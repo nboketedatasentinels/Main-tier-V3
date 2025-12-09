@@ -1,37 +1,8 @@
-import React, { createContext, useContext, useEffect, useState } from 'react'
-import { createClient, SupabaseClient, User, Session } from '@supabase/supabase-js'
+import React, { useEffect, useState } from 'react'
+import { User, Session } from '@supabase/supabase-js'
 import { UserProfile, UserRole } from '@/types'
-
-// Supabase configuration
-const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || ''
-const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY || ''
-
-export const supabase: SupabaseClient = createClient(supabaseUrl, supabaseAnonKey)
-
-interface AuthContextType {
-  user: User | null
-  profile: UserProfile | null
-  session: Session | null
-  loading: boolean
-  signIn: (email: string, password: string) => Promise<{ error: Error | null }>
-  signUp: (email: string, password: string, userData: Partial<UserProfile>) => Promise<{ error: Error | null }>
-  signOut: () => Promise<void>
-  signInWithMagicLink: (email: string) => Promise<{ error: Error | null }>
-  resetPassword: (email: string) => Promise<{ error: Error | null }>
-  updateProfile: (updates: Partial<UserProfile>) => Promise<{ error: Error | null }>
-  hasRole: (role: UserRole) => boolean
-  hasAnyRole: (roles: UserRole[]) => boolean
-}
-
-const AuthContext = createContext<AuthContextType | undefined>(undefined)
-
-export const useAuth = () => {
-  const context = useContext(AuthContext)
-  if (!context) {
-    throw new Error('useAuth must be used within AuthProvider')
-  }
-  return context
-}
+import { supabase } from '@/services/supabase'
+import { AuthContext, AuthContextType } from './AuthContextType'
 
 interface AuthProviderProps {
   children: React.ReactNode

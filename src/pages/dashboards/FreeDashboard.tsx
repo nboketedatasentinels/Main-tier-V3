@@ -1,6 +1,6 @@
 import React from 'react'
 import { Box, Heading, Text, SimpleGrid, Stat, StatLabel, StatNumber, StatHelpText, Card, CardBody } from '@chakra-ui/react'
-import { useAuth } from '@/contexts/AuthContext'
+import { useAuth } from '@/hooks/useAuth'
 
 export const FreeDashboard: React.FC = () => {
   const { profile } = useAuth()

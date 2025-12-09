@@ -11,7 +11,7 @@ import {
   useToast,
   HStack,
 } from '@chakra-ui/react'
-import { useAuth } from '@/contexts/AuthContext'
+import { useAuth } from '@/hooks/useAuth'
 
 export const SignUpPage: React.FC = () => {
   const [formData, setFormData] = useState({

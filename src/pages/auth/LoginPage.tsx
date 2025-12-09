@@ -12,7 +12,7 @@ import {
   Divider,
   HStack,
 } from '@chakra-ui/react'
-import { useAuth } from '@/contexts/AuthContext'
+import { useAuth } from '@/hooks/useAuth'
 
 export const LoginPage: React.FC = () => {
   const [email, setEmail] = useState('')

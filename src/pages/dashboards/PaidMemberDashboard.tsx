@@ -1,6 +1,6 @@
 import React from 'react'
 import { Box, Heading, Text, SimpleGrid, Card, CardBody, Stat, StatLabel, StatNumber, StatHelpText } from '@chakra-ui/react'
-import { useAuth } from '@/contexts/AuthContext'
+import { useAuth } from '@/hooks/useAuth'
 
 export const PaidMemberDashboard: React.FC = () => {
   const { profile } = useAuth()

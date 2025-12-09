@@ -1,0 +1,20 @@
+import { createContext } from 'react'
+import { User, Session } from '@supabase/supabase-js'
+import { UserProfile, UserRole } from '@/types'
+
+export interface AuthContextType {
+  user: User | null
+  profile: UserProfile | null
+  session: Session | null
+  loading: boolean
+  signIn: (email: string, password: string) => Promise<{ error: Error | null }>
+  signUp: (email: string, password: string, userData: Partial<UserProfile>) => Promise<{ error: Error | null }>
+  signOut: () => Promise<void>
+  signInWithMagicLink: (email: string) => Promise<{ error: Error | null }>
+  resetPassword: (email: string) => Promise<{ error: Error | null }>
+  updateProfile: (updates: Partial<UserProfile>) => Promise<{ error: Error | null }>
+  hasRole: (role: UserRole) => boolean
+  hasAnyRole: (roles: UserRole[]) => boolean
+}
+
+export const AuthContext = createContext<AuthContextType | undefined>(undefined)

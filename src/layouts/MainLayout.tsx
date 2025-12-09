@@ -31,7 +31,7 @@ import {
   LogOut,
   User,
 } from 'lucide-react'
-import { useAuth } from '@/contexts/AuthContext'
+import { useAuth } from '@/hooks/useAuth'
 import { UserRole } from '@/types'
 
 export const MainLayout: React.FC = () => {
