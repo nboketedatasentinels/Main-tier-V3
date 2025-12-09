@@ -28,9 +28,9 @@ T4L (Transformation 4 Leaders) is a full-stack web application designed to facil
 - **Canvas Confetti** for celebratory effects
 
 ### Backend & Database
-- **Supabase** (PostgreSQL) for database and authentication
-- **Supabase Edge Functions** for serverless logic
-- **Supabase Storage** for file uploads
+- **Firebase** (Firestore) for database and authentication
+- **Firebase Cloud Functions** for serverless logic
+- **Firebase Storage** for file uploads
 - Real-time subscriptions
 
 ### Payments & Email
@@ -75,7 +75,7 @@ src/
 
 - Node.js 18+ 
 - npm or yarn
-- Supabase account
+- Firebase account
 - Stripe account (for payments)
 - SendGrid account (for emails)
 
@@ -98,8 +98,12 @@ src/
    ```
    
    Edit `.env` and add your configuration:
-   - `VITE_SUPABASE_URL`: Your Supabase project URL
-   - `VITE_SUPABASE_ANON_KEY`: Your Supabase anonymous key
+   - `VITE_FIREBASE_API_KEY`: Your Firebase API key
+   - `VITE_FIREBASE_AUTH_DOMAIN`: Your Firebase auth domain
+   - `VITE_FIREBASE_PROJECT_ID`: Your Firebase project ID
+   - `VITE_FIREBASE_STORAGE_BUCKET`: Your Firebase storage bucket
+   - `VITE_FIREBASE_MESSAGING_SENDER_ID`: Your Firebase messaging sender ID
+   - `VITE_FIREBASE_APP_ID`: Your Firebase app ID
    - `VITE_STRIPE_PUBLIC_KEY`: Your Stripe publishable key
 
 4. **Start the development server**
@@ -157,11 +161,11 @@ The platform supports six distinct user roles:
 
 ## 🔒 Security
 
-- Row-level security (RLS) on all database tables
+- Firestore Security Rules for data access control
 - Role-based access control (RBAC)
 - Input validation and sanitization
 - Encrypted data at rest and in transit
-- Secure authentication flows
+- Secure authentication flows with Firebase Auth
 
 ## 📝 Development Scripts
 

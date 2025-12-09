@@ -22,9 +22,9 @@ T4L (Transformation 4 Leaders) is a comprehensive leadership transformation plat
 - **Architecture**: Client-server with serverless backend
 - **Rendering**: Client-side rendering (CSR) with React
 - **State**: Context API + local state management
-- **Database**: PostgreSQL via Supabase with Row Level Security
+- **Database**: Firestore (NoSQL) with Security Rules
 - **Real-time**: WebSocket subscriptions for live updates
-- **Authentication**: JWT-based with Supabase Auth
+- **Authentication**: JWT-based with Firebase Auth
 
 ---
 
@@ -64,10 +64,10 @@ intro.js 7.2.0        - Guided tours
 
 ### Backend Services
 ```
-Supabase              - PostgreSQL database
-Supabase Auth         - Authentication
-Supabase Storage      - File storage
-Supabase Edge Fns     - Serverless functions
+Firebase                  - Firestore NoSQL database
+Firebase Auth             - Authentication
+Firebase Storage          - File storage
+Firebase Cloud Functions  - Serverless functions
 ```
 
 ### External Services
@@ -103,7 +103,7 @@ src/
 ├── routes/           # Route configuration
 │   └── index.tsx
 ├── services/         # API services
-│   └── supabase.ts
+│   └── firebase.ts
 ├── theme/            # Chakra UI theme
 │   └── index.ts
 ├── types/            # TypeScript types
@@ -262,7 +262,7 @@ if (hasAnyRole([UserRole.MENTOR, UserRole.AMBASSADOR])) {
 ```
 
 #### Database Security
-- Row Level Security (RLS) on all tables
+- Firestore Security Rules on all collections
 - Policies match application roles
 - User can only access their own data
 - Admins have elevated permissions
@@ -338,7 +338,7 @@ if (hasAnyRole([UserRole.MENTOR, UserRole.AMBASSADOR])) {
 
 ### Server State
 - Data fetching with custom hooks
-- Real-time subscriptions via Supabase
+- Real-time subscriptions via Firebase
 - Optimistic updates for better UX
 
 ---
@@ -435,76 +435,88 @@ xl:  80em  (1280px)
 
 ## API Integration
 
-### Supabase Client
+### Firebase Client
 
 #### Configuration
 ```typescript
-// src/services/supabase.ts
-import { createClient } from '@supabase/supabase-js'
+// src/services/firebase.ts
+import { initializeApp } from 'firebase/app'
+import { getAuth } from 'firebase/auth'
+import { getFirestore } from 'firebase/firestore'
 
-export const supabase = createClient(
-  process.env.VITE_SUPABASE_URL,
-  process.env.VITE_SUPABASE_ANON_KEY
-)
+const firebaseConfig = {
+  apiKey: process.env.VITE_FIREBASE_API_KEY,
+  authDomain: process.env.VITE_FIREBASE_AUTH_DOMAIN,
+  projectId: process.env.VITE_FIREBASE_PROJECT_ID,
+  // ... more config
+}
+
+export const app = initializeApp(firebaseConfig)
+export const auth = getAuth(app)
+export const db = getFirestore(app)
 ```
 
 #### Usage Patterns
 
-**Select Data**
+**Query Data**
 ```typescript
-const { data, error } = await supabase
-  .from('profiles')
-  .select('*')
-  .eq('id', userId)
-  .single()
+import { collection, query, where, getDocs } from 'firebase/firestore'
+
+const q = query(
+  collection(db, 'profiles'),
+  where('userId', '==', userId)
+)
+const snapshot = await getDocs(q)
 ```
 
 **Insert Data**
 ```typescript
-const { error } = await supabase
-  .from('impact_logs')
-  .insert({
-    user_id: userId,
-    title: 'My Impact',
-    // ... more fields
-  })
+import { doc, setDoc } from 'firebase/firestore'
+
+await setDoc(doc(db, 'impact_logs', docId), {
+  userId: userId,
+  title: 'My Impact',
+  // ... more fields
+})
 ```
 
 **Update Data**
 ```typescript
-const { error } = await supabase
-  .from('profiles')
-  .update({ total_points: newPoints })
-  .eq('id', userId)
+import { doc, updateDoc } from 'firebase/firestore'
+
+await updateDoc(doc(db, 'profiles', userId), {
+  totalPoints: newPoints
+})
 ```
 
 **Real-time Subscription**
 ```typescript
-const subscription = supabase
-  .channel('notifications')
-  .on('postgres_changes', {
-    event: 'INSERT',
-    schema: 'public',
-    table: 'notifications'
-  }, payload => {
-    // Handle new notification
-  })
-  .subscribe()
+import { collection, onSnapshot } from 'firebase/firestore'
+
+const unsubscribe = onSnapshot(
+  collection(db, 'notifications'),
+  (snapshot) => {
+    snapshot.docChanges().forEach((change) => {
+      // Handle new notification
+    })
+  }
+)
 ```
 
 ### Error Handling
 
 ```typescript
 try {
-  const { data, error } = await supabase.from('table').select()
+  const docRef = doc(db, 'collection', 'docId')
+  const docSnap = await getDoc(docRef)
   
-  if (error) {
-    throw error
+  if (!docSnap.exists()) {
+    throw new Error('Document not found')
   }
   
-  return { data, error: null }
+  return { data: docSnap.data(), error: null }
 } catch (error) {
-  console.error('Database error:', error)
+  console.error('Firestore error:', error)
   return { data: null, error: error as Error }
 }
 ```
@@ -517,8 +529,12 @@ try {
 
 ```env
 # .env.example
-VITE_SUPABASE_URL=your_supabase_url
-VITE_SUPABASE_ANON_KEY=your_anon_key
+VITE_FIREBASE_API_KEY=your_firebase_api_key
+VITE_FIREBASE_AUTH_DOMAIN=your_auth_domain
+VITE_FIREBASE_PROJECT_ID=your_project_id
+VITE_FIREBASE_STORAGE_BUCKET=your_storage_bucket
+VITE_FIREBASE_MESSAGING_SENDER_ID=your_sender_id
+VITE_FIREBASE_APP_ID=your_app_id
 VITE_STRIPE_PUBLIC_KEY=your_stripe_key
 ```
 
@@ -539,9 +555,9 @@ npm run format       # Prettier
 
 ### Deployment Targets
 
-- **Frontend**: Vercel, Netlify, or similar CDN
-- **Backend**: Supabase (managed PostgreSQL + Edge Functions)
-- **Storage**: Supabase Storage (S3-compatible)
+- **Frontend**: Vercel, Netlify, or Firebase Hosting
+- **Backend**: Firebase (managed Firestore + Cloud Functions)
+- **Storage**: Firebase Storage
 
 ### Performance Considerations
 

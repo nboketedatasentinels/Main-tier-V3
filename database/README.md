@@ -1,51 +1,58 @@
 # Database Schema
 
-This directory contains the complete database schema for the T4L platform.
+This directory contains the complete database schema for the T4L platform using **Firebase Firestore**.
 
 ## Setup Instructions
 
-1. Create a new Supabase project at https://supabase.com
-2. Navigate to the SQL Editor in your Supabase dashboard
-3. Run the `schema.sql` file to create all tables, indexes, and policies
-4. Copy your Supabase URL and anon key to `.env`
+1. Create a new Firebase project at https://firebase.google.com
+2. Navigate to Firestore Database in your Firebase console
+3. Click "Create database" and choose production mode
+4. Set up Security Rules from `firestore-security-rules.txt`
+5. Review the structure in `firestore-schema.md`
+6. Copy your Firebase configuration to `.env`
 
 ## Database Structure
 
-### Core Tables
+### Core Collections
 - **profiles** - User profiles and settings
 - **journeys** - Available transformation journeys
-- **user_journeys** - User enrollment in journeys
 - **activities** - Available activities with points
-- **weekly_activities** - User activity completion tracking
 - **courses** - Available courses
-- **course_modules** - Course content modules
-- **impact_logs** - User impact tracking
 - **badges** - Achievement badges
-- **user_badges** - Badges earned by users
 - **villages** - Community groups
-- **clusters** - Sub-groups within organizations
 - **companies** - Organization profiles
 - **events** - Platform events
+
+### Subcollections (under profiles/{userId}/)
+- **userJourneys** - User enrollment in journeys
+- **weeklyActivities** - User activity completion tracking
+- **impactLogs** - User impact tracking
+- **userBadges** - Badges earned by users
 - **notifications** - User notifications
-- **subscriptions** - Payment subscriptions
 
 ### Security
 
-All tables have Row Level Security (RLS) enabled with appropriate policies:
+Firestore Security Rules are configured to:
 - Users can only access their own data
 - Admins have elevated permissions
-- Reference tables (journeys, activities, etc.) are publicly readable
+- Reference collections (journeys, activities, etc.) are readable by authenticated users
+- Write access to reference data is admin-only
 
-## Migrations
+## Using Firestore
 
-For production deployments, use Supabase migrations:
+The Firebase SDK is configured in `src/services/firebase.ts`:
 
-```bash
-# Create a new migration
-supabase migration new migration_name
+```typescript
+import { db } from '@/services/firebase'
+import { collection, doc, getDoc, setDoc } from 'firebase/firestore'
 
-# Apply migrations
-supabase db push
+// Example: Get user profile
+const docRef = doc(db, 'profiles', userId)
+const docSnap = await getDoc(docRef)
+const profile = docSnap.data()
+
+// Example: Create document
+await setDoc(doc(db, 'profiles', userId), profileData)
 ```
 
-See the full schema.sql file for complete table definitions, indexes, and policies.
+See the full schema in `firestore-schema.md` for complete collection definitions and security rules.

@@ -1,7 +1,22 @@
 import React, { useEffect, useState } from 'react'
-import { User, Session } from '@supabase/supabase-js'
+import { User } from 'firebase/auth'
+import {
+  signInWithEmailAndPassword,
+  createUserWithEmailAndPassword,
+  signOut as firebaseSignOut,
+  sendPasswordResetEmail,
+  sendSignInLinkToEmail,
+  onAuthStateChanged,
+} from 'firebase/auth'
+import {
+  doc,
+  getDoc,
+  setDoc,
+  updateDoc,
+  serverTimestamp,
+} from 'firebase/firestore'
 import { UserProfile, UserRole } from '@/types'
-import { supabase } from '@/services/supabase'
+import { auth, db } from '@/services/firebase'
 import { AuthContext, AuthContextType } from './AuthContextType'
 
 interface AuthProviderProps {
@@ -11,76 +26,48 @@ interface AuthProviderProps {
 export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null)
   const [profile, setProfile] = useState<UserProfile | null>(null)
-  const [session, setSession] = useState<Session | null>(null)
   const [loading, setLoading] = useState(true)
 
-  // Fetch user profile
+  // Fetch user profile from Firestore
   const fetchProfile = async (userId: string): Promise<UserProfile | null> => {
     try {
-      const { data, error } = await supabase
-        .from('profiles')
-        .select('*')
-        .eq('id', userId)
-        .single()
+      const docRef = doc(db, 'profiles', userId)
+      const docSnap = await getDoc(docRef)
 
-      if (error) {
-        console.error('Error fetching profile:', error)
-        return null
+      if (docSnap.exists()) {
+        return docSnap.data() as UserProfile
       }
 
-      return data as UserProfile
+      return null
     } catch (error) {
-      console.error('Error in fetchProfile:', error)
+      console.error('Error fetching profile:', error)
       return null
     }
   }
 
   // Initialize auth state
   useEffect(() => {
-    // Get initial session
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setSession(session)
-      setUser(session?.user ?? null)
-      
-      if (session?.user) {
-        fetchProfile(session.user.id).then(profile => {
-          setProfile(profile)
-          setLoading(false)
-        })
-      } else {
-        setLoading(false)
-      }
-    })
+    const unsubscribe = onAuthStateChanged(auth, async (user) => {
+      setUser(user)
 
-    // Listen for auth changes
-    const {
-      data: { subscription },
-    } = supabase.auth.onAuthStateChange(async (_event, session) => {
-      setSession(session)
-      setUser(session?.user ?? null)
-
-      if (session?.user) {
-        const userProfile = await fetchProfile(session.user.id)
+      if (user) {
+        const userProfile = await fetchProfile(user.uid)
         setProfile(userProfile)
       } else {
         setProfile(null)
       }
+
       setLoading(false)
     })
 
-    return () => {
-      subscription.unsubscribe()
-    }
+    return () => unsubscribe()
   }, [])
 
   // Sign in with email and password
   const signIn = async (email: string, password: string) => {
     try {
-      const { error } = await supabase.auth.signInWithPassword({
-        email,
-        password,
-      })
-      return { error }
+      await signInWithEmailAndPassword(auth, email, password)
+      return { error: null }
     } catch (error) {
       return { error: error as Error }
     }
@@ -89,34 +76,25 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   // Sign up
   const signUp = async (email: string, password: string, userData: Partial<UserProfile>) => {
     try {
-      const { data, error } = await supabase.auth.signUp({
+      const userCredential = await createUserWithEmailAndPassword(auth, email, password)
+      const user = userCredential.user
+
+      // Create profile in Firestore
+      const profileData: UserProfile = {
+        id: user.uid,
         email,
-        password,
-        options: {
-          data: userData,
-        },
-      })
-
-      if (error) return { error }
-
-      // Create profile
-      if (data.user) {
-        const { error: profileError } = await supabase.from('profiles').insert({
-          id: data.user.id,
-          email,
-          ...userData,
-          role: UserRole.FREE_USER,
-          totalPoints: 0,
-          level: 1,
-          isOnboarded: false,
-          createdAt: new Date().toISOString(),
-          updatedAt: new Date().toISOString(),
-        })
-
-        if (profileError) {
-          console.error('Error creating profile:', profileError)
-        }
+        firstName: userData.firstName || 'User',
+        lastName: userData.lastName || '',
+        fullName: userData.fullName || 'User',
+        role: UserRole.FREE_USER,
+        totalPoints: 0,
+        level: 1,
+        isOnboarded: false,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
       }
+
+      await setDoc(doc(db, 'profiles', user.uid), profileData)
 
       return { error: null }
     } catch (error) {
@@ -126,22 +104,27 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
   // Sign out
   const signOut = async () => {
-    await supabase.auth.signOut()
-    setUser(null)
-    setProfile(null)
-    setSession(null)
+    try {
+      await firebaseSignOut(auth)
+      setUser(null)
+      setProfile(null)
+    } catch (error) {
+      console.error('Error signing out:', error)
+    }
   }
 
-  // Magic link sign in
+  // Magic link sign in (email link)
   const signInWithMagicLink = async (email: string) => {
     try {
-      const { error } = await supabase.auth.signInWithOtp({
-        email,
-        options: {
-          emailRedirectTo: `${window.location.origin}/auth/callback`,
-        },
-      })
-      return { error }
+      const actionCodeSettings = {
+        url: `${window.location.origin}/auth/callback`,
+        handleCodeInApp: true,
+      }
+
+      await sendSignInLinkToEmail(auth, email, actionCodeSettings)
+      // Store email for verification
+      window.localStorage.setItem('emailForSignIn', email)
+      return { error: null }
     } catch (error) {
       return { error: error as Error }
     }
@@ -150,10 +133,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   // Reset password
   const resetPassword = async (email: string) => {
     try {
-      const { error } = await supabase.auth.resetPasswordForEmail(email, {
-        redirectTo: `${window.location.origin}/auth/reset-password`,
-      })
-      return { error }
+      await sendPasswordResetEmail(auth, email)
+      return { error: null }
     } catch (error) {
       return { error: error as Error }
     }
@@ -164,19 +145,17 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     if (!user) return { error: new Error('No user logged in') }
 
     try {
-      const { error } = await supabase
-        .from('profiles')
-        .update({
-          ...updates,
-          updatedAt: new Date().toISOString(),
-        })
-        .eq('id', user.id)
+      const profileRef = doc(db, 'profiles', user.uid)
+      await updateDoc(profileRef, {
+        ...updates,
+        updatedAt: serverTimestamp(),
+      })
 
-      if (!error && profile) {
+      if (profile) {
         setProfile({ ...profile, ...updates })
       }
 
-      return { error }
+      return { error: null }
     } catch (error) {
       return { error: error as Error }
     }
@@ -194,7 +173,6 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const value: AuthContextType = {
     user,
     profile,
-    session,
     loading,
     signIn,
     signUp,
