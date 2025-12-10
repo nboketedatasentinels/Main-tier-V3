@@ -1,10 +1,12 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
-import { ProtectedRoute } from '@/components/ProtectedRoute'
+import { Center, Spinner } from '@chakra-ui/react'
+import { ProtectedRoute, PublicRoute } from '@/components/ProtectedRoute'
 import { UserRole } from '@/types'
+import { useAuth } from '@/hooks/useAuth'
+import { getDashboardRouteForRole } from '@/utils/auth'
 
 // Layout imports
 import { MainLayout } from '@/layouts/MainLayout'
-import { AuthLayout } from '@/layouts/AuthLayout'
 
 // Page imports (we'll create these)
 import { LoginPage } from '@/pages/auth/LoginPage'
@@ -33,6 +35,21 @@ import { UnauthorizedPage } from '@/pages/errors/UnauthorizedPage'
 
 // Dashboard router component
 const DashboardRouter = () => {
+  const { profile, loading } = useAuth()
+
+  if (loading) {
+    return (
+      <Center h="100vh" bg="brand.deepPlum">
+        <Spinner size="xl" color="brand.gold" thickness="4px" />
+      </Center>
+    )
+  }
+
+  const defaultPath = getDashboardRouteForRole(profile?.role ?? UserRole.FREE_USER).replace(
+    '/dashboard',
+    ''
+  )
+
   return (
     <Routes>
       <Route path="free" element={
@@ -65,6 +82,7 @@ const DashboardRouter = () => {
           <SuperAdminDashboard />
         </ProtectedRoute>
       } />
+      <Route index element={<Navigate to={defaultPath} replace />} />
     </Routes>
   )
 }
@@ -74,9 +92,30 @@ export const AppRoutes = () => {
     <BrowserRouter>
       <Routes>
         {/* Public routes */}
-        <Route path="/login" element={<AuthLayout><LoginPage /></AuthLayout>} />
-        <Route path="/signup" element={<AuthLayout><SignUpPage /></AuthLayout>} />
-        <Route path="/reset-password" element={<AuthLayout><ResetPasswordPage /></AuthLayout>} />
+        <Route
+          path="/login"
+          element={
+            <PublicRoute>
+              <LoginPage />
+            </PublicRoute>
+          }
+        />
+        <Route
+          path="/signup"
+          element={
+            <PublicRoute>
+              <SignUpPage />
+            </PublicRoute>
+          }
+        />
+        <Route
+          path="/reset-password"
+          element={
+            <PublicRoute>
+              <ResetPasswordPage />
+            </PublicRoute>
+          }
+        />
         
         {/* Onboarding */}
         <Route path="/onboarding" element={
@@ -100,7 +139,7 @@ export const AppRoutes = () => {
           <Route path="leaderboard" element={<LeaderboardPage />} />
           <Route path="profile" element={<ProfilePage />} />
           <Route path="settings" element={<SettingsPage />} />
-          
+
           {/* Default redirect based on role */}
           <Route index element={<Navigate to="/dashboard" replace />} />
         </Route>

@@ -2,7 +2,14 @@ import React, { useEffect, useRef, useState } from 'react'
 import { ArrowRight, Eye, EyeOff } from 'lucide-react'
 import { motion } from 'framer-motion'
 
-type Mode = 'signin' | 'signup'
+export type Mode = 'signin' | 'signup' | 'reset'
+
+type AuthFormValues = {
+  email: string
+  password?: string
+  confirmPassword?: string
+  fullName?: string
+}
 
 const cn = (...classes: string[]) => classes.filter(Boolean).join(' ')
 
@@ -10,12 +17,14 @@ interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
   children: React.ReactNode
   variant?: 'default' | 'outline'
   className?: string
+  loading?: boolean
 }
 
 const Button = ({
   children,
   variant = 'default',
   className = '',
+  loading = false,
   ...props
 }: ButtonProps) => {
   const baseStyles =
@@ -31,26 +40,39 @@ const Button = ({
   return (
     <button
       className={cn(baseStyles, variantStyles[variant], className)}
+      disabled={loading || props.disabled}
       {...props}
     >
-      {children}
+      {loading ? (
+        <span className="flex items-center gap-2">
+          <span className="h-4 w-4 animate-spin rounded-full border-2 border-white/60 border-t-white" />
+          <span>Loading...</span>
+        </span>
+      ) : (
+        children
+      )}
     </button>
   )
 }
 
 interface InputProps extends React.InputHTMLAttributes<HTMLInputElement> {
   className?: string
+  error?: string
 }
 
-const Input = ({ className = '', ...props }: InputProps) => {
+const Input = ({ className = '', error, ...props }: InputProps) => {
   return (
-    <input
-      className={cn(
-        'flex h-10 w-full rounded-md border bg-background px-3 py-2 text-sm text-gray-900 ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-gray-400 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#f4540c] focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50',
-        className
-      )}
-      {...props}
-    />
+    <div className="w-full">
+      <input
+        className={cn(
+          'flex h-10 w-full rounded-md border bg-background px-3 py-2 text-sm text-gray-900 ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-gray-400 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#f4540c] focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50',
+          error ? 'border-red-400 focus-visible:ring-red-400' : 'border-gray-200',
+          className
+        )}
+        {...props}
+      />
+      {error && <p className="mt-1 text-xs text-red-500">{error}</p>}
+    </div>
   )
 }
 
@@ -118,6 +140,7 @@ const DotMap = () => {
         }
       }
     }
+
     return dots
   }
 
@@ -126,13 +149,13 @@ const DotMap = () => {
     if (!canvas) return
 
     const resizeObserver = new ResizeObserver((entries) => {
-      const { width, height } = entries[0].contentRect
-      setDimensions({ width, height })
-      canvas.width = width
-      canvas.height = height
+      for (const entry of entries) {
+        const { width, height } = entry.contentRect
+        setDimensions({ width, height })
+      }
     })
 
-    resizeObserver.observe(canvas.parentElement as Element)
+    resizeObserver.observe(canvas)
     return () => resizeObserver.disconnect()
   }, [])
 
@@ -142,9 +165,10 @@ const DotMap = () => {
     const canvas = canvasRef.current
     if (!canvas) return
 
-    const ctx = canvas.getContext('2d')
-    if (!ctx) return
+    const context = canvas.getContext('2d')
+    if (!context) return
 
+    const ctx = context
     const dots = generateDots(dimensions.width, dimensions.height)
     let animationFrameId: number
     let startTime = Date.now()
@@ -228,16 +252,105 @@ const DotMap = () => {
 
 interface AuthCardProps {
   mode?: Mode
+  loading?: boolean
+  serverError?: string | null
+  onSubmit?: (values: AuthFormValues) => Promise<{ error?: string } | void> | { error?: string } | void
+  onGoogleClick?: () => Promise<{ error?: string } | void> | { error?: string } | void
+  onNavigateToReset?: () => void
+  onNavigateToSignUp?: () => void
+  onNavigateToSignIn?: () => void
+  successMessage?: string | null
 }
 
-export const T4LAuthCard: React.FC<AuthCardProps> = ({ mode = 'signin' }) => {
+export const T4LAuthCard: React.FC<AuthCardProps> = ({
+  mode = 'signin',
+  loading = false,
+  serverError,
+  onSubmit,
+  onGoogleClick,
+  onNavigateToReset,
+  onNavigateToSignUp,
+  onNavigateToSignIn,
+  successMessage,
+}) => {
   const [isPasswordVisible, setIsPasswordVisible] = useState(false)
   const [email, setEmail] = useState('')
   const [fullName, setFullName] = useState('')
   const [password, setPassword] = useState('')
+  const [confirmPassword, setConfirmPassword] = useState('')
   const [isHovered, setIsHovered] = useState(false)
+  const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({})
+  const [formError, setFormError] = useState<string | null>(null)
 
   const isSignIn = mode === 'signin'
+  const isReset = mode === 'reset'
+
+  const validate = () => {
+    const errors: Record<string, string> = {}
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+
+    if (!emailRegex.test(email)) {
+      errors.email = 'Please enter a valid email address'
+    }
+
+    if (!isReset) {
+      if (!password || password.length < 6) {
+        errors.password = 'Password must be at least 6 characters'
+      }
+    }
+
+    if (!isSignIn && !isReset) {
+      if (!fullName.trim()) {
+        errors.fullName = 'Full name is required'
+      }
+      if (confirmPassword !== password) {
+        errors.confirmPassword = 'Passwords do not match'
+      }
+    }
+
+    setFieldErrors(errors)
+    return errors
+  }
+
+  const handleSubmit = async (event: React.FormEvent) => {
+    event.preventDefault()
+    setFormError(null)
+
+    const errors = validate()
+    if (Object.keys(errors).length > 0) return
+
+    const payload: AuthFormValues = {
+      email,
+      password,
+      confirmPassword,
+      fullName,
+    }
+
+    const result = await onSubmit?.(payload)
+    if (result && 'error' in result && result.error) {
+      setFormError(result.error)
+    }
+  }
+
+  const handleGoogleClick = async () => {
+    setFormError(null)
+    const result = await onGoogleClick?.()
+    if (result && 'error' in result && result.error) {
+      setFormError(result.error)
+    }
+  }
+
+  const headingCopy = isReset
+    ? 'Reset your password'
+    : isSignIn
+      ? 'Welcome back'
+      : 'Create your account'
+
+  const descriptionCopy = isReset
+    ? 'Enter your email and we will send you a reset link.'
+    : isSignIn
+      ? 'Sign in to continue your leadership journey.'
+      : 'Start your transformation journey with T4L.'
 
   return (
     <div className="flex w-full h-full items-center justify-center">
@@ -278,8 +391,9 @@ export const T4LAuthCard: React.FC<AuthCardProps> = ({ mode = 'signin' }) => {
                 transition={{ delay: 0.8, duration: 0.5 }}
                 className="text-sm text-center text-gray-100/80 max-w-xs"
               >
-                Sign in to access your leadership dashboard, track impact, and
-                continue your transformation journey.
+                {isReset
+                  ? 'We will send you a secure link to reset your password.'
+                  : 'Sign in to access your leadership dashboard, track impact, and continue your transformation journey.'}
               </motion.p>
             </div>
           </div>
@@ -291,57 +405,69 @@ export const T4LAuthCard: React.FC<AuthCardProps> = ({ mode = 'signin' }) => {
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.5 }}
           >
-            <h1 className="text-2xl md:text-3xl font-bold mb-1 text-gray-900">
-              {isSignIn ? 'Welcome back' : 'Create your account'}
-            </h1>
-            <p className="text-gray-500 mb-8">
-              {isSignIn
-                ? 'Sign in to continue your leadership journey.'
-                : 'Start your transformation journey with T4L.'}
-            </p>
+            <h1 className="text-2xl md:text-3xl font-bold mb-1 text-gray-900">{headingCopy}</h1>
+            <p className="text-gray-500 mb-4">{descriptionCopy}</p>
 
-            <div className="mb-6">
-              <button
-                className="w-full flex items-center justify-center gap-2 bg-gray-50 border border-gray-200 rounded-lg p-3 hover:bg-gray-100 transition-all duration-300 text-gray-700 shadow-sm"
-                type="button"
-              >
-                <svg className="h-5 w-5" viewBox="0 0 24 24">
-                  <path
-                    fill="currentColor"
-                    d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"
-                    fillOpacity=".54"
-                  />
-                  <path
-                    fill="#4285F4"
-                    d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"
-                  />
-                  <path
-                    fill="#34A853"
-                    d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"
-                  />
-                  <path
-                    fill="#FBBC05"
-                    d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"
-                  />
-                  <path fill="#EA4335" d="M1 1h22v22H1z" fillOpacity="0" />
-                </svg>
-                <span>
-                  {isSignIn ? 'Sign in with Google' : 'Sign up with Google'}
-                </span>
-              </button>
-            </div>
-
-            <div className="relative my-6">
-              <div className="absolute inset-0 flex items-center">
-                <div className="w-full border-t border-gray-200" />
+            {successMessage && (
+              <div className="mb-4 rounded-lg border border-green-100 bg-green-50 px-4 py-3 text-sm text-green-700">
+                {successMessage}
               </div>
-              <div className="relative flex justify-center text-sm">
-                <span className="px-2 bg-white text-gray-500">or</span>
-              </div>
-            </div>
+            )}
 
-            <form className="space-y-5">
-              {!isSignIn && (
+            {(serverError || formError) && (
+              <div className="mb-4 rounded-lg border border-red-100 bg-red-50 px-4 py-3 text-sm text-red-700">
+                {serverError || formError}
+              </div>
+            )}
+
+            {!isReset && (
+              <div className="mb-6">
+                <button
+                  className="w-full flex items-center justify-center gap-2 bg-gray-50 border border-gray-200 rounded-lg p-3 hover:bg-gray-100 transition-all duration-300 text-gray-700 shadow-sm"
+                  type="button"
+                  onClick={handleGoogleClick}
+                  disabled={loading}
+                >
+                  <svg className="h-5 w-5" viewBox="0 0 24 24">
+                    <path
+                      fill="currentColor"
+                      d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"
+                      fillOpacity=".54"
+                    />
+                    <path
+                      fill="#4285F4"
+                      d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"
+                    />
+                    <path
+                      fill="#34A853"
+                      d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"
+                    />
+                    <path
+                      fill="#FBBC05"
+                      d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"
+                    />
+                    <path fill="#EA4335" d="M1 1h22v22H1z" fillOpacity="0" />
+                  </svg>
+                  <span>
+                    {isSignIn ? 'Sign in with Google' : 'Sign up with Google'}
+                  </span>
+                </button>
+              </div>
+            )}
+
+            {!isReset && (
+              <div className="relative my-6">
+                <div className="absolute inset-0 flex items-center">
+                  <div className="w-full border-t border-gray-200" />
+                </div>
+                <div className="relative flex justify-center text-sm">
+                  <span className="px-2 bg-white text-gray-500">or</span>
+                </div>
+              </div>
+            )}
+
+            <form className="space-y-5" onSubmit={handleSubmit}>
+              {!isSignIn && !isReset && (
                 <div>
                   <label
                     htmlFor="fullName"
@@ -356,7 +482,9 @@ export const T4LAuthCard: React.FC<AuthCardProps> = ({ mode = 'signin' }) => {
                     onChange={(e) => setFullName(e.target.value)}
                     placeholder="Enter your full name"
                     required
-                    className="bg-gray-50 border-gray-200 placeholder:text-gray-400 text-gray-900"
+                    error={fieldErrors.fullName}
+                    className="bg-gray-50 placeholder:text-gray-400 text-gray-900"
+                    disabled={loading}
                   />
                 </div>
               )}
@@ -375,41 +503,70 @@ export const T4LAuthCard: React.FC<AuthCardProps> = ({ mode = 'signin' }) => {
                   onChange={(e) => setEmail(e.target.value)}
                   placeholder="Enter your email address"
                   required
-                  className="bg-gray-50 border-gray-200 placeholder:text-gray-400 text-gray-900"
+                  error={fieldErrors.email}
+                  className="bg-gray-50 placeholder:text-gray-400 text-gray-900"
+                  disabled={loading}
                 />
               </div>
 
-              <div>
-                <label
-                  htmlFor="password"
-                  className="block text-sm font-medium text-gray-700 mb-1"
-                >
-                  Password <span className="text-[#f4540c]">*</span>
-                </label>
-                <div className="relative">
-                  <Input
-                    id="password"
-                    type={isPasswordVisible ? 'text' : 'password'}
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    placeholder="Enter your password"
-                    required
-                    className="bg-gray-50 border-gray-200 placeholder:text-gray-400 text-gray-900 w-full pr-10"
-                  />
-                  <button
-                    type="button"
-                    className="absolute inset-y-0 right-0 flex items-center pr-3 text-gray-500 hover:text-gray-700"
-                    onClick={() => setIsPasswordVisible(!isPasswordVisible)}
+              {!isReset && (
+                <div>
+                  <label
+                    htmlFor="password"
+                    className="block text-sm font-medium text-gray-700 mb-1"
                   >
-                    {isPasswordVisible ? <EyeOff size={18} /> : <Eye size={18} />}
-                  </button>
+                    Password <span className="text-[#f4540c]">*</span>
+                  </label>
+                  <div className="relative">
+                    <Input
+                      id="password"
+                      type={isPasswordVisible ? 'text' : 'password'}
+                      value={password}
+                      onChange={(e) => setPassword(e.target.value)}
+                      placeholder="Enter your password"
+                      required
+                      error={fieldErrors.password}
+                      className="bg-gray-50 placeholder:text-gray-400 text-gray-900 w-full pr-10"
+                      disabled={loading}
+                    />
+                    <button
+                      type="button"
+                      className="absolute inset-y-0 right-0 flex items-center pr-3 text-gray-500 hover:text-gray-700"
+                      onClick={() => setIsPasswordVisible(!isPasswordVisible)}
+                      aria-label={isPasswordVisible ? 'Hide password' : 'Show password'}
+                      disabled={loading}
+                    >
+                      {isPasswordVisible ? <EyeOff size={18} /> : <Eye size={18} />}
+                    </button>
+                  </div>
                 </div>
-              </div>
+              )}
 
-              {!isSignIn && (
+              {!isSignIn && !isReset && (
+                <div>
+                  <label
+                    htmlFor="confirmPassword"
+                    className="block text-sm font-medium text-gray-700 mb-1"
+                  >
+                    Confirm password <span className="text-[#f4540c]">*</span>
+                  </label>
+                  <Input
+                    id="confirmPassword"
+                    type="password"
+                    value={confirmPassword}
+                    onChange={(e) => setConfirmPassword(e.target.value)}
+                    placeholder="Confirm your password"
+                    required
+                    error={fieldErrors.confirmPassword}
+                    className="bg-gray-50 placeholder:text-gray-400 text-gray-900"
+                    disabled={loading}
+                  />
+                </div>
+              )}
+
+              {!isSignIn && !isReset && (
                 <p className="text-xs text-gray-500">
-                  By creating an account you agree to our Terms of Use and
-                  Privacy Policy.
+                  By creating an account you agree to our Terms of Use and Privacy Policy.
                 </p>
               )}
 
@@ -426,17 +583,15 @@ export const T4LAuthCard: React.FC<AuthCardProps> = ({ mode = 'signin' }) => {
                     'w-full relative overflow-hidden py-2 rounded-lg transition-all duration-300',
                     isHovered ? 'shadow-lg shadow-amber-200/60' : ''
                   )}
-                  onClick={(e) => {
-                    e.preventDefault()
-                    console.log(
-                      isSignIn ? 'Sign in' : 'Sign up',
-                      { email, password, fullName }
-                    )
-                  }}
+                  loading={loading}
                 >
                   <span className="flex items-center justify-center">
-                    {isSignIn ? 'Sign in' : 'Create account'}
-                    <ArrowRight className="ml-2 h-4 w-4" />
+                    {isReset
+                      ? 'Send reset link'
+                      : isSignIn
+                        ? 'Sign in'
+                        : 'Create account'}
+                    {!isReset && <ArrowRight className="ml-2 h-4 w-4" />}
                   </span>
                   {isHovered && (
                     <motion.span
@@ -450,32 +605,47 @@ export const T4LAuthCard: React.FC<AuthCardProps> = ({ mode = 'signin' }) => {
                 </Button>
               </motion.div>
 
-              {isSignIn ? (
+              {isSignIn && (
                 <div className="flex items-center justify-between text-sm mt-4">
-                  <a
-                    href="#"
+                  <button
+                    type="button"
+                    onClick={onNavigateToReset}
                     className="text-[#350e6f] hover:text-[#f4540c] transition-colors"
                   >
                     Forgot password?
-                  </a>
-                  <a
-                    href="#"
+                  </button>
+                  <button
+                    type="button"
+                    onClick={onNavigateToSignUp}
                     className="text-gray-500 hover:text-gray-700 transition-colors"
                   >
                     New here? Create an account
-                  </a>
+                  </button>
                 </div>
-              ) : (
+              )}
+
+              {!isSignIn && !isReset && (
                 <div className="text-center mt-4 text-sm">
-                  <span className="text-gray-500">
-                    Already have an account?{' '}
-                  </span>
-                  <a
-                    href="#"
+                  <span className="text-gray-500">Already have an account? </span>
+                  <button
+                    type="button"
+                    onClick={onNavigateToSignIn}
                     className="text-[#350e6f] hover:text-[#f4540c] transition-colors"
                   >
                     Sign in
-                  </a>
+                  </button>
+                </div>
+              )}
+
+              {isReset && (
+                <div className="text-center mt-4 text-sm">
+                  <button
+                    type="button"
+                    onClick={onNavigateToSignIn}
+                    className="text-[#350e6f] hover:text-[#f4540c] transition-colors"
+                  >
+                    Back to sign in
+                  </button>
                 </div>
               )}
             </form>
@@ -486,10 +656,14 @@ export const T4LAuthCard: React.FC<AuthCardProps> = ({ mode = 'signin' }) => {
   )
 }
 
-const T4LAuthScreen: React.FC<{ mode?: Mode }> = ({ mode = 'signin' }) => {
+interface AuthScreenProps extends AuthCardProps {
+  mode?: Mode
+}
+
+const T4LAuthScreen: React.FC<AuthScreenProps> = ({ mode = 'signin', ...props }) => {
   return (
     <div className="min-h-screen w-full flex items-center justify-center bg-gradient-to-br from-[#27062e] via-[#350e6f] to-[#27062e] p-4">
-      <T4LAuthCard mode={mode} />
+      <T4LAuthCard mode={mode} {...props} />
     </div>
   )
 }

@@ -7,6 +7,8 @@ import {
   sendPasswordResetEmail,
   sendSignInLinkToEmail,
   onAuthStateChanged,
+  GoogleAuthProvider,
+  signInWithPopup,
 } from 'firebase/auth'
 import {
   doc,
@@ -27,6 +29,51 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null)
   const [profile, setProfile] = useState<UserProfile | null>(null)
   const [loading, setLoading] = useState(true)
+
+  const googleProvider = new GoogleAuthProvider()
+
+  const buildProfileFromUser = (firebaseUser: User): UserProfile => {
+    const [firstName = 'User', lastName = ''] = (firebaseUser.displayName || 'User')
+      .split(' ')
+      .filter(Boolean)
+
+    return {
+      id: firebaseUser.uid,
+      email: firebaseUser.email || '',
+      firstName,
+      lastName,
+      fullName: firebaseUser.displayName || `${firstName} ${lastName}`.trim(),
+      role: UserRole.FREE_USER,
+      avatarUrl: firebaseUser.photoURL || undefined,
+      totalPoints: 0,
+      level: 1,
+      isOnboarded: false,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    }
+  }
+
+  const ensureProfileExists = async (firebaseUser: User) => {
+    const profileRef = doc(db, 'profiles', firebaseUser.uid)
+    const profileSnap = await getDoc(profileRef)
+
+    if (!profileSnap.exists()) {
+      const profileData = buildProfileFromUser(firebaseUser)
+      await setDoc(profileRef, profileData)
+      return profileData
+    }
+
+    const existingProfile = profileSnap.data() as UserProfile
+
+    if (!existingProfile.avatarUrl && firebaseUser.photoURL) {
+      await updateDoc(profileRef, {
+        avatarUrl: firebaseUser.photoURL,
+        updatedAt: serverTimestamp(),
+      })
+    }
+
+    return { ...existingProfile, avatarUrl: existingProfile.avatarUrl || firebaseUser.photoURL || undefined }
+  }
 
   // Fetch user profile from Firestore
   const fetchProfile = async (userId: string): Promise<UserProfile | null> => {
@@ -95,6 +142,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       }
 
       await setDoc(doc(db, 'profiles', user.uid), profileData)
+      setProfile(profileData)
 
       return { error: null }
     } catch (error) {
@@ -124,6 +172,20 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       await sendSignInLinkToEmail(auth, email, actionCodeSettings)
       // Store email for verification
       window.localStorage.setItem('emailForSignIn', email)
+      return { error: null }
+    } catch (error) {
+      return { error: error as Error }
+    }
+  }
+
+  const signInWithGoogle = async () => {
+    try {
+      const result = await signInWithPopup(auth, googleProvider)
+      const firebaseUser = result.user
+
+      const userProfile = await ensureProfileExists(firebaseUser)
+      setProfile(userProfile)
+
       return { error: null }
     } catch (error) {
       return { error: error as Error }
@@ -177,6 +239,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     signIn,
     signUp,
     signOut,
+    signInWithGoogle,
     signInWithMagicLink,
     resetPassword,
     updateProfile,
