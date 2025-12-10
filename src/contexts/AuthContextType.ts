@@ -9,6 +9,7 @@ export interface AuthContextType {
   signIn: (email: string, password: string) => Promise<{ error: Error | null }>
   signUp: (email: string, password: string, userData: Partial<UserProfile>) => Promise<{ error: Error | null }>
   signOut: () => Promise<void>
+  signInWithGoogle: () => Promise<{ error: Error | null }>
   signInWithMagicLink: (email: string) => Promise<{ error: Error | null }>
   resetPassword: (email: string) => Promise<{ error: Error | null }>
   updateProfile: (updates: Partial<UserProfile>) => Promise<{ error: Error | null }>
