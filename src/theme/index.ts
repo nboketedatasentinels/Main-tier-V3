@@ -5,6 +5,7 @@ const colors = {
     primary: '#5d6bff',
     primaryMuted: '#eef0fb',
     accent: '#f6f7fb',
+    sidebar: '#f3f4fb',
     text: '#3a4562',
     subtleText: '#6b7392',
     border: '#e6e8f3',
