@@ -23,7 +23,6 @@ import {
   InputGroup,
   InputLeftElement,
   Input,
-  Divider,
 } from '@chakra-ui/react'
 import {
   Menu as MenuIcon,
@@ -145,18 +144,6 @@ export const MainLayout: React.FC = () => {
           </VStack>
         </Box>
       ))}
-      <Divider borderColor="brand.border" pt={2} />
-      <Button
-        leftIcon={<LogOut size={18} />}
-        variant="ghost"
-        justifyContent="flex-start"
-        color="brand.subtleText"
-        onClick={handleSignOut}
-        height="42px"
-        _hover={{ bg: 'brand.primaryMuted', color: 'brand.text' }}
-      >
-        Sign Out
-      </Button>
     </VStack>
   )
 
