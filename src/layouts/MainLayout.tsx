@@ -42,7 +42,6 @@ import {
   Bell,
   LogOut,
   User,
-  Settings,
 } from 'lucide-react'
 import { useAuth } from '@/hooks/useAuth'
 import { UserRole } from '@/types'
@@ -214,14 +213,6 @@ export const MainLayout: React.FC = () => {
               </HStack>
             </Box>
             <Button
-              leftIcon={<Settings size={16} />}
-              variant="ghost"
-              size="sm"
-              onClick={() => navigate('/app/settings')}
-            >
-              Settings
-            </Button>
-            <Button
               leftIcon={<LogOut size={16} />}
               variant="ghost"
               size="sm"
@@ -283,7 +274,6 @@ export const MainLayout: React.FC = () => {
               <MenuButton as={IconButton} icon={<User size={20} />} variant="ghost" />
               <MenuList bg="brand.deepPlum" borderColor="brand.gold">
                 <MenuItem onClick={() => navigate('/app/profile')}>Profile</MenuItem>
-                <MenuItem onClick={() => navigate('/app/settings')}>Settings</MenuItem>
                 <MenuDivider />
                 <MenuItem onClick={handleSignOut}>Sign Out</MenuItem>
               </MenuList>
