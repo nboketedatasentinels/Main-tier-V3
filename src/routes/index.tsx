@@ -7,6 +7,8 @@ import { getDashboardRouteForRole } from '@/utils/auth'
 
 // Layout imports
 import { MainLayout } from '@/layouts/MainLayout'
+import { AuthLayout } from '@/layouts/AuthLayout'
+import { HomePage } from '@/pages/home/HomePage'
 
 // Page imports (we'll create these)
 import { LoginPage } from '@/pages/auth/LoginPage'
@@ -26,8 +28,17 @@ import { SuperAdminDashboard } from '@/pages/dashboards/SuperAdminDashboard'
 import { JourneysPage } from '@/pages/journeys/JourneysPage'
 import { ImpactLogPage } from '@/pages/impact/ImpactLogPage'
 import { LeaderboardPage } from '@/pages/leaderboard/LeaderboardPage'
+import { LeadershipBoardPage } from '@/pages/leaderboard/LeadershipBoardPage'
 import { ProfilePage } from '@/pages/profile/ProfilePage'
 import { SettingsPage } from '@/pages/settings/SettingsPage'
+import { WeeklyUpdatesPage } from '@/pages/journeys/WeeklyUpdatesPage'
+import { MyCoursesPage } from '@/pages/courses/MyCoursesPage'
+import { PeerConnectPage } from '@/pages/peer/PeerConnectPage'
+import { LeadershipCouncilPage } from '@/pages/leadership/LeadershipCouncilPage'
+import { AnnouncementsPage } from '@/pages/community/AnnouncementsPage'
+import { ReferralRewardsPage } from '@/pages/community/ReferralRewardsPage'
+import { BookClubPage } from '@/pages/community/BookClubPage'
+import { ShamelessCirclePage } from '@/pages/community/ShamelessCirclePage'
 
 // Error pages
 import { NotFoundPage } from '@/pages/errors/NotFoundPage'
@@ -82,7 +93,7 @@ const DashboardRouter = () => {
           <SuperAdminDashboard />
         </ProtectedRoute>
       } />
-      <Route index element={<Navigate to={defaultPath} replace />} />
+      <Route index element={<Navigate to="free" replace />} />
     </Routes>
   )
 }
@@ -92,40 +103,20 @@ export const AppRoutes = () => {
     <BrowserRouter>
       <Routes>
         {/* Public routes */}
-        <Route
-          path="/login"
-          element={
-            <PublicRoute>
-              <LoginPage />
-            </PublicRoute>
-          }
-        />
-        <Route
-          path="/signup"
-          element={
-            <PublicRoute>
-              <SignUpPage />
-            </PublicRoute>
-          }
-        />
-        <Route
-          path="/reset-password"
-          element={
-            <PublicRoute>
-              <ResetPasswordPage />
-            </PublicRoute>
-          }
-        />
-        
+        <Route path="/" element={<HomePage />} />
+        <Route path="/login" element={<AuthLayout><LoginPage /></AuthLayout>} />
+        <Route path="/signup" element={<AuthLayout><SignUpPage /></AuthLayout>} />
+        <Route path="/reset-password" element={<AuthLayout><ResetPasswordPage /></AuthLayout>} />
+
         {/* Onboarding */}
-        <Route path="/onboarding" element={
+        <Route path="/app/onboarding" element={
           <ProtectedRoute>
             <OnboardingPage />
           </ProtectedRoute>
         } />
 
         {/* Protected main app routes */}
-        <Route path="/" element={
+        <Route path="/app" element={
           <ProtectedRoute>
             <MainLayout />
           </ProtectedRoute>
@@ -137,11 +128,20 @@ export const AppRoutes = () => {
           <Route path="journeys" element={<JourneysPage />} />
           <Route path="impact" element={<ImpactLogPage />} />
           <Route path="leaderboard" element={<LeaderboardPage />} />
+          <Route path="leadership-board" element={<LeadershipBoardPage />} />
+          <Route path="weekly-updates" element={<WeeklyUpdatesPage />} />
+          <Route path="courses" element={<MyCoursesPage />} />
+          <Route path="peer-connect" element={<PeerConnectPage />} />
+          <Route path="leadership-council" element={<LeadershipCouncilPage />} />
+          <Route path="announcements" element={<AnnouncementsPage />} />
+          <Route path="referral-rewards" element={<ReferralRewardsPage />} />
+          <Route path="book-club" element={<BookClubPage />} />
+          <Route path="shameless-circle" element={<ShamelessCirclePage />} />
           <Route path="profile" element={<ProfilePage />} />
           <Route path="settings" element={<SettingsPage />} />
 
           {/* Default redirect based on role */}
-          <Route index element={<Navigate to="/dashboard" replace />} />
+          <Route index element={<Navigate to="/app/dashboard/free" replace />} />
         </Route>
 
         {/* Error routes */}
