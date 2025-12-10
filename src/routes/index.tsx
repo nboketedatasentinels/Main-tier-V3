@@ -27,7 +27,6 @@ import { ImpactLogPage } from '@/pages/impact/ImpactLogPage'
 import { LeaderboardPage } from '@/pages/leaderboard/LeaderboardPage'
 import { LeadershipBoardPage } from '@/pages/leaderboard/LeadershipBoardPage'
 import { ProfilePage } from '@/pages/profile/ProfilePage'
-import { SettingsPage } from '@/pages/settings/SettingsPage'
 import { WeeklyUpdatesPage } from '@/pages/journeys/WeeklyUpdatesPage'
 import { MyCoursesPage } from '@/pages/courses/MyCoursesPage'
 import { PeerConnectPage } from '@/pages/peer/PeerConnectPage'
@@ -120,7 +119,6 @@ export const AppRoutes = () => {
           <Route path="book-club" element={<BookClubPage />} />
           <Route path="shameless-circle" element={<ShamelessCirclePage />} />
           <Route path="profile" element={<ProfilePage />} />
-          <Route path="settings" element={<SettingsPage />} />
 
           {/* Default redirect based on role */}
           <Route index element={<Navigate to="/app/dashboard/free" replace />} />
