@@ -40,7 +40,6 @@ import {
   Search,
   Bell,
   LogOut,
-  User,
 } from 'lucide-react'
 import { useAuth } from '@/hooks/useAuth'
 import { UserRole } from '@/types'
@@ -87,27 +86,27 @@ export const MainLayout: React.FC = () => {
       label: 'MY JOURNEY',
       items: [
         { label: 'Dashboard', path: getDashboardPath(), icon: Home },
-        { label: 'Weekly Updates', path: '/weekly-updates', icon: ClipboardList },
-        { label: 'Leadership Board', path: '/leadership-board', icon: Trophy },
-        { label: 'My Courses', path: '/courses', icon: BookOpen },
-        { label: 'Peer Connect', path: '/peer-connect', icon: Users },
-        { label: 'Impact Activities', path: '/impact', icon: Target },
-        { label: 'Leadership Council', path: '/leadership-council', icon: Gavel },
+        { label: 'Weekly Updates', path: '/app/weekly-updates', icon: ClipboardList },
+        { label: 'Leadership Board', path: '/app/leadership-board', icon: Trophy },
+        { label: 'My Courses', path: '/app/courses', icon: BookOpen },
+        { label: 'Peer Connect', path: '/app/peer-connect', icon: Users },
+        { label: 'Impact Activities', path: '/app/impact', icon: Target },
+        { label: 'Leadership Council', path: '/app/leadership-council', icon: Gavel },
       ],
     },
     {
       label: 'COMMUNITY',
       items: [
-        { label: 'Announcements', path: '/announcements', icon: Megaphone },
-        { label: 'Referral Rewards', path: '/referral-rewards', icon: Gift },
-        { label: 'Global Book Club', path: '/book-club', icon: BookMarked },
-        { label: 'Shameless Circle', path: '/shameless-circle', icon: Sparkles },
+        { label: 'Announcements', path: '/app/announcements', icon: Megaphone },
+        { label: 'Referral Rewards', path: '/app/referral-rewards', icon: Gift },
+        { label: 'Global Book Club', path: '/app/book-club', icon: BookMarked },
+        { label: 'Shameless Circle', path: '/app/shameless-circle', icon: Sparkles },
       ],
     },
   ]
 
   const NavContent = () => (
-    <VStack align="stretch" spacing={4} pt={4}>
+    <VStack align="stretch" spacing={5} pt={4}>
       {navigationSections.map(section => (
         <Box key={section.label}>
           <Text mb={2} {...sectionLabelStyles}>
@@ -115,10 +114,10 @@ export const MainLayout: React.FC = () => {
           </Text>
           <VStack align="stretch" spacing={1}>
             {section.items.map(item => {
-              const isActive =
-                item.path === '/dashboard/free'
-                  ? location.pathname.startsWith('/dashboard')
-                  : location.pathname.startsWith(item.path)
+              const isDashboardItem = item.path.startsWith('/app/dashboard')
+              const isActive = isDashboardItem
+                ? location.pathname.startsWith('/app/dashboard')
+                : location.pathname.startsWith(item.path)
 
               return (
                 <Button
@@ -151,25 +150,25 @@ export const MainLayout: React.FC = () => {
       {/* Desktop Sidebar */}
       <Box
         w={{ base: '0', md: '260px' }}
-        bg="brand.primaryMuted"
+        bg="brand.sidebar"
         borderRight="1px solid"
         borderColor="brand.border"
         p={6}
         display={{ base: 'none', md: 'block' }}
       >
         <VStack align="stretch" h="full" spacing={8}>
-          <HStack spacing={3}>
-            <Box boxSize="38px" borderRadius="full" bg="brand.primary" display="grid" placeItems="center">
-              <Text fontWeight="bold" color="white">
+          <HStack spacing={3} align="center">
+            <Box boxSize="36px" borderRadius="full" bg="white" display="grid" placeItems="center" boxShadow="sm">
+              <Text fontWeight="bold" color="brand.primary">
                 T4
               </Text>
             </Box>
             <Box>
-              <Text fontSize="md" fontWeight="bold" color="brand.text">
-                Transformation
+              <Text fontSize="sm" fontWeight="bold" color="brand.text">
+                Tier Platform
               </Text>
               <Text fontSize="xs" color="brand.subtleText">
-                Tier Platform
+                Transformation Journey
               </Text>
             </Box>
           </HStack>
@@ -179,26 +178,18 @@ export const MainLayout: React.FC = () => {
           </Box>
 
           {/* User Info */}
-          <VStack align="stretch" spacing={2}>
-            <Box
-              p={3}
-              bg="rgba(53, 14, 111, 0.5)"
-              borderRadius="lg"
-              border="1px solid"
-              borderColor="rgba(234, 177, 48, 0.2)"
-            >
-              <HStack>
-                <Avatar size="sm" name={profile?.fullName} src={profile?.avatarUrl} />
-                <Box flex="1">
-                  <Text fontSize="sm" fontWeight="semibold" color="brand.softGold">
-                    {profile?.fullName}
-                  </Text>
-                  <Text fontSize="xs" color="brand.gold">
-                    {profile?.totalPoints || 0} points
-                  </Text>
-                </Box>
-              </HStack>
-            </Box>
+          <VStack align="stretch" spacing={3}>
+            <HStack align="center" spacing={3}>
+              <Avatar size="sm" name={profile?.fullName} src={profile?.avatarUrl} bg="brand.primary" color="white" />
+              <Box flex="1">
+                <Text fontSize="sm" fontWeight="semibold" color="brand.text">
+                  {profile?.fullName || 'Your name'}
+                </Text>
+                <Text fontSize="xs" color="brand.subtleText">
+                  {profile?.totalPoints ? `${profile.totalPoints} points` : 'Logged in'}
+                </Text>
+              </Box>
+            </HStack>
             <Button
               leftIcon={<LogOut size={16} />}
               variant="ghost"
@@ -247,7 +238,7 @@ export const MainLayout: React.FC = () => {
             />
           </InputGroup>
 
-          <HStack spacing={3} ml={{ base: 0, md: 4 }}>
+          <HStack spacing={3} ml={{ base: 0, md: 4 }} align="center">
             <IconButton
               aria-label="Notifications"
               icon={<Bell size={18} />}
@@ -258,8 +249,15 @@ export const MainLayout: React.FC = () => {
               _hover={{ bg: 'brand.primaryMuted' }}
             />
             <Menu>
-              <MenuButton as={IconButton} icon={<User size={20} />} variant="ghost" />
-              <MenuList bg="brand.deepPlum" borderColor="brand.gold">
+              <MenuButton as={Button} variant="ghost" px={0} _hover={{ bg: 'transparent' }}>
+                <HStack spacing={2}>
+                  <Avatar size="sm" name={profile?.fullName} src={profile?.avatarUrl} bg="brand.primary" color="white" />
+                  <Text display={{ base: 'none', md: 'block' }} fontSize="sm" color="brand.text">
+                    {profile?.fullName || "User's name"}
+                  </Text>
+                </HStack>
+              </MenuButton>
+              <MenuList bg="white" borderColor="brand.border">
                 <MenuItem onClick={() => navigate('/app/profile')}>Profile</MenuItem>
                 <MenuDivider />
                 <MenuItem onClick={handleSignOut}>Sign Out</MenuItem>
