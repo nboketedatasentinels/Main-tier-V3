@@ -1,6 +1,9 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
-import { ProtectedRoute } from '@/components/ProtectedRoute'
+import { Center, Spinner } from '@chakra-ui/react'
+import { ProtectedRoute, PublicRoute } from '@/components/ProtectedRoute'
 import { UserRole } from '@/types'
+import { useAuth } from '@/hooks/useAuth'
+import { getDashboardRouteForRole } from '@/utils/auth'
 
 // Layout imports
 import { MainLayout } from '@/layouts/MainLayout'
@@ -43,6 +46,21 @@ import { UnauthorizedPage } from '@/pages/errors/UnauthorizedPage'
 
 // Dashboard router component
 const DashboardRouter = () => {
+  const { profile, loading } = useAuth()
+
+  if (loading) {
+    return (
+      <Center h="100vh" bg="brand.deepPlum">
+        <Spinner size="xl" color="brand.gold" thickness="4px" />
+      </Center>
+    )
+  }
+
+  const defaultPath = getDashboardRouteForRole(profile?.role ?? UserRole.FREE_USER).replace(
+    '/dashboard',
+    ''
+  )
+
   return (
     <Routes>
       <Route path="free" element={

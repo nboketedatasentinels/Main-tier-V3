@@ -1,0 +1,676 @@
+import React, { useEffect, useRef, useState } from 'react'
+import { ArrowRight, Eye, EyeOff } from 'lucide-react'
+import { motion } from 'framer-motion'
+
+export type Mode = 'signin' | 'signup' | 'reset'
+
+type AuthFormValues = {
+  email: string
+  password?: string
+  confirmPassword?: string
+  fullName?: string
+}
+
+const cn = (...classes: string[]) => classes.filter(Boolean).join(' ')
+
+interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
+  children: React.ReactNode
+  variant?: 'default' | 'outline'
+  className?: string
+  loading?: boolean
+}
+
+const Button = ({
+  children,
+  variant = 'default',
+  className = '',
+  loading = false,
+  ...props
+}: ButtonProps) => {
+  const baseStyles =
+    'inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#f4540c] focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50'
+
+  const variantStyles = {
+    default:
+      'bg-gradient-to-r from-[#f4540c] via-[#eab130] to-[#f9db59] text-[#27062e] hover:from-[#f4540c] hover:via-[#eab130] hover:to-[#f9db59]',
+    outline:
+      'border border-input bg-background hover:bg-accent hover:text-accent-foreground',
+  }
+
+  return (
+    <button
+      className={cn(baseStyles, variantStyles[variant], className)}
+      disabled={loading || props.disabled}
+      {...props}
+    >
+      {loading ? (
+        <span className="flex items-center gap-2">
+          <span className="h-4 w-4 animate-spin rounded-full border-2 border-white/60 border-t-white" />
+          <span>Loading...</span>
+        </span>
+      ) : (
+        children
+      )}
+    </button>
+  )
+}
+
+interface InputProps extends React.InputHTMLAttributes<HTMLInputElement> {
+  className?: string
+  error?: string
+}
+
+const Input = ({ className = '', error, ...props }: InputProps) => {
+  return (
+    <div className="w-full">
+      <input
+        className={cn(
+          'flex h-10 w-full rounded-md border bg-background px-3 py-2 text-sm text-gray-900 ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-gray-400 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#f4540c] focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50',
+          error ? 'border-red-400 focus-visible:ring-red-400' : 'border-gray-200',
+          className
+        )}
+        {...props}
+      />
+      {error && <p className="mt-1 text-xs text-red-500">{error}</p>}
+    </div>
+  )
+}
+
+type RoutePoint = {
+  x: number
+  y: number
+  delay: number
+}
+
+const ROUTES: { start: RoutePoint; end: RoutePoint; color: string }[] = [
+  {
+    start: { x: 100, y: 150, delay: 0 },
+    end: { x: 200, y: 80, delay: 2 },
+    color: '#eab130',
+  },
+  {
+    start: { x: 200, y: 80, delay: 2 },
+    end: { x: 260, y: 120, delay: 4 },
+    color: '#eab130',
+  },
+  {
+    start: { x: 50, y: 50, delay: 1 },
+    end: { x: 150, y: 180, delay: 3 },
+    color: '#f4540c',
+  },
+  {
+    start: { x: 280, y: 60, delay: 0.5 },
+    end: { x: 180, y: 180, delay: 2.5 },
+    color: '#f9db59',
+  },
+]
+
+const DotMap = () => {
+  const canvasRef = useRef<HTMLCanvasElement>(null)
+  const [dimensions, setDimensions] = useState({ width: 0, height: 0 })
+
+  const generateDots = (width: number, height: number) => {
+    const dots: { x: number; y: number; radius: number; opacity: number }[] = []
+    const gap = 12
+    const dotRadius = 1
+
+    for (let x = 0; x < width; x += gap) {
+      for (let y = 0; y < height; y += gap) {
+        const isInMapShape =
+          ((x < width * 0.25 && x > width * 0.05) &&
+            (y < height * 0.4 && y > height * 0.1)) ||
+          ((x < width * 0.25 && x > width * 0.15) &&
+            (y < height * 0.8 && y > height * 0.4)) ||
+          ((x < width * 0.45 && x > width * 0.3) &&
+            (y < height * 0.35 && y > height * 0.15)) ||
+          ((x < width * 0.5 && x > width * 0.35) &&
+            (y < height * 0.65 && y > height * 0.35)) ||
+          ((x < width * 0.7 && x > width * 0.45) &&
+            (y < height * 0.5 && y > height * 0.1)) ||
+          ((x < width * 0.8 && x > width * 0.65) &&
+            (y < height * 0.8 && y > height * 0.6))
+
+        if (isInMapShape && Math.random() > 0.3) {
+          dots.push({
+            x,
+            y,
+            radius: dotRadius,
+            opacity: Math.random() * 0.5 + 0.2,
+          })
+        }
+      }
+    }
+
+    return dots
+  }
+
+  useEffect(() => {
+    const canvas = canvasRef.current
+    if (!canvas) return
+
+    const resizeObserver = new ResizeObserver((entries) => {
+      for (const entry of entries) {
+        const { width, height } = entry.contentRect
+        setDimensions({ width, height })
+      }
+    })
+
+    resizeObserver.observe(canvas)
+    return () => resizeObserver.disconnect()
+  }, [])
+
+  useEffect(() => {
+    if (!dimensions.width || !dimensions.height) return
+
+    const canvas = canvasRef.current
+    if (!canvas) return
+
+    const context = canvas.getContext('2d')
+    if (!context) return
+
+    const dpr = window.devicePixelRatio || 1
+    canvas.width = dimensions.width * dpr
+    canvas.height = dimensions.height * dpr
+    context.setTransform(dpr, 0, 0, dpr, 0, 0)
+
+    const ctx = context
+    const dots = generateDots(dimensions.width, dimensions.height)
+    let animationFrameId: number
+    let startTime = Date.now()
+
+    function drawDots() {
+      ctx.clearRect(0, 0, dimensions.width, dimensions.height)
+      dots.forEach((dot) => {
+        ctx.beginPath()
+        ctx.arc(dot.x, dot.y, dot.radius, 0, Math.PI * 2)
+        ctx.fillStyle = `rgba(234, 177, 48, ${dot.opacity})`
+        ctx.fill()
+      })
+    }
+
+    function drawRoutes() {
+      const currentTime = (Date.now() - startTime) / 1000
+
+      ROUTES.forEach((route) => {
+        const elapsed = currentTime - route.start.delay
+        if (elapsed <= 0) return
+
+        const duration = 3
+        const progress = Math.min(elapsed / duration, 1)
+
+        const x = route.start.x + (route.end.x - route.start.x) * progress
+        const y = route.start.y + (route.end.y - route.start.y) * progress
+
+        ctx.beginPath()
+        ctx.moveTo(route.start.x, route.start.y)
+        ctx.lineTo(x, y)
+        ctx.strokeStyle = route.color
+        ctx.lineWidth = 1.5
+        ctx.stroke()
+
+        ctx.beginPath()
+        ctx.arc(route.start.x, route.start.y, 3, 0, Math.PI * 2)
+        ctx.fillStyle = route.color
+        ctx.fill()
+
+        ctx.beginPath()
+        ctx.arc(x, y, 3, 0, Math.PI * 2)
+        ctx.fillStyle = '#f9db59'
+        ctx.fill()
+
+        ctx.beginPath()
+        ctx.arc(x, y, 6, 0, Math.PI * 2)
+        ctx.fillStyle = 'rgba(249, 219, 89, 0.4)'
+        ctx.fill()
+
+        if (progress === 1) {
+          ctx.beginPath()
+          ctx.arc(route.end.x, route.end.y, 3, 0, Math.PI * 2)
+          ctx.fillStyle = route.color
+          ctx.fill()
+        }
+      })
+    }
+
+    function animate() {
+      drawDots()
+      drawRoutes()
+
+      const currentTime = (Date.now() - startTime) / 1000
+      if (currentTime > 15) {
+        startTime = Date.now()
+      }
+
+      animationFrameId = requestAnimationFrame(animate)
+    }
+
+    animate()
+    return () => cancelAnimationFrame(animationFrameId)
+  }, [dimensions])
+
+  return (
+    <div className="relative w-full h-full overflow-hidden">
+      <canvas ref={canvasRef} className="absolute inset-0 w-full h-full" />
+    </div>
+  )
+}
+
+interface AuthCardProps {
+  mode?: Mode
+  loading?: boolean
+  serverError?: string | null
+  onSubmit?: (values: AuthFormValues) => Promise<{ error?: string } | void> | { error?: string } | void
+  onGoogleClick?: () => Promise<{ error?: string } | void> | { error?: string } | void
+  onNavigateToReset?: () => void
+  onNavigateToSignUp?: () => void
+  onNavigateToSignIn?: () => void
+  successMessage?: string | null
+}
+
+export const T4LAuthCard: React.FC<AuthCardProps> = ({
+  mode = 'signin',
+  loading = false,
+  serverError,
+  onSubmit,
+  onGoogleClick,
+  onNavigateToReset,
+  onNavigateToSignUp,
+  onNavigateToSignIn,
+  successMessage,
+}) => {
+  const [isPasswordVisible, setIsPasswordVisible] = useState(false)
+  const [email, setEmail] = useState('')
+  const [fullName, setFullName] = useState('')
+  const [password, setPassword] = useState('')
+  const [confirmPassword, setConfirmPassword] = useState('')
+  const [isHovered, setIsHovered] = useState(false)
+  const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({})
+  const [formError, setFormError] = useState<string | null>(null)
+
+  const isSignIn = mode === 'signin'
+  const isReset = mode === 'reset'
+
+  const validate = () => {
+    const errors: Record<string, string> = {}
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+
+    if (!emailRegex.test(email)) {
+      errors.email = 'Please enter a valid email address'
+    }
+
+    if (!isReset) {
+      if (!password || password.length < 6) {
+        errors.password = 'Password must be at least 6 characters'
+      }
+    }
+
+    if (!isSignIn && !isReset) {
+      if (!fullName.trim()) {
+        errors.fullName = 'Full name is required'
+      }
+      if (confirmPassword !== password) {
+        errors.confirmPassword = 'Passwords do not match'
+      }
+    }
+
+    setFieldErrors(errors)
+    return errors
+  }
+
+  const handleSubmit = async (event: React.FormEvent) => {
+    event.preventDefault()
+    setFormError(null)
+
+    const errors = validate()
+    if (Object.keys(errors).length > 0) return
+
+    const payload: AuthFormValues = {
+      email,
+      password,
+      confirmPassword,
+      fullName,
+    }
+
+    const result = await onSubmit?.(payload)
+    if (result && 'error' in result && result.error) {
+      setFormError(result.error)
+    }
+  }
+
+  const handleGoogleClick = async () => {
+    setFormError(null)
+    const result = await onGoogleClick?.()
+    if (result && 'error' in result && result.error) {
+      setFormError(result.error)
+    }
+  }
+
+  const headingCopy = isReset
+    ? 'Reset your password'
+    : isSignIn
+      ? 'Welcome back'
+      : 'Create your account'
+
+  const descriptionCopy = isReset
+    ? 'Enter your email and we will send you a reset link.'
+    : isSignIn
+      ? 'Sign in to continue your leadership journey.'
+      : 'Start your transformation journey with T4L.'
+
+  return (
+    <div className="flex w-full h-full items-center justify-center">
+      <motion.div
+        initial={{ opacity: 0, scale: 0.97 }}
+        animate={{ opacity: 1, scale: 1 }}
+        transition={{ duration: 0.5 }}
+        className="w-full max-w-4xl overflow-hidden rounded-2xl flex flex-col md:flex-row bg-white shadow-xl min-h-[540px] md:min-h-[600px] lg:min-h-[660px]"
+      >
+        <div className="hidden md:flex md:flex-1 relative overflow-hidden border-r border-gray-100 min-h-[320px] lg:min-h-[420px]">
+          <div className="absolute inset-0 bg-gradient-to-br from-[#27062e] via-[#350e6f] to-[#eab130]">
+            <DotMap />
+
+            <div className="absolute inset-0 flex flex-col items-center justify-center p-8 z-10">
+              <motion.div
+                initial={{ opacity: 0, y: -20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.6, duration: 0.5 }}
+                className="mb-6"
+              >
+                <div className="h-12 w-12 rounded-full bg-gradient-to-br from-[#f4540c] to-[#eab130] flex items-center justify-center shadow-lg shadow-black/30">
+                  <ArrowRight className="text-[#27062e] h-6 w-6" />
+                </div>
+              </motion.div>
+
+              <motion.h2
+                initial={{ opacity: 0, y: -20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.7, duration: 0.5 }}
+                className="text-3xl font-bold mb-2 text-center text-transparent bg-clip-text bg-gradient-to-r from-[#f9db59] via-white to-[#eab130]"
+              >
+                Transformation 4 Leaders
+              </motion.h2>
+
+              <motion.p
+                initial={{ opacity: 0, y: -20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.8, duration: 0.5 }}
+                className="text-sm text-center text-gray-100/80 max-w-xs"
+              >
+                {isReset
+                  ? 'We will send you a secure link to reset your password.'
+                  : 'Sign in to access your leadership dashboard, track impact, and continue your transformation journey.'}
+              </motion.p>
+            </div>
+          </div>
+        </div>
+
+        <div className="flex-1 w-full p-8 md:p-10 flex flex-col justify-center bg-white min-h-[320px]">
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.5 }}
+          >
+            <h1 className="text-2xl md:text-3xl font-bold mb-1 text-gray-900">{headingCopy}</h1>
+            <p className="text-gray-500 mb-4">{descriptionCopy}</p>
+
+            {successMessage && (
+              <div className="mb-4 rounded-lg border border-green-100 bg-green-50 px-4 py-3 text-sm text-green-700">
+                {successMessage}
+              </div>
+            )}
+
+            {(serverError || formError) && (
+              <div className="mb-4 rounded-lg border border-red-100 bg-red-50 px-4 py-3 text-sm text-red-700">
+                {serverError || formError}
+              </div>
+            )}
+
+            {!isReset && (
+              <div className="mb-6">
+                <button
+                  className="w-full flex items-center justify-center gap-2 bg-gray-50 border border-gray-200 rounded-lg p-3 hover:bg-gray-100 transition-all duration-300 text-gray-700 shadow-sm"
+                  type="button"
+                  onClick={handleGoogleClick}
+                  disabled={loading}
+                >
+                  <svg className="h-5 w-5" viewBox="0 0 24 24">
+                    <path
+                      fill="currentColor"
+                      d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"
+                      fillOpacity=".54"
+                    />
+                    <path
+                      fill="#4285F4"
+                      d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"
+                    />
+                    <path
+                      fill="#34A853"
+                      d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"
+                    />
+                    <path
+                      fill="#FBBC05"
+                      d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"
+                    />
+                    <path fill="#EA4335" d="M1 1h22v22H1z" fillOpacity="0" />
+                  </svg>
+                  <span>
+                    {isSignIn ? 'Sign in with Google' : 'Sign up with Google'}
+                  </span>
+                </button>
+              </div>
+            )}
+
+            {!isReset && (
+              <div className="relative my-6">
+                <div className="absolute inset-0 flex items-center">
+                  <div className="w-full border-t border-gray-200" />
+                </div>
+                <div className="relative flex justify-center text-sm">
+                  <span className="px-2 bg-white text-gray-500">or</span>
+                </div>
+              </div>
+            )}
+
+            <form className="space-y-5" onSubmit={handleSubmit}>
+              {!isSignIn && !isReset && (
+                <div>
+                  <label
+                    htmlFor="fullName"
+                    className="block text-sm font-medium text-gray-700 mb-1"
+                  >
+                    Full name <span className="text-[#f4540c]">*</span>
+                  </label>
+                  <Input
+                    id="fullName"
+                    type="text"
+                    value={fullName}
+                    onChange={(e) => setFullName(e.target.value)}
+                    placeholder="Enter your full name"
+                    required
+                    error={fieldErrors.fullName}
+                    className="bg-gray-50 placeholder:text-gray-400 text-gray-900"
+                    disabled={loading}
+                  />
+                </div>
+              )}
+
+              <div>
+                <label
+                  htmlFor="email"
+                  className="block text-sm font-medium text-gray-700 mb-1"
+                >
+                  Email <span className="text-[#f4540c]">*</span>
+                </label>
+                <Input
+                  id="email"
+                  type="email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  placeholder="Enter your email address"
+                  required
+                  error={fieldErrors.email}
+                  className="bg-gray-50 placeholder:text-gray-400 text-gray-900"
+                  disabled={loading}
+                />
+              </div>
+
+              {!isReset && (
+                <div>
+                  <label
+                    htmlFor="password"
+                    className="block text-sm font-medium text-gray-700 mb-1"
+                  >
+                    Password <span className="text-[#f4540c]">*</span>
+                  </label>
+                  <div className="relative">
+                    <Input
+                      id="password"
+                      type={isPasswordVisible ? 'text' : 'password'}
+                      value={password}
+                      onChange={(e) => setPassword(e.target.value)}
+                      placeholder="Enter your password"
+                      required
+                      error={fieldErrors.password}
+                      className="bg-gray-50 placeholder:text-gray-400 text-gray-900 w-full pr-10"
+                      disabled={loading}
+                    />
+                    <button
+                      type="button"
+                      className="absolute inset-y-0 right-0 flex items-center pr-3 text-gray-500 hover:text-gray-700"
+                      onClick={() => setIsPasswordVisible(!isPasswordVisible)}
+                      aria-label={isPasswordVisible ? 'Hide password' : 'Show password'}
+                      disabled={loading}
+                    >
+                      {isPasswordVisible ? <EyeOff size={18} /> : <Eye size={18} />}
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {!isSignIn && !isReset && (
+                <div>
+                  <label
+                    htmlFor="confirmPassword"
+                    className="block text-sm font-medium text-gray-700 mb-1"
+                  >
+                    Confirm password <span className="text-[#f4540c]">*</span>
+                  </label>
+                  <Input
+                    id="confirmPassword"
+                    type="password"
+                    value={confirmPassword}
+                    onChange={(e) => setConfirmPassword(e.target.value)}
+                    placeholder="Confirm your password"
+                    required
+                    error={fieldErrors.confirmPassword}
+                    className="bg-gray-50 placeholder:text-gray-400 text-gray-900"
+                    disabled={loading}
+                  />
+                </div>
+              )}
+
+              {!isSignIn && !isReset && (
+                <p className="text-xs text-gray-500">
+                  By creating an account you agree to our Terms of Use and Privacy Policy.
+                </p>
+              )}
+
+              <motion.div
+                whileHover={{ scale: 1.01 }}
+                whileTap={{ scale: 0.98 }}
+                onHoverStart={() => setIsHovered(true)}
+                onHoverEnd={() => setIsHovered(false)}
+                className="pt-2"
+              >
+                <Button
+                  type="submit"
+                  className={cn(
+                    'w-full relative overflow-hidden py-2 rounded-lg transition-all duration-300',
+                    isHovered ? 'shadow-lg shadow-amber-200/60' : ''
+                  )}
+                  loading={loading}
+                >
+                  <span className="flex items-center justify-center">
+                    {isReset
+                      ? 'Send reset link'
+                      : isSignIn
+                        ? 'Sign in'
+                        : 'Create account'}
+                    {!isReset && <ArrowRight className="ml-2 h-4 w-4" />}
+                  </span>
+                  {isHovered && (
+                    <motion.span
+                      initial={{ left: '-100%' }}
+                      animate={{ left: '100%' }}
+                      transition={{ duration: 1, ease: 'easeInOut' }}
+                      className="absolute top-0 bottom-0 left-0 w-20 bg-gradient-to-r from-transparent via-white/40 to-transparent"
+                      style={{ filter: 'blur(8px)' }}
+                    />
+                  )}
+                </Button>
+              </motion.div>
+
+              {isSignIn && (
+                <div className="flex items-center justify-between text-sm mt-4">
+                  <button
+                    type="button"
+                    onClick={onNavigateToReset}
+                    className="text-[#350e6f] hover:text-[#f4540c] transition-colors"
+                  >
+                    Forgot password?
+                  </button>
+                  <button
+                    type="button"
+                    onClick={onNavigateToSignUp}
+                    className="text-gray-500 hover:text-gray-700 transition-colors"
+                  >
+                    New here? Create an account
+                  </button>
+                </div>
+              )}
+
+              {!isSignIn && !isReset && (
+                <div className="text-center mt-4 text-sm">
+                  <span className="text-gray-500">Already have an account? </span>
+                  <button
+                    type="button"
+                    onClick={onNavigateToSignIn}
+                    className="text-[#350e6f] hover:text-[#f4540c] transition-colors"
+                  >
+                    Sign in
+                  </button>
+                </div>
+              )}
+
+              {isReset && (
+                <div className="text-center mt-4 text-sm">
+                  <button
+                    type="button"
+                    onClick={onNavigateToSignIn}
+                    className="text-[#350e6f] hover:text-[#f4540c] transition-colors"
+                  >
+                    Back to sign in
+                  </button>
+                </div>
+              )}
+            </form>
+          </motion.div>
+        </div>
+      </motion.div>
+    </div>
+  )
+}
+
+interface AuthScreenProps extends AuthCardProps {
+  mode?: Mode
+}
+
+const T4LAuthScreen: React.FC<AuthScreenProps> = ({ mode = 'signin', ...props }) => {
+  return (
+    <div className="min-h-screen w-full flex items-center justify-center bg-gradient-to-br from-[#27062e] via-[#350e6f] to-[#27062e] p-4">
+      <T4LAuthCard mode={mode} {...props} />
+    </div>
+  )
+}
+
+export default T4LAuthScreen
