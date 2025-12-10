@@ -25,8 +25,17 @@ import { SuperAdminDashboard } from '@/pages/dashboards/SuperAdminDashboard'
 import { JourneysPage } from '@/pages/journeys/JourneysPage'
 import { ImpactLogPage } from '@/pages/impact/ImpactLogPage'
 import { LeaderboardPage } from '@/pages/leaderboard/LeaderboardPage'
+import { LeadershipBoardPage } from '@/pages/leaderboard/LeadershipBoardPage'
 import { ProfilePage } from '@/pages/profile/ProfilePage'
 import { SettingsPage } from '@/pages/settings/SettingsPage'
+import { WeeklyUpdatesPage } from '@/pages/journeys/WeeklyUpdatesPage'
+import { MyCoursesPage } from '@/pages/courses/MyCoursesPage'
+import { PeerConnectPage } from '@/pages/peer/PeerConnectPage'
+import { LeadershipCouncilPage } from '@/pages/leadership/LeadershipCouncilPage'
+import { AnnouncementsPage } from '@/pages/community/AnnouncementsPage'
+import { ReferralRewardsPage } from '@/pages/community/ReferralRewardsPage'
+import { BookClubPage } from '@/pages/community/BookClubPage'
+import { ShamelessCirclePage } from '@/pages/community/ShamelessCirclePage'
 
 // Error pages
 import { NotFoundPage } from '@/pages/errors/NotFoundPage'
@@ -101,6 +110,15 @@ export const AppRoutes = () => {
           <Route path="journeys" element={<JourneysPage />} />
           <Route path="impact" element={<ImpactLogPage />} />
           <Route path="leaderboard" element={<LeaderboardPage />} />
+          <Route path="leadership-board" element={<LeadershipBoardPage />} />
+          <Route path="weekly-updates" element={<WeeklyUpdatesPage />} />
+          <Route path="courses" element={<MyCoursesPage />} />
+          <Route path="peer-connect" element={<PeerConnectPage />} />
+          <Route path="leadership-council" element={<LeadershipCouncilPage />} />
+          <Route path="announcements" element={<AnnouncementsPage />} />
+          <Route path="referral-rewards" element={<ReferralRewardsPage />} />
+          <Route path="book-club" element={<BookClubPage />} />
+          <Route path="shameless-circle" element={<ShamelessCirclePage />} />
           <Route path="profile" element={<ProfilePage />} />
           <Route path="settings" element={<SettingsPage />} />
 
