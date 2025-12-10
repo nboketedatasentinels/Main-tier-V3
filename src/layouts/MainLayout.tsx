@@ -1,5 +1,5 @@
 import React from 'react'
-import { Outlet, useNavigate } from 'react-router-dom'
+import { Outlet, useLocation, useNavigate } from 'react-router-dom'
 import {
   Box,
   Flex,
@@ -20,23 +20,43 @@ import {
   DrawerContent,
   DrawerCloseButton,
   DrawerBody,
+  InputGroup,
+  InputLeftElement,
+  Input,
+  Divider,
+  Badge,
 } from '@chakra-ui/react'
-import { 
+import {
   Menu as MenuIcon,
   Home,
-  TrendingUp,
   Target,
+  Trophy,
+  BookOpen,
   Users,
-  Settings,
+  ClipboardList,
+  Gavel,
+  Megaphone,
+  Gift,
+  BookMarked,
+  Sparkles,
+  Search,
+  Bell,
   LogOut,
-  User,
 } from 'lucide-react'
 import { useAuth } from '@/hooks/useAuth'
 import { UserRole } from '@/types'
 
+const sectionLabelStyles = {
+  fontSize: 'xs',
+  fontWeight: 'semibold',
+  color: 'brand.subtleText',
+  letterSpacing: '0.08em',
+}
+
 export const MainLayout: React.FC = () => {
   const { profile, signOut } = useAuth()
   const navigate = useNavigate()
+  const location = useLocation()
   const { isOpen, onOpen, onClose } = useDisclosure()
 
   const handleSignOut = async () => {
@@ -63,134 +83,197 @@ export const MainLayout: React.FC = () => {
     }
   }
 
-  const navigationItems = [
-    { label: 'Dashboard', path: getDashboardPath(), icon: Home },
-    { label: 'Journeys', path: '/journeys', icon: Target },
-    { label: 'Impact Log', path: '/impact', icon: TrendingUp },
-    { label: 'Leaderboard', path: '/leaderboard', icon: Users },
+  const navigationSections = [
+    {
+      label: 'MY JOURNEY',
+      items: [
+        { label: 'Dashboard', path: getDashboardPath(), icon: Home },
+        { label: 'Weekly Updates', path: '/weekly-updates', icon: ClipboardList },
+        { label: 'Leadership Board', path: '/leadership-board', icon: Trophy },
+        { label: 'My Courses', path: '/courses', icon: BookOpen },
+        { label: 'Peer Connect', path: '/peer-connect', icon: Users },
+        { label: 'Impact Activities', path: '/impact', icon: Target },
+        { label: 'Leadership Council', path: '/leadership-council', icon: Gavel },
+      ],
+    },
+    {
+      label: 'COMMUNITY',
+      items: [
+        { label: 'Announcements', path: '/announcements', icon: Megaphone },
+        { label: 'Referral Rewards', path: '/referral-rewards', icon: Gift },
+        { label: 'Global Book Club', path: '/book-club', icon: BookMarked },
+        { label: 'Shameless Circle', path: '/shameless-circle', icon: Sparkles },
+      ],
+    },
   ]
 
   const NavContent = () => (
-    <VStack align="stretch" spacing={2}>
-      {navigationItems.map(item => (
-        <Button
-          key={item.path}
-          leftIcon={<item.icon size={20} />}
-          variant="ghost"
-          justifyContent="flex-start"
-          onClick={() => {
-            navigate(item.path)
-            onClose()
-          }}
-          _hover={{ bg: 'rgba(249, 219, 89, 0.1)', color: 'brand.gold' }}
-          color="brand.softGold"
-        >
-          {item.label}
-        </Button>
+    <VStack align="stretch" spacing={4} pt={4}>
+      {navigationSections.map(section => (
+        <Box key={section.label}>
+          <Text mb={2} {...sectionLabelStyles}>
+            {section.label}
+          </Text>
+          <VStack align="stretch" spacing={1}>
+            {section.items.map(item => {
+              const isActive =
+                item.path === '/dashboard/free'
+                  ? location.pathname.startsWith('/dashboard')
+                  : location.pathname.startsWith(item.path)
+
+              return (
+                <Button
+                  key={item.path}
+                  leftIcon={<item.icon size={18} />}
+                  variant="ghost"
+                  justifyContent="flex-start"
+                  onClick={() => {
+                    navigate(item.path)
+                    onClose()
+                  }}
+                  bg={isActive ? 'brand.primaryMuted' : 'transparent'}
+                  color={isActive ? 'brand.text' : 'brand.subtleText'}
+                  _hover={{ bg: 'brand.primaryMuted', color: 'brand.text' }}
+                  height="42px"
+                  fontWeight={isActive ? 'semibold' : 'medium'}
+                >
+                  {item.label}
+                </Button>
+              )
+            })}
+          </VStack>
+        </Box>
       ))}
+      <Divider borderColor="brand.border" pt={2} />
+      <Button
+        leftIcon={<LogOut size={18} />}
+        variant="ghost"
+        justifyContent="flex-start"
+        color="brand.subtleText"
+        onClick={handleSignOut}
+        height="42px"
+        _hover={{ bg: 'brand.primaryMuted', color: 'brand.text' }}
+      >
+        Sign Out
+      </Button>
     </VStack>
   )
 
   return (
-    <Flex h="100vh" bg="brand.deepPlum">
+    <Flex minH="100vh" bg="brand.accent" color="brand.text">
       {/* Desktop Sidebar */}
       <Box
-        w="250px"
-        bg="brand.deepPlum"
+        w={{ base: '0', md: '260px' }}
+        bg="brand.primaryMuted"
         borderRight="1px solid"
-        borderColor="rgba(234, 177, 48, 0.2)"
-        p={4}
+        borderColor="brand.border"
+        p={6}
         display={{ base: 'none', md: 'block' }}
       >
-        <VStack align="stretch" h="full" spacing={6}>
-          {/* Logo */}
-          <Box>
-            <Text fontSize="2xl" fontWeight="bold" color="brand.gold">
-              T4L
-            </Text>
-            <Text fontSize="xs" color="brand.softGold">
-              Transformation 4 Leaders
-            </Text>
-          </Box>
+        <VStack align="stretch" h="full" spacing={8}>
+          <HStack spacing={3}>
+            <Box boxSize="38px" borderRadius="full" bg="brand.primary" display="grid" placeItems="center">
+              <Text fontWeight="bold" color="white">
+                T4
+              </Text>
+            </Box>
+            <Box>
+              <Text fontSize="md" fontWeight="bold" color="brand.text">
+                Transformation
+              </Text>
+              <Text fontSize="xs" color="brand.subtleText">
+                Tier Platform
+              </Text>
+            </Box>
+          </HStack>
 
-          {/* Navigation */}
           <Box flex="1">
             <NavContent />
           </Box>
 
-          {/* User Info */}
-          <VStack align="stretch" spacing={2}>
-            <Box
-              p={3}
-              bg="rgba(53, 14, 111, 0.5)"
-              borderRadius="lg"
-              border="1px solid"
-              borderColor="rgba(234, 177, 48, 0.2)"
-            >
-              <HStack>
-                <Avatar size="sm" name={profile?.fullName} src={profile?.avatarUrl} />
-                <Box flex="1">
-                  <Text fontSize="sm" fontWeight="semibold" color="brand.softGold">
-                    {profile?.fullName}
-                  </Text>
-                  <Text fontSize="xs" color="brand.gold">
-                    {profile?.totalPoints || 0} points
-                  </Text>
-                </Box>
-              </HStack>
-            </Box>
-            <Button
-              leftIcon={<Settings size={16} />}
-              variant="ghost"
-              size="sm"
-              onClick={() => navigate('/settings')}
-            >
-              Settings
-            </Button>
-            <Button
-              leftIcon={<LogOut size={16} />}
-              variant="ghost"
-              size="sm"
-              onClick={handleSignOut}
-              colorScheme="red"
-            >
-              Sign Out
-            </Button>
-          </VStack>
+          <Box p={4} bg="white" borderRadius="lg" border="1px solid" borderColor="brand.border">
+            <HStack spacing={3}>
+              <Avatar size="sm" name={profile?.fullName} src={profile?.avatarUrl} />
+              <Box flex="1">
+                <Text fontSize="sm" fontWeight="semibold">
+                  {profile?.fullName || 'User'}
+                </Text>
+                <Text fontSize="xs" color="brand.subtleText">
+                  {profile?.totalPoints || 0} points
+                </Text>
+              </Box>
+              <Badge variant="subtle">{profile?.role ?? 'Member'}</Badge>
+            </HStack>
+          </Box>
         </VStack>
       </Box>
 
       {/* Main Content */}
       <Flex flex="1" direction="column" overflow="hidden">
-        {/* Mobile Header */}
+        {/* Header */}
         <Flex
-          display={{ base: 'flex', md: 'none' }}
-          p={4}
-          bg="brand.deepPlum"
-          borderBottom="1px solid"
-          borderColor="rgba(234, 177, 48, 0.2)"
           align="center"
           justify="space-between"
+          px={{ base: 4, md: 8 }}
+          py={4}
+          bg="white"
+          borderBottom="1px solid"
+          borderColor="brand.border"
+          gap={3}
         >
-          <Text fontSize="xl" fontWeight="bold" color="brand.gold">
-            T4L
-          </Text>
-          <HStack>
+          <HStack spacing={3} display={{ base: 'flex', md: 'none' }}>
+            <IconButton
+              icon={<MenuIcon size={20} />}
+              variant="ghost"
+              aria-label="Open menu"
+              onClick={onOpen}
+            />
+            <Text fontWeight="bold">T4</Text>
+          </HStack>
+
+          <InputGroup maxW={{ base: '100%', md: '420px' }} flex={1}>
+            <InputLeftElement pointerEvents="none">
+              <Search size={18} color="#6b7392" />
+            </InputLeftElement>
+            <Input
+              placeholder="Search"
+              bg="brand.accent"
+              borderColor="brand.border"
+              _focus={{ borderColor: 'brand.primary', boxShadow: '0 0 0 1px #5d6bff' }}
+            />
+          </InputGroup>
+
+          <HStack spacing={3} ml={{ base: 0, md: 4 }}>
+            <IconButton
+              aria-label="Notifications"
+              icon={<Bell size={18} />}
+              variant="ghost"
+              bg="brand.accent"
+              border="1px solid"
+              borderColor="brand.border"
+              _hover={{ bg: 'brand.primaryMuted' }}
+            />
             <Menu>
-              <MenuButton as={IconButton} icon={<User size={20} />} variant="ghost" />
-              <MenuList bg="brand.deepPlum" borderColor="brand.gold">
+              <MenuButton>
+                <HStack spacing={3}>
+                  <Avatar size="sm" name={profile?.fullName} src={profile?.avatarUrl} />
+                  <Box textAlign="left" display={{ base: 'none', md: 'block' }}>
+                    <Text fontSize="sm" fontWeight="semibold">
+                      {profile?.fullName || "User's name"}
+                    </Text>
+                    <Text fontSize="xs" color="brand.subtleText">
+                      Tier Platform
+                    </Text>
+                  </Box>
+                </HStack>
+              </MenuButton>
+              <MenuList>
                 <MenuItem onClick={() => navigate('/profile')}>Profile</MenuItem>
                 <MenuItem onClick={() => navigate('/settings')}>Settings</MenuItem>
                 <MenuDivider />
                 <MenuItem onClick={handleSignOut}>Sign Out</MenuItem>
               </MenuList>
             </Menu>
-            <IconButton
-              icon={<MenuIcon size={20} />}
-              variant="ghost"
-              onClick={onOpen}
-              aria-label="Open menu"
-            />
           </HStack>
         </Flex>
 
@@ -203,12 +286,12 @@ export const MainLayout: React.FC = () => {
       {/* Mobile Drawer */}
       <Drawer isOpen={isOpen} placement="left" onClose={onClose}>
         <DrawerOverlay />
-        <DrawerContent bg="brand.deepPlum">
-          <DrawerCloseButton color="brand.softGold" />
+        <DrawerContent bg="white">
+          <DrawerCloseButton />
           <DrawerBody pt={12}>
             <VStack align="stretch" spacing={4}>
-              <Text fontSize="2xl" fontWeight="bold" color="brand.gold" mb={4}>
-                T4L Menu
+              <Text fontSize="lg" fontWeight="bold" color="brand.text" mb={2}>
+                T4 Menu
               </Text>
               <NavContent />
             </VStack>
