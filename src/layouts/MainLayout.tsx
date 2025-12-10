@@ -67,19 +67,19 @@ export const MainLayout: React.FC = () => {
   const getDashboardPath = () => {
     switch (profile?.role) {
       case UserRole.FREE_USER:
-        return '/dashboard/free'
+        return '/app/dashboard/free'
       case UserRole.PAID_MEMBER:
-        return '/dashboard/member'
+        return '/app/dashboard/member'
       case UserRole.MENTOR:
-        return '/dashboard/mentor'
+        return '/app/dashboard/mentor'
       case UserRole.AMBASSADOR:
-        return '/dashboard/ambassador'
+        return '/app/dashboard/ambassador'
       case UserRole.COMPANY_ADMIN:
-        return '/dashboard/company-admin'
+        return '/app/dashboard/company-admin'
       case UserRole.SUPER_ADMIN:
-        return '/dashboard/super-admin'
+        return '/app/dashboard/super-admin'
       default:
-        return '/dashboard/free'
+        return '/app/dashboard/free'
     }
   }
 
@@ -191,20 +191,45 @@ export const MainLayout: React.FC = () => {
             <NavContent />
           </Box>
 
-          <Box p={4} bg="white" borderRadius="lg" border="1px solid" borderColor="brand.border">
-            <HStack spacing={3}>
-              <Avatar size="sm" name={profile?.fullName} src={profile?.avatarUrl} />
-              <Box flex="1">
-                <Text fontSize="sm" fontWeight="semibold">
-                  {profile?.fullName || 'User'}
-                </Text>
-                <Text fontSize="xs" color="brand.subtleText">
-                  {profile?.totalPoints || 0} points
-                </Text>
-              </Box>
-              <Badge variant="subtle">{profile?.role ?? 'Member'}</Badge>
-            </HStack>
-          </Box>
+          {/* User Info */}
+          <VStack align="stretch" spacing={2}>
+            <Box
+              p={3}
+              bg="rgba(53, 14, 111, 0.5)"
+              borderRadius="lg"
+              border="1px solid"
+              borderColor="rgba(234, 177, 48, 0.2)"
+            >
+              <HStack>
+                <Avatar size="sm" name={profile?.fullName} src={profile?.avatarUrl} />
+                <Box flex="1">
+                  <Text fontSize="sm" fontWeight="semibold" color="brand.softGold">
+                    {profile?.fullName}
+                  </Text>
+                  <Text fontSize="xs" color="brand.gold">
+                    {profile?.totalPoints || 0} points
+                  </Text>
+                </Box>
+              </HStack>
+            </Box>
+            <Button
+              leftIcon={<Settings size={16} />}
+              variant="ghost"
+              size="sm"
+              onClick={() => navigate('/app/settings')}
+            >
+              Settings
+            </Button>
+            <Button
+              leftIcon={<LogOut size={16} />}
+              variant="ghost"
+              size="sm"
+              onClick={handleSignOut}
+              colorScheme="red"
+            >
+              Sign Out
+            </Button>
+          </VStack>
         </VStack>
       </Box>
 
@@ -254,22 +279,10 @@ export const MainLayout: React.FC = () => {
               _hover={{ bg: 'brand.primaryMuted' }}
             />
             <Menu>
-              <MenuButton>
-                <HStack spacing={3}>
-                  <Avatar size="sm" name={profile?.fullName} src={profile?.avatarUrl} />
-                  <Box textAlign="left" display={{ base: 'none', md: 'block' }}>
-                    <Text fontSize="sm" fontWeight="semibold">
-                      {profile?.fullName || "User's name"}
-                    </Text>
-                    <Text fontSize="xs" color="brand.subtleText">
-                      Tier Platform
-                    </Text>
-                  </Box>
-                </HStack>
-              </MenuButton>
-              <MenuList>
-                <MenuItem onClick={() => navigate('/profile')}>Profile</MenuItem>
-                <MenuItem onClick={() => navigate('/settings')}>Settings</MenuItem>
+              <MenuButton as={IconButton} icon={<User size={20} />} variant="ghost" />
+              <MenuList bg="brand.deepPlum" borderColor="brand.gold">
+                <MenuItem onClick={() => navigate('/app/profile')}>Profile</MenuItem>
+                <MenuItem onClick={() => navigate('/app/settings')}>Settings</MenuItem>
                 <MenuDivider />
                 <MenuItem onClick={handleSignOut}>Sign Out</MenuItem>
               </MenuList>

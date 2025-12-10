@@ -44,7 +44,7 @@ export const LoginPage: React.FC = () => {
         status: 'success',
         duration: 3000,
       })
-      navigate('/')
+      navigate('/app')
     }
 
     setLoading(false)

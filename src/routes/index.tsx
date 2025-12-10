@@ -5,6 +5,7 @@ import { UserRole } from '@/types'
 // Layout imports
 import { MainLayout } from '@/layouts/MainLayout'
 import { AuthLayout } from '@/layouts/AuthLayout'
+import { HomePage } from '@/pages/home/HomePage'
 
 // Page imports (we'll create these)
 import { LoginPage } from '@/pages/auth/LoginPage'
@@ -74,6 +75,7 @@ const DashboardRouter = () => {
           <SuperAdminDashboard />
         </ProtectedRoute>
       } />
+      <Route index element={<Navigate to="free" replace />} />
     </Routes>
   )
 }
@@ -83,19 +85,20 @@ export const AppRoutes = () => {
     <BrowserRouter>
       <Routes>
         {/* Public routes */}
+        <Route path="/" element={<HomePage />} />
         <Route path="/login" element={<AuthLayout><LoginPage /></AuthLayout>} />
         <Route path="/signup" element={<AuthLayout><SignUpPage /></AuthLayout>} />
         <Route path="/reset-password" element={<AuthLayout><ResetPasswordPage /></AuthLayout>} />
-        
+
         {/* Onboarding */}
-        <Route path="/onboarding" element={
+        <Route path="/app/onboarding" element={
           <ProtectedRoute>
             <OnboardingPage />
           </ProtectedRoute>
         } />
 
         {/* Protected main app routes */}
-        <Route path="/" element={
+        <Route path="/app" element={
           <ProtectedRoute>
             <MainLayout />
           </ProtectedRoute>
@@ -118,9 +121,9 @@ export const AppRoutes = () => {
           <Route path="shameless-circle" element={<ShamelessCirclePage />} />
           <Route path="profile" element={<ProfilePage />} />
           <Route path="settings" element={<SettingsPage />} />
-          
+
           {/* Default redirect based on role */}
-          <Route index element={<Navigate to="/dashboard" replace />} />
+          <Route index element={<Navigate to="/app/dashboard/free" replace />} />
         </Route>
 
         {/* Error routes */}

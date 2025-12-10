@@ -33,7 +33,7 @@ export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
 
   // Missing profile (should complete onboarding)
   if (requireAuth && user && !profile) {
-    return <Navigate to="/onboarding" replace />
+    return <Navigate to="/app/onboarding" replace />
   }
 
   // Role check
