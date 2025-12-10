@@ -24,7 +24,6 @@ import {
   InputLeftElement,
   Input,
   Divider,
-  Badge,
 } from '@chakra-ui/react'
 import {
   Menu as MenuIcon,
@@ -42,6 +41,8 @@ import {
   Search,
   Bell,
   LogOut,
+  User,
+  Settings,
 } from 'lucide-react'
 import { useAuth } from '@/hooks/useAuth'
 import { UserRole } from '@/types'
