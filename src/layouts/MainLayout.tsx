@@ -47,27 +47,27 @@ export const MainLayout: React.FC = () => {
   const getDashboardPath = () => {
     switch (profile?.role) {
       case UserRole.FREE_USER:
-        return '/dashboard/free'
+        return '/app/dashboard/free'
       case UserRole.PAID_MEMBER:
-        return '/dashboard/member'
+        return '/app/dashboard/member'
       case UserRole.MENTOR:
-        return '/dashboard/mentor'
+        return '/app/dashboard/mentor'
       case UserRole.AMBASSADOR:
-        return '/dashboard/ambassador'
+        return '/app/dashboard/ambassador'
       case UserRole.COMPANY_ADMIN:
-        return '/dashboard/company-admin'
+        return '/app/dashboard/company-admin'
       case UserRole.SUPER_ADMIN:
-        return '/dashboard/super-admin'
+        return '/app/dashboard/super-admin'
       default:
-        return '/dashboard/free'
+        return '/app/dashboard/free'
     }
   }
 
   const navigationItems = [
     { label: 'Dashboard', path: getDashboardPath(), icon: Home },
-    { label: 'Journeys', path: '/journeys', icon: Target },
-    { label: 'Impact Log', path: '/impact', icon: TrendingUp },
-    { label: 'Leaderboard', path: '/leaderboard', icon: Users },
+    { label: 'Journeys', path: '/app/journeys', icon: Target },
+    { label: 'Impact Log', path: '/app/impact', icon: TrendingUp },
+    { label: 'Leaderboard', path: '/app/leaderboard', icon: Users },
   ]
 
   const NavContent = () => (
@@ -143,7 +143,7 @@ export const MainLayout: React.FC = () => {
               leftIcon={<Settings size={16} />}
               variant="ghost"
               size="sm"
-              onClick={() => navigate('/settings')}
+              onClick={() => navigate('/app/settings')}
             >
               Settings
             </Button>
@@ -179,8 +179,8 @@ export const MainLayout: React.FC = () => {
             <Menu>
               <MenuButton as={IconButton} icon={<User size={20} />} variant="ghost" />
               <MenuList bg="brand.deepPlum" borderColor="brand.gold">
-                <MenuItem onClick={() => navigate('/profile')}>Profile</MenuItem>
-                <MenuItem onClick={() => navigate('/settings')}>Settings</MenuItem>
+                <MenuItem onClick={() => navigate('/app/profile')}>Profile</MenuItem>
+                <MenuItem onClick={() => navigate('/app/settings')}>Settings</MenuItem>
                 <MenuDivider />
                 <MenuItem onClick={handleSignOut}>Sign Out</MenuItem>
               </MenuList>
