@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react'
+import React, { useEffect, useMemo, useState } from 'react'
 import { User } from 'firebase/auth'
 import {
   signInWithEmailAndPassword,
@@ -20,6 +20,7 @@ import {
 import { UserProfile, UserRole } from '@/types'
 import { auth, db } from '@/services/firebase'
 import { AuthContext, AuthContextType } from './AuthContextType'
+import { splitFullName } from '@/utils/auth'
 
 interface AuthProviderProps {
   children: React.ReactNode
@@ -30,19 +31,23 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const [profile, setProfile] = useState<UserProfile | null>(null)
   const [loading, setLoading] = useState(true)
 
-  const googleProvider = new GoogleAuthProvider()
+  const googleProvider = useMemo(() => {
+    const provider = new GoogleAuthProvider()
+    provider.setCustomParameters({ prompt: 'select_account' })
+    return provider
+  }, [])
 
   const buildProfileFromUser = (firebaseUser: User): UserProfile => {
-    const [firstName = 'User', lastName = ''] = (firebaseUser.displayName || 'User')
-      .split(' ')
-      .filter(Boolean)
+    const baseName =
+      firebaseUser.displayName || firebaseUser.email?.split('@')[0] || 'User'
+    const { firstName, lastName, fullName } = splitFullName(baseName)
 
     return {
       id: firebaseUser.uid,
       email: firebaseUser.email || '',
-      firstName,
+      firstName: firstName || 'User',
       lastName,
-      fullName: firebaseUser.displayName || `${firstName} ${lastName}`.trim(),
+      fullName: fullName || `${firstName} ${lastName}`.trim(),
       role: UserRole.FREE_USER,
       avatarUrl: firebaseUser.photoURL || undefined,
       totalPoints: 0,
@@ -64,15 +69,33 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     }
 
     const existingProfile = profileSnap.data() as UserProfile
+    const updates: Partial<UserProfile> = {}
 
     if (!existingProfile.avatarUrl && firebaseUser.photoURL) {
+      updates.avatarUrl = firebaseUser.photoURL
+    }
+
+    if (!existingProfile.firstName || !existingProfile.lastName || !existingProfile.fullName) {
+      const baseName =
+        firebaseUser.displayName || existingProfile.fullName || firebaseUser.email?.split('@')[0] || 'User'
+      const { firstName, lastName, fullName } = splitFullName(baseName)
+      updates.firstName = firstName || existingProfile.firstName
+      updates.lastName = lastName || existingProfile.lastName
+      updates.fullName = fullName || existingProfile.fullName
+    }
+
+    if (Object.keys(updates).length > 0) {
       await updateDoc(profileRef, {
-        avatarUrl: firebaseUser.photoURL,
+        ...updates,
         updatedAt: serverTimestamp(),
       })
     }
 
-    return { ...existingProfile, avatarUrl: existingProfile.avatarUrl || firebaseUser.photoURL || undefined }
+    return {
+      ...existingProfile,
+      ...updates,
+      avatarUrl: updates.avatarUrl || existingProfile.avatarUrl || firebaseUser.photoURL || undefined,
+    }
   }
 
   // Fetch user profile from Firestore
@@ -98,7 +121,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       setUser(user)
 
       if (user) {
-        const userProfile = await fetchProfile(user.uid)
+        const userProfile = (await fetchProfile(user.uid)) || (await ensureProfileExists(user))
         setProfile(userProfile)
       } else {
         setProfile(null)

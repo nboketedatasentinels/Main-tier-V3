@@ -168,6 +168,11 @@ const DotMap = () => {
     const context = canvas.getContext('2d')
     if (!context) return
 
+    const dpr = window.devicePixelRatio || 1
+    canvas.width = dimensions.width * dpr
+    canvas.height = dimensions.height * dpr
+    context.setTransform(dpr, 0, 0, dpr, 0, 0)
+
     const ctx = context
     const dots = generateDots(dimensions.width, dimensions.height)
     let animationFrameId: number
@@ -358,9 +363,9 @@ export const T4LAuthCard: React.FC<AuthCardProps> = ({
         initial={{ opacity: 0, scale: 0.97 }}
         animate={{ opacity: 1, scale: 1 }}
         transition={{ duration: 0.5 }}
-        className="w-full max-w-4xl overflow-hidden rounded-2xl flex bg-white shadow-xl"
+        className="w-full max-w-4xl overflow-hidden rounded-2xl flex flex-col md:flex-row bg-white shadow-xl min-h-[540px] md:min-h-[600px] lg:min-h-[660px]"
       >
-        <div className="hidden md:block w-1/2 h-[600px] relative overflow-hidden border-r border-gray-100">
+        <div className="hidden md:flex md:flex-1 relative overflow-hidden border-r border-gray-100 min-h-[320px] lg:min-h-[420px]">
           <div className="absolute inset-0 bg-gradient-to-br from-[#27062e] via-[#350e6f] to-[#eab130]">
             <DotMap />
 
@@ -399,7 +404,7 @@ export const T4LAuthCard: React.FC<AuthCardProps> = ({
           </div>
         </div>
 
-        <div className="w-full md:w-1/2 p-8 md:p-10 flex flex-col justify-center bg-white">
+        <div className="flex-1 w-full p-8 md:p-10 flex flex-col justify-center bg-white min-h-[320px]">
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
