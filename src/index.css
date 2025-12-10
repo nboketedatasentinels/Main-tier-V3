@@ -9,34 +9,34 @@
 }
 
 ::-webkit-scrollbar-track {
-  background: #e6e8f3;
+  background: rgba(39, 6, 46, 0.3);
 }
 
 ::-webkit-scrollbar-thumb {
-  background: #c5cae9;
+  background: rgba(234, 177, 48, 0.5);
   border-radius: 4px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: #b3b8d8;
+  background: rgba(234, 177, 48, 0.7);
 }
 
 /* Intro.js custom styling */
 .introjs-tooltip {
-  background: #ffffff !important;
-  color: #3a4562 !important;
-  border: 2px solid #e6e8f3 !important;
+  background: #27062e !important;
+  color: #f9db59 !important;
+  border: 2px solid #eab130 !important;
 }
 
 .introjs-button {
-  background: #5d6bff !important;
+  background: #f4540c !important;
   color: white !important;
   border: none !important;
   text-shadow: none !important;
 }
 
 .introjs-button:hover {
-  background: #4b59e6 !important;
+  background: #d94a0b !important;
 }
 
 /* Custom animations */
@@ -57,20 +57,20 @@
 
 /* Gradient backgrounds */
 .gradient-hero {
-  background: linear-gradient(135deg, #5d6bff 0%, #7c8bff 50%, #cfd5ff 100%);
+  background: linear-gradient(135deg, #27062e 0%, #350e6f 50%, #eab130 100%);
 }
 
 .gradient-card {
-  background: linear-gradient(145deg, #eef0fb 0%, #dfe4ff 100%);
+  background: linear-gradient(145deg, #27062e 0%, #350e6f 100%);
 }
 
 /* Loading skeleton */
 .skeleton {
   background: linear-gradient(
     90deg,
-    #eef0fb 25%,
-    #e0e5ff 50%,
-    #eef0fb 75%
+    rgba(39, 6, 46, 0.5) 25%,
+    rgba(53, 14, 111, 0.5) 50%,
+    rgba(39, 6, 46, 0.5) 75%
   );
   background-size: 200% 100%;
   animation: loading 1.5s ease-in-out infinite;

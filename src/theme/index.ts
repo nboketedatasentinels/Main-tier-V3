@@ -1,28 +1,23 @@
 import { extendTheme, type ThemeConfig } from '@chakra-ui/react'
 
+// T4L Brand Colors (Mandatory)
 const colors = {
   brand: {
-    primary: '#5d6bff',
-    primaryMuted: '#eef0fb',
-    accent: '#f6f7fb',
-    text: '#3a4562',
-    subtleText: '#6b7392',
-    border: '#e6e8f3',
-    warning: '#f4540c',
-    // Legacy keys preserved for compatibility
     deepPlum: '#27062e',
     flameOrange: '#f4540c',
     royalPurple: '#350e6f',
-    gold: '#5d6bff',
-    softGold: '#eef0fb',
+    gold: '#eab130',
+    softGold: '#f9db59',
   },
 }
 
+// Theme configuration
 const config: ThemeConfig = {
-  initialColorMode: 'light',
+  initialColorMode: 'dark',
   useSystemColorMode: false,
 }
 
+// Component style overrides
 const components = {
   Button: {
     baseStyle: {
@@ -31,33 +26,34 @@ const components = {
     },
     variants: {
       primary: {
-        bg: 'brand.primary',
+        bg: 'brand.flameOrange',
         color: 'white',
         _hover: {
-          bg: '#4b59e6',
-          transform: 'translateY(-1px)',
+          bg: '#d94a0b',
+          transform: 'translateY(-2px)',
           boxShadow: 'lg',
         },
         _active: {
-          bg: '#3f4ccc',
+          bg: '#c04309',
           transform: 'translateY(0)',
         },
       },
       secondary: {
-        bg: 'white',
-        color: 'brand.text',
-        border: '1px solid',
-        borderColor: 'brand.border',
+        bg: 'brand.deepPlum',
+        color: 'brand.softGold',
+        border: '2px solid',
+        borderColor: 'brand.gold',
         _hover: {
-          bg: 'brand.primaryMuted',
-          color: 'brand.text',
+          bg: 'brand.royalPurple',
+          transform: 'translateY(-2px)',
+          boxShadow: 'lg',
         },
       },
       ghost: {
-        color: 'brand.text',
+        color: 'brand.deepPlum',
         _hover: {
-          bg: 'brand.primaryMuted',
-          color: 'brand.text',
+          bg: 'rgba(249, 219, 89, 0.1)',
+          color: 'brand.gold',
         },
       },
     },
@@ -68,11 +64,11 @@ const components = {
   Card: {
     baseStyle: {
       container: {
-        bg: 'white',
+        bg: 'brand.deepPlum',
         borderRadius: 'xl',
-        boxShadow: 'sm',
+        boxShadow: 'md',
         border: '1px solid',
-        borderColor: 'brand.border',
+        borderColor: 'rgba(234, 177, 48, 0.2)',
       },
     },
   },
@@ -84,16 +80,16 @@ const components = {
       fontWeight: 'bold',
     },
     variants: {
-      primary: {
-        bg: 'brand.primary',
-        color: 'white',
+      gold: {
+        bg: 'brand.gold',
+        color: 'brand.deepPlum',
       },
-      subtle: {
-        bg: 'brand.primaryMuted',
-        color: 'brand.text',
+      purple: {
+        bg: 'brand.royalPurple',
+        color: 'brand.softGold',
       },
-      warning: {
-        bg: 'brand.warning',
+      orange: {
+        bg: 'brand.flameOrange',
         color: 'white',
       },
     },
@@ -101,46 +97,49 @@ const components = {
   Progress: {
     baseStyle: {
       filledTrack: {
-        bg: 'brand.primary',
+        bg: 'brand.gold',
       },
       track: {
-        bg: 'brand.primaryMuted',
+        bg: 'rgba(234, 177, 48, 0.2)',
       },
     },
   },
 }
 
+// Global styles
 const styles = {
   global: {
     body: {
-      bg: 'brand.accent',
-      color: 'brand.text',
+      bg: 'brand.deepPlum',
+      color: 'brand.softGold',
       fontFamily: 'system-ui, -apple-system, sans-serif',
     },
     'h1, h2, h3, h4, h5, h6': {
-      color: 'brand.text',
+      color: 'brand.softGold',
     },
     a: {
-      color: 'brand.primary',
+      color: 'brand.flameOrange',
       _hover: {
-        color: '#4b59e6',
+        color: 'brand.gold',
         textDecoration: 'underline',
       },
     },
   },
 }
 
+// Fonts
 const fonts = {
   heading: 'system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
   body: 'system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
 }
 
+// Breakpoints
 const breakpoints = {
-  sm: '30em',
-  md: '48em',
-  lg: '62em',
-  xl: '80em',
-  '2xl': '96em',
+  sm: '30em', // 480px
+  md: '48em', // 768px
+  lg: '62em', // 992px
+  xl: '80em', // 1280px
+  '2xl': '96em', // 1536px
 }
 
 const theme = extendTheme({
