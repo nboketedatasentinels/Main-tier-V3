@@ -1,5 +1,6 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
 import { ProtectedRoute } from '@/components/ProtectedRoute'
+import { FreeTierGuard } from '@/components/FreeTierGuard'
 import { UserRole } from '@/types'
 
 // Layout imports
@@ -85,9 +86,18 @@ export const AppRoutes = () => {
       <Routes>
         {/* Public routes */}
         <Route path="/" element={<HomePage />} />
-        <Route path="/login" element={<AuthLayout><LoginPage /></AuthLayout>} />
-        <Route path="/signup" element={<AuthLayout><SignUpPage /></AuthLayout>} />
-        <Route path="/reset-password" element={<AuthLayout><ResetPasswordPage /></AuthLayout>} />
+      <Route path="/login" element={<AuthLayout><LoginPage /></AuthLayout>} />
+      <Route path="/signup" element={<AuthLayout><SignUpPage /></AuthLayout>} />
+      <Route path="/reset-password" element={<AuthLayout><ResetPasswordPage /></AuthLayout>} />
+
+        <Route
+          path="/mentor/dashboard"
+          element={
+            <ProtectedRoute requiredRoles={[UserRole.MENTOR]}>
+              <MentorDashboard />
+            </ProtectedRoute>
+          }
+        />
 
         {/* Onboarding */}
         <Route path="/app/onboarding" element={
@@ -112,8 +122,22 @@ export const AppRoutes = () => {
           <Route path="leadership-board" element={<LeadershipBoardPage />} />
           <Route path="weekly-checklist" element={<WeeklyUpdatesPage />} />
           <Route path="courses" element={<MyCoursesPage />} />
-          <Route path="peer-connect" element={<PeerConnectPage />} />
-          <Route path="leadership-council" element={<LeadershipCouncilPage />} />
+          <Route
+            path="peer-connect"
+            element={
+              <FreeTierGuard fallbackPath="/app/dashboard/free" description="Peer Connect is available on paid plans." title="Upgrade to connect">
+                <PeerConnectPage />
+              </FreeTierGuard>
+            }
+          />
+          <Route
+            path="leadership-council"
+            element={
+              <FreeTierGuard fallbackPath="/app/dashboard/free" description="Leadership Council is available on paid plans." title="Upgrade to access">
+                <LeadershipCouncilPage />
+              </FreeTierGuard>
+            }
+          />
           <Route path="announcements" element={<AnnouncementsPage />} />
           <Route path="referral-rewards" element={<ReferralRewardsPage />} />
           <Route path="book-club" element={<BookClubPage />} />

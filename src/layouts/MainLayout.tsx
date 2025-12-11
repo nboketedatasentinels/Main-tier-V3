@@ -1,4 +1,4 @@
-import React from 'react'
+import React, { useCallback, useEffect, useMemo, useState } from 'react'
 import { Outlet, useLocation, useNavigate } from 'react-router-dom'
 import {
   Box,
@@ -23,6 +23,7 @@ import {
   InputGroup,
   InputLeftElement,
   Input,
+  useToast,
 } from '@chakra-ui/react'
 import {
   Menu as MenuIcon,
@@ -43,6 +44,8 @@ import {
 } from 'lucide-react'
 import { useAuth } from '@/hooks/useAuth'
 import { UserRole } from '@/types'
+import { BuildVillageModal } from '@/components/modals/BuildVillageModal'
+import { ConfirmationWelcomeModal } from '@/components/modals/ConfirmationWelcomeModal'
 
 const HEADER_HEIGHT = '72px'
 
@@ -58,20 +61,61 @@ export const MainLayout: React.FC = () => {
   const navigate = useNavigate()
   const location = useLocation()
   const { isOpen, onOpen, onClose } = useDisclosure()
+  const toast = useToast()
+  const [showVillagePrompt, setShowVillagePrompt] = useState(false)
+  const [showWelcomeModal, setShowWelcomeModal] = useState(false)
+
+  const buildVillageKey = useMemo(() => (profile ? `t4l.buildVillage.${profile.id}` : null), [profile])
+  const verificationKey = 't4l.emailVerificationComplete'
+
+  useEffect(() => {
+    if (!profile) return
+
+    if (profile.role === UserRole.FREE_USER && profile.isOnboarded && buildVillageKey) {
+      const stored = localStorage.getItem(buildVillageKey)
+      if (!stored) {
+        setShowVillagePrompt(true)
+      }
+    }
+
+    const verified = localStorage.getItem(verificationKey)
+    if (verified === 'verified') {
+      setShowWelcomeModal(true)
+    }
+  }, [profile, buildVillageKey])
 
   const handleSignOut = async () => {
     await signOut()
     navigate('/login')
   }
 
-  const getDashboardPath = () => {
+  const handleVillageCreated = () => {
+    if (buildVillageKey) {
+      localStorage.setItem(buildVillageKey, 'completed')
+    }
+    setShowVillagePrompt(false)
+  }
+
+  const handleVillageSkipped = () => {
+    if (buildVillageKey) {
+      localStorage.setItem(buildVillageKey, 'skipped')
+    }
+    setShowVillagePrompt(false)
+  }
+
+  const handleWelcomeAcknowledged = () => {
+    localStorage.removeItem(verificationKey)
+    setShowWelcomeModal(false)
+  }
+
+  const getDashboardPath = useCallback(() => {
     switch (profile?.role) {
       case UserRole.FREE_USER:
         return '/app/dashboard/free'
       case UserRole.PAID_MEMBER:
         return '/app/dashboard/member'
       case UserRole.MENTOR:
-        return '/app/dashboard/mentor'
+        return '/mentor/dashboard'
       case UserRole.AMBASSADOR:
         return '/app/dashboard/ambassador'
       case UserRole.COMPANY_ADMIN:
@@ -81,35 +125,73 @@ export const MainLayout: React.FC = () => {
       default:
         return '/app/dashboard/free'
     }
-  }
+  }, [profile?.role])
 
-  const navigationSections = [
-    {
-      label: 'MY JOURNEY',
-      items: [
-        { label: 'Dashboard', path: getDashboardPath(), icon: Home },
-        { label: 'Weekly Checklist', path: '/app/weekly-checklist', icon: ClipboardList },
-        { label: 'Leadership Board', path: '/app/leadership-board', icon: Trophy },
-        { label: 'My Courses', path: '/app/courses', icon: BookOpen },
-        { label: 'Peer Connect', path: '/app/peer-connect', icon: Users },
-        { label: 'Impact Activities', path: '/app/impact', icon: Target },
-        { label: 'Leadership Council', path: '/app/leadership-council', icon: Gavel },
-      ],
-    },
-    {
-      label: 'COMMUNITY',
-      items: [
-        { label: 'Announcements', path: '/app/announcements', icon: Megaphone },
-        { label: 'Referral Rewards', path: '/app/referral-rewards', icon: Gift },
-        { label: 'Global Book Club', path: '/app/book-club', icon: BookMarked },
-        { label: 'Shameless Circle', path: '/app/shameless-circle', icon: Sparkles },
-      ],
-    },
-  ]
+  const navigationSections = useMemo(
+    () => [
+      {
+        label: 'MY JOURNEY',
+        items: [
+          { label: 'Dashboard', path: getDashboardPath(), icon: Home },
+          { label: 'Weekly Checklist', path: '/app/weekly-checklist', icon: ClipboardList },
+          { label: 'Leadership Board', path: '/app/leadership-board', icon: Trophy },
+          { label: 'My Courses', path: '/app/courses', icon: BookOpen },
+          { label: 'Peer Connect', path: '/app/peer-connect', icon: Users },
+          { label: 'Impact Activities', path: '/app/impact', icon: Target },
+          { label: 'Leadership Council', path: '/app/leadership-council', icon: Gavel },
+        ],
+      },
+      {
+        label: 'COMMUNITY',
+        items: [
+          { label: 'Announcements', path: '/app/announcements', icon: Megaphone },
+          { label: 'Referral Rewards', path: '/app/referral-rewards', icon: Gift },
+          { label: 'Global Book Club', path: '/app/book-club', icon: BookMarked },
+          { label: 'Shameless Circle', path: '/app/shameless-circle', icon: Sparkles },
+        ],
+      },
+    ],
+    [getDashboardPath],
+  )
+
+  const isFreeUser = profile?.role === UserRole.FREE_USER
+  const isMentor = profile?.role === UserRole.MENTOR
+
+  const filteredNavigation = useMemo(() => {
+    return navigationSections.map(section => ({
+      ...section,
+      items: section.items.filter(item => {
+        if (isMentor && item.label === 'Leadership Board') {
+          return false
+        }
+        return true
+      }),
+    }))
+  }, [isMentor, navigationSections])
+
+  const handleNavigation = (path: string) => {
+    const restrictedPaths = ['/app/peer-connect', '/app/leadership-council']
+
+    if (isFreeUser && restrictedPaths.some(restricted => path.startsWith(restricted))) {
+      toast({
+        title: 'Upgrade required',
+        description: 'This feature is available to paid members. Upgrade to continue.',
+        status: 'info',
+        duration: 3500,
+        isClosable: true,
+      })
+      navigate('/app/dashboard/free', { replace: true })
+      onClose()
+      return
+    }
+
+    navigate(path)
+    onClose()
+  }
 
   const NavContent = () => (
     <VStack align="stretch" spacing={5} pt={4}>
-      {navigationSections.map(section => (
+      {filteredNavigation.map(section => (
         <Box key={section.label}>
           <Text mb={2} {...sectionLabelStyles}>
             {section.label}
@@ -127,10 +209,7 @@ export const MainLayout: React.FC = () => {
                   leftIcon={<item.icon size={18} />}
                   variant="ghost"
                   justifyContent="flex-start"
-                  onClick={() => {
-                    navigate(item.path)
-                    onClose()
-                  }}
+                  onClick={() => handleNavigation(item.path)}
                   bg={isActive ? 'brand.primaryMuted' : 'transparent'}
                   color={isActive ? 'brand.text' : 'brand.subtleText'}
                   _hover={{ bg: 'brand.primaryMuted', color: 'brand.text' }}
@@ -296,6 +375,17 @@ export const MainLayout: React.FC = () => {
           </DrawerBody>
         </DrawerContent>
       </Drawer>
+
+      <BuildVillageModal
+        isOpen={showVillagePrompt}
+        onCreate={handleVillageCreated}
+        onSkip={handleVillageSkipped}
+      />
+
+      <ConfirmationWelcomeModal
+        isOpen={showWelcomeModal}
+        onAcknowledge={handleWelcomeAcknowledged}
+      />
     </Flex>
   )
 }
