@@ -134,6 +134,7 @@ export const MainLayout: React.FC = () => {
                   _hover={{ bg: 'brand.primaryMuted', color: 'brand.text' }}
                   height="42px"
                   fontWeight={isActive ? 'semibold' : 'medium'}
+                  fontSize="13px"
                 >
                   {item.label}
                 </Button>
