@@ -30,11 +30,25 @@ export interface UserProfile {
   // Organization
   companyId?: string
   companyCode?: string
-  corporateVillageId?: string
-  cohortIdentifier?: string
+  companyName?: string
   villageId?: string
   clusterId?: string
+  corporateVillageId?: string
+  cohortIdentifier?: string
+
+  // Availability & preferences
   timezone?: string
+  availabilityStatus?: string
+  notes?: string
+
+  // Leadership relations
+  mentorId?: string
+  ambassadorId?: string
+  isActiveAmbassador?: boolean
+  accountStatus?: string
+  lastInteraction?: string
+  registrationDate?: string
+  lastActive?: string
   
   // Settings
   isOnboarded: boolean
