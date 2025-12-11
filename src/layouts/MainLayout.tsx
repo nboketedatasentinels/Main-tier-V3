@@ -1,4 +1,4 @@
-import React from 'react'
+import React, { useEffect, useMemo, useState } from 'react'
 import { Outlet, useLocation, useNavigate } from 'react-router-dom'
 import {
   Box,
@@ -43,6 +43,8 @@ import {
 } from 'lucide-react'
 import { useAuth } from '@/hooks/useAuth'
 import { UserRole } from '@/types'
+import { BuildVillageModal } from '@/components/modals/BuildVillageModal'
+import { ConfirmationWelcomeModal } from '@/components/modals/ConfirmationWelcomeModal'
 
 const HEADER_HEIGHT = '72px'
 
@@ -58,10 +60,50 @@ export const MainLayout: React.FC = () => {
   const navigate = useNavigate()
   const location = useLocation()
   const { isOpen, onOpen, onClose } = useDisclosure()
+  const [showVillagePrompt, setShowVillagePrompt] = useState(false)
+  const [showWelcomeModal, setShowWelcomeModal] = useState(false)
+
+  const buildVillageKey = useMemo(() => (profile ? `t4l.buildVillage.${profile.id}` : null), [profile])
+  const verificationKey = 't4l.emailVerificationComplete'
+
+  useEffect(() => {
+    if (!profile) return
+
+    if (profile.role === UserRole.FREE_USER && profile.isOnboarded && buildVillageKey) {
+      const stored = localStorage.getItem(buildVillageKey)
+      if (!stored) {
+        setShowVillagePrompt(true)
+      }
+    }
+
+    const verified = localStorage.getItem(verificationKey)
+    if (verified === 'verified') {
+      setShowWelcomeModal(true)
+    }
+  }, [profile, buildVillageKey])
 
   const handleSignOut = async () => {
     await signOut()
     navigate('/login')
+  }
+
+  const handleVillageCreated = () => {
+    if (buildVillageKey) {
+      localStorage.setItem(buildVillageKey, 'completed')
+    }
+    setShowVillagePrompt(false)
+  }
+
+  const handleVillageSkipped = () => {
+    if (buildVillageKey) {
+      localStorage.setItem(buildVillageKey, 'skipped')
+    }
+    setShowVillagePrompt(false)
+  }
+
+  const handleWelcomeAcknowledged = () => {
+    localStorage.removeItem(verificationKey)
+    setShowWelcomeModal(false)
   }
 
   const getDashboardPath = () => {
@@ -296,6 +338,17 @@ export const MainLayout: React.FC = () => {
           </DrawerBody>
         </DrawerContent>
       </Drawer>
+
+      <BuildVillageModal
+        isOpen={showVillagePrompt}
+        onCreate={handleVillageCreated}
+        onSkip={handleVillageSkipped}
+      />
+
+      <ConfirmationWelcomeModal
+        isOpen={showWelcomeModal}
+        onAcknowledge={handleWelcomeAcknowledged}
+      />
     </Flex>
   )
 }
