@@ -70,6 +70,8 @@ export interface PrivacySettings {
   shareImpactPublicly: boolean
 }
 
+export * from './onboarding'
+
 // Journey Types
 export enum JourneyType {
   FREE = 'free',
