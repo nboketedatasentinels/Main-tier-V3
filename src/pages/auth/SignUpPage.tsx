@@ -71,11 +71,11 @@ export const SignUpPage: React.FC = () => {
     } else {
       toast({
         title: 'Account created!',
-        description: 'Redirecting you to onboarding to finish setup.',
+        description: 'Redirecting you to your dashboard to begin exploring.',
         status: 'success',
         duration: 5000,
       })
-      navigate('/app/onboarding')
+      navigate('/app/dashboard/free')
     }
 
     setLoading(false)

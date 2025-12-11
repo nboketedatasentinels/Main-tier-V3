@@ -56,6 +56,10 @@ import {
   orderBy,
   query,
   where,
+  DocumentData,
+  Query,
+  QueryConstraint,
+  QuerySnapshot,
 } from 'firebase/firestore'
 import { db } from '@/services/firebase'
 import { useAuth } from '@/hooks/useAuth'
@@ -137,22 +141,27 @@ const faqFallback = {
 
 const couponLink = 'https://www.t4leader.com/challenge-page/transformational-leadership'
 
-const useRealtimeCollection = <T,>(path: string, constraints: any[], mapper: (docId: string, data: any) => T) => {
+const useRealtimeCollection = <T,>(
+  path: string,
+  constraints: QueryConstraint[],
+  mapper: (docId: string, data: DocumentData) => T,
+) => {
   const [data, setData] = useState<T[]>([])
   const [loading, setLoading] = useState(true)
+  const constraintsKey = useMemo(() => JSON.stringify(constraints), [constraints])
 
   useEffect(() => {
-    const q = constraints.length
+    const baseQuery: Query<DocumentData> = constraints.length
       ? query(collection(db, path), ...constraints)
-      : (collection(db, path) as any)
+      : collection(db, path)
 
-    const unsub = onSnapshot(q, (snapshot: any) => {
-      setData(snapshot.docs.map((d: any) => mapper(d.id, d.data())))
+    const unsub = onSnapshot(baseQuery, (snapshot: QuerySnapshot<DocumentData>) => {
+      setData(snapshot.docs.map((d) => mapper(d.id, d.data())))
       setLoading(false)
     })
 
     return () => unsub()
-  }, [path, mapper, JSON.stringify(constraints)])
+  }, [constraints, constraintsKey, mapper, path])
 
   return { data, loading }
 }
@@ -163,8 +172,6 @@ export const CompanyDashboard: React.FC = () => {
 
   const [upgradeDismissed, setUpgradeDismissed] = useState(false)
   const [faq, setFaq] = useState(faqFallback)
-  const [onboardingProgress, setOnboardingProgress] = useState(0)
-  const [onboardingDeadline, setOnboardingDeadline] = useState<Date | null>(null)
   const [liftProgress, setLiftProgress] = useState<LiftProgress | null>(null)
 
   const weekStart = useMemo(() => startOfWeek(new Date(), { weekStartsOn: 1 }), [])
@@ -247,27 +254,15 @@ export const CompanyDashboard: React.FC = () => {
 
   useEffect(() => {
     if (!profile?.id) return
-    const unsub = onSnapshot(doc(db, 'onboarding_progress', profile.id), (snap) => {
-      if (snap.exists()) {
-        const data = snap.data() as any
-        setOnboardingProgress(data.percentComplete || 0)
-        setOnboardingDeadline(data.deadline ? data.deadline.toDate() : null)
-      }
-    })
-    return () => unsub()
-  }, [profile?.id])
-
-  useEffect(() => {
-    if (!profile?.id) return
     const unsub = onSnapshot(doc(db, 'lift_progress', profile.id), (snap) => {
       if (snap.exists()) {
-        const data = snap.data() as any
+        const data = snap.data() as Partial<LiftProgress>
         setLiftProgress({
-          educationHours: data.educationHours || 0,
-          educationTarget: data.educationTarget || 10,
-          verifiedHours: data.verifiedHours || 0,
-          selfAttestedHours: data.selfAttestedHours || 0,
-          givingTarget: data.givingTarget || 10,
+          educationHours: data.educationHours ?? 0,
+          educationTarget: data.educationTarget ?? 10,
+          verifiedHours: data.verifiedHours ?? 0,
+          selfAttestedHours: data.selfAttestedHours ?? 0,
+          givingTarget: data.givingTarget ?? 10,
         })
       }
     })
@@ -297,15 +292,8 @@ export const CompanyDashboard: React.FC = () => {
     return { completed, total, percent }
   }, [checklistItems])
 
-  const onboardingCtaLabel = useMemo(() => {
-    if (onboardingProgress >= 100) return 'Onboarding completed'
-    if (onboardingProgress > 0) return 'Resume onboarding'
-    return 'Start your journey'
-  }, [onboardingProgress])
-
-  const onboardingBadge = onboardingProgress >= 100 ? `${onboardingProgress}% complete` : '+500 XP bonus'
-
-  const statusColor = checklistProgress.percent >= 80 ? 'green' : checklistProgress.percent >= 50 ? 'orange' : 'red'
+  const statusColor: 'green' | 'orange' | 'red' =
+    checklistProgress.percent >= 80 ? 'green' : checklistProgress.percent >= 50 ? 'orange' : 'red'
 
   const hideUpgrade = profile?.role !== UserRole.FREE_USER
 
@@ -344,10 +332,6 @@ export const CompanyDashboard: React.FC = () => {
     localStorage.setItem('company-dashboard-upgrade-dismissed', 'true')
     setUpgradeDismissed(true)
   }, [])
-
-  const handleOnboardingClick = useCallback(() => {
-    navigate('/app/onboarding')
-  }, [navigate])
 
   const peerWeekRange = useMemo(() => {
     const start = weekStart
@@ -640,25 +624,7 @@ export const CompanyDashboard: React.FC = () => {
       </Box>
 
       {profile?.role !== UserRole.FREE_USER && (
-        <SimpleGrid columns={{ base: 1, md: 2, xl: 4 }} spacing={4}>
-          <Card borderColor="brand.border" shadow="lg">
-            <CardBody>
-              <HStack justify="space-between" align="center">
-                <Text fontWeight="bold">{onboardingCtaLabel}</Text>
-                <Badge colorScheme="purple">{onboardingBadge}</Badge>
-              </HStack>
-              <Text color="gray.500" fontSize="sm" mt={2}>
-                {onboardingDeadline
-                  ? `Complete by ${format(onboardingDeadline, 'MMM d')}`
-                  : 'Takes ~5 min to finish'}
-              </Text>
-              <Progress mt={3} value={onboardingProgress} hasStripe isAnimated={onboardingProgress < 100} />
-              <Button mt={4} colorScheme="purple" onClick={handleOnboardingClick}>
-                Continue
-              </Button>
-            </CardBody>
-          </Card>
-
+        <SimpleGrid columns={{ base: 1, md: 2, xl: 3 }} spacing={4}>
           <Card shadow="lg">
             <CardBody>
               <Text fontWeight="bold">Book 1-on-1</Text>
@@ -719,7 +685,7 @@ export const CompanyDashboard: React.FC = () => {
                 {checklistProgress.completed}/{checklistProgress.total} activities completed — {taskStatusLabel}
               </Badge>
             </HStack>
-          <Progress value={checklistProgress.percent} colorScheme={statusColor as any} mb={3} />
+          <Progress value={checklistProgress.percent} colorScheme={statusColor} mb={3} />
           <Text color="gray.500" fontSize="sm" mb={2}>
             {checklistProgress.total - checklistProgress.completed} pending | {checklistProgress.percent}% complete
           </Text>

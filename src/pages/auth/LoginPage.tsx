@@ -101,11 +101,6 @@ export const LoginPage: React.FC = () => {
   useEffect(() => {
     if (!pendingNavigation || authLoading || !profile) return
 
-    if (!profile.isOnboarded) {
-      navigate('/app/onboarding', { replace: true })
-      return
-    }
-
     if (!profile.dashboardTourCompleted) {
       navigate(`${getDashboardPath()}?firstVisit=true`, { replace: true })
       return

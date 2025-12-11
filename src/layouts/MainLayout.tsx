@@ -72,7 +72,7 @@ export const MainLayout: React.FC = () => {
   useEffect(() => {
     if (!profile) return
 
-    if (profile.role === UserRole.FREE_USER && profile.isOnboarded && buildVillageKey) {
+    if (profile.role === UserRole.FREE_USER && buildVillageKey) {
       const stored = localStorage.getItem(buildVillageKey)
       if (!stored) {
         setShowVillagePrompt(true)
@@ -325,7 +325,6 @@ export const MainLayout: React.FC = () => {
                 </HStack>
               </MenuButton>
               <MenuList bg="white" borderColor="brand.border">
-                <MenuItem onClick={() => navigate('/app/onboarding')}>Onboarding</MenuItem>
                 <MenuItem onClick={() => navigate('/app/profile')}>Profile</MenuItem>
                 <MenuDivider />
                 <MenuItem onClick={handleSignOut}>Sign Out</MenuItem>

@@ -37,7 +37,6 @@ import { StatCard } from '@/components/dashboard/StatCard'
 import { ActivityCard } from '@/components/dashboard/ActivityCard'
 import { BadgeCard } from '@/components/dashboard/BadgeCard'
 import { DashboardTourStep, useDashboardTour } from '@/hooks/useDashboardTour'
-import { OnboardingBanner } from '@/components/OnboardingBanner'
 import { TourBanner } from '@/components/TourBanner'
 
 interface ActivityItem {
@@ -208,16 +207,6 @@ export const PaidMemberDashboard: React.FC = () => {
 
   return (
     <Stack spacing={8}>
-      <OnboardingBanner
-        userId={profile?.id}
-        profileName={profile?.firstName}
-        variant="paid"
-        isOnboarded={profile?.isOnboarded}
-        progress={profile?.onboardingSnapshot}
-        onStart={() => navigate('/app/onboarding')}
-        description="Finish onboarding to personalize your leadership journey, unlock concierge support, and fast-track rewards."
-        highlight="Premium members: onboarding boosts your XP"
-      />
       {announcementNode}
       <TourBanner
         profileName={profile?.firstName}

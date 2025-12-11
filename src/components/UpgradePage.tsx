@@ -100,7 +100,7 @@ export const UpgradePage: React.FC = () => {
 
           <Stack spacing={3}>
             <Heading size="lg">Choose your 2026 cohort</Heading>
-            <Text color="gray.600">Six-week journey cohorts with structured onboarding and live coaching.</Text>
+            <Text color="gray.600">Six-week journey cohorts with guided tours and live coaching.</Text>
           </Stack>
 
           <Grid templateColumns={{ base: '1fr', md: 'repeat(2, 1fr)', lg: 'repeat(3, 1fr)' }} gap={4}>

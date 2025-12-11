@@ -14,7 +14,6 @@ import { HomePage } from '@/pages/home/HomePage'
 import { LoginPage } from '@/pages/auth/LoginPage'
 import { SignUpPage } from '@/pages/auth/SignUpPage'
 import { ResetPasswordPage } from '@/pages/auth/ResetPasswordPage'
-import { OnboardingPage } from '@/pages/onboarding/OnboardingPage'
 import { UpgradePage } from '@/pages/upgrade/UpgradePage'
 
 // Dashboard imports
@@ -48,14 +47,9 @@ import { UnauthorizedPage } from '@/pages/errors/UnauthorizedPage'
 
 // Dashboard router component
 const DashboardRouter = () => {
-  const { profile, loading } = useAuth()
+  const { loading } = useAuth()
 
   if (loading) return null
-
-  const dashboardPath = getDashboardPathForRole(profile?.role)
-  const relativeDashboardPath = dashboardPath.startsWith('/app/dashboard/')
-    ? dashboardPath.replace('/app/dashboard/', '')
-    : dashboardPath
 
   return (
     <Routes>
@@ -126,13 +120,6 @@ export const AppRoutes = () => {
             </ProtectedRoute>
           }
         />
-
-        {/* Onboarding */}
-        <Route path="/app/onboarding" element={
-          <ProtectedRoute>
-            <OnboardingPage />
-          </ProtectedRoute>
-        } />
 
         {/* Admin routes */}
         <Route
