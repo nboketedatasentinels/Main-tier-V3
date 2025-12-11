@@ -27,12 +27,6 @@ import {
   Skeleton,
   Stack,
   Tag,
-  Table,
-  Tbody,
-  Td,
-  Th,
-  Thead,
-  Tr,
   Text,
   Textarea,
   Tooltip,
@@ -56,8 +50,6 @@ interface ActivityTemplate {
   week: number
   category: string
   tags?: string[]
-  frequency?: string
-  monthlyMax?: number
 }
 
 type ActivityStatus = 'not_started' | 'pending' | 'completed'
@@ -122,153 +114,67 @@ const weeklyGuidance: Record<number, string[]> = {
   6: ['Record your transformation recap', 'Request endorsements from peers', 'Lock in final points to hit 100%'],
 }
 
-const fullJourneyActivities: ActivityTemplate[] = [
+const defaultTemplates: ActivityTemplate[] = [
   {
-    id: 'watch-podcast',
-    baseId: 'watch_listen_podcast',
-    title: 'Watch/listen to podcast',
-    description: 'Engage with up to three podcast episodes each month.',
-    points: 1000,
-    week: 1,
-    category: 'Learning',
-    frequency: '3 / month',
-    monthlyMax: 3000,
-  },
-  {
-    id: 'podcast-workbook',
-    baseId: 'podcast_workbook',
-    title: 'Complete podcast workbook',
-    description: 'Submit reflections for the podcast episodes you watched.',
-    points: 1000,
-    week: 1,
-    category: 'Reflection',
-    frequency: '3 / month',
-    monthlyMax: 3000,
-  },
-  {
-    id: 'webinar-attend',
-    baseId: 'attend_webinar',
-    title: 'Attend webinar',
-    description: 'Join one live webinar to unlock discussion points.',
-    points: 2000,
-    week: 1,
-    category: 'Live',
-    frequency: '1 / month',
-    monthlyMax: 2000,
-  },
-  {
-    id: 'webinar-workbook',
-    baseId: 'webinar_workbook',
-    title: 'Complete webinar workbook',
-    description: 'Turn webinar insights into action via the workbook.',
-    points: 2000,
-    week: 1,
-    category: 'Reflection',
-    frequency: '1 / month',
-    monthlyMax: 2000,
-  },
-  {
-    id: 'peer-matching',
-    baseId: 'peer_matching',
-    title: 'Peer Matching',
-    description: 'Connect with peers up to four times per month.',
-    points: 1000,
-    week: 1,
-    category: 'Networking',
-    frequency: '4 / month',
-    monthlyMax: 4000,
-  },
-  {
-    id: 'impact-log-entry',
-    baseId: 'impact_log_entry',
-    title: 'Impact Log Entry',
-    description: 'Capture up to two measurable impact updates monthly.',
-    points: 1000,
-    week: 1,
-    category: 'Impact',
-    frequency: '2 / month',
-    monthlyMax: 2000,
-  },
-  {
-    id: 'book-club',
-    baseId: 'book_club',
-    title: 'Book Club Participation',
-    description: 'Join the monthly book club discussion.',
-    points: 1500,
+    id: 'forum-post',
+    baseId: 'community_post',
+    title: 'Post and comment in the forum',
+    description: 'Create one post and two thoughtful comments.',
+    points: 50,
     week: 1,
     category: 'Community',
-    frequency: '1 / month',
-    monthlyMax: 1500,
+    tags: ['proof-optional'],
   },
   {
-    id: 'peer-to-peer-monthly',
-    baseId: 'monthly_peer_to_peer',
-    title: 'Monthly Peer to Peer',
-    description: 'Complete one peer-to-peer accountability session.',
-    points: 2500,
-    week: 1,
-    category: 'Accountability',
-    frequency: '1 / month',
-    monthlyMax: 2500,
-    requiresApproval: true,
-  },
-  {
-    id: 'linkedin-engagement',
-    baseId: 'linkedin_engagement',
-    title: 'LinkedIn engagement (post/comment)',
-    description: 'Post or comment to grow your public leadership signal.',
-    points: 500,
-    week: 1,
-    category: 'Brand',
-    frequency: '2 / month',
-    monthlyMax: 1000,
-  },
-  {
-    id: 'lift-course-module',
-    baseId: 'lift_course_module',
-    title: 'LIFT Course Module Completed',
-    description: 'Complete one LIFT course module per month.',
-    points: 3000,
+    id: 'video-watch',
+    baseId: 'video_watch',
+    title: 'Watch this week\'s leadership video',
+    description: 'Complete the featured video and share takeaways.',
+    points: 40,
     week: 1,
     category: 'Learning',
-    frequency: '1 / month',
-    monthlyMax: 3000,
+    isFreeTier: true,
+  },
+  {
+    id: 'impact-log',
+    baseId: 'impact_log',
+    title: 'Submit your Impact Log',
+    description: 'Capture your wins and lessons for the week.',
+    points: 60,
+    week: 1,
+    category: 'Reflection',
+    requiresApproval: true,
+  },
+  {
+    id: 'peer-to-peer',
+    baseId: 'peer_to_peer',
+    title: 'Peer-to-peer connection',
+    description: 'Complete a peer matching session and note outcomes.',
+    points: 80,
+    week: 2,
+    category: 'Networking',
+    requiresApproval: true,
+  },
+  {
+    id: 'linkedin',
+    baseId: 'linkedin_engagement',
+    title: 'LinkedIn engagement',
+    description: 'Share or comment on a leadership insight.',
+    points: 30,
+    week: 3,
+    category: 'Brand',
+  },
+  {
+    id: 'mentor-session',
+    baseId: 'mentor_session',
+    title: 'Mentor or coach session',
+    description: 'Book and attend a mentor session.',
+    points: 100,
+    week: 4,
+    category: 'Growth',
     requiresApproval: true,
   },
 ]
-
-const introJourneyActivities = [
-  'watch-podcast',
-  'podcast-workbook',
-  'webinar-attend',
-  'webinar-workbook',
-  'impact-log-entry',
-  'lift-course-module',
-]
-
-const journeyTargets = [
-  { journey: '4-Week Intro', weeks: 4, weeklyTarget: 2500, target: 10000, maxPossible: 15000 },
-  { journey: '6-Week Power', weeks: 6, weeklyTarget: 4000, target: 24000, maxPossible: 36000 },
-  { journey: '3-Month', weeks: 12, weeklyTarget: 4000, target: 48000, maxPossible: 72000 },
-  { journey: '6-Month', weeks: 24, weeklyTarget: 4000, target: 96000, maxPossible: 144000 },
-  { journey: '9-Month', weeks: 36, weeklyTarget: 4000, target: 144000, maxPossible: 216000 },
-  { journey: '12-Month', weeks: 48, weeklyTarget: 4000, target: 192000, maxPossible: 288000 },
-]
-
-const statusLegend = [
-  { label: 'On Track', rule: '≥ 100% of weekly target', color: 'green' },
-  { label: 'Warning', rule: '75-99% of weekly target', color: 'yellow' },
-  { label: 'Alert', rule: '< 75% of weekly target', color: 'red' },
-]
-
-const getDefaultTemplatesForWeek = (week: number, journeyType: string) => {
-  const isIntroJourney = journeyType === 'fourWeekIntro'
-  const templateSource = isIntroJourney
-    ? fullJourneyActivities.filter(activity => introJourneyActivities.includes(activity.id))
-    : fullJourneyActivities
-
-  return templateSource.map(template => ({ ...template, week }))
-}
 
 const getWeekKey = (week: number) => `week${week}`
 
@@ -312,53 +218,6 @@ const statusLabelMap: Record<ActivityStatus, string> = {
   completed: 'Completed',
 }
 
-const AddIcon = (props: IconProps) => (
-  <Icon viewBox="0 0 24 24" {...props}>
-    <path d="M12 5v14M5 12h14" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
-  </Icon>
-)
-
-const CheckCircleIcon = (props: IconProps) => (
-  <Icon viewBox="0 0 24 24" {...props}>
-    <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="2" fill="none" />
-    <path d="m8 12 3 3 5-6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-  </Icon>
-)
-
-const ChevronLeftIcon = (props: IconProps) => (
-  <Icon viewBox="0 0 24 24" {...props}>
-    <path d="M15 6 9 12l6 6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-  </Icon>
-)
-
-const ChevronRightIcon = (props: IconProps) => (
-  <Icon viewBox="0 0 24 24" {...props}>
-    <path d="m9 6 6 6-6 6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-  </Icon>
-)
-
-const LockIcon = (props: IconProps) => (
-  <Icon viewBox="0 0 24 24" {...props}>
-    <rect x="5" y="10" width="14" height="9" rx="2" stroke="currentColor" strokeWidth="2" fill="none" />
-    <path d="M9 10V7a3 3 0 1 1 6 0v3" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
-  </Icon>
-)
-
-const WarningIcon = (props: IconProps) => (
-  <Icon viewBox="0 0 24 24" {...props}>
-    <path
-      d="M12 4 3 19h18L12 4Z"
-      stroke="currentColor"
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      fill="none"
-    />
-    <path d="M12 10v4" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
-    <circle cx="12" cy="17" r="1" fill="currentColor" />
-  </Icon>
-)
-
 const WeeklyChecklistPage: React.FC = () => {
   const { user, profile } = useAuth()
   const [journey, setJourney] = useState<JourneyConfig | null>(null)
@@ -390,8 +249,9 @@ const WeeklyChecklistPage: React.FC = () => {
   const totalWeeks = normalizedJourneyType === 'fourWeekIntro' ? 4 : normalizedJourneyType === 'sixWeekSprint' ? 6 : 12
 
   const weeklyTarget = useMemo(() => {
-    if (normalizedJourneyType === 'fourWeekIntro') return 2500
-    return 4000
+    if (normalizedJourneyType === 'sixWeekSprint') return 350
+    if (normalizedJourneyType === 'fourWeekIntro') return 250
+    return 400
   }, [normalizedJourneyType])
 
   const fetchJourney = useCallback(async () => {
@@ -459,18 +319,16 @@ const WeeklyChecklistPage: React.FC = () => {
         ? (checklistSnap.data() as WeeklyChecklistRecord)
         : { completed_activities: [], pending_activities: [], responses: {} }
 
-      const filtered = templates.filter(template => (journey.isPaid ? true : template.isFreeTier ?? true))
+      const filtered = templates.filter(template => (journey.isPaid ? true : template.isFreeTier))
       setActivities(buildActivitiesFromTemplates(filtered, checklistData))
     } catch (err) {
       console.error(err)
       setError('We could not load weekly activities from Firebase. Try refreshing.')
-      setActivities(
-        getDefaultTemplatesForWeek(selectedWeek, normalizedJourneyType).map(template => ({ ...template, status: 'not_started' })),
-      )
+      setActivities(defaultTemplates.filter(t => t.week === selectedWeek).map(template => ({ ...template, status: 'not_started' })))
     } finally {
       setActivityLoading(false)
     }
-  }, [journey, normalizedJourneyType, selectedWeek, user])
+  }, [journey, selectedWeek, user])
 
   const calculateProgress = useCallback(() => {
     const completedActivities = activities.filter(a => a.status === 'completed')
@@ -601,21 +459,8 @@ const WeeklyChecklistPage: React.FC = () => {
     const pct = Math.min(100, Math.round((pendingCounts.points / weeklyTarget) * 100))
     if (pct >= 100) return { color: 'green', label: 'On Track', pct }
     if (pct >= 75) return { color: 'yellow', label: 'Warning', pct }
-    return { color: 'red', label: 'Alert', pct }
+    return { color: 'red', label: 'Critical', pct }
   }, [pendingCounts.points, weeklyTarget])
-
-  const activityReference = useMemo(
-    () =>
-      normalizedJourneyType === 'fourWeekIntro'
-        ? fullJourneyActivities.filter(activity => introJourneyActivities.includes(activity.id))
-        : fullJourneyActivities,
-    [normalizedJourneyType],
-  )
-
-  const activeJourneyTarget = useMemo(() => {
-    if (normalizedJourneyType === 'fourWeekIntro') return journeyTargets[0]
-    return journeyTargets.find(target => target.weeks === (journey?.programDuration || totalWeeks)) || journeyTargets[1]
-  }, [journey?.programDuration, normalizedJourneyType, totalWeeks])
 
   const firstIncompleteActivity = useMemo(() => activities.find(activity => activity.status !== 'completed'), [activities])
 
@@ -826,74 +671,6 @@ const WeeklyChecklistPage: React.FC = () => {
       <Text color="gray.300" fontSize="sm" mt={2}>
         Saved locally for calendar week {calendarWeek}. Perfect for building your weekly habits.
       </Text>
-    </Box>
-  )
-
-  const renderPointsReference = () => (
-    <Box borderWidth="1px" borderColor="gray.700" p={4} borderRadius="lg" bg="gray.900">
-      <Heading size="sm" color="brand.gold" mb={2}>
-        Points system reference
-      </Heading>
-      <Text color="gray.300" fontSize="sm" mb={3}>
-        Calibrated to the latest journey-based points model (weekly targets, monthly caps, and approval rules).
-      </Text>
-      <SimpleGrid columns={{ base: 1, md: 3 }} spacing={3} mb={4}>
-        <StatCard
-          label="Weekly target"
-          value={`${weeklyTarget.toLocaleString()} pts`}
-          icon={<InfoPill color="teal" />}
-        />
-        <StatCard
-          label="Journey target (67%)"
-          value={activeJourneyTarget ? `${activeJourneyTarget.target.toLocaleString()} pts` : 'See table'}
-          icon={<InfoPill color="orange" />}
-        />
-        <StatCard
-          label="Max possible"
-          value={activeJourneyTarget ? `${activeJourneyTarget.maxPossible.toLocaleString()} pts` : 'See table'}
-          icon={<InfoPill color="purple" />}
-        />
-      </SimpleGrid>
-      <Stack spacing={2} mb={3}>
-        <Text color="gray.200" fontWeight="bold">
-          Weekly status automation
-        </Text>
-        {statusLegend.map(status => (
-          <HStack key={status.label} spacing={2} align="center" color={`${status.color}.200`}>
-            <InfoPill color={status.color} />
-            <Text>{status.label}</Text>
-            <Tag size="sm" colorScheme={status.color} variant="subtle">
-              {status.rule}
-            </Tag>
-          </HStack>
-        ))}
-      </Stack>
-      <Table size="sm" variant="simple">
-        <Thead>
-          <Tr>
-            <Th color="gray.400">Activity</Th>
-            <Th color="gray.400">Frequency</Th>
-            <Th color="gray.400">Points</Th>
-            <Th color="gray.400">Monthly max</Th>
-          </Tr>
-        </Thead>
-        <Tbody>
-          {activityReference.map(activity => (
-            <Tr key={activity.id}>
-              <Td color="gray.200">{activity.title}</Td>
-              <Td color="gray.300">{activity.frequency || '—'}</Td>
-              <Td color="gray.200">{activity.points.toLocaleString()}</Td>
-              <Td color="gray.300">{activity.monthlyMax ? activity.monthlyMax.toLocaleString() : '—'}</Td>
-            </Tr>
-          ))}
-        </Tbody>
-      </Table>
-      {normalizedJourneyType === 'fourWeekIntro' && (
-        <Text color="gray.400" fontSize="sm" mt={3}>
-          4-week intro journeys have limited activities and a 2,500 pts/week goal. Peer Matching, Book Club, Peer to Peer, and
-          LinkedIn engagement unlock after graduation.
-        </Text>
-      )}
     </Box>
   )
 
@@ -1113,13 +890,12 @@ const WeeklyChecklistPage: React.FC = () => {
                       ? 'Amazing! You are ahead of your target.'
                       : progressStatus.pct >= 75
                         ? 'You are close. Aim to close remaining activities.'
-                        : 'Alert: earn points now to avoid falling behind.'}
+                        : 'Critical: earn points to avoid falling behind.'}
                   </Text>
                 </Stack>
               )}
             </Box>
             {renderGamificationPanel()}
-            {renderPointsReference()}
           </Stack>
         </GridItem>
       </Grid>
