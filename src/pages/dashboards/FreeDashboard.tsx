@@ -1,4 +1,4 @@
-import React, { useState } from 'react'
+import React, { useMemo, useState } from 'react'
 import {
   Box,
   Heading,
@@ -24,20 +24,61 @@ import {
   FormLabel,
   Input,
   Textarea,
+  HStack,
 } from '@chakra-ui/react'
+import { useNavigate } from 'react-router-dom'
 import { useAuth } from '@/hooks/useAuth'
 import { DashboardTourStep, useDashboardTour } from '@/hooks/useDashboardTour'
+import { OnboardingBanner } from '@/components/OnboardingBanner'
 
 export const FreeDashboard: React.FC = () => {
   const { profile } = useAuth()
+  const navigate = useNavigate()
   const { isOpen, onOpen, onClose } = useDisclosure()
   const [villageName, setVillageName] = useState('')
   const [villagePurpose, setVillagePurpose] = useState('')
 
+  const tourSteps = useMemo<DashboardTourStep[]>(
+    () => [
+      {
+        element: '#free-guided-tour',
+        title: 'Replay the guided tour',
+        intro: 'Use this to revisit tips about navigation and actions on your dashboard.',
+        position: 'bottom',
+      },
+      {
+        element: '#free-stat-grid',
+        title: 'Your momentum stats',
+        intro: 'Track your points, level, and journey status from this quick snapshot.',
+        position: 'bottom',
+      },
+      {
+        element: '#free-upgrade-card',
+        title: 'Upgrade to unlock journeys',
+        intro: 'Move beyond the free tier to unlock guided journeys and more rewards.',
+        position: 'top',
+      },
+    ],
+    [],
+  )
+
+  const { startTour, currentStep, hasCompleted, announcementNode, isLoading } =
+    useDashboardTour('free', tourSteps, true)
+
   return (
     <Box>
+      <OnboardingBanner
+        userId={profile?.id}
+        profileName={profile?.firstName}
+        variant="free"
+        isOnboarded={profile?.isOnboarded}
+        progress={profile?.onboardingSnapshot}
+        onStart={() => navigate('/app/onboarding')}
+        highlight="Finish setup to unlock more challenges"
+      />
       {announcementNode}
       <HStack
+        id="free-guided-tour"
         justify="space-between"
         align={{ base: 'flex-start', md: 'center' }}
         spacing={4}
@@ -90,7 +131,7 @@ export const FreeDashboard: React.FC = () => {
         </Card>
       )}
 
-      <SimpleGrid columns={{ base: 1, md: 3 }} spacing={6}>
+      <SimpleGrid id="free-stat-grid" columns={{ base: 1, md: 3 }} spacing={6}>
         <Card bg="brand.royalPurple">
           <CardBody>
             <Stat>

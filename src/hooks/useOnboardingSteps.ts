@@ -27,6 +27,8 @@ const INITIAL_PROGRESS: ProgressState = {
   pointsDeducted: false,
   pointsDeductedAmount: null,
   updatedAt: null,
+  totalTaskCount: 0,
+  totalStepCount: 0,
 }
 
 interface UseOnboardingStepsOptions {
@@ -49,6 +51,8 @@ export const useOnboardingSteps = ({ userId, roleKey, resume }: UseOnboardingSte
       onboardingComplete: (nextProgress as OnboardingSnapshot | null)?.onboardingComplete ?? false,
       onboardingSkipped: (nextProgress as OnboardingSnapshot | null)?.onboardingSkipped ?? false,
       lastStepId: (nextProgress as OnboardingSnapshot | null)?.lastStepId ?? null,
+      totalTaskCount: (nextProgress as OnboardingSnapshot | null)?.totalTaskCount ?? 0,
+      totalStepCount: (nextProgress as OnboardingSnapshot | null)?.totalStepCount ?? 0,
     }),
     [],
   )
@@ -111,6 +115,24 @@ export const useOnboardingSteps = ({ userId, roleKey, resume }: UseOnboardingSte
     return Math.round((progress.completedItems.length / Math.max(totalItemCount, 1)) * 100)
   }, [progress, totalItemCount])
 
+  useEffect(() => {
+    if (!progress || !userId || !steps.length) return
+
+    if (progress.totalTaskCount === totalItemCount && progress.totalStepCount === steps.length) {
+      return
+    }
+
+    const syncedProgress: OnboardingSnapshot = {
+      ...progress,
+      totalTaskCount: totalItemCount,
+      totalStepCount: steps.length,
+    }
+
+    setProgress(syncedProgress)
+    cacheProgress(userId, syncedProgress)
+    persistOnboardingProgress(userId, syncedProgress)
+  }, [progress, steps.length, totalItemCount, userId])
+
   const updateProgress = useCallback(
     async (updater: (current: OnboardingSnapshot) => OnboardingSnapshot, label: string) => {
       if (!userId) return
@@ -118,9 +140,21 @@ export const useOnboardingSteps = ({ userId, roleKey, resume }: UseOnboardingSte
       setProgress((current) => {
         const hydrated = hydrateProgress(current)
         const next = updater(hydrated)
-        cacheProgress(userId, next)
-        persistOnboardingProgress(userId, next)
-        return next
+        const withTotals: OnboardingSnapshot = {
+          ...next,
+          totalTaskCount: totalItemCount,
+          totalStepCount: steps.length,
+          onboardingComplete:
+            next.onboardingComplete ||
+            (steps.length > 0 && next.completedSteps.length >= steps.length),
+          onboardingSkipped: next.onboardingSkipped ?? hydrated.onboardingSkipped ?? false,
+          onboardingStartTime: next.onboardingStartTime ||
+            hydrated.onboardingStartTime ||
+            new Date().toISOString(),
+        }
+        cacheProgress(userId, withTotals)
+        persistOnboardingProgress(userId, withTotals)
+        return withTotals
       })
 
       await logOnboardingAnalytics({
@@ -136,7 +170,16 @@ export const useOnboardingSteps = ({ userId, roleKey, resume }: UseOnboardingSte
         recorded_at: new Date().toISOString(),
       })
     },
-    [userId, hydrateProgress, completedPercentage, progress?.completedItems.length, totalItemCount, roleKey, resume],
+    [
+      userId,
+      hydrateProgress,
+      completedPercentage,
+      progress?.completedItems.length,
+      totalItemCount,
+      steps.length,
+      roleKey,
+      resume,
+    ],
   )
 
   const markItemComplete = useCallback(
@@ -145,9 +188,12 @@ export const useOnboardingSteps = ({ userId, roleKey, resume }: UseOnboardingSte
         if (current.completedItems.includes(item.id)) return current
 
         const updatedItems = [...current.completedItems, item.id]
+        const stepDefinition = steps.find((step) => step.id === stepId)
         const updatedSteps = current.completedSteps.includes(stepId)
           ? current.completedSteps
-          : current.completedSteps
+          : stepDefinition && stepDefinition.items.every((stepItem) => updatedItems.includes(stepItem.id))
+            ? [...current.completedSteps, stepId]
+            : current.completedSteps
 
         return {
           ...current,
@@ -156,10 +202,11 @@ export const useOnboardingSteps = ({ userId, roleKey, resume }: UseOnboardingSte
           totalPoints: current.totalPoints + item.points,
           updatedAt: new Date().toISOString(),
           lastStepId: stepId,
+          onboardingSkipped: false,
         }
       }, item.id)
     },
-    [updateProgress],
+    [steps, updateProgress],
   )
 
   const markStepComplete = useCallback(
@@ -177,6 +224,7 @@ export const useOnboardingSteps = ({ userId, roleKey, resume }: UseOnboardingSte
           updatedAt: new Date().toISOString(),
           lastStepId: step.id,
           onboardingComplete: [...current.completedSteps, step.id].length === steps.length,
+          onboardingSkipped: false,
         }
       }, step.id)
     },
@@ -192,12 +240,15 @@ export const useOnboardingSteps = ({ userId, roleKey, resume }: UseOnboardingSte
         onboardingSkipped: true,
         onboardingComplete: false,
         updatedAt: new Date().toISOString(),
+        totalTaskCount: totalItemCount,
+        totalStepCount: steps.length,
+        onboardingStartTime: hydrated.onboardingStartTime || new Date().toISOString(),
       }
       cacheProgress(userId, next)
       persistOnboardingProgress(userId, next)
       return next
     })
-  }, [hydrateProgress, userId])
+  }, [hydrateProgress, steps.length, totalItemCount, userId])
 
   const resetOnboarding = useCallback(() => {
     if (!userId) return

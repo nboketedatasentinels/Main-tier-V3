@@ -33,11 +33,6 @@ export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
     return <Navigate to="/login" state={{ from: location }} replace />
   }
 
-  // Missing profile (should complete onboarding)
-  if (requireAuth && user && !profile) {
-    return <Navigate to="/app/onboarding" replace />
-  }
-
   if (isMentor && location.pathname.startsWith('/app')) {
     return <Navigate to="/mentor/dashboard" replace />
   }
