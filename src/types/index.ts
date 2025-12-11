@@ -29,8 +29,12 @@ export interface UserProfile {
   
   // Organization
   companyId?: string
+  companyCode?: string
+  corporateVillageId?: string
+  cohortIdentifier?: string
   villageId?: string
   clusterId?: string
+  timezone?: string
   
   // Settings
   isOnboarded: boolean
