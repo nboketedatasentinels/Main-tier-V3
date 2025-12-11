@@ -270,26 +270,37 @@ export const ProfilePage: React.FC = () => {
   const [visibilityMessage, setVisibilityMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null)
 
   const buildProfileFromDoc = useCallback(
-    (docData: Record<string, any>): ProfileData => ({
-      id: docData.id,
-      fullName: docData.fullName || docData.full_name || docData.firstName || 'User',
-      email: docData.email || '',
+    (docData: Record<string, unknown>): ProfileData => ({
+      id: String(docData.id),
+      fullName:
+        (typeof docData.fullName === 'string' && docData.fullName) ||
+        (typeof docData.full_name === 'string' && docData.full_name) ||
+        (typeof docData.firstName === 'string' && docData.firstName) ||
+        'User',
+      email: (typeof docData.email === 'string' && docData.email) || '',
       role: (docData.role as UserRole) || profile?.role || UserRole.FREE_USER,
       accountStatus: (docData.accountStatus as ProfileData['accountStatus']) || 'active',
       membershipStatus: (docData.membershipStatus as ProfileData['membershipStatus']) ||
         (docData.role === UserRole.PAID_MEMBER ? 'paid' : 'free'),
-      profilePictureUrl: docData.avatarUrl || docData.profilePictureUrl || docData.profile_picture_url,
-      personalityType: docData.personalityType || docData.personality_type,
-      coreValues: docData.coreValues || docData.core_values || [],
-      bio: docData.bio || '',
-      socialLinks: docData.socialLinks || docData.social_media_links || {},
+      profilePictureUrl:
+        (typeof docData.avatarUrl === 'string' && docData.avatarUrl) ||
+        (typeof docData.profilePictureUrl === 'string' && docData.profilePictureUrl) ||
+        (typeof docData.profile_picture_url === 'string' && docData.profile_picture_url),
+      personalityType: (typeof docData.personalityType === 'string' && docData.personalityType) ||
+        (typeof docData.personality_type === 'string' && docData.personality_type),
+      coreValues: (docData.coreValues as string[]) || (docData.core_values as string[]) || [],
+      bio: (typeof docData.bio === 'string' && docData.bio) || '',
+      socialLinks: (docData.socialLinks as Record<string, string>) ||
+        (docData.social_media_links as Record<string, string>) ||
+        {},
       leaderboardVisibility: (docData.leaderboardVisibility as ProfileData['leaderboardVisibility']) ||
-        docData.leaderboard_visibility || 'public',
-      registrationDate: docData.registrationDate || docData.createdAt,
-      companyName: docData.companyName,
-      companyCode: docData.companyCode,
-      villageName: docData.villageName,
-      clusterName: docData.clusterName,
+        (docData.leaderboard_visibility as ProfileData['leaderboardVisibility']) ||
+        'public',
+      registrationDate: (docData.registrationDate as string) || (docData.createdAt as string),
+      companyName: docData.companyName as string,
+      companyCode: docData.companyCode as string,
+      villageName: docData.villageName as string,
+      clusterName: docData.clusterName as string,
     }),
     [profile?.role]
   )
@@ -330,12 +341,15 @@ export const ProfilePage: React.FC = () => {
     setBadgesError(null)
     try {
       const badgeDefsSnap = await getDocs(collection(db, 'badges'))
-      const badgeDefs = badgeDefsSnap.docs.map((docItem) => ({ id: docItem.id, ...(docItem.data() as any) }))
+      const badgeDefs = badgeDefsSnap.docs.map((docItem) => ({
+        id: docItem.id,
+        ...(docItem.data() as Record<string, unknown>),
+      }))
 
       const userBadgesSnap = await getDocs(query(collection(db, 'user_badges'), where('userId', '==', user.uid)))
       const userBadgeMap = new Map(
         userBadgesSnap.docs.map((docItem) => {
-          const payload = docItem.data() as any
+          const payload = docItem.data() as Record<string, unknown>
           return [payload.badgeId, { ...payload, id: docItem.id }]
         })
       )
@@ -378,7 +392,7 @@ export const ProfilePage: React.FC = () => {
     loadUserBadges()
   }, [loadUserBadges])
 
-  const handleInputChange = (field: keyof ProfileData, value: any) => {
+  const handleInputChange = <K extends keyof ProfileData>(field: K, value: ProfileData[K]) => {
     if (!editedData) return
     setEditedData({ ...editedData, [field]: value })
   }
