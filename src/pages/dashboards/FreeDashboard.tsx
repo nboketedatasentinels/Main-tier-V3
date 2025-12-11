@@ -26,6 +26,7 @@ import {
   Textarea,
 } from '@chakra-ui/react'
 import { useAuth } from '@/hooks/useAuth'
+import { DashboardTourStep, useDashboardTour } from '@/hooks/useDashboardTour'
 
 export const FreeDashboard: React.FC = () => {
   const { profile } = useAuth()
@@ -35,10 +36,41 @@ export const FreeDashboard: React.FC = () => {
 
   return (
     <Box>
-      <Heading mb={6} color="brand.gold">Welcome, {profile?.firstName}!</Heading>
-      <Text mb={8} color="brand.softGold">
-        You're on the Curious Cat Path. Explore T4L and upgrade to unlock full features!
-      </Text>
+      {announcementNode}
+      <HStack
+        justify="space-between"
+        align={{ base: 'flex-start', md: 'center' }}
+        spacing={4}
+        mb={4}
+        bg="rgba(255, 255, 255, 0.04)"
+        border="1px solid"
+        borderColor="brand.border"
+        borderRadius="lg"
+        p={4}
+      >
+        <VStack align="flex-start" spacing={1}>
+          <Text fontWeight="bold" color="brand.softGold">
+            Guided tour
+          </Text>
+          <Text fontSize="sm" color="brand.softGold" opacity={0.85}>
+            {isLoading
+              ? 'Loading your dashboard tour...'
+              : hasCompleted
+                ? 'Tour complete — replay to revisit tips.'
+                : `Resume from step ${currentStep + 1}.`}
+          </Text>
+        </VStack>
+        <Button
+          size="sm"
+          variant="outline"
+          colorScheme="yellow"
+          aria-label="Start dashboard tour"
+          onClick={() => startTour(hasCompleted ? 0 : currentStep)}
+          isDisabled={isLoading}
+        >
+          {hasCompleted ? 'Replay tour' : 'Start tour'}
+        </Button>
+      </HStack>
 
       {profile?.isOnboarded && !profile?.villageId && (
         <Card mb={8} bg="brand.primaryMuted" border="1px" borderColor="brand.border">
@@ -79,7 +111,7 @@ export const FreeDashboard: React.FC = () => {
           </CardBody>
         </Card>
 
-        <Card bg="brand.royalPurple">
+        <Card bg="brand.royalPurple" id="free-upgrade-card" aria-label="Upgrade call to action">
           <CardBody>
             <Stat>
               <StatLabel color="brand.softGold">Journey</StatLabel>
