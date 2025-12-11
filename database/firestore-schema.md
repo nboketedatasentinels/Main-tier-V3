@@ -31,7 +31,7 @@ User profile documents (indexed by user UID)
   clusterId?: string
   
   // Settings
-  isOnboarded: boolean
+  isOnboarded: boolean // Deprecated legacy flag; defaults to true
   personalityType?: string
   showOnLeaderboard: boolean
   allowPeerMatching: boolean

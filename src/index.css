@@ -21,24 +21,6 @@
   background: #b3b8d8;
 }
 
-/* Intro.js custom styling */
-.introjs-tooltip {
-  background: #ffffff !important;
-  color: #3a4562 !important;
-  border: 2px solid #e6e8f3 !important;
-}
-
-.introjs-button {
-  background: #5d6bff !important;
-  color: white !important;
-  border: none !important;
-  text-shadow: none !important;
-}
-
-.introjs-button:hover {
-  background: #4b59e6 !important;
-}
-
 /* Custom animations */
 @keyframes fadeIn {
   from {

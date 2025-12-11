@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useState } from 'react'
+import React, { useState } from 'react'
 import { useNavigate, Link as RouterLink } from 'react-router-dom'
 import {
   VStack,
@@ -16,35 +16,16 @@ import { useAuth } from '@/hooks/useAuth'
 import { getDashboardPathForRole } from '@/utils/dashboardPaths'
 import { doc, getDoc } from 'firebase/firestore'
 import { db, auth } from '@/services/firebase'
-import { UserProfile, UserRole } from '@/types'
+import { UserProfile } from '@/types'
 
 export const LoginPage: React.FC = () => {
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [loading, setLoading] = useState(false)
   const [magicLinkSent, setMagicLinkSent] = useState(false)
-  const [pendingNavigation, setPendingNavigation] = useState(false)
-
-  const { signIn, signInWithMagicLink, profile, user, loading: authLoading } = useAuth()
+  const { signIn, signInWithMagicLink, profile } = useAuth()
   const navigate = useNavigate()
   const toast = useToast()
-
-  const getDashboardPath = useCallback(() => {
-    switch (profile?.role) {
-      case UserRole.PAID_MEMBER:
-        return '/app/dashboard/member'
-      case UserRole.MENTOR:
-        return '/mentor/dashboard'
-      case UserRole.AMBASSADOR:
-        return '/app/dashboard/ambassador'
-      case UserRole.COMPANY_ADMIN:
-        return '/app/dashboard/company-admin'
-      case UserRole.SUPER_ADMIN:
-        return '/app/dashboard/super-admin'
-      default:
-        return '/app/dashboard/free'
-    }
-  }, [profile?.role])
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -67,18 +48,16 @@ export const LoginPage: React.FC = () => {
         duration: 3000,
       })
       try {
+        const currentUser = auth.currentUser
         let role = profile?.role
 
-        if (!role) {
-          const currentUser = auth.currentUser
-          if (currentUser) {
-            const profileRef = doc(db, 'profiles', currentUser.uid)
-            const profileSnapshot = await getDoc(profileRef)
+        if (!role && currentUser) {
+          const profileRef = doc(db, 'profiles', currentUser.uid)
+          const profileSnapshot = await getDoc(profileRef)
 
-            if (profileSnapshot.exists()) {
-              const profileData = profileSnapshot.data() as UserProfile
-              role = profileData.role
-            }
+          if (profileSnapshot.exists()) {
+            const profileData = profileSnapshot.data() as UserProfile
+            role = profileData.role
           }
         }
 
@@ -91,23 +70,6 @@ export const LoginPage: React.FC = () => {
 
     setLoading(false)
   }
-
-  useEffect(() => {
-    if (!pendingNavigation && user && profile && !authLoading) {
-      setPendingNavigation(true)
-    }
-  }, [authLoading, pendingNavigation, profile, user])
-
-  useEffect(() => {
-    if (!pendingNavigation || authLoading || !profile) return
-
-    if (!profile.dashboardTourCompleted) {
-      navigate(`${getDashboardPath()}?firstVisit=true`, { replace: true })
-      return
-    }
-
-    navigate(getDashboardPath(), { replace: true })
-  }, [authLoading, getDashboardPath, navigate, pendingNavigation, profile])
 
   const handleMagicLink = async () => {
     if (!email) {

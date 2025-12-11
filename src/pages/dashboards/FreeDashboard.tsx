@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react'
+import React, { useState } from 'react'
 import {
   Box,
   Heading,
@@ -26,8 +26,6 @@ import {
   Textarea,
 } from '@chakra-ui/react'
 import { useAuth } from '@/hooks/useAuth'
-import { DashboardTourStep, useDashboardTour } from '@/hooks/useDashboardTour'
-import { TourBanner } from '@/components/TourBanner'
 
 export const FreeDashboard: React.FC = () => {
   const { profile } = useAuth()
@@ -35,44 +33,8 @@ export const FreeDashboard: React.FC = () => {
   const [villageName, setVillageName] = useState('')
   const [villagePurpose, setVillagePurpose] = useState('')
 
-  const tourSteps = useMemo<DashboardTourStep[]>(
-    () => [
-      {
-        element: '#free-guided-tour',
-        title: 'Replay the guided tour',
-        intro: 'Use this to revisit tips about navigation and actions on your dashboard.',
-        position: 'bottom',
-      },
-      {
-        element: '#free-stat-grid',
-        title: 'Your momentum stats',
-        intro: 'Track your points, level, and journey status from this quick snapshot.',
-        position: 'bottom',
-      },
-      {
-        element: '#free-upgrade-card',
-        title: 'Upgrade to unlock journeys',
-        intro: 'Move beyond the free tier to unlock guided journeys and more rewards.',
-        position: 'top',
-      },
-    ],
-    [],
-  )
-
-  const { startTour, currentStep, hasCompleted, hasSkipped, announcementNode, isLoading } =
-    useDashboardTour('free', tourSteps, true)
-
   return (
     <Box>
-      {announcementNode}
-      <TourBanner
-        profileName={profile?.firstName}
-        hasCompleted={hasCompleted}
-        hasSkipped={hasSkipped}
-        isLoading={isLoading}
-        onStart={() => startTour(hasCompleted ? 0 : currentStep)}
-      />
-
       {!profile?.villageId && (
         <Card mb={8} bg="brand.primaryMuted" border="1px" borderColor="brand.border">
           <CardBody>
@@ -91,7 +53,7 @@ export const FreeDashboard: React.FC = () => {
         </Card>
       )}
 
-      <SimpleGrid id="free-stat-grid" columns={{ base: 1, md: 3 }} spacing={6}>
+      <SimpleGrid columns={{ base: 1, md: 3 }} spacing={6}>
         <Card bg="brand.royalPurple">
           <CardBody>
             <Stat>
@@ -112,7 +74,7 @@ export const FreeDashboard: React.FC = () => {
           </CardBody>
         </Card>
 
-        <Card bg="brand.royalPurple" id="free-upgrade-card" aria-label="Upgrade call to action">
+        <Card bg="brand.royalPurple" aria-label="Upgrade call to action">
           <CardBody>
             <Stat>
               <StatLabel color="brand.softGold">Journey</StatLabel>
