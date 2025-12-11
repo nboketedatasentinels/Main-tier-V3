@@ -28,20 +28,21 @@ export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
   }
 
   const isMentor = profile?.role === UserRole.MENTOR
-  const isSuperAdmin = profile?.role === UserRole.SUPER_ADMIN
-  const isCompanyAdmin = profile?.role === UserRole.COMPANY_ADMIN
 
   // Not authenticated
   if (requireAuth && !user) {
     return <Navigate to="/login" state={{ from: location }} replace />
   }
 
-  if ((isSuperAdmin || isCompanyAdmin) && location.pathname.startsWith('/app')) {
-    return <Navigate to={getDashboardPathForRole(profile?.role)} replace />
-  }
-
   if (isMentor && location.pathname.startsWith('/app')) {
     return <Navigate to="/mentor/dashboard" replace />
+  }
+
+  if (
+    (profile?.role === UserRole.SUPER_ADMIN || profile?.role === UserRole.COMPANY_ADMIN) &&
+    location.pathname.startsWith('/app')
+  ) {
+    return <Navigate to={getDashboardPathForRole(profile?.role)} replace />
   }
 
   // Role check
