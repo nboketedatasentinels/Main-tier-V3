@@ -2,6 +2,8 @@ import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
 import { ProtectedRoute } from '@/components/ProtectedRoute'
 import { FreeTierGuard } from '@/components/FreeTierGuard'
 import { UserRole } from '@/types'
+import { useAuth } from '@/hooks/useAuth'
+import { getDashboardPathForRole } from '@/utils/dashboardPaths'
 
 // Layout imports
 import { MainLayout } from '@/layouts/MainLayout'
@@ -46,6 +48,15 @@ import { UnauthorizedPage } from '@/pages/errors/UnauthorizedPage'
 
 // Dashboard router component
 const DashboardRouter = () => {
+  const { profile, loading } = useAuth()
+
+  if (loading) return null
+
+  const dashboardPath = getDashboardPathForRole(profile?.role)
+  const relativeDashboardPath = dashboardPath.startsWith('/app/dashboard/')
+    ? dashboardPath.replace('/app/dashboard/', '')
+    : dashboardPath
+
   return (
     <Routes>
       <Route path="free" element={
@@ -88,6 +99,14 @@ const DashboardRouter = () => {
   )
 }
 
+const DefaultAppRedirect = () => {
+  const { profile, loading } = useAuth()
+
+  if (loading) return null
+
+  return <Navigate to={getDashboardPathForRole(profile?.role)} replace />
+}
+
 export const AppRoutes = () => {
   return (
     <BrowserRouter>
@@ -128,12 +147,12 @@ export const AppRoutes = () => {
           <Route index element={<Navigate to="/admin/dashboard" replace />} />
         </Route>
 
-        {/* Protected main app routes */}
-        <Route path="/app" element={
-          <ProtectedRoute>
-            <MainLayout />
-          </ProtectedRoute>
-        }>
+      {/* Protected main app routes */}
+      <Route path="/app" element={
+        <ProtectedRoute>
+          <MainLayout />
+        </ProtectedRoute>
+      }>
           {/* Dashboard routes */}
           <Route path="dashboard/*" element={<DashboardRouter />} />
           
@@ -164,11 +183,11 @@ export const AppRoutes = () => {
           <Route path="referral-rewards" element={<ReferralRewardsPage />} />
           <Route path="book-club" element={<BookClubPage />} />
           <Route path="shameless-circle" element={<ShamelessCirclePage />} />
-          <Route path="profile" element={<ProfilePage />} />
+        <Route path="profile" element={<ProfilePage />} />
 
-          {/* Default redirect based on role */}
-          <Route index element={<Navigate to="/app/dashboard/free" replace />} />
-        </Route>
+        {/* Default redirect based on role */}
+        <Route index element={<DefaultAppRedirect />} />
+      </Route>
 
         {/* Error routes */}
         <Route path="/unauthorized" element={<UnauthorizedPage />} />

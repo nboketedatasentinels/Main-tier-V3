@@ -13,16 +13,18 @@ import {
   HStack,
 } from '@chakra-ui/react'
 import { useAuth } from '@/hooks/useAuth'
-import { UserRole } from '@/types'
+import { getDashboardPathForRole } from '@/utils/dashboardPaths'
+import { doc, getDoc } from 'firebase/firestore'
+import { db, auth } from '@/services/firebase'
+import { UserProfile } from '@/types'
 
 export const LoginPage: React.FC = () => {
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [loading, setLoading] = useState(false)
   const [magicLinkSent, setMagicLinkSent] = useState(false)
-  const [pendingNavigation, setPendingNavigation] = useState(false)
-
-  const { signIn, signInWithMagicLink, profile, user, loading: authLoading } = useAuth()
+  
+  const { signIn, signInWithMagicLink, profile } = useAuth()
   const navigate = useNavigate()
   const toast = useToast()
 
@@ -63,7 +65,27 @@ export const LoginPage: React.FC = () => {
         status: 'success',
         duration: 3000,
       })
-      setPendingNavigation(true)
+      try {
+        let role = profile?.role
+
+        if (!role) {
+          const currentUser = auth.currentUser
+          if (currentUser) {
+            const profileRef = doc(db, 'profiles', currentUser.uid)
+            const profileSnapshot = await getDoc(profileRef)
+
+            if (profileSnapshot.exists()) {
+              const profileData = profileSnapshot.data() as UserProfile
+              role = profileData.role
+            }
+          }
+        }
+
+        navigate(getDashboardPathForRole(role), { replace: true })
+      } catch (fetchError) {
+        console.error('Error fetching dashboard path', fetchError)
+        navigate('/app', { replace: true })
+      }
     }
 
     setLoading(false)
