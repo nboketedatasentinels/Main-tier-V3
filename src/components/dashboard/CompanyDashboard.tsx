@@ -11,6 +11,7 @@ import {
   Divider,
   Flex,
   Grid,
+  GridItem,
   HStack,
   Heading,
   Icon,
@@ -58,6 +59,7 @@ import {
 } from 'firebase/firestore'
 import { db } from '@/services/firebase'
 import { useAuth } from '@/hooks/useAuth'
+import { UserRole } from '@/types'
 
 interface WeeklyAggregation {
   id: string
@@ -112,6 +114,12 @@ interface LeaderboardEntry {
   totalPoints: number
 }
 
+interface FAQEntry {
+  id: string
+  question: string
+  answer: string
+}
+
 const inspirationQuotes = [
   'You are never too small to make a difference. — Greta Thunberg',
   'Leadership is a choice, not a rank. — Simon Sinek',
@@ -138,8 +146,8 @@ const useRealtimeCollection = <T,>(path: string, constraints: any[], mapper: (do
       ? query(collection(db, path), ...constraints)
       : (collection(db, path) as any)
 
-    const unsub = onSnapshot(q, (snapshot) => {
-      setData(snapshot.docs.map((d) => mapper(d.id, d.data())))
+    const unsub = onSnapshot(q, (snapshot: any) => {
+      setData(snapshot.docs.map((d: any) => mapper(d.id, d.data())))
       setLoading(false)
     })
 
@@ -226,6 +234,12 @@ export const CompanyDashboard: React.FC = () => {
     (id, data) => ({ id, name: data.name || 'Teammate', totalPoints: data.total_points || 0 }),
   )
 
+  const { data: faqEntries } = useRealtimeCollection<FAQEntry>(
+    'faqs',
+    [where('isVisible', '==', true)],
+    (id, data) => ({ id, question: data.question || '', answer: data.answer || '' }),
+  )
+
   useEffect(() => {
     const stored = localStorage.getItem('company-dashboard-upgrade-dismissed')
     if (stored === 'true') setUpgradeDismissed(true)
@@ -262,10 +276,15 @@ export const CompanyDashboard: React.FC = () => {
 
   useEffect(() => {
     const weekNumber = Number(format(weekStart, 'I'))
-    const idx = weekNumber % inspirationQuotes.length
-    const { question, answer } = faqFallback
-    setFaq({ question, answer })
-  }, [weekStart])
+    if (faqEntries.length === 0) {
+      setFaq({ question: faqFallback.question, answer: faqFallback.answer })
+      return
+    }
+
+    const idx = weekNumber % faqEntries.length
+    const entry = faqEntries[idx]
+    setFaq({ question: entry.question, answer: entry.answer })
+  }, [weekStart, faqEntries])
 
   const weekly = weeklyMetrics[0]
   const assignment = assignments[0]
@@ -288,10 +307,12 @@ export const CompanyDashboard: React.FC = () => {
 
   const statusColor = checklistProgress.percent >= 80 ? 'green' : checklistProgress.percent >= 50 ? 'orange' : 'red'
 
-  const hideUpgrade = profile?.role !== 'FREE_USER'
+  const hideUpgrade = profile?.role !== UserRole.FREE_USER
+
+  const villageDisplayName = profile?.companyName || profile?.companyCode
 
   const personalitySummary = profile?.personalityType
-    ? `${profile.personalityType} • ${profile.personalityTraits || 'Curious, Collaborative'}`
+    ? `${profile.personalityType} • Your personality insights`
     : 'Take the 16Personalities assessment to unlock insights.'
 
   const weeklyQuote = useMemo(() => {
@@ -300,15 +321,23 @@ export const CompanyDashboard: React.FC = () => {
   }, [weekStart])
 
   const weeklyTargetStatus = useMemo(() => {
-    if (!weekly) return { label: 'Below Target', color: 'red.500', difference: 0 }
+    if (!weekly)
+      return {
+        label: 'Below Target',
+        difference: 0,
+        bg: 'red.50',
+        text: 'red.700',
+        border: 'red.200',
+      }
+
     const diff = weekly.totalPoints - weekly.targetPoints
     if (weekly.totalPoints >= weekly.targetPoints * 1.1) {
-      return { label: 'Exceeding Target', color: 'green.400', difference: diff }
+      return { label: 'Exceeding Target', difference: diff, bg: 'green.50', text: 'green.700', border: 'green.200' }
     }
     if (weekly.totalPoints >= weekly.targetPoints) {
-      return { label: 'On Track', color: 'yellow.400', difference: diff }
+      return { label: 'On Track', difference: diff, bg: 'yellow.50', text: 'yellow.700', border: 'yellow.200' }
     }
-    return { label: 'Below Target', color: 'red.400', difference: diff }
+    return { label: 'Below Target', difference: diff, bg: 'red.50', text: 'red.700', border: 'red.200' }
   }, [weekly])
 
   const handleDismissUpgrade = useCallback(() => {
@@ -345,6 +374,17 @@ export const CompanyDashboard: React.FC = () => {
 
   const topTasks = useMemo(() => checklistItems.filter((item) => !item.completed).slice(0, 5), [checklistItems])
 
+  const taskStatusLabel = useMemo(() => {
+    if (checklistProgress.percent >= 80) return 'On track'
+    if (checklistProgress.percent >= 50) return 'Making progress'
+    return 'Needs attention'
+  }, [checklistProgress])
+
+  const totalLiftHours = useMemo(
+    () => (liftProgress?.educationHours || 0) + (liftProgress?.verifiedHours || 0) + (liftProgress?.selfAttestedHours || 0),
+    [liftProgress],
+  )
+
   return (
     <Stack spacing={8} pb={16}>
       {!hideUpgrade && !upgradeDismissed && (
@@ -371,13 +411,13 @@ export const CompanyDashboard: React.FC = () => {
       )}
 
       <Box>
-        <HStack spacing={3} align={{ base: 'flex-start', md: 'center' }} flexWrap="wrap" mb={2}>
-          <Heading size="lg">This Week at a Glance</Heading>
-          {profile?.villageName && (
-            <Badge colorScheme="purple" borderRadius="full">
-              for {profile.villageName}
-            </Badge>
-          )}
+          <HStack spacing={3} align={{ base: 'flex-start', md: 'center' }} flexWrap="wrap" mb={2}>
+            <Heading size="lg">This Week at a Glance</Heading>
+            {villageDisplayName && (
+              <Badge colorScheme="purple" borderRadius="full">
+                for {villageDisplayName}
+              </Badge>
+            )}
           <HStack color="green.400" fontSize="sm">
             <CheckCircle2 size={16} />
             <Text>Updated {formatDistanceToNow(new Date(), { addSuffix: true })}</Text>
@@ -411,24 +451,18 @@ export const CompanyDashboard: React.FC = () => {
                   </Tag>
                 </Flex>
 
-                <Flex
-                  p={4}
-                  borderRadius="md"
-                  bg={weeklyTargetStatus.color.replace('.400', '.900')}
-                  color="white"
-                  justify="space-between"
-                  align="center"
-                  mb={4}
-                >
+                <Flex p={4} borderRadius="md" bg={weeklyTargetStatus.bg} border="1px solid" borderColor={weeklyTargetStatus.border} justify="space-between" align="center" mb={4}>
                   <VStack align="flex-start" spacing={0}>
-                    <Text fontWeight="semibold">{weeklyTargetStatus.label}</Text>
-                    <Text fontSize="sm">
+                    <Text fontWeight="semibold" color={weeklyTargetStatus.text}>
+                      {weeklyTargetStatus.label}
+                    </Text>
+                    <Text fontSize="sm" color={weeklyTargetStatus.text}>
                       {weeklyTargetStatus.difference >= 0
                         ? `${weeklyTargetStatus.difference.toLocaleString()} pts above target`
                         : `${Math.abs(weeklyTargetStatus.difference).toLocaleString()} pts to reach baseline`}
                     </Text>
                   </VStack>
-                  <Badge colorScheme="blackAlpha">Weekly target status</Badge>
+                  <Badge colorScheme="yellow">Weekly target status</Badge>
                 </Flex>
 
                 <SimpleGrid columns={{ base: 1, md: 2 }} spacing={3}>
@@ -483,11 +517,11 @@ export const CompanyDashboard: React.FC = () => {
                     {assignment?.mentor?.available && <Badge colorScheme="green">Available</Badge>}
                   </HStack>
                   <Text fontWeight="semibold">{assignment?.mentor?.name || 'No mentor assigned'}</Text>
-                  {assignment?.mentor?.calendar && (
-                    <Button
-                      as={Link}
-                      href={assignment.mentor.calendar}
-                      leftIcon={<CalendarClock size={16} />}
+                {assignment?.mentor?.calendar && (
+                  <Button
+                    as={Link}
+                    href={assignment.mentor.calendar}
+                    leftIcon={<CalendarClock size={16} />}
                       size="sm"
                       variant="outline"
                       mt={2}
@@ -552,20 +586,36 @@ export const CompanyDashboard: React.FC = () => {
                 </Text>
                 <Badge colorScheme="blue">Week of {peerWeekRange}</Badge>
               </HStack>
-              <Text fontWeight="semibold" mt={2}>
-                {peerMatchName ? `You are matched with ${peerMatchName}` : 'No match yet'}
-              </Text>
-              <Text color="gray.500" fontSize="sm" mt={1}>
-                Deterministic weekly match based on your company cohort
-              </Text>
-              <Button
-                mt={3}
-                variant="outline"
-                colorScheme="blue"
-                onClick={() => navigate('/app/peer-connect?peerTab=sessions')}
-              >
-                Open Peer Connect
-              </Button>
+              {profile?.companyCode ? (
+                <>
+                  <Text fontWeight="semibold" mt={2}>
+                    {peerMatchName ? `You are matched with ${peerMatchName}` : 'No match yet'}
+                  </Text>
+                  <Text color="gray.500" fontSize="sm" mt={1}>
+                    Deterministic weekly match based on your company cohort
+                  </Text>
+                  <Button
+                    mt={3}
+                    variant="outline"
+                    colorScheme="blue"
+                    onClick={() => navigate('/app/peer-connect?peerTab=sessions')}
+                  >
+                    Open Peer Connect
+                  </Button>
+                </>
+              ) : (
+                <>
+                  <Text fontWeight="semibold" mt={2}>
+                    No match yet
+                  </Text>
+                  <Text color="gray.500" fontSize="sm" mt={1}>
+                    Weekly matching activates once you join a corporate village.
+                  </Text>
+                  <Button mt={3} variant="outline" colorScheme="blue" onClick={() => navigate('/app/peer-connect?peerTab=sessions')}>
+                    Open Peer Connect
+                  </Button>
+                </>
+              )}
             </CardBody>
           </Card>
 
@@ -589,7 +639,7 @@ export const CompanyDashboard: React.FC = () => {
         </Grid>
       </Box>
 
-      {profile?.role !== 'FREE_USER' && (
+      {profile?.role !== UserRole.FREE_USER && (
         <SimpleGrid columns={{ base: 1, md: 2, xl: 4 }} spacing={4}>
           <Card borderColor="brand.border" shadow="lg">
             <CardBody>
@@ -663,13 +713,16 @@ export const CompanyDashboard: React.FC = () => {
 
       <Card shadow="lg">
         <CardBody>
-          <HStack justify="space-between" mb={2}>
-            <Text fontWeight="bold">Weekly Tasks</Text>
-            <Badge colorScheme={statusColor}>
-              {checklistProgress.completed}/{checklistProgress.total} activities completed
-            </Badge>
-          </HStack>
+            <HStack justify="space-between" mb={2}>
+              <Text fontWeight="bold">Weekly Tasks</Text>
+              <Badge colorScheme={statusColor}>
+                {checklistProgress.completed}/{checklistProgress.total} activities completed — {taskStatusLabel}
+              </Badge>
+            </HStack>
           <Progress value={checklistProgress.percent} colorScheme={statusColor as any} mb={3} />
+          <Text color="gray.500" fontSize="sm" mb={2}>
+            {checklistProgress.total - checklistProgress.completed} pending | {checklistProgress.percent}% complete
+          </Text>
           {checklistLoading ? (
             <Skeleton height="20px" />
           ) : topTasks.length === 0 ? (
@@ -700,7 +753,7 @@ export const CompanyDashboard: React.FC = () => {
         </CardBody>
       </Card>
 
-      {profile?.role === 'FREE_USER' && (
+      {profile?.role === UserRole.FREE_USER && (
         <Card shadow="lg" bg="white">
           <CardBody>
             <HStack justify="space-between" align="center">
@@ -722,26 +775,22 @@ export const CompanyDashboard: React.FC = () => {
       <Card shadow="lg">
         <CardBody>
           <HStack justify="space-between" align="flex-start" mb={4}>
-            <Box>
-              <Heading size="md">LIFT Progress</Heading>
-              <Text color="gray.500">Track your annual 20 hour goal</Text>
-            </Box>
+              <Box>
+                <Heading size="md">LIFT Progress</Heading>
+                <Text color="gray.500">Track your annual 20 hour goal</Text>
+              </Box>
             <Badge colorScheme="green">In good standing</Badge>
           </HStack>
           <Flex align="center" gap={6} flexWrap="wrap">
             <CircularProgress
-              value={((liftProgress?.educationHours || 0) + (liftProgress?.verifiedHours || 0) + (liftProgress?.selfAttestedHours || 0)) /
-                20 *
-                100}
+              value={(totalLiftHours / 20) * 100}
               color="purple.500"
               size="140px"
               thickness="10px"
             >
               <CircularProgressLabel textAlign="center">
                 <Text fontWeight="bold">
-                  {((liftProgress?.educationHours || 0) + (liftProgress?.verifiedHours || 0) + (liftProgress?.selfAttestedHours || 0)).toFixed(
-                    1,
-                  )}
+                  {totalLiftHours.toFixed(1)}
                   /20 hrs
                 </Text>
                 <Text fontSize="xs">Annual goal</Text>
@@ -807,6 +856,55 @@ export const CompanyDashboard: React.FC = () => {
 
             <Stack spacing={4}>
               <Box>
+                <Text fontWeight="bold" mb={1}>
+                  Total Points
+                </Text>
+                <HStack spacing={3} align="center">
+                  <Star size={18} color="#d69e2e" />
+                  <Heading size="lg" color="yellow.600">
+                    {(profile?.totalPoints || weekly?.totalPoints || 0).toLocaleString()} XP
+                  </Heading>
+                </HStack>
+              </Box>
+
+              <SimpleGrid columns={{ base: 1, md: 2 }} spacing={3}>
+                <Box p={3} borderRadius="md" border="1px solid" borderColor="gray.100" bg="gray.50">
+                  <Text fontWeight="bold">Ranking</Text>
+                  {profile?.role === UserRole.FREE_USER ? (
+                    <VStack align="flex-start" spacing={2} mt={1}>
+                      <Text color="gray.600" fontSize="sm">
+                        Unlock rankings when you upgrade.
+                      </Text>
+                      <Button size="sm" colorScheme="yellow" as={RouterLink} to="/upgrade">
+                        Upgrade to view
+                      </Button>
+                    </VStack>
+                  ) : (
+                    <Text color="gray.600" fontSize="sm" mt={1}>
+                      Coming soon
+                    </Text>
+                  )}
+                </Box>
+                <Box p={3} borderRadius="md" border="1px solid" borderColor="gray.100" bg="gray.50">
+                  <Text fontWeight="bold">Upcoming Challenges</Text>
+                  {profile?.role === UserRole.FREE_USER ? (
+                    <VStack align="flex-start" spacing={2} mt={1}>
+                      <Text color="gray.600" fontSize="sm">
+                        Upgrade for premium challenges.
+                      </Text>
+                      <Button size="sm" colorScheme="purple" as={RouterLink} to="/upgrade">
+                        View plans
+                      </Button>
+                    </VStack>
+                  ) : (
+                    <Text color="gray.600" fontSize="sm" mt={1}>
+                      No upcoming challenges
+                    </Text>
+                  )}
+                </Box>
+              </SimpleGrid>
+
+              <Box>
                 <Text fontWeight="bold">Recent Wins</Text>
                 <Text color="gray.500" fontSize="sm">
                   {transactionsLoading ? 'Loading...' : 'No recent wins'}
@@ -852,44 +950,46 @@ export const CompanyDashboard: React.FC = () => {
           </CardBody>
         </Card>
 
-        <Card shadow="lg">
-          <CardBody>
-            <Flex justify="space-between" align="center" mb={3}>
-              <HStack>
-                <Icon as={Crown} color="purple.500" />
-                <Heading size="md">Company Leaderboard</Heading>
-              </HStack>
-              {leaderboardLoading && <Loader2 className="spin" />}
-            </Flex>
-            {leaderboardLoading ? (
-              <Skeleton height="80px" />
-            ) : leaderboard.length === 0 ? (
-              <Text color="gray.500">No teammates found in your company yet</Text>
-            ) : (
-              <VStack align="stretch" spacing={2}>
-                {leaderboard.map((entry, idx) => (
-                  <Flex
-                    key={entry.id}
-                    align="center"
-                    justify="space-between"
-                    p={2}
-                    borderRadius="md"
-                    bg={idx === 0 ? 'purple.50' : 'gray.50'}
-                    border="1px solid"
-                    borderColor="gray.100"
-                  >
-                    <HStack spacing={3}>
-                      <Badge colorScheme={idx === 0 ? 'purple' : 'gray'}>{idx + 1}</Badge>
-                      <Avatar size="sm" name={entry.name} />
-                      <Text fontWeight={idx === 0 ? 'bold' : 'semibold'}>{entry.name}</Text>
-                    </HStack>
-                    <Text fontWeight="bold">{entry.totalPoints} pts</Text>
-                  </Flex>
-                ))}
-              </VStack>
-            )}
-          </CardBody>
-        </Card>
+        {profile?.companyCode && (
+          <Card shadow="lg">
+            <CardBody>
+              <Flex justify="space-between" align="center" mb={3}>
+                <HStack>
+                  <Icon as={Crown} color="purple.500" />
+                  <Heading size="md">Company Leaderboard</Heading>
+                </HStack>
+                {leaderboardLoading && <Loader2 className="spin" />}
+              </Flex>
+              {leaderboardLoading ? (
+                <Skeleton height="80px" />
+              ) : leaderboard.length === 0 ? (
+                <Text color="gray.500">No teammates found in your company yet</Text>
+              ) : (
+                <VStack align="stretch" spacing={2}>
+                  {leaderboard.map((entry, idx) => (
+                    <Flex
+                      key={entry.id}
+                      align="center"
+                      justify="space-between"
+                      p={2}
+                      borderRadius="md"
+                      bg={idx === 0 ? 'purple.50' : 'gray.50'}
+                      border="1px solid"
+                      borderColor="gray.100"
+                    >
+                      <HStack spacing={3}>
+                        <Badge colorScheme={idx === 0 ? 'purple' : 'gray'}>{idx + 1}</Badge>
+                        <Avatar size="sm" name={entry.name} />
+                        <Text fontWeight={idx === 0 ? 'bold' : 'semibold'}>{entry.name}</Text>
+                      </HStack>
+                      <Text fontWeight="bold">{entry.totalPoints} pts</Text>
+                    </Flex>
+                  ))}
+                </VStack>
+              )}
+            </CardBody>
+          </Card>
+        )}
       </Grid>
     </Stack>
   )
