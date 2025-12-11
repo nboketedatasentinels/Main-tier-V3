@@ -35,6 +35,7 @@ import {
 } from '@chakra-ui/react'
 import { AlertTriangle, CheckCircle, ChevronLeft, ChevronRight, Lock, Plus } from 'lucide-react'
 import { addDoc, collection, doc, getDoc, getDocs, query, serverTimestamp, setDoc, where } from 'firebase/firestore'
+import { removeUndefinedFields } from '@/utils/firestore'
 import { db } from '@/services/firebase'
 import { useAuth } from '@/hooks/useAuth'
 import { UserRole, UserProfile } from '@/types'
@@ -394,7 +395,7 @@ const WeeklyChecklistPage: React.FC = () => {
   const submitProof = async () => {
     if (!proofModal.activity || !user) return
     try {
-      await addDoc(collection(db, 'points_verification_requests'), {
+      const payload = removeUndefinedFields({
         user_id: user.uid,
         week: selectedWeek,
         activity_id: proofModal.activity.id,
@@ -405,6 +406,8 @@ const WeeklyChecklistPage: React.FC = () => {
         status: 'pending',
         created_at: serverTimestamp(),
       })
+
+      await addDoc(collection(db, 'points_verification_requests'), payload)
 
       await persistChecklist(
         activities.map(activity =>
