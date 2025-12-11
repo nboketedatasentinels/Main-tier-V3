@@ -135,7 +135,10 @@ const toDateFromTimeframe = (timeframe: LeaderboardTimeframe): Date | null => {
   return null
 }
 
-const formatNumber = (value: number) => value.toLocaleString(undefined, { maximumFractionDigits: 0 })
+const formatNumber = (value?: number | null) => {
+  const safeValue = typeof value === 'number' && !Number.isNaN(value) ? value : 0
+  return safeValue.toLocaleString(undefined, { maximumFractionDigits: 0 })
+}
 
 export const LeadershipBoardPage: React.FC = () => {
   const { profile } = useAuth()
