@@ -244,6 +244,78 @@ profiles/{userId}/notifications/{notificationId}
 }
 ```
 
+### onboarding_steps
+Role-based onboarding journeys for free and paid members.
+```typescript
+onboarding_steps/{stepId}
+{
+  title: string
+  description: string
+  iconName?: string
+  order: number
+  points: number
+  items: {
+    id: string
+    title: string
+    description?: string
+    points: number
+    link?: string
+    microTask?: { type: 'button' | 'input' | 'confirm', ... }
+  }[]
+  roles: string[] // e.g., ['individual_free'] or ['individual_paid']
+  role?: string // convenience for filtering
+  updatedAt: Timestamp
+}
+```
+
+### onboarding_progress
+User-specific onboarding completion state.
+```typescript
+onboarding_progress/{userId}
+{
+  completedSteps: string[]
+  completedItems: string[]
+  totalPoints: number
+  onboardingStartTime: string | null
+  pointsDeducted: boolean
+  pointsDeductedAmount: number | null
+  onboardingComplete: boolean
+  onboardingSkipped: boolean
+  updatedAt: Timestamp | string
+  lastStepId: string | null
+}
+```
+
+### onboarding_analytics
+Event log for onboarding usage.
+```typescript
+onboarding_analytics/{eventId}
+{
+  user_id: string
+  status: 'not_started' | 'in_progress' | 'completed'
+  progress_percentage: number
+  completed_item_count: number
+  total_item_count: number
+  role: string | null
+  label: string | null
+  variant: 'start' | 'resume' | 'completed' | null
+  triggered_from: string
+  recorded_at: string
+}
+```
+
+### user_points
+Points awarded to users from onboarding or other systems.
+```typescript
+user_points/{pointsId}
+{
+  userId: string
+  source: 'onboarding' | 'onboarding_deadline' | string
+  points: number
+  recordedAt: Timestamp
+}
+```
+
 ## Firestore Security Rules
 
 ```javascript
@@ -334,6 +406,25 @@ service cloud.firestore {
       allow read: if isAuthenticated();
       allow create: if isAuthenticated();
       allow update, delete: if hasRole('super_admin') || hasRole('company_admin');
+    }
+
+    match /onboarding_steps/{stepId} {
+      allow read: if isAuthenticated();
+      allow write: if hasRole('super_admin');
+    }
+
+    match /onboarding_progress/{userId} {
+      allow read, write: if isAuthenticated() && isOwner(userId);
+    }
+
+    match /onboarding_analytics/{eventId} {
+      allow create: if isAuthenticated();
+      allow read: if hasRole('super_admin');
+    }
+
+    match /user_points/{pointsId} {
+      allow read: if isAuthenticated() && (request.auth.uid == resource.data.userId || hasRole('super_admin'));
+      allow create, update: if isAuthenticated() && (request.resource.data.userId == request.auth.uid || hasRole('super_admin'));
     }
   }
 }

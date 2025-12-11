@@ -4,99 +4,168 @@ import { OnboardingAnalyticsEvent, OnboardingSnapshot, OnboardingStep } from '@/
 
 const DEFAULT_STEPS: OnboardingStep[] = [
   {
-    id: 'welcome',
-    title: 'Welcome & Orientation',
-    description: 'Watch the welcome video and agree to the learning pledge.',
-    iconName: 'Video',
+    id: 'welcome_paid',
+    title: 'Welcome & Agreements',
+    description: 'Start with orientation and commit to the learning pact.',
+    iconName: 'Handshake',
     order: 1,
-    points: 150,
+    points: 220,
     items: [
       {
         id: 'welcome-video',
-        title: 'Preview welcome message',
-        description: 'Watch the welcome walkthrough and scroll to the end.',
+        title: 'Watch the welcome walkthrough',
+        description: 'Preview the onboarding journey and premium benefits.',
         points: 100,
         link: 'https://www.youtube.com/watch?v=IxK0rcpKrKQ',
         microTask: {
           type: 'button',
-          actionLabel: 'Play Intro Preview',
-          successLabel: 'Great! You know how to launch the welcome video now.',
+          actionLabel: 'Play Intro',
+          successLabel: 'You’re oriented and ready to go!',
         },
       },
       {
         id: 'learning-agreement',
         title: 'Sign the learning agreement',
-        description: 'A quick pledge to stay accountable during the sprint.',
+        description: 'Commit to finishing the first 14 days strong.',
         points: 120,
         microTask: {
           type: 'input',
           placeholder: 'Type your name to sign…',
+          helperText: 'A signature keeps you accountable.',
           minLength: 2,
           multiline: false,
-          helperText: 'A signature helps you commit to finishing strong.',
           successLabel: 'Agreement acknowledged!',
         },
       },
     ],
   },
   {
-    id: 'community',
+    id: 'community_paid',
     title: 'Community & Calendar',
-    description: 'Join the conversations and sync your calendar.',
-    iconName: 'Chat',
+    description: 'Join the conversations and plan your sessions.',
+    iconName: 'CalendarClock',
     order: 2,
-    points: 150,
+    points: 220,
     items: [
       {
         id: 'chat-group',
-        title: 'Explore the chat group',
-        description: 'Confirm you visited the WhatsApp or community chat.',
-        points: 80,
+        title: 'Say hello in your cohort channel',
+        description: 'Introduce yourself in the WhatsApp or Discord cohort space.',
+        points: 100,
         microTask: {
           type: 'confirm',
-          actionLabel: "I've explored the chat",
-          successLabel: 'Community awaits you—nice scouting mission!',
+          actionLabel: "I've greeted my cohort",
+          successLabel: 'Community activated—nice intro!',
         },
       },
       {
         id: 'calendar-sync',
-        title: 'Sync your calendar',
-        description: 'Add our leadership huddles to your calendar.',
-        points: 100,
+        title: 'Sync the huddle calendar',
+        description: 'Add the leadership huddles and office hours to your calendar.',
+        points: 120,
         link: 'https://calendar.google.com',
       },
     ],
   },
   {
-    id: 'activation',
-    title: 'Activation Tasks',
-    description: 'Take your first action toward transformation.',
-    iconName: 'Spark',
+    id: 'premium_setup',
+    title: 'Premium Setup',
+    description: 'Dive into premium resources and choose a focus path.',
+    iconName: 'Sparkles',
     order: 3,
-    points: 200,
+    points: 240,
+    items: [
+      {
+        id: 'access-premium-library',
+        title: 'Access the premium library',
+        description: 'Open a premium playbook or course to bookmark your first lesson.',
+        points: 120,
+        link: 'https://t4l.world/premium-library',
+        microTask: {
+          type: 'confirm',
+          actionLabel: 'I opened the library',
+          successLabel: 'Premium content queued up!',
+        },
+      },
+      {
+        id: 'select-learning-path',
+        title: 'Select your learning path',
+        description: 'Choose the journey that matches your next leadership milestone.',
+        points: 120,
+        microTask: {
+          type: 'input',
+          placeholder: 'Which path did you pick?',
+          helperText: 'e.g., Career growth, Team leadership, Product delivery…',
+          minLength: 3,
+          successLabel: 'Path saved—focus locked in.',
+        },
+      },
+    ],
+  },
+  {
+    id: 'huddles_accountability',
+    title: 'Huddles & Accountability',
+    description: 'Schedule your first huddle and set up a partner.',
+    iconName: 'UsersRound',
+    order: 4,
+    points: 260,
+    items: [
+      {
+        id: 'schedule-huddle',
+        title: 'Schedule your first huddle',
+        description: 'Book a 20-minute session to practice with peers.',
+        points: 130,
+        microTask: {
+          type: 'input',
+          placeholder: 'Drop your calendar invite text…',
+          minLength: 10,
+          multiline: true,
+          successLabel: 'Huddle scheduled—see you there!',
+        },
+      },
+      {
+        id: 'accountability-partner',
+        title: 'Set up accountability partner',
+        description: 'Pair up with someone from your cohort and agree on check-ins.',
+        points: 130,
+        microTask: {
+          type: 'confirm',
+          actionLabel: 'Partner confirmed',
+          successLabel: 'Accountability locked in.',
+        },
+      },
+    ],
+  },
+  {
+    id: 'impact_progress',
+    title: 'Impact & Progress',
+    description: 'Capture early wins and measure your momentum.',
+    iconName: 'Activity',
+    order: 5,
+    points: 260,
     items: [
       {
         id: 'impact-log',
         title: 'Log your first impact',
-        description: 'Submit a quick win using the impact tracker.',
-        points: 150,
+        description: 'Use the impact tracker to submit a quick win.',
+        points: 130,
         microTask: {
           type: 'confirm',
           actionLabel: 'I logged an impact',
-          successLabel: 'Impact logged! Keep the momentum.',
+          successLabel: 'Impact logged—keep going!',
         },
       },
       {
-        id: 'schedule-huddle',
-        title: 'Schedule your first huddle',
-        description: 'Plan your first leadership huddle with your team.',
-        points: 120,
+        id: 'set-impact-goal',
+        title: 'Set your 14-day impact goal',
+        description: 'Write a measurable outcome you want to reach in two weeks.',
+        points: 130,
         microTask: {
           type: 'input',
-          placeholder: 'Draft your invite message…',
+          placeholder: 'Describe your goal…',
           minLength: 10,
           multiline: true,
-          successLabel: 'Huddle scheduled! Leadership awaits.',
+          successLabel: 'Goal captured—aim high!',
         },
       },
     ],
@@ -104,16 +173,21 @@ const DEFAULT_STEPS: OnboardingStep[] = [
 ]
 
 export const fetchOnboardingSteps = async (roleKey: string): Promise<OnboardingStep[]> => {
-  const stepsRef = collection(db, 'onboarding_steps')
-  const q = query(stepsRef, where('roles', 'array-contains', roleKey), orderBy('order', 'asc'))
-  const snapshot = await getDocs(q)
+  try {
+    const stepsRef = collection(db, 'onboarding_steps')
+    const q = query(stepsRef, where('roles', 'array-contains', roleKey), orderBy('order', 'asc'))
+    const snapshot = await getDocs(q)
 
-  if (snapshot.empty) return DEFAULT_STEPS
+    if (snapshot.empty) return DEFAULT_STEPS
 
-  return snapshot.docs.map((docSnap) => ({
-    id: docSnap.id,
-    ...docSnap.data(),
-  })) as OnboardingStep[]
+    return snapshot.docs.map((docSnap) => ({
+      id: docSnap.id,
+      ...docSnap.data(),
+    })) as OnboardingStep[]
+  } catch (error) {
+    console.error('Error fetching onboarding steps; falling back to defaults.', error)
+    return DEFAULT_STEPS
+  }
 }
 
 export const fetchOnboardingProgress = async (
