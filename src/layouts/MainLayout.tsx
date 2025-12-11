@@ -46,6 +46,8 @@ import { UserRole } from '@/types'
 import { BuildVillageModal } from '@/components/modals/BuildVillageModal'
 import { ConfirmationWelcomeModal } from '@/components/modals/ConfirmationWelcomeModal'
 
+const HEADER_HEIGHT = '72px'
+
 const sectionLabelStyles = {
   fontSize: 'xs',
   fontWeight: 'semibold',
@@ -189,7 +191,7 @@ export const MainLayout: React.FC = () => {
   )
 
   return (
-    <Flex minH="100vh" bg="brand.accent" color="brand.text">
+    <Flex minH="100vh" h="100vh" bg="brand.accent" color="brand.text" overflow="hidden">
       {/* Desktop Sidebar */}
       <Box
         w={{ base: '0', md: '260px' }}
@@ -247,13 +249,14 @@ export const MainLayout: React.FC = () => {
       </Box>
 
       {/* Main Content */}
-      <Flex flex="1" direction="column" overflow="hidden">
+      <Flex flex="1" direction="column" h="100vh" maxH="100vh" overflow="hidden">
         {/* Header */}
         <Flex
           align="center"
           justify="space-between"
           px={{ base: 4, md: 8 }}
-          py={4}
+          h={HEADER_HEIGHT}
+          flexShrink={0}
           bg="white"
           borderBottom="1px solid"
           borderColor="brand.border"
@@ -310,7 +313,12 @@ export const MainLayout: React.FC = () => {
         </Flex>
 
         {/* Content */}
-        <Box flex="1" overflow="auto" p={{ base: 4, md: 8 }}>
+        <Box
+          flex="1"
+          height={`calc(100vh - ${HEADER_HEIGHT})`}
+          overflowY="auto"
+          p={{ base: 4, md: 8 }}
+        >
           <Outlet />
         </Box>
       </Flex>
