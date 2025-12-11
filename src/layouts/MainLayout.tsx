@@ -39,7 +39,6 @@ import {
   BookMarked,
   Sparkles,
   Search,
-  Bell,
   LogOut,
 } from 'lucide-react'
 import { useAuth } from '@/hooks/useAuth'
@@ -47,6 +46,7 @@ import { UserRole } from '@/types'
 import { BuildVillageModal } from '@/components/modals/BuildVillageModal'
 import { ConfirmationWelcomeModal } from '@/components/modals/ConfirmationWelcomeModal'
 import { getDashboardPathForRole } from '@/utils/dashboardPaths'
+import { NotificationDropdown } from '@/components/notifications/NotificationDropdown'
 
 const HEADER_HEIGHT = '72px'
 
@@ -328,15 +328,7 @@ export const MainLayout: React.FC = () => {
           </InputGroup>
 
           <HStack spacing={3} ml={{ base: 0, md: 4 }} align="center">
-            <IconButton
-              aria-label="Notifications"
-              icon={<Bell size={18} />}
-              variant="ghost"
-              bg="brand.accent"
-              border="1px solid"
-              borderColor="brand.border"
-              _hover={{ bg: 'brand.primaryMuted' }}
-            />
+            <NotificationDropdown />
             <Menu>
               <MenuButton as={Button} variant="ghost" px={0} _hover={{ bg: 'transparent' }}>
                 <HStack spacing={2}>

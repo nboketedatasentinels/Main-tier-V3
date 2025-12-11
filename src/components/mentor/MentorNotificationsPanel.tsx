@@ -82,8 +82,8 @@ export const MentorNotificationsPanel = ({
                   <Button size="sm" variant="outline" onClick={() => onMarkRead(notification.id)}>
                     Mark read
                   </Button>
-                  {notification.metadata?.actionUrl && (
-                    <Button size="sm" as="a" href={String(notification.metadata.actionUrl)} target="_blank">
+                  {typeof notification.metadata?.actionUrl === 'string' && (
+                    <Button size="sm" as="a" href={notification.metadata.actionUrl} target="_blank">
                       Open link
                     </Button>
                   )}

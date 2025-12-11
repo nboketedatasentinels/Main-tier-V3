@@ -5,6 +5,7 @@ import {
   getDocs,
   onSnapshot,
   orderBy,
+  arrayUnion,
   query,
   serverTimestamp,
   updateDoc,
@@ -163,6 +164,21 @@ export const sendEmailNotification = async (params: {
 }) => {
   // Placeholder for email service integration
   console.log('Sending email notification (placeholder)', params)
+}
+
+export const saveFcmTokenToProfile = async (userId: string, token: string) => {
+  const profileRef = doc(db, 'profiles', userId)
+  await updateDoc(profileRef, {
+    fcmTokens: arrayUnion(token),
+    updatedAt: serverTimestamp(),
+  })
+}
+
+export const requestBrowserNotificationPermission = async () => {
+  if (!('Notification' in window)) return 'denied'
+
+  const result = await Notification.requestPermission()
+  return result
 }
 
 export const markAlertAsNotified = async (alertId: string) => {
