@@ -4,6 +4,7 @@ import { useAuth } from '@/hooks/useAuth'
 import { UserRole } from '@/types'
 import { Box, Spinner, Center } from '@chakra-ui/react'
 import { getDashboardPathForRole } from '@/utils/dashboardPaths'
+import { normalizeUserRole } from '@/utils/roles'
 
 interface ProtectedRouteProps {
   children: React.ReactNode
@@ -18,6 +19,7 @@ export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
 }) => {
   const { user, profile, loading } = useAuth()
   const location = useLocation()
+  const normalizedRole = normalizeUserRole(profile?.role)
 
   if (loading) {
     return (
@@ -27,7 +29,7 @@ export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
     )
   }
 
-  const isMentor = profile?.role === UserRole.MENTOR
+  const isMentor = normalizedRole === UserRole.MENTOR
 
   // Not authenticated
   if (requireAuth && !user) {
@@ -39,14 +41,14 @@ export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
   }
 
   if (
-    (profile?.role === UserRole.SUPER_ADMIN || profile?.role === UserRole.COMPANY_ADMIN) &&
+    (normalizedRole === UserRole.SUPER_ADMIN || normalizedRole === UserRole.COMPANY_ADMIN) &&
     location.pathname.startsWith('/app')
   ) {
-    return <Navigate to={getDashboardPathForRole(profile?.role)} replace />
+    return <Navigate to={getDashboardPathForRole(normalizedRole)} replace />
   }
 
   // Role check
-  if (requiredRoles && profile && !requiredRoles.includes(profile.role)) {
+  if (requiredRoles && normalizedRole && !requiredRoles.includes(normalizedRole)) {
     return <Navigate to="/unauthorized" replace />
   }
 
