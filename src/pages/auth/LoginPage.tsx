@@ -16,15 +16,16 @@ import { useAuth } from '@/hooks/useAuth'
 import { getDashboardPathForRole } from '@/utils/dashboardPaths'
 import { doc, getDoc } from 'firebase/firestore'
 import { db, auth } from '@/services/firebase'
-import { UserProfile } from '@/types'
+import { UserProfile, UserRole } from '@/types'
 
 export const LoginPage: React.FC = () => {
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [loading, setLoading] = useState(false)
   const [magicLinkSent, setMagicLinkSent] = useState(false)
-  
-  const { signIn, signInWithMagicLink, profile } = useAuth()
+  const [pendingNavigation, setPendingNavigation] = useState(false)
+
+  const { signIn, signInWithMagicLink, profile, user, loading: authLoading } = useAuth()
   const navigate = useNavigate()
   const toast = useToast()
 
