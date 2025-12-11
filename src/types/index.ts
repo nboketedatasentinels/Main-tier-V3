@@ -57,6 +57,7 @@ export interface UserProfile {
   isOnboarded: boolean
   personalityType?: string
   privacySettings?: PrivacySettings
+  onboardingSnapshot?: OnboardingSnapshot
   
   // Timestamps
   createdAt: string
@@ -443,3 +444,4 @@ export interface PaginatedResponse<T> {
   pageSize: number
   hasMore: boolean
 }
+import { OnboardingSnapshot } from './onboarding'

@@ -54,6 +54,8 @@ export interface ProgressState {
   pointsDeducted: boolean
   pointsDeductedAmount: number | null
   updatedAt: string | null
+  totalTaskCount?: number
+  totalStepCount?: number
 }
 
 export interface OnboardingSnapshot extends ProgressState {

@@ -37,6 +37,7 @@ import { StatCard } from '@/components/dashboard/StatCard'
 import { ActivityCard } from '@/components/dashboard/ActivityCard'
 import { BadgeCard } from '@/components/dashboard/BadgeCard'
 import { DashboardTourStep, useDashboardTour } from '@/hooks/useDashboardTour'
+import { OnboardingBanner } from '@/components/OnboardingBanner'
 
 interface ActivityItem {
   title: string
@@ -206,6 +207,16 @@ export const PaidMemberDashboard: React.FC = () => {
 
   return (
     <Stack spacing={8}>
+      <OnboardingBanner
+        userId={profile?.id}
+        profileName={profile?.firstName}
+        variant="paid"
+        isOnboarded={profile?.isOnboarded}
+        progress={profile?.onboardingSnapshot}
+        onStart={() => navigate('/app/onboarding')}
+        description="Finish onboarding to personalize your leadership journey, unlock concierge support, and fast-track rewards."
+        highlight="Premium members: onboarding boosts your XP"
+      />
       {announcementNode}
       <HStack
         justify="space-between"
@@ -279,24 +290,6 @@ export const PaidMemberDashboard: React.FC = () => {
           />
         </HStack>
       </Flex>
-
-      {!profile?.isOnboarded && (
-        <Card bg="brand.primaryMuted" border="1px" borderColor="brand.border">
-          <CardBody>
-            <HStack justify="space-between" align="flex-start">
-              <Box>
-                <Text fontWeight="bold" color="brand.gold">Resume Onboarding</Text>
-                <Text color="brand.softGold" mt={1}>
-                  Finish setting up your profile to unlock personalized journeys and community features.
-                </Text>
-              </Box>
-              <Button colorScheme="yellow" onClick={() => navigate('/app/onboarding')}>
-                Continue setup
-              </Button>
-            </HStack>
-          </CardBody>
-        </Card>
-      )}
 
       <SimpleGrid columns={{ base: 1, md: 2, xl: 4 }} spacing={4}>
         <StatCard

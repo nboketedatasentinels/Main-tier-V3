@@ -208,6 +208,8 @@ export const fetchOnboardingProgress = async (
       onboardingSkipped: false,
       updatedAt: new Date().toISOString(),
       lastStepId: null,
+      totalTaskCount: 0,
+      totalStepCount: 0,
     }
 
     await setDoc(progressRef, initial)
