@@ -245,8 +245,9 @@ export const LeadershipCouncilPage: React.FC = () => {
         const partnerData = partnerSnap.data() as PartnerProfile
         setPartnerProfile({ ...partnerData, id: partnerSnap.id })
       }
-    } catch (error: any) {
-      setAssignmentsError(error?.message || 'Unable to load leadership assignments.')
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Unable to load leadership assignments.'
+      setAssignmentsError(message)
     } finally {
       setAssignmentsLoading(false)
     }
@@ -332,10 +333,11 @@ export const LeadershipCouncilPage: React.FC = () => {
         })
         .sort((a, b) => (a.name || '').localeCompare(b.name || ''))
       setCompanies(loadedCompanies)
-    } catch (error: any) {
+    } catch (error) {
+      const description = error instanceof Error ? error.message : 'Check your connection and try again.'
       toast({
         title: 'Unable to load leadership data',
-        description: error?.message || 'Check your connection and try again.',
+        description,
         status: 'error',
       })
     } finally {
@@ -415,10 +417,11 @@ export const LeadershipCouncilPage: React.FC = () => {
       setScheduleNotes('')
       setScheduleLink('')
       scheduleModal.onClose()
-    } catch (error: any) {
+    } catch (error) {
+      const description = error instanceof Error ? error.message : 'Try again in a moment.'
       toast({
         title: 'Failed to create session',
-        description: error?.message || 'Try again in a moment.',
+        description,
         status: 'error',
       })
     } finally {
@@ -497,8 +500,9 @@ export const LeadershipCouncilPage: React.FC = () => {
       toast({ title: 'Leadership role assigned', status: 'success' })
       promoteModal.onClose()
       loadLeadershipData()
-    } catch (error: any) {
-      toast({ title: 'Unable to promote member', description: error?.message, status: 'error' })
+    } catch (error) {
+      const description = error instanceof Error ? error.message : 'Unable to promote member'
+      toast({ title: 'Unable to promote member', description, status: 'error' })
     } finally {
       setMutatingId(null)
     }
@@ -529,8 +533,9 @@ export const LeadershipCouncilPage: React.FC = () => {
       editModal.onClose()
       setEditTarget(null)
       loadLeadershipData()
-    } catch (error: any) {
-      toast({ title: 'Unable to update member', description: error?.message, status: 'error' })
+    } catch (error) {
+      const description = error instanceof Error ? error.message : 'Unable to update member'
+      toast({ title: 'Unable to update member', description, status: 'error' })
     } finally {
       setMutatingId(null)
     }
@@ -550,8 +555,9 @@ export const LeadershipCouncilPage: React.FC = () => {
       })
       toast({ title: `${member.fullName || 'Member'} has been removed from the council.`, status: 'success' })
       loadLeadershipData()
-    } catch (error: any) {
-      toast({ title: 'Unable to remove member', description: error?.message, status: 'error' })
+    } catch (error) {
+      const description = error instanceof Error ? error.message : 'Unable to remove member'
+      toast({ title: 'Unable to remove member', description, status: 'error' })
     } finally {
       setMutatingId(null)
     }
