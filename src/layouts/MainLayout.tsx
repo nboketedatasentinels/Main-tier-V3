@@ -86,7 +86,7 @@ export const MainLayout: React.FC = () => {
       label: 'MY JOURNEY',
       items: [
         { label: 'Dashboard', path: getDashboardPath(), icon: Home },
-        { label: 'Weekly Updates', path: '/app/weekly-updates', icon: ClipboardList },
+        { label: 'Weekly Checklist', path: '/app/weekly-checklist', icon: ClipboardList },
         { label: 'Leadership Board', path: '/app/leadership-board', icon: Trophy },
         { label: 'My Courses', path: '/app/courses', icon: BookOpen },
         { label: 'Peer Connect', path: '/app/peer-connect', icon: Users },
