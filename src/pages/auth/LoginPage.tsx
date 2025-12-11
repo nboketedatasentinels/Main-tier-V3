@@ -17,6 +17,7 @@ import { getDashboardPathForRole } from '@/utils/dashboardPaths'
 import { doc, getDoc } from 'firebase/firestore'
 import { db, auth } from '@/services/firebase'
 import { UserProfile } from '@/types'
+import { normalizeUserRole } from '@/utils/roles'
 
 export const LoginPage: React.FC = () => {
   const [email, setEmail] = useState('')
@@ -49,7 +50,7 @@ export const LoginPage: React.FC = () => {
       })
       try {
         const currentUser = auth.currentUser
-        let role = profile?.role
+        let role = normalizeUserRole(profile?.role)
 
         if (!role && currentUser) {
           const profileRef = doc(db, 'profiles', currentUser.uid)
@@ -57,7 +58,7 @@ export const LoginPage: React.FC = () => {
 
           if (profileSnapshot.exists()) {
             const profileData = profileSnapshot.data() as UserProfile
-            role = profileData.role
+            role = normalizeUserRole(profileData.role)
           }
         }
 
