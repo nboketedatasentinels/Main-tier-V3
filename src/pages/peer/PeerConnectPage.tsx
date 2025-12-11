@@ -74,6 +74,7 @@ import {
 import { db } from '@/services/firebase'
 import { useAuth } from '@/hooks/useAuth'
 import { StartChallengeModal } from '@/components/modals/StartChallengeModal'
+import { removeUndefinedFields } from '@/utils/firestore'
 
 // Types
 type PeerProfile = {
@@ -389,10 +390,10 @@ export const PeerConnectPage: React.FC = () => {
     try {
       await setDoc(
         doc(db, 'peer_preferences', user.uid),
-        {
+        removeUndefinedFields({
           ...preferences,
           updatedAt: serverTimestamp(),
-        },
+        }),
         { merge: true }
       )
       toast({
@@ -515,11 +516,11 @@ export const PeerConnectPage: React.FC = () => {
 
     try {
       const scheduledAt = Timestamp.fromDate(new Date(`${sessionForm.date}T${sessionForm.time}:00`))
-      const sessionPayload = {
+      const sessionPayload = removeUndefinedFields({
         title: sessionForm.title,
         description: sessionForm.description,
         platform: sessionForm.platform,
-        meetingLink: sessionForm.meetingLink,
+        ...(sessionForm.meetingLink ? { meetingLink: sessionForm.meetingLink } : {}),
         timezone: sessionForm.timezone,
         participants: [user.uid, ...sessionForm.participants],
         status: 'scheduled',
@@ -528,21 +529,24 @@ export const PeerConnectPage: React.FC = () => {
         createdBy: user.uid,
         createdAt: serverTimestamp(),
         confirmations: { [user.uid]: true },
-      }
+      })
 
       const sessionRef = await addDoc(collection(db, 'peer_sessions'), sessionPayload)
 
       await Promise.all(
         sessionForm.participants.map((peerId) =>
-          addDoc(collection(db, 'peer_session_requests'), {
-            sessionId: sessionRef.id,
-            fromUserId: user.uid,
-            fromName: profile.fullName,
-            fromEmail: profile.email,
-            toUserId: peerId,
-            status: 'pending',
-            createdAt: serverTimestamp(),
-          })
+          addDoc(
+            collection(db, 'peer_session_requests'),
+            removeUndefinedFields({
+              sessionId: sessionRef.id,
+              fromUserId: user.uid,
+              fromName: profile.fullName,
+              fromEmail: profile.email,
+              toUserId: peerId,
+              status: 'pending',
+              createdAt: serverTimestamp(),
+            })
+          )
         )
       )
 

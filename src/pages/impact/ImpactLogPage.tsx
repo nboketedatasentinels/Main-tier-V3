@@ -60,10 +60,12 @@ import {
   Users,
 } from 'lucide-react'
 import { addDoc, collection, onSnapshot, orderBy, query, where } from 'firebase/firestore'
+import { FirebaseError } from 'firebase/app'
 import { format, isAfter, isBefore, startOfMonth, subMonths } from 'date-fns'
 import { db } from '@/services/firebase'
 import { useAuth } from '@/hooks/useAuth'
 import { ESGCategory } from '@/types'
+import { removeUndefinedFields } from '@/utils/firestore'
 
 interface ImpactLogEntry {
   id: string
@@ -267,7 +269,10 @@ export const ImpactLogPage: React.FC = () => {
   }, [user?.uid])
 
   useEffect(() => {
-    if (!profile?.companyId) return
+    if (!profile?.companyId) {
+      setCompanyEntries([])
+      return
+    }
 
     const q = query(
       collection(db, 'impact_logs'),
@@ -287,12 +292,12 @@ export const ImpactLogPage: React.FC = () => {
     const nextMonth = new Date(start)
     nextMonth.setMonth(nextMonth.getMonth() + 1)
 
-    const list = activeTab === 'personal' ? entries : companyEntries
+    const list = activeTab === 'personal' || !profile?.companyId ? entries : companyEntries
     return list.filter((entry) => {
       const entryDate = new Date(entry.date)
       return !isBefore(entryDate, start) && isBefore(entryDate, nextMonth)
     })
-  }, [activeTab, companyEntries, entries, monthCursor])
+  }, [activeTab, companyEntries, entries, monthCursor, profile?.companyId])
 
   const chartCategoryData = useMemo(() => {
     const map = new Map<string, { hours: number; usd: number }>()
@@ -364,16 +369,21 @@ export const ImpactLogPage: React.FC = () => {
     }
 
     try {
-      const payload: Omit<ImpactLogEntry, 'id'> = {
+      const payload = removeUndefinedFields<Omit<ImpactLogEntry, 'id'>>({
         userId: user.uid,
-        companyId: profile?.companyId,
+        ...(profile?.companyId ? { companyId: profile.companyId } : {}),
         title: formValues.title || 'Impact Activity',
         description: formValues.description || '',
         categoryGroup: formValues.categoryGroup || 'esg',
-        esgCategory: formValues.categoryGroup === 'esg' ? formValues.esgCategory : undefined,
-        activityType: formValues.categoryGroup === 'esg' ? formValues.activityType : undefined,
-        businessCategory: formValues.categoryGroup === 'business' ? formValues.businessCategory : undefined,
-        businessActivity: formValues.categoryGroup === 'business' ? formValues.businessActivity : undefined,
+        ...(formValues.categoryGroup === 'esg'
+          ? {
+              esgCategory: formValues.esgCategory,
+              activityType: formValues.activityType,
+            }
+          : {
+              businessCategory: formValues.businessCategory,
+              businessActivity: formValues.businessActivity,
+            }),
         liftPillars: getPillarsForActivity(
           formValues.categoryGroup === 'esg' ? formValues.activityType : formValues.businessActivity,
         ),
@@ -381,16 +391,16 @@ export const ImpactLogPage: React.FC = () => {
         hours: Number(formValues.hours) || 0,
         peopleImpacted: Number(formValues.peopleImpacted) || 0,
         usdValue: Number(formValues.usdValue) || 0,
-        outcomeLabel: formValues.outcomeLabel,
+        ...(formValues.outcomeLabel ? { outcomeLabel: formValues.outcomeLabel } : {}),
         verificationLevel: formValues.verificationLevel || 'Tier 1: Self-Reported',
-        verifierEmail: formValues.verifierEmail,
-        evidenceLink: formValues.evidenceLink,
+        ...(formValues.verifierEmail ? { verifierEmail: formValues.verifierEmail } : {}),
+        ...(formValues.evidenceLink ? { evidenceLink: formValues.evidenceLink } : {}),
         points: preview.points,
         impactValue: preview.impactValue,
         scp: preview.scp,
         verificationMultiplier: preview.verificationMultiplier,
         createdAt: new Date().toISOString(),
-      }
+      })
 
       await addDoc(collection(db, 'impact_logs'), payload)
 
@@ -401,9 +411,15 @@ export const ImpactLogPage: React.FC = () => {
       })
       onClose()
     } catch (error) {
+      const errorMessage = error instanceof FirebaseError ? error.message : (error as Error)?.message || 'Unknown error'
+
+      if (import.meta.env.DEV) {
+        console.error('Impact log submission failed', error)
+      }
+
       toast({
         title: 'Unable to log impact',
-        description: (error as Error).message,
+        description: errorMessage,
         status: 'error',
       })
     }
@@ -843,7 +859,7 @@ export const ImpactLogPage: React.FC = () => {
                   {getPillarsForActivity(
                     formValues.categoryGroup === 'esg' ? formValues.activityType : formValues.businessActivity,
                   ).map((pillar) => (
-                    <Badge key={pillar} colorScheme={liftPillarColors[pillar] as any} px={2} py={1} rounded="md">
+                    <Badge key={pillar} colorScheme={liftPillarColors[pillar]} px={2} py={1} rounded="md">
                       {pillar}
                     </Badge>
                   ))}
@@ -1084,7 +1100,7 @@ export const ImpactLogPage: React.FC = () => {
   )
 }
 
-const InfoIcon = (props: any) => (
+const InfoIcon = (props: React.SVGProps<SVGSVGElement>) => (
   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...props}>
     <circle cx="12" cy="12" r="10" />
     <line x1="12" y1="16" x2="12" y2="12" />
