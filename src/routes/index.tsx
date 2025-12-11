@@ -13,6 +13,7 @@ import { LoginPage } from '@/pages/auth/LoginPage'
 import { SignUpPage } from '@/pages/auth/SignUpPage'
 import { ResetPasswordPage } from '@/pages/auth/ResetPasswordPage'
 import { OnboardingPage } from '@/pages/onboarding/OnboardingPage'
+import { UpgradePage } from '@/pages/upgrade/UpgradePage'
 
 // Dashboard imports
 import { FreeDashboard } from '@/pages/dashboards/FreeDashboard'
@@ -87,6 +88,7 @@ export const AppRoutes = () => {
       <Routes>
         {/* Public routes */}
         <Route path="/" element={<HomePage />} />
+        <Route path="/upgrade" element={<UpgradePage />} />
       <Route path="/login" element={<AuthLayout><LoginPage /></AuthLayout>} />
       <Route path="/signup" element={<AuthLayout><SignUpPage /></AuthLayout>} />
       <Route path="/reset-password" element={<AuthLayout><ResetPasswordPage /></AuthLayout>} />
