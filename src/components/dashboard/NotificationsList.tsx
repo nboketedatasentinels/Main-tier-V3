@@ -11,7 +11,7 @@ import {
   Text,
   VStack,
 } from '@chakra-ui/react'
-import { Bell, CheckCircle2, CircleAlert, Mail, MessageCircle } from 'lucide-react'
+import { AlertCircle, Bell, CheckCircle2, Mail, MessageCircle } from 'lucide-react'
 import { useEffect, useMemo, useState } from 'react'
 import { useAuth } from '@/hooks/useAuth'
 import {
@@ -115,7 +115,7 @@ const NotificationCard = ({
             <Badge colorScheme={isRead ? 'gray' : 'purple'}>{categoryLabels[category]}</Badge>
             {!isRead && <Badge colorScheme="purple">New</Badge>}
             {notification.type === 'direct_message' && <Icon as={MessageCircle} boxSize={4} />}
-            {notification.type === 'system_alert' && <Icon as={CircleAlert} boxSize={4} />}
+            {notification.type === 'system_alert' && <Icon as={AlertCircle} boxSize={4} />}
             {notification.type === 'important_update' && <Icon as={Mail} boxSize={4} />}
           </HStack>
           <Text fontWeight="bold" color="gray.900">

@@ -58,6 +58,7 @@ export interface UserProfile {
    * @deprecated Legacy onboarding flag. Always true for all users.
    */
   isOnboarded: boolean
+  fcmTokens?: string[]
   personalityType?: string
   privacySettings?: PrivacySettings
 

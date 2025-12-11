@@ -283,11 +283,12 @@ export const ProfilePage: React.FC = () => {
       membershipStatus: (docData.membershipStatus as ProfileData['membershipStatus']) ||
         (docData.role === UserRole.PAID_MEMBER ? 'paid' : 'free'),
       profilePictureUrl:
-        (typeof docData.avatarUrl === 'string' && docData.avatarUrl) ||
-        (typeof docData.profilePictureUrl === 'string' && docData.profilePictureUrl) ||
-        (typeof docData.profile_picture_url === 'string' && docData.profile_picture_url),
-      personalityType: (typeof docData.personalityType === 'string' && docData.personalityType) ||
-        (typeof docData.personality_type === 'string' && docData.personality_type),
+        (typeof docData.avatarUrl === 'string' ? docData.avatarUrl : undefined) ||
+        (typeof docData.profilePictureUrl === 'string' ? docData.profilePictureUrl : undefined) ||
+        (typeof docData.profile_picture_url === 'string' ? docData.profile_picture_url : undefined),
+      personalityType:
+        (typeof docData.personalityType === 'string' ? docData.personalityType : undefined) ||
+        (typeof docData.personality_type === 'string' ? docData.personality_type : undefined),
       coreValues: (docData.coreValues as string[]) || (docData.core_values as string[]) || [],
       bio: (typeof docData.bio === 'string' && docData.bio) || '',
       socialLinks: (docData.socialLinks as Record<string, string>) ||
@@ -341,17 +342,28 @@ export const ProfilePage: React.FC = () => {
     setBadgesError(null)
     try {
       const badgeDefsSnap = await getDocs(collection(db, 'badges'))
-      const badgeDefs = badgeDefsSnap.docs.map((docItem) => ({
+      type BadgeDefinition = {
+        id: string
+        title?: string
+        name?: string
+        description?: string
+        criteria?: string
+        type?: string
+      }
+
+      const badgeDefs: BadgeDefinition[] = badgeDefsSnap.docs.map((docItem) => ({
         id: docItem.id,
         ...(docItem.data() as Record<string, unknown>),
       }))
 
       const userBadgesSnap = await getDocs(query(collection(db, 'user_badges'), where('userId', '==', user.uid)))
+      type UserBadgePayload = { badgeId?: string; earnedAt?: string; progressPercentage?: number }
+
       const userBadgeMap = new Map(
         userBadgesSnap.docs.map((docItem) => {
-          const payload = docItem.data() as Record<string, unknown>
+          const payload = docItem.data() as UserBadgePayload
           return [payload.badgeId, { ...payload, id: docItem.id }]
-        })
+        }),
       )
 
       const combined: BadgeRecord[] = badgeDefs.map((def) => {
