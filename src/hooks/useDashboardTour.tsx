@@ -103,7 +103,10 @@ export const useDashboardTour = (
         setAnnouncement('Dashboard tour completed')
       })
 
-      intro.goToStepNumber(stepIndex + 1).start()
+      intro.start()
+      if (stepIndex > 0) {
+        intro.goToStepNumber(stepIndex + 1)
+      }
     },
     [memoizedSteps, persistProgress, teardownTour]
   )
