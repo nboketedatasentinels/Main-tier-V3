@@ -1,4 +1,5 @@
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
+import { useEffect } from 'react'
+import { BrowserRouter, Routes, Route, Navigate, useNavigate } from 'react-router-dom'
 import { ProtectedRoute } from '@/components/ProtectedRoute'
 import { FreeTierGuard } from '@/components/FreeTierGuard'
 import { UserRole } from '@/types'
@@ -82,12 +83,23 @@ const DashboardRouter = () => {
   )
 }
 
-const DefaultAppRedirect = () => {
-  const { profile, loading } = useAuth()
+const PostLoginRedirect = () => {
+  const navigate = useNavigate()
+  const { user, profile, loading } = useAuth()
 
-  if (loading) return null
+  useEffect(() => {
+    if (loading) return
 
-  return <Navigate to={getDashboardPathForRole(profile?.role)} replace />
+    if (!user) {
+      navigate('/login', { replace: true })
+      return
+    }
+
+    const dashboardPath = getDashboardPathForRole(profile?.role)
+    navigate(dashboardPath, { replace: true })
+  }, [user, profile, loading, navigate])
+
+  return null
 }
 
 export const AppRoutes = () => {
@@ -163,7 +175,7 @@ export const AppRoutes = () => {
         <Route path="profile" element={<ProfilePage />} />
 
         {/* Default redirect based on role */}
-        <Route index element={<DefaultAppRedirect />} />
+        <Route index element={<PostLoginRedirect />} />
       </Route>
 
         {/* Error routes */}

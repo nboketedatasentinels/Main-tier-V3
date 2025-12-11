@@ -13,18 +13,13 @@ import {
   HStack,
 } from '@chakra-ui/react'
 import { useAuth } from '@/hooks/useAuth'
-import { getDashboardPathForRole } from '@/utils/dashboardPaths'
-import { doc, getDoc } from 'firebase/firestore'
-import { db, auth } from '@/services/firebase'
-import { UserProfile } from '@/types'
-import { normalizeUserRole } from '@/utils/roles'
 
 export const LoginPage: React.FC = () => {
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [loading, setLoading] = useState(false)
   const [magicLinkSent, setMagicLinkSent] = useState(false)
-  const { signIn, signInWithMagicLink, profile } = useAuth()
+  const { signIn, signInWithMagicLink } = useAuth()
   const navigate = useNavigate()
   const toast = useToast()
 
@@ -32,44 +27,31 @@ export const LoginPage: React.FC = () => {
     e.preventDefault()
     setLoading(true)
 
-    const { error } = await signIn(email, password)
+    try {
+      const { error } = await signIn(email, password)
 
-    if (error) {
-      toast({
-        title: 'Login failed',
-        description: error.message,
-        status: 'error',
-        duration: 5000,
-        isClosable: true,
-      })
-    } else {
+      if (error) {
+        toast({
+          title: 'Login failed',
+          description: error.message,
+          status: 'error',
+          duration: 5000,
+          isClosable: true,
+        })
+        return
+      }
+
       toast({
         title: 'Welcome back!',
         status: 'success',
         duration: 3000,
       })
-      try {
-        const currentUser = auth.currentUser
-        let role = normalizeUserRole(profile?.role)
 
-        if (!role && currentUser) {
-          const profileRef = doc(db, 'profiles', currentUser.uid)
-          const profileSnapshot = await getDoc(profileRef)
-
-          if (profileSnapshot.exists()) {
-            const profileData = profileSnapshot.data() as UserProfile
-            role = normalizeUserRole(profileData.role)
-          }
-        }
-
-        navigate(getDashboardPathForRole(role), { replace: true })
-      } catch (fetchError) {
-        console.error('Error fetching dashboard path', fetchError)
-        navigate('/app', { replace: true })
-      }
+      // Let the authenticated app redirect decide the correct dashboard once the profile is loaded
+      navigate('/app', { replace: true })
+    } finally {
+      setLoading(false)
     }
-
-    setLoading(false)
   }
 
   const handleMagicLink = async () => {
