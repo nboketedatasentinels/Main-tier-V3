@@ -26,6 +26,9 @@ export interface UserProfile {
   currentWeek?: number
   totalPoints: number
   level: number
+  referralCount?: number
+  referralCode?: string | null
+  referredBy?: string | null
   
   // Organization
   companyId?: string
