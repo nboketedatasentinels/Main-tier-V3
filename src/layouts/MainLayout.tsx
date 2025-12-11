@@ -40,6 +40,7 @@ import {
   Sparkles,
   Search,
   LogOut,
+  CalendarDays,
 } from 'lucide-react'
 import { useAuth } from '@/hooks/useAuth'
 import { UserRole } from '@/types'
@@ -140,6 +141,7 @@ export const MainLayout: React.FC = () => {
         items: [
           { label: 'Dashboard', path: dashboardPath, icon: Home },
           { label: 'Weekly Checklist', path: '/app/weekly-checklist', icon: ClipboardList },
+          { label: 'Weekly Glance', path: '/app/weekly-glance', icon: CalendarDays },
           { label: 'Leadership Board', path: '/app/leadership-board', icon: Trophy },
           { label: 'My Courses', path: '/app/courses', icon: BookOpen },
           { label: 'Peer Connect', path: '/app/peer-connect', icon: Users },
