@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import introJs, { Step } from 'intro.js'
 import 'intro.js/introjs.css'
 import { VisuallyHidden } from '@chakra-ui/react'
+import { useLocation, useNavigate } from 'react-router-dom'
 import { useAuth } from './useAuth'
 import {
   DashboardTourVariant,
@@ -19,13 +20,15 @@ export const useDashboardTour = (
   steps: DashboardTourStep[],
   autoStart: boolean
 ) => {
-  const { user } = useAuth()
+  const { user, profile, updateProfile } = useAuth()
   const introRef = useRef<introJs.IntroJs | null>(null)
   const [isLoading, setIsLoading] = useState(true)
   const [announcement, setAnnouncement] = useState('')
   const [currentStep, setCurrentStep] = useState(0)
   const [hasCompleted, setHasCompleted] = useState(false)
   const [hasSkipped, setHasSkipped] = useState(false)
+  const location = useLocation()
+  const navigate = useNavigate()
 
   const userId = user?.uid || 'anonymous'
 
@@ -44,8 +47,16 @@ export const useDashboardTour = (
         skipped,
         lastUpdated: new Date().toISOString(),
       })
+
+      if (completed && userId !== 'anonymous' && !profile?.dashboardTourCompleted) {
+        await updateProfile({ dashboardTourCompleted: true })
+      }
+
+      if (skipped && userId !== 'anonymous' && profile?.dashboardTourCompleted) {
+        await updateProfile({ dashboardTourCompleted: false })
+      }
     },
-    [userId, variant]
+    [profile?.dashboardTourCompleted, updateProfile, userId, variant]
   )
 
   const teardownTour = useCallback(() => {
@@ -106,6 +117,18 @@ export const useDashboardTour = (
       setHasSkipped(progress?.skipped ?? false)
       setIsLoading(false)
 
+      const params = new URLSearchParams(location.search)
+      const isFirstVisit = params.get('firstVisit') === 'true'
+
+      if (isFirstVisit && !progress?.completed) {
+        setTimeout(() => startTour(stepIndex), 300)
+        params.delete('firstVisit')
+        navigate({ pathname: location.pathname, search: params.toString() ? `?${params.toString()}` : '' }, {
+          replace: true,
+        })
+        return
+      }
+
       if (autoStart && !progress?.completed) {
         setTimeout(() => startTour(stepIndex), 400)
       }
@@ -116,7 +139,7 @@ export const useDashboardTour = (
     return () => {
       teardownTour()
     }
-  }, [autoStart, startTour, teardownTour, userId, variant])
+  }, [autoStart, location.pathname, location.search, navigate, startTour, teardownTour, userId, variant])
 
   const announcementNode = useMemo(
     () => (

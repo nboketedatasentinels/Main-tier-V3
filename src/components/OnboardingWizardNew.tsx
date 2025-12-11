@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react'
+import React, { useCallback, useEffect, useMemo, useState } from 'react'
 import {
   Box,
   Button,
@@ -21,7 +21,7 @@ import {
   useToast,
 } from '@chakra-ui/react'
 import { CheckCircle, Clock4 } from 'lucide-react'
-import { useSearchParams } from 'react-router-dom'
+import { useNavigate, useSearchParams } from 'react-router-dom'
 import { useOnboardingSteps } from '@/hooks/useOnboardingSteps'
 import { InputMicroTask, OnboardingStepItem } from '@/types/onboarding'
 import { useAuth } from '@/hooks/useAuth'
@@ -40,6 +40,7 @@ const MICRO_TASK_SUCCESS = 'success'
 
 export const OnboardingWizardNew: React.FC = () => {
   const { user, profile } = useAuth()
+  const navigate = useNavigate()
   const toast = useToast()
   const [searchParams] = useSearchParams()
   const resume = searchParams.get('resume') === 'true'
@@ -67,6 +68,24 @@ export const OnboardingWizardNew: React.FC = () => {
     expired: false,
   })
   const [microTaskState, setMicroTaskState] = useState<Record<string, string>>({})
+
+  const getDashboardPath = useCallback(() => {
+    switch (profile?.role) {
+      case UserRole.PAID_MEMBER:
+        return '/app/dashboard/member'
+      case UserRole.MENTOR:
+        return '/mentor/dashboard'
+      case UserRole.AMBASSADOR:
+        return '/app/dashboard/ambassador'
+      case UserRole.COMPANY_ADMIN:
+        return '/app/dashboard/company-admin'
+      case UserRole.SUPER_ADMIN:
+        return '/app/dashboard/super-admin'
+      case UserRole.FREE_USER:
+      default:
+        return '/app/dashboard/free'
+    }
+  }, [profile?.role])
 
   const startTime = useMemo(() => {
     if (progress?.onboardingStartTime) return new Date(progress.onboardingStartTime)
@@ -115,6 +134,13 @@ export const OnboardingWizardNew: React.FC = () => {
       })
     }
   }, [applyPenalty, countdown.expired, progress, toast, user?.uid])
+
+  useEffect(() => {
+    if (!progress?.onboardingComplete) return
+
+    const destination = `${getDashboardPath()}?firstVisit=true`
+    navigate(destination, { replace: true })
+  }, [getDashboardPath, navigate, progress?.onboardingComplete])
 
   const quickStartItems = useMemo(() => {
     if (!activeStep) return []
