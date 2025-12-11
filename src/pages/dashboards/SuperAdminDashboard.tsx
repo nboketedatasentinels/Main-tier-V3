@@ -24,6 +24,7 @@ import { EngagementChart } from '@/components/admin/EngagementChart'
 import { RiskAnalysisCard, RiskLevel, RiskReason, DataWarning } from '@/components/admin/RiskAnalysisCard'
 import { AdminUserTable, TableColumn } from '@/components/admin/AdminUserTable'
 import { OrganizationCard } from '@/components/admin/OrganizationCard'
+import type { OrganizationCardProps } from '@/components/admin/OrganizationCard'
 import { StatusBadge } from '@/components/admin/StatusBadge'
 
 type OrganizationStatus = 'active' | 'inactive' | 'pending' | 'watch'
@@ -64,14 +65,7 @@ const dataQualityWarnings: DataWarning[] = [
   { message: '3 accounts missing organization assignment', severity: 'warning' },
 ]
 
-const organizations: Array<{
-  name: string
-  status: OrganizationStatus
-  admins: number
-  newThisWeek: number
-  activeUsers: number
-  change: string
-}> = [
+const organizations: OrganizationCardProps[] = [
   { name: 'Northwind Holdings', status: 'active', admins: 4, newThisWeek: 2, activeUsers: 182, change: '+12' },
   { name: 'Contoso Labs', status: 'active', admins: 3, newThisWeek: 1, activeUsers: 143, change: '+4' },
   { name: 'Globex Partners', status: 'watch', admins: 2, newThisWeek: 0, activeUsers: 96, change: '-3' },
