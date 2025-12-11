@@ -110,7 +110,7 @@ export const AppRoutes = () => {
           <Route path="impact" element={<ImpactLogPage />} />
           <Route path="leaderboard" element={<LeaderboardPage />} />
           <Route path="leadership-board" element={<LeadershipBoardPage />} />
-          <Route path="weekly-updates" element={<WeeklyUpdatesPage />} />
+          <Route path="weekly-checklist" element={<WeeklyUpdatesPage />} />
           <Route path="courses" element={<MyCoursesPage />} />
           <Route path="peer-connect" element={<PeerConnectPage />} />
           <Route path="leadership-council" element={<LeadershipCouncilPage />} />
