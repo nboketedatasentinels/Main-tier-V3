@@ -21,8 +21,6 @@ import { FreeDashboard } from '@/pages/dashboards/FreeDashboard'
 import { PaidMemberDashboard } from '@/pages/dashboards/PaidMemberDashboard'
 import { MentorDashboard } from '@/pages/dashboards/MentorDashboard'
 import { AmbassadorDashboard } from '@/pages/dashboards/AmbassadorDashboard'
-import { CompanyAdminDashboard } from '@/pages/dashboards/CompanyAdminDashboard'
-import { SuperAdminDashboard } from '@/pages/dashboards/SuperAdminDashboard'
 import { AdminDashboard } from '@/pages/dashboards/AdminDashboard'
 import { CompanyDashboard } from '@/components/dashboard/CompanyDashboard'
 
@@ -77,16 +75,6 @@ const DashboardRouter = () => {
       <Route path="company" element={
         <ProtectedRoute>
           <CompanyDashboard />
-        </ProtectedRoute>
-      } />
-      <Route path="company-admin" element={
-        <ProtectedRoute requiredRoles={[UserRole.COMPANY_ADMIN]}>
-          <CompanyAdminDashboard />
-        </ProtectedRoute>
-      } />
-      <Route path="super-admin" element={
-        <ProtectedRoute requiredRoles={[UserRole.SUPER_ADMIN]}>
-          <SuperAdminDashboard />
         </ProtectedRoute>
       } />
       <Route index element={<Navigate to="company" replace />} />
