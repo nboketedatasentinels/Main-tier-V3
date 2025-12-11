@@ -3,6 +3,7 @@ import { Navigate, useLocation } from 'react-router-dom'
 import { useAuth } from '@/hooks/useAuth'
 import { UserRole } from '@/types'
 import { Box, Spinner, Center } from '@chakra-ui/react'
+import { getDashboardPathForRole } from '@/utils/dashboardPaths'
 
 interface ProtectedRouteProps {
   children: React.ReactNode
@@ -27,10 +28,16 @@ export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
   }
 
   const isMentor = profile?.role === UserRole.MENTOR
+  const isSuperAdmin = profile?.role === UserRole.SUPER_ADMIN
+  const isCompanyAdmin = profile?.role === UserRole.COMPANY_ADMIN
 
   // Not authenticated
   if (requireAuth && !user) {
     return <Navigate to="/login" state={{ from: location }} replace />
+  }
+
+  if ((isSuperAdmin || isCompanyAdmin) && location.pathname.startsWith('/app')) {
+    return <Navigate to={getDashboardPathForRole(profile?.role)} replace />
   }
 
   if (isMentor && location.pathname.startsWith('/app')) {

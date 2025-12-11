@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useMemo, useState } from 'react'
+import React, { useEffect, useMemo, useState } from 'react'
 import { Outlet, useLocation, useNavigate } from 'react-router-dom'
 import {
   Box,
@@ -46,6 +46,7 @@ import { useAuth } from '@/hooks/useAuth'
 import { UserRole } from '@/types'
 import { BuildVillageModal } from '@/components/modals/BuildVillageModal'
 import { ConfirmationWelcomeModal } from '@/components/modals/ConfirmationWelcomeModal'
+import { getDashboardPathForRole } from '@/utils/dashboardPaths'
 
 const HEADER_HEIGHT = '72px'
 
@@ -108,31 +109,14 @@ export const MainLayout: React.FC = () => {
     setShowWelcomeModal(false)
   }
 
-  const getDashboardPath = useCallback(() => {
-    switch (profile?.role) {
-      case UserRole.FREE_USER:
-        return '/app/dashboard/free'
-      case UserRole.PAID_MEMBER:
-        return '/app/dashboard/member'
-      case UserRole.MENTOR:
-        return '/mentor/dashboard'
-      case UserRole.AMBASSADOR:
-        return '/app/dashboard/ambassador'
-      case UserRole.COMPANY_ADMIN:
-        return '/app/dashboard/company-admin'
-      case UserRole.SUPER_ADMIN:
-        return '/app/dashboard/super-admin'
-      default:
-        return '/app/dashboard/free'
-    }
-  }, [profile?.role])
+  const dashboardPath = useMemo(() => getDashboardPathForRole(profile?.role), [profile?.role])
 
   const navigationSections = useMemo(
     () => [
       {
         label: 'MY JOURNEY',
         items: [
-          { label: 'Dashboard', path: getDashboardPath(), icon: Home },
+          { label: 'Dashboard', path: dashboardPath, icon: Home },
           { label: 'Weekly Checklist', path: '/app/weekly-checklist', icon: ClipboardList },
           { label: 'Leadership Board', path: '/app/leadership-board', icon: Trophy },
           { label: 'My Courses', path: '/app/courses', icon: BookOpen },
@@ -151,7 +135,7 @@ export const MainLayout: React.FC = () => {
         ],
       },
     ],
-    [getDashboardPath],
+    [dashboardPath],
   )
 
   const isFreeUser = profile?.role === UserRole.FREE_USER
