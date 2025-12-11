@@ -31,10 +31,12 @@ import {
   Star,
   TrendingUp,
 } from 'lucide-react'
+import { useNavigate } from 'react-router-dom'
 import { useAuth } from '@/hooks/useAuth'
 import { StatCard } from '@/components/dashboard/StatCard'
 import { ActivityCard } from '@/components/dashboard/ActivityCard'
 import { BadgeCard } from '@/components/dashboard/BadgeCard'
+import { DashboardTourStep, useDashboardTour } from '@/hooks/useDashboardTour'
 
 interface ActivityItem {
   title: string
@@ -77,6 +79,7 @@ const milestones = [
 
 export const PaidMemberDashboard: React.FC = () => {
   const { profile } = useAuth()
+  const navigate = useNavigate()
 
   const [activities, setActivities] = useState<ActivityItem[]>([
     { title: 'Complete leadership reflection', points: 50 },
@@ -86,6 +89,102 @@ export const PaidMemberDashboard: React.FC = () => {
   ])
 
   const [activeBadgeIndex, setActiveBadgeIndex] = useState(0)
+
+  const tourSteps = useMemo<DashboardTourStep[]>(
+    () => [
+      {
+        element: '#dashboard-welcome',
+        title: 'Welcome to your leadership dashboard',
+        intro:
+          'Track progress, celebrate achievements, and jump into your next leadership action.',
+        position: 'bottom',
+        buttons: [
+          {
+            text: 'Skip for now',
+            className: 'introjs-skip',
+            action: (intro) => intro.exit(),
+          },
+          {
+            text: 'Next insight',
+            action: (intro) => intro.nextStep(),
+          },
+        ],
+      },
+      {
+        element: '#dashboard-stats',
+        title: 'Your performance snapshot',
+        intro:
+          'These metrics show your points, level, and weekly journey momentum. You can always return here for a quick health check.',
+        position: 'bottom',
+        buttons: [
+          {
+            text: 'View leaderboard',
+            className: 'introjs-secondary',
+            action: () => navigate('/app/leadership-board'),
+          },
+          {
+            text: 'Next',
+            action: (intro) => intro.nextStep(),
+          },
+        ],
+      },
+      {
+        element: '#weekly-progress',
+        title: 'Weekly checklist',
+        intro:
+          'Complete these activities to keep your journey on track. You can toggle items here or open the full checklist.',
+        position: 'right',
+        buttons: [
+          {
+            text: 'Open weekly checklist',
+            action: () => navigate('/app/weekly-checklist'),
+          },
+          {
+            text: 'Next',
+            action: (intro) => intro.nextStep(),
+          },
+        ],
+      },
+      {
+        element: '#dashboard-events',
+        title: 'Upcoming experiences',
+        intro:
+          'Join live events and mentorship sessions directly from here. We recommend saving one to your calendar.',
+        position: 'left',
+        buttons: [
+          {
+            text: 'Open event calendar',
+            action: () => window.open('https://t4l.community/events', '_blank', 'noopener'),
+          },
+          {
+            text: 'Next',
+            action: (intro) => intro.nextStep(),
+          },
+        ],
+      },
+      {
+        element: '#dashboard-badges',
+        title: 'Celebrate your badges',
+        intro:
+          'Review the badges you have earned and preview what is coming next. Advance through them right from this tour.',
+        position: 'top',
+        buttons: [
+          {
+            text: 'Show next badge',
+            action: () => setActiveBadgeIndex((prev) => (prev + 1) % achievements.length),
+          },
+          {
+            text: 'Finish',
+            action: (intro) => intro.nextStep(),
+          },
+        ],
+      },
+    ],
+    [navigate]
+  )
+
+  const { startTour, currentStep, hasCompleted, announcementNode, isLoading } =
+    useDashboardTour('paid', tourSteps, true)
 
   const completedActivities = useMemo(
     () => activities.filter((activity) => activity.completed).length,
@@ -107,7 +206,50 @@ export const PaidMemberDashboard: React.FC = () => {
 
   return (
     <Stack spacing={8}>
-      <Flex align={{ base: 'flex-start', md: 'center' }} justify="space-between" gap={4}>
+      {announcementNode}
+      <HStack
+        justify="space-between"
+        align={{ base: 'flex-start', md: 'center' }}
+        spacing={4}
+        bg="rgba(255, 255, 255, 0.04)"
+        borderRadius="lg"
+        border="1px solid"
+        borderColor="brand.border"
+        p={4}
+      >
+        <VStack align="flex-start" spacing={1}>
+          <Text fontWeight="bold" color="brand.softGold">
+            Dashboard tour
+          </Text>
+          <Text fontSize="sm" color="brand.softGold" opacity={0.85}>
+            {isLoading
+              ? 'Preparing your guided walkthrough...'
+              : hasCompleted
+                ? 'Tour complete — replay anytime.'
+                : `Resume where you left off at step ${currentStep + 1}.`}
+          </Text>
+        </VStack>
+        <HStack spacing={2}>
+          <Button
+            aria-label="Start leadership dashboard tour"
+            onClick={() => startTour(hasCompleted ? 0 : currentStep)}
+            colorScheme="yellow"
+            variant="outline"
+            size="sm"
+            isDisabled={isLoading}
+          >
+            {hasCompleted ? 'Replay tour' : 'Start guided tour'}
+          </Button>
+        </HStack>
+      </HStack>
+
+      <Flex
+        id="dashboard-welcome"
+        aria-label="Dashboard welcome panel"
+        align={{ base: 'flex-start', md: 'center' }}
+        justify="space-between"
+        gap={4}
+      >
         <Box>
           <Tag size="lg" colorScheme="yellow" bg="rgba(234, 177, 48, 0.2)" color="brand.gold" mb={2}>
             Journey: Leadership Transformation
@@ -138,7 +280,12 @@ export const PaidMemberDashboard: React.FC = () => {
         </HStack>
       </Flex>
 
-      <SimpleGrid columns={{ base: 1, md: 2, xl: 4 }} spacing={4}>
+      <SimpleGrid
+        id="dashboard-stats"
+        aria-label="Performance stats"
+        columns={{ base: 1, md: 2, xl: 4 }}
+        spacing={4}
+      >
         <StatCard
           label="Total points"
           value={profile?.totalPoints ?? 1840}
@@ -172,7 +319,7 @@ export const PaidMemberDashboard: React.FC = () => {
 
       <Grid templateColumns={{ base: '1fr', xl: '2fr 1fr' }} gap={6}>
         <GridItem>
-          <Card>
+          <Card id="weekly-progress" aria-label="Weekly progress overview">
             <CardBody>
               <HStack justify="space-between" align="flex-start" mb={4}>
                 <Box>
@@ -260,7 +407,7 @@ export const PaidMemberDashboard: React.FC = () => {
         </GridItem>
 
         <GridItem>
-          <Card>
+          <Card id="dashboard-badges" aria-label="Badge highlights">
             <CardBody>
               <HStack justify="space-between" mb={4}>
                 <Text fontWeight="bold" color="brand.softGold">
@@ -291,7 +438,7 @@ export const PaidMemberDashboard: React.FC = () => {
 
       <Grid templateColumns={{ base: '1fr', xl: '3fr 2fr' }} gap={6}>
         <GridItem>
-          <Card>
+          <Card id="dashboard-events" aria-label="Upcoming events list">
             <CardBody>
               <HStack justify="space-between" mb={4}>
                 <Text fontWeight="bold" color="brand.softGold">
