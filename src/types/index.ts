@@ -54,12 +54,14 @@ export interface UserProfile {
   lastActive?: string
   
   // Settings
+  /**
+   * @deprecated Legacy onboarding flag. Always true for all users.
+   */
   isOnboarded: boolean
   dashboardTourCompleted?: boolean
   personalityType?: string
   privacySettings?: PrivacySettings
-  onboardingSnapshot?: OnboardingSnapshot
-  
+
   // Timestamps
   createdAt: string
   updatedAt: string
@@ -71,8 +73,6 @@ export interface PrivacySettings {
   allowPeerMatching: boolean
   shareImpactPublicly: boolean
 }
-
-export * from './onboarding'
 
 // Journey Types
 export enum JourneyType {
@@ -445,4 +445,3 @@ export interface PaginatedResponse<T> {
   pageSize: number
   hasMore: boolean
 }
-import { OnboardingSnapshot } from './onboarding'

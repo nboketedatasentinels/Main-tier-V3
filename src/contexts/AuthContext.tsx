@@ -92,7 +92,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         referralCount: 0,
         referralCode: null,
         referredBy: null,
-        isOnboarded: false,
+        isOnboarded: true,
         dashboardTourCompleted: false,
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),

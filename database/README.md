@@ -57,9 +57,9 @@ await setDoc(doc(db, 'profiles', userId), profileData)
 
 See the full schema in `firestore-schema.md` for complete collection definitions and security rules.
 
-## Seeding Onboarding Data
+## Onboarding cleanup migration
 
-Use the `scripts/seed-onboarding.mjs` helper to populate both free and paid onboarding flows.
+The onboarding system has been deprecated. Use `scripts/migrations/cleanup-onboarding.mjs` to mark every user as onboarded and remove legacy onboarding documents.
 
 ### Prerequisites
 - Install dependencies: `npm install` (requires access to `firebase-admin`).
@@ -71,22 +71,10 @@ Use the `scripts/seed-onboarding.mjs` helper to populate both free and paid onbo
 ### Run the script
 
 ```bash
-node scripts/seed-onboarding.mjs
+node scripts/migrations/cleanup-onboarding.mjs
 ```
 
-The script seeds two role-specific documents in `onboarding_steps`:
-- `individual_free` (lighter, exploration-focused tasks)
-- `individual_paid` (comprehensive premium journey)
-
-### Verify the data
-- In Firestore console: filter `onboarding_steps` by `roles` containing `individual_free` or `individual_paid` and confirm orders/points.
-- Using the Firebase CLI (authenticated):
-  ```bash
-  firebase firestore:documents list onboarding_steps --filter="roles:array-contains:individual_paid"
-  firebase firestore:documents list onboarding_progress --limit 5
-  ```
-
-### Update or reseed
-- Re-run the script after editing step definitions to overwrite the documents with the latest content.
-- Remove outdated steps by deleting the documents in `onboarding_steps` for the affected role and rerunning the script.
-- Confirm frontend fallbacks still return `DEFAULT_STEPS` if the query fails or returns empty.
+### What the script does
+- Sets `isOnboarded` to `true` for all profiles and removes any `onboardingSnapshot` fields.
+- Deletes all documents in `onboarding_steps`, `onboarding_progress`, and `onboarding_analytics`.
+- Removes `user_points` records where `source` contains "onboarding".

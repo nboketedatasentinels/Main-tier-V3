@@ -19,7 +19,7 @@ This document captures the target architecture, routing map, and dashboard layou
 - Tailwind CSS for layout utilities and fine-grain spacing
 - Framer Motion for transitions and micro-interactions
 - Recharts for charts; Lucide React for iconography
-- Intro.js for guided tours and onboarding helpers
+- Intro.js for guided tours and feature walkthroughs
 - date-fns for date/time utilities
 - Canvas Confetti for milestone celebrations
 
@@ -96,7 +96,6 @@ src/
 - `/dashboard/ambassador` – Ambassador dashboard
 - `/dashboard/company-admin` – Company admin dashboard
 - `/dashboard/super-admin` – Super admin tools
-- `/onboarding` – Role-aware onboarding wizard + Intro.js tour
 - `/journeys` – Journey catalog & enrollment
 - `/journeys/:journeyId` – Journey detail with weekly map
 - `/journeys/:journeyId/weeks/:weekNumber` – Weekly checklist view
@@ -180,7 +179,7 @@ src/
 
 ## 8. Testing Recommendations
 - **Unit**: points calculation, weekly target status, RBAC guards, checklist unlock rules.
-- **Integration**: auth flows, onboarding wizard, weekly checklist completion, impact logging, subscription upgrade/downgrade.
+- **Integration**: auth flows, weekly checklist completion, impact logging, subscription upgrade/downgrade.
 - **Visual/regression**: route-level snapshots for dashboards and critical flows.
 
 ## 9. Environment & Dev Workflow

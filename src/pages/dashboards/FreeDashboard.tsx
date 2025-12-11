@@ -24,17 +24,13 @@ import {
   FormLabel,
   Input,
   Textarea,
-  HStack,
 } from '@chakra-ui/react'
-import { useNavigate } from 'react-router-dom'
 import { useAuth } from '@/hooks/useAuth'
 import { DashboardTourStep, useDashboardTour } from '@/hooks/useDashboardTour'
-import { OnboardingBanner } from '@/components/OnboardingBanner'
 import { TourBanner } from '@/components/TourBanner'
 
 export const FreeDashboard: React.FC = () => {
   const { profile } = useAuth()
-  const navigate = useNavigate()
   const { isOpen, onOpen, onClose } = useDisclosure()
   const [villageName, setVillageName] = useState('')
   const [villagePurpose, setVillagePurpose] = useState('')
@@ -68,15 +64,6 @@ export const FreeDashboard: React.FC = () => {
 
   return (
     <Box>
-      <OnboardingBanner
-        userId={profile?.id}
-        profileName={profile?.firstName}
-        variant="free"
-        isOnboarded={profile?.isOnboarded}
-        progress={profile?.onboardingSnapshot}
-        onStart={() => navigate('/app/onboarding')}
-        highlight="Finish setup to unlock more challenges"
-      />
       {announcementNode}
       <TourBanner
         profileName={profile?.firstName}
@@ -86,7 +73,7 @@ export const FreeDashboard: React.FC = () => {
         onStart={() => startTour(hasCompleted ? 0 : currentStep)}
       />
 
-      {profile?.isOnboarded && !profile?.villageId && (
+      {!profile?.villageId && (
         <Card mb={8} bg="brand.primaryMuted" border="1px" borderColor="brand.border">
           <CardBody>
             <VStack align="flex-start" spacing={3}>
