@@ -1,4 +1,3 @@
-import React from 'react'
 import { Badge, HStack, Box, BadgeProps } from '@chakra-ui/react'
 
 const statusColorMap: Record<string, { color: BadgeProps['colorScheme']; bg: string }> = {

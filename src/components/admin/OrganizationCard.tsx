@@ -1,10 +1,9 @@
-import React from 'react'
 import { Badge, Box, HStack, Stack, Text } from '@chakra-ui/react'
 import { StatusBadge } from './StatusBadge'
 
-interface OrganizationCardProps {
+export interface OrganizationCardProps {
   name: string
-  status: 'active' | 'inactive' | 'pending' | 'watch'
+  status: 'active' | 'inactive' | 'pending' | 'watch' | 'critical'
   admins?: number
   newThisWeek?: number
   activeUsers?: number

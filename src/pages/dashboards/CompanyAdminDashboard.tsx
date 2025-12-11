@@ -23,6 +23,7 @@ import { EngagementChart } from '@/components/admin/EngagementChart'
 import { RiskAnalysisCard, RiskLevel, RiskReason, DataWarning } from '@/components/admin/RiskAnalysisCard'
 import { AdminUserTable, TableColumn } from '@/components/admin/AdminUserTable'
 import { OrganizationCard } from '@/components/admin/OrganizationCard'
+import type { OrganizationCardProps } from '@/components/admin/OrganizationCard'
 import { StatusBadge } from '@/components/admin/StatusBadge'
 
 const registrationTrend = [
@@ -67,7 +68,7 @@ const userTable = [
   { name: 'Ravi Patel', org: 'Contoso', status: 'Active', engagement: 74, risk: 'Engaged', role: 'Mentor' },
 ]
 
-const scopedOrganizations = [
+const scopedOrganizations: OrganizationCardProps[] = [
   { name: 'Northwind Holdings', status: 'active', admins: 2, newThisWeek: 1, activeUsers: 94, change: '+6' },
   { name: 'Contoso Labs', status: 'watch', admins: 1, newThisWeek: 0, activeUsers: 71, change: '-2' },
 ]
@@ -322,8 +323,8 @@ export const CompanyAdminDashboard: React.FC = () => {
                       >
                         <Text fontWeight="semibold" color="brand.text">{org.name}</Text>
                         <Text fontSize="sm" color="brand.subtleText">Active users: {org.activeUsers}</Text>
-                        <Badge mt={2} colorScheme={org.change.includes('-') ? 'red' : 'green'}>
-                          {org.change} this week
+                        <Badge mt={2} colorScheme={org.change && org.change.includes('-') ? 'red' : 'green'}>
+                          {(org.change ?? '0%')} this week
                         </Badge>
                       </Box>
                     </WrapItem>
