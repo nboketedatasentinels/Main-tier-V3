@@ -21,6 +21,7 @@ import { MentorDashboard } from '@/pages/dashboards/MentorDashboard'
 import { AmbassadorDashboard } from '@/pages/dashboards/AmbassadorDashboard'
 import { CompanyAdminDashboard } from '@/pages/dashboards/CompanyAdminDashboard'
 import { SuperAdminDashboard } from '@/pages/dashboards/SuperAdminDashboard'
+import { AdminDashboard } from '@/pages/dashboards/AdminDashboard'
 
 // Feature page imports
 import { JourneysPage } from '@/pages/journeys/JourneysPage'
@@ -105,6 +106,19 @@ export const AppRoutes = () => {
             <OnboardingPage />
           </ProtectedRoute>
         } />
+
+        {/* Admin routes */}
+        <Route
+          path="/admin"
+          element={
+            <ProtectedRoute requiredRoles={[UserRole.SUPER_ADMIN, UserRole.COMPANY_ADMIN]}>
+              <MainLayout />
+            </ProtectedRoute>
+          }
+        >
+          <Route path="dashboard" element={<AdminDashboard />} />
+          <Route index element={<Navigate to="/admin/dashboard" replace />} />
+        </Route>
 
         {/* Protected main app routes */}
         <Route path="/app" element={
