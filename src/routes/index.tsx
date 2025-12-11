@@ -23,6 +23,7 @@ import { AmbassadorDashboard } from '@/pages/dashboards/AmbassadorDashboard'
 import { CompanyAdminDashboard } from '@/pages/dashboards/CompanyAdminDashboard'
 import { SuperAdminDashboard } from '@/pages/dashboards/SuperAdminDashboard'
 import { AdminDashboard } from '@/pages/dashboards/AdminDashboard'
+import { CompanyDashboard } from '@/components/dashboard/CompanyDashboard'
 
 // Feature page imports
 import { JourneysPage } from '@/pages/journeys/JourneysPage'
@@ -67,6 +68,11 @@ const DashboardRouter = () => {
           <AmbassadorDashboard />
         </ProtectedRoute>
       } />
+      <Route path="company" element={
+        <ProtectedRoute>
+          <CompanyDashboard />
+        </ProtectedRoute>
+      } />
       <Route path="company-admin" element={
         <ProtectedRoute requiredRoles={[UserRole.COMPANY_ADMIN]}>
           <CompanyAdminDashboard />
@@ -77,7 +83,7 @@ const DashboardRouter = () => {
           <SuperAdminDashboard />
         </ProtectedRoute>
       } />
-      <Route index element={<Navigate to="free" replace />} />
+      <Route index element={<Navigate to="company" replace />} />
     </Routes>
   )
 }
