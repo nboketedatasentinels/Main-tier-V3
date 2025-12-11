@@ -1,4 +1,4 @@
-import React, { useCallback, useMemo } from 'react'
+import React, { useEffect, useMemo, useState } from 'react'
 import { Outlet, useLocation, useNavigate } from 'react-router-dom'
 import {
   Box,
@@ -44,6 +44,10 @@ import {
 } from 'lucide-react'
 import { useAuth } from '@/hooks/useAuth'
 import { UserRole } from '@/types'
+import { BuildVillageModal } from '@/components/modals/BuildVillageModal'
+import { ConfirmationWelcomeModal } from '@/components/modals/ConfirmationWelcomeModal'
+
+const HEADER_HEIGHT = '72px'
 
 const sectionLabelStyles = {
   fontSize: 'xs',
@@ -57,14 +61,53 @@ export const MainLayout: React.FC = () => {
   const navigate = useNavigate()
   const location = useLocation()
   const { isOpen, onOpen, onClose } = useDisclosure()
-  const toast = useToast()
+  const [showVillagePrompt, setShowVillagePrompt] = useState(false)
+  const [showWelcomeModal, setShowWelcomeModal] = useState(false)
+
+  const buildVillageKey = useMemo(() => (profile ? `t4l.buildVillage.${profile.id}` : null), [profile])
+  const verificationKey = 't4l.emailVerificationComplete'
+
+  useEffect(() => {
+    if (!profile) return
+
+    if (profile.role === UserRole.FREE_USER && profile.isOnboarded && buildVillageKey) {
+      const stored = localStorage.getItem(buildVillageKey)
+      if (!stored) {
+        setShowVillagePrompt(true)
+      }
+    }
+
+    const verified = localStorage.getItem(verificationKey)
+    if (verified === 'verified') {
+      setShowWelcomeModal(true)
+    }
+  }, [profile, buildVillageKey])
 
   const handleSignOut = async () => {
     await signOut()
     navigate('/login')
   }
 
-  const getDashboardPath = useCallback(() => {
+  const handleVillageCreated = () => {
+    if (buildVillageKey) {
+      localStorage.setItem(buildVillageKey, 'completed')
+    }
+    setShowVillagePrompt(false)
+  }
+
+  const handleVillageSkipped = () => {
+    if (buildVillageKey) {
+      localStorage.setItem(buildVillageKey, 'skipped')
+    }
+    setShowVillagePrompt(false)
+  }
+
+  const handleWelcomeAcknowledged = () => {
+    localStorage.removeItem(verificationKey)
+    setShowWelcomeModal(false)
+  }
+
+  const getDashboardPath = () => {
     switch (profile?.role) {
       case UserRole.FREE_USER:
         return '/app/dashboard/free'
@@ -184,7 +227,7 @@ export const MainLayout: React.FC = () => {
   )
 
   return (
-    <Flex minH="100vh" bg="brand.accent" color="brand.text">
+    <Flex minH="100vh" h="100vh" bg="brand.accent" color="brand.text" overflow="hidden">
       {/* Desktop Sidebar */}
       <Box
         w={{ base: '0', md: '260px' }}
@@ -242,13 +285,14 @@ export const MainLayout: React.FC = () => {
       </Box>
 
       {/* Main Content */}
-      <Flex flex="1" direction="column" overflow="hidden">
+      <Flex flex="1" direction="column" h="100vh" maxH="100vh" overflow="hidden">
         {/* Header */}
         <Flex
           align="center"
           justify="space-between"
           px={{ base: 4, md: 8 }}
-          py={4}
+          h={HEADER_HEIGHT}
+          flexShrink={0}
           bg="white"
           borderBottom="1px solid"
           borderColor="brand.border"
@@ -305,7 +349,12 @@ export const MainLayout: React.FC = () => {
         </Flex>
 
         {/* Content */}
-        <Box flex="1" overflow="auto" p={{ base: 4, md: 8 }}>
+        <Box
+          flex="1"
+          height={`calc(100vh - ${HEADER_HEIGHT})`}
+          overflowY="auto"
+          p={{ base: 4, md: 8 }}
+        >
           <Outlet />
         </Box>
       </Flex>
@@ -325,6 +374,17 @@ export const MainLayout: React.FC = () => {
           </DrawerBody>
         </DrawerContent>
       </Drawer>
+
+      <BuildVillageModal
+        isOpen={showVillagePrompt}
+        onCreate={handleVillageCreated}
+        onSkip={handleVillageSkipped}
+      />
+
+      <ConfirmationWelcomeModal
+        isOpen={showWelcomeModal}
+        onAcknowledge={handleWelcomeAcknowledged}
+      />
     </Flex>
   )
 }
