@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react'
+import React, { useCallback, useEffect, useMemo, useState } from 'react'
 import { Outlet, useLocation, useNavigate } from 'react-router-dom'
 import {
   Box,
@@ -61,6 +61,7 @@ export const MainLayout: React.FC = () => {
   const navigate = useNavigate()
   const location = useLocation()
   const { isOpen, onOpen, onClose } = useDisclosure()
+  const toast = useToast()
   const [showVillagePrompt, setShowVillagePrompt] = useState(false)
   const [showWelcomeModal, setShowWelcomeModal] = useState(false)
 
@@ -107,7 +108,7 @@ export const MainLayout: React.FC = () => {
     setShowWelcomeModal(false)
   }
 
-  const getDashboardPath = () => {
+  const getDashboardPath = useCallback(() => {
     switch (profile?.role) {
       case UserRole.FREE_USER:
         return '/app/dashboard/free'
