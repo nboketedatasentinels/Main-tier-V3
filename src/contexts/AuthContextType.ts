@@ -7,7 +7,11 @@ export interface AuthContextType {
   profile: UserProfile | null
   loading: boolean
   signIn: (email: string, password: string) => Promise<{ error: Error | null }>
-  signUp: (email: string, password: string, userData: Partial<UserProfile>) => Promise<{ error: Error | null }>
+  signUp: (
+    email: string,
+    password: string,
+    userData: Partial<UserProfile>,
+  ) => Promise<{ error: Error | null; userId?: string }>
   signOut: () => Promise<void>
   signInWithMagicLink: (email: string) => Promise<{ error: Error | null }>
   resetPassword: (email: string) => Promise<{ error: Error | null }>

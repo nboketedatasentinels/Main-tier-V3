@@ -93,14 +93,13 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         referralCode: null,
         referredBy: null,
         isOnboarded: true,
-        dashboardTourCompleted: false,
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
       }
 
       await setDoc(doc(db, 'profiles', user.uid), profileData)
 
-      return { error: null }
+      return { error: null, userId: user.uid }
     } catch (error) {
       return { error: error as Error }
     }

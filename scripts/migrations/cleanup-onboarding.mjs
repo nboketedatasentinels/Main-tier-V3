@@ -72,6 +72,7 @@ const markProfilesOnboarded = async () => {
     await doc.ref.update({
       isOnboarded: true,
       onboardingSnapshot: fieldValue.delete(),
+      dashboardTourCompleted: fieldValue.delete(),
       updatedAt: new Date().toISOString(),
     })
     updated += 1

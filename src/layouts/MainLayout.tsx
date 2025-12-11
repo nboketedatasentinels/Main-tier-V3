@@ -67,7 +67,11 @@ export const MainLayout: React.FC = () => {
   const [showWelcomeModal, setShowWelcomeModal] = useState(false)
 
   const buildVillageKey = useMemo(() => (profile ? `t4l.buildVillage.${profile.id}` : null), [profile])
-  const verificationKey = 't4l.emailVerificationComplete'
+  const welcomeKey = useMemo(() => (profile ? `t4l.newUserWelcome.${profile.id}` : null), [profile])
+
+  useEffect(() => {
+    localStorage.removeItem('bolt.dashboard_tour_progress')
+  }, [])
 
   useEffect(() => {
     if (!profile) return
@@ -79,11 +83,27 @@ export const MainLayout: React.FC = () => {
       }
     }
 
-    const verified = localStorage.getItem(verificationKey)
-    if (verified === 'verified') {
-      setShowWelcomeModal(true)
+    if (welcomeKey && location.pathname.startsWith('/app/dashboard')) {
+      const shouldWelcome = localStorage.getItem(welcomeKey)
+      if (shouldWelcome === 'pending') {
+        setShowWelcomeModal(true)
+      }
     }
-  }, [profile, buildVillageKey])
+  }, [buildVillageKey, location.pathname, profile, welcomeKey])
+
+  useEffect(() => {
+    if (!welcomeKey) return
+
+    const handleStorage = (event: StorageEvent) => {
+      if (event.key === welcomeKey && event.newValue !== 'pending') {
+        setShowWelcomeModal(false)
+      }
+    }
+
+    window.addEventListener('storage', handleStorage)
+
+    return () => window.removeEventListener('storage', handleStorage)
+  }, [welcomeKey])
 
   const handleSignOut = async () => {
     await signOut()
@@ -105,7 +125,9 @@ export const MainLayout: React.FC = () => {
   }
 
   const handleWelcomeAcknowledged = () => {
-    localStorage.removeItem(verificationKey)
+    if (welcomeKey) {
+      localStorage.removeItem(welcomeKey)
+    }
     setShowWelcomeModal(false)
   }
 
@@ -369,6 +391,8 @@ export const MainLayout: React.FC = () => {
       <ConfirmationWelcomeModal
         isOpen={showWelcomeModal}
         onAcknowledge={handleWelcomeAcknowledged}
+        firstName={profile?.firstName}
+        role={profile?.role}
       />
     </Flex>
   )

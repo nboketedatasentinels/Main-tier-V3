@@ -55,7 +55,7 @@ export const SignUpPage: React.FC = () => {
 
     setLoading(true)
 
-    const { error } = await signUp(formData.email, formData.password, {
+    const { error, userId } = await signUp(formData.email, formData.password, {
       firstName: formData.firstName,
       lastName: formData.lastName,
       fullName: `${formData.firstName} ${formData.lastName}`,
@@ -75,6 +75,9 @@ export const SignUpPage: React.FC = () => {
         status: 'success',
         duration: 5000,
       })
+      if (userId) {
+        localStorage.setItem(`t4l.newUserWelcome.${userId}`, 'pending')
+      }
       navigate('/app/dashboard/free')
     }
 
