@@ -19,6 +19,7 @@ import {
   Text,
   VStack,
 } from '@chakra-ui/react'
+import { useNavigate } from 'react-router-dom'
 import {
   Award,
   CalendarClock,
@@ -280,12 +281,25 @@ export const PaidMemberDashboard: React.FC = () => {
         </HStack>
       </Flex>
 
-      <SimpleGrid
-        id="dashboard-stats"
-        aria-label="Performance stats"
-        columns={{ base: 1, md: 2, xl: 4 }}
-        spacing={4}
-      >
+      {!profile?.isOnboarded && (
+        <Card bg="brand.primaryMuted" border="1px" borderColor="brand.border">
+          <CardBody>
+            <HStack justify="space-between" align="flex-start">
+              <Box>
+                <Text fontWeight="bold" color="brand.gold">Resume Onboarding</Text>
+                <Text color="brand.softGold" mt={1}>
+                  Finish setting up your profile to unlock personalized journeys and community features.
+                </Text>
+              </Box>
+              <Button colorScheme="yellow" onClick={() => navigate('/app/onboarding')}>
+                Continue setup
+              </Button>
+            </HStack>
+          </CardBody>
+        </Card>
+      )}
+
+      <SimpleGrid columns={{ base: 1, md: 2, xl: 4 }} spacing={4}>
         <StatCard
           label="Total points"
           value={profile?.totalPoints ?? 1840}

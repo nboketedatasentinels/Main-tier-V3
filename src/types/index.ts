@@ -26,11 +26,32 @@ export interface UserProfile {
   currentWeek?: number
   totalPoints: number
   level: number
+  referralCount?: number
+  referralCode?: string | null
+  referredBy?: string | null
   
   // Organization
   companyId?: string
+  companyCode?: string
+  companyName?: string
   villageId?: string
   clusterId?: string
+  corporateVillageId?: string
+  cohortIdentifier?: string
+
+  // Availability & preferences
+  timezone?: string
+  availabilityStatus?: string
+  notes?: string
+
+  // Leadership relations
+  mentorId?: string
+  ambassadorId?: string
+  isActiveAmbassador?: boolean
+  accountStatus?: string
+  lastInteraction?: string
+  registrationDate?: string
+  lastActive?: string
   
   // Settings
   isOnboarded: boolean
@@ -48,6 +69,8 @@ export interface PrivacySettings {
   allowPeerMatching: boolean
   shareImpactPublicly: boolean
 }
+
+export * from './onboarding'
 
 // Journey Types
 export enum JourneyType {

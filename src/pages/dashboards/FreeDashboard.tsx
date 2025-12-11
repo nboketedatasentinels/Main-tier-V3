@@ -1,4 +1,4 @@
-import React, { useMemo } from 'react'
+import React, { useState } from 'react'
 import {
   Box,
   Heading,
@@ -11,61 +11,28 @@ import {
   Card,
   CardBody,
   Button,
-  HStack,
   VStack,
+  useDisclosure,
+  Modal,
+  ModalOverlay,
+  ModalContent,
+  ModalHeader,
+  ModalBody,
+  ModalFooter,
+  ModalCloseButton,
+  FormControl,
+  FormLabel,
+  Input,
+  Textarea,
 } from '@chakra-ui/react'
-import { useNavigate } from 'react-router-dom'
 import { useAuth } from '@/hooks/useAuth'
 import { DashboardTourStep, useDashboardTour } from '@/hooks/useDashboardTour'
 
 export const FreeDashboard: React.FC = () => {
   const { profile } = useAuth()
-  const navigate = useNavigate()
-
-  const tourSteps = useMemo<DashboardTourStep[]>(
-    () => [
-      {
-        element: '#free-dashboard-welcome',
-        title: 'Start your tour',
-        intro: 'A quick walkthrough of the free dashboard so you can explore with confidence.',
-        position: 'bottom',
-        buttons: [
-          { text: 'Skip', action: (intro) => intro.exit() },
-          { text: 'Next', action: (intro) => intro.nextStep() },
-        ],
-      },
-      {
-        element: '#free-dashboard-stats',
-        title: 'Track your basics',
-        intro: 'Keep an eye on your points, level, and weekly journey notes. Upgrade unlocks deeper insights.',
-        position: 'right',
-        buttons: [
-          {
-            text: 'Visit leaderboard',
-            action: () => navigate('/app/leadership-board'),
-          },
-          { text: 'Next', action: (intro) => intro.nextStep() },
-        ],
-      },
-      {
-        element: '#free-upgrade-card',
-        title: 'Unlock the full experience',
-        intro: 'Paid members get full journeys, guided paths, and live events. Upgrade when you are ready.',
-        position: 'left',
-        buttons: [
-          {
-            text: 'Explore memberships',
-            action: () => navigate('/'),
-          },
-          { text: 'Finish', action: (intro) => intro.nextStep() },
-        ],
-      },
-    ],
-    [navigate]
-  )
-
-  const { startTour, currentStep, hasCompleted, announcementNode, isLoading } =
-    useDashboardTour('free', tourSteps, true)
+  const { isOpen, onOpen, onClose } = useDisclosure()
+  const [villageName, setVillageName] = useState('')
+  const [villagePurpose, setVillagePurpose] = useState('')
 
   return (
     <Box>
@@ -105,19 +72,25 @@ export const FreeDashboard: React.FC = () => {
         </Button>
       </HStack>
 
-      <Box id="free-dashboard-welcome" aria-label="Free dashboard welcome">
-        <Heading mb={2} color="brand.gold">Welcome, {profile?.firstName}!</Heading>
-        <Text mb={8} color="brand.softGold">
-          You're on the Curious Cat Path. Explore T4L and upgrade to unlock full features!
-        </Text>
-      </Box>
+      {profile?.isOnboarded && !profile?.villageId && (
+        <Card mb={8} bg="brand.primaryMuted" border="1px" borderColor="brand.border">
+          <CardBody>
+            <VStack align="flex-start" spacing={3}>
+              <Heading size="md" color="brand.gold">
+                Build Your Village
+              </Heading>
+              <Text color="brand.softGold">
+                Rally your peers by creating a village to collaborate and track your collective impact.
+              </Text>
+              <Button colorScheme="yellow" onClick={onOpen} alignSelf="flex-start">
+                Open Build Village
+              </Button>
+            </VStack>
+          </CardBody>
+        </Card>
+      )}
 
-      <SimpleGrid
-        id="free-dashboard-stats"
-        aria-label="Free dashboard stats"
-        columns={{ base: 1, md: 3 }}
-        spacing={6}
-      >
+      <SimpleGrid columns={{ base: 1, md: 3 }} spacing={6}>
         <Card bg="brand.royalPurple">
           <CardBody>
             <Stat>
@@ -148,6 +121,49 @@ export const FreeDashboard: React.FC = () => {
           </CardBody>
         </Card>
       </SimpleGrid>
+
+      <Modal isOpen={isOpen} onClose={onClose} isCentered>
+        <ModalOverlay />
+        <ModalContent>
+          <ModalHeader color="brand.gold">Build Your Village</ModalHeader>
+          <ModalCloseButton />
+          <ModalBody>
+            <VStack align="stretch" spacing={4}>
+              <Text color="brand.softGold">
+                Start a village to bring together peers working on similar goals. Share updates, host events, and celebrate wins.
+              </Text>
+              <FormControl>
+                <FormLabel color="brand.softGold">Village name</FormLabel>
+                <Input
+                  value={villageName}
+                  onChange={(e) => setVillageName(e.target.value)}
+                  placeholder="e.g. Impact Innovators"
+                  bg="brand.inputBg"
+                  borderColor="brand.border"
+                />
+              </FormControl>
+              <FormControl>
+                <FormLabel color="brand.softGold">Purpose</FormLabel>
+                <Textarea
+                  value={villagePurpose}
+                  onChange={(e) => setVillagePurpose(e.target.value)}
+                  placeholder="Describe what your village will focus on"
+                  bg="brand.inputBg"
+                  borderColor="brand.border"
+                />
+              </FormControl>
+            </VStack>
+          </ModalBody>
+          <ModalFooter>
+            <Button variant="ghost" mr={3} onClick={onClose} color="brand.softGold">
+              Cancel
+            </Button>
+            <Button colorScheme="yellow" onClick={onClose} isDisabled={!villageName.trim()}>
+              Save Village
+            </Button>
+          </ModalFooter>
+        </ModalContent>
+      </Modal>
     </Box>
   )
 }

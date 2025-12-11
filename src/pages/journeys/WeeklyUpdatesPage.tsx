@@ -1,5 +1,4 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { AddIcon, CheckCircleIcon, ChevronLeftIcon, ChevronRightIcon, LockIcon, WarningIcon } from '@chakra-ui/icons'
 import {
   Alert,
   AlertDescription,
@@ -15,6 +14,7 @@ import {
   GridItem,
   HStack,
   Heading,
+  Icon,
   Modal,
   ModalBody,
   ModalCloseButton,
@@ -33,7 +33,9 @@ import {
   useDisclosure,
   useToast,
 } from '@chakra-ui/react'
+import { AlertTriangle, CheckCircle, ChevronLeft, ChevronRight, Lock, Plus } from 'lucide-react'
 import { addDoc, collection, doc, getDoc, getDocs, query, serverTimestamp, setDoc, where } from 'firebase/firestore'
+import { removeUndefinedFields } from '@/utils/firestore'
 import { db } from '@/services/firebase'
 import { useAuth } from '@/hooks/useAuth'
 import { UserRole, UserProfile } from '@/types'
@@ -307,7 +309,10 @@ const WeeklyChecklistPage: React.FC = () => {
       const templateSnapshot = await getDocs(templateQuery)
       const templates: ActivityTemplate[] = templateSnapshot.empty
         ? defaultTemplates.filter(t => t.week === selectedWeek)
-        : templateSnapshot.docs.map(docSnap => ({ id: docSnap.id, ...(docSnap.data() as ActivityTemplate) }))
+        : templateSnapshot.docs.map(docSnap => ({
+            ...(docSnap.data() as ActivityTemplate),
+            id: docSnap.id,
+          }))
 
       const checklistRef = doc(collection(db, 'weekly_checklist'), `${user.uid}-${getWeekKey(selectedWeek)}`)
       const checklistSnap = await getDoc(checklistRef)
@@ -390,7 +395,7 @@ const WeeklyChecklistPage: React.FC = () => {
   const submitProof = async () => {
     if (!proofModal.activity || !user) return
     try {
-      await addDoc(collection(db, 'points_verification_requests'), {
+      const payload = removeUndefinedFields({
         user_id: user.uid,
         week: selectedWeek,
         activity_id: proofModal.activity.id,
@@ -401,6 +406,8 @@ const WeeklyChecklistPage: React.FC = () => {
         status: 'pending',
         created_at: serverTimestamp(),
       })
+
+      await addDoc(collection(db, 'points_verification_requests'), payload)
 
       await persistChecklist(
         activities.map(activity =>
@@ -480,7 +487,7 @@ const WeeklyChecklistPage: React.FC = () => {
           <Flex align="center" justify="space-between">
             <Button
               size="sm"
-              leftIcon={<ChevronLeftIcon />}
+              leftIcon={<Icon as={ChevronLeft} />}
               isDisabled={monthIndex <= 1}
               onClick={() => setSelectedWeek(Math.max(1, selectedWeek - 4))}
             >
@@ -496,7 +503,7 @@ const WeeklyChecklistPage: React.FC = () => {
             </Stack>
             <Button
               size="sm"
-              rightIcon={<ChevronRightIcon />}
+              rightIcon={<Icon as={ChevronRight} />}
               isDisabled={monthIndex >= months}
               onClick={() => setSelectedWeek(Math.min(totalWeeks, selectedWeek + 4))}
             >
@@ -510,8 +517,10 @@ const WeeklyChecklistPage: React.FC = () => {
                   variant={selectedWeek === weekNumber ? 'solid' : 'outline'}
                   colorScheme={selectedWeek === weekNumber ? 'teal' : 'gray'}
                   size="sm"
-                  leftIcon={weekNumber < (journey?.currentWeek || 1) ? <CheckCircleIcon /> : undefined}
-                  rightIcon={weekNumber > (journey?.currentWeek || 1) ? <LockIcon /> : undefined}
+            leftIcon={
+              weekNumber < (journey?.currentWeek || 1) ? <Icon as={CheckCircle} /> : undefined
+            }
+                  rightIcon={weekNumber > (journey?.currentWeek || 1) ? <Icon as={Lock} /> : undefined}
                   isDisabled={weekNumber > (journey?.currentWeek || 1) + 3}
                   onClick={() => setSelectedWeek(weekNumber)}
                 >
@@ -548,8 +557,8 @@ const WeeklyChecklistPage: React.FC = () => {
                 size="sm"
                 variant={selectedWeek === week ? 'solid' : 'outline'}
                 colorScheme={selectedWeek === week ? 'teal' : 'gray'}
-                leftIcon={isCompleted ? <CheckCircleIcon /> : undefined}
-                rightIcon={isLocked ? <LockIcon /> : undefined}
+                leftIcon={isCompleted ? <Icon as={CheckCircle} /> : undefined}
+                rightIcon={isLocked ? <Icon as={Lock} /> : undefined}
                 onClick={() => setSelectedWeek(week)}
                 isDisabled={isLocked}
               >
@@ -609,7 +618,7 @@ const WeeklyChecklistPage: React.FC = () => {
             </Tag>
             {activity.status === 'pending' && (
               <Tooltip label="Pending verification. Points will post after approval.">
-                <WarningIcon color="yellow.300" />
+                <Icon as={AlertTriangle} color="yellow.300" />
               </Tooltip>
             )}
           </Stack>
@@ -650,7 +659,9 @@ const WeeklyChecklistPage: React.FC = () => {
             <Text color="gray.200">{item}</Text>
             <Button
               size="sm"
-              leftIcon={rhythmCompleted[item] ? <CheckCircleIcon /> : <AddIcon />}
+              leftIcon={
+                rhythmCompleted[item] ? <Icon as={CheckCircle} /> : <Icon as={Plus} />
+              }
               colorScheme={rhythmCompleted[item] ? 'teal' : 'gray'}
               variant={rhythmCompleted[item] ? 'solid' : 'outline'}
               onClick={() => toggleItem(item)}
@@ -679,7 +690,7 @@ const WeeklyChecklistPage: React.FC = () => {
         <Stack spacing={2} color="purple.50">
           {bullets.map(item => (
             <HStack key={item} spacing={2} align="flex-start">
-              <CheckCircleIcon color="purple.200" />
+              <Icon as={CheckCircle} color="purple.200" />
               <Text>{item}</Text>
             </HStack>
           ))}
@@ -742,7 +753,7 @@ const WeeklyChecklistPage: React.FC = () => {
           <Button variant="ghost" mr={3} onClick={onClose}>
             Cancel
           </Button>
-          <Button colorScheme="teal" onClick={submitProof} leftIcon={<AddIcon />}
+          <Button colorScheme="teal" onClick={submitProof} leftIcon={<Icon as={Plus} />}
             isDisabled={!proofModal.activity?.proofUrl}
           >
             Submit for verification
@@ -775,12 +786,12 @@ const WeeklyChecklistPage: React.FC = () => {
             <StatCard
               label="Activities completed"
               value={`${pendingCounts.completed} of ${pendingCounts.total}`}
-              icon={<CheckCircleIcon color="green.300" />}
+              icon={<Icon as={CheckCircle} color="green.300" />}
             />
             <StatCard
               label="Weekly points"
               value={`${pendingCounts.points} / ${weeklyTarget}`}
-              icon={<AddIcon color="orange.300" />}
+              icon={<Icon as={Plus} color="orange.300" />}
             />
             <StatCard
               label="Status"
@@ -822,7 +833,7 @@ const WeeklyChecklistPage: React.FC = () => {
             </Heading>
             {isWeekLocked && (
               <Tag colorScheme="red" borderRadius="full" size="sm">
-                <LockIcon mr={1} /> Locked for review
+                <Icon as={Lock} mr={1} /> Locked for review
               </Tag>
             )}
           </Flex>
