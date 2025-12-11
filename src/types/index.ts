@@ -55,6 +55,7 @@ export interface UserProfile {
   
   // Settings
   isOnboarded: boolean
+  dashboardTourCompleted?: boolean
   personalityType?: string
   privacySettings?: PrivacySettings
   onboardingSnapshot?: OnboardingSnapshot

@@ -30,6 +30,7 @@ import { useNavigate } from 'react-router-dom'
 import { useAuth } from '@/hooks/useAuth'
 import { DashboardTourStep, useDashboardTour } from '@/hooks/useDashboardTour'
 import { OnboardingBanner } from '@/components/OnboardingBanner'
+import { TourBanner } from '@/components/TourBanner'
 
 export const FreeDashboard: React.FC = () => {
   const { profile } = useAuth()
@@ -62,7 +63,7 @@ export const FreeDashboard: React.FC = () => {
     [],
   )
 
-  const { startTour, currentStep, hasCompleted, announcementNode, isLoading } =
+  const { startTour, currentStep, hasCompleted, hasSkipped, announcementNode, isLoading } =
     useDashboardTour('free', tourSteps, true)
 
   return (
@@ -77,41 +78,13 @@ export const FreeDashboard: React.FC = () => {
         highlight="Finish setup to unlock more challenges"
       />
       {announcementNode}
-      <HStack
-        id="free-guided-tour"
-        justify="space-between"
-        align={{ base: 'flex-start', md: 'center' }}
-        spacing={4}
-        mb={4}
-        bg="rgba(255, 255, 255, 0.04)"
-        border="1px solid"
-        borderColor="brand.border"
-        borderRadius="lg"
-        p={4}
-      >
-        <VStack align="flex-start" spacing={1}>
-          <Text fontWeight="bold" color="brand.softGold">
-            Guided tour
-          </Text>
-          <Text fontSize="sm" color="brand.softGold" opacity={0.85}>
-            {isLoading
-              ? 'Loading your dashboard tour...'
-              : hasCompleted
-                ? 'Tour complete — replay to revisit tips.'
-                : `Resume from step ${currentStep + 1}.`}
-          </Text>
-        </VStack>
-        <Button
-          size="sm"
-          variant="outline"
-          colorScheme="yellow"
-          aria-label="Start dashboard tour"
-          onClick={() => startTour(hasCompleted ? 0 : currentStep)}
-          isDisabled={isLoading}
-        >
-          {hasCompleted ? 'Replay tour' : 'Start tour'}
-        </Button>
-      </HStack>
+      <TourBanner
+        profileName={profile?.firstName}
+        hasCompleted={hasCompleted}
+        hasSkipped={hasSkipped}
+        isLoading={isLoading}
+        onStart={() => startTour(hasCompleted ? 0 : currentStep)}
+      />
 
       {profile?.isOnboarded && !profile?.villageId && (
         <Card mb={8} bg="brand.primaryMuted" border="1px" borderColor="brand.border">

@@ -38,6 +38,7 @@ import { ActivityCard } from '@/components/dashboard/ActivityCard'
 import { BadgeCard } from '@/components/dashboard/BadgeCard'
 import { DashboardTourStep, useDashboardTour } from '@/hooks/useDashboardTour'
 import { OnboardingBanner } from '@/components/OnboardingBanner'
+import { TourBanner } from '@/components/TourBanner'
 
 interface ActivityItem {
   title: string
@@ -184,7 +185,7 @@ export const PaidMemberDashboard: React.FC = () => {
     [navigate]
   )
 
-  const { startTour, currentStep, hasCompleted, announcementNode, isLoading } =
+  const { startTour, currentStep, hasCompleted, hasSkipped, announcementNode, isLoading } =
     useDashboardTour('paid', tourSteps, true)
 
   const completedActivities = useMemo(
@@ -218,41 +219,13 @@ export const PaidMemberDashboard: React.FC = () => {
         highlight="Premium members: onboarding boosts your XP"
       />
       {announcementNode}
-      <HStack
-        justify="space-between"
-        align={{ base: 'flex-start', md: 'center' }}
-        spacing={4}
-        bg="rgba(255, 255, 255, 0.04)"
-        borderRadius="lg"
-        border="1px solid"
-        borderColor="brand.border"
-        p={4}
-      >
-        <VStack align="flex-start" spacing={1}>
-          <Text fontWeight="bold" color="brand.softGold">
-            Dashboard tour
-          </Text>
-          <Text fontSize="sm" color="brand.softGold" opacity={0.85}>
-            {isLoading
-              ? 'Preparing your guided walkthrough...'
-              : hasCompleted
-                ? 'Tour complete — replay anytime.'
-                : `Resume where you left off at step ${currentStep + 1}.`}
-          </Text>
-        </VStack>
-        <HStack spacing={2}>
-          <Button
-            aria-label="Start leadership dashboard tour"
-            onClick={() => startTour(hasCompleted ? 0 : currentStep)}
-            colorScheme="yellow"
-            variant="outline"
-            size="sm"
-            isDisabled={isLoading}
-          >
-            {hasCompleted ? 'Replay tour' : 'Start guided tour'}
-          </Button>
-        </HStack>
-      </HStack>
+      <TourBanner
+        profileName={profile?.firstName}
+        hasCompleted={hasCompleted}
+        hasSkipped={hasSkipped}
+        isLoading={isLoading}
+        onStart={() => startTour(hasCompleted ? 0 : currentStep)}
+      />
 
       <Flex
         id="dashboard-welcome"

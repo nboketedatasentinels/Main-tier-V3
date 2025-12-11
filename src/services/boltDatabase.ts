@@ -1,4 +1,13 @@
-export type DashboardTourVariant = 'paid' | 'free'
+import { doc, serverTimestamp, setDoc } from 'firebase/firestore'
+import { db } from './firebase'
+
+export type DashboardTourVariant =
+  | 'paid'
+  | 'free'
+  | 'mentor'
+  | 'ambassador'
+  | 'company_admin'
+  | 'super_admin'
 
 export type TourStorageRow = {
   userId: string
@@ -28,6 +37,22 @@ const writeJson = (key: string, value: unknown) => {
   localStorage.setItem(key, JSON.stringify(value))
 }
 
+const persistProfileTourStatus = async (userId: string, completed: boolean) => {
+  try {
+    const profileRef = doc(db, 'profiles', userId)
+    await setDoc(
+      profileRef,
+      {
+        dashboardTourCompleted: completed,
+        updatedAt: serverTimestamp(),
+      },
+      { merge: true },
+    )
+  } catch (error) {
+    console.warn('Unable to persist dashboard tour status', error)
+  }
+}
+
 export const getDashboardTourProgress = async (
   userId: string,
   variant: DashboardTourVariant
@@ -45,6 +70,7 @@ export const saveDashboardTourProgress = async (
   )
   const nextRow = { ...progress, lastUpdated: new Date().toISOString() }
   writeJson(DASHBOARD_TOUR_KEY, [...filtered, nextRow])
+  await persistProfileTourStatus(progress.userId, progress.completed)
   return nextRow
 }
 

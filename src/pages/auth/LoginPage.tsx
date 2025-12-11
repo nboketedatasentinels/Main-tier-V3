@@ -1,4 +1,4 @@
-import React, { useState } from 'react'
+import React, { useCallback, useEffect, useState } from 'react'
 import { useNavigate, Link as RouterLink } from 'react-router-dom'
 import {
   VStack,
@@ -27,6 +27,23 @@ export const LoginPage: React.FC = () => {
   const { signIn, signInWithMagicLink, profile } = useAuth()
   const navigate = useNavigate()
   const toast = useToast()
+
+  const getDashboardPath = useCallback(() => {
+    switch (profile?.role) {
+      case UserRole.PAID_MEMBER:
+        return '/app/dashboard/member'
+      case UserRole.MENTOR:
+        return '/mentor/dashboard'
+      case UserRole.AMBASSADOR:
+        return '/app/dashboard/ambassador'
+      case UserRole.COMPANY_ADMIN:
+        return '/app/dashboard/company-admin'
+      case UserRole.SUPER_ADMIN:
+        return '/app/dashboard/super-admin'
+      default:
+        return '/app/dashboard/free'
+    }
+  }, [profile?.role])
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -73,6 +90,28 @@ export const LoginPage: React.FC = () => {
 
     setLoading(false)
   }
+
+  useEffect(() => {
+    if (!pendingNavigation && user && profile && !authLoading) {
+      setPendingNavigation(true)
+    }
+  }, [authLoading, pendingNavigation, profile, user])
+
+  useEffect(() => {
+    if (!pendingNavigation || authLoading || !profile) return
+
+    if (!profile.isOnboarded) {
+      navigate('/app/onboarding', { replace: true })
+      return
+    }
+
+    if (!profile.dashboardTourCompleted) {
+      navigate(`${getDashboardPath()}?firstVisit=true`, { replace: true })
+      return
+    }
+
+    navigate(getDashboardPath(), { replace: true })
+  }, [authLoading, getDashboardPath, navigate, pendingNavigation, profile])
 
   const handleMagicLink = async () => {
     if (!email) {
