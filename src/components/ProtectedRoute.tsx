@@ -26,6 +26,8 @@ export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
     )
   }
 
+  const isMentor = profile?.role === UserRole.MENTOR
+
   // Not authenticated
   if (requireAuth && !user) {
     return <Navigate to="/login" state={{ from: location }} replace />
@@ -34,6 +36,10 @@ export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
   // Missing profile (should complete onboarding)
   if (requireAuth && user && !profile) {
     return <Navigate to="/app/onboarding" replace />
+  }
+
+  if (isMentor && location.pathname.startsWith('/app')) {
+    return <Navigate to="/mentor/dashboard" replace />
   }
 
   // Role check
