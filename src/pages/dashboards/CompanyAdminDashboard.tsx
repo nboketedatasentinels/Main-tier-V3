@@ -25,6 +25,8 @@ import { AdminUserTable, TableColumn } from '@/components/admin/AdminUserTable'
 import { OrganizationCard } from '@/components/admin/OrganizationCard'
 import { StatusBadge } from '@/components/admin/StatusBadge'
 
+type OrganizationStatus = 'active' | 'inactive' | 'pending' | 'watch'
+
 const registrationTrend = [
   { label: 'Mar 1', value: 9 },
   { label: 'Mar 2', value: 12 },
@@ -67,7 +69,14 @@ const userTable = [
   { name: 'Ravi Patel', org: 'Contoso', status: 'Active', engagement: 74, risk: 'Engaged', role: 'Mentor' },
 ]
 
-const scopedOrganizations = [
+const scopedOrganizations: Array<{
+  name: string
+  status: OrganizationStatus
+  admins: number
+  newThisWeek: number
+  activeUsers: number
+  change: string
+}> = [
   { name: 'Northwind Holdings', status: 'active', admins: 2, newThisWeek: 1, activeUsers: 94, change: '+6' },
   { name: 'Contoso Labs', status: 'watch', admins: 1, newThisWeek: 0, activeUsers: 71, change: '-2' },
 ]
