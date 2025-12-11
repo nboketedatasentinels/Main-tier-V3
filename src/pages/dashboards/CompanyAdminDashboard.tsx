@@ -26,6 +26,8 @@ import { OrganizationCard } from '@/components/admin/OrganizationCard'
 import type { OrganizationCardProps } from '@/components/admin/OrganizationCard'
 import { StatusBadge } from '@/components/admin/StatusBadge'
 
+type OrganizationStatus = 'active' | 'inactive' | 'pending' | 'watch'
+
 const registrationTrend = [
   { label: 'Mar 1', value: 9 },
   { label: 'Mar 2', value: 12 },
