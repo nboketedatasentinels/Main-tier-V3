@@ -30,6 +30,7 @@ import {
   Sparkles,
   UserPlus,
   Users,
+  type LucideIcon,
 } from 'lucide-react'
 import { useAuth } from '@/hooks/useAuth'
 
@@ -43,7 +44,7 @@ interface RewardTier {
   reward: string
   description: string
   emoji: string
-  icon: React.ComponentType<{ size?: number }>
+  icon: LucideIcon
   gradient: string
   accent: string
 }
