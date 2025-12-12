@@ -28,12 +28,14 @@ export const normalizeUserRole = (
     case 'company_admin':
     case 'companyadmin':
     case 'companyadministrator':
-    case 'administrator':
     case 'company-administrator':
+    case 'company administrator':
+    case 'administrator':
     case 'admin':
       return UserRole.COMPANY_ADMIN
     // super-admin variations
     case 'super_admin':
+    case 'super admin':
     case 'superadmin':
     case 'superadministrator':
     case 'super_administrator':
@@ -61,4 +63,20 @@ export const normalizeUserRole = (
 
   // unknown role → return null
   return null
+}
+
+export const isValidUserRole = (role?: UserRole | string | null): role is UserRole => {
+  return normalizeUserRole(role) !== null
+}
+
+export const isAdminRole = (role?: UserRole | string | null): boolean => {
+  const normalizedRole = normalizeUserRole(role)
+  return (
+    normalizedRole === UserRole.COMPANY_ADMIN || normalizedRole === UserRole.SUPER_ADMIN
+  )
+}
+
+export const getSafeRole = (role?: UserRole | string | null): UserRole | null => {
+  const normalized = normalizeUserRole(role)
+  return normalized ?? null
 }

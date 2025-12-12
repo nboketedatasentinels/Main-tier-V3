@@ -96,6 +96,9 @@ const PostLoginRedirect = () => {
     }
 
     const dashboardPath = getDashboardPathForRole(profile?.role)
+
+    if (!dashboardPath) return
+
     navigate(dashboardPath, { replace: true })
   }, [user, profile, loading, navigate])
 
