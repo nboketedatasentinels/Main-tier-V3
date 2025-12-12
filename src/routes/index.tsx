@@ -41,7 +41,6 @@ import { AnnouncementsPage } from '@/pages/community/AnnouncementsPage'
 import { ReferralRewardsPage } from '@/pages/community/ReferralRewardsPage'
 import { BookClubPage } from '@/pages/community/BookClubPage'
 import { ShamelessCirclePage } from '@/pages/community/ShamelessCirclePage'
-import { ProfileMissingPage } from '@/pages/auth/ProfileMissingPage'
 
 // Error pages
 import { NotFoundPage } from '@/pages/errors/NotFoundPage'
