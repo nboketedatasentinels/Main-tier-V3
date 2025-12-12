@@ -132,7 +132,10 @@ export const MainLayout: React.FC = () => {
     setShowWelcomeModal(false)
   }
 
-  const dashboardPath = useMemo(() => getDashboardPathForRole(profile?.role), [profile?.role])
+  const dashboardPath = useMemo(
+    () => getDashboardPathForRole(profile?.role) ?? '/unauthorized',
+    [profile?.role]
+  )
 
   const navigationSections = useMemo(
     () => [

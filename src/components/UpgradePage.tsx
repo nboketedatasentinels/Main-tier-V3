@@ -38,7 +38,10 @@ const cohorts = [
 
 export const UpgradePage: React.FC = () => {
   const { profile } = useAuth()
-  const isPaid = useMemo(() => profile && profile.role !== UserRole.FREE_USER, [profile])
+  const isPaid = useMemo(
+    () => Boolean(profile?.role && profile.role !== UserRole.FREE_USER),
+    [profile?.role]
+  )
   const navigate = useNavigate()
   const toast = useToast()
   const { isOpen, onOpen, onClose } = useDisclosure()
