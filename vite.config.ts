@@ -8,6 +8,10 @@ export default defineConfig({
   resolve: {
     alias: {
       '@': path.resolve(__dirname, './src'),
+      '@lottiefiles/dotlottie-react': path.resolve(
+        __dirname,
+        './src/vendor/DotLottieReact.tsx',
+      ),
     },
   },
   server: {
