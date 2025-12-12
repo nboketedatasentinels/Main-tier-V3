@@ -20,6 +20,15 @@ export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
   const { user, profile, loading } = useAuth()
   const location = useLocation()
   const normalizedRole = normalizeUserRole(profile?.role)
+  const isProfileLoaded = !loading && (!user || Boolean(profile))
+
+  if (!isProfileLoaded && requireAuth && user) {
+    return (
+      <Center h="100vh" bg="brand.deepPlum">
+        <Spinner size="xl" color="brand.gold" thickness="4px" />
+      </Center>
+    )
+  }
 
   if (loading) {
     return (
@@ -36,6 +45,15 @@ export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
     return <Navigate to="/login" state={{ from: location }} replace />
   }
 
+  if (!normalizedRole && requiredRoles) {
+    console.warn('[ProtectedRoute] Missing or invalid role; redirecting to unauthorized', {
+      path: location.pathname,
+      requiredRoles,
+      rawRole: profile?.role,
+    })
+    return <Navigate to="/unauthorized" replace />
+  }
+
   if (isMentor && location.pathname.startsWith('/app')) {
     return <Navigate to="/mentor/dashboard" replace />
   }
@@ -44,11 +62,20 @@ export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
     (normalizedRole === UserRole.SUPER_ADMIN || normalizedRole === UserRole.COMPANY_ADMIN) &&
     location.pathname.startsWith('/app')
   ) {
+    console.debug('[ProtectedRoute] Redirecting admin away from /app', {
+      normalizedRole,
+      target: getDashboardPathForRole(normalizedRole),
+    })
     return <Navigate to={getDashboardPathForRole(normalizedRole)} replace />
   }
 
   // Role check
   if (requiredRoles && normalizedRole && !requiredRoles.includes(normalizedRole)) {
+    console.warn('[ProtectedRoute] Role mismatch; redirecting to unauthorized', {
+      normalizedRole,
+      requiredRoles,
+      path: location.pathname,
+    })
     return <Navigate to="/unauthorized" replace />
   }
 

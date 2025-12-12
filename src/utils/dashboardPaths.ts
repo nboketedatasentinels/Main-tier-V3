@@ -1,8 +1,8 @@
 import { UserRole } from '@/types'
-import { normalizeUserRole } from './roles'
+import { getSafeRole } from './roles'
 
 export const getDashboardPathForRole = (role?: UserRole | string | null) => {
-  const normalizedRole = normalizeUserRole(role)
+  const normalizedRole = getSafeRole(role)
 
   switch (normalizedRole) {
     case UserRole.FREE_USER:

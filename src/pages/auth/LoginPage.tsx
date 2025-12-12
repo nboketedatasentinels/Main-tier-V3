@@ -1,4 +1,4 @@
-import React, { useState } from 'react'
+import React, { useEffect, useState } from 'react'
 import { useNavigate, Link as RouterLink } from 'react-router-dom'
 import {
   VStack,
@@ -13,15 +13,26 @@ import {
   HStack,
 } from '@chakra-ui/react'
 import { useAuth } from '@/hooks/useAuth'
+import { getDashboardPathForRole } from '@/utils/dashboardPaths'
 
 export const LoginPage: React.FC = () => {
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [loading, setLoading] = useState(false)
   const [magicLinkSent, setMagicLinkSent] = useState(false)
-  const { signIn, signInWithMagicLink } = useAuth()
+  const { signIn, signInWithMagicLink, user, profile, loading: authLoading } = useAuth()
   const navigate = useNavigate()
   const toast = useToast()
+  const [redirecting, setRedirecting] = useState(false)
+
+  // Redirect if the user is already authenticated and we know their profile
+  useEffect(() => {
+    if (authLoading || !user) return
+
+    const dashboardPath = getDashboardPathForRole(profile?.role)
+    navigate(dashboardPath, { replace: true })
+    setRedirecting(true)
+  }, [authLoading, navigate, profile?.role, user])
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -48,7 +59,9 @@ export const LoginPage: React.FC = () => {
       })
 
       // Let the authenticated app redirect decide the correct dashboard once the profile is loaded
-      navigate('/app', { replace: true })
+      const dashboardPath = getDashboardPathForRole(profile?.role)
+      navigate(dashboardPath, { replace: true })
+      setRedirecting(true)
     } finally {
       setLoading(false)
     }
@@ -144,7 +157,7 @@ export const LoginPage: React.FC = () => {
         <Button
           type="submit"
           variant="primary"
-          isLoading={loading}
+          isLoading={loading || redirecting}
           loadingText="Signing in..."
           size="lg"
         >
