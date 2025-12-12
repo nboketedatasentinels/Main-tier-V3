@@ -40,6 +40,7 @@ import { AnnouncementsPage } from '@/pages/community/AnnouncementsPage'
 import { ReferralRewardsPage } from '@/pages/community/ReferralRewardsPage'
 import { BookClubPage } from '@/pages/community/BookClubPage'
 import { ShamelessCirclePage } from '@/pages/community/ShamelessCirclePage'
+import { ProfileMissingPage } from '@/pages/auth/ProfileMissingPage'
 
 // Error pages
 import { NotFoundPage } from '@/pages/errors/NotFoundPage'
@@ -47,9 +48,9 @@ import { UnauthorizedPage } from '@/pages/errors/UnauthorizedPage'
 
 // Dashboard router component
 const DashboardRouter = () => {
-  const { loading } = useAuth()
+  const { loading, profileLoading } = useAuth()
 
-  if (loading) return null
+  if (loading || profileLoading) return null
 
   return (
     <Routes>
@@ -128,7 +129,7 @@ export const AppRoutes = () => {
       }>
           {/* Dashboard routes */}
           <Route path="dashboard/*" element={<DashboardRouter />} />
-          
+
           {/* Feature routes */}
           <Route path="journeys" element={<JourneysPage />} />
           <Route path="weekly-glance" element={<WeeklyGlancePage />} />
@@ -140,7 +141,11 @@ export const AppRoutes = () => {
           <Route
             path="peer-connect"
             element={
-              <FreeTierGuard fallbackPath="/app/dashboard/free" description="Peer Connect is available on paid plans." title="Upgrade to connect">
+              <FreeTierGuard
+                fallbackPath="/app/dashboard/free"
+                description="Peer Connect is available on paid plans."
+                title="Upgrade to connect"
+              >
                 <PeerConnectPage />
               </FreeTierGuard>
             }
@@ -148,7 +153,11 @@ export const AppRoutes = () => {
           <Route
             path="leadership-council"
             element={
-              <FreeTierGuard fallbackPath="/app/dashboard/free" description="Leadership Council is available on paid plans." title="Upgrade to access">
+              <FreeTierGuard
+                fallbackPath="/app/dashboard/free"
+                description="Leadership Council is available on paid plans."
+                title="Upgrade to access"
+              >
                 <LeadershipCouncilPage />
               </FreeTierGuard>
             }
@@ -157,7 +166,7 @@ export const AppRoutes = () => {
           <Route path="referral-rewards" element={<ReferralRewardsPage />} />
           <Route path="book-club" element={<BookClubPage />} />
           <Route path="shameless-circle" element={<ShamelessCirclePage />} />
-        <Route path="profile" element={<ProfilePage />} />
+          <Route path="profile" element={<ProfilePage />} />
 
         {/* Default redirect based on role */}
         <Route index element={<Navigate to="/app" replace />} />
