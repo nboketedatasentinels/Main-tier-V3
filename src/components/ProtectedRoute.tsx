@@ -2,7 +2,7 @@ import React from 'react'
 import { Navigate, useLocation } from 'react-router-dom'
 import { useAuth } from '@/hooks/useAuth'
 import { UserRole } from '@/types'
-import { Box, Spinner, Center } from '@chakra-ui/react'
+import { LoadingAnimation } from './LoadingAnimation'
 import { getDashboardPathForRole } from '@/utils/dashboardPaths'
 import { normalizeUserRole } from '@/utils/roles'
 
@@ -23,9 +23,7 @@ export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
 
   if (loading) {
     return (
-      <Center h="100vh" bg="brand.deepPlum">
-        <Spinner size="xl" color="brand.gold" thickness="4px" />
-      </Center>
+      <LoadingAnimation fullScreen />
     )
   }
 
@@ -69,11 +67,7 @@ export const RoleBasedRoute: React.FC<RoleBasedRouteProps> = ({
   const { profile, loading } = useAuth()
 
   if (loading) {
-    return (
-      <Box p={4}>
-        <Spinner color="brand.gold" />
-      </Box>
-    )
+    return <LoadingAnimation />
   }
 
   if (!profile || !allowedRoles.includes(profile.role)) {
