@@ -1,10 +1,9 @@
-import { useEffect } from 'react'
-import { BrowserRouter, Routes, Route, Navigate, useNavigate } from 'react-router-dom'
+import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
 import { ProtectedRoute } from '@/components/ProtectedRoute'
 import { FreeTierGuard } from '@/components/FreeTierGuard'
 import { UserRole } from '@/types'
 import { useAuth } from '@/hooks/useAuth'
-import { getDashboardPathForRole } from '@/utils/dashboardPaths'
+import { RoleRedirect } from '@/pages/auth/RoleRedirect'
 
 // Layout imports
 import { MainLayout } from '@/layouts/MainLayout'
@@ -40,6 +39,7 @@ import { AnnouncementsPage } from '@/pages/community/AnnouncementsPage'
 import { ReferralRewardsPage } from '@/pages/community/ReferralRewardsPage'
 import { BookClubPage } from '@/pages/community/BookClubPage'
 import { ShamelessCirclePage } from '@/pages/community/ShamelessCirclePage'
+import { ProfileMissingPage } from '@/pages/auth/ProfileMissingPage'
 
 // Error pages
 import { NotFoundPage } from '@/pages/errors/NotFoundPage'
@@ -47,9 +47,9 @@ import { UnauthorizedPage } from '@/pages/errors/UnauthorizedPage'
 
 // Dashboard router component
 const DashboardRouter = () => {
-  const { loading } = useAuth()
+  const { loading, profileLoading } = useAuth()
 
-  if (loading) return null
+  if (loading || profileLoading) return null
 
   return (
     <Routes>
@@ -83,25 +83,6 @@ const DashboardRouter = () => {
   )
 }
 
-const PostLoginRedirect = () => {
-  const navigate = useNavigate()
-  const { user, profile, loading } = useAuth()
-
-  useEffect(() => {
-    if (loading) return
-
-    if (!user) {
-      navigate('/login', { replace: true })
-      return
-    }
-
-    const dashboardPath = getDashboardPathForRole(profile?.role)
-    navigate(dashboardPath, { replace: true })
-  }, [user, profile, loading, navigate])
-
-  return null
-}
-
 export const AppRoutes = () => {
   return (
     <BrowserRouter>
@@ -109,9 +90,10 @@ export const AppRoutes = () => {
         {/* Public routes */}
         <Route path="/" element={<HomePage />} />
         <Route path="/upgrade" element={<UpgradePage />} />
-      <Route path="/login" element={<AuthLayout><LoginPage /></AuthLayout>} />
-      <Route path="/signup" element={<AuthLayout><SignUpPage /></AuthLayout>} />
-      <Route path="/reset-password" element={<AuthLayout><ResetPasswordPage /></AuthLayout>} />
+        <Route path="/login" element={<AuthLayout><LoginPage /></AuthLayout>} />
+        <Route path="/signup" element={<AuthLayout><SignUpPage /></AuthLayout>} />
+        <Route path="/reset-password" element={<AuthLayout><ResetPasswordPage /></AuthLayout>} />
+        <Route path="/profile-missing" element={<AuthLayout><ProfileMissingPage /></AuthLayout>} />
 
         <Route
           path="/mentor/dashboard"
@@ -135,15 +117,21 @@ export const AppRoutes = () => {
           <Route index element={<Navigate to="/admin/dashboard" replace />} />
         </Route>
 
-      {/* Protected main app routes */}
-      <Route path="/app" element={
-        <ProtectedRoute>
-          <MainLayout />
-        </ProtectedRoute>
-      }>
+        {/* Role-based redirect gate */}
+        <Route path="/app" element={<RoleRedirect />} />
+
+        {/* Protected main app routes */}
+        <Route
+          path="/app/*"
+          element={
+            <ProtectedRoute>
+              <MainLayout />
+            </ProtectedRoute>
+          }
+        >
           {/* Dashboard routes */}
           <Route path="dashboard/*" element={<DashboardRouter />} />
-          
+
           {/* Feature routes */}
           <Route path="journeys" element={<JourneysPage />} />
           <Route path="weekly-glance" element={<WeeklyGlancePage />} />
@@ -155,7 +143,11 @@ export const AppRoutes = () => {
           <Route
             path="peer-connect"
             element={
-              <FreeTierGuard fallbackPath="/app/dashboard/free" description="Peer Connect is available on paid plans." title="Upgrade to connect">
+              <FreeTierGuard
+                fallbackPath="/app/dashboard/free"
+                description="Peer Connect is available on paid plans."
+                title="Upgrade to connect"
+              >
                 <PeerConnectPage />
               </FreeTierGuard>
             }
@@ -163,7 +155,11 @@ export const AppRoutes = () => {
           <Route
             path="leadership-council"
             element={
-              <FreeTierGuard fallbackPath="/app/dashboard/free" description="Leadership Council is available on paid plans." title="Upgrade to access">
+              <FreeTierGuard
+                fallbackPath="/app/dashboard/free"
+                description="Leadership Council is available on paid plans."
+                title="Upgrade to access"
+              >
                 <LeadershipCouncilPage />
               </FreeTierGuard>
             }
@@ -172,11 +168,11 @@ export const AppRoutes = () => {
           <Route path="referral-rewards" element={<ReferralRewardsPage />} />
           <Route path="book-club" element={<BookClubPage />} />
           <Route path="shameless-circle" element={<ShamelessCirclePage />} />
-        <Route path="profile" element={<ProfilePage />} />
+          <Route path="profile" element={<ProfilePage />} />
 
-        {/* Default redirect based on role */}
-        <Route index element={<PostLoginRedirect />} />
-      </Route>
+          {/* Default redirect based on role */}
+          <Route index element={<RoleRedirect />} />
+        </Route>
 
         {/* Error routes */}
         <Route path="/unauthorized" element={<UnauthorizedPage />} />

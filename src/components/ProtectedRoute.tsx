@@ -17,11 +17,11 @@ export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
   requiredRoles,
   requireAuth = true,
 }) => {
-  const { user, profile, loading } = useAuth()
+  const { user, profile, loading, profileLoading } = useAuth()
   const location = useLocation()
   const normalizedRole = normalizeUserRole(profile?.role)
 
-  if (loading) {
+  if (loading || profileLoading) {
     return (
       <LoadingAnimation fullScreen />
     )
@@ -32,6 +32,10 @@ export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
   // Not authenticated
   if (requireAuth && !user) {
     return <Navigate to="/login" state={{ from: location }} replace />
+  }
+
+  if (requireAuth && user && !normalizedRole) {
+    return <Navigate to="/profile-missing" replace />
   }
 
   if (isMentor && location.pathname.startsWith('/app')) {
@@ -64,9 +68,9 @@ export const RoleBasedRoute: React.FC<RoleBasedRouteProps> = ({
   allowedRoles,
   fallback = null,
 }) => {
-  const { profile, loading } = useAuth()
+  const { profile, loading, profileLoading } = useAuth()
 
-  if (loading) {
+  if (loading || profileLoading) {
     return <LoadingAnimation />
   }
 

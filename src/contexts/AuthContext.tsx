@@ -27,6 +27,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null)
   const [profile, setProfile] = useState<UserProfile | null>(null)
   const [loading, setLoading] = useState(true)
+  const [profileLoading, setProfileLoading] = useState(true)
 
   // Fetch user profile from Firestore
   const fetchProfile = async (userId: string): Promise<UserProfile | null> => {
@@ -47,16 +48,23 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
   // Initialize auth state
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, async (user) => {
-      setUser(user)
+    const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
+      setLoading(true)
+      setProfileLoading(true)
 
-      if (user) {
-        const userProfile = await fetchProfile(user.uid)
-        setProfile(userProfile)
-      } else {
+      setUser(firebaseUser)
+
+      if (!firebaseUser) {
         setProfile(null)
+        setProfileLoading(false)
+        setLoading(false)
+        return
       }
 
+      const userProfile = await fetchProfile(firebaseUser.uid)
+      setProfile(userProfile)
+
+      setProfileLoading(false)
       setLoading(false)
     })
 
@@ -177,6 +185,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     user,
     profile,
     loading,
+    profileLoading,
     signIn,
     signUp,
     signOut,
