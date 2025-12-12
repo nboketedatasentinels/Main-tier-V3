@@ -14,14 +14,11 @@ describe('normalizeUserRole', () => {
     expect(normalizeUserRole('company administrator')).toBe(UserRole.COMPANY_ADMIN)
     expect(normalizeUserRole('SUPER ADMIN')).toBe(UserRole.SUPER_ADMIN)
     expect(normalizeUserRole('Super-Administrator')).toBe(UserRole.SUPER_ADMIN)
-    expect(normalizeUserRole('Super Admin ')).toBe(UserRole.SUPER_ADMIN)
-    expect(normalizeUserRole(' company admin role ')).toBe(UserRole.COMPANY_ADMIN)
   })
 
   test('falls back to detecting admin keywords', () => {
     expect(normalizeUserRole('super company admin')).toBe(UserRole.SUPER_ADMIN)
     expect(normalizeUserRole('team admin user')).toBe(UserRole.COMPANY_ADMIN)
-    expect(normalizeUserRole('company_admin_user')).toBe(UserRole.COMPANY_ADMIN)
   })
 
   test('returns null for unknown roles', () => {

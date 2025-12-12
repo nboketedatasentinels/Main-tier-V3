@@ -24,8 +24,7 @@
     /* Path mapping */
     "baseUrl": ".",
     "paths": {
-      "@/*": ["src/*"],
-      "@lottiefiles/dotlottie-react": ["src/shims/dotlottie-react.tsx"]
+      "@/*": ["src/*"]
     }
   },
   "include": ["src"],

@@ -9,7 +9,6 @@ import { getDashboardPathForRole } from '@/utils/dashboardPaths'
 // Layout imports
 import { MainLayout } from '@/layouts/MainLayout'
 import { AuthLayout } from '@/layouts/AuthLayout'
-import { AdminLayout } from '@/layouts/AdminLayout'
 import { HomePage } from '@/pages/home/HomePage'
 
 // Page imports (we'll create these)
@@ -131,7 +130,7 @@ export const AppRoutes = () => {
           path="/admin"
           element={
             <ProtectedRoute requiredRoles={[UserRole.SUPER_ADMIN, UserRole.COMPANY_ADMIN]}>
-              <AdminLayout />
+              <MainLayout />
             </ProtectedRoute>
           }
         >

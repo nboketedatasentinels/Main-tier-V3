@@ -2,10 +2,9 @@ import React from 'react'
 import { Navigate, useLocation } from 'react-router-dom'
 import { useAuth } from '@/hooks/useAuth'
 import { UserRole } from '@/types'
-import { Box, Center } from '@chakra-ui/react'
+import { Box, Spinner, Center } from '@chakra-ui/react'
 import { getDashboardPathForRole } from '@/utils/dashboardPaths'
 import { normalizeUserRole } from '@/utils/roles'
-import { LoadingAnimation } from './loading/LoadingAnimation'
 
 interface ProtectedRouteProps {
   children: React.ReactNode
@@ -20,23 +19,21 @@ export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
 }) => {
   const { user, profile, loading } = useAuth()
   const location = useLocation()
-  const normalizedRole = profile ? normalizeUserRole(profile.role) : null
-  const isAwaitingProfile = requireAuth && user && (!profile || profile.role === undefined)
-  const timestamp = new Date().toISOString()
+  const normalizedRole = normalizeUserRole(profile?.role)
+  const isProfileLoaded = !loading && (!user || Boolean(profile))
 
-  console.debug('[ProtectedRoute] Evaluating access', {
-    path: location.pathname,
-    requiredRoles,
-    normalizedRole,
-    rawRole: profile?.role,
-    userId: profile?.id ?? user?.uid,
-    timestamp,
-  })
-
-  if (loading || isAwaitingProfile) {
+  if (!isProfileLoaded && requireAuth && user) {
     return (
       <Center h="100vh" bg="brand.deepPlum">
-        <LoadingAnimation label="Loading your access..." />
+        <Spinner size="xl" color="brand.gold" thickness="4px" />
+      </Center>
+    )
+  }
+
+  if (loading) {
+    return (
+      <Center h="100vh" bg="brand.deepPlum">
+        <Spinner size="xl" color="brand.gold" thickness="4px" />
       </Center>
     )
   }
@@ -53,16 +50,8 @@ export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
       path: location.pathname,
       requiredRoles,
       rawRole: profile?.role,
-      userId: profile?.id ?? user?.uid,
-      timestamp: new Date().toISOString(),
     })
-    return (
-      <Navigate
-        to="/unauthorized"
-        replace
-        state={{ reason: 'missing-role', rawRole: profile?.role }}
-      />
-    )
+    return <Navigate to="/unauthorized" replace />
   }
 
   if (isMentor && location.pathname.startsWith('/app')) {
@@ -86,16 +75,8 @@ export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
       normalizedRole,
       requiredRoles,
       path: location.pathname,
-      userId: profile?.id ?? user?.uid,
-      timestamp: new Date().toISOString(),
     })
-    return (
-      <Navigate
-        to="/unauthorized"
-        replace
-        state={{ reason: 'role-mismatch', normalizedRole, requiredRoles }}
-      />
-    )
+    return <Navigate to="/unauthorized" replace />
   }
 
   return <>{children}</>
@@ -113,17 +94,16 @@ export const RoleBasedRoute: React.FC<RoleBasedRouteProps> = ({
   fallback = null,
 }) => {
   const { profile, loading } = useAuth()
-  const normalizedRole = profile?.role ? normalizeUserRole(profile.role) : null
 
   if (loading) {
     return (
       <Box p={4}>
-        <LoadingAnimation label="Checking access..." compact />
+        <Spinner color="brand.gold" />
       </Box>
     )
   }
 
-  if (!normalizedRole || !allowedRoles.includes(normalizedRole)) {
+  if (!profile || !allowedRoles.includes(profile.role)) {
     return <>{fallback}</>
   }
 

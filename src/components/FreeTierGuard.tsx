@@ -27,7 +27,7 @@ export const FreeTierGuard: React.FC<FreeTierGuardProps> = ({
   useEffect(() => {
     if (!profile || hasHandledAccess.current) return
 
-    if (profile.role && blockedRoles.includes(profile.role)) {
+    if (blockedRoles.includes(profile.role)) {
       hasHandledAccess.current = true
       toast({
         title,
@@ -40,7 +40,7 @@ export const FreeTierGuard: React.FC<FreeTierGuardProps> = ({
     }
   }, [blockedRoles, description, fallbackPath, navigate, profile, title, toast])
 
-  if (profile?.role && blockedRoles.includes(profile.role)) {
+  if (profile && blockedRoles.includes(profile.role)) {
     return null
   }
 
