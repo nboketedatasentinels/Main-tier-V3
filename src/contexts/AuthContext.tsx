@@ -18,7 +18,6 @@ import {
 import { UserProfile, UserRole } from '@/types'
 import { auth, db } from '@/services/firebase'
 import { AuthContext, AuthContextType } from './AuthContextType'
-import { getSafeRole, isValidUserRole } from '@/utils/roles'
 
 interface AuthProviderProps {
   children: React.ReactNode
@@ -36,17 +35,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       const docSnap = await getDoc(docRef)
 
       if (docSnap.exists()) {
-        const data = docSnap.data() as UserProfile
-        const normalizedRole = getSafeRole(data.role) ?? UserRole.FREE_USER
-
-        if (!isValidUserRole(data.role)) {
-          console.warn(
-            '[AuthContext] Received invalid role from Firestore, normalizing to default',
-            { rawRole: data.role, normalizedRole }
-          )
-        }
-
-        return { ...data, role: normalizedRole }
+        return docSnap.data() as UserProfile
       }
 
       return null
