@@ -1,8 +1,25 @@
 import { extendTheme, type ThemeConfig } from '@chakra-ui/react'
 
+const config: ThemeConfig = {
+  initialColorMode: 'dark',
+  useSystemColorMode: false,
+}
+
+// KEEP existing keys, but FIX meaning and add semantic names.
+// If you truly need that blue/purple, move it to brand.indigo and keep brand.gold gold.
 const colors = {
   brand: {
-    primary: '#5d6bff',
+    deepPlum: '#27062e',
+    royalPurple: '#350e6f',
+    flameOrange: '#f4540c',
+    gold: '#eab130',
+    softGold: '#f9db59',
+
+    primary: '#f4540c',
+    secondary: '#350e6f',
+    indigo: '#5d6bff',
+
+    // Backwards compatibility keys
     primaryMuted: '#eef0fb',
     accent: '#f6f7fb',
     sidebar: '#f3f4fb',
@@ -10,22 +27,60 @@ const colors = {
     subtleText: '#6b7392',
     border: '#e6e8f3',
     warning: '#f4540c',
-    // Text colors for proper contrast
     textLight: '#ffffff',
     textOnDark: '#f3f4f6',
     textOnPrimary: '#ffffff',
-    // Legacy keys preserved for compatibility
-    deepPlum: '#27062e',
-    flameOrange: '#f4540c',
-    royalPurple: '#350e6f',
-    gold: '#5d6bff',
-    softGold: '#eef0fb',
   },
 }
 
-const config: ThemeConfig = {
-  initialColorMode: 'light',
-  useSystemColorMode: false,
+/**
+ * TEXT RULES:
+ * - Never use brand.softGold / brand.gold for body text.
+ * - Use semantic tokens: text.primary, text.secondary, text.muted, text.inverse.
+ * - Brand colors are for accents (borders, icons, CTA backgrounds).
+ */
+const semanticTokens = {
+  colors: {
+    // Backgrounds
+    'bg.page': { default: '#07040d', _dark: '#07040d' },
+    'bg.surface': { default: '#0d0716', _dark: '#0d0716' },
+    'bg.card': { default: '#140a23', _dark: '#140a23' },
+
+    // Text
+    'text.primary': { default: 'gray.900', _dark: 'whiteAlpha.900' },
+    'text.secondary': { default: 'gray.700', _dark: 'whiteAlpha.800' },
+    'text.muted': { default: 'gray.600', _dark: 'whiteAlpha.700' },
+    'text.subtle': { default: 'gray.500', _dark: 'whiteAlpha.600' },
+    'text.inverse': { default: 'whiteAlpha.900', _dark: 'gray.900' },
+
+    // Borders
+    'border.subtle': { default: 'blackAlpha.200', _dark: 'whiteAlpha.200' },
+
+    // Brand semantic
+    'action.primary': { default: 'brand.flameOrange', _dark: 'brand.flameOrange' },
+    'action.secondary': { default: 'brand.royalPurple', _dark: 'brand.royalPurple' },
+    'accent.gold': { default: 'brand.gold', _dark: 'brand.gold' },
+  },
+}
+
+const styles = {
+  global: {
+    body: {
+      bg: 'bg.page',
+      color: 'text.primary',
+      fontFamily: 'system-ui, -apple-system, sans-serif',
+    },
+    'h1, h2, h3, h4, h5, h6': {
+      color: 'text.primary',
+    },
+    a: {
+      color: 'brand.primary',
+      _hover: {
+        color: '#c24300',
+        textDecoration: 'underline',
+      },
+    },
+  },
 }
 
 const components = {
@@ -39,12 +94,12 @@ const components = {
         bg: 'brand.primary',
         color: 'white',
         _hover: {
-          bg: '#4b59e6',
+          bg: '#c24300',
           transform: 'translateY(-1px)',
           boxShadow: 'lg',
         },
         _active: {
-          bg: '#3f4ccc',
+          bg: '#9d3600',
           transform: 'translateY(0)',
         },
       },
@@ -73,11 +128,12 @@ const components = {
   Card: {
     baseStyle: {
       container: {
-        bg: 'white',
+        bg: 'bg.card',
+        color: 'text.primary',
+        borderColor: 'border.subtle',
+        borderWidth: '1px',
         borderRadius: 'xl',
         boxShadow: 'sm',
-        border: '1px solid',
-        borderColor: 'brand.border',
       },
     },
   },
@@ -93,14 +149,6 @@ const components = {
         bg: 'brand.primary',
         color: 'white',
       },
-      subtle: {
-        bg: 'brand.primaryMuted',
-        color: 'brand.text',
-      },
-      warning: {
-        bg: 'brand.warning',
-        color: 'white',
-      },
     },
   },
   Progress: {
@@ -113,23 +161,33 @@ const components = {
       },
     },
   },
-}
-
-const styles = {
-  global: {
-    body: {
-      bg: 'brand.accent',
-      color: 'brand.text',
-      fontFamily: 'system-ui, -apple-system, sans-serif',
+  Heading: {
+    baseStyle: {
+      color: 'text.primary',
     },
-    'h1, h2, h3, h4, h5, h6': {
-      color: 'brand.text',
+  },
+  Text: {
+    baseStyle: {
+      color: 'text.secondary',
     },
-    a: {
-      color: 'brand.primary',
-      _hover: {
-        color: '#4b59e6',
-        textDecoration: 'underline',
+  },
+  FormLabel: {
+    baseStyle: {
+      color: 'text.secondary',
+      fontWeight: 'medium',
+    },
+  },
+  FormHelperText: {
+    baseStyle: {
+      color: 'text.muted',
+    },
+  },
+  Modal: {
+    baseStyle: {
+      dialog: {
+        bg: 'bg.surface',
+        color: 'text.primary',
+        borderColor: 'border.subtle',
       },
     },
   },
@@ -149,10 +207,11 @@ const breakpoints = {
 }
 
 const theme = extendTheme({
-  colors,
   config,
-  components,
+  colors,
+  semanticTokens,
   styles,
+  components,
   fonts,
   breakpoints,
 })
