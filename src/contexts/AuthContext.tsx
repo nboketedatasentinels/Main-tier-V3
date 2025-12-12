@@ -28,6 +28,27 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null)
   const [profile, setProfile] = useState<UserProfile | null>(null)
   const [loading, setLoading] = useState(true)
+  const [roleDebugEnabled] = useState(() => {
+    if (typeof window === 'undefined') return false
+    return window.localStorage.getItem('roleDebug') === 'true'
+  })
+
+  const logRoleEvent = (
+    level: 'log' | 'warn' | 'error' | 'debug',
+    message: string,
+    payload: Record<string, unknown>
+  ) => {
+    if (level === 'debug' && !roleDebugEnabled) return
+
+    const timestamp = new Date().toISOString()
+    const userId = payload.userId ?? user?.uid ?? 'unknown-user'
+    const entry = { timestamp, userId, ...payload }
+
+    if (level === 'warn') console.warn(`[AuthContext] ${message}`, entry)
+    else if (level === 'error') console.error(`[AuthContext] ${message}`, entry)
+    else if (level === 'debug') console.debug(`[AuthContext] ${message}`, entry)
+    else console.log(`[AuthContext] ${message}`, entry)
+  }
 
   // Fetch user profile from Firestore
   const fetchProfile = async (userId: string): Promise<UserProfile | null> => {
@@ -37,21 +58,33 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
       if (docSnap.exists()) {
         const data = docSnap.data() as UserProfile
-        const normalizedRole = getSafeRole(data.role) ?? UserRole.FREE_USER
+        const normalizedRole = getSafeRole(data.role)
+
+        logRoleEvent('log', 'Fetched raw role from Firestore', {
+          rawRole: data.role,
+          userId: userId,
+        })
 
         if (!isValidUserRole(data.role)) {
-          console.warn(
-            '[AuthContext] Received invalid role from Firestore, normalizing to default',
-            { rawRole: data.role, normalizedRole }
-          )
+          logRoleEvent('warn', 'Received invalid role from Firestore', {
+            rawRole: data.role,
+            normalizedRole,
+            userId: userId,
+          })
         }
+
+        logRoleEvent('debug', 'Normalized role from Firestore', {
+          rawRole: data.role,
+          normalizedRole,
+          userId: userId,
+        })
 
         return { ...data, role: normalizedRole }
       }
 
       return null
     } catch (error) {
-      console.error('Error fetching profile:', error)
+      logRoleEvent('error', 'Error fetching profile', { error })
       return null
     }
   }
@@ -158,6 +191,35 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const updateProfile = async (updates: Partial<UserProfile>) => {
     if (!user) return { error: new Error('No user logged in') }
 
+    if (updates.role !== undefined) {
+      const normalizedRole = getSafeRole(updates.role)
+      if (!normalizedRole) {
+        logRoleEvent('warn', 'Blocked profile update with invalid role', {
+          attemptedRole: updates.role,
+          userId: user.uid,
+        })
+        return { error: new Error('Invalid role provided. Please choose a valid role.') }
+      }
+
+      const currentRole = getSafeRole(profile?.role)
+      const isAdmin =
+        currentRole === UserRole.SUPER_ADMIN || currentRole === UserRole.COMPANY_ADMIN
+      if (!isAdmin) {
+        logRoleEvent('warn', 'Non-admin attempted to change a role', {
+          attemptedRole: updates.role,
+          userId: user.uid,
+          currentRole,
+        })
+        return { error: new Error('Only admins can change user roles.') }
+      }
+
+      updates.role = normalizedRole
+      logRoleEvent('log', 'Role update prepared', {
+        newRole: normalizedRole,
+        userId: user.uid,
+      })
+    }
+
     try {
       const profileRef = doc(db, 'profiles', user.uid)
       await updateDoc(profileRef, {
@@ -181,7 +243,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   }
 
   const hasAnyRole = (roles: UserRole[]): boolean => {
-    return profile ? roles.includes(profile.role) : false
+    return profile?.role ? roles.includes(profile.role) : false
   }
 
   const value: AuthContextType = {

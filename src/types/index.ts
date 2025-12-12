@@ -15,7 +15,7 @@ export interface UserProfile {
   firstName: string
   lastName: string
   fullName: string
-  role: UserRole
+  role: UserRole | null
   avatarUrl?: string
   bio?: string
   phoneNumber?: string

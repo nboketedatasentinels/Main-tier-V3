@@ -68,7 +68,7 @@ export const ConfirmationWelcomeModal: React.FC<ConfirmationWelcomeModalProps> =
     },
   ]
 
-  const dashboardPath = getDashboardPathForRole(role)
+  const dashboardPath = getDashboardPathForRole(role) ?? '/unauthorized'
 
   const quickActions = useMemo(
     () => [
