@@ -14,7 +14,7 @@ export const AuthLayout: React.FC<AuthLayoutProps> = ({ children }) => {
       justify="center"
       p={4}
     >
-      <Container maxW="5xl">
+      <Container maxW="md">
         <VStack spacing={8} align="stretch">
           {/* Logo */}
           <Box textAlign="center">
@@ -29,7 +29,7 @@ export const AuthLayout: React.FC<AuthLayoutProps> = ({ children }) => {
           {/* Auth Form */}
           <Box
             bg="brand.deepPlum"
-            p={{ base: 8, md: 10 }}
+            p={8}
             borderRadius="xl"
             border="2px solid"
             borderColor="brand.gold"
