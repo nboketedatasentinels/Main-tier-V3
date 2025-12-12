@@ -78,7 +78,7 @@ export const SignUpPage: React.FC = () => {
       if (userId) {
         localStorage.setItem(`t4l.newUserWelcome.${userId}`, 'pending')
       }
-      navigate('/app/dashboard/free')
+      navigate('/app', { replace: true })
     }
 
     setLoading(false)

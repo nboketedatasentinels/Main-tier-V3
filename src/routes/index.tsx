@@ -3,7 +3,7 @@ import { ProtectedRoute } from '@/components/ProtectedRoute'
 import { FreeTierGuard } from '@/components/FreeTierGuard'
 import { UserRole } from '@/types'
 import { useAuth } from '@/hooks/useAuth'
-import { RoleRedirect } from '@/pages/auth/RoleRedirect'
+import RoleRedirect from '@/pages/auth/RoleRedirect'
 
 // Layout imports
 import { MainLayout } from '@/layouts/MainLayout'
@@ -14,6 +14,7 @@ import { HomePage } from '@/pages/home/HomePage'
 import { LoginPage } from '@/pages/auth/LoginPage'
 import { SignUpPage } from '@/pages/auth/SignUpPage'
 import { ResetPasswordPage } from '@/pages/auth/ResetPasswordPage'
+import { ProfileMissingPage } from '@/pages/auth/ProfileMissingPage'
 import { UpgradePage } from '@/pages/upgrade/UpgradePage'
 
 // Dashboard imports
@@ -90,10 +91,13 @@ export const AppRoutes = () => {
         {/* Public routes */}
         <Route path="/" element={<HomePage />} />
         <Route path="/upgrade" element={<UpgradePage />} />
-        <Route path="/login" element={<AuthLayout><LoginPage /></AuthLayout>} />
-        <Route path="/signup" element={<AuthLayout><SignUpPage /></AuthLayout>} />
-        <Route path="/reset-password" element={<AuthLayout><ResetPasswordPage /></AuthLayout>} />
-        <Route path="/profile-missing" element={<AuthLayout><ProfileMissingPage /></AuthLayout>} />
+      <Route path="/login" element={<AuthLayout><LoginPage /></AuthLayout>} />
+      <Route path="/signup" element={<AuthLayout><SignUpPage /></AuthLayout>} />
+      <Route path="/reset-password" element={<AuthLayout><ResetPasswordPage /></AuthLayout>} />
+        <Route path="/auth/profile-missing" element={<AuthLayout><ProfileMissingPage /></AuthLayout>} />
+
+        {/* Role-based redirect entrypoint */}
+        <Route path="/app" element={<RoleRedirect />} />
 
         <Route
           path="/mentor/dashboard"
@@ -117,18 +121,12 @@ export const AppRoutes = () => {
           <Route index element={<Navigate to="/admin/dashboard" replace />} />
         </Route>
 
-        {/* Role-based redirect gate */}
-        <Route path="/app" element={<RoleRedirect />} />
-
-        {/* Protected main app routes */}
-        <Route
-          path="/app/*"
-          element={
-            <ProtectedRoute>
-              <MainLayout />
-            </ProtectedRoute>
-          }
-        >
+      {/* Protected main app routes */}
+      <Route path="/app/*" element={
+        <ProtectedRoute>
+          <MainLayout />
+        </ProtectedRoute>
+      }>
           {/* Dashboard routes */}
           <Route path="dashboard/*" element={<DashboardRouter />} />
 
@@ -170,9 +168,9 @@ export const AppRoutes = () => {
           <Route path="shameless-circle" element={<ShamelessCirclePage />} />
           <Route path="profile" element={<ProfilePage />} />
 
-          {/* Default redirect based on role */}
-          <Route index element={<RoleRedirect />} />
-        </Route>
+        {/* Default redirect based on role */}
+        <Route index element={<Navigate to="/app" replace />} />
+      </Route>
 
         {/* Error routes */}
         <Route path="/unauthorized" element={<UnauthorizedPage />} />

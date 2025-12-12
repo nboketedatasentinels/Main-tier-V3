@@ -2,9 +2,8 @@ import { useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '@/hooks/useAuth'
 import { getDashboardPathForRole } from '@/utils/dashboardPaths'
-import { normalizeUserRole } from '@/utils/roles'
 
-export const RoleRedirect = () => {
+const RoleRedirect = () => {
   const navigate = useNavigate()
   const { user, profile, loading, profileLoading } = useAuth()
 
@@ -16,14 +15,12 @@ export const RoleRedirect = () => {
       return
     }
 
-    const normalizedRole = normalizeUserRole(profile?.role)
-
-    if (!normalizedRole) {
-      navigate('/profile-missing', { replace: true })
+    if (!profile) {
+      navigate('/auth/profile-missing', { replace: true })
       return
     }
 
-    const dashboardPath = getDashboardPathForRole(normalizedRole)
+    const dashboardPath = getDashboardPathForRole(profile.role)
     navigate(dashboardPath, { replace: true })
   }, [loading, profileLoading, user, profile, navigate])
 

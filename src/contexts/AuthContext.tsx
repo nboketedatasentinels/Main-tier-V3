@@ -48,22 +48,21 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
   // Initialize auth state
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
+    const unsubscribe = onAuthStateChanged(auth, async (user) => {
       setLoading(true)
-      setProfileLoading(true)
+      setUser(user)
 
-      setUser(firebaseUser)
-
-      if (!firebaseUser) {
+      if (!user) {
         setProfile(null)
         setProfileLoading(false)
         setLoading(false)
         return
       }
 
-      const userProfile = await fetchProfile(firebaseUser.uid)
-      setProfile(userProfile)
+      setProfileLoading(true)
 
+      const userProfile = await fetchProfile(user.uid)
+      setProfile(userProfile)
       setProfileLoading(false)
       setLoading(false)
     })

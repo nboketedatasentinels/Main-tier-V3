@@ -27,6 +27,10 @@ export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
     )
   }
 
+  if (requireAuth && user && !profile) {
+    return <Navigate to="/auth/profile-missing" replace />
+  }
+
   const isMentor = normalizedRole === UserRole.MENTOR
 
   // Not authenticated
