@@ -49,10 +49,10 @@ export const ResetPasswordPage: React.FC = () => {
   if (emailSent) {
     return (
       <VStack spacing={6}>
-        <Text fontSize="2xl" fontWeight="bold" color="brand.gold">
+        <Text fontSize="2xl" fontWeight="bold" color="white">
           Check Your Email
         </Text>
-        <Text color="brand.softGold" textAlign="center">
+        <Text color="white" textAlign="center">
           We've sent password reset instructions to <strong>{email}</strong>.
         </Text>
         <Link as={RouterLink} to="/login" color="brand.flameOrange">
@@ -65,16 +65,16 @@ export const ResetPasswordPage: React.FC = () => {
   return (
     <form onSubmit={handleResetPassword}>
       <VStack spacing={6} align="stretch">
-        <Text fontSize="2xl" fontWeight="bold" color="brand.gold" textAlign="center">
+        <Text fontSize="2xl" fontWeight="bold" color="white" textAlign="center">
           Reset Password
         </Text>
 
-        <Text color="brand.softGold" textAlign="center" fontSize="sm">
+        <Text color="white" textAlign="center" fontSize="sm">
           Enter your email address and we'll send you instructions to reset your password.
         </Text>
 
         <FormControl isRequired>
-          <FormLabel color="brand.softGold">Email</FormLabel>
+          <FormLabel color="white">Email</FormLabel>
           <Input
             type="email"
             value={email}
@@ -82,8 +82,8 @@ export const ResetPasswordPage: React.FC = () => {
             placeholder="your@email.com"
             bg="rgba(53, 14, 111, 0.3)"
             borderColor="brand.gold"
-            color="brand.softGold"
-            _placeholder={{ color: 'rgba(249, 219, 89, 0.5)' }}
+            color="white"
+            _placeholder={{ color: 'rgba(255, 255, 255, 0.5)' }}
           />
         </FormControl>
 
@@ -97,7 +97,7 @@ export const ResetPasswordPage: React.FC = () => {
           Send Reset Link
         </Button>
 
-        <Text color="brand.softGold" fontSize="sm" textAlign="center">
+        <Text color="white" fontSize="sm" textAlign="center">
           Remember your password?{' '}
           <Link as={RouterLink} to="/login" color="brand.flameOrange" fontWeight="semibold">
             Sign In

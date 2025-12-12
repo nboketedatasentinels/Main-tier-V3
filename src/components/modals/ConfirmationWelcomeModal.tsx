@@ -96,7 +96,7 @@ export const ConfirmationWelcomeModal: React.FC<ConfirmationWelcomeModalProps> =
               <Icon as={Sparkles} color="brand.gold" />
             </Box>
             <VStack align="flex-start" spacing={0}>
-              <Text fontSize="lg" color="brand.softGold">
+              <Text fontSize="lg" color="white">
                 Welcome, {firstName || 'leader'}!
               </Text>
               <Text fontSize="sm" color="brand.subtleText">
@@ -112,10 +112,10 @@ export const ConfirmationWelcomeModal: React.FC<ConfirmationWelcomeModalProps> =
               <HStack spacing={3} align="flex-start">
                 <Icon as={Compass} color="brand.gold" />
                 <VStack align="flex-start" spacing={1}>
-                  <Text fontWeight="semibold" color="brand.gold">
+                  <Text fontWeight="semibold" color="white">
                     You are in the right place
                   </Text>
-                  <Text color="brand.softGold">{roleMessage}</Text>
+                  <Text color="brand.subtleText">{roleMessage}</Text>
                 </VStack>
               </HStack>
             </Box>
@@ -134,7 +134,7 @@ export const ConfirmationWelcomeModal: React.FC<ConfirmationWelcomeModalProps> =
                     <Box bg="rgba(234, 177, 48, 0.12)" borderRadius="full" p={2}>
                       <Icon as={feature.icon} color="brand.gold" />
                     </Box>
-                    <Text fontWeight="semibold" color="brand.softGold">
+                    <Text fontWeight="semibold" color="white">
                       {feature.title}
                     </Text>
                   </HStack>
@@ -148,7 +148,7 @@ export const ConfirmationWelcomeModal: React.FC<ConfirmationWelcomeModalProps> =
             <Box>
               <HStack justify="space-between" align="center" mb={3}>
                 <VStack align="flex-start" spacing={1}>
-                  <Text fontWeight="semibold" color="brand.gold">
+                  <Text fontWeight="semibold" color="white">
                     Quick start
                   </Text>
                   <Text color="brand.subtleText">Jump to the actions new members love most.</Text>
@@ -185,7 +185,7 @@ export const ConfirmationWelcomeModal: React.FC<ConfirmationWelcomeModalProps> =
             <Link
               as={RouterLink}
               to="/app/leaderboard"
-              color="brand.softGold"
+              color="brand.subtleText"
               fontSize="sm"
               onClick={onAcknowledge}
             >

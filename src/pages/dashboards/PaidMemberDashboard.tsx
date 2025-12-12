@@ -117,19 +117,19 @@ export const PaidMemberDashboard: React.FC = () => {
           <Tag size="lg" colorScheme="yellow" bg="rgba(234, 177, 48, 0.2)" color="brand.gold" mb={2}>
             Journey: Leadership Transformation
           </Tag>
-          <Text fontSize="3xl" fontWeight="bold" color="brand.gold">
+          <Text fontSize="3xl" fontWeight="bold" color="white">
             Welcome back, {profile?.firstName || 'Leader'}
           </Text>
-          <Text color="brand.softGold" opacity={0.9}>
+          <Text color="brand.textOnDark" opacity={0.9}>
             You are on track for week {profile?.currentWeek || 3}. Keep the momentum going today.
           </Text>
         </Box>
         <HStack spacing={4}>
           <VStack align="flex-end" spacing={1} display={{ base: 'none', md: 'flex' }}>
-            <Text fontSize="sm" color="brand.softGold" opacity={0.8}>
+            <Text fontSize="sm" color="brand.textOnDark" opacity={0.8}>
               Current level
             </Text>
-            <Text fontSize="xl" fontWeight="bold" color="brand.gold">
+            <Text fontSize="xl" fontWeight="bold" color="white">
               {profile?.level || 4}
             </Text>
           </VStack>
@@ -181,16 +181,16 @@ export const PaidMemberDashboard: React.FC = () => {
             <CardBody>
               <HStack justify="space-between" align="flex-start" mb={4}>
                 <Box>
-                  <Text fontWeight="bold" color="brand.softGold">
+                  <Text fontWeight="bold" color="brand.text">
                     Weekly progress
                   </Text>
-                  <Text fontSize="sm" color="brand.softGold" opacity={0.8}>
+                  <Text fontSize="sm" color="brand.subtleText" opacity={0.8}>
                     Week {profile?.currentWeek ?? 3} completion status
                   </Text>
                 </Box>
                 <HStack spacing={2}>
                   <Icon as={TrendingUp} color="brand.gold" />
-                  <Text color="brand.gold" fontWeight="bold">
+                  <Text color="brand.text" fontWeight="bold">
                     {completionRate}%
                   </Text>
                 </HStack>
@@ -198,18 +198,18 @@ export const PaidMemberDashboard: React.FC = () => {
               <Progress value={completionRate} borderRadius="full" mb={4} />
               <SimpleGrid columns={{ base: 1, md: 2 }} spacing={3}>
                 <Box>
-                  <Text fontSize="sm" color="brand.softGold" opacity={0.85}>
+                  <Text fontSize="sm" color="brand.subtleText" opacity={0.85}>
                     Activities completed
                   </Text>
-                  <Text fontSize="lg" fontWeight="bold" color="brand.gold">
+                  <Text fontSize="lg" fontWeight="bold" color="brand.text">
                     {completedActivities} / {activities.length}
                   </Text>
                 </Box>
                 <Box>
-                  <Text fontSize="sm" color="brand.softGold" opacity={0.85}>
+                  <Text fontSize="sm" color="brand.subtleText" opacity={0.85}>
                     Estimated points
                   </Text>
-                  <Text fontSize="lg" fontWeight="bold" color="brand.gold">
+                  <Text fontSize="lg" fontWeight="bold" color="brand.text">
                     {activities.reduce((total, act) => total + (act.completed ? act.points : 0), 0)} pts
                   </Text>
                 </Box>
@@ -223,7 +223,7 @@ export const PaidMemberDashboard: React.FC = () => {
             <CardBody>
               <HStack mb={3} spacing={3}>
                 <Icon as={Rocket} color="brand.gold" />
-                <Text fontWeight="bold" color="brand.gold">
+                <Text fontWeight="bold" color="white">
                   Quick actions
                 </Text>
               </HStack>
@@ -242,7 +242,7 @@ export const PaidMemberDashboard: React.FC = () => {
           <Card>
             <CardBody>
               <HStack justify="space-between" align="center" mb={4}>
-                <Text fontWeight="bold" color="brand.softGold">
+                <Text fontWeight="bold" color="brand.text">
                   Current week activities
                 </Text>
                 <Tag colorScheme="yellow" bg="rgba(234, 177, 48, 0.12)" color="brand.gold">
@@ -268,7 +268,7 @@ export const PaidMemberDashboard: React.FC = () => {
           <Card aria-label="Badge highlights">
             <CardBody>
               <HStack justify="space-between" mb={4}>
-                <Text fontWeight="bold" color="brand.softGold">
+                <Text fontWeight="bold" color="brand.text">
                   Recent achievements
                 </Text>
                 <HStack>
@@ -299,7 +299,7 @@ export const PaidMemberDashboard: React.FC = () => {
           <Card aria-label="Upcoming events list">
             <CardBody>
               <HStack justify="space-between" mb={4}>
-                <Text fontWeight="bold" color="brand.softGold">
+                <Text fontWeight="bold" color="brand.text">
                   Upcoming events
                 </Text>
                 <Tag variant="gold" color="brand.deepPlum">
@@ -316,17 +316,17 @@ export const PaidMemberDashboard: React.FC = () => {
                     bg="rgba(53, 14, 111, 0.5)"
                   >
                     <HStack justify="space-between" mb={1}>
-                      <Text fontWeight="semibold" color="brand.softGold">
+                      <Text fontWeight="semibold" color="white">
                         {event.title}
                       </Text>
                       <Tag variant="gold" color="brand.deepPlum">
                         {event.type}
                       </Tag>
                     </HStack>
-                    <Text fontSize="sm" color="brand.softGold" opacity={0.85}>
+                    <Text fontSize="sm" color="brand.textOnDark" opacity={0.85}>
                       {event.date}
                     </Text>
-                    <Text fontSize="sm" color="brand.softGold" opacity={0.8}>
+                    <Text fontSize="sm" color="brand.textOnDark" opacity={0.8}>
                       {event.location}
                     </Text>
                   </Box>
@@ -339,7 +339,7 @@ export const PaidMemberDashboard: React.FC = () => {
         <GridItem>
           <Card>
             <CardBody>
-              <Text fontWeight="bold" color="brand.softGold" mb={3}>
+              <Text fontWeight="bold" color="brand.text" mb={3}>
                 Journey milestones
               </Text>
               <Stack spacing={3}>
@@ -363,10 +363,10 @@ export const PaidMemberDashboard: React.FC = () => {
                       }
                     />
                     <VStack align="flex-start" spacing={0} flex={1}>
-                      <Text fontWeight="semibold" color="brand.softGold">
+                      <Text fontWeight="semibold" color="brand.text">
                         {milestone.label}
                       </Text>
-                      <Text fontSize="xs" color="brand.softGold" opacity={0.8}>
+                      <Text fontSize="xs" color="brand.subtleText" opacity={0.8}>
                         {milestone.status === 'complete'
                           ? 'Completed'
                           : milestone.status === 'active'
@@ -388,10 +388,10 @@ export const PaidMemberDashboard: React.FC = () => {
           <HStack spacing={4}>
             <Icon as={Sparkles} color="brand.gold" boxSize={6} />
             <VStack align="flex-start" spacing={1}>
-              <Text fontWeight="bold" color="brand.gold">
+              <Text fontWeight="bold" color="white">
                 Tip of the day
               </Text>
-              <Text color="brand.softGold" opacity={0.9}>
+              <Text color="brand.textOnDark" opacity={0.9}>
                 Pair every weekly activity with a micro-reflection. Noting what shifted for you boosts
                 retention and earns a bonus 25 points when you submit your impact log.
               </Text>

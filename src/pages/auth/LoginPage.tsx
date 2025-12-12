@@ -91,15 +91,17 @@ export const LoginPage: React.FC = () => {
   if (magicLinkSent) {
     return (
       <VStack spacing={6}>
-        <Text fontSize="2xl" fontWeight="bold" color="brand.gold">
+        <Text fontSize="2xl" fontWeight="bold" color="white">
           Check Your Email
         </Text>
-        <Text color="brand.softGold" textAlign="center">
+        <Text color="white" textAlign="center">
           We've sent a magic link to <strong>{email}</strong>. Click the link in the email to sign in.
         </Text>
         <Button
           variant="ghost"
           onClick={() => setMagicLinkSent(false)}
+          color="white"
+          _hover={{ bg: 'whiteAlpha.200' }}
         >
           Back to Login
         </Button>
@@ -110,12 +112,12 @@ export const LoginPage: React.FC = () => {
   return (
     <form onSubmit={handleLogin}>
       <VStack spacing={6} align="stretch">
-        <Text fontSize="2xl" fontWeight="bold" color="brand.gold" textAlign="center">
+        <Text fontSize="2xl" fontWeight="bold" color="white" textAlign="center">
           Sign In
         </Text>
 
         <FormControl isRequired>
-          <FormLabel color="brand.softGold">Email</FormLabel>
+          <FormLabel color="white">Email</FormLabel>
           <Input
             type="email"
             value={email}
@@ -123,13 +125,13 @@ export const LoginPage: React.FC = () => {
             placeholder="your@email.com"
             bg="rgba(53, 14, 111, 0.3)"
             borderColor="brand.gold"
-            color="brand.softGold"
-            _placeholder={{ color: 'rgba(249, 219, 89, 0.5)' }}
+            color="white"
+            _placeholder={{ color: 'rgba(255, 255, 255, 0.5)' }}
           />
         </FormControl>
 
         <FormControl isRequired>
-          <FormLabel color="brand.softGold">Password</FormLabel>
+          <FormLabel color="white">Password</FormLabel>
           <Input
             type="password"
             value={password}
@@ -137,7 +139,7 @@ export const LoginPage: React.FC = () => {
             placeholder="••••••••"
             bg="rgba(53, 14, 111, 0.3)"
             borderColor="brand.gold"
-            color="brand.softGold"
+            color="white"
           />
         </FormControl>
 
@@ -153,7 +155,7 @@ export const LoginPage: React.FC = () => {
 
         <HStack>
           <Divider borderColor="rgba(234, 177, 48, 0.3)" />
-          <Text fontSize="sm" color="brand.softGold" whiteSpace="nowrap">
+          <Text fontSize="sm" color="white" whiteSpace="nowrap">
             OR
           </Text>
           <Divider borderColor="rgba(234, 177, 48, 0.3)" />
@@ -177,7 +179,7 @@ export const LoginPage: React.FC = () => {
           >
             Forgot password?
           </Link>
-          <Text color="brand.softGold" fontSize="sm">
+          <Text color="white" fontSize="sm">
             Don't have an account?{' '}
             <Link as={RouterLink} to="/signup" color="brand.flameOrange" fontWeight="semibold">
               Sign Up

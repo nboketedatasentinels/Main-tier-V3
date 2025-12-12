@@ -494,7 +494,7 @@ const WeeklyChecklistPage: React.FC = () => {
               Previous Month
             </Button>
             <Stack spacing={0} textAlign="center">
-              <Text color="brand.gold" fontWeight="bold">
+              <Text color="white" fontWeight="bold">
                 Month {monthIndex} of {months}
               </Text>
               <Text color="gray.300" fontSize="sm">
@@ -648,7 +648,7 @@ const WeeklyChecklistPage: React.FC = () => {
   const renderParticipationRhythm = () => (
     <Box borderWidth="1px" borderColor="gray.700" p={4} borderRadius="lg" bg="gray.900">
       <HStack justify="space-between" mb={2}>
-        <Heading size="sm" color="brand.gold">
+        <Heading size="sm" color="white">
           Participation Rhythm
         </Heading>
         <Tag colorScheme="teal">+{rhythmPoints} pts</Tag>
@@ -701,7 +701,7 @@ const WeeklyChecklistPage: React.FC = () => {
 
   const renderGamificationPanel = () => (
     <Box borderWidth="1px" borderColor="gray.700" p={4} borderRadius="lg" bg="gray.900">
-      <Heading size="sm" color="brand.gold" mb={3}>
+      <Heading size="sm" color="white" mb={3}>
         Workflow Gamification
       </Heading>
       <Stack spacing={3}>
@@ -774,7 +774,7 @@ const WeeklyChecklistPage: React.FC = () => {
       <Box p={4} borderWidth="1px" borderColor="gray.700" bg="gray.900" borderRadius="lg">
         <Stack spacing={3}>
           <HStack justify="space-between">
-            <Heading size="sm" color="brand.gold">
+            <Heading size="sm" color="white">
               Week {selectedWeek} summary
             </Heading>
             <Tag colorScheme={progressStatus.color}>
@@ -808,7 +808,7 @@ const WeeklyChecklistPage: React.FC = () => {
     return (
       <Center py={16}>
         <Stack spacing={3} align="center">
-          <CircularProgress isIndeterminate color="brand.gold" />
+          <CircularProgress isIndeterminate color="purple.400" />
           <Text color="gray.400">Loading weekly activities...</Text>
         </Stack>
       </Center>
@@ -845,7 +845,7 @@ const WeeklyChecklistPage: React.FC = () => {
         <GridItem>
           <Stack spacing={4}>
             <Box borderWidth="1px" borderColor="gray.700" p={4} borderRadius="lg" bg="gray.900">
-              <Heading size="sm" color="brand.gold" mb={3}>
+              <Heading size="sm" color="white" mb={3}>
                 Weekly activities
               </Heading>
               {activityLoading ? (
@@ -877,7 +877,7 @@ const WeeklyChecklistPage: React.FC = () => {
         <GridItem>
           <Stack spacing={4}>
             <Box borderWidth="1px" borderColor="gray.700" p={4} borderRadius="lg" bg="gray.900">
-              <Heading size="sm" color="brand.gold" mb={3}>
+              <Heading size="sm" color="white" mb={3}>
                 Weekly progress
               </Heading>
               {progressLoading ? (

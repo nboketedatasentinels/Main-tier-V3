@@ -22,14 +22,14 @@ export const BadgeCard = ({ name, description, earnedOn, imageUrl, isNew }: Badg
             icon={<Icon as={ShieldCheck} />}
           />
           <VStack align="flex-start" spacing={1} flex={1}>
-            <Text fontWeight="bold" color="brand.softGold">
+            <Text fontWeight="bold" color="brand.text">
               {name}
             </Text>
-            <Text fontSize="sm" color="brand.softGold" opacity={0.85}>
+            <Text fontSize="sm" color="brand.subtleText" opacity={0.85}>
               {description}
             </Text>
             {earnedOn && (
-              <Text fontSize="xs" color="brand.gold">
+              <Text fontSize="xs" color="brand.subtleText">
                 Earned {earnedOn}
               </Text>
             )}

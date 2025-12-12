@@ -87,40 +87,40 @@ export const SignUpPage: React.FC = () => {
   return (
     <form onSubmit={handleSignUp}>
       <VStack spacing={6} align="stretch">
-        <Text fontSize="2xl" fontWeight="bold" color="brand.gold" textAlign="center">
+        <Text fontSize="2xl" fontWeight="bold" color="white" textAlign="center">
           Create Account
         </Text>
 
         <HStack spacing={4}>
           <FormControl isRequired>
-            <FormLabel color="brand.softGold">First Name</FormLabel>
+            <FormLabel color="white">First Name</FormLabel>
             <Input
               value={formData.firstName}
               onChange={e => handleChange('firstName', e.target.value)}
               placeholder="John"
               bg="rgba(53, 14, 111, 0.3)"
               borderColor="brand.gold"
-              color="brand.softGold"
-              _placeholder={{ color: 'rgba(249, 219, 89, 0.5)' }}
+              color="white"
+              _placeholder={{ color: 'rgba(255, 255, 255, 0.5)' }}
             />
           </FormControl>
 
           <FormControl isRequired>
-            <FormLabel color="brand.softGold">Last Name</FormLabel>
+            <FormLabel color="white">Last Name</FormLabel>
             <Input
               value={formData.lastName}
               onChange={e => handleChange('lastName', e.target.value)}
               placeholder="Doe"
               bg="rgba(53, 14, 111, 0.3)"
               borderColor="brand.gold"
-              color="brand.softGold"
-              _placeholder={{ color: 'rgba(249, 219, 89, 0.5)' }}
+              color="white"
+              _placeholder={{ color: 'rgba(255, 255, 255, 0.5)' }}
             />
           </FormControl>
         </HStack>
 
         <FormControl isRequired>
-          <FormLabel color="brand.softGold">Email</FormLabel>
+          <FormLabel color="white">Email</FormLabel>
           <Input
             type="email"
             value={formData.email}
@@ -128,13 +128,13 @@ export const SignUpPage: React.FC = () => {
             placeholder="your@email.com"
             bg="rgba(53, 14, 111, 0.3)"
             borderColor="brand.gold"
-            color="brand.softGold"
-            _placeholder={{ color: 'rgba(249, 219, 89, 0.5)' }}
+            color="white"
+            _placeholder={{ color: 'rgba(255, 255, 255, 0.5)' }}
           />
         </FormControl>
 
         <FormControl isRequired>
-          <FormLabel color="brand.softGold">Password</FormLabel>
+          <FormLabel color="white">Password</FormLabel>
           <Input
             type="password"
             value={formData.password}
@@ -142,12 +142,12 @@ export const SignUpPage: React.FC = () => {
             placeholder="••••••••"
             bg="rgba(53, 14, 111, 0.3)"
             borderColor="brand.gold"
-            color="brand.softGold"
+            color="white"
           />
         </FormControl>
 
         <FormControl isRequired>
-          <FormLabel color="brand.softGold">Confirm Password</FormLabel>
+          <FormLabel color="white">Confirm Password</FormLabel>
           <Input
             type="password"
             value={formData.confirmPassword}
@@ -155,7 +155,7 @@ export const SignUpPage: React.FC = () => {
             placeholder="••••••••"
             bg="rgba(53, 14, 111, 0.3)"
             borderColor="brand.gold"
-            color="brand.softGold"
+            color="white"
           />
         </FormControl>
 
@@ -169,7 +169,7 @@ export const SignUpPage: React.FC = () => {
           Sign Up
         </Button>
 
-        <Text color="brand.softGold" fontSize="sm" textAlign="center">
+        <Text color="white" fontSize="sm" textAlign="center">
           Already have an account?{' '}
           <Link as={RouterLink} to="/login" color="brand.flameOrange" fontWeight="semibold">
             Sign In

@@ -10,6 +10,10 @@ const colors = {
     subtleText: '#6b7392',
     border: '#e6e8f3',
     warning: '#f4540c',
+    // Text colors for proper contrast
+    textLight: '#ffffff',
+    textOnDark: '#f3f4f6',
+    textOnPrimary: '#ffffff',
     // Legacy keys preserved for compatibility
     deepPlum: '#27062e',
     flameOrange: '#f4540c',

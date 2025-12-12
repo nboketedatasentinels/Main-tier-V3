@@ -36,14 +36,14 @@ export const StatCard = ({
             </Box>
           )}
           <VStack align="flex-start" spacing={1} flex={1}>
-            <Text fontSize="sm" color="brand.softGold" opacity={0.85}>
+            <Text fontSize="sm" color="brand.textOnDark" opacity={0.85}>
               {label}
             </Text>
-            <Text fontSize={{ base: '2xl', md: '3xl' }} fontWeight="bold" color="brand.gold">
+            <Text fontSize={{ base: '2xl', md: '3xl' }} fontWeight="bold" color="white">
               {value}
             </Text>
             {helper && (
-              <Text fontSize="sm" color="brand.softGold" opacity={0.8}>
+              <Text fontSize="sm" color="brand.textOnDark" opacity={0.8}>
                 {helper}
               </Text>
             )}

@@ -18,10 +18,10 @@ export const AuthLayout: React.FC<AuthLayoutProps> = ({ children }) => {
         <VStack spacing={8} align="stretch">
           {/* Logo */}
           <Box textAlign="center">
-            <Text fontSize="4xl" fontWeight="bold" color="brand.softGold" mb={2}>
+            <Text fontSize="4xl" fontWeight="bold" color="white" mb={2}>
               T4L
             </Text>
-            <Text fontSize="lg" color="brand.softGold">
+            <Text fontSize="lg" color="white">
               Transformation 4 Leaders
             </Text>
           </Box>
@@ -39,7 +39,7 @@ export const AuthLayout: React.FC<AuthLayoutProps> = ({ children }) => {
           </Box>
 
           {/* Footer */}
-          <Text textAlign="center" fontSize="sm" color="brand.softGold">
+          <Text textAlign="center" fontSize="sm" color="white">
             © 2024 T4L. All rights reserved.
           </Text>
         </VStack>

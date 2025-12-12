@@ -158,10 +158,10 @@ export const SuperAdminDashboard: React.FC = () => {
           <Text fontSize="sm" color="brand.subtleText">
             Super Admin
           </Text>
-          <Text fontSize="3xl" fontWeight="bold" color="brand.gold">
+          <Text fontSize="3xl" fontWeight="bold" color="white">
             Welcome back, {adminName}
           </Text>
-          <Text color="brand.softGold" opacity={0.9} maxW="720px">
+          <Text color="brand.textOnDark" opacity={0.9} maxW="720px">
             Platform-wide oversight with risk visibility, organization governance, and system performance monitoring. Missing
             organization assignments are surfaced here so you can correct access quickly.
           </Text>

@@ -25,7 +25,7 @@ export const ActivityCard = ({ title, points, completed, onToggle }: ActivityCar
             iconColor="brand.deepPlum"
           />
           <Flex direction="column" flex={1} gap={1}>
-            <Text fontWeight="semibold" color="brand.softGold">
+            <Text fontWeight="semibold" color="brand.textOnDark">
               {title}
             </Text>
             <Badge variant="gold" width="fit-content">
@@ -34,7 +34,7 @@ export const ActivityCard = ({ title, points, completed, onToggle }: ActivityCar
           </Flex>
           <Icon
             as={completed ? CheckCircle2 : CircleDashed}
-            color={completed ? 'brand.gold' : 'brand.softGold'}
+            color={completed ? 'white' : 'brand.textOnDark'}
             boxSize={5}
           />
         </Flex>
