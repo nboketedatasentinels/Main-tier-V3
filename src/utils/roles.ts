@@ -5,14 +5,12 @@ export const normalizeUserRole = (
 ): UserRole | null => {
   if (!role) return null
 
-  // normalise string (remove hyphens/spaces/extra punctuation, lower-case)
+  // normalise string (remove hyphens/spaces, lower-case)
   const normalized = role
     .toString()
     .trim()
     .toLowerCase()
-    .replace(/[^a-z0-9]+/g, '_')
-    .replace(/_{2,}/g, '_')
-    .replace(/^_+|_+$/g, '')
+    .replace(/[-\s]+/g, '_')
 
   // handle explicit matches first
   switch (normalized) {
@@ -34,9 +32,7 @@ export const normalizeUserRole = (
     case 'company administrator':
     case 'administrator':
     case 'admin':
-    case 'company_admin_role':
-    case 'company_admin_user':
-    return UserRole.COMPANY_ADMIN
+      return UserRole.COMPANY_ADMIN
     // super-admin variations
     case 'super_admin':
     case 'super admin':

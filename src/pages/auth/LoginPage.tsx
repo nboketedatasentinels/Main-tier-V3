@@ -29,7 +29,7 @@ export const LoginPage: React.FC = () => {
   useEffect(() => {
     if (authLoading || !user) return
 
-    const dashboardPath = getDashboardPathForRole(profile?.role) ?? '/unauthorized'
+    const dashboardPath = getDashboardPathForRole(profile?.role)
     navigate(dashboardPath, { replace: true })
     setRedirecting(true)
   }, [authLoading, navigate, profile?.role, user])
@@ -59,7 +59,7 @@ export const LoginPage: React.FC = () => {
       })
 
       // Let the authenticated app redirect decide the correct dashboard once the profile is loaded
-      const dashboardPath = getDashboardPathForRole(profile?.role) ?? '/unauthorized'
+      const dashboardPath = getDashboardPathForRole(profile?.role)
       navigate(dashboardPath, { replace: true })
       setRedirecting(true)
     } finally {
