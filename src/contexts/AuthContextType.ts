@@ -6,6 +6,7 @@ export interface AuthContextType {
   user: User | null
   profile: UserProfile | null
   loading: boolean
+  profileLoading: boolean
   signIn: (email: string, password: string) => Promise<{ error: Error | null }>
   signUp: (
     email: string,

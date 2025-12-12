@@ -1,10 +1,9 @@
-import { useEffect } from 'react'
-import { BrowserRouter, Routes, Route, Navigate, useNavigate } from 'react-router-dom'
+import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
 import { ProtectedRoute } from '@/components/ProtectedRoute'
 import { FreeTierGuard } from '@/components/FreeTierGuard'
 import { UserRole } from '@/types'
 import { useAuth } from '@/hooks/useAuth'
-import { getDashboardPathForRole } from '@/utils/dashboardPaths'
+import RoleRedirect from '@/pages/auth/RoleRedirect'
 
 // Layout imports
 import { MainLayout } from '@/layouts/MainLayout'
@@ -15,6 +14,7 @@ import { HomePage } from '@/pages/home/HomePage'
 import { LoginPage } from '@/pages/auth/LoginPage'
 import { SignUpPage } from '@/pages/auth/SignUpPage'
 import { ResetPasswordPage } from '@/pages/auth/ResetPasswordPage'
+import { ProfileMissingPage } from '@/pages/auth/ProfileMissingPage'
 import { UpgradePage } from '@/pages/upgrade/UpgradePage'
 
 // Dashboard imports
@@ -83,25 +83,6 @@ const DashboardRouter = () => {
   )
 }
 
-const PostLoginRedirect = () => {
-  const navigate = useNavigate()
-  const { user, profile, loading } = useAuth()
-
-  useEffect(() => {
-    if (loading) return
-
-    if (!user) {
-      navigate('/login', { replace: true })
-      return
-    }
-
-    const dashboardPath = getDashboardPathForRole(profile?.role)
-    navigate(dashboardPath, { replace: true })
-  }, [user, profile, loading, navigate])
-
-  return null
-}
-
 export const AppRoutes = () => {
   return (
     <BrowserRouter>
@@ -112,6 +93,10 @@ export const AppRoutes = () => {
       <Route path="/login" element={<AuthLayout><LoginPage /></AuthLayout>} />
       <Route path="/signup" element={<AuthLayout><SignUpPage /></AuthLayout>} />
       <Route path="/reset-password" element={<AuthLayout><ResetPasswordPage /></AuthLayout>} />
+        <Route path="/auth/profile-missing" element={<AuthLayout><ProfileMissingPage /></AuthLayout>} />
+
+        {/* Role-based redirect entrypoint */}
+        <Route path="/app" element={<RoleRedirect />} />
 
         <Route
           path="/mentor/dashboard"
@@ -136,7 +121,7 @@ export const AppRoutes = () => {
         </Route>
 
       {/* Protected main app routes */}
-      <Route path="/app" element={
+      <Route path="/app/*" element={
         <ProtectedRoute>
           <MainLayout />
         </ProtectedRoute>
@@ -175,7 +160,7 @@ export const AppRoutes = () => {
         <Route path="profile" element={<ProfilePage />} />
 
         {/* Default redirect based on role */}
-        <Route index element={<PostLoginRedirect />} />
+        <Route index element={<Navigate to="/app" replace />} />
       </Route>
 
         {/* Error routes */}
