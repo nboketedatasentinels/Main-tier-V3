@@ -16,7 +16,7 @@ export const getDashboardPathForRole = (role?: UserRole | string | null) => {
     case UserRole.COMPANY_ADMIN:
       return '/admin/dashboard'
     case UserRole.SUPER_ADMIN:
-      return '/admin/dashboard'
+      return '/super-admin/dashboard'
     default:
       return '/app/dashboard/free'
   }

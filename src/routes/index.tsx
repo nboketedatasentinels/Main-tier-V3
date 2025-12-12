@@ -23,6 +23,7 @@ import { PaidMemberDashboard } from '@/pages/dashboards/PaidMemberDashboard'
 import { MentorDashboard } from '@/pages/dashboards/MentorDashboard'
 import { AmbassadorDashboard } from '@/pages/dashboards/AmbassadorDashboard'
 import { AdminDashboard } from '@/pages/dashboards/AdminDashboard'
+import { SuperAdminDashboard } from '@/pages/dashboards/SuperAdminDashboard'
 import { CompanyDashboard } from '@/components/dashboard/CompanyDashboard'
 
 // Feature page imports
@@ -126,13 +127,26 @@ export const AppRoutes = () => {
         <Route
           path="/admin"
           element={
-            <ProtectedRoute requiredRoles={[UserRole.SUPER_ADMIN, UserRole.COMPANY_ADMIN]}>
+            <ProtectedRoute requiredRoles={[UserRole.COMPANY_ADMIN]}>
               <MainLayout />
             </ProtectedRoute>
           }
         >
           <Route path="dashboard" element={<AdminDashboard />} />
           <Route index element={<Navigate to="/admin/dashboard" replace />} />
+        </Route>
+
+        {/* Super Admin routes */}
+        <Route
+          path="/super-admin"
+          element={
+            <ProtectedRoute requiredRoles={[UserRole.SUPER_ADMIN]}>
+              <MainLayout />
+            </ProtectedRoute>
+          }
+        >
+          <Route path="dashboard" element={<SuperAdminDashboard />} />
+          <Route index element={<Navigate to="/super-admin/dashboard" replace />} />
         </Route>
 
       {/* Protected main app routes */}
