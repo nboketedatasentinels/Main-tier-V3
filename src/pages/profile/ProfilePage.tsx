@@ -161,6 +161,7 @@ const roleDisplayMap: Record<UserRole, string> = {
   [UserRole.PAID_MEMBER]: 'Paid Member',
   [UserRole.MENTOR]: 'Mentor',
   [UserRole.AMBASSADOR]: 'Team Leader',
+  [UserRole.ADMIN]: 'Administrator',
   [UserRole.COMPANY_ADMIN]: 'Administrator',
   [UserRole.SUPER_ADMIN]: 'Administrator',
 }
@@ -170,6 +171,7 @@ const roleColorMap: Record<UserRole, string> = {
   [UserRole.PAID_MEMBER]: 'green',
   [UserRole.MENTOR]: 'purple',
   [UserRole.AMBASSADOR]: 'blue',
+  [UserRole.ADMIN]: 'red',
   [UserRole.COMPANY_ADMIN]: 'red',
   [UserRole.SUPER_ADMIN]: 'red',
 }

@@ -1,109 +1,98 @@
-import React, { useState } from 'react'
-import { Link as RouterLink } from 'react-router-dom'
-import {
-  VStack,
-  FormControl,
-  FormLabel,
-  Input,
-  Button,
-  Text,
-  Link,
-  useToast,
-} from '@chakra-ui/react'
-import { useAuth } from '@/hooks/useAuth'
+import React, { useState } from "react"
+import { Link as RouterLink } from "react-router-dom"
+import { motion } from "framer-motion"
+import { Mail, ArrowRight } from "lucide-react"
+import { useAuth } from "@/hooks/useAuth"
+import { CheckEmailScreen } from "@/components/auth/CheckEmailScreen"
 
 export const ResetPasswordPage: React.FC = () => {
-  const [email, setEmail] = useState('')
-  const [loading, setLoading] = useState(false)
-  const [emailSent, setEmailSent] = useState(false)
-  
   const { resetPassword } = useAuth()
-  const toast = useToast()
+  const [email, setEmail] = useState("")
+  const [loading, setLoading] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+  const [sent, setSent] = useState(false)
 
-  const handleResetPassword = async (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
+    setError(null)
     setLoading(true)
 
-    const { error } = await resetPassword(email)
-
-    if (error) {
-      toast({
-        title: 'Error',
-        description: error.message,
-        status: 'error',
-        duration: 5000,
-      })
-    } else {
-      setEmailSent(true)
-      toast({
-        title: 'Check your email',
-        description: 'We sent you instructions to reset your password',
-        status: 'success',
-        duration: 5000,
-      })
+    try {
+      const { error } = await resetPassword(email.trim())
+      if (error) {
+        setError(error.message)
+        return
+      }
+      setSent(true)
+    } finally {
+      setLoading(false)
     }
-
-    setLoading(false)
   }
 
-  if (emailSent) {
+  if (sent) {
     return (
-      <VStack spacing={6}>
-        <Text fontSize="2xl" fontWeight="bold" color="white">
-          Check Your Email
-        </Text>
-        <Text color="white" textAlign="center">
-          We've sent password reset instructions to <strong>{email}</strong>.
-        </Text>
-        <Link as={RouterLink} to="/login" color="brand.flameOrange">
-          Back to Login
-        </Link>
-      </VStack>
+      <CheckEmailScreen
+        email={email}
+        title="Password reset sent"
+        message="If an account exists for this email, we sent a password reset link. Open it to set a new password."
+        primaryAction={
+          <button
+            type="button"
+            onClick={() => setSent(false)}
+            className="inline-flex h-10 w-full items-center justify-center rounded-md bg-gradient-to-r from-[#350e6f] to-[#27062e] text-white text-sm font-medium shadow-sm hover:opacity-95"
+          >
+            Send again
+          </button>
+        }
+      />
     )
   }
 
   return (
-    <form onSubmit={handleResetPassword}>
-      <VStack spacing={6} align="stretch">
-        <Text fontSize="2xl" fontWeight="bold" color="white" textAlign="center">
-          Reset Password
-        </Text>
+    <div>
+      <p className="text-sm text-gray-600 mb-5">
+        Enter the email address linked to your account and we’ll send a reset link.
+      </p>
 
-        <Text color="white" textAlign="center" fontSize="sm">
-          Enter your email address and we'll send you instructions to reset your password.
-        </Text>
+      {error && (
+        <div className="mb-5 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+          {error}
+        </div>
+      )}
 
-        <FormControl isRequired>
-          <FormLabel color="white">Email</FormLabel>
-          <Input
-            type="email"
-            value={email}
-            onChange={e => setEmail(e.target.value)}
-            placeholder="your@email.com"
-            bg="rgba(53, 14, 111, 0.3)"
-            borderColor="brand.gold"
-            color="white"
-            _placeholder={{ color: 'rgba(255, 255, 255, 0.5)' }}
-          />
-        </FormControl>
+      <form onSubmit={handleSubmit} className="space-y-5">
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-1">Email</label>
+          <div className="relative">
+            <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+            <input
+              className="h-10 w-full rounded-md border bg-gray-50 pl-9 pr-3 text-sm text-gray-900 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-[#350e6f]"
+              type="email"
+              value={email}
+              onChange={e => setEmail(e.target.value)}
+              placeholder="your@email.com"
+              required
+            />
+          </div>
+        </div>
 
-        <Button
+        <motion.button
+          whileHover={{ scale: 1.01 }}
+          whileTap={{ scale: 0.98 }}
+          disabled={loading}
           type="submit"
-          variant="primary"
-          isLoading={loading}
-          loadingText="Sending..."
-          size="lg"
+          className="inline-flex h-10 w-full items-center justify-center gap-2 rounded-md bg-gradient-to-r from-[#350e6f] to-[#27062e] text-white text-sm font-medium shadow-sm hover:opacity-95 disabled:opacity-60"
         >
-          Send Reset Link
-        </Button>
+          {loading ? "Sending..." : "Send reset link"}
+          <ArrowRight className="h-4 w-4" />
+        </motion.button>
 
-        <Text color="white" fontSize="sm" textAlign="center">
-          Remember your password?{' '}
-          <Link as={RouterLink} to="/login" color="brand.flameOrange" fontWeight="semibold">
-            Sign In
-          </Link>
-        </Text>
-      </VStack>
-    </form>
+        <div className="text-center">
+          <RouterLink to="/login" className="text-sm text-[#4540c0] hover:underline">
+            Back to Sign In
+          </RouterLink>
+        </div>
+      </form>
+    </div>
   )
 }
