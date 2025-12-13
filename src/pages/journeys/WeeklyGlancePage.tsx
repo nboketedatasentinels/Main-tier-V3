@@ -21,7 +21,6 @@ import { FreeCourseAccessCard } from '@/components/journeys/weeklyGlance/FreeCou
 import { PeopleImpactedCard } from '@/components/journeys/weeklyGlance/PeopleImpactedCard'
 import { PeerMatchingCard } from '@/components/journeys/weeklyGlance/PeerMatchingCard'
 import { WeeklyInspirationCard } from '@/components/journeys/weeklyGlance/WeeklyInspirationCard'
-import { WeeklyHabitsCard } from '@/components/journeys/weeklyGlance/WeeklyHabitsCard'
 import { useWeeklyGlanceData } from '@/hooks/useWeeklyGlanceData'
 import { BuildVillageModal } from '@/components/modals/BuildVillageModal'
 import { useAuth } from '@/hooks/useAuth'
@@ -91,7 +90,6 @@ export const WeeklyGlancePage = () => {
           <PeopleImpactedCard count={data.impactCount} loading={data.loading.impact} />
           <PeerMatchingCard matches={data.peerMatches} loading={data.loading.matches} />
           <WeeklyInspirationCard data={data.inspirationQuote} loading={data.loading.inspiration} />
-          <WeeklyHabitsCard habits={data.weeklyHabits} loading={data.loading.habits} onToggleHabit={data.handleHabitToggle} />
         </SimpleGrid>
       </Stack>
 
