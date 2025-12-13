@@ -27,7 +27,6 @@ import {
 } from '@chakra-ui/react'
 import {
   Menu as MenuIcon,
-  Home,
   Target,
   Trophy,
   BookOpen,
@@ -46,7 +45,6 @@ import { useAuth } from '@/hooks/useAuth'
 import { UserRole } from '@/types'
 import { BuildVillageModal } from '@/components/modals/BuildVillageModal'
 import { ConfirmationWelcomeModal } from '@/components/modals/ConfirmationWelcomeModal'
-import { getDashboardPathForRole } from '@/utils/dashboardPaths'
 import { NotificationDropdown } from '@/components/notifications/NotificationDropdown'
 
 const HEADER_HEIGHT = '72px'
@@ -84,7 +82,7 @@ export const MainLayout: React.FC = () => {
       }
     }
 
-    if (welcomeKey && location.pathname.startsWith('/app/dashboard')) {
+    if (welcomeKey && location.pathname.startsWith('/app/weekly-glance')) {
       const shouldWelcome = localStorage.getItem(welcomeKey)
       if (shouldWelcome === 'pending') {
         setShowWelcomeModal(true)
@@ -132,15 +130,12 @@ export const MainLayout: React.FC = () => {
     setShowWelcomeModal(false)
   }
 
-  const dashboardPath = useMemo(() => getDashboardPathForRole(profile?.role), [profile?.role])
-
   const navigationSections = useMemo(
     () => [
       {
         label: 'MY JOURNEY',
         items: [
-          { label: 'Weekly Glance', path: '/app/weekly-glance', icon: CalendarDays },
-          { label: 'Dashboard', path: dashboardPath, icon: Home },
+          { label: 'Dashboard', path: '/app/weekly-glance', icon: CalendarDays },
           { label: 'Weekly Checklist', path: '/app/weekly-checklist', icon: ClipboardList },
           { label: 'Leadership Board', path: '/app/leadership-board', icon: Trophy },
           { label: 'My Courses', path: '/app/courses', icon: BookOpen },
@@ -159,7 +154,7 @@ export const MainLayout: React.FC = () => {
         ],
       },
     ],
-    [dashboardPath],
+    [],
   )
 
   const isFreeUser = profile?.role === UserRole.FREE_USER
@@ -188,7 +183,7 @@ export const MainLayout: React.FC = () => {
         duration: 3500,
         isClosable: true,
       })
-      navigate('/app/dashboard/free', { replace: true })
+      navigate('/app/weekly-glance', { replace: true })
       onClose()
       return
     }
@@ -206,10 +201,7 @@ export const MainLayout: React.FC = () => {
           </Text>
           <VStack align="stretch" spacing={1}>
             {section.items.map(item => {
-              const isDashboardItem = item.path.startsWith('/app/dashboard')
-              const isActive = isDashboardItem
-                ? location.pathname.startsWith('/app/dashboard')
-                : location.pathname.startsWith(item.path)
+              const isActive = location.pathname.startsWith(item.path)
 
               return (
                 <Button

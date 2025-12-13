@@ -13,6 +13,10 @@ import {
   HStack,
   Icon,
   Box,
+  FormControl,
+  FormLabel,
+  Input,
+  Textarea,
 } from '@chakra-ui/react'
 import { Users, Sparkles } from 'lucide-react'
 
@@ -20,9 +24,23 @@ interface BuildVillageModalProps {
   isOpen: boolean
   onCreate: () => void
   onSkip: () => void
+  villageName?: string
+  villagePurpose?: string
+  onVillageNameChange?: (value: string) => void
+  onVillagePurposeChange?: (value: string) => void
 }
 
-export const BuildVillageModal: React.FC<BuildVillageModalProps> = ({ isOpen, onCreate, onSkip }) => {
+export const BuildVillageModal: React.FC<BuildVillageModalProps> = ({
+  isOpen,
+  onCreate,
+  onSkip,
+  villageName,
+  villagePurpose,
+  onVillageNameChange,
+  onVillagePurposeChange,
+}) => {
+  const showForm = Boolean(onVillageNameChange && onVillagePurposeChange)
+
   return (
     <Modal isOpen={isOpen} onClose={onSkip} isCentered size="lg">
       <ModalOverlay bg="blackAlpha.600" />
@@ -54,13 +72,39 @@ export const BuildVillageModal: React.FC<BuildVillageModalProps> = ({ isOpen, on
             <Text fontSize="sm" color="brand.subtleText">
               Free users get one village to start experimenting. You can skip for now, but we will remember when you are ready.
             </Text>
+
+            {showForm && (
+              <VStack align="stretch" spacing={3} pt={2}>
+                <FormControl>
+                  <FormLabel color="brand.text">Village name</FormLabel>
+                  <Input
+                    value={villageName}
+                    onChange={event => onVillageNameChange?.(event.target.value)}
+                    placeholder="e.g. Impact Innovators"
+                    bg="white"
+                    borderColor="brand.border"
+                  />
+                </FormControl>
+
+                <FormControl>
+                  <FormLabel color="brand.text">Purpose</FormLabel>
+                  <Textarea
+                    value={villagePurpose}
+                    onChange={event => onVillagePurposeChange?.(event.target.value)}
+                    placeholder="Describe what your village will focus on"
+                    bg="white"
+                    borderColor="brand.border"
+                  />
+                </FormControl>
+              </VStack>
+            )}
           </VStack>
         </ModalBody>
         <ModalFooter gap={3}>
           <Button variant="outline" onClick={onSkip}>
             Skip for now
           </Button>
-          <Button colorScheme="purple" onClick={onCreate}>
+          <Button colorScheme="purple" onClick={onCreate} isDisabled={showForm ? !villageName?.trim() : false}>
             Build my village
           </Button>
         </ModalFooter>

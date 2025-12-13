@@ -4,12 +4,16 @@ import {
   AlertIcon,
   AlertTitle,
   Box,
+  Button,
+  Card,
+  CardBody,
   Heading,
   SimpleGrid,
   Stack,
   Text,
 } from '@chakra-ui/react'
 import { useNavigate } from 'react-router-dom'
+import { useState } from 'react'
 import { WeeklyPointsCard } from '@/components/journeys/weeklyGlance/WeeklyPointsCard'
 import { SupportTeamCard } from '@/components/journeys/weeklyGlance/SupportTeamCard'
 import { PersonalityProfileCard } from '@/components/journeys/weeklyGlance/PersonalityProfileCard'
@@ -20,16 +24,46 @@ import { PeerMatchingCard } from '@/components/journeys/weeklyGlance/PeerMatchin
 import { WeeklyInspirationCard } from '@/components/journeys/weeklyGlance/WeeklyInspirationCard'
 import { WeeklyHabitsCard } from '@/components/journeys/weeklyGlance/WeeklyHabitsCard'
 import { useWeeklyGlanceData } from '@/hooks/useWeeklyGlanceData'
+import { BuildVillageModal } from '@/components/modals/BuildVillageModal'
+import { useAuth } from '@/hooks/useAuth'
 
 export const WeeklyGlancePage = () => {
+  const { profile } = useAuth()
   const navigate = useNavigate()
   const data = useWeeklyGlanceData()
+  const [isBuildVillageOpen, setIsBuildVillageOpen] = useState(false)
+  const [villageName, setVillageName] = useState('')
+  const [villagePurpose, setVillagePurpose] = useState('')
 
   const hasError = Object.values(data.errors).some(Boolean)
+
+  const handleOpenVillageModal = () => setIsBuildVillageOpen(true)
+  const handleCloseVillageModal = () => setIsBuildVillageOpen(false)
+  const handleCreateVillage = () => {
+    setIsBuildVillageOpen(false)
+    setVillageName('')
+    setVillagePurpose('')
+  }
 
   return (
     <Box p={{ base: 4, md: 6 }}>
       <Stack spacing={6}>
+        {!profile?.villageId && (
+          <Card bg="brand.primaryMuted" border="1px" borderColor="brand.border">
+            <CardBody>
+              <Stack direction={{ base: 'column', md: 'row' }} spacing={4} align="flex-start" justify="space-between">
+                <Stack spacing={1}>
+                  <Heading size="md">Build Your Village</Heading>
+                  <Text color="brand.text">Rally your peers by creating a village to collaborate and track your collective impact.</Text>
+                </Stack>
+                <Button colorScheme="yellow" onClick={handleOpenVillageModal} alignSelf={{ base: 'flex-start', md: 'center' }}>
+                  Open Build Village
+                </Button>
+              </Stack>
+            </CardBody>
+          </Card>
+        )}
+
         <Stack spacing={1}>
           <Heading size="lg">This Week at a Glance</Heading>
           <Text color="brand.subtleText">Your personalized dashboard for weekly progress, habits, and support.</Text>
@@ -67,6 +101,16 @@ export const WeeklyGlancePage = () => {
           <WeeklyHabitsCard habits={data.weeklyHabits} loading={data.loading.habits} onToggleHabit={data.handleHabitToggle} />
         </SimpleGrid>
       </Stack>
+
+      <BuildVillageModal
+        isOpen={isBuildVillageOpen}
+        onCreate={handleCreateVillage}
+        onSkip={handleCloseVillageModal}
+        villageName={villageName}
+        villagePurpose={villagePurpose}
+        onVillageNameChange={setVillageName}
+        onVillagePurposeChange={setVillagePurpose}
+      />
     </Box>
   )
 }
