@@ -1,7 +1,6 @@
 import { useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '@/hooks/useAuth'
-import { getLandingPathForRole } from '@/utils/roleRouting'
 
 export default function RoleRedirect() {
   const navigate = useNavigate()
@@ -21,7 +20,7 @@ export default function RoleRedirect() {
       return
     }
 
-    navigate(getLandingPathForRole(profile.role), { replace: true })
+    navigate('/app/weekly-glance', { replace: true })
   }, [loading, profileLoading, user, profile?.role, navigate])
 
   return null
