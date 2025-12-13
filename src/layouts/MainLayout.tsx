@@ -139,9 +139,9 @@ export const MainLayout: React.FC = () => {
       {
         label: 'MY JOURNEY',
         items: [
+          { label: 'Weekly Glance', path: '/app/weekly-glance', icon: CalendarDays },
           { label: 'Dashboard', path: dashboardPath, icon: Home },
           { label: 'Weekly Checklist', path: '/app/weekly-checklist', icon: ClipboardList },
-          { label: 'Weekly Glance', path: '/app/weekly-glance', icon: CalendarDays },
           { label: 'Leadership Board', path: '/app/leadership-board', icon: Trophy },
           { label: 'My Courses', path: '/app/courses', icon: BookOpen },
           { label: 'Peer Connect', path: '/app/peer-connect', icon: Users },
