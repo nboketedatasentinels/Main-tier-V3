@@ -144,15 +144,7 @@ const DotMap = () => {
   )
 }
 
-export function T4LAuthShell({
-  title = "Welcome back",
-  subtitle = "Sign in to continue your transformation journey",
-  children,
-}: {
-  title?: string
-  subtitle?: string
-  children: React.ReactNode
-}) {
+export function T4LAuthShell({ children }: { children: React.ReactNode }) {
   return (
     <div
       className={cn(
@@ -204,11 +196,6 @@ export function T4LAuthShell({
         </div>
 
         <div className="w-full md:w-1/2 p-8 md:p-10 flex flex-col justify-center bg-white">
-          <div className="mb-8">
-            <h1 className="text-2xl md:text-3xl font-bold text-gray-900">{title}</h1>
-            <p className="text-gray-500 mt-1">{subtitle}</p>
-          </div>
-
           {children}
         </div>
       </motion.div>
