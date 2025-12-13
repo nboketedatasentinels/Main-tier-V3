@@ -35,6 +35,8 @@ import { useAuth } from '@/hooks/useAuth'
 import { StatCard } from '@/components/dashboard/StatCard'
 import { ActivityCard } from '@/components/dashboard/ActivityCard'
 import { BadgeCard } from '@/components/dashboard/BadgeCard'
+import { useWeeklyGlanceData } from '@/hooks/useWeeklyGlanceData'
+import { WeeklyInspirationCard } from './components/WeeklyInspirationCard'
 
 interface ActivityItem {
   title: string
@@ -77,6 +79,7 @@ const milestones = [
 
 export const PaidMemberDashboard: React.FC = () => {
   const { profile } = useAuth()
+  const { inspirationQuote } = useWeeklyGlanceData()
 
   const [activities, setActivities] = useState<ActivityItem[]>([
     { title: 'Complete leadership reflection', points: 50 },
@@ -383,22 +386,10 @@ export const PaidMemberDashboard: React.FC = () => {
         </GridItem>
       </Grid>
 
-      <Card bg="brand.royalPurple">
-        <CardBody>
-          <HStack spacing={4}>
-            <Icon as={Sparkles} color="brand.gold" boxSize={6} />
-            <VStack align="flex-start" spacing={1}>
-              <Text fontWeight="bold" color="white">
-                Tip of the day
-              </Text>
-              <Text color="brand.textOnDark" opacity={0.9}>
-                Pair every weekly activity with a micro-reflection. Noting what shifted for you boosts
-                retention and earns a bonus 25 points when you submit your impact log.
-              </Text>
-            </VStack>
-          </HStack>
-        </CardBody>
-      </Card>
+      <WeeklyInspirationCard
+        quote={inspirationQuote?.quote_text ?? 'Join the movement. Take one small step today toward your goal.'}
+        author={inspirationQuote?.author ?? 'T4L Community'}
+      />
     </Stack>
   )
 }
