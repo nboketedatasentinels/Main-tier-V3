@@ -29,19 +29,44 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const [loading, setLoading] = useState(true)
   const [profileLoading, setProfileLoading] = useState(true)
 
-  // Fetch user profile from Firestore
-  const fetchProfile = async (userId: string): Promise<UserProfile | null> => {
+  // Fetch user profile from Firestore or create one if it doesn't exist
+  const fetchOrCreateProfile = async (
+    firebaseUser: User
+  ): Promise<UserProfile | null> => {
     try {
-      const docRef = doc(db, 'profiles', userId)
+      const docRef = doc(db, 'profiles', firebaseUser.uid)
       const docSnap = await getDoc(docRef)
 
       if (docSnap.exists()) {
         return docSnap.data() as UserProfile
       }
 
-      return null
+      const profileData: UserProfile = {
+        id: firebaseUser.uid,
+        email: firebaseUser.email ?? '',
+        firstName: firebaseUser.displayName?.split(' ')?.[0] ?? 'User',
+        lastName: firebaseUser.displayName?.split(' ')?.slice(1).join(' ') ?? '',
+        fullName: firebaseUser.displayName ?? 'User',
+        role: UserRole.FREE_USER,
+        totalPoints: 0,
+        level: 1,
+        referralCount: 0,
+        referralCode: null,
+        referredBy: null,
+        isOnboarded: true,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+      }
+
+      await setDoc(docRef, {
+        ...profileData,
+        createdAt: serverTimestamp(),
+        updatedAt: serverTimestamp(),
+      })
+
+      return profileData
     } catch (error) {
-      console.error('Error fetching profile:', error)
+      console.error('Error fetching/creating profile:', error)
       return null
     }
   }
@@ -61,7 +86,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
       setProfileLoading(true)
 
-      const userProfile = await fetchProfile(user.uid)
+      const userProfile = await fetchOrCreateProfile(user)
       setProfile(userProfile)
       setProfileLoading(false)
       setLoading(false)
