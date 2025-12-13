@@ -13,6 +13,7 @@ import {
 import { db } from '@/services/firebase'
 import { useAuth } from '@/hooks/useAuth'
 import { getCurrentWeekNumber, getWeekKey } from '@/utils/weekCalculations'
+import { getOrCreateWeeklyPoints } from '@/services/weeklyPointsService'
 
 export interface WeeklyPoints {
   id: string
@@ -105,11 +106,20 @@ export const useWeeklyGlanceData = () => {
 
   useEffect(() => {
     if (!profile?.id) return
+    getOrCreateWeeklyPoints(profile.id).catch(error => {
+      console.error('Error initializing weekly points:', error)
+    })
+  }, [profile?.id])
 
+  useEffect(() => {
+    if (!profile?.id) return
+
+    const weekYear = new Date().getFullYear()
     const q = query(
       collection(db, 'weekly_points'),
       where('user_id', '==', profile.id),
       where('week_number', '==', weekNumber),
+      where('week_year', '==', weekYear),
     )
 
     const unsubscribe = onSnapshot(

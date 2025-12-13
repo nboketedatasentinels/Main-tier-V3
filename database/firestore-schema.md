@@ -256,6 +256,25 @@ user_points/{pointsId}
 }
 ```
 
+### weekly_points
+Weekly points tracking for users.
+```typescript
+weekly_points/{weeklyPointsId}
+{
+  user_id: string
+  week_number: number
+  week_year: number
+  points_earned: number
+  target_points: number
+  engagement_count: number
+  status: 'on_track' | 'warning' | 'at_risk'
+  week_start: Timestamp
+  week_end: Timestamp
+  created_at: Timestamp
+  updated_at: Timestamp
+}
+```
+
 ## Firestore Security Rules
 
 ```javascript
@@ -352,6 +371,11 @@ service cloud.firestore {
       allow read: if isAuthenticated() && (request.auth.uid == resource.data.userId || hasRole('super_admin'));
       allow create, update: if isAuthenticated() && (request.resource.data.userId == request.auth.uid || hasRole('super_admin'));
     }
+
+    match /weekly_points/{weeklyPointsId} {
+      allow read: if isAuthenticated() && (request.auth.uid == resource.data.user_id || hasRole('super_admin'));
+      allow create, update: if isAuthenticated() && (request.resource.data.user_id == request.auth.uid || hasRole('super_admin'));
+    }
   }
 }
 ```
@@ -372,6 +396,13 @@ Create composite indexes for common queries:
 3. **events** collection:
    - `startTime` (ascending)
    - `isPublic`, `startTime` (ascending)
+
+4. **weekly_points** collection:
+   - `user_id`, `week_number` (ascending)
+   - `user_id`, `week_year`, `week_number` (ascending)
+
+5. **user_points** collection:
+   - `userId`, `recordedAt` (descending)
 
 ## Initial Data Setup
 
