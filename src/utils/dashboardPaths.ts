@@ -6,13 +6,13 @@ export const getDashboardPathForRole = (role?: UserRole | string | null) => {
 
   switch (normalizedRole) {
     case UserRole.FREE_USER:
-      return '/app/dashboard/free'
+      return '/app/weekly-glance'
     case UserRole.PAID_MEMBER:
-      return '/app/dashboard/member'
+      return '/app/weekly-glance'
     case UserRole.MENTOR:
       return '/mentor/dashboard'
     case UserRole.AMBASSADOR:
-      return '/app/dashboard/ambassador'
+      return '/app/weekly-glance'
     case UserRole.ADMIN:
       return '/admin/dashboard'
     case UserRole.COMPANY_ADMIN:
@@ -20,6 +20,6 @@ export const getDashboardPathForRole = (role?: UserRole | string | null) => {
     case UserRole.SUPER_ADMIN:
       return '/super-admin/dashboard'
     default:
-      return '/app/dashboard/free'
+      return '/app/weekly-glance'
   }
 }

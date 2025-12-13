@@ -29,13 +29,13 @@ export const getLandingPathForRole = (role: unknown) => {
   }
 
   if (r === normalizeRole(UserRole.AMBASSADOR) || r === 'AMBASSADOR') {
-    return '/app/dashboard/ambassador'
+    return '/app/weekly-glance'
   }
 
   if (r === normalizeRole(UserRole.PAID_MEMBER) || r === 'PAID_MEMBER') {
-    return '/app/dashboard/member'
+    return '/app/weekly-glance'
   }
 
   // Default free
-  return '/app/dashboard/free'
+  return '/app/weekly-glance'
 }

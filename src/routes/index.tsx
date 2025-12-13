@@ -2,7 +2,6 @@ import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
 import { ProtectedRoute } from '@/components/ProtectedRoute'
 import { FreeTierGuard } from '@/components/FreeTierGuard'
 import { UserRole } from '@/types'
-import { useAuth } from '@/hooks/useAuth'
 import RoleRedirect from '@/pages/auth/RoleRedirect'
 import { getLandingPathForRole } from '@/utils/roleRouting'
 
@@ -19,13 +18,10 @@ import { ProfileMissingPage } from '@/pages/auth/ProfileMissingPage'
 import { UpgradePage } from '@/pages/upgrade/UpgradePage'
 
 // Dashboard imports
-import { FreeDashboard } from '@/pages/dashboards/FreeDashboard'
-import { PaidMemberDashboard } from '@/pages/dashboards/PaidMemberDashboard'
-import { MentorDashboard } from '@/pages/dashboards/MentorDashboard'
-import { AmbassadorDashboard } from '@/pages/dashboards/AmbassadorDashboard'
 import { AdminDashboard } from '@/pages/dashboards/AdminDashboard'
 import { SuperAdminDashboard } from '@/pages/dashboards/SuperAdminDashboard'
 import { CompanyDashboard } from '@/components/dashboard/CompanyDashboard'
+import { MentorDashboard } from '@/pages/dashboards/MentorDashboard'
 
 // Feature page imports
 import { JourneysPage } from '@/pages/journeys/JourneysPage'
@@ -46,33 +42,6 @@ import { ShamelessCirclePage } from '@/pages/community/ShamelessCirclePage'
 // Error pages
 import { NotFoundPage } from '@/pages/errors/NotFoundPage'
 import { UnauthorizedPage } from '@/pages/errors/UnauthorizedPage'
-
-// Dashboard router component
-const DashboardRouter = () => {
-  const { loading, profileLoading, profile } = useAuth()
-
-  if (loading || profileLoading) return null
-
-  // Convert full landing path -> dashboard-relative when it’s within /app/dashboard/*
-  const landing = getLandingPathForRole(profile?.role)
-  const relative =
-    landing.startsWith('/app/dashboard/')
-      ? landing.replace('/app/dashboard/', '')
-      : 'free'
-
-  return (
-    <Routes>
-      <Route path="free" element={<ProtectedRoute requiredRoles={[UserRole.FREE_USER]}><FreeDashboard /></ProtectedRoute>} />
-      <Route path="member" element={<ProtectedRoute requiredRoles={[UserRole.PAID_MEMBER]}><PaidMemberDashboard /></ProtectedRoute>} />
-      <Route path="mentor" element={<ProtectedRoute requiredRoles={[UserRole.MENTOR]}><MentorDashboard /></ProtectedRoute>} />
-      <Route path="ambassador" element={<ProtectedRoute requiredRoles={[UserRole.AMBASSADOR]}><AmbassadorDashboard /></ProtectedRoute>} />
-      <Route path="company" element={<ProtectedRoute><CompanyDashboard /></ProtectedRoute>} />
-
-      {/* ✅ role-aware default */}
-      <Route index element={<Navigate to={relative} replace />} />
-    </Routes>
-  )
-}
 
 export const AppRoutes = () => {
   return (
@@ -133,9 +102,6 @@ export const AppRoutes = () => {
           {/* Role-based redirect entrypoint */}
           <Route index element={<RoleRedirect />} />
 
-          {/* Dashboard routes */}
-          <Route path="dashboard/*" element={<DashboardRouter />} />
-
           {/* Feature routes */}
           <Route path="journeys" element={<JourneysPage />} />
           <Route path="weekly-glance" element={<WeeklyGlancePage />} />
@@ -148,7 +114,7 @@ export const AppRoutes = () => {
             path="peer-connect"
             element={
               <FreeTierGuard
-                fallbackPath="/app/dashboard/free"
+                fallbackPath="/app/weekly-glance"
                 description="Peer Connect is available on paid plans."
                 title="Upgrade to connect"
               >
@@ -160,7 +126,7 @@ export const AppRoutes = () => {
             path="leadership-council"
             element={
               <FreeTierGuard
-                fallbackPath="/app/dashboard/free"
+                fallbackPath="/app/weekly-glance"
                 description="Leadership Council is available on paid plans."
                 title="Upgrade to access"
               >
