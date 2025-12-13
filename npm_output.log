@@ -1,0 +1,11 @@
+
+> t4l-tier-website@1.0.0 dev
+> vite
+
+Re-optimizing dependencies because lockfile has changed
+Port 3000 is in use, trying another one...
+
+  VITE v5.4.21  ready in 351 ms
+
+  ➜  Local:   http://localhost:3001/
+  ➜  Network: use --host to expose
