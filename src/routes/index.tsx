@@ -4,7 +4,7 @@ import { FreeTierGuard } from '@/components/FreeTierGuard'
 import { UserRole } from '@/types'
 import { useAuth } from '@/hooks/useAuth'
 import RoleRedirect from '@/pages/auth/RoleRedirect'
-import { RequireRole } from '@/routes/RequireRole'
+import { getLandingPathForRole } from '@/utils/roleRouting'
 
 // Layout imports
 import { MainLayout } from '@/layouts/MainLayout'
@@ -49,38 +49,27 @@ import { UnauthorizedPage } from '@/pages/errors/UnauthorizedPage'
 
 // Dashboard router component
 const DashboardRouter = () => {
-  const { loading, profileLoading } = useAuth()
+  const { loading, profileLoading, profile } = useAuth()
 
   if (loading || profileLoading) return null
 
+  // Convert full landing path -> dashboard-relative when it’s within /app/dashboard/*
+  const landing = getLandingPathForRole(profile?.role)
+  const relative =
+    landing.startsWith('/app/dashboard/')
+      ? landing.replace('/app/dashboard/', '')
+      : 'free'
+
   return (
     <Routes>
-      <Route path="free" element={
-        <ProtectedRoute requiredRoles={[UserRole.FREE_USER]}>
-          <FreeDashboard />
-        </ProtectedRoute>
-      } />
-      <Route path="member" element={
-        <ProtectedRoute requiredRoles={[UserRole.PAID_MEMBER]}>
-          <PaidMemberDashboard />
-        </ProtectedRoute>
-      } />
-      <Route path="mentor" element={
-        <ProtectedRoute requiredRoles={[UserRole.MENTOR]}>
-          <MentorDashboard />
-        </ProtectedRoute>
-      } />
-      <Route path="ambassador" element={
-        <ProtectedRoute requiredRoles={[UserRole.AMBASSADOR]}>
-          <AmbassadorDashboard />
-        </ProtectedRoute>
-      } />
-      <Route path="company" element={
-        <ProtectedRoute>
-          <CompanyDashboard />
-        </ProtectedRoute>
-      } />
-      <Route index element={<Navigate to="company" replace />} />
+      <Route path="free" element={<ProtectedRoute requiredRoles={[UserRole.FREE_USER]}><FreeDashboard /></ProtectedRoute>} />
+      <Route path="member" element={<ProtectedRoute requiredRoles={[UserRole.PAID_MEMBER]}><PaidMemberDashboard /></ProtectedRoute>} />
+      <Route path="mentor" element={<ProtectedRoute requiredRoles={[UserRole.MENTOR]}><MentorDashboard /></ProtectedRoute>} />
+      <Route path="ambassador" element={<ProtectedRoute requiredRoles={[UserRole.AMBASSADOR]}><AmbassadorDashboard /></ProtectedRoute>} />
+      <Route path="company" element={<ProtectedRoute><CompanyDashboard /></ProtectedRoute>} />
+
+      {/* ✅ role-aware default */}
+      <Route index element={<Navigate to={relative} replace />} />
     </Routes>
   )
 }
@@ -107,19 +96,29 @@ export const AppRoutes = () => {
         />
 
         {/* Admin routes */}
-        <Route element={<RequireRole allow={[UserRole.COMPANY_ADMIN]} />}>
-          <Route path="/admin" element={<MainLayout />}>
-            <Route path="dashboard" element={<AdminDashboard />} />
-            <Route index element={<Navigate to="/admin/dashboard" replace />} />
-          </Route>
+        <Route
+          path="/admin"
+          element={
+            <ProtectedRoute requiredRoles={[UserRole.ADMIN, UserRole.COMPANY_ADMIN]}>
+              <MainLayout />
+            </ProtectedRoute>
+          }
+        >
+          <Route path="dashboard" element={<AdminDashboard />} />
+          <Route index element={<Navigate to="/admin/dashboard" replace />} />
         </Route>
 
         {/* Super Admin routes */}
-        <Route element={<RequireRole allow={[UserRole.SUPER_ADMIN]} />}>
-          <Route path="/super-admin" element={<MainLayout />}>
-            <Route path="dashboard" element={<SuperAdminDashboard />} />
-            <Route index element={<Navigate to="/super-admin/dashboard" replace />} />
-          </Route>
+        <Route
+          path="/super-admin"
+          element={
+            <ProtectedRoute requiredRoles={[UserRole.SUPER_ADMIN]}>
+              <MainLayout />
+            </ProtectedRoute>
+          }
+        >
+          <Route path="dashboard" element={<SuperAdminDashboard />} />
+          <Route index element={<Navigate to="/super-admin/dashboard" replace />} />
         </Route>
 
         {/* Protected main app routes */}

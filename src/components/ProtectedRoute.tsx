@@ -1,85 +1,34 @@
 import React from 'react'
 import { Navigate, useLocation } from 'react-router-dom'
 import { useAuth } from '@/hooks/useAuth'
-import { UserRole } from '@/types'
-import { LoadingAnimation } from './LoadingAnimation'
-import { getDashboardPathForRole } from '@/utils/dashboardPaths'
-import { normalizeUserRole } from '@/utils/roles'
+import { normalizeRole } from '@/utils/roleRouting'
 
-interface ProtectedRouteProps {
+type Props = {
   children: React.ReactNode
-  requiredRoles?: UserRole[]
-  requireAuth?: boolean
+  requiredRoles?: any[] // UserRole[] but keep tolerant
 }
 
-export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
-  children,
-  requiredRoles,
-  requireAuth = true,
-}) => {
+export const ProtectedRoute: React.FC<Props> = ({ children, requiredRoles }) => {
   const { user, profile, loading, profileLoading } = useAuth()
   const location = useLocation()
-  const normalizedRole = normalizeUserRole(profile?.role)
 
-  if (loading || profileLoading) {
-    return (
-      <LoadingAnimation fullScreen />
-    )
+  // block render until auth + profile are known
+  if (loading || profileLoading) return null
+
+  if (!user) {
+    return <Navigate to="/login" replace state={{ from: location }} />
   }
 
-  if (requireAuth && user && !profile) {
-    return <Navigate to="/auth/profile-missing" replace />
+  // no role requirements -> allow any authenticated user
+  if (!requiredRoles || requiredRoles.length === 0) {
+    return <>{children}</>
   }
 
-  const isMentor = normalizedRole === UserRole.MENTOR
+  const userRole = normalizeRole(profile?.role)
+  const allowed = requiredRoles.map(normalizeRole)
 
-  // Not authenticated
-  if (requireAuth && !user) {
-    return <Navigate to="/login" state={{ from: location }} replace />
-  }
-
-  if (requireAuth && user && !normalizedRole) {
-    return <Navigate to="/profile-missing" replace />
-  }
-
-  if (isMentor && location.pathname.startsWith('/app')) {
-    return <Navigate to="/mentor/dashboard" replace />
-  }
-
-  if (
-    (normalizedRole === UserRole.SUPER_ADMIN || normalizedRole === UserRole.COMPANY_ADMIN) &&
-    location.pathname.startsWith('/app')
-  ) {
-    return <Navigate to={getDashboardPathForRole(normalizedRole)} replace />
-  }
-
-  // Role check
-  if (requiredRoles && normalizedRole && !requiredRoles.includes(normalizedRole)) {
+  if (!allowed.includes(userRole)) {
     return <Navigate to="/unauthorized" replace />
-  }
-
-  return <>{children}</>
-}
-
-interface RoleBasedRouteProps {
-  children: React.ReactNode
-  allowedRoles: UserRole[]
-  fallback?: React.ReactNode
-}
-
-export const RoleBasedRoute: React.FC<RoleBasedRouteProps> = ({
-  children,
-  allowedRoles,
-  fallback = null,
-}) => {
-  const { profile, loading, profileLoading } = useAuth()
-
-  if (loading || profileLoading) {
-    return <LoadingAnimation />
-  }
-
-  if (!profile || !allowedRoles.includes(profile.role)) {
-    return <>{fallback}</>
   }
 
   return <>{children}</>
