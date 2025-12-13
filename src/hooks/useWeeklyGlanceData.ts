@@ -283,25 +283,32 @@ export const useWeeklyGlanceData = () => {
   }, [weekNumber])
 
   useEffect(() => {
-    const fetchImpact = async () => {
-      if (!profile?.id) return
-      setLoading(prev => ({ ...prev, impact: true }))
-      try {
-        const impactQuery = query(collection(db, 'impact_logs'), where('user_id', '==', profile.id))
-        const snapshot = await getDocs(impactQuery)
-        const total = snapshot.docs.reduce((sum, docItem) => {
-          const data = docItem.data() as { peopleImpacted?: number }
-          return sum + (data.peopleImpacted || 0)
-        }, 0)
-        setImpactCount(total)
-      } catch (error) {
-        setErrors(prev => ({ ...prev, impact: error as Error }))
-      } finally {
-        setLoading(prev => ({ ...prev, impact: false }))
-      }
+    if (!profile?.id) {
+      setLoading(prev => ({ ...prev, impact: false }));
+      setImpactCount(0);
+      return;
     }
 
-    fetchImpact()
+    setLoading(prev => ({ ...prev, impact: true }));
+    const impactQuery = query(collection(db, 'impact_logs'), where('user_id', '==', profile.id));
+
+    const unsubscribe = onSnapshot(
+      impactQuery,
+      snapshot => {
+        const total = snapshot.docs.reduce((sum, docItem) => {
+          const data = docItem.data() as { peopleImpacted?: number };
+          return sum + (data.peopleImpacted || 0);
+        }, 0);
+        setImpactCount(total);
+        setLoading(prev => ({ ...prev, impact: false }));
+      },
+      error => {
+        setErrors(prev => ({ ...prev, impact: error as Error }));
+        setLoading(prev => ({ ...prev, impact: false }));
+      }
+    );
+
+    return () => unsubscribe();
   }, [profile?.id])
 
   useEffect(() => {
