@@ -4,6 +4,7 @@ export enum UserRole {
   PAID_MEMBER = 'paid_member',
   MENTOR = 'mentor',
   AMBASSADOR = 'ambassador',
+  ADMIN = 'admin',
   COMPANY_ADMIN = 'company_admin',
   SUPER_ADMIN = 'super_admin',
 }
