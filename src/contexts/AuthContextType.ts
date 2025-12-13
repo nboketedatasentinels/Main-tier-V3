@@ -11,7 +11,12 @@ export interface AuthContextType {
   signUp: (
     email: string,
     password: string,
-    userData: Partial<UserProfile>,
+    userData: Partial<UserProfile> & {
+      gender?: string
+      companyCode?: string
+      companyId?: string
+      companyName?: string
+    },
   ) => Promise<{ error: Error | null; userId?: string }>
   signOut: () => Promise<void>
   signInWithMagicLink: (email: string) => Promise<{ error: Error | null }>
