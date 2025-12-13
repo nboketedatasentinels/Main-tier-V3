@@ -18,7 +18,6 @@ import { WeeklyPointsCard } from '@/components/journeys/weeklyGlance/WeeklyPoint
 import { SupportTeamCard } from '@/components/journeys/weeklyGlance/SupportTeamCard'
 import { PersonalityProfileCard } from '@/components/journeys/weeklyGlance/PersonalityProfileCard'
 import { FreeCourseAccessCard } from '@/components/journeys/weeklyGlance/FreeCourseAccessCard'
-import { PointsActivityCard } from '@/components/journeys/weeklyGlance/PointsActivityCard'
 import { PeopleImpactedCard } from '@/components/journeys/weeklyGlance/PeopleImpactedCard'
 import { PeerMatchingCard } from '@/components/journeys/weeklyGlance/PeerMatchingCard'
 import { WeeklyInspirationCard } from '@/components/journeys/weeklyGlance/WeeklyInspirationCard'
@@ -89,12 +88,6 @@ export const WeeklyGlancePage = () => {
           <SupportTeamCard data={data.supportAssignment} loading={data.loading.support} />
           <PersonalityProfileCard data={data.personality} loading={data.loading.profile} />
           <FreeCourseAccessCard />
-          <PointsActivityCard
-            totalPoints={data.weeklyPoints?.points_earned}
-            recentActivityCount={data.weeklyPoints?.engagement_count}
-            upcomingChallenges={[]}
-            allies={data.peerMatches.map(match => match.matched_user_id)}
-          />
           <PeopleImpactedCard count={data.impactCount} loading={data.loading.impact} />
           <PeerMatchingCard matches={data.peerMatches} loading={data.loading.matches} />
           <WeeklyInspirationCard data={data.inspirationQuote} loading={data.loading.inspiration} />
