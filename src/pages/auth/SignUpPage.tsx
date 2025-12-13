@@ -1,181 +1,199 @@
-import React, { useState } from 'react'
-import { useNavigate, Link as RouterLink } from 'react-router-dom'
-import {
-  VStack,
-  FormControl,
-  FormLabel,
-  Input,
-  Button,
-  Text,
-  Link,
-  useToast,
-  HStack,
-} from '@chakra-ui/react'
-import { useAuth } from '@/hooks/useAuth'
+import React, { useMemo, useState } from "react"
+import { Link as RouterLink, useNavigate } from "react-router-dom"
+import { motion } from "framer-motion"
+import { Eye, EyeOff, ArrowRight, User, Mail, Lock } from "lucide-react"
+import { useAuth } from "@/hooks/useAuth"
 
 export const SignUpPage: React.FC = () => {
-  const [formData, setFormData] = useState({
-    email: '',
-    password: '',
-    confirmPassword: '',
-    firstName: '',
-    lastName: '',
-  })
-  const [loading, setLoading] = useState(false)
-  
-  const { signUp } = useAuth()
   const navigate = useNavigate()
-  const toast = useToast()
+  const { signUp } = useAuth()
 
-  const handleChange = (field: string, value: string) => {
+  const [formData, setFormData] = useState({
+    email: "",
+    password: "",
+    confirmPassword: "",
+    firstName: "",
+    lastName: "",
+  })
+
+  const [loading, setLoading] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+  const [showPassword, setShowPassword] = useState(false)
+
+  const fullName = useMemo(() => {
+    const first = formData.firstName.trim()
+    const last = formData.lastName.trim()
+    return `${first} ${last}`.trim()
+  }, [formData.firstName, formData.lastName])
+
+  const handleChange = (field: keyof typeof formData, value: string) => {
     setFormData(prev => ({ ...prev, [field]: value }))
+  }
+
+  const validate = () => {
+    if (!formData.firstName.trim()) return "First name is required."
+    if (!formData.lastName.trim()) return "Last name is required."
+    if (!formData.email.trim()) return "Email is required."
+    if (formData.password.length < 6) return "Password must be at least 6 characters."
+    if (formData.password !== formData.confirmPassword) return "Passwords do not match."
+    return null
   }
 
   const handleSignUp = async (e: React.FormEvent) => {
     e.preventDefault()
+    setError(null)
 
-    if (formData.password !== formData.confirmPassword) {
-      toast({
-        title: 'Passwords do not match',
-        status: 'error',
-        duration: 3000,
-      })
-      return
-    }
-
-    if (formData.password.length < 6) {
-      toast({
-        title: 'Password too short',
-        description: 'Password must be at least 6 characters',
-        status: 'error',
-        duration: 3000,
-      })
+    const v = validate()
+    if (v) {
+      setError(v)
       return
     }
 
     setLoading(true)
-
-    const { error, userId } = await signUp(formData.email, formData.password, {
-      firstName: formData.firstName,
-      lastName: formData.lastName,
-      fullName: `${formData.firstName} ${formData.lastName}`,
-    })
-
-    if (error) {
-      toast({
-        title: 'Sign up failed',
-        description: error.message,
-        status: 'error',
-        duration: 5000,
+    try {
+      const { error, userId } = await signUp(formData.email.trim(), formData.password, {
+        firstName: formData.firstName.trim(),
+        lastName: formData.lastName.trim(),
+        fullName,
       })
-    } else {
-      toast({
-        title: 'Account created!',
-        description: 'Redirecting you to your dashboard to begin exploring.',
-        status: 'success',
-        duration: 5000,
-      })
-      if (userId) {
-        localStorage.setItem(`t4l.newUserWelcome.${userId}`, 'pending')
+
+      if (error) {
+        setError(error.message)
+        return
       }
-      navigate('/app', { replace: true })
-    }
 
-    setLoading(false)
+      if (userId) {
+        localStorage.setItem(`t4l.newUserWelcome.${userId}`, "pending")
+      }
+
+      navigate("/app", { replace: true })
+    } finally {
+      setLoading(false)
+    }
   }
 
   return (
-    <form onSubmit={handleSignUp}>
-      <VStack spacing={6} align="stretch">
-        <Text fontSize="2xl" fontWeight="bold" color="white" textAlign="center">
-          Create Account
-        </Text>
+    <div className="w-full">
+      {error && (
+        <div className="mb-5 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+          {error}
+        </div>
+      )}
 
-        <HStack spacing={4}>
-          <FormControl isRequired>
-            <FormLabel color="white">First Name</FormLabel>
-            <Input
-              value={formData.firstName}
-              onChange={e => handleChange('firstName', e.target.value)}
-              placeholder="John"
-              bg="rgba(53, 14, 111, 0.3)"
-              borderColor="brand.gold"
-              color="white"
-              _placeholder={{ color: 'rgba(255, 255, 255, 0.5)' }}
+      <form onSubmit={handleSignUp} className="space-y-5">
+        <div className="text-center">
+          <h1 className="text-2xl md:text-3xl font-bold text-gray-900">Create account</h1>
+          <p className="mt-1 text-sm text-gray-600">Start your transformation journey.</p>
+        </div>
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">First name</label>
+            <div className="relative">
+              <User className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+              <input
+                value={formData.firstName}
+                onChange={e => handleChange("firstName", e.target.value)}
+                placeholder="John"
+                autoComplete="given-name"
+                className="h-10 w-full rounded-md border bg-gray-50 pl-9 pr-3 text-sm text-gray-900 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-[#350e6f]"
+                required
+              />
+            </div>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Last name</label>
+            <div className="relative">
+              <User className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+              <input
+                value={formData.lastName}
+                onChange={e => handleChange("lastName", e.target.value)}
+                placeholder="Doe"
+                autoComplete="family-name"
+                className="h-10 w-full rounded-md border bg-gray-50 pl-9 pr-3 text-sm text-gray-900 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-[#350e6f]"
+                required
+              />
+            </div>
+          </div>
+        </div>
+
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-1">Email</label>
+          <div className="relative">
+            <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+            <input
+              type="email"
+              value={formData.email}
+              onChange={e => handleChange("email", e.target.value)}
+              placeholder="your@email.com"
+              autoComplete="email"
+              className="h-10 w-full rounded-md border bg-gray-50 pl-9 pr-3 text-sm text-gray-900 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-[#350e6f]"
+              required
             />
-          </FormControl>
+          </div>
+        </div>
 
-          <FormControl isRequired>
-            <FormLabel color="white">Last Name</FormLabel>
-            <Input
-              value={formData.lastName}
-              onChange={e => handleChange('lastName', e.target.value)}
-              placeholder="Doe"
-              bg="rgba(53, 14, 111, 0.3)"
-              borderColor="brand.gold"
-              color="white"
-              _placeholder={{ color: 'rgba(255, 255, 255, 0.5)' }}
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-1">Password</label>
+          <div className="relative">
+            <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+            <input
+              type={showPassword ? "text" : "password"}
+              value={formData.password}
+              onChange={e => handleChange("password", e.target.value)}
+              placeholder="••••••••"
+              autoComplete="new-password"
+              minLength={6}
+              className="h-10 w-full rounded-md border bg-gray-50 pl-9 pr-10 text-sm text-gray-900 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-[#350e6f]"
+              required
             />
-          </FormControl>
-        </HStack>
+            <button
+              type="button"
+              onClick={() => setShowPassword(v => !v)}
+              className="absolute inset-y-0 right-0 flex items-center pr-3 text-gray-500 hover:text-gray-700"
+              aria-label="Toggle password visibility"
+            >
+              {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+            </button>
+          </div>
+          <p className="mt-1 text-xs text-gray-500">Minimum 6 characters.</p>
+        </div>
 
-        <FormControl isRequired>
-          <FormLabel color="white">Email</FormLabel>
-          <Input
-            type="email"
-            value={formData.email}
-            onChange={e => handleChange('email', e.target.value)}
-            placeholder="your@email.com"
-            bg="rgba(53, 14, 111, 0.3)"
-            borderColor="brand.gold"
-            color="white"
-            _placeholder={{ color: 'rgba(255, 255, 255, 0.5)' }}
-          />
-        </FormControl>
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-1">Confirm password</label>
+          <div className="relative">
+            <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+            <input
+              type={showPassword ? "text" : "password"}
+              value={formData.confirmPassword}
+              onChange={e => handleChange("confirmPassword", e.target.value)}
+              placeholder="••••••••"
+              autoComplete="new-password"
+              className="h-10 w-full rounded-md border bg-gray-50 pl-9 pr-3 text-sm text-gray-900 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-[#350e6f]"
+              required
+            />
+          </div>
+        </div>
 
-        <FormControl isRequired>
-          <FormLabel color="white">Password</FormLabel>
-          <Input
-            type="password"
-            value={formData.password}
-            onChange={e => handleChange('password', e.target.value)}
-            placeholder="••••••••"
-            bg="rgba(53, 14, 111, 0.3)"
-            borderColor="brand.gold"
-            color="white"
-          />
-        </FormControl>
-
-        <FormControl isRequired>
-          <FormLabel color="white">Confirm Password</FormLabel>
-          <Input
-            type="password"
-            value={formData.confirmPassword}
-            onChange={e => handleChange('confirmPassword', e.target.value)}
-            placeholder="••••••••"
-            bg="rgba(53, 14, 111, 0.3)"
-            borderColor="brand.gold"
-            color="white"
-          />
-        </FormControl>
-
-        <Button
+        <motion.button
+          whileHover={{ scale: 1.01 }}
+          whileTap={{ scale: 0.98 }}
+          disabled={loading}
           type="submit"
-          variant="primary"
-          isLoading={loading}
-          loadingText="Creating account..."
-          size="lg"
+          className="inline-flex h-10 w-full items-center justify-center gap-2 rounded-md bg-gradient-to-r from-[#350e6f] to-[#27062e] text-white text-sm font-medium shadow-sm hover:opacity-95 disabled:opacity-60"
         >
-          Sign Up
-        </Button>
+          {loading ? "Creating account..." : "Sign Up"}
+          <ArrowRight className="h-4 w-4" />
+        </motion.button>
 
-        <Text color="white" fontSize="sm" textAlign="center">
-          Already have an account?{' '}
-          <Link as={RouterLink} to="/login" color="brand.flameOrange" fontWeight="semibold">
+        <p className="text-center text-sm text-gray-600">
+          Already have an account?{" "}
+          <RouterLink to="/login" className="font-semibold text-[#350e6f] hover:underline">
             Sign In
-          </Link>
-        </Text>
-      </VStack>
-    </form>
+          </RouterLink>
+        </p>
+      </form>
+    </div>
   )
 }

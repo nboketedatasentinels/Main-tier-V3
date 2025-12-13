@@ -1,192 +1,206 @@
-import React, { useState } from 'react'
-import { useNavigate, Link as RouterLink } from 'react-router-dom'
-import {
-  VStack,
-  FormControl,
-  FormLabel,
-  Input,
-  Button,
-  Text,
-  Link,
-  useToast,
-  Divider,
-  HStack,
-} from '@chakra-ui/react'
-import { useAuth } from '@/hooks/useAuth'
+import React, { useState } from "react"
+import { Link as RouterLink, useNavigate } from "react-router-dom"
+import { motion } from "framer-motion"
+import { Eye, EyeOff, ArrowRight, Mail, Lock, CheckCircle2, ArrowLeft, Link2 } from "lucide-react"
+import { useAuth } from "@/hooks/useAuth"
 
 export const LoginPage: React.FC = () => {
-  const [email, setEmail] = useState('')
-  const [password, setPassword] = useState('')
-  const [loading, setLoading] = useState(false)
-  const [magicLinkSent, setMagicLinkSent] = useState(false)
-  const { signIn, signInWithMagicLink } = useAuth()
   const navigate = useNavigate()
-  const toast = useToast()
+  const { signIn, signInWithMagicLink } = useAuth()
+
+  const [email, setEmail] = useState("")
+  const [password, setPassword] = useState("")
+  const [loading, setLoading] = useState(false)
+
+  const [magicLinkSent, setMagicLinkSent] = useState(false)
+  const [showPassword, setShowPassword] = useState(false)
+
+  const [error, setError] = useState<string | null>(null)
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault()
+    setError(null)
+
+    if (!email.trim()) {
+      setError("Please enter your email address.")
+      return
+    }
+    if (!password) {
+      setError("Please enter your password.")
+      return
+    }
+
     setLoading(true)
-
     try {
-      const { error } = await signIn(email, password)
-
+      const { error } = await signIn(email.trim(), password)
       if (error) {
-        toast({
-          title: 'Login failed',
-          description: error.message,
-          status: 'error',
-          duration: 5000,
-          isClosable: true,
-        })
+        setError(error.message)
         return
       }
 
-      toast({
-        title: 'Welcome back!',
-        status: 'success',
-        duration: 3000,
-      })
-
-      // Let the authenticated app redirect decide the correct dashboard once the profile is loaded
-      navigate('/app', { replace: true })
+      navigate("/app", { replace: true })
     } finally {
       setLoading(false)
     }
   }
 
   const handleMagicLink = async () => {
-    if (!email) {
-      toast({
-        title: 'Email required',
-        description: 'Please enter your email address',
-        status: 'warning',
-        duration: 3000,
-      })
+    setError(null)
+
+    if (!email.trim()) {
+      setError("Please enter your email address to receive a magic link.")
       return
     }
 
     setLoading(true)
-    const { error } = await signInWithMagicLink(email)
+    try {
+      const { error } = await signInWithMagicLink(email.trim())
+      if (error) {
+        setError(error.message)
+        return
+      }
 
-    if (error) {
-      toast({
-        title: 'Error',
-        description: error.message,
-        status: 'error',
-        duration: 5000,
-      })
-    } else {
       setMagicLinkSent(true)
-      toast({
-        title: 'Check your email',
-        description: 'We sent you a magic link to sign in',
-        status: 'success',
-        duration: 5000,
-      })
+    } finally {
+      setLoading(false)
     }
-
-    setLoading(false)
   }
 
   if (magicLinkSent) {
     return (
-      <VStack spacing={6}>
-        <Text fontSize="2xl" fontWeight="bold" color="white">
-          Check Your Email
-        </Text>
-        <Text color="white" textAlign="center">
-          We've sent a magic link to <strong>{email}</strong>. Click the link in the email to sign in.
-        </Text>
-        <Button
-          variant="ghost"
-          onClick={() => setMagicLinkSent(false)}
-          color="white"
-          _hover={{ bg: 'whiteAlpha.200' }}
+      <div className="w-full">
+        <motion.div
+          initial={{ opacity: 0, y: 14 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.35 }}
+          className="text-center"
         >
-          Back to Login
-        </Button>
-      </VStack>
+          <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-green-50">
+            <CheckCircle2 className="h-6 w-6 text-green-600" />
+          </div>
+
+          <h1 className="text-2xl md:text-3xl font-bold text-gray-900">Check your email</h1>
+          <p className="mt-2 text-sm text-gray-600">
+            We sent a magic sign-in link to {" "}
+            <span className="font-semibold text-gray-900">{email}</span>.
+          </p>
+
+          <div className="mt-6 space-y-3">
+            <div className="rounded-lg border bg-gray-50 px-4 py-3 text-sm text-gray-600">
+              If you don’t see it in a few minutes, check your spam/junk folder.
+            </div>
+
+            <button
+              type="button"
+              onClick={() => setMagicLinkSent(false)}
+              className="inline-flex w-full items-center justify-center gap-2 rounded-md border bg-white px-4 py-2 text-sm font-medium text-gray-900 shadow-sm hover:bg-gray-50"
+            >
+              <ArrowLeft className="h-4 w-4" />
+              Back to Sign In
+            </button>
+          </div>
+        </motion.div>
+      </div>
     )
   }
 
   return (
-    <form onSubmit={handleLogin}>
-      <VStack spacing={6} align="stretch">
-        <Text fontSize="2xl" fontWeight="bold" color="white" textAlign="center">
-          Sign In
-        </Text>
+    <div className="w-full">
+      {error && (
+        <div className="mb-5 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+          {error}
+        </div>
+      )}
 
-        <FormControl isRequired>
-          <FormLabel color="white">Email</FormLabel>
-          <Input
-            type="email"
-            value={email}
-            onChange={e => setEmail(e.target.value)}
-            placeholder="your@email.com"
-            bg="rgba(53, 14, 111, 0.3)"
-            borderColor="brand.gold"
-            color="white"
-            _placeholder={{ color: 'rgba(255, 255, 255, 0.5)' }}
-          />
-        </FormControl>
+      <form onSubmit={handleLogin} className="space-y-5">
+        <div className="text-center">
+          <h1 className="text-2xl md:text-3xl font-bold text-gray-900">Welcome back</h1>
+          <p className="mt-1 text-sm text-gray-600">Sign in to your account.</p>
+        </div>
 
-        <FormControl isRequired>
-          <FormLabel color="white">Password</FormLabel>
-          <Input
-            type="password"
-            value={password}
-            onChange={e => setPassword(e.target.value)}
-            placeholder="••••••••"
-            bg="rgba(53, 14, 111, 0.3)"
-            borderColor="brand.gold"
-            color="white"
-          />
-        </FormControl>
-
-        <Button
-          type="submit"
-          variant="primary"
-          isLoading={loading}
-          loadingText="Signing in..."
-          size="lg"
-        >
-          Sign In
-        </Button>
-
-        <HStack>
-          <Divider borderColor="rgba(234, 177, 48, 0.3)" />
-          <Text fontSize="sm" color="white" whiteSpace="nowrap">
-            OR
-          </Text>
-          <Divider borderColor="rgba(234, 177, 48, 0.3)" />
-        </HStack>
-
-        <Button
-          variant="secondary"
+        <button
+          type="button"
           onClick={handleMagicLink}
-          isLoading={loading}
-          size="lg"
+          disabled={loading}
+          className="inline-flex h-10 w-full items-center justify-center gap-2 rounded-md border bg-white px-4 py-2 text-sm font-medium text-gray-900 shadow-sm hover:bg-gray-50 disabled:opacity-60"
         >
-          Send Magic Link
-        </Button>
+          <Link2 className="h-4 w-4" />
+          Send magic link
+        </button>
 
-        <VStack spacing={2}>
-          <Link
-            as={RouterLink}
-            to="/reset-password"
-            color="brand.flameOrange"
-            fontSize="sm"
-          >
+        <div className="relative my-2">
+          <div className="absolute inset-0 flex items-center">
+            <div className="w-full border-t border-gray-200" />
+          </div>
+          <div className="relative flex justify-center text-xs">
+            <span className="bg-white px-2 text-gray-500">or sign in with password</span>
+          </div>
+        </div>
+
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-1">Email</label>
+          <div className="relative">
+            <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+            <input
+              type="email"
+              value={email}
+              onChange={e => setEmail(e.target.value)}
+              placeholder="your@email.com"
+              autoComplete="email"
+              className="h-10 w-full rounded-md border bg-gray-50 pl-9 pr-3 text-sm text-gray-900 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-[#350e6f]"
+              required
+            />
+          </div>
+        </div>
+
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-1">Password</label>
+          <div className="relative">
+            <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+            <input
+              type={showPassword ? "text" : "password"}
+              value={password}
+              onChange={e => setPassword(e.target.value)}
+              placeholder="••••••••"
+              autoComplete="current-password"
+              className="h-10 w-full rounded-md border bg-gray-50 pl-9 pr-10 text-sm text-gray-900 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-[#350e6f]"
+              required
+            />
+            <button
+              type="button"
+              onClick={() => setShowPassword(v => !v)}
+              className="absolute inset-y-0 right-0 flex items-center pr-3 text-gray-500 hover:text-gray-700"
+              aria-label="Toggle password visibility"
+            >
+              {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+            </button>
+          </div>
+        </div>
+
+        <motion.button
+          whileHover={{ scale: 1.01 }}
+          whileTap={{ scale: 0.98 }}
+          disabled={loading}
+          type="submit"
+          className="inline-flex h-10 w-full items-center justify-center gap-2 rounded-md bg-gradient-to-r from-[#350e6f] to-[#27062e] text-white text-sm font-medium shadow-sm hover:opacity-95 disabled:opacity-60"
+        >
+          {loading ? "Signing in..." : "Sign In"}
+          <ArrowRight className="h-4 w-4" />
+        </motion.button>
+
+        <div className="flex items-center justify-between text-sm">
+          <RouterLink to="/reset-password" className="font-medium text-[#350e6f] hover:underline">
             Forgot password?
-          </Link>
-          <Text color="white" fontSize="sm">
-            Don't have an account?{' '}
-            <Link as={RouterLink} to="/signup" color="brand.flameOrange" fontWeight="semibold">
+          </RouterLink>
+
+          <span className="text-gray-600">
+            No account?{" "}
+            <RouterLink to="/signup" className="font-semibold text-[#350e6f] hover:underline">
               Sign Up
-            </Link>
-          </Text>
-        </VStack>
-      </VStack>
-    </form>
+            </RouterLink>
+          </span>
+        </div>
+      </form>
+    </div>
   )
 }
