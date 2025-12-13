@@ -4,6 +4,7 @@ import { FreeTierGuard } from '@/components/FreeTierGuard'
 import { UserRole } from '@/types'
 import { useAuth } from '@/hooks/useAuth'
 import RoleRedirect from '@/pages/auth/RoleRedirect'
+import { RequireRole } from '@/routes/RequireRole'
 
 // Layout imports
 import { MainLayout } from '@/layouts/MainLayout'
@@ -109,29 +110,19 @@ export const AppRoutes = () => {
         />
 
         {/* Admin routes */}
-        <Route
-          path="/admin"
-          element={
-            <ProtectedRoute requiredRoles={[UserRole.COMPANY_ADMIN]}>
-              <MainLayout />
-            </ProtectedRoute>
-          }
-        >
-          <Route path="dashboard" element={<AdminDashboard />} />
-          <Route index element={<Navigate to="/admin/dashboard" replace />} />
+        <Route element={<RequireRole allow={[UserRole.COMPANY_ADMIN]} />}>
+          <Route path="/admin" element={<MainLayout />}>
+            <Route path="dashboard" element={<AdminDashboard />} />
+            <Route index element={<Navigate to="/admin/dashboard" replace />} />
+          </Route>
         </Route>
 
         {/* Super Admin routes */}
-        <Route
-          path="/super-admin"
-          element={
-            <ProtectedRoute requiredRoles={[UserRole.SUPER_ADMIN]}>
-              <MainLayout />
-            </ProtectedRoute>
-          }
-        >
-          <Route path="dashboard" element={<SuperAdminDashboard />} />
-          <Route index element={<Navigate to="/super-admin/dashboard" replace />} />
+        <Route element={<RequireRole allow={[UserRole.SUPER_ADMIN]} />}>
+          <Route path="/super-admin" element={<MainLayout />}>
+            <Route path="dashboard" element={<SuperAdminDashboard />} />
+            <Route index element={<Navigate to="/super-admin/dashboard" replace />} />
+          </Route>
         </Route>
 
       {/* Protected main app routes */}
