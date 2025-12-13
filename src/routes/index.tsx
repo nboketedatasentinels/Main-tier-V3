@@ -79,6 +79,22 @@ const DashboardRouter = () => {
           <CompanyDashboard />
         </ProtectedRoute>
       } />
+      <Route
+        path="admin"
+        element={
+          <ProtectedRoute requiredRoles={[UserRole.COMPANY_ADMIN]}>
+            <AdminDashboard />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="super-admin"
+        element={
+          <ProtectedRoute requiredRoles={[UserRole.SUPER_ADMIN]}>
+            <SuperAdminDashboard />
+          </ProtectedRoute>
+        }
+      />
       <Route index element={<Navigate to="company" replace />} />
     </Routes>
   )
@@ -109,30 +125,6 @@ export const AppRoutes = () => {
         />
 
         {/* Admin routes */}
-        <Route
-          path="/admin"
-          element={
-            <ProtectedRoute requiredRoles={[UserRole.COMPANY_ADMIN]}>
-              <MainLayout />
-            </ProtectedRoute>
-          }
-        >
-          <Route path="dashboard" element={<AdminDashboard />} />
-          <Route index element={<Navigate to="/admin/dashboard" replace />} />
-        </Route>
-
-        {/* Super Admin routes */}
-        <Route
-          path="/super-admin"
-          element={
-            <ProtectedRoute requiredRoles={[UserRole.SUPER_ADMIN]}>
-              <MainLayout />
-            </ProtectedRoute>
-          }
-        >
-          <Route path="dashboard" element={<SuperAdminDashboard />} />
-          <Route index element={<Navigate to="/super-admin/dashboard" replace />} />
-        </Route>
 
       {/* Protected main app routes */}
       <Route path="/app/*" element={
