@@ -97,9 +97,6 @@ export const AppRoutes = () => {
       <Route path="/reset-password" element={<AuthLayout><ResetPasswordPage /></AuthLayout>} />
         <Route path="/auth/profile-missing" element={<AuthLayout><ProfileMissingPage /></AuthLayout>} />
 
-        {/* Role-based redirect entrypoint */}
-        <Route path="/app" element={<RoleRedirect />} />
-
         <Route
           path="/mentor/dashboard"
           element={
@@ -125,12 +122,18 @@ export const AppRoutes = () => {
           </Route>
         </Route>
 
-      {/* Protected main app routes */}
-      <Route path="/app/*" element={
-        <ProtectedRoute>
-          <MainLayout />
-        </ProtectedRoute>
-      }>
+        {/* Protected main app routes */}
+        <Route
+          path="/app/*"
+          element={
+            <ProtectedRoute>
+              <MainLayout />
+            </ProtectedRoute>
+          }
+        >
+          {/* Role-based redirect entrypoint */}
+          <Route index element={<RoleRedirect />} />
+
           {/* Dashboard routes */}
           <Route path="dashboard/*" element={<DashboardRouter />} />
 
@@ -171,10 +174,7 @@ export const AppRoutes = () => {
           <Route path="book-club" element={<BookClubPage />} />
           <Route path="shameless-circle" element={<ShamelessCirclePage />} />
           <Route path="profile" element={<ProfilePage />} />
-
-        {/* Default redirect based on role */}
-        <Route index element={<Navigate to="/app" replace />} />
-      </Route>
+        </Route>
 
         {/* Error routes */}
         <Route path="/unauthorized" element={<UnauthorizedPage />} />
