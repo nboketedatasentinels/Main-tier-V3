@@ -3,9 +3,11 @@
 > vite
 
 Re-optimizing dependencies because lockfile has changed
-Port 3000 is in use, trying another one...
 
-  VITE v5.4.21  ready in 351 ms
+  VITE v5.4.21  ready in 546 ms
 
-  ➜  Local:   http://localhost:3001/
+  ➜  Local:   http://localhost:3000/
   ➜  Network: use --host to expose
+4:40:53 PM [vite] hmr update /src/pages/dashboards/components/Admin/QuoteManagement.tsx, /src/index.css
+4:40:58 PM [vite] hmr update /src/pages/dashboards/components/Admin/QuoteManagement.tsx, /src/index.css
+4:42:00 PM [vite] changed tsconfig file detected: /app/tsconfig.node.json - Clearing cache and forcing full-reload to ensure TypeScript is compiled with updated config values.

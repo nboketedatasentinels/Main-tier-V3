@@ -26,6 +26,7 @@ import { AdminUserTable, TableColumn } from '@/components/admin/AdminUserTable'
 import { OrganizationCard } from '@/components/admin/OrganizationCard'
 import type { OrganizationCardProps } from '@/components/admin/OrganizationCard'
 import { StatusBadge } from '@/components/admin/StatusBadge'
+import { QuoteManagement } from './components/Admin/QuoteManagement'
 
 const registrationTrend = [
   { label: 'Mar 1', value: 18 },
@@ -432,6 +433,12 @@ export const SuperAdminDashboard: React.FC = () => {
               ))}
             </Stack>
           </Stack>
+        </CardBody>
+      </Card>
+
+      <Card bg="white" border="1px solid" borderColor="brand.border">
+        <CardBody>
+          <QuoteManagement />
         </CardBody>
       </Card>
     </Stack>

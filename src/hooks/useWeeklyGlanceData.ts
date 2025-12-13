@@ -20,7 +20,8 @@ import {
   buildMonthlyCourseState,
   listenToCompanyProgram,
 } from '@/services/monthlyCoursesService'
-import { UserRole } from '@/types'
+import { InspirationQuote, UserRole } from '@/types'
+import { leadershipQuotes } from '@/services/quotes'
 
 export interface WeeklyPoints {
   id: string
@@ -58,14 +59,6 @@ export interface WeeklyHabit {
   title: string
   completed: boolean
   completed_at?: Timestamp | null
-}
-
-export interface InspirationQuote {
-  id: string
-  week_number: number
-  quote_text: string
-  author?: string
-  category?: string
 }
 
 interface WeeklyGlanceLoadingState {
@@ -274,10 +267,13 @@ export const useWeeklyGlanceData = () => {
         if (docData) {
           setInspirationQuote({ ...(docData.data() as InspirationQuote), id: docData.id })
         } else {
-          setInspirationQuote(null)
+          const fallbackQuote = leadershipQuotes[weekNumber % leadershipQuotes.length]
+          setInspirationQuote({ ...fallbackQuote, id: `fallback-${weekNumber}` })
         }
       } catch (error) {
         setErrors(prev => ({ ...prev, inspiration: error as Error }))
+        const fallbackQuote = leadershipQuotes[weekNumber % leadershipQuotes.length]
+        setInspirationQuote({ ...fallbackQuote, id: `fallback-${weekNumber}` })
       } finally {
         setLoading(prev => ({ ...prev, inspiration: false }))
       }

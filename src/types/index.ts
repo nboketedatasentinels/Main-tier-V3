@@ -465,3 +465,16 @@ export interface PaginatedResponse<T> {
   pageSize: number
   hasMore: boolean
 }
+
+// Inspiration Quote
+export interface InspirationQuote {
+  id: string
+  week_number: number
+  quote_text: string
+  author?: string
+  category?: string
+  isActive?: boolean
+  createdAt?: string
+  updatedAt?: string
+  year?: number
+}
