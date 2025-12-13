@@ -17,7 +17,7 @@ import { useState } from 'react'
 import { WeeklyPointsCard } from '@/components/journeys/weeklyGlance/WeeklyPointsCard'
 import { SupportTeamCard } from '@/components/journeys/weeklyGlance/SupportTeamCard'
 import { PersonalityProfileCard } from '@/components/journeys/weeklyGlance/PersonalityProfileCard'
-import { FreeCourseAccessCard } from '@/components/journeys/weeklyGlance/FreeCourseAccessCard'
+import { MonthlyCourseCard } from '@/components/journeys/weeklyGlance/MonthlyCourseCard'
 import { PeopleImpactedCard } from '@/components/journeys/weeklyGlance/PeopleImpactedCard'
 import { PeerMatchingCard } from '@/components/journeys/weeklyGlance/PeerMatchingCard'
 import { WeeklyInspirationCard } from '@/components/journeys/weeklyGlance/WeeklyInspirationCard'
@@ -86,7 +86,12 @@ export const WeeklyGlancePage = () => {
           />
           <SupportTeamCard data={data.supportAssignment} loading={data.loading.support} />
           <PersonalityProfileCard data={data.personality} loading={data.loading.profile} />
-          <FreeCourseAccessCard />
+          <MonthlyCourseCard
+            role={profile?.role}
+            data={data.monthlyCourse}
+            loading={data.loading.monthlyCourse}
+            error={data.errors.monthlyCourse}
+          />
           <PeopleImpactedCard count={data.impactCount} loading={data.loading.impact} />
           <PeerMatchingCard matches={data.peerMatches} loading={data.loading.matches} />
           <WeeklyInspirationCard data={data.inspirationQuote} loading={data.loading.inspiration} />
