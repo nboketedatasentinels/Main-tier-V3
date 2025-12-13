@@ -118,6 +118,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         firstName: userData.firstName || 'User',
         lastName: userData.lastName || '',
         fullName: userData.fullName || 'User',
+        gender: userData.gender,
         role: UserRole.FREE_USER,
         totalPoints: 0,
         level: 1,
@@ -125,6 +126,9 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         referralCode: null,
         referredBy: null,
         isOnboarded: true,
+        companyCode: userData.companyCode,
+        companyId: userData.companyId,
+        companyName: userData.companyName,
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
       }

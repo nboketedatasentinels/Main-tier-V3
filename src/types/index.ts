@@ -16,6 +16,7 @@ export interface UserProfile {
   firstName: string
   lastName: string
   fullName: string
+  gender?: string
   role: UserRole
   avatarUrl?: string
   bio?: string
@@ -67,6 +68,24 @@ export interface UserProfile {
   createdAt: string
   updatedAt: string
   lastActiveAt?: string
+}
+
+export type GenderOption =
+  | 'prefer_not_to_say'
+  | 'male'
+  | 'female'
+  | 'non_binary'
+  | 'other'
+
+export interface Organization {
+  id: string
+  code: string
+  name: string
+  status: 'active' | 'inactive' | 'suspended'
+  createdAt: string
+  updatedAt: string
+  memberCount: number
+  settings?: Record<string, unknown>
 }
 
 export interface PrivacySettings {
