@@ -145,7 +145,7 @@ export const MainLayout: React.FC = () => {
           { label: 'Leadership Board', path: '/app/leadership-board', icon: Trophy },
           { label: 'My Courses', path: '/app/courses', icon: BookOpen },
           { label: 'Peer Connect', path: '/app/peer-connect', icon: Users },
-          { label: 'Impact Activities', path: '/app/impact', icon: Target },
+          { label: 'Impact Log', path: '/app/impact', icon: Target },
           { label: 'Leadership Council', path: '/app/leadership-council', icon: Gavel },
         ],
       },
