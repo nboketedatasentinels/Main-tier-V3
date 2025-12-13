@@ -40,10 +40,13 @@ import {
   Sparkles,
   Search,
   LogOut,
+  CalendarDays,
 } from 'lucide-react'
 import { useAuth } from '@/hooks/useAuth'
 import { UserRole } from '@/types'
+import { BuildVillageModal } from '@/components/modals/BuildVillageModal'
 import { ConfirmationWelcomeModal } from '@/components/modals/ConfirmationWelcomeModal'
+import { getDashboardPathForRole } from '@/utils/dashboardPaths'
 import { NotificationDropdown } from '@/components/notifications/NotificationDropdown'
 
 const HEADER_HEIGHT = '72px'
@@ -61,8 +64,10 @@ export const MainLayout: React.FC = () => {
   const location = useLocation()
   const { isOpen, onOpen, onClose } = useDisclosure()
   const toast = useToast()
+  const [showVillagePrompt, setShowVillagePrompt] = useState(false)
   const [showWelcomeModal, setShowWelcomeModal] = useState(false)
 
+  const buildVillageKey = useMemo(() => (profile ? `t4l.buildVillage.${profile.id}` : null), [profile])
   const welcomeKey = useMemo(() => (profile ? `t4l.newUserWelcome.${profile.id}` : null), [profile])
 
   useEffect(() => {
@@ -72,13 +77,20 @@ export const MainLayout: React.FC = () => {
   useEffect(() => {
     if (!profile) return
 
-    if (welcomeKey && location.pathname.startsWith('/app/weekly-glance')) {
+    if (profile.role === UserRole.FREE_USER && buildVillageKey) {
+      const stored = localStorage.getItem(buildVillageKey)
+      if (!stored) {
+        setShowVillagePrompt(true)
+      }
+    }
+
+    if (welcomeKey && location.pathname.startsWith('/app/dashboard')) {
       const shouldWelcome = localStorage.getItem(welcomeKey)
       if (shouldWelcome === 'pending') {
         setShowWelcomeModal(true)
       }
     }
-  }, [location.pathname, profile, welcomeKey])
+  }, [buildVillageKey, location.pathname, profile, welcomeKey])
 
   useEffect(() => {
     if (!welcomeKey) return
@@ -99,6 +111,20 @@ export const MainLayout: React.FC = () => {
     navigate('/login')
   }
 
+  const handleVillageCreated = () => {
+    if (buildVillageKey) {
+      localStorage.setItem(buildVillageKey, 'completed')
+    }
+    setShowVillagePrompt(false)
+  }
+
+  const handleVillageSkipped = () => {
+    if (buildVillageKey) {
+      localStorage.setItem(buildVillageKey, 'skipped')
+    }
+    setShowVillagePrompt(false)
+  }
+
   const handleWelcomeAcknowledged = () => {
     if (welcomeKey) {
       localStorage.removeItem(welcomeKey)
@@ -106,12 +132,15 @@ export const MainLayout: React.FC = () => {
     setShowWelcomeModal(false)
   }
 
+  const dashboardPath = useMemo(() => getDashboardPathForRole(profile?.role), [profile?.role])
+
   const navigationSections = useMemo(
     () => [
       {
         label: 'MY JOURNEY',
         items: [
-          { label: 'Dashboard', path: '/app/weekly-glance', icon: Home },
+          { label: 'Weekly Glance', path: '/app/weekly-glance', icon: CalendarDays },
+          { label: 'Dashboard', path: dashboardPath, icon: Home },
           { label: 'Weekly Checklist', path: '/app/weekly-checklist', icon: ClipboardList },
           { label: 'Leadership Board', path: '/app/leadership-board', icon: Trophy },
           { label: 'My Courses', path: '/app/courses', icon: BookOpen },
@@ -130,7 +159,7 @@ export const MainLayout: React.FC = () => {
         ],
       },
     ],
-    [],
+    [dashboardPath],
   )
 
   const isFreeUser = profile?.role === UserRole.FREE_USER
@@ -159,7 +188,7 @@ export const MainLayout: React.FC = () => {
         duration: 3500,
         isClosable: true,
       })
-      navigate('/app/weekly-glance', { replace: true })
+      navigate('/app/dashboard/free', { replace: true })
       onClose()
       return
     }
@@ -170,16 +199,19 @@ export const MainLayout: React.FC = () => {
 
   const NavContent = () => (
     <VStack align="stretch" spacing={5} pt={4}>
-            {filteredNavigation.map(section => (
-              <Box key={section.label}>
-                <Text mb={2} {...sectionLabelStyles}>
-                  {section.label}
-                </Text>
-                <VStack align="stretch" spacing={1}>
-                  {section.items.map(item => {
-                    const isActive = location.pathname.startsWith(item.path)
+      {filteredNavigation.map(section => (
+        <Box key={section.label}>
+          <Text mb={2} {...sectionLabelStyles}>
+            {section.label}
+          </Text>
+          <VStack align="stretch" spacing={1}>
+            {section.items.map(item => {
+              const isDashboardItem = item.path.startsWith('/app/dashboard')
+              const isActive = isDashboardItem
+                ? location.pathname.startsWith('/app/dashboard')
+                : location.pathname.startsWith(item.path)
 
-                    return (
+              return (
                 <Button
                   key={item.path}
                   leftIcon={<item.icon size={18} />}
