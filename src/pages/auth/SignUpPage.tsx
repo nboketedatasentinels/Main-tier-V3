@@ -8,7 +8,8 @@ import { useAuth } from "@/hooks/useAuth"
 import { getFriendlyErrorMessage } from "@/utils/authErrors"
 import { validateCompanyCode } from "@/services/organizationService"
 import { auth } from "@/services/firebase"
-import { GenderOption, Organization } from "@/types"
+import { GenderOption, Organization, UserRole } from "@/types"
+import { getLandingPathForRole } from "@/utils/roleRouting"
 import { TermsOfUseModal } from "@/components/modals/TermsOfUseModal"
 import { PrivacyPolicyModal } from "@/components/modals/PrivacyPolicyModal"
 
@@ -165,7 +166,7 @@ export const SignUpPage: React.FC = () => {
         return
       }
 
-      navigate('/app/weekly-glance', { replace: true })
+      navigate(getLandingPathForRole(UserRole.FREE_USER), { replace: true })
     } catch (err) {
       setError(getFriendlyErrorMessage(err))
     } finally {
