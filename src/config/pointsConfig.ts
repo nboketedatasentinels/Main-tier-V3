@@ -14,23 +14,125 @@ export type ActivityId =
 
 export type ActivityDef = {
   id: ActivityId;
-  label: string;
-  pointsEach: number;
-  maxPerMonth: number; // from spec
-  // if you want: description, CTA routes, etc.
+  baseId: string;
+  title: string;
+  description: string;
+  points: number;
+  maxPerMonth: number;
+  requiresApproval?: boolean;
+  isFreeTier?: boolean;
+  week: number;
+  category: string;
+  tags?: string[];
 };
 
 export const FULL_ACTIVITIES: ActivityDef[] = [
-  { id: "podcast", label: "Watch/listen to podcast", pointsEach: 1000, maxPerMonth: 3 },
-  { id: "podcast_workbook", label: "Complete podcast workbook", pointsEach: 1000, maxPerMonth: 3 },
-  { id: "webinar", label: "Attend webinar", pointsEach: 2000, maxPerMonth: 1 },
-  { id: "webinar_workbook", label: "Complete webinar workbook", pointsEach: 2000, maxPerMonth: 1 },
-  { id: "peer_matching", label: "Peer Matching", pointsEach: 1000, maxPerMonth: 4 },
-  { id: "impact_log", label: "Impact Log Entry", pointsEach: 1000, maxPerMonth: 2 },
-  { id: "book_club", label: "Book Club Participation", pointsEach: 1500, maxPerMonth: 1 },
-  { id: "peer_to_peer", label: "Monthly Peer to Peer", pointsEach: 2500, maxPerMonth: 1 },
-  { id: "linkedin", label: "LinkedIn engagement (post/comment)", pointsEach: 500, maxPerMonth: 2 },
-  { id: "lift_module", label: "LIFT Course Module Completed", pointsEach: 3000, maxPerMonth: 1 },
+  {
+    id: "podcast",
+    baseId: "podcast",
+    title: "Watch/listen to podcast",
+    description: "Engage with weekly podcast content.",
+    points: 1000,
+    maxPerMonth: 3,
+    week: 1,
+    category: "Learning",
+    isFreeTier: true,
+  },
+  {
+    id: "podcast_workbook",
+    baseId: "podcast_workbook",
+    title: "Complete podcast workbook",
+    description: "Apply learnings from the podcast.",
+    points: 1000,
+    maxPerMonth: 3,
+    week: 1,
+    category: "Application",
+    requiresApproval: true,
+  },
+  {
+    id: "webinar",
+    baseId: "webinar",
+    title: "Attend webinar",
+    description: "Participate in a live webinar session.",
+    points: 2000,
+    maxPerMonth: 1,
+    week: 2,
+    category: "Community",
+  },
+  {
+    id: "webinar_workbook",
+    baseId: "webinar_workbook",
+    title: "Complete webinar workbook",
+    description: "Complete exercises from the webinar.",
+    points: 2000,
+    maxPerMonth: 1,
+    week: 2,
+    category: "Application",
+    requiresApproval: true,
+  },
+  {
+    id: "peer_matching",
+    baseId: "peer_matching",
+    title: "Peer Matching",
+    description: "Connect with a peer for mutual growth.",
+    points: 1000,
+    maxPerMonth: 4,
+    week: 3,
+    category: "Networking",
+  },
+  {
+    id: "impact_log",
+    baseId: "impact_log",
+    title: "Impact Log Entry",
+    description: "Document your professional impact.",
+    points: 1000,
+    maxPerMonth: 2,
+    week: 1,
+    category: "Reflection",
+    requiresApproval: true,
+  },
+  {
+    id: "book_club",
+    baseId: "book_club",
+    title: "Book Club Participation",
+    description: "Engage in book club discussions.",
+    points: 1500,
+    maxPerMonth: 1,
+    week: 4,
+    category: "Community",
+  },
+  {
+    id: "peer_to_peer",
+    baseId: "peer_to_peer",
+    title: "Monthly Peer to Peer",
+    description: "Hold a peer-to-peer accountability session.",
+    points: 2500,
+    maxPerMonth: 1,
+    week: 4,
+    category: "Networking",
+    requiresApproval: true,
+  },
+  {
+    id: "linkedin",
+    baseId: "linkedin",
+    title: "LinkedIn engagement (post/comment)",
+    description: "Share insights on LinkedIn.",
+    points: 500,
+    maxPerMonth: 2,
+    week: 3,
+    category: "Brand",
+  },
+  {
+    id: "lift_module",
+    baseId: "lift_module",
+    title: "LIFT Course Module Completed",
+    description: "Finish a module in the LIFT course.",
+    points: 3000,
+    maxPerMonth: 1,
+    week: 2,
+    category: "Learning",
+    requiresApproval: true,
+  },
 ];
 
 // 4-week intro = limited set (no peer matching, book club, peer-to-peer, linkedin)
