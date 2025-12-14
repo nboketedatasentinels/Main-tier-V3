@@ -92,6 +92,12 @@ type PeerProfile = {
   avatarUrl?: string
 }
 
+interface PreselectedUser {
+  id: string
+  name: string
+  email: string
+}
+
 type WeeklyMatch = {
   peer: PeerProfile
   matchReason: string
@@ -168,10 +174,112 @@ export const PeerConnectPage: React.FC = () => {
   const [formErrors, setFormErrors] = useState<Record<string, string>>({})
   const [participantFilter, setParticipantFilter] = useState('')
   const [loadingPeers, setLoadingPeers] = useState(false)
+  const [preselectedUser, setPreselectedUser] = useState<PreselectedUser | null>(null)
+
+  const fetchWeeklyMatch = async () => {
+    if (!user || !profile || !availablePeers.length) return
+    try {
+      const matchRef = doc(db, 'peer_weekly_matches', `${user.uid}-${weekRange}`)
+      const matchDoc = await getDoc(matchRef)
+      if (matchDoc.exists()) {
+        const data = matchDoc.data()
+        const matchedPeer = availablePeers.find((peer) => peer.id === data.peerId)
+        if (matchedPeer) {
+          setWeeklyMatch({
+            peer: matchedPeer,
+            matchReason: data.matchReason || 'Same company code',
+          })
+          return
+        }
+      }
+      const deterministicPeer = availablePeers[Math.abs(Number.parseInt(user.uid.slice(-3), 10)) % availablePeers.length]
+      if (deterministicPeer) {
+        const matchPayload = {
+          peerId: deterministicPeer.id,
+          matchReason: deterministicPeer.cohortIdentifier
+            ? 'Shared cohort'
+            : deterministicPeer.corporateVillageId
+              ? 'Same corporate village'
+              : 'Same company code',
+          createdAt: serverTimestamp(),
+        }
+        await setDoc(matchRef, matchPayload)
+        setWeeklyMatch({ peer: deterministicPeer, matchReason: matchPayload.matchReason })
+      }
+    } catch (error) {
+      console.error('Error selecting weekly match', error)
+    }
+  }
+
+  const fetchInvitesAndSessions = async () => {
+    if (!user) return
+    try {
+      const inviteRef = collection(db, 'peer_session_requests')
+      const inviteSnapshot = await getDocs(query(inviteRef, where('toUserId', '==', user.uid)))
+      const mappedInvites: Invitation[] = inviteSnapshot.docs.map((docSnap) => {
+        const data = docSnap.data()
+        return {
+          id: docSnap.id,
+          fromName: data.fromName || 'Peer',
+          fromEmail: data.fromEmail || 'peer@example.com',
+        }
+      })
+      setPendingInvites(mappedInvites)
+      const sessionRef = collection(db, 'peer_sessions')
+      const sessionSnapshot = await getDocs(query(sessionRef, where('participants', 'array-contains', user.uid)))
+      const mappedSessions: PeerSession[] = sessionSnapshot.docs.map((docSnap) => {
+        const data = docSnap.data()
+        return {
+          id: docSnap.id,
+          title: data.title || 'Weekly Peer Date',
+          scheduledAt: data.scheduledAt?.toDate?.() || new Date(),
+          timezone: data.timezone || profile?.timezone || 'UTC',
+          platform: (data.platform as PeerSession['platform']) || 'Zoom',
+          link: data.meetingLink,
+          status: (data.status as PeerSession['status']) || 'pending',
+          confirmationDeadline: data.confirmationDeadline?.toDate?.() || addDays(new Date(), 1),
+          youConfirmed: Boolean(data.confirmations?.[user.uid]),
+          peerConfirmed: Boolean(Object.keys(data.confirmations || {}).length > 1),
+        }
+      })
+      setSessions(
+        mappedSessions.length
+          ? mappedSessions
+          : [
+              {
+                id: 'demo-session',
+                title: 'Weekly Peer Date',
+                scheduledAt: addDays(new Date(), 2),
+                timezone: profile?.timezone || 'America/New_York',
+                platform: 'Zoom',
+                link: 'https://zoom.us/',
+                status: 'pending',
+                confirmationDeadline: addDays(new Date(), 1),
+                youConfirmed: false,
+                peerConfirmed: true,
+              },
+            ]
+      )
+    } catch (error) {
+      console.error('Error fetching sessions', error)
+    }
+  }
+
+  const onChallengeCreated = () => {
+    fetchWeeklyMatch()
+    fetchInvitesAndSessions()
+    toast({
+      title: 'Challenge created',
+      description: `Your opponent will receive a Firebase-backed notification.`,
+      status: 'success',
+      position: 'top',
+      icon: <Trophy size={18} />,
+    })
+  }
 
   useEffect(() => {
     const fetchPeers = async () => {
-      if (!profile) return
+    if (!profile) return
       setLoadingPeers(true)
       try {
         const peersRef = collection(db, 'profiles')
@@ -258,110 +366,14 @@ export const PeerConnectPage: React.FC = () => {
         setLoadingPeers(false)
       }
     }
-
     fetchPeers()
   }, [profile, toast])
 
   useEffect(() => {
-    const fetchWeeklyMatch = async () => {
-      if (!user || !profile || !availablePeers.length) return
-
-      try {
-        const matchRef = doc(db, 'peer_weekly_matches', `${user.uid}-${weekRange}`)
-        const matchDoc = await getDoc(matchRef)
-
-        if (matchDoc.exists()) {
-          const data = matchDoc.data()
-          const matchedPeer = availablePeers.find((peer) => peer.id === data.peerId)
-          if (matchedPeer) {
-            setWeeklyMatch({
-              peer: matchedPeer,
-              matchReason: data.matchReason || 'Same company code',
-            })
-            return
-          }
-        }
-
-        const deterministicPeer = availablePeers[Math.abs(Number.parseInt(user.uid.slice(-3), 10)) % availablePeers.length]
-        if (deterministicPeer) {
-          const matchPayload = {
-            peerId: deterministicPeer.id,
-            matchReason: deterministicPeer.cohortIdentifier
-              ? 'Shared cohort'
-              : deterministicPeer.corporateVillageId
-                ? 'Same corporate village'
-                : 'Same company code',
-            createdAt: serverTimestamp(),
-          }
-
-          await setDoc(matchRef, matchPayload)
-          setWeeklyMatch({ peer: deterministicPeer, matchReason: matchPayload.matchReason })
-        }
-      } catch (error) {
-        console.error('Error selecting weekly match', error)
-      }
-    }
-
     fetchWeeklyMatch()
   }, [availablePeers, profile, user, weekRange])
 
   useEffect(() => {
-    const fetchInvitesAndSessions = async () => {
-      if (!user) return
-      try {
-        const inviteRef = collection(db, 'peer_session_requests')
-        const inviteSnapshot = await getDocs(query(inviteRef, where('toUserId', '==', user.uid)))
-        const mappedInvites: Invitation[] = inviteSnapshot.docs.map((docSnap) => {
-          const data = docSnap.data()
-          return {
-            id: docSnap.id,
-            fromName: data.fromName || 'Peer',
-            fromEmail: data.fromEmail || 'peer@example.com',
-          }
-        })
-        setPendingInvites(mappedInvites)
-
-        const sessionRef = collection(db, 'peer_sessions')
-        const sessionSnapshot = await getDocs(query(sessionRef, where('participants', 'array-contains', user.uid)))
-        const mappedSessions: PeerSession[] = sessionSnapshot.docs.map((docSnap) => {
-          const data = docSnap.data()
-          return {
-            id: docSnap.id,
-            title: data.title || 'Weekly Peer Date',
-            scheduledAt: data.scheduledAt?.toDate?.() || new Date(),
-            timezone: data.timezone || profile?.timezone || 'UTC',
-            platform: (data.platform as PeerSession['platform']) || 'Zoom',
-            link: data.meetingLink,
-            status: (data.status as PeerSession['status']) || 'pending',
-            confirmationDeadline: data.confirmationDeadline?.toDate?.() || addDays(new Date(), 1),
-            youConfirmed: Boolean(data.confirmations?.[user.uid]),
-            peerConfirmed: Boolean(Object.keys(data.confirmations || {}).length > 1),
-          }
-        })
-
-        setSessions(
-          mappedSessions.length
-            ? mappedSessions
-            : [
-                {
-                  id: 'demo-session',
-                  title: 'Weekly Peer Date',
-                  scheduledAt: addDays(new Date(), 2),
-                  timezone: profile?.timezone || 'America/New_York',
-                  platform: 'Zoom',
-                  link: 'https://zoom.us/',
-                  status: 'pending',
-                  confirmationDeadline: addDays(new Date(), 1),
-                  youConfirmed: false,
-                  peerConfirmed: true,
-                },
-              ]
-        )
-      } catch (error) {
-        console.error('Error fetching sessions', error)
-      }
-    }
-
     fetchInvitesAndSessions()
   }, [profile?.timezone, user])
 
@@ -1059,7 +1071,15 @@ export const PeerConnectPage: React.FC = () => {
                               </Text>
                             </Stack>
                           </HStack>
-                          <Button size="sm" variant="outline" leftIcon={<Trophy size={14} />} onClick={challengeModal.onOpen}>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            leftIcon={<Trophy size={14} />}
+                            onClick={() => {
+                              setPreselectedUser(peer)
+                              challengeModal.onOpen()
+                            }}
+                          >
                             Challenge
                           </Button>
                         </Flex>
@@ -1339,17 +1359,12 @@ export const PeerConnectPage: React.FC = () => {
 
       <StartChallengeModal
         isOpen={challengeModal.isOpen}
-        opponents={availablePeers.map((peer) => peer.name)}
-        onClose={challengeModal.onClose}
-        onCreate={(config) =>
-          toast({
-            title: 'Challenge created',
-            description: `${config.opponent} will receive a Firebase-backed notification.`,
-            status: 'success',
-            position: 'top',
-            icon: <Trophy size={18} />,
-          })
-        }
+        onClose={() => {
+          challengeModal.onClose()
+          setPreselectedUser(null)
+        }}
+        onChallengeCreated={onChallengeCreated}
+        preselectedUser={preselectedUser}
       />
     </Stack>
   )
