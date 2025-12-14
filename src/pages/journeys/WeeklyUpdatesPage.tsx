@@ -36,6 +36,7 @@ import {
 import { AlertTriangle, CheckCircle, ChevronLeft, ChevronRight, Lock, Plus } from 'lucide-react'
 import { collection, doc, getDoc, getDocs, query, serverTimestamp, setDoc, where, onSnapshot, addDoc } from 'firebase/firestore'
 import { removeUndefinedFields } from '@/utils/firestore'
+import { getIsoWeekNumber } from '@/utils/date'
 import { db } from '@/services/firebase'
 import { useAuth } from '@/hooks/useAuth'
 import { UserRole, UserProfile, WeeklyProgress } from '@/types'
@@ -216,7 +217,31 @@ const WeeklyChecklistPage: React.FC = () => {
   const { isOpen, onOpen, onClose } = useDisclosure()
   const toast = useToast()
   const activityRefs = useRef<Record<string, HTMLDivElement | null>>({})
+  const [weeklyProgress, setWeeklyProgress] = useState<WeeklyProgress | null>(null)
   const { completed: rhythmCompleted, toggleItem, totalPoints: rhythmPoints, calendarWeek } = useRhythmState()
+
+  const persistChecklist = async (updatedActivities: ActivityState[]) => {
+    if (!user) return
+    const checklistState = {
+      activities: updatedActivities.map(({ id, status, proofUrl, notes }) => ({
+        id,
+        status,
+        proofUrl,
+        notes,
+      })),
+      updatedAt: serverTimestamp(),
+    }
+    try {
+      await setDoc(doc(db, 'checklists', `${user.uid}_${selectedWeek}`), checklistState, { merge: true })
+    } catch (error) {
+      console.error('Failed to persist checklist state:', error)
+      toast({
+        title: 'Sync Error',
+        description: 'Could not save your checklist progress to the server.',
+        status: 'error',
+      })
+    }
+  }
 
   const normalizedJourneyType = useMemo(() => {
     return journey?.journeyType || '4W';
@@ -588,7 +613,7 @@ const WeeklyChecklistPage: React.FC = () => {
             colorScheme="teal"
             variant={activity.status === 'completed' || activity.status === 'pending' ? 'solid' : 'outline'}
             isDisabled={yesDisabled}
-            onClick={() => (requiresProof ? openProofModal(activity) : handleActivityUpdate(activity.id, 'completed'))}
+            onClick={() => (requiresProof ? openProofModal(activity) : handleActivityUpdate(activity, 'completed'))}
           >
             Yes
           </Button>
@@ -596,7 +621,7 @@ const WeeklyChecklistPage: React.FC = () => {
             variant="outline"
             colorScheme="gray"
             isDisabled={noDisabled}
-            onClick={() => handleActivityUpdate(activity.id, 'not_started')}
+            onClick={() => handleActivityUpdate(activity, 'not_started')}
           >
             No
           </Button>
