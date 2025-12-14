@@ -26,8 +26,8 @@ import {
   Badge,
 } from '@chakra-ui/react';
 import { Swords, Users, Trophy, Filter, User, Lock } from 'lucide-react';
-import { useAuth } from '../../../hooks/useAuth';
-import { db } from '../../../services/firebase';
+import { useAuth } from '@/hooks/useAuth';
+import { db } from '@/services/firebase';
 import {
   collection,
   query,
@@ -39,7 +39,7 @@ import {
   doc,
   getDoc,
 } from 'firebase/firestore';
-import { UserProfile, Organization } from '../../../types';
+import { UserProfile, Organization } from '@/types';
 
 
 // --- INTERFACES ---
