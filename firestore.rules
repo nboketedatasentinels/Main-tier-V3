@@ -1,0 +1,95 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Helper functions
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    function isOwner(userId) {
+      return request.auth.uid == userId;
+    }
+
+    function hasRole(role) {
+      return isAuthenticated() &&
+        get(/databases/$(database)/documents/profiles/$(request.auth.uid)).data.role == role;
+    }
+
+    // Profiles collection
+    match /profiles/{userId} {
+      allow read: if isAuthenticated() && isOwner(userId);
+      allow create: if isAuthenticated() && isOwner(userId);
+      allow update: if isAuthenticated() && (isOwner(userId) || hasRole('super_admin'));
+      allow delete: if hasRole('super_admin');
+
+      // Subcollections
+      match /userJourneys/{journeyId} {
+        allow read, write: if isAuthenticated() && isOwner(userId);
+      }
+
+      match /weeklyActivities/{activityId} {
+        allow read, write: if isAuthenticated() && isOwner(userId);
+      }
+
+      match /impactLogs/{logId} {
+        allow read, write: if isAuthenticated() && isOwner(userId);
+      }
+
+      match /userBadges/{badgeId} {
+        allow read: if isAuthenticated() && isOwner(userId);
+        allow write: if hasRole('super_admin');
+      }
+
+      match /notifications/{notificationId} {
+        allow read: if isAuthenticated() && isOwner(userId);
+        allow update: if isAuthenticated() && isOwner(userId);
+        allow create: if hasRole('super_admin');
+      }
+    }
+
+    // Public read collections
+    match /journeys/{journeyId} {
+      allow read: if isAuthenticated();
+      allow write: if hasRole('super_admin');
+    }
+
+    match /activities/{activityId} {
+      allow read: if isAuthenticated();
+      allow write: if hasRole('super_admin');
+    }
+
+    match /courses/{courseId} {
+      allow read: if isAuthenticated();
+      allow write: if hasRole('super_admin');
+    }
+
+    match /badges/{badgeId} {
+      allow read: if isAuthenticated();
+      allow write: if hasRole('super_admin');
+    }
+
+    // Community collections
+    match /villages/{villageId} {
+      allow read: if isAuthenticated();
+      allow create: if isAuthenticated();
+      allow update, delete: if hasRole('super_admin') || hasRole('company_admin');
+    }
+
+    match /companies/{companyId} {
+      allow read: if isAuthenticated();
+      allow write: if hasRole('super_admin') || hasRole('company_admin');
+    }
+
+    match /events/{eventId} {
+      allow read: if isAuthenticated();
+      allow create: if isAuthenticated();
+      allow update, delete: if hasRole('super_admin') || hasRole('company_admin');
+    }
+
+    match /user_points/{pointsId} {
+      allow read: if isAuthenticated() && (request.auth.uid == resource.data.userId || hasRole('super_admin'));
+      allow create, update: if isAuthenticated() && (request.resource.data.userId == request.auth.uid || hasRole('super_admin'));
+    }
+  }
+}

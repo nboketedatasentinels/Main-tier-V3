@@ -17,6 +17,7 @@ import {
 } from 'firebase/firestore'
 import { UserProfile, UserRole } from '@/types'
 import { auth, db } from '@/services/firebase'
+import { isBootstrapAdmin } from '@/utils/bootstrap'
 import { AuthContext, AuthContextType } from './AuthContextType'
 
 interface AuthProviderProps {
@@ -38,7 +39,24 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       const docSnap = await getDoc(docRef)
 
       if (docSnap.exists()) {
-        return docSnap.data() as UserProfile
+        const profileData = docSnap.data() as UserProfile
+        if (!profileData.role || !Object.values(UserRole).includes(profileData.role)) {
+          console.warn(
+            `User profile for UID ${firebaseUser.uid} has a missing or invalid role:`,
+            profileData.role
+          )
+        }
+        return profileData
+      }
+
+      const role = isBootstrapAdmin(firebaseUser.email)
+        ? UserRole.SUPER_ADMIN
+        : UserRole.FREE_USER
+
+      if (role === UserRole.SUPER_ADMIN) {
+        console.log(
+          `Assigning SUPER_ADMIN role to bootstrap admin: ${firebaseUser.email}`
+        )
       }
 
       const profileData: UserProfile = {
@@ -47,7 +65,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         firstName: firebaseUser.displayName?.split(' ')?.[0] ?? 'User',
         lastName: firebaseUser.displayName?.split(' ')?.slice(1).join(' ') ?? '',
         fullName: firebaseUser.displayName ?? 'User',
-        role: UserRole.FREE_USER,
+        role,
         totalPoints: 0,
         level: 1,
         referralCount: 0,
@@ -65,8 +83,27 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       })
 
       return profileData
-    } catch (error) {
-      console.error('Error fetching/creating profile:', error)
+    } catch (error: any) {
+      console.error('Error fetching/creating profile:', {
+        message: error.message,
+        code: error.code,
+        uid: firebaseUser.uid,
+      })
+
+      if (error.code === 'permission-denied') {
+        console.error(
+          'Firestore Security Rules Permission Denied:',
+          'The rules blocked the request to fetch the user profile.',
+          'Please ensure the rules allow users to read their own profile.',
+          'Full error:',
+          error
+        )
+      } else {
+        console.error(
+          'An unexpected error occurred during profile fetch/create:',
+          error
+        )
+      }
       return null
     }
   }
