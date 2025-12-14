@@ -38,7 +38,7 @@ import { collection, doc, getDoc, getDocs, query, serverTimestamp, setDoc, where
 import { removeUndefinedFields } from '@/utils/firestore'
 import { db } from '@/services/firebase'
 import { useAuth } from '@/hooks/useAuth'
-import { UserRole, UserProfile } from '@/types'
+import { UserRole, UserProfile, WeeklyProgress } from '@/types'
 import { JOURNEY_META, getMonthNumber, getActivitiesForJourney, JourneyType, ActivityDef } from '@/config/pointsConfig'
 import { awardChecklistPoints, revokeChecklistPoints } from '@/services/pointsService'
 
