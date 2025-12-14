@@ -62,6 +62,7 @@ import {
 } from 'lucide-react'
 import {
   collection,
+  getDocs,
   limit,
   onSnapshot,
   orderBy,
@@ -73,6 +74,7 @@ import { LeaderboardTimeframe, UserProfile } from '@/types'
 import { db } from '@/services/firebase'
 import { useAuth } from '@/hooks/useAuth'
 import { PeerConnectPage } from '@/pages/peer/PeerConnectPage'
+import { StartChallengeModal } from '@/components/modals/StartChallengeModal'
 
 interface PointsTransaction {
   id: string
@@ -143,7 +145,7 @@ const formatNumber = (value?: number | null) => {
 export const LeadershipBoardPage: React.FC = () => {
   const { profile } = useAuth()
   const toast = useToast()
-  const { isOpen, onOpen, onClose } = useDisclosure()
+  const challengeModal = useDisclosure()
   const [timeframe, setTimeframe] = useState<LeaderboardTimeframe>(LeaderboardTimeframe.ALL_TIME)
   const [sortField, setSortField] = useState<'points' | 'level' | 'name'>('points')
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('desc')
@@ -159,6 +161,33 @@ export const LeadershipBoardPage: React.FC = () => {
   })
   const [showPeerConnect, setShowPeerConnect] = useState(false)
   const timeframeStart = useMemo(() => toDateFromTimeframe(timeframe), [timeframe])
+
+  const refetchChallenges = async () => {
+    if (!profile) return
+    const challengeQuery = query(
+      collection(db, 'challenges'),
+      where('participants', 'array-contains', profile.id),
+      orderBy('startDate', 'desc'),
+      limit(25),
+    )
+    const snapshot = await getDocs(challengeQuery)
+    const loadedChallenges: ChallengeRecord[] = snapshot.docs.map((doc) => {
+      const data = doc.data() as Record<string, unknown>
+      return {
+        id: doc.id,
+        opponentName: (data.opponentName as string) || 'Peer Challenger',
+        opponentAvatar: data.opponentAvatar as string | undefined,
+        opponentId: data.opponentId as string | undefined,
+        startDate: (data.startDate as string) || new Date().toISOString(),
+        endDate: (data.endDate as string) || new Date().toISOString(),
+        yourPoints: (data.yourPoints as number) || 0,
+        opponentPoints: (data.opponentPoints as number) || 0,
+        status: ((data.status as ChallengeRecord['status']) || 'active'),
+        result: data.result as ChallengeRecord['result'],
+      }
+    })
+    setChallenges(loadedChallenges)
+  }
 
   useEffect(() => {
     const profileQuery = query(collection(db, 'profiles'))
@@ -460,7 +489,7 @@ export const LeadershipBoardPage: React.FC = () => {
           <Text color="brand.subtleText">Switch between leaderboard and challenge views with real-time Firebase data.</Text>
         </Box>
         <HStack spacing={3}>
-          <Button variant="secondary" leftIcon={<Icon as={Info} />} onClick={onOpen}>
+          <Button variant="secondary" leftIcon={<Icon as={Info} />} onClick={challengeModal.onOpen}>
             Start a Challenge
           </Button>
           <Button onClick={() => setShowPeerConnect((prev) => !prev)} variant="primary">
@@ -887,7 +916,7 @@ export const LeadershipBoardPage: React.FC = () => {
                         <Text>Join or launch a challenge today</Text>
                       </HStack>
                     </Box>
-                    <Button colorScheme="blackAlpha" onClick={onOpen} rightIcon={<Icon as={Target} />}>Start a Challenge</Button>
+                    <Button colorScheme="blackAlpha" onClick={challengeModal.onOpen} rightIcon={<Icon as={Target} />}>Start a Challenge</Button>
                   </Flex>
                 </CardBody>
               </Card>
@@ -931,7 +960,7 @@ export const LeadershipBoardPage: React.FC = () => {
                 <CardHeader>
                   <Flex justify="space-between" align="center">
                     <Text fontWeight="bold">Your Challenges</Text>
-                    <Button size="sm" onClick={onOpen}>New Challenge</Button>
+                    <Button size="sm" onClick={challengeModal.onOpen}>New Challenge</Button>
                   </Flex>
                 </CardHeader>
                 <CardBody>
@@ -992,45 +1021,11 @@ export const LeadershipBoardPage: React.FC = () => {
         </TabPanels>
       </Tabs>
 
-      <Modal isOpen={isOpen} onClose={onClose} size="lg">
-        <ModalOverlay />
-        <ModalContent>
-          <ModalHeader>Start a Challenge</ModalHeader>
-          <ModalCloseButton />
-          <ModalBody>
-            <Stack spacing={3}>
-              <Box>
-                <Text fontSize="sm" mb={1}>Opponent</Text>
-                <Select>
-                  {leaderboardRows.map((row) => (
-                    <option key={row.user.id} value={row.user.id}>{row.user.fullName}</option>
-                  ))}
-                </Select>
-              </Box>
-              <Box>
-                <Text fontSize="sm" mb={1}>Challenge Type</Text>
-                <Select>
-                  <option>7-day sprint</option>
-                  <option>30-day marathon</option>
-                  <option>Custom goals</option>
-                </Select>
-              </Box>
-              <Box>
-                <Text fontSize="sm" mb={1}>Point Goal</Text>
-                <Select>
-                  <option>500 pts</option>
-                  <option>1,000 pts</option>
-                  <option>2,500 pts</option>
-                </Select>
-              </Box>
-            </Stack>
-          </ModalBody>
-          <ModalFooter>
-            <Button mr={3} variant="secondary" onClick={onClose}>Cancel</Button>
-            <Button onClick={() => toast({ title: 'Challenge created', status: 'success', duration: 2000 })}>Create</Button>
-          </ModalFooter>
-        </ModalContent>
-      </Modal>
+      <StartChallengeModal
+        isOpen={challengeModal.isOpen}
+        onClose={challengeModal.onClose}
+        onChallengeCreated={refetchChallenges}
+      />
     </Stack>
   )
 }
