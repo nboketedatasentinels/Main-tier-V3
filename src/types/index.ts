@@ -24,6 +24,9 @@ export interface UserProfile {
   linkedinUrl?: string
   
   // Journey & Progress
+  journeyType: "4W" | "6W" | "3M" | "6M" | "9M" | "12M";
+  programDurationWeeks?: number;
+  journeyStartDate?: string;
   currentJourneyId?: string
   currentWeek?: number
   totalPoints: number
@@ -94,22 +97,12 @@ export interface PrivacySettings {
   shareImpactPublicly: boolean
 }
 
-// Journey Types
-export enum JourneyType {
-  FREE = 'free',
-  INTRO_4_WEEK = 'intro_4_week',
-  SPRINT_6_WEEK = 'sprint_6_week',
-  THREE_MONTH = 'three_month',
-  SIX_MONTH = 'six_month',
-  NINE_MONTH = 'nine_month',
-  TWELVE_MONTH = 'twelve_month',
-  CUSTOM = 'custom',
-}
+import { JourneyType } from "@/config/pointsConfig";
 
 export interface Journey {
   id: string
   name: string
-  type: JourneyType
+  type: JourneyType;
   description: string
   durationWeeks: number
   totalPointsTarget: number
@@ -178,6 +171,16 @@ export interface Activity {
 }
 
 // Weekly Activity Tracking
+export interface WeeklyProgress {
+  uid: string;
+  weekNumber: number;
+  monthNumber: number;
+  weeklyTarget: number;
+  pointsEarned: number;
+  status: "on_track" | "warning" | "alert" | "recovery";
+  updatedAt: any;
+}
+
 export enum ActivityStatus {
   NOT_STARTED = 'not_started',
   PENDING = 'pending',
