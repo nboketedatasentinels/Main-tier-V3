@@ -25,14 +25,14 @@ export async function awardChecklistPoints(params: {
       weekNumber,
       monthNumber,
       activityId: activity.id,
-      points: activity.pointsEach,
+      points: activity.points,
       createdAt: serverTimestamp(),
       source: "weekly_checklist",
     });
 
     const progressSnap = await tx.get(progressRef);
     const currentProgress = progressSnap.exists() ? progressSnap.data() : { pointsEarned: 0, status: 'alert' };
-    const newPoints = currentProgress.pointsEarned + activity.pointsEach;
+    const newPoints = currentProgress.pointsEarned + activity.points;
 
     const ratio = weeklyTarget > 0 ? newPoints / weeklyTarget : 0;
     let status: "on_track" | "warning" | "alert" | "recovery" = "alert";
@@ -78,7 +78,7 @@ export async function revokeChecklistPoints(params: {
 
     const progressSnap = await tx.get(progressRef);
     const currentPoints = progressSnap.exists() ? (progressSnap.data().pointsEarned ?? 0) : 0;
-    const newPoints = Math.max(0, currentPoints - activity.pointsEach);
+    const newPoints = Math.max(0, currentPoints - activity.points);
 
     const ratio = weeklyTarget > 0 ? newPoints / weeklyTarget : 0;
     let status: "on_track" | "warning" | "alert" | "recovery" = "alert";
