@@ -107,7 +107,7 @@ export const AppRoutes = () => {
         <Route
           path="/mentor"
           element={
-            <ProtectedRoute requireMentor>
+            <ProtectedRoute requiredRoles={[UserRole.MENTOR]}>
               <MainLayout />
             </ProtectedRoute>
           }
@@ -120,7 +120,7 @@ export const AppRoutes = () => {
         <Route
           path="/ambassador"
           element={
-            <ProtectedRoute requireAmbassador>
+            <ProtectedRoute requiredRoles={[UserRole.AMBASSADOR]}>
               <MainLayout />
             </ProtectedRoute>
           }
@@ -133,7 +133,7 @@ export const AppRoutes = () => {
         <Route
           path="/admin"
           element={
-            <ProtectedRoute requireAdmin>
+            <ProtectedRoute requiredRoles={[UserRole.COMPANY_ADMIN, UserRole.SUPER_ADMIN]}>
               <MainLayout />
             </ProtectedRoute>
           }
@@ -146,7 +146,7 @@ export const AppRoutes = () => {
         <Route
           path="/super-admin"
           element={
-            <ProtectedRoute requireSuperAdmin>
+            <ProtectedRoute requiredRoles={[UserRole.SUPER_ADMIN]}>
               <MainLayout />
             </ProtectedRoute>
           }
@@ -203,7 +203,7 @@ export const AppRoutes = () => {
                 title="Upgrade to connect"
               >
                 <PeerConnectPage />
-              </FreeTierGuard>
+              </Free-tier-guard>
             }
           />
           <Route
