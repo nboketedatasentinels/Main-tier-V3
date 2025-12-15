@@ -35,6 +35,12 @@ export default function RoleRedirect() {
       return;
     }
 
+    // Admin
+    if (userData.role === UserRole.ADMIN) {
+      navigate("/admin/dashboard", { replace: true });
+      return;
+    }
+
     // ✅ Partner/Company Admin
     if (userData.role === UserRole.COMPANY_ADMIN) {
       navigate("/admin/dashboard", { replace: true });

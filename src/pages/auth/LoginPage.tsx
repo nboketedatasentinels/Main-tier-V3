@@ -15,6 +15,7 @@ import {
 import { useAuth } from '@/hooks/useAuth'
 import { UserProfile } from '@/types'
 import { PasswordChangeModal } from '@/components/PasswordChangeModal'
+import { getLandingPathForRole } from '@/utils/roleRouting'
 
 export const LoginPage: React.FC = () => {
   const [email, setEmail] = useState('')
@@ -31,11 +32,11 @@ export const LoginPage: React.FC = () => {
   useEffect(() => {
     if (!profileLoading && user && profile) {
       // If user is already logged in and profile is loaded, redirect them.
-      const redirectUrl = searchParams.get('redirectUrl')
-      const landingPath = (profile.dashboardPreferences?.defaultRoute || profile.defaultDashboardRoute)
-      navigate(landingPath || '/app/dashboard', { replace: true });
+      const redirectUrl = searchParams.get('redirectUrl');
+      const landingPath = getLandingPathForRole(profile.role, profile, redirectUrl);
+      navigate(landingPath, { replace: true });
     }
-  }, [user, profile, profileLoading, navigate, searchParams])
+  }, [user, profile, profileLoading, navigate, searchParams]);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault()

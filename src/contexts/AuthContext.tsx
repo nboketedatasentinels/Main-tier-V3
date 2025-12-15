@@ -42,6 +42,12 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
       if (docSnap.exists()) {
         const profileData = docSnap.data() as UserProfile
+        
+        // Backwards compatibility: remap 'partner' to 'company_admin'
+        if ((profileData.role as string) === 'partner') {
+          profileData.role = UserRole.COMPANY_ADMIN
+        }
+
         if (!profileData.role || !Object.values(UserRole).includes(profileData.role)) {
           console.warn(
             `User profile for UID ${firebaseUser.uid} has a missing or invalid role:`,
