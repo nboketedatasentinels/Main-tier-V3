@@ -1,5 +1,18 @@
 import { extendTheme, type ThemeConfig } from '@chakra-ui/react'
 
+const accentGoldScale = {
+  50: '#fefce8',
+  100: '#fef9c3',
+  200: '#fef08a',
+  300: '#fde047',
+  400: '#facc15',
+  500: '#EAB130',
+  600: '#ca8a04',
+  700: '#a16207',
+  800: '#854d0e',
+  900: '#713f12',
+}
+
 const colors = {
   // Primary Brand Color: Indigo/Purple
   primary: {
@@ -14,31 +27,9 @@ const colors = {
     800: '#2d0650',
     900: '#1e0340',
   },
-  // Accent/Secondary Color: Gold
-  accent: {
-    50: '#fefce8',
-    100: '#fef9c3',
-    200: '#fef08a',
-    300: '#fde047',
-    400: '#facc15',
-    500: '#EAB130',
-    600: '#ca8a04',
-    700: '#a16207',
-    800: '#854d0e',
-    900: '#713f12',
-  },
-  secondary: {
-    50: '#fefce8',
-    100: '#fef9c3',
-    200: '#fef08a',
-    300: '#fde047',
-    400: '#facc15',
-    500: '#EAB130',
-    600: '#ca8a04',
-    700: '#a16207',
-    800: '#854d0e',
-    900: '#713f12',
-  },
+  // Accent/Secondary Color: Gold (secondary is an alias for accent)
+  accent: accentGoldScale,
+  secondary: accentGoldScale,
   // Neutral Gray Scale
   neutral: {
     50: '#f8fafc',

@@ -1,4 +1,3 @@
-import React from 'react'
 import {
   Box,
   Button,
@@ -7,8 +6,6 @@ import {
   CardHeader,
   Container,
   Divider,
-  Grid,
-  GridItem,
   Heading,
   HStack,
   Progress,
