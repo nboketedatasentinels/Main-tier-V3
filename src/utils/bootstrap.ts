@@ -5,7 +5,7 @@ export const isBootstrapAdmin = (email: string | null): boolean => {
 
   const adminEmails = (import.meta.env.VITE_BOOTSTRAP_ADMIN_EMAILS || '')
     .split(',')
-    .map((e) => e.trim().toLowerCase())
+    .map((e: string) => e.trim().toLowerCase())
     .filter(Boolean)
 
   if (adminEmails.length === 0) {

@@ -1,6 +1,6 @@
 import { createContext } from 'react'
 import { User } from 'firebase/auth'
-import { UserProfile, UserRole } from '@/types'
+import { UserProfile, UserRole, DashboardPreferences } from '@/types'
 
 export interface AuthContextType {
   user: User | null
@@ -19,6 +19,26 @@ export interface AuthContextType {
   updateProfile: (updates: Partial<UserProfile>) => Promise<{ error: Error | null }>
   hasRole: (role: UserRole) => boolean
   hasAnyRole: (roles: UserRole[]) => boolean
+  
+  // Role Flags
+  isAdmin: boolean
+  isSuperAdmin: boolean
+  isMentor: boolean
+  isAmbassador: boolean
+  isPaid: boolean
+  isCorporateMember: boolean
+  
+  // Organization Access
+  assignedOrganizations: string[]
+  hasFullOrganizationAccess: boolean
+  canAccessOrganization: (orgCode: string) => boolean
+  
+  // Dashboard Preferences
+  updateDashboardPreferences: (preferences: DashboardPreferences) => Promise<{ error: Error | null }>
+  
+  // Custom Claims
+  claimsRole: string | null
+  refreshAdminSession: () => Promise<void>
 }
 
 export const AuthContext = createContext<AuthContextType | undefined>(undefined)

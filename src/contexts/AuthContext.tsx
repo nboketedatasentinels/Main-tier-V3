@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react'
+import React, { useEffect, useState, useMemo } from 'react'
 import { User } from 'firebase/auth'
 import {
   signInWithEmailAndPassword,
@@ -14,8 +14,9 @@ import {
   setDoc,
   updateDoc,
   serverTimestamp,
+  onSnapshot,
 } from 'firebase/firestore'
-import { UserProfile, UserRole } from '@/types'
+import { UserProfile, UserRole, DashboardPreferences, AccountStatus, TransformationTier } from '@/types'
 import { auth, db } from '@/services/firebase'
 import { isBootstrapAdmin } from '@/utils/bootstrap'
 import { AuthContext, AuthContextType } from './AuthContextType'
@@ -29,6 +30,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const [profile, setProfile] = useState<UserProfile | null>(null)
   const [loading, setLoading] = useState(true)
   const [profileLoading, setProfileLoading] = useState(true)
+  const [claimsRole, setClaimsRole] = useState<string | null>(null)
 
   // Fetch user profile from Firestore or create one if it doesn't exist
   const fetchOrCreateProfile = async (
@@ -72,6 +74,18 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         referralCode: null,
         referredBy: null,
         isOnboarded: true,
+        accountStatus: AccountStatus.ACTIVE,
+        transformationTier: TransformationTier.INDIVIDUAL_FREE,
+        assignedOrganizations: [],
+        onboardingComplete: true,
+        onboardingSkipped: false,
+        mustChangePassword: false,
+        hasSeenDashboardTour: false,
+        dashboardPreferences: {
+          defaultRoute: '/app/weekly-glance',
+          membershipStatus: 'free',
+          lockedToFreeExperience: role === UserRole.FREE_USER,
+        },
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
       }
@@ -108,7 +122,59 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     }
   }
 
-  // Initialize auth state
+  // Extract custom claims from user token
+  const extractCustomClaims = async (user: User) => {
+    try {
+      const idTokenResult = await user.getIdTokenResult()
+      const role = idTokenResult.claims.role as string | undefined
+      setClaimsRole(role || null)
+      return role
+    } catch (error) {
+      console.error('Error extracting custom claims:', error)
+      return null
+    }
+  }
+
+  // Refresh admin session to sync custom claims
+  const refreshAdminSession = async () => {
+    if (!user) return
+    try {
+      await user.getIdToken(true) // Force token refresh
+      const role = await extractCustomClaims(user)
+      console.log('Admin session refreshed, claims role:', role)
+    } catch (error) {
+      console.error('Error refreshing admin session:', error)
+    }
+  }
+
+  // Monitor for role mismatch and auto-sync
+  useEffect(() => {
+    if (!user || !profile) return
+
+    const checkRoleMismatch = async () => {
+      const tokenRole = await extractCustomClaims(user)
+      if (tokenRole && tokenRole !== profile.role) {
+        console.warn(
+          `Role mismatch detected! Claims: ${tokenRole}, Profile: ${profile.role}`
+        )
+        // Auto-sync by refreshing token
+        await refreshAdminSession()
+      }
+    }
+
+    checkRoleMismatch()
+
+    // Auto-refresh for super admins every 5 minutes
+    if (profile.role === UserRole.SUPER_ADMIN) {
+      const interval = setInterval(() => {
+        refreshAdminSession()
+      }, 5 * 60 * 1000) // 5 minutes
+
+      return () => clearInterval(interval)
+    }
+  }, [user, profile])
+
+  // Initialize auth state with real-time profile listener
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
       setLoading(true)
@@ -118,15 +184,34 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         setProfile(null)
         setProfileLoading(false)
         setLoading(false)
+        setClaimsRole(null)
         return
       }
 
       setProfileLoading(true)
 
+      // Extract custom claims
+      await extractCustomClaims(user)
+
       const userProfile = await fetchOrCreateProfile(user)
       setProfile(userProfile)
       setProfileLoading(false)
       setLoading(false)
+
+      // Set up real-time listener for profile updates
+      if (userProfile) {
+        const profileRef = doc(db, 'profiles', user.uid)
+        const unsubscribeProfile = onSnapshot(profileRef, (doc) => {
+          if (doc.exists()) {
+            const updatedProfile = doc.data() as UserProfile
+            setProfile(updatedProfile)
+          }
+        }, (error) => {
+          console.error('Error listening to profile updates:', error)
+        })
+
+        return unsubscribeProfile
+      }
     })
 
     return () => unsubscribe()
@@ -162,6 +247,18 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         referralCode: null,
         referredBy: null,
         isOnboarded: true,
+        accountStatus: AccountStatus.ACTIVE,
+        transformationTier: TransformationTier.INDIVIDUAL_FREE,
+        assignedOrganizations: [],
+        onboardingComplete: false,
+        onboardingSkipped: false,
+        mustChangePassword: false,
+        hasSeenDashboardTour: false,
+        dashboardPreferences: {
+          defaultRoute: '/app/weekly-glance',
+          membershipStatus: 'free',
+          lockedToFreeExperience: true,
+        },
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
       }
@@ -180,6 +277,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       await firebaseSignOut(auth)
       setUser(null)
       setProfile(null)
+      setClaimsRole(null)
     } catch (error) {
       console.error('Error signing out:', error)
     }
@@ -233,6 +331,35 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     }
   }
 
+  // Update dashboard preferences
+  const updateDashboardPreferences = async (preferences: DashboardPreferences) => {
+    if (!user) return { error: new Error('No user logged in') }
+
+    try {
+      const profileRef = doc(db, 'profiles', user.uid)
+      const updatedPreferences = {
+        ...preferences,
+        lastUpdatedAt: new Date().toISOString(),
+      }
+      
+      await updateDoc(profileRef, {
+        dashboardPreferences: updatedPreferences,
+        updatedAt: serverTimestamp(),
+      })
+
+      if (profile) {
+        setProfile({ 
+          ...profile, 
+          dashboardPreferences: updatedPreferences 
+        })
+      }
+
+      return { error: null }
+    } catch (error) {
+      return { error: error as Error }
+    }
+  }
+
   // Role checking utilities
   const hasRole = (role: UserRole): boolean => {
     return profile?.role === role
@@ -240,6 +367,57 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
   const hasAnyRole = (roles: UserRole[]): boolean => {
     return profile ? roles.includes(profile.role) : false
+  }
+
+  // Computed role flags
+  const isAdmin = useMemo(() => {
+    if (!profile?.role) return false
+    return [UserRole.ADMIN, UserRole.COMPANY_ADMIN, UserRole.SUPER_ADMIN].includes(profile.role)
+  }, [profile?.role])
+
+  const isSuperAdmin = useMemo(() => {
+    return profile?.role === UserRole.SUPER_ADMIN
+  }, [profile?.role])
+
+  const isMentor = useMemo(() => {
+    return profile?.role === UserRole.MENTOR
+  }, [profile?.role])
+
+  const isAmbassador = useMemo(() => {
+    return profile?.role === UserRole.AMBASSADOR
+  }, [profile?.role])
+
+  const isPaid = useMemo(() => {
+    if (!profile?.role) return false
+    return [
+      UserRole.PAID_MEMBER,
+      UserRole.MENTOR,
+      UserRole.AMBASSADOR,
+      UserRole.ADMIN,
+      UserRole.COMPANY_ADMIN,
+      UserRole.SUPER_ADMIN,
+    ].includes(profile.role)
+  }, [profile?.role])
+
+  const isCorporateMember = useMemo(() => {
+    if (!profile?.transformationTier) return false
+    const tier = profile.transformationTier.toString().toLowerCase()
+    return tier.includes('corporate')
+  }, [profile?.transformationTier])
+
+  // Organization access control
+  const assignedOrganizations = useMemo(() => {
+    return profile?.assignedOrganizations || []
+  }, [profile?.assignedOrganizations])
+
+  const hasFullOrganizationAccess = useMemo(() => {
+    return profile?.role === UserRole.SUPER_ADMIN
+  }, [profile?.role])
+
+  const canAccessOrganization = (orgCode: string): boolean => {
+    if (!profile) return false
+    if (profile.role === UserRole.SUPER_ADMIN) return true
+    return assignedOrganizations.includes(orgCode)
   }
 
   const value: AuthContextType = {
@@ -255,6 +433,18 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     updateProfile,
     hasRole,
     hasAnyRole,
+    isAdmin,
+    isSuperAdmin,
+    isMentor,
+    isAmbassador,
+    isPaid,
+    isCorporateMember,
+    assignedOrganizations,
+    hasFullOrganizationAccess,
+    canAccessOrganization,
+    updateDashboardPreferences,
+    claimsRole,
+    refreshAdminSession,
   }
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>
