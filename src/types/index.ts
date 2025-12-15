@@ -9,6 +9,31 @@ export enum UserRole {
   SUPER_ADMIN = 'super_admin',
 }
 
+// Transformation Tier Types
+export enum TransformationTier {
+  INDIVIDUAL_FREE = 'individual_free',
+  INDIVIDUAL_PAID = 'individual_paid',
+  CORPORATE_MEMBER = 'corporate_member',
+  CORPORATE_LEADER = 'corporate_leader',
+}
+
+// Account Status Types
+export enum AccountStatus {
+  ACTIVE = 'active',
+  INACTIVE = 'inactive',
+  PENDING = 'pending',
+  SUSPENDED = 'suspended',
+}
+
+// Dashboard Preferences
+export interface DashboardPreferences {
+  defaultRoute?: string
+  membershipStatus?: string
+  lockedToFreeExperience?: boolean
+  source?: string
+  lastUpdatedAt?: string
+}
+
 // User Profile
 export interface UserProfile {
   id: string
@@ -49,10 +74,24 @@ export interface UserProfile {
   mentorId?: string
   ambassadorId?: string
   isActiveAmbassador?: boolean
-  accountStatus?: string
+  
+  // Account Management
+  accountStatus?: AccountStatus | string
   lastInteraction?: string
   registrationDate?: string
   lastActive?: string
+  mustChangePassword?: boolean
+  
+  // Onboarding
+  onboardingComplete?: boolean
+  onboardingSkipped?: boolean
+  hasSeenDashboardTour?: boolean
+  
+  // Role-Based Features
+  transformationTier?: TransformationTier | string
+  assignedOrganizations?: string[]
+  dashboardPreferences?: DashboardPreferences
+  defaultDashboardRoute?: string
   
   // Settings
   /**
