@@ -11,12 +11,15 @@ import { MainLayout } from '@/layouts/MainLayout'
 import { AuthLayout } from '@/layouts/AuthLayout'
 import { HomePage } from '@/pages/home/HomePage'
 
-// Page imports (we'll create these)
+// Page imports
 import { LoginPage } from '@/pages/auth/LoginPage'
 import { SignUpPage } from '@/pages/auth/SignUpPage'
 import { ResetPasswordPage } from '@/pages/auth/ResetPasswordPage'
 import { ProfileMissingPage } from '@/pages/auth/ProfileMissingPage'
 import { UpgradePage } from '@/pages/upgrade/UpgradePage'
+
+// Onboarding imports
+import { WelcomePage } from '@/pages/onboarding/WelcomePage'
 
 // Dashboard imports
 import { FreeDashboard } from '@/pages/dashboards/FreeDashboard'
@@ -46,6 +49,7 @@ import { ShamelessCirclePage } from '@/pages/community/ShamelessCirclePage'
 // Error pages
 import { NotFoundPage } from '@/pages/errors/NotFoundPage'
 import { UnauthorizedPage } from '@/pages/errors/UnauthorizedPage'
+import { SuspendedPage } from '@/pages/errors/SuspendedPage'
 
 // Dashboard router component
 const DashboardRouter = () => {
@@ -53,8 +57,8 @@ const DashboardRouter = () => {
 
   if (loading || profileLoading) return null
 
-  // Convert full landing path -> dashboard-relative when it’s within /app/dashboard/*
-  const landing = getLandingPathForRole(profile?.role)
+  // Convert full landing path -> dashboard-relative when it's within /app/dashboard/*
+  const landing = getLandingPathForRole(profile?.role, profile)
   const relative =
     landing.startsWith('/app/dashboard/')
       ? landing.replace('/app/dashboard/', '')
@@ -81,25 +85,55 @@ export const AppRoutes = () => {
         {/* Public routes */}
         <Route path="/" element={<HomePage />} />
         <Route path="/upgrade" element={<UpgradePage />} />
-      <Route path="/login" element={<AuthLayout><LoginPage /></AuthLayout>} />
-      <Route path="/signup" element={<AuthLayout><SignUpPage /></AuthLayout>} />
-      <Route path="/reset-password" element={<AuthLayout><ResetPasswordPage /></AuthLayout>} />
+        <Route path="/login" element={<AuthLayout><LoginPage /></AuthLayout>} />
+        <Route path="/signup" element={<AuthLayout><SignUpPage /></AuthLayout>} />
+        <Route path="/reset-password" element={<AuthLayout><ResetPasswordPage /></AuthLayout>} />
         <Route path="/auth/profile-missing" element={<AuthLayout><ProfileMissingPage /></AuthLayout>} />
+        
+        {/* Account status pages */}
+        <Route path="/suspended" element={<SuspendedPage />} />
 
+        {/* Onboarding routes */}
         <Route
-          path="/mentor/dashboard"
+          path="/welcome"
           element={
-            <ProtectedRoute requiredRoles={[UserRole.MENTOR]}>
-              <MentorDashboard />
+            <ProtectedRoute>
+              <WelcomePage />
             </ProtectedRoute>
           }
         />
+
+        {/* Mentor routes */}
+        <Route
+          path="/mentor"
+          element={
+            <ProtectedRoute requireMentor>
+              <MainLayout />
+            </ProtectedRoute>
+          }
+        >
+          <Route path="dashboard" element={<MentorDashboard />} />
+          <Route index element={<Navigate to="/mentor/dashboard" replace />} />
+        </Route>
+
+        {/* Ambassador routes */}
+        <Route
+          path="/ambassador"
+          element={
+            <ProtectedRoute requireAmbassador>
+              <MainLayout />
+            </ProtectedRoute>
+          }
+        >
+          <Route path="dashboard" element={<AmbassadorDashboard />} />
+          <Route index element={<Navigate to="/ambassador/dashboard" replace />} />
+        </Route>
 
         {/* Admin routes */}
         <Route
           path="/admin"
           element={
-            <ProtectedRoute requiredRoles={[UserRole.ADMIN, UserRole.COMPANY_ADMIN]}>
+            <ProtectedRoute requireAdmin>
               <MainLayout />
             </ProtectedRoute>
           }
@@ -112,7 +146,7 @@ export const AppRoutes = () => {
         <Route
           path="/super-admin"
           element={
-            <ProtectedRoute requiredRoles={[UserRole.SUPER_ADMIN]}>
+            <ProtectedRoute requireSuperAdmin>
               <MainLayout />
             </ProtectedRoute>
           }
@@ -139,8 +173,24 @@ export const AppRoutes = () => {
           {/* Feature routes */}
           <Route path="journeys" element={<JourneysPage />} />
           <Route path="weekly-glance" element={<WeeklyGlancePage />} />
-          <Route path="impact" element={<ImpactLogPage />} />
-          <Route path="leaderboard" element={<LeaderboardPage />} />
+          
+          {/* Learner-specific routes with mentor restriction */}
+          <Route 
+            path="impact" 
+            element={
+              <ProtectedRoute restrictMentor>
+                <ImpactLogPage />
+              </ProtectedRoute>
+            } 
+          />
+          <Route 
+            path="leaderboard" 
+            element={
+              <ProtectedRoute restrictMentor>
+                <LeaderboardPage />
+              </ProtectedRoute>
+            } 
+          />
           <Route path="leadership-board" element={<LeadershipBoardPage />} />
           <Route path="weekly-checklist" element={<WeeklyUpdatesPage />} />
           <Route path="courses" element={<MyCoursesPage />} />
