@@ -13,11 +13,6 @@ describe('getLandingPathForRole', () => {
     expect(path).toBe('/super-admin/dashboard');
   });
 
-  it('should return the admin dashboard for ADMIN role', () => {
-    const path = getLandingPathForRole(UserRole.ADMIN);
-    expect(path).toBe('/admin/dashboard');
-  });
-
   it('should return the admin dashboard for COMPANY_ADMIN role', () => {
     const path = getLandingPathForRole(UserRole.COMPANY_ADMIN);
     expect(path).toBe('/admin/dashboard');

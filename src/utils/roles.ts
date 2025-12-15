@@ -29,10 +29,9 @@ export const normalizeUserRole = (
     case 'companyadmin':
     case 'companyadministrator':
     case 'company-administrator':
-      return UserRole.COMPANY_ADMIN
     case 'admin':
     case 'administrator':
-      return UserRole.ADMIN
+      return UserRole.COMPANY_ADMIN
     // super-admin variations
     case 'super_admin':
     case 'superadmin':

@@ -64,7 +64,6 @@ export const getLandingPathForRole = (
   switch (role) {
     case UserRole.SUPER_ADMIN:
       return '/super-admin/dashboard';
-    case UserRole.ADMIN:
     case UserRole.COMPANY_ADMIN:
       return '/admin/dashboard';
     case UserRole.MENTOR:

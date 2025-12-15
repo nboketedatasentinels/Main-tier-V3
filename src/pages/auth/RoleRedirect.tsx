@@ -7,23 +7,52 @@ export default function RoleRedirect() {
   const { loading, profileLoading, user, profile } = useAuth()
 
   useEffect(() => {
-    // In case of any async race conditions, though useAuth should handle this
-  }, [loading, profileLoading, user, profile])
+    if (loading || profileLoading) return;
 
-  if (loading || profileLoading) {
-    return null // Or a loading spinner
-  }
+    if (!user) {
+      navigate("/login", { replace: true });
+      return;
+    }
 
-  if (!user) {
-    return <Navigate to="/login" replace />
-  }
+    // if profile missing
+    if (!userData) {
+      navigate("/auth/profile-missing", { replace: true });
+      return;
+    }
 
-  if (!profile) {
-    return <Navigate to="/auth/profile-missing" replace />
-  }
+    // account status gate (optional but recommended)
+    if (userData.accountStatus && userData.accountStatus !== "active") {
+      navigate("/login", { replace: true });
+      return;
+    }
 
-  // Centralized routing logic
-  const landingPath = getLandingPathForRole(profile.role, profile)
-  
-  return <Navigate to={landingPath} replace />
+    // ✅ Super Admin first
+    if (userData.role === UserRole.SUPER_ADMIN) {
+      navigate("/super-admin/dashboard", { replace: true });
+      return;
+    }
+
+    // ✅ Partner/Company Admin
+    if (userData.role === UserRole.COMPANY_ADMIN) {
+      navigate("/admin/dashboard", { replace: true });
+      return;
+    }
+
+    // Mentor
+    if (userData.role === UserRole.MENTOR) {
+      navigate("/mentor/dashboard", { replace: true });
+      return;
+    }
+
+    // Ambassador
+    if (userData.role === UserRole.AMBASSADOR) {
+      navigate("/app/dashboard/ambassador", { replace: true });
+      return;
+    }
+
+    // default user
+    navigate("/app/dashboard/free", { replace: true });
+  }, [loading, profileLoading, user, userData, navigate, location.key]);
+
+  return null;
 }
