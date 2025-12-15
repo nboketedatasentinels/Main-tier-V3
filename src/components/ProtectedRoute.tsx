@@ -51,6 +51,9 @@ export const ProtectedRoute: React.FC<Props> = ({
   if (!profile) {
     return <Navigate to="/auth/profile-missing" replace />
   }
+  
+  // ✅ Add this near the top (after profile exists)
+  const userRole = normalizeRole(profile?.role)
 
   // Check account status
   const accountStatus = profile.accountStatus?.toString().toLowerCase()
@@ -67,15 +70,23 @@ export const ProtectedRoute: React.FC<Props> = ({
     return <Navigate to="/mentor/dashboard" replace />
   }
 
-  // Check for super admin requirement
-  if (requireSuperAdmin && !isSuperAdmin) {
+  // ✅ Super admin requirement (accept either computed flag OR role)
+  if (requireSuperAdmin && !(isSuperAdmin || userRole === 'super_admin')) {
     return <Navigate to="/unauthorized" replace />
   }
 
-  // Check for admin requirement (any admin type)
-  if (requireAdmin && !isAdmin) {
+  // ✅ Admin requirement (accept either computed flag OR role)
+  if (
+    requireAdmin &&
+    !(
+      isAdmin ||
+      userRole === 'partner' ||
+      userRole === 'super_admin' // super admins count as admin
+    )
+  ) {
     return <Navigate to="/unauthorized" replace />
   }
+
 
   // Check for mentor requirement
   if (requireMentor && !isMentor) {
