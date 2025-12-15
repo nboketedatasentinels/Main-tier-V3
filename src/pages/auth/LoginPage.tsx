@@ -1,4 +1,4 @@
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import { useNavigate, Link as RouterLink, useSearchParams } from 'react-router-dom'
 import {
   VStack,
@@ -13,8 +13,6 @@ import {
   HStack,
 } from '@chakra-ui/react'
 import { useAuth } from '@/hooks/useAuth'
-import { doc, getDoc } from 'firebase/firestore'
-import { db } from '@/services/firebase'
 import { UserProfile, AccountStatus } from '@/types'
 import { getLandingPathForRole } from '@/utils/roleRouting'
 import { PasswordChangeModal } from '@/components/PasswordChangeModal'
@@ -27,26 +25,17 @@ export const LoginPage: React.FC = () => {
   const [showPasswordChangeModal, setShowPasswordChangeModal] = useState(false)
   const [userId, setUserId] = useState<string | null>(null)
   const [profileData, setProfileData] = useState<UserProfile | null>(null)
-  const { signIn, signInWithMagicLink } = useAuth()
+  const { signIn, signInWithMagicLink, profile, profileLoading } = useAuth()
   const navigate = useNavigate()
   const toast = useToast()
   const [searchParams] = useSearchParams()
+  const [isLoginSuccess, setIsLoginSuccess] = useState(false)
 
-  const handlePostLoginRedirect = async (uid: string) => {
-    try {
-      // Fetch user profile from Firestore
-      const profileRef = doc(db, 'profiles', uid)
-      const profileSnap = await getDoc(profileRef)
-
-      if (!profileSnap.exists()) {
-        navigate('/auth/profile-missing', { replace: true })
-        return
-      }
-
-      const userData = profileSnap.data() as UserProfile
-
+  useEffect(() => {
+    // This effect handles the redirect after a successful login, once the user's profile is loaded.
+    if (isLoginSuccess && !profileLoading && profile) {
       // Check account status first
-      const accountStatus = userData.accountStatus?.toString().toLowerCase()
+      const accountStatus = profile.accountStatus?.toString().toLowerCase()
       if (accountStatus === AccountStatus.INACTIVE || accountStatus === 'inactive') {
         toast({
           title: 'Account Inactive',
@@ -55,6 +44,7 @@ export const LoginPage: React.FC = () => {
           duration: 5000,
           isClosable: true,
         })
+        setIsLoginSuccess(false) // Reset login success state
         navigate('/login', { replace: true })
         return
       }
@@ -67,15 +57,17 @@ export const LoginPage: React.FC = () => {
           duration: 5000,
           isClosable: true,
         })
+        setIsLoginSuccess(false) // Reset login success state
         navigate('/suspended', { replace: true })
         return
       }
 
       // Check if password change is required
-      if (userData.mustChangePassword) {
-        setUserId(uid)
-        setProfileData(userData)
+      if (profile.mustChangePassword) {
+        setUserId(profile.id)
+        setProfileData(profile)
         setShowPasswordChangeModal(true)
+        setIsLoginSuccess(false) // Reset login success state
         return
       }
 
@@ -83,27 +75,20 @@ export const LoginPage: React.FC = () => {
       const redirectUrl = searchParams.get('redirectUrl')
       
       // Check for onboarding completion
-      const needsOnboarding = !userData.onboardingComplete && !userData.onboardingSkipped
+      const needsOnboarding = !profile.onboardingComplete && !profile.onboardingSkipped
       if (needsOnboarding && !redirectUrl) {
         navigate('/welcome', { replace: true })
+        setIsLoginSuccess(false) // Reset login success state
         return
       }
 
       // Determine landing path based on role and profile
-      const landingPath = getLandingPathForRole(userData.role, userData, redirectUrl || undefined)
+      const landingPath = getLandingPathForRole(profile.role, profile, redirectUrl || undefined)
       
       navigate(landingPath, { replace: true })
-    } catch (error) {
-      console.error('Error during post-login redirect:', error)
-      toast({
-        title: 'Error',
-        description: 'An error occurred. Please try again.',
-        status: 'error',
-        duration: 5000,
-        isClosable: true,
-      })
+      setIsLoginSuccess(false) // Reset login success state after navigation
     }
-  }
+  }, [isLoginSuccess, profile, profileLoading, navigate, toast, searchParams])
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -120,6 +105,7 @@ export const LoginPage: React.FC = () => {
           duration: 5000,
           isClosable: true,
         })
+        setLoading(false)
         return
       }
 
@@ -128,14 +114,15 @@ export const LoginPage: React.FC = () => {
         status: 'success',
         duration: 3000,
       })
-
-      // Get the current user ID and handle post-login redirect
-      const user = (await import('@/services/firebase')).auth.currentUser
-      if (user) {
-        await handlePostLoginRedirect(user.uid)
-      }
+      
+      setIsLoginSuccess(true)
+      // The useEffect will handle the redirect once the profile is loaded.
     } finally {
-      setLoading(false)
+      // Set loading to false only after the redirect logic has a chance to trigger
+      // Or if there was an error.
+      if (!isLoginSuccess) {
+        setLoading(false)
+      }
     }
   }
 

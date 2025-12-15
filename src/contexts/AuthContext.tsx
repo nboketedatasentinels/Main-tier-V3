@@ -196,6 +196,9 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       const userProfile = await fetchOrCreateProfile(user)
       setProfile(userProfile)
       setProfileLoading(false)
+      if (userProfile && [UserRole.ADMIN, UserRole.SUPER_ADMIN, UserRole.COMPANY_ADMIN].includes(userProfile.role)) {
+        console.log(`AuthContext: Profile loading complete for admin user: ${userProfile.email}, role: ${userProfile.role}`)
+      }
       setLoading(false)
 
       // Set up real-time listener for profile updates
