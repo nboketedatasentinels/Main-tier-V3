@@ -80,7 +80,8 @@ export const getLandingPathForRole = (
     r === normalizeRole(UserRole.ADMIN) ||
     r === 'ADMIN' ||
     r === normalizeRole(UserRole.COMPANY_ADMIN) ||
-    r === 'COMPANY_ADMIN'
+    r === 'COMPANY_ADMIN' ||
+    r === 'PARTNER' // Treat legacy 'partner' role as admin
   ) {
     return '/admin/dashboard'
   }
