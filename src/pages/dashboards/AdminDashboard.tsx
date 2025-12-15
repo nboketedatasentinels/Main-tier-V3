@@ -1,24 +1,28 @@
 import React from 'react'
 import { Box, Text } from '@chakra-ui/react'
 import { useAuth } from '@/hooks/useAuth'
-import { UserRole } from '@/types'
 import { SuperAdminDashboard } from './SuperAdminDashboard'
 import { CompanyAdminDashboard } from './CompanyAdminDashboard'
 
 export const AdminDashboard: React.FC = () => {
-  const { profile } = useAuth()
+  const { isAdmin, isSuperAdmin } = useAuth()
 
-  if (profile?.role === UserRole.SUPER_ADMIN) {
+  // isSuperAdmin is a specific flag, check it first
+  if (isSuperAdmin) {
     return <SuperAdminDashboard />
   }
 
-  if (profile?.role === UserRole.COMPANY_ADMIN) {
+  // isAdmin is a general flag for any admin type
+  if (isAdmin) {
     return <CompanyAdminDashboard />
   }
 
   return (
-    <Box>
-      <Text color="brand.text">No admin dashboard available for your role.</Text>
+    <Box p={8} textAlign="center">
+      <Text fontSize="xl" fontWeight="bold">
+        No admin dashboard available for your role.
+      </Text>
+      <Text mt={2}>Please contact support if you believe this is an error.</Text>
     </Box>
   )
 }
