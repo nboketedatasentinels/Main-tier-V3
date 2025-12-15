@@ -11,17 +11,71 @@ service cloud.firestore {
       return request.auth.uid == userId;
     }
 
+    function getProfile(userId) {
+      return get(/databases/$(database)/documents/profiles/$(userId)).data;
+    }
+
+    function getUserRole() {
+      return isAuthenticated() ? getProfile(request.auth.uid).role : null;
+    }
+
     function hasRole(role) {
-      return isAuthenticated() &&
-        get(/databases/$(database)/documents/profiles/$(request.auth.uid)).data.role == role;
+      return isAuthenticated() && getUserRole() == role;
+    }
+
+    function hasAnyRole(roles) {
+      return isAuthenticated() && getUserRole() in roles;
+    }
+
+    function isSuperAdmin() {
+      return hasRole('super_admin');
+    }
+
+    function isAdmin() {
+      return hasAnyRole(['super_admin', 'admin', 'company_admin']);
+    }
+
+    function isActiveAccount() {
+      return isAuthenticated() && 
+        getProfile(request.auth.uid).accountStatus == 'active';
+    }
+
+    // Custom claims validation (if using Firebase Auth custom claims)
+    function hasCustomRole(role) {
+      return request.auth.token.role == role;
+    }
+
+    // Organization access validation
+    function canAccessOrganization(orgCode) {
+      return isSuperAdmin() || 
+        (isAdmin() && orgCode in getProfile(request.auth.uid).assignedOrganizations);
     }
 
     // Profiles collection
     match /profiles/{userId} {
+      // Users can read their own profile
       allow read: if isAuthenticated() && isOwner(userId);
+      
+      // Admins can read profiles in their assigned organizations
+      allow read: if isAdmin() && (
+        isSuperAdmin() || 
+        getProfile(userId).companyCode in getProfile(request.auth.uid).assignedOrganizations
+      );
+      
+      // Users can create their own profile
       allow create: if isAuthenticated() && isOwner(userId);
-      allow update: if isAuthenticated() && (isOwner(userId) || hasRole('super_admin'));
-      allow delete: if hasRole('super_admin');
+      
+      // Users can update their own profile, but cannot change their role
+      allow update: if isAuthenticated() && isOwner(userId) && (
+        !request.resource.data.keys().hasAny(['role']) ||
+        request.resource.data.role == resource.data.role
+      );
+      
+      // Super admins can update any profile
+      allow update: if isSuperAdmin();
+      
+      // Only super admins can delete profiles
+      allow delete: if isSuperAdmin();
 
       // Subcollections
       match /userJourneys/{journeyId} {
@@ -33,63 +87,122 @@ service cloud.firestore {
       }
 
       match /impactLogs/{logId} {
-        allow read, write: if isAuthenticated() && isOwner(userId);
+        allow read: if isAuthenticated() && (isOwner(userId) || isAdmin());
+        allow write: if isAuthenticated() && isOwner(userId);
       }
 
       match /userBadges/{badgeId} {
         allow read: if isAuthenticated() && isOwner(userId);
-        allow write: if hasRole('super_admin');
+        allow write: if isSuperAdmin();
       }
 
       match /notifications/{notificationId} {
         allow read: if isAuthenticated() && isOwner(userId);
         allow update: if isAuthenticated() && isOwner(userId);
-        allow create: if hasRole('super_admin');
+        allow create: if isSuperAdmin() || isAdmin();
       }
     }
 
     // Public read collections
     match /journeys/{journeyId} {
       allow read: if isAuthenticated();
-      allow write: if hasRole('super_admin');
+      allow write: if isSuperAdmin();
     }
 
     match /activities/{activityId} {
       allow read: if isAuthenticated();
-      allow write: if hasRole('super_admin');
+      allow write: if isSuperAdmin();
     }
 
     match /courses/{courseId} {
       allow read: if isAuthenticated();
-      allow write: if hasRole('super_admin');
+      allow write: if isSuperAdmin();
     }
 
     match /badges/{badgeId} {
       allow read: if isAuthenticated();
-      allow write: if hasRole('super_admin');
+      allow write: if isSuperAdmin();
     }
 
     // Community collections
     match /villages/{villageId} {
       allow read: if isAuthenticated();
       allow create: if isAuthenticated();
-      allow update, delete: if hasRole('super_admin') || hasRole('company_admin');
+      allow update, delete: if isSuperAdmin() || isAdmin();
     }
 
     match /companies/{companyId} {
+      // All authenticated users can read companies
       allow read: if isAuthenticated();
-      allow write: if hasRole('super_admin') || hasRole('company_admin');
+      
+      // Super admins can manage all companies
+      allow write: if isSuperAdmin();
+      
+      // Company admins can only update their assigned companies
+      allow update: if isAdmin() && canAccessOrganization(resource.data.code);
+    }
+
+    // Organizations collection (for admin organization management)
+    match /organizations/{orgId} {
+      allow read: if isAuthenticated() && (
+        isSuperAdmin() || 
+        canAccessOrganization(resource.data.code)
+      );
+      allow write: if isSuperAdmin();
     }
 
     match /events/{eventId} {
       allow read: if isAuthenticated();
       allow create: if isAuthenticated();
-      allow update, delete: if hasRole('super_admin') || hasRole('company_admin');
+      allow update, delete: if isSuperAdmin() || isAdmin();
     }
 
     match /user_points/{pointsId} {
-      allow read: if isAuthenticated() && (request.auth.uid == resource.data.userId || hasRole('super_admin'));
-      allow create, update: if isAuthenticated() && (request.resource.data.userId == request.auth.uid || hasRole('super_admin'));
+      allow read: if isAuthenticated() && (
+        request.auth.uid == resource.data.userId || 
+        isAdmin()
+      );
+      allow create, update: if isAuthenticated() && (
+        request.resource.data.userId == request.auth.uid || 
+        isSuperAdmin()
+      );
+    }
+
+    // Leaderboard collection (read-only for users, write for admins)
+    match /leaderboard/{entryId} {
+      allow read: if isAuthenticated();
+      allow write: if isSuperAdmin();
+    }
+
+    // Ambassador-specific collections
+    match /ambassador_milestone_submissions/{submissionId} {
+      allow read: if isAuthenticated() && (
+        hasRole('ambassador') || 
+        isAdmin()
+      );
+      allow create, update: if isAuthenticated() && hasRole('ambassador');
+      allow delete: if isSuperAdmin();
+    }
+
+    // Mentor-specific collections
+    match /mentor_sessions/{sessionId} {
+      allow read: if isAuthenticated() && (
+        hasRole('mentor') || 
+        resource.data.menteeId == request.auth.uid ||
+        isAdmin()
+      );
+      allow write: if isAuthenticated() && hasRole('mentor');
+    }
+
+    // Admin analytics and reports (super admin only)
+    match /admin_reports/{reportId} {
+      allow read, write: if isSuperAdmin();
+    }
+
+    // System audit trail
+    match /audit_logs/{logId} {
+      allow read: if isSuperAdmin();
+      allow create: if isAdmin();
     }
   }
 }
