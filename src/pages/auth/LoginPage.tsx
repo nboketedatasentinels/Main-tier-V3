@@ -13,7 +13,6 @@ import {
   HStack,
 } from '@chakra-ui/react'
 import { useAuth } from '@/hooks/useAuth'
-import { UserProfile } from '@/types'
 import { PasswordChangeModal } from '@/components/PasswordChangeModal'
 import { getLandingPathForRole } from '@/utils/roleRouting'
 
@@ -23,7 +22,6 @@ export const LoginPage: React.FC = () => {
   const [loading, setLoading] = useState(false)
   const [magicLinkSent, setMagicLinkSent] = useState(false)
   const [showPasswordChangeModal, setShowPasswordChangeModal] = useState(false)
-  const [userId, setUserId] = useState<string | null>(null)
   const { signIn, signInWithMagicLink, user, profile, profileLoading } = useAuth()
   const navigate = useNavigate()
   const toast = useToast()
@@ -215,11 +213,11 @@ export const LoginPage: React.FC = () => {
         </VStack>
       </form>
 
-      {userId && (
+      {user?.uid && (
         <PasswordChangeModal
           isOpen={showPasswordChangeModal}
           onClose={() => setShowPasswordChangeModal(false)}
-          userId={userId}
+          userId={user.uid}
           onSuccess={handlePasswordChangeSuccess}
         />
       )}

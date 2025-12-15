@@ -75,12 +75,11 @@ export const getLandingPathForRole = (
     return '/super-admin/dashboard'
   }
 
-  // Treat ADMIN and COMPANY_ADMIN as admin dashboard
+  // Treat COMPANY_ADMIN as admin dashboard
   if (
-    r === normalizeRole(UserRole.ADMIN) ||
-    r === 'ADMIN' ||
     r === normalizeRole(UserRole.COMPANY_ADMIN) ||
-    r === 'COMPANY_ADMIN'
+    r === 'COMPANY_ADMIN' ||
+    r === 'ADMIN'
   ) {
     return '/admin/dashboard'
   }

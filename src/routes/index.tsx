@@ -57,12 +57,7 @@ const DashboardRouter = () => {
 
   if (loading || profileLoading) return null
 
-  // Convert full landing path -> dashboard-relative when it's within /app/dashboard/*
   const landing = getLandingPathForRole(profile?.role, profile)
-  const relative =
-    landing.startsWith('/app/dashboard/')
-      ? landing.replace('/app/dashboard/', '')
-      : 'free'
 
   return (
     <Routes>
@@ -72,8 +67,8 @@ const DashboardRouter = () => {
       <Route path="ambassador" element={<ProtectedRoute requiredRoles={[UserRole.AMBASSADOR]}><AmbassadorDashboard /></ProtectedRoute>} />
       <Route path="company" element={<ProtectedRoute><CompanyDashboard /></ProtectedRoute>} />
 
-      {/* ✅ role-aware default */}
-      <Route index element={<Navigate to={relative} replace />} />
+      {/* ✅ IMPORTANT: always redirect using the full landing path */}
+      <Route index element={<Navigate to={landing} replace />} />
     </Routes>
   )
 }
@@ -133,7 +128,7 @@ export const AppRoutes = () => {
         <Route
           path="/admin"
           element={
-            <ProtectedRoute requiredRoles={[UserRole.ADMIN, UserRole.COMPANY_ADMIN, UserRole.SUPER_ADMIN]}>
+            <ProtectedRoute requiredRoles={[UserRole.COMPANY_ADMIN, UserRole.SUPER_ADMIN]}>
               <MainLayout />
             </ProtectedRoute>
           }
