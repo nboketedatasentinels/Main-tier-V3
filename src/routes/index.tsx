@@ -203,7 +203,7 @@ export const AppRoutes = () => {
                 title="Upgrade to connect"
               >
                 <PeerConnectPage />
-              </Free-tier-guard>
+              </FreeTierGuard>
             }
           />
           <Route
