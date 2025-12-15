@@ -1,4 +1,4 @@
-import { UserRole, UserProfile, TransformationTier } from '@/types'
+import { UserRole, UserProfile } from '@/types'
 
 export const normalizeRole = (role: unknown): string => {
   return String(role ?? '')
@@ -96,7 +96,7 @@ export const getLandingPathForRole = (
     }
     
     // For individual tier mentors, check for preferred dashboard route
-    const preferredRoute = getPreferredDashboardRoute(profile)
+    const preferredRoute = getPreferredDashboardRoute(profile || null)
     if (preferredRoute) {
       return preferredRoute
     }
