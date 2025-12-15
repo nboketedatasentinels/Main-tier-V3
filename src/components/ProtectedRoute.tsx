@@ -1,8 +1,8 @@
 import React from 'react'
 import { Navigate, useLocation } from 'react-router-dom'
 import { useAuth } from '@/hooks/useAuth'
-import { normalizeRole } from '@/utils/roleRouting'
-import { AccountStatus } from '@/types'
+import { normalizeRole } from '@/utils/role'
+import { AccountStatus, UserRole } from '@/types'
 
 type Props = {
   children: React.ReactNode

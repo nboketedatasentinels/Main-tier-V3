@@ -1,4 +1,4 @@
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
+import { BrowserRouter, Routes, Route, Navigate, useNavigate } from 'react-router-dom'
 import { ProtectedRoute } from '@/components/ProtectedRoute'
 import { FreeTierGuard } from '@/components/FreeTierGuard'
 import { UserRole } from '@/types'
@@ -54,15 +54,21 @@ import { SuspendedPage } from '@/pages/errors/SuspendedPage'
 // Dashboard router component
 const DashboardRouter = () => {
   const { loading, profileLoading, profile } = useAuth()
+  const navigate = useNavigate()
 
   if (loading || profileLoading) return null
 
-  // Convert full landing path -> dashboard-relative when it's within /app/dashboard/*
+  // Get the full landing path for this user's role
   const landing = getLandingPathForRole(profile?.role, profile)
-  const relative =
-    landing.startsWith('/app/dashboard/')
-      ? landing.replace('/app/dashboard/', '')
-      : 'free'
+  
+  // If landing path is NOT under /app/dashboard/*, redirect to it directly
+  // This fixes the bug where admins were forced to /app/dashboard/free
+  if (!landing.startsWith('/app/dashboard/')) {
+    return <Navigate to={landing} replace />
+  }
+  
+  // For learner dashboards under /app/dashboard/*, extract the relative path
+  const relative = landing.replace('/app/dashboard/', '')
 
   return (
     <Routes>
@@ -72,7 +78,7 @@ const DashboardRouter = () => {
       <Route path="ambassador" element={<ProtectedRoute requiredRoles={[UserRole.AMBASSADOR]}><AmbassadorDashboard /></ProtectedRoute>} />
       <Route path="company" element={<ProtectedRoute><CompanyDashboard /></ProtectedRoute>} />
 
-      {/* ✅ role-aware default */}
+      {/* ✅ role-aware default for learner dashboards */}
       <Route index element={<Navigate to={relative} replace />} />
     </Routes>
   )
