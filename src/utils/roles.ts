@@ -2,7 +2,6 @@
  * @deprecated This file is deprecated. Use @/utils/role instead.
  * Keeping for backward compatibility during migration.
  */
-import { UserRole } from '@/types'
 import { toUserRole as convertToUserRole } from './role'
 
 /**

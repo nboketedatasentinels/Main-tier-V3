@@ -6,6 +6,30 @@ This document describes the comprehensive role-based login redirect system imple
 
 The system provides sophisticated user routing based on roles, account status, onboarding state, and preferences. It ensures users are directed to the appropriate dashboard while enforcing security and access control at multiple levels.
 
+## Recent Updates
+
+### Role Normalization & Admin Routing Fix (December 2025)
+
+**Critical Bug Fixed**: Admins were being incorrectly redirected to the learner dashboard (`/app/dashboard/free`) instead of their proper admin dashboard.
+
+**Key Changes**:
+1. **Centralized Role Normalization** (`/src/utils/role.ts`):
+   - Single source of truth for role normalization via `normalizeRole()` function
+   - Handles role string comparisons consistently across the application
+   - Provides helper functions: `toUserRole()`, `isAdminRole()`, `isSuperAdminRole()`, `rolesMatch()`
+   
+2. **Fixed DashboardRouter** (`/src/routes/index.tsx`):
+   - Admins now redirect directly to their dashboard paths (e.g., `/admin/dashboard`, `/super-admin/dashboard`)
+   - Learner-specific paths under `/app/dashboard/*` continue to work as expected
+   - No longer defaults to 'free' for non-learner roles
+
+3. **Simplified AdminDashboard** (`/src/pages/dashboards/AdminDashboard.tsx`):
+   - Removed error fallback message
+   - Route guards ensure only authorized users reach this component
+   - Delegates to SuperAdminDashboard or CompanyAdminDashboard based on role
+
+**Migration Note**: The old `/src/utils/roles.ts` is deprecated in favor of `/src/utils/role.ts` but maintained for backward compatibility.
+
 ## Architecture
 
 ### 1. Type System

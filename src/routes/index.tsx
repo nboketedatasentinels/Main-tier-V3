@@ -1,4 +1,4 @@
-import { BrowserRouter, Routes, Route, Navigate, useNavigate } from 'react-router-dom'
+import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
 import { ProtectedRoute } from '@/components/ProtectedRoute'
 import { FreeTierGuard } from '@/components/FreeTierGuard'
 import { UserRole } from '@/types'
@@ -54,7 +54,6 @@ import { SuspendedPage } from '@/pages/errors/SuspendedPage'
 // Dashboard router component
 const DashboardRouter = () => {
   const { loading, profileLoading, profile } = useAuth()
-  const navigate = useNavigate()
 
   if (loading || profileLoading) return null
 
