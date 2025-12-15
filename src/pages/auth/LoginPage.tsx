@@ -13,8 +13,7 @@ import {
   HStack,
 } from '@chakra-ui/react'
 import { useAuth } from '@/hooks/useAuth'
-import { UserProfile, AccountStatus } from '@/types'
-import { getLandingPathForRole } from '@/utils/roleRouting'
+import { UserProfile } from '@/types'
 import { PasswordChangeModal } from '@/components/PasswordChangeModal'
 
 export const LoginPage: React.FC = () => {
@@ -24,71 +23,19 @@ export const LoginPage: React.FC = () => {
   const [magicLinkSent, setMagicLinkSent] = useState(false)
   const [showPasswordChangeModal, setShowPasswordChangeModal] = useState(false)
   const [userId, setUserId] = useState<string | null>(null)
-  const [profileData, setProfileData] = useState<UserProfile | null>(null)
-  const { signIn, signInWithMagicLink, profile, profileLoading } = useAuth()
+  const { signIn, signInWithMagicLink, user, profile, profileLoading } = useAuth()
   const navigate = useNavigate()
   const toast = useToast()
   const [searchParams] = useSearchParams()
-  const [isLoginSuccess, setIsLoginSuccess] = useState(false)
 
   useEffect(() => {
-    // This effect handles the redirect after a successful login, once the user's profile is loaded.
-    if (isLoginSuccess && !profileLoading && profile) {
-      // Check account status first
-      const accountStatus = profile.accountStatus?.toString().toLowerCase()
-      if (accountStatus === AccountStatus.INACTIVE || accountStatus === 'inactive') {
-        toast({
-          title: 'Account Inactive',
-          description: 'Your account is inactive. Please contact support.',
-          status: 'error',
-          duration: 5000,
-          isClosable: true,
-        })
-        setIsLoginSuccess(false) // Reset login success state
-        navigate('/login', { replace: true })
-        return
-      }
-
-      if (accountStatus === AccountStatus.SUSPENDED || accountStatus === 'suspended') {
-        toast({
-          title: 'Account Suspended',
-          description: 'Your account has been suspended. Please contact support.',
-          status: 'error',
-          duration: 5000,
-          isClosable: true,
-        })
-        setIsLoginSuccess(false) // Reset login success state
-        navigate('/suspended', { replace: true })
-        return
-      }
-
-      // Check if password change is required
-      if (profile.mustChangePassword) {
-        setUserId(profile.id)
-        setProfileData(profile)
-        setShowPasswordChangeModal(true)
-        setIsLoginSuccess(false) // Reset login success state
-        return
-      }
-
-      // Check for redirectUrl query parameter (payment flows, external redirects)
+    if (!profileLoading && user && profile) {
+      // If user is already logged in and profile is loaded, redirect them.
       const redirectUrl = searchParams.get('redirectUrl')
-      
-      // Check for onboarding completion
-      const needsOnboarding = !profile.onboardingComplete && !profile.onboardingSkipped
-      if (needsOnboarding && !redirectUrl) {
-        navigate('/welcome', { replace: true })
-        setIsLoginSuccess(false) // Reset login success state
-        return
-      }
-
-      // Determine landing path based on role and profile
-      const landingPath = getLandingPathForRole(profile.role, profile, redirectUrl || undefined)
-      
-      navigate(landingPath, { replace: true })
-      setIsLoginSuccess(false) // Reset login success state after navigation
+      const landingPath = (profile.dashboardPreferences?.defaultRoute || profile.defaultDashboardRoute)
+      navigate(landingPath || '/app/dashboard', { replace: true });
     }
-  }, [isLoginSuccess, profile, profileLoading, navigate, toast, searchParams])
+  }, [user, profile, profileLoading, navigate, searchParams])
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -114,15 +61,13 @@ export const LoginPage: React.FC = () => {
         status: 'success',
         duration: 3000,
       })
-      
-      setIsLoginSuccess(true)
-      // The useEffect will handle the redirect once the profile is loaded.
-    } finally {
-      // Set loading to false only after the redirect logic has a chance to trigger
-      // Or if there was an error.
-      if (!isLoginSuccess) {
-        setLoading(false)
-      }
+      // After successful sign-in, AuthContext will detect the change.
+      // The useEffect in this component or a top-level router component (like RoleRedirect)
+      // will handle the redirection.
+      // setLoading will be handled by the redirection causing the component to unmount.
+    } catch (err) {
+      // In case signIn promise itself rejects, though it returns an error object.
+      setLoading(false)
     }
   }
 
@@ -159,15 +104,13 @@ export const LoginPage: React.FC = () => {
 
     setLoading(false)
   }
-
+  
   const handlePasswordChangeSuccess = () => {
-    if (profileData && userId) {
-      // Continue with redirect after password change
-      const redirectUrl = searchParams.get('redirectUrl')
-      const landingPath = getLandingPathForRole(profileData.role, profileData, redirectUrl || undefined)
-      navigate(landingPath, { replace: true })
-    }
+    setShowPasswordChangeModal(false)
+    // After password change, the user is effectively logged in.
+    // Let the main redirect logic handle the navigation.
   }
+
 
   if (magicLinkSent) {
     return (
