@@ -1,6 +1,7 @@
 import { createContext } from 'react'
 import { User } from 'firebase/auth'
-import { UserProfile, UserRole, DashboardPreferences } from '@/types'
+import { UserProfile, DashboardPreferences } from '@/types'
+import { StandardRole } from '@/utils/role'
 
 export interface AuthContextType {
   user: User | null
@@ -17,8 +18,8 @@ export interface AuthContextType {
   signInWithMagicLink: (email: string) => Promise<{ error: Error | null }>
   resetPassword: (email: string) => Promise<{ error: Error | null }>
   updateProfile: (updates: Partial<UserProfile>) => Promise<{ error: Error | null }>
-  hasRole: (role: UserRole) => boolean
-  hasAnyRole: (roles: UserRole[]) => boolean
+  hasRole: (role: StandardRole) => boolean
+  hasAnyRole: (roles: StandardRole[]) => boolean
   
   // Role Flags
   isAdmin: boolean

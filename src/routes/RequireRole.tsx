@@ -6,7 +6,7 @@ import { getLandingPathForRole } from '@/utils/roleRouting'
 import { UserRole } from '@/types'
 
 type RequireRoleProps = {
-  allow: UserRole[]
+  allow: StandardRole[]
 }
 
 export const RequireRole: React.FC<RequireRoleProps> = ({ allow }) => {
@@ -16,7 +16,7 @@ export const RequireRole: React.FC<RequireRoleProps> = ({ allow }) => {
 
   if (!user) return <Navigate to="/login" replace />
 
-  const normalizedRole = normalizeRole(profile?.role)
+  const normalizedRole = toUserRole(profile?.role)
 
   if (!normalizedRole) {
     console.warn(

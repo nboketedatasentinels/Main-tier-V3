@@ -16,7 +16,8 @@ import {
   serverTimestamp,
   onSnapshot,
 } from 'firebase/firestore'
-import { UserProfile, UserRole, DashboardPreferences, AccountStatus, TransformationTier } from '@/types'
+import { UserProfile, DashboardPreferences, AccountStatus, TransformationTier } from '@/types'
+import { StandardRole, normalizeRole } from '@/utils/role'
 import { auth, db } from '@/services/firebase'
 import { isBootstrapAdmin } from '@/utils/bootstrap'
 import { normalizeRole } from '@/utils/role'
@@ -61,7 +62,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         ? UserRole.SUPER_ADMIN
         : UserRole.USER;
 
-      if (role === UserRole.SUPER_ADMIN) {
+      if (role === 'super_admin') {
         console.log(
           `Assigning SUPER_ADMIN role to bootstrap admin: ${firebaseUser.email}`
         );
@@ -91,6 +92,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         dashboardPreferences: {
           defaultRoute: '/app/weekly-glance',
           lockedToFreeExperience: true,
+          membershipStatus: 'free',
+          lockedToFreeExperience: role === 'user',
         },
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
@@ -171,7 +174,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     checkRoleMismatch()
 
     // Auto-refresh for super admins every 5 minutes
-    if (profile.role === UserRole.SUPER_ADMIN) {
+    if (profile.role === 'super_admin') {
       const interval = setInterval(() => {
         refreshAdminSession()
       }, 5 * 60 * 1000) // 5 minutes
@@ -202,7 +205,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       const userProfile = await fetchOrCreateProfile(user)
       setProfile(userProfile)
       setProfileLoading(false)
-      if (userProfile && [UserRole.SUPER_ADMIN, UserRole.COMPANY_ADMIN].includes(userProfile.role)) {
+      if (userProfile && ['super_admin', 'partner'].includes(userProfile.role)) {
         console.log(`AuthContext: Profile loading complete for admin user: ${userProfile.email}, role: ${userProfile.role}`)
       }
       setLoading(false)
@@ -249,7 +252,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         firstName: userData.firstName || 'User',
         lastName: userData.lastName || '',
         fullName: userData.fullName || 'User',
-        role: UserRole.FREE_USER,
+        role: 'user',
         totalPoints: 0,
         level: 1,
         referralCount: 0,
@@ -370,42 +373,45 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   }
 
   // Role checking utilities
-  const hasRole = (role: UserRole): boolean => {
-    return profile?.role === role
+  const hasRole = (role: StandardRole): boolean => {
+    return profile ? normalizeRole(profile.role) === role : false
   }
 
-  const hasAnyRole = (roles: UserRole[]): boolean => {
-    return profile ? roles.includes(profile.role) : false
+  const hasAnyRole = (roles: StandardRole[]): boolean => {
+    return profile ? roles.some(r => normalizeRole(profile.role) === r) : false
   }
 
   // Computed role flags
   const isAdmin = useMemo(() => {
     if (!profile?.role) return false
-    return [UserRole.COMPANY_ADMIN, UserRole.SUPER_ADMIN].includes(profile.role)
+    const normalized = normalizeRole(profile.role)
+    return ['partner', 'super_admin'].includes(normalized)
   }, [profile?.role])
 
   const isSuperAdmin = useMemo(() => {
-    return profile?.role === UserRole.SUPER_ADMIN
+    return normalizeRole(profile?.role) === 'super_admin'
   }, [profile?.role])
 
   const isMentor = useMemo(() => {
-    return profile?.role === UserRole.MENTOR
+    return normalizeRole(profile?.role) === 'mentor'
   }, [profile?.role])
 
   const isAmbassador = useMemo(() => {
-    return profile?.role === UserRole.AMBASSADOR
+    return normalizeRole(profile?.role) === 'ambassador'
   }, [profile?.role])
 
   const isPaid = useMemo(() => {
     if (!profile?.role) return false
+    const normalized = normalizeRole(profile.role)
     return [
-      UserRole.PAID_MEMBER,
-      UserRole.MENTOR,
-      UserRole.AMBASSADOR,
-      UserRole.COMPANY_ADMIN,
-      UserRole.SUPER_ADMIN,
-    ].includes(profile.role)
-  }, [profile?.role])
+      'partner',
+      'mentor',
+      'ambassador',
+      'team_leader',
+    ].includes(normalized) || (normalized === 'user' && profile.membershipStatus === 'paid') // Added explicit check for paid user
+  }, [profile?.role, profile?.membershipStatus])
+
+
 
   const isCorporateMember = useMemo(() => {
     if (!profile?.transformationTier) return false
@@ -419,12 +425,12 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   }, [profile?.assignedOrganizations])
 
   const hasFullOrganizationAccess = useMemo(() => {
-    return profile?.role === UserRole.SUPER_ADMIN
+    return normalizeRole(profile?.role) === 'super_admin'
   }, [profile?.role])
 
   const canAccessOrganization = (orgCode: string): boolean => {
     if (!profile) return false
-    if (profile.role === UserRole.SUPER_ADMIN) return true
+    if (normalizeRole(profile.role) === 'super_admin') return true
     return assignedOrganizations.includes(orgCode)
   }
 

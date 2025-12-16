@@ -14,11 +14,14 @@ export const getDefaultDashboardRouteByMembership = (
 }
 
 /**
- * Determines the appropriate landing path for a user based on their role and profile status.
- *
- * @param profile The user's profile object.
- * @param searchParams Optional URLSearchParams to check for a 'redirectUrl'.
- * @returns The calculated landing path string.
+ * Comprehensive role-based landing path with priority logic
+ * Priority:
+ * 1. redirectUrl query parameter (external/payment flows)
+ * 2. Super Admin -> /super-admin/dashboard
+ * 3. Partner (COMPANY_ADMIN) -> /admin/dashboard
+ * 4. Mentor conditional based on transformationTier
+ * 5. Ambassador -> /ambassador/dashboard
+ * 6. Regular user (USER, TEAM_LEADER) with onboarding check
  */
 export const getLandingPathForRole = (
   profile: UserProfile | null,
@@ -43,42 +46,56 @@ export const getLandingPathForRole = (
     return '/login'
   }
 
-  const role = normalizeRole(profile.role)
+  // Priority 2: Super Admin
+  const normalizedRole = normalizeRole(role)
 
-  // 2. Handle admin and specialized roles first
-  if (role === UserRole.SUPER_ADMIN) {
+  if (normalizedRole === 'super_admin') {
     return '/super-admin/dashboard'
   }
-  if (role === UserRole.COMPANY_ADMIN) {
+
+  // Priority 3: Partner (company_admin maps to partner in Firestore)
+  if (normalizedRole === 'partner') {
     return '/admin/dashboard'
   }
-  if (role === UserRole.MENTOR) {
-    // Corporate mentors have a different dashboard
-    if (profile.transformationTier === 'corporate_leader' || profile.transformationTier === 'corporate_member') {
-      return '/mentor/dashboard'
+
+  // Priority 4: Mentor conditional redirect based on transformationTier
+  if (normalizedRole === 'mentor') {
+    // Check if mentor has corporate tier
+    if (profile?.transformationTier) {
+      const tier = profile.transformationTier.toString().toLowerCase()
+      if (tier === 'corporate_member' || tier === 'corporate_leader') {
+        return '/mentor/dashboard'
+      }
+    }
+    
+    // For individual tier mentors, check for preferred dashboard route
+    const preferredRoute = getPreferredDashboardRoute(profile || null)
+    if (preferredRoute) {
+      return preferredRoute
     }
     // Non-corporate mentors go to the standard learner dashboard
     return getDefaultDashboardRouteByMembership(profile.membershipStatus)
   }
-  if (role === UserRole.AMBASSADOR) {
+
+  // Priority 5: Ambassador
+  if (normalizedRole === 'ambassador') {
     return '/ambassador/dashboard'
   }
 
-  // 3. Handle standard learners (user | team_leader)
-  if (role === UserRole.USER || role === UserRole.TEAM_LEADER) {
-    // Onboarding incomplete takes precedence
-    if (!profile.onboardingComplete && !profile.onboardingSkipped) {
+  // Priority 6: Regular learners (user, team_leader, free_user, paid_member) with onboarding check
+  // Note: These roles don't have explicit switch cases above and fall through to here
+  if (profile) {
+    // Check onboarding status
+    const needsOnboarding = !profile.onboardingComplete && !profile.onboardingSkipped
+    if (needsOnboarding) {
       return '/welcome'
     }
 
-    // Use preferred route if set, otherwise fall back to membership default
-    return (
-      profile.dashboardPreferences?.defaultRoute ||
-      getDefaultDashboardRouteByMembership(profile.membershipStatus)
-    )
+  // Fallback based on role only (when no profile is available)
+  if (normalizedRole === 'paid_member') {
+    return '/app/dashboard/member'
   }
 
-  // 4. Fallback for any unknown roles
-  console.warn(`Could not determine landing path for role: ${profile.role}. Defaulting to free dashboard.`)
+  // Default free user
   return '/app/dashboard/free'
 }

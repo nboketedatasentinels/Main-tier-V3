@@ -47,16 +47,26 @@ export const normalizeRole = (role: string | undefined | null): UserRole | null 
       console.warn(`Unknown role encountered: "${role}". Defaulting to USER.`);
       return UserRole.USER;
   }
-};
+}
+
+/**
+ * Check if a role is an admin type (partner or super_admin)
+ * @param role - Role to check
+ * @returns True if role is any admin type
+ */
+export const isAdminRole = (role: unknown): boolean => {
+  const normalized = normalizeRole(role)
+  return normalized === 'super_admin' || normalized === 'partner'
+}
 
 /**
  * Checks if a role is considered an administrative role.
  * @param role The UserRole to check.
  * @returns True if the role is SUPER_ADMIN or COMPANY_ADMIN.
  */
-export const isAdminRole = (role: UserRole | null): boolean => {
-  return role === UserRole.SUPER_ADMIN || role === UserRole.COMPANY_ADMIN;
-};
+export const isSuperAdminRole = (role: unknown): boolean => {
+  return normalizeRole(role) === 'super_admin'
+}
 
 /**
  * Checks if a role is a super admin role.
