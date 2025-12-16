@@ -756,10 +756,10 @@ const WeeklyChecklistPage: React.FC = () => {
         </Heading>
         <Text color="gray.300">A comprehensive weekly activity tracker with Firebase-powered progress.</Text>
       </Stack>
-      <Box p={4} borderWidth="1px" borderColor="gray.700" bg="gray.900" borderRadius="lg">
+      <Box p={4} borderWidth="1px" borderColor="gray.700" bg="white" borderRadius="lg">
         <Stack spacing={3}>
           <HStack justify="space-between">
-            <Heading size="sm" color="white">
+            <Heading size="sm" color="#273240">
               Week {selectedWeek} summary
             </Heading>
             <Tag colorScheme={progressStatus.color}>
@@ -894,14 +894,14 @@ const WeeklyChecklistPage: React.FC = () => {
 }
 
 const StatCard: React.FC<{ label: string; value: string; icon: React.ReactNode }> = ({ label, value, icon }) => (
-  <Box borderWidth="1px" borderColor="gray.700" p={4} borderRadius="lg" bg="gray.900">
+  <Box borderWidth="1px" borderColor="gray.700" p={4} borderRadius="lg" bg="white">
     <HStack justify="space-between" mb={1}>
-      <Text color="gray.400" fontSize="sm">
+      <Text color="#273240" fontSize="sm">
         {label}
       </Text>
       {icon}
     </HStack>
-    <Heading size="md" color="white">
+    <Heading size="md" color="#273240">
       {value}
     </Heading>
   </Box>
