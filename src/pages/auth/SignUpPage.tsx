@@ -71,9 +71,9 @@ export const SignUpPage: React.FC = () => {
     } else {
       toast({
         title: 'Account created!',
-        description: 'Redirecting you to your dashboard to begin exploring.',
+        description: 'Please check your email to verify your account. You can still access the dashboard while we verify your email.',
         status: 'success',
-        duration: 5000,
+        duration: 7000,
       })
       if (userId) {
         localStorage.setItem(`t4l.newUserWelcome.${userId}`, 'pending')

@@ -6,6 +6,7 @@ import {
   signOut as firebaseSignOut,
   sendPasswordResetEmail,
   sendSignInLinkToEmail,
+  sendEmailVerification,
   onAuthStateChanged,
 } from 'firebase/auth'
 import {
@@ -274,8 +275,33 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
       await setDoc(doc(db, 'profiles', user.uid), profileData)
 
+      // Create user document in users collection with role
+      const userDoc = {
+        uid: user.uid,
+        email,
+        firstName: userData.firstName || 'User',
+        lastName: userData.lastName || '',
+        fullName: userData.fullName || 'User',
+        role: 'user', // Default role is 'user', admin can be assigned later
+        emailVerified: false,
+        createdAt: serverTimestamp(),
+        updatedAt: serverTimestamp(),
+      }
+
+      await setDoc(doc(db, 'users', user.uid), userDoc)
+
+      // Send email verification link
+      const actionCodeSettings = {
+        url: `${window.location.origin}/auth/verify-email?email=${encodeURIComponent(email)}`,
+        handleCodeInApp: true,
+      }
+
+      await sendEmailVerification(user, actionCodeSettings)
+      console.log('Email verification sent to:', email)
+
       return { error: null, userId: user.uid }
     } catch (error) {
+      console.error('Sign up error:', error)
       return { error: error as Error }
     }
   }
