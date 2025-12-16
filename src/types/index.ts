@@ -19,7 +19,6 @@ export enum AccountStatus {
 // Dashboard Preferences
 export interface DashboardPreferences {
   defaultRoute?: string
-  membershipStatus?: string
   lockedToFreeExperience?: boolean
   source?: string
   lastUpdatedAt?: string
@@ -28,12 +27,12 @@ export interface DashboardPreferences {
 // User Profile
 export interface UserProfile {
   id: string
-  email: string
+  email:string
   firstName: string
   lastName: string
   fullName: string
-  role: StandardRole
-  membershipStatus?: string 
+  role: UserRole
+  membershipStatus?: 'free' | 'paid'
   avatarUrl?: string
   bio?: string
   phoneNumber?: string

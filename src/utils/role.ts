@@ -74,20 +74,19 @@ export const isAdminRole = (role: unknown): boolean => {
 }
 
 /**
- * Check if a role is super admin
- * @param role - Role to check
- * @returns True if role is super admin
+ * Checks if a role is considered an administrative role.
+ * @param role The UserRole to check.
+ * @returns True if the role is SUPER_ADMIN or COMPANY_ADMIN.
  */
 export const isSuperAdminRole = (role: unknown): boolean => {
   return normalizeRole(role) === 'super_admin'
 }
 
 /**
- * Check if two roles are equivalent (after normalization)
- * @param role1 - First role
- * @param role2 - Second role
- * @returns True if roles are equivalent
+ * Checks if a role is a super admin role.
+ * @param role The UserRole to check.
+ * @returns True if the role is SUPER_ADMIN.
  */
-export const rolesMatch = (role1: unknown, role2: unknown): boolean => {
-  return normalizeRole(role1) === normalizeRole(role2)
-}
+export const isSuperAdminRole = (role: UserRole | null): boolean => {
+  return role === UserRole.SUPER_ADMIN;
+};

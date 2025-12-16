@@ -21,6 +21,7 @@ import { StandardRole, normalizeRole } from '@/utils/role'
 import { ALL_STANDARD_ROLES } from '@/types/roles'
 import { auth, db } from '@/services/firebase'
 import { isBootstrapAdmin } from '@/utils/bootstrap'
+import { normalizeRole } from '@/utils/role'
 import { AuthContext, AuthContextType } from './AuthContextType'
 
 interface AuthProviderProps {
@@ -43,29 +44,29 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       const docSnap = await getDoc(docRef)
 
       if (docSnap.exists()) {
-        const profileData = docSnap.data() as UserProfile
+        const profileData = docSnap.data() as UserProfile;
+        const normalized = normalizeRole(profileData.role);
         
-        if ((profileData.role as string) === 'partner') {
-          profileData.role = 'partner' as StandardRole
+        if (normalized) {
+          profileData.role = normalized;
+        } else {
+          // Handle case where role is still invalid after normalization
+          console.warn(`Invalid role for user ${firebaseUser.uid}:`, profileData.role);
+          // Optional: default to a safe role
+          // profileData.role = UserRole.USER;
         }
 
-        if (!profileData.role || !ALL_STANDARD_ROLES.includes(profileData.role as StandardRole)) {
-          console.warn(
-            `User profile for UID ${firebaseUser.uid} has a missing or invalid role:`,
-            profileData.role
-          )
-        }
-        return profileData
+        return profileData;
       }
 
-      const role: StandardRole = isBootstrapAdmin(firebaseUser.email)
-        ? 'super_admin'
-        : 'user'
+      const role = isBootstrapAdmin(firebaseUser.email)
+        ? UserRole.SUPER_ADMIN
+        : UserRole.USER;
 
       if (role === 'super_admin') {
         console.log(
           `Assigning SUPER_ADMIN role to bootstrap admin: ${firebaseUser.email}`
-        )
+        );
       }
 
       const profileData: UserProfile = {
@@ -75,6 +76,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         lastName: firebaseUser.displayName?.split(' ')?.slice(1).join(' ') ?? '',
         fullName: firebaseUser.displayName ?? 'User',
         role,
+        membershipStatus: 'free',
         totalPoints: 0,
         level: 1,
         referralCount: 0,
@@ -84,18 +86,19 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         accountStatus: AccountStatus.ACTIVE,
         transformationTier: TransformationTier.INDIVIDUAL_FREE,
         assignedOrganizations: [],
-        onboardingComplete: true,
+        onboardingComplete: false,
         onboardingSkipped: false,
         mustChangePassword: false,
         hasSeenDashboardTour: false,
         dashboardPreferences: {
           defaultRoute: '/app/weekly-glance',
+          lockedToFreeExperience: true,
           membershipStatus: 'free',
           lockedToFreeExperience: role === 'user',
         },
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
-      }
+      };
 
       await setDoc(docRef, {
         ...profileData,
