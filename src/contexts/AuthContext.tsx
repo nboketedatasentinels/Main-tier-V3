@@ -190,6 +190,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       setLoading(true)
       setUser(user)
 
+      console.log("Am here")
+
       if (!user) {
         setProfile(null)
         setProfileLoading(false)
