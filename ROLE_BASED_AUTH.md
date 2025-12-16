@@ -15,20 +15,47 @@ The system provides sophisticated user routing based on roles, account status, o
 **Key Changes**:
 1. **Centralized Role Normalization** (`/src/utils/role.ts`):
    - Single source of truth for role normalization via `normalizeRole()` function
-   - Handles role string comparisons consistently across the application
+   - Maps legacy role values to standardized Firestore vocabulary:
+     - `company_admin` / `admin` → `partner`
+     - Other roles remain as-is (super_admin, mentor, ambassador, team_leader, user, free_user, paid_member)
    - Provides helper functions: `toUserRole()`, `isAdminRole()`, `isSuperAdminRole()`, `rolesMatch()`
    
-2. **Fixed DashboardRouter** (`/src/routes/index.tsx`):
-   - Admins now redirect directly to their dashboard paths (e.g., `/admin/dashboard`, `/super-admin/dashboard`)
-   - Learner-specific paths under `/app/dashboard/*` continue to work as expected
-   - No longer defaults to 'free' for non-learner roles
+2. **Centralized Landing Path Logic** (`/src/utils/roleRouting.ts`):
+   - `getLandingPathForRole(role, profile, redirectUrl)` implements priority-based routing:
+     1. redirectUrl query parameter (payment/external flows)
+     2. super_admin → `/super-admin/dashboard`
+     3. partner (company_admin) → `/admin/dashboard`
+     4. mentor → `/mentor/dashboard` (conditional based on transformationTier)
+     5. ambassador → `/ambassador/dashboard`
+     6. Regular users → onboarding check → preferred route → default by membership
+   - `getPreferredDashboardRoute(profile)` - gets user's preferred dashboard
+   - `getDefaultDashboardRouteByMembership(profile)` - default route by membership status
+   - Re-exported from `/src/utils/routes.ts` for backwards compatibility
 
-3. **Simplified AdminDashboard** (`/src/pages/dashboards/AdminDashboard.tsx`):
-   - Removed error fallback message
+3. **Fixed RoleRedirect** (`/src/pages/auth/RoleRedirect.tsx`):
+   - Completely rewritten to use `getLandingPathForRole` consistently
+   - Fixed broken code that referenced undefined variables
+   - Properly handles redirectUrl query parameter
+   - Shows nothing while loading, then navigates to computed landing path
+
+4. **Updated ProtectedRoute** (`/src/components/ProtectedRoute.tsx`):
+   - Uses normalized roles for all comparisons
+   - `requireAdmin` now correctly allows both `partner` and `super_admin`
+   - `requireSuperAdmin` only allows `super_admin`
+   - `requiredRoles` array compares normalized values
+
+5. **Simplified AdminDashboard** (`/src/pages/dashboards/AdminDashboard.tsx`):
+   - Removed error fallback message ("No admin dashboard available for your role")
    - Route guards ensure only authorized users reach this component
    - Delegates to SuperAdminDashboard or CompanyAdminDashboard based on role
+   - Trust the route protection layer instead of duplicating checks
 
-**Migration Note**: The old `/src/utils/roles.ts` is deprecated in favor of `/src/utils/role.ts` but maintained for backward compatibility.
+6. **Fixed DashboardRouter** (`/src/routes/index.tsx`):
+   - Index route uses full landing path from `getLandingPathForRole`
+   - No longer defaults to 'free' for non-learner roles
+   - Admin landing paths work correctly without falling back to learner dashboards
+
+**Migration Note**: The old `/src/utils/roles.ts` (note: plural) remains for potential backwards compatibility but is not actively used. The canonical implementation is in `/src/utils/role.ts` (singular) and `/src/utils/roleRouting.ts`.
 
 ## Architecture
 
@@ -62,13 +89,14 @@ interface UserProfile {
 
 ```typescript
 enum UserRole {
+  USER = 'user',
+  TEAM_LEADER = 'team_leader',
+  AMBASSADOR = 'ambassador',
+  MENTOR = 'mentor',
+  COMPANY_ADMIN = 'partner',     // Stored as 'partner' in Firestore
+  SUPER_ADMIN = 'super_admin',
   FREE_USER = 'free_user',
   PAID_MEMBER = 'paid_member',
-  MENTOR = 'mentor',
-  AMBASSADOR = 'ambassador',
-  ADMIN = 'admin',
-  COMPANY_ADMIN = 'company_admin',
-  SUPER_ADMIN = 'super_admin',
 }
 
 enum AccountStatus {
@@ -91,7 +119,7 @@ enum TransformationTier {
 #### Role Flags
 Computed boolean properties for easy role checking:
 
-- `isAdmin` - true for ADMIN, COMPANY_ADMIN, or SUPER_ADMIN
+- `isAdmin` - true for COMPANY_ADMIN (partner) or SUPER_ADMIN
 - `isSuperAdmin` - true for SUPER_ADMIN only
 - `isMentor` - true for MENTOR
 - `isAmbassador` - true for AMBASSADOR
