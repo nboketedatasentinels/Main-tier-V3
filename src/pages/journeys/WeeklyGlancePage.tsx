@@ -51,8 +51,8 @@ export const WeeklyGlancePage = () => {
             <CardBody>
               <Stack direction={{ base: 'column', md: 'row' }} spacing={4} align="flex-start" justify="space-between">
                 <Stack spacing={1}>
-                  <Heading size="md">Build Your Village</Heading>
-                  <Text color="brand.text">Rally your peers by creating a village to collaborate and track your collective impact.</Text>
+                  <Heading size="md" color="#273240">Build Your Village</Heading>
+                  <Text color="#273240">Rally your peers by creating a village to collaborate and track your collective impact.</Text>
                 </Stack>
                 <Button colorScheme="yellow" onClick={handleOpenVillageModal} alignSelf={{ base: 'flex-start', md: 'center' }}>
                   Open Build Village
@@ -63,8 +63,8 @@ export const WeeklyGlancePage = () => {
         )}
 
         <Stack spacing={1}>
-          <Heading size="lg">This Week at a Glance</Heading>
-          <Text color="brand.subtleText">Your personalized dashboard for weekly progress, habits, and support.</Text>
+          <Heading size="lg" color="#273240">This Week at a Glance</Heading>
+          <Text color="#273240">Your personalized dashboard for weekly progress, habits, and support.</Text>
         </Stack>
 
         {hasError && (

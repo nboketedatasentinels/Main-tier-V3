@@ -48,7 +48,7 @@ export const WeeklyPointsCard = ({ data, loading, error, onNavigate }: WeeklyPoi
           <HStack justify="space-between">
             <HStack>
               <Icon as={Target} color="brand.primary" />
-              <Text fontWeight="bold">Weekly Points</Text>
+              <Text fontWeight="bold" color="#273240">Weekly Points</Text>
             </HStack>
             {data?.status && (
               <Badge colorScheme={statusColor} variant="subtle">
@@ -60,28 +60,28 @@ export const WeeklyPointsCard = ({ data, loading, error, onNavigate }: WeeklyPoi
           <Skeleton isLoaded={!loading} rounded="md">
             <VStack align="stretch" spacing={2}>
               <HStack justify="space-between">
-                <Text fontSize="xs" color="brand.subtleText">
+                <Text fontSize="xs" color="#273240">
                   Target
                 </Text>
-                <Text fontWeight="bold">{data ? `${data.target_points || 0} pts` : '--'}</Text>
+                <Text fontWeight="bold" color="#273240">{data ? `${data.target_points || 0} pts` : '--'}</Text>
               </HStack>
               <HStack justify="space-between">
-                <Text fontSize="xs" color="brand.subtleText">
+                <Text fontSize="xs" color="#273240">
                   Earned
                 </Text>
-                <Text>{data ? `${data.points_earned || 0} pts` : '--'}</Text>
+                <Text color="#273240">{data ? `${data.points_earned || 0} pts` : '--'}</Text>
               </HStack>
               <Progress colorScheme="brand" value={progress} height="8px" rounded="full" />
               <HStack justify="space-between">
                 <HStack spacing={1}>
-                  <Icon as={Users} boxSize={4} color="brand.subtleText" />
-                  <Text fontSize="sm" color="brand.subtleText">
+                  <Icon as={Users} boxSize={4} color="#273240" />
+                  <Text fontSize="sm" color="#273240">
                     {data?.engagement_count || 0} engagements
                   </Text>
                 </HStack>
                 <HStack spacing={1}>
-                  <Icon as={Clock3} boxSize={4} color="brand.subtleText" />
-                  <Text fontSize="sm" color="brand.subtleText">
+                  <Icon as={Clock3} boxSize={4} color="#273240" />
+                  <Text fontSize="sm" color="#273240">
                     {daysRemaining} days left
                   </Text>
                 </HStack>
@@ -90,7 +90,7 @@ export const WeeklyPointsCard = ({ data, loading, error, onNavigate }: WeeklyPoi
           </Skeleton>
 
           {error && (
-            <HStack color="red.500" fontSize="sm">
+            <HStack color="#273240" fontSize="sm">
               <Icon as={AlertCircle} />
               <Text>Unable to load weekly points.</Text>
             </HStack>

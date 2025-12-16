@@ -105,7 +105,7 @@ export const PersonalityProfileCard = ({ data, loading }: PersonalityProfileCard
     setSaving(true)
 
     try {
-      const updates: PersonalityProfile = {
+      const updates = {
         personalityType,
         personalityStrengths,
         personalityDescription,
@@ -126,20 +126,20 @@ export const PersonalityProfileCard = ({ data, loading }: PersonalityProfileCard
           <HStack justify="space-between">
             <HStack>
               <Icon as={Sparkles} color="brand.primary" />
-              <Text fontWeight="bold">Personality Profile</Text>
+              <Text fontWeight="bold" color="#273240">Personality Profile</Text>
             </HStack>
             {localProfile?.personalityType && <Badge colorScheme="purple">{localProfile.personalityType}</Badge>}
           </HStack>
 
           <Skeleton isLoaded={!loading} rounded="md">
-            <Stack spacing={2} color="brand.subtleText" fontSize="sm">
+            <Stack spacing={2} color="#273240" fontSize="sm">
               <Text>
                 {localProfile?.personalityDescription ||
                   'Share your personality insights to receive tailored guidance.'}
               </Text>
               {strengths.length > 0 && (
                 <>
-                  <Text fontWeight="semibold" color="brand.text">
+                  <Text fontWeight="semibold" color="#273240">
                     Strengths
                   </Text>
                   <UnorderedList pl={5} spacing={1}>
