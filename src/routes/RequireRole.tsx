@@ -1,9 +1,9 @@
 import React from 'react'
 import { Navigate, Outlet } from 'react-router-dom'
 import { useAuth } from '@/hooks/useAuth'
-import { toUserRole } from '@/utils/role'
-import { getDashboardPathForRole } from '@/utils/dashboardPaths'
-import { normalizeRole, StandardRole } from '@/utils/role'
+import { normalizeRole } from '@/utils/role'
+import { getLandingPathForRole } from '@/utils/roleRouting'
+import { UserRole } from '@/types'
 
 type RequireRoleProps = {
   allow: StandardRole[]
@@ -37,7 +37,7 @@ export const RequireRole: React.FC<RequireRoleProps> = ({ allow }) => {
       `Profile state at time of check:`,
       profile
     )
-    return <Navigate to={getDashboardPathForRole(normalizedRole)} replace />
+    return <Navigate to={getLandingPathForRole(profile)} replace />
   }
 
   return <Outlet />

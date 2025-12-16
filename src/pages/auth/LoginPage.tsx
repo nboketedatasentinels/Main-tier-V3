@@ -29,19 +29,17 @@ export const LoginPage: React.FC = () => {
 
   useEffect(() => {
     if (!profileLoading && user && profile) {
-      // If user is already logged in and profile is loaded, redirect them.
-      const redirectUrl = searchParams.get('redirectUrl');
-      const landingPath = getLandingPathForRole(profile.role, profile, redirectUrl);
+      const landingPath = getLandingPathForRole(profile, searchParams);
       navigate(landingPath, { replace: true });
     }
   }, [user, profile, profileLoading, navigate, searchParams]);
 
   const handleLogin = async (e: React.FormEvent) => {
-    e.preventDefault()
-    setLoading(true)
+    e.preventDefault();
+    setLoading(true);
 
     try {
-      const { error } = await signIn(email, password)
+      const { error } = await signIn(email, password);
 
       if (error) {
         toast({
@@ -50,25 +48,22 @@ export const LoginPage: React.FC = () => {
           status: 'error',
           duration: 5000,
           isClosable: true,
-        })
-        setLoading(false)
-        return
+        });
+        setLoading(false);
+        return;
       }
 
+      // The useEffect will handle the redirect once the profile is loaded.
+      // No need to manually navigate here.
       toast({
         title: 'Welcome back!',
         status: 'success',
         duration: 3000,
-      })
-      // After successful sign-in, AuthContext will detect the change.
-      // The useEffect in this component or a top-level router component (like RoleRedirect)
-      // will handle the redirection.
-      // setLoading will be handled by the redirection causing the component to unmount.
+      });
     } catch (err) {
-      // In case signIn promise itself rejects, though it returns an error object.
-      setLoading(false)
+      setLoading(false);
     }
-  }
+  };
 
   const handleMagicLink = async () => {
     if (!email) {

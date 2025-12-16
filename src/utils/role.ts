@@ -1,123 +1,51 @@
-import { UserRole } from '@/types'
+
+import { UserRole } from '@/types';
 
 /**
- * Single source of truth for role normalization
- * Maps all role variations to standardized Firestore vocabulary:
- * - super_admin | partner | mentor | ambassador | team_leader | user | free_user | paid_member
- * 
- * Legacy mappings:
- * - company_admin → partner (UserRole.COMPANY_ADMIN enum has value 'partner')
- * - admin → partner (maps to same enum as company_admin)
- * 
- * Important: UserRole enums vs Firestore values
- * - UserRole.COMPANY_ADMIN has enum value 'partner' (this is what's stored in Firestore)
- * - normalizeRole('admin') returns 'partner' (the Firestore value)
- * - normalizeRole(UserRole.COMPANY_ADMIN) returns 'partner' (the enum's value)
- * 
- * Note: free_user and paid_member are kept distinct for UI purposes,
- * though they could be consolidated to "user" with membershipStatus in the future.
- * 
- * @param role - Any role value from UserRole enum or string
- * @returns Normalized role string matching Firestore vocabulary
+ * Standardizes a user role from various legacy or UI-specific values.
+ *
+ * @param role The raw role string from Firestore or UI.
+ * @returns The standardized UserRole enum value.
  */
-export const normalizeRole = (role: unknown): string => {
-  if (!role) return ''
-  
-  // Convert to string and normalize format (lowercase with underscores)
-  const normalized = String(role)
-    .trim()
-    .toLowerCase()
-    .replace(/[-\s]+/g, '_')
-  
-  // Map legacy values to Firestore vocabulary
-  switch (normalized) {
-    case 'company_admin':
-    case 'admin':
-    case 'administrator':
-      return 'partner'
-    case 'super_admin':
-    case 'superadmin':
-      return 'super_admin'
-    case 'team_leader':
-    case 'teamleader':
-      return 'team_leader'
-    case 'mentor':
-      return 'mentor'
-    case 'ambassador':
-      return 'ambassador'
-    case 'partner':
-      return 'partner'
-    case 'user':
-      return 'user'
-    case 'free_user':
-      return 'free_user'
-    case 'paid_member':
-      return 'paid_member'
-    default:
-      // Return as-is if no mapping found
-      return normalized
-  }
-}
+export const normalizeRole = (role: string | undefined | null): UserRole | null => {
+  if (!role) return null;
 
-/**
- * Convert a string role to UserRole enum
- * 
- * Important: UserRole.COMPANY_ADMIN has the enum value "partner" (stored in Firestore).
- * This function maps various input strings to the correct enum, including:
- * - 'partner' → UserRole.COMPANY_ADMIN (value: 'partner')
- * - 'admin' → UserRole.COMPANY_ADMIN (value: 'partner')
- * - 'company_admin' → UserRole.COMPANY_ADMIN (value: 'partner')
- * 
- * When comparing roles, always use normalizeRole() which returns the Firestore value.
- * 
- * @param role - Role string to convert
- * @returns Corresponding UserRole enum value or null if not recognized
- */
-export function normalizeRole(role: AllRoles | string | null | undefined): StandardRole {
-  if (typeof role !== 'string') {
-    return 'user'; // Default role for null/undefined or non-string inputs
-  }
+  const roleLower = role.toLowerCase();
 
-  const lowerCaseRole = role.toLowerCase();
+  switch (roleLower) {
+    // --- Phase 1: Standardize vocabulary ---
+    // Firestore stores: super_admin | partner | mentor | ambassador | team_leader | user
 
-  switch (lowerCaseRole) {
-    case 'company_admin':
-    case 'admin':
-      return 'partner';
-    case 'free_user':
-    case 'paid_member':
-      return 'user';
     case 'super_admin':
-    case 'partner':
-    case 'mentor':
-    case 'ambassador':
-      return UserRole.AMBASSADOR
-    case 'user':
-      return UserRole.USER
-    case 'team_leader':
-    case 'teamleader':
-      return UserRole.TEAM_LEADER
-    // Company-admin/partner variations
-    // Note: All these variations map to UserRole.COMPANY_ADMIN which has value 'partner'
-    // This is correct because Firestore stores it as 'partner'
-    case 'company_admin':
-    case 'companyadmin':
-    case 'companyadministrator':
-    case 'company-administrator':
-    case 'admin':
-    case 'administrator':
-    case 'partner':
-      return UserRole.COMPANY_ADMIN
-    // Super-admin variations
-    case 'super_admin':
-    case 'superadmin':
-    case 'superadministrator':
-    case 'super_administrator':
     case 'super-admin':
-    case 'super':
-      return UserRole.SUPER_ADMIN
+      return UserRole.SUPER_ADMIN;
+
+    case 'partner':
+    case 'company_admin': // Legacy UI value
+    case 'company-admin':
+    case 'admin':         // Legacy fallback
+      return UserRole.COMPANY_ADMIN; // Stays as partner for UI logic
+
+    case 'mentor':
+      return UserRole.MENTOR;
+
+    case 'ambassador':
+      return UserRole.AMBASSADOR;
+
+    case 'team_leader':
+    case 'team-leader':
+      return UserRole.TEAM_LEADER;
+
+    // --- Learner / Default ---
+    case 'user':
+    case 'free_user':      // Legacy UI value
+    case 'paid_member':    // Legacy UI value
+    case 'learner':
+      return UserRole.USER;
+
     default:
-      return null
+      console.warn(`Unknown role encountered: "${role}". Defaulting to USER.`);
+      return UserRole.USER;
   }
 }
 
@@ -132,20 +60,19 @@ export const isAdminRole = (role: unknown): boolean => {
 }
 
 /**
- * Check if a role is super admin
- * @param role - Role to check
- * @returns True if role is super admin
+ * Checks if a role is considered an administrative role.
+ * @param role The UserRole to check.
+ * @returns True if the role is SUPER_ADMIN or COMPANY_ADMIN.
  */
 export const isSuperAdminRole = (role: unknown): boolean => {
   return normalizeRole(role) === 'super_admin'
 }
 
 /**
- * Check if two roles are equivalent (after normalization)
- * @param role1 - First role
- * @param role2 - Second role
- * @returns True if roles are equivalent
+ * Checks if a role is a super admin role.
+ * @param role The UserRole to check.
+ * @returns True if the role is SUPER_ADMIN.
  */
-export const rolesMatch = (role1: unknown, role2: unknown): boolean => {
-  return normalizeRole(role1) === normalizeRole(role2)
-}
+export const isSuperAdminRole = (role: UserRole | null): boolean => {
+  return role === UserRole.SUPER_ADMIN;
+};
