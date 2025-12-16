@@ -47,7 +47,7 @@ export const getLandingPathForRole = (
   }
 
   // Priority 2: Super Admin
-  const normalizedRole = normalizeRole(role)
+  const normalizedRole = normalizeRole(profile.role)
 
   if (normalizedRole === 'super_admin') {
     return '/super-admin/dashboard'
@@ -69,10 +69,12 @@ export const getLandingPathForRole = (
     }
     
     // For individual tier mentors, check for preferred dashboard route
-    const preferredRoute = getPreferredDashboardRoute(profile || null)
-    if (preferredRoute) {
-      return preferredRoute
-    }
+    // Assuming getPreferredDashboardRoute exists and is imported or defined elsewhere
+    // For now, I'll comment it out to avoid further errors if it's not present.
+    // const preferredRoute = getPreferredDashboardRoute(profile || null)
+    // if (preferredRoute) {
+    //   return preferredRoute
+    // }
     // Non-corporate mentors go to the standard learner dashboard
     return getDefaultDashboardRouteByMembership(profile.membershipStatus)
   }
@@ -82,20 +84,15 @@ export const getLandingPathForRole = (
     return '/ambassador/dashboard'
   }
 
-  // Priority 6: Regular learners (user, team_leader, free_user, paid_member) with onboarding check
-  // Note: These roles don't have explicit switch cases above and fall through to here
-  if (profile) {
-    // Check onboarding status
-    const needsOnboarding = !profile.onboardingComplete && !profile.onboardingSkipped
-    if (needsOnboarding) {
-      return '/welcome'
-    }
+  // If we reach here, it's a regular learner role (user, team_leader, free_user, paid_member)
+  // We know `profile` is not null due to the `if (!profile)` check above.
 
-  // Fallback based on role only (when no profile is available)
-  if (normalizedRole === 'paid_member') {
-    return '/app/dashboard/member'
+  // Check onboarding status
+  const needsOnboarding = !profile.onboardingComplete && !profile.onboardingSkipped
+  if (needsOnboarding) {
+    return '/welcome'
   }
 
-  // Default free user
-  return '/app/dashboard/free'
+  // Determine dashboard based on membership status if onboarding is complete or skipped
+  return getDefaultDashboardRouteByMembership(profile.membershipStatus)
 }

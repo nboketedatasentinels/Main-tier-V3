@@ -21,7 +21,7 @@ import { StandardRole, normalizeRole } from '@/utils/role'
 import { ALL_STANDARD_ROLES } from '@/types/roles'
 import { auth, db } from '@/services/firebase'
 import { isBootstrapAdmin } from '@/utils/bootstrap'
-import { normalizeRole } from '@/utils/role'
+
 import { AuthContext, AuthContextType } from './AuthContextType'
 
 interface AuthProviderProps {

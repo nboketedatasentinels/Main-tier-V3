@@ -81,12 +81,3 @@ export const isAdminRole = (role: unknown): boolean => {
 export const isSuperAdminRole = (role: unknown): boolean => {
   return normalizeRole(role) === 'super_admin'
 }
-
-/**
- * Checks if a role is a super admin role.
- * @param role The UserRole to check.
- * @returns True if the role is SUPER_ADMIN.
- */
-export const isSuperAdminRole = (role: UserRole | null): boolean => {
-  return role === UserRole.SUPER_ADMIN;
-};
