@@ -57,7 +57,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
           // Optional: default to a safe role
           // profileData.role = UserRole.USER;
         }
-
+        console.log("profile data",profileData);
         return profileData;
       }
 
