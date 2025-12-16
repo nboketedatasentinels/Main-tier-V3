@@ -1,4 +1,9 @@
-import { StandardRole } from './roles';
+// Import and re-export role types and values
+import { UserRole, ALL_STANDARD_ROLES } from './roles';
+import type { StandardRole, AllRoles } from './roles';
+
+export { UserRole, ALL_STANDARD_ROLES };
+export type { StandardRole, AllRoles };
 
 // Transformation Tier Types
 export enum TransformationTier {
@@ -31,7 +36,7 @@ export interface UserProfile {
   firstName: string
   lastName: string
   fullName: string
-  role: UserRole
+  role: StandardRole
   membershipStatus?: 'free' | 'paid'
   avatarUrl?: string
   bio?: string

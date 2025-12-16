@@ -1,9 +1,10 @@
 import React from 'react'
 import { Navigate, Outlet } from 'react-router-dom'
 import { useAuth } from '@/hooks/useAuth'
-import { normalizeRole } from '@/utils/role'
+import { toUserRole } from '@/utils/role'
 import { getLandingPathForRole } from '@/utils/roleRouting'
-import { UserRole } from '@/types'
+import { getDashboardPathForRole } from '@/utils/dashboardPaths'
+import type { StandardRole } from '@/types'
 
 type RequireRoleProps = {
   allow: StandardRole[]

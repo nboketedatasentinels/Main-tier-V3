@@ -1,7 +1,7 @@
 import { createContext } from 'react'
 import { User } from 'firebase/auth'
 import { UserProfile, DashboardPreferences } from '@/types'
-import { StandardRole } from '@/utils/role'
+import type { StandardRole } from '@/types'
 
 export interface AuthContextType {
   user: User | null

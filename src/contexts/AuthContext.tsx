@@ -16,9 +16,10 @@ import {
   serverTimestamp,
   onSnapshot,
 } from 'firebase/firestore'
-import { UserProfile, DashboardPreferences, AccountStatus, TransformationTier } from '@/types'
-import { StandardRole, normalizeRole } from '@/utils/role'
-import { ALL_STANDARD_ROLES } from '@/types/roles'
+import { UserProfile, DashboardPreferences, AccountStatus, TransformationTier, UserRole } from '@/types'
+import type { StandardRole } from '@/types'
+import { normalizeRole } from '@/utils/role'
+import { isBootstrapAdmin } from '@/utils/bootstrap'
 import { auth, db } from '@/services/firebase'
 
 
@@ -92,8 +93,6 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         hasSeenDashboardTour: false,
         dashboardPreferences: {
           defaultRoute: '/app/weekly-glance',
-          lockedToFreeExperience: true,
-          membershipStatus: 'free',
           lockedToFreeExperience: role === 'user',
         },
         createdAt: new Date().toISOString(),
@@ -269,7 +268,6 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         hasSeenDashboardTour: false,
         dashboardPreferences: {
           defaultRoute: '/app/weekly-glance',
-          membershipStatus: 'free',
           lockedToFreeExperience: true,
         },
         createdAt: new Date().toISOString(),

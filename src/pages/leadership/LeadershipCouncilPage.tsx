@@ -69,7 +69,7 @@ import { format, formatDistanceToNow, isAfter, isValid, parseISO } from 'date-fn
 import { db } from '@/services/firebase'
 import { useAuth } from '@/hooks/useAuth'
 import { UserProfile } from '@/types'
-import { StandardRole, normalizeRole } from '@/utils/role'
+import { normalizeRole } from '@/utils/role'
 
 interface LeadershipProfile extends UserProfile {
   availabilityStatus?: string

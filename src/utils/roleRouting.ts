@@ -1,4 +1,4 @@
-import { UserProfile, UserRole } from '@/types'
+import { UserProfile } from '@/types'
 import { normalizeRole } from './role'
 
 /**

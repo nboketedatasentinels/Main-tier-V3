@@ -1,6 +1,4 @@
 import React from 'react'
-import { useAuth } from '@/hooks/useAuth'
-import { SuperAdminDashboard } from './SuperAdminDashboard'
 import { CompanyAdminDashboard } from './CompanyAdminDashboard'
 
 /**

@@ -1,9 +1,10 @@
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
+import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom'
 import { ProtectedRoute } from '@/components/ProtectedRoute'
 import { FreeTierGuard } from '@/components/FreeTierGuard'
 import { useAuth } from '@/hooks/useAuth'
 import RoleRedirect from '@/pages/auth/RoleRedirect'
 import { getLandingPathForRole } from '@/utils/roleRouting'
+import { UserRole } from '@/types'
 
 // Layout imports
 import { MainLayout } from '@/layouts/MainLayout'
@@ -27,7 +28,6 @@ import { MentorDashboard } from '@/pages/dashboards/MentorDashboard'
 import { AmbassadorDashboard } from '@/pages/dashboards/AmbassadorDashboard'
 import { AdminDashboard } from '@/pages/dashboards/AdminDashboard'
 import { SuperAdminDashboard } from '@/pages/dashboards/SuperAdminDashboard'
-import { CompanyDashboard } from '@/components/dashboard/CompanyDashboard'
 
 // Feature page imports
 import { JourneysPage } from '@/pages/journeys/JourneysPage'

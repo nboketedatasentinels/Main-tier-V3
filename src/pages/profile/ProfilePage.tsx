@@ -89,7 +89,8 @@ import {
 import { getDownloadURL, ref, uploadBytes } from 'firebase/storage'
 import { auth, db, storage } from '@/services/firebase'
 import { useAuth } from '@/hooks/useAuth'
-import { StandardRole } from '@/utils/role'
+import type { StandardRole } from '@/types'
+import { normalizeRole } from '@/utils/role'
 
 interface ProfileData {
   id: string
@@ -158,6 +159,8 @@ const coreValueOptions = [
 
 const roleDisplayMap: Record<StandardRole, string> = {
   user: 'Member',
+  free_user: 'Free Member',
+  paid_member: 'Paid Member',
   team_leader: 'Team Leader',
   mentor: 'Mentor',
   ambassador: 'Ambassador',
@@ -167,6 +170,8 @@ const roleDisplayMap: Record<StandardRole, string> = {
 
 const roleColorMap: Record<StandardRole, string> = {
   user: 'gray',
+  free_user: 'gray',
+  paid_member: 'green',
   team_leader: 'blue',
   mentor: 'purple',
   ambassador: 'blue',

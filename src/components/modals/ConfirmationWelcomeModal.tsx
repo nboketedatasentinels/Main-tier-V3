@@ -21,14 +21,14 @@ import {
   VStack,
 } from '@chakra-ui/react'
 import { ArrowRight, BookOpenCheck, Compass, Sparkles, Target, Users } from 'lucide-react'
-import { UserRole } from '@/types'
+import type { StandardRole } from '@/types'
 import { getDashboardPathForRole } from '@/utils/dashboardPaths'
 
 interface ConfirmationWelcomeModalProps {
   isOpen: boolean
   onAcknowledge: () => void
   firstName?: string
-  role?: UserRole
+  role?: StandardRole
 }
 
 export const ConfirmationWelcomeModal: React.FC<ConfirmationWelcomeModalProps> = ({
@@ -39,11 +39,11 @@ export const ConfirmationWelcomeModal: React.FC<ConfirmationWelcomeModalProps> =
 }) => {
   const roleMessage = useMemo(() => {
     switch (role) {
-      case UserRole.PAID_MEMBER:
+      case 'paid_member':
         return 'Dive into your journey dashboard to keep weekly momentum strong.'
-      case UserRole.MENTOR:
+      case 'mentor':
         return 'Share your expertise, review mentee updates, and celebrate their wins.'
-      case UserRole.AMBASSADOR:
+      case 'ambassador':
         return 'Rally the community by sharing opportunities and spotlighting great work.'
       default:
         return 'Explore the platform, find your community, and start logging your impact.'
