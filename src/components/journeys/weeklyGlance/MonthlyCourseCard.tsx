@@ -67,8 +67,8 @@ export const MonthlyCourseCard = ({ role, data, loading, error }: MonthlyCourseC
         <Alert status="error" rounded="md">
           <AlertIcon />
           <Stack spacing={1}>
-            <AlertTitle>Unable to load course</AlertTitle>
-            <AlertDescription>Try refreshing the page or contact an admin.</AlertDescription>
+            <AlertTitle color="#5A6ACF">Unable to load course</AlertTitle>
+            <AlertDescription color="#5A6ACF">Try refreshing the page or contact an admin.</AlertDescription>
           </Stack>
         </Alert>
       )
@@ -77,13 +77,13 @@ export const MonthlyCourseCard = ({ role, data, loading, error }: MonthlyCourseC
     if (data?.status === 'no_company') {
       return (
         <Stack spacing={3}>
-          <Text fontWeight="bold">Course of the Month</Text>
-          <Text color="brand.subtleText" fontSize="sm">
+          <Text fontWeight="bold" color="#5A6ACF">Course of the Month</Text>
+          <Text color="#5A6ACF" fontSize="sm">
             Paid members need to be assigned to a company program to see their monthly course.
           </Text>
           <Alert status="info" rounded="md" variant="subtle">
             <AlertIcon />
-            <Text fontSize="sm">Contact your admin to get added to your company.</Text>
+            <Text fontSize="sm" color="#5A6ACF">Contact your admin to get added to your company.</Text>
           </Alert>
         </Stack>
       )
@@ -92,15 +92,15 @@ export const MonthlyCourseCard = ({ role, data, loading, error }: MonthlyCourseC
     if (data?.status === 'pending_assignment') {
       return (
         <Stack spacing={3}>
-          <Text fontWeight="bold">Course of the Month</Text>
-          <Text color="brand.subtleText" fontSize="sm">
-            We’re waiting for your admin to finalize course assignments. Check back soon.
+          <Text fontWeight="bold" color="#5A6ACF">Course of the Month</Text>
+          <Text color="#5A6ACF" fontSize="sm">
+            We're waiting for your admin to finalize course assignments. Check back soon.
           </Text>
           <Alert status="info" rounded="md" variant="subtle">
             <AlertIcon />
             <Stack spacing={0}>
-              <AlertTitle>Assignments pending</AlertTitle>
-              <AlertDescription fontSize="sm">You’ll see your first course once it’s ready.</AlertDescription>
+              <AlertTitle color="#5A6ACF">Assignments pending</AlertTitle>
+              <AlertDescription fontSize="sm" color="#5A6ACF">You'll see your first course once it's ready.</AlertDescription>
             </Stack>
           </Alert>
         </Stack>
@@ -111,20 +111,20 @@ export const MonthlyCourseCard = ({ role, data, loading, error }: MonthlyCourseC
       <Stack spacing={3}>
         <HStack justify="space-between" align="flex-start">
           <Stack spacing={1}>
-            <Text fontWeight="bold">Course of the Month</Text>
-            <Text color="brand.subtleText" fontSize="sm">
-              {data?.message || 'Stay on pace with your company’s learning plan.'}
+            <Text fontWeight="bold" color="#5A6ACF">Course of the Month</Text>
+            <Text color="#5A6ACF" fontSize="sm">
+              {data?.message || 'Stay on pace with your company\'s learning plan.'}
             </Text>
           </Stack>
           {renderStatusBadge()}
         </HStack>
 
         <Stack spacing={1}>
-          <Text fontSize="lg" fontWeight="bold">
+          <Text fontSize="lg" fontWeight="bold" color="#5A6ACF">
             {courseTitle}
           </Text>
           {data?.course?.description && (
-            <Text color="brand.subtleText" fontSize="sm">
+            <Text color="#5A6ACF" fontSize="sm">
               {data.course.description}
             </Text>
           )}
@@ -134,13 +134,13 @@ export const MonthlyCourseCard = ({ role, data, loading, error }: MonthlyCourseC
           {monthLabel && (
             <HStack spacing={1} color="brand.subtleText" fontSize="sm">
               <CalendarIcon />
-              <Text>{monthLabel}</Text>
+              <Text color="#5A6ACF">{monthLabel}</Text>
             </HStack>
           )}
           {data?.status === 'completed' && (
             <HStack spacing={1} color="green.600" fontSize="sm">
               <InfoIcon />
-              <Text>Congratulations on completing your program!</Text>
+              <Text color="#5A6ACF">Congratulations on completing your program!</Text>
             </HStack>
           )}
         </HStack>
@@ -154,24 +154,24 @@ export const MonthlyCourseCard = ({ role, data, loading, error }: MonthlyCourseC
 
   const renderFreeContent = () => (
     <Stack spacing={3}>
-      <Text fontWeight="bold">Free Course Access</Text>
-      <Text color="brand.subtleText" fontSize="sm">
+      <Text fontWeight="bold" color="#5A6ACF">Free Course Access</Text>
+      <Text color="#5A6ACF" fontSize="sm">
         {data?.message || 'Kick off the week with quick learning. Use the code below to enroll.'}
       </Text>
       <HStack justify="space-between" align="flex-start">
         <Stack spacing={1}>
-          <Text fontSize="lg" fontWeight="bold">
+          <Text fontSize="lg" fontWeight="bold" color="#5A6ACF">
             {courseTitle}
           </Text>
-          <Text color="brand.subtleText" fontSize="sm">
+          <Text color="#5A6ACF" fontSize="sm">
             {FREE_COURSE.durationLabel}
           </Text>
         </Stack>
         <ExternalLinkButton href={courseUrl} />
       </HStack>
       <HStack spacing={3}>
-        <Text fontWeight="semibold">Enrollment Code</Text>
-        <Text bg="brand.primaryMuted" px={2} py={1} rounded="md">
+        <Text fontWeight="semibold" color="#5A6ACF">Enrollment Code</Text>
+        <Text bg="brand.primaryMuted" px={2} py={1} rounded="md" color="#5A6ACF">
           {enrollmentCode}
         </Text>
       </HStack>
