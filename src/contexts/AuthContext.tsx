@@ -53,7 +53,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         email: firebaseUser.email,
       })
 
-      const docRef = doc(db, 'profiles', firebaseUser.uid)
+      const docRef = doc(db, 'users', firebaseUser.uid)
       const docSnap = await getDoc(docRef)
 
       console.log('🟣 [Auth] Firestore profile exists?', docSnap.exists())
