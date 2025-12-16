@@ -51,8 +51,8 @@ export const WeeklyGlancePage = () => {
             <CardBody>
               <Stack direction={{ base: 'column', md: 'row' }} spacing={4} align="flex-start" justify="space-between">
                 <Stack spacing={1}>
-                  <Heading size="md" color="#5A6ACF">Build Your Village</Heading>
-                  <Text color="#5A6ACF">Rally your peers by creating a village to collaborate and track your collective impact.</Text>
+                  <Heading size="md">Build Your Village</Heading>
+                  <Text color="brand.text">Rally your peers by creating a village to collaborate and track your collective impact.</Text>
                 </Stack>
                 <Button colorScheme="yellow" onClick={handleOpenVillageModal} alignSelf={{ base: 'flex-start', md: 'center' }}>
                   Open Build Village
@@ -63,16 +63,16 @@ export const WeeklyGlancePage = () => {
         )}
 
         <Stack spacing={1}>
-          <Heading size="lg" color="#5A6ACF">This Week at a Glance</Heading>
-          <Text color="#5A6ACF">Your personalized dashboard for weekly progress, habits, and support.</Text>
+          <Heading size="lg">This Week at a Glance</Heading>
+          <Text color="brand.subtleText">Your personalized dashboard for weekly progress, habits, and support.</Text>
         </Stack>
 
         {hasError && (
           <Alert status="warning" rounded="md">
             <AlertIcon />
             <Box>
-              <AlertTitle color="#5A6ACF">Some sections failed to load</AlertTitle>
-              <AlertDescription color="#5A6ACF">Data may be incomplete. Try refreshing the page.</AlertDescription>
+              <AlertTitle>Some sections failed to load</AlertTitle>
+              <AlertDescription>Data may be incomplete. Try refreshing the page.</AlertDescription>
             </Box>
           </Alert>
         )}

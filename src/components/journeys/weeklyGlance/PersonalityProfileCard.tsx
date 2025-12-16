@@ -111,7 +111,7 @@ export const PersonalityProfileCard = ({ data, loading }: PersonalityProfileCard
         personalityDescription,
       }
 
-      await updateDoc(doc(db, 'profiles', profile.id), updates as any)
+      await updateDoc(doc(db, 'profiles', profile.id), updates)
       setLocalProfile(updates)
       setIsModalOpen(false)
     } finally {
@@ -126,20 +126,20 @@ export const PersonalityProfileCard = ({ data, loading }: PersonalityProfileCard
           <HStack justify="space-between">
             <HStack>
               <Icon as={Sparkles} color="brand.primary" />
-              <Text fontWeight="bold" color="#5A6ACF">Personality Profile</Text>
+              <Text fontWeight="bold">Personality Profile</Text>
             </HStack>
             {localProfile?.personalityType && <Badge colorScheme="purple">{localProfile.personalityType}</Badge>}
           </HStack>
 
           <Skeleton isLoaded={!loading} rounded="md">
-            <Stack spacing={2} color="#5A6ACF" fontSize="sm">
+            <Stack spacing={2} color="brand.subtleText" fontSize="sm">
               <Text>
                 {localProfile?.personalityDescription ||
                   'Share your personality insights to receive tailored guidance.'}
               </Text>
               {strengths.length > 0 && (
                 <>
-                  <Text fontWeight="semibold" color="#5A6ACF">
+                  <Text fontWeight="semibold" color="brand.text">
                     Strengths
                   </Text>
                   <UnorderedList pl={5} spacing={1}>
