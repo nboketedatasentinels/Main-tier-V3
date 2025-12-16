@@ -21,7 +21,12 @@ import { UserRole } from '@/types'
  * @returns Normalized role string matching Firestore vocabulary
  */
 export const normalizeRole = (role: unknown): string => {
-  if (!role) return ''
+  console.log('🔶 normalizeRole: Input role:', role, 'type:', typeof role);
+  
+  if (!role) {
+    console.log('🔶 normalizeRole: Role is falsy, returning empty string');
+    return ''
+  }
   
   // Convert to string and normalize format (lowercase with underscores)
   const normalized = String(role)
@@ -29,34 +34,50 @@ export const normalizeRole = (role: unknown): string => {
     .toLowerCase()
     .replace(/[-\s]+/g, '_')
   
+  console.log('🔶 normalizeRole: After normalization:', normalized);
+  
   // Map legacy values to Firestore vocabulary
+  let result: string;
   switch (normalized) {
     case 'company_admin':
     case 'admin':
     case 'administrator':
-      return 'partner'
+      result = 'partner';
+      break;
     case 'super_admin':
     case 'superadmin':
-      return 'super_admin'
+      result = 'super_admin';
+      break;
     case 'team_leader':
     case 'teamleader':
-      return 'team_leader'
+      result = 'team_leader';
+      break;
     case 'mentor':
-      return 'mentor'
+      result = 'mentor';
+      break;
     case 'ambassador':
-      return 'ambassador'
+      result = 'ambassador';
+      break;
     case 'partner':
-      return 'partner'
+      result = 'partner';
+      break;
     case 'user':
-      return 'user'
+      result = 'user';
+      break;
     case 'free_user':
-      return 'free_user'
+      result = 'free_user';
+      break;
     case 'paid_member':
-      return 'paid_member'
+      result = 'paid_member';
+      break;
     default:
       // Return as-is if no mapping found
-      return normalized
+      result = normalized;
+      break;
   }
+  
+  console.log('🔶 normalizeRole: Mapped to:', result);
+  return result;
 }
 
 /**
