@@ -302,9 +302,6 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     console.log('[AUTH] Profile loaded:', profileData)
 
     return { error: null }
-  } catch (error) {
-    console.error('[AUTH] Sign-in failed:', error)
-    return { error: error as Error }
   } finally {
     setLoading(false)
     setProfileLoading(false)
