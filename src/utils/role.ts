@@ -115,3 +115,11 @@ export const isSuperAdminRole = (role: unknown): boolean => {
   console.log('👑 isSuperAdminRole:', role, '→', isSuper)
   return isSuper
 }
+/**
+ * ✅ Backwards-compatible export (used by dashboardPaths.ts and others)
+ * Returns a normalized Firestore role string.
+ */
+export const toUserRole = (role?: string | UserRole | null): string => {
+  return normalizeRole(role)
+}
+
