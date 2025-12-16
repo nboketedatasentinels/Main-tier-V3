@@ -20,11 +20,13 @@ import type { StandardRole, AllRoles } from '@/types/roles'
  * @param role - Any role value from AllRoles enum or string
  * @returns Normalized role string matching Firestore vocabulary
  */
-export function normalizeRole(role: AllRoles | string | null | undefined | unknown): StandardRole {
-  if (!role) return 'user'; // Default role for null/undefined or non-string inputs
-
-  // Ensure role is a string for further processing
-  const roleString = String(role);
+export const normalizeRole = (role: unknown): string => {
+  console.log('🔶 normalizeRole: Input role:', role, 'type:', typeof role);
+  
+  if (!role) {
+    console.log('🔶 normalizeRole: Role is falsy, returning empty string');
+    return ''
+  }
   
   // Convert to string and normalize format (lowercase with underscores)
   const normalized = roleString
@@ -32,34 +34,114 @@ export function normalizeRole(role: AllRoles | string | null | undefined | unkno
     .toLowerCase()
     .replace(/[-\s]+/g, '_')
   
+  console.log('🔶 normalizeRole: After normalization:', normalized);
+  
   // Map legacy values to Firestore vocabulary
+  let result: string;
   switch (normalized) {
     case 'company_admin':
     case 'admin':
     case 'administrator':
-      return 'partner';
+      result = 'partner';
+      break;
     case 'super_admin':
     case 'superadmin':
-      return 'super_admin';
+      result = 'super_admin';
+      break;
     case 'team_leader':
     case 'teamleader':
-      return 'team_leader';
+      result = 'team_leader';
+      break;
     case 'mentor':
-      return 'mentor';
+      result = 'mentor';
+      break;
     case 'ambassador':
-      return 'ambassador';
+      result = 'ambassador';
+      break;
     case 'partner':
-      return 'partner';
+      result = 'partner';
+      break;
     case 'user':
-      return 'user';
+      result = 'user';
+      break;
     case 'free_user':
-      return 'free_user';
+      result = 'free_user';
+      break;
     case 'paid_member':
-      return 'paid_member';
+      result = 'paid_member';
+      break;
     default:
-      // Return 'user' as default if no mapping found, to satisfy StandardRole return type
-      console.warn(`Unknown role encountered: ${roleString}. Defaulting to 'user'.`);
-      return 'user';
+      // Return as-is if no mapping found
+      result = normalized;
+      break;
+  }
+  
+  console.log('🔶 normalizeRole: Mapped to:', result);
+  return result;
+}
+
+/**
+ * Convert a string role to UserRole enum
+ * 
+ * Important: UserRole.COMPANY_ADMIN has the enum value "partner" (stored in Firestore).
+ * This function maps various input strings to the correct enum, including:
+ * - 'partner' → UserRole.COMPANY_ADMIN (value: 'partner')
+ * - 'admin' → UserRole.COMPANY_ADMIN (value: 'partner')
+ * - 'company_admin' → UserRole.COMPANY_ADMIN (value: 'partner')
+ * 
+ * When comparing roles, always use normalizeRole() which returns the Firestore value.
+ * 
+ * @param role - Role string to convert
+ * @returns Corresponding UserRole enum value or null if not recognized
+ */
+export const toUserRole = (role?: UserRole | string | null): UserRole | null => {
+  if (!role) return null
+
+  // Normalize string (remove hyphens/spaces, lowercase)
+  const normalized = role
+    .toString()
+    .trim()
+    .toLowerCase()
+    .replace(/[-\s]+/g, '_')
+
+  // Handle explicit matches first
+  switch (normalized) {
+    case 'free_user':
+    case 'free':
+      return UserRole.FREE_USER
+    case 'paid_member':
+    case 'member':
+      return UserRole.PAID_MEMBER
+    case 'mentor':
+      return UserRole.MENTOR
+    case 'ambassador':
+      return UserRole.AMBASSADOR
+    case 'user':
+      return UserRole.USER
+    case 'team_leader':
+    case 'teamleader':
+      return UserRole.TEAM_LEADER
+    // Company-admin/partner variations
+    // Note: All these variations map to UserRole.COMPANY_ADMIN which has value 'partner'
+    // This is correct because Firestore stores it as 'partner'
+    case 'company_admin':
+    case 'companyadmin':
+    case 'companyadministrator':
+    case 'company-administrator':
+    case 'admin':
+    case 'administrator':
+    case 'partner':
+      return UserRole.COMPANY_ADMIN
+    // Super-admin variations
+    case 'super_admin':
+    case 'superadmin':
+    case 'superadministrator':
+    case 'super_administrator':
+    case 'super-admin':
+    case 'super':
+      return UserRole.SUPER_ADMIN
+    default:
+      return null
   }
 }
 

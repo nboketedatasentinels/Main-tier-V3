@@ -42,33 +42,57 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     firebaseUser: User
   ): Promise<UserProfile | null> => {
     try {
+      console.log('🟣 fetchOrCreateProfile: Starting for user', {
+        uid: firebaseUser.uid,
+        email: firebaseUser.email
+      });
+      
       const docRef = doc(db, 'profiles', firebaseUser.uid)
       const docSnap = await getDoc(docRef)
+      
+      console.log('🟣 fetchOrCreateProfile: Firestore document check', {
+        exists: docSnap.exists()
+      });
 
       if (docSnap.exists()) {
-        const profileData = docSnap.data() as UserProfile;
-        const normalized = normalizeRole(profileData.role);
+        const profileData = docSnap.data() as UserProfile
+        console.log('🟣 fetchOrCreateProfile: Profile found in Firestore', {
+          id: profileData.id,
+          email: profileData.email,
+          role: profileData.role,
+          roleType: typeof profileData.role,
+          fullName: profileData.fullName,
+          onboardingComplete: profileData.onboardingComplete,
+          transformationTier: profileData.transformationTier
+        });
         
-        if (normalized) {
-          profileData.role = normalized;
-        } else {
-          // Handle case where role is still invalid after normalization
-          console.warn(`Invalid role for user ${firebaseUser.uid}:`, profileData.role);
-          // Optional: default to a safe role
-          // profileData.role = UserRole.USER;
+        // Backwards compatibility: remap 'partner' to 'company_admin'
+        if ((profileData.role as string) === 'partner') {
+          console.log('🟣 fetchOrCreateProfile: Remapping "partner" to UserRole.COMPANY_ADMIN');
+          profileData.role = UserRole.COMPANY_ADMIN
+          console.log('🟣 fetchOrCreateProfile: After remap, role is:', profileData.role);
         }
-        console.log("profile data",profileData);
-        return profileData;
+
+        if (!profileData.role || !Object.values(UserRole).includes(profileData.role)) {
+          console.warn(
+            `🟣 fetchOrCreateProfile: User profile for UID ${firebaseUser.uid} has a missing or invalid role:`,
+            profileData.role
+          )
+        }
+        
+        console.log('🟣 fetchOrCreateProfile: Returning profile with role:', profileData.role);
+        return profileData
       }
 
+      console.log('🟣 fetchOrCreateProfile: No profile found, creating new one');
       const role = isBootstrapAdmin(firebaseUser.email)
         ? UserRole.SUPER_ADMIN
         : UserRole.USER;
 
       if (role === 'super_admin') {
         console.log(
-          `Assigning SUPER_ADMIN role to bootstrap admin: ${firebaseUser.email}`
-        );
+          `🟣 fetchOrCreateProfile: Assigning SUPER_ADMIN role to bootstrap admin: ${firebaseUser.email}`
+        )
       }
 
       const profileData: UserProfile = {
@@ -100,6 +124,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         updatedAt: new Date().toISOString(),
       };
 
+      console.log('🟣 fetchOrCreateProfile: Creating new profile with role:', role);
       await setDoc(docRef, {
         ...profileData,
         createdAt: serverTimestamp(),
@@ -108,7 +133,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
       return profileData
     } catch (error: any) {
-      console.error('Error fetching/creating profile:', {
+      console.error('🟣 fetchOrCreateProfile: Error fetching/creating profile:', {
         message: error.message,
         code: error.code,
         uid: firebaseUser.uid,
@@ -186,13 +211,19 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
   // Initialize auth state with real-time profile listener
   useEffect(() => {
+    console.log('🟠 AuthContext: Setting up onAuthStateChanged listener');
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
+      console.log('🟠 AuthContext: onAuthStateChanged triggered', {
+        user: user ? { uid: user.uid, email: user.email } : null
+      });
+      
       setLoading(true)
       setUser(user)
 
       console.log("Am here")
 
       if (!user) {
+        console.log('🟠 AuthContext: No user, clearing profile');
         setProfile(null)
         setProfileLoading(false)
         setLoading(false)
@@ -201,15 +232,32 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       }
 
       setProfileLoading(true)
+      console.log('🟠 AuthContext: User detected, starting profile load...');
 
       // Extract custom claims
+      console.log('🟠 AuthContext: Extracting custom claims...');
       await extractCustomClaims(user)
 
+      console.log('🟠 AuthContext: Fetching profile from Firestore...');
       const userProfile = await fetchOrCreateProfile(user)
+      console.log('🟠 AuthContext: Profile fetched', {
+        profile: userProfile ? {
+          id: userProfile.id,
+          email: userProfile.email,
+          role: userProfile.role,
+          fullName: userProfile.fullName,
+          onboardingComplete: userProfile.onboardingComplete,
+          transformationTier: userProfile.transformationTier,
+          dashboardPreferences: userProfile.dashboardPreferences
+        } : null
+      });
+      
       setProfile(userProfile)
       setProfileLoading(false)
-      if (userProfile && ['super_admin', 'partner'].includes(userProfile.role)) {
-        console.log(`AuthContext: Profile loading complete for admin user: ${userProfile.email}, role: ${userProfile.role}`)
+      console.log('🟠 AuthContext: Profile loading complete, profileLoading set to false');
+      
+      if (userProfile && [UserRole.SUPER_ADMIN, UserRole.COMPANY_ADMIN].includes(userProfile.role)) {
+        console.log(`🟠 AuthContext: Admin user detected: ${userProfile.email}, role: ${userProfile.role}`)
       }
       setLoading(false)
 
@@ -219,10 +267,14 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         const unsubscribeProfile = onSnapshot(profileRef, (doc) => {
           if (doc.exists()) {
             const updatedProfile = doc.data() as UserProfile
+            console.log('🟠 AuthContext: Profile updated via snapshot', {
+              role: updatedProfile.role,
+              email: updatedProfile.email
+            });
             setProfile(updatedProfile)
           }
         }, (error) => {
-          console.error('Error listening to profile updates:', error)
+          console.error('🟠 AuthContext: Error listening to profile updates:', error)
         })
 
         return unsubscribeProfile
@@ -232,26 +284,16 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     return () => unsubscribe()
   }, [])
 
-const signIn = async (email: string, password: string) => {
-  setLoading(true)
-  setProfileLoading(true)
-
-  try {
-    const cred = await signInWithEmailAndPassword(auth, email, password)
-    const u = cred.user
-
-    console.log('[AUTH] Signed in:', {
-      uid: u.uid,
-      email: u.email,
-    })
-
-    setUser(u)
-
-    const profileRef = doc(db, 'profiles', u.uid)
-    const snap = await getDoc(profileRef)
-
-    if (!snap.exists()) {
-      throw new Error('Profile document missing for user')
+  // Sign in with email and password
+  const signIn = async (email: string, password: string) => {
+    try {
+      console.log('🟡 AuthContext.signIn: Calling Firebase signInWithEmailAndPassword', { email });
+      await signInWithEmailAndPassword(auth, email, password)
+      console.log('🟡 AuthContext.signIn: Firebase auth successful');
+      return { error: null }
+    } catch (error) {
+      console.error('🟡 AuthContext.signIn: Firebase auth failed', error);
+      return { error: error as Error }
     }
 
     const profileData = snap.data() as UserProfile

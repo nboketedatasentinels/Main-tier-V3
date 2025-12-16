@@ -28,18 +28,50 @@ export const LoginPage: React.FC = () => {
   const [searchParams] = useSearchParams()
 
   useEffect(() => {
+    console.log('🔵 LoginPage useEffect triggered:', {
+      user: user ? { uid: user.uid, email: user.email } : null,
+      profile: profile ? { 
+        id: profile.id, 
+        email: profile.email, 
+        role: profile.role,
+        fullName: profile.fullName 
+      } : null,
+      profileLoading,
+      condition: !profileLoading && user && profile
+    });
+    
     if (!profileLoading && user && profile) {
-      const landingPath = getLandingPathForRole(profile, searchParams);
+      // If user is already logged in and profile is loaded, redirect them.
+      const redirectUrl = searchParams.get('redirectUrl');
+      console.log('🟢 LoginPage: Calculating landing path', {
+        role: profile.role,
+        redirectUrl,
+        profileData: {
+          id: profile.id,
+          email: profile.email,
+          role: profile.role,
+          fullName: profile.fullName,
+          onboardingComplete: profile.onboardingComplete,
+          dashboardPreferences: profile.dashboardPreferences
+        }
+      });
+      
+      const landingPath = getLandingPathForRole(profile.role, profile, redirectUrl);
+      console.log('🎯 LoginPage: Navigating to:', landingPath);
       navigate(landingPath, { replace: true });
     }
   }, [user, profile, profileLoading, navigate, searchParams]);
 
   const handleLogin = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setLoading(true);
+    e.preventDefault()
+    setLoading(true)
+    
+    console.log('🔴 LoginPage: handleLogin called', { email });
 
     try {
-      const { error } = await signIn(email, password);
+      console.log('🔴 LoginPage: Calling signIn...');
+      const { error } = await signIn(email, password)
+      console.log('🔴 LoginPage: signIn returned', { error: error?.message || null });
 
       if (error) {
         toast({
@@ -59,9 +91,16 @@ export const LoginPage: React.FC = () => {
         title: 'Welcome back!',
         status: 'success',
         duration: 3000,
-      });
+      })
+      console.log('🔴 LoginPage: Sign in successful, waiting for AuthContext to update...');
+      // After successful sign-in, AuthContext will detect the change.
+      // The useEffect in this component or a top-level router component (like RoleRedirect)
+      // will handle the redirection.
+      // setLoading will be handled by the redirection causing the component to unmount.
     } catch (err) {
-      setLoading(false);
+      console.error('🔴 LoginPage: Exception in handleLogin', err);
+      // In case signIn promise itself rejects, though it returns an error object.
+      setLoading(false)
     }
   };
 
