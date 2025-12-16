@@ -103,7 +103,8 @@ export const getLandingPathForRole = (
     return '/ambassador/dashboard'
   }
 
-  // Priority 6: Regular user (USER, TEAM_LEADER) with onboarding check
+  // Priority 6: Regular learners (user, team_leader, free_user, paid_member) with onboarding check
+  // Note: These roles don't have explicit switch cases above and fall through to here
   if (profile) {
     // Check onboarding status
     const needsOnboarding = !profile.onboardingComplete && !profile.onboardingSkipped

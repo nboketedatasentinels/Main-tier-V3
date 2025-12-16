@@ -27,6 +27,10 @@ export const ProtectedRoute: React.FC<Props> = ({
   restrictMentor,
   requireOrganization,
 }) => {
+  // Note: We use a hybrid approach for role checking:
+  // - Admin/super admin checks use normalizeRole for consistency with role mappings
+  // - Mentor/ambassador/paid checks use flags from AuthContext for simplicity
+  // This is intentional to balance consistency with developer ergonomics
   const {
     user,
     profile,
@@ -50,7 +54,8 @@ export const ProtectedRoute: React.FC<Props> = ({
     return <Navigate to="/auth/profile-missing" replace />
   }
   
-  // Get normalized role for comparisons
+  // Get normalized role for admin/super_admin comparisons
+  // (these require normalization due to partner/company_admin/admin variations)
   const userRole = normalizeRole(profile?.role)
 
   // Check account status

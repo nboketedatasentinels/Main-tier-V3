@@ -6,8 +6,13 @@ import { UserRole } from '@/types'
  * - super_admin | partner | mentor | ambassador | team_leader | user | free_user | paid_member
  * 
  * Legacy mappings:
- * - company_admin → partner
- * - admin → partner
+ * - company_admin → partner (UserRole.COMPANY_ADMIN enum has value 'partner')
+ * - admin → partner (maps to same enum as company_admin)
+ * 
+ * Important: UserRole enums vs Firestore values
+ * - UserRole.COMPANY_ADMIN has enum value 'partner' (this is what's stored in Firestore)
+ * - normalizeRole('admin') returns 'partner' (the Firestore value)
+ * - normalizeRole(UserRole.COMPANY_ADMIN) returns 'partner' (the enum's value)
  * 
  * Note: free_user and paid_member are kept distinct for UI purposes,
  * though they could be consolidated to "user" with membershipStatus in the future.
@@ -56,11 +61,14 @@ export const normalizeRole = (role: unknown): string => {
 
 /**
  * Convert a string role to UserRole enum
- * Handles common variations and legacy mappings:
- * - company_admin/admin variations → COMPANY_ADMIN (which maps to "partner" in Firestore)
- * - super_admin variations → SUPER_ADMIN
- * - free/free_user → FREE_USER
- * - member/paid_member → PAID_MEMBER
+ * 
+ * Important: UserRole.COMPANY_ADMIN has the enum value "partner" (stored in Firestore).
+ * This function maps various input strings to the correct enum, including:
+ * - 'partner' → UserRole.COMPANY_ADMIN (value: 'partner')
+ * - 'admin' → UserRole.COMPANY_ADMIN (value: 'partner')
+ * - 'company_admin' → UserRole.COMPANY_ADMIN (value: 'partner')
+ * 
+ * When comparing roles, always use normalizeRole() which returns the Firestore value.
  * 
  * @param role - Role string to convert
  * @returns Corresponding UserRole enum value or null if not recognized
@@ -93,6 +101,8 @@ export const toUserRole = (role?: UserRole | string | null): UserRole | null => 
     case 'teamleader':
       return UserRole.TEAM_LEADER
     // Company-admin/partner variations
+    // Note: All these variations map to UserRole.COMPANY_ADMIN which has value 'partner'
+    // This is correct because Firestore stores it as 'partner'
     case 'company_admin':
     case 'companyadmin':
     case 'companyadministrator':
