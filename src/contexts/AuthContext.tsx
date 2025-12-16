@@ -20,7 +20,7 @@ import { UserProfile, DashboardPreferences, AccountStatus, TransformationTier } 
 import { StandardRole, normalizeRole } from '@/utils/role'
 import { ALL_STANDARD_ROLES } from '@/types/roles'
 import { auth, db } from '@/services/firebase'
-import { isBootstrapAdmin } from '@/utils/bootstrap'
+
 
 import { AuthContext, AuthContextType } from './AuthContextType'
 
