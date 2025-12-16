@@ -3,27 +3,21 @@ import { useAuth } from '@/hooks/useAuth'
 import { SuperAdminDashboard } from './SuperAdminDashboard'
 import { CompanyAdminDashboard } from './CompanyAdminDashboard'
 
+/**
+ * AdminDashboard component
+ * Renders appropriate dashboard based on admin role
+ * Route guards ensure only admins can access this component
+ */
 export const AdminDashboard: React.FC = () => {
-  const { isAdmin, isSuperAdmin } = useAuth()
+  const { isSuperAdmin } = useAuth()
 
-  // isSuperAdmin is a specific flag, check it first
+  // Super admins get the super admin dashboard
   if (isSuperAdmin) {
     return <SuperAdminDashboard />
   }
 
-  // isAdmin is a general flag for any admin type
-  if (isAdmin) {
-    return <CompanyAdminDashboard />
-  }
-
-  return (
-    <Box p={8} textAlign="center">
-      <Text fontSize="xl" fontWeight="bold">
-        No admin dashboard available for your role.
-      </Text>
-      <Text mt={2}>Please contact support if you believe this is an error.</Text>
-    </Box>
-  )
+  // All other admins (partners) get the company admin dashboard
+  return <CompanyAdminDashboard />
 }
 
 export default AdminDashboard
