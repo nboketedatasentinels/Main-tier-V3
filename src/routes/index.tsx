@@ -53,44 +53,36 @@ import { SuspendedPage } from '@/pages/errors/SuspendedPage'
 
 // Dashboard router component
 const DashboardRouter = () => {
-  const { loading, profileLoading, profile } = useAuth()
+  const { profile, profileLoading } = useAuth()
+  const location = useLocation()
 
-  if (loading || profileLoading) return null
+  if (profileLoading) {
+    return null // Or a loading spinner
+  }
 
-  const landing = getLandingPathForRole(profile?.role, profile)
+  const landingPath = getLandingPathForRole(profile)
 
-  return (
-    <Routes>
-      <Route path="free" element={
-        <ProtectedRoute requiredRoles={[UserRole.FREE_USER]}>
-          <FreeDashboard />
-        </ProtectedRoute>
-      } />
-      <Route path="member" element={
-        <ProtectedRoute requiredRoles={[UserRole.PAID_MEMBER]}>
-          <PaidMemberDashboard />
-        </ProtectedRoute>
-      } />
-      <Route path="mentor" element={
-        <ProtectedRoute requiredRoles={[UserRole.MENTOR]}>
-          <MentorDashboard />
-        </ProtectedRoute>
-      } />
-      <Route path="ambassador" element={
-        <ProtectedRoute requiredRoles={[UserRole.AMBASSADOR]}>
-          <AmbassadorDashboard />
-        </ProtectedRoute>
-      } />
-      <Route path="company" element={
-        <ProtectedRoute>
-          <CompanyDashboard />
-        </ProtectedRoute>
-      } />
+  // If the calculated landing path is NOT a nested dashboard route,
+  // it means the user should be somewhere else entirely (e.g., /admin/dashboard).
+  // The navigate component will handle the absolute path redirect.
+  if (!landingPath.startsWith('/app/dashboard/')) {
+    return <Navigate to={landingPath} replace />
+  }
 
-      {/* ✅ IMPORTANT: always redirect using the full landing path */}
-      <Route index element={<Navigate to={landing} replace />} />
-    </Routes>
-  )
+  // If the user is already at the correct dashboard, render the routes.
+  // Otherwise, redirect them to the correct nested dashboard path.
+  if (location.pathname === landingPath) {
+    return (
+      <Routes>
+        <Route path="free" element={<FreeDashboard />} />
+        <Route path="member" element={<PaidMemberDashboard />} />
+        {/* Ambassador dashboard is now a top-level route, but we keep this for legacy URLs */}
+        <Route path="ambassador" element={<Navigate to="/ambassador/dashboard" replace />} />
+      </Routes>
+    )
+  }
+
+  return <Navigate to={landingPath} replace />
 }
 
 export const AppRoutes = () => {

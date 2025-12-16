@@ -4,26 +4,9 @@ import { SuperAdminDashboard } from './SuperAdminDashboard'
 import { CompanyAdminDashboard } from './CompanyAdminDashboard'
 
 export const AdminDashboard: React.FC = () => {
-  const { isAdmin, isSuperAdmin } = useAuth()
-
-  // isSuperAdmin is a specific flag, check it first
-  if (isSuperAdmin) {
-    return <SuperAdminDashboard />
-  }
-
-  // isAdmin is a general flag for any admin type
-  if (isAdmin) {
-    return <CompanyAdminDashboard />
-  }
-
-  return (
-    <Box p={8} textAlign="center">
-      <Text fontSize="xl" fontWeight="bold">
-        No admin dashboard available for your role.
-      </Text>
-      <Text mt={2}>Please contact support if you believe this is an error.</Text>
-    </Box>
-  )
+  // The route guard (ProtectedRoute) now ensures only authorized admins can see this.
+  // We can directly render the intended dashboard component.
+  return <CompanyAdminDashboard />
 }
 
 export default AdminDashboard

@@ -1,134 +1,84 @@
-import { UserRole, UserProfile } from '@/types'
+import { UserProfile, UserRole } from '@/types'
 import { normalizeRole } from './role'
 
-// Re-export for convenience
-export { normalizeRole }
-
 /**
- * Get the preferred dashboard route from user profile
+ * Gets the default dashboard route based on membership status.
+ *
+ * @param membershipStatus The user's membership status ('free' or 'paid').
+ * @returns The corresponding dashboard path.
  */
-export const getPreferredDashboardRoute = (profile: UserProfile | null): string | null => {
-  if (!profile) return null
-  
-  // Check dashboard preferences first
-  if (profile.dashboardPreferences?.defaultRoute) {
-    return profile.dashboardPreferences.defaultRoute
-  }
-  
-  // Check direct defaultDashboardRoute field
-  if (profile.defaultDashboardRoute) {
-    return profile.defaultDashboardRoute
-  }
-  
-  return null
+export const getDefaultDashboardRouteByMembership = (
+  membershipStatus: 'free' | 'paid' | undefined | null
+): string => {
+  return membershipStatus === 'paid' ? '/app/dashboard/member' : '/app/dashboard/free'
 }
 
 /**
- * Get default dashboard route based on membership tier
- */
-export const getDefaultDashboardRouteByMembership = (profile: UserProfile | null): string => {
-  if (!profile) return '/app/weekly-glance'
-  
-  const role = profile.role
-  const tier = profile.transformationTier
-  
-  // Corporate members may have custom defaults
-  if (tier && tier.toString().toLowerCase().includes('corporate')) {
-    return '/app/dashboard/company'
-  }
-  
-  // Paid members get full access
-  if (role === UserRole.PAID_MEMBER) {
-    return '/app/weekly-glance'
-  }
-  
-  // Free users default to weekly glance
-  return '/app/weekly-glance'
-}
-
-/**
- * Comprehensive role-based landing path with priority logic
- * Priority:
- * 1. redirectUrl query parameter (external/payment flows)
- * 2. Super Admin and Partner (ADMIN, COMPANY_ADMIN) -> /admin
- * 3. Mentor conditional based on transformationTier
- * 4. Ambassador -> /ambassador
- * 5. Regular user with onboarding check
+ * Determines the appropriate landing path for a user based on their role and profile status.
+ *
+ * @param profile The user's profile object.
+ * @param searchParams Optional URLSearchParams to check for a 'redirectUrl'.
+ * @returns The calculated landing path string.
  */
 export const getLandingPathForRole = (
-  role: unknown,
-  profile?: UserProfile | null,
-  redirectUrl?: string | null
+  profile: UserProfile | null,
+  searchParams?: URLSearchParams
 ): string => {
-  // Priority 1: Check for redirectUrl query parameter
+  // 1. Priority: Handle external redirect flows (e.g., payment)
+  const redirectUrl = searchParams?.get('redirectUrl')
   if (redirectUrl) {
-    return redirectUrl
+    try {
+      // Basic validation to prevent open redirects
+      const url = new URL(redirectUrl, window.location.origin)
+      if (url.hostname === window.location.hostname) {
+        return url.pathname + url.search
+      }
+    } catch (error) {
+      console.warn('Invalid redirectUrl parameter:', redirectUrl)
+      // Fall through to default logic
+    }
   }
 
-  // Priority 2: Super Admin and Partner
-  const r = normalizeRole(role)
+  if (!profile) {
+    return '/login'
+  }
 
-  if (r === normalizeRole(UserRole.SUPER_ADMIN) || r === 'SUPER_ADMIN') {
+  const role = normalizeRole(profile.role)
+
+  // 2. Handle admin and specialized roles first
+  if (role === UserRole.SUPER_ADMIN) {
     return '/super-admin/dashboard'
   }
-
-  // Treat COMPANY_ADMIN as admin dashboard
-  if (
-    r === normalizeRole(UserRole.COMPANY_ADMIN) ||
-    r === 'COMPANY_ADMIN' ||
-    r === 'ADMIN'
-  ) {
+  if (role === UserRole.COMPANY_ADMIN) {
     return '/admin/dashboard'
   }
-
-  // Priority 3: Mentor conditional redirect based on transformationTier
-  if (r === normalizeRole(UserRole.MENTOR) || r === 'MENTOR') {
-    // Check if mentor has corporate tier
-    if (profile?.transformationTier) {
-      const tier = profile.transformationTier.toString().toLowerCase()
-      if (tier === 'corporate_member' || tier === 'corporate_leader') {
-        return '/mentor/dashboard'
-      }
+  if (role === UserRole.MENTOR) {
+    // Corporate mentors have a different dashboard
+    if (profile.transformationTier === 'corporate_leader' || profile.transformationTier === 'corporate_member') {
+      return '/mentor/dashboard'
     }
-    
-    // For individual tier mentors, check for preferred dashboard route
-    const preferredRoute = getPreferredDashboardRoute(profile || null)
-    if (preferredRoute) {
-      return preferredRoute
-    }
-    
-    // Default to mentor dashboard
-    return '/mentor/dashboard'
+    // Non-corporate mentors go to the standard learner dashboard
+    return getDefaultDashboardRouteByMembership(profile.membershipStatus)
   }
-
-  // Priority 4: Ambassador
-  if (r === normalizeRole(UserRole.AMBASSADOR) || r === 'AMBASSADOR') {
+  if (role === UserRole.AMBASSADOR) {
     return '/ambassador/dashboard'
   }
 
-  // Priority 5: Regular user (FREE_USER, PAID_MEMBER) with onboarding check
-  if (profile) {
-    // Check onboarding status
-    const needsOnboarding = !profile.onboardingComplete && !profile.onboardingSkipped
-    if (needsOnboarding) {
+  // 3. Handle standard learners (user | team_leader)
+  if (role === UserRole.USER || role === UserRole.TEAM_LEADER) {
+    // Onboarding incomplete takes precedence
+    if (!profile.onboardingComplete && !profile.onboardingSkipped) {
       return '/welcome'
     }
-    
-    // Check for preferred dashboard route
-    const preferredRoute = getPreferredDashboardRoute(profile)
-    if (preferredRoute) {
-      return preferredRoute
-    }
-    
-    // Use default based on membership
-    return getDefaultDashboardRouteByMembership(profile)
+
+    // Use preferred route if set, otherwise fall back to membership default
+    return (
+      profile.dashboardPreferences?.defaultRoute ||
+      getDefaultDashboardRouteByMembership(profile.membershipStatus)
+    )
   }
 
-  // Fallback based on role only
-  if (r === normalizeRole(UserRole.PAID_MEMBER) || r === 'PAID_MEMBER') {
-    return '/app/dashboard/member'
-  }
-
-  // Default free
+  // 4. Fallback for any unknown roles
+  console.warn(`Could not determine landing path for role: ${profile.role}. Defaulting to free dashboard.`)
   return '/app/dashboard/free'
 }
