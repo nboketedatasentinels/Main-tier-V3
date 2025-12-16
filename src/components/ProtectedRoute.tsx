@@ -27,13 +27,15 @@ export const ProtectedRoute: React.FC<Props> = ({
   restrictMentor,
   requireOrganization,
 }) => {
+  // Note: We use a hybrid approach for role checking:
+  // - Admin/super admin checks use normalizeRole for consistency with role mappings
+  // - Mentor/ambassador/paid checks use flags from AuthContext for simplicity
+  // This is intentional to balance consistency with developer ergonomics
   const {
     user,
     profile,
     loading,
     profileLoading,
-    isAdmin,
-    isSuperAdmin,
     isMentor,
     isAmbassador,
     isPaid,
@@ -52,7 +54,8 @@ export const ProtectedRoute: React.FC<Props> = ({
     return <Navigate to="/auth/profile-missing" replace />
   }
   
-  // ✅ Add this near the top (after profile exists)
+  // Get normalized role for admin/super_admin comparisons
+  // (these require normalization due to partner/company_admin/admin variations)
   const userRole = normalizeRole(profile?.role)
 
   // Check account status
@@ -70,23 +73,15 @@ export const ProtectedRoute: React.FC<Props> = ({
     return <Navigate to="/mentor/dashboard" replace />
   }
 
-  // ✅ Super admin requirement (accept either computed flag OR role)
-  if (requireSuperAdmin && !(isSuperAdmin || userRole === 'super_admin')) {
+  // Super admin requirement - check normalized role
+  if (requireSuperAdmin && userRole !== 'super_admin') {
     return <Navigate to="/unauthorized" replace />
   }
 
-  // ✅ Admin requirement (accept either computed flag OR role)
-  if (
-    requireAdmin &&
-    !(
-      isAdmin ||
-      userRole === 'partner' ||
-      userRole === 'super_admin' // super admins count as admin
-    )
-  ) {
+  // Admin requirement - allow both partner and super_admin
+  if (requireAdmin && userRole !== 'partner' && userRole !== 'super_admin') {
     return <Navigate to="/unauthorized" replace />
   }
-
 
   // Check for mentor requirement
   if (requireMentor && !isMentor) {
@@ -110,10 +105,9 @@ export const ProtectedRoute: React.FC<Props> = ({
 
   // Check for specific role requirements
   if (requiredRoles && requiredRoles.length > 0) {
-    const userRole = normalizeRole(profile?.role)
-    const allowed = requiredRoles.map(normalizeRole)
+    const allowedRoles = requiredRoles.map(normalizeRole)
 
-    if (!allowed.includes(userRole)) {
+    if (!allowedRoles.includes(userRole)) {
       return <Navigate to="/unauthorized" replace />
     }
   }

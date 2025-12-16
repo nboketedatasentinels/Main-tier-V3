@@ -50,10 +50,11 @@ export const getDefaultDashboardRouteByMembership = (profile: UserProfile | null
  * Comprehensive role-based landing path with priority logic
  * Priority:
  * 1. redirectUrl query parameter (external/payment flows)
- * 2. Super Admin and Partner (ADMIN, COMPANY_ADMIN) -> /admin
- * 3. Mentor conditional based on transformationTier
- * 4. Ambassador -> /ambassador
- * 5. Regular user with onboarding check
+ * 2. Super Admin -> /super-admin/dashboard
+ * 3. Partner (COMPANY_ADMIN) -> /admin/dashboard
+ * 4. Mentor conditional based on transformationTier
+ * 5. Ambassador -> /ambassador/dashboard
+ * 6. Regular user (USER, TEAM_LEADER) with onboarding check
  */
 export const getLandingPathForRole = (
   role: unknown,
@@ -65,24 +66,20 @@ export const getLandingPathForRole = (
     return redirectUrl
   }
 
-  // Priority 2: Super Admin and Partner
-  const r = normalizeRole(role)
+  // Priority 2: Super Admin
+  const normalizedRole = normalizeRole(role)
 
-  if (r === normalizeRole(UserRole.SUPER_ADMIN) || r === 'SUPER_ADMIN') {
+  if (normalizedRole === 'super_admin') {
     return '/super-admin/dashboard'
   }
 
-  // Treat COMPANY_ADMIN as admin dashboard
-  if (
-    r === normalizeRole(UserRole.COMPANY_ADMIN) ||
-    r === 'COMPANY_ADMIN' ||
-    r === 'ADMIN'
-  ) {
+  // Priority 3: Partner (company_admin maps to partner in Firestore)
+  if (normalizedRole === 'partner') {
     return '/admin/dashboard'
   }
 
-  // Priority 3: Mentor conditional redirect based on transformationTier
-  if (r === normalizeRole(UserRole.MENTOR) || r === 'MENTOR') {
+  // Priority 4: Mentor conditional redirect based on transformationTier
+  if (normalizedRole === 'mentor') {
     // Check if mentor has corporate tier
     if (profile?.transformationTier) {
       const tier = profile.transformationTier.toString().toLowerCase()
@@ -101,12 +98,13 @@ export const getLandingPathForRole = (
     return '/mentor/dashboard'
   }
 
-  // Priority 4: Ambassador
-  if (r === normalizeRole(UserRole.AMBASSADOR) || r === 'AMBASSADOR') {
+  // Priority 5: Ambassador
+  if (normalizedRole === 'ambassador') {
     return '/ambassador/dashboard'
   }
 
-  // Priority 5: Regular user (FREE_USER, PAID_MEMBER) with onboarding check
+  // Priority 6: Regular learners (user, team_leader, free_user, paid_member) with onboarding check
+  // Note: These roles don't have explicit switch cases above and fall through to here
   if (profile) {
     // Check onboarding status
     const needsOnboarding = !profile.onboardingComplete && !profile.onboardingSkipped
@@ -124,11 +122,11 @@ export const getLandingPathForRole = (
     return getDefaultDashboardRouteByMembership(profile)
   }
 
-  // Fallback based on role only
-  if (r === normalizeRole(UserRole.PAID_MEMBER) || r === 'PAID_MEMBER') {
+  // Fallback based on role only (when no profile is available)
+  if (normalizedRole === 'paid_member') {
     return '/app/dashboard/member'
   }
 
-  // Default free
+  // Default free user
   return '/app/dashboard/free'
 }

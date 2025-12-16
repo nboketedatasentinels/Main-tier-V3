@@ -1,58 +1,37 @@
-import { useEffect } from 'react'
-import { Navigate } from 'react-router-dom'
+import { Navigate, useSearchParams } from 'react-router-dom'
 import { useAuth } from '@/hooks/useAuth'
 import { getLandingPathForRole } from '@/utils/roleRouting'
 
+/**
+ * RoleRedirect component for /app index entry
+ * Redirects authenticated users to their appropriate landing path
+ * based on their role and profile settings
+ */
 export default function RoleRedirect() {
   const { loading, profileLoading, user, profile } = useAuth()
+  const [searchParams] = useSearchParams()
 
-  useEffect(() => {
-    if (loading || profileLoading) return;
+  // Show nothing while loading
+  if (loading || profileLoading) {
+    return null
+  }
 
-    if (!user) {
-      navigate("/login", { replace: true });
-      return;
-    }
+  // Redirect to login if not authenticated
+  if (!user) {
+    return <Navigate to="/login" replace />
+  }
 
-    // if profile missing
-    if (!userData) {
-      navigate("/auth/profile-missing", { replace: true });
-      return;
-    }
+  // Redirect to profile missing page if profile doesn't exist
+  if (!profile) {
+    return <Navigate to="/auth/profile-missing" replace />
+  }
 
-    // account status gate (optional but recommended)
-    if (userData.accountStatus && userData.accountStatus !== "active") {
-      navigate("/login", { replace: true });
-      return;
-    }
+  // Get redirectUrl from query params if present
+  const redirectUrl = searchParams.get('redirectUrl')
 
-    // ✅ Super Admin first
-    if (userData.role === UserRole.SUPER_ADMIN) {
-      navigate("/super-admin/dashboard", { replace: true });
-      return;
-    }
+  // Compute landing path using centralized logic
+  const landingPath = getLandingPathForRole(profile.role, profile, redirectUrl)
 
-    // ✅ Partner/Company Admin
-    if (userData.role === UserRole.COMPANY_ADMIN) {
-      navigate("/admin/dashboard", { replace: true });
-      return;
-    }
-
-    // Mentor
-    if (userData.role === UserRole.MENTOR) {
-      navigate("/mentor/dashboard", { replace: true });
-      return;
-    }
-
-    // Ambassador
-    if (userData.role === UserRole.AMBASSADOR) {
-      navigate("/app/dashboard/ambassador", { replace: true });
-      return;
-    }
-
-    // default user
-    navigate("/app/dashboard/free", { replace: true });
-  }, [loading, profileLoading, user, userData, navigate, location.key]);
-
-  return null;
+  // Redirect to the computed landing path
+  return <Navigate to={landingPath} replace />
 }
