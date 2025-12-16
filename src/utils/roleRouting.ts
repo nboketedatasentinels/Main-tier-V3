@@ -1,6 +1,33 @@
 import { UserProfile } from '@/types'
 import { normalizeRole } from './role'
-import { getPreferredDashboardRoute } from '@/utils/dashboardPaths'
+
+/**
+ * Extracts preferred dashboard route from the profile (if set).
+ * Looks at the most common fields used across the codebase:
+ * - profile.dashboardPreferences.defaultRoute
+ * - profile.defaultDashboardRoute
+ */
+export const getPreferredDashboardRoute = (profile: UserProfile | null): string | null => {
+  const fromPrefs =
+    typeof profile?.dashboardPreferences?.defaultRoute === 'string'
+      ? profile.dashboardPreferences.defaultRoute
+      : null
+
+  const fromLegacy =
+    typeof (profile as any)?.defaultDashboardRoute === 'string'
+      ? (profile as any).defaultDashboardRoute
+      : null
+
+  const preferred = (fromPrefs || fromLegacy || '').trim()
+
+  console.log('🟩 getPreferredDashboardRoute:', {
+    fromPrefs,
+    fromLegacy,
+    preferred,
+  })
+
+  return preferred.length > 0 ? preferred : null
+}
 
 /**
  * Gets the default dashboard route based on membership status.
@@ -33,15 +60,15 @@ export const getLandingPathForRole = (
           email: profile.email,
           role: profile.role,
           onboardingComplete: profile.onboardingComplete,
+          onboardingSkipped: profile.onboardingSkipped,
           transformationTier: profile.transformationTier,
+          membershipStatus: (profile as any).membershipStatus,
           dashboardPreferences: profile.dashboardPreferences,
         }
       : null,
   })
 
-  /* ------------------------------------
-   * Priority 1: External redirect
-   * ------------------------------------ */
+  // Priority 1: External redirect override
   if (redirectUrl) {
     console.log('🔷 Redirect override detected:', redirectUrl)
     return redirectUrl
@@ -50,25 +77,19 @@ export const getLandingPathForRole = (
   const normalizedRole = normalizeRole(role)
   console.log('🔷 Normalized role:', normalizedRole)
 
-  /* ------------------------------------
-   * Priority 2: Super Admin
-   * ------------------------------------ */
+  // Priority 2: Super Admin
   if (normalizedRole === 'super_admin') {
-    console.log('🔷 Super admin detected')
+    console.log('🔷 Super admin detected → /super-admin/dashboard')
     return '/super-admin/dashboard'
   }
 
-  /* ------------------------------------
-   * Priority 3: Partner / Company Admin
-   * ------------------------------------ */
+  // Priority 3: Partner/Admin (company admin)
   if (normalizedRole === 'partner') {
-    console.log('🔷 Partner admin detected')
+    console.log('🔷 Partner detected → /admin/dashboard')
     return '/admin/dashboard'
   }
 
-  /* ------------------------------------
-   * Priority 4: Mentor
-   * ------------------------------------ */
+  // Priority 4: Mentor (conditional corporate)
   if (normalizedRole === 'mentor') {
     console.log('🔷 Mentor detected')
 
@@ -76,7 +97,7 @@ export const getLandingPathForRole = (
     console.log('🔷 Mentor tier:', tier)
 
     if (tier === 'corporate_member' || tier === 'corporate_leader') {
-      console.log('🔷 Corporate mentor → mentor dashboard')
+      console.log('🔷 Corporate mentor → /mentor/dashboard')
       return '/mentor/dashboard'
     }
 
@@ -86,20 +107,17 @@ export const getLandingPathForRole = (
       return preferred
     }
 
+    console.log('🔷 Mentor default → /mentor/dashboard')
     return '/mentor/dashboard'
   }
 
-  /* ------------------------------------
-   * Priority 5: Ambassador
-   * ------------------------------------ */
+  // Priority 5: Ambassador
   if (normalizedRole === 'ambassador') {
-    console.log('🔷 Ambassador detected')
+    console.log('🔷 Ambassador detected → /ambassador/dashboard')
     return '/ambassador/dashboard'
   }
 
-  /* ------------------------------------
-   * Priority 6: Learners (user / team_leader)
-   * ------------------------------------ */
+  // Priority 6: Learners (user / team_leader / free_user / paid_member)
   if (profile) {
     const needsOnboarding =
       !profile.onboardingComplete && !profile.onboardingSkipped
@@ -111,6 +129,7 @@ export const getLandingPathForRole = (
     })
 
     if (needsOnboarding) {
+      console.log('🔷 Needs onboarding → /welcome')
       return '/welcome'
     }
 
@@ -120,17 +139,17 @@ export const getLandingPathForRole = (
       return preferred
     }
 
-    const fallback = getDefaultDashboardRouteByMembership(
-      profile.membershipStatus
-    )
+    const membershipStatus = (profile as any).membershipStatus as
+      | 'free'
+      | 'paid'
+      | undefined
+      | null
 
+    const fallback = getDefaultDashboardRouteByMembership(membershipStatus)
     console.log('🔷 Learner fallback route:', fallback)
     return fallback
   }
 
-  /* ------------------------------------
-   * Absolute fallback
-   * ------------------------------------ */
-  console.log('🔷 Absolute fallback → free dashboard')
+  console.log('🔷 Absolute fallback → /app/dashboard/free')
   return '/app/dashboard/free'
 }
