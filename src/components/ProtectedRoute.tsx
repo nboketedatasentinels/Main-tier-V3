@@ -32,8 +32,6 @@ export const ProtectedRoute: React.FC<Props> = ({
     profile,
     loading,
     profileLoading,
-    isAdmin,
-    isSuperAdmin,
     isMentor,
     isAmbassador,
     isPaid,
