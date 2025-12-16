@@ -1,7 +1,6 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
 import { ProtectedRoute } from '@/components/ProtectedRoute'
 import { FreeTierGuard } from '@/components/FreeTierGuard'
-import { UserRole } from '@/types'
 import { useAuth } from '@/hooks/useAuth'
 import RoleRedirect from '@/pages/auth/RoleRedirect'
 import { getLandingPathForRole } from '@/utils/roleRouting'

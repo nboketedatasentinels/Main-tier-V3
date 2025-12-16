@@ -1,21 +1,18 @@
-import { UserRole } from '@/types'
-import { normalizeUserRole } from './roles'
+import { StandardRole, normalizeRole } from '@/utils/role'
 
-export const getDashboardPathForRole = (role?: UserRole | string | null) => {
-  const normalizedRole = normalizeUserRole(role)
+export const getDashboardPathForRole = (role?: StandardRole | string | null) => {
+  const normalizedRole = normalizeRole(role)
 
   switch (normalizedRole) {
-    case UserRole.FREE_USER:
-      return '/app/dashboard/free'
-    case UserRole.PAID_MEMBER:
-      return '/app/dashboard/member'
-    case UserRole.MENTOR:
+    case 'user':
+      return '/app/dashboard/free' // Assuming 'user' is default for both free and paid members, adjust if specific 'paid' dashboard needed
+    case 'mentor':
       return '/mentor/dashboard'
-    case UserRole.AMBASSADOR:
+    case 'ambassador':
       return '/app/dashboard/ambassador'
-    case UserRole.COMPANY_ADMIN:
+    case 'partner':
       return '/admin/dashboard'
-    case UserRole.SUPER_ADMIN:
+    case 'super_admin':
       return '/super-admin/dashboard'
     default:
       return '/app/dashboard/free'

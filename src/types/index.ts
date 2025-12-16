@@ -1,14 +1,4 @@
-// User Roles
-export enum UserRole {
-  USER = "user",
-  TEAM_LEADER = "team_leader",
-  AMBASSADOR = "ambassador",
-  MENTOR = "mentor",
-  COMPANY_ADMIN = "partner",     // map partner → COMPANY_ADMIN role in UI
-  SUPER_ADMIN = "super_admin",
-  FREE_USER = "free_user",
-  PAID_MEMBER = "paid_member",
-}
+import { StandardRole } from '../utils/role';
 
 // Transformation Tier Types
 export enum TransformationTier {
@@ -42,7 +32,8 @@ export interface UserProfile {
   firstName: string
   lastName: string
   fullName: string
-  role: UserRole
+  role: StandardRole
+  membershipStatus?: string 
   avatarUrl?: string
   bio?: string
   phoneNumber?: string

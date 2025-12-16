@@ -1,5 +1,6 @@
 
-import { UserRole, UserProfile } from '@/types';
+import { UserProfile } from '@/types';
+import { StandardRole, normalizeRole } from '@/utils/role';
 
 /**
  * Get the preferred dashboard route from user profile
@@ -26,20 +27,20 @@ export const getPreferredDashboardRoute = (profile: UserProfile | null): string 
 export const getDefaultDashboardRouteByMembership = (profile: UserProfile | null): string => {
   if (!profile) return '/app/weekly-glance';
 
-  const role = profile.role;
-  const tier = profile.transformationTier;
+  const normalizedRole = normalizeRole(profile.role);
+  const membershipStatus = profile.membershipStatus;
 
   // Corporate members may have custom defaults
-  if (tier && tier.toString().toLowerCase().includes('corporate')) {
+  if (profile.transformationTier && profile.transformationTier.toString().toLowerCase().includes('corporate')) {
     return '/app/dashboard/company';
   }
 
-  // Paid members get full access
-  if (role === UserRole.PAID_MEMBER) {
+  // Paid users get full access
+  if (normalizedRole === 'user' && membershipStatus === 'paid') {
     return '/app/weekly-glance';
   }
 
-  // Free users default to weekly glance
+  // Default free
   return '/app/weekly-glance';
 };
 
@@ -51,7 +52,7 @@ export const getDefaultDashboardRouteByMembership = (profile: UserProfile | null
  * 3. Regular user with onboarding check
  */
 export const getLandingPathForRole = (
-  role: UserRole,
+  role: StandardRole,
   profile?: UserProfile | null,
   redirectUrl?: string | null
 ): string => {
@@ -60,13 +61,15 @@ export const getLandingPathForRole = (
     return redirectUrl;
   }
 
+  const normalizedRole = normalizeRole(role);
+
   // Priority 2: Role-based redirection
-  switch (role) {
-    case UserRole.SUPER_ADMIN:
+  switch (normalizedRole) {
+    case 'super_admin':
       return '/super-admin/dashboard';
-    case UserRole.COMPANY_ADMIN:
+    case 'partner':
       return '/admin/dashboard';
-    case UserRole.MENTOR:
+    case 'mentor':
       // Mentor conditional redirect based on transformationTier
       if (profile?.transformationTier) {
         const tier = profile.transformationTier.toString().toLowerCase();
@@ -80,7 +83,7 @@ export const getLandingPathForRole = (
         return preferredRoute;
       }
       return '/mentor/dashboard';
-    case UserRole.AMBASSADOR:
+    case 'ambassador':
       return '/ambassador/dashboard';
     default:
       // Continue to Priority 3 for other roles
@@ -106,7 +109,7 @@ export const getLandingPathForRole = (
   }
 
   // Fallback based on role only
-  if (role === UserRole.PAID_MEMBER) {
+  if (normalizedRole === 'user' && profile?.membershipStatus === 'paid') {
     return '/app/dashboard/member';
   }
 

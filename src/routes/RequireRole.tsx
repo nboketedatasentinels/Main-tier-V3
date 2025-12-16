@@ -1,12 +1,12 @@
 import React from 'react'
 import { Navigate, Outlet } from 'react-router-dom'
 import { useAuth } from '@/hooks/useAuth'
-import { normalizeUserRole } from '@/utils/roles'
+
 import { getDashboardPathForRole } from '@/utils/dashboardPaths'
-import { UserRole } from '@/types'
+import { normalizeRole, StandardRole } from '@/utils/role'
 
 type RequireRoleProps = {
-  allow: UserRole[]
+  allow: StandardRole[]
 }
 
 export const RequireRole: React.FC<RequireRoleProps> = ({ allow }) => {
@@ -16,7 +16,7 @@ export const RequireRole: React.FC<RequireRoleProps> = ({ allow }) => {
 
   if (!user) return <Navigate to="/login" replace />
 
-  const normalizedRole = normalizeUserRole(profile?.role)
+  const normalizedRole = normalizeRole(profile?.role)
 
   if (!normalizedRole) {
     console.warn(
