@@ -18,6 +18,7 @@ import {
 } from 'firebase/firestore'
 import { UserProfile, DashboardPreferences, AccountStatus, TransformationTier } from '@/types'
 import { StandardRole, normalizeRole } from '@/utils/role'
+import { ALL_STANDARD_ROLES } from '@/types/roles'
 import { auth, db } from '@/services/firebase'
 import { isBootstrapAdmin } from '@/utils/bootstrap'
 import { AuthContext, AuthContextType } from './AuthContextType'
@@ -48,7 +49,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
           profileData.role = 'partner' as StandardRole
         }
 
-        if (!profileData.role || !Object.values(UserRole).includes(profileData.role)) {
+        if (!profileData.role || !ALL_STANDARD_ROLES.includes(profileData.role as StandardRole)) {
           console.warn(
             `User profile for UID ${firebaseUser.uid} has a missing or invalid role:`,
             profileData.role

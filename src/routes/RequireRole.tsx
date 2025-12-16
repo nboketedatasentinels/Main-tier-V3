@@ -29,6 +29,11 @@ export const RequireRole: React.FC<RequireRoleProps> = ({ allow }) => {
   }
 
   if (!allow.includes(normalizedRole)) {
+    console.log("ROLE_REDIRECT", {
+      rawRole: profile?.role,
+      normalized: normalizedRole,
+      landing: getDashboardPathForRole(normalizedRole),
+    })
     console.warn(
       `Redirecting user due to role mismatch.`,
       `User: ${user.email}`,

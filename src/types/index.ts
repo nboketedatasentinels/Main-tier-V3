@@ -1,4 +1,4 @@
-import { StandardRole } from '../utils/role';
+import { StandardRole } from './roles';
 
 // Transformation Tier Types
 export enum TransformationTier {
