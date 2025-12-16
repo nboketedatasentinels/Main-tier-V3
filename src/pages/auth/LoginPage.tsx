@@ -22,6 +22,7 @@ export const LoginPage: React.FC = () => {
   const [loading, setLoading] = useState(false)
   const [magicLinkSent, setMagicLinkSent] = useState(false)
   const [showPasswordChangeModal, setShowPasswordChangeModal] = useState(false)
+
   const { signIn, signInWithMagicLink, user, profile, profileLoading } = useAuth()
   const navigate = useNavigate()
   const toast = useToast()
@@ -30,48 +31,50 @@ export const LoginPage: React.FC = () => {
   useEffect(() => {
     console.log('🔵 LoginPage useEffect triggered:', {
       user: user ? { uid: user.uid, email: user.email } : null,
-      profile: profile ? { 
-        id: profile.id, 
-        email: profile.email, 
-        role: profile.role,
-        fullName: profile.fullName 
-      } : null,
+      profile: profile
+        ? {
+            id: profile.id,
+            email: profile.email,
+            role: profile.role,
+            fullName: profile.fullName,
+            onboardingComplete: profile.onboardingComplete,
+            onboardingSkipped: profile.onboardingSkipped,
+            dashboardPreferences: profile.dashboardPreferences,
+          }
+        : null,
       profileLoading,
-      condition: !profileLoading && user && profile
-    });
-    
-    if (!profileLoading && user && profile) {
-      // If user is already logged in and profile is loaded, redirect them.
-      const redirectUrl = searchParams.get('redirectUrl');
-      console.log('🟢 LoginPage: Calculating landing path', {
-        role: profile.role,
-        redirectUrl,
-        profileData: {
-          id: profile.id,
-          email: profile.email,
-          role: profile.role,
-          fullName: profile.fullName,
-          onboardingComplete: profile.onboardingComplete,
-          dashboardPreferences: profile.dashboardPreferences
-        }
-      });
-      
-      const landingPath = getLandingPathForRole(profile.role, profile, redirectUrl);
-      console.log('🎯 LoginPage: Navigating to:', landingPath);
-      navigate(landingPath, { replace: true });
+      condition: !profileLoading && !!user && !!profile,
+    })
+
+    if (profileLoading) return
+    if (!user || !profile) return
+
+    // ✅ Correct call signature: (profile, searchParams)
+    const landingPath = getLandingPathForRole(profile, searchParams)
+
+    console.log('🎯 LoginPage: Calculated landing path:', landingPath)
+
+    // Avoid pointless redirects (and reduce loops)
+    const currentPath = window.location.pathname
+    if (currentPath === landingPath) {
+      console.log('🟢 LoginPage: Already on landing path, no navigation needed.')
+      return
     }
-  }, [user, profile, profileLoading, navigate, searchParams]);
+
+    console.log('🎯 LoginPage: Navigating to:', landingPath)
+    navigate(landingPath, { replace: true })
+  }, [user, profile, profileLoading, navigate, searchParams])
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault()
     setLoading(true)
-    
-    console.log('🔴 LoginPage: handleLogin called', { email });
+
+    console.log('🔴 LoginPage: handleLogin called', { email })
 
     try {
-      console.log('🔴 LoginPage: Calling signIn...');
+      console.log('🔴 LoginPage: Calling signIn...')
       const { error } = await signIn(email, password)
-      console.log('🔴 LoginPage: signIn returned', { error: error?.message || null });
+      console.log('🔴 LoginPage: signIn returned', { error: error?.message || null })
 
       if (error) {
         toast({
@@ -80,29 +83,24 @@ export const LoginPage: React.FC = () => {
           status: 'error',
           duration: 5000,
           isClosable: true,
-        });
-        setLoading(false);
-        return;
+        })
+        setLoading(false)
+        return
       }
 
-      // The useEffect will handle the redirect once the profile is loaded.
-      // No need to manually navigate here.
       toast({
         title: 'Welcome back!',
         status: 'success',
         duration: 3000,
       })
-      console.log('🔴 LoginPage: Sign in successful, waiting for AuthContext to update...');
-      // After successful sign-in, AuthContext will detect the change.
-      // The useEffect in this component or a top-level router component (like RoleRedirect)
-      // will handle the redirection.
-      // setLoading will be handled by the redirection causing the component to unmount.
+
+      console.log('🟢 LoginPage: Sign in successful, waiting for AuthContext profile load...')
+      // Redirect will happen in the useEffect once profile is loaded
     } catch (err) {
-      console.error('🔴 LoginPage: Exception in handleLogin', err);
-      // In case signIn promise itself rejects, though it returns an error object.
+      console.error('🔴 LoginPage: Exception in handleLogin', err)
       setLoading(false)
     }
-  };
+  }
 
   const handleMagicLink = async () => {
     if (!email) {
@@ -137,13 +135,10 @@ export const LoginPage: React.FC = () => {
 
     setLoading(false)
   }
-  
+
   const handlePasswordChangeSuccess = () => {
     setShowPasswordChangeModal(false)
-    // After password change, the user is effectively logged in.
-    // Let the main redirect logic handle the navigation.
   }
-
 
   if (magicLinkSent) {
     return (
@@ -229,12 +224,7 @@ export const LoginPage: React.FC = () => {
           </Button>
 
           <VStack spacing={2}>
-            <Link
-              as={RouterLink}
-              to="/reset-password"
-              color="brand.flameOrange"
-              fontSize="sm"
-            >
+            <Link as={RouterLink} to="/reset-password" color="brand.flameOrange" fontSize="sm">
               Forgot password?
             </Link>
             <Text color="white" fontSize="sm">
