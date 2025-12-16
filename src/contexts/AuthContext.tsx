@@ -230,82 +230,115 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     return () => unsubscribe()
   }, [])
 
-  // Sign in with email and password
-  const signIn = async (email: string, password: string) => {
-    try {
-      await signInWithEmailAndPassword(auth, email, password)
-      return { error: null }
-    } catch (error) {
-      return { error: error as Error }
+const signIn = async (email: string, password: string) => {
+  setLoading(true)
+  setProfileLoading(true)
+
+  try {
+    const cred = await signInWithEmailAndPassword(auth, email, password)
+    const u = cred.user
+
+    console.log('[AUTH] Signed in:', {
+      uid: u.uid,
+      email: u.email,
+    })
+
+    setUser(u)
+
+    const profileRef = doc(db, 'profiles', u.uid)
+    const snap = await getDoc(profileRef)
+
+    if (!snap.exists()) {
+      throw new Error('Profile document missing for user')
     }
+
+    const profileData = snap.data() as UserProfile
+    setProfile(profileData)
+
+    console.log('[AUTH] Profile loaded:', profileData)
+
+    return { error: null }
+  } catch (error) {
+    console.error('[AUTH] Sign-in failed:', error)
+    return { error: error as Error }
+  } finally {
+    setLoading(false)
+    setProfileLoading(false)
   }
+}
 
-  // Sign up
-  const signUp = async (email: string, password: string, userData: Partial<UserProfile>) => {
-    try {
-      const userCredential = await createUserWithEmailAndPassword(auth, email, password)
-      const user = userCredential.user
 
-      // Create profile in Firestore
-      const profileData: UserProfile = {
-        id: user.uid,
-        email,
-        firstName: userData.firstName || 'User',
-        lastName: userData.lastName || '',
-        fullName: userData.fullName || 'User',
-        role: 'user',
-        totalPoints: 0,
-        level: 1,
-        referralCount: 0,
-        referralCode: null,
-        referredBy: null,
-        isOnboarded: true,
-        accountStatus: AccountStatus.ACTIVE,
-        transformationTier: TransformationTier.INDIVIDUAL_FREE,
-        assignedOrganizations: [],
-        onboardingComplete: false,
-        onboardingSkipped: false,
-        mustChangePassword: false,
-        hasSeenDashboardTour: false,
-        dashboardPreferences: {
-          defaultRoute: '/app/weekly-glance',
-          lockedToFreeExperience: true,
-        },
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString(),
-      }
+  const signUp = async (
+  email: string,
+  password: string,
+  userData: Partial<UserProfile>
+) => {
+  setLoading(true)
+  setProfileLoading(true)
 
-      await setDoc(doc(db, 'profiles', user.uid), profileData)
+  try {
+    const cred = await createUserWithEmailAndPassword(auth, email, password)
+    const u = cred.user
 
-      // Create user document in users collection with role
-      const userDoc = {
-        uid: user.uid,
-        email,
-        firstName: userData.firstName || 'User',
-        lastName: userData.lastName || '',
-        fullName: userData.fullName || 'User',
-        role: UserRole.USER, // Default role is USER, admin can be assigned later
-        emailVerified: false,
-        createdAt: serverTimestamp(),
-        updatedAt: serverTimestamp(),
-      }
+    console.log('[AUTH] Signed up:', {
+      uid: u.uid,
+      email: u.email,
+    })
 
-      await setDoc(doc(db, 'users', user.uid), userDoc)
-
-      // Send email verification link
-      const actionCodeSettings = {
-        url: `${window.location.origin}/auth/verify-email`,
-        handleCodeInApp: true,
-      }
-
-      await sendEmailVerification(user, actionCodeSettings)
-
-      return { error: null, userId: user.uid }
-    } catch (error) {
-      console.error('Sign up error:', error)
-      return { error: error as Error }
+    const profileData: UserProfile = {
+      id: u.uid,
+      email,
+      firstName: userData.firstName || 'User',
+      lastName: userData.lastName || '',
+      fullName:
+        userData.fullName ||
+        `${userData.firstName ?? 'User'} ${userData.lastName ?? ''}`.trim(),
+      role: UserRole.USER,
+      membershipStatus: 'free',
+      totalPoints: 0,
+      level: 1,
+      referralCount: 0,
+      referralCode: null,
+      referredBy: null,
+      isOnboarded: true,
+      accountStatus: AccountStatus.ACTIVE,
+      transformationTier: TransformationTier.INDIVIDUAL_FREE,
+      assignedOrganizations: [],
+      onboardingComplete: false,
+      onboardingSkipped: false,
+      mustChangePassword: false,
+      hasSeenDashboardTour: false,
+      dashboardPreferences: {
+        defaultRoute: '/app/weekly-glance',
+        lockedToFreeExperience: true,
+      },
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
     }
+
+    const profileRef = doc(db, 'profiles', u.uid)
+
+    await setDoc(profileRef, {
+      ...profileData,
+      createdAt: serverTimestamp(),
+      updatedAt: serverTimestamp(),
+    })
+
+    setUser(u)
+    setProfile(profileData)
+
+    console.log('[AUTH] Profile created:', profileData)
+
+    return { error: null, userId: u.uid }
+  } catch (error) {
+    console.error('[AUTH] Sign-up failed:', error)
+    return { error: error as Error }
+  } finally {
+    setLoading(false)
+    setProfileLoading(false)
   }
+}
+
 
   // Sign out
   const signOut = async () => {
