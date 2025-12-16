@@ -1,4 +1,4 @@
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import { useNavigate, Link as RouterLink, useSearchParams } from 'react-router-dom'
 import {
   VStack,
@@ -13,11 +13,8 @@ import {
   HStack,
 } from '@chakra-ui/react'
 import { useAuth } from '@/hooks/useAuth'
-import { doc, getDoc } from 'firebase/firestore'
-import { db } from '@/services/firebase'
-import { UserProfile, AccountStatus } from '@/types'
-import { getLandingPathForRole } from '@/utils/roleRouting'
 import { PasswordChangeModal } from '@/components/PasswordChangeModal'
+import { getLandingPathForRole } from '@/utils/roleRouting'
 
 export const LoginPage: React.FC = () => {
   const [email, setEmail] = useState('')
@@ -25,85 +22,19 @@ export const LoginPage: React.FC = () => {
   const [loading, setLoading] = useState(false)
   const [magicLinkSent, setMagicLinkSent] = useState(false)
   const [showPasswordChangeModal, setShowPasswordChangeModal] = useState(false)
-  const [userId, setUserId] = useState<string | null>(null)
-  const [profileData, setProfileData] = useState<UserProfile | null>(null)
-  const { signIn, signInWithMagicLink } = useAuth()
+  const { signIn, signInWithMagicLink, user, profile, profileLoading } = useAuth()
   const navigate = useNavigate()
   const toast = useToast()
   const [searchParams] = useSearchParams()
 
-  const handlePostLoginRedirect = async (uid: string) => {
-    try {
-      // Fetch user profile from Firestore
-      const profileRef = doc(db, 'profiles', uid)
-      const profileSnap = await getDoc(profileRef)
-
-      if (!profileSnap.exists()) {
-        navigate('/auth/profile-missing', { replace: true })
-        return
-      }
-
-      const userData = profileSnap.data() as UserProfile
-
-      // Check account status first
-      const accountStatus = userData.accountStatus?.toString().toLowerCase()
-      if (accountStatus === AccountStatus.INACTIVE || accountStatus === 'inactive') {
-        toast({
-          title: 'Account Inactive',
-          description: 'Your account is inactive. Please contact support.',
-          status: 'error',
-          duration: 5000,
-          isClosable: true,
-        })
-        navigate('/login', { replace: true })
-        return
-      }
-
-      if (accountStatus === AccountStatus.SUSPENDED || accountStatus === 'suspended') {
-        toast({
-          title: 'Account Suspended',
-          description: 'Your account has been suspended. Please contact support.',
-          status: 'error',
-          duration: 5000,
-          isClosable: true,
-        })
-        navigate('/suspended', { replace: true })
-        return
-      }
-
-      // Check if password change is required
-      if (userData.mustChangePassword) {
-        setUserId(uid)
-        setProfileData(userData)
-        setShowPasswordChangeModal(true)
-        return
-      }
-
-      // Check for redirectUrl query parameter (payment flows, external redirects)
-      const redirectUrl = searchParams.get('redirectUrl')
-      
-      // Check for onboarding completion
-      const needsOnboarding = !userData.onboardingComplete && !userData.onboardingSkipped
-      if (needsOnboarding && !redirectUrl) {
-        navigate('/welcome', { replace: true })
-        return
-      }
-
-      // Determine landing path based on role and profile
-      const landingPath = getLandingPathForRole(userData.role, userData, redirectUrl || undefined)
-      
-      navigate(landingPath, { replace: true })
-    } catch (error) {
-      console.error('Error during post-login redirect:', error)
-      toast({
-        title: 'Error',
-        description: 'An error occurred. Please try again.',
-        status: 'error',
-        duration: 5000,
-        isClosable: true,
-      })
+  useEffect(() => {
+    if (!profileLoading && user && profile) {
+      // If user is already logged in and profile is loaded, redirect them.
+      const redirectUrl = searchParams.get('redirectUrl');
+      const landingPath = getLandingPathForRole(profile.role, profile, redirectUrl);
+      navigate(landingPath, { replace: true });
     }
-  }
+  }, [user, profile, profileLoading, navigate, searchParams]);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -120,6 +51,7 @@ export const LoginPage: React.FC = () => {
           duration: 5000,
           isClosable: true,
         })
+        setLoading(false)
         return
       }
 
@@ -128,13 +60,12 @@ export const LoginPage: React.FC = () => {
         status: 'success',
         duration: 3000,
       })
-
-      // Get the current user ID and handle post-login redirect
-      const user = (await import('@/services/firebase')).auth.currentUser
-      if (user) {
-        await handlePostLoginRedirect(user.uid)
-      }
-    } finally {
+      // After successful sign-in, AuthContext will detect the change.
+      // The useEffect in this component or a top-level router component (like RoleRedirect)
+      // will handle the redirection.
+      // setLoading will be handled by the redirection causing the component to unmount.
+    } catch (err) {
+      // In case signIn promise itself rejects, though it returns an error object.
       setLoading(false)
     }
   }
@@ -172,15 +103,13 @@ export const LoginPage: React.FC = () => {
 
     setLoading(false)
   }
-
+  
   const handlePasswordChangeSuccess = () => {
-    if (profileData && userId) {
-      // Continue with redirect after password change
-      const redirectUrl = searchParams.get('redirectUrl')
-      const landingPath = getLandingPathForRole(profileData.role, profileData, redirectUrl || undefined)
-      navigate(landingPath, { replace: true })
-    }
+    setShowPasswordChangeModal(false)
+    // After password change, the user is effectively logged in.
+    // Let the main redirect logic handle the navigation.
   }
+
 
   if (magicLinkSent) {
     return (
@@ -284,11 +213,11 @@ export const LoginPage: React.FC = () => {
         </VStack>
       </form>
 
-      {userId && (
+      {user?.uid && (
         <PasswordChangeModal
           isOpen={showPasswordChangeModal}
           onClose={() => setShowPasswordChangeModal(false)}
-          userId={userId}
+          userId={user.uid}
           onSuccess={handlePasswordChangeSuccess}
         />
       )}

@@ -42,6 +42,12 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
       if (docSnap.exists()) {
         const profileData = docSnap.data() as UserProfile
+        
+        // Backwards compatibility: remap 'partner' to 'company_admin'
+        if ((profileData.role as string) === 'partner') {
+          profileData.role = UserRole.COMPANY_ADMIN
+        }
+
         if (!profileData.role || !Object.values(UserRole).includes(profileData.role)) {
           console.warn(
             `User profile for UID ${firebaseUser.uid} has a missing or invalid role:`,
@@ -196,6 +202,9 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       const userProfile = await fetchOrCreateProfile(user)
       setProfile(userProfile)
       setProfileLoading(false)
+      if (userProfile && [UserRole.SUPER_ADMIN, UserRole.COMPANY_ADMIN].includes(userProfile.role)) {
+        console.log(`AuthContext: Profile loading complete for admin user: ${userProfile.email}, role: ${userProfile.role}`)
+      }
       setLoading(false)
 
       // Set up real-time listener for profile updates
@@ -372,7 +381,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   // Computed role flags
   const isAdmin = useMemo(() => {
     if (!profile?.role) return false
-    return [UserRole.ADMIN, UserRole.COMPANY_ADMIN, UserRole.SUPER_ADMIN].includes(profile.role)
+    return [UserRole.COMPANY_ADMIN, UserRole.SUPER_ADMIN].includes(profile.role)
   }, [profile?.role])
 
   const isSuperAdmin = useMemo(() => {
@@ -393,7 +402,6 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       UserRole.PAID_MEMBER,
       UserRole.MENTOR,
       UserRole.AMBASSADOR,
-      UserRole.ADMIN,
       UserRole.COMPANY_ADMIN,
       UserRole.SUPER_ADMIN,
     ].includes(profile.role)

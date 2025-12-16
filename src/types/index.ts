@@ -1,12 +1,13 @@
 // User Roles
 export enum UserRole {
-  FREE_USER = 'free_user',
-  PAID_MEMBER = 'paid_member',
-  MENTOR = 'mentor',
-  AMBASSADOR = 'ambassador',
-  ADMIN = 'admin',
-  COMPANY_ADMIN = 'company_admin',
-  SUPER_ADMIN = 'super_admin',
+  USER = "user",
+  TEAM_LEADER = "team_leader",
+  AMBASSADOR = "ambassador",
+  MENTOR = "mentor",
+  COMPANY_ADMIN = "partner",     // map partner → COMPANY_ADMIN role in UI
+  SUPER_ADMIN = "super_admin",
+  FREE_USER = "free_user",
+  PAID_MEMBER = "paid_member",
 }
 
 // Transformation Tier Types

@@ -157,21 +157,23 @@ const coreValueOptions = [
 ]
 
 const roleDisplayMap: Record<UserRole, string> = {
+  [UserRole.USER]: 'User',
+  [UserRole.TEAM_LEADER]: 'Team Leader',
   [UserRole.FREE_USER]: 'Member',
   [UserRole.PAID_MEMBER]: 'Paid Member',
   [UserRole.MENTOR]: 'Mentor',
   [UserRole.AMBASSADOR]: 'Team Leader',
-  [UserRole.ADMIN]: 'Administrator',
   [UserRole.COMPANY_ADMIN]: 'Administrator',
   [UserRole.SUPER_ADMIN]: 'Super Administrator',
 }
 
 const roleColorMap: Record<UserRole, string> = {
+  [UserRole.USER]: 'gray',
+  [UserRole.TEAM_LEADER]: 'blue',
   [UserRole.FREE_USER]: 'gray',
   [UserRole.PAID_MEMBER]: 'green',
   [UserRole.MENTOR]: 'purple',
   [UserRole.AMBASSADOR]: 'blue',
-  [UserRole.ADMIN]: 'red',
   [UserRole.COMPANY_ADMIN]: 'red',
   [UserRole.SUPER_ADMIN]: 'red',
 }

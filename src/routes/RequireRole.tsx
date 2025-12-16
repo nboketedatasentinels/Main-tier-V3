@@ -33,7 +33,9 @@ export const RequireRole: React.FC<RequireRoleProps> = ({ allow }) => {
       `Redirecting user due to role mismatch.`,
       `User: ${user.email}`,
       `User Role: ${normalizedRole}`,
-      `Allowed Roles: ${allow.join(', ')}`
+      `Allowed Roles: ${allow.join(', ')}`,
+      `Profile state at time of check:`,
+      profile
     )
     return <Navigate to={getDashboardPathForRole(normalizedRole)} replace />
   }

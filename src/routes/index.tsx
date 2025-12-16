@@ -57,28 +57,38 @@ const DashboardRouter = () => {
 
   if (loading || profileLoading) return null
 
-  // Get the full landing path for this user's role
   const landing = getLandingPathForRole(profile?.role, profile)
-  
-  // If landing path is NOT under /app/dashboard/*, redirect to it directly
-  // This fixes the bug where admins were forced to /app/dashboard/free
-  if (!landing.startsWith('/app/dashboard/')) {
-    return <Navigate to={landing} replace />
-  }
-  
-  // For learner dashboards under /app/dashboard/*, extract the relative path
-  const relative = landing.replace('/app/dashboard/', '')
 
   return (
     <Routes>
-      <Route path="free" element={<ProtectedRoute requiredRoles={[UserRole.FREE_USER]}><FreeDashboard /></ProtectedRoute>} />
-      <Route path="member" element={<ProtectedRoute requiredRoles={[UserRole.PAID_MEMBER]}><PaidMemberDashboard /></ProtectedRoute>} />
-      <Route path="mentor" element={<ProtectedRoute requiredRoles={[UserRole.MENTOR]}><MentorDashboard /></ProtectedRoute>} />
-      <Route path="ambassador" element={<ProtectedRoute requiredRoles={[UserRole.AMBASSADOR]}><AmbassadorDashboard /></ProtectedRoute>} />
-      <Route path="company" element={<ProtectedRoute><CompanyDashboard /></ProtectedRoute>} />
+      <Route path="free" element={
+        <ProtectedRoute requiredRoles={[UserRole.FREE_USER]}>
+          <FreeDashboard />
+        </ProtectedRoute>
+      } />
+      <Route path="member" element={
+        <ProtectedRoute requiredRoles={[UserRole.PAID_MEMBER]}>
+          <PaidMemberDashboard />
+        </ProtectedRoute>
+      } />
+      <Route path="mentor" element={
+        <ProtectedRoute requiredRoles={[UserRole.MENTOR]}>
+          <MentorDashboard />
+        </ProtectedRoute>
+      } />
+      <Route path="ambassador" element={
+        <ProtectedRoute requiredRoles={[UserRole.AMBASSADOR]}>
+          <AmbassadorDashboard />
+        </ProtectedRoute>
+      } />
+      <Route path="company" element={
+        <ProtectedRoute>
+          <CompanyDashboard />
+        </ProtectedRoute>
+      } />
 
-      {/* ✅ role-aware default for learner dashboards */}
-      <Route index element={<Navigate to={relative} replace />} />
+      {/* ✅ IMPORTANT: always redirect using the full landing path */}
+      <Route index element={<Navigate to={landing} replace />} />
     </Routes>
   )
 }
@@ -112,7 +122,7 @@ export const AppRoutes = () => {
         <Route
           path="/mentor"
           element={
-            <ProtectedRoute requireMentor>
+            <ProtectedRoute requiredRoles={[UserRole.MENTOR]}>
               <MainLayout />
             </ProtectedRoute>
           }
@@ -125,7 +135,7 @@ export const AppRoutes = () => {
         <Route
           path="/ambassador"
           element={
-            <ProtectedRoute requireAmbassador>
+            <ProtectedRoute requiredRoles={[UserRole.AMBASSADOR]}>
               <MainLayout />
             </ProtectedRoute>
           }
@@ -138,7 +148,7 @@ export const AppRoutes = () => {
         <Route
           path="/admin"
           element={
-            <ProtectedRoute requireAdmin>
+            <ProtectedRoute requiredRoles={[UserRole.COMPANY_ADMIN, UserRole.SUPER_ADMIN]}>
               <MainLayout />
             </ProtectedRoute>
           }
@@ -151,7 +161,7 @@ export const AppRoutes = () => {
         <Route
           path="/super-admin"
           element={
-            <ProtectedRoute requireSuperAdmin>
+            <ProtectedRoute requiredRoles={[UserRole.SUPER_ADMIN]}>
               <MainLayout />
             </ProtectedRoute>
           }
