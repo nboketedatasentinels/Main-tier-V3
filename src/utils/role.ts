@@ -3,12 +3,14 @@ import { UserRole } from '@/types'
 /**
  * Single source of truth for role normalization
  * Maps all role variations to standardized Firestore vocabulary:
- * - super_admin | partner | mentor | ambassador | team_leader | user
+ * - super_admin | partner | mentor | ambassador | team_leader | user | free_user | paid_member
  * 
  * Legacy mappings:
  * - company_admin → partner
  * - admin → partner
- * - free_user/paid_member → user (role) + membershipStatus
+ * 
+ * Note: free_user and paid_member are kept distinct for UI purposes,
+ * though they could be consolidated to "user" with membershipStatus in the future.
  * 
  * @param role - Any role value from UserRole enum or string
  * @returns Normalized role string matching Firestore vocabulary
@@ -28,9 +30,6 @@ export const normalizeRole = (role: unknown): string => {
     case 'admin':
     case 'administrator':
       return 'partner'
-    case 'free_user':
-    case 'paid_member':
-      return 'user'
     case 'super_admin':
     case 'superadmin':
       return 'super_admin'
@@ -45,6 +44,10 @@ export const normalizeRole = (role: unknown): string => {
       return 'partner'
     case 'user':
       return 'user'
+    case 'free_user':
+      return 'free_user'
+    case 'paid_member':
+      return 'paid_member'
     default:
       // Return as-is if no mapping found
       return normalized
