@@ -192,7 +192,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       if (!userProfile) return
 
       /* -------- realtime updates -------- */
-      const profileRef = doc(db, 'profiles', currentUser.uid)
+      const profileRef = doc(db, 'users', currentUser.uid)
       return onSnapshot(profileRef, (snap) => {
         if (!snap.exists()) return
         const updated = snap.data() as UserProfile
