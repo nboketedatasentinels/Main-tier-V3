@@ -60,7 +60,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
       if (docSnap.exists()) {
         const profileData = docSnap.data() as UserProfile
-       console.log(profileData)
+       console.log('here',docSnap.data())
         console.log('🟣 [Auth] Raw profile loaded', {
           role: profileData.role,
           membershipStatus: profileData.membershipStatus,
