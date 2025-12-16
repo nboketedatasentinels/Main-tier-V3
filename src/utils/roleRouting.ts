@@ -1,11 +1,8 @@
 import { UserRole, UserProfile } from '@/types'
+import { normalizeRole } from './role'
 
-export const normalizeRole = (role: unknown): string => {
-  return String(role ?? '')
-    .trim()
-    .toUpperCase()
-    .replace(/\s+/g, '_')
-}
+// Re-export for convenience
+export { normalizeRole }
 
 /**
  * Get the preferred dashboard route from user profile

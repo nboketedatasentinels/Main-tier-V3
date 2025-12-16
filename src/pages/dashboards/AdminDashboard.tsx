@@ -1,5 +1,4 @@
 import React from 'react'
-import { Box, Text } from '@chakra-ui/react'
 import { useAuth } from '@/hooks/useAuth'
 import { SuperAdminDashboard } from './SuperAdminDashboard'
 import { CompanyAdminDashboard } from './CompanyAdminDashboard'
