@@ -16,6 +16,7 @@ import { LoginPage } from '@/pages/auth/LoginPage'
 import { SignUpPage } from '@/pages/auth/SignUpPage'
 import { ResetPasswordPage } from '@/pages/auth/ResetPasswordPage'
 import { ProfileMissingPage } from '@/pages/auth/ProfileMissingPage'
+import { EmailVerificationPage } from '@/pages/auth/EmailVerificationPage'
 import { UpgradePage } from '@/pages/upgrade/UpgradePage'
 
 // Onboarding imports
@@ -95,6 +96,7 @@ export const AppRoutes = () => {
         <Route path="/signup" element={<AuthLayout><SignUpPage /></AuthLayout>} />
         <Route path="/reset-password" element={<AuthLayout><ResetPasswordPage /></AuthLayout>} />
         <Route path="/auth/profile-missing" element={<AuthLayout><ProfileMissingPage /></AuthLayout>} />
+        <Route path="/auth/verify-email" element={<AuthLayout><EmailVerificationPage /></AuthLayout>} />
         
         {/* Account status pages */}
         <Route path="/suspended" element={<SuspendedPage />} />

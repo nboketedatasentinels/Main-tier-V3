@@ -103,6 +103,27 @@ service cloud.firestore {
       }
     }
 
+    // Users collection - stores basic user data with roles
+    match /users/{userId} {
+      // Users can read their own data
+      allow read: if isAuthenticated() && isOwner(userId);
+      
+      // Super admins can read all users, company admins can read based on profiles
+      allow read: if isSuperAdmin();
+      
+      // Users can create their own user document
+      allow create: if isAuthenticated() && isOwner(userId);
+      
+      // Users can update their own data (except role), super admins can update roles
+      allow update: if isAuthenticated() && (
+        (isOwner(userId) && (!request.resource.data.keys().hasAny(['role']) || request.resource.data.role == resource.data.role)) ||
+        isSuperAdmin()
+      );
+      
+      // Only super admins can delete users
+      allow delete: if isSuperAdmin();
+    }
+
     // Public read collections
     match /journeys/{journeyId} {
       allow read: if isAuthenticated();
