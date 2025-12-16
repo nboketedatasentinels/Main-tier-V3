@@ -108,13 +108,13 @@ service cloud.firestore {
       // Users can read their own data
       allow read: if isAuthenticated() && isOwner(userId);
       
-      // Admins can read all users
-      allow read: if isAdmin();
+      // Super admins can read all users, company admins can read based on profiles
+      allow read: if isSuperAdmin();
       
       // Users can create their own user document
       allow create: if isAuthenticated() && isOwner(userId);
       
-      // Users can update their own data (except role), admins can update roles
+      // Users can update their own data (except role), super admins can update roles
       allow update: if isAuthenticated() && (
         (isOwner(userId) && (!request.resource.data.keys().hasAny(['role']) || request.resource.data.role == resource.data.role)) ||
         isSuperAdmin()

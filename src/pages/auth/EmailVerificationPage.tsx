@@ -39,10 +39,15 @@ export const EmailVerificationPage: React.FC = () => {
         // Update the user document in Firestore if authenticated
         const currentUser = auth.currentUser
         if (currentUser) {
-          await updateDoc(doc(db, 'users', currentUser.uid), {
-            emailVerified: true,
-            updatedAt: new Date().toISOString(),
-          })
+          try {
+            await updateDoc(doc(db, 'users', currentUser.uid), {
+              emailVerified: true,
+              updatedAt: new Date().toISOString(),
+            })
+          } catch (updateError) {
+            // If document doesn't exist yet or update fails, log but don't fail the verification
+            console.error('Failed to update user document:', updateError)
+          }
         }
 
         toast({

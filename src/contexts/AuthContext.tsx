@@ -282,7 +282,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         firstName: userData.firstName || 'User',
         lastName: userData.lastName || '',
         fullName: userData.fullName || 'User',
-        role: 'user', // Default role is 'user', admin can be assigned later
+        role: UserRole.USER, // Default role is USER, admin can be assigned later
         emailVerified: false,
         createdAt: serverTimestamp(),
         updatedAt: serverTimestamp(),
@@ -292,12 +292,11 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
       // Send email verification link
       const actionCodeSettings = {
-        url: `${window.location.origin}/auth/verify-email?email=${encodeURIComponent(email)}`,
+        url: `${window.location.origin}/auth/verify-email`,
         handleCodeInApp: true,
       }
 
       await sendEmailVerification(user, actionCodeSettings)
-      console.log('Email verification sent to:', email)
 
       return { error: null, userId: user.uid }
     } catch (error) {
