@@ -2,14 +2,14 @@ import React, { useEffect, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useToast } from '@chakra-ui/react'
 import { useAuth } from '@/hooks/useAuth'
-import { UserRole } from '@/types'
+import type { StandardRole } from '@/types'
 
 interface FreeTierGuardProps {
   children: React.ReactNode
   fallbackPath: string
   title?: string
   description?: string
-  blockedRoles?: UserRole[]
+  blockedRoles?: StandardRole[]
 }
 
 export const FreeTierGuard: React.FC<FreeTierGuardProps> = ({
@@ -17,7 +17,7 @@ export const FreeTierGuard: React.FC<FreeTierGuardProps> = ({
   fallbackPath,
   title = 'Upgrade required',
   description = 'This area is available on paid plans. Upgrade to continue.',
-  blockedRoles = [UserRole.FREE_USER],
+  blockedRoles = ['free_user'],
 }) => {
   const { profile } = useAuth()
   const navigate = useNavigate()

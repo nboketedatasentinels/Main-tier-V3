@@ -89,13 +89,14 @@ import {
 import { getDownloadURL, ref, uploadBytes } from 'firebase/storage'
 import { auth, db, storage } from '@/services/firebase'
 import { useAuth } from '@/hooks/useAuth'
-import { UserRole } from '@/types'
+import type { StandardRole } from '@/types'
+import { normalizeRole } from '@/utils/role'
 
 interface ProfileData {
   id: string
   fullName: string
   email: string
-  role: UserRole
+  role: StandardRole
   accountStatus: 'active' | 'inactive' | 'pending'
   membershipStatus: 'paid' | 'free'
   profilePictureUrl?: string
@@ -156,26 +157,26 @@ const coreValueOptions = [
   'Leadership',
 ]
 
-const roleDisplayMap: Record<UserRole, string> = {
-  [UserRole.USER]: 'User',
-  [UserRole.TEAM_LEADER]: 'Team Leader',
-  [UserRole.FREE_USER]: 'Member',
-  [UserRole.PAID_MEMBER]: 'Paid Member',
-  [UserRole.MENTOR]: 'Mentor',
-  [UserRole.AMBASSADOR]: 'Team Leader',
-  [UserRole.COMPANY_ADMIN]: 'Administrator',
-  [UserRole.SUPER_ADMIN]: 'Super Administrator',
+const roleDisplayMap: Record<StandardRole, string> = {
+  user: 'Member',
+  free_user: 'Free Member',
+  paid_member: 'Paid Member',
+  team_leader: 'Team Leader',
+  mentor: 'Mentor',
+  ambassador: 'Ambassador',
+  partner: 'Administrator',
+  super_admin: 'Super Administrator',
 }
 
-const roleColorMap: Record<UserRole, string> = {
-  [UserRole.USER]: 'gray',
-  [UserRole.TEAM_LEADER]: 'blue',
-  [UserRole.FREE_USER]: 'gray',
-  [UserRole.PAID_MEMBER]: 'green',
-  [UserRole.MENTOR]: 'purple',
-  [UserRole.AMBASSADOR]: 'blue',
-  [UserRole.COMPANY_ADMIN]: 'red',
-  [UserRole.SUPER_ADMIN]: 'red',
+const roleColorMap: Record<StandardRole, string> = {
+  user: 'gray',
+  free_user: 'gray',
+  paid_member: 'green',
+  team_leader: 'blue',
+  mentor: 'purple',
+  ambassador: 'blue',
+  partner: 'red',
+  super_admin: 'red',
 }
 
 const statusColorMap: Record<ProfileData['accountStatus'], string> = {
@@ -282,10 +283,10 @@ export const ProfilePage: React.FC = () => {
         (typeof docData.firstName === 'string' && docData.firstName) ||
         'User',
       email: (typeof docData.email === 'string' && docData.email) || '',
-      role: (docData.role as UserRole) || profile?.role || UserRole.FREE_USER,
+      role: (docData.role as StandardRole) || profile?.role || 'user',
       accountStatus: (docData.accountStatus as ProfileData['accountStatus']) || 'active',
       membershipStatus: (docData.membershipStatus as ProfileData['membershipStatus']) ||
-        (docData.role === UserRole.PAID_MEMBER ? 'paid' : 'free'),
+        ((normalizeRole(docData.role as StandardRole) === 'user' && profile?.membershipStatus === 'paid') ? 'paid' : 'free'),
       profilePictureUrl:
         (typeof docData.avatarUrl === 'string' ? docData.avatarUrl : undefined) ||
         (typeof docData.profilePictureUrl === 'string' ? docData.profilePictureUrl : undefined) ||

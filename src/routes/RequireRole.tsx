@@ -2,11 +2,12 @@ import React from 'react'
 import { Navigate, Outlet } from 'react-router-dom'
 import { useAuth } from '@/hooks/useAuth'
 import { toUserRole } from '@/utils/role'
+import { getLandingPathForRole } from '@/utils/roleRouting'
 import { getDashboardPathForRole } from '@/utils/dashboardPaths'
-import { UserRole } from '@/types'
+import type { StandardRole } from '@/types'
 
 type RequireRoleProps = {
-  allow: UserRole[]
+  allow: StandardRole[]
 }
 
 export const RequireRole: React.FC<RequireRoleProps> = ({ allow }) => {
@@ -29,6 +30,11 @@ export const RequireRole: React.FC<RequireRoleProps> = ({ allow }) => {
   }
 
   if (!allow.includes(normalizedRole)) {
+    console.log("ROLE_REDIRECT", {
+      rawRole: profile?.role,
+      normalized: normalizedRole,
+      landing: getDashboardPathForRole(normalizedRole),
+    })
     console.warn(
       `Redirecting user due to role mismatch.`,
       `User: ${user.email}`,
@@ -37,7 +43,7 @@ export const RequireRole: React.FC<RequireRoleProps> = ({ allow }) => {
       `Profile state at time of check:`,
       profile
     )
-    return <Navigate to={getDashboardPathForRole(normalizedRole)} replace />
+    return <Navigate to={getLandingPathForRole(profile)} replace />
   }
 
   return <Outlet />

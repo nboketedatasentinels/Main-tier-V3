@@ -17,9 +17,13 @@ import {
   serverTimestamp,
   onSnapshot,
 } from 'firebase/firestore'
-import { UserProfile, UserRole, DashboardPreferences, AccountStatus, TransformationTier } from '@/types'
-import { auth, db } from '@/services/firebase'
+import { UserProfile, DashboardPreferences, AccountStatus, TransformationTier, UserRole } from '@/types'
+import type { StandardRole } from '@/types'
+import { normalizeRole } from '@/utils/role'
 import { isBootstrapAdmin } from '@/utils/bootstrap'
+import { auth, db } from '@/services/firebase'
+
+
 import { AuthContext, AuthContextType } from './AuthContextType'
 
 interface AuthProviderProps {
@@ -83,9 +87,9 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       console.log('🟣 fetchOrCreateProfile: No profile found, creating new one');
       const role = isBootstrapAdmin(firebaseUser.email)
         ? UserRole.SUPER_ADMIN
-        : UserRole.FREE_USER
+        : UserRole.USER;
 
-      if (role === UserRole.SUPER_ADMIN) {
+      if (role === 'super_admin') {
         console.log(
           `🟣 fetchOrCreateProfile: Assigning SUPER_ADMIN role to bootstrap admin: ${firebaseUser.email}`
         )
@@ -98,6 +102,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         lastName: firebaseUser.displayName?.split(' ')?.slice(1).join(' ') ?? '',
         fullName: firebaseUser.displayName ?? 'User',
         role,
+        membershipStatus: 'free',
         totalPoints: 0,
         level: 1,
         referralCount: 0,
@@ -107,18 +112,17 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         accountStatus: AccountStatus.ACTIVE,
         transformationTier: TransformationTier.INDIVIDUAL_FREE,
         assignedOrganizations: [],
-        onboardingComplete: true,
+        onboardingComplete: false,
         onboardingSkipped: false,
         mustChangePassword: false,
         hasSeenDashboardTour: false,
         dashboardPreferences: {
           defaultRoute: '/app/weekly-glance',
-          membershipStatus: 'free',
-          lockedToFreeExperience: role === UserRole.FREE_USER,
+          lockedToFreeExperience: role === 'user',
         },
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
-      }
+      };
 
       console.log('🟣 fetchOrCreateProfile: Creating new profile with role:', role);
       await setDoc(docRef, {
@@ -196,7 +200,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     checkRoleMismatch()
 
     // Auto-refresh for super admins every 5 minutes
-    if (profile.role === UserRole.SUPER_ADMIN) {
+    if (profile.role === 'super_admin') {
       const interval = setInterval(() => {
         refreshAdminSession()
       }, 5 * 60 * 1000) // 5 minutes
@@ -215,6 +219,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       
       setLoading(true)
       setUser(user)
+
+      console.log("Am here")
 
       if (!user) {
         console.log('🟠 AuthContext: No user, clearing profile');
@@ -289,75 +295,94 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       console.error('🟡 AuthContext.signIn: Firebase auth failed', error);
       return { error: error as Error }
     }
+
+    const profileData = snap.data() as UserProfile
+    setProfile(profileData)
+
+    console.log('[AUTH] Profile loaded:', profileData)
+
+    return { error: null }
+  } catch (error) {
+    console.error('[AUTH] Sign-in failed:', error)
+    return { error: error as Error }
+  } finally {
+    setLoading(false)
+    setProfileLoading(false)
   }
+}
 
-  // Sign up
-  const signUp = async (email: string, password: string, userData: Partial<UserProfile>) => {
-    try {
-      const userCredential = await createUserWithEmailAndPassword(auth, email, password)
-      const user = userCredential.user
 
-      // Create profile in Firestore
-      const profileData: UserProfile = {
-        id: user.uid,
-        email,
-        firstName: userData.firstName || 'User',
-        lastName: userData.lastName || '',
-        fullName: userData.fullName || 'User',
-        role: UserRole.FREE_USER,
-        totalPoints: 0,
-        level: 1,
-        referralCount: 0,
-        referralCode: null,
-        referredBy: null,
-        isOnboarded: true,
-        accountStatus: AccountStatus.ACTIVE,
-        transformationTier: TransformationTier.INDIVIDUAL_FREE,
-        assignedOrganizations: [],
-        onboardingComplete: false,
-        onboardingSkipped: false,
-        mustChangePassword: false,
-        hasSeenDashboardTour: false,
-        dashboardPreferences: {
-          defaultRoute: '/app/weekly-glance',
-          membershipStatus: 'free',
-          lockedToFreeExperience: true,
-        },
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString(),
-      }
+  const signUp = async (
+  email: string,
+  password: string,
+  userData: Partial<UserProfile>
+) => {
+  setLoading(true)
+  setProfileLoading(true)
 
-      await setDoc(doc(db, 'profiles', user.uid), profileData)
+  try {
+    const cred = await createUserWithEmailAndPassword(auth, email, password)
+    const u = cred.user
 
-      // Create user document in users collection with role
-      const userDoc = {
-        uid: user.uid,
-        email,
-        firstName: userData.firstName || 'User',
-        lastName: userData.lastName || '',
-        fullName: userData.fullName || 'User',
-        role: UserRole.USER, // Default role is USER, admin can be assigned later
-        emailVerified: false,
-        createdAt: serverTimestamp(),
-        updatedAt: serverTimestamp(),
-      }
+    console.log('[AUTH] Signed up:', {
+      uid: u.uid,
+      email: u.email,
+    })
 
-      await setDoc(doc(db, 'users', user.uid), userDoc)
-
-      // Send email verification link
-      const actionCodeSettings = {
-        url: `${window.location.origin}/auth/verify-email`,
-        handleCodeInApp: true,
-      }
-
-      await sendEmailVerification(user, actionCodeSettings)
-
-      return { error: null, userId: user.uid }
-    } catch (error) {
-      console.error('Sign up error:', error)
-      return { error: error as Error }
+    const profileData: UserProfile = {
+      id: u.uid,
+      email,
+      firstName: userData.firstName || 'User',
+      lastName: userData.lastName || '',
+      fullName:
+        userData.fullName ||
+        `${userData.firstName ?? 'User'} ${userData.lastName ?? ''}`.trim(),
+      role: UserRole.USER,
+      membershipStatus: 'free',
+      totalPoints: 0,
+      level: 1,
+      referralCount: 0,
+      referralCode: null,
+      referredBy: null,
+      isOnboarded: true,
+      accountStatus: AccountStatus.ACTIVE,
+      transformationTier: TransformationTier.INDIVIDUAL_FREE,
+      assignedOrganizations: [],
+      onboardingComplete: false,
+      onboardingSkipped: false,
+      mustChangePassword: false,
+      hasSeenDashboardTour: false,
+      dashboardPreferences: {
+        defaultRoute: '/app/weekly-glance',
+        lockedToFreeExperience: true,
+      },
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
     }
+
+    const profileRef = doc(db, 'profiles', u.uid)
+
+    await setDoc(profileRef, {
+      ...profileData,
+      createdAt: serverTimestamp(),
+      updatedAt: serverTimestamp(),
+    })
+
+    setUser(u)
+    setProfile(profileData)
+
+    console.log('[AUTH] Profile created:', profileData)
+
+    return { error: null, userId: u.uid }
+  } catch (error) {
+    console.error('[AUTH] Sign-up failed:', error)
+    return { error: error as Error }
+  } finally {
+    setLoading(false)
+    setProfileLoading(false)
   }
+}
+
 
   // Sign out
   const signOut = async () => {
@@ -449,42 +474,45 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   }
 
   // Role checking utilities
-  const hasRole = (role: UserRole): boolean => {
-    return profile?.role === role
+  const hasRole = (role: StandardRole): boolean => {
+    return profile ? normalizeRole(profile.role) === role : false
   }
 
-  const hasAnyRole = (roles: UserRole[]): boolean => {
-    return profile ? roles.includes(profile.role) : false
+  const hasAnyRole = (roles: StandardRole[]): boolean => {
+    return profile ? roles.some(r => normalizeRole(profile.role) === r) : false
   }
 
   // Computed role flags
   const isAdmin = useMemo(() => {
     if (!profile?.role) return false
-    return [UserRole.COMPANY_ADMIN, UserRole.SUPER_ADMIN].includes(profile.role)
+    const normalized = normalizeRole(profile.role)
+    return ['partner', 'super_admin'].includes(normalized)
   }, [profile?.role])
 
   const isSuperAdmin = useMemo(() => {
-    return profile?.role === UserRole.SUPER_ADMIN
+    return normalizeRole(profile?.role) === 'super_admin'
   }, [profile?.role])
 
   const isMentor = useMemo(() => {
-    return profile?.role === UserRole.MENTOR
+    return normalizeRole(profile?.role) === 'mentor'
   }, [profile?.role])
 
   const isAmbassador = useMemo(() => {
-    return profile?.role === UserRole.AMBASSADOR
+    return normalizeRole(profile?.role) === 'ambassador'
   }, [profile?.role])
 
   const isPaid = useMemo(() => {
     if (!profile?.role) return false
+    const normalized = normalizeRole(profile.role)
     return [
-      UserRole.PAID_MEMBER,
-      UserRole.MENTOR,
-      UserRole.AMBASSADOR,
-      UserRole.COMPANY_ADMIN,
-      UserRole.SUPER_ADMIN,
-    ].includes(profile.role)
-  }, [profile?.role])
+      'partner',
+      'mentor',
+      'ambassador',
+      'team_leader',
+    ].includes(normalized) || (normalized === 'user' && profile.membershipStatus === 'paid') // Added explicit check for paid user
+  }, [profile?.role, profile?.membershipStatus])
+
+
 
   const isCorporateMember = useMemo(() => {
     if (!profile?.transformationTier) return false
@@ -498,12 +526,12 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   }, [profile?.assignedOrganizations])
 
   const hasFullOrganizationAccess = useMemo(() => {
-    return profile?.role === UserRole.SUPER_ADMIN
+    return normalizeRole(profile?.role) === 'super_admin'
   }, [profile?.role])
 
   const canAccessOrganization = (orgCode: string): boolean => {
     if (!profile) return false
-    if (profile.role === UserRole.SUPER_ADMIN) return true
+    if (normalizeRole(profile.role) === 'super_admin') return true
     return assignedOrganizations.includes(orgCode)
   }
 

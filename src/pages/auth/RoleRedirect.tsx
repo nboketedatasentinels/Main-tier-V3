@@ -26,11 +26,8 @@ export default function RoleRedirect() {
     return <Navigate to="/auth/profile-missing" replace />
   }
 
-  // Get redirectUrl from query params if present
-  const redirectUrl = searchParams.get('redirectUrl')
-
   // Compute landing path using centralized logic
-  const landingPath = getLandingPathForRole(profile.role, profile, redirectUrl)
+  const landingPath = getLandingPathForRole(profile, searchParams)
 
   // Redirect to the computed landing path
   return <Navigate to={landingPath} replace />

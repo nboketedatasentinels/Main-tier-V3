@@ -40,3 +40,4 @@ lerna-debug.log*
 *.temp
 .vercel
 .env*.local
+*.log

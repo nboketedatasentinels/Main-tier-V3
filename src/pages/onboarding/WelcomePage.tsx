@@ -40,7 +40,7 @@ export const WelcomePage: React.FC = () => {
       })
 
       // Navigate to role-based landing page
-      const landingPath = getLandingPathForRole(profile.role, profile)
+      const landingPath = getLandingPathForRole(profile)
       navigate(landingPath, { replace: true })
     } catch (error) {
       console.error('Error completing onboarding:', error)
@@ -68,7 +68,7 @@ export const WelcomePage: React.FC = () => {
       })
 
       // Navigate to role-based landing page
-      const landingPath = getLandingPathForRole(profile.role, profile)
+      const landingPath = getLandingPathForRole(profile)
       navigate(landingPath, { replace: true })
     } catch (error) {
       console.error('Error skipping onboarding:', error)

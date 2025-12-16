@@ -1,49 +1,16 @@
-import { UserRole, UserProfile } from '@/types'
+import { UserProfile } from '@/types'
 import { normalizeRole } from './role'
 
-// Re-export for convenience
-export { normalizeRole }
-
 /**
- * Get the preferred dashboard route from user profile
+ * Gets the default dashboard route based on membership status.
+ *
+ * @param membershipStatus The user's membership status ('free' or 'paid').
+ * @returns The corresponding dashboard path.
  */
-export const getPreferredDashboardRoute = (profile: UserProfile | null): string | null => {
-  if (!profile) return null
-  
-  // Check dashboard preferences first
-  if (profile.dashboardPreferences?.defaultRoute) {
-    return profile.dashboardPreferences.defaultRoute
-  }
-  
-  // Check direct defaultDashboardRoute field
-  if (profile.defaultDashboardRoute) {
-    return profile.defaultDashboardRoute
-  }
-  
-  return null
-}
-
-/**
- * Get default dashboard route based on membership tier
- */
-export const getDefaultDashboardRouteByMembership = (profile: UserProfile | null): string => {
-  if (!profile) return '/app/weekly-glance'
-  
-  const role = profile.role
-  const tier = profile.transformationTier
-  
-  // Corporate members may have custom defaults
-  if (tier && tier.toString().toLowerCase().includes('corporate')) {
-    return '/app/dashboard/company'
-  }
-  
-  // Paid members get full access
-  if (role === UserRole.PAID_MEMBER) {
-    return '/app/weekly-glance'
-  }
-  
-  // Free users default to weekly glance
-  return '/app/weekly-glance'
+export const getDefaultDashboardRouteByMembership = (
+  membershipStatus: 'free' | 'paid' | undefined | null
+): string => {
+  return membershipStatus === 'paid' ? '/app/dashboard/member' : '/app/dashboard/free'
 }
 
 /**
@@ -57,9 +24,8 @@ export const getDefaultDashboardRouteByMembership = (profile: UserProfile | null
  * 6. Regular user (USER, TEAM_LEADER) with onboarding check
  */
 export const getLandingPathForRole = (
-  role: unknown,
-  profile?: UserProfile | null,
-  redirectUrl?: string | null
+  profile: UserProfile | null,
+  searchParams?: URLSearchParams
 ): string => {
   console.log('🔷 getLandingPathForRole called with:', {
     role,

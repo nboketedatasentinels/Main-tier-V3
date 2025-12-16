@@ -80,11 +80,13 @@ export const LoginPage: React.FC = () => {
           status: 'error',
           duration: 5000,
           isClosable: true,
-        })
-        setLoading(false)
-        return
+        });
+        setLoading(false);
+        return;
       }
 
+      // The useEffect will handle the redirect once the profile is loaded.
+      // No need to manually navigate here.
       toast({
         title: 'Welcome back!',
         status: 'success',
@@ -100,7 +102,7 @@ export const LoginPage: React.FC = () => {
       // In case signIn promise itself rejects, though it returns an error object.
       setLoading(false)
     }
-  }
+  };
 
   const handleMagicLink = async () => {
     if (!email) {

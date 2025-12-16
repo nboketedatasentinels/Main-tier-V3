@@ -1,14 +1,9 @@
-// User Roles
-export enum UserRole {
-  USER = "user",
-  TEAM_LEADER = "team_leader",
-  AMBASSADOR = "ambassador",
-  MENTOR = "mentor",
-  COMPANY_ADMIN = "partner",     // map partner → COMPANY_ADMIN role in UI
-  SUPER_ADMIN = "super_admin",
-  FREE_USER = "free_user",
-  PAID_MEMBER = "paid_member",
-}
+// Import and re-export role types and values
+import { UserRole, ALL_STANDARD_ROLES } from './roles';
+import type { StandardRole, AllRoles } from './roles';
+
+export { UserRole, ALL_STANDARD_ROLES };
+export type { StandardRole, AllRoles };
 
 // Transformation Tier Types
 export enum TransformationTier {
@@ -29,7 +24,6 @@ export enum AccountStatus {
 // Dashboard Preferences
 export interface DashboardPreferences {
   defaultRoute?: string
-  membershipStatus?: string
   lockedToFreeExperience?: boolean
   source?: string
   lastUpdatedAt?: string
@@ -38,11 +32,12 @@ export interface DashboardPreferences {
 // User Profile
 export interface UserProfile {
   id: string
-  email: string
+  email:string
   firstName: string
   lastName: string
   fullName: string
-  role: UserRole
+  role: StandardRole
+  membershipStatus?: 'free' | 'paid'
   avatarUrl?: string
   bio?: string
   phoneNumber?: string

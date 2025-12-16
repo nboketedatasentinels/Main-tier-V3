@@ -5,17 +5,15 @@ export const getDashboardPathForRole = (role?: UserRole | string | null) => {
   const normalizedRole = toUserRole(role)
 
   switch (normalizedRole) {
-    case UserRole.FREE_USER:
-      return '/app/dashboard/free'
-    case UserRole.PAID_MEMBER:
-      return '/app/dashboard/member'
-    case UserRole.MENTOR:
+    case 'user':
+      return '/app/dashboard/free' // Assuming 'user' is default for both free and paid members, adjust if specific 'paid' dashboard needed
+    case 'mentor':
       return '/mentor/dashboard'
     case UserRole.AMBASSADOR:
       return '/ambassador/dashboard'
     case UserRole.COMPANY_ADMIN:
       return '/admin/dashboard'
-    case UserRole.SUPER_ADMIN:
+    case 'super_admin':
       return '/super-admin/dashboard'
     default:
       return '/app/dashboard/free'
