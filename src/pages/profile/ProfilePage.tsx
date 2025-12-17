@@ -308,7 +308,7 @@ export const ProfilePage: React.FC = () => {
       villageName: docData.villageName as string,
       clusterName: docData.clusterName as string,
     }),
-    [profile?.role]
+    [profile?.role, profile?.membershipStatus]
   )
 
   const fetchUserProfile = useCallback(async () => {

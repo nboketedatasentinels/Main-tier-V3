@@ -56,13 +56,14 @@ export const EmailVerificationPage: React.FC = () => {
           status: 'success',
           duration: 5000,
         })
-      } catch (error: any) {
+      } catch (error: unknown) {
         console.error('Email verification error:', error)
         let errorMessage = 'Failed to verify email'
+        const firebaseError = error as { code?: string }
         
-        if (error.code === 'auth/expired-action-code') {
+        if (firebaseError?.code === 'auth/expired-action-code') {
           errorMessage = 'Verification link has expired'
-        } else if (error.code === 'auth/invalid-action-code') {
+        } else if (firebaseError?.code === 'auth/invalid-action-code') {
           errorMessage = 'Invalid verification link'
         }
         

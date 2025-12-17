@@ -225,5 +225,25 @@ service cloud.firestore {
       allow read: if isSuperAdmin();
       allow create: if isAdmin();
     }
+
+    // Admin activity log for super admin oversight
+    match /admin_activity_log/{entryId} {
+      allow read: if isSuperAdmin();
+      allow create: if isAdmin();
+      allow delete: if isSuperAdmin();
+    }
+
+    // Pending verifications for points and approvals
+    match /points_verification_requests/{requestId} {
+      allow read: if isAuthenticated() && (isSuperAdmin() || isAdmin());
+      allow create: if isAuthenticated();
+      allow update: if isAuthenticated() && (isSuperAdmin() || isAdmin());
+    }
+
+    // Engagement risk scoring collection
+    match /user_engagement_scores/{scoreId} {
+      allow read: if isAuthenticated() && (isSuperAdmin() || isAdmin());
+      allow create, update: if isSuperAdmin();
+    }
   }
 }

@@ -3,10 +3,11 @@ import { Navigate, useLocation } from 'react-router-dom'
 import { useAuth } from '@/hooks/useAuth'
 import { normalizeRole } from '@/utils/role'
 import { AccountStatus } from '@/types'
+import type { StandardRole } from '@/types'
 
 type Props = {
   children: React.ReactNode
-  requiredRoles?: any[] // UserRole[] but keep tolerant
+  requiredRoles?: StandardRole[] // UserRole[] but keep tolerant
   requireSuperAdmin?: boolean
   requireAdmin?: boolean
   requireMentor?: boolean
