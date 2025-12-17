@@ -27,7 +27,7 @@ import {
   LayoutDashboard,
   Menu,
   Settings,
-  SignOut,
+  LogOut,
   Users,
 } from 'lucide-react'
 
@@ -127,7 +127,7 @@ export const MentorDashboardLayout: React.FC<MentorDashboardLayoutProps> = ({
           <Flex mt="auto" pt={4} borderTop="1px solid" borderColor="brand.border">
             <Button
               variant="ghost"
-              leftIcon={<Icon as={SignOut} />}
+              leftIcon={<Icon as={LogOut} />}
               justifyContent="flex-start"
               color="brand.text"
             >
@@ -160,7 +160,7 @@ export const MentorDashboardLayout: React.FC<MentorDashboardLayoutProps> = ({
               />
               <Button
                 variant="ghost"
-                leftIcon={<Icon as={SignOut} />}
+                leftIcon={<Icon as={LogOut} />}
                 justifyContent="flex-start"
                 color="brand.text"
               >
