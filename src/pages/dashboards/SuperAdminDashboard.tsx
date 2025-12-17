@@ -76,7 +76,9 @@ import {
   fetchAdminActivityLog,
   fetchDashboardMetrics,
   fetchEngagementRiskAggregates,
+  fetchRegistrationTrend,
   fetchOrganizations,
+  fetchUserGrowthTrend,
   listenToRegistrations,
   listenToSystemAlerts,
   listenToTaskNotifications,
@@ -94,7 +96,6 @@ import {
   TaskNotificationRecord,
   VerificationRequest,
 } from '@/types/admin'
-import { isSuperAdmin } from '@/utils/permissions'
 
 type SortKey = keyof Pick<OrganizationRecord, 'name' | 'code' | 'teamSize' | 'status' | 'transformationPartner'>
 type StreamCardItem =
@@ -102,34 +103,6 @@ type StreamCardItem =
   | RegistrationRecord
   | SystemAlertRecord
   | TaskNotificationRecord
-
-const growthTrend = [
-  { label: 'W1', value: 18 },
-  { label: 'W2', value: 24 },
-  { label: 'W3', value: 29 },
-  { label: 'W4', value: 34 },
-  { label: 'W5', value: 40 },
-  { label: 'W6', value: 46 },
-  { label: 'W7', value: 51 },
-  { label: 'W8', value: 58 },
-]
-
-const registrationTrend = [
-  { label: 'Day 1', value: 12 },
-  { label: 'Day 2', value: 18 },
-  { label: 'Day 3', value: 23 },
-  { label: 'Day 4', value: 31 },
-  { label: 'Day 5', value: 29 },
-  { label: 'Day 6', value: 33 },
-  { label: 'Day 7', value: 37 },
-  { label: 'Day 8', value: 42 },
-  { label: 'Day 9', value: 45 },
-  { label: 'Day 10', value: 46 },
-  { label: 'Day 11', value: 48 },
-  { label: 'Day 12', value: 51 },
-  { label: 'Day 13', value: 55 },
-  { label: 'Day 14', value: 57 },
-]
 
 const defaultMetrics: SuperAdminDashboardMetrics = {
   organizationCount: 0,
@@ -139,6 +112,8 @@ const defaultMetrics: SuperAdminDashboardMetrics = {
   engagementRate: 0,
   newRegistrations: 0,
 }
+
+type TrendPoint = { label: string; value: number }
 
 export const SuperAdminDashboard: React.FC = () => {
   const { profile } = useAuth()
@@ -156,6 +131,9 @@ export const SuperAdminDashboard: React.FC = () => {
   const [streamsLoading, setStreamsLoading] = useState(true)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+
+  const [registrationTrend, setRegistrationTrend] = useState<TrendPoint[]>([])
+  const [userGrowthTrend, setUserGrowthTrend] = useState<TrendPoint[]>([])
 
   const [filters, setFilters] = useState({ search: '', status: 'all', village: 'all', cluster: 'all' })
   const [sortKey, setSortKey] = useState<SortKey>('name')
@@ -175,16 +153,20 @@ export const SuperAdminDashboard: React.FC = () => {
   const loadDashboard = useCallback(async () => {
     try {
       setLoading(true)
-      const [fetchedMetrics, orgs, risks, audit] = await Promise.all([
+      const [fetchedMetrics, orgs, risks, audit, registrations, growth] = await Promise.all([
         fetchDashboardMetrics(),
         fetchOrganizations(),
         fetchEngagementRiskAggregates(),
         fetchAdminActivityLog(),
+        fetchRegistrationTrend(),
+        fetchUserGrowthTrend(),
       ])
       setMetrics(fetchedMetrics)
       setOrganizations(orgs)
       setRiskAggregate(risks)
       setActivityLog(audit)
+      setRegistrationTrend(registrations)
+      setUserGrowthTrend(growth)
     } catch (err) {
       console.error(err)
       setError('Unable to load super admin data from Firebase')
@@ -370,33 +352,50 @@ export const SuperAdminDashboard: React.FC = () => {
   const statusOptions = ['all', 'active', 'inactive', 'pending', 'suspended', 'watch']
 
   return (
-    <Stack spacing={8}>
-      <Flex justify="space-between" align={{ base: 'flex-start', md: 'center' }} gap={4} wrap="wrap">
-        <Stack spacing={2}>
-          <Text fontSize="sm" color="brand.subtleText">
-            Super Admin — {isSuperAdmin(profile) ? 'Verified access' : 'Partner view'}
-          </Text>
-          <Text fontSize="3xl" fontWeight="bold" color="white">
-            Welcome back, {adminName}
-          </Text>
-          <Text color="brand.textOnDark" opacity={0.9} maxW="720px">
-            Platform-wide oversight with real-time Firebase listeners, role-aware access control, and responsive admin
-            tooling. Use the quick actions to jump into organization governance or audit history.
-          </Text>
-          <HStack spacing={3}>
-            <Button leftIcon={<Settings size={16} />} variant="outline" colorScheme="purple">
-              Settings
-            </Button>
-            <Button leftIcon={<UploadCloud size={16} />} colorScheme="purple" variant="solid">
-              Export reports
-            </Button>
-            <Button leftIcon={<Bell size={16} />} onClick={drawer.onOpen} variant="ghost">
-              Notification drawer
-            </Button>
-          </HStack>
-        </Stack>
-        <Avatar size="lg" name={adminName} src={profile?.avatarUrl} bg="brand.primary" color="white" />
-      </Flex>
+    <Stack spacing={10} bg="gray.50" p={{ base: 4, md: 6 }} borderRadius="2xl" border="1px solid" borderColor="gray.200">
+      <Card bg="white" border="1px solid" borderColor="gray.200" borderRadius="2xl" shadow="sm">
+        <CardBody>
+          <Flex justify="space-between" align={{ base: 'flex-start', md: 'center' }} gap={6} wrap="wrap">
+            <Stack spacing={3} maxW="800px">
+              <HStack spacing={3}>
+                <Badge colorScheme="purple" px={3} py={1} borderRadius="full" display="inline-flex" alignItems="center">
+                  <ShieldAlert size={14} style={{ marginRight: 8 }} /> ADMIN CONTROL CENTER
+                </Badge>
+                <Badge colorScheme="green" variant="subtle">
+                  Firebase live
+                </Badge>
+              </HStack>
+              <Text fontSize={{ base: '2xl', md: '3xl' }} fontWeight="bold" color="gray.900">
+                Welcome back, {adminName}.
+              </Text>
+              <Text color="gray.700" fontSize={{ base: 'md', md: 'lg' }}>
+                Monitor learner activity, manage badges, and configure settings across the platform in one unified view. You
+                currently oversee {metrics.organizationCount.toLocaleString()} organizations.
+              </Text>
+              <HStack spacing={3} wrap="wrap">
+                <Button leftIcon={<Settings size={16} />} variant="outline" colorScheme="purple">
+                  Settings
+                </Button>
+                <Button leftIcon={<UploadCloud size={16} />} colorScheme="purple" variant="solid">
+                  Export reports
+                </Button>
+                <Button leftIcon={<Bell size={16} />} onClick={drawer.onOpen} variant="ghost">
+                  Notification drawer
+                </Button>
+              </HStack>
+            </Stack>
+            <Avatar
+              size="xl"
+              name={adminName}
+              src={profile?.avatarUrl}
+              bg="purple.600"
+              color="white"
+              border="4px solid"
+              borderColor="purple.100"
+            />
+          </Flex>
+        </CardBody>
+      </Card>
 
       {error && (
         <Alert status="error" borderRadius="md">
@@ -411,39 +410,45 @@ export const SuperAdminDashboard: React.FC = () => {
         </Flex>
       ) : (
         <>
-          <SimpleGrid columns={{ base: 1, md: 2, xl: 4 }} spacing={4}>
-            <MetricCard icon={Users} label="Active members (30d)" value={metrics.activeMembers.toLocaleString()} helper="Across all organizations" />
+          <SimpleGrid columns={{ base: 1, sm: 2, xl: 4 }} spacing={4}>
+            <MetricCard
+              icon={Users}
+              label="Active members (30d)"
+              value={metrics.activeMembers.toLocaleString()}
+              helper="Signed in within assigned organizations"
+              accent="rgba(16, 185, 129, 0.15)"
+            />
             <MetricCard
               icon={Gauge}
               label="Engagement rate"
               value={`${Math.round(metrics.engagementRate * 100)}%`}
-              helper="14-day moving average"
-              accent="rgba(93, 107, 255, 0.12)"
+              helper="Active members vs total accounts"
+              accent="rgba(250, 204, 21, 0.2)"
             />
             <MetricCard
               icon={Sparkles}
               label="New registrations (7d)"
               value={metrics.newRegistrations.toLocaleString()}
-              helper="Auto-refreshing stream"
-              accent="rgba(255, 193, 7, 0.16)"
+              helper="Fresh members added this week"
+              accent="rgba(90, 13, 160, 0.12)"
             />
             <MetricCard
               icon={Building2}
               label="Managed companies"
               value={metrics.managedCompanies.toString()}
-              helper={`${metrics.organizationCount} tracked orgs`}
-              accent="rgba(52, 211, 153, 0.18)"
+              helper={`${metrics.organizationCount} total organizations`}
+              accent="rgba(107, 114, 128, 0.16)"
             />
           </SimpleGrid>
 
           <Grid templateColumns={{ base: '1fr', xl: '2fr 1fr' }} gap={6}>
             <GridItem>
-              <Card bg="white" border="1px solid" borderColor="brand.border">
+              <Card bgGradient="linear(to-br, purple.50, purple.100)" border="1px solid" borderColor="purple.200" borderRadius="3xl" shadow="sm">
                 <CardBody>
                   <EngagementChart
                     data={registrationTrend}
                     title="Engagement trends"
-                    subtitle="14-day daily registrations"
+                    subtitle="Last 14 days"
                     valueLabel="Registrations"
                   />
                 </CardBody>
@@ -451,14 +456,14 @@ export const SuperAdminDashboard: React.FC = () => {
             </GridItem>
 
             <GridItem>
-              <Card bg="white" border="1px solid" borderColor="brand.border">
+              <Card bg="white" border="1px solid" borderColor="gray.200" borderRadius="3xl" shadow="sm">
                 <CardBody>
                   <EngagementChart
-                    data={growthTrend}
-                    title="User growth"
-                    subtitle="30-day rolling"
-                    strokeColor="#f6ad55"
-                    valueLabel="New users"
+                    data={userGrowthTrend}
+                    title="User growth trend"
+                    subtitle="Rolling 30-day view"
+                    strokeColor="#6366f1"
+                    valueLabel="Users"
                   />
                 </CardBody>
               </Card>
@@ -474,7 +479,10 @@ export const SuperAdminDashboard: React.FC = () => {
                     badgeLabel="Risk engine"
                     levels={riskLevels}
                     reasons={riskReasons}
-                    warnings={systemAlerts.map((alert) => ({ message: alert.message || 'System alert', severity: alert.level || 'warning' }))}
+                    warnings={systemAlerts.map((alert) => ({
+                      message: alert.message || 'System alert',
+                      severity: alert.level === 'critical' ? 'critical' : 'warning',
+                    }))}
                     scopeNote="Scores sourced from user_engagement_scores collection"
                   />
                 </CardBody>
