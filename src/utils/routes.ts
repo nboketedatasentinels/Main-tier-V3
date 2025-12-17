@@ -66,7 +66,7 @@ export const getLandingPathForRole = (
       return '/super-admin/dashboard';
     case UserRole.COMPANY_ADMIN:
       return '/admin/dashboard';
-    case UserRole.MENTOR:
+    case UserRole.MENTOR: {
       // Mentor conditional redirect based on transformationTier
       if (profile?.transformationTier) {
         const tier = profile.transformationTier.toString().toLowerCase();
@@ -80,6 +80,7 @@ export const getLandingPathForRole = (
         return preferredRoute;
       }
       return '/mentor/dashboard';
+    }
     case UserRole.AMBASSADOR:
       return '/ambassador/dashboard';
     default:
