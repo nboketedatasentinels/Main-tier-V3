@@ -16,6 +16,9 @@ import {
 import { db } from './firebase'
 import {
   AdminActivityLogEntry,
+  AdminFormData,
+  AdminRole,
+  AdminUserRecord,
   EngagementRiskAggregate,
   OrganizationRecord,
   RegistrationRecord,
@@ -31,6 +34,7 @@ const orgCollection = collection(db, 'organizations')
 const usersCollection = collection(db, 'users')
 const auditCollection = collection(db, 'admin_activity_log')
 const engagementCollection = collection(db, 'user_engagement_scores')
+const adminRoles: AdminRole[] = ['super_admin', 'partner', 'mentor', 'ambassador', 'team_leader']
 
 export const fetchDashboardMetrics = async (
   filters?: Partial<{ organizationCodes: string[]; organizationIds: string[]; trendDays: number }>,
@@ -83,6 +87,17 @@ const timestampToMillis = (value?: unknown) => {
   if (typeof value === 'number') return value
   const asDate = (value as { toDate?: () => Date })?.toDate?.()
   return asDate?.getTime() || 0
+}
+
+const mapAdminDoc = (docSnap: { id: string; data: () => unknown }): AdminUserRecord => {
+  const data = docSnap.data() as Partial<AdminUserRecord>
+  const fullName =
+    data.fullName || [data.firstName, data.lastName].filter((value) => !!value).join(' ').trim() || undefined
+  return {
+    id: docSnap.id,
+    ...data,
+    fullName,
+  } as AdminUserRecord
 }
 
 export const fetchRegistrationTrend = async (days = 14): Promise<TrendPoint[]> => {
@@ -193,6 +208,83 @@ export const logAdminAction = async (entry: Omit<AdminActivityLogEntry, 'id' | '
   await addDoc(auditCollection, {
     ...entry,
     createdAt: serverTimestamp(),
+  })
+}
+
+export const fetchAdminUsers = async (): Promise<AdminUserRecord[]> => {
+  const adminQuery = query(usersCollection, where('role', 'in', adminRoles), orderBy('createdAt', 'desc'))
+  const snapshot = await getDocs(adminQuery)
+  return snapshot.docs.map(mapAdminDoc)
+}
+
+export const createAdminUser = async (
+  adminData: AdminFormData & Partial<AdminUserRecord> & { createdBy?: string; createdByName?: string },
+) => {
+  const { createdBy, createdByName, ...rest } = adminData
+  const payload = {
+    ...rest,
+    fullName: adminData.fullName || `${adminData.firstName} ${adminData.lastName}`.trim(),
+    accountStatus: adminData.accountStatus || 'active',
+    createdAt: serverTimestamp(),
+    updatedAt: serverTimestamp(),
+  }
+  const docRef = await addDoc(usersCollection, payload)
+  await logAdminAction({
+    action: 'admin_created',
+    adminId: createdBy,
+    adminName: createdByName,
+    userId: docRef.id,
+    metadata: { role: adminData.role, organizations: adminData.assignedOrganizations },
+  })
+  return docRef.id
+}
+
+export const updateAdminUser = async (adminId: string, updates: Partial<AdminUserRecord>) => {
+  const adminRef = doc(db, 'users', adminId)
+  await updateDoc(adminRef, { ...updates, updatedAt: serverTimestamp() })
+  await logAdminAction({
+    action: 'admin_updated',
+    userId: adminId,
+    metadata: updates,
+  })
+}
+
+export const deleteAdminUser = async (adminId: string) => {
+  const adminRef = doc(db, 'users', adminId)
+  await deleteDoc(adminRef)
+  await logAdminAction({
+    action: 'admin_deleted',
+    userId: adminId,
+  })
+}
+
+export const assignOrganizations = async (adminId: string, orgIds: string[]) => {
+  const adminRef = doc(db, 'users', adminId)
+  await updateDoc(adminRef, { assignedOrganizations: orgIds, updatedAt: serverTimestamp() })
+  await logAdminAction({
+    action: 'admin_orgs_updated',
+    userId: adminId,
+    metadata: { orgIds },
+  })
+}
+
+export const updateAdminRole = async (adminId: string, newRole: AdminRole) => {
+  const adminRef = doc(db, 'users', adminId)
+  await updateDoc(adminRef, { role: newRole, updatedAt: serverTimestamp() })
+  await logAdminAction({
+    action: 'admin_role_updated',
+    userId: adminId,
+    metadata: { newRole },
+  })
+}
+
+export const toggleAdminStatus = async (adminId: string, status: 'active' | 'suspended') => {
+  const adminRef = doc(db, 'users', adminId)
+  await updateDoc(adminRef, { accountStatus: status, updatedAt: serverTimestamp() })
+  await logAdminAction({
+    action: 'admin_status_updated',
+    userId: adminId,
+    metadata: { status },
   })
 }
 

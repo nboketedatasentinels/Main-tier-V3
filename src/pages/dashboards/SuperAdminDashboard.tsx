@@ -9,6 +9,7 @@ import { ReportsAnalyticsPage } from '@/pages/super-admin/ReportsAnalyticsPage'
 import { SecurityAuditPage } from '@/pages/super-admin/SecurityAuditPage'
 import { SystemSettingsPage } from '@/pages/super-admin/SystemSettingsPage'
 import { UserManagementPage } from '@/pages/super-admin/UserManagementPage'
+import { AdminOversightPage } from '@/pages/super-admin/AdminOversightPage'
 import {
   fetchAdminActivityLog,
   fetchDashboardMetrics,
@@ -156,6 +157,8 @@ export const SuperAdminDashboard: React.FC = () => {
         return <OrganizationManagementPage adminName={adminName} adminId={profile?.id} />
       case 'users':
         return <UserManagementPage />
+      case 'admin-oversight':
+        return <AdminOversightPage adminName={adminName} adminId={profile?.id} />
       case 'settings':
         return <SystemSettingsPage />
       case 'security':
