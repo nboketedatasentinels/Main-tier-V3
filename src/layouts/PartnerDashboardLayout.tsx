@@ -174,7 +174,7 @@ export const PartnerDashboardLayout: React.FC<PartnerDashboardLayoutProps> = ({
   )
 
   return (
-    <Flex minH="100vh" bg="brand.canvas">
+    <Flex minH="100vh" h="100vh" bg="brand.canvas" overflow="hidden">
       <Box
         display={{ base: 'none', md: 'block' }}
         w={sidebarWidth}
@@ -182,6 +182,8 @@ export const PartnerDashboardLayout: React.FC<PartnerDashboardLayoutProps> = ({
         borderColor="brand.border"
         bg="white"
         p={4}
+        h="100vh"
+        overflowY="auto"
       >
         <VStack align="stretch" spacing={4} h="full">
           <HStack spacing={2}>
@@ -222,24 +224,26 @@ export const PartnerDashboardLayout: React.FC<PartnerDashboardLayoutProps> = ({
         </DrawerContent>
       </Drawer>
 
-      <Box flex={1} p={{ base: 4, md: 8 }}>
-        <Flex justify="space-between" align={{ base: 'flex-start', md: 'center' }} mb={6} gap={4} wrap="wrap">
-          <VStack align="flex-start" spacing={1}>
-            <Text fontSize="sm" color="brand.subtleText">
-              Partner Dashboard
-            </Text>
-            <Text fontSize="3xl" fontWeight="bold" color="brand.text">
-              {profile?.fullName || 'Partner Admin'}
-            </Text>
-            <Text color="brand.subtleText" maxW="760px">
-              Real-time oversight for assigned organizations with scoped interventions, approvals, and mentor engagement tools.
-            </Text>
-          </VStack>
-          <HeaderControls />
-        </Flex>
+      <Flex flex={1} direction="column" h="100vh" overflow="hidden" p={{ base: 4, md: 8 }}>
+        <Box flex={1} overflowY="auto">
+          <Flex justify="space-between" align={{ base: 'flex-start', md: 'center' }} mb={6} gap={4} wrap="wrap">
+            <VStack align="flex-start" spacing={1}>
+              <Text fontSize="sm" color="brand.subtleText">
+                Partner Dashboard
+              </Text>
+              <Text fontSize="3xl" fontWeight="bold" color="brand.text">
+                {profile?.fullName || 'Partner Admin'}
+              </Text>
+              <Text color="brand.subtleText" maxW="760px">
+                Real-time oversight for assigned organizations with scoped interventions, approvals, and mentor engagement tools.
+              </Text>
+            </VStack>
+            <HeaderControls />
+          </Flex>
 
-        {children}
-      </Box>
+          {children}
+        </Box>
+      </Flex>
     </Flex>
   )
 }
