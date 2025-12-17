@@ -1,4 +1,4 @@
-const LEADERBOARD_TIP_KEY = 'bolt.leaderboard_filter_tip'
+const LEADERBOARD_TIP_KEY = 'firebase.leaderboard_filter_tip'
 
 const readJson = <T,>(key: string, fallback: T): T => {
   const raw = localStorage.getItem(key)
@@ -7,7 +7,7 @@ const readJson = <T,>(key: string, fallback: T): T => {
   try {
     return JSON.parse(raw) as T
   } catch (error) {
-    console.warn('Failed to parse Bolt DB cache', error)
+    console.warn('Failed to parse dashboard cache', error)
     return fallback
   }
 }

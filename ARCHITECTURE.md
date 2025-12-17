@@ -4,9 +4,9 @@ This document captures the target architecture, routing map, and dashboard layou
 
 ## 1. System Overview
 
-- **SPA with secure API layer**: React 18 + TypeScript front end powered by Vite. Client renders authenticated experience while calling Bolt Database Edge Functions for all privileged logic.
-- **Serverless backend**: Bolt Database PostgreSQL (115+ migrations), Bolt Auth, Edge Functions, Storage, and real-time subscriptions for live updates (leaderboards, notifications, checklists).
-- **Security**: RBAC enforced in UI and API, RLS on data tables, encrypted storage, CSRF/XSS protection, validated inputs, and secure Stripe integration through Edge Functions + webhooks.
+- **SPA with secure API layer**: React 18 + TypeScript front end powered by Vite. Client renders authenticated experience while calling Firebase Cloud Functions and Firestore for all privileged logic.
+- **Serverless backend**: Firebase Auth, Firestore, Storage, and Cloud Functions with real-time listeners for live updates (leaderboards, notifications, checklists).
+- **Security**: RBAC enforced in UI and API, Firestore Security Rules and custom claims on data, encrypted storage, CSRF/XSS protection, validated inputs, and secure Stripe integration through Cloud Functions + webhooks.
 - **Brand-first UI**: Dark plum shell with Royal Purple accents, Flame Orange CTAs, and Gold/Soft Gold highlights. Framer Motion for polish, Recharts for analytics, and Canvas Confetti for celebrations.
 
 ## 2. Technology Stack
@@ -23,14 +23,14 @@ This document captures the target architecture, routing map, and dashboard layou
 - Canvas Confetti for milestone celebrations
 
 ### Backend & Platform Services
-- Bolt Database PostgreSQL with RLS
-- Bolt Auth (email/password, magic links, password reset)
-- Bolt Edge Functions for server-side logic (payments, automations, exports)
-- Bolt Storage for assets (avatars, certificates, proof uploads)
-- Real-time subscriptions for leaderboards, notifications, checklist progression
+- Firebase Auth (email/password, magic links, password reset)
+- Firebase Firestore for structured data and role-aware access
+- Firebase Cloud Functions for server-side logic (payments, automations, exports)
+- Firebase Storage for assets (avatars, certificates, proof uploads)
+- Firestore listeners for leaderboards, notifications, checklist progression
 
 ### Payments & Email
-- Stripe Checkout + Customer Portal via secure Edge Functions & webhooks
+- Stripe Checkout + Customer Portal via secure Cloud Functions & webhooks
 - SendGrid for transactional and notification emails
 
 ### State & Data Layer
@@ -63,7 +63,7 @@ src/
 │   ├── admin/
 │   └── settings/
 ├── routes/            # Route configuration and loaders
-├── services/          # API clients (Bolt, Stripe), Edge Function callers, storage helpers
+├── services/          # API clients (Firebase, Stripe), Cloud Function callers, storage helpers
 ├── theme/             # Chakra theme tokens with T4L brand palette
 ├── types/             # Domain models and enums (User, Role, Journey, Checklist, ImpactLog, Badge)
 └── utils/             # Formatting, guards, error mappers, validation
@@ -71,13 +71,13 @@ src/
 
 ### Data Access & Services
 - **`services/authService.ts`**: login/register/magic links/password reset, token handling, profile bootstrap, email verification.
-- **`services/profileService.ts`**: profile CRUD, avatar uploads (Bolt Storage), preferences, notification settings.
+- **`services/profileService.ts`**: profile CRUD, avatar uploads (Firebase Storage), preferences, notification settings.
 - **`services/journeyService.ts`**: journey catalog, enrollment, weekly targets, progress, custom journey builder.
 - **`services/checklistService.ts`**: fetch/update weekly tasks, unlock rules, proof uploads, completion stats.
 - **`services/impactService.ts`**: create/update/delete impact logs, filters, stats, CSV export.
 - **`services/leaderboardService.ts`**: scoped leaderboards (global/org/village/cluster), kudos actions, challenges.
 - **`services/courseService.ts`**: course lists, module progress, certificates, CPD tracking.
-- **`services/paymentService.ts`**: Stripe checkout session creation, portal links, webhook event handling (Edge Functions).
+- **`services/paymentService.ts`**: Stripe checkout session creation, portal links, webhook event handling (Cloud Functions).
 - **`services/adminService.ts`**: users/orgs/events/upgrade requests, audit logs, badge management.
 
 ## 4. Routing Structure
@@ -159,15 +159,15 @@ src/
 - **Reports**: exports, audit summaries, compliance notices.
 
 ### Super Admin Dashboard
-- **System health**: migrations status, Edge Function latency, auth events, subscription revenue.
+- **System health**: Firestore rule health, Cloud Function latency, auth events, subscription revenue.
 - **Global settings**: roles/permissions management, feature flags.
 - **Data tools**: migrations runner, data snapshots, performance testing views.
-- **Oversight**: audit logs, admin actions, RLS policy summary, webhook monitor.
+- **Oversight**: audit logs, admin actions, Firestore Security Rules summary, webhook monitor.
 
 ## 6. RBAC & Route Protection
 - Route guards check `requiredRoles` before rendering; unauthorized users are redirected to `/unauthorized` with helpful messaging.
 - Components hide gated features (e.g., premium courses, admin tools) using `hasRole/hasAnyRole` helpers.
-- Backend enforces the same roles via Edge Function checks + RLS policies to prevent UI bypass.
+- Backend enforces the same roles via Cloud Function checks + Firestore Security Rules to prevent UI bypass.
 
 ## 7. UX & Interaction Baselines
 - **Loading**: skeletons for cards/tables, shimmer placeholders in dashboard grids.
@@ -182,7 +182,7 @@ src/
 - **Visual/regression**: route-level snapshots for dashboards and critical flows.
 
 ## 9. Environment & Dev Workflow
-- `.env` uses Bolt/Stripe/SendGrid keys; never commit secrets.
+- `.env` uses Firebase/Stripe/SendGrid keys; never commit secrets.
 - `npm run dev` for local development; `npm run build` for production preview.
 - Prefer lazy-loaded route chunks for heavy dashboards and chart-heavy pages.
-- Use centralized logging for Edge Function calls and surfaced errors to aid support.
+- Use centralized logging for Cloud Function calls and surfaced errors to aid support.
