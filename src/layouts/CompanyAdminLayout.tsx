@@ -21,7 +21,8 @@ import {
   VStack,
   useDisclosure,
 } from '@chakra-ui/react'
-import { Bell, LogOut, Menu, Sparkles } from 'lucide-react'
+import { LogOut, Menu, Sparkles } from 'lucide-react'
+import { NotificationDropdown } from '@/components/notifications/NotificationDropdown'
 import { useAuth } from '@/hooks/useAuth'
 import { NavigationItem, NavigationSection, buildCompanyAdminNavItems } from '@/utils/navigationItems'
 
@@ -33,7 +34,6 @@ interface CompanyAdminLayoutProps {
   organizations?: { code: string; name: string }[]
   selectedOrg?: string
   onSelectOrg?: (org: string) => void
-  notificationCount?: number
 }
 
 const defaultOrganizations = [
@@ -86,7 +86,6 @@ export const CompanyAdminLayout: React.FC<CompanyAdminLayoutProps> = ({
   organizations = defaultOrganizations,
   selectedOrg = 'all',
   onSelectOrg,
-  notificationCount = 0,
 }) => {
   const { profile, signOut } = useAuth()
   const disclosure = useDisclosure()
@@ -150,21 +149,7 @@ export const CompanyAdminLayout: React.FC<CompanyAdminLayoutProps> = ({
           </option>
         ))}
       </Select>
-      <Box position="relative">
-        <IconButton aria-label="Notifications" icon={<Bell />} variant="outline" />
-        {notificationCount > 0 && (
-          <Badge
-            position="absolute"
-            top="-6px"
-            right="-6px"
-            colorScheme="red"
-            borderRadius="full"
-            px={2}
-          >
-            {notificationCount}
-          </Badge>
-        )}
-      </Box>
+      <NotificationDropdown />
       <Button
         display={{ base: 'none', md: 'inline-flex' }}
         leftIcon={<LogOut size={16} />}

@@ -1,7 +1,6 @@
 import React, { useMemo } from 'react'
 import {
   Avatar,
-  Badge,
   Box,
   Button,
   Divider,
@@ -19,14 +18,14 @@ import {
   useBreakpointValue,
   useDisclosure,
 } from '@chakra-ui/react'
-import { Bell, LogOut, Menu } from 'lucide-react'
+import { LogOut, Menu } from 'lucide-react'
+import { NotificationDropdown } from '@/components/notifications/NotificationDropdown'
 import { buildMentorNavItems, NavigationSection } from '@/utils/navigationItems'
 
 interface MentorDashboardLayoutProps {
   children: React.ReactNode
   activeItem?: string
   onNavigate?: (key: string) => void
-  unreadCount?: number
   mentorName?: string
   mentorRoleLabel?: string
   avatarUrl?: string
@@ -78,7 +77,6 @@ export const MentorDashboardLayout: React.FC<MentorDashboardLayoutProps> = ({
   children,
   activeItem = 'overview',
   onNavigate,
-  unreadCount = 0,
   mentorName = 'Mentor',
   mentorRoleLabel = 'Mentor',
   avatarUrl,
@@ -191,21 +189,7 @@ export const MentorDashboardLayout: React.FC<MentorDashboardLayoutProps> = ({
               />
               <Text fontWeight="bold">Mentor Dashboard</Text>
             </HStack>
-            <Box position="relative">
-              <IconButton aria-label="Notifications" icon={<Icon as={Bell} />} variant="ghost" />
-              {unreadCount > 0 && (
-                <Badge
-                  position="absolute"
-                  top="-1"
-                  right="-1"
-                  colorScheme="yellow"
-                  borderRadius="full"
-                  px={2}
-                >
-                  {unreadCount > 99 ? '99+' : unreadCount}
-                </Badge>
-              )}
-            </Box>
+            <NotificationDropdown />
           </Flex>
         )}
 
@@ -220,21 +204,7 @@ export const MentorDashboardLayout: React.FC<MentorDashboardLayoutProps> = ({
               </Box>
               {!isMobile && (
                 <HStack spacing={3}>
-                  <Box position="relative">
-                    <IconButton aria-label="Notifications" icon={<Icon as={Bell} />} variant="ghost" />
-                    {unreadCount > 0 && (
-                      <Badge
-                        position="absolute"
-                        top="-1"
-                        right="-1"
-                        colorScheme="yellow"
-                        borderRadius="full"
-                        px={2}
-                      >
-                        {unreadCount > 99 ? '99+' : unreadCount}
-                      </Badge>
-                    )}
-                  </Box>
+                  <NotificationDropdown />
                   <Avatar size="sm" name={mentorName} src={avatarUrl} />
                 </HStack>
               )}
