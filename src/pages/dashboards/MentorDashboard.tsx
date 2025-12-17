@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react'
+import React, { useEffect, useMemo, useRef, useState } from 'react'
 import {
   Alert,
   AlertIcon,
@@ -33,6 +33,7 @@ import {
   Activity,
   AlertCircle,
   AlertTriangle,
+  LayoutDashboard,
   BarChart3,
   Bell,
   BookOpen,
@@ -71,6 +72,7 @@ import {
   type EngagementStatus,
   type RiskLevel,
 } from '@/services/mentorDashboardService'
+import { buildMentorNavItems } from '@/utils/navigationItems'
 
 interface DashboardMentee extends AssignedMentee {
   name: string
@@ -160,6 +162,7 @@ export const MentorDashboard: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState('')
   const [searchHistory, setSearchHistory] = useState<string[]>([])
   const [savedFilters, setSavedFilters] = useState<string[]>([])
+  const [activeNavItem, setActiveNavItem] = useState<string>('overview')
   const [activityLoading, setActivityLoading] = useState(true)
   const [activityError, setActivityError] = useState<string | null>(null)
   const [selectedMenteeId, setSelectedMenteeId] = useState<string | null>(null)
@@ -437,74 +440,118 @@ export const MentorDashboard: React.FC = () => {
     setSearchHistory(updatedHistory)
   }
 
+  const overviewRef = useRef<HTMLDivElement>(null)
+  const scheduleRef = useRef<HTMLDivElement>(null)
+  const progressRef = useRef<HTMLDivElement>(null)
+  const menteesRef = useRef<HTMLDivElement>(null)
+
+  const sectionRefs = useMemo(
+    () => ({
+      overview: overviewRef,
+      schedule: scheduleRef,
+      progress: progressRef,
+      mentees: menteesRef,
+    }),
+    []
+  )
+
+  const navSections = useMemo(() => {
+    const sections = buildMentorNavItems()
+    return [
+      {
+        ...sections[0],
+        items: [
+          { key: 'overview', label: 'Overview', icon: LayoutDashboard },
+          { key: 'schedule', label: 'Schedule & alerts', icon: CalendarClock },
+          { key: 'progress', label: 'Performance insights', icon: TrendingUp },
+          { key: 'mentees', label: 'Mentees & directory', icon: Users },
+        ],
+      },
+    ]
+  }, [])
+
+  const handleNavigate = (key: string) => {
+    setActiveNavItem(key)
+    const ref = sectionRefs[key as keyof typeof sectionRefs]
+    if (ref?.current) {
+      ref.current.scrollIntoView({ behavior: 'smooth', block: 'start' })
+    }
+  }
+
   const unreadCount = notifications.filter((notification) => !notification.read).length
 
   return (
     <MentorDashboardLayout
+      navSections={navSections}
+      activeItem={activeNavItem}
+      onNavigate={handleNavigate}
       unreadCount={unreadCount}
       mentorName={`${profile?.firstName || 'Mentor'} ${profile?.lastName || ''}`.trim()}
     >
       <Stack spacing={6}>
-        <Card>
-          <CardBody>
-            <Flex justify="space-between" align={{ base: 'flex-start', md: 'center' }} direction={{ base: 'column', md: 'row' }} gap={4}>
-              <Box>
-                <Text fontSize="2xl" fontWeight="bold">
-                  Welcome back, {profile?.firstName || 'Mentor'}!
-                </Text>
-                <Text color="brand.subtleText">
-                  {todaysSessions.length > 0
-                    ? `You have ${todaysSessions.length} session(s) on the calendar today.`
-                    : "Here's your personalized mentor overview."}
-                </Text>
-              </Box>
-              <HStack spacing={3} w={{ base: 'full', md: 'auto' }}>
-                <Button leftIcon={<Icon as={CalendarClock} />} w={{ base: 'full', md: 'auto' }}>
-                  Schedule new session
-                </Button>
-                <Button
-                  leftIcon={<Icon as={MessageSquare} />}
-                  variant="secondary"
-                  w={{ base: 'full', md: 'auto' }}
-                >
-                  Send quick message
-                </Button>
-              </HStack>
-            </Flex>
-          </CardBody>
-        </Card>
-
-        <Alert status="info" bg="#3D0C69" color="white" borderRadius="xl" alignItems="center">
-          <AlertIcon />
-          Mentor accounts are focused on mentee support. Community competitions and paid member upgrades are hidden to reduce distractions and protect mentee privacy.
-        </Alert>
-
-        <SimpleGrid columns={{ base: 1, md: 2, xl: 4 }} spacing={4}>
-          {summaryCards.map((card) => (
-            <Card key={card.label} shadow="md">
-              <CardBody>
-                <HStack justify="space-between" align="flex-start">
-                  <HStack spacing={3}>
-                    <Box p={3} bg="brand.primaryMuted" borderRadius="lg">
-                      <Icon as={card.icon} color="brand.primary" />
-                    </Box>
-                    <Box>
-                      <Text fontSize="sm" color="brand.subtleText">
-                        {card.label}
-                      </Text>
-                      <Text fontSize="2xl" fontWeight="bold">
-                        {card.value}
-                      </Text>
-                    </Box>
-                  </HStack>
-                  <Badge colorScheme="purple">{card.helper}</Badge>
+        <Box ref={overviewRef}>
+          <Card>
+            <CardBody>
+              <Flex justify="space-between" align={{ base: 'flex-start', md: 'center' }} direction={{ base: 'column', md: 'row' }} gap={4}>
+                <Box>
+                  <Text fontSize="2xl" fontWeight="bold">
+                    Welcome back, {profile?.firstName || 'Mentor'}!
+                  </Text>
+                  <Text color="brand.subtleText">
+                    {todaysSessions.length > 0
+                      ? `You have ${todaysSessions.length} session(s) on the calendar today.`
+                      : "Here's your personalized mentor overview."}
+                  </Text>
+                </Box>
+                <HStack spacing={3} w={{ base: 'full', md: 'auto' }}>
+                  <Button leftIcon={<Icon as={CalendarClock} />} w={{ base: 'full', md: 'auto' }}>
+                    Schedule new session
+                  </Button>
+                  <Button
+                    leftIcon={<Icon as={MessageSquare} />}
+                    variant="secondary"
+                    w={{ base: 'full', md: 'auto' }}
+                  >
+                    Send quick message
+                  </Button>
                 </HStack>
-              </CardBody>
-            </Card>
-          ))}
-        </SimpleGrid>
+              </Flex>
+            </CardBody>
+          </Card>
 
-        <Grid templateColumns={{ base: '1fr', xl: '2fr 1fr' }} gap={4}>
+          <Alert status="info" bg="#3D0C69" color="white" borderRadius="xl" alignItems="center" mt={4}>
+            <AlertIcon />
+            Mentor accounts are focused on mentee support. Community competitions and paid member upgrades are hidden to reduce distractions and protect mentee privacy.
+          </Alert>
+
+          <SimpleGrid columns={{ base: 1, md: 2, xl: 4 }} spacing={4} mt={4}>
+            {summaryCards.map((card) => (
+              <Card key={card.label} shadow="md">
+                <CardBody>
+                  <HStack justify="space-between" align="flex-start">
+                    <HStack spacing={3}>
+                      <Box p={3} bg="brand.primaryMuted" borderRadius="lg">
+                        <Icon as={card.icon} color="brand.primary" />
+                      </Box>
+                      <Box>
+                        <Text fontSize="sm" color="brand.subtleText">
+                          {card.label}
+                        </Text>
+                        <Text fontSize="2xl" fontWeight="bold">
+                          {card.value}
+                        </Text>
+                      </Box>
+                    </HStack>
+                    <Badge colorScheme="purple">{card.helper}</Badge>
+                  </HStack>
+                </CardBody>
+              </Card>
+            ))}
+          </SimpleGrid>
+        </Box>
+
+        <Box ref={scheduleRef}>
+          <Grid templateColumns={{ base: '1fr', xl: '2fr 1fr' }} gap={4}>
           <GridItem>
             <Card shadow="lg">
               <CardBody>
@@ -599,8 +646,10 @@ export const MentorDashboard: React.FC = () => {
             </Card>
           </GridItem>
         </Grid>
+        </Box>
 
-        <Grid templateColumns={{ base: '1fr', lg: '2fr 1fr' }} gap={4}>
+        <Box ref={progressRef}>
+          <Grid templateColumns={{ base: '1fr', lg: '2fr 1fr' }} gap={4}>
           <GridItem>
             <Card>
               <CardBody>
@@ -720,7 +769,10 @@ export const MentorDashboard: React.FC = () => {
           </GridItem>
         </Grid>
 
-        <Card>
+        </Box>
+
+        <Box ref={menteesRef}>
+          <Card>
           <CardBody>
             <Stack spacing={3}>
               <Flex justify="space-between" align={{ base: 'flex-start', md: 'center' }} direction={{ base: 'column', md: 'row' }} gap={3}>
@@ -1060,6 +1112,7 @@ export const MentorDashboard: React.FC = () => {
             </Card>
           </GridItem>
         </Grid>
+        </Box>
       </Stack>
     </MentorDashboardLayout>
   )
