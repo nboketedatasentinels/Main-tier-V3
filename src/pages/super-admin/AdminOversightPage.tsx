@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useMemo, useState } from 'react'
+import React, { useEffect, useMemo, useState } from 'react'
 import {
   Alert,
   AlertIcon,
@@ -94,17 +94,7 @@ export const AdminOversightPage: React.FC<AdminOversightPageProps> = ({ adminNam
     return () => clearTimeout(timer)
   }, [searchTerm])
 
-  const updateMetrics = useCallback((adminList: AdminUserRecord[]) => {
-    const total = adminList.length
-    const active = adminList.filter((admin) => admin.accountStatus !== 'suspended').length
-    const partners = adminList.filter((admin) => admin.role === 'partner').length
-    const mentors = adminList.filter((admin) => admin.role === 'mentor').length
-    const ambassadors = adminList.filter((admin) => admin.role === 'ambassador').length
-    const teamLeaders = adminList.filter((admin) => admin.role === 'team_leader').length
-    setMetrics({ total, active, partners, mentors, ambassadors, teamLeaders })
-  }, [])
-
-  const loadData = useCallback(async () => {
+  const loadData = async () => {
     try {
       setLoading(true)
       const [adminList, orgList] = await Promise.all([fetchAdminUsers(), fetchOrganizations()])
@@ -117,11 +107,11 @@ export const AdminOversightPage: React.FC<AdminOversightPageProps> = ({ adminNam
     } finally {
       setLoading(false)
     }
-  }, [toast, updateMetrics])
+  }
 
   useEffect(() => {
     loadData()
-  }, [loadData])
+  }, [])
 
   const handleSort = (key: SortKey) => {
     if (sortKey === key) {
@@ -139,6 +129,16 @@ export const AdminOversightPage: React.FC<AdminOversightPageProps> = ({ adminNam
     const asTimestamp = value as { toMillis?: () => number; toDate?: () => Date }
     if (asTimestamp.toMillis) return asTimestamp.toMillis()
     return asTimestamp.toDate?.()?.getTime?.() || 0
+  }
+
+  const updateMetrics = (adminList: AdminUserRecord[]) => {
+    const total = adminList.length
+    const active = adminList.filter((admin) => admin.accountStatus !== 'suspended').length
+    const partners = adminList.filter((admin) => admin.role === 'partner').length
+    const mentors = adminList.filter((admin) => admin.role === 'mentor').length
+    const ambassadors = adminList.filter((admin) => admin.role === 'ambassador').length
+    const teamLeaders = adminList.filter((admin) => admin.role === 'team_leader').length
+    setMetrics({ total, active, partners, mentors, ambassadors, teamLeaders })
   }
 
   const handleCreateAdmin = async (formData: AdminFormData) => {
