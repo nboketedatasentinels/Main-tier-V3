@@ -80,13 +80,14 @@ export const PasswordChangeModal: React.FC<PasswordChangeModalProps> = ({
 
       onSuccess()
       onClose()
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error('Error changing password:', err)
-      
+
       let errorMessage = 'Failed to update password'
-      if (err.code === 'auth/requires-recent-login') {
+      const firebaseError = err as { code?: string }
+      if (firebaseError?.code === 'auth/requires-recent-login') {
         errorMessage = 'Please log out and log in again to change your password'
-      } else if (err.code === 'auth/weak-password') {
+      } else if (firebaseError?.code === 'auth/weak-password') {
         errorMessage = 'Password is too weak. Please use a stronger password'
       }
       

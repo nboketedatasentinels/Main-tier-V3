@@ -2,24 +2,14 @@ import React, { useEffect, useMemo, useState } from 'react'
 import { User } from 'firebase/auth'
 import {
   signInWithEmailAndPassword,
-  createUserWithEmailAndPassword,
   signOut as firebaseSignOut,
   sendPasswordResetEmail,
-  sendSignInLinkToEmail,
   onAuthStateChanged,
 } from 'firebase/auth'
-import {
-  doc,
-  getDoc,
-  setDoc,
-  updateDoc,
-  serverTimestamp,
-  onSnapshot,
-} from 'firebase/firestore'
+import { doc, getDoc, setDoc, serverTimestamp, onSnapshot } from 'firebase/firestore'
 
 import {
   UserProfile,
-  DashboardPreferences,
   AccountStatus,
   TransformationTier,
   UserRole,
@@ -86,7 +76,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         console.log('🟣 [Auth] Normalized role:', normalized)
 
         if (normalized) {
-          baseUser.role = normalized as any
+          profileData.role = normalized as StandardRole
         } else {
           console.warn('🟠 [Auth] Invalid role detected:', baseUser.role)
         }
@@ -139,7 +129,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       console.log('🟣 [Auth] Profile created successfully')
 
       return profileData
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('🔴 [Auth] fetchOrCreateProfile error', error)
       return null
     }
@@ -215,19 +205,13 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
       /* -------- realtime updates (optional) -------- */
       const profileRef = doc(db, 'users', currentUser.uid)
-      unsubscribeProfile = onSnapshot(
-        profileRef,
-        (snap) => {
-          if (!snap.exists()) return
-          const updated = snap.data() as UserProfile
-          updated.role = normalizeRole(updated.role) as any
-          console.log('🔁 [Auth] Profile updated via snapshot', updated.role)
-          setProfile(updated)
-        },
-        (error) => {
-          console.warn('🟠 [Auth] Snapshot listener error (continuing without realtime updates)', error)
-        }
-      )
+      return onSnapshot(profileRef, (snap) => {
+        if (!snap.exists()) return
+        const updated = snap.data() as UserProfile
+        updated.role = normalizeRole(updated.role) as StandardRole
+        console.log('🔁 [Auth] Profile updated via snapshot', updated.role)
+        setProfile(updated)
+      })
     })
 
     return () => {
@@ -299,7 +283,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     signOut,
     resetPassword,
     hasRole: (r: StandardRole) => normalizedRole === r,
-    hasAnyRole: (roles: StandardRole[]) => roles.includes(normalizedRole as any),
+    hasAnyRole: (roles: StandardRole[]) => (normalizedRole ? roles.includes(normalizedRole as StandardRole) : false),
     isAdmin,
     isSuperAdmin,
     isMentor,

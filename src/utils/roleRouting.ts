@@ -14,8 +14,8 @@ export const getPreferredDashboardRoute = (profile: UserProfile | null): string 
       : null
 
   const fromLegacy =
-    typeof (profile as any)?.defaultDashboardRoute === 'string'
-      ? (profile as any).defaultDashboardRoute
+    typeof profile?.defaultDashboardRoute === 'string'
+      ? profile.defaultDashboardRoute
       : null
 
   const preferred = (fromPrefs || fromLegacy || '').trim()
@@ -62,7 +62,7 @@ export const getLandingPathForRole = (
           onboardingComplete: profile.onboardingComplete,
           onboardingSkipped: profile.onboardingSkipped,
           transformationTier: profile.transformationTier,
-          membershipStatus: (profile as any).membershipStatus,
+          membershipStatus: profile.membershipStatus,
           dashboardPreferences: profile.dashboardPreferences,
         }
       : null,
@@ -139,11 +139,7 @@ export const getLandingPathForRole = (
       return preferred
     }
 
-    const membershipStatus = (profile as any).membershipStatus as
-      | 'free'
-      | 'paid'
-      | undefined
-      | null
+    const membershipStatus = profile.membershipStatus
 
     const fallback = getDefaultDashboardRouteByMembership(membershipStatus)
     console.log('🔷 Learner fallback route:', fallback)
