@@ -1,4 +1,4 @@
-import React from 'react'
+import React, { useMemo } from 'react'
 import {
   Badge,
   Box,
@@ -49,12 +49,22 @@ export const PartnerAdminDashboard: React.FC = () => {
     { label: 'Grants & Funding', description: 'Partner resources' },
   ]
 
-  const riskReasons = [
-    { label: 'Low engagement score', count: atRiskUsers.length, color: 'orange' as const },
-    { label: 'Inactivity 14+ days', count: atRiskUsers.filter(u => u.riskReasons?.includes('Inactivity 14+ days')).length || 0, color: 'red' as const },
-    { label: 'Login friction', count: 3, color: 'yellow' as const },
-    { label: 'Org mismatch', count: 1, color: 'purple' as const },
-  ]
+  const riskReasons = useMemo(() => {
+    const counts: Record<string, number> = {}
+    atRiskUsers.forEach(user => {
+      const reasons = user.riskReasons?.length ? user.riskReasons : ['Behind on weekly points target']
+      reasons.forEach(reason => {
+        counts[reason] = (counts[reason] || 0) + 1
+      })
+    })
+
+    const palette: Array<'orange' | 'red' | 'yellow' | 'purple' | 'green'> = ['orange', 'red', 'yellow', 'purple', 'green']
+    return Object.entries(counts).map(([label, count], idx) => ({
+      label,
+      count,
+      color: palette[idx % palette.length],
+    }))
+  }, [atRiskUsers])
 
   const riskLevelList = [
     { label: 'Engaged', color: 'green' as const, count: riskLevels.engaged },
