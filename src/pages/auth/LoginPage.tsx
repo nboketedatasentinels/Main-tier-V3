@@ -11,6 +11,8 @@ import {
   useToast,
   Divider,
   HStack,
+  Alert,
+  AlertIcon,
 } from '@chakra-ui/react'
 import { useAuth } from '@/hooks/useAuth'
 import { PasswordChangeModal } from '@/components/PasswordChangeModal'
@@ -22,8 +24,10 @@ export const LoginPage: React.FC = () => {
   const [loading, setLoading] = useState(false)
   const [magicLinkSent, setMagicLinkSent] = useState(false)
   const [showPasswordChangeModal, setShowPasswordChangeModal] = useState(false)
+  const [profileTimeoutReached, setProfileTimeoutReached] = useState(false)
+  const [refreshingProfile, setRefreshingProfile] = useState(false)
 
-  const { signIn, signInWithMagicLink, user, profile, profileLoading } = useAuth()
+  const { signIn, signInWithMagicLink, user, profile, profileLoading, refreshProfile } = useAuth()
   const navigate = useNavigate()
   const toast = useToast()
   const [searchParams] = useSearchParams()
@@ -65,6 +69,20 @@ export const LoginPage: React.FC = () => {
     navigate(landingPath, { replace: true })
   }, [user, profile, profileLoading, navigate, searchParams])
 
+  useEffect(() => {
+    if (!user || profile) {
+      setProfileTimeoutReached(false)
+      return
+    }
+
+    const timer = window.setTimeout(() => {
+      console.warn('⏱️ LoginPage: Profile still missing after timeout, enabling manual refresh')
+      setProfileTimeoutReached(true)
+    }, 5000)
+
+    return () => window.clearTimeout(timer)
+  }, [user, profile])
+
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault()
     setLoading(true)
@@ -100,6 +118,21 @@ export const LoginPage: React.FC = () => {
       console.error('🔴 LoginPage: Exception in handleLogin', err)
       setLoading(false)
     }
+  }
+
+  const handleProfileRefresh = async () => {
+    console.log('🔵 LoginPage: Manual profile refresh triggered')
+    setRefreshingProfile(true)
+    const { error } = await refreshProfile()
+    if (error) {
+      toast({
+        title: 'Profile refresh failed',
+        description: error.message,
+        status: 'error',
+        duration: 4000,
+      })
+    }
+    setRefreshingProfile(false)
   }
 
   const handleMagicLink = async () => {
@@ -205,6 +238,25 @@ export const LoginPage: React.FC = () => {
           >
             Sign In
           </Button>
+
+          {profileTimeoutReached && (
+            <Alert status="warning" borderRadius="md">
+              <AlertIcon />
+              We're still loading your profile. You can retry below.
+            </Alert>
+          )}
+
+          {profileTimeoutReached && (
+            <Button
+              variant="secondary"
+              onClick={handleProfileRefresh}
+              isLoading={refreshingProfile}
+              loadingText="Refreshing profile..."
+              size="lg"
+            >
+              Retry profile load
+            </Button>
+          )}
 
           <HStack>
             <Divider borderColor="rgba(234, 177, 48, 0.3)" />

@@ -63,27 +63,27 @@ import {
 import { differenceInCalendarDays, format, isToday } from 'date-fns'
 import { MentorDashboardLayout } from '@/layouts/MentorDashboardLayout'
 import { useAuth } from '@/hooks/useAuth'
-import { deriveFallbackRisk, type RiskLevel } from '@/services/mentorDashboardService'
+import {
+  deriveFallbackRisk,
+  fetchAssignedMentees,
+  subscribeToAssignedMentees,
+  type AssignedMentee,
+  type EngagementStatus,
+  type RiskLevel,
+} from '@/services/mentorDashboardService'
 
-interface MenteeProfile {
-  id: string
+interface DashboardMentee extends AssignedMentee {
   name: string
-  email: string
   company: string
   program: string
   programDuration: string
   timezone: string
-  lastActive: string
-  weeklyActivity: number
-  goalsCompleted: number
-  goalsTotal: number
-  milestonesProgress: number
+  progress: number
+  scheduleLink?: string
   checkIns: {
     status: 'on-time' | 'overdue' | 'pending'
     last: string
   }
-  progress: number
-  scheduleLink?: string
 }
 
 interface SessionItem {
@@ -151,7 +151,11 @@ const calcTrendIcon = (current: number, previous: number) => {
 
 export const MentorDashboard: React.FC = () => {
   const { profile } = useAuth()
+  const [mentees, setMentees] = useState<AssignedMentee[]>([])
+  const [menteesLoading, setMenteesLoading] = useState(true)
+  const [menteesError, setMenteesError] = useState<string | null>(null)
   const [riskFilter, setRiskFilter] = useState<RiskLevel | 'all'>('all')
+  const [engagementFilter, setEngagementFilter] = useState<EngagementStatus | 'all'>('all')
   const [searchInput, setSearchInput] = useState('')
   const [searchTerm, setSearchTerm] = useState('')
   const [searchHistory, setSearchHistory] = useState<string[]>([])
@@ -160,146 +164,52 @@ export const MentorDashboard: React.FC = () => {
   const [activityError, setActivityError] = useState<string | null>(null)
   const [selectedMenteeId, setSelectedMenteeId] = useState<string | null>(null)
 
-  const menteeDirectory: MenteeProfile[] = useMemo(
-    () => [
-      {
-        id: '1',
-        name: 'Lina Chen',
-        email: 'lina.chen@aurora.dev',
-        company: 'Aurora Dev',
-        program: 'Impact Accelerator',
-        programDuration: '12 weeks',
-        timezone: 'GMT+1',
-        lastActive: '2024-04-09T12:00:00Z',
-        weeklyActivity: 3,
-        goalsCompleted: 4,
-        goalsTotal: 6,
-        milestonesProgress: 72,
-        checkIns: {
-          status: 'on-time',
-          last: '2024-04-08T09:00:00Z',
-        },
-        progress: 82,
-        scheduleLink: 'https://calendar.app/lina',
-      },
-      {
-        id: '2',
-        name: 'Diego Martínez',
-        email: 'diego.martinez@stellar.mx',
-        company: 'Stellar Systems',
-        program: 'Leadership Sprint',
-        programDuration: '10 weeks',
-        timezone: 'GMT-6',
-        lastActive: '2024-04-02T18:00:00Z',
-        weeklyActivity: 1,
-        goalsCompleted: 3,
-        goalsTotal: 7,
-        milestonesProgress: 54,
-        checkIns: {
-          status: 'pending',
-          last: '2024-03-29T14:00:00Z',
-        },
-        progress: 64,
-        scheduleLink: 'https://calendar.app/diego',
-      },
-      {
-        id: '3',
-        name: 'Amina Idris',
-        email: 'amina.idris@uplink.io',
-        company: 'Uplink',
-        program: 'Discovery Path',
-        programDuration: '8 weeks',
-        timezone: 'GMT+3',
-        lastActive: '2024-03-15T10:00:00Z',
-        weeklyActivity: 0,
-        goalsCompleted: 2,
-        goalsTotal: 6,
-        milestonesProgress: 38,
-        checkIns: {
-          status: 'overdue',
-          last: '2024-03-10T10:00:00Z',
-        },
-        progress: 48,
-      },
-      {
-        id: '4',
-        name: 'Nova Labs Team',
-        email: 'team@novalabs.ai',
-        company: 'Nova Labs',
-        program: 'Team Growth',
-        programDuration: '16 weeks',
-        timezone: 'GMT-5',
-        lastActive: '2024-04-06T11:00:00Z',
-        weeklyActivity: 2,
-        goalsCompleted: 5,
-        goalsTotal: 8,
-        milestonesProgress: 66,
-        checkIns: {
-          status: 'on-time',
-          last: '2024-04-05T11:00:00Z',
-        },
-        progress: 70,
-      },
-    ],
-    []
-  )
+  useEffect(() => {
+    if (!profile?.id) return
 
-  const sessionSchedule: SessionItem[] = useMemo(
-    () => [
-      {
-        id: 's1',
-        menteeId: '1',
-        topic: 'Career Narrative Review',
-        start: new Date(),
-        status: 'upcoming',
-        requiresNotes: false,
-      },
-      {
-        id: 's2',
-        menteeId: '2',
-        topic: 'Portfolio Feedback',
-        start: new Date(new Date().setHours(new Date().getHours() + 3)),
-        status: 'upcoming',
-        requiresNotes: true,
-      },
-      {
-        id: 's3',
-        menteeId: '3',
-        topic: 'Expectation Reset',
-        start: new Date(new Date().setDate(new Date().getDate() - 1)),
-        status: 'completed',
-        requiresNotes: true,
-      },
-      {
-        id: 's4',
-        menteeId: '4',
-        topic: 'Sprint Retrospective',
-        start: new Date(new Date().setDate(new Date().getDate() + 2)),
-        status: 'rescheduled',
-        requiresNotes: false,
-      },
-    ],
-    []
-  )
+    console.log('🟢 [MentorDashboard] Loading mentees for mentor', profile.id)
 
-  const notifications: NotificationItem[] = useMemo(
-    () => [
-      { id: 'n1', message: 'New check-in from Nova Labs Team', read: false, createdAt: new Date() },
-      { id: 'n2', message: 'Amina missed her weekly check-in', read: false, createdAt: new Date() },
-      { id: 'n3', message: 'Session summary needed for Diego', read: true, createdAt: new Date() },
-    ],
-    []
-  )
+    let unsubscribe: ReturnType<typeof subscribeToAssignedMentees> | null = null
+    let active = true
 
-  const recentActivity: ActivityItem[] = useMemo(
-    () => [
-      { id: 'a1', message: 'Shared resource "Career Map" with Lina', timeAgo: '12m ago' },
-      { id: 'a2', message: 'Reviewed Nova Labs check-in', timeAgo: '30m ago' },
-      { id: 'a3', message: 'Scheduled session with Diego', timeAgo: '1h ago' },
-      { id: 'a4', message: 'Saved filter "Top performers"', timeAgo: '2h ago' },
-    ],
-    []
-  )
+    const hydrate = async () => {
+      setMenteesLoading(true)
+      setMenteesError(null)
+      const { data, error } = await fetchAssignedMentees(profile.id)
+      if (!active) return
+      if (error) {
+        setMenteesError(error.message)
+      }
+      setMentees(data)
+      setMenteesLoading(false)
+    }
+
+    hydrate()
+
+    unsubscribe = subscribeToAssignedMentees(
+      profile.id,
+      (assigned) => {
+        if (!active) return
+        console.log('🟢 [MentorDashboard] Realtime mentee update', { count: assigned.length })
+        setMentees(assigned)
+        setMenteesLoading(false)
+      },
+      (error) => {
+        if (!active) return
+        console.error('🔴 [MentorDashboard] Realtime mentee subscription error', error)
+        setMenteesError(error.message)
+      }
+    )
+
+    return () => {
+      active = false
+      if (unsubscribe) unsubscribe()
+    }
+  }, [profile?.id])
+
+  const sessionSchedule: SessionItem[] = useMemo(() => [], [])
+  const notifications: NotificationItem[] = useMemo(() => [], [])
+  const recentActivity: ActivityItem[] = useMemo(() => [], [])
 
   useEffect(() => {
     const storageKey = `mentor-dashboard:${profile?.id || 'guest'}:search-history`
@@ -336,14 +246,68 @@ export const MentorDashboard: React.FC = () => {
     return () => clearTimeout(timer)
   }, [])
 
+  const menteeDirectory: DashboardMentee[] = useMemo(
+    () =>
+      mentees.map((mentee) => {
+        const name =
+          mentee.fullName?.trim() ||
+          `${mentee.firstName || ''} ${mentee.lastName || ''}`.trim() ||
+          mentee.email ||
+          'Mentee'
+        const company = mentee.companyName || mentee.companyCode || mentee.assignedOrganizations?.[0] || 'Independent'
+        const program = mentee.transformationTier?.toString().replace(/_/g, ' ') || 'Mentorship'
+        const programDuration = mentee.cohortIdentifier || mentee.dashboardPreferences?.defaultRoute || '—'
+        const timezone = mentee.timezone || 'Not set'
+        const weeklyActivity = mentee.weeklyActivity ?? 0
+        const goalsCompleted = mentee.goalsCompleted ?? 0
+        const goalsTotal = mentee.goalsTotal ?? 0
+        const lastActive =
+          (mentee.lastActive as string) ||
+          (mentee.lastActiveAt as string) ||
+          mentee.updatedAt ||
+          new Date().toISOString()
+        const daysSinceLastActive =
+          mentee.daysSinceLastActive ?? differenceInCalendarDays(new Date(), new Date(lastActive))
+        const risk = mentee.risk ?? deriveFallbackRisk({ daysSinceLastActive, weeklyActivity })
+        const milestonesProgress =
+          mentee.milestonesProgress ?? mentee.progress ??
+          (goalsTotal > 0 ? Math.round((goalsCompleted / goalsTotal) * 100) : 0)
+        const progress = Math.min(100, Math.max(0, milestonesProgress))
+        const checkInStatus = daysSinceLastActive <= 7 ? 'on-time' : daysSinceLastActive <= 14 ? 'pending' : 'overdue'
+
+        return {
+          ...mentee,
+          name,
+          company,
+          program,
+          programDuration,
+          timezone,
+          weeklyActivity,
+          goalsCompleted,
+          goalsTotal,
+          milestonesProgress,
+          progress,
+          lastActive,
+          risk,
+          checkIns: {
+            status: checkInStatus,
+            last: lastActive,
+          },
+        }
+      }),
+    [mentees]
+  )
+
   const menteesWithRisk = useMemo(
     () =>
       menteeDirectory.map((mentee) => {
-        const daysSinceLastActive = differenceInCalendarDays(new Date(), new Date(mentee.lastActive))
-        const risk = deriveFallbackRisk({
-          daysSinceLastActive,
-          weeklyActivity: mentee.weeklyActivity,
-        })
+        const daysSinceLastActive =
+          mentee.daysSinceLastActive ?? differenceInCalendarDays(new Date(), new Date(mentee.lastActive))
+        const risk = mentee.risk ??
+          deriveFallbackRisk({
+            daysSinceLastActive,
+            weeklyActivity: mentee.weeklyActivity,
+          })
         return {
           ...mentee,
           risk,
@@ -358,6 +322,9 @@ export const MentorDashboard: React.FC = () => {
     if (riskFilter !== 'all') {
       results = results.filter((mentee) => mentee.risk.level === riskFilter)
     }
+    if (engagementFilter !== 'all') {
+      results = results.filter((mentee) => mentee.engagementStatus === engagementFilter)
+    }
     if (searchTerm) {
       const term = searchTerm.toLowerCase()
       results = results.filter(
@@ -369,11 +336,11 @@ export const MentorDashboard: React.FC = () => {
       )
     }
     return results
-  }, [menteesWithRisk, riskFilter, searchTerm])
+  }, [menteesWithRisk, riskFilter, engagementFilter, searchTerm])
 
   const selectedMentee = useMemo(() => {
-    if (selectedMenteeId) return menteesWithRisk.find((mentee) => mentee.id === selectedMenteeId)
-    return menteesWithRisk[0]
+    if (selectedMenteeId) return menteesWithRisk.find((mentee) => mentee.id === selectedMenteeId) || null
+    return menteesWithRisk[0] || null
   }, [menteesWithRisk, selectedMenteeId])
 
   const todaysSessions = useMemo(
@@ -399,6 +366,7 @@ export const MentorDashboard: React.FC = () => {
   }, [notifications, sessionSchedule])
 
   const averageProgress = useMemo(() => {
+    if (menteesWithRisk.length === 0) return 0
     const total = menteesWithRisk.reduce((sum, mentee) => sum + mentee.progress, 0)
     return Math.round(total / menteesWithRisk.length)
   }, [menteesWithRisk])
@@ -853,6 +821,30 @@ export const MentorDashboard: React.FC = () => {
                   )
                 })}
               </Wrap>
+              <Wrap spacing={2}>
+                {[
+                  { key: 'all', label: 'All engagement' },
+                  { key: 'active', label: 'Active' },
+                  { key: 'idle', label: 'Idle' },
+                  { key: 'disengaged', label: 'Disengaged' },
+                ].map(({ key, label }) => {
+                  const isActive = engagementFilter === key
+                  return (
+                    <WrapItem key={key}>
+                      <Button
+                        size="sm"
+                        variant={isActive ? 'primary' : 'secondary'}
+                        bg={isActive ? '#3D0C69' : 'gray.50'}
+                        color={isActive ? 'white' : 'brand.text'}
+                        leftIcon={<Icon as={Activity} />}
+                        onClick={() => setEngagementFilter(key as EngagementStatus | 'all')}
+                      >
+                        {label}
+                      </Button>
+                    </WrapItem>
+                  )
+                })}
+              </Wrap>
               {searchTerm && (
                 <Alert status="info" borderRadius="md">
                   <AlertIcon />
@@ -866,6 +858,34 @@ export const MentorDashboard: React.FC = () => {
         <Grid templateColumns={{ base: '1fr', xl: '1fr 1fr' }} gap={4}>
           <GridItem>
             <Stack spacing={3}>
+              {menteesError && (
+                <Alert status="error" borderRadius="md">
+                  <AlertIcon />
+                  {menteesError}
+                </Alert>
+              )}
+              {menteesLoading && (
+                <Stack spacing={3}>
+                  {[1, 2, 3].map((idx) => (
+                    <Card key={idx} shadow="sm">
+                      <CardBody>
+                        <Stack spacing={2}>
+                          <Skeleton height="20px" w="40%" />
+                          <Skeleton height="16px" w="60%" />
+                          <Skeleton height="16px" w="80%" />
+                        </Stack>
+                      </CardBody>
+                    </Card>
+                  ))}
+                </Stack>
+              )}
+              {!menteesLoading && filteredMentees.length === 0 && (
+                <Card shadow="sm">
+                  <CardBody>
+                    <Text color="brand.subtleText">No assigned mentees found for your account.</Text>
+                  </CardBody>
+                </Card>
+              )}
               {filteredMentees.map((mentee) => {
                 const palette = riskStyles[mentee.risk.level]
                 const isSelected = selectedMentee?.id === mentee.id
