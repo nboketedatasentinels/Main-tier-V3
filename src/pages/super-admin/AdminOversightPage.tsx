@@ -89,6 +89,16 @@ export const AdminOversightPage: React.FC<AdminOversightPageProps> = ({ adminNam
     teamLeaders: 0,
   })
 
+  const updateMetrics = useCallback((adminList: AdminUserRecord[]) => {
+    const total = adminList.length
+    const active = adminList.filter((admin) => admin.accountStatus !== 'suspended').length
+    const partners = adminList.filter((admin) => admin.role === 'partner').length
+    const mentors = adminList.filter((admin) => admin.role === 'mentor').length
+    const ambassadors = adminList.filter((admin) => admin.role === 'ambassador').length
+    const teamLeaders = adminList.filter((admin) => admin.role === 'team_leader').length
+    setMetrics({ total, active, partners, mentors, ambassadors, teamLeaders })
+  }, [])
+
   useEffect(() => {
     const timer = setTimeout(() => setDebouncedSearch(searchTerm.toLowerCase()), 200)
     return () => clearTimeout(timer)
