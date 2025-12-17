@@ -38,6 +38,19 @@ export interface OrganizationRecord {
   programEnd?: string
   assignmentCount?: number
   partnerId?: string | null
+  cohortStartDate?: Timestamp | string | Date
+  programDuration?: number
+  courseAssignments?: string[]
+  description?: string
+  assignedMentorId?: string | null
+  assignedMentorName?: string | null
+  assignedMentorEmail?: string | null
+  assignedAmbassadorId?: string | null
+  assignedAmbassadorName?: string | null
+  assignedAmbassadorEmail?: string | null
+  assignedPartnerId?: string | null
+  assignedPartnerName?: string | null
+  assignedPartnerEmail?: string | null
 }
 
 export interface EngagementRiskAggregate {
@@ -110,4 +123,58 @@ export interface AdminMetrics {
   mentors: number
   ambassadors: number
   teamLeaders: number
+}
+
+export type InvitationMethod = 'email' | 'one_time_code'
+
+export interface InviteDraft {
+  id: string
+  name: string
+  email: string
+  role: AdminRole | 'user'
+  method: InvitationMethod
+}
+
+export interface InvitationPayload {
+  name: string
+  email?: string
+  role: AdminRole | 'user'
+  method: InvitationMethod
+  organizationId: string
+}
+
+export interface InvitationResultEntry {
+  id: string
+  name: string
+  email?: string
+  role: AdminRole | 'user'
+  method: InvitationMethod
+  status: 'success' | 'failed'
+  message?: string
+  code?: string
+}
+
+export interface BulkInvitationResult {
+  total: number
+  success: number
+  failed: number
+  results: InvitationResultEntry[]
+}
+
+export interface CourseOption {
+  id: string
+  title: string
+  description?: string
+}
+
+export interface OrganizationLead {
+  id: string
+  name: string
+  email?: string
+}
+
+export interface ProgramDurationOption {
+  value: number
+  label: string
+  courseCount: number
 }
