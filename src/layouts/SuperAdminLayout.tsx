@@ -154,7 +154,7 @@ export const SuperAdminLayout: React.FC<SuperAdminLayoutProps> = ({
   )
 
   return (
-    <Flex minH="100vh" bg="brand.accent">
+    <Flex minH="100vh" h="100vh" bg="brand.accent" overflow="hidden">
       <Box
         as="nav"
         w={{ base: '0', lg: '280px' }}
@@ -163,9 +163,8 @@ export const SuperAdminLayout: React.FC<SuperAdminLayoutProps> = ({
         borderColor="brand.border"
         display={{ base: 'none', lg: 'flex' }}
         flexDirection="column"
-        position="sticky"
-        top={0}
-        minH="100vh"
+        h="100vh"
+        overflowY="auto"
         p={5}
         gap={6}
       >
@@ -211,7 +210,7 @@ export const SuperAdminLayout: React.FC<SuperAdminLayoutProps> = ({
         </DrawerContent>
       </Drawer>
 
-      <Flex flex="1" direction="column" minW={0}>
+      <Flex flex="1" direction="column" minW={0} h="100vh" overflow="hidden">
         <Flex
           px={{ base: 4, md: 6, lg: 10 }}
           py={4}
@@ -274,7 +273,7 @@ export const SuperAdminLayout: React.FC<SuperAdminLayoutProps> = ({
           </HStack>
         </Flex>
 
-        <Box px={{ base: 4, md: 6, lg: 10 }} py={{ base: 5, md: 8 }}>
+        <Box px={{ base: 4, md: 6, lg: 10 }} py={{ base: 5, md: 8 }} flex="1" overflowY="auto">
           <Stack spacing={6} maxW="1600px" mx="auto">
             {children}
           </Stack>

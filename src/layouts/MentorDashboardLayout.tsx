@@ -94,7 +94,7 @@ export const MentorDashboardLayout: React.FC<MentorDashboardLayoutProps> = ({
   const shortName = useMemo(() => mentorName?.split(' ')[0] || 'Mentor', [mentorName])
 
   return (
-    <Flex minH="100vh" bg="brand.accent">
+    <Flex minH="100vh" h="100vh" bg="brand.accent" overflow="hidden">
       <Box
         as="nav"
         w={sidebarWidth}
@@ -103,9 +103,8 @@ export const MentorDashboardLayout: React.FC<MentorDashboardLayoutProps> = ({
         borderColor="brand.border"
         display={{ base: 'none', lg: 'flex' }}
         flexDirection="column"
-        position="sticky"
-        top={0}
-        minH="100vh"
+        h="100vh"
+        overflowY="auto"
       >
         <Flex direction="column" h="full" p={4} gap={4}>
           <HStack spacing={3} align="center">
@@ -171,7 +170,7 @@ export const MentorDashboardLayout: React.FC<MentorDashboardLayoutProps> = ({
         </DrawerContent>
       </Drawer>
 
-      <Flex flex="1" direction="column" minW={0}>
+      <Flex flex="1" direction="column" minW={0} h="100vh" overflow="hidden">
         {isMobile && (
           <Flex
             px={4}
@@ -212,7 +211,7 @@ export const MentorDashboardLayout: React.FC<MentorDashboardLayoutProps> = ({
           </Flex>
         )}
 
-        <Box px={{ base: 4, md: 6, lg: 10 }} py={{ base: 5, md: 8 }}>
+        <Box px={{ base: 4, md: 6, lg: 10 }} py={{ base: 5, md: 8 }} flex="1" overflowY="auto">
           <Stack spacing={6} maxW="1600px" mx="auto">
             <Flex justify="space-between" align="center">
               <Box>
