@@ -1,4 +1,5 @@
 import {
+  Timestamp,
   addDoc,
   collection,
   deleteDoc,
@@ -23,6 +24,8 @@ import {
   TaskNotificationRecord,
   VerificationRequest,
 } from '@/types/admin'
+
+type TrendPoint = { label: string; value: number }
 
 const orgCollection = collection(db, 'organizations')
 const usersCollection = collection(db, 'users')
@@ -52,6 +55,83 @@ export const fetchDashboardMetrics = async (
     engagementRate: 0.76,
     newRegistrations,
   }
+}
+
+const buildDateBuckets = (days: number) => {
+  const today = new Date()
+  const buckets: Record<string, { label: string; start: number; end: number; value: number }> = {}
+
+  for (let i = days - 1; i >= 0; i -= 1) {
+    const date = new Date(today)
+    date.setHours(0, 0, 0, 0)
+    date.setDate(today.getDate() - i)
+    const start = date.getTime()
+    const label = date.toLocaleDateString(undefined, { month: 'short', day: 'numeric' })
+
+    const endDate = new Date(date)
+    endDate.setHours(23, 59, 59, 999)
+
+    buckets[label] = { label, start, end: endDate.getTime(), value: 0 }
+  }
+
+  return buckets
+}
+
+const timestampToMillis = (value?: unknown) => {
+  if (!value) return 0
+  if (value instanceof Timestamp) return value.toMillis()
+  if (typeof value === 'number') return value
+  const asDate = (value as { toDate?: () => Date })?.toDate?.()
+  return asDate?.getTime() || 0
+}
+
+export const fetchRegistrationTrend = async (days = 14): Promise<TrendPoint[]> => {
+  const sinceDate = new Date()
+  sinceDate.setDate(sinceDate.getDate() - (days - 1))
+
+  const registrationQuery = query(
+    usersCollection,
+    where('registrationDate', '>=', sinceDate),
+    orderBy('registrationDate', 'asc'),
+  )
+
+  const snapshot = await getDocs(registrationQuery)
+  const buckets = buildDateBuckets(days)
+
+  snapshot.docs.forEach((docSnap) => {
+    const millis = timestampToMillis((docSnap.data() as { registrationDate?: unknown }).registrationDate)
+    Object.values(buckets).forEach((bucket) => {
+      if (millis >= bucket.start && millis <= bucket.end) {
+        buckets[bucket.label].value = (buckets[bucket.label].value || 0) + 1
+      }
+    })
+  })
+
+  return Object.values(buckets).map((bucket) => ({ label: bucket.label, value: bucket.value || 0 }))
+}
+
+export const fetchUserGrowthTrend = async (days = 30): Promise<TrendPoint[]> => {
+  const sinceDate = new Date()
+  sinceDate.setDate(sinceDate.getDate() - (days - 1))
+
+  const userQuery = query(usersCollection, where('registrationDate', '>=', sinceDate), orderBy('registrationDate', 'asc'))
+  const snapshot = await getDocs(userQuery)
+  const buckets = buildDateBuckets(days)
+
+  const byDay: Record<string, number> = {}
+  snapshot.docs.forEach((docSnap) => {
+    const millis = timestampToMillis((docSnap.data() as { registrationDate?: unknown }).registrationDate)
+    const bucket = Object.values(buckets).find((range) => millis >= range.start && millis <= range.end)
+    if (bucket) {
+      byDay[bucket.label] = (byDay[bucket.label] || 0) + 1
+    }
+  })
+
+  let runningTotal = 0
+  return Object.values(buckets).map((bucket) => {
+    runningTotal += byDay[bucket.label] || 0
+    return { label: bucket.label, value: runningTotal }
+  })
 }
 
 export const fetchOrganizations = async (): Promise<OrganizationRecord[]> => {
@@ -103,7 +183,10 @@ export const fetchEngagementRiskAggregates = async (): Promise<EngagementRiskAgg
 
 export const fetchAdminActivityLog = async (limitCount = 10): Promise<AdminActivityLogEntry[]> => {
   const snapshot = await getDocs(query(auditCollection, orderBy('createdAt', 'desc'), limit(limitCount)))
-  return snapshot.docs.map((docSnap) => ({ id: docSnap.id, ...(docSnap.data() as AdminActivityLogEntry) }))
+  return snapshot.docs.map((docSnap) => {
+    const { id: _ignored, ...rest } = docSnap.data() as AdminActivityLogEntry
+    return { id: docSnap.id, ...rest }
+  })
 }
 
 export const logAdminAction = async (entry: Omit<AdminActivityLogEntry, 'id' | 'createdAt'>) => {
@@ -120,27 +203,47 @@ export const listenToVerificationRequests = (onChange: (requests: VerificationRe
     limit(10),
   )
   return onSnapshot(verificationQuery, (snapshot) => {
-    onChange(snapshot.docs.map((docSnap) => ({ id: docSnap.id, ...(docSnap.data() as VerificationRequest) })))
+    onChange(
+      snapshot.docs.map((docSnap) => {
+        const { id: _ignored, ...rest } = docSnap.data() as VerificationRequest
+        return { id: docSnap.id, ...rest }
+      }),
+    )
   })
 }
 
 export const listenToRegistrations = (onChange: (registrations: RegistrationRecord[]) => void) => {
   const registrationQuery = query(collection(db, 'users'), orderBy('createdAt', 'desc'), limit(8))
   return onSnapshot(registrationQuery, (snapshot) => {
-    onChange(snapshot.docs.map((docSnap) => ({ id: docSnap.id, ...(docSnap.data() as RegistrationRecord) })))
+    onChange(
+      snapshot.docs.map((docSnap) => {
+        const { id: _ignored, ...rest } = docSnap.data() as RegistrationRecord
+        return { id: docSnap.id, ...rest }
+      }),
+    )
   })
 }
 
 export const listenToSystemAlerts = (onChange: (alerts: SystemAlertRecord[]) => void) => {
   const alertsQuery = query(collection(db, 'system_health_alerts'), orderBy('created_at', 'desc'), limit(8))
   return onSnapshot(alertsQuery, (snapshot) => {
-    onChange(snapshot.docs.map((docSnap) => ({ id: docSnap.id, ...(docSnap.data() as SystemAlertRecord) })))
+    onChange(
+      snapshot.docs.map((docSnap) => {
+        const { id: _ignored, ...rest } = docSnap.data() as SystemAlertRecord
+        return { id: docSnap.id, ...rest }
+      }),
+    )
   })
 }
 
 export const listenToTaskNotifications = (onChange: (tasks: TaskNotificationRecord[]) => void) => {
   const taskQuery = query(collection(db, 'task_notifications'), orderBy('created_at', 'desc'), limit(8))
   return onSnapshot(taskQuery, (snapshot) => {
-    onChange(snapshot.docs.map((docSnap) => ({ id: docSnap.id, ...(docSnap.data() as TaskNotificationRecord) })))
+    onChange(
+      snapshot.docs.map((docSnap) => {
+        const { id: _ignored, ...rest } = docSnap.data() as TaskNotificationRecord
+        return { id: docSnap.id, ...rest }
+      }),
+    )
   })
 }
