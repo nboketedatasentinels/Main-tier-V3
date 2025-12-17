@@ -74,8 +74,8 @@ export const getLandingPathForRole = (
     return redirectUrl
   }
 
-  const normalizedRole = normalizeRole(role)
-  console.log('🔷 Normalized role:', normalizedRole)
+  const normalizedRole = normalizeRole(role) ?? (profile?.mentorId ? 'mentor' : null)
+  console.log('🔷 Normalized role:', normalizedRole, 'mentorIdHint:', profile?.mentorId)
 
   // Priority 2: Super Admin
   if (normalizedRole === 'super_admin') {
@@ -143,6 +143,12 @@ export const getLandingPathForRole = (
 
     const fallback = getDefaultDashboardRouteByMembership(membershipStatus)
     console.log('🔷 Learner fallback route:', fallback)
+    return fallback
+  }
+
+  if (profile) {
+    const fallback = getPreferredDashboardRoute(profile) || getDefaultDashboardRouteByMembership(profile.membershipStatus)
+    console.warn('🔷 Role missing or null, using fallback route', fallback)
     return fallback
   }
 
