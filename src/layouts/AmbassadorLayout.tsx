@@ -23,7 +23,7 @@ import {
   useBreakpointValue,
   useDisclosure,
 } from '@chakra-ui/react'
-import { Bell, Menu as MenuIcon, Medal, TrendingUp, X } from 'lucide-react'
+import { Menu as MenuIcon, Medal, TrendingUp, X } from 'lucide-react'
 import { NotificationDropdown } from '@/components/notifications/NotificationDropdown'
 import { buildAmbassadorNavItems, buildCommonAccountItems, NavigationItem, NavigationSection } from '@/utils/navigationItems'
 import { useAuth } from '@/hooks/useAuth'
@@ -35,7 +35,6 @@ interface AmbassadorLayoutProps {
   ambassadorName?: string
   avatarUrl?: string
   navSections?: NavigationSection[]
-  notificationCount?: number
   subtitle?: string
 }
 
@@ -108,7 +107,6 @@ export const AmbassadorLayout: React.FC<AmbassadorLayoutProps> = ({
   ambassadorName = 'Ambassador',
   avatarUrl,
   navSections,
-  notificationCount = 0,
   subtitle = 'Grow the community and track your impact',
 }) => {
   const { signOut } = useAuth()
@@ -242,14 +240,6 @@ export const AmbassadorLayout: React.FC<AmbassadorLayoutProps> = ({
 
           <HStack spacing={3} align="center">
             <NotificationDropdown />
-            <Box position="relative" display={{ base: 'none', sm: 'block' }}>
-              <IconButton aria-label="Alerts" icon={<Bell size={18} />} variant="ghost" />
-              {notificationCount > 0 && (
-                <Badge position="absolute" top="-1" right="-1" colorScheme="purple" borderRadius="full">
-                  {notificationCount > 99 ? '99+' : notificationCount}
-                </Badge>
-              )}
-            </Box>
             <Menu>
               <MenuButton as={Button} leftIcon={<Avatar size="sm" name={ambassadorName} src={avatarUrl} />} variant="outline">
                 <Text>{ambassadorName}</Text>

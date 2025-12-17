@@ -1,4 +1,4 @@
-import React, { useMemo } from 'react'
+import React from 'react'
 import {
   Badge,
   Box,
@@ -72,14 +72,11 @@ export const AmbassadorDashboard: React.FC = () => {
   const { profile } = useAuth()
   const ambassadorName = profile?.fullName || profile?.firstName || 'Ambassador'
 
-  const notificationCount = useMemo(() => recentReferrals.filter((ref) => ref.status !== 'Converted').length, [])
-
   return (
     <AmbassadorLayout
       activeItem="overview"
       ambassadorName={ambassadorName}
       avatarUrl={profile?.avatarUrl}
-      notificationCount={notificationCount}
     >
       <Stack spacing={6}>
         <Flex justify="space-between" align={{ base: 'flex-start', md: 'center' }} gap={6} wrap="wrap">

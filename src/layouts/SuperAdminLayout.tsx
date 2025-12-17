@@ -23,7 +23,7 @@ import {
   useBreakpointValue,
   useDisclosure,
 } from '@chakra-ui/react'
-import { Bell, LogOut, Menu as MenuIcon, Shield, Sparkles, X } from 'lucide-react'
+import { LogOut, Menu as MenuIcon, Shield, Sparkles, X } from 'lucide-react'
 import { NotificationDropdown } from '@/components/notifications/NotificationDropdown'
 import { useAuth } from '@/hooks/useAuth'
 import { buildCommonAccountItems, buildSuperAdminNavItems, NavigationItem, NavigationSection } from '@/utils/navigationItems'
@@ -35,7 +35,6 @@ interface SuperAdminLayoutProps {
   adminName?: string
   avatarUrl?: string
   navSections?: NavigationSection[]
-  notificationCount?: number
   subtitle?: string
 }
 
@@ -108,7 +107,6 @@ export const SuperAdminLayout: React.FC<SuperAdminLayoutProps> = ({
   adminName = 'Super Admin',
   avatarUrl,
   navSections,
-  notificationCount = 0,
   subtitle = 'Platform Control Center',
 }) => {
   const { signOut } = useAuth()
@@ -247,14 +245,6 @@ export const SuperAdminLayout: React.FC<SuperAdminLayoutProps> = ({
 
           <HStack spacing={3} align="center">
             <NotificationDropdown />
-            <Box position="relative" display={{ base: 'none', sm: 'block' }}>
-              <IconButton aria-label="Alerts" icon={<Bell size={18} />} variant="ghost" />
-              {notificationCount > 0 && (
-                <Badge position="absolute" top="-1" right="-1" colorScheme="red" borderRadius="full">
-                  {notificationCount > 99 ? '99+' : notificationCount}
-                </Badge>
-              )}
-            </Box>
             <Menu>
               <MenuButton as={Button} leftIcon={<Avatar size="sm" name={adminName} src={avatarUrl} />} variant="outline">
                 <Text>{adminName}</Text>

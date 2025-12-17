@@ -142,11 +142,6 @@ export const SuperAdminDashboard: React.FC = () => {
     ]
   }, [riskAggregate])
 
-  const notificationBadge = useMemo(
-    () => verificationRequests.length + systemAlerts.length + taskNotifications.length,
-    [systemAlerts.length, taskNotifications.length, verificationRequests.length],
-  )
-
   const handleNavigate = (key: string) => {
     setActivePage(key)
   }
@@ -195,7 +190,6 @@ export const SuperAdminDashboard: React.FC = () => {
     <SuperAdminLayout
       adminName={adminName}
       avatarUrl={profile?.avatarUrl}
-      notificationCount={notificationBadge}
       activeItem={activePage}
       onNavigate={handleNavigate}
     >

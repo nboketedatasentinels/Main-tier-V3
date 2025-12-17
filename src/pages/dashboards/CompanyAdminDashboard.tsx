@@ -123,7 +123,6 @@ export const CompanyAdminDashboard: React.FC = () => {
   const adminName = profile?.fullName || profile?.firstName || 'Admin'
   const [activePage, setActivePage] = useState<CompanyPageKey>('overview')
   const [selectedOrg, setSelectedOrg] = useState<string>('all')
-  const [notificationCount] = useState<number>(3)
   const navSections = useMemo(() => buildCompanyAdminNavItems(), [])
 
   const scopedOrganizations = useMemo<CompanyOrg[]>(() => organizations.filter(org => org.code !== 'all'), [])
@@ -577,7 +576,6 @@ export const CompanyAdminDashboard: React.FC = () => {
       organizations={organizations}
       selectedOrg={selectedOrg}
       onSelectOrg={setSelectedOrg}
-      notificationCount={notificationCount}
     >
       {renderPage()}
     </CompanyAdminLayout>

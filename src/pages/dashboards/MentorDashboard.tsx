@@ -478,14 +478,11 @@ export const MentorDashboard: React.FC = () => {
     }
   }
 
-  const unreadCount = notifications.filter((notification) => !notification.read).length
-
   return (
     <MentorDashboardLayout
       navSections={navSections}
       activeItem={activeNavItem}
       onNavigate={handleNavigate}
-      unreadCount={unreadCount}
       mentorName={`${profile?.firstName || 'Mentor'} ${profile?.lastName || ''}`.trim()}
     >
       <Stack spacing={6}>
