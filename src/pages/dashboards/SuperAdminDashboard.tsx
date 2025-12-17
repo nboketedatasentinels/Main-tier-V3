@@ -96,6 +96,7 @@ import {
   TaskNotificationRecord,
   VerificationRequest,
 } from '@/types/admin'
+import { SuperAdminLayout } from '@/layouts/SuperAdminLayout'
 
 type SortKey = keyof Pick<OrganizationRecord, 'name' | 'code' | 'teamSize' | 'status' | 'transformationPartner'>
 type StreamCardItem =
@@ -351,12 +352,23 @@ export const SuperAdminDashboard: React.FC = () => {
 
   const statusOptions = ['all', 'active', 'inactive', 'pending', 'suspended', 'watch']
 
+  const notificationBadge = useMemo(
+    () => verificationRequests.length + systemAlerts.length + taskNotifications.length,
+    [systemAlerts.length, taskNotifications.length, verificationRequests.length],
+  )
+
   return (
-    <Stack spacing={10} bg="gray.50" p={{ base: 4, md: 6 }} borderRadius="2xl" border="1px solid" borderColor="gray.200">
-      <Card bg="white" border="1px solid" borderColor="gray.200" borderRadius="2xl" shadow="sm">
-        <CardBody>
-          <Flex justify="space-between" align={{ base: 'flex-start', md: 'center' }} gap={6} wrap="wrap">
-            <Stack spacing={3} maxW="800px">
+    <SuperAdminLayout
+      activeItem="overview"
+      adminName={adminName}
+      avatarUrl={profile?.avatarUrl}
+      notificationCount={notificationBadge}
+    >
+      <Stack spacing={10} bg="gray.50" p={{ base: 4, md: 6 }} borderRadius="2xl" border="1px solid" borderColor="gray.200">
+        <Card bg="white" border="1px solid" borderColor="gray.200" borderRadius="2xl" shadow="sm">
+          <CardBody>
+            <Flex justify="space-between" align={{ base: 'flex-start', md: 'center' }} gap={6} wrap="wrap">
+              <Stack spacing={3} maxW="800px">
               <HStack spacing={3}>
                 <Badge colorScheme="purple" px={3} py={1} borderRadius="full" display="inline-flex" alignItems="center">
                   <ShieldAlert size={14} style={{ marginRight: 8 }} /> ADMIN CONTROL CENTER
@@ -779,7 +791,8 @@ export const SuperAdminDashboard: React.FC = () => {
           </DrawerBody>
         </DrawerContent>
       </Drawer>
-    </Stack>
+      </Stack>
+    </SuperAdminLayout>
   )
 }
 

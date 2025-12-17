@@ -1,4 +1,4 @@
-import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom'
+import { BrowserRouter, Routes, Route, Navigate, useLocation, Outlet } from 'react-router-dom'
 import { ProtectedRoute } from '@/components/ProtectedRoute'
 import { FreeTierGuard } from '@/components/FreeTierGuard'
 import { useAuth } from '@/hooks/useAuth'
@@ -116,7 +116,7 @@ export const AppRoutes = () => {
           path="/mentor"
           element={
             <ProtectedRoute requiredRoles={[UserRole.MENTOR]}>
-              <MainLayout />
+              <Outlet />
             </ProtectedRoute>
           }
         >
@@ -129,7 +129,7 @@ export const AppRoutes = () => {
           path="/ambassador"
           element={
             <ProtectedRoute requiredRoles={[UserRole.AMBASSADOR]}>
-              <MainLayout />
+              <Outlet />
             </ProtectedRoute>
           }
         >
@@ -142,7 +142,7 @@ export const AppRoutes = () => {
           path="/admin"
           element={
             <ProtectedRoute requiredRoles={[UserRole.COMPANY_ADMIN, UserRole.SUPER_ADMIN]}>
-              <MainLayout />
+              <Outlet />
             </ProtectedRoute>
           }
         >
@@ -155,7 +155,7 @@ export const AppRoutes = () => {
           path="/super-admin"
           element={
             <ProtectedRoute requiredRoles={[UserRole.SUPER_ADMIN]}>
-              <MainLayout />
+              <Outlet />
             </ProtectedRoute>
           }
         >
