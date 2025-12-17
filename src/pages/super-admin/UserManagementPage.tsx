@@ -120,6 +120,15 @@ export const UserManagementPage: React.FC = () => {
     toast({ title: 'Status updated', status: 'info' })
   }
 
+  const handleInviteUser = () => {
+    toast({
+      title: 'Invite user',
+      description: 'User invitation feature coming soon',
+      status: 'info',
+      duration: 3000,
+    })
+  }
+
   return (
     <Stack spacing={6}>
       <Card bg="white" border="1px solid" borderColor="brand.border">
@@ -166,7 +175,7 @@ export const UserManagementPage: React.FC = () => {
             </HStack>
 
             <HStack spacing={3}>
-              <Button leftIcon={<UserPlus size={16} />} colorScheme="purple">
+              <Button leftIcon={<UserPlus size={16} />} colorScheme="purple" onClick={handleInviteUser}>
                 Invite user
               </Button>
               <Button leftIcon={<Filter size={16} />} variant="outline" onClick={() => setFilters({ organization: 'all', role: 'all', status: 'all', search: '' })}>
