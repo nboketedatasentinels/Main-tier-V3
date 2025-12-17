@@ -184,8 +184,8 @@ export const fetchEngagementRiskAggregates = async (): Promise<EngagementRiskAgg
 export const fetchAdminActivityLog = async (limitCount = 10): Promise<AdminActivityLogEntry[]> => {
   const snapshot = await getDocs(query(auditCollection, orderBy('createdAt', 'desc'), limit(limitCount)))
   return snapshot.docs.map((docSnap) => {
-    const { id: _ignored, ...rest } = docSnap.data() as AdminActivityLogEntry
-    return { id: docSnap.id, ...rest }
+    const data = docSnap.data() as AdminActivityLogEntry
+    return { ...data, id: docSnap.id }
   })
 }
 
@@ -205,8 +205,8 @@ export const listenToVerificationRequests = (onChange: (requests: VerificationRe
   return onSnapshot(verificationQuery, (snapshot) => {
     onChange(
       snapshot.docs.map((docSnap) => {
-        const { id: _ignored, ...rest } = docSnap.data() as VerificationRequest
-        return { id: docSnap.id, ...rest }
+        const data = docSnap.data() as VerificationRequest
+        return { ...data, id: docSnap.id }
       }),
     )
   })
@@ -217,8 +217,8 @@ export const listenToRegistrations = (onChange: (registrations: RegistrationReco
   return onSnapshot(registrationQuery, (snapshot) => {
     onChange(
       snapshot.docs.map((docSnap) => {
-        const { id: _ignored, ...rest } = docSnap.data() as RegistrationRecord
-        return { id: docSnap.id, ...rest }
+        const data = docSnap.data() as RegistrationRecord
+        return { ...data, id: docSnap.id }
       }),
     )
   })
@@ -229,8 +229,8 @@ export const listenToSystemAlerts = (onChange: (alerts: SystemAlertRecord[]) => 
   return onSnapshot(alertsQuery, (snapshot) => {
     onChange(
       snapshot.docs.map((docSnap) => {
-        const { id: _ignored, ...rest } = docSnap.data() as SystemAlertRecord
-        return { id: docSnap.id, ...rest }
+        const data = docSnap.data() as SystemAlertRecord
+        return { ...data, id: docSnap.id }
       }),
     )
   })
@@ -241,8 +241,8 @@ export const listenToTaskNotifications = (onChange: (tasks: TaskNotificationReco
   return onSnapshot(taskQuery, (snapshot) => {
     onChange(
       snapshot.docs.map((docSnap) => {
-        const { id: _ignored, ...rest } = docSnap.data() as TaskNotificationRecord
-        return { id: docSnap.id, ...rest }
+        const data = docSnap.data() as TaskNotificationRecord
+        return { ...data, id: docSnap.id }
       }),
     )
   })
