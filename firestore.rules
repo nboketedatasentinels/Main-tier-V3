@@ -31,8 +31,12 @@ service cloud.firestore {
       return hasRole('super_admin');
     }
 
+    function isPartner() {
+      return hasAnyRole(['partner', 'company_admin', 'admin']);
+    }
+
     function isAdmin() {
-      return hasAnyRole(['super_admin', 'admin', 'company_admin']);
+      return hasAnyRole(['super_admin', 'admin', 'company_admin', 'partner']);
     }
 
     function isActiveAccount() {
@@ -47,8 +51,19 @@ service cloud.firestore {
 
     // Organization access validation
     function canAccessOrganization(orgCode) {
-      return isSuperAdmin() || 
-        (isAdmin() && orgCode in getProfile(request.auth.uid).assignedOrganizations);
+      return isSuperAdmin() || (
+        isPartner() && (
+          getProfile(request.auth.uid).assignedOrganizations.hasAny([orgCode])
+        )
+      );
+    }
+
+    function canAccessUser(userId) {
+      return isSuperAdmin() || (
+        isPartner() && getProfile(request.auth.uid).assignedOrganizations.hasAny([
+          getProfile(userId).companyCode
+        ])
+      );
     }
 
     // Profiles collection
@@ -58,8 +73,8 @@ service cloud.firestore {
       
       // Admins can read profiles in their assigned organizations
       allow read: if isAdmin() && (
-        isSuperAdmin() || 
-        getProfile(userId).companyCode in getProfile(request.auth.uid).assignedOrganizations
+        isSuperAdmin() ||
+        canAccessUser(userId)
       );
       
       // Users can create their own profile
@@ -69,6 +84,9 @@ service cloud.firestore {
       allow update: if isAuthenticated() && isOwner(userId) && (
         !request.resource.data.keys().hasAny(['role']) ||
         request.resource.data.role == resource.data.role
+      ) && (
+        !request.resource.data.keys().hasAny(['assignedOrganizations']) ||
+        request.resource.data.assignedOrganizations.size() <= 100
       );
       
       // Super admins can update any profile
@@ -109,7 +127,7 @@ service cloud.firestore {
       allow read: if isAuthenticated() && isOwner(userId);
       
       // Super admins can read all users, company admins can read based on profiles
-      allow read: if isSuperAdmin();
+      allow read: if isSuperAdmin() || canAccessUser(userId);
       
       // Users can create their own user document
       allow create: if isAuthenticated() && isOwner(userId);
@@ -122,6 +140,22 @@ service cloud.firestore {
       
       // Only super admins can delete users
       allow delete: if isSuperAdmin();
+
+      // Partner engagement actions subcollection
+      match /engagement_actions/{actionId} {
+        allow read: if isAuthenticated() && (isOwner(userId) || canAccessUser(userId));
+        allow create: if isAuthenticated() && (isOwner(userId) || canAccessUser(userId));
+      }
+
+      // Weekly points subcollection for progress
+      match /weekly_points/{weekId} {
+        allow read: if isAuthenticated() && (isOwner(userId) || canAccessUser(userId));
+        allow update, create: if isAuthenticated() && (
+          isOwner(userId) ||
+          isSuperAdmin() ||
+          (canAccessUser(userId) && request.resource.data.keys().hasAny(['lastAdjustmentReason', 'updatedAt']))
+        );
+      }
     }
 
     // Public read collections
@@ -138,6 +172,55 @@ service cloud.firestore {
     match /courses/{courseId} {
       allow read: if isAuthenticated();
       allow write: if isSuperAdmin();
+    }
+
+    // Transformation partner collections
+    match /interventions/{interventionId} {
+      allow read: if isSuperAdmin() || (
+        isPartner() && (
+          resource.data.partner_id == request.auth.uid ||
+          canAccessUser(resource.data.user_id)
+        )
+      );
+      allow create, update: if isAuthenticated() && (
+        isSuperAdmin() ||
+        (
+          isPartner() &&
+          request.auth.uid == request.resource.data.partner_id &&
+          canAccessUser(request.resource.data.user_id)
+        )
+      );
+    }
+
+    match /points_verification_requests/{requestId} {
+      allow read: if isSuperAdmin() || (
+        isPartner() && (
+          resource.data.partner_id == request.auth.uid ||
+          canAccessUser(resource.data.learner_id)
+        )
+      );
+      allow update: if isSuperAdmin() || (
+        isPartner() && (
+          request.resource.data.partner_id == request.auth.uid ||
+          canAccessUser(request.resource.data.learner_id)
+        )
+      );
+    }
+
+    match /peer_matching_sessions/{sessionId} {
+      allow read: if isAuthenticated() && (
+        isSuperAdmin() ||
+        (isPartner() && (
+          canAccessUser(resource.data.participant_ids[0]) &&
+          canAccessUser(resource.data.participant_ids[1])
+        ))
+      );
+      allow update: if isSuperAdmin() || (
+        isPartner() && (
+          canAccessUser(request.resource.data.participant_ids[0]) &&
+          canAccessUser(request.resource.data.participant_ids[1])
+        )
+      );
     }
 
     match /badges/{badgeId} {

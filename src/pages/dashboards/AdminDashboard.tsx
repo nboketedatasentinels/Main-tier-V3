@@ -1,5 +1,7 @@
 import React from 'react'
+import { useAuth } from '@/hooks/useAuth'
 import { CompanyAdminDashboard } from './CompanyAdminDashboard'
+import { PartnerAdminDashboard } from './PartnerAdminDashboard'
 
 /**
  * AdminDashboard component
@@ -7,8 +9,15 @@ import { CompanyAdminDashboard } from './CompanyAdminDashboard'
  * Route guards ensure only admins can access this component
  */
 export const AdminDashboard: React.FC = () => {
-  // The route guard (ProtectedRoute) now ensures only authorized admins can see this.
-  // We can directly render the intended dashboard component.
+  const { profile } = useAuth()
+  const normalizedRole = profile?.role?.toString().toLowerCase()
+  const isPartner = normalizedRole === 'partner' || normalizedRole === 'company_admin'
+
+  if (isPartner) {
+    return <PartnerAdminDashboard />
+  }
+
+  // fallback to company admin experience
   return <CompanyAdminDashboard />
 }
 

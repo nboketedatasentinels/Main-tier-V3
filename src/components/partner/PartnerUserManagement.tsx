@@ -1,0 +1,709 @@
+import React, { useMemo, useState } from 'react'
+import {
+  Badge,
+  Box,
+  Button,
+  Checkbox,
+  Divider,
+  Drawer,
+  DrawerBody,
+  DrawerContent,
+  DrawerFooter,
+  DrawerHeader,
+  DrawerOverlay,
+  Flex,
+  FormControl,
+  FormLabel,
+  Grid,
+  GridItem,
+  HStack,
+  Input,
+  Modal,
+  ModalBody,
+  ModalCloseButton,
+  ModalContent,
+  ModalFooter,
+  ModalHeader,
+  ModalOverlay,
+  Select,
+  Spinner,
+  Stack,
+  Table,
+  Tbody,
+  Td,
+  Text,
+  Th,
+  Thead,
+  Tr,
+  useDisclosure,
+  useToast,
+  VStack,
+} from '@chakra-ui/react'
+import { AlertTriangle, CheckCircle2, Clock, ShieldAlert } from 'lucide-react'
+import { formatDistanceToNow } from 'date-fns'
+import { PartnerUser, PartnerOrganization, PartnerRiskLevel } from '@/hooks/usePartnerDashboardData'
+
+interface PartnerUserManagementProps {
+  users: PartnerUser[]
+  organizations: PartnerOrganization[]
+  selectedOrg: string
+  onSelectOrg: (org: string) => void
+  updateUserPoints: (userId: string, delta: number, reason: string) => void
+}
+
+const PAGE_SIZE = 20
+
+const riskColor: Record<PartnerRiskLevel | 'at_risk', string> = {
+  engaged: 'green',
+  watch: 'yellow',
+  concern: 'orange',
+  critical: 'red',
+  at_risk: 'red',
+}
+
+const getSortableValue = (user: PartnerUser, key: string) => {
+  switch (key) {
+    case 'name':
+      return user.name
+    case 'company':
+      return user.companyCode
+    case 'progress':
+      return user.progressPercent
+    case 'week':
+      return user.currentWeek
+    case 'status':
+      return user.status
+    case 'lastActive':
+      return new Date(user.lastActive).getTime()
+    default:
+      return ''
+  }
+}
+
+export const PartnerUserManagement: React.FC<PartnerUserManagementProps> = ({
+  users,
+  organizations,
+  selectedOrg,
+  onSelectOrg,
+  updateUserPoints,
+}) => {
+  const [activeTab, setActiveTab] = useState<'users' | 'risk' | 'leaders' | 'approvals'>('users')
+  const [sortKey, setSortKey] = useState('lastActive')
+  const [sortDir, setSortDir] = useState<'asc' | 'desc'>('desc')
+  const [page, setPage] = useState(1)
+  const [selectedUser, setSelectedUser] = useState<PartnerUser | null>(null)
+  const [adjustmentReason, setAdjustmentReason] = useState('')
+  const [adjustmentValue, setAdjustmentValue] = useState(0)
+  const [loadingAdjustment, setLoadingAdjustment] = useState(false)
+  const [selection, setSelection] = useState<string[]>([])
+  const [processingBulk, setProcessingBulk] = useState(false)
+  const drawer = useDisclosure()
+  const adjustmentModal = useDisclosure()
+  const toast = useToast()
+
+  const organizationOptions = useMemo(
+    () => [{ code: 'all', name: 'All Companies' }, ...organizations],
+    [organizations],
+  )
+
+  const filtered = useMemo(() => {
+    if (selectedOrg === 'all') return users
+    return users.filter(user => user.companyCode === selectedOrg)
+  }, [users, selectedOrg])
+
+  const sorted = useMemo(() => {
+    return [...filtered].sort((a, b) => {
+      const aVal = getSortableValue(a, sortKey)
+      const bVal = getSortableValue(b, sortKey)
+      if (aVal < bVal) return sortDir === 'asc' ? -1 : 1
+      if (aVal > bVal) return sortDir === 'asc' ? 1 : -1
+      return 0
+    })
+  }, [filtered, sortDir, sortKey])
+
+  const totalPages = Math.max(1, Math.ceil(sorted.length / PAGE_SIZE))
+  const paginated = sorted.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE)
+
+  const atRiskUsers = useMemo(
+    () =>
+      filtered.filter(user => ['watch', 'concern', 'critical', 'at_risk'].includes(user.riskStatus)),
+    [filtered],
+  )
+
+  const leaders = useMemo(() => filtered.filter(user => user.role === 'mentor' || user.role === 'team_leader'), [filtered])
+
+  const pendingApprovals = useMemo(
+    () =>
+      filtered.filter(user => user.riskReasons?.some(reason => reason.toLowerCase().includes('verification'))),
+    [filtered],
+  )
+
+  const openUser = (user: PartnerUser) => {
+    setSelectedUser(user)
+    drawer.onOpen()
+  }
+
+  const toggleSort = (key: string) => {
+    if (key === sortKey) {
+      setSortDir(prev => (prev === 'asc' ? 'desc' : 'asc'))
+    } else {
+      setSortKey(key)
+      setSortDir('asc')
+    }
+  }
+
+  const handleAdjustment = async () => {
+    if (!selectedUser) return
+    if (adjustmentValue <= 0) {
+      toast({
+        title: 'Points must be positive',
+        status: 'warning',
+        duration: 3000,
+        isClosable: true,
+      })
+      return
+    }
+
+    setLoadingAdjustment(true)
+    try {
+      updateUserPoints(selectedUser.id, adjustmentValue, adjustmentReason || 'Manual adjustment')
+      toast({
+        title: 'Points updated',
+        description: `${adjustmentValue} points applied to ${selectedUser.name}`,
+        status: 'success',
+        duration: 4000,
+        isClosable: true,
+      })
+      setAdjustmentValue(0)
+      setAdjustmentReason('')
+      adjustmentModal.onClose()
+    } finally {
+      setLoadingAdjustment(false)
+    }
+  }
+
+  const toggleSelection = (id: string) => {
+    setSelection(prev => (prev.includes(id) ? prev.filter(item => item !== id) : [...prev, id]))
+  }
+
+  const bulkApply = (actionLabel: string) => {
+    if (!selection.length) return
+    setProcessingBulk(true)
+    setTimeout(() => {
+      toast({
+        title: `${actionLabel} applied`,
+        description: `${selection.length} user(s) updated`,
+        status: 'success',
+      })
+      setSelection([])
+      setProcessingBulk(false)
+    }, 800)
+  }
+
+  const renderTableHeader = () => (
+    <Thead>
+      <Tr>
+        {['Name/Email', 'Company', 'Progress %', 'Current Week', 'Status', 'Last Active', 'Risk'].map((header, idx) => {
+          const sortMapping = ['name', 'company', 'progress', 'week', 'status', 'lastActive', 'risk']
+          const key = sortMapping[idx] || 'name'
+          return (
+            <Th
+              key={header}
+              cursor="pointer"
+              onClick={() => toggleSort(key)}
+              whiteSpace="nowrap"
+            >
+              <HStack spacing={2}>
+                <Text>{header}</Text>
+                {sortKey === key && <Badge colorScheme="purple">{sortDir === 'asc' ? '▲' : '▼'}</Badge>}
+              </HStack>
+            </Th>
+          )
+        })}
+      </Tr>
+    </Thead>
+  )
+
+  const renderUserRow = (user: PartnerUser) => (
+    <Tr key={user.id} _hover={{ bg: 'brand.accent' }} cursor="pointer" onClick={() => openUser(user)}>
+      <Td>
+        <VStack align="flex-start" spacing={0}>
+          <Text fontWeight="semibold" color="brand.text">
+            {user.name}
+          </Text>
+          <Text fontSize="sm" color="brand.subtleText">
+            {user.email}
+          </Text>
+        </VStack>
+      </Td>
+      <Td textTransform="capitalize">{user.companyCode || 'Unassigned'}</Td>
+      <Td>
+        <HStack spacing={2}>
+          <Box bg="brand.accent" borderRadius="full" h="8px" w="80px" position="relative">
+            <Box
+              position="absolute"
+              left={0}
+              top={0}
+              bottom={0}
+              borderRadius="full"
+              bg="indigo.500"
+              width={`${user.progressPercent}%`}
+            />
+          </Box>
+          <Text fontSize="sm">{user.progressPercent}%</Text>
+        </HStack>
+      </Td>
+      <Td>{user.currentWeek}</Td>
+      <Td>
+        <Badge colorScheme={user.status === 'Active' ? 'green' : 'yellow'}>{user.status}</Badge>
+      </Td>
+      <Td>
+        <Text fontSize="sm">{formatDistanceToNow(new Date(user.lastActive), { addSuffix: true })}</Text>
+      </Td>
+      <Td>
+        <Badge colorScheme={riskColor[user.riskStatus]} textTransform="capitalize">
+          {user.riskStatus === 'at_risk' ? 'At Risk' : user.riskStatus}
+        </Badge>
+      </Td>
+    </Tr>
+  )
+
+  const renderBulkToolbar = () => (
+    <Flex
+      bg="amber.50"
+      border="1px solid"
+      borderColor="yellow.200"
+      borderRadius="md"
+      p={3}
+      justify="space-between"
+      align={{ base: 'flex-start', md: 'center' }}
+      direction={{ base: 'column', md: 'row' }}
+      gap={3}
+    >
+      <HStack spacing={3}>
+        <Badge colorScheme="purple">{selection.length} user(s) selected</Badge>
+        <Button size="sm" onClick={() => setSelection([])} variant="ghost">
+          Clear selection
+        </Button>
+      </HStack>
+      <HStack spacing={3}>
+        <Select size="sm" placeholder="Select action" maxW="220px" onChange={e => bulkApply(e.target.value)}>
+          <option value="Active Intervention">Active Intervention</option>
+          <option value="Mentor Follow-up">Mentor Follow-up</option>
+          <option value="Overdue Acknowledgement">Overdue Acknowledgement</option>
+          <option value="Active Escalation">Active Escalation</option>
+        </Select>
+        <Button
+          size="sm"
+          colorScheme="purple"
+          isLoading={processingBulk}
+          isDisabled={!selection.length}
+          onClick={() => bulkApply('Bulk action')}
+        >
+          Apply to Selected
+        </Button>
+      </HStack>
+    </Flex>
+  )
+
+  return (
+    <Stack spacing={6}>
+      <Flex justify="space-between" align={{ base: 'flex-start', md: 'center' }} gap={3} wrap="wrap">
+        <Stack spacing={1}>
+          <Text fontWeight="bold" color="brand.text">User management</Text>
+          <Text fontSize="sm" color="brand.subtleText">
+            Filtered to your assigned organizations. Manual adjustments are logged for auditability.
+          </Text>
+        </Stack>
+        <Select maxW="240px" value={selectedOrg} onChange={e => onSelectOrg(e.target.value)}>
+          {organizationOptions.map(org => (
+            <option key={org.code} value={org.code}>
+              {org.name}
+            </option>
+          ))}
+        </Select>
+      </Flex>
+
+      <HStack spacing={3} wrap="wrap">
+        <Button
+          variant={activeTab === 'users' ? 'solid' : 'ghost'}
+          colorScheme="purple"
+          size="sm"
+          onClick={() => setActiveTab('users')}
+        >
+          Users
+        </Button>
+        <Button
+          variant={activeTab === 'risk' ? 'solid' : 'ghost'}
+          colorScheme="purple"
+          size="sm"
+          onClick={() => setActiveTab('risk')}
+          rightIcon={<Badge colorScheme="red">{atRiskUsers.length}</Badge>}
+        >
+          At Risk
+        </Button>
+        <Button
+          variant={activeTab === 'leaders' ? 'solid' : 'ghost'}
+          colorScheme="purple"
+          size="sm"
+          onClick={() => setActiveTab('leaders')}
+        >
+          Leaders
+        </Button>
+        <Button
+          variant={activeTab === 'approvals' ? 'solid' : 'ghost'}
+          colorScheme="purple"
+          size="sm"
+          onClick={() => setActiveTab('approvals')}
+          rightIcon={<Badge colorScheme="blue">{pendingApprovals.length}</Badge>}
+        >
+          Approvals
+        </Button>
+      </HStack>
+
+      {activeTab === 'users' && (
+        <Stack spacing={4}>
+          <Table size="md" variant="simple">
+            {renderTableHeader()}
+            <Tbody>
+              {paginated.map(renderUserRow)}
+              {!paginated.length && (
+                <Tr>
+                  <Td colSpan={7}>
+                    <HStack spacing={3} py={6} justify="center">
+                      <CheckCircle2 color="green" />
+                      <Text color="brand.subtleText">No learners found for the selected company</Text>
+                    </HStack>
+                  </Td>
+                </Tr>
+              )}
+            </Tbody>
+          </Table>
+
+          <Flex justify="space-between" align="center" wrap="wrap" gap={3}>
+            <Text fontSize="sm" color="brand.subtleText">
+              Showing {(page - 1) * PAGE_SIZE + 1} to {Math.min(page * PAGE_SIZE, sorted.length)} of {sorted.length} users
+            </Text>
+            <HStack spacing={3}>
+              <Button size="sm" onClick={() => setPage(prev => Math.max(1, prev - 1))} isDisabled={page === 1}>
+                Previous
+              </Button>
+              <Button size="sm" onClick={() => setPage(prev => Math.min(totalPages, prev + 1))} isDisabled={page === totalPages}>
+                Next
+              </Button>
+            </HStack>
+          </Flex>
+        </Stack>
+      )}
+
+      {activeTab === 'risk' && (
+        <Stack spacing={4}>
+          <Text fontWeight="semibold" color="brand.text">Active Alerts</Text>
+          {selection.length > 0 && renderBulkToolbar()}
+          <Table size="md" variant="simple">
+            <Thead>
+              <Tr>
+                <Th>
+                  <Checkbox
+                    size="lg"
+                    borderRadius="md"
+                    onChange={e =>
+                      setSelection(e.target.checked ? atRiskUsers.map(u => u.id) : [])
+                    }
+                  />
+                </Th>
+                <Th>Name/Email</Th>
+                <Th>Company</Th>
+                <Th>Progress %</Th>
+                <Th>Current Week</Th>
+                <Th>Status</Th>
+                <Th>Risk Reason</Th>
+                <Th>Last Active</Th>
+              </Tr>
+            </Thead>
+            <Tbody>
+              {atRiskUsers.map(user => (
+                <Tr key={user.id}>
+                  <Td>
+                    <Checkbox
+                      size="lg"
+                      borderRadius="md"
+                      isChecked={selection.includes(user.id)}
+                      onChange={() => toggleSelection(user.id)}
+                    />
+                  </Td>
+                  <Td>
+                    <VStack align="flex-start" spacing={0}>
+                      <Text fontWeight="semibold" color="brand.text">{user.name}</Text>
+                      <Text fontSize="sm" color="brand.subtleText">{user.email}</Text>
+                    </VStack>
+                  </Td>
+                  <Td textTransform="capitalize">{user.companyCode}</Td>
+                  <Td>
+                    <HStack spacing={2}>
+                      <Box bg="red.50" borderRadius="full" h="8px" w="80px" position="relative">
+                        <Box
+                          position="absolute"
+                          left={0}
+                          top={0}
+                          bottom={0}
+                          borderRadius="full"
+                          bg="red.400"
+                          width={`${user.progressPercent}%`}
+                        />
+                      </Box>
+                      <Text fontSize="sm">{user.progressPercent}%</Text>
+                    </HStack>
+                  </Td>
+                  <Td>{user.currentWeek}</Td>
+                  <Td>
+                    <Badge colorScheme="red">At Risk</Badge>
+                  </Td>
+                  <Td>
+                    <Text fontSize="sm" color="brand.subtleText">
+                      {user.riskReasons?.[0] || 'Points deficit'}
+                    </Text>
+                  </Td>
+                  <Td>
+                    <Text fontSize="sm">{formatDistanceToNow(new Date(user.lastActive), { addSuffix: true })}</Text>
+                  </Td>
+                </Tr>
+              ))}
+              {!atRiskUsers.length && (
+                <Tr>
+                  <Td colSpan={8}>
+                    <HStack spacing={3} py={6} justify="center">
+                      <CheckCircle2 color="green" />
+                      <Text color="brand.subtleText">All learners on track!</Text>
+                    </HStack>
+                  </Td>
+                </Tr>
+              )}
+            </Tbody>
+          </Table>
+        </Stack>
+      )}
+
+      {activeTab === 'leaders' && (
+        <Stack spacing={4}>
+          <Text fontWeight="semibold" color="brand.text">Mentors & Team Leaders</Text>
+          <Table size="md" variant="simple">
+            <Thead>
+              <Tr>
+                <Th>Name/Email</Th>
+                <Th>Company</Th>
+                <Th>Role</Th>
+                <Th>Last Active</Th>
+                <Th>Actions</Th>
+              </Tr>
+            </Thead>
+            <Tbody>
+              {leaders.map(leader => (
+                <Tr key={leader.id}>
+                  <Td>
+                    <VStack align="flex-start" spacing={0}>
+                      <Text fontWeight="semibold" color="brand.text">{leader.name}</Text>
+                      <Text fontSize="sm" color="brand.subtleText">{leader.email}</Text>
+                    </VStack>
+                  </Td>
+                  <Td textTransform="capitalize">{leader.companyCode}</Td>
+                  <Td>
+                    <Badge colorScheme="purple" textTransform="capitalize">{leader.role}</Badge>
+                  </Td>
+                  <Td>{formatDistanceToNow(new Date(leader.lastActive), { addSuffix: true })}</Td>
+                  <Td>
+                    <HStack spacing={2}>
+                      <Button size="xs" variant="outline">View Details</Button>
+                      <Button size="xs" variant="outline">Assign to Learner</Button>
+                    </HStack>
+                  </Td>
+                </Tr>
+              ))}
+              {!leaders.length && (
+                <Tr>
+                  <Td colSpan={5}>
+                    <HStack spacing={3} py={6} justify="center">
+                      <Clock />
+                      <Text color="brand.subtleText">No mentors or leaders in scope</Text>
+                    </HStack>
+                  </Td>
+                </Tr>
+              )}
+            </Tbody>
+          </Table>
+        </Stack>
+      )}
+
+      {activeTab === 'approvals' && (
+        <Stack spacing={4}>
+          <Text fontWeight="semibold" color="brand.text">Pending approvals</Text>
+          <Grid templateColumns={{ base: '1fr', md: '1fr 1fr' }} gap={4}>
+            <GridItem>
+              <Box p={4} borderRadius="xl" border="1px solid" borderColor="brand.border" bg="white" boxShadow="sm">
+                <HStack justify="space-between" mb={3}>
+                  <Text fontWeight="bold">Standard submissions</Text>
+                  <Badge colorScheme="blue">Queued</Badge>
+                </HStack>
+                <Stack spacing={3}>
+                  {pendingApprovals.slice(0, 3).map(user => (
+                    <Box key={user.id} p={3} borderRadius="md" border="1px solid" borderColor="brand.border" bg="brand.accent">
+                      <Text fontWeight="semibold" color="brand.text">{user.name}</Text>
+                      <Text fontSize="sm" color="brand.subtleText">{user.companyCode}</Text>
+                      <HStack spacing={2} mt={2}>
+                        <Button size="xs" colorScheme="green">Approve</Button>
+                        <Button size="xs" colorScheme="red" variant="outline">Reject</Button>
+                        <Button size="xs" variant="ghost">More info</Button>
+                      </HStack>
+                    </Box>
+                  ))}
+                  {!pendingApprovals.length && (
+                    <HStack spacing={3}>
+                      <ShieldAlert color="orange" />
+                      <Text color="brand.subtleText">No pending verification requests</Text>
+                    </HStack>
+                  )}
+                </Stack>
+              </Box>
+            </GridItem>
+            <GridItem>
+              <Box p={4} borderRadius="xl" border="1px solid" borderColor="brand.border" bg="white" boxShadow="sm">
+                <HStack justify="space-between" mb={3}>
+                  <Text fontWeight="bold">Peer matching sessions</Text>
+                  <Badge colorScheme="purple">Dual confirmation</Badge>
+                </HStack>
+                <Stack spacing={3}>
+                  {pendingApprovals.slice(0, 2).map(user => (
+                    <Box key={user.id} p={3} borderRadius="md" border="1px solid" borderColor="brand.border" bg="brand.accent">
+                      <Text fontWeight="semibold" color="brand.text">Session with {user.name}</Text>
+                      <Text fontSize="sm" color="brand.subtleText">Awaiting both confirmations</Text>
+                      <HStack spacing={2} mt={2}>
+                        <Button size="xs" colorScheme="green">Approve</Button>
+                        <Button size="xs" variant="outline">Mark more info</Button>
+                      </HStack>
+                    </Box>
+                  ))}
+                  {!pendingApprovals.length && (
+                    <HStack spacing={3}>
+                      <AlertTriangle color="orange" />
+                      <Text color="brand.subtleText">No peer sessions awaiting approval</Text>
+                    </HStack>
+                  )}
+                </Stack>
+              </Box>
+            </GridItem>
+          </Grid>
+        </Stack>
+      )}
+
+      <Drawer isOpen={drawer.isOpen} placement="right" onClose={drawer.onClose} size="md">
+        <DrawerOverlay />
+        <DrawerContent>
+          <DrawerHeader borderBottomWidth="1px">User details</DrawerHeader>
+          <DrawerBody>
+            {!selectedUser && (
+              <Flex align="center" justify="center" h="100%">
+                <Spinner />
+              </Flex>
+            )}
+            {selectedUser && (
+              <Stack spacing={4}>
+                <VStack align="flex-start" spacing={1}>
+                  <Text fontSize="xl" fontWeight="bold">{selectedUser.name}</Text>
+                  <Text color="brand.subtleText">{selectedUser.email}</Text>
+                </VStack>
+                <HStack spacing={3}>
+                  <Badge colorScheme="purple" textTransform="capitalize">{selectedUser.companyCode}</Badge>
+                  <Badge colorScheme={riskColor[selectedUser.riskStatus]}>Risk: {selectedUser.riskStatus}</Badge>
+                </HStack>
+                <Divider />
+                <Stack spacing={2}>
+                  <Text fontWeight="semibold">Weekly progress</Text>
+                  <Text fontSize="sm" color="brand.subtleText">
+                    Earned {selectedUser.weeklyEarned} / {selectedUser.weeklyRequired} points this week.
+                  </Text>
+                  <HStack spacing={2}>
+                    <Box bg="brand.accent" borderRadius="full" h="10px" flex={1} position="relative">
+                      <Box
+                        position="absolute"
+                        left={0}
+                        top={0}
+                        bottom={0}
+                        borderRadius="full"
+                        bg={selectedUser.weeklyEarned >= selectedUser.weeklyRequired ? 'green.400' : 'indigo.500'}
+                        width={`${Math.min(100, (selectedUser.weeklyEarned / Math.max(selectedUser.weeklyRequired, 1)) * 100)}%`}
+                      />
+                    </Box>
+                    <Text fontSize="sm">{selectedUser.progressPercent}%</Text>
+                  </HStack>
+                  <Button size="sm" onClick={adjustmentModal.onOpen} colorScheme="purple">
+                    Adjust points
+                  </Button>
+                </Stack>
+                <Stack spacing={2}>
+                  <Text fontWeight="semibold">Risk reasons</Text>
+                  <VStack align="flex-start" spacing={1}>
+                    {(selectedUser.riskReasons ?? ['No risk notes yet']).map(reason => (
+                      <Badge key={reason} colorScheme="orange" variant="subtle">
+                        {reason}
+                      </Badge>
+                    ))}
+                  </VStack>
+                </Stack>
+              </Stack>
+            )}
+          </DrawerBody>
+          <DrawerFooter>
+            <Button variant="outline" mr={3} onClick={drawer.onClose}>
+              Close
+            </Button>
+            <Button colorScheme="purple" onClick={adjustmentModal.onOpen} isDisabled={!selectedUser}>
+              Add intervention
+            </Button>
+          </DrawerFooter>
+        </DrawerContent>
+      </Drawer>
+
+      <Modal isOpen={adjustmentModal.isOpen} onClose={adjustmentModal.onClose} size="md">
+        <ModalOverlay />
+        <ModalContent>
+          <ModalHeader>Manual points adjustment</ModalHeader>
+          <ModalCloseButton />
+          <ModalBody>
+            <Stack spacing={3}>
+              <FormControl>
+                <FormLabel>Points</FormLabel>
+                <Input
+                  type="number"
+                  value={adjustmentValue}
+                  onChange={e => setAdjustmentValue(Number(e.target.value))}
+                  min={0}
+                />
+              </FormControl>
+              <FormControl>
+                <FormLabel>Reason</FormLabel>
+                <Input
+                  value={adjustmentReason}
+                  placeholder="Mentor follow-up, activity approval, etc."
+                  onChange={e => setAdjustmentReason(e.target.value)}
+                />
+              </FormControl>
+              <Text fontSize="sm" color="brand.subtleText">
+                Adjustments are logged to the admin activity trail and reflected in weekly_points for this learner.
+              </Text>
+            </Stack>
+          </ModalBody>
+          <ModalFooter>
+            <Button variant="ghost" mr={3} onClick={adjustmentModal.onClose}>
+              Cancel
+            </Button>
+            <Button colorScheme="purple" onClick={handleAdjustment} isLoading={loadingAdjustment}>
+              Apply points
+            </Button>
+          </ModalFooter>
+        </ModalContent>
+      </Modal>
+    </Stack>
+  )
+}
+
+export default PartnerUserManagement
