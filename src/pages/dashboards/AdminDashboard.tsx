@@ -9,16 +9,25 @@ import { PartnerAdminDashboard } from './PartnerAdminDashboard'
  * Route guards ensure only admins can access this component
  */
 export const AdminDashboard: React.FC = () => {
-  const { profile } = useAuth()
-  const normalizedRole = profile?.role?.toString().toLowerCase()
-  const isPartner = normalizedRole === 'partner' || normalizedRole === 'company_admin'
+  const { profile, claimsRole } = useAuth()
+  const normalizedRole = (claimsRole || profile?.role || '')
+    .toString()
+    .toLowerCase()
+    .replace(/[-\s]+/g, '_')
 
-  if (isPartner) {
+  const isCompanyAdmin = normalizedRole.includes('company_admin') || normalizedRole.includes('company')
+  const isPartner = normalizedRole.includes('partner')
+
+  if (isPartner && !isCompanyAdmin) {
     return <PartnerAdminDashboard />
   }
 
-  // fallback to company admin experience
-  return <CompanyAdminDashboard />
+  if (isCompanyAdmin) {
+    return <CompanyAdminDashboard />
+  }
+
+  // default to partner view for broader admin roles
+  return <PartnerAdminDashboard />
 }
 
 export default AdminDashboard

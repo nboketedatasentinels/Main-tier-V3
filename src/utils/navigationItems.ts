@@ -1,7 +1,9 @@
 import {
   BarChart3,
   BookOpen,
+  Building2,
   Gift,
+  Headset,
   LayoutDashboard,
   LockKeyhole,
   ShieldAlert,
@@ -55,6 +57,20 @@ export const buildAmbassadorNavItems = (): NavigationSection[] => [
       { key: 'rewards', label: 'Rewards & Recognition', icon: Gift },
       { key: 'resources', label: 'Ambassador Resources', icon: BookOpen },
       { key: 'analytics', label: 'Performance Analytics', icon: BarChart3 },
+    ],
+  },
+]
+
+export const buildCompanyAdminNavItems = (): NavigationSection[] => [
+  {
+    title: 'Administration',
+    items: [
+      { key: 'overview', label: 'Overview', icon: LayoutDashboard },
+      { key: 'users', label: 'User Management', icon: Users },
+      { key: 'organizations', label: 'Organizations', icon: Building2 },
+      { key: 'reports', label: 'Reports', icon: BarChart3 },
+      { key: 'settings', label: 'Settings', icon: Settings },
+      { key: 'support', label: 'Support', icon: Headset },
     ],
   },
 ]
