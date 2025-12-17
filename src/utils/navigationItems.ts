@@ -2,6 +2,7 @@ import {
   BarChart3,
   BookOpen,
   Building2,
+  CalendarCheck,
   Gift,
   Headphones,
   LayoutDashboard,
@@ -11,6 +12,7 @@ import {
   Settings,
   Sparkles,
   Target,
+  TrendingUp,
   Users,
   UserSquare2,
   Workflow,
@@ -73,6 +75,26 @@ export const buildCompanyAdminNavItems = (): NavigationSection[] => [
       { key: 'reports', label: 'Reports', icon: BarChart3 },
       { key: 'settings', label: 'Settings', icon: Settings },
       { key: 'support', label: 'Support', icon: Headphones },
+    ],
+  },
+]
+
+/**
+ * Navigation items for the mentor dashboard experience.
+ *
+ * Groups mentorship-focused tools into a single section for consistent rendering
+ * with other dashboard layouts.
+ */
+export const buildMentorNavItems = (): NavigationSection[] => [
+  {
+    title: 'Mentorship',
+    items: [
+      { key: 'overview', label: 'Overview', icon: LayoutDashboard },
+      { key: 'mentees', label: 'My Mentees', icon: Users },
+      { key: 'sessions', label: 'Mentorship Sessions', icon: CalendarCheck },
+      { key: 'progress', label: 'Progress Tracking', icon: TrendingUp },
+      { key: 'resources', label: 'Resources Library', icon: BookOpen },
+      { key: 'analytics', label: 'Analytics Reports', icon: BarChart3 },
     ],
   },
 ]

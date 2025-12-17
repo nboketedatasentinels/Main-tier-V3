@@ -19,17 +19,8 @@ import {
   useBreakpointValue,
   useDisclosure,
 } from '@chakra-ui/react'
-import {
-  BarChart3,
-  Bell,
-  BookOpen,
-  CalendarCheck,
-  LayoutDashboard,
-  Menu,
-  Settings,
-  LogOut,
-  Users,
-} from 'lucide-react'
+import { Bell, LogOut, Menu } from 'lucide-react'
+import { buildMentorNavItems, NavigationSection } from '@/utils/navigationItems'
 
 interface MentorDashboardLayoutProps {
   children: React.ReactNode
@@ -39,43 +30,47 @@ interface MentorDashboardLayoutProps {
   mentorName?: string
   mentorRoleLabel?: string
   avatarUrl?: string
+  navSections?: NavigationSection[]
 }
 
-const navItems = [
-  { key: 'overview', label: 'Dashboard Overview', icon: LayoutDashboard },
-  { key: 'mentees', label: 'Mentees', icon: Users },
-  { key: 'sessions', label: 'Sessions', icon: CalendarCheck },
-  { key: 'analytics', label: 'Analytics', icon: BarChart3 },
-  { key: 'resources', label: 'Resources', icon: BookOpen },
-  { key: 'notifications', label: 'Notifications', icon: Bell },
-  { key: 'notification-settings', label: 'Notification Settings', icon: Settings },
-]
-
 const SidebarNav = ({
+  sections,
   activeItem,
   onNavigate,
 }: {
+  sections: NavigationSection[]
   activeItem: string
   onNavigate?: (key: string) => void
 }) => (
-  <VStack spacing={2} align="stretch">
-    {navItems.map((item) => {
-      const isActive = activeItem === item.key
-      return (
-        <Button
-          key={item.key}
-          variant={isActive ? 'primary' : 'ghost'}
-          justifyContent="flex-start"
-          leftIcon={<Icon as={item.icon} />}
-          onClick={() => onNavigate?.(item.key)}
-          bg={isActive ? '#3D0C69' : 'transparent'}
-          color={isActive ? 'white' : 'brand.text'}
-          _hover={{ bg: isActive ? '#3D0C69' : 'brand.primaryMuted' }}
-        >
-          {item.label}
-        </Button>
-      )
-    })}
+  <VStack spacing={6} align="stretch">
+    {sections.map((section) => (
+      <VStack key={section.title || 'default'} align="stretch" spacing={3}>
+        {section.title && (
+          <Text fontSize="xs" fontWeight="bold" color="brand.subtleText" letterSpacing="0.08em">
+            {section.title}
+          </Text>
+        )}
+        <VStack align="stretch" spacing={2}>
+          {section.items.map((item) => {
+            const isActive = activeItem === item.key
+            return (
+              <Button
+                key={item.key}
+                variant={isActive ? 'primary' : 'ghost'}
+                justifyContent="flex-start"
+                leftIcon={item.icon ? <Icon as={item.icon} /> : undefined}
+                onClick={() => onNavigate?.(item.key)}
+                bg={isActive ? '#3D0C69' : 'transparent'}
+                color={isActive ? 'white' : 'brand.text'}
+                _hover={{ bg: isActive ? '#3D0C69' : 'brand.primaryMuted' }}
+              >
+                {item.label}
+              </Button>
+            )
+          })}
+        </VStack>
+      </VStack>
+    ))}
   </VStack>
 )
 
@@ -87,7 +82,9 @@ export const MentorDashboardLayout: React.FC<MentorDashboardLayoutProps> = ({
   mentorName = 'Mentor',
   mentorRoleLabel = 'Mentor',
   avatarUrl,
+  navSections,
 }) => {
+  const sections = useMemo(() => navSections || buildMentorNavItems(), [navSections])
   const sidebarWidth = useBreakpointValue({ base: '64px', lg: '256px' })
   const isMobile = useBreakpointValue({ base: true, lg: false })
   const drawer = useDisclosure()
@@ -121,7 +118,7 @@ export const MentorDashboardLayout: React.FC<MentorDashboardLayoutProps> = ({
 
           <Divider />
 
-          <SidebarNav activeItem={activeItem} onNavigate={onNavigate} />
+          <SidebarNav sections={sections} activeItem={activeItem} onNavigate={onNavigate} />
 
           <Flex mt="auto" pt={4} borderTop="1px solid" borderColor="brand.border">
             <Button
@@ -151,6 +148,7 @@ export const MentorDashboardLayout: React.FC<MentorDashboardLayoutProps> = ({
                 </Box>
               </HStack>
               <SidebarNav
+                sections={sections}
                 activeItem={activeItem}
                 onNavigate={(key) => {
                   drawer.onClose()
