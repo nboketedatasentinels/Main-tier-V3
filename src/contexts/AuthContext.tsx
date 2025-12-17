@@ -42,9 +42,9 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const [claimsRole, setClaimsRole] = useState<string | null>(null)
 
   /* ------------------------------------------------------------------ */
-  /* 🔹 Fetch or Create Profile                                          */
+  /* 🔹 Fetch or Create User Doc                                         */
   /* ------------------------------------------------------------------ */
-  const fetchOrCreateProfile = async (
+  const fetchOrCreateUserDoc = async (
     firebaseUser: User
   ): Promise<UserProfile | null> => {
     try {
@@ -53,30 +53,45 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         email: firebaseUser.email,
       })
 
-      const docRef = doc(db, 'users', firebaseUser.uid)
-      const docSnap = await getDoc(docRef)
+      const userDocRef = doc(db, 'users', firebaseUser.uid)
+      const userDocSnap = await getDoc(userDocRef)
 
-      console.log('🟣 [Auth] Firestore profile exists?', docSnap.exists())
+      console.log('🟣 [Auth] Firestore profile exists?', userDocSnap.exists())
 
-      if (docSnap.exists()) {
-        const profileData = docSnap.data() as UserProfile
-       console.log('here',docSnap.data())
+      if (userDocSnap.exists()) {
+        const baseUser = {
+          id: firebaseUser.uid,
+          ...(userDocSnap.data() as UserProfile),
+        } satisfies UserProfile
+
         console.log('🟣 [Auth] Raw profile loaded', {
-          role: profileData.role,
-          membershipStatus: profileData.membershipStatus,
-          transformationTier: profileData.transformationTier,
+          role: baseUser.role,
+          membershipStatus: baseUser.membershipStatus,
+          transformationTier: baseUser.transformationTier,
         })
 
-        const normalized = normalizeRole(profileData.role)
+        // Optionally merge learner-facing extras from profiles/{uid}
+        try {
+          const profileExtrasSnap = await getDoc(doc(db, 'profiles', firebaseUser.uid))
+          if (profileExtrasSnap.exists()) {
+            const extras = profileExtrasSnap.data() as Partial<UserProfile>
+            Object.assign(baseUser, { ...extras, ...baseUser, role: baseUser.role, id: firebaseUser.uid })
+            console.log('🟣 [Auth] Merged learner profile extras (user doc remains source of truth)')
+          }
+        } catch (extrasError) {
+          console.warn('🟠 [Auth] Unable to merge learner profile extras', extrasError)
+        }
+
+        const normalized = normalizeRole(baseUser.role)
         console.log('🟣 [Auth] Normalized role:', normalized)
 
         if (normalized) {
-          profileData.role = normalized as any
+          baseUser.role = normalized as any
         } else {
-          console.warn('🟠 [Auth] Invalid role detected:', profileData.role)
+          console.warn('🟠 [Auth] Invalid role detected:', baseUser.role)
         }
 
-        return profileData
+        return baseUser
       }
 
       /* ---------------- Create profile ---------------- */
@@ -115,7 +130,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         updatedAt: new Date().toISOString(),
       }
 
-      await setDoc(docRef, {
+      await setDoc(userDocRef, {
         ...profileData,
         createdAt: serverTimestamp(),
         updatedAt: serverTimestamp(),
@@ -159,8 +174,15 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   useEffect(() => {
     console.log('🟠 [Auth] Setting up onAuthStateChanged')
 
+    let unsubscribeProfile: (() => void) | null = null
+
     const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
       console.log('🟠 [Auth] Auth state changed', currentUser?.email)
+
+      if (unsubscribeProfile) {
+        unsubscribeProfile()
+        unsubscribeProfile = null
+      }
 
       setLoading(true)
       setUser(currentUser)
@@ -178,7 +200,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
       await extractCustomClaims(currentUser)
 
-      const userProfile = await fetchOrCreateProfile(currentUser)
+      const userProfile = await fetchOrCreateUserDoc(currentUser)
 
       console.log('🟢 [Auth] Profile resolved', {
         role: userProfile?.role,
@@ -191,18 +213,29 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
       if (!userProfile) return
 
-      /* -------- realtime updates -------- */
+      /* -------- realtime updates (optional) -------- */
       const profileRef = doc(db, 'users', currentUser.uid)
-      return onSnapshot(profileRef, (snap) => {
-        if (!snap.exists()) return
-        const updated = snap.data() as UserProfile
-        updated.role = normalizeRole(updated.role) as any
-        console.log('🔁 [Auth] Profile updated via snapshot', updated.role)
-        setProfile(updated)
-      })
+      unsubscribeProfile = onSnapshot(
+        profileRef,
+        (snap) => {
+          if (!snap.exists()) return
+          const updated = snap.data() as UserProfile
+          updated.role = normalizeRole(updated.role) as any
+          console.log('🔁 [Auth] Profile updated via snapshot', updated.role)
+          setProfile(updated)
+        },
+        (error) => {
+          console.warn('🟠 [Auth] Snapshot listener error (continuing without realtime updates)', error)
+        }
+      )
     })
 
-    return () => unsubscribe()
+    return () => {
+      if (unsubscribeProfile) {
+        unsubscribeProfile()
+      }
+      unsubscribe()
+    }
   }, [])
 
   /* ------------------------------------------------------------------ */

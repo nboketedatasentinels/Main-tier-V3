@@ -25,8 +25,8 @@ export const WelcomePage: React.FC = () => {
 
     setLoading(true)
     try {
-      const profileRef = doc(db, 'profiles', user.uid)
-      await updateDoc(profileRef, {
+      const userRef = doc(db, 'users', user.uid)
+      await updateDoc(userRef, {
         onboardingComplete: true,
         updatedAt: serverTimestamp(),
       })
@@ -61,8 +61,8 @@ export const WelcomePage: React.FC = () => {
 
     setLoading(true)
     try {
-      const profileRef = doc(db, 'profiles', user.uid)
-      await updateDoc(profileRef, {
+      const userRef = doc(db, 'users', user.uid)
+      await updateDoc(userRef, {
         onboardingSkipped: true,
         updatedAt: serverTimestamp(),
       })
