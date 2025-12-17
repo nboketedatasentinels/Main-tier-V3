@@ -3,7 +3,7 @@ import {
   BookOpen,
   Building2,
   Gift,
-  Headset,
+  Headphones,
   LayoutDashboard,
   LockKeyhole,
   ShieldAlert,
@@ -70,7 +70,7 @@ export const buildCompanyAdminNavItems = (): NavigationSection[] => [
       { key: 'organizations', label: 'Organizations', icon: Building2 },
       { key: 'reports', label: 'Reports', icon: BarChart3 },
       { key: 'settings', label: 'Settings', icon: Settings },
-      { key: 'support', label: 'Support', icon: Headset },
+      { key: 'support', label: 'Support', icon: Headphones },
     ],
   },
 ]
