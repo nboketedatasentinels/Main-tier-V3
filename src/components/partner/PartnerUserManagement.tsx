@@ -41,14 +41,17 @@ import {
 } from '@chakra-ui/react'
 import { AlertTriangle, CheckCircle2, Clock, ShieldAlert } from 'lucide-react'
 import { formatDistanceToNow } from 'date-fns'
+import { addDoc, collection, serverTimestamp } from 'firebase/firestore'
 import { PartnerUser, PartnerOrganization, PartnerRiskLevel } from '@/hooks/usePartnerDashboardData'
+import { useAuth } from '@/hooks/useAuth'
+import { db } from '@/services/firebase'
 
 interface PartnerUserManagementProps {
   users: PartnerUser[]
   organizations: PartnerOrganization[]
   selectedOrg: string
   onSelectOrg: (org: string) => void
-  updateUserPoints: (userId: string, delta: number, reason: string) => void
+  updateUserPoints: (userId: string, delta: number, reason: string) => Promise<void>
 }
 
 const PAGE_SIZE = 20
@@ -97,9 +100,11 @@ export const PartnerUserManagement: React.FC<PartnerUserManagementProps> = ({
   const [loadingAdjustment, setLoadingAdjustment] = useState(false)
   const [selection, setSelection] = useState<string[]>([])
   const [processingBulk, setProcessingBulk] = useState(false)
+  const [bulkAction, setBulkAction] = useState('')
   const drawer = useDisclosure()
   const adjustmentModal = useDisclosure()
   const toast = useToast()
+  const { profile } = useAuth()
 
   const organizationOptions = useMemo(
     () => [{ code: 'all', name: 'All Companies' }, ...organizations],
@@ -163,10 +168,9 @@ export const PartnerUserManagement: React.FC<PartnerUserManagementProps> = ({
       })
       return
     }
-
     setLoadingAdjustment(true)
     try {
-      updateUserPoints(selectedUser.id, adjustmentValue, adjustmentReason || 'Manual adjustment')
+      await updateUserPoints(selectedUser.id, adjustmentValue, adjustmentReason || 'Manual adjustment')
       toast({
         title: 'Points updated',
         description: `${adjustmentValue} points applied to ${selectedUser.name}`,
@@ -186,18 +190,46 @@ export const PartnerUserManagement: React.FC<PartnerUserManagementProps> = ({
     setSelection(prev => (prev.includes(id) ? prev.filter(item => item !== id) : [...prev, id]))
   }
 
-  const bulkApply = (actionLabel: string) => {
-    if (!selection.length) return
+  const bulkApply = async (actionLabel: string) => {
+    const actionToApply = actionLabel || bulkAction
+    if (!selection.length) {
+      toast({ title: 'Please select at least one user', status: 'error' })
+      return
+    }
+
+    if (!actionToApply) {
+      toast({ title: 'Select an action to apply', status: 'error' })
+      return
+    }
+
     setProcessingBulk(true)
-    setTimeout(() => {
+    try {
+      await Promise.all(
+        selection.map(userId =>
+          addDoc(collection(db, 'users', userId, 'engagement_actions'), {
+            action_type: actionToApply.toLowerCase().replace(/\s+/g, '_'),
+            action_label: actionToApply,
+            actor_id: profile?.id,
+            actor_name: profile?.fullName,
+            timestamp: serverTimestamp(),
+            user_id: userId,
+          }),
+        ),
+      )
+
       toast({
-        title: `${actionLabel} applied`,
+        title: `${actionToApply} applied`,
         description: `${selection.length} user(s) updated`,
         status: 'success',
       })
       setSelection([])
+      setBulkAction('')
+    } catch (error) {
+      console.error(error)
+      toast({ title: 'Failed to apply action', status: 'error' })
+    } finally {
       setProcessingBulk(false)
-    }, 800)
+    }
   }
 
   const renderTableHeader = () => (
@@ -286,23 +318,29 @@ export const PartnerUserManagement: React.FC<PartnerUserManagementProps> = ({
           Clear selection
         </Button>
       </HStack>
-      <HStack spacing={3}>
-        <Select size="sm" placeholder="Select action" maxW="220px" onChange={e => bulkApply(e.target.value)}>
-          <option value="Active Intervention">Active Intervention</option>
-          <option value="Mentor Follow-up">Mentor Follow-up</option>
-          <option value="Overdue Acknowledgement">Overdue Acknowledgement</option>
-          <option value="Active Escalation">Active Escalation</option>
-        </Select>
+        <HStack spacing={3}>
+          <Select
+            size="sm"
+            placeholder="Select action"
+            maxW="220px"
+            value={bulkAction}
+            onChange={e => setBulkAction(e.target.value)}
+          >
+            <option value="Active Intervention">Active Intervention</option>
+            <option value="Mentor Follow-up">Mentor Follow-up</option>
+            <option value="Overdue Acknowledgement">Overdue Acknowledgement</option>
+            <option value="Active Escalation">Active Escalation</option>
+          </Select>
         <Button
-          size="sm"
-          colorScheme="purple"
-          isLoading={processingBulk}
-          isDisabled={!selection.length}
-          onClick={() => bulkApply('Bulk action')}
-        >
-          Apply to Selected
-        </Button>
-      </HStack>
+            size="sm"
+            colorScheme="purple"
+            isLoading={processingBulk}
+            isDisabled={!selection.length}
+            onClick={() => bulkApply(bulkAction)}
+          >
+            Apply to Selected
+          </Button>
+        </HStack>
     </Flex>
   )
 

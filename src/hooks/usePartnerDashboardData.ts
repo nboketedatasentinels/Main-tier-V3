@@ -1,6 +1,25 @@
 import { useEffect, useMemo, useState } from 'react'
-import { addDays, differenceInDays, subDays } from 'date-fns'
+import { differenceInDays, subDays } from 'date-fns'
+import {
+  addDoc,
+  collection,
+  collectionGroup,
+  getDocs,
+  onSnapshot,
+  orderBy,
+  query,
+  serverTimestamp,
+  where,
+} from 'firebase/firestore'
 import { useAuth } from '@/hooks/useAuth'
+import { db } from '@/services/firebase'
+import {
+  build14DayRegistrationTrend,
+  calculateUserRiskStatus,
+  getProgramWeekNumber,
+  mapWeeklyPointsToProgress,
+  WeeklyPointsRecord,
+} from '@/utils/partnerProgress'
 
 export type PartnerRiskLevel = 'engaged' | 'watch' | 'concern' | 'critical'
 
@@ -32,132 +51,264 @@ export interface PartnerUser {
   interventions?: number
 }
 
+export interface PartnerInterventionSummary {
+  id: string
+  name: string
+  target: string
+  reason: string
+  status: 'active' | 'watch' | 'critical'
+  deadline: string
+  organizationCode?: string
+  userId?: string
+  partnerId?: string
+}
+
 interface UsePartnerDashboardDataOptions {
   selectedOrg?: string
 }
 
+const ORG_QUERY = query(collection(db, 'organizations'), where('status', '==', 'active'))
+const USERS_QUERY = query(collection(db, 'users'), where('accountStatus', '==', 'active'))
+
 export const usePartnerDashboardData = (options?: UsePartnerDashboardDataOptions) => {
-  const { assignedOrganizations, profile } = useAuth()
+  const { assignedOrganizations = [], profile, isSuperAdmin, user } = useAuth()
   const [selectedOrg, setSelectedOrg] = useState<string>(options?.selectedOrg || 'all')
   const [users, setUsers] = useState<PartnerUser[]>([])
   const [organizations, setOrganizations] = useState<PartnerOrganization[]>([])
-  const [notificationCount, setNotificationCount] = useState<number>(3)
+  const [notificationCount, setNotificationCount] = useState<number>(0)
+  const [interventions, setInterventions] = useState<PartnerInterventionSummary[]>([])
 
-  const scopedOrganizations = useMemo(() => {
-    const orgs: PartnerOrganization[] = [
-      { code: 'northwind', name: 'Northwind Holdings', status: 'active', activeUsers: 94, newThisWeek: 6 },
-      { code: 'contoso', name: 'Contoso Labs', status: 'watch', activeUsers: 71, newThisWeek: 2 },
-      { code: 'adventure', name: 'Adventure Works', status: 'active', activeUsers: 58, newThisWeek: 1 },
-    ]
-
-    if (!assignedOrganizations?.length) return orgs
-
-    return orgs.filter(org => assignedOrganizations.map(code => code.toLowerCase()).includes(org.code))
-  }, [assignedOrganizations])
+  const assignedSet = useMemo(() => new Set(assignedOrganizations.map((code) => code.toLowerCase())), [assignedOrganizations])
 
   useEffect(() => {
-    setOrganizations(scopedOrganizations)
-  }, [scopedOrganizations])
+    const unsubscribe = onSnapshot(ORG_QUERY, (snapshot) => {
+      const scoped = snapshot.docs
+        .map((docSnap) => {
+          const data = docSnap.data() as Partial<PartnerOrganization>
+          return {
+            code: data.code || docSnap.id,
+            name: data.name || docSnap.id,
+            status: (data.status as PartnerOrganization['status']) || 'active',
+            activeUsers: data.activeUsers ?? 0,
+            newThisWeek: data.newThisWeek ?? 0,
+            lastActive: data.lastActive,
+            tags: data.tags || [],
+          }
+        })
+        .filter((org) => (isSuperAdmin || !assignedSet.size ? true : assignedSet.has(org.code.toLowerCase())))
+
+      setOrganizations(scoped)
+    })
+
+    return () => unsubscribe()
+  }, [assignedSet, isSuperAdmin])
+
+  const fetchWeeklyPointsByUser = async (userIds: string[]) => {
+    const pointsByUser: Record<string, WeeklyPointsRecord[]> = {}
+    const batches = []
+    for (let i = 0; i < userIds.length; i += 10) {
+      batches.push(userIds.slice(i, i + 10))
+    }
+
+    for (const batch of batches) {
+      const weeklyQuery = query(collectionGroup(db, 'weekly_points'), where('user_id', 'in', batch))
+      const weeklySnapshot = await getDocs(weeklyQuery)
+      weeklySnapshot.docs.forEach((docSnap) => {
+        const data = docSnap.data() as WeeklyPointsRecord
+        if (!data.user_id) return
+        pointsByUser[data.user_id] = [...(pointsByUser[data.user_id] || []), data]
+      })
+    }
+
+    if (!Object.keys(pointsByUser).length && userIds.length) {
+      // Fallback to top-level weekly_points collection for legacy data
+      for (const batch of batches) {
+        const legacyQuery = query(collection(db, 'weekly_points'), where('user_id', 'in', batch))
+        const legacySnapshot = await getDocs(legacyQuery)
+        legacySnapshot.docs.forEach((docSnap) => {
+          const data = docSnap.data() as WeeklyPointsRecord
+          if (!data.user_id) return
+          pointsByUser[data.user_id] = [...(pointsByUser[data.user_id] || []), data]
+        })
+      }
+    }
+
+    return pointsByUser
+  }
 
   useEffect(() => {
-    const now = new Date()
-    const sampleUsers: PartnerUser[] = [
-      {
-        id: 'u1',
-        name: 'Leah Kim',
-        email: 'leah.kim@example.com',
-        companyCode: 'northwind',
-        progressPercent: 88,
-        currentWeek: 5,
-        status: 'Active',
-        lastActive: subDays(now, 3).toISOString(),
-        riskStatus: 'engaged',
-        weeklyEarned: 42,
-        weeklyRequired: 50,
-        role: 'learner',
-        riskReasons: ['Consistent check-ins'],
-        registrationDate: subDays(now, 14).toISOString(),
-        interventions: 1,
-      },
-      {
-        id: 'u2',
-        name: 'Derrick Shaw',
-        email: 'derrick.shaw@example.com',
-        companyCode: 'northwind',
-        progressPercent: 61,
-        currentWeek: 5,
-        status: 'Active',
-        lastActive: subDays(now, 8).toISOString(),
-        riskStatus: 'watch',
-        weeklyEarned: 31,
-        weeklyRequired: 45,
-        role: 'learner',
-        riskReasons: ['Drop in activity'],
-        registrationDate: subDays(now, 9).toISOString(),
-        interventions: 2,
-      },
-      {
-        id: 'u3',
-        name: 'Mei Lin',
-        email: 'mei.lin@example.com',
-        companyCode: 'contoso',
-        progressPercent: 33,
-        currentWeek: 5,
-        status: 'Paused',
-        lastActive: subDays(now, 15).toISOString(),
-        riskStatus: 'concern',
-        weeklyEarned: 18,
-        weeklyRequired: 45,
-        role: 'learner',
-        riskReasons: ['Inactivity 14+ days', 'Low engagement score'],
-        registrationDate: subDays(now, 40).toISOString(),
-        interventions: 3,
-      },
-      {
-        id: 'u4',
-        name: 'Ravi Patel',
-        email: 'ravi.patel@example.com',
-        companyCode: 'contoso',
-        progressPercent: 74,
-        currentWeek: 5,
-        status: 'Active',
-        lastActive: subDays(now, 2).toISOString(),
-        riskStatus: 'engaged',
-        weeklyEarned: 52,
-        weeklyRequired: 50,
-        role: 'mentor',
-        riskReasons: ['Mentor responses trending down'],
-        registrationDate: subDays(now, 25).toISOString(),
-        interventions: 0,
-      },
-    ]
+    let isMounted = true
 
-    setUsers(sampleUsers)
-  }, [])
+    const unsubscribe = onSnapshot(USERS_QUERY, async (snapshot) => {
+      const seenUserIds = new Set<string>()
+      const filteredDocs = snapshot.docs.filter((docSnap) => {
+        if (seenUserIds.has(docSnap.id)) return false
+        seenUserIds.add(docSnap.id)
+
+        const data = docSnap.data() as Partial<PartnerUser> & { companyCode?: string; company_code?: string }
+        const companyCode = (data.companyCode || data.company_code || '').toLowerCase()
+
+        if (!isSuperAdmin && assignedSet.size && companyCode && !assignedSet.has(companyCode)) {
+          return false
+        }
+
+        if (selectedOrg !== 'all' && selectedOrg && companyCode !== selectedOrg.toLowerCase()) {
+          return false
+        }
+
+        return true
+      })
+
+      const userIds = filteredDocs.map((docSnap) => docSnap.id)
+      const weeklyPoints = await fetchWeeklyPointsByUser(userIds)
+
+      if (!isMounted) return
+
+      const hydratedUsers: PartnerUser[] = filteredDocs.map((docSnap) => {
+        const data = docSnap.data() as Partial<PartnerUser> & {
+          companyCode?: string
+          company_code?: string
+          accountStatus?: string
+          registrationDate?: string
+          programStartDate?: string
+          lastActiveAt?: string
+          role?: PartnerUser['role']
+          totalPoints?: number
+        }
+
+        const companyCode = (data.companyCode || data.company_code || '').toLowerCase()
+        const programStart = data.programStartDate || data.registrationDate || data.createdAt || undefined
+        const currentWeek = getProgramWeekNumber(programStart)
+        const progress = mapWeeklyPointsToProgress(weeklyPoints[docSnap.id] || [], currentWeek)
+        const riskResult = calculateUserRiskStatus(
+          progress.current_week,
+          progress.earned_points,
+          progress.required_points,
+        )
+
+        const weeklyRequirement = progress.required_points[currentWeek] || 0
+        const weeklyEarned = progress.earned_points[currentWeek] || 0
+        const progressPercent = weeklyRequirement
+          ? Math.min(100, Math.round((weeklyEarned / weeklyRequirement) * 100))
+          : data.progressPercent || 0
+
+        const riskStatus: PartnerRiskLevel | 'at_risk' =
+          riskResult.status === 'at_risk'
+            ? 'at_risk'
+            : progressPercent >= 95
+              ? 'engaged'
+              : progressPercent >= 80
+                ? 'watch'
+                : progressPercent >= 60
+                  ? 'concern'
+                  : 'critical'
+
+        return {
+          id: docSnap.id,
+          name: data.name || data.fullName || 'Unknown User',
+          email: data.email || '',
+          companyCode,
+          progressPercent,
+          currentWeek,
+          status: (data.accountStatus as PartnerUser['status']) || 'Active',
+          lastActive: data.lastActiveAt || data.lastActive || data.registrationDate || new Date().toISOString(),
+          riskStatus,
+          weeklyEarned,
+          weeklyRequired: weeklyRequirement,
+          role: data.role,
+          riskReasons: [
+            ...(data.riskReasons || []),
+            ...(riskResult.reason ? [riskResult.reason] : []),
+          ].filter(Boolean),
+          registrationDate: data.registrationDate || data.createdAt,
+          interventions: data.interventions || 0,
+        }
+      })
+
+      setUsers(hydratedUsers)
+    })
+
+    return () => {
+      isMounted = false
+      unsubscribe()
+    }
+  }, [assignedSet, isSuperAdmin, selectedOrg])
 
   useEffect(() => {
-    const interval = setInterval(() => {
-      setNotificationCount(prev => (prev % 5) + 1)
-    }, 12000)
-    return () => clearInterval(interval)
-  }, [])
+    if (!profile?.id) return
+
+    const notificationsQuery = query(
+      collection(db, 'notifications'),
+      where('user_id', '==', profile.id),
+      where('is_read', '==', false),
+    )
+
+    const unsubscribe = onSnapshot(notificationsQuery, (snapshot) => {
+      setNotificationCount(snapshot.size)
+    })
+
+    return () => unsubscribe()
+  }, [profile?.id])
+
+  useEffect(() => {
+    if (!user?.uid) return
+
+    const unsubscribe = onSnapshot(
+      query(collection(db, 'interventions'), orderBy('opened_at', 'desc')),
+      (snapshot) => {
+        const scoped = snapshot.docs
+          .map((docSnap) => {
+            const data = docSnap.data() as Partial<PartnerInterventionSummary> & {
+              partner_id?: string
+              organization_code?: string
+              opened_at?: string
+            }
+
+            return {
+              id: docSnap.id,
+              name: data.name || 'Intervention',
+              target: data.target || 'Assigned learner',
+              reason: data.reason || 'Intervention in progress',
+              status: (data.status as PartnerInterventionSummary['status']) || 'active',
+              deadline: data.deadline || data.opened_at || new Date().toISOString(),
+              organizationCode: data.organizationCode || data.organization_code,
+              userId: data.userId,
+              partnerId: data.partner_id,
+            }
+          })
+          .filter((item) => {
+            const orgCode = item.organizationCode?.toLowerCase()
+            if (!isSuperAdmin && item.partnerId && item.partnerId !== user.uid) return false
+            if (!isSuperAdmin && assignedSet.size && orgCode && !assignedSet.has(orgCode)) return false
+            if (selectedOrg !== 'all' && selectedOrg && orgCode && orgCode !== selectedOrg.toLowerCase()) return false
+            return true
+          })
+
+        setInterventions(scoped)
+      },
+    )
+
+    return () => unsubscribe()
+  }, [assignedSet, isSuperAdmin, selectedOrg, user?.uid])
 
   const filteredUsers = useMemo(() => {
     if (selectedOrg === 'all') return users
-    return users.filter(user => user.companyCode === selectedOrg)
+    return users.filter((user) => user.companyCode === selectedOrg)
   }, [users, selectedOrg])
 
-  const managedCompanies = organizations.length || scopedOrganizations.length
+  const managedCompanies = organizations.length || assignedOrganizations.length
 
   const metrics = useMemo(() => {
     const activeWindow = subDays(new Date(), 30)
     const newWindow = subDays(new Date(), 7)
 
-    const activeMembers = filteredUsers.filter(user => new Date(user.lastActive) >= activeWindow).length
+    const activeMembers = filteredUsers.filter((user) => new Date(user.lastActive) >= activeWindow).length
     const engagementRate = Math.round(
-      filteredUsers.reduce((acc, user) => acc + user.progressPercent, 0) / Math.max(filteredUsers.length, 1)
+      filteredUsers.reduce((acc, user) => acc + user.progressPercent, 0) / Math.max(filteredUsers.length, 1),
     )
-    const newRegistrations = filteredUsers.filter(user => user.registrationDate && new Date(user.registrationDate) >= newWindow).length
+    const newRegistrations = filteredUsers.filter(
+      (user) => user.registrationDate && new Date(user.registrationDate) >= newWindow,
+    ).length
     const managed = managedCompanies
 
     return {
@@ -166,23 +317,17 @@ export const usePartnerDashboardData = (options?: UsePartnerDashboardDataOptions
       newRegistrations,
       managedCompanies: managed,
       deltas: {
-        activeMembers: '+4.2% WoW',
-        engagementRate: '+2.4% WoW',
-        newRegistrations: '+12 vs prior 7d',
+        activeMembers: `${activeMembers} active in 30d`,
+        engagementRate: `${engagementRate}% avg progress`,
+        newRegistrations: `${newRegistrations} in last 7d`,
         managedCompanies: `${managed} assigned`,
       },
     }
   }, [filteredUsers, managedCompanies])
 
   const engagementTrend = useMemo(() => {
-    const base = subDays(new Date(), 13)
-    return Array.from({ length: 14 }).map((_, idx) => {
-      const date = addDays(base, idx)
-      const label = `${date.getMonth() + 1}/${date.getDate()}`
-      const value = 10 + (idx % 5) * 3 + (selectedOrg === 'all' ? 4 : 2)
-      return { label, value }
-    })
-  }, [selectedOrg])
+    return build14DayRegistrationTrend(filteredUsers.map((user) => user.registrationDate))
+  }, [filteredUsers])
 
   const riskLevels = useMemo(() => {
     const levelCounts: Record<PartnerRiskLevel, number> = {
@@ -192,7 +337,7 @@ export const usePartnerDashboardData = (options?: UsePartnerDashboardDataOptions
       critical: 0,
     }
 
-    filteredUsers.forEach(user => {
+    filteredUsers.forEach((user) => {
       if (user.riskStatus === 'at_risk') {
         levelCounts.concern += 1
       } else {
@@ -204,20 +349,20 @@ export const usePartnerDashboardData = (options?: UsePartnerDashboardDataOptions
   }, [filteredUsers])
 
   const atRiskUsers = useMemo(() => {
-    return filteredUsers.filter(user => ['watch', 'concern', 'critical', 'at_risk'].includes(user.riskStatus))
+    return filteredUsers.filter((user) => ['watch', 'concern', 'critical', 'at_risk'].includes(user.riskStatus))
   }, [filteredUsers])
 
   const assignedOrgCount = assignedOrganizations?.length || organizations.length
 
   const managedBreakdown = useMemo(() => {
-    const active = organizations.filter(org => org.status === 'active').length
+    const active = organizations.filter((org) => org.status === 'active').length
     const inactive = organizations.length - active
     return { active, inactive }
   }, [organizations])
 
-  const updateUserPoints = (userId: string, delta: number, reason: string) => {
-    setUsers(prev =>
-      prev.map(user =>
+  const updateUserPoints = async (userId: string, delta: number, reason: string) => {
+    setUsers((prev) =>
+      prev.map((user) =>
         user.id === userId
           ? {
               ...user,
@@ -227,58 +372,41 @@ export const usePartnerDashboardData = (options?: UsePartnerDashboardDataOptions
           : user,
       ),
     )
-  }
 
-  const getUserRiskStatus = (user: PartnerUser) => {
-    const weekProgress = user.weeklyEarned / Math.max(user.weeklyRequired, 1)
-    if (weekProgress >= 0.95) return { status: 'engaged' as PartnerRiskLevel, deficit: 0 }
-    if (weekProgress >= 0.8) return { status: 'watch' as PartnerRiskLevel, deficit: 0 }
-    if (weekProgress >= 0.6) return { status: 'concern' as PartnerRiskLevel, deficit: Math.max(0, user.weeklyRequired - user.weeklyEarned) }
-    return { status: 'critical' as PartnerRiskLevel, deficit: Math.max(0, user.weeklyRequired - user.weeklyEarned) }
+    await addDoc(collection(db, 'users', userId, 'engagement_actions'), {
+      action_type: 'manual_adjustment',
+      action_label: reason,
+      actor_id: profile?.id,
+      actor_name: profile?.fullName,
+      timestamp: serverTimestamp(),
+      user_id: userId,
+      delta,
+    })
   }
 
   const dataQualityWarnings = useMemo(() => {
-    const missingAssignments = users.filter(user => !user.companyCode).length
-    if (!missingAssignments) return []
-    return [
-      {
+    const warnings = [] as { message: string; severity: 'warning' | 'error' }[]
+
+    const missingAssignments = users.filter((user) => !user.companyCode).length
+    if (missingAssignments) {
+      warnings.push({
         message: `${missingAssignments} learner${missingAssignments === 1 ? '' : 's'} missing organization assignment`,
-        severity: 'warning' as const,
-      },
-    ]
+        severity: 'warning',
+      })
+    }
+
+    const missingPoints = users.filter((user) => !user.weeklyRequired && !user.weeklyEarned).length
+    if (missingPoints) {
+      warnings.push({
+        message: `${missingPoints} learner${missingPoints === 1 ? ' is' : 's are'} missing weekly points data`,
+        severity: 'warning',
+      })
+    }
+
+    return warnings
   }, [users])
 
   const daysUntil = (date: string) => differenceInDays(new Date(date), new Date())
-
-  const interventions = useMemo(
-    () => [
-      {
-        id: 'i1',
-        name: 'Active intervention',
-        target: '6 learners',
-        reason: 'Low weekly activity',
-        status: 'watch' as const,
-        deadline: addDays(new Date(), 2).toISOString(),
-      },
-      {
-        id: 'i2',
-        name: 'Mentor follow-up',
-        target: '3 mentors',
-        reason: 'Pending acknowledgement',
-        status: 'active' as const,
-        deadline: addDays(new Date(), 5).toISOString(),
-      },
-      {
-        id: 'i3',
-        name: 'Escalations',
-        target: '2 accounts',
-        reason: 'Overdue > 7 days',
-        status: 'critical' as const,
-        deadline: addDays(new Date(), -1).toISOString(),
-      },
-    ],
-    [],
-  )
 
   return {
     assignedOrgCount,
@@ -286,7 +414,6 @@ export const usePartnerDashboardData = (options?: UsePartnerDashboardDataOptions
     atRiskUsers,
     dataQualityWarnings,
     engagementTrend,
-    getUserRiskStatus,
     managedBreakdown,
     metrics,
     notificationCount,
