@@ -34,10 +34,11 @@ import { Filter, MoreHorizontal, Search, Sparkles } from 'lucide-react'
 import { AssignPartnerModal } from '@/components/super-admin/AssignPartnerModal'
 import { ConfirmationDialog } from '@/components/super-admin/ConfirmationDialog'
 import { OrganizationFormModal } from '@/components/super-admin/OrganizationFormModal'
+import { CreateOrganizationModal } from '@/components/super-admin/CreateOrganizationModal'
 import {
   assignPartner,
-  createOrganization,
   deleteOrganization,
+  fetchAdminUsers,
   fetchOrganizations,
   logAdminAction,
   updateOrganization,
@@ -63,6 +64,8 @@ export const OrganizationManagementPage: React.FC<OrganizationManagementPageProp
 
   const [selectedOrg, setSelectedOrg] = useState<OrganizationRecord | null>(null)
   const [pendingDelete, setPendingDelete] = useState<OrganizationRecord | null>(null)
+  const [partners, setPartners] = useState<{ id: string; name: string; email?: string }[]>([])
+  const [, setIsLoadingPartners] = useState(false)
 
   const createModal = useDisclosure()
   const editModal = useDisclosure()
@@ -86,17 +89,39 @@ export const OrganizationManagementPage: React.FC<OrganizationManagementPageProp
     loadOrganizations()
   }, [loadOrganizations])
 
-  const handleCreateOrg = async (org: OrganizationRecord) => {
-    const id = await createOrganization(org)
-    const newOrg = { ...org, id }
-    setOrganizations((prev) => [newOrg, ...prev])
+  useEffect(() => {
+    const loadPartners = async () => {
+      setIsLoadingPartners(true)
+      try {
+        const admins = await fetchAdminUsers()
+        const partnerOptions = admins
+          .filter((admin) => admin.role === 'partner')
+          .map((partner) => ({
+            id: partner.id,
+            name: partner.fullName || `${partner.firstName || ''} ${partner.lastName || ''}`.trim() || partner.email || 'Partner',
+            email: partner.email,
+          }))
+        setPartners(partnerOptions)
+      } catch (err) {
+        console.error(err)
+        toast({ title: 'Unable to load partners', status: 'error' })
+      } finally {
+        setIsLoadingPartners(false)
+      }
+    }
+
+    loadPartners()
+  }, [toast])
+
+  const handleOrganizationCreated = async (org: OrganizationRecord) => {
+    setOrganizations((prev) => [org, ...prev])
     await logAdminAction({
       action: 'Organization created',
       organizationName: org.name,
       organizationCode: org.code,
       adminId,
       adminName,
-      metadata: { via: 'organization page' },
+      metadata: { via: 'CreateOrganizationModal' },
     })
     toast({ title: 'Organization created', status: 'success' })
     createModal.onClose()
@@ -346,7 +371,14 @@ export const OrganizationManagementPage: React.FC<OrganizationManagementPageProp
         </CardBody>
       </Card>
 
-      <OrganizationFormModal isOpen={createModal.isOpen} onClose={createModal.onClose} onSubmit={handleCreateOrg} mode="create" />
+      <CreateOrganizationModal
+        isOpen={createModal.isOpen}
+        onClose={createModal.onClose}
+        onCreated={handleOrganizationCreated}
+        adminId={adminId}
+        adminName={adminName}
+        partners={partners}
+      />
       <OrganizationFormModal
         isOpen={editModal.isOpen}
         onClose={() => {
