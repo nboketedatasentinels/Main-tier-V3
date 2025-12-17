@@ -1,3 +1,5 @@
+import type { Timestamp } from 'firebase/firestore'
+
 export interface AdminActivityLogEntry {
   id: string
   action: string
@@ -75,4 +77,37 @@ export interface TaskNotificationRecord {
   created_at?: Timestamp | string | Date
   severity?: string
 }
-import type { Timestamp } from 'firebase/firestore'
+
+export type AdminRole = 'super_admin' | 'partner' | 'mentor' | 'ambassador' | 'team_leader'
+
+export interface AdminUserRecord {
+  id: string
+  firstName?: string
+  lastName?: string
+  fullName?: string
+  email?: string
+  role: AdminRole
+  assignedOrganizations?: string[]
+  accountStatus?: 'active' | 'suspended'
+  lastActive?: Timestamp | string | Date
+  createdAt?: Timestamp | string | Date
+  avatarUrl?: string
+}
+
+export type AdminFormData = {
+  firstName: string
+  lastName: string
+  email: string
+  role: AdminRole
+  assignedOrganizations: string[]
+  accountStatus: 'active' | 'suspended'
+}
+
+export interface AdminMetrics {
+  total: number
+  active: number
+  partners: number
+  mentors: number
+  ambassadors: number
+  teamLeaders: number
+}
