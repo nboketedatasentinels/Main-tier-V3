@@ -64,8 +64,8 @@ export const PasswordChangeModal: React.FC<PasswordChangeModalProps> = ({
       await updatePassword(user, newPassword)
 
       // Update mustChangePassword field in Firestore
-      const profileRef = doc(db, 'profiles', userId)
-      await updateDoc(profileRef, {
+      const userRef = doc(db, 'users', userId)
+      await updateDoc(userRef, {
         mustChangePassword: false,
         updatedAt: serverTimestamp(),
       })
