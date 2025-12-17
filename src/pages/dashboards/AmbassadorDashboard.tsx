@@ -25,23 +25,34 @@ import {
   Thead,
   Tr,
   VStack,
+  type BadgeProps,
 } from '@chakra-ui/react'
 import { Flame, Gift, Megaphone, Share2, Target, TrendingUp, Users } from 'lucide-react'
 import { AmbassadorLayout } from '@/layouts/AmbassadorLayout'
 import { useAuth } from '@/hooks/useAuth'
 
-const referralMetrics = [
+type ReferralMetric = {
+  label: string
+  value: number | string
+  change: string
+  icon: typeof Share2
+  color: NonNullable<BadgeProps['colorScheme']>
+}
+
+type ReferralStage = { stage: string; value: number; color: NonNullable<BadgeProps['colorScheme']> }
+
+const referralMetrics: ReferralMetric[] = [
   { label: 'Active referrals', value: 42, change: '+8 this week', icon: Share2, color: 'purple' },
   { label: 'Successful enrollments', value: 19, change: '+4 this week', icon: Users, color: 'green' },
   { label: 'Rewards earned', value: '$860', change: 'Ready to redeem', icon: Gift, color: 'orange' },
   { label: 'Community events', value: 7, change: 'Next event in 2 days', icon: Megaphone, color: 'blue' },
 ]
 
-const referralPipeline = [
-  { stage: 'Invited', value: 65, color: 'purple.500' },
-  { stage: 'Joined', value: 44, color: 'green.500' },
-  { stage: 'Active', value: 31, color: 'orange.500' },
-  { stage: 'Converted', value: 19, color: 'teal.500' },
+const referralPipeline: ReferralStage[] = [
+  { stage: 'Invited', value: 65, color: 'purple' },
+  { stage: 'Joined', value: 44, color: 'green' },
+  { stage: 'Active', value: 31, color: 'orange' },
+  { stage: 'Converted', value: 19, color: 'teal' },
 ]
 
 const recentReferrals = [
@@ -107,7 +118,7 @@ export const AmbassadorDashboard: React.FC = () => {
                   <Box p={3} borderRadius="lg" bg={`${metric.color}.50`} color={`${metric.color}.600`}>
                     <Icon as={metric.icon} />
                   </Box>
-                  <Badge colorScheme={metric.color as any}>{metric.change}</Badge>
+                  <Badge colorScheme={metric.color}>{metric.change}</Badge>
                 </HStack>
                 <Stack spacing={1} mt={4}>
                   <Stat>
@@ -140,7 +151,7 @@ export const AmbassadorDashboard: React.FC = () => {
                           <Text color="brand.subtleText">{stage.stage}</Text>
                           <Text fontWeight="semibold" color="brand.text">{stage.value}</Text>
                         </HStack>
-                        <Progress value={stage.value} colorScheme={stage.color.split('.')[0] as any} borderRadius="full" />
+                        <Progress value={stage.value} colorScheme={stage.color} borderRadius="full" />
                       </Box>
                     ))}
                   </Stack>
