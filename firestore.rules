@@ -27,6 +27,10 @@ service cloud.firestore {
       return isAuthenticated() && getUserRole() in roles;
     }
 
+    function isMentor() {
+      return hasRole('mentor');
+    }
+
     function isSuperAdmin() {
       return hasRole('super_admin');
     }
@@ -66,6 +70,22 @@ service cloud.firestore {
       );
     }
 
+    function canAccessMentee(targetData) {
+      return isMentor() && targetData != null && (
+        targetData.mentorId == request.auth.uid ||
+        targetData.assignedMentorId == request.auth.uid ||
+        targetData.mentor_id == request.auth.uid ||
+        targetData.assigned_mentor_id == request.auth.uid
+      );
+    }
+
+    function canAccessMenteeProfile(userId) {
+      return isMentor() && (
+        getProfile(userId).mentorId == request.auth.uid ||
+        getProfile(userId).assignedMentorId == request.auth.uid
+      );
+    }
+
     // Profiles collection
     match /profiles/{userId} {
       // Users can read their own profile
@@ -76,6 +96,9 @@ service cloud.firestore {
         isSuperAdmin() ||
         canAccessUser(userId)
       );
+
+      // Mentors can read profiles of assigned mentees
+      allow read: if isAuthenticated() && canAccessMenteeProfile(userId);
       
       // Users can create their own profile
       allow create: if isAuthenticated() && isOwner(userId);
@@ -128,6 +151,9 @@ service cloud.firestore {
       
       // Super admins can read all users, company admins can read based on profiles
       allow read: if isSuperAdmin() || canAccessUser(userId);
+
+      // Mentors can read assigned mentee records only
+      allow read: if isAuthenticated() && canAccessMentee(resource.data);
       
       // Users can create their own user document
       allow create: if isAuthenticated() && isOwner(userId);
@@ -296,6 +322,138 @@ service cloud.firestore {
         isAdmin()
       );
       allow write: if isAuthenticated() && hasRole('mentor');
+    }
+
+    // Mentorship sessions with explicit mentor/mentee relationships
+    match /mentorship_sessions/{sessionId} {
+      allow read: if isAuthenticated() && (
+        isSuperAdmin() ||
+        (isMentor() && (
+          resource.data.mentor_id == request.auth.uid ||
+          resource.data.mentorId == request.auth.uid
+        ))
+      );
+
+      allow write: if isAuthenticated() && isMentor() && (
+        request.resource.data.mentor_id == request.auth.uid ||
+        request.resource.data.mentorId == request.auth.uid
+      );
+    }
+
+    // Mentor-facing notifications
+    match /mentor_notifications/{notificationId} {
+      allow read: if isAuthenticated() && (
+        isSuperAdmin() ||
+        (isMentor() && (
+          resource.data.mentor_id == request.auth.uid ||
+          resource.data.mentorId == request.auth.uid
+        ))
+      );
+
+      allow update: if isAuthenticated() && isMentor() && (
+        request.resource.data.keys().hasOnly(['read', 'read_at']) ||
+        request.resource.data.keys().hasOnly(['read', 'readAt'])
+      ) && (
+        resource.data.mentor_id == request.auth.uid ||
+        resource.data.mentorId == request.auth.uid
+      );
+
+      allow create: if isAuthenticated() && isSuperAdmin();
+    }
+
+    // Mentor-controlled resource library
+    match /resources/{resourceId} {
+      allow read: if isAuthenticated() && (
+        isSuperAdmin() || isAdmin() || (isMentor() && resource.data.createdBy == request.auth.uid)
+      );
+
+      allow create, update: if isAuthenticated() && (
+        isSuperAdmin() ||
+        (isMentor() && request.resource.data.createdBy == request.auth.uid)
+      );
+    }
+
+    // Engagement metrics for mentor-shared resources
+    match /resource_engagement/{engagementId} {
+      allow read: if isAuthenticated() && (
+        isSuperAdmin() ||
+        canAccessMentee(resource.data)
+      );
+
+      allow create: if isAuthenticated() && (
+        isSuperAdmin() ||
+        canAccessMentee(request.resource.data)
+      );
+    }
+
+    // Mentor access to mentee progress collections
+    match /points_transactions/{transactionId} {
+      allow read: if isAuthenticated() && (
+        isSuperAdmin() ||
+        canAccessMentee(resource.data)
+      );
+
+      allow create: if isAuthenticated() && (
+        isSuperAdmin() ||
+        canAccessMentee(request.resource.data)
+      );
+    }
+
+    match /weekly_checklist/{checklistId} {
+      allow read: if isAuthenticated() && (
+        isSuperAdmin() ||
+        canAccessMentee(resource.data)
+      );
+
+      allow create, update: if isAuthenticated() && (
+        isSuperAdmin() ||
+        canAccessMentee(request.resource.data)
+      );
+    }
+
+    match /impact_goals/{goalId} {
+      allow read: if isAuthenticated() && (
+        isSuperAdmin() ||
+        canAccessMentee(resource.data)
+      );
+
+      allow create, update: if isAuthenticated() && (
+        isSuperAdmin() ||
+        canAccessMentee(request.resource.data)
+      );
+    }
+
+    match /program_milestones/{milestoneId} {
+      allow read: if isAuthenticated() && (
+        isSuperAdmin() ||
+        canAccessMentee(resource.data)
+      );
+
+      allow create, update: if isAuthenticated() && (
+        isSuperAdmin() ||
+        canAccessMentee(request.resource.data)
+      );
+    }
+
+    match /user_courses/{courseId} {
+      allow read: if isAuthenticated() && (
+        isSuperAdmin() ||
+        canAccessMentee(resource.data)
+      );
+
+      allow create, update: if isAuthenticated() && (
+        isSuperAdmin() ||
+        canAccessMentee(request.resource.data)
+      );
+    }
+
+    match /user_badges/{badgeId} {
+      allow read: if isAuthenticated() && (
+        isSuperAdmin() ||
+        canAccessMentee(resource.data)
+      );
+
+      allow create: if isAuthenticated() && isSuperAdmin();
     }
 
     // Admin analytics and reports (super admin only)
