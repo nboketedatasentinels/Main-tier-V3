@@ -120,19 +120,19 @@ export const PaidMemberDashboard: React.FC = () => {
           <Tag size="lg" colorScheme="yellow" bg="rgba(234, 177, 48, 0.2)" color="brand.gold" mb={2}>
             Journey: Leadership Transformation
           </Tag>
-          <Text fontSize="3xl" fontWeight="bold" color="white">
+          <Text fontSize="3xl" fontWeight="bold" color="brand.text">
             Welcome back, {profile?.firstName || 'Leader'}
           </Text>
-          <Text color="brand.textOnDark" opacity={0.9}>
+          <Text color="brand.subtleText" opacity={0.9}>
             You are on track for week {profile?.currentWeek || 3}. Keep the momentum going today.
           </Text>
         </Box>
         <HStack spacing={4}>
           <VStack align="flex-end" spacing={1} display={{ base: 'none', md: 'flex' }}>
-            <Text fontSize="sm" color="brand.textOnDark" opacity={0.8}>
+            <Text fontSize="sm" color="brand.subtleText" opacity={0.9}>
               Current level
             </Text>
-            <Text fontSize="xl" fontWeight="bold" color="white">
+            <Text fontSize="xl" fontWeight="bold" color="brand.text">
               {profile?.level || 4}
             </Text>
           </VStack>
@@ -305,7 +305,7 @@ export const PaidMemberDashboard: React.FC = () => {
                 <Text fontWeight="bold" color="brand.text">
                   Upcoming events
                 </Text>
-                <Tag variant="gold" color="brand.deepPlum">
+                <Tag variant="gold" color="brand.primary">
                   Next 3
                 </Tag>
               </HStack>
@@ -315,21 +315,22 @@ export const PaidMemberDashboard: React.FC = () => {
                     key={event.title}
                     p={4}
                     borderRadius="lg"
-                    border="1px solid rgba(234, 177, 48, 0.2)"
-                    bg="rgba(53, 14, 111, 0.5)"
+                    border="1px solid"
+                    borderColor="brand.border"
+                    bg="brand.primaryMuted"
                   >
                     <HStack justify="space-between" mb={1}>
-                      <Text fontWeight="semibold" color="white">
+                      <Text fontWeight="semibold" color="brand.text">
                         {event.title}
                       </Text>
-                      <Tag variant="gold" color="brand.deepPlum">
+                      <Tag variant="gold" color="brand.primary">
                         {event.type}
                       </Tag>
                     </HStack>
-                    <Text fontSize="sm" color="brand.textOnDark" opacity={0.85}>
+                    <Text fontSize="sm" color="brand.subtleText" opacity={0.95}>
                       {event.date}
                     </Text>
-                    <Text fontSize="sm" color="brand.textOnDark" opacity={0.8}>
+                    <Text fontSize="sm" color="brand.subtleText" opacity={0.9}>
                       {event.location}
                     </Text>
                   </Box>

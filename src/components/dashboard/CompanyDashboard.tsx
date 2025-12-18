@@ -350,9 +350,9 @@ export const CompanyDashboard: React.FC = () => {
 
   const renderStat = (label: string, value: string | number, helper?: string) => (
     <Stat>
-      <StatLabel color="brand.textOnDark">{label}</StatLabel>
-      <StatNumber color="white">{value}</StatNumber>
-      {helper && <StatHelpText color="brand.textOnDark">{helper}</StatHelpText>}
+      <StatLabel color="brand.subtleText">{label}</StatLabel>
+      <StatNumber color="brand.text">{value}</StatNumber>
+      {helper && <StatHelpText color="brand.subtleText">{helper}</StatHelpText>}
     </Stat>
   )
 

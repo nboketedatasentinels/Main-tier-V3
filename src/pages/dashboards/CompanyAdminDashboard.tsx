@@ -136,10 +136,10 @@ export const CompanyAdminDashboard: React.FC = () => {
           <Text fontSize="sm" color="brand.subtleText">
             Company Admin
           </Text>
-          <Text fontSize="3xl" fontWeight="bold" color="white">
+          <Text fontSize="3xl" fontWeight="bold" color="brand.text">
             Welcome back, {adminName}
           </Text>
-          <Text color="brand.textOnDark" opacity={0.9} maxW="720px">
+          <Text color="brand.subtleText" opacity={0.9} maxW="720px">
             Organization-scoped oversight with targeted intervention tools. Users with missing assignments are highlighted so you
             can correct mappings before they lose access.
           </Text>

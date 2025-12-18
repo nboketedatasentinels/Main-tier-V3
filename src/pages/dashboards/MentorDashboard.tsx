@@ -436,15 +436,15 @@ export const MentorDashboard: React.FC = () => {
             <Tag size="lg" colorScheme="yellow" bg="rgba(234, 177, 48, 0.16)" color="brand.gold">
               Mentor Dashboard
             </Tag>
-            <HStack spacing={1} color="brand.textOnDark" fontWeight="semibold">
+            <HStack spacing={1} color="brand.subtleText" fontWeight="semibold">
               <Icon as={DatabaseZap} />
               <Text>Real-time sync via Bolt subscriptions</Text>
             </HStack>
           </HStack>
-          <Text fontSize="3xl" fontWeight="bold" color="white">
+          <Text fontSize="3xl" fontWeight="bold" color="brand.text">
             Welcome back, {profile?.firstName || 'Mentor'}
           </Text>
-          <Text color="brand.textOnDark" opacity={0.9}>
+          <Text color="brand.subtleText" opacity={0.9}>
             Manage mentees, track sessions, and keep momentum strong today.
           </Text>
         </Box>
@@ -452,7 +452,7 @@ export const MentorDashboard: React.FC = () => {
           <Button leftIcon={<Icon as={CalendarClock} />} colorScheme="purple" variant="solid" bg="brand.royalPurple" color="brand.gold" _hover={{ bg: 'purple.700' }} w={{ base: 'full', md: 'auto' }}>
             Schedule Session
           </Button>
-          <Button leftIcon={<Icon as={MessageSquare} />} variant="outline" color="brand.textOnDark" borderColor="brand.textOnDark" _hover={{ borderColor: 'brand.gold', color: 'brand.gold' }} w={{ base: 'full', md: 'auto' }}>
+          <Button leftIcon={<Icon as={MessageSquare} />} variant="outline" color="brand.text" borderColor="brand.border" _hover={{ borderColor: 'brand.primary', color: 'brand.primary' }} w={{ base: 'full', md: 'auto' }}>
             Send Quick Message
           </Button>
           {!isMobile && (
@@ -462,8 +462,8 @@ export const MentorDashboard: React.FC = () => {
               variant="ghost"
               color="brand.gold"
               border="1px solid"
-              borderColor="brand.textOnDark"
-              _hover={{ bg: 'whiteAlpha.200' }}
+              borderColor="brand.border"
+              _hover={{ bg: 'brand.primaryMuted' }}
             />
           )}
         </HStack>
@@ -471,23 +471,23 @@ export const MentorDashboard: React.FC = () => {
 
       <SimpleGrid columns={{ base: 1, md: 2, xl: 4 }} spacing={4}>
         {summaryStats.map((stat) => (
-          <Card key={stat.label} bg="whiteAlpha.50" border="1px solid" borderColor="whiteAlpha.200" shadow="lg">
+          <Card key={stat.label} bg="white" border="1px solid" borderColor="brand.border" shadow="md">
             <CardBody>
               <HStack justify="space-between" align="flex-start" mb={3}>
                 <HStack spacing={3}>
                   <Box
                     p={2}
-                    bg={stat.highlight ? 'rgba(234, 177, 48, 0.18)' : 'whiteAlpha.100'}
+                    bg={stat.highlight ? 'rgba(234, 177, 48, 0.18)' : 'brand.primaryMuted'}
                     borderRadius="md"
                   >
                     <Icon as={stat.icon} color="brand.gold" />
                   </Box>
                   <Box>
-                    <Text fontSize="sm" color="brand.textOnDark" opacity={0.85}
+                    <Text fontSize="sm" color="brand.subtleText" opacity={0.95}
                     >
                       {stat.label}
                     </Text>
-                    <Text fontSize="2xl" fontWeight="bold" color="white">
+                    <Text fontSize="2xl" fontWeight="bold" color="brand.text">
                       {stat.value}
                     </Text>
                   </Box>
@@ -498,7 +498,7 @@ export const MentorDashboard: React.FC = () => {
                   </Tag>
                 )}
               </HStack>
-              <Text color="brand.textOnDark" opacity={0.8}>{stat.helper}</Text>
+              <Text color="brand.subtleText" opacity={0.95}>{stat.helper}</Text>
             </CardBody>
           </Card>
         ))}
@@ -506,18 +506,18 @@ export const MentorDashboard: React.FC = () => {
 
       <Grid templateColumns={{ base: '1fr', xl: '2fr 1fr' }} gap={6}>
         <GridItem>
-          <Card bg="whiteAlpha.50" borderColor="whiteAlpha.200" border="1px solid" shadow="xl">
+          <Card bg="white" borderColor="brand.border" border="1px solid" shadow="md">
             <CardBody>
               <Flex justify="space-between" align={{ base: 'flex-start', md: 'center' }} mb={4} direction={{ base: 'column', md: 'row' }} gap={3}>
                 <Box>
-                  <Text fontWeight="bold" color="white">
+                  <Text fontWeight="bold" color="brand.text">
                     Today's schedule
                   </Text>
-                  <Text color="brand.textOnDark" opacity={0.8}>
+                  <Text color="brand.subtleText" opacity={0.9}>
                     Prepare for your upcoming mentorship moments.
                   </Text>
                 </Box>
-                <Button size="sm" leftIcon={<Icon as={CalendarClock} />} variant="outline" color="brand.textOnDark" borderColor="brand.textOnDark">
+                <Button size="sm" leftIcon={<Icon as={CalendarClock} />} variant="outline" color="brand.text" borderColor="brand.border" _hover={{ borderColor: 'brand.primary', color: 'brand.primary' }}>
                   View calendar
                 </Button>
               </Flex>
@@ -527,9 +527,9 @@ export const MentorDashboard: React.FC = () => {
                     key={`${item.title}-${item.mentee}`}
                     justify="space-between"
                     align="center"
-                    bg="whiteAlpha.100"
+                    bg="brand.primaryMuted"
                     border="1px solid"
-                    borderColor="whiteAlpha.200"
+                    borderColor="brand.border"
                     borderRadius="md"
                     p={3}
                   >
@@ -537,13 +537,13 @@ export const MentorDashboard: React.FC = () => {
                       <HStack spacing={3}>
                         <Icon as={Clock4} color="brand.gold" />
                         <Box>
-                          <Text fontWeight="semibold" color="white">
+                          <Text fontWeight="semibold" color="brand.text">
                             {item.title}
                           </Text>
-                          <Text color="brand.textOnDark" fontSize="sm">
+                          <Text color="brand.subtleText" fontSize="sm">
                             {item.mentee} • {item.time}
                           </Text>
-                          <Text color="brand.textOnDark" fontSize="xs" opacity={0.7}>
+                          <Text color="brand.subtleText" fontSize="xs" opacity={0.9}>
                             {item.type}
                           </Text>
                         </Box>
@@ -568,14 +568,14 @@ export const MentorDashboard: React.FC = () => {
           </Card>
         </GridItem>
         <GridItem>
-          <Card bg="rgba(234, 177, 48, 0.06)" borderColor="rgba(234, 177, 48, 0.25)" border="1px solid" shadow="lg">
+          <Card bg="rgba(234, 177, 48, 0.1)" borderColor="rgba(234, 177, 48, 0.35)" border="1px solid" shadow="md">
             <CardBody>
               <HStack justify="space-between" align="flex-start" mb={3}>
                 <Box>
-                  <Text fontWeight="bold" color="white">
+                  <Text fontWeight="bold" color="brand.text">
                     Pending actions
                   </Text>
-                  <Text color="brand.textOnDark" opacity={0.85}>
+                  <Text color="brand.subtleText" opacity={0.95}>
                     Overdue sessions, missing notes, unread alerts.
                   </Text>
                 </Box>
@@ -588,16 +588,16 @@ export const MentorDashboard: React.FC = () => {
                     justify="space-between"
                     align="center"
                     p={3}
-                    bg="whiteAlpha.100"
+                    bg="brand.primaryMuted"
                     border="1px solid"
-                    borderColor="whiteAlpha.200"
+                    borderColor="brand.border"
                     borderRadius="md"
                   >
                     <Box>
-                      <Text fontWeight="semibold" color="white">
+                      <Text fontWeight="semibold" color="brand.text">
                         {item.label}
                       </Text>
-                      <Text color="brand.textOnDark" fontSize="sm">
+                      <Text color="brand.subtleText" fontSize="sm">
                         {item.detail}
                       </Text>
                     </Box>
@@ -612,18 +612,18 @@ export const MentorDashboard: React.FC = () => {
 
       <Grid templateColumns={{ base: '1fr', lg: '2fr 1fr' }} gap={6}>
         <GridItem>
-          <Card bg="whiteAlpha.50" border="1px solid" borderColor="whiteAlpha.200" shadow="xl">
+          <Card bg="white" border="1px solid" borderColor="brand.border" shadow="md">
             <CardBody>
               <Flex justify="space-between" align={{ base: 'flex-start', md: 'center' }} mb={4} direction={{ base: 'column', md: 'row' }} gap={3}>
                 <Box>
-                  <Text fontWeight="bold" color="white">
+                  <Text fontWeight="bold" color="brand.text">
                     Weekly progress snapshot
                   </Text>
-                  <Text color="brand.textOnDark" opacity={0.8}>
+                  <Text color="brand.subtleText" opacity={0.95}>
                     Current week compared to last week.
                   </Text>
                 </Box>
-                <HStack spacing={2} color="brand.textOnDark">
+                <HStack spacing={2} color="brand.subtleText">
                   <Icon as={Sparkles} />
                   <Text fontSize="sm">AI-guided insight</Text>
                 </HStack>
@@ -633,16 +633,16 @@ export const MentorDashboard: React.FC = () => {
                   const delta = item.current - item.previous
                   const percent = Math.round((delta / item.previous) * 100)
                   return (
-                    <Box key={item.label} p={3} borderRadius="md" bg="whiteAlpha.100" border="1px solid" borderColor="whiteAlpha.200">
-                      <Text fontSize="sm" color="brand.textOnDark" opacity={0.85}>
+                    <Box key={item.label} p={3} borderRadius="md" bg="brand.primaryMuted" border="1px solid" borderColor="brand.border">
+                      <Text fontSize="sm" color="brand.subtleText" opacity={0.95}>
                         {item.label}
                       </Text>
                       <HStack spacing={2} align="baseline" mb={1}>
-                        <Text fontSize="2xl" fontWeight="bold" color="white">
+                        <Text fontSize="2xl" fontWeight="bold" color="brand.text">
                           {item.current}
                         </Text>
                         <Stat>
-                          <StatHelpText color={percent >= 0 ? 'green.400' : 'red.300'}>
+                          <StatHelpText color={percent >= 0 ? 'green.500' : 'red.400'}>
                             <StatArrow type={percent >= 0 ? 'increase' : 'decrease'} />
                             {Math.abs(percent)}% vs last week
                           </StatHelpText>
@@ -653,14 +653,14 @@ export const MentorDashboard: React.FC = () => {
                   )
                 })}
               </SimpleGrid>
-              <Box mt={4} p={3} borderRadius="md" bg="rgba(88, 28, 135, 0.2)" border="1px solid" borderColor="purple.500">
+              <Box mt={4} p={3} borderRadius="md" bg="rgba(93, 107, 255, 0.12)" border="1px solid" borderColor="brand.primary">
                 <HStack spacing={3}>
                   <Icon as={Lightbulb} color="brand.gold" />
                   <Box>
-                    <Text fontWeight="semibold" color="white">
+                    <Text fontWeight="semibold" color="brand.text">
                       Motivational insight
                     </Text>
-                    <Text color="brand.textOnDark" opacity={0.9}>
+                    <Text color="brand.subtleText" opacity={0.95}>
                       AI: "Your mentees respond fastest to feedback within 4 hours. Keep the cadence to lift engagement another 5% this week."
                     </Text>
                   </Box>
@@ -670,26 +670,26 @@ export const MentorDashboard: React.FC = () => {
           </Card>
         </GridItem>
         <GridItem>
-          <Card bg="whiteAlpha.50" border="1px solid" borderColor="whiteAlpha.200" shadow="xl">
+          <Card bg="white" border="1px solid" borderColor="brand.border" shadow="md">
             <CardBody>
               <HStack justify="space-between" align="center" mb={4}>
-                <Text fontWeight="bold" color="white">
+                <Text fontWeight="bold" color="brand.text">
                   Recent activity
                 </Text>
-                <IconButton aria-label="Refresh" icon={<Icon as={Loader2} />} variant="ghost" color="brand.textOnDark" />
+                <IconButton aria-label="Refresh" icon={<Icon as={Loader2} />} variant="ghost" color="brand.subtleText" />
               </HStack>
               <Stack spacing={3}>
                 {activityFeed.map((item) => (
-                  <Flex key={item.action} justify="space-between" align="center" p={3} borderRadius="md" bg="whiteAlpha.100" border="1px solid" borderColor="whiteAlpha.200">
+                  <Flex key={item.action} justify="space-between" align="center" p={3} borderRadius="md" bg="brand.primaryMuted" border="1px solid" borderColor="brand.border">
                     <Box>
-                      <Text color="white" fontWeight="semibold">
+                      <Text color="brand.text" fontWeight="semibold">
                         {item.action}
                       </Text>
-                      <Text color="brand.textOnDark" fontSize="sm">
+                      <Text color="brand.subtleText" fontSize="sm">
                         {item.meta}
                       </Text>
                     </Box>
-                    <Text color="brand.textOnDark" fontSize="sm" opacity={0.8}>
+                    <Text color="brand.subtleText" fontSize="sm" opacity={0.9}>
                       {item.timeAgo}
                     </Text>
                   </Flex>
@@ -702,14 +702,14 @@ export const MentorDashboard: React.FC = () => {
 
       <Grid templateColumns={{ base: '1fr', xl: '2fr 1fr' }} gap={6}>
         <GridItem>
-          <Card bg="whiteAlpha.50" border="1px solid" borderColor="whiteAlpha.200" shadow="xl">
+          <Card bg="white" border="1px solid" borderColor="brand.border" shadow="md">
             <CardBody>
               <Flex justify="space-between" align={{ base: 'flex-start', md: 'center' }} mb={4} direction={{ base: 'column', md: 'row' }} gap={3}>
                 <Box>
-                  <Text fontWeight="bold" color="white">
+                  <Text fontWeight="bold" color="brand.text">
                     Mentee management
                   </Text>
-                  <Text color="brand.textOnDark" opacity={0.8}>
+                  <Text color="brand.subtleText" opacity={0.95}>
                     Search, filter, and monitor progress across mentees.
                   </Text>
                 </Box>
@@ -725,15 +725,16 @@ export const MentorDashboard: React.FC = () => {
               <Stack spacing={4}>
                 <InputGroup>
                   <InputLeftElement pointerEvents="none">
-                    <Icon as={Search} color="brand.textOnDark" />
+                    <Icon as={Search} color="brand.subtleText" />
                   </InputLeftElement>
                   <Input
                     placeholder="Search by name, email, or company"
                     value={searchTerm}
                     onChange={(e) => handleSearch(e.target.value)}
-                    bg="whiteAlpha.100"
-                    borderColor="whiteAlpha.200"
-                    _placeholder={{ color: 'brand.textOnDark' }}
+                    bg="white"
+                    borderColor="brand.border"
+                    _placeholder={{ color: 'brand.subtleText' }}
+                    _focus={{ borderColor: 'brand.primary', boxShadow: '0 0 0 1px #5d6bff' }}
                   />
                   <Button ml={2} leftIcon={<Icon as={Filter} />} onClick={handleSaveFilter} colorScheme="yellow" variant="outline" color="brand.gold" borderColor="brand.gold">
                     Save filter
@@ -758,7 +759,7 @@ export const MentorDashboard: React.FC = () => {
                 )}
                 {searchHistory.length > 0 && (
                   <HStack spacing={2} align="center">
-                    <Text fontSize="sm" color="brand.textOnDark" opacity={0.8}>
+                    <Text fontSize="sm" color="brand.subtleText" opacity={0.95}>
                       Recent searches:
                     </Text>
                     <Wrap>
@@ -774,7 +775,7 @@ export const MentorDashboard: React.FC = () => {
                 )}
                 {savedFilters.length > 0 && (
                   <HStack spacing={2} align="center">
-                    <Text fontSize="sm" color="brand.textOnDark" opacity={0.8}>
+                    <Text fontSize="sm" color="brand.subtleText" opacity={0.95}>
                       Saved filters:
                     </Text>
                     <Wrap>
@@ -794,19 +795,19 @@ export const MentorDashboard: React.FC = () => {
                       key={mentee.email}
                       p={3}
                       borderRadius="md"
-                      bg="whiteAlpha.100"
+                      bg="white"
                       border="1px solid"
-                      borderColor="whiteAlpha.200"
+                      borderColor="brand.border"
                       justify="space-between"
                       align="center"
                     >
                       <HStack spacing={3} align="center">
                         <Avatar name={mentee.name} bg="brand.royalPurple" color="brand.gold" />
                         <Box>
-                          <Text fontWeight="semibold" color="white">
+                          <Text fontWeight="semibold" color="brand.text">
                             {mentee.name}
                           </Text>
-                          <Text fontSize="sm" color="brand.textOnDark">
+                          <Text fontSize="sm" color="brand.subtleText">
                             {mentee.email} • {mentee.company}
                           </Text>
                           <HStack spacing={2} mt={1}>
@@ -820,10 +821,10 @@ export const MentorDashboard: React.FC = () => {
                         </Box>
                       </HStack>
                       <VStack spacing={1} align="flex-end">
-                        <Text fontSize="sm" color="brand.textOnDark">
+                        <Text fontSize="sm" color="brand.subtleText">
                           Sessions this month
                         </Text>
-                        <Text fontWeight="bold" color="white">
+                        <Text fontWeight="bold" color="brand.text">
                           {mentee.sessionsThisMonth}
                         </Text>
                       </VStack>
@@ -836,35 +837,35 @@ export const MentorDashboard: React.FC = () => {
         </GridItem>
         <GridItem>
           <Stack spacing={6}>
-            <Card bg="whiteAlpha.50" border="1px solid" borderColor="whiteAlpha.200" shadow="xl">
+            <Card bg="white" border="1px solid" borderColor="brand.border" shadow="md">
               <CardBody>
                 <HStack justify="space-between" align="center" mb={3}>
-                  <Text fontWeight="bold" color="white">
+                  <Text fontWeight="bold" color="brand.text">
                     Quick access
                   </Text>
                   <Icon as={ArrowRight} color="brand.gold" />
                 </HStack>
                 <SimpleGrid columns={{ base: 1, sm: 2 }} spacing={3}>
-                  <Button leftIcon={<Icon as={CalendarClock} />} variant="outline" color="brand.textOnDark" borderColor="whiteAlpha.300">
+                  <Button leftIcon={<Icon as={CalendarClock} />} variant="outline" color="brand.text" borderColor="brand.border" _hover={{ borderColor: 'brand.primary', color: 'brand.primary' }}>
                     Schedule session
                   </Button>
-                  <Button leftIcon={<Icon as={Send} />} variant="outline" color="brand.textOnDark" borderColor="whiteAlpha.300">
+                  <Button leftIcon={<Icon as={Send} />} variant="outline" color="brand.text" borderColor="brand.border" _hover={{ borderColor: 'brand.primary', color: 'brand.primary' }}>
                     Send quick message
                   </Button>
-                  <Button leftIcon={<Icon as={NotebookPen} />} variant="outline" color="brand.textOnDark" borderColor="whiteAlpha.300">
+                  <Button leftIcon={<Icon as={NotebookPen} />} variant="outline" color="brand.text" borderColor="brand.border" _hover={{ borderColor: 'brand.primary', color: 'brand.primary' }}>
                     Add session notes
                   </Button>
-                  <Button leftIcon={<Icon as={TrendingUp} />} variant="outline" color="brand.textOnDark" borderColor="whiteAlpha.300">
+                  <Button leftIcon={<Icon as={TrendingUp} />} variant="outline" color="brand.text" borderColor="brand.border" _hover={{ borderColor: 'brand.primary', color: 'brand.primary' }}>
                     Review reports
                   </Button>
                 </SimpleGrid>
               </CardBody>
             </Card>
 
-            <Card bg="whiteAlpha.50" border="1px solid" borderColor="whiteAlpha.200" shadow="xl">
+            <Card bg="white" border="1px solid" borderColor="brand.border" shadow="md">
               <CardBody>
                 <HStack justify="space-between" align="center" mb={3}>
-                  <Text fontWeight="bold" color="white">
+                  <Text fontWeight="bold" color="brand.text">
                     Notifications
                   </Text>
                   <Badge colorScheme="purple">4 unread</Badge>
@@ -873,32 +874,32 @@ export const MentorDashboard: React.FC = () => {
                   <Flex justify="space-between" align="center">
                     <HStack spacing={2}>
                       <Icon as={Bell} color="brand.gold" />
-                      <Text color="brand.textOnDark">Real-time updates enabled</Text>
+                      <Text color="brand.subtleText">Real-time updates enabled</Text>
                     </HStack>
-                    <Button size="sm" variant="outline" color="brand.textOnDark" borderColor="whiteAlpha.300">
+                    <Button size="sm" variant="outline" color="brand.text" borderColor="brand.border" _hover={{ borderColor: 'brand.primary', color: 'brand.primary' }}>
                       Mark all read
                     </Button>
                   </Flex>
-                  <Divider borderColor="whiteAlpha.300" />
+                  <Divider borderColor="brand.border" />
                   <Stack spacing={2}>
                     {[1, 2, 3].map((id) => (
-                      <Flex key={id} justify="space-between" align="center" p={2} borderRadius="md" bg="whiteAlpha.100">
+                      <Flex key={id} justify="space-between" align="center" p={2} borderRadius="md" bg="brand.primaryMuted" border="1px solid" borderColor="brand.border">
                         <HStack spacing={3}>
                           <Icon as={id === 1 ? Inbox : id === 2 ? CheckCircle2 : HeartHandshake} color="brand.gold" />
                           <Box>
-                            <Text color="white" fontWeight="semibold">
+                            <Text color="brand.text" fontWeight="semibold">
                               {id === 1
                                 ? 'New check-in submitted'
                                 : id === 2
                                   ? 'Session summary saved'
                                   : 'Mentee shared progress update'}
                             </Text>
-                            <Text color="brand.textOnDark" fontSize="sm" opacity={0.85}>
+                            <Text color="brand.subtleText" fontSize="sm" opacity={0.95}>
                               {id === 1 ? 'Nova Labs team' : id === 2 ? 'Diego Martínez' : 'Lina Chen'} • {id === 1 ? '5m ago' : id === 2 ? '32m ago' : '1h ago'}
                             </Text>
                           </Box>
                         </HStack>
-                        <Icon as={ArrowRight} color="brand.textOnDark" />
+                        <Icon as={ArrowRight} color="brand.subtleText" />
                       </Flex>
                     ))}
                   </Stack>
@@ -911,14 +912,14 @@ export const MentorDashboard: React.FC = () => {
 
       <Grid templateColumns={{ base: '1fr', lg: '3fr 2fr' }} gap={6}>
         <GridItem>
-          <Card bg="whiteAlpha.50" border="1px solid" borderColor="whiteAlpha.200" shadow="xl">
+          <Card bg="white" border="1px solid" borderColor="brand.border" shadow="md">
             <CardBody>
               <Flex justify="space-between" align={{ base: 'flex-start', md: 'center' }} mb={4} direction={{ base: 'column', md: 'row' }} gap={3}>
                 <Box>
-                  <Text fontWeight="bold" color="white">
+                  <Text fontWeight="bold" color="brand.text">
                     Session management
                   </Text>
-                  <Text color="brand.textOnDark" opacity={0.8}>
+                  <Text color="brand.subtleText" opacity={0.95}>
                     Track scheduled, completed, and cancelled mentorship sessions.
                   </Text>
                 </Box>
@@ -932,21 +933,21 @@ export const MentorDashboard: React.FC = () => {
                     key={`${session.title}-${session.mentee}`}
                     p={3}
                     borderRadius="md"
-                    bg="whiteAlpha.100"
+                    bg="brand.primaryMuted"
                     border="1px solid"
-                    borderColor="whiteAlpha.200"
+                    borderColor="brand.border"
                     justify="space-between"
                     align="center"
                   >
                     <Box>
-                      <Text fontWeight="semibold" color="white">
+                      <Text fontWeight="semibold" color="brand.text">
                         {session.title}
                       </Text>
-                      <Text fontSize="sm" color="brand.textOnDark">
+                      <Text fontSize="sm" color="brand.subtleText">
                         {session.mentee} • {session.date}
                       </Text>
                       {session.notes && (
-                        <Text fontSize="xs" color="brand.textOnDark" opacity={0.8} mt={1}>
+                        <Text fontSize="xs" color="brand.subtleText" opacity={0.95} mt={1}>
                           Notes: {session.notes}
                         </Text>
                       )}
@@ -970,24 +971,24 @@ export const MentorDashboard: React.FC = () => {
         </GridItem>
         <GridItem>
           <Stack spacing={6}>
-            <Card bg="whiteAlpha.50" border="1px solid" borderColor="whiteAlpha.200" shadow="xl">
+            <Card bg="white" border="1px solid" borderColor="brand.border" shadow="md">
               <CardBody>
                 <HStack justify="space-between" align="center" mb={3}>
-                  <Text fontWeight="bold" color="white">
+                  <Text fontWeight="bold" color="brand.text">
                     Resource library
                   </Text>
-                  <Button size="sm" leftIcon={<Icon as={BookOpen} />} variant="outline" color="brand.textOnDark" borderColor="whiteAlpha.300">
+                  <Button size="sm" leftIcon={<Icon as={BookOpen} />} variant="outline" color="brand.text" borderColor="brand.border" _hover={{ borderColor: 'brand.primary', color: 'brand.primary' }}>
                     Share resource
                   </Button>
                 </HStack>
                 <Stack spacing={3}>
                   {resources.map((resource) => (
-                    <Flex key={resource.title} justify="space-between" align="center" p={3} borderRadius="md" bg="whiteAlpha.100" border="1px solid" borderColor="whiteAlpha.200">
+                    <Flex key={resource.title} justify="space-between" align="center" p={3} borderRadius="md" bg="brand.primaryMuted" border="1px solid" borderColor="brand.border">
                       <Box>
-                        <Text fontWeight="semibold" color="white">
+                        <Text fontWeight="semibold" color="brand.text">
                           {resource.title}
                         </Text>
-                        <Text color="brand.textOnDark" fontSize="sm">
+                        <Text color="brand.subtleText" fontSize="sm">
                           {resource.type} • Assigned to {resource.menteesAssigned} mentees
                         </Text>
                       </Box>
@@ -1000,23 +1001,23 @@ export const MentorDashboard: React.FC = () => {
               </CardBody>
             </Card>
 
-            <Card bg="whiteAlpha.50" border="1px solid" borderColor="whiteAlpha.200" shadow="xl">
+            <Card bg="white" border="1px solid" borderColor="brand.border" shadow="md">
               <CardBody>
                 <HStack justify="space-between" align="center" mb={3}>
-                  <Text fontWeight="bold" color="white">
+                  <Text fontWeight="bold" color="brand.text">
                     Notifications settings
                   </Text>
                   <Icon as={Settings} color="brand.gold" />
                 </HStack>
                 <Stack spacing={2}>
                   {notificationSettings.map((setting) => (
-                    <Flex key={setting} justify="space-between" align="center" p={2} borderRadius="md" bg="whiteAlpha.100" border="1px solid" borderColor="whiteAlpha.200">
-                      <Text color="brand.textOnDark">{setting}</Text>
+                    <Flex key={setting} justify="space-between" align="center" p={2} borderRadius="md" bg="brand.primaryMuted" border="1px solid" borderColor="brand.border">
+                      <Text color="brand.text">{setting}</Text>
                       <HStack spacing={2}>
                         <Badge colorScheme="green" variant="subtle">
                           Enabled
                         </Badge>
-                        <IconButton aria-label="Edit" size="sm" icon={<Icon as={ChevronDown} />} variant="ghost" color="brand.textOnDark" />
+                        <IconButton aria-label="Edit" size="sm" icon={<Icon as={ChevronDown} />} variant="ghost" color="brand.subtleText" />
                       </HStack>
                     </Flex>
                   ))}
@@ -1029,10 +1030,10 @@ export const MentorDashboard: React.FC = () => {
 
       <Grid templateColumns={{ base: '1fr', lg: '3fr 2fr' }} gap={6}>
         <GridItem>
-          <Card bg="whiteAlpha.50" border="1px solid" borderColor="whiteAlpha.200" shadow="xl">
+          <Card bg="white" border="1px solid" borderColor="brand.border" shadow="md">
             <CardBody>
               <HStack justify="space-between" align="center" mb={3}>
-                <Text fontWeight="bold" color="white">
+                <Text fontWeight="bold" color="brand.text">
                   Analytics dashboard
                 </Text>
                 <Tag colorScheme="purple" variant="subtle">
@@ -1041,16 +1042,16 @@ export const MentorDashboard: React.FC = () => {
               </HStack>
               <SimpleGrid columns={{ base: 1, md: 2 }} spacing={3}>
                 {analytics.map((item) => (
-                  <Box key={item.label} p={3} borderRadius="md" bg="whiteAlpha.100" border="1px solid" borderColor="whiteAlpha.200">
-                    <Text fontSize="sm" color="brand.textOnDark" opacity={0.85}>
+                  <Box key={item.label} p={3} borderRadius="md" bg="brand.primaryMuted" border="1px solid" borderColor="brand.border">
+                    <Text fontSize="sm" color="brand.subtleText" opacity={0.95}>
                       {item.label}
                     </Text>
                     <HStack justify="space-between" align="center">
-                      <Text fontSize="2xl" fontWeight="bold" color="white">
+                      <Text fontSize="2xl" fontWeight="bold" color="brand.text">
                         {item.value}
                       </Text>
                       <Stat>
-                        <StatHelpText color={item.positive ? 'green.400' : 'orange.300'}>
+                        <StatHelpText color={item.positive ? 'green.500' : 'orange.400'}>
                           <StatArrow type={item.positive ? 'increase' : 'decrease'} />
                           {item.change}
                         </StatHelpText>
@@ -1069,10 +1070,10 @@ export const MentorDashboard: React.FC = () => {
           </Card>
         </GridItem>
         <GridItem>
-          <Card bg="whiteAlpha.50" border="1px solid" borderColor="whiteAlpha.200" shadow="xl">
+          <Card bg="white" border="1px solid" borderColor="brand.border" shadow="md">
             <CardBody>
               <Flex justify="space-between" align="center" mb={4}>
-                <Text fontWeight="bold" color="white">
+                <Text fontWeight="bold" color="brand.text">
                   Search & collaboration
                 </Text>
                 <Badge colorScheme="yellow" variant="subtle">
@@ -1080,42 +1081,42 @@ export const MentorDashboard: React.FC = () => {
                 </Badge>
               </Flex>
               <Stack spacing={3}>
-                <Flex align="center" justify="space-between" p={3} borderRadius="md" bg="whiteAlpha.100" border="1px solid" borderColor="whiteAlpha.200">
+                <Flex align="center" justify="space-between" p={3} borderRadius="md" bg="brand.primaryMuted" border="1px solid" borderColor="brand.border">
                   <HStack spacing={3}>
                     <Icon as={DatabaseZap} color="brand.gold" />
                     <Box>
-                      <Text color="white" fontWeight="semibold">
+                      <Text color="brand.text" fontWeight="semibold">
                         Real-time data sync
                       </Text>
-                      <Text fontSize="sm" color="brand.textOnDark" opacity={0.85}>
+                      <Text fontSize="sm" color="brand.subtleText" opacity={0.95}>
                         Live Bolt Database subscriptions keep mentee data fresh.
                       </Text>
                     </Box>
                   </HStack>
                   <Badge colorScheme="green">Live</Badge>
                 </Flex>
-                <Flex align="center" justify="space-between" p={3} borderRadius="md" bg="whiteAlpha.100" border="1px solid" borderColor="whiteAlpha.200">
+                <Flex align="center" justify="space-between" p={3} borderRadius="md" bg="brand.primaryMuted" border="1px solid" borderColor="brand.border">
                   <HStack spacing={3}>
                     <Icon as={Search} color="brand.gold" />
                     <Box>
-                      <Text color="white" fontWeight="semibold">
+                      <Text color="brand.text" fontWeight="semibold">
                         Advanced search
                       </Text>
-                      <Text fontSize="sm" color="brand.textOnDark" opacity={0.85}>
+                      <Text fontSize="sm" color="brand.subtleText" opacity={0.95}>
                         Autocomplete suggestions and saved filters stored locally.
                       </Text>
                     </Box>
                   </HStack>
                   <Badge colorScheme="purple">Autocomplete</Badge>
                 </Flex>
-                <Flex align="center" justify="space-between" p={3} borderRadius="md" bg="whiteAlpha.100" border="1px solid" borderColor="whiteAlpha.200">
+                <Flex align="center" justify="space-between" p={3} borderRadius="md" bg="brand.primaryMuted" border="1px solid" borderColor="brand.border">
                   <HStack spacing={3}>
                     <Icon as={MessageSquare} color="brand.gold" />
                     <Box>
-                      <Text color="white" fontWeight="semibold">
+                      <Text color="brand.text" fontWeight="semibold">
                         Collaboration shortcuts
                       </Text>
-                      <Text fontSize="sm" color="brand.textOnDark" opacity={0.85}>
+                      <Text fontSize="sm" color="brand.subtleText" opacity={0.95}>
                         Quick actions keep messages and reports a tap away.
                       </Text>
                     </Box>

@@ -7,7 +7,7 @@ This document captures the target architecture, routing map, and dashboard layou
 - **SPA with secure API layer**: React 18 + TypeScript front end powered by Vite. Client renders authenticated experience while calling Bolt Database Edge Functions for all privileged logic.
 - **Serverless backend**: Bolt Database PostgreSQL (115+ migrations), Bolt Auth, Edge Functions, Storage, and real-time subscriptions for live updates (leaderboards, notifications, checklists).
 - **Security**: RBAC enforced in UI and API, RLS on data tables, encrypted storage, CSRF/XSS protection, validated inputs, and secure Stripe integration through Edge Functions + webhooks.
-- **Brand-first UI**: Dark plum shell with Royal Purple accents, Flame Orange CTAs, and Gold/Soft Gold highlights. Framer Motion for polish, Recharts for analytics, and Canvas Confetti for celebrations.
+- **Brand-first UI**: Plum-forward shell with Royal Purple accents, Flame Orange CTAs, and Gold/Soft Gold highlights. Framer Motion for polish, Recharts for analytics, and Canvas Confetti for celebrations.
 
 ## 2. Technology Stack
 
