@@ -37,14 +37,14 @@ export const PointsNotificationListener = () => {
           const alert = { ...(change.doc.data() as WeeklyTargetAlert), id: change.doc.id }
           if (alert.type === 'warning') {
             toast({
-              title: "Heads up! You're close to missing this week's target",
+              title: "Heads up! You're close to missing this week's minimum points",
               description: alert.message,
               status: 'warning',
             })
           }
           if (alert.type === 'alert') {
             toast({
-              title: "You're falling behind on your weekly target",
+              title: "You're falling behind on this week's minimum points",
               description: alert.message,
               status: 'error',
             })

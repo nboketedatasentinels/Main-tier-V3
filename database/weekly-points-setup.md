@@ -4,7 +4,7 @@
 
 The Weekly Points feature tracks user progress on a weekly basis, showing:
 - Points earned this week
-- Target points for the week
+- Minimum points required for the week
 - Engagement count (completed activities)
 - Status (on_track, warning, at_risk)
 
@@ -18,7 +18,7 @@ The `weekly_points` collection stores weekly point data with the following struc
   week_number: number         // ISO week number (1-53)
   week_year: number          // Year
   points_earned: number      // Points earned this week
-  target_points: number      // Weekly target (from journey)
+  target_points: number      // Minimum points required this week (from journey)
   engagement_count: number   // Number of completed activities
   status: 'on_track' | 'warning' | 'at_risk'
   week_start: Timestamp
@@ -32,21 +32,38 @@ The `weekly_points` collection stores weekly point data with the following struc
 
 1. **Automatic Initialization**: When a user visits the Weekly Glance page, the system automatically creates a `weekly_points` record for the current week if one doesn't exist.
 
-2. **Target Points**: The weekly target is pulled from the user's current journey. The standard 6-week sprint target is **4,000 points** (the minimum expectation), and 4,000 is also used as the default if no journey is set.
+2. **Minimum Weekly Points**: The minimum points requirement is pulled from the user's current journey. The standard 6-week sprint minimum is **4,000 points**, and 4,000 is also used as the default if no journey is set.
 
 3. **Status Calculation**:
-   - `on_track`: >= 70% of target
-   - `warning`: 40-69% of target
-   - `at_risk`: < 40% of target
+   - `on_track`: >= 70% of the minimum requirement
+   - `warning`: 40-69% of the minimum requirement
+   - `at_risk`: < 40% of the minimum requirement
 
 4. **Real-time Updates**: The Weekly Points card uses Firestore's real-time listeners to automatically update when data changes.
 
-## 6-Week Journey Targets & Completion Rules
+## 6-Week Journey Minimums, Caps & Completion Rules
 
-- **Weekly target (minimum)**: 4,000 points per week for the 6-week sprint, anchored around common activities like podcasts, peer matching, and LinkedIn posts.
-- **Maximum achievable**: 36,000 points across six weeks (about 6,000 per week) when participants mix higher-value activities alongside the core cadence.
+- **Minimum points required per week**: 4,000 points for the 6-week sprint, anchored around common activities like podcasts, peer matching, and LinkedIn posts.
+- **Weekly ceiling**: Roughly 6,000 points when participants layer in higher-value items such as webinars or LIFT modules; across six weeks this yields a **36,000-point maximum**.
 - **Pass threshold**: 67% of the six-week maximum (24,120 points) is the completion bar for the course.
 - **Rationale**: The 4,000-point floor keeps users engaged without overwhelming participants who are also working full-time, while still allowing motivated learners to push higher.
+
+## Activity Cadence & Point Caps
+
+These limits are shown to coaches and participants to distinguish the minimum requirement from the maximum achievable points:
+
+| Activity | Points per completion | Recommended cadence | Point cap (per month) |
+| --- | --- | --- | --- |
+| Watch/listen to podcast | 1,000 | Weekly | 3,000 |
+| Complete podcast workbook | 1,000 | Weekly (paired with podcast) | 3,000 |
+| Attend webinar | 2,000 | Monthly | 2,000 |
+| Complete webinar workbook | 2,000 | Monthly (paired with webinar) | 2,000 |
+| Peer Matching | 1,000 | Weekly | 4,000 |
+| Impact Log Entry | 1,000 | Twice monthly | 2,000 |
+| Book Club Participation | 1,500 | Monthly | 1,500 |
+| Peer to Peer Session | 2,500 | Monthly | 2,500 |
+| LinkedIn engagement (post/comment) | 500 | Twice monthly | 1,000 |
+| LIFT Course Module Completed | 3,000 | Monthly | 3,000 |
 
 ## Setting Up Test Data
 
@@ -58,7 +75,7 @@ The `weekly_points` collection stores weekly point data with the following struc
    - `week_number`: Current ISO week (e.g., 50)
    - `week_year`: Current year (e.g., 2024)
    - `points_earned`: Any number (e.g., 1500)
-   - `target_points`: Target (e.g., 4000)
+   - `target_points`: Minimum weekly requirement (e.g., 4000)
    - `engagement_count`: Number of activities (e.g., 5)
    - `status`: "on_track" or "warning" or "at_risk"
    - `week_start`: Timestamp of this week's Monday
@@ -93,7 +110,7 @@ This function will:
 2. **Navigate to Weekly Glance** page (/app/weekly-glance)
 3. The system will automatically create a weekly_points record with:
    - 0 points earned
-   - Default target of 4000 points
+   - Default minimum requirement of 4000 points
    - Status: at_risk
 
 4. **Add test points** by creating records in `user_points`:
