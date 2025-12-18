@@ -32,7 +32,7 @@ The `weekly_points` collection stores weekly point data with the following struc
 
 1. **Automatic Initialization**: When a user visits the Weekly Glance page, the system automatically creates a `weekly_points` record for the current week if one doesn't exist.
 
-2. **Target Points**: The weekly target is pulled from the user's current journey. Default is 2500 points if no journey is set.
+2. **Target Points**: The weekly target is pulled from the user's current journey. The standard 6-week sprint target is **4,000 points** (the minimum expectation), and 4,000 is also used as the default if no journey is set.
 
 3. **Status Calculation**:
    - `on_track`: >= 70% of target
@@ -40,6 +40,13 @@ The `weekly_points` collection stores weekly point data with the following struc
    - `at_risk`: < 40% of target
 
 4. **Real-time Updates**: The Weekly Points card uses Firestore's real-time listeners to automatically update when data changes.
+
+## 6-Week Journey Targets & Completion Rules
+
+- **Weekly target (minimum)**: 4,000 points per week for the 6-week sprint, anchored around common activities like podcasts, peer matching, and LinkedIn posts.
+- **Maximum achievable**: 36,000 points across six weeks (about 6,000 per week) when participants mix higher-value activities alongside the core cadence.
+- **Pass threshold**: 67% of the six-week maximum (24,120 points) is the completion bar for the course.
+- **Rationale**: The 4,000-point floor keeps users engaged without overwhelming participants who are also working full-time, while still allowing motivated learners to push higher.
 
 ## Setting Up Test Data
 
@@ -51,7 +58,7 @@ The `weekly_points` collection stores weekly point data with the following struc
    - `week_number`: Current ISO week (e.g., 50)
    - `week_year`: Current year (e.g., 2024)
    - `points_earned`: Any number (e.g., 1500)
-   - `target_points`: Target (e.g., 2500)
+   - `target_points`: Target (e.g., 4000)
    - `engagement_count`: Number of activities (e.g., 5)
    - `status`: "on_track" or "warning" or "at_risk"
    - `week_start`: Timestamp of this week's Monday
@@ -86,7 +93,7 @@ This function will:
 2. **Navigate to Weekly Glance** page (/app/weekly-glance)
 3. The system will automatically create a weekly_points record with:
    - 0 points earned
-   - Default target of 2500 points
+   - Default target of 4000 points
    - Status: at_risk
 
 4. **Add test points** by creating records in `user_points`:

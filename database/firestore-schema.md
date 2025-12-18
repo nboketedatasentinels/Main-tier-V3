@@ -57,6 +57,8 @@ Available journey templates
   weeklyPointsTarget: number
   minPointsPerWeek: number
   maxPointsPerWeek?: number
+  maxPointsTotal?: number
+  completionThresholdPct?: number
   badgeId?: string
   isActive: boolean
   isPremium: boolean
@@ -426,8 +428,9 @@ const badges = [
 
 // Sample journeys
 const journeys = [
-  { name: 'Curious Cat Path', type: 'free', durationWeeks: 0, totalPointsTarget: 0, weeklyPointsTarget: 0, isPremium: false },
-  { name: '4-Week Intro Journey', type: 'intro_4_week', durationWeeks: 4, totalPointsTarget: 10000, weeklyPointsTarget: 2500, isPremium: true },
+  { name: 'Curious Cat Path', type: 'free', durationWeeks: 0, totalPointsTarget: 0, weeklyPointsTarget: 0, minPointsPerWeek: 0, isPremium: false },
+  { name: '4-Week Intro Journey', type: 'intro_4_week', durationWeeks: 4, totalPointsTarget: 10000, weeklyPointsTarget: 2500, minPointsPerWeek: 2500, maxPointsPerWeek: 4000, maxPointsTotal: 16000, completionThresholdPct: 67, isPremium: true },
+  { name: '6-Week Sprint', type: 'sprint_6_week', durationWeeks: 6, totalPointsTarget: 24000, weeklyPointsTarget: 4000, minPointsPerWeek: 4000, maxPointsPerWeek: 6000, maxPointsTotal: 36000, completionThresholdPct: 67, isPremium: true },
   // ... more journeys
 ];
 ```

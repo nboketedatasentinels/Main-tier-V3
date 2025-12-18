@@ -109,6 +109,8 @@ export interface Journey {
   weeklyPointsTarget: number
   minPointsPerWeek: number
   maxPointsPerWeek?: number
+  maxPointsTotal?: number
+  completionThresholdPct?: number
   badgeId?: string
   isActive: boolean
   isPremium: boolean

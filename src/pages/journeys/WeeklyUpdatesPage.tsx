@@ -43,6 +43,8 @@ import { UserRole, UserProfile, WeeklyProgress } from '@/types'
 import { JOURNEY_META, getMonthNumber, getActivitiesForJourney, JourneyType, ActivityDef } from '@/config/pointsConfig'
 import { awardChecklistPoints, revokeChecklistPoints } from '@/services/pointsService'
 
+const DEFAULT_WEEKLY_TARGET = JOURNEY_META['6W'].weeklyTarget
+
 interface ActivityTemplate {
   id: string
   baseId: string
@@ -253,7 +255,7 @@ const WeeklyChecklistPage: React.FC = () => {
   }, [journey]);
 
   const weeklyTarget = useMemo(() => {
-    if (!journey) return 2500;
+    if (!journey) return DEFAULT_WEEKLY_TARGET;
     return JOURNEY_META[journey.journeyType].weeklyTarget;
   }, [journey]);
 
