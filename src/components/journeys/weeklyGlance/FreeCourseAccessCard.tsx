@@ -14,11 +14,11 @@ export const FreeCourseAccessCard = ({ courseTitle = 'Leadership Foundations', e
   }
 
   return (
-    <Card h="100%" variant="outline" borderColor="brand.border">
+    <Card h="100%" variant="outline" borderColor="border.subtle">
       <CardBody>
         <Stack spacing={3}>
           <Text fontWeight="bold">Free Course Access</Text>
-          <Text color="brand.subtleText" fontSize="sm">
+          <Text color="text.secondary" fontSize="sm">
             Kick off the week with quick learning. Use the code below to enroll.
           </Text>
           <HStack justify="space-between">
@@ -31,11 +31,11 @@ export const FreeCourseAccessCard = ({ courseTitle = 'Leadership Foundations', e
           </HStack>
           <HStack spacing={3}>
             <Text fontWeight="semibold">Enrollment Code</Text>
-            <Text bg="brand.primaryMuted" px={2} py={1} rounded="md">
+            <Text bg="tint.brandPrimary" px={2} py={1} rounded="md">
               {enrollmentCode}
             </Text>
           </HStack>
-          <Text fontSize="sm" color="brand.subtleText">
+          <Text fontSize="sm" color="text.secondary">
             Duration: 4 modules • Beginner friendly
           </Text>
         </Stack>

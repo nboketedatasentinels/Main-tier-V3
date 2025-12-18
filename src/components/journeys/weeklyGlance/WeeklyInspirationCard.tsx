@@ -9,7 +9,7 @@ interface WeeklyInspirationCardProps {
 
 export const WeeklyInspirationCard = ({ data, loading }: WeeklyInspirationCardProps) => {
   return (
-    <Card h="100%" variant="outline" borderColor="brand.border" bg="brand.primaryMuted">
+    <Card h="100%" variant="outline" borderColor="border.subtle" bg="tint.brandPrimary">
       <CardBody>
         <Stack spacing={3}>
           <HStack spacing={2}>
@@ -21,7 +21,7 @@ export const WeeklyInspirationCard = ({ data, loading }: WeeklyInspirationCardPr
               {data?.quote_text || 'Join the movement. Take one small step today toward your goal.'}
             </Text>
           </Skeleton>
-          <Text fontSize="sm" color="brand.subtleText">
+          <Text fontSize="sm" color="text.secondary">
             {data?.author || 'T4L Community'}
           </Text>
         </Stack>

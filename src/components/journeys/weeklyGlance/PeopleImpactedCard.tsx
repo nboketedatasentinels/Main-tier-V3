@@ -8,7 +8,7 @@ interface PeopleImpactedCardProps {
 
 export const PeopleImpactedCard = ({ count, loading }: PeopleImpactedCardProps) => {
   return (
-    <Card h="100%" variant="outline" borderColor="brand.border" _hover={{ shadow: 'sm' }}>
+    <Card h="100%" variant="outline" borderColor="border.subtle" _hover={{ shadow: 'sm' }}>
       <CardBody>
         <Stack spacing={3}>
           <HStack justify="space-between">
@@ -26,7 +26,7 @@ export const PeopleImpactedCard = ({ count, loading }: PeopleImpactedCardProps) 
               {count}
             </Text>
           </Skeleton>
-          <Text color="brand.subtleText" fontSize="sm">
+          <Text color="text.secondary" fontSize="sm">
             Celebrate each person you support. Log activities to see this grow.
           </Text>
         </Stack>
