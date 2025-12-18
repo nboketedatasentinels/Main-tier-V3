@@ -189,3 +189,14 @@ export function getActivitiesForJourney(journeyType: JourneyType): ActivityDef[]
 export function getMonthNumber(weekNumber: number): number {
   return Math.ceil(weekNumber / 4);
 }
+
+// Default export for consumers that prefer object access
+const pointsConfig = {
+  FULL_ACTIVITIES,
+  INTRO_ACTIVITIES,
+  JOURNEY_META,
+  getActivitiesForJourney,
+  getMonthNumber,
+};
+
+export default pointsConfig;

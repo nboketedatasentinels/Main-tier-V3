@@ -1,6 +1,9 @@
 import { doc, runTransaction, serverTimestamp, deleteDoc } from "firebase/firestore";
 import { db } from "@/services/firebase";
-import { JOURNEY_META, getMonthNumber, ActivityDef, JourneyType } from "@/config/pointsConfig";
+import pointsConfig from "@/config/pointsConfig";
+import type { ActivityDef, JourneyType } from "@/config/pointsConfig";
+
+const { JOURNEY_META, getMonthNumber } = pointsConfig;
 
 export async function awardChecklistPoints(params: {
   uid: string;
