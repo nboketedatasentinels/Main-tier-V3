@@ -1,6 +1,4 @@
 // User Roles
-import { Timestamp } from 'firebase/firestore'
-
 export enum UserRole {
   FREE_USER = 'free_user',
   PAID_MEMBER = 'paid_member',
@@ -180,7 +178,7 @@ export interface WeeklyProgress {
   weeklyTarget: number;
   pointsEarned: number;
   status: "on_track" | "warning" | "alert" | "recovery";
-  updatedAt: Timestamp | string | null;
+  updatedAt: any;
 }
 
 export enum ActivityStatus {

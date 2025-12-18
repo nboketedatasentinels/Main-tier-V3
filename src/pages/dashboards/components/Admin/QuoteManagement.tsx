@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Box, Button, FormControl, FormLabel, Input, Table, Tbody, Td, Th, Thead, Tr, VStack,
   Modal, ModalOverlay, ModalContent, ModalHeader, ModalFooter, ModalBody, ModalCloseButton, useDisclosure, useToast, HStack
@@ -21,15 +21,15 @@ export const QuoteManagement: React.FC = () => {
 
   const quotesCollection = collection(db, 'inspiration_quotes');
 
-  const fetchQuotes = useCallback(async () => {
+  const fetchQuotes = async () => {
     const snapshot = await getDocs(quotesCollection);
     const quotesData = snapshot.docs.map(doc => ({ ...doc.data(), id: doc.id } as InspirationQuote));
     setQuotes(quotesData.sort((a, b) => a.week_number - b.week_number));
-  }, [quotesCollection]);
+  };
 
   useEffect(() => {
     fetchQuotes();
-  }, [fetchQuotes]);
+  }, []);
 
   const handleAddQuote = async () => {
     try {
