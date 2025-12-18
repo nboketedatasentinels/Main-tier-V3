@@ -75,7 +75,7 @@ export const FULL_ACTIVITIES: ActivityDef[] = [
     id: "peer_matching",
     baseId: "peer_matching",
     title: "Peer Matching",
-    description: "Connect with a peer for mutual growth.",
+    description: "Connect with a peer for mutual growth (weekly cadence).",
     points: 1000,
     maxPerMonth: 4,
     week: 3,
