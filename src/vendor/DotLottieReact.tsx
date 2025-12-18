@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/no-namespace */
 import React, { useEffect } from 'react'
 
 declare global {
