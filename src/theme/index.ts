@@ -13,30 +13,45 @@ const accentGoldScale = {
   900: '#52300C',
 }
 
+const brandActionScale = {
+  50: '#f2ecfb',
+  100: '#e6daf6',
+  200: '#d7cfe2',
+  300: '#c1b2e6',
+  400: '#a180d6',
+  500: '#7f4fc2',
+  600: '#5e2ea4',
+  700: '#350e6f',
+  800: '#2d0c5c',
+  900: '#27062e',
+}
+
+const brandColors = {
+  // Growth.design-approved anchors
+  primary: '#350e6f',
+  dark: '#27062e',
+  indigo: '#350e6f',
+  // Legacy/compatibility aliases mapped to new semantic neutrals
+  primaryMuted: '#ede9fe',
+  accent: '#f8fafc',
+  sidebar: '#f1f5f9',
+  text: '#0F172A',
+  subtleText: '#334155',
+  border: '#E2E8F0',
+  warning: '#f4540c',
+  textLight: '#ffffff',
+  textOnDark: '#f3f4f6',
+  textOnPrimary: '#ffffff',
+  deepPlum: '#27062e',
+  flameOrange: '#f4540c',
+  royalPurple: '#350e6f',
+  gold: '#EAB130',
+  softGold: '#f9db59',
+}
+
 const colors = {
   // Brand Colors - Semantic Tokens (Growth.design approach)
-  // Also includes legacy keys for backward compatibility
-  brand: {
-    // New semantic tokens (Growth.design)
-    primary: '#350e6f',  // Violet - Primary brand anchor, high contrast on white
-    dark: '#27062e',     // Deep Purple - Dark brand anchor, trustworthy
-    // Legacy keys preserved for backward compatibility
-    primaryMuted: '#ede9fe',
-    accent: '#f8fafc',   // Maps to surface.subtle
-    sidebar: '#f1f5f9',  // Maps to surface.muted
-    text: '#334155',     // Maps to text.secondary
-    subtleText: '#64748b', // Maps to text.muted
-    border: '#e2e8f0',   // Maps to border.subtle
-    warning: '#f4540c',  // Maps to danger.DEFAULT (Orange)
-    textLight: '#ffffff',
-    textOnDark: '#f3f4f6',
-    textOnPrimary: '#ffffff',
-    deepPlum: '#27062e',  // Maps to brand.dark
-    flameOrange: '#f4540c', // Maps to danger.DEFAULT
-    royalPurple: '#350e6f', // Maps to brand.primary
-    gold: '#EAB130',     // Maps to accent.warning
-    softGold: '#f9db59', // Maps to accent.highlight
-  },
+  brand: brandColors,
   // Surface Colors - For backgrounds and cards
   surface: {
     default: '#FFFFFF',
@@ -73,19 +88,9 @@ const colors = {
     accentWarning: '#fbefd6',
     accentHighlight: '#fef8de',
   },
-  // Legacy Primary Brand Color: Indigo/Purple (kept for compatibility)
-  primary: {
-    50: '#F4EBFF',
-    100: '#E3D2FF',
-    200: '#C6A7FF',
-    300: '#AA7CFF',
-    400: '#8D51F0',
-    500: '#5A0DA0',
-    600: '#4A0B80',
-    700: '#380860',
-    800: '#270540',
-    900: '#180320',
-  },
+  // Primary/brand action scale used by Chakra color schemes
+  primary: brandActionScale,
+  purple: brandActionScale,
   // Accent/Secondary Color: Gold (secondary is an alias for accent)
   secondary: accentGoldScale,
   // Neutral Gray Scale
@@ -161,25 +166,6 @@ const colors = {
   statusGreen: '#16a34a',
   statusYellow: '#d97706',
   statusRed: '#dc2626',
-  // Legacy brand keys preserved for compatibility
-  brand: {
-    primary: '#5A0DA0',
-    primaryMuted: '#F4EBFF',
-    accent: '#F8F8F8',
-    sidebar: '#F0F0F0',
-    text: '#3F3F3F',
-    subtleText: '#7A7A7A',
-    border: '#E0E0E0',
-    warning: '#f4540c',
-    textLight: '#ffffff',
-    textOnDark: '#f3f4f6',
-    textOnPrimary: '#ffffff',
-    deepPlum: '#27062e',
-    flameOrange: '#f4540c',
-    royalPurple: '#3D0C69',
-    gold: '#EAB130',
-    softGold: '#FFD600',
-  },
 }
 
 const config: ThemeConfig = {
@@ -476,18 +462,18 @@ const components = {
 const styles = {
   global: {
     body: {
-      bg: 'neutral.50',
-      color: 'neutral.900',
+      bg: 'surface.subtle',
+      color: 'text.primary',
       fontFamily: 'body',
     },
     'h1, h2, h3, h4, h5, h6': {
-      color: 'neutral.900',
+      color: 'text.primary',
       fontFamily: 'heading',
     },
     a: {
-      color: 'primary.600',
+      color: 'brand.primary',
       _hover: {
-        color: 'primary.700',
+        color: 'brand.dark',
         textDecoration: 'underline',
       },
     },
