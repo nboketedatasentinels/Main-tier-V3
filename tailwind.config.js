@@ -7,7 +7,48 @@ export default {
   theme: {
     extend: {
       colors: {
-        // Primary Brand Color: Indigo/Purple
+        // Brand Colors - Semantic Tokens (Growth.design approach)
+        brand: {
+          primary: '#350e6f', // Violet
+          dark: '#27062e',    // Deep Purple
+        },
+        // Surface Colors - For backgrounds and cards
+        surface: {
+          default: '#FFFFFF',
+          subtle: '#F8FAFC',
+          muted: '#F1F5F9',
+          elevated: '#FFFFFF',
+        },
+        // Text Colors - For readability
+        text: {
+          primary: '#0F172A',
+          secondary: '#334155',
+          muted: '#64748B',
+          inverse: '#FFFFFF',
+        },
+        // Border Colors
+        border: {
+          subtle: '#E2E8F0',
+          strong: '#CBD5E1',
+        },
+        // Accent Colors - For highlights and status
+        accent: {
+          warning: '#eab130',  // Gold
+          highlight: '#f9db59', // Yellow (backgrounds only)
+        },
+        // Danger/Destructive Actions
+        danger: {
+          DEFAULT: '#f4540c', // Orange
+        },
+        // Tint Tokens - 80% blend toward white for safe backgrounds
+        tint: {
+          'brand-dark': '#d4cdd5',
+          'brand-primary': '#d7cfe2',
+          danger: '#fdddce',
+          'accent-warning': '#fbefd6',
+          'accent-highlight': '#fef8de',
+        },
+        // Legacy Primary Brand Color: Indigo/Purple (kept for compatibility)
         'brand-indigo': {
           50: '#F4EBFF',
           100: '#E3D2FF',
@@ -90,7 +131,7 @@ export default {
           800: '#991b1b',
           900: '#7f1d1d',
         },
-        // Special Purpose Colors
+        // Special Purpose Colors (legacy compatibility)
         charcoal: '#27062e',
         teal: '#350e6f',
         'deep-purple': '#3D0C69',
@@ -106,14 +147,6 @@ export default {
           700: '#167d3c',
           800: '#0e5227',
           900: '#072712',
-        },
-        // Legacy keys preserved for compatibility
-        brand: {
-          'deep-plum': '#27062e',
-          'flame-orange': '#f4540c',
-          'royal-purple': '#350e6f',
-          'gold': '#eab130',
-          'soft-gold': '#f9db59',
         },
       },
       fontFamily: {
