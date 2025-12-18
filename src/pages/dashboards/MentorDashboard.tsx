@@ -72,7 +72,7 @@ import {
   type EngagementStatus,
   type RiskLevel,
 } from '@/services/mentorDashboardService'
-import { buildMentorNavItems } from '@/utils/navigationItems'
+import { buildMentorNavItems, type NavigationSection } from '@/utils/navigationItems'
 
 interface DashboardMentee extends AssignedMentee {
   name: string
@@ -455,11 +455,10 @@ export const MentorDashboard: React.FC = () => {
     []
   )
 
-  const navSections = useMemo(() => {
-    const sections = buildMentorNavItems()
-    return [
+  const fallbackNavSections = useMemo<NavigationSection[]>(
+    () => [
       {
-        ...sections[0],
+        title: 'Mentorship',
         items: [
           { key: 'overview', label: 'Overview', icon: LayoutDashboard },
           { key: 'schedule', label: 'Schedule & alerts', icon: CalendarClock },
@@ -467,8 +466,27 @@ export const MentorDashboard: React.FC = () => {
           { key: 'mentees', label: 'Mentees & directory', icon: Users },
         ],
       },
-    ]
-  }, [])
+    ],
+    []
+  )
+
+  const navSections = useMemo(() => {
+    const allowedKeys = new Set(Object.keys(sectionRefs))
+    const sections = buildMentorNavItems()
+
+    const filteredSections = sections
+      .map((section) => ({
+        ...section,
+        items: section.items.filter((item) => allowedKeys.has(item.key)),
+      }))
+      .filter((section) => section.items.length > 0)
+
+    if (filteredSections.length === 0) {
+      return fallbackNavSections
+    }
+
+    return filteredSections
+  }, [fallbackNavSections, sectionRefs])
 
   const handleNavigate = (key: string) => {
     setActiveNavItem(key)

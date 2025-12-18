@@ -2,7 +2,7 @@ import {
   BarChart3,
   BookOpen,
   Building2,
-  CalendarCheck,
+  CalendarClock,
   Gift,
   Headphones,
   LayoutDashboard,
@@ -90,11 +90,9 @@ export const buildMentorNavItems = (): NavigationSection[] => [
     title: 'Mentorship',
     items: [
       { key: 'overview', label: 'Overview', icon: LayoutDashboard },
-      { key: 'mentees', label: 'My Mentees', icon: Users },
-      { key: 'sessions', label: 'Mentorship Sessions', icon: CalendarCheck },
-      { key: 'progress', label: 'Progress Tracking', icon: TrendingUp },
-      { key: 'resources', label: 'Resources Library', icon: BookOpen },
-      { key: 'analytics', label: 'Analytics Reports', icon: BarChart3 },
+      { key: 'schedule', label: 'Schedule & alerts', icon: CalendarClock },
+      { key: 'progress', label: 'Performance insights', icon: TrendingUp },
+      { key: 'mentees', label: 'Mentees & directory', icon: Users },
     ],
   },
 ]
