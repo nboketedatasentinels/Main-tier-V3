@@ -173,6 +173,20 @@ const config: ThemeConfig = {
   useSystemColorMode: false,
 }
 
+const semanticTokens = {
+  colors: {
+    surface: { default: 'surface.default', _dark: 'neutral.900' },
+    'surface.subtle': { default: 'surface.subtle', _dark: 'neutral.800' },
+    'surface.muted': { default: 'surface.muted', _dark: 'neutral.700' },
+    'text.primary': { default: 'text.primary', _dark: 'text.inverse' },
+    'text.muted': { default: 'text.muted', _dark: 'brand.textOnDark' },
+    'text.subtle': { default: 'text.secondary', _dark: 'brand.textOnDark' },
+    'border.default': { default: 'border.subtle', _dark: 'neutral.700' },
+    'accent.purpleSubtle': { default: 'tint.brandPrimary', _dark: 'primary.900' },
+    'accent.purpleBorder': { default: 'primary.200', _dark: 'primary.500' },
+  },
+}
+
 const components = {
   Button: {
     baseStyle: {
@@ -565,6 +579,7 @@ const breakpoints = {
 const theme = extendTheme({
   colors,
   config,
+  semanticTokens,
   components,
   styles,
   fonts,
