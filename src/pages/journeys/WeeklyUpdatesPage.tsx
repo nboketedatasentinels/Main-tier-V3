@@ -142,7 +142,7 @@ const defaultTemplates: ActivityTemplate[] = [
     id: 'peer-to-peer',
     baseId: 'peer_to_peer',
     title: 'Peer-to-peer connection',
-    description: 'Complete a peer matching session and note outcomes.',
+    description: 'Join a partner-led peer-to-peer group activity and document the outcomes.',
     points: 80,
     week: 2,
     category: 'Networking',
