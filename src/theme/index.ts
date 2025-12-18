@@ -1,16 +1,16 @@
 import { extendTheme, type ThemeConfig } from '@chakra-ui/react'
 
 const accentGoldScale = {
-  50: '#fefce8',
-  100: '#fef9c3',
-  200: '#fef08a',
-  300: '#fde047',
-  400: '#facc15',
+  50: '#FFF7E6',
+  100: '#FFEAC2',
+  200: '#FFD88F',
+  300: '#FEC25C',
+  400: '#FDB038',
   500: '#EAB130',
-  600: '#ca8a04',
-  700: '#a16207',
-  800: '#854d0e',
-  900: '#713f12',
+  600: '#C98C24',
+  700: '#A1681B',
+  800: '#7A4A13',
+  900: '#52300C',
 }
 
 const colors = {
@@ -75,31 +75,37 @@ const colors = {
   },
   // Legacy Primary Brand Color: Indigo/Purple (kept for compatibility)
   primary: {
-    50: '#f5f3ff',
-    100: '#ede9fe',
-    200: '#ddd6fe',
-    300: '#c4b5fd',
-    400: '#a78bfa',
-    500: '#350e6f', // Updated to Violet for better contrast
-    600: '#27062e', // Updated to Deep Purple
-    700: '#1e0340',
-    800: '#1e0340',
-    900: '#1e0340',
+    50: '#F4EBFF',
+    100: '#E3D2FF',
+    200: '#C6A7FF',
+    300: '#AA7CFF',
+    400: '#8D51F0',
+    500: '#5A0DA0',
+    600: '#4A0B80',
+    700: '#380860',
+    800: '#270540',
+    900: '#180320',
   },
   // Accent/Secondary Color: Gold (secondary is an alias for accent)
   secondary: accentGoldScale,
   // Neutral Gray Scale
   neutral: {
-    50: '#f8fafc',
-    100: '#f1f5f9',
-    200: '#e2e8f0',
-    300: '#cbd5e1',
-    400: '#94a3b8',
-    500: '#64748b',
-    600: '#475569',
-    700: '#334155',
-    800: '#1e293b',
-    900: '#0f172a',
+    50: '#F8F8F8',
+    100: '#F0F0F0',
+    200: '#E0E0E0',
+    300: '#C7C7C7',
+    400: '#A3A3A3',
+    500: '#7A7A7A',
+    600: '#5C5C5C',
+    700: '#3F3F3F',
+    800: '#262626',
+    900: '#1A1A1A',
+    darkest: '#1A1A1A',
+    dark: '#333333',
+    medium: '#555555',
+    muted: '#777777',
+    light: '#F5F5F5',
+    border: '#E0E0E0',
   },
   // Semantic Status Colors
   success: {
@@ -115,16 +121,16 @@ const colors = {
     900: '#14532d',
   },
   warning: {
-    50: '#fff7ed',
-    100: '#ffedd5',
-    200: '#fed7aa',
-    300: '#fdba74',
-    400: '#fb923c',
-    500: '#f97316',
-    600: '#ea580c',
-    700: '#d97706',
-    800: '#c2410c',
-    900: '#9a3412',
+    50: '#fffbeb',
+    100: '#fef3c7',
+    200: '#fde68a',
+    300: '#fcd34d',
+    400: '#fbbf24',
+    500: '#f59e0b',
+    600: '#d97706',
+    700: '#b45309',
+    800: '#92400e',
+    900: '#78350f',
   },
   error: {
     50: '#fef2f2',
@@ -155,6 +161,25 @@ const colors = {
   statusGreen: '#16a34a',
   statusYellow: '#d97706',
   statusRed: '#dc2626',
+  // Legacy brand keys preserved for compatibility
+  brand: {
+    primary: '#5A0DA0',
+    primaryMuted: '#F4EBFF',
+    accent: '#F8F8F8',
+    sidebar: '#F0F0F0',
+    text: '#3F3F3F',
+    subtleText: '#7A7A7A',
+    border: '#E0E0E0',
+    warning: '#f4540c',
+    textLight: '#ffffff',
+    textOnDark: '#f3f4f6',
+    textOnPrimary: '#ffffff',
+    deepPlum: '#27062e',
+    flameOrange: '#f4540c',
+    royalPurple: '#3D0C69',
+    gold: '#EAB130',
+    softGold: '#FFD600',
+  },
 }
 
 const config: ThemeConfig = {
@@ -451,18 +476,18 @@ const components = {
 const styles = {
   global: {
     body: {
-      bg: 'surface.subtle',
-      color: 'text.primary',
+      bg: 'neutral.50',
+      color: 'neutral.900',
       fontFamily: 'body',
     },
     'h1, h2, h3, h4, h5, h6': {
-      color: 'text.primary',
+      color: 'neutral.900',
       fontFamily: 'heading',
     },
     a: {
-      color: 'brand.primary',
+      color: 'primary.600',
       _hover: {
-        color: 'brand.dark',
+        color: 'primary.700',
         textDecoration: 'underline',
       },
     },
@@ -483,8 +508,8 @@ const fontSizes = {
   '2xl': '1.5rem',
   '3xl': '1.875rem',
   '4xl': '2.25rem',
-  '5xl': '3rem',
-  '6xl': '3.75rem',
+  '5xl': '2.625rem',
+  '6xl': '3rem',
   hero: '62px',
 }
 
@@ -508,21 +533,21 @@ const letterSpacings = {
 }
 
 const shadows = {
-  xs: '0 1px 2px 0 rgba(15, 23, 42, 0.05)',
-  sm: '0 2px 4px rgba(15, 23, 42, 0.06)',
-  md: '0 6px 12px rgba(15, 23, 42, 0.08)',
-  lg: '0 10px 20px rgba(15, 23, 42, 0.1)',
-  xl: '0 16px 32px rgba(15, 23, 42, 0.12)',
-  '2xl': '0 24px 48px rgba(15, 23, 42, 0.15)',
-  card: '0 8px 24px rgba(15, 23, 42, 0.08)',
-  'card-elevated': '0 18px 40px rgba(15, 23, 42, 0.12)',
-  focus: '0 0 0 4px rgba(53, 14, 111, 0.35)', // Updated to use brand.primary
-  inner: 'inset 0 2px 4px 0 rgba(15, 23, 42, 0.06)',
+  xs: '0 1px 2px 0 rgba(0, 0, 0, 0.05)',
+  sm: '0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px -1px rgba(0, 0, 0, 0.1)',
+  md: '0 10px 30px rgba(15, 23, 42, 0.08)',
+  lg: '0 18px 40px rgba(15, 23, 42, 0.12)',
+  xl: '0 20px 45px rgba(15, 23, 42, 0.14)',
+  '2xl': '0 25px 50px -12px rgba(0, 0, 0, 0.25)',
+  card: '0 10px 30px rgba(15, 23, 42, 0.08)',
+  'card-elevated': '0 20px 45px rgba(15, 23, 42, 0.12)',
+  focus: '0 0 0 4px rgba(90, 13, 160, 0.35)',
+  inner: 'inset 0 2px 4px 0 rgba(0, 0, 0, 0.05)',
 }
 
 const radii = {
   none: '0',
-  sm: '0.25rem',
+  sm: '0.375rem',
   base: '0.5rem',
   md: '0.5rem',
   lg: '0.75rem',

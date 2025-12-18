@@ -339,7 +339,7 @@ export const SuperAdminDashboard: React.FC = () => {
             <CardBody>
               <Stack spacing={4}>
                 <HStack justify="space-between">
-                  <Text fontWeight="bold" color="brand.text">Bolt database monitoring</Text>
+                  <Text fontWeight="bold" color="brand.text">Bolt Firebase database monitoring</Text>
                   <Badge colorScheme="green">Live</Badge>
                 </HStack>
                 <SimpleGrid columns={{ base: 1, sm: 2 }} spacing={3}>
