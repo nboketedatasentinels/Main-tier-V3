@@ -655,7 +655,7 @@ export const LeadershipBoardPage: React.FC = () => {
                       onScroll={leaderboardRows.length > virtualizationThreshold ? onScrollVirtual : undefined}
                     >
                       <Table variant="simple" size="md">
-                        <Thead position="sticky" top={0} bg="white" zIndex={1}>
+                        <Thead position="sticky" top={0} bg="surface.default" zIndex={1}>
                           <Tr>
                             <Th>Rank</Th>
                             <Th>Member</Th>
@@ -876,7 +876,7 @@ export const LeadershipBoardPage: React.FC = () => {
 
           <TabPanel px={0}>
             <Stack spacing={5}>
-              <Card bgGradient="linear(to-r, purple.500, purple.700)" color="white">
+              <Card bgGradient="linear(to-r, purple.500, purple.700)" color="text.inverse">
                 <CardBody>
                   <Flex align="center" justify="space-between">
                     <Box>

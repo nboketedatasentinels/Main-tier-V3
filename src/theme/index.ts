@@ -457,6 +457,16 @@ const components = {
       },
     },
   },
+  Text: {
+    baseStyle: {
+      color: 'text.primary',
+    },
+  },
+  Heading: {
+    baseStyle: {
+      color: 'text.primary',
+    },
+  },
 }
 
 const styles = {
