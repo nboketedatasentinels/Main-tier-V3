@@ -628,7 +628,7 @@ export const PeerConnectPage: React.FC = () => {
 
   return (
     <Stack spacing={6} pb={12}>
-      <Box bg="white" p={6} borderRadius="2xl" border="1px solid" borderColor="brand.border" boxShadow="sm">
+      <Box bg="surface.default" p={6} borderRadius="2xl" border="1px solid" borderColor="border.subtle" boxShadow="sm">
         <Stack spacing={2}>
           <Heading size="lg" color="brand.text">
             Peer Connect
@@ -640,7 +640,7 @@ export const PeerConnectPage: React.FC = () => {
       </Box>
 
       <Tabs variant="soft-rounded" colorScheme="purple" defaultIndex={0} isFitted>
-        <TabList bg="white" p={2} borderRadius="full" border="1px solid" borderColor="brand.border">
+        <TabList bg="surface.default" p={2} borderRadius="full" border="1px solid" borderColor="border.subtle">
           <Tab>
             <HStack spacing={2}>
               <Icon as={MessageSquare} w={4} h={4} />
@@ -660,7 +660,7 @@ export const PeerConnectPage: React.FC = () => {
             <SimpleGrid columns={{ base: 1, xl: 3 }} spacing={4} alignItems="start">
               <GridItem colSpan={{ base: 1, xl: 2 }}>
                 <Stack spacing={4}>
-                  <Box bg="white" p={6} borderRadius="2xl" border="1px solid" borderColor="brand.border" boxShadow="sm">
+                  <Box bg="surface.default" p={6} borderRadius="2xl" border="1px solid" borderColor="border.subtle" boxShadow="sm">
                     <Flex justify="space-between" align={{ base: 'flex-start', md: 'center' }} gap={4} mb={4} direction={{ base: 'column', md: 'row' }}>
                       <Stack spacing={1}>
                         <Text fontSize="sm" color="brand.subtleText">
@@ -743,7 +743,7 @@ export const PeerConnectPage: React.FC = () => {
                   </Box>
 
                   <SimpleGrid columns={{ base: 1, md: 2 }} spacing={4}>
-                    <Box bg="white" p={6} borderRadius="2xl" border="1px solid" borderColor="brand.border" boxShadow="sm">
+                    <Box bg="surface.default" p={6} borderRadius="2xl" border="1px solid" borderColor="border.subtle" boxShadow="sm">
                       <Heading size="sm" mb={2} color="brand.text">
                         Matching preferences
                       </Heading>
@@ -777,7 +777,7 @@ export const PeerConnectPage: React.FC = () => {
                       </Stack>
                     </Box>
 
-                    <Box bg="white" p={6} borderRadius="2xl" border="1px solid" borderColor="brand.border" boxShadow="sm">
+                    <Box bg="surface.default" p={6} borderRadius="2xl" border="1px solid" borderColor="border.subtle" boxShadow="sm">
                       <Flex justify="space-between" align="center" mb={3}>
                         <Heading size="sm" color="brand.text">
                           Pending peer invitations
@@ -789,7 +789,7 @@ export const PeerConnectPage: React.FC = () => {
                       <Stack spacing={3}>
                         {pendingInvites.length ? (
                           pendingInvites.map((invite) => (
-                            <Box key={invite.id} p={3} borderRadius="lg" border="1px dashed" borderColor="brand.border">
+                            <Box key={invite.id} p={3} borderRadius="lg" border="1px dashed" borderColor="border.subtle">
                               <HStack justify="space-between" align="flex-start">
                                 <Stack spacing={0}>
                                   <Text fontWeight="semibold" color="brand.text">
@@ -828,7 +828,7 @@ export const PeerConnectPage: React.FC = () => {
                     </Box>
                   </SimpleGrid>
 
-                  <Box bg="white" p={6} borderRadius="2xl" border="1px solid" borderColor="brand.border" boxShadow="sm">
+                  <Box bg="surface.default" p={6} borderRadius="2xl" border="1px solid" borderColor="border.subtle" boxShadow="sm">
                     <Flex justify="space-between" align={{ base: 'flex-start', md: 'center' }} gap={3} mb={4} direction={{ base: 'column', md: 'row' }}>
                       <Stack spacing={1}>
                         <Heading size="sm" color="brand.text">
@@ -852,7 +852,7 @@ export const PeerConnectPage: React.FC = () => {
 
                     <SimpleGrid columns={{ base: 1, md: 2, lg: 3 }} spacing={3}>
                       {filteredPeers.map((peer) => (
-                        <Box key={peer.id} p={4} borderRadius="lg" border="1px solid" borderColor="brand.border" bg="white" boxShadow="xs">
+                        <Box key={peer.id} p={4} borderRadius="lg" border="1px solid" borderColor="border.subtle" bg="surface.default" boxShadow="xs">
                           <HStack spacing={3} mb={2} align="flex-start">
                             <Avatar name={peer.name} src={peer.avatarUrl} size="sm" />
                             <Stack spacing={1} flex={1}>
@@ -898,7 +898,7 @@ export const PeerConnectPage: React.FC = () => {
                     </SimpleGrid>
                   </Box>
 
-                  <Box bg="white" p={6} borderRadius="2xl" border="1px solid" borderColor="brand.border" boxShadow="sm">
+                  <Box bg="surface.default" p={6} borderRadius="2xl" border="1px solid" borderColor="border.subtle" boxShadow="sm">
                     <Flex justify="space-between" align={{ base: 'flex-start', md: 'center' }} gap={3} mb={4} direction={{ base: 'column', md: 'row' }}>
                       <Stack spacing={1}>
                         <Heading size="sm" color="brand.text">
@@ -915,7 +915,7 @@ export const PeerConnectPage: React.FC = () => {
 
                     <SimpleGrid columns={{ base: 1, md: 2 }} spacing={4}>
                       {sessions.map((session) => (
-                        <Box key={session.id} p={4} borderRadius="xl" border="1px solid" borderColor="brand.border" bg="white" boxShadow="xs">
+                            <Box key={session.id} p={4} borderRadius="xl" border="1px solid" borderColor="border.subtle" bg="surface.default" boxShadow="xs">
                           <HStack justify="space-between" align="flex-start" mb={2}>
                             <Stack spacing={0}>
                               <Text fontWeight="semibold" color="brand.text">
@@ -977,7 +977,7 @@ export const PeerConnectPage: React.FC = () => {
               </GridItem>
 
               <GridItem>
-                <Box bg="white" p={6} borderRadius="2xl" border="1px solid" borderColor="brand.border" boxShadow="sm" position="sticky" top={4}>
+                    <Box bg="surface.default" p={6} borderRadius="2xl" border="1px solid" borderColor="border.subtle" boxShadow="sm" position="sticky" top={4}>
                   <Flex justify="space-between" align="center" mb={4}>
                     <Heading size="sm" color="brand.text">
                       Peer session invites
@@ -987,7 +987,7 @@ export const PeerConnectPage: React.FC = () => {
                   <Stack spacing={3}>
                     {pendingInvites.length ? (
                       pendingInvites.map((invite) => (
-                        <Box key={invite.id} p={4} borderRadius="lg" border="1px solid" borderColor="brand.border" bg="neutral.50">
+                        <Box key={invite.id} p={4} borderRadius="lg" border="1px solid" borderColor="border.subtle" bg="surface.subtle">
                           <Text fontWeight="semibold" color="brand.text">
                             {invite.fromName}
                           </Text>
@@ -1036,7 +1036,7 @@ export const PeerConnectPage: React.FC = () => {
 
               <SimpleGrid columns={{ base: 1, lg: 3 }} spacing={4} alignItems="start">
                 <GridItem colSpan={{ base: 1, lg: 1 }}>
-                  <Box bg="white" p={6} borderRadius="2xl" border="1px solid" borderColor="brand.border" boxShadow="sm">
+                  <Box bg="surface.default" p={6} borderRadius="2xl" border="1px solid" borderColor="border.subtle" boxShadow="sm">
                     <Flex justify="space-between" align="center" mb={3}>
                       <Heading size="sm" color="brand.text">
                         Your peer connections
@@ -1047,7 +1047,7 @@ export const PeerConnectPage: React.FC = () => {
                     </Flex>
                     <Stack spacing={3}>
                       {availablePeers.slice(0, 4).map((peer) => (
-                        <Flex key={peer.id} align="center" justify="space-between" p={3} borderRadius="lg" border="1px solid" borderColor="brand.border">
+                        <Flex key={peer.id} align="center" justify="space-between" p={3} borderRadius="lg" border="1px solid" borderColor="border.subtle">
                           <HStack spacing={3}>
                             <Avatar name={peer.name} src={peer.avatarUrl} size="sm" />
                             <Stack spacing={0}>
@@ -1075,7 +1075,7 @@ export const PeerConnectPage: React.FC = () => {
 
                 <GridItem colSpan={{ base: 1, lg: 2 }}>
                   <SimpleGrid columns={{ base: 1, md: 2 }} spacing={4}>
-                    <Box bg="white" p={6} borderRadius="2xl" border="1px solid" borderColor="brand.border" boxShadow="sm">
+                    <Box bg="surface.default" p={6} borderRadius="2xl" border="1px solid" borderColor="border.subtle" boxShadow="sm">
                       <Flex justify="space-between" align="center" mb={3}>
                         <Heading size="sm" color="brand.text">
                           Your sessions
@@ -1087,7 +1087,7 @@ export const PeerConnectPage: React.FC = () => {
                       <Stack spacing={3}>
                         {sessions.length ? (
                           sessions.map((session) => (
-                            <Box key={session.id} p={3} borderRadius="lg" border="1px solid" borderColor="brand.border">
+                            <Box key={session.id} p={3} borderRadius="lg" border="1px solid" borderColor="border.subtle">
                               <HStack justify="space-between" align="flex-start" mb={1}>
                                 <Stack spacing={0}>
                                   <Text fontWeight="semibold" color="brand.text">
@@ -1125,7 +1125,7 @@ export const PeerConnectPage: React.FC = () => {
                       </Stack>
                     </Box>
 
-                    <Box bg="white" p={6} borderRadius="2xl" border="1px solid" borderColor="brand.border" boxShadow="sm">
+                    <Box bg="surface.default" p={6} borderRadius="2xl" border="1px solid" borderColor="border.subtle" boxShadow="sm">
                       <Flex justify="space-between" align="center" mb={3}>
                         <Heading size="sm" color="brand.text">
                           Peer session invites
@@ -1137,7 +1137,7 @@ export const PeerConnectPage: React.FC = () => {
                       <Stack spacing={3}>
                         {pendingInvites.length ? (
                           pendingInvites.map((invite) => (
-                            <Box key={invite.id} p={3} borderRadius="lg" border="1px solid" borderColor="brand.border">
+                            <Box key={invite.id} p={3} borderRadius="lg" border="1px solid" borderColor="border.subtle">
                               <Text fontWeight="semibold" color="brand.text">
                                 {invite.fromName}
                               </Text>
@@ -1267,9 +1267,9 @@ export const PeerConnectPage: React.FC = () => {
                   <Text fontSize="xs" color="brand.subtleText" mb={2}>
                     {sessionForm.participants.length} of 3 selected
                   </Text>
-                  <Stack spacing={2} maxH="220px" overflowY="auto" border="1px solid" borderColor="brand.border" borderRadius="lg" p={2}>
+                  <Stack spacing={2} maxH="220px" overflowY="auto" border="1px solid" borderColor="border.subtle" borderRadius="lg" p={2}>
                     {filteredParticipants.map((peer) => (
-                      <Flex key={peer.id} align="center" justify="space-between" p={2} borderRadius="md" _hover={{ bg: 'gray.50' }}>
+                      <Flex key={peer.id} align="center" justify="space-between" p={2} borderRadius="md" _hover={{ bg: 'surface.subtle' }}>
                         <HStack spacing={3}>
                           <Avatar name={peer.name} src={peer.avatarUrl} size="sm" />
                           <Stack spacing={0}>
@@ -1315,7 +1315,7 @@ export const PeerConnectPage: React.FC = () => {
                   </FormControl>
                 </SimpleGrid>
 
-                <Box borderRadius="lg" border="1px dashed" borderColor="brand.border" p={3} bg="gray.50">
+                <Box borderRadius="lg" border="1px dashed" borderColor="border.subtle" p={3} bg="surface.subtle">
                   <HStack align="center" spacing={2}>
                     <Icon as={Target} w={4} h={4} color="purple.500" />
                     <Text fontSize="sm" color="brand.subtleText">
