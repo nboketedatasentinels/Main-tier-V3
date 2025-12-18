@@ -22,6 +22,8 @@ const firebaseConfig = {
 const app = initializeApp(firebaseConfig)
 const db = getFirestore(app)
 
+const DEFAULT_WEEKLY_TARGET_POINTS = 4000
+
 async function populateWeeklyPoints() {
   try {
     console.log('Fetching users from profiles collection...')
@@ -51,8 +53,8 @@ async function populateWeeklyPoints() {
         user_id: userId,
         week_number: weekNumber,
         week_year: weekYear,
-        points_earned: Math.floor(Math.random() * 3000),
-        target_points: 2500,
+        points_earned: Math.floor(Math.random() * DEFAULT_WEEKLY_TARGET_POINTS),
+        target_points: DEFAULT_WEEKLY_TARGET_POINTS,
         engagement_count: Math.floor(Math.random() * 10),
         status: ['on_track', 'warning', 'at_risk'][Math.floor(Math.random() * 3)],
         week_start: Timestamp.fromDate(weekStart),

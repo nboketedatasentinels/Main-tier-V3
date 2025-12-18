@@ -27,7 +27,8 @@ export interface WeeklyPointsData {
   updated_at: Timestamp
 }
 
-const LOW_WEEKLY_POINTS_ALERT_THRESHOLD = 4000
+const MINIMUM_WEEKLY_TARGET_POINTS = 4000
+const LOW_WEEKLY_POINTS_ALERT_THRESHOLD = MINIMUM_WEEKLY_TARGET_POINTS
 
 export const calculateWeeklyStatus = (
   earned: number,
@@ -59,7 +60,7 @@ export const getOrCreateWeeklyPoints = async (userId: string): Promise<void> => 
   if (existingDocs.empty) {
     // Get user's target from their journey or profile
     const profileDoc = await getDoc(doc(db, 'profiles', userId))
-    let targetPoints = 2500 // default weekly target
+    let targetPoints = MINIMUM_WEEKLY_TARGET_POINTS
 
     if (profileDoc.exists()) {
       const profileData = profileDoc.data()
@@ -68,7 +69,7 @@ export const getOrCreateWeeklyPoints = async (userId: string): Promise<void> => 
         const journeyDoc = await getDoc(doc(db, 'journeys', profileData.currentJourneyId))
         if (journeyDoc.exists()) {
           const journeyData = journeyDoc.data()
-          targetPoints = journeyData.weeklyPointsTarget || 2500
+          targetPoints = journeyData.weeklyPointsTarget || MINIMUM_WEEKLY_TARGET_POINTS
         }
       }
     }
@@ -214,7 +215,7 @@ export const updateWeeklyPoints = async (userId: string): Promise<void> => {
   if (!weeklyPointsDocs.empty) {
     const docRef = weeklyPointsDocs.docs[0].ref
     const existingData = weeklyPointsDocs.docs[0].data()
-    const targetPoints = existingData.target_points || 2500
+    const targetPoints = existingData.target_points || MINIMUM_WEEKLY_TARGET_POINTS
 
     const status = calculateWeeklyStatus(pointsEarned, targetPoints)
 

@@ -21,6 +21,12 @@ The Weekly Points card on the Weekly Glance page now displays real-time data fro
    - Updated query to include `week_year` field
    - Added real-time listener for instant updates
 
+## Current Scoring Model (6-Week Sprint)
+
+- **Weekly target**: 4,000 points minimum, built around the core activity mix of podcasts, peer matching, and LinkedIn engagement.
+- **Maximum over six weeks**: 36,000 points when participants layer in the higher-value activities.
+- **Completion threshold**: 67% of the six-week maximum (24,120 points) to pass the course while keeping expectations realistic for full-time professionals.
+
 ## How to Test
 
 ### Step 1: Set Up Firestore Indexes
@@ -52,7 +58,7 @@ Before testing, you need to create composite indexes in Firebase Console:
   week_number: 50,                     // Current ISO week number
   week_year: 2024,                     // Current year
   points_earned: 1500,                 // Example: 1500 points
-  target_points: 2500,                 // Weekly target
+  target_points: 4000,                 // Weekly target (minimum for the 6-week sprint)
   engagement_count: 5,                 // Number of activities completed
   status: "warning",                   // on_track, warning, or at_risk
   week_start: [Timestamp],             // Monday of this week
