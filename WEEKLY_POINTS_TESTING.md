@@ -23,9 +23,27 @@ The Weekly Points card on the Weekly Glance page now displays real-time data fro
 
 ## Current Scoring Model (6-Week Sprint)
 
-- **Weekly target**: 4,000 points minimum, built around the core activity mix of podcasts, peer matching, and LinkedIn engagement.
-- **Maximum over six weeks**: 36,000 points when participants layer in the higher-value activities.
+- **Minimum points required per week**: 4,000 points, built around the core activity mix of podcasts, peer matching, and LinkedIn engagement.
+- **Maximum over six weeks**: 36,000 points when participants layer in the higher-value activities (roughly a 6,000-point weekly ceiling at full cadence).
 - **Completion threshold**: 67% of the six-week maximum (24,120 points) to pass the course while keeping expectations realistic for full-time professionals.
+
+### Activity Cadence and Caps
+These caps are visible to participants and coaches so expectations are clear:
+
+| Activity | Points per completion | Recommended cadence | Point cap (per month) |
+| --- | --- | --- | --- |
+| Watch/listen to podcast | 1,000 | Weekly | 3,000 |
+| Complete podcast workbook | 1,000 | Weekly (paired with podcast) | 3,000 |
+| Attend webinar | 2,000 | Monthly | 2,000 |
+| Complete webinar workbook | 2,000 | Monthly (paired with webinar) | 2,000 |
+| Peer Matching | 1,000 | Weekly | 4,000 |
+| Impact Log Entry | 1,000 | Twice monthly | 2,000 |
+| Book Club Participation | 1,500 | Monthly | 1,500 |
+| Peer to Peer Session | 2,500 | Monthly | 2,500 |
+| LinkedIn engagement (post/comment) | 500 | Twice monthly | 1,000 |
+| LIFT Course Module Completed | 3,000 | Monthly | 3,000 |
+
+At the recommended cadence, participants consistently hit the 4,000-point minimum while understanding that the weekly ceiling hovers around 6,000 points when stacking higher-value items (e.g., a webinar or LIFT module).
 
 ## How to Test
 
@@ -58,7 +76,7 @@ Before testing, you need to create composite indexes in Firebase Console:
   week_number: 50,                     // Current ISO week number
   week_year: 2024,                     // Current year
   points_earned: 1500,                 // Example: 1500 points
-  target_points: 4000,                 // Weekly target (minimum for the 6-week sprint)
+  target_points: 4000,                 // Minimum points required per week (6-week sprint baseline)
   engagement_count: 5,                 // Number of activities completed
   status: "warning",                   // on_track, warning, or at_risk
   week_start: [Timestamp],             // Monday of this week
@@ -112,16 +130,16 @@ await updateWeeklyPoints('YOUR_USER_UID')
 This will:
 - Calculate total points from `user_points` collection for this week
 - Count completed activities from `weeklyActivities` subcollection
-- Update the status based on progress vs target
+- Update the status based on progress vs the minimum requirement
 - Update the `weekly_points` record
 
 ## Understanding the Status Indicators
 
-The status badge shows your progress:
+The status badge shows your progress toward the minimum points required this week:
 
-- **On Track** (Green): You've earned ≥70% of your weekly target
-- **Warning** (Yellow): You've earned 40-69% of your weekly target
-- **At Risk** (Red): You've earned <40% of your weekly target
+- **On Track** (Green): You've earned ≥70% of the minimum requirement
+- **Warning** (Yellow): You've earned 40-69% of the minimum requirement
+- **At Risk** (Red): You've earned <40% of the minimum requirement
 
 ## Data Structure
 
@@ -169,7 +187,7 @@ To fully integrate this feature, you should:
 
 1. **Add point-awarding logic** when users complete activities
 2. **Call `updateWeeklyPoints(userId)`** after awarding points
-3. **Set up weekly targets** based on user's journey
+3. **Set up the minimum weekly points requirement** based on user's journey
 4. **Create a background job** to initialize weekly_points for all users at the start of each week
 
 ## Sample Data Script

@@ -142,7 +142,7 @@ The platform supports six distinct user roles:
 - Custom journey builder
 
 ### Gamification
-- Points system with weekly targets
+- Points system with minimum points required per week (with clear caps)
 - Achievement badges
 - Global, company, village, and cluster leaderboards
 - Challenge system

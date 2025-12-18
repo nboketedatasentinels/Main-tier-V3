@@ -64,7 +64,7 @@ export const getOrCreateWeeklyPoints = async (userId: string): Promise<void> => 
 
     if (profileDoc.exists()) {
       const profileData = profileDoc.data()
-      // If user has a current journey, get its weekly target
+      // If user has a current journey, get its minimum weekly points requirement
       if (profileData.currentJourneyId) {
         const journeyDoc = await getDoc(doc(db, 'journeys', profileData.currentJourneyId))
         if (journeyDoc.exists()) {
