@@ -39,6 +39,7 @@ import { removeUndefinedFields } from '@/utils/firestore'
 import { db } from '@/services/firebase'
 import { useAuth } from '@/hooks/useAuth'
 import { UserRole, UserProfile } from '@/types'
+import { SurfaceCard, MutedText } from '@/components/primitives/SurfacePrimitives'
 
 interface ActivityTemplate {
   id: string
@@ -483,7 +484,7 @@ const WeeklyChecklistPage: React.FC = () => {
       const isMonthLocked = selectedWeek < (journey?.currentWeek || 1)
 
       return (
-        <Stack spacing={3} bg="gray.900" p={4} borderRadius="lg">
+        <Stack spacing={3} bg="surface.default" p={4} borderRadius="lg" borderWidth="1px" borderColor="border.subtle">
           <Flex align="center" justify="space-between">
             <Button
               size="sm"
@@ -494,10 +495,10 @@ const WeeklyChecklistPage: React.FC = () => {
               Previous Month
             </Button>
             <Stack spacing={0} textAlign="center">
-              <Text color="white" fontWeight="bold">
+              <Text color="text.primary" fontWeight="bold">
                 Month {monthIndex} of {months}
               </Text>
-              <Text color="gray.300" fontSize="sm">
+              <Text color="text.secondary" fontSize="sm">
                 Unlock the next month by completing all activities.
               </Text>
             </Stack>
@@ -529,15 +530,15 @@ const WeeklyChecklistPage: React.FC = () => {
               </Tooltip>
             ))}
           </HStack>
-          {isMonthLocked && (
-            <Alert status="warning" variant="left-accent" borderRadius="md">
-              <AlertIcon />
-              <AlertTitle>Previous month locked</AlertTitle>
-              <AlertDescription color="gray.200">
-                Great job advancing! You can review past weeks but cannot change submissions.
-              </AlertDescription>
-            </Alert>
-          )}
+            {isMonthLocked && (
+              <Alert status="warning" variant="left-accent" borderRadius="md">
+                <AlertIcon />
+                <AlertTitle>Previous month locked</AlertTitle>
+                <AlertDescription color="text.muted">
+                  Great job advancing! You can review past weeks but cannot change submissions.
+                </AlertDescription>
+              </Alert>
+            )}
         </Stack>
       )
     }
@@ -585,10 +586,10 @@ const WeeklyChecklistPage: React.FC = () => {
         key={activity.id}
         ref={ref => (activityRefs.current[activity.id] = ref)}
         borderWidth="1px"
-        borderColor="gray.700"
+        borderColor="border.subtle"
         p={4}
         borderRadius="lg"
-        bg="gray.900"
+        bg="surface.default"
         className="activity-card"
       >
         <Flex justify="space-between" align="flex-start" mb={2}>
@@ -605,10 +606,10 @@ const WeeklyChecklistPage: React.FC = () => {
               {showFreeBadge && <Badge colorScheme="blue">Free tier</Badge>}
               <Tag colorScheme="cyan">{activity.category}</Tag>
             </HStack>
-            <Heading size="sm" color="white">
+            <Heading size="sm" color="text.primary">
               {activity.title}
             </Heading>
-            <Text color="gray.300" fontSize="sm">
+            <Text color="text.secondary" fontSize="sm">
               {activity.description}
             </Text>
           </Stack>
@@ -646,17 +647,17 @@ const WeeklyChecklistPage: React.FC = () => {
   }
 
   const renderParticipationRhythm = () => (
-    <Box borderWidth="1px" borderColor="gray.700" p={4} borderRadius="lg" bg="gray.900">
+    <Box borderWidth="1px" borderColor="border.subtle" p={4} borderRadius="lg" bg="surface.default">
       <HStack justify="space-between" mb={2}>
-        <Heading size="sm" color="white">
+        <Heading size="sm" color="text.primary">
           Participation Rhythm
         </Heading>
         <Tag colorScheme="teal">+{rhythmPoints} pts</Tag>
       </HStack>
       <Stack spacing={2}>
         {rhythmItems.map(item => (
-          <Flex key={item} align="center" justify="space-between" p={2} borderRadius="md" bg="gray.800">
-            <Text color="gray.200">{item}</Text>
+          <Flex key={item} align="center" justify="space-between" p={2} borderRadius="md" bg="surface.subtle">
+            <Text color="text.secondary">{item}</Text>
             <Button
               size="sm"
               leftIcon={
@@ -671,7 +672,7 @@ const WeeklyChecklistPage: React.FC = () => {
           </Flex>
         ))}
       </Stack>
-      <Text color="gray.300" fontSize="sm" mt={2}>
+      <Text color="text.muted" fontSize="sm" mt={2}>
         Saved locally for calendar week {calendarWeek}. Perfect for building your weekly habits.
       </Text>
     </Box>
@@ -683,14 +684,14 @@ const WeeklyChecklistPage: React.FC = () => {
     if (!bullets?.length) return null
 
     return (
-      <Box borderWidth="1px" borderColor="purple.500" p={4} borderRadius="lg" bg="purple.900/50">
-        <Heading size="sm" color="purple.100" mb={2}>
+      <Box borderWidth="1px" borderColor="accent.purpleBorder" p={4} borderRadius="lg" bg="accent.purpleSubtle">
+        <Heading size="sm" color="text.primary" mb={2}>
           Week {selectedWeek} – Focus Guidance
         </Heading>
-        <Stack spacing={2} color="purple.50">
+        <Stack spacing={2} color="text.secondary">
           {bullets.map(item => (
             <HStack key={item} spacing={2} align="flex-start">
-              <Icon as={CheckCircle} color="purple.200" />
+              <Icon as={CheckCircle} color="brand.primary" />
               <Text>{item}</Text>
             </HStack>
           ))}
@@ -700,16 +701,16 @@ const WeeklyChecklistPage: React.FC = () => {
   }
 
   const renderGamificationPanel = () => (
-    <Box borderWidth="1px" borderColor="gray.700" p={4} borderRadius="lg" bg="gray.900">
-      <Heading size="sm" color="white" mb={3}>
+    <Box borderWidth="1px" borderColor="border.subtle" p={4} borderRadius="lg" bg="surface.default">
+      <Heading size="sm" color="text.primary" mb={3}>
         Workflow Gamification
       </Heading>
       <Stack spacing={3}>
         <Alert status="info" variant="subtle" borderRadius="md">
           <AlertIcon />
           <Stack spacing={1}>
-            <Text color="gray.200">Focus on your next incomplete activity.</Text>
-            <Text color="gray.300" fontSize="sm">
+            <Text color="text.secondary">Focus on your next incomplete activity.</Text>
+            <Text color="text.muted" fontSize="sm">
               Keep your streak alive by acting in the next 24 hours.
             </Text>
           </Stack>
@@ -717,7 +718,7 @@ const WeeklyChecklistPage: React.FC = () => {
         <Button colorScheme="teal" onClick={scrollToActivity} isDisabled={!firstIncompleteActivity}>
           {firstIncompleteActivity ? `Complete ${firstIncompleteActivity.title}` : 'All activities done'}
         </Button>
-        <Stack spacing={1} color="gray.300">
+        <Stack spacing={1} color="text.muted">
           <Text fontWeight="bold">Streak tracker</Text>
           <Progress value={Math.min(100, progressStatus.pct)} colorScheme={progressStatus.color} borderRadius="full" />
           <Text fontSize="sm">Maintain daily check-ins to grow your streak.</Text>
@@ -733,7 +734,7 @@ const WeeklyChecklistPage: React.FC = () => {
         <ModalHeader>Upload proof</ModalHeader>
         <ModalCloseButton />
         <ModalBody>
-          <Text mb={2} color="gray.600">
+          <Text mb={2} color="text.secondary">
             Provide a link or short notes so admins can approve your points.
           </Text>
           <Stack spacing={3}>
@@ -766,15 +767,15 @@ const WeeklyChecklistPage: React.FC = () => {
   const renderWeekSummary = () => (
     <Stack spacing={4}>
       <Stack spacing={1}>
-        <Heading size="lg" color="white">
+        <Heading size="lg" color="text.primary">
           Weekly Checklist
         </Heading>
-        <Text color="gray.300">A comprehensive weekly activity tracker with Firebase-powered progress.</Text>
+        <Text color="text.secondary">A comprehensive weekly activity tracker with Firebase-powered progress.</Text>
       </Stack>
-      <Box p={4} borderWidth="1px" borderColor="gray.700" bg="gray.900" borderRadius="lg">
+      <SurfaceCard>
         <Stack spacing={3}>
           <HStack justify="space-between">
-            <Heading size="sm" color="white">
+            <Heading size="sm" color="text.primary">
               Week {selectedWeek} summary
             </Heading>
             <Tag colorScheme={progressStatus.color}>
@@ -800,7 +801,7 @@ const WeeklyChecklistPage: React.FC = () => {
             />
           </SimpleGrid>
         </Stack>
-      </Box>
+      </SurfaceCard>
     </Stack>
   )
 
@@ -809,7 +810,7 @@ const WeeklyChecklistPage: React.FC = () => {
       <Center py={16}>
         <Stack spacing={3} align="center">
           <CircularProgress isIndeterminate color="purple.400" />
-          <Text color="gray.400">Loading weekly activities...</Text>
+          <Text color="text.muted">Loading weekly activities...</Text>
         </Stack>
       </Center>
     )
@@ -825,10 +826,10 @@ const WeeklyChecklistPage: React.FC = () => {
           <AlertDescription>{error}</AlertDescription>
         </Alert>
       )}
-      <Box borderWidth="1px" borderColor="gray.700" p={4} borderRadius="lg" bg="gray.900">
+      <SurfaceCard>
         <Stack spacing={4}>
           <Flex align="center" justify="space-between">
-            <Heading size="sm" color="gray.100">
+            <Heading size="sm" color="text.primary">
               Week navigation
             </Heading>
             {isWeekLocked && (
@@ -839,13 +840,13 @@ const WeeklyChecklistPage: React.FC = () => {
           </Flex>
           {renderWeekSelector()}
         </Stack>
-      </Box>
+      </SurfaceCard>
 
       <Grid templateColumns={{ base: '1fr', xl: '2fr 1fr' }} gap={6} alignItems="start">
         <GridItem>
           <Stack spacing={4}>
-            <Box borderWidth="1px" borderColor="gray.700" p={4} borderRadius="lg" bg="gray.900">
-              <Heading size="sm" color="white" mb={3}>
+            <SurfaceCard>
+              <Heading size="sm" color="text.primary" mb={3}>
                 Weekly activities
               </Heading>
               {activityLoading ? (
@@ -859,8 +860,8 @@ const WeeklyChecklistPage: React.FC = () => {
                   {activities.length ? activities.map(renderActivityCard) : (
                     <Center py={8}>
                       <Stack spacing={2} align="center">
-                        <Text color="gray.400">No activities found for this week.</Text>
-                        <Text color="gray.500" fontSize="sm">
+                        <Text color="text.muted">No activities found for this week.</Text>
+                        <Text color="text.muted" fontSize="sm">
                           Templates will automatically sync from Firebase when available.
                         </Text>
                       </Stack>
@@ -868,7 +869,7 @@ const WeeklyChecklistPage: React.FC = () => {
                   )}
                 </Stack>
               )}
-            </Box>
+            </SurfaceCard>
             {renderGuidanceCard()}
             {renderParticipationRhythm()}
           </Stack>
@@ -876,8 +877,8 @@ const WeeklyChecklistPage: React.FC = () => {
 
         <GridItem>
           <Stack spacing={4}>
-            <Box borderWidth="1px" borderColor="gray.700" p={4} borderRadius="lg" bg="gray.900">
-              <Heading size="sm" color="white" mb={3}>
+            <SurfaceCard>
+              <Heading size="sm" color="text.primary" mb={3}>
                 Weekly progress
               </Heading>
               {progressLoading ? (
@@ -885,10 +886,10 @@ const WeeklyChecklistPage: React.FC = () => {
               ) : (
                 <Stack spacing={3}>
                   <Progress value={progressStatus.pct} colorScheme={progressStatus.color} borderRadius="full" />
-                  <Text color="gray.200" fontWeight="bold">
+                  <Text color="text.primary" fontWeight="bold">
                     {pendingCounts.points} / {weeklyTarget} points earned
                   </Text>
-                  <Text color="gray.400" fontSize="sm">
+                  <Text color="text.muted" fontSize="sm">
                     {progressStatus.pct >= 100
                       ? 'Amazing! You are ahead of your target.'
                       : progressStatus.pct >= 75
@@ -897,7 +898,7 @@ const WeeklyChecklistPage: React.FC = () => {
                   </Text>
                 </Stack>
               )}
-            </Box>
+            </SurfaceCard>
             {renderGamificationPanel()}
           </Stack>
         </GridItem>
@@ -909,17 +910,17 @@ const WeeklyChecklistPage: React.FC = () => {
 }
 
 const StatCard: React.FC<{ label: string; value: string; icon: React.ReactNode }> = ({ label, value, icon }) => (
-  <Box borderWidth="1px" borderColor="gray.700" p={4} borderRadius="lg" bg="gray.900">
+  <SurfaceCard>
     <HStack justify="space-between" mb={1}>
-      <Text color="gray.400" fontSize="sm">
+      <MutedText fontSize="sm">
         {label}
-      </Text>
+      </MutedText>
       {icon}
     </HStack>
-    <Heading size="md" color="white">
+    <Heading size="md" color="text.primary">
       {value}
     </Heading>
-  </Box>
+  </SurfaceCard>
 )
 
 const InfoPill: React.FC<{ color: string }> = ({ color }) => (

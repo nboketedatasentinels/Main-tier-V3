@@ -75,6 +75,11 @@ const colors = {
   accent: {
     warning: '#eab130',  // Gold
     highlight: '#f9db59', // Yellow (backgrounds only, never text)
+    purpleSubtle: '#ede9fe', // background tint for guidance sections
+    purpleBorder: '#c4b5fd', // border tint for purple callouts
+  },
+  focusRing: {
+    default: 'rgba(53, 14, 111, 0.35)',
   },
   // Danger/Destructive Actions
   danger: {
@@ -376,11 +381,11 @@ const components = {
           bg: 'surface.default',
           _focus: {
             borderColor: 'brand.primary',
-            boxShadow: '0 0 0 1px #350e6f',
+            boxShadow: '0 0 0 1px var(--chakra-colors-focusRing-default)',
           },
           _invalid: {
             borderColor: 'danger.DEFAULT',
-            boxShadow: '0 0 0 1px #f4540c',
+            boxShadow: '0 0 0 1px var(--chakra-colors-danger-DEFAULT)',
           },
         },
       },
@@ -399,7 +404,7 @@ const components = {
           bg: 'surface.default',
           _focus: {
             borderColor: 'brand.primary',
-            boxShadow: '0 0 0 1px #350e6f',
+            boxShadow: '0 0 0 1px var(--chakra-colors-focusRing-default)',
           },
         },
       },
@@ -417,7 +422,7 @@ const components = {
         bg: 'surface.default',
         _focus: {
           borderColor: 'brand.primary',
-          boxShadow: '0 0 0 1px #350e6f',
+          boxShadow: '0 0 0 1px var(--chakra-colors-focusRing-default)',
         },
       },
     },
@@ -537,7 +542,7 @@ const shadows = {
   '2xl': '0 25px 50px -12px rgba(0, 0, 0, 0.25)',
   card: '0 10px 30px rgba(15, 23, 42, 0.08)',
   'card-elevated': '0 20px 45px rgba(15, 23, 42, 0.12)',
-  focus: '0 0 0 4px rgba(90, 13, 160, 0.35)',
+  focus: '0 0 0 4px var(--chakra-colors-focusRing-default)',
   inner: 'inset 0 2px 4px 0 rgba(0, 0, 0, 0.05)',
 }
 

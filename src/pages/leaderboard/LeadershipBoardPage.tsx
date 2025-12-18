@@ -405,7 +405,7 @@ export const LeadershipBoardPage: React.FC = () => {
 
   const getRankIcon = (rank: number) => {
     if (rank === 1) return <Icon as={Crown} color="yellow.400" />
-    if (rank === 2) return <Icon as={Medal} color="gray.400" />
+    if (rank === 2) return <Icon as={Medal} color="text.muted" />
     if (rank === 3) return <Icon as={Medal} color="#cd7f32" />
     return <Badge colorScheme="purple">{rank}</Badge>
   }
@@ -887,7 +887,7 @@ export const LeadershipBoardPage: React.FC = () => {
                         <Text>Join or launch a challenge today</Text>
                       </HStack>
                     </Box>
-                    <Button colorScheme="blackAlpha" onClick={onOpen} rightIcon={<Icon as={Target} />}>Start a Challenge</Button>
+                    <Button variant="secondary" onClick={onOpen} rightIcon={<Icon as={Target} />}>Start a Challenge</Button>
                   </Flex>
                 </CardBody>
               </Card>
