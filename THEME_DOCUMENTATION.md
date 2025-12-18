@@ -4,6 +4,140 @@
 
 This document provides a comprehensive overview of the T4L theme and design system implementation. The system combines Tailwind CSS utility-first approach with Chakra UI component theming to create a consistent, accessible, and maintainable design language.
 
+**⚠️ IMPORTANT**: For strict usage rules and approved color tokens, see [THEME_CONTRACT.md](./THEME_CONTRACT.md).
+
+## Color System
+
+### Semantic Brand Colors (Growth.design approach)
+
+Following Growth.design principles, brand colors express identity while neutrals carry readability.
+
+**Variable**: `brand` (Chakra & Tailwind)
+
+```
+brand.primary: #350e6f  (Violet) - Primary brand anchor, high contrast
+brand.dark:    #27062e  (Deep Purple) - Dark brand anchor, trustworthy
+```
+
+**Usage**: Primary buttons, links, focus states, main CTAs, headers
+
+**Contrast Tests**:
+- ✅ brand.primary on white: 12.89:1 (AAA)
+- ✅ brand.dark on white: 16.70:1 (AAA)
+- ✅ White text on brand.primary: 12.89:1 (AAA)
+- ✅ White text on brand.dark: 16.70:1 (AAA)
+
+### Surface Colors (Backgrounds)
+
+**Variable**: `surface` (Chakra & Tailwind)
+
+```
+surface.default:  #FFFFFF  (Page backgrounds, cards, modals)
+surface.subtle:   #F8FAFC  (Body background, subtle sections)
+surface.muted:    #F1F5F9  (Input fields, muted panels)
+surface.elevated: #FFFFFF  (Elevated elements)
+```
+
+**Usage**: All backgrounds, cards, modals, panels
+
+### Text Colors (Readability First)
+
+**Variable**: `text` (Chakra & Tailwind)
+
+```
+text.primary:   #0F172A  (Main text, body copy)        - 17.76:1 AAA ✓
+text.secondary: #334155  (Secondary text, paragraphs)  - 10.87:1 AAA ✓
+text.muted:     #64748B  (Hints, labels, subtle text)  - 5.89:1 AA+ ✓
+text.inverse:   #FFFFFF  (Text on dark backgrounds)
+```
+
+**Usage**: All text content - primary for headings/main, secondary for body, muted for hints
+
+### Border Colors
+
+**Variable**: `border` (Chakra & Tailwind)
+
+```
+border.subtle: #E2E8F0  (Default borders, dividers)
+border.strong: #CBD5E1  (Emphasized borders)
+```
+
+### Accent Colors (Highlights & Status)
+
+**Variable**: `accent` (Chakra & Tailwind)
+
+```
+accent.warning:   #eab130  (Gold) - Status, highlights, rewards
+accent.highlight: #f9db59  (Yellow) - Soft highlights (BACKGROUNDS ONLY)
+```
+
+**⚠️ CRITICAL**: Gold and Yellow MUST use dark text, never white text.
+
+**Contrast Tests**:
+- ✅ accent.warning with dark text: 10.00:1 (AAA)
+- ✅ accent.highlight with dark text: 14.46:1 (AAA)
+- ❌ White text on accent.warning: ~3.5:1 (FAILS AA)
+- ❌ White text on accent.highlight: ~2.8:1 (FAILS AA)
+
+### Danger/Destructive
+
+**Variable**: `danger` (Chakra & Tailwind)
+
+```
+danger.DEFAULT: #f4540c  (Orange) - Destructive actions
+```
+
+**⚠️ CRITICAL**: Orange MUST use dark text, never white text.
+
+**Contrast Tests**:
+- ✅ danger.DEFAULT with dark text: 5.20:1 (AA+)
+- ❌ White text on danger.DEFAULT: ~3.43:1 (FAILS AA)
+
+### Tint Tokens (Safe Backgrounds)
+
+**Variable**: `tint` (Chakra & Tailwind)
+
+All tint tokens are 80% blended toward white and pass WCAG AA with dark text:
+
+```
+tint.brandDark:       #d4cdd5  (11.47:1 AAA ✓)
+tint.brandPrimary:    #d7cfe2  (11.83:1 AAA ✓)
+tint.danger:          #fdddce  (13.95:1 AAA ✓)
+tint.accentWarning:   #fbefd6  (15.66:1 AAA ✓)
+tint.accentHighlight: #fef8de  (16.74:1 AAA ✓)
+```
+
+**Usage**: Chips, pills, badges, alert fills, table striping, selected states
+
+### Legacy Color Scales (For Compatibility)
+
+The following color scales are preserved for backward compatibility:
+
+#### Neutral Gray Scale
+**Variable**: `neutral`
+
+```
+50:  #f8fafc → 900: #0f172a
+```
+
+#### Semantic Status Colors
+
+**Success (Green)**
+- **Base**: #22c55e (500)
+- **Usage**: Success messages, completed states
+
+**Warning (Orange)**
+- **Base**: #f97316 (500)
+- **Usage**: Warning messages, caution states
+
+**Error (Red)**
+- **Base**: #ef4444 (500)
+- **Usage**: Error messages, failed states
+
+#### Special Purpose Colors
+- **WhatsApp**: #25D366 (500) with full 50-900 scale
+- **Teal**: #14b8a6 (500)
+
 ## Typography
 
 ### Fonts
@@ -25,106 +159,18 @@ All headings use Poppins font family with responsive sizing:
 - **h5**: Semibold (600), 1.125rem
 - **h6**: Semibold (600), 1rem
 
-## Color System
-
-### Primary Brand Color: Indigo/Purple
-**Variable**: `brand-indigo` (Tailwind) / `primary` (Chakra)
-**Base Color**: #5A0DA0 (at 500)
-
-```
-50:  #f5f3ff  (lightest)
-100: #ede9fe
-200: #ddd6fe
-300: #c4b5fd
-400: #a78bfa
-500: #5A0DA0  ← Primary brand color
-600: #4A0B80
-700: #380860
-800: #2d0650
-900: #1e0340  (darkest)
-```
-
-**Usage**: Primary buttons, links, focus states, main CTAs
-
-### Accent/Secondary Color: Gold
-**Variable**: `accent-gold` (Tailwind) / `accent` or `secondary` (Chakra)
-**Base Color**: #EAB130 (at 500)
-
-```
-50:  #fefce8  (lightest)
-100: #fef9c3
-200: #fef08a
-300: #fde047
-400: #facc15
-500: #EAB130  ← Accent color
-600: #ca8a04
-700: #a16207
-800: #854d0e
-900: #713f12  (darkest)
-```
-
-**Usage**: Premium badges, accent buttons, gold tier indicators, highlights
-
-### Neutral Gray Scale
-**Variable**: `neutral`
-
-```
-50:  #f8fafc  (lightest) → alias: light
-100: #f1f5f9
-200: #e2e8f0 → alias: border
-300: #cbd5e1
-400: #94a3b8 → alias: muted
-500: #64748b → alias: medium
-600: #475569
-700: #334155
-800: #1e293b → alias: dark
-900: #0f172a  (darkest) → alias: darkest
-```
-
-**Usage**: Text hierarchy, borders, backgrounds, subtle UI elements
-
-### Semantic Status Colors
-
-#### Success (Green)
-- **Base**: #22c55e (500)
-- **Light backgrounds**: 50-200
-- **Text on light**: 700-900
-- **Usage**: Success messages, completed states, positive indicators
-
-#### Warning (Orange)
-- **Base**: #f97316 (500)
-- **Light backgrounds**: 50-200
-- **Text on light**: 700-900
-- **Usage**: Warning messages, caution states, attention needed
-
-#### Error (Red)
-- **Base**: #ef4444 (500)
-- **Light backgrounds**: 50-200
-- **Text on light**: 700-900
-- **Usage**: Error messages, failed states, destructive actions
-
-### Special Purpose Colors
-- **WhatsApp**: #25D366 (500) with full 50-900 scale
-- **Teal**: #14b8a6 (500)
-- **Deep Purple**: #350e6f
-- **Bright Yellow**: #f9db59
-- **Charcoal**: #27062e
-
-### Status Color Aliases (Chakra only)
-- `statusGreen`: #16a34a
-- `statusYellow`: #d97706
-- `statusRed`: #dc2626
-
 ## Component Styles
 
 ### Buttons (Chakra UI)
 
 #### Variants
-- **primary**: Brand indigo background, white text, hover lift effect
-- **secondary**: White background, brand text, subtle border, hover fills with light indigo
-- **ghost**: Transparent background, brand text, hover fills with light indigo
-- **accent**: Gold background, white text, hover lift effect
-- **destructive**: Red background, white text, hover lift effect
+- **primary**: `brand.primary` background, white text, hover to `brand.dark`
+- **secondary**: `surface.subtle` background, `brand.primary` text & border, hover fills with `tint.brandPrimary`
+- **ghost**: Transparent background, `text.primary`, hover fills with `surface.subtle`
+- **accent**: `accent.warning` (Gold) background, `text.primary` (dark text), hover darker
+- **destructive**: `danger.DEFAULT` (Orange) background, `text.primary` (dark text), hover darker
+
+**⚠️ CRITICAL**: Danger and Accent buttons use dark text for accessibility (WCAG AA).
 
 #### Sizes
 - **sm**: px-4, py-2, text-sm
@@ -139,72 +185,84 @@ All headings use Poppins font family with responsive sizing:
 ### Cards (Chakra UI)
 
 #### Base Style
-- Background: white
+- Background: `surface.default` (white)
 - Border radius: xl (1rem)
 - Shadow: card (custom)
-- Border: 1px solid neutral-200
+- Border: 1px solid `border.subtle`
 
 #### Variants
 - **elevated**: Stronger shadow (card-elevated)
-- **muted**: Lighter shadow (sm)
-- **interactive**: Hover effects (lift, border color change, elevated shadow)
+- **muted**: Lighter shadow (sm), `surface.subtle` background
+- **interactive**: Hover effects (lift, border color change to `brand.primary`, elevated shadow)
 
 ### Badges (Chakra UI)
 
 #### Variants
-- **primary**: Brand indigo background, white text
-- **subtle**: Light indigo background, dark indigo text
+- **primary**: `brand.primary` background, white text
+- **subtle**: `tint.brandPrimary` background, `brand.primary` text
 - **success**: Green background, white text
-- **warning**: Orange background, white text
-- **error**: Red background, white text
-- **premium**: Gold-50 background, gold-700 text, gold-200 border, uppercase
+- **warning**: `tint.accentWarning` background, `text.primary` (dark text)
+- **error**: `tint.danger` background, `text.primary` (dark text)
+- **premium**: `tint.accentWarning` background, `text.primary`, `accent.warning` border, uppercase
+
+**⚠️ NOTE**: Warning and error badges use tint backgrounds with dark text for accessibility.
 
 ### Progress Bars (Chakra UI)
 
 #### Variants
-- **default**: Primary (brand indigo) filled track, neutral-100 background
+- **default**: `brand.primary` filled track, `surface.muted` background
 - **success**: Green filled track
-- **warning**: Orange filled track
-- **error**: Red filled track
+- **warning**: `accent.warning` filled track
+- **error**: `danger.DEFAULT` filled track
 
 ### Form Inputs (Chakra UI)
 
 #### Features
-- **Focus border color**: primary.500 (brand indigo)
-- **Error border color**: error.500 (red)
+- **Focus border color**: `brand.primary` (Violet)
+- **Error border color**: `danger.DEFAULT` (Orange)
 - **Border radius**: lg (0.75rem)
-- **Default border**: neutral-300
+- **Default border**: `border.subtle`
+- **Background**: `surface.default`
 - **Focus ring**: 1px solid in focus color
 
 #### Components
 - Input, Select, Textarea: All styled consistently
-- Checkbox, Radio: Brand indigo accent when checked
+- Checkbox, Radio: `brand.primary` accent when checked
+
+### Modals (Chakra UI)
+
+#### Base Style
+- **Dialog background**: `surface.default`
+- **Header color**: `text.primary`
+- **Body color**: `text.secondary`
+
+**⚠️ CRITICAL**: All modals must follow this pattern for consistency and accessibility.
 
 ## Custom Utility Classes
 
 ### Card Classes (Tailwind)
 ```css
-.card                 /* Base card: rounded-2xl, border, bg-white, p-6, shadow-md */
+.card                 /* Base card: rounded-2xl, border-subtle, surface-default, p-6, shadow-md */
 .card-sm              /* Smaller padding: p-4 */
 .card-lg              /* Larger padding: p-8 */
-.card-muted           /* Reduced shadow: shadow-sm */
-.card-interactive     /* Hover effects: lift, elevated shadow, brand border */
+.card-muted           /* Reduced shadow, surface-subtle bg */
+.card-interactive     /* Hover effects: lift, elevated shadow, brand.primary border */
 ```
 
 ### Status Indicators
 ```css
 .status-indicator            /* Base: inline-flex, gap-1.5, rounded-full, border, px-3, py-1 */
 .status-indicator--success   /* Green variant */
-.status-indicator--info      /* Brand indigo variant */
-.status-indicator--warning   /* Orange variant */
-.status-indicator--danger    /* Red variant */
+.status-indicator--info      /* Brand primary tint variant */
+.status-indicator--warning   /* Accent warning tint with dark text */
+.status-indicator--danger    /* Danger tint with dark text */
 .status-indicator--neutral   /* Gray variant */
 ```
 
 ### Premium Badges
 ```css
-.premium-badge          /* Gold-50 bg, gold-200 border, gold-700 text, uppercase */
-.premium-badge--outline /* Transparent bg, gold-300 border */
+.premium-badge          /* Accent warning tint bg, accent.warning border, dark text, uppercase */
+.premium-badge--outline /* Transparent bg, accent.warning border */
 ```
 
 ### Typography Utilities
@@ -220,9 +278,9 @@ All headings use Poppins font family with responsive sizing:
 
 ### Gradient Utilities
 ```css
-.gradient-hero     /* Purple gradient for hero sections */
+.gradient-hero     /* Violet gradient for hero sections */
 .gradient-card     /* Subtle indigo gradient for cards */
-.gradient-premium  /* Purple to gold gradient for premium features */
+.gradient-premium  /* Violet to gold gradient for premium features */
 .gradient-gold     /* Gold to orange gradient */
 .gradient-neutral  /* Gray gradients for free tier indicators */
 ```
@@ -284,23 +342,40 @@ All focusable elements use `:focus-visible` to show focus only for keyboard navi
 ```css
 :focus-visible {
   outline: none;
-  box-shadow: 0 0 0 2px white, 0 0 0 4px rgba(90, 13, 160, 0.35);
+  box-shadow: 0 0 0 2px white, 0 0 0 4px rgba(53, 14, 111, 0.35);
 }
 ```
 
 **Features**:
 - 2px white offset ring
-- 4px brand indigo focus ring with 35% opacity
+- 4px `brand.primary` (Violet) focus ring with 35% opacity
 - Only visible for keyboard focus (not mouse clicks)
 
 ## Accessibility
 
 ### Color Contrast
-All color combinations meet WCAG AA standards (minimum 4.5:1 for normal text, 3:1 for large text):
-- Primary text (neutral-900 #0f172a) on white: AAA ✓
-- Body text (neutral-600 #475569) on white: AA+ ✓
-- Status colors on light backgrounds: AA+ ✓
-- Badge text on colored backgrounds: AA+ ✓
+All color combinations meet or exceed WCAG AA standards (minimum 4.5:1 for normal text, 3:1 for large text):
+
+**Text on White Backgrounds:**
+- text.primary (#0F172A) on white: 17.76:1 ✅ (AAA)
+- text.secondary (#334155) on white: 10.87:1 ✅ (AAA)
+- text.muted (#64748B) on white: 5.89:1 ✅ (AA+)
+
+**White Text on Brand Backgrounds:**
+- White on brand.primary (#350e6f): 12.89:1 ✅ (AAA)
+- White on brand.dark (#27062e): 16.70:1 ✅ (AAA)
+
+**Dark Text on Accent Backgrounds:**
+- text.primary on accent.warning (#eab130): 10.00:1 ✅ (AAA)
+- text.primary on accent.highlight (#f9db59): 14.46:1 ✅ (AAA)
+- text.primary on danger.DEFAULT (#f4540c): 5.20:1 ✅ (AA+)
+
+**⚠️ CRITICAL**: Never use white text on gold, yellow, or orange backgrounds. Always use dark text.
+
+**Status colors on light backgrounds:** AA+ ✓  
+**Badge text on colored backgrounds:** AA+ ✓
+
+For detailed contrast specifications, see [THEME_CONTRACT.md](./THEME_CONTRACT.md).
 
 ### Touch Targets
 All interactive elements have minimum touch target sizes:
@@ -311,7 +386,7 @@ All interactive elements have minimum touch target sizes:
 - Visible focus rings on all interactive elements
 - 2px offset for clarity
 - Only shown for keyboard navigation (`:focus-visible`)
-- High contrast brand indigo color
+- High contrast `brand.primary` (Violet) color
 
 ### Keyboard Navigation
 - All interactive elements are keyboard accessible
@@ -367,9 +442,17 @@ xl:  80em (1280px)
 
 ### Using Brand Colors in Tailwind
 ```jsx
-<div className="bg-brand-indigo-500 text-white">Primary Button</div>
-<div className="bg-accent-gold-500 text-white">Accent Button</div>
-<div className="text-neutral-700 bg-neutral-50">Card Content</div>
+<div className="bg-brand-primary text-white">Primary Button</div>
+<div className="bg-accent-warning text-text-primary">Accent Button (dark text!)</div>
+<div className="text-text-primary bg-surface-default">Card Content</div>
+```
+
+### Using Semantic Tokens in Chakra
+```jsx
+<Button variant="primary">Primary Action</Button>
+<Button variant="accent">Gold Action</Button>
+<Badge variant="premium">Premium Feature</Badge>
+<Box bg="surface.default" color="text.primary">Content</Box>
 ```
 
 ### Using Card Components
@@ -392,6 +475,20 @@ xl:  80em (1280px)
 <div className="gradient-premium p-6 text-white">Premium Banner</div>
 ```
 
+### Modal Example
+```jsx
+<Modal>
+  <ModalContent bg="surface.default">
+    <ModalHeader color="text.primary">Title</ModalHeader>
+    <ModalBody color="text.secondary">Body content</ModalBody>
+    <ModalFooter>
+      <Button variant="secondary">Cancel</Button>
+      <Button variant="primary">Confirm</Button>
+    </ModalFooter>
+  </ModalContent>
+</Modal>
+```
+
 ## Theme Showcase
 
 A visual showcase of all theme elements is available at:
@@ -403,22 +500,50 @@ To view the showcase, add it to your routing configuration and navigate to the r
 ## Files Modified
 
 1. **index.html**: Google Fonts imports
-2. **tailwind.config.js**: Complete Tailwind theme configuration
-3. **src/theme/index.ts**: Chakra UI theme configuration
+2. **tailwind.config.js**: Complete Tailwind theme configuration with semantic tokens
+3. **src/theme/index.ts**: Chakra UI theme configuration with semantic tokens
 4. **src/index.css**: Base styles, component classes, animations
+5. **THEME_CONTRACT.md**: Strict usage rules and approved tokens (NEW)
+
+## Migration from v1.0.0
+
+If you're updating existing code to use the new semantic tokens:
+
+| Old Token | New Token |
+|-----------|-----------|
+| `primary.500` | `brand.primary` |
+| `primary.600` | `brand.dark` |
+| `brand.text` | `text.primary` or `text.secondary` |
+| `brand.accent` | `surface.subtle` |
+| `accent.500` | `accent.warning` (with dark text!) |
+| `error.500` (buttons) | `danger.DEFAULT` (with dark text!) |
+| `neutral.200` | `border.subtle` |
+| `neutral.300` | `border.strong` |
+| `white` (backgrounds) | `surface.default` |
+
+**⚠️ CRITICAL CHANGES:**
+- Destructive/danger buttons now use dark text, not white
+- Accent/gold buttons now use dark text, not white
+- All modals must use `surface.default` background
+- All text should use `text.*` tokens
 
 ## Best Practices
 
 ### Do's ✓
-- Use semantic color names (primary, accent, success) instead of specific colors
+- Use semantic color names (brand.primary, text.primary, surface.default) instead of specific colors
 - Use pre-built component classes (.card, .status-indicator) for consistency
 - Use the appropriate button variant for the context
 - Maintain WCAG AA+ contrast ratios for all text
+- Use dark text on gold, yellow, and orange backgrounds
+- Use `text.primary`, `text.secondary`, or `text.muted` for all text content
 - Use responsive typography classes
 - Apply hover effects to interactive elements
+- Refer to [THEME_CONTRACT.md](./THEME_CONTRACT.md) for strict usage rules
 
 ### Don'ts ✗
 - Don't hardcode color values; use theme tokens
+- Don't use white text on gold, yellow, or orange backgrounds
+- Don't use `accent.highlight` (yellow) or `accent.warning` (gold) for text
 - Don't create custom shadows; use the shadow scale
 - Don't override focus styles; use the global focus system
 - Don't use small touch targets (<44px)
@@ -437,12 +562,13 @@ Optional features that could be added:
 ## Support
 
 For questions about the theme system:
-1. Review this documentation
-2. Check the ThemeShowcase component for visual examples
-3. Refer to inline comments in theme files
-4. Test color combinations with WebAIM contrast checker for accessibility
+1. **Review [THEME_CONTRACT.md](./THEME_CONTRACT.md)** for strict usage rules
+2. Review this documentation for implementation details
+3. Check the ThemeShowcase component for visual examples
+4. Refer to inline comments in theme files
+5. Test color combinations with WebAIM contrast checker for accessibility
 
 ---
 
 Last Updated: December 2024
-Version: 1.0.0
+Version: 2.0.0 (Growth.design-informed accessible theme)
