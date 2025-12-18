@@ -26,13 +26,13 @@
 
   @media (min-width: 768px) {
     h1 {
-      font-size: 3rem;
+      font-size: 2.625rem;
     }
   }
 
   @media (min-width: 1024px) {
     h1 {
-      font-size: 3.75rem;
+      font-size: 3rem;
     }
   }
 
@@ -40,7 +40,7 @@
     font-family: 'Poppins', system-ui, -apple-system, sans-serif;
     font-weight: 600;
     font-size: 1.875rem;
-    line-height: 1.25;
+    line-height: 1.2;
     letter-spacing: -0.02em;
   }
 
@@ -52,7 +52,7 @@
 
   @media (min-width: 1024px) {
     h2 {
-      font-size: 3rem;
+      font-size: 2.625rem;
     }
   }
 
@@ -60,7 +60,7 @@
     font-family: 'Poppins', system-ui, -apple-system, sans-serif;
     font-weight: 600;
     font-size: 1.5rem;
-    line-height: 1.375;
+    line-height: 1.3;
   }
 
   @media (min-width: 768px) {
@@ -73,7 +73,7 @@
     font-family: 'Poppins', system-ui, -apple-system, sans-serif;
     font-weight: 600;
     font-size: 1.25rem;
-    line-height: 1.375;
+    line-height: 1.3;
   }
 
   @media (min-width: 768px) {
@@ -115,7 +115,7 @@
   /* Focus State System */
   :focus-visible {
     outline: none;
-    box-shadow: 0 0 0 2px white, 0 0 0 4px rgba(90, 13, 160, 0.35);
+    box-shadow: 0 0 0 2px #5A0DA0, 0 0 0 4px #ffffff;
   }
 
   button:focus-visible,
@@ -123,7 +123,7 @@
   textarea:focus-visible,
   select:focus-visible {
     outline: none;
-    box-shadow: 0 0 0 2px white, 0 0 0 4px rgba(90, 13, 160, 0.35);
+    box-shadow: 0 0 0 2px #5A0DA0, 0 0 0 4px #ffffff;
   }
 
   /* Global Transitions for Interactive Elements */
@@ -149,7 +149,7 @@
 @layer components {
   /* Card Base and Variants */
   .card {
-    @apply rounded-2xl border border-neutral-border bg-white p-6 shadow-md;
+    @apply rounded-2xl border border-neutral-border bg-white p-6 shadow-card;
   }
 
   .card-sm {
@@ -195,7 +195,7 @@
 
   /* Premium Badge */
   .premium-badge {
-    @apply inline-flex items-center gap-1 rounded-full bg-accent-gold-50 border border-accent-gold-200 px-3 py-1 text-xs font-semibold uppercase tracking-wider text-accent-gold-700;
+    @apply inline-flex items-center gap-1 rounded-full bg-accent-gold-50 border border-accent-gold-200 px-3 py-1 text-xs font-semibold uppercase tracking-[0.18em] text-accent-gold-700;
   }
 
   .premium-badge--outline {
@@ -204,7 +204,7 @@
 
   /* Eyebrow Text */
   .eyebrow {
-    @apply text-xs font-semibold uppercase tracking-widest text-neutral-500;
+    @apply text-xs font-semibold uppercase tracking-[0.18em] text-neutral-500;
   }
 
   /* Surface Utilities */
