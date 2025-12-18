@@ -19,11 +19,15 @@ export type ActivityDef = {
   description: string;
   points: number;
   maxPerMonth: number;
+  maxPerWeek?: number;
   requiresApproval?: boolean;
   isFreeTier?: boolean;
   week: number;
   category: string;
   tags?: string[];
+  verification?: "honor" | "partner_approval";
+  flexibleWeeks?: boolean;
+  frequencyNote?: string;
 };
 
 export const FULL_ACTIVITIES: ActivityDef[] = [
@@ -37,6 +41,9 @@ export const FULL_ACTIVITIES: ActivityDef[] = [
     week: 1,
     category: "Learning",
     isFreeTier: true,
+    verification: "honor",
+    flexibleWeeks: true,
+    frequencyNote: "Honor-based; complete in any week.",
   },
   {
     id: "podcast_workbook",
@@ -48,6 +55,8 @@ export const FULL_ACTIVITIES: ActivityDef[] = [
     week: 1,
     category: "Application",
     requiresApproval: true,
+    verification: "partner_approval",
+    flexibleWeeks: true,
   },
   {
     id: "webinar",
@@ -59,6 +68,9 @@ export const FULL_ACTIVITIES: ActivityDef[] = [
     week: 2,
     category: "Community",
     requiresApproval: true,
+    verification: "partner_approval",
+    flexibleWeeks: true,
+    frequencyNote: "Once per month; may be completed in any week.",
   },
   {
     id: "webinar_workbook",
@@ -70,16 +82,21 @@ export const FULL_ACTIVITIES: ActivityDef[] = [
     week: 2,
     category: "Application",
     requiresApproval: true,
+    verification: "partner_approval",
+    flexibleWeeks: true,
   },
   {
     id: "peer_matching",
     baseId: "peer_matching",
     title: "Peer Matching",
-    description: "Connect with a peer for mutual growth (weekly cadence).",
+    description: "Connect with a peer for mutual growth (weekly cadence with a 1,000 point cap per week).",
     points: 1000,
     maxPerMonth: 4,
+    maxPerWeek: 1,
     week: 3,
     category: "Networking",
+    flexibleWeeks: true,
+    frequencyNote: "Earn up to 1,000 points per week; complete in any week.",
   },
   {
     id: "impact_log",
@@ -91,17 +108,22 @@ export const FULL_ACTIVITIES: ActivityDef[] = [
     week: 1,
     category: "Reflection",
     requiresApproval: true,
+    verification: "partner_approval",
+    flexibleWeeks: true,
   },
   {
     id: "book_club",
     baseId: "book_club",
     title: "Book Club Participation",
-    description: "Engage in book club discussions and share proof for partner approval.",
+    description: "Engage in book club discussions and share proof for partner approval (1,500 points once per month).",
     points: 1500,
     maxPerMonth: 1,
     week: 4,
     category: "Community",
     requiresApproval: true,
+    verification: "partner_approval",
+    flexibleWeeks: true,
+    frequencyNote: "Once per month; schedule in any week.",
   },
   {
     id: "peer_to_peer",
@@ -113,17 +135,22 @@ export const FULL_ACTIVITIES: ActivityDef[] = [
     week: 4,
     category: "Networking",
     requiresApproval: true,
+    verification: "partner_approval",
+    flexibleWeeks: true,
   },
   {
     id: "linkedin",
     baseId: "linkedin",
     title: "LinkedIn engagement (post/comment)",
-    description: "Share insights on LinkedIn and route the post for partner approval.",
+    description: "Share insights on LinkedIn and route the post for partner approval (twice per month).",
     points: 500,
     maxPerMonth: 2,
     week: 3,
     category: "Brand",
     requiresApproval: true,
+    verification: "partner_approval",
+    flexibleWeeks: true,
+    frequencyNote: "Up to twice per month; complete in any week.",
   },
   {
     id: "lift_module",
@@ -135,6 +162,8 @@ export const FULL_ACTIVITIES: ActivityDef[] = [
     week: 2,
     category: "Learning",
     requiresApproval: true,
+    verification: "partner_approval",
+    flexibleWeeks: true,
   },
 ];
 
