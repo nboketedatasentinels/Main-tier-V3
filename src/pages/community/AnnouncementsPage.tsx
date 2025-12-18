@@ -112,13 +112,13 @@ const TabNavigation: React.FC<{
           variant={activeTab === tab.key ? 'solid' : 'ghost'}
           colorScheme={activeTab === tab.key ? 'purple' : undefined}
           borderRadius="full"
-          bg={activeTab === tab.key ? 'purple.600' : 'white'}
-          color={activeTab === tab.key ? 'white' : 'gray.700'}
+          bg={activeTab === tab.key ? 'purple.600' : 'surface.default'}
+          color={activeTab === tab.key ? 'text.inverse' : 'text.primary'}
           borderWidth={1}
-          borderColor={activeTab === tab.key ? 'purple.600' : 'gray.200'}
+          borderColor={activeTab === tab.key ? 'purple.600' : 'border.subtle'}
           boxShadow={activeTab === tab.key ? 'lg' : 'none'}
           leftIcon={<Icon as={tab.icon} boxSize={4} />}
-          _hover={{ bg: activeTab === tab.key ? 'purple.700' : 'gray.50' }}
+          _hover={{ bg: activeTab === tab.key ? 'purple.700' : 'surface.subtle' }}
           _focus={{ boxShadow: '0 0 0 3px rgba(99, 102, 241, 0.4)' }}
           onClick={() => onChange(tab.key)}
         >
@@ -136,7 +136,7 @@ const AnnouncementCard: React.FC<{
   onToggleArchive: () => void
 }> = ({ announcement, onOpen, onToggleRead, onToggleArchive }) => {
   const isUnread = !announcement.isRead
-  const indicatorColor = isUnread ? 'purple.500' : 'gray.300'
+  const indicatorColor = isUnread ? 'brand.primary' : 'border.subtle'
   const isArchived = announcement.isArchived
 
   return (
@@ -146,8 +146,8 @@ const AnnouncementCard: React.FC<{
       width="100%"
       onClick={onOpen}
       borderWidth={1}
-      borderColor={isUnread ? 'purple.300' : 'gray.200'}
-      bg={isUnread ? 'purple.50' : 'white'}
+      borderColor={isUnread ? 'accent.purpleBorder' : 'border.subtle'}
+      bg={isUnread ? 'accent.purpleSubtle' : 'surface.default'}
       boxShadow={isUnread ? 'md' : 'sm'}
       borderRadius="2xl"
       p={4}
@@ -159,10 +159,10 @@ const AnnouncementCard: React.FC<{
         <Stack spacing={2} flex={1}>
           <HStack justify="space-between" align="start">
             <Stack spacing={1}>
-              <Text fontSize={{ base: 'md', md: 'lg' }} fontWeight="semibold" color="gray.900">
+              <Text fontSize={{ base: 'md', md: 'lg' }} fontWeight="semibold" color="text.primary">
                 {announcement.title}
               </Text>
-              <Text color="gray.600" fontSize={{ base: 'sm', md: 'md' }}>
+              <Text color="text.secondary" fontSize={{ base: 'sm', md: 'md' }}>
                 {announcement.message.length > 240
                   ? `${announcement.message.slice(0, 240)}...`
                   : announcement.message}
@@ -180,7 +180,7 @@ const AnnouncementCard: React.FC<{
                 </Badge>
               )}
               {announcement.createdAt && (
-                <Text color="gray.500" fontSize="xs" textTransform="uppercase">
+                <Text color="text.muted" fontSize="xs" textTransform="uppercase">
                   {formatDistanceToNow(announcement.createdAt, { addSuffix: true })}
                 </Text>
               )}
@@ -228,27 +228,27 @@ const AnnouncementModal: React.FC<{
       <ModalContent borderRadius="2xl" overflow="hidden">
         <ModalHeader>
           <Stack spacing={1}>
-            <Text fontSize="xs" fontWeight="bold" color="gray.500" letterSpacing="widest">
+            <Text fontSize="xs" fontWeight="bold" color="text.muted" letterSpacing="widest">
               ANNOUNCEMENT
             </Text>
-            <Heading size="lg" color="gray.900">
+            <Heading size="lg" color="text.primary">
               {announcement.title}
             </Heading>
             <HStack spacing={2} flexWrap="wrap">
               {announcement.createdAt && (
-                <Badge bg="gray.100" color="gray.700" px={3} py={1} borderRadius="full" display="inline-flex" gap={2}>
+                <Badge bg="surface.subtle" color="text.secondary" px={3} py={1} borderRadius="full" display="inline-flex" gap={2}>
                   <Icon as={CalendarClock} boxSize={4} />
                   {format(announcement.createdAt, 'MMMM d, yyyy • h:mm a')}
                 </Badge>
               )}
               {announcement.author && (
-                <Badge bg="gray.100" color="gray.700" px={3} py={1} borderRadius="full" display="inline-flex" gap={2}>
+                <Badge bg="surface.subtle" color="text.secondary" px={3} py={1} borderRadius="full" display="inline-flex" gap={2}>
                   <Icon as={User} boxSize={4} />
                   {announcement.author}
                 </Badge>
               )}
               {announcement.source && (
-                <Badge bg="gray.100" color="gray.700" px={3} py={1} borderRadius="full" display="inline-flex" gap={2}>
+                <Badge bg="surface.subtle" color="text.secondary" px={3} py={1} borderRadius="full" display="inline-flex" gap={2}>
                   <Icon as={Inbox} boxSize={4} />
                   {announcement.source}
                 </Badge>
@@ -258,14 +258,14 @@ const AnnouncementModal: React.FC<{
         </ModalHeader>
         <ModalCloseButton rounded="full" mt={2} />
         <ModalBody>
-          <Box borderWidth={1} borderColor="gray.200" bg="gray.50" borderRadius="2xl" p={4}>
-            <Text whiteSpace="pre-wrap" color="gray.700" fontSize="md" lineHeight="tall">
+          <Box borderWidth={1} borderColor="border.subtle" bg="surface.subtle" borderRadius="2xl" p={4}>
+            <Text whiteSpace="pre-wrap" color="text.secondary" fontSize="md" lineHeight="tall">
               {announcement.message}
             </Text>
           </Box>
         </ModalBody>
         <ModalFooter justifyContent="space-between" alignItems="center">
-          <HStack spacing={3} color="gray.600" fontSize="sm" textTransform="uppercase" fontWeight="semibold">
+          <HStack spacing={3} color="text.secondary" fontSize="sm" textTransform="uppercase" fontWeight="semibold">
             {isArchived ? (
               <HStack spacing={2}>
                 <Icon as={Archive} boxSize={4} />
@@ -323,15 +323,15 @@ const EventsTab: React.FC = () => {
       )}
 
       {isAdmin && (
-        <Box borderWidth={1} borderColor="gray.200" bg="white" borderRadius="3xl" p={6} boxShadow="sm">
+        <Box borderWidth={1} borderColor="border.subtle" bg="surface.default" borderRadius="3xl" p={6} boxShadow="sm">
           <Stack spacing={2}>
-            <Text fontSize="xs" fontWeight="bold" color="gray.500" letterSpacing="widest">
+            <Text fontSize="xs" fontWeight="bold" color="text.muted" letterSpacing="widest">
               EXTERNAL MANAGEMENT
             </Text>
-            <Heading size="md" color="gray.900">
+            <Heading size="md" color="text.primary">
               Events are managed in the external admin portal
             </Heading>
-            <Text color="gray.600" fontSize="sm">
+            <Text color="text.secondary" fontSize="sm">
               Use the dedicated events management site to create, update, or archive events. Updates made there will appear here
               for everyone once published.
             </Text>
@@ -352,9 +352,9 @@ const EventsTab: React.FC = () => {
 
       <Box
         borderWidth={1}
-        borderColor="gray.200"
+        borderColor="border.subtle"
         borderStyle="dashed"
-        bg="white"
+        bg="surface.default"
         borderRadius="3xl"
         p={{ base: 8, md: 16 }}
         minH="320px"
@@ -373,10 +373,10 @@ const EventsTab: React.FC = () => {
           >
             <Icon as={CalendarDays} boxSize={8} color="purple.600" />
           </Box>
-          <Heading size="lg" color="gray.900">
+          <Heading size="lg" color="text.primary">
             Experience what's happening next
           </Heading>
-          <Text color="gray.600" fontSize={{ base: 'sm', md: 'md' }}>
+          <Text color="text.secondary" fontSize={{ base: 'sm', md: 'md' }}>
             {description}
           </Text>
           <Button
@@ -391,7 +391,7 @@ const EventsTab: React.FC = () => {
             View Events
           </Button>
           {eventsLoading && (
-            <Text color="gray.400" fontSize="xs" letterSpacing="widest">
+            <Text color="text.muted" fontSize="xs" letterSpacing="widest">
               Refreshing events feed...
             </Text>
           )}
@@ -518,7 +518,7 @@ export const AnnouncementsPage: React.FC = () => {
 
       <Stack spacing={2}>
         <TabNavigation activeTab={activeTab} onChange={handleTabChange} />
-        <Text color="gray.600" fontSize="sm">
+        <Text color="text.secondary" fontSize="sm">
           {announcementDescription}
         </Text>
       </Stack>
@@ -535,15 +535,15 @@ export const AnnouncementsPage: React.FC = () => {
           {loading ? (
             <VStack
               borderWidth={1}
-              borderColor="gray.200"
+              borderColor="border.subtle"
               borderRadius="2xl"
-              bg="white"
+              bg="surface.default"
               p={10}
               spacing={3}
               boxShadow="sm"
             >
               <Spinner color="purple.500" size="lg" />
-              <Text color="gray.600" fontWeight="medium">
+              <Text color="text.secondary" fontWeight="medium">
                 Loading content...
               </Text>
             </VStack>
@@ -551,18 +551,18 @@ export const AnnouncementsPage: React.FC = () => {
             <VStack
               borderWidth={1}
               borderStyle="dashed"
-              borderColor="gray.200"
+              borderColor="border.subtle"
               borderRadius="2xl"
-              bg="white"
+              bg="surface.default"
               p={10}
               spacing={3}
               boxShadow="sm"
             >
-              <Icon as={Inbox} boxSize={12} color="gray.300" />
-              <Heading size="sm" color="gray.800">
+              <Icon as={Inbox} boxSize={12} color="text.muted" />
+              <Heading size="sm" color="text.primary">
                 No announcements available
               </Heading>
-              <Text color="gray.600" fontSize="sm">
+              <Text color="text.secondary" fontSize="sm">
                 Check back soon for new updates and community announcements.
               </Text>
             </VStack>

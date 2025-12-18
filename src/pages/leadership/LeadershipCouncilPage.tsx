@@ -620,12 +620,12 @@ export const LeadershipCouncilPage: React.FC = () => {
 
   if (!user) {
     return (
-      <Card bg="white" borderColor="gray.200" borderWidth="1px">
+      <Card bg="surface.default" borderColor="border.subtle" borderWidth="1px">
         <CardBody>
           <Stack spacing={3} align="center" textAlign="center">
-            <Icon as={UserCircle2} boxSize={10} color="gray.400" />
+            <Icon as={UserCircle2} boxSize={10} color="text.muted" />
             <Heading size="md">Sign in to view your Leadership Council</Heading>
-            <Text color="gray.600">Create an account or sign in to connect with your mentor and ambassador.</Text>
+            <Text color="text.secondary">Create an account or sign in to connect with your mentor and ambassador.</Text>
           </Stack>
         </CardBody>
       </Card>
@@ -634,14 +634,14 @@ export const LeadershipCouncilPage: React.FC = () => {
 
   return (
     <Stack spacing={6}>
-      <Card bgGradient="linear(to-r, blue.50, white)" border="1px solid" borderColor="blue.100">
+      <Card bgGradient="linear(to-r, blue.50, surface.default)" border="1px solid" borderColor="border.subtle">
         <CardBody>
           <Stack spacing={2}>
             <Badge colorScheme="blue" width="fit-content" rounded="full" px={3} py={1} fontWeight="semibold">
               Leadership Council
             </Badge>
             <Heading size="lg">Stay connected with the people supporting your transformation journey.</Heading>
-            <Text color="gray.600">
+            <Text color="text.secondary">
               Your dedicated mentor, ambassador, and transformation partner are highlighted below. Schedule sessions,
               review upcoming meetings, and explore your leadership network.
             </Text>
@@ -652,17 +652,17 @@ export const LeadershipCouncilPage: React.FC = () => {
       <Grid templateColumns={{ base: '1fr', xl: '2fr 1.2fr' }} gap={6} alignItems="start">
         <GridItem>
           <Stack spacing={6}>
-            <Card borderColor="gray.200" borderWidth="1px">
+            <Card borderColor="border.subtle" borderWidth="1px" bg="surface.default">
               <CardHeader pb={0}>
                 <HStack justify="space-between" align="start">
                   <Box>
-                    <Text fontSize="xs" textTransform="uppercase" color="gray.500" fontWeight="semibold">
+                    <Text fontSize="xs" textTransform="uppercase" color="text.muted" fontWeight="semibold">
                       Mentor Assignment
                     </Text>
-                    <Heading size="md" color="gray.900">
+                    <Heading size="md" color="text.primary">
                       {mentorProfile?.fullName || mentorProfile?.firstName ? mentorProfile.fullName || mentorProfile.firstName : 'No mentor assigned'}
                     </Heading>
-                    <HStack spacing={2} color="gray.500" mt={2}>
+                    <HStack spacing={2} color="text.muted" mt={2}>
                       <Icon as={Building2} />
                       <Text>
                         {mentorProfile?.companyCode
@@ -690,9 +690,9 @@ export const LeadershipCouncilPage: React.FC = () => {
               </CardHeader>
               <CardBody pt={4}>
                 {assignmentsLoading && (
-                  <Flex direction="column" gap={3} p={4} border="1px dashed" borderColor="gray.200" rounded="xl">
+                  <Flex direction="column" gap={3} p={4} border="1px dashed" borderColor="border.subtle" rounded="xl">
                     <Spinner />
-                    <Text color="gray.600">Loading your mentor assignment...</Text>
+                    <Text color="text.secondary">Loading your mentor assignment...</Text>
                   </Flex>
                 )}
 
@@ -711,9 +711,9 @@ export const LeadershipCouncilPage: React.FC = () => {
 
                 {!assignmentsLoading && !mentorProfile && !assignmentsError && (
                   <Flex direction="column" align="center" textAlign="center" p={6} gap={3}>
-                    <Icon as={User} boxSize={10} color="gray.400" />
+                    <Icon as={User} boxSize={10} color="text.muted" />
                     <Heading size="sm">No mentor assigned yet</Heading>
-                    <Text color="gray.600">Please contact your administrator for support.</Text>
+                    <Text color="text.secondary">Please contact your administrator for support.</Text>
                   </Flex>
                 )}
 
@@ -743,9 +743,9 @@ export const LeadershipCouncilPage: React.FC = () => {
                       </Button>
                     </HStack>
 
-                    <Box p={4} border="1px solid" borderColor="gray.200" rounded="lg" bg="gray.50">
+                    <Box p={4} border="1px solid" borderColor="border.subtle" rounded="lg" bg="surface.subtle">
                       <HStack justify="space-between" align="start" mb={3}>
-                        <Text fontWeight="bold" color="gray.800">
+                        <Text fontWeight="bold" color="text.primary">
                           Your mentor sessions
                         </Text>
                         {sessions.length > 3 && (
@@ -755,7 +755,7 @@ export const LeadershipCouncilPage: React.FC = () => {
                         )}
                       </HStack>
 
-                      <Text color="gray.600" mb={3}>
+                      <Text color="text.secondary" mb={3}>
                         {mentorSessionsSummary}
                       </Text>
 
@@ -765,9 +765,9 @@ export const LeadershipCouncilPage: React.FC = () => {
                           gap={3}
                           p={4}
                           border="1px dashed"
-                          borderColor="gray.200"
+                          borderColor="border.subtle"
                           rounded="lg"
-                          bg="white"
+                          bg="surface.default"
                         >
                           <Spinner />
                           <Text>Checking for upcoming sessions...</Text>
@@ -792,13 +792,13 @@ export const LeadershipCouncilPage: React.FC = () => {
                           p={5}
                           gap={2}
                           border="1px dashed"
-                          borderColor="gray.200"
+                          borderColor="border.subtle"
                           rounded="lg"
-                          bg="white"
+                          bg="surface.default"
                         >
-                          <Icon as={Calendar} color="gray.400" />
+                          <Icon as={Calendar} color="text.muted" />
                           <Text>No sessions scheduled yet.</Text>
-                          <Text fontSize="sm" color="gray.600">
+                          <Text fontSize="sm" color="text.secondary">
                             Use the schedule button to plan your next conversation.
                           </Text>
                         </Flex>
@@ -807,7 +807,7 @@ export const LeadershipCouncilPage: React.FC = () => {
                       {!sessionsLoading && !sessionsError && sessions.length > 0 && renderSessionCards(3)}
 
                       {mentorProfile?.lastInteraction && (
-                        <Text mt={3} fontSize="sm" color="gray.500">
+                        <Text mt={3} fontSize="sm" color="text.muted">
                           Last interaction: {format(parseISO(mentorProfile.lastInteraction), 'PPP')}
                         </Text>
                       )}
@@ -817,12 +817,12 @@ export const LeadershipCouncilPage: React.FC = () => {
               </CardBody>
             </Card>
 
-            <Card borderColor="gray.200" borderWidth="1px">
+            <Card borderColor="border.subtle" borderWidth="1px" bg="surface.default">
               <CardHeader pb={0}>
-                <Text fontSize="xs" textTransform="uppercase" color="gray.500" fontWeight="semibold">
+                <Text fontSize="xs" textTransform="uppercase" color="text.muted" fontWeight="semibold">
                   Ambassador Assignment
                 </Text>
-                <Heading size="md" color="gray.900" mt={1}>
+                <Heading size="md" color="text.primary" mt={1}>
                   {ambassadorProfile?.fullName || 'Your ambassador is here to champion your progress'}
                 </Heading>
               </CardHeader>

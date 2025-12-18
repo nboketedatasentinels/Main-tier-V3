@@ -494,10 +494,10 @@ export const ImpactLogPage: React.FC = () => {
       <Flex align="center" mb={6} gap={3} wrap="wrap">
         <Icon as={Target} color="purple.500" boxSize={7} />
         <Box>
-          <Heading size="lg" color="gray.900">
+          <Heading size="lg" color="text.primary">
             Impact Log
           </Heading>
-          <Text color="gray.600">Track and measure your real-world impact</Text>
+          <Text color="text.secondary">Track and measure your real-world impact</Text>
         </Box>
         <Spacer />
         {!isMobile && (
@@ -552,17 +552,17 @@ export const ImpactLogPage: React.FC = () => {
         <GridItem>
           <SimpleGrid columns={{ base: 1, md: 2, xl: 5 }} spacing={4} mb={6}>
             {statCards.map((card) => (
-              <Stat key={card.label} p={4} bg="white" shadow="xs" rounded="lg" border="1px solid" borderColor="gray.100">
+              <Stat key={card.label} p={4} bg="surface.default" shadow="xs" rounded="lg" border="1px solid" borderColor="border.subtle">
                 <HStack justify="space-between" mb={3}>
                   <Box p={2} rounded="full" bg={`${card.color}10`} color={card.color}>
                     <Icon as={card.icon} />
                   </Box>
                   <Tooltip label={card.help}>
-                    <Icon as={InfoIcon} color="gray.400" />
+                    <Icon as={InfoIcon} color="text.muted" />
                   </Tooltip>
                 </HStack>
-                <StatLabel color="gray.600">{card.label}</StatLabel>
-                <StatNumber color="gray.900" fontSize="xl">
+                <StatLabel color="text.secondary">{card.label}</StatLabel>
+                <StatNumber color="text.primary" fontSize="xl">
                   {card.label === 'USD Saved/Created' ? card.value : card.value.toLocaleString()}
                 </StatNumber>
                 <StatHelpText>{card.help}</StatHelpText>
@@ -571,7 +571,7 @@ export const ImpactLogPage: React.FC = () => {
           </SimpleGrid>
 
           <Grid templateColumns={{ base: '1fr', xl: '1.2fr 1fr' }} gap={4} mb={6}>
-            <Box p={4} bg="white" rounded="lg" border="1px solid" borderColor="gray.100" shadow="xs">
+            <Box p={4} bg="surface.default" rounded="lg" border="1px solid" borderColor="border.subtle" shadow="xs">
               <HStack mb={4} justify="space-between">
                 <Text fontWeight="bold">Impact Activities by Category</Text>
                 <Badge colorScheme="purple">Dual Axis</Badge>
@@ -592,7 +592,7 @@ export const ImpactLogPage: React.FC = () => {
               </Box>
             </Box>
 
-            <Box p={4} bg="white" rounded="lg" border="1px solid" borderColor="gray.100" shadow="xs">
+            <Box p={4} bg="surface.default" rounded="lg" border="1px solid" borderColor="border.subtle" shadow="xs">
               <HStack mb={4} justify="space-between">
                 <Text fontWeight="bold">Monthly Trend</Text>
                 <Badge colorScheme="orange">Last 6 months</Badge>
@@ -638,9 +638,9 @@ export const ImpactLogPage: React.FC = () => {
             </HStack>
           </Flex>
 
-          <TableContainer bg="white" border="1px solid" borderColor="gray.100" rounded="lg" shadow="xs">
+          <TableContainer bg="surface.default" border="1px solid" borderColor="border.subtle" rounded="lg" shadow="xs">
             <Table size="sm">
-              <Thead bg="gray.50">
+              <Thead bg="surface.subtle">
                 <Tr>
                   <Th>Date</Th>
                   <Th>Title</Th>
@@ -661,16 +661,16 @@ export const ImpactLogPage: React.FC = () => {
                 ) : filteredEntries.length === 0 ? (
                   <Tr>
                     <Td colSpan={7}>
-                      <Text color="gray.500">No entries found for this period.</Text>
+                      <Text color="text.muted">No entries found for this period.</Text>
                     </Td>
                   </Tr>
                 ) : (
                   filteredEntries.map((entry) => (
-                    <Tr key={entry.id} _hover={{ bg: 'gray.50' }}>
+                    <Tr key={entry.id} _hover={{ bg: 'surface.subtle' }}>
                       <Td>{format(new Date(entry.date), 'dd MMM yyyy')}</Td>
                       <Td>
                         <Text fontWeight="semibold">{entry.title}</Text>
-                        <Text color="gray.500" fontSize="sm" noOfLines={1}>
+                        <Text color="text.muted" fontSize="sm" noOfLines={1}>
                           {entry.description}
                         </Text>
                       </Td>
@@ -703,22 +703,22 @@ export const ImpactLogPage: React.FC = () => {
               </Button>
             )}
 
-            <Box p={4} bg="white" border="1px solid" borderColor="gray.100" rounded="lg" shadow="xs">
+            <Box p={4} bg="surface.default" border="1px solid" borderColor="border.subtle" rounded="lg" shadow="xs">
               <HStack mb={3}>
                 <Icon as={TrendingUp} color="purple.500" />
                 <Text fontWeight="bold">Impact Momentum</Text>
               </HStack>
               <Stack spacing={2}>
                 <Flex align="center" justify="space-between">
-                  <Text color="gray.600">Points Today</Text>
+                  <Text color="text.secondary">Points Today</Text>
                   <Badge colorScheme="purple">{stats.points.toLocaleString()}</Badge>
                 </Flex>
                 <Flex align="center" justify="space-between">
-                  <Text color="gray.600">Hours this month</Text>
+                  <Text color="text.secondary">Hours this month</Text>
                   <Badge colorScheme="blue">{stats.hours}</Badge>
                 </Flex>
                 <Divider />
-                <Text color="gray.700" fontWeight="medium">
+                <Text color="text.secondary" fontWeight="medium">
                   Daily micro-challenge progress
                 </Text>
                 <Button w="full" colorScheme="purple" onClick={onOpen}>
@@ -727,11 +727,11 @@ export const ImpactLogPage: React.FC = () => {
               </Stack>
             </Box>
 
-            <Box p={4} bg="gray.900" color="white" rounded="lg" shadow="md" border="1px solid" borderColor="purple.700">
+            <Box p={4} bg="surface.default" color="text.primary" rounded="lg" shadow="md" border="1px solid" borderColor="accent.purpleBorder">
               <Text fontSize="lg" fontWeight="bold" mb={2}>
                 Gamification Goals
               </Text>
-              <Text color="purple.100">Keep your streak alive by logging impact every day.</Text>
+              <Text color="text.secondary">Keep your streak alive by logging impact every day.</Text>
               <Stack spacing={2} mt={4}>
                 <Flex justify="space-between" align="center">
                   <Text>Daily Goal</Text>
@@ -748,11 +748,11 @@ export const ImpactLogPage: React.FC = () => {
               </Stack>
             </Box>
 
-            <Box p={4} bg="white" border="1px solid" borderColor="gray.100" rounded="lg" shadow="xs">
+            <Box p={4} bg="surface.default" border="1px solid" borderColor="border.subtle" rounded="lg" shadow="xs">
               <Text fontWeight="bold" mb={2}>
                 Privacy & Consent
               </Text>
-              <Text color="gray.600">
+              <Text color="text.secondary">
                 ESG impact data is publicly aggregated. Business data stays private to the Transformation Leader.
               </Text>
             </Box>
@@ -897,7 +897,7 @@ export const ImpactLogPage: React.FC = () => {
                   value={formValues.description}
                   onChange={(e) => setFormValues((prev) => ({ ...prev, description: e.target.value }))}
                 />
-                <Text fontSize="sm" color="gray.500">
+                <Text fontSize="sm" color="text.muted">
                   Provide specific details about what you did and the outcomes achieved
                 </Text>
               </Box>
@@ -905,7 +905,7 @@ export const ImpactLogPage: React.FC = () => {
               <SimpleGrid columns={{ base: 1, md: 3 }} spacing={3}>
                 <InputGroup>
                   <InputLeftElement pointerEvents="none">
-                    <Icon as={Clock} color="gray.400" />
+                    <Icon as={Clock} color="text.muted" />
                   </InputLeftElement>
                   <Input
                     type="number"
@@ -918,7 +918,7 @@ export const ImpactLogPage: React.FC = () => {
                 </InputGroup>
                 <InputGroup>
                   <InputLeftElement pointerEvents="none">
-                    <Icon as={Users} color="gray.400" />
+                    <Icon as={Users} color="text.muted" />
                   </InputLeftElement>
                   <Input
                     type="number"
@@ -930,7 +930,7 @@ export const ImpactLogPage: React.FC = () => {
                 </InputGroup>
                 <InputGroup>
                   <InputLeftElement pointerEvents="none">
-                    <Icon as={ShieldCheck} color="gray.400" />
+                    <Icon as={ShieldCheck} color="text.muted" />
                   </InputLeftElement>
                   <Input
                     type="number"
@@ -970,10 +970,10 @@ export const ImpactLogPage: React.FC = () => {
               <SimpleGrid columns={{ base: 1, md: 2 }} spacing={3}>
                 <Box>
                   <Text fontWeight="medium">Evidence Link</Text>
-                  <InputGroup>
-                    <InputLeftElement pointerEvents="none">
-                      <Icon as={LinkIcon} color="gray.400" />
-                    </InputLeftElement>
+                <InputGroup>
+                  <InputLeftElement pointerEvents="none">
+                    <Icon as={LinkIcon} color="text.muted" />
+                  </InputLeftElement>
                     <Input
                       placeholder="https://drive.google.com/file/..."
                       value={formValues.evidenceLink}
@@ -999,27 +999,27 @@ export const ImpactLogPage: React.FC = () => {
                 </HStack>
                 <SimpleGrid columns={{ base: 1, md: 4 }} spacing={3}>
                   <Box>
-                    <Text color="gray.600">Points Earned</Text>
+                    <Text color="text.secondary">Points Earned</Text>
                     <Text fontSize="2xl" fontWeight="bold">
                       {preview.points.toLocaleString()}
                     </Text>
                   </Box>
                   <Box>
-                    <Text color="gray.600">Impact Value</Text>
+                    <Text color="text.secondary">Impact Value</Text>
                     <Text fontSize="2xl" fontWeight="bold">{formatCurrency(preview.impactValue)}</Text>
                   </Box>
                   <Box>
-                    <Text color="gray.600">Social Capital Points</Text>
+                    <Text color="text.secondary">Social Capital Points</Text>
                     <Text fontSize="2xl" fontWeight="bold">{preview.scp}</Text>
                   </Box>
                   <Box>
-                    <Text color="gray.600">Verification</Text>
+                    <Text color="text.secondary">Verification</Text>
                     <Text fontSize="lg" fontWeight="semibold">{formValues.verificationLevel}</Text>
                   </Box>
                 </SimpleGrid>
               </Box>
 
-              <Text fontSize="sm" color="gray.500">
+              <Text fontSize="sm" color="text.muted">
                 ESG impact data (people impacted) is aggregated publicly. Business data is private to the Transformation Leader.
               </Text>
             </Stack>
