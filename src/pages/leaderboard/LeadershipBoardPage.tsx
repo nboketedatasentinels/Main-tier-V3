@@ -450,14 +450,14 @@ export const LeadershipBoardPage: React.FC = () => {
         <Box>
           <HStack spacing={3}>
             <Icon as={Sparkles} color="brand.primary" />
-            <Text fontSize="sm" color="brand.subtleText" textTransform="uppercase" letterSpacing="wide">
+            <Text fontSize="sm" color="text.secondary" textTransform="uppercase" letterSpacing="wide">
               Leadership Board
             </Text>
           </HStack>
-          <Text fontSize="3xl" fontWeight="bold" color="brand.text" mt={1}>
+          <Text fontSize="3xl" fontWeight="bold" color="text.primary" mt={1}>
             Competitive, social, and personalized rankings
           </Text>
-          <Text color="brand.subtleText">Switch between leaderboard and challenge views with real-time Firebase data.</Text>
+          <Text color="text.secondary">Switch between leaderboard and challenge views with real-time Firebase data.</Text>
         </Box>
         <HStack spacing={3}>
           <Button variant="secondary" leftIcon={<Icon as={Info} />} onClick={onOpen}>
@@ -483,7 +483,7 @@ export const LeadershipBoardPage: React.FC = () => {
                     <HStack justify="space-between" align="center">
                       <Box>
                         <Text fontSize="lg" fontWeight="bold">Progress Overview</Text>
-                        <Text color="brand.subtleText">Live updates from Firestore</Text>
+                        <Text color="text.secondary">Live updates from Firestore</Text>
                       </Box>
                       <Badge colorScheme="purple" display="flex" alignItems="center" gap={2}>
                         <Icon as={Trophy} /> {percentile}
@@ -498,42 +498,42 @@ export const LeadershipBoardPage: React.FC = () => {
                           {getRankIcon(userRow?.rank || companyRows.length || 1)}
                           {userRow?.rank || '—'}
                         </StatNumber>
-                        <StatHelpText color="brand.subtleText">Across your company</StatHelpText>
+                        <StatHelpText color="text.secondary">Across your company</StatHelpText>
                       </Stat>
                       <Stat>
                         <StatLabel>Total Points</StatLabel>
                         <StatNumber>{formatNumber(userRow?.totalPoints || profile?.totalPoints || 0)}</StatNumber>
-                        <StatHelpText color="brand.subtleText">Lifetime XP</StatHelpText>
+                        <StatHelpText color="text.secondary">Lifetime XP</StatHelpText>
                       </Stat>
                       <Stat>
                         <StatLabel>Current Level</StatLabel>
                         <StatNumber>{userRow?.level || profile?.level || 1}</StatNumber>
-                        <StatHelpText color="brand.subtleText">Keep climbing</StatHelpText>
+                        <StatHelpText color="text.secondary">Keep climbing</StatHelpText>
                       </Stat>
                       <Stat>
                         <StatLabel>Weekly Points</StatLabel>
                         <StatNumber>{formatNumber(companyStats.weeklyPoints)}</StatNumber>
-                        <StatHelpText color="brand.subtleText">Last 7 days</StatHelpText>
+                        <StatHelpText color="text.secondary">Last 7 days</StatHelpText>
                       </Stat>
                       <Stat>
                         <StatLabel>Monthly Points</StatLabel>
                         <StatNumber>{formatNumber(companyStats.monthlyPoints)}</StatNumber>
-                        <StatHelpText color="brand.subtleText">Last 30 days</StatHelpText>
+                        <StatHelpText color="text.secondary">Last 30 days</StatHelpText>
                       </Stat>
                       <Stat>
                         <StatLabel>Active Challenges</StatLabel>
                         <StatNumber>{companyStats.activeChallenges}</StatNumber>
-                        <StatHelpText color="brand.subtleText">Live battles</StatHelpText>
+                        <StatHelpText color="text.secondary">Live battles</StatHelpText>
                       </Stat>
                       <Stat>
                         <StatLabel>Badges Earned</StatLabel>
                         <StatNumber>{companyStats.badgesEarned}</StatNumber>
-                        <StatHelpText color="brand.subtleText">Achievement count</StatHelpText>
+                        <StatHelpText color="text.secondary">Achievement count</StatHelpText>
                       </Stat>
                       <Stat>
                         <StatLabel>Team Members</StatLabel>
                         <StatNumber>{companySize || 1}</StatNumber>
-                        <StatHelpText color="brand.subtleText">Company size</StatHelpText>
+                        <StatHelpText color="text.secondary">Company size</StatHelpText>
                       </Stat>
                     </SimpleGrid>
                   </CardBody>
@@ -552,20 +552,20 @@ export const LeadershipBoardPage: React.FC = () => {
                         <Avatar size="lg" name={profile?.fullName} src={profile?.avatarUrl} />
                         <Box>
                           <Text fontWeight="bold">{profile?.fullName || 'You'}</Text>
-                          <Text color="brand.subtleText">Level {profile?.level || 1} · {formatNumber(profile?.totalPoints || 0)} pts</Text>
+                          <Text color="text.secondary">Level {profile?.level || 1} · {formatNumber(profile?.totalPoints || 0)} pts</Text>
                         </Box>
                       </HStack>
                       <SimpleGrid columns={3} spacing={3}>
-                        <Box p={3} border="1px solid" borderColor="brand.border" borderRadius="lg">
-                          <Text fontSize="xs" color="brand.subtleText">Active Points</Text>
+                        <Box p={3} border="1px solid" borderColor="border.subtle" borderRadius="lg">
+                          <Text fontSize="xs" color="text.secondary">Active Points</Text>
                           <Text fontWeight="bold">{formatNumber(userRow?.activePoints || 0)}</Text>
                         </Box>
-                        <Box p={3} border="1px solid" borderColor="brand.border" borderRadius="lg">
-                          <Text fontSize="xs" color="brand.subtleText">Total Points</Text>
+                        <Box p={3} border="1px solid" borderColor="border.subtle" borderRadius="lg">
+                          <Text fontSize="xs" color="text.secondary">Total Points</Text>
                           <Text fontWeight="bold">{formatNumber(userRow?.totalPoints || profile?.totalPoints || 0)}</Text>
                         </Box>
-                        <Box p={3} border="1px solid" borderColor="brand.border" borderRadius="lg">
-                          <Text fontSize="xs" color="brand.subtleText">Featured Badges</Text>
+                        <Box p={3} border="1px solid" borderColor="border.subtle" borderRadius="lg">
+                          <Text fontSize="xs" color="text.secondary">Featured Badges</Text>
                           <HStack spacing={2} mt={1}>
                             <Badge colorScheme="purple">Growth</Badge>
                             <Badge colorScheme="yellow">Impact</Badge>
@@ -583,7 +583,7 @@ export const LeadershipBoardPage: React.FC = () => {
                   <Flex justify="space-between" align="center">
                     <Box>
                       <Text fontWeight="bold">Filters & Sorting</Text>
-                      <Text color="brand.subtleText">Timeframes, sorting, and tutorials</Text>
+                      <Text color="text.secondary">Timeframes, sorting, and tutorials</Text>
                     </Box>
                     <HStack spacing={2}>
                       <Button size="sm" onClick={handleApplyFilters}>Apply</Button>
@@ -591,7 +591,7 @@ export const LeadershipBoardPage: React.FC = () => {
                     </HStack>
                   </Flex>
                   {showFilterTip && (
-                    <Flex mt={3} p={3} borderRadius="md" bg="brand.primaryMuted" align="center" gap={3}>
+                    <Flex mt={3} p={3} borderRadius="md" bg="tint.brandPrimary" align="center" gap={3}>
                       <Icon as={AlertCircle} color="brand.primary" />
                       <Text fontSize="sm" flex="1">First time? Adjust your timeframe, sort order, and admin filters here.</Text>
                       <Button size="xs" onClick={dismissFilterTip}>Got it</Button>
@@ -639,7 +639,7 @@ export const LeadershipBoardPage: React.FC = () => {
                   <Flex justify="space-between" align="center">
                     <Box>
                       <Text fontWeight="bold">Company Leaderboard</Text>
-                      <Text color="brand.subtleText">Sorted by points with live updates</Text>
+                      <Text color="text.secondary">Sorted by points with live updates</Text>
                     </Box>
                     <HStack spacing={2}>
                       <Badge colorScheme="blue">Virtualized</Badge>
@@ -648,7 +648,7 @@ export const LeadershipBoardPage: React.FC = () => {
                   </Flex>
                 </CardHeader>
                 <CardBody>
-                  <Box border="1px solid" borderColor="brand.border" borderRadius="lg" overflow="hidden">
+                  <Box border="1px solid" borderColor="border.subtle" borderRadius="lg" overflow="hidden">
                     <Box
                       maxH="420px"
                       overflowY="auto"
@@ -671,14 +671,14 @@ export const LeadershipBoardPage: React.FC = () => {
                             </Tr>
                           )}
                           {virtualized.rows.map((row) => (
-                            <Tr key={row.user.id} bg={row.user.id === profile?.id ? 'brand.primaryMuted' : 'transparent'} height={`${rowHeight}px`}>
+                            <Tr key={row.user.id} bg={row.user.id === profile?.id ? 'tint.brandPrimary' : 'transparent'} height={`${rowHeight}px`}>
                               <Td>{getRankIcon(row.rank)}</Td>
                               <Td>
                                 <HStack spacing={3}>
                                   <Avatar size="sm" name={row.user.fullName} src={row.user.avatarUrl} />
                                   <Box>
                                     <Text fontWeight="bold">{row.user.fullName}</Text>
-                                    <Text fontSize="xs" color="brand.subtleText">
+                                    <Text fontSize="xs" color="text.secondary">
                                       {row.user.companyId || 'Independent'} · {row.user.villageId || 'Village TBD'} · {row.user.clusterId || 'Cluster TBD'}
                                     </Text>
                                     <HStack spacing={2} mt={1}>
@@ -699,7 +699,7 @@ export const LeadershipBoardPage: React.FC = () => {
                               </Td>
                               <Td isNumeric>
                                 <Text fontWeight="bold">{formatNumber(row.activePoints)}</Text>
-                                <Text fontSize="xs" color="brand.subtleText">Total {formatNumber(row.totalPoints)}</Text>
+                                <Text fontSize="xs" color="text.secondary">Total {formatNumber(row.totalPoints)}</Text>
                               </Td>
                             </Tr>
                           ))}
@@ -729,7 +729,7 @@ export const LeadershipBoardPage: React.FC = () => {
                 <Card>
                   <CardHeader>
                     <Text fontWeight="bold">Peer Progress</Text>
-                    <Text color="brand.subtleText">Compare with nearby ranks</Text>
+                    <Text color="text.secondary">Compare with nearby ranks</Text>
                   </CardHeader>
                   <CardBody>
                     <Table size="sm">
@@ -745,7 +745,7 @@ export const LeadershipBoardPage: React.FC = () => {
                       </Thead>
                       <Tbody>
                         {peerRows.map((row) => (
-                          <Tr key={row.user.id} bg={row.user.id === profile?.id ? 'brand.primaryMuted' : 'transparent'}>
+                          <Tr key={row.user.id} bg={row.user.id === profile?.id ? 'tint.brandPrimary' : 'transparent'}>
                             <Td>{row.rank}</Td>
                             <Td>
                               <HStack spacing={2}>
@@ -770,28 +770,28 @@ export const LeadershipBoardPage: React.FC = () => {
                 <Card>
                   <CardHeader>
                     <Text fontWeight="bold">Cohort Comparison</Text>
-                    <Text color="brand.subtleText">Benchmarks vs cohort max & averages</Text>
+                    <Text color="text.secondary">Benchmarks vs cohort max & averages</Text>
                   </CardHeader>
                   <CardBody>
                     <Stack spacing={4}>
                       <Box>
                         <HStack justify="space-between">
                           <Text>Total Points</Text>
-                          <Text color="brand.subtleText">Avg {formatNumber(cohortStats.avgTotal)}</Text>
+                          <Text color="text.secondary">Avg {formatNumber(cohortStats.avgTotal)}</Text>
                         </HStack>
                         <Progress value={(cohortStats.total / cohortStats.maxTotal) * 100} colorScheme="blue" borderRadius="full" />
                       </Box>
                       <Box>
                         <HStack justify="space-between">
                           <Text>Active Points</Text>
-                          <Text color="brand.subtleText">Avg {formatNumber(cohortStats.avgActive)}</Text>
+                          <Text color="text.secondary">Avg {formatNumber(cohortStats.avgActive)}</Text>
                         </HStack>
                         <Progress value={(cohortStats.active / cohortStats.maxActive) * 100} colorScheme="yellow" borderRadius="full" />
                       </Box>
                       <Box>
                         <HStack justify="space-between">
                           <Text>Level</Text>
-                          <Text color="brand.subtleText">Avg {cohortStats.avgLevel}</Text>
+                          <Text color="text.secondary">Avg {cohortStats.avgLevel}</Text>
                         </HStack>
                         <Progress value={(cohortStats.level / cohortStats.maxLevel) * 100} colorScheme="purple" borderRadius="full" />
                       </Box>
@@ -805,7 +805,7 @@ export const LeadershipBoardPage: React.FC = () => {
                   <Flex justify="space-between" align="center">
                     <Box>
                       <Text fontWeight="bold">Points Breakdown</Text>
-                      <Text color="brand.subtleText">Corporate members only</Text>
+                      <Text color="text.secondary">Corporate members only</Text>
                     </Box>
                     <HStack spacing={3}>
                       <IconButton
@@ -848,11 +848,11 @@ export const LeadershipBoardPage: React.FC = () => {
                               <Text>{formatNumber(category.value)} pts</Text>
                             </Flex>
                             <Progress value={category.percent} colorScheme="purple" borderRadius="full" />
-                            <Text fontSize="xs" color="brand.subtleText">{category.percent}% of active points</Text>
+                            <Text fontSize="xs" color="text.secondary">{category.percent}% of active points</Text>
                           </Box>
                         </Flex>
                       ))}
-                      <Text fontSize="sm" color="brand.subtleText">Page {breakdownPage} of {Math.max(1, Math.ceil(breakdownByCategory.length / 4))}</Text>
+                      <Text fontSize="sm" color="text.secondary">Page {breakdownPage} of {Math.max(1, Math.ceil(breakdownByCategory.length / 4))}</Text>
                     </Stack>
                   </Grid>
                 </CardBody>
@@ -936,7 +936,7 @@ export const LeadershipBoardPage: React.FC = () => {
                 </CardHeader>
                 <CardBody>
                   {emptyChallenges ? (
-                    <VStack spacing={3} py={8} color="brand.subtleText">
+                    <VStack spacing={3} py={8} color="text.secondary">
                       <Icon as={Users} size={48} />
                       <Text fontWeight="bold">No Active Challenges</Text>
                       <Text>Start your first head-to-head battle to climb faster.</Text>
@@ -946,16 +946,16 @@ export const LeadershipBoardPage: React.FC = () => {
                       {challenges
                         .filter((c) => c.status === 'active')
                         .map((challenge) => (
-                          <Flex key={challenge.id} p={4} border="1px solid" borderColor="brand.border" borderRadius="lg" align="center" gap={4}>
+                          <Flex key={challenge.id} p={4} border="1px solid" borderColor="border.subtle" borderRadius="lg" align="center" gap={4}>
                             <Avatar name={challenge.opponentName} src={challenge.opponentAvatar} />
                             <Box flex="1">
                               <Text fontWeight="bold">vs {challenge.opponentName}</Text>
-                              <Text fontSize="sm" color="brand.subtleText">{challenge.startDate} → {challenge.endDate}</Text>
+                              <Text fontSize="sm" color="text.secondary">{challenge.startDate} → {challenge.endDate}</Text>
                               <Progress mt={2} value={(challenge.yourPoints / Math.max(challenge.yourPoints, challenge.opponentPoints || 1)) * 100} colorScheme="purple" borderRadius="full" />
                             </Box>
                             <VStack spacing={1} align="flex-end">
                               <Text fontWeight="bold">You {formatNumber(challenge.yourPoints)}</Text>
-                              <Text color="brand.subtleText">Opponent {formatNumber(challenge.opponentPoints)}</Text>
+                              <Text color="text.secondary">Opponent {formatNumber(challenge.opponentPoints)}</Text>
                               <Badge colorScheme={challenge.yourPoints >= challenge.opponentPoints ? 'green' : 'red'}>{challenge.status}</Badge>
                             </VStack>
                           </Flex>
@@ -968,18 +968,18 @@ export const LeadershipBoardPage: React.FC = () => {
               <Card>
                 <CardHeader>
                   <Text fontWeight="bold">Challenge History</Text>
-                  <Text color="brand.subtleText">Wins, losses, and stats</Text>
+                  <Text color="text.secondary">Wins, losses, and stats</Text>
                 </CardHeader>
                 <CardBody>
                   <Stack spacing={3}>
                     {challenges
                       .filter((c) => c.status === 'completed')
                       .map((challenge) => (
-                        <Flex key={challenge.id} p={3} border="1px solid" borderColor="brand.border" borderRadius="lg" align="center" gap={3}>
+                        <Flex key={challenge.id} p={3} border="1px solid" borderColor="border.subtle" borderRadius="lg" align="center" gap={3}>
                           <Icon as={Award} color={challenge.result === 'win' ? 'green.400' : 'red.400'} />
                           <Box flex="1">
                             <Text fontWeight="bold">{challenge.opponentName}</Text>
-                            <Text fontSize="sm" color="brand.subtleText">{challenge.startDate} → {challenge.endDate}</Text>
+                            <Text fontSize="sm" color="text.secondary">{challenge.startDate} → {challenge.endDate}</Text>
                           </Box>
                           <Text fontWeight="bold">{challenge.result?.toUpperCase() || 'DRAW'}</Text>
                         </Flex>

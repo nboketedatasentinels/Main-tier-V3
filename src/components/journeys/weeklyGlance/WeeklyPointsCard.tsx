@@ -36,8 +36,8 @@ export const WeeklyPointsCard = ({ data, loading, error, onNavigate }: WeeklyPoi
   return (
     <Card
       h="100%"
-      bg="white"
-      borderColor="brand.border"
+      bg="surface.default"
+      borderColor="border.subtle"
       variant="outline"
       _hover={{ shadow: 'sm', cursor: onNavigate ? 'pointer' : 'default', transform: 'translateY(-2px)' }}
       transition="all 0.2s"
@@ -60,13 +60,13 @@ export const WeeklyPointsCard = ({ data, loading, error, onNavigate }: WeeklyPoi
           <Skeleton isLoaded={!loading} rounded="md">
             <VStack align="stretch" spacing={2}>
               <HStack justify="space-between">
-                <Text fontSize="xs" color="brand.subtleText">
+                <Text fontSize="xs" color="text.secondary">
                   Target
                 </Text>
                 <Text fontWeight="bold">{data ? `${data.target_points || 0} pts` : '--'}</Text>
               </HStack>
               <HStack justify="space-between">
-                <Text fontSize="xs" color="brand.subtleText">
+                <Text fontSize="xs" color="text.secondary">
                   Earned
                 </Text>
                 <Text>{data ? `${data.points_earned || 0} pts` : '--'}</Text>
@@ -74,14 +74,14 @@ export const WeeklyPointsCard = ({ data, loading, error, onNavigate }: WeeklyPoi
               <Progress colorScheme="brand" value={progress} height="8px" rounded="full" />
               <HStack justify="space-between">
                 <HStack spacing={1}>
-                  <Icon as={Users} boxSize={4} color="brand.subtleText" />
-                  <Text fontSize="sm" color="brand.subtleText">
+                  <Icon as={Users} boxSize={4} color="text.secondary" />
+                  <Text fontSize="sm" color="text.secondary">
                     {data?.engagement_count || 0} engagements
                   </Text>
                 </HStack>
                 <HStack spacing={1}>
-                  <Icon as={Clock3} boxSize={4} color="brand.subtleText" />
-                  <Text fontSize="sm" color="brand.subtleText">
+                  <Icon as={Clock3} boxSize={4} color="text.secondary" />
+                  <Text fontSize="sm" color="text.secondary">
                     {daysRemaining} days left
                   </Text>
                 </HStack>

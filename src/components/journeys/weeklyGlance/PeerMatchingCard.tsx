@@ -13,7 +13,7 @@ export const PeerMatchingCard = ({ matches, loading }: PeerMatchingCardProps) =>
   const completed = useMemo(() => matches.filter(match => match.status === 'matched'), [matches])
 
   return (
-    <Card h="100%" variant="outline" borderColor="brand.border">
+    <Card h="100%" variant="outline" borderColor="border.subtle">
       <CardBody>
         <Stack spacing={3}>
           <HStack justify="space-between">
@@ -25,9 +25,9 @@ export const PeerMatchingCard = ({ matches, loading }: PeerMatchingCardProps) =>
           </HStack>
           <Skeleton isLoaded={!loading} rounded="md">
             <VStack align="stretch" spacing={2}>
-              {matches.length === 0 && <Text color="brand.subtleText">No matches yet. Start connecting!</Text>}
+              {matches.length === 0 && <Text color="text.secondary">No matches yet. Start connecting!</Text>}
               {pending.slice(0, 2).map(match => (
-                <HStack key={match.id} justify="space-between" p={2} borderWidth="1px" borderColor="brand.border" rounded="md">
+                <HStack key={match.id} justify="space-between" p={2} borderWidth="1px" borderColor="border.subtle" rounded="md">
                   <HStack spacing={2}>
                     <Icon as={UserPlus} />
                     <Text>Request to {match.matched_user_id}</Text>
@@ -36,7 +36,7 @@ export const PeerMatchingCard = ({ matches, loading }: PeerMatchingCardProps) =>
                 </HStack>
               ))}
               {completed.slice(0, 2).map(match => (
-                <HStack key={match.id} justify="space-between" p={2} borderWidth="1px" borderColor="brand.border" rounded="md">
+                <HStack key={match.id} justify="space-between" p={2} borderWidth="1px" borderColor="border.subtle" rounded="md">
                   <HStack spacing={2}>
                     <Icon as={CalendarClock} />
                     <Text>Matched with {match.matched_user_id}</Text>
