@@ -104,18 +104,18 @@
   }
 
   a {
-    color: #5A0DA0;
+    color: #350e6f;
     transition: color 180ms ease-in-out;
   }
 
   a:hover {
-    color: #4A0B80;
+    color: #27062e;
   }
 
   /* Focus State System */
   :focus-visible {
     outline: none;
-    box-shadow: 0 0 0 2px white, 0 0 0 4px rgba(90, 13, 160, 0.35);
+    box-shadow: 0 0 0 2px white, 0 0 0 4px rgba(53, 14, 111, 0.35);
   }
 
   button:focus-visible,
@@ -123,7 +123,7 @@
   textarea:focus-visible,
   select:focus-visible {
     outline: none;
-    box-shadow: 0 0 0 2px white, 0 0 0 4px rgba(90, 13, 160, 0.35);
+    box-shadow: 0 0 0 2px white, 0 0 0 4px rgba(53, 14, 111, 0.35);
   }
 
   /* Global Transitions for Interactive Elements */
@@ -149,7 +149,7 @@
 @layer components {
   /* Card Base and Variants */
   .card {
-    @apply rounded-2xl border border-neutral-border bg-white p-6 shadow-md;
+    @apply rounded-2xl border border-border-subtle bg-surface-default p-6 shadow-md;
   }
 
   .card-sm {
@@ -161,11 +161,11 @@
   }
 
   .card-muted {
-    @apply card shadow-sm;
+    @apply card shadow-sm bg-surface-subtle;
   }
 
   .card-interactive {
-    @apply card cursor-pointer transition-all duration-200 hover:-translate-y-1 hover:shadow-card-elevated hover:border-brand-indigo-500;
+    @apply card cursor-pointer transition-all duration-200 hover:-translate-y-1 hover:shadow-card-elevated hover:border-brand-primary;
   }
 
   /* Status Indicator Base and Variants */
@@ -178,15 +178,15 @@
   }
 
   .status-indicator--info {
-    @apply status-indicator bg-brand-indigo-50 border-brand-indigo-200 text-brand-indigo-700;
+    @apply status-indicator bg-tint-brand-primary border-brand-primary text-brand-primary;
   }
 
   .status-indicator--warning {
-    @apply status-indicator bg-warning-50 border-warning-200 text-warning-700;
+    @apply status-indicator bg-tint-accent-warning border-accent-warning text-text-primary;
   }
 
   .status-indicator--danger {
-    @apply status-indicator bg-error-50 border-error-200 text-error-700;
+    @apply status-indicator bg-tint-danger border-danger text-text-primary;
   }
 
   .status-indicator--neutral {
@@ -195,11 +195,11 @@
 
   /* Premium Badge */
   .premium-badge {
-    @apply inline-flex items-center gap-1 rounded-full bg-accent-gold-50 border border-accent-gold-200 px-3 py-1 text-xs font-semibold uppercase tracking-wider text-accent-gold-700;
+    @apply inline-flex items-center gap-1 rounded-full bg-tint-accent-warning border border-accent-warning px-3 py-1 text-xs font-semibold uppercase tracking-wider text-text-primary;
   }
 
   .premium-badge--outline {
-    @apply premium-badge bg-transparent border-accent-gold-300;
+    @apply premium-badge bg-transparent border-accent-warning;
   }
 
   /* Eyebrow Text */
@@ -218,18 +218,18 @@
   }
 
   .surface-subtle {
-    @apply bg-neutral-100/60;
+    @apply bg-surface-subtle;
   }
 
   /* Gradient Utilities */
   .gradient-hero {
     background: linear-gradient(
       135deg,
-      #5a0da0 0%,
-      #7c1fc4 25%,
-      #9d31e8 50%,
-      #be43ff 75%,
-      #d966ff 100%
+      #350e6f 0%,
+      #5a1f9a 25%,
+      #7c31c4 50%,
+      #9d43ee 75%,
+      #be55ff 100%
     );
   }
 
@@ -238,11 +238,11 @@
   }
 
   .gradient-premium {
-    background: linear-gradient(135deg, #5a0da0 0%, #8b5cf6 50%, #eab130 100%);
+    background: linear-gradient(135deg, #350e6f 0%, #7c31c4 50%, #eab130 100%);
   }
 
   .gradient-gold {
-    background: linear-gradient(135deg, #eab130 0%, #f97316 100%);
+    background: linear-gradient(135deg, #eab130 0%, #f4540c 100%);
   }
 
   .gradient-neutral {

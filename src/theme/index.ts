@@ -14,21 +14,63 @@ const accentGoldScale = {
 }
 
 const colors = {
-  // Primary Brand Color: Indigo/Purple
+  // Brand Colors - Semantic Tokens (Growth.design approach)
+  brand: {
+    // Primary brand anchor - Violet (high contrast on white)
+    primary: '#350e6f',
+    // Dark brand anchor - Deep Purple (strong contrast, trustworthy)
+    dark: '#27062e',
+  },
+  // Surface Colors - For backgrounds and cards
+  surface: {
+    default: '#FFFFFF',
+    subtle: '#F8FAFC',
+    muted: '#F1F5F9',
+    elevated: '#FFFFFF',
+  },
+  // Text Colors - For readability
+  text: {
+    primary: '#0F172A',
+    secondary: '#334155',
+    muted: '#64748B',
+    inverse: '#FFFFFF',
+  },
+  // Border Colors
+  border: {
+    subtle: '#E2E8F0',
+    strong: '#CBD5E1',
+  },
+  // Accent Colors - For highlights and status
+  accent: {
+    warning: '#eab130',  // Gold
+    highlight: '#f9db59', // Yellow (backgrounds only, never text)
+  },
+  // Danger/Destructive Actions
+  danger: {
+    DEFAULT: '#f4540c', // Orange
+  },
+  // Tint Tokens - 80% blend toward white for safe backgrounds
+  tint: {
+    brandDark: '#d4cdd5',
+    brandPrimary: '#d7cfe2',
+    danger: '#fdddce',
+    accentWarning: '#fbefd6',
+    accentHighlight: '#fef8de',
+  },
+  // Legacy Primary Brand Color: Indigo/Purple (kept for compatibility)
   primary: {
     50: '#f5f3ff',
     100: '#ede9fe',
     200: '#ddd6fe',
     300: '#c4b5fd',
     400: '#a78bfa',
-    500: '#5A0DA0',
-    600: '#4A0B80',
-    700: '#380860',
-    800: '#2d0650',
+    500: '#350e6f', // Updated to Violet for better contrast
+    600: '#27062e', // Updated to Deep Purple
+    700: '#1e0340',
+    800: '#1e0340',
     900: '#1e0340',
   },
   // Accent/Secondary Color: Gold (secondary is an alias for accent)
-  accent: accentGoldScale,
   secondary: accentGoldScale,
   // Neutral Gray Scale
   neutral: {
@@ -97,9 +139,9 @@ const colors = {
   statusGreen: '#16a34a',
   statusYellow: '#d97706',
   statusRed: '#dc2626',
-  // Legacy brand keys preserved for compatibility
-  brand: {
-    primary: '#5A0DA0',
+  // Legacy brand keys preserved for compatibility with existing components
+  brandLegacy: {
+    primary: '#350e6f',  // Updated to Violet
     primaryMuted: '#ede9fe',
     accent: '#f8fafc',
     sidebar: '#f1f5f9',
@@ -132,59 +174,59 @@ const components = {
     },
     variants: {
       primary: {
-        bg: 'primary.500',
+        bg: 'brand.primary',
         color: 'white',
         _hover: {
-          bg: 'primary.600',
+          bg: 'brand.dark',
           transform: 'translateY(-1px)',
           boxShadow: 'lg',
         },
         _active: {
-          bg: 'primary.700',
+          bg: 'brand.dark',
           transform: 'translateY(0)',
         },
       },
       secondary: {
-        bg: 'white',
-        color: 'brand.text',
+        bg: 'surface.subtle',
+        color: 'brand.primary',
         border: '1px solid',
-        borderColor: 'neutral.200',
+        borderColor: 'brand.primary',
         _hover: {
-          bg: 'primary.50',
-          color: 'brand.text',
+          bg: 'tint.brandPrimary',
+          color: 'brand.primary',
         },
       },
       ghost: {
-        color: 'brand.text',
+        color: 'text.primary',
         bg: 'transparent',
         _hover: {
-          bg: 'primary.50',
-          color: 'brand.text',
+          bg: 'surface.subtle',
+          color: 'text.primary',
         },
       },
       accent: {
-        bg: 'accent.500',
-        color: 'white',
+        bg: 'accent.warning',
+        color: 'text.primary',
         _hover: {
-          bg: 'accent.600',
+          bg: '#ca8a04',
           transform: 'translateY(-1px)',
           boxShadow: 'lg',
         },
         _active: {
-          bg: 'accent.700',
+          bg: '#a16207',
           transform: 'translateY(0)',
         },
       },
       destructive: {
-        bg: 'error.500',
-        color: 'white',
+        bg: 'danger.DEFAULT',
+        color: 'text.primary',
         _hover: {
-          bg: 'error.600',
+          bg: '#ea580c',
           transform: 'translateY(-1px)',
           boxShadow: 'lg',
         },
         _active: {
-          bg: 'error.700',
+          bg: '#ea580c',
           transform: 'translateY(0)',
         },
       },
@@ -214,11 +256,11 @@ const components = {
   Card: {
     baseStyle: {
       container: {
-        bg: 'white',
+        bg: 'surface.default',
         borderRadius: 'xl',
         boxShadow: 'card',
         border: '1px solid',
-        borderColor: 'neutral.200',
+        borderColor: 'border.subtle',
       },
     },
     variants: {
@@ -230,6 +272,7 @@ const components = {
       muted: {
         container: {
           boxShadow: 'sm',
+          bg: 'surface.subtle',
         },
       },
       interactive: {
@@ -239,7 +282,7 @@ const components = {
           _hover: {
             transform: 'translateY(-4px)',
             boxShadow: 'card-elevated',
-            borderColor: 'primary.500',
+            borderColor: 'brand.primary',
           },
         },
       },
@@ -255,30 +298,30 @@ const components = {
     },
     variants: {
       primary: {
-        bg: 'primary.500',
+        bg: 'brand.primary',
         color: 'white',
       },
       subtle: {
-        bg: 'primary.50',
-        color: 'primary.700',
+        bg: 'tint.brandPrimary',
+        color: 'brand.primary',
       },
       success: {
         bg: 'success.500',
         color: 'white',
       },
       warning: {
-        bg: 'warning.500',
-        color: 'white',
+        bg: 'tint.accentWarning',
+        color: 'text.primary',
       },
       error: {
-        bg: 'error.500',
-        color: 'white',
+        bg: 'tint.danger',
+        color: 'text.primary',
       },
       premium: {
-        bg: 'accent.50',
-        color: 'accent.700',
+        bg: 'tint.accentWarning',
+        color: 'text.primary',
         border: '1px solid',
-        borderColor: 'accent.200',
+        borderColor: 'accent.warning',
         textTransform: 'uppercase',
         fontWeight: '600',
         letterSpacing: '0.02em',
@@ -288,10 +331,10 @@ const components = {
   Progress: {
     baseStyle: {
       filledTrack: {
-        bg: 'primary.500',
+        bg: 'brand.primary',
       },
       track: {
-        bg: 'neutral.100',
+        bg: 'surface.muted',
       },
     },
     variants: {
@@ -302,33 +345,34 @@ const components = {
       },
       warning: {
         filledTrack: {
-          bg: 'warning.500',
+          bg: 'accent.warning',
         },
       },
       error: {
         filledTrack: {
-          bg: 'error.500',
+          bg: 'danger.DEFAULT',
         },
       },
     },
   },
   Input: {
     defaultProps: {
-      focusBorderColor: 'primary.500',
-      errorBorderColor: 'error.500',
+      focusBorderColor: 'brand.primary',
+      errorBorderColor: 'danger.DEFAULT',
     },
     variants: {
       outline: {
         field: {
-          borderColor: 'neutral.300',
+          borderColor: 'border.subtle',
           borderRadius: 'lg',
+          bg: 'surface.default',
           _focus: {
-            borderColor: 'primary.500',
-            boxShadow: '0 0 0 1px var(--chakra-colors-primary-500)',
+            borderColor: 'brand.primary',
+            boxShadow: '0 0 0 1px #350e6f',
           },
           _invalid: {
-            borderColor: 'error.300',
-            boxShadow: '0 0 0 1px var(--chakra-colors-error-300)',
+            borderColor: 'danger.DEFAULT',
+            boxShadow: '0 0 0 1px #f4540c',
           },
         },
       },
@@ -336,17 +380,18 @@ const components = {
   },
   Select: {
     defaultProps: {
-      focusBorderColor: 'primary.500',
-      errorBorderColor: 'error.500',
+      focusBorderColor: 'brand.primary',
+      errorBorderColor: 'danger.DEFAULT',
     },
     variants: {
       outline: {
         field: {
-          borderColor: 'neutral.300',
+          borderColor: 'border.subtle',
           borderRadius: 'lg',
+          bg: 'surface.default',
           _focus: {
-            borderColor: 'primary.500',
-            boxShadow: '0 0 0 1px var(--chakra-colors-primary-500)',
+            borderColor: 'brand.primary',
+            boxShadow: '0 0 0 1px #350e6f',
           },
         },
       },
@@ -354,16 +399,17 @@ const components = {
   },
   Textarea: {
     defaultProps: {
-      focusBorderColor: 'primary.500',
-      errorBorderColor: 'error.500',
+      focusBorderColor: 'brand.primary',
+      errorBorderColor: 'danger.DEFAULT',
     },
     variants: {
       outline: {
-        borderColor: 'neutral.300',
+        borderColor: 'border.subtle',
         borderRadius: 'lg',
+        bg: 'surface.default',
         _focus: {
-          borderColor: 'primary.500',
-          boxShadow: '0 0 0 1px var(--chakra-colors-primary-500)',
+          borderColor: 'brand.primary',
+          boxShadow: '0 0 0 1px #350e6f',
         },
       },
     },
@@ -371,10 +417,10 @@ const components = {
   Checkbox: {
     baseStyle: {
       control: {
-        borderColor: 'neutral.300',
+        borderColor: 'border.strong',
         _checked: {
-          bg: 'primary.500',
-          borderColor: 'primary.500',
+          bg: 'brand.primary',
+          borderColor: 'brand.primary',
         },
       },
     },
@@ -382,11 +428,24 @@ const components = {
   Radio: {
     baseStyle: {
       control: {
-        borderColor: 'neutral.300',
+        borderColor: 'border.strong',
         _checked: {
-          bg: 'primary.500',
-          borderColor: 'primary.500',
+          bg: 'brand.primary',
+          borderColor: 'brand.primary',
         },
+      },
+    },
+  },
+  Modal: {
+    baseStyle: {
+      dialog: {
+        bg: 'surface.default',
+      },
+      header: {
+        color: 'text.primary',
+      },
+      body: {
+        color: 'text.secondary',
       },
     },
   },
@@ -395,18 +454,18 @@ const components = {
 const styles = {
   global: {
     body: {
-      bg: 'brand.accent',
-      color: 'brand.text',
+      bg: 'surface.subtle',
+      color: 'text.primary',
       fontFamily: 'body',
     },
     'h1, h2, h3, h4, h5, h6': {
-      color: 'brand.text',
+      color: 'text.primary',
       fontFamily: 'heading',
     },
     a: {
-      color: 'primary.500',
+      color: 'brand.primary',
       _hover: {
-        color: 'primary.600',
+        color: 'brand.dark',
         textDecoration: 'underline',
       },
     },
@@ -460,7 +519,7 @@ const shadows = {
   '2xl': '0 24px 48px rgba(15, 23, 42, 0.15)',
   card: '0 8px 24px rgba(15, 23, 42, 0.08)',
   'card-elevated': '0 18px 40px rgba(15, 23, 42, 0.12)',
-  focus: '0 0 0 4px rgba(90, 13, 160, 0.35)',
+  focus: '0 0 0 4px rgba(53, 14, 111, 0.35)', // Updated to use brand.primary
   inner: 'inset 0 2px 4px 0 rgba(15, 23, 42, 0.06)',
 }
 
