@@ -1,5 +1,6 @@
 import {
   collection,
+  addDoc,
   doc,
   getDocs,
   query,
@@ -7,6 +8,7 @@ import {
   where,
   Timestamp,
   getDoc,
+  serverTimestamp,
 } from 'firebase/firestore'
 import { db } from './firebase'
 import { getCurrentWeekNumber, getWeekDateRange } from '@/utils/weekCalculations'
@@ -24,6 +26,8 @@ export interface WeeklyPointsData {
   created_at: Timestamp
   updated_at: Timestamp
 }
+
+const LOW_WEEKLY_POINTS_ALERT_THRESHOLD = 4000
 
 export const calculateWeeklyStatus = (
   earned: number,
@@ -89,6 +93,84 @@ export const getOrCreateWeeklyPoints = async (userId: string): Promise<void> => 
   }
 }
 
+const formatParticipantName = (profileData: Record<string, unknown>) => {
+  if (typeof profileData.fullName === 'string' && profileData.fullName.trim().length) {
+    return profileData.fullName
+  }
+
+  const firstName = typeof profileData.firstName === 'string' ? profileData.firstName : ''
+  const lastName = typeof profileData.lastName === 'string' ? profileData.lastName : ''
+  const combined = `${firstName} ${lastName}`.trim()
+
+  return combined.length ? combined : 'This participant'
+}
+
+const createEngagementAlertIfNeeded = async (params: {
+  userId: string
+  weekNumber: number
+  weekYear: number
+  pointsEarned: number
+  targetPoints: number
+}) => {
+  const { userId, weekNumber, weekYear, pointsEarned, targetPoints } = params
+
+  if (pointsEarned >= LOW_WEEKLY_POINTS_ALERT_THRESHOLD) {
+    return
+  }
+
+  const existingAlertsQuery = query(
+    collection(db, 'weekly_target_alerts'),
+    where('user_id', '==', userId),
+    where('week_number', '==', weekNumber),
+    where('week_year', '==', weekYear),
+    where('resolved_at', '==', null),
+  )
+
+  const existingAlerts = await getDocs(existingAlertsQuery)
+  if (!existingAlerts.empty) {
+    return
+  }
+
+  const profileDoc = await getDoc(doc(db, 'profiles', userId))
+  const profileData = profileDoc.exists() ? profileDoc.data() : {}
+  const participantName = formatParticipantName(profileData)
+
+  const message = `${participantName} is below ${LOW_WEEKLY_POINTS_ALERT_THRESHOLD.toLocaleString()} weekly points (${pointsEarned.toLocaleString()} pts). Start outreach with support resources to keep them engaged.`
+
+  await addDoc(collection(db, 'weekly_target_alerts'), {
+    user_id: userId,
+    week_number: weekNumber,
+    week_year: weekYear,
+    type: 'alert',
+    message,
+    status: 'open',
+    points_earned: pointsEarned,
+    target_points: targetPoints,
+    threshold: LOW_WEEKLY_POINTS_ALERT_THRESHOLD,
+    created_at: serverTimestamp(),
+    notified_at: null,
+    acknowledged_at: null,
+    resolved_at: null,
+  })
+
+  await addDoc(collection(db, 'admin_notifications'), {
+    type: 'engagement_alert',
+    title: 'Participant engagement alert',
+    message,
+    severity: 'warning',
+    target_roles: ['partner', 'super_admin'],
+    related_id: userId,
+    metadata: {
+      week_number: weekNumber,
+      week_year: weekYear,
+      points_earned: pointsEarned,
+      target_points: targetPoints,
+      threshold: LOW_WEEKLY_POINTS_ALERT_THRESHOLD,
+    },
+    created_at: serverTimestamp(),
+  })
+}
+
 export const updateWeeklyPoints = async (userId: string): Promise<void> => {
   const weekNumber = getCurrentWeekNumber()
   const weekYear = new Date().getFullYear()
@@ -146,5 +228,13 @@ export const updateWeeklyPoints = async (userId: string): Promise<void> => {
       },
       { merge: true },
     )
+
+    await createEngagementAlertIfNeeded({
+      userId,
+      weekNumber,
+      weekYear,
+      pointsEarned,
+      targetPoints,
+    })
   }
 }
