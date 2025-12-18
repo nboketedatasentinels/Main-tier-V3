@@ -42,6 +42,12 @@ const colors = {
     700: '#3F3F3F',
     800: '#262626',
     900: '#1A1A1A',
+    darkest: '#1A1A1A',
+    dark: '#333333',
+    medium: '#555555',
+    muted: '#777777',
+    light: '#F5F5F5',
+    border: '#E0E0E0',
   },
   // Semantic Status Colors
   success: {
@@ -395,18 +401,18 @@ const components = {
 const styles = {
   global: {
     body: {
-      bg: 'brand.accent',
-      color: 'brand.text',
+      bg: 'neutral.50',
+      color: 'neutral.900',
       fontFamily: 'body',
     },
     'h1, h2, h3, h4, h5, h6': {
-      color: 'brand.text',
+      color: 'neutral.900',
       fontFamily: 'heading',
     },
     a: {
-      color: 'primary.500',
+      color: 'primary.600',
       _hover: {
-        color: 'primary.600',
+        color: 'primary.700',
         textDecoration: 'underline',
       },
     },
