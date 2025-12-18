@@ -63,13 +63,15 @@ const colors = {
   text: {
     primary: '#0F172A',
     secondary: '#334155',
-    muted: '#64748B',
+    muted: '#475569',
+    subtle: '#64748B',
     inverse: '#FFFFFF',
   },
   // Border Colors
   border: {
     subtle: '#E2E8F0',
     strong: '#CBD5E1',
+    card: '#D6DEE8',
   },
   // Accent Colors - For highlights and status
   accent: {
@@ -339,6 +341,29 @@ const components = {
         fontWeight: '600',
         letterSpacing: '0.02em',
       },
+    },
+  },
+  Tag: {
+    baseStyle: {
+      container: {
+        borderRadius: 'full',
+        fontWeight: '600',
+      },
+      label: {
+        color: 'text.primary',
+      },
+    },
+    variants: {
+      subtle: {
+        container: {
+          bg: 'surface.muted',
+          border: '1px solid',
+          borderColor: 'border.strong',
+        },
+      },
+    },
+    defaultProps: {
+      variant: 'subtle',
     },
   },
   Progress: {
