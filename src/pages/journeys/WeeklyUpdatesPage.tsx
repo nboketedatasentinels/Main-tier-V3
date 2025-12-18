@@ -558,11 +558,11 @@ const WeeklyChecklistPage: React.FC = () => {
 
   const renderActivityCard = (activity: ActivityState) => {
     const disabled = isWeekLocked
-    const requiresProof = journey?.isPaid && activity.requiresApproval
+    const requiresPartnerApproval = journey?.isPaid && activity.requiresApproval
     const yesDisabled = disabled || activity.status === 'completed'
     const noDisabled = disabled || activity.status === 'not_started'
 
-    const showProofBadge = requiresProof
+    const showProofBadge = requiresPartnerApproval
     const showFreeBadge = activity.isFreeTier && !journey?.isPaid
 
     return (
@@ -583,8 +583,8 @@ const WeeklyChecklistPage: React.FC = () => {
                 {statusLabelMap[activity.status]}
               </Badge>
               {showProofBadge && (
-                <Tooltip label="Proof required for paid tier activities">
-                  <Badge colorScheme="purple">Requires proof</Badge>
+                <Tooltip label="Partner approval required. Upload proof so the partner team can verify.">
+                  <Badge colorScheme="purple">Partner approval</Badge>
                 </Tooltip>
               )}
               {showFreeBadge && <Badge colorScheme="blue">Free tier</Badge>}
@@ -602,7 +602,7 @@ const WeeklyChecklistPage: React.FC = () => {
               +{activity.points} pts
             </Tag>
             {activity.status === 'pending' && (
-              <Tooltip label="Pending verification. Points will post after approval.">
+              <Tooltip label="Pending partner verification. Points will post after approval.">
                 <Icon as={AlertTriangle} color="yellow.300" />
               </Tooltip>
             )}
@@ -613,7 +613,11 @@ const WeeklyChecklistPage: React.FC = () => {
             colorScheme="teal"
             variant={activity.status === 'completed' || activity.status === 'pending' ? 'solid' : 'outline'}
             isDisabled={yesDisabled}
-            onClick={() => (requiresProof ? openProofModal(activity) : handleActivityUpdate(activity, 'completed'))}
+            onClick={() =>
+              requiresPartnerApproval
+                ? openProofModal(activity)
+                : handleActivityUpdate(activity, 'completed')
+            }
           >
             Yes
           </Button>
