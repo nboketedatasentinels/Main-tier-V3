@@ -1,5 +1,7 @@
 import React, { useEffect } from 'react'
 
+/* eslint-disable @typescript-eslint/no-namespace */
+
 declare global {
   namespace JSX {
     interface IntrinsicElements {
@@ -13,6 +15,7 @@ declare global {
     }
   }
 }
+/* eslint-enable @typescript-eslint/no-namespace */
 
 interface DotLottieReactProps {
   src: string

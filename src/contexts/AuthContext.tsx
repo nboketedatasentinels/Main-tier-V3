@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react'
+import { FirebaseError } from 'firebase/app'
 import { User } from 'firebase/auth'
 import {
   signInWithEmailAndPassword,
@@ -83,14 +84,17 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       })
 
       return profileData
-    } catch (error: any) {
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : 'Unknown error'
+      const code = error instanceof FirebaseError ? error.code : 'unknown'
+
       console.error('Error fetching/creating profile:', {
-        message: error.message,
-        code: error.code,
+        message,
+        code,
         uid: firebaseUser.uid,
       })
 
-      if (error.code === 'permission-denied') {
+      if (error instanceof FirebaseError && error.code === 'permission-denied') {
         console.error(
           'Firestore Security Rules Permission Denied:',
           'The rules blocked the request to fetch the user profile.',
