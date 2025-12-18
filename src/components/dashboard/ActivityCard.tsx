@@ -11,8 +11,8 @@ interface ActivityCardProps {
 export const ActivityCard = ({ title, points, completed, onToggle }: ActivityCardProps) => {
   return (
     <Card
-      bg={completed ? 'rgba(234, 177, 48, 0.08)' : 'brand.deepPlum'}
-      borderColor={completed ? 'brand.gold' : 'rgba(234, 177, 48, 0.2)'}
+      bg={completed ? 'rgba(234, 177, 48, 0.08)' : 'white'}
+      borderColor={completed ? 'brand.gold' : 'brand.border'}
       transition="all 0.2s"
       _hover={{ transform: 'translateY(-2px)', borderColor: 'brand.gold' }}
     >
@@ -22,10 +22,10 @@ export const ActivityCard = ({ title, points, completed, onToggle }: ActivityCar
             colorScheme="yellow"
             isChecked={completed}
             onChange={onToggle}
-            iconColor="brand.deepPlum"
+            iconColor="brand.primary"
           />
           <Flex direction="column" flex={1} gap={1}>
-            <Text fontWeight="semibold" color="brand.textOnDark">
+            <Text fontWeight="semibold" color="brand.text">
               {title}
             </Text>
             <Badge variant="gold" width="fit-content">
@@ -34,7 +34,7 @@ export const ActivityCard = ({ title, points, completed, onToggle }: ActivityCar
           </Flex>
           <Icon
             as={completed ? CheckCircle2 : CircleDashed}
-            color={completed ? 'white' : 'brand.textOnDark'}
+            color={completed ? 'brand.primary' : 'brand.subtleText'}
             boxSize={5}
           />
         </Flex>

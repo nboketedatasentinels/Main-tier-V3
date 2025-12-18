@@ -41,7 +41,7 @@ T4L (Transformation 4 Leaders) is a full-stack web application designed to facil
 
 The application uses a distinctive color palette:
 
-- **Deep Plum**: `#27062e` - Primary backgrounds and dark surfaces
+- **Deep Plum**: `#27062e` - Primary brand base and hero accents
 - **Flame Orange**: `#f4540c` - CTAs and primary actions
 - **Royal Purple**: `#350e6f` - Secondary accents and cards
 - **Gold**: `#eab130` - Achievement colors and success states

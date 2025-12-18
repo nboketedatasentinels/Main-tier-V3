@@ -23,7 +23,7 @@ export const LoadingAnimation: React.FC<LoadingAnimationProps> = ({ fullScreen =
 
   if (fullScreen) {
     return (
-      <Center h="100vh" bg="brand.deepPlum">
+      <Center h="100vh" bg="brand.accent">
         {player}
       </Center>
     )

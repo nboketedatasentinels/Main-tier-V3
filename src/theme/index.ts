@@ -12,7 +12,6 @@ const colors = {
     warning: '#f4540c',
     // Text colors for proper contrast
     textLight: '#ffffff',
-    textOnDark: '#f3f4f6',
     textOnPrimary: '#ffffff',
     // Legacy keys preserved for compatibility
     deepPlum: '#27062e',

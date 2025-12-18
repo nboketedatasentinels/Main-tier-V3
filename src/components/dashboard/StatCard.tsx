@@ -20,13 +20,17 @@ export const StatCard = ({
   trendValue,
   highlight,
 }: StatCardProps) => {
+  const cardBg = highlight ? 'brand.primary' : 'white'
+  const textColor = highlight ? 'brand.textLight' : 'brand.text'
+  const helperColor = highlight ? 'brand.textLight' : 'brand.subtleText'
+
   return (
-    <Card bg={highlight ? 'brand.royalPurple' : 'brand.deepPlum'} borderColor="rgba(234, 177, 48, 0.35)">
+    <Card bg={cardBg} borderColor={highlight ? 'brand.primary' : 'brand.border'}>
       <CardBody>
         <HStack spacing={4} align="flex-start">
           {IconComponent && (
             <Box
-              bg="rgba(249, 219, 89, 0.12)"
+              bg={highlight ? 'rgba(255, 255, 255, 0.2)' : 'rgba(93, 107, 255, 0.12)'}
               borderRadius="full"
               p={2}
               color="brand.gold"
@@ -36,14 +40,14 @@ export const StatCard = ({
             </Box>
           )}
           <VStack align="flex-start" spacing={1} flex={1}>
-            <Text fontSize="sm" color="brand.textOnDark" opacity={0.85}>
+            <Text fontSize="sm" color={helperColor} opacity={0.9}>
               {label}
             </Text>
-            <Text fontSize={{ base: '2xl', md: '3xl' }} fontWeight="bold" color="white">
+            <Text fontSize={{ base: '2xl', md: '3xl' }} fontWeight="bold" color={textColor}>
               {value}
             </Text>
             {helper && (
-              <Text fontSize="sm" color="brand.textOnDark" opacity={0.8}>
+              <Text fontSize="sm" color={helperColor} opacity={0.9}>
                 {helper}
               </Text>
             )}
