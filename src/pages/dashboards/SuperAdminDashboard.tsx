@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useMemo, useState } from 'react'
+import React, { useEffect, useMemo, useState } from 'react'
 import { useToast } from '@chakra-ui/react'
 import { useAuth } from '@/hooks/useAuth'
 import { SuperAdminLayout } from '@/layouts/SuperAdminLayout'
@@ -11,11 +11,11 @@ import { SystemSettingsPage } from '@/pages/super-admin/SystemSettingsPage'
 import { UserManagementPage } from '@/pages/super-admin/UserManagementPage'
 import { AdminOversightPage } from '@/pages/super-admin/AdminOversightPage'
 import {
-  fetchAdminActivityLog,
-  fetchDashboardMetrics,
-  fetchEngagementRiskAggregates,
-  fetchRegistrationTrend,
-  fetchUserGrowthTrend,
+  listenToAdminActivityLog,
+  listenToDashboardMetrics,
+  listenToEngagementRiskAggregates,
+  listenToRegistrationTrend,
+  listenToUserGrowthTrend,
   listenToRegistrations,
   listenToSystemAlerts,
   listenToTaskNotifications,
@@ -63,33 +63,74 @@ export const SuperAdminDashboard: React.FC = () => {
   const [registrationTrend, setRegistrationTrend] = useState<TrendPoint[]>([])
   const [userGrowthTrend, setUserGrowthTrend] = useState<TrendPoint[]>([])
 
-  const loadDashboard = useCallback(async () => {
-    try {
-      setLoading(true)
-      const [fetchedMetrics, risks, audit, registrationsData, growth] = await Promise.all([
-        fetchDashboardMetrics(),
-        fetchEngagementRiskAggregates(),
-        fetchAdminActivityLog(),
-        fetchRegistrationTrend(),
-        fetchUserGrowthTrend(),
-      ])
-      setMetrics(fetchedMetrics)
-      setRiskAggregate(risks)
-      setActivityLog(audit)
-      setRegistrationTrend(registrationsData)
-      setUserGrowthTrend(growth)
-    } catch (err) {
+  useEffect(() => {
+    setLoading(true)
+    setError(null)
+
+    const unsubscribers: Array<() => void> = []
+    const handleError = (message: string, err: unknown) => {
       console.error(err)
-      setError('Unable to load super admin data from Firebase')
+      setError(message)
       toast({ title: 'Failed to load dashboard', status: 'error' })
-    } finally {
       setLoading(false)
     }
-  }, [toast])
 
-  useEffect(() => {
-    loadDashboard()
-  }, [loadDashboard])
+    unsubscribers.push(
+      listenToDashboardMetrics(
+        (liveMetrics) => {
+          setMetrics(liveMetrics)
+          setLoading(false)
+        },
+        undefined,
+        (err) => handleError('Unable to load super admin data from Firebase', err),
+      ),
+    )
+
+    unsubscribers.push(
+      listenToEngagementRiskAggregates(
+        (aggregate) => {
+          setRiskAggregate(aggregate)
+          setLoading(false)
+        },
+        (err) => handleError('Unable to load engagement risk data from Firebase', err),
+      ),
+    )
+
+    unsubscribers.push(
+      listenToAdminActivityLog(
+        (entries) => {
+          setActivityLog(entries)
+          setLoading(false)
+        },
+        10,
+        (err) => handleError('Unable to load admin activity from Firebase', err),
+      ),
+    )
+
+    unsubscribers.push(
+      listenToRegistrationTrend(
+        (trend) => {
+          setRegistrationTrend(trend)
+          setLoading(false)
+        },
+        14,
+        (err) => handleError('Unable to load registration trend from Firebase', err),
+      ),
+    )
+
+    unsubscribers.push(
+      listenToUserGrowthTrend(
+        (trend) => {
+          setUserGrowthTrend(trend)
+          setLoading(false)
+        },
+        30,
+        (err) => handleError('Unable to load user growth trend from Firebase', err),
+      ),
+    )
+
+    return () => unsubscribers.forEach((unsub) => unsub())
+  }, [toast])
 
   useEffect(() => {
     const unsubscribers: Array<() => void> = []
