@@ -6,16 +6,16 @@ const cn = (...classes: string[]) => classes.filter(Boolean).join(" ")
 
 type RoutePoint = { x: number; y: number; delay: number }
 
+const DOT_MAP_ROUTES: { start: RoutePoint; end: RoutePoint; color: string }[] = [
+  { start: { x: 100, y: 150, delay: 0 }, end: { x: 200, y: 80, delay: 2 }, color: "#350e6f" },
+  { start: { x: 200, y: 80, delay: 2 }, end: { x: 260, y: 120, delay: 4 }, color: "#350e6f" },
+  { start: { x: 50, y: 50, delay: 1 }, end: { x: 150, y: 180, delay: 3 }, color: "#350e6f" },
+  { start: { x: 280, y: 60, delay: 0.5 }, end: { x: 180, y: 180, delay: 2.5 }, color: "#350e6f" },
+]
+
 const DotMap = () => {
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const [dimensions, setDimensions] = useState({ width: 0, height: 0 })
-
-  const routes: { start: RoutePoint; end: RoutePoint; color: string }[] = [
-    { start: { x: 100, y: 150, delay: 0 }, end: { x: 200, y: 80, delay: 2 }, color: "#350e6f" },
-    { start: { x: 200, y: 80, delay: 2 }, end: { x: 260, y: 120, delay: 4 }, color: "#350e6f" },
-    { start: { x: 50, y: 50, delay: 1 }, end: { x: 150, y: 180, delay: 3 }, color: "#350e6f" },
-    { start: { x: 280, y: 60, delay: 0.5 }, end: { x: 180, y: 180, delay: 2.5 }, color: "#350e6f" },
-  ]
 
   const generateDots = (width: number, height: number) => {
     const dots: { x: number; y: number; radius: number; opacity: number }[] = []
@@ -84,7 +84,7 @@ const DotMap = () => {
 
     function drawRoutes() {
       const currentTime = (Date.now() - startTime) / 1000
-      routes.forEach(route => {
+      DOT_MAP_ROUTES.forEach(route => {
         const elapsed = currentTime - route.start.delay
         if (elapsed <= 0) return
 
