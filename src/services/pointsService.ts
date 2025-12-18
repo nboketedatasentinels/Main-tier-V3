@@ -1,4 +1,4 @@
-import { doc, runTransaction, serverTimestamp, deleteDoc } from "firebase/firestore";
+import { doc, runTransaction, serverTimestamp } from "firebase/firestore";
 import { db } from "@/services/firebase";
 import { JOURNEY_META, getMonthNumber, ActivityDef, JourneyType } from "@/config/pointsConfig";
 

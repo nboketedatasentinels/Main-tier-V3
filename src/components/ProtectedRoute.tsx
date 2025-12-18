@@ -2,10 +2,11 @@ import React from 'react'
 import { Navigate, useLocation } from 'react-router-dom'
 import { useAuth } from '@/hooks/useAuth'
 import { normalizeRole } from '@/utils/roleRouting'
+import { UserRole } from '@/types'
 
 type Props = {
   children: React.ReactNode
-  requiredRoles?: any[] // UserRole[] but keep tolerant
+  requiredRoles?: UserRole[]
 }
 
 export const ProtectedRoute: React.FC<Props> = ({ children, requiredRoles }) => {

@@ -1,4 +1,5 @@
 import React from 'react'
+import { PartnerVerificationNotice } from '@/components/PartnerVerificationNotice'
 import { JoinUs } from './bookClub/JoinUs'
 
 export const TeamBookClubPage: React.FC = () => {
@@ -11,8 +12,10 @@ export const TeamBookClubPage: React.FC = () => {
         </p>
       </header>
 
+      <div className="mb-8">
+        <PartnerVerificationNotice />
+      </div>
       <JoinUs />
     </main>
   )
 }
-

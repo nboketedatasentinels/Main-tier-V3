@@ -31,6 +31,7 @@ import { collection, query, where, onSnapshot, orderBy, limit, doc, getDocs, Tim
 import { useAuth } from '@/hooks/useAuth'
 import { db } from '@/services/firebase'
 import { UserRole } from '@/types'
+import { PartnerVerificationNotice } from '@/components/PartnerVerificationNotice'
 
 type CourseDifficulty = 'Beginner' | 'Intermediate' | 'Advanced'
 
@@ -879,6 +880,8 @@ export const MyCoursesPage: React.FC = () => {
           </Stack>
         </Flex>
       </Box>
+
+      <PartnerVerificationNotice />
 
       {profile?.role === UserRole.FREE_USER && (
         <Grid templateColumns={{ base: '1fr', md: '1fr 1fr' }} gap={6} as="section">
