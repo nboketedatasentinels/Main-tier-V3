@@ -15,11 +15,27 @@ const accentGoldScale = {
 
 const colors = {
   // Brand Colors - Semantic Tokens (Growth.design approach)
+  // Also includes legacy keys for backward compatibility
   brand: {
-    // Primary brand anchor - Violet (high contrast on white)
-    primary: '#350e6f',
-    // Dark brand anchor - Deep Purple (strong contrast, trustworthy)
-    dark: '#27062e',
+    // New semantic tokens (Growth.design)
+    primary: '#350e6f',  // Violet - Primary brand anchor, high contrast on white
+    dark: '#27062e',     // Deep Purple - Dark brand anchor, trustworthy
+    // Legacy keys preserved for backward compatibility
+    primaryMuted: '#ede9fe',
+    accent: '#f8fafc',   // Maps to surface.subtle
+    sidebar: '#f1f5f9',  // Maps to surface.muted
+    text: '#334155',     // Maps to text.secondary
+    subtleText: '#64748b', // Maps to text.muted
+    border: '#e2e8f0',   // Maps to border.subtle
+    warning: '#f4540c',  // Maps to danger.DEFAULT (Orange)
+    textLight: '#ffffff',
+    textOnDark: '#f3f4f6',
+    textOnPrimary: '#ffffff',
+    deepPlum: '#27062e',  // Maps to brand.dark
+    flameOrange: '#f4540c', // Maps to danger.DEFAULT
+    royalPurple: '#350e6f', // Maps to brand.primary
+    gold: '#EAB130',     // Maps to accent.warning
+    softGold: '#f9db59', // Maps to accent.highlight
   },
   // Surface Colors - For backgrounds and cards
   surface: {
@@ -139,25 +155,6 @@ const colors = {
   statusGreen: '#16a34a',
   statusYellow: '#d97706',
   statusRed: '#dc2626',
-  // Legacy brand keys preserved for compatibility with existing components
-  brandLegacy: {
-    primary: '#350e6f',  // Updated to Violet
-    primaryMuted: '#ede9fe',
-    accent: '#f8fafc',
-    sidebar: '#f1f5f9',
-    text: '#334155',
-    subtleText: '#64748b',
-    border: '#e2e8f0',
-    warning: '#f4540c',
-    textLight: '#ffffff',
-    textOnDark: '#f3f4f6',
-    textOnPrimary: '#ffffff',
-    deepPlum: '#27062e',
-    flameOrange: '#f4540c',
-    royalPurple: '#350e6f',
-    gold: '#EAB130',
-    softGold: '#f9db59',
-  },
 }
 
 const config: ThemeConfig = {
