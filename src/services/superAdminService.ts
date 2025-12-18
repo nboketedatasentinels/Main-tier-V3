@@ -4,6 +4,7 @@ import {
   collection,
   deleteDoc,
   doc,
+  FirestoreError,
   getDocs,
   limit,
   onSnapshot,
@@ -59,6 +60,56 @@ export const fetchDashboardMetrics = async (
     engagementRate: 0.76,
     newRegistrations,
   }
+}
+
+export const listenToDashboardMetrics = (
+  onChange: (metrics: SuperAdminDashboardMetrics) => void,
+  filters?: Partial<{ organizationCodes: string[]; organizationIds: string[]; trendDays: number }>,
+  onError?: (error: FirestoreError) => void,
+) => {
+  const orgQuery = filters?.organizationCodes?.length
+    ? query(orgCollection, where('code', 'in', filters.organizationCodes))
+    : orgCollection
+
+  let orgDocs: Array<{ data: () => unknown }> = []
+  let userDocs: Array<{ data: () => unknown }> = []
+
+  const emit = () => {
+    const organizationCount = orgDocs.length
+    const paidMembers = userDocs.filter((docSnap) => (docSnap.data() as { membershipStatus?: string }).membershipStatus === 'paid').length
+    const activeMembers = userDocs.filter((docSnap) => (docSnap.data() as { accountStatus?: string }).accountStatus === 'active').length
+    const newRegistrations = userDocs.filter((docSnap) => !!(docSnap.data() as { registrationDate?: unknown }).registrationDate).length
+
+    onChange({
+      organizationCount,
+      managedCompanies: organizationCount,
+      paidMembers,
+      activeMembers,
+      engagementRate: 0.76,
+      newRegistrations,
+    })
+  }
+
+  const unsubscribes = [
+    onSnapshot(
+      orgQuery,
+      (snapshot) => {
+        orgDocs = snapshot.docs
+        emit()
+      },
+      onError,
+    ),
+    onSnapshot(
+      usersCollection,
+      (snapshot) => {
+        userDocs = snapshot.docs
+        emit()
+      },
+      onError,
+    ),
+  ]
+
+  return () => unsubscribes.forEach((unsub) => unsub())
 }
 
 const buildDateBuckets = (days: number) => {
@@ -125,6 +176,40 @@ export const fetchRegistrationTrend = async (days = 14): Promise<TrendPoint[]> =
   return Object.values(buckets).map((bucket) => ({ label: bucket.label, value: bucket.value || 0 }))
 }
 
+export const listenToRegistrationTrend = (
+  onChange: (trend: TrendPoint[]) => void,
+  days = 14,
+  onError?: (error: FirestoreError) => void,
+) => {
+  const sinceDate = new Date()
+  sinceDate.setDate(sinceDate.getDate() - (days - 1))
+
+  const registrationQuery = query(
+    usersCollection,
+    where('registrationDate', '>=', sinceDate),
+    orderBy('registrationDate', 'asc'),
+  )
+
+  return onSnapshot(
+    registrationQuery,
+    (snapshot) => {
+      const buckets = buildDateBuckets(days)
+
+      snapshot.docs.forEach((docSnap) => {
+        const millis = timestampToMillis((docSnap.data() as { registrationDate?: unknown }).registrationDate)
+        Object.values(buckets).forEach((bucket) => {
+          if (millis >= bucket.start && millis <= bucket.end) {
+            buckets[bucket.label].value = (buckets[bucket.label].value || 0) + 1
+          }
+        })
+      })
+
+      onChange(Object.values(buckets).map((bucket) => ({ label: bucket.label, value: bucket.value || 0 })))
+    },
+    onError,
+  )
+}
+
 export const fetchUserGrowthTrend = async (days = 30): Promise<TrendPoint[]> => {
   const sinceDate = new Date()
   sinceDate.setDate(sinceDate.getDate() - (days - 1))
@@ -147,6 +232,42 @@ export const fetchUserGrowthTrend = async (days = 30): Promise<TrendPoint[]> => 
     runningTotal += byDay[bucket.label] || 0
     return { label: bucket.label, value: runningTotal }
   })
+}
+
+export const listenToUserGrowthTrend = (
+  onChange: (trend: TrendPoint[]) => void,
+  days = 30,
+  onError?: (error: FirestoreError) => void,
+) => {
+  const sinceDate = new Date()
+  sinceDate.setDate(sinceDate.getDate() - (days - 1))
+
+  const userQuery = query(usersCollection, where('registrationDate', '>=', sinceDate), orderBy('registrationDate', 'asc'))
+
+  return onSnapshot(
+    userQuery,
+    (snapshot) => {
+      const buckets = buildDateBuckets(days)
+      const byDay: Record<string, number> = {}
+
+      snapshot.docs.forEach((docSnap) => {
+        const millis = timestampToMillis((docSnap.data() as { registrationDate?: unknown }).registrationDate)
+        const bucket = Object.values(buckets).find((range) => millis >= range.start && millis <= range.end)
+        if (bucket) {
+          byDay[bucket.label] = (byDay[bucket.label] || 0) + 1
+        }
+      })
+
+      let runningTotal = 0
+      onChange(
+        Object.values(buckets).map((bucket) => {
+          runningTotal += byDay[bucket.label] || 0
+          return { label: bucket.label, value: runningTotal }
+        }),
+      )
+    },
+    onError,
+  )
 }
 
 export const fetchOrganizations = async (): Promise<OrganizationRecord[]> => {
@@ -196,12 +317,53 @@ export const fetchEngagementRiskAggregates = async (): Promise<EngagementRiskAgg
   }
 }
 
+export const listenToEngagementRiskAggregates = (
+  onChange: (aggregate: EngagementRiskAggregate) => void,
+  onError?: (error: FirestoreError) => void,
+) => {
+  return onSnapshot(
+    engagementCollection,
+    (snapshot) => {
+      const byRisk: Record<string, number> = {}
+      snapshot.docs.forEach((docSnap) => {
+        const riskLevel = (docSnap.data() as { riskLevel?: string }).riskLevel || 'unknown'
+        byRisk[riskLevel] = (byRisk[riskLevel] || 0) + 1
+      })
+
+      onChange({
+        total: snapshot.size,
+        riskBuckets: byRisk,
+      })
+    },
+    onError,
+  )
+}
+
 export const fetchAdminActivityLog = async (limitCount = 10): Promise<AdminActivityLogEntry[]> => {
   const snapshot = await getDocs(query(auditCollection, orderBy('createdAt', 'desc'), limit(limitCount)))
   return snapshot.docs.map((docSnap) => {
     const data = docSnap.data() as AdminActivityLogEntry
     return { ...data, id: docSnap.id }
   })
+}
+
+export const listenToAdminActivityLog = (
+  onChange: (entries: AdminActivityLogEntry[]) => void,
+  limitCount = 10,
+  onError?: (error: FirestoreError) => void,
+) => {
+  return onSnapshot(
+    query(auditCollection, orderBy('createdAt', 'desc'), limit(limitCount)),
+    (snapshot) => {
+      onChange(
+        snapshot.docs.map((docSnap) => {
+          const data = docSnap.data() as AdminActivityLogEntry
+          return { ...data, id: docSnap.id }
+        }),
+      )
+    },
+    onError,
+  )
 }
 
 export const logAdminAction = async (entry: Omit<AdminActivityLogEntry, 'id' | 'createdAt'>) => {
