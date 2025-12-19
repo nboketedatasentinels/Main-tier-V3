@@ -4,6 +4,16 @@
 
 /* Base Layer Typography and Styles */
 @layer base {
+  :root {
+    --surface-default: #ffffff;
+    --surface-subtle: #f7f7f8;
+    --border-subtle: #e6e6ea;
+    --text-primary: #111827;
+    --text-secondary: #6b7280;
+    --text-muted: #9ca3af;
+    --text-inverse: #ffffff;
+  }
+
   /* Responsive Base Font Size */
   html {
     font-size: 16px;
