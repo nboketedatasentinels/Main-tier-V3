@@ -70,6 +70,31 @@ interface UsePartnerDashboardDataOptions {
 const ORG_QUERY = query(collection(db, 'organizations'), where('status', '==', 'active'))
 const USERS_QUERY = query(collection(db, 'users'), where('accountStatus', '==', 'active'))
 
+const normalizeTimestamp = (value?: unknown): string | null => {
+  if (!value) return null
+
+  if (value instanceof Date) {
+    return isNaN(value.getTime()) ? null : value.toISOString()
+  }
+
+  if (typeof value === 'number') {
+    const dateValue = new Date(value)
+    return isNaN(dateValue.getTime()) ? null : dateValue.toISOString()
+  }
+
+  if (typeof (value as { toDate?: () => Date }).toDate === 'function') {
+    const dateValue = (value as { toDate: () => Date }).toDate()
+    return isNaN(dateValue.getTime()) ? null : dateValue.toISOString()
+  }
+
+  if (typeof value === 'string') {
+    const dateValue = new Date(value)
+    return isNaN(dateValue.getTime()) ? null : dateValue.toISOString()
+  }
+
+  return null
+}
+
 export const usePartnerDashboardData = (options?: UsePartnerDashboardDataOptions) => {
   const { assignedOrganizations = [], profile, isSuperAdmin, user } = useAuth()
   const [selectedOrg, setSelectedOrg] = useState<string>(options?.selectedOrg || 'all')
@@ -211,7 +236,9 @@ export const usePartnerDashboardData = (options?: UsePartnerDashboardDataOptions
           progressPercent,
           currentWeek,
           status: (data.accountStatus as PartnerUser['status']) || 'Active',
-          lastActive: data.lastActiveAt || data.lastActive || data.registrationDate || new Date().toISOString(),
+          lastActive:
+            normalizeTimestamp(data.lastActiveAt || data.lastActive || data.registrationDate || data.createdAt) ||
+            new Date().toISOString(),
           riskStatus,
           weeklyEarned,
           weeklyRequired: weeklyRequirement,

@@ -77,7 +77,8 @@ const getSortableValue = (user: PartnerUser, key: string) => {
     case 'status':
       return user.status
     case 'lastActive':
-      return new Date(user.lastActive).getTime()
+      const lastActiveTime = new Date(user.lastActive).getTime()
+      return Number.isNaN(lastActiveTime) ? -Infinity : lastActiveTime
     default:
       return ''
   }
@@ -256,49 +257,56 @@ export const PartnerUserManagement: React.FC<PartnerUserManagementProps> = ({
     </Thead>
   )
 
-  const renderUserRow = (user: PartnerUser) => (
-    <Tr key={user.id} _hover={{ bg: 'brand.accent' }} cursor="pointer" onClick={() => openUser(user)}>
-      <Td>
-        <VStack align="flex-start" spacing={0}>
-          <Text fontWeight="semibold" color="brand.text">
-            {user.name}
-          </Text>
-          <Text fontSize="sm" color="brand.subtleText">
-            {user.email}
-          </Text>
-        </VStack>
-      </Td>
-      <Td textTransform="capitalize">{user.companyCode || 'Unassigned'}</Td>
-      <Td>
-        <HStack spacing={2}>
-          <Box bg="brand.accent" borderRadius="full" h="8px" w="80px" position="relative">
-            <Box
-              position="absolute"
-              left={0}
-              top={0}
-              bottom={0}
-              borderRadius="full"
-              bg="indigo.500"
-              width={`${user.progressPercent}%`}
-            />
-          </Box>
-          <Text fontSize="sm">{user.progressPercent}%</Text>
-        </HStack>
-      </Td>
-      <Td>{user.currentWeek}</Td>
-      <Td>
-        <Badge colorScheme={user.status === 'Active' ? 'green' : 'yellow'}>{user.status}</Badge>
-      </Td>
-      <Td>
-        <Text fontSize="sm">{formatDistanceToNow(new Date(user.lastActive), { addSuffix: true })}</Text>
-      </Td>
-      <Td>
-        <Badge colorScheme={riskColor[user.riskStatus]} textTransform="capitalize">
-          {user.riskStatus === 'at_risk' ? 'At Risk' : user.riskStatus}
-        </Badge>
-      </Td>
-    </Tr>
-  )
+  const renderUserRow = (user: PartnerUser) => {
+    const lastActiveDate = new Date(user.lastActive)
+    const lastActiveLabel = isNaN(lastActiveDate.getTime())
+      ? 'Unknown'
+      : formatDistanceToNow(lastActiveDate, { addSuffix: true })
+
+    return (
+      <Tr key={user.id} _hover={{ bg: 'brand.accent' }} cursor="pointer" onClick={() => openUser(user)}>
+        <Td>
+          <VStack align="flex-start" spacing={0}>
+            <Text fontWeight="semibold" color="brand.text">
+              {user.name}
+            </Text>
+            <Text fontSize="sm" color="brand.subtleText">
+              {user.email}
+            </Text>
+          </VStack>
+        </Td>
+        <Td textTransform="capitalize">{user.companyCode || 'Unassigned'}</Td>
+        <Td>
+          <HStack spacing={2}>
+            <Box bg="brand.accent" borderRadius="full" h="8px" w="80px" position="relative">
+              <Box
+                position="absolute"
+                left={0}
+                top={0}
+                bottom={0}
+                borderRadius="full"
+                bg="indigo.500"
+                width={`${user.progressPercent}%`}
+              />
+            </Box>
+            <Text fontSize="sm">{user.progressPercent}%</Text>
+          </HStack>
+        </Td>
+        <Td>{user.currentWeek}</Td>
+        <Td>
+          <Badge colorScheme={user.status === 'Active' ? 'green' : 'yellow'}>{user.status}</Badge>
+        </Td>
+        <Td>
+          <Text fontSize="sm">{lastActiveLabel}</Text>
+        </Td>
+        <Td>
+          <Badge colorScheme={riskColor[user.riskStatus]} textTransform="capitalize">
+            {user.riskStatus === 'at_risk' ? 'At Risk' : user.riskStatus}
+          </Badge>
+        </Td>
+      </Tr>
+    )
+  }
 
   const renderBulkToolbar = () => (
     <Flex
