@@ -3,8 +3,6 @@ import { extendTheme, type ThemeConfig } from '@chakra-ui/react'
 // T4L Brand Colors (Mandatory)
 const colors = {
   brand: {
-<<<<<<< HEAD
-=======
     primary: '#5d6bff',
     primaryMuted: '#eef0fb',
     accent: '#f6f7fb',
@@ -18,7 +16,6 @@ const colors = {
     textOnDark: '#f3f4f6',
     textOnPrimary: '#ffffff',
     // Legacy keys preserved for compatibility
->>>>>>> origin/Sign-In/Up
     deepPlum: '#27062e',
     flameOrange: '#f4540c',
     royalPurple: '#350e6f',
