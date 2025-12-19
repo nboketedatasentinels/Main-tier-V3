@@ -2,7 +2,7 @@ import React, { useEffect, useMemo, useState } from "react"
 import { Link as RouterLink, useNavigate } from "react-router-dom"
 import { motion } from "framer-motion"
 import { Eye, EyeOff, ArrowRight, User, Mail, Lock, Building2, CheckCircle, XCircle, MailCheck } from "lucide-react"
-import { Spinner } from "@chakra-ui/react"
+import { Spinner, useToast } from "@chakra-ui/react"
 import { sendEmailVerification } from "firebase/auth"
 import { useAuth } from "@/hooks/useAuth"
 import { getFriendlyErrorMessage } from "@/utils/authErrors"
@@ -26,6 +26,7 @@ interface FormData {
 export const SignUpPage: React.FC = () => {
   const navigate = useNavigate()
   const { signUp } = useAuth()
+  const toast = useToast()
 
   const [formData, setFormData] = useState<FormData>({
     fullName: "",
@@ -147,11 +148,17 @@ export const SignUpPage: React.FC = () => {
         companyId: validatedOrganization?.id,
         companyName: validatedOrganization?.name,
       })
-    } else {
+
+      if (signUpError) {
+        setError(getFriendlyErrorMessage(signUpError))
+        return
+      }
+
       toast({
-        title: 'Account created!',
-        description: 'Please check your email to verify your account. You can still access the dashboard while we verify your email.',
-        status: 'success',
+        title: "Account created!",
+        description:
+          "Please check your email to verify your account. You can still access the dashboard while we verify your email.",
+        status: "success",
         duration: 7000,
       })
       if (userId) {
