@@ -41,6 +41,7 @@ import {
   Thead,
   Tr,
   useDisclosure,
+  useToken,
   useToast,
   VStack,
 } from '@chakra-ui/react'
@@ -118,8 +119,6 @@ const sortOptions = [
   { label: 'Sort by Name', value: 'name' },
 ]
 
-const pointsColors = ['#5d6bff', '#a855f7', '#f97316', '#22c55e', '#0ea5e9', '#facc15']
-
 const rowHeight = 76
 const virtualizationThreshold = 30
 const pageSize = 25
@@ -144,6 +143,14 @@ export const LeadershipBoardPage: React.FC = () => {
   const { profile } = useAuth()
   const toast = useToast()
   const { isOpen, onOpen, onClose } = useDisclosure()
+  const pointsColors = useToken('colors', [
+    'brand.primary',
+    'brand.dark',
+    'accent.warning',
+    'success.500',
+    'warning.500',
+    'tint.brandPrimary',
+  ])
   const [timeframe, setTimeframe] = useState<LeaderboardTimeframe>(LeaderboardTimeframe.ALL_TIME)
   const [sortField, setSortField] = useState<'points' | 'level' | 'name'>('points')
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('desc')
@@ -404,10 +411,10 @@ export const LeadershipBoardPage: React.FC = () => {
   const companyRows = useMemo(() => leaderboardRows.filter((row) => row.user.companyId === profile?.companyId), [leaderboardRows, profile?.companyId])
 
   const getRankIcon = (rank: number) => {
-    if (rank === 1) return <Icon as={Crown} color="yellow.400" />
+    if (rank === 1) return <Icon as={Crown} color="accent.warning" />
     if (rank === 2) return <Icon as={Medal} color="text.muted" />
-    if (rank === 3) return <Icon as={Medal} color="#cd7f32" />
-    return <Badge colorScheme="purple">{rank}</Badge>
+    if (rank === 3) return <Icon as={Medal} color="brand.primary" />
+    return <Badge colorScheme="primary">{rank}</Badge>
   }
 
   const companyStats = {
@@ -485,7 +492,7 @@ export const LeadershipBoardPage: React.FC = () => {
                         <Text fontSize="lg" fontWeight="bold">Progress Overview</Text>
                         <Text color="text.secondary">Live updates from Firestore</Text>
                       </Box>
-                      <Badge colorScheme="purple" display="flex" alignItems="center" gap={2}>
+                      <Badge colorScheme="primary" display="flex" alignItems="center" gap={2}>
                         <Icon as={Trophy} /> {percentile}
                       </Badge>
                     </HStack>
@@ -543,7 +550,7 @@ export const LeadershipBoardPage: React.FC = () => {
                   <CardHeader pb={2}>
                     <HStack justify="space-between">
                       <Text fontWeight="bold">Personal View</Text>
-                      <Badge colorScheme="green">Private Controls</Badge>
+                      <Badge colorScheme="success">Private Controls</Badge>
                     </HStack>
                   </CardHeader>
                   <CardBody>
@@ -567,8 +574,8 @@ export const LeadershipBoardPage: React.FC = () => {
                         <Box p={3} border="1px solid" borderColor="border.subtle" borderRadius="lg">
                           <Text fontSize="xs" color="text.secondary">Featured Badges</Text>
                           <HStack spacing={2} mt={1}>
-                            <Badge colorScheme="purple">Growth</Badge>
-                            <Badge colorScheme="yellow">Impact</Badge>
+                            <Badge colorScheme="primary">Growth</Badge>
+                            <Badge colorScheme="secondary">Impact</Badge>
                           </HStack>
                         </Box>
                       </SimpleGrid>
@@ -626,7 +633,7 @@ export const LeadershipBoardPage: React.FC = () => {
                     <Box>
                       <Text fontSize="sm" mb={1}>Admin Filters</Text>
                       <HStack spacing={3}>
-                        <Switch size="lg" colorScheme="purple" />
+                        <Switch size="lg" colorScheme="primary" />
                         <Text fontSize="sm">Company / Village / Cluster</Text>
                       </HStack>
                     </Box>
@@ -642,8 +649,8 @@ export const LeadershipBoardPage: React.FC = () => {
                       <Text color="text.secondary">Sorted by points with live updates</Text>
                     </Box>
                     <HStack spacing={2}>
-                      <Badge colorScheme="blue">Virtualized</Badge>
-                      <Badge colorScheme="purple">Real-time</Badge>
+                      <Badge colorScheme="primary">Virtualized</Badge>
+                      <Badge colorScheme="primary">Real-time</Badge>
                     </HStack>
                   </Flex>
                 </CardHeader>
@@ -682,9 +689,9 @@ export const LeadershipBoardPage: React.FC = () => {
                                       {row.user.companyId || 'Independent'} · {row.user.villageId || 'Village TBD'} · {row.user.clusterId || 'Cluster TBD'}
                                     </Text>
                                     <HStack spacing={2} mt={1}>
-                                      <Badge colorScheme="green">Active</Badge>
-                                      <Badge colorScheme="purple">{row.badgeCount} badges</Badge>
-                                      <Badge colorScheme="orange">Level {row.level}</Badge>
+                                      <Badge colorScheme="success">Active</Badge>
+                                      <Badge colorScheme="primary">{row.badgeCount} badges</Badge>
+                                      <Badge colorScheme="warning">Level {row.level}</Badge>
                                     </HStack>
                                   </Box>
                                 </HStack>
@@ -693,7 +700,7 @@ export const LeadershipBoardPage: React.FC = () => {
                               <Td>
                                 <HStack spacing={1}>
                                   {Array.from({ length: Math.min(row.badgeCount, 4) }).map((_, idx) => (
-                                    <Icon key={idx} as={Star} color="yellow.400" size={14} />
+                                    <Icon key={idx} as={Star} color="accent.warning" size={14} />
                                   ))}
                                 </HStack>
                               </Td>
@@ -756,7 +763,7 @@ export const LeadershipBoardPage: React.FC = () => {
                             <Td>{formatNumber(row.activePoints)}</Td>
                             <Td>{formatNumber(row.totalPoints)}</Td>
                             <Td>{row.level}</Td>
-                            <Td color={row.delta >= 0 ? 'green.500' : 'red.500'}>
+                            <Td color={row.delta >= 0 ? 'success.500' : 'danger.DEFAULT'}>
                               {row.delta >= 0 ? '+' : ''}
                               {formatNumber(row.delta)}
                             </Td>
@@ -779,21 +786,21 @@ export const LeadershipBoardPage: React.FC = () => {
                           <Text>Total Points</Text>
                           <Text color="text.secondary">Avg {formatNumber(cohortStats.avgTotal)}</Text>
                         </HStack>
-                        <Progress value={(cohortStats.total / cohortStats.maxTotal) * 100} colorScheme="blue" borderRadius="full" />
+                        <Progress value={(cohortStats.total / cohortStats.maxTotal) * 100} colorScheme="primary" borderRadius="full" />
                       </Box>
                       <Box>
                         <HStack justify="space-between">
                           <Text>Active Points</Text>
                           <Text color="text.secondary">Avg {formatNumber(cohortStats.avgActive)}</Text>
                         </HStack>
-                        <Progress value={(cohortStats.active / cohortStats.maxActive) * 100} colorScheme="yellow" borderRadius="full" />
+                        <Progress value={(cohortStats.active / cohortStats.maxActive) * 100} colorScheme="secondary" borderRadius="full" />
                       </Box>
                       <Box>
                         <HStack justify="space-between">
                           <Text>Level</Text>
                           <Text color="text.secondary">Avg {cohortStats.avgLevel}</Text>
                         </HStack>
-                        <Progress value={(cohortStats.level / cohortStats.maxLevel) * 100} colorScheme="purple" borderRadius="full" />
+                        <Progress value={(cohortStats.level / cohortStats.maxLevel) * 100} colorScheme="primary" borderRadius="full" />
                       </Box>
                     </Stack>
                   </CardBody>
@@ -847,7 +854,7 @@ export const LeadershipBoardPage: React.FC = () => {
                               <Text fontWeight="bold">{category.name}</Text>
                               <Text>{formatNumber(category.value)} pts</Text>
                             </Flex>
-                            <Progress value={category.percent} colorScheme="purple" borderRadius="full" />
+                            <Progress value={category.percent} colorScheme="primary" borderRadius="full" />
                             <Text fontSize="xs" color="text.secondary">{category.percent}% of active points</Text>
                           </Box>
                         </Flex>
@@ -876,7 +883,7 @@ export const LeadershipBoardPage: React.FC = () => {
 
           <TabPanel px={0}>
             <Stack spacing={5}>
-              <Card bgGradient="linear(to-r, purple.500, purple.700)" color="text.inverse">
+              <Card bgGradient="linear(to-r, brand.primary, brand.dark)" color="text.inverse">
                 <CardBody>
                   <Flex align="center" justify="space-between">
                     <Box>
@@ -951,7 +958,7 @@ export const LeadershipBoardPage: React.FC = () => {
                             <Box flex="1">
                               <Text fontWeight="bold">vs {challenge.opponentName}</Text>
                               <Text fontSize="sm" color="text.secondary">{challenge.startDate} → {challenge.endDate}</Text>
-                              <Progress mt={2} value={(challenge.yourPoints / Math.max(challenge.yourPoints, challenge.opponentPoints || 1)) * 100} colorScheme="purple" borderRadius="full" />
+                              <Progress mt={2} value={(challenge.yourPoints / Math.max(challenge.yourPoints, challenge.opponentPoints || 1)) * 100} colorScheme="primary" borderRadius="full" />
                             </Box>
                             <VStack spacing={1} align="flex-end">
                               <Text fontWeight="bold">You {formatNumber(challenge.yourPoints)}</Text>
@@ -976,7 +983,7 @@ export const LeadershipBoardPage: React.FC = () => {
                       .filter((c) => c.status === 'completed')
                       .map((challenge) => (
                         <Flex key={challenge.id} p={3} border="1px solid" borderColor="border.subtle" borderRadius="lg" align="center" gap={3}>
-                          <Icon as={Award} color={challenge.result === 'win' ? 'green.400' : 'red.400'} />
+                          <Icon as={Award} color={challenge.result === 'win' ? 'success.400' : 'danger.DEFAULT'} />
                           <Box flex="1">
                             <Text fontWeight="bold">{challenge.opponentName}</Text>
                             <Text fontSize="sm" color="text.secondary">{challenge.startDate} → {challenge.endDate}</Text>

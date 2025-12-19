@@ -461,9 +461,9 @@ const WeeklyChecklistPage: React.FC = () => {
 
   const progressStatus = useMemo(() => {
     const pct = Math.min(100, Math.round((pendingCounts.points / weeklyTarget) * 100))
-    if (pct >= 100) return { color: 'green', label: 'On Track', pct }
-    if (pct >= 75) return { color: 'yellow', label: 'Warning', pct }
-    return { color: 'red', label: 'Critical', pct }
+    if (pct >= 100) return { color: 'success', label: 'On Track', pct }
+    if (pct >= 75) return { color: 'secondary', label: 'Warning', pct }
+    return { color: 'warning', label: 'Critical', pct }
   }, [pendingCounts.points, weeklyTarget])
 
   const firstIncompleteActivity = useMemo(() => activities.find(activity => activity.status !== 'completed'), [activities])
@@ -516,7 +516,9 @@ const WeeklyChecklistPage: React.FC = () => {
               <Tooltip key={weekNumber} label={weekNumber > (journey?.currentWeek || 1) ? 'Locked until you finish this month' : 'Open week'}>
                 <Button
                   variant={selectedWeek === weekNumber ? 'solid' : 'outline'}
-                  colorScheme={selectedWeek === weekNumber ? 'teal' : 'gray'}
+                  colorScheme={selectedWeek === weekNumber ? 'primary' : undefined}
+                  borderColor={selectedWeek === weekNumber ? undefined : 'border.strong'}
+                  color={selectedWeek === weekNumber ? undefined : 'text.primary'}
                   size="sm"
             leftIcon={
               weekNumber < (journey?.currentWeek || 1) ? <Icon as={CheckCircle} /> : undefined
@@ -557,7 +559,9 @@ const WeeklyChecklistPage: React.FC = () => {
               <Button
                 size="sm"
                 variant={selectedWeek === week ? 'solid' : 'outline'}
-                colorScheme={selectedWeek === week ? 'teal' : 'gray'}
+                colorScheme={selectedWeek === week ? 'primary' : undefined}
+                borderColor={selectedWeek === week ? undefined : 'border.strong'}
+                color={selectedWeek === week ? undefined : 'text.primary'}
                 leftIcon={isCompleted ? <Icon as={CheckCircle} /> : undefined}
                 rightIcon={isLocked ? <Icon as={Lock} /> : undefined}
                 onClick={() => setSelectedWeek(week)}
@@ -595,16 +599,22 @@ const WeeklyChecklistPage: React.FC = () => {
         <Flex justify="space-between" align="flex-start" mb={2}>
           <Stack spacing={1}>
             <HStack spacing={2}>
-              <Badge colorScheme={activity.status === 'completed' ? 'green' : activity.status === 'pending' ? 'yellow' : 'gray'}>
-                {statusLabelMap[activity.status]}
-              </Badge>
+              {activity.status === 'completed' ? (
+                <Badge colorScheme="success">{statusLabelMap[activity.status]}</Badge>
+              ) : activity.status === 'pending' ? (
+                <Badge colorScheme="secondary">{statusLabelMap[activity.status]}</Badge>
+              ) : (
+                <Badge bg="surface.subtle" color="text.secondary" border="1px solid" borderColor="border.subtle">
+                  {statusLabelMap[activity.status]}
+                </Badge>
+              )}
               {showProofBadge && (
                 <Tooltip label="Proof required for paid tier activities">
-                  <Badge colorScheme="purple">Requires proof</Badge>
+                  <Badge colorScheme="primary">Requires proof</Badge>
                 </Tooltip>
               )}
-              {showFreeBadge && <Badge colorScheme="blue">Free tier</Badge>}
-              <Tag colorScheme="cyan">{activity.category}</Tag>
+              {showFreeBadge && <Badge colorScheme="secondary">Free tier</Badge>}
+              <Tag colorScheme="primary">{activity.category}</Tag>
             </HStack>
             <Heading size="sm" color="text.primary">
               {activity.title}
@@ -624,14 +634,14 @@ const WeeklyChecklistPage: React.FC = () => {
             </Tag>
             {activity.status === 'pending' && (
               <Tooltip label="Pending verification. Points will post after approval.">
-                <Icon as={AlertTriangle} color="yellow.300" />
+                <Icon as={AlertTriangle} color="warning.400" />
               </Tooltip>
             )}
           </Stack>
         </Flex>
         <HStack spacing={3}>
           <Button
-            colorScheme="teal"
+            colorScheme="primary"
             variant={activity.status === 'completed' || activity.status === 'pending' ? 'solid' : 'outline'}
             isDisabled={yesDisabled}
             onClick={() => (requiresProof ? openProofModal(activity) : handleActivityUpdate(activity.id, 'completed'))}
@@ -640,7 +650,8 @@ const WeeklyChecklistPage: React.FC = () => {
           </Button>
           <Button
             variant="outline"
-            colorScheme="gray"
+            borderColor="border.strong"
+            color="text.primary"
             isDisabled={noDisabled}
             onClick={() => handleActivityUpdate(activity.id, 'not_started')}
           >
@@ -657,7 +668,7 @@ const WeeklyChecklistPage: React.FC = () => {
         <Heading size="sm" color="text.primary">
           Participation Rhythm
         </Heading>
-        <Tag colorScheme="teal">+{rhythmPoints} pts</Tag>
+        <Tag colorScheme="primary">+{rhythmPoints} pts</Tag>
       </HStack>
       <Stack spacing={2}>
         {rhythmItems.map(item => (
@@ -668,7 +679,9 @@ const WeeklyChecklistPage: React.FC = () => {
               leftIcon={
                 rhythmCompleted[item] ? <Icon as={CheckCircle} /> : <Icon as={Plus} />
               }
-              colorScheme={rhythmCompleted[item] ? 'teal' : 'gray'}
+              colorScheme={rhythmCompleted[item] ? 'primary' : undefined}
+              borderColor={rhythmCompleted[item] ? undefined : 'border.strong'}
+              color={rhythmCompleted[item] ? undefined : 'text.primary'}
               variant={rhythmCompleted[item] ? 'solid' : 'outline'}
               onClick={() => toggleItem(item)}
             >
@@ -720,7 +733,7 @@ const WeeklyChecklistPage: React.FC = () => {
             </Text>
           </Stack>
         </Alert>
-        <Button colorScheme="teal" onClick={scrollToActivity} isDisabled={!firstIncompleteActivity}>
+        <Button colorScheme="primary" onClick={scrollToActivity} isDisabled={!firstIncompleteActivity}>
           {firstIncompleteActivity ? `Complete ${firstIncompleteActivity.title}` : 'All activities done'}
         </Button>
         <Stack spacing={1} color="text.secondary">
@@ -759,7 +772,7 @@ const WeeklyChecklistPage: React.FC = () => {
           <Button variant="ghost" mr={3} onClick={onClose}>
             Cancel
           </Button>
-          <Button colorScheme="teal" onClick={submitProof} leftIcon={<Icon as={Plus} />}
+          <Button colorScheme="primary" onClick={submitProof} leftIcon={<Icon as={Plus} />}
             isDisabled={!proofModal.activity?.proofUrl}
           >
             Submit for verification
@@ -792,12 +805,12 @@ const WeeklyChecklistPage: React.FC = () => {
             <StatCard
               label="Activities completed"
               value={`${pendingCounts.completed} of ${pendingCounts.total}`}
-              icon={<Icon as={CheckCircle} color="green.300" />}
+              icon={<Icon as={CheckCircle} color="success.400" />}
             />
             <StatCard
               label="Weekly points"
               value={`${pendingCounts.points} / ${weeklyTarget}`}
-              icon={<Icon as={Plus} color="orange.300" />}
+              icon={<Icon as={Plus} color="accent.warning" />}
             />
             <StatCard
               label="Status"
@@ -814,7 +827,7 @@ const WeeklyChecklistPage: React.FC = () => {
     return (
       <Center py={16}>
         <Stack spacing={3} align="center">
-          <CircularProgress isIndeterminate color="purple.400" />
+          <CircularProgress isIndeterminate color="brand.primary" />
           <Text color="text.secondary">Loading weekly activities...</Text>
         </Stack>
       </Center>
@@ -838,7 +851,7 @@ const WeeklyChecklistPage: React.FC = () => {
               Week navigation
             </Heading>
             {isWeekLocked && (
-              <Tag colorScheme="red" borderRadius="full" size="sm">
+              <Tag colorScheme="warning" borderRadius="full" size="sm">
                 <Icon as={Lock} mr={1} /> Locked for review
               </Tag>
             )}

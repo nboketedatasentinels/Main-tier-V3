@@ -605,11 +605,11 @@ export const PeerConnectPage: React.FC = () => {
 
   const renderStatusBadge = (status: PeerSession['status']) => {
     const colorMap: Record<PeerSession['status'], string> = {
-      pending: 'yellow',
-      confirmed: 'green',
-      scheduled: 'blue',
-      in_progress: 'purple',
-      no_show: 'red',
+      pending: 'secondary',
+      confirmed: 'success',
+      scheduled: 'primary',
+      in_progress: 'primary',
+      no_show: 'warning',
     }
     const labelMap: Record<PeerSession['status'], string> = {
       pending: 'Pending',
@@ -639,7 +639,7 @@ export const PeerConnectPage: React.FC = () => {
         </Stack>
       </Box>
 
-      <Tabs variant="soft-rounded" colorScheme="purple" defaultIndex={0} isFitted>
+      <Tabs variant="soft-rounded" colorScheme="primary" defaultIndex={0} isFitted>
         <TabList bg="surface.default" p={2} borderRadius="full" border="1px solid" borderColor="border.subtle">
           <Tab>
             <HStack spacing={2}>
@@ -671,7 +671,7 @@ export const PeerConnectPage: React.FC = () => {
                         </Heading>
                         <Text color="brand.subtleText">Deterministic selection refreshes every Monday. No setup required.</Text>
                       </Stack>
-                      <Badge colorScheme="purple" variant="subtle" alignSelf="flex-start">
+                      <Badge colorScheme="primary" variant="subtle" alignSelf="flex-start">
                         Refreshes Monday
                       </Badge>
                     </Flex>
@@ -688,11 +688,11 @@ export const PeerConnectPage: React.FC = () => {
                               {weeklyMatch.peer.email}
                             </Text>
                             <HStack spacing={2} pt={1}>
-                              <Badge colorScheme="blue" variant="subtle" display="flex" alignItems="center" gap={1}>
+                              <Badge colorScheme="primary" variant="subtle" display="flex" alignItems="center" gap={1}>
                                 <Icon as={Clock3} w={3} h={3} />
                                 {weeklyMatch.peer.timezone || 'Timezone TBD'}
                               </Badge>
-                              <Badge colorScheme="purple" variant="solid">
+                              <Badge colorScheme="primary" variant="solid">
                                 {weeklyMatch.matchReason}
                               </Badge>
                             </HStack>
@@ -706,7 +706,7 @@ export const PeerConnectPage: React.FC = () => {
                               `Hi ${weeklyMatch.peer.name},%0D%0A%0D%0AWe were paired for this week's Peer Connect. I'd love to lock in a time to connect. Feel free to grab a slot on my calendar or reply with your availability.%0D%0A%0D%0A- ${profile?.fullName || 'Your peer'}`
                             )}`}
                             leftIcon={<Mail size={18} />}
-                            colorScheme="purple"
+                            colorScheme="primary"
                             variant="solid"
                             target="_blank"
                           >
@@ -714,7 +714,7 @@ export const PeerConnectPage: React.FC = () => {
                           </Button>
                           <Button
                             leftIcon={<Check size={16} />}
-                            colorScheme="green"
+                            colorScheme="success"
                             variant="outline"
                             onClick={() => weeklyMatch && confirmMeeting('demo-session')}
                           >
@@ -771,7 +771,7 @@ export const PeerConnectPage: React.FC = () => {
                             <option value="compatible">Compatible working hours</option>
                           </Select>
                         </FormControl>
-                        <Button colorScheme="purple" leftIcon={<ShieldCheck size={16} />} onClick={persistPreferences} isLoading={loadingPeers}>
+                        <Button colorScheme="primary" leftIcon={<ShieldCheck size={16} />} onClick={persistPreferences} isLoading={loadingPeers}>
                           Apply preferences
                         </Button>
                       </Stack>
@@ -782,7 +782,7 @@ export const PeerConnectPage: React.FC = () => {
                         <Heading size="sm" color="brand.text">
                           Pending peer invitations
                         </Heading>
-                        <Badge colorScheme="purple" variant="outline">
+                        <Badge colorScheme="primary" variant="outline">
                           {pendingInvites.length} pending
                         </Badge>
                       </Flex>
@@ -811,7 +811,7 @@ export const PeerConnectPage: React.FC = () => {
                                     aria-label="Accept invitation"
                                     icon={<Check size={16} />}
                                     size="sm"
-                                    colorScheme="green"
+                                    colorScheme="success"
                                     variant="solid"
                                     onClick={() => respondToInvite(invite.id, true)}
                                   />
@@ -838,7 +838,7 @@ export const PeerConnectPage: React.FC = () => {
                           Filtered to your company, village, and cohort. Search by name, email, or identity tag.
                         </Text>
                       </Stack>
-                      <Badge colorScheme="purple" variant="outline">
+                      <Badge colorScheme="primary" variant="outline">
                         Showing {filteredPeers.length} members
                       </Badge>
                     </Flex>
@@ -861,7 +861,7 @@ export const PeerConnectPage: React.FC = () => {
                                   {peer.name}
                                 </Text>
                                 {peer.identityTag && (
-                                  <Badge colorScheme="purple" variant="subtle">
+                                  <Badge colorScheme="primary" variant="subtle">
                                     {peer.identityTag}
                                   </Badge>
                                 )}
@@ -870,11 +870,11 @@ export const PeerConnectPage: React.FC = () => {
                                 {peer.email}
                               </Text>
                               <HStack spacing={2} wrap="wrap">
-                                <Tag size="sm" colorScheme="blue" variant="subtle" display="flex" alignItems="center" gap={1}>
+                                <Tag size="sm" colorScheme="primary" variant="subtle" display="flex" alignItems="center" gap={1}>
                                   <Clock3 size={14} />
                                   {peer.timezone || 'Timezone TBD'}
                                 </Tag>
-                                <Tag size="sm" colorScheme="green" variant="outline">
+                                <Tag size="sm" colorScheme="success" variant="outline">
                                   {peer.cohortIdentifier ? 'Shared cohort' : peer.corporateVillageId ? 'Corporate village' : 'Company match'}
                                 </Tag>
                               </HStack>
@@ -884,7 +884,7 @@ export const PeerConnectPage: React.FC = () => {
                                   href={peer.calendarLink}
                                   size="sm"
                                   variant="link"
-                                  colorScheme="purple"
+                                  colorScheme="primary"
                                   leftIcon={<Calendar size={14} />}
                                   target="_blank"
                                 >
@@ -908,7 +908,7 @@ export const PeerConnectPage: React.FC = () => {
                           Confirm early to unlock points. Report no-shows after the confirmation deadline.
                         </Text>
                       </Stack>
-                      <Badge colorScheme="purple" variant="outline">
+                      <Badge colorScheme="primary" variant="outline">
                         {sessions.length} sessions
                       </Badge>
                     </Flex>
@@ -931,7 +931,7 @@ export const PeerConnectPage: React.FC = () => {
                             <Icon as={Video} w={4} h={4} />
                             <Text>{session.platform}</Text>
                             {session.link && (
-                              <Button as="a" href={session.link} target="_blank" rel="noreferrer" size="xs" colorScheme="purple" variant="ghost">
+                              <Button as="a" href={session.link} target="_blank" rel="noreferrer" size="xs" colorScheme="primary" variant="ghost">
                                 Join session
                               </Button>
                             )}
@@ -948,7 +948,7 @@ export const PeerConnectPage: React.FC = () => {
                             <Button
                               leftIcon={<Check size={14} />}
                               size="sm"
-                              colorScheme="green"
+                              colorScheme="success"
                               variant={session.youConfirmed ? 'outline' : 'solid'}
                               onClick={() => confirmMeeting(session.id)}
                               isDisabled={session.youConfirmed}
@@ -959,7 +959,7 @@ export const PeerConnectPage: React.FC = () => {
                               leftIcon={<AlarmClockOff size={14} />}
                               size="sm"
                               variant="outline"
-                              colorScheme="red"
+                              colorScheme="warning"
                               onClick={() => reportNoShow(session.id)}
                               isDisabled={disableNoShow(session)}
                             >
@@ -998,7 +998,7 @@ export const PeerConnectPage: React.FC = () => {
                             <Button size="sm" variant="ghost" leftIcon={<X size={14} />} onClick={() => respondToInvite(invite.id, false)}>
                               Decline
                             </Button>
-                            <Button size="sm" colorScheme="purple" leftIcon={<Check size={14} />} onClick={() => respondToInvite(invite.id, true)}>
+                            <Button size="sm" colorScheme="primary" leftIcon={<Check size={14} />} onClick={() => respondToInvite(invite.id, true)}>
                               Accept
                             </Button>
                           </HStack>
@@ -1028,7 +1028,7 @@ export const PeerConnectPage: React.FC = () => {
                   <Button variant="outline" leftIcon={<Sword size={16} />} onClick={challengeModal.onOpen}>
                     Challenge a friend
                   </Button>
-                  <Button colorScheme="purple" leftIcon={<Users size={16} />} onClick={sessionModal.onOpen}>
+                  <Button colorScheme="primary" leftIcon={<Users size={16} />} onClick={sessionModal.onOpen}>
                     Start Peer Session
                   </Button>
                 </HStack>
@@ -1041,7 +1041,7 @@ export const PeerConnectPage: React.FC = () => {
                       <Heading size="sm" color="brand.text">
                         Your peer connections
                       </Heading>
-                      <Badge colorScheme="purple" variant="subtle">
+                      <Badge colorScheme="primary" variant="subtle">
                         Smart list
                       </Badge>
                     </Flex>
@@ -1080,7 +1080,7 @@ export const PeerConnectPage: React.FC = () => {
                         <Heading size="sm" color="brand.text">
                           Your sessions
                         </Heading>
-                        <Badge colorScheme="purple" variant="outline">
+                        <Badge colorScheme="primary" variant="outline">
                           Active
                         </Badge>
                       </Flex>
@@ -1107,7 +1107,7 @@ export const PeerConnectPage: React.FC = () => {
                                 )}
                                 <Button
                                   size="sm"
-                                  colorScheme="green"
+                                  colorScheme="success"
                                   variant="ghost"
                                   leftIcon={<Check size={14} />}
                                   onClick={() => confirmMeeting(session.id)}
@@ -1130,7 +1130,7 @@ export const PeerConnectPage: React.FC = () => {
                         <Heading size="sm" color="brand.text">
                           Peer session invites
                         </Heading>
-                        <Badge colorScheme="purple" variant="subtle">
+                        <Badge colorScheme="primary" variant="subtle">
                           Inbox
                         </Badge>
                       </Flex>
@@ -1148,7 +1148,7 @@ export const PeerConnectPage: React.FC = () => {
                                 <Button size="sm" variant="ghost" leftIcon={<X size={14} />} onClick={() => respondToInvite(invite.id, false)}>
                                   Decline
                                 </Button>
-                                <Button size="sm" colorScheme="purple" leftIcon={<Check size={14} />} onClick={() => respondToInvite(invite.id, true)}>
+                                <Button size="sm" colorScheme="primary" leftIcon={<Check size={14} />} onClick={() => respondToInvite(invite.id, true)}>
                                   Accept
                                 </Button>
                               </HStack>
@@ -1317,7 +1317,7 @@ export const PeerConnectPage: React.FC = () => {
 
                 <Box borderRadius="lg" border="1px dashed" borderColor="border.subtle" p={3} bg="surface.subtle">
                   <HStack align="center" spacing={2}>
-                    <Icon as={Target} w={4} h={4} color="purple.500" />
+                    <Icon as={Target} w={4} h={4} color="brand.primary" />
                     <Text fontSize="sm" color="brand.subtleText">
                       Exactly 3 participants are required so you host a four-person conversation including you.
                     </Text>
@@ -1330,7 +1330,7 @@ export const PeerConnectPage: React.FC = () => {
             <Button variant="ghost" onClick={sessionModal.onClose} leftIcon={<X size={16} />}>
               Cancel
             </Button>
-            <Button colorScheme="purple" leftIcon={<Check size={16} />} onClick={createSession}>
+            <Button colorScheme="primary" leftIcon={<Check size={16} />} onClick={createSession}>
               Create Session
             </Button>
           </ModalFooter>
