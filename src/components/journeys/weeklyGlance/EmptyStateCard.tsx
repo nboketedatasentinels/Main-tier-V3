@@ -9,14 +9,14 @@ interface EmptyStateCardProps {
 
 export const EmptyStateCard = ({ title, description, action }: EmptyStateCardProps) => {
   return (
-    <Card variant="outline" borderColor="brand.border" h="100%">
+    <Card variant="outline" borderColor="border.subtle" h="100%">
       <CardBody>
         <VStack spacing={3} align="start">
-          <Text fontWeight="bold" color="brand.text">
+          <Text fontWeight="bold" color="text.primary">
             {title}
           </Text>
           {description && (
-            <Text color="brand.subtleText" fontSize="sm">
+            <Text color="text.secondary" fontSize="sm">
               {description}
             </Text>
           )}

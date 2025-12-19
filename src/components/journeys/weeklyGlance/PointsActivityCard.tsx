@@ -15,7 +15,7 @@ export const PointsActivityCard = ({
   allies = [],
 }: PointsActivityCardProps) => {
   return (
-    <Card h="100%" variant="outline" borderColor="brand.border">
+    <Card h="100%" variant="outline" borderColor="border.subtle">
       <CardBody>
         <Stack spacing={3}>
           <Text fontWeight="bold">Points & Activity</Text>
@@ -33,21 +33,21 @@ export const PointsActivityCard = ({
                 <Icon as={Activity} />
                 <Text>Life activity</Text>
               </HStack>
-              <Text color="brand.subtleText">Stay consistent this week</Text>
+              <Text color="text.secondary">Stay consistent this week</Text>
             </HStack>
             <HStack justify="space-between">
               <HStack spacing={2}>
                 <Icon as={ListChecks} />
                 <Text>Upcoming challenges</Text>
               </HStack>
-              <Text color="brand.subtleText">{upcomingChallenges.length} queued</Text>
+              <Text color="text.secondary">{upcomingChallenges.length} queued</Text>
             </HStack>
             <HStack justify="space-between">
               <HStack spacing={2}>
                 <Icon as={Users} />
                 <Text>Recent allies</Text>
               </HStack>
-              <Text color="brand.subtleText">{allies.length} peers</Text>
+              <Text color="text.secondary">{allies.length} peers</Text>
             </HStack>
           </VStack>
           <Divider />

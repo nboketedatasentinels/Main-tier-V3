@@ -1,14 +1,4 @@
-import {
-  Badge,
-  Box,
-  Button,
-  Flex,
-  Heading,
-  Icon,
-  Stack,
-  Text,
-  useColorModeValue,
-} from '@chakra-ui/react'
+import { Badge, Box, Button, Flex, Heading, Icon, Stack, Text } from '@chakra-ui/react'
 import { Clock, FileCheck2, FileX, Sparkles } from 'lucide-react'
 import { formatDistanceToNow } from 'date-fns'
 import { UpgradeRequest } from '@/types/upgrade'
@@ -26,16 +16,15 @@ interface RequestStatusViewProps {
 }
 
 export const RequestStatusView: React.FC<RequestStatusViewProps> = ({ request, onCancel }) => {
-  const borderColor = useColorModeValue('gray.200', 'gray.700')
   const { color, label, icon } = statusConfig[request.status]
 
   return (
     <Box
       borderWidth="1px"
-      borderColor={borderColor}
+      borderColor="border.subtle"
       borderRadius="lg"
       p={4}
-      bg={useColorModeValue('white', 'gray.900')}
+      bg="surface.default"
     >
       <Stack direction={{ base: 'column', md: 'row' }} justify="space-between" spacing={4} align="flex-start">
         <Stack spacing={2} flex={1}>
@@ -43,13 +32,13 @@ export const RequestStatusView: React.FC<RequestStatusViewProps> = ({ request, o
             <Badge colorScheme={color} px={3} py={1} borderRadius="md">
               {label}
             </Badge>
-            <Text color="gray.600">Submitted {formatDistanceToNow(new Date(request.requested_at))} ago</Text>
+            <Text color="text.secondary">Submitted {formatDistanceToNow(new Date(request.requested_at))} ago</Text>
           </Flex>
           <Heading size="md">Requested Tier: {request.requested_tier ?? 'Not specified'}</Heading>
           {request.message && (
-            <Text color="gray.700">Reason: {request.message}</Text>
+            <Text color="text.primary">Reason: {request.message}</Text>
           )}
-          <Text fontSize="sm" color="gray.600">
+          <Text fontSize="sm" color="text.secondary">
             Estimated response time: under 24 hours
           </Text>
         </Stack>

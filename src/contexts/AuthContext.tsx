@@ -1,4 +1,5 @@
-import React, { useEffect, useMemo, useState } from 'react'
+import React, { useEffect, useState } from 'react'
+import { FirebaseError } from 'firebase/app'
 import { User } from 'firebase/auth'
 import {
   signInWithEmailAndPassword,
@@ -169,29 +170,29 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
       return profileData
     } catch (error: unknown) {
-      console.error('🔴 [Auth] fetchOrCreateProfile error', {
-        uid: firebaseUser.uid,
-        email: firebaseUser.email,
-        message: (error as Error)?.message,
-        stack: (error as Error)?.stack,
-        raw: error,
-      })
-      return null
-    }
-  }
+      const message = error instanceof Error ? error.message : 'Unknown error'
+      const code = error instanceof FirebaseError ? error.code : 'unknown'
 
-  /* ------------------------------------------------------------------ */
-  /* 🔹 Custom Claims                                                    */
-  /* ------------------------------------------------------------------ */
-  const extractCustomClaims = async (u: User) => {
-    try {
-      const token = await u.getIdTokenResult()
-      const role = token.claims.role as string | undefined
-      console.log('🟡 [Auth] Token claims role:', role)
-      setClaimsRole(role ?? null)
-      return role ?? null
-    } catch (err) {
-      console.error('🔴 [Auth] extractCustomClaims failed', err)
+      console.error('Error fetching/creating profile:', {
+        message,
+        code,
+        uid: firebaseUser.uid,
+      })
+
+      if (error instanceof FirebaseError && error.code === 'permission-denied') {
+        console.error(
+          'Firestore Security Rules Permission Denied:',
+          'The rules blocked the request to fetch the user profile.',
+          'Please ensure the rules allow users to read their own profile.',
+          'Full error:',
+          error
+        )
+      } else {
+        console.error(
+          'An unexpected error occurred during profile fetch/create:',
+          error
+        )
+      }
       return null
     }
   }

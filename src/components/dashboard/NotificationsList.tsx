@@ -102,14 +102,14 @@ const NotificationCard = ({
   return (
     <Box
       borderWidth="1px"
-      borderColor={isRead ? 'gray.200' : 'purple.300'}
-      bg={isRead ? 'white' : 'purple.50'}
+      borderColor={isRead ? 'border.subtle' : 'accent.purpleBorder'}
+      bg={isRead ? 'surface.default' : 'accent.purpleSubtle'}
       p={4}
       rounded="lg"
       _hover={{ shadow: 'sm' }}
     >
       <HStack align="start" spacing={4}>
-        <Icon as={isRead ? CheckCircle2 : Bell} color={isRead ? 'gray.400' : 'purple.500'} boxSize={5} />
+        <Icon as={isRead ? CheckCircle2 : Bell} color={isRead ? 'text.muted' : 'brand.primary'} boxSize={5} />
         <VStack align="start" spacing={2} flex={1}>
           <HStack spacing={3} align="center">
             <Badge colorScheme={isRead ? 'gray' : 'purple'}>{categoryLabels[category]}</Badge>
@@ -118,10 +118,10 @@ const NotificationCard = ({
             {notification.type === 'system_alert' && <Icon as={AlertCircle} boxSize={4} />}
             {notification.type === 'important_update' && <Icon as={Mail} boxSize={4} />}
           </HStack>
-          <Text fontWeight="bold" color="gray.900">
+          <Text fontWeight="bold" color="text.primary">
             {notification.title || typeLabels[notification.type] || 'Notification'}
           </Text>
-          <Text color="gray.700">{notification.message}</Text>
+          <Text color="text.secondary">{notification.message}</Text>
           <HStack spacing={2}>{statusBadge(notification)}</HStack>
           <HStack spacing={2}>
             <Button size="sm" variant="ghost" colorScheme="purple" onClick={onMarkRead}>

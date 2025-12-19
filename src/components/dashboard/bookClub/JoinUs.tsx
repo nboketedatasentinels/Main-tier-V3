@@ -32,12 +32,12 @@ export const JoinUs: React.FC = () => {
   }
 
   return (
-    <section className="space-y-6 rounded-2xl border border-slate-200 bg-white p-8 shadow-sm">
+    <section className="space-y-6 rounded-2xl border border-border-subtle bg-surface-default p-8 shadow-sm">
       <div className="space-y-3">
-        <h2 className="text-xl font-semibold text-neutral-900">
+        <h2 className="text-xl font-semibold text-text-primary">
           Book club management lives on the Global Book Club hub
         </h2>
-        <div className="space-y-3 text-base leading-relaxed text-neutral-700">
+        <div className="space-y-3 text-base leading-relaxed text-text-secondary">
           <p>
             Our reading community is coordinated through an external platform where you can see upcoming selections, join
             discussions, and manage your membership.
@@ -53,13 +53,12 @@ export const JoinUs: React.FC = () => {
         <button
           type="button"
           onClick={handleJoinClick}
-          className="inline-flex items-center justify-center rounded-lg bg-indigo-600 px-6 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-indigo-700 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600"
+          className="inline-flex items-center justify-center rounded-lg bg-brand-primary px-6 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-brand-dark focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-primary focus-visible:ring focus-visible:ring-offset-2 focus-visible:ring-brand-primary focus-visible:ring-offset-surface-default"
         >
           Go to the Global Book Club hub
         </button>
-        {isLogging && <span className="text-sm text-neutral-500">Syncing with Firebase...</span>}
+        {isLogging && <span className="text-sm text-text-muted">Syncing with Firebase...</span>}
       </div>
     </section>
   )
 }
-

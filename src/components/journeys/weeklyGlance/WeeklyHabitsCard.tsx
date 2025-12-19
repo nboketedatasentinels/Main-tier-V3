@@ -25,7 +25,7 @@ export const WeeklyHabitsCard = ({ habits, loading, onToggleHabit }: WeeklyHabit
   const progress = habits.length ? Math.round((completedCount / habits.length) * 100) : 0
 
   return (
-    <Card h="100%" variant="outline" borderColor="brand.border">
+    <Card h="100%" variant="outline" borderColor="border.subtle">
       <CardBody>
         <Stack spacing={3}>
           <HStack justify="space-between">
@@ -35,16 +35,16 @@ export const WeeklyHabitsCard = ({ habits, loading, onToggleHabit }: WeeklyHabit
           <Progress value={progress} colorScheme="green" rounded="full" />
           <Skeleton isLoaded={!loading} rounded="md">
             <VStack align="stretch" spacing={2}>
-              {habits.length === 0 && <Text color="brand.subtleText">No habits added yet.</Text>}
+              {habits.length === 0 && <Text color="text.secondary">No habits added yet.</Text>}
               {habits.map(habit => (
                 <HStack
                   key={habit.id}
                   justify="space-between"
                   p={2}
                   borderWidth="1px"
-                  borderColor="brand.border"
+                  borderColor="border.subtle"
                   rounded="md"
-                  _hover={{ bg: 'brand.primaryMuted', cursor: 'pointer' }}
+                  _hover={{ bg: 'tint.brandPrimary', cursor: 'pointer' }}
                   onClick={() => onToggleHabit(habit)}
                 >
                   <HStack spacing={2}>

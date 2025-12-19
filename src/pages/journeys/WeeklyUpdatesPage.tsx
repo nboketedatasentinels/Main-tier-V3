@@ -572,35 +572,46 @@ const WeeklyChecklistPage: React.FC = () => {
         key={activity.id}
         ref={ref => (activityRefs.current[activity.id] = ref)}
         borderWidth="1px"
-        borderColor="gray.700"
+        borderColor="border.card"
         p={4}
         borderRadius="lg"
-        bg="gray.900"
+        bg="surface.default"
         className="activity-card"
       >
         <Flex justify="space-between" align="flex-start" mb={2}>
           <Stack spacing={1}>
             <HStack spacing={2}>
-              <Badge colorScheme={activity.status === 'completed' ? 'green' : activity.status === 'pending' ? 'yellow' : 'gray'}>
-                {statusLabelMap[activity.status]}
-              </Badge>
+              {activity.status === 'completed' ? (
+                <Badge colorScheme="success">{statusLabelMap[activity.status]}</Badge>
+              ) : activity.status === 'pending' ? (
+                <Badge colorScheme="secondary">{statusLabelMap[activity.status]}</Badge>
+              ) : (
+                <Badge bg="surface.subtle" color="text.secondary" border="1px solid" borderColor="border.subtle">
+                  {statusLabelMap[activity.status]}
+                </Badge>
+              )}
               {showProofBadge && (
                 <Tooltip label="Partner approval required. Upload proof so the partner team can verify.">
                   <Badge colorScheme="purple">Partner approval</Badge>
                 </Tooltip>
               )}
-              {showFreeBadge && <Badge colorScheme="blue">Free tier</Badge>}
-              <Tag colorScheme="cyan">{activity.category}</Tag>
+              {showFreeBadge && <Badge colorScheme="secondary">Free tier</Badge>}
+              <Tag colorScheme="primary">{activity.category}</Tag>
             </HStack>
-            <Heading size="sm" color="white">
+            <Heading size="sm" color="text.primary">
               {activity.title}
             </Heading>
-            <Text color="gray.300" fontSize="sm">
+            <Text color="text.secondary" fontSize="sm">
               {activity.description}
             </Text>
           </Stack>
           <Stack align="flex-end" spacing={2}>
-            <Tag colorScheme="orange" fontWeight="bold">
+            <Tag
+              bg="tint.accentWarning"
+              color="text.primary"
+              border="1px solid"
+              borderColor="accent.warning"
+            >
               +{activity.points} pts
             </Tag>
             {activity.status === 'pending' && (
@@ -612,7 +623,7 @@ const WeeklyChecklistPage: React.FC = () => {
         </Flex>
         <HStack spacing={3}>
           <Button
-            colorScheme="teal"
+            colorScheme="primary"
             variant={activity.status === 'completed' || activity.status === 'pending' ? 'solid' : 'outline'}
             isDisabled={yesDisabled}
             onClick={() =>
@@ -625,7 +636,8 @@ const WeeklyChecklistPage: React.FC = () => {
           </Button>
           <Button
             variant="outline"
-            colorScheme="gray"
+            borderColor="border.strong"
+            color="text.primary"
             isDisabled={noDisabled}
             onClick={() => handleActivityUpdate(activity, 'not_started')}
           >
@@ -637,23 +649,25 @@ const WeeklyChecklistPage: React.FC = () => {
   }
 
   const renderParticipationRhythm = () => (
-    <Box borderWidth="1px" borderColor="gray.700" p={4} borderRadius="lg" bg="gray.900">
+    <Box borderWidth="1px" borderColor="border.card" p={4} borderRadius="lg" bg="surface.default">
       <HStack justify="space-between" mb={2}>
-        <Heading size="sm" color="white">
+        <Heading size="sm" color="text.primary">
           Participation Rhythm
         </Heading>
-        <Tag colorScheme="teal">+{rhythmPoints} pts</Tag>
+        <Tag colorScheme="primary">+{rhythmPoints} pts</Tag>
       </HStack>
       <Stack spacing={2}>
         {rhythmItems.map(item => (
-          <Flex key={item} align="center" justify="space-between" p={2} borderRadius="md" bg="gray.800">
-            <Text color="gray.200">{item}</Text>
+          <Flex key={item} align="center" justify="space-between" p={2} borderRadius="md" bg="surface.subtle">
+            <Text color="text.secondary">{item}</Text>
             <Button
               size="sm"
               leftIcon={
                 rhythmCompleted[item] ? <Icon as={CheckCircle} /> : <Icon as={Plus} />
               }
-              colorScheme={rhythmCompleted[item] ? 'teal' : 'gray'}
+              colorScheme={rhythmCompleted[item] ? 'primary' : undefined}
+              borderColor={rhythmCompleted[item] ? undefined : 'border.strong'}
+              color={rhythmCompleted[item] ? undefined : 'text.primary'}
               variant={rhythmCompleted[item] ? 'solid' : 'outline'}
               onClick={() => toggleItem(item)}
             >
@@ -662,7 +676,7 @@ const WeeklyChecklistPage: React.FC = () => {
           </Flex>
         ))}
       </Stack>
-      <Text color="gray.300" fontSize="sm" mt={2}>
+      <Text color="text.muted" fontSize="sm" mt={2}>
         Saved locally for calendar week {calendarWeek}. Perfect for building your weekly habits.
       </Text>
     </Box>
@@ -674,14 +688,14 @@ const WeeklyChecklistPage: React.FC = () => {
     if (!bullets?.length) return null
 
     return (
-      <Box borderWidth="1px" borderColor="purple.500" p={4} borderRadius="lg" bg="purple.900/50">
-        <Heading size="sm" color="purple.100" mb={2}>
+      <Box borderWidth="1px" borderColor="accent.purpleBorder" p={4} borderRadius="lg" bg="accent.purpleSubtle">
+        <Heading size="sm" color="text.primary" mb={2}>
           Week {selectedWeek} – Focus Guidance
         </Heading>
-        <Stack spacing={2} color="purple.50">
+        <Stack spacing={2} color="text.secondary">
           {bullets.map(item => (
             <HStack key={item} spacing={2} align="flex-start">
-              <Icon as={CheckCircle} color="purple.200" />
+              <Icon as={CheckCircle} color="brand.primary" />
               <Text>{item}</Text>
             </HStack>
           ))}
@@ -691,27 +705,27 @@ const WeeklyChecklistPage: React.FC = () => {
   }
 
   const renderGamificationPanel = () => (
-    <Box borderWidth="1px" borderColor="gray.700" p={4} borderRadius="lg" bg="gray.900">
-      <Heading size="sm" color="white" mb={3}>
+    <Box borderWidth="1px" borderColor="border.card" p={4} borderRadius="lg" bg="surface.default">
+      <Heading size="sm" color="text.primary" mb={3}>
         Workflow Gamification
       </Heading>
       <Stack spacing={3}>
         <Alert status="info" variant="subtle" borderRadius="md">
           <AlertIcon />
           <Stack spacing={1}>
-            <Text color="gray.200">Focus on your next incomplete activity.</Text>
-            <Text color="gray.300" fontSize="sm">
+            <Text color="text.secondary">Focus on your next incomplete activity.</Text>
+            <Text color="text.secondary" fontSize="sm">
               Keep your streak alive by acting in the next 24 hours.
             </Text>
           </Stack>
         </Alert>
-        <Button colorScheme="teal" onClick={scrollToActivity} isDisabled={!firstIncompleteActivity}>
+        <Button colorScheme="primary" onClick={scrollToActivity} isDisabled={!firstIncompleteActivity}>
           {firstIncompleteActivity ? `Complete ${firstIncompleteActivity.title}` : 'All activities done'}
         </Button>
-        <Stack spacing={1} color="gray.300">
+        <Stack spacing={1} color="text.secondary">
           <Text fontWeight="bold">Streak tracker</Text>
           <Progress value={Math.min(100, progressStatus.pct)} colorScheme={progressStatus.color} borderRadius="full" />
-          <Text fontSize="sm">Maintain daily check-ins to grow your streak.</Text>
+          <Text fontSize="sm" color="text.muted">Maintain daily check-ins to grow your streak.</Text>
         </Stack>
       </Stack>
     </Box>
@@ -724,7 +738,7 @@ const WeeklyChecklistPage: React.FC = () => {
         <ModalHeader>Upload proof</ModalHeader>
         <ModalCloseButton />
         <ModalBody>
-          <Text mb={2} color="gray.600">
+          <Text mb={2} color="text.secondary">
             Provide a link or short notes so admins can approve your points.
           </Text>
           <Stack spacing={3}>
@@ -744,7 +758,7 @@ const WeeklyChecklistPage: React.FC = () => {
           <Button variant="ghost" mr={3} onClick={onClose}>
             Cancel
           </Button>
-          <Button colorScheme="teal" onClick={submitProof} leftIcon={<Icon as={Plus} />}
+          <Button colorScheme="primary" onClick={submitProof} leftIcon={<Icon as={Plus} />}
             isDisabled={!proofModal.activity?.proofUrl}
           >
             Submit for verification
@@ -757,10 +771,10 @@ const WeeklyChecklistPage: React.FC = () => {
   const renderWeekSummary = () => (
     <Stack spacing={4}>
       <Stack spacing={1}>
-        <Heading size="lg" color="white">
+        <Heading size="lg" color="text.primary">
           Weekly Checklist
         </Heading>
-        <Text color="gray.300">A comprehensive weekly activity tracker with Firebase-powered progress.</Text>
+        <Text color="text.secondary">A comprehensive weekly activity tracker with Firebase-powered progress.</Text>
       </Stack>
       <Box p={4} borderWidth="1px" borderColor="gray.700" bg="white" borderRadius="lg">
         <Stack spacing={3}>
@@ -777,12 +791,12 @@ const WeeklyChecklistPage: React.FC = () => {
             <StatCard
               label="Activities completed"
               value={`${pendingCounts.completed} of ${pendingCounts.total}`}
-              icon={<Icon as={CheckCircle} color="green.300" />}
+              icon={<Icon as={CheckCircle} color="success.400" />}
             />
             <StatCard
               label="Weekly points"
               value={`${pendingCounts.points} / ${weeklyTarget}`}
-              icon={<Icon as={Plus} color="orange.300" />}
+              icon={<Icon as={Plus} color="accent.warning" />}
             />
             <StatCard
               label="Status"
@@ -791,7 +805,7 @@ const WeeklyChecklistPage: React.FC = () => {
             />
           </SimpleGrid>
         </Stack>
-      </Box>
+      </SurfaceCard>
     </Stack>
   )
 
@@ -799,15 +813,15 @@ const WeeklyChecklistPage: React.FC = () => {
     return (
       <Center py={16}>
         <Stack spacing={3} align="center">
-          <CircularProgress isIndeterminate color="purple.400" />
-          <Text color="gray.400">Loading weekly activities...</Text>
+          <CircularProgress isIndeterminate color="brand.primary" />
+          <Text color="text.secondary">Loading weekly activities...</Text>
         </Stack>
       </Center>
     )
   }
 
   return (
-    <Stack spacing={6}>
+    <Stack spacing={6} color="text.primary">
       {renderWeekSummary()}
       {error && (
         <Alert status="error" borderRadius="md">
@@ -816,27 +830,27 @@ const WeeklyChecklistPage: React.FC = () => {
           <AlertDescription>{error}</AlertDescription>
         </Alert>
       )}
-      <Box borderWidth="1px" borderColor="gray.700" p={4} borderRadius="lg" bg="gray.900">
+      <SurfaceCard borderColor="border.card">
         <Stack spacing={4}>
           <Flex align="center" justify="space-between">
-            <Heading size="sm" color="gray.100">
+            <Heading size="sm" color="text.primary">
               Week navigation
             </Heading>
             {isWeekLocked && (
-              <Tag colorScheme="red" borderRadius="full" size="sm">
+              <Tag colorScheme="warning" borderRadius="full" size="sm">
                 <Icon as={Lock} mr={1} /> Locked for review
               </Tag>
             )}
           </Flex>
           {renderWeekSelector()}
         </Stack>
-      </Box>
+      </SurfaceCard>
 
       <Grid templateColumns={{ base: '1fr', xl: '2fr 1fr' }} gap={6} alignItems="start">
         <GridItem>
           <Stack spacing={4}>
-            <Box borderWidth="1px" borderColor="gray.700" p={4} borderRadius="lg" bg="gray.900">
-              <Heading size="sm" color="white" mb={3}>
+            <SurfaceCard borderColor="border.card">
+              <Heading size="sm" color="text.primary" mb={3}>
                 Weekly activities
               </Heading>
               {activityLoading ? (
@@ -850,8 +864,8 @@ const WeeklyChecklistPage: React.FC = () => {
                   {activities.length ? activities.map(renderActivityCard) : (
                     <Center py={8}>
                       <Stack spacing={2} align="center">
-                        <Text color="gray.400">No activities found for this week.</Text>
-                        <Text color="gray.500" fontSize="sm">
+                        <Text color="text.secondary">No activities found for this week.</Text>
+                        <Text color="text.secondary" fontSize="sm">
                           Templates will automatically sync from Firebase when available.
                         </Text>
                       </Stack>
@@ -859,7 +873,7 @@ const WeeklyChecklistPage: React.FC = () => {
                   )}
                 </Stack>
               )}
-            </Box>
+            </SurfaceCard>
             {renderGuidanceCard()}
             {renderParticipationRhythm()}
           </Stack>
@@ -867,8 +881,8 @@ const WeeklyChecklistPage: React.FC = () => {
 
         <GridItem>
           <Stack spacing={4}>
-            <Box borderWidth="1px" borderColor="gray.700" p={4} borderRadius="lg" bg="gray.900">
-              <Heading size="sm" color="white" mb={3}>
+            <SurfaceCard borderColor="border.card">
+              <Heading size="sm" color="text.primary" mb={3}>
                 Weekly progress
               </Heading>
               {progressLoading ? (
@@ -876,10 +890,10 @@ const WeeklyChecklistPage: React.FC = () => {
               ) : (
                 <Stack spacing={3}>
                   <Progress value={progressStatus.pct} colorScheme={progressStatus.color} borderRadius="full" />
-                  <Text color="gray.200" fontWeight="bold">
+                  <Text color="text.primary" fontWeight="bold">
                     {pendingCounts.points} / {weeklyTarget} points earned
                   </Text>
-                  <Text color="gray.400" fontSize="sm">
+                  <Text color="text.secondary" fontSize="sm">
                     {progressStatus.pct >= 100
                       ? 'Amazing! You are ahead of your target.'
                       : progressStatus.pct >= 75
@@ -888,7 +902,7 @@ const WeeklyChecklistPage: React.FC = () => {
                   </Text>
                 </Stack>
               )}
-            </Box>
+            </SurfaceCard>
             {renderGamificationPanel()}
           </Stack>
         </GridItem>
@@ -904,13 +918,13 @@ const StatCard: React.FC<{ label: string; value: string; icon: React.ReactNode }
     <HStack justify="space-between" mb={1}>
       <Text color="#273240" fontSize="sm">
         {label}
-      </Text>
+      </MutedText>
       {icon}
     </HStack>
     <Heading size="md" color="#273240">
       {value}
     </Heading>
-  </Box>
+  </SurfaceCard>
 )
 
 const InfoPill: React.FC<{ color: string }> = ({ color }) => (
