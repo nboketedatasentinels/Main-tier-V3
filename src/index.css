@@ -193,12 +193,12 @@
   }
 
   .status-indicator--info {
-    @apply status-indicator bg-tint-brand-primary border-brand-primary;
+    @apply status-indicator bg-tint-brandPrimary border-brand-primary;
     color: theme('colors.brand.primary');
   }
 
   .status-indicator--warning {
-    @apply status-indicator bg-tint-accent-warning border-accent-warning text-text-primary;
+    @apply status-indicator bg-tint-accentWarning border-accent-warning text-text-primary;
   }
 
   .status-indicator--danger {
@@ -211,7 +211,7 @@
 
   /* Premium Badge */
   .premium-badge {
-    @apply inline-flex items-center gap-1 rounded-full bg-tint-accent-warning border border-accent-warning px-3 py-1 text-xs font-semibold uppercase tracking-[0.18em] text-text-primary;
+    @apply inline-flex items-center gap-1 rounded-full bg-tint-accentWarning border border-accent-warning px-3 py-1 text-xs font-semibold uppercase tracking-[0.18em] text-text-primary;
   }
 
   .premium-badge--outline {
@@ -268,22 +268,6 @@
 
 /* Utilities Layer - Animations and Special Effects */
 @layer utilities {
-  .bg-surface-subtle {
-    background-color: theme('colors.surface.subtle');
-  }
-
-  .text-text-primary {
-    color: theme('colors.text.primary');
-  }
-
-  .text-text-secondary {
-    color: theme('colors.text.secondary');
-  }
-
-  .text-text-muted {
-    color: theme('colors.text.muted');
-  }
-
   /* Animation Utilities */
   .animate-slide-in {
     animation: slideIn 0.3s ease-out;
