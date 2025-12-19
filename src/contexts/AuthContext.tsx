@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react'
+import React, { useEffect, useState } from 'react'
 import { FirebaseError } from 'firebase/app'
 import { User } from 'firebase/auth'
 import {
@@ -39,6 +39,25 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     const timestamp = new Date().toISOString()
     localStorage.setItem('lastProfileLoadAt', timestamp)
     console.log('🟣 [Auth] Recorded profile load timestamp', { id: loadedProfile.id, timestamp })
+  }
+
+  const extractCustomClaims = async (firebaseUser: User) => {
+    try {
+      const tokenResult = await firebaseUser.getIdTokenResult()
+      const rawRole =
+        (tokenResult.claims?.role as string | undefined) ??
+        (tokenResult.claims?.claimsRole as string | undefined) ??
+        (tokenResult.claims?.customRole as string | undefined)
+      if (rawRole) {
+        console.log('🟣 [Auth] Custom claims role detected', rawRole)
+        setClaimsRole(rawRole)
+      } else {
+        setClaimsRole(null)
+      }
+    } catch (error) {
+      console.warn('🟠 [Auth] Unable to read custom claims', error)
+      setClaimsRole(null)
+    }
   }
 
   const fetchProfileOnce = async (uid: string): Promise<UserProfile | null> => {
@@ -378,11 +397,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   /* ------------------------------------------------------------------ */
   /* 🔹 Role Flags (LOGGED)                                              */
   /* ------------------------------------------------------------------ */
-  const normalizedRole = useMemo(() => {
-    const r = normalizeRole(profile?.role)
-    console.log('🔵 [Auth] normalizedRole computed:', r)
-    return r
-  }, [profile?.role])
+  const normalizedRole = normalizeRole(profile?.role)
 
   const isAdmin = normalizedRole === 'partner' || normalizedRole === 'super_admin'
   const isSuperAdmin = normalizedRole === 'super_admin'
