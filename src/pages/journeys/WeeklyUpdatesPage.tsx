@@ -805,7 +805,7 @@ const WeeklyChecklistPage: React.FC = () => {
             />
           </SimpleGrid>
         </Stack>
-      </SurfaceCard>
+      </Box>
     </Stack>
   )
 
