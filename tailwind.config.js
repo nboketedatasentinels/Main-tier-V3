@@ -10,7 +10,7 @@ export default {
         // Brand Colors - Semantic Tokens (Growth.design approach)
         brand: {
           primary: '#350e6f', // Violet
-          dark: '#27062e',    // Deep Purple
+          dark: '#24084d',    // Deep Purple
         },
         // Surface Colors - For backgrounds and cards
         surface: {
@@ -38,14 +38,14 @@ export default {
         },
         // Danger/Destructive Actions
         danger: {
-          DEFAULT: '#f4540c', // Orange
+          DEFAULT: '#ef4444', // Red
         },
         // Tint Tokens - 80% blend toward white for safe backgrounds
         tint: {
+          brandPrimary: 'rgba(53, 14, 111, 0.08)',
+          accentWarning: 'rgba(234, 177, 48, 0.16)',
+          danger: 'rgba(239, 68, 68, 0.12)',
           'brand-dark': '#d4cdd5',
-          'brand-primary': '#d7cfe2',
-          danger: '#fdddce',
-          'accent-warning': '#fbefd6',
           'accent-highlight': '#fef8de',
         },
         // Legacy Primary Brand Color: Indigo/Purple (kept for compatibility)
@@ -77,13 +77,13 @@ export default {
         // Neutral Gray Scale
         neutral: {
           50: '#F8F8F8',
-          100: '#F0F0F0',
+          100: '#f1f5f9',
           200: '#E0E0E0',
-          300: '#C7C7C7',
+          300: '#cbd5e1',
           400: '#A3A3A3',
-          500: '#7A7A7A',
+          500: '#64748b',
           600: '#5C5C5C',
-          700: '#3F3F3F',
+          700: '#334155',
           800: '#262626',
           900: '#1A1A1A',
           // Named aliases
@@ -96,14 +96,14 @@ export default {
         },
         // Semantic Status Colors
         success: {
-          50: '#f0fdf4',
+          50: '#ecfdf5',
           100: '#dcfce7',
-          200: '#bbf7d0',
+          200: '#a7f3d0',
           300: '#86efac',
-          400: '#4ade80',
+          400: '#34d399',
           500: '#22c55e',
           600: '#16a34a',
-          700: '#15803d',
+          700: '#047857',
           800: '#166534',
           900: '#14532d',
         },
@@ -237,7 +237,7 @@ export default {
         xl: '0 20px 45px rgba(15, 23, 42, 0.14)',
         '2xl': '0 25px 50px -12px rgba(0, 0, 0, 0.25)',
         card: '0 8px 30px rgba(0, 0, 0, 0.08)',
-        'card-elevated': '0 20px 45px rgba(15, 23, 42, 0.12)',
+        'card-elevated': '0 16px 60px rgba(0, 0, 0, 0.14)',
         focus: '0 0 0 4px rgba(90, 13, 160, 0.35)',
         inner: 'inset 0 2px 4px 0 rgba(0, 0, 0, 0.05)',
       },
