@@ -470,14 +470,14 @@ export function ThemeShowcase() {
                     shadow-2xl
                   </Text>
                 </Box>
-                <Box bg="white" p={4} rounded="lg" shadow="card">
+                <Box bg="white" p={4} rounded="lg" shadow="inner">
                   <Text fontSize="sm" fontWeight="medium">
-                    shadow-card
+                    shadow-inner
                   </Text>
                 </Box>
-                <Box bg="white" p={4} rounded="lg" shadow="card-elevated">
+                <Box bg="white" p={4} rounded="lg" shadow="none">
                   <Text fontSize="sm" fontWeight="medium">
-                    card-elevated
+                    shadow-none
                   </Text>
                 </Box>
               </SimpleGrid>

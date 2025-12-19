@@ -163,7 +163,7 @@
 @layer components {
   /* Card Base and Variants */
   .card {
-    @apply rounded-2xl border p-6 shadow-card;
+    @apply rounded-2xl border p-6 shadow-lg;
     background-color: var(--surface-default);
     border-color: var(--border-subtle);
   }
@@ -182,7 +182,7 @@
   }
 
   .card-interactive {
-    @apply card cursor-pointer transition-all duration-200 hover:-translate-y-1 hover:shadow-card-elevated hover:border-brand-primary;
+    @apply card cursor-pointer transition-all duration-200 hover:-translate-y-1 hover:shadow-xl hover:border-brand-primary;
   }
 
   /* Status Indicator Base and Variants */
