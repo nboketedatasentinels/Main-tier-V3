@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react'
+import React, { useCallback, useEffect, useState } from 'react'
 import { FirebaseError } from 'firebase/app'
 import { User } from 'firebase/auth'
 import {
@@ -41,7 +41,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     console.log('🟣 [Auth] Recorded profile load timestamp', { id: loadedProfile.id, timestamp })
   }
 
-  const extractCustomClaims = async (firebaseUser: User) => {
+  const extractCustomClaims = useCallback(async (firebaseUser: User) => {
     try {
       const tokenResult = await firebaseUser.getIdTokenResult()
       const rawRole =
@@ -58,7 +58,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       console.warn('🟠 [Auth] Unable to read custom claims', error)
       setClaimsRole(null)
     }
-  }
+  }, [])
 
   const fetchProfileOnce = async (uid: string): Promise<UserProfile | null> => {
     try {
@@ -316,7 +316,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       }
       unsubscribe()
     }
-  }, [enableProfileRealtime])
+  }, [enableProfileRealtime, extractCustomClaims])
 
   /* ------------------------------------------------------------------ */
   /* 🔹 Auth Actions                                                     */
