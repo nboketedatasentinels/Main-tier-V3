@@ -9,6 +9,7 @@ import {
   where,
 } from 'firebase/firestore'
 import { db } from './firebase'
+import { Organization } from '@/types'
 import { BulkInvitationResult, CourseOption, InvitationPayload, OrganizationLead, OrganizationRecord } from '@/types/admin'
 import { inviteUsersBulk } from './invitationService'
 
@@ -48,6 +49,57 @@ export const fetchAvailableCourses = async (): Promise<CourseOption[]> => {
     const data = docSnap.data() as { title?: string; description?: string }
     return { id: docSnap.id, title: data.title || 'Untitled course', description: data.description }
   })
+}
+
+const normalizeTimestamp = (value?: Timestamp | string | Date): string => {
+  if (!value) return ''
+  if (typeof value === 'string') return value
+  if (value instanceof Date) return value.toISOString()
+  if ('toDate' in value) return value.toDate().toISOString()
+  return ''
+}
+
+const normalizeOrganizationStatus = (status?: string): Organization['status'] => {
+  if (status === 'active' || status === 'inactive' || status === 'suspended') return status
+  return 'inactive'
+}
+
+export const validateCompanyCode = async (
+  code: string,
+): Promise<{ valid: boolean; error?: string; organization?: Organization }> => {
+  const trimmed = code.trim().toUpperCase()
+  if (!trimmed) {
+    return { valid: false, error: 'Company code is required.' }
+  }
+
+  const snapshot = await getDocs(query(orgCollection, where('code', '==', trimmed)))
+  if (snapshot.empty) {
+    return { valid: false, error: 'Company code not found.' }
+  }
+
+  const docSnap = snapshot.docs[0]
+  const data = docSnap.data() as Partial<OrganizationRecord> & {
+    memberCount?: number
+    settings?: Record<string, unknown>
+  }
+  const status = normalizeOrganizationStatus(data.status)
+  if (status !== 'active') {
+    return { valid: false, error: 'Company is not active.' }
+  }
+
+  return {
+    valid: true,
+    organization: {
+      id: docSnap.id,
+      code: data.code || trimmed,
+      name: data.name || 'Unknown organization',
+      status,
+      createdAt: normalizeTimestamp(data.createdAt),
+      updatedAt: normalizeTimestamp(data.updatedAt),
+      memberCount: data.memberCount ?? 0,
+      settings: data.settings,
+    },
+  }
 }
 
 const buildLead = (docSnap: { id: string; data: () => unknown }): OrganizationLead => {
