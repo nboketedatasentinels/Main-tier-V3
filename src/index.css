@@ -256,6 +256,10 @@
 
 /* Utilities Layer - Animations and Special Effects */
 @layer utilities {
+  .bg-surface-subtle {
+    background-color: theme('colors.surface.subtle');
+  }
+
   /* Animation Utilities */
   .animate-slide-in {
     animation: slideIn 0.3s ease-out;

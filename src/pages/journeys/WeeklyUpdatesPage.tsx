@@ -42,6 +42,7 @@ import { useAuth } from '@/hooks/useAuth'
 import { UserRole, UserProfile, WeeklyProgress } from '@/types'
 import { JOURNEY_META, getMonthNumber, getActivitiesForJourney, JourneyType, ActivityDef } from '@/config/pointsConfig'
 import { awardChecklistPoints, revokeChecklistPoints } from '@/services/pointsService'
+import { SurfaceCard } from '@/components/primitives/SurfacePrimitives'
 
 const DEFAULT_WEEKLY_TARGET = JOURNEY_META['6W'].weeklyTarget
 
@@ -914,11 +915,11 @@ const WeeklyChecklistPage: React.FC = () => {
 }
 
 const StatCard: React.FC<{ label: string; value: string; icon: React.ReactNode }> = ({ label, value, icon }) => (
-  <Box borderWidth="1px" borderColor="gray.700" p={4} borderRadius="lg" bg="white">
+  <SurfaceCard borderColor="gray.700" borderRadius="lg" bg="white">
     <HStack justify="space-between" mb={1}>
       <Text color="#273240" fontSize="sm">
         {label}
-      </MutedText>
+      </Text>
       {icon}
     </HStack>
     <Heading size="md" color="#273240">
