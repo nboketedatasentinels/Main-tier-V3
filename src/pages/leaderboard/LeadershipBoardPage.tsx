@@ -414,7 +414,11 @@ export const LeadershipBoardPage: React.FC = () => {
     if (rank === 1) return <Icon as={Crown} color="accent.warning" />
     if (rank === 2) return <Icon as={Medal} color="text.muted" />
     if (rank === 3) return <Icon as={Medal} color="brand.primary" />
-    return <Badge colorScheme="primary">{rank}</Badge>
+    return (
+      <Badge bg="tint.brandPrimary" color="brand.primary" border="1px solid" borderColor="brand.primary">
+        {rank}
+      </Badge>
+    )
   }
 
   const companyStats = {
@@ -467,7 +471,15 @@ export const LeadershipBoardPage: React.FC = () => {
           <Text color="text.secondary">Switch between leaderboard and challenge views with real-time Firebase data.</Text>
         </Box>
         <HStack spacing={3}>
-          <Button variant="secondary" leftIcon={<Icon as={Info} />} onClick={onOpen}>
+          <Button
+            bg="surface.default"
+            color="brand.primary"
+            border="1px solid"
+            borderColor="brand.primary"
+            _hover={{ bg: 'tint.brandPrimary' }}
+            leftIcon={<Icon as={Info} />}
+            onClick={onOpen}
+          >
             Start a Challenge
           </Button>
           <Button onClick={() => setShowPeerConnect((prev) => !prev)} variant="primary">
@@ -510,7 +522,7 @@ export const LeadershipBoardPage: React.FC = () => {
           <TabPanel px={0}>
             <Stack spacing={6}>
               <Grid templateColumns={{ base: '1fr', lg: '2fr 1fr' }} gap={4}>
-                <Card>
+                <Card bg="surface.default" border="1px solid" borderColor="border.subtle">
                   <CardHeader>
                     <HStack justify="space-between" align="center">
                       <Box>
@@ -571,7 +583,7 @@ export const LeadershipBoardPage: React.FC = () => {
                   </CardBody>
                 </Card>
 
-                <Card>
+                <Card bg="surface.default" border="1px solid" borderColor="border.subtle">
                   <CardHeader pb={2}>
                     <HStack justify="space-between">
                       <Text fontWeight="bold">Personal View</Text>
@@ -610,7 +622,7 @@ export const LeadershipBoardPage: React.FC = () => {
                 </Card>
               </Grid>
 
-              <Card>
+              <Card bg="surface.default" border="1px solid" borderColor="border.subtle">
                 <CardHeader>
                   <Flex justify="space-between" align="center">
                     <Box>
@@ -666,7 +678,7 @@ export const LeadershipBoardPage: React.FC = () => {
                 </CardBody>
               </Card>
 
-              <Card>
+              <Card bg="surface.default" border="1px solid" borderColor="border.subtle">
                 <CardHeader>
                   <Flex justify="space-between" align="center">
                     <Box>
@@ -703,7 +715,12 @@ export const LeadershipBoardPage: React.FC = () => {
                             </Tr>
                           )}
                           {virtualized.rows.map((row) => (
-                            <Tr key={row.user.id} bg={row.user.id === profile?.id ? 'tint.brandPrimary' : 'transparent'} height={`${rowHeight}px`}>
+                            <Tr
+                              key={row.user.id}
+                              bg={row.user.id === profile?.id ? 'tint.brandPrimary' : 'transparent'}
+                              _hover={{ bg: row.user.id === profile?.id ? 'tint.brandPrimary' : 'surface.subtle' }}
+                              height={`${rowHeight}px`}
+                            >
                               <Td>{getRankIcon(row.rank)}</Td>
                               <Td>
                                 <HStack spacing={3}>
@@ -765,7 +782,7 @@ export const LeadershipBoardPage: React.FC = () => {
               </Card>
 
               <Grid templateColumns={{ base: '1fr', lg: '1fr 1fr' }} gap={4}>
-                <Card>
+                <Card bg="surface.default" border="1px solid" borderColor="border.subtle">
                   <CardHeader>
                     <Text fontWeight="bold">Peer Progress</Text>
                     <Text color="text.secondary">Compare with nearby ranks</Text>
@@ -784,7 +801,11 @@ export const LeadershipBoardPage: React.FC = () => {
                       </Thead>
                       <Tbody>
                         {peerRows.map((row) => (
-                          <Tr key={row.user.id} bg={row.user.id === profile?.id ? 'tint.brandPrimary' : 'transparent'}>
+                          <Tr
+                            key={row.user.id}
+                            bg={row.user.id === profile?.id ? 'tint.brandPrimary' : 'transparent'}
+                            _hover={{ bg: row.user.id === profile?.id ? 'tint.brandPrimary' : 'surface.subtle' }}
+                          >
                             <Td>{row.rank}</Td>
                             <Td>
                               <HStack spacing={2}>
@@ -806,7 +827,7 @@ export const LeadershipBoardPage: React.FC = () => {
                   </CardBody>
                 </Card>
 
-                <Card>
+                <Card bg="surface.default" border="1px solid" borderColor="border.subtle">
                   <CardHeader>
                     <Text fontWeight="bold">Cohort Comparison</Text>
                     <Text color="text.secondary">Benchmarks vs cohort max & averages</Text>
@@ -839,7 +860,7 @@ export const LeadershipBoardPage: React.FC = () => {
                 </Card>
               </Grid>
 
-              <Card>
+              <Card bg="surface.default" border="1px solid" borderColor="border.subtle">
                 <CardHeader>
                   <Flex justify="space-between" align="center">
                     <Box>
@@ -898,7 +919,7 @@ export const LeadershipBoardPage: React.FC = () => {
               </Card>
 
               {showPeerConnect && (
-                <Card>
+                <Card bg="surface.default" border="1px solid" borderColor="border.subtle">
                   <CardHeader>
                     <Flex justify="space-between" align="center">
                       <Text fontWeight="bold">Peer Connect</Text>
@@ -942,7 +963,7 @@ export const LeadershipBoardPage: React.FC = () => {
               </Card>
 
               <SimpleGrid columns={{ base: 2, md: 4 }} spacing={4}>
-                <Card>
+                <Card bg="surface.default" border="1px solid" borderColor="border.subtle">
                   <CardBody>
                     <Stat>
                       <StatLabel color="text.muted">Active Challenges</StatLabel>
@@ -950,7 +971,7 @@ export const LeadershipBoardPage: React.FC = () => {
                     </Stat>
                   </CardBody>
                 </Card>
-                <Card>
+                <Card bg="surface.default" border="1px solid" borderColor="border.subtle">
                   <CardBody>
                     <Stat>
                       <StatLabel color="text.muted">Victories</StatLabel>
@@ -958,7 +979,7 @@ export const LeadershipBoardPage: React.FC = () => {
                     </Stat>
                   </CardBody>
                 </Card>
-                <Card>
+                <Card bg="surface.default" border="1px solid" borderColor="border.subtle">
                   <CardBody>
                     <Stat>
                       <StatLabel color="text.muted">Points Earned</StatLabel>
@@ -966,7 +987,7 @@ export const LeadershipBoardPage: React.FC = () => {
                     </Stat>
                   </CardBody>
                 </Card>
-                <Card>
+                <Card bg="surface.default" border="1px solid" borderColor="border.subtle">
                   <CardBody>
                     <Stat>
                       <StatLabel color="text.muted">Leaderboard Rank</StatLabel>
@@ -976,7 +997,7 @@ export const LeadershipBoardPage: React.FC = () => {
                 </Card>
               </SimpleGrid>
 
-              <Card>
+              <Card bg="surface.default" border="1px solid" borderColor="border.subtle">
                 <CardHeader>
                   <Flex justify="space-between" align="center">
                     <Text fontWeight="bold">Your Challenges</Text>
@@ -986,7 +1007,7 @@ export const LeadershipBoardPage: React.FC = () => {
                 <CardBody>
                   {emptyChallenges ? (
                     <VStack spacing={3} py={8} color="text.secondary">
-                      <Icon as={Users} size={48} />
+                      <Icon as={Users} boxSize={12} />
                       <Text fontWeight="bold">No Active Challenges</Text>
                       <Text>Start your first head-to-head battle to climb faster.</Text>
                     </VStack>
@@ -1014,7 +1035,7 @@ export const LeadershipBoardPage: React.FC = () => {
                 </CardBody>
               </Card>
 
-              <Card>
+              <Card bg="surface.default" border="1px solid" borderColor="border.subtle">
                 <CardHeader>
                   <Text fontWeight="bold">Challenge History</Text>
                   <Text color="text.secondary">Wins, losses, and stats</Text>
