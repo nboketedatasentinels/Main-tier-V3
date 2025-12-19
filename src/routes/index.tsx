@@ -26,6 +26,7 @@ import { WelcomePage } from '@/pages/onboarding/WelcomePage'
 import { AdminDashboard } from '@/pages/dashboards/AdminDashboard'
 import { SuperAdminDashboard } from '@/pages/dashboards/SuperAdminDashboard'
 import { MentorDashboard } from '@/pages/dashboards/MentorDashboard'
+import { AmbassadorDashboard } from '@/pages/dashboards/AmbassadorDashboard'
 
 // Feature page imports
 import { JourneysPage } from '@/pages/journeys/JourneysPage'
