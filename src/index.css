@@ -260,6 +260,18 @@
     background-color: theme('colors.surface.subtle');
   }
 
+  .text-text-primary {
+    color: theme('colors.text.primary');
+  }
+
+  .text-text-secondary {
+    color: theme('colors.text.secondary');
+  }
+
+  .text-text-muted {
+    color: theme('colors.text.muted');
+  }
+
   /* Animation Utilities */
   .animate-slide-in {
     animation: slideIn 0.3s ease-out;
