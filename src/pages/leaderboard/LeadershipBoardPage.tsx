@@ -476,10 +476,35 @@ export const LeadershipBoardPage: React.FC = () => {
         </HStack>
       </Flex>
 
-      <Tabs variant="enclosed">
-        <TabList>
-          <Tab>Leaderboard</Tab>
-          <Tab>Challenges</Tab>
+      <Tabs variant="unstyled" colorScheme="primary">
+        <TabList
+          bg="surface.default"
+          border="1px solid"
+          borderColor="border.subtle"
+          borderRadius="lg"
+          p={1}
+          gap={1}
+        >
+          <Tab
+            _selected={{ bg: 'tint.brandPrimary', color: 'text.primary' }}
+            color="text.secondary"
+            borderRadius="md"
+            px={4}
+            py={2}
+            fontWeight="600"
+          >
+            Leaderboard
+          </Tab>
+          <Tab
+            _selected={{ bg: 'tint.brandPrimary', color: 'text.primary' }}
+            color="text.secondary"
+            borderRadius="md"
+            px={4}
+            py={2}
+            fontWeight="600"
+          >
+            Challenges
+          </Tab>
         </TabList>
         <TabPanels>
           <TabPanel px={0}>
@@ -500,46 +525,46 @@ export const LeadershipBoardPage: React.FC = () => {
                   <CardBody>
                     <SimpleGrid columns={{ base: 2, md: 4 }} spacing={3}>
                       <Stat>
-                        <StatLabel>Your Current Rank</StatLabel>
-                        <StatNumber display="flex" alignItems="center" gap={2}>
+                        <StatLabel color="text.muted">Your Current Rank</StatLabel>
+                        <StatNumber color="text.primary" display="flex" alignItems="center" gap={2}>
                           {getRankIcon(userRow?.rank || companyRows.length || 1)}
                           {userRow?.rank || '—'}
                         </StatNumber>
                         <StatHelpText color="text.secondary">Across your company</StatHelpText>
                       </Stat>
                       <Stat>
-                        <StatLabel>Total Points</StatLabel>
-                        <StatNumber>{formatNumber(userRow?.totalPoints || profile?.totalPoints || 0)}</StatNumber>
+                        <StatLabel color="text.muted">Total Points</StatLabel>
+                        <StatNumber color="text.primary">{formatNumber(userRow?.totalPoints || profile?.totalPoints || 0)}</StatNumber>
                         <StatHelpText color="text.secondary">Lifetime XP</StatHelpText>
                       </Stat>
                       <Stat>
-                        <StatLabel>Current Level</StatLabel>
-                        <StatNumber>{userRow?.level || profile?.level || 1}</StatNumber>
+                        <StatLabel color="text.muted">Current Level</StatLabel>
+                        <StatNumber color="text.primary">{userRow?.level || profile?.level || 1}</StatNumber>
                         <StatHelpText color="text.secondary">Keep climbing</StatHelpText>
                       </Stat>
                       <Stat>
-                        <StatLabel>Weekly Points</StatLabel>
-                        <StatNumber>{formatNumber(companyStats.weeklyPoints)}</StatNumber>
+                        <StatLabel color="text.muted">Weekly Points</StatLabel>
+                        <StatNumber color="text.primary">{formatNumber(companyStats.weeklyPoints)}</StatNumber>
                         <StatHelpText color="text.secondary">Last 7 days</StatHelpText>
                       </Stat>
                       <Stat>
-                        <StatLabel>Monthly Points</StatLabel>
-                        <StatNumber>{formatNumber(companyStats.monthlyPoints)}</StatNumber>
+                        <StatLabel color="text.muted">Monthly Points</StatLabel>
+                        <StatNumber color="text.primary">{formatNumber(companyStats.monthlyPoints)}</StatNumber>
                         <StatHelpText color="text.secondary">Last 30 days</StatHelpText>
                       </Stat>
                       <Stat>
-                        <StatLabel>Active Challenges</StatLabel>
-                        <StatNumber>{companyStats.activeChallenges}</StatNumber>
+                        <StatLabel color="text.muted">Active Challenges</StatLabel>
+                        <StatNumber color="text.primary">{companyStats.activeChallenges}</StatNumber>
                         <StatHelpText color="text.secondary">Live battles</StatHelpText>
                       </Stat>
                       <Stat>
-                        <StatLabel>Badges Earned</StatLabel>
-                        <StatNumber>{companyStats.badgesEarned}</StatNumber>
+                        <StatLabel color="text.muted">Badges Earned</StatLabel>
+                        <StatNumber color="text.primary">{companyStats.badgesEarned}</StatNumber>
                         <StatHelpText color="text.secondary">Achievement count</StatHelpText>
                       </Stat>
                       <Stat>
-                        <StatLabel>Team Members</StatLabel>
-                        <StatNumber>{companySize || 1}</StatNumber>
+                        <StatLabel color="text.muted">Team Members</StatLabel>
+                        <StatNumber color="text.primary">{companySize || 1}</StatNumber>
                         <StatHelpText color="text.secondary">Company size</StatHelpText>
                       </Stat>
                     </SimpleGrid>
@@ -661,14 +686,14 @@ export const LeadershipBoardPage: React.FC = () => {
                       overflowY="auto"
                       onScroll={leaderboardRows.length > virtualizationThreshold ? onScrollVirtual : undefined}
                     >
-                      <Table variant="simple" size="md">
+                      <Table variant="simple" size="md" color="text.primary">
                         <Thead position="sticky" top={0} bg="surface.default" zIndex={1}>
                           <Tr>
-                            <Th>Rank</Th>
-                            <Th>Member</Th>
-                            <Th>Level</Th>
-                            <Th>Badges</Th>
-                            <Th isNumeric>Points</Th>
+                            <Th color="text.muted">Rank</Th>
+                            <Th color="text.muted">Member</Th>
+                            <Th color="text.muted">Level</Th>
+                            <Th color="text.muted">Badges</Th>
+                            <Th color="text.muted" isNumeric>Points</Th>
                           </Tr>
                         </Thead>
                         <Tbody>
@@ -684,28 +709,35 @@ export const LeadershipBoardPage: React.FC = () => {
                                 <HStack spacing={3}>
                                   <Avatar size="sm" name={row.user.fullName} src={row.user.avatarUrl} />
                                   <Box>
-                                    <Text fontWeight="bold">{row.user.fullName}</Text>
+                                    <Text fontWeight="bold" color="text.primary">{row.user.fullName}</Text>
                                     <Text fontSize="xs" color="text.secondary">
                                       {row.user.companyId || 'Independent'} · {row.user.villageId || 'Village TBD'} · {row.user.clusterId || 'Cluster TBD'}
                                     </Text>
                                     <HStack spacing={2} mt={1}>
                                       <Badge colorScheme="success">Active</Badge>
                                       <Badge colorScheme="primary">{row.badgeCount} badges</Badge>
-                                      <Badge colorScheme="warning">Level {row.level}</Badge>
+                                      <Badge
+                                        bg="tint.accentWarning"
+                                        color="text.primary"
+                                        border="1px solid"
+                                        borderColor="accent.warning"
+                                      >
+                                        Level {row.level}
+                                      </Badge>
                                     </HStack>
                                   </Box>
                                 </HStack>
                               </Td>
-                              <Td>Lvl {row.level}</Td>
+                              <Td color="text.primary">Lvl {row.level}</Td>
                               <Td>
                                 <HStack spacing={1}>
                                   {Array.from({ length: Math.min(row.badgeCount, 4) }).map((_, idx) => (
-                                    <Icon key={idx} as={Star} color="accent.warning" size={14} />
+                                    <Icon key={idx} as={Star} color="accent.warning" boxSize={4} />
                                   ))}
                                 </HStack>
                               </Td>
                               <Td isNumeric>
-                                <Text fontWeight="bold">{formatNumber(row.activePoints)}</Text>
+                                <Text fontWeight="bold" color="text.primary">{formatNumber(row.activePoints)}</Text>
                                 <Text fontSize="xs" color="text.secondary">Total {formatNumber(row.totalPoints)}</Text>
                               </Td>
                             </Tr>
@@ -739,15 +771,15 @@ export const LeadershipBoardPage: React.FC = () => {
                     <Text color="text.secondary">Compare with nearby ranks</Text>
                   </CardHeader>
                   <CardBody>
-                    <Table size="sm">
-                      <Thead>
+                    <Table size="sm" color="text.primary">
+                      <Thead bg="surface.default">
                         <Tr>
-                          <Th>Rank</Th>
-                          <Th>Member</Th>
-                          <Th>Active Points</Th>
-                          <Th>Total</Th>
-                          <Th>Level</Th>
-                          <Th>Δ vs You</Th>
+                          <Th color="text.muted">Rank</Th>
+                          <Th color="text.muted">Member</Th>
+                          <Th color="text.muted">Active Points</Th>
+                          <Th color="text.muted">Total</Th>
+                          <Th color="text.muted">Level</Th>
+                          <Th color="text.muted">Δ vs You</Th>
                         </Tr>
                       </Thead>
                       <Tbody>
@@ -885,17 +917,27 @@ export const LeadershipBoardPage: React.FC = () => {
             <Stack spacing={5}>
               <Card bgGradient="linear(to-r, brand.primary, brand.dark)" color="text.inverse">
                 <CardBody>
-                  <Flex align="center" justify="space-between">
-                    <Box>
-                      <Text fontSize="sm" opacity={0.9}>Challenge Weeks are Live</Text>
-                      <Text fontSize="2xl" fontWeight="bold">Friendly competitions to spark growth</Text>
-                      <HStack spacing={3} mt={2}>
-                        <Icon as={Clock} />
-                        <Text>Join or launch a challenge today</Text>
-                      </HStack>
-                    </Box>
-                    <Button variant="secondary" onClick={onOpen} rightIcon={<Icon as={Target} />}>Start a Challenge</Button>
-                  </Flex>
+                  <Stack color="text.inverse">
+                    <Flex align="center" justify="space-between">
+                      <Box>
+                        <Text fontSize="sm" opacity={0.9}>Challenge Weeks are Live</Text>
+                        <Text fontSize="2xl" fontWeight="bold">Friendly competitions to spark growth</Text>
+                        <HStack spacing={3} mt={2}>
+                          <Icon as={Clock} />
+                          <Text>Join or launch a challenge today</Text>
+                        </HStack>
+                      </Box>
+                      <Button
+                        bg="surface.default"
+                        color="brand.primary"
+                        _hover={{ bg: 'surface.subtle' }}
+                        onClick={onOpen}
+                        rightIcon={<Icon as={Target} />}
+                      >
+                        Start a Challenge
+                      </Button>
+                    </Flex>
+                  </Stack>
                 </CardBody>
               </Card>
 
@@ -903,32 +945,32 @@ export const LeadershipBoardPage: React.FC = () => {
                 <Card>
                   <CardBody>
                     <Stat>
-                      <StatLabel>Active Challenges</StatLabel>
-                      <StatNumber>{challenges.filter((c) => c.status === 'active').length}</StatNumber>
+                      <StatLabel color="text.muted">Active Challenges</StatLabel>
+                      <StatNumber color="text.primary">{challenges.filter((c) => c.status === 'active').length}</StatNumber>
                     </Stat>
                   </CardBody>
                 </Card>
                 <Card>
                   <CardBody>
                     <Stat>
-                      <StatLabel>Victories</StatLabel>
-                      <StatNumber>{challenges.filter((c) => c.result === 'win').length}</StatNumber>
+                      <StatLabel color="text.muted">Victories</StatLabel>
+                      <StatNumber color="text.primary">{challenges.filter((c) => c.result === 'win').length}</StatNumber>
                     </Stat>
                   </CardBody>
                 </Card>
                 <Card>
                   <CardBody>
                     <Stat>
-                      <StatLabel>Points Earned</StatLabel>
-                      <StatNumber>{formatNumber(challenges.reduce((sum, c) => sum + c.yourPoints, 0))}</StatNumber>
+                      <StatLabel color="text.muted">Points Earned</StatLabel>
+                      <StatNumber color="text.primary">{formatNumber(challenges.reduce((sum, c) => sum + c.yourPoints, 0))}</StatNumber>
                     </Stat>
                   </CardBody>
                 </Card>
                 <Card>
                   <CardBody>
                     <Stat>
-                      <StatLabel>Leaderboard Rank</StatLabel>
-                      <StatNumber>{userRow?.rank || '—'}</StatNumber>
+                      <StatLabel color="text.muted">Leaderboard Rank</StatLabel>
+                      <StatNumber color="text.primary">{userRow?.rank || '—'}</StatNumber>
                     </Stat>
                   </CardBody>
                 </Card>
@@ -963,7 +1005,7 @@ export const LeadershipBoardPage: React.FC = () => {
                             <VStack spacing={1} align="flex-end">
                               <Text fontWeight="bold">You {formatNumber(challenge.yourPoints)}</Text>
                               <Text color="text.secondary">Opponent {formatNumber(challenge.opponentPoints)}</Text>
-                              <Badge colorScheme={challenge.yourPoints >= challenge.opponentPoints ? 'green' : 'red'}>{challenge.status}</Badge>
+                              <Badge colorScheme={challenge.yourPoints >= challenge.opponentPoints ? 'success' : 'error'}>{challenge.status}</Badge>
                             </VStack>
                           </Flex>
                         ))}
@@ -1000,7 +1042,7 @@ export const LeadershipBoardPage: React.FC = () => {
       </Tabs>
 
       <Modal isOpen={isOpen} onClose={onClose} size="lg">
-        <ModalOverlay />
+        <ModalOverlay bg="blackAlpha.300" />
         <ModalContent>
           <ModalHeader>Start a Challenge</ModalHeader>
           <ModalCloseButton />
