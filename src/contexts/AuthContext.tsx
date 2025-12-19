@@ -18,8 +18,9 @@ import {
 import type { StandardRole } from '@/types'
 import { normalizeRole } from '@/utils/role'
 import { isBootstrapAdmin } from '@/utils/bootstrap'
-import { auth, db } from '@/services/firebase'
+import { auth, db, firebaseConfigStatus } from '@/services/firebase'
 import { AuthContext, AuthContextType } from './AuthContextType'
+import { getFriendlyErrorMessage } from '@/utils/authErrors'
 
 interface AuthProviderProps {
   children: React.ReactNode
@@ -321,10 +322,29 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   /* ------------------------------------------------------------------ */
   /* 🔹 Auth Actions                                                     */
   /* ------------------------------------------------------------------ */
+  const ensureFirebaseConfigured = () => {
+    if (firebaseConfigStatus.isValid) return null
+
+    const missingKeysList = firebaseConfigStatus.missingKeys.join(', ')
+    return new Error(
+      `Authentication is not available because required Firebase environment variables are missing: ${missingKeysList}.`
+    )
+  }
+
   const signIn = async (email: string, password: string) => {
     console.log('🟡 [Auth] signIn:start', email)
     setLoading(true)
     setProfileLoading(true)
+
+    const configError = ensureFirebaseConfigured()
+    if (configError) {
+      console.error('🔴 [Auth] signIn blocked due to missing Firebase config', {
+        missingKeys: firebaseConfigStatus.missingKeys,
+      })
+      setLoading(false)
+      setProfileLoading(false)
+      return { error: configError }
+    }
 
     try {
       await signInWithEmailAndPassword(auth, email, password)
@@ -332,9 +352,14 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       return { error: null }
     } catch (error) {
       console.error('🔴 [Auth] signIn failed', error)
+      const friendlyMessage = getFriendlyErrorMessage(error)
+      const normalizedError =
+        error instanceof Error && error.message === friendlyMessage
+          ? error
+          : new Error(friendlyMessage)
       setLoading(false)
       setProfileLoading(false)
-      return { error: error as Error }
+      return { error: normalizedError }
     }
   }
 
