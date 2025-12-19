@@ -14,21 +14,21 @@ export default {
         },
         // Surface Colors - For backgrounds and cards
         surface: {
-          default: '#FFFFFF',
-          subtle: '#F8FAFC',
+          default: 'var(--surface-default)',
+          subtle: 'var(--surface-subtle)',
           muted: '#F1F5F9',
           elevated: '#FFFFFF',
         },
         // Text Colors - For readability
         text: {
-          primary: '#0F172A',
-          secondary: '#334155',
-          muted: '#64748B',
-          inverse: '#FFFFFF',
+          primary: 'var(--text-primary)',
+          secondary: 'var(--text-secondary)',
+          muted: 'var(--text-muted)',
+          inverse: 'var(--text-inverse)',
         },
         // Border Colors
         border: {
-          subtle: '#E2E8F0',
+          subtle: 'var(--border-subtle)',
           strong: '#CBD5E1',
         },
         // Accent Colors - For highlights and status
@@ -236,7 +236,7 @@ export default {
         lg: '0 18px 40px rgba(15, 23, 42, 0.12)',
         xl: '0 20px 45px rgba(15, 23, 42, 0.14)',
         '2xl': '0 25px 50px -12px rgba(0, 0, 0, 0.25)',
-        card: '0 10px 30px rgba(15, 23, 42, 0.08)',
+        card: '0 8px 30px rgba(0, 0, 0, 0.08)',
         'card-elevated': '0 20px 45px rgba(15, 23, 42, 0.12)',
         focus: '0 0 0 4px rgba(90, 13, 160, 0.35)',
         inner: 'inset 0 2px 4px 0 rgba(0, 0, 0, 0.05)',
