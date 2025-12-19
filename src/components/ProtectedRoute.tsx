@@ -2,11 +2,19 @@ import React from 'react'
 import { Navigate, useLocation } from 'react-router-dom'
 import { useAuth } from '@/hooks/useAuth'
 import type { UserRole } from '@/types'
+import { AccountStatus } from '@/types'
 import { normalizeRole } from '@/utils/role'
 
 type Props = {
   children: React.ReactNode
   requiredRoles?: Array<UserRole | string>
+  requireSuperAdmin?: boolean
+  requireAdmin?: boolean
+  requireMentor?: boolean
+  requireAmbassador?: boolean
+  requirePaid?: boolean
+  restrictMentor?: boolean
+  requireOrganization?: string
 }
 
 export const ProtectedRoute: React.FC<Props> = ({
@@ -46,7 +54,7 @@ export const ProtectedRoute: React.FC<Props> = ({
   if (!profile) {
     return <Navigate to="/auth/profile-missing" replace />
   }
-  
+
   // Get normalized role for admin/super_admin comparisons
   // (these require normalization due to partner/company_admin/admin variations)
   const userRole = normalizeRole(profile?.role)
