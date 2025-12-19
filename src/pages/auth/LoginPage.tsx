@@ -19,6 +19,7 @@ import {
 import { useAuth } from '@/hooks/useAuth'
 import { PasswordChangeModal } from '@/components/PasswordChangeModal'
 import { getLandingPathForRole } from '@/utils/roleRouting'
+import { getFriendlyErrorMessage } from '@/utils/authErrors'
 
 export const LoginPage: React.FC = () => {
   const { signIn, signInWithMagicLink, user, profile, profileLoading, refreshProfile } = useAuth()
@@ -110,10 +111,11 @@ export const LoginPage: React.FC = () => {
       console.log('🔴 LoginPage: signIn returned', { error: error?.message || null })
 
       if (error) {
-        setError(error.message)
+        const friendlyMessage = getFriendlyErrorMessage(error)
+        setError(friendlyMessage)
         toast({
           title: 'Login failed',
-          description: error.message,
+          description: friendlyMessage,
           status: 'error',
           duration: 5000,
           isClosable: true,
@@ -131,7 +133,7 @@ export const LoginPage: React.FC = () => {
       // Redirect will happen in the useEffect once profile is loaded
     } catch (err) {
       console.error('🔴 LoginPage: Exception in handleLogin', err)
-      setError('Something went wrong while signing in. Please try again.')
+      setError(getFriendlyErrorMessage(err))
     } finally {
       setLoading(false)
     }
