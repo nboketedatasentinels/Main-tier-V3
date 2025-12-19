@@ -1,8 +1,22 @@
-import React, { useState } from "react"
-import { Link as RouterLink, useNavigate } from "react-router-dom"
-import { motion } from "framer-motion"
-import { Eye, EyeOff, ArrowRight, Mail, Lock, CheckCircle2, ArrowLeft, Link2 } from "lucide-react"
-import { useAuth } from "@/hooks/useAuth"
+import React, { useState, useEffect } from 'react'
+import { useNavigate, Link as RouterLink, useSearchParams } from 'react-router-dom'
+import {
+  VStack,
+  FormControl,
+  FormLabel,
+  Input,
+  Button,
+  Text,
+  Link,
+  useToast,
+  Divider,
+  HStack,
+  Alert,
+  AlertIcon,
+} from '@chakra-ui/react'
+import { useAuth } from '@/hooks/useAuth'
+import { PasswordChangeModal } from '@/components/PasswordChangeModal'
+import { getLandingPathForRole } from '@/utils/roleRouting'
 
 export const LoginPage: React.FC = () => {
   const navigate = useNavigate()
@@ -13,9 +27,65 @@ export const LoginPage: React.FC = () => {
   const [loading, setLoading] = useState(false)
 
   const [magicLinkSent, setMagicLinkSent] = useState(false)
-  const [showPassword, setShowPassword] = useState(false)
+  const [showPasswordChangeModal, setShowPasswordChangeModal] = useState(false)
+  const [profileTimeoutReached, setProfileTimeoutReached] = useState(false)
+  const [refreshingProfile, setRefreshingProfile] = useState(false)
 
-  const [error, setError] = useState<string | null>(null)
+  const { signIn, signInWithMagicLink, user, profile, profileLoading, refreshProfile } = useAuth()
+  const navigate = useNavigate()
+  const toast = useToast()
+  const [searchParams] = useSearchParams()
+
+  useEffect(() => {
+    console.log('🔵 LoginPage useEffect triggered:', {
+      user: user ? { uid: user.uid, email: user.email } : null,
+      profile: profile
+        ? {
+            id: profile.id,
+            email: profile.email,
+            role: profile.role,
+            fullName: profile.fullName,
+            onboardingComplete: profile.onboardingComplete,
+            onboardingSkipped: profile.onboardingSkipped,
+            dashboardPreferences: profile.dashboardPreferences,
+          }
+        : null,
+      profileLoading,
+      condition: !profileLoading && !!user && !!profile,
+    })
+
+    if (profileLoading) return
+    if (!user || !profile) return
+
+    // ✅ Correct call signature: (profile, searchParams)
+    const landingPath = getLandingPathForRole(profile, searchParams)
+
+    console.log('🎯 LoginPage: Calculated landing path:', landingPath)
+
+    // Avoid pointless redirects (and reduce loops)
+    const currentPath = window.location.pathname
+    if (currentPath === landingPath) {
+      console.log('🟢 LoginPage: Already on landing path, no navigation needed.')
+      return
+    }
+
+    console.log('🎯 LoginPage: Navigating to:', landingPath)
+    navigate(landingPath, { replace: true })
+  }, [user, profile, profileLoading, navigate, searchParams])
+
+  useEffect(() => {
+    if (!user || profile) {
+      setProfileTimeoutReached(false)
+      return
+    }
+
+    const timer = window.setTimeout(() => {
+      console.warn('⏱️ LoginPage: Profile still missing after timeout, enabling manual refresh')
+      setProfileTimeoutReached(true)
+    }, 5000)
+
+    return () => window.clearTimeout(timer)
+  }, [user, profile])
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -31,24 +101,63 @@ export const LoginPage: React.FC = () => {
     }
 
     setLoading(true)
+
+    console.log('🔴 LoginPage: handleLogin called', { email })
+
     try {
-      const { error } = await signIn(email.trim(), password)
+      console.log('🔴 LoginPage: Calling signIn...')
+      const { error } = await signIn(email, password)
+      console.log('🔴 LoginPage: signIn returned', { error: error?.message || null })
+
       if (error) {
-        setError(error.message)
+        toast({
+          title: 'Login failed',
+          description: error.message,
+          status: 'error',
+          duration: 5000,
+          isClosable: true,
+        })
+        setLoading(false)
         return
       }
 
-      navigate("/app", { replace: true })
-    } finally {
+      toast({
+        title: 'Welcome back!',
+        status: 'success',
+        duration: 3000,
+      })
+
+      console.log('🟢 LoginPage: Sign in successful, waiting for AuthContext profile load...')
+      // Redirect will happen in the useEffect once profile is loaded
+    } catch (err) {
+      console.error('🔴 LoginPage: Exception in handleLogin', err)
       setLoading(false)
     }
   }
 
-  const handleMagicLink = async () => {
-    setError(null)
+  const handleProfileRefresh = async () => {
+    console.log('🔵 LoginPage: Manual profile refresh triggered')
+    setRefreshingProfile(true)
+    const { error } = await refreshProfile()
+    if (error) {
+      toast({
+        title: 'Profile refresh failed',
+        description: error.message,
+        status: 'error',
+        duration: 4000,
+      })
+    }
+    setRefreshingProfile(false)
+  }
 
-    if (!email.trim()) {
-      setError("Please enter your email address to receive a magic link.")
+  const handleMagicLink = async () => {
+    if (!email) {
+      toast({
+        title: 'Email required',
+        description: 'Please enter your email address',
+        status: 'warning',
+        duration: 3000,
+      })
       return
     }
 
@@ -61,9 +170,19 @@ export const LoginPage: React.FC = () => {
       }
 
       setMagicLinkSent(true)
-    } finally {
-      setLoading(false)
+      toast({
+        title: 'Check your email',
+        description: 'We sent you a magic link to sign in',
+        status: 'success',
+        duration: 5000,
+      })
     }
+
+    setLoading(false)
+  }
+
+  const handlePasswordChangeSuccess = () => {
+    setShowPasswordChangeModal(false)
   }
 
   if (magicLinkSent) {
@@ -105,102 +224,108 @@ export const LoginPage: React.FC = () => {
   }
 
   return (
-    <div className="w-full">
-      {error && (
-        <div className="mb-5 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
-          {error}
-        </div>
-      )}
+    <>
+      <form onSubmit={handleLogin}>
+        <VStack spacing={6} align="stretch">
+          <Text fontSize="2xl" fontWeight="bold" color="white" textAlign="center">
+            Sign In
+          </Text>
 
-      <form onSubmit={handleLogin} className="space-y-5">
-        <div className="text-center">
-          <h1 className="text-2xl md:text-3xl font-bold text-gray-900">Welcome back</h1>
-          <p className="mt-1 text-sm text-gray-600">Sign in to your account.</p>
-        </div>
-
-        <button
-          type="button"
-          onClick={handleMagicLink}
-          disabled={loading}
-          className="inline-flex h-10 w-full items-center justify-center gap-2 rounded-md border bg-white px-4 py-2 text-sm font-medium text-gray-900 shadow-sm hover:bg-gray-50 disabled:opacity-60"
-        >
-          <Link2 className="h-4 w-4" />
-          Send magic link
-        </button>
-
-        <div className="relative my-2">
-          <div className="absolute inset-0 flex items-center">
-            <div className="w-full border-t border-gray-200" />
-          </div>
-          <div className="relative flex justify-center text-xs">
-            <span className="bg-white px-2 text-gray-500">or sign in with password</span>
-          </div>
-        </div>
-
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">Email</label>
-          <div className="relative">
-            <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
-            <input
+          <FormControl isRequired>
+            <FormLabel color="white">Email</FormLabel>
+            <Input
               type="email"
               value={email}
               onChange={e => setEmail(e.target.value)}
               placeholder="your@email.com"
-              autoComplete="email"
-              className="h-10 w-full rounded-md border bg-gray-50 pl-9 pr-3 text-sm text-gray-900 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-[#350e6f]"
-              required
+              bg="rgba(53, 14, 111, 0.3)"
+              borderColor="brand.gold"
+              color="white"
+              _placeholder={{ color: 'rgba(255, 255, 255, 0.5)' }}
             />
-          </div>
-        </div>
+          </FormControl>
 
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">Password</label>
-          <div className="relative">
-            <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
-            <input
-              type={showPassword ? "text" : "password"}
+          <FormControl isRequired>
+            <FormLabel color="white">Password</FormLabel>
+            <Input
+              type="password"
               value={password}
               onChange={e => setPassword(e.target.value)}
               placeholder="••••••••"
-              autoComplete="current-password"
-              className="h-10 w-full rounded-md border bg-gray-50 pl-9 pr-10 text-sm text-gray-900 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-[#350e6f]"
-              required
+              bg="rgba(53, 14, 111, 0.3)"
+              borderColor="brand.gold"
+              color="white"
             />
-            <button
-              type="button"
-              onClick={() => setShowPassword(v => !v)}
-              className="absolute inset-y-0 right-0 flex items-center pr-3 text-gray-500 hover:text-gray-700"
-              aria-label="Toggle password visibility"
+          </FormControl>
+
+          <Button
+            type="submit"
+            variant="primary"
+            isLoading={loading}
+            loadingText="Signing in..."
+            size="lg"
+          >
+            Sign In
+          </Button>
+
+          {profileTimeoutReached && (
+            <Alert status="warning" borderRadius="md">
+              <AlertIcon />
+              We're still loading your profile. You can retry below.
+            </Alert>
+          )}
+
+          {profileTimeoutReached && (
+            <Button
+              variant="secondary"
+              onClick={handleProfileRefresh}
+              isLoading={refreshingProfile}
+              loadingText="Refreshing profile..."
+              size="lg"
             >
-              {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
-            </button>
-          </div>
-        </div>
+              Retry profile load
+            </Button>
+          )}
 
-        <motion.button
-          whileHover={{ scale: 1.01 }}
-          whileTap={{ scale: 0.98 }}
-          disabled={loading}
-          type="submit"
-          className="inline-flex h-10 w-full items-center justify-center gap-2 rounded-md bg-gradient-to-r from-[#350e6f] to-[#27062e] text-white text-sm font-medium shadow-sm hover:opacity-95 disabled:opacity-60"
-        >
-          {loading ? "Signing in..." : "Sign In"}
-          <ArrowRight className="h-4 w-4" />
-        </motion.button>
+          <HStack>
+            <Divider borderColor="rgba(234, 177, 48, 0.3)" />
+            <Text fontSize="sm" color="white" whiteSpace="nowrap">
+              OR
+            </Text>
+            <Divider borderColor="rgba(234, 177, 48, 0.3)" />
+          </HStack>
 
-        <div className="flex items-center justify-between text-sm">
-          <RouterLink to="/reset-password" className="font-medium text-[#350e6f] hover:underline">
-            Forgot password?
-          </RouterLink>
+          <Button
+            variant="secondary"
+            onClick={handleMagicLink}
+            isLoading={loading}
+            size="lg"
+          >
+            Send Magic Link
+          </Button>
 
-          <span className="text-gray-600">
-            No account?{" "}
-            <RouterLink to="/signup" className="font-semibold text-[#350e6f] hover:underline">
-              Sign Up
-            </RouterLink>
-          </span>
-        </div>
+          <VStack spacing={2}>
+            <Link as={RouterLink} to="/reset-password" color="brand.flameOrange" fontSize="sm">
+              Forgot password?
+            </Link>
+            <Text color="white" fontSize="sm">
+              Don't have an account?{' '}
+              <Link as={RouterLink} to="/signup" color="brand.flameOrange" fontWeight="semibold">
+                Sign Up
+              </Link>
+            </Text>
+          </VStack>
+        </VStack>
       </form>
-    </div>
+
+      {user?.uid && (
+        <PasswordChangeModal
+          isOpen={showPasswordChangeModal}
+          onClose={() => setShowPasswordChangeModal(false)}
+          userId={user.uid}
+          onSuccess={handlePasswordChangeSuccess}
+        />
+      )}
+    </>
   )
 }

@@ -1,28 +1,34 @@
-import { useEffect } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { Navigate, useSearchParams } from 'react-router-dom'
 import { useAuth } from '@/hooks/useAuth'
 import { getLandingPathForRole } from '@/utils/roleRouting'
 
+/**
+ * RoleRedirect component for /app index entry
+ * Redirects authenticated users to their appropriate landing path
+ * based on their role and profile settings
+ */
 export default function RoleRedirect() {
-  const navigate = useNavigate()
-  const { user, profile, loading, profileLoading } = useAuth()
+  const { loading, profileLoading, user, profile } = useAuth()
+  const [searchParams] = useSearchParams()
 
-  useEffect(() => {
-    if (loading || profileLoading) return
+  // Show nothing while loading
+  if (loading || profileLoading) {
+    return null
+  }
 
-    if (!user) {
-      navigate('/login', { replace: true })
-      return
-    }
+  // Redirect to login if not authenticated
+  if (!user) {
+    return <Navigate to="/login" replace />
+  }
 
-    if (!profile?.role) {
-      // IMPORTANT: profile missing should not downgrade to “normal user”
-      navigate('/auth/profile-missing', { replace: true })
-      return
-    }
+  // Redirect to profile missing page if profile doesn't exist
+  if (!profile) {
+    return <Navigate to="/auth/profile-missing" replace />
+  }
 
-    navigate(getLandingPathForRole(profile.role), { replace: true })
-  }, [loading, profileLoading, user, profile?.role, navigate])
+  // Compute landing path using centralized logic
+  const landingPath = getLandingPathForRole(profile, searchParams)
 
-  return null
+  // Redirect to the computed landing path
+  return <Navigate to={landingPath} replace />
 }

@@ -1,5 +1,7 @@
-import React, { useEffect, useMemo, useState } from 'react'
+import React, { useEffect, useMemo, useRef, useState } from 'react'
 import {
+  Alert,
+  AlertIcon,
   Avatar,
   Badge,
   Box,
@@ -18,1118 +20,1115 @@ import {
   InputLeftElement,
   Progress,
   SimpleGrid,
+  Skeleton,
   Stack,
-  Stat,
-  StatArrow,
-  StatHelpText,
   Tag,
   TagLabel,
   Text,
   VStack,
   Wrap,
   WrapItem,
-  useBreakpointValue,
 } from '@chakra-ui/react'
 import {
+  Activity,
+  AlertCircle,
   AlertTriangle,
-  ArrowRight,
+  LayoutDashboard,
+  BarChart3,
   Bell,
   BookOpen,
+  Building2,
+  Calendar,
   CalendarClock,
   CheckCircle2,
-  ChevronDown,
-  ClipboardList,
-  Clock4,
-  DatabaseZap,
+  ChevronRight,
+  Clock,
   Filter,
-  HeartHandshake,
-  Inbox,
+  Flag,
+  History,
   Lightbulb,
-  Loader2,
+  Link2,
+  Mail,
+  MapPin,
   MessageSquare,
-  NotebookPen,
+  RefreshCw,
   Search,
-  Send,
-  Settings,
   Sparkles,
+  Save,
+  Target,
   TrendingUp,
+  UserX,
   Users,
+  Eye,
 } from 'lucide-react'
+import { differenceInCalendarDays, format, isToday } from 'date-fns'
+import { MentorDashboardLayout } from '@/layouts/MentorDashboardLayout'
 import { useAuth } from '@/hooks/useAuth'
+import {
+  deriveFallbackRisk,
+  fetchAssignedMentees,
+  subscribeToAssignedMentees,
+  type AssignedMentee,
+  type EngagementStatus,
+  type RiskLevel,
+} from '@/services/mentorDashboardService'
+import { buildMentorNavItems, type NavigationSection } from '@/utils/navigationItems'
 
-interface StatMetric {
-  label: string
-  value: string | number
-  helper: string
-  icon: React.ComponentType
-  trend?: string
-  highlight?: boolean
-}
-
-interface ScheduleItem {
-  title: string
-  mentee: string
-  time: string
-  type: string
-  status: 'scheduled' | 'pending' | 'overdue'
-}
-
-interface PendingAction {
-  label: string
-  detail: string
-  severity: 'warning' | 'info'
-}
-
-interface ActivityItem {
-  action: string
-  meta: string
-  timeAgo: string
-}
-
-interface MenteeProfile {
+interface DashboardMentee extends AssignedMentee {
   name: string
-  email: string
   company: string
+  program: string
+  programDuration: string
+  timezone: string
   progress: number
-  stage: string
-  sessionsThisMonth: number
+  scheduleLink?: string
+  checkIns: {
+    status: 'on-time' | 'overdue' | 'pending'
+    last: string
+  }
 }
 
 interface SessionItem {
-  title: string
-  mentee: string
-  date: string
-  status: 'scheduled' | 'completed' | 'cancelled'
-  notes?: string
+  id: string
+  menteeId: string
+  topic: string
+  start: Date
+  status: 'upcoming' | 'completed' | 'cancelled' | 'rescheduled'
+  requiresNotes?: boolean
 }
 
-interface ResourceItem {
-  title: string
-  type: string
-  menteesAssigned: number
-  usage: string
+interface NotificationItem {
+  id: string
+  message: string
+  read: boolean
+  createdAt: Date
 }
 
-interface AnalyticsItem {
-  label: string
-  value: string
-  change: string
-  positive?: boolean
+interface ActivityItem {
+  id: string
+  message: string
+  timeAgo: string
 }
 
-const summaryStats: StatMetric[] = [
-  {
-    label: 'Total mentees',
-    value: 18,
-    helper: '3 new assignments this month',
-    icon: Users,
-    trend: '+14%',
-    highlight: true,
-  },
-  {
-    label: 'Upcoming sessions',
-    value: 7,
-    helper: 'Next within 2 hours',
-    icon: CalendarClock,
-    trend: '+2 vs last week',
-  },
-  {
-    label: 'Pending actions',
-    value: 5,
-    helper: 'Notes & follow-ups',
-    icon: ClipboardList,
-    trend: '2 overdue',
-  },
-  {
-    label: 'Avg. mentee progress',
-    value: '76%',
-    helper: '↑ steady growth',
-    icon: TrendingUp,
-    trend: '+6% WoW',
-    highlight: true,
-  },
-]
+const riskStyles: Record<RiskLevel, { color: string; bg: string; label: string }> = {
+  engaged: { color: 'green.700', bg: 'green.50', label: 'Engaged' },
+  watch: { color: 'orange.700', bg: 'orange.50', label: 'Monitor' },
+  concern: { color: 'red.700', bg: 'red.50', label: 'Concern' },
+  critical: { color: 'red.800', bg: 'red.100', label: 'Critical' },
+}
 
-const schedule: ScheduleItem[] = [
+const weeklyComparison = [
   {
-    title: 'Growth plan review',
-    mentee: 'Amina Idris',
-    time: '09:30 AM • Zoom',
-    type: 'Coaching',
-    status: 'scheduled',
-  },
-  {
-    title: 'Portfolio feedback',
-    mentee: 'Diego Martínez',
-    time: '11:00 AM • In-person',
-    type: 'Feedback',
-    status: 'pending',
-  },
-  {
-    title: 'Sprint retrospective',
-    mentee: 'Nova Labs Team',
-    time: '03:00 PM • Zoom',
-    type: 'Team session',
-    status: 'overdue',
-  },
-]
-
-const pendingActions: PendingAction[] = [
-  {
-    label: 'Overdue session summary',
-    detail: 'Send notes for Nova Labs retrospective',
-    severity: 'warning',
-  },
-  {
-    label: 'Needs notes',
-    detail: 'Document outcomes for Diego portfolio review',
-    severity: 'info',
-  },
-  {
-    label: 'Unread notifications',
-    detail: '4 new updates from mentees',
-    severity: 'info',
-  },
-]
-
-const weeklySnapshot = [
-  {
-    label: 'Sessions completed',
+    label: 'Sessions Completed',
     current: 12,
     previous: 9,
+    icon: CalendarClock,
   },
   {
-    label: 'Resources shared',
+    label: 'Resources Shared',
     current: 18,
     previous: 15,
+    icon: BookOpen,
   },
   {
-    label: 'Check-ins reviewed',
+    label: 'Check-ins Reviewed',
     current: 22,
     previous: 19,
+    icon: Activity,
   },
 ]
 
-const activityFeed: ActivityItem[] = [
-  {
-    action: 'Shared "Career Map" resource with Lina Chen',
-    meta: 'Resource Library',
-    timeAgo: '12m ago',
-  },
-  {
-    action: 'Reviewed check-in for Horizon Labs',
-    meta: 'Weekly progress',
-    timeAgo: '28m ago',
-  },
-  {
-    action: 'Scheduled session: Leadership calibration',
-    meta: 'Mentorship sessions',
-    timeAgo: '1h ago',
-  },
-  {
-    action: 'Saved filter "Top performers"',
-    meta: 'Mentee management',
-    timeAgo: '2h ago',
-  },
-]
+const formatPercentageChange = (current: number, previous: number) => {
+  if (previous === 0) return '—'
+  const delta = current - previous
+  const percent = Math.round((delta / previous) * 100)
+  if (percent === 0) return '0%'
+  return `${percent > 0 ? '+' : ''}${percent}%`
+}
 
-const mentees: MenteeProfile[] = [
-  {
-    name: 'Lina Chen',
-    email: 'lina.chen@aurora.dev',
-    company: 'Aurora Dev',
-    progress: 82,
-    stage: 'Experimentation',
-    sessionsThisMonth: 3,
-  },
-  {
-    name: 'Amina Idris',
-    email: 'amina.idris@uplink.io',
-    company: 'Uplink',
-    progress: 68,
-    stage: 'Discovery',
-    sessionsThisMonth: 2,
-  },
-  {
-    name: 'Diego Martínez',
-    email: 'diego.martinez@stellar.mx',
-    company: 'Stellar Systems',
-    progress: 74,
-    stage: 'Experimentation',
-    sessionsThisMonth: 4,
-  },
-  {
-    name: 'Nova Labs Team',
-    email: 'team@novalabs.ai',
-    company: 'Nova Labs',
-    progress: 59,
-    stage: 'Ignition',
-    sessionsThisMonth: 1,
-  },
-  {
-    name: 'Harper Singh',
-    email: 'harper.singh@orbit.co',
-    company: 'Orbit Co.',
-    progress: 91,
-    stage: 'Impact',
-    sessionsThisMonth: 3,
-  },
-]
-
-const sessions: SessionItem[] = [
-  {
-    title: 'Leadership calibration',
-    mentee: 'Harper Singh',
-    date: 'Today • 4:00 PM',
-    status: 'scheduled',
-    notes: 'Focus on influence mapping & sponsor asks.',
-  },
-  {
-    title: 'Sprint retrospective',
-    mentee: 'Nova Labs Team',
-    date: 'Today • 3:00 PM',
-    status: 'scheduled',
-  },
-  {
-    title: 'Portfolio feedback',
-    mentee: 'Diego Martínez',
-    date: 'Today • 11:00 AM',
-    status: 'completed',
-    notes: 'Highlight prototype storytelling & metrics.',
-  },
-  {
-    title: 'Discovery path review',
-    mentee: 'Amina Idris',
-    date: 'Yesterday',
-    status: 'completed',
-    notes: 'Set experimentation targets for next week.',
-  },
-  {
-    title: 'Expectation reset',
-    mentee: 'Nova Labs Team',
-    date: 'Monday',
-    status: 'cancelled',
-  },
-]
-
-const resources: ResourceItem[] = [
-  {
-    title: 'Career Narrative Canvas',
-    type: 'Template',
-    menteesAssigned: 9,
-    usage: 'High engagement',
-  },
-  {
-    title: 'Weekly Impact Log',
-    type: 'Worksheet',
-    menteesAssigned: 12,
-    usage: 'Steady usage',
-  },
-  {
-    title: 'Sponsorship Playbook',
-    type: 'Guide',
-    menteesAssigned: 6,
-    usage: 'Trending',
-  },
-]
-
-const analytics: AnalyticsItem[] = [
-  {
-    label: 'Session completion rate',
-    value: '92%',
-    change: '+4% vs last week',
-    positive: true,
-  },
-  {
-    label: 'Mentee engagement',
-    value: '88%',
-    change: '+6% vs last week',
-    positive: true,
-  },
-  {
-    label: 'Response time',
-    value: '1.8h',
-    change: '-0.6h vs last week',
-    positive: true,
-  },
-  {
-    label: 'Resource adoption',
-    value: '74%',
-    change: '-2% vs last week',
-  },
-]
-
-const notificationSettings = [
-  'Session reminders',
-  'New mentee assignment',
-  'Resource feedback',
-  'Check-in submissions',
-  'System alerts',
-]
+const calcTrendIcon = (current: number, previous: number) => {
+  if (current === previous) return null
+  return current > previous ? 'up' : 'down'
+}
 
 export const MentorDashboard: React.FC = () => {
   const { profile } = useAuth()
+  const [mentees, setMentees] = useState<AssignedMentee[]>([])
+  const [menteesLoading, setMenteesLoading] = useState(true)
+  const [menteesError, setMenteesError] = useState<string | null>(null)
+  const [riskFilter, setRiskFilter] = useState<RiskLevel | 'all'>('all')
+  const [engagementFilter, setEngagementFilter] = useState<EngagementStatus | 'all'>('all')
+  const [searchInput, setSearchInput] = useState('')
   const [searchTerm, setSearchTerm] = useState('')
-  const [savedFilters, setSavedFilters] = useState<string[]>([])
   const [searchHistory, setSearchHistory] = useState<string[]>([])
-  const isMobile = useBreakpointValue({ base: true, md: false })
+  const [savedFilters, setSavedFilters] = useState<string[]>([])
+  const [activeNavItem, setActiveNavItem] = useState<string>('overview')
+  const [activityLoading, setActivityLoading] = useState(true)
+  const [activityError, setActivityError] = useState<string | null>(null)
+  const [selectedMenteeId, setSelectedMenteeId] = useState<string | null>(null)
+
+  useEffect(() => {
+    if (!profile?.id) return
+
+    console.log('🟢 [MentorDashboard] Loading mentees for mentor', profile.id)
+
+    let unsubscribe: ReturnType<typeof subscribeToAssignedMentees> | null = null
+    let active = true
+
+    const hydrate = async () => {
+      setMenteesLoading(true)
+      setMenteesError(null)
+      const { data, error } = await fetchAssignedMentees(profile.id)
+      if (!active) return
+      if (error) {
+        setMenteesError(error.message)
+      }
+      setMentees(data)
+      setMenteesLoading(false)
+    }
+
+    hydrate()
+
+    unsubscribe = subscribeToAssignedMentees(
+      profile.id,
+      (assigned) => {
+        if (!active) return
+        console.log('🟢 [MentorDashboard] Realtime mentee update', { count: assigned.length })
+        setMentees(assigned)
+        setMenteesLoading(false)
+      },
+      (error) => {
+        if (!active) return
+        console.error('🔴 [MentorDashboard] Realtime mentee subscription error', error)
+        setMenteesError(error.message)
+      }
+    )
+
+    return () => {
+      active = false
+      if (unsubscribe) unsubscribe()
+    }
+  }, [profile?.id])
+
+  const sessionSchedule: SessionItem[] = useMemo(() => [], [])
+  const notifications: NotificationItem[] = useMemo(() => [], [])
+  const recentActivity: ActivityItem[] = useMemo(() => [], [])
+
+  useEffect(() => {
+    const storageKey = `mentor-dashboard:${profile?.id || 'guest'}:search-history`
+    const savedKey = `mentor-dashboard:${profile?.id || 'guest'}:saved-filters`
+    if (typeof window === 'undefined') return
+    const storedHistory = localStorage.getItem(storageKey)
+    const storedFilters = localStorage.getItem(savedKey)
+    if (storedHistory) setSearchHistory(JSON.parse(storedHistory))
+    if (storedFilters) setSavedFilters(JSON.parse(storedFilters))
+  }, [profile?.id])
 
   useEffect(() => {
     if (typeof window === 'undefined') return
-    const storedFilters = localStorage.getItem('mentor-dashboard-saved-filters')
-    const storedHistory = localStorage.getItem('mentor-dashboard-search-history')
+    const storageKey = `mentor-dashboard:${profile?.id || 'guest'}:search-history`
+    localStorage.setItem(storageKey, JSON.stringify(searchHistory.slice(0, 8)))
+  }, [profile?.id, searchHistory])
 
-    if (storedFilters) setSavedFilters(JSON.parse(storedFilters))
-    if (storedHistory) setSearchHistory(JSON.parse(storedHistory))
+  useEffect(() => {
+    if (typeof window === 'undefined') return
+    const savedKey = `mentor-dashboard:${profile?.id || 'guest'}:saved-filters`
+    localStorage.setItem(savedKey, JSON.stringify(savedFilters.slice(0, 8)))
+  }, [profile?.id, savedFilters])
+
+  useEffect(() => {
+    const handle = setTimeout(() => setSearchTerm(searchInput.trim()), 250)
+    return () => clearTimeout(handle)
+  }, [searchInput])
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setActivityLoading(false)
+      setActivityError(null)
+    }, 600)
+    return () => clearTimeout(timer)
   }, [])
 
-  useEffect(() => {
-    if (typeof window === 'undefined') return
-    localStorage.setItem('mentor-dashboard-saved-filters', JSON.stringify(savedFilters))
-  }, [savedFilters])
+  const menteeDirectory: DashboardMentee[] = useMemo(
+    () =>
+      mentees.map((mentee) => {
+        const name =
+          mentee.fullName?.trim() ||
+          `${mentee.firstName || ''} ${mentee.lastName || ''}`.trim() ||
+          mentee.email ||
+          'Mentee'
+        const company = mentee.companyName || mentee.companyCode || mentee.assignedOrganizations?.[0] || 'Independent'
+        const program = mentee.transformationTier?.toString().replace(/_/g, ' ') || 'Mentorship'
+        const programDuration = mentee.cohortIdentifier || mentee.dashboardPreferences?.defaultRoute || '—'
+        const timezone = mentee.timezone || 'Not set'
+        const weeklyActivity = mentee.weeklyActivity ?? 0
+        const goalsCompleted = mentee.goalsCompleted ?? 0
+        const goalsTotal = mentee.goalsTotal ?? 0
+        const lastActive =
+          (mentee.lastActive as string) ||
+          (mentee.lastActiveAt as string) ||
+          mentee.updatedAt ||
+          new Date().toISOString()
+        const daysSinceLastActive =
+          mentee.daysSinceLastActive ?? differenceInCalendarDays(new Date(), new Date(lastActive))
+        const risk = mentee.risk ?? deriveFallbackRisk({ daysSinceLastActive, weeklyActivity })
+        const milestonesProgress =
+          mentee.milestonesProgress ?? mentee.progress ??
+          (goalsTotal > 0 ? Math.round((goalsCompleted / goalsTotal) * 100) : 0)
+        const progress = Math.min(100, Math.max(0, milestonesProgress))
+        const checkInStatus = daysSinceLastActive <= 7 ? 'on-time' : daysSinceLastActive <= 14 ? 'pending' : 'overdue'
 
-  useEffect(() => {
-    if (typeof window === 'undefined') return
-    localStorage.setItem('mentor-dashboard-search-history', JSON.stringify(searchHistory))
-  }, [searchHistory])
+        return {
+          ...mentee,
+          name,
+          company,
+          program,
+          programDuration,
+          timezone,
+          weeklyActivity,
+          goalsCompleted,
+          goalsTotal,
+          milestonesProgress,
+          progress,
+          lastActive,
+          risk,
+          checkIns: {
+            status: checkInStatus,
+            last: lastActive,
+          },
+        }
+      }),
+    [mentees]
+  )
 
-  const handleSaveFilter = () => {
-    if (!searchTerm.trim() || savedFilters.includes(searchTerm.trim())) return
-    setSavedFilters((prev) => [...prev, searchTerm.trim()])
-  }
-
-  const handleSearch = (term: string) => {
-    setSearchTerm(term)
-    if (!term.trim()) return
-    setSearchHistory((prev) => {
-      const updated = [term.trim(), ...prev.filter((item) => item !== term.trim())]
-      return updated.slice(0, 6)
-    })
-  }
+  const menteesWithRisk = useMemo(
+    () =>
+      menteeDirectory.map((mentee) => {
+        const daysSinceLastActive =
+          mentee.daysSinceLastActive ?? differenceInCalendarDays(new Date(), new Date(mentee.lastActive))
+        const risk = mentee.risk ??
+          deriveFallbackRisk({
+            daysSinceLastActive,
+            weeklyActivity: mentee.weeklyActivity,
+          })
+        return {
+          ...mentee,
+          risk,
+          daysSinceLastActive,
+        }
+      }),
+    [menteeDirectory]
+  )
 
   const filteredMentees = useMemo(() => {
-    if (!searchTerm.trim()) return mentees
-    const term = searchTerm.toLowerCase()
-    return mentees.filter(
-      (mentee) =>
-        mentee.name.toLowerCase().includes(term) ||
-        mentee.email.toLowerCase().includes(term) ||
-        mentee.company.toLowerCase().includes(term)
-    )
-  }, [searchTerm])
+    let results = menteesWithRisk
+    if (riskFilter !== 'all') {
+      results = results.filter((mentee) => mentee.risk.level === riskFilter)
+    }
+    if (engagementFilter !== 'all') {
+      results = results.filter((mentee) => mentee.engagementStatus === engagementFilter)
+    }
+    if (searchTerm) {
+      const term = searchTerm.toLowerCase()
+      results = results.filter(
+        (mentee) =>
+          mentee.name.toLowerCase().includes(term) ||
+          mentee.email.toLowerCase().includes(term) ||
+          mentee.company.toLowerCase().includes(term) ||
+          mentee.program.toLowerCase().includes(term)
+      )
+    }
+    return results
+  }, [menteesWithRisk, riskFilter, engagementFilter, searchTerm])
+
+  const selectedMentee = useMemo(() => {
+    if (selectedMenteeId) return menteesWithRisk.find((mentee) => mentee.id === selectedMenteeId) || null
+    return menteesWithRisk[0] || null
+  }, [menteesWithRisk, selectedMenteeId])
+
+  const todaysSessions = useMemo(
+    () => sessionSchedule.filter((session) => isToday(session.start)),
+    [sessionSchedule]
+  )
+
+  const upcomingSessions = useMemo(
+    () => sessionSchedule.filter((session) => session.start > new Date()),
+    [sessionSchedule]
+  )
+
+  const pendingSummary = useMemo(() => {
+    const overdue = sessionSchedule.filter((session) => session.status === 'rescheduled').length
+    const needsNotes = sessionSchedule.filter((session) => session.requiresNotes).length
+    const unreadNotifications = notifications.filter((notification) => !notification.read).length
+    return {
+      overdue,
+      needsNotes,
+      unreadNotifications,
+      total: overdue + needsNotes + unreadNotifications,
+    }
+  }, [notifications, sessionSchedule])
+
+  const averageProgress = useMemo(() => {
+    if (menteesWithRisk.length === 0) return 0
+    const total = menteesWithRisk.reduce((sum, mentee) => sum + mentee.progress, 0)
+    return Math.round(total / menteesWithRisk.length)
+  }, [menteesWithRisk])
+
+  const summaryCards = useMemo(
+    () => [
+      {
+        label: 'Total mentees',
+        value: menteesWithRisk.length,
+        helper: 'Assigned mentees',
+        icon: Users,
+      },
+      {
+        label: 'Upcoming sessions',
+        value: upcomingSessions.length,
+        helper: 'Next 7 days',
+        icon: Calendar,
+      },
+      {
+        label: 'Pending actions',
+        value: pendingSummary.total,
+        helper: 'Overdue + missing notes + unread',
+        icon: AlertCircle,
+      },
+      {
+        label: 'Avg. mentee progress',
+        value: `${averageProgress}%`,
+        helper: 'Across all mentees',
+        icon: TrendingUp,
+      },
+    ],
+    [averageProgress, menteesWithRisk.length, pendingSummary.total, upcomingSessions.length]
+  )
+
+  const motivationalMessage = useMemo(() => {
+    if (weeklyComparison[0].current > weeklyComparison[0].previous) {
+      return 'Sessions are trending up. Keep the momentum with quick follow-ups today.'
+    }
+    if (weeklyComparison[1].current > weeklyComparison[1].previous) {
+      return 'Resources are resonating. Share one more playbook with a mentee on the fence.'
+    }
+    if (averageProgress > 75) {
+      return 'Most mentees are on track. Focus on those who are slipping behind to keep balance.'
+    }
+    return 'Consistency wins. A focused check-in today can unblock an at-risk mentee.'
+  }, [averageProgress])
 
   const searchSuggestions = useMemo(() => {
-    if (!searchTerm) return []
-    const term = searchTerm.toLowerCase()
-    const suggestions = mentees
-      .map((mentee) => [mentee.name, mentee.email, mentee.company])
+    if (!searchInput) return []
+    const term = searchInput.toLowerCase()
+    const suggestions = menteeDirectory
+      .map((mentee) => [mentee.name, mentee.email, mentee.company, mentee.program])
       .flat()
       .filter((value) => value.toLowerCase().includes(term))
     return Array.from(new Set(suggestions)).slice(0, 5)
-  }, [searchTerm])
+  }, [menteeDirectory, searchInput])
+
+  const handleSaveFilter = () => {
+    if (!searchTerm) return
+    if (savedFilters.includes(searchTerm)) return
+    const next = [searchTerm, ...savedFilters].slice(0, 8)
+    setSavedFilters(next)
+  }
+
+  const handleSearchSelect = (value: string) => {
+    setSearchInput(value)
+    const updatedHistory = [value, ...searchHistory.filter((item) => item !== value)].slice(0, 8)
+    setSearchHistory(updatedHistory)
+  }
+
+  const overviewRef = useRef<HTMLDivElement>(null)
+  const scheduleRef = useRef<HTMLDivElement>(null)
+  const progressRef = useRef<HTMLDivElement>(null)
+  const menteesRef = useRef<HTMLDivElement>(null)
+
+  const sectionRefs = useMemo(
+    () => ({
+      overview: overviewRef,
+      schedule: scheduleRef,
+      progress: progressRef,
+      mentees: menteesRef,
+    }),
+    []
+  )
+
+  const fallbackNavSections = useMemo<NavigationSection[]>(
+    () => [
+      {
+        title: 'Mentorship',
+        items: [
+          { key: 'overview', label: 'Overview', icon: LayoutDashboard },
+          { key: 'schedule', label: 'Schedule & alerts', icon: CalendarClock },
+          { key: 'progress', label: 'Performance insights', icon: TrendingUp },
+          { key: 'mentees', label: 'Mentees & directory', icon: Users },
+        ],
+      },
+    ],
+    []
+  )
+
+  const navSections = useMemo(() => {
+    const allowedKeys = new Set(Object.keys(sectionRefs))
+    const sections = buildMentorNavItems()
+
+    const filteredSections = sections
+      .map((section) => ({
+        ...section,
+        items: section.items.filter((item) => allowedKeys.has(item.key)),
+      }))
+      .filter((section) => section.items.length > 0)
+
+    if (filteredSections.length === 0) {
+      return fallbackNavSections
+    }
+
+    return filteredSections
+  }, [fallbackNavSections, sectionRefs])
+
+  const handleNavigate = (key: string) => {
+    setActiveNavItem(key)
+    const ref = sectionRefs[key as keyof typeof sectionRefs]
+    if (ref?.current) {
+      ref.current.scrollIntoView({ behavior: 'smooth', block: 'start' })
+    }
+  }
 
   return (
-    <Stack spacing={8} pb={8}>
-      <Flex justify="space-between" align={{ base: 'flex-start', md: 'center' }} gap={4} direction={{ base: 'column', md: 'row' }}>
-        <Box>
-          <HStack spacing={3} mb={2}>
-            <Tag size="lg" colorScheme="yellow" bg="rgba(234, 177, 48, 0.16)" color="brand.gold">
-              Mentor Dashboard
-            </Tag>
-            <HStack spacing={1} color="brand.subtleText" fontWeight="semibold">
-              <Icon as={DatabaseZap} />
-              <Text>Real-time sync via Bolt subscriptions</Text>
-            </HStack>
-          </HStack>
-          <Text fontSize="3xl" fontWeight="bold" color="brand.text">
-            Welcome back, {profile?.firstName || 'Mentor'}
-          </Text>
-          <Text color="brand.subtleText" opacity={0.9}>
-            Manage mentees, track sessions, and keep momentum strong today.
-          </Text>
-        </Box>
-        <HStack spacing={3} w={{ base: 'full', md: 'auto' }}>
-          <Button leftIcon={<Icon as={CalendarClock} />} colorScheme="purple" variant="solid" bg="brand.royalPurple" color="brand.gold" _hover={{ bg: 'purple.700' }} w={{ base: 'full', md: 'auto' }}>
-            Schedule Session
-          </Button>
-          <Button leftIcon={<Icon as={MessageSquare} />} variant="outline" color="brand.text" borderColor="brand.border" _hover={{ borderColor: 'brand.primary', color: 'brand.primary' }} w={{ base: 'full', md: 'auto' }}>
-            Send Quick Message
-          </Button>
-          {!isMobile && (
-            <IconButton
-              aria-label="Review reports"
-              icon={<Icon as={ArrowRight} />}
-              variant="ghost"
-              color="brand.gold"
-              border="1px solid"
-              borderColor="brand.border"
-              _hover={{ bg: 'brand.primaryMuted' }}
-            />
-          )}
-        </HStack>
-      </Flex>
-
-      <SimpleGrid columns={{ base: 1, md: 2, xl: 4 }} spacing={4}>
-        {summaryStats.map((stat) => (
-          <Card key={stat.label} bg="white" border="1px solid" borderColor="brand.border" shadow="md">
+    <MentorDashboardLayout
+      navSections={navSections}
+      activeItem={activeNavItem}
+      onNavigate={handleNavigate}
+      mentorName={`${profile?.firstName || 'Mentor'} ${profile?.lastName || ''}`.trim()}
+    >
+      <Stack spacing={6}>
+        <Box ref={overviewRef}>
+          <Card>
             <CardBody>
-              <HStack justify="space-between" align="flex-start" mb={3}>
-                <HStack spacing={3}>
-                  <Box
-                    p={2}
-                    bg={stat.highlight ? 'rgba(234, 177, 48, 0.18)' : 'brand.primaryMuted'}
-                    borderRadius="md"
-                  >
-                    <Icon as={stat.icon} color="brand.gold" />
-                  </Box>
-                  <Box>
-                    <Text fontSize="sm" color="brand.subtleText" opacity={0.95}
-                    >
-                      {stat.label}
-                    </Text>
-                    <Text fontSize="2xl" fontWeight="bold" color="brand.text">
-                      {stat.value}
-                    </Text>
-                  </Box>
-                </HStack>
-                {stat.trend && (
-                  <Tag size="sm" colorScheme="yellow" bg="rgba(234, 177, 48, 0.16)" color="brand.gold">
-                    {stat.trend}
-                  </Tag>
-                )}
-              </HStack>
-              <Text color="brand.subtleText" opacity={0.95}>{stat.helper}</Text>
-            </CardBody>
-          </Card>
-        ))}
-      </SimpleGrid>
-
-      <Grid templateColumns={{ base: '1fr', xl: '2fr 1fr' }} gap={6}>
-        <GridItem>
-          <Card bg="white" borderColor="brand.border" border="1px solid" shadow="md">
-            <CardBody>
-              <Flex justify="space-between" align={{ base: 'flex-start', md: 'center' }} mb={4} direction={{ base: 'column', md: 'row' }} gap={3}>
+              <Flex justify="space-between" align={{ base: 'flex-start', md: 'center' }} direction={{ base: 'column', md: 'row' }} gap={4}>
                 <Box>
-                  <Text fontWeight="bold" color="brand.text">
-                    Today's schedule
+                  <Text fontSize="2xl" fontWeight="bold">
+                    Welcome back, {profile?.firstName || 'Mentor'}!
                   </Text>
-                  <Text color="brand.subtleText" opacity={0.9}>
-                    Prepare for your upcoming mentorship moments.
+                  <Text color="brand.subtleText">
+                    {todaysSessions.length > 0
+                      ? `You have ${todaysSessions.length} session(s) on the calendar today.`
+                      : "Here's your personalized mentor overview."}
                   </Text>
                 </Box>
-                <Button size="sm" leftIcon={<Icon as={CalendarClock} />} variant="outline" color="brand.text" borderColor="brand.border" _hover={{ borderColor: 'brand.primary', color: 'brand.primary' }}>
-                  View calendar
-                </Button>
-              </Flex>
-              <Stack spacing={3}>
-                {schedule.map((item) => (
-                  <Flex
-                    key={`${item.title}-${item.mentee}`}
-                    justify="space-between"
-                    align="center"
-                    bg="brand.primaryMuted"
-                    border="1px solid"
-                    borderColor="brand.border"
-                    borderRadius="md"
-                    p={3}
+                <HStack spacing={3} w={{ base: 'full', md: 'auto' }}>
+                  <Button leftIcon={<Icon as={CalendarClock} />} w={{ base: 'full', md: 'auto' }}>
+                    Schedule new session
+                  </Button>
+                  <Button
+                    leftIcon={<Icon as={MessageSquare} />}
+                    variant="secondary"
+                    w={{ base: 'full', md: 'auto' }}
                   >
-                    <Box>
-                      <HStack spacing={3}>
-                        <Icon as={Clock4} color="brand.gold" />
-                        <Box>
-                          <Text fontWeight="semibold" color="brand.text">
-                            {item.title}
-                          </Text>
-                          <Text color="brand.subtleText" fontSize="sm">
-                            {item.mentee} • {item.time}
-                          </Text>
-                          <Text color="brand.subtleText" fontSize="xs" opacity={0.9}>
-                            {item.type}
-                          </Text>
-                        </Box>
-                      </HStack>
-                    </Box>
-                    <Badge
-                      colorScheme={
-                        item.status === 'overdue'
-                          ? 'red'
-                          : item.status === 'pending'
-                            ? 'orange'
-                            : 'green'
-                      }
-                      variant="subtle"
-                    >
-                      {item.status}
-                    </Badge>
-                  </Flex>
-                ))}
-              </Stack>
-            </CardBody>
-          </Card>
-        </GridItem>
-        <GridItem>
-          <Card bg="rgba(234, 177, 48, 0.1)" borderColor="rgba(234, 177, 48, 0.35)" border="1px solid" shadow="md">
-            <CardBody>
-              <HStack justify="space-between" align="flex-start" mb={3}>
-                <Box>
-                  <Text fontWeight="bold" color="brand.text">
-                    Pending actions
-                  </Text>
-                  <Text color="brand.subtleText" opacity={0.95}>
-                    Overdue sessions, missing notes, unread alerts.
-                  </Text>
-                </Box>
-                <Icon as={AlertTriangle} color="brand.gold" />
-              </HStack>
-              <Stack spacing={3}>
-                {pendingActions.map((item) => (
-                  <Flex
-                    key={item.label}
-                    justify="space-between"
-                    align="center"
-                    p={3}
-                    bg="brand.primaryMuted"
-                    border="1px solid"
-                    borderColor="brand.border"
-                    borderRadius="md"
-                  >
-                    <Box>
-                      <Text fontWeight="semibold" color="brand.text">
-                        {item.label}
-                      </Text>
-                      <Text color="brand.subtleText" fontSize="sm">
-                        {item.detail}
-                      </Text>
-                    </Box>
-                    <Badge colorScheme={item.severity === 'warning' ? 'orange' : 'blue'}>{item.severity}</Badge>
-                  </Flex>
-                ))}
-              </Stack>
-            </CardBody>
-          </Card>
-        </GridItem>
-      </Grid>
-
-      <Grid templateColumns={{ base: '1fr', lg: '2fr 1fr' }} gap={6}>
-        <GridItem>
-          <Card bg="white" border="1px solid" borderColor="brand.border" shadow="md">
-            <CardBody>
-              <Flex justify="space-between" align={{ base: 'flex-start', md: 'center' }} mb={4} direction={{ base: 'column', md: 'row' }} gap={3}>
-                <Box>
-                  <Text fontWeight="bold" color="brand.text">
-                    Weekly progress snapshot
-                  </Text>
-                  <Text color="brand.subtleText" opacity={0.95}>
-                    Current week compared to last week.
-                  </Text>
-                </Box>
-                <HStack spacing={2} color="brand.subtleText">
-                  <Icon as={Sparkles} />
-                  <Text fontSize="sm">AI-guided insight</Text>
+                    Send quick message
+                  </Button>
                 </HStack>
               </Flex>
-              <SimpleGrid columns={{ base: 1, md: 3 }} spacing={3}>
-                {weeklySnapshot.map((item) => {
-                  const delta = item.current - item.previous
-                  const percent = Math.round((delta / item.previous) * 100)
-                  return (
-                    <Box key={item.label} p={3} borderRadius="md" bg="brand.primaryMuted" border="1px solid" borderColor="brand.border">
-                      <Text fontSize="sm" color="brand.subtleText" opacity={0.95}>
-                        {item.label}
-                      </Text>
-                      <HStack spacing={2} align="baseline" mb={1}>
-                        <Text fontSize="2xl" fontWeight="bold" color="brand.text">
-                          {item.current}
+            </CardBody>
+          </Card>
+
+          <Alert status="info" bg="#3D0C69" color="white" borderRadius="xl" alignItems="center" mt={4}>
+            <AlertIcon />
+            Mentor accounts are focused on mentee support. Community competitions and paid member upgrades are hidden to reduce distractions and protect mentee privacy.
+          </Alert>
+
+          <SimpleGrid columns={{ base: 1, md: 2, xl: 4 }} spacing={4} mt={4}>
+            {summaryCards.map((card) => (
+              <Card key={card.label} shadow="md">
+                <CardBody>
+                  <HStack justify="space-between" align="flex-start">
+                    <HStack spacing={3}>
+                      <Box p={3} bg="brand.primaryMuted" borderRadius="lg">
+                        <Icon as={card.icon} color="brand.primary" />
+                      </Box>
+                      <Box>
+                        <Text fontSize="sm" color="brand.subtleText">
+                          {card.label}
                         </Text>
-                        <Stat>
-                          <StatHelpText color={percent >= 0 ? 'green.500' : 'red.400'}>
-                            <StatArrow type={percent >= 0 ? 'increase' : 'decrease'} />
-                            {Math.abs(percent)}% vs last week
-                          </StatHelpText>
-                        </Stat>
-                      </HStack>
-                      <Progress value={(item.current / Math.max(item.previous, 1)) * 60 + 30} borderRadius="full" />
-                    </Box>
-                  )
-                })}
-              </SimpleGrid>
-              <Box mt={4} p={3} borderRadius="md" bg="rgba(93, 107, 255, 0.12)" border="1px solid" borderColor="brand.primary">
-                <HStack spacing={3}>
-                  <Icon as={Lightbulb} color="brand.gold" />
-                  <Box>
-                    <Text fontWeight="semibold" color="brand.text">
-                      Motivational insight
-                    </Text>
-                    <Text color="brand.subtleText" opacity={0.95}>
-                      AI: "Your mentees respond fastest to feedback within 4 hours. Keep the cadence to lift engagement another 5% this week."
-                    </Text>
-                  </Box>
-                </HStack>
-              </Box>
-            </CardBody>
-          </Card>
-        </GridItem>
-        <GridItem>
-          <Card bg="white" border="1px solid" borderColor="brand.border" shadow="md">
-            <CardBody>
-              <HStack justify="space-between" align="center" mb={4}>
-                <Text fontWeight="bold" color="brand.text">
-                  Recent activity
-                </Text>
-                <IconButton aria-label="Refresh" icon={<Icon as={Loader2} />} variant="ghost" color="brand.subtleText" />
-              </HStack>
-              <Stack spacing={3}>
-                {activityFeed.map((item) => (
-                  <Flex key={item.action} justify="space-between" align="center" p={3} borderRadius="md" bg="brand.primaryMuted" border="1px solid" borderColor="brand.border">
-                    <Box>
-                      <Text color="brand.text" fontWeight="semibold">
-                        {item.action}
-                      </Text>
-                      <Text color="brand.subtleText" fontSize="sm">
-                        {item.meta}
-                      </Text>
-                    </Box>
-                    <Text color="brand.subtleText" fontSize="sm" opacity={0.9}>
-                      {item.timeAgo}
-                    </Text>
-                  </Flex>
-                ))}
-              </Stack>
-            </CardBody>
-          </Card>
-        </GridItem>
-      </Grid>
+                        <Text fontSize="2xl" fontWeight="bold">
+                          {card.value}
+                        </Text>
+                      </Box>
+                    </HStack>
+                    <Badge colorScheme="purple">{card.helper}</Badge>
+                  </HStack>
+                </CardBody>
+              </Card>
+            ))}
+          </SimpleGrid>
+        </Box>
 
-      <Grid templateColumns={{ base: '1fr', xl: '2fr 1fr' }} gap={6}>
-        <GridItem>
-          <Card bg="white" border="1px solid" borderColor="brand.border" shadow="md">
-            <CardBody>
-              <Flex justify="space-between" align={{ base: 'flex-start', md: 'center' }} mb={4} direction={{ base: 'column', md: 'row' }} gap={3}>
+        <Box ref={scheduleRef}>
+          <Grid templateColumns={{ base: '1fr', xl: '2fr 1fr' }} gap={4}>
+          <GridItem>
+            <Card shadow="lg">
+              <CardBody>
+                <Flex justify="space-between" align={{ base: 'flex-start', md: 'center' }} mb={4} direction={{ base: 'column', md: 'row' }} gap={3}>
+                  <Box>
+                    <Text fontWeight="bold">Today's schedule</Text>
+                    <Text color="brand.subtleText">Sessions scheduled for today.</Text>
+                  </Box>
+                  <Button variant="secondary" leftIcon={<Icon as={Calendar} />}>View calendar</Button>
+                </Flex>
+                {todaysSessions.length === 0 && (
+                  <Box p={4} borderRadius="md" bg="brand.primaryMuted" color="brand.subtleText">
+                    You have no sessions scheduled for today.
+                  </Box>
+                )}
+                <Stack spacing={3}>
+                  {todaysSessions.map((session) => {
+                    const mentee = menteesWithRisk.find((item) => item.id === session.menteeId)
+                    return (
+                      <Flex
+                        key={session.id}
+                        justify="space-between"
+                        align={{ base: 'flex-start', md: 'center' }}
+                        p={4}
+                        borderRadius="lg"
+                        bg="brand.primaryMuted"
+                        border="1px solid"
+                        borderColor="brand.border"
+                        direction={{ base: 'column', md: 'row' }}
+                        gap={2}
+                      >
+                        <HStack spacing={3} align="flex-start">
+                          <Box p={2} bg="white" borderRadius="md" border="1px solid" borderColor="brand.border">
+                            <Icon as={Clock} color="brand.primary" />
+                          </Box>
+                          <Box>
+                            <Text fontWeight="semibold">{session.topic}</Text>
+                            <Text color="brand.subtleText">{mentee?.name || 'Mentee'} • {format(session.start, 'p')}</Text>
+                          </Box>
+                        </HStack>
+                        <Badge colorScheme={session.status === 'completed' ? 'green' : session.status === 'rescheduled' ? 'yellow' : 'purple'}>
+                          {session.status === 'completed' ? 'Completed' : session.status === 'rescheduled' ? 'Rescheduled' : 'Upcoming'}
+                        </Badge>
+                      </Flex>
+                    )
+                  })}
+                </Stack>
+              </CardBody>
+            </Card>
+          </GridItem>
+          <GridItem>
+            <Card shadow="lg" bg="linear-gradient(135deg, rgba(61, 12, 105, 0.08), white)">
+              <CardBody>
+                <HStack justify="space-between" align="flex-start" mb={3}>
+                  <Box>
+                    <Text fontWeight="bold">Pending actions</Text>
+                    <Text color="brand.subtleText">Overdue sessions, missing notes, unread alerts.</Text>
+                  </Box>
+                  <Icon as={AlertTriangle} color="orange.500" />
+                </HStack>
+                <SimpleGrid columns={{ base: 1, sm: 3 }} spacing={3}>
+                  <Box p={3} borderRadius="lg" bg="white" border="1px solid" borderColor="brand.border">
+                    <Text fontSize="sm" color="brand.subtleText">Overdue sessions</Text>
+                    <Text fontSize="2xl" fontWeight="bold">{pendingSummary.overdue}</Text>
+                  </Box>
+                  <Box p={3} borderRadius="lg" bg="white" border="1px solid" borderColor="brand.border">
+                    <Text fontSize="sm" color="brand.subtleText">Needs notes</Text>
+                    <Text fontSize="2xl" fontWeight="bold">{pendingSummary.needsNotes}</Text>
+                  </Box>
+                  <Box p={3} borderRadius="lg" bg="white" border="1px solid" borderColor="brand.border">
+                    <Text fontSize="sm" color="brand.subtleText">Unread</Text>
+                    <Text fontSize="2xl" fontWeight="bold">{pendingSummary.unreadNotifications}</Text>
+                  </Box>
+                </SimpleGrid>
+                <Divider my={4} />
+                <Stack spacing={2}>
+                  {notifications.slice(0, 3).map((notification) => (
+                    <Flex key={notification.id} align="center" justify="space-between" p={3} borderRadius="md" bg="white">
+                      <HStack spacing={2}>
+                        <Icon as={Bell} color="brand.primary" />
+                        <Text>{notification.message}</Text>
+                      </HStack>
+                      {!notification.read && (
+                        <Badge colorScheme="yellow" variant="solid">
+                          New
+                        </Badge>
+                      )}
+                    </Flex>
+                  ))}
+                </Stack>
+              </CardBody>
+            </Card>
+          </GridItem>
+        </Grid>
+        </Box>
+
+        <Box ref={progressRef}>
+          <Grid templateColumns={{ base: '1fr', lg: '2fr 1fr' }} gap={4}>
+          <GridItem>
+            <Card>
+              <CardBody>
+                <Flex justify="space-between" align={{ base: 'flex-start', md: 'center' }} mb={4} direction={{ base: 'column', md: 'row' }} gap={3}>
+                  <Box>
+                    <Text fontWeight="bold">Weekly progress snapshot</Text>
+                    <Text color="brand.subtleText">Compare this week to last week.</Text>
+                  </Box>
+                  <HStack spacing={2} color="brand.subtleText">
+                    <Icon as={Sparkles} />
+                    <Text fontSize="sm">Automated insight</Text>
+                  </HStack>
+                </Flex>
+                <SimpleGrid columns={{ base: 1, md: 3 }} spacing={3}>
+                  {weeklyComparison.map((item) => {
+                    const change = formatPercentageChange(item.current, item.previous)
+                    const trend = calcTrendIcon(item.current, item.previous)
+                    return (
+                      <Box key={item.label} p={4} borderRadius="lg" border="1px solid" borderColor="brand.border" bg="brand.primaryMuted">
+                        <HStack justify="space-between" align="center" mb={2}>
+                          <HStack spacing={2}>
+                            <Icon as={item.icon} color="brand.primary" />
+                            <Text fontWeight="semibold">{item.label}</Text>
+                          </HStack>
+                          {trend && (
+                            <Badge colorScheme={trend === 'up' ? 'green' : 'red'}>{change}</Badge>
+                          )}
+                        </HStack>
+                        <HStack spacing={2} align="baseline">
+                          <Text fontSize="2xl" fontWeight="bold">{item.current}</Text>
+                          <Text color="brand.subtleText">prev {item.previous}</Text>
+                        </HStack>
+                        <Progress value={(item.current / Math.max(item.previous, 1)) * 60 + 30} borderRadius="full" mt={2} />
+                      </Box>
+                    )
+                  })}
+                </SimpleGrid>
+                <Box mt={4} p={4} borderRadius="lg" bg="linear-gradient(135deg, #3D0C69, #6A0DAD)" color="white">
+                  <HStack spacing={3} align="flex-start">
+                    <Icon as={Lightbulb} />
+                    <Box>
+                      <Text fontWeight="semibold">Motivational insight</Text>
+                      <Text>{motivationalMessage}</Text>
+                    </Box>
+                  </HStack>
+                </Box>
+              </CardBody>
+            </Card>
+          </GridItem>
+          <GridItem>
+            <Stack spacing={4}>
+              <Card>
+                <CardBody>
+                  <HStack justify="space-between" align="center" mb={3}>
+                    <Text fontWeight="bold">Quick access</Text>
+                    <Icon as={ChevronRight} color="brand.subtleText" />
+                  </HStack>
+                  <SimpleGrid columns={{ base: 1, sm: 2 }} spacing={3}>
+                    <Button leftIcon={<Icon as={CalendarClock} />} minH="44px" variant="secondary">
+                      Schedule a session
+                    </Button>
+                    <Button leftIcon={<Icon as={Users} />} minH="44px" variant="secondary">
+                      View mentee directory
+                    </Button>
+                    <Button leftIcon={<Icon as={BarChart3} />} minH="44px" variant="secondary">
+                      Review reports
+                    </Button>
+                    <Button leftIcon={<Icon as={Mail} />} minH="44px" variant="secondary">
+                      Send quick message
+                    </Button>
+                  </SimpleGrid>
+                </CardBody>
+              </Card>
+
+              <Card>
+                <CardBody>
+                  <HStack justify="space-between" align="center" mb={3}>
+                    <Text fontWeight="bold">Recent activity</Text>
+                    <IconButton aria-label="Refresh" icon={<Icon as={RefreshCw} />} variant="ghost" />
+                  </HStack>
+                  {activityError && (
+                    <Alert status="error" borderRadius="md" mb={3}>
+                      <AlertIcon />
+                      <Flex justify="space-between" align="center" w="full">
+                        <Text>{activityError}</Text>
+                        <Button size="sm" onClick={() => setActivityError(null)}>
+                          Retry
+                        </Button>
+                      </Flex>
+                    </Alert>
+                  )}
+                  {activityLoading ? (
+                    <Stack spacing={3}>
+                      {[1, 2, 3].map((item) => (
+                        <Skeleton key={item} height="60px" borderRadius="md" />
+                      ))}
+                    </Stack>
+                  ) : recentActivity.length === 0 ? (
+                    <Box p={3} borderRadius="md" bg="brand.primaryMuted" color="brand.subtleText">
+                      No recent activity to display.
+                    </Box>
+                  ) : (
+                    <Stack spacing={3}>
+                      {recentActivity.slice(0, 6).map((activity) => (
+                        <Flex key={activity.id} justify="space-between" align="center" p={3} borderRadius="md" border="1px solid" borderColor="brand.border">
+                          <Text>{activity.message}</Text>
+                          <Text color="brand.subtleText" fontSize="sm">
+                            {activity.timeAgo}
+                          </Text>
+                        </Flex>
+                      ))}
+                    </Stack>
+                  )}
+                </CardBody>
+              </Card>
+            </Stack>
+          </GridItem>
+        </Grid>
+
+        </Box>
+
+        <Box ref={menteesRef}>
+          <Card>
+          <CardBody>
+            <Stack spacing={3}>
+              <Flex justify="space-between" align={{ base: 'flex-start', md: 'center' }} direction={{ base: 'column', md: 'row' }} gap={3}>
                 <Box>
-                  <Text fontWeight="bold" color="brand.text">
-                    Mentee management
-                  </Text>
-                  <Text color="brand.subtleText" opacity={0.95}>
-                    Search, filter, and monitor progress across mentees.
-                  </Text>
+                  <Text fontWeight="bold">Search mentees</Text>
+                  <Text color="brand.subtleText">Search mentees by name, email, company, or program.</Text>
                 </Box>
                 <HStack spacing={2}>
-                  <Tag colorScheme="purple" variant="subtle">
-                    <TagLabel>Advanced search</TagLabel>
-                  </Tag>
-                  <Tag colorScheme="yellow" variant="subtle">
-                    <TagLabel>Autocomplete</TagLabel>
-                  </Tag>
-                </HStack>
-              </Flex>
-              <Stack spacing={4}>
-                <InputGroup>
-                  <InputLeftElement pointerEvents="none">
-                    <Icon as={Search} color="brand.subtleText" />
-                  </InputLeftElement>
-                  <Input
-                    placeholder="Search by name, email, or company"
-                    value={searchTerm}
-                    onChange={(e) => handleSearch(e.target.value)}
-                    bg="white"
-                    borderColor="brand.border"
-                    _placeholder={{ color: 'brand.subtleText' }}
-                    _focus={{ borderColor: 'brand.primary', boxShadow: '0 0 0 1px #5d6bff' }}
-                  />
-                  <Button ml={2} leftIcon={<Icon as={Filter} />} onClick={handleSaveFilter} colorScheme="yellow" variant="outline" color="brand.gold" borderColor="brand.gold">
+                  <Button variant="secondary" leftIcon={<Icon as={History} />}>Recent searches</Button>
+                  <Button variant="secondary" leftIcon={<Icon as={Save} />} onClick={handleSaveFilter}>
                     Save filter
                   </Button>
-                </InputGroup>
-                {searchSuggestions.length > 0 && (
-                  <Wrap spacing={2}>
-                    {searchSuggestions.map((suggestion) => (
-                      <WrapItem key={suggestion}>
+                </HStack>
+              </Flex>
+              <InputGroup>
+                <InputLeftElement pointerEvents="none">
+                  <Icon as={Search} color="brand.subtleText" />
+                </InputLeftElement>
+                <Input
+                  placeholder="Search mentees by name, email, company, or program..."
+                  value={searchInput}
+                  onChange={(e) => setSearchInput(e.target.value)}
+                  bg="white"
+                />
+              </InputGroup>
+              {searchSuggestions.length > 0 && (
+                <Wrap spacing={2}>
+                  {searchSuggestions.map((suggestion) => (
+                    <WrapItem key={suggestion}>
+                      <Tag
+                        size="sm"
+                        colorScheme="purple"
+                        variant="subtle"
+                        cursor="pointer"
+                        onClick={() => handleSearchSelect(suggestion)}
+                      >
+                        <TagLabel>{suggestion}</TagLabel>
+                      </Tag>
+                    </WrapItem>
+                  ))}
+                </Wrap>
+              )}
+              {searchHistory.length > 0 && (
+                <HStack spacing={2} wrap="wrap">
+                  <Text fontSize="sm" color="brand.subtleText">
+                    Recent:
+                  </Text>
+                  <Wrap>
+                    {searchHistory.map((term) => (
+                      <WrapItem key={term}>
                         <Tag
                           size="sm"
-                          colorScheme="purple"
                           variant="subtle"
+                          colorScheme="gray"
                           cursor="pointer"
-                          onClick={() => handleSearch(suggestion)}
+                          onClick={() => handleSearchSelect(term)}
                         >
-                          <TagLabel>{suggestion}</TagLabel>
+                          <TagLabel>{term}</TagLabel>
                         </Tag>
                       </WrapItem>
                     ))}
                   </Wrap>
-                )}
-                {searchHistory.length > 0 && (
-                  <HStack spacing={2} align="center">
-                    <Text fontSize="sm" color="brand.subtleText" opacity={0.95}>
-                      Recent searches:
-                    </Text>
-                    <Wrap>
-                      {searchHistory.map((historyItem) => (
-                        <WrapItem key={historyItem}>
-                          <Tag size="sm" variant="subtle" colorScheme="gray" cursor="pointer" onClick={() => handleSearch(historyItem)}>
-                            <TagLabel>{historyItem}</TagLabel>
-                          </Tag>
-                        </WrapItem>
-                      ))}
-                    </Wrap>
-                  </HStack>
-                )}
-                {savedFilters.length > 0 && (
-                  <HStack spacing={2} align="center">
-                    <Text fontSize="sm" color="brand.subtleText" opacity={0.95}>
-                      Saved filters:
-                    </Text>
-                    <Wrap>
-                      {savedFilters.map((filter) => (
-                        <WrapItem key={filter}>
-                          <Tag size="sm" colorScheme="yellow" variant="subtle">
-                            <TagLabel>{filter}</TagLabel>
-                          </Tag>
-                        </WrapItem>
-                      ))}
-                    </Wrap>
-                  </HStack>
-                )}
+                </HStack>
+              )}
+              {savedFilters.length > 0 && (
+                <HStack spacing={2} wrap="wrap">
+                  <Text fontSize="sm" color="brand.subtleText">
+                    Saved filters:
+                  </Text>
+                  <Wrap>
+                    {savedFilters.map((filter) => (
+                      <WrapItem key={filter}>
+                        <Tag size="sm" colorScheme="yellow" variant="subtle">
+                          <TagLabel>{filter}</TagLabel>
+                        </Tag>
+                      </WrapItem>
+                    ))}
+                  </Wrap>
+                </HStack>
+              )}
+              <Wrap spacing={2}>
+                {['all', 'engaged', 'watch', 'concern', 'critical'].map((risk) => {
+                  const isActive = riskFilter === risk
+                  const palette = risk !== 'all' ? riskStyles[risk as RiskLevel] : { color: 'brand.text', bg: 'brand.primaryMuted', label: 'All' }
+                  return (
+                    <WrapItem key={risk}>
+                      <Button
+                        size="sm"
+                        variant={isActive ? 'primary' : 'secondary'}
+                        bg={isActive ? '#3D0C69' : palette.bg}
+                        color={isActive ? 'white' : palette.color}
+                        onClick={() => setRiskFilter(risk as RiskLevel | 'all')}
+                        leftIcon={risk === 'all' ? <Icon as={Filter} /> : <Icon as={AlertCircle} />}
+                      >
+                        {risk === 'all' ? 'All' : palette.label}
+                      </Button>
+                    </WrapItem>
+                  )
+                })}
+              </Wrap>
+              <Wrap spacing={2}>
+                {[
+                  { key: 'all', label: 'All engagement' },
+                  { key: 'active', label: 'Active' },
+                  { key: 'idle', label: 'Idle' },
+                  { key: 'disengaged', label: 'Disengaged' },
+                ].map(({ key, label }) => {
+                  const isActive = engagementFilter === key
+                  return (
+                    <WrapItem key={key}>
+                      <Button
+                        size="sm"
+                        variant={isActive ? 'primary' : 'secondary'}
+                        bg={isActive ? '#3D0C69' : 'gray.50'}
+                        color={isActive ? 'white' : 'brand.text'}
+                        leftIcon={<Icon as={Activity} />}
+                        onClick={() => setEngagementFilter(key as EngagementStatus | 'all')}
+                      >
+                        {label}
+                      </Button>
+                    </WrapItem>
+                  )
+                })}
+              </Wrap>
+              {searchTerm && (
+                <Alert status="info" borderRadius="md">
+                  <AlertIcon />
+                  Showing results for "{searchTerm}" ({filteredMentees.length} matches)
+                </Alert>
+              )}
+            </Stack>
+          </CardBody>
+        </Card>
+
+        <Grid templateColumns={{ base: '1fr', xl: '1fr 1fr' }} gap={4}>
+          <GridItem>
+            <Stack spacing={3}>
+              {menteesError && (
+                <Alert status="error" borderRadius="md">
+                  <AlertIcon />
+                  {menteesError}
+                </Alert>
+              )}
+              {menteesLoading && (
                 <Stack spacing={3}>
-                  {filteredMentees.map((mentee) => (
-                    <Flex
-                      key={mentee.email}
-                      p={3}
-                      borderRadius="md"
-                      bg="white"
-                      border="1px solid"
-                      borderColor="brand.border"
-                      justify="space-between"
-                      align="center"
-                    >
-                      <HStack spacing={3} align="center">
-                        <Avatar name={mentee.name} bg="brand.royalPurple" color="brand.gold" />
+                  {[1, 2, 3].map((idx) => (
+                    <Card key={idx} shadow="sm">
+                      <CardBody>
+                        <Stack spacing={2}>
+                          <Skeleton height="20px" w="40%" />
+                          <Skeleton height="16px" w="60%" />
+                          <Skeleton height="16px" w="80%" />
+                        </Stack>
+                      </CardBody>
+                    </Card>
+                  ))}
+                </Stack>
+              )}
+              {!menteesLoading && filteredMentees.length === 0 && (
+                <Card shadow="sm">
+                  <CardBody>
+                    <Text color="brand.subtleText">No assigned mentees found for your account.</Text>
+                  </CardBody>
+                </Card>
+              )}
+              {filteredMentees.map((mentee) => {
+                const palette = riskStyles[mentee.risk.level]
+                const isSelected = selectedMentee?.id === mentee.id
+                return (
+                  <Flex
+                    key={mentee.id}
+                    p={4}
+                    borderRadius="lg"
+                    border="2px solid"
+                    borderColor={isSelected ? 'brand.primary' : 'brand.border'}
+                    bg={isSelected ? 'brand.primaryMuted' : 'white'}
+                    direction="column"
+                    gap={3}
+                    onClick={() => setSelectedMenteeId(mentee.id)}
+                    cursor="pointer"
+                  >
+                    <Flex justify="space-between" align="flex-start" gap={3} direction={{ base: 'column', md: 'row' }}>
+                      <HStack spacing={3} align="flex-start">
+                        <Avatar size="lg" name={mentee.name} src={`https://i.pravatar.cc/150?u=${mentee.email}`} />
                         <Box>
-                          <Text fontWeight="semibold" color="brand.text">
-                            {mentee.name}
+                          <Text fontWeight="bold">{mentee.name}</Text>
+                          <Text color="brand.subtleText" fontSize="sm">
+                            {mentee.email}
                           </Text>
-                          <Text fontSize="sm" color="brand.subtleText">
-                            {mentee.email} • {mentee.company}
-                          </Text>
-                          <HStack spacing={2} mt={1}>
-                            <Badge colorScheme={mentee.progress >= 80 ? 'green' : mentee.progress >= 60 ? 'yellow' : 'red'}>
-                              {mentee.progress}% progress
-                            </Badge>
-                            <Badge variant="outline" colorScheme="purple">
-                              {mentee.stage}
-                            </Badge>
-                          </HStack>
+                          <Wrap mt={2} spacing={2}>
+                            <Tag size="sm" colorScheme="purple" variant="subtle">
+                              <TagLabel>Program: {mentee.programDuration}</TagLabel>
+                            </Tag>
+                            <Tag size="sm" bg={palette.bg} color={palette.color}>
+                              <TagLabel>
+                                <Icon as={AlertTriangle} mr={1} /> {palette.label} • Avg {mentee.weeklyActivity.toFixed(1)} / wk
+                              </TagLabel>
+                            </Tag>
+                          </Wrap>
                         </Box>
                       </HStack>
-                      <VStack spacing={1} align="flex-end">
-                        <Text fontSize="sm" color="brand.subtleText">
-                          Sessions this month
+                      <VStack align="flex-end" spacing={1}>
+                        <Text color="brand.subtleText" fontSize="sm">
+                          Last active
                         </Text>
-                        <Text fontWeight="bold" color="brand.text">
-                          {mentee.sessionsThisMonth}
+                        <Text fontWeight="bold">{mentee.daysSinceLastActive}d ago</Text>
+                        <Text color="brand.subtleText" fontSize="sm">
+                          Timezone: {mentee.timezone}
                         </Text>
                       </VStack>
                     </Flex>
-                  ))}
-                </Stack>
-              </Stack>
-            </CardBody>
-          </Card>
-        </GridItem>
-        <GridItem>
-          <Stack spacing={6}>
-            <Card bg="white" border="1px solid" borderColor="brand.border" shadow="md">
-              <CardBody>
-                <HStack justify="space-between" align="center" mb={3}>
-                  <Text fontWeight="bold" color="brand.text">
-                    Quick access
-                  </Text>
-                  <Icon as={ArrowRight} color="brand.gold" />
-                </HStack>
-                <SimpleGrid columns={{ base: 1, sm: 2 }} spacing={3}>
-                  <Button leftIcon={<Icon as={CalendarClock} />} variant="outline" color="brand.text" borderColor="brand.border" _hover={{ borderColor: 'brand.primary', color: 'brand.primary' }}>
-                    Schedule session
-                  </Button>
-                  <Button leftIcon={<Icon as={Send} />} variant="outline" color="brand.text" borderColor="brand.border" _hover={{ borderColor: 'brand.primary', color: 'brand.primary' }}>
-                    Send quick message
-                  </Button>
-                  <Button leftIcon={<Icon as={NotebookPen} />} variant="outline" color="brand.text" borderColor="brand.border" _hover={{ borderColor: 'brand.primary', color: 'brand.primary' }}>
-                    Add session notes
-                  </Button>
-                  <Button leftIcon={<Icon as={TrendingUp} />} variant="outline" color="brand.text" borderColor="brand.border" _hover={{ borderColor: 'brand.primary', color: 'brand.primary' }}>
-                    Review reports
-                  </Button>
-                </SimpleGrid>
-              </CardBody>
-            </Card>
 
-            <Card bg="white" border="1px solid" borderColor="brand.border" shadow="md">
-              <CardBody>
-                <HStack justify="space-between" align="center" mb={3}>
-                  <Text fontWeight="bold" color="brand.text">
-                    Notifications
-                  </Text>
-                  <Badge colorScheme="purple">4 unread</Badge>
-                </HStack>
-                <Stack spacing={3}>
-                  <Flex justify="space-between" align="center">
-                    <HStack spacing={2}>
-                      <Icon as={Bell} color="brand.gold" />
-                      <Text color="brand.subtleText">Real-time updates enabled</Text>
+                    <HStack spacing={3}>
+                      <Badge colorScheme="purple" variant="subtle" display="flex" alignItems="center" gap={1}>
+                        <Icon as={Building2} /> {mentee.company}
+                      </Badge>
+                      <Badge colorScheme="green" variant="subtle" display="flex" alignItems="center" gap={1}>
+                        <Icon as={MapPin} /> Village cohort
+                      </Badge>
+                      <Badge colorScheme="yellow" variant="subtle" display="flex" alignItems="center" gap={1}>
+                        <Icon as={Sparkles} /> {mentee.program}
+                      </Badge>
                     </HStack>
-                    <Button size="sm" variant="outline" color="brand.text" borderColor="brand.border" _hover={{ borderColor: 'brand.primary', color: 'brand.primary' }}>
-                      Mark all read
-                    </Button>
-                  </Flex>
-                  <Divider borderColor="brand.border" />
-                  <Stack spacing={2}>
-                    {[1, 2, 3].map((id) => (
-                      <Flex key={id} justify="space-between" align="center" p={2} borderRadius="md" bg="brand.primaryMuted" border="1px solid" borderColor="brand.border">
-                        <HStack spacing={3}>
-                          <Icon as={id === 1 ? Inbox : id === 2 ? CheckCircle2 : HeartHandshake} color="brand.gold" />
-                          <Box>
-                            <Text color="brand.text" fontWeight="semibold">
-                              {id === 1
-                                ? 'New check-in submitted'
-                                : id === 2
-                                  ? 'Session summary saved'
-                                  : 'Mentee shared progress update'}
-                            </Text>
-                            <Text color="brand.subtleText" fontSize="sm" opacity={0.95}>
-                              {id === 1 ? 'Nova Labs team' : id === 2 ? 'Diego Martínez' : 'Lina Chen'} • {id === 1 ? '5m ago' : id === 2 ? '32m ago' : '1h ago'}
-                            </Text>
-                          </Box>
-                        </HStack>
-                        <Icon as={ArrowRight} color="brand.subtleText" />
-                      </Flex>
-                    ))}
-                  </Stack>
-                </Stack>
-              </CardBody>
-            </Card>
-          </Stack>
-        </GridItem>
-      </Grid>
 
-      <Grid templateColumns={{ base: '1fr', lg: '3fr 2fr' }} gap={6}>
-        <GridItem>
-          <Card bg="white" border="1px solid" borderColor="brand.border" shadow="md">
-            <CardBody>
-              <Flex justify="space-between" align={{ base: 'flex-start', md: 'center' }} mb={4} direction={{ base: 'column', md: 'row' }} gap={3}>
-                <Box>
-                  <Text fontWeight="bold" color="brand.text">
-                    Session management
-                  </Text>
-                  <Text color="brand.subtleText" opacity={0.95}>
-                    Track scheduled, completed, and cancelled mentorship sessions.
-                  </Text>
-                </Box>
-                <Button size="sm" leftIcon={<Icon as={CalendarClock} />} colorScheme="purple" variant="outline" borderColor="brand.gold" color="brand.gold">
-                  Schedule new session
-                </Button>
-              </Flex>
-              <Stack spacing={3}>
-                {sessions.map((session) => (
-                  <Flex
-                    key={`${session.title}-${session.mentee}`}
-                    p={3}
-                    borderRadius="md"
-                    bg="brand.primaryMuted"
-                    border="1px solid"
-                    borderColor="brand.border"
-                    justify="space-between"
-                    align="center"
-                  >
                     <Box>
-                      <Text fontWeight="semibold" color="brand.text">
-                        {session.title}
+                      <Text fontSize="sm" color="brand.subtleText" mb={1}>
+                        Progress: {mentee.progress}%
                       </Text>
-                      <Text fontSize="sm" color="brand.subtleText">
-                        {session.mentee} • {session.date}
-                      </Text>
-                      {session.notes && (
-                        <Text fontSize="xs" color="brand.subtleText" opacity={0.95} mt={1}>
-                          Notes: {session.notes}
-                        </Text>
-                      )}
+                      <Progress value={mentee.progress} borderRadius="full" />
                     </Box>
-                    <Badge
-                      colorScheme={
-                        session.status === 'completed'
-                          ? 'green'
-                          : session.status === 'cancelled'
-                            ? 'red'
-                            : 'blue'
-                      }
-                    >
-                      {session.status}
-                    </Badge>
-                  </Flex>
-                ))}
-              </Stack>
-            </CardBody>
-          </Card>
-        </GridItem>
-        <GridItem>
-          <Stack spacing={6}>
-            <Card bg="white" border="1px solid" borderColor="brand.border" shadow="md">
-              <CardBody>
-                <HStack justify="space-between" align="center" mb={3}>
-                  <Text fontWeight="bold" color="brand.text">
-                    Resource library
-                  </Text>
-                  <Button size="sm" leftIcon={<Icon as={BookOpen} />} variant="outline" color="brand.text" borderColor="brand.border" _hover={{ borderColor: 'brand.primary', color: 'brand.primary' }}>
-                    Share resource
-                  </Button>
-                </HStack>
-                <Stack spacing={3}>
-                  {resources.map((resource) => (
-                    <Flex key={resource.title} justify="space-between" align="center" p={3} borderRadius="md" bg="brand.primaryMuted" border="1px solid" borderColor="brand.border">
-                      <Box>
-                        <Text fontWeight="semibold" color="brand.text">
-                          {resource.title}
-                        </Text>
-                        <Text color="brand.subtleText" fontSize="sm">
-                          {resource.type} • Assigned to {resource.menteesAssigned} mentees
+
+                    <SimpleGrid columns={{ base: 1, sm: 3 }} spacing={3}>
+                      <Box p={3} borderRadius="md" bg="brand.primaryMuted">
+                        <HStack spacing={2}>
+                          <Icon as={Target} color="brand.primary" />
+                          <Text fontWeight="semibold">Goals</Text>
+                        </HStack>
+                        <Text color="brand.subtleText">{mentee.goalsCompleted}/{mentee.goalsTotal} goals</Text>
+                      </Box>
+                      <Box p={3} borderRadius="md" bg="brand.primaryMuted">
+                        <HStack spacing={2}>
+                          <Icon as={Flag} color="brand.primary" />
+                          <Text fontWeight="semibold">Milestones</Text>
+                        </HStack>
+                        <Text color="brand.subtleText">{mentee.milestonesProgress}% complete</Text>
+                      </Box>
+                      <Box p={3} borderRadius="md" bg="brand.primaryMuted">
+                        <HStack spacing={2}>
+                          <Icon as={Activity} color="brand.primary" />
+                          <Text fontWeight="semibold">Check-ins</Text>
+                        </HStack>
+                        <Text color={mentee.checkIns.status === 'overdue' ? 'red.500' : 'green.600'}>
+                          {mentee.checkIns.status === 'overdue' ? 'Overdue' : 'On track'} • {differenceInCalendarDays(new Date(), new Date(mentee.checkIns.last))}d ago
                         </Text>
                       </Box>
-                      <Badge colorScheme="purple" variant="subtle">
-                        {resource.usage}
-                      </Badge>
-                    </Flex>
-                  ))}
-                </Stack>
-              </CardBody>
-            </Card>
+                    </SimpleGrid>
 
-            <Card bg="white" border="1px solid" borderColor="brand.border" shadow="md">
+                    <Wrap spacing={2}>
+                      <WrapItem>
+                        <Button size="sm" variant="secondary" leftIcon={<Icon as={Eye} />}>
+                          View profile
+                        </Button>
+                      </WrapItem>
+                      <WrapItem>
+                        <Button size="sm" variant="secondary" leftIcon={<Icon as={MessageSquare} />}>
+                          Send message
+                        </Button>
+                      </WrapItem>
+                      <WrapItem>
+                        <Button size="sm" colorScheme="red" variant="ghost" leftIcon={<Icon as={UserX} />}>
+                          Unassign
+                        </Button>
+                      </WrapItem>
+                      {mentee.scheduleLink && (
+                        <WrapItem>
+                          <Button size="sm" variant="secondary" leftIcon={<Icon as={Link2} />}>
+                            Schedule link
+                          </Button>
+                        </WrapItem>
+                      )}
+                    </Wrap>
+                  </Flex>
+                )
+              })}
+            </Stack>
+          </GridItem>
+          <GridItem>
+            <Card shadow="lg">
               <CardBody>
-                <HStack justify="space-between" align="center" mb={3}>
-                  <Text fontWeight="bold" color="brand.text">
-                    Notifications settings
-                  </Text>
-                  <Icon as={Settings} color="brand.gold" />
-                </HStack>
-                <Stack spacing={2}>
-                  {notificationSettings.map((setting) => (
-                    <Flex key={setting} justify="space-between" align="center" p={2} borderRadius="md" bg="brand.primaryMuted" border="1px solid" borderColor="brand.border">
-                      <Text color="brand.text">{setting}</Text>
-                      <HStack spacing={2}>
-                        <Badge colorScheme="green" variant="subtle">
-                          Enabled
+                <Text fontWeight="bold" mb={2}>
+                  Mentee detail
+                </Text>
+                {selectedMentee ? (
+                  <Stack spacing={3}>
+                    <HStack spacing={3}>
+                      <Avatar name={selectedMentee.name} src={`https://i.pravatar.cc/150?u=${selectedMentee.email}`} />
+                      <Box>
+                        <Text fontWeight="bold">{selectedMentee.name}</Text>
+                        <Text color="brand.subtleText" fontSize="sm">
+                          {selectedMentee.email}
+                        </Text>
+                        <Badge colorScheme="purple" mt={1}>
+                          {selectedMentee.program}
                         </Badge>
-                        <IconButton aria-label="Edit" size="sm" icon={<Icon as={ChevronDown} />} variant="ghost" color="brand.subtleText" />
-                      </HStack>
-                    </Flex>
-                  ))}
-                </Stack>
+                      </Box>
+                    </HStack>
+                    <Divider />
+                    <Text color="brand.subtleText">
+                      Insights and activity for this mentee load when selected. Use this panel to review goals, milestones, and recent session history.
+                    </Text>
+                    <SimpleGrid columns={{ base: 1, sm: 2 }} spacing={3}>
+                      <Box p={3} borderRadius="md" bg="brand.primaryMuted">
+                        <Text fontSize="sm" color="brand.subtleText">
+                          Engagement level
+                        </Text>
+                        <Text fontWeight="bold" color={riskStyles[selectedMentee.risk.level].color}>
+                          {riskStyles[selectedMentee.risk.level].label}
+                        </Text>
+                      </Box>
+                      <Box p={3} borderRadius="md" bg="brand.primaryMuted">
+                        <Text fontSize="sm" color="brand.subtleText">
+                          Weekly activity
+                        </Text>
+                        <Text fontWeight="bold">{selectedMentee.weeklyActivity} completed</Text>
+                      </Box>
+                    </SimpleGrid>
+                    <Button variant="primary" leftIcon={<Icon as={CheckCircle2} />}>
+                      Mark alerts resolved
+                    </Button>
+                  </Stack>
+                ) : (
+                  <Box p={4} borderRadius="md" bg="brand.primaryMuted" color="brand.subtleText">
+                    Select a mentee to see details.
+                  </Box>
+                )}
               </CardBody>
             </Card>
-          </Stack>
-        </GridItem>
-      </Grid>
-
-      <Grid templateColumns={{ base: '1fr', lg: '3fr 2fr' }} gap={6}>
-        <GridItem>
-          <Card bg="white" border="1px solid" borderColor="brand.border" shadow="md">
-            <CardBody>
-              <HStack justify="space-between" align="center" mb={3}>
-                <Text fontWeight="bold" color="brand.text">
-                  Analytics dashboard
-                </Text>
-                <Tag colorScheme="purple" variant="subtle">
-                  Engagement insights
-                </Tag>
-              </HStack>
-              <SimpleGrid columns={{ base: 1, md: 2 }} spacing={3}>
-                {analytics.map((item) => (
-                  <Box key={item.label} p={3} borderRadius="md" bg="brand.primaryMuted" border="1px solid" borderColor="brand.border">
-                    <Text fontSize="sm" color="brand.subtleText" opacity={0.95}>
-                      {item.label}
-                    </Text>
-                    <HStack justify="space-between" align="center">
-                      <Text fontSize="2xl" fontWeight="bold" color="brand.text">
-                        {item.value}
-                      </Text>
-                      <Stat>
-                        <StatHelpText color={item.positive ? 'green.500' : 'orange.400'}>
-                          <StatArrow type={item.positive ? 'increase' : 'decrease'} />
-                          {item.change}
-                        </StatHelpText>
-                      </Stat>
-                    </HStack>
-                    <Progress
-                      value={item.positive ? 78 : 52}
-                      mt={2}
-                      borderRadius="full"
-                      colorScheme={item.positive ? 'green' : 'orange'}
-                    />
-                  </Box>
-                ))}
-              </SimpleGrid>
-            </CardBody>
-          </Card>
-        </GridItem>
-        <GridItem>
-          <Card bg="white" border="1px solid" borderColor="brand.border" shadow="md">
-            <CardBody>
-              <Flex justify="space-between" align="center" mb={4}>
-                <Text fontWeight="bold" color="brand.text">
-                  Search & collaboration
-                </Text>
-                <Badge colorScheme="yellow" variant="subtle">
-                  Persistent history
-                </Badge>
-              </Flex>
-              <Stack spacing={3}>
-                <Flex align="center" justify="space-between" p={3} borderRadius="md" bg="brand.primaryMuted" border="1px solid" borderColor="brand.border">
-                  <HStack spacing={3}>
-                    <Icon as={DatabaseZap} color="brand.gold" />
-                    <Box>
-                      <Text color="brand.text" fontWeight="semibold">
-                        Real-time data sync
-                      </Text>
-                      <Text fontSize="sm" color="brand.subtleText" opacity={0.95}>
-                        Live Bolt Database subscriptions keep mentee data fresh.
-                      </Text>
-                    </Box>
-                  </HStack>
-                  <Badge colorScheme="green">Live</Badge>
-                </Flex>
-                <Flex align="center" justify="space-between" p={3} borderRadius="md" bg="brand.primaryMuted" border="1px solid" borderColor="brand.border">
-                  <HStack spacing={3}>
-                    <Icon as={Search} color="brand.gold" />
-                    <Box>
-                      <Text color="brand.text" fontWeight="semibold">
-                        Advanced search
-                      </Text>
-                      <Text fontSize="sm" color="brand.subtleText" opacity={0.95}>
-                        Autocomplete suggestions and saved filters stored locally.
-                      </Text>
-                    </Box>
-                  </HStack>
-                  <Badge colorScheme="purple">Autocomplete</Badge>
-                </Flex>
-                <Flex align="center" justify="space-between" p={3} borderRadius="md" bg="brand.primaryMuted" border="1px solid" borderColor="brand.border">
-                  <HStack spacing={3}>
-                    <Icon as={MessageSquare} color="brand.gold" />
-                    <Box>
-                      <Text color="brand.text" fontWeight="semibold">
-                        Collaboration shortcuts
-                      </Text>
-                      <Text fontSize="sm" color="brand.subtleText" opacity={0.95}>
-                        Quick actions keep messages and reports a tap away.
-                      </Text>
-                    </Box>
-                  </HStack>
-                  <Badge colorScheme="blue" variant="subtle">
-                    Action ready
-                  </Badge>
-                </Flex>
-              </Stack>
-            </CardBody>
-          </Card>
-        </GridItem>
-      </Grid>
-    </Stack>
+          </GridItem>
+        </Grid>
+        </Box>
+      </Stack>
+    </MentorDashboardLayout>
   )
 }

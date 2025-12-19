@@ -1,24 +1,26 @@
-import { UserRole } from '@/types'
-import { normalizeUserRole } from './roles'
+import { toUserRole } from './role'
 
-export const getDashboardPathForRole = (role?: UserRole | string | null) => {
-  const normalizedRole = normalizeUserRole(role)
+export const getDashboardPathForRole = (role?: string | null) => {
+  const normalizedRole = toUserRole(role)
 
   switch (normalizedRole) {
-    case UserRole.FREE_USER:
-      return '/app/weekly-glance'
-    case UserRole.PAID_MEMBER:
-      return '/app/weekly-glance'
-    case UserRole.MENTOR:
+    case 'user':
+    case 'free_user':
+    case 'paid_member':
+      return '/app/dashboard/free'
+
+    case 'mentor':
       return '/mentor/dashboard'
-    case UserRole.AMBASSADOR:
-      return '/app/weekly-glance'
-    case UserRole.ADMIN:
+
+    case 'ambassador':
+      return '/ambassador/dashboard'
+
+    case 'partner':
       return '/admin/dashboard'
-    case UserRole.COMPANY_ADMIN:
-      return '/admin/dashboard'
-    case UserRole.SUPER_ADMIN:
+
+    case 'super_admin':
       return '/super-admin/dashboard'
+
     default:
       return '/app/weekly-glance'
   }

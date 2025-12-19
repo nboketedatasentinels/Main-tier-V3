@@ -1,4 +1,4 @@
-import React, { useMemo } from 'react'
+import React, { useMemo, useState } from 'react'
 import {
   Badge,
   Box,
@@ -25,6 +25,21 @@ import { AdminUserTable, TableColumn } from '@/components/admin/AdminUserTable'
 import { OrganizationCard } from '@/components/admin/OrganizationCard'
 import type { OrganizationCardProps } from '@/components/admin/OrganizationCard'
 import { StatusBadge } from '@/components/admin/StatusBadge'
+import CompanyAdminLayout from '@/layouts/CompanyAdminLayout'
+import { buildCompanyAdminNavItems } from '@/utils/navigationItems'
+
+type CompanyPageKey = 'overview' | 'users' | 'organizations' | 'reports' | 'settings' | 'support'
+type CompanyOrg = OrganizationCardProps & { code: string }
+
+type UserRow = {
+  name: string
+  org: string
+  orgCode: string
+  status: string
+  engagement: number
+  risk: string
+  role: string
+}
 
 const registrationTrend = [
   { label: 'Mar 1', value: 9 },
@@ -61,16 +76,17 @@ const dataQualityWarnings: DataWarning[] = [
   { message: '2 accounts missing organization assignment', severity: 'warning' },
 ]
 
-const userTable = [
-  { name: 'Leah Kim', org: 'Northwind', status: 'Active', engagement: 88, risk: 'Engaged', role: 'Member' },
-  { name: 'Derrick Shaw', org: 'Northwind', status: 'Active', engagement: 61, risk: 'Watch', role: 'Member' },
-  { name: 'Mei Lin', org: 'Contoso', status: 'Paused', engagement: 33, risk: 'Concern', role: 'Member' },
-  { name: 'Ravi Patel', org: 'Contoso', status: 'Active', engagement: 74, risk: 'Engaged', role: 'Mentor' },
+const baseUsers: UserRow[] = [
+  { name: 'Leah Kim', org: 'Northwind', orgCode: 'northwind', status: 'Active', engagement: 88, risk: 'Engaged', role: 'Member' },
+  { name: 'Derrick Shaw', org: 'Northwind', orgCode: 'northwind', status: 'Active', engagement: 61, risk: 'Watch', role: 'Member' },
+  { name: 'Mei Lin', org: 'Contoso', orgCode: 'contoso', status: 'Paused', engagement: 33, risk: 'Concern', role: 'Member' },
+  { name: 'Ravi Patel', org: 'Contoso', orgCode: 'contoso', status: 'Active', engagement: 74, risk: 'Engaged', role: 'Mentor' },
 ]
 
-const scopedOrganizations: OrganizationCardProps[] = [
-  { name: 'Northwind Holdings', status: 'active', admins: 2, newThisWeek: 1, activeUsers: 94, change: '+6' },
-  { name: 'Contoso Labs', status: 'watch', admins: 1, newThisWeek: 0, activeUsers: 71, change: '-2' },
+const organizations: CompanyOrg[] = [
+  { code: 'all', name: 'All Organizations', status: 'active' },
+  { code: 'northwind', name: 'Northwind Holdings', status: 'active', admins: 2, newThisWeek: 1, activeUsers: 94, change: '+6' },
+  { code: 'contoso', name: 'Contoso Labs', status: 'watch', admins: 1, newThisWeek: 0, activeUsers: 71, change: '-2' },
 ]
 
 const interventions = [
@@ -85,11 +101,38 @@ const performanceSnapshots = [
   { label: 'Memory', value: '63%', trend: '+2%' },
 ]
 
+const UserManagementSection: React.FC<{
+  rows: UserRow[]
+  columns: TableColumn<UserRow>[]
+  scopeLabel?: string
+}> = ({ rows, columns, scopeLabel }) => (
+  <Stack spacing={4}>
+    <HStack justify="space-between" align="center">
+      <Text fontWeight="bold" color="brand.text">User management</Text>
+      {scopeLabel && <Badge colorScheme="green">{scopeLabel}</Badge>}
+    </HStack>
+    <Text fontSize="sm" color="brand.subtleText">
+      Only users in your assigned organizations are shown. Missing assignments remain visible for correction.
+    </Text>
+    <AdminUserTable rows={rows} columns={columns} />
+  </Stack>
+)
+
 export const CompanyAdminDashboard: React.FC = () => {
   const { profile } = useAuth()
   const adminName = profile?.fullName || profile?.firstName || 'Admin'
+  const [activePage, setActivePage] = useState<CompanyPageKey>('overview')
+  const [selectedOrg, setSelectedOrg] = useState<string>('all')
+  const navSections = useMemo(() => buildCompanyAdminNavItems(), [])
 
-  const userColumns: TableColumn<(typeof userTable)[number]>[] = useMemo(
+  const scopedOrganizations = useMemo<CompanyOrg[]>(() => organizations.filter(org => org.code !== 'all'), [])
+
+  const filteredOrganizations = useMemo(() => {
+    if (selectedOrg === 'all') return scopedOrganizations
+    return scopedOrganizations.filter(org => org.code === selectedOrg)
+  }, [selectedOrg, scopedOrganizations])
+
+  const userColumns: TableColumn<UserRow>[] = useMemo(
     () => [
       {
         header: 'User',
@@ -129,7 +172,14 @@ export const CompanyAdminDashboard: React.FC = () => {
     [],
   )
 
-  return (
+  const filteredUsers = useMemo(
+    () => (selectedOrg === 'all' ? baseUsers : baseUsers.filter(user => user.orgCode === selectedOrg)),
+    [selectedOrg],
+  )
+
+  const activeOrgName = selectedOrg === 'all' ? 'all organizations' : filteredOrganizations[0]?.name || 'selected org'
+
+  const renderOverview = () => (
     <Stack spacing={8}>
       <Flex justify="space-between" align={{ base: 'flex-start', md: 'center' }} gap={4} wrap="wrap">
         <Stack spacing={2}>
@@ -139,24 +189,19 @@ export const CompanyAdminDashboard: React.FC = () => {
           <Text fontSize="3xl" fontWeight="bold" color="brand.text">
             Welcome back, {adminName}
           </Text>
-          <Text color="brand.subtleText" opacity={0.9} maxW="720px">
-            Organization-scoped oversight with targeted intervention tools. Users with missing assignments are highlighted so you
-            can correct mappings before they lose access.
+          <Text color="brand.textOnDark" opacity={0.9} maxW="720px">
+            Organization-scoped oversight with targeted intervention tools. Users with missing assignments are highlighted so you can
+            correct mappings before they lose access.
           </Text>
         </Stack>
         <StatusBadge status="active" />
       </Flex>
 
       <SimpleGrid columns={{ base: 1, md: 2, xl: 4 }} spacing={4}>
-        <MetricCard icon={Users} label="Active members" value="224" helper="Across managed organizations" />
+        <MetricCard icon={Users} label="Active members" value={filteredUsers.length.toString()} helper={`Viewing ${activeOrgName}`} />
         <MetricCard icon={Gauge} label="Engagement rate" value="71%" helper="Up 3.1% week over week" />
         <MetricCard icon={Sparkles} label="New registrations" value="64" helper="+12 vs prior 7 days" />
-        <MetricCard
-          icon={Building}
-          label="Managed companies"
-          value={scopedOrganizations.length}
-          helper="Assigned organizations"
-        />
+        <MetricCard icon={Building} label="Managed companies" value={filteredOrganizations.length.toString()} helper="Assigned organizations" />
       </SimpleGrid>
 
       <Grid templateColumns={{ base: '1fr', xl: '2fr 1fr' }} gap={6}>
@@ -166,7 +211,7 @@ export const CompanyAdminDashboard: React.FC = () => {
               <EngagementChart
                 data={registrationTrend}
                 title="Engagement trends"
-                subtitle="14-day registrations for your organizations"
+                subtitle={`14-day registrations for ${activeOrgName}`}
                 valueLabel="Registrations"
               />
             </CardBody>
@@ -188,16 +233,7 @@ export const CompanyAdminDashboard: React.FC = () => {
 
       <Card bg="white" border="1px solid" borderColor="brand.border">
         <CardBody>
-          <Stack spacing={4}>
-            <HStack justify="space-between" align="center">
-              <Text fontWeight="bold" color="brand.text">User management</Text>
-              <Badge colorScheme="green">Partner scoped</Badge>
-            </HStack>
-            <Text fontSize="sm" color="brand.subtleText">
-              Only users in your assigned organizations are shown. Missing assignments remain visible for correction.
-            </Text>
-            <AdminUserTable rows={userTable} columns={userColumns} />
-          </Stack>
+          <UserManagementSection rows={filteredUsers} columns={userColumns} scopeLabel="Partner scoped" />
         </CardBody>
       </Card>
 
@@ -293,7 +329,7 @@ export const CompanyAdminDashboard: React.FC = () => {
               <Badge colorScheme="teal">Scoped by role</Badge>
             </HStack>
             <SimpleGrid columns={{ base: 1, md: 2, xl: 4 }} spacing={3}>
-              {scopedOrganizations.map(company => (
+              {filteredOrganizations.map(company => (
                 <OrganizationCard key={company.name} {...company} />
               ))}
             </SimpleGrid>
@@ -311,7 +347,7 @@ export const CompanyAdminDashboard: React.FC = () => {
                   <Badge colorScheme="blue">7-day change</Badge>
                 </HStack>
                 <Wrap spacing={3}>
-                  {scopedOrganizations.map(org => (
+                  {filteredOrganizations.map(org => (
                     <WrapItem key={org.name}>
                       <Box
                         p={3}
@@ -323,7 +359,7 @@ export const CompanyAdminDashboard: React.FC = () => {
                       >
                         <Text fontWeight="semibold" color="brand.text">{org.name}</Text>
                         <Text fontSize="sm" color="brand.subtleText">Active users: {org.activeUsers}</Text>
-                        <Badge mt={2} colorScheme={org.change && org.change.includes('-') ? 'red' : 'green'}>
+                        <Badge mt={2} colorScheme={(org.change ?? '0%').includes('-') ? 'red' : 'green'}>
                           {(org.change ?? '0%')} this week
                         </Badge>
                       </Box>
@@ -400,4 +436,150 @@ export const CompanyAdminDashboard: React.FC = () => {
       </Card>
     </Stack>
   )
+
+  const renderOrganizations = () => (
+    <Stack spacing={6}>
+      <Card bg="white" border="1px solid" borderColor="brand.border">
+        <CardBody>
+          <Stack spacing={3}>
+            <HStack justify="space-between" align="center">
+              <VStack align="flex-start" spacing={0}>
+                <Text fontWeight="bold" color="brand.text">Organizations</Text>
+                <Text fontSize="sm" color="brand.subtleText">
+                  Showing {filteredOrganizations.length} organizations for {activeOrgName}
+                </Text>
+              </VStack>
+              <Badge colorScheme="purple">Scoped</Badge>
+            </HStack>
+            <SimpleGrid columns={{ base: 1, md: 2, xl: 3 }} spacing={4}>
+              {filteredOrganizations.map(org => (
+                <OrganizationCard key={org.name} {...org} />
+              ))}
+            </SimpleGrid>
+          </Stack>
+        </CardBody>
+      </Card>
+    </Stack>
+  )
+
+  const renderReports = () => (
+    <Stack spacing={6}>
+      <Card bg="white" border="1px solid" borderColor="brand.border">
+        <CardBody>
+          <Stack spacing={3}>
+            <Text fontWeight="bold" color="brand.text">Reports</Text>
+            <Text fontSize="sm" color="brand.subtleText">
+              Analytics and engagement reports will appear here. Customize filters by organization to export scoped summaries.
+            </Text>
+            <Wrap spacing={3}>
+              {['Engagement by org', 'At-risk trends', 'Data quality'].map(report => (
+                <WrapItem key={report}>
+                  <Box
+                    p={3}
+                    borderRadius="md"
+                    border="1px solid"
+                    borderColor="brand.border"
+                    bg="brand.accent"
+                    minW="200px"
+                  >
+                    <Text fontWeight="semibold" color="brand.text">{report}</Text>
+                    <Text fontSize="sm" color="brand.subtleText">Coming soon</Text>
+                  </Box>
+                </WrapItem>
+              ))}
+            </Wrap>
+          </Stack>
+        </CardBody>
+      </Card>
+    </Stack>
+  )
+
+  const renderSettings = () => (
+    <Stack spacing={6}>
+      <Card bg="white" border="1px solid" borderColor="brand.border">
+        <CardBody>
+          <Stack spacing={3}>
+            <Text fontWeight="bold" color="brand.text">Settings</Text>
+            <Text fontSize="sm" color="brand.subtleText">
+              Manage dashboard preferences, notification thresholds, and organization defaults.
+            </Text>
+            <Wrap spacing={3}>
+              {['Notification rules', 'Organization defaults', 'Access control'].map(setting => (
+                <WrapItem key={setting}>
+                  <Box p={3} borderRadius="md" border="1px solid" borderColor="brand.border" bg="brand.accent">
+                    <Text fontWeight="semibold" color="brand.text">{setting}</Text>
+                    <Text fontSize="sm" color="brand.subtleText">Configuration coming soon</Text>
+                  </Box>
+                </WrapItem>
+              ))}
+            </Wrap>
+          </Stack>
+        </CardBody>
+      </Card>
+    </Stack>
+  )
+
+  const renderSupport = () => (
+    <Stack spacing={6}>
+      <Card bg="white" border="1px solid" borderColor="brand.border">
+        <CardBody>
+          <Stack spacing={3}>
+            <Text fontWeight="bold" color="brand.text">Support</Text>
+            <Text fontSize="sm" color="brand.subtleText">
+              Need help? Reach out to support or review the upcoming knowledge base articles for company admins.
+            </Text>
+            <Badge colorScheme="blue" w="fit-content">
+              Live chat coming soon
+            </Badge>
+          </Stack>
+        </CardBody>
+      </Card>
+    </Stack>
+  )
+
+  const renderPage = () => {
+    switch (activePage) {
+      case 'users':
+        return (
+          <Card bg="white" border="1px solid" borderColor="brand.border">
+            <CardBody>
+              <UserManagementSection rows={filteredUsers} columns={userColumns} scopeLabel="Partner scoped" />
+            </CardBody>
+          </Card>
+        )
+      case 'organizations':
+        return renderOrganizations()
+      case 'reports':
+        return renderReports()
+      case 'settings':
+        return renderSettings()
+      case 'support':
+        return renderSupport()
+      case 'overview':
+      default:
+        return renderOverview()
+    }
+  }
+
+  const handleNavigate = (key: string) => {
+    const normalized = key as CompanyPageKey
+    if (['overview', 'users', 'organizations', 'reports', 'settings', 'support'].includes(normalized)) {
+      setActivePage(normalized)
+    }
+  }
+
+  return (
+    <CompanyAdminLayout
+      navSections={navSections}
+      activeItem={activePage}
+      onNavigate={handleNavigate}
+      organizations={organizations}
+      selectedOrg={selectedOrg}
+      onSelectOrg={setSelectedOrg}
+    >
+      {renderPage()}
+    </CompanyAdminLayout>
+  )
 }
+
+export default CompanyAdminDashboard

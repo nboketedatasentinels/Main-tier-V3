@@ -1,12 +1,13 @@
 import React from 'react'
 import { Navigate, Outlet } from 'react-router-dom'
 import { useAuth } from '@/hooks/useAuth'
-import { normalizeUserRole } from '@/utils/roles'
+import { toUserRole } from '@/utils/role'
+import { getLandingPathForRole } from '@/utils/roleRouting'
 import { getDashboardPathForRole } from '@/utils/dashboardPaths'
-import { UserRole } from '@/types'
+import type { StandardRole } from '@/types'
 
 type RequireRoleProps = {
-  allow: UserRole[]
+  allow: StandardRole[]
 }
 
 export const RequireRole: React.FC<RequireRoleProps> = ({ allow }) => {
@@ -16,12 +17,33 @@ export const RequireRole: React.FC<RequireRoleProps> = ({ allow }) => {
 
   if (!user) return <Navigate to="/login" replace />
 
-  const normalizedRole = normalizeUserRole(profile?.role)
+  const normalizedRole = toUserRole(profile?.role)
 
-  if (!normalizedRole) return <Navigate to="/auth/profile-missing" replace />
+  if (!normalizedRole) {
+    console.warn(
+      `Redirecting user to /auth/profile-missing.`,
+      `User: ${user.email}`,
+      `Profile:`,
+      profile
+    )
+    return <Navigate to="/auth/profile-missing" replace />
+  }
 
   if (!allow.includes(normalizedRole)) {
-    return <Navigate to={getDashboardPathForRole(normalizedRole)} replace />
+    console.log("ROLE_REDIRECT", {
+      rawRole: profile?.role,
+      normalized: normalizedRole,
+      landing: getDashboardPathForRole(normalizedRole),
+    })
+    console.warn(
+      `Redirecting user due to role mismatch.`,
+      `User: ${user.email}`,
+      `User Role: ${normalizedRole}`,
+      `Allowed Roles: ${allow.join(', ')}`,
+      `Profile state at time of check:`,
+      profile
+    )
+    return <Navigate to={getLandingPathForRole(profile)} replace />
   }
 
   return <Outlet />

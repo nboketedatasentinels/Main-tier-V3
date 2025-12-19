@@ -167,8 +167,8 @@ export const sendEmailNotification = async (params: {
 }
 
 export const saveFcmTokenToProfile = async (userId: string, token: string) => {
-  const profileRef = doc(db, 'profiles', userId)
-  await updateDoc(profileRef, {
+  const userRef = doc(db, 'users', userId)
+  await updateDoc(userRef, {
     fcmTokens: arrayUnion(token),
     updatedAt: serverTimestamp(),
   })

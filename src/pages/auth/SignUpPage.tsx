@@ -147,12 +147,13 @@ export const SignUpPage: React.FC = () => {
         companyId: validatedOrganization?.id,
         companyName: validatedOrganization?.name,
       })
-
-      if (signUpError) {
-        setError(getFriendlyErrorMessage(signUpError))
-        return
-      }
-
+    } else {
+      toast({
+        title: 'Account created!',
+        description: 'Please check your email to verify your account. You can still access the dashboard while we verify your email.',
+        status: 'success',
+        duration: 7000,
+      })
       if (userId) {
         localStorage.setItem(`t4l.newUserWelcome.${userId}`, "pending")
       }

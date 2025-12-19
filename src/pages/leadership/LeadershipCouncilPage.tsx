@@ -68,7 +68,8 @@ import {
 import { format, formatDistanceToNow, isAfter, isValid, parseISO } from 'date-fns'
 import { db } from '@/services/firebase'
 import { useAuth } from '@/hooks/useAuth'
-import { UserProfile, UserRole } from '@/types'
+import { UserProfile } from '@/types'
+import { normalizeRole } from '@/utils/role'
 
 interface LeadershipProfile extends UserProfile {
   availabilityStatus?: string
@@ -188,8 +189,15 @@ export const LeadershipCouncilPage: React.FC = () => {
   const [editNotes, setEditNotes] = useState('')
   const [mutatingId, setMutatingId] = useState<string | null>(null)
 
-  const isAdmin = profile?.role === UserRole.COMPANY_ADMIN || profile?.role === UserRole.SUPER_ADMIN
-  const isSuperAdmin = profile?.role === UserRole.SUPER_ADMIN
+  const isAdmin = useMemo(() => {
+    if (!profile?.role) return false
+    const normalized = normalizeRole(profile.role)
+    return ['partner', 'super_admin'].includes(normalized)
+  }, [profile?.role])
+
+  const isSuperAdmin = useMemo(() => {
+    return normalizeRole(profile?.role) === 'super_admin'
+  }, [profile?.role])
 
   const loadAssignments = useCallback(async () => {
     if (!profile?.id) return
@@ -322,9 +330,9 @@ export const LeadershipCouncilPage: React.FC = () => {
         .map((docSnapshot) => ({ ...(docSnapshot.data() as LeadershipProfile), id: docSnapshot.id }))
         .sort((a, b) => (a.fullName || '').localeCompare(b.fullName || ''))
 
-      setMentors(loadedProfiles.filter((p) => p.role === UserRole.MENTOR))
-      setAmbassadors(loadedProfiles.filter((p) => p.role === UserRole.AMBASSADOR))
-      setAvailableUsers(loadedProfiles.filter((p) => ![UserRole.MENTOR, UserRole.AMBASSADOR].includes(p.role)))
+      setMentors(loadedProfiles.filter((p) => normalizeRole(p.role) === 'mentor'))
+      setAmbassadors(loadedProfiles.filter((p) => normalizeRole(p.role) === 'ambassador'))
+      setAvailableUsers(loadedProfiles.filter((p) => ![normalizeRole('mentor'), normalizeRole('ambassador')].includes(normalizeRole(p.role))))
 
       const loadedCompanies: CompanyRecord[] = companiesSnap.docs
         .map((docSnapshot) => {
@@ -475,7 +483,7 @@ export const LeadershipCouncilPage: React.FC = () => {
     try {
       const company = companies.find((c) => c.id === form.companyId)
       await updateDoc(doc(db, 'profiles', form.userId), {
-        role: promoteModalRole === 'mentor' ? UserRole.MENTOR : UserRole.AMBASSADOR,
+        role: promoteModalRole,
         accountStatus: 'active',
         companyId: form.companyId || null,
         companyCode: company?.code || null,
@@ -526,7 +534,7 @@ export const LeadershipCouncilPage: React.FC = () => {
         companyCode: company?.code || null,
         companyName: company?.name || null,
         accountStatus: editStatus || null,
-        isActiveAmbassador: editTarget.role === UserRole.AMBASSADOR ? editStatus === 'active' : undefined,
+        isActiveAmbassador: normalizeRole(editTarget.role) === 'ambassador' ? editStatus === 'active' : undefined,
         notes: editNotes || null,
       })
       toast({ title: 'Leadership profile updated.', status: 'success' })
@@ -547,7 +555,7 @@ export const LeadershipCouncilPage: React.FC = () => {
     setMutatingId(member.id)
     try {
       await updateDoc(doc(db, 'profiles', member.id), {
-        role: UserRole.PAID_MEMBER,
+        role: 'user',
         companyId: null,
         companyCode: null,
         companyName: null,

@@ -42,7 +42,6 @@ import {
   CalendarDays,
 } from 'lucide-react'
 import { useAuth } from '@/hooks/useAuth'
-import { UserRole } from '@/types'
 import { BuildVillageModal } from '@/components/modals/BuildVillageModal'
 import { ConfirmationWelcomeModal } from '@/components/modals/ConfirmationWelcomeModal'
 import { NotificationDropdown } from '@/components/notifications/NotificationDropdown'
@@ -74,7 +73,7 @@ export const MainLayout: React.FC = () => {
   useEffect(() => {
     if (!profile) return
 
-    if (profile.role === UserRole.FREE_USER && buildVillageKey) {
+    if (profile.role === 'free_user' && buildVillageKey) {
       const stored = localStorage.getItem(buildVillageKey)
       if (!stored) {
         setShowVillagePrompt(true)
@@ -155,8 +154,8 @@ export const MainLayout: React.FC = () => {
     [],
   )
 
-  const isFreeUser = profile?.role === UserRole.FREE_USER
-  const isMentor = profile?.role === UserRole.MENTOR
+  const isFreeUser = profile?.role === 'free_user'
+  const isMentor = profile?.role === 'mentor'
 
   const filteredNavigation = useMemo(() => {
     return navigationSections.map(section => ({
