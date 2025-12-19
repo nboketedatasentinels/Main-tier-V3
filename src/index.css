@@ -21,7 +21,6 @@
   background: rgba(234, 177, 48, 0.7);
 }
 
-<<<<<<< HEAD
 /* Intro.js custom styling */
 .introjs-tooltip {
   background: #27062e !important;
@@ -39,9 +38,6 @@
 .introjs-button:hover {
   background: #d94a0b !important;
 }
-
-=======
->>>>>>> origin/Sign-In/Up
 /* Custom animations */
 @keyframes fadeIn {
   from {
