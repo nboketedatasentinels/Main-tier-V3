@@ -279,6 +279,8 @@ weekly_points/{weeklyPointsId}
 
 ## Firestore Security Rules
 
+**Note:** The canonical source for Firestore security rules is the `firestore.rules` file in the root of the project. The rules below are for documentation purposes. Please deploy the rules from the root `firestore.rules` file.
+
 ```javascript
 rules_version = '2';
 service cloud.firestore {

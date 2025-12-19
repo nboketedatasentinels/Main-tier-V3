@@ -1,41 +1,157 @@
-import { UserRole } from '@/types'
+import { UserProfile } from '@/types'
+import { normalizeRole } from './role'
 
-export const normalizeRole = (role: unknown): string => {
-  return String(role ?? '')
-    .trim()
-    .toUpperCase()
-    .replace(/\s+/g, '_')
+/**
+ * Extracts preferred dashboard route from the profile (if set).
+ * Looks at the most common fields used across the codebase:
+ * - profile.dashboardPreferences.defaultRoute
+ * - profile.defaultDashboardRoute
+ */
+export const getPreferredDashboardRoute = (profile: UserProfile | null): string | null => {
+  const fromPrefs =
+    typeof profile?.dashboardPreferences?.defaultRoute === 'string'
+      ? profile.dashboardPreferences.defaultRoute
+      : null
+
+  const fromLegacy =
+    typeof profile?.defaultDashboardRoute === 'string'
+      ? profile.defaultDashboardRoute
+      : null
+
+  const preferred = (fromPrefs || fromLegacy || '').trim()
+
+  console.log('🟩 getPreferredDashboardRoute:', {
+    fromPrefs,
+    fromLegacy,
+    preferred,
+  })
+
+  return preferred.length > 0 ? preferred : null
 }
 
-export const getLandingPathForRole = (role: unknown) => {
-  const r = normalizeRole(role)
+/**
+ * Gets the default dashboard route based on membership status.
+ */
+export const getDefaultDashboardRouteByMembership = (
+  membershipStatus: 'free' | 'paid' | undefined | null
+): string => {
+  return membershipStatus === 'paid'
+    ? '/app/dashboard/member'
+    : '/app/dashboard/free'
+}
 
-  if (r === normalizeRole(UserRole.SUPER_ADMIN) || r === 'SUPER_ADMIN') {
+/**
+ * Comprehensive role-based landing path with priority logic
+ */
+export const getLandingPathForRole = (
+  profile: UserProfile | null,
+  searchParams?: URLSearchParams
+): string => {
+  const role = profile?.role
+  const redirectUrl = searchParams?.get('redirect')
+
+  console.log('🔷 getLandingPathForRole called with:', {
+    role,
+    roleType: typeof role,
+    redirectUrl,
+    profile: profile
+      ? {
+          id: profile.id,
+          email: profile.email,
+          role: profile.role,
+          onboardingComplete: profile.onboardingComplete,
+          onboardingSkipped: profile.onboardingSkipped,
+          transformationTier: profile.transformationTier,
+          membershipStatus: profile.membershipStatus,
+          dashboardPreferences: profile.dashboardPreferences,
+        }
+      : null,
+  })
+
+  // Priority 1: External redirect override
+  if (redirectUrl) {
+    console.log('🔷 Redirect override detected:', redirectUrl)
+    return redirectUrl
+  }
+
+  const normalizedRole = normalizeRole(role) ?? (profile?.mentorId ? 'mentor' : null)
+  console.log('🔷 Normalized role:', normalizedRole, 'mentorIdHint:', profile?.mentorId)
+
+  // Priority 2: Super Admin
+  if (normalizedRole === 'super_admin') {
+    console.log('🔷 Super admin detected → /super-admin/dashboard')
     return '/super-admin/dashboard'
   }
 
-  // Treat ADMIN and COMPANY_ADMIN as admin dashboard
-  if (
-    r === normalizeRole(UserRole.ADMIN) ||
-    r === 'ADMIN' ||
-    r === normalizeRole(UserRole.COMPANY_ADMIN) ||
-    r === 'COMPANY_ADMIN'
-  ) {
+  // Priority 3: Partner/Admin (company admin)
+  if (normalizedRole === 'partner') {
+    console.log('🔷 Partner detected → /admin/dashboard')
     return '/admin/dashboard'
   }
 
-  if (r === normalizeRole(UserRole.MENTOR) || r === 'MENTOR') {
+  // Priority 4: Mentor (conditional corporate)
+  if (normalizedRole === 'mentor') {
+    console.log('🔷 Mentor detected')
+
+    const tier = profile?.transformationTier?.toString().toLowerCase()
+    console.log('🔷 Mentor tier:', tier)
+
+    if (tier === 'corporate_member' || tier === 'corporate_leader') {
+      console.log('🔷 Corporate mentor → /mentor/dashboard')
+      return '/mentor/dashboard'
+    }
+
+    const preferred = getPreferredDashboardRoute(profile)
+    if (preferred) {
+      console.log('🔷 Individual mentor preferred route:', preferred)
+      return preferred
+    }
+
+    console.log('🔷 Mentor default → /mentor/dashboard')
     return '/mentor/dashboard'
   }
 
-  if (r === normalizeRole(UserRole.AMBASSADOR) || r === 'AMBASSADOR') {
-    return '/app/weekly-glance'
+  // Priority 5: Ambassador
+  if (normalizedRole === 'ambassador') {
+    console.log('🔷 Ambassador detected → /ambassador/dashboard')
+    return '/ambassador/dashboard'
   }
 
-  if (r === normalizeRole(UserRole.PAID_MEMBER) || r === 'PAID_MEMBER') {
-    return '/app/weekly-glance'
+  // Priority 6: Learners (user / team_leader / free_user / paid_member)
+  if (profile) {
+    const needsOnboarding =
+      !profile.onboardingComplete && !profile.onboardingSkipped
+
+    console.log('🔷 Learner onboarding check:', {
+      onboardingComplete: profile.onboardingComplete,
+      onboardingSkipped: profile.onboardingSkipped,
+      needsOnboarding,
+    })
+
+    if (needsOnboarding) {
+      console.log('🔷 Needs onboarding → /welcome')
+      return '/welcome'
+    }
+
+    const preferred = getPreferredDashboardRoute(profile)
+    if (preferred) {
+      console.log('🔷 Learner preferred route:', preferred)
+      return preferred
+    }
+
+    const membershipStatus = profile.membershipStatus
+
+    const fallback = getDefaultDashboardRouteByMembership(membershipStatus)
+    console.log('🔷 Learner fallback route:', fallback)
+    return fallback
   }
 
-  // Default free
-  return '/app/weekly-glance'
+  if (profile) {
+    const fallback = getPreferredDashboardRoute(profile) || getDefaultDashboardRouteByMembership(profile.membershipStatus)
+    console.warn('🔷 Role missing or null, using fallback route', fallback)
+    return fallback
+  }
+
+  console.log('🔷 Absolute fallback → /app/dashboard/free')
+  return '/app/dashboard/free'
 }

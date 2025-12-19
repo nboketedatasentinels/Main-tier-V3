@@ -1,23 +1,44 @@
-// User Roles
-export enum UserRole {
-  FREE_USER = 'free_user',
-  PAID_MEMBER = 'paid_member',
-  MENTOR = 'mentor',
-  AMBASSADOR = 'ambassador',
-  ADMIN = 'admin',
-  COMPANY_ADMIN = 'company_admin',
-  SUPER_ADMIN = 'super_admin',
+// Import and re-export role types and values
+import { UserRole, ALL_STANDARD_ROLES } from './roles';
+import type { StandardRole, AllRoles } from './roles';
+export * from './admin'
+
+export { UserRole, ALL_STANDARD_ROLES };
+export type { StandardRole, AllRoles };
+
+// Transformation Tier Types
+export enum TransformationTier {
+  INDIVIDUAL_FREE = 'individual_free',
+  INDIVIDUAL_PAID = 'individual_paid',
+  CORPORATE_MEMBER = 'corporate_member',
+  CORPORATE_LEADER = 'corporate_leader',
+}
+
+// Account Status Types
+export enum AccountStatus {
+  ACTIVE = 'active',
+  INACTIVE = 'inactive',
+  PENDING = 'pending',
+  SUSPENDED = 'suspended',
+}
+
+// Dashboard Preferences
+export interface DashboardPreferences {
+  defaultRoute?: string
+  lockedToFreeExperience?: boolean
+  source?: string
+  lastUpdatedAt?: string
 }
 
 // User Profile
 export interface UserProfile {
   id: string
-  email: string
+  email:string
   firstName: string
   lastName: string
   fullName: string
-  gender?: string
-  role: UserRole
+  role: StandardRole
+  membershipStatus?: 'free' | 'paid'
   avatarUrl?: string
   bio?: string
   phoneNumber?: string
@@ -53,10 +74,24 @@ export interface UserProfile {
   mentorId?: string
   ambassadorId?: string
   isActiveAmbassador?: boolean
-  accountStatus?: string
+  
+  // Account Management
+  accountStatus?: AccountStatus | string
   lastInteraction?: string
   registrationDate?: string
   lastActive?: string
+  mustChangePassword?: boolean
+  
+  // Onboarding
+  onboardingComplete?: boolean
+  onboardingSkipped?: boolean
+  hasSeenDashboardTour?: boolean
+  
+  // Role-Based Features
+  transformationTier?: TransformationTier | string
+  assignedOrganizations?: string[]
+  dashboardPreferences?: DashboardPreferences
+  defaultDashboardRoute?: string
   
   // Settings
   /**

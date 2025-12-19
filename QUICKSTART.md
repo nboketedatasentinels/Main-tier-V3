@@ -35,14 +35,32 @@ VITE_FIREBASE_PROJECT_ID=your-project-id
 VITE_FIREBASE_STORAGE_BUCKET=your-project.appspot.com
 VITE_FIREBASE_MESSAGING_SENDER_ID=your-sender-id
 VITE_FIREBASE_APP_ID=your-app-id
+
+# To create one or more super admins on first login, add their emails here.
+# For example: VITE_BOOTSTRIP_ADMIN_EMAILS=admin1@example.com,admin2@example.com
+VITE_BOOTSTRIP_ADMIN_EMAILS=
 ```
 
 ### 4. Set Up Firestore Security Rules
 1. In Firebase console, go to Firestore Database > Rules
-2. Copy the security rules from `database/firestore-schema.md`
-3. Publish the rules
+2. Copy the security rules from `firestore.rules` at the root of the project.
+3. Publish the rules. The new rules fix a critical bug that prevented admins from logging in.
 
-### 5. Start Development Server
+### 5. Creating an Admin Account
+There are two ways to create a Super Admin:
+
+**A) Environment Variable (Recommended for setup)**
+1.  Open your `.env` file.
+2.  Add the email of the user you want to be an admin to the `VITE_BOOTSTRIP_ADMIN_EMAILS` variable.
+3.  When that user signs up or logs in for the first time, they will automatically be granted the Super Admin role.
+
+**B) Manual Promotion (After setup)**
+1.  Have the user sign up for a regular account.
+2.  Go to your Firebase Console > Firestore Database.
+3.  Navigate to the `profiles` collection and find the user's document by their UID.
+4.  Edit the `role` field and set it to `super_admin`.
+
+### 6. Start Development Server
 ```bash
 npm run dev
 ```

@@ -1,21 +1,22 @@
-import React, { useEffect, useState } from 'react'
+import React, { useEffect, useMemo, useState } from 'react'
 import { User } from 'firebase/auth'
 import {
   signInWithEmailAndPassword,
-  createUserWithEmailAndPassword,
   signOut as firebaseSignOut,
   sendPasswordResetEmail,
-  sendSignInLinkToEmail,
   onAuthStateChanged,
 } from 'firebase/auth'
+import { doc, getDoc, setDoc, serverTimestamp, onSnapshot } from 'firebase/firestore'
+
 import {
-  doc,
-  getDoc,
-  setDoc,
-  updateDoc,
-  serverTimestamp,
-} from 'firebase/firestore'
-import { UserProfile, UserRole } from '@/types'
+  UserProfile,
+  AccountStatus,
+  TransformationTier,
+  UserRole,
+} from '@/types'
+import type { StandardRole } from '@/types'
+import { normalizeRole } from '@/utils/role'
+import { isBootstrapAdmin } from '@/utils/bootstrap'
 import { auth, db } from '@/services/firebase'
 import { AuthContext, AuthContextType } from './AuthContextType'
 
@@ -28,18 +29,106 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const [profile, setProfile] = useState<UserProfile | null>(null)
   const [loading, setLoading] = useState(true)
   const [profileLoading, setProfileLoading] = useState(true)
+  const [claimsRole, setClaimsRole] = useState<string | null>(null)
+  const enableProfileRealtime = import.meta.env.VITE_ENABLE_PROFILE_REALTIME === 'true'
 
-  // Fetch user profile from Firestore or create one if it doesn't exist
-  const fetchOrCreateProfile = async (
+  const recordProfileLoad = (loadedProfile: UserProfile | null) => {
+    if (typeof window === 'undefined') return
+    if (!loadedProfile?.id) return
+    const timestamp = new Date().toISOString()
+    localStorage.setItem('lastProfileLoadAt', timestamp)
+    console.log('🟣 [Auth] Recorded profile load timestamp', { id: loadedProfile.id, timestamp })
+  }
+
+  const fetchProfileOnce = async (uid: string): Promise<UserProfile | null> => {
+    try {
+      console.log('🟣 [Auth] fetchProfileOnce:start', { uid })
+      const profileRef = doc(db, 'users', uid)
+      const profileSnap = await getDoc(profileRef)
+      if (!profileSnap.exists()) {
+        console.warn('🟠 [Auth] fetchProfileOnce: no profile found')
+        return null
+      }
+      const rawProfile = { id: uid, ...(profileSnap.data() as UserProfile) } as UserProfile
+      const normalizedRole = normalizeRole(rawProfile.role)
+      if (normalizedRole) {
+        rawProfile.role = normalizedRole as StandardRole
+      }
+      console.log('🟣 [Auth] fetchProfileOnce: resolved profile', {
+        id: rawProfile.id,
+        role: rawProfile.role,
+      })
+      return rawProfile
+    } catch (error) {
+      console.error('🔴 [Auth] fetchProfileOnce error', {
+        uid,
+        message: (error as Error)?.message,
+        stack: (error as Error)?.stack,
+        raw: error,
+      })
+      return null
+    }
+  }
+
+  /* ------------------------------------------------------------------ */
+  /* 🔹 Fetch or Create User Doc                                         */
+  /* ------------------------------------------------------------------ */
+  const fetchOrCreateUserDoc = async (
     firebaseUser: User
   ): Promise<UserProfile | null> => {
     try {
-      const docRef = doc(db, 'profiles', firebaseUser.uid)
-      const docSnap = await getDoc(docRef)
+      console.log('🟣 [Auth] fetchOrCreateProfile:start', {
+        uid: firebaseUser.uid,
+        email: firebaseUser.email,
+      })
 
-      if (docSnap.exists()) {
-        return docSnap.data() as UserProfile
+      const userDocRef = doc(db, 'users', firebaseUser.uid)
+      const userDocSnap = await getDoc(userDocRef)
+
+      console.log('🟣 [Auth] Firestore profile exists?', userDocSnap.exists())
+
+      if (userDocSnap.exists()) {
+        const baseUser = {
+          id: firebaseUser.uid,
+          ...(userDocSnap.data() as UserProfile),
+        } satisfies UserProfile
+
+        console.log('🟣 [Auth] Raw profile loaded', {
+          role: baseUser.role,
+          membershipStatus: baseUser.membershipStatus,
+          transformationTier: baseUser.transformationTier,
+        })
+
+        // Optionally merge learner-facing extras from profiles/{uid}
+        try {
+          const profileExtrasSnap = await getDoc(doc(db, 'profiles', firebaseUser.uid))
+          if (profileExtrasSnap.exists()) {
+            const extras = profileExtrasSnap.data() as Partial<UserProfile>
+            Object.assign(baseUser, { ...extras, ...baseUser, role: baseUser.role, id: firebaseUser.uid })
+            console.log('🟣 [Auth] Merged learner profile extras (user doc remains source of truth)')
+          }
+        } catch (extrasError) {
+          console.warn('🟠 [Auth] Unable to merge learner profile extras', extrasError)
+        }
+
+        const normalized = normalizeRole(baseUser.role)
+        console.log('🟣 [Auth] Normalized role:', normalized)
+
+        if (normalized) {
+          baseUser.role = normalized as StandardRole
+        } else {
+          console.warn('🟠 [Auth] Invalid role detected:', baseUser.role)
+        }
+
+        return baseUser
       }
+
+      /* ---------------- Create profile ---------------- */
+      const role = isBootstrapAdmin(firebaseUser.email)
+        ? UserRole.SUPER_ADMIN
+        : UserRole.USER
+
+      console.log('🟣 [Auth] Creating new profile with role:', role)
 
       const profileData: UserProfile = {
         id: firebaseUser.uid,
@@ -47,168 +136,264 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         firstName: firebaseUser.displayName?.split(' ')?.[0] ?? 'User',
         lastName: firebaseUser.displayName?.split(' ')?.slice(1).join(' ') ?? '',
         fullName: firebaseUser.displayName ?? 'User',
-        role: UserRole.FREE_USER,
+        role,
+        membershipStatus: 'free',
         totalPoints: 0,
         level: 1,
         referralCount: 0,
         referralCode: null,
         referredBy: null,
         isOnboarded: true,
+        accountStatus: AccountStatus.ACTIVE,
+        transformationTier: TransformationTier.INDIVIDUAL_FREE,
+        assignedOrganizations: [],
+        onboardingComplete: false,
+        onboardingSkipped: false,
+        mustChangePassword: false,
+        hasSeenDashboardTour: false,
+        dashboardPreferences: {
+          defaultRoute: '/app/weekly-glance',
+          lockedToFreeExperience: normalizeRole(role) === 'user',
+        },
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
       }
 
-      await setDoc(docRef, {
+      await setDoc(userDocRef, {
         ...profileData,
         createdAt: serverTimestamp(),
         updatedAt: serverTimestamp(),
       })
 
+      console.log('🟣 [Auth] Profile created successfully')
+
       return profileData
-    } catch (error) {
-      console.error('Error fetching/creating profile:', error)
+    } catch (error: unknown) {
+      console.error('🔴 [Auth] fetchOrCreateProfile error', {
+        uid: firebaseUser.uid,
+        email: firebaseUser.email,
+        message: (error as Error)?.message,
+        stack: (error as Error)?.stack,
+        raw: error,
+      })
       return null
     }
   }
 
-  // Initialize auth state
-  useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, async (user) => {
-      setLoading(true)
-      setUser(user)
+  /* ------------------------------------------------------------------ */
+  /* 🔹 Custom Claims                                                    */
+  /* ------------------------------------------------------------------ */
+  const extractCustomClaims = async (u: User) => {
+    try {
+      const token = await u.getIdTokenResult()
+      const role = token.claims.role as string | undefined
+      console.log('🟡 [Auth] Token claims role:', role)
+      setClaimsRole(role ?? null)
+      return role ?? null
+    } catch (err) {
+      console.error('🔴 [Auth] extractCustomClaims failed', err)
+      return null
+    }
+  }
 
-      if (!user) {
+  const refreshAdminSession = async () => {
+    if (!user) return
+    console.log('🟡 [Auth] Forcing token refresh...')
+    await user.getIdToken(true)
+    await extractCustomClaims(user)
+  }
+
+  /* ------------------------------------------------------------------ */
+  /* 🔹 Auth State Listener                                              */
+  /* ------------------------------------------------------------------ */
+  useEffect(() => {
+    console.log('🟠 [Auth] Setting up onAuthStateChanged')
+
+    let unsubscribeProfile: (() => void) | null = null
+    let isActive = true
+
+    const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
+      console.log('🟠 [Auth] Auth state changed', currentUser?.email)
+
+      if (unsubscribeProfile) {
+        unsubscribeProfile()
+        unsubscribeProfile = null
+      }
+
+      setLoading(true)
+      setUser(currentUser)
+
+      if (!currentUser) {
+        console.log('🟠 [Auth] No user → clearing state')
         setProfile(null)
-        setProfileLoading(false)
+        setClaimsRole(null)
         setLoading(false)
+        setProfileLoading(false)
         return
       }
 
       setProfileLoading(true)
 
-      const userProfile = await fetchOrCreateProfile(user)
-      setProfile(userProfile)
-      setProfileLoading(false)
-      setLoading(false)
+      await extractCustomClaims(currentUser)
+
+      let userProfile = await fetchOrCreateUserDoc(currentUser)
+
+      if (!userProfile) {
+        console.warn('🟠 [Auth] Profile null on first attempt, retrying with direct fetch')
+        userProfile = await fetchProfileOnce(currentUser.uid)
+      }
+
+      if (!userProfile?.role) {
+        console.warn('🟠 [Auth] Profile loaded without role, applying fallback role:user')
+        userProfile = userProfile
+          ? { ...userProfile, role: (normalizeRole(userProfile.role) as StandardRole) || UserRole.USER }
+          : null
+      }
+
+      if (isActive) {
+        console.log('🟢 [Auth] Profile resolved', {
+          role: userProfile?.role,
+          normalized: normalizeRole(userProfile?.role),
+        })
+
+        setProfile(userProfile)
+        recordProfileLoad(userProfile)
+        setProfileLoading(false)
+        setLoading(false)
+      }
+
+      if (!userProfile || !isActive) return
+
+      if (!enableProfileRealtime) {
+        console.log('🟠 [Auth] Realtime profile updates disabled')
+        return
+      }
+
+      /* -------- realtime updates (optional) -------- */
+      const profileRef = doc(db, 'users', currentUser.uid)
+      unsubscribeProfile = onSnapshot(
+        profileRef,
+        (snap) => {
+          if (!snap.exists()) return
+          const updated = snap.data() as UserProfile
+          updated.role = normalizeRole(updated.role) as StandardRole
+          console.log('🔁 [Auth] Profile updated via snapshot', updated.role)
+          setProfile(updated)
+          recordProfileLoad(updated)
+        },
+        (error) => {
+          console.error('🔴 [Auth] Realtime profile listener error', error)
+        }
+      )
+
+      return unsubscribeProfile
     })
 
-    return () => unsubscribe()
-  }, [])
+    return () => {
+      isActive = false
+      if (unsubscribeProfile) {
+        unsubscribeProfile()
+      }
+      unsubscribe()
+    }
+  }, [enableProfileRealtime])
 
-  // Sign in with email and password
+  /* ------------------------------------------------------------------ */
+  /* 🔹 Auth Actions                                                     */
+  /* ------------------------------------------------------------------ */
   const signIn = async (email: string, password: string) => {
+    console.log('🟡 [Auth] signIn:start', email)
+    setLoading(true)
+    setProfileLoading(true)
+
     try {
       await signInWithEmailAndPassword(auth, email, password)
+      console.log('🟢 [Auth] signIn success')
       return { error: null }
     } catch (error) {
+      console.error('🔴 [Auth] signIn failed', error)
+      setLoading(false)
+      setProfileLoading(false)
       return { error: error as Error }
     }
   }
 
-  // Sign up
-  const signUp = async (email: string, password: string, userData: Partial<UserProfile>) => {
-    try {
-      const userCredential = await createUserWithEmailAndPassword(auth, email, password)
-      const user = userCredential.user
-
-      // Create profile in Firestore
-      const profileData: UserProfile = {
-        id: user.uid,
-        email,
-        firstName: userData.firstName || 'User',
-        lastName: userData.lastName || '',
-        fullName: userData.fullName || 'User',
-        gender: userData.gender,
-        role: UserRole.FREE_USER,
-        totalPoints: 0,
-        level: 1,
-        referralCount: 0,
-        referralCode: null,
-        referredBy: null,
-        isOnboarded: true,
-        companyCode: userData.companyCode,
-        companyId: userData.companyId,
-        companyName: userData.companyName,
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString(),
-      }
-
-      await setDoc(doc(db, 'profiles', user.uid), profileData)
-
-      return { error: null, userId: user.uid }
-    } catch (error) {
-      return { error: error as Error }
-    }
-  }
-
-  // Sign out
-  const signOut = async () => {
-    try {
-      await firebaseSignOut(auth)
-      setUser(null)
-      setProfile(null)
-    } catch (error) {
-      console.error('Error signing out:', error)
-    }
-  }
-
-  // Magic link sign in (email link)
   const signInWithMagicLink = async (email: string) => {
+    console.log('🟡 [Auth] signInWithMagicLink requested', email)
+    return { error: new Error('Magic link sign-in is currently disabled') }
+  }
+
+  const signUp = async (
+    email: string,
+    _password: string,
+    _userData: Partial<UserProfile>
+  ) => {
+    console.warn('🟠 [Auth] signUp attempted but not implemented in this context', { email })
+    return { error: new Error('Sign up is not available'), userId: undefined }
+  }
+
+  const signOut = async () => {
+    console.log('🟡 [Auth] signOut')
+    await firebaseSignOut(auth)
+    setUser(null)
+    setProfile(null)
+    setClaimsRole(null)
+  }
+
+  const resetPassword = async (email: string) =>
+    sendPasswordResetEmail(auth, email)
+
+  const updateProfile = async (_updates: Partial<UserProfile>) => {
+    console.warn('🟠 [Auth] updateProfile stub invoked')
+    return { error: null }
+  }
+
+  const refreshProfile = async () => {
+    const currentUser = auth.currentUser
+    console.log('🟡 [Auth] Manual profile refresh requested', { uid: currentUser?.uid })
+
+    if (!currentUser) {
+      const error = new Error('No authenticated user to refresh')
+      console.error('🔴 [Auth] refreshProfile failed', error)
+      return { error, profile: null as UserProfile | null }
+    }
+
     try {
-      const actionCodeSettings = {
-        url: `${window.location.origin}/auth/callback`,
-        handleCodeInApp: true,
+      setProfileLoading(true)
+      const refreshed = (await fetchProfileOnce(currentUser.uid)) ?? (await fetchOrCreateUserDoc(currentUser))
+      if (refreshed) {
+        setProfile(refreshed)
+        recordProfileLoad(refreshed)
       }
-
-      await sendSignInLinkToEmail(auth, email, actionCodeSettings)
-      // Store email for verification
-      window.localStorage.setItem('emailForSignIn', email)
-      return { error: null }
+      setProfileLoading(false)
+      return { error: null, profile: refreshed }
     } catch (error) {
-      return { error: error as Error }
+      console.error('🔴 [Auth] refreshProfile error', error)
+      setProfileLoading(false)
+      return { error: error as Error, profile: null as UserProfile | null }
     }
   }
 
-  // Reset password
-  const resetPassword = async (email: string) => {
-    try {
-      await sendPasswordResetEmail(auth, email)
-      return { error: null }
-    } catch (error) {
-      return { error: error as Error }
-    }
-  }
+  /* ------------------------------------------------------------------ */
+  /* 🔹 Role Flags (LOGGED)                                              */
+  /* ------------------------------------------------------------------ */
+  const normalizedRole = useMemo(() => {
+    const r = normalizeRole(profile?.role)
+    console.log('🔵 [Auth] normalizedRole computed:', r)
+    return r
+  }, [profile?.role])
 
-  // Update profile
-  const updateProfile = async (updates: Partial<UserProfile>) => {
-    if (!user) return { error: new Error('No user logged in') }
+  const isAdmin = normalizedRole === 'partner' || normalizedRole === 'super_admin'
+  const isSuperAdmin = normalizedRole === 'super_admin'
+  const isMentor = normalizedRole === 'mentor'
+  const isAmbassador = normalizedRole === 'ambassador'
+  const isPaid =
+    ['partner', 'mentor', 'ambassador', 'team_leader', 'super_admin'].includes(
+      normalizedRole ?? ''
+    ) ||
+    (normalizedRole === 'user' && profile?.membershipStatus === 'paid')
 
-    try {
-      const profileRef = doc(db, 'profiles', user.uid)
-      await updateDoc(profileRef, {
-        ...updates,
-        updatedAt: serverTimestamp(),
-      })
-
-      if (profile) {
-        setProfile({ ...profile, ...updates })
-      }
-
-      return { error: null }
-    } catch (error) {
-      return { error: error as Error }
-    }
-  }
-
-  // Role checking utilities
-  const hasRole = (role: UserRole): boolean => {
-    return profile?.role === role
-  }
-
-  const hasAnyRole = (roles: UserRole[]): boolean => {
-    return profile ? roles.includes(profile.role) : false
-  }
-
+  /* ------------------------------------------------------------------ */
   const value: AuthContextType = {
     user,
     profile,
@@ -220,8 +405,24 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     signInWithMagicLink,
     resetPassword,
     updateProfile,
-    hasRole,
-    hasAnyRole,
+    hasRole: (r: StandardRole) => normalizedRole === r,
+    hasAnyRole: (roles: StandardRole[]) => (normalizedRole ? roles.includes(normalizedRole as StandardRole) : false),
+    isAdmin,
+    isSuperAdmin,
+    isMentor,
+    isAmbassador,
+    isPaid,
+    isCorporateMember:
+      profile?.transformationTier?.toLowerCase().includes('corporate') ?? false,
+    assignedOrganizations: profile?.assignedOrganizations ?? [],
+    hasFullOrganizationAccess: normalizedRole === 'super_admin',
+    canAccessOrganization: (code: string) =>
+      normalizedRole === 'super_admin' ||
+      profile?.assignedOrganizations?.includes(code) === true,
+    updateDashboardPreferences: async () => ({ error: null }),
+    claimsRole,
+    refreshAdminSession,
+    refreshProfile,
   }
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>

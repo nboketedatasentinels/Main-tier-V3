@@ -1,26 +1,33 @@
 import React from 'react'
-import { Box, Text } from '@chakra-ui/react'
 import { useAuth } from '@/hooks/useAuth'
-import { UserRole } from '@/types'
-import { SuperAdminDashboard } from './SuperAdminDashboard'
 import { CompanyAdminDashboard } from './CompanyAdminDashboard'
+import { PartnerAdminDashboard } from './PartnerAdminDashboard'
 
+/**
+ * AdminDashboard component
+ * Renders appropriate dashboard based on admin role
+ * Route guards ensure only admins can access this component
+ */
 export const AdminDashboard: React.FC = () => {
-  const { profile } = useAuth()
+  const { profile, claimsRole } = useAuth()
+  const normalizedRole = (claimsRole || profile?.role || '')
+    .toString()
+    .toLowerCase()
+    .replace(/[-\s]+/g, '_')
 
-  if (profile?.role === UserRole.SUPER_ADMIN) {
-    return <SuperAdminDashboard />
+  const isCompanyAdmin = normalizedRole.includes('company_admin') || normalizedRole.includes('company')
+  const isPartner = normalizedRole.includes('partner')
+
+  if (isPartner && !isCompanyAdmin) {
+    return <PartnerAdminDashboard />
   }
 
-  if (profile?.role === UserRole.COMPANY_ADMIN) {
+  if (isCompanyAdmin) {
     return <CompanyAdminDashboard />
   }
 
-  return (
-    <Box>
-      <Text color="brand.text">No admin dashboard available for your role.</Text>
-    </Box>
-  )
+  // default to partner view for broader admin roles
+  return <PartnerAdminDashboard />
 }
 
 export default AdminDashboard
