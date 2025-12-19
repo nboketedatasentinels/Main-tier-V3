@@ -113,7 +113,7 @@
   }
 
   a:hover {
-    @apply text-brand-dark;
+    color: theme('colors.brand.dark');
   }
 
   /* Focus State System */
