@@ -34,11 +34,16 @@ import {
   useToast,
 } from '@chakra-ui/react'
 import { AlertTriangle, CheckCircle, ChevronLeft, ChevronRight, Lock, Plus } from 'lucide-react'
-import { addDoc, collection, doc, getDoc, getDocs, query, serverTimestamp, setDoc, where } from 'firebase/firestore'
+import { collection, doc, getDoc, getDocs, query, serverTimestamp, setDoc, where, onSnapshot, addDoc } from 'firebase/firestore'
 import { removeUndefinedFields } from '@/utils/firestore'
+import { getIsoWeekNumber } from '@/utils/date'
 import { db } from '@/services/firebase'
 import { useAuth } from '@/hooks/useAuth'
-import { UserRole, UserProfile } from '@/types'
+import { UserRole, UserProfile, WeeklyProgress } from '@/types'
+import { JOURNEY_META, getMonthNumber, getActivitiesForJourney, JourneyType, ActivityDef } from '@/config/pointsConfig'
+import { awardChecklistPoints, revokeChecklistPoints } from '@/services/pointsService'
+
+const DEFAULT_WEEKLY_TARGET = JOURNEY_META['6W'].weeklyTarget
 
 interface ActivityTemplate {
   id: string
@@ -62,28 +67,15 @@ interface ActivityState extends ActivityTemplate {
 }
 
 interface JourneyConfig {
-  journeyType: string
-  currentWeek: number
-  programDuration?: number
-  isPaid?: boolean
+  journeyType: JourneyType;
+  currentWeek: number;
+  programDurationWeeks: number;
+  isPaid?: boolean;
 }
 
 interface ProofModalState {
-  isOpen: boolean
-  activity?: ActivityState
-}
-
-interface ChecklistResponses {
-  [activityId: string]: {
-    proofUrl?: string
-    notes?: string
-  }
-}
-
-interface WeeklyChecklistRecord {
-  completed_activities?: string[]
-  pending_activities?: string[]
-  responses?: ChecklistResponses
+  isOpen: boolean;
+  activity?: ActivityState;
 }
 
 const rhythmItems = [
@@ -150,7 +142,7 @@ const defaultTemplates: ActivityTemplate[] = [
     id: 'peer-to-peer',
     baseId: 'peer_to_peer',
     title: 'Peer-to-peer connection',
-    description: 'Complete a peer matching session and note outcomes.',
+    description: 'Join a partner-led peer-to-peer group activity and document the outcomes.',
     points: 80,
     week: 2,
     category: 'Networking',
@@ -176,16 +168,6 @@ const defaultTemplates: ActivityTemplate[] = [
     requiresApproval: true,
   },
 ]
-
-const getWeekKey = (week: number) => `week${week}`
-
-const getIsoWeekNumber = (date: Date) => {
-  const tmp = new Date(Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()))
-  const dayNum = tmp.getUTCDay() || 7
-  tmp.setUTCDate(tmp.getUTCDate() + 4 - dayNum)
-  const yearStart = new Date(Date.UTC(tmp.getUTCFullYear(), 0, 1))
-  return Math.ceil(((tmp.getTime() - yearStart.getTime()) / 86400000 + 1) / 7)
-}
 
 const useRhythmState = () => {
   const today = new Date()
@@ -237,99 +219,110 @@ const WeeklyChecklistPage: React.FC = () => {
   const { isOpen, onOpen, onClose } = useDisclosure()
   const toast = useToast()
   const activityRefs = useRef<Record<string, HTMLDivElement | null>>({})
+  const [weeklyProgress, setWeeklyProgress] = useState<WeeklyProgress | null>(null)
   const { completed: rhythmCompleted, toggleItem, totalPoints: rhythmPoints, calendarWeek } = useRhythmState()
 
-  const normalizedJourneyType = useMemo(() => {
-    const rawType = journey?.journeyType?.toLowerCase() || ''
-    if (['sixweeksprint', 'six_week_sprint', 'sprint', 'sixweeks'].includes(rawType)) return 'sixWeekSprint'
-    if (['fourweekintro', '4_week_intro', 'intro_4_week', 'fourweek'].includes(rawType)) return 'fourWeekIntro'
-    return rawType
-  }, [journey?.journeyType])
-
-  const isShortJourney = normalizedJourneyType === 'sixWeekSprint' || normalizedJourneyType === 'fourWeekIntro'
-  const totalWeeks = normalizedJourneyType === 'fourWeekIntro' ? 4 : normalizedJourneyType === 'sixWeekSprint' ? 6 : 12
-
-  const weeklyTarget = useMemo(() => {
-    if (normalizedJourneyType === 'sixWeekSprint') return 350
-    if (normalizedJourneyType === 'fourWeekIntro') return 250
-    return 400
-  }, [normalizedJourneyType])
-
-  const fetchJourney = useCallback(async () => {
+  const persistChecklist = async (updatedActivities: ActivityState[]) => {
     if (!user) return
-    try {
-      const profileRef = doc(db, 'profiles', user.uid)
-      const profileSnap = await getDoc(profileRef)
-      if (profileSnap.exists()) {
-        const data = profileSnap.data() as Partial<JourneyConfig> & { journey_type?: string; current_week?: number; program_duration?: number; isPaid?: boolean }
-        const profileWithPayment = profile as (UserProfile & { isPaid?: boolean }) | null
-        const journeyConfig: JourneyConfig = {
-          journeyType: data.journeyType || data.journey_type || 'sixWeekSprint',
-          currentWeek: data.currentWeek || data.current_week || 1,
-          programDuration: data.programDuration || data.program_duration || totalWeeks,
-          isPaid: profileWithPayment?.isPaid ?? data.isPaid ?? profile?.role !== UserRole.FREE_USER,
-        }
-        setJourney(journeyConfig)
-        setSelectedWeek(journeyConfig.currentWeek || 1)
-      }
-    } catch (err) {
-      console.error(err)
-      setError('Unable to load your journey settings from Firebase.')
-    }
-  }, [profile, totalWeeks, user])
-
-  const buildActivitiesFromTemplates = (
-    templates: ActivityTemplate[],
-    checklist: WeeklyChecklistRecord,
-  ) => {
-    return templates.map(template => {
-      let status: ActivityStatus = 'not_started'
-      if (checklist.completed_activities?.includes(template.id)) status = 'completed'
-      if (checklist.pending_activities?.includes(template.id)) status = 'pending'
-
-      const response = checklist.responses?.[template.id]
-      return {
-        ...template,
+    const checklistState = {
+      activities: updatedActivities.map(({ id, status, proofUrl, notes }) => ({
+        id,
         status,
-        proofUrl: response?.proofUrl,
-        notes: response?.notes,
-      }
-    })
+        proofUrl,
+        notes,
+      })),
+      updatedAt: serverTimestamp(),
+    }
+    try {
+      await setDoc(doc(db, 'checklists', `${user.uid}_${selectedWeek}`), checklistState, { merge: true })
+    } catch (error) {
+      console.error('Failed to persist checklist state:', error)
+      toast({
+        title: 'Sync Error',
+        description: 'Could not save your checklist progress to the server.',
+        status: 'error',
+      })
+    }
   }
 
-  const fetchWeeklyData = useCallback(async () => {
-    if (!journey || !user) return
-    setActivityLoading(true)
-    setError('')
+  const normalizedJourneyType = useMemo(() => {
+    return journey?.journeyType || '4W';
+  }, [journey?.journeyType]);
+
+  const totalWeeks = useMemo(() => {
+    if (!journey) return 4;
+    return JOURNEY_META[journey.journeyType].weeks;
+  }, [journey]);
+
+  const weeklyTarget = useMemo(() => {
+    if (!journey) return DEFAULT_WEEKLY_TARGET;
+    return JOURNEY_META[journey.journeyType].weeklyTarget;
+  }, [journey]);
+
+  const fetchJourney = useCallback(async () => {
+    if (!user || !profile) return;
     try {
-      const templateQuery = query(
-        collection(db, 'weekly_activity_templates'),
-        where('week', '==', selectedWeek),
-      )
-      const templateSnapshot = await getDocs(templateQuery)
-      const templates: ActivityTemplate[] = templateSnapshot.empty
-        ? defaultTemplates.filter(t => t.week === selectedWeek)
-        : templateSnapshot.docs.map(docSnap => ({
-            ...(docSnap.data() as ActivityTemplate),
-            id: docSnap.id,
-          }))
+      // Free users are automatically assigned to the 4W journey.
+      const journeyType = profile.role === UserRole.FREE_USER ? "4W" : profile.journeyType || "6W";
+      const meta = JOURNEY_META[journeyType];
 
-      const checklistRef = doc(collection(db, 'weekly_checklist'), `${user.uid}-${getWeekKey(selectedWeek)}`)
-      const checklistSnap = await getDoc(checklistRef)
-      const checklistData: WeeklyChecklistRecord = checklistSnap.exists()
-        ? (checklistSnap.data() as WeeklyChecklistRecord)
-        : { completed_activities: [], pending_activities: [], responses: {} }
+      const journeyConfig: JourneyConfig = {
+        journeyType,
+        currentWeek: profile.currentWeek || 1,
+        programDurationWeeks: meta.weeks,
+        isPaid: profile.role !== UserRole.FREE_USER,
+      };
 
-      const filtered = templates.filter(template => (journey.isPaid ? true : template.isFreeTier))
-      setActivities(buildActivitiesFromTemplates(filtered, checklistData))
+      setJourney(journeyConfig);
+      setSelectedWeek(journeyConfig.currentWeek);
     } catch (err) {
-      console.error(err)
-      setError('We could not load weekly activities from Firebase. Try refreshing.')
-      setActivities(defaultTemplates.filter(t => t.week === selectedWeek).map(template => ({ ...template, status: 'not_started' })))
-    } finally {
-      setActivityLoading(false)
+      console.error(err);
+      setError('Unable to load your journey settings.');
     }
-  }, [journey, selectedWeek, user])
+  }, [user, profile]);
+
+  const fetchWeeklyData = useCallback(async () => {
+    if (!journey || !user) return;
+    setActivityLoading(true);
+    setError('');
+    try {
+      const activityDefs = getActivitiesForJourney(journey.journeyType);
+
+      const ledgerQuery = query(
+        collection(db, 'pointsLedger'),
+        where('uid', '==', user.uid),
+        where('weekNumber', '==', selectedWeek)
+      );
+
+      const ledgerSnapshot = await getDocs(ledgerQuery);
+      const completedActivities = new Set(ledgerSnapshot.docs.map(d => d.data().activityId));
+
+      const activityStates: ActivityState[] = activityDefs.map(def => ({
+        ...def,
+        status: completedActivities.has(def.id) ? 'completed' : 'not_started',
+      }));
+
+      setActivities(activityStates);
+    } catch (err) {
+      console.error(err);
+      setError('We could not load weekly activities. Try refreshing.');
+    } finally {
+      setActivityLoading(false);
+    }
+  }, [journey, selectedWeek, user]);
+
+  useEffect(() => {
+    if (!user) return;
+    const progressRef = doc(db, "weeklyProgress", `${user.uid}__${selectedWeek}`);
+    const unsubscribe = onSnapshot(progressRef, (doc) => {
+      if (doc.exists()) {
+        setWeeklyProgress(doc.data() as WeeklyProgress);
+      } else {
+        setWeeklyProgress(null);
+      }
+    });
+    return () => unsubscribe();
+  }, [user, selectedWeek]);
 
   const calculateProgress = useCallback(() => {
     const completedActivities = activities.filter(a => a.status === 'completed')
@@ -353,39 +346,39 @@ const WeeklyChecklistPage: React.FC = () => {
     setProgressLoading(false)
   }, [activities, calculateProgress])
 
-  const persistChecklist = async (updatedActivities: ActivityState[]) => {
-    if (!user) return
-    const weekKey = getWeekKey(selectedWeek)
-    const completed = updatedActivities.filter(a => a.status === 'completed').map(a => a.id)
-    const pending = updatedActivities.filter(a => a.status === 'pending').map(a => a.id)
-    const responses = updatedActivities.reduce<Record<string, { proofUrl?: string; notes?: string }>>((acc, activity) => {
-      if (activity.proofUrl || activity.notes) acc[activity.id] = { proofUrl: activity.proofUrl, notes: activity.notes }
-      return acc
-    }, {})
+  const handleActivityUpdate = async (activity: ActivityState, nextStatus: ActivityStatus) => {
+    if (!user || !journey) return;
 
-    const payload = {
-      user_id: user.uid,
-      week_key: weekKey,
-      week: selectedWeek,
-      completed_activities: completed,
-      pending_activities: pending,
-      responses,
-      updated_at: serverTimestamp(),
+    try {
+      if (nextStatus === 'completed') {
+        await awardChecklistPoints({
+          uid: user.uid,
+          journeyType: journey.journeyType,
+          weekNumber: selectedWeek,
+          activity,
+        });
+      } else if (nextStatus === 'not_started') {
+        await revokeChecklistPoints({
+          uid: user.uid,
+          journeyType: journey.journeyType,
+          weekNumber: selectedWeek,
+          activity,
+        });
+      }
+
+      // UI optimistically updates
+      setActivities(prev =>
+        prev.map(act => (act.id === activity.id ? { ...act, status: nextStatus } : act))
+      );
+    } catch (error) {
+      console.error("Failed to update activity:", error);
+      toast({
+        title: 'Update Failed',
+        description: 'Could not update your activity. Please try again.',
+        status: 'error',
+      });
     }
-
-    await setDoc(doc(collection(db, 'weekly_checklist'), `${user.uid}-${weekKey}`), payload, { merge: true })
-  }
-
-  const handleActivityUpdate = async (activityId: string, nextStatus: ActivityStatus) => {
-    setActivities(prev => {
-      const updated = prev.map(activity =>
-        activity.id === activityId ? { ...activity, status: nextStatus, proofUrl: nextStatus === 'not_started' ? undefined : activity.proofUrl, notes: activity.notes } : activity,
-      )
-      persistChecklist(updated)
-      return updated
-    })
-    calculateProgress()
-  }
+  };
 
   const openProofModal = (activity: ActivityState) => {
     setProofModal({ isOpen: true, activity })
@@ -453,17 +446,19 @@ const WeeklyChecklistPage: React.FC = () => {
   }
 
   const isWeekLocked = useMemo(() => {
-    if (!journey) return false
-    if (!isShortJourney) return selectedWeek < (journey.currentWeek || 1)
-    return selectedWeek < (journey.currentWeek || 1)
-  }, [isShortJourney, journey, selectedWeek])
+    if (!journey) return false;
+    return selectedWeek < journey.currentWeek;
+  }, [journey, selectedWeek]);
 
   const progressStatus = useMemo(() => {
-    const pct = Math.min(100, Math.round((pendingCounts.points / weeklyTarget) * 100))
-    if (pct >= 100) return { color: 'green', label: 'On Track', pct }
-    if (pct >= 75) return { color: 'yellow', label: 'Warning', pct }
-    return { color: 'red', label: 'Critical', pct }
-  }, [pendingCounts.points, weeklyTarget])
+    if (!weeklyProgress) return { color: 'gray', label: 'Loading...', pct: 0 };
+    const { pointsEarned, weeklyTarget } = weeklyProgress;
+    const pct = weeklyTarget > 0 ? Math.min(100, Math.round((pointsEarned / weeklyTarget) * 100)) : 0;
+
+    if (pct >= 100) return { color: 'green', label: 'On Track', pct };
+    if (pct >= 75) return { color: 'yellow', label: 'Warning', pct };
+    return { color: 'red', label: 'Alert', pct };
+  }, [weeklyProgress]);
 
   const firstIncompleteActivity = useMemo(() => activities.find(activity => activity.status !== 'completed'), [activities])
 
@@ -476,108 +471,100 @@ const WeeklyChecklistPage: React.FC = () => {
   }
 
   const renderWeekSelector = () => {
-    if (!isShortJourney) {
-      const months = journey?.programDuration || 3
-      const monthIndex = Math.ceil(selectedWeek / 4)
-      const weeksInMonth = [1, 2, 3, 4].map(offset => (monthIndex - 1) * 4 + offset)
-      const isMonthLocked = selectedWeek < (journey?.currentWeek || 1)
+    if (!journey) return null;
 
+    const { journeyType, currentWeek } = journey;
+    const meta = JOURNEY_META[journeyType];
+    const totalWeeks = meta.weeks;
+
+    if (journeyType === '4W' || journeyType === '6W') {
+      const weeks = Array.from({ length: totalWeeks }, (_, idx) => idx + 1);
       return (
-        <Stack spacing={3} bg="gray.900" p={4} borderRadius="lg">
-          <Flex align="center" justify="space-between">
-            <Button
-              size="sm"
-              leftIcon={<Icon as={ChevronLeft} />}
-              isDisabled={monthIndex <= 1}
-              onClick={() => setSelectedWeek(Math.max(1, selectedWeek - 4))}
-            >
-              Previous Month
-            </Button>
-            <Stack spacing={0} textAlign="center">
-              <Text color="white" fontWeight="bold">
-                Month {monthIndex} of {months}
-              </Text>
-              <Text color="gray.300" fontSize="sm">
-                Unlock the next month by completing all activities.
-              </Text>
-            </Stack>
-            <Button
-              size="sm"
-              rightIcon={<Icon as={ChevronRight} />}
-              isDisabled={monthIndex >= months}
-              onClick={() => setSelectedWeek(Math.min(totalWeeks, selectedWeek + 4))}
-            >
-              Next Month
-            </Button>
-          </Flex>
-          <HStack spacing={2} justify="center" wrap="wrap">
-            {weeksInMonth.map(weekNumber => (
-              <Tooltip key={weekNumber} label={weekNumber > (journey?.currentWeek || 1) ? 'Locked until you finish this month' : 'Open week'}>
+        <HStack spacing={2} wrap="wrap">
+          {weeks.map(week => {
+            const isLocked = week > currentWeek;
+            const isCompleted = week < currentWeek;
+            return (
+              <Tooltip
+                key={week}
+                label={isLocked ? 'Locked until you reach this week' : isCompleted ? 'Completed week' : 'Current week'}
+              >
                 <Button
-                  variant={selectedWeek === weekNumber ? 'solid' : 'outline'}
-                  colorScheme={selectedWeek === weekNumber ? 'teal' : 'gray'}
                   size="sm"
-            leftIcon={
-              weekNumber < (journey?.currentWeek || 1) ? <Icon as={CheckCircle} /> : undefined
-            }
-                  rightIcon={weekNumber > (journey?.currentWeek || 1) ? <Icon as={Lock} /> : undefined}
-                  isDisabled={weekNumber > (journey?.currentWeek || 1) + 3}
-                  onClick={() => setSelectedWeek(weekNumber)}
+                  variant={selectedWeek === week ? 'solid' : 'outline'}
+                  colorScheme={selectedWeek === week ? 'teal' : 'gray'}
+                  leftIcon={isCompleted ? <Icon as={CheckCircle} /> : undefined}
+                  rightIcon={isLocked ? <Icon as={Lock} /> : undefined}
+                  onClick={() => setSelectedWeek(week)}
+                  isDisabled={isLocked}
                 >
-                  Week {weekNumber}
+                  Week {week}
                 </Button>
               </Tooltip>
-            ))}
-          </HStack>
-          {isMonthLocked && (
-            <Alert status="warning" variant="left-accent" borderRadius="md">
-              <AlertIcon />
-              <AlertTitle>Previous month locked</AlertTitle>
-              <AlertDescription color="gray.200">
-                Great job advancing! You can review past weeks but cannot change submissions.
-              </AlertDescription>
-            </Alert>
-          )}
-        </Stack>
-      )
+            );
+          })}
+        </HStack>
+      );
     }
 
-    const weeks = Array.from({ length: totalWeeks }, (_, idx) => idx + 1)
+    const totalMonths = totalWeeks / 4;
+    const currentMonth = getMonthNumber(selectedWeek);
+    const weeksInMonth = Array.from({ length: 4 }, (_, i) => (currentMonth - 1) * 4 + i + 1);
+
     return (
-      <HStack spacing={2} wrap="wrap">
-        {weeks.map(week => {
-          const isLocked = week > (journey?.currentWeek || 1)
-          const isCompleted = week < (journey?.currentWeek || 1)
-          return (
-            <Tooltip
-              key={week}
-              label={isLocked ? 'Locked until you reach this week' : isCompleted ? 'Completed week' : 'Current week'}
-            >
+      <Stack spacing={3} bg="gray.900" p={4} borderRadius="lg">
+        <Flex align="center" justify="space-between">
+          <Button
+            size="sm"
+            leftIcon={<Icon as={ChevronLeft} />}
+            isDisabled={currentMonth <= 1}
+            onClick={() => setSelectedWeek(Math.max(1, selectedWeek - 4))}
+          >
+            Previous Month
+          </Button>
+          <Text color="white" fontWeight="bold">
+            Month {currentMonth} of {totalMonths}
+          </Text>
+          <Button
+            size="sm"
+            rightIcon={<Icon as={ChevronRight} />}
+            isDisabled={currentMonth >= totalMonths}
+            onClick={() => setSelectedWeek(Math.min(totalWeeks, selectedWeek + 4))}
+          >
+            Next Month
+          </Button>
+        </Flex>
+        <HStack spacing={2} justify="center" wrap="wrap">
+          {weeksInMonth.map(weekNumber => {
+             const isLocked = weekNumber > currentWeek;
+             const isCompleted = weekNumber < currentWeek;
+            return (
+            <Tooltip key={weekNumber} label={isLocked ? 'Locked' : isCompleted ? 'Completed' : 'Current week'}>
               <Button
+                variant={selectedWeek === weekNumber ? 'solid' : 'outline'}
+                colorScheme={selectedWeek === weekNumber ? 'teal' : 'gray'}
                 size="sm"
-                variant={selectedWeek === week ? 'solid' : 'outline'}
-                colorScheme={selectedWeek === week ? 'teal' : 'gray'}
                 leftIcon={isCompleted ? <Icon as={CheckCircle} /> : undefined}
                 rightIcon={isLocked ? <Icon as={Lock} /> : undefined}
-                onClick={() => setSelectedWeek(week)}
                 isDisabled={isLocked}
+                onClick={() => setSelectedWeek(weekNumber)}
               >
-                Week {week}
+                {`Month ${getMonthNumber(weekNumber)} · Week ${weekNumber}`}
               </Button>
             </Tooltip>
-          )
-        })}
-      </HStack>
-    )
-  }
+          )})}
+        </HStack>
+      </Stack>
+    );
+  };
 
   const renderActivityCard = (activity: ActivityState) => {
     const disabled = isWeekLocked
-    const requiresProof = journey?.isPaid && activity.requiresApproval
+    const requiresPartnerApproval = journey?.isPaid && activity.requiresApproval
     const yesDisabled = disabled || activity.status === 'completed'
     const noDisabled = disabled || activity.status === 'not_started'
 
-    const showProofBadge = requiresProof
+    const showProofBadge = requiresPartnerApproval
     const showFreeBadge = activity.isFreeTier && !journey?.isPaid
 
     return (
@@ -598,8 +585,8 @@ const WeeklyChecklistPage: React.FC = () => {
                 {statusLabelMap[activity.status]}
               </Badge>
               {showProofBadge && (
-                <Tooltip label="Proof required for paid tier activities">
-                  <Badge colorScheme="purple">Requires proof</Badge>
+                <Tooltip label="Partner approval required. Upload proof so the partner team can verify.">
+                  <Badge colorScheme="purple">Partner approval</Badge>
                 </Tooltip>
               )}
               {showFreeBadge && <Badge colorScheme="blue">Free tier</Badge>}
@@ -617,7 +604,7 @@ const WeeklyChecklistPage: React.FC = () => {
               +{activity.points} pts
             </Tag>
             {activity.status === 'pending' && (
-              <Tooltip label="Pending verification. Points will post after approval.">
+              <Tooltip label="Pending partner verification. Points will post after approval.">
                 <Icon as={AlertTriangle} color="yellow.300" />
               </Tooltip>
             )}
@@ -628,7 +615,11 @@ const WeeklyChecklistPage: React.FC = () => {
             colorScheme="teal"
             variant={activity.status === 'completed' || activity.status === 'pending' ? 'solid' : 'outline'}
             isDisabled={yesDisabled}
-            onClick={() => (requiresProof ? openProofModal(activity) : handleActivityUpdate(activity.id, 'completed'))}
+            onClick={() =>
+              requiresPartnerApproval
+                ? openProofModal(activity)
+                : handleActivityUpdate(activity, 'completed')
+            }
           >
             Yes
           </Button>
@@ -636,7 +627,7 @@ const WeeklyChecklistPage: React.FC = () => {
             variant="outline"
             colorScheme="gray"
             isDisabled={noDisabled}
-            onClick={() => handleActivityUpdate(activity.id, 'not_started')}
+            onClick={() => handleActivityUpdate(activity, 'not_started')}
           >
             No
           </Button>
@@ -771,10 +762,10 @@ const WeeklyChecklistPage: React.FC = () => {
         </Heading>
         <Text color="gray.300">A comprehensive weekly activity tracker with Firebase-powered progress.</Text>
       </Stack>
-      <Box p={4} borderWidth="1px" borderColor="gray.700" bg="gray.900" borderRadius="lg">
+      <Box p={4} borderWidth="1px" borderColor="gray.700" bg="white" borderRadius="lg">
         <Stack spacing={3}>
           <HStack justify="space-between">
-            <Heading size="sm" color="white">
+            <Heading size="sm" color="#273240">
               Week {selectedWeek} summary
             </Heading>
             <Tag colorScheme={progressStatus.color}>
@@ -909,14 +900,14 @@ const WeeklyChecklistPage: React.FC = () => {
 }
 
 const StatCard: React.FC<{ label: string; value: string; icon: React.ReactNode }> = ({ label, value, icon }) => (
-  <Box borderWidth="1px" borderColor="gray.700" p={4} borderRadius="lg" bg="gray.900">
+  <Box borderWidth="1px" borderColor="gray.700" p={4} borderRadius="lg" bg="white">
     <HStack justify="space-between" mb={1}>
-      <Text color="gray.400" fontSize="sm">
+      <Text color="#273240" fontSize="sm">
         {label}
       </Text>
       {icon}
     </HStack>
-    <Heading size="md" color="white">
+    <Heading size="md" color="#273240">
       {value}
     </Heading>
   </Box>
@@ -926,4 +917,5 @@ const InfoPill: React.FC<{ color: string }> = ({ color }) => (
   <Box w={3} h={3} borderRadius="full" bg={`${color}.300`} />
 )
 
-export { WeeklyChecklistPage, WeeklyChecklistPage as WeeklyUpdatesPage }
+export const WeeklyUpdatesPage = WeeklyChecklistPage
+export { WeeklyChecklistPage }

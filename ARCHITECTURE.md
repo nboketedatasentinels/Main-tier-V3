@@ -7,7 +7,7 @@ This document captures the target architecture, routing map, and dashboard layou
 - **SPA with secure API layer**: React 18 + TypeScript front end powered by Vite. Client renders authenticated experience while calling Bolt Database Edge Functions for all privileged logic.
 - **Serverless backend**: Bolt Database PostgreSQL (115+ migrations), Bolt Auth, Edge Functions, Storage, and real-time subscriptions for live updates (leaderboards, notifications, checklists).
 - **Security**: RBAC enforced in UI and API, RLS on data tables, encrypted storage, CSRF/XSS protection, validated inputs, and secure Stripe integration through Edge Functions + webhooks.
-- **Brand-first UI**: Dark plum shell with Royal Purple accents, Flame Orange CTAs, and Gold/Soft Gold highlights. Framer Motion for polish, Recharts for analytics, and Canvas Confetti for celebrations.
+- **Brand-first UI**: Plum-forward shell with Royal Purple accents, Flame Orange CTAs, and Gold/Soft Gold highlights. Framer Motion for polish, Recharts for analytics, and Canvas Confetti for celebrations.
 
 ## 2. Technology Stack
 
@@ -72,7 +72,7 @@ src/
 ### Data Access & Services
 - **`services/authService.ts`**: login/register/magic links/password reset, token handling, profile bootstrap, email verification.
 - **`services/profileService.ts`**: profile CRUD, avatar uploads (Bolt Storage), preferences, notification settings.
-- **`services/journeyService.ts`**: journey catalog, enrollment, weekly targets, progress, custom journey builder.
+- **`services/journeyService.ts`**: journey catalog, enrollment, minimum weekly points expectations, progress, custom journey builder.
 - **`services/checklistService.ts`**: fetch/update weekly tasks, unlock rules, proof uploads, completion stats.
 - **`services/impactService.ts`**: create/update/delete impact logs, filters, stats, CSV export.
 - **`services/leaderboardService.ts`**: scoped leaderboards (global/org/village/cluster), kudos actions, challenges.
@@ -131,7 +131,7 @@ src/
 
 ### Member Dashboard (Free & Paid)
 - **Hero strip**: name, current level, points-to-next-level, Flame Orange CTA (upgrade for free users, “Continue journey” for paid) with confetti on milestones.
-- **Overview grid**: weekly target progress (gold progress bar), streak counter, next milestone badge, upgrade prompt card for free tier.
+- **Overview grid**: minimum weekly points progress (gold progress bar), streak counter, next milestone badge, upgrade prompt card for free tier.
 - **Journey & checklist**: current journey card with phase timeline; weekly checklist card with completion meter and quick actions.
 - **Impact log snapshot**: hours/USD/people impacted with Recharts mini charts; CTA to log impact.
 - **Leaderboard preview**: top peers and personal rank; kudos button.
@@ -177,7 +177,7 @@ src/
 - **Accessibility**: WCAG 2.1 AA, focus outlines, semantic headings, ARIA labels, keyboard nav, sufficient contrast with brand colors.
 
 ## 8. Testing Recommendations
-- **Unit**: points calculation, weekly target status, RBAC guards, checklist unlock rules.
+- **Unit**: points calculation, minimum weekly points status, RBAC guards, checklist unlock rules.
 - **Integration**: auth flows, weekly checklist completion, impact logging, subscription upgrade/downgrade.
 - **Visual/regression**: route-level snapshots for dashboards and critical flows.
 

@@ -77,8 +77,8 @@ export const MonthlyCourseCard = ({ role, data, loading, error }: MonthlyCourseC
     if (data?.status === 'no_company') {
       return (
         <Stack spacing={3}>
-          <Text fontWeight="bold">Course of the Month</Text>
-          <Text color="brand.subtleText" fontSize="sm">
+          <Text fontWeight="bold" color="#273240">Course of the Month</Text>
+          <Text color="#273240" fontSize="sm">
             Paid members need to be assigned to a company program to see their monthly course.
           </Text>
           <Alert status="info" rounded="md" variant="subtle">
@@ -92,15 +92,15 @@ export const MonthlyCourseCard = ({ role, data, loading, error }: MonthlyCourseC
     if (data?.status === 'pending_assignment') {
       return (
         <Stack spacing={3}>
-          <Text fontWeight="bold">Course of the Month</Text>
-          <Text color="brand.subtleText" fontSize="sm">
-            We’re waiting for your admin to finalize course assignments. Check back soon.
+          <Text fontWeight="bold" color="#273240">Course of the Month</Text>
+          <Text color="#273240" fontSize="sm">
+            We're waiting for your admin to finalize course assignments. Check back soon.
           </Text>
           <Alert status="info" rounded="md" variant="subtle">
             <AlertIcon />
             <Stack spacing={0}>
               <AlertTitle>Assignments pending</AlertTitle>
-              <AlertDescription fontSize="sm">You’ll see your first course once it’s ready.</AlertDescription>
+              <AlertDescription fontSize="sm">You'll see your first course once it's ready.</AlertDescription>
             </Stack>
           </Alert>
         </Stack>
@@ -111,20 +111,20 @@ export const MonthlyCourseCard = ({ role, data, loading, error }: MonthlyCourseC
       <Stack spacing={3}>
         <HStack justify="space-between" align="flex-start">
           <Stack spacing={1}>
-            <Text fontWeight="bold">Course of the Month</Text>
-            <Text color="brand.subtleText" fontSize="sm">
-              {data?.message || 'Stay on pace with your company’s learning plan.'}
+            <Text fontWeight="bold" color="#273240">Course of the Month</Text>
+            <Text color="#273240" fontSize="sm">
+              {data?.message || 'Stay on pace with your company\'s learning plan.'}
             </Text>
           </Stack>
           {renderStatusBadge()}
         </HStack>
 
         <Stack spacing={1}>
-          <Text fontSize="lg" fontWeight="bold">
+          <Text fontSize="lg" fontWeight="bold" color="#273240">
             {courseTitle}
           </Text>
           {data?.course?.description && (
-            <Text color="brand.subtleText" fontSize="sm">
+            <Text color="#273240" fontSize="sm">
               {data.course.description}
             </Text>
           )}
@@ -132,13 +132,13 @@ export const MonthlyCourseCard = ({ role, data, loading, error }: MonthlyCourseC
 
         <HStack spacing={3}>
           {monthLabel && (
-            <HStack spacing={1} color="brand.subtleText" fontSize="sm">
+            <HStack spacing={1} color="#273240" fontSize="sm">
               <CalendarIcon />
               <Text>{monthLabel}</Text>
             </HStack>
           )}
           {data?.status === 'completed' && (
-            <HStack spacing={1} color="green.600" fontSize="sm">
+            <HStack spacing={1} color="#273240" fontSize="sm">
               <InfoIcon />
               <Text>Congratulations on completing your program!</Text>
             </HStack>
@@ -154,24 +154,24 @@ export const MonthlyCourseCard = ({ role, data, loading, error }: MonthlyCourseC
 
   const renderFreeContent = () => (
     <Stack spacing={3}>
-      <Text fontWeight="bold">Free Course Access</Text>
-      <Text color="brand.subtleText" fontSize="sm">
+      <Text fontWeight="bold" color="#273240">Free Course Access</Text>
+      <Text color="#273240" fontSize="sm">
         {data?.message || 'Kick off the week with quick learning. Use the code below to enroll.'}
       </Text>
       <HStack justify="space-between" align="flex-start">
         <Stack spacing={1}>
-          <Text fontSize="lg" fontWeight="bold">
+          <Text fontSize="lg" fontWeight="bold" color="#273240">
             {courseTitle}
           </Text>
-          <Text color="brand.subtleText" fontSize="sm">
+          <Text color="#273240" fontSize="sm">
             {FREE_COURSE.durationLabel}
           </Text>
         </Stack>
         <ExternalLinkButton href={courseUrl} />
       </HStack>
       <HStack spacing={3}>
-        <Text fontWeight="semibold">Enrollment Code</Text>
-        <Text bg="brand.primaryMuted" px={2} py={1} rounded="md">
+        <Text fontWeight="semibold" color="#273240">Enrollment Code</Text>
+        <Text bg="brand.primaryMuted" px={2} py={1} rounded="md" color="#273240">
           {enrollmentCode}
         </Text>
       </HStack>

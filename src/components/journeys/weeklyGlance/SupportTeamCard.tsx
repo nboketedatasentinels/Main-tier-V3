@@ -24,7 +24,7 @@ export const SupportTeamCard = ({ data, loading }: SupportTeamCardProps) => {
     <Card h="100%" variant="outline" borderColor="brand.border">
       <CardBody>
         <Stack spacing={4}>
-          <Text fontWeight="bold">Support Team</Text>
+          <Text fontWeight="bold" color="#273240">Support Team</Text>
           <Skeleton isLoaded={!loading} rounded="md">
             <Stack spacing={3}>
               <VStack align="start" spacing={2} p={3} borderWidth="1px" borderColor="brand.border" rounded="md">
@@ -32,8 +32,8 @@ export const SupportTeamCard = ({ data, loading }: SupportTeamCardProps) => {
                   <HStack spacing={2}>
                     <Avatar size="sm" name={data?.mentor_id || 'Mentor'} />
                     <VStack spacing={0} align="start">
-                      <Text fontWeight="semibold">Mentor</Text>
-                      <Text fontSize="sm" color="brand.subtleText">
+                      <Text fontWeight="semibold" color="#273240">Mentor</Text>
+                      <Text fontSize="sm" color="#273240">
                         {data?.mentor_id ? data.mentor_id : 'No mentor assigned'}
                       </Text>
                     </VStack>
@@ -51,8 +51,8 @@ export const SupportTeamCard = ({ data, loading }: SupportTeamCardProps) => {
                   <HStack spacing={2}>
                     <Avatar size="sm" name={data?.ambassador_id || 'Ambassador'} />
                     <VStack spacing={0} align="start">
-                      <Text fontWeight="semibold">Ambassador</Text>
-                      <Text fontSize="sm" color="brand.subtleText">
+                      <Text fontWeight="semibold" color="#273240">Ambassador</Text>
+                      <Text fontSize="sm" color="#273240">
                         {data?.ambassador_id ? data.ambassador_id : 'No ambassador assigned'}
                       </Text>
                     </VStack>

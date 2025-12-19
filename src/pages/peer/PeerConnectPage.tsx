@@ -646,8 +646,33 @@ export const PeerConnectPage: React.FC = () => {
             Peer Connect
           </Heading>
           <Text color="brand.subtleText">
-            Automated weekly matching plus high-intent peer sessions—all anchored in Firebase so your connections stay in sync.
+            Automated weekly matching pairs you one-on-one, while peer-to-peer sessions are partner-supervised group experiences—all anchored in Firebase so
+            your connections stay in sync.
           </Text>
+          <SimpleGrid columns={{ base: 1, md: 2 }} spacing={3} pt={1}>
+            <Box p={3} borderRadius="lg" border="1px solid" borderColor="brand.border" bg="gray.50">
+              <HStack spacing={2} mb={1}>
+                <Badge colorScheme="purple" variant="subtle">
+                  Peer Matching
+                </Badge>
+                <Icon as={MessageSquare} w={4} h={4} color="purple.500" />
+              </HStack>
+              <Text fontSize="sm" color="brand.subtleText">
+                System-automated, one-on-one pairing so you can connect directly with a matched peer each week.
+              </Text>
+            </Box>
+            <Box p={3} borderRadius="lg" border="1px solid" borderColor="brand.border" bg="gray.50">
+              <HStack spacing={2} mb={1}>
+                <Badge colorScheme="blue" variant="subtle">
+                  Peer to Peer
+                </Badge>
+                <Icon as={Users} w={4} h={4} color="blue.500" />
+              </HStack>
+              <Text fontSize="sm" color="brand.subtleText">
+                Group-oriented activities with partner oversight to keep sessions structured, monitored, and collaborative.
+              </Text>
+            </Box>
+          </SimpleGrid>
         </Stack>
       </Box>
 

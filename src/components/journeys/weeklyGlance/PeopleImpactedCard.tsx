@@ -14,19 +14,19 @@ export const PeopleImpactedCard = ({ count, loading }: PeopleImpactedCardProps) 
           <HStack justify="space-between">
             <HStack spacing={2}>
               <Icon as={Users} color="brand.primary" />
-              <Text fontWeight="bold">People Impacted</Text>
+              <Text fontWeight="bold" color="#273240">People Impacted</Text>
             </HStack>
-            <HStack spacing={1} color="green.500">
+            <HStack spacing={1} color="#273240">
               <Icon as={TrendingUp} boxSize={4} />
               <Text fontSize="sm">Track your impact</Text>
             </HStack>
           </HStack>
           <Skeleton isLoaded={!loading} rounded="md">
-            <Text fontSize="4xl" fontWeight="bold">
+            <Text fontSize="4xl" fontWeight="bold" color="#273240">
               {count}
             </Text>
           </Skeleton>
-          <Text color="brand.subtleText" fontSize="sm">
+          <Text color="#273240" fontSize="sm">
             Celebrate each person you support. Log activities to see this grow.
           </Text>
         </Stack>

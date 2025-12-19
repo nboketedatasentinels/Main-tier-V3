@@ -1,6 +1,6 @@
 import { Card, CardBody, HStack, Icon, Skeleton, Stack, Text } from '@chakra-ui/react'
 import { Quote } from 'lucide-react'
-import { InspirationQuote } from '@/hooks/useWeeklyGlanceData'
+import { InspirationQuote } from '@/types'
 
 interface WeeklyInspirationCardProps {
   data: InspirationQuote | null
@@ -13,15 +13,15 @@ export const WeeklyInspirationCard = ({ data, loading }: WeeklyInspirationCardPr
       <CardBody>
         <Stack spacing={3}>
           <HStack spacing={2}>
-            <Icon as={Quote} />
-            <Text fontWeight="bold">Weekly Inspiration</Text>
+            <Icon as={Quote} color="#273240" />
+            <Text fontWeight="bold" color="#273240">Weekly Inspiration</Text>
           </HStack>
           <Skeleton isLoaded={!loading} rounded="md">
-            <Text fontSize="lg" fontWeight="semibold">
+            <Text fontSize="lg" fontWeight="semibold" color="#273240">
               {data?.quote_text || 'Join the movement. Take one small step today toward your goal.'}
             </Text>
           </Skeleton>
-          <Text fontSize="sm" color="brand.subtleText">
+          <Text fontSize="sm" color="#273240">
             {data?.author || 'T4L Community'}
           </Text>
         </Stack>

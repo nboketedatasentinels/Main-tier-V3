@@ -105,12 +105,12 @@ export const sendBelowTargetAlert = async (notification: {
   }
 
   const messageParts = [
-    'Your weekly target needs attention.',
+    'Your minimum weekly points requirement needs attention.',
     notification.percentageBehind
       ? `You are ${notification.percentageBehind}% behind.`
       : undefined,
     notification.pointsBehind
-      ? `${notification.pointsBehind} points remaining to target.`
+      ? `${notification.pointsBehind} points remaining to hit the minimum.`
       : undefined,
     notification.alertLevel === 'critical'
       ? 'Consider reaching out to your mentor for help.'
@@ -151,7 +151,7 @@ export const sendRecoveryNotification = async (notification: {
     userId: notification.userId,
     type: 'system_alert',
     title: '🎉 Weekly Recovery',
-    message: 'Nice recovery! You are back on track for your weekly target.',
+    message: "Nice recovery! You are back on track for this week's minimum points.",
     metadata: { relatedId: notification.relatedId, alertLevel: 'recovery' },
   })
 }
