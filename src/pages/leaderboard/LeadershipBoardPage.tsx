@@ -289,7 +289,10 @@ export const LeadershipBoardPage: React.FC = () => {
       .filter((p) => p.privacySettings?.showOnLeaderboard !== false)
       .map((user) => {
         const activePoints = timeframe === LeaderboardTimeframe.ALL_TIME ? user.totalPoints : aggregatedPoints[user.id] || 0
-        const badgeCount = Math.max(1, Math.round((activePoints + user.totalPoints) / 500))
+        const badgeCount = Math.max(
+          1,
+          Math.round((timeframe === LeaderboardTimeframe.ALL_TIME ? user.totalPoints : activePoints) / 500),
+        )
 
         return {
           user,
@@ -616,7 +619,16 @@ export const LeadershipBoardPage: React.FC = () => {
                           </HStack>
                         </Box>
                       </SimpleGrid>
-                      <Button variant="secondary" leftIcon={<Icon as={BookOpen} />}>Manage Visibility</Button>
+                      <Button
+                        bg="surface.default"
+                        color="brand.primary"
+                        border="1px solid"
+                        borderColor="brand.primary"
+                        _hover={{ bg: 'tint.brandPrimary' }}
+                        leftIcon={<Icon as={BookOpen} />}
+                      >
+                        Manage Visibility
+                      </Button>
                     </VStack>
                   </CardBody>
                 </Card>
@@ -944,7 +956,7 @@ export const LeadershipBoardPage: React.FC = () => {
                         <Text fontSize="sm" opacity={0.9}>Challenge Weeks are Live</Text>
                         <Text fontSize="2xl" fontWeight="bold">Friendly competitions to spark growth</Text>
                         <HStack spacing={3} mt={2}>
-                          <Icon as={Clock} />
+                          <Icon as={Clock} color="text.inverse" />
                           <Text>Join or launch a challenge today</Text>
                         </HStack>
                       </Box>
@@ -1064,8 +1076,8 @@ export const LeadershipBoardPage: React.FC = () => {
 
       <Modal isOpen={isOpen} onClose={onClose} size="lg">
         <ModalOverlay bg="blackAlpha.300" />
-        <ModalContent>
-          <ModalHeader>Start a Challenge</ModalHeader>
+        <ModalContent bg="surface.default" color="text.primary" border="1px solid" borderColor="border.subtle">
+          <ModalHeader borderBottom="1px solid" borderColor="border.subtle">Start a Challenge</ModalHeader>
           <ModalCloseButton />
           <ModalBody>
             <Stack spacing={3}>
@@ -1095,7 +1107,7 @@ export const LeadershipBoardPage: React.FC = () => {
               </Box>
             </Stack>
           </ModalBody>
-          <ModalFooter>
+          <ModalFooter borderTop="1px solid" borderColor="border.subtle">
             <Button mr={3} variant="secondary" onClick={onClose}>Cancel</Button>
             <Button onClick={() => toast({ title: 'Challenge created', status: 'success', duration: 2000 })}>Create</Button>
           </ModalFooter>
