@@ -25,10 +25,8 @@ import { MentorDashboard } from '@/pages/dashboards/MentorDashboard'
 import { JourneysPage } from '@/pages/journeys/JourneysPage'
 import { ImpactLogPage } from '@/pages/impact/ImpactLogPage'
 import { LeaderboardPage } from '@/pages/leaderboard/LeaderboardPage'
+import { LeadershipBoardPage } from '@/pages/leaderboard/LeadershipBoardPage'
 import { ProfilePage } from '@/pages/profile/ProfilePage'
-<<<<<<< HEAD
-import { SettingsPage } from '@/pages/settings/SettingsPage'
-=======
 import { WeeklyUpdatesPage } from '@/pages/journeys/WeeklyUpdatesPage'
 import { WeeklyGlancePage } from '@/pages/journeys/WeeklyGlancePage'
 import { MyCoursesPage } from '@/pages/courses/MyCoursesPage'
@@ -38,7 +36,6 @@ import { AnnouncementsPage } from '@/pages/community/AnnouncementsPage'
 import { ReferralRewardsPage } from '@/pages/community/ReferralRewardsPage'
 import { BookClubPage } from '@/pages/community/BookClubPage'
 import { ShamelessCirclePage } from '@/pages/community/ShamelessCirclePage'
->>>>>>> origin/Sign-In/Up
 
 // Error pages
 import { NotFoundPage } from '@/pages/errors/NotFoundPage'
@@ -51,9 +48,9 @@ export const AppRoutes = () => {
         {/* Public routes */}
         <Route path="/" element={<HomePage />} />
         <Route path="/upgrade" element={<UpgradePage />} />
-      <Route path="/login" element={<AuthLayout><LoginPage /></AuthLayout>} />
-      <Route path="/signup" element={<AuthLayout><SignUpPage /></AuthLayout>} />
-      <Route path="/reset-password" element={<AuthLayout><ResetPasswordPage /></AuthLayout>} />
+        <Route path="/login" element={<AuthLayout><LoginPage /></AuthLayout>} />
+        <Route path="/signup" element={<AuthLayout><SignUpPage /></AuthLayout>} />
+        <Route path="/reset-password" element={<AuthLayout><ResetPasswordPage /></AuthLayout>} />
         <Route path="/auth/profile-missing" element={<AuthLayout><ProfileMissingPage /></AuthLayout>} />
 
         <Route
@@ -108,8 +105,6 @@ export const AppRoutes = () => {
           <Route path="weekly-glance" element={<WeeklyGlancePage />} />
           <Route path="impact" element={<ImpactLogPage />} />
           <Route path="leaderboard" element={<LeaderboardPage />} />
-<<<<<<< HEAD
-=======
           <Route path="leadership-board" element={<LeadershipBoardPage />} />
           <Route path="weekly-checklist" element={<WeeklyUpdatesPage />} />
           <Route path="courses" element={<MyCoursesPage />} />
@@ -141,7 +136,6 @@ export const AppRoutes = () => {
           <Route path="referral-rewards" element={<ReferralRewardsPage />} />
           <Route path="book-club" element={<BookClubPage />} />
           <Route path="shameless-circle" element={<ShamelessCirclePage />} />
->>>>>>> origin/Sign-In/Up
           <Route path="profile" element={<ProfilePage />} />
         </Route>
 

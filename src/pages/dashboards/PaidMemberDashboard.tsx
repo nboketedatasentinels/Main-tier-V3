@@ -1,9 +1,30 @@
-import React from 'react'
-import { Box, Heading, Text, SimpleGrid, Card, CardBody, Stat, StatLabel, StatNumber, StatHelpText } from '@chakra-ui/react'
+import React, { useMemo, useState } from 'react'
+import {
+  Avatar,
+  Box,
+  Button,
+  Card,
+  CardBody,
+  Divider,
+  Flex,
+  Grid,
+  GridItem,
+  HStack,
+  Icon,
+  IconButton,
+  Progress,
+  SimpleGrid,
+  Stack,
+  Stat,
+  StatHelpText,
+  StatLabel,
+  StatNumber,
+  Tag,
+  Text,
+  VStack,
+} from '@chakra-ui/react'
+import { CalendarClock, Compass, Flame, Rocket, Star, TrendingUp } from 'lucide-react'
 import { useAuth } from '@/hooks/useAuth'
-<<<<<<< HEAD
-=======
-import { StatCard } from '@/components/dashboard/StatCard'
 import { ActivityCard } from '@/components/dashboard/ActivityCard'
 import { BadgeCard } from '@/components/dashboard/BadgeCard'
 import { useWeeklyGlanceData } from '@/hooks/useWeeklyGlanceData'
@@ -14,6 +35,13 @@ interface ActivityItem {
   points: number
   completed?: boolean
 }
+
+const initialActivities: ActivityItem[] = [
+  { title: 'Complete leadership reflection', points: 40, completed: true },
+  { title: 'Review your weekly plan', points: 20 },
+  { title: 'Check in with your mentor', points: 35 },
+  { title: 'Log an impact action', points: 50 },
+]
 
 const achievements = [
   {
@@ -47,20 +75,40 @@ const milestones = [
   { label: 'Impact', status: 'up-next' },
   { label: 'Amplify', status: 'pending' },
 ]
->>>>>>> origin/Sign-In/Up
 
 export const PaidMemberDashboard: React.FC = () => {
   const { profile } = useAuth()
   const { inspirationQuote } = useWeeklyGlanceData()
+  const [activities, setActivities] = useState<ActivityItem[]>(initialActivities)
+  const [activeBadgeIndex, setActiveBadgeIndex] = useState(0)
+
+  const completedActivities = useMemo(
+    () => activities.filter(activity => activity.completed).length,
+    [activities],
+  )
+
+  const completionRate = useMemo(() => {
+    if (!activities.length) return 0
+    return Math.round((completedActivities / activities.length) * 100)
+  }, [activities.length, completedActivities])
+
+  const toggleActivity = (title: string) => {
+    setActivities(prev =>
+      prev.map(activity =>
+        activity.title === title ? { ...activity, completed: !activity.completed } : activity,
+      ),
+    )
+  }
+
+  const prevBadge = () => {
+    setActiveBadgeIndex(prev => (prev - 1 + achievements.length) % achievements.length)
+  }
+
+  const nextBadge = () => {
+    setActiveBadgeIndex(prev => (prev + 1) % achievements.length)
+  }
 
   return (
-<<<<<<< HEAD
-    <Box>
-      <Heading mb={6} color="brand.gold">Welcome back, {profile?.firstName}!</Heading>
-      <Text mb={8} color="brand.softGold">
-        Continue your transformation journey with T4L.
-      </Text>
-=======
     <Stack spacing={8}>
       <Flex
         aria-label="Dashboard welcome panel"
@@ -97,7 +145,6 @@ export const PaidMemberDashboard: React.FC = () => {
           />
         </HStack>
       </Flex>
->>>>>>> origin/Sign-In/Up
 
       <SimpleGrid columns={{ base: 1, md: 4 }} spacing={6}>
         <Card bg="brand.royalPurple">
@@ -140,9 +187,6 @@ export const PaidMemberDashboard: React.FC = () => {
           </CardBody>
         </Card>
       </SimpleGrid>
-<<<<<<< HEAD
-    </Box>
-=======
 
       <Grid templateColumns={{ base: '1fr', xl: '2fr 1fr' }} gap={6}>
         <GridItem>
@@ -197,9 +241,15 @@ export const PaidMemberDashboard: React.FC = () => {
                 </Text>
               </HStack>
               <Stack spacing={3}>
-                <Button variant="secondary" leftIcon={<Icon as={Flame} />}>Log new impact</Button>
-                <Button variant="secondary" leftIcon={<Icon as={Compass} />}>Review journey plan</Button>
-                <Button variant="secondary" leftIcon={<Icon as={CalendarClock} />}>Schedule mentor session</Button>
+                <Button variant="secondary" leftIcon={<Icon as={Flame} />}>
+                  Log new impact
+                </Button>
+                <Button variant="secondary" leftIcon={<Icon as={Compass} />}>
+                  Review journey plan
+                </Button>
+                <Button variant="secondary" leftIcon={<Icon as={CalendarClock} />}>
+                  Schedule mentor session
+                </Button>
               </Stack>
             </CardBody>
           </Card>
@@ -219,7 +269,7 @@ export const PaidMemberDashboard: React.FC = () => {
                 </Tag>
               </HStack>
               <Stack spacing={3}>
-                {activities.map((activity) => (
+                {activities.map(activity => (
                   <ActivityCard
                     key={activity.title}
                     title={activity.title}
@@ -276,7 +326,7 @@ export const PaidMemberDashboard: React.FC = () => {
                 </Tag>
               </HStack>
               <Stack spacing={3}>
-                {events.map((event) => (
+                {events.map(event => (
                   <Box
                     key={event.title}
                     p={4}
@@ -343,7 +393,9 @@ export const PaidMemberDashboard: React.FC = () => {
                             : 'Coming up'}
                       </Text>
                     </VStack>
-                    {index < milestones.length - 1 && <Divider orientation="vertical" borderColor="rgba(234, 177, 48, 0.3)" />}
+                    {index < milestones.length - 1 && (
+                      <Divider orientation="vertical" borderColor="rgba(234, 177, 48, 0.3)" />
+                    )}
                   </Flex>
                 ))}
               </Stack>
@@ -357,6 +409,5 @@ export const PaidMemberDashboard: React.FC = () => {
         author={inspirationQuote?.author ?? 'T4L Community'}
       />
     </Stack>
->>>>>>> origin/Sign-In/Up
   )
 }

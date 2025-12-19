@@ -1,10 +1,5 @@
-<<<<<<< HEAD
-import React from 'react'
-import { Outlet, useNavigate } from 'react-router-dom'
-=======
 import React, { useEffect, useMemo, useState } from 'react'
 import { Outlet, useLocation, useNavigate } from 'react-router-dom'
->>>>>>> origin/Sign-In/Up
 import {
   Box,
   Flex,
@@ -25,38 +20,26 @@ import {
   DrawerContent,
   DrawerCloseButton,
   DrawerBody,
-<<<<<<< HEAD
-=======
   InputGroup,
   InputLeftElement,
   Input,
   useToast,
->>>>>>> origin/Sign-In/Up
 } from '@chakra-ui/react'
-import { 
+import {
   Menu as MenuIcon,
-<<<<<<< HEAD
-  Home,
-  TrendingUp,
-=======
->>>>>>> origin/Sign-In/Up
   Target,
   Users,
-<<<<<<< HEAD
-  Settings,
-  LogOut,
-  User,
-=======
   ClipboardList,
   Gavel,
   Megaphone,
   Gift,
   BookMarked,
+  BookOpen,
   Sparkles,
   Search,
+  Trophy,
   LogOut,
   CalendarDays,
->>>>>>> origin/Sign-In/Up
 } from 'lucide-react'
 import { useAuth } from '@/hooks/useAuth'
 import { UserRole } from '@/types'
@@ -65,9 +48,16 @@ import { ConfirmationWelcomeModal } from '@/components/modals/ConfirmationWelcom
 import { NotificationDropdown } from '@/components/notifications/NotificationDropdown'
 
 const HEADER_HEIGHT = '72px'
+const sectionLabelStyles = {
+  fontSize: 'xs',
+  fontWeight: 'semibold',
+  letterSpacing: '0.08em',
+  color: 'brand.subtleText',
+} as const
 
 export const MainLayout: React.FC = () => {
   const { profile, signOut } = useAuth()
+  const location = useLocation()
   const navigate = useNavigate()
   const { isOpen, onOpen, onClose } = useDisclosure()
   const toast = useToast()
@@ -124,33 +114,6 @@ export const MainLayout: React.FC = () => {
     }
     setShowVillagePrompt(false)
   }
-
-<<<<<<< HEAD
-  const navigationItems = [
-    { label: 'Dashboard', path: getDashboardPath(), icon: Home },
-    { label: 'Journeys', path: '/app/journeys', icon: Target },
-    { label: 'Impact Log', path: '/app/impact', icon: TrendingUp },
-    { label: 'Leaderboard', path: '/app/leaderboard', icon: Users },
-  ]
-
-  const NavContent = () => (
-    <VStack align="stretch" spacing={2}>
-      {navigationItems.map(item => (
-        <Button
-          key={item.path}
-          leftIcon={<item.icon size={20} />}
-          variant="ghost"
-          justifyContent="flex-start"
-          onClick={() => {
-            navigate(item.path)
-            onClose()
-          }}
-          _hover={{ bg: 'rgba(249, 219, 89, 0.1)', color: 'brand.gold' }}
-          color="brand.softGold"
-        >
-          {item.label}
-        </Button>
-=======
   const handleVillageSkipped = () => {
     if (buildVillageKey) {
       localStorage.setItem(buildVillageKey, 'skipped')
@@ -258,42 +221,21 @@ export const MainLayout: React.FC = () => {
             })}
           </VStack>
         </Box>
->>>>>>> origin/Sign-In/Up
       ))}
     </VStack>
   )
 
   return (
-<<<<<<< HEAD
-    <Flex h="100vh" bg="brand.deepPlum">
-      {/* Desktop Sidebar */}
-      <Box
-        w="250px"
-        bg="brand.deepPlum"
-=======
     <Flex minH="100vh" h="100vh" bg="brand.accent" color="brand.text" overflow="hidden">
       {/* Desktop Sidebar */}
       <Box
         w={{ base: '0', md: '260px' }}
         bg="brand.sidebar"
->>>>>>> origin/Sign-In/Up
         borderRight="1px solid"
         borderColor="rgba(234, 177, 48, 0.2)"
         p={4}
         display={{ base: 'none', md: 'block' }}
       >
-<<<<<<< HEAD
-        <VStack align="stretch" h="full" spacing={6}>
-          {/* Logo */}
-          <Box>
-            <Text fontSize="2xl" fontWeight="bold" color="brand.gold">
-              T4L
-            </Text>
-            <Text fontSize="xs" color="brand.softGold">
-              Transformation 4 Leaders
-            </Text>
-          </Box>
-=======
         <VStack align="stretch" h="full" spacing={8}>
           <HStack spacing={3} align="center">
             <Box boxSize="36px" borderRadius="full" bg="white" display="grid" placeItems="center" boxShadow="sm">
@@ -310,7 +252,6 @@ export const MainLayout: React.FC = () => {
               </Text>
             </Box>
           </HStack>
->>>>>>> origin/Sign-In/Up
 
           {/* Navigation */}
           <Box flex="1">
@@ -344,28 +285,11 @@ export const MainLayout: React.FC = () => {
       </Box>
 
       {/* Main Content */}
-<<<<<<< HEAD
-      <Flex flex="1" direction="column" overflow="hidden">
-        {/* Mobile Header */}
-=======
       <Flex flex="1" direction="column" h="100vh" maxH="100vh" overflow="hidden">
         {/* Header */}
->>>>>>> origin/Sign-In/Up
         <Flex
-          display={{ base: 'flex', md: 'none' }}
-          p={4}
-          bg="brand.deepPlum"
-          borderBottom="1px solid"
-          borderColor="rgba(234, 177, 48, 0.2)"
           align="center"
           justify="space-between"
-<<<<<<< HEAD
-        >
-          <Text fontSize="xl" fontWeight="bold" color="brand.gold">
-            T4L
-          </Text>
-          <HStack>
-=======
           px={{ base: 4, md: 8 }}
           h={HEADER_HEIGHT}
           flexShrink={0}
@@ -398,7 +322,6 @@ export const MainLayout: React.FC = () => {
 
           <HStack spacing={3} ml={{ base: 0, md: 4 }} align="center">
             <NotificationDropdown />
->>>>>>> origin/Sign-In/Up
             <Menu>
               <MenuButton as={Button} variant="ghost" px={0} _hover={{ bg: 'transparent' }}>
                 <HStack spacing={2}>
@@ -414,12 +337,6 @@ export const MainLayout: React.FC = () => {
                 <MenuItem onClick={handleSignOut}>Sign Out</MenuItem>
               </MenuList>
             </Menu>
-            <IconButton
-              icon={<MenuIcon size={20} />}
-              variant="ghost"
-              onClick={onOpen}
-              aria-label="Open menu"
-            />
           </HStack>
         </Flex>
 
