@@ -1,0 +1,1204 @@
+import React, { useEffect, useMemo, useState } from 'react'
+import {
+  Box,
+  Heading,
+  Text,
+  Stack,
+  SimpleGrid,
+  Skeleton,
+  Spinner,
+  Badge,
+  Button,
+  Grid,
+  GridItem,
+  Flex,
+  Icon,
+  Progress,
+  HStack,
+  VStack,
+  Divider,
+  Image,
+} from '@chakra-ui/react'
+import {
+  BookOpen,
+  Clock,
+  ExternalLink,
+  Sparkles,
+  ListPlus,
+  ArrowUpRight,
+} from 'lucide-react'
+import { collection, query, where, onSnapshot, orderBy, limit, doc, getDocs, Timestamp } from 'firebase/firestore'
+import { useAuth } from '@/hooks/useAuth'
+import { db } from '@/services/firebase'
+import { UserRole } from '@/types'
+
+type CourseDifficulty = 'Beginner' | 'Intermediate' | 'Advanced'
+
+interface CourseDetail {
+  slug: string
+  link: string
+  points: number
+  price: number
+  description: string
+}
+
+interface CourseMetadata {
+  estimatedMinutes: number
+  difficulty: CourseDifficulty
+}
+
+interface NormalizedCourse {
+  id: string
+  title: string
+  description: string
+  link?: string
+  assignedDate?: Date | null
+  progress?: number
+  status?: string
+  source: 'user' | 'company' | 'personal' | 'organization'
+  estimatedMinutes?: number
+  difficulty?: CourseDifficulty
+  image?: string
+}
+
+interface RecentActivityItem {
+  id: string
+  title: string
+  lastAccessed: Date | null
+  progress?: number
+  courseId?: string
+}
+
+type RecommendedCourse = CourseDetail & CourseMetadata & { title: string }
+
+const COURSE_DETAILS_MAPPING: Record<string, CourseDetail> = {
+  'The Courage to Heal': {
+    slug: 'courage-to-heal',
+    link: 'https://t4leader.com/program/courage-to-heal',
+    points: 100,
+    price: 55,
+    description: 'Build resilience and foster personal healing.',
+  },
+  'AI Stacking 101': {
+    slug: 'ai-stacking-101',
+    link: 'https://t4leader.com/program/ai-stacking-101',
+    points: 100,
+    price: 89,
+    description: 'Leverage AI tools to stack efficiencies in your workflow.',
+  },
+  'Hire Me Already': {
+    slug: 'hire-me-already',
+    link: 'https://t4leader.com/program/hire-me-already',
+    points: 100,
+    price: 79,
+    description: 'Polish your personal brand to land your next opportunity.',
+  },
+  'The Art of Connection': {
+    slug: 'art-of-connection',
+    link: 'https://t4leader.com/program/art-of-connection',
+    points: 100,
+    price: 65,
+    description: 'Deepen relationships through intentional communication.',
+  },
+  'Auto Connection': {
+    slug: 'auto-connection',
+    link: 'https://t4leader.com/program/auto-connection',
+    points: 100,
+    price: 49,
+    description: 'Automate outreach and follow-up with authenticity.',
+  },
+  'The Heart of Leadership': {
+    slug: 'heart-of-leadership',
+    link: 'https://t4leader.com/program/heart-of-leadership',
+    points: 100,
+    price: 95,
+    description: 'Lead with empathy, courage, and clarity.',
+  },
+  'LinkedIn Warrior': {
+    slug: 'linkedin-warrior',
+    link: 'https://t4leader.com/program/linkedin-warrior',
+    points: 100,
+    price: 45,
+    description: 'Grow your professional influence on LinkedIn.',
+  },
+  'Path to Promotion': {
+    slug: 'path-to-promotion',
+    link: 'https://t4leader.com/program/path-to-promotion',
+    points: 100,
+    price: 79,
+    description: 'Map the exact steps to accelerate your advancement.',
+  },
+  'Understanding Digital Bias': {
+    slug: 'understanding-digital-bias',
+    link: 'https://t4leader.com/program/understanding-digital-bias',
+    points: 100,
+    price: 82,
+    description: 'Recognize and mitigate bias in digital experiences.',
+  },
+  'Cultural Intelligence': {
+    slug: 'cultural-intelligence',
+    link: 'https://t4leader.com/program/cultural-intelligence',
+    points: 100,
+    price: 72,
+    description: 'Navigate cross-cultural collaboration with ease.',
+  },
+  'The Confidence Code': {
+    slug: 'confidence-code',
+    link: 'https://t4leader.com/program/confidence-code',
+    points: 100,
+    price: 60,
+    description: 'Unlock and sustain unshakeable confidence.',
+  },
+  'Think Like an Owner': {
+    slug: 'think-like-an-owner',
+    link: 'https://t4leader.com/program/think-like-an-owner',
+    points: 100,
+    price: 90,
+    description: 'Adopt an ownership mindset to drive results.',
+  },
+  'Mindset Reset': {
+    slug: 'mindset-reset',
+    link: 'https://t4leader.com/program/mindset-reset',
+    points: 100,
+    price: 68,
+    description: 'Reframe limiting beliefs into empowering narratives.',
+  },
+  'Goal Setting Mastery': {
+    slug: 'goal-setting-mastery',
+    link: 'https://t4leader.com/program/goal-setting-mastery',
+    points: 100,
+    price: 85,
+    description: 'Set, track, and achieve meaningful goals.',
+  },
+  'Goal Setting': {
+    slug: 'goal-setting',
+    link: 'https://t4leader.com/program/goal-setting',
+    points: 100,
+    price: 40,
+    description: 'Quick-start guide to defining achievable goals.',
+  },
+  'How to Thrive in a Toxic Workplace': {
+    slug: 'thrive-toxic-workplace',
+    link: 'https://t4leader.com/program/thrive-toxic-workplace',
+    points: 100,
+    price: 77,
+    description: 'Strategies for navigating and improving tough cultures.',
+  },
+  'The Science of You': {
+    slug: 'science-of-you',
+    link: 'https://t4leader.com/program/science-of-you',
+    points: 100,
+    price: 92,
+    description: 'Personalized insights to optimize your strengths.',
+  },
+  'Transformational Leadership': {
+    slug: 'transformational-leadership',
+    link: 'https://t4leader.com/program/transformational-leadership',
+    points: 100,
+    price: 110,
+    description: 'Guide teams through change with vision and trust.',
+  },
+  'Digital Transformation and Data': {
+    slug: 'digital-transformation-data',
+    link: 'https://t4leader.com/program/digital-transformation-data',
+    points: 100,
+    price: 115,
+    description: 'Lead digital-first initiatives with data fluency.',
+  },
+  'Leading Through Change and Continuous Improvement': {
+    slug: 'leading-through-change',
+    link: 'https://t4leader.com/program/leading-through-change',
+    points: 100,
+    price: 105,
+    description: 'Embed continuous improvement within your team.',
+  },
+  'Project Management for Leaders': {
+    slug: 'project-management-for-leaders',
+    link: 'https://t4leader.com/program/project-management-for-leaders',
+    points: 100,
+    price: 120,
+    description: 'Deliver complex initiatives with confidence.',
+  },
+  'Foundations of Leadership and Team Dynamics': {
+    slug: 'foundations-of-leadership',
+    link: 'https://t4leader.com/program/foundations-of-leadership',
+    points: 100,
+    price: 96,
+    description: 'Lead cohesive teams with clarity and trust.',
+  },
+  'Inner Shift': {
+    slug: 'inner-shift',
+    link: 'https://t4leader.com/program/inner-shift',
+    points: 100,
+    price: 120,
+    description: 'Comprehensive personal development transformation.',
+  },
+  'Digital Rebel': {
+    slug: 'digital-rebel',
+    link: 'https://t4leader.com/program/digital-rebel',
+    points: 100,
+    price: 120,
+    description: 'Lead digital disruption with creativity.',
+  },
+  'Architect': {
+    slug: 'architect',
+    link: 'https://t4leader.com/program/architect',
+    points: 100,
+    price: 130,
+    description: '12-month leadership transformation program.',
+  },
+}
+
+const COURSE_METADATA_MAPPING: Record<string, CourseMetadata> = {
+  'The Courage to Heal': { estimatedMinutes: 120, difficulty: 'Intermediate' },
+  'AI Stacking 101': { estimatedMinutes: 90, difficulty: 'Advanced' },
+  'Hire Me Already': { estimatedMinutes: 80, difficulty: 'Intermediate' },
+  'The Art of Connection': { estimatedMinutes: 75, difficulty: 'Beginner' },
+  'Auto Connection': { estimatedMinutes: 70, difficulty: 'Beginner' },
+  'The Heart of Leadership': { estimatedMinutes: 110, difficulty: 'Intermediate' },
+  'LinkedIn Warrior': { estimatedMinutes: 85, difficulty: 'Intermediate' },
+  'Path to Promotion': { estimatedMinutes: 95, difficulty: 'Advanced' },
+  'Understanding Digital Bias': { estimatedMinutes: 100, difficulty: 'Intermediate' },
+  'Cultural Intelligence': { estimatedMinutes: 120, difficulty: 'Intermediate' },
+  'The Confidence Code': { estimatedMinutes: 60, difficulty: 'Beginner' },
+  'Think Like an Owner': { estimatedMinutes: 105, difficulty: 'Advanced' },
+  'Mindset Reset': { estimatedMinutes: 65, difficulty: 'Beginner' },
+  'Goal Setting Mastery': { estimatedMinutes: 90, difficulty: 'Intermediate' },
+  'Goal Setting': { estimatedMinutes: 45, difficulty: 'Beginner' },
+  'How to Thrive in a Toxic Workplace': { estimatedMinutes: 70, difficulty: 'Intermediate' },
+  'The Science of You': { estimatedMinutes: 115, difficulty: 'Advanced' },
+  'Transformational Leadership': { estimatedMinutes: 140, difficulty: 'Advanced' },
+  'Digital Transformation and Data': { estimatedMinutes: 150, difficulty: 'Advanced' },
+  'Leading Through Change and Continuous Improvement': { estimatedMinutes: 130, difficulty: 'Advanced' },
+  'Project Management for Leaders': { estimatedMinutes: 160, difficulty: 'Advanced' },
+  'Foundations of Leadership and Team Dynamics': { estimatedMinutes: 100, difficulty: 'Intermediate' },
+  'Inner Shift': { estimatedMinutes: 360, difficulty: 'Intermediate' },
+  'Digital Rebel': { estimatedMinutes: 360, difficulty: 'Advanced' },
+  'Architect': { estimatedMinutes: 480, difficulty: 'Advanced' },
+}
+
+const COURSE_IMAGE_FILENAMES: Record<string, string> = {
+  'AI Stacking 101': 'course-ai-stacking-101.avif',
+  'The Art of Connection': 'course-art-of-connection.avif',
+  'Mindset Reset': 'course-mindset-reset.avif',
+  'Goal Setting Mastery': 'course-goal-setting-mastery.avif',
+  'The Heart of Leadership': 'course-heart-of-leadership.avif',
+  'Digital Transformation and Data': 'course-digital-transformation.avif',
+  'LinkedIn Warrior': 'course-linkedin-warrior.avif',
+  'Transformational Leadership': 'course-transformational-leadership.avif',
+}
+
+const MONTHLY_JOURNEY_COURSES: Record<string, string[]> = {
+  levelUp: ['Mindset Reset', 'Goal Setting Mastery', 'The Art of Connection'],
+  wokeWired: ['Understanding Digital Bias', 'AI Stacking 101', 'Digital Transformation and Data'],
+  glowUp: ['The Science of You', 'The Heart of Leadership', 'Leading Through Change and Continuous Improvement'],
+  navigator: ['How to Thrive in a Toxic Workplace', 'Think Like an Owner', 'LinkedIn Warrior'],
+  bossMode: [
+    'Mindset Reset',
+    'Goal Setting Mastery',
+    'The Art of Connection',
+    'The Confidence Code',
+    'Think Like an Owner',
+    'LinkedIn Warrior',
+  ],
+  changeHacker: [
+    'The Science of You',
+    'Transformational Leadership',
+    'Leading Through Change and Continuous Improvement',
+    'Understanding Digital Bias',
+    'AI Stacking 101',
+    'Digital Transformation and Data',
+  ],
+  innerShift: [
+    'Mindset Reset',
+    'Goal Setting Mastery',
+    'The Art of Connection',
+    'The Science of You',
+    'The Heart of Leadership',
+    'Leading Through Change and Continuous Improvement',
+    'Think Like an Owner',
+    'Path to Promotion',
+    'Transformational Leadership',
+  ],
+  digitalRebel: [
+    'Understanding Digital Bias',
+    'AI Stacking 101',
+    'Digital Transformation and Data',
+    'Project Management for Leaders',
+    'Leading Through Change and Continuous Improvement',
+    'LinkedIn Warrior',
+    'Transformational Leadership',
+    'Think Like an Owner',
+    'Path to Promotion',
+  ],
+  architect: [
+    'Foundations of Leadership and Team Dynamics',
+    'Mindset Reset',
+    'Goal Setting Mastery',
+    'The Art of Connection',
+    'The Heart of Leadership',
+    'Think Like an Owner',
+    'Path to Promotion',
+    'Leading Through Change and Continuous Improvement',
+    'Digital Transformation and Data',
+    'Transformational Leadership',
+    'Project Management for Leaders',
+    'AI Stacking 101',
+  ],
+  custom3: [],
+  custom6: [],
+}
+
+const journeyTemplateCount = Object.keys(MONTHLY_JOURNEY_COURSES).length
+
+const normalizeDate = (value: unknown): Date | null => {
+  if (!value) return null
+  if (value instanceof Date) return value
+  if (typeof value === 'number') return new Date(value)
+  if (typeof value === 'string') {
+    const parsed = new Date(value)
+    return isNaN(parsed.getTime()) ? null : parsed
+  }
+  if (value instanceof Timestamp) {
+    return value.toDate()
+  }
+  if (typeof value === 'object' && (value as { toDate?: () => Date }).toDate) {
+    return (value as { toDate: () => Date }).toDate()
+  }
+  return null
+}
+
+const formatDuration = (minutes?: number) => {
+  if (!minutes || Number.isNaN(minutes)) return null
+  if (minutes < 60) return `${minutes} min`
+  const hours = Math.floor(minutes / 60)
+  const remaining = minutes % 60
+  return remaining ? `${hours} hrs ${remaining} min` : `${hours} hrs`
+}
+
+const formatStatus = (status?: string) => {
+  if (!status) return undefined
+  return status
+    .split(/_|\s/)
+    .filter(Boolean)
+    .map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+    .join(' ')
+}
+
+const normalizeCourseIds = (input?: unknown): string[] => {
+  if (!Array.isArray(input)) return []
+  const uniqueIds = new Set<string>()
+  input.forEach(value => {
+    if (typeof value === 'string') {
+      const trimmed = value.trim()
+      if (trimmed) {
+        uniqueIds.add(trimmed)
+      }
+    }
+  })
+  return Array.from(uniqueIds)
+}
+
+const badgeColor = (difficulty?: CourseDifficulty) => {
+  switch (difficulty) {
+    case 'Beginner':
+      return 'green'
+    case 'Intermediate':
+      return 'orange'
+    case 'Advanced':
+      return 'red'
+    default:
+      return 'gray'
+  }
+}
+
+export const MyCoursesPage: React.FC = () => {
+  const { user, profile } = useAuth()
+
+  const [userCourses, setUserCourses] = useState<NormalizedCourse[]>([])
+  const [companyAssignedCourses, setCompanyAssignedCourses] = useState<NormalizedCourse[]>([])
+  const [personalAssignedCourses, setPersonalAssignedCourses] = useState<NormalizedCourse[]>([])
+  const [organizationCourses, setOrganizationCourses] = useState<NormalizedCourse[]>([])
+  const [assignedCourseOrder, setAssignedCourseOrder] = useState<string[]>([])
+  const [recentActivity, setRecentActivity] = useState<RecentActivityItem[]>([])
+
+  const [loadingUserCourses, setLoadingUserCourses] = useState(true)
+  const [loadingCompanyCourses, setLoadingCompanyCourses] = useState(true)
+  const [loadingPersonalCourses, setLoadingPersonalCourses] = useState(true)
+  const [loadingOrganizationCourses, setLoadingOrganizationCourses] = useState(true)
+  const [loadingRecentActivity, setLoadingRecentActivity] = useState(true)
+
+  const companyCode = profile?.companyId || (profile as { companyCode?: string } | null)?.companyCode
+
+  useEffect(() => {
+    if (!user) {
+      setUserCourses([])
+      setLoadingUserCourses(false)
+      return
+    }
+
+    const q = query(collection(db, 'user_courses'), where('user_id', '==', user.uid))
+    const unsubscribe = onSnapshot(
+      q,
+      snapshot => {
+        const mapped: NormalizedCourse[] = snapshot.docs.map(docSnap => {
+          const data = docSnap.data()
+          const title = (data.title || data.name || data.courseTitle || 'Untitled Course') as string
+          const details = COURSE_DETAILS_MAPPING[title]
+          const metadata = COURSE_METADATA_MAPPING[title]
+
+          return {
+            id: docSnap.id,
+            title,
+            description: (data.description || details?.description || 'No description available.') as string,
+            link: (data.link || details?.link) as string | undefined,
+            assignedDate: normalizeDate(data.assignedAt || data.assigned_at || data.createdAt || data.assignedDate),
+            progress: typeof data.progress === 'number' ? data.progress : undefined,
+            status: formatStatus(data.status),
+            source: 'user',
+            estimatedMinutes: metadata?.estimatedMinutes,
+            difficulty: metadata?.difficulty,
+            image: COURSE_IMAGE_FILENAMES[title],
+          }
+        })
+        setUserCourses(mapped)
+        setLoadingUserCourses(false)
+      },
+      error => {
+        console.error('Error loading user courses', error)
+        setUserCourses([])
+        setLoadingUserCourses(false)
+      }
+    )
+
+    return () => unsubscribe()
+  }, [user])
+
+  useEffect(() => {
+    if (!user || !companyCode) {
+      setCompanyAssignedCourses([])
+      setLoadingCompanyCourses(false)
+      return
+    }
+
+    const q = query(collection(db, 'assigned_courses'), where('companyCode', '==', companyCode))
+    const unsubscribe = onSnapshot(
+      q,
+      snapshot => {
+        const mapped: NormalizedCourse[] = snapshot.docs.map(docSnap => {
+          const data = docSnap.data()
+          const title = (data.title || data.name || data.courseTitle || 'Untitled Course') as string
+          const details = COURSE_DETAILS_MAPPING[title]
+          const metadata = COURSE_METADATA_MAPPING[title]
+
+          return {
+            id: docSnap.id,
+            title,
+            description: (data.description || details?.description || 'No description available.') as string,
+            link: (data.link || details?.link) as string | undefined,
+            assignedDate: normalizeDate(data.assignedAt || data.assigned_at || data.createdAt || data.assignedDate),
+            progress: typeof data.progress === 'number' ? data.progress : undefined,
+            status: formatStatus(data.status || 'assigned'),
+            source: 'company',
+            estimatedMinutes: metadata?.estimatedMinutes,
+            difficulty: metadata?.difficulty,
+            image: COURSE_IMAGE_FILENAMES[title],
+          }
+        })
+        setCompanyAssignedCourses(mapped)
+        setLoadingCompanyCourses(false)
+      },
+      error => {
+        console.error('Error loading company assigned courses', error)
+        setCompanyAssignedCourses([])
+        setLoadingCompanyCourses(false)
+      }
+    )
+
+    return () => unsubscribe()
+  }, [user, companyCode])
+
+  useEffect(() => {
+    if (!user) {
+      setPersonalAssignedCourses([])
+      setLoadingPersonalCourses(false)
+      return
+    }
+
+    const q = query(collection(db, 'assigned_courses'), where('userId', '==', user.uid))
+    const unsubscribe = onSnapshot(
+      q,
+      snapshot => {
+        const mapped: NormalizedCourse[] = snapshot.docs.map(docSnap => {
+          const data = docSnap.data()
+          const title = (data.title || data.name || data.courseTitle || 'Untitled Course') as string
+          const details = COURSE_DETAILS_MAPPING[title]
+          const metadata = COURSE_METADATA_MAPPING[title]
+
+          return {
+            id: docSnap.id,
+            title,
+            description: (data.description || details?.description || 'No description available.') as string,
+            link: (data.link || details?.link) as string | undefined,
+            assignedDate: normalizeDate(data.assignedAt || data.assigned_at || data.createdAt || data.assignedDate),
+            progress: typeof data.progress === 'number' ? data.progress : undefined,
+            status: formatStatus(data.status || 'assigned'),
+            source: 'personal',
+            estimatedMinutes: metadata?.estimatedMinutes,
+            difficulty: metadata?.difficulty,
+            image: COURSE_IMAGE_FILENAMES[title],
+          }
+        })
+        setPersonalAssignedCourses(mapped)
+        setLoadingPersonalCourses(false)
+      },
+      error => {
+        console.error('Error loading personal assigned courses', error)
+        setPersonalAssignedCourses([])
+        setLoadingPersonalCourses(false)
+      }
+    )
+
+    return () => unsubscribe()
+  }, [user])
+
+  useEffect(() => {
+    if (!companyCode) {
+      setOrganizationCourses([])
+      setAssignedCourseOrder([])
+      setLoadingOrganizationCourses(false)
+      return
+    }
+
+    const companyRef = doc(db, 'companies', companyCode)
+    const unsubscribe = onSnapshot(
+      companyRef,
+      async snapshot => {
+        try {
+          if (!snapshot.exists()) {
+            setOrganizationCourses([])
+            setAssignedCourseOrder([])
+            setLoadingOrganizationCourses(false)
+            return
+          }
+
+          const companyData = snapshot.data()
+          const durationRaw =
+            companyData.programDuration || companyData.program_duration || companyData.duration || companyData.programLength
+          const durationNumber = typeof durationRaw === 'string' ? parseFloat(durationRaw) : Number(durationRaw)
+          let limitCount: number | undefined
+          if (!Number.isNaN(durationNumber) && durationNumber > 0) {
+            if (durationNumber === 1.5) limitCount = 2
+            else if (durationNumber === 3) limitCount = 3
+            else if (durationNumber === 6) limitCount = 6
+            else if (durationNumber === 12) limitCount = 12
+            else limitCount = Math.round(durationNumber)
+          }
+
+          const courseIds = normalizeCourseIds(
+            companyData.courseAssignments || companyData.assignedCourses || companyData.defaultCourses
+          )
+
+          const limitedCourseIds = typeof limitCount === 'number' ? courseIds.slice(0, limitCount) : courseIds
+          setAssignedCourseOrder(limitedCourseIds)
+
+          if (!limitedCourseIds.length) {
+            setOrganizationCourses([])
+            setLoadingOrganizationCourses(false)
+            return
+          }
+
+          const fetchChunks: string[][] = []
+          for (let i = 0; i < limitedCourseIds.length; i += 10) {
+            fetchChunks.push(limitedCourseIds.slice(i, i + 10))
+          }
+
+          const courseDocs: NormalizedCourse[] = []
+          for (const chunk of fetchChunks) {
+            const coursesQuery = query(collection(db, 'courses'), where('id', 'in', chunk))
+            const courseSnapshot = await getDocs(coursesQuery)
+            courseSnapshot.forEach(docSnap => {
+              const data = docSnap.data()
+              const title = (data.title || data.name || data.courseTitle || 'Untitled Course') as string
+              const details = COURSE_DETAILS_MAPPING[title]
+              const metadata = COURSE_METADATA_MAPPING[title]
+
+              courseDocs.push({
+                id: docSnap.id,
+                title,
+                description: (data.description || details?.description || 'No description available.') as string,
+                link: (data.link || details?.link) as string | undefined,
+                assignedDate: normalizeDate(data.assignedAt || data.assigned_at || data.createdAt || data.assignedDate),
+                progress: typeof data.progress === 'number' ? data.progress : undefined,
+                status: formatStatus(data.status || 'assigned'),
+                source: 'organization',
+                estimatedMinutes: metadata?.estimatedMinutes,
+                difficulty: metadata?.difficulty,
+                image: COURSE_IMAGE_FILENAMES[title],
+              })
+            })
+          }
+
+          setOrganizationCourses(courseDocs)
+          setLoadingOrganizationCourses(false)
+        } catch (error) {
+          console.error('Error loading organization courses', error)
+          setOrganizationCourses([])
+          setAssignedCourseOrder([])
+          setLoadingOrganizationCourses(false)
+        }
+      },
+      error => {
+        console.error('Company listener error', error)
+        setOrganizationCourses([])
+        setAssignedCourseOrder([])
+        setLoadingOrganizationCourses(false)
+      }
+    )
+
+    return () => unsubscribe()
+  }, [companyCode])
+
+  useEffect(() => {
+    if (!user) {
+      setRecentActivity([])
+      setLoadingRecentActivity(false)
+      return
+    }
+
+    const recentQuery = query(
+      collection(db, 'user_recent_activity'),
+      where('user_id', '==', user.uid),
+      orderBy('lastAccessed', 'desc'),
+      limit(5)
+    )
+
+    const unsubscribe = onSnapshot(
+      recentQuery,
+      snapshot => {
+        const mapped: RecentActivityItem[] = snapshot.docs.map(docSnap => {
+          const data = docSnap.data()
+          return {
+            id: docSnap.id,
+            title: (data.title || data.courseTitle || data.name || 'Untitled Course') as string,
+            courseId: data.course_id || data.courseId,
+            lastAccessed: normalizeDate(data.lastAccessed),
+            progress: typeof data.progress === 'number' ? data.progress : undefined,
+          }
+        })
+
+        setRecentActivity(mapped)
+        setLoadingRecentActivity(false)
+      },
+      error => {
+        console.error('Error loading recent activity', error)
+        setRecentActivity([])
+        setLoadingRecentActivity(false)
+      }
+    )
+
+    return () => unsubscribe()
+  }, [user])
+
+  const combinedAssignedCourses = useMemo(() => {
+    const priority = ['user', 'personal', 'company', 'organization'] as NormalizedCourse['source'][]
+    const mergeMap = new Map<string, NormalizedCourse>()
+
+    const addCourses = (courses: NormalizedCourse[]) => {
+      courses.forEach(course => {
+        const key = course.title.trim().toLowerCase()
+        const existing = mergeMap.get(key)
+        const details = COURSE_DETAILS_MAPPING[course.title]
+        const metadata = COURSE_METADATA_MAPPING[course.title]
+        const enhancedCourse: NormalizedCourse = {
+          ...course,
+          link: course.link || details?.link,
+          description: course.description || details?.description || 'No description available.',
+          estimatedMinutes: course.estimatedMinutes ?? metadata?.estimatedMinutes,
+          difficulty: course.difficulty ?? metadata?.difficulty,
+          image: course.image || COURSE_IMAGE_FILENAMES[course.title],
+          status: formatStatus(course.status || 'assigned'),
+        }
+
+        if (!existing) {
+          mergeMap.set(key, enhancedCourse)
+          return
+        }
+
+        const shouldReplace =
+          priority.indexOf(course.source) < priority.indexOf(existing.source) ||
+          (existing.progress ?? 0) < (course.progress ?? 0)
+
+        if (shouldReplace) {
+          mergeMap.set(key, { ...existing, ...enhancedCourse })
+        } else {
+          mergeMap.set(key, {
+            ...enhancedCourse,
+            progress: existing.progress ?? enhancedCourse.progress,
+            assignedDate: existing.assignedDate || enhancedCourse.assignedDate,
+            source: existing.source,
+          })
+        }
+      })
+    }
+
+    addCourses(userCourses)
+    addCourses(personalAssignedCourses)
+    addCourses(companyAssignedCourses)
+    addCourses(organizationCourses)
+
+    const result = Array.from(mergeMap.values())
+
+    if (assignedCourseOrder.length) {
+      return result.sort((a, b) => {
+        const indexA = assignedCourseOrder.findIndex(id => id.toLowerCase() === a.title.toLowerCase() || id === a.id)
+        const indexB = assignedCourseOrder.findIndex(id => id.toLowerCase() === b.title.toLowerCase() || id === b.id)
+        if (indexA === -1 && indexB === -1) return a.title.localeCompare(b.title)
+        if (indexA === -1) return 1
+        if (indexB === -1) return -1
+        return indexA - indexB
+      })
+    }
+
+    return result
+  }, [
+    userCourses,
+    personalAssignedCourses,
+    companyAssignedCourses,
+    organizationCourses,
+    assignedCourseOrder,
+  ])
+
+  const recommendedCourses = useMemo<RecommendedCourse[]>(() => {
+    const assignedTitles = new Set(combinedAssignedCourses.map(course => course.title.toLowerCase()))
+    const availableCourses = Object.keys(COURSE_DETAILS_MAPPING)
+      .map(title => ({
+        title,
+        ...(COURSE_DETAILS_MAPPING[title] || {}),
+        ...(COURSE_METADATA_MAPPING[title] || {}),
+      }))
+      .filter(course => !assignedTitles.has(course.title.toLowerCase()))
+      .slice(0, 4)
+
+    return availableCourses
+  }, [combinedAssignedCourses])
+
+  const assignedCourseCount = useMemo(() => combinedAssignedCourses.length, [combinedAssignedCourses])
+
+  const assignedCourseTimeline = useMemo(() => {
+    const scheduled = combinedAssignedCourses.filter(course => course.assignedDate)
+    const unscheduled = combinedAssignedCourses.filter(course => !course.assignedDate)
+
+    scheduled.sort((a, b) => (a.assignedDate && b.assignedDate ? a.assignedDate.getTime() - b.assignedDate.getTime() : 0))
+    unscheduled.sort((a, b) => a.title.localeCompare(b.title))
+
+    const groups: {
+      label: string
+      monthNumber: number
+      courses: NormalizedCourse[]
+      scheduled: boolean
+    }[] = []
+
+    const monthNameFormatter = new Intl.DateTimeFormat('en-US', { month: 'long', year: 'numeric' })
+
+    scheduled.forEach(course => {
+      const label = course.assignedDate ? monthNameFormatter.format(course.assignedDate) : 'Upcoming'
+      const existingGroup = groups.find(group => group.label === label)
+      if (existingGroup) {
+        existingGroup.courses.push(course)
+      } else {
+        groups.push({ label, monthNumber: groups.length + 1, courses: [course], scheduled: true })
+      }
+    })
+
+    if (unscheduled.length) {
+      const label = groups.length ? 'Upcoming' : 'Month 1'
+      groups.push({ label, monthNumber: groups.length + 1, courses: unscheduled, scheduled: false })
+    }
+
+    return groups
+  }, [combinedAssignedCourses])
+
+  const headerDescription = useMemo(() => {
+    if (!user) return 'Sign in to view the courses that have been assigned to you.'
+    if (profile?.role === UserRole.FREE_USER)
+      return 'Upgrade your membership to receive personalized course assignments tailored to your journey.'
+    if (!companyCode)
+      return 'Once you are assigned to a company program, your courses will appear here.'
+    return 'Explore your assigned learning experiences below. Course progress and completion are tracked on the external platform.'
+  }, [user, profile?.role, companyCode])
+
+  const overallLoading =
+    loadingUserCourses || loadingCompanyCourses || loadingPersonalCourses || loadingOrganizationCourses
+
+  const recentCoursesToDisplay = useMemo(() => {
+    if (recentActivity.length) return recentActivity
+    if (!recentActivity.length && !loadingRecentActivity && combinedAssignedCourses.length) {
+      return combinedAssignedCourses.slice(0, 3).map(course => ({
+        id: course.id,
+        title: course.title,
+        lastAccessed: null,
+        progress: course.progress,
+        courseId: course.id,
+      }))
+    }
+    return []
+  }, [recentActivity, loadingRecentActivity, combinedAssignedCourses])
+
+  return (
+    <Stack spacing={8} py={2} as="section">
+      <Box
+        bgGradient="linear(to-r, purple.50, purple.100)"
+        borderRadius="3xl"
+        border="1px solid"
+        borderColor="purple.100"
+        p={{ base: 5, md: 8 }}
+        boxShadow="md"
+      >
+        <Flex direction={{ base: 'column', md: 'row' }} align={{ base: 'flex-start', md: 'center' }} gap={4}>
+          <Flex
+            bg="white"
+            borderRadius="full"
+            p={3}
+            border="1px solid"
+            borderColor="purple.100"
+            boxShadow="sm"
+          >
+            <Icon as={BookOpen} boxSize={7} color="purple.600" />
+          </Flex>
+          <Stack spacing={1} flex={1}>
+            <Heading size="lg" color="purple.900">
+              Continue your learning journey
+            </Heading>
+            <Text color="purple.700" fontSize="md">
+              {headerDescription}
+            </Text>
+            <Badge colorScheme="purple" variant="subtle" width="fit-content" borderRadius="full">
+              {journeyTemplateCount} curated journey templates available
+            </Badge>
+          </Stack>
+        </Flex>
+      </Box>
+
+      {profile?.role === UserRole.FREE_USER && (
+        <Grid templateColumns={{ base: '1fr', md: '1fr 1fr' }} gap={6} as="section">
+          <GridItem>
+            <Box bg="white" p={5} borderRadius="2xl" border="1px solid" borderColor="gray.100" boxShadow="sm">
+              <HStack justify="space-between" mb={4}>
+                <Heading size="md" color="gray.800">
+                  Courses for you
+                </Heading>
+                <HStack spacing={2} color="purple.600">
+                  <Icon as={Sparkles} />
+                  <Text fontWeight="semibold">Personalized soon</Text>
+                </HStack>
+              </HStack>
+
+              {recommendedCourses.length ? (
+                <SimpleGrid columns={{ base: 1, sm: 2 }} spacing={4}>
+                  {recommendedCourses.map(course => (
+                    <Box
+                      key={course.title}
+                      border="1px solid"
+                      borderColor="gray.100"
+                      borderRadius="xl"
+                      p={4}
+                      bg="gray.50"
+                      _hover={{ boxShadow: 'md', bg: 'white' }}
+                    >
+                      <Stack spacing={3}>
+                        {COURSE_IMAGE_FILENAMES[course.title] ? (
+                          <Image
+                            src={`/${COURSE_IMAGE_FILENAMES[course.title]}`}
+                            alt={course.title}
+                            borderRadius="lg"
+                            objectFit="cover"
+                            height="120px"
+                          />
+                        ) : (
+                          <Flex
+                            borderRadius="lg"
+                            border="1px solid"
+                            borderColor="gray.200"
+                            height="120px"
+                            align="center"
+                            justify="center"
+                            bg="white"
+                          >
+                            <Icon as={BookOpen} boxSize={8} color="gray.400" />
+                          </Flex>
+                        )}
+                        <Heading size="sm" color="gray.800">
+                          {course.title}
+                        </Heading>
+                        <Badge
+                          colorScheme={badgeColor(course.difficulty as CourseDifficulty)}
+                          alignSelf="flex-start"
+                          borderRadius="full"
+                        >
+                          {course.difficulty || 'Beginner'}
+                        </Badge>
+                        <Text color="gray.600" fontSize="sm">
+                          {course.description}
+                        </Text>
+                        <HStack spacing={2} color="gray.500" fontSize="sm">
+                          <Icon as={Clock} boxSize={4} />
+                          <Text>{formatDuration(course.estimatedMinutes) || 'Self-paced'}</Text>
+                        </HStack>
+                        <Button
+                          as="a"
+                          href={course.link}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          rightIcon={<ArrowUpRight size={14} />}
+                          colorScheme="purple"
+                          variant="outline"
+                          size="sm"
+                          borderRadius="full"
+                        >
+                          Explore
+                        </Button>
+                      </Stack>
+                    </Box>
+                  ))}
+                </SimpleGrid>
+              ) : (
+                <Flex direction="column" align="center" justify="center" py={8} color="gray.500" gap={3}>
+                  <Icon as={Sparkles} boxSize={8} />
+                  <Text fontWeight="semibold">All available courses are already in your queue...</Text>
+                </Flex>
+              )}
+            </Box>
+          </GridItem>
+
+          <GridItem>
+            <Box bg="white" p={5} borderRadius="2xl" border="1px solid" borderColor="gray.100" boxShadow="sm">
+              <HStack justify="space-between" mb={4}>
+                <Heading size="md" color="gray.800">
+                  Recently viewed
+                </Heading>
+                <Badge colorScheme="purple" borderRadius="full">
+                  {recentActivity.length ? 'Latest activity' : 'Start exploring'}
+                </Badge>
+              </HStack>
+
+              {loadingRecentActivity && (
+                <Stack spacing={3}>
+                  {[1, 2].map(item => (
+                    <Box key={item} border="1px solid" borderColor="gray.100" borderRadius="lg" p={3}>
+                      <Skeleton height="20px" width="50%" mb={3} />
+                      <Skeleton height="10px" borderRadius="full" />
+                    </Box>
+                  ))}
+                </Stack>
+              )}
+
+              {!loadingRecentActivity && recentCoursesToDisplay.length === 0 && (
+                <Flex direction="column" align="center" justify="center" py={8} color="gray.500" gap={2}>
+                  <Icon as={BookOpen} boxSize={8} />
+                  <Text>Start exploring your assigned courses to see them appear here.</Text>
+                </Flex>
+              )}
+
+              {!loadingRecentActivity && recentCoursesToDisplay.length > 0 && (
+                <Stack spacing={3}>
+                  {recentCoursesToDisplay.map(item => (
+                    <Box key={item.id} border="1px solid" borderColor="gray.100" borderRadius="lg" p={3}>
+                      <HStack justify="space-between" align="start" mb={2}>
+                        <Text fontWeight="semibold" color="gray.800">
+                          {item.title}
+                        </Text>
+                        {item.lastAccessed && (
+                          <Text fontSize="sm" color="gray.500">
+                            Viewed {item.lastAccessed.toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}
+                          </Text>
+                        )}
+                      </HStack>
+                      <Progress
+                        value={item.progress || 0}
+                        size="sm"
+                        colorScheme="purple"
+                        borderRadius="full"
+                        aria-hidden
+                      />
+                      <Text fontSize="xs" color="gray.500" mt={1}>
+                        {(item.progress || 0).toFixed(0)}% complete
+                      </Text>
+                      <Button
+                        as="a"
+                        href={COURSE_DETAILS_MAPPING[item.title]?.link || '#'}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        size="xs"
+                        variant="link"
+                        colorScheme="purple"
+                        mt={1}
+                      >
+                        Resume
+                      </Button>
+                    </Box>
+                  ))}
+                </Stack>
+              )}
+            </Box>
+          </GridItem>
+        </Grid>
+      )}
+
+      <Stack spacing={4} as="section">
+        <HStack justify="space-between" align="center">
+          <Heading size="md" color="gray.800">
+            All assigned courses
+          </Heading>
+          <HStack spacing={3}>
+            <Badge colorScheme="purple" variant="subtle" borderRadius="full">
+              {assignedCourseCount} total courses
+            </Badge>
+            <Badge colorScheme="purple" borderRadius="full">
+              Real-time updates
+            </Badge>
+          </HStack>
+        </HStack>
+
+        {overallLoading && (
+          <Flex align="center" justify="center" py={10} direction="column" gap={3}>
+            <Spinner size="lg" color="purple.500" />
+            <Text color="gray.600">Loading your courses…</Text>
+          </Flex>
+        )}
+
+        {!overallLoading && combinedAssignedCourses.length === 0 && (
+          <Flex
+            direction="column"
+            align="center"
+            justify="center"
+            py={12}
+            border="1px solid"
+            borderColor="gray.100"
+            borderRadius="2xl"
+            bg="white"
+            gap={3}
+          >
+            <Icon as={BookOpen} boxSize={10} color="gray.300" />
+            <Heading size="sm" color="gray.800">
+              No courses assigned yet
+            </Heading>
+            <Text color="gray.500" textAlign="center" maxW="lg">
+              {profile?.role === UserRole.FREE_USER
+                ? 'Upgrade to a paid membership or connect with your administrator to start receiving course assignments.'
+                : 'Your program administrator has not assigned any courses yet. Check back soon!'}
+            </Text>
+          </Flex>
+        )}
+
+        {!overallLoading && combinedAssignedCourses.length > 0 && (
+          <SimpleGrid columns={{ base: 1, md: 2, xl: 3 }} spacing={6}>
+            {assignedCourseTimeline.map(group => (
+              <Box
+                key={`${group.label}-${group.monthNumber}`}
+                as="article"
+                borderRadius="3xl"
+                overflow="hidden"
+                border="1px solid"
+                borderColor="gray.100"
+                boxShadow="md"
+              >
+                <Box
+                  bgGradient="linear(to-r, purple.50, purple.100)"
+                  p={4}
+                  display="flex"
+                  alignItems="center"
+                  justifyContent="space-between"
+                >
+                  <HStack spacing={3}>
+                    <Badge colorScheme="purple" borderRadius="full" px={3} py={1} fontWeight="bold">
+                      {group.scheduled ? `Month ${group.monthNumber}` : 'Upcoming'}
+                    </Badge>
+                    <Text fontWeight="semibold" color="purple.900">
+                      {group.label}
+                    </Text>
+                  </HStack>
+                  <HStack spacing={2} color="purple.700">
+                    <Icon as={group.scheduled ? ListPlus : Sparkles} />
+                    <Text fontSize="sm">{group.courses.length} courses assigned</Text>
+                  </HStack>
+                </Box>
+
+                <Stack spacing={0} divider={<Divider />} p={4} bg="white">
+                  {group.courses.map(course => (
+                    <Box key={`${course.id}-${course.title}`} py={3}>
+                      <HStack justify="space-between" align="start" spacing={3}>
+                        <VStack align="start" spacing={1} flex={1}>
+                          <Heading size="sm" color="gray.800">
+                            {course.title}
+                          </Heading>
+                          <Text color="gray.600" fontSize="sm">
+                            {course.description}
+                          </Text>
+                          <HStack spacing={3} flexWrap="wrap">
+                            {course.assignedDate && (
+                              <Badge colorScheme="gray" variant="subtle" borderRadius="full">
+                                {course.assignedDate.toLocaleDateString(undefined, {
+                                  month: 'short',
+                                  day: 'numeric',
+                                  year: 'numeric',
+                                })}
+                              </Badge>
+                            )}
+                            {course.difficulty && (
+                              <Badge colorScheme={badgeColor(course.difficulty)} variant="outline" borderRadius="full">
+                                {course.difficulty}
+                              </Badge>
+                            )}
+                            {course.estimatedMinutes && (
+                              <HStack spacing={1} color="gray.500">
+                                <Icon as={Clock} boxSize={4} />
+                                <Text fontSize="xs">{formatDuration(course.estimatedMinutes)}</Text>
+                              </HStack>
+                            )}
+                          </HStack>
+
+                          {typeof course.progress === 'number' && (
+                            <Box pt={1} width="full">
+                              <Progress
+                                value={course.progress}
+                                size="sm"
+                                colorScheme="purple"
+                                borderRadius="full"
+                                aria-hidden
+                              />
+                              <Text fontSize="xs" color="gray.500" mt={1}>
+                                {course.progress.toFixed(0)}% complete
+                              </Text>
+                            </Box>
+                          )}
+                        </VStack>
+
+                        {course.link && (
+                          <Button
+                            as="a"
+                            href={course.link}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            size="sm"
+                            colorScheme="purple"
+                            rightIcon={<ExternalLink size={16} />}
+                            variant="solid"
+                            borderRadius="full"
+                            minW="120px"
+                          >
+                            Open course
+                          </Button>
+                        )}
+                      </HStack>
+                    </Box>
+                  ))}
+                </Stack>
+              </Box>
+            ))}
+          </SimpleGrid>
+        )}
+      </Stack>
+    </Stack>
+  )
+}

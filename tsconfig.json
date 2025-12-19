@@ -24,7 +24,8 @@
     /* Path mapping */
     "baseUrl": ".",
     "paths": {
-      "@/*": ["src/*"]
+      "@/*": ["src/*"],
+      "@lottiefiles/dotlottie-react": ["src/vendor/DotLottieReact.tsx"]
     }
   },
   "include": ["src"],

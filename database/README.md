@@ -56,3 +56,25 @@ await setDoc(doc(db, 'profiles', userId), profileData)
 ```
 
 See the full schema in `firestore-schema.md` for complete collection definitions and security rules.
+
+## Legacy onboarding cleanup migration
+
+The onboarding and guided tour systems have been fully retired. Use `scripts/migrations/cleanup-onboarding.mjs` to remove legacy onboarding documents and fields.
+
+### Prerequisites
+- Install dependencies: `npm install` (requires access to `firebase-admin`).
+- Provide Firebase Admin credentials via one of the following:
+  - Set `GOOGLE_APPLICATION_CREDENTIALS` to the path of a service account JSON file, **or**
+  - Set `FIREBASE_SERVICE_ACCOUNT` to the JSON string of the service account.
+- (Optional) Set `FIREBASE_PROJECT_ID` if the service account is used across multiple projects.
+
+### Run the script
+
+```bash
+node scripts/migrations/cleanup-onboarding.mjs
+```
+
+### What the script does
+- Sets `isOnboarded` to `true` for all profiles and removes any `onboardingSnapshot` and `dashboardTourCompleted` fields.
+- Deletes all documents in `onboarding_steps`, `onboarding_progress`, and `onboarding_analytics`.
+- Removes `user_points` records where `source` contains "onboarding".

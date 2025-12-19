@@ -1,5 +1,10 @@
+<<<<<<< HEAD
 import React from 'react'
 import { Outlet, useNavigate } from 'react-router-dom'
+=======
+import React, { useEffect, useMemo, useState } from 'react'
+import { Outlet, useLocation, useNavigate } from 'react-router-dom'
+>>>>>>> origin/Sign-In/Up
 import {
   Box,
   Flex,
@@ -20,49 +25,107 @@ import {
   DrawerContent,
   DrawerCloseButton,
   DrawerBody,
+<<<<<<< HEAD
+=======
+  InputGroup,
+  InputLeftElement,
+  Input,
+  useToast,
+>>>>>>> origin/Sign-In/Up
 } from '@chakra-ui/react'
 import { 
   Menu as MenuIcon,
+<<<<<<< HEAD
   Home,
   TrendingUp,
+=======
+>>>>>>> origin/Sign-In/Up
   Target,
   Users,
+<<<<<<< HEAD
   Settings,
   LogOut,
   User,
+=======
+  ClipboardList,
+  Gavel,
+  Megaphone,
+  Gift,
+  BookMarked,
+  Sparkles,
+  Search,
+  LogOut,
+  CalendarDays,
+>>>>>>> origin/Sign-In/Up
 } from 'lucide-react'
 import { useAuth } from '@/hooks/useAuth'
 import { UserRole } from '@/types'
+import { BuildVillageModal } from '@/components/modals/BuildVillageModal'
+import { ConfirmationWelcomeModal } from '@/components/modals/ConfirmationWelcomeModal'
+import { NotificationDropdown } from '@/components/notifications/NotificationDropdown'
+
+const HEADER_HEIGHT = '72px'
 
 export const MainLayout: React.FC = () => {
   const { profile, signOut } = useAuth()
   const navigate = useNavigate()
   const { isOpen, onOpen, onClose } = useDisclosure()
+  const toast = useToast()
+  const [showVillagePrompt, setShowVillagePrompt] = useState(false)
+  const [showWelcomeModal, setShowWelcomeModal] = useState(false)
+
+  const buildVillageKey = useMemo(() => (profile ? `t4l.buildVillage.${profile.id}` : null), [profile])
+  const welcomeKey = useMemo(() => (profile ? `t4l.newUserWelcome.${profile.id}` : null), [profile])
+
+  useEffect(() => {
+    localStorage.removeItem('bolt.dashboard_tour_progress')
+  }, [])
+
+  useEffect(() => {
+    if (!profile) return
+
+    if (profile.role === UserRole.FREE_USER && buildVillageKey) {
+      const stored = localStorage.getItem(buildVillageKey)
+      if (!stored) {
+        setShowVillagePrompt(true)
+      }
+    }
+
+    if (welcomeKey && location.pathname.startsWith('/app/weekly-glance')) {
+      const shouldWelcome = localStorage.getItem(welcomeKey)
+      if (shouldWelcome === 'pending') {
+        setShowWelcomeModal(true)
+      }
+    }
+  }, [buildVillageKey, location.pathname, profile, welcomeKey])
+
+  useEffect(() => {
+    if (!welcomeKey) return
+
+    const handleStorage = (event: StorageEvent) => {
+      if (event.key === welcomeKey && event.newValue !== 'pending') {
+        setShowWelcomeModal(false)
+      }
+    }
+
+    window.addEventListener('storage', handleStorage)
+
+    return () => window.removeEventListener('storage', handleStorage)
+  }, [welcomeKey])
 
   const handleSignOut = async () => {
     await signOut()
     navigate('/login')
   }
 
-  const getDashboardPath = () => {
-    switch (profile?.role) {
-      case UserRole.FREE_USER:
-        return '/app/dashboard/free'
-      case UserRole.PAID_MEMBER:
-        return '/app/dashboard/member'
-      case UserRole.MENTOR:
-        return '/app/dashboard/mentor'
-      case UserRole.AMBASSADOR:
-        return '/app/dashboard/ambassador'
-      case UserRole.COMPANY_ADMIN:
-        return '/app/dashboard/company-admin'
-      case UserRole.SUPER_ADMIN:
-        return '/app/dashboard/super-admin'
-      default:
-        return '/app/dashboard/free'
+  const handleVillageCreated = () => {
+    if (buildVillageKey) {
+      localStorage.setItem(buildVillageKey, 'completed')
     }
+    setShowVillagePrompt(false)
   }
 
+<<<<<<< HEAD
   const navigationItems = [
     { label: 'Dashboard', path: getDashboardPath(), icon: Home },
     { label: 'Journeys', path: '/app/journeys', icon: Target },
@@ -87,21 +150,139 @@ export const MainLayout: React.FC = () => {
         >
           {item.label}
         </Button>
+=======
+  const handleVillageSkipped = () => {
+    if (buildVillageKey) {
+      localStorage.setItem(buildVillageKey, 'skipped')
+    }
+    setShowVillagePrompt(false)
+  }
+
+  const handleWelcomeAcknowledged = () => {
+    if (welcomeKey) {
+      localStorage.removeItem(welcomeKey)
+    }
+    setShowWelcomeModal(false)
+  }
+
+  const navigationSections = useMemo(
+    () => [
+      {
+        label: 'MY JOURNEY',
+        items: [
+          { label: 'Dashboard', path: '/app/weekly-glance', icon: CalendarDays },
+          { label: 'Weekly Checklist', path: '/app/weekly-checklist', icon: ClipboardList },
+          { label: 'Leadership Board', path: '/app/leadership-board', icon: Trophy },
+          { label: 'My Courses', path: '/app/courses', icon: BookOpen },
+          { label: 'Peer Connect', path: '/app/peer-connect', icon: Users },
+          { label: 'Impact Log', path: '/app/impact', icon: Target },
+          { label: 'Leadership Council', path: '/app/leadership-council', icon: Gavel },
+        ],
+      },
+      {
+        label: 'COMMUNITY',
+        items: [
+          { label: 'Announcements', path: '/app/announcements', icon: Megaphone },
+          { label: 'Referral Rewards', path: '/app/referral-rewards', icon: Gift },
+          { label: 'Global Book Club', path: '/app/book-club', icon: BookMarked },
+          { label: 'Shameless Circle', path: '/app/shameless-circle', icon: Sparkles },
+        ],
+      },
+    ],
+    [],
+  )
+
+  const isFreeUser = profile?.role === UserRole.FREE_USER
+  const isMentor = profile?.role === UserRole.MENTOR
+
+  const filteredNavigation = useMemo(() => {
+    return navigationSections.map(section => ({
+      ...section,
+      items: section.items.filter(item => {
+        if (isMentor && item.label === 'Leadership Board') {
+          return false
+        }
+        return true
+      }),
+    }))
+  }, [isMentor, navigationSections])
+
+  const handleNavigation = (path: string) => {
+    const restrictedPaths = ['/app/peer-connect', '/app/leadership-council']
+
+    if (isFreeUser && restrictedPaths.some(restricted => path.startsWith(restricted))) {
+      toast({
+        title: 'Upgrade required',
+        description: 'This feature is available to paid members. Upgrade to continue.',
+        status: 'info',
+        duration: 3500,
+        isClosable: true,
+      })
+      navigate('/app/weekly-glance', { replace: true })
+      onClose()
+      return
+    }
+
+    navigate(path)
+    onClose()
+  }
+
+  const NavContent = () => (
+    <VStack align="stretch" spacing={5} pt={4}>
+      {filteredNavigation.map(section => (
+        <Box key={section.label}>
+          <Text mb={2} {...sectionLabelStyles}>
+            {section.label}
+          </Text>
+          <VStack align="stretch" spacing={1}>
+            {section.items.map(item => {
+              const isActive = location.pathname.startsWith(item.path)
+
+              return (
+                <Button
+                  key={item.path}
+                  leftIcon={<item.icon size={18} />}
+                  variant="ghost"
+                  justifyContent="flex-start"
+                  onClick={() => handleNavigation(item.path)}
+                  bg={isActive ? 'brand.primaryMuted' : 'transparent'}
+                  color={isActive ? 'brand.text' : 'brand.subtleText'}
+                  _hover={{ bg: 'brand.primaryMuted', color: 'brand.text' }}
+                  height="42px"
+                  fontWeight={isActive ? 'semibold' : 'medium'}
+                  fontSize="13px"
+                >
+                  {item.label}
+                </Button>
+              )
+            })}
+          </VStack>
+        </Box>
+>>>>>>> origin/Sign-In/Up
       ))}
     </VStack>
   )
 
   return (
+<<<<<<< HEAD
     <Flex h="100vh" bg="brand.deepPlum">
       {/* Desktop Sidebar */}
       <Box
         w="250px"
         bg="brand.deepPlum"
+=======
+    <Flex minH="100vh" h="100vh" bg="brand.accent" color="brand.text" overflow="hidden">
+      {/* Desktop Sidebar */}
+      <Box
+        w={{ base: '0', md: '260px' }}
+        bg="brand.sidebar"
+>>>>>>> origin/Sign-In/Up
         borderRight="1px solid"
         borderColor="rgba(234, 177, 48, 0.2)"
         p={4}
         display={{ base: 'none', md: 'block' }}
       >
+<<<<<<< HEAD
         <VStack align="stretch" h="full" spacing={6}>
           {/* Logo */}
           <Box>
@@ -112,6 +293,24 @@ export const MainLayout: React.FC = () => {
               Transformation 4 Leaders
             </Text>
           </Box>
+=======
+        <VStack align="stretch" h="full" spacing={8}>
+          <HStack spacing={3} align="center">
+            <Box boxSize="36px" borderRadius="full" bg="white" display="grid" placeItems="center" boxShadow="sm">
+              <Text fontWeight="bold" color="brand.primary">
+                T4
+              </Text>
+            </Box>
+            <Box>
+              <Text fontSize="sm" fontWeight="bold" color="brand.text">
+                Tier Platform
+              </Text>
+              <Text fontSize="xs" color="brand.subtleText">
+                Transformation Journey
+              </Text>
+            </Box>
+          </HStack>
+>>>>>>> origin/Sign-In/Up
 
           {/* Navigation */}
           <Box flex="1">
@@ -119,34 +318,18 @@ export const MainLayout: React.FC = () => {
           </Box>
 
           {/* User Info */}
-          <VStack align="stretch" spacing={2}>
-            <Box
-              p={3}
-              bg="rgba(53, 14, 111, 0.5)"
-              borderRadius="lg"
-              border="1px solid"
-              borderColor="rgba(234, 177, 48, 0.2)"
-            >
-              <HStack>
-                <Avatar size="sm" name={profile?.fullName} src={profile?.avatarUrl} />
-                <Box flex="1">
-                  <Text fontSize="sm" fontWeight="semibold" color="brand.softGold">
-                    {profile?.fullName}
-                  </Text>
-                  <Text fontSize="xs" color="brand.gold">
-                    {profile?.totalPoints || 0} points
-                  </Text>
-                </Box>
-              </HStack>
-            </Box>
-            <Button
-              leftIcon={<Settings size={16} />}
-              variant="ghost"
-              size="sm"
-              onClick={() => navigate('/app/settings')}
-            >
-              Settings
-            </Button>
+          <VStack align="stretch" spacing={3}>
+            <HStack align="center" spacing={3}>
+              <Avatar size="sm" name={profile?.fullName} src={profile?.avatarUrl} bg="brand.primary" color="white" />
+              <Box flex="1">
+                <Text fontSize="sm" fontWeight="semibold" color="brand.text">
+                  {profile?.fullName || 'Your name'}
+                </Text>
+                <Text fontSize="xs" color="brand.subtleText">
+                  {profile?.totalPoints ? `${profile.totalPoints} points` : 'Logged in'}
+                </Text>
+              </Box>
+            </HStack>
             <Button
               leftIcon={<LogOut size={16} />}
               variant="ghost"
@@ -161,8 +344,13 @@ export const MainLayout: React.FC = () => {
       </Box>
 
       {/* Main Content */}
+<<<<<<< HEAD
       <Flex flex="1" direction="column" overflow="hidden">
         {/* Mobile Header */}
+=======
+      <Flex flex="1" direction="column" h="100vh" maxH="100vh" overflow="hidden">
+        {/* Header */}
+>>>>>>> origin/Sign-In/Up
         <Flex
           display={{ base: 'flex', md: 'none' }}
           p={4}
@@ -171,16 +359,57 @@ export const MainLayout: React.FC = () => {
           borderColor="rgba(234, 177, 48, 0.2)"
           align="center"
           justify="space-between"
+<<<<<<< HEAD
         >
           <Text fontSize="xl" fontWeight="bold" color="brand.gold">
             T4L
           </Text>
           <HStack>
+=======
+          px={{ base: 4, md: 8 }}
+          h={HEADER_HEIGHT}
+          flexShrink={0}
+          bg="white"
+          borderBottom="1px solid"
+          borderColor="brand.border"
+          gap={3}
+        >
+          <HStack spacing={3} display={{ base: 'flex', md: 'none' }}>
+            <IconButton
+              icon={<MenuIcon size={20} />}
+              variant="ghost"
+              aria-label="Open menu"
+              onClick={onOpen}
+            />
+            <Text fontWeight="bold">T4</Text>
+          </HStack>
+
+          <InputGroup maxW={{ base: '100%', md: '420px' }} flex={1}>
+            <InputLeftElement pointerEvents="none">
+              <Search size={18} color="#6b7392" />
+            </InputLeftElement>
+            <Input
+              placeholder="Search"
+              bg="brand.accent"
+              borderColor="brand.border"
+              _focus={{ borderColor: 'brand.primary', boxShadow: '0 0 0 1px #5d6bff' }}
+            />
+          </InputGroup>
+
+          <HStack spacing={3} ml={{ base: 0, md: 4 }} align="center">
+            <NotificationDropdown />
+>>>>>>> origin/Sign-In/Up
             <Menu>
-              <MenuButton as={IconButton} icon={<User size={20} />} variant="ghost" />
-              <MenuList bg="brand.deepPlum" borderColor="brand.gold">
+              <MenuButton as={Button} variant="ghost" px={0} _hover={{ bg: 'transparent' }}>
+                <HStack spacing={2}>
+                  <Avatar size="sm" name={profile?.fullName} src={profile?.avatarUrl} bg="brand.primary" color="white" />
+                  <Text display={{ base: 'none', md: 'block' }} fontSize="sm" color="brand.text">
+                    {profile?.fullName || "User's name"}
+                  </Text>
+                </HStack>
+              </MenuButton>
+              <MenuList bg="white" borderColor="brand.border">
                 <MenuItem onClick={() => navigate('/app/profile')}>Profile</MenuItem>
-                <MenuItem onClick={() => navigate('/app/settings')}>Settings</MenuItem>
                 <MenuDivider />
                 <MenuItem onClick={handleSignOut}>Sign Out</MenuItem>
               </MenuList>
@@ -195,7 +424,12 @@ export const MainLayout: React.FC = () => {
         </Flex>
 
         {/* Content */}
-        <Box flex="1" overflow="auto" p={{ base: 4, md: 8 }}>
+        <Box
+          flex="1"
+          height={`calc(100vh - ${HEADER_HEIGHT})`}
+          overflowY="auto"
+          p={{ base: 4, md: 8 }}
+        >
           <Outlet />
         </Box>
       </Flex>
@@ -215,6 +449,19 @@ export const MainLayout: React.FC = () => {
           </DrawerBody>
         </DrawerContent>
       </Drawer>
+
+      <BuildVillageModal
+        isOpen={showVillagePrompt}
+        onCreate={handleVillageCreated}
+        onSkip={handleVillageSkipped}
+      />
+
+      <ConfirmationWelcomeModal
+        isOpen={showWelcomeModal}
+        onAcknowledge={handleWelcomeAcknowledged}
+        firstName={profile?.firstName}
+        role={profile?.role}
+      />
     </Flex>
   )
 }

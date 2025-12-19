@@ -9,7 +9,7 @@ export const UnauthorizedPage: React.FC = () => {
     <Box minH="100vh" bg="brand.deepPlum" display="flex" alignItems="center" justifyContent="center" p={4}>
       <Box textAlign="center">
         <Heading size="2xl" color="brand.flameOrange" mb={4}>Access Denied</Heading>
-        <Text color="brand.softGold" mb={8}>You don't have permission to access this page.</Text>
+        <Text color="brand.textOnDark" mb={8}>You don't have permission to access this page.</Text>
         <Button variant="primary" onClick={() => navigate('/')}>Go Home</Button>
       </Box>
     </Box>

@@ -27,20 +27,46 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null)
   const [profile, setProfile] = useState<UserProfile | null>(null)
   const [loading, setLoading] = useState(true)
+  const [profileLoading, setProfileLoading] = useState(true)
 
-  // Fetch user profile from Firestore
-  const fetchProfile = async (userId: string): Promise<UserProfile | null> => {
+  // Fetch user profile from Firestore or create one if it doesn't exist
+  const fetchOrCreateProfile = async (
+    firebaseUser: User
+  ): Promise<UserProfile | null> => {
     try {
-      const docRef = doc(db, 'profiles', userId)
+      const docRef = doc(db, 'profiles', firebaseUser.uid)
       const docSnap = await getDoc(docRef)
 
       if (docSnap.exists()) {
         return docSnap.data() as UserProfile
       }
 
-      return null
+      const profileData: UserProfile = {
+        id: firebaseUser.uid,
+        email: firebaseUser.email ?? '',
+        firstName: firebaseUser.displayName?.split(' ')?.[0] ?? 'User',
+        lastName: firebaseUser.displayName?.split(' ')?.slice(1).join(' ') ?? '',
+        fullName: firebaseUser.displayName ?? 'User',
+        role: UserRole.FREE_USER,
+        totalPoints: 0,
+        level: 1,
+        referralCount: 0,
+        referralCode: null,
+        referredBy: null,
+        isOnboarded: true,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+      }
+
+      await setDoc(docRef, {
+        ...profileData,
+        createdAt: serverTimestamp(),
+        updatedAt: serverTimestamp(),
+      })
+
+      return profileData
     } catch (error) {
-      console.error('Error fetching profile:', error)
+      console.error('Error fetching/creating profile:', error)
       return null
     }
   }
@@ -48,15 +74,21 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   // Initialize auth state
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
+      setLoading(true)
       setUser(user)
 
-      if (user) {
-        const userProfile = await fetchProfile(user.uid)
-        setProfile(userProfile)
-      } else {
+      if (!user) {
         setProfile(null)
+        setProfileLoading(false)
+        setLoading(false)
+        return
       }
 
+      setProfileLoading(true)
+
+      const userProfile = await fetchOrCreateProfile(user)
+      setProfile(userProfile)
+      setProfileLoading(false)
       setLoading(false)
     })
 
@@ -86,17 +118,24 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         firstName: userData.firstName || 'User',
         lastName: userData.lastName || '',
         fullName: userData.fullName || 'User',
+        gender: userData.gender,
         role: UserRole.FREE_USER,
         totalPoints: 0,
         level: 1,
-        isOnboarded: false,
+        referralCount: 0,
+        referralCode: null,
+        referredBy: null,
+        isOnboarded: true,
+        companyCode: userData.companyCode,
+        companyId: userData.companyId,
+        companyName: userData.companyName,
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
       }
 
       await setDoc(doc(db, 'profiles', user.uid), profileData)
 
-      return { error: null }
+      return { error: null, userId: user.uid }
     } catch (error) {
       return { error: error as Error }
     }
@@ -174,6 +213,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     user,
     profile,
     loading,
+    profileLoading,
     signIn,
     signUp,
     signOut,

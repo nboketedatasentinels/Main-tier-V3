@@ -7,7 +7,7 @@ This document captures the target architecture, routing map, and dashboard layou
 - **SPA with secure API layer**: React 18 + TypeScript front end powered by Vite. Client renders authenticated experience while calling Bolt Database Edge Functions for all privileged logic.
 - **Serverless backend**: Bolt Database PostgreSQL (115+ migrations), Bolt Auth, Edge Functions, Storage, and real-time subscriptions for live updates (leaderboards, notifications, checklists).
 - **Security**: RBAC enforced in UI and API, RLS on data tables, encrypted storage, CSRF/XSS protection, validated inputs, and secure Stripe integration through Edge Functions + webhooks.
-- **Brand-first UI**: Dark plum shell with Royal Purple accents, Flame Orange CTAs, and Gold/Soft Gold highlights. Framer Motion for polish, Recharts for analytics, Intro.js for tours, and Canvas Confetti for celebrations.
+- **Brand-first UI**: Dark plum shell with Royal Purple accents, Flame Orange CTAs, and Gold/Soft Gold highlights. Framer Motion for polish, Recharts for analytics, and Canvas Confetti for celebrations.
 
 ## 2. Technology Stack
 
@@ -19,7 +19,6 @@ This document captures the target architecture, routing map, and dashboard layou
 - Tailwind CSS for layout utilities and fine-grain spacing
 - Framer Motion for transitions and micro-interactions
 - Recharts for charts; Lucide React for iconography
-- Intro.js for guided tours and onboarding helpers
 - date-fns for date/time utilities
 - Canvas Confetti for milestone celebrations
 
@@ -51,7 +50,7 @@ This document captures the target architecture, routing map, and dashboard layou
 ```
 src/
 ├── components/        # Shared UI (cards, charts, tables, badges, loaders)
-├── contexts/          # AuthContext, NotificationContext, TourContext, FeatureFlagContext
+├── contexts/          # AuthContext, NotificationContext, FeatureFlagContext
 ├── hooks/             # useAuth, useRBAC, useJourneyProgress, useChecklist, useImpactLog
 ├── layouts/           # AppShell, AuthLayout, RoleDashboardLayout variants
 ├── pages/             # Route-level screens organized by domain
@@ -96,7 +95,6 @@ src/
 - `/dashboard/ambassador` – Ambassador dashboard
 - `/dashboard/company-admin` – Company admin dashboard
 - `/dashboard/super-admin` – Super admin tools
-- `/onboarding` – Role-aware onboarding wizard + Intro.js tour
 - `/journeys` – Journey catalog & enrollment
 - `/journeys/:journeyId` – Journey detail with weekly map
 - `/journeys/:journeyId/weeks/:weekNumber` – Weekly checklist view
@@ -180,7 +178,7 @@ src/
 
 ## 8. Testing Recommendations
 - **Unit**: points calculation, weekly target status, RBAC guards, checklist unlock rules.
-- **Integration**: auth flows, onboarding wizard, weekly checklist completion, impact logging, subscription upgrade/downgrade.
+- **Integration**: auth flows, weekly checklist completion, impact logging, subscription upgrade/downgrade.
 - **Visual/regression**: route-level snapshots for dashboards and critical flows.
 
 ## 9. Environment & Dev Workflow

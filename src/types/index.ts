@@ -4,6 +4,7 @@ export enum UserRole {
   PAID_MEMBER = 'paid_member',
   MENTOR = 'mentor',
   AMBASSADOR = 'ambassador',
+  ADMIN = 'admin',
   COMPANY_ADMIN = 'company_admin',
   SUPER_ADMIN = 'super_admin',
 }
@@ -15,6 +16,7 @@ export interface UserProfile {
   firstName: string
   lastName: string
   fullName: string
+  gender?: string
   role: UserRole
   avatarUrl?: string
   bio?: string
@@ -26,21 +28,64 @@ export interface UserProfile {
   currentWeek?: number
   totalPoints: number
   level: number
+  referralCount?: number
+  referralCode?: string | null
+  referredBy?: string | null
   
   // Organization
   companyId?: string
+  companyCode?: string
+  companyName?: string
   villageId?: string
   clusterId?: string
+  corporateVillageId?: string
+  cohortIdentifier?: string
+
+  // Availability & preferences
+  timezone?: string
+  availabilityStatus?: string
+  notes?: string
+
+  // Leadership relations
+  mentorId?: string
+  ambassadorId?: string
+  isActiveAmbassador?: boolean
+  accountStatus?: string
+  lastInteraction?: string
+  registrationDate?: string
+  lastActive?: string
   
   // Settings
+  /**
+   * @deprecated Legacy onboarding flag. Always true for all users.
+   */
   isOnboarded: boolean
+  fcmTokens?: string[]
   personalityType?: string
   privacySettings?: PrivacySettings
-  
+
   // Timestamps
   createdAt: string
   updatedAt: string
   lastActiveAt?: string
+}
+
+export type GenderOption =
+  | 'prefer_not_to_say'
+  | 'male'
+  | 'female'
+  | 'non_binary'
+  | 'other'
+
+export interface Organization {
+  id: string
+  code: string
+  name: string
+  status: 'active' | 'inactive' | 'suspended'
+  createdAt: string
+  updatedAt: string
+  memberCount: number
+  settings?: Record<string, unknown>
 }
 
 export interface PrivacySettings {
@@ -419,4 +464,17 @@ export interface PaginatedResponse<T> {
   page: number
   pageSize: number
   hasMore: boolean
+}
+
+// Inspiration Quote
+export interface InspirationQuote {
+  id: string
+  week_number: number
+  quote_text: string
+  author?: string
+  category?: string
+  isActive?: boolean
+  createdAt?: string
+  updatedAt?: string
+  year?: number
 }
