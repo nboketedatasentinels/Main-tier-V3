@@ -84,13 +84,13 @@ const TabNavigation: React.FC<{
           variant={activeTab === tab.key ? 'solid' : 'ghost'}
           colorScheme={activeTab === tab.key ? 'purple' : undefined}
           borderRadius="full"
-          bg={activeTab === tab.key ? 'purple.600' : 'white'}
-          color={activeTab === tab.key ? 'white' : 'gray.700'}
+          bg={activeTab === tab.key ? 'purple.600' : 'surface.default'}
+          color={activeTab === tab.key ? 'text.inverse' : 'text.primary'}
           borderWidth={1}
-          borderColor={activeTab === tab.key ? 'purple.600' : 'gray.200'}
+          borderColor={activeTab === tab.key ? 'purple.600' : 'border.subtle'}
           boxShadow={activeTab === tab.key ? 'lg' : 'none'}
           leftIcon={<Icon as={tab.icon} boxSize={4} />}
-          _hover={{ bg: activeTab === tab.key ? 'purple.700' : 'gray.50' }}
+          _hover={{ bg: activeTab === tab.key ? 'purple.700' : 'surface.subtle' }}
           _focus={{ boxShadow: '0 0 0 3px rgba(99, 102, 241, 0.4)' }}
           onClick={() => onChange(tab.key)}
         >
@@ -101,7 +101,179 @@ const TabNavigation: React.FC<{
   )
 }
 
+const AnnouncementCard: React.FC<{
+  announcement: Announcement
+  onOpen: () => void
+  onToggleRead: () => void
+  onToggleArchive: () => void
+}> = ({ announcement, onOpen, onToggleRead, onToggleArchive }) => {
+  const isUnread = !announcement.isRead
+  const indicatorColor = isUnread ? 'brand.primary' : 'border.subtle'
+  const isArchived = announcement.isArchived
 
+  return (
+    <Box
+      as="button"
+      textAlign="left"
+      width="100%"
+      onClick={onOpen}
+      borderWidth={1}
+      borderColor={isUnread ? 'accent.purpleBorder' : 'border.subtle'}
+      bg={isUnread ? 'accent.purpleSubtle' : 'surface.default'}
+      boxShadow={isUnread ? 'md' : 'sm'}
+      borderRadius="2xl"
+      p={4}
+      _hover={{ borderColor: 'purple.400', boxShadow: 'md' }}
+      transition="all 0.2s ease"
+    >
+      <HStack align="start" spacing={4}>
+        <Box mt={2} boxSize={3} borderRadius="full" bg={indicatorColor} aria-hidden />
+        <Stack spacing={2} flex={1}>
+          <HStack justify="space-between" align="start">
+            <Stack spacing={1}>
+              <Text fontSize={{ base: 'md', md: 'lg' }} fontWeight="semibold" color="text.primary">
+                {announcement.title}
+              </Text>
+              <Text color="text.secondary" fontSize={{ base: 'sm', md: 'md' }}>
+                {announcement.message.length > 240
+                  ? `${announcement.message.slice(0, 240)}...`
+                  : announcement.message}
+              </Text>
+            </Stack>
+            <Stack direction={{ base: 'column', md: 'row' }} spacing={2} align="flex-end">
+              {isUnread && (
+                <Badge colorScheme="purple" variant="solid" borderRadius="full">
+                  New
+                </Badge>
+              )}
+              {isArchived && (
+                <Badge colorScheme="gray" variant="subtle" borderRadius="full">
+                  Archived
+                </Badge>
+              )}
+              {announcement.createdAt && (
+                <Text color="text.muted" fontSize="xs" textTransform="uppercase">
+                  {formatDistanceToNow(announcement.createdAt, { addSuffix: true })}
+                </Text>
+              )}
+            </Stack>
+          </HStack>
+          <HStack spacing={2}>
+            <IconButton
+              aria-label={announcement.isRead ? 'Mark as unread' : 'Mark as read'}
+              icon={<Icon as={announcement.isRead ? MailOpen : Mail} boxSize={4} />}
+              size="sm"
+              variant="ghost"
+              onClick={(e) => {
+                e.stopPropagation()
+                onToggleRead()
+              }}
+            />
+            <IconButton
+              aria-label={announcement.isArchived ? 'Restore announcement' : 'Archive announcement'}
+              icon={<Icon as={announcement.isArchived ? RefreshCcw : Archive} boxSize={4} />}
+              size="sm"
+              variant="ghost"
+              onClick={(e) => {
+                e.stopPropagation()
+                onToggleArchive()
+              }}
+            />
+          </HStack>
+        </Stack>
+      </HStack>
+    </Box>
+  )
+}
+
+const AnnouncementModal: React.FC<{
+  announcement: Announcement
+  isOpen: boolean
+  onClose: () => void
+  onArchive: () => void
+  onRestore: () => void
+}> = ({ announcement, isOpen, onClose, onArchive, onRestore }) => {
+  const isArchived = announcement.isArchived
+  return (
+    <Modal isOpen={isOpen} onClose={onClose} size="4xl" isCentered>
+      <ModalOverlay backdropFilter="blur(6px)" />
+      <ModalContent borderRadius="2xl" overflow="hidden">
+        <ModalHeader>
+          <Stack spacing={1}>
+            <Text fontSize="xs" fontWeight="bold" color="text.muted" letterSpacing="widest">
+              ANNOUNCEMENT
+            </Text>
+            <Heading size="lg" color="text.primary">
+              {announcement.title}
+            </Heading>
+            <HStack spacing={2} flexWrap="wrap">
+              {announcement.createdAt && (
+                <Badge bg="surface.subtle" color="text.secondary" px={3} py={1} borderRadius="full" display="inline-flex" gap={2}>
+                  <Icon as={CalendarClock} boxSize={4} />
+                  {format(announcement.createdAt, 'MMMM d, yyyy • h:mm a')}
+                </Badge>
+              )}
+              {announcement.author && (
+                <Badge bg="surface.subtle" color="text.secondary" px={3} py={1} borderRadius="full" display="inline-flex" gap={2}>
+                  <Icon as={User} boxSize={4} />
+                  {announcement.author}
+                </Badge>
+              )}
+              {announcement.source && (
+                <Badge bg="surface.subtle" color="text.secondary" px={3} py={1} borderRadius="full" display="inline-flex" gap={2}>
+                  <Icon as={Inbox} boxSize={4} />
+                  {announcement.source}
+                </Badge>
+              )}
+            </HStack>
+          </Stack>
+        </ModalHeader>
+        <ModalCloseButton rounded="full" mt={2} />
+        <ModalBody>
+          <Box borderWidth={1} borderColor="border.subtle" bg="surface.subtle" borderRadius="2xl" p={4}>
+            <Text whiteSpace="pre-wrap" color="text.secondary" fontSize="md" lineHeight="tall">
+              {announcement.message}
+            </Text>
+          </Box>
+        </ModalBody>
+        <ModalFooter justifyContent="space-between" alignItems="center">
+          <HStack spacing={3} color="text.secondary" fontSize="sm" textTransform="uppercase" fontWeight="semibold">
+            {isArchived ? (
+              <HStack spacing={2}>
+                <Icon as={Archive} boxSize={4} />
+                <Text>Archived</Text>
+              </HStack>
+            ) : announcement.isRead ? (
+              <HStack spacing={2}>
+                <Icon as={MailOpen} boxSize={4} />
+                <Text>Read</Text>
+              </HStack>
+            ) : (
+              <HStack spacing={2}>
+                <Icon as={Mail} boxSize={4} />
+                <Text>Unread</Text>
+              </HStack>
+            )}
+          </HStack>
+          <HStack spacing={3}>
+            {isArchived ? (
+              <Button variant="outline" leftIcon={<RefreshCcw size={18} />} onClick={onRestore}>
+                Restore
+              </Button>
+            ) : (
+              <Button variant="outline" leftIcon={<Archive size={18} />} onClick={onArchive}>
+                Archive
+              </Button>
+            )}
+            <Button colorScheme="purple" onClick={onClose}>
+              Close
+            </Button>
+          </HStack>
+        </ModalFooter>
+      </ModalContent>
+    </Modal>
+  )
+}
 
 const EventsTab: React.FC = () => {
   const { profile } = useAuth()
@@ -123,15 +295,15 @@ const EventsTab: React.FC = () => {
       )}
 
       {isAdmin && (
-        <Box borderWidth={1} borderColor="gray.200" bg="white" borderRadius="3xl" p={6} boxShadow="sm">
+        <Box borderWidth={1} borderColor="border.subtle" bg="surface.default" borderRadius="3xl" p={6} boxShadow="sm">
           <Stack spacing={2}>
-            <Text fontSize="xs" fontWeight="bold" color="gray.500" letterSpacing="widest">
+            <Text fontSize="xs" fontWeight="bold" color="text.muted" letterSpacing="widest">
               EXTERNAL MANAGEMENT
             </Text>
-            <Heading size="md" color="gray.900">
+            <Heading size="md" color="text.primary">
               Events are managed in the external admin portal
             </Heading>
-            <Text color="gray.600" fontSize="sm">
+            <Text color="text.secondary" fontSize="sm">
               Use the dedicated events management site to create, update, or archive events. Updates made there will appear here
               for everyone once published.
             </Text>
@@ -152,9 +324,9 @@ const EventsTab: React.FC = () => {
 
       <Box
         borderWidth={1}
-        borderColor="gray.200"
+        borderColor="border.subtle"
         borderStyle="dashed"
-        bg="white"
+        bg="surface.default"
         borderRadius="3xl"
         p={{ base: 8, md: 16 }}
         minH="320px"
@@ -173,10 +345,10 @@ const EventsTab: React.FC = () => {
           >
             <Icon as={CalendarDays} boxSize={8} color="purple.600" />
           </Box>
-          <Heading size="lg" color="gray.900">
+          <Heading size="lg" color="text.primary">
             Experience what's happening next
           </Heading>
-          <Text color="gray.600" fontSize={{ base: 'sm', md: 'md' }}>
+          <Text color="text.secondary" fontSize={{ base: 'sm', md: 'md' }}>
             {description}
           </Text>
           <Button
@@ -191,7 +363,7 @@ const EventsTab: React.FC = () => {
             View Events
           </Button>
           {eventsLoading && (
-            <Text color="gray.400" fontSize="xs" letterSpacing="widest">
+            <Text color="text.muted" fontSize="xs" letterSpacing="widest">
               Refreshing events feed...
             </Text>
           )}
@@ -292,10 +464,77 @@ export const AnnouncementsPage: React.FC = () => {
 
       <Stack spacing={2}>
         <TabNavigation activeTab={activeTab} onChange={handleTabChange} />
-        <Text color="gray.600" fontSize="sm">
+        <Text color="text.secondary" fontSize="sm">
           {announcementDescription}
         </Text>
       </Stack>
+
+      {activeTab === 'announcements' && (
+        <Stack spacing={4}>
+          {error && (
+            <Alert status="error" borderRadius="xl" borderWidth={1} borderColor="red.200" bg="red.50">
+              <AlertIcon />
+              <AlertDescription fontSize="sm">{error}</AlertDescription>
+            </Alert>
+          )}
+
+          {loading ? (
+            <VStack
+              borderWidth={1}
+              borderColor="border.subtle"
+              borderRadius="2xl"
+              bg="surface.default"
+              p={10}
+              spacing={3}
+              boxShadow="sm"
+            >
+              <Spinner color="purple.500" size="lg" />
+              <Text color="text.secondary" fontWeight="medium">
+                Loading content...
+              </Text>
+            </VStack>
+          ) : announcements.length === 0 ? (
+            <VStack
+              borderWidth={1}
+              borderStyle="dashed"
+              borderColor="border.subtle"
+              borderRadius="2xl"
+              bg="surface.default"
+              p={10}
+              spacing={3}
+              boxShadow="sm"
+            >
+              <Icon as={Inbox} boxSize={12} color="text.muted" />
+              <Heading size="sm" color="text.primary">
+                No announcements available
+              </Heading>
+              <Text color="text.secondary" fontSize="sm">
+                Check back soon for new updates and community announcements.
+              </Text>
+            </VStack>
+          ) : (
+            <Grid templateColumns="repeat(auto-fit, minmax(320px, 1fr))" gap={4}>
+              {announcements.map((announcement) => (
+                <AnnouncementCard
+                  key={announcement.id}
+                  announcement={announcement}
+                  onOpen={() => openAnnouncement(announcement)}
+                  onToggleRead={() =>
+                    announcement.isRead
+                      ? markAnnouncementAsUnread(announcement.id)
+                      : markAnnouncementAsRead(announcement.id)
+                  }
+                  onToggleArchive={() =>
+                    announcement.isArchived
+                      ? restoreAnnouncement(announcement.id)
+                      : archiveAnnouncement(announcement.id)
+                  }
+                />
+              ))}
+            </Grid>
+          )}
+        </Stack>
+      )}
 
       {activeTab === 'events' && <EventsTab />}
       {activeTab === 'jobs' && <JobsTab />}

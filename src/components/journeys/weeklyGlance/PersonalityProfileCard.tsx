@@ -120,7 +120,7 @@ export const PersonalityProfileCard = ({ data, loading }: PersonalityProfileCard
   }
 
   return (
-    <Card h="100%" variant="outline" borderColor="brand.border">
+    <Card h="100%" variant="outline" borderColor="border.subtle">
       <CardBody>
         <Stack spacing={3}>
           <HStack justify="space-between">
@@ -132,14 +132,11 @@ export const PersonalityProfileCard = ({ data, loading }: PersonalityProfileCard
           </HStack>
 
           <Skeleton isLoaded={!loading} rounded="md">
-            <Stack spacing={2} color="#273240" fontSize="sm">
-              <Text>
-                {localProfile?.personalityDescription ||
-                  'Share your personality insights to receive tailored guidance.'}
-              </Text>
+            <Stack spacing={2} color="brand.subtleText" fontSize="sm">
+              <Text>{data?.personalityDescription || 'Share your personality insights to receive tailored guidance.'}</Text>
               {strengths.length > 0 && (
                 <>
-                  <Text fontWeight="semibold" color="#273240">
+                  <Text fontWeight="semibold" color="brand.text">
                     Strengths
                   </Text>
                   <UnorderedList pl={5} spacing={1}>

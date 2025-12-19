@@ -174,7 +174,7 @@ export const ReferralRewardsPage: React.FC = () => {
         boxShadow="md"
       >
         <Stack spacing={3} align={{ base: 'center', md: 'flex-start' }} textAlign={{ base: 'center', md: 'left' }}>
-          <HStack spacing={3} color="brand.indigo">
+          <HStack spacing={3} color="brand.primary">
             <Text fontSize="2xl">🚀🚀</Text>
             <Badge colorScheme="purple" variant="subtle" px={3} py={1} borderRadius="full">
               Tier Ambassador Program

@@ -33,7 +33,7 @@ export const WhatsAppCommunityCard: React.FC<WhatsAppCommunityCardProps> = ({
   communityName = 'WhatsApp Community',
 }) => {
   return (
-    <Box borderWidth={1} borderColor="gray.200" bg="white" borderRadius="3xl" boxShadow="sm" p={{ base: 6, md: 8 }}>
+    <Box borderWidth={1} borderColor="border.subtle" bg="surface.default" borderRadius="3xl" boxShadow="sm" p={{ base: 6, md: 8 }}>
       <Stack spacing={6}>
         <Stack spacing={3}>
           <Badge
@@ -54,10 +54,10 @@ export const WhatsAppCommunityCard: React.FC<WhatsAppCommunityCardProps> = ({
             </Text>
           </Badge>
           <Stack spacing={2}>
-            <Text fontSize="2xl" fontWeight="semibold" color="gray.900">
+            <Text fontSize="2xl" fontWeight="semibold" color="text.primary">
               {title}
             </Text>
-            <Text color="gray.600" fontSize={{ base: 'sm', md: 'md' }}>
+            <Text color="text.secondary" fontSize={{ base: 'sm', md: 'md' }}>
               {description}
             </Text>
           </Stack>
@@ -80,8 +80,8 @@ export const WhatsAppCommunityCard: React.FC<WhatsAppCommunityCardProps> = ({
             align="stretch"
             spacing={4}
             borderWidth={1}
-            borderColor="gray.200"
-            bg="gray.50"
+            borderColor="border.subtle"
+            bg="surface.subtle"
             borderRadius="2xl"
             p={6}
           >
@@ -89,7 +89,7 @@ export const WhatsAppCommunityCard: React.FC<WhatsAppCommunityCardProps> = ({
               <Box bg="yellow.100" borderRadius="full" p={2} display="inline-flex">
                 <Icon as={Sparkles} color="yellow.500" />
               </Box>
-              <Text fontWeight="semibold" color="gray.900">
+              <Text fontWeight="semibold" color="text.primary">
                 What you'll find inside
               </Text>
             </HStack>
@@ -99,7 +99,7 @@ export const WhatsAppCommunityCard: React.FC<WhatsAppCommunityCardProps> = ({
                   <Box bg="green.100" borderRadius="full" p={2} display="inline-flex">
                     <Icon as={Users} color="green.600" />
                   </Box>
-                  <Text color="gray.700" fontSize="sm">
+                  <Text color="text.secondary" fontSize="sm">
                     {highlight}
                   </Text>
                 </HStack>
@@ -111,8 +111,8 @@ export const WhatsAppCommunityCard: React.FC<WhatsAppCommunityCardProps> = ({
             align="stretch"
             spacing={4}
             borderWidth={1}
-            borderColor="gray.200"
-            bg="gray.50"
+            borderColor="border.subtle"
+            bg="surface.subtle"
             borderRadius="2xl"
             p={6}
           >
@@ -120,7 +120,7 @@ export const WhatsAppCommunityCard: React.FC<WhatsAppCommunityCardProps> = ({
               <Box bg="green.100" borderRadius="full" p={2} display="inline-flex">
                 <Icon as={ShieldCheck} color="green.600" />
               </Box>
-              <Text fontWeight="semibold" color="gray.900">
+              <Text fontWeight="semibold" color="text.primary">
                 Community guidelines
               </Text>
             </HStack>
@@ -132,7 +132,7 @@ export const WhatsAppCommunityCard: React.FC<WhatsAppCommunityCardProps> = ({
                       •
                     </Box>
                   </Box>
-                  <Text color="gray.700" fontSize="sm">
+                  <Text color="text.secondary" fontSize="sm">
                     {guideline}
                   </Text>
                 </HStack>
@@ -142,7 +142,7 @@ export const WhatsAppCommunityCard: React.FC<WhatsAppCommunityCardProps> = ({
         </SimpleGrid>
 
         <Box borderWidth={1} borderColor="green.200" borderStyle="dashed" bg="green.50" p={4} borderRadius="xl">
-          <Text fontSize="sm" color="green.800">
+          <Text fontSize="sm" color="text.secondary">
             This resource now lives in our WhatsApp community so you can collaborate directly with peers. Links open in a new
             tab.
           </Text>

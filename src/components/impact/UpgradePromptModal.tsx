@@ -82,7 +82,7 @@ export const ImpactUpgradePromptModal: React.FC<EnhancedUpgradePromptModalProps>
             <Stack spacing={1}>
               <Flex align="center" gap={2}>
                 <Icon as={Crown} />
-                <Badge colorScheme="yellow" bg="yellow.400" color="gray.900">
+                <Badge colorScheme="yellow" bg="accent.warning" color="text.primary">
                   Premium Access
                 </Badge>
               </Flex>
@@ -103,9 +103,9 @@ export const ImpactUpgradePromptModal: React.FC<EnhancedUpgradePromptModalProps>
         <ModalCloseButton />
         <ModalBody>
           <Stack spacing={4}>
-            <Box borderWidth="1px" borderStyle="dashed" borderRadius="md" p={3} borderColor="gray.300">
+            <Box borderWidth="1px" borderStyle="dashed" borderRadius="md" p={3} borderColor="border.strong">
               <Text fontWeight="semibold">Join 10,000+ Impact Leaders</Text>
-              <Text color="gray.600">Starting at $29/month. 30-day money-back guarantee.</Text>
+              <Text color="text.secondary">Starting at $29/month. 30-day money-back guarantee.</Text>
             </Box>
             <List spacing={2}>
               {resolvedBenefits.map((benefit) => (
