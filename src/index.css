@@ -108,7 +108,7 @@
 
   /* Paragraph and Link Base Styles */
   body {
-    @apply bg-surface-subtle text-text-primary font-sans;
+    @apply bg-[var(--surface-subtle)] text-[var(--text-primary)] font-sans;
   }
 
   p {
@@ -163,8 +163,9 @@
 @layer components {
   /* Card Base and Variants */
   .card {
-    @apply rounded-2xl border bg-surface-default p-6 shadow-card;
-    border-color: theme('colors.border.subtle');
+    @apply rounded-2xl border p-6 shadow-card;
+    background-color: var(--surface-default);
+    border-color: var(--border-subtle);
   }
 
   .card-sm {
@@ -176,7 +177,8 @@
   }
 
   .card-muted {
-    @apply card shadow-sm bg-surface-subtle;
+    @apply card shadow-sm;
+    background-color: var(--surface-subtle);
   }
 
   .card-interactive {
@@ -198,11 +200,11 @@
   }
 
   .status-indicator--warning {
-    @apply status-indicator bg-tint-accentWarning border-accent-warning text-text-primary;
+    @apply status-indicator bg-tint-accentWarning border-accent-warning text-[var(--text-primary)];
   }
 
   .status-indicator--danger {
-    @apply status-indicator bg-tint-danger border-danger text-text-primary;
+    @apply status-indicator bg-tint-danger border-danger text-[var(--text-primary)];
   }
 
   .status-indicator--neutral {
@@ -211,7 +213,7 @@
 
   /* Premium Badge */
   .premium-badge {
-    @apply inline-flex items-center gap-1 rounded-full bg-tint-accentWarning border border-accent-warning px-3 py-1 text-xs font-semibold uppercase tracking-[0.18em] text-text-primary;
+    @apply inline-flex items-center gap-1 rounded-full bg-tint-accentWarning border border-accent-warning px-3 py-1 text-xs font-semibold uppercase tracking-[0.18em] text-[var(--text-primary)];
   }
 
   .premium-badge--outline {
@@ -234,7 +236,7 @@
   }
 
   .surface-subtle {
-    @apply bg-surface-subtle;
+    background-color: var(--surface-subtle);
   }
 
   /* Gradient Utilities */
