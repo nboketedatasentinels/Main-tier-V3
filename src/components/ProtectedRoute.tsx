@@ -2,7 +2,7 @@ import React from 'react'
 import { Navigate, useLocation } from 'react-router-dom'
 import { useAuth } from '@/hooks/useAuth'
 import type { UserRole } from '@/types'
-import { normalizeRole } from '@/utils/roleRouting'
+import { normalizeRole } from '@/utils/role'
 
 type Props = {
   children: React.ReactNode
