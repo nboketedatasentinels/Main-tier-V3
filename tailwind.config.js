@@ -149,6 +149,9 @@ export default {
           900: '#072712',
         },
       },
+      backgroundColor: ({ theme }) => ({
+        surface: theme('colors.surface'),
+      }),
       fontFamily: {
         sans: ['Inter', 'system-ui', '-apple-system', 'sans-serif'],
         body: ['Inter', 'system-ui', '-apple-system', 'sans-serif'],
