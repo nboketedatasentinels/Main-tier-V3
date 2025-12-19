@@ -153,7 +153,8 @@
 @layer components {
   /* Card Base and Variants */
   .card {
-    @apply rounded-2xl border border-border-subtle bg-surface-default p-6 shadow-card;
+    @apply rounded-2xl border bg-surface-default p-6 shadow-card;
+    border-color: theme('colors.border.subtle');
   }
 
   .card-sm {
