@@ -1,6 +1,8 @@
 import { UserProfile } from '@/types'
 import { normalizeRole } from './role'
 
+export { normalizeRole } from './role'
+
 /**
  * Extracts preferred dashboard route from the profile (if set).
  * Looks at the most common fields used across the codebase:
