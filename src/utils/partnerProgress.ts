@@ -97,7 +97,9 @@ export const build14DayRegistrationTrend = (
   registrationDates.forEach((dateString) => {
     if (!dateString) return
     const date = new Date(dateString)
+    if (Number.isNaN(date.getTime())) return
     const dayIndex = differenceInCalendarDays(date, start)
+    if (!Number.isInteger(dayIndex)) return
     if (dayIndex < 0 || dayIndex >= 14) return
     buckets[dayIndex].value += 1
   })
