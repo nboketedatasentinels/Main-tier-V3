@@ -1,5 +1,7 @@
 import React, { useState, useEffect } from 'react'
 import { useNavigate, Link as RouterLink, useSearchParams } from 'react-router-dom'
+import { motion } from 'framer-motion'
+import { ArrowLeft, CheckCircle2 } from 'lucide-react'
 import {
   VStack,
   FormControl,
@@ -19,22 +21,20 @@ import { PasswordChangeModal } from '@/components/PasswordChangeModal'
 import { getLandingPathForRole } from '@/utils/roleRouting'
 
 export const LoginPage: React.FC = () => {
+  const { signIn, signInWithMagicLink, user, profile, profileLoading, refreshProfile } = useAuth()
   const navigate = useNavigate()
-  const { signIn, signInWithMagicLink } = useAuth()
+  const toast = useToast()
+  const [searchParams] = useSearchParams()
 
-  const [email, setEmail] = useState("")
-  const [password, setPassword] = useState("")
+  const [email, setEmail] = useState('')
+  const [password, setPassword] = useState('')
   const [loading, setLoading] = useState(false)
+  const [error, setError] = useState<string | null>(null)
 
   const [magicLinkSent, setMagicLinkSent] = useState(false)
   const [showPasswordChangeModal, setShowPasswordChangeModal] = useState(false)
   const [profileTimeoutReached, setProfileTimeoutReached] = useState(false)
   const [refreshingProfile, setRefreshingProfile] = useState(false)
-
-  const { signIn, signInWithMagicLink, user, profile, profileLoading, refreshProfile } = useAuth()
-  const navigate = useNavigate()
-  const toast = useToast()
-  const [searchParams] = useSearchParams()
 
   useEffect(() => {
     console.log('🔵 LoginPage useEffect triggered:', {
@@ -92,11 +92,11 @@ export const LoginPage: React.FC = () => {
     setError(null)
 
     if (!email.trim()) {
-      setError("Please enter your email address.")
+      setError('Please enter your email address.')
       return
     }
     if (!password) {
-      setError("Please enter your password.")
+      setError('Please enter your password.')
       return
     }
 
@@ -110,6 +110,7 @@ export const LoginPage: React.FC = () => {
       console.log('🔴 LoginPage: signIn returned', { error: error?.message || null })
 
       if (error) {
+        setError(error.message)
         toast({
           title: 'Login failed',
           description: error.message,
@@ -117,7 +118,6 @@ export const LoginPage: React.FC = () => {
           duration: 5000,
           isClosable: true,
         })
-        setLoading(false)
         return
       }
 
@@ -131,6 +131,8 @@ export const LoginPage: React.FC = () => {
       // Redirect will happen in the useEffect once profile is loaded
     } catch (err) {
       console.error('🔴 LoginPage: Exception in handleLogin', err)
+      setError('Something went wrong while signing in. Please try again.')
+    } finally {
       setLoading(false)
     }
   }
@@ -151,6 +153,8 @@ export const LoginPage: React.FC = () => {
   }
 
   const handleMagicLink = async () => {
+    setError(null)
+
     if (!email) {
       toast({
         title: 'Email required',
@@ -176,9 +180,12 @@ export const LoginPage: React.FC = () => {
         status: 'success',
         duration: 5000,
       })
+    } catch (err) {
+      console.error('🔴 LoginPage: Exception in handleMagicLink', err)
+      setError('Unable to send the magic link. Please try again.')
+    } finally {
+      setLoading(false)
     }
-
-    setLoading(false)
   }
 
   const handlePasswordChangeSuccess = () => {
@@ -230,6 +237,13 @@ export const LoginPage: React.FC = () => {
           <Text fontSize="2xl" fontWeight="bold" color="white" textAlign="center">
             Sign In
           </Text>
+
+          {error && (
+            <Alert status="error" borderRadius="md">
+              <AlertIcon />
+              {error}
+            </Alert>
+          )}
 
           <FormControl isRequired>
             <FormLabel color="white">Email</FormLabel>
