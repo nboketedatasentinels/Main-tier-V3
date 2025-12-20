@@ -236,7 +236,7 @@ export const LoginPage: React.FC = () => {
     <>
       <form onSubmit={handleLogin}>
         <VStack spacing={6} align="stretch">
-          <Text fontSize="2xl" fontWeight="bold" color="white" textAlign="center">
+          <Text fontSize="2xl" fontWeight="bold" color="text.primary" textAlign="center">
             Sign In
           </Text>
 
@@ -248,29 +248,30 @@ export const LoginPage: React.FC = () => {
           )}
 
           <FormControl isRequired>
-            <FormLabel color="white">Email</FormLabel>
+            <FormLabel color="text.primary">Email</FormLabel>
             <Input
               type="email"
               value={email}
               onChange={e => setEmail(e.target.value)}
               placeholder="your@email.com"
-              bg="rgba(53, 14, 111, 0.3)"
-              borderColor="brand.gold"
-              color="white"
-              _placeholder={{ color: 'rgba(255, 255, 255, 0.5)' }}
+              bg="surface.default"
+              borderColor="border.subtle"
+              color="text.primary"
+              _placeholder={{ color: 'text.muted' }}
             />
           </FormControl>
 
           <FormControl isRequired>
-            <FormLabel color="white">Password</FormLabel>
+            <FormLabel color="text.primary">Password</FormLabel>
             <Input
               type="password"
               value={password}
               onChange={e => setPassword(e.target.value)}
               placeholder="••••••••"
-              bg="rgba(53, 14, 111, 0.3)"
-              borderColor="brand.gold"
-              color="white"
+              bg="surface.default"
+              borderColor="border.subtle"
+              color="text.primary"
+              _placeholder={{ color: 'text.muted' }}
             />
           </FormControl>
 
@@ -305,7 +306,7 @@ export const LoginPage: React.FC = () => {
 
           <HStack>
             <Divider borderColor="rgba(234, 177, 48, 0.3)" />
-            <Text fontSize="sm" color="white" whiteSpace="nowrap">
+            <Text fontSize="sm" color="text.secondary" whiteSpace="nowrap">
               OR
             </Text>
             <Divider borderColor="rgba(234, 177, 48, 0.3)" />
@@ -324,7 +325,7 @@ export const LoginPage: React.FC = () => {
             <Link as={RouterLink} to="/reset-password" color="brand.flameOrange" fontSize="sm">
               Forgot password?
             </Link>
-            <Text color="white" fontSize="sm">
+            <Text color="text.secondary" fontSize="sm">
               Don't have an account?{' '}
               <Link as={RouterLink} to="/signup" color="brand.flameOrange" fontWeight="semibold">
                 Sign Up
