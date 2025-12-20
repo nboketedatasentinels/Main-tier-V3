@@ -117,8 +117,8 @@ export const Header: React.FC<HeaderProps> = ({ topOffset = '0' }) => {
   }
 
   const headerBg = scrollY > 20 ? 'bg-white/95 backdrop-blur-md shadow-sm' : 'bg-transparent'
-  const textColor = scrollY > 20 ? 'text-neutral-700' : 'text-neutral-900'
-  const subtleText = scrollY > 20 ? 'text-neutral-600' : 'text-neutral-700'
+  const textColor = scrollY > 20 ? 'text-neutral-700' : 'text-white'
+  const subtleText = scrollY > 20 ? 'text-neutral-600' : 'text-neutral-200'
 
   return (
     <header
@@ -162,7 +162,7 @@ export const Header: React.FC<HeaderProps> = ({ topOffset = '0' }) => {
             {!loading && isAuthed && (
               <div
                 className={`inline-flex items-center gap-2 rounded-full px-3 py-1 text-sm ${
-                  scrollY > 20 ? 'bg-neutral-100 text-neutral-700' : 'bg-white/20 text-neutral-900 backdrop-blur'
+                  scrollY > 20 ? 'bg-neutral-100 text-neutral-700' : 'bg-white/15 text-white backdrop-blur'
                 }`}
               >
                 <Star className="h-4 w-4 text-[#EAB130]" />

@@ -6,10 +6,10 @@ export const HeroSection: React.FC = () => {
   const navigate = useNavigate()
 
   return (
-    <section className="relative w-full min-h-screen flex items-center justify-center overflow-hidden">
+    <section className="relative w-full min-h-screen flex items-center justify-center overflow-hidden text-white">
       <div
         aria-hidden="true"
-        className="pointer-events-none hidden sm:block absolute right-[-60px] top-[-60px] h-48 w-48 md:h-64 md:w-64 rounded-full bg-[#E3D2FF] opacity-20 blur-[60px] -z-10"
+        className="pointer-events-none hidden sm:block absolute right-[-60px] top-[-60px] h-48 w-48 md:h-64 md:w-64 rounded-full bg-[#E3D2FF] opacity-30 blur-[60px] -z-10"
       />
       <div
         aria-hidden="true"
@@ -25,17 +25,17 @@ export const HeroSection: React.FC = () => {
         </div>
 
         <h1
-          className="mx-auto font-bold tracking-tight text-neutral-900 leading-tight
+          className="mx-auto font-bold tracking-tight text-white leading-tight
           text-3xl sm:text-4xl md:text-5xl lg:text-6xl xl:text-7xl
           max-w-2xl sm:max-w-3xl lg:max-w-4xl"
           style={{ fontFamily: 'Poppins, Inter, system-ui, sans-serif' }}
         >
           Digital Transformation Doesn&apos;t Happen Alone.{' '}
-          <span className="text-[#EAB130]">Even Beyoncé Has a Team.</span>
+          <span className="text-[#F6D86B]">Even Beyoncé Has a Team.</span>
         </h1>
 
         <p
-          className="mx-auto mt-6 text-neutral-700 leading-relaxed
+          className="mx-auto mt-6 text-slate-200 leading-relaxed
           text-sm sm:text-base md:text-lg lg:text-xl
           max-w-xl sm:max-w-2xl lg:max-w-3xl px-4"
           style={{ fontFamily: 'Inter, system-ui, sans-serif' }}
@@ -56,7 +56,7 @@ export const HeroSection: React.FC = () => {
             Get Started (+50 XP)
           </button>
 
-          <p className="text-xs sm:text-sm text-neutral-600 max-w-sm text-center px-2">
+          <p className="text-xs sm:text-sm text-slate-200/90 max-w-sm text-center px-2">
             For go-getters who want to dive in and earn XP like a boss.
           </p>
         </div>
