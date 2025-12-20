@@ -4,6 +4,7 @@ import { useAuth } from '@/hooks/useAuth'
 import type { UserRole } from '@/types'
 import { AccountStatus } from '@/types'
 import { normalizeRole } from '@/utils/role'
+import { AppLoader } from '@/components/ui/AppLoader'
 
 type Props = {
   children: React.ReactNode
@@ -45,7 +46,7 @@ export const ProtectedRoute: React.FC<Props> = ({
   const location = useLocation()
 
   // Block render until auth + profile are known
-  if (loading || profileLoading) return null
+  if (loading || profileLoading) return <AppLoader />
 
   if (!user) {
     return <Navigate to="/login" replace state={{ from: location }} />
