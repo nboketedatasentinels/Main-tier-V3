@@ -26,6 +26,12 @@ export const WelcomePage: React.FC = () => {
     setLoading(true)
     try {
       const userRef = doc(db, 'users', user.uid)
+      const updatedProfile = {
+        ...profile,
+        onboardingComplete: true,
+        onboardingSkipped: false,
+      }
+
       await updateDoc(userRef, {
         onboardingComplete: true,
         updatedAt: serverTimestamp(),
@@ -40,7 +46,7 @@ export const WelcomePage: React.FC = () => {
       })
 
       // Navigate to role-based landing page
-      const landingPath = getLandingPathForRole(profile)
+      const landingPath = getLandingPathForRole(updatedProfile)
       navigate(landingPath, { replace: true })
     } catch (error) {
       console.error('Error completing onboarding:', error)
@@ -62,13 +68,19 @@ export const WelcomePage: React.FC = () => {
     setLoading(true)
     try {
       const userRef = doc(db, 'users', user.uid)
+      const updatedProfile = {
+        ...profile,
+        onboardingComplete: false,
+        onboardingSkipped: true,
+      }
+
       await updateDoc(userRef, {
         onboardingSkipped: true,
         updatedAt: serverTimestamp(),
       })
 
       // Navigate to role-based landing page
-      const landingPath = getLandingPathForRole(profile)
+      const landingPath = getLandingPathForRole(updatedProfile)
       navigate(landingPath, { replace: true })
     } catch (error) {
       console.error('Error skipping onboarding:', error)
