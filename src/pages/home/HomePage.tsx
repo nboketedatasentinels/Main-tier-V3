@@ -1,20 +1,23 @@
 import React from 'react'
 import { Header } from '@/components/Header'
 import { HeroSection } from '@/components/HeroSection'
+import { ShapeLandingBackground } from '@/components/ui/shape-landing-background'
 
 export const HomePage: React.FC = () => {
   return (
     <>
       <Header />
 
-      <main
-        className="min-h-screen w-full bg-[#f8fafc]"
-        style={{
-          backgroundImage: 'radial-gradient(rgba(100,116,139,0.08) 1px, transparent 1px)',
-          backgroundSize: '28px 28px',
-        }}
-      >
-        <HeroSection />
+      <main className="relative min-h-screen w-full overflow-hidden bg-gradient-to-b from-[#060910] via-[#0b1224] to-[#0f172a] text-white">
+        <ShapeLandingBackground className="opacity-80" />
+        <div
+          aria-hidden="true"
+          className="pointer-events-none absolute inset-0 bg-[radial-gradient(rgba(255,255,255,0.06)_1px,transparent_1px)] [background-size:28px_28px]"
+        />
+
+        <div className="relative z-10">
+          <HeroSection />
+        </div>
       </main>
     </>
   )
