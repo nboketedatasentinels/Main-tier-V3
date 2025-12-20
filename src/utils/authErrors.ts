@@ -8,6 +8,7 @@ const errorMessages: Record<string, string> = {
   'auth/user-disabled': 'This account has been disabled. Please contact support',
   'auth/user-not-found': 'No account found with these credentials',
   'auth/wrong-password': 'Incorrect password. Please try again',
+  'auth/invalid-credential': 'Invalid email or password. Please try again or reset your password',
   'auth/too-many-requests': 'Too many attempts. Please try again later',
   'auth/operation-not-allowed': 'This sign in method is currently disabled',
 }
