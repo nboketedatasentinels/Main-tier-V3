@@ -21,10 +21,7 @@ import {
   HStack,
   Heading,
   Icon,
-  IconButton,
   Input,
-  InputGroup,
-  InputLeftElement,
   Link,
   Modal,
   ModalBody,
@@ -33,43 +30,33 @@ import {
   ModalFooter,
   ModalHeader,
   ModalOverlay,
-  Select,
   SimpleGrid,
   Spinner,
   Stack,
-  Table,
-  Tbody,
-  Td,
   Text,
   Textarea,
-  Th,
-  Thead,
   Tooltip,
-  Tr,
   useDisclosure,
   useToast,
   VStack,
 } from '@chakra-ui/react'
-import { Building2, Calendar, Download, Edit3, Eye, ExternalLink, Plus, RefreshCcw, Search, Shield, Timer, Trash2, User, UserCircle2, UserSquare2, Users } from 'lucide-react'
+import { Building2, Calendar, Download, Eye, ExternalLink, RefreshCcw, Shield, Timer, User, UserCircle2, Users } from 'lucide-react'
 import {
   Timestamp,
   addDoc,
   collection,
   doc,
   getDoc,
-  getDocs,
   onSnapshot,
   orderBy,
   query,
   serverTimestamp,
-  updateDoc,
   where,
 } from 'firebase/firestore'
 import { format, formatDistanceToNow, isAfter, isValid, parseISO } from 'date-fns'
 import { db } from '@/services/firebase'
 import { useAuth } from '@/hooks/useAuth'
 import { UserProfile } from '@/types'
-import { normalizeRole } from '@/utils/role'
 
 interface LeadershipProfile extends UserProfile {
   availabilityStatus?: string
@@ -95,12 +82,6 @@ interface MentorshipSession {
   status: 'scheduled' | 'completed' | 'cancelled'
   meetingLink?: string
   createdAt?: Date
-}
-
-interface CompanyRecord {
-  id: string
-  name: string
-  code?: string
 }
 
 interface PartnerProfile {
@@ -171,33 +152,6 @@ export const LeadershipCouncilPage: React.FC = () => {
 
   const sessionsModal = useDisclosure()
   const scheduleModal = useDisclosure()
-
-  const [leadershipTab, setLeadershipTab] = useState<'mentor' | 'ambassador'>('mentor')
-  const [adminLoading, setAdminLoading] = useState(false)
-  const [mentors, setMentors] = useState<LeadershipProfile[]>([])
-  const [ambassadors, setAmbassadors] = useState<LeadershipProfile[]>([])
-  const [availableUsers, setAvailableUsers] = useState<LeadershipProfile[]>([])
-  const [companies, setCompanies] = useState<CompanyRecord[]>([])
-  const [searchTerm, setSearchTerm] = useState('')
-  const [promoteModalRole, setPromoteModalRole] = useState<'mentor' | 'ambassador'>('mentor')
-  const promoteModal = useDisclosure()
-
-  const [editTarget, setEditTarget] = useState<LeadershipProfile | null>(null)
-  const editModal = useDisclosure()
-  const [editCompany, setEditCompany] = useState('')
-  const [editStatus, setEditStatus] = useState('')
-  const [editNotes, setEditNotes] = useState('')
-  const [mutatingId, setMutatingId] = useState<string | null>(null)
-
-  const isAdmin = useMemo(() => {
-    if (!profile?.role) return false
-    const normalized = normalizeRole(profile.role)
-    return ['partner', 'super_admin'].includes(normalized)
-  }, [profile?.role])
-
-  const isSuperAdmin = useMemo(() => {
-    return normalizeRole(profile?.role) === 'super_admin'
-  }, [profile?.role])
 
   const loadAssignments = useCallback(async () => {
     if (!profile?.id) return
@@ -317,42 +271,6 @@ export const LeadershipCouncilPage: React.FC = () => {
     return unsubscribe
   }, [profile?.id])
 
-  const loadLeadershipData = useCallback(async () => {
-    if (!isAdmin) return
-    setAdminLoading(true)
-    try {
-      const [profilesSnap, companiesSnap] = await Promise.all([
-        getDocs(collection(db, 'profiles')),
-        getDocs(collection(db, 'companies')),
-      ])
-
-      const loadedProfiles: LeadershipProfile[] = profilesSnap.docs
-        .map((docSnapshot) => ({ ...(docSnapshot.data() as LeadershipProfile), id: docSnapshot.id }))
-        .sort((a, b) => (a.fullName || '').localeCompare(b.fullName || ''))
-
-      setMentors(loadedProfiles.filter((p) => normalizeRole(p.role) === 'mentor'))
-      setAmbassadors(loadedProfiles.filter((p) => normalizeRole(p.role) === 'ambassador'))
-      setAvailableUsers(loadedProfiles.filter((p) => ![normalizeRole('mentor'), normalizeRole('ambassador')].includes(normalizeRole(p.role))))
-
-      const loadedCompanies: CompanyRecord[] = companiesSnap.docs
-        .map((docSnapshot) => {
-          const data = docSnapshot.data() as CompanyRecord
-          return { id: docSnapshot.id, name: data.name, code: data.code }
-        })
-        .sort((a, b) => (a.name || '').localeCompare(b.name || ''))
-      setCompanies(loadedCompanies)
-    } catch (error) {
-      const description = error instanceof Error ? error.message : 'Check your connection and try again.'
-      toast({
-        title: 'Unable to load leadership data',
-        description,
-        status: 'error',
-      })
-    } finally {
-      setAdminLoading(false)
-    }
-  }, [isAdmin, toast])
-
   useEffect(() => {
     const cleanupRef: { fn?: () => void } = {}
     loadAssignments().then((cleanup) => {
@@ -368,10 +286,6 @@ export const LeadershipCouncilPage: React.FC = () => {
     const unsubscribe = loadSessions()
     return () => unsubscribe && unsubscribe()
   }, [loadSessions])
-
-  useEffect(() => {
-    loadLeadershipData()
-  }, [loadLeadershipData])
 
   const handleScheduleSession = async () => {
     if (!mentorProfile?.id) {
@@ -462,115 +376,6 @@ export const LeadershipCouncilPage: React.FC = () => {
     URL.revokeObjectURL(url)
   }
 
-  const filteredLeadership = useMemo(() => {
-    const pool = leadershipTab === 'mentor' ? mentors : ambassadors
-    if (!searchTerm.trim()) return pool
-    const lower = searchTerm.toLowerCase()
-    return pool.filter((member) =>
-      [member.fullName, member.email, member.companyCode, member.companyName]
-        .filter(Boolean)
-        .some((value) => value!.toLowerCase().includes(lower)),
-    )
-  }, [ambassadors, leadershipTab, mentors, searchTerm])
-
-  const openPromoteModal = (role: 'mentor' | 'ambassador') => {
-    setPromoteModalRole(role)
-    promoteModal.onOpen()
-  }
-
-  const handlePromote = async (form: { userId: string; companyId?: string; notes?: string }) => {
-    setMutatingId('promote')
-    try {
-      const company = companies.find((c) => c.id === form.companyId)
-      await updateDoc(doc(db, 'profiles', form.userId), {
-        role: promoteModalRole,
-        accountStatus: 'active',
-        companyId: form.companyId || null,
-        companyCode: company?.code || null,
-        companyName: company?.name || null,
-        isActiveAmbassador: promoteModalRole === 'ambassador',
-        notes: form.notes || null,
-      })
-
-      await addDoc(collection(db, 'notifications'), {
-        user_id: form.userId,
-        type: 'role_assignment',
-        message: `You have been assigned the role of ${promoteModalRole}.`,
-        is_read: false,
-        created_at: serverTimestamp(),
-        metadata: {
-          notes: form.notes,
-          companyName: company?.name,
-          companyCode: company?.code,
-        },
-      })
-
-      toast({ title: 'Leadership role assigned', status: 'success' })
-      promoteModal.onClose()
-      loadLeadershipData()
-    } catch (error) {
-      const description = error instanceof Error ? error.message : 'Unable to promote member'
-      toast({ title: 'Unable to promote member', description, status: 'error' })
-    } finally {
-      setMutatingId(null)
-    }
-  }
-
-  const openEdit = (member: LeadershipProfile) => {
-    setEditTarget(member)
-    setEditCompany(member.companyId || '')
-    setEditStatus(member.accountStatus || '')
-    setEditNotes(member.notes || '')
-    editModal.onOpen()
-  }
-
-  const handleEditSave = async () => {
-    if (!editTarget) return
-    setMutatingId(editTarget.id)
-    try {
-      const company = companies.find((c) => c.id === editCompany)
-      await updateDoc(doc(db, 'profiles', editTarget.id), {
-        companyId: editCompany || null,
-        companyCode: company?.code || null,
-        companyName: company?.name || null,
-        accountStatus: editStatus || null,
-        isActiveAmbassador: normalizeRole(editTarget.role) === 'ambassador' ? editStatus === 'active' : undefined,
-        notes: editNotes || null,
-      })
-      toast({ title: 'Leadership profile updated.', status: 'success' })
-      editModal.onClose()
-      setEditTarget(null)
-      loadLeadershipData()
-    } catch (error) {
-      const description = error instanceof Error ? error.message : 'Unable to update member'
-      toast({ title: 'Unable to update member', description, status: 'error' })
-    } finally {
-      setMutatingId(null)
-    }
-  }
-
-  const handleRemove = async (member: LeadershipProfile) => {
-    const confirmed = window.confirm(`Remove ${member.fullName || member.email} from the Leadership Council?`)
-    if (!confirmed) return
-    setMutatingId(member.id)
-    try {
-      await updateDoc(doc(db, 'profiles', member.id), {
-        role: 'user',
-        companyId: null,
-        companyCode: null,
-        companyName: null,
-        isActiveAmbassador: false,
-      })
-      toast({ title: `${member.fullName || 'Member'} has been removed from the council.`, status: 'success' })
-      loadLeadershipData()
-    } catch (error) {
-      const description = error instanceof Error ? error.message : 'Unable to remove member'
-      toast({ title: 'Unable to remove member', description, status: 'error' })
-    } finally {
-      setMutatingId(null)
-    }
-  }
-
   const renderSessionCards = (limitCount?: number) => {
     const items = limitCount ? sessions.slice(0, limitCount) : sessions
     return (
@@ -618,8 +423,6 @@ export const LeadershipCouncilPage: React.FC = () => {
     )
   }
 
-  const adminActionLocked = !isSuperAdmin
-
   const mentorSessionsSummary = useMemo(() => {
     if (sessionsLoading) return 'Checking your schedule...'
     if (sessions.length === 0) return 'No sessions scheduled yet. Use the schedule button to plan your next conversation.'
@@ -657,7 +460,7 @@ export const LeadershipCouncilPage: React.FC = () => {
         </CardBody>
       </Card>
 
-      <Grid templateColumns={{ base: '1fr', xl: '2fr 1.2fr' }} gap={6} alignItems="start">
+      <Grid templateColumns="1fr" gap={6} alignItems="start">
         <GridItem>
           <Stack spacing={6}>
             <Card borderColor="border.subtle" borderWidth="1px" bg="surface.default">
@@ -1019,212 +822,6 @@ export const LeadershipCouncilPage: React.FC = () => {
             </Card>
           </Stack>
         </GridItem>
-
-        <GridItem>
-          <Card borderColor="border.subtle" borderWidth="1px" bg="surface.subtle">
-            <CardHeader pb={3}>
-              <Stack spacing={2}>
-                <HStack spacing={3} align="center">
-                  <Icon as={UserSquare2} color="brand.primary" />
-                  <Box>
-                    <Text fontSize="xs" textTransform="uppercase" color="brand.primary" fontWeight="semibold">
-                      Leadership Council
-                    </Text>
-                    <Heading size="md">Mentor & Ambassador oversight</Heading>
-                    <Text color="text.secondary" mt={1}>
-                      Promote trusted members, track their organization alignment, and ensure our leadership network has the right support.
-                    </Text>
-                  </Box>
-                </HStack>
-                {!isAdmin && (
-                  <Alert status="warning" variant="subtle" rounded="lg">
-                    <AlertIcon />
-                    <Box>
-                      <AlertTitle>Admin access required</AlertTitle>
-                      <AlertDescription>
-                        You need admin permissions to view leadership assignments. Contact a super admin if you need access.
-                      </AlertDescription>
-                    </Box>
-                  </Alert>
-                )}
-              </Stack>
-            </CardHeader>
-            {isAdmin && (
-              <CardBody>
-                <SimpleGrid columns={2} spacing={3} mb={4}>
-                  <Box p={4} bg="surface.default" border="1px solid" borderColor="border.subtle" rounded="lg" boxShadow="sm">
-                    <Text fontSize="xs" textTransform="uppercase" color="text.muted" fontWeight="bold">
-                      Active mentors
-                    </Text>
-                    <Heading size="lg" mt={2}>{mentors.length}</Heading>
-                  </Box>
-                  <Box p={4} bg="surface.default" border="1px solid" borderColor="border.subtle" rounded="lg" boxShadow="sm">
-                    <Text fontSize="xs" textTransform="uppercase" color="text.muted" fontWeight="bold">
-                      Active ambassadors
-                    </Text>
-                    <Heading size="lg" mt={2}>{ambassadors.length}</Heading>
-                  </Box>
-                </SimpleGrid>
-
-                <HStack spacing={3} mb={4} align="center">
-                  <Box
-                    display="inline-flex"
-                    p={1}
-                    rounded="full"
-                    bg={leadershipTab === 'mentor' ? 'surface.default' : 'surface.subtle'}
-                    border="1px solid"
-                    borderColor="border.subtle"
-                  >
-                    <Button
-                      size="sm"
-                      variant={leadershipTab === 'mentor' ? 'solid' : 'ghost'}
-                      colorScheme="primary"
-                      rounded="full"
-                      onClick={() => setLeadershipTab('mentor')}
-                    >
-                      Mentor
-                    </Button>
-                    <Button
-                      size="sm"
-                      variant={leadershipTab === 'ambassador' ? 'solid' : 'ghost'}
-                      colorScheme="primary"
-                      rounded="full"
-                      onClick={() => setLeadershipTab('ambassador')}
-                    >
-                      Ambassador
-                    </Button>
-                  </Box>
-
-                  <InputGroup maxW="260px" bg="surface.default" borderRadius="md" boxShadow="sm">
-                    <InputLeftElement pointerEvents="none">
-                      <Icon as={Search} color="text.muted" />
-                    </InputLeftElement>
-                    <Input
-                      placeholder={`Search ${leadershipTab === 'mentor' ? 'mentors' : 'ambassadors'}`}
-                      value={searchTerm}
-                      onChange={(e) => setSearchTerm(e.target.value)}
-                    />
-                  </InputGroup>
-
-                  {isSuperAdmin && (
-                    <Button
-                      size="sm"
-                      leftIcon={<Plus size={16} />}
-                      colorScheme="primary"
-                      onClick={() => openPromoteModal(leadershipTab)}
-                    >
-                      Add {leadershipTab === 'mentor' ? 'Mentor' : 'Ambassador'}
-                    </Button>
-                  )}
-                </HStack>
-
-                <Box border="1px solid" borderColor="border.subtle" rounded="lg" overflow="hidden" bg="surface.default">
-                  <Table size="sm">
-                    <Thead bg="surface.subtle">
-                      <Tr>
-                        <Th>Name</Th>
-                        <Th>Email</Th>
-                        <Th>Company</Th>
-                        <Th>Status</Th>
-                        <Th>Last Active</Th>
-                        <Th>Joined</Th>
-                        <Th textAlign="right">Actions</Th>
-                      </Tr>
-                    </Thead>
-                    <Tbody>
-                      {adminLoading && (
-                        <Tr>
-                          <Td colSpan={7}>
-                            <Flex align="center" gap={3} py={4} justify="center">
-                              <Spinner color="brand.primary" />
-                              <Text color="text.secondary">Loading leadership records...</Text>
-                            </Flex>
-                          </Td>
-                        </Tr>
-                      )}
-
-                      {!adminLoading && filteredLeadership.length === 0 && (
-                        <Tr>
-                          <Td colSpan={7}>
-                            <Flex direction="column" align="center" py={6} gap={2} color="text.secondary">
-                              <Icon as={Users} />
-                              <Text>
-                                No {leadershipTab === 'mentor' ? 'mentors' : 'ambassadors'} found. Use 'Add {leadershipTab === 'mentor' ? 'Mentor' : 'Ambassador'}' to promote a member.
-                              </Text>
-                            </Flex>
-                          </Td>
-                        </Tr>
-                      )}
-
-                      {filteredLeadership.map((member) => (
-                        <Tr key={member.id} _hover={{ bg: 'surface.subtle' }} transition="background 0.2s ease">
-                          <Td>
-                            <Stack spacing={0}>
-                              <Text fontWeight="semibold">{member.fullName || `${member.firstName} ${member.lastName}`}</Text>
-                              <Text fontSize="xs" color="text.muted">
-                                ID: {member.id}
-                              </Text>
-                            </Stack>
-                          </Td>
-                          <Td>{member.email}</Td>
-                          <Td>
-                            <Stack spacing={0}>
-                              <Text fontWeight="semibold">{member.companyName || '—'}</Text>
-                              <Text fontSize="xs" color="text.muted">
-                                {member.companyCode ? member.companyCode.toUpperCase() : '—'}
-                              </Text>
-                            </Stack>
-                          </Td>
-                          <Td>
-                            <Badge
-                              colorScheme={
-                                member.accountStatus === 'active'
-                                  ? 'green'
-                                  : member.accountStatus === 'suspended'
-                                    ? 'red'
-                                    : 'gray'
-                              }
-                              rounded="full"
-                            >
-                              {member.accountStatus || 'unknown'}
-                            </Badge>
-                          </Td>
-                          <Td>{member.lastActive ? relativeTime(parseISO(member.lastActive)) : '—'}</Td>
-                          <Td>{member.registrationDate ? relativeTime(parseISO(member.registrationDate)) : '—'}</Td>
-                          <Td textAlign="right">
-                            <HStack spacing={2} justify="flex-end">
-                              <Tooltip label={adminActionLocked ? 'Super admin only' : 'Edit member'}>
-                                <IconButton
-                                  aria-label="Edit"
-                                  size="sm"
-                                  icon={<Edit3 size={16} />}
-                                  onClick={() => openEdit(member)}
-                                  isDisabled={adminActionLocked}
-                                />
-                              </Tooltip>
-                              <Tooltip label={adminActionLocked ? 'Super admin only' : 'Remove from council'}>
-                                <IconButton
-                                  aria-label="Remove"
-                                  size="sm"
-                                  colorScheme="warning"
-                                  variant="outline"
-                                  icon={<Trash2 size={16} />}
-                                  onClick={() => handleRemove(member)}
-                                  isLoading={mutatingId === member.id}
-                                  isDisabled={adminActionLocked}
-                                />
-                              </Tooltip>
-                            </HStack>
-                          </Td>
-                        </Tr>
-                      ))}
-                    </Tbody>
-                  </Table>
-                </Box>
-              </CardBody>
-            )}
-          </Card>
-        </GridItem>
       </Grid>
 
       <Modal isOpen={sessionsModal.isOpen} onClose={sessionsModal.onClose} size="xl" scrollBehavior="inside">
@@ -1359,119 +956,6 @@ export const LeadershipCouncilPage: React.FC = () => {
             </Button>
             <Button colorScheme="primary" onClick={handleScheduleSession} isLoading={scheduleSubmitting}>
               Schedule Session
-            </Button>
-          </ModalFooter>
-        </ModalContent>
-      </Modal>
-
-      <Modal isOpen={promoteModal.isOpen} onClose={promoteModal.onClose} size="lg">
-        <ModalOverlay />
-        <ModalContent>
-          <ModalHeader>
-            <Heading size="md">Promote a {promoteModalRole === 'mentor' ? 'Mentor' : 'Ambassador'}</Heading>
-          </ModalHeader>
-          <ModalCloseButton />
-          <ModalBody>
-            <Stack spacing={4}>
-              <FormControl isRequired>
-                <FormLabel>Select member</FormLabel>
-                <Select placeholder="Choose a member" id="promote-member-select">
-                  {availableUsers.map((user) => (
-                    <option key={user.id} value={user.id}>
-                      {user.fullName || user.email} — {user.email} ({user.role})
-                    </option>
-                  ))}
-                </Select>
-              </FormControl>
-
-              <FormControl>
-                <FormLabel>Assign company (optional)</FormLabel>
-                <Select placeholder="Optional company assignment" id="promote-company-select">
-                  {companies.map((company) => (
-                    <option key={company.id} value={company.id}>
-                      {company.name} {company.code ? `(${company.code})` : ''}
-                    </option>
-                  ))}
-                </Select>
-              </FormControl>
-
-              <FormControl>
-                <FormLabel>Notes (optional)</FormLabel>
-                <Textarea placeholder="Share context for the new leadership assignment" id="promote-notes-input" />
-              </FormControl>
-            </Stack>
-          </ModalBody>
-          <ModalFooter gap={3}>
-            <Button variant="ghost" onClick={promoteModal.onClose}>
-              Cancel
-            </Button>
-            <Button
-              colorScheme="primary"
-              isLoading={mutatingId === 'promote'}
-              onClick={() => {
-                const memberSelect = document.getElementById('promote-member-select') as HTMLSelectElement | null
-                const companySelect = document.getElementById('promote-company-select') as HTMLSelectElement | null
-                const notesInput = document.getElementById('promote-notes-input') as HTMLTextAreaElement | null
-                const memberId = memberSelect?.value
-                if (!memberId) {
-                  toast({ title: 'Choose a member to promote', status: 'error' })
-                  return
-                }
-                handlePromote({ userId: memberId, companyId: companySelect?.value, notes: notesInput?.value })
-              }}
-              isDisabled={adminActionLocked}
-            >
-              Promote
-            </Button>
-          </ModalFooter>
-        </ModalContent>
-      </Modal>
-
-      <Modal isOpen={editModal.isOpen} onClose={editModal.onClose} size="lg">
-        <ModalOverlay />
-        <ModalContent>
-          <ModalHeader>
-            <Heading size="md">Update {editTarget?.fullName || 'member'}</Heading>
-          </ModalHeader>
-          <ModalCloseButton />
-          <ModalBody>
-            <Stack spacing={4}>
-              <FormControl>
-                <FormLabel>Company alignment</FormLabel>
-                <Select value={editCompany} onChange={(e) => setEditCompany(e.target.value)} placeholder="Select a company">
-                  {companies.map((company) => (
-                    <option key={company.id} value={company.id}>
-                      {company.name} {company.code ? `(${company.code})` : ''}
-                    </option>
-                  ))}
-                </Select>
-              </FormControl>
-
-              <FormControl>
-                <FormLabel>Account status</FormLabel>
-                <Select value={editStatus} onChange={(e) => setEditStatus(e.target.value)} placeholder="Choose status">
-                  <option value="active">Active</option>
-                  <option value="inactive">Inactive</option>
-                  <option value="suspended">Suspended</option>
-                </Select>
-              </FormControl>
-
-              <FormControl>
-                <FormLabel>Internal notes</FormLabel>
-                <Textarea
-                  placeholder="Document changes or context for other admins"
-                  value={editNotes}
-                  onChange={(e) => setEditNotes(e.target.value)}
-                />
-              </FormControl>
-            </Stack>
-          </ModalBody>
-          <ModalFooter gap={3}>
-            <Button variant="ghost" onClick={editModal.onClose}>
-              Cancel
-            </Button>
-            <Button colorScheme="primary" onClick={handleEditSave} isLoading={mutatingId === editTarget?.id} isDisabled={adminActionLocked}>
-              Save changes
             </Button>
           </ModalFooter>
         </ModalContent>
