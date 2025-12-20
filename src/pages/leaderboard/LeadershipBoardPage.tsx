@@ -1042,7 +1042,7 @@ export const LeadershipBoardPage: React.FC = () => {
                 <CardHeader>
                   <Flex justify="space-between" align="center">
                     <Text fontWeight="bold">Your Challenges</Text>
-                    <Button size="sm" onClick={challengeModal.onOpen}>New Challenge</Button>
+                    <Button size="sm" onClick={onOpen}>New Challenge</Button>
                   </Flex>
                 </CardHeader>
                 <CardBody>
