@@ -1,6 +1,7 @@
 import { BrowserRouter, Routes, Route, Navigate, useLocation, Outlet } from 'react-router-dom'
 import { ProtectedRoute } from '@/components/ProtectedRoute'
 import { FreeTierGuard } from '@/components/FreeTierGuard'
+import { AppLoader } from '@/components/ui/AppLoader'
 import { useAuth } from '@/hooks/useAuth'
 import RoleRedirect from '@/pages/auth/RoleRedirect'
 import { getLandingPathForRole } from '@/utils/roleRouting'
@@ -55,7 +56,7 @@ const DashboardRouter = () => {
   const location = useLocation()
 
   if (profileLoading) {
-    return null // Or a loading spinner
+    return <AppLoader />
   }
 
   const landingPath = getLandingPathForRole(profile)
