@@ -6,17 +6,17 @@ export const HeroSection: React.FC = () => {
   const navigate = useNavigate()
 
   return (
-    <section className="relative w-full min-h-screen flex items-center justify-center">
+    <section className="relative w-full min-h-screen flex items-center justify-center overflow-hidden">
       <div
         aria-hidden="true"
-        className="hidden sm:block absolute right-[-60px] top-[-60px] h-48 w-48 md:h-64 md:w-64 rounded-full bg-[#E3D2FF] opacity-20 blur-[60px]"
+        className="pointer-events-none hidden sm:block absolute right-[-60px] top-[-60px] h-48 w-48 md:h-64 md:w-64 rounded-full bg-[#E3D2FF] opacity-20 blur-[60px] -z-10"
       />
       <div
         aria-hidden="true"
-        className="hidden sm:block absolute left-[-80px] bottom-[-80px] h-64 w-64 md:h-96 md:w-96 rounded-full bg-[#FFEAC2] opacity-20 blur-[60px]"
+        className="pointer-events-none hidden sm:block absolute left-[-80px] bottom-[-80px] h-64 w-64 md:h-96 md:w-96 rounded-full bg-[#FFEAC2] opacity-20 blur-[60px] -z-10"
       />
 
-      <div className="relative mx-auto w-full max-w-6xl px-4 sm:px-6 lg:px-8 py-16 sm:py-20 text-center">
+      <div className="relative z-10 mx-auto w-full max-w-6xl px-4 sm:px-6 lg:px-8 py-16 sm:py-20 text-center">
         <div className="mb-6 flex justify-center">
           <div className="inline-flex items-center gap-2 rounded-full bg-[#E3D2FF] px-4 py-2 text-sm font-medium text-[#270540] shadow-sm">
             <Award className="h-4 w-4" aria-hidden="true" />
