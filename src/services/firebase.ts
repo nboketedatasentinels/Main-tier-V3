@@ -16,25 +16,60 @@ const requiredFirebaseEnvVars = [
   'VITE_FIREBASE_APP_ID',
 ] as const
 
-// Firebase configuration
-const firebaseConfig = {
-  apiKey: import.meta.env.VITE_FIREBASE_API_KEY || '',
-  authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN || '',
-  projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID || '',
-  storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET || '',
-  messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID || '',
-  appId: import.meta.env.VITE_FIREBASE_APP_ID || '',
-}
+type FirebaseEnvKey = (typeof requiredFirebaseEnvVars)[number]
+
+const placeholderValues = new Set([
+  'your_firebase_api_key_here',
+  'your_firebase_auth_domain_here',
+  'your_firebase_project_id_here',
+  'your_firebase_storage_bucket_here',
+  'your_firebase_messaging_sender_id_here',
+  'your_firebase_app_id_here',
+])
+
+const firebaseEnv = requiredFirebaseEnvVars.reduce(
+  (acc, key) => ({
+    ...acc,
+    [key]: (import.meta.env[key] ?? '').toString(),
+  }),
+  {} as Record<FirebaseEnvKey, string>
+)
+
+const missingKeys = requiredFirebaseEnvVars.filter((key) => !firebaseEnv[key])
+const placeholderKeys = requiredFirebaseEnvVars.filter((key) =>
+  placeholderValues.has(firebaseEnv[key].toLowerCase()) || firebaseEnv[key].toLowerCase().startsWith('your_')
+)
 
 export const firebaseConfigStatus = {
-  isValid: requiredFirebaseEnvVars.every((key) => !!import.meta.env[key]),
-  missingKeys: requiredFirebaseEnvVars.filter((key) => !import.meta.env[key]),
+  isValid: missingKeys.length === 0 && placeholderKeys.length === 0,
+  missingKeys,
+  placeholderKeys,
 }
 
 if (!firebaseConfigStatus.isValid) {
-  console.warn('⚠️ Firebase configuration is missing required environment variables', {
-    missingKeys: firebaseConfigStatus.missingKeys,
-  })
+  const messageParts = [
+    missingKeys.length > 0
+      ? `missing required environment variables: ${missingKeys.join(', ')}`
+      : null,
+    placeholderKeys.length > 0
+      ? `using placeholder values for: ${placeholderKeys.join(', ')}`
+      : null,
+  ].filter(Boolean)
+
+  const guidance =
+    'Please copy .env.example to .env and provide real Firebase credentials before running the app.'
+
+  throw new Error(`Firebase configuration is invalid (${messageParts.join('; ')}). ${guidance}`)
+}
+
+// Firebase configuration
+const firebaseConfig = {
+  apiKey: firebaseEnv.VITE_FIREBASE_API_KEY,
+  authDomain: firebaseEnv.VITE_FIREBASE_AUTH_DOMAIN,
+  projectId: firebaseEnv.VITE_FIREBASE_PROJECT_ID,
+  storageBucket: firebaseEnv.VITE_FIREBASE_STORAGE_BUCKET,
+  messagingSenderId: firebaseEnv.VITE_FIREBASE_MESSAGING_SENDER_ID,
+  appId: firebaseEnv.VITE_FIREBASE_APP_ID,
 }
 
 // Initialize Firebase
