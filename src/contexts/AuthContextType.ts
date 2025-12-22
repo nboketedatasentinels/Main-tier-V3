@@ -6,6 +6,7 @@ import type { StandardRole } from '@/types'
 export interface AuthContextType {
   user: User | null
   profile: UserProfile | null
+  userData?: UserProfile | null
   loading: boolean
   profileLoading: boolean
   signIn: (email: string, password: string) => Promise<{ error: Error | null }>

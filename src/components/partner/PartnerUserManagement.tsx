@@ -76,9 +76,10 @@ const getSortableValue = (user: PartnerUser, key: string) => {
       return user.currentWeek
     case 'status':
       return user.status
-    case 'lastActive':
+    case 'lastActive': {
       const lastActiveTime = new Date(user.lastActive).getTime()
       return Number.isNaN(lastActiveTime) ? -Infinity : lastActiveTime
+    }
     default:
       return ''
   }

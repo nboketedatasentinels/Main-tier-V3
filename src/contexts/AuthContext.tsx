@@ -70,7 +70,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         console.warn('🟠 [Auth] fetchProfileOnce: no profile found')
         return null
       }
-      const rawProfile = { id: uid, ...(profileSnap.data() as UserProfile) } as UserProfile
+      const profileData = profileSnap.data() as UserProfile
+      const rawProfile = { ...profileData, id: uid, journeyType: profileData.journeyType || '4W' } as UserProfile
       const normalizedRole = normalizeRole(rawProfile.role)
       if (normalizedRole) {
         rawProfile.role = normalizedRole as StandardRole
@@ -109,15 +110,18 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       console.log('🟣 [Auth] Firestore profile exists?', userDocSnap.exists())
 
       if (userDocSnap.exists()) {
-        const baseUser = {
+        const storedUser = userDocSnap.data() as UserProfile
+        const baseUser: UserProfile = {
+          ...storedUser,
           id: firebaseUser.uid,
-          ...(userDocSnap.data() as UserProfile),
-        } satisfies UserProfile
+          journeyType: storedUser.journeyType || '4W',
+        }
+        let mergedUser = baseUser
 
         console.log('🟣 [Auth] Raw profile loaded', {
-          role: baseUser.role,
-          membershipStatus: baseUser.membershipStatus,
-          transformationTier: baseUser.transformationTier,
+          role: mergedUser.role,
+          membershipStatus: mergedUser.membershipStatus,
+          transformationTier: mergedUser.transformationTier,
         })
 
         // Optionally merge learner-facing extras from profiles/{uid}
@@ -125,23 +129,29 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
           const profileExtrasSnap = await getDoc(doc(db, 'profiles', firebaseUser.uid))
           if (profileExtrasSnap.exists()) {
             const extras = profileExtrasSnap.data() as Partial<UserProfile>
-            Object.assign(baseUser, { ...extras, ...baseUser, role: baseUser.role, id: firebaseUser.uid })
+            mergedUser = {
+              ...baseUser,
+              ...extras,
+              role: baseUser.role,
+              id: firebaseUser.uid,
+              journeyType: extras.journeyType || baseUser.journeyType || '4W',
+            }
             console.log('🟣 [Auth] Merged learner profile extras (user doc remains source of truth)')
           }
         } catch (extrasError) {
           console.warn('🟠 [Auth] Unable to merge learner profile extras', extrasError)
         }
 
-        const normalized = normalizeRole(baseUser.role)
+        const normalized = normalizeRole(mergedUser.role)
         console.log('🟣 [Auth] Normalized role:', normalized)
 
         if (normalized) {
-          baseUser.role = normalized as StandardRole
+          mergedUser.role = normalized as StandardRole
         } else {
-          console.warn('🟠 [Auth] Invalid role detected:', baseUser.role)
+          console.warn('🟠 [Auth] Invalid role detected:', mergedUser.role)
         }
 
-        return baseUser
+        return mergedUser
       }
 
       /* ---------------- Create profile ---------------- */
@@ -161,6 +171,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         membershipStatus: 'free',
         totalPoints: 0,
         level: 1,
+        journeyType: '4W',
         referralCount: 0,
         referralCode: null,
         referredBy: null,
@@ -297,6 +308,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         (snap) => {
           if (!snap.exists()) return
           const updated = snap.data() as UserProfile
+          updated.journeyType = updated.journeyType || '4W'
           updated.role = normalizeRole(updated.role) as StandardRole
           console.log('🔁 [Auth] Profile updated via snapshot', updated.role)
           setProfile(updated)
@@ -385,8 +397,14 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     setClaimsRole(null)
   }
 
-  const resetPassword = async (email: string) =>
-    sendPasswordResetEmail(auth, email)
+  const resetPassword = async (email: string) => {
+    try {
+      await sendPasswordResetEmail(auth, email)
+      return { error: null }
+    } catch (error) {
+      return { error: error as Error }
+    }
+  }
 
   const updateProfile = async (_updates: Partial<UserProfile>) => {
     console.warn('🟠 [Auth] updateProfile stub invoked')
@@ -438,6 +456,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const value: AuthContextType = {
     user,
     profile,
+    userData: profile,
     loading,
     profileLoading,
     signIn,

@@ -85,7 +85,6 @@ export const db: Firestore = enableLongPolling
       // transport. Enabling long polling keeps Firestore realtime listeners
       // functional in those environments.
       experimentalAutoDetectLongPolling: true,
-      useFetchStreams: false,
     })
   : getFirestore(app)
 export const storage: FirebaseStorage = getStorage(app)

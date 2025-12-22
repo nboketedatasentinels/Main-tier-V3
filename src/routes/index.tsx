@@ -1,10 +1,7 @@
-import { BrowserRouter, Routes, Route, Navigate, useLocation, Outlet } from 'react-router-dom'
+import { BrowserRouter, Routes, Route, Navigate, Outlet } from 'react-router-dom'
 import { ProtectedRoute } from '@/components/ProtectedRoute'
 import { FreeTierGuard } from '@/components/FreeTierGuard'
-import { AppLoader } from '@/components/ui/AppLoader'
-import { useAuth } from '@/hooks/useAuth'
 import RoleRedirect from '@/pages/auth/RoleRedirect'
-import { getLandingPathForRole } from '@/utils/roleRouting'
 import { UserRole } from '@/types'
 
 // Layout imports
@@ -49,40 +46,6 @@ import { ShamelessCirclePage } from '@/pages/community/ShamelessCirclePage'
 import { NotFoundPage } from '@/pages/errors/NotFoundPage'
 import { UnauthorizedPage } from '@/pages/errors/UnauthorizedPage'
 import { SuspendedPage } from '@/pages/errors/SuspendedPage'
-
-// Dashboard router component
-const DashboardRouter = () => {
-  const { profile, profileLoading } = useAuth()
-  const location = useLocation()
-
-  if (profileLoading) {
-    return <AppLoader />
-  }
-
-  const landingPath = getLandingPathForRole(profile)
-
-  // If the calculated landing path is NOT a nested dashboard route,
-  // it means the user should be somewhere else entirely (e.g., /admin/dashboard).
-  // The navigate component will handle the absolute path redirect.
-  if (!landingPath.startsWith('/app/dashboard/')) {
-    return <Navigate to={landingPath} replace />
-  }
-
-  // If the user is already at the correct dashboard, render the routes.
-  // Otherwise, redirect them to the correct nested dashboard path.
-  if (location.pathname === landingPath) {
-    return (
-      <Routes>
-        <Route path="free" element={<FreeDashboard />} />
-        <Route path="member" element={<PaidMemberDashboard />} />
-        {/* Ambassador dashboard is now a top-level route, but we keep this for legacy URLs */}
-        <Route path="ambassador" element={<Navigate to="/ambassador/dashboard" replace />} />
-      </Routes>
-    )
-  }
-
-  return <Navigate to={landingPath} replace />
-}
 
 export const AppRoutes = () => {
   return (

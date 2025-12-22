@@ -304,28 +304,39 @@ export const OrganizationManagementPage: React.FC<OrganizationManagementPageProp
                       </Tr>
                     </Thead>
                     <Tbody>
-                      {paginatedOrganizations.map((org) => (
-                        <Tr key={org.id || org.code} _hover={{ bg: 'gray.50' }}>
-                          <Td>
-                            <Menu>
-                              <MenuButton as={IconButton} icon={<MoreHorizontal size={16} />} aria-label="Actions" size="sm" variant="ghost" />
-                              <MenuList>
-                                <MenuItem onClick={() => { setSelectedOrg(org); editModal.onOpen() }}>Edit organization</MenuItem>
-                                <MenuItem onClick={() => { setSelectedOrg(org); assignModal.onOpen() }}>Assign partner</MenuItem>
-                                <MenuItem onClick={() => { setPendingDelete(org); confirmDialog.onOpen() }} color="red.500">
-                                  Delete
-                                </MenuItem>
-                              </MenuList>
-                            </Menu>
-                          </Td>
-                          <Td fontWeight="semibold">{org.name}</Td>
-                          <Td>{org.code}</Td>
-                          <Td>{org.teamSize || 0}</Td>
-                          <Td>{renderStatusBadge(org.status)}</Td>
-                          <Td>{org.transformationPartner || 'Unassigned'}</Td>
-                          <Td>{org.createdAt?.toDate ? org.createdAt.toDate().toLocaleDateString() : (org.createdAt as string) || '—'}</Td>
-                        </Tr>
-                      ))}
+                      {paginatedOrganizations.map((org) => {
+                        const createdAt =
+                          typeof org.createdAt === 'string'
+                            ? org.createdAt
+                            : org.createdAt instanceof Date
+                              ? org.createdAt.toLocaleDateString()
+                              : org.createdAt?.toDate?.()
+                                ? org.createdAt.toDate().toLocaleDateString()
+                                : '—'
+
+                        return (
+                          <Tr key={org.id || org.code} _hover={{ bg: 'gray.50' }}>
+                            <Td>
+                              <Menu>
+                                <MenuButton as={IconButton} icon={<MoreHorizontal size={16} />} aria-label="Actions" size="sm" variant="ghost" />
+                                <MenuList>
+                                  <MenuItem onClick={() => { setSelectedOrg(org); editModal.onOpen() }}>Edit organization</MenuItem>
+                                  <MenuItem onClick={() => { setSelectedOrg(org); assignModal.onOpen() }}>Assign partner</MenuItem>
+                                  <MenuItem onClick={() => { setPendingDelete(org); confirmDialog.onOpen() }} color="red.500">
+                                    Delete
+                                  </MenuItem>
+                                </MenuList>
+                              </Menu>
+                            </Td>
+                            <Td fontWeight="semibold">{org.name}</Td>
+                            <Td>{org.code}</Td>
+                            <Td>{org.teamSize || 0}</Td>
+                            <Td>{renderStatusBadge(org.status)}</Td>
+                            <Td>{org.transformationPartner || 'Unassigned'}</Td>
+                            <Td>{createdAt}</Td>
+                          </Tr>
+                        )
+                      })}
                       {!paginatedOrganizations.length && (
                         <Tr>
                           <Td colSpan={7} textAlign="center" py={6}>

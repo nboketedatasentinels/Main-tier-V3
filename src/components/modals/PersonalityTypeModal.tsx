@@ -14,20 +14,18 @@ import {
   Box,
   Grid,
   Select,
-  Spinner,
   Alert,
   AlertIcon,
   Link,
-  useDisclosure,
   Collapse,
   Checkbox,
   Flex,
   Icon,
 } from '@chakra-ui/react';
-import { Brain, Heart, Globe, ExternalLink, AlertCircle, CheckCircle, ChevronDown, ChevronUp } from 'lucide-react';
+import { Brain, Heart, Globe, ExternalLink, CheckCircle, ChevronDown, ChevronUp } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { db } from '@/services/firebase';
-import { doc, getDoc, updateDoc, Timestamp } from 'firebase/firestore';
+import { doc, getDoc, Timestamp, setDoc } from 'firebase/firestore';
 
 import {
   PERSONALITY_TYPES,
@@ -220,7 +218,7 @@ export const PersonalityTypeModal: React.FC<PersonalityTypeModalProps> = ({
         region,
         updatedAt: Timestamp.now(),
       };
-      await updateDoc(userDocRef, dataToSave, { merge: true });
+      await setDoc(userDocRef, dataToSave, { merge: true });
 
       setSuccess(true);
 
