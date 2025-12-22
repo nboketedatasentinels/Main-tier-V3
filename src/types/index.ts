@@ -215,7 +215,7 @@ export interface WeeklyProgress {
   weeklyTarget: number;
   pointsEarned: number;
   status: "on_track" | "warning" | "alert" | "recovery";
-  updatedAt: any;
+  updatedAt: string | Date | { toDate: () => Date };
 }
 
 export enum ActivityStatus {

@@ -105,7 +105,7 @@ export const PartnerDashboardLayout: React.FC<PartnerDashboardLayoutProps> = ({
             <Text fontWeight="semibold" color="brand.text">
               {item.label}
             </Text>
-            {item.description && (
+            {'description' in item && item.description && (
               <Text fontSize="xs" color="brand.subtleText">
                 {item.description}
               </Text>

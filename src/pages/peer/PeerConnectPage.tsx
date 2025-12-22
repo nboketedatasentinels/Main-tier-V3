@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react'
+import React, { useCallback, useEffect, useMemo, useState } from 'react'
 import {
   Avatar,
   Badge,
@@ -176,7 +176,7 @@ export const PeerConnectPage: React.FC = () => {
   const [loadingPeers, setLoadingPeers] = useState(false)
   const [preselectedUser, setPreselectedUser] = useState<PreselectedUser | null>(null)
 
-  const fetchWeeklyMatch = async () => {
+  const fetchWeeklyMatch = useCallback(async () => {
     if (!user || !profile || !availablePeers.length) return
     try {
       const matchRef = doc(db, 'peer_weekly_matches', `${user.uid}-${weekRange}`)
@@ -209,9 +209,9 @@ export const PeerConnectPage: React.FC = () => {
     } catch (error) {
       console.error('Error selecting weekly match', error)
     }
-  }
+  }, [availablePeers, profile, user, weekRange])
 
-  const fetchInvitesAndSessions = async () => {
+  const fetchInvitesAndSessions = useCallback(async () => {
     if (!user) return
     try {
       const inviteRef = collection(db, 'peer_session_requests')
@@ -263,7 +263,7 @@ export const PeerConnectPage: React.FC = () => {
     } catch (error) {
       console.error('Error fetching sessions', error)
     }
-  }
+  }, [profile?.timezone, user])
 
   const onChallengeCreated = () => {
     fetchWeeklyMatch()
@@ -371,11 +371,11 @@ export const PeerConnectPage: React.FC = () => {
 
   useEffect(() => {
     fetchWeeklyMatch()
-  }, [availablePeers, profile, user, weekRange])
+  }, [fetchWeeklyMatch])
 
   useEffect(() => {
     fetchInvitesAndSessions()
-  }, [profile?.timezone, user])
+  }, [fetchInvitesAndSessions])
 
   const filteredPeers = useMemo(() => {
     const queryString = search.toLowerCase()

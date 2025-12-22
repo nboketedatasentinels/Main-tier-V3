@@ -202,7 +202,7 @@ export const usePartnerDashboardData = (options?: UsePartnerDashboardDataOptions
         }
 
         const companyCode = (data.companyCode || data.company_code || '').toLowerCase()
-        const programStart = data.programStartDate || data.registrationDate || data.createdAt || undefined
+        const programStart = data.programStartDate || data.registrationDate || undefined
         const currentWeek = getProgramWeekNumber(programStart)
         const progress = mapWeeklyPointsToProgress(weeklyPoints[docSnap.id] || [], currentWeek)
         const riskResult = calculateUserRiskStatus(
@@ -230,14 +230,14 @@ export const usePartnerDashboardData = (options?: UsePartnerDashboardDataOptions
 
         return {
           id: docSnap.id,
-          name: data.name || data.fullName || 'Unknown User',
+          name: data.name || 'Unknown User',
           email: data.email || '',
           companyCode,
           progressPercent,
           currentWeek,
           status: (data.accountStatus as PartnerUser['status']) || 'Active',
           lastActive:
-            normalizeTimestamp(data.lastActiveAt || data.lastActive || data.registrationDate || data.createdAt) ||
+            normalizeTimestamp(data.lastActiveAt || data.lastActive || data.registrationDate) ||
             new Date().toISOString(),
           riskStatus,
           weeklyEarned,

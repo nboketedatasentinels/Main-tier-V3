@@ -63,7 +63,6 @@ import {
 } from 'lucide-react'
 import {
   collection,
-  getDocs,
   limit,
   onSnapshot,
   orderBy,
@@ -75,7 +74,6 @@ import { LeaderboardTimeframe, UserProfile } from '@/types'
 import { db } from '@/services/firebase'
 import { useAuth } from '@/hooks/useAuth'
 import { PeerConnectPage } from '@/pages/peer/PeerConnectPage'
-import { StartChallengeModal } from '@/components/modals/StartChallengeModal'
 
 interface PointsTransaction {
   id: string
@@ -168,33 +166,6 @@ export const LeadershipBoardPage: React.FC = () => {
   })
   const [showPeerConnect, setShowPeerConnect] = useState(false)
   const timeframeStart = useMemo(() => toDateFromTimeframe(timeframe), [timeframe])
-
-  const refetchChallenges = async () => {
-    if (!profile) return
-    const challengeQuery = query(
-      collection(db, 'challenges'),
-      where('participants', 'array-contains', profile.id),
-      orderBy('startDate', 'desc'),
-      limit(25),
-    )
-    const snapshot = await getDocs(challengeQuery)
-    const loadedChallenges: ChallengeRecord[] = snapshot.docs.map((doc) => {
-      const data = doc.data() as Record<string, unknown>
-      return {
-        id: doc.id,
-        opponentName: (data.opponentName as string) || 'Peer Challenger',
-        opponentAvatar: data.opponentAvatar as string | undefined,
-        opponentId: data.opponentId as string | undefined,
-        startDate: (data.startDate as string) || new Date().toISOString(),
-        endDate: (data.endDate as string) || new Date().toISOString(),
-        yourPoints: (data.yourPoints as number) || 0,
-        opponentPoints: (data.opponentPoints as number) || 0,
-        status: ((data.status as ChallengeRecord['status']) || 'active'),
-        result: data.result as ChallengeRecord['result'],
-      }
-    })
-    setChallenges(loadedChallenges)
-  }
 
   useEffect(() => {
     const profileQuery = query(collection(db, 'profiles'))
