@@ -56,10 +56,7 @@ import {
   orderBy,
   query,
   where,
-  DocumentData,
-  Query,
-  QueryConstraint,
-  QuerySnapshot,
+  type QueryConstraint,
 } from 'firebase/firestore'
 import { db } from '@/services/firebase'
 import { useAuth } from '@/hooks/useAuth'
@@ -144,18 +141,16 @@ const couponLink = 'https://www.t4leader.com/challenge-page/transformational-lea
 const useRealtimeCollection = <T,>(
   path: string,
   constraints: QueryConstraint[],
-  mapper: (docId: string, data: DocumentData) => T,
+  mapper: (docId: string, data: Record<string, any>) => T,
 ) => {
   const [data, setData] = useState<T[]>([])
   const [loading, setLoading] = useState(true)
   const constraintsKey = useMemo(() => JSON.stringify(constraints), [constraints])
 
   useEffect(() => {
-    const baseQuery: Query<DocumentData> = constraints.length
-      ? query(collection(db, path), ...constraints)
-      : collection(db, path)
+    const baseQuery = constraints.length ? query(collection(db, path), ...constraints) : collection(db, path)
 
-    const unsub = onSnapshot(baseQuery, (snapshot: QuerySnapshot<DocumentData>) => {
+    const unsub = onSnapshot(baseQuery, (snapshot) => {
       setData(snapshot.docs.map((d) => mapper(d.id, d.data())))
       setLoading(false)
     })
