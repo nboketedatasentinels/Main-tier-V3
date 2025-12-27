@@ -163,15 +163,17 @@ const WeeklyChecklistPage: React.FC = () => {
 
   const persistChecklist = async (updatedActivities: ActivityState[]) => {
     if (!user) return
-    const checklistState = {
-      activities: updatedActivities.map(({ id, status, proofUrl, notes }) => ({
-        id,
-        status,
-        proofUrl,
-        notes,
-      })),
+    const checklistState = removeUndefinedFields({
+      activities: updatedActivities.map(({ id, status, proofUrl, notes }) =>
+        removeUndefinedFields({
+          id,
+          status,
+          proofUrl,
+          notes,
+        }),
+      ),
       updatedAt: serverTimestamp(),
-    }
+    })
     try {
       await setDoc(doc(db, 'checklists', `${user.uid}_${selectedWeek}`), checklistState, { merge: true })
     } catch (error) {
