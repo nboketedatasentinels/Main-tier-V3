@@ -124,6 +124,7 @@ export interface Organization {
   updatedAt: string
   memberCount: number
   settings?: Record<string, unknown>
+  transformation_partner_id?: string | null
 }
 
 export interface PrivacySettings {

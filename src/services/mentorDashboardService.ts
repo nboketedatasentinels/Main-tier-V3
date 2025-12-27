@@ -5,7 +5,6 @@ import {
   orderBy,
   query,
   where,
-  type DocumentData,
   type QueryConstraint,
   type QuerySnapshot,
   type Unsubscribe,
@@ -104,7 +103,7 @@ export const deriveFallbackRisk = (signals: EngagementSignals): EngagementRisk =
   }
 }
 
-const mapSnapshot = <T extends { id: string }>(snapshot: QuerySnapshot<DocumentData>) =>
+const mapSnapshot = <T extends { id: string }>(snapshot: QuerySnapshot) =>
   snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() } as T))
 
 const deriveEngagementStatus = (daysSinceLastActive: number): EngagementStatus => {
