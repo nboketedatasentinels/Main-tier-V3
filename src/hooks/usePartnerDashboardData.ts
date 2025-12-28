@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import { differenceInDays, subDays } from 'date-fns'
+import type { DataWarning } from '@/components/admin/RiskAnalysisCard'
 import {
   addDoc,
   collection,
@@ -412,7 +413,7 @@ export const usePartnerDashboardData = (options?: UsePartnerDashboardDataOptions
   }
 
   const dataQualityWarnings = useMemo(() => {
-    const warnings = [] as { message: string; severity: 'warning' | 'error' }[]
+    const warnings = [] as DataWarning[]
 
     const missingAssignments = users.filter((user) => !user.companyCode).length
     if (missingAssignments) {
