@@ -51,13 +51,9 @@ export interface AssignedMentee extends UserProfile {
   progress?: number
   goalsCompleted?: number
   goalsTotal?: number
-  milestonesProgress?: number
-  progress?: number
   risk: EngagementRisk
   daysSinceLastActive: number
   engagementStatus: EngagementStatus
-  lastActive?: string
-  lastActiveAt?: string
 }
 
 export interface MenteeFilters {
@@ -196,7 +192,7 @@ export const fetchAssignedMentees = async (
         ...(doc.data() as UserProfile),
         id: doc.id,
       })
-    })
+    )
 
     return { data: applyFilters(mentees, filters), error: null }
   } catch (error) {
