@@ -125,6 +125,7 @@ export interface Organization {
   transformation_partner_id?: string | null
   memberCount: number
   settings?: Record<string, unknown>
+  transformation_partner_id?: string | null
 }
 
 export interface PrivacySettings {

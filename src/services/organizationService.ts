@@ -64,6 +64,18 @@ const normalizeOrganizationStatus = (status?: string): Organization['status'] =>
   return 'inactive'
 }
 
+const coerceCreatedAt = (
+  value?: Timestamp | string | Date,
+): Timestamp | ReturnType<typeof serverTimestamp> => {
+  if (value instanceof Timestamp) return value
+  if (value instanceof Date) return Timestamp.fromDate(value)
+  if (typeof value === 'string') {
+    const parsedDate = new Date(value)
+    if (!Number.isNaN(parsedDate.getTime())) return Timestamp.fromDate(parsedDate)
+  }
+  return serverTimestamp()
+}
+
 export const validateCompanyCode = async (
   code: string,
 ): Promise<{ valid: boolean; error?: string; organization?: Organization }> => {
@@ -128,10 +140,12 @@ export const createOrganizationWithInvitations = async (
   invitations: InvitationPayload[],
   adminContext?: { adminId?: string; adminName?: string },
 ): Promise<{ organizationId: string; invitationResult: BulkInvitationResult | null }> => {
-  const payload = {
+  const payload: Omit<OrganizationRecord, 'createdAt' | 'updatedAt'> & {
+    createdAt: Timestamp | ReturnType<typeof serverTimestamp>
+    updatedAt?: Timestamp | ReturnType<typeof serverTimestamp>
+  } = {
     ...organization,
-    createdAt: organization.createdAt instanceof Timestamp ? organization.createdAt : serverTimestamp(),
-    updatedAt: organization.updatedAt instanceof Timestamp ? organization.updatedAt : serverTimestamp(),
+    createdAt: coerceCreatedAt(organization.createdAt),
   }
 
   const orgRef = await addDoc(orgCollection, { ...payload, updatedAt: serverTimestamp() })

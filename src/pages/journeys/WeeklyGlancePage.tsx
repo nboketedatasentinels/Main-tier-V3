@@ -24,6 +24,7 @@ import { WeeklyInspirationCard } from '@/components/journeys/weeklyGlance/Weekly
 import { useWeeklyGlanceData } from '@/hooks/useWeeklyGlanceData'
 import { BuildVillageModal } from '@/components/modals/BuildVillageModal'
 import { useAuth } from '@/hooks/useAuth'
+import { UserRole } from '@/types'
 
 export const WeeklyGlancePage = () => {
   const { profile } = useAuth()
@@ -32,6 +33,7 @@ export const WeeklyGlancePage = () => {
   const [isBuildVillageOpen, setIsBuildVillageOpen] = useState(false)
   const [villageName, setVillageName] = useState('')
   const [villagePurpose, setVillagePurpose] = useState('')
+  const userRole = profile?.role as UserRole | undefined
 
   const hasError = Object.values(data.errors).some(Boolean)
 
@@ -87,7 +89,7 @@ export const WeeklyGlancePage = () => {
           <SupportTeamCard data={data.supportAssignment} loading={data.loading.support} />
           <PersonalityProfileCard data={data.personality} loading={data.loading.profile} />
           <MonthlyCourseCard
-            role={profile?.role}
+            role={userRole}
             data={data.monthlyCourse}
             loading={data.loading.monthlyCourse}
             error={data.errors.monthlyCourse}

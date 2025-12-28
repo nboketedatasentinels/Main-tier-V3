@@ -41,6 +41,7 @@ import {
   User,
 } from 'lucide-react'
 import { format, formatDistanceToNow } from 'date-fns'
+import type { Announcement } from '@/hooks/useAnnouncements'
 import { useEventsFeed } from '@/hooks/useEventsFeed'
 import { WhatsAppCommunityCard } from '@/components/community/WhatsAppCommunityCard'
 import { useAuth } from '@/hooks/useAuth'
@@ -70,17 +71,6 @@ const tabs: Array<{ key: TabKey; label: string; description: string; icon: React
     icon: Coins,
   },
 ]
-
-type Announcement = {
-  id: string
-  title: string
-  message: string
-  createdAt?: Date
-  isRead?: boolean
-  isArchived?: boolean
-  author?: string
-  source?: string
-}
 
 const buildSearchParams = (tab: TabKey) => {
   const params = new URLSearchParams()

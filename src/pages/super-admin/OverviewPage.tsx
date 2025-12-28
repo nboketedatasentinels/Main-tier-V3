@@ -339,6 +339,50 @@ export const OverviewPage: React.FC<OverviewPageProps> = ({
 
 type StreamCardItem = VerificationRequest | RegistrationRecord | SystemAlertRecord | TaskNotificationRecord
 
+const isVerificationRequest = (item: StreamCardItem): item is VerificationRequest =>
+  'activityTitle' in item || 'points' in item || 'userName' in item
+
+const isRegistrationRecord = (item: StreamCardItem): item is RegistrationRecord =>
+  'email' in item || 'registrationDate' in item
+
+const isTaskNotificationRecord = (item: StreamCardItem): item is TaskNotificationRecord =>
+  'severity' in item || 'message' in item
+
+const isSystemAlertRecord = (item: StreamCardItem): item is SystemAlertRecord =>
+  'component' in item || 'level' in item
+
+const getStreamItemCopy = (item: StreamCardItem) => {
+  if (isVerificationRequest(item)) {
+    return {
+      title: item.userName || 'Verification request',
+      description: item.activityTitle || 'Awaiting verification',
+    }
+  }
+
+  if (isRegistrationRecord(item)) {
+    return {
+      title: item.name || 'User registration',
+      description: item.email || item.company || 'Registration submitted',
+    }
+  }
+
+  if (isTaskNotificationRecord(item)) {
+    return {
+      title: item.title || 'Task notification',
+      description: item.message || 'Task update available',
+    }
+  }
+
+  if (isSystemAlertRecord(item)) {
+    return {
+      title: item.component || 'System alert',
+      description: item.message || 'Alert raised',
+    }
+  }
+
+  return { title: 'Item', description: 'No details provided' }
+}
+
 const NotificationStreamCard = ({
   title,
   items,
@@ -351,61 +395,42 @@ const NotificationStreamCard = ({
   icon: React.ReactNode
   color: 'purple' | 'red' | 'blue' | 'green'
   emptyLabel: string
-}) => {
-  const getItemTitle = (item: StreamCardItem) => {
-    if ('title' in item && item.title) return item.title
-    if ('userName' in item && item.userName) return item.userName
-    if ('name' in item && item.name) return item.name
-    return 'Item'
-  }
-
-  const getItemSubtitle = (item: StreamCardItem) => {
-    if ('message' in item && item.message) return item.message
-    if ('email' in item && item.email) return item.email
-    if ('activityTitle' in item && item.activityTitle) return item.activityTitle
-    return 'No details provided'
-  }
-
-  return (
-    <Box border="1px solid" borderColor="brand.border" borderRadius="md" p={3} bg="gray.50" minH="140px">
-      <HStack justify="space-between" mb={2}>
-        <HStack spacing={2}>
-          <Box p={2} borderRadius="md" bg={`${color}.50`} color={`${color}.600`}>
-            {icon}
-          </Box>
-          <Text fontWeight="semibold" color="brand.text">
-            {title}
-          </Text>
-        </HStack>
-        <Badge colorScheme={color}>{items.length}</Badge>
+}) => (
+  <Box border="1px solid" borderColor="brand.border" borderRadius="md" p={3} bg="gray.50" minH="140px">
+    <HStack justify="space-between" mb={2}>
+      <HStack spacing={2}>
+        <Box p={2} borderRadius="md" bg={`${color}.50`} color={`${color}.600`}>
+          {icon}
+        </Box>
+        <Text fontWeight="semibold" color="brand.text">
+          {title}
+        </Text>
       </HStack>
-      <Stack spacing={2}>
-        {items.map((item) => (
-          <Box
-            key={('id' in item && item.id) || getItemTitle(item)}
-            p={2}
-            borderRadius="md"
-            border="1px solid"
-            borderColor="brand.border"
-            bg="white"
-          >
+      <Badge colorScheme={color}>{items.length}</Badge>
+    </HStack>
+    <Stack spacing={2}>
+      {items.map((item) => {
+        const { title: itemTitle, description } = getStreamItemCopy(item)
+
+        return (
+          <Box key={item.id} p={2} borderRadius="md" border="1px solid" borderColor="brand.border" bg="white">
             <Text fontWeight="semibold" color="brand.text">
-              {getItemTitle(item)}
+              {itemTitle}
             </Text>
             <Text fontSize="sm" color="brand.subtleText">
-              {getItemSubtitle(item)}
+              {description}
             </Text>
           </Box>
-        ))}
-        {!items.length && (
-          <Text color="gray.600" fontSize="sm">
-            {emptyLabel}
-          </Text>
-        )}
-      </Stack>
-    </Box>
-  )
-}
+        )
+      })}
+      {!items.length && (
+        <Text color="gray.600" fontSize="sm">
+          {emptyLabel}
+        </Text>
+      )}
+    </Stack>
+  </Box>
+)
 
 const DrawerNotifications = ({ isOpen, onClose }: { isOpen: boolean; onClose: () => void }) => (
   <Drawer isOpen={isOpen} placement="right" onClose={onClose} size="md">

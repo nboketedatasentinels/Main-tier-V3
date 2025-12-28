@@ -22,6 +22,7 @@ export type NavigationItem = {
   key: string
   label: string
   icon?: React.ElementType
+  description?: string
 }
 
 export type NavigationSection = {

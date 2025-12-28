@@ -5,7 +5,6 @@ import {
   orderBy,
   query,
   where,
-  type DocumentData,
   type QueryConstraint,
   type QuerySnapshot,
   type Unsubscribe,
@@ -48,6 +47,8 @@ export type EngagementStatus = 'active' | 'idle' | 'disengaged'
 
 export interface AssignedMentee extends UserProfile {
   weeklyActivity?: number
+  milestonesProgress?: number
+  progress?: number
   goalsCompleted?: number
   goalsTotal?: number
   milestonesProgress?: number
@@ -108,7 +109,7 @@ export const deriveFallbackRisk = (signals: EngagementSignals): EngagementRisk =
   }
 }
 
-const mapSnapshot = <T extends { id: string }>(snapshot: QuerySnapshot<DocumentData>) =>
+const mapSnapshot = <T extends { id: string }>(snapshot: QuerySnapshot) =>
   snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() } as T))
 
 const deriveEngagementStatus = (daysSinceLastActive: number): EngagementStatus => {
@@ -117,8 +118,20 @@ const deriveEngagementStatus = (daysSinceLastActive: number): EngagementStatus =
   return 'disengaged'
 }
 
+const resolveValidLastActive = (profile: UserProfile & Record<string, unknown>): string => {
+  const candidates = [profile.lastActive, profile.lastActiveAt, profile.updatedAt]
+  for (const candidate of candidates) {
+    if (typeof candidate === 'string') {
+      const parsed = new Date(candidate)
+      if (!Number.isNaN(parsed.getTime())) return parsed.toISOString()
+    }
+  }
+
+  return new Date().toISOString()
+}
+
 const withComputedMenteeFields = (profile: UserProfile & Record<string, unknown>): AssignedMentee => {
-  const lastActive = (profile.lastActive as string) || (profile.lastActiveAt as string) || new Date().toISOString()
+  const lastActive = resolveValidLastActive(profile)
   const weeklyActivity = Number(profile.weeklyActivity ?? 0)
   const daysSinceLastActive = differenceInCalendarDays(new Date(), new Date(lastActive))
   const risk = deriveFallbackRisk({ daysSinceLastActive, weeklyActivity })
@@ -178,11 +191,10 @@ export const fetchAssignedMentees = async (
     const constraints: QueryConstraint[] = [where('mentorId', '==', mentorId)]
     const menteeQuery = query(collection(db, 'users'), ...constraints)
     const snapshot = await getDocs(menteeQuery)
-    const mentees = snapshot.docs.map((doc) => {
-      const { id: _ignoredId, ...profile } = doc.data() as UserProfile
-      return withComputedMenteeFields({
+    const mentees = snapshot.docs.map((doc) =>
+      withComputedMenteeFields({
+        ...(doc.data() as UserProfile),
         id: doc.id,
-        ...profile,
       })
     })
 
@@ -204,10 +216,12 @@ export const subscribeToAssignedMentees = (
   return onSnapshot(
     menteeQuery,
     (snapshot) => {
-      const mentees = snapshot.docs.map((doc) => {
-        const { id: _ignoredId, ...profile } = doc.data() as UserProfile
-        return withComputedMenteeFields({ id: doc.id, ...profile })
-      })
+      const mentees = snapshot.docs.map((doc) =>
+        withComputedMenteeFields({
+          ...(doc.data() as UserProfile),
+          id: doc.id,
+        })
+      )
       onUpdate(applyFilters(mentees, filters))
     },
     (error) => {

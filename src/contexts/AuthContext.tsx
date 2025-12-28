@@ -70,8 +70,12 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         console.warn('🟠 [Auth] fetchProfileOnce: no profile found')
         return null
       }
-      const profileData = profileSnap.data() as UserProfile
-      const rawProfile = { ...profileData, id: uid, journeyType: profileData.journeyType || '4W' } as UserProfile
+      const { id: _ignoredId, ...profileData } = profileSnap.data() as UserProfile
+      const rawProfile = {
+        ...profileData,
+        id: uid,
+        journeyType: profileData.journeyType || '4W',
+      } as UserProfile
       const normalizedRole = normalizeRole(rawProfile.role)
       if (normalizedRole) {
         rawProfile.role = normalizedRole as StandardRole
@@ -110,7 +114,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       console.log('🟣 [Auth] Firestore profile exists?', userDocSnap.exists())
 
       if (userDocSnap.exists()) {
-        const storedUser = userDocSnap.data() as UserProfile
+        const { id: _ignoredId, ...storedUser } = userDocSnap.data() as UserProfile
         const baseUser: UserProfile = {
           ...storedUser,
           id: firebaseUser.uid,
@@ -307,12 +311,16 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         profileRef,
         (snap) => {
           if (!snap.exists()) return
-          const updated = snap.data() as UserProfile
-          updated.journeyType = updated.journeyType || '4W'
-          updated.role = normalizeRole(updated.role) as StandardRole
-          console.log('🔁 [Auth] Profile updated via snapshot', updated.role)
-          setProfile(updated)
-          recordProfileLoad(updated)
+          const { id: _ignoredId, ...updatedData } = snap.data() as UserProfile
+          const updatedProfile: UserProfile = {
+            ...updatedData,
+            id: snap.id,
+            journeyType: updatedData.journeyType || '4W',
+            role: (normalizeRole(updatedData.role) as StandardRole) ?? updatedData.role,
+          }
+          console.log('🔁 [Auth] Profile updated via snapshot', updatedProfile.role)
+          setProfile(updatedProfile)
+          recordProfileLoad(updatedProfile)
         },
         (error) => {
           console.error('🔴 [Auth] Realtime profile listener error', error)
@@ -398,11 +406,22 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   }
 
   const resetPassword = async (email: string) => {
+    const configError = ensureFirebaseConfigured()
+    if (configError) {
+      console.error('🔴 [Auth] resetPassword blocked due to missing Firebase config')
+      return { error: configError }
+    }
+
     try {
       await sendPasswordResetEmail(auth, email)
       return { error: null }
     } catch (error) {
-      return { error: error as Error }
+      const friendlyMessage = getFriendlyErrorMessage(error)
+      const normalizedError =
+        error instanceof Error && error.message === friendlyMessage
+          ? error
+          : new Error(friendlyMessage)
+      return { error: normalizedError }
     }
   }
 

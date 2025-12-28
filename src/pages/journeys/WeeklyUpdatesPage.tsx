@@ -40,29 +40,15 @@ import { getIsoWeekNumber } from '@/utils/date'
 import { db } from '@/services/firebase'
 import { useAuth } from '@/hooks/useAuth'
 import { UserRole, WeeklyProgress } from '@/types'
-import { JOURNEY_META, getMonthNumber, getActivitiesForJourney, JourneyType, type ActivityId } from '@/config/pointsConfig'
+import { JOURNEY_META, getMonthNumber, getActivitiesForJourney, type ActivityDef, type JourneyType } from '@/config/pointsConfig'
 import { awardChecklistPoints, revokeChecklistPoints } from '@/services/pointsService'
 import { SurfaceCard } from '@/components/primitives/SurfacePrimitives'
 
 const DEFAULT_WEEKLY_TARGET = JOURNEY_META['6W'].weeklyTarget
 
-interface ActivityTemplate {
-  id: ActivityId
-  baseId: string
-  title: string
-  description: string
-  points: number
-  maxPerMonth: number
-  requiresApproval?: boolean
-  isFreeTier?: boolean
-  week: number
-  category: string
-  tags?: string[]
-}
-
 type ActivityStatus = 'not_started' | 'pending' | 'completed'
 
-interface ActivityState extends ActivityTemplate {
+type ActivityState = ActivityDef & {
   status: ActivityStatus
   proofUrl?: string
   notes?: string
@@ -164,15 +150,17 @@ const WeeklyChecklistPage: React.FC = () => {
 
   const persistChecklist = async (updatedActivities: ActivityState[]) => {
     if (!user) return
-    const checklistState = {
-      activities: updatedActivities.map(({ id, status, proofUrl, notes }) => ({
-        id,
-        status,
-        proofUrl,
-        notes,
-      })),
+    const checklistState = removeUndefinedFields({
+      activities: updatedActivities.map(({ id, status, proofUrl, notes }) =>
+        removeUndefinedFields({
+          id,
+          status,
+          proofUrl,
+          notes,
+        }),
+      ),
       updatedAt: serverTimestamp(),
-    }
+    })
     try {
       await setDoc(doc(db, 'checklists', `${user.uid}_${selectedWeek}`), checklistState, { merge: true })
     } catch (error) {

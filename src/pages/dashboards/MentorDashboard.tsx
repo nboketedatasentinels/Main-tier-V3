@@ -143,6 +143,19 @@ const weeklyComparison = [
   },
 ]
 
+const ensureValidDateString = (input?: string | number | Date): string => {
+  if (input instanceof Date && !Number.isNaN(input.getTime())) {
+    return input.toISOString()
+  }
+
+  if (typeof input === 'string' || typeof input === 'number') {
+    const parsed = new Date(input)
+    if (!Number.isNaN(parsed.getTime())) return parsed.toISOString()
+  }
+
+  return new Date().toISOString()
+}
+
 const formatPercentageChange = (current: number, previous: number) => {
   if (previous === 0) return '—'
   const delta = current - previous
@@ -266,21 +279,17 @@ export const MentorDashboard: React.FC = () => {
         const program = mentee.transformationTier?.toString().replace(/_/g, ' ') || 'Mentorship'
         const programDuration = mentee.cohortIdentifier || mentee.dashboardPreferences?.defaultRoute || '—'
         const timezone = mentee.timezone || 'Not set'
-        const weeklyActivity = mentee.weeklyActivity ?? 0
+        const weeklyActivity = Number(mentee.weeklyActivity ?? 0)
         const goalsCompleted = mentee.goalsCompleted ?? 0
         const goalsTotal = mentee.goalsTotal ?? 0
-        const lastActive =
-          (mentee.lastActive as string) ||
-          (mentee.lastActiveAt as string) ||
-          mentee.updatedAt ||
-          new Date().toISOString()
+        const lastActive = ensureValidDateString(mentee.lastActive || mentee.lastActiveAt || mentee.updatedAt)
         const daysSinceLastActive =
           mentee.daysSinceLastActive ?? differenceInCalendarDays(new Date(), new Date(lastActive))
         const risk = mentee.risk ?? deriveFallbackRisk({ daysSinceLastActive, weeklyActivity })
         const milestonesProgress =
           mentee.milestonesProgress ?? mentee.progress ??
           (goalsTotal > 0 ? Math.round((goalsCompleted / goalsTotal) * 100) : 0)
-        const progress = Math.min(100, Math.max(0, milestonesProgress))
+        const progress = Math.min(100, Math.max(0, milestonesProgress ?? 0))
         const checkInStatus = daysSinceLastActive <= 7 ? 'on-time' : daysSinceLastActive <= 14 ? 'pending' : 'overdue'
 
         return {
@@ -299,7 +308,7 @@ export const MentorDashboard: React.FC = () => {
           risk,
           checkIns: {
             status: checkInStatus,
-            last: lastActive,
+            last: ensureValidDateString(mentee.checkIns?.last || lastActive),
           },
         }
       }),
@@ -310,7 +319,8 @@ export const MentorDashboard: React.FC = () => {
     () =>
       menteeDirectory.map((mentee) => {
         const daysSinceLastActive =
-          mentee.daysSinceLastActive ?? differenceInCalendarDays(new Date(), new Date(mentee.lastActive))
+          mentee.daysSinceLastActive ??
+          differenceInCalendarDays(new Date(), new Date(ensureValidDateString(mentee.lastActive)))
         const risk = mentee.risk ??
           deriveFallbackRisk({
             daysSinceLastActive,
@@ -961,6 +971,8 @@ export const MentorDashboard: React.FC = () => {
               {filteredMentees.map((mentee) => {
                 const palette = riskStyles[mentee.risk.level]
                 const isSelected = selectedMentee?.id === mentee.id
+                const lastCheckInDate = ensureValidDateString(mentee.checkIns?.last)
+                const daysSinceCheckIn = differenceInCalendarDays(new Date(), new Date(lastCheckInDate))
                 return (
                   <Flex
                     key={mentee.id}
@@ -988,7 +1000,8 @@ export const MentorDashboard: React.FC = () => {
                             </Tag>
                             <Tag size="sm" bg={palette.bg} color={palette.color}>
                               <TagLabel>
-                                <Icon as={AlertTriangle} mr={1} /> {palette.label} • Avg {mentee.weeklyActivity.toFixed(1)} / wk
+                                <Icon as={AlertTriangle} mr={1} /> {palette.label} • Avg{' '}
+                                {Number(mentee.weeklyActivity ?? 0).toFixed(1)} / wk
                               </TagLabel>
                             </Tag>
                           </Wrap>
@@ -1045,7 +1058,7 @@ export const MentorDashboard: React.FC = () => {
                           <Text fontWeight="semibold">Check-ins</Text>
                         </HStack>
                         <Text color={mentee.checkIns.status === 'overdue' ? 'red.500' : 'green.600'}>
-                          {mentee.checkIns.status === 'overdue' ? 'Overdue' : 'On track'} • {differenceInCalendarDays(new Date(), new Date(mentee.checkIns.last))}d ago
+                          {mentee.checkIns.status === 'overdue' ? 'Overdue' : 'On track'} • {daysSinceCheckIn}d ago
                         </Text>
                       </Box>
                     </SimpleGrid>

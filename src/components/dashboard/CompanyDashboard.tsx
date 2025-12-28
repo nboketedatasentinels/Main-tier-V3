@@ -56,10 +56,7 @@ import {
   orderBy,
   query,
   where,
-  DocumentData,
-  Query,
-  QueryConstraint,
-  QuerySnapshot,
+  type QueryConstraint,
 } from 'firebase/firestore'
 import { db } from '@/services/firebase'
 import { useAuth } from '@/hooks/useAuth'
@@ -109,7 +106,7 @@ interface PointTransaction {
   id: string
   reason: string
   points: number
-  createdAt: Timestamp
+  createdAt?: Timestamp | Date | string | number | null
 }
 
 interface LeaderboardEntry {
@@ -139,23 +136,36 @@ const faqFallback = {
   answer: 'Finish your checklist early, schedule your mentor session, and log small wins daily.',
 }
 
+const normalizeTransactionDate = (value?: unknown): Date | null => {
+  if (!value) return null
+  if (value instanceof Date) return value
+  if (value instanceof Timestamp) return value.toDate()
+
+  if (typeof value === 'object' && 'toDate' in (value as Record<string, unknown>)) {
+    const toDate = (value as { toDate?: () => Date }).toDate
+    const dateValue = typeof toDate === 'function' ? toDate() : null
+    return dateValue && !Number.isNaN(dateValue.getTime()) ? dateValue : null
+  }
+
+  const dateValue = new Date(value as string | number)
+  return Number.isNaN(dateValue.getTime()) ? null : dateValue
+}
+
 const couponLink = 'https://www.t4leader.com/challenge-page/transformational-leadership'
 
 const useRealtimeCollection = <T,>(
   path: string,
   constraints: QueryConstraint[],
-  mapper: (docId: string, data: DocumentData) => T,
+  mapper: (docId: string, data: Record<string, any>) => T,
 ) => {
   const [data, setData] = useState<T[]>([])
   const [loading, setLoading] = useState(true)
   const constraintsKey = useMemo(() => JSON.stringify(constraints), [constraints])
 
   useEffect(() => {
-    const baseQuery: Query<DocumentData> = constraints.length
-      ? query(collection(db, path), ...constraints)
-      : collection(db, path)
+    const baseQuery = constraints.length ? query(collection(db, path), ...constraints) : collection(db, path)
 
-    const unsub = onSnapshot(baseQuery, (snapshot: QuerySnapshot<DocumentData>) => {
+    const unsub = onSnapshot(baseQuery, (snapshot) => {
       setData(snapshot.docs.map((d) => mapper(d.id, d.data())))
       setLoading(false)
     })
@@ -887,17 +897,21 @@ export const CompanyDashboard: React.FC = () => {
                   <Text color="gray.500">No recent activity</Text>
                 ) : (
                   <VStack align="stretch" spacing={3}>
-                    {transactions.map((tx) => (
-                      <Flex key={tx.id} justify="space-between" align="center" borderBottom="1px solid" borderColor="gray.100" pb={2}>
-                        <Box>
-                          <Text fontWeight="semibold">{tx.reason}</Text>
-                          <Text fontSize="sm" color="gray.500">
-                            {tx.createdAt ? format(tx.createdAt.toDate(), 'MMM d, yyyy') : 'Pending'}
-                          </Text>
-                        </Box>
-                        <Badge colorScheme={tx.points >= 0 ? 'green' : 'red'}>{tx.points} XP</Badge>
-                      </Flex>
-                    ))}
+                    {transactions.map((tx) => {
+                      const transactionDate = normalizeTransactionDate(tx.createdAt)
+
+                      return (
+                        <Flex key={tx.id} justify="space-between" align="center" borderBottom="1px solid" borderColor="gray.100" pb={2}>
+                          <Box>
+                            <Text fontWeight="semibold">{tx.reason}</Text>
+                            <Text fontSize="sm" color="gray.500">
+                              {transactionDate ? format(transactionDate, 'MMM d, yyyy') : 'Pending'}
+                            </Text>
+                          </Box>
+                          <Badge colorScheme={tx.points >= 0 ? 'green' : 'red'}>{tx.points} XP</Badge>
+                        </Flex>
+                      )
+                    })}
                     {profile?.companyCode && (
                       <Flex justify="space-between" align="center" borderBottom="1px solid" borderColor="gray.100" pb={2}>
                         <Box>
