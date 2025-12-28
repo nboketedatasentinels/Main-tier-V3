@@ -167,7 +167,6 @@ export const SignUpPage: React.FC = () => {
 
       const currentUser = auth.currentUser
       if (currentUser && !currentUser.emailVerified) {
-        await sendEmailVerification(currentUser)
         setPendingEmailVerification(true)
         setSuccessMessage("We sent a verification link to your email.")
         setLastVerificationSent(Date.now())
