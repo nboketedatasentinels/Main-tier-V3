@@ -303,7 +303,7 @@ export const MentorDashboard: React.FC = () => {
           risk,
           checkIns: {
             status: checkInStatus,
-            last: ensureValidDateString(mentee.checkIns?.last || lastActive),
+            last: ensureValidDateString(lastActive),
           },
         }
       }),
@@ -319,7 +319,7 @@ export const MentorDashboard: React.FC = () => {
         const risk = mentee.risk ??
           deriveFallbackRisk({
             daysSinceLastActive,
-            weeklyActivity: mentee.weeklyActivity,
+            weeklyActivity: Number(mentee.weeklyActivity ?? 0),
           })
         return {
           ...mentee,
