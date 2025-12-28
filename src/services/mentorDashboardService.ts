@@ -176,8 +176,8 @@ export const fetchAssignedMentees = async (
     const snapshot = await getDocs(menteeQuery)
     const mentees = snapshot.docs.map((doc) =>
       withComputedMenteeFields({
-        id: doc.id,
         ...(doc.data() as UserProfile),
+        id: doc.id,
       })
     )
 
@@ -200,7 +200,10 @@ export const subscribeToAssignedMentees = (
     menteeQuery,
     (snapshot) => {
       const mentees = snapshot.docs.map((doc) =>
-        withComputedMenteeFields({ id: doc.id, ...(doc.data() as UserProfile) })
+        withComputedMenteeFields({
+          ...(doc.data() as UserProfile),
+          id: doc.id,
+        })
       )
       onUpdate(applyFilters(mentees, filters))
     },
