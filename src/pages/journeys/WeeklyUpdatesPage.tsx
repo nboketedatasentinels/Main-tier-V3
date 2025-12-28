@@ -40,28 +40,15 @@ import { getIsoWeekNumber } from '@/utils/date'
 import { db } from '@/services/firebase'
 import { useAuth } from '@/hooks/useAuth'
 import { UserRole, WeeklyProgress } from '@/types'
-import { JOURNEY_META, getMonthNumber, getActivitiesForJourney, JourneyType } from '@/config/pointsConfig'
+import { JOURNEY_META, getMonthNumber, getActivitiesForJourney, type ActivityDef, type JourneyType } from '@/config/pointsConfig'
 import { awardChecklistPoints, revokeChecklistPoints } from '@/services/pointsService'
 import { SurfaceCard } from '@/components/primitives/SurfacePrimitives'
 
 const DEFAULT_WEEKLY_TARGET = JOURNEY_META['6W'].weeklyTarget
 
-interface ActivityTemplate {
-  id: string
-  baseId: string
-  title: string
-  description: string
-  points: number
-  requiresApproval?: boolean
-  isFreeTier?: boolean
-  week: number
-  category: string
-  tags?: string[]
-}
-
 type ActivityStatus = 'not_started' | 'pending' | 'completed'
 
-interface ActivityState extends ActivityTemplate {
+type ActivityState = ActivityDef & {
   status: ActivityStatus
   proofUrl?: string
   notes?: string
