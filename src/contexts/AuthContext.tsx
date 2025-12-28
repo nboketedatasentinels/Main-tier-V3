@@ -499,9 +499,9 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         companyName?: string
       } = {
         ...profileData,
-        companyId: validatedOrganization?.id ?? userData.companyId ?? undefined,
-        companyCode: validatedOrganization?.code ?? normalizedCompanyCode ?? undefined,
-        companyName: validatedOrganization?.name ?? userData.companyName ?? undefined,
+        ...(validatedOrganization?.id ? { companyId: validatedOrganization.id } : {}),
+        ...(validatedOrganization?.code ? { companyCode: validatedOrganization.code } : {}),
+        ...(validatedOrganization?.name ? { companyName: validatedOrganization.name } : {}),
         ...(userData.gender ? { gender: userData.gender } : {}),
       }
 
