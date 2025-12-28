@@ -32,6 +32,7 @@ export interface OrganizationRecord {
   status: OrganizationStatus
   transformationPartner?: string
   createdAt?: Timestamp | string | Date
+  updatedAt?: Timestamp | string | Date
   village?: string
   cluster?: string
   programStart?: string
