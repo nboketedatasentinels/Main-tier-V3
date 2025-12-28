@@ -50,9 +50,13 @@ export interface AssignedMentee extends UserProfile {
   weeklyActivity?: number
   goalsCompleted?: number
   goalsTotal?: number
+  milestonesProgress?: number
+  progress?: number
   risk: EngagementRisk
   daysSinceLastActive: number
   engagementStatus: EngagementStatus
+  lastActive?: string
+  lastActiveAt?: string
 }
 
 export interface MenteeFilters {
@@ -174,12 +178,13 @@ export const fetchAssignedMentees = async (
     const constraints: QueryConstraint[] = [where('mentorId', '==', mentorId)]
     const menteeQuery = query(collection(db, 'users'), ...constraints)
     const snapshot = await getDocs(menteeQuery)
-    const mentees = snapshot.docs.map((doc) =>
-      withComputedMenteeFields({
+    const mentees = snapshot.docs.map((doc) => {
+      const { id: _ignoredId, ...profile } = doc.data() as UserProfile
+      return withComputedMenteeFields({
         id: doc.id,
-        ...(doc.data() as UserProfile),
+        ...profile,
       })
-    )
+    })
 
     return { data: applyFilters(mentees, filters), error: null }
   } catch (error) {
@@ -199,9 +204,10 @@ export const subscribeToAssignedMentees = (
   return onSnapshot(
     menteeQuery,
     (snapshot) => {
-      const mentees = snapshot.docs.map((doc) =>
-        withComputedMenteeFields({ id: doc.id, ...(doc.data() as UserProfile) })
-      )
+      const mentees = snapshot.docs.map((doc) => {
+        const { id: _ignoredId, ...profile } = doc.data() as UserProfile
+        return withComputedMenteeFields({ id: doc.id, ...profile })
+      })
       onUpdate(applyFilters(mentees, filters))
     },
     (error) => {

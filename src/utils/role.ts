@@ -1,4 +1,4 @@
-import { UserRole } from '@/types'
+import { StandardRole, UserRole } from '@/types'
 
 /**
  * 🔐 Single source of truth for role normalization
@@ -119,7 +119,6 @@ export const isSuperAdminRole = (role: unknown): boolean => {
  * ✅ Backwards-compatible export (used by dashboardPaths.ts and others)
  * Returns a normalized Firestore role string.
  */
-export const toUserRole = (role?: string | UserRole | null): string => {
-  return normalizeRole(role)
+export const toUserRole = (role?: string | UserRole | null): StandardRole => {
+  return normalizeRole(role) as StandardRole
 }
-

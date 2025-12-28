@@ -40,18 +40,19 @@ import { getIsoWeekNumber } from '@/utils/date'
 import { db } from '@/services/firebase'
 import { useAuth } from '@/hooks/useAuth'
 import { UserRole, WeeklyProgress } from '@/types'
-import { JOURNEY_META, getMonthNumber, getActivitiesForJourney, JourneyType } from '@/config/pointsConfig'
+import { JOURNEY_META, getMonthNumber, getActivitiesForJourney, JourneyType, type ActivityId } from '@/config/pointsConfig'
 import { awardChecklistPoints, revokeChecklistPoints } from '@/services/pointsService'
 import { SurfaceCard } from '@/components/primitives/SurfacePrimitives'
 
 const DEFAULT_WEEKLY_TARGET = JOURNEY_META['6W'].weeklyTarget
 
 interface ActivityTemplate {
-  id: string
+  id: ActivityId
   baseId: string
   title: string
   description: string
   points: number
+  maxPerMonth: number
   requiresApproval?: boolean
   isFreeTier?: boolean
   week: number
@@ -617,7 +618,7 @@ const WeeklyChecklistPage: React.FC = () => {
   )
 
   const renderGuidanceCard = () => {
-    if (normalizedJourneyType !== 'sixWeekSprint') return null
+    if (normalizedJourneyType !== '6W') return null
     const bullets = weeklyGuidance[selectedWeek]
     if (!bullets?.length) return null
 

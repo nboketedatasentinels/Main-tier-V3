@@ -128,9 +128,10 @@ export const createOrganizationWithInvitations = async (
   invitations: InvitationPayload[],
   adminContext?: { adminId?: string; adminName?: string },
 ): Promise<{ organizationId: string; invitationResult: BulkInvitationResult | null }> => {
-  const payload: Omit<OrganizationRecord, 'createdAt'> & { createdAt: Timestamp | ReturnType<typeof serverTimestamp> } = {
+  const payload = {
     ...organization,
-    createdAt: organization.createdAt || serverTimestamp(),
+    createdAt: organization.createdAt instanceof Timestamp ? organization.createdAt : serverTimestamp(),
+    updatedAt: organization.updatedAt instanceof Timestamp ? organization.updatedAt : serverTimestamp(),
   }
 
   const orgRef = await addDoc(orgCollection, { ...payload, updatedAt: serverTimestamp() })

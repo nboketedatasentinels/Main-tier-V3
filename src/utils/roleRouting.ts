@@ -151,12 +151,6 @@ export const getLandingPathForRole = (
     return fallback
   }
 
-  if (profile) {
-    const fallback = getPreferredDashboardRoute(profile) || getDefaultDashboardRouteByMembership(profile.membershipStatus)
-    console.warn('🔷 Role missing or null, using fallback route', fallback)
-    return fallback
-  }
-
   console.log('🔷 Absolute fallback → /app/dashboard/free')
   return '/app/dashboard/free'
 }

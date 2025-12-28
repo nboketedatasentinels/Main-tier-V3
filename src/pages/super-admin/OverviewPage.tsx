@@ -351,38 +351,61 @@ const NotificationStreamCard = ({
   icon: React.ReactNode
   color: 'purple' | 'red' | 'blue' | 'green'
   emptyLabel: string
-}) => (
-  <Box border="1px solid" borderColor="brand.border" borderRadius="md" p={3} bg="gray.50" minH="140px">
-    <HStack justify="space-between" mb={2}>
-      <HStack spacing={2}>
-        <Box p={2} borderRadius="md" bg={`${color}.50`} color={`${color}.600`}>
-          {icon}
-        </Box>
-        <Text fontWeight="semibold" color="brand.text">
-          {title}
-        </Text>
-      </HStack>
-      <Badge colorScheme={color}>{items.length}</Badge>
-    </HStack>
-    <Stack spacing={2}>
-      {items.map((item) => (
-        <Box key={(item as { id?: string }).id || item.title} p={2} borderRadius="md" border="1px solid" borderColor="brand.border" bg="white">
+}) => {
+  const getItemTitle = (item: StreamCardItem) => {
+    if ('title' in item && item.title) return item.title
+    if ('userName' in item && item.userName) return item.userName
+    if ('name' in item && item.name) return item.name
+    return 'Item'
+  }
+
+  const getItemSubtitle = (item: StreamCardItem) => {
+    if ('message' in item && item.message) return item.message
+    if ('email' in item && item.email) return item.email
+    if ('activityTitle' in item && item.activityTitle) return item.activityTitle
+    return 'No details provided'
+  }
+
+  return (
+    <Box border="1px solid" borderColor="brand.border" borderRadius="md" p={3} bg="gray.50" minH="140px">
+      <HStack justify="space-between" mb={2}>
+        <HStack spacing={2}>
+          <Box p={2} borderRadius="md" bg={`${color}.50`} color={`${color}.600`}>
+            {icon}
+          </Box>
           <Text fontWeight="semibold" color="brand.text">
-            {(item as RegistrationRecord).title || (item as VerificationRequest).name || (item as TaskNotificationRecord).userName || 'Item'}
+            {title}
           </Text>
-          <Text fontSize="sm" color="brand.subtleText">
-            {(item as RegistrationRecord).message || (item as VerificationRequest).email || (item as TaskNotificationRecord).activityTitle || 'No details provided'}
+        </HStack>
+        <Badge colorScheme={color}>{items.length}</Badge>
+      </HStack>
+      <Stack spacing={2}>
+        {items.map((item) => (
+          <Box
+            key={('id' in item && item.id) || getItemTitle(item)}
+            p={2}
+            borderRadius="md"
+            border="1px solid"
+            borderColor="brand.border"
+            bg="white"
+          >
+            <Text fontWeight="semibold" color="brand.text">
+              {getItemTitle(item)}
+            </Text>
+            <Text fontSize="sm" color="brand.subtleText">
+              {getItemSubtitle(item)}
+            </Text>
+          </Box>
+        ))}
+        {!items.length && (
+          <Text color="gray.600" fontSize="sm">
+            {emptyLabel}
           </Text>
-        </Box>
-      ))}
-      {!items.length && (
-        <Text color="gray.600" fontSize="sm">
-          {emptyLabel}
-        </Text>
-      )}
-    </Stack>
-  </Box>
-)
+        )}
+      </Stack>
+    </Box>
+  )
+}
 
 const DrawerNotifications = ({ isOpen, onClose }: { isOpen: boolean; onClose: () => void }) => (
   <Drawer isOpen={isOpen} placement="right" onClose={onClose} size="md">

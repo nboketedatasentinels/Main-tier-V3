@@ -48,6 +48,7 @@ export interface PartnerUser {
   role?: 'learner' | 'mentor' | 'team_leader'
   riskReasons?: string[]
   registrationDate?: string
+  createdAt?: string
   interventions?: number
 }
 
@@ -412,7 +413,7 @@ export const usePartnerDashboardData = (options?: UsePartnerDashboardDataOptions
   }
 
   const dataQualityWarnings = useMemo(() => {
-    const warnings = [] as { message: string; severity: 'warning' | 'error' }[]
+    const warnings = [] as { message: string; severity: 'warning' | 'critical' }[]
 
     const missingAssignments = users.filter((user) => !user.companyCode).length
     if (missingAssignments) {
