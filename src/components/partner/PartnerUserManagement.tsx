@@ -211,8 +211,8 @@ export const PartnerUserManagement: React.FC<PartnerUserManagementProps> = ({
           addDoc(collection(db, 'users', userId, 'engagement_actions'), {
             action_type: actionToApply.toLowerCase().replace(/\s+/g, '_'),
             action_label: actionToApply,
-            actor_id: profile?.id,
-            actor_name: profile?.fullName,
+            actor_id: profile?.id ?? null,
+            actor_name: profile?.fullName ?? null,
             timestamp: serverTimestamp(),
             user_id: userId,
           }),
