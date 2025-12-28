@@ -109,7 +109,7 @@ interface PointTransaction {
   id: string
   reason: string
   points: number
-  createdAt: Timestamp
+  createdAt?: Timestamp | Date | string | number | null
 }
 
 interface LeaderboardEntry {
@@ -137,6 +137,21 @@ const inspirationQuotes = [
 const faqFallback = {
   question: 'How do I keep momentum each week?',
   answer: 'Finish your checklist early, schedule your mentor session, and log small wins daily.',
+}
+
+const normalizeTransactionDate = (value?: unknown): Date | null => {
+  if (!value) return null
+  if (value instanceof Date) return value
+  if (value instanceof Timestamp) return value.toDate()
+
+  if (typeof value === 'object' && 'toDate' in (value as Record<string, unknown>)) {
+    const toDate = (value as { toDate?: () => Date }).toDate
+    const dateValue = typeof toDate === 'function' ? toDate() : null
+    return dateValue && !Number.isNaN(dateValue.getTime()) ? dateValue : null
+  }
+
+  const dateValue = new Date(value as string | number)
+  return Number.isNaN(dateValue.getTime()) ? null : dateValue
 }
 
 const couponLink = 'https://www.t4leader.com/challenge-page/transformational-leadership'
@@ -887,17 +902,21 @@ export const CompanyDashboard: React.FC = () => {
                   <Text color="gray.500">No recent activity</Text>
                 ) : (
                   <VStack align="stretch" spacing={3}>
-                    {transactions.map((tx) => (
-                      <Flex key={tx.id} justify="space-between" align="center" borderBottom="1px solid" borderColor="gray.100" pb={2}>
-                        <Box>
-                          <Text fontWeight="semibold">{tx.reason}</Text>
-                          <Text fontSize="sm" color="gray.500">
-                            {tx.createdAt ? format(tx.createdAt.toDate(), 'MMM d, yyyy') : 'Pending'}
-                          </Text>
-                        </Box>
-                        <Badge colorScheme={tx.points >= 0 ? 'green' : 'red'}>{tx.points} XP</Badge>
-                      </Flex>
-                    ))}
+                    {transactions.map((tx) => {
+                      const transactionDate = normalizeTransactionDate(tx.createdAt)
+
+                      return (
+                        <Flex key={tx.id} justify="space-between" align="center" borderBottom="1px solid" borderColor="gray.100" pb={2}>
+                          <Box>
+                            <Text fontWeight="semibold">{tx.reason}</Text>
+                            <Text fontSize="sm" color="gray.500">
+                              {transactionDate ? format(transactionDate, 'MMM d, yyyy') : 'Pending'}
+                            </Text>
+                          </Box>
+                          <Badge colorScheme={tx.points >= 0 ? 'green' : 'red'}>{tx.points} XP</Badge>
+                        </Flex>
+                      )
+                    })}
                     {profile?.companyCode && (
                       <Flex justify="space-between" align="center" borderBottom="1px solid" borderColor="gray.100" pb={2}>
                         <Box>
