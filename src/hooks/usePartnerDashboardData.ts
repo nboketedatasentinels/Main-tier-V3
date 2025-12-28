@@ -435,8 +435,8 @@ export const usePartnerDashboardData = (options?: UsePartnerDashboardDataOptions
     await addDoc(collection(db, 'users', userId, 'engagement_actions'), {
       action_type: 'manual_adjustment',
       action_label: reason,
-      actor_id: profile?.id,
-      actor_name: profile?.fullName,
+      actor_id: profile?.id ?? null,
+      actor_name: profile?.fullName ?? null,
       timestamp: serverTimestamp(),
       user_id: userId,
       delta,
