@@ -1,10 +1,11 @@
 import { UserRole } from '@/types'
+import type { StandardRole } from '@/types'
 
 /**
  * 🔐 Single source of truth for role normalization
  * Always returns Firestore-compatible role strings
  */
-export const normalizeRole = (role: unknown): string => {
+export const normalizeRole = (role: unknown): StandardRole => {
   console.log('🔶 normalizeRole: input →', role, 'type:', typeof role)
 
   if (!role) {
@@ -20,7 +21,7 @@ export const normalizeRole = (role: unknown): string => {
 
   console.log('🔶 normalizeRole: normalized string →', roleString)
 
-  let result: string
+  let result: StandardRole
 
   switch (roleString) {
     case 'company_admin':
@@ -119,7 +120,6 @@ export const isSuperAdminRole = (role: unknown): boolean => {
  * ✅ Backwards-compatible export (used by dashboardPaths.ts and others)
  * Returns a normalized Firestore role string.
  */
-export const toUserRole = (role?: string | UserRole | null): string => {
+export const toUserRole = (role?: string | UserRole | null): StandardRole => {
   return normalizeRole(role)
 }
-
