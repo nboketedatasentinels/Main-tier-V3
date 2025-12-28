@@ -25,7 +25,7 @@ interface FormData {
 
 export const SignUpPage: React.FC = () => {
   const navigate = useNavigate()
-  const { signUp } = useAuth()
+  const { signUp, profile } = useAuth()
   const toast = useToast()
 
   const [formData, setFormData] = useState<FormData>({
@@ -174,7 +174,7 @@ export const SignUpPage: React.FC = () => {
         return
       }
 
-      navigate(getLandingPathForRole(UserRole.FREE_USER), { replace: true })
+      navigate(getLandingPathForRole(profile ?? UserRole.FREE_USER), { replace: true })
     } catch (err) {
       setError(getFriendlyErrorMessage(err))
     } finally {
