@@ -53,6 +53,7 @@ export interface PartnerUser {
   role?: 'learner' | 'mentor' | 'team_leader'
   riskReasons?: string[]
   registrationDate?: string
+  createdAt?: string
   interventions?: number
 }
 

@@ -122,6 +122,7 @@ export interface Organization {
   status: 'active' | 'inactive' | 'suspended'
   createdAt: string
   updatedAt: string
+  transformation_partner_id?: string | null
   memberCount: number
   settings?: Record<string, unknown>
   transformation_partner_id?: string | null

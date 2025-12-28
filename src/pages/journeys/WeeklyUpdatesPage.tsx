@@ -606,7 +606,7 @@ const WeeklyChecklistPage: React.FC = () => {
   )
 
   const renderGuidanceCard = () => {
-    if (normalizedJourneyType !== 'sixWeekSprint') return null
+    if (normalizedJourneyType !== '6W') return null
     const bullets = weeklyGuidance[selectedWeek]
     if (!bullets?.length) return null
 

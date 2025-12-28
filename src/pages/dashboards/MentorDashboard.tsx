@@ -81,6 +81,11 @@ interface DashboardMentee extends AssignedMentee {
   programDuration: string
   timezone: string
   progress: number
+  weeklyActivity: number
+  goalsCompleted: number
+  goalsTotal: number
+  milestonesProgress: number
+  lastActive: string
   scheduleLink?: string
   checkIns: {
     status: 'on-time' | 'overdue' | 'pending'

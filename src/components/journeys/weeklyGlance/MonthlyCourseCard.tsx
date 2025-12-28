@@ -15,10 +15,11 @@ import {
 } from '@chakra-ui/react'
 import { FREE_COURSE } from '@/constants/courseConfig'
 import { MonthlyCourseData } from '@/services/monthlyCoursesService'
-import { UserRole } from '@/types'
+import { StandardRole, UserRole } from '@/types'
+import { normalizeRole } from '@/utils/role'
 
 interface MonthlyCourseCardProps {
-  role?: UserRole
+  role?: UserRole | StandardRole | string
   data: MonthlyCourseData | null
   loading: boolean
   error?: Error
@@ -45,7 +46,8 @@ const ExternalLinkButton = ({ href, isDisabled }: { href?: string; isDisabled?: 
 )
 
 export const MonthlyCourseCard = ({ role, data, loading, error }: MonthlyCourseCardProps) => {
-  const isFreeUser = role === UserRole.FREE_USER
+  const normalizedRole = role ? normalizeRole(role) : null
+  const isFreeUser = normalizedRole === UserRole.FREE_USER || role === UserRole.FREE_USER
   const courseTitle = data?.course?.title || (isFreeUser ? FREE_COURSE.title : 'Course details coming soon')
   const courseUrl = data?.course?.externalUrl || (isFreeUser ? FREE_COURSE.externalUrl : undefined)
   const enrollmentCode = isFreeUser ? FREE_COURSE.enrollmentCode : data?.enrollmentCode
