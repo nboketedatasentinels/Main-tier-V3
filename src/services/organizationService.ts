@@ -140,11 +140,12 @@ export const createOrganizationWithInvitations = async (
   invitations: InvitationPayload[],
   adminContext?: { adminId?: string; adminName?: string },
 ): Promise<{ organizationId: string; invitationResult: BulkInvitationResult | null }> => {
+  const { createdAt: _createdAt, updatedAt: _updatedAt, ...organizationData } = organization
   const payload: Omit<OrganizationRecord, 'createdAt' | 'updatedAt'> & {
     createdAt: Timestamp | ReturnType<typeof serverTimestamp>
     updatedAt?: Timestamp | ReturnType<typeof serverTimestamp>
   } = {
-    ...organization,
+    ...organizationData,
     createdAt: coerceCreatedAt(organization.createdAt),
   }
 
