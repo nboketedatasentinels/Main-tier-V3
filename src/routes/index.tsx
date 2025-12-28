@@ -1,8 +1,10 @@
-import { BrowserRouter, Routes, Route, Navigate, Outlet } from 'react-router-dom'
+import { BrowserRouter, Routes, Route, Navigate, Outlet, useSearchParams } from 'react-router-dom'
 import { ProtectedRoute } from '@/components/ProtectedRoute'
 import { FreeTierGuard } from '@/components/FreeTierGuard'
 import RoleRedirect from '@/pages/auth/RoleRedirect'
 import { UserRole } from '@/types'
+import { useAuth } from '@/hooks/useAuth'
+import { getLandingPathForRole } from '@/utils/roleRouting'
 
 // Layout imports
 import { MainLayout } from '@/layouts/MainLayout'
@@ -25,6 +27,9 @@ import { AdminDashboard } from '@/pages/dashboards/AdminDashboard'
 import { SuperAdminDashboard } from '@/pages/dashboards/SuperAdminDashboard'
 import { MentorDashboard } from '@/pages/dashboards/MentorDashboard'
 import { AmbassadorDashboard } from '@/pages/dashboards/AmbassadorDashboard'
+import { CompanyAdminDashboard } from '@/pages/dashboards/CompanyAdminDashboard'
+import { PartnerAdminDashboard } from '@/pages/dashboards/PartnerAdminDashboard'
+import { PaidMemberDashboard } from '@/pages/dashboards/PaidMemberDashboard'
 
 // Feature page imports
 import { JourneysPage } from '@/pages/journeys/JourneysPage'
@@ -46,6 +51,44 @@ import { ShamelessCirclePage } from '@/pages/community/ShamelessCirclePage'
 import { NotFoundPage } from '@/pages/errors/NotFoundPage'
 import { UnauthorizedPage } from '@/pages/errors/UnauthorizedPage'
 import { SuspendedPage } from '@/pages/errors/SuspendedPage'
+
+const DashboardRouter = () => {
+  const { loading, profileLoading, user, profile } = useAuth()
+  const [searchParams] = useSearchParams()
+
+  if (loading || profileLoading) {
+    return null
+  }
+
+  if (!user) {
+    return <Navigate to="/login" replace />
+  }
+
+  if (!profile) {
+    return <Navigate to="/auth/profile-missing" replace />
+  }
+
+  const landing = getLandingPathForRole(profile, searchParams)
+
+  if (!landing.startsWith('/app/dashboard/')) {
+    return <Navigate to={landing} replace />
+  }
+
+  const dashboardKey = landing.replace('/app/dashboard/', '')
+
+  switch (dashboardKey) {
+    case 'free':
+      return <WeeklyGlancePage />
+    case 'member':
+      return <PaidMemberDashboard />
+    case 'company':
+      return <CompanyAdminDashboard />
+    case 'partner':
+      return <PartnerAdminDashboard />
+    default:
+      return <Navigate to="/app/weekly-glance" replace />
+  }
+}
 
 export const AppRoutes = () => {
   return (
@@ -190,6 +233,7 @@ export const AppRoutes = () => {
           <Route path="book-club" element={<BookClubPage />} />
           <Route path="shameless-circle" element={<ShamelessCirclePage />} />
           <Route path="profile" element={<ProfilePage />} />
+          <Route path="dashboard/*" element={<DashboardRouter />} />
         </Route>
 
         {/* Error routes */}
