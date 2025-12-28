@@ -6,6 +6,9 @@ import {
   signOut as firebaseSignOut,
   sendPasswordResetEmail,
   onAuthStateChanged,
+  createUserWithEmailAndPassword,
+  sendEmailVerification,
+  deleteUser,
 } from 'firebase/auth'
 import { doc, getDoc, setDoc, serverTimestamp, onSnapshot } from 'firebase/firestore'
 
@@ -21,6 +24,7 @@ import { isBootstrapAdmin } from '@/utils/bootstrap'
 import { auth, db, firebaseConfigStatus } from '@/services/firebase'
 import { AuthContext, AuthContextType } from './AuthContextType'
 import { getFriendlyErrorMessage } from '@/utils/authErrors'
+import { validateCompanyCode } from '@/services/organizationService'
 
 interface AuthProviderProps {
   children: React.ReactNode
@@ -390,11 +394,160 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
   const signUp = async (
     email: string,
-    _password: string,
-    _userData: Partial<UserProfile>
+    password: string,
+    userData: Partial<UserProfile> & {
+      gender?: string
+      companyCode?: string
+      companyId?: string
+      companyName?: string
+    }
   ) => {
-    console.warn('🟠 [Auth] signUp attempted but not implemented in this context', { email })
-    return { error: new Error('Sign up is not available'), userId: undefined }
+    console.log('🟡 [Auth] signUp:start', email)
+    setLoading(true)
+    setProfileLoading(true)
+
+    const configError = ensureFirebaseConfigured()
+    if (configError) {
+      console.error('🔴 [Auth] signUp blocked due to missing Firebase config', {
+        missingKeys: firebaseConfigStatus.missingKeys,
+      })
+      setLoading(false)
+      setProfileLoading(false)
+      return { error: configError, userId: undefined }
+    }
+
+    const normalizedEmail = email.trim().toLowerCase()
+    const normalizedCompanyCode = userData.companyCode?.trim().toUpperCase()
+
+    let validatedOrganization:
+      | Awaited<ReturnType<typeof validateCompanyCode>>['organization']
+      | null = null
+
+    if (normalizedCompanyCode) {
+      try {
+        const validationResult = await validateCompanyCode(normalizedCompanyCode)
+        if (!validationResult.valid || !validationResult.organization) {
+          setLoading(false)
+          setProfileLoading(false)
+          return {
+            error: new Error(validationResult.error || 'Company code is invalid or inactive.'),
+            userId: undefined,
+          }
+        }
+        validatedOrganization = validationResult.organization
+      } catch (validationError) {
+        const friendlyMessage = getFriendlyErrorMessage(validationError)
+        setLoading(false)
+        setProfileLoading(false)
+        return {
+          error: new Error(friendlyMessage),
+          userId: undefined,
+        }
+      }
+    }
+
+    try {
+      const credential = await createUserWithEmailAndPassword(auth, normalizedEmail, password)
+      const firebaseUser = credential.user
+      const uid = firebaseUser.uid
+
+      const role = isBootstrapAdmin(firebaseUser.email)
+        ? UserRole.SUPER_ADMIN
+        : UserRole.FREE_USER
+      const normalizedRole = normalizeRole(role)
+
+      const profileData: UserProfile = {
+        id: uid,
+        email: normalizedEmail,
+        firstName: userData.firstName?.trim() || firebaseUser.displayName?.split(' ')?.[0] || 'User',
+        lastName: userData.lastName?.trim() || firebaseUser.displayName?.split(' ')?.slice(1).join(' ') || '',
+        fullName:
+          userData.fullName?.trim() ||
+          firebaseUser.displayName ||
+          userData.firstName?.trim() ||
+          'User',
+        role: normalizedRole,
+        membershipStatus: 'free',
+        totalPoints: 0,
+        level: 1,
+        journeyType: '4W',
+        referralCount: 0,
+        referralCode: null,
+        referredBy: null,
+        isOnboarded: true,
+        accountStatus: AccountStatus.ACTIVE,
+        transformationTier: validatedOrganization
+          ? TransformationTier.CORPORATE_MEMBER
+          : TransformationTier.INDIVIDUAL_FREE,
+        assignedOrganizations: [],
+        onboardingComplete: false,
+        onboardingSkipped: false,
+        mustChangePassword: false,
+        hasSeenDashboardTour: false,
+        dashboardPreferences: {
+          defaultRoute: '/app/weekly-glance',
+          lockedToFreeExperience: normalizedRole === 'user' || normalizedRole === 'free_user',
+        },
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+      }
+
+      const profilePayload: UserProfile & {
+        gender?: string
+        companyId?: string
+        companyCode?: string
+        companyName?: string
+      } = {
+        ...profileData,
+        companyId: validatedOrganization?.id ?? userData.companyId ?? undefined,
+        companyCode: validatedOrganization?.code ?? normalizedCompanyCode ?? undefined,
+        companyName: validatedOrganization?.name ?? userData.companyName ?? undefined,
+        ...(userData.gender ? { gender: userData.gender } : {}),
+      }
+
+      try {
+        await setDoc(doc(db, 'users', uid), {
+          ...profilePayload,
+          createdAt: serverTimestamp(),
+          updatedAt: serverTimestamp(),
+        })
+      } catch (profileError) {
+        await deleteUser(firebaseUser).catch((cleanupError) => {
+          console.error('🔴 [Auth] Failed to cleanup auth user after profile error', cleanupError)
+        })
+        throw profileError
+      }
+
+      try {
+        if (!firebaseUser.emailVerified) {
+          await sendEmailVerification(firebaseUser)
+        }
+      } catch (verificationError) {
+        console.warn('🟠 [Auth] Unable to send verification email', verificationError)
+        const friendlyMessage = getFriendlyErrorMessage(verificationError)
+        setLoading(false)
+        setProfileLoading(false)
+        return {
+          error: new Error(friendlyMessage),
+          userId: uid,
+        }
+      }
+
+      console.log('🟢 [Auth] signUp success', { uid })
+      setLoading(false)
+      setProfileLoading(false)
+      return { error: null, userId: uid }
+    } catch (error) {
+      console.error('🔴 [Auth] signUp failed', error)
+      const friendlyMessage = getFriendlyErrorMessage(error)
+      const normalizedError =
+        error instanceof Error && error.message === friendlyMessage
+          ? error
+          : new Error(friendlyMessage)
+      setLoading(false)
+      setProfileLoading(false)
+      return { error: normalizedError, userId: undefined }
+    }
   }
 
   const signOut = async () => {
