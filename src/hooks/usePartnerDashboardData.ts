@@ -36,6 +36,10 @@ export interface PartnerOrganization {
 export interface PartnerUser {
   id: string
   name: string
+  fullName?: string
+  createdAt?: string
+  lastActiveAt?: string
+  programStartDate?: string
   email: string
   companyCode: string
   progressPercent: number
@@ -161,6 +165,25 @@ export const usePartnerDashboardData = (options?: UsePartnerDashboardDataOptions
     return pointsByUser
   }
 
+  type FirestorePartnerUser = Partial<PartnerUser> & {
+    full_name?: string
+    companyCode?: string
+    company_code?: string
+    accountStatus?: string
+    registrationDate?: unknown
+    registration_date?: unknown
+    programStartDate?: unknown
+    program_start_date?: unknown
+    lastActiveAt?: unknown
+    last_active_at?: unknown
+    lastActive?: unknown
+    last_active?: unknown
+    createdAt?: unknown
+    created_at?: unknown
+    role?: PartnerUser['role']
+    totalPoints?: number
+  }
+
   useEffect(() => {
     let isMounted = true
 
@@ -170,7 +193,7 @@ export const usePartnerDashboardData = (options?: UsePartnerDashboardDataOptions
         if (seenUserIds.has(docSnap.id)) return false
         seenUserIds.add(docSnap.id)
 
-        const data = docSnap.data() as Partial<PartnerUser> & { companyCode?: string; company_code?: string }
+        const data = docSnap.data() as FirestorePartnerUser
         const companyCode = (data.companyCode || data.company_code || '').toLowerCase()
 
         if (!isSuperAdmin && assignedSet.size && companyCode && !assignedSet.has(companyCode)) {
@@ -190,20 +213,27 @@ export const usePartnerDashboardData = (options?: UsePartnerDashboardDataOptions
       if (!isMounted) return
 
       const hydratedUsers: PartnerUser[] = filteredDocs.map((docSnap) => {
-        const data = docSnap.data() as Partial<PartnerUser> & {
-          companyCode?: string
-          company_code?: string
-          accountStatus?: string
-          registrationDate?: string
-          programStartDate?: string
-          lastActiveAt?: string
-          role?: PartnerUser['role']
-          totalPoints?: number
-        }
+        const data = docSnap.data() as FirestorePartnerUser
 
         const companyCode = (data.companyCode || data.company_code || '').toLowerCase()
-        const programStart = data.programStartDate || data.registrationDate || undefined
-        const currentWeek = getProgramWeekNumber(programStart)
+        const normalizedCreatedAt = normalizeTimestamp(data.createdAt || data.created_at)
+        const normalizedRegistrationDate =
+          normalizeTimestamp(
+            data.registrationDate || data.registration_date || data.createdAt || data.created_at,
+          ) || undefined
+        const normalizedProgramStart =
+          normalizeTimestamp(
+            data.programStartDate || data.program_start_date || normalizedRegistrationDate,
+          ) || normalizedRegistrationDate
+        const normalizedLastActive =
+          normalizeTimestamp(
+            data.lastActiveAt ||
+              data.last_active_at ||
+              data.lastActive ||
+              data.last_active ||
+              normalizedRegistrationDate,
+          ) || new Date().toISOString()
+        const currentWeek = getProgramWeekNumber(normalizedProgramStart || undefined)
         const progress = mapWeeklyPointsToProgress(weeklyPoints[docSnap.id] || [], currentWeek)
         const riskResult = calculateUserRiskStatus(
           progress.current_week,
@@ -230,15 +260,17 @@ export const usePartnerDashboardData = (options?: UsePartnerDashboardDataOptions
 
         return {
           id: docSnap.id,
-          name: data.name || 'Unknown User',
+          name: data.name || data.fullName || data.full_name || 'Unknown User',
+          fullName: data.fullName || data.full_name || data.name,
+          createdAt: normalizedCreatedAt || undefined,
+          lastActiveAt: normalizeTimestamp(data.lastActiveAt || data.last_active_at) || undefined,
+          programStartDate: normalizedProgramStart || undefined,
           email: data.email || '',
           companyCode,
           progressPercent,
           currentWeek,
           status: (data.accountStatus as PartnerUser['status']) || 'Active',
-          lastActive:
-            normalizeTimestamp(data.lastActiveAt || data.lastActive || data.registrationDate) ||
-            new Date().toISOString(),
+          lastActive: normalizedLastActive,
           riskStatus,
           weeklyEarned,
           weeklyRequired: weeklyRequirement,
@@ -247,7 +279,7 @@ export const usePartnerDashboardData = (options?: UsePartnerDashboardDataOptions
             ...(data.riskReasons || []),
             ...(riskResult.reason ? [riskResult.reason] : []),
           ].filter(Boolean),
-          registrationDate: data.registrationDate || data.createdAt,
+          registrationDate: normalizedRegistrationDate || undefined,
           interventions: data.interventions || 0,
         }
       })
