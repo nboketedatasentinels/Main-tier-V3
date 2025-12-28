@@ -339,6 +339,50 @@ export const OverviewPage: React.FC<OverviewPageProps> = ({
 
 type StreamCardItem = VerificationRequest | RegistrationRecord | SystemAlertRecord | TaskNotificationRecord
 
+const isVerificationRequest = (item: StreamCardItem): item is VerificationRequest =>
+  'activityTitle' in item || 'points' in item || 'userName' in item
+
+const isRegistrationRecord = (item: StreamCardItem): item is RegistrationRecord =>
+  'email' in item || 'registrationDate' in item
+
+const isTaskNotificationRecord = (item: StreamCardItem): item is TaskNotificationRecord =>
+  'severity' in item || 'message' in item
+
+const isSystemAlertRecord = (item: StreamCardItem): item is SystemAlertRecord =>
+  'component' in item || 'level' in item
+
+const getStreamItemCopy = (item: StreamCardItem) => {
+  if (isVerificationRequest(item)) {
+    return {
+      title: item.userName || 'Verification request',
+      description: item.activityTitle || 'Awaiting verification',
+    }
+  }
+
+  if (isRegistrationRecord(item)) {
+    return {
+      title: item.name || 'User registration',
+      description: item.email || item.company || 'Registration submitted',
+    }
+  }
+
+  if (isTaskNotificationRecord(item)) {
+    return {
+      title: item.title || 'Task notification',
+      description: item.message || 'Task update available',
+    }
+  }
+
+  if (isSystemAlertRecord(item)) {
+    return {
+      title: item.component || 'System alert',
+      description: item.message || 'Alert raised',
+    }
+  }
+
+  return { title: 'Item', description: 'No details provided' }
+}
+
 const NotificationStreamCard = ({
   title,
   items,
@@ -365,16 +409,20 @@ const NotificationStreamCard = ({
       <Badge colorScheme={color}>{items.length}</Badge>
     </HStack>
     <Stack spacing={2}>
-      {items.map((item) => (
-        <Box key={(item as { id?: string }).id || item.title} p={2} borderRadius="md" border="1px solid" borderColor="brand.border" bg="white">
-          <Text fontWeight="semibold" color="brand.text">
-            {(item as RegistrationRecord).title || (item as VerificationRequest).name || (item as TaskNotificationRecord).userName || 'Item'}
-          </Text>
-          <Text fontSize="sm" color="brand.subtleText">
-            {(item as RegistrationRecord).message || (item as VerificationRequest).email || (item as TaskNotificationRecord).activityTitle || 'No details provided'}
-          </Text>
-        </Box>
-      ))}
+      {items.map((item) => {
+        const { title: itemTitle, description } = getStreamItemCopy(item)
+
+        return (
+          <Box key={item.id} p={2} borderRadius="md" border="1px solid" borderColor="brand.border" bg="white">
+            <Text fontWeight="semibold" color="brand.text">
+              {itemTitle}
+            </Text>
+            <Text fontSize="sm" color="brand.subtleText">
+              {description}
+            </Text>
+          </Box>
+        )
+      })}
       {!items.length && (
         <Text color="gray.600" fontSize="sm">
           {emptyLabel}
