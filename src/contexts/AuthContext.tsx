@@ -11,6 +11,7 @@ import {
   deleteUser,
   GoogleAuthProvider,
   signInWithPopup,
+  signInWithRedirect,
   getAdditionalUserInfo,
 } from 'firebase/auth'
 import { doc, getDoc, setDoc, serverTimestamp, onSnapshot } from 'firebase/firestore'
@@ -427,11 +428,11 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       return { error: configError }
     }
 
-    try {
-      const provider = new GoogleAuthProvider()
-      provider.addScope('email')
-      provider.addScope('profile')
+    const provider = new GoogleAuthProvider()
+    provider.addScope('email')
+    provider.addScope('profile')
 
+    try {
       const credential = await signInWithPopup(auth, provider)
       const additionalInfo = getAdditionalUserInfo(credential)
       console.log('🟢 [Auth] signInWithGoogle success', {
@@ -441,6 +442,25 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       return { error: null, isNewUser: additionalInfo?.isNewUser }
     } catch (error) {
       console.error('🔴 [Auth] signInWithGoogle failed', error)
+
+      if (error instanceof FirebaseError && error.code === 'auth/popup-blocked') {
+        console.warn('🟠 [Auth] Popup blocked. Falling back to redirect sign-in.')
+        try {
+          await signInWithRedirect(auth, provider)
+          return { error: null, redirect: true }
+        } catch (redirectError) {
+          console.error('🔴 [Auth] signInWithRedirect failed', redirectError)
+          const friendlyMessage = getFriendlyErrorMessage(redirectError)
+          const normalizedError =
+            redirectError instanceof Error && redirectError.message === friendlyMessage
+              ? redirectError
+              : new Error(friendlyMessage)
+          setLoading(false)
+          setProfileLoading(false)
+          return { error: normalizedError }
+        }
+      }
+
       const friendlyMessage = getFriendlyErrorMessage(error)
       const normalizedError =
         error instanceof Error && error.message === friendlyMessage

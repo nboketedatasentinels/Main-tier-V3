@@ -241,9 +241,13 @@ export const SignUpPage: React.FC = () => {
 
     setGoogleLoading(true)
     try {
-      const { error: googleError, isNewUser } = await signInWithGoogle()
+      const { error: googleError, isNewUser, redirect } = await signInWithGoogle()
       if (googleError) {
         setError(getFriendlyErrorMessage(googleError))
+        return
+      }
+
+      if (redirect) {
         return
       }
 

@@ -216,7 +216,7 @@ export const LoginPage: React.FC = () => {
     setError(null)
     setGoogleLoading(true)
     try {
-      const { error: googleError } = await signInWithGoogle()
+      const { error: googleError, redirect } = await signInWithGoogle()
       if (googleError) {
         const friendlyMessage = getFriendlyErrorMessage(googleError)
         setError(friendlyMessage)
@@ -226,6 +226,10 @@ export const LoginPage: React.FC = () => {
           status: 'error',
           duration: 5000,
         })
+        return
+      }
+
+      if (redirect) {
         return
       }
 
