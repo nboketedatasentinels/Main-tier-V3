@@ -17,7 +17,7 @@ export const RequireRole: React.FC<RequireRoleProps> = ({ allow }) => {
 
   if (!user) return <Navigate to="/login" replace />
 
-  const normalizedRole = toUserRole(profile?.role)
+  const normalizedRole: StandardRole | undefined = toUserRole(profile?.role)
 
   if (!normalizedRole) {
     console.warn(

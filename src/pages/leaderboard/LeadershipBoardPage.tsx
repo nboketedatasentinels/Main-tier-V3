@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react'
+import React, { useCallback, useEffect, useMemo, useState } from 'react'
 import {
   Avatar,
   Badge,
@@ -12,13 +12,6 @@ import {
   HStack,
   Icon,
   IconButton,
-  Modal,
-  ModalBody,
-  ModalCloseButton,
-  ModalContent,
-  ModalFooter,
-  ModalHeader,
-  ModalOverlay,
   Progress,
   Select,
   SimpleGrid,
@@ -169,14 +162,16 @@ export const LeadershipBoardPage: React.FC = () => {
   const [showPeerConnect, setShowPeerConnect] = useState(false)
   const timeframeStart = useMemo(() => toDateFromTimeframe(timeframe), [timeframe])
 
-  const refetchChallenges = async () => {
+  const refetchChallenges = useCallback(async () => {
     if (!profile) return
+
     const challengeQuery = query(
       collection(db, 'challenges'),
       where('participants', 'array-contains', profile.id),
       orderBy('startDate', 'desc'),
       limit(25),
     )
+
     const snapshot = await getDocs(challengeQuery)
     const loadedChallenges: ChallengeRecord[] = snapshot.docs.map((doc) => {
       const data = doc.data() as Record<string, unknown>
@@ -193,8 +188,20 @@ export const LeadershipBoardPage: React.FC = () => {
         result: data.result as ChallengeRecord['result'],
       }
     })
+
     setChallenges(loadedChallenges)
-  }
+  }, [profile])
+
+  const handleChallengeCreated = useCallback(() => {
+    refetchChallenges()
+    toast({
+      title: 'Challenge created',
+      description: 'Your opponent will receive a notification.',
+      status: 'success',
+      duration: 2000,
+      isClosable: true,
+    })
+  }, [refetchChallenges, toast])
 
   useEffect(() => {
     const profileQuery = query(collection(db, 'profiles'))
@@ -1103,45 +1110,11 @@ export const LeadershipBoardPage: React.FC = () => {
         </TabPanels>
       </Tabs>
 
-      <Modal isOpen={isOpen} onClose={onClose} size="lg">
-        <ModalOverlay bg="blackAlpha.300" />
-        <ModalContent bg="surface.default" color="text.primary" border="1px solid" borderColor="border.subtle">
-          <ModalHeader borderBottom="1px solid" borderColor="border.subtle">Start a Challenge</ModalHeader>
-          <ModalCloseButton />
-          <ModalBody>
-            <Stack spacing={3}>
-              <Box>
-                <Text fontSize="sm" mb={1}>Opponent</Text>
-                <Select>
-                  {leaderboardRows.map((row) => (
-                    <option key={row.user.id} value={row.user.id}>{row.user.fullName}</option>
-                  ))}
-                </Select>
-              </Box>
-              <Box>
-                <Text fontSize="sm" mb={1}>Challenge Type</Text>
-                <Select>
-                  <option>7-day sprint</option>
-                  <option>30-day marathon</option>
-                  <option>Custom goals</option>
-                </Select>
-              </Box>
-              <Box>
-                <Text fontSize="sm" mb={1}>Point Goal</Text>
-                <Select>
-                  <option>500 pts</option>
-                  <option>1,000 pts</option>
-                  <option>2,500 pts</option>
-                </Select>
-              </Box>
-            </Stack>
-          </ModalBody>
-          <ModalFooter borderTop="1px solid" borderColor="border.subtle">
-            <Button mr={3} variant="secondary" onClick={onClose}>Cancel</Button>
-            <Button onClick={() => toast({ title: 'Challenge created', status: 'success', duration: 2000 })}>Create</Button>
-          </ModalFooter>
-        </ModalContent>
-      </Modal>
+      <StartChallengeModal
+        isOpen={isOpen}
+        onClose={onClose}
+        onChallengeCreated={handleChallengeCreated}
+      />
     </Stack>
   )
 }

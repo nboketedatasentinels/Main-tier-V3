@@ -6,6 +6,9 @@ import {
   signOut as firebaseSignOut,
   sendPasswordResetEmail,
   onAuthStateChanged,
+  createUserWithEmailAndPassword,
+  sendEmailVerification,
+  deleteUser,
 } from 'firebase/auth'
 import { doc, getDoc, setDoc, serverTimestamp, onSnapshot } from 'firebase/firestore'
 
@@ -21,6 +24,7 @@ import { isBootstrapAdmin } from '@/utils/bootstrap'
 import { auth, db, firebaseConfigStatus } from '@/services/firebase'
 import { AuthContext, AuthContextType } from './AuthContextType'
 import { getFriendlyErrorMessage } from '@/utils/authErrors'
+import { validateCompanyCode } from '@/services/organizationService'
 
 interface AuthProviderProps {
   children: React.ReactNode
@@ -70,7 +74,12 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         console.warn('🟠 [Auth] fetchProfileOnce: no profile found')
         return null
       }
-      const rawProfile = { id: uid, ...(profileSnap.data() as UserProfile) } as UserProfile
+      const { id: _ignoredId, ...profileData } = profileSnap.data() as UserProfile
+      const rawProfile = {
+        ...profileData,
+        id: uid,
+        journeyType: profileData.journeyType || '4W',
+      } as UserProfile
       const normalizedRole = normalizeRole(rawProfile.role)
       if (normalizedRole) {
         rawProfile.role = normalizedRole as StandardRole
@@ -109,15 +118,18 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       console.log('🟣 [Auth] Firestore profile exists?', userDocSnap.exists())
 
       if (userDocSnap.exists()) {
-        const baseUser = {
+        const { id: _ignoredId, ...storedUser } = userDocSnap.data() as UserProfile
+        const baseUser: UserProfile = {
+          ...storedUser,
           id: firebaseUser.uid,
-          ...(userDocSnap.data() as UserProfile),
-        } satisfies UserProfile
+          journeyType: storedUser.journeyType || '4W',
+        }
+        let mergedUser = baseUser
 
         console.log('🟣 [Auth] Raw profile loaded', {
-          role: baseUser.role,
-          membershipStatus: baseUser.membershipStatus,
-          transformationTier: baseUser.transformationTier,
+          role: mergedUser.role,
+          membershipStatus: mergedUser.membershipStatus,
+          transformationTier: mergedUser.transformationTier,
         })
 
         // Optionally merge learner-facing extras from profiles/{uid}
@@ -125,23 +137,29 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
           const profileExtrasSnap = await getDoc(doc(db, 'profiles', firebaseUser.uid))
           if (profileExtrasSnap.exists()) {
             const extras = profileExtrasSnap.data() as Partial<UserProfile>
-            Object.assign(baseUser, { ...extras, ...baseUser, role: baseUser.role, id: firebaseUser.uid })
+            mergedUser = {
+              ...baseUser,
+              ...extras,
+              role: baseUser.role,
+              id: firebaseUser.uid,
+              journeyType: extras.journeyType || baseUser.journeyType || '4W',
+            }
             console.log('🟣 [Auth] Merged learner profile extras (user doc remains source of truth)')
           }
         } catch (extrasError) {
           console.warn('🟠 [Auth] Unable to merge learner profile extras', extrasError)
         }
 
-        const normalized = normalizeRole(baseUser.role)
+        const normalized = normalizeRole(mergedUser.role)
         console.log('🟣 [Auth] Normalized role:', normalized)
 
         if (normalized) {
-          baseUser.role = normalized as StandardRole
+          mergedUser.role = normalized as StandardRole
         } else {
-          console.warn('🟠 [Auth] Invalid role detected:', baseUser.role)
+          console.warn('🟠 [Auth] Invalid role detected:', mergedUser.role)
         }
 
-        return baseUser
+        return mergedUser
       }
 
       /* ---------------- Create profile ---------------- */
@@ -161,6 +179,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         membershipStatus: 'free',
         totalPoints: 0,
         level: 1,
+        journeyType: '4W',
         referralCount: 0,
         referralCode: null,
         referredBy: null,
@@ -296,11 +315,16 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         profileRef,
         (snap) => {
           if (!snap.exists()) return
-          const updated = snap.data() as UserProfile
-          updated.role = normalizeRole(updated.role) as StandardRole
-          console.log('🔁 [Auth] Profile updated via snapshot', updated.role)
-          setProfile(updated)
-          recordProfileLoad(updated)
+          const { id: _ignoredId, ...updatedData } = snap.data() as UserProfile
+          const updatedProfile: UserProfile = {
+            ...updatedData,
+            id: snap.id,
+            journeyType: updatedData.journeyType || '4W',
+            role: (normalizeRole(updatedData.role) as StandardRole) ?? updatedData.role,
+          }
+          console.log('🔁 [Auth] Profile updated via snapshot', updatedProfile.role)
+          setProfile(updatedProfile)
+          recordProfileLoad(updatedProfile)
         },
         (error) => {
           console.error('🔴 [Auth] Realtime profile listener error', error)
@@ -370,11 +394,160 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
   const signUp = async (
     email: string,
-    _password: string,
-    _userData: Partial<UserProfile>
+    password: string,
+    userData: Partial<UserProfile> & {
+      gender?: string
+      companyCode?: string
+      companyId?: string
+      companyName?: string
+    }
   ) => {
-    console.warn('🟠 [Auth] signUp attempted but not implemented in this context', { email })
-    return { error: new Error('Sign up is not available'), userId: undefined }
+    console.log('🟡 [Auth] signUp:start', email)
+    setLoading(true)
+    setProfileLoading(true)
+
+    const configError = ensureFirebaseConfigured()
+    if (configError) {
+      console.error('🔴 [Auth] signUp blocked due to missing Firebase config', {
+        missingKeys: firebaseConfigStatus.missingKeys,
+      })
+      setLoading(false)
+      setProfileLoading(false)
+      return { error: configError, userId: undefined }
+    }
+
+    const normalizedEmail = email.trim().toLowerCase()
+    const normalizedCompanyCode = userData.companyCode?.trim().toUpperCase()
+
+    let validatedOrganization:
+      | Awaited<ReturnType<typeof validateCompanyCode>>['organization']
+      | null = null
+
+    if (normalizedCompanyCode) {
+      try {
+        const validationResult = await validateCompanyCode(normalizedCompanyCode)
+        if (!validationResult.valid || !validationResult.organization) {
+          setLoading(false)
+          setProfileLoading(false)
+          return {
+            error: new Error(validationResult.error || 'Company code is invalid or inactive.'),
+            userId: undefined,
+          }
+        }
+        validatedOrganization = validationResult.organization
+      } catch (validationError) {
+        const friendlyMessage = getFriendlyErrorMessage(validationError)
+        setLoading(false)
+        setProfileLoading(false)
+        return {
+          error: new Error(friendlyMessage),
+          userId: undefined,
+        }
+      }
+    }
+
+    try {
+      const credential = await createUserWithEmailAndPassword(auth, normalizedEmail, password)
+      const firebaseUser = credential.user
+      const uid = firebaseUser.uid
+
+      const role = isBootstrapAdmin(firebaseUser.email)
+        ? UserRole.SUPER_ADMIN
+        : UserRole.FREE_USER
+      const normalizedRole = normalizeRole(role)
+
+      const profileData: UserProfile = {
+        id: uid,
+        email: normalizedEmail,
+        firstName: userData.firstName?.trim() || firebaseUser.displayName?.split(' ')?.[0] || 'User',
+        lastName: userData.lastName?.trim() || firebaseUser.displayName?.split(' ')?.slice(1).join(' ') || '',
+        fullName:
+          userData.fullName?.trim() ||
+          firebaseUser.displayName ||
+          userData.firstName?.trim() ||
+          'User',
+        role: normalizedRole,
+        membershipStatus: 'free',
+        totalPoints: 0,
+        level: 1,
+        journeyType: '4W',
+        referralCount: 0,
+        referralCode: null,
+        referredBy: null,
+        isOnboarded: true,
+        accountStatus: AccountStatus.ACTIVE,
+        transformationTier: validatedOrganization
+          ? TransformationTier.CORPORATE_MEMBER
+          : TransformationTier.INDIVIDUAL_FREE,
+        assignedOrganizations: [],
+        onboardingComplete: false,
+        onboardingSkipped: false,
+        mustChangePassword: false,
+        hasSeenDashboardTour: false,
+        dashboardPreferences: {
+          defaultRoute: '/app/weekly-glance',
+          lockedToFreeExperience: normalizedRole === 'user' || normalizedRole === 'free_user',
+        },
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+      }
+
+      const profilePayload: UserProfile & {
+        gender?: string
+        companyId?: string
+        companyCode?: string
+        companyName?: string
+      } = {
+        ...profileData,
+        ...(validatedOrganization?.id ? { companyId: validatedOrganization.id } : {}),
+        ...(validatedOrganization?.code ? { companyCode: validatedOrganization.code } : {}),
+        ...(validatedOrganization?.name ? { companyName: validatedOrganization.name } : {}),
+        ...(userData.gender ? { gender: userData.gender } : {}),
+      }
+
+      try {
+        await setDoc(doc(db, 'users', uid), {
+          ...profilePayload,
+          createdAt: serverTimestamp(),
+          updatedAt: serverTimestamp(),
+        })
+      } catch (profileError) {
+        await deleteUser(firebaseUser).catch((cleanupError) => {
+          console.error('🔴 [Auth] Failed to cleanup auth user after profile error', cleanupError)
+        })
+        throw profileError
+      }
+
+      try {
+        if (!firebaseUser.emailVerified) {
+          await sendEmailVerification(firebaseUser)
+        }
+      } catch (verificationError) {
+        console.warn('🟠 [Auth] Unable to send verification email', verificationError)
+        const friendlyMessage = getFriendlyErrorMessage(verificationError)
+        setLoading(false)
+        setProfileLoading(false)
+        return {
+          error: new Error(friendlyMessage),
+          userId: uid,
+        }
+      }
+
+      console.log('🟢 [Auth] signUp success', { uid })
+      setLoading(false)
+      setProfileLoading(false)
+      return { error: null, userId: uid }
+    } catch (error) {
+      console.error('🔴 [Auth] signUp failed', error)
+      const friendlyMessage = getFriendlyErrorMessage(error)
+      const normalizedError =
+        error instanceof Error && error.message === friendlyMessage
+          ? error
+          : new Error(friendlyMessage)
+      setLoading(false)
+      setProfileLoading(false)
+      return { error: normalizedError, userId: undefined }
+    }
   }
 
   const signOut = async () => {
@@ -385,8 +558,25 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     setClaimsRole(null)
   }
 
-  const resetPassword = async (email: string) =>
-    sendPasswordResetEmail(auth, email)
+  const resetPassword = async (email: string) => {
+    const configError = ensureFirebaseConfigured()
+    if (configError) {
+      console.error('🔴 [Auth] resetPassword blocked due to missing Firebase config')
+      return { error: configError }
+    }
+
+    try {
+      await sendPasswordResetEmail(auth, email)
+      return { error: null }
+    } catch (error) {
+      const friendlyMessage = getFriendlyErrorMessage(error)
+      const normalizedError =
+        error instanceof Error && error.message === friendlyMessage
+          ? error
+          : new Error(friendlyMessage)
+      return { error: normalizedError }
+    }
+  }
 
   const updateProfile = async (_updates: Partial<UserProfile>) => {
     console.warn('🟠 [Auth] updateProfile stub invoked')
@@ -438,6 +628,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const value: AuthContextType = {
     user,
     profile,
+    userData: profile,
     loading,
     profileLoading,
     signIn,

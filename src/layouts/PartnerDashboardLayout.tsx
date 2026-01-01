@@ -23,12 +23,10 @@ import {
 } from '@chakra-ui/react'
 import { Bell, LogOut, Menu, Sparkles } from 'lucide-react'
 import { useAuth } from '@/hooks/useAuth'
+import { type NavigationItem } from '@/utils/navigationItems'
 
-export interface PartnerNavItem {
+export type PartnerNavItem = Omit<NavigationItem, 'key'> & {
   key?: string
-  label: string
-  icon?: React.ElementType
-  description?: string
 }
 
 interface PartnerDashboardLayoutProps {
@@ -105,7 +103,7 @@ export const PartnerDashboardLayout: React.FC<PartnerDashboardLayoutProps> = ({
             <Text fontWeight="semibold" color="brand.text">
               {item.label}
             </Text>
-            {item.description && (
+            {'description' in item && item.description && (
               <Text fontSize="xs" color="brand.subtleText">
                 {item.description}
               </Text>

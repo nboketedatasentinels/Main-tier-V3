@@ -1,15 +1,26 @@
-import React, { useEffect, useMemo } from 'react'
+import React, { useEffect, useMemo, useState } from 'react'
 import {
   Alert,
   AlertDescription,
   AlertIcon,
+  Badge,
   Box,
   Button,
   ButtonGroup,
   chakra,
+  Grid,
   Heading,
   HStack,
   Icon,
+  IconButton,
+  Modal,
+  ModalBody,
+  ModalCloseButton,
+  ModalContent,
+  ModalFooter,
+  ModalHeader,
+  ModalOverlay,
+  Spinner,
   Stack,
   Text,
   useDisclosure,
@@ -18,10 +29,19 @@ import {
 import { useSearchParams } from 'react-router-dom'
 import {
   ArrowUpRight,
+  Archive,
   Briefcase,
   CalendarDays,
   Coins,
+  Inbox,
+  Mail,
+  MailOpen,
+  RefreshCcw,
+  CalendarClock,
+  User,
 } from 'lucide-react'
+import { format, formatDistanceToNow } from 'date-fns'
+import type { Announcement } from '@/hooks/useAnnouncements'
 import { useEventsFeed } from '@/hooks/useEventsFeed'
 import { WhatsAppCommunityCard } from '@/components/community/WhatsAppCommunityCard'
 import { useAuth } from '@/hooks/useAuth'
@@ -439,6 +459,11 @@ const GrantsTab = () => (
 
 export const AnnouncementsPage: React.FC = () => {
   const [searchParams, setSearchParams] = useSearchParams()
+  const [announcements, setAnnouncements] = useState<Announcement[]>([])
+  const [loading, setLoading] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+  const { isOpen, onOpen, onClose } = useDisclosure()
+  const [activeAnnouncement, setActiveAnnouncement] = useState<Announcement | null>(null)
 
   const tabFromUrl = (searchParams.get('tab') as TabKey) || DEFAULT_TAB
   const activeTab: TabKey = tabs.some((tab) => tab.key === tabFromUrl) ? tabFromUrl : DEFAULT_TAB
@@ -448,6 +473,46 @@ export const AnnouncementsPage: React.FC = () => {
       setSearchParams(buildSearchParams('events'))
     }
   }, [tabFromUrl, setSearchParams])
+
+  useEffect(() => {
+    setLoading(false)
+    setError(null)
+  }, [])
+
+  const markAnnouncementAsRead = (id: string) => {
+    setAnnouncements((prev) => prev.map((announcement) => (announcement.id === id ? { ...announcement, isRead: true } : announcement)))
+  }
+
+  const markAnnouncementAsUnread = (id: string) => {
+    setAnnouncements((prev) => prev.map((announcement) => (announcement.id === id ? { ...announcement, isRead: false } : announcement)))
+  }
+
+  const archiveAnnouncement = (id: string) => {
+    setAnnouncements((prev) =>
+      prev.map((announcement) =>
+        announcement.id === id ? { ...announcement, isArchived: true, isRead: true } : announcement,
+      ),
+    )
+  }
+
+  const restoreAnnouncement = (id: string) => {
+    setAnnouncements((prev) =>
+      prev.map((announcement) =>
+        announcement.id === id ? { ...announcement, isArchived: false } : announcement,
+      ),
+    )
+  }
+
+  const openAnnouncement = (announcement: Announcement) => {
+    setActiveAnnouncement(announcement)
+    markAnnouncementAsRead(announcement.id)
+    onOpen()
+  }
+
+  const closeAnnouncementModal = () => {
+    setActiveAnnouncement(null)
+    onClose()
+  }
 
   const handleTabChange = (tab: TabKey) => {
     setSearchParams(buildSearchParams(tab))
@@ -539,6 +604,16 @@ export const AnnouncementsPage: React.FC = () => {
       {activeTab === 'events' && <EventsTab />}
       {activeTab === 'jobs' && <JobsTab />}
       {activeTab === 'grants' && <GrantsTab />}
+
+      {activeAnnouncement && (
+        <AnnouncementModal
+          announcement={activeAnnouncement}
+          isOpen={isOpen}
+          onClose={closeAnnouncementModal}
+          onArchive={() => archiveAnnouncement(activeAnnouncement.id)}
+          onRestore={() => restoreAnnouncement(activeAnnouncement.id)}
+        />
+      )}
     </Stack>
   )
 }

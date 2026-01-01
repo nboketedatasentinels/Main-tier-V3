@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from "react"
+import React, { useEffect, useMemo, useRef, useState } from "react"
 import { motion } from "framer-motion"
 import { ArrowRight } from "lucide-react"
 
@@ -10,12 +10,15 @@ const DotMap = () => {
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const [dimensions, setDimensions] = useState({ width: 0, height: 0 })
 
-  const routes: { start: RoutePoint; end: RoutePoint; color: string }[] = [
-    { start: { x: 100, y: 150, delay: 0 }, end: { x: 200, y: 80, delay: 2 }, color: "#350e6f" },
-    { start: { x: 200, y: 80, delay: 2 }, end: { x: 260, y: 120, delay: 4 }, color: "#350e6f" },
-    { start: { x: 50, y: 50, delay: 1 }, end: { x: 150, y: 180, delay: 3 }, color: "#350e6f" },
-    { start: { x: 280, y: 60, delay: 0.5 }, end: { x: 180, y: 180, delay: 2.5 }, color: "#350e6f" },
-  ]
+  const routes: { start: RoutePoint; end: RoutePoint; color: string }[] = useMemo(
+    () => [
+      { start: { x: 100, y: 150, delay: 0 }, end: { x: 200, y: 80, delay: 2 }, color: "#350e6f" },
+      { start: { x: 200, y: 80, delay: 2 }, end: { x: 260, y: 120, delay: 4 }, color: "#350e6f" },
+      { start: { x: 50, y: 50, delay: 1 }, end: { x: 150, y: 180, delay: 3 }, color: "#350e6f" },
+      { start: { x: 280, y: 60, delay: 0.5 }, end: { x: 180, y: 180, delay: 2.5 }, color: "#350e6f" },
+    ],
+    [],
+  )
 
   const generateDots = (width: number, height: number) => {
     const dots: { x: number; y: number; radius: number; opacity: number }[] = []
@@ -135,7 +138,7 @@ const DotMap = () => {
 
     animate()
     return () => cancelAnimationFrame(animationFrameId)
-  }, [dimensions])
+  }, [dimensions, routes])
 
   return (
     <div className="relative w-full h-full overflow-hidden">

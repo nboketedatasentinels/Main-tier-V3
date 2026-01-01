@@ -1,4 +1,4 @@
-import { UserProfile } from '@/types'
+import { UserProfile, UserRole } from '@/types'
 import { normalizeRole } from './role'
 
 export { normalizeRole } from './role'
@@ -9,7 +9,7 @@ export { normalizeRole } from './role'
  * - profile.dashboardPreferences.defaultRoute
  * - profile.defaultDashboardRoute
  */
-export const getPreferredDashboardRoute = (profile: UserProfile | null): string | null => {
+export const getPreferredDashboardRoute = (profile?: UserProfile | null): string | null => {
   const fromPrefs =
     typeof profile?.dashboardPreferences?.defaultRoute === 'string'
       ? profile.dashboardPreferences.defaultRoute
@@ -46,10 +46,13 @@ export const getDefaultDashboardRouteByMembership = (
  * Comprehensive role-based landing path with priority logic
  */
 export const getLandingPathForRole = (
-  profile: UserProfile | null,
+  profileOrRole?: UserProfile | UserRole | null,
   searchParams?: URLSearchParams
 ): string => {
-  const role = profile?.role
+  const profile = typeof profileOrRole === 'object' && profileOrRole !== null && 'role' in profileOrRole
+    ? (profileOrRole as UserProfile)
+    : null
+  const role = typeof profileOrRole === 'string' ? profileOrRole : profile?.role
   const redirectUrl = searchParams?.get('redirect')
 
   console.log('🔷 getLandingPathForRole called with:', {
@@ -145,12 +148,6 @@ export const getLandingPathForRole = (
 
     const fallback = getDefaultDashboardRouteByMembership(membershipStatus)
     console.log('🔷 Learner fallback route:', fallback)
-    return fallback
-  }
-
-  if (profile) {
-    const fallback = getPreferredDashboardRoute(profile) || getDefaultDashboardRouteByMembership(profile.membershipStatus)
-    console.warn('🔷 Role missing or null, using fallback route', fallback)
     return fallback
   }
 

@@ -2,6 +2,7 @@ import { initializeApp, FirebaseApp } from 'firebase/app'
 import { getAuth, Auth } from 'firebase/auth'
 import {
   Firestore,
+  FirestoreSettings,
   getFirestore,
   initializeFirestore,
 } from 'firebase/firestore'
@@ -78,14 +79,14 @@ export const app: FirebaseApp = initializeApp(firebaseConfig)
 // Initialize Firebase services
 export const auth: Auth = getAuth(app)
 const enableLongPolling = import.meta.env.VITE_FIRESTORE_FORCE_LONG_POLLING === 'true'
+const firestoreSettings: FirestoreSettings = {
+  // Some privacy / ad-blocking extensions can block the default streaming
+  // transport. Enabling long polling keeps Firestore realtime listeners
+  // functional in those environments.
+  experimentalAutoDetectLongPolling: true,
+}
 
 export const db: Firestore = enableLongPolling
-  ? initializeFirestore(app, {
-      // Some privacy / ad-blocking extensions can block the default streaming
-      // transport. Enabling long polling keeps Firestore realtime listeners
-      // functional in those environments.
-      experimentalAutoDetectLongPolling: true,
-      useFetchStreams: false,
-    })
+  ? initializeFirestore(app, firestoreSettings)
   : getFirestore(app)
 export const storage: FirebaseStorage = getStorage(app)

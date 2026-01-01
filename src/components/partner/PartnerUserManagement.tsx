@@ -76,9 +76,10 @@ const getSortableValue = (user: PartnerUser, key: string) => {
       return user.currentWeek
     case 'status':
       return user.status
-    case 'lastActive':
+    case 'lastActive': {
       const lastActiveTime = new Date(user.lastActive).getTime()
       return Number.isNaN(lastActiveTime) ? -Infinity : lastActiveTime
+    }
     default:
       return ''
   }
@@ -210,8 +211,8 @@ export const PartnerUserManagement: React.FC<PartnerUserManagementProps> = ({
           addDoc(collection(db, 'users', userId, 'engagement_actions'), {
             action_type: actionToApply.toLowerCase().replace(/\s+/g, '_'),
             action_label: actionToApply,
-            actor_id: profile?.id,
-            actor_name: profile?.fullName,
+            actor_id: profile?.id ?? null,
+            actor_name: profile?.fullName ?? null,
             timestamp: serverTimestamp(),
             user_id: userId,
           }),

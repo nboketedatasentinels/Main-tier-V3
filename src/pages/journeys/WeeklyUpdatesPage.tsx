@@ -34,34 +34,21 @@ import {
   useToast,
 } from '@chakra-ui/react'
 import { AlertTriangle, CheckCircle, ChevronLeft, ChevronRight, Lock, Plus } from 'lucide-react'
-import { collection, doc, getDoc, getDocs, query, serverTimestamp, setDoc, where, onSnapshot, addDoc } from 'firebase/firestore'
+import { collection, doc, getDocs, query, serverTimestamp, setDoc, where, onSnapshot, addDoc } from 'firebase/firestore'
 import { removeUndefinedFields } from '@/utils/firestore'
 import { getIsoWeekNumber } from '@/utils/date'
 import { db } from '@/services/firebase'
 import { useAuth } from '@/hooks/useAuth'
-import { UserRole, UserProfile, WeeklyProgress } from '@/types'
-import { JOURNEY_META, getMonthNumber, getActivitiesForJourney, JourneyType, ActivityDef } from '@/config/pointsConfig'
+import { UserRole, WeeklyProgress } from '@/types'
+import { JOURNEY_META, getMonthNumber, getActivitiesForJourney, type ActivityDef, type JourneyType } from '@/config/pointsConfig'
 import { awardChecklistPoints, revokeChecklistPoints } from '@/services/pointsService'
 import { SurfaceCard } from '@/components/primitives/SurfacePrimitives'
 
 const DEFAULT_WEEKLY_TARGET = JOURNEY_META['6W'].weeklyTarget
 
-interface ActivityTemplate {
-  id: string
-  baseId: string
-  title: string
-  description: string
-  points: number
-  requiresApproval?: boolean
-  isFreeTier?: boolean
-  week: number
-  category: string
-  tags?: string[]
-}
-
 type ActivityStatus = 'not_started' | 'pending' | 'completed'
 
-interface ActivityState extends ActivityTemplate {
+type ActivityState = ActivityDef & {
   status: ActivityStatus
   proofUrl?: string
   notes?: string
@@ -107,68 +94,6 @@ const weeklyGuidance: Record<number, string[]> = {
   5: ['Host or lead a meetup', 'Share a public celebration post', 'Review your streaks and keep them alive'],
   6: ['Record your transformation recap', 'Request endorsements from peers', 'Lock in final points to hit 100%'],
 }
-
-const defaultTemplates: ActivityTemplate[] = [
-  {
-    id: 'forum-post',
-    baseId: 'community_post',
-    title: 'Post and comment in the forum',
-    description: 'Create one post and two thoughtful comments.',
-    points: 50,
-    week: 1,
-    category: 'Community',
-    tags: ['proof-optional'],
-  },
-  {
-    id: 'video-watch',
-    baseId: 'video_watch',
-    title: 'Watch this week\'s leadership video',
-    description: 'Complete the featured video and share takeaways.',
-    points: 40,
-    week: 1,
-    category: 'Learning',
-    isFreeTier: true,
-  },
-  {
-    id: 'impact-log',
-    baseId: 'impact_log',
-    title: 'Submit your Impact Log',
-    description: 'Capture your wins and lessons for the week.',
-    points: 60,
-    week: 1,
-    category: 'Reflection',
-    requiresApproval: true,
-  },
-  {
-    id: 'peer-to-peer',
-    baseId: 'peer_to_peer',
-    title: 'Peer-to-peer connection',
-    description: 'Join a partner-led peer-to-peer group activity and document the outcomes.',
-    points: 80,
-    week: 2,
-    category: 'Networking',
-    requiresApproval: true,
-  },
-  {
-    id: 'linkedin',
-    baseId: 'linkedin_engagement',
-    title: 'LinkedIn engagement',
-    description: 'Share or comment on a leadership insight.',
-    points: 30,
-    week: 3,
-    category: 'Brand',
-  },
-  {
-    id: 'mentor-session',
-    baseId: 'mentor_session',
-    title: 'Mentor or coach session',
-    description: 'Book and attend a mentor session.',
-    points: 100,
-    week: 4,
-    category: 'Growth',
-    requiresApproval: true,
-  },
-]
 
 const useRhythmState = () => {
   const today = new Date()
@@ -225,15 +150,17 @@ const WeeklyChecklistPage: React.FC = () => {
 
   const persistChecklist = async (updatedActivities: ActivityState[]) => {
     if (!user) return
-    const checklistState = {
-      activities: updatedActivities.map(({ id, status, proofUrl, notes }) => ({
-        id,
-        status,
-        proofUrl,
-        notes,
-      })),
+    const checklistState = removeUndefinedFields({
+      activities: updatedActivities.map(({ id, status, proofUrl, notes }) =>
+        removeUndefinedFields({
+          id,
+          status,
+          proofUrl,
+          notes,
+        }),
+      ),
       updatedAt: serverTimestamp(),
-    }
+    })
     try {
       await setDoc(doc(db, 'checklists', `${user.uid}_${selectedWeek}`), checklistState, { merge: true })
     } catch (error) {
@@ -249,11 +176,6 @@ const WeeklyChecklistPage: React.FC = () => {
   const normalizedJourneyType = useMemo(() => {
     return journey?.journeyType || '4W';
   }, [journey?.journeyType]);
-
-  const totalWeeks = useMemo(() => {
-    if (!journey) return 4;
-    return JOURNEY_META[journey.journeyType].weeks;
-  }, [journey]);
 
   const weeklyTarget = useMemo(() => {
     if (!journey) return DEFAULT_WEEKLY_TARGET;
@@ -684,7 +606,7 @@ const WeeklyChecklistPage: React.FC = () => {
   )
 
   const renderGuidanceCard = () => {
-    if (normalizedJourneyType !== 'sixWeekSprint') return null
+    if (normalizedJourneyType !== '6W') return null
     const bullets = weeklyGuidance[selectedWeek]
     if (!bullets?.length) return null
 

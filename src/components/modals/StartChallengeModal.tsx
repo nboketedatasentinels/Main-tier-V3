@@ -33,7 +33,6 @@ import {
   query,
   where,
   getDocs,
-  DocumentData,
   addDoc,
   Timestamp,
   doc,
@@ -94,7 +93,7 @@ export const StartChallengeModal: React.FC<StartChallengeModalProps> = ({
   const [userLevel, setUserLevel] = useState(1);
   const [companyCode, setCompanyCode] = useState<string | undefined>(undefined);
 
-  const { user, userData } = useAuth();
+  const { user, profile } = useAuth();
 
   // --- DATA FETCHING ---
   const fetchCompanyUsers = useCallback(async () => {
@@ -178,7 +177,7 @@ export const StartChallengeModal: React.FC<StartChallengeModalProps> = ({
 
     try {
       const challengedUserId = preselectedUser ? preselectedUser.id : selectedUserId;
-      if (!challengedUserId || !user || !userData) {
+      if (!challengedUserId || !user || !profile) {
         throw new Error('User data is missing.');
       }
 
@@ -273,13 +272,13 @@ export const StartChallengeModal: React.FC<StartChallengeModalProps> = ({
 
   // --- EFFECTS ---
   useEffect(() => {
-    if (userData?.companyCode) {
-      setCompanyCode(userData.companyCode);
+    if (profile?.companyCode) {
+      setCompanyCode(profile.companyCode);
     }
-    if (userData?.level) {
-      setUserLevel(userData.level);
+    if (profile?.level) {
+      setUserLevel(profile.level);
     }
-  }, [userData]);
+  }, [profile]);
 
   useEffect(() => {
     if (isOpen) {

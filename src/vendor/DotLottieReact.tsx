@@ -1,8 +1,6 @@
-/* eslint-disable @typescript-eslint/no-namespace */
 import React, { useEffect } from 'react'
 
 /* eslint-disable @typescript-eslint/no-namespace */
-
 declare global {
   namespace JSX {
     interface IntrinsicElements {

@@ -1,11 +1,10 @@
-import { BrowserRouter, Routes, Route, Navigate, useLocation, Outlet } from 'react-router-dom'
+import { BrowserRouter, Routes, Route, Navigate, Outlet, useSearchParams } from 'react-router-dom'
 import { ProtectedRoute } from '@/components/ProtectedRoute'
 import { FreeTierGuard } from '@/components/FreeTierGuard'
-import { AppLoader } from '@/components/ui/AppLoader'
-import { useAuth } from '@/hooks/useAuth'
 import RoleRedirect from '@/pages/auth/RoleRedirect'
-import { getLandingPathForRole } from '@/utils/roleRouting'
 import { UserRole } from '@/types'
+import { useAuth } from '@/hooks/useAuth'
+import { getLandingPathForRole } from '@/utils/roleRouting'
 
 // Layout imports
 import { MainLayout } from '@/layouts/MainLayout'
@@ -28,6 +27,9 @@ import { AdminDashboard } from '@/pages/dashboards/AdminDashboard'
 import { SuperAdminDashboard } from '@/pages/dashboards/SuperAdminDashboard'
 import { MentorDashboard } from '@/pages/dashboards/MentorDashboard'
 import { AmbassadorDashboard } from '@/pages/dashboards/AmbassadorDashboard'
+import { CompanyAdminDashboard } from '@/pages/dashboards/CompanyAdminDashboard'
+import { PartnerAdminDashboard } from '@/pages/dashboards/PartnerAdminDashboard'
+import { PaidMemberDashboard } from '@/pages/dashboards/PaidMemberDashboard'
 
 // Feature page imports
 import { JourneysPage } from '@/pages/journeys/JourneysPage'
@@ -50,38 +52,42 @@ import { NotFoundPage } from '@/pages/errors/NotFoundPage'
 import { UnauthorizedPage } from '@/pages/errors/UnauthorizedPage'
 import { SuspendedPage } from '@/pages/errors/SuspendedPage'
 
-// Dashboard router component
 const DashboardRouter = () => {
-  const { profile, profileLoading } = useAuth()
-  const location = useLocation()
+  const { loading, profileLoading, user, profile } = useAuth()
+  const [searchParams] = useSearchParams()
 
-  if (profileLoading) {
-    return <AppLoader />
+  if (loading || profileLoading) {
+    return null
   }
 
-  const landingPath = getLandingPathForRole(profile)
-
-  // If the calculated landing path is NOT a nested dashboard route,
-  // it means the user should be somewhere else entirely (e.g., /admin/dashboard).
-  // The navigate component will handle the absolute path redirect.
-  if (!landingPath.startsWith('/app/dashboard/')) {
-    return <Navigate to={landingPath} replace />
+  if (!user) {
+    return <Navigate to="/login" replace />
   }
 
-  // If the user is already at the correct dashboard, render the routes.
-  // Otherwise, redirect them to the correct nested dashboard path.
-  if (location.pathname === landingPath) {
-    return (
-      <Routes>
-        <Route path="free" element={<FreeDashboard />} />
-        <Route path="member" element={<PaidMemberDashboard />} />
-        {/* Ambassador dashboard is now a top-level route, but we keep this for legacy URLs */}
-        <Route path="ambassador" element={<Navigate to="/ambassador/dashboard" replace />} />
-      </Routes>
-    )
+  if (!profile) {
+    return <Navigate to="/auth/profile-missing" replace />
   }
 
-  return <Navigate to={landingPath} replace />
+  const landing = getLandingPathForRole(profile, searchParams)
+
+  if (!landing.startsWith('/app/dashboard/')) {
+    return <Navigate to={landing} replace />
+  }
+
+  const dashboardKey = landing.replace('/app/dashboard/', '')
+
+  switch (dashboardKey) {
+    case 'free':
+      return <WeeklyGlancePage />
+    case 'member':
+      return <PaidMemberDashboard />
+    case 'company':
+      return <CompanyAdminDashboard />
+    case 'partner':
+      return <PartnerAdminDashboard />
+    default:
+      return <Navigate to="/app/weekly-glance" replace />
+  }
 }
 
 export const AppRoutes = () => {
@@ -227,6 +233,7 @@ export const AppRoutes = () => {
           <Route path="book-club" element={<BookClubPage />} />
           <Route path="shameless-circle" element={<ShamelessCirclePage />} />
           <Route path="profile" element={<ProfilePage />} />
+          <Route path="dashboard/*" element={<DashboardRouter />} />
         </Route>
 
         {/* Error routes */}

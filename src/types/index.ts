@@ -124,6 +124,7 @@ export interface Organization {
   updatedAt: string
   memberCount: number
   settings?: Record<string, unknown>
+  transformation_partner_id?: string | null
 }
 
 export interface PrivacySettings {
@@ -215,7 +216,7 @@ export interface WeeklyProgress {
   weeklyTarget: number;
   pointsEarned: number;
   status: "on_track" | "warning" | "alert" | "recovery";
-  updatedAt: any;
+  updatedAt: string | Date | { toDate: () => Date };
 }
 
 export enum ActivityStatus {
