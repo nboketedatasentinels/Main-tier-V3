@@ -9,6 +9,9 @@ import {
   createUserWithEmailAndPassword,
   sendEmailVerification,
   deleteUser,
+  GoogleAuthProvider,
+  signInWithPopup,
+  getAdditionalUserInfo,
 } from 'firebase/auth'
 import { doc, getDoc, setDoc, serverTimestamp, onSnapshot } from 'firebase/firestore'
 
@@ -64,6 +67,17 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       setClaimsRole(null)
     }
   }, [])
+
+  const getNameParts = (displayName?: string | null, email?: string | null) => {
+    const fallbackBase = email?.split('@')?.[0] || 'User'
+    const cleanedName = displayName?.trim() || fallbackBase
+    const parts = cleanedName.split(/\s+/).filter(Boolean)
+    return {
+      firstName: parts[0] || 'User',
+      lastName: parts.slice(1).join(' '),
+      fullName: cleanedName,
+    }
+  }
 
   const fetchProfileOnce = async (uid: string): Promise<UserProfile | null> => {
     try {
@@ -165,18 +179,23 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       /* ---------------- Create profile ---------------- */
       const role = isBootstrapAdmin(firebaseUser.email)
         ? UserRole.SUPER_ADMIN
-        : UserRole.USER
+        : UserRole.FREE_USER
+      const { firstName, lastName, fullName } = getNameParts(
+        firebaseUser.displayName,
+        firebaseUser.email
+      )
 
       console.log('🟣 [Auth] Creating new profile with role:', role)
 
       const profileData: UserProfile = {
         id: firebaseUser.uid,
         email: firebaseUser.email ?? '',
-        firstName: firebaseUser.displayName?.split(' ')?.[0] ?? 'User',
-        lastName: firebaseUser.displayName?.split(' ')?.slice(1).join(' ') ?? '',
-        fullName: firebaseUser.displayName ?? 'User',
+        firstName,
+        lastName,
+        fullName,
         role,
         membershipStatus: 'free',
+        ...(firebaseUser.photoURL ? { avatarUrl: firebaseUser.photoURL } : {}),
         totalPoints: 0,
         level: 1,
         journeyType: '4W',
@@ -193,7 +212,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         hasSeenDashboardTour: false,
         dashboardPreferences: {
           defaultRoute: '/app/weekly-glance',
-          lockedToFreeExperience: normalizeRole(role) === 'user',
+          lockedToFreeExperience: ['user', 'free_user'].includes(normalizeRole(role)),
         },
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
@@ -201,6 +220,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
       await setDoc(userDocRef, {
         ...profileData,
+        ...(firebaseUser.photoURL ? { avatarUrl: firebaseUser.photoURL } : {}),
         createdAt: serverTimestamp(),
         updatedAt: serverTimestamp(),
       })
@@ -390,6 +410,46 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const signInWithMagicLink = async (email: string) => {
     console.log('🟡 [Auth] signInWithMagicLink requested', email)
     return { error: new Error('Magic link sign-in is currently disabled') }
+  }
+
+  const signInWithGoogle = async () => {
+    console.log('🟡 [Auth] signInWithGoogle:start')
+    setLoading(true)
+    setProfileLoading(true)
+
+    const configError = ensureFirebaseConfigured()
+    if (configError) {
+      console.error('🔴 [Auth] signInWithGoogle blocked due to missing Firebase config', {
+        missingKeys: firebaseConfigStatus.missingKeys,
+      })
+      setLoading(false)
+      setProfileLoading(false)
+      return { error: configError }
+    }
+
+    try {
+      const provider = new GoogleAuthProvider()
+      provider.addScope('email')
+      provider.addScope('profile')
+
+      const credential = await signInWithPopup(auth, provider)
+      const additionalInfo = getAdditionalUserInfo(credential)
+      console.log('🟢 [Auth] signInWithGoogle success', {
+        uid: credential.user.uid,
+        isNewUser: additionalInfo?.isNewUser,
+      })
+      return { error: null, isNewUser: additionalInfo?.isNewUser }
+    } catch (error) {
+      console.error('🔴 [Auth] signInWithGoogle failed', error)
+      const friendlyMessage = getFriendlyErrorMessage(error)
+      const normalizedError =
+        error instanceof Error && error.message === friendlyMessage
+          ? error
+          : new Error(friendlyMessage)
+      setLoading(false)
+      setProfileLoading(false)
+      return { error: normalizedError }
+    }
   }
 
   const signUp = async (
@@ -635,6 +695,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     signUp,
     signOut,
     signInWithMagicLink,
+    signInWithGoogle,
     resetPassword,
     updateProfile,
     hasRole: (r: StandardRole) => normalizedRole === r,
