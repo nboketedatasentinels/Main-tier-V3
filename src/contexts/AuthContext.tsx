@@ -598,9 +598,9 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
       const profilePayload: UserProfile & {
         gender?: string
-        companyId?: string
-        companyCode?: string
-        companyName?: string
+        companyId?: string | null
+        companyCode?: string | null
+        companyName?: string | null
       } = {
         ...profileData,
         ...(validatedOrganization?.id ? { companyId: validatedOrganization.id } : {}),

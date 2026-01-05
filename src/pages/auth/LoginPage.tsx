@@ -94,6 +94,7 @@ export const LoginPage: React.FC = () => {
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault()
     setError(null)
+    setGoogleError(null)
 
     if (!email.trim()) {
       setError('Please enter your email address.')
@@ -195,12 +196,13 @@ export const LoginPage: React.FC = () => {
 
   const handleGoogleSignIn = async () => {
     setError(null)
+    setGoogleError(null)
     setGoogleLoading(true)
     try {
       const { error: googleError, redirect } = await signInWithGoogle()
       if (googleError) {
         const friendlyMessage = getFriendlyErrorMessage(googleError)
-        setError(friendlyMessage)
+        setGoogleError(friendlyMessage)
         toast({
           title: 'Google sign-in failed',
           description: friendlyMessage,
@@ -221,7 +223,7 @@ export const LoginPage: React.FC = () => {
       })
     } catch (err) {
       const friendlyMessage = getFriendlyErrorMessage(err)
-      setError(friendlyMessage)
+      setGoogleError(friendlyMessage)
       toast({
         title: 'Google sign-in failed',
         description: friendlyMessage,
