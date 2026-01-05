@@ -11,8 +11,6 @@ import {
   createUserWithEmailAndPassword,
   sendEmailVerification,
   deleteUser,
-  GoogleAuthProvider,
-  signInWithPopup,
   signInWithRedirect,
   getAdditionalUserInfo,
 } from 'firebase/auth'
