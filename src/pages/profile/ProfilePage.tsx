@@ -36,6 +36,7 @@ import {
   Text,
   Textarea,
   Tooltip,
+  useToast,
   VStack,
 } from '@chakra-ui/react'
 import {
@@ -45,6 +46,7 @@ import {
   Building,
   Calendar,
   Check,
+  CheckCircle,
   ChevronRight,
   CreditCard,
   Edit,
@@ -66,6 +68,7 @@ import {
   User,
   Users,
   X,
+  XCircle,
 } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
 import {
@@ -89,8 +92,10 @@ import {
 import { getDownloadURL, ref, uploadBytes } from 'firebase/storage'
 import { auth, db, storage } from '@/services/firebase'
 import { useAuth } from '@/hooks/useAuth'
-import type { StandardRole } from '@/types'
+import type { StandardRole, Organization } from '@/types'
+import { TransformationTier } from '@/types'
 import { normalizeRole } from '@/utils/role'
+import { validateCompanyCode } from '@/services/organizationService'
 
 interface ProfileData {
   id: string
@@ -253,6 +258,7 @@ const PaymentHistory: React.FC = () => {
 export const ProfilePage: React.FC = () => {
   const navigate = useNavigate()
   const { user, profile } = useAuth()
+  const toast = useToast()
 
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -273,6 +279,12 @@ export const ProfilePage: React.FC = () => {
   const [passwordMessage, setPasswordMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null)
   const [visibilitySaving, setVisibilitySaving] = useState(false)
   const [visibilityMessage, setVisibilityMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null)
+  const [companyCode, setCompanyCode] = useState('')
+  const [companyCodeValid, setCompanyCodeValid] = useState<boolean | null>(null)
+  const [companyCodeError, setCompanyCodeError] = useState<string | null>(null)
+  const [companyCodeChecking, setCompanyCodeChecking] = useState(false)
+  const [companyOrganization, setCompanyOrganization] = useState<Organization | null>(null)
+  const [companyCodeSaving, setCompanyCodeSaving] = useState(false)
 
   const buildProfileFromDoc = useCallback(
     (docData: Record<string, unknown>): ProfileData => ({
@@ -408,6 +420,45 @@ export const ProfilePage: React.FC = () => {
   useEffect(() => {
     loadUserBadges()
   }, [loadUserBadges])
+
+  useEffect(() => {
+    setCompanyCode(profileData?.companyCode || '')
+  }, [profileData?.companyCode])
+
+  useEffect(() => {
+    const trimmedCode = companyCode.trim().toUpperCase()
+
+    if (!trimmedCode) {
+      setCompanyCodeValid(null)
+      setCompanyCodeError(null)
+      setCompanyOrganization(null)
+      setCompanyCodeChecking(false)
+      return
+    }
+
+    if (trimmedCode.length !== 6) {
+      setCompanyCodeValid(null)
+      setCompanyCodeError(null)
+      setCompanyOrganization(null)
+      setCompanyCodeChecking(false)
+      return
+    }
+
+    let cancelled = false
+    setCompanyCodeChecking(true)
+
+    validateCompanyCode(trimmedCode).then((result) => {
+      if (cancelled) return
+      setCompanyCodeValid(result.valid)
+      setCompanyCodeError(result.error ?? null)
+      setCompanyOrganization(result.valid && result.organization ? result.organization : null)
+      setCompanyCodeChecking(false)
+    })
+
+    return () => {
+      cancelled = true
+    }
+  }, [companyCode])
 
   const handleInputChange = <K extends keyof ProfileData>(field: K, value: ProfileData[K]) => {
     if (!editedData) return
@@ -562,6 +613,88 @@ export const ProfilePage: React.FC = () => {
       setVisibilityMessage({ type: 'error', text: 'Unable to save preference.' })
     } finally {
       setVisibilitySaving(false)
+    }
+  }
+
+  const handleCompanyCodeSave = async () => {
+    if (!user || !profileData) return
+    const trimmedCode = companyCode.trim().toUpperCase()
+
+    if (!trimmedCode) {
+      toast({
+        title: 'Company code required',
+        description: 'Enter your 6-character company code to continue.',
+        status: 'warning',
+        duration: 4000,
+      })
+      return
+    }
+
+    if (trimmedCode.length !== 6) {
+      toast({
+        title: 'Invalid company code',
+        description: 'Company codes must be 6 characters.',
+        status: 'error',
+        duration: 4000,
+      })
+      return
+    }
+
+    if (companyCodeValid === false || companyCodeChecking) {
+      toast({
+        title: 'Company code not ready',
+        description: companyCodeError || 'Please wait while we verify the company code.',
+        status: 'error',
+        duration: 4000,
+      })
+      return
+    }
+
+    setCompanyCodeSaving(true)
+    const updates = {
+      companyCode: trimmedCode,
+      companyId: companyOrganization?.id ?? null,
+      companyName: companyOrganization?.name ?? null,
+      updatedAt: serverTimestamp(),
+    }
+
+    try {
+      await Promise.all([
+        updateDoc(doc(db, 'profiles', user.uid), updates),
+        updateDoc(doc(db, 'users', user.uid), {
+          ...updates,
+          transformationTier: companyOrganization
+            ? TransformationTier.CORPORATE_MEMBER
+            : TransformationTier.INDIVIDUAL_FREE,
+        }),
+      ])
+
+      const updatedProfile = {
+        ...profileData,
+        companyCode: trimmedCode,
+        companyName: companyOrganization?.name ?? profileData.companyName,
+      }
+      setProfileData(updatedProfile)
+      setEditedData(updatedProfile)
+
+      toast({
+        title: 'Company code updated',
+        description: companyOrganization?.name
+          ? `Connected to ${companyOrganization.name}.`
+          : 'Company code saved successfully.',
+        status: 'success',
+        duration: 4000,
+      })
+    } catch (err) {
+      console.error(err)
+      toast({
+        title: 'Unable to update company code',
+        description: 'Please try again or contact support.',
+        status: 'error',
+        duration: 5000,
+      })
+    } finally {
+      setCompanyCodeSaving(false)
     }
   }
 
@@ -1198,6 +1331,69 @@ export const ProfilePage: React.FC = () => {
                           </HStack>
                         </VStack>
                       )}
+                    </CardBody>
+                  </Card>
+
+                  <Card borderColor="brand.border">
+                    <CardHeader>
+                      <Flex justify="space-between" align="center">
+                        <Box>
+                          <Text fontWeight="semibold">Company Code</Text>
+                          <Text fontSize="sm" color="brand.subtleText">
+                            Add or update your company code to unlock corporate perks.
+                          </Text>
+                        </Box>
+                      </Flex>
+                    </CardHeader>
+                    <CardBody>
+                      <VStack align="stretch" spacing={4}>
+                        <Box>
+                          <Text fontSize="sm" color="brand.subtleText">
+                            Current affiliation
+                          </Text>
+                          <Text fontWeight="semibold">{profileData.companyName || 'Not assigned'}</Text>
+                          <Text fontSize="sm" color="brand.subtleText">
+                            Code: {profileData.companyCode || 'N/A'}
+                          </Text>
+                        </Box>
+                        <FormControl>
+                          <FormLabel>Company Code</FormLabel>
+                          <Input
+                            value={companyCode}
+                            onChange={(event) => setCompanyCode(event.target.value.toUpperCase().slice(0, 6))}
+                            placeholder="Enter 6-character code"
+                          />
+                        </FormControl>
+                        {companyCodeValid && companyOrganization && !companyCodeChecking && (
+                          <Box bg="green.50" border="1px solid" borderColor="green.100" p={3} rounded="md">
+                            <HStack spacing={2} color="green.600">
+                              <Icon as={CheckCircle} />
+                              <Text fontSize="sm">Valid company code ({companyOrganization.name})</Text>
+                            </HStack>
+                          </Box>
+                        )}
+                        {companyCodeValid === false && !companyCodeChecking && (
+                          <Box bg="red.50" border="1px solid" borderColor="red.100" p={3} rounded="md">
+                            <HStack spacing={2} color="red.600">
+                              <Icon as={XCircle} />
+                              <Text fontSize="sm">{companyCodeError || 'Invalid or inactive company code'}</Text>
+                            </HStack>
+                          </Box>
+                        )}
+                        {companyCodeChecking && (
+                          <Text fontSize="sm" color="brand.subtleText">
+                            Checking company code...
+                          </Text>
+                        )}
+                        <Button
+                          onClick={handleCompanyCodeSave}
+                          isLoading={companyCodeSaving}
+                          loadingText="Saving..."
+                          isDisabled={!companyCode.trim()}
+                        >
+                          Save Company Code
+                        </Button>
+                      </VStack>
                     </CardBody>
                   </Card>
 

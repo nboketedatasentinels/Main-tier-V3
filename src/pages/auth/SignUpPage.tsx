@@ -12,6 +12,8 @@ import { GenderOption, Organization, UserRole } from "@/types"
 import { getLandingPathForRole } from "@/utils/roleRouting"
 import { TermsOfUseModal } from "@/components/modals/TermsOfUseModal"
 import { PrivacyPolicyModal } from "@/components/modals/PrivacyPolicyModal"
+import { GoogleIcon } from "@/components/icons/GoogleIcon"
+import { CompanyCodeModal } from "@/components/modals/CompanyCodeModal"
 
 interface FormData {
   fullName: string
@@ -63,6 +65,8 @@ export const SignUpPage: React.FC = () => {
   const [googleLoading, setGoogleLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [successMessage, setSuccessMessage] = useState<string | null>(null)
+  const [googleLoading, setGoogleLoading] = useState(false)
+  const [googleError, setGoogleError] = useState<string | null>(null)
   const [showPassword, setShowPassword] = useState(false)
   const [companyCodeValid, setCompanyCodeValid] = useState<boolean | null>(null)
   const [companyCodeError, setCompanyCodeError] = useState<string | null>(null)
@@ -73,6 +77,8 @@ export const SignUpPage: React.FC = () => {
   const [resendLoading, setResendLoading] = useState(false)
   const [showTermsModal, setShowTermsModal] = useState(false)
   const [showPrivacyModal, setShowPrivacyModal] = useState(false)
+  const [showCompanyCodeModal, setShowCompanyCodeModal] = useState(false)
+  const [pendingGoogleNavigation, setPendingGoogleNavigation] = useState(false)
 
   const nameParts = useMemo(() => {
     const parts = formData.fullName.trim().split(/\s+/).filter(Boolean)
@@ -201,6 +207,48 @@ export const SignUpPage: React.FC = () => {
     } finally {
       setLoading(false)
     }
+  }
+
+  useEffect(() => {
+    if (!pendingGoogleNavigation || profileLoading) return
+    if (!user || !profile) return
+    if (showCompanyCodeModal) return
+    setPendingGoogleNavigation(false)
+    navigate(getLandingPathForRole(profile ?? UserRole.FREE_USER), { replace: true })
+  }, [pendingGoogleNavigation, profileLoading, profile, showCompanyCodeModal, navigate, user])
+
+  const handleGoogleSignUp = async () => {
+    setError(null)
+    setGoogleError(null)
+    setGoogleLoading(true)
+    const { error: googleAuthError, isNewUser, linked } = await signInWithGoogle()
+    if (googleAuthError) {
+      const friendlyMessage = getFriendlyErrorMessage(googleAuthError)
+      setGoogleError(friendlyMessage)
+      toast({
+        title: "Google sign-in failed",
+        description: friendlyMessage,
+        status: "error",
+        duration: 5000,
+      })
+      setGoogleLoading(false)
+      return
+    }
+
+    toast({
+      title: linked ? "Accounts linked" : "Welcome!",
+      description: linked
+        ? "Your Google account has been linked to your existing profile."
+        : "Signed in with Google successfully.",
+      status: "success",
+      duration: 4000,
+    })
+
+    if (isNewUser) {
+      setShowCompanyCodeModal(true)
+    }
+    setPendingGoogleNavigation(true)
+    setGoogleLoading(false)
   }
 
   const handleResendEmail = async () => {
@@ -538,6 +586,13 @@ export const SignUpPage: React.FC = () => {
       />
 
       <PrivacyPolicyModal isOpen={showPrivacyModal} onClose={() => setShowPrivacyModal(false)} />
+
+      <CompanyCodeModal
+        isOpen={showCompanyCodeModal}
+        onClose={() => setShowCompanyCodeModal(false)}
+        onSkip={() => setShowCompanyCodeModal(false)}
+        onSuccess={() => setShowCompanyCodeModal(false)}
+      />
     </div>
   )
 }

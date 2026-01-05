@@ -20,6 +20,7 @@ import { useAuth } from '@/hooks/useAuth'
 import { PasswordChangeModal } from '@/components/PasswordChangeModal'
 import { getLandingPathForRole } from '@/utils/roleRouting'
 import { getFriendlyErrorMessage } from '@/utils/authErrors'
+import { GoogleIcon } from '@/components/icons/GoogleIcon'
 
 const GoogleIcon = () => (
   <svg width="20" height="20" viewBox="0 0 48 48" aria-hidden="true">
@@ -53,6 +54,8 @@ export const LoginPage: React.FC = () => {
   const [loading, setLoading] = useState(false)
   const [googleLoading, setGoogleLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [googleLoading, setGoogleLoading] = useState(false)
+  const [googleError, setGoogleError] = useState<string | null>(null)
 
   const [magicLinkSent, setMagicLinkSent] = useState(false)
   const [showPasswordChangeModal, setShowPasswordChangeModal] = useState(false)
@@ -306,6 +309,13 @@ export const LoginPage: React.FC = () => {
             <Alert status="error" borderRadius="md">
               <AlertIcon />
               {error}
+            </Alert>
+          )}
+
+          {googleError && (
+            <Alert status="error" borderRadius="md">
+              <AlertIcon />
+              {googleError}
             </Alert>
           )}
 

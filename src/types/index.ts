@@ -40,9 +40,11 @@ export interface UserProfile {
   role: StandardRole
   membershipStatus?: 'free' | 'paid'
   avatarUrl?: string
+  photoURL?: string
   bio?: string
   phoneNumber?: string
   linkedinUrl?: string
+  emailVerified?: boolean
   
   // Journey & Progress
   journeyType: "4W" | "6W" | "3M" | "6M" | "9M" | "12M";
@@ -57,9 +59,9 @@ export interface UserProfile {
   referredBy?: string | null
   
   // Organization
-  companyId?: string
-  companyCode?: string
-  companyName?: string
+  companyId?: string | null
+  companyCode?: string | null
+  companyName?: string | null
   villageId?: string
   clusterId?: string
   corporateVillageId?: string
