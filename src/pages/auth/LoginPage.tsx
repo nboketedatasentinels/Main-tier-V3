@@ -20,9 +20,10 @@ import { useAuth } from '@/hooks/useAuth'
 import { PasswordChangeModal } from '@/components/PasswordChangeModal'
 import { getLandingPathForRole } from '@/utils/roleRouting'
 import { getFriendlyErrorMessage } from '@/utils/authErrors'
+import { GoogleIcon } from '@/components/icons/GoogleIcon'
 
 export const LoginPage: React.FC = () => {
-  const { signIn, signInWithMagicLink, user, profile, profileLoading, refreshProfile } = useAuth()
+  const { signIn, signInWithMagicLink, signInWithGoogle, user, profile, profileLoading, refreshProfile } = useAuth()
   const navigate = useNavigate()
   const toast = useToast()
   const [searchParams] = useSearchParams()
@@ -31,6 +32,8 @@ export const LoginPage: React.FC = () => {
   const [password, setPassword] = useState('')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [googleLoading, setGoogleLoading] = useState(false)
+  const [googleError, setGoogleError] = useState<string | null>(null)
 
   const [magicLinkSent, setMagicLinkSent] = useState(false)
   const [showPasswordChangeModal, setShowPasswordChangeModal] = useState(false)
@@ -190,6 +193,35 @@ export const LoginPage: React.FC = () => {
     }
   }
 
+  const handleGoogleSignIn = async () => {
+    setError(null)
+    setGoogleError(null)
+    setGoogleLoading(true)
+
+    const { error: googleAuthError, linked } = await signInWithGoogle()
+    if (googleAuthError) {
+      const friendlyMessage = getFriendlyErrorMessage(googleAuthError)
+      setGoogleError(friendlyMessage)
+      toast({
+        title: 'Google sign-in failed',
+        description: friendlyMessage,
+        status: 'error',
+        duration: 5000,
+        isClosable: true,
+      })
+      setGoogleLoading(false)
+      return
+    }
+
+    toast({
+      title: linked ? 'Accounts linked' : 'Welcome back!',
+      description: linked ? 'Your Google account has been linked successfully.' : 'Signed in with Google successfully.',
+      status: 'success',
+      duration: 4000,
+    })
+    setGoogleLoading(false)
+  }
+
   const handlePasswordChangeSuccess = () => {
     setShowPasswordChangeModal(false)
   }
@@ -244,6 +276,13 @@ export const LoginPage: React.FC = () => {
             <Alert status="error" borderRadius="md">
               <AlertIcon />
               {error}
+            </Alert>
+          )}
+
+          {googleError && (
+            <Alert status="error" borderRadius="md">
+              <AlertIcon />
+              {googleError}
             </Alert>
           )}
 
@@ -319,6 +358,21 @@ export const LoginPage: React.FC = () => {
             size="lg"
           >
             Send Magic Link
+          </Button>
+
+          <Button
+            variant="outline"
+            onClick={handleGoogleSignIn}
+            isLoading={googleLoading}
+            loadingText="Connecting..."
+            size="lg"
+            bg="white"
+            color="gray.800"
+            borderColor="gray.200"
+            _hover={{ bg: 'gray.50' }}
+            leftIcon={<GoogleIcon className="h-4 w-4" />}
+          >
+            Continue with Google
           </Button>
 
           <VStack spacing={2}>

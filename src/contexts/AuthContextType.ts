@@ -22,6 +22,7 @@ export interface AuthContextType {
   ) => Promise<{ error: Error | null; userId?: string }>
   signOut: () => Promise<void>
   signInWithMagicLink: (email: string) => Promise<{ error: Error | null }>
+  signInWithGoogle: () => Promise<{ error: Error | null; isNewUser?: boolean; linked?: boolean }>
   resetPassword: (email: string) => Promise<{ error: Error | null }>
   updateProfile: (updates: Partial<UserProfile>) => Promise<{ error: Error | null }>
   hasRole: (role: StandardRole) => boolean

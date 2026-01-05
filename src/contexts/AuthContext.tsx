@@ -2,15 +2,19 @@ import React, { useCallback, useEffect, useState } from 'react'
 import { FirebaseError } from 'firebase/app'
 import { User } from 'firebase/auth'
 import {
+  GoogleAuthProvider,
   signInWithEmailAndPassword,
+  signInWithPopup,
   signOut as firebaseSignOut,
   sendPasswordResetEmail,
   onAuthStateChanged,
   createUserWithEmailAndPassword,
   sendEmailVerification,
   deleteUser,
+  linkWithCredential,
+  fetchSignInMethodsForEmail,
 } from 'firebase/auth'
-import { doc, getDoc, setDoc, serverTimestamp, onSnapshot } from 'firebase/firestore'
+import { doc, getDoc, setDoc, serverTimestamp, onSnapshot, updateDoc } from 'firebase/firestore'
 
 import {
   UserProfile,
@@ -159,13 +163,34 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
           console.warn('🟠 [Auth] Invalid role detected:', mergedUser.role)
         }
 
+        const profileUpdates: Partial<UserProfile> = {}
+        if (firebaseUser.photoURL && !mergedUser.avatarUrl) {
+          profileUpdates.avatarUrl = firebaseUser.photoURL
+          profileUpdates.photoURL = firebaseUser.photoURL
+        }
+        if (firebaseUser.emailVerified && !mergedUser.emailVerified) {
+          profileUpdates.emailVerified = true
+        }
+
+        if (Object.keys(profileUpdates).length > 0) {
+          try {
+            await updateDoc(userDocRef, {
+              ...profileUpdates,
+              updatedAt: serverTimestamp(),
+            })
+            mergedUser = { ...mergedUser, ...profileUpdates }
+          } catch (updateError) {
+            console.warn('🟠 [Auth] Unable to update profile extras from Google account', updateError)
+          }
+        }
+
         return mergedUser
       }
 
       /* ---------------- Create profile ---------------- */
       const role = isBootstrapAdmin(firebaseUser.email)
         ? UserRole.SUPER_ADMIN
-        : UserRole.USER
+        : UserRole.FREE_USER
 
       console.log('🟣 [Auth] Creating new profile with role:', role)
 
@@ -175,6 +200,9 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         firstName: firebaseUser.displayName?.split(' ')?.[0] ?? 'User',
         lastName: firebaseUser.displayName?.split(' ')?.slice(1).join(' ') ?? '',
         fullName: firebaseUser.displayName ?? 'User',
+        avatarUrl: firebaseUser.photoURL ?? undefined,
+        photoURL: firebaseUser.photoURL ?? undefined,
+        emailVerified: firebaseUser.emailVerified,
         role,
         membershipStatus: 'free',
         totalPoints: 0,
@@ -187,6 +215,9 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         accountStatus: AccountStatus.ACTIVE,
         transformationTier: TransformationTier.INDIVIDUAL_FREE,
         assignedOrganizations: [],
+        companyCode: null,
+        companyId: null,
+        companyName: null,
         onboardingComplete: false,
         onboardingSkipped: false,
         mustChangePassword: false,
@@ -392,6 +423,96 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     return { error: new Error('Magic link sign-in is currently disabled') }
   }
 
+  const signInWithGoogle = async () => {
+    console.log('🟡 [Auth] signInWithGoogle:start')
+    setLoading(true)
+    setProfileLoading(true)
+
+    const configError = ensureFirebaseConfigured()
+    if (configError) {
+      console.error('🔴 [Auth] signInWithGoogle blocked due to missing Firebase config', {
+        missingKeys: firebaseConfigStatus.missingKeys,
+      })
+      setLoading(false)
+      setProfileLoading(false)
+      return { error: configError }
+    }
+
+    const provider = new GoogleAuthProvider()
+    provider.addScope('profile')
+    provider.addScope('email')
+
+    try {
+      const result = await signInWithPopup(auth, provider)
+      const firebaseUser = result.user
+      const isNewUser = result.additionalUserInfo?.isNewUser ?? false
+
+      const resolvedProfile = await fetchOrCreateUserDoc(firebaseUser)
+      if (resolvedProfile) {
+        setProfile(resolvedProfile)
+        recordProfileLoad(resolvedProfile)
+      }
+
+      setLoading(false)
+      setProfileLoading(false)
+      return { error: null, isNewUser }
+    } catch (error) {
+      const firebaseError = error as FirebaseError & {
+        customData?: { email?: string }
+      }
+
+      if (firebaseError.code === 'auth/account-exists-with-different-credential') {
+        const pendingCredential = GoogleAuthProvider.credentialFromError(firebaseError)
+        const email = firebaseError.customData?.email
+        if (email) {
+          try {
+            const methods = await fetchSignInMethodsForEmail(auth, email)
+            if (methods.includes('password') && auth.currentUser?.email === email && pendingCredential) {
+              const linkResult = await linkWithCredential(auth.currentUser, pendingCredential)
+              const linkedProfile = await fetchOrCreateUserDoc(linkResult.user)
+              if (linkedProfile) {
+                setProfile(linkedProfile)
+                recordProfileLoad(linkedProfile)
+              }
+              setLoading(false)
+              setProfileLoading(false)
+              return { error: null, isNewUser: false, linked: true }
+            }
+
+            const linkingMessage = methods.includes('password')
+              ? 'An account with this email already exists. Sign in with your password first to link Google.'
+              : 'An account with this email already exists with a different sign-in method.'
+            setLoading(false)
+            setProfileLoading(false)
+            return { error: new Error(linkingMessage) }
+          } catch (linkingError) {
+            const friendlyMessage = getFriendlyErrorMessage(linkingError)
+            setLoading(false)
+            setProfileLoading(false)
+            return { error: new Error(friendlyMessage) }
+          }
+        }
+      }
+
+      if (firebaseError.code === 'auth/credential-already-in-use') {
+        const friendlyMessage = getFriendlyErrorMessage(firebaseError)
+        setLoading(false)
+        setProfileLoading(false)
+        return { error: new Error(friendlyMessage) }
+      }
+
+      console.error('🔴 [Auth] signInWithGoogle failed', error)
+      const friendlyMessage = getFriendlyErrorMessage(error)
+      const normalizedError =
+        error instanceof Error && error.message === friendlyMessage
+          ? error
+          : new Error(friendlyMessage)
+      setLoading(false)
+      setProfileLoading(false)
+      return { error: normalizedError }
+    }
+  }
+
   const signUp = async (
     email: string,
     password: string,
@@ -578,9 +699,23 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     }
   }
 
-  const updateProfile = async (_updates: Partial<UserProfile>) => {
-    console.warn('🟠 [Auth] updateProfile stub invoked')
-    return { error: null }
+  const updateProfile = async (updates: Partial<UserProfile>) => {
+    if (!user) {
+      return { error: new Error('No authenticated user available to update') }
+    }
+
+    try {
+      await updateDoc(doc(db, 'users', user.uid), {
+        ...updates,
+        updatedAt: serverTimestamp(),
+      })
+      setProfile((prev) => (prev ? { ...prev, ...updates } : prev))
+      return { error: null }
+    } catch (error) {
+      console.error('🔴 [Auth] updateProfile failed', error)
+      const friendlyMessage = getFriendlyErrorMessage(error)
+      return { error: new Error(friendlyMessage) }
+    }
   }
 
   const refreshProfile = async () => {
@@ -635,6 +770,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     signUp,
     signOut,
     signInWithMagicLink,
+    signInWithGoogle,
     resetPassword,
     updateProfile,
     hasRole: (r: StandardRole) => normalizedRole === r,
