@@ -25,9 +25,30 @@ interface FormData {
   acceptTerms: boolean
 }
 
+const GoogleIcon = () => (
+  <svg width="18" height="18" viewBox="0 0 48 48" aria-hidden="true">
+    <path
+      fill="#EA4335"
+      d="M24 9.5c3.26 0 6.2 1.12 8.5 3.32l6.33-6.33C34.92 2.52 29.84 0 24 0 14.64 0 6.68 5.38 2.7 13.22l7.38 5.73C12.04 13.12 17.55 9.5 24 9.5z"
+    />
+    <path
+      fill="#4285F4"
+      d="M46.14 24.55c0-1.59-.14-3.11-.41-4.55H24v8.62h12.44c-.54 2.9-2.21 5.36-4.7 7.02l7.2 5.58c4.22-3.9 6.2-9.64 6.2-16.67z"
+    />
+    <path
+      fill="#FBBC05"
+      d="M10.08 28.95A14.43 14.43 0 019.2 24c0-1.71.3-3.35.88-4.95l-7.38-5.73A23.94 23.94 0 000 24c0 3.87.92 7.54 2.7 10.78l7.38-5.83z"
+    />
+    <path
+      fill="#34A853"
+      d="M24 48c6.48 0 11.92-2.14 15.89-5.78l-7.2-5.58c-2 1.35-4.55 2.16-8.69 2.16-6.45 0-11.96-3.62-13.92-8.84L2.7 40.78C6.68 48.62 14.64 48 24 48z"
+    />
+  </svg>
+)
+
 export const SignUpPage: React.FC = () => {
   const navigate = useNavigate()
-  const { signUp, signInWithGoogle, profile, user, profileLoading } = useAuth()
+  const { signUp, signInWithGoogle, profile } = useAuth()
   const toast = useToast()
 
   const [formData, setFormData] = useState<FormData>({
@@ -41,6 +62,7 @@ export const SignUpPage: React.FC = () => {
   })
 
   const [loading, setLoading] = useState(false)
+  const [googleLoading, setGoogleLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [successMessage, setSuccessMessage] = useState<string | null>(null)
   const [googleLoading, setGoogleLoading] = useState(false)
@@ -256,6 +278,45 @@ export const SignUpPage: React.FC = () => {
     }
   }
 
+  const handleGoogleSignUp = async () => {
+    setError(null)
+    setSuccessMessage(null)
+
+    if (!formData.acceptTerms) {
+      setError("You must accept the Terms of Use and Privacy Policy.")
+      return
+    }
+
+    setGoogleLoading(true)
+    try {
+      const { error: googleError, isNewUser, redirect } = await signInWithGoogle()
+      if (googleError) {
+        setError(getFriendlyErrorMessage(googleError))
+        return
+      }
+
+      if (redirect) {
+        return
+      }
+
+      const currentUser = auth.currentUser
+      if (currentUser?.uid && isNewUser) {
+        localStorage.setItem(`t4l.newUserWelcome.${currentUser.uid}`, "pending")
+      }
+
+      toast({
+        title: "Signed in with Google!",
+        description: "Welcome to Man-Tier.",
+        status: "success",
+        duration: 5000,
+      })
+    } catch (err) {
+      setError(getFriendlyErrorMessage(err))
+    } finally {
+      setGoogleLoading(false)
+    }
+  }
+
   if (pendingEmailVerification) {
     return (
       <div className="w-full">
@@ -334,27 +395,17 @@ export const SignUpPage: React.FC = () => {
         <button
           type="button"
           onClick={handleGoogleSignUp}
-          className="flex w-full items-center justify-center gap-3 rounded-xl border border-gray-200 bg-white px-4 py-3 text-sm font-semibold text-gray-700 shadow-sm transition hover:bg-gray-50 disabled:opacity-60"
           disabled={googleLoading}
+          className="inline-flex h-10 w-full items-center justify-center gap-2 rounded-md border border-gray-200 bg-white text-sm font-medium text-gray-800 shadow-sm hover:bg-gray-50 disabled:opacity-60"
         >
-          {googleLoading ? (
-            <Spinner size="sm" />
-          ) : (
-            <GoogleIcon className="h-4 w-4" />
-          )}
-          Continue with Google
+          <GoogleIcon />
+          {googleLoading ? "Connecting Google..." : "Continue with Google"}
         </button>
 
-        {googleError && (
-          <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
-            {googleError}
-          </div>
-        )}
-
-        <div className="flex items-center gap-3">
-          <div className="h-px flex-1 bg-gray-200" />
-          <span className="text-xs font-semibold uppercase text-gray-400">OR</span>
-          <div className="h-px flex-1 bg-gray-200" />
+        <div className="flex items-center gap-3 text-xs text-gray-500">
+          <span className="h-px flex-1 bg-gray-200" />
+          <span>or sign up with email</span>
+          <span className="h-px flex-1 bg-gray-200" />
         </div>
 
         <div>

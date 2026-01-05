@@ -11,11 +11,11 @@ const errorMessages: Record<string, string> = {
   'auth/invalid-credential': 'Invalid email or password. Please try again or reset your password',
   'auth/too-many-requests': 'Too many attempts. Please try again later',
   'auth/operation-not-allowed': 'This sign in method is currently disabled',
-  'auth/popup-blocked': 'Popup was blocked. Please allow popups for this site and try again',
-  'auth/cancelled-popup-request': 'Sign-in popup was closed before completing. Please try again',
-  'auth/popup-closed-by-user': 'Sign-in popup was closed before completing. Please try again',
-  'auth/account-exists-with-different-credential': 'An account already exists with this email using a different sign-in method',
-  'auth/credential-already-in-use': 'These credentials are already linked to another account',
+  'auth/popup-closed-by-user': 'Sign-in popup closed before completing. Please try again',
+  'auth/popup-blocked': 'Sign-in popup was blocked. Please allow popups and try again',
+  'auth/cancelled-popup-request': 'Sign-in popup was cancelled. Please try again',
+  'auth/account-exists-with-different-credential':
+    'An account already exists with this email using a different sign-in method. Please sign in with that method and link Google in your profile',
 }
 
 export const getFriendlyErrorMessage = (error: unknown): string => {

@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react'
 import { Link as RouterLink, useNavigate } from 'react-router-dom'
-import { Crown, Lock, Menu, Star, X } from 'lucide-react'
+import { Crown, Lock, Menu, X } from 'lucide-react'
 import { useAuth } from '@/hooks/useAuth'
 import { UserRole } from '@/types'
 
@@ -10,11 +10,6 @@ type HeaderProps = {
 
 function clamp(n: number, min: number, max: number) {
   return Math.max(min, Math.min(max, n))
-}
-
-function formatNumber(n?: number | null) {
-  if (typeof n !== 'number') return '0'
-  return n.toLocaleString()
 }
 
 export const Header: React.FC<HeaderProps> = ({ topOffset = '0' }) => {
@@ -29,9 +24,6 @@ export const Header: React.FC<HeaderProps> = ({ topOffset = '0' }) => {
 
   const isAuthed = !!user
   const role = profile?.role
-  const points = profile?.totalPoints ?? 0
-  const level = profile?.level ?? 1
-
   const showUpgrade = isAuthed && role === UserRole.FREE_USER
 
   const collapseProgress = useMemo(() => clamp(scrollY / 120, 0, 1), [scrollY])
@@ -159,17 +151,6 @@ export const Header: React.FC<HeaderProps> = ({ topOffset = '0' }) => {
           </div>
 
           <div className="hidden md:flex items-center gap-3">
-            {!loading && isAuthed && (
-              <div
-                className={`inline-flex items-center gap-2 rounded-full px-3 py-1 text-sm ${
-                  scrollY > 20 ? 'bg-neutral-100 text-neutral-700' : 'bg-white/15 text-white backdrop-blur'
-                }`}
-              >
-                <Star className="h-4 w-4 text-[#EAB130]" />
-                <span className="font-medium">{formatNumber(points)} pts · Lv {level}</span>
-              </div>
-            )}
-
             {!loading && showUpgrade && (
               <button
                 type="button"
@@ -216,12 +197,6 @@ export const Header: React.FC<HeaderProps> = ({ topOffset = '0' }) => {
           ref={dialogRef}
         >
           <div className="mx-auto max-w-6xl px-4 py-6 space-y-4">
-            {isAuthed && (
-              <div className="mx-auto w-full max-w-sm rounded-2xl bg-[#FFF7E6] px-4 py-3 text-center">
-                <div className="text-sm font-semibold text-[#27062e]">{formatNumber(points)} pts • Level {level}</div>
-              </div>
-            )}
-
             <div className="space-y-3">
               {showUpgrade && (
                 <button

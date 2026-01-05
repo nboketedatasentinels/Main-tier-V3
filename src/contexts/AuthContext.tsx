@@ -11,8 +11,10 @@ import {
   createUserWithEmailAndPassword,
   sendEmailVerification,
   deleteUser,
-  linkWithCredential,
-  fetchSignInMethodsForEmail,
+  GoogleAuthProvider,
+  signInWithPopup,
+  signInWithRedirect,
+  getAdditionalUserInfo,
 } from 'firebase/auth'
 import { doc, getDoc, setDoc, serverTimestamp, onSnapshot, updateDoc } from 'firebase/firestore'
 
@@ -68,6 +70,17 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       setClaimsRole(null)
     }
   }, [])
+
+  const getNameParts = (displayName?: string | null, email?: string | null) => {
+    const fallbackBase = email?.split('@')?.[0] || 'User'
+    const cleanedName = displayName?.trim() || fallbackBase
+    const parts = cleanedName.split(/\s+/).filter(Boolean)
+    return {
+      firstName: parts[0] || 'User',
+      lastName: parts.slice(1).join(' '),
+      fullName: cleanedName,
+    }
+  }
 
   const fetchProfileOnce = async (uid: string): Promise<UserProfile | null> => {
     try {
@@ -191,20 +204,22 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       const role = isBootstrapAdmin(firebaseUser.email)
         ? UserRole.SUPER_ADMIN
         : UserRole.FREE_USER
+      const { firstName, lastName, fullName } = getNameParts(
+        firebaseUser.displayName,
+        firebaseUser.email
+      )
 
       console.log('🟣 [Auth] Creating new profile with role:', role)
 
       const profileData: UserProfile = {
         id: firebaseUser.uid,
         email: firebaseUser.email ?? '',
-        firstName: firebaseUser.displayName?.split(' ')?.[0] ?? 'User',
-        lastName: firebaseUser.displayName?.split(' ')?.slice(1).join(' ') ?? '',
-        fullName: firebaseUser.displayName ?? 'User',
-        avatarUrl: firebaseUser.photoURL ?? undefined,
-        photoURL: firebaseUser.photoURL ?? undefined,
-        emailVerified: firebaseUser.emailVerified,
+        firstName,
+        lastName,
+        fullName,
         role,
         membershipStatus: 'free',
+        ...(firebaseUser.photoURL ? { avatarUrl: firebaseUser.photoURL } : {}),
         totalPoints: 0,
         level: 1,
         journeyType: '4W',
@@ -224,7 +239,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         hasSeenDashboardTour: false,
         dashboardPreferences: {
           defaultRoute: '/app/weekly-glance',
-          lockedToFreeExperience: normalizeRole(role) === 'user',
+          lockedToFreeExperience: ['user', 'free_user'].includes(normalizeRole(role)),
         },
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
@@ -232,6 +247,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
       await setDoc(userDocRef, {
         ...profileData,
+        ...(firebaseUser.photoURL ? { avatarUrl: firebaseUser.photoURL } : {}),
         createdAt: serverTimestamp(),
         updatedAt: serverTimestamp(),
       })
@@ -439,69 +455,38 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     }
 
     const provider = new GoogleAuthProvider()
-    provider.addScope('profile')
     provider.addScope('email')
+    provider.addScope('profile')
 
     try {
-      const result = await signInWithPopup(auth, provider)
-      const firebaseUser = result.user
-      const isNewUser = result.additionalUserInfo?.isNewUser ?? false
-
-      const resolvedProfile = await fetchOrCreateUserDoc(firebaseUser)
-      if (resolvedProfile) {
-        setProfile(resolvedProfile)
-        recordProfileLoad(resolvedProfile)
-      }
-
-      setLoading(false)
-      setProfileLoading(false)
-      return { error: null, isNewUser }
+      const credential = await signInWithPopup(auth, provider)
+      const additionalInfo = getAdditionalUserInfo(credential)
+      console.log('🟢 [Auth] signInWithGoogle success', {
+        uid: credential.user.uid,
+        isNewUser: additionalInfo?.isNewUser,
+      })
+      return { error: null, isNewUser: additionalInfo?.isNewUser }
     } catch (error) {
-      const firebaseError = error as FirebaseError & {
-        customData?: { email?: string }
-      }
+      console.error('🔴 [Auth] signInWithGoogle failed', error)
 
-      if (firebaseError.code === 'auth/account-exists-with-different-credential') {
-        const pendingCredential = GoogleAuthProvider.credentialFromError(firebaseError)
-        const email = firebaseError.customData?.email
-        if (email) {
-          try {
-            const methods = await fetchSignInMethodsForEmail(auth, email)
-            if (methods.includes('password') && auth.currentUser?.email === email && pendingCredential) {
-              const linkResult = await linkWithCredential(auth.currentUser, pendingCredential)
-              const linkedProfile = await fetchOrCreateUserDoc(linkResult.user)
-              if (linkedProfile) {
-                setProfile(linkedProfile)
-                recordProfileLoad(linkedProfile)
-              }
-              setLoading(false)
-              setProfileLoading(false)
-              return { error: null, isNewUser: false, linked: true }
-            }
-
-            const linkingMessage = methods.includes('password')
-              ? 'An account with this email already exists. Sign in with your password first to link Google.'
-              : 'An account with this email already exists with a different sign-in method.'
-            setLoading(false)
-            setProfileLoading(false)
-            return { error: new Error(linkingMessage) }
-          } catch (linkingError) {
-            const friendlyMessage = getFriendlyErrorMessage(linkingError)
-            setLoading(false)
-            setProfileLoading(false)
-            return { error: new Error(friendlyMessage) }
-          }
+      if (error instanceof FirebaseError && error.code === 'auth/popup-blocked') {
+        console.warn('🟠 [Auth] Popup blocked. Falling back to redirect sign-in.')
+        try {
+          await signInWithRedirect(auth, provider)
+          return { error: null, redirect: true }
+        } catch (redirectError) {
+          console.error('🔴 [Auth] signInWithRedirect failed', redirectError)
+          const friendlyMessage = getFriendlyErrorMessage(redirectError)
+          const normalizedError =
+            redirectError instanceof Error && redirectError.message === friendlyMessage
+              ? redirectError
+              : new Error(friendlyMessage)
+          setLoading(false)
+          setProfileLoading(false)
+          return { error: normalizedError }
         }
       }
 
-      if (firebaseError.code === 'auth/credential-already-in-use') {
-        const friendlyMessage = getFriendlyErrorMessage(firebaseError)
-        setLoading(false)
-        setProfileLoading(false)
-        return { error: new Error(friendlyMessage) }
-      }
-
-      console.error('🔴 [Auth] signInWithGoogle failed', error)
       const friendlyMessage = getFriendlyErrorMessage(error)
       const normalizedError =
         error instanceof Error && error.message === friendlyMessage
