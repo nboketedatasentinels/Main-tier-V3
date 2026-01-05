@@ -7,6 +7,8 @@ interface GoogleIconProps {
 export const GoogleIcon: React.FC<GoogleIconProps> = ({ className }) => (
   <svg
     className={className}
+    width="20"
+    height="20"
     viewBox="0 0 533.5 544.3"
     aria-hidden="true"
     focusable="false"
