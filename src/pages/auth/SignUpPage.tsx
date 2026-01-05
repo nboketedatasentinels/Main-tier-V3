@@ -27,7 +27,7 @@ interface FormData {
 
 export const SignUpPage: React.FC = () => {
   const navigate = useNavigate()
-  const { signUp, signInWithGoogle, profile } = useAuth()
+  const { signUp, signInWithGoogle, profile, profileLoading, user } = useAuth()
   const toast = useToast()
 
   const [formData, setFormData] = useState<FormData>({
@@ -44,7 +44,6 @@ export const SignUpPage: React.FC = () => {
   const [googleLoading, setGoogleLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [successMessage, setSuccessMessage] = useState<string | null>(null)
-  const [googleError, setGoogleError] = useState<string | null>(null)
   const [showPassword, setShowPassword] = useState(false)
   const [companyCodeValid, setCompanyCodeValid] = useState<boolean | null>(null)
   const [companyCodeError, setCompanyCodeError] = useState<string | null>(null)
@@ -194,40 +193,6 @@ export const SignUpPage: React.FC = () => {
     setPendingGoogleNavigation(false)
     navigate(getLandingPathForRole(profile ?? UserRole.FREE_USER), { replace: true })
   }, [pendingGoogleNavigation, profileLoading, profile, showCompanyCodeModal, navigate, user])
-
-  const handleGoogleSignUp = async () => {
-    setError(null)
-    setGoogleError(null)
-    setGoogleLoading(true)
-    const { error: googleAuthError, isNewUser, linked } = await signInWithGoogle()
-    if (googleAuthError) {
-      const friendlyMessage = getFriendlyErrorMessage(googleAuthError)
-      setGoogleError(friendlyMessage)
-      toast({
-        title: "Google sign-in failed",
-        description: friendlyMessage,
-        status: "error",
-        duration: 5000,
-      })
-      setGoogleLoading(false)
-      return
-    }
-
-    toast({
-      title: linked ? "Accounts linked" : "Welcome!",
-      description: linked
-        ? "Your Google account has been linked to your existing profile."
-        : "Signed in with Google successfully.",
-      status: "success",
-      duration: 4000,
-    })
-
-    if (isNewUser) {
-      setShowCompanyCodeModal(true)
-    }
-    setPendingGoogleNavigation(true)
-    setGoogleLoading(false)
-  }
 
   const handleResendEmail = async () => {
     setError(null)
