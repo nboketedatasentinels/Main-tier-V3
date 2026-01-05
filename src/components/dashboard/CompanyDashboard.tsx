@@ -588,14 +588,6 @@ export const CompanyDashboard: React.FC = () => {
                   <Text color="gray.500" fontSize="sm" mt={1}>
                     Deterministic weekly match based on your company cohort
                   </Text>
-                  <Button
-                    mt={3}
-                    variant="outline"
-                    colorScheme="blue"
-                    onClick={() => navigate('/app/peer-connect?peerTab=sessions')}
-                  >
-                    Open Peer Connect
-                  </Button>
                 </>
               ) : (
                 <>
@@ -605,9 +597,6 @@ export const CompanyDashboard: React.FC = () => {
                   <Text color="gray.500" fontSize="sm" mt={1}>
                     Weekly matching activates once you join a corporate village.
                   </Text>
-                  <Button mt={3} variant="outline" colorScheme="blue" onClick={() => navigate('/app/peer-connect?peerTab=sessions')}>
-                    Open Peer Connect
-                  </Button>
                 </>
               )}
             </CardBody>
