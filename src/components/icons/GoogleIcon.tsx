@@ -2,13 +2,19 @@ import React from 'react'
 
 interface GoogleIconProps {
   className?: string
+  width?: number | string
+  height?: number | string
 }
 
-export const GoogleIcon: React.FC<GoogleIconProps> = ({ className }) => (
+export const GoogleIcon: React.FC<GoogleIconProps> = ({
+  className,
+  width = 20,
+  height = 20,
+}) => (
   <svg
     className={className}
-    width="20"
-    height="20"
+    width={width}
+    height={height}
     viewBox="0 0 533.5 544.3"
     aria-hidden="true"
     focusable="false"
