@@ -51,6 +51,7 @@ interface EditOrganizationModalProps {
   onClose: () => void
   organization?: OrganizationRecord | null
   onUpdated?: (organization: OrganizationRecord) => void
+  partnerAssignmentCounts?: Record<string, number>
 }
 
 const programDurations: ProgramDurationOption[] = [
@@ -78,6 +79,7 @@ export const EditOrganizationModal: React.FC<EditOrganizationModalProps> = ({
   onClose,
   organization,
   onUpdated,
+  partnerAssignmentCounts,
 }) => {
   const toast = useToast()
   const [form, setForm] = useState<OrganizationRecord>(emptyOrganization)
@@ -87,6 +89,7 @@ export const EditOrganizationModal: React.FC<EditOrganizationModalProps> = ({
   const [partners, setPartners] = useState<OrganizationLead[]>([])
   const [isLoading, setIsLoading] = useState(false)
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const [partnerSearch, setPartnerSearch] = useState('')
 
   const courseLimit = useMemo(() => {
     const option = programDurations.find((duration) => duration.value === form.programDuration)
@@ -96,6 +99,27 @@ export const EditOrganizationModal: React.FC<EditOrganizationModalProps> = ({
   const remainingCourses = courseLimit - (form.courseAssignments?.length || 0)
   const codeLength = form.code.trim().length
   const isCodeValidLength = codeLength === 6
+
+  const sortedPartners = useMemo(
+    () => [...partners].sort((a, b) => a.name.localeCompare(b.name)),
+    [partners],
+  )
+
+  const filteredPartners = useMemo(() => {
+    const term = partnerSearch.trim().toLowerCase()
+    if (!term) return sortedPartners
+    return sortedPartners.filter((item) => {
+      const email = item.email?.toLowerCase() ?? ''
+      return item.name.toLowerCase().includes(term) || email.includes(term)
+    })
+  }, [partnerSearch, sortedPartners])
+
+  const buildPartnerLabel = (item: OrganizationLead) => {
+    const emailSuffix = item.email ? ` — ${item.email}` : ''
+    const assignmentCount = partnerAssignmentCounts?.[item.name] ?? 0
+    const countSuffix = assignmentCount > 1 ? ` • ${assignmentCount} orgs` : ''
+    return `${item.name}${emailSuffix}${countSuffix}`
+  }
 
   useEffect(() => {
     if (!isOpen) {
@@ -333,22 +357,33 @@ export const EditOrganizationModal: React.FC<EditOrganizationModalProps> = ({
                 <GridItem>
                   <FormControl>
                     <FormLabel>Transformation partner</FormLabel>
+                    <Input
+                      value={partnerSearch}
+                      onChange={(e) => setPartnerSearch(e.target.value)}
+                      placeholder="Search partners"
+                      mb={2}
+                    />
                     <Select
                       placeholder="Select partner"
                       value={form.assignedPartnerId || ''}
                       onChange={(e) => {
-                        const partner = partners.find((item) => item.id === e.target.value)
-                        updateField('assignedPartnerId', e.target.value || null)
+                        const selectedId = e.target.value
+                        const partner = partners.find((item) => item.id === selectedId)
+                        updateField('assignedPartnerId', selectedId || null)
                         updateField('assignedPartnerName', partner?.name || null)
                         updateField('assignedPartnerEmail', partner?.email || null)
                       }}
                     >
-                      {partners.map((partner) => (
+                      <option value="">— No partner —</option>
+                      {filteredPartners.map((partner) => (
                         <option key={partner.id} value={partner.id}>
-                          {partner.name}
+                          {buildPartnerLabel(partner)}
                         </option>
                       ))}
                     </Select>
+                    {!filteredPartners.length && (
+                      <FormHelperText color="gray.600">No partners available.</FormHelperText>
+                    )}
                   </FormControl>
                 </GridItem>
                 <GridItem colSpan={2}>

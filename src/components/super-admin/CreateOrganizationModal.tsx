@@ -64,6 +64,7 @@ interface CreateOrganizationModalProps {
   adminName?: string
   adminId?: string
   partners?: { id: string; name: string; email?: string }[]
+  partnerAssignmentCounts?: Record<string, number>
 }
 
 const programDurations: ProgramDurationOption[] = [
@@ -101,6 +102,7 @@ export const CreateOrganizationModal: React.FC<CreateOrganizationModalProps> = (
   adminId,
   adminName,
   partners = [],
+  partnerAssignmentCounts,
 }) => {
   const toast = useToast()
   const [form, setForm] = useState<OrganizationRecord>(emptyOrganization)
@@ -110,6 +112,7 @@ export const CreateOrganizationModal: React.FC<CreateOrganizationModalProps> = (
   const [mentors, setMentors] = useState<OrganizationLead[]>([])
   const [ambassadors, setAmbassadors] = useState<OrganizationLead[]>([])
   const [results, setResults] = useState<BulkInvitationResult | null>(null)
+  const [partnerSearch, setPartnerSearch] = useState('')
   const resultsModal = useDisclosure()
   const fileInputRef = useRef<HTMLInputElement | null>(null)
 
@@ -121,6 +124,27 @@ export const CreateOrganizationModal: React.FC<CreateOrganizationModalProps> = (
   const remainingCourses = courseLimit - (form.courseAssignments?.length || 0)
   const codeLength = form.code.trim().length
   const isCodeValidLength = codeLength === 6
+
+  const sortedPartners = useMemo(
+    () => [...partners].sort((a, b) => a.name.localeCompare(b.name)),
+    [partners],
+  )
+
+  const filteredPartners = useMemo(() => {
+    const term = partnerSearch.trim().toLowerCase()
+    if (!term) return sortedPartners
+    return sortedPartners.filter((item) => {
+      const email = item.email?.toLowerCase() ?? ''
+      return item.name.toLowerCase().includes(term) || email.includes(term)
+    })
+  }, [partnerSearch, sortedPartners])
+
+  const buildPartnerLabel = (item: OrganizationLead) => {
+    const emailSuffix = item.email ? ` — ${item.email}` : ''
+    const assignmentCount = partnerAssignmentCounts?.[item.name] ?? 0
+    const countSuffix = assignmentCount > 1 ? ` • ${assignmentCount} orgs` : ''
+    return `${item.name}${emailSuffix}${countSuffix}`
+  }
 
   useEffect(() => {
     if (form.name && !form.code) {
@@ -415,6 +439,12 @@ export const CreateOrganizationModal: React.FC<CreateOrganizationModalProps> = (
                 <GridItem>
                   <FormControl>
                     <FormLabel>Transformation partner</FormLabel>
+                    <Input
+                      value={partnerSearch}
+                      onChange={(e) => setPartnerSearch(e.target.value)}
+                      placeholder="Search partners"
+                      mb={2}
+                    />
                     <Select
                       placeholder="Select partner"
                       value={form.assignedPartnerId || ''}
@@ -425,12 +455,16 @@ export const CreateOrganizationModal: React.FC<CreateOrganizationModalProps> = (
                         updateField('assignedPartnerEmail', partner?.email || null)
                       }}
                     >
-                      {partners.map((partner) => (
+                      <option value="">— No partner —</option>
+                      {filteredPartners.map((partner) => (
                         <option key={partner.id} value={partner.id}>
-                          {partner.name}
+                          {buildPartnerLabel(partner)}
                         </option>
                       ))}
                     </Select>
+                    {!filteredPartners.length && (
+                      <FormHelperText color="gray.600">No partners available.</FormHelperText>
+                    )}
                   </FormControl>
                 </GridItem>
                 <GridItem colSpan={2}>

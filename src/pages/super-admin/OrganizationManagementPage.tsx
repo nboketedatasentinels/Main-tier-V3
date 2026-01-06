@@ -44,7 +44,7 @@ import {
   fetchOrganizations,
   logAdminAction,
 } from '@/services/superAdminService'
-import { OrganizationMemberStats, OrganizationRecord } from '@/types/admin'
+import { OrganizationLead, OrganizationMemberStats, OrganizationRecord } from '@/types/admin'
 
 type SortKey = keyof Pick<OrganizationRecord, 'name' | 'code' | 'teamSize' | 'status' | 'transformationPartner'>
 
@@ -66,8 +66,9 @@ export const OrganizationManagementPage: React.FC<OrganizationManagementPageProp
   const [selectedOrg, setSelectedOrg] = useState<OrganizationRecord | null>(null)
   const [viewOrg, setViewOrg] = useState<OrganizationRecord | null>(null)
   const [pendingDelete, setPendingDelete] = useState<OrganizationRecord | null>(null)
-  const [partners, setPartners] = useState<{ id: string; name: string; email?: string }[]>([])
-  const [, setIsLoadingPartners] = useState(false)
+  const [partners, setPartners] = useState<OrganizationLead[]>([])
+  const [isLoadingPartners, setIsLoadingPartners] = useState(false)
+  const [partnersError, setPartnersError] = useState<string | null>(null)
   const [memberStats, setMemberStats] = useState<OrganizationMemberStats | null>(null)
   const [isLoadingStats, setIsLoadingStats] = useState(false)
 
@@ -97,11 +98,13 @@ export const OrganizationManagementPage: React.FC<OrganizationManagementPageProp
   useEffect(() => {
     const loadPartners = async () => {
       setIsLoadingPartners(true)
+      setPartnersError(null)
       try {
-      const partnerOptions = await fetchPartners()
-      setPartners(partnerOptions)
+        const partnerOptions = await fetchPartners()
+        setPartners(partnerOptions)
       } catch (err) {
         console.error(err)
+        setPartnersError('Unable to load partners.')
         toast({ title: 'Unable to load partners', status: 'error' })
       } finally {
         setIsLoadingPartners(false)
@@ -205,6 +208,16 @@ export const OrganizationManagementPage: React.FC<OrganizationManagementPageProp
       return aVal < bVal ? 1 : -1
     })
   }, [filteredOrganizations, sortDir, sortKey])
+
+  const partnerAssignmentCounts = useMemo(() => {
+    return organizations.reduce((acc, org) => {
+      const key = (org.assignedPartnerName || org.transformationPartner || '').trim()
+      if (key) {
+        acc[key] = (acc[key] || 0) + 1
+      }
+      return acc
+    }, {} as Record<string, number>)
+  }, [organizations])
 
   const paginatedOrganizations = useMemo(() => {
     const start = (page - 1) * pageSize
@@ -427,6 +440,7 @@ export const OrganizationManagementPage: React.FC<OrganizationManagementPageProp
         adminId={adminId}
         adminName={adminName}
         partners={partners}
+        partnerAssignmentCounts={partnerAssignmentCounts}
       />
       <OrganizationDetailsModal
         isOpen={viewModal.isOpen}
@@ -444,6 +458,7 @@ export const OrganizationManagementPage: React.FC<OrganizationManagementPageProp
         }}
         organization={selectedOrg || undefined}
         onUpdated={handleOrganizationUpdated}
+        partnerAssignmentCounts={partnerAssignmentCounts}
       />
       <AssignPartnerModal
         isOpen={assignModal.isOpen}
@@ -453,6 +468,10 @@ export const OrganizationManagementPage: React.FC<OrganizationManagementPageProp
         }}
         organization={selectedOrg || undefined}
         onSubmit={handleAssignPartner}
+        partners={partners}
+        isLoadingPartners={isLoadingPartners}
+        partnersError={partnersError}
+        partnerAssignmentCounts={partnerAssignmentCounts}
       />
       <ConfirmationDialog
         isOpen={confirmDialog.isOpen}
