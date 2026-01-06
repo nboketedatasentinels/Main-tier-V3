@@ -2,6 +2,8 @@ import {
   Timestamp,
   addDoc,
   collection,
+  doc,
+  getDoc,
   getDocs,
   orderBy,
   query,
@@ -133,6 +135,26 @@ export const fetchMentors = async (): Promise<OrganizationLead[]> => {
 export const fetchAmbassadors = async (): Promise<OrganizationLead[]> => {
   const snapshot = await getDocs(query(usersCollection, where('role', '==', 'ambassador')))
   return snapshot.docs.map(buildLead)
+}
+
+export const fetchPartners = async (): Promise<OrganizationLead[]> => {
+  const snapshot = await getDocs(query(usersCollection, where('role', '==', 'partner')))
+  return snapshot.docs.map(buildLead)
+}
+
+export const fetchOrganizationDetails = async (organizationId: string): Promise<OrganizationRecord | null> => {
+  if (!organizationId) return null
+  const docSnap = await getDoc(doc(db, 'organizations', organizationId))
+  if (!docSnap.exists()) return null
+  return { id: docSnap.id, ...(docSnap.data() as Omit<OrganizationRecord, 'id'>) }
+}
+
+export const fetchOrganizationAssignments = async (organizationId: string): Promise<string[]> => {
+  if (!organizationId) return []
+  const docSnap = await getDoc(doc(db, 'organizations', organizationId))
+  if (!docSnap.exists()) return []
+  const data = docSnap.data() as OrganizationRecord
+  return data.courseAssignments || []
 }
 
 export const createOrganizationWithInvitations = async (

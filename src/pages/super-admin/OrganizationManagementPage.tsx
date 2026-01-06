@@ -34,16 +34,15 @@ import { Filter, MoreHorizontal, Search, Sparkles } from 'lucide-react'
 import { AssignPartnerModal } from '@/components/super-admin/AssignPartnerModal'
 import { ConfirmationDialog } from '@/components/super-admin/ConfirmationDialog'
 import { OrganizationDetailsModal } from '@/components/super-admin/OrganizationDetailsModal'
-import { OrganizationFormModal } from '@/components/super-admin/OrganizationFormModal'
+import { EditOrganizationModal } from '@/components/super-admin/EditOrganizationModal'
 import { CreateOrganizationModal } from '@/components/super-admin/CreateOrganizationModal'
+import { fetchPartners } from '@/services/organizationService'
 import {
   assignPartner,
   deleteOrganization,
   fetchOrganizationMemberStats,
-  fetchAdminUsers,
   fetchOrganizations,
   logAdminAction,
-  updateOrganization,
 } from '@/services/superAdminService'
 import { OrganizationMemberStats, OrganizationRecord } from '@/types/admin'
 
@@ -99,15 +98,8 @@ export const OrganizationManagementPage: React.FC<OrganizationManagementPageProp
     const loadPartners = async () => {
       setIsLoadingPartners(true)
       try {
-        const admins = await fetchAdminUsers()
-        const partnerOptions = admins
-          .filter((admin) => admin.role === 'partner')
-          .map((partner) => ({
-            id: partner.id,
-            name: partner.fullName || `${partner.firstName || ''} ${partner.lastName || ''}`.trim() || partner.email || 'Partner',
-            email: partner.email,
-          }))
-        setPartners(partnerOptions)
+      const partnerOptions = await fetchPartners()
+      setPartners(partnerOptions)
       } catch (err) {
         console.error(err)
         toast({ title: 'Unable to load partners', status: 'error' })
@@ -149,21 +141,6 @@ export const OrganizationManagementPage: React.FC<OrganizationManagementPageProp
     })
     toast({ title: 'Organization created', status: 'success' })
     createModal.onClose()
-  }
-
-  const handleEditOrg = async (updates: OrganizationRecord) => {
-    if (!selectedOrg?.id) return
-    await updateOrganization(selectedOrg.id, updates)
-    setOrganizations((prev) => prev.map((org) => (org.id === selectedOrg.id ? { ...org, ...updates } : org)))
-    await logAdminAction({
-      action: 'Organization updated',
-      organizationName: updates.name,
-      organizationCode: updates.code,
-      adminId,
-      adminName,
-    })
-    toast({ title: 'Organization updated', status: 'success' })
-    editModal.onClose()
   }
 
   const handleDeleteOrg = async () => {
@@ -262,17 +239,34 @@ export const OrganizationManagementPage: React.FC<OrganizationManagementPageProp
     setMemberStats(null)
   }
 
-  const handleOpenViewModal = (org: OrganizationRecord) => {
+  const handleViewOrganization = (org: OrganizationRecord) => {
     setViewOrg(org)
     setMemberStats(null)
     viewModal.onOpen()
   }
 
+  const handleEditOrganization = (org: OrganizationRecord) => {
+    setSelectedOrg(org)
+    editModal.onOpen()
+  }
+
   const handleEditFromView = () => {
     if (!viewOrg) return
-    setSelectedOrg(viewOrg)
     handleCloseViewModal()
-    editModal.onOpen()
+    handleEditOrganization(viewOrg)
+  }
+
+  const handleOrganizationUpdated = async (updates: OrganizationRecord) => {
+    setOrganizations((prev) => prev.map((org) => (org.id === updates.id ? { ...org, ...updates } : org)))
+    await logAdminAction({
+      action: 'Organization updated',
+      organizationName: updates.name,
+      organizationCode: updates.code,
+      adminId,
+      adminName,
+    })
+    toast({ title: 'Organization updated', status: 'success' })
+    await loadOrganizations()
   }
 
   return (
@@ -363,8 +357,8 @@ export const OrganizationManagementPage: React.FC<OrganizationManagementPageProp
                               <Menu>
                                 <MenuButton as={IconButton} icon={<MoreHorizontal size={16} />} aria-label="Actions" size="sm" variant="ghost" />
                                 <MenuList>
-                                  <MenuItem onClick={() => handleOpenViewModal(org)}>View Organisation</MenuItem>
-                                  <MenuItem onClick={() => { setSelectedOrg(org); editModal.onOpen() }}>Edit organization</MenuItem>
+                                  <MenuItem onClick={() => handleViewOrganization(org)}>View Organisation</MenuItem>
+                                  <MenuItem onClick={() => handleEditOrganization(org)}>Edit organization</MenuItem>
                                   <MenuItem onClick={() => { setSelectedOrg(org); assignModal.onOpen() }}>Assign partner</MenuItem>
                                   <MenuItem onClick={() => { setPendingDelete(org); confirmDialog.onOpen() }} color="red.500">
                                     Delete
@@ -442,15 +436,14 @@ export const OrganizationManagementPage: React.FC<OrganizationManagementPageProp
         isLoadingStats={isLoadingStats}
         onEdit={viewOrg ? handleEditFromView : undefined}
       />
-      <OrganizationFormModal
+      <EditOrganizationModal
         isOpen={editModal.isOpen}
         onClose={() => {
           setSelectedOrg(null)
           editModal.onClose()
         }}
-        initialData={selectedOrg || undefined}
-        onSubmit={handleEditOrg}
-        mode="edit"
+        organization={selectedOrg || undefined}
+        onUpdated={handleOrganizationUpdated}
       />
       <AssignPartnerModal
         isOpen={assignModal.isOpen}
