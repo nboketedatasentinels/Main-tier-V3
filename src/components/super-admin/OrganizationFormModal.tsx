@@ -3,6 +3,8 @@ import {
   Box,
   Button,
   FormControl,
+  FormErrorMessage,
+  FormHelperText,
   FormLabel,
   HStack,
   Input,
@@ -16,8 +18,10 @@ import {
   Select,
   Stack,
   Textarea,
+  Tooltip,
   useToast,
 } from '@chakra-ui/react'
+import { InfoIcon } from '@chakra-ui/icons'
 import { OrganizationRecord } from '@/types/admin'
 
 type Mode = 'create' | 'edit'
@@ -48,6 +52,8 @@ export const OrganizationFormModal: React.FC<Props> = ({ isOpen, onClose, initia
   const [form, setForm] = useState<OrganizationRecord>(initialData || defaultOrg)
   const [isSubmitting, setSubmitting] = useState(false)
   const toast = useToast()
+  const codeLength = form.code.trim().length
+  const isCodeValidLength = codeLength === 6
 
   useEffect(() => {
     setForm(initialData || defaultOrg)
@@ -60,6 +66,10 @@ export const OrganizationFormModal: React.FC<Props> = ({ isOpen, onClose, initia
   const handleSubmit = async () => {
     if (!form.name || !form.code) {
       toast({ title: 'Name and code are required', status: 'warning' })
+      return
+    }
+    if (!isCodeValidLength) {
+      toast({ title: 'Organization code must be exactly 6 characters', status: 'warning' })
       return
     }
 
@@ -85,9 +95,24 @@ export const OrganizationFormModal: React.FC<Props> = ({ isOpen, onClose, initia
                 <FormLabel>Organization name</FormLabel>
                 <Input value={form.name} onChange={(e) => handleChange('name', e.target.value)} placeholder="Acme Corp" />
               </FormControl>
-              <FormControl isRequired>
-                <FormLabel>Company code</FormLabel>
-                <Input value={form.code} onChange={(e) => handleChange('code', e.target.value)} placeholder="ACME" textTransform="uppercase" />
+              <FormControl isRequired isInvalid={codeLength > 0 && !isCodeValidLength}>
+                <FormLabel display="flex" alignItems="center" gap={2}>
+                  Organization code
+                  <Tooltip label="6-character code: 2-letter prefix + 4 random characters." placement="top">
+                    <InfoIcon color="gray.400" />
+                  </Tooltip>
+                </FormLabel>
+                <Input
+                  value={form.code}
+                  onChange={(e) => handleChange('code', e.target.value.toUpperCase())}
+                  placeholder="6-char code"
+                  maxLength={6}
+                  textTransform="uppercase"
+                />
+                <FormHelperText color={isCodeValidLength ? 'green.500' : 'gray.600'}>
+                  {codeLength}/6 characters
+                </FormHelperText>
+                <FormErrorMessage>Organization code must be exactly 6 characters.</FormErrorMessage>
               </FormControl>
             </HStack>
 
@@ -160,4 +185,3 @@ export const OrganizationFormModal: React.FC<Props> = ({ isOpen, onClose, initia
     </Modal>
   )
 }
-

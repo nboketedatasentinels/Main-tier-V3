@@ -9,6 +9,7 @@ import {
   Flex,
   FormControl,
   FormErrorMessage,
+  FormHelperText,
   FormLabel,
   Grid,
   GridItem,
@@ -28,9 +29,11 @@ import {
   Stack,
   Text,
   Textarea,
+  Tooltip,
   useDisclosure,
   useToast,
 } from '@chakra-ui/react'
+import { InfoIcon } from '@chakra-ui/icons'
 import { Plus, Upload, X } from 'lucide-react'
 import {
   BulkInvitationResult,
@@ -116,6 +119,8 @@ export const CreateOrganizationModal: React.FC<CreateOrganizationModalProps> = (
   }, [form.programDuration])
 
   const remainingCourses = courseLimit - (form.courseAssignments?.length || 0)
+  const codeLength = form.code.trim().length
+  const isCodeValidLength = codeLength === 6
 
   useEffect(() => {
     if (form.name && !form.code) {
@@ -247,6 +252,7 @@ export const CreateOrganizationModal: React.FC<CreateOrganizationModalProps> = (
     try {
       if (!form.name || form.name.length < 3) throw new Error('Organization name must be at least 3 characters')
       if (!form.code) throw new Error('Organization code is required')
+      if (!isCodeValidLength) throw new Error('Organization code must be exactly 6 characters')
       const isUnique = await validateOrganizationCodeUnique(form.code)
       if (!isUnique) throw new Error('Organization code is already in use')
       if (!form.programDuration) throw new Error('Program duration is required')
@@ -329,16 +335,27 @@ export const CreateOrganizationModal: React.FC<CreateOrganizationModalProps> = (
                   </FormControl>
                 </GridItem>
                 <GridItem>
-                  <FormControl isRequired>
-                    <FormLabel>Organization code</FormLabel>
+                  <FormControl isRequired isInvalid={codeLength > 0 && !isCodeValidLength}>
+                    <FormLabel display="flex" alignItems="center" gap={2}>
+                      Organization code
+                      <Tooltip label="6-character code: 2-letter prefix + 4 random characters." placement="top">
+                        <InfoIcon color="gray.400" />
+                      </Tooltip>
+                    </FormLabel>
                     <InputGroup>
                       <InputLeftAddon>Code</InputLeftAddon>
                       <Input
                         value={form.code}
                         onChange={(e) => updateField('code', e.target.value.toUpperCase())}
-                        placeholder="ACME1"
+                        maxLength={6}
+                        placeholder="6-char code"
+                        textTransform="uppercase"
                       />
                     </InputGroup>
+                    <FormHelperText color={isCodeValidLength ? 'green.500' : 'gray.600'}>
+                      {codeLength}/6 characters
+                    </FormHelperText>
+                    <FormErrorMessage>Organization code must be exactly 6 characters.</FormErrorMessage>
                   </FormControl>
                 </GridItem>
                 <GridItem>

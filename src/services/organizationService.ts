@@ -8,6 +8,7 @@ import {
   orderBy,
   query,
   serverTimestamp,
+  updateDoc,
   where,
 } from 'firebase/firestore'
 import { db } from './firebase'
@@ -23,11 +24,28 @@ const usersCollection = collection(db, 'users')
 const adminActivityCollection = collection(db, 'admin_activity_log')
 
 export const generateOrganizationCode = (name: string) => {
-  const prefix = name.trim().slice(0, 2).toUpperCase().replace(/[^A-Z0-9]/g, '') || 'ORG'
+  const validChars = name.toUpperCase().match(/[A-Z0-9]/g) ?? []
+  let prefix = validChars.slice(0, 2).join('')
+  if (prefix.length < 2) {
+    prefix = 'OR'
+  }
   const random = Array.from({ length: 4 })
     .map(() => safeCodeChars[Math.floor(Math.random() * safeCodeChars.length)])
     .join('')
   return `${prefix}${random}`
+}
+
+export const findOrganizationsWithInvalidCodes = async (): Promise<OrganizationRecord[]> => {
+  const snapshot = await getDocs(orgCollection)
+  return snapshot.docs
+    .map((docSnap) => ({ id: docSnap.id, ...(docSnap.data() as OrganizationRecord) }))
+    .filter((organization) => (organization.code || '').trim().length !== 6)
+}
+
+export const regenerateOrganizationCode = async (organizationId: string, organizationName: string) => {
+  const code = generateOrganizationCode(organizationName)
+  await updateDoc(doc(orgCollection, organizationId), { code, updatedAt: serverTimestamp() })
+  return code
 }
 
 export const validateOrganizationCodeUnique = async (code: string) => {
