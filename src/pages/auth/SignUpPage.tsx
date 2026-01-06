@@ -6,6 +6,7 @@ import { Spinner, useToast } from "@chakra-ui/react"
 import { sendEmailVerification } from "firebase/auth"
 import { useAuth } from "@/hooks/useAuth"
 import { getFriendlyErrorMessage } from "@/utils/authErrors"
+import { buildActionCodeSettings } from "@/utils/authActionCodeSettings"
 import { validateCompanyCode } from "@/services/organizationService"
 import { auth } from "@/services/firebase"
 import { GenderOption, Organization, UserRole } from "@/types"
@@ -211,7 +212,7 @@ export const SignUpPage: React.FC = () => {
         return
       }
 
-      await sendEmailVerification(currentUser)
+      await sendEmailVerification(currentUser, buildActionCodeSettings("/auth/verify-email"))
       setSuccessMessage("Confirmation email sent! Check your inbox.")
       setLastVerificationSent(Date.now())
     } catch (err) {
