@@ -63,6 +63,7 @@ const SidebarNav = ({
                 key={item.key}
                 justifyContent="flex-start"
                 leftIcon={item.icon ? <Icon as={item.icon} /> : undefined}
+                fontSize="sm"
                 variant={isActive ? 'primary' : 'ghost'}
                 bg={isActive ? '#3D0C69' : 'transparent'}
                 color={isActive ? 'white' : 'brand.text'}
