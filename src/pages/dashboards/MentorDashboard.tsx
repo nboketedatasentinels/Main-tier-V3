@@ -62,6 +62,7 @@ import {
   Eye,
 } from 'lucide-react'
 import { differenceInCalendarDays, format, isToday } from 'date-fns'
+import { useNavigate } from 'react-router-dom'
 import { MentorDashboardLayout } from '@/layouts/MentorDashboardLayout'
 import { useAuth } from '@/hooks/useAuth'
 import {
@@ -166,6 +167,7 @@ const calcTrendIcon = (current: number, previous: number) => {
 
 export const MentorDashboard: React.FC = () => {
   const { profile } = useAuth()
+  const navigate = useNavigate()
   const [mentees, setMentees] = useState<AssignedMentee[]>([])
   const [menteesLoading, setMenteesLoading] = useState(true)
   const [menteesError, setMenteesError] = useState<string | null>(null)
@@ -1060,7 +1062,12 @@ export const MentorDashboard: React.FC = () => {
 
                     <Wrap spacing={2}>
                       <WrapItem>
-                        <Button size="sm" variant="secondary" leftIcon={<Icon as={Eye} />}>
+                        <Button
+                          size="sm"
+                          variant="secondary"
+                          leftIcon={<Icon as={Eye} />}
+                          onClick={() => navigate(`/mentor/user/${mentee.id}`)}
+                        >
                           View profile
                         </Button>
                       </WrapItem>
