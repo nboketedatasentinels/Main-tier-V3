@@ -3,9 +3,6 @@ import {
   Avatar,
   Badge,
   Box,
-  Breadcrumb,
-  BreadcrumbItem,
-  BreadcrumbLink,
   Button,
   Card,
   CardBody,
@@ -41,7 +38,7 @@ import {
   UserX,
   X,
 } from 'lucide-react'
-import { Link as RouterLink, useNavigate, useParams } from 'react-router-dom'
+import { useNavigate, useParams } from 'react-router-dom'
 import { useAuth } from '@/hooks/useAuth'
 import { UnauthorizedPage } from '@/pages/errors/UnauthorizedPage'
 import { NotFoundPage } from '@/pages/errors/NotFoundPage'
@@ -450,21 +447,6 @@ export const UserProfileManagementPage: React.FC<{ viewContext?: ViewContext }> 
     <Stack spacing={6}>
       <Flex justify="space-between" align="center" flexWrap="wrap" gap={4}>
         <Stack spacing={2}>
-          <Breadcrumb>
-            <BreadcrumbItem>
-              <BreadcrumbLink as={RouterLink} to={isMentorView ? '/mentor/dashboard' : '/admin/dashboard'}>
-                Dashboard
-              </BreadcrumbLink>
-            </BreadcrumbItem>
-            <BreadcrumbItem>
-              <BreadcrumbLink as={RouterLink} to={isMentorView ? '/mentor/dashboard' : '/admin/dashboard'}>
-                {isMentorView ? 'Mentees' : 'Users'}
-              </BreadcrumbLink>
-            </BreadcrumbItem>
-            <BreadcrumbItem isCurrentPage>
-              <BreadcrumbLink>{profileData.fullName || profileData.email}</BreadcrumbLink>
-            </BreadcrumbItem>
-          </Breadcrumb>
           <HStack>
             <Button
               size="sm"
