@@ -46,6 +46,7 @@ import { AnnouncementsPage } from '@/pages/community/AnnouncementsPage'
 import { ReferralRewardsPage } from '@/pages/community/ReferralRewardsPage'
 import { BookClubPage } from '@/pages/community/BookClubPage'
 import { ShamelessCirclePage } from '@/pages/community/ShamelessCirclePage'
+import { UserProfileManagementPage } from '@/pages/admin/UserProfileManagementPage'
 
 // Error pages
 import { NotFoundPage } from '@/pages/errors/NotFoundPage'
@@ -126,6 +127,7 @@ export const AppRoutes = () => {
           }
         >
           <Route path="dashboard" element={<MentorDashboard />} />
+          <Route path="user/:userId" element={<UserProfileManagementPage viewContext="mentor" />} />
           <Route index element={<Navigate to="/mentor/dashboard" replace />} />
         </Route>
 
@@ -152,6 +154,7 @@ export const AppRoutes = () => {
           }
         >
           <Route path="dashboard" element={<AdminDashboard />} />
+          <Route path="user/:userId" element={<UserProfileManagementPage viewContext="admin" />} />
           <Route index element={<Navigate to="/admin/dashboard" replace />} />
         </Route>
 
