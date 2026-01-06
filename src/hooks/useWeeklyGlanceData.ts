@@ -44,6 +44,7 @@ export interface PersonalityProfile {
   personalityType?: string
   personalityStrengths?: string[]
   personalityDescription?: string
+  coreValues?: string[]
 }
 
 export interface PeerMatch {
@@ -190,6 +191,7 @@ export const useWeeklyGlanceData = () => {
             personalityType: data.personalityType,
             personalityStrengths: data.personalityStrengths || [],
             personalityDescription: data.personalityDescription,
+            coreValues: data.coreValues || [],
           })
         } else {
           setPersonality(null)

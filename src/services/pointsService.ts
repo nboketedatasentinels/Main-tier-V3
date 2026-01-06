@@ -1,9 +1,35 @@
-import { doc, runTransaction, serverTimestamp } from "firebase/firestore";
+import { doc, increment, runTransaction, serverTimestamp, type Transaction } from "firebase/firestore";
 import { db } from "@/services/firebase";
 import pointsConfig from "@/config/pointsConfig";
 import type { ActivityDef, JourneyType } from "@/config/pointsConfig";
+import { calculateLevel, calculateUserTotalPoints } from "@/utils/points";
 
 const { JOURNEY_META, getMonthNumber } = pointsConfig;
+
+const RETRYABLE_TRANSACTION_CODES = new Set(["aborted", "failed-precondition", "unavailable"]);
+
+const runTransactionWithRetry = async <T>(
+  operation: (transaction: Transaction) => Promise<T>,
+  maxAttempts = 3
+): Promise<T> => {
+  let attempt = 0;
+
+  while (attempt < maxAttempts) {
+    try {
+      return await runTransaction(db, operation);
+    } catch (error) {
+      attempt += 1;
+      const code = (error as { code?: string }).code;
+      const shouldRetry = code ? RETRYABLE_TRANSACTION_CODES.has(code) : false;
+      if (!shouldRetry || attempt >= maxAttempts) {
+        throw error;
+      }
+      await new Promise((resolve) => setTimeout(resolve, 150 * attempt));
+    }
+  }
+
+  throw new Error("Transaction failed after retries");
+};
 
 export async function awardChecklistPoints(params: {
   uid: string;
@@ -19,53 +45,72 @@ export async function awardChecklistPoints(params: {
   const ledgerRef = doc(db, "pointsLedger", `${uid}__w${weekNumber}__${activity.id}`);
   const progressRef = doc(db, "weeklyProgress", `${uid}__${weekNumber}`);
 
-  await runTransaction(db, async (tx) => {
-    const [ledgerDoc, progressDoc] = await Promise.all([
-      tx.get(ledgerRef),
-      tx.get(progressRef),
-    ]);
+  try {
+    await runTransactionWithRetry(async (tx) => {
+      const [ledgerDoc, progressDoc] = await Promise.all([
+        tx.get(ledgerRef),
+        tx.get(progressRef),
+      ]);
 
-    if (ledgerDoc.exists()) return;
+      if (ledgerDoc.exists()) return;
 
-    const currentProgress = progressDoc.exists()
-      ? progressDoc.data()
-      : { pointsEarned: 0, status: "alert" };
-    const newPoints = currentProgress.pointsEarned + activity.points;
+      const currentProgress = progressDoc.exists()
+        ? progressDoc.data()
+        : { pointsEarned: 0, status: "alert" };
+      const newPoints = currentProgress.pointsEarned + activity.points;
 
-    const ratio = weeklyTarget > 0 ? newPoints / weeklyTarget : 0;
-    let status: "on_track" | "warning" | "alert" | "recovery" = "alert";
-    if (ratio >= 1) {
-      status = currentProgress.status === "alert" ? "recovery" : "on_track";
-    } else if (ratio >= 0.75) {
-      status = "warning";
-    } else {
-      status = "alert";
-    }
+      const ratio = weeklyTarget > 0 ? newPoints / weeklyTarget : 0;
+      let status: "on_track" | "warning" | "alert" | "recovery" = "alert";
+      if (ratio >= 1) {
+        status = currentProgress.status === "alert" ? "recovery" : "on_track";
+      } else if (ratio >= 0.75) {
+        status = "warning";
+      } else {
+        status = "alert";
+      }
 
-    tx.set(ledgerRef, {
-      uid,
-      weekNumber,
-      monthNumber,
-      activityId: activity.id,
-      points: activity.points,
-      createdAt: serverTimestamp(),
-      source: "weekly_checklist",
-    });
+      const currentTotal = await calculateUserTotalPoints(uid, { transaction: tx });
+      const totalPoints = Math.max(0, currentTotal + activity.points);
+      const level = calculateLevel(totalPoints);
 
-    tx.set(
-      progressRef,
-      {
+      tx.set(ledgerRef, {
         uid,
         weekNumber,
         monthNumber,
-        weeklyTarget,
-        pointsEarned: newPoints,
-        status,
+        activityId: activity.id,
+        points: activity.points,
+        createdAt: serverTimestamp(),
+        source: "weekly_checklist",
+      });
+
+      tx.set(
+        progressRef,
+        {
+          uid,
+          weekNumber,
+          monthNumber,
+          weeklyTarget,
+          pointsEarned: newPoints,
+          status,
+          updatedAt: serverTimestamp(),
+        },
+        { merge: true }
+      );
+
+      const profileUpdate = {
+        totalPoints,
+        level,
+        pointsVersion: increment(1),
         updatedAt: serverTimestamp(),
-      },
-      { merge: true }
-    );
-  });
+      };
+
+      tx.set(doc(db, "users", uid), profileUpdate, { merge: true });
+      tx.set(doc(db, "profiles", uid), profileUpdate, { merge: true });
+    });
+  } catch (error) {
+    console.error("🔴 [Points] Failed to award checklist points", error);
+    throw error;
+  }
 }
 
 export async function revokeChecklistPoints(params: {
@@ -82,39 +127,59 @@ export async function revokeChecklistPoints(params: {
   const ledgerRef = doc(db, "pointsLedger", `${uid}__w${weekNumber}__${activity.id}`);
   const progressRef = doc(db, "weeklyProgress", `${uid}__${weekNumber}`);
 
-  await runTransaction(db, async (tx) => {
-    const [ledgerDoc, progressDoc] = await Promise.all([
-      tx.get(ledgerRef),
-      tx.get(progressRef),
-    ]);
+  try {
+    await runTransactionWithRetry(async (tx) => {
+      const [ledgerDoc, progressDoc] = await Promise.all([
+        tx.get(ledgerRef),
+        tx.get(progressRef),
+      ]);
 
-    if (!ledgerDoc.exists()) return;
+      if (!ledgerDoc.exists()) return;
 
-    const currentPoints = progressDoc.exists()
-      ? progressDoc.data().pointsEarned ?? 0
-      : 0;
-    const newPoints = Math.max(0, currentPoints - activity.points);
+      const ledgerPoints = ledgerDoc.data()?.points ?? activity.points;
+      const currentPoints = progressDoc.exists()
+        ? progressDoc.data().pointsEarned ?? 0
+        : 0;
+      const newPoints = Math.max(0, currentPoints - ledgerPoints);
 
-    const ratio = weeklyTarget > 0 ? newPoints / weeklyTarget : 0;
-    let status: "on_track" | "warning" | "alert" | "recovery" = "alert";
-    if (ratio >= 1) status = "on_track";
-    else if (ratio >= 0.75) status = "warning";
-    else status = "alert";
+      const ratio = weeklyTarget > 0 ? newPoints / weeklyTarget : 0;
+      let status: "on_track" | "warning" | "alert" | "recovery" = "alert";
+      if (ratio >= 1) status = "on_track";
+      else if (ratio >= 0.75) status = "warning";
+      else status = "alert";
 
-    tx.delete(ledgerRef);
+      const currentTotal = await calculateUserTotalPoints(uid, { transaction: tx });
+      const totalPoints = Math.max(0, currentTotal - ledgerPoints);
+      const level = calculateLevel(totalPoints);
 
-    tx.set(
-      progressRef,
-      {
-        uid,
-        weekNumber,
-        monthNumber,
-        weeklyTarget,
-        pointsEarned: newPoints,
-        status,
+      tx.delete(ledgerRef);
+
+      tx.set(
+        progressRef,
+        {
+          uid,
+          weekNumber,
+          monthNumber,
+          weeklyTarget,
+          pointsEarned: newPoints,
+          status,
+          updatedAt: serverTimestamp(),
+        },
+        { merge: true }
+      );
+
+      const profileUpdate = {
+        totalPoints,
+        level,
+        pointsVersion: increment(1),
         updatedAt: serverTimestamp(),
-      },
-      { merge: true }
-    );
-  });
+      };
+
+      tx.set(doc(db, "users", uid), profileUpdate, { merge: true });
+      tx.set(doc(db, "profiles", uid), profileUpdate, { merge: true });
+    });
+  } catch (error) {
+    console.error("🔴 [Points] Failed to revoke checklist points", error);
+    throw error;
+  }
 }

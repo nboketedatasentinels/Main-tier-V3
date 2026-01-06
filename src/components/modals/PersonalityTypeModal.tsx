@@ -21,6 +21,8 @@ import {
   Checkbox,
   Flex,
   Icon,
+  Tooltip,
+  useToast,
 } from '@chakra-ui/react';
 import { Brain, Heart, Globe, ExternalLink, CheckCircle, ChevronDown, ChevronUp } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
@@ -50,6 +52,8 @@ interface ExistingData {
   coreValues?: string[];
   country?: string;
   region?: string;
+  hasCompletedPersonalityTest?: boolean;
+  hasCompletedValuesTest?: boolean;
 }
 
 // --- HELPER COMPONENTS ---
@@ -73,12 +77,17 @@ export const PersonalityTypeModal: React.FC<PersonalityTypeModalProps> = ({
 }) => {
   // --- STATE MANAGEMENT ---
   const { user } = useAuth();
+  const toast = useToast();
 
   // Form data state
   const [personalityType, setPersonalityType] = useState<PersonalityType | ''>('');
   const [coreValues, setCoreValues] = useState<string[]>([]);
   const [country, setCountry] = useState('');
   const [region, setRegion] = useState('');
+  const [hasCompletedPersonalityTest, setHasCompletedPersonalityTest] = useState(false);
+  const [hasCompletedValuesTest, setHasCompletedValuesTest] = useState(false);
+  const [personalityTestError, setPersonalityTestError] = useState<string | null>(null);
+  const [valuesTestError, setValuesTestError] = useState<string | null>(null);
 
   // UI state
   const [suggestedTimezone, setSuggestedTimezone] = useState('');
@@ -101,6 +110,10 @@ export const PersonalityTypeModal: React.FC<PersonalityTypeModalProps> = ({
     setCoreValues([]);
     setCountry('');
     setRegion('');
+    setHasCompletedPersonalityTest(false);
+    setHasCompletedValuesTest(false);
+    setPersonalityTestError(null);
+    setValuesTestError(null);
     setError(null);
     setSuccess(false);
     setIsSubmitting(false);
@@ -121,11 +134,15 @@ export const PersonalityTypeModal: React.FC<PersonalityTypeModalProps> = ({
           coreValues: data.coreValues || [],
           country: data.country || '',
           region: data.region || '',
+          hasCompletedPersonalityTest: Boolean(data.hasCompletedPersonalityTest),
+          hasCompletedValuesTest: Boolean(data.hasCompletedValuesTest),
         };
         setPersonalityType(currentData.personalityType);
         setCoreValues(currentData.coreValues);
         setCountry(currentData.country);
         setRegion(currentData.region);
+        setHasCompletedPersonalityTest(currentData.hasCompletedPersonalityTest);
+        setHasCompletedValuesTest(currentData.hasCompletedValuesTest);
         setExistingData(currentData);
       }
     } catch (err) {
@@ -190,12 +207,30 @@ export const PersonalityTypeModal: React.FC<PersonalityTypeModalProps> = ({
     };
   }, [isValuesDropdownOpen]);
 
+  useEffect(() => {
+    if (!hasCompletedValuesTest) {
+      setIsValuesDropdownOpen(false);
+    }
+  }, [hasCompletedValuesTest]);
+
 
   const handleSubmit = async () => {
     setError(null);
+    setPersonalityTestError(null);
+    setValuesTestError(null);
     // Validation
     if (!user) {
       setError("You must be logged in to save your profile.");
+      return;
+    }
+    if (!hasCompletedPersonalityTest || !hasCompletedValuesTest) {
+      if (!hasCompletedPersonalityTest) {
+        setPersonalityTestError("Please confirm you have taken the 16 Personalities test.");
+      }
+      if (!hasCompletedValuesTest) {
+        setValuesTestError("Please confirm you have taken the Personal Values test.");
+      }
+      window.alert('Please confirm you have completed the required tests before saving.');
       return;
     }
     if (!personalityType) {
@@ -216,11 +251,20 @@ export const PersonalityTypeModal: React.FC<PersonalityTypeModalProps> = ({
         coreValues,
         country,
         region,
+        hasCompletedPersonalityTest,
+        hasCompletedValuesTest,
         updatedAt: Timestamp.now(),
       };
       await setDoc(userDocRef, dataToSave, { merge: true });
 
       setSuccess(true);
+      toast({
+        title: 'Profile saved',
+        description: 'Your personality type and core values have been updated.',
+        status: 'success',
+        duration: 4000,
+        isClosable: true,
+      });
 
       if (onComplete) {
         setTimeout(() => {
@@ -251,7 +295,7 @@ export const PersonalityTypeModal: React.FC<PersonalityTypeModalProps> = ({
   };
   // --- RENDER ---
   return (
-    <Modal isOpen={isOpen} onClose={onClose} isCentered size="4xl" scrollBehavior="inside">
+    <Modal isOpen={isOpen} onClose={onClose} isCentered size={{ base: 'full', md: '4xl' }} scrollBehavior="inside">
       <ModalOverlay />
       <ModalContent maxH="90vh">
         <ModalHeader borderBottomWidth="1px" borderColor="neutral.200" p={6}>
@@ -276,6 +320,81 @@ export const PersonalityTypeModal: React.FC<PersonalityTypeModalProps> = ({
             </VStack>
           ) : (
             <VStack spacing={6} align="stretch">
+              {/* Prerequisites Section */}
+              <Box bg="blue.50" p={6} borderRadius="lg" borderWidth="2px" borderColor="blue.200">
+                <VStack spacing={4} align="stretch">
+                  <Text fontSize="lg" fontWeight="semibold" color="blue.800">Prerequisites</Text>
+                  <Grid templateColumns={{ base: '1fr', md: '1fr 1fr' }} gap={4}>
+                    <Box bg="white" p={4} borderRadius="lg" borderWidth="1px" borderColor="blue.200">
+                      <VStack spacing={3} align="stretch">
+                        <Text fontWeight="semibold" color="neutral-800">16 Personalities Test</Text>
+                        <Text fontSize="sm" color="neutral-600">
+                          Complete the 16 Personalities assessment to unlock the personality type field.
+                        </Text>
+                        <Button
+                          as={Link}
+                          href="https://www.16personalities.com/free-personality-test"
+                          isExternal
+                          variant="outline"
+                          colorScheme="blue"
+                          rightIcon={<Icon as={ExternalLink} />}
+                          alignSelf="flex-start"
+                        >
+                          Take the test
+                        </Button>
+                        <Checkbox
+                          isChecked={hasCompletedPersonalityTest}
+                          onChange={(e) => {
+                            setHasCompletedPersonalityTest(e.target.checked);
+                            setPersonalityTestError(null);
+                          }}
+                        >
+                          I have completed this test
+                        </Checkbox>
+                        {personalityTestError && (
+                          <Text fontSize="sm" color="red.500">
+                            {personalityTestError}
+                          </Text>
+                        )}
+                      </VStack>
+                    </Box>
+                    <Box bg="white" p={4} borderRadius="lg" borderWidth="1px" borderColor="blue.200">
+                      <VStack spacing={3} align="stretch">
+                        <Text fontWeight="semibold" color="neutral-800">Personal Values Test</Text>
+                        <Text fontSize="sm" color="neutral-600">
+                          Complete the Personal Values assessment to unlock core values selection.
+                        </Text>
+                        <Button
+                          as={Link}
+                          href="https://personalvalu.es/"
+                          isExternal
+                          variant="outline"
+                          colorScheme="blue"
+                          rightIcon={<Icon as={ExternalLink} />}
+                          alignSelf="flex-start"
+                        >
+                          Take the test
+                        </Button>
+                        <Checkbox
+                          isChecked={hasCompletedValuesTest}
+                          onChange={(e) => {
+                            setHasCompletedValuesTest(e.target.checked);
+                            setValuesTestError(null);
+                          }}
+                        >
+                          I have completed this test
+                        </Checkbox>
+                        {valuesTestError && (
+                          <Text fontSize="sm" color="red.500">
+                            {valuesTestError}
+                          </Text>
+                        )}
+                      </VStack>
+                    </Box>
+                  </Grid>
+                </VStack>
+              </Box>
+
               {/* Introduction Section */}
               <VStack spacing={4} textAlign="center">
                 <Box bg="brand-indigo-100" p="2" borderRadius="full">
@@ -298,21 +417,40 @@ export const PersonalityTypeModal: React.FC<PersonalityTypeModalProps> = ({
                   </HStack>
                   <Text color="neutral-600" fontSize="sm">
                     Discover your personality type by taking the free 16Personalities test. It takes less than 12 minutes.
-                    <Link href="https://www.16personalities.com/free-personality-test" isExternal textDecoration="underline" color="brand-indigo-600" ml={1}>
-                      Take the test <Icon as={ExternalLink} w={4} h={4} display="inline-block" verticalAlign="middle" />
-                    </Link>
                   </Text>
-                  <Select
-                    placeholder="Select your type"
-                    value={personalityType}
-                    onChange={(e) => setPersonalityType(e.target.value as PersonalityType)}
-                    borderColor="brand-indigo-300"
-                    focusBorderColor="brand-indigo-500"
+                  <Button
+                    as={Link}
+                    href="https://www.16personalities.com/free-personality-test"
+                    isExternal
+                    variant="outline"
+                    colorScheme="blue"
+                    rightIcon={<Icon as={ExternalLink} />}
+                    alignSelf="flex-start"
+                    size="sm"
                   >
-                    {PERSONALITY_TYPES.map(pt => (
-                      <option key={pt.type} value={pt.type}>{pt.type} - {pt.name}</option>
-                    ))}
-                  </Select>
+                    Take the test
+                  </Button>
+                  <Tooltip
+                    label="Complete the 16 Personalities test to unlock this field."
+                    isDisabled={hasCompletedPersonalityTest}
+                    placement="top"
+                    hasArrow
+                  >
+                    <Box opacity={hasCompletedPersonalityTest ? 1 : 0.6}>
+                      <Select
+                        placeholder="Select your type"
+                        value={personalityType}
+                        onChange={(e) => setPersonalityType(e.target.value as PersonalityType)}
+                        borderColor="brand-indigo-300"
+                        focusBorderColor="brand-indigo-500"
+                        isDisabled={!hasCompletedPersonalityTest}
+                      >
+                        {PERSONALITY_TYPES.map(pt => (
+                          <option key={pt.type} value={pt.type}>{pt.type} - {pt.name}</option>
+                        ))}
+                      </Select>
+                    </Box>
+                  </Tooltip>
                   {personalityType && (
                     <Box bg="white" p={4} borderRadius="md" borderWidth="1px" borderColor="brand-indigo-200">
                       <Text fontWeight="semibold" color="brand-indigo-800">About {personalityType} Types</Text>
@@ -336,27 +474,46 @@ export const PersonalityTypeModal: React.FC<PersonalityTypeModalProps> = ({
                     <Text fontSize="lg" fontWeight="semibold" color="accent-gold-800">Core Values</Text>
                   </HStack>
                   <Text color="neutral-600" fontSize="sm">
-                    Select exactly 5 core values that are most important to you. Not sure?
-                    <Link href="https://personalvalu.es/" isExternal textDecoration="underline" color="accent-gold-600" ml={1}>
-                      Take the values test <Icon as={ExternalLink} w={4} h={4} display="inline-block" verticalAlign="middle" />
-                    </Link>
+                    Select exactly 5 core values that are most important to you.
                   </Text>
-
                   <Button
-                    onClick={() => setIsValuesDropdownOpen(!isValuesDropdownOpen)}
+                    as={Link}
+                    href="https://personalvalu.es/"
+                    isExternal
                     variant="outline"
-                    borderColor="accent-gold-300"
-                    _hover={{ bg: 'accent-gold-100' }}
-                    textAlign="left"
-                    fontWeight="normal"
+                    colorScheme="yellow"
+                    rightIcon={<Icon as={ExternalLink} />}
+                    alignSelf="flex-start"
+                    size="sm"
                   >
-                    <HStack justify="space-between" w="full">
-                      <Text isTruncated>
-                        {coreValues.length > 0 ? coreValues.join(', ') : 'Select core values (max 5)'}
-                      </Text>
-                      <Icon as={isValuesDropdownOpen ? ChevronUp : ChevronDown} />
-                    </HStack>
+                    Take the values test
                   </Button>
+
+                  <Tooltip
+                    label="Complete the Personal Values test to unlock core values."
+                    isDisabled={hasCompletedValuesTest}
+                    placement="top"
+                    hasArrow
+                  >
+                    <Box opacity={hasCompletedValuesTest ? 1 : 0.6}>
+                      <Button
+                        onClick={() => setIsValuesDropdownOpen(!isValuesDropdownOpen)}
+                        variant="outline"
+                        borderColor="accent-gold-300"
+                        _hover={{ bg: 'accent-gold-100' }}
+                        textAlign="left"
+                        fontWeight="normal"
+                        isDisabled={!hasCompletedValuesTest}
+                      >
+                        <HStack justify="space-between" w="full">
+                          <Text isTruncated>
+                            {coreValues.length > 0 ? coreValues.join(', ') : 'Select core values (max 5)'}
+                          </Text>
+                          <Icon as={isValuesDropdownOpen ? ChevronUp : ChevronDown} />
+                        </HStack>
+                      </Button>
+                    </Box>
+                  </Tooltip>
                   <Text fontSize="xs" color="neutral-500" textAlign="right">{coreValues.length}/5 values selected</Text>
 
                   <Collapse in={isValuesDropdownOpen} animateOpacity>
@@ -387,7 +544,7 @@ export const PersonalityTypeModal: React.FC<PersonalityTypeModalProps> = ({
                                 <Checkbox
                                     id={`value-${value}`}
                                     isChecked={coreValues.includes(value)}
-                                    isDisabled={coreValues.length >= 5 && !coreValues.includes(value)}
+                                    isDisabled={!hasCompletedValuesTest || (coreValues.length >= 5 && !coreValues.includes(value))}
                                     onChange={() => handleToggleValue(value)}
                                     mr={2}
                                 />
