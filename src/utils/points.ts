@@ -27,7 +27,10 @@ export const calculateUserTotalPoints = async (
   options?: { transaction?: Transaction },
 ): Promise<number> => {
   const ledgerQuery = query(collection(db, 'pointsLedger'), where('uid', '==', uid))
-  const snapshot = options?.transaction ? await options.transaction.get(ledgerQuery) : await getDocs(ledgerQuery)
+  if (options?.transaction) {
+    // Firestore transactions do not support query reads via Transaction#get.
+  }
+  const snapshot = await getDocs(ledgerQuery)
 
-  return snapshot.docs.reduce((sum, doc) => sum + (doc.data().points ?? 0), 0)
+  return snapshot.docs.reduce<number>((sum, doc) => sum + (doc.data().points ?? 0), 0)
 }

@@ -35,11 +35,11 @@ import {
   Thead,
   Tr,
   useDisclosure,
-  keyframes,
   useToken,
   useToast,
   VStack,
 } from '@chakra-ui/react'
+import { keyframes } from '@emotion/react'
 import {
   AlertCircle,
   ArrowDownAZ,
