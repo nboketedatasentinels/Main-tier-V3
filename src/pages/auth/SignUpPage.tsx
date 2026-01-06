@@ -247,6 +247,14 @@ export const SignUpPage: React.FC = () => {
         localStorage.setItem(`t4l.newUserWelcome.${currentUser.uid}`, "pending")
       }
 
+      if (isNewUser) {
+        setShowCompanyCodeModal(true)
+        setPendingGoogleNavigation(true)
+      } else {
+        setShowCompanyCodeModal(false)
+        setPendingGoogleNavigation(true)
+      }
+
       toast({
         title: "Signed in with Google!",
         description: "Welcome to Man-Tier.",
@@ -533,8 +541,16 @@ export const SignUpPage: React.FC = () => {
       <CompanyCodeModal
         isOpen={showCompanyCodeModal}
         onClose={() => setShowCompanyCodeModal(false)}
-        onSkip={() => setShowCompanyCodeModal(false)}
-        onSuccess={() => setShowCompanyCodeModal(false)}
+        onSkip={() => {
+          setShowCompanyCodeModal(false)
+          setPendingGoogleNavigation(false)
+          navigate(getLandingPathForRole(profile ?? UserRole.FREE_USER), { replace: true })
+        }}
+        onSuccess={() => {
+          setShowCompanyCodeModal(false)
+          setPendingGoogleNavigation(false)
+          navigate(getLandingPathForRole(profile ?? UserRole.FREE_USER), { replace: true })
+        }}
       />
     </div>
   )
