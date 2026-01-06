@@ -43,7 +43,6 @@ import {
   ArrowDownAZ,
   ArrowUpAZ,
   Award,
-  BookOpen,
   Clock,
   Crown,
   Info,
@@ -655,16 +654,6 @@ export const LeadershipBoardPage: React.FC = () => {
                           </HStack>
                         </Box>
                       </SimpleGrid>
-                      <Button
-                        bg="surface.default"
-                        color="brand.primary"
-                        border="1px solid"
-                        borderColor="brand.primary"
-                        _hover={{ bg: 'tint.brandPrimary' }}
-                        leftIcon={<Icon as={BookOpen} />}
-                      >
-                        Manage Visibility
-                      </Button>
                     </VStack>
                   </CardBody>
                 </Card>
