@@ -39,7 +39,6 @@ import {
   useToast,
   VStack,
 } from '@chakra-ui/react'
-import { keyframes } from '@emotion/react'
 import {
   AlertCircle,
   ArrowDownAZ,
@@ -182,15 +181,7 @@ export const LeadershipBoardPage: React.FC = () => {
     } as UserProfile
   }, [authProfile, currentProfile])
 
-  const pointsPulseKeyframes = useMemo(
-    () => keyframes`
-      0% { box-shadow: 0 0 0 0 rgba(55, 153, 255, 0.0); }
-      30% { box-shadow: 0 0 0 6px rgba(55, 153, 255, 0.35); }
-      100% { box-shadow: 0 0 0 0 rgba(55, 153, 255, 0.0); }
-    `,
-    []
-  )
-  const pointsPulseStyle = pointsPulse ? `${pointsPulseKeyframes} 1.2s ease-in-out` : 'none'
+  const pointsPulseStyle = pointsPulse ? 'pointsPulse 1.2s ease-in-out' : 'none'
 
   const refetchChallenges = useCallback(async () => {
     if (!profile) return
