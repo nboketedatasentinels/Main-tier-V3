@@ -35,8 +35,9 @@ import {
   useDisclosure,
   useToast,
 } from '@chakra-ui/react'
-import { AlertTriangle, CheckCircle, ChevronLeft, ChevronRight, Lock, Plus } from 'lucide-react'
+import { AlertTriangle, CheckCircle, ChevronLeft, ChevronRight, Lock, Plus, ShieldCheck } from 'lucide-react'
 import { collection, doc, getDocs, query, serverTimestamp, setDoc, where, onSnapshot, addDoc } from 'firebase/firestore'
+import { addDays, format } from 'date-fns'
 import { removeUndefinedFields } from '@/utils/firestore'
 import { getIsoWeekNumber } from '@/utils/date'
 import { db } from '@/services/firebase'
@@ -158,6 +159,7 @@ const WeeklyChecklistPage: React.FC = () => {
 
   const { isOpen, onOpen, onClose } = useDisclosure()
   const toast = useToast()
+  const navigate = useNavigate()
   const activityRefs = useRef<Record<string, HTMLDivElement | null>>({})
   const [weeklyProgress, setWeeklyProgress] = useState<WeeklyProgress | null>(null)
   const {
@@ -212,6 +214,27 @@ const WeeklyChecklistPage: React.FC = () => {
     return JOURNEY_META[journey.journeyType].weeklyTarget;
   }, [journey]);
 
+  const getImpactLogDateRange = useCallback(
+    (weekNumber: number) => {
+      let journeyStart: Date | null = profile?.journeyStartDate ? new Date(profile.journeyStartDate) : null
+
+      if (!journeyStart && profile?.currentWeek) {
+        const offsetWeeks = profile.currentWeek - 1
+        journeyStart = addDays(new Date(), -(offsetWeeks * 7))
+      }
+
+      if (!journeyStart) return null
+
+      const weekStart = addDays(journeyStart, (weekNumber - 1) * 7)
+      const weekEnd = addDays(weekStart, 7)
+      return {
+        start: format(weekStart, 'yyyy-MM-dd'),
+        end: format(weekEnd, 'yyyy-MM-dd'),
+      }
+    },
+    [profile?.currentWeek, profile?.journeyStartDate],
+  )
+
   const fetchJourney = useCallback(async () => {
     if (!user || !profile) return;
     try {
@@ -249,6 +272,22 @@ const WeeklyChecklistPage: React.FC = () => {
 
       const ledgerSnapshot = await getDocs(ledgerQuery);
       const completedActivities = new Set(ledgerSnapshot.docs.map(d => d.data().activityId));
+
+      const impactRange = getImpactLogDateRange(selectedWeek)
+      const hasImpactLog = activityDefs.some(def => def.id === 'impact_log')
+
+      if (impactRange && hasImpactLog) {
+        const impactQuery = query(
+          collection(db, 'impact_logs'),
+          where('userId', '==', user.uid),
+          where('date', '>=', impactRange.start),
+          where('date', '<', impactRange.end),
+        )
+        const impactSnapshot = await getDocs(impactQuery)
+        if (!impactSnapshot.empty) {
+          completedActivities.add('impact_log')
+        }
+      }
 
       const activityStates: ActivityState[] = activityDefs.map(def => ({
         ...def,
@@ -291,6 +330,44 @@ const WeeklyChecklistPage: React.FC = () => {
     });
     return () => unsubscribe();
   }, [user, selectedWeek]);
+
+  useEffect(() => {
+    if (!user) return
+    const impactRange = getImpactLogDateRange(selectedWeek)
+    if (!impactRange) return
+
+    const impactQuery = query(
+      collection(db, 'impact_logs'),
+      where('userId', '==', user.uid),
+      where('date', '>=', impactRange.start),
+      where('date', '<', impactRange.end),
+    )
+
+    const unsubscribe = onSnapshot(impactQuery, snapshot => {
+      const hasEntry = !snapshot.empty
+      setActivities(prev => {
+        const impactActivity = prev.find(activity => activity.id === 'impact_log')
+        if (!impactActivity) return prev
+        const nextStatus: ActivityStatus = hasEntry ? 'completed' : 'not_started'
+        if (impactActivity.status === nextStatus) return prev
+
+        if (hasEntry) {
+          toast({
+            title: 'Impact Log recorded',
+            description: 'Your weekly checklist was updated automatically.',
+            status: 'success',
+            duration: 3000,
+          })
+        }
+
+        return prev.map(activity =>
+          activity.id === 'impact_log' ? { ...activity, status: nextStatus } : activity,
+        )
+      })
+    })
+
+    return () => unsubscribe()
+  }, [getImpactLogDateRange, selectedWeek, toast, user])
 
   const calculateProgress = useCallback(() => {
     const completedActivities = activities.filter(a => a.status === 'completed')
@@ -565,6 +642,8 @@ const WeeklyChecklistPage: React.FC = () => {
   const renderActivityCard = (activity: ActivityState) => {
     const disabled = isWeekLocked
     const requiresPartnerApproval = journey?.isPaid && activity.requiresApproval
+    const isHonorBased = !activity.requiresApproval
+    const isAutoTracked = activity.id === 'impact_log'
     const yesDisabled = disabled || activity.status === 'completed'
     const noDisabled = disabled || activity.status === 'not_started'
 
@@ -595,16 +674,33 @@ const WeeklyChecklistPage: React.FC = () => {
                 </Badge>
               )}
               {showProofBadge && (
-                <Tooltip label="Partner approval required. Upload proof so the partner team can verify.">
+                <Tooltip
+                  label={
+                    activity.id === 'lift_module'
+                      ? 'Complete the module, then upload proof for verification.'
+                      : 'Partner approval required. Upload proof so the partner team can verify.'
+                  }
+                >
                   <Badge colorScheme="purple">Partner approval</Badge>
                 </Tooltip>
               )}
               {showFreeBadge && <Badge colorScheme="secondary">Free tier</Badge>}
               <Tag colorScheme="primary">{activity.category}</Tag>
             </HStack>
-            <Heading size="sm" color="text.primary">
-              {activity.title}
-            </Heading>
+            <HStack spacing={2}>
+              <Heading size="sm" color="text.primary">
+                {activity.title}
+              </Heading>
+              {isHonorBased ? (
+                <Tooltip label="Self-verified">
+                  <Icon as={CheckCircle} color="green.400" boxSize={4} />
+                </Tooltip>
+              ) : (
+                <Tooltip label="Requires partner approval">
+                  <Icon as={ShieldCheck} color="purple.400" boxSize={4} />
+                </Tooltip>
+              )}
+            </HStack>
             <Text color="text.secondary" fontSize="sm">
               {activity.description}
             </Text>
@@ -625,29 +721,42 @@ const WeeklyChecklistPage: React.FC = () => {
             )}
           </Stack>
         </Flex>
-        <HStack spacing={3}>
-          <Button
-            colorScheme="primary"
-            variant={activity.status === 'completed' || activity.status === 'pending' ? 'solid' : 'outline'}
-            isDisabled={yesDisabled}
-            onClick={() =>
-              requiresPartnerApproval
-                ? openProofModal(activity)
-                : handleActivityUpdate(activity, 'completed')
-            }
-          >
-            Yes
-          </Button>
-          <Button
-            variant="outline"
-            borderColor="border.strong"
-            color="text.primary"
-            isDisabled={noDisabled}
-            onClick={() => handleActivityUpdate(activity, 'not_started')}
-          >
-            No
-          </Button>
-        </HStack>
+        {isHonorBased ? (
+          <Stack spacing={2}>
+            <Text color="text.muted" fontSize="sm">
+              Status automatically updated when you submit this activity.
+            </Text>
+            {isAutoTracked && (
+              <Button variant="outline" colorScheme="purple" onClick={() => navigate('/app/impact-log')}>
+                Go to Impact Log
+              </Button>
+            )}
+          </Stack>
+        ) : (
+          <HStack spacing={3}>
+            <Button
+              colorScheme="primary"
+              variant={activity.status === 'completed' || activity.status === 'pending' ? 'solid' : 'outline'}
+              isDisabled={yesDisabled}
+              onClick={() =>
+                requiresPartnerApproval
+                  ? openProofModal(activity)
+                  : handleActivityUpdate(activity, 'completed')
+              }
+            >
+              Yes
+            </Button>
+            <Button
+              variant="outline"
+              borderColor="border.strong"
+              color="text.primary"
+              isDisabled={noDisabled}
+              onClick={() => handleActivityUpdate(activity, 'not_started')}
+            >
+              No
+            </Button>
+          </HStack>
+        )}
       </Box>
     )
   }

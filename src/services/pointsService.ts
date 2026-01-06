@@ -10,8 +10,9 @@ export async function awardChecklistPoints(params: {
   journeyType: JourneyType;
   weekNumber: number;
   activity: ActivityDef;
+  source?: string;
 }) {
-  const { uid, journeyType, weekNumber, activity } = params;
+  const { uid, journeyType, weekNumber, activity, source = "weekly_checklist" } = params;
 
   const monthNumber = getMonthNumber(weekNumber);
   const weeklyTarget = JOURNEY_META[journeyType].weeklyTarget;
@@ -49,7 +50,7 @@ export async function awardChecklistPoints(params: {
       activityId: activity.id,
       points: activity.points,
       createdAt: serverTimestamp(),
-      source: "weekly_checklist",
+      source,
     });
 
     tx.set(

@@ -56,16 +56,19 @@ import {
   ShieldCheck,
   Target,
   TrendingUp,
+  Trash2,
   Upload,
   Users,
 } from 'lucide-react'
-import { addDoc, collection, onSnapshot, orderBy, query, where } from 'firebase/firestore'
+import { addDoc, collection, deleteDoc, doc, getDoc, getDocs, onSnapshot, orderBy, query, where } from 'firebase/firestore'
 import { FirebaseError } from 'firebase/app'
 import { format, isAfter, isBefore, startOfMonth, subMonths } from 'date-fns'
 import { db } from '@/services/firebase'
 import { useAuth } from '@/hooks/useAuth'
-import { ESGCategory } from '@/types'
+import { ESGCategory, UserRole } from '@/types'
 import { removeUndefinedFields } from '@/utils/firestore'
+import { JOURNEY_META, getActivitiesForJourney, getMonthNumber, type ActivityDef, type JourneyType } from '@/config/pointsConfig'
+import { awardChecklistPoints, revokeChecklistPoints } from '@/services/pointsService'
 
 interface ImpactLogEntry {
   id: string
@@ -255,6 +258,30 @@ export const ImpactLogPage: React.FC = () => {
 
   const preview = useMemo(() => calculateImpactPreview(formValues), [formValues])
 
+  const resolveJourneyType = (): JourneyType => {
+    if (profile?.journeyType) return profile.journeyType
+    return profile?.role === UserRole.FREE_USER ? '4W' : '6W'
+  }
+
+  const resolveImpactActivity = (journeyType: JourneyType): ActivityDef | undefined => {
+    return getActivitiesForJourney(journeyType).find((activity) => activity.id === 'impact_log')
+  }
+
+  const resolveWeekNumberForDate = (dateString: string, journeyType: JourneyType): number => {
+    const meta = JOURNEY_META[journeyType]
+    if (!profile?.journeyStartDate) {
+      const fallbackWeek = profile?.currentWeek ?? 1
+      return Math.min(Math.max(1, fallbackWeek), meta.weeks)
+    }
+
+    const startDate = new Date(profile.journeyStartDate)
+    const impactDate = new Date(dateString)
+    const diffMs = impactDate.getTime() - startDate.getTime()
+    const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24))
+    const weekNumber = Math.floor(diffDays / 7) + 1
+    return Math.min(Math.max(1, weekNumber), meta.weeks)
+  }
+
   useEffect(() => {
     if (!user?.uid) return
 
@@ -404,10 +431,63 @@ export const ImpactLogPage: React.FC = () => {
 
       await addDoc(collection(db, 'impact_logs'), payload)
 
+      const journeyType = resolveJourneyType()
+      const activity = resolveImpactActivity(journeyType)
+      const weekNumber = resolveWeekNumberForDate(payload.date, journeyType)
+      const monthNumber = getMonthNumber(weekNumber)
+      const weekSuffix =
+        profile?.currentWeek && profile.currentWeek !== weekNumber
+          ? ` Points awarded to Week ${weekNumber} based on activity date.`
+          : ''
+      let toastStatus: 'success' | 'warning' = 'success'
+      let toastTitle = 'Impact logged successfully!'
+      let toastDescription = 'Your entry has been saved.'
+
+      if (activity) {
+        const ledgerRef = doc(db, 'pointsLedger', `${user.uid}__w${weekNumber}__${activity.id}`)
+        const ledgerSnap = await getDoc(ledgerRef)
+
+        if (ledgerSnap.exists()) {
+          toastStatus = 'warning'
+          toastDescription = "You've already earned Impact Log points this week."
+        } else {
+          const monthQuery = query(
+            collection(db, 'pointsLedger'),
+            where('uid', '==', user.uid),
+            where('activityId', '==', activity.id),
+            where('monthNumber', '==', monthNumber),
+          )
+          const monthSnapshot = await getDocs(monthQuery)
+
+          if (monthSnapshot.size >= activity.maxPerMonth) {
+            toastStatus = 'warning'
+            toastDescription = 'You have reached the Impact Log monthly points limit.'
+          } else {
+            try {
+              await awardChecklistPoints({
+                uid: user.uid,
+                journeyType,
+                weekNumber,
+                activity,
+                source: 'impact_log_submission',
+              })
+              toastTitle = 'Impact logged and points awarded!'
+              toastDescription = `You earned ${activity.points} points.${weekSuffix}`
+            } catch (awardError) {
+              if (import.meta.env.DEV) {
+                console.error('Impact log points award failed', awardError)
+              }
+              toastStatus = 'warning'
+              toastDescription = 'Impact logged, but points could not be awarded. Please try again later.'
+            }
+          }
+        }
+      }
+
       toast({
-        title: 'Impact logged successfully!',
-        description: `You earned ${preview.points} points`,
-        status: 'success',
+        title: toastTitle,
+        description: toastDescription,
+        status: toastStatus,
       })
       onClose()
     } catch (error) {
@@ -419,6 +499,46 @@ export const ImpactLogPage: React.FC = () => {
 
       toast({
         title: 'Unable to log impact',
+        description: errorMessage,
+        status: 'error',
+      })
+    }
+  }
+
+  const handleDeleteEntry = async (entry: ImpactLogEntry) => {
+    if (!user?.uid) return
+
+    try {
+      await deleteDoc(doc(db, 'impact_logs', entry.id))
+
+      const journeyType = resolveJourneyType()
+      const activity = resolveImpactActivity(journeyType)
+
+      if (activity) {
+        const weekNumber = resolveWeekNumberForDate(entry.date, journeyType)
+        const remainingInWeek = entries.filter(
+          (item) => item.id !== entry.id && resolveWeekNumberForDate(item.date, journeyType) === weekNumber,
+        )
+
+        if (remainingInWeek.length === 0) {
+          await revokeChecklistPoints({
+            uid: user.uid,
+            journeyType,
+            weekNumber,
+            activity,
+          })
+        }
+      }
+
+      toast({
+        title: 'Impact entry deleted',
+        description: 'Your Impact Log entry has been removed.',
+        status: 'success',
+      })
+    } catch (error) {
+      const errorMessage = error instanceof FirebaseError ? error.message : (error as Error)?.message || 'Unknown error'
+      toast({
+        title: 'Unable to delete impact entry',
         description: errorMessage,
         status: 'error',
       })
@@ -649,18 +769,19 @@ export const ImpactLogPage: React.FC = () => {
                   <Th isNumeric>USD</Th>
                   <Th isNumeric>People</Th>
                   <Th>Verification</Th>
+                  {activeTab === 'personal' && <Th />}
                 </Tr>
               </Thead>
               <Tbody>
                 {loading ? (
                   <Tr>
-                    <Td colSpan={7}>
+                    <Td colSpan={activeTab === 'personal' ? 8 : 7}>
                       <Skeleton height="18px" />
                     </Td>
                   </Tr>
                 ) : filteredEntries.length === 0 ? (
                   <Tr>
-                    <Td colSpan={7}>
+                    <Td colSpan={activeTab === 'personal' ? 8 : 7}>
                       <Text color="text.muted">No entries found for this period.</Text>
                     </Td>
                   </Tr>
@@ -687,6 +808,20 @@ export const ImpactLogPage: React.FC = () => {
                           {entry.verificationLevel}
                         </Badge>
                       </Td>
+                      {activeTab === 'personal' && entry.userId === user?.uid && (
+                        <Td>
+                          <Tooltip label="Delete entry">
+                            <IconButton
+                              aria-label="Delete impact entry"
+                              icon={<Trash2 size={16} />}
+                              size="sm"
+                              variant="ghost"
+                              colorScheme="red"
+                              onClick={() => handleDeleteEntry(entry)}
+                            />
+                          </Tooltip>
+                        </Td>
+                      )}
                     </Tr>
                   ))
                 )}
