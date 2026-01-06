@@ -47,6 +47,21 @@ export const WeeklyGlancePage = () => {
 
   const hasError = Object.values(data.errors).some(Boolean)
 
+  const shouldShowBuildVillage = (currentProfile?: UserProfile) => {
+    if (!currentProfile) return false
+    if (currentProfile.villageId) return false
+    if (currentProfile.companyId) return false
+    if (currentProfile.corporateVillageId) return false
+    if (currentProfile.membershipStatus === 'paid') return false
+    if (
+      currentProfile.transformationTier === TransformationTier.CORPORATE_MEMBER ||
+      currentProfile.transformationTier === TransformationTier.CORPORATE_LEADER
+    ) {
+      return false
+    }
+    return true
+  }
+
   const handleOpenVillageModal = () => setIsBuildVillageOpen(true)
   const handleCloseVillageModal = () => setIsBuildVillageOpen(false)
   const handleCreateVillage = () => {
