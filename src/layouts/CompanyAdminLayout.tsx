@@ -67,7 +67,7 @@ const NavItemRow: React.FC<{
         <Icon as={item.icon} color="brand.text" />
       </Box>
     )}
-    <Text fontWeight="semibold" color="brand.text">
+    <Text fontSize="sm" fontWeight="semibold" color="brand.text">
       {item.label}
     </Text>
     {item.key !== 'support' && (
