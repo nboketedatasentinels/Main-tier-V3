@@ -33,17 +33,19 @@ import {
 import { Filter, MoreHorizontal, Search, Sparkles } from 'lucide-react'
 import { AssignPartnerModal } from '@/components/super-admin/AssignPartnerModal'
 import { ConfirmationDialog } from '@/components/super-admin/ConfirmationDialog'
+import { OrganizationDetailsModal } from '@/components/super-admin/OrganizationDetailsModal'
 import { OrganizationFormModal } from '@/components/super-admin/OrganizationFormModal'
 import { CreateOrganizationModal } from '@/components/super-admin/CreateOrganizationModal'
 import {
   assignPartner,
   deleteOrganization,
+  fetchOrganizationMemberStats,
   fetchAdminUsers,
   fetchOrganizations,
   logAdminAction,
   updateOrganization,
 } from '@/services/superAdminService'
-import { OrganizationRecord } from '@/types/admin'
+import { OrganizationMemberStats, OrganizationRecord } from '@/types/admin'
 
 type SortKey = keyof Pick<OrganizationRecord, 'name' | 'code' | 'teamSize' | 'status' | 'transformationPartner'>
 
@@ -63,13 +65,17 @@ export const OrganizationManagementPage: React.FC<OrganizationManagementPageProp
   const [page, setPage] = useState(1)
 
   const [selectedOrg, setSelectedOrg] = useState<OrganizationRecord | null>(null)
+  const [viewOrg, setViewOrg] = useState<OrganizationRecord | null>(null)
   const [pendingDelete, setPendingDelete] = useState<OrganizationRecord | null>(null)
   const [partners, setPartners] = useState<{ id: string; name: string; email?: string }[]>([])
   const [, setIsLoadingPartners] = useState(false)
+  const [memberStats, setMemberStats] = useState<OrganizationMemberStats | null>(null)
+  const [isLoadingStats, setIsLoadingStats] = useState(false)
 
   const createModal = useDisclosure()
   const editModal = useDisclosure()
   const assignModal = useDisclosure()
+  const viewModal = useDisclosure()
   const confirmDialog = useDisclosure()
 
   const loadOrganizations = useCallback(async () => {
@@ -112,6 +118,24 @@ export const OrganizationManagementPage: React.FC<OrganizationManagementPageProp
 
     loadPartners()
   }, [toast])
+
+  useEffect(() => {
+    const loadMemberStats = async () => {
+      if (!viewModal.isOpen || !viewOrg) return
+      setIsLoadingStats(true)
+      try {
+        const stats = await fetchOrganizationMemberStats({ id: viewOrg.id, code: viewOrg.code })
+        setMemberStats(stats)
+      } catch (err) {
+        console.error(err)
+        toast({ title: 'Unable to load organization stats', status: 'error' })
+      } finally {
+        setIsLoadingStats(false)
+      }
+    }
+
+    loadMemberStats()
+  }, [toast, viewModal.isOpen, viewOrg])
 
   const handleOrganizationCreated = async (org: OrganizationRecord) => {
     setOrganizations((prev) => [org, ...prev])
@@ -232,6 +256,25 @@ export const OrganizationManagementPage: React.FC<OrganizationManagementPageProp
     setSortDir('asc')
   }
 
+  const handleCloseViewModal = () => {
+    viewModal.onClose()
+    setViewOrg(null)
+    setMemberStats(null)
+  }
+
+  const handleOpenViewModal = (org: OrganizationRecord) => {
+    setViewOrg(org)
+    setMemberStats(null)
+    viewModal.onOpen()
+  }
+
+  const handleEditFromView = () => {
+    if (!viewOrg) return
+    setSelectedOrg(viewOrg)
+    handleCloseViewModal()
+    editModal.onOpen()
+  }
+
   return (
     <Stack spacing={6}>
       <Card bg="white" border="1px solid" borderColor="brand.border">
@@ -320,6 +363,7 @@ export const OrganizationManagementPage: React.FC<OrganizationManagementPageProp
                               <Menu>
                                 <MenuButton as={IconButton} icon={<MoreHorizontal size={16} />} aria-label="Actions" size="sm" variant="ghost" />
                                 <MenuList>
+                                  <MenuItem onClick={() => handleOpenViewModal(org)}>View Organisation</MenuItem>
                                   <MenuItem onClick={() => { setSelectedOrg(org); editModal.onOpen() }}>Edit organization</MenuItem>
                                   <MenuItem onClick={() => { setSelectedOrg(org); assignModal.onOpen() }}>Assign partner</MenuItem>
                                   <MenuItem onClick={() => { setPendingDelete(org); confirmDialog.onOpen() }} color="red.500">
@@ -389,6 +433,14 @@ export const OrganizationManagementPage: React.FC<OrganizationManagementPageProp
         adminId={adminId}
         adminName={adminName}
         partners={partners}
+      />
+      <OrganizationDetailsModal
+        isOpen={viewModal.isOpen}
+        onClose={handleCloseViewModal}
+        organization={viewOrg}
+        memberStats={memberStats}
+        isLoadingStats={isLoadingStats}
+        onEdit={viewOrg ? handleEditFromView : undefined}
       />
       <OrganizationFormModal
         isOpen={editModal.isOpen}

@@ -21,6 +21,7 @@ import {
   AdminRole,
   AdminUserRecord,
   EngagementRiskAggregate,
+  OrganizationMemberStats,
   OrganizationRecord,
   RegistrationRecord,
   SuperAdminDashboardMetrics,
@@ -110,6 +111,38 @@ export const listenToDashboardMetrics = (
   ]
 
   return () => unsubscribes.forEach((unsub) => unsub())
+}
+
+export const fetchOrganizationMemberStats = async (
+  organization: Pick<OrganizationRecord, 'id' | 'code'>,
+): Promise<OrganizationMemberStats> => {
+  const queries = []
+  if (organization.code) {
+    queries.push(getDocs(query(usersCollection, where('companyCode', '==', organization.code))))
+  }
+  if (organization.id) {
+    queries.push(getDocs(query(usersCollection, where('companyId', '==', organization.id))))
+  }
+
+  if (!queries.length) {
+    return { totalMembers: 0, activeMembers: 0, paidMembers: 0 }
+  }
+
+  const snapshots = await Promise.all(queries)
+  const userIndex = new Map<string, { membershipStatus?: string; accountStatus?: string }>()
+
+  snapshots.forEach((snapshot) => {
+    snapshot.docs.forEach((docSnap) => {
+      userIndex.set(docSnap.id, docSnap.data() as { membershipStatus?: string; accountStatus?: string })
+    })
+  })
+
+  const users = Array.from(userIndex.values())
+  const totalMembers = users.length
+  const activeMembers = users.filter((user) => user.accountStatus === 'active').length
+  const paidMembers = users.filter((user) => user.membershipStatus === 'paid').length
+
+  return { totalMembers, activeMembers, paidMembers }
 }
 
 const buildDateBuckets = (days: number) => {
