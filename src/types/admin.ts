@@ -54,6 +54,12 @@ export interface OrganizationRecord {
   assignedPartnerEmail?: string | null
 }
 
+export interface OrganizationMemberStats {
+  totalMembers: number
+  activeMembers: number
+  paidMembers: number
+}
+
 export interface EngagementRiskAggregate {
   total: number
   riskBuckets: Record<string, number>

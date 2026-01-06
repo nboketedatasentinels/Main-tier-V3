@@ -29,9 +29,10 @@ import {
   Th,
   Thead,
   Tr,
+  Tooltip,
   useToast,
 } from '@chakra-ui/react'
-import { ChevronDown, Filter, Search, Trash2 } from 'lucide-react'
+import { ChevronDown, Eye, Filter, Search, Trash2 } from 'lucide-react'
 import { Link as RouterLink } from 'react-router-dom'
 import { useAuth } from '@/hooks/useAuth'
 import {
@@ -441,9 +442,18 @@ export const UsersManagementTab = () => {
                         <Td>{formatDate(user.lastActive)}</Td>
                         <Td>
                           <HStack spacing={2} justify="flex-end">
-                            <Button as={RouterLink} to={`/admin/user/${user.id}`} size="sm" variant="outline" colorScheme="purple">
-                              View profile
-                            </Button>
+                            <Tooltip label="View and edit profile">
+                              <Button
+                                as={RouterLink}
+                                to={`/admin/user/${user.id}`}
+                                size="sm"
+                                variant="outline"
+                                colorScheme="purple"
+                                leftIcon={<Eye size={16} />}
+                              >
+                                View profile
+                              </Button>
+                            </Tooltip>
                             {isSuperAdmin && (
                               <IconButton
                                 aria-label={`Delete ${user.name}`}

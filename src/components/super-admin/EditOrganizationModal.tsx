@@ -1,11 +1,8 @@
-import React, { ChangeEvent, useEffect, useMemo, useRef, useState } from 'react'
+import React, { useEffect, useMemo, useState } from 'react'
 import {
-  Alert,
-  AlertIcon,
   Box,
   Button,
   Checkbox,
-  Divider,
   Flex,
   FormControl,
   FormErrorMessage,
@@ -13,8 +10,6 @@ import {
   FormLabel,
   Grid,
   GridItem,
-  HStack,
-  IconButton,
   Input,
   InputGroup,
   InputLeftAddon,
@@ -26,44 +21,36 @@ import {
   ModalHeader,
   ModalOverlay,
   Select,
+  Spinner,
   Stack,
   Text,
   Textarea,
   Tooltip,
-  useDisclosure,
   useToast,
 } from '@chakra-ui/react'
 import { InfoIcon } from '@chakra-ui/icons'
-import { Plus, Upload, X } from 'lucide-react'
 import {
-  BulkInvitationResult,
   CourseOption,
-  InviteDraft,
   OrganizationLead,
   OrganizationRecord,
   ProgramDurationOption,
 } from '@/types/admin'
 import {
-  createOrganizationWithInvitations,
   determineClusterFromTeamSize,
   fetchAmbassadors,
   fetchAvailableCourses,
   fetchMentors,
-  generateOrganizationCode,
-  validateOrganizationCodeUnique,
+  fetchOrganizationAssignments,
+  fetchOrganizationDetails,
+  fetchPartners,
 } from '@/services/organizationService'
-import { InvitationResultsModal } from './InvitationResultsModal'
-import { downloadCSVTemplate, parseInvitationCSV } from '@/utils/csvUtils'
+import { updateOrganization } from '@/services/superAdminService'
 
-const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
-
-interface CreateOrganizationModalProps {
+interface EditOrganizationModalProps {
   isOpen: boolean
   onClose: () => void
-  onCreated?: (organization: OrganizationRecord) => void
-  adminName?: string
-  adminId?: string
-  partners?: { id: string; name: string; email?: string }[]
+  organization?: OrganizationRecord | null
+  onUpdated?: (organization: OrganizationRecord) => void
   partnerAssignmentCounts?: Record<string, number>
 }
 
@@ -87,34 +74,22 @@ const emptyOrganization: OrganizationRecord = {
   programDuration: undefined,
 }
 
-const blankInvite: InviteDraft = {
-  id: 'invite-0',
-  name: '',
-  email: '',
-  role: 'user',
-  method: 'email',
-}
-
-export const CreateOrganizationModal: React.FC<CreateOrganizationModalProps> = ({
+export const EditOrganizationModal: React.FC<EditOrganizationModalProps> = ({
   isOpen,
   onClose,
-  onCreated,
-  adminId,
-  adminName,
-  partners = [],
+  organization,
+  onUpdated,
   partnerAssignmentCounts,
 }) => {
   const toast = useToast()
   const [form, setForm] = useState<OrganizationRecord>(emptyOrganization)
-  const [inviteDrafts, setInviteDrafts] = useState<InviteDraft[]>([blankInvite])
-  const [isSubmitting, setIsSubmitting] = useState(false)
   const [courses, setCourses] = useState<CourseOption[]>([])
   const [mentors, setMentors] = useState<OrganizationLead[]>([])
   const [ambassadors, setAmbassadors] = useState<OrganizationLead[]>([])
-  const [results, setResults] = useState<BulkInvitationResult | null>(null)
+  const [partners, setPartners] = useState<OrganizationLead[]>([])
+  const [isLoading, setIsLoading] = useState(false)
+  const [isSubmitting, setIsSubmitting] = useState(false)
   const [partnerSearch, setPartnerSearch] = useState('')
-  const resultsModal = useDisclosure()
-  const fileInputRef = useRef<HTMLInputElement | null>(null)
 
   const courseLimit = useMemo(() => {
     const option = programDurations.find((duration) => duration.value === form.programDuration)
@@ -147,40 +122,65 @@ export const CreateOrganizationModal: React.FC<CreateOrganizationModalProps> = (
   }
 
   useEffect(() => {
-    if (form.name && !form.code) {
-      setForm((prev) => ({ ...prev, code: generateOrganizationCode(form.name) }))
-    }
-  }, [form.name, form.code])
-
-  useEffect(() => {
     if (!isOpen) {
       setForm(emptyOrganization)
-      setInviteDrafts([blankInvite])
       setCourses([])
       setMentors([])
       setAmbassadors([])
-      setResults(null)
+      setPartners([])
       return
     }
 
+    if (organization) {
+      setForm({ ...emptyOrganization, ...organization })
+    }
+
     const fetchData = async () => {
+      if (!organization?.id) return
+      setIsLoading(true)
       try {
-        const [courseOptions, mentorOptions, ambassadorOptions] = await Promise.all([
+        const [
+          courseOptions,
+          mentorOptions,
+          ambassadorOptions,
+          partnerOptions,
+          organizationDetails,
+          assignments,
+        ] = await Promise.all([
           fetchAvailableCourses(),
           fetchMentors(),
           fetchAmbassadors(),
+          fetchPartners(),
+          fetchOrganizationDetails(organization.id),
+          fetchOrganizationAssignments(organization.id),
         ])
+
         setCourses(courseOptions)
         setMentors(mentorOptions)
         setAmbassadors(ambassadorOptions)
+        setPartners(partnerOptions)
+
+        if (organizationDetails) {
+          setForm({
+            ...emptyOrganization,
+            ...organizationDetails,
+            courseAssignments: assignments.length
+              ? assignments
+              : organizationDetails.courseAssignments || [],
+          })
+        }
       } catch (error) {
         console.error(error)
-        toast({ title: 'Unable to load form data', status: 'error' })
+        toast({ title: 'Unable to load organization data', status: 'error' })
+      } finally {
+        setIsLoading(false)
       }
     }
 
     fetchData()
-  }, [isOpen, toast])
+  }, [isOpen, organization, toast])
+
+  if (!organization) return null
 
   const updateField = (key: keyof OrganizationRecord, value: unknown) => {
     setForm((prev) => ({ ...prev, [key]: value }))
@@ -207,120 +207,32 @@ export const CreateOrganizationModal: React.FC<CreateOrganizationModalProps> = (
     })
   }
 
-  const handleInviteChange = (id: string, field: keyof InviteDraft, value: string) => {
-    setInviteDrafts((prev) => prev.map((draft) => (draft.id === id ? { ...draft, [field]: value } : draft)))
-  }
-
-  const addInviteDraft = () => {
-    if (inviteDrafts.length >= (form.teamSize || 0)) {
-      toast({ title: 'Invitation count cannot exceed cohort size', status: 'warning' })
-      return
-    }
-    setInviteDrafts((prev) => [
-      ...prev,
-      {
-        ...blankInvite,
-        id: `invite-${Date.now()}`,
-      },
-    ])
-  }
-
-  const removeInviteDraft = (id: string) => {
-    if (inviteDrafts.length === 1) return
-    setInviteDrafts((prev) => prev.filter((draft) => draft.id !== id))
-  }
-
-  const handleCsvUpload = async (event: ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0]
-    if (!file) return
-    try {
-      const drafts = await parseInvitationCSV(file)
-      if (drafts.length > (form.teamSize || drafts.length)) {
-        toast({ title: 'Import exceeds cohort size', status: 'error' })
-        return
-      }
-      setInviteDrafts(drafts)
-      toast({ title: `Imported ${drafts.length} invitations`, status: 'success' })
-    } catch (error) {
-      toast({
-        title: 'Unable to process CSV',
-        description: error instanceof Error ? error.message : 'Unknown error',
-        status: 'error',
-      })
-    } finally {
-      if (fileInputRef.current) fileInputRef.current.value = ''
-    }
-  }
-
-  const validateInvitations = () => {
-    const trimmed = inviteDrafts.filter((draft) => draft.name || draft.email)
-    const emails = new Set<string>()
-    for (const draft of trimmed) {
-      if (!draft.name.trim()) {
-        throw new Error('Invitation name is required')
-      }
-      if (draft.method === 'email') {
-        if (!draft.email.trim()) throw new Error('Email is required for email invitations')
-        if (!emailRegex.test(draft.email.trim())) throw new Error(`Invalid email: ${draft.email}`)
-        if (emails.has(draft.email.trim())) throw new Error(`Duplicate email: ${draft.email}`)
-        emails.add(draft.email.trim())
-      }
-    }
-    if (trimmed.length > (form.teamSize || 0)) {
-      throw new Error('Invitations cannot exceed cohort size')
-    }
-    return trimmed
-  }
-
   const handleSubmit = async () => {
+    if (!organization.id) return
+
     try {
       if (!form.name || form.name.length < 3) throw new Error('Organization name must be at least 3 characters')
       if (!form.code) throw new Error('Organization code is required')
       if (!isCodeValidLength) throw new Error('Organization code must be exactly 6 characters')
-      const isUnique = await validateOrganizationCodeUnique(form.code)
-      if (!isUnique) throw new Error('Organization code is already in use')
       if (!form.programDuration) throw new Error('Program duration is required')
       if (!form.teamSize || form.teamSize <= 0) throw new Error('Cohort size must be greater than 0')
       if (courseLimit && (form.courseAssignments?.length || 0) !== courseLimit) {
         throw new Error(`Please assign exactly ${courseLimit} course(s) for the selected duration`)
       }
 
-      const invitations = validateInvitations()
-
       setIsSubmitting(true)
-      const organizationPayload: OrganizationRecord = {
-        ...form,
+      const { id: _id, ...payload } = form
+      await updateOrganization(organization.id, {
+        ...payload,
         code: form.code.toUpperCase(),
         courseAssignments: form.courseAssignments || [],
-        cohortStartDate: form.cohortStartDate,
-        programDuration: form.programDuration,
-      }
-
-      const { organizationId, invitationResult } = await createOrganizationWithInvitations(
-        organizationPayload,
-        invitations.map((invite) => ({
-          name: invite.name.trim(),
-          email: invite.email.trim() || undefined,
-          role: invite.role,
-          method: invite.method,
-          organizationId: '',
-        })),
-        { adminId, adminName },
-      )
-
-      const organizationWithId = { ...organizationPayload, id: organizationId }
-      if (onCreated) {
-        await onCreated(organizationWithId)
-      }
-      if (invitationResult) {
-        setResults(invitationResult)
-        resultsModal.onOpen()
-      }
-      toast({ title: 'Organization created successfully', status: 'success' })
+      })
+      toast({ title: 'Organization updated successfully', status: 'success' })
+      onUpdated?.({ ...form, id: organization.id })
       onClose()
     } catch (error) {
       toast({
-        title: 'Unable to create organization',
+        title: 'Unable to update organization',
         description: error instanceof Error ? error.message : 'Unknown error',
         status: 'error',
       })
@@ -329,21 +241,24 @@ export const CreateOrganizationModal: React.FC<CreateOrganizationModalProps> = (
     }
   }
 
-  const invitationCountColor = inviteDrafts.length > (form.teamSize || 0) ? 'red.500' : 'gray.600'
-
   return (
-    <>
-      <Modal isOpen={isOpen} onClose={onClose} size="5xl" scrollBehavior="inside">
-        <ModalOverlay />
-        <ModalContent>
-          <ModalHeader>Create organization</ModalHeader>
-          <ModalCloseButton />
-          <ModalBody>
+    <Modal isOpen={isOpen} onClose={onClose} size="5xl" scrollBehavior="inside">
+      <ModalOverlay />
+      <ModalContent>
+        <ModalHeader>Edit organization</ModalHeader>
+        <ModalCloseButton />
+        <ModalBody>
+          {isLoading ? (
+            <Flex justify="center" align="center" py={12} direction="column" gap={3}>
+              <Spinner size="lg" />
+              <Text color="gray.600">Loading organization data...</Text>
+            </Flex>
+          ) : (
             <Stack spacing={8}>
               <Box>
-                <Text fontWeight="bold">1. ORGANIZATION DETAILS</Text>
+                <Text fontWeight="bold">ORGANIZATION DETAILS</Text>
                 <Text color="gray.600" fontSize="sm">
-                  Configure the organization profile, program duration, and leadership assignments.
+                  Update organization details, program configuration, and leadership assignments.
                 </Text>
               </Box>
 
@@ -406,7 +321,10 @@ export const CreateOrganizationModal: React.FC<CreateOrganizationModalProps> = (
                   </FormControl>
                 </GridItem>
                 <GridItem>
-                  <FormControl isRequired>
+                  <FormControl
+                    isRequired
+                    isInvalid={courseLimit > 0 && (form.courseAssignments?.length || 0) !== courseLimit}
+                  >
                     <FormLabel>Program duration</FormLabel>
                     <Select
                       placeholder="Select duration"
@@ -449,8 +367,9 @@ export const CreateOrganizationModal: React.FC<CreateOrganizationModalProps> = (
                       placeholder="Select partner"
                       value={form.assignedPartnerId || ''}
                       onChange={(e) => {
-                        const partner = partners.find((item) => item.id === e.target.value)
-                        updateField('assignedPartnerId', e.target.value || null)
+                        const selectedId = e.target.value
+                        const partner = partners.find((item) => item.id === selectedId)
+                        updateField('assignedPartnerId', selectedId || null)
                         updateField('assignedPartnerName', partner?.name || null)
                         updateField('assignedPartnerEmail', partner?.email || null)
                       }}
@@ -504,6 +423,11 @@ export const CreateOrganizationModal: React.FC<CreateOrganizationModalProps> = (
                       {course.title}
                     </Checkbox>
                   ))}
+                  {!courses.length && (
+                    <Text fontSize="sm" color="gray.600">
+                      No courses available yet.
+                    </Text>
+                  )}
                 </Stack>
                 <Text mt={2} fontSize="sm" color={remainingCourses > 0 ? 'gray.600' : 'green.500'}>
                   {courseLimit === 0
@@ -571,108 +495,18 @@ export const CreateOrganizationModal: React.FC<CreateOrganizationModalProps> = (
                   </FormControl>
                 </GridItem>
               </Grid>
-
-              <Divider />
-
-              <Box>
-                <Text fontWeight="bold">2. ADD USERS</Text>
-                <Text color="gray.600" fontSize="sm">
-                  Invite learners via email or one-time codes. Import CSV for bulk setup.
-                </Text>
-              </Box>
-
-              <Flex justify="space-between" align={{ base: 'stretch', md: 'center' }} direction={{ base: 'column', md: 'row' }}>
-                <HStack spacing={3} mb={{ base: 3, md: 0 }}>
-                  <Button leftIcon={<Plus size={16} />} onClick={addInviteDraft}>
-                    Add manual entry
-                  </Button>
-                  <Button leftIcon={<Upload size={16} />} onClick={() => fileInputRef.current?.click()}>
-                    Upload CSV
-                  </Button>
-                  <Button variant="ghost" onClick={downloadCSVTemplate}>
-                    Download template
-                  </Button>
-                </HStack>
-                <Text fontWeight="medium" color={invitationCountColor}>
-                  {inviteDrafts.length} / {form.teamSize || 0} invitations
-                </Text>
-              </Flex>
-
-              <input
-                ref={fileInputRef}
-                type="file"
-                accept=".csv"
-                style={{ display: 'none' }}
-                onChange={handleCsvUpload}
-              />
-
-              <Stack spacing={3}>
-                {inviteDrafts.map((draft) => (
-                  <Box key={draft.id} borderWidth="1px" borderRadius="md" p={3}>
-                    <Grid templateColumns={{ base: '1fr', md: 'repeat(4, 1fr)' }} gap={3} alignItems="center">
-                      <FormControl isRequired>
-                        <FormLabel>Name</FormLabel>
-                        <Input value={draft.name} onChange={(e) => handleInviteChange(draft.id, 'name', e.target.value)} />
-                      </FormControl>
-                      <FormControl isRequired={draft.method === 'email'}>
-                        <FormLabel>Email</FormLabel>
-                        <Input value={draft.email} onChange={(e) => handleInviteChange(draft.id, 'email', e.target.value)} />
-                      </FormControl>
-                      <FormControl>
-                        <FormLabel>Role</FormLabel>
-                        <Select
-                          value={draft.role}
-                          onChange={(e) => handleInviteChange(draft.id, 'role', e.target.value)}
-                        >
-                          <option value="user">User</option>
-                          <option value="mentor">Mentor</option>
-                          <option value="ambassador">Ambassador</option>
-                          <option value="partner">Partner</option>
-                        </Select>
-                      </FormControl>
-                      <FormControl>
-                        <FormLabel>Method</FormLabel>
-                        <Select
-                          value={draft.method}
-                          onChange={(e) => handleInviteChange(draft.id, 'method', e.target.value)}
-                        >
-                          <option value="email">Email</option>
-                          <option value="one_time_code">One-time code</option>
-                        </Select>
-                      </FormControl>
-                      <GridItem colSpan={4} textAlign="right">
-                        <IconButton
-                          aria-label="Remove invitation"
-                          size="sm"
-                          icon={<X size={14} />}
-                          variant="ghost"
-                          onClick={() => removeInviteDraft(draft.id)}
-                          isDisabled={inviteDrafts.length === 1}
-                        />
-                      </GridItem>
-                    </Grid>
-                  </Box>
-                ))}
-              </Stack>
-
-              <Alert status="warning" borderRadius="md">
-                <AlertIcon />
-                If your admin session is out of sync, refresh before submitting to avoid inconsistent permissions.
-              </Alert>
             </Stack>
-          </ModalBody>
-          <ModalFooter>
-            <Button variant="ghost" mr={3} onClick={onClose}>
-              Cancel
-            </Button>
-            <Button colorScheme="purple" onClick={handleSubmit} isLoading={isSubmitting}>
-              Create organization
-            </Button>
-          </ModalFooter>
-        </ModalContent>
-      </Modal>
-
-      <InvitationResultsModal isOpen={resultsModal.isOpen} onClose={resultsModal.onClose} result={results} />
-    </>
+          )}
+        </ModalBody>
+        <ModalFooter>
+          <Button variant="ghost" mr={3} onClick={onClose}>
+            Cancel
+          </Button>
+          <Button colorScheme="purple" onClick={handleSubmit} isLoading={isSubmitting} isDisabled={isLoading}>
+            Save changes
+          </Button>
+        </ModalFooter>
+      </ModalContent>
+    </Modal>
   )
 }
