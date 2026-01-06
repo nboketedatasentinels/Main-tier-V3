@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useMemo, useState } from 'react'
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import {
   Avatar,
   Badge,
@@ -12,6 +12,7 @@ import {
   HStack,
   Icon,
   IconButton,
+  Skeleton,
   Progress,
   Select,
   SimpleGrid,
@@ -34,6 +35,7 @@ import {
   Thead,
   Tr,
   useDisclosure,
+  keyframes,
   useToken,
   useToast,
   VStack,
@@ -48,6 +50,7 @@ import {
   Crown,
   Info,
   Medal,
+  RefreshCw,
   Sparkles,
   Star,
   Target,
@@ -56,6 +59,7 @@ import {
 } from 'lucide-react'
 import {
   collection,
+  doc,
   getDocs,
   limit,
   onSnapshot,
@@ -135,7 +139,7 @@ const formatNumber = (value?: number | null) => {
 }
 
 export const LeadershipBoardPage: React.FC = () => {
-  const { profile } = useAuth()
+  const { profile: authProfile, refreshProfile } = useAuth()
   const toast = useToast()
   const { isOpen, onOpen, onClose } = useDisclosure()
   const pointsColors = useToken('colors', [
@@ -150,17 +154,44 @@ export const LeadershipBoardPage: React.FC = () => {
   const [sortField, setSortField] = useState<'points' | 'level' | 'name'>('points')
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('desc')
   const [profiles, setProfiles] = useState<UserProfile[]>([])
+  const [currentProfile, setCurrentProfile] = useState<UserProfile | null>(null)
   const [transactions, setTransactions] = useState<PointsTransaction[]>([])
   const [challenges, setChallenges] = useState<ChallengeRecord[]>([])
   const [virtualOffset, setVirtualOffset] = useState(0)
   const [leaderboardPage, setLeaderboardPage] = useState(1)
   const [breakdownPage, setBreakdownPage] = useState(1)
+  const [profilesLoaded, setProfilesLoaded] = useState(false)
+  const [transactionsLoaded, setTransactionsLoaded] = useState(false)
+  const [pointsPulse, setPointsPulse] = useState(false)
+  const [isRefreshingProfile, setIsRefreshingProfile] = useState(false)
   const [showFilterTip, setShowFilterTip] = useState(() => {
     const stored = localStorage.getItem('leaderboard-filter-tip')
     return stored !== 'dismissed'
   })
   const [showPeerConnect, setShowPeerConnect] = useState(false)
+  const previousTotalPoints = useRef<number | null>(null)
+  const previousLevel = useRef<number | null>(null)
   const timeframeStart = useMemo(() => toDateFromTimeframe(timeframe), [timeframe])
+  const enableProfileRealtime = import.meta.env.VITE_ENABLE_PROFILE_REALTIME === 'true'
+
+  const profile = useMemo(() => {
+    if (!authProfile && !currentProfile) return null
+    return {
+      ...(authProfile ?? {}),
+      ...(currentProfile ?? {}),
+      id: currentProfile?.id ?? authProfile?.id,
+    } as UserProfile
+  }, [authProfile, currentProfile])
+
+  const pointsPulseKeyframes = useMemo(
+    () => keyframes`
+      0% { box-shadow: 0 0 0 0 rgba(55, 153, 255, 0.0); }
+      30% { box-shadow: 0 0 0 6px rgba(55, 153, 255, 0.35); }
+      100% { box-shadow: 0 0 0 0 rgba(55, 153, 255, 0.0); }
+    `,
+    []
+  )
+  const pointsPulseStyle = pointsPulse ? `${pointsPulseKeyframes} 1.2s ease-in-out` : 'none'
 
   const refetchChallenges = useCallback(async () => {
     if (!profile) return
@@ -208,6 +239,7 @@ export const LeadershipBoardPage: React.FC = () => {
     const unsubscribe = onSnapshot(profileQuery, (snapshot) => {
       const loadedProfiles: UserProfile[] = snapshot.docs.map((doc) => doc.data() as UserProfile)
       setProfiles(loadedProfiles)
+      setProfilesLoaded(true)
     })
 
     return () => unsubscribe()
@@ -228,6 +260,7 @@ export const LeadershipBoardPage: React.FC = () => {
         }
       })
       setTransactions(loadedTx)
+      setTransactionsLoaded(true)
     })
 
     return () => unsubscribe()
@@ -267,6 +300,30 @@ export const LeadershipBoardPage: React.FC = () => {
   }, [profile])
 
   useEffect(() => {
+    if (!profile?.id) return undefined
+
+    const profileRef = doc(db, 'profiles', profile.id)
+    const unsubscribe = onSnapshot(
+      profileRef,
+      (snapshot) => {
+        if (!snapshot.exists()) return
+        const data = snapshot.data() as UserProfile
+        setCurrentProfile({
+          ...data,
+          id: snapshot.id,
+          journeyType: data.journeyType || profile.journeyType || '4W',
+          role: profile.role || data.role,
+        })
+      },
+      (error) => {
+        console.error('🔴 [Leaderboard] Profile listener error', error)
+      }
+    )
+
+    return () => unsubscribe()
+  }, [profile?.id, profile?.journeyType, profile?.role])
+
+  useEffect(() => {
     if (profile && profile.privacySettings?.showOnLeaderboard === false) {
       toast({
         title: 'Privacy enabled',
@@ -277,6 +334,47 @@ export const LeadershipBoardPage: React.FC = () => {
       })
     }
   }, [profile, toast])
+
+  useEffect(() => {
+    if (!profile?.id) return undefined
+
+    if (enableProfileRealtime) {
+      console.log('🟢 [Leaderboard] Profile realtime enabled')
+      return undefined
+    }
+
+    console.log('🟠 [Leaderboard] Profile realtime disabled, polling every 60s')
+    const interval = setInterval(() => {
+      refreshProfile()
+    }, 60_000)
+
+    return () => clearInterval(interval)
+  }, [enableProfileRealtime, profile?.id, refreshProfile])
+
+  const handleManualRefresh = async () => {
+    setIsRefreshingProfile(true)
+    const result = await refreshProfile()
+    setIsRefreshingProfile(false)
+
+    if (result.error) {
+      toast({
+        title: 'Refresh failed',
+        description: result.error.message,
+        status: 'error',
+        duration: 3000,
+        isClosable: true,
+      })
+      return
+    }
+
+    toast({
+      title: 'Profile refreshed',
+      description: 'Latest points have been synced.',
+      status: 'success',
+      duration: 2000,
+      isClosable: true,
+    })
+  }
 
   const dismissFilterTip = () => {
     setShowFilterTip(false)
@@ -368,6 +466,51 @@ export const LeadershipBoardPage: React.FC = () => {
 
   const userRow = useMemo(() => leaderboardRows.find((row) => row.user.id === profile?.id), [leaderboardRows, profile])
 
+  const isPointsReady = Boolean(profile) && profilesLoaded && transactionsLoaded
+  const displayTotalPoints = userRow?.totalPoints ?? profile?.totalPoints ?? 0
+  const displayLevel = userRow?.level ?? profile?.level ?? 1
+
+  useEffect(() => {
+    if (!profile) return
+
+    if (previousTotalPoints.current === null || previousLevel.current === null) {
+      previousTotalPoints.current = displayTotalPoints
+      previousLevel.current = displayLevel
+      return
+    }
+
+    if (displayTotalPoints > previousTotalPoints.current) {
+      const delta = displayTotalPoints - previousTotalPoints.current
+      setPointsPulse(true)
+      toast({
+        title: 'Points earned!',
+        description: `+${formatNumber(delta)} points added to your total.`,
+        status: 'success',
+        duration: 2500,
+        isClosable: true,
+      })
+    }
+
+    if (displayLevel > (previousLevel.current ?? 0)) {
+      toast({
+        title: 'Level up!',
+        description: `You reached level ${displayLevel}.`,
+        status: 'success',
+        duration: 2500,
+        isClosable: true,
+      })
+    }
+
+    previousTotalPoints.current = displayTotalPoints
+    previousLevel.current = displayLevel
+  }, [displayLevel, displayTotalPoints, profile, toast])
+
+  useEffect(() => {
+    if (!pointsPulse) return undefined
+    const timeout = setTimeout(() => setPointsPulse(false), 1200)
+    return () => clearTimeout(timeout)
+  }, [pointsPulse])
+
   const paginatedRows = useMemo(() => {
     const end = leaderboardPage * pageSize
     return leaderboardRows.slice(0, end)
@@ -397,7 +540,7 @@ export const LeadershipBoardPage: React.FC = () => {
   const cohortStats = useMemo(() => {
     const active = userRow?.activePoints || 0
     const total = userRow?.totalPoints || 0
-    const level = userRow?.level || profile?.level || 1
+    const level = displayLevel
     const maxActive = Math.max(...leaderboardRows.map((row) => row.activePoints), active)
     const maxTotal = Math.max(...leaderboardRows.map((row) => row.totalPoints), total)
     const maxLevel = Math.max(...leaderboardRows.map((row) => row.level), level)
@@ -423,7 +566,7 @@ export const LeadershipBoardPage: React.FC = () => {
       avgTotal,
       avgLevel,
     }
-  }, [leaderboardRows, profile?.level, userRow])
+  }, [displayLevel, leaderboardRows, userRow])
 
   const breakdownByCategory = useMemo(() => {
     const categoryTotals: Record<string, number> = {}
@@ -511,6 +654,15 @@ export const LeadershipBoardPage: React.FC = () => {
         </Box>
         <HStack spacing={3}>
           <Button
+            variant="outline"
+            colorScheme="brand"
+            leftIcon={<Icon as={RefreshCw} />}
+            isLoading={isRefreshingProfile}
+            onClick={handleManualRefresh}
+          >
+            Refresh
+          </Button>
+          <Button
             bg="surface.default"
             color="brand.primary"
             border="1px solid"
@@ -585,22 +737,34 @@ export const LeadershipBoardPage: React.FC = () => {
                       </Stat>
                       <Stat>
                         <StatLabel color="text.muted">Total Points</StatLabel>
-                        <StatNumber color="text.primary">{formatNumber(userRow?.totalPoints || profile?.totalPoints || 0)}</StatNumber>
+                        <Skeleton isLoaded={isPointsReady} height="32px">
+                          <StatNumber color="text.primary" animation={pointsPulseStyle}>
+                            {formatNumber(displayTotalPoints)}
+                          </StatNumber>
+                        </Skeleton>
                         <StatHelpText color="text.secondary">Lifetime XP</StatHelpText>
                       </Stat>
                       <Stat>
                         <StatLabel color="text.muted">Current Level</StatLabel>
-                        <StatNumber color="text.primary">{userRow?.level || profile?.level || 1}</StatNumber>
+                        <Skeleton isLoaded={isPointsReady} height="32px">
+                          <StatNumber color="text.primary" animation={pointsPulseStyle}>
+                            {displayLevel}
+                          </StatNumber>
+                        </Skeleton>
                         <StatHelpText color="text.secondary">Keep climbing</StatHelpText>
                       </Stat>
                       <Stat>
                         <StatLabel color="text.muted">Weekly Points</StatLabel>
-                        <StatNumber color="text.primary">{formatNumber(companyStats.weeklyPoints)}</StatNumber>
+                        <Skeleton isLoaded={isPointsReady} height="32px">
+                          <StatNumber color="text.primary">{formatNumber(companyStats.weeklyPoints)}</StatNumber>
+                        </Skeleton>
                         <StatHelpText color="text.secondary">Last 7 days</StatHelpText>
                       </Stat>
                       <Stat>
                         <StatLabel color="text.muted">Monthly Points</StatLabel>
-                        <StatNumber color="text.primary">{formatNumber(companyStats.monthlyPoints)}</StatNumber>
+                        <Skeleton isLoaded={isPointsReady} height="32px">
+                          <StatNumber color="text.primary">{formatNumber(companyStats.monthlyPoints)}</StatNumber>
+                        </Skeleton>
                         <StatHelpText color="text.secondary">Last 30 days</StatHelpText>
                       </Stat>
                       <Stat>
@@ -635,7 +799,9 @@ export const LeadershipBoardPage: React.FC = () => {
                         <Avatar size="lg" name={profile?.fullName} src={profile?.avatarUrl} />
                         <Box>
                           <Text fontWeight="bold">{profile?.fullName || 'You'}</Text>
-                          <Text color="text.secondary">Level {profile?.level || 1} · {formatNumber(profile?.totalPoints || 0)} pts</Text>
+                          <Text color="text.secondary">
+                            Level {displayLevel} · {formatNumber(displayTotalPoints)} pts
+                          </Text>
                         </Box>
                       </HStack>
                       <SimpleGrid columns={3} spacing={3}>
@@ -645,7 +811,9 @@ export const LeadershipBoardPage: React.FC = () => {
                         </Box>
                         <Box p={3} border="1px solid" borderColor="border.subtle" borderRadius="lg">
                           <Text fontSize="xs" color="text.secondary">Total Points</Text>
-                          <Text fontWeight="bold">{formatNumber(userRow?.totalPoints || profile?.totalPoints || 0)}</Text>
+                          <Text fontWeight="bold" animation={pointsPulseStyle}>
+                            {formatNumber(displayTotalPoints)}
+                          </Text>
                         </Box>
                         <Box p={3} border="1px solid" borderColor="border.subtle" borderRadius="lg">
                           <Text fontSize="xs" color="text.secondary">Featured Badges</Text>
