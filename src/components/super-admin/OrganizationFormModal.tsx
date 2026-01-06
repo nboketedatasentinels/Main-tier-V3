@@ -1,8 +1,10 @@
-import React, { useEffect, useState } from 'react'
+import React, { useEffect, useMemo, useState } from 'react'
 import {
   Box,
   Button,
   FormControl,
+  FormErrorMessage,
+  FormHelperText,
   FormLabel,
   HStack,
   Input,
@@ -16,9 +18,12 @@ import {
   Select,
   Stack,
   Textarea,
+  Tooltip,
   useToast,
 } from '@chakra-ui/react'
-import { OrganizationRecord } from '@/types/admin'
+import { InfoIcon } from '@chakra-ui/icons'
+import { fetchPartners } from '@/services/organizationService'
+import { OrganizationLead, OrganizationRecord } from '@/types/admin'
 
 type Mode = 'create' | 'edit'
 
@@ -28,6 +33,7 @@ interface Props {
   initialData?: OrganizationRecord | null
   onSubmit: (data: OrganizationRecord) => Promise<void>
   mode?: Mode
+  partners?: OrganizationLead[]
 }
 
 const defaultOrg: OrganizationRecord = {
@@ -44,22 +50,88 @@ const defaultOrg: OrganizationRecord = {
   partnerId: null,
 }
 
-export const OrganizationFormModal: React.FC<Props> = ({ isOpen, onClose, initialData, onSubmit, mode = 'create' }) => {
+export const OrganizationFormModal: React.FC<Props> = ({
+  isOpen,
+  onClose,
+  initialData,
+  onSubmit,
+  mode = 'create',
+  partners: partnersProp = [],
+}) => {
   const [form, setForm] = useState<OrganizationRecord>(initialData || defaultOrg)
   const [isSubmitting, setSubmitting] = useState(false)
+  const [partners, setPartners] = useState<OrganizationLead[]>(partnersProp)
+  const [isLoadingPartners, setIsLoadingPartners] = useState(false)
+  const [partnersError, setPartnersError] = useState<string | null>(null)
+  const [partnerSearch, setPartnerSearch] = useState('')
   const toast = useToast()
+  const codeLength = form.code.trim().length
+  const isCodeValidLength = codeLength === 6
 
   useEffect(() => {
     setForm(initialData || defaultOrg)
   }, [initialData])
 
+  useEffect(() => {
+    setPartners(partnersProp)
+  }, [partnersProp])
+
+  useEffect(() => {
+    if (!isOpen) return
+
+    const loadPartners = async () => {
+      setIsLoadingPartners(true)
+      setPartnersError(null)
+      try {
+        const partnerOptions = await fetchPartners()
+        setPartners(partnerOptions)
+      } catch (error) {
+        console.error(error)
+        setPartnersError('Unable to load partners.')
+        toast({ title: 'Unable to load partners', status: 'error' })
+      } finally {
+        setIsLoadingPartners(false)
+      }
+    }
+
+    loadPartners()
+  }, [isOpen, toast])
+
   const handleChange = (key: keyof OrganizationRecord, value: string | number | null) => {
     setForm((prev) => ({ ...prev, [key]: value }))
+  }
+
+  const sortedPartners = useMemo(
+    () => [...partners].sort((a, b) => a.name.localeCompare(b.name)),
+    [partners],
+  )
+
+  const filteredPartners = useMemo(() => {
+    const term = partnerSearch.trim().toLowerCase()
+    if (!term) return sortedPartners
+    return sortedPartners.filter((item) => {
+      const email = item.email?.toLowerCase() ?? ''
+      return item.name.toLowerCase().includes(term) || email.includes(term)
+    })
+  }, [partnerSearch, sortedPartners])
+
+  const selectedPartnerId =
+    form.partnerId ||
+    partners.find((item) => item.name === form.transformationPartner)?.id ||
+    ''
+
+  const buildPartnerLabel = (item: OrganizationLead) => {
+    const emailSuffix = item.email ? ` — ${item.email}` : ''
+    return `${item.name}${emailSuffix}`
   }
 
   const handleSubmit = async () => {
     if (!form.name || !form.code) {
       toast({ title: 'Name and code are required', status: 'warning' })
+      return
+    }
+    if (!isCodeValidLength) {
+      toast({ title: 'Organization code must be exactly 6 characters', status: 'warning' })
       return
     }
 
@@ -85,9 +157,24 @@ export const OrganizationFormModal: React.FC<Props> = ({ isOpen, onClose, initia
                 <FormLabel>Organization name</FormLabel>
                 <Input value={form.name} onChange={(e) => handleChange('name', e.target.value)} placeholder="Acme Corp" />
               </FormControl>
-              <FormControl isRequired>
-                <FormLabel>Company code</FormLabel>
-                <Input value={form.code} onChange={(e) => handleChange('code', e.target.value)} placeholder="ACME" textTransform="uppercase" />
+              <FormControl isRequired isInvalid={codeLength > 0 && !isCodeValidLength}>
+                <FormLabel display="flex" alignItems="center" gap={2}>
+                  Organization code
+                  <Tooltip label="6-character code: 2-letter prefix + 4 random characters." placement="top">
+                    <InfoIcon color="gray.400" />
+                  </Tooltip>
+                </FormLabel>
+                <Input
+                  value={form.code}
+                  onChange={(e) => handleChange('code', e.target.value.toUpperCase())}
+                  placeholder="6-char code"
+                  maxLength={6}
+                  textTransform="uppercase"
+                />
+                <FormHelperText color={isCodeValidLength ? 'green.500' : 'gray.600'}>
+                  {codeLength}/6 characters
+                </FormHelperText>
+                <FormErrorMessage>Organization code must be exactly 6 characters.</FormErrorMessage>
               </FormControl>
             </HStack>
 
@@ -132,7 +219,37 @@ export const OrganizationFormModal: React.FC<Props> = ({ isOpen, onClose, initia
 
             <FormControl>
               <FormLabel>Transformation partner</FormLabel>
-              <Input value={form.transformationPartner || ''} onChange={(e) => handleChange('transformationPartner', e.target.value)} placeholder="Partner name" />
+              <Input
+                value={partnerSearch}
+                onChange={(e) => setPartnerSearch(e.target.value)}
+                placeholder="Search partners"
+                mb={2}
+              />
+              <Select
+                value={selectedPartnerId}
+                onChange={(e) => {
+                  const selectedId = e.target.value
+                  const selectedPartner = partners.find((item) => item.id === selectedId)
+                  handleChange('partnerId', selectedId || null)
+                  handleChange('transformationPartner', selectedPartner?.name || '')
+                }}
+                placeholder="Select partner"
+                isDisabled={isLoadingPartners}
+              >
+                <option value="">— No partner —</option>
+                {filteredPartners.map((partner) => (
+                  <option key={partner.id} value={partner.id}>
+                    {buildPartnerLabel(partner)}
+                  </option>
+                ))}
+              </Select>
+              {isLoadingPartners ? (
+                <FormHelperText>Loading partners...</FormHelperText>
+              ) : null}
+              {partnersError ? <FormHelperText color="red.500">{partnersError}</FormHelperText> : null}
+              {!isLoadingPartners && !partnersError && !filteredPartners.length ? (
+                <FormHelperText color="gray.600">No partners available.</FormHelperText>
+              ) : null}
             </FormControl>
 
             <FormControl>
@@ -160,4 +277,3 @@ export const OrganizationFormModal: React.FC<Props> = ({ isOpen, onClose, initia
     </Modal>
   )
 }
-

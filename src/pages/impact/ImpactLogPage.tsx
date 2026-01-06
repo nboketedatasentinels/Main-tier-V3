@@ -255,6 +255,8 @@ export const ImpactLogPage: React.FC = () => {
     verificationLevel: 'Tier 1: Self-Reported',
     date: format(new Date(), 'yyyy-MM-dd'),
   })
+  const isEsgActive = formValues.categoryGroup === 'esg'
+  const isBusinessActive = formValues.categoryGroup === 'business'
 
   const preview = useMemo(() => calculateImpactPreview(formValues), [formValues])
 
@@ -904,7 +906,16 @@ export const ImpactLogPage: React.FC = () => {
             <Stack spacing={4}>
               <HStack spacing={3}>
                 <Button
-                  colorScheme={formValues.categoryGroup === 'esg' ? 'green' : 'gray'}
+                  colorScheme={isEsgActive ? 'green' : 'gray'}
+                  variant={isEsgActive ? 'solid' : 'outline'}
+                  size="lg"
+                  leftIcon={isEsgActive ? <Check size={18} /> : undefined}
+                  fontWeight={isEsgActive ? 'semibold' : 'medium'}
+                  boxShadow={isEsgActive ? 'md' : 'none'}
+                  transform={isEsgActive ? 'scale(1.02)' : 'scale(1)'}
+                  transition="all 0.2s ease"
+                  aria-pressed={isEsgActive}
+                  color={isEsgActive ? 'white' : 'gray.600'}
                   onClick={() =>
                     setFormValues((prev) => ({
                       ...prev,
@@ -917,7 +928,16 @@ export const ImpactLogPage: React.FC = () => {
                   ESG Impact
                 </Button>
                 <Button
-                  colorScheme={formValues.categoryGroup === 'business' ? 'blue' : 'gray'}
+                  colorScheme={isBusinessActive ? 'blue' : 'gray'}
+                  variant={isBusinessActive ? 'solid' : 'outline'}
+                  size="lg"
+                  leftIcon={isBusinessActive ? <Check size={18} /> : undefined}
+                  fontWeight={isBusinessActive ? 'semibold' : 'medium'}
+                  boxShadow={isBusinessActive ? 'md' : 'none'}
+                  transform={isBusinessActive ? 'scale(1.02)' : 'scale(1)'}
+                  transition="all 0.2s ease"
+                  aria-pressed={isBusinessActive}
+                  color={isBusinessActive ? 'white' : 'gray.600'}
                   onClick={() =>
                     setFormValues((prev) => ({
                       ...prev,

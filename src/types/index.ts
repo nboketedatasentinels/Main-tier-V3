@@ -103,6 +103,8 @@ export interface UserProfile {
   isOnboarded: boolean
   fcmTokens?: string[]
   personalityType?: string
+  hasCompletedPersonalityTest?: boolean
+  hasCompletedValuesTest?: boolean
   privacySettings?: PrivacySettings
 
   // Timestamps

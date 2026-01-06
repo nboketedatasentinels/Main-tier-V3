@@ -100,7 +100,7 @@ export const PartnerDashboardLayout: React.FC<PartnerDashboardLayoutProps> = ({
             </Box>
           )}
           <VStack align="flex-start" spacing={0} flex={1}>
-            <Text fontWeight="semibold" color="brand.text">
+            <Text fontSize="sm" fontWeight="semibold" color="brand.text">
               {item.label}
             </Text>
             {'description' in item && item.description && (

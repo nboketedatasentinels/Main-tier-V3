@@ -24,7 +24,7 @@ import { WeeklyInspirationCard } from '@/components/journeys/weeklyGlance/Weekly
 import { useWeeklyGlanceData } from '@/hooks/useWeeklyGlanceData'
 import { BuildVillageModal } from '@/components/modals/BuildVillageModal'
 import { useAuth } from '@/hooks/useAuth'
-import { TransformationTier, UserProfile, UserRole } from '@/types'
+import { TransformationTier, UserRole } from '@/types'
 
 export const WeeklyGlancePage = () => {
   const { profile } = useAuth()
@@ -34,6 +34,16 @@ export const WeeklyGlancePage = () => {
   const [villageName, setVillageName] = useState('')
   const [villagePurpose, setVillagePurpose] = useState('')
   const userRole = profile?.role as UserRole | undefined
+  const isPaidMember = profile?.membershipStatus === 'paid'
+  const isCorporateTier =
+    profile?.transformationTier === TransformationTier.CORPORATE_MEMBER ||
+    profile?.transformationTier === TransformationTier.CORPORATE_LEADER
+  const shouldShowBuildVillage =
+    !profile?.villageId &&
+    !profile?.companyId &&
+    !profile?.corporateVillageId &&
+    !isPaidMember &&
+    !isCorporateTier
 
   const hasError = Object.values(data.errors).some(Boolean)
 
@@ -63,7 +73,7 @@ export const WeeklyGlancePage = () => {
   return (
     <Box p={{ base: 4, md: 6 }}>
       <Stack spacing={6}>
-        {shouldShowBuildVillage(profile) && (
+        {shouldShowBuildVillage && (
           <Card bg="brand.primaryMuted" border="1px" borderColor="brand.border">
             <CardBody>
               <Stack direction={{ base: 'column', md: 'row' }} spacing={4} align="flex-start" justify="space-between">

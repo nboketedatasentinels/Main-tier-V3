@@ -30,7 +30,8 @@ import {
 import { collection, query, where, onSnapshot, orderBy, limit, doc, getDocs, Timestamp } from 'firebase/firestore'
 import { useAuth } from '@/hooks/useAuth'
 import { db } from '@/services/firebase'
-import { UserRole } from '@/types'
+import { canAccessCourse, FREE_TIER_COURSE_TITLE, isFreeUser } from '@/utils/membership'
+import { Link as RouterLink } from 'react-router-dom'
 
 type CourseDifficulty = 'Beginner' | 'Intermediate' | 'Advanced'
 
@@ -349,8 +350,6 @@ const MONTHLY_JOURNEY_COURSES: Record<string, string[]> = {
   custom6: [],
 }
 
-const journeyTemplateCount = Object.keys(MONTHLY_JOURNEY_COURSES).length
-
 const normalizeDate = (value: unknown): Date | null => {
   if (!value) return null
   if (value instanceof Date) return value
@@ -414,6 +413,7 @@ const badgeColor = (difficulty?: CourseDifficulty) => {
 
 export const MyCoursesPage: React.FC = () => {
   const { user, profile } = useAuth()
+  const isFreeTierUser = useMemo(() => isFreeUser(profile), [profile])
 
   const [userCourses, setUserCourses] = useState<NormalizedCourse[]>([])
   const [companyAssignedCourses, setCompanyAssignedCourses] = useState<NormalizedCourse[]>([])
@@ -748,9 +748,13 @@ export const MyCoursesPage: React.FC = () => {
     addCourses(organizationCourses)
 
     const result = Array.from(mergeMap.values())
+    const applyFreeTierFilter = (courses: NormalizedCourse[]) =>
+      isFreeTierUser
+        ? courses.filter(course => course.title.trim().toLowerCase() === FREE_TIER_COURSE_TITLE.toLowerCase())
+        : courses
 
     if (assignedCourseOrder.length) {
-      return result.sort((a, b) => {
+      const ordered = result.sort((a, b) => {
         const indexA = assignedCourseOrder.findIndex(id => id.toLowerCase() === a.title.toLowerCase() || id === a.id)
         const indexB = assignedCourseOrder.findIndex(id => id.toLowerCase() === b.title.toLowerCase() || id === b.id)
         if (indexA === -1 && indexB === -1) return a.title.localeCompare(b.title)
@@ -758,15 +762,17 @@ export const MyCoursesPage: React.FC = () => {
         if (indexB === -1) return -1
         return indexA - indexB
       })
+      return applyFreeTierFilter(ordered)
     }
 
-    return result
+    return applyFreeTierFilter(result)
   }, [
     userCourses,
     personalAssignedCourses,
     companyAssignedCourses,
     organizationCourses,
     assignedCourseOrder,
+    isFreeTierUser,
   ])
 
   const recommendedCourses = useMemo<RecommendedCourse[]>(() => {
@@ -778,10 +784,12 @@ export const MyCoursesPage: React.FC = () => {
         ...(COURSE_METADATA_MAPPING[title] || {}),
       }))
       .filter(course => !assignedTitles.has(course.title.toLowerCase()))
-      .slice(0, 4)
+    const filteredCourses = isFreeTierUser
+      ? availableCourses.filter(course => course.title.toLowerCase() === FREE_TIER_COURSE_TITLE.toLowerCase())
+      : availableCourses
 
-    return availableCourses
-  }, [combinedAssignedCourses])
+    return filteredCourses.slice(0, 4)
+  }, [combinedAssignedCourses, isFreeTierUser])
 
   const assignedCourseCount = useMemo(() => combinedAssignedCourses.length, [combinedAssignedCourses])
 
@@ -821,20 +829,31 @@ export const MyCoursesPage: React.FC = () => {
 
   const headerDescription = useMemo(() => {
     if (!user) return 'Sign in to view the courses that have been assigned to you.'
-    if (profile?.role === UserRole.FREE_USER)
-      return 'Upgrade your membership to receive personalized course assignments tailored to your journey.'
+    if (isFreeTierUser)
+      return 'You have access to one complimentary course—Transformational Leadership. Upgrade anytime to unlock the full learning library.'
     if (!companyCode)
       return 'Once you are assigned to a company program, your courses will appear here.'
     return 'Explore your assigned learning experiences below. Course progress and completion are tracked on the external platform.'
-  }, [user, profile?.role, companyCode])
+  }, [user, isFreeTierUser, companyCode])
 
   const overallLoading =
     loadingUserCourses || loadingCompanyCourses || loadingPersonalCourses || loadingOrganizationCourses
 
+  const journeyTemplateCourses = useMemo(() => {
+    if (!isFreeTierUser) return MONTHLY_JOURNEY_COURSES
+    return {
+      complimentary: [FREE_TIER_COURSE_TITLE],
+    }
+  }, [isFreeTierUser])
+
+  const journeyTemplateCount = useMemo(() => Object.keys(journeyTemplateCourses).length, [journeyTemplateCourses])
+
   const recentCoursesToDisplay = useMemo(() => {
-    if (recentActivity.length) return recentActivity
-    if (!recentActivity.length && !loadingRecentActivity && combinedAssignedCourses.length) {
-      return combinedAssignedCourses.slice(0, 3).map(course => ({
+    let items: RecentActivityItem[] = []
+    if (recentActivity.length) {
+      items = recentActivity
+    } else if (!recentActivity.length && !loadingRecentActivity && combinedAssignedCourses.length) {
+      items = combinedAssignedCourses.slice(0, 3).map(course => ({
         id: course.id,
         title: course.title,
         lastAccessed: null,
@@ -842,8 +861,9 @@ export const MyCoursesPage: React.FC = () => {
         courseId: course.id,
       }))
     }
-    return []
-  }, [recentActivity, loadingRecentActivity, combinedAssignedCourses])
+
+    return isFreeTierUser ? items.filter(item => canAccessCourse(profile, item.title)) : items
+  }, [recentActivity, loadingRecentActivity, combinedAssignedCourses, isFreeTierUser, profile])
 
   return (
     <Stack spacing={8} py={2} as="section">
@@ -876,11 +896,31 @@ export const MyCoursesPage: React.FC = () => {
             <Badge colorScheme="purple" variant="subtle" width="fit-content" borderRadius="full">
               {journeyTemplateCount} curated journey templates available
             </Badge>
+            {isFreeTierUser && (
+              <HStack spacing={3} flexWrap="wrap">
+                <Badge colorScheme="orange" variant="subtle" borderRadius="full">
+                  Free tier experience
+                </Badge>
+                <Text color="orange.700" fontSize="sm">
+                  You are viewing the complimentary course catalog.
+                </Text>
+                <Button
+                  as={RouterLink}
+                  to="/upgrade"
+                  size="sm"
+                  colorScheme="purple"
+                  rightIcon={<ArrowUpRight size={14} />}
+                  borderRadius="full"
+                >
+                  Upgrade membership
+                </Button>
+              </HStack>
+            )}
           </Stack>
         </Flex>
       </Box>
 
-      {profile?.role === UserRole.FREE_USER && (
+      {isFreeTierUser && (
         <Grid templateColumns={{ base: '1fr', md: '1fr 1fr' }} gap={6} as="section">
           <GridItem>
             <Box bg="white" p={5} borderRadius="2xl" border="1px solid" borderColor="gray.100" boxShadow="sm">
@@ -896,7 +936,9 @@ export const MyCoursesPage: React.FC = () => {
 
               {recommendedCourses.length ? (
                 <SimpleGrid columns={{ base: 1, sm: 2 }} spacing={4}>
-                  {recommendedCourses.map(course => (
+                  {recommendedCourses.map(course => {
+                    const hasAccess = canAccessCourse(profile, course.title)
+                    return (
                     <Box
                       key={course.title}
                       border="1px solid"
@@ -946,21 +988,23 @@ export const MyCoursesPage: React.FC = () => {
                           <Text>{formatDuration(course.estimatedMinutes) || 'Self-paced'}</Text>
                         </HStack>
                         <Button
-                          as="a"
-                          href={course.link}
-                          target="_blank"
-                          rel="noopener noreferrer"
+                          as={hasAccess && course.link ? 'a' : (RouterLink as React.ElementType)}
+                          href={hasAccess ? course.link : undefined}
+                          to={hasAccess ? undefined : '/upgrade'}
+                          target={hasAccess ? '_blank' : undefined}
+                          rel={hasAccess ? 'noopener noreferrer' : undefined}
                           rightIcon={<ArrowUpRight size={14} />}
                           colorScheme="purple"
                           variant="outline"
                           size="sm"
                           borderRadius="full"
                         >
-                          Explore
+                          {hasAccess ? 'Explore' : 'Upgrade to access'}
                         </Button>
                       </Stack>
                     </Box>
-                  ))}
+                    )
+                  })}
                 </SimpleGrid>
               ) : (
                 <Flex direction="column" align="center" justify="center" py={8} color="gray.500" gap={3}>
@@ -1002,7 +1046,9 @@ export const MyCoursesPage: React.FC = () => {
 
               {!loadingRecentActivity && recentCoursesToDisplay.length > 0 && (
                 <Stack spacing={3}>
-                  {recentCoursesToDisplay.map(item => (
+                  {recentCoursesToDisplay.map(item => {
+                    const hasAccess = canAccessCourse(profile, item.title)
+                    return (
                     <Box key={item.id} border="1px solid" borderColor="gray.100" borderRadius="lg" p={3}>
                       <HStack justify="space-between" align="start" mb={2}>
                         <Text fontWeight="semibold" color="gray.800">
@@ -1025,19 +1071,21 @@ export const MyCoursesPage: React.FC = () => {
                         {(item.progress || 0).toFixed(0)}% complete
                       </Text>
                       <Button
-                        as="a"
-                        href={COURSE_DETAILS_MAPPING[item.title]?.link || '#'}
-                        target="_blank"
-                        rel="noopener noreferrer"
+                        as={hasAccess ? 'a' : (RouterLink as React.ElementType)}
+                        href={hasAccess ? COURSE_DETAILS_MAPPING[item.title]?.link || '#' : undefined}
+                        to={hasAccess ? undefined : '/upgrade'}
+                        target={hasAccess ? '_blank' : undefined}
+                        rel={hasAccess ? 'noopener noreferrer' : undefined}
                         size="xs"
                         variant="link"
                         colorScheme="purple"
                         mt={1}
                       >
-                        Resume
+                        {hasAccess ? 'Resume' : 'Upgrade to resume'}
                       </Button>
                     </Box>
-                  ))}
+                    )
+                  })}
                 </Stack>
               )}
             </Box>
@@ -1084,8 +1132,8 @@ export const MyCoursesPage: React.FC = () => {
               No courses assigned yet
             </Heading>
             <Text color="gray.500" textAlign="center" maxW="lg">
-              {profile?.role === UserRole.FREE_USER
-                ? 'Upgrade to a paid membership or connect with your administrator to start receiving course assignments.'
+              {isFreeTierUser
+                ? 'Free members can access Transformational Leadership. Upgrade your membership to unlock the full course catalog.'
                 : 'Your program administrator has not assigned any courses yet. Check back soon!'}
             </Text>
           </Flex>
@@ -1174,22 +1222,26 @@ export const MyCoursesPage: React.FC = () => {
                           )}
                         </VStack>
 
-                        {course.link && (
-                          <Button
-                            as="a"
-                            href={course.link}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            size="sm"
-                            colorScheme="purple"
-                            rightIcon={<ExternalLink size={16} />}
-                            variant="solid"
-                            borderRadius="full"
-                            minW="120px"
-                          >
-                            Open course
-                          </Button>
-                        )}
+                        {course.link && (() => {
+                          const hasAccess = canAccessCourse(profile, course.title)
+                          return (
+                            <Button
+                              as={hasAccess ? 'a' : (RouterLink as React.ElementType)}
+                              href={hasAccess ? course.link : undefined}
+                              to={hasAccess ? undefined : '/upgrade'}
+                              target={hasAccess ? '_blank' : undefined}
+                              rel={hasAccess ? 'noopener noreferrer' : undefined}
+                              size="sm"
+                              colorScheme="purple"
+                              rightIcon={<ExternalLink size={16} />}
+                              variant="solid"
+                              borderRadius="full"
+                              minW="120px"
+                            >
+                              {hasAccess ? 'Open course' : 'Upgrade to unlock'}
+                            </Button>
+                          )
+                        })()}
                       </HStack>
                     </Box>
                   ))}

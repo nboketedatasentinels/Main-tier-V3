@@ -1,9 +1,11 @@
-import React, { useEffect, useState } from 'react'
+import React, { useEffect, useMemo, useState } from 'react'
 import {
   Badge,
   Button,
   FormControl,
+  FormHelperText,
   FormLabel,
+  HStack,
   Input,
   Modal,
   ModalBody,
@@ -12,25 +14,67 @@ import {
   ModalFooter,
   ModalHeader,
   ModalOverlay,
+  Select,
+  Spinner,
   Stack,
   Text,
 } from '@chakra-ui/react'
-import { OrganizationRecord } from '@/types/admin'
+import { OrganizationLead, OrganizationRecord } from '@/types/admin'
 
 interface Props {
   isOpen: boolean
   onClose: () => void
   organization?: OrganizationRecord | null
   onSubmit: (partnerName: string) => Promise<void>
+  partners: OrganizationLead[]
+  isLoadingPartners?: boolean
+  partnersError?: string | null
+  partnerAssignmentCounts?: Record<string, number>
 }
 
-export const AssignPartnerModal: React.FC<Props> = ({ isOpen, onClose, organization, onSubmit }) => {
+export const AssignPartnerModal: React.FC<Props> = ({
+  isOpen,
+  onClose,
+  organization,
+  onSubmit,
+  partners,
+  isLoadingPartners = false,
+  partnersError = null,
+  partnerAssignmentCounts,
+}) => {
   const [partner, setPartner] = useState('')
+  const [partnerSearch, setPartnerSearch] = useState('')
   const [loading, setLoading] = useState(false)
 
   useEffect(() => {
     setPartner(organization?.transformationPartner || '')
   }, [organization])
+
+  const sortedPartners = useMemo(
+    () => [...partners].sort((a, b) => a.name.localeCompare(b.name)),
+    [partners],
+  )
+
+  const filteredPartners = useMemo(() => {
+    const term = partnerSearch.trim().toLowerCase()
+    if (!term) return sortedPartners
+    return sortedPartners.filter((item) => {
+      const email = item.email?.toLowerCase() ?? ''
+      return item.name.toLowerCase().includes(term) || email.includes(term)
+    })
+  }, [partnerSearch, sortedPartners])
+
+  const missingPartner =
+    partner && !partners.some((item) => item.name === partner)
+      ? { id: `current-${partner}`, name: partner }
+      : null
+
+  const buildPartnerLabel = (item: OrganizationLead) => {
+    const emailSuffix = item.email ? ` — ${item.email}` : ''
+    const assignmentCount = partnerAssignmentCounts?.[item.name] ?? 0
+    const countSuffix = assignmentCount > 1 ? ` • ${assignmentCount} orgs` : ''
+    return `${item.name}${emailSuffix}${countSuffix}`
+  }
 
   const handleSubmit = async () => {
     setLoading(true)
@@ -52,8 +96,45 @@ export const AssignPartnerModal: React.FC<Props> = ({ isOpen, onClose, organizat
               visibility.
             </Text>
             <FormControl>
-              <FormLabel>Partner name</FormLabel>
-              <Input value={partner} onChange={(e) => setPartner(e.target.value)} placeholder="Partner company" />
+              <FormLabel>Search partner</FormLabel>
+              <Input
+                value={partnerSearch}
+                onChange={(e) => setPartnerSearch(e.target.value)}
+                placeholder="Type a name or email"
+              />
+            </FormControl>
+            <FormControl>
+              <FormLabel>Partner</FormLabel>
+              <Select
+                value={partner}
+                onChange={(e) => setPartner(e.target.value)}
+                placeholder="Select partner"
+                isDisabled={isLoadingPartners}
+              >
+                <option value="">— No partner —</option>
+                {missingPartner ? (
+                  <option value={missingPartner.name}>{missingPartner.name}</option>
+                ) : null}
+                {filteredPartners.map((partnerOption) => (
+                  <option key={partnerOption.id} value={partnerOption.name}>
+                    {buildPartnerLabel(partnerOption)}
+                  </option>
+                ))}
+              </Select>
+              {isLoadingPartners ? (
+                <FormHelperText>
+                  <HStack spacing={2}>
+                    <Spinner size="xs" />
+                    <Text>Loading partners...</Text>
+                  </HStack>
+                </FormHelperText>
+              ) : null}
+              {!isLoadingPartners && partnersError ? (
+                <FormHelperText color="red.500">{partnersError}</FormHelperText>
+              ) : null}
+              {!isLoadingPartners && !partnersError && !filteredPartners.length ? (
+                <FormHelperText color="gray.600">No partners available.</FormHelperText>
+              ) : null}
             </FormControl>
             {organization && (
               <Stack spacing={1} fontSize="sm" color="gray.600">
@@ -77,4 +158,3 @@ export const AssignPartnerModal: React.FC<Props> = ({ isOpen, onClose, organizat
     </Modal>
   )
 }
-

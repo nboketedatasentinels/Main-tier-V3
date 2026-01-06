@@ -29,6 +29,7 @@ import { auth, db, firebaseConfigStatus } from '@/services/firebase'
 import { AuthContext, AuthContextType } from './AuthContextType'
 import { getFriendlyErrorMessage } from '@/utils/authErrors'
 import { validateCompanyCode } from '@/services/organizationService'
+import { buildActionCodeSettings } from '@/utils/authActionCodeSettings'
 
 interface AuthProviderProps {
   children: React.ReactNode
@@ -624,7 +625,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
       try {
         if (!firebaseUser.emailVerified) {
-          await sendEmailVerification(firebaseUser)
+          await sendEmailVerification(firebaseUser, buildActionCodeSettings('/auth/verify-email'))
         }
       } catch (verificationError) {
         console.warn('🟠 [Auth] Unable to send verification email', verificationError)
@@ -670,7 +671,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     }
 
     try {
-      await sendPasswordResetEmail(auth, email)
+      await sendPasswordResetEmail(auth, email, buildActionCodeSettings('/reset-password'))
       return { error: null }
     } catch (error) {
       const friendlyMessage = getFriendlyErrorMessage(error)
