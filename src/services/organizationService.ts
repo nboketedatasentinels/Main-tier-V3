@@ -5,6 +5,7 @@ import {
   doc,
   getDoc,
   getDocs,
+  increment,
   orderBy,
   query,
   serverTimestamp,
@@ -173,6 +174,14 @@ export const fetchOrganizationAssignments = async (organizationId: string): Prom
   if (!docSnap.exists()) return []
   const data = docSnap.data() as OrganizationRecord
   return data.courseAssignments || []
+}
+
+export const incrementOrganizationMemberCount = async (organizationId: string, delta = 1) => {
+  if (!organizationId) return
+  await updateDoc(doc(db, 'organizations', organizationId), {
+    memberCount: increment(delta),
+    updatedAt: serverTimestamp(),
+  })
 }
 
 export const createOrganizationWithInvitations = async (

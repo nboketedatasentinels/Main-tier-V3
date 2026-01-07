@@ -22,7 +22,7 @@ import { UpgradeCtaCard } from './UpgradeCtaCard'
 import { useAuth } from '@/hooks/useAuth'
 import { usePendingUpgradeRequest } from '@/hooks/useUpgradeRequests'
 import { useNavigate, useSearchParams } from 'react-router-dom'
-import { UserRole } from '@/types'
+import { isFreeUser } from '@/utils/membership'
 
 const cohorts = [
   { name: 'First Cohort', startDate: 'Week of January 13', link: 'https://t4leader.com/pay/first-2026' },
@@ -38,7 +38,7 @@ const cohorts = [
 
 export const UpgradePage: React.FC = () => {
   const { profile } = useAuth()
-  const isPaid = useMemo(() => profile && profile.role !== UserRole.FREE_USER, [profile])
+  const isPaid = useMemo(() => (profile ? !isFreeUser(profile) : false), [profile])
   const navigate = useNavigate()
   const toast = useToast()
   const { isOpen, onOpen, onClose } = useDisclosure()

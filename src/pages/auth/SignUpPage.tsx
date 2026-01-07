@@ -231,6 +231,13 @@ export const SignUpPage: React.FC = () => {
       return
     }
 
+    const pendingCode = formData.companyCode.trim().toUpperCase()
+    if (pendingCode && companyCodeValid) {
+      localStorage.setItem('t4l.pendingCompanyCode', pendingCode)
+    } else {
+      localStorage.removeItem('t4l.pendingCompanyCode')
+    }
+
     setGoogleLoading(true)
     try {
       const { error: googleError, isNewUser, redirect } = await signInWithGoogle()

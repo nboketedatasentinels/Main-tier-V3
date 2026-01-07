@@ -6,8 +6,9 @@ export const getDashboardPathForRole = (role?: string | null) => {
   switch (normalizedRole) {
     case 'user':
     case 'free_user':
-    case 'paid_member':
       return '/app/dashboard/free'
+    case 'paid_member':
+      return '/app/dashboard/member'
 
     case 'mentor':
       return '/mentor/dashboard'

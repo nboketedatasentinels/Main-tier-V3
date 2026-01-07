@@ -60,7 +60,7 @@ import {
 } from 'firebase/firestore'
 import { db } from '@/services/firebase'
 import { useAuth } from '@/hooks/useAuth'
-import { UserRole } from '@/types'
+import { isFreeUser } from '@/utils/membership'
 
 interface WeeklyAggregation {
   id: string
@@ -305,7 +305,8 @@ export const CompanyDashboard: React.FC = () => {
   const statusColor: 'green' | 'orange' | 'red' =
     checklistProgress.percent >= 80 ? 'green' : checklistProgress.percent >= 50 ? 'orange' : 'red'
 
-  const hideUpgrade = profile?.role !== UserRole.FREE_USER
+  const isFreeTierUser = isFreeUser(profile)
+  const hideUpgrade = !isFreeTierUser
 
   const villageDisplayName = profile?.companyName || profile?.companyCode
 
@@ -622,7 +623,7 @@ export const CompanyDashboard: React.FC = () => {
         </Grid>
       </Box>
 
-      {profile?.role !== UserRole.FREE_USER && (
+      {!isFreeTierUser && (
         <SimpleGrid columns={{ base: 1, md: 2, xl: 3 }} spacing={4}>
           <Card shadow="lg">
             <CardBody>
@@ -718,7 +719,7 @@ export const CompanyDashboard: React.FC = () => {
         </CardBody>
       </Card>
 
-      {profile?.role === UserRole.FREE_USER && (
+      {isFreeTierUser && (
         <Card shadow="lg" bg="white">
           <CardBody>
             <HStack justify="space-between" align="center">
@@ -835,7 +836,7 @@ export const CompanyDashboard: React.FC = () => {
               <SimpleGrid columns={{ base: 1, md: 2 }} spacing={3}>
                 <Box p={3} borderRadius="md" border="1px solid" borderColor="gray.100" bg="gray.50">
                   <Text fontWeight="bold">Ranking</Text>
-                  {profile?.role === UserRole.FREE_USER ? (
+                  {isFreeTierUser ? (
                     <VStack align="flex-start" spacing={2} mt={1}>
                       <Text color="gray.600" fontSize="sm">
                         Unlock rankings when you upgrade.
@@ -852,7 +853,7 @@ export const CompanyDashboard: React.FC = () => {
                 </Box>
                 <Box p={3} borderRadius="md" border="1px solid" borderColor="gray.100" bg="gray.50">
                   <Text fontWeight="bold">Upcoming Challenges</Text>
-                  {profile?.role === UserRole.FREE_USER ? (
+                  {isFreeTierUser ? (
                     <VStack align="flex-start" spacing={2} mt={1}>
                       <Text color="gray.600" fontSize="sm">
                         Upgrade for premium challenges.

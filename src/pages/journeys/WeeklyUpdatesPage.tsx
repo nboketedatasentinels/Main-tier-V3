@@ -43,7 +43,8 @@ import { removeUndefinedFields } from '@/utils/firestore'
 import { getIsoWeekNumber } from '@/utils/date'
 import { db } from '@/services/firebase'
 import { useAuth } from '@/hooks/useAuth'
-import { CALENDAR_SYNC_TUTORIAL, UserRole, WeeklyProgress } from '@/types'
+import { CALENDAR_SYNC_TUTORIAL, WeeklyProgress } from '@/types'
+import { isFreeUser } from '@/utils/membership'
 import { JOURNEY_META, getMonthNumber, getActivitiesForJourney, type ActivityDef, type JourneyType } from '@/config/pointsConfig'
 import { awardChecklistPoints, revokeChecklistPoints } from '@/services/pointsService'
 import { SurfaceCard } from '@/components/primitives/SurfacePrimitives'
@@ -240,14 +241,15 @@ const WeeklyChecklistPage: React.FC = () => {
     if (!user || !profile) return;
     try {
       // Free users are automatically assigned to the 4W journey.
-      const journeyType = profile.role === UserRole.FREE_USER ? "4W" : profile.journeyType || "6W";
+      const isFreeTierUser = isFreeUser(profile);
+      const journeyType = isFreeTierUser ? "4W" : profile.journeyType || "6W";
       const meta = JOURNEY_META[journeyType];
 
       const journeyConfig: JourneyConfig = {
         journeyType,
         currentWeek: profile.currentWeek || 1,
         programDurationWeeks: meta.weeks,
-        isPaid: profile.role !== UserRole.FREE_USER,
+        isPaid: !isFreeTierUser,
       };
 
       setJourney(journeyConfig);
