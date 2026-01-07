@@ -28,7 +28,11 @@ import type { OrganizationCardProps } from '@/components/admin/OrganizationCard'
 import { StatusBadge } from '@/components/admin/StatusBadge'
 import CompanyAdminLayout from '@/layouts/CompanyAdminLayout'
 import { buildCompanyAdminNavItems } from '@/utils/navigationItems'
-import { fetchOrganizationEngagementStats, listenToAssignedOrganizations } from '@/services/organizationService'
+import {
+  fetchOrganizationEngagementStats,
+  listenToAssignedOrganizations,
+  logOrganizationAccessAttempt,
+} from '@/services/organizationService'
 import type { OrganizationRecord, OrganizationStatistics } from '@/types/admin'
 
 type CompanyPageKey = 'overview' | 'users' | 'organizations' | 'reports' | 'settings' | 'support'
@@ -116,7 +120,7 @@ const UserManagementSection: React.FC<{
 )
 
 export const CompanyAdminDashboard: React.FC = () => {
-  const { profile, assignedOrganizations, user } = useAuth()
+  const { profile, assignedOrganizations, isSuperAdmin, user } = useAuth()
   const navigate = useNavigate()
   const adminName = profile?.fullName || profile?.firstName || 'Admin'
   const [activePage, setActivePage] = useState<CompanyPageKey>('overview')
@@ -154,14 +158,16 @@ export const CompanyAdminDashboard: React.FC = () => {
           setOrganizationsError(null)
           setOrganizationsLoading(false)
         },
-        (error) => {
-          console.error('Failed to listen for assigned organizations', error)
-          setOrganizationsError('Live organization updates are temporarily unavailable. Retrying…')
-          setOrganizationsLoading(false)
-          if (retryTimeoutRef.current) {
-            window.clearTimeout(retryTimeoutRef.current)
-          }
-          retryTimeoutRef.current = window.setTimeout(startListener, 5000)
+        {
+          onError: (error) => {
+            console.error('Failed to listen for assigned organizations', error)
+            setOrganizationsError('Live organization updates are temporarily unavailable. Retrying…')
+            setOrganizationsLoading(false)
+            if (retryTimeoutRef.current) {
+              window.clearTimeout(retryTimeoutRef.current)
+            }
+            retryTimeoutRef.current = window.setTimeout(startListener, 5000)
+          },
         },
       )
     }
