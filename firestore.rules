@@ -54,10 +54,10 @@ service cloud.firestore {
     }
 
     // Organization access validation
-    function canAccessOrganization(orgCode) {
+    function canAccessOrganization(orgCode, orgId) {
       return isSuperAdmin() || (
         isPartner() && (
-          getProfile(request.auth.uid).assignedOrganizations.hasAny([orgCode])
+          getProfile(request.auth.uid).assignedOrganizations.hasAny([orgCode, orgId])
         )
       );
     }
@@ -269,14 +269,14 @@ service cloud.firestore {
       allow write: if isSuperAdmin();
       
       // Company admins can only update their assigned companies
-      allow update: if isAdmin() && canAccessOrganization(resource.data.code);
+      allow update: if isAdmin() && canAccessOrganization(resource.data.code, resource.id);
     }
 
     // Organizations collection (for admin organization management)
     match /organizations/{orgId} {
       allow read: if isAuthenticated() && (
         isSuperAdmin() || 
-        canAccessOrganization(resource.data.code)
+        canAccessOrganization(resource.data.code, orgId)
       );
       allow write: if isSuperAdmin();
     }

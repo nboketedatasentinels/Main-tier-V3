@@ -32,7 +32,7 @@ import { fetchOrganizationEngagementStats, listenToAssignedOrganizations } from 
 import type { OrganizationRecord, OrganizationStatistics } from '@/types/admin'
 
 type CompanyPageKey = 'overview' | 'users' | 'organizations' | 'reports' | 'settings' | 'support'
-type CompanyOrg = OrganizationCardProps & { code: string }
+type CompanyOrg = OrganizationCardProps & { code: string; id?: string }
 
 type UserRow = {
   name: string
@@ -121,6 +121,7 @@ export const CompanyAdminDashboard: React.FC = () => {
   const adminName = profile?.fullName || profile?.firstName || 'Admin'
   const [activePage, setActivePage] = useState<CompanyPageKey>('overview')
   const [selectedOrg, setSelectedOrg] = useState<string>('all')
+  const [organizations, setOrganizations] = useState<CompanyOrg[]>([])
   const navSections = useMemo(() => buildCompanyAdminNavItems(), [])
   const [organizationRecords, setOrganizationRecords] = useState<OrganizationRecord[]>([])
   const [organizationStats, setOrganizationStats] = useState<Record<string, OrganizationStatistics>>({})
@@ -291,6 +292,43 @@ export const CompanyAdminDashboard: React.FC = () => {
   )
 
   const activeOrgName = selectedOrg === 'all' ? 'all organizations' : filteredOrganizations[0]?.name || 'selected org'
+  const hasAssignments = isSuperAdmin || assignedOrganizations.length > 0
+
+  useEffect(() => {
+    if (!user?.uid) return
+    if (!isSuperAdmin && !assignedOrganizations.length) {
+      setOrganizations([])
+      return
+    }
+
+    const unsubscribe = listenToAssignedOrganizations(
+      user.uid,
+      (assignedOrgs) => {
+        const mapped = assignedOrgs.map((org: OrganizationRecord) => {
+          const status = org.status === 'suspended' ? 'paused' : org.status
+          return {
+            id: org.id,
+            code: org.code || org.id || '',
+            name: org.name || org.code || org.id || 'Unknown organization',
+            status: (status as CompanyOrg['status']) || 'active',
+            activeUsers: org.assignmentCount ?? org.teamSize ?? 0,
+          }
+        })
+        setOrganizations(mapped)
+      },
+      { onError: (error) => console.warn('Failed to load assigned organizations', error) },
+    )
+
+    return () => unsubscribe()
+  }, [assignedOrganizations, isSuperAdmin, user?.uid])
+
+  useEffect(() => {
+    if (selectedOrg === 'all') return
+    const stillValid = organizations.some(org => org.code === selectedOrg)
+    if (!stillValid) {
+      setSelectedOrg('all')
+    }
+  }, [organizations, selectedOrg])
 
   const aggregateStats = useMemo(() => {
     const totals = {
@@ -319,6 +357,15 @@ export const CompanyAdminDashboard: React.FC = () => {
   }, [organizationStats])
 
   const handleViewOrganization = (orgCode: string) => {
+    const allowed = isSuperAdmin || organizations.some(org => org.code.toLowerCase() === orgCode.toLowerCase())
+    if (!allowed && user?.uid) {
+      void logOrganizationAccessAttempt({
+        userId: user.uid,
+        organizationCode: orgCode,
+        reason: 'company_admin_dashboard',
+      })
+      return
+    }
     navigate(`/admin/organization/${orgCode}`)
   }
 
@@ -346,6 +393,11 @@ export const CompanyAdminDashboard: React.FC = () => {
             Organization-scoped oversight with targeted intervention tools. Users with missing assignments are highlighted so you can
             correct mappings before they lose access.
           </Text>
+          {!hasAssignments && (
+            <Text color="orange.200" fontSize="sm">
+              No organizations are assigned to this account yet. Contact a super admin to request access.
+            </Text>
+          )}
         </Stack>
         <StatusBadge status="active" />
       </Flex>
@@ -624,11 +676,17 @@ export const CompanyAdminDashboard: React.FC = () => {
               </VStack>
               <Badge colorScheme="purple">Scoped</Badge>
             </HStack>
-            <SimpleGrid columns={{ base: 1, md: 2, xl: 3 }} spacing={4}>
-              {filteredOrganizations.map(org => (
-                <OrganizationCard key={org.name} {...org} onViewClick={() => handleViewOrganization(org.code)} />
-              ))}
-            </SimpleGrid>
+            {filteredOrganizations.length ? (
+              <SimpleGrid columns={{ base: 1, md: 2, xl: 3 }} spacing={4}>
+                {filteredOrganizations.map(org => (
+                  <OrganizationCard key={org.name} {...org} onViewClick={() => handleViewOrganization(org.code)} />
+                ))}
+              </SimpleGrid>
+            ) : (
+              <Text fontSize="sm" color="brand.subtleText">
+                No organizations are assigned to this account yet.
+              </Text>
+            )}
           </Stack>
         </CardBody>
       </Card>

@@ -2,6 +2,7 @@ import {
   Timestamp,
   addDoc,
   collection,
+  documentId,
   doc,
   documentId,
   FirestoreError,
@@ -19,6 +20,7 @@ import { Organization } from '@/types'
 import {
   BulkInvitationResult,
   CourseOption,
+  OrganizationStatus,
   InvitationPayload,
   OrganizationLead,
   OrganizationRecord,
@@ -34,6 +36,23 @@ const coursesCollection = collection(db, 'courses')
 const usersCollection = collection(db, 'users')
 const engagementCollection = collection(db, 'user_engagement_scores')
 const adminActivityCollection = collection(db, 'admin_activity_log')
+
+const chunkArray = <T>(items: T[], size = 10): T[][] => {
+  const chunks: T[][] = []
+  for (let i = 0; i < items.length; i += size) {
+    chunks.push(items.slice(i, i + size))
+  }
+  return chunks
+}
+
+const fetchAssignedOrganizationIds = async (userId: string): Promise<string[]> => {
+  if (!userId) return []
+  const userSnap = await getDoc(doc(usersCollection, userId))
+  if (!userSnap.exists()) return []
+  const data = userSnap.data() as { assignedOrganizations?: string[] }
+  if (!Array.isArray(data.assignedOrganizations)) return []
+  return data.assignedOrganizations.filter((orgId) => typeof orgId === 'string' && orgId.trim().length > 0)
+}
 
 export const generateOrganizationCode = (name: string) => {
   const validChars = name.toUpperCase().match(/[A-Z0-9]/g) ?? []
