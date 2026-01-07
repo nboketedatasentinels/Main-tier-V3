@@ -38,7 +38,7 @@ export const WeeklyGlancePage = () => {
   const isCorporateTier =
     profile?.transformationTier === TransformationTier.CORPORATE_MEMBER ||
     profile?.transformationTier === TransformationTier.CORPORATE_LEADER
-  const shouldShowBuildVillage =
+  const shouldShowBuildVillageCard =
     !profile?.villageId &&
     !profile?.companyId &&
     !profile?.corporateVillageId &&
@@ -58,7 +58,7 @@ export const WeeklyGlancePage = () => {
   return (
     <Box p={{ base: 4, md: 6 }}>
       <Stack spacing={6}>
-        {shouldShowBuildVillage && (
+        {shouldShowBuildVillageCard && (
           <Card bg="brand.primaryMuted" border="1px" borderColor="brand.border">
             <CardBody>
               <Stack direction={{ base: 'column', md: 'row' }} spacing={4} align="flex-start" justify="space-between">
