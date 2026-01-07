@@ -37,6 +37,13 @@ import {
 } from '@/constants/courseCatalog'
 import { canAccessCourse, FREE_TIER_COURSE_TITLE, isFreeUser } from '@/utils/membership'
 import {
+  COURSE_DETAILS_MAPPING,
+  COURSE_METADATA_MAPPING,
+  type CourseDetail,
+  type CourseDifficulty,
+  type CourseMetadata,
+} from '@/utils/courseMappings'
+import {
   MonthlyCourseAssignments,
   formatMonthRange,
   getMonthAvailabilityStatus,
@@ -60,6 +67,79 @@ interface NormalizedCourse {
   image?: string
 }
 
+type RecommendedCourse = CourseDetail & CourseMetadata & { title: string }
+
+const COURSE_IMAGE_FILENAMES: Record<string, string> = {
+  'AI Stacking 101': 'course-ai-stacking-101.avif',
+  'The Art of Connection': 'course-art-of-connection.avif',
+  'Mindset Reset': 'course-mindset-reset.avif',
+  'Goal Setting Mastery': 'course-goal-setting-mastery.avif',
+  'The Heart of Leadership': 'course-heart-of-leadership.avif',
+  'Digital Transformation and Data': 'course-digital-transformation.avif',
+  'LinkedIn Warrior': 'course-linkedin-warrior.avif',
+  'Transformational Leadership': 'course-transformational-leadership.avif',
+}
+
+const MONTHLY_JOURNEY_COURSES: Record<string, string[]> = {
+  levelUp: ['Mindset Reset', 'Goal Setting Mastery', 'The Art of Connection'],
+  wokeWired: ['Understanding Digital Bias', 'AI Stacking 101', 'Digital Transformation and Data'],
+  glowUp: ['The Science of You', 'The Heart of Leadership', 'Leading Through Change and Continuous Improvement'],
+  navigator: ['How to Thrive in a Toxic Workplace', 'Think Like an Owner', 'LinkedIn Warrior'],
+  bossMode: [
+    'Mindset Reset',
+    'Goal Setting Mastery',
+    'The Art of Connection',
+    'The Confidence Code',
+    'Think Like an Owner',
+    'LinkedIn Warrior',
+  ],
+  changeHacker: [
+    'The Science of You',
+    'Transformational Leadership',
+    'Leading Through Change and Continuous Improvement',
+    'Understanding Digital Bias',
+    'AI Stacking 101',
+    'Digital Transformation and Data',
+  ],
+  innerShift: [
+    'Mindset Reset',
+    'Goal Setting Mastery',
+    'The Art of Connection',
+    'The Science of You',
+    'The Heart of Leadership',
+    'Leading Through Change and Continuous Improvement',
+    'Think Like an Owner',
+    'Path to Promotion',
+    'Transformational Leadership',
+  ],
+  digitalRebel: [
+    'Understanding Digital Bias',
+    'AI Stacking 101',
+    'Digital Transformation and Data',
+    'Project Management for Leaders',
+    'Leading Through Change and Continuous Improvement',
+    'LinkedIn Warrior',
+    'Transformational Leadership',
+    'Think Like an Owner',
+    'Path to Promotion',
+  ],
+  architect: [
+    'Foundations of Leadership and Team Dynamics',
+    'Mindset Reset',
+    'Goal Setting Mastery',
+    'The Art of Connection',
+    'The Heart of Leadership',
+    'Think Like an Owner',
+    'Path to Promotion',
+    'Leading Through Change and Continuous Improvement',
+    'Digital Transformation and Data',
+    'Transformational Leadership',
+    'Project Management for Leaders',
+    'AI Stacking 101',
+  ],
+  custom3: [],
+  custom6: [],
+}
 
 const normalizeDate = (value: unknown): Date | null => {
   if (!value) return null

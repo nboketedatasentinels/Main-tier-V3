@@ -1,10 +1,10 @@
-import { addDoc, collection, getDocs, query, serverTimestamp, where } from 'firebase/firestore'
-import { COURSE_DETAILS_MAPPING, COURSE_METADATA_MAPPING } from '@/constants/courseCatalog'
+import { addDoc, collection, getDocs, limit, query, serverTimestamp, where } from 'firebase/firestore'
 import { db } from '@/services/firebase'
 import { FREE_TIER_COURSE_TITLE } from '@/utils/membership'
+import { COURSE_DETAILS_MAPPING, COURSE_METADATA_MAPPING } from '@/utils/courseMappings'
 
 /**
- * Firestore user_courses document schema:
+ * user_courses collection schema
  * - user_id: string (Firebase Auth UID)
  * - title: string (course title)
  * - description: string
@@ -16,38 +16,21 @@ import { FREE_TIER_COURSE_TITLE } from '@/utils/membership'
  * - estimatedMinutes: number
  * - difficulty: string ("Beginner", "Intermediate", "Advanced")
  */
-export interface UserCourseDocument {
-  user_id: string
-  title: string
-  description: string
-  link: string
-  status: 'assigned' | 'in_progress' | 'completed'
-  source: 'user' | 'company' | 'personal' | 'organization'
-  assignedAt: ReturnType<typeof serverTimestamp>
-  progress: number
-  estimatedMinutes: number
-  difficulty: string
-}
-
-const normalizeTitle = (value?: string | null) => (value || '').trim().toLowerCase()
 
 /**
- * Checks if the complimentary free-tier course has already been assigned to the user.
+ * Check whether the free course is already assigned to a user.
  */
 export const hasFreeCourseAssigned = async (userId: string): Promise<boolean> => {
   try {
-    const snapshot = await getDocs(query(collection(db, 'user_courses'), where('user_id', '==', userId)))
-    const normalizedFreeTitle = normalizeTitle(FREE_TIER_COURSE_TITLE)
-    const hasAssignment = snapshot.docs.some((docSnap) => {
-      const data = docSnap.data() as { title?: string }
-      return normalizeTitle(data.title) === normalizedFreeTitle
-    })
-    console.log('🟣 [CourseAssignment] Checked free course assignment status', {
-      userId,
-      hasAssignment,
-      checkedCount: snapshot.size,
-    })
-    return hasAssignment
+    const assignmentsRef = collection(db, 'user_courses')
+    const assignmentsQuery = query(
+      assignmentsRef,
+      where('user_id', '==', userId),
+      where('title', '==', FREE_TIER_COURSE_TITLE),
+      limit(1)
+    )
+    const snapshot = await getDocs(assignmentsQuery)
+    return !snapshot.empty
   } catch (error) {
     console.error('🔴 [CourseAssignment] Failed to check free course assignment', {
       userId,
@@ -55,36 +38,37 @@ export const hasFreeCourseAssigned = async (userId: string): Promise<boolean> =>
       stack: (error as Error)?.stack,
       raw: error,
     })
-    throw error
+    return false
   }
 }
 
 /**
- * Assigns the complimentary free-tier course to a user if it is not already present.
+ * Assign the free course to a user if it is not already assigned.
  */
-export const assignFreeCourseToUser = async (userId: string): Promise<{ assigned: boolean }> => {
+export const assignFreeCourseToUser = async (userId: string): Promise<boolean> => {
   try {
     const alreadyAssigned = await hasFreeCourseAssigned(userId)
     if (alreadyAssigned) {
-      console.log('🟣 [CourseAssignment] Free course already assigned, skipping', { userId })
-      return { assigned: false }
+      console.log('🟡 [CourseAssignment] Free course already assigned', { userId })
+      return false
     }
 
     const courseDetails = COURSE_DETAILS_MAPPING[FREE_TIER_COURSE_TITLE]
     const courseMetadata = COURSE_METADATA_MAPPING[FREE_TIER_COURSE_TITLE]
 
     if (!courseDetails || !courseMetadata) {
-      console.warn('🟠 [CourseAssignment] Free course metadata missing; using fallbacks', {
+      console.warn('🟠 [CourseAssignment] Missing course mapping data', {
         userId,
+        title: FREE_TIER_COURSE_TITLE,
         hasDetails: Boolean(courseDetails),
         hasMetadata: Boolean(courseMetadata),
       })
     }
 
-    const payload: UserCourseDocument = {
+    await addDoc(collection(db, 'user_courses'), {
       user_id: userId,
       title: FREE_TIER_COURSE_TITLE,
-      description: courseDetails?.description ?? 'Complimentary course assignment.',
+      description: courseDetails?.description ?? '',
       link: courseDetails?.link ?? '',
       status: 'assigned',
       source: 'user',
@@ -92,11 +76,10 @@ export const assignFreeCourseToUser = async (userId: string): Promise<{ assigned
       progress: 0,
       estimatedMinutes: courseMetadata?.estimatedMinutes ?? 0,
       difficulty: courseMetadata?.difficulty ?? 'Beginner',
-    }
+    })
 
-    await addDoc(collection(db, 'user_courses'), payload)
     console.log('🟢 [CourseAssignment] Assigned free course to user', { userId })
-    return { assigned: true }
+    return true
   } catch (error) {
     console.error('🔴 [CourseAssignment] Failed to assign free course', {
       userId,
@@ -104,6 +87,6 @@ export const assignFreeCourseToUser = async (userId: string): Promise<{ assigned
       stack: (error as Error)?.stack,
       raw: error,
     })
-    return { assigned: false }
+    return false
   }
 }

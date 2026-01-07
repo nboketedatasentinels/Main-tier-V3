@@ -1,22 +1,26 @@
 #!/usr/bin/env node
 
 /**
- * Migration Script: Assign the complimentary free-tier course to existing free users.
+ * Migration Script: Assign free "Transformational Leadership" course to free users
  *
  * Usage:
  * 1. Set FIREBASE_PROJECT_ID environment variable
- * 2. Ensure Firebase Admin credentials are available in service-account-key.json
+ * 2. Ensure you have Firebase Admin credentials configured
  * 3. Run: node scripts/migrations/assign-free-course.mjs
  */
 
 import admin from 'firebase-admin'
 import { readFile } from 'fs/promises'
 
-const FREE_COURSE_TITLE = 'Transformational Leadership'
-const FREE_COURSE_DESCRIPTION = 'Guide teams through change with vision and trust.'
-const FREE_COURSE_LINK = 'https://t4leader.com/program/transformational-leadership'
-const FREE_COURSE_ESTIMATED_MINUTES = 140
-const FREE_COURSE_DIFFICULTY = 'Advanced'
+const COURSE_TITLE = 'Transformational Leadership'
+const COURSE_DETAILS = {
+  description: 'Guide teams through change with vision and trust.',
+  link: 'https://t4leader.com/program/transformational-leadership',
+}
+const COURSE_METADATA = {
+  estimatedMinutes: 140,
+  difficulty: 'Advanced',
+}
 
 const serviceAccount = JSON.parse(
   await readFile(new URL('../../service-account-key.json', import.meta.url))
@@ -24,62 +28,48 @@ const serviceAccount = JSON.parse(
 
 admin.initializeApp({
   credential: admin.credential.cert(serviceAccount),
-  databaseURL: `https://${process.env.FIREBASE_PROJECT_ID}.firebaseio.com`
+  databaseURL: `https://${process.env.FIREBASE_PROJECT_ID}.firebaseio.com`,
 })
 
 const db = admin.firestore()
 
-const normalizeTitle = (value = '') => value.trim().toLowerCase()
+const getFreeUserDocs = async () => {
+  const queries = [
+    db.collection('users').where('transformationTier', '==', 'individual_free'),
+    db.collection('users').where('role', '==', 'free_user'),
+    db.collection('users').where('membershipStatus', '==', 'free'),
+  ]
 
-const buildCoursePayload = (userId) => ({
-  user_id: userId,
-  title: FREE_COURSE_TITLE,
-  description: FREE_COURSE_DESCRIPTION,
-  link: FREE_COURSE_LINK,
-  status: 'assigned',
-  source: 'user',
-  assignedAt: admin.firestore.FieldValue.serverTimestamp(),
-  progress: 0,
-  estimatedMinutes: FREE_COURSE_ESTIMATED_MINUTES,
-  difficulty: FREE_COURSE_DIFFICULTY
-})
+  const userMap = new Map()
 
-const collectFreeUsers = async () => {
-  const usersRef = db.collection('users')
-  const [tierSnap, roleSnap, statusSnap] = await Promise.all([
-    usersRef.where('transformationTier', '==', 'individual_free').get(),
-    usersRef.where('role', '==', 'free_user').get(),
-    usersRef.where('membershipStatus', '==', 'free').get()
-  ])
-
-  const userIds = new Map()
-  for (const snap of [tierSnap, roleSnap, statusSnap]) {
-    snap.forEach((docSnap) => {
-      userIds.set(docSnap.id, true)
+  for (const queryRef of queries) {
+    const snapshot = await queryRef.get()
+    snapshot.forEach((doc) => {
+      if (!userMap.has(doc.id)) {
+        userMap.set(doc.id, doc.data())
+      }
     })
   }
 
-  return Array.from(userIds.keys())
+  return userMap
 }
 
-const hasFreeCourseAssignment = async (userId) => {
+const hasCourseAssigned = async (userId) => {
   const snapshot = await db
     .collection('user_courses')
     .where('user_id', '==', userId)
+    .where('title', '==', COURSE_TITLE)
+    .limit(1)
     .get()
-  const normalizedFreeTitle = normalizeTitle(FREE_COURSE_TITLE)
-  return snapshot.docs.some((docSnap) => {
-    const data = docSnap.data() || {}
-    return normalizeTitle(data.title || '') === normalizedFreeTitle
-  })
+  return !snapshot.empty
 }
 
-async function runMigration() {
-  console.log('Starting migration: assign free course to existing free users...')
+async function assignFreeCourse() {
+  console.log('Starting migration: Assign free course to free users...')
 
   try {
-    const userIds = await collectFreeUsers()
-    console.log(`Found ${userIds.length} free-tier users to evaluate.`)
+    const userMap = await getFreeUserDocs()
+    console.log(`Found ${userMap.size} free users to evaluate`)
 
     let successCount = 0
     let skipCount = 0
@@ -89,43 +79,53 @@ async function runMigration() {
     const batchSize = 500
     let batch = db.batch()
     let batchCount = 0
-    let processedCount = 0
 
-    for (const userId of userIds) {
-      processedCount++
+    for (const userId of userMap.keys()) {
       try {
-        const alreadyAssigned = await hasFreeCourseAssignment(userId)
+        const alreadyAssigned = await hasCourseAssigned(userId)
         if (alreadyAssigned) {
           skipCount++
           continue
         }
 
-        const docRef = db.collection('user_courses').doc()
-        batch.set(docRef, buildCoursePayload(userId))
+        const assignmentRef = db.collection('user_courses').doc()
+        batch.set(assignmentRef, {
+          user_id: userId,
+          title: COURSE_TITLE,
+          description: COURSE_DETAILS.description,
+          link: COURSE_DETAILS.link,
+          status: 'assigned',
+          source: 'user',
+          assignedAt: admin.firestore.FieldValue.serverTimestamp(),
+          progress: 0,
+          estimatedMinutes: COURSE_METADATA.estimatedMinutes,
+          difficulty: COURSE_METADATA.difficulty,
+        })
+
         batchCount++
-        successCount++
 
         if (batchCount >= batchSize) {
           await batch.commit()
-          console.log(`Committed batch of ${batchCount} assignments (processed ${processedCount}/${userIds.length}).`)
+          successCount += batchCount
+          console.log(`Committed batch of ${batchCount} assignments (total: ${successCount})`)
           batch = db.batch()
           batchCount = 0
         }
       } catch (error) {
         errorCount++
-        errors.push({ userId, error: error?.message || String(error) })
-        console.error(`Error processing user ${userId}:`, error?.message || error)
+        errors.push({ userId, error: error.message })
+        console.error(`Error processing user ${userId}:`, error.message)
       }
     }
 
     if (batchCount > 0) {
       await batch.commit()
-      console.log(`Committed final batch of ${batchCount} assignments.`)
+      successCount += batchCount
+      console.log(`Committed final batch of ${batchCount} assignments`)
     }
 
     console.log('\n=== Migration Complete ===')
-    console.log(`Processed users: ${processedCount}`)
-    console.log(`New assignments: ${successCount}`)
+    console.log(`Assigned: ${successCount}`)
     console.log(`Skipped (already assigned): ${skipCount}`)
     console.log(`Errors: ${errorCount}`)
 
@@ -141,7 +141,7 @@ async function runMigration() {
   }
 }
 
-runMigration()
+assignFreeCourse()
   .then(() => {
     console.log('Migration script completed')
     process.exit(0)
