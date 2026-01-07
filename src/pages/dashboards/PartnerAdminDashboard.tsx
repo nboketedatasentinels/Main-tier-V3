@@ -2,6 +2,7 @@ import React, { useEffect, useMemo, useState } from 'react'
 import {
   Badge,
   Box,
+  Button,
   Card,
   CardBody,
   Divider,
@@ -12,6 +13,7 @@ import {
   Stack,
   Text,
   VStack,
+  Skeleton,
 } from '@chakra-ui/react'
 import { Bell, Building2, Gauge, Sparkles, Users } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
@@ -39,12 +41,14 @@ import type { NudgeTemplateRecord } from '@/types/nudges'
 
 export const PartnerAdminDashboard: React.FC = () => {
   const navigate = useNavigate()
-  const { isSuperAdmin, user } = useAuth()
+  const { isSuperAdmin, user, refreshProfile } = useAuth()
   const {
     assignedOrgCount,
     engagementTrend,
     metrics,
     organizations,
+    organizationsError,
+    organizationsLoading,
     riskLevels,
     selectedOrg,
     setSelectedOrg,
@@ -57,6 +61,8 @@ export const PartnerAdminDashboard: React.FC = () => {
     managedBreakdown,
     notificationCount,
   } = usePartnerDashboardData()
+  const enableProfileRealtime = import.meta.env.VITE_ENABLE_PROFILE_REALTIME === 'true'
+  const supportEmail = 'support@transformation4leaders.com'
 
   type PartnerPageKey = 'overview' | 'users' | 'job-board' | 'grants' | 'organization-management' | 'at-risk'
   const [activePage, setActivePage] = useState<PartnerPageKey>('overview')
@@ -74,6 +80,18 @@ export const PartnerAdminDashboard: React.FC = () => {
 
     void loadTemplates()
   }, [])
+
+  useEffect(() => {
+    if (enableProfileRealtime) return
+    console.warn(
+      '[PartnerDashboard] VITE_ENABLE_PROFILE_REALTIME is disabled. Manual or scheduled refresh is required.'
+    )
+    void refreshProfile()
+    const interval = window.setInterval(() => {
+      void refreshProfile()
+    }, 5 * 60 * 1000)
+    return () => window.clearInterval(interval)
+  }, [enableProfileRealtime, refreshProfile])
 
   const partnerNavItems = [
     { key: 'overview', label: 'Overview', description: 'Metrics & trends' },
@@ -613,9 +631,41 @@ export const PartnerAdminDashboard: React.FC = () => {
                   These organisations are assigned to your partner admin scope.
                 </Text>
               </VStack>
-              <Badge colorScheme="purple">{organizations.length} assigned</Badge>
+              <Badge colorScheme={organizationsLoading ? 'gray' : 'purple'}>
+                {organizationsLoading ? 'Loading' : `${organizations.length} assigned`}
+              </Badge>
             </HStack>
-            {organizations.length ? (
+            {organizationsLoading ? (
+              <SimpleGrid columns={{ base: 1, md: 2, xl: 3 }} spacing={3}>
+                {Array.from({ length: 3 }).map((_, idx) => (
+                  <Box
+                    key={`org-skeleton-${idx}`}
+                    border="1px solid"
+                    borderColor="brand.border"
+                    borderRadius="md"
+                    p={4}
+                    bg="white"
+                  >
+                    <Stack spacing={3}>
+                      <Skeleton height="18px" width="60%" />
+                      <Skeleton height="12px" width="40%" />
+                      <Skeleton height="12px" width="80%" />
+                    </Stack>
+                  </Box>
+                ))}
+              </SimpleGrid>
+            ) : organizationsError ? (
+              <Box p={4} borderRadius="md" border="1px solid" borderColor="orange.200" bg="orange.50">
+                <Stack spacing={2}>
+                  <Text color="orange.700" fontWeight="semibold">
+                    Unable to load assigned organizations.
+                  </Text>
+                  <Text color="orange.700" fontSize="sm">
+                    {organizationsError}
+                  </Text>
+                </Stack>
+              </Box>
+            ) : organizations.length ? (
               <SimpleGrid columns={{ base: 1, md: 2, xl: 3 }} spacing={3}>
                 {organizations.map(org => (
                   <OrganizationCard
@@ -630,9 +680,23 @@ export const PartnerAdminDashboard: React.FC = () => {
               </SimpleGrid>
             ) : (
               <Box p={4} borderRadius="md" border="1px solid" borderColor="brand.border" bg="brand.accent">
-                <Text color="brand.subtleText">
-                  No organizations have been assigned yet. Assigned organizations will appear here.
-                </Text>
+                <Stack spacing={2}>
+                  <Text color="brand.subtleText" fontWeight="semibold">
+                    No organizations assigned yet
+                  </Text>
+                  <Text color="brand.subtleText" fontSize="sm">
+                    Assigned organizations will appear here once a super admin connects your account.
+                  </Text>
+                  <Button
+                    as="a"
+                    href={`mailto:${supportEmail}`}
+                    size="sm"
+                    variant="outline"
+                    alignSelf="flex-start"
+                  >
+                    Contact super admin
+                  </Button>
+                </Stack>
               </Box>
             )}
           </Stack>

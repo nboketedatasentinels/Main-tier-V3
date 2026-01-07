@@ -278,3 +278,34 @@ export const checkAdminAccess = (role?: unknown) => {
 ```
 
 Much cleaner! 🎉
+
+---
+
+# Real-Time Profile Synchronization Migration Guide
+
+This guide helps enable real-time profile synchronization so partner/admin dashboards immediately reflect organization assignments.
+
+## Why It Matters
+- Assigned organizations update in real-time for partner dashboards.
+- Admins see new assignments without requiring manual refreshes.
+- Reduces timing issues between Super Admin assignments and partner visibility.
+
+## Migration Steps
+
+### 1. Enable the environment flag
+Ensure your `.env` has the flag enabled:
+```env
+VITE_ENABLE_PROFILE_REALTIME=true
+```
+
+### 2. Restart the app
+Real-time listeners are configured at app startup. Restart the dev server or redeploy after enabling the flag.
+
+### 3. Verify partner dashboard behavior
+- Assign an organization to a partner/admin in the Super Admin UI.
+- Confirm the partner dashboard updates without a manual refresh.
+
+### 4. Fallback when disabled
+If you cannot enable the flag immediately:
+- Use the “Refresh profile” button in the Partner Dashboard header/sidebar.
+- Watch for the “Refresh suggested” prompt after 30 minutes of inactivity.

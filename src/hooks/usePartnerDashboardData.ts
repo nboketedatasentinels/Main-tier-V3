@@ -109,6 +109,8 @@ export const usePartnerDashboardData = (options?: UsePartnerDashboardDataOptions
   const [selectedOrg, setSelectedOrg] = useState<string>(options?.selectedOrg || 'all')
   const [users, setUsers] = useState<PartnerUser[]>([])
   const [organizations, setOrganizations] = useState<PartnerOrganization[]>([])
+  const [organizationsLoading, setOrganizationsLoading] = useState<boolean>(true)
+  const [organizationsError, setOrganizationsError] = useState<string | null>(null)
   const [notificationCount, setNotificationCount] = useState<number>(0)
   const [interventions, setInterventions] = useState<PartnerInterventionSummary[]>([])
   const lastAccessAttempt = useRef<string | null>(null)
@@ -148,11 +150,13 @@ export const usePartnerDashboardData = (options?: UsePartnerDashboardDataOptions
   }, [organizationLookup, selectedOrg])
 
   useEffect(() => {
-    if (!user?.uid) return
-    if (!isSuperAdmin && !assignedOrganizations.length) {
+    if (!user?.uid) {
       setOrganizations([])
+      setOrganizationsLoading(false)
       return
     }
+    setOrganizationsLoading(true)
+    setOrganizationsError(null)
 
     if (isSuperAdmin) {
       const unsubscribe = onSnapshot(
@@ -172,6 +176,13 @@ export const usePartnerDashboardData = (options?: UsePartnerDashboardDataOptions
             }
           })
           setOrganizations(scoped)
+          setOrganizationsLoading(false)
+        },
+        (error) => {
+          console.error('Failed to load organizations', error)
+          setOrganizations([])
+          setOrganizationsError('Unable to load organizations. Please try again.')
+          setOrganizationsLoading(false)
         },
       )
 
@@ -195,12 +206,21 @@ export const usePartnerDashboardData = (options?: UsePartnerDashboardDataOptions
           }
         })
         setOrganizations(scoped)
+        setOrganizationsLoading(false)
       },
-      { status: 'active' },
+      {
+        status: 'active',
+        onError: (error) => {
+          console.error('Failed to listen for assigned organizations', error)
+          setOrganizations([])
+          setOrganizationsError('Unable to load assigned organizations. Please refresh and try again.')
+          setOrganizationsLoading(false)
+        },
+      },
     )
 
     return () => unsubscribe()
-  }, [assignedOrganizations, isSuperAdmin, user?.uid])
+  }, [isSuperAdmin, user?.uid])
 
   useEffect(() => {
     if (!organizations.length) return undefined
@@ -513,7 +533,7 @@ export const usePartnerDashboardData = (options?: UsePartnerDashboardDataOptions
     })
   }, [selectedOrg, selectedOrgKeys, users])
 
-  const managedCompanies = isSuperAdmin ? organizations.length : assignedOrganizations.length
+  const managedCompanies = organizations.length
 
   const metrics = useMemo(() => {
     const activeWindow = subDays(new Date(), 30)
@@ -569,7 +589,7 @@ export const usePartnerDashboardData = (options?: UsePartnerDashboardDataOptions
     return filteredUsers.filter((user) => ['watch', 'concern', 'critical', 'at_risk'].includes(user.riskStatus))
   }, [filteredUsers])
 
-  const assignedOrgCount = isSuperAdmin ? organizations.length : assignedOrganizations?.length || 0
+  const assignedOrgCount = organizations.length || assignedOrganizations?.length || 0
 
   const managedBreakdown = useMemo(() => {
     const active = organizations.filter((org) => org.status === 'active').length
@@ -604,7 +624,7 @@ export const usePartnerDashboardData = (options?: UsePartnerDashboardDataOptions
   const dataQualityWarnings = useMemo(() => {
     const warnings = [] as DataWarning[]
 
-    if (!isSuperAdmin && !assignedOrganizations.length) {
+    if (!organizationsLoading && !isSuperAdmin && !organizations.length) {
       warnings.push({
         message: 'No organizations are assigned to this account yet.',
         severity: 'warning',
@@ -628,7 +648,7 @@ export const usePartnerDashboardData = (options?: UsePartnerDashboardDataOptions
     }
 
     return warnings
-  }, [assignedOrganizations, isSuperAdmin, users])
+  }, [isSuperAdmin, organizations.length, organizationsLoading, users])
 
   const daysUntil = (date: string) => differenceInDays(new Date(date), new Date())
 
@@ -642,6 +662,8 @@ export const usePartnerDashboardData = (options?: UsePartnerDashboardDataOptions
     metrics,
     notificationCount,
     organizations,
+    organizationsError,
+    organizationsLoading,
     profile,
     riskLevels,
     selectedOrg,

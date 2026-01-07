@@ -43,6 +43,10 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const [loading, setLoading] = useState(true)
   const [profileLoading, setProfileLoading] = useState(true)
   const [claimsRole, setClaimsRole] = useState<string | null>(null)
+  const [lastProfileLoadAt, setLastProfileLoadAt] = useState<string | null>(() => {
+    if (typeof window === 'undefined') return null
+    return localStorage.getItem('lastProfileLoadAt')
+  })
   const enableProfileRealtime = import.meta.env.VITE_ENABLE_PROFILE_REALTIME === 'true'
   const freeCourseAssignmentRef = useRef({ inFlight: false, lastAttemptAt: 0, lastUserId: '' })
   const pendingCompanyCodeKey = 't4l.pendingCompanyCode'
@@ -52,8 +56,16 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     if (!loadedProfile?.id) return
     const timestamp = new Date().toISOString()
     localStorage.setItem('lastProfileLoadAt', timestamp)
+    setLastProfileLoadAt(timestamp)
     console.log('🟣 [Auth] Recorded profile load timestamp', { id: loadedProfile.id, timestamp })
   }
+
+  useEffect(() => {
+    if (enableProfileRealtime) return
+    console.warn(
+      '[Auth] Real-time profile updates are disabled. Set VITE_ENABLE_PROFILE_REALTIME=true for live updates.'
+    )
+  }, [enableProfileRealtime])
 
   const attemptFreeCourseAssignment = useCallback(
     async (userId: string, loadedProfile: UserProfile) => {
@@ -871,6 +883,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     userData: profile,
     loading,
     profileLoading,
+    lastProfileLoadAt,
     signIn,
     signUp,
     signOut,
