@@ -205,13 +205,25 @@ export const fetchOrganizationDetails = async (organizationId: string): Promise<
 const fetchOrganizationUserDocs = async (organizationKey: string): Promise<DocumentSnapshot[]> => {
   const trimmed = organizationKey.trim()
   if (!trimmed) return []
-  const [companySnapshot, orgCodeSnapshot] = await Promise.all([
+  const [
+    companySnapshot,
+    legacyCompanySnapshot,
+    orgCodeSnapshot,
+    companyIdSnapshot,
+    organizationIdSnapshot,
+  ] = await Promise.all([
     getDocs(query(usersCollection, where('companyCode', '==', trimmed))),
+    getDocs(query(usersCollection, where('company_code', '==', trimmed))),
     getDocs(query(usersCollection, where('organization_code', '==', trimmed))),
+    getDocs(query(usersCollection, where('companyId', '==', trimmed))),
+    getDocs(query(usersCollection, where('organizationId', '==', trimmed))),
   ])
   const usersMap = new Map<string, DocumentSnapshot>()
   companySnapshot.docs.forEach((docSnap) => usersMap.set(docSnap.id, docSnap))
+  legacyCompanySnapshot.docs.forEach((docSnap) => usersMap.set(docSnap.id, docSnap))
   orgCodeSnapshot.docs.forEach((docSnap) => usersMap.set(docSnap.id, docSnap))
+  companyIdSnapshot.docs.forEach((docSnap) => usersMap.set(docSnap.id, docSnap))
+  organizationIdSnapshot.docs.forEach((docSnap) => usersMap.set(docSnap.id, docSnap))
   return Array.from(usersMap.values())
 }
 

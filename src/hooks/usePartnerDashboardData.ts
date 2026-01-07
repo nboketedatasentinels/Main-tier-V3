@@ -15,6 +15,7 @@ import {
 import { useAuth } from '@/hooks/useAuth'
 import { db } from '@/services/firebase'
 import { listenToAssignedOrganizations, logOrganizationAccessAttempt } from '@/services/organizationService'
+import { listenToOrganizationStatsUpdates, updateOrganizationStatisticsBatch } from '@/services/organizationStatsService'
 import type { OrganizationRecord } from '@/types/admin'
 import {
   build14DayRegistrationTrend,
@@ -46,6 +47,7 @@ export interface PartnerUser {
   programStartDate?: string
   email: string
   companyCode: string
+  organizationId?: string
   progressPercent: number
   currentWeek: number
   status: 'Active' | 'Paused' | 'Onboarding'
@@ -111,21 +113,39 @@ export const usePartnerDashboardData = (options?: UsePartnerDashboardDataOptions
   const [interventions, setInterventions] = useState<PartnerInterventionSummary[]>([])
   const lastAccessAttempt = useRef<string | null>(null)
 
-  const assignedOrgIds = useMemo(
-    () => new Set(assignedOrganizations.map((orgId) => orgId.toLowerCase())),
-    [assignedOrganizations],
-  )
-  const assignedOrgCodes = useMemo(() => {
-    const codes = new Set<string>()
-    assignedOrganizations.forEach((org) => codes.add(org.toLowerCase()))
+  const organizationLookup = useMemo(() => {
+    const mapping = new Map<string, string>()
     organizations.forEach((org) => {
-      const orgId = org.id?.toLowerCase()
-      if (orgId && assignedOrgIds.has(orgId)) {
-        codes.add(org.code.toLowerCase())
+      if (org.id && org.code) {
+        mapping.set(org.id.toLowerCase(), org.code.toLowerCase())
+        mapping.set(org.code.toLowerCase(), org.id.toLowerCase())
+      } else if (org.id) {
+        mapping.set(org.id.toLowerCase(), org.id.toLowerCase())
+      } else if (org.code) {
+        mapping.set(org.code.toLowerCase(), org.code.toLowerCase())
       }
     })
-    return codes
-  }, [assignedOrganizations, assignedOrgIds, organizations])
+    return mapping
+  }, [organizations])
+
+  const assignedOrgKeys = useMemo(() => {
+    const keys = new Set<string>()
+    assignedOrganizations.forEach((org) => keys.add(org.toLowerCase()))
+    organizations.forEach((org) => {
+      if (org.id) keys.add(org.id.toLowerCase())
+      if (org.code) keys.add(org.code.toLowerCase())
+    })
+    return keys
+  }, [assignedOrganizations, organizations])
+
+  const selectedOrgKeys = useMemo(() => {
+    if (!selectedOrg || selectedOrg === 'all') return new Set<string>()
+    const selected = selectedOrg.toLowerCase()
+    const keys = new Set<string>([selected])
+    const mapped = organizationLookup.get(selected)
+    if (mapped) keys.add(mapped)
+    return keys
+  }, [organizationLookup, selectedOrg])
 
   useEffect(() => {
     if (!user?.uid) return
@@ -183,9 +203,43 @@ export const usePartnerDashboardData = (options?: UsePartnerDashboardDataOptions
   }, [assignedOrganizations, isSuperAdmin, user?.uid])
 
   useEffect(() => {
+    if (!organizations.length) return undefined
+    let isMounted = true
+
+    const updateStats = async () => {
+      try {
+        await updateOrganizationStatisticsBatch(organizations)
+      } catch (error) {
+        console.error('Failed to update organization statistics', error)
+      }
+    }
+
+    void updateStats()
+
+    const unsubscribers = organizations.map((org) =>
+      listenToOrganizationStatsUpdates(
+        { id: org.id, code: org.code },
+        {
+          onError: (error) => {
+            if (!isMounted) return
+            console.error('Failed to refresh organization stats', error)
+          },
+        },
+      ),
+    )
+
+    return () => {
+      isMounted = false
+      unsubscribers.forEach((unsubscribe) => unsubscribe())
+    }
+  }, [organizations])
+
+  useEffect(() => {
     if (isSuperAdmin || selectedOrg === 'all') return
     const selected = selectedOrg.toLowerCase()
-    if (assignedOrgCodes.size && assignedOrgCodes.has(selected)) return
+    const hasAccess =
+      assignedOrgKeys.size > 0 && Array.from(selectedOrgKeys).some((key) => assignedOrgKeys.has(key))
+    if (hasAccess) return
     if (!user?.uid || lastAccessAttempt.current === selectedOrg) return
 
     lastAccessAttempt.current = selectedOrg
@@ -194,11 +248,14 @@ export const usePartnerDashboardData = (options?: UsePartnerDashboardDataOptions
       organizationCode: selectedOrg,
       reason: 'partner_dashboard_selection',
     })
-  }, [assignedOrgCodes, isSuperAdmin, selectedOrg, user?.uid])
+  }, [assignedOrgKeys, isSuperAdmin, selectedOrg, selectedOrgKeys, user?.uid])
 
   useEffect(() => {
     if (selectedOrg === 'all') return
-    const stillValid = organizations.some((org) => org.code.toLowerCase() === selectedOrg.toLowerCase())
+    const selected = selectedOrg.toLowerCase()
+    const stillValid = organizations.some(
+      (org) => org.code.toLowerCase() === selected || org.id?.toLowerCase() === selected,
+    )
     if (!stillValid) {
       setSelectedOrg('all')
     }
@@ -246,6 +303,8 @@ export const usePartnerDashboardData = (options?: UsePartnerDashboardDataOptions
     registration_date?: unknown
     programStartDate?: unknown
     program_start_date?: unknown
+    companyId?: string
+    organizationId?: string
     lastActiveAt?: unknown
     last_active_at?: unknown
     lastActive?: unknown
@@ -267,13 +326,20 @@ export const usePartnerDashboardData = (options?: UsePartnerDashboardDataOptions
         seenUserIds.add(docSnap.id)
 
         const data = docSnap.data() as FirestorePartnerUser
-        const companyCode = (data.companyCode || data.company_code || '').toLowerCase()
+        const userOrgKeys = [
+          data.companyCode,
+          data.company_code,
+          data.companyId,
+          data.organizationId,
+        ]
+          .filter((value): value is string => !!value)
+          .map((value) => value.toLowerCase())
 
-        if (!isSuperAdmin && (!assignedOrgCodes.size || (companyCode && !assignedOrgCodes.has(companyCode)))) {
+        if (!isSuperAdmin && (!assignedOrgKeys.size || !userOrgKeys.some((key) => assignedOrgKeys.has(key)))) {
           return false
         }
 
-        if (selectedOrg !== 'all' && selectedOrg && companyCode !== selectedOrg.toLowerCase()) {
+        if (selectedOrg !== 'all' && selectedOrg && !userOrgKeys.some((key) => selectedOrgKeys.has(key))) {
           return false
         }
 
@@ -288,7 +354,14 @@ export const usePartnerDashboardData = (options?: UsePartnerDashboardDataOptions
       const hydratedUsers: PartnerUser[] = filteredDocs.map((docSnap) => {
         const data = docSnap.data() as FirestorePartnerUser
 
-        const companyCode = (data.companyCode || data.company_code || '').toLowerCase()
+        const rawCompanyCode = data.companyCode || data.company_code || ''
+        const rawOrganizationId = data.companyId || data.organizationId || ''
+        const companyCode =
+          rawCompanyCode.trim().length > 0
+            ? rawCompanyCode.toLowerCase()
+            : rawOrganizationId
+              ? organizationLookup.get(rawOrganizationId.toLowerCase()) || rawOrganizationId.toLowerCase()
+              : ''
         const normalizedCreatedAt = normalizeTimestamp(data.createdAt || data.created_at)
         const normalizedRegistrationDate =
           normalizeTimestamp(
@@ -341,6 +414,7 @@ export const usePartnerDashboardData = (options?: UsePartnerDashboardDataOptions
           programStartDate: normalizedProgramStart || undefined,
           email: data.email || '',
           companyCode,
+          organizationId: rawOrganizationId ? rawOrganizationId.toLowerCase() : undefined,
           progressPercent,
           currentWeek,
           status: (data.accountStatus as PartnerUser['status']) || 'Active',
@@ -368,7 +442,7 @@ export const usePartnerDashboardData = (options?: UsePartnerDashboardDataOptions
       isMounted = false
       unsubscribe()
     }
-  }, [assignedOrgCodes, isSuperAdmin, selectedOrg])
+  }, [assignedOrgKeys, isSuperAdmin, organizationLookup, selectedOrg, selectedOrgKeys])
 
   useEffect(() => {
     if (!profile?.id) return
@@ -415,8 +489,12 @@ export const usePartnerDashboardData = (options?: UsePartnerDashboardDataOptions
           .filter((item) => {
             const orgCode = item.organizationCode?.toLowerCase()
             if (!isSuperAdmin && item.partnerId && item.partnerId !== user.uid) return false
-            if (!isSuperAdmin && (!assignedOrgCodes.size || (orgCode && !assignedOrgCodes.has(orgCode)))) return false
-            if (selectedOrg !== 'all' && selectedOrg && orgCode && orgCode !== selectedOrg.toLowerCase()) return false
+            if (
+              !isSuperAdmin &&
+              (!assignedOrgKeys.size || (orgCode && !assignedOrgKeys.has(orgCode)))
+            )
+              return false
+            if (selectedOrg !== 'all' && selectedOrg && orgCode && !selectedOrgKeys.has(orgCode)) return false
             return true
           })
 
@@ -425,12 +503,15 @@ export const usePartnerDashboardData = (options?: UsePartnerDashboardDataOptions
     )
 
     return () => unsubscribe()
-  }, [assignedOrgCodes, isSuperAdmin, selectedOrg, user?.uid])
+  }, [assignedOrgKeys, isSuperAdmin, selectedOrg, selectedOrgKeys, user?.uid])
 
   const filteredUsers = useMemo(() => {
     if (selectedOrg === 'all') return users
-    return users.filter((user) => user.companyCode === selectedOrg)
-  }, [users, selectedOrg])
+    return users.filter((user) => {
+      const userKeys = [user.companyCode, user.organizationId].filter(Boolean).map((value) => value.toLowerCase())
+      return userKeys.some((key) => selectedOrgKeys.has(key))
+    })
+  }, [selectedOrg, selectedOrgKeys, users])
 
   const managedCompanies = isSuperAdmin ? organizations.length : assignedOrganizations.length
 
