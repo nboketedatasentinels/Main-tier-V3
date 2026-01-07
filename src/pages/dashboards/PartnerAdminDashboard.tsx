@@ -14,6 +14,7 @@ import {
   VStack,
 } from '@chakra-ui/react'
 import { Bell, Building2, Gauge, Sparkles, Users } from 'lucide-react'
+import { useNavigate } from 'react-router-dom'
 import { MetricCard } from '@/components/admin/MetricCard'
 import { EngagementChart } from '@/components/admin/EngagementChart'
 import { RiskAnalysisCard } from '@/components/admin/RiskAnalysisCard'
@@ -25,6 +26,7 @@ import { PartnerUserManagement } from '@/components/partner/PartnerUserManagemen
 import { usePartnerDashboardData } from '@/hooks/usePartnerDashboardData'
 
 export const PartnerAdminDashboard: React.FC = () => {
+  const navigate = useNavigate()
   const {
     assignedOrgCount,
     engagementTrend,
@@ -113,6 +115,10 @@ export const PartnerAdminDashboard: React.FC = () => {
       { active: 0, watch: 0, paused: 0, totalActiveUsers: 0 },
     )
   }, [organizations])
+
+  const handleViewOrganization = (orgCode: string) => {
+    navigate(`/admin/organization/${orgCode}`)
+  }
 
   const renderOverview = () => (
     <Stack spacing={8}>
@@ -529,6 +535,7 @@ export const PartnerAdminDashboard: React.FC = () => {
                     status={org.status}
                     activeUsers={org.activeUsers}
                     newThisWeek={org.newThisWeek}
+                    onViewClick={() => handleViewOrganization(org.code)}
                   />
                 ))}
               </SimpleGrid>

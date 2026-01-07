@@ -1,4 +1,5 @@
 import React, { useMemo, useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import {
   Badge,
   Box,
@@ -120,6 +121,7 @@ const UserManagementSection: React.FC<{
 
 export const CompanyAdminDashboard: React.FC = () => {
   const { profile } = useAuth()
+  const navigate = useNavigate()
   const adminName = profile?.fullName || profile?.firstName || 'Admin'
   const [activePage, setActivePage] = useState<CompanyPageKey>('overview')
   const [selectedOrg, setSelectedOrg] = useState<string>('all')
@@ -178,6 +180,10 @@ export const CompanyAdminDashboard: React.FC = () => {
   )
 
   const activeOrgName = selectedOrg === 'all' ? 'all organizations' : filteredOrganizations[0]?.name || 'selected org'
+
+  const handleViewOrganization = (orgCode: string) => {
+    navigate(`/admin/organization/${orgCode}`)
+  }
 
   const renderOverview = () => (
     <Stack spacing={8}>
@@ -330,7 +336,7 @@ export const CompanyAdminDashboard: React.FC = () => {
             </HStack>
             <SimpleGrid columns={{ base: 1, md: 2, xl: 4 }} spacing={3}>
               {filteredOrganizations.map(company => (
-                <OrganizationCard key={company.name} {...company} />
+                <OrganizationCard key={company.name} {...company} onViewClick={() => handleViewOrganization(company.code)} />
               ))}
             </SimpleGrid>
           </Stack>
@@ -453,7 +459,7 @@ export const CompanyAdminDashboard: React.FC = () => {
             </HStack>
             <SimpleGrid columns={{ base: 1, md: 2, xl: 3 }} spacing={4}>
               {filteredOrganizations.map(org => (
-                <OrganizationCard key={org.name} {...org} />
+                <OrganizationCard key={org.name} {...org} onViewClick={() => handleViewOrganization(org.code)} />
               ))}
             </SimpleGrid>
           </Stack>
