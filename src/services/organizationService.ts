@@ -37,6 +37,14 @@ const usersCollection = collection(db, 'users')
 const engagementCollection = collection(db, 'user_engagement_scores')
 const adminActivityCollection = collection(db, 'admin_activity_log')
 
+type OrganizationAccessAttemptPayload = {
+  userId: string
+  organizationId?: string
+  organizationCode?: string
+  reason?: string
+  metadata?: Record<string, unknown>
+}
+
 const chunkArray = <T>(items: T[], size = 10): T[][] => {
   const chunks: T[][] = []
   for (let i = 0; i < items.length; i += size) {
@@ -209,6 +217,29 @@ export const fetchOrganizationDetails = async (organizationId: string): Promise<
   const docSnap = await getDoc(doc(db, 'organizations', organizationId))
   if (!docSnap.exists()) return null
   return { id: docSnap.id, ...(docSnap.data() as Omit<OrganizationRecord, 'id'>) }
+}
+
+export const logOrganizationAccessAttempt = async ({
+  userId,
+  organizationId,
+  organizationCode,
+  reason,
+  metadata,
+}: OrganizationAccessAttemptPayload) => {
+  if (!userId) return
+  await addDoc(adminActivityCollection, {
+    action: 'organization_access_attempt',
+    adminId: userId,
+    userId,
+    organizationCode,
+    severity: 'watch',
+    metadata: {
+      organizationId,
+      reason,
+      ...metadata,
+    },
+    createdAt: serverTimestamp(),
+  })
 }
 
 export const fetchOrganizationByCode = async (organizationCode: string): Promise<OrganizationRecord | null> => {
