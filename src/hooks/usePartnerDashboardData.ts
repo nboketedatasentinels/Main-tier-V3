@@ -256,16 +256,16 @@ export const usePartnerDashboardData = (options?: UsePartnerDashboardDataOptions
 
   useEffect(() => {
     if (isSuperAdmin || selectedOrg === 'all') return
-    const selected = selectedOrg.toLowerCase()
     const hasAccess =
       assignedOrgKeys.size > 0 && Array.from(selectedOrgKeys).some((key) => assignedOrgKeys.has(key))
     if (hasAccess) return
-    if (!user?.uid || lastAccessAttempt.current === selectedOrg) return
+    const selected = selectedOrg.toLowerCase()
+    if (!user?.uid || lastAccessAttempt.current === selected) return
 
-    lastAccessAttempt.current = selectedOrg
+    lastAccessAttempt.current = selected
     void logOrganizationAccessAttempt({
       userId: user.uid,
-      organizationCode: selectedOrg,
+      organizationCode: selected,
       reason: 'partner_dashboard_selection',
     })
   }, [assignedOrgKeys, isSuperAdmin, selectedOrg, selectedOrgKeys, user?.uid])
@@ -449,7 +449,7 @@ export const usePartnerDashboardData = (options?: UsePartnerDashboardDataOptions
             data.nudgeResponseScore && data.nudgeResponseScore >= 0.7
               ? 'Responds well to nudges'
               : undefined,
-          ].filter(Boolean),
+          ].filter((reason): reason is string => Boolean(reason)),
           registrationDate: normalizedRegistrationDate || undefined,
           interventions: data.interventions || 0,
         }
@@ -528,7 +528,9 @@ export const usePartnerDashboardData = (options?: UsePartnerDashboardDataOptions
   const filteredUsers = useMemo(() => {
     if (selectedOrg === 'all') return users
     return users.filter((user) => {
-      const userKeys = [user.companyCode, user.organizationId].filter(Boolean).map((value) => value.toLowerCase())
+      const userKeys = [user.companyCode, user.organizationId]
+        .filter((value): value is string => Boolean(value))
+        .map((value) => value.toLowerCase())
       return userKeys.some((key) => selectedOrgKeys.has(key))
     })
   }, [selectedOrg, selectedOrgKeys, users])
