@@ -5,12 +5,9 @@ import {
   Text,
   Stack,
   SimpleGrid,
-  Skeleton,
   Spinner,
   Badge,
   Button,
-  Grid,
-  GridItem,
   Flex,
   Icon,
   Progress,
@@ -30,7 +27,7 @@ import {
   CalendarDays,
   Lock,
 } from 'lucide-react'
-import { collection, query, where, onSnapshot, orderBy, limit, doc, getDocs, Timestamp } from 'firebase/firestore'
+import { collection, query, where, onSnapshot, doc, getDocs, Timestamp } from 'firebase/firestore'
 import { useAuth } from '@/hooks/useAuth'
 import { db } from '@/services/firebase'
 import { canAccessCourse, FREE_TIER_COURSE_TITLE, isFreeUser } from '@/utils/membership'
@@ -71,14 +68,6 @@ interface NormalizedCourse {
   estimatedMinutes?: number
   difficulty?: CourseDifficulty
   image?: string
-}
-
-interface RecentActivityItem {
-  id: string
-  title: string
-  lastAccessed: Date | null
-  progress?: number
-  courseId?: string
 }
 
 type RecommendedCourse = CourseDetail & CourseMetadata & { title: string }
@@ -431,7 +420,6 @@ export const MyCoursesPage: React.FC = () => {
   const [personalAssignedCourses, setPersonalAssignedCourses] = useState<NormalizedCourse[]>([])
   const [organizationCourses, setOrganizationCourses] = useState<NormalizedCourse[]>([])
   const [assignedCourseOrder, setAssignedCourseOrder] = useState<string[]>([])
-  const [recentActivity, setRecentActivity] = useState<RecentActivityItem[]>([])
   const [companyProgram, setCompanyProgram] = useState<{
     monthlyAssignments: MonthlyCourseAssignments
     totalMonths: number
@@ -443,7 +431,6 @@ export const MyCoursesPage: React.FC = () => {
   const [loadingCompanyCourses, setLoadingCompanyCourses] = useState(true)
   const [loadingPersonalCourses, setLoadingPersonalCourses] = useState(true)
   const [loadingOrganizationCourses, setLoadingOrganizationCourses] = useState(true)
-  const [loadingRecentActivity, setLoadingRecentActivity] = useState(true)
 
   const companyCode = profile?.companyId || (profile as { companyCode?: string } | null)?.companyCode
 
@@ -689,47 +676,6 @@ export const MyCoursesPage: React.FC = () => {
     return () => unsubscribe()
   }, [companyCode])
 
-  useEffect(() => {
-    if (!user) {
-      setRecentActivity([])
-      setLoadingRecentActivity(false)
-      return
-    }
-
-    const recentQuery = query(
-      collection(db, 'user_recent_activity'),
-      where('user_id', '==', user.uid),
-      orderBy('lastAccessed', 'desc'),
-      limit(5)
-    )
-
-    const unsubscribe = onSnapshot(
-      recentQuery,
-      snapshot => {
-        const mapped: RecentActivityItem[] = snapshot.docs.map(docSnap => {
-          const data = docSnap.data()
-          return {
-            id: docSnap.id,
-            title: (data.title || data.courseTitle || data.name || 'Untitled Course') as string,
-            courseId: data.course_id || data.courseId,
-            lastAccessed: normalizeDate(data.lastAccessed),
-            progress: typeof data.progress === 'number' ? data.progress : undefined,
-          }
-        })
-
-        setRecentActivity(mapped)
-        setLoadingRecentActivity(false)
-      },
-      error => {
-        console.error('Error loading recent activity', error)
-        setRecentActivity([])
-        setLoadingRecentActivity(false)
-      }
-    )
-
-    return () => unsubscribe()
-  }, [user])
-
   const combinedAssignedCourses = useMemo(() => {
     const priority = ['user', 'personal', 'company', 'organization'] as NormalizedCourse['source'][]
     const mergeMap = new Map<string, NormalizedCourse>()
@@ -920,23 +866,6 @@ export const MyCoursesPage: React.FC = () => {
 
   const journeyTemplateCount = useMemo(() => Object.keys(journeyTemplateCourses).length, [journeyTemplateCourses])
 
-  const recentCoursesToDisplay = useMemo(() => {
-    let items: RecentActivityItem[] = []
-    if (recentActivity.length) {
-      items = recentActivity
-    } else if (!recentActivity.length && !loadingRecentActivity && combinedAssignedCourses.length) {
-      items = combinedAssignedCourses.slice(0, 3).map(course => ({
-        id: course.id,
-        title: course.title,
-        lastAccessed: null,
-        progress: course.progress,
-        courseId: course.id,
-      }))
-    }
-
-    return isFreeTierUser ? items.filter(item => canAccessCourse(profile, item.title)) : items
-  }, [recentActivity, loadingRecentActivity, combinedAssignedCourses, isFreeTierUser, profile])
-
   return (
     <Stack spacing={8} py={2} as="section">
       <Box
@@ -993,169 +922,96 @@ export const MyCoursesPage: React.FC = () => {
       </Box>
 
       {isFreeTierUser && (
-        <Grid templateColumns={{ base: '1fr', md: '1fr 1fr' }} gap={6} as="section">
-          <GridItem>
-            <Box bg="white" p={5} borderRadius="2xl" border="1px solid" borderColor="gray.100" boxShadow="sm">
-              <HStack justify="space-between" mb={4}>
-                <Heading size="md" color="gray.800">
-                  Courses for you
-                </Heading>
-                <HStack spacing={2} color="purple.600">
-                  <Icon as={Sparkles} />
-                  <Text fontWeight="semibold">Personalized soon</Text>
-                </HStack>
-              </HStack>
+        <Box bg="white" p={5} borderRadius="2xl" border="1px solid" borderColor="gray.100" boxShadow="sm">
+          <HStack justify="space-between" mb={4}>
+            <Heading size="md" color="gray.800">
+              Courses for you
+            </Heading>
+            <HStack spacing={2} color="purple.600">
+              <Icon as={Sparkles} />
+              <Text fontWeight="semibold">Personalized soon</Text>
+            </HStack>
+          </HStack>
 
-              {recommendedCourses.length ? (
-                <SimpleGrid columns={{ base: 1, sm: 2 }} spacing={4}>
-                  {recommendedCourses.map(course => {
-                    const hasAccess = canAccessCourse(profile, course.title)
-                    return (
-                    <Box
-                      key={course.title}
-                      border="1px solid"
-                      borderColor="gray.100"
-                      borderRadius="xl"
-                      p={4}
-                      bg="gray.50"
-                      _hover={{ boxShadow: 'md', bg: 'white' }}
-                    >
-                      <Stack spacing={3}>
-                        {COURSE_IMAGE_FILENAMES[course.title] ? (
-                          <Image
-                            src={`/${COURSE_IMAGE_FILENAMES[course.title]}`}
-                            alt={course.title}
-                            borderRadius="lg"
-                            objectFit="cover"
-                            height="120px"
-                          />
-                        ) : (
-                          <Flex
-                            borderRadius="lg"
-                            border="1px solid"
-                            borderColor="gray.200"
-                            height="120px"
-                            align="center"
-                            justify="center"
-                            bg="white"
-                          >
-                            <Icon as={BookOpen} boxSize={8} color="gray.400" />
-                          </Flex>
-                        )}
-                        <Heading size="sm" color="gray.800">
-                          {course.title}
-                        </Heading>
-                        <Badge
-                          colorScheme={badgeColor(course.difficulty as CourseDifficulty)}
-                          alignSelf="flex-start"
-                          borderRadius="full"
+          {recommendedCourses.length ? (
+            <SimpleGrid columns={{ base: 1, sm: 2 }} spacing={4}>
+              {recommendedCourses.map(course => {
+                const hasAccess = canAccessCourse(profile, course.title)
+                return (
+                  <Box
+                    key={course.title}
+                    border="1px solid"
+                    borderColor="gray.100"
+                    borderRadius="xl"
+                    p={4}
+                    bg="gray.50"
+                    _hover={{ boxShadow: 'md', bg: 'white' }}
+                  >
+                    <Stack spacing={3}>
+                      {COURSE_IMAGE_FILENAMES[course.title] ? (
+                        <Image
+                          src={`/${COURSE_IMAGE_FILENAMES[course.title]}`}
+                          alt={course.title}
+                          borderRadius="lg"
+                          objectFit="cover"
+                          height="120px"
+                        />
+                      ) : (
+                        <Flex
+                          borderRadius="lg"
+                          border="1px solid"
+                          borderColor="gray.200"
+                          height="120px"
+                          align="center"
+                          justify="center"
+                          bg="white"
                         >
-                          {course.difficulty || 'Beginner'}
-                        </Badge>
-                        <Text color="gray.600" fontSize="sm">
-                          {course.description}
-                        </Text>
-                        <HStack spacing={2} color="gray.500" fontSize="sm">
-                          <Icon as={Clock} boxSize={4} />
-                          <Text>{formatDuration(course.estimatedMinutes) || 'Self-paced'}</Text>
-                        </HStack>
-                        <Button
-                          as={hasAccess && course.link ? 'a' : (RouterLink as React.ElementType)}
-                          href={hasAccess ? course.link : undefined}
-                          to={hasAccess ? undefined : '/upgrade'}
-                          target={hasAccess ? '_blank' : undefined}
-                          rel={hasAccess ? 'noopener noreferrer' : undefined}
-                          rightIcon={<ArrowUpRight size={14} />}
-                          colorScheme="purple"
-                          variant="outline"
-                          size="sm"
-                          borderRadius="full"
-                        >
-                          {hasAccess ? 'Explore' : 'Upgrade to access'}
-                        </Button>
-                      </Stack>
-                    </Box>
-                    )
-                  })}
-                </SimpleGrid>
-              ) : (
-                <Flex direction="column" align="center" justify="center" py={8} color="gray.500" gap={3}>
-                  <Icon as={Sparkles} boxSize={8} />
-                  <Text fontWeight="semibold">All available courses are already in your queue...</Text>
-                </Flex>
-              )}
-            </Box>
-          </GridItem>
-
-          <GridItem>
-            <Box bg="white" p={5} borderRadius="2xl" border="1px solid" borderColor="gray.100" boxShadow="sm">
-              <HStack justify="space-between" mb={4}>
-                <Heading size="md" color="gray.800">
-                  Recently viewed
-                </Heading>
-                <Badge colorScheme="purple" borderRadius="full">
-                  {recentActivity.length ? 'Latest activity' : 'Start exploring'}
-                </Badge>
-              </HStack>
-
-              {loadingRecentActivity && (
-                <Stack spacing={3}>
-                  {[1, 2].map(item => (
-                    <Box key={item} border="1px solid" borderColor="gray.100" borderRadius="lg" p={3}>
-                      <Skeleton height="20px" width="50%" mb={3} />
-                      <Skeleton height="10px" borderRadius="full" />
-                    </Box>
-                  ))}
-                </Stack>
-              )}
-
-              {!loadingRecentActivity && recentCoursesToDisplay.length > 0 && (
-                <Stack spacing={3}>
-                  {recentCoursesToDisplay.map(item => {
-                    const hasAccess = canAccessCourse(profile, item.title)
-                    return (
-                    <Box key={item.id} border="1px solid" borderColor="gray.100" borderRadius="lg" p={3}>
-                      <HStack justify="space-between" align="start" mb={2}>
-                        <Text fontWeight="semibold" color="gray.800">
-                          {item.title}
-                        </Text>
-                        {item.lastAccessed && (
-                          <Text fontSize="sm" color="gray.500">
-                            Viewed {item.lastAccessed.toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}
-                          </Text>
-                        )}
-                      </HStack>
-                      <Progress
-                        value={item.progress || 0}
-                        size="sm"
-                        colorScheme="purple"
+                          <Icon as={BookOpen} boxSize={8} color="gray.400" />
+                        </Flex>
+                      )}
+                      <Heading size="sm" color="gray.800">
+                        {course.title}
+                      </Heading>
+                      <Badge
+                        colorScheme={badgeColor(course.difficulty as CourseDifficulty)}
+                        alignSelf="flex-start"
                         borderRadius="full"
-                        aria-hidden
-                      />
-                      <Text fontSize="xs" color="gray.500" mt={1}>
-                        {(item.progress || 0).toFixed(0)}% complete
+                      >
+                        {course.difficulty || 'Beginner'}
+                      </Badge>
+                      <Text color="gray.600" fontSize="sm">
+                        {course.description}
                       </Text>
+                      <HStack spacing={2} color="gray.500" fontSize="sm">
+                        <Icon as={Clock} boxSize={4} />
+                        <Text>{formatDuration(course.estimatedMinutes) || 'Self-paced'}</Text>
+                      </HStack>
                       <Button
-                        as={hasAccess ? 'a' : (RouterLink as React.ElementType)}
-                        href={hasAccess ? COURSE_DETAILS_MAPPING[item.title]?.link || '#' : undefined}
+                        as={hasAccess && course.link ? 'a' : (RouterLink as React.ElementType)}
+                        href={hasAccess ? course.link : undefined}
                         to={hasAccess ? undefined : '/upgrade'}
                         target={hasAccess ? '_blank' : undefined}
                         rel={hasAccess ? 'noopener noreferrer' : undefined}
-                        size="xs"
-                        variant="link"
+                        rightIcon={<ArrowUpRight size={14} />}
                         colorScheme="purple"
-                        mt={1}
+                        variant="outline"
+                        size="sm"
+                        borderRadius="full"
                       >
-                        {hasAccess ? 'Resume' : 'Upgrade to resume'}
+                        {hasAccess ? 'Explore' : 'Upgrade to access'}
                       </Button>
-                    </Box>
-                    )
-                  })}
-                </Stack>
-              )}
-            </Box>
-          </GridItem>
-        </Grid>
+                    </Stack>
+                  </Box>
+                )
+              })}
+            </SimpleGrid>
+          ) : (
+            <Flex direction="column" align="center" justify="center" py={8} color="gray.500" gap={3}>
+              <Icon as={Sparkles} boxSize={8} />
+              <Text fontWeight="semibold">All available courses are already in your queue...</Text>
+            </Flex>
+          )}
+        </Box>
       )}
 
       {companyProgram && companyProgram.totalMonths > 0 && (
