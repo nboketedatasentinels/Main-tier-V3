@@ -24,9 +24,12 @@ import PartnerDashboardLayout from '@/layouts/PartnerDashboardLayout'
 import { PartnerInterventionPanel } from '@/components/partner/PartnerInterventionPanel'
 import { PartnerUserManagement } from '@/components/partner/PartnerUserManagement'
 import { usePartnerDashboardData } from '@/hooks/usePartnerDashboardData'
+import { useAuth } from '@/hooks/useAuth'
+import { logOrganizationAccessAttempt } from '@/services/organizationService'
 
 export const PartnerAdminDashboard: React.FC = () => {
   const navigate = useNavigate()
+  const { isSuperAdmin, user } = useAuth()
   const {
     assignedOrgCount,
     engagementTrend,
@@ -117,6 +120,15 @@ export const PartnerAdminDashboard: React.FC = () => {
   }, [organizations])
 
   const handleViewOrganization = (orgCode: string) => {
+    const allowed = isSuperAdmin || organizations.some(org => org.code.toLowerCase() === orgCode.toLowerCase())
+    if (!allowed && user?.uid) {
+      void logOrganizationAccessAttempt({
+        userId: user.uid,
+        organizationCode: orgCode,
+        reason: 'partner_dashboard_navigation',
+      })
+      return
+    }
     navigate(`/admin/organization/${orgCode}`)
   }
 

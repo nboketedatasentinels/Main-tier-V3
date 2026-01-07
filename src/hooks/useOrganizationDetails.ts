@@ -6,6 +6,7 @@ import {
   fetchOrganizationByCode,
   fetchOrganizationEngagementStats,
   fetchOrganizationUsers,
+  logOrganizationAccessAttempt,
 } from '@/services/organizationService'
 import type {
   OrganizationAccountStatusFilter,
@@ -132,6 +133,14 @@ export const useOrganizationDetails = (organizationId?: string) => {
         (orgRecord.code ? assignedOrganizations.includes(orgRecord.code) : false)
 
       if (!isSuperAdmin && !accessResult.authorized && !matchesAssignedOrg) {
+        if (user?.uid) {
+          void logOrganizationAccessAttempt({
+            userId: user.uid,
+            organizationId: orgRecord.id,
+            organizationCode: orgRecord.code,
+            reason: 'organization_details',
+          })
+        }
         setError('unauthorized')
         setLoading(false)
         return

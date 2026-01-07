@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { differenceInDays, subDays } from 'date-fns'
 import type { DataWarning } from '@/components/admin/RiskAnalysisCard'
 import {
@@ -14,6 +14,8 @@ import {
 } from 'firebase/firestore'
 import { useAuth } from '@/hooks/useAuth'
 import { db } from '@/services/firebase'
+import { listenToAssignedOrganizations, logOrganizationAccessAttempt } from '@/services/organizationService'
+import type { OrganizationRecord } from '@/types/admin'
 import {
   build14DayRegistrationTrend,
   calculateUserRiskStatus,
@@ -25,6 +27,7 @@ import {
 export type PartnerRiskLevel = 'engaged' | 'watch' | 'concern' | 'critical'
 
 export interface PartnerOrganization {
+  id?: string
   code: string
   name: string
   status: 'active' | 'watch' | 'paused'
@@ -72,7 +75,6 @@ interface UsePartnerDashboardDataOptions {
   selectedOrg?: string
 }
 
-const ORG_QUERY = query(collection(db, 'organizations'), where('status', '==', 'active'))
 const USERS_QUERY = query(collection(db, 'users'), where('accountStatus', '==', 'active'))
 
 const normalizeTimestamp = (value?: unknown): string | null => {
@@ -107,17 +109,64 @@ export const usePartnerDashboardData = (options?: UsePartnerDashboardDataOptions
   const [organizations, setOrganizations] = useState<PartnerOrganization[]>([])
   const [notificationCount, setNotificationCount] = useState<number>(0)
   const [interventions, setInterventions] = useState<PartnerInterventionSummary[]>([])
+  const lastAccessAttempt = useRef<string | null>(null)
 
-  const assignedSet = useMemo(() => new Set(assignedOrganizations.map((code) => code.toLowerCase())), [assignedOrganizations])
+  const assignedOrgIds = useMemo(
+    () => new Set(assignedOrganizations.map((orgId) => orgId.toLowerCase())),
+    [assignedOrganizations],
+  )
+  const assignedOrgCodes = useMemo(() => {
+    const codes = new Set<string>()
+    assignedOrganizations.forEach((org) => codes.add(org.toLowerCase()))
+    organizations.forEach((org) => {
+      const orgId = org.id?.toLowerCase()
+      if (orgId && assignedOrgIds.has(orgId)) {
+        codes.add(org.code.toLowerCase())
+      }
+    })
+    return codes
+  }, [assignedOrganizations, assignedOrgIds, organizations])
 
   useEffect(() => {
-    const unsubscribe = onSnapshot(ORG_QUERY, (snapshot) => {
-      const scoped = snapshot.docs
-        .map((docSnap) => {
-          const data = docSnap.data() as Partial<PartnerOrganization>
+    if (!user?.uid) return
+    if (!isSuperAdmin && !assignedOrganizations.length) {
+      setOrganizations([])
+      return
+    }
+
+    if (isSuperAdmin) {
+      const unsubscribe = onSnapshot(
+        query(collection(db, 'organizations'), where('status', '==', 'active')),
+        (snapshot) => {
+          const scoped = snapshot.docs.map((docSnap) => {
+            const data = docSnap.data() as Partial<PartnerOrganization>
+            return {
+              id: docSnap.id,
+              code: data.code || docSnap.id,
+              name: data.name || docSnap.id,
+              status: (data.status as PartnerOrganization['status']) || 'active',
+              activeUsers: data.activeUsers ?? 0,
+              newThisWeek: data.newThisWeek ?? 0,
+              lastActive: data.lastActive,
+              tags: data.tags || [],
+            }
+          })
+          setOrganizations(scoped)
+        },
+      )
+
+      return () => unsubscribe()
+    }
+
+    const unsubscribe = listenToAssignedOrganizations(
+      user.uid,
+      (assignedOrgs) => {
+        const scoped = assignedOrgs.map((org) => {
+          const data = org as OrganizationRecord & Partial<PartnerOrganization>
           return {
-            code: data.code || docSnap.id,
-            name: data.name || docSnap.id,
+            id: data.id,
+            code: data.code || data.id || '',
+            name: data.name || data.code || data.id || 'Unknown organization',
             status: (data.status as PartnerOrganization['status']) || 'active',
             activeUsers: data.activeUsers ?? 0,
             newThisWeek: data.newThisWeek ?? 0,
@@ -125,13 +174,35 @@ export const usePartnerDashboardData = (options?: UsePartnerDashboardDataOptions
             tags: data.tags || [],
           }
         })
-        .filter((org) => (isSuperAdmin || !assignedSet.size ? true : assignedSet.has(org.code.toLowerCase())))
-
-      setOrganizations(scoped)
-    })
+        setOrganizations(scoped)
+      },
+      { status: 'active' },
+    )
 
     return () => unsubscribe()
-  }, [assignedSet, isSuperAdmin])
+  }, [assignedOrganizations, isSuperAdmin, user?.uid])
+
+  useEffect(() => {
+    if (isSuperAdmin || selectedOrg === 'all') return
+    const selected = selectedOrg.toLowerCase()
+    if (assignedOrgCodes.size && assignedOrgCodes.has(selected)) return
+    if (!user?.uid || lastAccessAttempt.current === selectedOrg) return
+
+    lastAccessAttempt.current = selectedOrg
+    void logOrganizationAccessAttempt({
+      userId: user.uid,
+      organizationCode: selectedOrg,
+      reason: 'partner_dashboard_selection',
+    })
+  }, [assignedOrgCodes, isSuperAdmin, selectedOrg, user?.uid])
+
+  useEffect(() => {
+    if (selectedOrg === 'all') return
+    const stillValid = organizations.some((org) => org.code.toLowerCase() === selectedOrg.toLowerCase())
+    if (!stillValid) {
+      setSelectedOrg('all')
+    }
+  }, [organizations, selectedOrg])
 
   const fetchWeeklyPointsByUser = async (userIds: string[]) => {
     const pointsByUser: Record<string, WeeklyPointsRecord[]> = {}
@@ -197,7 +268,7 @@ export const usePartnerDashboardData = (options?: UsePartnerDashboardDataOptions
         const data = docSnap.data() as FirestorePartnerUser
         const companyCode = (data.companyCode || data.company_code || '').toLowerCase()
 
-        if (!isSuperAdmin && assignedSet.size && companyCode && !assignedSet.has(companyCode)) {
+        if (!isSuperAdmin && (!assignedOrgCodes.size || (companyCode && !assignedOrgCodes.has(companyCode)))) {
           return false
         }
 
@@ -292,7 +363,7 @@ export const usePartnerDashboardData = (options?: UsePartnerDashboardDataOptions
       isMounted = false
       unsubscribe()
     }
-  }, [assignedSet, isSuperAdmin, selectedOrg])
+  }, [assignedOrgCodes, isSuperAdmin, selectedOrg])
 
   useEffect(() => {
     if (!profile?.id) return
@@ -339,7 +410,7 @@ export const usePartnerDashboardData = (options?: UsePartnerDashboardDataOptions
           .filter((item) => {
             const orgCode = item.organizationCode?.toLowerCase()
             if (!isSuperAdmin && item.partnerId && item.partnerId !== user.uid) return false
-            if (!isSuperAdmin && assignedSet.size && orgCode && !assignedSet.has(orgCode)) return false
+            if (!isSuperAdmin && (!assignedOrgCodes.size || (orgCode && !assignedOrgCodes.has(orgCode)))) return false
             if (selectedOrg !== 'all' && selectedOrg && orgCode && orgCode !== selectedOrg.toLowerCase()) return false
             return true
           })
@@ -349,14 +420,14 @@ export const usePartnerDashboardData = (options?: UsePartnerDashboardDataOptions
     )
 
     return () => unsubscribe()
-  }, [assignedSet, isSuperAdmin, selectedOrg, user?.uid])
+  }, [assignedOrgCodes, isSuperAdmin, selectedOrg, user?.uid])
 
   const filteredUsers = useMemo(() => {
     if (selectedOrg === 'all') return users
     return users.filter((user) => user.companyCode === selectedOrg)
   }, [users, selectedOrg])
 
-  const managedCompanies = organizations.length || assignedOrganizations.length
+  const managedCompanies = isSuperAdmin ? organizations.length : assignedOrganizations.length
 
   const metrics = useMemo(() => {
     const activeWindow = subDays(new Date(), 30)
@@ -412,7 +483,7 @@ export const usePartnerDashboardData = (options?: UsePartnerDashboardDataOptions
     return filteredUsers.filter((user) => ['watch', 'concern', 'critical', 'at_risk'].includes(user.riskStatus))
   }, [filteredUsers])
 
-  const assignedOrgCount = assignedOrganizations?.length || organizations.length
+  const assignedOrgCount = isSuperAdmin ? organizations.length : assignedOrganizations?.length || 0
 
   const managedBreakdown = useMemo(() => {
     const active = organizations.filter((org) => org.status === 'active').length
@@ -447,6 +518,13 @@ export const usePartnerDashboardData = (options?: UsePartnerDashboardDataOptions
   const dataQualityWarnings = useMemo(() => {
     const warnings = [] as DataWarning[]
 
+    if (!isSuperAdmin && !assignedOrganizations.length) {
+      warnings.push({
+        message: 'No organizations are assigned to this account yet.',
+        severity: 'warning',
+      })
+    }
+
     const missingAssignments = users.filter((user) => !user.companyCode).length
     if (missingAssignments) {
       warnings.push({
@@ -464,7 +542,7 @@ export const usePartnerDashboardData = (options?: UsePartnerDashboardDataOptions
     }
 
     return warnings
-  }, [users])
+  }, [assignedOrganizations, isSuperAdmin, users])
 
   const daysUntil = (date: string) => differenceInDays(new Date(date), new Date())
 

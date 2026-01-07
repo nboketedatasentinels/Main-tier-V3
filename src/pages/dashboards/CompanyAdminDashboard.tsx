@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react'
+import React, { useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import {
   Badge,
@@ -28,9 +28,11 @@ import type { OrganizationCardProps } from '@/components/admin/OrganizationCard'
 import { StatusBadge } from '@/components/admin/StatusBadge'
 import CompanyAdminLayout from '@/layouts/CompanyAdminLayout'
 import { buildCompanyAdminNavItems } from '@/utils/navigationItems'
+import { listenToAssignedOrganizations, logOrganizationAccessAttempt } from '@/services/organizationService'
+import type { OrganizationRecord } from '@/types/admin'
 
 type CompanyPageKey = 'overview' | 'users' | 'organizations' | 'reports' | 'settings' | 'support'
-type CompanyOrg = OrganizationCardProps & { code: string }
+type CompanyOrg = OrganizationCardProps & { code: string; id?: string }
 
 type UserRow = {
   name: string
@@ -84,12 +86,6 @@ const baseUsers: UserRow[] = [
   { name: 'Ravi Patel', org: 'Contoso', orgCode: 'contoso', status: 'Active', engagement: 74, risk: 'Engaged', role: 'Mentor' },
 ]
 
-const organizations: CompanyOrg[] = [
-  { code: 'all', name: 'All Organizations', status: 'active' },
-  { code: 'northwind', name: 'Northwind Holdings', status: 'active', admins: 2, newThisWeek: 1, activeUsers: 94, change: '+6' },
-  { code: 'contoso', name: 'Contoso Labs', status: 'watch', admins: 1, newThisWeek: 0, activeUsers: 71, change: '-2' },
-]
-
 const interventions = [
   { name: 'Follow-up outreach to paused users', target: '6 accounts', reason: 'Low weekly activity', status: 'watch' },
   { name: 'Mentor pairing refresh', target: '3 at-risk mentors', reason: 'Low response rate', status: 'active' },
@@ -120,14 +116,20 @@ const UserManagementSection: React.FC<{
 )
 
 export const CompanyAdminDashboard: React.FC = () => {
-  const { profile } = useAuth()
+  const { assignedOrganizations = [], isSuperAdmin, profile, user } = useAuth()
   const navigate = useNavigate()
   const adminName = profile?.fullName || profile?.firstName || 'Admin'
   const [activePage, setActivePage] = useState<CompanyPageKey>('overview')
   const [selectedOrg, setSelectedOrg] = useState<string>('all')
+  const [organizations, setOrganizations] = useState<CompanyOrg[]>([])
   const navSections = useMemo(() => buildCompanyAdminNavItems(), [])
 
-  const scopedOrganizations = useMemo<CompanyOrg[]>(() => organizations.filter(org => org.code !== 'all'), [])
+  const organizationOptions = useMemo(
+    () => [{ code: 'all', name: 'All Organizations' }, ...organizations],
+    [organizations],
+  )
+
+  const scopedOrganizations = useMemo<CompanyOrg[]>(() => organizations.filter(org => org.code !== 'all'), [organizations])
 
   const filteredOrganizations = useMemo(() => {
     if (selectedOrg === 'all') return scopedOrganizations
@@ -180,8 +182,54 @@ export const CompanyAdminDashboard: React.FC = () => {
   )
 
   const activeOrgName = selectedOrg === 'all' ? 'all organizations' : filteredOrganizations[0]?.name || 'selected org'
+  const hasAssignments = isSuperAdmin || assignedOrganizations.length > 0
+
+  useEffect(() => {
+    if (!user?.uid) return
+    if (!isSuperAdmin && !assignedOrganizations.length) {
+      setOrganizations([])
+      return
+    }
+
+    const unsubscribe = listenToAssignedOrganizations(
+      user.uid,
+      (assignedOrgs) => {
+        const mapped = assignedOrgs.map((org: OrganizationRecord) => {
+          const status = org.status === 'suspended' ? 'paused' : org.status
+          return {
+            id: org.id,
+            code: org.code || org.id || '',
+            name: org.name || org.code || org.id || 'Unknown organization',
+            status: (status as CompanyOrg['status']) || 'active',
+            activeUsers: org.assignmentCount ?? org.teamSize ?? 0,
+          }
+        })
+        setOrganizations(mapped)
+      },
+      { onError: (error) => console.warn('Failed to load assigned organizations', error) },
+    )
+
+    return () => unsubscribe()
+  }, [assignedOrganizations, isSuperAdmin, user?.uid])
+
+  useEffect(() => {
+    if (selectedOrg === 'all') return
+    const stillValid = organizations.some(org => org.code === selectedOrg)
+    if (!stillValid) {
+      setSelectedOrg('all')
+    }
+  }, [organizations, selectedOrg])
 
   const handleViewOrganization = (orgCode: string) => {
+    const allowed = isSuperAdmin || organizations.some(org => org.code.toLowerCase() === orgCode.toLowerCase())
+    if (!allowed && user?.uid) {
+      void logOrganizationAccessAttempt({
+        userId: user.uid,
+        organizationCode: orgCode,
+        reason: 'company_admin_dashboard',
+      })
+      return
+    }
     navigate(`/admin/organization/${orgCode}`)
   }
 
@@ -199,6 +247,11 @@ export const CompanyAdminDashboard: React.FC = () => {
             Organization-scoped oversight with targeted intervention tools. Users with missing assignments are highlighted so you can
             correct mappings before they lose access.
           </Text>
+          {!hasAssignments && (
+            <Text color="orange.200" fontSize="sm">
+              No organizations are assigned to this account yet. Contact a super admin to request access.
+            </Text>
+          )}
         </Stack>
         <StatusBadge status="active" />
       </Flex>
@@ -457,11 +510,17 @@ export const CompanyAdminDashboard: React.FC = () => {
               </VStack>
               <Badge colorScheme="purple">Scoped</Badge>
             </HStack>
-            <SimpleGrid columns={{ base: 1, md: 2, xl: 3 }} spacing={4}>
-              {filteredOrganizations.map(org => (
-                <OrganizationCard key={org.name} {...org} onViewClick={() => handleViewOrganization(org.code)} />
-              ))}
-            </SimpleGrid>
+            {filteredOrganizations.length ? (
+              <SimpleGrid columns={{ base: 1, md: 2, xl: 3 }} spacing={4}>
+                {filteredOrganizations.map(org => (
+                  <OrganizationCard key={org.name} {...org} onViewClick={() => handleViewOrganization(org.code)} />
+                ))}
+              </SimpleGrid>
+            ) : (
+              <Text fontSize="sm" color="brand.subtleText">
+                No organizations are assigned to this account yet.
+              </Text>
+            )}
           </Stack>
         </CardBody>
       </Card>
@@ -579,7 +638,7 @@ export const CompanyAdminDashboard: React.FC = () => {
       navSections={navSections}
       activeItem={activePage}
       onNavigate={handleNavigate}
-      organizations={organizations}
+      organizations={organizationOptions}
       selectedOrg={selectedOrg}
       onSelectOrg={setSelectedOrg}
     >

@@ -2,9 +2,11 @@ import {
   Timestamp,
   addDoc,
   collection,
+  documentId,
   doc,
   getDoc,
   getDocs,
+  onSnapshot,
   orderBy,
   query,
   serverTimestamp,
@@ -16,6 +18,7 @@ import { Organization } from '@/types'
 import {
   BulkInvitationResult,
   CourseOption,
+  OrganizationStatus,
   InvitationPayload,
   OrganizationLead,
   OrganizationRecord,
@@ -31,6 +34,23 @@ const coursesCollection = collection(db, 'courses')
 const usersCollection = collection(db, 'users')
 const engagementCollection = collection(db, 'user_engagement_scores')
 const adminActivityCollection = collection(db, 'admin_activity_log')
+
+const chunkArray = <T>(items: T[], size = 10): T[][] => {
+  const chunks: T[][] = []
+  for (let i = 0; i < items.length; i += size) {
+    chunks.push(items.slice(i, i + size))
+  }
+  return chunks
+}
+
+const fetchAssignedOrganizationIds = async (userId: string): Promise<string[]> => {
+  if (!userId) return []
+  const userSnap = await getDoc(doc(usersCollection, userId))
+  if (!userSnap.exists()) return []
+  const data = userSnap.data() as { assignedOrganizations?: string[] }
+  if (!Array.isArray(data.assignedOrganizations)) return []
+  return data.assignedOrganizations.filter((orgId) => typeof orgId === 'string' && orgId.trim().length > 0)
+}
 
 export const generateOrganizationCode = (name: string) => {
   const validChars = name.toUpperCase().match(/[A-Z0-9]/g) ?? []
@@ -353,4 +373,130 @@ export const createOrganizationWithInvitations = async (
   )
 
   return { organizationId: orgRef.id, invitationResult }
+}
+
+export const fetchAssignedOrganizations = async (
+  userId: string,
+  options?: { status?: OrganizationStatus },
+): Promise<OrganizationRecord[]> => {
+  const assignedOrganizations = await fetchAssignedOrganizationIds(userId)
+  if (!assignedOrganizations.length) return []
+
+  const chunks = chunkArray(assignedOrganizations, 10)
+  const queries = chunks.map((chunk) => {
+    const constraints = [where(documentId(), 'in', chunk)]
+    if (options?.status) {
+      constraints.push(where('status', '==', options.status))
+    }
+    return query(orgCollection, ...constraints)
+  })
+
+  const snapshots = await Promise.all(queries.map((chunkQuery) => getDocs(chunkQuery)))
+  const organizationMap = new Map<string, OrganizationRecord>()
+  snapshots.forEach((snapshot) => {
+    snapshot.docs.forEach((docSnap) => {
+      organizationMap.set(docSnap.id, {
+        id: docSnap.id,
+        ...(docSnap.data() as Omit<OrganizationRecord, 'id'>),
+      })
+    })
+  })
+
+  return Array.from(organizationMap.values())
+}
+
+export const listenToAssignedOrganizations = (
+  userId: string,
+  onChange: (organizations: OrganizationRecord[]) => void,
+  options?: {
+    status?: OrganizationStatus
+    onError?: (error: Error) => void
+  },
+) => {
+  let isActive = true
+  const unsubscribeCallbacks: Array<() => void> = []
+  const organizationsByChunk = new Map<number, OrganizationRecord[]>()
+
+  const emitChanges = () => {
+    if (!isActive) return
+    const organizationMap = new Map<string, OrganizationRecord>()
+    organizationsByChunk.forEach((organizations) => {
+      organizations.forEach((organization) => {
+        const orgId = organization.id || organization.code || organization.name
+        if (orgId) {
+          organizationMap.set(orgId, organization)
+        }
+      })
+    })
+    onChange(Array.from(organizationMap.values()))
+  }
+
+  fetchAssignedOrganizationIds(userId)
+    .then((assignedOrganizations) => {
+      if (!assignedOrganizations.length) {
+        if (isActive) {
+          onChange([])
+        }
+        return
+      }
+
+      const chunks = chunkArray(assignedOrganizations, 10)
+      chunks.forEach((chunk, index) => {
+        const constraints = [where(documentId(), 'in', chunk)]
+        if (options?.status) {
+          constraints.push(where('status', '==', options.status))
+        }
+        const chunkQuery = query(orgCollection, ...constraints)
+        const unsubscribe = onSnapshot(
+          chunkQuery,
+          (snapshot) => {
+            const organizations = snapshot.docs.map((docSnap) => ({
+              id: docSnap.id,
+              ...(docSnap.data() as Omit<OrganizationRecord, 'id'>),
+            }))
+            organizationsByChunk.set(index, organizations)
+            emitChanges()
+          },
+          (error) => {
+            options?.onError?.(error as Error)
+          },
+        )
+        unsubscribeCallbacks.push(unsubscribe)
+      })
+    })
+    .catch((error) => {
+      if (isActive) {
+        options?.onError?.(error as Error)
+      }
+    })
+
+  return () => {
+    isActive = false
+    unsubscribeCallbacks.forEach((unsubscribe) => unsubscribe())
+  }
+}
+
+export const logOrganizationAccessAttempt = async (params: {
+  userId: string
+  organizationCode?: string
+  organizationId?: string
+  reason?: string
+}) => {
+  const { userId, organizationCode, organizationId, reason } = params
+  if (!userId) return
+  try {
+    await addDoc(adminActivityCollection, {
+      action: 'Organization access denied',
+      organizationCode: organizationCode || organizationId || 'unknown',
+      userId,
+      createdAt: serverTimestamp(),
+      severity: 'watch',
+      metadata: {
+        reason: reason || 'access_denied',
+        organizationId,
+      },
+    })
+  } catch (error) {
+    console.warn('Unable to log organization access attempt', error)
+  }
 }
