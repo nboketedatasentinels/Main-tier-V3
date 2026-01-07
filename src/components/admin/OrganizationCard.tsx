@@ -3,7 +3,7 @@ import { StatusBadge } from './StatusBadge'
 
 export interface OrganizationCardProps {
   name: string
-  status: 'active' | 'inactive' | 'pending' | 'watch' | 'critical'
+  status: 'active' | 'inactive' | 'pending' | 'watch' | 'critical' | 'paused'
   admins?: number
   newThisWeek?: number
   activeUsers?: number
