@@ -18,10 +18,16 @@ import {
   Select,
   Stack,
   Text,
+  Tooltip,
   VStack,
+  Alert,
+  AlertDescription,
+  AlertIcon,
+  AlertTitle,
+  useToast,
   useDisclosure,
 } from '@chakra-ui/react'
-import { Bell, LogOut, Menu, Sparkles } from 'lucide-react'
+import { Bell, LogOut, Menu, RefreshCw, Sparkles } from 'lucide-react'
 import { useAuth } from '@/hooks/useAuth'
 import { type NavigationItem } from '@/utils/navigationItems'
 
@@ -52,7 +58,12 @@ export const PartnerDashboardLayout: React.FC<PartnerDashboardLayoutProps> = ({
 }) => {
   const sidebarWidth = '280px'
   const disclosure = useDisclosure()
-  const { profile, signOut } = useAuth()
+  const { profile, signOut, refreshProfile, profileLoading, lastProfileLoadAt, isAdmin } = useAuth()
+  const enableProfileRealtime = import.meta.env.VITE_ENABLE_PROFILE_REALTIME === 'true'
+  const toast = useToast()
+  const [showRefreshHint, setShowRefreshHint] = React.useState(false)
+  const [lastUpdatedLabel, setLastUpdatedLabel] = React.useState('Not yet loaded')
+  const assignedCount = organizations.length || profile?.assignedOrganizations?.length || 0
   const menuItems = navItems.length
     ? navItems
     : [
@@ -62,13 +73,66 @@ export const PartnerDashboardLayout: React.FC<PartnerDashboardLayoutProps> = ({
         { key: 'grants', label: 'Grants & Funding', icon: Sparkles },
       ]
 
-  const orgOptions = organizations.length
-    ? organizations
-    : [
-        { code: 'all', name: 'All Companies' },
-        { code: 'northwind', name: 'Northwind Holdings' },
-        { code: 'contoso', name: 'Contoso Labs' },
-      ]
+  const orgOptions = organizations.length ? organizations : []
+
+  const formatLastUpdated = (timestamp?: string | null) => {
+    if (!timestamp) return 'Not yet loaded'
+    const date = new Date(timestamp)
+    if (Number.isNaN(date.getTime())) return 'Not yet loaded'
+    return date.toLocaleString()
+  }
+
+  const updateRefreshHint = React.useCallback(() => {
+    if (!lastProfileLoadAt) {
+      setShowRefreshHint(false)
+      setLastUpdatedLabel(formatLastUpdated(null))
+      return
+    }
+    const lastDate = new Date(lastProfileLoadAt)
+    const minutesSince = (Date.now() - lastDate.getTime()) / (1000 * 60)
+    setShowRefreshHint(minutesSince >= 30)
+    setLastUpdatedLabel(formatLastUpdated(lastProfileLoadAt))
+  }, [lastProfileLoadAt])
+
+  React.useEffect(() => {
+    updateRefreshHint()
+    const interval = window.setInterval(updateRefreshHint, 60 * 1000)
+    return () => window.clearInterval(interval)
+  }, [updateRefreshHint])
+
+  const handleManualRefresh = React.useCallback(async () => {
+    const result = await refreshProfile()
+    if (result.error) {
+      toast({
+        title: 'Profile refresh failed',
+        description: result.error.message,
+        status: 'error',
+        duration: 5000,
+        isClosable: true,
+      })
+      return
+    }
+    toast({
+      title: 'Profile refreshed',
+      description: 'Latest organization assignments are now available.',
+      status: 'success',
+      duration: 3000,
+      isClosable: true,
+    })
+  }, [refreshProfile, toast])
+
+  React.useEffect(() => {
+    const handler = (event: KeyboardEvent) => {
+      const target = event.target as HTMLElement | null
+      if (target && ['INPUT', 'TEXTAREA', 'SELECT'].includes(target.tagName)) return
+      if (event.altKey && event.shiftKey && event.key.toLowerCase() === 'r') {
+        event.preventDefault()
+        void handleManualRefresh()
+      }
+    }
+    window.addEventListener('keydown', handler)
+    return () => window.removeEventListener('keydown', handler)
+  }, [handleManualRefresh])
 
   const renderNav = () => (
     <VStack align="stretch" spacing={2} py={4} px={2}>
@@ -124,8 +188,23 @@ export const PartnerDashboardLayout: React.FC<PartnerDashboardLayoutProps> = ({
         <Text fontWeight="bold" color="brand.text" fontSize="sm">
           {profile?.fullName || 'Partner Admin'}
         </Text>
-        <Text fontSize="xs" color="brand.subtleText">
-          Assigned: {profile?.assignedOrganizations?.length || '0'} orgs
+        <HStack spacing={2} align="center">
+          <Text fontSize="xs" color="brand.subtleText">
+            Assigned: {assignedCount} orgs
+          </Text>
+          <Tooltip label="Refresh profile (Alt+Shift+R)" placement="top">
+            <IconButton
+              aria-label="Refresh profile"
+              icon={<RefreshCw size={14} />}
+              size="xs"
+              variant="ghost"
+              onClick={() => void handleManualRefresh()}
+              isLoading={profileLoading}
+            />
+          </Tooltip>
+        </HStack>
+        <Text fontSize="2xs" color="brand.subtleText">
+          Last updated: {lastUpdatedLabel}
         </Text>
         <Button
           size="xs"
@@ -156,6 +235,15 @@ export const PartnerDashboardLayout: React.FC<PartnerDashboardLayoutProps> = ({
           </option>
         ))}
       </Select>
+      <Tooltip label="Refresh profile (Alt+Shift+R)" placement="bottom">
+        <IconButton
+          aria-label="Refresh profile"
+          icon={<RefreshCw size={16} />}
+          variant="outline"
+          onClick={() => void handleManualRefresh()}
+          isLoading={profileLoading}
+        />
+      </Tooltip>
       <Box position="relative">
         <IconButton aria-label="Notifications" icon={<Bell />} variant="outline" />
         {notificationCount > 0 && (
@@ -256,9 +344,38 @@ export const PartnerDashboardLayout: React.FC<PartnerDashboardLayoutProps> = ({
               <Text color="brand.subtleText" maxW="760px">
                 Real-time oversight for assigned organizations with scoped interventions, approvals, and mentor engagement tools.
               </Text>
+              <Text fontSize="xs" color="brand.subtleText">
+                Profile last updated: {lastUpdatedLabel}
+              </Text>
+              {showRefreshHint && (
+                <HStack spacing={3} pt={2}>
+                  <Badge colorScheme="orange">Refresh suggested</Badge>
+                  <Button
+                    size="xs"
+                    variant="outline"
+                    onClick={() => void handleManualRefresh()}
+                    isLoading={profileLoading}
+                  >
+                    Refresh now
+                  </Button>
+                </HStack>
+              )}
             </VStack>
             <HeaderControls />
           </Flex>
+
+          {isAdmin && !enableProfileRealtime && (
+            <Alert status="warning" mb={6} borderRadius="md">
+              <AlertIcon />
+              <Box>
+                <AlertTitle>Real-time profile updates are disabled.</AlertTitle>
+                <AlertDescription>
+                  Enable VITE_ENABLE_PROFILE_REALTIME to keep organization assignments in sync. Until then, use the
+                  refresh button to pull updates.
+                </AlertDescription>
+              </Box>
+            </Alert>
+          )}
 
           {children}
         </Box>

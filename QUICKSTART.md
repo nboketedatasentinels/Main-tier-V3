@@ -39,6 +39,10 @@ VITE_FIREBASE_APP_ID=your-app-id
 # To create one or more super admins on first login, add their emails here.
 # For example: VITE_BOOTSTRIP_ADMIN_EMAILS=admin1@example.com,admin2@example.com
 VITE_BOOTSTRIP_ADMIN_EMAILS=
+
+# Keep profile and organization assignments in sync across dashboards.
+# Disable only if you plan to rely on manual refresh or scheduled polling.
+VITE_ENABLE_PROFILE_REALTIME=true
 ```
 
 ### 4. Set Up Firestore Security Rules
