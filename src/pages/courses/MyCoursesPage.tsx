@@ -62,8 +62,6 @@ interface NormalizedCourse {
   image?: string
 }
 
-type RecommendedCourse = CourseDetail & CourseMetadata & { title: string }
-
 const COURSE_IMAGE_FILENAMES: Record<string, string> = {
   'AI Stacking 101': 'course-ai-stacking-101.avif',
   'The Art of Connection': 'course-art-of-connection.avif',
@@ -537,22 +535,6 @@ export const MyCoursesPage: React.FC = () => {
     isFreeTierUser,
   ])
 
-  const recommendedCourses = useMemo<RecommendedCourse[]>(() => {
-    const assignedTitles = new Set(combinedAssignedCourses.map(course => course.title.toLowerCase()))
-    const availableCourses = Object.keys(COURSE_DETAILS_MAPPING)
-      .map(title => ({
-        title,
-        ...(COURSE_DETAILS_MAPPING[title] || {}),
-        ...(COURSE_METADATA_MAPPING[title] || {}),
-      }))
-      .filter(course => !assignedTitles.has(course.title.toLowerCase()))
-    const filteredCourses = isFreeTierUser
-      ? availableCourses.filter(course => course.title.toLowerCase() === FREE_TIER_COURSE_TITLE.toLowerCase())
-      : availableCourses
-
-    return filteredCourses.slice(0, 4)
-  }, [combinedAssignedCourses, isFreeTierUser])
-
   const assignedCourseCount = useMemo(() => combinedAssignedCourses.length, [combinedAssignedCourses])
 
   const assignedCourseTimeline = useMemo(() => {
@@ -706,99 +688,6 @@ export const MyCoursesPage: React.FC = () => {
           </Stack>
         </Flex>
       </Box>
-
-      {isFreeTierUser && (
-        <Box bg="white" p={5} borderRadius="2xl" border="1px solid" borderColor="gray.100" boxShadow="sm">
-          <HStack justify="space-between" mb={4}>
-            <Heading size="md" color="gray.800">
-              Courses for you
-            </Heading>
-            <HStack spacing={2} color="purple.600">
-              <Icon as={Sparkles} />
-              <Text fontWeight="semibold">Personalized soon</Text>
-            </HStack>
-          </HStack>
-
-          {recommendedCourses.length ? (
-            <SimpleGrid columns={{ base: 1, sm: 2 }} spacing={4}>
-              {recommendedCourses.map(course => {
-                const hasAccess = canAccessCourse(profile, course.title)
-                return (
-                  <Box
-                    key={course.title}
-                    border="1px solid"
-                    borderColor="gray.100"
-                    borderRadius="xl"
-                    p={4}
-                    bg="gray.50"
-                    _hover={{ boxShadow: 'md', bg: 'white' }}
-                  >
-                    <Stack spacing={3}>
-                      {COURSE_IMAGE_FILENAMES[course.title] ? (
-                        <Image
-                          src={`/${COURSE_IMAGE_FILENAMES[course.title]}`}
-                          alt={course.title}
-                          borderRadius="lg"
-                          objectFit="cover"
-                          height="120px"
-                        />
-                      ) : (
-                        <Flex
-                          borderRadius="lg"
-                          border="1px solid"
-                          borderColor="gray.200"
-                          height="120px"
-                          align="center"
-                          justify="center"
-                          bg="white"
-                        >
-                          <Icon as={BookOpen} boxSize={8} color="gray.400" />
-                        </Flex>
-                      )}
-                      <Heading size="sm" color="gray.800">
-                        {course.title}
-                      </Heading>
-                      <Badge
-                        colorScheme={badgeColor(course.difficulty as CourseDifficulty)}
-                        alignSelf="flex-start"
-                        borderRadius="full"
-                      >
-                        {course.difficulty || 'Beginner'}
-                      </Badge>
-                      <Text color="gray.600" fontSize="sm">
-                        {course.description}
-                      </Text>
-                      <HStack spacing={2} color="gray.500" fontSize="sm">
-                        <Icon as={Clock} boxSize={4} />
-                        <Text>{formatDuration(course.estimatedMinutes) || 'Self-paced'}</Text>
-                      </HStack>
-                      <Button
-                        as={hasAccess && course.link ? 'a' : (RouterLink as React.ElementType)}
-                        href={hasAccess ? course.link : undefined}
-                        to={hasAccess ? undefined : '/upgrade'}
-                        target={hasAccess ? '_blank' : undefined}
-                        rel={hasAccess ? 'noopener noreferrer' : undefined}
-                        rightIcon={<ArrowUpRight size={14} />}
-                        colorScheme="purple"
-                        variant="outline"
-                        size="sm"
-                        borderRadius="full"
-                      >
-                        {hasAccess ? 'Explore' : 'Upgrade to access'}
-                      </Button>
-                    </Stack>
-                  </Box>
-                )
-              })}
-            </SimpleGrid>
-          ) : (
-            <Flex direction="column" align="center" justify="center" py={8} color="gray.500" gap={3}>
-              <Icon as={Sparkles} boxSize={8} />
-              <Text fontWeight="semibold">All available courses are already in your queue...</Text>
-            </Flex>
-          )}
-        </Box>
-      )}
 
       {companyProgram && companyProgram.totalMonths > 0 && (
         <Stack spacing={4} as="section">
