@@ -1,3 +1,5 @@
+import type { Timestamp } from 'firebase/firestore'
+
 export type NudgeTemplateCategory =
   | 'Initial Outreach'
   | 'Follow-up'
@@ -9,6 +11,8 @@ export type NudgeChannel = 'email' | 'in_app' | 'both'
 
 export type NudgeDeliveryStatus = 'pending' | 'sent' | 'failed' | 'scheduled'
 
+export type FirestoreTimestamp = Timestamp | null
+
 export interface NudgeTemplateRecord {
   id: string
   name: string
@@ -16,8 +20,8 @@ export interface NudgeTemplateRecord {
   message_body: string
   template_type: NudgeTemplateCategory
   target_audience?: string | null
-  created_at: string
-  updated_at: string
+  created_at?: FirestoreTimestamp
+  updated_at?: FirestoreTimestamp
   is_active: boolean
 }
 
@@ -25,7 +29,7 @@ export interface NudgeSentRecord {
   id: string
   user_id: string
   template_id?: string | null
-  sent_at: string
+  sent_at?: FirestoreTimestamp
   sent_by_admin_id?: string | null
   delivery_status: NudgeDeliveryStatus
   channel: NudgeChannel
@@ -42,7 +46,7 @@ export interface NudgeEffectivenessRecord {
   tasks_completed_after?: number | null
   days_to_response?: number | null
   responded: boolean
-  measured_at: string
+  measured_at?: FirestoreTimestamp
 }
 
 export interface NudgeCampaignRecord {
@@ -50,8 +54,8 @@ export interface NudgeCampaignRecord {
   name: string
   description?: string | null
   target_risk_levels: string[]
-  start_date?: string | null
-  end_date?: string | null
+  start_date?: FirestoreTimestamp
+  end_date?: FirestoreTimestamp
   created_by?: string | null
   status: 'draft' | 'active' | 'paused' | 'completed'
 }

@@ -16,7 +16,7 @@ import {
   Textarea,
   VStack,
 } from '@chakra-ui/react'
-import { createNudgeTemplate } from '@/services/boltClient'
+import { createNudgeTemplate } from '@/services/firebaseNudgeService'
 import { getAllNudgeTemplates, toggleTemplateStatus } from '@/services/nudgeService'
 import type { NudgeTemplateCategory, NudgeTemplateRecord } from '@/types/nudges'
 
