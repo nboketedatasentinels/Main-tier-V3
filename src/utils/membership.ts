@@ -10,6 +10,15 @@ export const isFreeUser = (profile?: MembershipProfile): boolean => {
   const membershipStatus = profile?.membershipStatus?.toString().toLowerCase()
   const transformationTier = profile?.transformationTier?.toString().toLowerCase()
 
+  if (roleValue === UserRole.PAID_MEMBER) return false
+  if (membershipStatus === 'paid') return false
+  if (
+    transformationTier === TransformationTier.CORPORATE_MEMBER ||
+    transformationTier === TransformationTier.CORPORATE_LEADER
+  ) {
+    return false
+  }
+
   return (
     roleValue === UserRole.FREE_USER ||
     membershipStatus === 'free' ||

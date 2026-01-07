@@ -100,6 +100,8 @@ export const WeeklyGlancePage = () => {
           <PersonalityProfileCard data={data.personality} loading={data.loading.profile} />
           <MonthlyCourseCard
             role={userRole}
+            membershipStatus={profile?.membershipStatus}
+            transformationTier={profile?.transformationTier}
             data={data.monthlyCourse}
             loading={data.loading.monthlyCourse}
             error={data.errors.monthlyCourse}

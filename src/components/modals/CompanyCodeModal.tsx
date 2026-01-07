@@ -18,9 +18,9 @@ import {
   VStack,
 } from '@chakra-ui/react'
 import { CheckCircle, XCircle } from 'lucide-react'
-import { validateCompanyCode } from '@/services/organizationService'
+import { incrementOrganizationMemberCount, validateCompanyCode } from '@/services/organizationService'
 import { useAuth } from '@/hooks/useAuth'
-import { TransformationTier } from '@/types'
+import { TransformationTier, UserRole } from '@/types'
 
 interface CompanyCodeModalProps {
   isOpen: boolean
@@ -36,7 +36,7 @@ export const CompanyCodeModal: React.FC<CompanyCodeModalProps> = ({
   onSuccess,
 }) => {
   const toast = useToast()
-  const { updateProfile } = useAuth()
+  const { updateProfile, refreshProfile, profile } = useAuth()
   const [companyCode, setCompanyCode] = useState('')
   const [companyCodeValid, setCompanyCodeValid] = useState<boolean | null>(null)
   const [companyCodeError, setCompanyCodeError] = useState<string | null>(null)
@@ -115,11 +115,20 @@ export const CompanyCodeModal: React.FC<CompanyCodeModalProps> = ({
     }
 
     setIsSubmitting(true)
+    const shouldIncrementMemberCount = !!companyId && companyId !== profile?.companyId
+    const updatedPreferences = {
+      ...(profile?.dashboardPreferences ?? {}),
+      lockedToFreeExperience: false,
+    }
+
     const { error } = await updateProfile({
       companyCode: trimmedCode,
       companyId: companyId ?? undefined,
       companyName: companyName ?? undefined,
+      role: UserRole.PAID_MEMBER,
+      membershipStatus: 'paid',
       transformationTier: companyId ? TransformationTier.CORPORATE_MEMBER : TransformationTier.INDIVIDUAL_FREE,
+      dashboardPreferences: updatedPreferences,
     })
     setIsSubmitting(false)
 
@@ -133,9 +142,21 @@ export const CompanyCodeModal: React.FC<CompanyCodeModalProps> = ({
       return
     }
 
+    if (companyId && shouldIncrementMemberCount) {
+      try {
+        await incrementOrganizationMemberCount(companyId)
+      } catch (incrementError) {
+        console.warn('🟠 [CompanyCodeModal] Unable to increment organization member count', incrementError)
+      }
+    }
+
+    await refreshProfile()
+
     toast({
-      title: 'Company code applied',
-      description: companyName ? `Connected to ${companyName}.` : 'Company code saved successfully.',
+      title: 'You are now a paid member',
+      description: companyName
+        ? `Connected to ${companyName}. Your membership has been upgraded.`
+        : 'Company code saved successfully. Your membership has been upgraded.',
       status: 'success',
       duration: 4000,
     })

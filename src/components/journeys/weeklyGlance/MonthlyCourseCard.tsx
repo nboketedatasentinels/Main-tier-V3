@@ -15,10 +15,13 @@ import {
 } from '@chakra-ui/react'
 import { FREE_COURSE } from '@/constants/courseConfig'
 import { MonthlyCourseData } from '@/services/monthlyCoursesService'
-import { UserRole } from '@/types'
+import { UserProfile, UserRole } from '@/types'
+import { isFreeUser } from '@/utils/membership'
 
 interface MonthlyCourseCardProps {
   role?: UserRole
+  membershipStatus?: UserProfile['membershipStatus']
+  transformationTier?: UserProfile['transformationTier']
   data: MonthlyCourseData | null
   loading: boolean
   error?: Error
@@ -44,11 +47,11 @@ const ExternalLinkButton = ({ href, isDisabled }: { href?: string; isDisabled?: 
   </Button>
 )
 
-export const MonthlyCourseCard = ({ role, data, loading, error }: MonthlyCourseCardProps) => {
-  const isFreeUser = role === UserRole.FREE_USER
-  const courseTitle = data?.course?.title || (isFreeUser ? FREE_COURSE.title : 'Course details coming soon')
-  const courseUrl = data?.course?.externalUrl || (isFreeUser ? FREE_COURSE.externalUrl : undefined)
-  const enrollmentCode = isFreeUser ? FREE_COURSE.enrollmentCode : data?.enrollmentCode
+export const MonthlyCourseCard = ({ role, membershipStatus, transformationTier, data, loading, error }: MonthlyCourseCardProps) => {
+  const isFreeTierUser = isFreeUser({ role, membershipStatus, transformationTier })
+  const courseTitle = data?.course?.title || (isFreeTierUser ? FREE_COURSE.title : 'Course details coming soon')
+  const courseUrl = data?.course?.externalUrl || (isFreeTierUser ? FREE_COURSE.externalUrl : undefined)
+  const enrollmentCode = isFreeTierUser ? FREE_COURSE.enrollmentCode : data?.enrollmentCode
   const monthLabel = formatMonthLabel(data?.monthNumber, data?.totalMonths)
 
   const renderStatusBadge = () => {
@@ -188,7 +191,7 @@ export const MonthlyCourseCard = ({ role, data, loading, error }: MonthlyCourseC
             <Skeleton height="32px" />
             <Skeleton height="24px" />
           </Stack>
-        ) : isFreeUser ? (
+        ) : isFreeTierUser ? (
           renderFreeContent()
         ) : (
           renderPaidContent()

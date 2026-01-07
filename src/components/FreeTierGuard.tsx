@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { useToast } from '@chakra-ui/react'
 import { useAuth } from '@/hooks/useAuth'
 import type { StandardRole } from '@/types'
+import { isFreeUser } from '@/utils/membership'
 
 interface FreeTierGuardProps {
   children: React.ReactNode
@@ -27,7 +28,11 @@ export const FreeTierGuard: React.FC<FreeTierGuardProps> = ({
   useEffect(() => {
     if (!profile || hasHandledAccess.current) return
 
-    if (blockedRoles.includes(profile.role)) {
+    const isBlocked =
+      blockedRoles.includes(profile.role) ||
+      (blockedRoles.includes('free_user') && isFreeUser(profile))
+
+    if (isBlocked) {
       hasHandledAccess.current = true
       toast({
         title,
@@ -40,7 +45,12 @@ export const FreeTierGuard: React.FC<FreeTierGuardProps> = ({
     }
   }, [blockedRoles, description, fallbackPath, navigate, profile, title, toast])
 
-  if (profile && blockedRoles.includes(profile.role)) {
+  const isBlocked =
+    profile &&
+    (blockedRoles.includes(profile.role) ||
+      (blockedRoles.includes('free_user') && isFreeUser(profile)))
+
+  if (isBlocked) {
     return null
   }
 

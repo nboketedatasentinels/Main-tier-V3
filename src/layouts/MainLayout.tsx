@@ -45,6 +45,7 @@ import { useAuth } from '@/hooks/useAuth'
 import { BuildVillageModal } from '@/components/modals/BuildVillageModal'
 import { ConfirmationWelcomeModal } from '@/components/modals/ConfirmationWelcomeModal'
 import { NotificationDropdown } from '@/components/notifications/NotificationDropdown'
+import { isFreeUser as isFreeTierUser } from '@/utils/membership'
 
 const HEADER_HEIGHT = '72px'
 const sectionLabelStyles = {
@@ -70,10 +71,13 @@ export const MainLayout: React.FC = () => {
     localStorage.removeItem('bolt.dashboard_tour_progress')
   }, [])
 
+  const isFreeUser = isFreeTierUser(profile)
+  const isMentor = profile?.role === 'mentor'
+
   useEffect(() => {
     if (!profile) return
 
-    if (profile.role === 'free_user' && buildVillageKey) {
+    if (isFreeUser && buildVillageKey) {
       const stored = localStorage.getItem(buildVillageKey)
       if (!stored) {
         setShowVillagePrompt(true)
@@ -153,9 +157,6 @@ export const MainLayout: React.FC = () => {
     ],
     [],
   )
-
-  const isFreeUser = profile?.role === 'free_user'
-  const isMentor = profile?.role === 'mentor'
 
   const filteredNavigation = useMemo(() => {
     return navigationSections.map(section => ({

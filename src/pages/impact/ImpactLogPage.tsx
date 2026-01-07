@@ -65,7 +65,8 @@ import { FirebaseError } from 'firebase/app'
 import { format, isAfter, isBefore, startOfMonth, subMonths } from 'date-fns'
 import { db } from '@/services/firebase'
 import { useAuth } from '@/hooks/useAuth'
-import { ESGCategory, UserRole } from '@/types'
+import { ESGCategory } from '@/types'
+import { isFreeUser } from '@/utils/membership'
 import { removeUndefinedFields } from '@/utils/firestore'
 import { JOURNEY_META, getActivitiesForJourney, getMonthNumber, type ActivityDef, type JourneyType } from '@/config/pointsConfig'
 import { awardChecklistPoints, revokeChecklistPoints } from '@/services/pointsService'
@@ -262,7 +263,7 @@ export const ImpactLogPage: React.FC = () => {
 
   const resolveJourneyType = (): JourneyType => {
     if (profile?.journeyType) return profile.journeyType
-    return profile?.role === UserRole.FREE_USER ? '4W' : '6W'
+    return isFreeUser(profile) ? '4W' : '6W'
   }
 
   const resolveImpactActivity = (journeyType: JourneyType): ActivityDef | undefined => {

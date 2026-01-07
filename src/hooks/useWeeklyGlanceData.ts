@@ -20,8 +20,9 @@ import {
   buildMonthlyCourseState,
   listenToCompanyProgram,
 } from '@/services/monthlyCoursesService'
-import { InspirationQuote, UserRole } from '@/types'
+import { InspirationQuote, TransformationTier, UserRole } from '@/types'
 import { leadershipQuotes } from '@/services/quotes'
+import { isFreeUser } from '@/utils/membership'
 
 export interface WeeklyPoints {
   id: string
@@ -366,12 +367,19 @@ export const useWeeklyGlanceData = () => {
       return () => undefined
     }
 
-    if (profile.role === UserRole.FREE_USER) {
+    const isFreeTierUser = isFreeUser(profile)
+    const isCorporateMember =
+      profile?.transformationTier === TransformationTier.CORPORATE_MEMBER ||
+      profile?.transformationTier === TransformationTier.CORPORATE_LEADER
+    const hasPaidAccess =
+      profile?.membershipStatus === 'paid' || profile?.role === UserRole.PAID_MEMBER || isCorporateMember
+
+    if (isFreeTierUser) {
       resolveFreeCourse()
       return () => undefined
     }
 
-    if (profile.role === UserRole.PAID_MEMBER) {
+    if (hasPaidAccess) {
       initializePaidCourseListener()
     } else {
       setLoading(prev => ({ ...prev, monthlyCourse: false }))
