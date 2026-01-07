@@ -259,13 +259,13 @@ export const usePartnerDashboardData = (options?: UsePartnerDashboardDataOptions
     const hasAccess =
       assignedOrgKeys.size > 0 && Array.from(selectedOrgKeys).some((key) => assignedOrgKeys.has(key))
     if (hasAccess) return
-    const selected = selectedOrg.toLowerCase()
-    if (!user?.uid || lastAccessAttempt.current === selected) return
+    const selectedKey = selectedOrg.toLowerCase()
+    if (!user?.uid || lastAccessAttempt.current === selectedKey) return
 
-    lastAccessAttempt.current = selected
+    lastAccessAttempt.current = selectedKey
     void logOrganizationAccessAttempt({
       userId: user.uid,
-      organizationCode: selected,
+      organizationCode: selectedKey,
       reason: 'partner_dashboard_selection',
     })
   }, [assignedOrgKeys, isSuperAdmin, selectedOrg, selectedOrgKeys, user?.uid])
@@ -425,6 +425,14 @@ export const usePartnerDashboardData = (options?: UsePartnerDashboardDataOptions
                   ? 'concern'
                   : 'critical'
 
+        const riskReasons = [
+          ...(data.riskReasons || []),
+          ...(riskResult.reason ? [riskResult.reason] : []),
+          data.nudgeResponseScore && data.nudgeResponseScore >= 0.7
+            ? 'Responds well to nudges'
+            : undefined,
+        ].filter((reason): reason is string => typeof reason === 'string' && reason.length > 0)
+
         return {
           id: docSnap.id,
           name: data.name || data.fullName || data.full_name || 'Unknown User',
@@ -443,13 +451,7 @@ export const usePartnerDashboardData = (options?: UsePartnerDashboardDataOptions
           weeklyEarned,
           weeklyRequired: weeklyRequirement,
           role: data.role,
-          riskReasons: [
-            ...(data.riskReasons || []),
-            ...(riskResult.reason ? [riskResult.reason] : []),
-            data.nudgeResponseScore && data.nudgeResponseScore >= 0.7
-              ? 'Responds well to nudges'
-              : undefined,
-          ].filter((reason): reason is string => Boolean(reason)),
+          riskReasons,
           registrationDate: normalizedRegistrationDate || undefined,
           interventions: data.interventions || 0,
         }
@@ -529,7 +531,7 @@ export const usePartnerDashboardData = (options?: UsePartnerDashboardDataOptions
     if (selectedOrg === 'all') return users
     return users.filter((user) => {
       const userKeys = [user.companyCode, user.organizationId]
-        .filter((value): value is string => Boolean(value))
+        .filter((value): value is string => typeof value === 'string' && value.length > 0)
         .map((value) => value.toLowerCase())
       return userKeys.some((key) => selectedOrgKeys.has(key))
     })
