@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useState } from 'react'
+import React, { useCallback, useEffect, useRef, useState } from 'react'
 import { FirebaseError } from 'firebase/app'
 import { User } from 'firebase/auth'
 import {
@@ -30,6 +30,7 @@ import { AuthContext, AuthContextType } from './AuthContextType'
 import { getFriendlyErrorMessage } from '@/utils/authErrors'
 import { validateCompanyCode } from '@/services/organizationService'
 import { buildActionCodeSettings } from '@/utils/authActionCodeSettings'
+import { assignFreeCourseToUser, hasFreeCourseAssigned } from '@/services/courseAssignmentService'
 
 interface AuthProviderProps {
   children: React.ReactNode
@@ -42,6 +43,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const [profileLoading, setProfileLoading] = useState(true)
   const [claimsRole, setClaimsRole] = useState<string | null>(null)
   const enableProfileRealtime = import.meta.env.VITE_ENABLE_PROFILE_REALTIME === 'true'
+  const freeCourseAssignmentRef = useRef({ inFlight: false, lastAttemptAt: 0, userId: '' })
 
   const recordProfileLoad = (loadedProfile: UserProfile | null) => {
     if (typeof window === 'undefined') return
@@ -115,6 +117,48 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       return null
     }
   }
+
+  const attemptFreeCourseAssignment = useCallback(async (currentProfile: UserProfile | null) => {
+    if (!currentProfile?.id) return
+    const isFreeTierProfile =
+      currentProfile.transformationTier === TransformationTier.INDIVIDUAL_FREE ||
+      normalizeRole(currentProfile.role) === UserRole.FREE_USER
+    if (!isFreeTierProfile) return
+
+    const now = Date.now()
+    const assignmentState = freeCourseAssignmentRef.current
+    const isSameUser = assignmentState.userId === currentProfile.id
+    if (assignmentState.inFlight && isSameUser) {
+      console.log('🟠 [Auth] Free course assignment already in flight, skipping', { uid: currentProfile.id })
+      return
+    }
+    if (isSameUser && now - assignmentState.lastAttemptAt < 15000) {
+      console.log('🟠 [Auth] Free course assignment recently attempted, skipping', { uid: currentProfile.id })
+      return
+    }
+
+    assignmentState.inFlight = true
+    assignmentState.lastAttemptAt = now
+    assignmentState.userId = currentProfile.id
+
+    try {
+      const hasAssigned = await hasFreeCourseAssigned(currentProfile.id)
+      if (!hasAssigned) {
+        await assignFreeCourseToUser(currentProfile.id)
+        console.log('🟢 [Auth] Free course auto-assigned for free-tier user', { uid: currentProfile.id })
+      } else {
+        console.log('🟣 [Auth] Free course already assigned for user', { uid: currentProfile.id })
+      }
+    } catch (error) {
+      console.warn('🟠 [Auth] Free course auto-assignment check failed', {
+        uid: currentProfile.id,
+        message: (error as Error)?.message,
+        raw: error,
+      })
+    } finally {
+      assignmentState.inFlight = false
+    }
+  }, [assignFreeCourseToUser, hasFreeCourseAssigned])
 
   /* ------------------------------------------------------------------ */
   /* 🔹 Fetch or Create User Doc                                         */
@@ -346,6 +390,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         recordProfileLoad(userProfile)
         setProfileLoading(false)
         setLoading(false)
+        // Auto-assign the complimentary free course for eligible users.
+        void attemptFreeCourseAssignment(userProfile)
       }
 
       if (!userProfile || !isActive) return
@@ -371,6 +417,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
           console.log('🔁 [Auth] Profile updated via snapshot', updatedProfile.role)
           setProfile(updatedProfile)
           recordProfileLoad(updatedProfile)
+          // Auto-assign the complimentary free course for eligible users.
+          void attemptFreeCourseAssignment(updatedProfile)
         },
         (error) => {
           console.error('🔴 [Auth] Realtime profile listener error', error)
@@ -387,7 +435,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       }
       unsubscribe()
     }
-  }, [enableProfileRealtime, extractCustomClaims])
+  }, [attemptFreeCourseAssignment, enableProfileRealtime, extractCustomClaims])
 
   /* ------------------------------------------------------------------ */
   /* 🔹 Auth Actions                                                     */
@@ -621,6 +669,22 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
           console.error('🔴 [Auth] Failed to cleanup auth user after profile error', cleanupError)
         })
         throw profileError
+      }
+
+      try {
+        const isFreeTierUser =
+          profilePayload.transformationTier === TransformationTier.INDIVIDUAL_FREE ||
+          profilePayload.role === UserRole.FREE_USER
+        if (isFreeTierUser) {
+          // Auto-assign the complimentary free course for new free-tier users.
+          await assignFreeCourseToUser(uid)
+        }
+      } catch (assignmentError) {
+        console.warn('🟠 [Auth] Unable to auto-assign free course after signup', {
+          uid,
+          message: (assignmentError as Error)?.message,
+          raw: assignmentError,
+        })
       }
 
       try {
