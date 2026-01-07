@@ -26,11 +26,22 @@ import {
   Sparkles,
   ListPlus,
   ArrowUpRight,
+  CheckCircle2,
+  CalendarDays,
+  Lock,
 } from 'lucide-react'
 import { collection, query, where, onSnapshot, orderBy, limit, doc, getDocs, Timestamp } from 'firebase/firestore'
 import { useAuth } from '@/hooks/useAuth'
 import { db } from '@/services/firebase'
 import { canAccessCourse, FREE_TIER_COURSE_TITLE, isFreeUser } from '@/utils/membership'
+import {
+  MonthlyCourseAssignments,
+  formatMonthRange,
+  getMonthAvailabilityStatus,
+  getMonthDateRange,
+  getMonthlyAssignmentsArray,
+  normalizeMonthlyAssignments,
+} from '@/utils/monthlyCourseAssignments'
 import { Link as RouterLink } from 'react-router-dom'
 
 type CourseDifficulty = 'Beginner' | 'Intermediate' | 'Advanced'
@@ -421,6 +432,12 @@ export const MyCoursesPage: React.FC = () => {
   const [organizationCourses, setOrganizationCourses] = useState<NormalizedCourse[]>([])
   const [assignedCourseOrder, setAssignedCourseOrder] = useState<string[]>([])
   const [recentActivity, setRecentActivity] = useState<RecentActivityItem[]>([])
+  const [companyProgram, setCompanyProgram] = useState<{
+    monthlyAssignments: MonthlyCourseAssignments
+    totalMonths: number
+    cohortStartDate: Date | null
+  } | null>(null)
+  const [companyProgramCourseMap, setCompanyProgramCourseMap] = useState<Record<string, NormalizedCourse>>({})
 
   const [loadingUserCourses, setLoadingUserCourses] = useState(true)
   const [loadingCompanyCourses, setLoadingCompanyCourses] = useState(true)
@@ -567,6 +584,8 @@ export const MyCoursesPage: React.FC = () => {
       setOrganizationCourses([])
       setAssignedCourseOrder([])
       setLoadingOrganizationCourses(false)
+      setCompanyProgram(null)
+      setCompanyProgramCourseMap({})
       return
     }
 
@@ -585,32 +604,34 @@ export const MyCoursesPage: React.FC = () => {
           const companyData = snapshot.data()
           const durationRaw =
             companyData.programDuration || companyData.program_duration || companyData.duration || companyData.programLength
-          const durationNumber = typeof durationRaw === 'string' ? parseFloat(durationRaw) : Number(durationRaw)
-          let limitCount: number | undefined
-          if (!Number.isNaN(durationNumber) && durationNumber > 0) {
-            if (durationNumber === 1.5) limitCount = 2
-            else if (durationNumber === 3) limitCount = 3
-            else if (durationNumber === 6) limitCount = 6
-            else if (durationNumber === 12) limitCount = 12
-            else limitCount = Math.round(durationNumber)
-          }
-
           const courseIds = normalizeCourseIds(
             companyData.courseAssignments || companyData.assignedCourses || companyData.defaultCourses
           )
+          const { monthlyAssignments, totalMonths } = normalizeMonthlyAssignments({
+            monthlyCourseAssignments: companyData.monthlyCourseAssignments,
+            courseAssignments: courseIds,
+            programDuration: durationRaw,
+          })
+          const monthlyAssignmentArray = getMonthlyAssignmentsArray(monthlyAssignments, totalMonths)
+          const assignedMonthlyCourseIds = monthlyAssignmentArray.filter(Boolean)
 
-          const limitedCourseIds = typeof limitCount === 'number' ? courseIds.slice(0, limitCount) : courseIds
-          setAssignedCourseOrder(limitedCourseIds)
+          setAssignedCourseOrder(assignedMonthlyCourseIds)
+          setCompanyProgram({
+            monthlyAssignments,
+            totalMonths,
+            cohortStartDate: normalizeDate(companyData.cohortStartDate),
+          })
 
-          if (!limitedCourseIds.length) {
+          if (!assignedMonthlyCourseIds.length) {
             setOrganizationCourses([])
             setLoadingOrganizationCourses(false)
+            setCompanyProgramCourseMap({})
             return
           }
 
           const fetchChunks: string[][] = []
-          for (let i = 0; i < limitedCourseIds.length; i += 10) {
-            fetchChunks.push(limitedCourseIds.slice(i, i + 10))
+          for (let i = 0; i < assignedMonthlyCourseIds.length; i += 10) {
+            fetchChunks.push(assignedMonthlyCourseIds.slice(i, i + 10))
           }
 
           const courseDocs: NormalizedCourse[] = []
@@ -640,12 +661,19 @@ export const MyCoursesPage: React.FC = () => {
           }
 
           setOrganizationCourses(courseDocs)
+          const mappedCourseLookup = courseDocs.reduce<Record<string, NormalizedCourse>>((acc, course) => {
+            acc[course.id] = course
+            return acc
+          }, {})
+          setCompanyProgramCourseMap(mappedCourseLookup)
           setLoadingOrganizationCourses(false)
         } catch (error) {
           console.error('Error loading organization courses', error)
           setOrganizationCourses([])
           setAssignedCourseOrder([])
           setLoadingOrganizationCourses(false)
+          setCompanyProgram(null)
+          setCompanyProgramCourseMap({})
         }
       },
       error => {
@@ -653,6 +681,8 @@ export const MyCoursesPage: React.FC = () => {
         setOrganizationCourses([])
         setAssignedCourseOrder([])
         setLoadingOrganizationCourses(false)
+        setCompanyProgram(null)
+        setCompanyProgramCourseMap({})
       }
     )
 
@@ -826,6 +856,48 @@ export const MyCoursesPage: React.FC = () => {
 
     return groups
   }, [combinedAssignedCourses])
+
+  const courseMonthIndexLookup = useMemo(() => {
+    const map = new Map<string, number>()
+    if (!companyProgram) return map
+    Object.entries(companyProgram.monthlyAssignments).forEach(([key, courseId]) => {
+      if (!courseId || map.has(courseId)) return
+      map.set(courseId, Number(key) - 1)
+    })
+    return map
+  }, [companyProgram])
+
+  const monthlyProgramTimeline = useMemo(() => {
+    if (!companyProgram || !companyProgram.totalMonths) return []
+    const now = new Date()
+    return Array.from({ length: companyProgram.totalMonths }, (_, index) => {
+      const courseId = companyProgram.monthlyAssignments[String(index + 1)] || ''
+      const course = courseId ? companyProgramCourseMap[courseId] : undefined
+      const availability = getMonthAvailabilityStatus({
+        cohortStartDate: companyProgram.cohortStartDate,
+        currentDate: now,
+        monthIndex: index,
+      })
+      const monthRange = companyProgram.cohortStartDate
+        ? getMonthDateRange(companyProgram.cohortStartDate, index)
+        : null
+      const dateRange = monthRange ? formatMonthRange(monthRange.startDate, monthRange.endDate) : undefined
+      const unlockDate = monthRange ? monthRange.startDate : null
+      return {
+        monthNumber: index + 1,
+        courseId,
+        course,
+        availability,
+        dateRange,
+        unlockDate,
+      }
+    })
+  }, [companyProgram, companyProgramCourseMap])
+
+  const nextUnlockDate = useMemo(() => {
+    const nextLocked = monthlyProgramTimeline.find((entry) => entry.availability === 'locked')
+    return nextLocked?.unlockDate || null
+  }, [monthlyProgramTimeline])
 
   const headerDescription = useMemo(() => {
     if (!user) return 'Sign in to view the courses that have been assigned to you.'
@@ -1093,6 +1165,94 @@ export const MyCoursesPage: React.FC = () => {
         </Grid>
       )}
 
+      {companyProgram && companyProgram.totalMonths > 0 && (
+        <Stack spacing={4} as="section">
+          <HStack justify="space-between" align="center">
+            <Heading size="md" color="gray.800">
+              Monthly program timeline
+            </Heading>
+            <Badge colorScheme="purple" borderRadius="full">
+              {companyProgram.totalMonths} months
+            </Badge>
+          </HStack>
+
+          <Box borderWidth="1px" borderRadius="2xl" p={5} bg="white" boxShadow="sm">
+            <HStack justify="space-between" flexWrap="wrap" spacing={4}>
+              <HStack spacing={2}>
+                <Icon as={CalendarDays} color="purple.600" />
+                <Text fontWeight="medium">
+                  Cohort start:{' '}
+                  {companyProgram.cohortStartDate
+                    ? companyProgram.cohortStartDate.toLocaleDateString(undefined, {
+                        month: 'short',
+                        day: 'numeric',
+                        year: 'numeric',
+                      })
+                    : 'Not set'}
+                </Text>
+              </HStack>
+              {nextUnlockDate && (
+                <Badge colorScheme="orange" borderRadius="full">
+                  Next unlock: {nextUnlockDate.toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}
+                </Badge>
+              )}
+            </HStack>
+
+            <SimpleGrid columns={{ base: 1, md: 2, xl: 3 }} spacing={4} mt={4}>
+              {monthlyProgramTimeline.map((entry) => {
+                const statusColor =
+                  entry.availability === 'current'
+                    ? 'green'
+                    : entry.availability === 'completed'
+                      ? 'purple'
+                      : 'gray'
+                const statusLabel =
+                  entry.availability === 'current'
+                    ? 'Current month'
+                    : entry.availability === 'completed'
+                      ? 'Completed'
+                      : 'Locked'
+                return (
+                  <Box
+                    key={`monthly-${entry.monthNumber}`}
+                    borderWidth="1px"
+                    borderRadius="2xl"
+                    p={4}
+                    bg={entry.availability === 'current' ? 'purple.50' : 'gray.50'}
+                  >
+                    <HStack justify="space-between" mb={2}>
+                      <Badge colorScheme={statusColor} borderRadius="full">
+                        Month {entry.monthNumber}
+                      </Badge>
+                      <HStack spacing={1} color="gray.600">
+                        <Icon as={entry.availability === 'completed' ? CheckCircle2 : entry.availability === 'locked' ? Lock : Sparkles} />
+                        <Text fontSize="xs">{statusLabel}</Text>
+                      </HStack>
+                    </HStack>
+                    <Heading size="sm" color="gray.800" mb={1}>
+                      {entry.course?.title || (entry.courseId ? 'Course assigned' : 'Course not assigned')}
+                    </Heading>
+                    <Text fontSize="sm" color="gray.600" mb={2}>
+                      {entry.course?.description || 'Your monthly course assignment.'}
+                    </Text>
+                    {entry.dateRange && (
+                      <Badge variant="subtle" colorScheme="gray" borderRadius="full">
+                        {entry.dateRange}
+                      </Badge>
+                    )}
+                    {entry.availability === 'locked' && entry.unlockDate && (
+                      <Text fontSize="xs" color="gray.500" mt={2}>
+                        Unlocks on {entry.unlockDate.toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}
+                      </Text>
+                    )}
+                  </Box>
+                )
+              })}
+            </SimpleGrid>
+          </Box>
+        </Stack>
+      )}
+
       <Stack spacing={4} as="section">
         <HStack justify="space-between" align="center">
           <Heading size="md" color="gray.800">
@@ -1184,6 +1344,11 @@ export const MyCoursesPage: React.FC = () => {
                             {course.description}
                           </Text>
                           <HStack spacing={3} flexWrap="wrap">
+                            {course.source === 'organization' && companyProgram?.cohortStartDate && courseMonthIndexLookup.has(course.id) && (
+                              <Badge colorScheme="purple" variant="subtle" borderRadius="full">
+                                Month {courseMonthIndexLookup.get(course.id)! + 1}
+                              </Badge>
+                            )}
                             {course.assignedDate && (
                               <Badge colorScheme="gray" variant="subtle" borderRadius="full">
                                 {course.assignedDate.toLocaleDateString(undefined, {
@@ -1224,21 +1389,40 @@ export const MyCoursesPage: React.FC = () => {
 
                         {course.link && (() => {
                           const hasAccess = canAccessCourse(profile, course.title)
+                          const monthIndex = course.source === 'organization' ? courseMonthIndexLookup.get(course.id) : undefined
+                          const availability = monthIndex !== undefined
+                            ? getMonthAvailabilityStatus({
+                                cohortStartDate: companyProgram?.cohortStartDate || null,
+                                currentDate: new Date(),
+                                monthIndex,
+                              })
+                            : null
+                          const isLocked = availability === 'locked'
+                          const unlockDate =
+                            isLocked && companyProgram?.cohortStartDate
+                              ? getMonthDateRange(companyProgram.cohortStartDate, monthIndex || 0).startDate
+                              : null
+                          const canOpen = hasAccess && !isLocked
                           return (
                             <Button
-                              as={hasAccess ? 'a' : (RouterLink as React.ElementType)}
-                              href={hasAccess ? course.link : undefined}
-                              to={hasAccess ? undefined : '/upgrade'}
-                              target={hasAccess ? '_blank' : undefined}
-                              rel={hasAccess ? 'noopener noreferrer' : undefined}
+                              as={canOpen ? 'a' : (RouterLink as React.ElementType)}
+                              href={canOpen ? course.link : undefined}
+                              to={canOpen ? undefined : '/upgrade'}
+                              target={canOpen ? '_blank' : undefined}
+                              rel={canOpen ? 'noopener noreferrer' : undefined}
                               size="sm"
                               colorScheme="purple"
                               rightIcon={<ExternalLink size={16} />}
                               variant="solid"
                               borderRadius="full"
                               minW="120px"
+                              isDisabled={isLocked}
                             >
-                              {hasAccess ? 'Open course' : 'Upgrade to unlock'}
+                              {isLocked && unlockDate
+                                ? `Unlocks ${unlockDate.toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}`
+                                : hasAccess
+                                  ? 'Open course'
+                                  : 'Upgrade to unlock'}
                             </Button>
                           )
                         })()}
