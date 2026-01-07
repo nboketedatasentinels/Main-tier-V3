@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react'
+import React, { useEffect, useMemo, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import {
   Badge,
@@ -28,8 +28,8 @@ import type { OrganizationCardProps } from '@/components/admin/OrganizationCard'
 import { StatusBadge } from '@/components/admin/StatusBadge'
 import CompanyAdminLayout from '@/layouts/CompanyAdminLayout'
 import { buildCompanyAdminNavItems } from '@/utils/navigationItems'
-import { listenToAssignedOrganizations, logOrganizationAccessAttempt } from '@/services/organizationService'
-import type { OrganizationRecord } from '@/types/admin'
+import { fetchOrganizationEngagementStats, listenToAssignedOrganizations } from '@/services/organizationService'
+import type { OrganizationRecord, OrganizationStatistics } from '@/types/admin'
 
 type CompanyPageKey = 'overview' | 'users' | 'organizations' | 'reports' | 'settings' | 'support'
 type CompanyOrg = OrganizationCardProps & { code: string; id?: string }
@@ -116,25 +116,135 @@ const UserManagementSection: React.FC<{
 )
 
 export const CompanyAdminDashboard: React.FC = () => {
-  const { assignedOrganizations = [], isSuperAdmin, profile, user } = useAuth()
+  const { profile, assignedOrganizations, user } = useAuth()
   const navigate = useNavigate()
   const adminName = profile?.fullName || profile?.firstName || 'Admin'
   const [activePage, setActivePage] = useState<CompanyPageKey>('overview')
   const [selectedOrg, setSelectedOrg] = useState<string>('all')
   const [organizations, setOrganizations] = useState<CompanyOrg[]>([])
   const navSections = useMemo(() => buildCompanyAdminNavItems(), [])
+  const [organizationRecords, setOrganizationRecords] = useState<OrganizationRecord[]>([])
+  const [organizationStats, setOrganizationStats] = useState<Record<string, OrganizationStatistics>>({})
+  const [organizationsError, setOrganizationsError] = useState<string | null>(null)
+  const [organizationsLoading, setOrganizationsLoading] = useState(true)
+  const retryTimeoutRef = useRef<number | null>(null)
+  const unsubscribeRef = useRef<(() => void) | null>(null)
+  const assignedCount = assignedOrganizations?.length || 0
+
+  const mapOrgStatus = (status?: OrganizationRecord['status']): CompanyOrg['status'] => {
+    if (status === 'inactive') return 'inactive'
+    if (status === 'pending') return 'pending'
+    if (status === 'watch') return 'watch'
+    if (status === 'suspended') return 'paused'
+    return 'active'
+  }
+
+  useEffect(() => {
+    if (!user?.uid) return undefined
+
+    const startListener = () => {
+      if (unsubscribeRef.current) {
+        unsubscribeRef.current()
+      }
+      setOrganizationsLoading(true)
+      unsubscribeRef.current = listenToAssignedOrganizations(
+        user.uid,
+        (orgs) => {
+          setOrganizationRecords(orgs)
+          setOrganizationsError(null)
+          setOrganizationsLoading(false)
+        },
+        (error) => {
+          console.error('Failed to listen for assigned organizations', error)
+          setOrganizationsError('Live organization updates are temporarily unavailable. Retrying…')
+          setOrganizationsLoading(false)
+          if (retryTimeoutRef.current) {
+            window.clearTimeout(retryTimeoutRef.current)
+          }
+          retryTimeoutRef.current = window.setTimeout(startListener, 5000)
+        },
+      )
+    }
+
+    startListener()
+
+    return () => {
+      if (unsubscribeRef.current) {
+        unsubscribeRef.current()
+      }
+      if (retryTimeoutRef.current) {
+        window.clearTimeout(retryTimeoutRef.current)
+      }
+    }
+  }, [user?.uid])
+
+  useEffect(() => {
+    let isActive = true
+
+    const loadStats = async () => {
+      if (!organizationRecords.length) {
+        setOrganizationStats({})
+        return
+      }
+      try {
+        const entries = await Promise.all(
+          organizationRecords.map(async (org) => {
+            const key = org.id || org.code
+            const stats = await fetchOrganizationEngagementStats(key)
+            return [key, stats] as const
+          }),
+        )
+        if (!isActive) return
+        setOrganizationStats(Object.fromEntries(entries))
+      } catch (error) {
+        console.error('Failed to load organization statistics', error)
+        if (!isActive) return
+        setOrganizationsError('Unable to load organization statistics right now.')
+      }
+    }
+
+    loadStats()
+
+    return () => {
+      isActive = false
+    }
+  }, [organizationRecords])
+
+  const scopedOrganizations = useMemo<CompanyOrg[]>(() => {
+    return organizationRecords.map((org) => {
+      const key = org.id || org.code
+      const stats = organizationStats[key]
+      const newThisWeek = stats?.newMembersThisWeek ?? 0
+      return {
+        code: org.code || key,
+        name: org.name || 'Unknown organization',
+        status: mapOrgStatus(org.status),
+        activeUsers: stats?.activeMembers ?? 0,
+        newThisWeek,
+        change: stats ? `${newThisWeek >= 0 ? '+' : ''}${newThisWeek}` : undefined,
+        admins: org.assignmentCount,
+        description: org.description,
+      }
+    })
+  }, [organizationRecords, organizationStats])
 
   const organizationOptions = useMemo(
-    () => [{ code: 'all', name: 'All Organizations' }, ...organizations],
-    [organizations],
+    () => [{ code: 'all', name: 'All Organizations' }, ...scopedOrganizations.map(({ code, name }) => ({ code, name }))],
+    [scopedOrganizations],
   )
-
-  const scopedOrganizations = useMemo<CompanyOrg[]>(() => organizations.filter(org => org.code !== 'all'), [organizations])
 
   const filteredOrganizations = useMemo(() => {
     if (selectedOrg === 'all') return scopedOrganizations
     return scopedOrganizations.filter(org => org.code === selectedOrg)
   }, [selectedOrg, scopedOrganizations])
+
+  useEffect(() => {
+    if (selectedOrg === 'all') return
+    const hasSelection = scopedOrganizations.some((org) => org.code === selectedOrg)
+    if (!hasSelection) {
+      setSelectedOrg('all')
+    }
+  }, [scopedOrganizations, selectedOrg])
 
   const userColumns: TableColumn<UserRow>[] = useMemo(
     () => [
@@ -220,6 +330,32 @@ export const CompanyAdminDashboard: React.FC = () => {
     }
   }, [organizations, selectedOrg])
 
+  const aggregateStats = useMemo(() => {
+    const totals = {
+      totalMembers: 0,
+      activeMembers: 0,
+      newMembersThisWeek: 0,
+      engagementWeightedSum: 0,
+    }
+
+    Object.values(organizationStats).forEach((stats) => {
+      totals.totalMembers += stats.totalMembers
+      totals.activeMembers += stats.activeMembers
+      totals.newMembersThisWeek += stats.newMembersThisWeek
+      totals.engagementWeightedSum += stats.averageEngagementRate * stats.totalMembers
+    })
+
+    const engagementRate = totals.totalMembers
+      ? Math.round(totals.engagementWeightedSum / totals.totalMembers)
+      : 0
+
+    return {
+      activeMembers: totals.activeMembers,
+      newMembersThisWeek: totals.newMembersThisWeek,
+      engagementRate,
+    }
+  }, [organizationStats])
+
   const handleViewOrganization = (orgCode: string) => {
     const allowed = isSuperAdmin || organizations.some(org => org.code.toLowerCase() === orgCode.toLowerCase())
     if (!allowed && user?.uid) {
@@ -243,6 +379,16 @@ export const CompanyAdminDashboard: React.FC = () => {
           <Text fontSize="3xl" fontWeight="bold" color="brand.text">
             Welcome back, {adminName}
           </Text>
+          {organizationsError && (
+            <Badge colorScheme="red" w="fit-content">
+              {organizationsError}
+            </Badge>
+          )}
+          {!organizationsLoading && assignedCount === 0 && (
+            <Badge colorScheme="yellow" w="fit-content">
+              No organizations assigned yet
+            </Badge>
+          )}
           <Text color="brand.textOnDark" opacity={0.9} maxW="720px">
             Organization-scoped oversight with targeted intervention tools. Users with missing assignments are highlighted so you can
             correct mappings before they lose access.
@@ -257,10 +403,30 @@ export const CompanyAdminDashboard: React.FC = () => {
       </Flex>
 
       <SimpleGrid columns={{ base: 1, md: 2, xl: 4 }} spacing={4}>
-        <MetricCard icon={Users} label="Active members" value={filteredUsers.length.toString()} helper={`Viewing ${activeOrgName}`} />
-        <MetricCard icon={Gauge} label="Engagement rate" value="71%" helper="Up 3.1% week over week" />
-        <MetricCard icon={Sparkles} label="New registrations" value="64" helper="+12 vs prior 7 days" />
-        <MetricCard icon={Building} label="Managed companies" value={filteredOrganizations.length.toString()} helper="Assigned organizations" />
+        <MetricCard
+          icon={Users}
+          label="Active members"
+          value={aggregateStats.activeMembers.toString()}
+          helper={`Viewing ${activeOrgName}`}
+        />
+        <MetricCard
+          icon={Gauge}
+          label="Engagement rate"
+          value={`${aggregateStats.engagementRate}%`}
+          helper="Based on assigned organizations"
+        />
+        <MetricCard
+          icon={Sparkles}
+          label="New registrations"
+          value={aggregateStats.newMembersThisWeek.toString()}
+          helper="Last 7 days"
+        />
+        <MetricCard
+          icon={Building}
+          label="Managed companies"
+          value={filteredOrganizations.length.toString()}
+          helper="Assigned organizations"
+        />
       </SimpleGrid>
 
       <Grid templateColumns={{ base: '1fr', xl: '2fr 1fr' }} gap={6}>

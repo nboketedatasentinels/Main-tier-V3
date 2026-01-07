@@ -4,6 +4,8 @@ import {
   collection,
   documentId,
   doc,
+  documentId,
+  FirestoreError,
   getDoc,
   getDocs,
   onSnapshot,
@@ -229,6 +231,7 @@ export const fetchOrganizationAssignments = async (organizationId: string): Prom
 export const checkOrganizationAccess = async (
   userId: string,
   organizationId: string,
+  organizationCode?: string,
 ): Promise<{ authorized: boolean; error?: 'invalid' | 'not_found' | 'unauthorized' }> => {
   if (!userId || !organizationId) {
     return { authorized: false, error: 'invalid' }
@@ -245,7 +248,10 @@ export const checkOrganizationAccess = async (
   }
 
   const assignedOrganizations = data.assignedOrganizations || []
-  if (assignedOrganizations.includes(organizationId)) {
+  if (
+    assignedOrganizations.includes(organizationId) ||
+    (organizationCode ? assignedOrganizations.includes(organizationCode) : false)
+  ) {
     return { authorized: true }
   }
 
@@ -375,128 +381,161 @@ export const createOrganizationWithInvitations = async (
   return { organizationId: orgRef.id, invitationResult }
 }
 
-export const fetchAssignedOrganizations = async (
-  userId: string,
-  options?: { status?: OrganizationStatus },
-): Promise<OrganizationRecord[]> => {
-  const assignedOrganizations = await fetchAssignedOrganizationIds(userId)
-  if (!assignedOrganizations.length) return []
+const normalizeAssignments = (assignedOrganizations?: string[]): string[] =>
+  (assignedOrganizations || []).map((entry) => entry?.trim()).filter((entry): entry is string => !!entry)
 
-  const chunks = chunkArray(assignedOrganizations, 10)
-  const queries = chunks.map((chunk) => {
-    const constraints = [where(documentId(), 'in', chunk)]
-    if (options?.status) {
-      constraints.push(where('status', '==', options.status))
-    }
-    return query(orgCollection, ...constraints)
-  })
+const chunkList = <T,>(items: T[], size: number): T[][] => {
+  const chunks: T[][] = []
+  for (let index = 0; index < items.length; index += size) {
+    chunks.push(items.slice(index, index + size))
+  }
+  return chunks
+}
 
-  const snapshots = await Promise.all(queries.map((chunkQuery) => getDocs(chunkQuery)))
-  const organizationMap = new Map<string, OrganizationRecord>()
+const buildOrganizationRecord = (docSnap: { id: string; data: () => unknown }): OrganizationRecord => ({
+  id: docSnap.id,
+  ...(docSnap.data() as Omit<OrganizationRecord, 'id'>),
+})
+
+const fetchOrganizationsByAssignments = async (assignments: string[]): Promise<OrganizationRecord[]> => {
+  const normalized = normalizeAssignments(assignments)
+  if (!normalized.length) return []
+
+  const codeCandidates = Array.from(new Set(normalized.flatMap((entry) => [entry, entry.toUpperCase()])))
+  const idChunks = chunkList(normalized, 10)
+  const codeChunks = chunkList(codeCandidates, 10)
+
+  const snapshots = await Promise.all([
+    ...idChunks.map((chunk) => getDocs(query(orgCollection, where(documentId(), 'in', chunk)))),
+    ...codeChunks.map((chunk) => getDocs(query(orgCollection, where('code', 'in', chunk)))),
+  ])
+
+  const orgMap = new Map<string, OrganizationRecord>()
   snapshots.forEach((snapshot) => {
     snapshot.docs.forEach((docSnap) => {
-      organizationMap.set(docSnap.id, {
-        id: docSnap.id,
-        ...(docSnap.data() as Omit<OrganizationRecord, 'id'>),
-      })
+      orgMap.set(docSnap.id, buildOrganizationRecord(docSnap))
     })
   })
 
-  return Array.from(organizationMap.values())
+  return Array.from(orgMap.values()).sort((a, b) => (a.name || '').localeCompare(b.name || ''))
+}
+
+export const fetchAssignedOrganizations = async (userId: string): Promise<OrganizationRecord[]> => {
+  if (!userId) return []
+  const userSnap = await getDoc(doc(usersCollection, userId))
+  if (!userSnap.exists()) return []
+  const data = userSnap.data() as { assignedOrganizations?: string[] }
+  return fetchOrganizationsByAssignments(data.assignedOrganizations || [])
+}
+
+const listenToOrganizationsByAssignments = (
+  assignments: string[],
+  onChange: (organizations: OrganizationRecord[]) => void,
+  onError?: (error: FirestoreError) => void,
+) => {
+  const normalized = normalizeAssignments(assignments)
+  if (!normalized.length) {
+    onChange([])
+    return () => undefined
+  }
+
+  const codeCandidates = Array.from(new Set(normalized.flatMap((entry) => [entry, entry.toUpperCase()])))
+  const idChunks = chunkList(normalized, 10)
+  const codeChunks = chunkList(codeCandidates, 10)
+  const listenerMaps = new Map<string, Map<string, OrganizationRecord>>()
+  const unsubscribers: Array<() => void> = []
+
+  const emitCombined = () => {
+    const combined = new Map<string, OrganizationRecord>()
+    listenerMaps.forEach((map) => {
+      map.forEach((org, id) => {
+        combined.set(id, org)
+      })
+    })
+    onChange(Array.from(combined.values()).sort((a, b) => (a.name || '').localeCompare(b.name || '')))
+  }
+
+  idChunks.forEach((chunk, index) => {
+    const key = `id-${index}`
+    const unsubscribe = onSnapshot(
+      query(orgCollection, where(documentId(), 'in', chunk)),
+      (snapshot) => {
+        listenerMaps.set(
+          key,
+          new Map(snapshot.docs.map((docSnap) => [docSnap.id, buildOrganizationRecord(docSnap)])),
+        )
+        emitCombined()
+      },
+      onError,
+    )
+    unsubscribers.push(unsubscribe)
+  })
+
+  codeChunks.forEach((chunk, index) => {
+    const key = `code-${index}`
+    const unsubscribe = onSnapshot(
+      query(orgCollection, where('code', 'in', chunk)),
+      (snapshot) => {
+        listenerMaps.set(
+          key,
+          new Map(snapshot.docs.map((docSnap) => [docSnap.id, buildOrganizationRecord(docSnap)])),
+        )
+        emitCombined()
+      },
+      onError,
+    )
+    unsubscribers.push(unsubscribe)
+  })
+
+  return () => {
+    unsubscribers.forEach((unsubscribe) => unsubscribe())
+  }
 }
 
 export const listenToAssignedOrganizations = (
   userId: string,
   onChange: (organizations: OrganizationRecord[]) => void,
-  options?: {
-    status?: OrganizationStatus
-    onError?: (error: Error) => void
-  },
+  onError?: (error: FirestoreError) => void,
 ) => {
-  let isActive = true
-  const unsubscribeCallbacks: Array<() => void> = []
-  const organizationsByChunk = new Map<number, OrganizationRecord[]>()
-
-  const emitChanges = () => {
-    if (!isActive) return
-    const organizationMap = new Map<string, OrganizationRecord>()
-    organizationsByChunk.forEach((organizations) => {
-      organizations.forEach((organization) => {
-        const orgId = organization.id || organization.code || organization.name
-        if (orgId) {
-          organizationMap.set(orgId, organization)
-        }
-      })
-    })
-    onChange(Array.from(organizationMap.values()))
+  if (!userId) {
+    onChange([])
+    return () => undefined
   }
 
-  fetchAssignedOrganizationIds(userId)
-    .then((assignedOrganizations) => {
-      if (!assignedOrganizations.length) {
-        if (isActive) {
-          onChange([])
-        }
+  let unsubscribeOrganizations: (() => void) | null = null
+  let lastAssignmentKey = ''
+
+  const updateAssignments = (assignments: string[]) => {
+    const normalized = normalizeAssignments(assignments)
+    const assignmentKey = normalized.slice().sort().join('|')
+    if (assignmentKey === lastAssignmentKey) return
+    lastAssignmentKey = assignmentKey
+
+    if (unsubscribeOrganizations) {
+      unsubscribeOrganizations()
+      unsubscribeOrganizations = null
+    }
+
+    unsubscribeOrganizations = listenToOrganizationsByAssignments(normalized, onChange, onError)
+  }
+
+  const unsubscribeUser = onSnapshot(
+    doc(usersCollection, userId),
+    (snapshot) => {
+      if (!snapshot.exists()) {
+        updateAssignments([])
         return
       }
-
-      const chunks = chunkArray(assignedOrganizations, 10)
-      chunks.forEach((chunk, index) => {
-        const constraints = [where(documentId(), 'in', chunk)]
-        if (options?.status) {
-          constraints.push(where('status', '==', options.status))
-        }
-        const chunkQuery = query(orgCollection, ...constraints)
-        const unsubscribe = onSnapshot(
-          chunkQuery,
-          (snapshot) => {
-            const organizations = snapshot.docs.map((docSnap) => ({
-              id: docSnap.id,
-              ...(docSnap.data() as Omit<OrganizationRecord, 'id'>),
-            }))
-            organizationsByChunk.set(index, organizations)
-            emitChanges()
-          },
-          (error) => {
-            options?.onError?.(error as Error)
-          },
-        )
-        unsubscribeCallbacks.push(unsubscribe)
-      })
-    })
-    .catch((error) => {
-      if (isActive) {
-        options?.onError?.(error as Error)
-      }
-    })
+      const data = snapshot.data() as { assignedOrganizations?: string[] }
+      updateAssignments(data.assignedOrganizations || [])
+    },
+    onError,
+  )
 
   return () => {
-    isActive = false
-    unsubscribeCallbacks.forEach((unsubscribe) => unsubscribe())
-  }
-}
-
-export const logOrganizationAccessAttempt = async (params: {
-  userId: string
-  organizationCode?: string
-  organizationId?: string
-  reason?: string
-}) => {
-  const { userId, organizationCode, organizationId, reason } = params
-  if (!userId) return
-  try {
-    await addDoc(adminActivityCollection, {
-      action: 'Organization access denied',
-      organizationCode: organizationCode || organizationId || 'unknown',
-      userId,
-      createdAt: serverTimestamp(),
-      severity: 'watch',
-      metadata: {
-        reason: reason || 'access_denied',
-        organizationId,
-      },
-    })
-  } catch (error) {
-    console.warn('Unable to log organization access attempt', error)
+    unsubscribeUser()
+    if (unsubscribeOrganizations) {
+      unsubscribeOrganizations()
+    }
   }
 }
