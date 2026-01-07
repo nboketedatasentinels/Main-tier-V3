@@ -181,6 +181,7 @@ export const calculateOrganizationStatistics = async (
     ? Math.round(engagementScoreSum / engagementScoreCount)
     : 0
 
+  const lastActiveIso: string | null = lastActive ? lastActive.toISOString() : null
   const snapshot: OrganizationStatsSnapshot = {
     totalMembers,
     activeMembers,
@@ -189,7 +190,7 @@ export const calculateOrganizationStatistics = async (
     averageEngagementRate,
     activeUsers: activeMembers,
     newThisWeek: newMembersThisWeek,
-    lastActive: lastActive?.toISOString(),
+    lastActive: lastActiveIso,
   }
 
   const ttlMs = options?.cacheTtlMs ?? 120000
@@ -207,7 +208,8 @@ export const updateOrganizationStatistics = async (organization: Pick<Organizati
 
   let orgId = organization.id
   if (!orgId && organization.code) {
-    orgId = await resolveOrganizationId(organization.code)
+    const resolvedOrgId = await resolveOrganizationId(organization.code)
+    orgId = resolvedOrgId ?? undefined
   }
 
   if (orgId) {

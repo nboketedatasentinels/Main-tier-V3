@@ -3,7 +3,6 @@ import {
   Badge,
   Box,
   Button,
-  Divider,
   HStack,
   Modal,
   ModalBody,
