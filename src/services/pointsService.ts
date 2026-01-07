@@ -81,7 +81,7 @@ export async function awardChecklistPoints(params: {
         activityId: activity.id,
         points: activity.points,
         createdAt: serverTimestamp(),
-        source: "weekly_checklist",
+        source,
       });
 
       tx.set(

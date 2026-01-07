@@ -1109,13 +1109,6 @@ export const MyCoursesPage: React.FC = () => {
                 </Stack>
               )}
 
-              {!loadingRecentActivity && recentCoursesToDisplay.length === 0 && (
-                <Flex direction="column" align="center" justify="center" py={8} color="gray.500" gap={2}>
-                  <Icon as={BookOpen} boxSize={8} />
-                  <Text>Start exploring your assigned courses to see them appear here.</Text>
-                </Flex>
-              )}
-
               {!loadingRecentActivity && recentCoursesToDisplay.length > 0 && (
                 <Stack spacing={3}>
                   {recentCoursesToDisplay.map(item => {
