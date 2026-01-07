@@ -90,7 +90,7 @@ export const PartnerDashboardLayout: React.FC<PartnerDashboardLayoutProps> = ({
         >
           {item.icon && (
             <Box
-              p={2}
+              p={1.5}
               borderRadius="lg"
               bg="brand.accent"
               border="1px solid"
@@ -100,16 +100,16 @@ export const PartnerDashboardLayout: React.FC<PartnerDashboardLayoutProps> = ({
             </Box>
           )}
           <VStack align="flex-start" spacing={0} flex={1}>
-            <Text fontSize="sm" fontWeight="semibold" color="brand.text">
+            <Text fontSize="xs" fontWeight="semibold" color="brand.text">
               {item.label}
             </Text>
             {'description' in item && item.description && (
-              <Text fontSize="xs" color="brand.subtleText">
+              <Text fontSize="2xs" color="brand.subtleText">
                 {item.description}
               </Text>
             )}
           </VStack>
-          <Badge colorScheme="purple" variant="subtle">
+          <Badge colorScheme="purple" variant="subtle" fontSize="xs">
             Scoped
           </Badge>
         </HStack>
@@ -121,10 +121,10 @@ export const PartnerDashboardLayout: React.FC<PartnerDashboardLayoutProps> = ({
     <HStack spacing={3} p={3} borderRadius="lg" bg="brand.accent" align="flex-start">
       <Avatar name={profile?.fullName || 'Partner Admin'} size="sm" />
       <VStack align="flex-start" spacing={0} flex={1}>
-        <Text fontWeight="bold" color="brand.text">
+        <Text fontWeight="bold" color="brand.text" fontSize="sm">
           {profile?.fullName || 'Partner Admin'}
         </Text>
-        <Text fontSize="sm" color="brand.subtleText">
+        <Text fontSize="xs" color="brand.subtleText">
           Assigned: {profile?.assignedOrganizations?.length || '0'} orgs
         </Text>
         <Button
@@ -203,14 +203,14 @@ export const PartnerDashboardLayout: React.FC<PartnerDashboardLayoutProps> = ({
       >
         <VStack align="stretch" spacing={4} h="full">
           <HStack spacing={2}>
-            <Box p={2} borderRadius="md" bg="brand.accent" border="1px solid" borderColor="brand.border">
-              <Sparkles size={18} />
+            <Box p={1.5} borderRadius="md" bg="brand.accent" border="1px solid" borderColor="brand.border">
+              <Sparkles size={16} />
             </Box>
             <VStack align="flex-start" spacing={0}>
-              <Text fontWeight="bold" color="brand.text">
+              <Text fontWeight="bold" color="brand.text" fontSize="sm">
                 Transformation Partner
               </Text>
-              <Text fontSize="xs" color="brand.subtleText">
+              <Text fontSize="2xs" color="brand.subtleText">
                 Scoped access dashboard
               </Text>
             </VStack>
