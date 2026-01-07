@@ -254,6 +254,7 @@ export const usePartnerDashboardData = (options?: UsePartnerDashboardDataOptions
     created_at?: unknown
     role?: PartnerUser['role']
     totalPoints?: number
+    nudgeResponseScore?: number
   }
 
   useEffect(() => {
@@ -311,6 +312,7 @@ export const usePartnerDashboardData = (options?: UsePartnerDashboardDataOptions
           progress.current_week,
           progress.earned_points,
           progress.required_points,
+          data.nudgeResponseScore,
         )
 
         const weeklyRequirement = progress.required_points[currentWeek] || 0
@@ -350,6 +352,9 @@ export const usePartnerDashboardData = (options?: UsePartnerDashboardDataOptions
           riskReasons: [
             ...(data.riskReasons || []),
             ...(riskResult.reason ? [riskResult.reason] : []),
+            data.nudgeResponseScore && data.nudgeResponseScore >= 0.7
+              ? 'Responds well to nudges'
+              : undefined,
           ].filter(Boolean),
           registrationDate: normalizedRegistrationDate || undefined,
           interventions: data.interventions || 0,

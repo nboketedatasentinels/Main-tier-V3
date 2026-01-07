@@ -37,6 +37,7 @@ import {
   Tr,
   useDisclosure,
   useToast,
+  Switch,
   VStack,
 } from '@chakra-ui/react'
 import { AlertTriangle, CheckCircle2, Clock, ShieldAlert } from 'lucide-react'
@@ -45,6 +46,7 @@ import { addDoc, collection, serverTimestamp } from 'firebase/firestore'
 import { PartnerUser, PartnerOrganization, PartnerRiskLevel } from '@/hooks/usePartnerDashboardData'
 import { useAuth } from '@/hooks/useAuth'
 import { db } from '@/services/firebase'
+import UserNudgeHistoryPanel from '@/components/partner/nudges/UserNudgeHistoryPanel'
 
 interface PartnerUserManagementProps {
   users: PartnerUser[]
@@ -466,6 +468,8 @@ export const PartnerUserManagement: React.FC<PartnerUserManagementProps> = ({
                 <Th>Status</Th>
                 <Th>Risk Reason</Th>
                 <Th>Last Active</Th>
+                <Th>Nudge status</Th>
+                <Th>Actions</Th>
               </Tr>
             </Thead>
             <Tbody>
@@ -514,11 +518,19 @@ export const PartnerUserManagement: React.FC<PartnerUserManagementProps> = ({
                   <Td>
                     <Text fontSize="sm">{formatDistanceToNow(new Date(user.lastActive), { addSuffix: true })}</Text>
                   </Td>
+                  <Td>
+                    <Badge colorScheme="green">Ready</Badge>
+                  </Td>
+                  <Td>
+                    <Button size="xs" colorScheme="purple" variant="outline" onClick={() => openUser(user)}>
+                      Quick nudge
+                    </Button>
+                  </Td>
                 </Tr>
               ))}
               {!atRiskUsers.length && (
                 <Tr>
-                  <Td colSpan={8}>
+                  <Td colSpan={10}>
                     <HStack spacing={3} py={6} justify="center">
                       <CheckCircle2 color="green" />
                       <Text color="brand.subtleText">All learners on track!</Text>
@@ -695,6 +707,29 @@ export const PartnerUserManagement: React.FC<PartnerUserManagementProps> = ({
                       </Badge>
                     ))}
                   </VStack>
+                </Stack>
+                <UserNudgeHistoryPanel
+                  userName={selectedUser.name}
+                  lastNudgeAt="No nudges sent"
+                  effectivenessScore={undefined}
+                  cooldownHours={0}
+                />
+                <Stack spacing={3}>
+                  <Text fontWeight="semibold">Nudge preferences</Text>
+                  <HStack justify="space-between">
+                    <Text fontSize="sm" color="brand.subtleText">Allow nudge notifications</Text>
+                    <Switch colorScheme="purple" defaultChecked />
+                  </HStack>
+                  <Text fontSize="xs" color="brand.subtleText">
+                    Preferences are honored across email and in-app channels.
+                  </Text>
+                </Stack>
+                <Stack spacing={2}>
+                  <Text fontWeight="semibold">Admin follow-up notes</Text>
+                  <Input placeholder="Add a quick note about manual outreach" />
+                  <Text fontSize="xs" color="brand.subtleText">
+                    Recommended next action: schedule a follow-up in 5 days if no response.
+                  </Text>
                 </Stack>
               </Stack>
             )}
