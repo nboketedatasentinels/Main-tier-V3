@@ -125,7 +125,7 @@ export const useOrganizationDetails = (organizationId?: string) => {
         return
       }
 
-      const accessResult = await checkOrganizationAccess(user.uid, organizationId)
+      const accessResult = await checkOrganizationAccess(user.uid, organizationId, orgRecord.code)
       const matchesAssignedOrg =
         assignedOrganizations.includes(organizationId) ||
         (orgRecord.id ? assignedOrganizations.includes(orgRecord.id) : false) ||
