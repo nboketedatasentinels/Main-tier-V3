@@ -42,6 +42,8 @@ export interface OrganizationRecord {
   cohortStartDate?: Timestamp | string | Date
   programDuration?: number
   courseAssignments?: string[]
+  monthlyCourseAssignments?: Record<string, string>
+  courseAssignmentStructure?: 'monthly' | 'array'
   description?: string
   assignedMentorId?: string | null
   assignedMentorName?: string | null

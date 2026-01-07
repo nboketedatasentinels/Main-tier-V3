@@ -15,6 +15,8 @@ export interface CompanyProgramInfo {
   id: string
   programDuration?: string
   courseAssignments?: string[]
+  monthlyCourseAssignments?: Record<string, string>
+  courseAssignmentStructure?: 'monthly' | 'array'
   cohortStartDate?: Timestamp | Date | null
 }
 
@@ -42,7 +44,14 @@ export interface MonthlyCourseData {
   enrollmentCode?: string
   message?: string
   cohortStartDate?: Date | null
+  monthStatuses?: Array<{
+    monthNumber: number
+    courseId?: string
+    status: 'locked' | 'current' | 'completed'
+  }>
 }
+
+export type MonthlyCourseStatusIndicator = 'locked' | 'current' | 'completed'
 
 const normalizeDate = (value?: Timestamp | Date | null): Date | null => {
   if (!value) return null
@@ -51,27 +60,70 @@ const normalizeDate = (value?: Timestamp | Date | null): Date | null => {
 }
 
 const calculateMonthIndex = (startDate: Date, currentDate = new Date()): number => {
+  if (currentDate < startDate) return 0
   const startYear = startDate.getFullYear()
   const startMonth = startDate.getMonth()
   const currentYear = currentDate.getFullYear()
   const currentMonth = currentDate.getMonth()
 
   let monthsElapsed = (currentYear - startYear) * 12 + (currentMonth - startMonth)
-
   if (currentDate.getDate() < startDate.getDate()) {
     monthsElapsed -= 1
   }
-
   return monthsElapsed < 0 ? 0 : monthsElapsed
 }
 
-const getProgramMonths = (courseAssignments: string[] = [], programDuration?: string): number => {
+const getProgramMonths = (params: {
+  courseAssignments?: string[]
+  monthlyCourseAssignments?: Record<string, string>
+  programDuration?: string
+}): number => {
+  const { courseAssignments = [], monthlyCourseAssignments, programDuration } = params
+  const monthlyCount = monthlyCourseAssignments ? Object.keys(monthlyCourseAssignments).length : 0
+  if (monthlyCount) return monthlyCount
   if (courseAssignments.length) return courseAssignments.length
   const parsedDuration = Number(programDuration)
   if (Number.isFinite(parsedDuration) && parsedDuration > 0) {
     return Math.ceil(parsedDuration)
   }
   return 0
+}
+
+const buildMonthlyAssignments = (
+  company: CompanyProgramInfo,
+  totalMonths: number,
+): { assignments: string[]; assignmentMode: 'monthly' | 'array' } => {
+  const hasMonthly = company.monthlyCourseAssignments && Object.keys(company.monthlyCourseAssignments).length > 0
+  if (hasMonthly) {
+    const assignments = Array.from({ length: totalMonths }, (_, index) => {
+      const key = String(index + 1)
+      return company.monthlyCourseAssignments?.[key] || ''
+    })
+    return { assignments, assignmentMode: 'monthly' }
+  }
+
+  const assignments = company.courseAssignments || []
+  return { assignments, assignmentMode: 'array' }
+}
+
+const getMonthAvailabilityStatus = (params: {
+  cohortStartDate: Date | null
+  currentDate: Date
+  monthIndex: number
+}): MonthlyCourseStatusIndicator => {
+  const { cohortStartDate, currentDate, monthIndex } = params
+  if (!cohortStartDate) {
+    return monthIndex === 0 ? 'current' : 'locked'
+  }
+
+  const startDate = new Date(cohortStartDate)
+  startDate.setMonth(startDate.getMonth() + monthIndex)
+  const endDate = new Date(cohortStartDate)
+  endDate.setMonth(endDate.getMonth() + monthIndex + 1)
+
+  if (currentDate < startDate) return 'locked'
+  if (currentDate >= endDate) return 'completed'
+  return 'current'
 }
 
 const fetchCourseDetails = async (courseId: string): Promise<CourseDetails | null> => {
@@ -106,8 +158,12 @@ export const buildMonthlyCourseState = async (
   company: CompanyProgramInfo,
   currentDate = new Date(),
 ): Promise<MonthlyCourseData> => {
-  const assignments = company.courseAssignments || []
-  const totalMonths = getProgramMonths(assignments, company.programDuration)
+  const totalMonths = getProgramMonths({
+    courseAssignments: company.courseAssignments,
+    monthlyCourseAssignments: company.monthlyCourseAssignments,
+    programDuration: company.programDuration,
+  })
+  const { assignments } = buildMonthlyAssignments(company, totalMonths)
 
   if (!assignments.length) {
     return {
@@ -142,6 +198,11 @@ export const buildMonthlyCourseState = async (
       totalMonths,
       cohortStartDate: cohortStart,
       message: 'You have completed all assigned courses for this program.',
+      monthStatuses: assignments.map((courseId, index) => ({
+        monthNumber: index + 1,
+        courseId: courseId || undefined,
+        status: 'completed',
+      })),
     }
   }
 
@@ -153,6 +214,16 @@ export const buildMonthlyCourseState = async (
     if (!courseId) {
       currentIndex += 1
       continue
+    }
+
+    const availability = getMonthAvailabilityStatus({
+      cohortStartDate: cohortStart,
+      currentDate,
+      monthIndex: currentIndex,
+    })
+
+    if (availability !== 'current') {
+      break
     }
 
     const fetchedDetails = await fetchCourseDetails(courseId)
@@ -168,6 +239,15 @@ export const buildMonthlyCourseState = async (
       status: 'pending_assignment',
       totalMonths,
       message: 'Course details are missing for this month. Please contact an admin.',
+      monthStatuses: assignments.map((courseId, index) => ({
+        monthNumber: index + 1,
+        courseId: courseId || undefined,
+        status: getMonthAvailabilityStatus({
+          cohortStartDate: cohortStart,
+          currentDate,
+          monthIndex: index,
+        }),
+      })),
     }
   }
 
@@ -177,6 +257,15 @@ export const buildMonthlyCourseState = async (
     monthNumber: currentIndex + 1,
     totalMonths,
     cohortStartDate: cohortStart,
+    monthStatuses: assignments.map((courseId, index) => ({
+      monthNumber: index + 1,
+      courseId: courseId || undefined,
+      status: getMonthAvailabilityStatus({
+        cohortStartDate: cohortStart,
+        currentDate,
+        monthIndex: index,
+      }),
+    })),
   }
 }
 
@@ -201,6 +290,8 @@ export const listenToCompanyProgram = (
           id: snapshot.id,
           programDuration: data.programDuration,
           courseAssignments: data.courseAssignments || data.defaultCourses || [],
+          monthlyCourseAssignments: data.monthlyCourseAssignments || undefined,
+          courseAssignmentStructure: data.courseAssignmentStructure || undefined,
           cohortStartDate: data.cohortStartDate || null,
         })
       },
@@ -223,6 +314,8 @@ export const listenToCompanyProgram = (
           id: docSnapshot.id,
           programDuration: data.programDuration,
           courseAssignments: data.courseAssignments || data.defaultCourses || [],
+          monthlyCourseAssignments: data.monthlyCourseAssignments || undefined,
+          courseAssignmentStructure: data.courseAssignmentStructure || undefined,
           cohortStartDate: data.cohortStartDate || null,
         })
       },
