@@ -14,7 +14,6 @@ import {
   HStack,
   VStack,
   Divider,
-  Image,
 } from '@chakra-ui/react'
 import {
   BookOpen,
@@ -34,9 +33,7 @@ import { canAccessCourse, FREE_TIER_COURSE_TITLE, isFreeUser } from '@/utils/mem
 import {
   COURSE_DETAILS_MAPPING,
   COURSE_METADATA_MAPPING,
-  type CourseDetail,
   type CourseDifficulty,
-  type CourseMetadata,
 } from '@/utils/courseMappings'
 import {
   MonthlyCourseAssignments,
