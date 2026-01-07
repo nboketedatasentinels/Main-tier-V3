@@ -8,7 +8,7 @@ import {
   FirestoreError,
   getDoc,
   getDocs,
-  onSnapshot,
+  increment,
   orderBy,
   query,
   serverTimestamp,
@@ -259,119 +259,12 @@ export const fetchOrganizationAssignments = async (organizationId: string): Prom
   return data.courseAssignments || []
 }
 
-export const checkOrganizationAccess = async (
-  userId: string,
-  organizationId: string,
-  organizationCode?: string,
-): Promise<{ authorized: boolean; error?: 'invalid' | 'not_found' | 'unauthorized' }> => {
-  if (!userId || !organizationId) {
-    return { authorized: false, error: 'invalid' }
-  }
-
-  const userSnap = await getDoc(doc(usersCollection, userId))
-  if (!userSnap.exists()) {
-    return { authorized: false, error: 'not_found' }
-  }
-
-  const data = userSnap.data() as { role?: string; assignedOrganizations?: string[] }
-  if (data.role === 'super_admin') {
-    return { authorized: true }
-  }
-
-  const assignedOrganizations = data.assignedOrganizations || []
-  if (
-    assignedOrganizations.includes(organizationId) ||
-    (organizationCode ? assignedOrganizations.includes(organizationCode) : false)
-  ) {
-    return { authorized: true }
-  }
-
-  return { authorized: false, error: 'unauthorized' }
-}
-
-const mapOrganizationUser = (docSnap: { id: string; data: () => unknown }): OrganizationUserProfile => {
-  const data = docSnap.data() as Partial<OrganizationUserProfile> & {
-    firstName?: string
-    lastName?: string
-    fullName?: string
-    membershipStatus?: 'free' | 'paid' | 'inactive'
-    role?: OrganizationUserProfile['role']
-    accountStatus?: 'active' | 'suspended'
-    lastActive?: Timestamp | string | number | Date
-    lastActiveAt?: Timestamp | string | number | Date
-    createdAt?: Timestamp | string | number | Date
-  }
-
-  const name =
-    data.name ||
-    data.fullName ||
-    [data.firstName, data.lastName].filter(Boolean).join(' ').trim() ||
-    data.email ||
-    'Unknown user'
-
-  return {
-    id: docSnap.id,
-    name,
-    email: data.email,
-    role: data.role || 'user',
-    membershipStatus: data.membershipStatus || 'free',
-    accountStatus: data.accountStatus || 'active',
-    lastActive: parseDateValue(data.lastActive || data.lastActiveAt),
-    createdAt: parseDateValue(data.createdAt),
-    avatarUrl: data.avatarUrl || null,
-  }
-}
-
-export const fetchOrganizationUsers = async (organizationId: string): Promise<OrganizationUserProfile[]> => {
-  if (!organizationId) return []
-
-  const primarySnapshot = await getDocs(query(usersCollection, where('companyId', '==', organizationId)))
-  if (!primarySnapshot.empty) {
-    return primarySnapshot.docs.map(mapOrganizationUser)
-  }
-
-  const secondarySnapshot = await getDocs(query(usersCollection, where('companyCode', '==', organizationId)))
-  if (!secondarySnapshot.empty) {
-    return secondarySnapshot.docs.map(mapOrganizationUser)
-  }
-
-  const tertiarySnapshot = await getDocs(query(usersCollection, where('organizationId', '==', organizationId)))
-  return tertiarySnapshot.docs.map(mapOrganizationUser)
-}
-
-export const fetchOrganizationEngagementStats = async (organizationId: string): Promise<OrganizationStatistics> => {
-  const users = await fetchOrganizationUsers(organizationId)
-  const now = Date.now()
-  const thirtyDaysAgo = now - 1000 * 60 * 60 * 24 * 30
-  const sevenDaysAgo = now - 1000 * 60 * 60 * 24 * 7
-
-  const totalMembers = users.length
-  const activeMembers = users.filter((user) => (user.lastActive?.getTime() ?? 0) >= thirtyDaysAgo).length
-  const paidMembers = users.filter((user) => user.membershipStatus === 'paid').length
-  const newMembersThisWeek = users.filter((user) => (user.createdAt?.getTime() ?? 0) >= sevenDaysAgo).length
-
-  let engagementSnapshot = await getDocs(query(engagementCollection, where('companyId', '==', organizationId)))
-  if (engagementSnapshot.empty) {
-    engagementSnapshot = await getDocs(query(engagementCollection, where('organizationId', '==', organizationId)))
-  }
-  if (engagementSnapshot.empty) {
-    engagementSnapshot = await getDocs(query(engagementCollection, where('organizationCode', '==', organizationId)))
-  }
-
-  const engagementScores = engagementSnapshot.docs
-    .map((docSnap) => (docSnap.data() as { engagementScore?: number }).engagementScore ?? 0)
-    .filter((score) => Number.isFinite(score))
-  const averageEngagementRate = engagementScores.length
-    ? Math.round(engagementScores.reduce((sum, score) => sum + score, 0) / engagementScores.length)
-    : 0
-
-  return {
-    totalMembers,
-    activeMembers,
-    paidMembers,
-    newMembersThisWeek,
-    averageEngagementRate,
-  }
+export const incrementOrganizationMemberCount = async (organizationId: string, delta = 1) => {
+  if (!organizationId) return
+  await updateDoc(doc(db, 'organizations', organizationId), {
+    memberCount: increment(delta),
+    updatedAt: serverTimestamp(),
+  })
 }
 
 export const createOrganizationWithInvitations = async (

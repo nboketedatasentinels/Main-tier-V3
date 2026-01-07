@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useState } from 'react'
+import React, { useCallback, useEffect, useRef, useState } from 'react'
 import { FirebaseError } from 'firebase/app'
 import { User } from 'firebase/auth'
 import {
@@ -28,7 +28,10 @@ import { isBootstrapAdmin } from '@/utils/bootstrap'
 import { auth, db, firebaseConfigStatus } from '@/services/firebase'
 import { AuthContext, AuthContextType } from './AuthContextType'
 import { getFriendlyErrorMessage } from '@/utils/authErrors'
-import { validateCompanyCode } from '@/services/organizationService'
+import { incrementOrganizationMemberCount, validateCompanyCode } from '@/services/organizationService'
+import { buildActionCodeSettings } from '@/utils/authActionCodeSettings'
+import { assignFreeCourseToUser, hasFreeCourseAssigned } from '@/services/courseAssignmentService'
+import { isFreeUser } from '@/utils/membership'
 
 interface AuthProviderProps {
   children: React.ReactNode
@@ -41,6 +44,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const [profileLoading, setProfileLoading] = useState(true)
   const [claimsRole, setClaimsRole] = useState<string | null>(null)
   const enableProfileRealtime = import.meta.env.VITE_ENABLE_PROFILE_REALTIME === 'true'
+  const freeCourseAssignmentRef = useRef({ inFlight: false, lastAttemptAt: 0, lastUserId: '' })
+  const pendingCompanyCodeKey = 't4l.pendingCompanyCode'
 
   const recordProfileLoad = (loadedProfile: UserProfile | null) => {
     if (typeof window === 'undefined') return
@@ -49,6 +54,51 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     localStorage.setItem('lastProfileLoadAt', timestamp)
     console.log('🟣 [Auth] Recorded profile load timestamp', { id: loadedProfile.id, timestamp })
   }
+
+  const attemptFreeCourseAssignment = useCallback(
+    async (userId: string, loadedProfile: UserProfile) => {
+      const isFreeTier = isFreeUser(loadedProfile)
+      if (!isFreeTier) return
+
+      const now = Date.now()
+      const assignmentState = freeCourseAssignmentRef.current
+      if (
+        assignmentState.inFlight ||
+        (assignmentState.lastUserId === userId && now - assignmentState.lastAttemptAt < 15000)
+      ) {
+        return
+      }
+
+      assignmentState.inFlight = true
+      assignmentState.lastAttemptAt = now
+      assignmentState.lastUserId = userId
+
+      try {
+        const alreadyAssigned = await hasFreeCourseAssigned(userId)
+        if (alreadyAssigned) {
+          console.log('🟡 [Auth] Free course already assigned for user', { userId })
+          return
+        }
+
+        const assigned = await assignFreeCourseToUser(userId)
+        if (assigned) {
+          console.log('🟢 [Auth] Auto-assigned free course for user', { userId })
+        } else {
+          console.log('🟠 [Auth] Free course assignment skipped', { userId })
+        }
+      } catch (error) {
+        console.error('🔴 [Auth] Free course assignment failed', {
+          userId,
+          message: (error as Error)?.message,
+          stack: (error as Error)?.stack,
+          raw: error,
+        })
+      } finally {
+        assignmentState.inFlight = false
+      }
+    },
+    [assignFreeCourseToUser, hasFreeCourseAssigned]
+  )
 
   const extractCustomClaims = useCallback(async (firebaseUser: User) => {
     try {
@@ -199,9 +249,33 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       }
 
       /* ---------------- Create profile ---------------- */
+      let validatedOrganization:
+        | Awaited<ReturnType<typeof validateCompanyCode>>['organization']
+        | null = null
+      const pendingCompanyCode =
+        typeof window !== 'undefined' ? localStorage.getItem(pendingCompanyCodeKey)?.trim() : null
+      const normalizedPendingCompanyCode = pendingCompanyCode?.toUpperCase() || null
+
+      if (normalizedPendingCompanyCode) {
+        try {
+          const validationResult = await validateCompanyCode(normalizedPendingCompanyCode)
+          if (validationResult.valid && validationResult.organization) {
+            validatedOrganization = validationResult.organization
+          }
+        } catch (validationError) {
+          console.warn('🟠 [Auth] Unable to validate pending company code', validationError)
+        } finally {
+          if (typeof window !== 'undefined') {
+            localStorage.removeItem(pendingCompanyCodeKey)
+          }
+        }
+      }
+
       const role = isBootstrapAdmin(firebaseUser.email)
         ? UserRole.SUPER_ADMIN
-        : UserRole.FREE_USER
+        : validatedOrganization
+          ? UserRole.PAID_MEMBER
+          : UserRole.FREE_USER
       const { firstName, lastName, fullName } = getNameParts(
         firebaseUser.displayName,
         firebaseUser.email
@@ -216,7 +290,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         lastName,
         fullName,
         role,
-        membershipStatus: 'free',
+        membershipStatus: validatedOrganization ? 'paid' : 'free',
         ...(firebaseUser.photoURL ? { avatarUrl: firebaseUser.photoURL } : {}),
         totalPoints: 0,
         level: 1,
@@ -226,18 +300,22 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         referredBy: null,
         isOnboarded: true,
         accountStatus: AccountStatus.ACTIVE,
-        transformationTier: TransformationTier.INDIVIDUAL_FREE,
+        transformationTier: validatedOrganization
+          ? TransformationTier.CORPORATE_MEMBER
+          : TransformationTier.INDIVIDUAL_FREE,
         assignedOrganizations: [],
-        companyCode: null,
-        companyId: null,
-        companyName: null,
+        companyCode: validatedOrganization?.code ?? null,
+        companyId: validatedOrganization?.id ?? null,
+        companyName: validatedOrganization?.name ?? null,
         onboardingComplete: false,
         onboardingSkipped: false,
         mustChangePassword: false,
         hasSeenDashboardTour: false,
         dashboardPreferences: {
           defaultRoute: '/app/weekly-glance',
-          lockedToFreeExperience: ['user', 'free_user'].includes(normalizeRole(role)),
+          lockedToFreeExperience: validatedOrganization
+            ? false
+            : ['user', 'free_user'].includes(normalizeRole(role)),
         },
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
@@ -249,6 +327,14 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         createdAt: serverTimestamp(),
         updatedAt: serverTimestamp(),
       })
+
+      if (validatedOrganization?.id) {
+        try {
+          await incrementOrganizationMemberCount(validatedOrganization.id)
+        } catch (incrementError) {
+          console.warn('🟠 [Auth] Unable to increment organization member count', incrementError)
+        }
+      }
 
       console.log('🟣 [Auth] Profile created successfully')
 
@@ -343,6 +429,9 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
         setProfile(userProfile)
         recordProfileLoad(userProfile)
+        if (userProfile) {
+          void attemptFreeCourseAssignment(currentUser.uid, userProfile)
+        }
         setProfileLoading(false)
         setLoading(false)
       }
@@ -370,6 +459,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
           console.log('🔁 [Auth] Profile updated via snapshot', updatedProfile.role)
           setProfile(updatedProfile)
           recordProfileLoad(updatedProfile)
+          void attemptFreeCourseAssignment(currentUser.uid, updatedProfile)
         },
         (error) => {
           console.error('🔴 [Auth] Realtime profile listener error', error)
@@ -386,7 +476,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       }
       unsubscribe()
     }
-  }, [enableProfileRealtime, extractCustomClaims])
+  }, [attemptFreeCourseAssignment, enableProfileRealtime, extractCustomClaims])
 
   /* ------------------------------------------------------------------ */
   /* 🔹 Auth Actions                                                     */
@@ -557,7 +647,9 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
       const role = isBootstrapAdmin(firebaseUser.email)
         ? UserRole.SUPER_ADMIN
-        : UserRole.FREE_USER
+        : validatedOrganization
+          ? UserRole.PAID_MEMBER
+          : UserRole.FREE_USER
       const normalizedRole = normalizeRole(role)
 
       const profileData: UserProfile = {
@@ -571,7 +663,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
           userData.firstName?.trim() ||
           'User',
         role: normalizedRole,
-        membershipStatus: 'free',
+        membershipStatus: validatedOrganization ? 'paid' : 'free',
         totalPoints: 0,
         level: 1,
         journeyType: '4W',
@@ -590,7 +682,9 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         hasSeenDashboardTour: false,
         dashboardPreferences: {
           defaultRoute: '/app/weekly-glance',
-          lockedToFreeExperience: normalizedRole === 'user' || normalizedRole === 'free_user',
+          lockedToFreeExperience: validatedOrganization
+            ? false
+            : normalizedRole === 'user' || normalizedRole === 'free_user',
         },
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
@@ -622,9 +716,36 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         throw profileError
       }
 
+      if (validatedOrganization?.id) {
+        try {
+          await incrementOrganizationMemberCount(validatedOrganization.id)
+        } catch (incrementError) {
+          console.warn('🟠 [Auth] Unable to increment organization member count', incrementError)
+        }
+      }
+
+      // Auto-assign the free course for eligible free-tier users.
+      if (isFreeUser(profilePayload)) {
+        try {
+          const assigned = await assignFreeCourseToUser(uid)
+          if (assigned) {
+            console.log('🟢 [Auth] Assigned free course after signup', { uid })
+          } else {
+            console.log('🟠 [Auth] Free course assignment skipped after signup', { uid })
+          }
+        } catch (assignmentError) {
+          console.error('🔴 [Auth] Unable to assign free course after signup', {
+            uid,
+            message: (assignmentError as Error)?.message,
+            stack: (assignmentError as Error)?.stack,
+            raw: assignmentError,
+          })
+        }
+      }
+
       try {
         if (!firebaseUser.emailVerified) {
-          await sendEmailVerification(firebaseUser)
+          await sendEmailVerification(firebaseUser, buildActionCodeSettings('/auth/verify-email'))
         }
       } catch (verificationError) {
         console.warn('🟠 [Auth] Unable to send verification email', verificationError)
@@ -670,7 +791,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     }
 
     try {
-      await sendPasswordResetEmail(auth, email)
+      await sendPasswordResetEmail(auth, email, buildActionCodeSettings('/reset-password'))
       return { error: null }
     } catch (error) {
       const friendlyMessage = getFriendlyErrorMessage(error)
@@ -740,6 +861,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     ['partner', 'mentor', 'ambassador', 'team_leader', 'super_admin'].includes(
       normalizedRole ?? ''
     ) ||
+    normalizedRole === 'paid_member' ||
     (normalizedRole === 'user' && profile?.membershipStatus === 'paid')
 
   /* ------------------------------------------------------------------ */

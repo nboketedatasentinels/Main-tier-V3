@@ -15,6 +15,7 @@ import {
   HStack,
   Heading,
   Icon,
+  IconButton,
   Modal,
   ModalBody,
   ModalCloseButton,
@@ -25,6 +26,7 @@ import {
   Progress,
   SimpleGrid,
   Skeleton,
+  Spinner,
   Stack,
   Tag,
   Text,
@@ -33,16 +35,21 @@ import {
   useDisclosure,
   useToast,
 } from '@chakra-ui/react'
-import { AlertTriangle, CheckCircle, ChevronLeft, ChevronRight, Lock, Plus } from 'lucide-react'
+import { AlertTriangle, CheckCircle, ChevronLeft, ChevronRight, Lock, Plus, ShieldCheck } from 'lucide-react'
 import { collection, doc, getDocs, query, serverTimestamp, setDoc, where, onSnapshot, addDoc } from 'firebase/firestore'
+import { addDays, format } from 'date-fns'
+import { useNavigate } from 'react-router-dom'
 import { removeUndefinedFields } from '@/utils/firestore'
 import { getIsoWeekNumber } from '@/utils/date'
 import { db } from '@/services/firebase'
 import { useAuth } from '@/hooks/useAuth'
-import { UserRole, WeeklyProgress } from '@/types'
+import { CALENDAR_SYNC_TUTORIAL, WeeklyProgress } from '@/types'
+import { isFreeUser } from '@/utils/membership'
 import { JOURNEY_META, getMonthNumber, getActivitiesForJourney, type ActivityDef, type JourneyType } from '@/config/pointsConfig'
 import { awardChecklistPoints, revokeChecklistPoints } from '@/services/pointsService'
 import { SurfaceCard } from '@/components/primitives/SurfacePrimitives'
+import { IoradTutorialModal } from '@/components/modals/IoradTutorialModal'
+import { checkTutorialCompletion, markTutorialComplete } from '@/services/tutorialService'
 
 const DEFAULT_WEEKLY_TARGET = JOURNEY_META['6W'].weeklyTarget
 
@@ -73,6 +80,8 @@ const rhythmItems = [
   'Add weekly time block for point tracking',
   'Accept first live session invite',
 ]
+
+const CALENDAR_SYNC_ITEM = 'Sync T4L Calendar to Google/Outlook'
 
 const weeklyGuidance: Record<number, string[]> = {
   1: [
@@ -116,9 +125,17 @@ const useRhythmState = () => {
     })
   }
 
+  const setItemCompletion = (item: string, value: boolean) => {
+    setCompleted(prev => {
+      const next = { ...prev, [item]: value }
+      localStorage.setItem(storageKey, JSON.stringify(next))
+      return next
+    })
+  }
+
   const totalPoints = useMemo(() => Object.values(completed).filter(Boolean).length * 50, [completed])
 
-  return { completed, toggleItem, totalPoints, calendarWeek }
+  return { completed, toggleItem, setItemCompletion, totalPoints, calendarWeek }
 }
 
 const statusLabelMap: Record<ActivityStatus, string> = {
@@ -144,9 +161,26 @@ const WeeklyChecklistPage: React.FC = () => {
 
   const { isOpen, onOpen, onClose } = useDisclosure()
   const toast = useToast()
+  const navigate = useNavigate()
   const activityRefs = useRef<Record<string, HTMLDivElement | null>>({})
   const [weeklyProgress, setWeeklyProgress] = useState<WeeklyProgress | null>(null)
-  const { completed: rhythmCompleted, toggleItem, totalPoints: rhythmPoints, calendarWeek } = useRhythmState()
+  const {
+    completed: rhythmCompleted,
+    toggleItem,
+    setItemCompletion,
+    totalPoints: rhythmPoints,
+    calendarWeek,
+  } = useRhythmState()
+  const {
+    isOpen: isTutorialModalOpen,
+    onOpen: openTutorialModal,
+    onClose: closeTutorialModal,
+  } = useDisclosure()
+  const [tutorialCompleted, setTutorialCompleted] = useState(false)
+  const [tutorialLoading, setTutorialLoading] = useState(false)
+  const [tutorialError, setTutorialError] = useState<string | null>(null)
+  const [tutorialSaving, setTutorialSaving] = useState(false)
+  const [tutorialSaveError, setTutorialSaveError] = useState<string | null>(null)
 
   const persistChecklist = async (updatedActivities: ActivityState[]) => {
     if (!user) return
@@ -182,18 +216,40 @@ const WeeklyChecklistPage: React.FC = () => {
     return JOURNEY_META[journey.journeyType].weeklyTarget;
   }, [journey]);
 
+  const getImpactLogDateRange = useCallback(
+    (weekNumber: number) => {
+      let journeyStart: Date | null = profile?.journeyStartDate ? new Date(profile.journeyStartDate) : null
+
+      if (!journeyStart && profile?.currentWeek) {
+        const offsetWeeks = profile.currentWeek - 1
+        journeyStart = addDays(new Date(), -(offsetWeeks * 7))
+      }
+
+      if (!journeyStart) return null
+
+      const weekStart = addDays(journeyStart, (weekNumber - 1) * 7)
+      const weekEnd = addDays(weekStart, 7)
+      return {
+        start: format(weekStart, 'yyyy-MM-dd'),
+        end: format(weekEnd, 'yyyy-MM-dd'),
+      }
+    },
+    [profile?.currentWeek, profile?.journeyStartDate],
+  )
+
   const fetchJourney = useCallback(async () => {
     if (!user || !profile) return;
     try {
       // Free users are automatically assigned to the 4W journey.
-      const journeyType = profile.role === UserRole.FREE_USER ? "4W" : profile.journeyType || "6W";
+      const isFreeTierUser = isFreeUser(profile);
+      const journeyType = isFreeTierUser ? "4W" : profile.journeyType || "6W";
       const meta = JOURNEY_META[journeyType];
 
       const journeyConfig: JourneyConfig = {
         journeyType,
         currentWeek: profile.currentWeek || 1,
         programDurationWeeks: meta.weeks,
-        isPaid: profile.role !== UserRole.FREE_USER,
+        isPaid: !isFreeTierUser,
       };
 
       setJourney(journeyConfig);
@@ -220,6 +276,22 @@ const WeeklyChecklistPage: React.FC = () => {
       const ledgerSnapshot = await getDocs(ledgerQuery);
       const completedActivities = new Set(ledgerSnapshot.docs.map(d => d.data().activityId));
 
+      const impactRange = getImpactLogDateRange(selectedWeek)
+      const hasImpactLog = activityDefs.some(def => def.id === 'impact_log')
+
+      if (impactRange && hasImpactLog) {
+        const impactQuery = query(
+          collection(db, 'impact_logs'),
+          where('userId', '==', user.uid),
+          where('date', '>=', impactRange.start),
+          where('date', '<', impactRange.end),
+        )
+        const impactSnapshot = await getDocs(impactQuery)
+        if (!impactSnapshot.empty) {
+          completedActivities.add('impact_log')
+        }
+      }
+
       const activityStates: ActivityState[] = activityDefs.map(def => ({
         ...def,
         status: completedActivities.has(def.id) ? 'completed' : 'not_started',
@@ -234,6 +306,21 @@ const WeeklyChecklistPage: React.FC = () => {
     }
   }, [journey, selectedWeek, user]);
 
+  const checkCalendarSyncTutorial = useCallback(async () => {
+    if (!user) return
+    setTutorialLoading(true)
+    setTutorialError(null)
+    try {
+      const completion = await checkTutorialCompletion(user.uid, CALENDAR_SYNC_TUTORIAL.id)
+      setTutorialCompleted(Boolean(completion))
+    } catch (err) {
+      console.error(err)
+      setTutorialError('Unable to load tutorial status. Please retry.')
+    } finally {
+      setTutorialLoading(false)
+    }
+  }, [user])
+
   useEffect(() => {
     if (!user) return;
     const progressRef = doc(db, "weeklyProgress", `${user.uid}__${selectedWeek}`);
@@ -246,6 +333,44 @@ const WeeklyChecklistPage: React.FC = () => {
     });
     return () => unsubscribe();
   }, [user, selectedWeek]);
+
+  useEffect(() => {
+    if (!user) return
+    const impactRange = getImpactLogDateRange(selectedWeek)
+    if (!impactRange) return
+
+    const impactQuery = query(
+      collection(db, 'impact_logs'),
+      where('userId', '==', user.uid),
+      where('date', '>=', impactRange.start),
+      where('date', '<', impactRange.end),
+    )
+
+    const unsubscribe = onSnapshot(impactQuery, snapshot => {
+      const hasEntry = !snapshot.empty
+      setActivities(prev => {
+        const impactActivity = prev.find(activity => activity.id === 'impact_log')
+        if (!impactActivity) return prev
+        const nextStatus: ActivityStatus = hasEntry ? 'completed' : 'not_started'
+        if (impactActivity.status === nextStatus) return prev
+
+        if (hasEntry) {
+          toast({
+            title: 'Impact Log recorded',
+            description: 'Your weekly checklist was updated automatically.',
+            status: 'success',
+            duration: 3000,
+          })
+        }
+
+        return prev.map(activity =>
+          activity.id === 'impact_log' ? { ...activity, status: nextStatus } : activity,
+        )
+      })
+    })
+
+    return () => unsubscribe()
+  }, [getImpactLogDateRange, selectedWeek, toast, user])
 
   const calculateProgress = useCallback(() => {
     const completedActivities = activities.filter(a => a.status === 'completed')
@@ -262,6 +387,10 @@ const WeeklyChecklistPage: React.FC = () => {
   useEffect(() => {
     fetchWeeklyData()
   }, [fetchWeeklyData])
+
+  useEffect(() => {
+    checkCalendarSyncTutorial()
+  }, [checkCalendarSyncTutorial])
 
   useEffect(() => {
     setProgressLoading(true)
@@ -306,6 +435,38 @@ const WeeklyChecklistPage: React.FC = () => {
   const openProofModal = (activity: ActivityState) => {
     setProofModal({ isOpen: true, activity })
     onOpen()
+  }
+
+  const handleTutorialComplete = async () => {
+    if (!user) return
+    setTutorialSaving(true)
+    setTutorialSaveError(null)
+    try {
+      await markTutorialComplete(user.uid, CALENDAR_SYNC_TUTORIAL.id)
+      setTutorialCompleted(true)
+      setItemCompletion(CALENDAR_SYNC_ITEM, true)
+      toast({
+        title: 'Tutorial complete',
+        description: 'You can now mark the calendar sync item as done.',
+        status: 'success',
+      })
+      closeTutorialModal()
+    } catch (err) {
+      console.error(err)
+      setTutorialSaveError('Unable to save tutorial completion. Please retry.')
+    } finally {
+      setTutorialSaving(false)
+    }
+  }
+
+  const handleOpenTutorialModal = () => {
+    setTutorialSaveError(null)
+    openTutorialModal()
+  }
+
+  const handleCloseTutorialModal = () => {
+    setTutorialSaveError(null)
+    closeTutorialModal()
   }
 
   const submitProof = async () => {
@@ -484,6 +645,8 @@ const WeeklyChecklistPage: React.FC = () => {
   const renderActivityCard = (activity: ActivityState) => {
     const disabled = isWeekLocked
     const requiresPartnerApproval = journey?.isPaid && activity.requiresApproval
+    const isHonorBased = !activity.requiresApproval
+    const isAutoTracked = activity.id === 'impact_log'
     const yesDisabled = disabled || activity.status === 'completed'
     const noDisabled = disabled || activity.status === 'not_started'
 
@@ -514,16 +677,33 @@ const WeeklyChecklistPage: React.FC = () => {
                 </Badge>
               )}
               {showProofBadge && (
-                <Tooltip label="Partner approval required. Upload proof so the partner team can verify.">
+                <Tooltip
+                  label={
+                    activity.id === 'lift_module'
+                      ? 'Complete the module, then upload proof for verification.'
+                      : 'Partner approval required. Upload proof so the partner team can verify.'
+                  }
+                >
                   <Badge colorScheme="purple">Partner approval</Badge>
                 </Tooltip>
               )}
               {showFreeBadge && <Badge colorScheme="secondary">Free tier</Badge>}
               <Tag colorScheme="primary">{activity.category}</Tag>
             </HStack>
-            <Heading size="sm" color="text.primary">
-              {activity.title}
-            </Heading>
+            <HStack spacing={2}>
+              <Heading size="sm" color="text.primary">
+                {activity.title}
+              </Heading>
+              {isHonorBased ? (
+                <Tooltip label="Self-verified">
+                  <Icon as={CheckCircle} color="green.400" boxSize={4} />
+                </Tooltip>
+              ) : (
+                <Tooltip label="Requires partner approval">
+                  <Icon as={ShieldCheck} color="purple.400" boxSize={4} />
+                </Tooltip>
+              )}
+            </HStack>
             <Text color="text.secondary" fontSize="sm">
               {activity.description}
             </Text>
@@ -544,29 +724,42 @@ const WeeklyChecklistPage: React.FC = () => {
             )}
           </Stack>
         </Flex>
-        <HStack spacing={3}>
-          <Button
-            colorScheme="primary"
-            variant={activity.status === 'completed' || activity.status === 'pending' ? 'solid' : 'outline'}
-            isDisabled={yesDisabled}
-            onClick={() =>
-              requiresPartnerApproval
-                ? openProofModal(activity)
-                : handleActivityUpdate(activity, 'completed')
-            }
-          >
-            Yes
-          </Button>
-          <Button
-            variant="outline"
-            borderColor="border.strong"
-            color="text.primary"
-            isDisabled={noDisabled}
-            onClick={() => handleActivityUpdate(activity, 'not_started')}
-          >
-            No
-          </Button>
-        </HStack>
+        {isHonorBased ? (
+          <Stack spacing={2}>
+            <Text color="text.muted" fontSize="sm">
+              Status automatically updated when you submit this activity.
+            </Text>
+            {isAutoTracked && (
+              <Button variant="outline" colorScheme="purple" onClick={() => navigate('/app/impact-log')}>
+                Go to Impact Log
+              </Button>
+            )}
+          </Stack>
+        ) : (
+          <HStack spacing={3}>
+            <Button
+              colorScheme="primary"
+              variant={activity.status === 'completed' || activity.status === 'pending' ? 'solid' : 'outline'}
+              isDisabled={yesDisabled}
+              onClick={() =>
+                requiresPartnerApproval
+                  ? openProofModal(activity)
+                  : handleActivityUpdate(activity, 'completed')
+              }
+            >
+              Yes
+            </Button>
+            <Button
+              variant="outline"
+              borderColor="border.strong"
+              color="text.primary"
+              isDisabled={noDisabled}
+              onClick={() => handleActivityUpdate(activity, 'not_started')}
+            >
+              No
+            </Button>
+          </HStack>
+        )}
       </Box>
     )
   }
@@ -579,23 +772,67 @@ const WeeklyChecklistPage: React.FC = () => {
         </Heading>
         <Tag colorScheme="primary">+{rhythmPoints} pts</Tag>
       </HStack>
+      {tutorialError && (
+        <Alert status="warning" borderRadius="md" mb={3}>
+          <AlertIcon />
+          <AlertDescription>{tutorialError}</AlertDescription>
+          <IconButton
+            aria-label="Retry tutorial status"
+            size="sm"
+            ml="auto"
+            onClick={checkCalendarSyncTutorial}
+            icon={tutorialLoading ? <Spinner size="xs" /> : <Icon as={Plus} />}
+            isDisabled={tutorialLoading}
+            variant="outline"
+          />
+        </Alert>
+      )}
       <Stack spacing={2}>
         {rhythmItems.map(item => (
           <Flex key={item} align="center" justify="space-between" p={2} borderRadius="md" bg="surface.subtle">
-            <Text color="text.secondary">{item}</Text>
-            <Button
-              size="sm"
-              leftIcon={
-                rhythmCompleted[item] ? <Icon as={CheckCircle} /> : <Icon as={Plus} />
+            <HStack spacing={2}>
+              <Text color="text.secondary">{item}</Text>
+              {item === CALENDAR_SYNC_ITEM && (
+                <Badge colorScheme="orange" variant="subtle">
+                  Tutorial Required
+                </Badge>
+              )}
+            </HStack>
+            <Tooltip
+              label={
+                item === CALENDAR_SYNC_ITEM
+                  ? 'Complete the calendar sync tutorial before marking this as done.'
+                  : ''
               }
-              colorScheme={rhythmCompleted[item] ? 'primary' : undefined}
-              borderColor={rhythmCompleted[item] ? undefined : 'border.strong'}
-              color={rhythmCompleted[item] ? undefined : 'text.primary'}
-              variant={rhythmCompleted[item] ? 'solid' : 'outline'}
-              onClick={() => toggleItem(item)}
+              isDisabled={item !== CALENDAR_SYNC_ITEM}
             >
-              {rhythmCompleted[item] ? 'Completed' : 'Mark done'}
-            </Button>
+              <Button
+                size="sm"
+                leftIcon={
+                  rhythmCompleted[item] ? (
+                    <Icon as={CheckCircle} />
+                  ) : tutorialLoading && item === CALENDAR_SYNC_ITEM ? (
+                    <Spinner size="xs" />
+                  ) : (
+                    <Icon as={Plus} />
+                  )
+                }
+                colorScheme={rhythmCompleted[item] ? 'primary' : undefined}
+                borderColor={rhythmCompleted[item] ? undefined : 'border.strong'}
+                color={rhythmCompleted[item] ? undefined : 'text.primary'}
+                variant={rhythmCompleted[item] ? 'solid' : 'outline'}
+                onClick={() => {
+                  if (item === CALENDAR_SYNC_ITEM && !tutorialCompleted) {
+                    handleOpenTutorialModal()
+                    return
+                  }
+                  toggleItem(item)
+                }}
+                isDisabled={tutorialLoading && item === CALENDAR_SYNC_ITEM}
+              >
+                {rhythmCompleted[item] ? 'Completed' : 'Mark done'}
+              </Button>
+            </Tooltip>
           </Flex>
         ))}
       </Stack>
@@ -832,6 +1069,15 @@ const WeeklyChecklistPage: React.FC = () => {
       </Grid>
 
       {renderProofModal()}
+      <IoradTutorialModal
+        isOpen={isTutorialModalOpen}
+        onClose={handleCloseTutorialModal}
+        onComplete={handleTutorialComplete}
+        tutorialUrl={CALENDAR_SYNC_TUTORIAL.url}
+        isSubmitting={tutorialSaving}
+        error={tutorialSaveError}
+        onRetry={tutorialSaveError ? handleTutorialComplete : undefined}
+      />
     </Stack>
   )
 }

@@ -5,7 +5,6 @@ import {
   Box,
   Button,
   Divider,
-  Flex,
   HStack,
   Modal,
   ModalBody,
@@ -82,6 +81,7 @@ export const OrganizationDetailsModal: React.FC<Props> = ({
   const activeMemberContent = isLoadingStats ? <Spinner size="xs" /> : memberStats?.activeMembers ?? '—'
   const paidMemberContent = isLoadingStats ? <Spinner size="xs" /> : memberStats?.paidMembers ?? '—'
   const courseAssignments = organization.courseAssignments || []
+  const monthlyAssignments = organization.monthlyCourseAssignments || {}
   const programStartDate = organization.cohortStartDate || organization.programStart
 
   return (
@@ -136,13 +136,30 @@ export const OrganizationDetailsModal: React.FC<Props> = ({
                       value={organization.programDuration ? `${organization.programDuration} months` : '—'}
                     />
                     <InfoItem label="Program start" value={formatDate(programStartDate)} />
-                    <InfoItem label="Course assignments" value={courseAssignments.length || '—'} />
+                    <InfoItem
+                      label="Course assignments"
+                      value={Object.keys(monthlyAssignments).length || courseAssignments.length || '—'}
+                    />
+                    <InfoItem
+                      label="Assignment structure"
+                      value={organization.courseAssignmentStructure || (Object.keys(monthlyAssignments).length ? 'monthly' : 'array')}
+                    />
                   </SimpleGrid>
                   <Box>
                     <Text fontSize="sm" color="brand.subtleText" mb={2}>
                       Assigned courses
                     </Text>
-                    {courseAssignments.length ? (
+                    {Object.keys(monthlyAssignments).length ? (
+                      <Wrap>
+                        {Object.entries(monthlyAssignments).map(([month, courseId]) => (
+                          <WrapItem key={`${month}-${courseId}`}>
+                            <Badge variant="subtle">
+                              Month {month}: {courseId || 'Unassigned'}
+                            </Badge>
+                          </WrapItem>
+                        ))}
+                      </Wrap>
+                    ) : courseAssignments.length ? (
                       <Wrap>
                         {courseAssignments.map((courseId) => (
                           <WrapItem key={courseId}>

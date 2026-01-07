@@ -2,9 +2,9 @@ import React, { ChangeEvent, useEffect, useMemo, useRef, useState } from 'react'
 import {
   Alert,
   AlertIcon,
+  Badge,
   Box,
   Button,
-  Checkbox,
   Divider,
   Flex,
   FormControl,
@@ -34,7 +34,7 @@ import {
   useToast,
 } from '@chakra-ui/react'
 import { InfoIcon } from '@chakra-ui/icons'
-import { Plus, Upload, X } from 'lucide-react'
+import { ChevronDown, ChevronUp, Eye, Plus, Upload, X } from 'lucide-react'
 import {
   BulkInvitationResult,
   CourseOption,
@@ -54,6 +54,15 @@ import {
 } from '@/services/organizationService'
 import { InvitationResultsModal } from './InvitationResultsModal'
 import { downloadCSVTemplate, parseInvitationCSV } from '@/utils/csvUtils'
+import {
+  MonthlyCourseAssignments,
+  buildMonthlyAssignmentsFromArray,
+  buildMonthlyAssignmentsSummary,
+  formatMonthRange,
+  getAssignedCourseIdsFromMonthlyAssignments,
+  getMonthAvailabilityStatus,
+  getMonthDateRange,
+} from '@/utils/monthlyCourseAssignments'
 
 const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
 
@@ -85,6 +94,8 @@ const emptyOrganization: OrganizationRecord = {
   description: '',
   courseAssignments: [],
   programDuration: undefined,
+  monthlyCourseAssignments: {},
+  courseAssignmentStructure: 'monthly',
 }
 
 const blankInvite: InviteDraft = {
@@ -113,6 +124,7 @@ export const CreateOrganizationModal: React.FC<CreateOrganizationModalProps> = (
   const [ambassadors, setAmbassadors] = useState<OrganizationLead[]>([])
   const [results, setResults] = useState<BulkInvitationResult | null>(null)
   const [partnerSearch, setPartnerSearch] = useState('')
+  const [monthlyAssignments, setMonthlyAssignments] = useState<MonthlyCourseAssignments>({})
   const resultsModal = useDisclosure()
   const fileInputRef = useRef<HTMLInputElement | null>(null)
 
@@ -121,9 +133,44 @@ export const CreateOrganizationModal: React.FC<CreateOrganizationModalProps> = (
     return option?.courseCount ?? 0
   }, [form.programDuration])
 
-  const remainingCourses = courseLimit - (form.courseAssignments?.length || 0)
+  const remainingCourses = courseLimit - getAssignedCourseIdsFromMonthlyAssignments(monthlyAssignments, courseLimit).length
   const codeLength = form.code.trim().length
   const isCodeValidLength = codeLength === 6
+  const cohortStartDate = useMemo(
+    () => (form.cohortStartDate ? new Date(String(form.cohortStartDate)) : null),
+    [form.cohortStartDate],
+  )
+  const monthlySummary = useMemo(
+    () =>
+      buildMonthlyAssignmentsSummary({
+        monthlyAssignments,
+        totalMonths: courseLimit,
+        courseTitleLookup: (courseId) =>
+          courses.find((course) => course.id === courseId)?.title || courseId,
+      }),
+    [monthlyAssignments, courseLimit, courses],
+  )
+  const duplicateCourses = useMemo(() => {
+    const seen = new Set<string>()
+    const duplicates = new Set<string>()
+    Object.values(monthlyAssignments).forEach((courseId) => {
+      if (!courseId) return
+      if (seen.has(courseId)) {
+        duplicates.add(courseId)
+      } else {
+        seen.add(courseId)
+      }
+    })
+    return Array.from(duplicates)
+  }, [monthlyAssignments])
+  const emptyMonths = useMemo(
+    () =>
+      Array.from({ length: courseLimit }, (_, index) => ({
+        month: index + 1,
+        courseId: monthlyAssignments[String(index + 1)] || '',
+      })).filter((entry) => !entry.courseId),
+    [monthlyAssignments, courseLimit],
+  )
 
   const sortedPartners = useMemo(
     () => [...partners].sort((a, b) => a.name.localeCompare(b.name)),
@@ -160,6 +207,7 @@ export const CreateOrganizationModal: React.FC<CreateOrganizationModalProps> = (
       setMentors([])
       setAmbassadors([])
       setResults(null)
+      setMonthlyAssignments({})
       return
     }
 
@@ -182,6 +230,25 @@ export const CreateOrganizationModal: React.FC<CreateOrganizationModalProps> = (
     fetchData()
   }, [isOpen, toast])
 
+  useEffect(() => {
+    if (!isOpen) return
+    if (!courseLimit) {
+      setMonthlyAssignments({})
+      return
+    }
+    setMonthlyAssignments((prev) => {
+      const seed = Object.keys(prev).length
+        ? prev
+        : buildMonthlyAssignmentsFromArray(form.courseAssignments || [], courseLimit)
+      const next: MonthlyCourseAssignments = {}
+      for (let index = 0; index < courseLimit; index += 1) {
+        const key = String(index + 1)
+        next[key] = seed[key] || ''
+      }
+      return next
+    })
+  }, [courseLimit, form.courseAssignments, isOpen])
+
   const updateField = (key: keyof OrganizationRecord, value: unknown) => {
     setForm((prev) => ({ ...prev, [key]: value }))
   }
@@ -192,18 +259,22 @@ export const CreateOrganizationModal: React.FC<CreateOrganizationModalProps> = (
     setForm((prev) => ({ ...prev, teamSize: parsed, cluster }))
   }
 
-  const handleCourseToggle = (courseId: string) => {
-    setForm((prev) => {
-      const assignments = prev.courseAssignments || []
-      const exists = assignments.includes(courseId)
-      if (!exists && courseLimit && assignments.length >= courseLimit) {
-        toast({ title: 'Course limit reached for selected duration', status: 'warning' })
-        return prev
-      }
-      const nextAssignments = exists
-        ? assignments.filter((id) => id !== courseId)
-        : [...assignments, courseId]
-      return { ...prev, courseAssignments: nextAssignments }
+  const handleMonthlyAssignmentChange = (monthKey: string, courseId: string) => {
+    setMonthlyAssignments((prev) => ({
+      ...prev,
+      [monthKey]: courseId,
+    }))
+  }
+
+  const swapMonthlyAssignments = (fromIndex: number, toIndex: number) => {
+    setMonthlyAssignments((prev) => {
+      const next = { ...prev }
+      const fromKey = String(fromIndex + 1)
+      const toKey = String(toIndex + 1)
+      const temp = next[fromKey] || ''
+      next[fromKey] = next[toKey] || ''
+      next[toKey] = temp
+      return next
     })
   }
 
@@ -281,17 +352,20 @@ export const CreateOrganizationModal: React.FC<CreateOrganizationModalProps> = (
       if (!isUnique) throw new Error('Organization code is already in use')
       if (!form.programDuration) throw new Error('Program duration is required')
       if (!form.teamSize || form.teamSize <= 0) throw new Error('Cohort size must be greater than 0')
-      if (courseLimit && (form.courseAssignments?.length || 0) !== courseLimit) {
-        throw new Error(`Please assign exactly ${courseLimit} course(s) for the selected duration`)
+      if (courseLimit && emptyMonths.length) {
+        throw new Error(`Please assign a course for each of the ${courseLimit} month(s)`)
       }
 
       const invitations = validateInvitations()
 
       setIsSubmitting(true)
+      const assignmentArray = getAssignedCourseIdsFromMonthlyAssignments(monthlyAssignments, courseLimit)
       const organizationPayload: OrganizationRecord = {
         ...form,
         code: form.code.toUpperCase(),
-        courseAssignments: form.courseAssignments || [],
+        courseAssignments: assignmentArray,
+        monthlyCourseAssignments: monthlyAssignments,
+        courseAssignmentStructure: 'monthly',
         cohortStartDate: form.cohortStartDate,
         programDuration: form.programDuration,
       }
@@ -480,36 +554,153 @@ export const CreateOrganizationModal: React.FC<CreateOrganizationModalProps> = (
 
               <Box>
                 <Text fontWeight="medium" mb={2}>
-                  Course assignments
+                  Monthly course assignments
                 </Text>
                 {courseLimit === 0 ? (
                   <Text fontSize="sm" color="gray.600">
                     Select a program duration to enable course assignments.
                   </Text>
                 ) : null}
-                <Stack
-                  maxH="200px"
-                  overflowY="auto"
-                  borderWidth="1px"
-                  borderRadius="md"
-                  p={3}
-                  spacing={2}
-                >
-                  {courses.map((course) => (
-                    <Checkbox
-                      key={course.id}
-                      isChecked={form.courseAssignments?.includes(course.id)}
-                      onChange={() => handleCourseToggle(course.id)}
-                    >
-                      {course.title}
-                    </Checkbox>
-                  ))}
+                <Stack spacing={3}>
+                  {Array.from({ length: courseLimit }, (_, index) => {
+                    const monthNumber = index + 1
+                    const monthKey = String(monthNumber)
+                    const assignedCourse = monthlyAssignments[monthKey] || ''
+                    const dateRange = cohortStartDate
+                      ? (() => {
+                          const { startDate, endDate } = getMonthDateRange(cohortStartDate, index)
+                          return formatMonthRange(startDate, endDate)
+                        })()
+                      : undefined
+                    const isEmpty = !assignedCourse
+                    return (
+                      <Box key={monthKey} borderWidth="1px" borderRadius="lg" p={3} bg="gray.50">
+                        <Flex justify="space-between" align="center" mb={2}>
+                          <HStack spacing={2}>
+                            <Badge colorScheme={isEmpty ? 'red' : 'green'} borderRadius="full">
+                              Month {monthNumber}
+                            </Badge>
+                            {dateRange && (
+                              <Text fontSize="sm" color="gray.600">
+                                {dateRange}
+                              </Text>
+                            )}
+                          </HStack>
+                          <HStack spacing={1}>
+                            <IconButton
+                              aria-label="Move course up"
+                              size="sm"
+                              icon={<ChevronUp size={16} />}
+                              onClick={() => swapMonthlyAssignments(index, index - 1)}
+                              isDisabled={index === 0}
+                              variant="ghost"
+                            />
+                            <IconButton
+                              aria-label="Move course down"
+                              size="sm"
+                              icon={<ChevronDown size={16} />}
+                              onClick={() => swapMonthlyAssignments(index, index + 1)}
+                              isDisabled={index === courseLimit - 1}
+                              variant="ghost"
+                            />
+                          </HStack>
+                        </Flex>
+                        <Select
+                          placeholder="Select course"
+                          value={assignedCourse}
+                          onChange={(e) => handleMonthlyAssignmentChange(monthKey, e.target.value)}
+                          bg="white"
+                        >
+                          {courses.map((course) => (
+                            <option key={course.id} value={course.id}>
+                              {course.title}
+                            </option>
+                          ))}
+                        </Select>
+                        {isEmpty && (
+                          <Text fontSize="xs" color="red.500" mt={2}>
+                            Course assignment required for this month.
+                          </Text>
+                        )}
+                      </Box>
+                    )
+                  })}
                 </Stack>
                 <Text mt={2} fontSize="sm" color={remainingCourses > 0 ? 'gray.600' : 'green.500'}>
                   {courseLimit === 0
                     ? 'Select a program duration to assign courses'
                     : `${Math.max(remainingCourses, 0)} course(s) remaining to assign`}
                 </Text>
+                {duplicateCourses.length > 0 && (
+                  <Alert status="warning" mt={3} borderRadius="md">
+                    <AlertIcon />
+                    Duplicate courses assigned for multiple months: {duplicateCourses.join(', ')}.
+                  </Alert>
+                )}
+                {emptyMonths.length > 0 && courseLimit > 0 && (
+                  <Alert status="error" mt={3} borderRadius="md">
+                    <AlertIcon />
+                    {emptyMonths.length} month(s) still need course assignments.
+                  </Alert>
+                )}
+                {courseLimit > 0 && (
+                  <Box mt={4} borderWidth="1px" borderRadius="lg" p={3} bg="white">
+                    <HStack justify="space-between" mb={2}>
+                      <Text fontWeight="semibold">Monthly breakdown summary</Text>
+                      <HStack spacing={2} color="purple.600">
+                        <Eye size={16} />
+                        <Text fontSize="sm">Admin preview</Text>
+                      </HStack>
+                    </HStack>
+                    <Stack spacing={2}>
+                      {monthlySummary.map((entry) => (
+                        <Flex key={entry.month} justify="space-between" align="center">
+                          <Text fontWeight="medium">Month {entry.month}</Text>
+                          <Text color={entry.courseId ? 'gray.700' : 'red.500'}>{entry.title}</Text>
+                        </Flex>
+                      ))}
+                    </Stack>
+                  </Box>
+                )}
+                {courseLimit > 0 && (
+                  <Box mt={4} borderWidth="1px" borderRadius="lg" p={3} bg="gray.50">
+                    <Text fontWeight="semibold" mb={2}>
+                      Learner dashboard preview
+                    </Text>
+                    <Stack spacing={2}>
+                      {Array.from({ length: courseLimit }, (_, index) => {
+                        const monthNumber = index + 1
+                        const courseId = monthlyAssignments[String(monthNumber)] || ''
+                        const availability = getMonthAvailabilityStatus({
+                          cohortStartDate,
+                          currentDate: new Date(),
+                          monthIndex: index,
+                        })
+                        const label =
+                          availability === 'current'
+                            ? 'Current month'
+                            : availability === 'completed'
+                              ? 'Completed'
+                              : 'Locked'
+                        return (
+                          <Flex key={monthNumber} justify="space-between" align="center" p={2} bg="white" borderRadius="md">
+                            <Text fontWeight="medium">Month {monthNumber}</Text>
+                            <HStack spacing={2}>
+                              <Badge colorScheme={availability === 'current' ? 'green' : availability === 'completed' ? 'purple' : 'gray'}>
+                                {label}
+                              </Badge>
+                              <Text fontSize="sm" color="gray.600">
+                                {courseId
+                                  ? courses.find((course) => course.id === courseId)?.title || courseId
+                                  : 'Unassigned'}
+                              </Text>
+                            </HStack>
+                          </Flex>
+                        )
+                      })}
+                    </Stack>
+                  </Box>
+                )}
               </Box>
 
               <Grid templateColumns={{ base: '1fr', md: 'repeat(3, 1fr)' }} gap={4}>

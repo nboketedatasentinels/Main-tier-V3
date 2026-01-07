@@ -9,6 +9,9 @@ import {
   CardHeader,
   Center,
   chakra,
+  Alert,
+  AlertIcon,
+  Checkbox,
   Divider,
   Flex,
   FormControl,
@@ -50,6 +53,7 @@ import {
   ChevronRight,
   CreditCard,
   Edit,
+  ExternalLink,
   Github,
   Heart,
   Key,
@@ -96,6 +100,7 @@ import type { StandardRole, Organization } from '@/types'
 import { TransformationTier } from '@/types'
 import { normalizeRole } from '@/utils/role'
 import { validateCompanyCode } from '@/services/organizationService'
+import { CORE_VALUES } from '@/config/personality-data'
 
 interface ProfileData {
   id: string
@@ -107,6 +112,8 @@ interface ProfileData {
   profilePictureUrl?: string
   personalityType?: string
   coreValues: string[]
+  hasCompletedPersonalityTest?: boolean
+  hasCompletedValuesTest?: boolean
   bio?: string
   socialLinks: {
     linkedin?: string
@@ -151,16 +158,7 @@ const personalityTypes = [
   'ESFP',
 ]
 
-const coreValueOptions = [
-  'Innovation',
-  'Integrity',
-  'Excellence',
-  'Collaboration',
-  'Customer Focus',
-  'Accountability',
-  'Adaptability',
-  'Leadership',
-]
+const coreValueOptions = CORE_VALUES
 
 const roleDisplayMap: Record<StandardRole, string> = {
   user: 'Member',
@@ -285,6 +283,9 @@ export const ProfilePage: React.FC = () => {
   const [companyCodeChecking, setCompanyCodeChecking] = useState(false)
   const [companyOrganization, setCompanyOrganization] = useState<Organization | null>(null)
   const [companyCodeSaving, setCompanyCodeSaving] = useState(false)
+  const [personalityTestError, setPersonalityTestError] = useState<string | null>(null)
+  const [valuesTestError, setValuesTestError] = useState<string | null>(null)
+  const [personalityFormError, setPersonalityFormError] = useState<string | null>(null)
 
   const buildProfileFromDoc = useCallback(
     (docData: Record<string, unknown>): ProfileData => ({
@@ -307,6 +308,14 @@ export const ProfilePage: React.FC = () => {
         (typeof docData.personalityType === 'string' ? docData.personalityType : undefined) ||
         (typeof docData.personality_type === 'string' ? docData.personality_type : undefined),
       coreValues: (docData.coreValues as string[]) || (docData.core_values as string[]) || [],
+      hasCompletedPersonalityTest:
+        (typeof docData.hasCompletedPersonalityTest === 'boolean'
+          ? docData.hasCompletedPersonalityTest
+          : profile?.hasCompletedPersonalityTest) || false,
+      hasCompletedValuesTest:
+        (typeof docData.hasCompletedValuesTest === 'boolean'
+          ? docData.hasCompletedValuesTest
+          : profile?.hasCompletedValuesTest) || false,
       bio: (typeof docData.bio === 'string' && docData.bio) || '',
       socialLinks: (docData.socialLinks as Record<string, string>) ||
         (docData.social_media_links as Record<string, string>) ||
@@ -320,7 +329,7 @@ export const ProfilePage: React.FC = () => {
       villageName: docData.villageName as string,
       clusterName: docData.clusterName as string,
     }),
-    [profile?.role, profile?.membershipStatus]
+    [profile?.role, profile?.membershipStatus, profile?.hasCompletedPersonalityTest, profile?.hasCompletedValuesTest]
   )
 
   const fetchUserProfile = useCallback(async () => {
@@ -475,9 +484,10 @@ export const ProfilePage: React.FC = () => {
     const hasValue = editedData.coreValues.includes(value)
     if (hasValue) {
       setEditedData({ ...editedData, coreValues: editedData.coreValues.filter((item) => item !== value) })
-    } else if (editedData.coreValues.length < 3) {
+    } else if (editedData.coreValues.length < 5) {
       setEditedData({ ...editedData, coreValues: [...editedData.coreValues, value] })
     }
+    setPersonalityFormError(null)
   }
 
   const handleProfilePictureChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -499,6 +509,33 @@ export const ProfilePage: React.FC = () => {
     if (!user || !editedData) return
     setIsSaving(true)
     setError(null)
+    setPersonalityTestError(null)
+    setValuesTestError(null)
+    setPersonalityFormError(null)
+
+    if (!editedData.hasCompletedPersonalityTest || !editedData.hasCompletedValuesTest) {
+      if (!editedData.hasCompletedPersonalityTest) {
+        setPersonalityTestError('Please confirm you have taken the 16 Personalities test.')
+      }
+      if (!editedData.hasCompletedValuesTest) {
+        setValuesTestError('Please confirm you have taken the Personal Values test.')
+      }
+      window.alert('Please confirm you have completed the required tests before saving.')
+      setIsSaving(false)
+      return
+    }
+
+    if (!editedData.personalityType) {
+      setPersonalityFormError('Please select your personality type.')
+      setIsSaving(false)
+      return
+    }
+
+    if (editedData.coreValues.length !== 5) {
+      setPersonalityFormError('Please select exactly 5 core values.')
+      setIsSaving(false)
+      return
+    }
     try {
       const uploadedUrl = await uploadProfilePicture()
       const payload = {
@@ -506,17 +543,35 @@ export const ProfilePage: React.FC = () => {
         email: editedData.email,
         personalityType: editedData.personalityType || null,
         coreValues: editedData.coreValues,
+        hasCompletedPersonalityTest: editedData.hasCompletedPersonalityTest ?? false,
+        hasCompletedValuesTest: editedData.hasCompletedValuesTest ?? false,
         profilePictureUrl: uploadedUrl || editedData.profilePictureUrl || null,
         bio: editedData.bio || '',
         socialLinks: editedData.socialLinks,
         leaderboardVisibility: editedData.leaderboardVisibility,
         updatedAt: serverTimestamp(),
       }
-      await updateDoc(doc(db, 'profiles', user.uid), payload)
+      await Promise.all([
+        updateDoc(doc(db, 'profiles', user.uid), payload),
+        updateDoc(doc(db, 'users', user.uid), {
+          personalityType: payload.personalityType,
+          coreValues: payload.coreValues,
+          hasCompletedPersonalityTest: payload.hasCompletedPersonalityTest,
+          hasCompletedValuesTest: payload.hasCompletedValuesTest,
+          updatedAt: serverTimestamp(),
+        }),
+      ])
       const updatedProfile = { ...editedData, profilePictureUrl: uploadedUrl || editedData.profilePictureUrl }
       setProfileData(updatedProfile)
       setEditedData(updatedProfile)
       setIsEditing(false)
+      toast({
+        title: 'Profile updated',
+        description: 'Your profile details were saved successfully.',
+        status: 'success',
+        duration: 4000,
+        isClosable: true,
+      })
     } catch (err) {
       console.error(err)
       setError('Unable to save your profile. Please try again.')
@@ -530,6 +585,9 @@ export const ProfilePage: React.FC = () => {
     setEditedData(profileData)
     setProfilePictureFile(null)
     setPreviewUrl(null)
+    setPersonalityTestError(null)
+    setValuesTestError(null)
+    setPersonalityFormError(null)
   }
 
   const reauthenticateUser = async (currentUser: FirebaseUser, password: string) => {
@@ -900,30 +958,116 @@ export const ProfilePage: React.FC = () => {
 
                       <FormControl>
                         <FormLabel>Personality Type</FormLabel>
+                        {isEditing && (
+                          <Alert status="info" borderRadius="lg" mb={3} bg="blue.50" border="1px solid" borderColor="blue.200">
+                            <HStack align="start" spacing={3}>
+                              <AlertIcon color="blue.500" mt={1} />
+                              <VStack align="start" spacing={2}>
+                                <Text fontWeight="semibold" color="blue.800">
+                                  Required: Take the test first
+                                </Text>
+                                <Button
+                                  as={Link}
+                                  href="https://www.16personalities.com/free-personality-test"
+                                  isExternal
+                                  variant="outline"
+                                  colorScheme="blue"
+                                  rightIcon={<Icon as={ExternalLink} />}
+                                  size="sm"
+                                >
+                                  Take the 16 Personalities test
+                                </Button>
+                                <Checkbox
+                                  isChecked={Boolean(editedData.hasCompletedPersonalityTest)}
+                                  onChange={(e) => {
+                                    handleInputChange('hasCompletedPersonalityTest', e.target.checked)
+                                    setPersonalityTestError(null)
+                                  }}
+                                >
+                                  I have completed the 16 Personalities test
+                                </Checkbox>
+                                {personalityTestError && (
+                                  <Text fontSize="sm" color="red.500">
+                                    {personalityTestError}
+                                  </Text>
+                                )}
+                              </VStack>
+                            </HStack>
+                          </Alert>
+                        )}
                         {!isEditing ? (
                           <HStack spacing={2} color="brand.text">
                             <Icon as={Brain} />
                             <Text>{profileData.personalityType || 'Not set'}</Text>
                           </HStack>
                         ) : (
-                          <chakra.select
-                            value={editedData.personalityType || ''}
-                            onChange={(e) => handleInputChange('personalityType', e.target.value)}
-                            className="chakra-select"
-                            style={{ padding: '12px', borderRadius: '12px', border: '1px solid #e6e8f3' }}
+                          <Tooltip
+                            label="Complete the 16 Personalities test to unlock this field."
+                            isDisabled={Boolean(editedData.hasCompletedPersonalityTest)}
+                            hasArrow
                           >
-                            <option value="">Select personality type</option>
-                            {personalityTypes.map((type) => (
-                              <option key={type} value={type}>
-                                {type}
-                              </option>
-                            ))}
-                          </chakra.select>
+                            <Box opacity={editedData.hasCompletedPersonalityTest ? 1 : 0.6}>
+                              <chakra.select
+                                value={editedData.personalityType || ''}
+                                onChange={(e) => {
+                                  handleInputChange('personalityType', e.target.value)
+                                  setPersonalityFormError(null)
+                                }}
+                                className="chakra-select"
+                                style={{ padding: '12px', borderRadius: '12px', border: '1px solid #e6e8f3' }}
+                                disabled={!editedData.hasCompletedPersonalityTest}
+                              >
+                                <option value="">Select personality type</option>
+                                {personalityTypes.map((type) => (
+                                  <option key={type} value={type}>
+                                    {type}
+                                  </option>
+                                ))}
+                              </chakra.select>
+                            </Box>
+                          </Tooltip>
                         )}
                       </FormControl>
 
                       <FormControl>
-                        <FormLabel>Core Values (up to 3)</FormLabel>
+                        <FormLabel>Core Values (select exactly 5)</FormLabel>
+                        {isEditing && (
+                          <Alert status="info" borderRadius="lg" mb={3} bg="blue.50" border="1px solid" borderColor="blue.200">
+                            <HStack align="start" spacing={3}>
+                              <AlertIcon color="blue.500" mt={1} />
+                              <VStack align="start" spacing={2}>
+                                <Text fontWeight="semibold" color="blue.800">
+                                  Required: Take the test first
+                                </Text>
+                                <Button
+                                  as={Link}
+                                  href="https://personalvalu.es/"
+                                  isExternal
+                                  variant="outline"
+                                  colorScheme="blue"
+                                  rightIcon={<Icon as={ExternalLink} />}
+                                  size="sm"
+                                >
+                                  Take the Personal Values test
+                                </Button>
+                                <Checkbox
+                                  isChecked={Boolean(editedData.hasCompletedValuesTest)}
+                                  onChange={(e) => {
+                                    handleInputChange('hasCompletedValuesTest', e.target.checked)
+                                    setValuesTestError(null)
+                                  }}
+                                >
+                                  I have completed the Personal Values test
+                                </Checkbox>
+                                {valuesTestError && (
+                                  <Text fontSize="sm" color="red.500">
+                                    {valuesTestError}
+                                  </Text>
+                                )}
+                              </VStack>
+                            </HStack>
+                          </Alert>
+                        )}
                         {!isEditing ? (
                           <HStack spacing={2} flexWrap="wrap">
                             {profileData.coreValues.length === 0 ? (
@@ -940,30 +1084,48 @@ export const ProfilePage: React.FC = () => {
                             )}
                           </HStack>
                         ) : (
-                          <Grid templateColumns={{ base: 'repeat(2, 1fr)', md: 'repeat(4, 1fr)' }} gap={3}>
-                            {coreValueOptions.map((value) => {
-                              const selected = editedData.coreValues.includes(value)
-                              const disabled = !selected && editedData.coreValues.length >= 3
-                              return (
-                                <Box
-                                  key={value}
-                                  border="1px solid"
-                                  borderColor={selected ? 'yellow.400' : 'brand.border'}
-                                  bg={selected ? 'yellow.50' : 'white'}
-                                  rounded="lg"
-                                  p={3}
-                                  cursor={disabled ? 'not-allowed' : 'pointer'}
-                                  opacity={disabled ? 0.5 : 1}
-                                  onClick={() => !disabled && handleCoreValueToggle(value)}
-                                >
-                                  <HStack spacing={2}>
-                                    <Icon as={Heart} color={selected ? 'yellow.500' : 'brand.subtleText'} />
-                                    <Text fontWeight="medium">{value}</Text>
-                                  </HStack>
-                                </Box>
-                              )
-                            })}
-                          </Grid>
+                          <Tooltip
+                            label="Complete the Personal Values test to unlock this section."
+                            isDisabled={Boolean(editedData.hasCompletedValuesTest)}
+                            hasArrow
+                          >
+                            <Box opacity={editedData.hasCompletedValuesTest ? 1 : 0.6}>
+                              <Grid templateColumns={{ base: 'repeat(2, 1fr)', md: 'repeat(4, 1fr)' }} gap={3}>
+                                {coreValueOptions.map((value) => {
+                                  const selected = editedData.coreValues.includes(value)
+                                  const disabled =
+                                    !editedData.hasCompletedValuesTest ||
+                                    (!selected && editedData.coreValues.length >= 5)
+                                  return (
+                                    <Box
+                                      key={value}
+                                      border="1px solid"
+                                      borderColor={selected ? 'yellow.400' : 'brand.border'}
+                                      bg={selected ? 'yellow.50' : 'white'}
+                                      rounded="lg"
+                                      p={3}
+                                      cursor={disabled ? 'not-allowed' : 'pointer'}
+                                      opacity={disabled ? 0.5 : 1}
+                                      onClick={() => !disabled && handleCoreValueToggle(value)}
+                                    >
+                                      <HStack spacing={2}>
+                                        <Icon as={Heart} color={selected ? 'yellow.500' : 'brand.subtleText'} />
+                                        <Text fontWeight="medium">{value}</Text>
+                                      </HStack>
+                                    </Box>
+                                  )
+                                })}
+                              </Grid>
+                              <Text fontSize="xs" color="brand.subtleText" textAlign="right" mt={2}>
+                                {editedData.coreValues.length}/5 values selected
+                              </Text>
+                            </Box>
+                          </Tooltip>
+                        )}
+                        {personalityFormError && (
+                          <Text fontSize="sm" color="red.500" mt={2}>
+                            {personalityFormError}
+                          </Text>
                         )}
                       </FormControl>
 

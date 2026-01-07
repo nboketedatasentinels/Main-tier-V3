@@ -6,6 +6,7 @@ import { Spinner, useToast } from "@chakra-ui/react"
 import { sendEmailVerification } from "firebase/auth"
 import { useAuth } from "@/hooks/useAuth"
 import { getFriendlyErrorMessage } from "@/utils/authErrors"
+import { buildActionCodeSettings } from "@/utils/authActionCodeSettings"
 import { validateCompanyCode } from "@/services/organizationService"
 import { auth } from "@/services/firebase"
 import { GenderOption, Organization, UserRole } from "@/types"
@@ -211,7 +212,7 @@ export const SignUpPage: React.FC = () => {
         return
       }
 
-      await sendEmailVerification(currentUser)
+      await sendEmailVerification(currentUser, buildActionCodeSettings("/auth/verify-email"))
       setSuccessMessage("Confirmation email sent! Check your inbox.")
       setLastVerificationSent(Date.now())
     } catch (err) {
@@ -230,6 +231,13 @@ export const SignUpPage: React.FC = () => {
       return
     }
 
+    const pendingCode = formData.companyCode.trim().toUpperCase()
+    if (pendingCode && companyCodeValid) {
+      localStorage.setItem('t4l.pendingCompanyCode', pendingCode)
+    } else {
+      localStorage.removeItem('t4l.pendingCompanyCode')
+    }
+
     setGoogleLoading(true)
     try {
       const { error: googleError, isNewUser, redirect } = await signInWithGoogle()
@@ -245,6 +253,14 @@ export const SignUpPage: React.FC = () => {
       const currentUser = auth.currentUser
       if (currentUser?.uid && isNewUser) {
         localStorage.setItem(`t4l.newUserWelcome.${currentUser.uid}`, "pending")
+      }
+
+      if (isNewUser) {
+        setShowCompanyCodeModal(true)
+        setPendingGoogleNavigation(true)
+      } else {
+        setShowCompanyCodeModal(false)
+        setPendingGoogleNavigation(true)
       }
 
       toast({
@@ -533,8 +549,16 @@ export const SignUpPage: React.FC = () => {
       <CompanyCodeModal
         isOpen={showCompanyCodeModal}
         onClose={() => setShowCompanyCodeModal(false)}
-        onSkip={() => setShowCompanyCodeModal(false)}
-        onSuccess={() => setShowCompanyCodeModal(false)}
+        onSkip={() => {
+          setShowCompanyCodeModal(false)
+          setPendingGoogleNavigation(false)
+          navigate(getLandingPathForRole(profile ?? UserRole.FREE_USER), { replace: true })
+        }}
+        onSuccess={() => {
+          setShowCompanyCodeModal(false)
+          setPendingGoogleNavigation(false)
+          navigate(getLandingPathForRole(profile ?? UserRole.FREE_USER), { replace: true })
+        }}
       />
     </div>
   )

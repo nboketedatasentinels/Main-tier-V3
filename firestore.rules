@@ -298,6 +298,12 @@ service cloud.firestore {
       );
     }
 
+    match /tutorial_completions/{completionId} {
+      allow read: if isAuthenticated() && request.auth.uid == resource.data.user_id;
+      allow create: if isAuthenticated() && request.auth.uid == request.resource.data.user_id;
+      allow update, delete: if isAuthenticated() && request.auth.uid == resource.data.user_id;
+    }
+
     // Leaderboard collection (read-only for users, write for admins)
     match /leaderboard/{entryId} {
       allow read: if isAuthenticated();

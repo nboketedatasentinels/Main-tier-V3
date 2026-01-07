@@ -2,7 +2,7 @@ import React, { useEffect, useMemo, useRef, useState } from 'react'
 import { Link as RouterLink, useNavigate } from 'react-router-dom'
 import { Crown, Lock, Menu, X } from 'lucide-react'
 import { useAuth } from '@/hooks/useAuth'
-import { UserRole } from '@/types'
+import { isFreeUser } from '@/utils/membership'
 
 type HeaderProps = {
   topOffset?: string
@@ -23,8 +23,7 @@ export const Header: React.FC<HeaderProps> = ({ topOffset = '0' }) => {
   const dialogRef = useRef<HTMLDivElement | null>(null)
 
   const isAuthed = !!user
-  const role = profile?.role
-  const showUpgrade = isAuthed && role === UserRole.FREE_USER
+  const showUpgrade = isAuthed && isFreeUser(profile)
 
   const collapseProgress = useMemo(() => clamp(scrollY / 120, 0, 1), [scrollY])
   const dynamicPaddingY = 24 - (24 - 12) * collapseProgress

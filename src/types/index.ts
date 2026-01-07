@@ -2,6 +2,7 @@
 import { UserRole, ALL_STANDARD_ROLES } from './roles';
 import type { StandardRole, AllRoles } from './roles';
 export * from './admin'
+export * from './tutorials'
 
 export { UserRole, ALL_STANDARD_ROLES };
 export type { StandardRole, AllRoles };
@@ -102,6 +103,8 @@ export interface UserProfile {
   isOnboarded: boolean
   fcmTokens?: string[]
   personalityType?: string
+  hasCompletedPersonalityTest?: boolean
+  hasCompletedValuesTest?: boolean
   privacySettings?: PrivacySettings
 
   // Timestamps
