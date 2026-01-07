@@ -31,6 +31,7 @@ T4L (Transformation 4 Leaders) is a full-stack web application designed to facil
 - **Firebase** (Firestore) for database and authentication
 - **Firebase Cloud Functions** for serverless logic
 - **Firebase Storage** for file uploads
+- Nudge system collections stored in Firestore (`nudge_templates`, `nudges_sent`, `nudge_effectiveness`, `nudge_campaigns`)
 - Real-time subscriptions
 
 ### Payments & Email
@@ -166,6 +167,15 @@ The platform supports six distinct user roles:
 - Input validation and sanitization
 - Encrypted data at rest and in transit
 - Secure authentication flows with Firebase Auth
+
+## 🛠️ Nudge System Troubleshooting
+
+If the nudge templates or campaigns fail to load:
+
+1. Confirm Firebase environment variables are set in `.env` and match your project.
+2. Verify Firestore security rules include access to `nudge_templates`, `nudges_sent`, `nudge_effectiveness`, and `nudge_campaigns`.
+3. Ensure Firestore indexes exist for common nudge queries (see `database/firestore-schema.md`).
+4. Seed starter templates with `node scripts/seed-nudge-templates.mjs` if the collection is empty.
 
 ## 📝 Development Scripts
 

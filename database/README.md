@@ -22,6 +22,10 @@ This directory contains the complete database schema for the T4L platform using 
 - **villages** - Community groups
 - **companies** - Organization profiles
 - **events** - Platform events
+- **nudge_templates** - Reusable outreach templates
+- **nudges_sent** - Nudge delivery audit trail
+- **nudge_effectiveness** - Engagement lift measurements
+- **nudge_campaigns** - Campaign tracking
 
 ### Subcollections (under profiles/{userId}/)
 - **userJourneys** - User enrollment in journeys
@@ -78,3 +82,13 @@ node scripts/migrations/cleanup-onboarding.mjs
 - Sets `isOnboarded` to `true` for all profiles and removes any `onboardingSnapshot` and `dashboardTourCompleted` fields.
 - Deletes all documents in `onboarding_steps`, `onboarding_progress`, and `onboarding_analytics`.
 - Removes `user_points` records where `source` contains "onboarding".
+
+## Nudge template seed data
+
+Use `scripts/seed-nudge-templates.mjs` to create starter templates with personalization tokens:
+
+```bash
+node scripts/seed-nudge-templates.mjs
+```
+
+The script uses the same Firebase Admin credentials as other migrations. It skips templates that already exist by name.

@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react'
+import React, { useCallback, useEffect, useMemo, useState } from 'react'
 import {
   Badge,
   Box,
@@ -67,19 +67,30 @@ export const PartnerAdminDashboard: React.FC = () => {
   type PartnerPageKey = 'overview' | 'users' | 'job-board' | 'grants' | 'organization-management' | 'at-risk'
   const [activePage, setActivePage] = useState<PartnerPageKey>('overview')
   const [activeTemplates, setActiveTemplates] = useState<NudgeTemplateRecord[]>([])
+  const [templateLoadError, setTemplateLoadError] = useState<string | null>(null)
+  const [templateLoading, setTemplateLoading] = useState(false)
+
+  const loadTemplates = useCallback(async () => {
+    setTemplateLoading(true)
+    setTemplateLoadError(null)
+    try {
+      const templates = await getActiveNudgeTemplates()
+      setActiveTemplates(templates)
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Unknown error'
+      console.error('Failed to load nudge templates', error)
+      setActiveTemplates([])
+      setTemplateLoadError(
+        `Nudge templates could not be loaded. Please confirm your Firebase configuration and Firestore access. (${message})`,
+      )
+    } finally {
+      setTemplateLoading(false)
+    }
+  }, [])
 
   useEffect(() => {
-    const loadTemplates = async () => {
-      try {
-        const templates = await getActiveNudgeTemplates()
-        setActiveTemplates(templates)
-      } catch (error) {
-        console.error('Failed to load nudge templates', error)
-      }
-    }
-
     void loadTemplates()
-  }, [])
+  }, [loadTemplates])
 
   useEffect(() => {
     if (enableProfileRealtime) return
@@ -391,6 +402,30 @@ export const PartnerAdminDashboard: React.FC = () => {
 
       <Card bg="white" border="1px solid" borderColor="brand.border">
         <CardBody>
+          {templateLoadError ? (
+            <Stack
+              spacing={3}
+              p={4}
+              mb={4}
+              border="1px solid"
+              borderColor="red.200"
+              bg="red.50"
+              borderRadius="lg"
+            >
+              <Text fontWeight="semibold" color="red.700">Nudge templates unavailable</Text>
+              <Text fontSize="sm" color="red.700">
+                {templateLoadError} If the issue persists, contact support at {supportEmail}.
+              </Text>
+              <HStack>
+                <Button size="sm" colorScheme="red" onClick={() => void loadTemplates()} isLoading={templateLoading}>
+                  Retry
+                </Button>
+                <Button size="sm" variant="outline" onClick={() => setTemplateLoadError(null)}>
+                  Dismiss
+                </Button>
+              </HStack>
+            </Stack>
+          ) : null}
           <NudgeControlPanel users={atRiskUsers} templates={activeTemplates} />
         </CardBody>
       </Card>

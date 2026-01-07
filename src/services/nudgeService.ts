@@ -6,7 +6,7 @@ import {
   logNudgeEffectiveness,
   logNudgeSent,
   updateNudgeTemplate,
-} from '@/services/boltClient'
+} from '@/services/firebaseNudgeService'
 import type {
   NudgeAutomationRule,
   NudgeCampaignRecord,
@@ -27,7 +27,7 @@ export const getAllNudgeTemplates = async () => {
 }
 
 export const toggleTemplateStatus = async (id: string, isActive: boolean) => {
-  return updateNudgeTemplate(id, { is_active: isActive, updated_at: new Date().toISOString() })
+  return updateNudgeTemplate(id, { is_active: isActive })
 }
 
 const buildPersonalizedMessage = (message: string, tokens: NudgePersonalizationTokens) => {
