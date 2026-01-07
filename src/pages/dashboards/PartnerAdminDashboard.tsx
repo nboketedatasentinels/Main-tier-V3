@@ -14,16 +14,22 @@ import {
   VStack,
 } from '@chakra-ui/react'
 import { Bell, Building2, Gauge, Sparkles, Users } from 'lucide-react'
+import { useNavigate } from 'react-router-dom'
 import { MetricCard } from '@/components/admin/MetricCard'
 import { EngagementChart } from '@/components/admin/EngagementChart'
 import { RiskAnalysisCard } from '@/components/admin/RiskAnalysisCard'
 import { StatusBadge } from '@/components/admin/StatusBadge'
+import { OrganizationCard } from '@/components/admin/OrganizationCard'
 import PartnerDashboardLayout from '@/layouts/PartnerDashboardLayout'
 import { PartnerInterventionPanel } from '@/components/partner/PartnerInterventionPanel'
 import { PartnerUserManagement } from '@/components/partner/PartnerUserManagement'
 import { usePartnerDashboardData } from '@/hooks/usePartnerDashboardData'
+import { useAuth } from '@/hooks/useAuth'
+import { logOrganizationAccessAttempt } from '@/services/organizationService'
 
 export const PartnerAdminDashboard: React.FC = () => {
+  const navigate = useNavigate()
+  const { isSuperAdmin, user } = useAuth()
   const {
     assignedOrgCount,
     engagementTrend,
@@ -42,12 +48,17 @@ export const PartnerAdminDashboard: React.FC = () => {
     notificationCount,
   } = usePartnerDashboardData()
 
-  type PartnerPageKey = 'overview' | 'users' | 'job-board' | 'grants'
+  type PartnerPageKey = 'overview' | 'users' | 'job-board' | 'grants' | 'organization-management'
   const [activePage, setActivePage] = useState<PartnerPageKey>('overview')
 
   const partnerNavItems = [
     { key: 'overview', label: 'Overview', description: 'Metrics & trends' },
     { key: 'users', label: 'Users', description: 'Learners & leaders' },
+    {
+      key: 'organization-management',
+      label: 'Organisation Management',
+      description: 'Assigned organisations',
+    },
     { key: 'job-board', label: 'Job Board', description: 'Opportunities' },
     { key: 'grants', label: 'Grants & Funding', description: 'Partner resources' },
   ]
@@ -84,6 +95,42 @@ export const PartnerAdminDashboard: React.FC = () => {
     admins: 1,
     change: `+${org.newThisWeek}`,
   }))
+
+  const organizationSummary = useMemo(() => {
+    return organizations.reduce(
+      (acc, org) => {
+        acc.totalActiveUsers += org.activeUsers
+        switch (org.status) {
+          case 'active':
+            acc.active += 1
+            break
+          case 'watch':
+            acc.watch += 1
+            break
+          case 'paused':
+            acc.paused += 1
+            break
+          default:
+            break
+        }
+        return acc
+      },
+      { active: 0, watch: 0, paused: 0, totalActiveUsers: 0 },
+    )
+  }, [organizations])
+
+  const handleViewOrganization = (orgCode: string) => {
+    const allowed = isSuperAdmin || organizations.some(org => org.code.toLowerCase() === orgCode.toLowerCase())
+    if (!allowed && user?.uid) {
+      void logOrganizationAccessAttempt({
+        userId: user.uid,
+        organizationCode: orgCode,
+        reason: 'partner_dashboard_navigation',
+      })
+      return
+    }
+    navigate(`/admin/organization/${orgCode}`)
+  }
 
   const renderOverview = () => (
     <Stack spacing={8}>
@@ -403,10 +450,126 @@ export const PartnerAdminDashboard: React.FC = () => {
     </Stack>
   )
 
+  const renderOrganizationManagementPage = () => (
+    <Stack spacing={6}>
+      <Card bg="white" border="1px solid" borderColor="brand.border">
+        <CardBody>
+          <Stack spacing={4}>
+            <HStack justify="space-between" align="center" wrap="wrap" spacing={3}>
+              <VStack align="flex-start" spacing={1}>
+                <Text fontWeight="bold" color="brand.text">
+                  Assigned organization overview
+                </Text>
+                <Text fontSize="sm" color="brand.subtleText">
+                  Summary of scoped organizations and active learner engagement.
+                </Text>
+              </VStack>
+              <HStack spacing={3}>
+                <Badge colorScheme="purple">Scoped access</Badge>
+                <Badge colorScheme="green">Real-time data</Badge>
+              </HStack>
+            </HStack>
+            <SimpleGrid columns={{ base: 1, md: 2, xl: 5 }} spacing={3}>
+              <Box p={3} borderRadius="md" border="1px solid" borderColor="brand.border" bg="brand.accent">
+                <Text fontSize="xs" color="brand.subtleText">
+                  Total assigned
+                </Text>
+                <Text fontWeight="bold" color="brand.text" fontSize="2xl">
+                  {organizations.length}
+                </Text>
+              </Box>
+              <Box p={3} borderRadius="md" border="1px solid" borderColor="brand.border" bg="brand.accent">
+                <Text fontSize="xs" color="brand.subtleText">
+                  Active organizations
+                </Text>
+                <HStack justify="space-between" align="center">
+                  <Text fontWeight="bold" color="brand.text" fontSize="2xl">
+                    {organizationSummary.active}
+                  </Text>
+                  <Badge colorScheme="green">Active</Badge>
+                </HStack>
+              </Box>
+              <Box p={3} borderRadius="md" border="1px solid" borderColor="brand.border" bg="brand.accent">
+                <Text fontSize="xs" color="brand.subtleText">
+                  Watch organizations
+                </Text>
+                <HStack justify="space-between" align="center">
+                  <Text fontWeight="bold" color="brand.text" fontSize="2xl">
+                    {organizationSummary.watch}
+                  </Text>
+                  <Badge colorScheme="orange">Watch</Badge>
+                </HStack>
+              </Box>
+              <Box p={3} borderRadius="md" border="1px solid" borderColor="brand.border" bg="brand.accent">
+                <Text fontSize="xs" color="brand.subtleText">
+                  Paused organizations
+                </Text>
+                <HStack justify="space-between" align="center">
+                  <Text fontWeight="bold" color="brand.text" fontSize="2xl">
+                    {organizationSummary.paused}
+                  </Text>
+                  <Badge colorScheme="red">Paused</Badge>
+                </HStack>
+              </Box>
+              <Box p={3} borderRadius="md" border="1px solid" borderColor="brand.border" bg="brand.accent">
+                <Text fontSize="xs" color="brand.subtleText">
+                  Total active users
+                </Text>
+                <Text fontWeight="bold" color="brand.text" fontSize="2xl">
+                  {organizationSummary.totalActiveUsers}
+                </Text>
+              </Box>
+            </SimpleGrid>
+          </Stack>
+        </CardBody>
+      </Card>
+
+      <Card bg="white" border="1px solid" borderColor="brand.border">
+        <CardBody>
+          <Stack spacing={4}>
+            <HStack justify="space-between" align="center" wrap="wrap" spacing={3}>
+              <VStack align="flex-start" spacing={1}>
+                <Text fontWeight="bold" color="brand.text">
+                  Organisation Management
+                </Text>
+                <Text fontSize="sm" color="brand.subtleText">
+                  These organisations are assigned to your partner admin scope.
+                </Text>
+              </VStack>
+              <Badge colorScheme="purple">{organizations.length} assigned</Badge>
+            </HStack>
+            {organizations.length ? (
+              <SimpleGrid columns={{ base: 1, md: 2, xl: 3 }} spacing={3}>
+                {organizations.map(org => (
+                  <OrganizationCard
+                    key={org.code}
+                    name={org.name}
+                    status={org.status}
+                    activeUsers={org.activeUsers}
+                    newThisWeek={org.newThisWeek}
+                    onViewClick={() => handleViewOrganization(org.code)}
+                  />
+                ))}
+              </SimpleGrid>
+            ) : (
+              <Box p={4} borderRadius="md" border="1px solid" borderColor="brand.border" bg="brand.accent">
+                <Text color="brand.subtleText">
+                  No organizations have been assigned yet. Assigned organizations will appear here.
+                </Text>
+              </Box>
+            )}
+          </Stack>
+        </CardBody>
+      </Card>
+    </Stack>
+  )
+
   const renderPage = () => {
     switch (activePage) {
       case 'users':
         return renderUsersPage()
+      case 'organization-management':
+        return renderOrganizationManagementPage()
       case 'job-board':
         return renderJobBoardPage()
       case 'grants':
@@ -419,7 +582,7 @@ export const PartnerAdminDashboard: React.FC = () => {
 
   const handleNavigate = (key: string) => {
     const normalized = key as PartnerPageKey
-    if (['overview', 'users', 'job-board', 'grants'].includes(normalized)) {
+    if (['overview', 'users', 'job-board', 'grants', 'organization-management'].includes(normalized)) {
       setActivePage(normalized)
     } else {
       setActivePage('overview')

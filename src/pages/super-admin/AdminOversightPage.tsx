@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useMemo, useState } from 'react'
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import {
   Alert,
   AlertIcon,
@@ -38,8 +38,8 @@ import {
   assignOrganizations,
   createAdminUser,
   deleteAdminUser,
-  fetchAdminUsers,
-  fetchOrganizations,
+  listenToAdminUsers,
+  listenToOrganizations,
   toggleAdminStatus,
   updateAdminUser,
 } from '@/services/superAdminService'
@@ -74,7 +74,8 @@ export const AdminOversightPage: React.FC<AdminOversightPageProps> = ({ adminNam
   const [admins, setAdmins] = useState<AdminUserRecord[]>([])
   const [organizations, setOrganizations] = useState<OrganizationRecord[]>([])
   const [selectedAdmin, setSelectedAdmin] = useState<AdminUserRecord | null>(null)
-  const [loading, setLoading] = useState(true)
+  const [loadingAdmins, setLoadingAdmins] = useState(true)
+  const [loadingOrganizations, setLoadingOrganizations] = useState(true)
   const [filters, setFilters] = useState({ role: 'all', status: 'all', organization: 'all' })
   const [searchTerm, setSearchTerm] = useState('')
   const [debouncedSearch, setDebouncedSearch] = useState('')
@@ -99,29 +100,91 @@ export const AdminOversightPage: React.FC<AdminOversightPageProps> = ({ adminNam
     setMetrics({ total, active, partners, mentors, ambassadors, teamLeaders })
   }, [])
 
+  const adminUpdateTimeout = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const orgUpdateTimeout = useRef<ReturnType<typeof setTimeout> | null>(null)
+
   useEffect(() => {
     const timer = setTimeout(() => setDebouncedSearch(searchTerm.toLowerCase()), 200)
     return () => clearTimeout(timer)
   }, [searchTerm])
 
-  const loadData = useCallback(async () => {
-    try {
-      setLoading(true)
-      const [adminList, orgList] = await Promise.all([fetchAdminUsers(), fetchOrganizations()])
-      setAdmins(adminList)
-      setOrganizations(orgList)
-      updateMetrics(adminList)
-    } catch (error) {
-      console.error(error)
-      toast({ title: 'Unable to load admin users', status: 'error' })
-    } finally {
-      setLoading(false)
-    }
-  }, [toast, updateMetrics])
+  const handleAdminUpdate = useCallback(
+    (adminList: AdminUserRecord[]) => {
+      if (adminUpdateTimeout.current) {
+        clearTimeout(adminUpdateTimeout.current)
+      }
+      adminUpdateTimeout.current = setTimeout(() => {
+        setAdmins(adminList)
+        updateMetrics(adminList)
+        setLoadingAdmins(false)
+      }, 120)
+    },
+    [updateMetrics],
+  )
 
   useEffect(() => {
-    loadData()
-  }, [loadData])
+    let isMounted = true
+    let retryTimeout: ReturnType<typeof setTimeout> | null = null
+    let unsubscribeAdmins: (() => void) | null = null
+    let unsubscribeOrganizations: (() => void) | null = null
+
+    const handleOrganizationUpdate = (orgList: OrganizationRecord[]) => {
+      if (orgUpdateTimeout.current) {
+        clearTimeout(orgUpdateTimeout.current)
+      }
+      orgUpdateTimeout.current = setTimeout(() => {
+        if (!isMounted) return
+        setOrganizations(orgList)
+        setLoadingOrganizations(false)
+      }, 120)
+    }
+
+    const scheduleReconnect = (source: string) => {
+      if (!isMounted || retryTimeout) return
+      retryTimeout = setTimeout(() => {
+        retryTimeout = null
+        if (!isMounted) return
+        setLoadingAdmins(true)
+        setLoadingOrganizations(true)
+        unsubscribeAdmins?.()
+        unsubscribeOrganizations?.()
+        subscribe()
+      }, 4000)
+      toast({
+        title: 'Real-time connection issue',
+        description: `Lost connection to ${source}. Retrying shortly...`,
+        status: 'error',
+      })
+    }
+
+    const subscribe = () => {
+      unsubscribeAdmins = listenToAdminUsers(handleAdminUpdate, (error) => {
+        console.error('Admin listener error', error)
+        scheduleReconnect('admin users')
+      })
+      unsubscribeOrganizations = listenToOrganizations(handleOrganizationUpdate, (error) => {
+        console.error('Organization listener error', error)
+        scheduleReconnect('organizations')
+      })
+    }
+
+    subscribe()
+
+    return () => {
+      isMounted = false
+      if (retryTimeout) {
+        clearTimeout(retryTimeout)
+      }
+      if (adminUpdateTimeout.current) {
+        clearTimeout(adminUpdateTimeout.current)
+      }
+      if (orgUpdateTimeout.current) {
+        clearTimeout(orgUpdateTimeout.current)
+      }
+      unsubscribeAdmins?.()
+      unsubscribeOrganizations?.()
+    }
+  }, [handleAdminUpdate, toast])
 
   const handleSort = (key: SortKey) => {
     if (sortKey === key) {
@@ -145,7 +208,6 @@ export const AdminOversightPage: React.FC<AdminOversightPageProps> = ({ adminNam
     try {
       await createAdminUser({ ...formData, createdBy: adminId, createdByName: adminName })
       toast({ title: 'Admin created', status: 'success' })
-      await loadData()
     } catch (error) {
       console.error(error)
       toast({ title: 'Failed to create admin', status: 'error' })
@@ -158,7 +220,6 @@ export const AdminOversightPage: React.FC<AdminOversightPageProps> = ({ adminNam
       await updateAdminUser(selectedAdmin.id, formData)
       await assignOrganizations(selectedAdmin.id, formData.assignedOrganizations || [])
       toast({ title: 'Admin updated', status: 'success' })
-      await loadData()
     } catch (error) {
       console.error(error)
       toast({ title: 'Failed to update admin', status: 'error' })
@@ -174,7 +235,6 @@ export const AdminOversightPage: React.FC<AdminOversightPageProps> = ({ adminNam
     try {
       await toggleAdminStatus(admin.id, nextStatus)
       toast({ title: `Admin ${nextStatus === 'active' ? 'activated' : 'suspended'}`, status: 'success' })
-      await loadData()
     } catch (error) {
       console.error(error)
       toast({ title: 'Failed to update status', status: 'error' })
@@ -189,7 +249,6 @@ export const AdminOversightPage: React.FC<AdminOversightPageProps> = ({ adminNam
       await deleteAdminUser(adminToDelete.id)
       toast({ title: 'Admin deleted', status: 'success' })
       setAdminToDelete(null)
-      await loadData()
     } catch (error) {
       console.error(error)
       toast({ title: 'Failed to delete admin', status: 'error' })
@@ -244,6 +303,7 @@ export const AdminOversightPage: React.FC<AdminOversightPageProps> = ({ adminNam
   const organizationName = (orgId: string) => organizations.find((org) => org.id === orgId)?.name || orgId
 
   const renderTableRows = () => {
+    const loading = loadingAdmins || loadingOrganizations
     if (loading) {
       return (
         <Tr>

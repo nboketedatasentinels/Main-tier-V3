@@ -2,7 +2,10 @@ import {
   Timestamp,
   addDoc,
   collection,
+  documentId,
   doc,
+  documentId,
+  FirestoreError,
   getDoc,
   getDocs,
   increment,
@@ -14,7 +17,16 @@ import {
 } from 'firebase/firestore'
 import { db } from './firebase'
 import { Organization } from '@/types'
-import { BulkInvitationResult, CourseOption, InvitationPayload, OrganizationLead, OrganizationRecord } from '@/types/admin'
+import {
+  BulkInvitationResult,
+  CourseOption,
+  OrganizationStatus,
+  InvitationPayload,
+  OrganizationLead,
+  OrganizationRecord,
+  OrganizationStatistics,
+  OrganizationUserProfile,
+} from '@/types/admin'
 import { inviteUsersBulk } from './invitationService'
 
 const safeCodeChars = '23456789ABCDEFGHJKLMNPQRSTUVWXYZ'
@@ -22,7 +34,33 @@ const safeCodeChars = '23456789ABCDEFGHJKLMNPQRSTUVWXYZ'
 const orgCollection = collection(db, 'organizations')
 const coursesCollection = collection(db, 'courses')
 const usersCollection = collection(db, 'users')
+const engagementCollection = collection(db, 'user_engagement_scores')
 const adminActivityCollection = collection(db, 'admin_activity_log')
+
+type OrganizationAccessAttemptPayload = {
+  userId: string
+  organizationId?: string
+  organizationCode?: string
+  reason?: string
+  metadata?: Record<string, unknown>
+}
+
+const chunkArray = <T>(items: T[], size = 10): T[][] => {
+  const chunks: T[][] = []
+  for (let i = 0; i < items.length; i += size) {
+    chunks.push(items.slice(i, i + size))
+  }
+  return chunks
+}
+
+const fetchAssignedOrganizationIds = async (userId: string): Promise<string[]> => {
+  if (!userId) return []
+  const userSnap = await getDoc(doc(usersCollection, userId))
+  if (!userSnap.exists()) return []
+  const data = userSnap.data() as { assignedOrganizations?: string[] }
+  if (!Array.isArray(data.assignedOrganizations)) return []
+  return data.assignedOrganizations.filter((orgId) => typeof orgId === 'string' && orgId.trim().length > 0)
+}
 
 export const generateOrganizationCode = (name: string) => {
   const validChars = name.toUpperCase().match(/[A-Z0-9]/g) ?? []
@@ -78,6 +116,19 @@ const normalizeTimestamp = (value?: Timestamp | string | Date): string => {
   if (value instanceof Date) return value.toISOString()
   if ('toDate' in value) return value.toDate().toISOString()
   return ''
+}
+
+const parseDateValue = (value?: Timestamp | string | Date | number): Date | null => {
+  if (!value) return null
+  if (value instanceof Date) return value
+  if (value instanceof Timestamp) return value.toDate()
+  if (typeof value === 'number') return new Date(value)
+  if (typeof value === 'string') {
+    const parsed = new Date(value)
+    return Number.isNaN(parsed.getTime()) ? null : parsed
+  }
+  const maybeDate = (value as { toDate?: () => Date })?.toDate?.()
+  return maybeDate || null
 }
 
 const normalizeOrganizationStatus = (status?: string): Organization['status'] => {
@@ -168,6 +219,38 @@ export const fetchOrganizationDetails = async (organizationId: string): Promise<
   return { id: docSnap.id, ...(docSnap.data() as Omit<OrganizationRecord, 'id'>) }
 }
 
+export const logOrganizationAccessAttempt = async ({
+  userId,
+  organizationId,
+  organizationCode,
+  reason,
+  metadata,
+}: OrganizationAccessAttemptPayload) => {
+  if (!userId) return
+  await addDoc(adminActivityCollection, {
+    action: 'organization_access_attempt',
+    adminId: userId,
+    userId,
+    organizationCode,
+    severity: 'watch',
+    metadata: {
+      organizationId,
+      reason,
+      ...metadata,
+    },
+    createdAt: serverTimestamp(),
+  })
+}
+
+export const fetchOrganizationByCode = async (organizationCode: string): Promise<OrganizationRecord | null> => {
+  if (!organizationCode) return null
+  const trimmed = organizationCode.trim().toUpperCase()
+  const snapshot = await getDocs(query(orgCollection, where('code', '==', trimmed)))
+  if (snapshot.empty) return null
+  const docSnap = snapshot.docs[0]
+  return { id: docSnap.id, ...(docSnap.data() as Omit<OrganizationRecord, 'id'>) }
+}
+
 export const fetchOrganizationAssignments = async (organizationId: string): Promise<string[]> => {
   if (!organizationId) return []
   const docSnap = await getDoc(doc(db, 'organizations', organizationId))
@@ -220,4 +303,163 @@ export const createOrganizationWithInvitations = async (
   )
 
   return { organizationId: orgRef.id, invitationResult }
+}
+
+const normalizeAssignments = (assignedOrganizations?: string[]): string[] =>
+  (assignedOrganizations || []).map((entry) => entry?.trim()).filter((entry): entry is string => !!entry)
+
+const chunkList = <T,>(items: T[], size: number): T[][] => {
+  const chunks: T[][] = []
+  for (let index = 0; index < items.length; index += size) {
+    chunks.push(items.slice(index, index + size))
+  }
+  return chunks
+}
+
+const buildOrganizationRecord = (docSnap: { id: string; data: () => unknown }): OrganizationRecord => ({
+  id: docSnap.id,
+  ...(docSnap.data() as Omit<OrganizationRecord, 'id'>),
+})
+
+const fetchOrganizationsByAssignments = async (assignments: string[]): Promise<OrganizationRecord[]> => {
+  const normalized = normalizeAssignments(assignments)
+  if (!normalized.length) return []
+
+  const codeCandidates = Array.from(new Set(normalized.flatMap((entry) => [entry, entry.toUpperCase()])))
+  const idChunks = chunkList(normalized, 10)
+  const codeChunks = chunkList(codeCandidates, 10)
+
+  const snapshots = await Promise.all([
+    ...idChunks.map((chunk) => getDocs(query(orgCollection, where(documentId(), 'in', chunk)))),
+    ...codeChunks.map((chunk) => getDocs(query(orgCollection, where('code', 'in', chunk)))),
+  ])
+
+  const orgMap = new Map<string, OrganizationRecord>()
+  snapshots.forEach((snapshot) => {
+    snapshot.docs.forEach((docSnap) => {
+      orgMap.set(docSnap.id, buildOrganizationRecord(docSnap))
+    })
+  })
+
+  return Array.from(orgMap.values()).sort((a, b) => (a.name || '').localeCompare(b.name || ''))
+}
+
+export const fetchAssignedOrganizations = async (userId: string): Promise<OrganizationRecord[]> => {
+  if (!userId) return []
+  const userSnap = await getDoc(doc(usersCollection, userId))
+  if (!userSnap.exists()) return []
+  const data = userSnap.data() as { assignedOrganizations?: string[] }
+  return fetchOrganizationsByAssignments(data.assignedOrganizations || [])
+}
+
+const listenToOrganizationsByAssignments = (
+  assignments: string[],
+  onChange: (organizations: OrganizationRecord[]) => void,
+  onError?: (error: FirestoreError) => void,
+) => {
+  const normalized = normalizeAssignments(assignments)
+  if (!normalized.length) {
+    onChange([])
+    return () => undefined
+  }
+
+  const codeCandidates = Array.from(new Set(normalized.flatMap((entry) => [entry, entry.toUpperCase()])))
+  const idChunks = chunkList(normalized, 10)
+  const codeChunks = chunkList(codeCandidates, 10)
+  const listenerMaps = new Map<string, Map<string, OrganizationRecord>>()
+  const unsubscribers: Array<() => void> = []
+
+  const emitCombined = () => {
+    const combined = new Map<string, OrganizationRecord>()
+    listenerMaps.forEach((map) => {
+      map.forEach((org, id) => {
+        combined.set(id, org)
+      })
+    })
+    onChange(Array.from(combined.values()).sort((a, b) => (a.name || '').localeCompare(b.name || '')))
+  }
+
+  idChunks.forEach((chunk, index) => {
+    const key = `id-${index}`
+    const unsubscribe = onSnapshot(
+      query(orgCollection, where(documentId(), 'in', chunk)),
+      (snapshot) => {
+        listenerMaps.set(
+          key,
+          new Map(snapshot.docs.map((docSnap) => [docSnap.id, buildOrganizationRecord(docSnap)])),
+        )
+        emitCombined()
+      },
+      onError,
+    )
+    unsubscribers.push(unsubscribe)
+  })
+
+  codeChunks.forEach((chunk, index) => {
+    const key = `code-${index}`
+    const unsubscribe = onSnapshot(
+      query(orgCollection, where('code', 'in', chunk)),
+      (snapshot) => {
+        listenerMaps.set(
+          key,
+          new Map(snapshot.docs.map((docSnap) => [docSnap.id, buildOrganizationRecord(docSnap)])),
+        )
+        emitCombined()
+      },
+      onError,
+    )
+    unsubscribers.push(unsubscribe)
+  })
+
+  return () => {
+    unsubscribers.forEach((unsubscribe) => unsubscribe())
+  }
+}
+
+export const listenToAssignedOrganizations = (
+  userId: string,
+  onChange: (organizations: OrganizationRecord[]) => void,
+  onError?: (error: FirestoreError) => void,
+) => {
+  if (!userId) {
+    onChange([])
+    return () => undefined
+  }
+
+  let unsubscribeOrganizations: (() => void) | null = null
+  let lastAssignmentKey = ''
+
+  const updateAssignments = (assignments: string[]) => {
+    const normalized = normalizeAssignments(assignments)
+    const assignmentKey = normalized.slice().sort().join('|')
+    if (assignmentKey === lastAssignmentKey) return
+    lastAssignmentKey = assignmentKey
+
+    if (unsubscribeOrganizations) {
+      unsubscribeOrganizations()
+      unsubscribeOrganizations = null
+    }
+
+    unsubscribeOrganizations = listenToOrganizationsByAssignments(normalized, onChange, onError)
+  }
+
+  const unsubscribeUser = onSnapshot(
+    doc(usersCollection, userId),
+    (snapshot) => {
+      if (!snapshot.exists()) {
+        updateAssignments([])
+        return
+      }
+      const data = snapshot.data() as { assignedOrganizations?: string[] }
+      updateAssignments(data.assignedOrganizations || [])
+    },
+    onError,
+  )
+
+  return () => {
+    unsubscribeUser()
+    if (unsubscribeOrganizations) {
+      unsubscribeOrganizations()
+    }
+  }
 }

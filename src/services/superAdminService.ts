@@ -308,6 +308,21 @@ export const fetchOrganizations = async (): Promise<OrganizationRecord[]> => {
   return snapshot.docs.map((docSnap) => ({ id: docSnap.id, ...(docSnap.data() as Omit<OrganizationRecord, 'id'>) }))
 }
 
+export const listenToOrganizations = (
+  onChange: (organizations: OrganizationRecord[]) => void,
+  onError?: (error: FirestoreError) => void,
+) => {
+  return onSnapshot(
+    query(orgCollection, orderBy('createdAt', 'desc')),
+    (snapshot) => {
+      onChange(
+        snapshot.docs.map((docSnap) => ({ id: docSnap.id, ...(docSnap.data() as Omit<OrganizationRecord, 'id'>) })),
+      )
+    },
+    onError,
+  )
+}
+
 export const createOrganization = async (organization: OrganizationRecord) => {
   const payload = {
     ...organization,
@@ -410,6 +425,20 @@ export const fetchAdminUsers = async (): Promise<AdminUserRecord[]> => {
   const adminQuery = query(usersCollection, where('role', 'in', adminRoles), orderBy('createdAt', 'desc'))
   const snapshot = await getDocs(adminQuery)
   return snapshot.docs.map(mapAdminDoc)
+}
+
+export const listenToAdminUsers = (
+  onChange: (admins: AdminUserRecord[]) => void,
+  onError?: (error: FirestoreError) => void,
+) => {
+  const adminQuery = query(usersCollection, where('role', 'in', adminRoles), orderBy('createdAt', 'desc'))
+  return onSnapshot(
+    adminQuery,
+    (snapshot) => {
+      onChange(snapshot.docs.map(mapAdminDoc))
+    },
+    onError,
+  )
 }
 
 export const createAdminUser = async (

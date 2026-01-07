@@ -187,3 +187,76 @@ export interface ProgramDurationOption {
   label: string
   courseCount: number
 }
+
+export type OrganizationDetailStatus =
+  | 'active'
+  | 'inactive'
+  | 'pending'
+  | 'suspended'
+  | 'watch'
+  | 'paused'
+  | 'critical'
+
+export interface OrganizationDetailView {
+  id: string
+  name: string
+  code: string
+  status: OrganizationDetailStatus
+  teamSize?: number
+  village?: string
+  cluster?: string
+  programStart?: string
+  programEnd?: string
+  cohortStartDate?: string
+  programDuration?: number
+  description?: string
+  transformationPartner?: string
+  assignedMentorName?: string | null
+  assignedMentorEmail?: string | null
+  assignedAmbassadorName?: string | null
+  assignedAmbassadorEmail?: string | null
+  assignedPartnerName?: string | null
+  assignedPartnerEmail?: string | null
+  createdAt?: string
+  updatedAt?: string
+  courseAssignments?: string[]
+}
+
+export interface OrganizationUserProfile {
+  id: string
+  name: string
+  email?: string
+  role: AdminRole | 'user'
+  membershipStatus: 'free' | 'paid' | 'inactive'
+  accountStatus: 'active' | 'suspended'
+  lastActive?: Date | null
+  createdAt?: Date | null
+  avatarUrl?: string | null
+}
+
+export interface OrganizationStatistics {
+  totalMembers: number
+  activeMembers: number
+  paidMembers: number
+  newMembersThisWeek: number
+  averageEngagementRate: number
+}
+
+export type OrganizationUserRoleFilter =
+  | 'all'
+  | 'user'
+  | 'mentor'
+  | 'team_leader'
+  | 'ambassador'
+  | 'partner'
+
+export type OrganizationMembershipFilter = 'all' | 'free' | 'paid' | 'inactive'
+export type OrganizationAccountStatusFilter = 'all' | 'active' | 'suspended'
+export type OrganizationUserSortKey =
+  | 'name'
+  | 'email'
+  | 'role'
+  | 'membershipStatus'
+  | 'accountStatus'
+  | 'lastActive'
+export type OrganizationUserSortDirection = 'asc' | 'desc'
