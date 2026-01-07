@@ -618,8 +618,8 @@ export const MyCoursesPage: React.FC = () => {
     if (isFreeTierUser)
       return 'You have access to one complimentary course—Transformational Leadership. Upgrade anytime to unlock the full learning library.'
     if (!companyCode)
-      return 'Once you are assigned to a company program, your courses will appear here.'
-    return 'Explore your assigned learning experiences below. Course progress and completion are tracked on the external platform.'
+      return 'Welcome to your premium membership! You have full access to our complete course library. Start exploring transformation courses below.'
+    return 'Welcome to your corporate learning program! Access all assigned courses and track your leadership development journey on the external platform.'
   }, [user, isFreeTierUser, companyCode])
 
   const overallLoading =
@@ -633,6 +633,10 @@ export const MyCoursesPage: React.FC = () => {
   }, [isFreeTierUser])
 
   const journeyTemplateCount = useMemo(() => Object.keys(journeyTemplateCourses).length, [journeyTemplateCourses])
+  const journeyTemplateLabel = useMemo(() => {
+    if (isFreeTierUser) return `${journeyTemplateCount} curated journey templates available`
+    return `Full access to ${journeyTemplateCount} professional journey templates`
+  }, [isFreeTierUser, journeyTemplateCount])
 
   return (
     <Stack spacing={8} py={2} as="section">
@@ -663,7 +667,7 @@ export const MyCoursesPage: React.FC = () => {
               {headerDescription}
             </Text>
             <Badge colorScheme="purple" variant="subtle" width="fit-content" borderRadius="full">
-              {journeyTemplateCount} curated journey templates available
+              {journeyTemplateLabel}
             </Badge>
             {isFreeTierUser && (
               <HStack spacing={3} flexWrap="wrap">
@@ -683,6 +687,18 @@ export const MyCoursesPage: React.FC = () => {
                 >
                   Upgrade membership
                 </Button>
+              </HStack>
+            )}
+            {user && !isFreeTierUser && (
+              <HStack spacing={3} flexWrap="wrap">
+                <Badge colorScheme="green" variant="subtle" borderRadius="full">
+                  {companyCode ? 'Corporate member' : 'Premium member'}
+                </Badge>
+                <Text color="green.700" fontSize="sm">
+                  {companyCode
+                    ? 'Access curated company courses and leadership development resources.'
+                    : 'Unlimited access to the full transformation course library.'}
+                </Text>
               </HStack>
             )}
           </Stack>
