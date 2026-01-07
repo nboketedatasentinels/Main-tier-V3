@@ -1,4 +1,5 @@
-import { Badge, Box, HStack, Stack, Text } from '@chakra-ui/react'
+import { Badge, Box, Button, HStack, Stack, Text } from '@chakra-ui/react'
+import { Eye } from 'lucide-react'
 import { StatusBadge } from './StatusBadge'
 
 export interface OrganizationCardProps {
@@ -9,6 +10,7 @@ export interface OrganizationCardProps {
   activeUsers?: number
   change?: string
   description?: string
+  onViewClick?: () => void
 }
 
 export const OrganizationCard: React.FC<OrganizationCardProps> = ({
@@ -19,6 +21,7 @@ export const OrganizationCard: React.FC<OrganizationCardProps> = ({
   activeUsers,
   change,
   description,
+  onViewClick,
 }) => {
   return (
     <Box p={3} borderRadius="md" border="1px solid" borderColor="brand.border" bg="brand.accent">
@@ -55,6 +58,18 @@ export const OrganizationCard: React.FC<OrganizationCardProps> = ({
           {change}
         </Badge>
       )}
+      <Button
+        mt={3}
+        variant="outline"
+        colorScheme="gray"
+        size="sm"
+        w="full"
+        leftIcon={<Eye size={16} />}
+        onClick={onViewClick}
+        isDisabled={!onViewClick}
+      >
+        View Organisation
+      </Button>
     </Box>
   )
 }
