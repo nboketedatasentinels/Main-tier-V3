@@ -49,11 +49,14 @@ export const PartnerAdminDashboard: React.FC = () => {
     organizations,
     organizationsError,
     organizationsLoading,
+    refreshDashboardData,
     riskLevels,
     selectedOrg,
     setSelectedOrg,
     updateUserPoints,
     users,
+    usersError,
+    usersLoading,
     dataQualityWarnings,
     interventions,
     daysUntil,
@@ -188,6 +191,35 @@ export const PartnerAdminDashboard: React.FC = () => {
 
   const renderOverview = () => (
     <Stack spacing={8}>
+      {(organizationsError || usersError) && (
+        <Card bg="red.50" border="1px solid" borderColor="red.200">
+          <CardBody>
+            <Stack spacing={3}>
+              <Text fontWeight="semibold" color="red.700">
+                We hit a problem loading your dashboard data.
+              </Text>
+              {organizationsError ? (
+                <Text fontSize="sm" color="red.700">
+                  Organizations: {organizationsError}
+                </Text>
+              ) : null}
+              {usersError ? (
+                <Text fontSize="sm" color="red.700">
+                  Users: {usersError}
+                </Text>
+              ) : null}
+              <HStack>
+                <Button size="sm" colorScheme="red" onClick={refreshDashboardData} isLoading={organizationsLoading || usersLoading}>
+                  Retry loading data
+                </Button>
+                <Button size="sm" variant="outline" onClick={() => navigate('/login', { replace: true })}>
+                  Back to login
+                </Button>
+              </HStack>
+            </Stack>
+          </CardBody>
+        </Card>
+      )}
       <Card bg="white" border="1px solid" borderColor="brand.border">
         <CardBody>
           <HStack justify="space-between" align={{ base: 'flex-start', md: 'center' }} spacing={4} wrap="wrap">
@@ -582,6 +614,30 @@ export const PartnerAdminDashboard: React.FC = () => {
 
   const renderOrganizationManagementPage = () => (
     <Stack spacing={6}>
+      {(organizationsError || usersError) && (
+        <Card bg="red.50" border="1px solid" borderColor="red.200">
+          <CardBody>
+            <Stack spacing={3}>
+              <Text fontWeight="semibold" color="red.700">
+                Some dashboard data failed to load.
+              </Text>
+              {organizationsError ? (
+                <Text fontSize="sm" color="red.700">
+                  Organizations: {organizationsError}
+                </Text>
+              ) : null}
+              {usersError ? (
+                <Text fontSize="sm" color="red.700">
+                  Users: {usersError}
+                </Text>
+              ) : null}
+              <Button size="sm" colorScheme="red" onClick={refreshDashboardData} isLoading={organizationsLoading || usersLoading}>
+                Retry loading data
+              </Button>
+            </Stack>
+          </CardBody>
+        </Card>
+      )}
       <Card bg="white" border="1px solid" borderColor="brand.border">
         <CardBody>
           <Stack spacing={4}>

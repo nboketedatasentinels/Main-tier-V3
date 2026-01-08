@@ -42,6 +42,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const [profile, setProfile] = useState<UserProfile | null>(null)
   const [loading, setLoading] = useState(true)
   const [profileLoading, setProfileLoading] = useState(true)
+  const [profileError, setProfileError] = useState<Error | null>(null)
   const [claimsRole, setClaimsRole] = useState<string | null>(null)
   const [lastProfileLoadAt, setLastProfileLoadAt] = useState<string | null>(() => {
     if (typeof window === 'undefined') return null
@@ -175,6 +176,38 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       })
       return null
     }
+  }
+
+  const fetchProfileWithRetry = async (firebaseUser: User, attempts = 3): Promise<UserProfile | null> => {
+    let lastError: Error | null = null
+    for (let attempt = 1; attempt <= attempts; attempt += 1) {
+      const delayMs = Math.min(500 * 2 ** (attempt - 1), 3000)
+      try {
+        const resolved = await fetchOrCreateUserDoc(firebaseUser)
+        if (resolved) {
+          setProfileError(null)
+          return resolved
+        }
+        const fallback = await fetchProfileOnce(firebaseUser.uid)
+        if (fallback) {
+          setProfileError(null)
+          return fallback
+        }
+        lastError = new Error('Profile unavailable after fetch attempt.')
+      } catch (error) {
+        lastError = error instanceof Error ? error : new Error('Profile fetch failed.')
+      }
+
+      if (attempt < attempts) {
+        await new Promise((resolve) => setTimeout(resolve, delayMs))
+      }
+    }
+
+    if (lastError) {
+      setProfileError(lastError)
+    }
+
+    return null
   }
 
   /* ------------------------------------------------------------------ */
@@ -410,6 +443,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         console.log('🟠 [Auth] No user → clearing state')
         setProfile(null)
         setClaimsRole(null)
+        setProfileError(null)
         setLoading(false)
         setProfileLoading(false)
         return
@@ -419,12 +453,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
       await extractCustomClaims(currentUser)
 
-      let userProfile = await fetchOrCreateUserDoc(currentUser)
-
-      if (!userProfile) {
-        console.warn('🟠 [Auth] Profile null on first attempt, retrying with direct fetch')
-        userProfile = await fetchProfileOnce(currentUser.uid)
-      }
+      let userProfile = await fetchProfileWithRetry(currentUser)
 
       if (!userProfile?.role) {
         console.warn('🟠 [Auth] Profile loaded without role, applying fallback role:user')
@@ -841,6 +870,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     if (!currentUser) {
       const error = new Error('No authenticated user to refresh')
       console.error('🔴 [Auth] refreshProfile failed', error)
+      setProfileError(error)
       return { error, profile: null as UserProfile | null }
     }
 
@@ -850,11 +880,13 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       if (refreshed) {
         setProfile(refreshed)
         recordProfileLoad(refreshed)
+        setProfileError(null)
       }
       setProfileLoading(false)
       return { error: null, profile: refreshed }
     } catch (error) {
       console.error('🔴 [Auth] refreshProfile error', error)
+      setProfileError(error as Error)
       setProfileLoading(false)
       return { error: error as Error, profile: null as UserProfile | null }
     }
@@ -883,6 +915,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     userData: profile,
     loading,
     profileLoading,
+    profileError,
     lastProfileLoadAt,
     signIn,
     signUp,
