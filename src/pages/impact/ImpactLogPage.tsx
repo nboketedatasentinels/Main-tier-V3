@@ -70,7 +70,11 @@ import { isFreeUser } from '@/utils/membership'
 import { removeUndefinedFields } from '@/utils/firestore'
 import { JOURNEY_META, getActivitiesForJourney, getMonthNumber, type ActivityDef, type JourneyType } from '@/config/pointsConfig'
 import { awardChecklistPoints, revokeChecklistPoints } from '@/services/pointsService'
-
+import { isValidUrl } from '@/utils/validation'
+/**
+ * Represents a single impact log entry.
+ * The requirements for `verifierEmail` and `evidenceLink` are conditional based on the `verificationLevel`.
+ */
 interface ImpactLogEntry {
   id: string
   userId: string
@@ -88,8 +92,17 @@ interface ImpactLogEntry {
   peopleImpacted: number
   usdValue?: number
   outcomeLabel?: string
+  /**
+   * The level of verification for the impact log entry.
+   * - 'Tier 1: Self-Reported': No additional evidence required.
+   * - 'Tier 2: Partner Verified': `verifierEmail` is required.
+   * - 'Tier 3: Evidence Uploaded': `evidenceLink` is required.
+   * - 'Tier 4: Third-Party Verified': Both `verifierEmail` and `evidenceLink` are required.
+   */
   verificationLevel: string
+  /** The email of the person who can verify the impact. Required for Tier 2 and Tier 4. */
   verifierEmail?: string
+  /** A URL to evidence supporting the impact. Required for Tier 3 and Tier 4. */
   evidenceLink?: string
   points: number
   impactValue: number
@@ -134,6 +147,29 @@ const verificationMultipliers: Record<string, number> = {
   'Tier 2: Partner Verified': 1.5,
   'Tier 3: Evidence Uploaded': 2,
   'Tier 4: Third-Party Verified': 2.5,
+}
+
+const verificationRequirements = {
+  'Tier 1: Self-Reported': {
+    verifierEmail: false,
+    evidenceLink: false,
+    description: 'Standard, self-reported impact. No external validation required.',
+  },
+  'Tier 2: Partner Verified': {
+    verifierEmail: true,
+    evidenceLink: false,
+    description: 'Requires an email from a colleague or manager who can verify the impact.',
+  },
+  'Tier 3: Evidence Uploaded': {
+    verifierEmail: false,
+    evidenceLink: true,
+    description: 'Requires a link to supporting evidence (e.g., document, presentation, video).',
+  },
+  'Tier 4: Third-Party Verified': {
+    verifierEmail: true,
+    evidenceLink: true,
+    description: 'Requires both an external verifier email and a link to evidence.',
+  },
 }
 
 const basePoints = 500
@@ -389,11 +425,42 @@ export const ImpactLogPage: React.FC = () => {
   const handleSubmit = async () => {
     if (!user?.uid) return
 
-    if (!formValues.description || !formValues.date || (!formValues.hours && !formValues.peopleImpacted)) {
-      toast({
-        title: 'Missing details',
-        description: 'Please complete required fields and include at least hours or people impacted.',
-        status: 'warning',
+    const errors: string[] = []
+    const { verificationLevel, verifierEmail, evidenceLink, description, date, hours, peopleImpacted } = formValues
+    const requirements = verificationRequirements[verificationLevel]
+
+    if (!description || !date || (!hours && !peopleImpacted)) {
+      errors.push('Please complete all required fields (Description, Date, and either Hours or People Impacted).')
+    }
+
+    if (requirements.verifierEmail) {
+      if (!verifierEmail) {
+        errors.push('Verifier email is required for this verification tier.')
+      } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(verifierEmail)) {
+        errors.push('Please enter a valid verifier email address.')
+      }
+    }
+
+    if (requirements.evidenceLink) {
+      if (!evidenceLink) {
+        errors.push('Evidence link is required for this verification tier.')
+      } else {
+        const urlValidation = isValidUrl(evidenceLink)
+        if (!urlValidation.isValid) {
+          errors.push(urlValidation.message || 'The evidence link is not a valid URL.')
+        }
+      }
+    }
+
+    if (errors.length > 0) {
+      errors.forEach((error) => {
+        toast({
+          title: 'Validation Error',
+          description: error,
+          status: 'error',
+          duration: 5000,
+          isClosable: true,
+        })
       })
       return
     }
@@ -1100,40 +1167,111 @@ export const ImpactLogPage: React.FC = () => {
 
               <SimpleGrid columns={{ base: 1, md: 2 }} spacing={3}>
                 <Box>
-                  <Text fontWeight="medium">Verification Level</Text>
+                  <Text fontWeight="medium">
+                    Verification Level
+                    <Tooltip
+                      label={
+                        <Box p={2}>
+                          <Text fontWeight="bold">About Verification Tiers</Text>
+                          <Text mt={2}>
+                            <Text as="span" fontWeight="semibold">
+                              Tier 1 (1x Points):
+                            </Text>{' '}
+                            Self-reported impact.
+                          </Text>
+                          <Text>
+                            <Text as="span" fontWeight="semibold">
+                              Tier 2 (1.5x Points):
+                            </Text>{' '}
+                            Verified by a colleague or manager via email.
+                          </Text>
+                          <Text>
+                            <Text as="span" fontWeight="semibold">
+                              Tier 3 (2x Points):
+                            </Text>{' '}
+                            Validated with a link to evidence like a document or presentation.
+                          </Text>
+                          <Text>
+                            <Text as="span" fontWeight="semibold">
+                              Tier 4 (2.5x Points):
+                            </Text>{' '}
+                            Confirmed with both an email and an evidence link.
+                          </Text>
+                        </Box>
+                      }
+                      hasArrow
+                      placement="top-start"
+                      bg="surface.default"
+                      color="text.primary"
+                      border="1px solid"
+                      borderColor="border.subtle"
+                    >
+                      <Icon as={InfoIcon} color="text.muted" ml={2} boxSize={4} cursor="pointer" />
+                    </Tooltip>
+                  </Text>
                   <Select
                     mt={1}
                     value={formValues.verificationLevel}
-                    onChange={(e) => setFormValues((prev) => ({ ...prev, verificationLevel: e.target.value }))}
+                    onChange={(e) => {
+                      const newLevel = e.target.value
+                      const requirements = verificationRequirements[newLevel]
+                      setFormValues((prev) => ({
+                        ...prev,
+                        verificationLevel: newLevel,
+                        verifierEmail: requirements.verifierEmail ? prev.verifierEmail : '',
+                        evidenceLink: requirements.evidenceLink ? prev.evidenceLink : '',
+                      }))
+                    }}
                   >
                     {Object.keys(verificationMultipliers).map((tier) => (
                       <option key={tier}>{tier}</option>
                     ))}
                   </Select>
+                  <Text fontSize="sm" color="text.muted" mt={1}>
+                    {verificationRequirements[formValues.verificationLevel]?.description}
+                  </Text>
                 </Box>
                 <Box>
-                  <Text fontWeight="medium">External Verifier Email</Text>
+                  <Text fontWeight="medium">
+                    External Verifier Email
+                    {verificationRequirements[formValues.verificationLevel]?.verifierEmail && (
+                      <Text as="span" color="red.500">
+                        {' '}
+                        *
+                      </Text>
+                    )}
+                  </Text>
                   <Input
                     mt={1}
                     type="email"
                     placeholder="Required for partner verification"
                     value={formValues.verifierEmail}
                     onChange={(e) => setFormValues((prev) => ({ ...prev, verifierEmail: e.target.value }))}
+                    isDisabled={!verificationRequirements[formValues.verificationLevel]?.verifierEmail}
                   />
                 </Box>
               </SimpleGrid>
 
               <SimpleGrid columns={{ base: 1, md: 2 }} spacing={3}>
                 <Box>
-                  <Text fontWeight="medium">Evidence Link</Text>
-                <InputGroup>
-                  <InputLeftElement pointerEvents="none">
-                    <Icon as={LinkIcon} color="text.muted" />
-                  </InputLeftElement>
+                  <Text fontWeight="medium">
+                    Evidence Link
+                    {verificationRequirements[formValues.verificationLevel]?.evidenceLink && (
+                      <Text as="span" color="red.500">
+                        {' '}
+                        *
+                      </Text>
+                    )}
+                  </Text>
+                  <InputGroup>
+                    <InputLeftElement pointerEvents="none">
+                      <Icon as={LinkIcon} color="text.muted" />
+                    </InputLeftElement>
                     <Input
                       placeholder="https://drive.google.com/file/..."
                       value={formValues.evidenceLink}
-                      onChange={(e) => setFormValues((prev) => ({ ...prev, evidenceLink: e.target.value, verificationLevel: 'Tier 3: Evidence Uploaded' }))}
+                      onChange={(e) => setFormValues((prev) => ({ ...prev, evidenceLink: e.target.value }))}
+                      isDisabled={!verificationRequirements[formValues.verificationLevel]?.evidenceLink}
                     />
                   </InputGroup>
                 </Box>
