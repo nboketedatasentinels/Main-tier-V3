@@ -55,7 +55,7 @@ export const ShamelessCirclePage: React.FC = () => {
         </div>
         <Button
           as="a"
-          href="https://www.youtube.com/@T4Leaders/featured"
+          href="https://www.youtube.com/@T4Leaders/podcasts"
           target="_blank"
           rel="noopener noreferrer"
           colorScheme="red"
