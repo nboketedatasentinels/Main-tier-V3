@@ -373,7 +373,7 @@ const EventsTab: React.FC = () => {
           </Text>
           <Button
             as={chakra.a}
-            href="https://www.t4leader.com/event-list"
+            href="https://www.t4leader.com/event"
             target="_blank"
             rel="noopener noreferrer"
             colorScheme="purple"

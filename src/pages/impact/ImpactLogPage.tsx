@@ -142,14 +142,20 @@ const liftPillarColors: Record<string, string> = {
   'Transforming Business': 'orange',
 }
 
-const verificationMultipliers: Record<string, number> = {
+type VerificationTier =
+  | 'Tier 1: Self-Reported'
+  | 'Tier 2: Partner Verified'
+  | 'Tier 3: Evidence Uploaded'
+  | 'Tier 4: Third-Party Verified'
+
+const verificationMultipliers: Record<VerificationTier, number> = {
   'Tier 1: Self-Reported': 1,
   'Tier 2: Partner Verified': 1.5,
   'Tier 3: Evidence Uploaded': 2,
   'Tier 4: Third-Party Verified': 2.5,
 }
 
-const verificationRequirements = {
+const verificationRequirements: Record<VerificationTier, { verifierEmail: boolean; evidenceLink: boolean; description: string }> = {
   'Tier 1: Self-Reported': {
     verifierEmail: false,
     evidenceLink: false,
@@ -241,7 +247,7 @@ const buildCsv = (entries: ImpactLogEntry[]) => {
 }
 
 const calculateImpactPreview = (values: Partial<ImpactLogEntry>) => {
-  const verificationMultiplier = verificationMultipliers[values.verificationLevel || 'Tier 1: Self-Reported'] || 1
+  const verificationMultiplier = verificationMultipliers[(values.verificationLevel || 'Tier 1: Self-Reported') as VerificationTier] || 1
   const categoryMultiplier = values.categoryGroup === 'business' ? 1.15 : 1
   const hours = Number(values.hours) || 0
   const usd = Number(values.usdValue) || 0
@@ -427,7 +433,7 @@ export const ImpactLogPage: React.FC = () => {
 
     const errors: string[] = []
     const { verificationLevel, verifierEmail, evidenceLink, description, date, hours, peopleImpacted } = formValues
-    const requirements = verificationRequirements[verificationLevel]
+    const requirements = verificationRequirements[(verificationLevel || 'Tier 1: Self-Reported') as VerificationTier]
 
     if (!description || !date || (!hours && !peopleImpacted)) {
       errors.push('Please complete all required fields (Description, Date, and either Hours or People Impacted).')
@@ -1213,7 +1219,7 @@ export const ImpactLogPage: React.FC = () => {
                     mt={1}
                     value={formValues.verificationLevel}
                     onChange={(e) => {
-                      const newLevel = e.target.value
+                      const newLevel = e.target.value as VerificationTier
                       const requirements = verificationRequirements[newLevel]
                       setFormValues((prev) => ({
                         ...prev,
@@ -1228,13 +1234,13 @@ export const ImpactLogPage: React.FC = () => {
                     ))}
                   </Select>
                   <Text fontSize="sm" color="text.muted" mt={1}>
-                    {verificationRequirements[formValues.verificationLevel]?.description}
+                    {verificationRequirements[(formValues.verificationLevel || 'Tier 1: Self-Reported') as VerificationTier]?.description}
                   </Text>
                 </Box>
                 <Box>
                   <Text fontWeight="medium">
                     External Verifier Email
-                    {verificationRequirements[formValues.verificationLevel]?.verifierEmail && (
+                    {verificationRequirements[(formValues.verificationLevel || 'Tier 1: Self-Reported') as VerificationTier]?.verifierEmail && (
                       <Text as="span" color="red.500">
                         {' '}
                         *
@@ -1247,7 +1253,7 @@ export const ImpactLogPage: React.FC = () => {
                     placeholder="Required for partner verification"
                     value={formValues.verifierEmail}
                     onChange={(e) => setFormValues((prev) => ({ ...prev, verifierEmail: e.target.value }))}
-                    isDisabled={!verificationRequirements[formValues.verificationLevel]?.verifierEmail}
+                    isDisabled={!verificationRequirements[(formValues.verificationLevel || 'Tier 1: Self-Reported') as VerificationTier]?.verifierEmail}
                   />
                 </Box>
               </SimpleGrid>
@@ -1256,7 +1262,7 @@ export const ImpactLogPage: React.FC = () => {
                 <Box>
                   <Text fontWeight="medium">
                     Evidence Link
-                    {verificationRequirements[formValues.verificationLevel]?.evidenceLink && (
+                    {verificationRequirements[(formValues.verificationLevel || 'Tier 1: Self-Reported') as VerificationTier]?.evidenceLink && (
                       <Text as="span" color="red.500">
                         {' '}
                         *
@@ -1271,7 +1277,7 @@ export const ImpactLogPage: React.FC = () => {
                       placeholder="https://drive.google.com/file/..."
                       value={formValues.evidenceLink}
                       onChange={(e) => setFormValues((prev) => ({ ...prev, evidenceLink: e.target.value }))}
-                      isDisabled={!verificationRequirements[formValues.verificationLevel]?.evidenceLink}
+                      isDisabled={!verificationRequirements[(formValues.verificationLevel || 'Tier 1: Self-Reported') as VerificationTier]?.evidenceLink}
                     />
                   </InputGroup>
                 </Box>
