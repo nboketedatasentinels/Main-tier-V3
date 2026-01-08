@@ -5,6 +5,9 @@ import {
   Button,
   Divider,
   Flex,
+  FormControl,
+  FormHelperText,
+  FormLabel,
   Grid,
   GridItem,
   HStack,
@@ -1132,43 +1135,56 @@ export const ImpactLogPage: React.FC = () => {
               </Box>
 
               <SimpleGrid columns={{ base: 1, md: 3 }} spacing={3}>
-                <InputGroup>
-                  <InputLeftElement pointerEvents="none">
-                    <Icon as={Clock} color="text.muted" />
-                  </InputLeftElement>
-                  <Input
-                    type="number"
-                    step="0.25"
-                    min={0}
-                    placeholder="Hours"
-                    value={formValues.hours}
-                    onChange={(e) => setFormValues((prev) => ({ ...prev, hours: Number(e.target.value) }))}
-                  />
-                </InputGroup>
-                <InputGroup>
-                  <InputLeftElement pointerEvents="none">
-                    <Icon as={Users} color="text.muted" />
-                  </InputLeftElement>
-                  <Input
-                    type="number"
-                    min={0}
-                    placeholder="People Impacted"
-                    value={formValues.peopleImpacted}
-                    onChange={(e) => setFormValues((prev) => ({ ...prev, peopleImpacted: Number(e.target.value) }))}
-                  />
-                </InputGroup>
-                <InputGroup>
-                  <InputLeftElement pointerEvents="none">
-                    <Icon as={ShieldCheck} color="text.muted" />
-                  </InputLeftElement>
-                  <Input
-                    type="number"
-                    min={0}
-                    placeholder="Outcome metric (USD)"
-                    value={formValues.usdValue}
-                    onChange={(e) => setFormValues((prev) => ({ ...prev, usdValue: Number(e.target.value) }))}
-                  />
-                </InputGroup>
+                <FormControl>
+                  <FormLabel htmlFor="impact-hours">Hours Spent</FormLabel>
+                  <InputGroup>
+                    <InputLeftElement pointerEvents="none">
+                      <Icon as={Clock} color="text.muted" />
+                    </InputLeftElement>
+                    <Input
+                      id="impact-hours"
+                      type="number"
+                      step="0.25"
+                      min={0}
+                      placeholder="Hours"
+                      value={formValues.hours}
+                      onChange={(e) => setFormValues((prev) => ({ ...prev, hours: Number(e.target.value) }))}
+                    />
+                  </InputGroup>
+                </FormControl>
+                <FormControl>
+                  <FormLabel htmlFor="impact-people">People Impacted</FormLabel>
+                  <InputGroup>
+                    <InputLeftElement pointerEvents="none">
+                      <Icon as={Users} color="text.muted" />
+                    </InputLeftElement>
+                    <Input
+                      id="impact-people"
+                      type="number"
+                      min={0}
+                      placeholder="People Impacted"
+                      value={formValues.peopleImpacted}
+                      onChange={(e) => setFormValues((prev) => ({ ...prev, peopleImpacted: Number(e.target.value) }))}
+                    />
+                  </InputGroup>
+                </FormControl>
+                <FormControl>
+                  <FormLabel htmlFor="impact-financial">Financial Impact</FormLabel>
+                  <InputGroup>
+                    <InputLeftElement pointerEvents="none">
+                      <Icon as={ShieldCheck} color="text.muted" />
+                    </InputLeftElement>
+                    <Input
+                      id="impact-financial"
+                      type="number"
+                      min={0}
+                      placeholder="Outcome metric (USD)"
+                      value={formValues.usdValue}
+                      onChange={(e) => setFormValues((prev) => ({ ...prev, usdValue: Number(e.target.value) }))}
+                    />
+                  </InputGroup>
+                  <FormHelperText>Enter the estimated USD value of the impact.</FormHelperText>
+                </FormControl>
               </SimpleGrid>
 
               <SimpleGrid columns={{ base: 1, md: 2 }} spacing={3}>
@@ -1368,21 +1384,29 @@ export const ImpactLogPage: React.FC = () => {
                 <option>Other</option>
               </Select>
               <SimpleGrid columns={{ base: 1, md: 2 }} spacing={3}>
-                <Input
-                  type="number"
-                  min={0}
-                  step={0.5}
-                  placeholder="Hours"
-                  value={formValues.hours}
-                  onChange={(e) => setFormValues((prev) => ({ ...prev, hours: Number(e.target.value) }))}
-                />
-                <Input
-                  type="number"
-                  min={0}
-                  placeholder="People Impacted"
-                  value={formValues.peopleImpacted}
-                  onChange={(e) => setFormValues((prev) => ({ ...prev, peopleImpacted: Number(e.target.value) }))}
-                />
+                <FormControl>
+                  <FormLabel htmlFor="quick-impact-hours">Hours Spent</FormLabel>
+                  <Input
+                    id="quick-impact-hours"
+                    type="number"
+                    min={0}
+                    step={0.5}
+                    placeholder="Hours"
+                    value={formValues.hours}
+                    onChange={(e) => setFormValues((prev) => ({ ...prev, hours: Number(e.target.value) }))}
+                  />
+                </FormControl>
+                <FormControl>
+                  <FormLabel htmlFor="quick-impact-people">People Impacted</FormLabel>
+                  <Input
+                    id="quick-impact-people"
+                    type="number"
+                    min={0}
+                    placeholder="People Impacted"
+                    value={formValues.peopleImpacted}
+                    onChange={(e) => setFormValues((prev) => ({ ...prev, peopleImpacted: Number(e.target.value) }))}
+                  />
+                </FormControl>
               </SimpleGrid>
             </Stack>
           </ModalBody>
