@@ -252,6 +252,11 @@ service cloud.firestore {
       allow write: if isSuperAdmin();
     }
 
+    match /weekly_content/{episodeId} {
+      allow read: if isAuthenticated();
+      allow write: if isSuperAdmin();
+    }
+
     // Transformation partner collections
     match /interventions/{interventionId} {
       allow read: if isSuperAdmin() || (

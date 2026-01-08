@@ -10,6 +10,7 @@ import { SecurityAuditPage } from '@/pages/super-admin/SecurityAuditPage'
 import { SystemSettingsPage } from '@/pages/super-admin/SystemSettingsPage'
 import { UserManagementPage } from '@/pages/super-admin/UserManagementPage'
 import { AdminOversightPage } from '@/pages/super-admin/AdminOversightPage'
+import { PodcastContentPage } from '@/pages/super-admin/PodcastContentPage'
 import {
   listenToAdminActivityLog,
   listenToDashboardMetrics,
@@ -203,6 +204,8 @@ export const SuperAdminDashboard: React.FC = () => {
         return <ReportsAnalyticsPage metrics={metrics} registrationTrend={registrationTrend} userGrowthTrend={userGrowthTrend} />
       case 'configuration':
         return <PlatformConfigurationPage />
+      case 'podcast-content':
+        return <PodcastContentPage />
       case 'overview':
       default:
         return (

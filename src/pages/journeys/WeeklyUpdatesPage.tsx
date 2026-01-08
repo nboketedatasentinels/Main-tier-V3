@@ -50,6 +50,8 @@ import { awardChecklistPoints, revokeChecklistPoints } from '@/services/pointsSe
 import { SurfaceCard } from '@/components/primitives/SurfacePrimitives'
 import { IoradTutorialModal } from '@/components/modals/IoradTutorialModal'
 import { checkTutorialCompletion, markTutorialComplete } from '@/services/tutorialService'
+import { PodcastVideoCard } from '@/components/journeys/PodcastVideoCard'
+import { useWeeklyPodcastEpisode } from '@/hooks/useWeeklyPodcastEpisode'
 
 const DEFAULT_WEEKLY_TARGET = JOURNEY_META['6W'].weeklyTarget
 
@@ -210,6 +212,13 @@ const WeeklyChecklistPage: React.FC = () => {
   const normalizedJourneyType = useMemo(() => {
     return journey?.journeyType || '4W';
   }, [journey?.journeyType]);
+
+  const { episode: podcastEpisode, loading: podcastLoading, error: podcastError } = useWeeklyPodcastEpisode(
+    selectedWeek,
+    normalizedJourneyType,
+  )
+
+  const podcastActivity = useMemo(() => activities.find(activity => activity.id === 'podcast'), [activities])
 
   const weeklyTarget = useMemo(() => {
     if (!journey) return DEFAULT_WEEKLY_TARGET;
@@ -1009,6 +1018,18 @@ const WeeklyChecklistPage: React.FC = () => {
       <Grid templateColumns={{ base: '1fr', xl: '2fr 1fr' }} gap={6} alignItems="start">
         <GridItem>
           <Stack spacing={4}>
+            <PodcastVideoCard
+              episode={podcastEpisode}
+              loading={podcastLoading}
+              error={podcastError}
+              isCompleted={podcastActivity?.status === 'completed'}
+              onMarkWatched={
+                podcastActivity && podcastEpisode
+                  ? () => handleActivityUpdate(podcastActivity, 'completed')
+                  : undefined
+              }
+              onViewAll={() => navigate('/app/shameless-circle')}
+            />
             <SurfaceCard borderColor="border.card">
               <Heading size="sm" color="text.primary" mb={3}>
                 Weekly activities
