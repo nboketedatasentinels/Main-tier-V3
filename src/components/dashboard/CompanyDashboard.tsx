@@ -151,7 +151,8 @@ const normalizeTransactionDate = (value?: unknown): Date | null => {
   return Number.isNaN(dateValue.getTime()) ? null : dateValue
 }
 
-const couponLink = 'https://www.t4leader.com/challenge-page/transformational-leadership'
+const couponLink =
+  'https://www.t4leader.com/challenge-page/transformational-leadership?programId=d4e58ca0-f0e6-4f12-b2a8-9dc5fcf6e335'
 
 const useRealtimeCollection = <T,>(
   path: string,
