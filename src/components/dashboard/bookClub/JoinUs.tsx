@@ -1,4 +1,5 @@
 import React, { useCallback, useState } from 'react'
+import { ArrowUpRight } from 'lucide-react'
 import { addDoc, collection, serverTimestamp } from 'firebase/firestore'
 import { useAuth } from '@/hooks/useAuth'
 import { db } from '@/services/firebase'
@@ -27,7 +28,6 @@ export const JoinUs: React.FC = () => {
   }, [profile?.email, profile?.fullName, user?.uid])
 
   const handleJoinClick = () => {
-    window.open(HUB_URL, '_blank', 'noopener,noreferrer')
     void logHubVisit()
   }
 
@@ -49,14 +49,26 @@ export const JoinUs: React.FC = () => {
         </div>
       </div>
 
-      <div className="flex items-center gap-3">
-        <button
-          type="button"
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+        <a
+          href={HUB_URL}
+          target="_blank"
+          rel="noopener noreferrer"
           onClick={handleJoinClick}
           className="inline-flex items-center justify-center rounded-lg bg-brand-primary px-6 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-brand-dark focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-primary focus-visible:ring focus-visible:ring-offset-2 focus-visible:ring-brand-primary focus-visible:ring-offset-surface-default"
         >
           Go to the Global Book Club hub
-        </button>
+          <ArrowUpRight className="ml-2 h-4 w-4" aria-hidden="true" />
+        </a>
+        <a
+          href="https://www.t4leader.com/book-club"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="inline-flex items-center justify-center rounded-lg border border-brand-primary px-6 py-3 text-sm font-semibold text-brand-primary shadow-sm transition hover:bg-brand-primary/10 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-primary focus-visible:ring focus-visible:ring-offset-2 focus-visible:ring-brand-primary focus-visible:ring-offset-surface-default"
+        >
+          View Books
+          <ArrowUpRight className="ml-2 h-4 w-4" aria-hidden="true" />
+        </a>
         {isLogging && <span className="text-sm text-text-muted">Syncing with Firebase...</span>}
       </div>
     </section>
