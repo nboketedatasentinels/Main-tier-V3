@@ -22,7 +22,6 @@ This directory contains the complete database schema for the T4L platform using 
 - **villages** - Community groups
 - **companies** - Organization profiles
 - **events** - Platform events
-- **weekly_content** - Weekly podcast episodes for journeys
 - **nudge_templates** - Reusable outreach templates
 - **nudges_sent** - Nudge delivery audit trail
 - **nudge_effectiveness** - Engagement lift measurements
@@ -61,16 +60,6 @@ await setDoc(doc(db, 'profiles', userId), profileData)
 ```
 
 See the full schema in `firestore-schema.md` for complete collection definitions and security rules.
-
-## Podcast content management (admins)
-
-Super admins manage weekly podcast episodes in the **Podcast Content** section of the super admin dashboard:
-
-1. Open **Super Admin → Podcast Content**.
-2. Create or edit an episode with week number, journey type, and video URL (YouTube, Vimeo, or Wistia).
-3. Preview the embed, then publish by setting **Active episode**.
-4. Use filters to review content by week and journey.
-5. Bulk upload multiple episodes by pasting a JSON array into the bulk uploader.
 
 ## Legacy onboarding cleanup migration
 

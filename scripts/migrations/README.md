@@ -134,14 +134,3 @@ If you need to rollback this migration:
 4. **Monitor for errors** during and after migration
 5. **Have a rollback plan** ready
 6. **Document all changes** and their impact
-
-## Seed weekly podcast content
-
-### File: `seed-weekly-content.mjs`
-
-Seeds the `weekly_content` collection with sample weekly podcast episodes for the 4W and 6W journeys.
-
-#### Run the script
-```bash
-node scripts/migrations/seed-weekly-content.mjs
-```

@@ -3,7 +3,6 @@ import { UserRole, ALL_STANDARD_ROLES } from './roles';
 import type { StandardRole, AllRoles } from './roles';
 export * from './admin'
 export * from './tutorials'
-export * from './podcast'
 
 export { UserRole, ALL_STANDARD_ROLES };
 export type { StandardRole, AllRoles };
