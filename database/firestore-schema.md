@@ -277,6 +277,69 @@ weekly_points/{weeklyPointsId}
 }
 ```
 
+### nudge_templates
+Reusable nudge message templates.
+```typescript
+{
+  id: string
+  name: string
+  subject: string
+  message_body: string
+  template_type: 'Initial Outreach' | 'Follow-up' | 'Critical Alert' | 'Encouragement' | 'Resource Sharing'
+  target_audience?: string
+  is_active: boolean
+  created_at: Timestamp
+  updated_at: Timestamp
+}
+```
+
+### nudges_sent
+Audit log of nudges sent to users.
+```typescript
+{
+  id: string
+  user_id: string
+  template_id?: string
+  sent_at: Timestamp
+  sent_by_admin_id?: string
+  delivery_status: 'pending' | 'sent' | 'failed' | 'scheduled'
+  channel: 'email' | 'in_app' | 'both'
+  metadata?: Record<string, unknown>
+}
+```
+
+### nudge_effectiveness
+Effectiveness metrics for nudges.
+```typescript
+{
+  id: string
+  nudge_id?: string
+  user_id: string
+  engagement_score_before?: number
+  engagement_score_after?: number
+  tasks_completed_before?: number
+  tasks_completed_after?: number
+  days_to_response?: number
+  responded: boolean
+  measured_at: Timestamp
+}
+```
+
+### nudge_campaigns
+Campaigns for organized outreach.
+```typescript
+{
+  id: string
+  name: string
+  description?: string
+  target_risk_levels: string[]
+  start_date?: Timestamp
+  end_date?: Timestamp
+  created_by?: string
+  status: 'draft' | 'active' | 'paused' | 'completed'
+}
+```
+
 ## Firestore Security Rules
 
 **Note:** The canonical source for Firestore security rules is the `firestore.rules` file in the root of the project. The rules below are for documentation purposes. Please deploy the rules from the root `firestore.rules` file.
@@ -371,6 +434,27 @@ service cloud.firestore {
       allow update, delete: if hasRole('super_admin') || hasRole('company_admin');
     }
 
+    // Nudge collections (admin/partner access)
+    match /nudge_templates/{templateId} {
+      allow read: if hasRole('super_admin') || hasRole('company_admin') || hasRole('admin') || hasRole('partner');
+      allow create, update, delete: if hasRole('super_admin') || hasRole('company_admin') || hasRole('admin') || hasRole('partner');
+    }
+
+    match /nudges_sent/{nudgeId} {
+      allow read: if hasRole('super_admin') || hasRole('company_admin') || hasRole('admin') || hasRole('partner');
+      allow create, update: if hasRole('super_admin') || hasRole('company_admin') || hasRole('admin') || hasRole('partner');
+    }
+
+    match /nudge_effectiveness/{effectivenessId} {
+      allow read: if hasRole('super_admin') || hasRole('company_admin') || hasRole('admin') || hasRole('partner');
+      allow create: if hasRole('super_admin') || hasRole('company_admin') || hasRole('admin') || hasRole('partner');
+    }
+
+    match /nudge_campaigns/{campaignId} {
+      allow read: if hasRole('super_admin') || hasRole('company_admin') || hasRole('admin') || hasRole('partner');
+      allow create, update, delete: if hasRole('super_admin') || hasRole('company_admin') || hasRole('admin') || hasRole('partner');
+    }
+
     match /user_points/{pointsId} {
       allow read: if isAuthenticated() && (request.auth.uid == resource.data.userId || hasRole('super_admin'));
       allow create, update: if isAuthenticated() && (request.resource.data.userId == request.auth.uid || hasRole('super_admin'));
@@ -407,6 +491,20 @@ Create composite indexes for common queries:
 
 5. **user_points** collection:
    - `userId`, `recordedAt` (descending)
+
+6. **nudge_templates** collection:
+   - `is_active`, `created_at` (descending)
+
+7. **nudges_sent** collection:
+   - `user_id`, `sent_at` (descending)
+   - `template_id`, `sent_at` (descending)
+
+8. **nudge_effectiveness** collection:
+   - `user_id`, `measured_at` (descending)
+   - `nudge_id`, `measured_at` (descending)
+
+9. **nudge_campaigns** collection:
+   - `start_date` (descending)
 
 ## Initial Data Setup
 

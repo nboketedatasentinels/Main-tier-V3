@@ -287,6 +287,27 @@ service cloud.firestore {
       allow update, delete: if isSuperAdmin() || isAdmin();
     }
 
+    // Nudge system collections
+    match /nudge_templates/{templateId} {
+      allow read: if isAdmin();
+      allow create, update, delete: if isAdmin();
+    }
+
+    match /nudges_sent/{nudgeId} {
+      allow read: if isAdmin();
+      allow create, update: if isAdmin();
+    }
+
+    match /nudge_effectiveness/{effectivenessId} {
+      allow read: if isAdmin();
+      allow create: if isAdmin();
+    }
+
+    match /nudge_campaigns/{campaignId} {
+      allow read: if isAdmin();
+      allow create, update, delete: if isAdmin();
+    }
+
     match /user_points/{pointsId} {
       allow read: if isAuthenticated() && (
         request.auth.uid == resource.data.userId || 

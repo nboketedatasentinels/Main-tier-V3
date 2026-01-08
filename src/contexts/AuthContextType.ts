@@ -9,6 +9,8 @@ export interface AuthContextType {
   userData: UserProfile | null
   loading: boolean
   profileLoading: boolean
+  profileError: Error | null
+  lastProfileLoadAt: string | null
   signIn: (email: string, password: string) => Promise<{ error: Error | null }>
   signUp: (
     email: string,

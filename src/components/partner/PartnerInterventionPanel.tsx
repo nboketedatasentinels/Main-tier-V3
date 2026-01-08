@@ -119,7 +119,7 @@ export const PartnerInterventionPanel: React.FC<PartnerInterventionPanelProps> =
         <HStack spacing={3}>
           <CheckCircle color="#22c55e" />
           <Text fontSize="sm" color="brand.subtleText">
-            Automated reminders are generated 48 hours before deadlines. Overdue items escalate after 7 days with admin alerts.
+            Automated reminders are generated 48 hours before deadlines. Overdue items escalate after 7 days with admin alerts. Suggested nudges appear once cooldown windows expire.
           </Text>
         </HStack>
       </Box>

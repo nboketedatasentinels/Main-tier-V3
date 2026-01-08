@@ -49,6 +49,7 @@ export const calculateUserRiskStatus = (
   currentWeek: number,
   earnedPoints: Record<number, number>,
   requiredPoints: Record<number, number>,
+  nudgeResponsivenessScore?: number,
 ): { status: 'at_risk' | 'on_track'; reason?: string; points_deficit?: number } => {
   const weekRequirement = requiredPoints[currentWeek] ?? 0
   const weekEarned = earnedPoints[currentWeek] ?? 0
@@ -67,7 +68,9 @@ export const calculateUserRiskStatus = (
 
   const weeklyRatio = weekRequirement > 0 ? weekEarned / weekRequirement : 1
   const cumulativeRatio = cumulativeRequirement > 0 ? cumulativeEarned / cumulativeRequirement : 1
-  const progressRatio = Math.min(weeklyRatio, cumulativeRatio)
+  const baseRatio = Math.min(weeklyRatio, cumulativeRatio)
+  const responsivenessBoost = nudgeResponsivenessScore ? Math.min(0.1, nudgeResponsivenessScore * 0.05) : 0
+  const progressRatio = Math.min(1, baseRatio + responsivenessBoost)
 
   if (progressRatio < 0.8) {
     const deficit = Math.max(0, Math.round(weekRequirement * 0.8 - weekEarned))

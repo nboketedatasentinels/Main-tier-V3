@@ -1,7 +1,8 @@
-import React, { useMemo, useState } from 'react'
+import React, { useCallback, useEffect, useMemo, useState } from 'react'
 import {
   Badge,
   Box,
+  Button,
   Card,
   CardBody,
   Divider,
@@ -12,6 +13,7 @@ import {
   Stack,
   Text,
   VStack,
+  Skeleton,
 } from '@chakra-ui/react'
 import { Bell, Building2, Gauge, Sparkles, Users } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
@@ -23,23 +25,38 @@ import { OrganizationCard } from '@/components/admin/OrganizationCard'
 import PartnerDashboardLayout from '@/layouts/PartnerDashboardLayout'
 import { PartnerInterventionPanel } from '@/components/partner/PartnerInterventionPanel'
 import { PartnerUserManagement } from '@/components/partner/PartnerUserManagement'
+import NudgeControlPanel from '@/components/partner/nudges/NudgeControlPanel'
+import NudgeTemplateManager from '@/components/partner/nudges/NudgeTemplateManager'
+import NudgeEffectivenessDashboard from '@/components/partner/nudges/NudgeEffectivenessDashboard'
+import NudgeAutomationRules from '@/components/partner/nudges/NudgeAutomationRules'
+import NudgeHistory from '@/components/partner/nudges/NudgeHistory'
+import RealTimeEffectivenessMonitor from '@/components/partner/nudges/RealTimeEffectivenessMonitor'
+import TemplatePerformanceAnalytics from '@/components/partner/nudges/TemplatePerformanceAnalytics'
+import NudgeInsightsReportGenerator from '@/components/partner/nudges/NudgeInsightsReportGenerator'
 import { usePartnerDashboardData } from '@/hooks/usePartnerDashboardData'
 import { useAuth } from '@/hooks/useAuth'
 import { logOrganizationAccessAttempt } from '@/services/organizationService'
+import { getActiveNudgeTemplates } from '@/services/nudgeService'
+import type { NudgeTemplateRecord } from '@/types/nudges'
 
 export const PartnerAdminDashboard: React.FC = () => {
   const navigate = useNavigate()
-  const { isSuperAdmin, user } = useAuth()
+  const { isSuperAdmin, user, refreshProfile } = useAuth()
   const {
     assignedOrgCount,
     engagementTrend,
     metrics,
     organizations,
+    organizationsError,
+    organizationsLoading,
+    refreshDashboardData,
     riskLevels,
     selectedOrg,
     setSelectedOrg,
     updateUserPoints,
     users,
+    usersError,
+    usersLoading,
     dataQualityWarnings,
     interventions,
     daysUntil,
@@ -47,12 +64,52 @@ export const PartnerAdminDashboard: React.FC = () => {
     managedBreakdown,
     notificationCount,
   } = usePartnerDashboardData()
+  const enableProfileRealtime = import.meta.env.VITE_ENABLE_PROFILE_REALTIME === 'true'
+  const supportEmail = 'support@transformation4leaders.com'
 
-  type PartnerPageKey = 'overview' | 'users' | 'job-board' | 'grants' | 'organization-management'
+  type PartnerPageKey = 'overview' | 'users' | 'job-board' | 'grants' | 'organization-management' | 'at-risk'
   const [activePage, setActivePage] = useState<PartnerPageKey>('overview')
+  const [activeTemplates, setActiveTemplates] = useState<NudgeTemplateRecord[]>([])
+  const [templateLoadError, setTemplateLoadError] = useState<string | null>(null)
+  const [templateLoading, setTemplateLoading] = useState(false)
+
+  const loadTemplates = useCallback(async () => {
+    setTemplateLoading(true)
+    setTemplateLoadError(null)
+    try {
+      const templates = await getActiveNudgeTemplates()
+      setActiveTemplates(templates)
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Unknown error'
+      console.error('Failed to load nudge templates', error)
+      setActiveTemplates([])
+      setTemplateLoadError(
+        `Nudge templates could not be loaded. Please confirm your Firebase configuration and Firestore access. (${message})`,
+      )
+    } finally {
+      setTemplateLoading(false)
+    }
+  }, [])
+
+  useEffect(() => {
+    void loadTemplates()
+  }, [loadTemplates])
+
+  useEffect(() => {
+    if (enableProfileRealtime) return
+    console.warn(
+      '[PartnerDashboard] VITE_ENABLE_PROFILE_REALTIME is disabled. Manual or scheduled refresh is required.'
+    )
+    void refreshProfile()
+    const interval = window.setInterval(() => {
+      void refreshProfile()
+    }, 5 * 60 * 1000)
+    return () => window.clearInterval(interval)
+  }, [enableProfileRealtime, refreshProfile])
 
   const partnerNavItems = [
     { key: 'overview', label: 'Overview', description: 'Metrics & trends' },
+    { key: 'at-risk', label: 'At Risk', description: 'Risk monitoring & nudges' },
     { key: 'users', label: 'Users', description: 'Learners & leaders' },
     {
       key: 'organization-management',
@@ -134,6 +191,35 @@ export const PartnerAdminDashboard: React.FC = () => {
 
   const renderOverview = () => (
     <Stack spacing={8}>
+      {(organizationsError || usersError) && (
+        <Card bg="red.50" border="1px solid" borderColor="red.200">
+          <CardBody>
+            <Stack spacing={3}>
+              <Text fontWeight="semibold" color="red.700">
+                We hit a problem loading your dashboard data.
+              </Text>
+              {organizationsError ? (
+                <Text fontSize="sm" color="red.700">
+                  Organizations: {organizationsError}
+                </Text>
+              ) : null}
+              {usersError ? (
+                <Text fontSize="sm" color="red.700">
+                  Users: {usersError}
+                </Text>
+              ) : null}
+              <HStack>
+                <Button size="sm" colorScheme="red" onClick={refreshDashboardData} isLoading={organizationsLoading || usersLoading}>
+                  Retry loading data
+                </Button>
+                <Button size="sm" variant="outline" onClick={() => navigate('/login', { replace: true })}>
+                  Back to login
+                </Button>
+              </HStack>
+            </Stack>
+          </CardBody>
+        </Card>
+      )}
       <Card bg="white" border="1px solid" borderColor="brand.border">
         <CardBody>
           <HStack justify="space-between" align={{ base: 'flex-start', md: 'center' }} spacing={4} wrap="wrap">
@@ -182,32 +268,6 @@ export const PartnerAdminDashboard: React.FC = () => {
         />
       </SimpleGrid>
 
-      <Grid templateColumns={{ base: '1fr', xl: '2fr 1fr' }} gap={6}>
-        <GridItem>
-          <Card bg="white" border="1px solid" borderColor="brand.border">
-            <CardBody>
-              <EngagementChart
-                data={engagementTrend}
-                title="Engagement trends"
-                subtitle="14-day activity across assigned organizations"
-                valueLabel="Registrations"
-              />
-            </CardBody>
-          </Card>
-        </GridItem>
-        <GridItem>
-          <RiskAnalysisCard
-            title="At-risk accounts"
-            badgeLabel="Partner scoped"
-            badgeColor="purple"
-            levels={riskLevelList}
-            reasons={riskReasons}
-            warnings={dataQualityWarnings}
-            scopeNote="Only assigned organizations are included"
-          />
-        </GridItem>
-      </Grid>
-
       <Card bg="white" border="1px solid" borderColor="brand.border">
         <CardBody>
           <Stack spacing={4}>
@@ -236,6 +296,86 @@ export const PartnerAdminDashboard: React.FC = () => {
           </Stack>
         </CardBody>
       </Card>
+
+      <Card bg="white" border="1px solid" borderColor="brand.border">
+        <CardBody>
+          <PartnerUserManagement
+            users={users}
+            organizations={organizations}
+            selectedOrg={selectedOrg}
+            onSelectOrg={setSelectedOrg}
+            updateUserPoints={updateUserPoints}
+          />
+        </CardBody>
+      </Card>
+
+      <Card bg="white" border="1px solid" borderColor="brand.border">
+        <CardBody>
+          <Stack spacing={3}>
+            <HStack justify="space-between" align="center">
+              <Text fontWeight="bold" color="brand.text">Real-time notifications</Text>
+              <Badge colorScheme="red">{notificationCount} unread</Badge>
+            </HStack>
+            <Divider />
+            <Stack spacing={3}>
+              {[1, 2, 3].map(item => (
+                <HStack
+                  key={item}
+                  justify="space-between"
+                  p={3}
+                  borderRadius="md"
+                  border="1px solid"
+                  borderColor="brand.border"
+                  bg="brand.accent"
+                >
+                  <HStack spacing={3}>
+                    <Box p={2} borderRadius="md" bg="white" border="1px solid" borderColor="brand.border">
+                      <Bell size={16} />
+                    </Box>
+                    <VStack align="flex-start" spacing={0}>
+                      <Text fontWeight="semibold" color="brand.text">At-risk alert</Text>
+                      <Text fontSize="sm" color="brand.subtleText">
+                        Learner activity dropped in the past week. Review interventions.
+                      </Text>
+                    </VStack>
+                  </HStack>
+                  <Badge colorScheme="purple">Unread</Badge>
+                </HStack>
+              ))}
+            </Stack>
+          </Stack>
+        </CardBody>
+      </Card>
+    </Stack>
+  )
+
+  const renderAtRiskPage = () => (
+    <Stack spacing={8}>
+      <Grid templateColumns={{ base: '1fr', xl: '2fr 1fr' }} gap={6}>
+        <GridItem>
+          <Card bg="white" border="1px solid" borderColor="brand.border">
+            <CardBody>
+              <EngagementChart
+                data={engagementTrend}
+                title="Engagement trends"
+                subtitle="14-day activity across assigned organizations"
+                valueLabel="Registrations"
+              />
+            </CardBody>
+          </Card>
+        </GridItem>
+        <GridItem>
+          <RiskAnalysisCard
+            title="At-risk accounts"
+            badgeLabel="Partner scoped"
+            badgeColor="purple"
+            levels={riskLevelList}
+            reasons={riskReasons}
+            warnings={dataQualityWarnings}
+            scopeNote="Only assigned organizations are included"
+          />
+        </GridItem>
+      </Grid>
 
       <Card bg="white" border="1px solid" borderColor="brand.border">
         <CardBody>
@@ -294,51 +434,73 @@ export const PartnerAdminDashboard: React.FC = () => {
 
       <Card bg="white" border="1px solid" borderColor="brand.border">
         <CardBody>
-          <PartnerUserManagement
-            users={users}
-            organizations={organizations}
-            selectedOrg={selectedOrg}
-            onSelectOrg={setSelectedOrg}
-            updateUserPoints={updateUserPoints}
-          />
+          {templateLoadError ? (
+            <Stack
+              spacing={3}
+              p={4}
+              mb={4}
+              border="1px solid"
+              borderColor="red.200"
+              bg="red.50"
+              borderRadius="lg"
+            >
+              <Text fontWeight="semibold" color="red.700">Nudge templates unavailable</Text>
+              <Text fontSize="sm" color="red.700">
+                {templateLoadError} If the issue persists, contact support at {supportEmail}.
+              </Text>
+              <HStack>
+                <Button size="sm" colorScheme="red" onClick={() => void loadTemplates()} isLoading={templateLoading}>
+                  Retry
+                </Button>
+                <Button size="sm" variant="outline" onClick={() => setTemplateLoadError(null)}>
+                  Dismiss
+                </Button>
+              </HStack>
+            </Stack>
+          ) : null}
+          <NudgeControlPanel users={atRiskUsers} templates={activeTemplates} />
         </CardBody>
       </Card>
 
       <Card bg="white" border="1px solid" borderColor="brand.border">
         <CardBody>
-          <Stack spacing={3}>
-            <HStack justify="space-between" align="center">
-              <Text fontWeight="bold" color="brand.text">Real-time notifications</Text>
-              <Badge colorScheme="red">{notificationCount} unread</Badge>
-            </HStack>
-            <Divider />
-            <Stack spacing={3}>
-              {[1, 2, 3].map(item => (
-                <HStack
-                  key={item}
-                  justify="space-between"
-                  p={3}
-                  borderRadius="md"
-                  border="1px solid"
-                  borderColor="brand.border"
-                  bg="brand.accent"
-                >
-                  <HStack spacing={3}>
-                    <Box p={2} borderRadius="md" bg="white" border="1px solid" borderColor="brand.border">
-                      <Bell size={16} />
-                    </Box>
-                    <VStack align="flex-start" spacing={0}>
-                      <Text fontWeight="semibold" color="brand.text">At-risk alert</Text>
-                      <Text fontSize="sm" color="brand.subtleText">
-                        Learner activity dropped in the past week. Review interventions.
-                      </Text>
-                    </VStack>
-                  </HStack>
-                  <Badge colorScheme="purple">Unread</Badge>
-                </HStack>
-              ))}
-            </Stack>
-          </Stack>
+          <NudgeTemplateManager />
+        </CardBody>
+      </Card>
+
+      <Card bg="white" border="1px solid" borderColor="brand.border">
+        <CardBody>
+          <NudgeAutomationRules />
+        </CardBody>
+      </Card>
+
+      <Card bg="white" border="1px solid" borderColor="brand.border">
+        <CardBody>
+          <RealTimeEffectivenessMonitor />
+        </CardBody>
+      </Card>
+
+      <Card bg="white" border="1px solid" borderColor="brand.border">
+        <CardBody>
+          <NudgeEffectivenessDashboard />
+        </CardBody>
+      </Card>
+
+      <Card bg="white" border="1px solid" borderColor="brand.border">
+        <CardBody>
+          <TemplatePerformanceAnalytics />
+        </CardBody>
+      </Card>
+
+      <Card bg="white" border="1px solid" borderColor="brand.border">
+        <CardBody>
+          <NudgeHistory />
+        </CardBody>
+      </Card>
+
+      <Card bg="white" border="1px solid" borderColor="brand.border">
+        <CardBody>
+          <NudgeInsightsReportGenerator />
         </CardBody>
       </Card>
     </Stack>
@@ -452,6 +614,30 @@ export const PartnerAdminDashboard: React.FC = () => {
 
   const renderOrganizationManagementPage = () => (
     <Stack spacing={6}>
+      {(organizationsError || usersError) && (
+        <Card bg="red.50" border="1px solid" borderColor="red.200">
+          <CardBody>
+            <Stack spacing={3}>
+              <Text fontWeight="semibold" color="red.700">
+                Some dashboard data failed to load.
+              </Text>
+              {organizationsError ? (
+                <Text fontSize="sm" color="red.700">
+                  Organizations: {organizationsError}
+                </Text>
+              ) : null}
+              {usersError ? (
+                <Text fontSize="sm" color="red.700">
+                  Users: {usersError}
+                </Text>
+              ) : null}
+              <Button size="sm" colorScheme="red" onClick={refreshDashboardData} isLoading={organizationsLoading || usersLoading}>
+                Retry loading data
+              </Button>
+            </Stack>
+          </CardBody>
+        </Card>
+      )}
       <Card bg="white" border="1px solid" borderColor="brand.border">
         <CardBody>
           <Stack spacing={4}>
@@ -536,9 +722,41 @@ export const PartnerAdminDashboard: React.FC = () => {
                   These organisations are assigned to your partner admin scope.
                 </Text>
               </VStack>
-              <Badge colorScheme="purple">{organizations.length} assigned</Badge>
+              <Badge colorScheme={organizationsLoading ? 'gray' : 'purple'}>
+                {organizationsLoading ? 'Loading' : `${organizations.length} assigned`}
+              </Badge>
             </HStack>
-            {organizations.length ? (
+            {organizationsLoading ? (
+              <SimpleGrid columns={{ base: 1, md: 2, xl: 3 }} spacing={3}>
+                {Array.from({ length: 3 }).map((_, idx) => (
+                  <Box
+                    key={`org-skeleton-${idx}`}
+                    border="1px solid"
+                    borderColor="brand.border"
+                    borderRadius="md"
+                    p={4}
+                    bg="white"
+                  >
+                    <Stack spacing={3}>
+                      <Skeleton height="18px" width="60%" />
+                      <Skeleton height="12px" width="40%" />
+                      <Skeleton height="12px" width="80%" />
+                    </Stack>
+                  </Box>
+                ))}
+              </SimpleGrid>
+            ) : organizationsError ? (
+              <Box p={4} borderRadius="md" border="1px solid" borderColor="orange.200" bg="orange.50">
+                <Stack spacing={2}>
+                  <Text color="orange.700" fontWeight="semibold">
+                    Unable to load assigned organizations.
+                  </Text>
+                  <Text color="orange.700" fontSize="sm">
+                    {organizationsError}
+                  </Text>
+                </Stack>
+              </Box>
+            ) : organizations.length ? (
               <SimpleGrid columns={{ base: 1, md: 2, xl: 3 }} spacing={3}>
                 {organizations.map(org => (
                   <OrganizationCard
@@ -553,9 +771,23 @@ export const PartnerAdminDashboard: React.FC = () => {
               </SimpleGrid>
             ) : (
               <Box p={4} borderRadius="md" border="1px solid" borderColor="brand.border" bg="brand.accent">
-                <Text color="brand.subtleText">
-                  No organizations have been assigned yet. Assigned organizations will appear here.
-                </Text>
+                <Stack spacing={2}>
+                  <Text color="brand.subtleText" fontWeight="semibold">
+                    No organizations assigned yet
+                  </Text>
+                  <Text color="brand.subtleText" fontSize="sm">
+                    Assigned organizations will appear here once a super admin connects your account.
+                  </Text>
+                  <Button
+                    as="a"
+                    href={`mailto:${supportEmail}`}
+                    size="sm"
+                    variant="outline"
+                    alignSelf="flex-start"
+                  >
+                    Contact super admin
+                  </Button>
+                </Stack>
               </Box>
             )}
           </Stack>
@@ -574,6 +806,8 @@ export const PartnerAdminDashboard: React.FC = () => {
         return renderJobBoardPage()
       case 'grants':
         return renderGrantsPage()
+      case 'at-risk':
+        return renderAtRiskPage()
       case 'overview':
       default:
         return renderOverview()
@@ -582,7 +816,7 @@ export const PartnerAdminDashboard: React.FC = () => {
 
   const handleNavigate = (key: string) => {
     const normalized = key as PartnerPageKey
-    if (['overview', 'users', 'job-board', 'grants', 'organization-management'].includes(normalized)) {
+    if (['overview', 'users', 'job-board', 'grants', 'organization-management', 'at-risk'].includes(normalized)) {
       setActivePage(normalized)
     } else {
       setActivePage('overview')

@@ -2,7 +2,6 @@ import {
   Timestamp,
   addDoc,
   collection,
-  documentId,
   doc,
   FirestoreError,
   getDoc,
@@ -10,6 +9,7 @@ import {
   increment,
   onSnapshot,
   orderBy,
+  QuerySnapshot,
   query,
   serverTimestamp,
   updateDoc,
@@ -20,12 +20,11 @@ import { Organization } from '@/types'
 import {
   BulkInvitationResult,
   CourseOption,
-  OrganizationStatus,
   InvitationPayload,
   OrganizationLead,
   OrganizationRecord,
-  OrganizationStatistics,
-  OrganizationUserProfile,
+  type OrganizationStatistics,
+  type OrganizationUserProfile,
 } from '@/types/admin'
 import { inviteUsersBulk } from './invitationService'
 
@@ -34,7 +33,6 @@ const safeCodeChars = '23456789ABCDEFGHJKLMNPQRSTUVWXYZ'
 const orgCollection = collection(db, 'organizations')
 const coursesCollection = collection(db, 'courses')
 const usersCollection = collection(db, 'users')
-const engagementCollection = collection(db, 'user_engagement_scores')
 const adminActivityCollection = collection(db, 'admin_activity_log')
 
 type OrganizationAccessAttemptPayload = {
@@ -229,7 +227,7 @@ const normalizeTimestamp = (value?: Timestamp | string | Date): string => {
   return ''
 }
 
-const parseDateValue = (value?: Timestamp | string | Date | number): Date | null => {
+const parseUserDate = (value?: Timestamp | string | Date | number | null): Date | null => {
   if (!value) return null
   if (value instanceof Date) return value
   if (value instanceof Timestamp) return value.toDate()
@@ -330,6 +328,56 @@ export const fetchOrganizationDetails = async (organizationId: string): Promise<
   return { id: docSnap.id, ...(docSnap.data() as Omit<OrganizationRecord, 'id'>) }
 }
 
+const fetchOrganizationUserDocs = async (organizationKey: string): Promise<DocumentSnapshot[]> => {
+  const trimmed = organizationKey.trim()
+  if (!trimmed) return []
+  const [
+    companySnapshot,
+    legacyCompanySnapshot,
+    orgCodeSnapshot,
+    companyIdSnapshot,
+    organizationIdSnapshot,
+  ] = await Promise.all([
+    getDocs(query(usersCollection, where('companyCode', '==', trimmed))),
+    getDocs(query(usersCollection, where('company_code', '==', trimmed))),
+    getDocs(query(usersCollection, where('organization_code', '==', trimmed))),
+    getDocs(query(usersCollection, where('companyId', '==', trimmed))),
+    getDocs(query(usersCollection, where('organizationId', '==', trimmed))),
+  ])
+  const usersMap = new Map<string, DocumentSnapshot>()
+  companySnapshot.docs.forEach((docSnap) => usersMap.set(docSnap.id, docSnap))
+  legacyCompanySnapshot.docs.forEach((docSnap) => usersMap.set(docSnap.id, docSnap))
+  orgCodeSnapshot.docs.forEach((docSnap) => usersMap.set(docSnap.id, docSnap))
+  companyIdSnapshot.docs.forEach((docSnap) => usersMap.set(docSnap.id, docSnap))
+  organizationIdSnapshot.docs.forEach((docSnap) => usersMap.set(docSnap.id, docSnap))
+  return Array.from(usersMap.values())
+}
+
+/**
+ * Check whether a user has access to an organization based on assigned organizations.
+ */
+export const checkOrganizationAccess = async (
+  userId: string,
+  organizationId?: string,
+  organizationCode?: string,
+): Promise<{ authorized: boolean }> => {
+  if (!userId) return { authorized: false }
+  const userSnap = await getDoc(doc(usersCollection, userId))
+  if (!userSnap.exists()) return { authorized: false }
+  const data = userSnap.data() as { assignedOrganizations?: string[] }
+  const assignments = (data.assignedOrganizations || [])
+    .map((entry) => entry?.trim().toLowerCase())
+    .filter((entry): entry is string => !!entry)
+  if (!assignments.length) return { authorized: false }
+
+  const targets = [organizationId, organizationCode]
+    .map((entry) => entry?.trim().toLowerCase())
+    .filter((entry): entry is string => !!entry)
+
+  const authorized = targets.some((target) => assignments.includes(target))
+  return { authorized }
+}
+
 export const logOrganizationAccessAttempt = async ({
   userId,
   organizationId,
@@ -360,6 +408,111 @@ export const fetchOrganizationByCode = async (organizationCode: string): Promise
   if (snapshot.empty) return null
   const docSnap = snapshot.docs[0]
   return { id: docSnap.id, ...(docSnap.data() as Omit<OrganizationRecord, 'id'>) }
+}
+
+/**
+ * Calculate engagement and membership statistics for an organization.
+ */
+export const fetchOrganizationEngagementStats = async (organizationKey: string): Promise<OrganizationStatistics> => {
+  if (!organizationKey) {
+    return {
+      totalMembers: 0,
+      activeMembers: 0,
+      paidMembers: 0,
+      newMembersThisWeek: 0,
+      averageEngagementRate: 0,
+    }
+  }
+
+  const docs = await fetchOrganizationUserDocs(organizationKey)
+  const now = new Date()
+  const weekAgo = new Date(now)
+  weekAgo.setDate(now.getDate() - 7)
+
+  let totalMembers = 0
+  let activeMembers = 0
+  let paidMembers = 0
+  let newMembersThisWeek = 0
+  let engagementScoreSum = 0
+  let engagementScoreCount = 0
+
+  docs.forEach((docSnap) => {
+    totalMembers += 1
+    const data = docSnap.data() as {
+      membershipStatus?: OrganizationUserProfile['membershipStatus']
+      accountStatus?: OrganizationUserProfile['accountStatus']
+      createdAt?: Timestamp | string | Date | number
+      engagementScore?: number
+      engagementRate?: number
+    }
+    if ((data.accountStatus || 'active') === 'active') {
+      activeMembers += 1
+    }
+    if ((data.membershipStatus || 'inactive') === 'paid') {
+      paidMembers += 1
+    }
+    const createdAt = parseUserDate(data.createdAt)
+    if (createdAt && createdAt >= weekAgo) {
+      newMembersThisWeek += 1
+    }
+    const score = typeof data.engagementScore === 'number' ? data.engagementScore : data.engagementRate
+    if (typeof score === 'number') {
+      engagementScoreSum += score
+      engagementScoreCount += 1
+    }
+  })
+
+  const averageEngagementRate = engagementScoreCount ? Math.round(engagementScoreSum / engagementScoreCount) : 0
+
+  return {
+    totalMembers,
+    activeMembers,
+    paidMembers,
+    newMembersThisWeek,
+    averageEngagementRate,
+  }
+}
+
+/**
+ * Fetch user profiles associated with an organization.
+ */
+export const fetchOrganizationUsers = async (organizationKey: string): Promise<OrganizationUserProfile[]> => {
+  if (!organizationKey) return []
+  const docs = await fetchOrganizationUserDocs(organizationKey)
+  return docs.map((docSnap) => {
+    const data = docSnap.data() as {
+      fullName?: string
+      name?: string
+      firstName?: string
+      lastName?: string
+      email?: string
+      role?: OrganizationUserProfile['role']
+      membershipStatus?: OrganizationUserProfile['membershipStatus']
+      accountStatus?: OrganizationUserProfile['accountStatus']
+      lastActiveAt?: Timestamp | string | Date | number
+      lastActive?: Timestamp | string | Date | number
+      createdAt?: Timestamp | string | Date | number
+      avatarUrl?: string
+      photoURL?: string
+    }
+    const fullName =
+      data.fullName ||
+      data.name ||
+      [data.firstName, data.lastName].filter((value) => !!value).join(' ').trim() ||
+      data.email ||
+      'Unknown user'
+    return {
+      id: docSnap.id,
+      name: fullName,
+      email: data.email,
+      role: data.role || 'user',
+      membershipStatus: data.membershipStatus || 'inactive',
+      accountStatus: data.accountStatus || 'active',
+      lastActive: parseUserDate(data.lastActiveAt || data.lastActive),
+      createdAt: parseUserDate(data.createdAt),
+      avatarUrl: data.avatarUrl ?? data.photoURL ?? null,
+    }
+  })
 }
 
 export const fetchOrganizationAssignments = async (organizationId: string): Promise<string[]> => {
@@ -494,10 +647,12 @@ const listenToOrganizationsByAssignments = (
     const key = `id-${index}`
     const unsubscribe = onSnapshot(
       query(orgCollection, where(documentId(), 'in', chunk)),
-      (snapshot) => {
+      (snapshot: QuerySnapshot) => {
         listenerMaps.set(
           key,
-          new Map(snapshot.docs.map((docSnap) => [docSnap.id, buildOrganizationRecord(docSnap)])),
+          new Map(
+            snapshot.docs.map((docSnap: DocumentSnapshot) => [docSnap.id, buildOrganizationRecord(docSnap)]),
+          ),
         )
         emitCombined()
       },
@@ -510,10 +665,12 @@ const listenToOrganizationsByAssignments = (
     const key = `code-${index}`
     const unsubscribe = onSnapshot(
       query(orgCollection, where('code', 'in', chunk)),
-      (snapshot) => {
+      (snapshot: QuerySnapshot) => {
         listenerMaps.set(
           key,
-          new Map(snapshot.docs.map((docSnap) => [docSnap.id, buildOrganizationRecord(docSnap)])),
+          new Map(
+            snapshot.docs.map((docSnap: DocumentSnapshot) => [docSnap.id, buildOrganizationRecord(docSnap)]),
+          ),
         )
         emitCombined()
       },
@@ -527,14 +684,28 @@ const listenToOrganizationsByAssignments = (
   }
 }
 
+export interface ListenToAssignedOrganizationsOptions {
+  status?: OrganizationRecord['status'] | OrganizationRecord['status'][]
+  onError?: (error: FirestoreError) => void
+}
+
 export const listenToAssignedOrganizations = (
   userId: string,
   onChange: (organizations: OrganizationRecord[]) => void,
-  onError?: (error: FirestoreError) => void,
+  options?: ListenToAssignedOrganizationsOptions,
 ) => {
   if (!userId) {
     onChange([])
     return () => undefined
+  }
+
+  const statusFilter = options?.status
+  const statusList = Array.isArray(statusFilter) ? statusFilter : statusFilter ? [statusFilter] : null
+  const handleChange = (organizations: OrganizationRecord[]) => {
+    const filtered = statusList
+      ? organizations.filter((org) => org.status && statusList.includes(org.status))
+      : organizations
+    onChange(filtered)
   }
 
   let unsubscribeOrganizations: (() => void) | null = null
@@ -551,12 +722,12 @@ export const listenToAssignedOrganizations = (
       unsubscribeOrganizations = null
     }
 
-    unsubscribeOrganizations = listenToOrganizationsByAssignments(normalized, onChange, onError)
+    unsubscribeOrganizations = listenToOrganizationsByAssignments(normalized, handleChange, options?.onError)
   }
 
   const unsubscribeUser = onSnapshot(
     doc(usersCollection, userId),
-    (snapshot) => {
+    (snapshot: DocumentSnapshot) => {
       if (!snapshot.exists()) {
         updateAssignments([])
         return
@@ -564,7 +735,7 @@ export const listenToAssignedOrganizations = (
       const data = snapshot.data() as { assignedOrganizations?: string[] }
       updateAssignments(data.assignedOrganizations || [])
     },
-    onError,
+    options?.onError,
   )
 
   return () => {
