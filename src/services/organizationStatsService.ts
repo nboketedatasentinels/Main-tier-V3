@@ -181,7 +181,7 @@ export const calculateOrganizationStatistics = async (
     ? Math.round(engagementScoreSum / engagementScoreCount)
     : 0
 
-  const lastActiveIso = lastActive instanceof Date ? lastActive.toISOString() : undefined
+  const lastActiveIso = lastActive?.toISOString()
   const snapshot: OrganizationStatsSnapshot = {
     totalMembers,
     activeMembers,
