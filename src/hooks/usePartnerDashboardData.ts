@@ -108,11 +108,14 @@ export const usePartnerDashboardData = (options?: UsePartnerDashboardDataOptions
   const { assignedOrganizations = [], profile, isSuperAdmin, user } = useAuth()
   const [selectedOrg, setSelectedOrg] = useState<string>(options?.selectedOrg || 'all')
   const [users, setUsers] = useState<PartnerUser[]>([])
+  const [usersLoading, setUsersLoading] = useState<boolean>(true)
+  const [usersError, setUsersError] = useState<string | null>(null)
   const [organizations, setOrganizations] = useState<PartnerOrganization[]>([])
   const [organizationsLoading, setOrganizationsLoading] = useState<boolean>(true)
   const [organizationsError, setOrganizationsError] = useState<string | null>(null)
   const [notificationCount, setNotificationCount] = useState<number>(0)
   const [interventions, setInterventions] = useState<PartnerInterventionSummary[]>([])
+  const [reloadKey, setReloadKey] = useState(0)
   const lastAccessAttempt = useRef<string | null>(null)
 
   const organizationLookup = useMemo(() => {
@@ -149,6 +152,17 @@ export const usePartnerDashboardData = (options?: UsePartnerDashboardDataOptions
     return keys
   }, [organizationLookup, selectedOrg])
 
+  const formatFirestoreError = (error: unknown, fallback: string) => {
+    if (error instanceof Error) {
+      return `${fallback} (${error.message})`
+    }
+    return fallback
+  }
+
+  const refreshDashboardData = () => {
+    setReloadKey((prev) => prev + 1)
+  }
+
   useEffect(() => {
     if (!user?.uid) {
       setOrganizations([])
@@ -181,7 +195,7 @@ export const usePartnerDashboardData = (options?: UsePartnerDashboardDataOptions
         (error) => {
           console.error('Failed to load organizations', error)
           setOrganizations([])
-          setOrganizationsError('Unable to load organizations. Please try again.')
+          setOrganizationsError(formatFirestoreError(error, 'Unable to load organizations. Please try again.'))
           setOrganizationsLoading(false)
         },
       )
@@ -213,14 +227,16 @@ export const usePartnerDashboardData = (options?: UsePartnerDashboardDataOptions
         onError: (error) => {
           console.error('Failed to listen for assigned organizations', error)
           setOrganizations([])
-          setOrganizationsError('Unable to load assigned organizations. Please refresh and try again.')
+          setOrganizationsError(
+            formatFirestoreError(error, 'Unable to load assigned organizations. Please refresh and try again.'),
+          )
           setOrganizationsLoading(false)
         },
       },
     )
 
     return () => unsubscribe()
-  }, [isSuperAdmin, user?.uid])
+  }, [isSuperAdmin, user?.uid, reloadKey])
 
   useEffect(() => {
     if (!organizations.length) return undefined
@@ -339,132 +355,146 @@ export const usePartnerDashboardData = (options?: UsePartnerDashboardDataOptions
   useEffect(() => {
     let isMounted = true
 
-    const unsubscribe = onSnapshot(USERS_QUERY, async (snapshot) => {
-      const seenUserIds = new Set<string>()
-      const filteredDocs = snapshot.docs.filter((docSnap) => {
-        if (seenUserIds.has(docSnap.id)) return false
-        seenUserIds.add(docSnap.id)
+    setUsersLoading(true)
+    setUsersError(null)
 
-        const data = docSnap.data() as FirestorePartnerUser
-        const userOrgKeys = [
-          data.companyCode,
-          data.company_code,
-          data.companyId,
-          data.organizationId,
-        ]
-          .filter((value): value is string => !!value)
-          .map((value) => value.toLowerCase())
+    const unsubscribe = onSnapshot(
+      USERS_QUERY,
+      async (snapshot) => {
+        const seenUserIds = new Set<string>()
+        const filteredDocs = snapshot.docs.filter((docSnap) => {
+          if (seenUserIds.has(docSnap.id)) return false
+          seenUserIds.add(docSnap.id)
 
-        if (!isSuperAdmin && (!assignedOrgKeys.size || !userOrgKeys.some((key) => assignedOrgKeys.has(key)))) {
-          return false
-        }
+          const data = docSnap.data() as FirestorePartnerUser
+          const userOrgKeys = [
+            data.companyCode,
+            data.company_code,
+            data.companyId,
+            data.organizationId,
+          ]
+            .filter((value): value is string => !!value)
+            .map((value) => value.toLowerCase())
 
-        if (selectedOrg !== 'all' && selectedOrg && !userOrgKeys.some((key) => selectedOrgKeys.has(key))) {
-          return false
-        }
+          if (!isSuperAdmin && (!assignedOrgKeys.size || !userOrgKeys.some((key) => assignedOrgKeys.has(key)))) {
+            return false
+          }
 
-        return true
-      })
+          if (selectedOrg !== 'all' && selectedOrg && !userOrgKeys.some((key) => selectedOrgKeys.has(key))) {
+            return false
+          }
 
-      const userIds = filteredDocs.map((docSnap) => docSnap.id)
-      const weeklyPoints = await fetchWeeklyPointsByUser(userIds)
+          return true
+        })
 
-      if (!isMounted) return
+        const userIds = filteredDocs.map((docSnap) => docSnap.id)
+        const weeklyPoints = await fetchWeeklyPointsByUser(userIds)
 
-      const hydratedUsers: PartnerUser[] = filteredDocs.map((docSnap) => {
-        const data = docSnap.data() as FirestorePartnerUser
+        if (!isMounted) return
 
-        const rawCompanyCode = data.companyCode || data.company_code || ''
-        const rawOrganizationId = data.companyId || data.organizationId || ''
-        const companyCode =
-          rawCompanyCode.trim().length > 0
-            ? rawCompanyCode.toLowerCase()
-            : rawOrganizationId
-              ? organizationLookup.get(rawOrganizationId.toLowerCase()) || rawOrganizationId.toLowerCase()
-              : ''
-        const normalizedCreatedAt = normalizeTimestamp(data.createdAt || data.created_at)
-        const normalizedRegistrationDate =
-          normalizeTimestamp(
-            data.registrationDate || data.registration_date || data.createdAt || data.created_at,
-          ) || undefined
-        const normalizedProgramStart =
-          normalizeTimestamp(
-            data.programStartDate || data.program_start_date || normalizedRegistrationDate,
-          ) || normalizedRegistrationDate
-        const normalizedLastActive =
-          normalizeTimestamp(
-            data.lastActiveAt ||
-              data.last_active_at ||
-              data.lastActive ||
-              data.last_active ||
-              normalizedRegistrationDate,
-          ) || new Date().toISOString()
-        const currentWeek = getProgramWeekNumber(normalizedProgramStart || undefined)
-        const progress = mapWeeklyPointsToProgress(weeklyPoints[docSnap.id] || [], currentWeek)
-        const riskResult = calculateUserRiskStatus(
-          progress.current_week,
-          progress.earned_points,
-          progress.required_points,
-          data.nudgeResponseScore,
-        )
+        const hydratedUsers: PartnerUser[] = filteredDocs.map((docSnap) => {
+          const data = docSnap.data() as FirestorePartnerUser
 
-        const weeklyRequirement = progress.required_points[currentWeek] || 0
-        const weeklyEarned = progress.earned_points[currentWeek] || 0
-        const progressPercent = weeklyRequirement
-          ? Math.min(100, Math.round((weeklyEarned / weeklyRequirement) * 100))
-          : data.progressPercent || 0
+          const rawCompanyCode = data.companyCode || data.company_code || ''
+          const rawOrganizationId = data.companyId || data.organizationId || ''
+          const companyCode =
+            rawCompanyCode.trim().length > 0
+              ? rawCompanyCode.toLowerCase()
+              : rawOrganizationId
+                ? organizationLookup.get(rawOrganizationId.toLowerCase()) || rawOrganizationId.toLowerCase()
+                : ''
+          const normalizedCreatedAt = normalizeTimestamp(data.createdAt || data.created_at)
+          const normalizedRegistrationDate =
+            normalizeTimestamp(
+              data.registrationDate || data.registration_date || data.createdAt || data.created_at,
+            ) || undefined
+          const normalizedProgramStart =
+            normalizeTimestamp(
+              data.programStartDate || data.program_start_date || normalizedRegistrationDate,
+            ) || normalizedRegistrationDate
+          const normalizedLastActive =
+            normalizeTimestamp(
+              data.lastActiveAt ||
+                data.last_active_at ||
+                data.lastActive ||
+                data.last_active ||
+                normalizedRegistrationDate,
+            ) || new Date().toISOString()
+          const currentWeek = getProgramWeekNumber(normalizedProgramStart || undefined)
+          const progress = mapWeeklyPointsToProgress(weeklyPoints[docSnap.id] || [], currentWeek)
+          const riskResult = calculateUserRiskStatus(
+            progress.current_week,
+            progress.earned_points,
+            progress.required_points,
+            data.nudgeResponseScore,
+          )
 
-        const riskStatus: PartnerRiskLevel | 'at_risk' =
-          riskResult.status === 'at_risk'
-            ? 'at_risk'
-            : progressPercent >= 95
-              ? 'engaged'
-              : progressPercent >= 80
-                ? 'watch'
-                : progressPercent >= 60
-                  ? 'concern'
-                  : 'critical'
+          const weeklyRequirement = progress.required_points[currentWeek] || 0
+          const weeklyEarned = progress.earned_points[currentWeek] || 0
+          const progressPercent = weeklyRequirement
+            ? Math.min(100, Math.round((weeklyEarned / weeklyRequirement) * 100))
+            : data.progressPercent || 0
 
-        const riskReasons = [
-          ...(data.riskReasons || []),
-          ...(riskResult.reason ? [riskResult.reason] : []),
-          data.nudgeResponseScore && data.nudgeResponseScore >= 0.7
-            ? 'Responds well to nudges'
-            : undefined,
-        ].filter((reason): reason is string => typeof reason === 'string' && reason.length > 0)
+          const riskStatus: PartnerRiskLevel | 'at_risk' =
+            riskResult.status === 'at_risk'
+              ? 'at_risk'
+              : progressPercent >= 95
+                ? 'engaged'
+                : progressPercent >= 80
+                  ? 'watch'
+                  : progressPercent >= 60
+                    ? 'concern'
+                    : 'critical'
 
-        return {
-          id: docSnap.id,
-          name: data.name || data.fullName || data.full_name || 'Unknown User',
-          fullName: data.fullName || data.full_name || data.name,
-          createdAt: normalizedCreatedAt || undefined,
-          lastActiveAt: normalizeTimestamp(data.lastActiveAt || data.last_active_at) || undefined,
-          programStartDate: normalizedProgramStart || undefined,
-          email: data.email || '',
-          companyCode,
-          organizationId: rawOrganizationId ? rawOrganizationId.toLowerCase() : undefined,
-          progressPercent,
-          currentWeek,
-          status: (data.accountStatus as PartnerUser['status']) || 'Active',
-          lastActive: normalizedLastActive,
-          riskStatus,
-          weeklyEarned,
-          weeklyRequired: weeklyRequirement,
-          role: data.role,
-          riskReasons,
-          registrationDate: normalizedRegistrationDate || undefined,
-          interventions: data.interventions || 0,
-        }
-      })
+          const riskReasons = [
+            ...(data.riskReasons || []),
+            ...(riskResult.reason ? [riskResult.reason] : []),
+            data.nudgeResponseScore && data.nudgeResponseScore >= 0.7
+              ? 'Responds well to nudges'
+              : undefined,
+          ].filter((reason): reason is string => typeof reason === 'string' && reason.length > 0)
 
-      setUsers(hydratedUsers)
-    })
+          return {
+            id: docSnap.id,
+            name: data.name || data.fullName || data.full_name || 'Unknown User',
+            fullName: data.fullName || data.full_name || data.name,
+            createdAt: normalizedCreatedAt || undefined,
+            lastActiveAt: normalizeTimestamp(data.lastActiveAt || data.last_active_at) || undefined,
+            programStartDate: normalizedProgramStart || undefined,
+            email: data.email || '',
+            companyCode,
+            organizationId: rawOrganizationId ? rawOrganizationId.toLowerCase() : undefined,
+            progressPercent,
+            currentWeek,
+            status: (data.accountStatus as PartnerUser['status']) || 'Active',
+            lastActive: normalizedLastActive,
+            riskStatus,
+            weeklyEarned,
+            weeklyRequired: weeklyRequirement,
+            role: data.role,
+            riskReasons,
+            registrationDate: normalizedRegistrationDate || undefined,
+            interventions: data.interventions || 0,
+          }
+        })
+
+        setUsers(hydratedUsers)
+        setUsersLoading(false)
+      },
+      (error) => {
+        if (!isMounted) return
+        console.error('Failed to load users for partner dashboard', error)
+        setUsers([])
+        setUsersError(formatFirestoreError(error, 'Unable to load user data. Please try again.'))
+        setUsersLoading(false)
+      },
+    )
 
     return () => {
       isMounted = false
       unsubscribe()
     }
-  }, [assignedOrgKeys, isSuperAdmin, organizationLookup, selectedOrg, selectedOrgKeys])
+  }, [assignedOrgKeys, isSuperAdmin, organizationLookup, selectedOrg, selectedOrgKeys, reloadKey])
 
   useEffect(() => {
     if (!profile?.id) return
@@ -669,9 +699,12 @@ export const usePartnerDashboardData = (options?: UsePartnerDashboardDataOptions
     organizationsError,
     organizationsLoading,
     profile,
+    refreshDashboardData,
     riskLevels,
     selectedOrg,
     setSelectedOrg,
+    usersError,
+    usersLoading,
     updateUserPoints,
     users,
     interventions,

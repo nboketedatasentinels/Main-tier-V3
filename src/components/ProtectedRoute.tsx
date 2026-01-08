@@ -38,6 +38,7 @@ export const ProtectedRoute: React.FC<Props> = ({
     profile,
     loading,
     profileLoading,
+    profileError,
     isMentor,
     isAmbassador,
     isPaid,
@@ -53,7 +54,15 @@ export const ProtectedRoute: React.FC<Props> = ({
   }
 
   if (!profile) {
-    return <Navigate to="/auth/profile-missing" replace />
+    return (
+      <Navigate
+        to="/auth/profile-missing"
+        replace
+        state={{
+          error: profileError?.message || 'Unable to load profile data.',
+        }}
+      />
+    )
   }
 
   // Get normalized role for admin/super_admin comparisons
