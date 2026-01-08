@@ -148,7 +148,7 @@ export const MainLayout: React.FC = () => {
       {
         label: 'COMMUNITY',
         items: [
-          { label: 'Announcements', path: '/app/announcements', icon: Megaphone },
+          { label: 'Events', path: '/app/announcements', icon: Megaphone },
           { label: 'Referral Rewards', path: '/app/referral-rewards', icon: Gift },
           { label: 'Global Book Club', path: '/app/book-club', icon: BookMarked },
           { label: 'Shameless Circle', path: '/app/shameless-circle', icon: Sparkles },
