@@ -302,8 +302,8 @@ const EventsTab: React.FC = () => {
     profile?.role === UserRole.SUPER_ADMIN || profile?.role === UserRole.AMBASSADOR || profile?.role === UserRole.COMPANY_ADMIN
 
   const description = events.length
-    ? 'All upcoming workshops, gatherings, and learning sessions now live on our T4Leader events calendar. Head there to explore the full schedule and RSVP.'
-    : "We've moved event discovery to our dedicated T4Leader events calendar. Visit the full schedule to see what's coming up and reserve your spot."
+    ? 'All upcoming workshops, gatherings, learning sessions, and book club meetups now live on T4Leader. Head there to explore the full schedule and RSVP.'
+    : "We've moved event discovery and book club updates to our dedicated T4Leader calendar. See what's coming up and reserve your spot."
 
   return (
     <Stack spacing={4}>
@@ -371,17 +371,32 @@ const EventsTab: React.FC = () => {
           <Text color="text.secondary" fontSize={{ base: 'sm', md: 'md' }}>
             {description}
           </Text>
-          <Button
-            as={chakra.a}
-            href="https://www.t4leader.com/event"
-            target="_blank"
-            rel="noopener noreferrer"
-            colorScheme="purple"
-            size="lg"
-            rightIcon={<ArrowUpRight size={18} />}
-          >
-            View Events
-          </Button>
+          <HStack spacing={4} flexDirection={{ base: 'column', md: 'row' }} align="center">
+            <Button
+              as={chakra.a}
+              href="https://www.t4leader.com/event"
+              target="_blank"
+              rel="noopener noreferrer"
+              colorScheme="purple"
+              size="lg"
+              rightIcon={<ArrowUpRight size={18} />}
+              width={{ base: 'full', md: 'auto' }}
+            >
+              View Events
+            </Button>
+            <Button
+              as={chakra.a}
+              href="https://www.t4leader.com/book-club"
+              target="_blank"
+              rel="noopener noreferrer"
+              colorScheme="purple"
+              size="lg"
+              rightIcon={<ArrowUpRight size={18} />}
+              width={{ base: 'full', md: 'auto' }}
+            >
+              View Books
+            </Button>
+          </HStack>
           {eventsLoading && (
             <Text color="text.muted" fontSize="xs" letterSpacing="widest">
               Refreshing events feed...
