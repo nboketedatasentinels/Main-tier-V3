@@ -131,29 +131,6 @@ Available courses
 }
 ```
 
-### weekly_content
-Weekly podcast episodes
-```typescript
-{
-  id: string
-  weekNumber: number
-  journeyType: '4W' | '6W' | '3M' | '6M' | '9M' | '12M' | 'all'
-  title: string
-  description?: string
-  videoUrl?: string // YouTube, Vimeo, or Wistia URLs
-  thumbnailUrl?: string
-  duration?: string // e.g. "42 min"
-  isActive: boolean
-  createdAt: Timestamp
-  updatedAt: Timestamp
-}
-```
-
-Example video URLs:
-- YouTube: `https://www.youtube.com/watch?v=Du71f-J9s2A`
-- Vimeo: `https://vimeo.com/123456789`
-- Wistia: `https://fast.wistia.net/embed/iframe/abc123`
-
 ### impactLogs
 User impact tracking (subcollection under profiles)
 ```typescript
