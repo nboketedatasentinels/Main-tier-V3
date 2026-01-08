@@ -48,6 +48,7 @@ export const buildSuperAdminNavItems = (): NavigationSection[] => [
       { key: 'security', label: 'Security & Audit', icon: ShieldAlert },
       { key: 'reports', label: 'Reports & Analytics', icon: BarChart3 },
       { key: 'configuration', label: 'Platform Configuration', icon: Target },
+      { key: 'podcast-content', label: 'Podcast Content', icon: Headphones },
     ],
   },
 ]
