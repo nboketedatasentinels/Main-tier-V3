@@ -67,6 +67,8 @@ const parseTimestamp = (value?: unknown): Date | null => {
   return asDate || null
 }
 
+const toIsoString = (value: Date | null): string | undefined => (value ? value.toISOString() : undefined)
+
 const normalizeCodes = (code?: string): string[] => {
   if (!code) return []
   const trimmed = code.trim()
@@ -181,7 +183,7 @@ export const calculateOrganizationStatistics = async (
     ? Math.round(engagementScoreSum / engagementScoreCount)
     : 0
 
-  const lastActiveIso = lastActive?.toISOString()
+  const lastActiveIso = toIsoString(lastActive)
   const snapshot: OrganizationStatsSnapshot = {
     totalMembers,
     activeMembers,
