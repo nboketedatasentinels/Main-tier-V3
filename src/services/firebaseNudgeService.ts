@@ -24,13 +24,37 @@ const mapDoc = <T extends { id: string }>(docSnap: { id: string; data: () => unk
     ...(docSnap.data() as Omit<T, 'id'>),
   }) as T
 
+const isMissingIndexError = (error: unknown) => {
+  if (!error || typeof error !== 'object') return false
+  const code = (error as { code?: string }).code
+  const message = (error as { message?: string }).message
+  return code === 'failed-precondition' && typeof message === 'string' && message.includes('requires an index')
+}
+
+const sortTemplatesByCreatedAt = (templates: NudgeTemplateRecord[]) => {
+  return [...templates].sort((a, b) => {
+    const aValue = a.created_at?.toMillis?.() ?? 0
+    const bValue = b.created_at?.toMillis?.() ?? 0
+    return bValue - aValue
+  })
+}
+
 export const fetchNudgeTemplates = async (onlyActive = false) => {
   const templatesRef = collection(db, 'nudge_templates')
   const baseQuery = onlyActive
     ? query(templatesRef, where('is_active', '==', true), orderBy('created_at', 'desc'))
     : query(templatesRef, orderBy('created_at', 'desc'))
-  const snapshot = await getDocs(baseQuery)
-  return snapshot.docs.map((docSnap) => mapDoc<NudgeTemplateRecord>(docSnap))
+  try {
+    const snapshot = await getDocs(baseQuery)
+    return snapshot.docs.map((docSnap) => mapDoc<NudgeTemplateRecord>(docSnap))
+  } catch (error) {
+    if (onlyActive && isMissingIndexError(error)) {
+      const fallbackSnapshot = await getDocs(query(templatesRef, where('is_active', '==', true)))
+      const fallbackTemplates = fallbackSnapshot.docs.map((docSnap) => mapDoc<NudgeTemplateRecord>(docSnap))
+      return sortTemplatesByCreatedAt(fallbackTemplates)
+    }
+    throw error
+  }
 }
 
 export const createNudgeTemplate = async (template: Omit<NudgeTemplateRecord, 'id' | 'created_at' | 'updated_at'>) => {
