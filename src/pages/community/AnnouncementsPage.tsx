@@ -371,7 +371,7 @@ const EventsTab: React.FC = () => {
           <Text color="text.secondary" fontSize={{ base: 'sm', md: 'md' }}>
             {description}
           </Text>
-          <HStack spacing={4} flexDirection={{ base: 'column', md: 'row' }} align="center">
+          <HStack spacing={4} flexDirection={{ base: 'column', md: 'row' }} align="center" justify="center">
             <Button
               as={chakra.a}
               href="https://www.t4leader.com/event"
@@ -383,18 +383,6 @@ const EventsTab: React.FC = () => {
               width={{ base: 'full', md: 'auto' }}
             >
               View Events
-            </Button>
-            <Button
-              as={chakra.a}
-              href="https://www.t4leader.com/book-club"
-              target="_blank"
-              rel="noopener noreferrer"
-              colorScheme="purple"
-              size="lg"
-              rightIcon={<ArrowUpRight size={18} />}
-              width={{ base: 'full', md: 'auto' }}
-            >
-              View Books
             </Button>
           </HStack>
           {eventsLoading && (
