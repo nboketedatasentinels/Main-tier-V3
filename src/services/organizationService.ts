@@ -278,8 +278,33 @@ export const createOrganizationWithInvitations = async (
   return { organizationId: orgRef.id, invitationResult }
 }
 
-const normalizeAssignments = (assignedOrganizations?: string[]): string[] =>
-  (assignedOrganizations || []).map((entry) => entry?.trim()).filter((entry): entry is string => !!entry)
+const normalizeAssignments = (assignedOrganizations?: string[]): string[] => {
+  const normalized: string[] = []
+  const seen = new Set<string>()
+  const codePattern = /^[A-Z0-9]{6}$/i
+
+  ;(assignedOrganizations || []).forEach((entry) => {
+    if (typeof entry !== 'string') return
+    const trimmed = entry.trim()
+    if (!trimmed) return
+    const value = codePattern.test(trimmed) ? trimmed.toUpperCase() : trimmed
+    if (seen.has(value)) return
+    seen.add(value)
+    normalized.push(value)
+  })
+
+  return normalized
+}
+
+const buildCodeCandidates = (assignments: string[]): string[] => {
+  const candidates = new Set<string>()
+  assignments.forEach((entry) => {
+    candidates.add(entry)
+    candidates.add(entry.toUpperCase())
+    candidates.add(entry.toLowerCase())
+  })
+  return Array.from(candidates)
+}
 
 const chunkList = <T,>(items: T[], size: number): T[][] => {
   const chunks: T[][] = []
@@ -298,7 +323,7 @@ const fetchOrganizationsByAssignments = async (assignments: string[]): Promise<O
   const normalized = normalizeAssignments(assignments)
   if (!normalized.length) return []
 
-  const codeCandidates = Array.from(new Set(normalized.flatMap((entry) => [entry, entry.toUpperCase()])))
+  const codeCandidates = buildCodeCandidates(normalized)
   const idChunks = chunkList(normalized, 10)
   const codeChunks = chunkList(codeCandidates, 10)
 
@@ -336,7 +361,7 @@ const listenToOrganizationsByAssignments = (
     return () => undefined
   }
 
-  const codeCandidates = Array.from(new Set(normalized.flatMap((entry) => [entry, entry.toUpperCase()])))
+  const codeCandidates = buildCodeCandidates(normalized)
   const idChunks = chunkList(normalized, 10)
   const codeChunks = chunkList(codeCandidates, 10)
   const listenerMaps = new Map<string, Map<string, OrganizationRecord>>()
