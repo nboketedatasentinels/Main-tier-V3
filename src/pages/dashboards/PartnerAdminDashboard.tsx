@@ -50,12 +50,14 @@ export const PartnerAdminDashboard: React.FC = () => {
     organizations,
     organizationsError,
     organizationsLoading,
+    organizationsReady,
     riskLevels,
     selectedOrg,
     setSelectedOrg,
     updateUserPoints,
     users,
     usersError,
+    usersLoading,
     dataQualityWarnings,
     interventions,
     daysUntil,
@@ -179,7 +181,7 @@ export const PartnerAdminDashboard: React.FC = () => {
   ]
 
   const orgCards = organizations.map(org => ({
-    name: org.name,
+    name: org.name || org.code || org.id || 'Unknown organization',
     status: org.status,
     activeUsers: org.activeUsers,
     newThisWeek: org.newThisWeek,
@@ -211,11 +213,14 @@ export const PartnerAdminDashboard: React.FC = () => {
   }, [organizations])
 
   const handleViewOrganization = (orgCode: string) => {
-    const allowed = isSuperAdmin || organizations.some(org => org.code.toLowerCase() === orgCode.toLowerCase())
+    const normalized = orgCode.toLowerCase()
+    const allowed =
+      isSuperAdmin ||
+      organizations.some(org => org.code?.toLowerCase() === normalized || org.id?.toLowerCase() === normalized)
     if (!allowed && user?.uid) {
       void logOrganizationAccessAttempt({
         userId: user.uid,
-        organizationCode: orgCode,
+        organizationCode: normalized,
         reason: 'partner_dashboard_navigation',
       })
       return
@@ -343,7 +348,10 @@ export const PartnerAdminDashboard: React.FC = () => {
         <CardBody>
           <PartnerUserManagement
             users={users}
+            usersLoading={usersLoading}
             organizations={organizations}
+            organizationsLoading={organizationsLoading}
+            organizationsReady={organizationsReady}
             selectedOrg={selectedOrg}
             onSelectOrg={setSelectedOrg}
             updateUserPoints={updateUserPoints}
@@ -564,7 +572,10 @@ export const PartnerAdminDashboard: React.FC = () => {
             </HStack>
             <PartnerUserManagement
               users={users}
+              usersLoading={usersLoading}
               organizations={organizations}
+              organizationsLoading={organizationsLoading}
+              organizationsReady={organizationsReady}
               selectedOrg={selectedOrg}
               onSelectOrg={setSelectedOrg}
               updateUserPoints={updateUserPoints}
@@ -806,13 +817,13 @@ export const PartnerAdminDashboard: React.FC = () => {
                 <SimpleGrid columns={{ base: 1, md: 2, xl: 3 }} spacing={3}>
                   {organizations.map(org => (
                     <OrganizationCard
-                      key={org.code}
-                      name={org.name}
+                      key={org.code || org.id}
+                      name={org.name || org.code || org.id || 'Unknown organization'}
                       status={org.status}
                       activeUsers={org.activeUsers}
                       newThisWeek={org.newThisWeek}
                       warning={org.warning}
-                      onViewClick={() => handleViewOrganization(org.code)}
+                      onViewClick={() => handleViewOrganization(org.code || org.id || 'unknown')}
                     />
                   ))}
                 </SimpleGrid>

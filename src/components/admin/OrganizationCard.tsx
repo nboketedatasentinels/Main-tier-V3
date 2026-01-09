@@ -30,7 +30,7 @@ export const OrganizationCard: React.FC<OrganizationCardProps> = ({
       <HStack justify="space-between" mb={2} align="flex-start">
         <Stack spacing={1}>
           <Text fontWeight="semibold" color="brand.text">
-            {name}
+            {name || 'Unknown Organization'}
           </Text>
           {description && (
             <Text fontSize="sm" color="brand.subtleText">

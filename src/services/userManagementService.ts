@@ -186,11 +186,25 @@ export const deleteUserAccount = async (userId: string) => {
 }
 
 export const bulkUpdateRole = async (userIds: string[], role: ManagedUserRole) => {
-  await Promise.all(userIds.map((id) => updateUserRole(id, role)))
+  const results = await Promise.allSettled(userIds.map((id) => updateUserRole(id, role)))
+  const failedIds = results
+    .map((result, idx) => (result.status === 'rejected' ? userIds[idx] : null))
+    .filter((id): id is string => typeof id === 'string')
+  return {
+    successfulIds: userIds.filter((id) => !failedIds.includes(id)),
+    failedIds,
+  }
 }
 
 export const bulkUpdateMembershipStatus = async (userIds: string[], membershipStatus: MembershipStatus) => {
-  await Promise.all(userIds.map((id) => updateMembershipStatus(id, membershipStatus)))
+  const results = await Promise.allSettled(userIds.map((id) => updateMembershipStatus(id, membershipStatus)))
+  const failedIds = results
+    .map((result, idx) => (result.status === 'rejected' ? userIds[idx] : null))
+    .filter((id): id is string => typeof id === 'string')
+  return {
+    successfulIds: userIds.filter((id) => !failedIds.includes(id)),
+    failedIds,
+  }
 }
 
 export const assignRoleToUser = async (
