@@ -281,29 +281,17 @@ export const createOrganizationWithInvitations = async (
 const normalizeAssignments = (assignedOrganizations?: string[]): string[] => {
   const normalized: string[] = []
   const seen = new Set<string>()
-  const codePattern = /^[A-Z0-9]{6}$/i
 
   ;(assignedOrganizations || []).forEach((entry) => {
     if (typeof entry !== 'string') return
     const trimmed = entry.trim()
     if (!trimmed) return
-    const value = codePattern.test(trimmed) ? trimmed.toUpperCase() : trimmed
-    if (seen.has(value)) return
-    seen.add(value)
-    normalized.push(value)
+    if (seen.has(trimmed)) return
+    seen.add(trimmed)
+    normalized.push(trimmed)
   })
 
   return normalized
-}
-
-const buildCodeCandidates = (assignments: string[]): string[] => {
-  const candidates = new Set<string>()
-  assignments.forEach((entry) => {
-    candidates.add(entry)
-    candidates.add(entry.toUpperCase())
-    candidates.add(entry.toLowerCase())
-  })
-  return Array.from(candidates)
 }
 
 const chunkList = <T,>(items: T[], size: number): T[][] => {
@@ -323,14 +311,11 @@ const fetchOrganizationsByAssignments = async (assignments: string[]): Promise<O
   const normalized = normalizeAssignments(assignments)
   if (!normalized.length) return []
 
-  const codeCandidates = buildCodeCandidates(normalized)
   const idChunks = chunkList(normalized, 10)
-  const codeChunks = chunkList(codeCandidates, 10)
 
-  const snapshots = await Promise.all([
-    ...idChunks.map((chunk) => getDocs(query(orgCollection, where(documentId(), 'in', chunk)))),
-    ...codeChunks.map((chunk) => getDocs(query(orgCollection, where('code', 'in', chunk)))),
-  ])
+  const snapshots = await Promise.all(
+    idChunks.map((chunk) => getDocs(query(orgCollection, where(documentId(), 'in', chunk)))),
+  )
 
   const orgMap = new Map<string, OrganizationRecord>()
   snapshots.forEach((snapshot) => {
@@ -361,9 +346,7 @@ const listenToOrganizationsByAssignments = (
     return () => undefined
   }
 
-  const codeCandidates = buildCodeCandidates(normalized)
   const idChunks = chunkList(normalized, 10)
-  const codeChunks = chunkList(codeCandidates, 10)
   const listenerMaps = new Map<string, Map<string, OrganizationRecord>>()
   const unsubscribers: Array<() => void> = []
 
@@ -381,24 +364,6 @@ const listenToOrganizationsByAssignments = (
     const key = `id-${index}`
     const unsubscribe = onSnapshot(
       query(orgCollection, where(documentId(), 'in', chunk)),
-      (snapshot: QuerySnapshot) => {
-        listenerMaps.set(
-          key,
-          new Map(
-            snapshot.docs.map((docSnap: DocumentSnapshot) => [docSnap.id, buildOrganizationRecord(docSnap)]),
-          ),
-        )
-        emitCombined()
-      },
-      onError,
-    )
-    unsubscribers.push(unsubscribe)
-  })
-
-  codeChunks.forEach((chunk, index) => {
-    const key = `code-${index}`
-    const unsubscribe = onSnapshot(
-      query(orgCollection, where('code', 'in', chunk)),
       (snapshot: QuerySnapshot) => {
         listenerMaps.set(
           key,

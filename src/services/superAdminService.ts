@@ -484,11 +484,20 @@ export const deleteAdminUser = async (adminId: string) => {
 
 export const assignOrganizations = async (adminId: string, orgIds: string[]) => {
   const adminRef = doc(db, 'users', adminId)
-  await updateDoc(adminRef, { assignedOrganizations: orgIds, updatedAt: serverTimestamp() })
+  // assignedOrganizations must contain organization document IDs only, never codes.
+  const sanitizedOrgIds = Array.from(
+    new Set(
+      (orgIds || [])
+        .filter((id): id is string => typeof id === 'string')
+        .map((id) => id.trim())
+        .filter(Boolean),
+    ),
+  )
+  await updateDoc(adminRef, { assignedOrganizations: sanitizedOrgIds, updatedAt: serverTimestamp() })
   await logAdminAction({
     action: 'admin_orgs_updated',
     userId: adminId,
-    metadata: { orgIds },
+    metadata: { orgIds: sanitizedOrgIds },
   })
 }
 

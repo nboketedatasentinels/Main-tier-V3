@@ -42,6 +42,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const [profile, setProfile] = useState<UserProfile | null>(null)
   const [loading, setLoading] = useState(true)
   const [profileLoading, setProfileLoading] = useState(true)
+  const [profileStatus, setProfileStatus] = useState<'loading' | 'ready'>('loading')
   const [profileError, setProfileError] = useState<Error | null>(null)
   const [claimsRole, setClaimsRole] = useState<string | null>(null)
   const profileRef = useRef<UserProfile | null>(null)
@@ -495,6 +496,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
       setLoading(true)
       setUser(currentUser)
+      setProfileStatus('loading')
 
       if (!currentUser) {
         console.log('🟠 [Auth] No user → clearing state')
@@ -503,6 +505,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         setProfileError(null)
         setLoading(false)
         setProfileLoading(false)
+        setProfileStatus('ready')
         return
       }
 
@@ -520,18 +523,22 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       }
 
       if (isActive) {
+        const ensuredProfile = userProfile
+          ? { ...userProfile, assignedOrganizations: userProfile.assignedOrganizations ?? [] }
+          : null
         console.log('🟢 [Auth] Profile resolved', {
-          role: userProfile?.role,
-          normalized: normalizeRole(userProfile?.role),
+          role: ensuredProfile?.role,
+          normalized: normalizeRole(ensuredProfile?.role),
         })
 
-        updateProfileState(userProfile, 'auth-state-change')
-        recordProfileLoad(userProfile)
-        if (userProfile) {
-          void attemptFreeCourseAssignment(currentUser.uid, userProfile)
+        updateProfileState(ensuredProfile, 'auth-state-change')
+        recordProfileLoad(ensuredProfile)
+        if (ensuredProfile) {
+          void attemptFreeCourseAssignment(currentUser.uid, ensuredProfile)
         }
         setProfileLoading(false)
         setLoading(false)
+        setProfileStatus('ready')
       }
 
       if (!userProfile || !isActive) return
@@ -553,11 +560,13 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
             id: snap.id,
             journeyType: updatedData.journeyType || '4W',
             role: (normalizeRole(updatedData.role) as StandardRole) ?? updatedData.role,
+            assignedOrganizations: updatedData.assignedOrganizations ?? [],
           }
           console.log('🔁 [Auth] Profile updated via snapshot', updatedProfile.role)
           updateProfileState(updatedProfile, 'realtime-snapshot')
           recordProfileLoad(updatedProfile)
           void attemptFreeCourseAssignment(currentUser.uid, updatedProfile)
+          setProfileStatus('ready')
         },
         (error) => {
           console.error('🔴 [Auth] Realtime profile listener error', error)
@@ -975,7 +984,10 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
     try {
       setProfileLoading(true)
-      const refreshed = (await fetchProfileOnce(currentUser.uid)) ?? (await fetchOrCreateUserDoc(currentUser))
+      const refreshedRaw = (await fetchProfileOnce(currentUser.uid)) ?? (await fetchOrCreateUserDoc(currentUser))
+      const refreshed = refreshedRaw
+        ? { ...refreshedRaw, assignedOrganizations: refreshedRaw.assignedOrganizations ?? [] }
+        : null
       if (refreshed) {
         updateProfileState(refreshed, `manual-refresh:${reason}`)
         recordProfileLoad(refreshed)
@@ -1016,6 +1028,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     userData: profile,
     loading,
     profileLoading,
+    profileStatus,
     profileError,
     lastProfileLoadAt: lastProfileLoadAtRef.current,
     signIn,
@@ -1036,9 +1049,9 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       profile?.transformationTier?.toLowerCase().includes('corporate') ?? false,
     assignedOrganizations: profile?.assignedOrganizations ?? [],
     hasFullOrganizationAccess: normalizedRole === 'super_admin',
-    canAccessOrganization: (code: string) =>
+    canAccessOrganization: (organizationId: string) =>
       normalizedRole === 'super_admin' ||
-      profile?.assignedOrganizations?.includes(code) === true,
+      profile?.assignedOrganizations?.includes(organizationId) === true,
     updateDashboardPreferences: async () => ({ error: null }),
     claimsRole,
     refreshAdminSession,

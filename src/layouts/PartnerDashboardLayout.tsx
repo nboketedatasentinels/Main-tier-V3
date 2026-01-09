@@ -58,11 +58,13 @@ export const PartnerDashboardLayout: React.FC<PartnerDashboardLayoutProps> = ({
 }) => {
   const sidebarWidth = '280px'
   const disclosure = useDisclosure()
-  const { profile, signOut, refreshProfile, profileLoading, lastProfileLoadAt, isAdmin } = useAuth()
+  const { profile, signOut, refreshProfile, profileLoading, lastProfileLoadAt, isAdmin, profileStatus } = useAuth()
   const enableProfileRealtime = import.meta.env.VITE_ENABLE_PROFILE_REALTIME === 'true'
   const toast = useToast()
   const [showRefreshHint, setShowRefreshHint] = React.useState(false)
   const [lastUpdatedLabel, setLastUpdatedLabel] = React.useState('Not yet loaded')
+  const [profileSyncWarning, setProfileSyncWarning] = React.useState(false)
+  const profileLoadingSinceRef = React.useRef<number | null>(null)
   const assignedCount = organizations.length || profile?.assignedOrganizations?.length || 0
   const menuItems = navItems.length
     ? navItems
@@ -99,6 +101,27 @@ export const PartnerDashboardLayout: React.FC<PartnerDashboardLayoutProps> = ({
     const interval = window.setInterval(updateRefreshHint, 60 * 1000)
     return () => window.clearInterval(interval)
   }, [updateRefreshHint])
+
+  React.useEffect(() => {
+    if (profileStatus === 'loading') {
+      profileLoadingSinceRef.current = profileLoadingSinceRef.current ?? Date.now()
+    } else {
+      profileLoadingSinceRef.current = null
+      setProfileSyncWarning(false)
+    }
+  }, [profileStatus])
+
+  React.useEffect(() => {
+    const interval = window.setInterval(() => {
+      if (profileStatus !== 'loading' || !profileLoadingSinceRef.current) {
+        setProfileSyncWarning(false)
+        return
+      }
+      const elapsedMs = Date.now() - profileLoadingSinceRef.current
+      setProfileSyncWarning(elapsedMs > 15000)
+    }, 1000)
+    return () => window.clearInterval(interval)
+  }, [profileStatus])
 
   const handleManualRefresh = React.useCallback(async () => {
     const result = await refreshProfile({ reason: 'partner-dashboard-manual' })
@@ -344,9 +367,22 @@ export const PartnerDashboardLayout: React.FC<PartnerDashboardLayoutProps> = ({
               <Text color="brand.subtleText" maxW="760px">
                 Real-time oversight for assigned organizations with scoped interventions, approvals, and mentor engagement tools.
               </Text>
-              <Text fontSize="xs" color="brand.subtleText">
-                Profile last updated: {lastUpdatedLabel}
-              </Text>
+              <HStack spacing={3} align="center" flexWrap="wrap">
+                <Badge colorScheme={profileStatus === 'ready' ? 'green' : 'orange'}>
+                  {profileStatus === 'ready' ? 'Profile synced' : 'Profile syncing'}
+                </Badge>
+                <Text fontSize="xs" color="brand.subtleText">
+                  Profile last updated: {lastUpdatedLabel}
+                </Text>
+                <Button
+                  size="xs"
+                  variant="outline"
+                  onClick={() => void handleManualRefresh()}
+                  isLoading={profileLoading}
+                >
+                  Sync Profile
+                </Button>
+              </HStack>
               {showRefreshHint && (
                 <HStack spacing={3} pt={2}>
                   <Badge colorScheme="orange">Refresh suggested</Badge>
@@ -357,7 +393,15 @@ export const PartnerDashboardLayout: React.FC<PartnerDashboardLayoutProps> = ({
                     isLoading={profileLoading}
                   >
                     Refresh now
-                  </Button>
+                    </Button>
+                </HStack>
+              )}
+              {profileSyncWarning && (
+                <HStack spacing={2} pt={2}>
+                  <Badge colorScheme="red">Profile sync delayed</Badge>
+                  <Text fontSize="xs" color="red.600">
+                    Profile has not loaded within the expected timeframe.
+                  </Text>
                 </HStack>
               )}
             </VStack>

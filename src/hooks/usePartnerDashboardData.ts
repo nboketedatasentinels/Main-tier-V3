@@ -36,6 +36,7 @@ export interface PartnerOrganization {
   newThisWeek: number
   lastActive?: string
   tags?: string[]
+  warning?: string
 }
 
 export interface PartnerUser {
@@ -105,7 +106,7 @@ const normalizeTimestamp = (value?: unknown): string | null => {
 }
 
 export const usePartnerDashboardData = (options?: UsePartnerDashboardDataOptions) => {
-  const { assignedOrganizations = [], profile, isSuperAdmin, user } = useAuth()
+  const { assignedOrganizations = [], profile, isSuperAdmin, user, profileStatus } = useAuth()
   const [selectedOrg, setSelectedOrg] = useState<string>(options?.selectedOrg || 'all')
   const [users, setUsers] = useState<PartnerUser[]>([])
   const [usersLoading, setUsersLoading] = useState<boolean>(true)
@@ -115,8 +116,11 @@ export const usePartnerDashboardData = (options?: UsePartnerDashboardDataOptions
   const [organizationsError, setOrganizationsError] = useState<string | null>(null)
   const [notificationCount, setNotificationCount] = useState<number>(0)
   const [interventions, setInterventions] = useState<PartnerInterventionSummary[]>([])
-  const [reloadKey, setReloadKey] = useState(0)
   const lastAccessAttempt = useRef<string | null>(null)
+  const assignmentKey = useMemo(
+    () => assignedOrganizations.slice().filter(Boolean).sort().join('|'),
+    [assignedOrganizations],
+  )
 
   const organizationLookup = useMemo(() => {
     const mapping = new Map<string, string>()
@@ -159,12 +163,7 @@ export const usePartnerDashboardData = (options?: UsePartnerDashboardDataOptions
     return fallback
   }
 
-  const refreshDashboardData = () => {
-    setReloadKey((prev) => prev + 1)
-  }
-
   useEffect(() => {
-    const assignmentKey = assignedOrganizations.slice().sort().join('|')
     if (!assignmentKey) {
       console.debug('[PartnerDashboard] No assigned organizations in auth context.')
     } else {
@@ -172,10 +171,28 @@ export const usePartnerDashboardData = (options?: UsePartnerDashboardDataOptions
         assignments: assignedOrganizations,
       })
     }
-    refreshDashboardData()
-  }, [assignedOrganizations])
+  }, [assignedOrganizations, assignmentKey])
 
   useEffect(() => {
+    if (profileStatus !== 'ready') {
+      console.debug('[PartnerDashboard] Waiting for profile readiness before loading dashboard data.', {
+        profileStatus,
+      })
+      setOrganizations([])
+      setUsers([])
+      setOrganizationsLoading(true)
+      setUsersLoading(true)
+      setOrganizationsError(null)
+      setUsersError(null)
+      return
+    }
+    console.debug('[PartnerDashboard] Profile ready, loading dashboard data.')
+  }, [profileStatus])
+
+  useEffect(() => {
+    if (profileStatus !== 'ready') {
+      return
+    }
     if (!user?.uid) {
       setOrganizations([])
       setOrganizationsLoading(false)
@@ -199,6 +216,7 @@ export const usePartnerDashboardData = (options?: UsePartnerDashboardDataOptions
               newThisWeek: data.newThisWeek ?? 0,
               lastActive: data.lastActive,
               tags: data.tags || [],
+              warning: !data.name || !data.code ? 'Organization details incomplete.' : undefined,
             }
           })
           setOrganizations(scoped)
@@ -218,11 +236,8 @@ export const usePartnerDashboardData = (options?: UsePartnerDashboardDataOptions
     const unsubscribe = listenToAssignedOrganizations(
       user.uid,
       (assignedOrgs) => {
-        const assignedIds = assignedOrganizations.map((org) => org.toLowerCase())
-        const returnedIds = assignedOrgs
-          .flatMap((org) => [org.id, org.code])
-          .filter((value): value is string => typeof value === 'string')
-          .map((value) => value.toLowerCase())
+        const assignedIds = assignedOrganizations.filter(Boolean)
+        const returnedIds = assignedOrgs.map((org) => org.id).filter(Boolean) as string[]
         const missingAssignments = assignedIds.filter((id) => !returnedIds.includes(id))
         if (assignedOrganizations.length && !assignedOrgs.length) {
           console.warn('[PartnerDashboard] Assigned organizations missing from Firestore results', {
@@ -231,6 +246,7 @@ export const usePartnerDashboardData = (options?: UsePartnerDashboardDataOptions
         } else if (missingAssignments.length) {
           console.warn('[PartnerDashboard] Some assigned organizations could not be resolved', {
             missingAssignments,
+            assignments: assignedIds,
           })
         }
         console.debug('[PartnerDashboard] Assigned organizations loaded', {
@@ -248,6 +264,7 @@ export const usePartnerDashboardData = (options?: UsePartnerDashboardDataOptions
             newThisWeek: data.newThisWeek ?? 0,
             lastActive: data.lastActive,
             tags: data.tags || [],
+            warning: !data.name || !data.code ? 'Organization details incomplete.' : undefined,
           }
         })
         setOrganizations(scoped)
@@ -267,9 +284,12 @@ export const usePartnerDashboardData = (options?: UsePartnerDashboardDataOptions
     )
 
     return () => unsubscribe()
-  }, [assignedOrganizations, isSuperAdmin, user?.uid, reloadKey])
+  }, [assignedOrganizations, assignmentKey, isSuperAdmin, profileStatus, user?.uid])
 
   useEffect(() => {
+    if (profileStatus !== 'ready') {
+      return
+    }
     if (!organizations.length) return undefined
     let isMounted = true
 
@@ -302,6 +322,9 @@ export const usePartnerDashboardData = (options?: UsePartnerDashboardDataOptions
   }, [organizations])
 
   useEffect(() => {
+    if (profileStatus !== 'ready') {
+      return
+    }
     if (isSuperAdmin || selectedOrg === 'all') return
     const hasAccess =
       assignedOrgKeys.size > 0 && Array.from(selectedOrgKeys).some((key) => assignedOrgKeys.has(key))
@@ -318,6 +341,9 @@ export const usePartnerDashboardData = (options?: UsePartnerDashboardDataOptions
   }, [assignedOrgKeys, isSuperAdmin, selectedOrg, selectedOrgKeys, user?.uid])
 
   useEffect(() => {
+    if (profileStatus !== 'ready') {
+      return
+    }
     if (selectedOrg === 'all') return
     const selected = selectedOrg.toLowerCase()
     const stillValid = organizations.some(
@@ -384,6 +410,9 @@ export const usePartnerDashboardData = (options?: UsePartnerDashboardDataOptions
   }
 
   useEffect(() => {
+    if (profileStatus !== 'ready') {
+      return
+    }
     let isMounted = true
 
     setUsersLoading(true)
@@ -525,9 +554,12 @@ export const usePartnerDashboardData = (options?: UsePartnerDashboardDataOptions
       isMounted = false
       unsubscribe()
     }
-  }, [assignedOrgKeys, isSuperAdmin, organizationLookup, selectedOrg, selectedOrgKeys, reloadKey])
+  }, [assignedOrgKeys, isSuperAdmin, organizationLookup, profileStatus, selectedOrg, selectedOrgKeys])
 
   useEffect(() => {
+    if (profileStatus !== 'ready') {
+      return
+    }
     if (!profile?.id) return
 
     const notificationsQuery = query(
@@ -544,6 +576,9 @@ export const usePartnerDashboardData = (options?: UsePartnerDashboardDataOptions
   }, [profile?.id])
 
   useEffect(() => {
+    if (profileStatus !== 'ready') {
+      return
+    }
     if (!user?.uid) return
 
     const unsubscribe = onSnapshot(
@@ -696,6 +731,17 @@ export const usePartnerDashboardData = (options?: UsePartnerDashboardDataOptions
       })
     }
 
+    if (
+      profileStatus === 'ready' &&
+      assignedOrganizations.length > organizations.length &&
+      organizations.length > 0
+    ) {
+      warnings.push({
+        message: 'Some assigned organizations could not be resolved. Please re-sync your profile.',
+        severity: 'warning',
+      })
+    }
+
     const missingAssignments = users.filter((user) => !user.companyCode).length
     if (missingAssignments) {
       warnings.push({
@@ -713,9 +759,46 @@ export const usePartnerDashboardData = (options?: UsePartnerDashboardDataOptions
     }
 
     return warnings
-  }, [isSuperAdmin, organizations.length, organizationsLoading, users])
+  }, [assignedOrganizations.length, isSuperAdmin, organizations.length, organizationsLoading, profileStatus, users])
 
   const daysUntil = (date: string) => differenceInDays(new Date(date), new Date())
+
+  if (profileStatus !== 'ready') {
+    return {
+      assignedOrgCount: 0,
+      assignedOrganizations: assignedOrganizations ?? [],
+      atRiskUsers: [],
+      dataQualityWarnings: [],
+      engagementTrend: [],
+      managedBreakdown: { active: 0, inactive: 0 },
+      metrics: {
+        activeMembers: 0,
+        engagementRate: 0,
+        newRegistrations: 0,
+        managedCompanies: 0,
+        deltas: {
+          activeMembers: 'Initializing',
+          engagementRate: 'Initializing',
+          newRegistrations: 'Initializing',
+          managedCompanies: 'Initializing',
+        },
+      },
+      notificationCount: 0,
+      organizations: [],
+      organizationsError: null,
+      organizationsLoading: true,
+      profile,
+      riskLevels: { engaged: 0, watch: 0, concern: 0, critical: 0 },
+      selectedOrg,
+      setSelectedOrg,
+      usersError: null,
+      usersLoading: true,
+      updateUserPoints: async () => undefined,
+      users: [],
+      interventions: [],
+      daysUntil,
+    }
+  }
 
   return {
     assignedOrgCount,
@@ -730,7 +813,6 @@ export const usePartnerDashboardData = (options?: UsePartnerDashboardDataOptions
     organizationsError,
     organizationsLoading,
     profile,
-    refreshDashboardData,
     riskLevels,
     selectedOrg,
     setSelectedOrg,

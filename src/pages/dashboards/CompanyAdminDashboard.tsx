@@ -11,6 +11,7 @@ import {
   HStack,
   Progress,
   SimpleGrid,
+  Skeleton,
   Stack,
   Text,
   VStack,
@@ -26,6 +27,7 @@ import { AdminUserTable, TableColumn } from '@/components/admin/AdminUserTable'
 import { OrganizationCard } from '@/components/admin/OrganizationCard'
 import type { OrganizationCardProps } from '@/components/admin/OrganizationCard'
 import { StatusBadge } from '@/components/admin/StatusBadge'
+import { DashboardErrorBoundary } from '@/components/ui/DashboardErrorBoundary'
 import CompanyAdminLayout from '@/layouts/CompanyAdminLayout'
 import { buildCompanyAdminNavItems } from '@/utils/navigationItems'
 import {
@@ -120,7 +122,7 @@ const UserManagementSection: React.FC<{
 )
 
 export const CompanyAdminDashboard: React.FC = () => {
-  const { profile, assignedOrganizations, isSuperAdmin, user } = useAuth()
+  const { profile, assignedOrganizations, isSuperAdmin, user, profileStatus } = useAuth()
   const navigate = useNavigate()
   const adminName = profile?.fullName || profile?.firstName || 'Admin'
   const [activePage, setActivePage] = useState<CompanyPageKey>('overview')
@@ -144,6 +146,11 @@ export const CompanyAdminDashboard: React.FC = () => {
   }
 
   useEffect(() => {
+    if (profileStatus !== 'ready') {
+      setOrganizationsLoading(true)
+      setOrganizationRecords([])
+      return undefined
+    }
     if (!user?.uid) return undefined
 
     const startListener = () => {
@@ -182,7 +189,7 @@ export const CompanyAdminDashboard: React.FC = () => {
         window.clearTimeout(retryTimeoutRef.current)
       }
     }
-  }, [user?.uid])
+  }, [profileStatus, user?.uid])
 
   useEffect(() => {
     let isActive = true
@@ -221,6 +228,7 @@ export const CompanyAdminDashboard: React.FC = () => {
       const key = org.id || org.code
       const stats = organizationStats[key]
       const newThisWeek = stats?.newMembersThisWeek ?? 0
+      const warning = !org.name || !org.code ? 'Organization details incomplete.' : undefined
       return {
         code: org.code || key,
         name: org.name || 'Unknown organization',
@@ -230,6 +238,7 @@ export const CompanyAdminDashboard: React.FC = () => {
         change: stats ? `${newThisWeek >= 0 ? '+' : ''}${newThisWeek}` : undefined,
         admins: org.assignmentCount,
         description: org.description,
+        warning,
       }
     })
   }, [organizationRecords, organizationStats])
@@ -301,6 +310,9 @@ export const CompanyAdminDashboard: React.FC = () => {
   const hasAssignments = isSuperAdmin || assignedOrganizations.length > 0
 
   useEffect(() => {
+    if (profileStatus !== 'ready') {
+      return
+    }
     if (!user?.uid) return
     if (!isSuperAdmin && !assignedOrganizations.length) {
       setOrganizations([])
@@ -326,7 +338,7 @@ export const CompanyAdminDashboard: React.FC = () => {
     )
 
     return () => unsubscribe()
-  }, [assignedOrganizations, isSuperAdmin, user?.uid])
+  }, [assignedOrganizations, isSuperAdmin, profileStatus, user?.uid])
 
   useEffect(() => {
     if (selectedOrg === 'all') return
@@ -559,11 +571,13 @@ export const CompanyAdminDashboard: React.FC = () => {
               <Text fontWeight="bold" color="brand.text">Managed companies</Text>
               <Badge colorScheme="teal">Scoped by role</Badge>
             </HStack>
-            <SimpleGrid columns={{ base: 1, md: 2, xl: 4 }} spacing={3}>
-              {filteredOrganizations.map(company => (
-                <OrganizationCard key={company.name} {...company} onViewClick={() => handleViewOrganization(company.code)} />
-              ))}
-            </SimpleGrid>
+            <DashboardErrorBoundary context="Company Admin organizations">
+              <SimpleGrid columns={{ base: 1, md: 2, xl: 4 }} spacing={3}>
+                {filteredOrganizations.map(company => (
+                  <OrganizationCard key={company.name} {...company} onViewClick={() => handleViewOrganization(company.code)} />
+                ))}
+              </SimpleGrid>
+            </DashboardErrorBoundary>
           </Stack>
         </CardBody>
       </Card>
@@ -683,11 +697,13 @@ export const CompanyAdminDashboard: React.FC = () => {
               <Badge colorScheme="purple">Scoped</Badge>
             </HStack>
             {filteredOrganizations.length ? (
-              <SimpleGrid columns={{ base: 1, md: 2, xl: 3 }} spacing={4}>
-                {filteredOrganizations.map(org => (
-                  <OrganizationCard key={org.name} {...org} onViewClick={() => handleViewOrganization(org.code)} />
-                ))}
-              </SimpleGrid>
+              <DashboardErrorBoundary context="Company Admin organizations">
+                <SimpleGrid columns={{ base: 1, md: 2, xl: 3 }} spacing={4}>
+                  {filteredOrganizations.map(org => (
+                    <OrganizationCard key={org.name} {...org} onViewClick={() => handleViewOrganization(org.code)} />
+                  ))}
+                </SimpleGrid>
+              </DashboardErrorBoundary>
             ) : (
               <Text fontSize="sm" color="brand.subtleText">
                 No organizations are assigned to this account yet.
@@ -803,6 +819,31 @@ export const CompanyAdminDashboard: React.FC = () => {
     if (['overview', 'users', 'organizations', 'reports', 'settings', 'support'].includes(normalized)) {
       setActivePage(normalized)
     }
+  }
+
+  if (profileStatus !== 'ready') {
+    return (
+      <CompanyAdminLayout
+        navSections={navSections}
+        activeItem={activePage}
+        onNavigate={handleNavigate}
+        organizations={organizationOptions}
+        selectedOrg={selectedOrg}
+        onSelectOrg={setSelectedOrg}
+      >
+        <Stack spacing={4}>
+          <Skeleton height="28px" width="240px" />
+          <Text fontSize="sm" color="brand.subtleText">
+            Loading profile...
+          </Text>
+          <Skeleton height="140px" borderRadius="md" />
+          <Text fontSize="sm" color="brand.subtleText">
+            Loading organizations...
+          </Text>
+          <Skeleton height="220px" borderRadius="md" />
+        </Stack>
+      </CompanyAdminLayout>
+    )
   }
 
   return (

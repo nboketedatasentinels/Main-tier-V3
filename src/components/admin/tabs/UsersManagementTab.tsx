@@ -96,8 +96,9 @@ export const UsersManagementTab = () => {
   const accessibleUsers = useMemo(() => {
     if (isSuperAdmin || !assignedOrganizations?.length) return users
     return users.filter((user) => {
-      if (!user.companyCode) return false
-      return assignedOrganizations.includes(user.companyCode)
+      const organizationId = user.companyId
+      if (!organizationId) return false
+      return assignedOrganizations.includes(organizationId)
     })
   }, [assignedOrganizations, isSuperAdmin, users])
 
