@@ -164,6 +164,7 @@ export const usePartnerDashboardData = (options?: UsePartnerDashboardDataOptions
   }
 
   useEffect(() => {
+    console.debug('[PartnerDashboard] Assignment key updated', { assignmentKey })
     if (!assignmentKey) {
       console.debug('[PartnerDashboard] No assigned organizations in auth context.')
     } else {
@@ -205,6 +206,9 @@ export const usePartnerDashboardData = (options?: UsePartnerDashboardDataOptions
       const unsubscribe = onSnapshot(
         query(collection(db, 'organizations'), where('status', '==', 'active')),
         (snapshot) => {
+          console.debug('[PartnerDashboard] Super admin organizations loaded', {
+            count: snapshot.size,
+          })
           const scoped = snapshot.docs.map((docSnap) => {
             const data = docSnap.data() as Partial<PartnerOrganization>
             return {
@@ -239,6 +243,7 @@ export const usePartnerDashboardData = (options?: UsePartnerDashboardDataOptions
         const assignedIds = assignedOrganizations.filter(Boolean)
         const returnedIds = assignedOrgs.map((org) => org.id).filter(Boolean) as string[]
         const missingAssignments = assignedIds.filter((id) => !returnedIds.includes(id))
+        const unexpectedAssignments = returnedIds.filter((id) => !assignedIds.includes(id))
         if (assignedOrganizations.length && !assignedOrgs.length) {
           console.warn('[PartnerDashboard] Assigned organizations missing from Firestore results', {
             assignments: assignedOrganizations,
@@ -246,6 +251,12 @@ export const usePartnerDashboardData = (options?: UsePartnerDashboardDataOptions
         } else if (missingAssignments.length) {
           console.warn('[PartnerDashboard] Some assigned organizations could not be resolved', {
             missingAssignments,
+            assignments: assignedIds,
+          })
+        }
+        if (unexpectedAssignments.length) {
+          console.warn('[PartnerDashboard] Received organizations not present in assignments', {
+            unexpectedAssignments,
             assignments: assignedIds,
           })
         }

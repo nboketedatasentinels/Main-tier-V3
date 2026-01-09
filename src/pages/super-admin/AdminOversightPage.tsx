@@ -228,10 +228,12 @@ export const AdminOversightPage: React.FC<AdminOversightPageProps> = ({ adminNam
       await updateAdminUser(selectedAdmin.id, formData)
       await assignOrganizations(selectedAdmin.id, formData.assignedOrganizations || [])
       const verifiedOrganizations = await fetchAssignedOrganizations(selectedAdmin.id)
-      const verifiedIds = verifiedOrganizations.map((org) => org.id)
+      const verifiedIds = verifiedOrganizations.map((org) => org.id).filter((id): id is string => !!id)
       const requestedIds = formData.assignedOrganizations || []
       const missingIds = requestedIds.filter((orgId) => !verifiedIds.includes(orgId))
-      const assignedNames = verifiedOrganizations.map((org) => organizationName(org.id))
+      const assignedNames = verifiedOrganizations.map((org) =>
+        org.id ? organizationName(org.id) : 'Unknown',
+      )
       console.debug('[SuperAdmin] Assignment verification results', {
         requested: requestedIds,
         verified: verifiedIds,

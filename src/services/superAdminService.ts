@@ -484,7 +484,7 @@ export const deleteAdminUser = async (adminId: string) => {
 
 export const assignOrganizations = async (adminId: string, orgIds: string[]) => {
   const adminRef = doc(db, 'users', adminId)
-  // assignedOrganizations must contain organization document IDs only, never codes.
+  // assignedOrganizations MUST contain organization document IDs only, never codes.
   const sanitizedOrgIds = Array.from(
     new Set(
       (orgIds || [])

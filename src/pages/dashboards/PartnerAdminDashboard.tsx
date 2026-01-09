@@ -56,7 +56,6 @@ export const PartnerAdminDashboard: React.FC = () => {
     updateUserPoints,
     users,
     usersError,
-    usersLoading,
     dataQualityWarnings,
     interventions,
     daysUntil,
