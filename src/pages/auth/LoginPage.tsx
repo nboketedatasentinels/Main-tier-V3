@@ -146,7 +146,7 @@ export const LoginPage: React.FC = () => {
   const handleProfileRefresh = async () => {
     console.log('🔵 LoginPage: Manual profile refresh triggered')
     setRefreshingProfile(true)
-    const { error } = await refreshProfile()
+    const { error } = await refreshProfile({ reason: 'login-manual' })
     if (error) {
       toast({
         title: 'Profile refresh failed',

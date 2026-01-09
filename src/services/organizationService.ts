@@ -179,7 +179,7 @@ export const fetchAmbassadors = async (): Promise<OrganizationLead[]> => {
 }
 
 export const fetchPartners = async (): Promise<OrganizationLead[]> => {
-  const snapshot = await getDocs(query(usersCollection, where('role', '==', 'partner')))
+  const snapshot = await getDocs(query(usersCollection, where('role', 'in', ['partner', 'admin'])))
   return snapshot.docs.map(buildLead)
 }
 

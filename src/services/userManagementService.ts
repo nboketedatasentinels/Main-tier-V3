@@ -13,7 +13,7 @@ import {
 } from 'firebase/firestore'
 import { db } from './firebase'
 
-export type ManagedUserRole = 'user' | 'partner' | 'super_admin' | 'team_leader' | 'mentor' | 'ambassador'
+export type ManagedUserRole = 'user' | 'partner' | 'admin' | 'super_admin' | 'team_leader' | 'mentor' | 'ambassador'
 export type MembershipStatus = 'free' | 'paid' | 'inactive'
 
 export interface OrganizationOption {

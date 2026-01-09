@@ -36,7 +36,7 @@ const orgCollection = collection(db, 'organizations')
 const usersCollection = collection(db, 'users')
 const auditCollection = collection(db, 'admin_activity_log')
 const engagementCollection = collection(db, 'user_engagement_scores')
-const adminRoles: AdminRole[] = ['super_admin', 'partner', 'mentor', 'ambassador', 'team_leader']
+const adminRoles: AdminRole[] = ['super_admin', 'partner', 'admin', 'mentor', 'ambassador', 'team_leader']
 
 export const fetchDashboardMetrics = async (
   filters?: Partial<{ organizationCodes: string[]; organizationIds: string[]; trendDays: number }>,

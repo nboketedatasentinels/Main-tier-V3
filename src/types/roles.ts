@@ -1,8 +1,7 @@
-/* eslint-disable @typescript-eslint/no-duplicate-enum-values */
 export enum UserRole {
   SUPER_ADMIN = 'super_admin',
   COMPANY_ADMIN = 'partner', // Maps to 'partner'
-  ADMIN = 'partner',         // Maps to 'partner'
+  ADMIN = 'admin',
   MENTOR = 'mentor',
   AMBASSADOR = 'ambassador',
   TEAM_LEADER = 'team_leader',
@@ -14,6 +13,7 @@ export enum UserRole {
 // Defines the set of roles that are considered "standard" and stored in Firestore.
 export type StandardRole =
   | 'super_admin'
+  | 'admin'
   | 'partner'
   | 'mentor'
   | 'ambassador'
@@ -27,6 +27,7 @@ export type AllRoles = StandardRole | UserRole | string;
 
 export const ALL_STANDARD_ROLES: StandardRole[] = [
   'super_admin',
+  'admin',
   'partner',
   'mentor',
   'ambassador',

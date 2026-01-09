@@ -54,6 +54,7 @@ type SortKey = 'name' | 'email' | 'role' | 'status' | 'lastActive'
 
 const roleColorMap: Record<string, string> = {
   partner: 'purple',
+  admin: 'purple',
   mentor: 'blue',
   ambassador: 'teal',
   team_leader: 'orange',
@@ -93,7 +94,7 @@ export const AdminOversightPage: React.FC<AdminOversightPageProps> = ({ adminNam
   const updateMetrics = useCallback((adminList: AdminUserRecord[]) => {
     const total = adminList.length
     const active = adminList.filter((admin) => admin.accountStatus !== 'suspended').length
-    const partners = adminList.filter((admin) => admin.role === 'partner').length
+    const partners = adminList.filter((admin) => admin.role === 'partner' || admin.role === 'admin').length
     const mentors = adminList.filter((admin) => admin.role === 'mentor').length
     const ambassadors = adminList.filter((admin) => admin.role === 'ambassador').length
     const teamLeaders = adminList.filter((admin) => admin.role === 'team_leader').length
@@ -294,6 +295,7 @@ export const AdminOversightPage: React.FC<AdminOversightPageProps> = ({ adminNam
   const roleLabel = (role: string) =>
     ({
       partner: 'Partner',
+      admin: 'Admin',
       mentor: 'Mentor',
       ambassador: 'Ambassador',
       team_leader: 'Team Leader',
@@ -451,6 +453,7 @@ export const AdminOversightPage: React.FC<AdminOversightPageProps> = ({ adminNam
           >
             <option value="all">All Roles</option>
             <option value="partner">Partner</option>
+            <option value="admin">Admin</option>
             <option value="mentor">Mentor</option>
             <option value="ambassador">Ambassador</option>
             <option value="team_leader">Team Leader</option>

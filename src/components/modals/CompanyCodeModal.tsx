@@ -150,7 +150,7 @@ export const CompanyCodeModal: React.FC<CompanyCodeModalProps> = ({
       }
     }
 
-    await refreshProfile()
+    await refreshProfile({ reason: 'company-code-upgrade' })
 
     toast({
       title: 'You are now a paid member',

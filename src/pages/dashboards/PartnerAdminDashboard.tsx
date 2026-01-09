@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useMemo, useState } from 'react'
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import {
   Badge,
   Box,
@@ -72,6 +72,7 @@ export const PartnerAdminDashboard: React.FC = () => {
   const [activeTemplates, setActiveTemplates] = useState<NudgeTemplateRecord[]>([])
   const [templateLoadError, setTemplateLoadError] = useState<string | null>(null)
   const [templateLoading, setTemplateLoading] = useState(false)
+  const initialRefreshRef = useRef(false)
 
   const loadTemplates = useCallback(async () => {
     setTemplateLoading(true)
@@ -95,17 +96,37 @@ export const PartnerAdminDashboard: React.FC = () => {
     void loadTemplates()
   }, [loadTemplates])
 
+  const refreshIfVisible = useCallback((reason: string) => {
+    if (typeof document !== 'undefined' && document.visibilityState !== 'visible') {
+      console.log('[PartnerDashboard] Skipping refresh because tab is hidden', { reason })
+      return
+    }
+    void refreshProfile({ reason })
+  }, [refreshProfile])
+
   useEffect(() => {
     if (enableProfileRealtime) return
     console.warn(
       '[PartnerDashboard] VITE_ENABLE_PROFILE_REALTIME is disabled. Manual or scheduled refresh is required.'
     )
-    void refreshProfile()
+    if (!initialRefreshRef.current) {
+      initialRefreshRef.current = true
+      refreshIfVisible('partner-dashboard-initial')
+    }
     const interval = window.setInterval(() => {
-      void refreshProfile()
-    }, 5 * 60 * 1000)
-    return () => window.clearInterval(interval)
-  }, [enableProfileRealtime, refreshProfile])
+      refreshIfVisible('partner-dashboard-interval')
+    }, 60 * 1000)
+    const handleVisibility = () => {
+      if (document.visibilityState === 'visible') {
+        refreshIfVisible('partner-dashboard-visible')
+      }
+    }
+    document.addEventListener('visibilitychange', handleVisibility)
+    return () => {
+      window.clearInterval(interval)
+      document.removeEventListener('visibilitychange', handleVisibility)
+    }
+  }, [enableProfileRealtime, refreshIfVisible])
 
   const partnerNavItems = [
     { key: 'overview', label: 'Overview', description: 'Metrics & trends' },

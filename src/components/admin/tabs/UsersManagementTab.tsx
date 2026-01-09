@@ -48,7 +48,7 @@ import {
   updateUserRole,
 } from '@/services/userManagementService'
 
-const roleOptions: ManagedUserRole[] = ['user', 'partner', 'super_admin', 'team_leader', 'mentor', 'ambassador']
+const roleOptions: ManagedUserRole[] = ['user', 'partner', 'admin', 'super_admin', 'team_leader', 'mentor', 'ambassador']
 const membershipOptions: MembershipStatus[] = ['free', 'paid', 'inactive']
 
 const formatDate = (date?: Date | null) => {

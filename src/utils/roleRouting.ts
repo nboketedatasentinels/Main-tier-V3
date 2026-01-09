@@ -89,8 +89,8 @@ export const getLandingPathForRole = (
   }
 
   // Priority 3: Partner/Admin (company admin)
-  if (normalizedRole === 'partner') {
-    console.log('🔷 Partner detected → /admin/dashboard')
+  if (normalizedRole === 'partner' || normalizedRole === 'admin') {
+    console.log('🔷 Admin detected → /admin/dashboard')
     return '/admin/dashboard'
   }
 

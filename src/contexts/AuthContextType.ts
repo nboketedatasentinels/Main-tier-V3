@@ -49,7 +49,7 @@ export interface AuthContextType {
   // Custom Claims
   claimsRole: string | null
   refreshAdminSession: () => Promise<void>
-  refreshProfile: () => Promise<{ error: Error | null; profile: UserProfile | null }>
+  refreshProfile: (options?: { reason?: string }) => Promise<{ error: Error | null; profile: UserProfile | null }>
 }
 
 export const AuthContext = createContext<AuthContextType | undefined>(undefined)
