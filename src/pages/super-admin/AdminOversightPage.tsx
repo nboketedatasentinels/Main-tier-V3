@@ -351,7 +351,8 @@ export const AdminOversightPage: React.FC<AdminOversightPageProps> = ({ adminNam
   const organizationName = (orgId: string) => {
     const org = organizations.find((entry) => entry.id === orgId)
     if (!org) return orgId
-    return org.code ? `${org.name} (${org.code})` : org.name
+    const name = org.name || org.code || org.id || orgId
+    return org.code ? `${name} (${org.code})` : name
   }
 
   const renderTableRows = () => {
