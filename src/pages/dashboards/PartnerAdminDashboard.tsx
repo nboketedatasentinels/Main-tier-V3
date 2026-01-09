@@ -41,7 +41,7 @@ import type { NudgeTemplateRecord } from '@/types/nudges'
 
 export const PartnerAdminDashboard: React.FC = () => {
   const navigate = useNavigate()
-  const { isSuperAdmin, user, refreshProfile } = useAuth()
+  const { assignedOrganizations, isSuperAdmin, user, refreshProfile } = useAuth()
   const {
     assignedOrgCount,
     engagementTrend,
@@ -72,6 +72,7 @@ export const PartnerAdminDashboard: React.FC = () => {
   const [activeTemplates, setActiveTemplates] = useState<NudgeTemplateRecord[]>([])
   const [templateLoadError, setTemplateLoadError] = useState<string | null>(null)
   const [templateLoading, setTemplateLoading] = useState(false)
+  const [refreshingOrganizations, setRefreshingOrganizations] = useState(false)
   const initialRefreshRef = useRef(false)
 
   const loadTemplates = useCallback(async () => {
@@ -104,6 +105,16 @@ export const PartnerAdminDashboard: React.FC = () => {
     void refreshProfile({ reason })
   }, [refreshProfile])
 
+  const refreshOrganizations = useCallback(async () => {
+    setRefreshingOrganizations(true)
+    try {
+      await refreshProfile({ reason: 'partner-dashboard-org-refresh' })
+      refreshDashboardData()
+    } finally {
+      setRefreshingOrganizations(false)
+    }
+  }, [refreshDashboardData, refreshProfile])
+
   useEffect(() => {
     if (enableProfileRealtime) return
     console.warn(
@@ -127,6 +138,10 @@ export const PartnerAdminDashboard: React.FC = () => {
       document.removeEventListener('visibilitychange', handleVisibility)
     }
   }, [enableProfileRealtime, refreshIfVisible])
+
+  useEffect(() => {
+    console.debug('[PartnerDashboard] Auth assigned organizations', assignedOrganizations)
+  }, [assignedOrganizations])
 
   const partnerNavItems = [
     { key: 'overview', label: 'Overview', description: 'Metrics & trends' },
@@ -674,6 +689,9 @@ export const PartnerAdminDashboard: React.FC = () => {
               <HStack spacing={3}>
                 <Badge colorScheme="purple">Scoped access</Badge>
                 <Badge colorScheme="green">Real-time data</Badge>
+                <Button size="sm" variant="outline" onClick={refreshOrganizations} isLoading={refreshingOrganizations}>
+                  Refresh organizations
+                </Button>
               </HStack>
             </HStack>
             <SimpleGrid columns={{ base: 1, md: 2, xl: 5 }} spacing={3}>

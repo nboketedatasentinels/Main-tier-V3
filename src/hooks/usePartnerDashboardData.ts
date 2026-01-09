@@ -164,6 +164,18 @@ export const usePartnerDashboardData = (options?: UsePartnerDashboardDataOptions
   }
 
   useEffect(() => {
+    const assignmentKey = assignedOrganizations.slice().sort().join('|')
+    if (!assignmentKey) {
+      console.debug('[PartnerDashboard] No assigned organizations in auth context.')
+    } else {
+      console.debug('[PartnerDashboard] Auth assignments updated', {
+        assignments: assignedOrganizations,
+      })
+    }
+    refreshDashboardData()
+  }, [assignedOrganizations])
+
+  useEffect(() => {
     if (!user?.uid) {
       setOrganizations([])
       setOrganizationsLoading(false)
@@ -206,6 +218,25 @@ export const usePartnerDashboardData = (options?: UsePartnerDashboardDataOptions
     const unsubscribe = listenToAssignedOrganizations(
       user.uid,
       (assignedOrgs) => {
+        const assignedIds = assignedOrganizations.map((org) => org.toLowerCase())
+        const returnedIds = assignedOrgs
+          .flatMap((org) => [org.id, org.code])
+          .filter((value): value is string => typeof value === 'string')
+          .map((value) => value.toLowerCase())
+        const missingAssignments = assignedIds.filter((id) => !returnedIds.includes(id))
+        if (assignedOrganizations.length && !assignedOrgs.length) {
+          console.warn('[PartnerDashboard] Assigned organizations missing from Firestore results', {
+            assignments: assignedOrganizations,
+          })
+        } else if (missingAssignments.length) {
+          console.warn('[PartnerDashboard] Some assigned organizations could not be resolved', {
+            missingAssignments,
+          })
+        }
+        console.debug('[PartnerDashboard] Assigned organizations loaded', {
+          count: assignedOrgs.length,
+          organizations: assignedOrgs.map((org) => ({ id: org.id, code: org.code, name: org.name })),
+        })
         const scoped = assignedOrgs.map((org) => {
           const data = org as OrganizationRecord & Partial<PartnerOrganization>
           return {
@@ -236,7 +267,7 @@ export const usePartnerDashboardData = (options?: UsePartnerDashboardDataOptions
     )
 
     return () => unsubscribe()
-  }, [isSuperAdmin, user?.uid, reloadKey])
+  }, [assignedOrganizations, isSuperAdmin, user?.uid, reloadKey])
 
   useEffect(() => {
     if (!organizations.length) return undefined

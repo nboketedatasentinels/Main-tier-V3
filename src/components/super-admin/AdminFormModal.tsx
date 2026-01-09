@@ -77,6 +77,14 @@ export const AdminFormModal: React.FC<AdminFormModalProps> = ({
   const isEdit = mode === 'edit'
 
   const emailValid = useMemo(() => /\S+@\S+\.\S+/.test(formData.email || ''), [formData.email])
+  const organizationLookup = useMemo(
+    () => new Map(organizations.map((org) => [org.id || '', org])),
+    [organizations],
+  )
+  const selectedOrganizations = useMemo(
+    () => formData.assignedOrganizations.map((orgId) => organizationLookup.get(orgId)).filter(Boolean),
+    [formData.assignedOrganizations, organizationLookup],
+  )
 
   const validate = () => {
     const nextErrors: Record<string, string> = {}
@@ -87,6 +95,13 @@ export const AdminFormModal: React.FC<AdminFormModalProps> = ({
     if (!formData.role) nextErrors.role = 'Role is required'
     if ((formData.role === 'partner' || formData.role === 'admin') && !formData.assignedOrganizations.length)
       nextErrors.assignedOrganizations = 'Admin users must be assigned to at least one organization'
+    const missingOrganizations = formData.assignedOrganizations.filter((orgId) => !organizationLookup.has(orgId))
+    const inactiveOrganizations = selectedOrganizations.filter((org) => org?.status && org.status !== 'active')
+    if (missingOrganizations.length) {
+      nextErrors.assignedOrganizations = 'One or more selected organizations could not be found.'
+    } else if (inactiveOrganizations.length) {
+      nextErrors.assignedOrganizations = 'Selected organizations must be active before assignment.'
+    }
     setErrors(nextErrors)
     return Object.keys(nextErrors).length === 0
   }
@@ -166,7 +181,7 @@ export const AdminFormModal: React.FC<AdminFormModalProps> = ({
                           isChecked={formData.assignedOrganizations.includes(org.id || '')}
                           onChange={() => handleOrganizationsChange(org.id || '')}
                         >
-                          {org.name}
+                          {org.name} {org.code ? `(${org.code})` : '(No code)'}
                         </Checkbox>
                       </WrapItem>
                     ))}
@@ -177,6 +192,24 @@ export const AdminFormModal: React.FC<AdminFormModalProps> = ({
               )}
               <FormErrorMessage>{errors.assignedOrganizations}</FormErrorMessage>
             </FormControl>
+
+            {selectedOrganizations.length ? (
+              <Box borderWidth="1px" borderRadius="md" p={3} bg="gray.50">
+                <Text fontSize="sm" fontWeight="semibold" mb={2}>
+                  Assignment preview
+                </Text>
+                <Wrap spacing={2}>
+                  {selectedOrganizations.map((org) => (
+                    <WrapItem key={org?.id}>
+                      <Text fontSize="sm" color={org?.status === 'active' ? 'gray.700' : 'orange.600'}>
+                        {org?.name || 'Unknown'} {org?.code ? `(${org.code})` : '(No code)'}
+                        {org?.status && org.status !== 'active' ? ` • ${org.status}` : ''}
+                      </Text>
+                    </WrapItem>
+                  ))}
+                </Wrap>
+              </Box>
+            ) : null}
 
             <FormControl display="flex" alignItems="center">
               <FormLabel mb="0">Active Status</FormLabel>
