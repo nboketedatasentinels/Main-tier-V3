@@ -23,6 +23,7 @@ import { RiskAnalysisCard } from '@/components/admin/RiskAnalysisCard'
 import { StatusBadge } from '@/components/admin/StatusBadge'
 import { OrganizationCard } from '@/components/admin/OrganizationCard'
 import PartnerDashboardLayout from '@/layouts/PartnerDashboardLayout'
+import { DashboardErrorBoundary } from '@/components/ui/DashboardErrorBoundary'
 import { PartnerInterventionPanel } from '@/components/partner/PartnerInterventionPanel'
 import { PartnerUserManagement } from '@/components/partner/PartnerUserManagement'
 import NudgeControlPanel from '@/components/partner/nudges/NudgeControlPanel'
@@ -41,7 +42,7 @@ import type { NudgeTemplateRecord } from '@/types/nudges'
 
 export const PartnerAdminDashboard: React.FC = () => {
   const navigate = useNavigate()
-  const { assignedOrganizations, isSuperAdmin, user, refreshProfile } = useAuth()
+  const { assignedOrganizations, isSuperAdmin, user, refreshProfile, profileStatus } = useAuth()
   const {
     assignedOrgCount,
     engagementTrend,
@@ -49,7 +50,6 @@ export const PartnerAdminDashboard: React.FC = () => {
     organizations,
     organizationsError,
     organizationsLoading,
-    refreshDashboardData,
     riskLevels,
     selectedOrg,
     setSelectedOrg,
@@ -109,11 +109,10 @@ export const PartnerAdminDashboard: React.FC = () => {
     setRefreshingOrganizations(true)
     try {
       await refreshProfile({ reason: 'partner-dashboard-org-refresh' })
-      refreshDashboardData()
     } finally {
       setRefreshingOrganizations(false)
     }
-  }, [refreshDashboardData, refreshProfile])
+  }, [refreshProfile])
 
   useEffect(() => {
     if (enableProfileRealtime) return
@@ -245,7 +244,7 @@ export const PartnerAdminDashboard: React.FC = () => {
                 </Text>
               ) : null}
               <HStack>
-                <Button size="sm" colorScheme="red" onClick={refreshDashboardData} isLoading={organizationsLoading || usersLoading}>
+                <Button size="sm" colorScheme="red" onClick={refreshOrganizations} isLoading={refreshingOrganizations}>
                   Retry loading data
                 </Button>
                 <Button size="sm" variant="outline" onClick={() => navigate('/login', { replace: true })}>
@@ -270,6 +269,14 @@ export const PartnerAdminDashboard: React.FC = () => {
               <HStack spacing={3}>
                 <Badge colorScheme="green">Real-time</Badge>
                 <Badge colorScheme="purple">Partner scoped</Badge>
+                {organizationsLoading ? (
+                  <Badge colorScheme="gray">Loading organizations...</Badge>
+                ) : assignedOrganizations.length === 0 ? (
+                  <Badge colorScheme="yellow">No organizations assigned</Badge>
+                ) : null}
+                <Button size="xs" variant="outline" onClick={refreshOrganizations} isLoading={refreshingOrganizations}>
+                  Sync profile
+                </Button>
               </HStack>
             </VStack>
             <StatusBadge status="active" />
@@ -667,7 +674,7 @@ export const PartnerAdminDashboard: React.FC = () => {
                   Users: {usersError}
                 </Text>
               ) : null}
-              <Button size="sm" colorScheme="red" onClick={refreshDashboardData} isLoading={organizationsLoading || usersLoading}>
+              <Button size="sm" colorScheme="red" onClick={refreshOrganizations} isLoading={refreshingOrganizations}>
                 Retry loading data
               </Button>
             </Stack>
@@ -796,18 +803,21 @@ export const PartnerAdminDashboard: React.FC = () => {
                 </Stack>
               </Box>
             ) : organizations.length ? (
-              <SimpleGrid columns={{ base: 1, md: 2, xl: 3 }} spacing={3}>
-                {organizations.map(org => (
-                  <OrganizationCard
-                    key={org.code}
-                    name={org.name}
-                    status={org.status}
-                    activeUsers={org.activeUsers}
-                    newThisWeek={org.newThisWeek}
-                    onViewClick={() => handleViewOrganization(org.code)}
-                  />
-                ))}
-              </SimpleGrid>
+              <DashboardErrorBoundary context="Partner Admin organizations">
+                <SimpleGrid columns={{ base: 1, md: 2, xl: 3 }} spacing={3}>
+                  {organizations.map(org => (
+                    <OrganizationCard
+                      key={org.code}
+                      name={org.name}
+                      status={org.status}
+                      activeUsers={org.activeUsers}
+                      newThisWeek={org.newThisWeek}
+                      warning={org.warning}
+                      onViewClick={() => handleViewOrganization(org.code)}
+                    />
+                  ))}
+                </SimpleGrid>
+              </DashboardErrorBoundary>
             ) : (
               <Box p={4} borderRadius="md" border="1px solid" borderColor="brand.border" bg="brand.accent">
                 <Stack spacing={2}>
@@ -860,6 +870,29 @@ export const PartnerAdminDashboard: React.FC = () => {
     } else {
       setActivePage('overview')
     }
+  }
+
+  if (profileStatus !== 'ready') {
+    return (
+      <PartnerDashboardLayout
+        organizations={organizations}
+        selectedOrg={selectedOrg}
+        onSelectOrg={setSelectedOrg}
+        notificationCount={notificationCount}
+        navItems={partnerNavItems}
+        onNavigate={handleNavigate}
+        activeItem={activePage}
+      >
+        <Stack spacing={4}>
+          <Text fontSize="sm" color="brand.subtleText">
+            Initializing dashboard...
+          </Text>
+          <Skeleton height="28px" width="220px" />
+          <Skeleton height="180px" borderRadius="md" />
+          <Skeleton height="180px" borderRadius="md" />
+        </Stack>
+      </PartnerDashboardLayout>
+    )
   }
 
   return (

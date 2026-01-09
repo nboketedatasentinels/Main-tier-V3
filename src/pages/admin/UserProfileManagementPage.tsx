@@ -167,8 +167,8 @@ export const UserProfileManagementPage: React.FC<{ viewContext?: ViewContext }> 
       return profileData.mentorId === viewerProfile.id
     }
     if (isAdmin) {
-      if (!profileData.companyCode) return false
-      return canAccessOrganization(profileData.companyCode)
+      if (!profileData.companyId) return false
+      return canAccessOrganization(profileData.companyId)
     }
     return false
   }, [canAccessOrganization, isAdmin, isMentorView, isSuperAdmin, profileData, viewerProfile])

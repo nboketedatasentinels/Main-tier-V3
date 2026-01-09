@@ -172,6 +172,9 @@ export const AdminFormModal: React.FC<AdminFormModalProps> = ({
 
             <FormControl isInvalid={!!errors.assignedOrganizations}>
               <FormLabel>Assigned Organizations</FormLabel>
+              <Text fontSize="sm" color="gray.500" mb={2}>
+                Selected organizations will be accessible by this admin.
+              </Text>
               {organizations.length ? (
                 <Box borderWidth="1px" borderRadius="md" p={3}>
                   <Wrap spacing={3}>
@@ -181,7 +184,7 @@ export const AdminFormModal: React.FC<AdminFormModalProps> = ({
                           isChecked={formData.assignedOrganizations.includes(org.id || '')}
                           onChange={() => handleOrganizationsChange(org.id || '')}
                         >
-                          {org.name} {org.code ? `(${org.code})` : '(No code)'}
+                          {org.name} {org.code ? `(${org.code})` : `(ID: ${org.id})`}
                         </Checkbox>
                       </WrapItem>
                     ))}

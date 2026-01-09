@@ -16,16 +16,16 @@ export const isPartnerAdmin = (profile?: UserProfile | null) => {
 
 export const isAdminLike = (profile?: UserProfile | null) => isSuperAdmin(profile) || isPartnerAdmin(profile)
 
-export const isAssignedPartner = (profile: UserProfile | null | undefined, organizationCode?: string) => {
-  if (!profile || !organizationCode) return false
+export const isAssignedPartner = (profile: UserProfile | null | undefined, organizationId?: string) => {
+  if (!profile || !organizationId) return false
   if (isSuperAdmin(profile)) return true
-  return profile.assignedOrganizations?.includes(organizationCode) ?? false
+  return profile.assignedOrganizations?.includes(organizationId) ?? false
 }
 
-export const canManageOrganization = (profile: UserProfile | null | undefined, organizationCode?: string) => {
+export const canManageOrganization = (profile: UserProfile | null | undefined, organizationId?: string) => {
   if (!profile) return false
   if (isSuperAdmin(profile)) return true
-  return isAssignedPartner(profile, organizationCode)
+  return isAssignedPartner(profile, organizationId)
 }
 
 export const guardByRole = (profile: UserProfile | null | undefined, allowedRoles: string[]) => {

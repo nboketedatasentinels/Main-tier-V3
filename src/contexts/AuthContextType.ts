@@ -9,6 +9,7 @@ export interface AuthContextType {
   userData: UserProfile | null
   loading: boolean
   profileLoading: boolean
+  profileStatus: 'loading' | 'ready'
   profileError: Error | null
   lastProfileLoadAt: string | null
   signIn: (email: string, password: string) => Promise<{ error: Error | null }>
@@ -41,7 +42,7 @@ export interface AuthContextType {
   // Organization Access
   assignedOrganizations: string[]
   hasFullOrganizationAccess: boolean
-  canAccessOrganization: (orgCode: string) => boolean
+  canAccessOrganization: (organizationId: string) => boolean
   
   // Dashboard Preferences
   updateDashboardPreferences: (preferences: DashboardPreferences) => Promise<{ error: Error | null }>
