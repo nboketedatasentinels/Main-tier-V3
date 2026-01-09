@@ -435,10 +435,17 @@ export const listenToAssignedOrganizations = (
 
   const statusFilter = options?.status
   const statusList = Array.isArray(statusFilter) ? statusFilter : statusFilter ? [statusFilter] : null
+  let currentAssignments: string[] = []
   const handleChange = (organizations: OrganizationRecord[]) => {
     const filtered = statusList
       ? organizations.filter((org) => org.status && statusList.includes(org.status))
       : organizations
+    if (currentAssignments.length && !filtered.length) {
+      console.warn('[OrganizationService] No organizations found for assignments', {
+        userId,
+        assignments: currentAssignments,
+      })
+    }
     onChange(filtered)
   }
 
@@ -450,6 +457,12 @@ export const listenToAssignedOrganizations = (
     const assignmentKey = normalized.slice().sort().join('|')
     if (assignmentKey === lastAssignmentKey) return
     lastAssignmentKey = assignmentKey
+    currentAssignments = normalized
+
+    console.debug('[OrganizationService] Assigned organizations updated', {
+      userId,
+      assignments: normalized,
+    })
 
     if (unsubscribeOrganizations) {
       unsubscribeOrganizations()

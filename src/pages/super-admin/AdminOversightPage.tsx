@@ -220,7 +220,15 @@ export const AdminOversightPage: React.FC<AdminOversightPageProps> = ({ adminNam
     try {
       await updateAdminUser(selectedAdmin.id, formData)
       await assignOrganizations(selectedAdmin.id, formData.assignedOrganizations || [])
-      toast({ title: 'Admin updated', status: 'success' })
+      const assignedNames = (formData.assignedOrganizations || []).map((orgId) => organizationName(orgId))
+      toast({
+        title: 'Admin updated',
+        description: assignedNames.length
+          ? `Assigned organizations: ${assignedNames.join(', ')}. Admin may need to refresh to see changes.`
+          : 'Organization assignments cleared. Admin may need to refresh to see changes.',
+        status: 'success',
+        duration: 5000,
+      })
     } catch (error) {
       console.error(error)
       toast({ title: 'Failed to update admin', status: 'error' })
@@ -302,7 +310,11 @@ export const AdminOversightPage: React.FC<AdminOversightPageProps> = ({ adminNam
       super_admin: 'Super Admin',
     }[role] || role)
 
-  const organizationName = (orgId: string) => organizations.find((org) => org.id === orgId)?.name || orgId
+  const organizationName = (orgId: string) => {
+    const org = organizations.find((entry) => entry.id === orgId)
+    if (!org) return orgId
+    return org.code ? `${org.name} (${org.code})` : org.name
+  }
 
   const renderTableRows = () => {
     const loading = loadingAdmins || loadingOrganizations
