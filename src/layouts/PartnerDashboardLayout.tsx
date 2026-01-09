@@ -101,7 +101,7 @@ export const PartnerDashboardLayout: React.FC<PartnerDashboardLayoutProps> = ({
   }, [updateRefreshHint])
 
   const handleManualRefresh = React.useCallback(async () => {
-    const result = await refreshProfile()
+    const result = await refreshProfile({ reason: 'partner-dashboard-manual' })
     if (result.error) {
       toast({
         title: 'Profile refresh failed',

@@ -476,6 +476,7 @@ export const OrganizationDetailPage: React.FC = () => {
                   <option value="team_leader">Team Leader</option>
                   <option value="ambassador">Ambassador</option>
                   <option value="partner">Partner</option>
+                  <option value="admin">Admin</option>
                 </Select>
                 <Select
                   value={membershipFilter}

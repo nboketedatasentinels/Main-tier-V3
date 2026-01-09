@@ -335,7 +335,7 @@ export const LeadershipBoardPage: React.FC = () => {
 
     console.log('🟠 [Leaderboard] Profile realtime disabled, polling every 60s')
     const interval = setInterval(() => {
-      refreshProfile()
+      void refreshProfile({ reason: 'leaderboard-interval' })
     }, 60_000)
 
     return () => clearInterval(interval)
@@ -343,7 +343,7 @@ export const LeadershipBoardPage: React.FC = () => {
 
   const handleManualRefresh = async () => {
     setIsRefreshingProfile(true)
-    const result = await refreshProfile()
+    const result = await refreshProfile({ reason: 'leaderboard-manual' })
     setIsRefreshingProfile(false)
 
     if (result.error) {

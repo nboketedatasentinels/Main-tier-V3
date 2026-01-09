@@ -167,6 +167,7 @@ const roleDisplayMap: Record<StandardRole, string> = {
   team_leader: 'Team Leader',
   mentor: 'Mentor',
   ambassador: 'Ambassador',
+  admin: 'Administrator',
   partner: 'Administrator',
   super_admin: 'Super Administrator',
 }
@@ -178,6 +179,7 @@ const roleColorMap: Record<StandardRole, string> = {
   team_leader: 'blue',
   mentor: 'purple',
   ambassador: 'blue',
+  admin: 'red',
   partner: 'red',
   super_admin: 'red',
 }

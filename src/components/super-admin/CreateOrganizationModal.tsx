@@ -819,6 +819,7 @@ export const CreateOrganizationModal: React.FC<CreateOrganizationModalProps> = (
                           <option value="mentor">Mentor</option>
                           <option value="ambassador">Ambassador</option>
                           <option value="partner">Partner</option>
+                          <option value="admin">Admin</option>
                         </Select>
                       </FormControl>
                       <FormControl>

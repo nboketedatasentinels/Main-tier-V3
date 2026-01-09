@@ -89,8 +89,8 @@ export const ProtectedRoute: React.FC<Props> = ({
     return <Navigate to="/unauthorized" replace />
   }
 
-  // Admin requirement - allow both partner and super_admin
-  if (requireAdmin && userRole !== 'partner' && userRole !== 'super_admin') {
+  // Admin requirement - allow admin, partner, and super_admin
+  if (requireAdmin && userRole !== 'partner' && userRole !== 'admin' && userRole !== 'super_admin') {
     return <Navigate to="/unauthorized" replace />
   }
 
