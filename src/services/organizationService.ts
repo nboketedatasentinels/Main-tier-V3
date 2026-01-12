@@ -1,10 +1,10 @@
 import {
+  DocumentSnapshot,
   Timestamp,
   addDoc,
   collection,
   doc,
   documentId,
-  DocumentSnapshot,
   FirestoreError,
   getDoc,
   getDocs,
