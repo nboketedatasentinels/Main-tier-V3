@@ -53,6 +53,15 @@ import { checkTutorialCompletion, markTutorialComplete } from '@/services/tutori
 
 const DEFAULT_WEEKLY_TARGET = JOURNEY_META['6W'].weeklyTarget
 
+const JOURNEY_LABELS: Record<JourneyType, string> = {
+  '4W': '4-Week Intro',
+  '6W': '6-Week Full',
+  '3M': '3-Month Program',
+  '6M': '6-Month Program',
+  '9M': '9-Month Program',
+  '12M': '12-Month Program',
+}
+
 type ActivityStatus = 'not_started' | 'pending' | 'completed'
 
 type ActivityState = ActivityDef & {
@@ -216,6 +225,64 @@ const WeeklyChecklistPage: React.FC = () => {
     return JOURNEY_META[journey.journeyType].weeklyTarget;
   }, [journey]);
 
+  const tierLabel = useMemo(() => {
+    if (!profile) return 'Member';
+    const tier = profile.transformationTier?.toString().toLowerCase() ?? '';
+    if (tier.includes('corporate')) return 'Corporate';
+    return isFreeUser(profile) ? 'Free Tier' : 'Premium';
+  }, [profile]);
+
+  const journeyStartDate = useMemo(() => {
+    if (!journey || !profile) return null;
+    if (profile.journeyStartDate) {
+      return new Date(profile.journeyStartDate);
+    }
+    const offsetWeeks = journey.currentWeek - 1;
+    return addDays(new Date(), -(offsetWeeks * 7));
+  }, [journey, profile]);
+
+  const journeyEndDate = useMemo(() => {
+    if (!journeyStartDate || !journey) return null;
+    return addDays(journeyStartDate, journey.programDurationWeeks * 7);
+  }, [journeyStartDate, journey]);
+
+  const isMonthBasedJourney = useMemo(() => {
+    return journey ? journey.programDurationWeeks >= 12 : false;
+  }, [journey]);
+
+  const currentMonthNumber = useMemo(() => {
+    if (!journey) return 1;
+    return getMonthNumber(journey.currentWeek);
+  }, [journey]);
+
+  const selectedMonthNumber = useMemo(() => {
+    return getMonthNumber(selectedWeek);
+  }, [selectedWeek]);
+
+  const totalMonths = useMemo(() => {
+    if (!journey) return 1;
+    return Math.ceil(journey.programDurationWeeks / 4);
+  }, [journey]);
+
+  const weekRangeLabel = useCallback(
+    (weekNumber: number) => {
+      if (!journeyStartDate) return null;
+      const weekStart = addDays(journeyStartDate, (weekNumber - 1) * 7);
+      const weekEnd = addDays(weekStart, 6);
+      return `${format(weekStart, 'MMM d')} - ${format(weekEnd, 'MMM d')}`;
+    },
+    [journeyStartDate],
+  );
+
+  const normalizeWeeklyProgress = useCallback(
+    (data: WeeklyProgress & { points_earned?: number; weekly_target?: number }) => ({
+      ...data,
+      pointsEarned: data.pointsEarned ?? data.points_earned ?? 0,
+      weeklyTarget: data.weeklyTarget ?? data.weekly_target ?? weeklyTarget,
+    }),
+    [weeklyTarget],
+  );
+
   const getImpactLogDateRange = useCallback(
     (weekNumber: number) => {
       let journeyStart: Date | null = profile?.journeyStartDate ? new Date(profile.journeyStartDate) : null
@@ -326,13 +393,13 @@ const WeeklyChecklistPage: React.FC = () => {
     const progressRef = doc(db, "weeklyProgress", `${user.uid}__${selectedWeek}`);
     const unsubscribe = onSnapshot(progressRef, (doc) => {
       if (doc.exists()) {
-        setWeeklyProgress(doc.data() as WeeklyProgress);
+        setWeeklyProgress(normalizeWeeklyProgress(doc.data() as WeeklyProgress & { points_earned?: number; weekly_target?: number }));
       } else {
         setWeeklyProgress(null);
       }
     });
     return () => unsubscribe();
-  }, [user, selectedWeek]);
+  }, [normalizeWeeklyProgress, selectedWeek, user]);
 
   useEffect(() => {
     if (!user) return
@@ -531,7 +598,7 @@ const WeeklyChecklistPage: React.FC = () => {
 
   const isWeekLocked = useMemo(() => {
     if (!journey) return false;
-    return selectedWeek < journey.currentWeek;
+    return selectedWeek > journey.currentWeek;
   }, [journey, selectedWeek]);
 
   const progressStatus = useMemo(() => {
@@ -543,6 +610,131 @@ const WeeklyChecklistPage: React.FC = () => {
     if (pct >= 75) return { color: 'yellow', label: 'Warning', pct };
     return { color: 'red', label: 'Alert', pct };
   }, [weeklyProgress]);
+
+  const weeklyPointsEarned = useMemo(() => {
+    if (weeklyProgress) return weeklyProgress.pointsEarned;
+    return pendingCounts.points;
+  }, [pendingCounts.points, weeklyProgress]);
+
+  const journeyProgress = useMemo(() => {
+    if (!journey) {
+      return { weeksCompleted: 0, pct: 0 };
+    }
+    const weeksCompleted = Math.max(0, journey.currentWeek - 1);
+    const pct = journey.programDurationWeeks
+      ? Math.min(100, Math.round((weeksCompleted / journey.programDurationWeeks) * 100))
+      : 0;
+    return { weeksCompleted, pct };
+  }, [journey]);
+
+  const monthMeta = useCallback(
+    (month: number) => {
+      if (!journey) {
+        return {
+          month,
+          startWeek: 1,
+          endWeek: 4,
+          status: 'locked' as const,
+          completionPercent: 0,
+        };
+      }
+      const startWeek = (month - 1) * 4 + 1;
+      const endWeek = Math.min(journey.programDurationWeeks, startWeek + 3);
+      const isCompleted = endWeek < journey.currentWeek;
+      const isCurrent = month === currentMonthNumber;
+      const status = isCompleted ? 'completed' : isCurrent ? 'current' : 'locked';
+      const completedWeeks = isCompleted
+        ? 4
+        : isCurrent
+          ? Math.max(0, Math.min(4, journey.currentWeek - startWeek))
+          : 0;
+      const completionPercent = Math.min(100, Math.round((completedWeeks / 4) * 100));
+      return { month, startWeek, endWeek, status, completionPercent };
+    },
+    [currentMonthNumber, journey],
+  );
+
+  const renderJourneyHeader = () => {
+    if (!journey) return null;
+    const label = JOURNEY_LABELS[journey.journeyType];
+    const startLabel = journeyStartDate ? format(journeyStartDate, 'MMM d, yyyy') : 'Not set';
+    const endLabel = journeyEndDate ? format(journeyEndDate, 'MMM d, yyyy') : 'TBD';
+    const overviewLabel = isMonthBasedJourney
+      ? `Month ${currentMonthNumber} of ${totalMonths} · Week ${journey.currentWeek} of ${journey.programDurationWeeks}`
+      : `Week ${journey.currentWeek} of ${journey.programDurationWeeks}`;
+    const milestones = isMonthBasedJourney
+      ? Array.from({ length: totalMonths }, (_, idx) => monthMeta(idx + 1))
+      : Array.from({ length: journey.programDurationWeeks }, (_, idx) => ({
+        week: idx + 1,
+        status:
+          idx + 1 < journey.currentWeek ? 'completed' : idx + 1 === journey.currentWeek ? 'current' : 'locked',
+      }));
+
+    return (
+      <SurfaceCard borderColor="border.card">
+        <Stack spacing={4}>
+          <Flex align="flex-start" justify="space-between" wrap="wrap" gap={4}>
+            <Stack spacing={2}>
+              <HStack spacing={2}>
+                <Badge colorScheme="purple">{label}</Badge>
+                <Badge colorScheme={journey.isPaid ? 'green' : 'gray'}>{tierLabel}</Badge>
+              </HStack>
+              <Heading size="md" color="text.primary">
+                Journey Progress
+              </Heading>
+              <Text color="text.secondary">{overviewLabel}</Text>
+              <Text color="text.secondary" fontSize="sm">
+                {journey.programDurationWeeks} total weeks · {journeyProgress.weeksCompleted} weeks completed
+              </Text>
+            </Stack>
+            <Stack spacing={1} align="flex-end">
+              <Text color="text.muted" fontSize="sm">
+                Started: {startLabel}
+              </Text>
+              <Text color="text.muted" fontSize="sm">
+                Expected completion: {endLabel}
+              </Text>
+              <Text color="text.muted" fontSize="sm">
+                Completion {journeyProgress.pct}%
+              </Text>
+            </Stack>
+          </Flex>
+          <Progress value={journeyProgress.pct} colorScheme="teal" borderRadius="full" />
+          <HStack spacing={2} wrap="wrap">
+            {isMonthBasedJourney
+              ? milestones.map((monthItem) => (
+                <Tag
+                  key={`month-${monthItem.month}`}
+                  colorScheme={
+                    monthItem.status === 'completed' ? 'green' : monthItem.status === 'current' ? 'teal' : 'gray'
+                  }
+                >
+                  <HStack spacing={1}>
+                    {monthItem.status === 'completed' && <Icon as={CheckCircle} />}
+                    {monthItem.status === 'locked' && <Icon as={Lock} />}
+                    <Text>Month {monthItem.month}</Text>
+                  </HStack>
+                </Tag>
+              ))
+              : milestones.map((weekItem) => (
+                <Tag
+                  key={`week-${weekItem.week}`}
+                  colorScheme={
+                    weekItem.status === 'completed' ? 'green' : weekItem.status === 'current' ? 'teal' : 'gray'
+                  }
+                >
+                  <HStack spacing={1}>
+                    {weekItem.status === 'completed' && <Icon as={CheckCircle} />}
+                    {weekItem.status === 'locked' && <Icon as={Lock} />}
+                    <Text>Week {weekItem.week}</Text>
+                  </HStack>
+                </Tag>
+              ))}
+          </HStack>
+        </Stack>
+      </SurfaceCard>
+    );
+  };
 
   const firstIncompleteActivity = useMemo(() => activities.find(activity => activity.status !== 'completed'), [activities])
 
@@ -591,9 +783,11 @@ const WeeklyChecklistPage: React.FC = () => {
       );
     }
 
-    const totalMonths = totalWeeks / 4;
-    const currentMonth = getMonthNumber(selectedWeek);
-    const weeksInMonth = Array.from({ length: 4 }, (_, i) => (currentMonth - 1) * 4 + i + 1);
+    const currentMonth = selectedMonthNumber;
+    const weeksInMonth = Array.from({ length: 4 }, (_, i) => (currentMonth - 1) * 4 + i + 1).filter(
+      week => week <= totalWeeks,
+    );
+    const months = Array.from({ length: totalMonths }, (_, idx) => monthMeta(idx + 1));
 
     return (
       <Stack spacing={3} bg="gray.900" p={4} borderRadius="lg">
@@ -602,7 +796,11 @@ const WeeklyChecklistPage: React.FC = () => {
             size="sm"
             leftIcon={<Icon as={ChevronLeft} />}
             isDisabled={currentMonth <= 1}
-            onClick={() => setSelectedWeek(Math.max(1, selectedWeek - 4))}
+            onClick={() => {
+              const previousMonth = Math.max(1, currentMonth - 1);
+              const previousMeta = monthMeta(previousMonth);
+              setSelectedWeek(previousMeta.startWeek);
+            }}
           >
             Previous Month
           </Button>
@@ -612,31 +810,99 @@ const WeeklyChecklistPage: React.FC = () => {
           <Button
             size="sm"
             rightIcon={<Icon as={ChevronRight} />}
-            isDisabled={currentMonth >= totalMonths}
-            onClick={() => setSelectedWeek(Math.min(totalWeeks, selectedWeek + 4))}
+            isDisabled={currentMonth >= totalMonths || currentMonth >= currentMonthNumber}
+            onClick={() => {
+              const nextMonth = Math.min(totalMonths, currentMonth + 1);
+              const nextMeta = monthMeta(nextMonth);
+              const nextWeek = nextMonth === currentMonthNumber ? journey.currentWeek : nextMeta.startWeek;
+              if (nextMonth <= currentMonthNumber) {
+                setSelectedWeek(nextWeek);
+              }
+            }}
           >
             Next Month
           </Button>
         </Flex>
+        <SimpleGrid columns={{ base: 1, md: 3 }} spacing={2}>
+          {months.map(month => {
+            const isLocked = month.status === 'locked';
+            const isCurrent = month.status === 'current';
+            const monthLabel = `Month ${month.month}`;
+            const rangeLabel = `Weeks ${month.startWeek}-${month.endWeek}`;
+            const buttonLabel = isLocked
+              ? `${monthLabel} • Locked`
+              : month.status === 'completed'
+                ? `${monthLabel} • Completed`
+                : `${monthLabel} • Current`;
+            return (
+              <Tooltip
+                key={month.month}
+                label={
+                  isLocked
+                    ? `Unlocks once you reach Week ${month.startWeek}`
+                    : `${rangeLabel} (${month.completionPercent}% complete)`
+                }
+              >
+                <Button
+                  size="sm"
+                  variant={isCurrent ? 'solid' : 'outline'}
+                  colorScheme={month.status === 'completed' ? 'green' : isCurrent ? 'teal' : 'gray'}
+                  leftIcon={month.status === 'completed' ? <Icon as={CheckCircle} /> : undefined}
+                  rightIcon={isLocked ? <Icon as={Lock} /> : undefined}
+                  isDisabled={isLocked}
+                  onClick={() => {
+                    const nextWeek = month.month === currentMonthNumber ? journey.currentWeek : month.startWeek;
+                    setSelectedWeek(nextWeek);
+                  }}
+                >
+                  <Stack spacing={0} align="flex-start">
+                    <Text>{buttonLabel}</Text>
+                    <Text fontSize="xs" color={isCurrent ? 'whiteAlpha.900' : 'gray.300'}>
+                      {rangeLabel}
+                    </Text>
+                  </Stack>
+                </Button>
+              </Tooltip>
+            );
+          })}
+        </SimpleGrid>
         <HStack spacing={2} justify="center" wrap="wrap">
           {weeksInMonth.map(weekNumber => {
-             const isLocked = weekNumber > currentWeek;
-             const isCompleted = weekNumber < currentWeek;
+            const isLocked = weekNumber > currentWeek;
+            const isCompleted = weekNumber < currentWeek;
+            const weekLabel = `Month ${getMonthNumber(weekNumber)} · Week ${weekNumber}`;
+            const relativeWeek = weekNumber - (currentMonth - 1) * 4;
+            const rangeLabel = weekRangeLabel(weekNumber);
             return (
-            <Tooltip key={weekNumber} label={isLocked ? 'Locked' : isCompleted ? 'Completed' : 'Current week'}>
-              <Button
-                variant={selectedWeek === weekNumber ? 'solid' : 'outline'}
-                colorScheme={selectedWeek === weekNumber ? 'teal' : 'gray'}
-                size="sm"
-                leftIcon={isCompleted ? <Icon as={CheckCircle} /> : undefined}
-                rightIcon={isLocked ? <Icon as={Lock} /> : undefined}
-                isDisabled={isLocked}
-                onClick={() => setSelectedWeek(weekNumber)}
+              <Tooltip
+                key={weekNumber}
+                label={
+                  isLocked
+                    ? 'Locked until you reach this week'
+                    : rangeLabel
+                      ? `${rangeLabel} • Week ${relativeWeek} of 4`
+                      : `Week ${relativeWeek} of 4`
+                }
               >
-                {`Month ${getMonthNumber(weekNumber)} · Week ${weekNumber}`}
-              </Button>
-            </Tooltip>
-          )})}
+                <Button
+                  variant={selectedWeek === weekNumber ? 'solid' : 'outline'}
+                  colorScheme={selectedWeek === weekNumber ? 'teal' : 'gray'}
+                  size="sm"
+                  leftIcon={isCompleted ? <Icon as={CheckCircle} /> : undefined}
+                  rightIcon={isLocked ? <Icon as={Lock} /> : undefined}
+                  isDisabled={isLocked}
+                  onClick={() => setSelectedWeek(weekNumber)}
+                >
+                  <Stack spacing={0} align="flex-start">
+                    <Text>{weekLabel}</Text>
+                    <Text fontSize="xs" color="gray.400">
+                      Week {relativeWeek} of 4
+                    </Text>
+                  </Stack>
+                </Button>
+              </Tooltip>
+            )
+          })}
         </HStack>
       </Stack>
     );
@@ -934,7 +1200,9 @@ const WeeklyChecklistPage: React.FC = () => {
         <Heading size="lg" color="text.primary">
           Weekly Checklist
         </Heading>
-        <Text color="text.secondary">A comprehensive weekly activity tracker with Firebase-powered progress.</Text>
+        <Text color="text.secondary">
+          Track your weekly activities and see how they roll up into your overall journey.
+        </Text>
       </Stack>
       <Box p={4} borderWidth="1px" borderColor="gray.700" bg="white" borderRadius="lg">
         <Stack spacing={3}>
@@ -955,7 +1223,7 @@ const WeeklyChecklistPage: React.FC = () => {
             />
             <StatCard
               label="Weekly points"
-              value={`${pendingCounts.points} / ${weeklyTarget}`}
+              value={`${weeklyPointsEarned} / ${weeklyTarget}`}
               icon={<Icon as={Plus} color="accent.warning" />}
             />
             <StatCard
@@ -982,6 +1250,7 @@ const WeeklyChecklistPage: React.FC = () => {
 
   return (
     <Stack spacing={6} color="text.primary">
+      {renderJourneyHeader()}
       {renderWeekSummary()}
       {error && (
         <Alert status="error" borderRadius="md">
@@ -994,7 +1263,7 @@ const WeeklyChecklistPage: React.FC = () => {
         <Stack spacing={4}>
           <Flex align="center" justify="space-between">
             <Heading size="sm" color="text.primary">
-              Week navigation
+              {isMonthBasedJourney ? 'Month & week navigation' : 'Week navigation'}
             </Heading>
             {isWeekLocked && (
               <Tag colorScheme="warning" borderRadius="full" size="sm">
@@ -1051,7 +1320,7 @@ const WeeklyChecklistPage: React.FC = () => {
                 <Stack spacing={3}>
                   <Progress value={progressStatus.pct} colorScheme={progressStatus.color} borderRadius="full" />
                   <Text color="text.primary" fontWeight="bold">
-                    {pendingCounts.points} / {weeklyTarget} points earned
+                    {weeklyPointsEarned} / {weeklyTarget} points earned
                   </Text>
                   <Text color="text.secondary" fontSize="sm">
                     {progressStatus.pct >= 100
