@@ -29,7 +29,6 @@ import { MentorDashboard } from '@/pages/dashboards/MentorDashboard'
 import { AmbassadorDashboard } from '@/pages/dashboards/AmbassadorDashboard'
 import { CompanyAdminDashboard } from '@/pages/dashboards/CompanyAdminDashboard'
 import { PartnerAdminDashboard } from '@/pages/dashboards/PartnerAdminDashboard'
-import { PaidMemberDashboard } from '@/pages/dashboards/PaidMemberDashboard'
 
 // Feature page imports
 import { JourneysPage } from '@/pages/journeys/JourneysPage'
@@ -82,7 +81,7 @@ const DashboardRouter = () => {
     case 'free':
       return <WeeklyGlancePage />
     case 'member':
-      return <PaidMemberDashboard />
+      return <WeeklyGlancePage />
     case 'company':
       return <CompanyAdminDashboard />
     case 'partner':
