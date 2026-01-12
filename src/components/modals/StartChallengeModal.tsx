@@ -37,6 +37,9 @@ import {
   Timestamp,
   doc,
   getDoc,
+  limit,
+  QueryDocumentSnapshot,
+  DocumentData,
 } from 'firebase/firestore';
 import { UserProfile, Organization } from '@/types';
 
@@ -96,27 +99,43 @@ export const StartChallengeModal: React.FC<StartChallengeModalProps> = ({
   const { user, profile } = useAuth();
 
   // --- DATA FETCHING ---
-  const fetchCompanyUsers = useCallback(async () => {
-    if (!companyCode || !user) return;
+  const fetchPotentialOpponents = useCallback(async () => {
+    if (!user) return;
     setLoading(true);
     setError(null);
     try {
-      const usersRef = collection(db, 'users');
-      const q = query(usersRef, where('companyCode', '==', companyCode));
-      const querySnapshot = await getDocs(q);
+      const profilesRef = collection(db, 'profiles');
+      const mapProfiles = (docs: QueryDocumentSnapshot<DocumentData>[]) =>
+        docs
+          .map(docSnap => ({ ...docSnap.data(), id: docSnap.id } as UserProfile))
+          .filter(p => p.id !== user.uid)
+          .map(p => ({
+            id: p.id,
+            name: p.fullName || `${p.firstName || ''} ${p.lastName || ''}`.trim(),
+            email: p.email,
+            level: p.level || 1,
+            points: p.totalPoints || 0,
+            recommended: false,
+          }));
 
-      const userOptions: UserOption[] = querySnapshot.docs
-        .map(doc => ({ ...doc.data(), id: doc.id } as UserProfile))
-        .filter(p => p.id !== user.uid)
-        .map(p => ({
-          id: p.id,
-          name: p.fullName,
-          email: p.email,
-          level: p.level || 1,
-          points: p.totalPoints || 0,
-          recommended: false,
-        }));
+      let userOptions: UserOption[] = [];
 
+      if (companyCode) {
+        const companySnapshot = await getDocs(query(profilesRef, where('companyCode', '==', companyCode)));
+        userOptions = mapProfiles(companySnapshot.docs);
+      }
+
+      if (!companyCode || userOptions.length < 3) {
+        const fallbackSnapshot = await getDocs(query(profilesRef, limit(50)));
+        const fallbackOptions = mapProfiles(fallbackSnapshot.docs);
+        const merged = new Map<string, UserOption>();
+        [...userOptions, ...fallbackOptions].forEach(option => merged.set(option.id, option));
+        userOptions = Array.from(merged.values());
+      }
+
+      if (userOptions.length === 0) {
+        setError('No users available to challenge right now.');
+      }
       setUsers(userOptions);
     } catch (err) {
       setError('Failed to load users. Please try again.');
@@ -177,27 +196,34 @@ export const StartChallengeModal: React.FC<StartChallengeModalProps> = ({
 
     try {
       const challengedUserId = preselectedUser ? preselectedUser.id : selectedUserId;
-      if (!challengedUserId || !user || !profile) {
+      if (!challengedUserId || !user) {
         throw new Error('User data is missing.');
       }
 
-      // Fetch challenger and challenged profiles
-      const challengerDoc = await getDoc(doc(db, 'users', user.uid));
-      const challengedDoc = await getDoc(doc(db, 'users', challengedUserId));
+      const fetchProfile = async (userId: string) => {
+        if (profile?.id === userId) return profile;
+        const profileDoc = await getDoc(doc(db, 'profiles', userId));
+        return profileDoc.exists() ? ({ ...profileDoc.data(), id: profileDoc.id } as UserProfile) : null;
+      };
 
-      if (!challengerDoc.exists() || !challengedDoc.exists()) {
-        throw new Error('Could not find one of the users.');
-      }
-      const challenger = challengerDoc.data() as UserProfile;
-      const challenged = challengedDoc.data() as UserProfile;
+      const challenger = await fetchProfile(user.uid);
+      const challenged = await fetchProfile(challengedUserId);
 
-      // Fetch company data
-      const companyQuery = query(collection(db, 'companies'), where('code', '==', companyCode));
-      const companySnapshot = await getDocs(companyQuery);
-      if (companySnapshot.empty) {
-        throw new Error('Company not found.');
+      if (!challenger) {
+        throw new Error('Your profile could not be loaded.');
       }
-      const company = { ...companySnapshot.docs[0].data(), id: companySnapshot.docs[0].id } as Organization;
+      if (!challenged) {
+        throw new Error('Opponent profile could not be loaded.');
+      }
+
+      let company: Organization | null = null;
+      if (companyCode) {
+        const companyQuery = query(collection(db, 'companies'), where('code', '==', companyCode));
+        const companySnapshot = await getDocs(companyQuery);
+        if (!companySnapshot.empty) {
+          company = { ...companySnapshot.docs[0].data(), id: companySnapshot.docs[0].id } as Organization;
+        }
+      }
 
       // Calculate dates
       const startDate = new Date();
@@ -221,9 +247,9 @@ export const StartChallengeModal: React.FC<StartChallengeModalProps> = ({
         challenger_name: challenger.fullName,
         challenged_id: challenged.id,
         challenged_name: challenged.fullName,
-        company_id: company.id,
-        company_name: company.name,
-        company_code: companyCode,
+        company_id: company?.id || null,
+        company_name: company?.name || null,
+        company_code: companyCode || null,
         status: 'pending',
         type: challengeType,
         custom_goal: challengeType === 'collaborative' ? customGoal : '',
@@ -231,7 +257,7 @@ export const StartChallengeModal: React.FC<StartChallengeModalProps> = ({
         start_date: Timestamp.fromDate(startDate),
         end_date: Timestamp.fromDate(endDate),
         created_at: Timestamp.now(),
-        transformation_partner_id: company.transformation_partner_id || null,
+        transformation_partner_id: company?.transformation_partner_id || null,
         metrics: {
           challenger: { completion: 0, speed: 0, consistency: 0, bonus: 0, total: 0 },
           challenged: { completion: 0, speed: 0, consistency: 0, bonus: 0, total: 0 },
@@ -284,14 +310,14 @@ export const StartChallengeModal: React.FC<StartChallengeModalProps> = ({
     if (isOpen) {
       if (preselectedUser) {
         setSelectedUserId(preselectedUser.id);
-      } else if (companyCode) {
-        fetchCompanyUsers();
+      } else {
+        fetchPotentialOpponents();
       }
     } else {
       // Reset form when modal closes
       setTimeout(resetForm, 300); // Delay to allow animation
     }
-  }, [isOpen, preselectedUser, companyCode, fetchCompanyUsers]);
+  }, [isOpen, preselectedUser, fetchPotentialOpponents]);
 
   useEffect(() => {
     applyOpponentFilter();

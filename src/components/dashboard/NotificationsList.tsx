@@ -15,10 +15,10 @@ import { AlertCircle, Bell, CheckCircle2, Mail, MessageCircle } from 'lucide-rea
 import { useEffect, useMemo, useState } from 'react'
 import { useAuth } from '@/hooks/useAuth'
 import {
+  handleNotificationAction,
   listenToUserNotifications,
   markAllNotificationsRead,
   markNotificationRead,
-  updateNotificationAction,
 } from '@/services/notificationService'
 import { NotificationRecord, NotificationType } from '@/types/notifications'
 
@@ -176,10 +176,10 @@ export const NotificationsList = () => {
   }
 
   const handleAction = async (
-    id: string,
+    notification: NotificationRecord,
     action: NotificationRecord['action_response'],
   ) => {
-    await updateNotificationAction(id, action)
+    await handleNotificationAction(notification, action)
   }
 
   const handleMarkAll = async () => {
@@ -226,7 +226,7 @@ export const NotificationsList = () => {
               key={notification.id}
               notification={notification}
               onMarkRead={() => handleMarkRead(notification.id)}
-              onAction={(action) => handleAction(notification.id, action)}
+              onAction={(action) => handleAction(notification, action)}
             />
           ))}
         </Stack>
