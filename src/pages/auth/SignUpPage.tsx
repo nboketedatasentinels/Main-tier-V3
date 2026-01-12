@@ -445,13 +445,13 @@ export const SignUpPage: React.FC = () => {
         <div>
           <label className="mb-1 block text-sm font-medium text-gray-700">Full Name</label>
           <div className="relative">
-            <User className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+            <User className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-500" />
             <input
               value={formData.fullName}
               onChange={e => handleChange("fullName", e.target.value)}
               placeholder="John Doe"
               autoComplete="name"
-              className="h-10 w-full rounded-md border bg-gray-50 pl-9 pr-3 text-sm text-gray-900 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-[#350e6f]"
+              className="h-10 w-full rounded-md border bg-gray-50 pl-9 pr-3 text-sm text-gray-900 placeholder:text-gray-500 focus:outline-none focus:ring-2 focus:ring-[#350e6f]"
               required
             />
           </div>
@@ -475,14 +475,14 @@ export const SignUpPage: React.FC = () => {
         <div>
           <label className="mb-1 block text-sm font-medium text-gray-700">Email</label>
           <div className="relative">
-            <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+            <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-500" />
             <input
               type="email"
               value={formData.email}
               onChange={e => handleChange("email", e.target.value.toLowerCase())}
               placeholder="your@email.com"
               autoComplete="email"
-              className="h-10 w-full rounded-md border bg-gray-50 pl-9 pr-3 text-sm text-gray-900 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-[#350e6f]"
+              className="h-10 w-full rounded-md border bg-gray-50 pl-9 pr-3 text-sm text-gray-900 placeholder:text-gray-500 focus:outline-none focus:ring-2 focus:ring-[#350e6f]"
               required
             />
           </div>
@@ -491,13 +491,13 @@ export const SignUpPage: React.FC = () => {
         <div>
           <label className="mb-1 block text-sm font-medium text-gray-700">Company Code (optional)</label>
           <div className="relative">
-            <Building2 className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+            <Building2 className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-500" />
             <input
               value={formData.companyCode}
               onChange={e => handleChange("companyCode", e.target.value.slice(0, 6))}
               placeholder="6-digit code"
               maxLength={6}
-              className="h-10 w-full rounded-md border bg-gray-50 pl-9 pr-3 text-sm uppercase tracking-widest text-gray-900 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-[#350e6f]"
+              className="h-10 w-full rounded-md border bg-gray-50 pl-9 pr-3 text-sm uppercase tracking-widest text-gray-900 placeholder:text-gray-500 focus:outline-none focus:ring-2 focus:ring-[#350e6f]"
             />
           </div>
           {isCheckingCode && (
@@ -523,7 +523,7 @@ export const SignUpPage: React.FC = () => {
         <div>
           <label className="mb-1 block text-sm font-medium text-gray-700">Password</label>
           <div className="relative">
-            <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+            <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-500" />
             <input
               type={showPassword ? "text" : "password"}
               value={formData.password}
@@ -531,7 +531,7 @@ export const SignUpPage: React.FC = () => {
               placeholder="••••••••"
               autoComplete="new-password"
               minLength={8}
-              className="h-10 w-full rounded-md border bg-gray-50 pl-9 pr-10 text-sm text-gray-900 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-[#350e6f]"
+              className="h-10 w-full rounded-md border bg-gray-50 pl-9 pr-10 text-sm text-gray-900 placeholder:text-gray-500 focus:outline-none focus:ring-2 focus:ring-[#350e6f]"
               required
             />
             <button
@@ -549,14 +549,14 @@ export const SignUpPage: React.FC = () => {
         <div>
           <label className="mb-1 block text-sm font-medium text-gray-700">Confirm password</label>
           <div className="relative">
-            <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+            <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-500" />
             <input
               type={showPassword ? "text" : "password"}
               value={formData.confirmPassword}
               onChange={e => handleChange("confirmPassword", e.target.value)}
               placeholder="••••••••"
               autoComplete="new-password"
-              className="h-10 w-full rounded-md border bg-gray-50 pl-9 pr-3 text-sm text-gray-900 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-[#350e6f]"
+              className="h-10 w-full rounded-md border bg-gray-50 pl-9 pr-3 text-sm text-gray-900 placeholder:text-gray-500 focus:outline-none focus:ring-2 focus:ring-[#350e6f]"
               required
             />
           </div>

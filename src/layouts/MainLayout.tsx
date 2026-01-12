@@ -355,7 +355,7 @@ export const MainLayout: React.FC = () => {
       <Drawer isOpen={isOpen} placement="left" onClose={onClose}>
         <DrawerOverlay />
         <DrawerContent bg="brand.deepPlum">
-          <DrawerCloseButton color="brand.softGold" />
+          <DrawerCloseButton color="brand.textLight" />
           <DrawerBody pt={12}>
             <VStack align="stretch" spacing={4}>
               <Text fontSize="2xl" fontWeight="bold" color="brand.gold" mb={4}>
