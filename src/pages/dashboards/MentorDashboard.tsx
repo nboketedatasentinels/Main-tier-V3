@@ -716,10 +716,10 @@ export const MentorDashboard: React.FC = () => {
                 </SimpleGrid>
                 <Box mt={4} p={4} borderRadius="lg" bg="linear-gradient(135deg, #3D0C69, #6A0DAD)" color="white">
                   <HStack spacing={3} align="flex-start">
-                    <Icon as={Lightbulb} />
+                    <Icon as={Lightbulb} color="white" />
                     <Box>
-                      <Text fontWeight="semibold">Motivational insight</Text>
-                      <Text>{motivationalMessage}</Text>
+                      <Text fontWeight="semibold" color="white">Motivational insight</Text>
+                      <Text color="white">{motivationalMessage}</Text>
                     </Box>
                   </HStack>
                 </Box>
