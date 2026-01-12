@@ -58,6 +58,7 @@ export interface UserProfile {
   referralCount?: number
   referralCode?: string | null
   referredBy?: string | null
+  referralStatus?: 'pending' | 'credited' | 'rejected' | null
   
   // Organization
   companyId?: string | null

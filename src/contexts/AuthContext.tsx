@@ -32,6 +32,7 @@ import { incrementOrganizationMemberCount, validateCompanyCode } from '@/service
 import { buildActionCodeSettings } from '@/utils/authActionCodeSettings'
 import { assignFreeCourseToUser, hasFreeCourseAssigned } from '@/services/courseAssignmentService'
 import { isFreeUser } from '@/utils/membership'
+import { createReferral, generateReferralCode, validateReferralCode } from '@/services/referralService'
 
 interface AuthProviderProps {
   children: React.ReactNode
@@ -325,6 +326,12 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         firebaseUser.displayName,
         firebaseUser.email
       )
+      let referralCode: string | null = null
+      try {
+        referralCode = await generateReferralCode(firebaseUser.uid)
+      } catch (error) {
+        console.warn('🟠 [Auth] Unable to generate referral code', error)
+      }
 
       console.log('🟣 [Auth] Creating new profile with role:', role)
 
@@ -341,8 +348,9 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         level: 1,
         journeyType: '4W',
         referralCount: 0,
-        referralCode: null,
+        referralCode,
         referredBy: null,
+        referralStatus: null,
         isOnboarded: true,
         accountStatus: AccountStatus.ACTIVE,
         transformationTier: validatedOrganization
@@ -378,6 +386,27 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
           await incrementOrganizationMemberCount(validatedOrganization.id)
         } catch (incrementError) {
           console.warn('🟠 [Auth] Unable to increment organization member count', incrementError)
+        }
+      }
+
+      const pendingReferralCode =
+        typeof window !== 'undefined' ? localStorage.getItem('pending_ref')?.trim() : null
+      if (pendingReferralCode) {
+        const referrerUid = await validateReferralCode(pendingReferralCode)
+        if (referrerUid) {
+          const { success, error } = await createReferral(
+            firebaseUser.uid,
+            referrerUid,
+            pendingReferralCode
+          )
+          if (!success && error) {
+            console.warn('🟠 [Auth] Unable to create referral for new user', error)
+          }
+        } else {
+          console.warn('🟠 [Auth] Pending referral code is invalid or inactive', pendingReferralCode)
+        }
+        if (typeof window !== 'undefined') {
+          localStorage.removeItem('pending_ref')
         }
       }
 
@@ -635,7 +664,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       companyCode?: string
       companyId?: string
       companyName?: string
-    }
+    },
+    referralCode?: string
   ) => {
     console.log('🟡 [Auth] signUp:start', email)
     setLoading(true)
@@ -692,6 +722,12 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
           ? UserRole.PAID_MEMBER
           : UserRole.FREE_USER
       const normalizedRole = normalizeRole(role)
+      let generatedReferralCode: string | null = null
+      try {
+        generatedReferralCode = await generateReferralCode(uid)
+      } catch (error) {
+        console.warn('🟠 [Auth] Unable to generate referral code during signup', error)
+      }
 
       const profileData: UserProfile = {
         id: uid,
@@ -709,8 +745,9 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         level: 1,
         journeyType: '4W',
         referralCount: 0,
-        referralCode: null,
+        referralCode: generatedReferralCode,
         referredBy: null,
+        referralStatus: null,
         isOnboarded: true,
         accountStatus: AccountStatus.ACTIVE,
         transformationTier: validatedOrganization
@@ -762,6 +799,21 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
           await incrementOrganizationMemberCount(validatedOrganization.id)
         } catch (incrementError) {
           console.warn('🟠 [Auth] Unable to increment organization member count', incrementError)
+        }
+      }
+
+      if (referralCode) {
+        const trimmedReferralCode = referralCode.trim()
+        if (trimmedReferralCode) {
+          const referrerUid = await validateReferralCode(trimmedReferralCode)
+          if (!referrerUid) {
+            console.warn('🟠 [Auth] Referral code invalid or inactive during signup', trimmedReferralCode)
+          } else {
+            const { success, error } = await createReferral(uid, referrerUid, trimmedReferralCode)
+            if (!success && error) {
+              console.warn('🟠 [Auth] Unable to create referral during signup', error)
+            }
+          }
         }
       }
 

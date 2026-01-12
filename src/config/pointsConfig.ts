@@ -30,6 +30,9 @@ export type ActivityDef = {
   frequencyNote?: string;
 };
 
+export const REFERRAL_POINTS = 100;
+export const REFERRAL_MAX_PER_USER = 100;
+
 export const FULL_ACTIVITIES: ActivityDef[] = [
   {
     id: "podcast",
@@ -197,6 +200,8 @@ const pointsConfig = {
   JOURNEY_META,
   getActivitiesForJourney,
   getMonthNumber,
+  REFERRAL_POINTS,
+  REFERRAL_MAX_PER_USER,
 };
 
 export default pointsConfig;

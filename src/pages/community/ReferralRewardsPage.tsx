@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react'
+import React, { useEffect, useMemo, useState } from 'react'
 import {
   Badge,
   Box,
@@ -32,7 +32,10 @@ import {
   Users,
   type LucideIcon,
 } from 'lucide-react'
+import { collection, onSnapshot, orderBy, query, where } from 'firebase/firestore'
 import { useAuth } from '@/hooks/useAuth'
+import { APP_BASE_URL } from '@/config/app'
+import { db } from '@/services/firebase'
 
 const MotionBox = motion(Box)
 const MotionFlex = motion(Flex)
@@ -47,6 +50,14 @@ interface RewardTier {
   icon: LucideIcon
   gradient: string
   accent: string
+}
+
+interface ReferralRecord {
+  referredUid: string
+  referrerUid: string
+  refCode: string
+  status: 'pending' | 'credited' | 'rejected'
+  createdAt?: { toDate?: () => Date } | string | null
 }
 
 const rewardTiers: RewardTier[] = [
@@ -101,14 +112,51 @@ export const ReferralRewardsPage: React.FC = () => {
   const { user, profile } = useAuth()
   const toast = useToast()
   const [copied, setCopied] = useState(false)
+  const [referrals, setReferrals] = useState<ReferralRecord[]>([])
+  const [referralsLoading, setReferralsLoading] = useState(false)
 
-  const referralCount = profile?.referralCount ?? 0
-  const baseAppUrl = useMemo(() => import.meta.env.VITE_APP_BASE_URL || window.location.origin, [])
+  const baseAppUrl = APP_BASE_URL
+
+  useEffect(() => {
+    if (!user?.uid) return
+    setReferralsLoading(true)
+    const referralQuery = query(
+      collection(db, 'referrals'),
+      where('referrerUid', '==', user.uid),
+      orderBy('createdAt', 'desc')
+    )
+    const unsubscribe = onSnapshot(
+      referralQuery,
+      (snapshot) => {
+        const items = snapshot.docs.map((doc) => doc.data() as ReferralRecord)
+        setReferrals(items)
+        setReferralsLoading(false)
+      },
+      (error) => {
+        console.error('🔴 [Referral] Unable to load referrals', error)
+        setReferralsLoading(false)
+      }
+    )
+
+    return () => unsubscribe()
+  }, [user?.uid])
+
+  const creditedCount = useMemo(
+    () => referrals.filter((referral) => referral.status === 'credited').length,
+    [referrals]
+  )
+  const pendingCount = useMemo(
+    () => referrals.filter((referral) => referral.status === 'pending').length,
+    [referrals]
+  )
+
+  const referralCount = creditedCount > 0 ? creditedCount : profile?.referralCount ?? 0
+  const referralCode = profile?.referralCode ?? user?.uid
 
   const referralLink = useMemo(() => {
     const sanitizedBase = baseAppUrl.endsWith('/') ? baseAppUrl.slice(0, -1) : baseAppUrl
-    return user?.uid ? `${sanitizedBase}/auth?ref=${user.uid}` : `${sanitizedBase}/auth`
-  }, [baseAppUrl, user?.uid])
+    return referralCode ? `${sanitizedBase}/auth?ref=${referralCode}` : `${sanitizedBase}/auth`
+  }, [baseAppUrl, referralCode])
 
   const nextTier = rewardTiers.find(tier => referralCount < tier.required)
   const progressToNext = nextTier ? Math.min((referralCount / nextTier.required) * 100, 100) : 100
@@ -269,6 +317,25 @@ export const ReferralRewardsPage: React.FC = () => {
             </Text>
           </Flex>
         </Stack>
+
+        <SimpleGrid columns={{ base: 1, md: 2 }} spacing={4} mt={6}>
+          <Box border="1px solid" borderColor="brand.border" borderRadius="xl" p={4} bg="gray.50">
+            <Text fontSize="xs" color="brand.subtleText" textTransform="uppercase" letterSpacing="wide">
+              Pending referrals
+            </Text>
+            <Heading size="md" color="brand.text">
+              {pendingCount}
+            </Heading>
+          </Box>
+          <Box border="1px solid" borderColor="brand.border" borderRadius="xl" p={4} bg="gray.50">
+            <Text fontSize="xs" color="brand.subtleText" textTransform="uppercase" letterSpacing="wide">
+              Credited referrals
+            </Text>
+            <Heading size="md" color="brand.text">
+              {creditedCount}
+            </Heading>
+          </Box>
+        </SimpleGrid>
       </MotionBox>
 
       <Stack spacing={4}>
@@ -386,6 +453,72 @@ export const ReferralRewardsPage: React.FC = () => {
           })}
         </SimpleGrid>
       </Stack>
+
+      <MotionBox
+        bg="white"
+        border="1px solid"
+        borderColor="brand.border"
+        borderRadius="2xl"
+        p={{ base: 6, md: 8 }}
+        boxShadow="md"
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.6, delay: 0.15 }}
+      >
+        <Stack spacing={4}>
+          <HStack justify="space-between" align="center">
+            <Heading size="md" color="brand.text">
+              Recent referrals
+            </Heading>
+            {referralsLoading && (
+              <HStack spacing={2} color="brand.subtleText">
+                <Text fontSize="sm">Loading</Text>
+              </HStack>
+            )}
+          </HStack>
+
+          {referrals.length === 0 && !referralsLoading ? (
+            <Text color="brand.subtleText">No referrals yet. Share your link to get started!</Text>
+          ) : (
+            <Stack spacing={3}>
+              {referrals.slice(0, 5).map((referral, index) => (
+                <Flex
+                  key={`${referral.referredUid}-${index}`}
+                  justify="space-between"
+                  align="center"
+                  border="1px solid"
+                  borderColor="brand.border"
+                  borderRadius="lg"
+                  px={4}
+                  py={3}
+                >
+                  <Stack spacing={1}>
+                    <Text fontWeight="semibold" color="brand.text">
+                      Referral #{referrals.length - index}
+                    </Text>
+                    <Text fontSize="sm" color="brand.subtleText">
+                      Code: {referral.refCode}
+                    </Text>
+                  </Stack>
+                  <Badge
+                    colorScheme={
+                      referral.status === 'credited'
+                        ? 'green'
+                        : referral.status === 'pending'
+                          ? 'yellow'
+                          : 'red'
+                    }
+                    borderRadius="full"
+                    px={3}
+                  >
+                    {referral.status}
+                  </Badge>
+                </Flex>
+              ))}
+            </Stack>
+          )}
+        </Stack>
+      </MotionBox>
 
       <MotionBox
         bgGradient="linear(to-r, purple.600, purple.700)"

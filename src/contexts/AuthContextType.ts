@@ -21,6 +21,7 @@ export interface AuthContextType {
       companyId?: string
       companyName?: string
     },
+    referralCode?: string
   ) => Promise<{ error: Error | null; userId?: string }>
   signOut: () => Promise<void>
   signInWithMagicLink: (email: string) => Promise<{ error: Error | null }>
