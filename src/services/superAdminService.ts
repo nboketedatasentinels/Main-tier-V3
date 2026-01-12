@@ -36,7 +36,7 @@ const orgCollection = collection(db, 'organizations')
 const usersCollection = collection(db, 'users')
 const auditCollection = collection(db, 'admin_activity_log')
 const engagementCollection = collection(db, 'user_engagement_scores')
-const adminRoles: AdminRole[] = ['super_admin', 'partner', 'mentor', 'ambassador', 'team_leader']
+const adminRoles: AdminRole[] = ['super_admin', 'partner', 'admin', 'mentor', 'ambassador', 'team_leader']
 
 export const fetchDashboardMetrics = async (
   filters?: Partial<{ organizationCodes: string[]; organizationIds: string[]; trendDays: number }>,
@@ -484,11 +484,20 @@ export const deleteAdminUser = async (adminId: string) => {
 
 export const assignOrganizations = async (adminId: string, orgIds: string[]) => {
   const adminRef = doc(db, 'users', adminId)
-  await updateDoc(adminRef, { assignedOrganizations: orgIds, updatedAt: serverTimestamp() })
+  // assignedOrganizations MUST contain organization document IDs only, never codes.
+  const sanitizedOrgIds = Array.from(
+    new Set(
+      (orgIds || [])
+        .filter((id): id is string => typeof id === 'string')
+        .map((id) => id.trim())
+        .filter(Boolean),
+    ),
+  )
+  await updateDoc(adminRef, { assignedOrganizations: sanitizedOrgIds, updatedAt: serverTimestamp() })
   await logAdminAction({
     action: 'admin_orgs_updated',
     userId: adminId,
-    metadata: { orgIds },
+    metadata: { orgIds: sanitizedOrgIds },
   })
 }
 

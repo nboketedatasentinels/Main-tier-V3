@@ -48,6 +48,45 @@ service cloud.firestore {
         getProfile(request.auth.uid).accountStatus == 'active';
     }
 
+    function isValidImpactLog(logData) {
+      // Basic fields validation
+      let hasRequiredFields = logData.description is string && logData.description.size() > 0 &&
+                              logData.date is string && logData.date.size() > 0;
+
+      if (!hasRequiredFields) {
+        return false;
+      }
+
+      let level = logData.verificationLevel;
+      let email = logData.get('verifierEmail', '');
+      let link = logData.get('evidenceLink', '');
+
+      let hasEmail = email != '';
+      let hasLink = link != '';
+
+      let isEmailValid = hasEmail ? email.matches('^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,}$') : true;
+      let isLinkValid = hasLink ? link.matches('^https?://[\\S]+$') : true;
+
+      // Tier 1: No conditional requirements
+      if (level == 'Tier 1: Self-Reported') {
+        return isEmailValid && isLinkValid; // Allow optional fields if valid
+      }
+      // Tier 2: Email required, link optional
+      if (level == 'Tier 2: Partner Verified') {
+        return hasEmail && isEmailValid && isLinkValid;
+      }
+      // Tier 3: Link required, email optional
+      if (level == 'Tier 3: Evidence Uploaded') {
+        return hasLink && isLinkValid && isEmailValid;
+      }
+      // Tier 4: Both required
+      if (level == 'Tier 4: Third-Party Verified') {
+        return hasEmail && isEmailValid && hasLink && isLinkValid;
+      }
+      // Deny any other case
+      return false;
+    }
+
     // Custom claims validation (if using Firebase Auth custom claims)
     function hasCustomRole(role) {
       return request.auth.token.role == role;
@@ -127,11 +166,6 @@ service cloud.firestore {
         allow read, write: if isAuthenticated() && isOwner(userId);
       }
 
-      match /impactLogs/{logId} {
-        allow read: if isAuthenticated() && (isOwner(userId) || isAdmin());
-        allow write: if isAuthenticated() && isOwner(userId);
-      }
-
       match /userBadges/{badgeId} {
         allow read: if isAuthenticated() && isOwner(userId);
         allow write: if isSuperAdmin();
@@ -142,6 +176,24 @@ service cloud.firestore {
         allow update: if isAuthenticated() && isOwner(userId);
         allow create: if isSuperAdmin() || isAdmin();
       }
+    }
+
+    // Impact logs collection with tiered verification validation
+    match /impact_logs/{logId} {
+      allow read: if isAuthenticated() && (
+        resource.data.userId == request.auth.uid ||
+        canAccessUser(resource.data.userId)
+      );
+
+      allow create: if isAuthenticated() &&
+        request.resource.data.userId == request.auth.uid &&
+        isValidImpactLog(request.resource.data);
+
+      allow update: if isAuthenticated() &&
+        resource.data.userId == request.auth.uid &&
+        isValidImpactLog(request.resource.data);
+
+      allow delete: if isAuthenticated() && resource.data.userId == request.auth.uid;
     }
 
     // Users collection - stores basic user data with roles
@@ -182,6 +234,35 @@ service cloud.firestore {
           (canAccessUser(userId) && request.resource.data.keys().hasAny(['lastAdjustmentReason', 'updatedAt']))
         );
       }
+    }
+
+    // Referral system collections
+    match /referralCodes/{code} {
+      allow read: if true;
+      allow create: if isAuthenticated() &&
+        request.auth.uid == code &&
+        request.resource.data.uid == request.auth.uid &&
+        request.resource.data.active == true;
+      allow update, delete: if isSuperAdmin();
+    }
+
+    match /referrals/{referredUid} {
+      allow read: if isAuthenticated() && (
+        request.auth.uid == referredUid ||
+        request.auth.uid == resource.data.referrerUid
+      );
+      allow create: if isAuthenticated() &&
+        request.auth.uid == request.resource.data.referredUid &&
+        request.resource.data.status == 'pending' &&
+        request.resource.data.referrerUid != request.auth.uid;
+      allow update: if isAuthenticated() &&
+        request.auth.uid == resource.data.referredUid &&
+        resource.data.status == 'pending' &&
+        request.resource.data.referrerUid == resource.data.referrerUid &&
+        request.resource.data.referredUid == resource.data.referredUid &&
+        request.resource.data.refCode == resource.data.refCode &&
+        request.resource.data.status in ['credited', 'rejected'];
+      allow delete: if isSuperAdmin();
     }
 
     // Public read collections

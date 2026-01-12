@@ -3,6 +3,7 @@ import { useAuth } from '@/hooks/useAuth'
 import { normalizeRole } from '@/utils/role'
 import { CompanyAdminDashboard } from './CompanyAdminDashboard'
 import { PartnerAdminDashboard } from './PartnerAdminDashboard'
+import { DashboardErrorBoundary } from '@/components/ui/DashboardErrorBoundary'
 
 /**
  * AdminDashboard component
@@ -19,23 +20,39 @@ export const AdminDashboard: React.FC = () => {
   const normalizedRole = normalizeRole(rawRole)
 
   const isCompanyAdmin = rawRoleString.includes('company_admin') || rawRoleString.includes('company')
-  const isPartner = normalizedRole === 'partner'
+  const isPartner = normalizedRole === 'partner' || normalizedRole === 'admin'
   const isSuperAdmin = normalizedRole === 'super_admin'
 
   if (isPartner && !isCompanyAdmin) {
-    return <PartnerAdminDashboard />
+    return (
+      <DashboardErrorBoundary context="Partner Admin Dashboard">
+        <PartnerAdminDashboard />
+      </DashboardErrorBoundary>
+    )
   }
 
   if (isCompanyAdmin) {
-    return <CompanyAdminDashboard />
+    return (
+      <DashboardErrorBoundary context="Company Admin Dashboard">
+        <CompanyAdminDashboard />
+      </DashboardErrorBoundary>
+    )
   }
 
   // default to partner view for broader admin roles
   if (isSuperAdmin) {
-    return <PartnerAdminDashboard />
+    return (
+      <DashboardErrorBoundary context="Partner Admin Dashboard">
+        <PartnerAdminDashboard />
+      </DashboardErrorBoundary>
+    )
   }
 
-  return <PartnerAdminDashboard />
+  return (
+    <DashboardErrorBoundary context="Partner Admin Dashboard">
+      <PartnerAdminDashboard />
+    </DashboardErrorBoundary>
+  )
 }
 
 export default AdminDashboard

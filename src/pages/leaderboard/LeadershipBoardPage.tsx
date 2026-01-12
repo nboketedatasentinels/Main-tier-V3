@@ -1,4 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import {
   Avatar,
   Badge,
@@ -13,6 +14,7 @@ import {
   Icon,
   IconButton,
   Skeleton,
+  SkeletonCircle,
   Progress,
   Select,
   SimpleGrid,
@@ -34,6 +36,7 @@ import {
   Th,
   Thead,
   Tr,
+  Tooltip,
   useDisclosure,
   useToken,
   useToast,
@@ -43,6 +46,7 @@ import {
   AlertCircle,
   ArrowDownAZ,
   ArrowUpAZ,
+  ArrowUpRight,
   Award,
   Clock,
   Crown,
@@ -58,6 +62,7 @@ import {
 import {
   collection,
   doc,
+  documentId,
   getDocs,
   limit,
   onSnapshot,
@@ -66,10 +71,9 @@ import {
   where,
 } from 'firebase/firestore'
 import { ResponsiveContainer, PieChart, Pie, Cell } from 'recharts'
-import { LeaderboardTimeframe, UserProfile } from '@/types'
+import { Badge as BadgeDefinition, LeaderboardTimeframe, UserProfile } from '@/types'
 import { db } from '@/services/firebase'
 import { useAuth } from '@/hooks/useAuth'
-import { PeerConnectPage } from '@/pages/peer/PeerConnectPage'
 import { StartChallengeModal } from '@/components/modals/StartChallengeModal'
 
 interface PointsTransaction {
@@ -101,6 +105,16 @@ interface LeaderboardRow {
   level: number
   badgeCount: number
   rank: number
+}
+
+interface FeaturedBadge {
+  id: string
+  name: string
+  description?: string
+  iconUrl?: string
+  color?: string
+  type?: BadgeDefinition['type']
+  earnedAt?: string
 }
 
 const timeframeOptions = [
@@ -137,6 +151,7 @@ const formatNumber = (value?: number | null) => {
 }
 
 export const LeadershipBoardPage: React.FC = () => {
+  const navigate = useNavigate()
   const { profile: authProfile, refreshProfile } = useAuth()
   const toast = useToast()
   const { isOpen, onOpen, onClose } = useDisclosure()
@@ -160,13 +175,15 @@ export const LeadershipBoardPage: React.FC = () => {
   const [breakdownPage, setBreakdownPage] = useState(1)
   const [profilesLoaded, setProfilesLoaded] = useState(false)
   const [transactionsLoaded, setTransactionsLoaded] = useState(false)
+  const [featuredBadges, setFeaturedBadges] = useState<FeaturedBadge[]>([])
+  const [badgesLoading, setBadgesLoading] = useState(false)
+  const [badgesError, setBadgesError] = useState<string | null>(null)
   const [pointsPulse, setPointsPulse] = useState(false)
   const [isRefreshingProfile, setIsRefreshingProfile] = useState(false)
   const [showFilterTip, setShowFilterTip] = useState(() => {
     const stored = localStorage.getItem('leaderboard-filter-tip')
     return stored !== 'dismissed'
   })
-  const [showPeerConnect, setShowPeerConnect] = useState(false)
   const previousTotalPoints = useRef<number | null>(null)
   const previousLevel = useRef<number | null>(null)
   const timeframeStart = useMemo(() => toDateFromTimeframe(timeframe), [timeframe])
@@ -182,6 +199,88 @@ export const LeadershipBoardPage: React.FC = () => {
   }, [authProfile, currentProfile])
 
   const pointsPulseStyle = pointsPulse ? 'pointsPulse 1.2s ease-in-out' : 'none'
+
+  const fetchFeaturedBadges = useCallback(async () => {
+    if (!profile?.id) return
+    setBadgesLoading(true)
+    setBadgesError(null)
+
+    const normalizeEarnedAt = (value: unknown) => {
+      if (!value) return undefined
+      if (typeof value === 'string') return value
+      if (value instanceof Date) return value.toISOString()
+      if (typeof value === 'object' && 'toDate' in value) {
+        return (value as { toDate: () => Date }).toDate().toISOString()
+      }
+      return undefined
+    }
+
+    try {
+      const userBadgeQuery = query(
+        collection(db, 'user_badges'),
+        where('userId', '==', profile.id),
+        orderBy('earnedAt', 'desc'),
+        limit(5),
+      )
+      const userBadgeSnapshot = await getDocs(userBadgeQuery)
+      const userBadges = userBadgeSnapshot.docs.map((docItem) => {
+        const data = docItem.data() as { badgeId?: string; earnedAt?: unknown }
+        return {
+          id: docItem.id,
+          badgeId: data.badgeId ?? docItem.id,
+          earnedAt: normalizeEarnedAt(data.earnedAt),
+        }
+      })
+
+      if (!userBadges.length) {
+        setFeaturedBadges([])
+        return
+      }
+
+      const badgeIds = Array.from(new Set(userBadges.map((badge) => badge.badgeId).filter(Boolean))) as string[]
+      const badgeDefsMap = new Map<string, BadgeDefinition>()
+
+      if (badgeIds.length) {
+        const badgeDefsSnapshot = await getDocs(
+          query(collection(db, 'badges'), where(documentId(), 'in', badgeIds))
+        )
+        badgeDefsSnapshot.docs.forEach((docItem) => {
+          const data = docItem.data() as Partial<BadgeDefinition> & { title?: string }
+          badgeDefsMap.set(docItem.id, {
+            id: docItem.id,
+            name: data.name ?? data.title ?? 'Badge',
+            description: data.description ?? '',
+            iconUrl: data.iconUrl ?? '',
+            color: data.color ?? 'gray.500',
+            type: data.type ?? 'special',
+            criteria: data.criteria ?? '',
+            pointsRequired: data.pointsRequired,
+            createdAt: data.createdAt ?? '',
+          })
+        })
+      }
+
+      const mergedBadges = userBadges.map((userBadge) => {
+        const definition = badgeDefsMap.get(userBadge.badgeId)
+        return {
+          id: definition?.id ?? userBadge.badgeId,
+          name: definition?.name ?? 'Badge',
+          description: definition?.description,
+          iconUrl: definition?.iconUrl,
+          color: definition?.color,
+          type: definition?.type,
+          earnedAt: userBadge.earnedAt,
+        }
+      })
+
+      setFeaturedBadges(mergedBadges)
+    } catch (error) {
+      console.error('🔴 [Leaderboard] Failed to load badges', error)
+      setBadgesError('Badges unavailable right now.')
+    } finally {
+      setBadgesLoading(false)
+    }
+  }, [profile?.id])
 
   const refetchChallenges = useCallback(async () => {
     if (!profile) return
@@ -234,6 +333,10 @@ export const LeadershipBoardPage: React.FC = () => {
 
     return () => unsubscribe()
   }, [])
+
+  useEffect(() => {
+    void fetchFeaturedBadges()
+  }, [fetchFeaturedBadges])
 
   useEffect(() => {
     const txQuery = query(collection(db, 'points_transactions'), orderBy('createdAt', 'desc'), limit(500))
@@ -335,7 +438,7 @@ export const LeadershipBoardPage: React.FC = () => {
 
     console.log('🟠 [Leaderboard] Profile realtime disabled, polling every 60s')
     const interval = setInterval(() => {
-      refreshProfile()
+      void refreshProfile({ reason: 'leaderboard-interval' })
     }, 60_000)
 
     return () => clearInterval(interval)
@@ -343,7 +446,7 @@ export const LeadershipBoardPage: React.FC = () => {
 
   const handleManualRefresh = async () => {
     setIsRefreshingProfile(true)
-    const result = await refreshProfile()
+    const result = await refreshProfile({ reason: 'leaderboard-manual' })
     setIsRefreshingProfile(false)
 
     if (result.error) {
@@ -640,7 +743,7 @@ export const LeadershipBoardPage: React.FC = () => {
           <Text fontSize="3xl" fontWeight="bold" color="text.primary" mt={1}>
             Competitive, social, and personalized rankings
           </Text>
-          <Text color="text.secondary">Switch between leaderboard and challenge views with real-time Firebase data.</Text>
+          <Text color="text.secondary">Switch between leaderboard and challenge views with real-time data.</Text>
         </Box>
         <HStack spacing={3}>
           <Button
@@ -663,8 +766,12 @@ export const LeadershipBoardPage: React.FC = () => {
           >
             Start a Challenge
           </Button>
-          <Button onClick={() => setShowPeerConnect((prev) => !prev)} variant="primary">
-            {showPeerConnect ? 'Hide Peer Connect' : 'Open Peer Connect'}
+          <Button
+            onClick={() => navigate('/app/peer-connect')}
+            variant="primary"
+            rightIcon={<Icon as={ArrowUpRight} />}
+          >
+            Open Peer Connect
           </Button>
         </HStack>
       </Flex>
@@ -708,7 +815,7 @@ export const LeadershipBoardPage: React.FC = () => {
                     <HStack justify="space-between" align="center">
                       <Box>
                         <Text fontSize="lg" fontWeight="bold">Progress Overview</Text>
-                        <Text color="text.secondary">Live updates from Firestore</Text>
+                        <Text color="text.secondary">Live updates</Text>
                       </Box>
                       <Badge colorScheme="primary" display="flex" alignItems="center" gap={2}>
                         <Icon as={Trophy} /> {percentile}
@@ -807,10 +914,48 @@ export const LeadershipBoardPage: React.FC = () => {
                         </Box>
                         <Box p={3} border="1px solid" borderColor="border.subtle" borderRadius="lg">
                           <Text fontSize="xs" color="text.secondary">Featured Badges</Text>
-                          <HStack spacing={2} mt={1}>
-                            <Badge colorScheme="primary">Growth</Badge>
-                            <Badge colorScheme="secondary">Impact</Badge>
-                          </HStack>
+                          {badgesLoading ? (
+                            <HStack spacing={2} mt={2}>
+                              {Array.from({ length: 3 }).map((_, index) => (
+                                <SkeletonCircle key={index} size="8" />
+                              ))}
+                            </HStack>
+                          ) : badgesError ? (
+                            <Text fontSize="xs" color="text.secondary" mt={2}>
+                              {badgesError}
+                            </Text>
+                          ) : featuredBadges.length ? (
+                            <HStack spacing={2} mt={2}>
+                              {featuredBadges.map((badge) => {
+                                const earnedAtLabel = badge.earnedAt
+                                  ? new Date(badge.earnedAt).toLocaleDateString()
+                                  : 'Date unavailable'
+                                return (
+                                  <Tooltip
+                                    key={badge.id}
+                                    label={`${badge.name} • ${earnedAtLabel}`}
+                                    hasArrow
+                                  >
+                                    <Avatar
+                                      size="xs"
+                                      name={badge.name}
+                                      src={badge.iconUrl}
+                                      bg={badge.color ?? 'gray.500'}
+                                      color="white"
+                                      icon={<Icon as={Award} />}
+                                      border="1px solid"
+                                      borderColor="border.subtle"
+                                    />
+                                  </Tooltip>
+                                )
+                              })}
+                            </HStack>
+                          ) : (
+                            <HStack spacing={2} mt={2} color="text.secondary">
+                              <Icon as={Award} boxSize={4} />
+                              <Text fontSize="xs">No badges earned yet.</Text>
+                            </HStack>
+                          )}
                         </Box>
                       </SimpleGrid>
                     </VStack>
@@ -1114,19 +1259,6 @@ export const LeadershipBoardPage: React.FC = () => {
                 </CardBody>
               </Card>
 
-              {showPeerConnect && (
-                <Card bg="surface.default" border="1px solid" borderColor="border.subtle">
-                  <CardHeader>
-                    <Flex justify="space-between" align="center">
-                      <Text fontWeight="bold">Peer Connect</Text>
-                      <Button size="sm" variant="secondary" onClick={() => setShowPeerConnect(false)}>Back to Leaderboard</Button>
-                    </Flex>
-                  </CardHeader>
-                  <CardBody>
-                    <PeerConnectPage />
-                  </CardBody>
-                </Card>
-              )}
             </Stack>
           </TabPanel>
 
@@ -1137,11 +1269,11 @@ export const LeadershipBoardPage: React.FC = () => {
                   <Stack color="text.inverse">
                     <Flex align="center" justify="space-between">
                       <Box>
-                        <Text fontSize="sm" opacity={0.9}>Challenge Weeks are Live</Text>
-                        <Text fontSize="2xl" fontWeight="bold">Friendly competitions to spark growth</Text>
+                        <Text fontSize="sm" opacity={0.9} color="white">Challenge Weeks are Live</Text>
+                        <Text fontSize="2xl" fontWeight="bold" color="white">Friendly competitions to spark growth</Text>
                         <HStack spacing={3} mt={2}>
-                          <Icon as={Clock} color="text.inverse" />
-                          <Text>Join or launch a challenge today</Text>
+                          <Icon as={Clock} color="white" />
+                          <Text color="white">Join or launch a challenge today</Text>
                         </HStack>
                       </Box>
                       <Button

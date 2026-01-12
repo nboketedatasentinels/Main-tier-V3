@@ -302,8 +302,8 @@ const EventsTab: React.FC = () => {
     profile?.role === UserRole.SUPER_ADMIN || profile?.role === UserRole.AMBASSADOR || profile?.role === UserRole.COMPANY_ADMIN
 
   const description = events.length
-    ? 'All upcoming workshops, gatherings, and learning sessions now live on our T4Leader events calendar. Head there to explore the full schedule and RSVP.'
-    : "We've moved event discovery to our dedicated T4Leader events calendar. Visit the full schedule to see what's coming up and reserve your spot."
+    ? 'All upcoming workshops, gatherings, learning sessions, and book club meetups now live on T4Leader. Head there to explore the full schedule and RSVP.'
+    : "We've moved event discovery and book club updates to our dedicated T4Leader calendar. See what's coming up and reserve your spot."
 
   return (
     <Stack spacing={4}>
@@ -371,17 +371,20 @@ const EventsTab: React.FC = () => {
           <Text color="text.secondary" fontSize={{ base: 'sm', md: 'md' }}>
             {description}
           </Text>
-          <Button
-            as={chakra.a}
-            href="https://www.t4leader.com/event-list"
-            target="_blank"
-            rel="noopener noreferrer"
-            colorScheme="purple"
-            size="lg"
-            rightIcon={<ArrowUpRight size={18} />}
-          >
-            View Events
-          </Button>
+          <HStack spacing={4} flexDirection={{ base: 'column', md: 'row' }} align="center" justify="center">
+            <Button
+              as={chakra.a}
+              href="https://www.t4leader.com/event"
+              target="_blank"
+              rel="noopener noreferrer"
+              colorScheme="purple"
+              size="lg"
+              rightIcon={<ArrowUpRight size={18} />}
+              width={{ base: 'full', md: 'auto' }}
+            >
+              View Events
+            </Button>
+          </HStack>
           {eventsLoading && (
             <Text color="text.muted" fontSize="xs" letterSpacing="widest">
               Refreshing events feed...
@@ -418,7 +421,7 @@ const JobsTab = () => (
         'Keep follow-up conversations in-thread so everyone benefits',
         'Avoid duplicate posts—refresh previous listings with updates instead',
       ]}
-      link={import.meta.env.VITE_WHATSAPP_COMMUNITY_LINK || '#'}
+      link="https://chat.whatsapp.com/ImFRIflsS7pGOoHtpTOJy9"
       ctaLabel="Open WhatsApp job board"
       communityName="WhatsApp Job Board"
     />
@@ -450,7 +453,7 @@ const GrantsTab = () => (
         'Keep discussions respectful and consolidate updates in the original thread',
         'Do not share sensitive personal data—link to official forms instead',
       ]}
-      link={import.meta.env.VITE_WHATSAPP_COMMUNITY_LINK || '#'}
+      link="https://chat.whatsapp.com/FAmTJ4AX7fk3CvrWWteDx8"
       ctaLabel="Open WhatsApp grants space"
       communityName="Grants & Funding"
     />

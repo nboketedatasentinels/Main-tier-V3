@@ -50,7 +50,10 @@ import UserNudgeHistoryPanel from '@/components/partner/nudges/UserNudgeHistoryP
 
 interface PartnerUserManagementProps {
   users: PartnerUser[]
+  usersLoading: boolean
   organizations: PartnerOrganization[]
+  organizationsLoading: boolean
+  organizationsReady: boolean
   selectedOrg: string
   onSelectOrg: (org: string) => void
   updateUserPoints: (userId: string, delta: number, reason: string) => Promise<void>
@@ -89,7 +92,10 @@ const getSortableValue = (user: PartnerUser, key: string) => {
 
 export const PartnerUserManagement: React.FC<PartnerUserManagementProps> = ({
   users,
+  usersLoading,
   organizations,
+  organizationsLoading,
+  organizationsReady,
   selectedOrg,
   onSelectOrg,
   updateUserPoints,
@@ -111,13 +117,21 @@ export const PartnerUserManagement: React.FC<PartnerUserManagementProps> = ({
   const { profile } = useAuth()
 
   const organizationOptions = useMemo(
-    () => [{ code: 'all', name: 'All Companies' }, ...organizations],
+    () => [
+      { code: 'all', name: 'All Companies' },
+      ...organizations.map((org) => ({
+        ...org,
+        code: org.code || org.id || 'unknown',
+        name: org.name || org.code || org.id || 'Unknown organization',
+      })),
+    ],
     [organizations],
   )
 
   const filtered = useMemo(() => {
     if (selectedOrg === 'all') return users
-    return users.filter(user => user.companyCode === selectedOrg)
+    const normalized = selectedOrg.toLowerCase()
+    return users.filter((user) => user.companyCode?.toLowerCase() === normalized)
   }, [users, selectedOrg])
 
   const sorted = useMemo(() => {
@@ -132,6 +146,7 @@ export const PartnerUserManagement: React.FC<PartnerUserManagementProps> = ({
 
   const totalPages = Math.max(1, Math.ceil(sorted.length / PAGE_SIZE))
   const paginated = sorted.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE)
+  const waitingForOrganizations = organizationsLoading && !organizationsReady
 
   const atRiskUsers = useMemo(
     () =>
@@ -208,8 +223,8 @@ export const PartnerUserManagement: React.FC<PartnerUserManagementProps> = ({
 
     setProcessingBulk(true)
     try {
-      await Promise.all(
-        selection.map(userId =>
+      const results = await Promise.allSettled(
+        selection.map((userId) =>
           addDoc(collection(db, 'users', userId, 'engagement_actions'), {
             action_type: actionToApply.toLowerCase().replace(/\s+/g, '_'),
             action_label: actionToApply,
@@ -221,13 +236,38 @@ export const PartnerUserManagement: React.FC<PartnerUserManagementProps> = ({
         ),
       )
 
-      toast({
-        title: `${actionToApply} applied`,
-        description: `${selection.length} user(s) updated`,
-        status: 'success',
-      })
-      setSelection([])
-      setBulkAction('')
+      const failedIds = results
+        .map((result, idx) => (result.status === 'rejected' ? selection[idx] : null))
+        .filter((id): id is string => typeof id === 'string')
+      const successCount = results.length - failedIds.length
+
+      if (failedIds.length && successCount) {
+        console.warn('[PartnerDashboard] Bulk action partially failed', {
+          action: actionToApply,
+          failedIds,
+        })
+        toast({
+          title: 'Bulk action partially completed',
+          description: `${successCount} of ${selection.length} user(s) updated. ${failedIds.length} failed.`,
+          status: 'warning',
+        })
+        setSelection(failedIds)
+      } else if (failedIds.length) {
+        console.error('[PartnerDashboard] Bulk action failed', { action: actionToApply, failedIds })
+        toast({
+          title: 'Bulk action failed',
+          description: 'No updates were applied. Please retry.',
+          status: 'error',
+        })
+      } else {
+        toast({
+          title: `${actionToApply} applied`,
+          description: `${selection.length} user(s) updated`,
+          status: 'success',
+        })
+        setSelection([])
+        setBulkAction('')
+      }
     } catch (error) {
       console.error(error)
       toast({ title: 'Failed to apply action', status: 'error' })
@@ -416,12 +456,28 @@ export const PartnerUserManagement: React.FC<PartnerUserManagementProps> = ({
             {renderTableHeader()}
             <Tbody>
               {paginated.map(renderUserRow)}
-              {!paginated.length && (
+              {usersLoading && (
+                <Tr>
+                  <Td colSpan={7}>
+                    <HStack spacing={3} py={6} justify="center">
+                      <Spinner size="sm" />
+                      <Text color="brand.subtleText">
+                        {waitingForOrganizations ? 'Waiting for organizations...' : 'Loading learners...'}
+                      </Text>
+                    </HStack>
+                  </Td>
+                </Tr>
+              )}
+              {!usersLoading && !paginated.length && (
                 <Tr>
                   <Td colSpan={7}>
                     <HStack spacing={3} py={6} justify="center">
                       <CheckCircle2 color="green" />
-                      <Text color="brand.subtleText">No learners found for the selected company</Text>
+                      <Text color="brand.subtleText">
+                        {usersLoading
+                          ? 'Loading learners...'
+                          : 'No learners found for the selected company'}
+                      </Text>
                     </HStack>
                   </Td>
                 </Tr>
@@ -473,6 +529,18 @@ export const PartnerUserManagement: React.FC<PartnerUserManagementProps> = ({
               </Tr>
             </Thead>
             <Tbody>
+              {usersLoading && (
+                <Tr>
+                  <Td colSpan={10}>
+                    <HStack spacing={3} py={6} justify="center">
+                      <Spinner size="sm" />
+                      <Text color="brand.subtleText">
+                        {waitingForOrganizations ? 'Waiting for organizations...' : 'Loading learners...'}
+                      </Text>
+                    </HStack>
+                  </Td>
+                </Tr>
+              )}
               {atRiskUsers.map(user => (
                 <Tr key={user.id}>
                   <Td>
@@ -528,12 +596,14 @@ export const PartnerUserManagement: React.FC<PartnerUserManagementProps> = ({
                   </Td>
                 </Tr>
               ))}
-              {!atRiskUsers.length && (
+              {!usersLoading && !atRiskUsers.length && (
                 <Tr>
                   <Td colSpan={10}>
                     <HStack spacing={3} py={6} justify="center">
                       <CheckCircle2 color="green" />
-                      <Text color="brand.subtleText">All learners on track!</Text>
+                      <Text color="brand.subtleText">
+                        {usersLoading ? 'Loading learners...' : 'All learners on track!'}
+                      </Text>
                     </HStack>
                   </Td>
                 </Tr>
@@ -557,6 +627,18 @@ export const PartnerUserManagement: React.FC<PartnerUserManagementProps> = ({
               </Tr>
             </Thead>
             <Tbody>
+              {usersLoading && (
+                <Tr>
+                  <Td colSpan={5}>
+                    <HStack spacing={3} py={6} justify="center">
+                      <Spinner size="sm" />
+                      <Text color="brand.subtleText">
+                        {waitingForOrganizations ? 'Waiting for organizations...' : 'Loading leaders...'}
+                      </Text>
+                    </HStack>
+                  </Td>
+                </Tr>
+              )}
               {leaders.map(leader => (
                 <Tr key={leader.id}>
                   <Td>
@@ -578,12 +660,14 @@ export const PartnerUserManagement: React.FC<PartnerUserManagementProps> = ({
                   </Td>
                 </Tr>
               ))}
-              {!leaders.length && (
+              {!usersLoading && !leaders.length && (
                 <Tr>
                   <Td colSpan={5}>
                     <HStack spacing={3} py={6} justify="center">
                       <Clock />
-                      <Text color="brand.subtleText">No mentors or leaders in scope</Text>
+                      <Text color="brand.subtleText">
+                        {usersLoading ? 'Loading leaders...' : 'No mentors or leaders in scope'}
+                      </Text>
                     </HStack>
                   </Td>
                 </Tr>
@@ -654,7 +738,15 @@ export const PartnerUserManagement: React.FC<PartnerUserManagementProps> = ({
         </Stack>
       )}
 
-      <Drawer isOpen={drawer.isOpen} placement="right" onClose={drawer.onClose} size="md">
+      <Drawer
+        isOpen={drawer.isOpen}
+        placement="right"
+        onClose={() => {
+          drawer.onClose()
+          setSelectedUser(null)
+        }}
+        size="md"
+      >
         <DrawerOverlay />
         <DrawerContent>
           <DrawerHeader borderBottomWidth="1px">User details</DrawerHeader>

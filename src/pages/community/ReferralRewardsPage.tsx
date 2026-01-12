@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react'
+import React, { useEffect, useMemo, useState } from 'react'
 import {
   Badge,
   Box,
@@ -11,6 +11,7 @@ import {
   SimpleGrid,
   Stack,
   Text,
+  useDisclosure,
   useToast,
 } from '@chakra-ui/react'
 import { motion } from 'framer-motion'
@@ -21,18 +22,29 @@ import {
   CheckCircle2,
   Copy,
   ExternalLink,
+  Facebook,
   Gift,
+  Instagram,
   Layers,
+  Link2,
+  Linkedin,
   Lock,
+  Mail,
+  MessageCircle,
   Medal,
   Rocket,
   Share2,
   Sparkles,
+  Twitter,
   UserPlus,
   Users,
   type LucideIcon,
 } from 'lucide-react'
+import { collection, onSnapshot, orderBy, query, where } from 'firebase/firestore'
 import { useAuth } from '@/hooks/useAuth'
+import { APP_BASE_URL } from '@/config/app'
+import { db } from '@/services/firebase'
+import { InstagramShareModal, SocialShareModal } from '@/components/modals/SocialShareModal'
 
 const MotionBox = motion(Box)
 const MotionFlex = motion(Flex)
@@ -47,6 +59,14 @@ interface RewardTier {
   icon: LucideIcon
   gradient: string
   accent: string
+}
+
+interface ReferralRecord {
+  referredUid: string
+  referrerUid: string
+  refCode: string
+  status: 'pending' | 'credited' | 'rejected'
+  createdAt?: { toDate?: () => Date } | string | null
 }
 
 const rewardTiers: RewardTier[] = [
@@ -97,18 +117,57 @@ const rewardTiers: RewardTier[] = [
   },
 ]
 
-export const ReferralRewardsPage: React.FC = () => {
+const ReferralRewardsPage: React.FC = () => {
   const { user, profile } = useAuth()
   const toast = useToast()
+  const shareModal = useDisclosure()
+  const instagramModal = useDisclosure()
   const [copied, setCopied] = useState(false)
+  const [referrals, setReferrals] = useState<ReferralRecord[]>([])
+  const [referralsLoading, setReferralsLoading] = useState(false)
 
-  const referralCount = profile?.referralCount ?? 0
-  const baseAppUrl = useMemo(() => import.meta.env.VITE_APP_BASE_URL || window.location.origin, [])
+  const baseAppUrl = APP_BASE_URL
+
+  useEffect(() => {
+    if (!user?.uid) return
+    setReferralsLoading(true)
+    const referralQuery = query(
+      collection(db, 'referrals'),
+      where('referrerUid', '==', user.uid),
+      orderBy('createdAt', 'desc')
+    )
+    const unsubscribe = onSnapshot(
+      referralQuery,
+      (snapshot) => {
+        const items = snapshot.docs.map((doc) => doc.data() as ReferralRecord)
+        setReferrals(items)
+        setReferralsLoading(false)
+      },
+      (error) => {
+        console.error('🔴 [Referral] Unable to load referrals', error)
+        setReferralsLoading(false)
+      }
+    )
+
+    return () => unsubscribe()
+  }, [user?.uid])
+
+  const creditedCount = useMemo(
+    () => referrals.filter((referral) => referral.status === 'credited').length,
+    [referrals]
+  )
+  const pendingCount = useMemo(
+    () => referrals.filter((referral) => referral.status === 'pending').length,
+    [referrals]
+  )
+
+  const referralCount = creditedCount > 0 ? creditedCount : profile?.referralCount ?? 0
+  const referralCode = profile?.referralCode ?? user?.uid
 
   const referralLink = useMemo(() => {
     const sanitizedBase = baseAppUrl.endsWith('/') ? baseAppUrl.slice(0, -1) : baseAppUrl
-    return user?.uid ? `${sanitizedBase}/auth?ref=${user.uid}` : `${sanitizedBase}/auth`
-  }, [baseAppUrl, user?.uid])
+    return referralCode ? `${sanitizedBase}/auth?ref=${referralCode}` : `${sanitizedBase}/auth`
+  }, [baseAppUrl, referralCode])
 
   const nextTier = rewardTiers.find(tier => referralCount < tier.required)
   const progressToNext = nextTier ? Math.min((referralCount / nextTier.required) * 100, 100) : 100
@@ -156,8 +215,114 @@ export const ReferralRewardsPage: React.FC = () => {
     await handleCopy()
   }
 
+  const shareMessage = 'Join me on Transformation Tier and start your growth journey!'
+  const messageWithLink = `${shareMessage} ${referralLink}`
+
+  const openShareUrl = (url: string) => {
+    window.open(url, '_blank', 'noopener,noreferrer')
+  }
+
+  const handleWhatsAppShare = () => {
+    openShareUrl(`https://wa.me/?text=${encodeURIComponent(messageWithLink)}`)
+  }
+
+  const handleFacebookShare = () => {
+    openShareUrl(`https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(referralLink)}`)
+  }
+
+  const handleTwitterShare = () => {
+    openShareUrl(`https://twitter.com/intent/tweet?text=${encodeURIComponent(messageWithLink)}`)
+  }
+
+  const handleLinkedInShare = () => {
+    openShareUrl(`https://www.linkedin.com/sharing/share-offsite/?url=${encodeURIComponent(referralLink)}`)
+  }
+
+  const handleEmailShare = () => {
+    const subject = 'Join me on Transformation Tier'
+    openShareUrl(`mailto:?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(messageWithLink)}`)
+  }
+
+  const handleInstagramShare = async () => {
+    await handleCopy()
+    shareModal.onClose()
+    instagramModal.onOpen()
+  }
+
+  const shareActions = useMemo(
+    () => [
+      {
+        label: 'Copy Link',
+        description: 'Grab your referral URL',
+        icon: Link2,
+        color: 'gray.700',
+        bg: 'gray.100',
+        onClick: handleCopy,
+      },
+      {
+        label: 'WhatsApp',
+        description: 'Send a quick message',
+        icon: MessageCircle,
+        color: 'white',
+        bg: '#25D366',
+        onClick: handleWhatsAppShare,
+      },
+      {
+        label: 'Instagram',
+        description: 'Share to bio or story',
+        icon: Instagram,
+        color: 'white',
+        bg: '#E1306C',
+        onClick: handleInstagramShare,
+      },
+      {
+        label: 'Facebook',
+        description: 'Post to your feed',
+        icon: Facebook,
+        color: 'white',
+        bg: '#1877F2',
+        onClick: handleFacebookShare,
+      },
+      {
+        label: 'LinkedIn',
+        description: 'Share professionally',
+        icon: Linkedin,
+        color: 'white',
+        bg: '#0A66C2',
+        onClick: handleLinkedInShare,
+      },
+      {
+        label: 'Twitter',
+        description: 'Tweet your invite',
+        icon: Twitter,
+        color: 'white',
+        bg: '#1DA1F2',
+        onClick: handleTwitterShare,
+      },
+      {
+        label: 'Email',
+        description: 'Send a direct note',
+        icon: Mail,
+        color: 'white',
+        bg: '#6B7280',
+        onClick: handleEmailShare,
+      },
+    ],
+    [
+      handleCopy,
+      handleEmailShare,
+      handleFacebookShare,
+      handleInstagramShare,
+      handleLinkedInShare,
+      handleTwitterShare,
+      handleWhatsAppShare,
+    ]
+  )
+
   return (
     <Stack spacing={8} px={{ base: 0, md: 1 }}>
+      <SocialShareModal isOpen={shareModal.isOpen} onClose={shareModal.onClose} actions={shareActions} />
+      <InstagramShareModal isOpen={instagramModal.isOpen} onClose={instagramModal.onClose} />
       <MotionFlex
         bg="white"
         border="1px solid"
@@ -188,10 +353,10 @@ export const ReferralRewardsPage: React.FC = () => {
           </Text>
         </Stack>
         <HStack spacing={3}>
-          <Button leftIcon={<Icon as={Share2} />} colorScheme="purple" variant="outline" onClick={handleShare}>
+          <Button leftIcon={<Icon as={Share2} />} colorScheme="purple" variant="outline" onClick={shareModal.onOpen}>
             Share
           </Button>
-          <Button leftIcon={<Icon as={UserPlus} />} colorScheme="purple" onClick={handleShare}>
+          <Button leftIcon={<Icon as={UserPlus} />} colorScheme="purple" onClick={shareModal.onOpen}>
             Invite Friends Now
           </Button>
         </HStack>
@@ -269,6 +434,25 @@ export const ReferralRewardsPage: React.FC = () => {
             </Text>
           </Flex>
         </Stack>
+
+        <SimpleGrid columns={{ base: 1, md: 2 }} spacing={4} mt={6}>
+          <Box border="1px solid" borderColor="brand.border" borderRadius="xl" p={4} bg="gray.50">
+            <Text fontSize="xs" color="brand.subtleText" textTransform="uppercase" letterSpacing="wide">
+              Pending referrals
+            </Text>
+            <Heading size="md" color="brand.text">
+              {pendingCount}
+            </Heading>
+          </Box>
+          <Box border="1px solid" borderColor="brand.border" borderRadius="xl" p={4} bg="gray.50">
+            <Text fontSize="xs" color="brand.subtleText" textTransform="uppercase" letterSpacing="wide">
+              Credited referrals
+            </Text>
+            <Heading size="md" color="brand.text">
+              {creditedCount}
+            </Heading>
+          </Box>
+        </SimpleGrid>
       </MotionBox>
 
       <Stack spacing={4}>
@@ -388,6 +572,72 @@ export const ReferralRewardsPage: React.FC = () => {
       </Stack>
 
       <MotionBox
+        bg="white"
+        border="1px solid"
+        borderColor="brand.border"
+        borderRadius="2xl"
+        p={{ base: 6, md: 8 }}
+        boxShadow="md"
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.6, delay: 0.15 }}
+      >
+        <Stack spacing={4}>
+          <HStack justify="space-between" align="center">
+            <Heading size="md" color="brand.text">
+              Recent referrals
+            </Heading>
+            {referralsLoading && (
+              <HStack spacing={2} color="brand.subtleText">
+                <Text fontSize="sm">Loading</Text>
+              </HStack>
+            )}
+          </HStack>
+
+          {referrals.length === 0 && !referralsLoading ? (
+            <Text color="brand.subtleText">No referrals yet. Share your link to get started!</Text>
+          ) : (
+            <Stack spacing={3}>
+              {referrals.slice(0, 5).map((referral, index) => (
+                <Flex
+                  key={`${referral.referredUid}-${index}`}
+                  justify="space-between"
+                  align="center"
+                  border="1px solid"
+                  borderColor="brand.border"
+                  borderRadius="lg"
+                  px={4}
+                  py={3}
+                >
+                  <Stack spacing={1}>
+                    <Text fontWeight="semibold" color="brand.text">
+                      Referral #{referrals.length - index}
+                    </Text>
+                    <Text fontSize="sm" color="brand.subtleText">
+                      Code: {referral.refCode}
+                    </Text>
+                  </Stack>
+                  <Badge
+                    colorScheme={
+                      referral.status === 'credited'
+                        ? 'green'
+                        : referral.status === 'pending'
+                          ? 'yellow'
+                          : 'red'
+                    }
+                    borderRadius="full"
+                    px={3}
+                  >
+                    {referral.status}
+                  </Badge>
+                </Flex>
+              ))}
+            </Stack>
+          )}
+        </Stack>
+      </MotionBox>
+
+      <MotionBox
         bgGradient="linear(to-r, purple.600, purple.700)"
         borderRadius="2xl"
         p={{ base: 6, md: 8 }}
@@ -399,11 +649,15 @@ export const ReferralRewardsPage: React.FC = () => {
       >
         <Stack spacing={4}>
           <HStack spacing={3}>
-            <Icon as={Rocket} />
-            <Text fontWeight="bold">Ready to Grow Your Crew?</Text>
+            <Icon as={Rocket} color="white" />
+            <Text fontWeight="bold" color="white">
+              Ready to Grow Your Crew?
+            </Text>
           </HStack>
-          <Heading size="md">Share your link and start building your community.</Heading>
-          <Text opacity={0.9} maxW="3xl">
+          <Heading size="md" color="white">
+            Share your link and start building your community.
+          </Heading>
+          <Text opacity={0.9} maxW="3xl" color="white">
             Invite friends, peers, or teammates to Transformation Tier. Each successful signup counts toward your next reward
             and helps expand our community of ambitious leaders.
           </Text>
@@ -439,7 +693,7 @@ export const ReferralRewardsPage: React.FC = () => {
                   variant="outline"
                   colorScheme="purple"
                   width={{ base: 'full', md: 'auto' }}
-                  onClick={handleShare}
+                  onClick={shareModal.onOpen}
                 >
                   Share
                 </Button>
@@ -455,7 +709,7 @@ export const ReferralRewardsPage: React.FC = () => {
               bg="white"
               color="purple.700"
               _hover={{ bg: 'gray.50' }}
-              onClick={handleShare}
+              onClick={shareModal.onOpen}
             >
               Invite Friends Now
             </Button>
@@ -473,3 +727,5 @@ export const ReferralRewardsPage: React.FC = () => {
     </Stack>
   )
 }
+
+export default ReferralRewardsPage

@@ -25,8 +25,12 @@ export const normalizeRole = (role: unknown): StandardRole => {
 
   switch (roleString) {
     case 'company_admin':
+      result = 'partner'
+      break
     case 'admin':
     case 'administrator':
+      result = 'admin'
+      break
     case 'partner':
       result = 'partner'
       break
@@ -80,6 +84,8 @@ export const toUserRoleEnum = (role?: string | UserRole | null): UserRole | null
   switch (normalized) {
     case 'super_admin':
       return UserRole.SUPER_ADMIN
+    case 'admin':
+      return UserRole.ADMIN
     case 'partner':
       return UserRole.COMPANY_ADMIN
     case 'mentor':
@@ -103,7 +109,7 @@ export const toUserRoleEnum = (role?: string | UserRole | null): UserRole | null
  */
 export const isAdminRole = (role: unknown): boolean => {
   const normalized = normalizeRole(role)
-  const isAdmin = normalized === 'super_admin' || normalized === 'partner'
+  const isAdmin = normalized === 'super_admin' || normalized === 'partner' || normalized === 'admin'
   console.log('🛂 isAdminRole:', role, '→', isAdmin)
   return isAdmin
 }

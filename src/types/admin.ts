@@ -100,7 +100,7 @@ export interface TaskNotificationRecord {
   severity?: string
 }
 
-export type AdminRole = 'super_admin' | 'partner' | 'mentor' | 'ambassador' | 'team_leader'
+export type AdminRole = 'super_admin' | 'partner' | 'admin' | 'mentor' | 'ambassador' | 'team_leader'
 
 export interface AdminUserRecord {
   id: string

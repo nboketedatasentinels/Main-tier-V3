@@ -32,6 +32,7 @@ import { incrementOrganizationMemberCount, validateCompanyCode } from '@/service
 import { buildActionCodeSettings } from '@/utils/authActionCodeSettings'
 import { assignFreeCourseToUser, hasFreeCourseAssigned } from '@/services/courseAssignmentService'
 import { isFreeUser } from '@/utils/membership'
+import { createReferral, generateReferralCode, validateReferralCode } from '@/services/referralService'
 
 interface AuthProviderProps {
   children: React.ReactNode
@@ -42,24 +43,82 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const [profile, setProfile] = useState<UserProfile | null>(null)
   const [loading, setLoading] = useState(true)
   const [profileLoading, setProfileLoading] = useState(true)
+  const [profileStatus, setProfileStatus] = useState<'loading' | 'ready'>('loading')
   const [profileError, setProfileError] = useState<Error | null>(null)
   const [claimsRole, setClaimsRole] = useState<string | null>(null)
-  const [lastProfileLoadAt, setLastProfileLoadAt] = useState<string | null>(() => {
+  const profileRef = useRef<UserProfile | null>(null)
+  const initialLastProfileLoadAt = (() => {
     if (typeof window === 'undefined') return null
     return localStorage.getItem('lastProfileLoadAt')
-  })
+  })()
+  const lastProfileLoadAtRef = useRef<string | null>(initialLastProfileLoadAt)
   const enableProfileRealtime = import.meta.env.VITE_ENABLE_PROFILE_REALTIME === 'true'
   const freeCourseAssignmentRef = useRef({ inFlight: false, lastAttemptAt: 0, lastUserId: '' })
+  const refreshStateRef = useRef({
+    inFlight: false,
+    lastRequestAt: 0,
+    windowStart: 0,
+    requestCount: 0,
+    circuitBrokenUntil: 0,
+  })
   const pendingCompanyCodeKey = 't4l.pendingCompanyCode'
 
-  const recordProfileLoad = (loadedProfile: UserProfile | null) => {
+  useEffect(() => {
+    profileRef.current = profile
+  }, [profile])
+
+  const recordProfileLoad = useCallback((loadedProfile: UserProfile | null) => {
     if (typeof window === 'undefined') return
     if (!loadedProfile?.id) return
     const timestamp = new Date().toISOString()
     localStorage.setItem('lastProfileLoadAt', timestamp)
-    setLastProfileLoadAt(timestamp)
+    lastProfileLoadAtRef.current = timestamp
     console.log('🟣 [Auth] Recorded profile load timestamp', { id: loadedProfile.id, timestamp })
+  }, [])
+
+  const serializeAssignments = (assignments?: string[]) => {
+    if (!assignments?.length) return ''
+    return [...assignments].sort().join('|')
   }
+
+  const areProfilesEquivalent = (previous: UserProfile | null, next: UserProfile | null) => {
+    if (previous === next) return true
+    if (!previous || !next) return false
+    return (
+      previous.id === next.id &&
+      previous.role === next.role &&
+      previous.membershipStatus === next.membershipStatus &&
+      previous.accountStatus === next.accountStatus &&
+      previous.transformationTier === next.transformationTier &&
+      previous.companyId === next.companyId &&
+      previous.companyCode === next.companyCode &&
+      previous.companyName === next.companyName &&
+      previous.email === next.email &&
+      previous.firstName === next.firstName &&
+      previous.lastName === next.lastName &&
+      previous.fullName === next.fullName &&
+      previous.journeyType === next.journeyType &&
+      previous.avatarUrl === next.avatarUrl &&
+      previous.photoURL === next.photoURL &&
+      previous.emailVerified === next.emailVerified &&
+      previous.totalPoints === next.totalPoints &&
+      previous.level === next.level &&
+      previous.onboardingComplete === next.onboardingComplete &&
+      previous.onboardingSkipped === next.onboardingSkipped &&
+      serializeAssignments(previous.assignedOrganizations) === serializeAssignments(next.assignedOrganizations)
+    )
+  }
+
+  const updateProfileState = useCallback((nextProfile: UserProfile | null, reason: string) => {
+    setProfile((prev) => {
+      if (areProfilesEquivalent(prev, nextProfile)) {
+        console.log('🟢 [Auth] Profile unchanged, skipping state update', { reason })
+        return prev
+      }
+      console.log('🟢 [Auth] Profile updated', { reason, role: nextProfile?.role })
+      return nextProfile
+    })
+  }, [])
 
   useEffect(() => {
     if (enableProfileRealtime) return
@@ -132,7 +191,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     }
   }, [])
 
-  const getNameParts = (displayName?: string | null, email?: string | null) => {
+  const getNameParts = useCallback((displayName?: string | null, email?: string | null) => {
     const fallbackBase = email?.split('@')?.[0] || 'User'
     const cleanedName = displayName?.trim() || fallbackBase
     const parts = cleanedName.split(/\s+/).filter(Boolean)
@@ -141,9 +200,9 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       lastName: parts.slice(1).join(' '),
       fullName: cleanedName,
     }
-  }
+  }, [])
 
-  const fetchProfileOnce = async (uid: string): Promise<UserProfile | null> => {
+  const fetchProfileOnce = useCallback(async (uid: string): Promise<UserProfile | null> => {
     try {
       console.log('🟣 [Auth] fetchProfileOnce:start', { uid })
       const profileRef = doc(db, 'users', uid)
@@ -176,7 +235,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       })
       return null
     }
-  }
+  }, [])
 
   const fetchProfileWithRetry = async (firebaseUser: User, attempts = 3): Promise<UserProfile | null> => {
     let lastError: Error | null = null
@@ -213,7 +272,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   /* ------------------------------------------------------------------ */
   /* 🔹 Fetch or Create User Doc                                         */
   /* ------------------------------------------------------------------ */
-  const fetchOrCreateUserDoc = async (
+  const fetchOrCreateUserDoc = useCallback(async (
     firebaseUser: User
   ): Promise<UserProfile | null> => {
     try {
@@ -325,6 +384,12 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         firebaseUser.displayName,
         firebaseUser.email
       )
+      let referralCode: string | null = null
+      try {
+        referralCode = await generateReferralCode(firebaseUser.uid)
+      } catch (error) {
+        console.warn('🟠 [Auth] Unable to generate referral code', error)
+      }
 
       console.log('🟣 [Auth] Creating new profile with role:', role)
 
@@ -341,8 +406,9 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         level: 1,
         journeyType: '4W',
         referralCount: 0,
-        referralCode: null,
+        referralCode,
         referredBy: null,
+        referralStatus: null,
         isOnboarded: true,
         accountStatus: AccountStatus.ACTIVE,
         transformationTier: validatedOrganization
@@ -381,6 +447,27 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         }
       }
 
+      const pendingReferralCode =
+        typeof window !== 'undefined' ? localStorage.getItem('pending_ref')?.trim() : null
+      if (pendingReferralCode) {
+        const referrerUid = await validateReferralCode(pendingReferralCode)
+        if (referrerUid) {
+          const { success, error } = await createReferral(
+            firebaseUser.uid,
+            referrerUid,
+            pendingReferralCode
+          )
+          if (!success && error) {
+            console.warn('🟠 [Auth] Unable to create referral for new user', error)
+          }
+        } else {
+          console.warn('🟠 [Auth] Pending referral code is invalid or inactive', pendingReferralCode)
+        }
+        if (typeof window !== 'undefined') {
+          localStorage.removeItem('pending_ref')
+        }
+      }
+
       console.log('🟣 [Auth] Profile created successfully')
 
       return profileData
@@ -410,7 +497,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       }
       return null
     }
-  }
+  }, [getNameParts, pendingCompanyCodeKey])
 
   const refreshAdminSession = async () => {
     if (!user) return
@@ -438,6 +525,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
       setLoading(true)
       setUser(currentUser)
+      setProfileStatus('loading')
 
       if (!currentUser) {
         console.log('🟠 [Auth] No user → clearing state')
@@ -446,6 +534,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         setProfileError(null)
         setLoading(false)
         setProfileLoading(false)
+        setProfileStatus('ready')
         return
       }
 
@@ -463,18 +552,22 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       }
 
       if (isActive) {
+        const ensuredProfile = userProfile
+          ? { ...userProfile, assignedOrganizations: userProfile.assignedOrganizations ?? [] }
+          : null
         console.log('🟢 [Auth] Profile resolved', {
-          role: userProfile?.role,
-          normalized: normalizeRole(userProfile?.role),
+          role: ensuredProfile?.role,
+          normalized: normalizeRole(ensuredProfile?.role),
         })
 
-        setProfile(userProfile)
-        recordProfileLoad(userProfile)
-        if (userProfile) {
-          void attemptFreeCourseAssignment(currentUser.uid, userProfile)
+        updateProfileState(ensuredProfile, 'auth-state-change')
+        recordProfileLoad(ensuredProfile)
+        if (ensuredProfile) {
+          void attemptFreeCourseAssignment(currentUser.uid, ensuredProfile)
         }
         setProfileLoading(false)
         setLoading(false)
+        setProfileStatus('ready')
       }
 
       if (!userProfile || !isActive) return
@@ -496,11 +589,13 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
             id: snap.id,
             journeyType: updatedData.journeyType || '4W',
             role: (normalizeRole(updatedData.role) as StandardRole) ?? updatedData.role,
+            assignedOrganizations: updatedData.assignedOrganizations ?? [],
           }
           console.log('🔁 [Auth] Profile updated via snapshot', updatedProfile.role)
-          setProfile(updatedProfile)
+          updateProfileState(updatedProfile, 'realtime-snapshot')
           recordProfileLoad(updatedProfile)
           void attemptFreeCourseAssignment(currentUser.uid, updatedProfile)
+          setProfileStatus('ready')
         },
         (error) => {
           console.error('🔴 [Auth] Realtime profile listener error', error)
@@ -517,7 +612,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       }
       unsubscribe()
     }
-  }, [attemptFreeCourseAssignment, enableProfileRealtime, extractCustomClaims])
+  }, [attemptFreeCourseAssignment, enableProfileRealtime, extractCustomClaims, recordProfileLoad, updateProfileState])
 
   /* ------------------------------------------------------------------ */
   /* 🔹 Auth Actions                                                     */
@@ -635,7 +730,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       companyCode?: string
       companyId?: string
       companyName?: string
-    }
+    },
+    referralCode?: string
   ) => {
     console.log('🟡 [Auth] signUp:start', email)
     setLoading(true)
@@ -692,6 +788,12 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
           ? UserRole.PAID_MEMBER
           : UserRole.FREE_USER
       const normalizedRole = normalizeRole(role)
+      let generatedReferralCode: string | null = null
+      try {
+        generatedReferralCode = await generateReferralCode(uid)
+      } catch (error) {
+        console.warn('🟠 [Auth] Unable to generate referral code during signup', error)
+      }
 
       const profileData: UserProfile = {
         id: uid,
@@ -709,8 +811,9 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         level: 1,
         journeyType: '4W',
         referralCount: 0,
-        referralCode: null,
+        referralCode: generatedReferralCode,
         referredBy: null,
+        referralStatus: null,
         isOnboarded: true,
         accountStatus: AccountStatus.ACTIVE,
         transformationTier: validatedOrganization
@@ -762,6 +865,21 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
           await incrementOrganizationMemberCount(validatedOrganization.id)
         } catch (incrementError) {
           console.warn('🟠 [Auth] Unable to increment organization member count', incrementError)
+        }
+      }
+
+      if (referralCode) {
+        const trimmedReferralCode = referralCode.trim()
+        if (trimmedReferralCode) {
+          const referrerUid = await validateReferralCode(trimmedReferralCode)
+          if (!referrerUid) {
+            console.warn('🟠 [Auth] Referral code invalid or inactive during signup', trimmedReferralCode)
+          } else {
+            const { success, error } = await createReferral(uid, referrerUid, trimmedReferralCode)
+            if (!success && error) {
+              console.warn('🟠 [Auth] Unable to create referral during signup', error)
+            }
+          }
         }
       }
 
@@ -854,7 +972,11 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         ...updates,
         updatedAt: serverTimestamp(),
       })
-      setProfile((prev) => (prev ? { ...prev, ...updates } : prev))
+      setProfile((prev) => {
+        if (!prev) return prev
+        const merged = { ...prev, ...updates }
+        return areProfilesEquivalent(prev, merged) ? prev : merged
+      })
       return { error: null }
     } catch (error) {
       console.error('🔴 [Auth] updateProfile failed', error)
@@ -863,46 +985,89 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     }
   }
 
-  const refreshProfile = async () => {
+  const refreshProfile = useCallback(async (options?: { reason?: string }) => {
     const currentUser = auth.currentUser
-    console.log('🟡 [Auth] Manual profile refresh requested', { uid: currentUser?.uid })
+    const reason = options?.reason || 'manual'
+    const now = Date.now()
+    const refreshState = refreshStateRef.current
 
     if (!currentUser) {
       const error = new Error('No authenticated user to refresh')
-      console.error('🔴 [Auth] refreshProfile failed', error)
+      console.error('🔴 [Auth] refreshProfile failed', { reason, error })
       setProfileError(error)
       return { error, profile: null as UserProfile | null }
     }
 
+    if (refreshState.circuitBrokenUntil > now) {
+      console.warn('🟠 [Auth] refreshProfile circuit breaker engaged', {
+        reason,
+        resumeAt: new Date(refreshState.circuitBrokenUntil).toISOString(),
+      })
+      return { error: new Error('Profile refresh temporarily paused to prevent a loop.'), profile: profileRef.current }
+    }
+
+    if (refreshState.inFlight) {
+      console.warn('🟠 [Auth] refreshProfile skipped: request already in flight', { reason })
+      return { error: null, profile: profileRef.current }
+    }
+
+    if (now - refreshState.lastRequestAt < 1500) {
+      console.warn('🟠 [Auth] refreshProfile debounced', { reason })
+      return { error: null, profile: profileRef.current }
+    }
+
+    if (now - refreshState.windowStart > 30000) {
+      refreshState.windowStart = now
+      refreshState.requestCount = 0
+    }
+    refreshState.requestCount += 1
+    if (refreshState.requestCount > 6) {
+      refreshState.circuitBrokenUntil = now + 30000
+      console.warn('🔴 [Auth] refreshProfile loop detected, opening circuit breaker', {
+        reason,
+        requestCount: refreshState.requestCount,
+      })
+      return { error: new Error('Profile refresh paused due to excessive refresh attempts.'), profile: profileRef.current }
+    }
+
+    refreshState.inFlight = true
+    refreshState.lastRequestAt = now
+    console.log('🟡 [Auth] profile refresh requested', { uid: currentUser.uid, reason })
+
     try {
       setProfileLoading(true)
-      const refreshed = (await fetchProfileOnce(currentUser.uid)) ?? (await fetchOrCreateUserDoc(currentUser))
+      const refreshedRaw = (await fetchProfileOnce(currentUser.uid)) ?? (await fetchOrCreateUserDoc(currentUser))
+      const refreshed = refreshedRaw
+        ? { ...refreshedRaw, assignedOrganizations: refreshedRaw.assignedOrganizations ?? [] }
+        : null
       if (refreshed) {
-        setProfile(refreshed)
+        updateProfileState(refreshed, `manual-refresh:${reason}`)
         recordProfileLoad(refreshed)
         setProfileError(null)
       }
       setProfileLoading(false)
       return { error: null, profile: refreshed }
     } catch (error) {
-      console.error('🔴 [Auth] refreshProfile error', error)
+      console.error('🔴 [Auth] refreshProfile error', { reason, error })
       setProfileError(error as Error)
       setProfileLoading(false)
       return { error: error as Error, profile: null as UserProfile | null }
+    } finally {
+      refreshState.inFlight = false
     }
-  }
+  }, [fetchOrCreateUserDoc, fetchProfileOnce, recordProfileLoad, updateProfileState])
 
   /* ------------------------------------------------------------------ */
   /* 🔹 Role Flags (LOGGED)                                              */
   /* ------------------------------------------------------------------ */
   const normalizedRole = normalizeRole(profile?.role)
 
-  const isAdmin = normalizedRole === 'partner' || normalizedRole === 'super_admin'
+  const isAdmin = normalizedRole === 'partner' || normalizedRole === 'admin' || normalizedRole === 'super_admin'
   const isSuperAdmin = normalizedRole === 'super_admin'
   const isMentor = normalizedRole === 'mentor'
   const isAmbassador = normalizedRole === 'ambassador'
   const isPaid =
-    ['partner', 'mentor', 'ambassador', 'team_leader', 'super_admin'].includes(
+    ['partner', 'admin', 'mentor', 'ambassador', 'team_leader', 'super_admin'].includes(
       normalizedRole ?? ''
     ) ||
     normalizedRole === 'paid_member' ||
@@ -915,8 +1080,9 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     userData: profile,
     loading,
     profileLoading,
+    profileStatus,
     profileError,
-    lastProfileLoadAt,
+    lastProfileLoadAt: lastProfileLoadAtRef.current,
     signIn,
     signUp,
     signOut,
@@ -935,9 +1101,9 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       profile?.transformationTier?.toLowerCase().includes('corporate') ?? false,
     assignedOrganizations: profile?.assignedOrganizations ?? [],
     hasFullOrganizationAccess: normalizedRole === 'super_admin',
-    canAccessOrganization: (code: string) =>
+    canAccessOrganization: (organizationId: string) =>
       normalizedRole === 'super_admin' ||
-      profile?.assignedOrganizations?.includes(code) === true,
+      profile?.assignedOrganizations?.includes(organizationId) === true,
     updateDashboardPreferences: async () => ({ error: null }),
     claimsRole,
     refreshAdminSession,

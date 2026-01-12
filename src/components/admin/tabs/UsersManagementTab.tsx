@@ -48,7 +48,7 @@ import {
   updateUserRole,
 } from '@/services/userManagementService'
 
-const roleOptions: ManagedUserRole[] = ['user', 'partner', 'super_admin', 'team_leader', 'mentor', 'ambassador']
+const roleOptions: ManagedUserRole[] = ['user', 'partner', 'admin', 'super_admin', 'team_leader', 'mentor', 'ambassador']
 const membershipOptions: MembershipStatus[] = ['free', 'paid', 'inactive']
 
 const formatDate = (date?: Date | null) => {
@@ -96,8 +96,9 @@ export const UsersManagementTab = () => {
   const accessibleUsers = useMemo(() => {
     if (isSuperAdmin || !assignedOrganizations?.length) return users
     return users.filter((user) => {
-      if (!user.companyCode) return false
-      return assignedOrganizations.includes(user.companyCode)
+      const organizationId = user.companyId
+      if (!organizationId) return false
+      return assignedOrganizations.includes(organizationId)
     })
   }, [assignedOrganizations, isSuperAdmin, users])
 
@@ -170,9 +171,26 @@ export const UsersManagementTab = () => {
     if (!selectedIds.length) return
     try {
       setBulkLoading(true)
-      await bulkUpdateRole(selectedIds, role)
-      toast({ title: 'Roles updated', description: 'Selected users updated', status: 'success' })
-      setSelectedIds([])
+      const result = await bulkUpdateRole(selectedIds, role)
+      if (result.failedIds.length && result.successfulIds.length) {
+        console.warn('[AdminUsers] Bulk role update partially failed', { failedIds: result.failedIds })
+        toast({
+          title: 'Roles partially updated',
+          description: `${result.successfulIds.length} of ${selectedIds.length} users updated. ${result.failedIds.length} failed.`,
+          status: 'warning',
+        })
+        setSelectedIds(result.failedIds)
+      } else if (result.failedIds.length) {
+        console.error('[AdminUsers] Bulk role update failed', { failedIds: result.failedIds })
+        toast({
+          title: 'Unable to update roles',
+          description: 'No users were updated. Please retry.',
+          status: 'error',
+        })
+      } else {
+        toast({ title: 'Roles updated', description: 'Selected users updated', status: 'success' })
+        setSelectedIds([])
+      }
     } catch (err) {
       console.error(err)
       toast({ title: 'Unable to update roles', status: 'error' })
@@ -185,9 +203,26 @@ export const UsersManagementTab = () => {
     if (!selectedIds.length) return
     try {
       setBulkLoading(true)
-      await bulkUpdateMembershipStatus(selectedIds, status)
-      toast({ title: 'Membership updated', status: 'success' })
-      setSelectedIds([])
+      const result = await bulkUpdateMembershipStatus(selectedIds, status)
+      if (result.failedIds.length && result.successfulIds.length) {
+        console.warn('[AdminUsers] Bulk membership update partially failed', { failedIds: result.failedIds })
+        toast({
+          title: 'Membership partially updated',
+          description: `${result.successfulIds.length} of ${selectedIds.length} users updated. ${result.failedIds.length} failed.`,
+          status: 'warning',
+        })
+        setSelectedIds(result.failedIds)
+      } else if (result.failedIds.length) {
+        console.error('[AdminUsers] Bulk membership update failed', { failedIds: result.failedIds })
+        toast({
+          title: 'Unable to update membership',
+          description: 'No users were updated. Please retry.',
+          status: 'error',
+        })
+      } else {
+        toast({ title: 'Membership updated', status: 'success' })
+        setSelectedIds([])
+      }
     } catch (err) {
       console.error(err)
       toast({ title: 'Unable to update membership', status: 'error' })

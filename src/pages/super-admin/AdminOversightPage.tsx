@@ -43,6 +43,7 @@ import {
   toggleAdminStatus,
   updateAdminUser,
 } from '@/services/superAdminService'
+import { fetchAssignedOrganizations } from '@/services/organizationService'
 import { AdminFormData, AdminMetrics, AdminUserRecord, OrganizationRecord } from '@/types/admin'
 
 interface AdminOversightPageProps {
@@ -54,6 +55,7 @@ type SortKey = 'name' | 'email' | 'role' | 'status' | 'lastActive'
 
 const roleColorMap: Record<string, string> = {
   partner: 'purple',
+  admin: 'purple',
   mentor: 'blue',
   ambassador: 'teal',
   team_leader: 'orange',
@@ -70,6 +72,7 @@ export const AdminOversightPage: React.FC<AdminOversightPageProps> = ({ adminNam
   const toast = useToast()
   const formModal = useDisclosure()
   const deleteDialog = useDisclosure()
+  const enableProfileRealtime = import.meta.env.VITE_ENABLE_PROFILE_REALTIME === 'true'
 
   const [admins, setAdmins] = useState<AdminUserRecord[]>([])
   const [organizations, setOrganizations] = useState<OrganizationRecord[]>([])
@@ -93,7 +96,7 @@ export const AdminOversightPage: React.FC<AdminOversightPageProps> = ({ adminNam
   const updateMetrics = useCallback((adminList: AdminUserRecord[]) => {
     const total = adminList.length
     const active = adminList.filter((admin) => admin.accountStatus !== 'suspended').length
-    const partners = adminList.filter((admin) => admin.role === 'partner').length
+    const partners = adminList.filter((admin) => admin.role === 'partner' || admin.role === 'admin').length
     const mentors = adminList.filter((admin) => admin.role === 'mentor').length
     const ambassadors = adminList.filter((admin) => admin.role === 'ambassador').length
     const teamLeaders = adminList.filter((admin) => admin.role === 'team_leader').length
@@ -217,9 +220,53 @@ export const AdminOversightPage: React.FC<AdminOversightPageProps> = ({ adminNam
   const handleUpdateAdmin = async (formData: AdminFormData) => {
     if (!selectedAdmin) return
     try {
+      console.debug('[SuperAdmin] Updating admin assignments', {
+        adminId: selectedAdmin.id,
+        before: selectedAdmin.assignedOrganizations,
+        after: formData.assignedOrganizations,
+      })
       await updateAdminUser(selectedAdmin.id, formData)
       await assignOrganizations(selectedAdmin.id, formData.assignedOrganizations || [])
-      toast({ title: 'Admin updated', status: 'success' })
+      const verifiedOrganizations = await fetchAssignedOrganizations(selectedAdmin.id)
+      const verifiedIds = verifiedOrganizations.map((org) => org.id).filter((id): id is string => !!id)
+      const requestedIds = formData.assignedOrganizations || []
+      const missingIds = requestedIds.filter((orgId) => !verifiedIds.includes(orgId))
+      const assignedNames = verifiedOrganizations.map((org) =>
+        org.id ? organizationName(org.id) : 'Unknown',
+      )
+      console.debug('[SuperAdmin] Assignment verification results', {
+        requested: requestedIds,
+        verified: verifiedIds,
+      })
+      if (missingIds.length) {
+        console.warn('[SuperAdmin] Assigned organizations missing after verification', {
+          missing: missingIds,
+        })
+        toast({
+          title: 'Some organizations could not be resolved',
+          description: `Missing assignments: ${missingIds.map((orgId) => organizationName(orgId)).join(', ')}`,
+          status: 'warning',
+          duration: 7000,
+        })
+      }
+      toast({
+        title: `Assigned ${assignedNames.length} organization${assignedNames.length === 1 ? '' : 's'} to ${
+          selectedAdmin.fullName || 'admin'
+        }`,
+        description: assignedNames.length
+          ? `Assigned organizations: ${assignedNames.join(', ')}. The admin will see these organizations immediately if they're logged in.`
+          : 'Organization assignments cleared. The admin will see changes immediately if they are logged in.',
+        status: 'success',
+        duration: 5000,
+      })
+      if (!enableProfileRealtime) {
+        toast({
+          title: 'Real-time updates are disabled',
+          description: 'Admins will need to refresh their dashboard to see assignment changes.',
+          status: 'warning',
+          duration: 5000,
+        })
+      }
     } catch (error) {
       console.error(error)
       toast({ title: 'Failed to update admin', status: 'error' })
@@ -294,13 +341,19 @@ export const AdminOversightPage: React.FC<AdminOversightPageProps> = ({ adminNam
   const roleLabel = (role: string) =>
     ({
       partner: 'Partner',
+      admin: 'Admin',
       mentor: 'Mentor',
       ambassador: 'Ambassador',
       team_leader: 'Team Leader',
       super_admin: 'Super Admin',
     }[role] || role)
 
-  const organizationName = (orgId: string) => organizations.find((org) => org.id === orgId)?.name || orgId
+  const organizationName = (orgId: string) => {
+    const org = organizations.find((entry) => entry.id === orgId)
+    if (!org) return orgId
+    const name = org.name || org.code || org.id || orgId
+    return org.code ? `${name} (${org.code})` : name
+  }
 
   const renderTableRows = () => {
     const loading = loadingAdmins || loadingOrganizations
@@ -451,6 +504,7 @@ export const AdminOversightPage: React.FC<AdminOversightPageProps> = ({ adminNam
           >
             <option value="all">All Roles</option>
             <option value="partner">Partner</option>
+            <option value="admin">Admin</option>
             <option value="mentor">Mentor</option>
             <option value="ambassador">Ambassador</option>
             <option value="team_leader">Team Leader</option>

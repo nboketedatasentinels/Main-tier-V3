@@ -148,7 +148,7 @@ export const MainLayout: React.FC = () => {
       {
         label: 'COMMUNITY',
         items: [
-          { label: 'Announcements', path: '/app/announcements', icon: Megaphone },
+          { label: 'Events', path: '/app/announcements', icon: Megaphone },
           { label: 'Referral Rewards', path: '/app/referral-rewards', icon: Gift },
           { label: 'Global Book Club', path: '/app/book-club', icon: BookMarked },
           { label: 'Shameless Circle', path: '/app/shameless-circle', icon: Sparkles },
@@ -355,7 +355,7 @@ export const MainLayout: React.FC = () => {
       <Drawer isOpen={isOpen} placement="left" onClose={onClose}>
         <DrawerOverlay />
         <DrawerContent bg="brand.deepPlum">
-          <DrawerCloseButton color="brand.softGold" />
+          <DrawerCloseButton color="brand.textLight" />
           <DrawerBody pt={12}>
             <VStack align="stretch" spacing={4}>
               <Text fontSize="2xl" fontWeight="bold" color="brand.gold" mb={4}>

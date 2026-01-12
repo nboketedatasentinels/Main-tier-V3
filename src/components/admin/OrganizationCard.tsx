@@ -10,6 +10,7 @@ export interface OrganizationCardProps {
   activeUsers?: number
   change?: string
   description?: string
+  warning?: string
   onViewClick?: () => void
 }
 
@@ -21,6 +22,7 @@ export const OrganizationCard: React.FC<OrganizationCardProps> = ({
   activeUsers,
   change,
   description,
+  warning,
   onViewClick,
 }) => {
   return (
@@ -28,7 +30,7 @@ export const OrganizationCard: React.FC<OrganizationCardProps> = ({
       <HStack justify="space-between" mb={2} align="flex-start">
         <Stack spacing={1}>
           <Text fontWeight="semibold" color="brand.text">
-            {name}
+            {name || 'Unknown Organization'}
           </Text>
           {description && (
             <Text fontSize="sm" color="brand.subtleText">
@@ -51,6 +53,11 @@ export const OrganizationCard: React.FC<OrganizationCardProps> = ({
       {typeof newThisWeek === 'number' && (
         <Text fontSize="sm" color="brand.subtleText">
           New this week: {newThisWeek}
+        </Text>
+      )}
+      {warning && (
+        <Text fontSize="sm" color="red.600">
+          {warning}
         </Text>
       )}
       {change && (

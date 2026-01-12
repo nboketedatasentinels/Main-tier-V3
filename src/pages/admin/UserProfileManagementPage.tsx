@@ -167,8 +167,8 @@ export const UserProfileManagementPage: React.FC<{ viewContext?: ViewContext }> 
       return profileData.mentorId === viewerProfile.id
     }
     if (isAdmin) {
-      if (!profileData.companyCode) return false
-      return canAccessOrganization(profileData.companyCode)
+      if (!profileData.companyId) return false
+      return canAccessOrganization(profileData.companyId)
     }
     return false
   }, [canAccessOrganization, isAdmin, isMentorView, isSuperAdmin, profileData, viewerProfile])
@@ -639,7 +639,8 @@ export const UserProfileManagementPage: React.FC<{ viewContext?: ViewContext }> 
                         <option value="team_leader">Team Leader</option>
                         <option value="mentor">Mentor</option>
                         <option value="ambassador">Ambassador</option>
-                        <option value="partner">Admin</option>
+                        <option value="partner">Partner Admin</option>
+                        <option value="admin">Admin</option>
                         <option value="super_admin">Super Admin</option>
                       </Select>
                     </FormControl>

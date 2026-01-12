@@ -11,21 +11,21 @@ export const isSuperAdmin = (profile?: UserProfile | null) => normalizeRole(prof
 
 export const isPartnerAdmin = (profile?: UserProfile | null) => {
   const role = normalizeRole(profile?.role)
-  return role === 'partner'
+  return role === 'partner' || role === 'admin'
 }
 
 export const isAdminLike = (profile?: UserProfile | null) => isSuperAdmin(profile) || isPartnerAdmin(profile)
 
-export const isAssignedPartner = (profile: UserProfile | null | undefined, organizationCode?: string) => {
-  if (!profile || !organizationCode) return false
+export const isAssignedPartner = (profile: UserProfile | null | undefined, organizationId?: string) => {
+  if (!profile || !organizationId) return false
   if (isSuperAdmin(profile)) return true
-  return profile.assignedOrganizations?.includes(organizationCode) ?? false
+  return profile.assignedOrganizations?.includes(organizationId) ?? false
 }
 
-export const canManageOrganization = (profile: UserProfile | null | undefined, organizationCode?: string) => {
+export const canManageOrganization = (profile: UserProfile | null | undefined, organizationId?: string) => {
   if (!profile) return false
   if (isSuperAdmin(profile)) return true
-  return isAssignedPartner(profile, organizationCode)
+  return isAssignedPartner(profile, organizationId)
 }
 
 export const guardByRole = (profile: UserProfile | null | undefined, allowedRoles: string[]) => {
@@ -40,6 +40,8 @@ export const getRoleLabel = (profile: UserProfile | null | undefined) => {
   switch (normalized) {
     case 'super_admin':
       return 'Super Admin'
+    case 'admin':
+      return 'Admin'
     case 'partner':
       return 'Partner Admin'
     case 'mentor':
