@@ -81,12 +81,12 @@ export const ImpactUpgradePromptModal: React.FC<EnhancedUpgradePromptModalProps>
           <Flex justify="space-between" align="center">
             <Stack spacing={1}>
               <Flex align="center" gap={2}>
-                <Icon as={Crown} />
+                <Icon as={Crown} color="white" />
                 <Badge colorScheme="yellow" bg="accent.warning" color="text.primary">
                   Premium Access
                 </Badge>
               </Flex>
-              <Text fontSize="xl" fontWeight="bold">
+              <Text fontSize="xl" fontWeight="bold" color="white">
                 {title}
               </Text>
               <Text color="whiteAlpha.800">{message}</Text>
