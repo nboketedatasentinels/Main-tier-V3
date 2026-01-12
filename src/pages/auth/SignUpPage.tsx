@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from "react"
-import { Link as RouterLink, useNavigate } from "react-router-dom"
+import { Link as RouterLink, useNavigate, useSearchParams } from "react-router-dom"
 import { motion } from "framer-motion"
 import { Eye, EyeOff, ArrowRight, User, Mail, Lock, Building2, CheckCircle, XCircle, MailCheck } from "lucide-react"
 import { Spinner, useToast } from "@chakra-ui/react"
@@ -9,6 +9,7 @@ import { getFriendlyErrorMessage } from "@/utils/authErrors"
 import { buildActionCodeSettings } from "@/utils/authActionCodeSettings"
 import { validateCompanyCode } from "@/services/organizationService"
 import { auth } from "@/services/firebase"
+import { validateReferralCode } from "@/services/referralService"
 import { GenderOption, Organization, UserRole } from "@/types"
 import { getLandingPathForRole } from "@/utils/roleRouting"
 import { TermsOfUseModal } from "@/components/modals/TermsOfUseModal"
@@ -28,6 +29,7 @@ interface FormData {
 
 export const SignUpPage: React.FC = () => {
   const navigate = useNavigate()
+  const [searchParams] = useSearchParams()
   const { signUp, signInWithGoogle, profile, profileLoading, user } = useAuth()
   const toast = useToast()
 
@@ -57,6 +59,46 @@ export const SignUpPage: React.FC = () => {
   const [showPrivacyModal, setShowPrivacyModal] = useState(false)
   const [showCompanyCodeModal, setShowCompanyCodeModal] = useState(false)
   const [pendingGoogleNavigation, setPendingGoogleNavigation] = useState(false)
+  const [referralCode, setReferralCode] = useState<string | null>(null)
+  const [referralStatus, setReferralStatus] = useState<"idle" | "checking" | "valid" | "invalid">("idle")
+
+  useEffect(() => {
+    const queryRef = searchParams.get("ref")?.trim()
+    if (queryRef) {
+      localStorage.setItem("pending_ref", queryRef)
+      setReferralCode(queryRef)
+      return
+    }
+
+    const storedRef = localStorage.getItem("pending_ref")?.trim()
+    if (storedRef) {
+      setReferralCode(storedRef)
+    }
+  }, [searchParams])
+
+  useEffect(() => {
+    if (!referralCode) {
+      setReferralStatus("idle")
+      return
+    }
+
+    let active = true
+    setReferralStatus("checking")
+
+    validateReferralCode(referralCode).then(referrerUid => {
+      if (!active) return
+      if (referrerUid) {
+        setReferralStatus("valid")
+      } else {
+        setReferralStatus("invalid")
+        localStorage.removeItem("pending_ref")
+      }
+    })
+
+    return () => {
+      active = false
+    }
+  }, [referralCode])
 
   const nameParts = useMemo(() => {
     const parts = formData.fullName.trim().split(/\s+/).filter(Boolean)
@@ -144,20 +186,30 @@ export const SignUpPage: React.FC = () => {
       const { firstName, lastName } = nameParts
       const email = formData.email.trim().toLowerCase()
 
-      const { error: signUpError, userId } = await signUp(email, formData.password, {
-        firstName: firstName || "User",
-        lastName,
-        fullName: formData.fullName.trim(),
-        gender: formData.gender !== "prefer_not_to_say" ? formData.gender : undefined,
-        companyCode:
-          formData.companyCode.trim() && companyCodeValid ? formData.companyCode.trim() : undefined,
-        companyId: validatedOrganization?.id,
-        companyName: validatedOrganization?.name,
-      })
+      const referralCodeToUse = referralStatus === "valid" ? referralCode ?? undefined : undefined
+      const { error: signUpError, userId } = await signUp(
+        email,
+        formData.password,
+        {
+          firstName: firstName || "User",
+          lastName,
+          fullName: formData.fullName.trim(),
+          gender: formData.gender !== "prefer_not_to_say" ? formData.gender : undefined,
+          companyCode:
+            formData.companyCode.trim() && companyCodeValid ? formData.companyCode.trim() : undefined,
+          companyId: validatedOrganization?.id,
+          companyName: validatedOrganization?.name,
+        },
+        referralCodeToUse
+      )
 
       if (signUpError) {
         setError(getFriendlyErrorMessage(signUpError))
         return
+      }
+
+      if (referralCodeToUse) {
+        localStorage.removeItem("pending_ref")
       }
 
       toast({
@@ -350,6 +402,29 @@ export const SignUpPage: React.FC = () => {
           <h1 className="text-2xl md:text-3xl font-bold text-gray-900">Create account</h1>
           <p className="mt-1 text-sm text-gray-600">Start your transformation journey.</p>
         </div>
+
+        {referralCode && (
+          <div className="rounded-lg border border-purple-100 bg-purple-50 px-4 py-3 text-sm text-purple-700">
+            {referralStatus === "checking" && (
+              <div className="inline-flex items-center gap-2">
+                <Spinner size="xs" />
+                <span>Checking referral code...</span>
+              </div>
+            )}
+            {referralStatus === "valid" && (
+              <div className="inline-flex items-center gap-2">
+                <CheckCircle className="h-4 w-4 text-green-600" />
+                <span>Referral code applied!</span>
+              </div>
+            )}
+            {referralStatus === "invalid" && (
+              <div className="inline-flex items-center gap-2 text-red-700">
+                <XCircle className="h-4 w-4" />
+                <span>Referral code is invalid or inactive.</span>
+              </div>
+            )}
+          </div>
+        )}
 
         <button
           type="button"
