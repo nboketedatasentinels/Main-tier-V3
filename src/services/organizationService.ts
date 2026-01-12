@@ -5,7 +5,6 @@ import {
   collection,
   doc,
   documentId,
-  DocumentSnapshot,
   FirestoreError,
   getDoc,
   getDocs,
