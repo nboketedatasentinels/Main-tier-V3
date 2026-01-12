@@ -727,3 +727,5 @@ export const ReferralRewardsPage: React.FC = () => {
     </Stack>
   )
 }
+
+export default ReferralRewardsPage
