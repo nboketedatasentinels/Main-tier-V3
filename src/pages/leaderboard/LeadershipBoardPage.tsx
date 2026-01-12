@@ -641,7 +641,7 @@ export const LeadershipBoardPage: React.FC = () => {
           <Text fontSize="3xl" fontWeight="bold" color="text.primary" mt={1}>
             Competitive, social, and personalized rankings
           </Text>
-          <Text color="text.secondary">Switch between leaderboard and challenge views with real-time Firebase data.</Text>
+          <Text color="text.secondary">Switch between leaderboard and challenge views with real-time data.</Text>
         </Box>
         <HStack spacing={3}>
           <Button
