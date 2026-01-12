@@ -236,6 +236,35 @@ service cloud.firestore {
       }
     }
 
+    // Referral system collections
+    match /referralCodes/{code} {
+      allow read: if true;
+      allow create: if isAuthenticated() &&
+        request.auth.uid == code &&
+        request.resource.data.uid == request.auth.uid &&
+        request.resource.data.active == true;
+      allow update, delete: if isSuperAdmin();
+    }
+
+    match /referrals/{referredUid} {
+      allow read: if isAuthenticated() && (
+        request.auth.uid == referredUid ||
+        request.auth.uid == resource.data.referrerUid
+      );
+      allow create: if isAuthenticated() &&
+        request.auth.uid == request.resource.data.referredUid &&
+        request.resource.data.status == 'pending' &&
+        request.resource.data.referrerUid != request.auth.uid;
+      allow update: if isAuthenticated() &&
+        request.auth.uid == resource.data.referredUid &&
+        resource.data.status == 'pending' &&
+        request.resource.data.referrerUid == resource.data.referrerUid &&
+        request.resource.data.referredUid == resource.data.referredUid &&
+        request.resource.data.refCode == resource.data.refCode &&
+        request.resource.data.status in ['credited', 'rejected'];
+      allow delete: if isSuperAdmin();
+    }
+
     // Public read collections
     match /journeys/{journeyId} {
       allow read: if isAuthenticated();

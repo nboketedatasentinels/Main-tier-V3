@@ -12,6 +12,7 @@ import {
 import { applyActionCode } from 'firebase/auth'
 import { doc, updateDoc } from 'firebase/firestore'
 import { auth, db } from '@/services/firebase'
+import { creditReferralPoints } from '@/services/referralService'
 import { CheckCircleIcon, WarningIcon } from '@chakra-ui/icons'
 
 export const EmailVerificationPage: React.FC = () => {
@@ -44,6 +45,11 @@ export const EmailVerificationPage: React.FC = () => {
               emailVerified: true,
               updatedAt: new Date().toISOString(),
             })
+
+            const { success, error } = await creditReferralPoints(currentUser.uid)
+            if (!success && error) {
+              console.warn('🟠 [Referral] Unable to credit referral points after verification', error)
+            }
           } catch (updateError) {
             // If document doesn't exist yet or update fails, log but don't fail the verification
             console.error('Failed to update user document:', updateError)

@@ -41,6 +41,13 @@ export const LoginPage: React.FC = () => {
   const [refreshingProfile, setRefreshingProfile] = useState(false)
 
   useEffect(() => {
+    const refCode = searchParams.get('ref')?.trim()
+    if (refCode) {
+      localStorage.setItem('pending_ref', refCode)
+    }
+  }, [searchParams])
+
+  useEffect(() => {
     console.log('🔵 LoginPage useEffect triggered:', {
       user: user ? { uid: user.uid, email: user.email } : null,
       profile: profile
