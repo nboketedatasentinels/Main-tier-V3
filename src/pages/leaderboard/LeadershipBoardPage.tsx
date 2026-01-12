@@ -713,7 +713,7 @@ export const LeadershipBoardPage: React.FC = () => {
                     <HStack justify="space-between" align="center">
                       <Box>
                         <Text fontSize="lg" fontWeight="bold">Progress Overview</Text>
-                        <Text color="text.secondary">Live updates from Firestore</Text>
+                        <Text color="text.secondary">Live updates</Text>
                       </Box>
                       <Badge colorScheme="primary" display="flex" alignItems="center" gap={2}>
                         <Icon as={Trophy} /> {percentile}
