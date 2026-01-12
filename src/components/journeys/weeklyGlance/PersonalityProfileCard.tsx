@@ -22,13 +22,11 @@ import {
   Skeleton,
   Stack,
   Tag,
-  Textarea,
   Text,
   UnorderedList,
   ListItem,
   Button,
   Checkbox,
-  CheckboxGroup,
   Tooltip,
   useToast,
   VStack,
@@ -54,12 +52,6 @@ export const PersonalityProfileCard = ({ data, loading }: PersonalityProfileCard
   const [saving, setSaving] = useState(false)
   const [localProfile, setLocalProfile] = useState<PersonalityProfile | null>(data)
   const [personalityType, setPersonalityType] = useState(localProfile?.personalityType || '')
-  const [personalityDescription, setPersonalityDescription] = useState(
-    localProfile?.personalityDescription || '',
-  )
-  const [personalityStrengths, setPersonalityStrengths] = useState<string[]>(
-    localProfile?.personalityStrengths || [],
-  )
   const [coreValues, setCoreValues] = useState<string[]>(localProfile?.coreValues || [])
   const [hasCompletedPersonalityTest, setHasCompletedPersonalityTest] = useState(
     Boolean(profile?.hasCompletedPersonalityTest),
@@ -74,8 +66,6 @@ export const PersonalityProfileCard = ({ data, loading }: PersonalityProfileCard
   useEffect(() => {
     setLocalProfile(data)
     setPersonalityType(data?.personalityType || '')
-    setPersonalityDescription(data?.personalityDescription || '')
-    setPersonalityStrengths(data?.personalityStrengths || [])
     setCoreValues(data?.coreValues || [])
   }, [data])
 
@@ -116,22 +106,6 @@ export const PersonalityProfileCard = ({ data, loading }: PersonalityProfileCard
       'ESFJ',
       'ENFJ',
       'ENTJ',
-    ],
-    [],
-  )
-
-  const strengthOptions = useMemo(
-    () => [
-      'Analytical thinking',
-      'Empathy',
-      'Creativity',
-      'Strategic planning',
-      'Collaboration',
-      'Adaptability',
-      'Communication',
-      'Problem solving',
-      'Organization',
-      'Vision casting',
     ],
     [],
   )
@@ -178,8 +152,6 @@ export const PersonalityProfileCard = ({ data, loading }: PersonalityProfileCard
     try {
       const updates = {
         personalityType,
-        personalityStrengths,
-        personalityDescription,
         coreValues,
       }
 
@@ -191,7 +163,10 @@ export const PersonalityProfileCard = ({ data, loading }: PersonalityProfileCard
           hasCompletedValuesTest,
         }),
       ])
-      setLocalProfile(updates)
+      setLocalProfile(prev => ({
+        ...(prev ?? {}),
+        ...updates,
+      }))
       setIsModalOpen(false)
       toast({
         title: 'Profile saved',
@@ -398,29 +373,6 @@ export const PersonalityProfileCard = ({ data, loading }: PersonalityProfileCard
                       </Select>
                     </Box>
                   </Tooltip>
-                </FormControl>
-
-                <FormControl>
-                  <FormLabel>Top Strengths</FormLabel>
-                  <CheckboxGroup value={personalityStrengths} onChange={values => setPersonalityStrengths(values as string[])}>
-                    <Stack spacing={2} direction={{ base: 'column', md: 'row' }} flexWrap="wrap">
-                      {strengthOptions.map(item => (
-                        <Checkbox key={item} value={item} width={{ base: '100%', md: '45%' }}>
-                          {item}
-                        </Checkbox>
-                      ))}
-                    </Stack>
-                  </CheckboxGroup>
-                </FormControl>
-
-                <FormControl>
-                  <FormLabel>How would you describe this type?</FormLabel>
-                  <Textarea
-                    placeholder="Share a short description or takeaway from your assessment"
-                    value={personalityDescription}
-                    onChange={event => setPersonalityDescription(event.target.value)}
-                    rows={4}
-                  />
                 </FormControl>
 
                 <Divider />
