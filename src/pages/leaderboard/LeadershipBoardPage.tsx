@@ -75,6 +75,12 @@ import { Badge as BadgeDefinition, LeaderboardTimeframe, UserProfile } from '@/t
 import { db } from '@/services/firebase'
 import { useAuth } from '@/hooks/useAuth'
 import { StartChallengeModal } from '@/components/modals/StartChallengeModal'
+import { isAdminRole } from '@/utils/role'
+import {
+  filterProfilesBySegment,
+  getSegmentContext,
+  isProfileInSegment,
+} from '@/utils/leaderboardSegmentation'
 
 interface PointsTransaction {
   id: string
@@ -180,6 +186,7 @@ export const LeadershipBoardPage: React.FC = () => {
   const [badgesError, setBadgesError] = useState<string | null>(null)
   const [pointsPulse, setPointsPulse] = useState(false)
   const [isRefreshingProfile, setIsRefreshingProfile] = useState(false)
+  const [adminViewAll, setAdminViewAll] = useState(false)
   const [showFilterTip, setShowFilterTip] = useState(() => {
     const stored = localStorage.getItem('leaderboard-filter-tip')
     return stored !== 'dismissed'
@@ -197,6 +204,33 @@ export const LeadershipBoardPage: React.FC = () => {
       id: currentProfile?.id ?? authProfile?.id,
     } as UserProfile
   }, [authProfile, currentProfile])
+
+  const segmentContext = useMemo(() => getSegmentContext(profile), [profile])
+  const segmentLabel = segmentContext?.label ?? 'Leaderboard'
+  const segmentMemberLabel = segmentContext?.memberLabel ?? 'Members'
+  const segmentScopeText = segmentContext?.scopeText ?? 'Across your community'
+  const segmentBadgeLabel = segmentContext ? `${segmentContext.label} View` : 'Segment View'
+  const isAdminViewer = isAdminRole(profile?.role)
+
+  const segmentIssue = useMemo(() => {
+    if (!profile || !segmentContext) return null
+    if (!segmentContext.filterValue) {
+      if (segmentContext.type === 'free_village') {
+        return 'Please contact support to join a village.'
+      }
+      if (segmentContext.type === 'corporate_org') {
+        return 'Organization assignment required to view this leaderboard.'
+      }
+      return 'Segment details are missing. Please refresh your profile.'
+    }
+    return null
+  }, [profile, segmentContext])
+
+  useEffect(() => {
+    if (!isAdminViewer && adminViewAll) {
+      setAdminViewAll(false)
+    }
+  }, [adminViewAll, isAdminViewer])
 
   const pointsPulseStyle = pointsPulse ? 'pointsPulse 1.2s ease-in-out' : 'none'
 
@@ -324,7 +358,26 @@ export const LeadershipBoardPage: React.FC = () => {
   }, [refetchChallenges, toast])
 
   useEffect(() => {
-    const profileQuery = query(collection(db, 'profiles'))
+    if (!profile) return undefined
+
+    const canViewAll = isAdminViewer && adminViewAll
+    if (!segmentContext && !canViewAll) {
+      setProfiles([])
+      setProfilesLoaded(true)
+      return undefined
+    }
+
+    if (!segmentContext?.filterValue && !canViewAll) {
+      setProfiles([])
+      setProfilesLoaded(true)
+      return undefined
+    }
+
+    setProfilesLoaded(false)
+    const profileQuery = canViewAll
+      ? query(collection(db, 'profiles'))
+      : query(collection(db, 'profiles'), where(segmentContext!.filterField, '==', segmentContext!.filterValue))
+
     const unsubscribe = onSnapshot(profileQuery, (snapshot) => {
       const loadedProfiles: UserProfile[] = snapshot.docs.map((doc) => doc.data() as UserProfile)
       setProfiles(loadedProfiles)
@@ -332,14 +385,43 @@ export const LeadershipBoardPage: React.FC = () => {
     })
 
     return () => unsubscribe()
-  }, [])
+  }, [
+    adminViewAll,
+    isAdminViewer,
+    profile,
+    segmentContext,
+    segmentContext?.filterField,
+    segmentContext?.filterValue,
+  ])
 
   useEffect(() => {
     void fetchFeaturedBadges()
   }, [fetchFeaturedBadges])
 
   useEffect(() => {
-    const txQuery = query(collection(db, 'points_transactions'), orderBy('createdAt', 'desc'), limit(500))
+    if (!profile) return undefined
+
+    const canViewAll = isAdminViewer && adminViewAll
+    if (!segmentContext && !canViewAll) {
+      setTransactions([])
+      setTransactionsLoaded(true)
+      return undefined
+    }
+
+    if (!segmentContext?.filterValue && !canViewAll) {
+      setTransactions([])
+      setTransactionsLoaded(true)
+      return undefined
+    }
+
+    setTransactionsLoaded(false)
+    const constraints = [orderBy('createdAt', 'desc'), limit(500)]
+
+    if (!canViewAll && segmentContext?.type === 'corporate_org' && profile.companyId) {
+      constraints.unshift(where('companyId', '==', profile.companyId))
+    }
+
+    const txQuery = query(collection(db, 'points_transactions'), ...constraints)
     const unsubscribe = onSnapshot(txQuery, (snapshot) => {
       const loadedTx: PointsTransaction[] = snapshot.docs.map((doc) => {
         const data = doc.data()
@@ -357,7 +439,7 @@ export const LeadershipBoardPage: React.FC = () => {
     })
 
     return () => unsubscribe()
-  }, [])
+  }, [adminViewAll, isAdminViewer, profile, segmentContext])
 
   useEffect(() => {
     if (!profile) return
@@ -444,6 +526,14 @@ export const LeadershipBoardPage: React.FC = () => {
     return () => clearInterval(interval)
   }, [enableProfileRealtime, profile?.id, refreshProfile])
 
+  useEffect(() => {
+    if (!segmentContext || (adminViewAll && isAdminViewer)) return
+    const invalidProfiles = profiles.filter((candidate) => !isProfileInSegment(candidate, segmentContext))
+    if (invalidProfiles.length) {
+      console.warn('🟠 [Leaderboard] Segment mismatch detected', invalidProfiles.map((p) => p.id))
+    }
+  }, [adminViewAll, isAdminViewer, profiles, segmentContext])
+
   const handleManualRefresh = async () => {
     setIsRefreshingProfile(true)
     const result = await refreshProfile({ reason: 'leaderboard-manual' })
@@ -474,45 +564,72 @@ export const LeadershipBoardPage: React.FC = () => {
     localStorage.setItem('leaderboard-filter-tip', 'dismissed')
   }
 
+  const segmentProfiles = useMemo(() => {
+    if (adminViewAll && isAdminViewer) return profiles
+    return filterProfilesBySegment(profiles, profile)
+  }, [adminViewAll, isAdminViewer, profiles, profile])
+
+  const segmentProfileIds = useMemo(() => new Set(segmentProfiles.map((item) => item.id)), [segmentProfiles])
+
+  const segmentTransactions = useMemo(() => {
+    if (adminViewAll && isAdminViewer) return transactions
+    if (!segmentProfileIds.size) return []
+    return transactions.filter((tx) => segmentProfileIds.has(tx.userId))
+  }, [adminViewAll, isAdminViewer, segmentProfileIds, transactions])
+
+  const segmentChallenges = useMemo(() => {
+    if (adminViewAll && isAdminViewer) return challenges
+    if (!segmentProfileIds.size) return []
+    return challenges.filter((challenge) => {
+      if (!challenge.opponentId) return true
+      return segmentProfileIds.has(challenge.opponentId)
+    })
+  }, [adminViewAll, challenges, isAdminViewer, segmentProfileIds])
+
   const aggregatedPoints = useMemo(() => {
     const totals: Record<string, number> = {}
-    transactions.forEach((tx) => {
+    segmentTransactions.forEach((tx) => {
       const createdAt = tx.createdAt ? new Date(tx.createdAt) : null
       if (timeframe === LeaderboardTimeframe.CURRENT_JOURNEY && tx.userId !== profile?.id) return
       if (timeframeStart && createdAt && createdAt < timeframeStart) return
       totals[tx.userId] = (totals[tx.userId] || 0) + tx.points
     })
     return totals
-  }, [profile?.id, timeframe, timeframeStart, transactions])
+  }, [profile?.id, segmentTransactions, timeframe, timeframeStart])
 
   const weeklyPoints = useMemo(() => {
     if (!profile) return 0
     const start = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000)
-    return transactions.reduce((sum, tx) => {
+    return segmentTransactions.reduce((sum, tx) => {
       const createdAt = tx.createdAt ? new Date(tx.createdAt) : null
       if (tx.userId === profile.id && createdAt && createdAt >= start) {
         return sum + tx.points
       }
       return sum
     }, 0)
-  }, [profile, transactions])
+  }, [profile, segmentTransactions])
 
   const monthlyPoints = useMemo(() => {
     if (!profile) return 0
     const start = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000)
-    return transactions.reduce((sum, tx) => {
+    return segmentTransactions.reduce((sum, tx) => {
       const createdAt = tx.createdAt ? new Date(tx.createdAt) : null
       if (tx.userId === profile.id && createdAt && createdAt >= start) {
         return sum + tx.points
       }
       return sum
     }, 0)
-  }, [profile, transactions])
+  }, [profile, segmentTransactions])
 
-  const companySize = useMemo(() => profiles.filter((p) => p.companyId === profile?.companyId).length, [profiles, profile])
+  const segmentSize = useMemo(() => segmentProfiles.length, [segmentProfiles])
 
   const leaderboardRows: LeaderboardRow[] = useMemo(() => {
-    const rows = profiles
+    const visibleProfiles = adminViewAll && isAdminViewer ? profiles : segmentProfiles
+    const validatedProfiles = adminViewAll && isAdminViewer
+      ? visibleProfiles
+      : visibleProfiles.filter((candidate) => (segmentContext ? isProfileInSegment(candidate, segmentContext) : false))
+
+    const rows = validatedProfiles
       .filter((p) => p.privacySettings?.showOnLeaderboard !== false)
       .map((user) => {
         const activePoints = timeframe === LeaderboardTimeframe.ALL_TIME ? user.totalPoints : aggregatedPoints[user.id] || 0
@@ -546,14 +663,23 @@ export const LeadershipBoardPage: React.FC = () => {
     })
 
     return sorted.map((row, index) => ({ ...row, rank: index + 1 }))
-  }, [aggregatedPoints, profiles, sortDirection, sortField, timeframe])
+  }, [
+    adminViewAll,
+    aggregatedPoints,
+    isAdminViewer,
+    profiles,
+    segmentContext,
+    segmentProfiles,
+    sortDirection,
+    sortField,
+    timeframe,
+  ])
 
   const percentile = useMemo(() => {
     if (!profile) return 'Top 100%'
-    const companyRows = leaderboardRows.filter((row) => row.user.companyId === profile.companyId)
-    const currentRank = companyRows.find((row) => row.user.id === profile.id)?.rank || companyRows.length
-    if (!companyRows.length) return 'Top 100%'
-    const pct = Math.round((currentRank / companyRows.length) * 100)
+    const currentRank = leaderboardRows.find((row) => row.user.id === profile.id)?.rank || leaderboardRows.length
+    if (!leaderboardRows.length) return 'Top 100%'
+    const pct = Math.round((currentRank / leaderboardRows.length) * 100)
     return `Top ${pct}%`
   }, [leaderboardRows, profile])
 
@@ -663,7 +789,7 @@ export const LeadershipBoardPage: React.FC = () => {
 
   const breakdownByCategory = useMemo(() => {
     const categoryTotals: Record<string, number> = {}
-    transactions.forEach((tx) => {
+    segmentTransactions.forEach((tx) => {
       if (tx.category) {
         categoryTotals[tx.category] = (categoryTotals[tx.category] || 0) + tx.points
       }
@@ -674,7 +800,7 @@ export const LeadershipBoardPage: React.FC = () => {
       value,
       percent: userRow?.activePoints ? Math.round((value / userRow.activePoints) * 100) : 0,
     }))
-  }, [transactions, userRow?.activePoints])
+  }, [segmentTransactions, userRow?.activePoints])
 
   useEffect(() => {
     const maxPage = Math.max(1, Math.ceil(breakdownByCategory.length / 4))
@@ -682,8 +808,6 @@ export const LeadershipBoardPage: React.FC = () => {
       setBreakdownPage(maxPage)
     }
   }, [breakdownByCategory.length, breakdownPage])
-
-  const companyRows = useMemo(() => leaderboardRows.filter((row) => row.user.companyId === profile?.companyId), [leaderboardRows, profile?.companyId])
 
   const getRankIcon = (rank: number) => {
     if (rank === 1) return <Icon as={Crown} color="accent.warning" />
@@ -696,10 +820,10 @@ export const LeadershipBoardPage: React.FC = () => {
     )
   }
 
-  const companyStats = {
+  const segmentStats = {
     weeklyPoints,
     monthlyPoints,
-    activeChallenges: challenges.filter((c) => c.status === 'active').length,
+    activeChallenges: segmentChallenges.filter((c) => c.status === 'active').length,
     badgesEarned: userRow?.badgeCount || 0,
   }
 
@@ -728,7 +852,7 @@ export const LeadershipBoardPage: React.FC = () => {
     setVirtualOffset(offset)
   }
 
-  const emptyChallenges = challenges.filter((challenge) => challenge.status === 'active').length === 0
+  const emptyChallenges = segmentChallenges.filter((challenge) => challenge.status === 'active').length === 0
 
   return (
     <Stack spacing={6}>
@@ -744,6 +868,17 @@ export const LeadershipBoardPage: React.FC = () => {
             Competitive, social, and personalized rankings
           </Text>
           <Text color="text.secondary">Switch between leaderboard and challenge views with real-time data.</Text>
+          <HStack spacing={2} mt={3} flexWrap="wrap">
+            <Badge colorScheme="primary">{segmentBadgeLabel}</Badge>
+            {segmentIssue ? (
+              <Badge colorScheme="orange">{segmentIssue}</Badge>
+            ) : (
+              <Badge colorScheme="green">Segmented privacy enabled</Badge>
+            )}
+            {isAdminViewer && adminViewAll && (
+              <Badge colorScheme="purple">Admin override: All segments</Badge>
+            )}
+          </HStack>
         </Box>
         <HStack spacing={3}>
           <Button
@@ -827,10 +962,10 @@ export const LeadershipBoardPage: React.FC = () => {
                       <Stat>
                         <StatLabel color="text.muted">Your Current Rank</StatLabel>
                         <StatNumber color="text.primary" display="flex" alignItems="center" gap={2}>
-                          {getRankIcon(userRow?.rank || companyRows.length || 1)}
+                          {getRankIcon(userRow?.rank || leaderboardRows.length || 1)}
                           {userRow?.rank || '—'}
                         </StatNumber>
-                        <StatHelpText color="text.secondary">Across your company</StatHelpText>
+                        <StatHelpText color="text.secondary">{segmentScopeText}</StatHelpText>
                       </Stat>
                       <Stat>
                         <StatLabel color="text.muted">Total Points</StatLabel>
@@ -853,31 +988,31 @@ export const LeadershipBoardPage: React.FC = () => {
                       <Stat>
                         <StatLabel color="text.muted">Weekly Points</StatLabel>
                         <Skeleton isLoaded={isPointsReady} height="32px">
-                          <StatNumber color="text.primary">{formatNumber(companyStats.weeklyPoints)}</StatNumber>
+                          <StatNumber color="text.primary">{formatNumber(segmentStats.weeklyPoints)}</StatNumber>
                         </Skeleton>
                         <StatHelpText color="text.secondary">Last 7 days</StatHelpText>
                       </Stat>
                       <Stat>
                         <StatLabel color="text.muted">Monthly Points</StatLabel>
                         <Skeleton isLoaded={isPointsReady} height="32px">
-                          <StatNumber color="text.primary">{formatNumber(companyStats.monthlyPoints)}</StatNumber>
+                          <StatNumber color="text.primary">{formatNumber(segmentStats.monthlyPoints)}</StatNumber>
                         </Skeleton>
                         <StatHelpText color="text.secondary">Last 30 days</StatHelpText>
                       </Stat>
                       <Stat>
                         <StatLabel color="text.muted">Active Challenges</StatLabel>
-                        <StatNumber color="text.primary">{companyStats.activeChallenges}</StatNumber>
+                        <StatNumber color="text.primary">{segmentStats.activeChallenges}</StatNumber>
                         <StatHelpText color="text.secondary">Live battles</StatHelpText>
                       </Stat>
                       <Stat>
                         <StatLabel color="text.muted">Badges Earned</StatLabel>
-                        <StatNumber color="text.primary">{companyStats.badgesEarned}</StatNumber>
+                        <StatNumber color="text.primary">{segmentStats.badgesEarned}</StatNumber>
                         <StatHelpText color="text.secondary">Achievement count</StatHelpText>
                       </Stat>
                       <Stat>
-                        <StatLabel color="text.muted">Team Members</StatLabel>
-                        <StatNumber color="text.primary">{companySize || 1}</StatNumber>
-                        <StatHelpText color="text.secondary">Company size</StatHelpText>
+                        <StatLabel color="text.muted">{segmentMemberLabel}</StatLabel>
+                        <StatNumber color="text.primary">{segmentSize || 1}</StatNumber>
+                        <StatHelpText color="text.secondary">{segmentLabel} size</StatHelpText>
                       </Stat>
                     </SimpleGrid>
                   </CardBody>
@@ -1010,10 +1145,23 @@ export const LeadershipBoardPage: React.FC = () => {
                     </Box>
                     <Box>
                       <Text fontSize="sm" mb={1}>Admin Filters</Text>
-                      <HStack spacing={3}>
-                        <Switch size="lg" colorScheme="primary" />
-                        <Text fontSize="sm">Company / Village / Cluster</Text>
-                      </HStack>
+                      <Tooltip
+                        label={isAdminViewer ? 'Toggle to view all segments (admin only).' : 'Admin access required.'}
+                        hasArrow
+                      >
+                        <HStack spacing={3}>
+                          <Switch
+                            size="lg"
+                            colorScheme="primary"
+                            isChecked={adminViewAll}
+                            isDisabled={!isAdminViewer}
+                            onChange={(event) => setAdminViewAll(event.target.checked)}
+                          />
+                          <Text fontSize="sm">
+                            {isAdminViewer ? 'Company / Village / Cluster' : 'Segment locked'}
+                          </Text>
+                        </HStack>
+                      </Tooltip>
                     </Box>
                   </SimpleGrid>
                 </CardBody>
@@ -1023,7 +1171,7 @@ export const LeadershipBoardPage: React.FC = () => {
                 <CardHeader>
                   <Flex justify="space-between" align="center">
                     <Box>
-                      <Text fontWeight="bold">Company Leaderboard</Text>
+                      <Text fontWeight="bold">{segmentLabel} Leaderboard</Text>
                       <Text color="text.secondary">Sorted by points with live updates</Text>
                     </Box>
                     <HStack spacing={2}>
@@ -1206,7 +1354,7 @@ export const LeadershipBoardPage: React.FC = () => {
                   <Flex justify="space-between" align="center">
                     <Box>
                       <Text fontWeight="bold">Points Breakdown</Text>
-                      <Text color="text.secondary">Corporate members only</Text>
+                      <Text color="text.secondary">{segmentLabel} member insights</Text>
                     </Box>
                     <HStack spacing={3}>
                       <IconButton
@@ -1295,7 +1443,7 @@ export const LeadershipBoardPage: React.FC = () => {
                   <CardBody>
                     <Stat>
                       <StatLabel color="text.muted">Active Challenges</StatLabel>
-                      <StatNumber color="text.primary">{challenges.filter((c) => c.status === 'active').length}</StatNumber>
+                      <StatNumber color="text.primary">{segmentChallenges.filter((c) => c.status === 'active').length}</StatNumber>
                     </Stat>
                   </CardBody>
                 </Card>
@@ -1303,7 +1451,7 @@ export const LeadershipBoardPage: React.FC = () => {
                   <CardBody>
                     <Stat>
                       <StatLabel color="text.muted">Victories</StatLabel>
-                      <StatNumber color="text.primary">{challenges.filter((c) => c.result === 'win').length}</StatNumber>
+                      <StatNumber color="text.primary">{segmentChallenges.filter((c) => c.result === 'win').length}</StatNumber>
                     </Stat>
                   </CardBody>
                 </Card>
@@ -1311,7 +1459,7 @@ export const LeadershipBoardPage: React.FC = () => {
                   <CardBody>
                     <Stat>
                       <StatLabel color="text.muted">Points Earned</StatLabel>
-                      <StatNumber color="text.primary">{formatNumber(challenges.reduce((sum, c) => sum + c.yourPoints, 0))}</StatNumber>
+                      <StatNumber color="text.primary">{formatNumber(segmentChallenges.reduce((sum, c) => sum + c.yourPoints, 0))}</StatNumber>
                     </Stat>
                   </CardBody>
                 </Card>
@@ -1341,7 +1489,7 @@ export const LeadershipBoardPage: React.FC = () => {
                     </VStack>
                   ) : (
                     <Stack spacing={3}>
-                      {challenges
+                      {segmentChallenges
                         .filter((c) => c.status === 'active')
                         .map((challenge) => (
                           <Flex key={challenge.id} p={4} border="1px solid" borderColor="border.subtle" borderRadius="lg" align="center" gap={4}>
@@ -1370,7 +1518,7 @@ export const LeadershipBoardPage: React.FC = () => {
                 </CardHeader>
                 <CardBody>
                   <Stack spacing={3}>
-                    {challenges
+                    {segmentChallenges
                       .filter((c) => c.status === 'completed')
                       .map((challenge) => (
                         <Flex key={challenge.id} p={3} border="1px solid" borderColor="border.subtle" borderRadius="lg" align="center" gap={3}>
