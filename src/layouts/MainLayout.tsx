@@ -68,7 +68,7 @@ export const MainLayout: React.FC = () => {
   const welcomeKey = useMemo(() => (profile ? `t4l.newUserWelcome.${profile.id}` : null), [profile])
 
   useEffect(() => {
-    localStorage.removeItem('bolt.dashboard_tour_progress')
+    localStorage.removeItem('t4l.dashboard_tour_progress')
   }, [])
 
   const isFreeUser = isFreeTierUser(profile)
