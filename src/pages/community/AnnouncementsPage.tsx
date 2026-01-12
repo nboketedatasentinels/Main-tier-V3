@@ -453,7 +453,7 @@ const GrantsTab = () => (
         'Keep discussions respectful and consolidate updates in the original thread',
         'Do not share sensitive personal data—link to official forms instead',
       ]}
-      link={import.meta.env.VITE_WHATSAPP_COMMUNITY_LINK || '#'}
+      link="https://chat.whatsapp.com/FAmTJ4AX7fk3CvrWWteDx8"
       ctaLabel="Open WhatsApp grants space"
       communityName="Grants & Funding"
     />
