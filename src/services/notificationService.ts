@@ -2,6 +2,7 @@ import {
   addDoc,
   collection,
   doc,
+  getDoc,
   getDocs,
   onSnapshot,
   orderBy,
@@ -66,6 +67,49 @@ export const updateNotificationAction = async (
 ) => {
   const notificationRef = doc(db, 'notifications', notificationId)
   await updateDoc(notificationRef, { action_response, is_read: true, read: true })
+}
+
+export const handleNotificationAction = async (
+  notification: NotificationRecord,
+  action_response: NotificationRecord['action_response'],
+) => {
+  const notificationRef = doc(db, 'notifications', notification.id)
+  await updateDoc(notificationRef, { action_response, is_read: true, read: true })
+
+  if (
+    notification.type === 'challenge_request'
+    && notification.related_id
+    && (action_response === 'accepted' || action_response === 'declined')
+  ) {
+    const challengeRef = doc(db, 'challenges', notification.related_id)
+    const challengeSnap = await getDoc(challengeRef)
+    if (!challengeSnap.exists()) return
+
+    const challengeData = challengeSnap.data() as Record<string, unknown>
+    const responderName = (challengeData.challenged_name as string) || 'Your peer'
+    const challengerId = challengeData.challenger_id as string | undefined
+    const status = action_response === 'accepted' ? 'active' : 'declined'
+
+    await updateDoc(challengeRef, {
+      status,
+      responded_at: serverTimestamp(),
+      accepted_at: action_response === 'accepted' ? serverTimestamp() : null,
+      declined_at: action_response === 'declined' ? serverTimestamp() : null,
+    })
+
+    if (challengerId) {
+      await addDoc(notificationsCollection, {
+        user_id: challengerId,
+        type: 'challenge_response',
+        title: 'Challenge response',
+        message: `${responderName} ${action_response === 'accepted' ? 'accepted' : 'declined'} your challenge.`,
+        related_id: notification.related_id,
+        is_read: false,
+        read: false,
+        created_at: serverTimestamp(),
+      })
+    }
+  }
 }
 
 export const createInAppNotification = async (params: {

@@ -1,10 +1,10 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useToast } from '@chakra-ui/react'
 import {
+  handleNotificationAction,
   listenToUserNotifications,
   markAllNotificationsRead,
   markNotificationRead,
-  updateNotificationAction,
 } from '@/services/notificationService'
 import { NotificationCategory, NotificationRecord, NotificationType } from '@/types/notifications'
 import { useAuth } from './useAuth'
@@ -124,9 +124,9 @@ export const useNotifications = ({
   }, [profile?.id, toast])
 
   const handleAction = useCallback(
-    async (notificationId: string, action: NotificationRecord['action_response']) => {
+    async (notification: NotificationRecord, action: NotificationRecord['action_response']) => {
       try {
-        await updateNotificationAction(notificationId, action)
+        await handleNotificationAction(notification, action)
       } catch (err) {
         console.error(err)
         setError('Unable to update notification')

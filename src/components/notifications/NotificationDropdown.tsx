@@ -154,8 +154,7 @@ export const NotificationDropdown = () => {
                     onMarkRead={() => markNotificationAsRead(notification.id)}
                     onAction={(action) => {
                       if (!action) return
-                      updateNotificationAction(notification.id, action)
-                      markNotificationAsRead(notification.id)
+                      updateNotificationAction(notification, action)
                     }}
                   />
                 ))}

@@ -64,6 +64,7 @@ const resolveTimestamp = (value?: unknown): string => {
 export const NotificationItem = ({ notification, onMarkRead, onAction }: NotificationItemProps) => {
   const bg = useColorModeValue(notification.is_read || notification.read ? 'white' : 'purple.50', 'gray.800')
   const border = useColorModeValue('gray.200', 'gray.700')
+  const actionTaken = Boolean(notification.action_response)
 
   const timestamp = resolveTimestamp(notification.created_at)
   const categoryLabel = notification.metadata?.category as string | undefined
@@ -124,10 +125,10 @@ export const NotificationItem = ({ notification, onMarkRead, onAction }: Notific
             )}
             {['challenge_request', 'session_request'].includes(notification.type) && (
               <>
-                <Button size="xs" variant="outline" onClick={() => onAction?.('accepted')}>
+                <Button size="xs" variant="outline" onClick={() => onAction?.('accepted')} isDisabled={actionTaken}>
                   Accept
                 </Button>
-                <Button size="xs" variant="ghost" colorScheme="red" onClick={() => onAction?.('declined')}>
+                <Button size="xs" variant="ghost" colorScheme="red" onClick={() => onAction?.('declined')} isDisabled={actionTaken}>
                   Decline
                 </Button>
               </>
