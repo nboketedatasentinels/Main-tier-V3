@@ -30,6 +30,9 @@ export interface WeeklyPointsData {
 const MINIMUM_WEEKLY_TARGET_POINTS = 4000
 const LOW_WEEKLY_POINTS_ALERT_THRESHOLD = MINIMUM_WEEKLY_TARGET_POINTS
 
+// NOTE: The weekly_points collection is deprecated in favor of weeklyProgress.
+// Keep this module for legacy partner dashboards and future migration cleanup.
+
 export const calculateWeeklyStatus = (
   earned: number,
   target: number,

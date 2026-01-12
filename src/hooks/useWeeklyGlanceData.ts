@@ -7,16 +7,19 @@ import {
   getDocs,
   onSnapshot,
   query,
+  serverTimestamp,
+  setDoc,
   updateDoc,
   where,
 } from 'firebase/firestore'
 import { db } from '@/services/firebase'
 import { useAuth } from '@/hooks/useAuth'
 import { getCurrentWeekNumber, getWeekKey } from '@/utils/weekCalculations'
-import { getOrCreateWeeklyPoints } from '@/services/weeklyPointsService'
+import { JOURNEY_META, getMonthNumber } from '@/config/pointsConfig'
 import { InspirationQuote } from '@/types'
 import { leadershipQuotes } from '@/services/quotes'
 import { fetchUserProfileById, UserProfileExtended } from '@/services/userProfileService'
+import type { WeeklyProgress } from '@/types'
 
 export interface WeeklyPoints {
   id: string
@@ -102,43 +105,95 @@ export const useWeeklyGlanceData = () => {
   })
   const [errors, setErrors] = useState<WeeklyGlanceErrorState>({})
 
-  const weekNumber = useMemo(() => getCurrentWeekNumber(), [])
+  const calendarWeekNumber = useMemo(() => getCurrentWeekNumber(), [])
+  const weekNumber = useMemo(
+    () => (profile?.currentWeek && profile.currentWeek > 0 ? profile.currentWeek : calendarWeekNumber),
+    [calendarWeekNumber, profile?.currentWeek],
+  )
   const weekKey = useMemo(() => getWeekKey(), [])
 
   useEffect(() => {
     if (!profile?.id) return
-    getOrCreateWeeklyPoints(profile.id).catch(error => {
-      console.error('Error initializing weekly points:', error)
-    })
-  }, [profile?.id])
+
+    const initializeWeeklyProgress = async () => {
+      const journeyType = profile.journeyType
+      const weeklyTarget = journeyType ? JOURNEY_META[journeyType].weeklyTarget : 0
+      const progressRef = doc(db, 'weeklyProgress', `${profile.id}__${weekNumber}`)
+      const monthNumber = getMonthNumber(weekNumber)
+      const payload = {
+        uid: profile.id,
+        weekNumber,
+        monthNumber,
+        weeklyTarget,
+        pointsEarned: 0,
+        status: 'alert',
+        createdAt: serverTimestamp(),
+        updatedAt: serverTimestamp(),
+      }
+
+      const maxAttempts = 2
+      for (let attempt = 1; attempt <= maxAttempts; attempt += 1) {
+        try {
+          const existing = await getDoc(progressRef)
+          if (!existing.exists()) {
+            await setDoc(progressRef, payload, { merge: true })
+          }
+          return
+        } catch (error) {
+          if (attempt === maxAttempts) {
+            console.warn('Unable to initialize weekly progress document.', error)
+          } else {
+            await new Promise(resolve => setTimeout(resolve, 150 * attempt))
+          }
+        }
+      }
+    }
+
+    initializeWeeklyProgress()
+  }, [profile?.id, profile?.journeyType, weekNumber])
 
   useEffect(() => {
     if (!profile?.id) return
 
-    const weekYear = new Date().getFullYear()
-    const q = query(
-      collection(db, 'weekly_points'),
-      where('user_id', '==', profile.id),
-      where('week_number', '==', weekNumber),
-      where('week_year', '==', weekYear),
-    )
+    const progressRef = doc(db, 'weeklyProgress', `${profile.id}__${weekNumber}`)
+    const defaultTarget = profile?.journeyType ? JOURNEY_META[profile.journeyType].weeklyTarget : 0
+    const mapStatus = (status?: WeeklyProgress['status']): WeeklyPoints['status'] => {
+      switch (status) {
+        case 'on_track':
+          return 'on_track'
+        case 'warning':
+          return 'warning'
+        case 'alert':
+          return 'at_risk'
+        case 'recovery':
+          return 'on_track'
+        default:
+          return 'at_risk'
+      }
+    }
+    const toWeeklyPoints = (data: WeeklyProgress, id: string): WeeklyPoints => ({
+      id,
+      points_earned: data.pointsEarned ?? 0,
+      target_points: data.weeklyTarget ?? defaultTarget,
+      status: mapStatus(data.status),
+      engagement_count: 0,
+      week_number: data.weekNumber ?? weekNumber,
+    })
 
     const unsubscribe = onSnapshot(
-      q,
+      progressRef,
       snapshot => {
-        const docData = snapshot.docs[0]
-        if (docData) {
-          const data = docData.data()
-          setWeeklyPoints({
-            id: docData.id,
-            points_earned: data.points_earned || 0,
-            target_points: data.target_points || 0,
-            status: data.status,
-            engagement_count: data.engagement_count || 0,
-            week_number: data.week_number || weekNumber,
-          })
+        if (snapshot.exists()) {
+          setWeeklyPoints(toWeeklyPoints(snapshot.data() as WeeklyProgress, snapshot.id))
         } else {
-          setWeeklyPoints(null)
+          setWeeklyPoints({
+            id: progressRef.id,
+            points_earned: 0,
+            target_points: defaultTarget,
+            status: 'at_risk',
+            engagement_count: 0,
+            week_number: weekNumber,
+          })
         }
         setLoading(prev => ({ ...prev, points: false }))
       },
@@ -149,7 +204,7 @@ export const useWeeklyGlanceData = () => {
     )
 
     return () => unsubscribe()
-  }, [profile?.id, weekNumber])
+  }, [profile?.id, profile?.journeyType, weekNumber])
 
   useEffect(() => {
     const fetchSupport = async () => {
