@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import {
   Timestamp,
   collection,
@@ -16,6 +16,7 @@ import { getCurrentWeekNumber, getWeekKey } from '@/utils/weekCalculations'
 import { getOrCreateWeeklyPoints } from '@/services/weeklyPointsService'
 import { InspirationQuote } from '@/types'
 import { leadershipQuotes } from '@/services/quotes'
+import { fetchUserProfileById, UserProfileExtended } from '@/services/userProfileService'
 
 export interface WeeklyPoints {
   id: string
@@ -32,6 +33,10 @@ export interface SupportAssignment {
   mentor_id?: string | null
   ambassador_id?: string | null
   assigned_date?: Timestamp
+  mentorProfile?: UserProfileExtended | null
+  mentorProfileError?: string
+  ambassadorProfile?: UserProfileExtended | null
+  ambassadorProfileError?: string
 }
 
 export interface PersonalityProfile {
@@ -85,6 +90,7 @@ export const useWeeklyGlanceData = () => {
   const [weeklyHabits, setWeeklyHabits] = useState<WeeklyHabit[]>([])
   const [inspirationQuote, setInspirationQuote] = useState<InspirationQuote | null>(null)
   const [impactCount, setImpactCount] = useState<number>(0)
+  const profileCache = useRef<Map<string, UserProfileExtended | null>>(new Map())
   const [loading, setLoading] = useState<WeeklyGlanceLoadingState>({
     points: true,
     support: true,
@@ -155,7 +161,42 @@ export const useWeeklyGlanceData = () => {
         const docData = snapshot.docs[0]
         if (docData) {
           const data = docData.data() as SupportAssignment
-          setSupportAssignment({ ...data, id: docData.id })
+          const mentorId = data.mentor_id
+          const ambassadorId = data.ambassador_id
+          const getCachedProfile = async (userId: string) => {
+            if (profileCache.current.has(userId)) {
+              return profileCache.current.get(userId) ?? null
+            }
+            const profile = await fetchUserProfileById(userId)
+            profileCache.current.set(userId, profile)
+            return profile
+          }
+          const [mentorResult, ambassadorResult] = await Promise.all([
+            mentorId
+              ? getCachedProfile(mentorId)
+                  .then(profileData => ({
+                    profile: profileData,
+                    error: profileData ? undefined : 'Mentor profile not found',
+                  }))
+                  .catch(() => ({ profile: null, error: 'Unable to load mentor profile' }))
+              : Promise.resolve({ profile: null, error: undefined }),
+            ambassadorId
+              ? getCachedProfile(ambassadorId)
+                  .then(profileData => ({
+                    profile: profileData,
+                    error: profileData ? undefined : 'Ambassador profile not found',
+                  }))
+                  .catch(() => ({ profile: null, error: 'Unable to load ambassador profile' }))
+              : Promise.resolve({ profile: null, error: undefined }),
+          ])
+          setSupportAssignment({
+            ...data,
+            id: docData.id,
+            mentorProfile: mentorResult.profile,
+            mentorProfileError: mentorResult.error,
+            ambassadorProfile: ambassadorResult.profile,
+            ambassadorProfileError: ambassadorResult.error,
+          })
         } else {
           setSupportAssignment(null)
         }
