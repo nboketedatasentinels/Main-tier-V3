@@ -1269,11 +1269,11 @@ export const LeadershipBoardPage: React.FC = () => {
                   <Stack color="text.inverse">
                     <Flex align="center" justify="space-between">
                       <Box>
-                        <Text fontSize="sm" opacity={0.9}>Challenge Weeks are Live</Text>
-                        <Text fontSize="2xl" fontWeight="bold">Friendly competitions to spark growth</Text>
+                        <Text fontSize="sm" opacity={0.9} color="white">Challenge Weeks are Live</Text>
+                        <Text fontSize="2xl" fontWeight="bold" color="white">Friendly competitions to spark growth</Text>
                         <HStack spacing={3} mt={2}>
-                          <Icon as={Clock} color="text.inverse" />
-                          <Text>Join or launch a challenge today</Text>
+                          <Icon as={Clock} color="white" />
+                          <Text color="white">Join or launch a challenge today</Text>
                         </HStack>
                       </Box>
                       <Button
