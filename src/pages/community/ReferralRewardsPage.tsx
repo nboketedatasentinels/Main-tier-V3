@@ -11,6 +11,7 @@ import {
   SimpleGrid,
   Stack,
   Text,
+  useDisclosure,
   useToast,
 } from '@chakra-ui/react'
 import { motion } from 'framer-motion'
@@ -21,13 +22,20 @@ import {
   CheckCircle2,
   Copy,
   ExternalLink,
+  Facebook,
   Gift,
+  Instagram,
   Layers,
+  Link2,
+  Linkedin,
   Lock,
+  Mail,
+  MessageCircle,
   Medal,
   Rocket,
   Share2,
   Sparkles,
+  Twitter,
   UserPlus,
   Users,
   type LucideIcon,
@@ -36,6 +44,7 @@ import { collection, onSnapshot, orderBy, query, where } from 'firebase/firestor
 import { useAuth } from '@/hooks/useAuth'
 import { APP_BASE_URL } from '@/config/app'
 import { db } from '@/services/firebase'
+import { InstagramShareModal, SocialShareModal } from '@/components/modals/SocialShareModal'
 
 const MotionBox = motion(Box)
 const MotionFlex = motion(Flex)
@@ -111,6 +120,8 @@ const rewardTiers: RewardTier[] = [
 export const ReferralRewardsPage: React.FC = () => {
   const { user, profile } = useAuth()
   const toast = useToast()
+  const shareModal = useDisclosure()
+  const instagramModal = useDisclosure()
   const [copied, setCopied] = useState(false)
   const [referrals, setReferrals] = useState<ReferralRecord[]>([])
   const [referralsLoading, setReferralsLoading] = useState(false)
@@ -204,8 +215,114 @@ export const ReferralRewardsPage: React.FC = () => {
     await handleCopy()
   }
 
+  const shareMessage = 'Join me on Transformation Tier and start your growth journey!'
+  const messageWithLink = `${shareMessage} ${referralLink}`
+
+  const openShareUrl = (url: string) => {
+    window.open(url, '_blank', 'noopener,noreferrer')
+  }
+
+  const handleWhatsAppShare = () => {
+    openShareUrl(`https://wa.me/?text=${encodeURIComponent(messageWithLink)}`)
+  }
+
+  const handleFacebookShare = () => {
+    openShareUrl(`https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(referralLink)}`)
+  }
+
+  const handleTwitterShare = () => {
+    openShareUrl(`https://twitter.com/intent/tweet?text=${encodeURIComponent(messageWithLink)}`)
+  }
+
+  const handleLinkedInShare = () => {
+    openShareUrl(`https://www.linkedin.com/sharing/share-offsite/?url=${encodeURIComponent(referralLink)}`)
+  }
+
+  const handleEmailShare = () => {
+    const subject = 'Join me on Transformation Tier'
+    openShareUrl(`mailto:?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(messageWithLink)}`)
+  }
+
+  const handleInstagramShare = async () => {
+    await handleCopy()
+    shareModal.onClose()
+    instagramModal.onOpen()
+  }
+
+  const shareActions = useMemo(
+    () => [
+      {
+        label: 'Copy Link',
+        description: 'Grab your referral URL',
+        icon: Link2,
+        color: 'gray.700',
+        bg: 'gray.100',
+        onClick: handleCopy,
+      },
+      {
+        label: 'WhatsApp',
+        description: 'Send a quick message',
+        icon: MessageCircle,
+        color: 'white',
+        bg: '#25D366',
+        onClick: handleWhatsAppShare,
+      },
+      {
+        label: 'Instagram',
+        description: 'Share to bio or story',
+        icon: Instagram,
+        color: 'white',
+        bg: '#E1306C',
+        onClick: handleInstagramShare,
+      },
+      {
+        label: 'Facebook',
+        description: 'Post to your feed',
+        icon: Facebook,
+        color: 'white',
+        bg: '#1877F2',
+        onClick: handleFacebookShare,
+      },
+      {
+        label: 'LinkedIn',
+        description: 'Share professionally',
+        icon: Linkedin,
+        color: 'white',
+        bg: '#0A66C2',
+        onClick: handleLinkedInShare,
+      },
+      {
+        label: 'Twitter',
+        description: 'Tweet your invite',
+        icon: Twitter,
+        color: 'white',
+        bg: '#1DA1F2',
+        onClick: handleTwitterShare,
+      },
+      {
+        label: 'Email',
+        description: 'Send a direct note',
+        icon: Mail,
+        color: 'white',
+        bg: '#6B7280',
+        onClick: handleEmailShare,
+      },
+    ],
+    [
+      handleCopy,
+      handleEmailShare,
+      handleFacebookShare,
+      handleInstagramShare,
+      handleLinkedInShare,
+      handleTwitterShare,
+      handleWhatsAppShare,
+    ]
+  )
+
   return (
     <Stack spacing={8} px={{ base: 0, md: 1 }}>
+      <SocialShareModal isOpen={shareModal.isOpen} onClose={shareModal.onClose} actions={shareActions} />
+      <InstagramShareModal isOpen={instagramModal.isOpen} onClose={instagramModal.onClose} />
       <MotionFlex
         bg="white"
         border="1px solid"
@@ -236,10 +353,10 @@ export const ReferralRewardsPage: React.FC = () => {
           </Text>
         </Stack>
         <HStack spacing={3}>
-          <Button leftIcon={<Icon as={Share2} />} colorScheme="purple" variant="outline" onClick={handleShare}>
+          <Button leftIcon={<Icon as={Share2} />} colorScheme="purple" variant="outline" onClick={shareModal.onOpen}>
             Share
           </Button>
-          <Button leftIcon={<Icon as={UserPlus} />} colorScheme="purple" onClick={handleShare}>
+          <Button leftIcon={<Icon as={UserPlus} />} colorScheme="purple" onClick={shareModal.onOpen}>
             Invite Friends Now
           </Button>
         </HStack>
@@ -572,7 +689,7 @@ export const ReferralRewardsPage: React.FC = () => {
                   variant="outline"
                   colorScheme="purple"
                   width={{ base: 'full', md: 'auto' }}
-                  onClick={handleShare}
+                  onClick={shareModal.onOpen}
                 >
                   Share
                 </Button>
@@ -588,7 +705,7 @@ export const ReferralRewardsPage: React.FC = () => {
               bg="white"
               color="purple.700"
               _hover={{ bg: 'gray.50' }}
-              onClick={handleShare}
+              onClick={shareModal.onOpen}
             >
               Invite Friends Now
             </Button>
