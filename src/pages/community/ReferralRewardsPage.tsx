@@ -117,7 +117,7 @@ const rewardTiers: RewardTier[] = [
   },
 ]
 
-export const ReferralRewardsPage: React.FC = () => {
+const ReferralRewardsPage: React.FC = () => {
   const { user, profile } = useAuth()
   const toast = useToast()
   const shareModal = useDisclosure()
