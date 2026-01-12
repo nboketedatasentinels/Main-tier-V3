@@ -9,21 +9,23 @@ interface WeeklyInspirationCardProps {
 
 export const WeeklyInspirationCard = ({ data, loading }: WeeklyInspirationCardProps) => {
   return (
-    <Card h="100%" variant="outline" borderColor="border.subtle" bg="tint.brandPrimary">
+    <Card bg="brand.primaryMuted" border="1px" borderColor="brand.border">
       <CardBody>
-        <Stack spacing={3}>
+        <Stack direction={{ base: 'column', md: 'row' }} spacing={4} align="flex-start" justify="space-between">
           <HStack spacing={2}>
             <Icon as={Quote} color="#273240" />
             <Text fontWeight="bold" color="#273240">Weekly Inspiration</Text>
           </HStack>
-          <Skeleton isLoaded={!loading} rounded="md">
-            <Text fontSize="lg" fontWeight="semibold" color="#273240">
-              {data?.quote_text || 'Join the movement. Take one small step today toward your goal.'}
+          <Stack spacing={2} flex="1">
+            <Skeleton isLoaded={!loading} rounded="md">
+              <Text fontSize="lg" fontWeight="semibold" color="#273240">
+                {data?.quote_text || 'Join the movement. Take one small step today toward your goal.'}
+              </Text>
+            </Skeleton>
+            <Text fontSize="sm" color="text.secondary">
+              {data?.author || 'T4L Community'}
             </Text>
-          </Skeleton>
-          <Text fontSize="sm" color="text.secondary">
-            {data?.author || 'T4L Community'}
-          </Text>
+          </Stack>
         </Stack>
       </CardBody>
     </Card>

@@ -87,6 +87,8 @@ export const WeeklyGlancePage = () => {
           </Alert>
         )}
 
+        <WeeklyInspirationCard data={data.inspirationQuote} loading={data.loading.inspiration} />
+
         <SimpleGrid columns={{ base: 1, md: 2, xl: 3 }} spacing={4} alignItems="stretch">
           <WeeklyPointsCard
             data={data.weeklyPoints}
@@ -98,7 +100,6 @@ export const WeeklyGlancePage = () => {
           <PersonalityProfileCard data={data.personality} loading={data.loading.profile} />
           <PeopleImpactedCard count={data.impactCount} loading={data.loading.impact} />
           <PeerMatchingCard matches={data.peerMatches} loading={data.loading.matches} />
-          <WeeklyInspirationCard data={data.inspirationQuote} loading={data.loading.inspiration} />
         </SimpleGrid>
       </Stack>
 
