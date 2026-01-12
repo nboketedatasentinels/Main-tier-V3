@@ -14,15 +14,8 @@ import { db } from '@/services/firebase'
 import { useAuth } from '@/hooks/useAuth'
 import { getCurrentWeekNumber, getWeekKey } from '@/utils/weekCalculations'
 import { getOrCreateWeeklyPoints } from '@/services/weeklyPointsService'
-import { FREE_COURSE } from '@/constants/courseConfig'
-import {
-  MonthlyCourseData,
-  buildMonthlyCourseState,
-  listenToCompanyProgram,
-} from '@/services/monthlyCoursesService'
-import { InspirationQuote, TransformationTier, UserRole } from '@/types'
+import { InspirationQuote } from '@/types'
 import { leadershipQuotes } from '@/services/quotes'
-import { isFreeUser } from '@/utils/membership'
 
 export interface WeeklyPoints {
   id: string
@@ -71,7 +64,6 @@ interface WeeklyGlanceLoadingState {
   habits: boolean
   inspiration: boolean
   impact: boolean
-  monthlyCourse: boolean
 }
 
 interface WeeklyGlanceErrorState {
@@ -82,7 +74,6 @@ interface WeeklyGlanceErrorState {
   habits?: Error
   inspiration?: Error
   impact?: Error
-  monthlyCourse?: Error
 }
 
 export const useWeeklyGlanceData = () => {
@@ -94,7 +85,6 @@ export const useWeeklyGlanceData = () => {
   const [weeklyHabits, setWeeklyHabits] = useState<WeeklyHabit[]>([])
   const [inspirationQuote, setInspirationQuote] = useState<InspirationQuote | null>(null)
   const [impactCount, setImpactCount] = useState<number>(0)
-  const [monthlyCourse, setMonthlyCourse] = useState<MonthlyCourseData | null>(null)
   const [loading, setLoading] = useState<WeeklyGlanceLoadingState>({
     points: true,
     support: true,
@@ -103,7 +93,6 @@ export const useWeeklyGlanceData = () => {
     habits: true,
     inspiration: true,
     impact: true,
-    monthlyCourse: true,
   })
   const [errors, setErrors] = useState<WeeklyGlanceErrorState>({})
 
@@ -314,82 +303,6 @@ export const useWeeklyGlanceData = () => {
     return () => unsubscribe();
   }, [profile?.id])
 
-  useEffect(() => {
-    let unsubscribe: (() => void) | null = null
-
-    const resolveFreeCourse = () => {
-      setMonthlyCourse({
-        status: 'free',
-        course: { title: FREE_COURSE.title, externalUrl: FREE_COURSE.externalUrl, id: 'free-course' },
-        enrollmentCode: FREE_COURSE.enrollmentCode,
-        message: 'Kick off the week with quick learning. Use the code below to enroll.',
-      })
-      setErrors(prev => ({ ...prev, monthlyCourse: undefined }))
-      setLoading(prev => ({ ...prev, monthlyCourse: false }))
-    }
-
-    const initializePaidCourseListener = () => {
-      setLoading(prev => ({ ...prev, monthlyCourse: true }))
-
-      unsubscribe = listenToCompanyProgram(
-        profile,
-        async company => {
-          setLoading(prev => ({ ...prev, monthlyCourse: true }))
-          try {
-            if (!company) {
-              setMonthlyCourse({
-                status: 'no_company',
-                message: 'Once you are assigned to a company program, your monthly course will appear here.',
-              })
-              setErrors(prev => ({ ...prev, monthlyCourse: undefined }))
-              return
-            }
-
-            const courseState = await buildMonthlyCourseState(company)
-            setMonthlyCourse(courseState)
-            setErrors(prev => ({ ...prev, monthlyCourse: undefined }))
-          } catch (error) {
-            setErrors(prev => ({ ...prev, monthlyCourse: error as Error }))
-          } finally {
-            setLoading(prev => ({ ...prev, monthlyCourse: false }))
-          }
-        },
-        error => {
-          setErrors(prev => ({ ...prev, monthlyCourse: error as Error }))
-          setLoading(prev => ({ ...prev, monthlyCourse: false }))
-        },
-      )
-    }
-
-    if (!profile) {
-      setMonthlyCourse(null)
-      setLoading(prev => ({ ...prev, monthlyCourse: false }))
-      return () => undefined
-    }
-
-    const isFreeTierUser = isFreeUser(profile)
-    const isCorporateMember =
-      profile?.transformationTier === TransformationTier.CORPORATE_MEMBER ||
-      profile?.transformationTier === TransformationTier.CORPORATE_LEADER
-    const hasPaidAccess =
-      profile?.membershipStatus === 'paid' || profile?.role === UserRole.PAID_MEMBER || isCorporateMember
-
-    if (isFreeTierUser) {
-      resolveFreeCourse()
-      return () => undefined
-    }
-
-    if (hasPaidAccess) {
-      initializePaidCourseListener()
-    } else {
-      setLoading(prev => ({ ...prev, monthlyCourse: false }))
-    }
-
-    return () => {
-      if (unsubscribe) unsubscribe()
-    }
-  }, [profile])
-
   const handleHabitToggle = async (habit: WeeklyHabit) => {
     const nextState = !habit.completed
     setWeeklyHabits(prev => prev.map(item => (item.id === habit.id ? { ...item, completed: nextState } : item)))
@@ -415,7 +328,6 @@ export const useWeeklyGlanceData = () => {
     inspirationQuote,
     impactCount,
     weekNumber,
-    monthlyCourse,
     loading,
     errors,
     handleHabitToggle,
