@@ -13,6 +13,7 @@ export default defineConfig({
         './src/vendor/DotLottieReact.tsx',
       ),
     },
+    dedupe: ['react', 'react-dom'],
   },
   server: {
     port: 3000,
