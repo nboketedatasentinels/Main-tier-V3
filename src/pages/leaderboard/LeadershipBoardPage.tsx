@@ -1,4 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import {
   Avatar,
   Badge,
@@ -43,6 +44,7 @@ import {
   AlertCircle,
   ArrowDownAZ,
   ArrowUpAZ,
+  ArrowUpRight,
   Award,
   Clock,
   Crown,
@@ -69,7 +71,6 @@ import { ResponsiveContainer, PieChart, Pie, Cell } from 'recharts'
 import { LeaderboardTimeframe, UserProfile } from '@/types'
 import { db } from '@/services/firebase'
 import { useAuth } from '@/hooks/useAuth'
-import { PeerConnectPage } from '@/pages/peer/PeerConnectPage'
 import { StartChallengeModal } from '@/components/modals/StartChallengeModal'
 
 interface PointsTransaction {
@@ -137,6 +138,7 @@ const formatNumber = (value?: number | null) => {
 }
 
 export const LeadershipBoardPage: React.FC = () => {
+  const navigate = useNavigate()
   const { profile: authProfile, refreshProfile } = useAuth()
   const toast = useToast()
   const { isOpen, onOpen, onClose } = useDisclosure()
@@ -166,7 +168,6 @@ export const LeadershipBoardPage: React.FC = () => {
     const stored = localStorage.getItem('leaderboard-filter-tip')
     return stored !== 'dismissed'
   })
-  const [showPeerConnect, setShowPeerConnect] = useState(false)
   const previousTotalPoints = useRef<number | null>(null)
   const previousLevel = useRef<number | null>(null)
   const timeframeStart = useMemo(() => toDateFromTimeframe(timeframe), [timeframe])
@@ -663,8 +664,12 @@ export const LeadershipBoardPage: React.FC = () => {
           >
             Start a Challenge
           </Button>
-          <Button onClick={() => setShowPeerConnect((prev) => !prev)} variant="primary">
-            {showPeerConnect ? 'Hide Peer Connect' : 'Open Peer Connect'}
+          <Button
+            onClick={() => navigate('/app/peer-connect')}
+            variant="primary"
+            rightIcon={<Icon as={ArrowUpRight} />}
+          >
+            Open Peer Connect
           </Button>
         </HStack>
       </Flex>
@@ -1114,19 +1119,6 @@ export const LeadershipBoardPage: React.FC = () => {
                 </CardBody>
               </Card>
 
-              {showPeerConnect && (
-                <Card bg="surface.default" border="1px solid" borderColor="border.subtle">
-                  <CardHeader>
-                    <Flex justify="space-between" align="center">
-                      <Text fontWeight="bold">Peer Connect</Text>
-                      <Button size="sm" variant="secondary" onClick={() => setShowPeerConnect(false)}>Back to Leaderboard</Button>
-                    </Flex>
-                  </CardHeader>
-                  <CardBody>
-                    <PeerConnectPage />
-                  </CardBody>
-                </Card>
-              )}
             </Stack>
           </TabPanel>
 
