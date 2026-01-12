@@ -21,6 +21,7 @@ import {
   Select,
   Skeleton,
   Stack,
+  Tag,
   Textarea,
   Text,
   UnorderedList,
@@ -32,7 +33,7 @@ import {
   useToast,
   VStack,
 } from '@chakra-ui/react'
-import { ExternalLink, Sparkles } from 'lucide-react'
+import { Award, ExternalLink, Sparkles } from 'lucide-react'
 import { FormEvent, useEffect, useMemo, useState } from 'react'
 import { doc, updateDoc } from 'firebase/firestore'
 import { PersonalityProfile } from '@/hooks/useWeeklyGlanceData'
@@ -92,6 +93,10 @@ export const PersonalityProfileCard = ({ data, loading }: PersonalityProfileCard
   }, [isModalOpen])
 
   const strengths = localProfile?.personalityStrengths || []
+  const selectedCoreValues = localProfile?.coreValues || []
+  const coreValuePreviewCount = expanded ? selectedCoreValues.length : 3
+  const strengthPreviewCount = expanded ? strengths.length : 3
+  const shouldShowToggle = strengths.length > 3 || selectedCoreValues.length > 3
 
   const personalityOptions = useMemo(
     () => [
@@ -224,12 +229,39 @@ export const PersonalityProfileCard = ({ data, loading }: PersonalityProfileCard
                     Strengths
                   </Text>
                   <UnorderedList pl={5} spacing={1}>
-                    {strengths.slice(0, expanded ? strengths.length : 3).map(item => (
+                    {strengths.slice(0, strengthPreviewCount).map(item => (
                       <ListItem key={item}>{item}</ListItem>
                     ))}
                   </UnorderedList>
                 </>
               )}
+              <Stack spacing={2} pt={strengths.length > 0 ? 1 : 0}>
+                <HStack spacing={2} color="brand.text">
+                  <Icon as={Award} color="yellow.500" />
+                  <Text fontWeight="semibold">Core Values</Text>
+                </HStack>
+                {selectedCoreValues.length > 0 ? (
+                  <HStack spacing={2} flexWrap="wrap">
+                    {selectedCoreValues.slice(0, coreValuePreviewCount).map(value => (
+                      <Tag key={value} colorScheme="yellow" borderRadius="full" px={3} py={1} whiteSpace="nowrap">
+                        <HStack spacing={1}>
+                          <Icon as={Award} size={14} />
+                          <Text>{value}</Text>
+                        </HStack>
+                      </Tag>
+                    ))}
+                  </HStack>
+                ) : (
+                  <Stack spacing={1}>
+                    <Text color="brand.subtleText">No core values selected yet.</Text>
+                    {localProfile?.personalityType && (
+                      <Text fontSize="xs" color="brand.subtleText">
+                        Complete the Personal Values test to add your core values.
+                      </Text>
+                    )}
+                  </Stack>
+                )}
+              </Stack>
               <Collapse in={expanded} animateOpacity>
                 {data?.personalityDescription && (
                   <Text pt={2}>
@@ -237,14 +269,14 @@ export const PersonalityProfileCard = ({ data, loading }: PersonalityProfileCard
                   </Text>
                 )}
               </Collapse>
-              {strengths.length > 3 && (
+              {shouldShowToggle && (
                 <Button variant="ghost" size="sm" alignSelf="flex-start" onClick={() => setExpanded(prev => !prev)}>
                   {expanded ? 'Show less' : 'Show full assessment'}
                 </Button>
               )}
               {!localProfile?.personalityType && (
                 <Button colorScheme="purple" size="sm" onClick={() => setIsModalOpen(true)} alignSelf="flex-start">
-                  Take Personality Test
+                  Take Personality & Values Tests
                 </Button>
               )}
               {localProfile?.personalityType && (
