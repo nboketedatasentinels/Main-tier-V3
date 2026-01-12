@@ -150,9 +150,9 @@ export const PaidMemberDashboard: React.FC = () => {
         <Card bg="brand.royalPurple">
           <CardBody>
             <Stat>
-              <StatLabel color="brand.softGold">Total Points</StatLabel>
+              <StatLabel color="brand.goldLight">Total Points</StatLabel>
               <StatNumber color="brand.gold">{profile?.totalPoints || 0}</StatNumber>
-              <StatHelpText color="brand.softGold">This journey</StatHelpText>
+              <StatHelpText color="brand.goldLight">This journey</StatHelpText>
             </Stat>
           </CardBody>
         </Card>
@@ -160,9 +160,9 @@ export const PaidMemberDashboard: React.FC = () => {
         <Card bg="brand.royalPurple">
           <CardBody>
             <Stat>
-              <StatLabel color="brand.softGold">Level</StatLabel>
+              <StatLabel color="brand.goldLight">Level</StatLabel>
               <StatNumber color="brand.gold">{profile?.level || 1}</StatNumber>
-              <StatHelpText color="brand.softGold">Current level</StatHelpText>
+              <StatHelpText color="brand.goldLight">Current level</StatHelpText>
             </Stat>
           </CardBody>
         </Card>
@@ -170,9 +170,9 @@ export const PaidMemberDashboard: React.FC = () => {
         <Card bg="brand.royalPurple">
           <CardBody>
             <Stat>
-              <StatLabel color="brand.softGold">Current Week</StatLabel>
+              <StatLabel color="brand.goldLight">Current Week</StatLabel>
               <StatNumber color="brand.gold">{profile?.currentWeek || 1}</StatNumber>
-              <StatHelpText color="brand.softGold">of your journey</StatHelpText>
+              <StatHelpText color="brand.goldLight">of your journey</StatHelpText>
             </Stat>
           </CardBody>
         </Card>
@@ -180,9 +180,9 @@ export const PaidMemberDashboard: React.FC = () => {
         <Card bg="brand.royalPurple">
           <CardBody>
             <Stat>
-              <StatLabel color="brand.softGold">Badges</StatLabel>
+              <StatLabel color="brand.goldLight">Badges</StatLabel>
               <StatNumber color="brand.gold">0</StatNumber>
-              <StatHelpText color="brand.softGold">Earned</StatHelpText>
+              <StatHelpText color="brand.goldLight">Earned</StatHelpText>
             </Stat>
           </CardBody>
         </Card>
