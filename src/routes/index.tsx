@@ -167,6 +167,7 @@ export const AppRoutes = () => {
           }
         >
           <Route path="dashboard" element={<SuperAdminDashboard />} />
+          <Route path="organization/:organizationId" element={<OrganizationDetailPage />} />
           <Route index element={<Navigate to="/super-admin/dashboard" replace />} />
         </Route>
 
