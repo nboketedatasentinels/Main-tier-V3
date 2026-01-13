@@ -1,4 +1,5 @@
 export type JourneyType = "4W" | "6W" | "3M" | "6M" | "9M" | "12M";
+export type JourneyTimelineDisplayMode = "duration" | "course-count";
 
 export type ActivityId =
   | "podcast"
@@ -177,13 +178,16 @@ export const INTRO_ACTIVITIES: ActivityDef[] = FULL_ACTIVITIES.filter(
   a => !["peer_matching", "book_club", "peer_to_peer", "linkedin"].includes(a.id)
 );
 
-export const JOURNEY_META: Record<JourneyType, { weeks: number; weeklyTarget: number; mode: "intro" | "full" }> = {
-  "4W":  { weeks: 4,  weeklyTarget: 2500, mode: "intro" },
-  "6W":  { weeks: 6,  weeklyTarget: 4000, mode: "full"  },
-  "3M":  { weeks: 12, weeklyTarget: 4000, mode: "full"  },
-  "6M":  { weeks: 24, weeklyTarget: 4000, mode: "full"  },
-  "9M":  { weeks: 36, weeklyTarget: 4000, mode: "full"  },
-  "12M": { weeks: 48, weeklyTarget: 4000, mode: "full"  },
+export const JOURNEY_META: Record<
+  JourneyType,
+  { weeks: number; weeklyTarget: number; mode: "intro" | "full"; timelineDisplay: JourneyTimelineDisplayMode }
+> = {
+  "4W":  { weeks: 4,  weeklyTarget: 2500, mode: "intro", timelineDisplay: "duration" },
+  "6W":  { weeks: 6,  weeklyTarget: 4000, mode: "full",  timelineDisplay: "course-count" },
+  "3M":  { weeks: 12, weeklyTarget: 4000, mode: "full",  timelineDisplay: "duration" },
+  "6M":  { weeks: 24, weeklyTarget: 4000, mode: "full",  timelineDisplay: "duration" },
+  "9M":  { weeks: 36, weeklyTarget: 4000, mode: "full",  timelineDisplay: "duration" },
+  "12M": { weeks: 48, weeklyTarget: 4000, mode: "full",  timelineDisplay: "duration" },
 };
 
 export function getActivitiesForJourney(journeyType: JourneyType): ActivityDef[] {

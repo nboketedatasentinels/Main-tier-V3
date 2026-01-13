@@ -36,7 +36,12 @@ import {
   getMonthAvailabilityStatus,
   getMonthDateRange,
 } from '@/utils/monthlyCourseAssignments'
-import { getJourneyLabel, getJourneyWeeks, isMonthBasedJourney } from '@/utils/journeyType'
+import {
+  getJourneyLabel,
+  getJourneyTimelineDisplayMode,
+  getJourneyWeeks,
+  isMonthBasedJourney,
+} from '@/utils/journeyType'
 import type { UserProfile } from '@/types'
 
 interface NormalizedCourse {
@@ -474,19 +479,21 @@ const OrganizationCoursesPage: React.FC<{ userId?: string | null; profile: UserP
     }
   }, [organizationId, program])
 
-  const coursesWithProgress = useMemo(
-    () =>
-      courses.map(course => ({
-        ...course,
-        progress: progressMap.get(course.id) ?? progressMap.get(course.title.trim().toLowerCase()),
-      })),
-    [courses, progressMap]
-  )
-
   const journeyType = program?.journeyType ?? null
   const journeyLabel = journeyType ? getJourneyLabel(journeyType) : null
   const isWeeklyTimeline = journeyType ? !isMonthBasedJourney(journeyType) : false
   const totalWeeks = program?.programDurationWeeks ?? (journeyType ? getJourneyWeeks(journeyType) : null)
+  const journeyTimelineDisplay = journeyType ? getJourneyTimelineDisplayMode(journeyType) : 'duration'
+  const fallbackAssignments = useMemo(() => {
+    if (!program) return []
+    return getMonthlyAssignmentsArray(program.monthlyAssignments, program.totalMonths)
+  }, [program])
+  const assignmentList = useMemo(() => {
+    if (!program) return []
+    return program.courseAssignments.length ? program.courseAssignments : fallbackAssignments
+  }, [program, fallbackAssignments])
+  const assignedCourseIds = useMemo(() => assignmentList.filter(Boolean), [assignmentList])
+  const assignedCourseCount = useMemo(() => assignedCourseIds.length, [assignedCourseIds])
 
   const monthlyProgramTimeline = useMemo(() => {
     if (!program || !program.totalMonths) return []
@@ -514,12 +521,15 @@ const OrganizationCoursesPage: React.FC<{ userId?: string | null; profile: UserP
   }, [program, courseMap])
 
   const weeklyProgramTimeline = useMemo(() => {
-    if (!program || !totalWeeks) return []
+    if (!program) return []
     const now = new Date()
-    const fallbackAssignments = getMonthlyAssignmentsArray(program.monthlyAssignments, program.totalMonths)
-    const assignmentList = program.courseAssignments.length ? program.courseAssignments : fallbackAssignments
-    return Array.from({ length: totalWeeks }, (_, index) => {
-      const courseId = assignmentList[index] || ''
+    const durationWeeks = totalWeeks ?? assignedCourseIds.length
+    const displayAssignments =
+      journeyTimelineDisplay === 'course-count'
+        ? assignedCourseIds
+        : Array.from({ length: durationWeeks }, (_, index) => assignmentList[index] || '')
+    if (!displayAssignments.length) return []
+    return displayAssignments.map((courseId, index) => {
       const course = courseId ? courseMap[courseId] : undefined
       const availability = getWeekAvailabilityStatus({
         cohortStartDate: program.cohortStartDate,
@@ -538,7 +548,7 @@ const OrganizationCoursesPage: React.FC<{ userId?: string | null; profile: UserP
         unlockDate,
       }
     })
-  }, [program, courseMap, totalWeeks])
+  }, [program, totalWeeks, assignmentList, assignedCourseIds, courseMap, journeyTimelineDisplay])
 
   const timelineEntries = useMemo(() => {
     if (isWeeklyTimeline) {
@@ -560,6 +570,27 @@ const OrganizationCoursesPage: React.FC<{ userId?: string | null; profile: UserP
     return nextLocked?.unlockDate || null
   }, [timelineEntries])
 
+  const timelineHeading = useMemo(() => {
+    if (isWeeklyTimeline) {
+      return journeyTimelineDisplay === 'course-count' ? 'Assigned course timeline' : 'Weekly program timeline'
+    }
+    return 'Monthly program timeline'
+  }, [isWeeklyTimeline, journeyTimelineDisplay])
+  const timelineCountLabel = useMemo(() => {
+    if (!program) return ''
+    if (isWeeklyTimeline) {
+      if (journeyTimelineDisplay === 'course-count' && timelineEntries.length) {
+        const suffix = timelineEntries.length === 1 ? 'course' : 'courses'
+        return `${timelineEntries.length} ${suffix}`
+      }
+      return `${totalWeeks ?? timelineEntries.length} weeks`
+    }
+    return `${program.totalMonths ?? timelineEntries.length} months`
+  }, [program, isWeeklyTimeline, journeyTimelineDisplay, timelineEntries.length, totalWeeks])
+  const shouldShowJourneyLabel =
+    journeyLabel &&
+    !(isWeeklyTimeline && journeyTimelineDisplay === 'course-count' && assignedCourseCount && assignedCourseCount < (totalWeeks ?? 0))
+
   const overallLoading = programLoading || loadingCourses || progressLoading
   const cohortStartDate = program?.cohortStartDate ?? null
 
@@ -571,7 +602,7 @@ const OrganizationCoursesPage: React.FC<{ userId?: string | null; profile: UserP
   }, [userId, organizationId])
 
   const hasOrganization = Boolean(organizationId)
-  const hasProgram = Boolean(program?.orderedCourseIds.length)
+  const hasProgram = Boolean(program)
   const hasTimeline = timelineEntries.length > 0
 
   return (
@@ -626,13 +657,10 @@ const OrganizationCoursesPage: React.FC<{ userId?: string | null; profile: UserP
         <Stack spacing={4} as="section">
           <HStack justify="space-between" align="center">
             <Heading size="md" color="gray.800">
-              {isWeeklyTimeline ? 'Weekly program timeline' : 'Monthly program timeline'}
+              {timelineHeading}
             </Heading>
             <Badge colorScheme="purple" borderRadius="full">
-              {journeyLabel ||
-                (isWeeklyTimeline
-                  ? `${totalWeeks ?? timelineEntries.length} weeks`
-                  : `${program?.totalMonths ?? timelineEntries.length} months`)}
+              {shouldShowJourneyLabel ? journeyLabel : timelineCountLabel}
             </Badge>
           </HStack>
 
@@ -801,6 +829,18 @@ const OrganizationCoursesPage: React.FC<{ userId?: string | null; profile: UserP
             </SimpleGrid>
           </Box>
         </Stack>
+      )}
+
+      {hasOrganization && hasProgram && !hasTimeline && (
+        <Box borderWidth="1px" borderRadius="2xl" p={5} bg="white" boxShadow="sm">
+          <Heading size="sm" color="gray.800" mb={2}>
+            Courses are still being assigned
+          </Heading>
+          <Text color="gray.600" fontSize="sm">
+            Your organization hasn&apos;t assigned any courses to this program yet. Check back soon or contact your
+            administrator for updates.
+          </Text>
+        </Box>
       )}
 
     </Stack>

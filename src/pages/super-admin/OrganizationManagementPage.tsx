@@ -31,11 +31,11 @@ import {
   useToast,
 } from '@chakra-ui/react'
 import { Filter, MoreHorizontal, Search, Sparkles } from 'lucide-react'
+import { useNavigate } from 'react-router-dom'
 import { AssignAmbassadorModal } from '@/components/super-admin/AssignAmbassadorModal'
 import { AssignMentorModal } from '@/components/super-admin/AssignMentorModal'
 import { AssignPartnerModal } from '@/components/super-admin/AssignPartnerModal'
 import { ConfirmationDialog } from '@/components/super-admin/ConfirmationDialog'
-import { OrganizationDetailsModal } from '@/components/super-admin/OrganizationDetailsModal'
 import { EditOrganizationModal } from '@/components/super-admin/EditOrganizationModal'
 import { CreateOrganizationModal } from '@/components/super-admin/CreateOrganizationModal'
 import {
@@ -49,11 +49,10 @@ import {
 } from '@/services/organizationService'
 import {
   deleteOrganization,
-  fetchOrganizationMemberStats,
   fetchOrganizations,
   logAdminAction,
 } from '@/services/superAdminService'
-import { OrganizationLead, OrganizationMemberStats, OrganizationRecord } from '@/types/admin'
+import { OrganizationLead, OrganizationRecord } from '@/types/admin'
 
 type SortKey = 'name' | 'code' | 'teamSize' | 'status' | 'partnerName'
 
@@ -63,6 +62,7 @@ type OrganizationManagementPageProps = {
 }
 
 export const OrganizationManagementPage: React.FC<OrganizationManagementPageProps> = ({ adminName, adminId }) => {
+  const navigate = useNavigate()
   const toast = useToast()
   const [organizations, setOrganizations] = useState<OrganizationRecord[]>([])
   const [loading, setLoading] = useState(true)
@@ -73,7 +73,6 @@ export const OrganizationManagementPage: React.FC<OrganizationManagementPageProp
   const [page, setPage] = useState(1)
 
   const [selectedOrg, setSelectedOrg] = useState<OrganizationRecord | null>(null)
-  const [viewOrg, setViewOrg] = useState<OrganizationRecord | null>(null)
   const [pendingDelete, setPendingDelete] = useState<OrganizationRecord | null>(null)
   const [partners, setPartners] = useState<OrganizationLead[]>([])
   const [isLoadingPartners, setIsLoadingPartners] = useState(false)
@@ -84,15 +83,12 @@ export const OrganizationManagementPage: React.FC<OrganizationManagementPageProp
   const [ambassadors, setAmbassadors] = useState<OrganizationLead[]>([])
   const [isLoadingAmbassadors, setIsLoadingAmbassadors] = useState(false)
   const [ambassadorsError, setAmbassadorsError] = useState<string | null>(null)
-  const [memberStats, setMemberStats] = useState<OrganizationMemberStats | null>(null)
-  const [isLoadingStats, setIsLoadingStats] = useState(false)
 
   const createModal = useDisclosure()
   const editModal = useDisclosure()
   const assignPartnerModal = useDisclosure()
   const assignMentorModal = useDisclosure()
   const assignAmbassadorModal = useDisclosure()
-  const viewModal = useDisclosure()
   const confirmDialog = useDisclosure()
 
   const loadOrganizations = useCallback(async () => {
@@ -168,24 +164,6 @@ export const OrganizationManagementPage: React.FC<OrganizationManagementPageProp
 
     loadAmbassadors()
   }, [toast])
-
-  useEffect(() => {
-    const loadMemberStats = async () => {
-      if (!viewModal.isOpen || !viewOrg) return
-      setIsLoadingStats(true)
-      try {
-        const stats = await fetchOrganizationMemberStats({ id: viewOrg.id, code: viewOrg.code })
-        setMemberStats(stats)
-      } catch (err) {
-        console.error(err)
-        toast({ title: 'Unable to load organization stats', status: 'error' })
-      } finally {
-        setIsLoadingStats(false)
-      }
-    }
-
-    loadMemberStats()
-  }, [toast, viewModal.isOpen, viewOrg])
 
   const handleOrganizationCreated = async (org: OrganizationRecord) => {
     setOrganizations((prev) => [org, ...prev])
@@ -367,27 +345,15 @@ export const OrganizationManagementPage: React.FC<OrganizationManagementPageProp
     setSortDir('asc')
   }
 
-  const handleCloseViewModal = () => {
-    viewModal.onClose()
-    setViewOrg(null)
-    setMemberStats(null)
-  }
-
   const handleViewOrganization = (org: OrganizationRecord) => {
-    setViewOrg(org)
-    setMemberStats(null)
-    viewModal.onOpen()
+    const organizationKey = org.code || org.id
+    if (!organizationKey) return
+    navigate(`/super-admin/organization/${organizationKey}`)
   }
 
   const handleEditOrganization = (org: OrganizationRecord) => {
     setSelectedOrg(org)
     editModal.onOpen()
-  }
-
-  const handleEditFromView = () => {
-    if (!viewOrg) return
-    handleCloseViewModal()
-    handleEditOrganization(viewOrg)
   }
 
   const handleOrganizationUpdated = async (updates: OrganizationRecord) => {
@@ -564,14 +530,6 @@ export const OrganizationManagementPage: React.FC<OrganizationManagementPageProp
         onCreated={handleOrganizationCreated}
         adminId={adminId}
         adminName={adminName}
-      />
-      <OrganizationDetailsModal
-        isOpen={viewModal.isOpen}
-        onClose={handleCloseViewModal}
-        organization={viewOrg}
-        memberStats={memberStats}
-        isLoadingStats={isLoadingStats}
-        onEdit={viewOrg ? handleEditFromView : undefined}
       />
       <EditOrganizationModal
         isOpen={editModal.isOpen}
