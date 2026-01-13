@@ -5,7 +5,7 @@ import { isAdminRole } from '@/utils/role'
 export type LeaderboardContext =
   | { type: 'free' }
   | { type: 'community' }
-  | { type: 'organization'; organizationId?: string | null }
+  | { type: 'organization'; organizationId?: string | null; organizationCode?: string | null }
   | { type: 'village'; villageId?: string | null }
   | { type: 'cluster'; clusterId?: string | null }
   | { type: 'admin_all' }
@@ -46,7 +46,7 @@ export const useLeaderboardContext = (profile: UserProfile | null): LeaderboardC
     }
 
     if (isCorporateProfile(profile)) {
-      return { type: 'organization', organizationId: profile.companyId }
+      return { type: 'organization', organizationId: profile.companyId, organizationCode: profile.companyCode }
     }
 
     if (isPaidProfile(profile)) {
@@ -58,7 +58,11 @@ export const useLeaderboardContext = (profile: UserProfile | null): LeaderboardC
     }
 
     if (profile.companyId) {
-      return { type: 'organization', organizationId: profile.companyId }
+      return { type: 'organization', organizationId: profile.companyId, organizationCode: profile.companyCode }
+    }
+
+    if (profile.companyCode) {
+      return { type: 'organization', organizationCode: profile.companyCode }
     }
 
     if (profile.villageId) {
