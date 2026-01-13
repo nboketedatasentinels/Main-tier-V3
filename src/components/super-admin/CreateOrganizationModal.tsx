@@ -18,6 +18,7 @@ import {
   Input,
   InputGroup,
   InputLeftAddon,
+  InputRightElement,
   Modal,
   ModalBody,
   ModalCloseButton,
@@ -33,7 +34,7 @@ import {
   useDisclosure,
   useToast,
 } from '@chakra-ui/react'
-import { InfoIcon } from '@chakra-ui/icons'
+import { InfoIcon, WarningIcon } from '@chakra-ui/icons'
 import { ChevronDown, ChevronUp, Eye, Plus, Upload, X } from 'lucide-react'
 import {
   BulkInvitationResult,
@@ -54,6 +55,7 @@ import {
 } from '@/services/organizationService'
 import { InvitationResultsModal } from './InvitationResultsModal'
 import { downloadCSVTemplate, parseInvitationCSV } from '@/utils/csvUtils'
+import { normalizeEmail } from '@/utils/email'
 import {
   MonthlyCourseAssignments,
   buildMonthlyAssignmentsFromArray,
@@ -190,6 +192,52 @@ export const CreateOrganizationModal: React.FC<CreateOrganizationModalProps> = (
       return item.name.toLowerCase().includes(term) || email.includes(term)
     })
   }, [partnerSearch, sortedPartners])
+
+  const leadEmails = useMemo(() => {
+    const emails = [...partners, ...mentors, ...ambassadors]
+      .map((lead) => normalizeEmail(lead.email || ''))
+      .filter(Boolean)
+    return new Set(emails)
+  }, [ambassadors, mentors, partners])
+
+  const invitationEmailState = useMemo(() => {
+    const emailCounts = new Map<string, { ids: string[] }>()
+    const duplicateById = new Map<string, string>()
+    const leadConflictsById = new Map<string, string>()
+    const leadConflictEmails = new Set<string>()
+
+    inviteDrafts.forEach((draft) => {
+      if (draft.method !== 'email') return
+      const normalized = normalizeEmail(draft.email)
+      if (!normalized) return
+      const entry = emailCounts.get(normalized) || { ids: [] }
+      entry.ids.push(draft.id)
+      emailCounts.set(normalized, entry)
+      if (leadEmails.has(normalized)) {
+        leadConflictsById.set(draft.id, normalized)
+        leadConflictEmails.add(normalized)
+      }
+    })
+
+    const duplicateEmails = Array.from(emailCounts.entries())
+      .filter(([, entry]) => entry.ids.length > 1)
+      .map(([email]) => email)
+    emailCounts.forEach((entry, email) => {
+      if (entry.ids.length > 1) {
+        entry.ids.forEach((id) => duplicateById.set(id, email))
+      }
+    })
+
+    return {
+      duplicateEmails,
+      duplicateById,
+      leadConflictEmails: Array.from(leadConflictEmails),
+      leadConflictsById,
+    }
+  }, [inviteDrafts, leadEmails])
+
+  const hasDuplicateEmails = invitationEmailState.duplicateEmails.length > 0
+  const hasLeadConflicts = invitationEmailState.leadConflictEmails.length > 0
 
   const buildPartnerLabel = (item: OrganizationLead) => {
     const emailSuffix = item.email ? ` — ${item.email}` : ''
@@ -331,16 +379,28 @@ export const CreateOrganizationModal: React.FC<CreateOrganizationModalProps> = (
   const validateInvitations = () => {
     const trimmed = inviteDrafts.filter((draft) => draft.name || draft.email)
     const emails = new Set<string>()
+    const duplicateEmails = new Set<string>()
+    const leadConflicts = new Set<string>()
     for (const draft of trimmed) {
       if (!draft.name.trim()) {
         throw new Error('Invitation name is required')
       }
       if (draft.method === 'email') {
-        if (!draft.email.trim()) throw new Error('Email is required for email invitations')
-        if (!emailRegex.test(draft.email.trim())) throw new Error(`Invalid email: ${draft.email}`)
-        if (emails.has(draft.email.trim())) throw new Error(`Duplicate email: ${draft.email}`)
-        emails.add(draft.email.trim())
+        const normalizedEmail = normalizeEmail(draft.email)
+        if (!normalizedEmail) throw new Error('Email is required for email invitations')
+        if (!emailRegex.test(normalizedEmail)) throw new Error(`Invalid email: ${draft.email}`)
+        if (emails.has(normalizedEmail)) duplicateEmails.add(normalizedEmail)
+        emails.add(normalizedEmail)
+        if (leadEmails.has(normalizedEmail)) leadConflicts.add(normalizedEmail)
       }
+    }
+    if (duplicateEmails.size > 0) {
+      throw new Error(`Duplicate emails detected: ${Array.from(duplicateEmails).join(', ')}`)
+    }
+    if (leadConflicts.size > 0) {
+      throw new Error(
+        `Emails already assigned to mentors, ambassadors, or partners: ${Array.from(leadConflicts).join(', ')}`,
+      )
     }
     if (trimmed.length > (form.teamSize || 0)) {
       throw new Error('Invitations cannot exceed cohort size')
@@ -379,7 +439,7 @@ export const CreateOrganizationModal: React.FC<CreateOrganizationModalProps> = (
         organizationPayload,
         invitations.map((invite) => ({
           name: invite.name.trim(),
-          email: invite.email.trim() || undefined,
+          email: invite.email ? normalizeEmail(invite.email) : undefined,
           role: invite.role,
           method: invite.method,
           organizationId: '',
@@ -408,7 +468,8 @@ export const CreateOrganizationModal: React.FC<CreateOrganizationModalProps> = (
     }
   }
 
-  const invitationCountColor = inviteDrafts.length > (form.teamSize || 0) ? 'red.500' : 'gray.600'
+  const invitationCountColor =
+    inviteDrafts.length > (form.teamSize || 0) || hasDuplicateEmails || hasLeadConflicts ? 'red.500' : 'gray.600'
 
   return (
     <>
@@ -794,6 +855,25 @@ export const CreateOrganizationModal: React.FC<CreateOrganizationModalProps> = (
                 </Text>
               </Flex>
 
+              {(hasDuplicateEmails || hasLeadConflicts) && (
+                <Alert status="error" borderRadius="md">
+                  <AlertIcon />
+                  <Box>
+                    {hasDuplicateEmails && (
+                      <Text fontSize="sm">
+                        Duplicate emails detected: {invitationEmailState.duplicateEmails.join(', ')}.
+                      </Text>
+                    )}
+                    {hasLeadConflicts && (
+                      <Text fontSize="sm">
+                        Emails already assigned to mentors, ambassadors, or partners:{' '}
+                        {invitationEmailState.leadConflictEmails.join(', ')}.
+                      </Text>
+                    )}
+                  </Box>
+                </Alert>
+              )}
+
               <input
                 ref={fileInputRef}
                 type="file"
@@ -803,53 +883,80 @@ export const CreateOrganizationModal: React.FC<CreateOrganizationModalProps> = (
               />
 
               <Stack spacing={3}>
-                {inviteDrafts.map((draft) => (
-                  <Box key={draft.id} borderWidth="1px" borderRadius="md" p={3}>
-                    <Grid templateColumns={{ base: '1fr', md: 'repeat(4, 1fr)' }} gap={3} alignItems="center">
-                      <FormControl isRequired>
-                        <FormLabel>Name</FormLabel>
-                        <Input value={draft.name} onChange={(e) => handleInviteChange(draft.id, 'name', e.target.value)} />
-                      </FormControl>
-                      <FormControl isRequired={draft.method === 'email'}>
-                        <FormLabel>Email</FormLabel>
-                        <Input value={draft.email} onChange={(e) => handleInviteChange(draft.id, 'email', e.target.value)} />
-                      </FormControl>
-                      <FormControl>
-                        <FormLabel>Role</FormLabel>
-                        <Select
-                          value={draft.role}
-                          onChange={(e) => handleInviteChange(draft.id, 'role', e.target.value)}
+                {inviteDrafts.map((draft) => {
+                  const duplicateEmail = invitationEmailState.duplicateById.get(draft.id)
+                  const leadConflictEmail = invitationEmailState.leadConflictsById.get(draft.id)
+                  const emailErrorMessage = [
+                    duplicateEmail ? `Duplicate email: ${duplicateEmail}` : null,
+                    leadConflictEmail ? `Already assigned: ${leadConflictEmail}` : null,
+                  ]
+                    .filter(Boolean)
+                    .join(' • ')
+                  return (
+                    <Box key={draft.id} borderWidth="1px" borderRadius="md" p={3}>
+                      <Grid templateColumns={{ base: '1fr', md: 'repeat(4, 1fr)' }} gap={3} alignItems="center">
+                        <FormControl isRequired>
+                          <FormLabel>Name</FormLabel>
+                          <Input
+                            value={draft.name}
+                            onChange={(e) => handleInviteChange(draft.id, 'name', e.target.value)}
+                          />
+                        </FormControl>
+                        <FormControl
+                          isRequired={draft.method === 'email'}
+                          isInvalid={draft.method === 'email' && Boolean(emailErrorMessage)}
                         >
-                          <option value="user">User</option>
-                          <option value="mentor">Mentor</option>
-                          <option value="ambassador">Ambassador</option>
-                          <option value="partner">Partner</option>
-                          <option value="admin">Admin</option>
-                        </Select>
-                      </FormControl>
-                      <FormControl>
-                        <FormLabel>Method</FormLabel>
-                        <Select
-                          value={draft.method}
-                          onChange={(e) => handleInviteChange(draft.id, 'method', e.target.value)}
-                        >
-                          <option value="email">Email</option>
-                          <option value="one_time_code">One-time code</option>
-                        </Select>
-                      </FormControl>
-                      <GridItem colSpan={4} textAlign="right">
-                        <IconButton
-                          aria-label="Remove invitation"
-                          size="sm"
-                          icon={<X size={14} />}
-                          variant="ghost"
-                          onClick={() => removeInviteDraft(draft.id)}
-                          isDisabled={inviteDrafts.length === 1}
-                        />
-                      </GridItem>
-                    </Grid>
-                  </Box>
-                ))}
+                          <FormLabel>Email</FormLabel>
+                          <InputGroup>
+                            <Input
+                              value={draft.email}
+                              onChange={(e) => handleInviteChange(draft.id, 'email', e.target.value)}
+                            />
+                            {draft.method === 'email' && emailErrorMessage && (
+                              <InputRightElement>
+                                <WarningIcon color="red.500" />
+                              </InputRightElement>
+                            )}
+                          </InputGroup>
+                          <FormErrorMessage>{emailErrorMessage}</FormErrorMessage>
+                        </FormControl>
+                        <FormControl>
+                          <FormLabel>Role</FormLabel>
+                          <Select
+                            value={draft.role}
+                            onChange={(e) => handleInviteChange(draft.id, 'role', e.target.value)}
+                          >
+                            <option value="user">User</option>
+                            <option value="mentor">Mentor</option>
+                            <option value="ambassador">Ambassador</option>
+                            <option value="partner">Partner</option>
+                            <option value="admin">Admin</option>
+                          </Select>
+                        </FormControl>
+                        <FormControl>
+                          <FormLabel>Method</FormLabel>
+                          <Select
+                            value={draft.method}
+                            onChange={(e) => handleInviteChange(draft.id, 'method', e.target.value)}
+                          >
+                            <option value="email">Email</option>
+                            <option value="one_time_code">One-time code</option>
+                          </Select>
+                        </FormControl>
+                        <GridItem colSpan={4} textAlign="right">
+                          <IconButton
+                            aria-label="Remove invitation"
+                            size="sm"
+                            icon={<X size={14} />}
+                            variant="ghost"
+                            onClick={() => removeInviteDraft(draft.id)}
+                            isDisabled={inviteDrafts.length === 1}
+                          />
+                        </GridItem>
+                      </Grid>
+                    </Box>
+                  )
+                })}
               </Stack>
 
               <Alert status="warning" borderRadius="md">
@@ -862,7 +969,12 @@ export const CreateOrganizationModal: React.FC<CreateOrganizationModalProps> = (
             <Button variant="ghost" mr={3} onClick={onClose}>
               Cancel
             </Button>
-            <Button colorScheme="purple" onClick={handleSubmit} isLoading={isSubmitting}>
+            <Button
+              colorScheme="purple"
+              onClick={handleSubmit}
+              isLoading={isSubmitting}
+              isDisabled={hasDuplicateEmails || hasLeadConflicts}
+            >
               Create organization
             </Button>
           </ModalFooter>

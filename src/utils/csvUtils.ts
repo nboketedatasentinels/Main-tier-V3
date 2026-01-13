@@ -1,4 +1,5 @@
 import { InviteDraft } from '@/types/admin'
+import { normalizeEmail } from '@/utils/email'
 
 const headers = ['name', 'email', 'role', 'invitation method']
 
@@ -32,7 +33,7 @@ const parseRow = (row: string[]) => {
   const [name, email, role, method] = row
   return {
     name: name?.trim() || '',
-    email: email?.trim() || '',
+    email: normalizeEmail(email || ''),
     role: (role?.trim() || 'user') as InviteDraft['role'],
     method: (method?.trim() || (email ? 'email' : 'one_time_code')) as InviteDraft['method'],
   }
@@ -56,13 +57,20 @@ export const parseInvitationCSV = async (file: File): Promise<InviteDraft[]> => 
   }
 
   const dataLines = lines.slice(1)
+  const emailRows = new Map<string, number[]>()
   const drafts: InviteDraft[] = dataLines.map((line, index) => {
     const columns = line.split(',')
     const parsed = parseRow(columns)
+    const rowNumber = index + 2
 
     if (!parsed.name) throw new Error(`Row ${index + 2}: Name is required`)
     if (parsed.method === 'email' && parsed.email && !emailRegex.test(parsed.email)) {
       throw new Error(`Row ${index + 2}: Invalid email format`)
+    }
+    if (parsed.method === 'email' && parsed.email) {
+      const rows = emailRows.get(parsed.email) || []
+      rows.push(rowNumber)
+      emailRows.set(parsed.email, rows)
     }
 
     return {
@@ -73,6 +81,13 @@ export const parseInvitationCSV = async (file: File): Promise<InviteDraft[]> => 
       method: parsed.method,
     }
   })
+
+  const duplicateEmailDetails = Array.from(emailRows.entries())
+    .filter(([, rows]) => rows.length > 1)
+    .map(([email, rows]) => `${email} (rows ${rows.join(', ')})`)
+  if (duplicateEmailDetails.length) {
+    throw new Error(`Duplicate emails found: ${duplicateEmailDetails.join('; ')}`)
+  }
 
   return drafts
 }
