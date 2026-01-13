@@ -8,6 +8,7 @@ import {
   orderBy,
   query,
   serverTimestamp,
+  setDoc,
   updateDoc,
   where,
   limit,
@@ -193,6 +194,32 @@ export const updateUserProfile = async (
   }
 
   await updateDoc(doc(db, 'users', userId), payload)
+
+  const hasMentorUpdate = Object.prototype.hasOwnProperty.call(sanitized, 'mentorId')
+  const hasAmbassadorUpdate = Object.prototype.hasOwnProperty.call(sanitized, 'ambassadorId')
+
+  if (hasMentorUpdate || hasAmbassadorUpdate) {
+    const normalizeAssignmentId = (value: unknown) => {
+      if (typeof value !== 'string') return value ?? null
+      const trimmed = value.trim()
+      return trimmed.length ? trimmed : null
+    }
+
+    const supportPayload: Record<string, unknown> = {
+      user_id: userId,
+      assigned_date: serverTimestamp(),
+      updated_at: serverTimestamp(),
+    }
+
+    if (hasMentorUpdate) {
+      supportPayload.mentor_id = normalizeAssignmentId(sanitized.mentorId)
+    }
+    if (hasAmbassadorUpdate) {
+      supportPayload.ambassador_id = normalizeAssignmentId(sanitized.ambassadorId)
+    }
+
+    await setDoc(doc(db, 'support_assignments', userId), supportPayload, { merge: true })
+  }
 
   return { updates: sanitized, error: null }
 }

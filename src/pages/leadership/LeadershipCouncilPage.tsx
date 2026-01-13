@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useMemo, useState } from 'react'
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import {
   Alert,
   AlertDescription,
@@ -46,7 +46,6 @@ import {
   addDoc,
   collection,
   doc,
-  getDoc,
   onSnapshot,
   orderBy,
   query,
@@ -137,6 +136,15 @@ export const LeadershipCouncilPage: React.FC = () => {
   const [partnerProfile, setPartnerProfile] = useState<PartnerProfile | null>(null)
   const [assignmentsLoading, setAssignmentsLoading] = useState(false)
   const [assignmentsError, setAssignmentsError] = useState<string | null>(null)
+  const [partnerLoading, setPartnerLoading] = useState(true)
+  const [partnerError, setPartnerError] = useState<string | null>(null)
+  const [assignmentsRetryKey, setAssignmentsRetryKey] = useState(0)
+  const [partnerRetryKey, setPartnerRetryKey] = useState(0)
+  const [assignmentIds, setAssignmentIds] = useState<{ mentorId: string | null; ambassadorId: string | null }>({
+    mentorId: null,
+    ambassadorId: null,
+  })
+  const partnerRetryCountRef = useRef(0)
 
   const [sessions, setSessions] = useState<MentorshipSession[]>([])
   const [sessionsLoading, setSessionsLoading] = useState(false)
@@ -153,71 +161,13 @@ export const LeadershipCouncilPage: React.FC = () => {
   const sessionsModal = useDisclosure()
   const scheduleModal = useDisclosure()
 
-  const loadAssignments = useCallback(async () => {
-    if (!profile?.id) return
-    setAssignmentsLoading(true)
-    setAssignmentsError(null)
+  const retryAssignments = useCallback(() => {
+    setAssignmentsRetryKey((prev) => prev + 1)
+  }, [])
 
-    const unsubscribers: (() => void)[] = []
-
-    try {
-      const profileRef = doc(db, 'profiles', profile.id)
-      const profileSnap = await getDoc(profileRef)
-      const data = (profileSnap.data() || {}) as LeadershipProfile
-      const mentorId = (data.mentorId || (profile as LeadershipProfile).mentorId) as string | undefined
-      const ambassadorId = (data.ambassadorId || (profile as LeadershipProfile).ambassadorId) as string | undefined
-
-      if (mentorId) {
-        const mentorRef = doc(db, 'profiles', mentorId)
-        const unsub = onSnapshot(mentorRef, (snap) => {
-          const mentorData = snap.data() as LeadershipProfile | undefined
-          if (mentorData) {
-            setMentorProfile({
-              ...mentorData,
-              id: mentorId,
-              fullName: mentorData.fullName || `${mentorData.firstName} ${mentorData.lastName}`,
-            })
-          }
-        })
-        unsubscribers.push(unsub)
-      } else {
-        setMentorProfile(null)
-      }
-
-      if (ambassadorId) {
-        const ambassadorRef = doc(db, 'profiles', ambassadorId)
-        const unsub = onSnapshot(ambassadorRef, (snap) => {
-          const ambassadorData = snap.data() as LeadershipProfile | undefined
-          if (ambassadorData) {
-            setAmbassadorProfile({
-              ...ambassadorData,
-              id: ambassadorId,
-              fullName: ambassadorData.fullName || `${ambassadorData.firstName} ${ambassadorData.lastName}`,
-            })
-          }
-        })
-        unsubscribers.push(unsub)
-      } else {
-        setAmbassadorProfile(null)
-      }
-
-      const partnerRef = doc(db, 'transformation_partners', 'primary')
-      const partnerSnap = await getDoc(partnerRef)
-      if (partnerSnap.exists()) {
-        const partnerData = partnerSnap.data() as PartnerProfile
-        setPartnerProfile({ ...partnerData, id: partnerSnap.id })
-      }
-    } catch (error) {
-      const message = error instanceof Error ? error.message : 'Unable to load leadership assignments.'
-      setAssignmentsError(message)
-    } finally {
-      setAssignmentsLoading(false)
-    }
-
-    return () => {
-      unsubscribers.forEach((unsubscribe) => unsubscribe())
-    }
-  }, [profile])
+  const schedulePartnerRetry = useCallback(() => {
+    setPartnerRetryKey((prev) => prev + 1)
+  }, [])
 
   const loadSessions = useCallback(() => {
     if (!profile?.id) return () => undefined
@@ -272,15 +222,150 @@ export const LeadershipCouncilPage: React.FC = () => {
   }, [profile?.id])
 
   useEffect(() => {
-    const cleanupRef: { fn?: () => void } = {}
-    loadAssignments().then((cleanup) => {
-      cleanupRef.fn = cleanup || undefined
-    })
+    if (!profile?.id) return
+    setAssignmentsLoading(true)
+    setAssignmentsError(null)
+    let didReceiveSnapshot = false
+
+    const supportQuery = query(
+      collection(db, 'support_assignments'),
+      where('user_id', '==', profile.id),
+    )
+
+    const timeoutId = setTimeout(() => {
+      if (!didReceiveSnapshot) {
+        setAssignmentsLoading(false)
+      }
+    }, 5000)
+
+    const unsubscribe = onSnapshot(
+      supportQuery,
+      (snapshot) => {
+        didReceiveSnapshot = true
+        const docSnapshot = snapshot.docs[0]
+        if (docSnapshot) {
+          const data = docSnapshot.data() as { mentor_id?: string | null; ambassador_id?: string | null }
+          setAssignmentIds({
+            mentorId: data.mentor_id ?? null,
+            ambassadorId: data.ambassador_id ?? null,
+          })
+        } else {
+          setAssignmentIds({ mentorId: null, ambassadorId: null })
+        }
+        setAssignmentsLoading(false)
+      },
+      (error) => {
+        didReceiveSnapshot = true
+        setAssignmentsError(error.message)
+        setAssignmentsLoading(false)
+      },
+    )
 
     return () => {
-      cleanupRef.fn?.()
+      clearTimeout(timeoutId)
+      unsubscribe()
     }
-  }, [loadAssignments])
+  }, [profile?.id, assignmentsRetryKey])
+
+  useEffect(() => {
+    const unsubscribers: Array<() => void> = []
+    if (assignmentIds.mentorId) {
+      const mentorRef = doc(db, 'users', assignmentIds.mentorId)
+      const unsub = onSnapshot(
+        mentorRef,
+        (snap) => {
+          const mentorData = snap.data() as LeadershipProfile | undefined
+          if (mentorData) {
+            setMentorProfile({
+              ...mentorData,
+              id: assignmentIds.mentorId as string,
+              fullName: mentorData.fullName || `${mentorData.firstName} ${mentorData.lastName}`.trim(),
+            })
+          } else {
+            setMentorProfile(null)
+          }
+        },
+        (error) => {
+          setAssignmentsError(error.message)
+          setMentorProfile(null)
+        },
+      )
+      unsubscribers.push(unsub)
+    } else {
+      setMentorProfile(null)
+    }
+
+    if (assignmentIds.ambassadorId) {
+      const ambassadorRef = doc(db, 'users', assignmentIds.ambassadorId)
+      const unsub = onSnapshot(
+        ambassadorRef,
+        (snap) => {
+          const ambassadorData = snap.data() as LeadershipProfile | undefined
+          if (ambassadorData) {
+            setAmbassadorProfile({
+              ...ambassadorData,
+              id: assignmentIds.ambassadorId as string,
+              fullName: ambassadorData.fullName || `${ambassadorData.firstName} ${ambassadorData.lastName}`.trim(),
+            })
+          } else {
+            setAmbassadorProfile(null)
+          }
+        },
+        (error) => {
+          setAssignmentsError(error.message)
+          setAmbassadorProfile(null)
+        },
+      )
+      unsubscribers.push(unsub)
+    } else {
+      setAmbassadorProfile(null)
+    }
+
+    return () => {
+      unsubscribers.forEach((unsubscribe) => unsubscribe())
+    }
+  }, [assignmentIds.ambassadorId, assignmentIds.mentorId])
+
+  useEffect(() => {
+    setPartnerLoading(true)
+    setPartnerError(null)
+    let timeoutId: ReturnType<typeof setTimeout> | null = null
+
+    const partnerRef = doc(db, 'transformation_partners', 'primary')
+    const unsubscribe = onSnapshot(
+      partnerRef,
+      (snapshot) => {
+        if (snapshot.exists()) {
+          const partnerData = snapshot.data() as PartnerProfile
+          setPartnerProfile({ ...partnerData, id: snapshot.id })
+          setPartnerError(null)
+        } else {
+          setPartnerProfile(null)
+          setPartnerError('Transformation partner details are not yet available.')
+        }
+        setPartnerLoading(false)
+        partnerRetryCountRef.current = 0
+      },
+      (error) => {
+        setPartnerProfile(null)
+        setPartnerError(error.message)
+        setPartnerLoading(false)
+
+        if (partnerRetryCountRef.current < 3) {
+          const delay = Math.min(1000 * 2 ** partnerRetryCountRef.current, 8000)
+          timeoutId = setTimeout(() => {
+            partnerRetryCountRef.current += 1
+            schedulePartnerRetry()
+          }, delay)
+        }
+      },
+    )
+
+    return () => {
+      if (timeoutId) clearTimeout(timeoutId)
+      unsubscribe()
+    }
+  }, [partnerRetryKey, schedulePartnerRetry])
 
   useEffect(() => {
     const unsubscribe = loadSessions()
@@ -514,7 +599,7 @@ export const LeadershipCouncilPage: React.FC = () => {
                       <AlertTitle>We couldn't load your mentor right now.</AlertTitle>
                       <AlertDescription>{assignmentsError}</AlertDescription>
                     </Box>
-                    <Button size="sm" leftIcon={<RefreshCcw size={16} />} ml={4} onClick={loadAssignments}>
+                    <Button size="sm" leftIcon={<RefreshCcw size={16} />} ml={4} onClick={retryAssignments}>
                       Try again
                     </Button>
                   </Alert>
@@ -652,7 +737,7 @@ export const LeadershipCouncilPage: React.FC = () => {
                       <AlertTitle>We couldn't load your ambassador right now.</AlertTitle>
                       <AlertDescription>{assignmentsError}</AlertDescription>
                     </Box>
-                    <Button size="sm" leftIcon={<RefreshCcw size={16} />} ml={4} onClick={loadAssignments}>
+                    <Button size="sm" leftIcon={<RefreshCcw size={16} />} ml={4} onClick={retryAssignments}>
                       Try again
                     </Button>
                   </Alert>
@@ -716,7 +801,13 @@ export const LeadershipCouncilPage: React.FC = () => {
                 </HStack>
               </CardHeader>
               <CardBody>
-                {partnerProfile ? (
+                {partnerLoading && (
+                  <Flex direction="column" align="center" gap={3} p={6}>
+                    <Spinner />
+                    <Text color="text.secondary">Loading transformation partner...</Text>
+                  </Flex>
+                )}
+                {!partnerLoading && partnerProfile && (
                   <Stack spacing={4}>
                     <HStack justify="space-between" align="start" spacing={4} flexWrap="wrap">
                       <HStack spacing={3} align="start">
@@ -812,10 +903,17 @@ export const LeadershipCouncilPage: React.FC = () => {
                       </Stack>
                     </SimpleGrid>
                   </Stack>
-                ) : (
-                  <Flex direction="column" align="center" gap={3} p={6}>
-                    <Spinner />
-                    <Text color="text.secondary">Loading transformation partner...</Text>
+                )}
+                {!partnerLoading && !partnerProfile && (
+                  <Flex direction="column" align="center" gap={3} p={6} textAlign="center">
+                    <Icon as={Shield} boxSize={8} color="text.muted" />
+                    <Heading size="sm">Transformation partner unavailable</Heading>
+                    <Text color="text.secondary">
+                      {partnerError || 'Your transformation partner profile is not set up yet. Please contact your administrator for support.'}
+                    </Text>
+                    <Button size="sm" leftIcon={<RefreshCcw size={16} />} onClick={schedulePartnerRetry}>
+                      Try again
+                    </Button>
                   </Flex>
                 )}
               </CardBody>
