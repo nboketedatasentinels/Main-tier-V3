@@ -68,6 +68,7 @@ import {
   clusterBoundaries,
   clusterTiers,
   getClusterDisplayName,
+  getClusterShortName,
   getClusterTierByName,
 } from '@/utils/clusterTiers'
 
@@ -162,12 +163,60 @@ export const EditOrganizationModal: React.FC<EditOrganizationModalProps> = ({
     [courses],
   )
   const clusterDisplayName = useMemo(() => getClusterDisplayName(form.cluster), [form.cluster])
+  const clusterShortName = useMemo(() => getClusterShortName(form.cluster), [form.cluster])
   const clusterTier = useMemo(() => getClusterTierByName(form.cluster), [form.cluster])
   const clusterHelperColor = clusterTier.colorScheme === 'gray' ? 'gray.600' : `${clusterTier.colorScheme}.600`
-  const isClusterBoundary = clusterBoundaries.includes(form.teamSize || 0) && form.teamSize > 0
+  const hasValidTeamSize = (form.teamSize || 0) > 0
+  const isClusterAssigned = (form.teamSize || 0) >= 4 && Boolean(form.cluster)
+  const nextBoundary = clusterBoundaries.find((boundary) => boundary > (form.teamSize || 0))
+  const transitionHint = hasValidTeamSize && nextBoundary ? `${nextBoundary - 1}→${nextBoundary}` : null
+  const isClusterBoundary = clusterBoundaries.includes(form.teamSize || 0) && hasValidTeamSize
+  const boundaryTier = clusterTiers.find((tier) => tier.min === form.teamSize)
+  const nextBoundaryTier = boundaryTier
+    ? clusterTiers[clusterTiers.findIndex((tier) => tier.name === boundaryTier.name) + 1]
+    : undefined
   const clusterProgressMax = 50
   const clusterProgressValue = Math.min(form.teamSize || 0, clusterProgressMax)
   const clusterProgressPercent = (clusterProgressValue / clusterProgressMax) * 100
+  const clusterHighlightBg = `${clusterTier.colorScheme}.50`
+  const clusterTooltipContent = (
+    <Box>
+      <Text fontWeight="semibold" mb={2}>
+        Cluster breakdown
+      </Text>
+      <Table size="sm" variant="simple">
+        <Thead>
+          <Tr>
+            <Th>Cluster</Th>
+            <Th>Range</Th>
+            <Th>Badge</Th>
+          </Tr>
+        </Thead>
+        <Tbody>
+          {clusterTiers.map((tier) => (
+            <Tr key={tier.name}>
+              <Td>{tier.shortName}</Td>
+              <Td>{tier.rangeLabel} users</Td>
+              <Td>
+                <Badge colorScheme={tier.colorScheme} variant="subtle">
+                  {tier.shortName}
+                </Badge>
+              </Td>
+            </Tr>
+          ))}
+        </Tbody>
+      </Table>
+      <Text fontSize="xs" color="gray.600" mt={2}>
+        No Cluster (1-3), Kalahari (4-10), Sahara (11-20), Sahel (21-40), Serengeti (41+).
+      </Text>
+    </Box>
+  )
+  const clusterHelperText = isClusterAssigned
+    ? `Assigned to ${clusterShortName} based on cohort size.`
+    : 'No cluster assigned (1-3 users).'
+  const boundaryAlertText = nextBoundaryTier
+    ? `Cluster tier: ${clusterShortName}. Adding 1 more user keeps you in ${clusterShortName}; ${nextBoundaryTier.shortName} begins at ${nextBoundaryTier.min} users.`
+    : `Cluster tier: ${clusterShortName}. You're in the highest tier.`
 
   useEffect(() => {
     if (!isOpen) {
@@ -288,7 +337,9 @@ export const EditOrganizationModal: React.FC<EditOrganizationModalProps> = ({
       if (!form.code) throw new Error('Organization code is required')
       if (!isCodeValidLength) throw new Error('Organization code must be exactly 6 characters')
       if (!form.programDuration) throw new Error('Program duration is required')
-      if (!form.teamSize || form.teamSize <= 0) throw new Error('Cohort size must be greater than 0')
+      if (!form.teamSize || form.teamSize <= 0) {
+        throw new Error('Cohort size must be greater than 0 to assign a cluster')
+      }
       if (courseLimit && emptyMonths.length) {
         throw new Error(`Please assign a course for each of the ${courseLimit} month(s)`)
       }
@@ -303,7 +354,11 @@ export const EditOrganizationModal: React.FC<EditOrganizationModalProps> = ({
         monthlyCourseAssignments: monthlyAssignments,
         courseAssignmentStructure: 'monthly',
       })
-      toast({ title: 'Organization updated successfully', status: 'success' })
+      toast({
+        title: 'Organization updated successfully',
+        description: `Cluster: ${clusterDisplayName}`,
+        status: 'success',
+      })
       onUpdated?.({ ...form, id: organization.id })
       onClose()
     } catch (error) {
@@ -388,42 +443,21 @@ export const EditOrganizationModal: React.FC<EditOrganizationModalProps> = ({
                       onChange={(e) => handleTeamSizeChange(e.target.value)}
                       min={1}
                     />
-                    <FormHelperText color={clusterHelperColor}>
-                      Cohort size determines cluster: {clusterDisplayName}
+                    <FormHelperText color={hasValidTeamSize ? clusterHelperColor : 'gray.500'}>
+                      {hasValidTeamSize
+                        ? `Cohort size determines cluster tier: ${clusterDisplayName}.`
+                        : 'Enter a cohort size to preview the cluster tier.'}
                     </FormHelperText>
+                    {transitionHint ? (
+                      <FormHelperText color="gray.500">Next tier transition: {transitionHint} users</FormHelperText>
+                    ) : null}
                   </FormControl>
                 </GridItem>
                 <GridItem>
                   <FormControl>
                     <FormLabel display="flex" alignItems="center" gap={2}>
                       Cluster
-                      <Tooltip
-                        label={
-                          <Box>
-                            <Text fontWeight="semibold" mb={2}>
-                              Cluster tiers
-                            </Text>
-                            <Table size="sm" variant="simple">
-                              <Thead>
-                                <Tr>
-                                  <Th>Tier</Th>
-                                  <Th>Range</Th>
-                                </Tr>
-                              </Thead>
-                              <Tbody>
-                                {clusterTiers.map((tier) => (
-                                  <Tr key={tier.name}>
-                                    <Td>{tier.name}</Td>
-                                    <Td>{tier.rangeLabel}</Td>
-                                  </Tr>
-                                ))}
-                              </Tbody>
-                            </Table>
-                          </Box>
-                        }
-                        placement="top"
-                        maxW="320px"
-                      >
+                      <Tooltip label={clusterTooltipContent} placement="top" maxW="360px">
                         <InfoIcon color="gray.400" />
                       </Tooltip>
                     </FormLabel>
@@ -433,16 +467,16 @@ export const EditOrganizationModal: React.FC<EditOrganizationModalProps> = ({
                         isReadOnly
                         placeholder="Auto-calculated from cohort size"
                       />
-                      {form.cluster ? (
+                      {isClusterAssigned ? (
                         <InputRightElement width="auto" mr={2}>
                           <Badge colorScheme={clusterTier.colorScheme} variant="subtle">
-                            {clusterTier.name}
+                            {clusterShortName}
                           </Badge>
                         </InputRightElement>
                       ) : null}
                     </InputGroup>
-                    <FormHelperText color="gray.600">
-                      Auto-calculated from cohort size. This will assign the organization to {clusterDisplayName}.
+                    <FormHelperText color={isClusterAssigned ? clusterHelperColor : 'gray.600'}>
+                      {clusterHelperText}
                     </FormHelperText>
                   </FormControl>
                 </GridItem>
@@ -472,9 +506,9 @@ export const EditOrganizationModal: React.FC<EditOrganizationModalProps> = ({
                 </GridItem>
                 {isClusterBoundary ? (
                   <GridItem colSpan={{ base: 1, md: 2 }}>
-                    <Alert status="warning" borderRadius="md">
+                    <Alert status="info" borderRadius="md">
                       <AlertIcon />
-                      This cohort size is at a cluster boundary. Current cluster: {clusterDisplayName}.
+                      {boundaryAlertText}
                     </Alert>
                   </GridItem>
                 ) : null}
@@ -502,31 +536,31 @@ export const EditOrganizationModal: React.FC<EditOrganizationModalProps> = ({
                     <AccordionItem borderWidth="1px" borderRadius="md" overflow="hidden">
                       <AccordionButton bg="gray.50">
                         <Box flex="1" textAlign="left" fontWeight="semibold">
-                          Cluster tier reference
+                          Cluster tier reference guide
                         </Box>
                         <AccordionIcon />
                       </AccordionButton>
-                      <AccordionPanel>
+                      <AccordionPanel bg="gray.50">
                         <Table size="sm" variant="simple">
                           <Thead>
                             <Tr>
-                              <Th>Cluster</Th>
-                              <Th>Range</Th>
-                              <Th>Description</Th>
+                              <Th>Cluster Name</Th>
+                              <Th>Cohort Size Range</Th>
+                              <Th>Color Badge</Th>
                             </Tr>
                           </Thead>
                           <Tbody>
                             {clusterTiers.map((tier) => (
-                              <Tr key={tier.name} bg={tier.name === clusterDisplayName ? 'purple.50' : 'transparent'}>
+                              <Tr key={tier.name} bg={tier.name === clusterDisplayName ? clusterHighlightBg : 'transparent'}>
                                 <Td>
-                                  <HStack spacing={2}>
-                                    <Badge colorScheme={tier.colorScheme} variant="subtle">
-                                      {tier.name}
-                                    </Badge>
-                                  </HStack>
+                                  {tier.shortName}
                                 </Td>
-                                <Td>{tier.rangeLabel}</Td>
-                                <Td color="gray.600">{tier.description}</Td>
+                                <Td>{tier.rangeLabel} users</Td>
+                                <Td>
+                                  <Badge colorScheme={tier.colorScheme} variant="subtle">
+                                    {tier.shortName}
+                                  </Badge>
+                                </Td>
                               </Tr>
                             ))}
                           </Tbody>
@@ -535,48 +569,75 @@ export const EditOrganizationModal: React.FC<EditOrganizationModalProps> = ({
                           <Text fontSize="sm" fontWeight="semibold" mb={2}>
                             Cluster progression
                           </Text>
-                          <Box position="relative" h="8px" bg="gray.200" borderRadius="full" overflow="hidden">
-                            <Box
-                              h="100%"
-                              w={`${clusterProgressPercent}%`}
-                              bgGradient="linear(to-r, gray.400, blue.400, green.400, orange.400, red.400)"
-                            />
+                          <Box position="relative" h="10px" bg="gray.200" borderRadius="full" overflow="hidden">
+                            <Flex h="100%">
+                              {clusterTiers.map((tier) => {
+                                const rangeMax = tier.max ?? clusterProgressMax
+                                const rangeStart = Math.max(tier.min, 1)
+                                const cappedMax = Math.min(rangeMax, clusterProgressMax)
+                                const widthPercent =
+                                  ((cappedMax - rangeStart + 1) / clusterProgressMax) * 100
+                                return (
+                                  <Box
+                                    key={tier.name}
+                                    w={`${widthPercent}%`}
+                                    bg={`${tier.colorScheme}.400`}
+                                  />
+                                )
+                              })}
+                            </Flex>
                             {clusterBoundaries.map((boundary) => {
                               const left = `${(boundary / clusterProgressMax) * 100}%`
+                              const boundaryTierName =
+                                clusterTiers.find((tier) => tier.min === boundary)?.shortName ?? 'New tier'
                               return (
-                                <Tooltip key={boundary} label={`Tier boundary: ${boundary}`} placement="top">
+                                <Tooltip
+                                  key={boundary}
+                                  label={`${boundary} users: ${boundaryTierName} begins`}
+                                  placement="top"
+                                >
                                   <Box
                                     position="absolute"
                                     top="-4px"
                                     left={left}
                                     transform="translateX(-50%)"
                                     w="2px"
-                                    h="16px"
-                                    bg="gray.500"
+                                    h="18px"
+                                    bg="gray.600"
                                   />
                                 </Tooltip>
                               )
                             })}
-                            {form.teamSize > 0 ? (
-                              <Box
-                                position="absolute"
-                                top="-6px"
-                                left={`${clusterProgressPercent}%`}
-                                transform="translateX(-50%)"
-                                w="16px"
-                                h="16px"
-                                bg="white"
-                                borderWidth="2px"
-                                borderColor={`${clusterTier.colorScheme}.500`}
-                                borderRadius="full"
-                              />
+                            {hasValidTeamSize ? (
+                              <Tooltip label={`${form.teamSize} users`} placement="top">
+                                <Box
+                                  position="absolute"
+                                  top="-7px"
+                                  left={`${clusterProgressPercent}%`}
+                                  transform="translateX(-50%)"
+                                  w="18px"
+                                  h="18px"
+                                  bg="white"
+                                  borderWidth="2px"
+                                  borderColor={`${clusterTier.colorScheme}.500`}
+                                  borderRadius="full"
+                                />
+                              </Tooltip>
                             ) : null}
                           </Box>
-                          <HStack justify="space-between" mt={2} fontSize="xs" color="gray.500">
-                            <Text>0</Text>
-                            {clusterBoundaries.map((boundary) => (
-                              <Text key={boundary}>{boundary}</Text>
+                          <Grid templateColumns="repeat(5, 1fr)" mt={2} fontSize="xs" color="gray.600">
+                            {clusterTiers.map((tier) => (
+                              <Text key={tier.name} textAlign="center">
+                                {tier.shortName}
+                              </Text>
                             ))}
+                          </Grid>
+                          <HStack justify="space-between" mt={1} fontSize="xs" color="gray.500">
+                            <Text>1-3</Text>
+                            <Text>4</Text>
+                            <Text>11</Text>
+                            <Text>21</Text>
+                            <Text>41+</Text>
                           </HStack>
                         </Box>
                       </AccordionPanel>
@@ -690,6 +751,9 @@ export const EditOrganizationModal: React.FC<EditOrganizationModalProps> = ({
                         <Text fontSize="sm">Admin preview</Text>
                       </HStack>
                     </HStack>
+                    <Text fontSize="sm" color="gray.600" mb={3}>
+                      Cluster assignment: {clusterDisplayName}
+                    </Text>
                     <Stack spacing={2}>
                       {monthlySummary.map((entry) => (
                         <Flex key={entry.month} justify="space-between" align="center">
