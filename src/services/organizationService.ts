@@ -45,10 +45,33 @@ const adminActivityCollection = collection(db, 'admin_activity_log')
 
 export type LeadershipRole = 'mentor' | 'ambassador' | 'partner'
 
-const leadershipRoleConfig: Record<LeadershipRole, { field: keyof OrganizationRecord; requiredRole: string }> = {
-  mentor: { field: 'assignedMentorId', requiredRole: 'mentor' },
-  ambassador: { field: 'assignedAmbassadorId', requiredRole: 'ambassador' },
-  partner: { field: 'transformationPartnerId', requiredRole: 'partner' },
+const leadershipRoleConfig: Record<
+  LeadershipRole,
+  {
+    field: keyof OrganizationRecord
+    assignedAtField: keyof OrganizationRecord
+    assignedByField: keyof OrganizationRecord
+    requiredRole: string
+  }
+> = {
+  mentor: {
+    field: 'assignedMentorId',
+    assignedAtField: 'assignedMentorAt',
+    assignedByField: 'assignedMentorBy',
+    requiredRole: 'mentor',
+  },
+  ambassador: {
+    field: 'assignedAmbassadorId',
+    assignedAtField: 'assignedAmbassadorAt',
+    assignedByField: 'assignedAmbassadorBy',
+    requiredRole: 'ambassador',
+  },
+  partner: {
+    field: 'transformationPartnerId',
+    assignedAtField: 'assignedPartnerAt',
+    assignedByField: 'assignedPartnerBy',
+    requiredRole: 'partner',
+  },
 }
 
 const assertLeadershipRole = (role: string): role is LeadershipRole =>
@@ -281,6 +304,8 @@ const assignLeadershipRole = async (organizationId: string, userId: string, role
 
     transaction.update(organizationRef, {
       [roleConfig.field]: userId,
+      [roleConfig.assignedAtField]: serverTimestamp(),
+      [roleConfig.assignedByField]: actorId,
       leadershipUpdatedAt: serverTimestamp(),
       leadershipUpdatedBy: actorId,
     })
@@ -324,6 +349,8 @@ export const unassignLeadershipRole = async (organizationId: string, role: strin
 
     transaction.update(organizationRef, {
       [roleConfig.field]: null,
+      [roleConfig.assignedAtField]: null,
+      [roleConfig.assignedByField]: actorId,
       leadershipUpdatedAt: serverTimestamp(),
       leadershipUpdatedBy: actorId,
     })
