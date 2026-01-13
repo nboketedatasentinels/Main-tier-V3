@@ -439,8 +439,6 @@ export const OrganizationManagementPage: React.FC<OrganizationManagementPageProp
         onCreated={handleOrganizationCreated}
         adminId={adminId}
         adminName={adminName}
-        partners={partners}
-        partnerAssignmentCounts={partnerAssignmentCounts}
       />
       <OrganizationDetailsModal
         isOpen={viewModal.isOpen}
