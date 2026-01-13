@@ -55,8 +55,14 @@ export interface OrganizationRecord {
   courseAssignmentStructure?: 'monthly' | 'array'
   description?: string
   assignedMentorId?: string | null
+  assignedMentorAt?: Timestamp | string | Date
+  assignedMentorBy?: string | null
   assignedAmbassadorId?: string | null
+  assignedAmbassadorAt?: Timestamp | string | Date
+  assignedAmbassadorBy?: string | null
   transformationPartnerId?: string | null
+  assignedPartnerAt?: Timestamp | string | Date
+  assignedPartnerBy?: string | null
   capacityLastAlertThreshold?: 75 | 90 | 95 | 100 | null
 }
 
@@ -114,6 +120,8 @@ export interface AdminUserRecord {
   email?: string
   role: AdminRole
   assignedOrganizations?: string[]
+  assignedOrganizationsUpdatedAt?: Timestamp | string | Date
+  assignedOrganizationsUpdatedBy?: string | null
   accountStatus?: 'active' | 'suspended'
   lastActive?: Timestamp | string | Date
   createdAt?: Timestamp | string | Date
