@@ -26,6 +26,7 @@ import {
   ModalOverlay,
   Select,
   SimpleGrid,
+  Spinner,
   Stack,
   Tab,
   TabList,
@@ -926,36 +927,49 @@ export const PeerConnectPage: React.FC = () => {
                       </Badge>
                     </Flex>
                     <Stack spacing={3}>
-                      {availablePeers.slice(0, 4).map((peer) => (
-                        <Flex key={peer.id} align="center" justify="space-between" p={3} borderRadius="lg" border="1px solid" borderColor="border.subtle">
-                          <HStack spacing={3}>
-                            <Avatar name={peer.name} src={peer.avatarUrl} size="sm" />
-                            <Stack spacing={0}>
-                              <Text fontWeight="semibold" color="brand.text">
-                                {peer.name}
-                              </Text>
-                              <Text fontSize="sm" color="brand.subtleText">
-                                {peer.email}
-                              </Text>
-                            </Stack>
+                      {loadingPeers ? (
+                        <Center py={4}>
+                          <HStack spacing={2}>
+                            <Spinner size="sm" />
+                            <Text fontSize="sm" color="brand.subtleText">
+                              Loading peers...
+                            </Text>
                           </HStack>
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            leftIcon={<Trophy size={14} />}
-                            onClick={() => {
-                              setPreselectedUser(peer)
-                              challengeModal.onOpen()
-                            }}
-                          >
-                            Challenge
-                          </Button>
-                        </Flex>
-                      ))}
-                      {!availablePeers.length && (
-                        <Text fontSize="sm" color="brand.subtleText">
-                          Once peers load from Firebase, you'll be able to start challenges instantly.
-                        </Text>
+                        </Center>
+                      ) : (
+                        <>
+                          {availablePeers.slice(0, 4).map((peer) => (
+                            <Flex key={peer.id} align="center" justify="space-between" p={3} borderRadius="lg" border="1px solid" borderColor="border.subtle">
+                              <HStack spacing={3}>
+                                <Avatar name={peer.name} src={peer.avatarUrl} size="sm" />
+                                <Stack spacing={0}>
+                                  <Text fontWeight="semibold" color="brand.text">
+                                    {peer.name}
+                                  </Text>
+                                  <Text fontSize="sm" color="brand.subtleText">
+                                    {peer.email}
+                                  </Text>
+                                </Stack>
+                              </HStack>
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                leftIcon={<Trophy size={14} />}
+                                onClick={() => {
+                                  setPreselectedUser(peer)
+                                  challengeModal.onOpen()
+                                }}
+                              >
+                                Challenge
+                              </Button>
+                            </Flex>
+                          ))}
+                          {!availablePeers.length && (
+                            <Text fontSize="sm" color="brand.subtleText">
+                              Once peers load from Firebase, you'll be able to start challenges instantly.
+                            </Text>
+                          )}
+                        </>
                       )}
                     </Stack>
                   </Box>

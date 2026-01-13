@@ -36,7 +36,7 @@ import {
   useToast,
 } from '@chakra-ui/react'
 import { AlertTriangle, CheckCircle, ChevronLeft, ChevronRight, Lock, Plus, ShieldCheck } from 'lucide-react'
-import { addDoc, collection, doc, getDoc, getDocs, onSnapshot, query, serverTimestamp, setDoc, where } from 'firebase/firestore'
+import { addDoc, collection, doc, getDocs, onSnapshot, query, serverTimestamp, setDoc, where } from 'firebase/firestore'
 import { addDays, format } from 'date-fns'
 import { removeUndefinedFields } from '@/utils/firestore'
 import { getIsoWeekNumber } from '@/utils/date'
@@ -289,6 +289,19 @@ const WeeklyChecklistPage: React.FC = () => {
       const weekStart = addDays(journeyStartDate, (weekNumber - 1) * 7);
       const weekEnd = addDays(weekStart, 6);
       return `${format(weekStart, 'MMM d')} - ${format(weekEnd, 'MMM d')}`;
+    },
+    [journeyStartDate],
+  );
+
+  const getImpactLogDateRange = useCallback(
+    (weekNumber: number) => {
+      if (!journeyStartDate) return null;
+      const weekStart = addDays(journeyStartDate, (weekNumber - 1) * 7);
+      const weekEnd = addDays(weekStart, 7);
+      return {
+        start: format(weekStart, 'yyyy-MM-dd'),
+        end: format(weekEnd, 'yyyy-MM-dd'),
+      };
     },
     [journeyStartDate],
   );

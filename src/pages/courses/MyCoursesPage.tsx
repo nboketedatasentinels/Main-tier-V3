@@ -365,13 +365,20 @@ export const MyCoursesPage: React.FC = () => {
     const organizationId = companyId || assignedOrganizationId
 
     const resolveOrganizationCourses = async (orgData: Record<string, unknown>) => {
-      const durationRaw =
+      const rawDuration =
         orgData.programDuration || orgData.program_duration || orgData.duration || orgData.programLength
+      const durationRaw =
+        typeof rawDuration === 'number' || typeof rawDuration === 'string' ? rawDuration : null
+      const rawMonthlyAssignments = orgData.monthlyCourseAssignments
+      const monthlyCourseAssignments =
+        rawMonthlyAssignments && typeof rawMonthlyAssignments === 'object' && !Array.isArray(rawMonthlyAssignments)
+          ? (rawMonthlyAssignments as MonthlyCourseAssignments)
+          : null
       const courseIds = normalizeCourseIds(
         orgData.courseAssignments || orgData.assignedCourses || orgData.defaultCourses
       )
       const { monthlyAssignments, totalMonths } = normalizeMonthlyAssignments({
-        monthlyCourseAssignments: orgData.monthlyCourseAssignments,
+        monthlyCourseAssignments,
         courseAssignments: courseIds,
         programDuration: durationRaw,
       })

@@ -1,6 +1,7 @@
 import {
   collection,
   doc,
+  getDocs,
   increment,
   query,
   runTransaction,
@@ -65,7 +66,7 @@ export async function awardChecklistPoints(params: {
       const [ledgerDoc, progressDoc, ledgerSnapshot] = await Promise.all([
         tx.get(ledgerRef),
         tx.get(progressRef),
-        tx.get(ledgerQuery),
+        getDocs(ledgerQuery),
       ]);
 
       if (ledgerDoc.exists()) return;
@@ -155,7 +156,7 @@ export async function revokeChecklistPoints(params: {
       const [ledgerDoc, progressDoc, ledgerSnapshot] = await Promise.all([
         tx.get(ledgerRef),
         tx.get(progressRef),
-        tx.get(ledgerQuery),
+        getDocs(ledgerQuery),
       ]);
 
       if (!ledgerDoc.exists()) return;
