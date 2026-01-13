@@ -172,6 +172,11 @@ export const CreateOrganizationModal: React.FC<CreateOrganizationModalProps> = (
     [monthlyAssignments, courseLimit],
   )
 
+  const sortedCourses = useMemo(
+    () => [...courses].sort((a, b) => a.title.localeCompare(b.title)),
+    [courses],
+  )
+
   const sortedPartners = useMemo(
     () => [...partners].sort((a, b) => a.name.localeCompare(b.name)),
     [partners],
@@ -611,7 +616,7 @@ export const CreateOrganizationModal: React.FC<CreateOrganizationModalProps> = (
                           onChange={(e) => handleMonthlyAssignmentChange(monthKey, e.target.value)}
                           bg="white"
                         >
-                          {courses.map((course) => (
+                          {sortedCourses.map((course) => (
                             <option key={course.id} value={course.id}>
                               {course.title}
                             </option>
