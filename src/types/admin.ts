@@ -48,6 +48,8 @@ export interface OrganizationRecord {
   partnerId?: string | null
   cohortStartDate?: Timestamp | string | Date
   programDuration?: number
+  programDurationWeeks?: number
+  journeyType?: JourneyType
   courseAssignments?: string[]
   monthlyCourseAssignments?: Record<string, string>
   courseAssignmentStructure?: 'monthly' | 'array'
@@ -219,6 +221,8 @@ export interface OrganizationDetailView {
   programEnd?: string
   cohortStartDate?: string
   programDuration?: number
+  programDurationWeeks?: number
+  journeyType?: JourneyType
   description?: string
   transformationPartner?: string
   assignedMentorName?: string | null
