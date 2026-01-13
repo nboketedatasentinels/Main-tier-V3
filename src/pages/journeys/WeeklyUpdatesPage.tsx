@@ -36,7 +36,7 @@ import {
   useToast,
 } from '@chakra-ui/react'
 import { AlertTriangle, CheckCircle, ChevronLeft, ChevronRight, Lock, Plus, ShieldCheck } from 'lucide-react'
-import { collection, doc, getDocs, query, serverTimestamp, setDoc, where, onSnapshot, addDoc } from 'firebase/firestore'
+import { addDoc, collection, doc, getDoc, getDocs, onSnapshot, query, serverTimestamp, setDoc, where } from 'firebase/firestore'
 import { addDays, format } from 'date-fns'
 import { removeUndefinedFields } from '@/utils/firestore'
 import { getIsoWeekNumber } from '@/utils/date'
@@ -67,6 +67,7 @@ type ActivityState = ActivityDef & {
   status: ActivityStatus
   proofUrl?: string
   notes?: string
+  hasInteracted?: boolean
 }
 
 interface JourneyConfig {
@@ -205,12 +206,13 @@ const WeeklyChecklistPage: React.FC = () => {
   const persistChecklist = async (updatedActivities: ActivityState[]) => {
     if (!user) return
     const checklistState = removeUndefinedFields({
-      activities: updatedActivities.map(({ id, status, proofUrl, notes }) =>
+      activities: updatedActivities.map(({ id, status, proofUrl, notes, hasInteracted }) =>
         removeUndefinedFields({
           id,
           status,
           proofUrl,
           notes,
+          hasInteracted,
         }),
       ),
       updatedAt: serverTimestamp(),
@@ -486,9 +488,15 @@ const WeeklyChecklistPage: React.FC = () => {
       }
 
       // UI optimistically updates
-      setActivities(prev =>
-        prev.map(act => (act.id === activity.id ? { ...act, status: nextStatus } : act))
-      );
+      setActivities(prev => {
+        const nextActivities = prev.map(act =>
+          act.id === activity.id
+            ? { ...act, status: nextStatus, hasInteracted: true }
+            : act,
+        )
+        void persistChecklist(nextActivities)
+        return nextActivities
+      });
     } catch (error) {
       console.error("Failed to update activity:", error);
       toast({
@@ -556,7 +564,13 @@ const WeeklyChecklistPage: React.FC = () => {
       await persistChecklist(
         activities.map(activity =>
           activity.id === proofModal.activity?.id
-            ? { ...activity, status: 'pending' as ActivityStatus }
+            ? {
+              ...activity,
+              status: 'pending' as ActivityStatus,
+              proofUrl: proofModal.activity?.proofUrl,
+              notes: proofModal.activity?.notes,
+              hasInteracted: true,
+            }
             : activity,
         ),
       )
@@ -564,7 +578,13 @@ const WeeklyChecklistPage: React.FC = () => {
       setActivities(prev =>
         prev.map(activity =>
           activity.id === proofModal.activity?.id
-            ? { ...activity, status: 'pending', proofUrl: proofModal.activity?.proofUrl, notes: proofModal.activity?.notes }
+            ? {
+              ...activity,
+              status: 'pending',
+              proofUrl: proofModal.activity?.proofUrl,
+              notes: proofModal.activity?.notes,
+              hasInteracted: true,
+            }
             : activity,
         ),
       )
@@ -1018,29 +1038,36 @@ const WeeklyChecklistPage: React.FC = () => {
             </Text>
           </Stack>
         ) : (
-          <HStack spacing={3}>
-            <Button
-              colorScheme="primary"
-              variant={activity.status === 'completed' || activity.status === 'pending' ? 'solid' : 'outline'}
-              isDisabled={yesDisabled}
-              onClick={() =>
-                requiresPartnerApproval
-                  ? openProofModal(activity)
-                  : handleActivityUpdate(activity, 'completed')
-              }
-            >
-              Yes
-            </Button>
-            <Button
-              variant="outline"
-              borderColor="border.strong"
-              color="text.primary"
-              isDisabled={noDisabled}
-              onClick={() => handleActivityUpdate(activity, 'not_started')}
-            >
-              No
-            </Button>
-          </HStack>
+          <Stack spacing={2} align="flex-start">
+            <HStack spacing={3}>
+              <Button
+                colorScheme="primary"
+                variant={activity.status === 'completed' || activity.status === 'pending' ? 'solid' : 'outline'}
+                isDisabled={yesDisabled}
+                onClick={() =>
+                  requiresPartnerApproval
+                    ? openProofModal(activity)
+                    : handleActivityUpdate(activity, 'completed')
+                }
+              >
+                Yes
+              </Button>
+              <Button
+                variant="outline"
+                borderColor="border.strong"
+                color="text.primary"
+                isDisabled={noDisabled}
+                onClick={() => handleActivityUpdate(activity, 'not_started')}
+              >
+                No
+              </Button>
+            </HStack>
+            {activity.hasInteracted && (
+              <Text fontSize="sm" color="text.muted">
+                Selection locked. Contact support to make changes.
+              </Text>
+            )}
+          </Stack>
         )}
       </Box>
     )
