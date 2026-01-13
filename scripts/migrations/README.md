@@ -2,18 +2,6 @@
 
 This directory contains migration scripts for updating the Firestore database schema.
 
-## Migration: Copy legacy companies to organizations
-
-### File: `migrate-companies-to-organizations.mjs`
-
-Copies documents from the legacy `companies` collection into `organizations` when an organization document is missing. The script is idempotent and will skip organizations that already exist.
-
-### Running the Migration
-
-```bash
-node scripts/migrations/migrate-companies-to-organizations.mjs
-```
-
 ## Migration: Add Role-Based Login Fields
 
 ### File: `add-role-based-fields.mjs`

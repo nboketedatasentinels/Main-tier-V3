@@ -71,11 +71,9 @@ import {
   where,
 } from 'firebase/firestore'
 import { db } from '@/services/firebase'
-import { validateUserOrganizationAccess, type OrganizationValidationResult } from '@/services/organizationValidationService'
 import { useAuth } from '@/hooks/useAuth'
 import { StartChallengeModal } from '@/components/modals/StartChallengeModal'
 import { removeUndefinedFields } from '@/utils/firestore'
-import { resolveUserOrganizationId } from '@/utils/organizationResolution'
 
 // Types
 type PeerProfile = {
@@ -150,8 +148,6 @@ export const PeerConnectPage: React.FC = () => {
   const weekRange = useWeekRange()
   const challengeModal = useDisclosure()
   const sessionModal = useDisclosure()
-  const organizationResolution = useMemo(() => resolveUserOrganizationId(profile), [profile])
-  const [organizationValidation, setOrganizationValidation] = useState<OrganizationValidationResult | null>(null)
 
   const [availablePeers, setAvailablePeers] = useState<PeerProfile[]>([])
   const [weeklyMatch, setWeeklyMatch] = useState<WeeklyMatch | null>(null)
@@ -173,8 +169,6 @@ export const PeerConnectPage: React.FC = () => {
   const [loadingPeers, setLoadingPeers] = useState(false)
   const [loadingSessions, setLoadingSessions] = useState(false)
   const [preselectedUser, setPreselectedUser] = useState<PreselectedUser | null>(null)
-  const resolvedOrganizationCode = organizationValidation?.organizationCode ?? organizationResolution.organizationCode
-  const resolvedOrganizationName = organizationValidation?.organizationName ?? profile?.companyName ?? null
 
   const fetchWeeklyMatch = useCallback(async () => {
     if (!user || !profile) return
@@ -278,57 +272,18 @@ export const PeerConnectPage: React.FC = () => {
   }
 
   useEffect(() => {
-    let isMounted = true
-
-    if (!organizationResolution.organizationId && !organizationResolution.organizationCode) {
-      setOrganizationValidation(null)
-      return () => {
-        isMounted = false
-      }
-    }
-
-    validateUserOrganizationAccess({
-      organizationId: organizationResolution.organizationId,
-      organizationCode: organizationResolution.organizationCode,
-    })
-      .then((result) => {
-        if (isMounted) {
-          setOrganizationValidation(result)
-        }
-      })
-      .catch((error) => {
-        if (isMounted) {
-          setOrganizationValidation({
-            valid: false,
-            errorCode: 'ORG_NOT_FOUND',
-            message: error instanceof Error ? error.message : 'Organization validation failed.',
-          })
-        }
-      })
-
-    return () => {
-      isMounted = false
-    }
-  }, [organizationResolution])
-
-  useEffect(() => {
     const fetchPeers = async () => {
       if (!profile) return
       setLoadingPeers(true)
       try {
-        if (organizationValidation && !organizationValidation.valid) {
+        if (!profile.companyCode) {
           setAvailablePeers([])
           return
         }
-        if (!resolvedOrganizationCode) {
-          setAvailablePeers([])
-          return
-        }
-        const normalizedCode = resolvedOrganizationCode.trim().toUpperCase()
         const peersRef = collection(db, 'profiles')
         const peerQuery = query(
           peersRef,
-          where('companyCode', '==', normalizedCode),
+          where('companyCode', '==', profile.companyCode || ''),
           orderBy('firstName', 'asc')
         )
         const snapshot = await getDocs(peerQuery)
@@ -366,7 +321,7 @@ export const PeerConnectPage: React.FC = () => {
       }
     }
     fetchPeers()
-  }, [organizationValidation, profile, resolvedOrganizationCode, toast])
+  }, [profile, toast])
 
   useEffect(() => {
     fetchWeeklyMatch()
@@ -955,56 +910,36 @@ export const PeerConnectPage: React.FC = () => {
                         </Center>
                       ) : (
                         <>
-                          {organizationValidation && !organizationValidation.valid ? (
+                          {availablePeers.slice(0, 4).map((peer) => (
+                            <Flex key={peer.id} align="center" justify="space-between" p={3} borderRadius="lg" border="1px solid" borderColor="border.subtle">
+                              <HStack spacing={3}>
+                                <Avatar name={peer.name} src={peer.avatarUrl} size="sm" />
+                                <Stack spacing={0}>
+                                  <Text fontWeight="semibold" color="brand.text">
+                                    {peer.name}
+                                  </Text>
+                                  <Text fontSize="sm" color="brand.subtleText">
+                                    {peer.email}
+                                  </Text>
+                                </Stack>
+                              </HStack>
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                leftIcon={<Trophy size={14} />}
+                                onClick={() => {
+                                  setPreselectedUser(peer)
+                                  challengeModal.onOpen()
+                                }}
+                              >
+                                Challenge
+                              </Button>
+                            </Flex>
+                          ))}
+                          {!availablePeers.length && (
                             <Text fontSize="sm" color="brand.subtleText">
-                              {organizationValidation.message ||
-                                'We could not verify your organization. Please contact your administrator.'}
+                              No peers found in your organisation yet. Invite teammates so you can start challenges and sessions.
                             </Text>
-                          ) : !resolvedOrganizationCode ? (
-                            <Text fontSize="sm" color="brand.subtleText">
-                              Your account is not linked to an organization yet. Connect with an administrator to enable peer matching.
-                            </Text>
-                          ) : (
-                            <>
-                              {availablePeers.slice(0, 4).map((peer) => (
-                                <Flex key={peer.id} align="center" justify="space-between" p={3} borderRadius="lg" border="1px solid" borderColor="border.subtle">
-                                  <HStack spacing={3}>
-                                    <Avatar name={peer.name} src={peer.avatarUrl} size="sm" />
-                                    <Stack spacing={0}>
-                                      <Text fontWeight="semibold" color="brand.text">
-                                        {peer.name}
-                                      </Text>
-                                      <Text fontSize="sm" color="brand.subtleText">
-                                        {peer.email}
-                                      </Text>
-                                    </Stack>
-                                  </HStack>
-                                  <Button
-                                    size="sm"
-                                    variant="outline"
-                                    leftIcon={<Trophy size={14} />}
-                                    onClick={() => {
-                                      setPreselectedUser(peer)
-                                      challengeModal.onOpen()
-                                    }}
-                                  >
-                                    Challenge
-                                  </Button>
-                                </Flex>
-                              ))}
-                              {!availablePeers.length && (
-                                <Text fontSize="sm" color="brand.subtleText">
-                                  {resolvedOrganizationName
-                                    ? `0 peers found for ${resolvedOrganizationName}. Invite teammates so you can start challenges and sessions.`
-                                    : 'No peers found in your organisation yet. Invite teammates so you can start challenges and sessions.'}
-                                </Text>
-                              )}
-                              {availablePeers.length > 0 && (
-                                <Text fontSize="xs" color="brand.subtleText">
-                                  {availablePeers.length} peer{availablePeers.length === 1 ? '' : 's'} found
-                                </Text>
-                              )}
-                            </>
                           )}
                         </>
                       )}

@@ -258,7 +258,7 @@ export const updateUser = async (userId: string, updates: Partial<ManagedUserRec
 }
 
 export const fetchEngagementRoster = async (): Promise<EngagementRosterEntry[]> => {
-  const [engagementSnapshot, usersSnapshot, organizationsSnapshot] = await Promise.all([
+  const [engagementSnapshot, usersSnapshot, companiesSnapshot] = await Promise.all([
     getDocs(engagementCollection),
     getDocs(usersCollection),
     getDocs(organizationsCollection),
@@ -268,7 +268,7 @@ export const fetchEngagementRoster = async (): Promise<EngagementRosterEntry[]> 
   usersSnapshot.docs.forEach((docSnap) => userIndex.set(docSnap.id, mapUser(docSnap)))
 
   const companyIndex = new Map<string, { name?: string; code?: string }>()
-  organizationsSnapshot.docs.forEach((docSnap) => {
+  companiesSnapshot.docs.forEach((docSnap) => {
     const data = docSnap.data() as { name?: string; code?: string }
     companyIndex.set(docSnap.id, data)
   })
