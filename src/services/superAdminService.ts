@@ -344,14 +344,6 @@ export const deleteOrganization = async (id: string) => {
   await deleteDoc(orgRef)
 }
 
-export const assignPartner = async (id: string, partnerId: string | null) => {
-  const orgRef = doc(db, ORG_COLLECTION, id)
-  await updateDoc(orgRef, {
-    partnerId,
-    updatedAt: serverTimestamp(),
-  })
-}
-
 export const fetchEngagementRiskAggregates = async (): Promise<EngagementRiskAggregate> => {
   const snapshot = await getDocs(engagementCollection)
   const byRisk: Record<string, number> = {}

@@ -13,11 +13,12 @@ import {
   orderBy,
   QuerySnapshot,
   query,
+  runTransaction,
   serverTimestamp,
   updateDoc,
   where,
 } from 'firebase/firestore'
-import { db } from './firebase'
+import { auth, db } from './firebase'
 import { ORG_COLLECTION } from '@/constants/organizations'
 import { Organization } from '@/types'
 import {
@@ -41,6 +42,19 @@ const orgCollection = collection(db, ORG_COLLECTION)
 const coursesCollection = collection(db, 'courses')
 const usersCollection = collection(db, 'users')
 const adminActivityCollection = collection(db, 'admin_activity_log')
+
+export type LeadershipRole = 'mentor' | 'ambassador' | 'partner'
+
+const leadershipRoleConfig: Record<LeadershipRole, { field: keyof OrganizationRecord; requiredRole: string }> = {
+  mentor: { field: 'assignedMentorId', requiredRole: 'mentor' },
+  ambassador: { field: 'assignedAmbassadorId', requiredRole: 'ambassador' },
+  partner: { field: 'transformationPartnerId', requiredRole: 'partner' },
+}
+
+const assertLeadershipRole = (role: string): role is LeadershipRole =>
+  role === 'mentor' || role === 'ambassador' || role === 'partner'
+
+const getActorId = () => auth.currentUser?.uid || 'system'
 
 type OrganizationAccessAttemptPayload = {
   userId: string
@@ -210,8 +224,121 @@ export const fetchAmbassadors = async (): Promise<OrganizationLead[]> => {
 }
 
 export const fetchPartners = async (): Promise<OrganizationLead[]> => {
-  const snapshot = await getDocs(query(usersCollection, where('role', 'in', ['partner', 'admin'])))
+  const snapshot = await getDocs(query(usersCollection, where('role', '==', 'partner')))
   return snapshot.docs.map(buildLead)
+}
+
+const validateLeadershipIds = (organizationId: string, userId: string, role: LeadershipRole) => {
+  if (!organizationId?.trim()) throw new Error('Organization is required.')
+  if (!userId?.trim()) throw new Error('User ID is required.')
+  if (!assertLeadershipRole(role)) throw new Error('Invalid leadership role.')
+}
+
+const buildLeadershipAuditEntry = (params: {
+  action: string
+  organizationId: string
+  userId?: string | null
+  role: LeadershipRole
+  actorId: string
+  previousUserId?: string | null
+}) => ({
+  action: params.action,
+  organizationId: params.organizationId,
+  userId: params.userId ?? null,
+  adminId: params.actorId,
+  createdAt: serverTimestamp(),
+  metadata: {
+    role: params.role,
+    assignedUserId: params.userId ?? null,
+    previousUserId: params.previousUserId ?? null,
+  },
+})
+
+const assignLeadershipRole = async (organizationId: string, userId: string, role: LeadershipRole) => {
+  validateLeadershipIds(organizationId, userId, role)
+  const actorId = getActorId()
+  const roleConfig = leadershipRoleConfig[role]
+  const organizationRef = doc(db, ORG_COLLECTION, organizationId)
+  const userRef = doc(usersCollection, userId)
+  const auditRef = doc(adminActivityCollection)
+
+  await runTransaction(db, async (transaction) => {
+    const [organizationSnap, userSnap] = await Promise.all([
+      transaction.get(organizationRef),
+      transaction.get(userRef),
+    ])
+    if (!organizationSnap.exists()) {
+      throw new Error('Organization record not found.')
+    }
+    if (!userSnap.exists()) {
+      throw new Error('User record not found.')
+    }
+
+    const userData = userSnap.data() as { role?: string }
+    if (userData.role !== roleConfig.requiredRole) {
+      throw new Error(`User role must be ${roleConfig.requiredRole}.`)
+    }
+
+    transaction.update(organizationRef, {
+      [roleConfig.field]: userId,
+      leadershipUpdatedAt: serverTimestamp(),
+      leadershipUpdatedBy: actorId,
+    })
+    transaction.set(
+      auditRef,
+      buildLeadershipAuditEntry({
+        action: 'leadership_assigned',
+        organizationId,
+        userId,
+        role,
+        actorId,
+        previousUserId: (organizationSnap.data() as OrganizationRecord)[roleConfig.field] as string | null,
+      }),
+    )
+  })
+}
+
+export const assignMentorToOrganization = async (organizationId: string, mentorId: string) =>
+  assignLeadershipRole(organizationId, mentorId, 'mentor')
+
+export const assignAmbassadorToOrganization = async (organizationId: string, ambassadorId: string) =>
+  assignLeadershipRole(organizationId, ambassadorId, 'ambassador')
+
+export const assignPartnerToOrganization = async (organizationId: string, partnerId: string) =>
+  assignLeadershipRole(organizationId, partnerId, 'partner')
+
+export const unassignLeadershipRole = async (organizationId: string, role: string) => {
+  if (!organizationId?.trim()) throw new Error('Organization is required.')
+  if (!assertLeadershipRole(role)) throw new Error('Invalid leadership role.')
+  const actorId = getActorId()
+  const roleConfig = leadershipRoleConfig[role]
+  const organizationRef = doc(db, ORG_COLLECTION, organizationId)
+  const auditRef = doc(adminActivityCollection)
+
+  await runTransaction(db, async (transaction) => {
+    const organizationSnap = await transaction.get(organizationRef)
+    if (!organizationSnap.exists()) {
+      throw new Error('Organization record not found.')
+    }
+    const previousUserId = (organizationSnap.data() as OrganizationRecord)[roleConfig.field] as string | null
+
+    transaction.update(organizationRef, {
+      [roleConfig.field]: null,
+      leadershipUpdatedAt: serverTimestamp(),
+      leadershipUpdatedBy: actorId,
+    })
+    transaction.set(
+      auditRef,
+      buildLeadershipAuditEntry({
+        action: 'leadership_unassigned',
+        organizationId,
+        userId: null,
+        role,
+        actorId,
+        previousUserId,
+      }),
+    )
+  })
 }
 
 export const fetchOrganizationDetails = async (organizationId: string): Promise<OrganizationRecord | null> => {

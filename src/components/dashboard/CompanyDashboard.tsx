@@ -60,6 +60,7 @@ import {
 } from 'firebase/firestore'
 import { db } from '@/services/firebase'
 import { useAuth } from '@/hooks/useAuth'
+import { useOrganizationLeadership } from '@/hooks/useOrganizationLeadership'
 import { isFreeUser } from '@/utils/membership'
 
 interface WeeklyAggregation {
@@ -74,17 +75,10 @@ interface WeeklyAggregation {
   peopleImpactedChange: number
 }
 
-interface Assignment {
-  ambassador?: {
-    name: string
-    available?: boolean
-    contact?: string
-  }
-  mentor?: {
-    name: string
-    available?: boolean
-    calendar?: string
-  }
+interface SupportLeadSummary {
+  name: string
+  email?: string
+  availabilityStatus?: string
 }
 
 interface ChecklistItem {
@@ -151,6 +145,26 @@ const normalizeTransactionDate = (value?: unknown): Date | null => {
   return Number.isNaN(dateValue.getTime()) ? null : dateValue
 }
 
+const buildSupportLead = (
+  profile?: {
+    fullName?: string
+    firstName?: string
+    lastName?: string
+    email?: string
+    availabilityStatus?: string
+  } | null,
+): SupportLeadSummary | null => {
+  if (!profile) return null
+  const name = profile.fullName || `${profile.firstName ?? ''} ${profile.lastName ?? ''}`.trim() || profile.email || 'Unknown'
+  return {
+    name,
+    email: profile.email,
+    availabilityStatus: profile.availabilityStatus,
+  }
+}
+
+const isLeadAvailable = (status?: string) => status?.toLowerCase().includes('available')
+
 const couponLink =
   'https://www.t4leader.com/challenge-page/transformational-leadership?programId=d4e58ca0-f0e6-4f12-b2a8-9dc5fcf6e335'
 
@@ -205,14 +219,16 @@ export const CompanyDashboard: React.FC = () => {
     }),
   )
 
-  const { data: assignments } = useRealtimeCollection<Assignment>(
-    'user_assignments',
-    profile?.id ? [where('userId', '==', profile.id), limit(1)] : [],
-    (_, data) => ({
-      ambassador: data.ambassador,
-      mentor: data.mentor,
+  const { profiles: leadershipProfiles, loading: leadershipLoading, errors: leadershipErrors } =
+    useOrganizationLeadership(profile?.companyId)
+  const assignment = useMemo(
+    () => ({
+      ambassador: buildSupportLead(leadershipProfiles.ambassador),
+      mentor: buildSupportLead(leadershipProfiles.mentor),
     }),
+    [leadershipProfiles.ambassador, leadershipProfiles.mentor],
   )
+  const supportErrorMessage = leadershipErrors.organization
 
   const { data: checklistItems, loading: checklistLoading } = useRealtimeCollection<ChecklistItem>(
     'weekly_checklist',
@@ -481,20 +497,32 @@ export const CompanyDashboard: React.FC = () => {
                 Support Team
               </Text>
               <VStack align="stretch" spacing={4}>
+                {leadershipLoading && (
+                  <Text fontSize="sm" color="gray.500">
+                    Loading support team...
+                  </Text>
+                )}
+                {supportErrorMessage && (
+                  <Text fontSize="sm" color="red.500">
+                    {supportErrorMessage}
+                  </Text>
+                )}
                 <Box>
                   <HStack justify="space-between" mb={1}>
                     <Text fontSize="sm" color="gray.500" fontWeight="bold">
                       Ambassador Status
                     </Text>
-                    {assignment?.ambassador?.available && <Badge colorScheme="green">Available</Badge>}
+                    {isLeadAvailable(assignment.ambassador?.availabilityStatus) && (
+                      <Badge colorScheme="green">Available</Badge>
+                    )}
                   </HStack>
                   <Text fontWeight="semibold">
                     {assignment?.ambassador?.name || 'No ambassador assigned'}
                   </Text>
-                  {assignment?.ambassador?.contact && (
+                  {assignment?.ambassador?.email && (
                     <Button
                       as={Link}
-                      href={`mailto:${assignment.ambassador.contact}`}
+                      href={`mailto:${assignment.ambassador.email}`}
                       leftIcon={<Mail size={16} />}
                       size="sm"
                       variant="outline"
@@ -510,18 +538,19 @@ export const CompanyDashboard: React.FC = () => {
                     <Text fontSize="sm" color="gray.500" fontWeight="bold">
                       Mentor
                     </Text>
-                    {assignment?.mentor?.available && <Badge colorScheme="green">Available</Badge>}
+                    {isLeadAvailable(assignment.mentor?.availabilityStatus) && (
+                      <Badge colorScheme="green">Available</Badge>
+                    )}
                   </HStack>
                   <Text fontWeight="semibold">{assignment?.mentor?.name || 'No mentor assigned'}</Text>
-                {assignment?.mentor?.calendar && (
-                  <Button
-                    as={Link}
-                    href={assignment.mentor.calendar}
-                    leftIcon={<CalendarClock size={16} />}
+                  {assignment?.mentor?.email && (
+                    <Button
+                      as={Link}
+                      href="/app/leadership-council"
+                      leftIcon={<CalendarClock size={16} />}
                       size="sm"
                       variant="outline"
                       mt={2}
-                      target="_blank"
                     >
                       Schedule
                     </Button>
