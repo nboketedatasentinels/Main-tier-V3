@@ -1,6 +1,7 @@
 // Import and re-export role types and values
 import { UserRole, ALL_STANDARD_ROLES } from './roles';
 import type { StandardRole, AllRoles } from './roles';
+import { JourneyType } from '@/config/pointsConfig';
 export * from './admin'
 export * from './tutorials'
 
@@ -73,6 +74,10 @@ export interface UserProfile {
   timezone?: string
   availabilityStatus?: string
   notes?: string
+  matchRefreshPreference?: 'weekly' | 'biweekly' | 'on-demand' | 'disabled'
+  preferredMatchDay?: number
+  matchNotificationPreference?: 'email' | 'in_app' | 'both'
+  lastMatchRefreshDate?: string
 
   // Leadership relations
   mentorId?: string
@@ -133,6 +138,9 @@ export interface Organization {
   memberCount: number
   settings?: Record<string, unknown>
   transformation_partner_id?: string | null
+  journeyType?: JourneyType
+  programDurationWeeks?: number
+  cohortStartDate?: string
 }
 
 export interface PrivacySettings {
@@ -140,8 +148,6 @@ export interface PrivacySettings {
   allowPeerMatching: boolean
   shareImpactPublicly: boolean
 }
-
-import { JourneyType } from "@/config/pointsConfig";
 
 export interface Journey {
   id: string

@@ -50,38 +50,14 @@ import { SurfaceCard } from '@/components/primitives/SurfacePrimitives'
 import { IoradTutorialModal } from '@/components/modals/IoradTutorialModal'
 import { checkTutorialCompletion, markTutorialComplete } from '@/services/tutorialService'
 import { ORG_COLLECTION } from '@/constants/organizations'
+import {
+  JOURNEY_LABELS,
+  JOURNEY_MONTH_COUNTS,
+  MONTH_BASED_JOURNEYS,
+  resolveJourneyType,
+} from '@/utils/journeyType'
 
 const DEFAULT_WEEKLY_TARGET = JOURNEY_META['6W'].weeklyTarget
-
-const JOURNEY_LABELS: Record<JourneyType, string> = {
-  '4W': '4-Week Intro',
-  '6W': '6-Week Full',
-  '3M': '3-Month Program',
-  '6M': '6-Month Program',
-  '9M': '9-Month Program',
-  '12M': '12-Month Program',
-}
-
-const MONTH_BASED_JOURNEYS: JourneyType[] = ['3M', '6M', '9M', '12M']
-
-const JOURNEY_MONTH_COUNTS: Record<JourneyType, number> = {
-  '4W': 1,
-  '6W': 1,
-  '3M': 3,
-  '6M': 6,
-  '9M': 9,
-  '12M': 12,
-}
-
-const journeyTypeFromDurationWeeks = (weeks?: number | null): JourneyType | null => {
-  if (!weeks) return null
-  if (weeks <= 4) return '4W'
-  if (weeks <= 6) return '6W'
-  if (weeks <= 12) return '3M'
-  if (weeks <= 24) return '6M'
-  if (weeks <= 36) return '9M'
-  return '12M'
-}
 
 type ActivityStatus = 'not_started' | 'pending' | 'completed'
 
@@ -358,10 +334,11 @@ const WeeklyChecklistPage: React.FC = () => {
           const programDurationWeeks = Number.isNaN(durationNumber)
             ? orgData?.programDurationWeeks ?? null
             : orgData?.programDurationWeeks ?? (durationNumber ? durationNumber * 4 : null);
-          orgJourneyType =
-            orgData?.journeyType ??
-            journeyTypeFromDurationWeeks(programDurationWeeks) ??
-            null;
+          orgJourneyType = resolveJourneyType({
+            journeyType: orgData?.journeyType,
+            programDurationWeeks,
+            programDuration: durationNumber,
+          })
         }
       }
 

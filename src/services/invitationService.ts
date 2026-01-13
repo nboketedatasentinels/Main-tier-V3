@@ -16,6 +16,7 @@ import {
   InvitationResultEntry,
   OrganizationRecord,
 } from '@/types/admin'
+import { normalizeEmail } from '@/utils/email'
 
 const invitationsCollection = collection(db, 'invitations')
 const usersCollection = collection(db, 'users')
@@ -46,7 +47,8 @@ export const createInvitation = async (data: {
 }
 
 const findExistingUserByEmail = async (email: string) => {
-  const snapshot = await getDocs(query(usersCollection, where('email', '==', email)))
+  const normalizedEmail = normalizeEmail(email)
+  const snapshot = await getDocs(query(usersCollection, where('email', '==', normalizedEmail)))
   if (snapshot.empty) return null
   const docSnap = snapshot.docs[0]
   return { id: docSnap.id, ...(docSnap.data() as Partial<OrganizationRecord>) }
@@ -55,7 +57,8 @@ const findExistingUserByEmail = async (email: string) => {
 const createOrUpdateUser = async (
   payload: Omit<InvitationPayload, 'method' | 'organizationId'> & { organizationId: string },
 ) => {
-  const existing = payload.email ? await findExistingUserByEmail(payload.email) : null
+  const normalizedEmail = payload.email ? normalizeEmail(payload.email) : undefined
+  const existing = normalizedEmail ? await findExistingUserByEmail(normalizedEmail) : null
 
   if (existing?.id) {
     const userRef = doc(db, 'users', existing.id)
@@ -68,7 +71,7 @@ const createOrUpdateUser = async (
 
   const docRef = await addDoc(usersCollection, {
     name: payload.name,
-    email: payload.email,
+    email: normalizedEmail,
     role: payload.role,
     assignedOrganizations: [payload.organizationId],
     createdAt: serverTimestamp(),
@@ -86,10 +89,11 @@ export const inviteUsersBulk = async (
     try {
       if (invitation.method === 'email') {
         if (!invitation.email) throw new Error('Email is required for email invitations')
-        const userId = await createOrUpdateUser(invitation)
+        const normalizedEmail = normalizeEmail(invitation.email)
+        const userId = await createOrUpdateUser({ ...invitation, email: normalizedEmail })
         await createInvitation({
           name: invitation.name,
-          email: invitation.email,
+          email: normalizedEmail,
           role: invitation.role,
           method: 'email',
           organizationId: context.organizationId,
@@ -97,17 +101,18 @@ export const inviteUsersBulk = async (
         results.push({
           id: userId,
           name: invitation.name,
-          email: invitation.email,
+          email: normalizedEmail,
           role: invitation.role,
           method: 'email',
           status: 'success',
           message: 'Invitation email queued',
         })
       } else {
+        const normalizedEmail = invitation.email ? normalizeEmail(invitation.email) : undefined
         const code = generateOneTimeCode()
         await createInvitation({
           name: invitation.name,
-          email: invitation.email,
+          email: normalizedEmail,
           role: invitation.role,
           method: 'one_time_code',
           organizationId: context.organizationId,
@@ -116,7 +121,7 @@ export const inviteUsersBulk = async (
         results.push({
           id: `${invitation.name}-${code}`,
           name: invitation.name,
-          email: invitation.email,
+          email: normalizedEmail,
           role: invitation.role,
           method: 'one_time_code',
           status: 'success',
