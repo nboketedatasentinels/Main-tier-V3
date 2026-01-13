@@ -6,7 +6,6 @@ export type ActivityId =
   | "webinar"
   | "webinar_workbook"
   | "peer_matching"
-  | "impact_log"
   | "book_club"
   | "peer_to_peer"
   | "linkedin"
@@ -100,19 +99,6 @@ export const FULL_ACTIVITIES: ActivityDef[] = [
     category: "Networking",
     flexibleWeeks: true,
     frequencyNote: "Earn up to 1,000 points per week; complete in any week.",
-  },
-  {
-    id: "impact_log",
-    baseId: "impact_log",
-    title: "Impact Log Entry",
-    description: "Document your professional impact. Points automatically awarded when you submit an entry.",
-    points: 1000,
-    maxPerMonth: 2,
-    week: 1,
-    category: "Reflection",
-    requiresApproval: false,
-    verification: "honor",
-    flexibleWeeks: true,
   },
   {
     id: "book_club",

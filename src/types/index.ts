@@ -194,7 +194,6 @@ export enum ActivityType {
   WEBINAR_ATTEND = 'webinar_attend',
   WEBINAR_WORKBOOK = 'webinar_workbook',
   PEER_MATCHING = 'peer_matching',
-  IMPACT_LOG = 'impact_log',
   BOOK_CLUB = 'book_club',
   PEER_TO_PEER_MONTHLY = 'peer_to_peer_monthly',
   LINKEDIN_ENGAGEMENT = 'linkedin_engagement',

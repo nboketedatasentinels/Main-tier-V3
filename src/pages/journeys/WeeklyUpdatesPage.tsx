@@ -38,7 +38,6 @@ import {
 import { AlertTriangle, CheckCircle, ChevronLeft, ChevronRight, Lock, Plus, ShieldCheck } from 'lucide-react'
 import { addDoc, collection, doc, getDoc, getDocs, onSnapshot, query, serverTimestamp, setDoc, where } from 'firebase/firestore'
 import { addDays, format } from 'date-fns'
-import { useNavigate } from 'react-router-dom'
 import { removeUndefinedFields } from '@/utils/firestore'
 import { getIsoWeekNumber } from '@/utils/date'
 import { db } from '@/services/firebase'
@@ -93,7 +92,7 @@ interface MonthMilestone {
 
 interface WeekMilestone {
   week: number;
-  status: 'completed' | 'current' | 'locked';
+  status: 'completed' | 'current' | 'locked' | 'incomplete';
 }
 
 const rhythmItems = [
@@ -110,7 +109,6 @@ const weeklyGuidance: Record<number, string[]> = {
   1: [
     'Introduce yourself with forum posts, comments, and likes',
     'Share a progress update publicly',
-    'Submit your weekly Impact Log',
   ],
   2: [
     'Complete your core leadership modules',
@@ -184,9 +182,9 @@ const WeeklyChecklistPage: React.FC = () => {
 
   const { isOpen, onOpen, onClose } = useDisclosure()
   const toast = useToast()
-  const navigate = useNavigate()
   const activityRefs = useRef<Record<string, HTMLDivElement | null>>({})
   const [weeklyProgress, setWeeklyProgress] = useState<WeeklyProgress | null>(null)
+  const [allWeeksProgress, setAllWeeksProgress] = useState<WeeklyProgress[]>([])
   const {
     completed: rhythmCompleted,
     toggleItem,
@@ -239,6 +237,12 @@ const WeeklyChecklistPage: React.FC = () => {
     if (!journey) return DEFAULT_WEEKLY_TARGET;
     return JOURNEY_META[journey.journeyType].weeklyTarget;
   }, [journey]);
+
+  const weekProgressByNumber = useMemo(() => {
+    const map = new Map<number, WeeklyProgress>();
+    allWeeksProgress.forEach(week => map.set(week.weekNumber, week));
+    return map;
+  }, [allWeeksProgress]);
 
   const tierLabel = useMemo(() => {
     if (!profile) return 'Member';
@@ -298,27 +302,6 @@ const WeeklyChecklistPage: React.FC = () => {
     [weeklyTarget],
   );
 
-  const getImpactLogDateRange = useCallback(
-    (weekNumber: number) => {
-      let journeyStart: Date | null = profile?.journeyStartDate ? new Date(profile.journeyStartDate) : null
-
-      if (!journeyStart && profile?.currentWeek) {
-        const offsetWeeks = profile.currentWeek - 1
-        journeyStart = addDays(new Date(), -(offsetWeeks * 7))
-      }
-
-      if (!journeyStart) return null
-
-      const weekStart = addDays(journeyStart, (weekNumber - 1) * 7)
-      const weekEnd = addDays(weekStart, 7)
-      return {
-        start: format(weekStart, 'yyyy-MM-dd'),
-        end: format(weekEnd, 'yyyy-MM-dd'),
-      }
-    },
-    [profile?.currentWeek, profile?.journeyStartDate],
-  )
-
   const fetchJourney = useCallback(async () => {
     if (!user || !profile) return;
     try {
@@ -358,42 +341,10 @@ const WeeklyChecklistPage: React.FC = () => {
       const ledgerSnapshot = await getDocs(ledgerQuery);
       const completedActivities = new Set(ledgerSnapshot.docs.map(d => d.data().activityId));
 
-      const impactRange = getImpactLogDateRange(selectedWeek)
-      const hasImpactLog = activityDefs.some(def => def.id === 'impact_log')
-
-      if (impactRange && hasImpactLog) {
-        const impactQuery = query(
-          collection(db, 'impact_logs'),
-          where('userId', '==', user.uid),
-          where('date', '>=', impactRange.start),
-          where('date', '<', impactRange.end),
-        )
-        const impactSnapshot = await getDocs(impactQuery)
-        if (!impactSnapshot.empty) {
-          completedActivities.add('impact_log')
-        }
-      }
-
-      const checklistRef = doc(db, 'checklists', `${user.uid}_${selectedWeek}`)
-      const checklistDoc = await getDoc(checklistRef)
-      const checklistData = checklistDoc.exists() ? checklistDoc.data() : null
-      const persistedActivities = Array.isArray(checklistData?.activities) ? checklistData?.activities : []
-      const checklistMap = new Map(persistedActivities.map(activity => [activity.id, activity]))
-
-      const activityStates: ActivityState[] = activityDefs.map(def => {
-        const persisted = checklistMap.get(def.id)
-        const status = completedActivities.has(def.id)
-          ? 'completed'
-          : (persisted?.status as ActivityStatus | undefined) ?? 'not_started'
-
-        return {
-          ...def,
-          status,
-          hasInteracted: persisted?.hasInteracted ?? completedActivities.has(def.id) ?? false,
-          proofUrl: persisted?.proofUrl,
-          notes: persisted?.notes,
-        }
-      })
+      const activityStates: ActivityState[] = activityDefs.map(def => ({
+        ...def,
+        status: completedActivities.has(def.id) ? 'completed' : 'not_started',
+      }));
 
       setActivities(activityStates);
     } catch (err) {
@@ -431,6 +382,26 @@ const WeeklyChecklistPage: React.FC = () => {
     });
     return () => unsubscribe();
   }, [normalizeWeeklyProgress, selectedWeek, user]);
+
+  useEffect(() => {
+    if (!user || !journey) {
+      setAllWeeksProgress([])
+      return
+    }
+    const progressQuery = query(
+      collection(db, 'weeklyProgress'),
+      where('uid', '==', user.uid),
+      where('weekNumber', '>=', 1),
+      where('weekNumber', '<=', journey.programDurationWeeks),
+    )
+    const unsubscribe = onSnapshot(progressQuery, snapshot => {
+      const progress = snapshot.docs.map(doc =>
+        normalizeWeeklyProgress(doc.data() as WeeklyProgress & { points_earned?: number; weekly_target?: number }),
+      )
+      setAllWeeksProgress(progress)
+    })
+    return () => unsubscribe()
+  }, [journey, normalizeWeeklyProgress, user])
 
   useEffect(() => {
     if (!user) return
@@ -667,14 +638,16 @@ const WeeklyChecklistPage: React.FC = () => {
 
   const journeyProgress = useMemo(() => {
     if (!journey) {
-      return { weeksCompleted: 0, pct: 0 };
+      return { weeksAtTarget: 0, pct: 0, totalEarned: 0, totalTarget: 0 };
     }
-    const weeksCompleted = Math.max(0, journey.currentWeek - 1);
-    const pct = journey.programDurationWeeks
-      ? Math.min(100, Math.round((weeksCompleted / journey.programDurationWeeks) * 100))
-      : 0;
-    return { weeksCompleted, pct };
-  }, [journey]);
+    const totalTarget = weeklyTarget * journey.programDurationWeeks;
+    const totalEarned = allWeeksProgress.reduce((sum, week) => sum + (week.pointsEarned ?? 0), 0);
+    const pct = totalTarget > 0 ? Math.min(100, Math.round((totalEarned / totalTarget) * 100)) : 0;
+    const weeksAtTarget = allWeeksProgress.filter(
+      week => week.pointsEarned >= (week.weeklyTarget ?? weeklyTarget),
+    ).length;
+    return { weeksAtTarget, pct, totalEarned, totalTarget };
+  }, [allWeeksProgress, journey, weeklyTarget]);
 
   const monthMeta = useCallback(
     (month: number): MonthMilestone => {
@@ -717,8 +690,16 @@ const WeeklyChecklistPage: React.FC = () => {
     const weekMilestones: WeekMilestone[] = !isMonthBasedJourney
       ? Array.from({ length: journey.programDurationWeeks }, (_, idx) => ({
         week: idx + 1,
-        status:
-          idx + 1 < journey.currentWeek ? 'completed' : idx + 1 === journey.currentWeek ? 'current' : 'locked',
+        status: (() => {
+          const weekNumber = idx + 1;
+          const progress = weekProgressByNumber.get(weekNumber);
+          const target = progress?.weeklyTarget ?? weeklyTarget;
+          const isAtTarget = progress ? progress.pointsEarned >= target : false;
+          if (isAtTarget) return 'completed';
+          if (weekNumber === selectedWeek) return 'current';
+          if (weekNumber > journey.currentWeek) return 'locked';
+          return 'incomplete';
+        })(),
       }))
       : [];
 
@@ -736,7 +717,10 @@ const WeeklyChecklistPage: React.FC = () => {
               </Heading>
               <Text color="text.secondary">{overviewLabel}</Text>
               <Text color="text.secondary" fontSize="sm">
-                {journey.programDurationWeeks} total weeks · {journeyProgress.weeksCompleted} weeks completed
+                {journey.programDurationWeeks} total weeks · {journeyProgress.weeksAtTarget} weeks at target
+              </Text>
+              <Text color="text.secondary" fontSize="sm">
+                {journeyProgress.totalEarned.toLocaleString()} of {journeyProgress.totalTarget.toLocaleString()} points earned
               </Text>
             </Stack>
             <Stack spacing={1} align="flex-end">
@@ -772,7 +756,13 @@ const WeeklyChecklistPage: React.FC = () => {
                 <Tag
                   key={`week-${weekItem.week}`}
                   colorScheme={
-                    weekItem.status === 'completed' ? 'green' : weekItem.status === 'current' ? 'teal' : 'gray'
+                    weekItem.status === 'completed'
+                      ? 'green'
+                      : weekItem.status === 'current'
+                        ? 'teal'
+                        : weekItem.status === 'incomplete'
+                          ? 'yellow'
+                          : 'gray'
                   }
                 >
                   <HStack spacing={1}>
@@ -964,9 +954,8 @@ const WeeklyChecklistPage: React.FC = () => {
     const disabled = isWeekLocked
     const requiresPartnerApproval = journey?.isPaid && activity.requiresApproval
     const isHonorBased = !activity.requiresApproval
-    const isAutoTracked = activity.id === 'impact_log'
-    const yesDisabled = disabled || activity.hasInteracted === true
-    const noDisabled = disabled || activity.hasInteracted === true
+    const yesDisabled = disabled || activity.status === 'completed'
+    const noDisabled = disabled || activity.status === 'not_started'
 
     const showProofBadge = requiresPartnerApproval
     const showFreeBadge = activity.isFreeTier && !journey?.isPaid
@@ -1047,11 +1036,6 @@ const WeeklyChecklistPage: React.FC = () => {
             <Text color="text.muted" fontSize="sm">
               Status automatically updated when you submit this activity.
             </Text>
-            {isAutoTracked && (
-              <Button variant="outline" colorScheme="purple" onClick={() => navigate('/app/impact-log')}>
-                Go to Impact Log
-              </Button>
-            )}
           </Stack>
         ) : (
           <Stack spacing={2} align="flex-start">
