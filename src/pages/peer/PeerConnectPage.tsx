@@ -167,10 +167,15 @@ export const PeerConnectPage: React.FC = () => {
   const [formErrors, setFormErrors] = useState<Record<string, string>>({})
   const [participantFilter, setParticipantFilter] = useState('')
   const [loadingPeers, setLoadingPeers] = useState(false)
+  const [loadingSessions, setLoadingSessions] = useState(false)
   const [preselectedUser, setPreselectedUser] = useState<PreselectedUser | null>(null)
 
   const fetchWeeklyMatch = useCallback(async () => {
-    if (!user || !profile || !availablePeers.length) return
+    if (!user || !profile) return
+    if (!availablePeers.length) {
+      setWeeklyMatch(null)
+      return
+    }
     try {
       const matchRef = doc(db, 'peer_weekly_matches', `${user.uid}-${weekRange}`)
       const matchDoc = await getDoc(matchRef)
@@ -189,6 +194,8 @@ export const PeerConnectPage: React.FC = () => {
       if (deterministicPeer) {
         const matchPayload = {
           peerId: deterministicPeer.id,
+          userId: user.uid,
+          weekRange,
           matchReason: deterministicPeer.cohortIdentifier
             ? 'Shared cohort'
             : deterministicPeer.corporateVillageId
@@ -206,6 +213,7 @@ export const PeerConnectPage: React.FC = () => {
 
   const fetchInvitesAndSessions = useCallback(async () => {
     if (!user) return
+    setLoadingSessions(true)
     try {
       const inviteRef = collection(db, 'peer_session_requests')
       const inviteSnapshot = await getDocs(query(inviteRef, where('toUserId', '==', user.uid)))
@@ -235,28 +243,21 @@ export const PeerConnectPage: React.FC = () => {
           peerConfirmed: Boolean(Object.keys(data.confirmations || {}).length > 1),
         }
       })
-      setSessions(
-        mappedSessions.length
-          ? mappedSessions
-          : [
-              {
-                id: 'demo-session',
-                title: 'Weekly Peer Date',
-                scheduledAt: addDays(new Date(), 2),
-                timezone: profile?.timezone || 'America/New_York',
-                platform: 'Zoom',
-                link: 'https://zoom.us/',
-                status: 'pending',
-                confirmationDeadline: addDays(new Date(), 1),
-                youConfirmed: false,
-                peerConfirmed: true,
-              },
-            ]
-      )
+      setSessions(mappedSessions)
     } catch (error) {
       console.error('Error fetching sessions', error)
+      setSessions([])
+      setPendingInvites([])
+      toast({
+        title: 'Unable to load peer sessions',
+        description: 'We could not retrieve invitations or sessions from Firestore. Please try again shortly.',
+        status: 'error',
+        position: 'top',
+      })
+    } finally {
+      setLoadingSessions(false)
     }
-  }, [profile?.timezone, user])
+  }, [toast, user])
 
   const onChallengeCreated = () => {
     fetchWeeklyMatch()
@@ -272,9 +273,13 @@ export const PeerConnectPage: React.FC = () => {
 
   useEffect(() => {
     const fetchPeers = async () => {
-    if (!profile) return
+      if (!profile) return
       setLoadingPeers(true)
       try {
+        if (!profile.companyCode) {
+          setAvailablePeers([])
+          return
+        }
         const peersRef = collection(db, 'profiles')
         const peerQuery = query(
           peersRef,
@@ -303,50 +308,6 @@ export const PeerConnectPage: React.FC = () => {
           })
 
         setAvailablePeers(mappedPeers)
-
-        if (!mappedPeers.length) {
-          setAvailablePeers([
-            {
-              id: 'demo-1',
-              name: 'Alex Transformation',
-              email: 'alex@example.com',
-              timezone: 'America/New_York',
-              interests: 'Product strategy, Communication',
-              goals: 'Grow leadership, Improve communication',
-              companyCode: profile.companyCode ?? undefined,
-              corporateVillageId: profile.corporateVillageId,
-              cohortIdentifier: profile.cohortIdentifier,
-              calendarLink: 'https://cal.com/alex',
-              identityTag: 'Village Captain',
-            },
-            {
-              id: 'demo-2',
-              name: 'Jordan Impact',
-              email: 'jordan@example.com',
-              timezone: 'Europe/London',
-              interests: 'Marketing, Storytelling',
-              goals: 'Improve communication',
-              companyCode: profile.companyCode ?? undefined,
-              corporateVillageId: profile.corporateVillageId,
-              cohortIdentifier: profile.cohortIdentifier,
-              calendarLink: 'https://meet.jit.si/jordan',
-              identityTag: 'Cohort 5',
-            },
-            {
-              id: 'demo-3',
-              name: 'Sam Collaboration',
-              email: 'sam@example.com',
-              timezone: 'Asia/Singapore',
-              interests: 'Leadership, Coaching',
-              goals: 'Grow leadership',
-              companyCode: profile.companyCode ?? undefined,
-              corporateVillageId: profile.corporateVillageId,
-              cohortIdentifier: profile.cohortIdentifier,
-              calendarLink: 'https://cal.com/sam',
-              identityTag: 'People Lead',
-            },
-          ])
-        }
       } catch (error) {
         console.error('Error fetching peers', error)
         toast({
@@ -699,14 +660,6 @@ export const PeerConnectPage: React.FC = () => {
                           >
                             Email your peer
                           </Button>
-                          <Button
-                            leftIcon={<Check size={16} />}
-                            colorScheme="success"
-                            variant="outline"
-                            onClick={() => weeklyMatch && confirmMeeting('demo-session')}
-                          >
-                            Confirm meetup
-                          </Button>
                           {weeklyMatch.peer.calendarLink && (
                             <Button
                               as="a"
@@ -724,7 +677,9 @@ export const PeerConnectPage: React.FC = () => {
                     ) : (
                       <Center py={10} flexDirection="column" gap={3} color="brand.subtleText">
                         <Icon as={AlertCircle} w={5} h={5} color="orange.400" />
-                        <Text>No peer available yet. We are still fetching your organisation pool from Firebase.</Text>
+                        <Text>
+                          No peer match yet. We will generate a weekly match once someone else joins your organisation.
+                        </Text>
                       </Center>
                     )}
                   </Box>
@@ -795,63 +750,80 @@ export const PeerConnectPage: React.FC = () => {
                     </Flex>
 
                     <SimpleGrid columns={{ base: 1, md: 2 }} spacing={4}>
-                      {sessions.map((session) => (
-                            <Box key={session.id} p={4} borderRadius="xl" border="1px solid" borderColor="border.subtle" bg="surface.default" boxShadow="xs">
-                          <HStack justify="space-between" align="flex-start" mb={2}>
-                            <Stack spacing={0}>
-                              <Text fontWeight="semibold" color="brand.text">
-                                {session.title}
-                              </Text>
-                              <Text fontSize="sm" color="brand.subtleText">
-                                {format(session.scheduledAt, 'EEE, MMM d')} • {format(session.scheduledAt, 'p')} {session.timezone}
-                              </Text>
-                            </Stack>
-                            {renderStatusBadge(session.status)}
+                      {loadingSessions ? (
+                        <Center py={6}>
+                          <HStack spacing={2}>
+                            <Spinner size="sm" />
+                            <Text fontSize="sm" color="brand.subtleText">
+                              Loading sessions...
+                            </Text>
                           </HStack>
-                          <HStack spacing={3} color="brand.subtleText" fontSize="sm" mb={3}>
-                            <Icon as={Video} w={4} h={4} />
-                            <Text>{session.platform}</Text>
-                            {session.link && (
-                              <Button as="a" href={session.link} target="_blank" rel="noreferrer" size="xs" colorScheme="primary" variant="ghost">
-                                Join session
+                        </Center>
+                      ) : sessions.length ? (
+                        sessions.map((session) => (
+                              <Box key={session.id} p={4} borderRadius="xl" border="1px solid" borderColor="border.subtle" bg="surface.default" boxShadow="xs">
+                            <HStack justify="space-between" align="flex-start" mb={2}>
+                              <Stack spacing={0}>
+                                <Text fontWeight="semibold" color="brand.text">
+                                  {session.title}
+                                </Text>
+                                <Text fontSize="sm" color="brand.subtleText">
+                                  {format(session.scheduledAt, 'EEE, MMM d')} • {format(session.scheduledAt, 'p')} {session.timezone}
+                                </Text>
+                              </Stack>
+                              {renderStatusBadge(session.status)}
+                            </HStack>
+                            <HStack spacing={3} color="brand.subtleText" fontSize="sm" mb={3}>
+                              <Icon as={Video} w={4} h={4} />
+                              <Text>{session.platform}</Text>
+                              {session.link && (
+                                <Button as="a" href={session.link} target="_blank" rel="noreferrer" size="xs" colorScheme="primary" variant="ghost">
+                                  Join session
+                                </Button>
+                              )}
+                            </HStack>
+                            <HStack spacing={2} mb={3}>
+                              <Badge colorScheme={session.youConfirmed ? 'green' : 'yellow'} variant="subtle">
+                                {session.youConfirmed ? 'You confirmed' : 'Awaiting your confirmation'}
+                              </Badge>
+                              <Badge colorScheme={session.peerConfirmed ? 'green' : 'yellow'} variant="outline">
+                                {session.peerConfirmed ? 'Peer confirmed' : 'Peer pending'}
+                              </Badge>
+                            </HStack>
+                            <Flex gap={2} wrap="wrap">
+                              <Button
+                                leftIcon={<Check size={14} />}
+                                size="sm"
+                                colorScheme="success"
+                                variant={session.youConfirmed ? 'outline' : 'solid'}
+                                onClick={() => confirmMeeting(session.id)}
+                                isDisabled={session.youConfirmed}
+                              >
+                                {session.youConfirmed ? 'Confirmed' : 'Confirm Meeting'}
                               </Button>
-                            )}
-                          </HStack>
-                          <HStack spacing={2} mb={3}>
-                            <Badge colorScheme={session.youConfirmed ? 'green' : 'yellow'} variant="subtle">
-                              {session.youConfirmed ? 'You confirmed' : 'Awaiting your confirmation'}
-                            </Badge>
-                            <Badge colorScheme={session.peerConfirmed ? 'green' : 'yellow'} variant="outline">
-                              {session.peerConfirmed ? 'Peer confirmed' : 'Peer pending'}
-                            </Badge>
-                          </HStack>
-                          <Flex gap={2} wrap="wrap">
-                            <Button
-                              leftIcon={<Check size={14} />}
-                              size="sm"
-                              colorScheme="success"
-                              variant={session.youConfirmed ? 'outline' : 'solid'}
-                              onClick={() => confirmMeeting(session.id)}
-                              isDisabled={session.youConfirmed}
-                            >
-                              {session.youConfirmed ? 'Confirmed' : 'Confirm Meeting'}
-                            </Button>
-                            <Button
-                              leftIcon={<AlarmClockOff size={14} />}
-                              size="sm"
-                              variant="outline"
-                              colorScheme="warning"
-                              onClick={() => reportNoShow(session.id)}
-                              isDisabled={disableNoShow(session)}
-                            >
-                              Report No-Show
-                            </Button>
-                          </Flex>
-                          <Text fontSize="xs" color="brand.subtleText" mt={3}>
-                            Confirmation deadline: {format(session.confirmationDeadline, 'MMM d, p')}
-                          </Text>
-                        </Box>
-                      ))}
+                              <Button
+                                leftIcon={<AlarmClockOff size={14} />}
+                                size="sm"
+                                variant="outline"
+                                colorScheme="warning"
+                                onClick={() => reportNoShow(session.id)}
+                                isDisabled={disableNoShow(session)}
+                              >
+                                Report No-Show
+                              </Button>
+                            </Flex>
+                            <Text fontSize="xs" color="brand.subtleText" mt={3}>
+                              Confirmation deadline: {format(session.confirmationDeadline, 'MMM d, p')}
+                            </Text>
+                          </Box>
+                        ))
+                      ) : (
+                        <Center py={6} flexDirection="column" gap={2} color="brand.subtleText" border="1px dashed" borderColor="border.subtle" borderRadius="xl">
+                          <Icon as={AlarmClockCheck} w={5} h={5} />
+                          <Text fontSize="sm">No sessions scheduled yet.</Text>
+                          <Text fontSize="xs">Create a peer session or wait for an invite from your organisation.</Text>
+                        </Center>
+                      )}
                     </SimpleGrid>
                   </Box>
                 </Stack>
@@ -966,7 +938,7 @@ export const PeerConnectPage: React.FC = () => {
                           ))}
                           {!availablePeers.length && (
                             <Text fontSize="sm" color="brand.subtleText">
-                              Once peers load from Firebase, you'll be able to start challenges instantly.
+                              No peers found in your organisation yet. Invite teammates so you can start challenges and sessions.
                             </Text>
                           )}
                         </>
@@ -987,7 +959,16 @@ export const PeerConnectPage: React.FC = () => {
                         </Badge>
                       </Flex>
                       <Stack spacing={3}>
-                        {sessions.length ? (
+                        {loadingSessions ? (
+                          <Center py={4}>
+                            <HStack spacing={2}>
+                              <Spinner size="sm" />
+                              <Text fontSize="sm" color="brand.subtleText">
+                                Loading sessions...
+                              </Text>
+                            </HStack>
+                          </Center>
+                        ) : sessions.length ? (
                           sessions.map((session) => (
                             <Box key={session.id} p={3} borderRadius="lg" border="1px solid" borderColor="border.subtle">
                               <HStack justify="space-between" align="flex-start" mb={1}>
@@ -1020,9 +1001,10 @@ export const PeerConnectPage: React.FC = () => {
                             </Box>
                           ))
                         ) : (
-                          <Text fontSize="sm" color="brand.subtleText">
-                            Create your first peer session to see it here.
-                          </Text>
+                          <Stack spacing={1} color="brand.subtleText">
+                            <Text fontSize="sm">No sessions yet.</Text>
+                            <Text fontSize="xs">Start a peer session to schedule your first group meetup.</Text>
+                          </Stack>
                         )}
                       </Stack>
                     </Box>
