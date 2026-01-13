@@ -12,6 +12,7 @@ import {
   updateDoc,
 } from 'firebase/firestore'
 import { db } from './firebase'
+import { ORG_COLLECTION } from '@/constants/organizations'
 
 export type ManagedUserRole = 'user' | 'partner' | 'admin' | 'super_admin' | 'team_leader' | 'mentor' | 'ambassador'
 export type MembershipStatus = 'free' | 'paid' | 'inactive'
@@ -88,7 +89,7 @@ export interface EngagementTrendPoint {
 }
 
 const usersCollection = collection(db, 'users')
-const organizationsCollection = collection(db, 'organizations')
+const organizationsCollection = collection(db, ORG_COLLECTION)
 const engagementCollection = collection(db, 'user_engagement_scores')
 const notificationsCollection = collection(db, 'notifications')
 

@@ -9,6 +9,7 @@ import {
   where,
 } from 'firebase/firestore'
 import { db } from '@/services/firebase'
+import { ORG_COLLECTION } from '@/constants/organizations'
 import { UserProfile, UserRole } from '@/types'
 
 export interface CompanyProgramInfo {
@@ -277,7 +278,7 @@ export const listenToCompanyProgram = (
   if (!profile || profile.role !== UserRole.PAID_MEMBER) return null
 
   if (profile.companyId) {
-    const companyRef = doc(db, 'organizations', profile.companyId)
+    const companyRef = doc(db, ORG_COLLECTION, profile.companyId)
     return onSnapshot(
       companyRef,
       snapshot => {
@@ -300,7 +301,7 @@ export const listenToCompanyProgram = (
   }
 
   if (profile.companyCode) {
-    const companyQuery = query(collection(db, 'organizations'), where('code', '==', profile.companyCode))
+    const companyQuery = query(collection(db, ORG_COLLECTION), where('code', '==', profile.companyCode))
     return onSnapshot(
       companyQuery,
       snapshot => {

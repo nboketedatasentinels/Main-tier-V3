@@ -54,7 +54,7 @@ import {
 } from 'firebase/firestore'
 import { format, formatDistanceToNow, isAfter, isValid, parseISO } from 'date-fns'
 import { db } from '@/services/firebase'
-import { validateUserOrganizationAccess, type OrganizationValidationResult } from '@/services/organizationValidationService'
+import { ORG_COLLECTION } from '@/constants/organizations'
 import { useAuth } from '@/hooks/useAuth'
 import { resolveUserOrganizationId } from '@/utils/organizationResolution'
 import { UserProfile } from '@/types'
@@ -587,7 +587,7 @@ export const LeadershipCouncilPage: React.FC = () => {
       }
     }
 
-    const companyRef = doc(db, 'organizations', resolvedOrganizationId)
+    const companyRef = doc(db, ORG_COLLECTION, profile.companyId)
     unsubscribeCompany = onSnapshot(
       companyRef,
       (snapshot) => {

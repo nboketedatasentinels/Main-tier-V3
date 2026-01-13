@@ -31,7 +31,7 @@ import {
 import { collection, query, where, onSnapshot, doc, getDocs, Timestamp, documentId } from 'firebase/firestore'
 import { useAuth } from '@/hooks/useAuth'
 import { db } from '@/services/firebase'
-import { validateUserOrganizationAccess, type OrganizationValidationResult } from '@/services/organizationValidationService'
+import { ORG_COLLECTION } from '@/constants/organizations'
 import { canAccessCourse, FREE_TIER_COURSE_TITLE, isFreeUser } from '@/utils/membership'
 import {
   COURSE_DETAILS_MAPPING,
@@ -420,7 +420,7 @@ export const MyCoursesPage: React.FC = () => {
     }
 
     if (organizationId) {
-      const organizationRef = doc(db, 'organizations', organizationId)
+      const organizationRef = doc(db, ORG_COLLECTION, organizationId)
       const unsubscribe = onSnapshot(
         organizationRef,
         async snapshot => {
@@ -469,8 +469,8 @@ export const MyCoursesPage: React.FC = () => {
       return () => unsubscribe()
     }
 
-    if (organizationCode) {
-      const organizationQuery = query(collection(db, 'organizations'), where('code', '==', organizationCode))
+    if (companyCode) {
+      const organizationQuery = query(collection(db, ORG_COLLECTION), where('code', '==', companyCode))
       const unsubscribe = onSnapshot(
         organizationQuery,
         async snapshot => {
