@@ -33,7 +33,13 @@ const isProfileInContext = (candidate: UserProfile, context: LeaderboardContext 
     case 'admin_all':
       return true
     case 'organization':
-      return Boolean(context.organizationId && candidate.companyId === context.organizationId)
+      if (context.organizationId) {
+        return candidate.companyId === context.organizationId
+      }
+      if (context.organizationCode) {
+        return candidate.companyCode === context.organizationCode
+      }
+      return false
     case 'village':
       return Boolean(context.villageId && candidate.villageId === context.villageId)
     case 'cluster':
