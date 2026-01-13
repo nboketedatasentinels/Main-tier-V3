@@ -109,8 +109,8 @@ const buildCourseFromDoc = (courseId: string, data: Record<string, unknown>): No
   return {
     id: courseId,
     title,
-    description: (data.description || details?.description || 'Description not available.') as string,
-    link: (data.link || details?.link) as string | undefined,
+    description: (details?.description || data.description || 'Description not available.') as string,
+    link: (details?.link || data.link) as string | undefined,
     status: formatStatus(data.status as string | undefined),
     estimatedMinutes: metadata?.estimatedMinutes,
     difficulty: metadata?.difficulty,
