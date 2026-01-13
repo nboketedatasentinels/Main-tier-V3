@@ -94,7 +94,7 @@ export const useLeaderboardData = ({
     const constraints = buildProfilesConstraints(context)
     if (!constraints) {
       setProfiles([])
-      setProfilesLoaded(Boolean(context) && context.type !== 'free')
+      setProfilesLoaded(Boolean(context) && context?.type !== 'free')
       return undefined
     }
 
@@ -113,7 +113,7 @@ export const useLeaderboardData = ({
     const constraints = buildTransactionConstraints(context)
     if (!constraints || context?.type === 'free') {
       setTransactions([])
-      setTransactionsLoaded(Boolean(context) && context.type !== 'free')
+      setTransactionsLoaded(Boolean(context) && context?.type !== 'free')
       return undefined
     }
 

@@ -33,7 +33,7 @@ import { useAuth } from '@/hooks/useAuth'
 import { useOrganizationProgramCourses } from '@/hooks/useOrganizationProgramCourses'
 import { useUserCourseProgress } from '@/hooks/useUserCourseProgress'
 import { db } from '@/services/firebase'
-import { canAccessCourse, FREE_TIER_COURSE_TITLE, isFreeUser } from '@/utils/membership'
+import { canAccessCourse, isFreeUser } from '@/utils/membership'
 import {
   COURSE_DETAILS_MAPPING,
   COURSE_METADATA_MAPPING,
@@ -288,7 +288,7 @@ const FreeTierCoursesPage: React.FC<{ userId?: string | null; profile: UserProfi
                     Complimentary
                   </Badge>
                   <Text fontWeight="semibold" color="purple.900">
-                    {course.title}
+                    {courseWithProgress.title}
                   </Text>
                 </HStack>
                 <HStack spacing={2} color="purple.700">
