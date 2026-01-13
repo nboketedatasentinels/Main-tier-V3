@@ -32,7 +32,7 @@ export interface WeeklyPoints {
 
 export interface SupportAssignment {
   id: string
-  user_id: string
+  user_id?: string
   mentor_id?: string | null
   ambassador_id?: string | null
   assigned_date?: Timestamp
@@ -239,6 +239,7 @@ export const useWeeklyGlanceData = () => {
     let isActive = true
     let didReceiveSnapshot = false
 
+    const supportRef = doc(db, 'support_assignments', profile.id)
     const supportQuery = query(collection(db, 'support_assignments'), where('user_id', '==', profile.id))
     const fallbackTimeout = setTimeout(() => {
       if (isActive && !didReceiveSnapshot) {
@@ -246,11 +247,18 @@ export const useWeeklyGlanceData = () => {
       }
     }, 5000)
 
-    const handleSnapshot = async (snapshot: any) => {
+    const handleSnapshot = async (
+      snapshot: any,
+      options: { docIdFallback?: string; allowFallback?: boolean } = {},
+    ) => {
+      const docData = snapshot?.docs ? snapshot.docs[0] : snapshot
+      const hasDoc = Boolean(docData) && !(docData.exists ? !docData.exists() : false)
+      if (!hasDoc && options.allowFallback) {
+        return
+      }
       didReceiveSnapshot = true
       clearTimeout(fallbackTimeout)
       if (!isActive) return
-      const docData = snapshot.docs[0]
       if (!docData) {
         setSupportAssignment(null)
         setLoading(prev => ({ ...prev, support: false }))
@@ -291,7 +299,8 @@ export const useWeeklyGlanceData = () => {
       if (!isActive) return
       setSupportAssignment({
         ...data,
-        id: docData.id,
+        id: docData.id || options.docIdFallback || profile.id,
+        user_id: data.user_id || options.docIdFallback || profile.id,
         mentorProfile: mentorResult.profile,
         mentorProfileError: mentorResult.error,
         ambassadorProfile: ambassadorResult.profile,
@@ -300,9 +309,27 @@ export const useWeeklyGlanceData = () => {
       setLoading(prev => ({ ...prev, support: false }))
     }
 
-    const unsubscribe = onSnapshot(
+    const unsubscribeById = onSnapshot(
+      supportRef,
+      snapshot => {
+        void handleSnapshot(snapshot, { docIdFallback: profile.id, allowFallback: true })
+      },
+      error => {
+        if (!isActive) return
+        setErrors(prev => ({ ...prev, support: error as Error }))
+        const errorCode = (error as { code?: string }).code
+        if (errorCode === 'permission-denied' || errorCode === 'not-found') {
+          didReceiveSnapshot = true
+          clearTimeout(fallbackTimeout)
+          setLoading(prev => ({ ...prev, support: false }))
+        }
+      },
+    )
+
+    const unsubscribeByQuery = onSnapshot(
       supportQuery,
       snapshot => {
+        if (didReceiveSnapshot) return
         void handleSnapshot(snapshot)
       },
       error => {
@@ -317,7 +344,8 @@ export const useWeeklyGlanceData = () => {
     return () => {
       isActive = false
       clearTimeout(fallbackTimeout)
-      unsubscribe()
+      unsubscribeById()
+      unsubscribeByQuery()
     }
   }, [profile?.id])
 
