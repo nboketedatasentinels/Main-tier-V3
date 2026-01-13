@@ -32,6 +32,7 @@ import { Link as RouterLink } from 'react-router-dom'
 import { useAuth } from '@/hooks/useAuth'
 import { useOrganizationProgramCourses } from '@/hooks/useOrganizationProgramCourses'
 import { useUserCourseProgress } from '@/hooks/useUserCourseProgress'
+import { ComplementaryCourseSection } from '@/components/courses/ComplementaryCourseSection'
 import { db } from '@/services/firebase'
 import { canAccessCourse, isFreeUser } from '@/utils/membership'
 import {
@@ -58,7 +59,7 @@ interface NormalizedCourse {
   image?: string
 }
 
-const FREE_TIER_COURSE_ID = 'transformational-leadership'
+const COMPLEMENTARY_COURSE_ID = 'transformational-leadership'
 
 const COURSE_IMAGE_FILENAMES: Record<string, string> = {
   'AI Stacking 101': 'course-ai-stacking-101.avif',
@@ -134,12 +135,12 @@ const FreeTierCoursesPage: React.FC<{ userId?: string | null; profile: UserProfi
       try {
         setLoading(true)
         setError(null)
-        const courseRef = doc(db, 'courses', FREE_TIER_COURSE_ID)
+        const courseRef = doc(db, 'courses', COMPLEMENTARY_COURSE_ID)
         const courseSnap = await getDoc(courseRef)
         if (!courseSnap.exists()) {
           if (isActive) {
             setCourse(null)
-            setError('The complimentary course could not be found.')
+            setError('The complementary course could not be found.')
           }
           return
         }
@@ -150,7 +151,7 @@ const FreeTierCoursesPage: React.FC<{ userId?: string | null; profile: UserProfi
         console.error('Error loading free tier course', fetchError)
         if (isActive) {
           setCourse(null)
-          setError('Unable to load the complimentary course right now.')
+          setError('Unable to load the complementary course right now.')
         }
       } finally {
         if (isActive) {
@@ -175,7 +176,7 @@ const FreeTierCoursesPage: React.FC<{ userId?: string | null; profile: UserProfi
   }, [course, progressMap])
 
   const headerDescription =
-    'You have access to one complimentary course—Transformational Leadership. Upgrade anytime to unlock the full learning library.'
+    'Transformational Leadership is a complementary course available to every member. Upgrade anytime to unlock the full learning library while keeping access to this course.'
 
   return (
     <Stack spacing={8} py={2} as="section">
@@ -210,7 +211,7 @@ const FreeTierCoursesPage: React.FC<{ userId?: string | null; profile: UserProfi
                 Free tier experience
               </Badge>
               <Text color="orange.700" fontSize="sm">
-                You are viewing the complimentary course catalog.
+                You are viewing the complementary course catalog.
               </Text>
               <Button
                 as={RouterLink}
@@ -230,7 +231,7 @@ const FreeTierCoursesPage: React.FC<{ userId?: string | null; profile: UserProfi
       <Stack spacing={4} as="section">
         <HStack justify="space-between" align="center">
           <Heading size="md" color="gray.800">
-            Complimentary course
+            Complementary course
           </Heading>
           <Badge colorScheme="purple" variant="subtle" borderRadius="full">
             1 course
@@ -285,7 +286,7 @@ const FreeTierCoursesPage: React.FC<{ userId?: string | null; profile: UserProfi
               >
                 <HStack spacing={3}>
                   <Badge colorScheme="purple" borderRadius="full" px={3} py={1} fontWeight="bold">
-                    Complimentary
+                    Complementary - Available to All
                   </Badge>
                   <Text fontWeight="semibold" color="purple.900">
                     {courseWithProgress.title}
@@ -342,7 +343,7 @@ const FreeTierCoursesPage: React.FC<{ userId?: string | null; profile: UserProfi
                     </VStack>
 
                     {courseWithProgress.link && (() => {
-                      const hasAccess = canAccessCourse(profile, courseWithProgress.title)
+                      const hasAccess = canAccessCourse(profile, courseWithProgress.title, courseWithProgress.id)
                       const canOpen = hasAccess
                       return (
                         <Button
@@ -574,6 +575,13 @@ const OrganizationCoursesPage: React.FC<{ userId?: string | null; profile: UserP
         </Flex>
       </Box>
 
+      <ComplementaryCourseSection
+        excludedCourseIds={program?.orderedCourseIds ?? []}
+        progressMap={progressMap}
+        progressLoading={progressLoading}
+        profile={profile}
+      />
+
       {hasOrganization && hasProgram && program?.totalMonths && program.totalMonths > 0 && (
         <Stack spacing={4} as="section">
           <HStack justify="space-between" align="center">
@@ -625,7 +633,7 @@ const OrganizationCoursesPage: React.FC<{ userId?: string | null; profile: UserP
                 const isLoadingCourse = overallLoading && entry.courseId && !entry.course
                 const missingCourse = !overallLoading && entry.courseId && !entry.course
                 const hasLink = Boolean(entry.course?.link)
-                const hasAccess = entry.course ? canAccessCourse(profile, entry.course.title) : false
+                const hasAccess = entry.course ? canAccessCourse(profile, entry.course.title, entry.course.id) : false
                 const isLocked = entry.availability === 'locked'
                 const unlockDateLabel =
                   isLocked && entry.unlockDate

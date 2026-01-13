@@ -1,6 +1,10 @@
-import { addDoc, collection, getDocs, limit, query, serverTimestamp, where } from 'firebase/firestore'
+import { addDoc, collection, getDocs, query, serverTimestamp, where } from 'firebase/firestore'
 import { db } from '@/services/firebase'
-import { FREE_TIER_COURSE_TITLE } from '@/utils/membership'
+import {
+  COMPLEMENTARY_COURSES,
+  COMPLEMENTARY_COURSE_IDS,
+  COMPLEMENTARY_COURSE_TITLES,
+} from '@/utils/membership'
 import { COURSE_DETAILS_MAPPING, COURSE_METADATA_MAPPING } from '@/utils/courseMappings'
 
 /**
@@ -17,22 +21,57 @@ import { COURSE_DETAILS_MAPPING, COURSE_METADATA_MAPPING } from '@/utils/courseM
  * - difficulty: string ("Beginner", "Intermediate", "Advanced")
  */
 
+const buildComplementaryAssignmentLookup = async (userId: string) => {
+  const assignmentsRef = collection(db, 'user_courses')
+  const lookup = new Set<string>()
+
+  const titleQuery =
+    COMPLEMENTARY_COURSE_TITLES.length > 0
+      ? query(assignmentsRef, where('user_id', '==', userId), where('title', 'in', COMPLEMENTARY_COURSE_TITLES))
+      : null
+  const idQuery =
+    COMPLEMENTARY_COURSE_IDS.length > 0
+      ? query(assignmentsRef, where('user_id', '==', userId), where('courseId', 'in', COMPLEMENTARY_COURSE_IDS))
+      : null
+  const legacyIdQuery =
+    COMPLEMENTARY_COURSE_IDS.length > 0
+      ? query(assignmentsRef, where('user_id', '==', userId), where('course_id', 'in', COMPLEMENTARY_COURSE_IDS))
+      : null
+
+  const [titleSnapshot, idSnapshot, legacyIdSnapshot] = await Promise.all([
+    titleQuery ? getDocs(titleQuery) : Promise.resolve(null),
+    idQuery ? getDocs(idQuery) : Promise.resolve(null),
+    legacyIdQuery ? getDocs(legacyIdQuery) : Promise.resolve(null),
+  ])
+
+  const snapshots = [titleSnapshot, idSnapshot, legacyIdSnapshot].filter(Boolean) as Array<
+    Awaited<ReturnType<typeof getDocs>>
+  >
+
+  snapshots.forEach(snapshot => {
+    snapshot.forEach(docSnap => {
+      const data = docSnap.data()
+      const title = typeof data.title === 'string' ? data.title.trim().toLowerCase() : ''
+      const courseId = typeof data.courseId === 'string' ? data.courseId.trim().toLowerCase() : ''
+      const legacyCourseId = typeof data.course_id === 'string' ? data.course_id.trim().toLowerCase() : ''
+      if (title) lookup.add(`title:${title}`)
+      if (courseId) lookup.add(`id:${courseId}`)
+      if (legacyCourseId) lookup.add(`id:${legacyCourseId}`)
+    })
+  })
+
+  return lookup
+}
+
 /**
- * Check whether the free course is already assigned to a user.
+ * Check whether any complementary course is already assigned to a user.
  */
-export const hasFreeCourseAssigned = async (userId: string): Promise<boolean> => {
+export const hasComplementaryCourseAssigned = async (userId: string): Promise<boolean> => {
   try {
-    const assignmentsRef = collection(db, 'user_courses')
-    const assignmentsQuery = query(
-      assignmentsRef,
-      where('user_id', '==', userId),
-      where('title', '==', FREE_TIER_COURSE_TITLE),
-      limit(1)
-    )
-    const snapshot = await getDocs(assignmentsQuery)
-    return !snapshot.empty
+    const lookup = await buildComplementaryAssignmentLookup(userId)
+    return lookup.size > 0
   } catch (error) {
-    console.error('🔴 [CourseAssignment] Failed to check free course assignment', {
+    console.error('🔴 [CourseAssignment] Failed to check complementary course assignment', {
       userId,
       message: (error as Error)?.message,
       stack: (error as Error)?.stack,
@@ -43,45 +82,60 @@ export const hasFreeCourseAssigned = async (userId: string): Promise<boolean> =>
 }
 
 /**
- * Assign the free course to a user if it is not already assigned.
+ * Assign complementary courses to a user if they are not already assigned.
  */
-export const assignFreeCourseToUser = async (userId: string): Promise<boolean> => {
+export const assignComplementaryCoursesToUser = async (userId: string): Promise<boolean> => {
   try {
-    const alreadyAssigned = await hasFreeCourseAssigned(userId)
-    if (alreadyAssigned) {
-      console.log('🟡 [CourseAssignment] Free course already assigned', { userId })
-      return false
-    }
+    const assignmentLookup = await buildComplementaryAssignmentLookup(userId)
+    let assigned = false
 
-    const courseDetails = COURSE_DETAILS_MAPPING[FREE_TIER_COURSE_TITLE]
-    const courseMetadata = COURSE_METADATA_MAPPING[FREE_TIER_COURSE_TITLE]
+    for (const course of COMPLEMENTARY_COURSES) {
+      const normalizedTitle = course.title.trim().toLowerCase()
+      const normalizedId = course.id.trim().toLowerCase()
+      if (assignmentLookup.has(`title:${normalizedTitle}`) || assignmentLookup.has(`id:${normalizedId}`)) {
+        continue
+      }
 
-    if (!courseDetails || !courseMetadata) {
-      console.warn('🟠 [CourseAssignment] Missing course mapping data', {
-        userId,
-        title: FREE_TIER_COURSE_TITLE,
-        hasDetails: Boolean(courseDetails),
-        hasMetadata: Boolean(courseMetadata),
+      const courseDetails = COURSE_DETAILS_MAPPING[course.title]
+      const courseMetadata = COURSE_METADATA_MAPPING[course.title]
+
+      if (!courseDetails || !courseMetadata) {
+        console.warn('🟠 [CourseAssignment] Missing course mapping data', {
+          userId,
+          title: course.title,
+          hasDetails: Boolean(courseDetails),
+          hasMetadata: Boolean(courseMetadata),
+        })
+      }
+
+      await addDoc(collection(db, 'user_courses'), {
+        user_id: userId,
+        courseId: course.id,
+        title: course.title,
+        description: courseDetails?.description ?? '',
+        link: courseDetails?.link ?? '',
+        status: 'assigned',
+        source: 'user',
+        assignedAt: serverTimestamp(),
+        progress: 0,
+        estimatedMinutes: courseMetadata?.estimatedMinutes ?? 0,
+        difficulty: courseMetadata?.difficulty ?? 'Beginner',
       })
+
+      assigned = true
+      assignmentLookup.add(`title:${normalizedTitle}`)
+      assignmentLookup.add(`id:${normalizedId}`)
     }
 
-    await addDoc(collection(db, 'user_courses'), {
-      user_id: userId,
-      title: FREE_TIER_COURSE_TITLE,
-      description: courseDetails?.description ?? '',
-      link: courseDetails?.link ?? '',
-      status: 'assigned',
-      source: 'user',
-      assignedAt: serverTimestamp(),
-      progress: 0,
-      estimatedMinutes: courseMetadata?.estimatedMinutes ?? 0,
-      difficulty: courseMetadata?.difficulty ?? 'Beginner',
-    })
+    if (assigned) {
+      console.log('🟢 [CourseAssignment] Assigned complementary courses to user', { userId })
+    } else {
+      console.log('🟡 [CourseAssignment] Complementary courses already assigned', { userId })
+    }
 
-    console.log('🟢 [CourseAssignment] Assigned free course to user', { userId })
-    return true
+    return assigned
   } catch (error) {
-    console.error('🔴 [CourseAssignment] Failed to assign free course', {
+    console.error('🔴 [CourseAssignment] Failed to assign complementary courses', {
       userId,
       message: (error as Error)?.message,
       stack: (error as Error)?.stack,
@@ -89,4 +143,15 @@ export const assignFreeCourseToUser = async (userId: string): Promise<boolean> =
     })
     return false
   }
+}
+
+export const mergeOrganizationCourseIdsWithComplementary = (organizationCourseIds: string[]): string[] => {
+  const merged = new Set<string>(organizationCourseIds)
+  COMPLEMENTARY_COURSE_IDS.forEach(courseId => merged.add(courseId))
+  return Array.from(merged)
+}
+
+export const getComplementaryCourseIdsForOrganization = (organizationCourseIds: string[]): string[] => {
+  const organizationSet = new Set(organizationCourseIds)
+  return COMPLEMENTARY_COURSE_IDS.filter(courseId => !organizationSet.has(courseId))
 }
