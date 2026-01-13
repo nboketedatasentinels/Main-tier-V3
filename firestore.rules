@@ -31,6 +31,13 @@ service cloud.firestore {
       return hasRole('mentor');
     }
 
+    function isSameCompany(companyId, companyCode) {
+      return isAuthenticated() && (
+        (companyId != null && getProfile(request.auth.uid).companyId == companyId) ||
+        (companyCode != null && getProfile(request.auth.uid).companyCode == companyCode)
+      );
+    }
+
     function isSuperAdmin() {
       return hasRole('super_admin');
     }
@@ -210,6 +217,9 @@ service cloud.firestore {
 
       // Mentors can read assigned mentee records only
       allow read: if isAuthenticated() && canAccessMentee(resource.data);
+
+      // Users can read members of their organization
+      allow read: if isAuthenticated() && isSameCompany(resource.data.companyId, resource.data.companyCode);
       
       // Users can create their own user document
       allow create: if isAuthenticated() && isOwner(userId);
@@ -238,6 +248,15 @@ service cloud.firestore {
           (canAccessUser(userId) && request.resource.data.keys().hasAny(['lastAdjustmentReason', 'updatedAt']))
         );
       }
+    }
+
+    // Support assignments for direct mentorship
+    match /support_assignments/{assignmentId} {
+      allow read: if isAuthenticated() && (
+        resource.data.user_id == request.auth.uid ||
+        isAdmin()
+      );
+      allow create, update, delete: if isAdmin();
     }
 
     // Referral system collections
@@ -339,6 +358,11 @@ service cloud.firestore {
       allow write: if isSuperAdmin();
     }
 
+    match /transformation_partners/{partnerId} {
+      allow read: if isAuthenticated();
+      allow write: if isSuperAdmin();
+    }
+
     // Community collections
     match /villages/{villageId} {
       allow read: if isAuthenticated();
@@ -347,8 +371,11 @@ service cloud.firestore {
     }
 
     match /companies/{companyId} {
-      // All authenticated users can read companies
-      allow read: if isAuthenticated();
+      // Users can read their own company, admins can read all
+      allow read: if isAuthenticated() && (
+        isAdmin() ||
+        isSameCompany(companyId, resource.data.code)
+      );
       
       // Super admins can manage all companies
       allow write: if isSuperAdmin();
