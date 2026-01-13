@@ -482,6 +482,7 @@ export const ImpactLogPage: React.FC = () => {
       hours: filteredEntries.reduce((sum, e) => sum + (e.hours || 0), 0),
       usd: filteredEntries.reduce((sum, e) => sum + (e.usdValue || 0), 0),
       points: filteredEntries.reduce((sum, e) => sum + (e.points || 0), 0),
+      scp: filteredEntries.reduce((sum, e) => sum + (e.scp || 0), 0),
     }
   }, [filteredEntries])
 
@@ -752,10 +753,10 @@ export const ImpactLogPage: React.FC = () => {
       color: 'green.500',
     },
     {
-      label: 'Points Earned',
-      value: stats.points,
-      help: 'Points from verified activities',
-      icon: Check,
+      label: 'Social Capital Points',
+      value: stats.scp,
+      help: 'Social capital earned from verified impact activities',
+      icon: TrendingUp,
       color: 'orange.500',
     },
   ]
@@ -921,6 +922,7 @@ export const ImpactLogPage: React.FC = () => {
                   <Th isNumeric>Hours</Th>
                   <Th isNumeric>USD</Th>
                   <Th isNumeric>People</Th>
+                  <Th isNumeric>SCP</Th>
                   <Th>Verification</Th>
                   {activeTab === 'personal' && <Th />}
                 </Tr>
@@ -928,13 +930,13 @@ export const ImpactLogPage: React.FC = () => {
               <Tbody>
                 {loading ? (
                   <Tr>
-                    <Td colSpan={activeTab === 'personal' ? 8 : 7}>
+                    <Td colSpan={activeTab === 'personal' ? 9 : 8}>
                       <Skeleton height="18px" />
                     </Td>
                   </Tr>
                 ) : filteredEntries.length === 0 ? (
                   <Tr>
-                    <Td colSpan={activeTab === 'personal' ? 8 : 7}>
+                    <Td colSpan={activeTab === 'personal' ? 9 : 8}>
                       <Text color="text.muted">No entries found for this period.</Text>
                     </Td>
                   </Tr>
@@ -956,6 +958,7 @@ export const ImpactLogPage: React.FC = () => {
                       <Td isNumeric>{entry.hours}</Td>
                       <Td isNumeric>{entry.usdValue?.toLocaleString() || '0'}</Td>
                       <Td isNumeric>{entry.peopleImpacted}</Td>
+                      <Td isNumeric>{entry.scp?.toLocaleString() || '0'}</Td>
                       <Td>
                         <Badge colorScheme={entry.verificationMultiplier > 1 ? 'purple' : 'gray'}>
                           {entry.verificationLevel}
@@ -998,8 +1001,8 @@ export const ImpactLogPage: React.FC = () => {
               </HStack>
               <Stack spacing={2}>
                 <Flex align="center" justify="space-between">
-                  <Text color="text.secondary">Points Today</Text>
-                  <Badge colorScheme="purple">{stats.points.toLocaleString()}</Badge>
+                  <Text color="text.secondary">Social Capital Points</Text>
+                  <Badge colorScheme="purple">{stats.scp.toLocaleString()}</Badge>
                 </Flex>
                 <Flex align="center" justify="space-between">
                   <Text color="text.secondary">Hours this month</Text>
@@ -1007,7 +1010,7 @@ export const ImpactLogPage: React.FC = () => {
                 </Flex>
                 <Divider />
                 <Text color="text.secondary" fontWeight="medium">
-                  Daily micro-challenge progress
+                  Daily momentum based on social capital growth
                 </Text>
                 <Button w="full" colorScheme="purple" onClick={onOpen}>
                   Log Impact Now
