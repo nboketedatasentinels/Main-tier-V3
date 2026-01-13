@@ -1266,15 +1266,6 @@ const WeeklyChecklistPage: React.FC = () => {
 
   return (
     <Stack spacing={6} color="text.primary">
-      {renderJourneyHeader()}
-      {renderWeekSummary()}
-      {error && (
-        <Alert status="error" borderRadius="md">
-          <AlertIcon />
-          <AlertTitle>Something went wrong</AlertTitle>
-          <AlertDescription>{error}</AlertDescription>
-        </Alert>
-      )}
       <SurfaceCard borderColor="border.card">
         <Stack spacing={4}>
           <Flex align="center" justify="space-between">
@@ -1290,6 +1281,15 @@ const WeeklyChecklistPage: React.FC = () => {
           {renderWeekSelector()}
         </Stack>
       </SurfaceCard>
+      {renderJourneyHeader()}
+      {renderWeekSummary()}
+      {error && (
+        <Alert status="error" borderRadius="md">
+          <AlertIcon />
+          <AlertTitle>Something went wrong</AlertTitle>
+          <AlertDescription>{error}</AlertDescription>
+        </Alert>
+      )}
 
       <Grid templateColumns={{ base: '1fr', xl: '2fr 1fr' }} gap={6} alignItems="start">
         <GridItem>
