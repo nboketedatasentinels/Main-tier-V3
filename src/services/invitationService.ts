@@ -2,6 +2,7 @@ import {
   addDoc,
   collection,
   doc,
+  getDoc,
   getDocs,
   query,
   serverTimestamp,
@@ -9,6 +10,7 @@ import {
   where,
 } from 'firebase/firestore'
 import { db } from './firebase'
+import { ORG_COLLECTION } from '@/constants/organizations'
 import {
   BulkInvitationResult,
   InvitationMethod,
@@ -20,8 +22,41 @@ import { normalizeEmail } from '@/utils/email'
 
 const invitationsCollection = collection(db, 'invitations')
 const usersCollection = collection(db, 'users')
+const organizationsCollection = collection(db, ORG_COLLECTION)
 
 const codeChars = '23456789ABCDEFGHJKLMNPQRSTUVWXYZ'
+
+const LICENSE_CONSUMING_ROLES = new Set(['user', 'mentor', 'ambassador', 'team_leader'])
+
+const isLicenseConsumingRole = (role?: string | null) => {
+  if (!role) return false
+  return LICENSE_CONSUMING_ROLES.has(role)
+}
+
+const isActiveAccountStatus = (status?: string | null) => {
+  if (!status) return true
+  const normalized = status.toLowerCase()
+  return normalized !== 'suspended' && normalized !== 'inactive'
+}
+
+const getOrganizationLicenseSnapshot = async (organizationId: string) => {
+  const orgSnap = await getDoc(doc(organizationsCollection, organizationId))
+  if (!orgSnap.exists()) {
+    throw new Error('Organization not found for invitation validation.')
+  }
+  const data = orgSnap.data() as OrganizationRecord
+  return {
+    teamSize: data.teamSize ?? 0,
+  }
+}
+
+const getActiveLicenseMemberCount = async (organizationId: string) => {
+  const snapshot = await getDocs(query(usersCollection, where('assignedOrganizations', 'array-contains', organizationId)))
+  return snapshot.docs.filter((docSnap) => {
+    const data = docSnap.data() as { role?: string; accountStatus?: string | null }
+    return isLicenseConsumingRole(data.role) && isActiveAccountStatus(data.accountStatus)
+  }).length
+}
 
 export const generateOneTimeCode = () => {
   return Array.from({ length: 8 })
@@ -85,6 +120,18 @@ export const inviteUsersBulk = async (
   context: { organizationId: string; organizationName: string },
 ): Promise<BulkInvitationResult> => {
   const results: InvitationResultEntry[] = []
+  const { teamSize } = await getOrganizationLicenseSnapshot(context.organizationId)
+  if (!teamSize || teamSize <= 0) {
+    throw new Error('Cohort size must be set before inviting users.')
+  }
+  const currentMembers = await getActiveLicenseMemberCount(context.organizationId)
+  const requestedSeats = invitations.filter((invite) => isLicenseConsumingRole(invite.role)).length
+  const availableSeats = Math.max(teamSize - currentMembers, 0)
+  if (requestedSeats > availableSeats) {
+    throw new Error(
+      `Cannot add ${requestedSeats} members. ${currentMembers} of ${teamSize} licenses already in use. Only ${availableSeats} licenses available.`,
+    )
+  }
   for (const invitation of invitations) {
     try {
       if (invitation.method === 'email') {

@@ -30,7 +30,7 @@ export interface OrganizationRecord {
   name: string
   code: string
   /**
-   * Cohort size and paid license count.
+   * Cohort size and total paid license count (includes users, mentors, ambassadors, and team leaders).
    */
   teamSize?: number
   status: OrganizationStatus

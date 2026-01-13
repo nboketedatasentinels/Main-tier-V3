@@ -40,16 +40,13 @@ import {
   BulkInvitationResult,
   CourseOption,
   InviteDraft,
-  OrganizationLead,
   OrganizationRecord,
   ProgramDurationOption,
 } from '@/types/admin'
 import {
   createOrganizationWithInvitations,
   determineClusterFromTeamSize,
-  fetchAmbassadors,
   fetchAvailableCourses,
-  fetchMentors,
   generateOrganizationCode,
   validateOrganizationCodeUnique,
 } from '@/services/organizationService'
@@ -74,8 +71,6 @@ interface CreateOrganizationModalProps {
   onCreated?: (organization: OrganizationRecord) => void
   adminName?: string
   adminId?: string
-  partners?: { id: string; name: string; email?: string }[]
-  partnerAssignmentCounts?: Record<string, number>
 }
 
 const programDurations: ProgramDurationOption[] = [
@@ -114,18 +109,13 @@ export const CreateOrganizationModal: React.FC<CreateOrganizationModalProps> = (
   onCreated,
   adminId,
   adminName,
-  partners = [],
-  partnerAssignmentCounts,
 }) => {
   const toast = useToast()
   const [form, setForm] = useState<OrganizationRecord>(emptyOrganization)
   const [inviteDrafts, setInviteDrafts] = useState<InviteDraft[]>([blankInvite])
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [courses, setCourses] = useState<CourseOption[]>([])
-  const [mentors, setMentors] = useState<OrganizationLead[]>([])
-  const [ambassadors, setAmbassadors] = useState<OrganizationLead[]>([])
   const [results, setResults] = useState<BulkInvitationResult | null>(null)
-  const [partnerSearch, setPartnerSearch] = useState('')
   const [monthlyAssignments, setMonthlyAssignments] = useState<MonthlyCourseAssignments>({})
   const resultsModal = useDisclosure()
   const fileInputRef = useRef<HTMLInputElement | null>(null)
@@ -179,32 +169,9 @@ export const CreateOrganizationModal: React.FC<CreateOrganizationModalProps> = (
     [courses],
   )
 
-  const sortedPartners = useMemo(
-    () => [...partners].sort((a, b) => a.name.localeCompare(b.name)),
-    [partners],
-  )
-
-  const filteredPartners = useMemo(() => {
-    const term = partnerSearch.trim().toLowerCase()
-    if (!term) return sortedPartners
-    return sortedPartners.filter((item) => {
-      const email = item.email?.toLowerCase() ?? ''
-      return item.name.toLowerCase().includes(term) || email.includes(term)
-    })
-  }, [partnerSearch, sortedPartners])
-
-  const leadEmails = useMemo(() => {
-    const emails = [...partners, ...mentors, ...ambassadors]
-      .map((lead) => normalizeEmail(lead.email || ''))
-      .filter(Boolean)
-    return new Set(emails)
-  }, [ambassadors, mentors, partners])
-
   const invitationEmailState = useMemo(() => {
     const emailCounts = new Map<string, { ids: string[] }>()
     const duplicateById = new Map<string, string>()
-    const leadConflictsById = new Map<string, string>()
-    const leadConflictEmails = new Set<string>()
 
     inviteDrafts.forEach((draft) => {
       if (draft.method !== 'email') return
@@ -213,10 +180,6 @@ export const CreateOrganizationModal: React.FC<CreateOrganizationModalProps> = (
       const entry = emailCounts.get(normalized) || { ids: [] }
       entry.ids.push(draft.id)
       emailCounts.set(normalized, entry)
-      if (leadEmails.has(normalized)) {
-        leadConflictsById.set(draft.id, normalized)
-        leadConflictEmails.add(normalized)
-      }
     })
 
     const duplicateEmails = Array.from(emailCounts.entries())
@@ -231,20 +194,10 @@ export const CreateOrganizationModal: React.FC<CreateOrganizationModalProps> = (
     return {
       duplicateEmails,
       duplicateById,
-      leadConflictEmails: Array.from(leadConflictEmails),
-      leadConflictsById,
     }
-  }, [inviteDrafts, leadEmails])
+  }, [inviteDrafts])
 
   const hasDuplicateEmails = invitationEmailState.duplicateEmails.length > 0
-  const hasLeadConflicts = invitationEmailState.leadConflictEmails.length > 0
-
-  const buildPartnerLabel = (item: OrganizationLead) => {
-    const emailSuffix = item.email ? ` — ${item.email}` : ''
-    const assignmentCount = partnerAssignmentCounts?.[item.name] ?? 0
-    const countSuffix = assignmentCount > 1 ? ` • ${assignmentCount} orgs` : ''
-    return `${item.name}${emailSuffix}${countSuffix}`
-  }
 
   useEffect(() => {
     if (form.name && !form.code) {
@@ -257,8 +210,6 @@ export const CreateOrganizationModal: React.FC<CreateOrganizationModalProps> = (
       setForm(emptyOrganization)
       setInviteDrafts([blankInvite])
       setCourses([])
-      setMentors([])
-      setAmbassadors([])
       setResults(null)
       setMonthlyAssignments({})
       return
@@ -266,14 +217,8 @@ export const CreateOrganizationModal: React.FC<CreateOrganizationModalProps> = (
 
     const fetchData = async () => {
       try {
-        const [courseOptions, mentorOptions, ambassadorOptions] = await Promise.all([
-          fetchAvailableCourses(),
-          fetchMentors(),
-          fetchAmbassadors(),
-        ])
+        const [courseOptions] = await Promise.all([fetchAvailableCourses()])
         setCourses(courseOptions)
-        setMentors(mentorOptions)
-        setAmbassadors(ambassadorOptions)
       } catch (error) {
         console.error(error)
         toast({ title: 'Unable to load form data', status: 'error' })
@@ -380,7 +325,6 @@ export const CreateOrganizationModal: React.FC<CreateOrganizationModalProps> = (
     const trimmed = inviteDrafts.filter((draft) => draft.name || draft.email)
     const emails = new Set<string>()
     const duplicateEmails = new Set<string>()
-    const leadConflicts = new Set<string>()
     for (const draft of trimmed) {
       if (!draft.name.trim()) {
         throw new Error('Invitation name is required')
@@ -391,16 +335,10 @@ export const CreateOrganizationModal: React.FC<CreateOrganizationModalProps> = (
         if (!emailRegex.test(normalizedEmail)) throw new Error(`Invalid email: ${draft.email}`)
         if (emails.has(normalizedEmail)) duplicateEmails.add(normalizedEmail)
         emails.add(normalizedEmail)
-        if (leadEmails.has(normalizedEmail)) leadConflicts.add(normalizedEmail)
       }
     }
     if (duplicateEmails.size > 0) {
       throw new Error(`Duplicate emails detected: ${Array.from(duplicateEmails).join(', ')}`)
-    }
-    if (leadConflicts.size > 0) {
-      throw new Error(
-        `Emails already assigned to mentors, ambassadors, or partners: ${Array.from(leadConflicts).join(', ')}`,
-      )
     }
     if (trimmed.length > (form.teamSize || 0)) {
       throw new Error('Invitations cannot exceed cohort size')
@@ -469,7 +407,7 @@ export const CreateOrganizationModal: React.FC<CreateOrganizationModalProps> = (
   }
 
   const invitationCountColor =
-    inviteDrafts.length > (form.teamSize || 0) || hasDuplicateEmails || hasLeadConflicts ? 'red.500' : 'gray.600'
+    inviteDrafts.length > (form.teamSize || 0) || hasDuplicateEmails ? 'red.500' : 'gray.600'
 
   return (
     <>
@@ -483,7 +421,7 @@ export const CreateOrganizationModal: React.FC<CreateOrganizationModalProps> = (
               <Box>
                 <Text fontWeight="bold">1. ORGANIZATION DETAILS</Text>
                 <Text color="gray.600" fontSize="sm">
-                  Configure the organization profile, program duration, and leadership assignments.
+                  Configure the organization profile and program duration details.
                 </Text>
               </Box>
 
@@ -574,37 +512,6 @@ export const CreateOrganizationModal: React.FC<CreateOrganizationModalProps> = (
                       value={form.cohortStartDate ? String(form.cohortStartDate) : ''}
                       onChange={(e) => updateField('cohortStartDate', e.target.value)}
                     />
-                  </FormControl>
-                </GridItem>
-                <GridItem>
-                  <FormControl>
-                    <FormLabel>Transformation partner</FormLabel>
-                    <Input
-                      value={partnerSearch}
-                      onChange={(e) => setPartnerSearch(e.target.value)}
-                      placeholder="Search partners"
-                      mb={2}
-                    />
-                    <Select
-                      placeholder="Select partner"
-                      value={form.assignedPartnerId || ''}
-                      onChange={(e) => {
-                        const partner = partners.find((item) => item.id === e.target.value)
-                        updateField('assignedPartnerId', e.target.value || null)
-                        updateField('assignedPartnerName', partner?.name || null)
-                        updateField('assignedPartnerEmail', partner?.email || null)
-                      }}
-                    >
-                      <option value="">— No partner —</option>
-                      {filteredPartners.map((partner) => (
-                        <option key={partner.id} value={partner.id}>
-                          {buildPartnerLabel(partner)}
-                        </option>
-                      ))}
-                    </Select>
-                    {!filteredPartners.length && (
-                      <FormHelperText color="gray.600">No partners available.</FormHelperText>
-                    )}
                   </FormControl>
                 </GridItem>
                 <GridItem colSpan={2}>
@@ -769,49 +676,7 @@ export const CreateOrganizationModal: React.FC<CreateOrganizationModalProps> = (
                 )}
               </Box>
 
-              <Grid templateColumns={{ base: '1fr', md: 'repeat(3, 1fr)' }} gap={4}>
-                <GridItem>
-                  <FormControl>
-                    <FormLabel>Mentor</FormLabel>
-                    <Select
-                      placeholder="Select mentor"
-                      value={form.assignedMentorId || ''}
-                      onChange={(e) => {
-                        const mentor = mentors.find((m) => m.id === e.target.value)
-                        updateField('assignedMentorId', mentor?.id || null)
-                        updateField('assignedMentorName', mentor?.name || null)
-                        updateField('assignedMentorEmail', mentor?.email || null)
-                      }}
-                    >
-                      {mentors.map((mentor) => (
-                        <option key={mentor.id} value={mentor.id}>
-                          {mentor.name}
-                        </option>
-                      ))}
-                    </Select>
-                  </FormControl>
-                </GridItem>
-                <GridItem>
-                  <FormControl>
-                    <FormLabel>Ambassador</FormLabel>
-                    <Select
-                      placeholder="Select ambassador"
-                      value={form.assignedAmbassadorId || ''}
-                      onChange={(e) => {
-                        const ambassador = ambassadors.find((m) => m.id === e.target.value)
-                        updateField('assignedAmbassadorId', ambassador?.id || null)
-                        updateField('assignedAmbassadorName', ambassador?.name || null)
-                        updateField('assignedAmbassadorEmail', ambassador?.email || null)
-                      }}
-                    >
-                      {ambassadors.map((ambassador) => (
-                        <option key={ambassador.id} value={ambassador.id}>
-                          {ambassador.name}
-                        </option>
-                      ))}
-                    </Select>
-                  </FormControl>
-                </GridItem>
+              <Grid templateColumns={{ base: '1fr', md: 'repeat(2, 1fr)' }} gap={4}>
                 <GridItem>
                   <FormControl>
                     <FormLabel>Status</FormLabel>
@@ -855,21 +720,13 @@ export const CreateOrganizationModal: React.FC<CreateOrganizationModalProps> = (
                 </Text>
               </Flex>
 
-              {(hasDuplicateEmails || hasLeadConflicts) && (
+              {hasDuplicateEmails && (
                 <Alert status="error" borderRadius="md">
                   <AlertIcon />
                   <Box>
-                    {hasDuplicateEmails && (
-                      <Text fontSize="sm">
-                        Duplicate emails detected: {invitationEmailState.duplicateEmails.join(', ')}.
-                      </Text>
-                    )}
-                    {hasLeadConflicts && (
-                      <Text fontSize="sm">
-                        Emails already assigned to mentors, ambassadors, or partners:{' '}
-                        {invitationEmailState.leadConflictEmails.join(', ')}.
-                      </Text>
-                    )}
+                    <Text fontSize="sm">
+                      Duplicate emails detected: {invitationEmailState.duplicateEmails.join(', ')}.
+                    </Text>
                   </Box>
                 </Alert>
               )}
@@ -885,13 +742,7 @@ export const CreateOrganizationModal: React.FC<CreateOrganizationModalProps> = (
               <Stack spacing={3}>
                 {inviteDrafts.map((draft) => {
                   const duplicateEmail = invitationEmailState.duplicateById.get(draft.id)
-                  const leadConflictEmail = invitationEmailState.leadConflictsById.get(draft.id)
-                  const emailErrorMessage = [
-                    duplicateEmail ? `Duplicate email: ${duplicateEmail}` : null,
-                    leadConflictEmail ? `Already assigned: ${leadConflictEmail}` : null,
-                  ]
-                    .filter(Boolean)
-                    .join(' • ')
+                  const emailErrorMessage = duplicateEmail ? `Duplicate email: ${duplicateEmail}` : ''
                   return (
                     <Box key={draft.id} borderWidth="1px" borderRadius="md" p={3}>
                       <Grid templateColumns={{ base: '1fr', md: 'repeat(4, 1fr)' }} gap={3} alignItems="center">
@@ -969,14 +820,14 @@ export const CreateOrganizationModal: React.FC<CreateOrganizationModalProps> = (
             <Button variant="ghost" mr={3} onClick={onClose}>
               Cancel
             </Button>
-            <Button
-              colorScheme="purple"
-              onClick={handleSubmit}
-              isLoading={isSubmitting}
-              isDisabled={hasDuplicateEmails || hasLeadConflicts}
-            >
-              Create organization
-            </Button>
+              <Button
+                colorScheme="purple"
+                onClick={handleSubmit}
+                isLoading={isSubmitting}
+                isDisabled={hasDuplicateEmails}
+              >
+                Create organization
+              </Button>
           </ModalFooter>
         </ModalContent>
       </Modal>
