@@ -77,12 +77,18 @@ export interface OrganizationRecord {
   assignedMentorId?: string | null
   assignedMentorAt?: Timestamp | string | Date
   assignedMentorBy?: string | null
+  assignedMentorName?: string | null
+  assignedMentorEmail?: string | null
   assignedAmbassadorId?: string | null
   assignedAmbassadorAt?: Timestamp | string | Date
   assignedAmbassadorBy?: string | null
+  assignedAmbassadorName?: string | null
+  assignedAmbassadorEmail?: string | null
   transformationPartnerId?: string | null
   assignedPartnerAt?: Timestamp | string | Date
   assignedPartnerBy?: string | null
+  assignedPartnerName?: string | null
+  assignedPartnerEmail?: string | null
   capacityLastAlertThreshold?: 75 | 90 | 95 | 100 | null
 }
 

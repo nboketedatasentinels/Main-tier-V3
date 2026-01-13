@@ -16,24 +16,13 @@ import {
   Divider,
   Tooltip,
 } from '@chakra-ui/react'
-import {
-  BookOpen,
-  Clock,
-  ExternalLink,
-  Sparkles,
-  ListPlus,
-  ArrowUpRight,
-  CheckCircle2,
-  CalendarDays,
-  Lock,
-} from 'lucide-react'
+import { BookOpen, Clock, ExternalLink, Sparkles, ArrowUpRight, CheckCircle2, CalendarDays, Lock } from 'lucide-react'
 import { doc, getDoc } from 'firebase/firestore'
 import { Link as RouterLink } from 'react-router-dom'
 import { addDays } from 'date-fns'
 import { useAuth } from '@/hooks/useAuth'
 import { useOrganizationProgramCourses } from '@/hooks/useOrganizationProgramCourses'
 import { useUserCourseProgress } from '@/hooks/useUserCourseProgress'
-import { ComplementaryCourseSection } from '@/components/courses/ComplementaryCourseSection'
 import { db } from '@/services/firebase'
 import { canAccessCourse, isFreeUser } from '@/utils/membership'
 import {
@@ -426,14 +415,12 @@ const OrganizationCoursesPage: React.FC<{ userId?: string | null; profile: UserP
     return null
   }, [profile])
 
-  const { program, loading: programLoading, error: programError } = useOrganizationProgramCourses(organizationId)
+  const { program, loading: programLoading } = useOrganizationProgramCourses(organizationId)
   const { progressMap, loading: progressLoading } = useUserCourseProgress(userId)
 
   const [courses, setCourses] = useState<NormalizedCourse[]>([])
   const [courseMap, setCourseMap] = useState<Record<string, NormalizedCourse>>({})
-  const [missingCourseIds, setMissingCourseIds] = useState<string[]>([])
   const [loadingCourses, setLoadingCourses] = useState(true)
-  const [coursesError, setCoursesError] = useState<string | null>(null)
 
   useEffect(() => {
     let isActive = true
@@ -443,16 +430,13 @@ const OrganizationCoursesPage: React.FC<{ userId?: string | null; profile: UserP
         if (isActive) {
           setCourses([])
           setCourseMap({})
-          setMissingCourseIds([])
           setLoadingCourses(false)
-          setCoursesError(null)
         }
         return
       }
 
       try {
         setLoadingCourses(true)
-        setCoursesError(null)
         const orderedCourseIds = program.orderedCourseIds
         const snapshots = await Promise.all(
           orderedCourseIds.map(courseId => getDoc(doc(db, 'courses', courseId)))
@@ -460,12 +444,9 @@ const OrganizationCoursesPage: React.FC<{ userId?: string | null; profile: UserP
 
         const nextCourses: NormalizedCourse[] = []
         const nextCourseMap: Record<string, NormalizedCourse> = {}
-        const missing: string[] = []
-
         snapshots.forEach((snap, index) => {
           const courseId = orderedCourseIds[index]
           if (!snap.exists()) {
-            missing.push(courseId)
             return
           }
 
@@ -477,15 +458,12 @@ const OrganizationCoursesPage: React.FC<{ userId?: string | null; profile: UserP
         if (isActive) {
           setCourses(nextCourses)
           setCourseMap(nextCourseMap)
-          setMissingCourseIds(missing)
         }
       } catch (loadError) {
         console.error('Error loading organization courses', loadError)
         if (isActive) {
           setCourses([])
           setCourseMap({})
-          setMissingCourseIds([])
-          setCoursesError('Unable to load organization courses.')
         }
       } finally {
         if (isActive) {
@@ -614,6 +592,7 @@ const OrganizationCoursesPage: React.FC<{ userId?: string | null; profile: UserP
     !(isWeeklyTimeline && journeyTimelineDisplay === 'course-count' && assignedCourseCount && assignedCourseCount < (totalWeeks ?? 0))
 
   const overallLoading = programLoading || loadingCourses || progressLoading
+  const cohortStartDate = program?.cohortStartDate ?? null
 
   const headerDescription = useMemo(() => {
     if (!userId) return 'Sign in to view the courses that have been assigned to you.'
@@ -691,8 +670,8 @@ const OrganizationCoursesPage: React.FC<{ userId?: string | null; profile: UserP
                 <Icon as={CalendarDays} color="purple.600" />
                 <Text fontWeight="medium">
                   Cohort start:{' '}
-                  {program.cohortStartDate
-                    ? program.cohortStartDate.toLocaleDateString(undefined, {
+                  {cohortStartDate
+                    ? cohortStartDate.toLocaleDateString(undefined, {
                         month: 'short',
                         day: 'numeric',
                         year: 'numeric',

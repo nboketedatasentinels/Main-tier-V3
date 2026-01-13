@@ -309,7 +309,6 @@ export const CompanyDashboard: React.FC = () => {
   }, [weekStart, faqEntries])
 
   const weekly = weeklyMetrics[0]
-  const assignment = assignments[0]
 
   const checklistProgress = useMemo(() => {
     if (!checklistItems.length) return { completed: 0, total: 0, percent: 0 }

@@ -50,7 +50,7 @@ const buildComplementaryAssignmentLookup = async (userId: string) => {
 
   snapshots.forEach(snapshot => {
     snapshot.forEach(docSnap => {
-      const data = docSnap.data()
+      const data = docSnap.data() as Record<string, unknown>
       const title = typeof data.title === 'string' ? data.title.trim().toLowerCase() : ''
       const courseId = typeof data.courseId === 'string' ? data.courseId.trim().toLowerCase() : ''
       const legacyCourseId = typeof data.course_id === 'string' ? data.course_id.trim().toLowerCase() : ''

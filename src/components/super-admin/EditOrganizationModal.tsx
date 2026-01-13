@@ -274,7 +274,7 @@ export const EditOrganizationModal: React.FC<EditOrganizationModalProps> = ({
 
   useEffect(() => {
     if (!isOpen) return
-    if (form.teamSize > 0 && !form.cluster) {
+    if ((form.teamSize ?? 0) > 0 && !form.cluster) {
       setForm((prev) => ({ ...prev, cluster: determineClusterFromTeamSize(prev.teamSize) }))
     }
   }, [form.cluster, form.teamSize, isOpen])
