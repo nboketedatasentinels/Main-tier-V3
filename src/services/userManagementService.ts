@@ -12,6 +12,7 @@ import {
   updateDoc,
 } from 'firebase/firestore'
 import { db } from './firebase'
+import { ORG_COLLECTION } from '@/constants/organizations'
 
 export type ManagedUserRole = 'user' | 'partner' | 'admin' | 'super_admin' | 'team_leader' | 'mentor' | 'ambassador'
 export type MembershipStatus = 'free' | 'paid' | 'inactive'
@@ -88,7 +89,7 @@ export interface EngagementTrendPoint {
 }
 
 const usersCollection = collection(db, 'users')
-const companiesCollection = collection(db, 'companies')
+const organizationsCollection = collection(db, ORG_COLLECTION)
 const engagementCollection = collection(db, 'user_engagement_scores')
 const notificationsCollection = collection(db, 'notifications')
 
@@ -153,7 +154,7 @@ export const listenToUsers = (onChange: (users: ManagedUserRecord[]) => void) =>
 }
 
 export const fetchOrganizationsList = async (): Promise<OrganizationOption[]> => {
-  const snapshot = await getDocs(query(companiesCollection, orderBy('name', 'asc')))
+  const snapshot = await getDocs(query(organizationsCollection, orderBy('name', 'asc')))
   return snapshot.docs.map((docSnap) => {
     const data = docSnap.data() as { name?: string; code?: string }
     return { id: docSnap.id, name: data.name || 'Untitled organization', code: data.code }
@@ -260,7 +261,7 @@ export const fetchEngagementRoster = async (): Promise<EngagementRosterEntry[]> 
   const [engagementSnapshot, usersSnapshot, companiesSnapshot] = await Promise.all([
     getDocs(engagementCollection),
     getDocs(usersCollection),
-    getDocs(companiesCollection),
+    getDocs(organizationsCollection),
   ])
 
   const userIndex = new Map<string, ManagedUserRecord>()
