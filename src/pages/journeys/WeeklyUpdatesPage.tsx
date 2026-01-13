@@ -38,7 +38,6 @@ import {
 import { AlertTriangle, CheckCircle, ChevronLeft, ChevronRight, Lock, Plus, ShieldCheck } from 'lucide-react'
 import { collection, doc, getDocs, query, serverTimestamp, setDoc, where, onSnapshot, addDoc } from 'firebase/firestore'
 import { addDays, format } from 'date-fns'
-import { useNavigate } from 'react-router-dom'
 import { removeUndefinedFields } from '@/utils/firestore'
 import { getIsoWeekNumber } from '@/utils/date'
 import { db } from '@/services/firebase'
@@ -109,7 +108,6 @@ const weeklyGuidance: Record<number, string[]> = {
   1: [
     'Introduce yourself with forum posts, comments, and likes',
     'Share a progress update publicly',
-    'Submit your weekly Impact Log',
   ],
   2: [
     'Complete your core leadership modules',
@@ -183,7 +181,6 @@ const WeeklyChecklistPage: React.FC = () => {
 
   const { isOpen, onOpen, onClose } = useDisclosure()
   const toast = useToast()
-  const navigate = useNavigate()
   const activityRefs = useRef<Record<string, HTMLDivElement | null>>({})
   const [weeklyProgress, setWeeklyProgress] = useState<WeeklyProgress | null>(null)
   const {
@@ -296,27 +293,6 @@ const WeeklyChecklistPage: React.FC = () => {
     [weeklyTarget],
   );
 
-  const getImpactLogDateRange = useCallback(
-    (weekNumber: number) => {
-      let journeyStart: Date | null = profile?.journeyStartDate ? new Date(profile.journeyStartDate) : null
-
-      if (!journeyStart && profile?.currentWeek) {
-        const offsetWeeks = profile.currentWeek - 1
-        journeyStart = addDays(new Date(), -(offsetWeeks * 7))
-      }
-
-      if (!journeyStart) return null
-
-      const weekStart = addDays(journeyStart, (weekNumber - 1) * 7)
-      const weekEnd = addDays(weekStart, 7)
-      return {
-        start: format(weekStart, 'yyyy-MM-dd'),
-        end: format(weekEnd, 'yyyy-MM-dd'),
-      }
-    },
-    [profile?.currentWeek, profile?.journeyStartDate],
-  )
-
   const fetchJourney = useCallback(async () => {
     if (!user || !profile) return;
     try {
@@ -355,22 +331,6 @@ const WeeklyChecklistPage: React.FC = () => {
 
       const ledgerSnapshot = await getDocs(ledgerQuery);
       const completedActivities = new Set(ledgerSnapshot.docs.map(d => d.data().activityId));
-
-      const impactRange = getImpactLogDateRange(selectedWeek)
-      const hasImpactLog = activityDefs.some(def => def.id === 'impact_log')
-
-      if (impactRange && hasImpactLog) {
-        const impactQuery = query(
-          collection(db, 'impact_logs'),
-          where('userId', '==', user.uid),
-          where('date', '>=', impactRange.start),
-          where('date', '<', impactRange.end),
-        )
-        const impactSnapshot = await getDocs(impactQuery)
-        if (!impactSnapshot.empty) {
-          completedActivities.add('impact_log')
-        }
-      }
 
       const activityStates: ActivityState[] = activityDefs.map(def => ({
         ...def,
@@ -413,44 +373,6 @@ const WeeklyChecklistPage: React.FC = () => {
     });
     return () => unsubscribe();
   }, [normalizeWeeklyProgress, selectedWeek, user]);
-
-  useEffect(() => {
-    if (!user) return
-    const impactRange = getImpactLogDateRange(selectedWeek)
-    if (!impactRange) return
-
-    const impactQuery = query(
-      collection(db, 'impact_logs'),
-      where('userId', '==', user.uid),
-      where('date', '>=', impactRange.start),
-      where('date', '<', impactRange.end),
-    )
-
-    const unsubscribe = onSnapshot(impactQuery, snapshot => {
-      const hasEntry = !snapshot.empty
-      setActivities(prev => {
-        const impactActivity = prev.find(activity => activity.id === 'impact_log')
-        if (!impactActivity) return prev
-        const nextStatus: ActivityStatus = hasEntry ? 'completed' : 'not_started'
-        if (impactActivity.status === nextStatus) return prev
-
-        if (hasEntry) {
-          toast({
-            title: 'Impact Log recorded',
-            description: 'Your weekly checklist was updated automatically.',
-            status: 'success',
-            duration: 3000,
-          })
-        }
-
-        return prev.map(activity =>
-          activity.id === 'impact_log' ? { ...activity, status: nextStatus } : activity,
-        )
-      })
-    })
-
-    return () => unsubscribe()
-  }, [getImpactLogDateRange, selectedWeek, toast, user])
 
   const calculateProgress = useCallback(() => {
     const completedActivities = activities.filter(a => a.status === 'completed')
@@ -928,7 +850,6 @@ const WeeklyChecklistPage: React.FC = () => {
     const disabled = isWeekLocked
     const requiresPartnerApproval = journey?.isPaid && activity.requiresApproval
     const isHonorBased = !activity.requiresApproval
-    const isAutoTracked = activity.id === 'impact_log'
     const yesDisabled = disabled || activity.status === 'completed'
     const noDisabled = disabled || activity.status === 'not_started'
 
@@ -1011,11 +932,6 @@ const WeeklyChecklistPage: React.FC = () => {
             <Text color="text.muted" fontSize="sm">
               Status automatically updated when you submit this activity.
             </Text>
-            {isAutoTracked && (
-              <Button variant="outline" colorScheme="purple" onClick={() => navigate('/app/impact-log')}>
-                Go to Impact Log
-              </Button>
-            )}
           </Stack>
         ) : (
           <HStack spacing={3}>
