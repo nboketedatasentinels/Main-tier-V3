@@ -77,6 +77,8 @@ export interface UserProfile {
   // Leadership relations
   mentorId?: string
   ambassadorId?: string
+  mentorOverrideId?: string | null
+  ambassadorOverrideId?: string | null
   isActiveAmbassador?: boolean
   
   // Account Management

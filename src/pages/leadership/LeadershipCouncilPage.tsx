@@ -132,22 +132,23 @@ export const LeadershipCouncilPage: React.FC = () => {
   const { profile, user } = useAuth()
   const toast = useToast()
 
-  const [directMentorProfile, setDirectMentorProfile] = useState<LeadershipProfile | null>(null)
-  const [directAmbassadorProfile, setDirectAmbassadorProfile] = useState<LeadershipProfile | null>(null)
-  const [orgMentorProfile, setOrgMentorProfile] = useState<LeadershipProfile | null>(null)
-  const [orgAmbassadorProfile, setOrgAmbassadorProfile] = useState<LeadershipProfile | null>(null)
+  const [mentorProfile, setMentorProfile] = useState<LeadershipProfile | null>(null)
+  const [ambassadorProfile, setAmbassadorProfile] = useState<LeadershipProfile | null>(null)
   const [partnerProfile, setPartnerProfile] = useState<PartnerProfile | null>(null)
-  const [directAssignmentsLoading, setDirectAssignmentsLoading] = useState(false)
-  const [orgAssignmentsLoading, setOrgAssignmentsLoading] = useState(false)
-  const [directAssignmentsError, setDirectAssignmentsError] = useState<string | null>(null)
-  const [orgAssignmentsError, setOrgAssignmentsError] = useState<string | null>(null)
+  const [assignmentsLoading, setAssignmentsLoading] = useState(false)
+  const [assignmentsError, setAssignmentsError] = useState<string | null>(null)
   const [partnerLoading, setPartnerLoading] = useState(true)
   const [partnerError, setPartnerError] = useState<string | null>(null)
   const [assignmentsRetryKey, setAssignmentsRetryKey] = useState(0)
   const [partnerRetryKey, setPartnerRetryKey] = useState(0)
-  const [directAssignmentIds, setDirectAssignmentIds] = useState<{ mentorId: string | null; ambassadorId: string | null }>({
+  const [resolvedAssignmentIds, setResolvedAssignmentIds] = useState<{
+    mentorId: string | null
+    ambassadorId: string | null
+    partnerId: string | null
+  }>({
     mentorId: null,
     ambassadorId: null,
+    partnerId: null,
   })
   const partnerRetryCountRef = useRef(0)
 
@@ -166,23 +167,7 @@ export const LeadershipCouncilPage: React.FC = () => {
   const sessionsModal = useDisclosure()
   const scheduleModal = useDisclosure()
 
-  const assignmentsLoading = directAssignmentsLoading || orgAssignmentsLoading
   const hasOrganization = Boolean(profile?.companyId)
-
-  const mentorProfile = useMemo(
-    () => directMentorProfile ?? orgMentorProfile ?? null,
-    [directMentorProfile, orgMentorProfile],
-  )
-
-  const ambassadorProfile = useMemo(
-    () => directAmbassadorProfile ?? orgAmbassadorProfile ?? null,
-    [directAmbassadorProfile, orgAmbassadorProfile],
-  )
-
-  const assignmentsError = useMemo(() => {
-    if (mentorProfile || ambassadorProfile) return null
-    return directAssignmentsError || orgAssignmentsError
-  }, [mentorProfile, ambassadorProfile, directAssignmentsError, orgAssignmentsError])
 
   const retryAssignments = useCallback(() => {
     setAssignmentsRetryKey((prev) => prev + 1)
@@ -246,246 +231,122 @@ export const LeadershipCouncilPage: React.FC = () => {
 
   useEffect(() => {
     if (!profile?.id) {
-      setDirectAssignmentIds({ mentorId: null, ambassadorId: null })
-      setDirectMentorProfile(null)
-      setDirectAmbassadorProfile(null)
-      setDirectAssignmentsLoading(false)
-      setDirectAssignmentsError(null)
-      return
+      setResolvedAssignmentIds({ mentorId: null, ambassadorId: null, partnerId: null })
+      setMentorProfile(null)
+      setAmbassadorProfile(null)
+      setAssignmentsLoading(false)
+      setAssignmentsError(null)
+      return () => undefined
     }
-    setDirectAssignmentsLoading(true)
-    setDirectAssignmentsError(null)
 
-    const assignmentRef = doc(db, 'support_assignments', profile.id)
+    const mentorOverrideId = profile.mentorOverrideId ?? profile.mentorId ?? null
+    const ambassadorOverrideId = profile.ambassadorOverrideId ?? profile.ambassadorId ?? null
+
+    if (!profile.companyId) {
+      setResolvedAssignmentIds({
+        mentorId: mentorOverrideId,
+        ambassadorId: ambassadorOverrideId,
+        partnerId: null,
+      })
+      setAssignmentsLoading(false)
+      setAssignmentsError(null)
+      return () => undefined
+    }
+
+    setAssignmentsLoading(true)
+    setAssignmentsError(null)
+
+    const organizationRef = doc(db, ORG_COLLECTION, profile.companyId)
     const unsubscribe = onSnapshot(
-      assignmentRef,
+      organizationRef,
       (snapshot) => {
         if (!snapshot.exists()) {
-          setDirectAssignmentIds({ mentorId: null, ambassadorId: null })
-          setDirectAssignmentsLoading(false)
+          setResolvedAssignmentIds({ mentorId: mentorOverrideId, ambassadorId: ambassadorOverrideId, partnerId: null })
+          setAssignmentsError('Organization details could not be loaded.')
+          setAssignmentsLoading(false)
           return
         }
-        const data = snapshot.data() as { mentor_id?: string | null; ambassador_id?: string | null }
-        setDirectAssignmentIds({
-          mentorId: data.mentor_id ?? null,
-          ambassadorId: data.ambassador_id ?? null,
+        const data = snapshot.data() as { mentorId?: string | null; ambassadorId?: string | null; partnerId?: string | null; transformation_partner_id?: string | null }
+        setResolvedAssignmentIds({
+          mentorId: mentorOverrideId ?? data.mentorId ?? null,
+          ambassadorId: ambassadorOverrideId ?? data.ambassadorId ?? null,
+          partnerId: data.partnerId ?? data.transformation_partner_id ?? null,
         })
-        setDirectAssignmentsLoading(false)
+        setAssignmentsLoading(false)
       },
       (error) => {
-        setDirectAssignmentsError(error.message)
-        setDirectAssignmentsLoading(false)
+        setResolvedAssignmentIds({ mentorId: mentorOverrideId, ambassadorId: ambassadorOverrideId, partnerId: null })
+        setAssignmentsError(error.message)
+        setAssignmentsLoading(false)
       },
     )
 
     return () => {
       unsubscribe()
     }
-  }, [profile?.id, assignmentsRetryKey])
+  }, [
+    profile?.id,
+    profile?.companyId,
+    profile?.mentorOverrideId,
+    profile?.mentorId,
+    profile?.ambassadorOverrideId,
+    profile?.ambassadorId,
+    assignmentsRetryKey,
+  ])
 
   useEffect(() => {
     const unsubscribers: Array<() => void> = []
-    if (directAssignmentIds.mentorId) {
-      const mentorRef = doc(db, 'profiles', directAssignmentIds.mentorId)
-      const unsub = onSnapshot(
-        mentorRef,
-        (snap) => {
-          const mentorData = snap.data() as LeadershipProfile | undefined
-          if (mentorData) {
-            setDirectMentorProfile({
-              ...mentorData,
-              id: directAssignmentIds.mentorId as string,
-              fullName: mentorData.fullName || `${mentorData.firstName} ${mentorData.lastName}`.trim(),
+    setAssignmentsError(null)
+
+    const subscribeToProfile = (
+      leaderId: string,
+      setter: React.Dispatch<React.SetStateAction<LeadershipProfile | null>>,
+    ) => {
+      const leaderRef = doc(db, 'profiles', leaderId)
+      const unsubscribe = onSnapshot(
+        leaderRef,
+        (snapshot) => {
+          const leaderData = snapshot.data() as LeadershipProfile | undefined
+          if (leaderData) {
+            setter({
+              ...leaderData,
+              id: leaderId,
+              fullName: leaderData.fullName || `${leaderData.firstName} ${leaderData.lastName}`.trim(),
             })
           } else {
-            setDirectMentorProfile(null)
+            setter(null)
           }
         },
         (error) => {
-          setDirectAssignmentsError(error.message)
-          setDirectMentorProfile(null)
+          setAssignmentsError(error.message)
+          setter(null)
         },
       )
-      unsubscribers.push(unsub)
-    } else {
-      setDirectMentorProfile(null)
+      unsubscribers.push(unsubscribe)
     }
 
-    if (directAssignmentIds.ambassadorId) {
-      const ambassadorRef = doc(db, 'profiles', directAssignmentIds.ambassadorId)
-      const unsub = onSnapshot(
-        ambassadorRef,
-        (snap) => {
-          const ambassadorData = snap.data() as LeadershipProfile | undefined
-          if (ambassadorData) {
-            setDirectAmbassadorProfile({
-              ...ambassadorData,
-              id: directAssignmentIds.ambassadorId as string,
-              fullName: ambassadorData.fullName || `${ambassadorData.firstName} ${ambassadorData.lastName}`.trim(),
-            })
-          } else {
-            setDirectAmbassadorProfile(null)
-          }
-        },
-        (error) => {
-          setDirectAssignmentsError(error.message)
-          setDirectAmbassadorProfile(null)
-        },
-      )
-      unsubscribers.push(unsub)
+    if (resolvedAssignmentIds.mentorId) {
+      subscribeToProfile(resolvedAssignmentIds.mentorId, setMentorProfile)
     } else {
-      setDirectAmbassadorProfile(null)
+      setMentorProfile(null)
+    }
+
+    if (resolvedAssignmentIds.ambassadorId) {
+      subscribeToProfile(resolvedAssignmentIds.ambassadorId, setAmbassadorProfile)
+    } else {
+      setAmbassadorProfile(null)
     }
 
     return () => {
       unsubscribers.forEach((unsubscribe) => unsubscribe())
     }
-  }, [directAssignmentIds.ambassadorId, directAssignmentIds.mentorId])
-
-  useEffect(() => {
-    const needsMentor = !directAssignmentIds.mentorId
-    const needsAmbassador = !directAssignmentIds.ambassadorId
-
-    if (!profile?.companyId || (!needsMentor && !needsAmbassador)) {
-      setOrgMentorProfile(null)
-      setOrgAmbassadorProfile(null)
-      setOrgAssignmentsError(null)
-      setOrgAssignmentsLoading(false)
-      return () => undefined
-    }
-
-    if (!needsMentor) {
-      setOrgMentorProfile(null)
-    }
-    if (!needsAmbassador) {
-      setOrgAmbassadorProfile(null)
-    }
-
-    setOrgAssignmentsLoading(needsMentor || needsAmbassador)
-    setOrgAssignmentsError(null)
-    let mentorLoaded = !needsMentor
-    let ambassadorLoaded = !needsAmbassador
-    const unsubscribers: Array<() => void> = []
-
-    const getLastActive = (leader: LeadershipProfile) => {
-      const dateValue = leader.lastActive || leader.lastActiveAt || leader.registrationDate
-      if (!dateValue) return 0
-      const parsed = new Date(dateValue)
-      return isValid(parsed) ? parsed.getTime() : 0
-    }
-
-    const isActiveLeader = (leader: LeadershipProfile, role: 'mentor' | 'ambassador') => {
-      const status = leader.accountStatus?.toLowerCase()
-      if (status === 'inactive' || status === 'suspended') return false
-      if (role === 'ambassador' && leader.isActiveAmbassador === false) return false
-      return true
-    }
-
-    const selectLeader = (leaders: LeadershipProfile[], role: 'mentor' | 'ambassador') => {
-      const activeLeaders = leaders.filter((leader) => isActiveLeader(leader, role))
-      const pool = activeLeaders.length ? activeLeaders : leaders
-      return pool
-        .sort((a, b) => {
-          const diff = getLastActive(b) - getLastActive(a)
-          if (diff !== 0) return diff
-          return (a.fullName || a.firstName || '').localeCompare(b.fullName || b.firstName || '')
-        })[0]
-    }
-
-    const handleLoaded = () => {
-      if (mentorLoaded && ambassadorLoaded) {
-        setOrgAssignmentsLoading(false)
-      }
-    }
-
-    const mentorQuery = needsMentor
-      ? query(
-          collection(db, 'profiles'),
-          where('role', '==', 'mentor'),
-          where('companyId', '==', profile.companyId),
-        )
-      : null
-    const ambassadorQuery = needsAmbassador
-      ? query(
-          collection(db, 'profiles'),
-          where('role', '==', 'ambassador'),
-          where('companyId', '==', profile.companyId),
-        )
-      : null
-
-    if (mentorQuery) {
-      unsubscribers.push(
-        onSnapshot(
-          mentorQuery,
-          (snapshot) => {
-            const leaders = snapshot.docs.map((docSnapshot) => {
-              const data = docSnapshot.data() as LeadershipProfile
-              return {
-                ...data,
-                id: docSnapshot.id,
-                fullName: data.fullName || `${data.firstName} ${data.lastName}`.trim(),
-              }
-            })
-
-            const selected = leaders.length ? selectLeader(leaders, 'mentor') : undefined
-            setOrgMentorProfile(selected || null)
-            mentorLoaded = true
-            handleLoaded()
-          },
-          (error) => {
-            mentorLoaded = true
-            setOrgMentorProfile(null)
-            setOrgAssignmentsError(error.message)
-            handleLoaded()
-          },
-        ),
-      )
-    } else {
-      mentorLoaded = true
-    }
-
-    if (ambassadorQuery) {
-      unsubscribers.push(
-        onSnapshot(
-          ambassadorQuery,
-          (snapshot) => {
-            const leaders = snapshot.docs.map((docSnapshot) => {
-              const data = docSnapshot.data() as LeadershipProfile
-              return {
-                ...data,
-                id: docSnapshot.id,
-                fullName: data.fullName || `${data.firstName} ${data.lastName}`.trim(),
-              }
-            })
-
-            const selected = leaders.length ? selectLeader(leaders, 'ambassador') : undefined
-            setOrgAmbassadorProfile(selected || null)
-            ambassadorLoaded = true
-            handleLoaded()
-          },
-          (error) => {
-            ambassadorLoaded = true
-            setOrgAmbassadorProfile(null)
-            setOrgAssignmentsError(error.message)
-            handleLoaded()
-          },
-        ),
-      )
-    } else {
-      ambassadorLoaded = true
-    }
-
-    return () => {
-      unsubscribers.forEach((unsubscribe) => unsubscribe())
-    }
-  }, [profile?.companyId, assignmentsRetryKey, directAssignmentIds.ambassadorId, directAssignmentIds.mentorId])
+  }, [resolvedAssignmentIds.ambassadorId, resolvedAssignmentIds.mentorId])
 
   useEffect(() => {
     setPartnerLoading(true)
     setPartnerError(null)
     let timeoutId: ReturnType<typeof setTimeout> | null = null
     let unsubscribePartner: (() => void) | null = null
-    let unsubscribeCompany: (() => void) | null = null
 
     const subscribeToPartner = (partnerId: string, allowFallback: boolean) => {
       if (unsubscribePartner) {
@@ -534,33 +395,14 @@ export const LeadershipCouncilPage: React.FC = () => {
       }
     }
 
-    const companyRef = doc(db, ORG_COLLECTION, profile.companyId)
-    unsubscribeCompany = onSnapshot(
-      companyRef,
-      (snapshot) => {
-        if (!snapshot.exists()) {
-          setPartnerProfile(null)
-          setPartnerError('Organization details could not be loaded.')
-          setPartnerLoading(false)
-          return
-        }
-        const companyData = snapshot.data() as { transformation_partner_id?: string | null }
-        const partnerId = companyData.transformation_partner_id || 'primary'
-        subscribeToPartner(partnerId, true)
-      },
-      (error) => {
-        setPartnerProfile(null)
-        setPartnerError(error.message)
-        setPartnerLoading(false)
-      },
-    )
+    const partnerId = resolvedAssignmentIds.partnerId || 'primary'
+    subscribeToPartner(partnerId, true)
 
     return () => {
       if (timeoutId) clearTimeout(timeoutId)
       if (unsubscribePartner) unsubscribePartner()
-      if (unsubscribeCompany) unsubscribeCompany()
     }
-  }, [partnerRetryKey, schedulePartnerRetry, profile?.companyId])
+  }, [partnerRetryKey, schedulePartnerRetry, profile?.companyId, resolvedAssignmentIds.partnerId])
 
   useEffect(() => {
     const unsubscribe = loadSessions()
@@ -725,14 +567,6 @@ export const LeadershipCouncilPage: React.FC = () => {
 
   return (
     <Stack spacing={6}>
-      <Box fontSize="xs" p={3} border="1px solid" borderColor="border.subtle" rounded="md" bg="surface.subtle">
-        <Text>uid: {profile?.id}</Text>
-        <Text>companyId: {profile?.companyId ?? 'none'}</Text>
-        <Text>assignment mentorId: {directAssignmentIds.mentorId ?? 'none'}</Text>
-        <Text>assignment ambassadorId: {directAssignmentIds.ambassadorId ?? 'none'}</Text>
-        <Text>mentorProfile source: {directMentorProfile ? 'direct' : orgMentorProfile ? 'org' : 'none'}</Text>
-        <Text>ambassadorProfile source: {directAmbassadorProfile ? 'direct' : orgAmbassadorProfile ? 'org' : 'none'}</Text>
-      </Box>
       <Card bgGradient="linear(to-r, tint.brandPrimary, surface.default)" border="1px solid" borderColor="border.subtle">
         <CardBody>
           <Stack spacing={2}>
