@@ -11,6 +11,7 @@ import {
   where,
 } from 'firebase/firestore'
 import { db } from './firebase'
+import { ORG_COLLECTION } from '@/constants/organizations'
 import type { OrganizationRecord, OrganizationStatistics } from '@/types/admin'
 
 type OrganizationKey = {
@@ -27,7 +28,7 @@ type OrganizationStatsSnapshot = OrganizationStatistics & {
 }
 
 const usersCollection = collection(db, 'users')
-const organizationsCollection = collection(db, 'organizations')
+const organizationsCollection = collection(db, ORG_COLLECTION)
 
 const COMPANY_CODE_FIELDS = ['companyCode', 'company_code', 'organization_code'] as const
 const COMPANY_ID_FIELDS = ['companyId', 'organizationId'] as const

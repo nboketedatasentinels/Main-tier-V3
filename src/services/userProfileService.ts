@@ -14,6 +14,7 @@ import {
   limit,
 } from 'firebase/firestore'
 import { db } from '@/services/firebase'
+import { ORG_COLLECTION } from '@/constants/organizations'
 import type { UserProfile } from '@/types'
 
 export interface BadgeRecord {
@@ -102,7 +103,7 @@ export const fetchUserProfileById = async (userId: string): Promise<UserProfileE
 
 export const fetchOrganizationDetails = async (companyId?: string | null): Promise<OrganizationSummary | null> => {
   if (!companyId) return null
-  const snapshot = await getDoc(doc(db, 'companies', companyId))
+  const snapshot = await getDoc(doc(db, ORG_COLLECTION, companyId))
   if (!snapshot.exists()) return null
   const data = snapshot.data() as { name?: string; code?: string; status?: string }
   return {
