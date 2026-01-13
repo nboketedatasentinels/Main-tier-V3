@@ -7,12 +7,17 @@ import {
   getMonthlyAssignmentsArray,
   normalizeMonthlyAssignments,
 } from '@/utils/monthlyCourseAssignments'
+import { normalizeDurationWeeks, resolveDurationWeeksFromProgramDuration, resolveJourneyType } from '@/utils/journeyType'
+import { JOURNEY_META, type JourneyType } from '@/config/pointsConfig'
 
 interface OrganizationProgram {
   monthlyAssignments: MonthlyCourseAssignments
   totalMonths: number
   cohortStartDate: Date | null
   orderedCourseIds: string[]
+  courseAssignments: string[]
+  journeyType: JourneyType | null
+  programDurationWeeks: number | null
 }
 
 const normalizeDate = (value: unknown): Date | null => {
@@ -91,6 +96,13 @@ export const useOrganizationProgramCourses = (organizationId: string | null) => 
         const courseAssignments = normalizeCourseIds(
           data.courseAssignments || data.assignedCourses || data.defaultCourses
         )
+        const programDurationWeeks =
+          normalizeDurationWeeks(data.programDurationWeeks) ?? resolveDurationWeeksFromProgramDuration(programDuration)
+        const journeyType = resolveJourneyType({
+          journeyType: data.journeyType,
+          programDurationWeeks,
+          programDuration,
+        })
         const { monthlyAssignments, totalMonths } = normalizeMonthlyAssignments({
           monthlyCourseAssignments,
           courseAssignments,
@@ -104,6 +116,9 @@ export const useOrganizationProgramCourses = (organizationId: string | null) => 
           totalMonths,
           cohortStartDate: normalizeDate(data.cohortStartDate),
           orderedCourseIds,
+          courseAssignments,
+          journeyType,
+          programDurationWeeks: programDurationWeeks ?? (journeyType ? JOURNEY_META[journeyType].weeks : null),
         })
         setLoading(false)
       },

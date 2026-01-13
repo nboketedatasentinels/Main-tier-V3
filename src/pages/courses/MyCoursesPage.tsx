@@ -29,6 +29,7 @@ import {
 } from 'lucide-react'
 import { doc, getDoc } from 'firebase/firestore'
 import { Link as RouterLink } from 'react-router-dom'
+import { addDays } from 'date-fns'
 import { useAuth } from '@/hooks/useAuth'
 import { useOrganizationProgramCourses } from '@/hooks/useOrganizationProgramCourses'
 import { useUserCourseProgress } from '@/hooks/useUserCourseProgress'
@@ -41,9 +42,11 @@ import {
 } from '@/utils/courseMappings'
 import {
   formatMonthRange,
+  getMonthlyAssignmentsArray,
   getMonthAvailabilityStatus,
   getMonthDateRange,
 } from '@/utils/monthlyCourseAssignments'
+import { getJourneyLabel, getJourneyWeeks, isMonthBasedJourney } from '@/utils/journeyType'
 import type { UserProfile } from '@/types'
 
 interface NormalizedCourse {
@@ -86,6 +89,35 @@ const formatStatus = (status?: string) => {
     .filter(Boolean)
     .map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
     .join(' ')
+}
+
+const getWeekDateRange = (cohortStartDate: Date, weekIndex: number) => {
+  const startDate = addDays(cohortStartDate, weekIndex * 7)
+  const endDate = addDays(startDate, 7)
+  return { startDate, endDate }
+}
+
+const formatWeekRange = (startDate: Date, endDate: Date) => {
+  const formatter = new Intl.DateTimeFormat('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
+  const endDisplay = new Date(endDate)
+  endDisplay.setDate(endDisplay.getDate() - 1)
+  return `${formatter.format(startDate)} – ${formatter.format(endDisplay)}`
+}
+
+const getWeekAvailabilityStatus = (params: {
+  cohortStartDate: Date | null
+  currentDate: Date
+  weekIndex: number
+}) => {
+  const { cohortStartDate, currentDate, weekIndex } = params
+  if (!cohortStartDate) {
+    return weekIndex === 0 ? 'current' : 'locked'
+  }
+
+  const { startDate, endDate } = getWeekDateRange(cohortStartDate, weekIndex)
+  if (currentDate < startDate) return 'locked'
+  if (currentDate >= endDate) return 'completed'
+  return 'current'
 }
 
 const badgeColor = (difficulty?: CourseDifficulty) => {
@@ -472,15 +504,10 @@ const OrganizationCoursesPage: React.FC<{ userId?: string | null; profile: UserP
     [courses, progressMap]
   )
 
-  const courseMonthIndexLookup = useMemo(() => {
-    const map = new Map<string, number>()
-    if (!program) return map
-    Object.entries(program.monthlyAssignments).forEach(([key, courseId]) => {
-      if (!courseId || map.has(courseId)) return
-      map.set(courseId, Number(key) - 1)
-    })
-    return map
-  }, [program])
+  const journeyType = program?.journeyType ?? null
+  const journeyLabel = journeyType ? getJourneyLabel(journeyType) : null
+  const isWeeklyTimeline = journeyType ? !isMonthBasedJourney(journeyType) : false
+  const totalWeeks = program?.programDurationWeeks ?? (journeyType ? getJourneyWeeks(journeyType) : null)
 
   const monthlyProgramTimeline = useMemo(() => {
     if (!program || !program.totalMonths) return []
@@ -507,10 +534,52 @@ const OrganizationCoursesPage: React.FC<{ userId?: string | null; profile: UserP
     })
   }, [program, courseMap])
 
+  const weeklyProgramTimeline = useMemo(() => {
+    if (!program || !totalWeeks) return []
+    const now = new Date()
+    const fallbackAssignments = getMonthlyAssignmentsArray(program.monthlyAssignments, program.totalMonths)
+    const assignmentList = program.courseAssignments.length ? program.courseAssignments : fallbackAssignments
+    return Array.from({ length: totalWeeks }, (_, index) => {
+      const courseId = assignmentList[index] || ''
+      const course = courseId ? courseMap[courseId] : undefined
+      const availability = getWeekAvailabilityStatus({
+        cohortStartDate: program.cohortStartDate,
+        currentDate: now,
+        weekIndex: index,
+      })
+      const weekRange = program.cohortStartDate ? getWeekDateRange(program.cohortStartDate, index) : null
+      const dateRange = weekRange ? formatWeekRange(weekRange.startDate, weekRange.endDate) : undefined
+      const unlockDate = weekRange ? weekRange.startDate : null
+      return {
+        weekNumber: index + 1,
+        courseId,
+        course,
+        availability,
+        dateRange,
+        unlockDate,
+      }
+    })
+  }, [program, courseMap, totalWeeks])
+
+  const timelineEntries = useMemo(() => {
+    if (isWeeklyTimeline) {
+      return weeklyProgramTimeline.map(entry => ({
+        ...entry,
+        periodNumber: entry.weekNumber,
+        periodLabel: 'week' as const,
+      }))
+    }
+    return monthlyProgramTimeline.map(entry => ({
+      ...entry,
+      periodNumber: entry.monthNumber,
+      periodLabel: 'month' as const,
+    }))
+  }, [isWeeklyTimeline, monthlyProgramTimeline, weeklyProgramTimeline])
+
   const nextUnlockDate = useMemo(() => {
-    const nextLocked = monthlyProgramTimeline.find(entry => entry.availability === 'locked')
+    const nextLocked = timelineEntries.find(entry => entry.availability === 'locked')
     return nextLocked?.unlockDate || null
-  }, [monthlyProgramTimeline])
+  }, [timelineEntries])
 
   const assignedCourseCount = useMemo(() => coursesWithProgress.length, [coursesWithProgress])
 
@@ -525,6 +594,7 @@ const OrganizationCoursesPage: React.FC<{ userId?: string | null; profile: UserP
 
   const hasOrganization = Boolean(organizationId)
   const hasProgram = Boolean(program?.orderedCourseIds.length)
+  const hasTimeline = timelineEntries.length > 0
 
   return (
     <Stack spacing={8} py={2} as="section">
@@ -574,14 +644,17 @@ const OrganizationCoursesPage: React.FC<{ userId?: string | null; profile: UserP
         </Flex>
       </Box>
 
-      {hasOrganization && hasProgram && program?.totalMonths && program.totalMonths > 0 && (
+      {hasOrganization && hasProgram && hasTimeline && (
         <Stack spacing={4} as="section">
           <HStack justify="space-between" align="center">
             <Heading size="md" color="gray.800">
-              Monthly program timeline
+              {isWeeklyTimeline ? 'Weekly program timeline' : 'Monthly program timeline'}
             </Heading>
             <Badge colorScheme="purple" borderRadius="full">
-              {program.totalMonths} months
+              {journeyLabel ||
+                (isWeeklyTimeline
+                  ? `${totalWeeks ?? timelineEntries.length} weeks`
+                  : `${program?.totalMonths ?? timelineEntries.length} months`)}
             </Badge>
           </HStack>
 
@@ -608,7 +681,7 @@ const OrganizationCoursesPage: React.FC<{ userId?: string | null; profile: UserP
             </HStack>
 
             <SimpleGrid columns={{ base: 1, md: 2, xl: 3 }} spacing={4} mt={4}>
-              {monthlyProgramTimeline.map(entry => {
+              {timelineEntries.map(entry => {
                 const statusColor =
                   entry.availability === 'current'
                     ? 'green'
@@ -617,7 +690,9 @@ const OrganizationCoursesPage: React.FC<{ userId?: string | null; profile: UserP
                       : 'gray'
                 const statusLabel =
                   entry.availability === 'current'
-                    ? 'Current month'
+                    ? isWeeklyTimeline
+                      ? 'Current week'
+                      : 'Current month'
                     : entry.availability === 'completed'
                       ? 'Completed'
                       : 'Locked'
@@ -634,7 +709,7 @@ const OrganizationCoursesPage: React.FC<{ userId?: string | null; profile: UserP
                 const canOpen = hasAccess && !isLocked && hasLink
                 return (
                   <Box
-                    key={`monthly-${entry.monthNumber}`}
+                    key={`${entry.periodLabel}-${entry.periodNumber}`}
                     borderWidth="1px"
                     borderRadius="2xl"
                     p={4}
@@ -642,7 +717,9 @@ const OrganizationCoursesPage: React.FC<{ userId?: string | null; profile: UserP
                   >
                     <HStack justify="space-between" mb={2}>
                       <Badge colorScheme={statusColor} borderRadius="full">
-                        Month {entry.monthNumber}
+                        {entry.periodLabel === 'week'
+                          ? `Week ${entry.periodNumber}`
+                          : `Month ${entry.periodNumber}`}
                       </Badge>
                       <HStack spacing={1} color="gray.600">
                         <Icon
@@ -661,7 +738,8 @@ const OrganizationCoursesPage: React.FC<{ userId?: string | null; profile: UserP
                       {entry.course?.title || (entry.courseId ? 'Course assigned' : 'Course not assigned')}
                     </Heading>
                     <Text fontSize="sm" color="gray.600" mb={2}>
-                      {entry.course?.description || 'Your monthly course assignment.'}
+                      {entry.course?.description ||
+                        `Your ${entry.periodLabel === 'week' ? 'weekly' : 'monthly'} course assignment.`}
                     </Text>
                     {entry.dateRange && (
                       <Badge variant="subtle" colorScheme="gray" borderRadius="full">
@@ -680,7 +758,7 @@ const OrganizationCoursesPage: React.FC<{ userId?: string | null; profile: UserP
                     )}
                     {!entry.courseId && (
                       <Text fontSize="xs" color="gray.500" mt={2}>
-                        No course assigned for this month yet.
+                        No course assigned for this {entry.periodLabel} yet.
                       </Text>
                     )}
                     {entry.courseId && (

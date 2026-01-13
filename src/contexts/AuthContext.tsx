@@ -32,9 +32,18 @@ import { buildActionCodeSettings } from '@/utils/authActionCodeSettings'
 import { assignFreeCourseToUser, hasFreeCourseAssigned } from '@/services/courseAssignmentService'
 import { isFreeUser } from '@/utils/membership'
 import { createReferral, generateReferralCode, validateReferralCode } from '@/services/referralService'
+import { JOURNEY_META, type JourneyType } from '@/config/pointsConfig'
 
 interface AuthProviderProps {
   children: React.ReactNode
+}
+
+const resolveInitialJourneyType = (params: {
+  isFreeTierUser: boolean
+  organizationJourneyType?: JourneyType | null
+}): JourneyType => {
+  if (params.organizationJourneyType) return params.organizationJourneyType
+  return params.isFreeTierUser ? '4W' : '6W'
 }
 
 export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
@@ -390,6 +399,13 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         console.warn('🟠 [Auth] Unable to generate referral code', error)
       }
 
+      const resolvedJourneyType = resolveInitialJourneyType({
+        isFreeTierUser: role === UserRole.FREE_USER,
+        organizationJourneyType: validatedOrganization?.journeyType ?? null,
+      })
+      const programDurationWeeks = JOURNEY_META[resolvedJourneyType].weeks
+      const journeyStartDate = validatedOrganization?.cohortStartDate || undefined
+
       console.log('🟣 [Auth] Creating new profile with role:', role)
 
       const profileData: UserProfile = {
@@ -403,7 +419,9 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         ...(firebaseUser.photoURL ? { avatarUrl: firebaseUser.photoURL } : {}),
         totalPoints: 0,
         level: 1,
-        journeyType: '4W',
+        journeyType: resolvedJourneyType,
+        programDurationWeeks,
+        journeyStartDate,
         referralCount: 0,
         referralCode,
         referredBy: null,
@@ -795,6 +813,13 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         console.warn('🟠 [Auth] Unable to generate referral code during signup', error)
       }
 
+      const resolvedJourneyType = resolveInitialJourneyType({
+        isFreeTierUser: role === UserRole.FREE_USER,
+        organizationJourneyType: validatedOrganization?.journeyType ?? null,
+      })
+      const programDurationWeeks = JOURNEY_META[resolvedJourneyType].weeks
+      const journeyStartDate = validatedOrganization?.cohortStartDate || undefined
+
       const profileData: UserProfile = {
         id: uid,
         email: normalizedEmail,
@@ -809,7 +834,9 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         membershipStatus: validatedOrganization ? 'paid' : 'free',
         totalPoints: 0,
         level: 1,
-        journeyType: '4W',
+        journeyType: resolvedJourneyType,
+        programDurationWeeks,
+        journeyStartDate,
         referralCount: 0,
         referralCode: generatedReferralCode,
         referredBy: null,
