@@ -48,6 +48,10 @@ service cloud.firestore {
         getProfile(request.auth.uid).accountStatus == 'active';
     }
 
+    function isChecklistOwner(checklistId) {
+      return isAuthenticated() && checklistId.matches('^' + request.auth.uid + '_.*$');
+    }
+
     function isValidImpactLog(logData) {
       // Basic fields validation
       let hasRequiredFields = logData.description is string && logData.description.size() > 0 &&
@@ -517,6 +521,11 @@ service cloud.firestore {
         isSuperAdmin() ||
         canAccessMentee(request.resource.data)
       );
+    }
+
+    match /checklists/{checklistId} {
+      allow read: if isChecklistOwner(checklistId);
+      allow create, update: if isChecklistOwner(checklistId);
     }
 
     match /impact_goals/{goalId} {
