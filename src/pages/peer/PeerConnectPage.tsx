@@ -32,7 +32,6 @@ import {
   TabPanel,
   TabPanels,
   Tabs,
-  Tag,
   Text,
   Textarea,
   useDisclosure,
@@ -49,7 +48,6 @@ import {
   Mail,
   MessageSquare,
   Search,
-  ShieldCheck,
   Sword,
   Target,
   Trophy,
@@ -150,16 +148,10 @@ export const PeerConnectPage: React.FC = () => {
   const challengeModal = useDisclosure()
   const sessionModal = useDisclosure()
 
-  const [search, setSearch] = useState('')
   const [availablePeers, setAvailablePeers] = useState<PeerProfile[]>([])
   const [weeklyMatch, setWeeklyMatch] = useState<WeeklyMatch | null>(null)
   const [pendingInvites, setPendingInvites] = useState<Invitation[]>([])
   const [sessions, setSessions] = useState<PeerSession[]>([])
-  const [preferences, setPreferences] = useState({
-    interests: '',
-    goals: '',
-    timezonePreference: 'any',
-  })
   const [sessionForm, setSessionForm] = useState({
     title: 'Group Transformation Session',
     description: defaultSessionDescription,
@@ -377,53 +369,10 @@ export const PeerConnectPage: React.FC = () => {
     fetchInvitesAndSessions()
   }, [fetchInvitesAndSessions])
 
-  const filteredPeers = useMemo(() => {
-    const queryString = search.toLowerCase()
-    return availablePeers.filter((peer) => {
-      return (
-        peer.name.toLowerCase().includes(queryString) ||
-        peer.email.toLowerCase().includes(queryString) ||
-        (peer.identityTag || '').toLowerCase().includes(queryString)
-      )
-    })
-  }, [availablePeers, search])
-
   const filteredParticipants = useMemo(() => {
     const queryString = participantFilter.toLowerCase()
     return availablePeers.filter((peer) => peer.name.toLowerCase().includes(queryString) || peer.email.toLowerCase().includes(queryString))
   }, [availablePeers, participantFilter])
-
-  const updatePreference = (key: keyof typeof preferences, value: string) => {
-    setPreferences((prev) => ({ ...prev, [key]: value }))
-  }
-
-  const persistPreferences = async () => {
-    if (!user) return
-    try {
-      await setDoc(
-        doc(db, 'peer_preferences', user.uid),
-        removeUndefinedFields({
-          ...preferences,
-          updatedAt: serverTimestamp(),
-        }),
-        { merge: true }
-      )
-      toast({
-        title: 'Preferences saved',
-        description: 'We will prioritise peers who match these preferences when creating weekly matches.',
-        status: 'success',
-        position: 'top',
-      })
-    } catch (error) {
-      toast({
-        title: 'Could not save preferences',
-        description: 'Firebase rejected the update. Please try again.',
-        status: 'error',
-        position: 'top',
-      })
-      console.error('Preference update failed', error)
-    }
-  }
 
   const confirmMeeting = async (sessionId: string) => {
     if (!user) return
@@ -779,160 +728,54 @@ export const PeerConnectPage: React.FC = () => {
                     )}
                   </Box>
 
-                  <SimpleGrid columns={{ base: 1, md: 2 }} spacing={4}>
-                    <Box bg="surface.default" p={6} borderRadius="2xl" border="1px solid" borderColor="border.subtle" boxShadow="sm">
-                      <Heading size="sm" mb={2} color="brand.text">
-                        Matching preferences
-                      </Heading>
-                      <Text fontSize="sm" color="brand.subtleText" mb={4}>
-                        Soft filters to prioritise peers with aligned interests, goals, and work hours.
-                      </Text>
-                      <Stack spacing={4}>
-                        <FormControl>
-                          <FormLabel fontSize="sm">Interests (comma-separated)</FormLabel>
-                          <Input
-                            value={preferences.interests}
-                            onChange={(e) => updatePreference('interests', e.target.value)}
-                            placeholder="Product strategy, Marketing"
-                          />
-                        </FormControl>
-                        <FormControl>
-                          <FormLabel fontSize="sm">Goals (comma-separated)</FormLabel>
-                          <Input value={preferences.goals} onChange={(e) => updatePreference('goals', e.target.value)} placeholder="Grow leadership, Improve communication" />
-                        </FormControl>
-                        <FormControl>
-                          <FormLabel fontSize="sm">Timezone preference</FormLabel>
-                          <Select value={preferences.timezonePreference} onChange={(e) => updatePreference('timezonePreference', e.target.value)}>
-                            <option value="any">Any timezone</option>
-                            <option value="same">Same timezone</option>
-                            <option value="compatible">Compatible working hours</option>
-                          </Select>
-                        </FormControl>
-                        <Button colorScheme="primary" leftIcon={<ShieldCheck size={16} />} onClick={persistPreferences} isLoading={loadingPeers}>
-                          Apply preferences
-                        </Button>
-                      </Stack>
-                    </Box>
-
-                    <Box bg="surface.default" p={6} borderRadius="2xl" border="1px solid" borderColor="border.subtle" boxShadow="sm">
-                      <Flex justify="space-between" align="center" mb={3}>
-                        <Heading size="sm" color="brand.text">
-                          Pending peer invitations
-                        </Heading>
-                        <Badge colorScheme="primary" variant="outline">
-                          {pendingInvites.length} pending
-                        </Badge>
-                      </Flex>
-                      <Stack spacing={3}>
-                        {pendingInvites.length ? (
-                          pendingInvites.map((invite) => (
-                            <Box key={invite.id} p={3} borderRadius="lg" border="1px dashed" borderColor="border.subtle">
-                              <HStack justify="space-between" align="flex-start">
-                                <Stack spacing={0}>
-                                  <Text fontWeight="semibold" color="brand.text">
-                                    {invite.fromName}
-                                  </Text>
-                                  <Text fontSize="sm" color="brand.subtleText">
-                                    {invite.fromEmail}
-                                  </Text>
-                                </Stack>
-                                <HStack spacing={2}>
-                                  <IconButton
-                                    aria-label="Decline invitation"
-                                    icon={<X size={16} />}
-                                    size="sm"
-                                    variant="ghost"
-                                    onClick={() => respondToInvite(invite.id, false)}
-                                  />
-                                  <IconButton
-                                    aria-label="Accept invitation"
-                                    icon={<Check size={16} />}
-                                    size="sm"
-                                    colorScheme="success"
-                                    variant="solid"
-                                    onClick={() => respondToInvite(invite.id, true)}
-                                  />
-                                </HStack>
-                              </HStack>
-                            </Box>
-                          ))
-                        ) : (
-                          <Text fontSize="sm" color="brand.subtleText">
-                            No pending peer invitations right now.
-                          </Text>
-                        )}
-                      </Stack>
-                    </Box>
-                  </SimpleGrid>
-
                   <Box bg="surface.default" p={6} borderRadius="2xl" border="1px solid" borderColor="border.subtle" boxShadow="sm">
-                    <Flex justify="space-between" align={{ base: 'flex-start', md: 'center' }} gap={3} mb={4} direction={{ base: 'column', md: 'row' }}>
-                      <Stack spacing={1}>
-                        <Heading size="sm" color="brand.text">
-                          Available matches pool
-                        </Heading>
-                        <Text fontSize="sm" color="brand.subtleText">
-                          Filtered to your company, village, and cohort. Search by name, email, or identity tag.
-                        </Text>
-                      </Stack>
+                    <Flex justify="space-between" align="center" mb={3}>
+                      <Heading size="sm" color="brand.text">
+                        Pending peer invitations
+                      </Heading>
                       <Badge colorScheme="primary" variant="outline">
-                        Showing {filteredPeers.length} members
+                        {pendingInvites.length} pending
                       </Badge>
                     </Flex>
-
-                    <InputGroup mb={4} maxW={{ base: '100%', md: '320px' }}>
-                      <InputLeftElement pointerEvents="none">
-                        <Search size={16} opacity={0.65} />
-                      </InputLeftElement>
-                      <Input placeholder="Search peers" value={search} onChange={(e) => setSearch(e.target.value)} />
-                    </InputGroup>
-
-                    <SimpleGrid columns={{ base: 1, md: 2, lg: 3 }} spacing={3}>
-                      {filteredPeers.map((peer) => (
-                        <Box key={peer.id} p={4} borderRadius="lg" border="1px solid" borderColor="border.subtle" bg="surface.default" boxShadow="xs">
-                          <HStack spacing={3} mb={2} align="flex-start">
-                            <Avatar name={peer.name} src={peer.avatarUrl} size="sm" />
-                            <Stack spacing={1} flex={1}>
-                              <HStack justify="space-between">
+                    <Stack spacing={3}>
+                      {pendingInvites.length ? (
+                        pendingInvites.map((invite) => (
+                          <Box key={invite.id} p={3} borderRadius="lg" border="1px dashed" borderColor="border.subtle">
+                            <HStack justify="space-between" align="flex-start">
+                              <Stack spacing={0}>
                                 <Text fontWeight="semibold" color="brand.text">
-                                  {peer.name}
+                                  {invite.fromName}
                                 </Text>
-                                {peer.identityTag && (
-                                  <Badge colorScheme="primary" variant="subtle">
-                                    {peer.identityTag}
-                                  </Badge>
-                                )}
-                              </HStack>
-                              <Text fontSize="sm" color="brand.subtleText">
-                                {peer.email}
-                              </Text>
-                              <HStack spacing={2} wrap="wrap">
-                                <Tag size="sm" colorScheme="primary" variant="subtle" display="flex" alignItems="center" gap={1}>
-                                  <Clock3 size={14} />
-                                  {peer.timezone || 'Timezone TBD'}
-                                </Tag>
-                                <Tag size="sm" colorScheme="success" variant="outline">
-                                  {peer.cohortIdentifier ? 'Shared cohort' : peer.corporateVillageId ? 'Corporate village' : 'Company match'}
-                                </Tag>
-                              </HStack>
-                              {peer.calendarLink && (
-                                <Button
-                                  as="a"
-                                  href={peer.calendarLink}
+                                <Text fontSize="sm" color="brand.subtleText">
+                                  {invite.fromEmail}
+                                </Text>
+                              </Stack>
+                              <HStack spacing={2}>
+                                <IconButton
+                                  aria-label="Decline invitation"
+                                  icon={<X size={16} />}
                                   size="sm"
-                                  variant="link"
-                                  colorScheme="primary"
-                                  leftIcon={<Calendar size={14} />}
-                                  target="_blank"
-                                >
-                                  Calendar link
-                                </Button>
-                              )}
-                            </Stack>
-                          </HStack>
-                        </Box>
-                      ))}
-                    </SimpleGrid>
+                                  variant="ghost"
+                                  onClick={() => respondToInvite(invite.id, false)}
+                                />
+                                <IconButton
+                                  aria-label="Accept invitation"
+                                  icon={<Check size={16} />}
+                                  size="sm"
+                                  colorScheme="success"
+                                  variant="solid"
+                                  onClick={() => respondToInvite(invite.id, true)}
+                                />
+                              </HStack>
+                            </HStack>
+                          </Box>
+                        ))
+                      ) : (
+                        <Text fontSize="sm" color="brand.subtleText">
+                          No pending peer invitations right now.
+                        </Text>
+                      )}
+                    </Stack>
                   </Box>
 
                   <Box bg="surface.default" p={6} borderRadius="2xl" border="1px solid" borderColor="border.subtle" boxShadow="sm">
