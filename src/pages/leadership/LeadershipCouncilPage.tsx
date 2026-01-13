@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import React, { useCallback, useEffect, useMemo, useState } from 'react'
 import {
   Alert,
   AlertDescription,
@@ -46,6 +46,7 @@ import {
   addDoc,
   collection,
   doc,
+  getDoc,
   onSnapshot,
   orderBy,
   query,
@@ -54,7 +55,6 @@ import {
 } from 'firebase/firestore'
 import { format, formatDistanceToNow, isAfter, isValid, parseISO } from 'date-fns'
 import { db } from '@/services/firebase'
-import { ORG_COLLECTION } from '@/constants/organizations'
 import { useAuth } from '@/hooks/useAuth'
 import { UserProfile } from '@/types'
 
@@ -150,7 +150,6 @@ export const LeadershipCouncilPage: React.FC = () => {
     ambassadorId: null,
     partnerId: null,
   })
-  const partnerRetryCountRef = useRef(0)
 
   const [sessions, setSessions] = useState<MentorshipSession[]>([])
   const [sessionsLoading, setSessionsLoading] = useState(false)
@@ -230,24 +229,8 @@ export const LeadershipCouncilPage: React.FC = () => {
   }, [profile?.id])
 
   useEffect(() => {
-    if (!profile?.id) {
+    if (!profile?.companyId) {
       setResolvedAssignmentIds({ mentorId: null, ambassadorId: null, partnerId: null })
-      setMentorProfile(null)
-      setAmbassadorProfile(null)
-      setAssignmentsLoading(false)
-      setAssignmentsError(null)
-      return () => undefined
-    }
-
-    const mentorOverrideId = profile.mentorOverrideId ?? profile.mentorId ?? null
-    const ambassadorOverrideId = profile.ambassadorOverrideId ?? profile.ambassadorId ?? null
-
-    if (!profile.companyId) {
-      setResolvedAssignmentIds({
-        mentorId: mentorOverrideId,
-        ambassadorId: ambassadorOverrideId,
-        partnerId: null,
-      })
       setAssignmentsLoading(false)
       setAssignmentsError(null)
       return () => undefined
@@ -256,27 +239,31 @@ export const LeadershipCouncilPage: React.FC = () => {
     setAssignmentsLoading(true)
     setAssignmentsError(null)
 
-    const organizationRef = doc(db, ORG_COLLECTION, profile.companyId)
+    const organizationRef = doc(db, 'organizations', profile.companyId)
     const unsubscribe = onSnapshot(
       organizationRef,
       (snapshot) => {
         if (!snapshot.exists()) {
-          setResolvedAssignmentIds({ mentorId: mentorOverrideId, ambassadorId: ambassadorOverrideId, partnerId: null })
-          setAssignmentsError('Organization details could not be loaded.')
+          setAssignmentsError('Organization not found')
+          setResolvedAssignmentIds({ mentorId: null, ambassadorId: null, partnerId: null })
           setAssignmentsLoading(false)
           return
         }
-        const data = snapshot.data() as { mentorId?: string | null; ambassadorId?: string | null; partnerId?: string | null; transformation_partner_id?: string | null }
+        const data = snapshot.data() as {
+          assignedMentorId?: string | null
+          assignedAmbassadorId?: string | null
+          transformationPartnerId?: string | null
+        }
         setResolvedAssignmentIds({
-          mentorId: mentorOverrideId ?? data.mentorId ?? null,
-          ambassadorId: ambassadorOverrideId ?? data.ambassadorId ?? null,
-          partnerId: data.partnerId ?? data.transformation_partner_id ?? null,
+          mentorId: data.assignedMentorId ?? null,
+          ambassadorId: data.assignedAmbassadorId ?? null,
+          partnerId: data.transformationPartnerId ?? null,
         })
         setAssignmentsLoading(false)
       },
       (error) => {
-        setResolvedAssignmentIds({ mentorId: mentorOverrideId, ambassadorId: ambassadorOverrideId, partnerId: null })
-        setAssignmentsError(error.message)
+        console.error(error)
+        setAssignmentsError('Failed to load organization leadership')
         setAssignmentsLoading(false)
       },
     )
@@ -284,125 +271,87 @@ export const LeadershipCouncilPage: React.FC = () => {
     return () => {
       unsubscribe()
     }
-  }, [
-    profile?.id,
-    profile?.companyId,
-    profile?.mentorOverrideId,
-    profile?.mentorId,
-    profile?.ambassadorOverrideId,
-    profile?.ambassadorId,
-    assignmentsRetryKey,
-  ])
+  }, [profile?.companyId, assignmentsRetryKey])
 
   useEffect(() => {
-    const unsubscribers: Array<() => void> = []
+    const { mentorId, ambassadorId } = resolvedAssignmentIds
+
+    if (!mentorId && !ambassadorId) {
+      setMentorProfile(null)
+      setAmbassadorProfile(null)
+      return
+    }
+
+    setAssignmentsLoading(true)
     setAssignmentsError(null)
 
-    const subscribeToProfile = (
-      leaderId: string,
-      setter: React.Dispatch<React.SetStateAction<LeadershipProfile | null>>,
-    ) => {
-      const leaderRef = doc(db, 'profiles', leaderId)
-      const unsubscribe = onSnapshot(
-        leaderRef,
-        (snapshot) => {
-          const leaderData = snapshot.data() as LeadershipProfile | undefined
-          if (leaderData) {
-            setter({
-              ...leaderData,
-              id: leaderId,
-              fullName: leaderData.fullName || `${leaderData.firstName} ${leaderData.lastName}`.trim(),
-            })
-          } else {
-            setter(null)
-          }
-        },
-        (error) => {
-          setAssignmentsError(error.message)
-          setter(null)
-        },
-      )
-      unsubscribers.push(unsubscribe)
+    const fetchProfiles = async () => {
+      try {
+        if (mentorId) {
+          const mentorSnap = await getDoc(doc(db, 'profiles', mentorId))
+          const mentorData = mentorSnap.data() as LeadershipProfile | undefined
+          setMentorProfile(
+            mentorSnap.exists() && mentorData
+              ? {
+                  ...mentorData,
+                  id: mentorSnap.id,
+                  fullName: mentorData.fullName || `${mentorData.firstName} ${mentorData.lastName}`.trim(),
+                }
+              : null,
+          )
+        } else {
+          setMentorProfile(null)
+        }
+
+        if (ambassadorId) {
+          const ambassadorSnap = await getDoc(doc(db, 'profiles', ambassadorId))
+          const ambassadorData = ambassadorSnap.data() as LeadershipProfile | undefined
+          setAmbassadorProfile(
+            ambassadorSnap.exists() && ambassadorData
+              ? {
+                  ...ambassadorData,
+                  id: ambassadorSnap.id,
+                  fullName: ambassadorData.fullName || `${ambassadorData.firstName} ${ambassadorData.lastName}`.trim(),
+                }
+              : null,
+          )
+        } else {
+          setAmbassadorProfile(null)
+        }
+      } catch (error) {
+        console.error(error)
+        setAssignmentsError('Failed to load leadership profiles')
+      } finally {
+        setAssignmentsLoading(false)
+      }
     }
 
-    if (resolvedAssignmentIds.mentorId) {
-      subscribeToProfile(resolvedAssignmentIds.mentorId, setMentorProfile)
-    } else {
-      setMentorProfile(null)
-    }
-
-    if (resolvedAssignmentIds.ambassadorId) {
-      subscribeToProfile(resolvedAssignmentIds.ambassadorId, setAmbassadorProfile)
-    } else {
-      setAmbassadorProfile(null)
-    }
-
-    return () => {
-      unsubscribers.forEach((unsubscribe) => unsubscribe())
-    }
-  }, [resolvedAssignmentIds.ambassadorId, resolvedAssignmentIds.mentorId])
+    fetchProfiles()
+  }, [resolvedAssignmentIds, assignmentsRetryKey])
 
   useEffect(() => {
+    const { partnerId } = resolvedAssignmentIds
+
+    if (!partnerId) {
+      setPartnerProfile(null)
+      setPartnerLoading(false)
+      return
+    }
+
     setPartnerLoading(true)
     setPartnerError(null)
-    let timeoutId: ReturnType<typeof setTimeout> | null = null
-    let unsubscribePartner: (() => void) | null = null
 
-    const subscribeToPartner = (partnerId: string, allowFallback: boolean) => {
-      if (unsubscribePartner) {
-        unsubscribePartner()
-      }
-      const partnerRef = doc(db, 'transformation_partners', partnerId)
-      unsubscribePartner = onSnapshot(
-        partnerRef,
-        (snapshot) => {
-          if (snapshot.exists()) {
-            const partnerData = snapshot.data() as PartnerProfile
-            setPartnerProfile({ ...partnerData, id: snapshot.id })
-            setPartnerError(null)
-          } else if (allowFallback && partnerId !== 'primary') {
-            subscribeToPartner('primary', false)
-            return
-          } else {
-            setPartnerProfile(null)
-            setPartnerError('Transformation partner details are not yet available.')
-          }
-          setPartnerLoading(false)
-          partnerRetryCountRef.current = 0
-        },
-        (error) => {
-          setPartnerProfile(null)
-          setPartnerError(error.message)
-          setPartnerLoading(false)
-
-          if (partnerRetryCountRef.current < 3) {
-            const delay = Math.min(1000 * 2 ** partnerRetryCountRef.current, 8000)
-            timeoutId = setTimeout(() => {
-              partnerRetryCountRef.current += 1
-              schedulePartnerRetry()
-            }, delay)
-          }
-        },
-      )
-    }
-
-    if (!profile?.companyId) {
-      setPartnerProfile(null)
-      setPartnerError('Your organization is not assigned yet. Please contact your administrator.')
-      setPartnerLoading(false)
-      return () => {
-        if (timeoutId) clearTimeout(timeoutId)
-      }
-    }
-
-    const partnerId = resolvedAssignmentIds.partnerId || 'primary'
-    subscribeToPartner(partnerId, true)
-
-    return () => {
-      if (timeoutId) clearTimeout(timeoutId)
-      if (unsubscribePartner) unsubscribePartner()
-    }
-  }, [partnerRetryKey, schedulePartnerRetry, profile?.companyId, resolvedAssignmentIds.partnerId])
+    getDoc(doc(db, 'profiles', partnerId))
+      .then((snapshot) => {
+        const partnerData = snapshot.data() as PartnerProfile | undefined
+        setPartnerProfile(snapshot.exists() && partnerData ? { ...partnerData, id: snapshot.id } : null)
+      })
+      .catch((error) => {
+        console.error(error)
+        setPartnerError('Failed to load transformation partner')
+      })
+      .finally(() => setPartnerLoading(false))
+  }, [resolvedAssignmentIds, partnerRetryKey])
 
   useEffect(() => {
     const unsubscribe = loadSessions()
