@@ -3,6 +3,7 @@ import { UserRole, ALL_STANDARD_ROLES } from './roles';
 import type { StandardRole, AllRoles } from './roles';
 import { JourneyType } from '@/config/pointsConfig';
 export * from './admin'
+export * from './capacity'
 export * from './tutorials'
 
 export { UserRole, ALL_STANDARD_ROLES };
