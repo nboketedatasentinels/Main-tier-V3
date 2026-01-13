@@ -44,6 +44,26 @@ User profile documents (indexed by user UID)
 }
 ```
 
+### organizations
+Organization settings and program configuration
+```typescript
+{
+  id: string
+  name: string
+  code: string
+  status: 'active' | 'inactive' | 'pending' | 'suspended' | 'watch'
+  teamSize?: number
+  cohortStartDate?: Timestamp
+  programDuration?: number | string // Stored as months; used to build assignments
+  programDurationWeeks?: number
+  journeyType?: '4W' | '6W' | '3M' | '6M' | '9M' | '12M'
+  courseAssignments?: string[]
+  monthlyCourseAssignments?: Record<string, string>
+  createdAt?: Timestamp
+  updatedAt?: Timestamp
+}
+```
+
 ### journeys
 Available journey templates
 ```typescript

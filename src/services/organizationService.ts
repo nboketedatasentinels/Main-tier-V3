@@ -27,6 +27,11 @@ import {
   OrganizationLead,
   OrganizationRecord,
 } from '@/types/admin'
+import {
+  normalizeDurationWeeks,
+  resolveDurationWeeksFromProgramDuration,
+  resolveJourneyType,
+} from '@/utils/journeyType'
 import { inviteUsersBulk } from './invitationService'
 export { checkOrganizationAccess, fetchOrganizationEngagementStats, fetchOrganizationUsers } from './organizationUserService'
 
@@ -109,6 +114,13 @@ const normalizeTimestamp = (value?: Timestamp | string | Date): string => {
   return ''
 }
 
+const normalizeProgramDurationWeeks = (
+  programDurationWeeks?: number | string | null,
+  programDuration?: number | string | null,
+): number | null => {
+  return normalizeDurationWeeks(programDurationWeeks) ?? resolveDurationWeeksFromProgramDuration(programDuration)
+}
+
 
 const normalizeOrganizationStatus = (status?: string): Organization['status'] => {
   if (status === 'active' || status === 'inactive' || status === 'suspended') return status
@@ -145,6 +157,14 @@ export const validateCompanyCode = async (
     memberCount?: number
     settings?: Record<string, unknown>
   }
+  const rawProgramDuration =
+    data.programDuration ?? (data as { program_duration?: number | string | null }).program_duration ?? null
+  const programDurationWeeks = normalizeProgramDurationWeeks(data.programDurationWeeks, rawProgramDuration)
+  const journeyType = resolveJourneyType({
+    journeyType: data.journeyType,
+    programDurationWeeks,
+    programDuration: rawProgramDuration,
+  })
   const status = normalizeOrganizationStatus(data.status)
   if (status !== 'active') {
     return { valid: false, error: 'Company is not active.' }
@@ -161,6 +181,9 @@ export const validateCompanyCode = async (
       updatedAt: normalizeTimestamp(data.updatedAt),
       memberCount: data.memberCount ?? 0,
       settings: data.settings,
+      journeyType: journeyType ?? undefined,
+      programDurationWeeks: programDurationWeeks ?? undefined,
+      cohortStartDate: normalizeTimestamp(data.cohortStartDate),
     },
   }
 }
