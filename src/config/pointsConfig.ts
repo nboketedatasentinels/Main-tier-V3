@@ -9,7 +9,8 @@ export type ActivityId =
   | "book_club"
   | "peer_to_peer"
   | "linkedin"
-  | "lift_module";
+  | "lift_module"
+  | "impact_log";
 
 export type ActivityDef = {
   id: ActivityId;
@@ -153,6 +154,21 @@ export const FULL_ACTIVITIES: ActivityDef[] = [
     requiresApproval: true,
     verification: "partner_approval",
     flexibleWeeks: true,
+  },
+  {
+    id: "impact_log",
+    baseId: "impact_log",
+    title: "Impact Log entry",
+    description: "Log an impact story to capture outcomes and progress.",
+    points: 500,
+    maxPerMonth: 4,
+    maxPerWeek: 1,
+    week: 4,
+    category: "Impact",
+    isFreeTier: true,
+    verification: "honor",
+    flexibleWeeks: true,
+    frequencyNote: "Once per week; cap of four per month.",
   },
 ];
 
