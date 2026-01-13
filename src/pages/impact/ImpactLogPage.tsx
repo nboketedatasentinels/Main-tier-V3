@@ -1399,13 +1399,7 @@ export const ImpactLogPage: React.FC = () => {
                   <Text fontWeight="bold">Impact Calculation Preview</Text>
                   <Badge colorScheme="purple">{preview.verificationMultiplier.toFixed(1)}×</Badge>
                 </HStack>
-                <SimpleGrid columns={{ base: 1, md: 4 }} spacing={3}>
-                  <Box>
-                    <Text color="text.secondary">Points Earned</Text>
-                    <Text fontSize="2xl" fontWeight="bold">
-                      {preview.points.toLocaleString()}
-                    </Text>
-                  </Box>
+                <SimpleGrid columns={{ base: 1, md: 3 }} spacing={3}>
                   <Box>
                     <Text color="text.secondary">Impact Value</Text>
                     <Text fontSize="2xl" fontWeight="bold">{formatCurrency(preview.impactValue)}</Text>
