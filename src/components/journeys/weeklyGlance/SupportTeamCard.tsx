@@ -19,13 +19,15 @@ interface SupportTeamCardProps {
 }
 
 export const SupportTeamCard = ({ data, loading }: SupportTeamCardProps) => {
-  const mentorProfile = data?.mentor ?? null
-  const ambassadorProfile = data?.ambassador ?? null
-  const transformationPartnerProfile = data?.transformationPartner ?? null
+  const mentorProfile = data?.mentorProfile ?? null
+  const ambassadorProfile = data?.ambassadorProfile ?? null
+  const hasAssignedIds = Boolean(data?.mentor_id || data?.ambassador_id)
   const hasMentor = Boolean(mentorProfile)
   const hasAmbassador = Boolean(ambassadorProfile)
-  const hasTransformationPartner = Boolean(transformationPartnerProfile)
-  const showEmptyState = !loading && !hasMentor && !hasAmbassador && !hasTransformationPartner
+  const showEmptyState = !loading && !hasMentor && !hasAmbassador
+  const supportErrorMessages = [data?.mentorProfileError, data?.ambassadorProfileError].filter(
+    (message): message is string => Boolean(message),
+  )
 
   const getDisplayName = (profile: NonNullable<typeof mentorProfile>) => {
     const name = profile.fullName || `${profile.firstName ?? ''} ${profile.lastName ?? ''}`.trim()
@@ -87,37 +89,25 @@ export const SupportTeamCard = ({ data, loading }: SupportTeamCardProps) => {
                 </VStack>
               )}
 
-              {hasTransformationPartner && transformationPartnerProfile && (
-                <VStack align="start" spacing={2} p={3} borderWidth="1px" borderColor="border.subtle" rounded="md">
-                  <HStack spacing={3} w="100%" justify="space-between">
-                    <HStack spacing={2}>
-                      <Avatar
-                        size="sm"
-                        name={getDisplayName(transformationPartnerProfile)}
-                        src={getAvatarSrc(transformationPartnerProfile)}
-                      />
-                      <VStack spacing={0} align="start">
-                        <Text fontWeight="semibold">Transformation Partner</Text>
-                        <Text fontSize="sm" color="text.secondary">
-                          {getDisplayName(transformationPartnerProfile)}
-                        </Text>
-                        {transformationPartnerProfile.email && (
-                          <Text fontSize="xs" color="text.secondary">
-                            {transformationPartnerProfile.email}
-                          </Text>
-                        )}
-                      </VStack>
-                    </HStack>
-                    <Button size="sm" leftIcon={<Icon as={MessageCircle} />}>Message</Button>
-                  </HStack>
-                </VStack>
-              )}
-
               {showEmptyState && (
                 <VStack align="start" spacing={1} p={3} borderWidth="1px" borderColor="border.subtle" rounded="md">
                   <Text fontWeight="semibold" color="text.secondary">
-                    No support team assigned yet.
+                    {hasAssignedIds ? 'Support team details are currently unavailable.' : 'No support team assigned yet.'}
                   </Text>
+                  {supportErrorMessages.map((message, index) => (
+                    <Text key={`${message}-${index}`} fontSize="sm" color="red.500">
+                      {message}
+                    </Text>
+                  ))}
+                </VStack>
+              )}
+              {!showEmptyState && supportErrorMessages.length > 0 && (
+                <VStack align="start" spacing={1}>
+                  {supportErrorMessages.map((message, index) => (
+                    <Text key={`${message}-${index}`} fontSize="sm" color="red.500">
+                      {message}
+                    </Text>
+                  ))}
                 </VStack>
               )}
             </Stack>

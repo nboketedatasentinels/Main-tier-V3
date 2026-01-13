@@ -23,18 +23,25 @@ import { WeeklyInspirationCard } from '@/components/journeys/weeklyGlance/Weekly
 import { useWeeklyGlanceData } from '@/hooks/useWeeklyGlanceData'
 import { BuildVillageModal } from '@/components/modals/BuildVillageModal'
 import { useAuth } from '@/hooks/useAuth'
-import { resolveOrgContext } from '@/utils/orgContext'
+import { TransformationTier } from '@/types'
 
 export const WeeklyGlancePage = () => {
   const { profile } = useAuth()
   const navigate = useNavigate()
-  const context = resolveOrgContext(profile)
-  const data = useWeeklyGlanceData(context)
+  const data = useWeeklyGlanceData()
   const [isBuildVillageOpen, setIsBuildVillageOpen] = useState(false)
   const [villageName, setVillageName] = useState('')
   const [villagePurpose, setVillagePurpose] = useState('')
+  const isPaidMember = profile?.membershipStatus === 'paid'
+  const isCorporateTier =
+    profile?.transformationTier === TransformationTier.CORPORATE_MEMBER ||
+    profile?.transformationTier === TransformationTier.CORPORATE_LEADER
   const shouldShowBuildVillageCard =
-    context.type === 'individual' && profile?.membershipStatus !== 'paid'
+    !profile?.villageId &&
+    !profile?.companyId &&
+    !profile?.corporateVillageId &&
+    !isPaidMember &&
+    !isCorporateTier
 
   const hasError = Object.values(data.errors).some(Boolean)
 

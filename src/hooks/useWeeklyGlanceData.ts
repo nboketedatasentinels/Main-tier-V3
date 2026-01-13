@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import {
   Timestamp,
   collection,
@@ -17,9 +17,9 @@ import { useAuth } from '@/hooks/useAuth'
 import { getCurrentWeekNumber, getWeekKey } from '@/utils/weekCalculations'
 import { JOURNEY_META, getMonthNumber } from '@/config/pointsConfig'
 import { InspirationQuote } from '@/types'
-import { UserProfileExtended } from '@/services/userProfileService'
+import { leadershipQuotes } from '@/services/quotes'
+import { fetchUserProfileById, UserProfileExtended } from '@/services/userProfileService'
 import type { WeeklyProgress } from '@/types'
-import { OrgContext } from '@/utils/orgContext'
 
 export interface WeeklyPoints {
   id: string
@@ -31,9 +31,15 @@ export interface WeeklyPoints {
 }
 
 export interface SupportAssignment {
-  mentor?: UserProfileExtended | null
-  ambassador?: UserProfileExtended | null
-  transformationPartner?: UserProfileExtended | null
+  id: string
+  user_id: string
+  mentor_id?: string | null
+  ambassador_id?: string | null
+  assigned_date?: Timestamp
+  mentorProfile?: UserProfileExtended | null
+  mentorProfileError?: string
+  ambassadorProfile?: UserProfileExtended | null
+  ambassadorProfileError?: string
 }
 
 export interface PersonalityProfile {
@@ -43,7 +49,12 @@ export interface PersonalityProfile {
   coreValues?: string[]
 }
 
-export type PeerProfile = UserProfileExtended
+export interface PeerMatch {
+  id: string
+  matched_user_id: string
+  status: string
+  created_at?: Timestamp
+}
 
 export interface WeeklyHabit {
   id: string
@@ -73,15 +84,16 @@ interface WeeklyGlanceErrorState {
   impact?: Error
 }
 
-export const useWeeklyGlanceData = (context: OrgContext) => {
+export const useWeeklyGlanceData = () => {
   const { profile } = useAuth()
   const [weeklyPoints, setWeeklyPoints] = useState<WeeklyPoints | null>(null)
   const [supportAssignment, setSupportAssignment] = useState<SupportAssignment | null>(null)
   const [personality, setPersonality] = useState<PersonalityProfile | null>(null)
-  const [peerMatches, setPeerMatches] = useState<PeerProfile[]>([])
+  const [peerMatches, setPeerMatches] = useState<PeerMatch[]>([])
   const [weeklyHabits, setWeeklyHabits] = useState<WeeklyHabit[]>([])
   const [inspirationQuote, setInspirationQuote] = useState<InspirationQuote | null>(null)
   const [impactCount, setImpactCount] = useState<number>(0)
+  const profileCache = useRef<Map<string, UserProfileExtended | null>>(new Map())
   const [loading, setLoading] = useState<WeeklyGlanceLoadingState>({
     points: true,
     support: true,
@@ -223,37 +235,79 @@ export const useWeeklyGlanceData = (context: OrgContext) => {
 
   useEffect(() => {
     if (!profile?.id) return
-    if (context.type !== 'organization') {
-      setSupportAssignment(null)
-      setLoading(prev => ({ ...prev, support: false }))
-      return
-    }
-
     setLoading(prev => ({ ...prev, support: true }))
     let isActive = true
+    let didReceiveSnapshot = false
 
-    const supportQuery = query(
-      collection(db, 'profiles'),
-      where('companyId', '==', context.organizationId),
-      where('role', 'in', ['mentor', 'ambassador', 'transformation_partner']),
-    )
+    const supportQuery = query(collection(db, 'support_assignments'), where('user_id', '==', profile.id))
+    const fallbackTimeout = setTimeout(() => {
+      if (isActive && !didReceiveSnapshot) {
+        setLoading(prev => ({ ...prev, support: false }))
+      }
+    }, 5000)
+
+    const handleSnapshot = async (snapshot: any) => {
+      didReceiveSnapshot = true
+      clearTimeout(fallbackTimeout)
+      if (!isActive) return
+      const docData = snapshot.docs[0]
+      if (!docData) {
+        setSupportAssignment(null)
+        setLoading(prev => ({ ...prev, support: false }))
+        return
+      }
+
+      const data = docData.data() as SupportAssignment
+      const mentorId = data.mentor_id
+      const ambassadorId = data.ambassador_id
+      const getCachedProfile = async (userId: string) => {
+        if (profileCache.current.has(userId)) {
+          return profileCache.current.get(userId) ?? null
+        }
+        const profile = await fetchUserProfileById(userId)
+        profileCache.current.set(userId, profile)
+        return profile
+      }
+
+      const [mentorResult, ambassadorResult] = await Promise.all([
+        mentorId
+          ? getCachedProfile(mentorId)
+              .then(profileData => ({
+                profile: profileData,
+                error: profileData ? undefined : 'Mentor profile not found',
+              }))
+              .catch(() => ({ profile: null, error: 'Unable to load mentor profile' }))
+          : Promise.resolve({ profile: null, error: undefined }),
+        ambassadorId
+          ? getCachedProfile(ambassadorId)
+              .then(profileData => ({
+                profile: profileData,
+                error: profileData ? undefined : 'Ambassador profile not found',
+              }))
+              .catch(() => ({ profile: null, error: 'Unable to load ambassador profile' }))
+          : Promise.resolve({ profile: null, error: undefined }),
+      ])
+
+      if (!isActive) return
+      setSupportAssignment({
+        ...data,
+        id: docData.id,
+        mentorProfile: mentorResult.profile,
+        mentorProfileError: mentorResult.error,
+        ambassadorProfile: ambassadorResult.profile,
+        ambassadorProfileError: ambassadorResult.error,
+      })
+      setLoading(prev => ({ ...prev, support: false }))
+    }
 
     const unsubscribe = onSnapshot(
       supportQuery,
       snapshot => {
-        if (!isActive) return
-        const entries = snapshot.docs.map(docItem => ({
-          ...(docItem.data() as UserProfileExtended),
-          id: docItem.id,
-        }))
-        const mentor = entries.find(item => item.role === 'mentor') ?? null
-        const ambassador = entries.find(item => item.role === 'ambassador') ?? null
-        const transformationPartner =
-          entries.find(item => item.role === 'transformation_partner') ?? null
-        setSupportAssignment({ mentor, ambassador, transformationPartner })
-        setLoading(prev => ({ ...prev, support: false }))
+        void handleSnapshot(snapshot)
       },
       error => {
+        didReceiveSnapshot = true
+        clearTimeout(fallbackTimeout)
         if (!isActive) return
         setErrors(prev => ({ ...prev, support: error as Error }))
         setLoading(prev => ({ ...prev, support: false }))
@@ -262,9 +316,10 @@ export const useWeeklyGlanceData = (context: OrgContext) => {
 
     return () => {
       isActive = false
+      clearTimeout(fallbackTimeout)
       unsubscribe()
     }
-  }, [context, profile?.id])
+  }, [profile?.id])
 
   useEffect(() => {
     const fetchProfile = async () => {
@@ -296,34 +351,14 @@ export const useWeeklyGlanceData = (context: OrgContext) => {
   useEffect(() => {
     const fetchMatches = async () => {
       if (!profile?.id) return
-      if (context.type === 'individual') {
-        setPeerMatches([])
-        setLoading(prev => ({ ...prev, matches: false }))
-        return
-      }
       setLoading(prev => ({ ...prev, matches: true }))
       try {
-        const peerField =
-          context.type === 'organization'
-            ? 'companyId'
-            : context.type === 'village'
-              ? 'villageId'
-              : 'corporateVillageId'
-        const peerValue =
-          context.type === 'organization'
-            ? context.organizationId
-            : context.type === 'village'
-              ? context.villageId
-              : context.corporateVillageId
-
-        const matchesQuery = query(collection(db, 'profiles'), where(peerField, '==', peerValue))
+        const matchesQuery = query(collection(db, 'peer_matches'), where('user_id', '==', profile.id))
         const snapshot = await getDocs(matchesQuery)
-        const matchesData: PeerProfile[] = snapshot.docs
-          .filter(docItem => docItem.id !== profile.id)
-          .map(docItem => ({
-            ...(docItem.data() as UserProfileExtended),
-            id: docItem.id,
-          }))
+        const matchesData: PeerMatch[] = snapshot.docs.map(item => ({
+          ...(item.data() as PeerMatch),
+          id: item.id,
+        }))
         setPeerMatches(matchesData)
       } catch (error) {
         setErrors(prev => ({ ...prev, matches: error as Error }))
@@ -333,7 +368,7 @@ export const useWeeklyGlanceData = (context: OrgContext) => {
     }
 
     fetchMatches()
-  }, [context, profile?.id])
+  }, [profile?.id])
 
   useEffect(() => {
     if (!profile?.id) return
@@ -376,11 +411,13 @@ export const useWeeklyGlanceData = (context: OrgContext) => {
         if (docData) {
           setInspirationQuote({ ...(docData.data() as InspirationQuote), id: docData.id })
         } else {
-          setInspirationQuote(null)
+          const fallbackQuote = leadershipQuotes[weekNumber % leadershipQuotes.length]
+          setInspirationQuote({ ...fallbackQuote, id: `fallback-${weekNumber}` })
         }
       } catch (error) {
         setErrors(prev => ({ ...prev, inspiration: error as Error }))
-        setInspirationQuote(null)
+        const fallbackQuote = leadershipQuotes[weekNumber % leadershipQuotes.length]
+        setInspirationQuote({ ...fallbackQuote, id: `fallback-${weekNumber}` })
       } finally {
         setLoading(prev => ({ ...prev, inspiration: false }))
       }
@@ -391,35 +428,32 @@ export const useWeeklyGlanceData = (context: OrgContext) => {
 
   useEffect(() => {
     if (!profile?.id) {
-      setLoading(prev => ({ ...prev, impact: false }))
-      setImpactCount(0)
-      return
+      setLoading(prev => ({ ...prev, impact: false }));
+      setImpactCount(0);
+      return;
     }
 
-    setLoading(prev => ({ ...prev, impact: true }))
-    const impactQuery =
-      context.type === 'organization'
-        ? query(collection(db, 'impact_logs'), where('companyId', '==', context.organizationId))
-        : query(collection(db, 'impact_logs'), where('userId', '==', profile.id))
+    setLoading(prev => ({ ...prev, impact: true }));
+    const impactQuery = query(collection(db, 'impact_logs'), where('user_id', '==', profile.id));
 
     const unsubscribe = onSnapshot(
       impactQuery,
       snapshot => {
         const total = snapshot.docs.reduce((sum, docItem) => {
-          const data = docItem.data() as { peopleImpacted?: number }
-          return sum + (data.peopleImpacted || 0)
-        }, 0)
-        setImpactCount(total)
-        setLoading(prev => ({ ...prev, impact: false }))
+          const data = docItem.data() as { peopleImpacted?: number };
+          return sum + (data.peopleImpacted || 0);
+        }, 0);
+        setImpactCount(total);
+        setLoading(prev => ({ ...prev, impact: false }));
       },
       error => {
-        setErrors(prev => ({ ...prev, impact: error as Error }))
-        setLoading(prev => ({ ...prev, impact: false }))
+        setErrors(prev => ({ ...prev, impact: error as Error }));
+        setLoading(prev => ({ ...prev, impact: false }));
       }
-    )
+    );
 
-    return () => unsubscribe()
-  }, [context, profile?.id])
+    return () => unsubscribe();
+  }, [profile?.id])
 
   const handleHabitToggle = async (habit: WeeklyHabit) => {
     const nextState = !habit.completed

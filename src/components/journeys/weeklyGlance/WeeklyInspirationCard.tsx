@@ -19,14 +19,12 @@ export const WeeklyInspirationCard = ({ data, loading }: WeeklyInspirationCardPr
           <Stack spacing={2} flex="1">
             <Skeleton isLoaded={!loading} rounded="md">
               <Text fontSize="lg" fontWeight="semibold" color="#273240">
-                {data?.quote_text || 'No inspiration available yet.'}
+                {data?.quote_text || 'Join the movement. Take one small step today toward your goal.'}
               </Text>
             </Skeleton>
-            {data?.author && (
-              <Text fontSize="sm" color="text.secondary">
-                {data.author}
-              </Text>
-            )}
+            <Text fontSize="sm" color="text.secondary">
+              {data?.author || 'T4L Community'}
+            </Text>
           </Stack>
         </Stack>
       </CardBody>
