@@ -255,44 +255,30 @@ export const LeadershipCouncilPage: React.FC = () => {
     }
     setDirectAssignmentsLoading(true)
     setDirectAssignmentsError(null)
-    let didReceiveSnapshot = false
 
-    const supportQuery = query(
-      collection(db, 'support_assignments'),
-      where('user_id', '==', profile.id),
-    )
-
-    const timeoutId = setTimeout(() => {
-      if (!didReceiveSnapshot) {
-        setDirectAssignmentsLoading(false)
-      }
-    }, 5000)
-
+    const assignmentRef = doc(db, 'support_assignments', profile.id)
     const unsubscribe = onSnapshot(
-      supportQuery,
+      assignmentRef,
       (snapshot) => {
-        didReceiveSnapshot = true
-        const docSnapshot = snapshot.docs[0]
-        if (docSnapshot) {
-          const data = docSnapshot.data() as { mentor_id?: string | null; ambassador_id?: string | null }
-          setDirectAssignmentIds({
-            mentorId: data.mentor_id ?? null,
-            ambassadorId: data.ambassador_id ?? null,
-          })
-        } else {
+        if (!snapshot.exists()) {
           setDirectAssignmentIds({ mentorId: null, ambassadorId: null })
+          setDirectAssignmentsLoading(false)
+          return
         }
+        const data = snapshot.data() as { mentor_id?: string | null; ambassador_id?: string | null }
+        setDirectAssignmentIds({
+          mentorId: data.mentor_id ?? null,
+          ambassadorId: data.ambassador_id ?? null,
+        })
         setDirectAssignmentsLoading(false)
       },
       (error) => {
-        didReceiveSnapshot = true
         setDirectAssignmentsError(error.message)
         setDirectAssignmentsLoading(false)
       },
     )
 
     return () => {
-      clearTimeout(timeoutId)
       unsubscribe()
     }
   }, [profile?.id, assignmentsRetryKey])
@@ -300,7 +286,7 @@ export const LeadershipCouncilPage: React.FC = () => {
   useEffect(() => {
     const unsubscribers: Array<() => void> = []
     if (directAssignmentIds.mentorId) {
-      const mentorRef = doc(db, 'users', directAssignmentIds.mentorId)
+      const mentorRef = doc(db, 'profiles', directAssignmentIds.mentorId)
       const unsub = onSnapshot(
         mentorRef,
         (snap) => {
@@ -326,7 +312,7 @@ export const LeadershipCouncilPage: React.FC = () => {
     }
 
     if (directAssignmentIds.ambassadorId) {
-      const ambassadorRef = doc(db, 'users', directAssignmentIds.ambassadorId)
+      const ambassadorRef = doc(db, 'profiles', directAssignmentIds.ambassadorId)
       const unsub = onSnapshot(
         ambassadorRef,
         (snap) => {
@@ -414,14 +400,14 @@ export const LeadershipCouncilPage: React.FC = () => {
 
     const mentorQuery = needsMentor
       ? query(
-          collection(db, 'users'),
+          collection(db, 'profiles'),
           where('role', '==', 'mentor'),
           where('companyId', '==', profile.companyId),
         )
       : null
     const ambassadorQuery = needsAmbassador
       ? query(
-          collection(db, 'users'),
+          collection(db, 'profiles'),
           where('role', '==', 'ambassador'),
           where('companyId', '==', profile.companyId),
         )
@@ -739,6 +725,14 @@ export const LeadershipCouncilPage: React.FC = () => {
 
   return (
     <Stack spacing={6}>
+      <Box fontSize="xs" p={3} border="1px solid" borderColor="border.subtle" rounded="md" bg="surface.subtle">
+        <Text>uid: {profile?.id}</Text>
+        <Text>companyId: {profile?.companyId ?? 'none'}</Text>
+        <Text>assignment mentorId: {directAssignmentIds.mentorId ?? 'none'}</Text>
+        <Text>assignment ambassadorId: {directAssignmentIds.ambassadorId ?? 'none'}</Text>
+        <Text>mentorProfile source: {directMentorProfile ? 'direct' : orgMentorProfile ? 'org' : 'none'}</Text>
+        <Text>ambassadorProfile source: {directAmbassadorProfile ? 'direct' : orgAmbassadorProfile ? 'org' : 'none'}</Text>
+      </Box>
       <Card bgGradient="linear(to-r, tint.brandPrimary, surface.default)" border="1px solid" borderColor="border.subtle">
         <CardBody>
           <Stack spacing={2}>
