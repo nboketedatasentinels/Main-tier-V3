@@ -15,7 +15,6 @@ import {
   VStack,
   Divider,
   Tooltip,
-  Link,
 } from '@chakra-ui/react'
 import {
   BookOpen,
@@ -28,7 +27,7 @@ import {
   CalendarDays,
   Lock,
 } from 'lucide-react'
-import { collection, query, where, onSnapshot, doc, getDocs, Timestamp, documentId } from 'firebase/firestore'
+import { collection, query, where, onSnapshot, doc, getDocs, Timestamp } from 'firebase/firestore'
 import { useAuth } from '@/hooks/useAuth'
 import { db } from '@/services/firebase'
 import { ORG_COLLECTION } from '@/constants/organizations'
@@ -46,7 +45,6 @@ import {
   getMonthlyAssignmentsArray,
   normalizeMonthlyAssignments,
 } from '@/utils/monthlyCourseAssignments'
-import { resolveUserOrganizationId } from '@/utils/organizationResolution'
 import { Link as RouterLink } from 'react-router-dom'
 
 interface NormalizedCourse {
@@ -57,7 +55,7 @@ interface NormalizedCourse {
   assignedDate?: Date | null
   progress?: number
   status?: string
-  source: 'user' | 'organization'
+  source: 'user' | 'company' | 'personal' | 'organization'
   estimatedMinutes?: number
   difficulty?: CourseDifficulty
   image?: string
@@ -208,10 +206,10 @@ export const MyCoursesPage: React.FC = () => {
   const isFreeTierUser = useMemo(() => isFreeUser(profile), [profile])
 
   const [userCourses, setUserCourses] = useState<NormalizedCourse[]>([])
+  const [companyAssignedCourses, setCompanyAssignedCourses] = useState<NormalizedCourse[]>([])
+  const [personalAssignedCourses, setPersonalAssignedCourses] = useState<NormalizedCourse[]>([])
   const [organizationCourses, setOrganizationCourses] = useState<NormalizedCourse[]>([])
   const [assignedCourseOrder, setAssignedCourseOrder] = useState<string[]>([])
-  const [missingOrganizationCourseIds, setMissingOrganizationCourseIds] = useState<string[]>([])
-  const [organizationValidation, setOrganizationValidation] = useState<OrganizationValidationResult | null>(null)
   const [companyProgram, setCompanyProgram] = useState<{
     monthlyAssignments: MonthlyCourseAssignments
     totalMonths: number
@@ -220,21 +218,13 @@ export const MyCoursesPage: React.FC = () => {
   const [companyProgramCourseMap, setCompanyProgramCourseMap] = useState<Record<string, NormalizedCourse>>({})
 
   const [loadingUserCourses, setLoadingUserCourses] = useState(true)
+  const [loadingCompanyCourses, setLoadingCompanyCourses] = useState(true)
+  const [loadingPersonalCourses, setLoadingPersonalCourses] = useState(true)
   const [loadingOrganizationCourses, setLoadingOrganizationCourses] = useState(true)
 
-  const organizationResolution = useMemo(() => resolveUserOrganizationId(profile), [profile])
-  const { organizationId, organizationCode, source: organizationSource } = organizationResolution
-  const hasOrganizationAssignment = Boolean(organizationId || organizationCode)
-
-  useEffect(() => {
-    if (organizationResolution.warnings.length) {
-      console.warn('[MyCourses] Organization identifier mismatch', {
-        warnings: organizationResolution.warnings,
-        organizationId,
-        organizationCode,
-      })
-    }
-  }, [organizationResolution, organizationCode, organizationId])
+  const companyId = profile?.companyId ?? null
+  const companyCode = (profile as { companyCode?: string | null } | null)?.companyCode ?? null
+  const assignedOrganizationId = profile?.assignedOrganizations?.[0] ?? null
 
   useEffect(() => {
     if (!user) {
@@ -281,11 +271,99 @@ export const MyCoursesPage: React.FC = () => {
   }, [user])
 
   useEffect(() => {
-    if (!organizationId && !organizationCode) {
+    if (!user || (!companyCode && !companyId)) {
+      setCompanyAssignedCourses([])
+      setLoadingCompanyCourses(false)
+      return
+    }
+
+    const q = companyCode
+      ? query(collection(db, 'assigned_courses'), where('companyCode', '==', companyCode))
+      : query(collection(db, 'assigned_courses'), where('companyId', '==', companyId))
+    const unsubscribe = onSnapshot(
+      q,
+      snapshot => {
+        const mapped: NormalizedCourse[] = snapshot.docs.map(docSnap => {
+          const data = docSnap.data()
+          const title = (data.title || data.name || data.courseTitle || 'Untitled Course') as string
+          const details = COURSE_DETAILS_MAPPING[title]
+          const metadata = COURSE_METADATA_MAPPING[title]
+
+          return {
+            id: docSnap.id,
+            title,
+            description: (data.description || details?.description || 'No description available.') as string,
+            link: (data.link || details?.link) as string | undefined,
+            assignedDate: normalizeDate(data.assignedAt || data.assigned_at || data.createdAt || data.assignedDate),
+            progress: typeof data.progress === 'number' ? data.progress : undefined,
+            status: formatStatus(data.status || 'assigned'),
+            source: 'company',
+            estimatedMinutes: metadata?.estimatedMinutes,
+            difficulty: metadata?.difficulty,
+            image: COURSE_IMAGE_FILENAMES[title],
+          }
+        })
+        setCompanyAssignedCourses(mapped)
+        setLoadingCompanyCourses(false)
+      },
+      error => {
+        console.error('Error loading company assigned courses', error)
+        setCompanyAssignedCourses([])
+        setLoadingCompanyCourses(false)
+      }
+    )
+
+    return () => unsubscribe()
+  }, [user, companyCode, companyId])
+
+  useEffect(() => {
+    if (!user) {
+      setPersonalAssignedCourses([])
+      setLoadingPersonalCourses(false)
+      return
+    }
+
+    const q = query(collection(db, 'assigned_courses'), where('userId', '==', user.uid))
+    const unsubscribe = onSnapshot(
+      q,
+      snapshot => {
+        const mapped: NormalizedCourse[] = snapshot.docs.map(docSnap => {
+          const data = docSnap.data()
+          const title = (data.title || data.name || data.courseTitle || 'Untitled Course') as string
+          const details = COURSE_DETAILS_MAPPING[title]
+          const metadata = COURSE_METADATA_MAPPING[title]
+
+          return {
+            id: docSnap.id,
+            title,
+            description: (data.description || details?.description || 'No description available.') as string,
+            link: (data.link || details?.link) as string | undefined,
+            assignedDate: normalizeDate(data.assignedAt || data.assigned_at || data.createdAt || data.assignedDate),
+            progress: typeof data.progress === 'number' ? data.progress : undefined,
+            status: formatStatus(data.status || 'assigned'),
+            source: 'personal',
+            estimatedMinutes: metadata?.estimatedMinutes,
+            difficulty: metadata?.difficulty,
+            image: COURSE_IMAGE_FILENAMES[title],
+          }
+        })
+        setPersonalAssignedCourses(mapped)
+        setLoadingPersonalCourses(false)
+      },
+      error => {
+        console.error('Error loading personal assigned courses', error)
+        setPersonalAssignedCourses([])
+        setLoadingPersonalCourses(false)
+      }
+    )
+
+    return () => unsubscribe()
+  }, [user])
+
+  useEffect(() => {
+    if (!companyId && !companyCode && !assignedOrganizationId) {
       setOrganizationCourses([])
       setAssignedCourseOrder([])
-      setMissingOrganizationCourseIds([])
-      setOrganizationValidation(null)
       setLoadingOrganizationCourses(false)
       setCompanyProgram(null)
       setCompanyProgramCourseMap({})
@@ -293,23 +371,9 @@ export const MyCoursesPage: React.FC = () => {
     }
 
     setLoadingOrganizationCourses(true)
-    setOrganizationValidation(null)
-    setMissingOrganizationCourseIds([])
+    const organizationId = companyId || assignedOrganizationId
 
     const resolveOrganizationCourses = async (orgData: Record<string, unknown>) => {
-      const validation = await validateUserOrganizationAccess({
-        organizationId,
-        organizationCode,
-      })
-      if (!validation.valid) {
-        setOrganizationValidation(validation)
-      } else {
-        setOrganizationValidation({
-          ...validation,
-          organization: orgData,
-        })
-      }
-
       const rawDuration =
         orgData.programDuration || orgData.program_duration || orgData.duration || orgData.programLength
       const programDuration: number | string | null =
@@ -340,15 +404,6 @@ export const MyCoursesPage: React.FC = () => {
         setOrganizationCourses([])
         setLoadingOrganizationCourses(false)
         setCompanyProgramCourseMap({})
-        setMissingOrganizationCourseIds([])
-        setOrganizationValidation({
-          valid: false,
-          organizationId: validation.organizationId ?? organizationId ?? undefined,
-          organizationCode: validation.organizationCode ?? organizationCode ?? undefined,
-          organizationName: validation.organizationName,
-          errorCode: 'NO_COURSES_ASSIGNED',
-          message: validation.message || 'No courses are assigned to your organization yet.',
-        })
         return
       }
 
@@ -358,13 +413,11 @@ export const MyCoursesPage: React.FC = () => {
       }
 
       const courseDocs: NormalizedCourse[] = []
-      const fetchedIds = new Set<string>()
       for (const chunk of fetchChunks) {
-        const coursesQuery = query(collection(db, 'courses'), where(documentId(), 'in', chunk))
+        const coursesQuery = query(collection(db, 'courses'), where('id', 'in', chunk))
         const courseSnapshot = await getDocs(coursesQuery)
         courseSnapshot.forEach(docSnap => {
           const data = docSnap.data()
-          fetchedIds.add(docSnap.id)
           const title = (data.title || data.name || data.courseTitle || 'Untitled Course') as string
           const details = COURSE_DETAILS_MAPPING[title]
           const metadata = COURSE_METADATA_MAPPING[title]
@@ -386,14 +439,6 @@ export const MyCoursesPage: React.FC = () => {
       }
 
       setOrganizationCourses(courseDocs)
-      const missingIds = assignedMonthlyCourseIds.filter((courseId) => !fetchedIds.has(courseId))
-      if (missingIds.length) {
-        console.warn('[MyCourses] Missing course documents for organization assignment', {
-          organizationId,
-          missingIds,
-        })
-      }
-      setMissingOrganizationCourseIds(missingIds)
       const mappedCourseLookup = courseDocs.reduce<Record<string, NormalizedCourse>>((acc, course) => {
         acc[course.id] = course
         return acc
@@ -403,20 +448,12 @@ export const MyCoursesPage: React.FC = () => {
     }
 
     const handleSnapshotError = (error: Error) => {
-      console.error('[MyCourses] Organization listener error', error)
+      console.error('Organization listener error', error)
       setOrganizationCourses([])
       setAssignedCourseOrder([])
-      setMissingOrganizationCourseIds([])
       setLoadingOrganizationCourses(false)
       setCompanyProgram(null)
       setCompanyProgramCourseMap({})
-      setOrganizationValidation({
-        valid: false,
-        organizationId: organizationId ?? undefined,
-        organizationCode: organizationCode ?? undefined,
-        errorCode: 'ORG_NOT_FOUND',
-        message: 'Organization details could not be loaded.',
-      })
     }
 
     if (organizationId) {
@@ -428,39 +465,19 @@ export const MyCoursesPage: React.FC = () => {
             if (!snapshot.exists()) {
               setOrganizationCourses([])
               setAssignedCourseOrder([])
-              setMissingOrganizationCourseIds([])
               setLoadingOrganizationCourses(false)
               setCompanyProgram(null)
               setCompanyProgramCourseMap({})
-              setOrganizationValidation({
-                valid: false,
-                organizationId,
-                organizationCode: organizationCode ?? undefined,
-                errorCode: 'ORG_NOT_FOUND',
-                message: 'Organization details could not be found.',
-              })
               return
             }
-            console.debug('[MyCourses] Organization document resolved', {
-              organizationId,
-              source: organizationSource,
-            })
             await resolveOrganizationCourses(snapshot.data())
           } catch (error) {
             console.error('Error loading organization courses', error)
             setOrganizationCourses([])
             setAssignedCourseOrder([])
-            setMissingOrganizationCourseIds([])
             setLoadingOrganizationCourses(false)
             setCompanyProgram(null)
             setCompanyProgramCourseMap({})
-            setOrganizationValidation({
-              valid: false,
-              organizationId,
-              organizationCode: organizationCode ?? undefined,
-              errorCode: 'ORG_NOT_FOUND',
-              message: 'Organization details could not be loaded.',
-            })
           }
         },
         handleSnapshotError
@@ -479,37 +496,19 @@ export const MyCoursesPage: React.FC = () => {
             if (!docSnapshot) {
               setOrganizationCourses([])
               setAssignedCourseOrder([])
-              setMissingOrganizationCourseIds([])
               setLoadingOrganizationCourses(false)
               setCompanyProgram(null)
               setCompanyProgramCourseMap({})
-              setOrganizationValidation({
-                valid: false,
-                organizationCode,
-                errorCode: 'ORG_NOT_FOUND',
-                message: 'Organization details could not be found.',
-              })
               return
             }
-            console.debug('[MyCourses] Organization document resolved by code', {
-              organizationCode,
-              organizationId: docSnapshot.id,
-            })
             await resolveOrganizationCourses(docSnapshot.data())
           } catch (error) {
             console.error('Error loading organization courses', error)
             setOrganizationCourses([])
             setAssignedCourseOrder([])
-            setMissingOrganizationCourseIds([])
             setLoadingOrganizationCourses(false)
             setCompanyProgram(null)
             setCompanyProgramCourseMap({})
-            setOrganizationValidation({
-              valid: false,
-              organizationCode,
-              errorCode: 'ORG_NOT_FOUND',
-              message: 'Organization details could not be loaded.',
-            })
           }
         },
         handleSnapshotError
@@ -519,9 +518,10 @@ export const MyCoursesPage: React.FC = () => {
     }
 
     return
-  }, [organizationCode, organizationId, organizationSource])
+  }, [assignedOrganizationId, companyCode, companyId])
 
   const combinedAssignedCourses = useMemo(() => {
+    const priority = ['user', 'personal', 'company', 'organization'] as NormalizedCourse['source'][]
     const mergeMap = new Map<string, NormalizedCourse>()
 
     const addCourses = (courses: NormalizedCourse[]) => {
@@ -545,7 +545,9 @@ export const MyCoursesPage: React.FC = () => {
           return
         }
 
-        const shouldReplace = (existing.progress ?? 0) < (course.progress ?? 0)
+        const shouldReplace =
+          priority.indexOf(course.source) < priority.indexOf(existing.source) ||
+          (existing.progress ?? 0) < (course.progress ?? 0)
 
         if (shouldReplace) {
           mergeMap.set(key, { ...existing, ...enhancedCourse })
@@ -560,38 +562,19 @@ export const MyCoursesPage: React.FC = () => {
       })
     }
 
-    if (hasOrganizationAssignment) {
-      addCourses(organizationCourses)
-      const organizationTitles = new Set(organizationCourses.map(course => course.title.trim().toLowerCase()))
-      addCourses(userCourses.filter(course => organizationTitles.has(course.title.trim().toLowerCase())))
-    } else if (isFreeTierUser) {
-      const freeCourses = userCourses.filter(
-        course => course.title.trim().toLowerCase() === FREE_TIER_COURSE_TITLE.toLowerCase()
-      )
-      if (freeCourses.length) {
-        addCourses(freeCourses)
-      } else {
-        const details = COURSE_DETAILS_MAPPING[FREE_TIER_COURSE_TITLE]
-        const metadata = COURSE_METADATA_MAPPING[FREE_TIER_COURSE_TITLE]
-        addCourses([
-          {
-            id: FREE_TIER_COURSE_TITLE,
-            title: FREE_TIER_COURSE_TITLE,
-            description: details?.description || 'No description available.',
-            link: details?.link,
-            source: 'user',
-            estimatedMinutes: metadata?.estimatedMinutes,
-            difficulty: metadata?.difficulty,
-            image: COURSE_IMAGE_FILENAMES[FREE_TIER_COURSE_TITLE],
-          },
-        ])
-      }
-    }
+    addCourses(userCourses)
+    addCourses(personalAssignedCourses)
+    addCourses(companyAssignedCourses)
+    addCourses(organizationCourses)
 
     const result = Array.from(mergeMap.values())
+    const applyFreeTierFilter = (courses: NormalizedCourse[]) =>
+      isFreeTierUser
+        ? courses.filter(course => course.title.trim().toLowerCase() === FREE_TIER_COURSE_TITLE.toLowerCase())
+        : courses
 
     if (assignedCourseOrder.length) {
-      return result.sort((a, b) => {
+      const ordered = result.sort((a, b) => {
         const indexA = assignedCourseOrder.findIndex(id => id.toLowerCase() === a.title.toLowerCase() || id === a.id)
         const indexB = assignedCourseOrder.findIndex(id => id.toLowerCase() === b.title.toLowerCase() || id === b.id)
         if (indexA === -1 && indexB === -1) return a.title.localeCompare(b.title)
@@ -599,10 +582,18 @@ export const MyCoursesPage: React.FC = () => {
         if (indexB === -1) return -1
         return indexA - indexB
       })
+      return applyFreeTierFilter(ordered)
     }
 
-    return result
-  }, [assignedCourseOrder, hasOrganizationAssignment, isFreeTierUser, organizationCourses, userCourses])
+    return applyFreeTierFilter(result)
+  }, [
+    userCourses,
+    personalAssignedCourses,
+    companyAssignedCourses,
+    organizationCourses,
+    assignedCourseOrder,
+    isFreeTierUser,
+  ])
 
   const assignedCourseCount = useMemo(() => combinedAssignedCourses.length, [combinedAssignedCourses])
 
@@ -686,12 +677,13 @@ export const MyCoursesPage: React.FC = () => {
     if (!user) return 'Sign in to view the courses that have been assigned to you.'
     if (isFreeTierUser)
       return 'You have access to one complimentary course—Transformational Leadership. Upgrade anytime to unlock the full learning library.'
-    if (!hasOrganizationAssignment)
-      return 'Upgrade your membership or connect with an organization administrator to unlock curated learning programs.'
+    if (!companyCode)
+      return 'Welcome to your premium membership! You have full access to our complete course library. Start exploring transformation courses below.'
     return 'Welcome to your corporate learning program! Access all assigned courses and track your leadership development journey on the external platform.'
-  }, [user, isFreeTierUser, hasOrganizationAssignment])
+  }, [user, isFreeTierUser, companyCode])
 
-  const overallLoading = loadingUserCourses || loadingOrganizationCourses
+  const overallLoading =
+    loadingUserCourses || loadingCompanyCourses || loadingPersonalCourses || loadingOrganizationCourses
 
   const journeyTemplateCourses = useMemo(() => {
     if (!isFreeTierUser) return MONTHLY_JOURNEY_COURSES
@@ -705,21 +697,6 @@ export const MyCoursesPage: React.FC = () => {
     if (isFreeTierUser) return `${journeyTemplateCount} curated journey templates available`
     return `Full access to ${journeyTemplateCount} professional journey templates`
   }, [isFreeTierUser, journeyTemplateCount])
-
-  const organizationIssue = useMemo(() => {
-    if (!organizationValidation || organizationValidation.valid) return null
-    return organizationValidation
-  }, [organizationValidation])
-
-  const diagnosticDetails = useMemo(() => {
-    if (!organizationIssue) return null
-    const lines = [
-      `Org ID: ${organizationIssue.organizationId || 'unknown'}`,
-      `Org Code: ${organizationIssue.organizationCode || 'unknown'}`,
-      `Error: ${organizationIssue.errorCode || 'unknown'}`,
-    ]
-    return lines.join('%0D%0A')
-  }, [organizationIssue])
 
   return (
     <Stack spacing={8} py={2} as="section">
@@ -775,12 +752,12 @@ export const MyCoursesPage: React.FC = () => {
             {user && !isFreeTierUser && (
               <HStack spacing={3} flexWrap="wrap">
                 <Badge colorScheme="green" variant="subtle" borderRadius="full">
-                  {hasOrganizationAssignment ? 'Corporate member' : 'Premium member'}
+                  {companyCode ? 'Corporate member' : 'Premium member'}
                 </Badge>
                 <Text color="green.700" fontSize="sm">
-                  {hasOrganizationAssignment
+                  {companyCode
                     ? 'Access curated company courses and leadership development resources.'
-                    : 'Upgrade to unlock curated programs or contact an administrator to link your organization.'}
+                    : 'Unlimited access to the full transformation course library.'}
                 </Text>
               </HStack>
             )}
@@ -989,35 +966,13 @@ export const MyCoursesPage: React.FC = () => {
           >
             <Icon as={BookOpen} boxSize={10} color="gray.300" />
             <Heading size="sm" color="gray.800">
-              {organizationIssue?.errorCode === 'ORG_INACTIVE'
-                ? 'Organization inactive'
-                : organizationIssue?.errorCode === 'ORG_NOT_FOUND'
-                  ? 'Organization not found'
-                  : organizationIssue?.errorCode === 'NO_COURSES_ASSIGNED'
-                    ? 'No organization courses assigned yet'
-                    : 'No courses assigned yet'}
+              No courses assigned yet
             </Heading>
             <Text color="gray.500" textAlign="center" maxW="lg">
-              {organizationIssue?.message
-                ? organizationIssue.message
-                : isFreeTierUser
-                  ? 'Free members can access Transformational Leadership. Upgrade your membership to unlock the full course catalog.'
-                  : hasOrganizationAssignment
-                    ? 'Your program administrator has not assigned any courses yet. Check back soon!'
-                    : 'Upgrade your membership or contact your organization administrator to access corporate courses.'}
+              {isFreeTierUser
+                ? 'Free members can access Transformational Leadership. Upgrade your membership to unlock the full course catalog.'
+                : 'Your program administrator has not assigned any courses yet. Check back soon!'}
             </Text>
-            {organizationIssue && (
-              <Button
-                as={Link}
-                href={`mailto:support@t4leader.com?subject=Organization%20Course%20Access%20Issue&body=${diagnosticDetails ?? ''}`}
-                size="sm"
-                colorScheme="purple"
-                variant="outline"
-                borderRadius="full"
-              >
-                Contact Administrator
-              </Button>
-            )}
           </Flex>
         )}
 
@@ -1157,22 +1112,6 @@ export const MyCoursesPage: React.FC = () => {
           </SimpleGrid>
         )}
       </Stack>
-
-      {import.meta.env.DEV && (
-        <Box borderWidth="1px" borderRadius="2xl" p={4} bg="gray.50">
-          <Heading size="sm" color="gray.700" mb={2}>
-            Debug: organization resolution
-          </Heading>
-          <Stack spacing={1} fontSize="sm" color="gray.600">
-            <Text>Resolved org ID: {organizationId || 'none'}</Text>
-            <Text>Resolved org code: {organizationCode || 'none'}</Text>
-            <Text>Resolution source: {organizationSource}</Text>
-            <Text>Assigned course IDs: {assignedCourseOrder.length || 0}</Text>
-            <Text>Courses fetched: {organizationCourses.length}</Text>
-            <Text>Missing course IDs: {missingOrganizationCourseIds.length || 0}</Text>
-          </Stack>
-        </Box>
-      )}
     </Stack>
   )
 }
