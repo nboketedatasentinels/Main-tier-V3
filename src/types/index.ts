@@ -73,6 +73,10 @@ export interface UserProfile {
   timezone?: string
   availabilityStatus?: string
   notes?: string
+  matchRefreshPreference?: 'weekly' | 'biweekly' | 'on-demand' | 'disabled'
+  preferredMatchDay?: number
+  matchNotificationPreference?: 'email' | 'in_app' | 'both'
+  lastMatchRefreshDate?: string
 
   // Leadership relations
   mentorId?: string

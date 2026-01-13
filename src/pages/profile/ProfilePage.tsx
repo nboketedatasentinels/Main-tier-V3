@@ -29,7 +29,9 @@ import {
   Progress,
   Radio,
   RadioGroup,
+  Select,
   Spinner,
+  Switch,
   Tab,
   TabList,
   TabPanel,
@@ -115,6 +117,10 @@ interface ProfileData {
   hasCompletedPersonalityTest?: boolean
   hasCompletedValuesTest?: boolean
   bio?: string
+  timezone?: string
+  matchRefreshPreference?: 'weekly' | 'biweekly' | 'on-demand' | 'disabled'
+  preferredMatchDay?: number
+  matchNotificationPreference?: 'email' | 'in_app' | 'both'
   socialLinks: {
     linkedin?: string
     twitter?: string
@@ -203,6 +209,41 @@ const membershipCopy: Record<ProfileData['membershipStatus'], { title: string; d
   },
 }
 
+const matchRefreshOptions: Array<{ label: string; value: NonNullable<ProfileData['matchRefreshPreference']> }> = [
+  { label: 'Weekly', value: 'weekly' },
+  { label: 'Every 2 weeks', value: 'biweekly' },
+  { label: 'On-demand', value: 'on-demand' },
+  { label: 'Disabled', value: 'disabled' },
+]
+
+const matchNotificationOptions: Array<{ label: string; value: NonNullable<ProfileData['matchNotificationPreference']> }> = [
+  { label: 'Email only', value: 'email' },
+  { label: 'In-app only', value: 'in_app' },
+  { label: 'Email + in-app', value: 'both' },
+]
+
+const weekdayOptions = [
+  { label: 'Sunday', value: 0 },
+  { label: 'Monday', value: 1 },
+  { label: 'Tuesday', value: 2 },
+  { label: 'Wednesday', value: 3 },
+  { label: 'Thursday', value: 4 },
+  { label: 'Friday', value: 5 },
+  { label: 'Saturday', value: 6 },
+]
+
+const timezoneOptions = [
+  'America/New_York',
+  'America/Chicago',
+  'America/Denver',
+  'America/Los_Angeles',
+  'Europe/London',
+  'Europe/Paris',
+  'Asia/Singapore',
+  'Asia/Kolkata',
+  'Australia/Sydney',
+]
+
 const formatDate = (value?: string) => {
   if (!value) return 'Not available'
   const date = new Date(value)
@@ -288,6 +329,8 @@ export const ProfilePage: React.FC = () => {
   const [personalityTestError, setPersonalityTestError] = useState<string | null>(null)
   const [valuesTestError, setValuesTestError] = useState<string | null>(null)
   const [personalityFormError, setPersonalityFormError] = useState<string | null>(null)
+  const [matchPreferencesSaving, setMatchPreferencesSaving] = useState(false)
+  const [matchPreferencesMessage, setMatchPreferencesMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null)
 
   const buildProfileFromDoc = useCallback(
     (docData: Record<string, unknown>): ProfileData => ({
@@ -319,6 +362,11 @@ export const ProfilePage: React.FC = () => {
           ? docData.hasCompletedValuesTest
           : profile?.hasCompletedValuesTest) || false,
       bio: (typeof docData.bio === 'string' && docData.bio) || '',
+      timezone: (docData.timezone as string) || profile?.timezone || Intl.DateTimeFormat().resolvedOptions().timeZone,
+      matchRefreshPreference: (docData.matchRefreshPreference as ProfileData['matchRefreshPreference']) || 'weekly',
+      preferredMatchDay: typeof docData.preferredMatchDay === 'number' ? docData.preferredMatchDay : 1,
+      matchNotificationPreference:
+        (docData.matchNotificationPreference as ProfileData['matchNotificationPreference']) || 'both',
       socialLinks: (docData.socialLinks as Record<string, string>) ||
         (docData.social_media_links as Record<string, string>) ||
         {},
@@ -673,6 +721,32 @@ export const ProfilePage: React.FC = () => {
       setVisibilityMessage({ type: 'error', text: 'Unable to save preference.' })
     } finally {
       setVisibilitySaving(false)
+    }
+  }
+
+  const handleSaveMatchPreferences = async () => {
+    if (!auth.currentUser || !editedData) return
+    setMatchPreferencesSaving(true)
+    setMatchPreferencesMessage(null)
+    try {
+      const updates = {
+        matchRefreshPreference: editedData.matchRefreshPreference || 'weekly',
+        preferredMatchDay: editedData.preferredMatchDay ?? 1,
+        matchNotificationPreference: editedData.matchNotificationPreference || 'both',
+        timezone: editedData.timezone || Intl.DateTimeFormat().resolvedOptions().timeZone,
+        updatedAt: serverTimestamp(),
+      }
+      await Promise.all([
+        updateDoc(doc(db, 'profiles', auth.currentUser.uid), updates),
+        updateDoc(doc(db, 'users', auth.currentUser.uid), updates),
+      ])
+      setProfileData({ ...editedData, ...updates })
+      setMatchPreferencesMessage({ type: 'success', text: 'Peer matching preferences updated.' })
+    } catch (err) {
+      console.error(err)
+      setMatchPreferencesMessage({ type: 'error', text: 'Unable to save peer matching preferences.' })
+    } finally {
+      setMatchPreferencesSaving(false)
     }
   }
 
@@ -1557,6 +1631,118 @@ export const ProfilePage: React.FC = () => {
                         >
                           Save Company Code
                         </Button>
+                      </VStack>
+                    </CardBody>
+                  </Card>
+
+                  <Card borderColor="brand.border">
+                    <CardHeader>
+                      <Text fontWeight="semibold">Peer Matching Preferences</Text>
+                      <Text fontSize="sm" color="brand.subtleText" mt={1}>
+                        Control how often you receive a new peer match and how we notify you.
+                      </Text>
+                    </CardHeader>
+                    <CardBody>
+                      <VStack align="stretch" spacing={4}>
+                        <FormControl display="flex" alignItems="center" justifyContent="space-between">
+                          <Box>
+                            <FormLabel mb={1}>Automatic matching</FormLabel>
+                            <Text fontSize="sm" color="brand.subtleText">
+                              Disable if you only want to request matches manually.
+                            </Text>
+                          </Box>
+                          <Switch
+                            isChecked={editedData.matchRefreshPreference !== 'disabled'}
+                            onChange={(event) =>
+                              handleInputChange(
+                                'matchRefreshPreference',
+                                event.target.checked ? 'weekly' : 'disabled'
+                              )
+                            }
+                          />
+                        </FormControl>
+
+                        <FormControl>
+                          <FormLabel>Refresh frequency</FormLabel>
+                          <Select
+                            value={editedData.matchRefreshPreference || 'weekly'}
+                            onChange={(event) =>
+                              handleInputChange('matchRefreshPreference', event.target.value as ProfileData['matchRefreshPreference'])
+                            }
+                          >
+                            {matchRefreshOptions.map((option) => (
+                              <option key={option.value} value={option.value}>
+                                {option.label}
+                              </option>
+                            ))}
+                          </Select>
+                        </FormControl>
+
+                        <FormControl isDisabled={!['weekly', 'biweekly'].includes(editedData.matchRefreshPreference || '')}>
+                          <FormLabel>Preferred match day</FormLabel>
+                          <Select
+                            value={editedData.preferredMatchDay ?? 1}
+                            onChange={(event) => handleInputChange('preferredMatchDay', Number(event.target.value))}
+                          >
+                            {weekdayOptions.map((option) => (
+                              <option key={option.value} value={option.value}>
+                                {option.label}
+                              </option>
+                            ))}
+                          </Select>
+                        </FormControl>
+
+                        <FormControl>
+                          <FormLabel>Notification preference</FormLabel>
+                          <Select
+                            value={editedData.matchNotificationPreference || 'both'}
+                            onChange={(event) =>
+                              handleInputChange('matchNotificationPreference', event.target.value as ProfileData['matchNotificationPreference'])
+                            }
+                          >
+                            {matchNotificationOptions.map((option) => (
+                              <option key={option.value} value={option.value}>
+                                {option.label}
+                              </option>
+                            ))}
+                          </Select>
+                        </FormControl>
+
+                        <FormControl>
+                          <FormLabel>Match timezone</FormLabel>
+                          <Select
+                            value={editedData.timezone || ''}
+                            onChange={(event) => handleInputChange('timezone', event.target.value)}
+                          >
+                            {timezoneOptions.map((zone) => (
+                              <option key={zone} value={zone}>
+                                {zone}
+                              </option>
+                            ))}
+                          </Select>
+                          <FormHelperText>
+                            Match timing is calculated using this timezone.
+                          </FormHelperText>
+                        </FormControl>
+
+                        <Button onClick={handleSaveMatchPreferences} isLoading={matchPreferencesSaving} loadingText="Saving...">
+                          Save Peer Matching Preferences
+                        </Button>
+
+                        {matchPreferencesMessage && (
+                          <Box
+                            bg={matchPreferencesMessage.type === 'success' ? 'green.50' : 'red.50'}
+                            border="1px solid"
+                            borderColor={matchPreferencesMessage.type === 'success' ? 'green.100' : 'red.100'}
+                            p={3}
+                            rounded="md"
+                          >
+                            <HStack spacing={2} color={matchPreferencesMessage.type === 'success' ? 'green.600' : 'red.600'}>
+                              <Icon as={matchPreferencesMessage.type === 'success' ? Check : AlertCircle} />
+                              <Text>{matchPreferencesMessage.text}</Text>
+                            </HStack>
+                          </Box>
+                        )}
                       </VStack>
                     </CardBody>
                   </Card>
