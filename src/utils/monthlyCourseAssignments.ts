@@ -82,13 +82,18 @@ export const getMonthlyAssignmentsArray = (
   return Array.from({ length: totalMonths }, (_, index) => {
     const key = String(index + 1)
     return monthlyAssignments[key] || ''
-  })
+  }).filter(Boolean)
 }
 
 export const getAssignedCourseIdsFromMonthlyAssignments = (
   monthlyAssignments: MonthlyCourseAssignments,
   totalMonths: number,
-): string[] => getMonthlyAssignmentsArray(monthlyAssignments, totalMonths).filter(Boolean)
+): string[] => getMonthlyAssignmentsArray(monthlyAssignments, totalMonths)
+
+export const getAssignedCourseCountFromMonthlyAssignments = (
+  monthlyAssignments: MonthlyCourseAssignments,
+  totalMonths: number,
+): number => getMonthlyAssignmentsArray(monthlyAssignments, totalMonths).length
 
 export const addMonths = (date: Date, months: number): Date => {
   const result = new Date(date)
