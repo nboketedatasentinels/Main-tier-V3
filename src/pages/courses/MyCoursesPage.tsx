@@ -213,7 +213,9 @@ export const MyCoursesPage: React.FC = () => {
   const [loadingPersonalCourses, setLoadingPersonalCourses] = useState(true)
   const [loadingOrganizationCourses, setLoadingOrganizationCourses] = useState(true)
 
-  const companyCode = profile?.companyId || (profile as { companyCode?: string } | null)?.companyCode
+  const companyId = profile?.companyId ?? null
+  const companyCode = (profile as { companyCode?: string | null } | null)?.companyCode ?? null
+  const assignedOrganizationId = profile?.assignedOrganizations?.[0] ?? null
 
   useEffect(() => {
     if (!user) {
@@ -260,13 +262,15 @@ export const MyCoursesPage: React.FC = () => {
   }, [user])
 
   useEffect(() => {
-    if (!user || !companyCode) {
+    if (!user || (!companyCode && !companyId)) {
       setCompanyAssignedCourses([])
       setLoadingCompanyCourses(false)
       return
     }
 
-    const q = query(collection(db, 'assigned_courses'), where('companyCode', '==', companyCode))
+    const q = companyCode
+      ? query(collection(db, 'assigned_courses'), where('companyCode', '==', companyCode))
+      : query(collection(db, 'assigned_courses'), where('companyId', '==', companyId))
     const unsubscribe = onSnapshot(
       q,
       snapshot => {
@@ -301,7 +305,7 @@ export const MyCoursesPage: React.FC = () => {
     )
 
     return () => unsubscribe()
-  }, [user, companyCode])
+  }, [user, companyCode, companyId])
 
   useEffect(() => {
     if (!user) {
@@ -348,7 +352,7 @@ export const MyCoursesPage: React.FC = () => {
   }, [user])
 
   useEffect(() => {
-    if (!companyCode) {
+    if (!companyId && !companyCode && !assignedOrganizationId) {
       setOrganizationCourses([])
       setAssignedCourseOrder([])
       setLoadingOrganizationCourses(false)
@@ -357,105 +361,156 @@ export const MyCoursesPage: React.FC = () => {
       return
     }
 
-    const companyRef = doc(db, 'companies', companyCode)
-    const unsubscribe = onSnapshot(
-      companyRef,
-      async snapshot => {
-        try {
-          if (!snapshot.exists()) {
+    setLoadingOrganizationCourses(true)
+    const organizationId = companyId || assignedOrganizationId
+
+    const resolveOrganizationCourses = async (orgData: Record<string, unknown>) => {
+      const rawDuration =
+        orgData.programDuration || orgData.program_duration || orgData.duration || orgData.programLength
+      const durationRaw =
+        typeof rawDuration === 'number' || typeof rawDuration === 'string' ? rawDuration : null
+      const rawMonthlyAssignments = orgData.monthlyCourseAssignments
+      const monthlyCourseAssignments =
+        rawMonthlyAssignments && typeof rawMonthlyAssignments === 'object' && !Array.isArray(rawMonthlyAssignments)
+          ? (rawMonthlyAssignments as MonthlyCourseAssignments)
+          : null
+      const courseIds = normalizeCourseIds(
+        orgData.courseAssignments || orgData.assignedCourses || orgData.defaultCourses
+      )
+      const { monthlyAssignments, totalMonths } = normalizeMonthlyAssignments({
+        monthlyCourseAssignments,
+        courseAssignments: courseIds,
+        programDuration: durationRaw,
+      })
+      const monthlyAssignmentArray = getMonthlyAssignmentsArray(monthlyAssignments, totalMonths)
+      const assignedMonthlyCourseIds = monthlyAssignmentArray.filter(Boolean)
+
+      setAssignedCourseOrder(assignedMonthlyCourseIds)
+      setCompanyProgram({
+        monthlyAssignments,
+        totalMonths,
+        cohortStartDate: normalizeDate(orgData.cohortStartDate),
+      })
+
+      if (!assignedMonthlyCourseIds.length) {
+        setOrganizationCourses([])
+        setLoadingOrganizationCourses(false)
+        setCompanyProgramCourseMap({})
+        return
+      }
+
+      const fetchChunks: string[][] = []
+      for (let i = 0; i < assignedMonthlyCourseIds.length; i += 10) {
+        fetchChunks.push(assignedMonthlyCourseIds.slice(i, i + 10))
+      }
+
+      const courseDocs: NormalizedCourse[] = []
+      for (const chunk of fetchChunks) {
+        const coursesQuery = query(collection(db, 'courses'), where('id', 'in', chunk))
+        const courseSnapshot = await getDocs(coursesQuery)
+        courseSnapshot.forEach(docSnap => {
+          const data = docSnap.data()
+          const title = (data.title || data.name || data.courseTitle || 'Untitled Course') as string
+          const details = COURSE_DETAILS_MAPPING[title]
+          const metadata = COURSE_METADATA_MAPPING[title]
+
+          courseDocs.push({
+            id: docSnap.id,
+            title,
+            description: (data.description || details?.description || 'No description available.') as string,
+            link: (data.link || details?.link) as string | undefined,
+            assignedDate: normalizeDate(data.assignedAt || data.assigned_at || data.createdAt || data.assignedDate),
+            progress: typeof data.progress === 'number' ? data.progress : undefined,
+            status: formatStatus(data.status || 'assigned'),
+            source: 'organization',
+            estimatedMinutes: metadata?.estimatedMinutes,
+            difficulty: metadata?.difficulty,
+            image: COURSE_IMAGE_FILENAMES[title],
+          })
+        })
+      }
+
+      setOrganizationCourses(courseDocs)
+      const mappedCourseLookup = courseDocs.reduce<Record<string, NormalizedCourse>>((acc, course) => {
+        acc[course.id] = course
+        return acc
+      }, {})
+      setCompanyProgramCourseMap(mappedCourseLookup)
+      setLoadingOrganizationCourses(false)
+    }
+
+    const handleSnapshotError = (error: Error) => {
+      console.error('Organization listener error', error)
+      setOrganizationCourses([])
+      setAssignedCourseOrder([])
+      setLoadingOrganizationCourses(false)
+      setCompanyProgram(null)
+      setCompanyProgramCourseMap({})
+    }
+
+    if (organizationId) {
+      const organizationRef = doc(db, 'organizations', organizationId)
+      const unsubscribe = onSnapshot(
+        organizationRef,
+        async snapshot => {
+          try {
+            if (!snapshot.exists()) {
+              setOrganizationCourses([])
+              setAssignedCourseOrder([])
+              setLoadingOrganizationCourses(false)
+              setCompanyProgram(null)
+              setCompanyProgramCourseMap({})
+              return
+            }
+            await resolveOrganizationCourses(snapshot.data())
+          } catch (error) {
+            console.error('Error loading organization courses', error)
             setOrganizationCourses([])
             setAssignedCourseOrder([])
             setLoadingOrganizationCourses(false)
-            return
-          }
-
-          const companyData = snapshot.data()
-          const durationRaw =
-            companyData.programDuration || companyData.program_duration || companyData.duration || companyData.programLength
-          const courseIds = normalizeCourseIds(
-            companyData.courseAssignments || companyData.assignedCourses || companyData.defaultCourses
-          )
-          const { monthlyAssignments, totalMonths } = normalizeMonthlyAssignments({
-            monthlyCourseAssignments: companyData.monthlyCourseAssignments,
-            courseAssignments: courseIds,
-            programDuration: durationRaw,
-          })
-          const monthlyAssignmentArray = getMonthlyAssignmentsArray(monthlyAssignments, totalMonths)
-          const assignedMonthlyCourseIds = monthlyAssignmentArray.filter(Boolean)
-
-          setAssignedCourseOrder(assignedMonthlyCourseIds)
-          setCompanyProgram({
-            monthlyAssignments,
-            totalMonths,
-            cohortStartDate: normalizeDate(companyData.cohortStartDate),
-          })
-
-          if (!assignedMonthlyCourseIds.length) {
-            setOrganizationCourses([])
-            setLoadingOrganizationCourses(false)
+            setCompanyProgram(null)
             setCompanyProgramCourseMap({})
-            return
           }
+        },
+        handleSnapshotError
+      )
 
-          const fetchChunks: string[][] = []
-          for (let i = 0; i < assignedMonthlyCourseIds.length; i += 10) {
-            fetchChunks.push(assignedMonthlyCourseIds.slice(i, i + 10))
+      return () => unsubscribe()
+    }
+
+    if (companyCode) {
+      const organizationQuery = query(collection(db, 'organizations'), where('code', '==', companyCode))
+      const unsubscribe = onSnapshot(
+        organizationQuery,
+        async snapshot => {
+          try {
+            const docSnapshot = snapshot.docs[0]
+            if (!docSnapshot) {
+              setOrganizationCourses([])
+              setAssignedCourseOrder([])
+              setLoadingOrganizationCourses(false)
+              setCompanyProgram(null)
+              setCompanyProgramCourseMap({})
+              return
+            }
+            await resolveOrganizationCourses(docSnapshot.data())
+          } catch (error) {
+            console.error('Error loading organization courses', error)
+            setOrganizationCourses([])
+            setAssignedCourseOrder([])
+            setLoadingOrganizationCourses(false)
+            setCompanyProgram(null)
+            setCompanyProgramCourseMap({})
           }
+        },
+        handleSnapshotError
+      )
 
-          const courseDocs: NormalizedCourse[] = []
-          for (const chunk of fetchChunks) {
-            const coursesQuery = query(collection(db, 'courses'), where('id', 'in', chunk))
-            const courseSnapshot = await getDocs(coursesQuery)
-            courseSnapshot.forEach(docSnap => {
-              const data = docSnap.data()
-              const title = (data.title || data.name || data.courseTitle || 'Untitled Course') as string
-              const details = COURSE_DETAILS_MAPPING[title]
-              const metadata = COURSE_METADATA_MAPPING[title]
+      return () => unsubscribe()
+    }
 
-              courseDocs.push({
-                id: docSnap.id,
-                title,
-                description: (data.description || details?.description || 'No description available.') as string,
-                link: (data.link || details?.link) as string | undefined,
-                assignedDate: normalizeDate(data.assignedAt || data.assigned_at || data.createdAt || data.assignedDate),
-                progress: typeof data.progress === 'number' ? data.progress : undefined,
-                status: formatStatus(data.status || 'assigned'),
-                source: 'organization',
-                estimatedMinutes: metadata?.estimatedMinutes,
-                difficulty: metadata?.difficulty,
-                image: COURSE_IMAGE_FILENAMES[title],
-              })
-            })
-          }
-
-          setOrganizationCourses(courseDocs)
-          const mappedCourseLookup = courseDocs.reduce<Record<string, NormalizedCourse>>((acc, course) => {
-            acc[course.id] = course
-            return acc
-          }, {})
-          setCompanyProgramCourseMap(mappedCourseLookup)
-          setLoadingOrganizationCourses(false)
-        } catch (error) {
-          console.error('Error loading organization courses', error)
-          setOrganizationCourses([])
-          setAssignedCourseOrder([])
-          setLoadingOrganizationCourses(false)
-          setCompanyProgram(null)
-          setCompanyProgramCourseMap({})
-        }
-      },
-      error => {
-        console.error('Company listener error', error)
-        setOrganizationCourses([])
-        setAssignedCourseOrder([])
-        setLoadingOrganizationCourses(false)
-        setCompanyProgram(null)
-        setCompanyProgramCourseMap({})
-      }
-    )
-
-    return () => unsubscribe()
-  }, [companyCode])
+    return
+  }, [assignedOrganizationId, companyCode, companyId])
 
   const combinedAssignedCourses = useMemo(() => {
     const priority = ['user', 'personal', 'company', 'organization'] as NormalizedCourse['source'][]

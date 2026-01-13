@@ -121,9 +121,9 @@ const mapActivityTypesToCategories = <T extends string>(
     return acc
   }, {} as Record<ActivityType, T[]>)
 
-  Object.entries(categoryMap).forEach(([category, activities]) => {
+  ;(Object.entries(categoryMap) as Array<[T, ActivityType[]]>).forEach(([category, activities]) => {
     activities.forEach((activity) => {
-      mapping[activity].push(category as T)
+      mapping[activity].push(category)
     })
   })
 

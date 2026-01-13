@@ -234,62 +234,91 @@ export const useWeeklyGlanceData = () => {
   }, [profile?.id, profile?.journeyType, weekNumber])
 
   useEffect(() => {
-    const fetchSupport = async () => {
-      if (!profile?.id) return
-      setLoading(prev => ({ ...prev, support: true }))
-      try {
-        const supportQuery = query(collection(db, 'support_assignments'), where('user_id', '==', profile.id))
-        const snapshot = await getDocs(supportQuery)
-        const docData = snapshot.docs[0]
-        if (docData) {
-          const data = docData.data() as SupportAssignment
-          const mentorId = data.mentor_id
-          const ambassadorId = data.ambassador_id
-          const getCachedProfile = async (userId: string) => {
-            if (profileCache.current.has(userId)) {
-              return profileCache.current.get(userId) ?? null
-            }
-            const profile = await fetchUserProfileById(userId)
-            profileCache.current.set(userId, profile)
-            return profile
-          }
-          const [mentorResult, ambassadorResult] = await Promise.all([
-            mentorId
-              ? getCachedProfile(mentorId)
-                  .then(profileData => ({
-                    profile: profileData,
-                    error: profileData ? undefined : 'Mentor profile not found',
-                  }))
-                  .catch(() => ({ profile: null, error: 'Unable to load mentor profile' }))
-              : Promise.resolve({ profile: null, error: undefined }),
-            ambassadorId
-              ? getCachedProfile(ambassadorId)
-                  .then(profileData => ({
-                    profile: profileData,
-                    error: profileData ? undefined : 'Ambassador profile not found',
-                  }))
-                  .catch(() => ({ profile: null, error: 'Unable to load ambassador profile' }))
-              : Promise.resolve({ profile: null, error: undefined }),
-          ])
-          setSupportAssignment({
-            ...data,
-            id: docData.id,
-            mentorProfile: mentorResult.profile,
-            mentorProfileError: mentorResult.error,
-            ambassadorProfile: ambassadorResult.profile,
-            ambassadorProfileError: ambassadorResult.error,
-          })
-        } else {
-          setSupportAssignment(null)
-        }
-      } catch (error) {
-        setErrors(prev => ({ ...prev, support: error as Error }))
-      } finally {
+    if (!profile?.id) return
+    setLoading(prev => ({ ...prev, support: true }))
+    let isActive = true
+    let didReceiveSnapshot = false
+
+    const supportQuery = query(collection(db, 'support_assignments'), where('user_id', '==', profile.id))
+    const fallbackTimeout = setTimeout(() => {
+      if (isActive && !didReceiveSnapshot) {
         setLoading(prev => ({ ...prev, support: false }))
       }
+    }, 5000)
+
+    const handleSnapshot = async (snapshot: any) => {
+      didReceiveSnapshot = true
+      clearTimeout(fallbackTimeout)
+      if (!isActive) return
+      const docData = snapshot.docs[0]
+      if (!docData) {
+        setSupportAssignment(null)
+        setLoading(prev => ({ ...prev, support: false }))
+        return
+      }
+
+      const data = docData.data() as SupportAssignment
+      const mentorId = data.mentor_id
+      const ambassadorId = data.ambassador_id
+      const getCachedProfile = async (userId: string) => {
+        if (profileCache.current.has(userId)) {
+          return profileCache.current.get(userId) ?? null
+        }
+        const profile = await fetchUserProfileById(userId)
+        profileCache.current.set(userId, profile)
+        return profile
+      }
+
+      const [mentorResult, ambassadorResult] = await Promise.all([
+        mentorId
+          ? getCachedProfile(mentorId)
+              .then(profileData => ({
+                profile: profileData,
+                error: profileData ? undefined : 'Mentor profile not found',
+              }))
+              .catch(() => ({ profile: null, error: 'Unable to load mentor profile' }))
+          : Promise.resolve({ profile: null, error: undefined }),
+        ambassadorId
+          ? getCachedProfile(ambassadorId)
+              .then(profileData => ({
+                profile: profileData,
+                error: profileData ? undefined : 'Ambassador profile not found',
+              }))
+              .catch(() => ({ profile: null, error: 'Unable to load ambassador profile' }))
+          : Promise.resolve({ profile: null, error: undefined }),
+      ])
+
+      if (!isActive) return
+      setSupportAssignment({
+        ...data,
+        id: docData.id,
+        mentorProfile: mentorResult.profile,
+        mentorProfileError: mentorResult.error,
+        ambassadorProfile: ambassadorResult.profile,
+        ambassadorProfileError: ambassadorResult.error,
+      })
+      setLoading(prev => ({ ...prev, support: false }))
     }
 
-    fetchSupport()
+    const unsubscribe = onSnapshot(
+      supportQuery,
+      snapshot => {
+        void handleSnapshot(snapshot)
+      },
+      error => {
+        didReceiveSnapshot = true
+        clearTimeout(fallbackTimeout)
+        if (!isActive) return
+        setErrors(prev => ({ ...prev, support: error as Error }))
+        setLoading(prev => ({ ...prev, support: false }))
+      },
+    )
+
+    return () => {
+      isActive = false
+      clearTimeout(fallbackTimeout)
+      unsubscribe()
+    }
   }, [profile?.id])
 
   useEffect(() => {
