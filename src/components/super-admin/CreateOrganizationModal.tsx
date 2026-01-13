@@ -1,10 +1,20 @@
 import React, { useEffect, useMemo, useState } from 'react'
 import {
   Alert,
+  AlertDialog,
+  AlertDialogBody,
+  AlertDialogContent,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogOverlay,
   AlertIcon,
   Badge,
   Box,
   Button,
+  Checkbox,
+  Editable,
+  EditableInput,
+  EditablePreview,
   Flex,
   FormControl,
   FormErrorMessage,
@@ -26,9 +36,14 @@ import {
   ModalOverlay,
   Select,
   Stack,
+  Table,
+  Tbody,
+  Td,
   Text,
-  Textarea,
+  Th,
+  Thead,
   Tooltip,
+  Tr,
   useDisclosure,
   useToast,
 } from '@chakra-ui/react'
@@ -91,6 +106,32 @@ const emptyOrganization: OrganizationRecord = {
 const inviteRoleOptions: InviteDraft['role'][] = ['user', 'mentor', 'ambassador', 'team_leader']
 const inviteMethodOptions: InviteDraft['method'][] = ['email', 'one_time_code']
 const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+const nameRegex = /^[A-Za-z][A-Za-z\s'-]*$/
+const commonEmailDomains = ['gmail.com', 'outlook.com', 'hotmail.com', 'yahoo.com', 'icloud.com']
+
+type InviteDraftField = 'name' | 'email' | 'role' | 'method'
+type InviteDraftErrors = Partial<Record<InviteDraftField, string>>
+type InviteDraftEntry = InviteDraft & {
+  isValid: boolean
+  errors: InviteDraftErrors
+  source?: 'manual' | 'csv'
+  rowNumber?: number
+  addedAt: number
+  isNew?: boolean
+}
+
+const formatName = (value: string) =>
+  value
+    .trim()
+    .split(/\s+/)
+    .map((segment) => segment.charAt(0).toUpperCase() + segment.slice(1))
+    .join(' ')
+
+const normalizeMethodForEmail = (email: string, current: InviteDraft['method']) => {
+  if (!email) return 'one_time_code'
+  if (current === 'one_time_code') return 'email'
+  return current
+}
 
 export const CreateOrganizationModal: React.FC<CreateOrganizationModalProps> = ({
   isOpen,
@@ -105,9 +146,22 @@ export const CreateOrganizationModal: React.FC<CreateOrganizationModalProps> = (
   const [courses, setCourses] = useState<CourseOption[]>([])
   const [results, setResults] = useState<BulkInvitationResult | null>(null)
   const [monthlyAssignments, setMonthlyAssignments] = useState<MonthlyCourseAssignments>({})
-  const [inviteDrafts, setInviteDrafts] = useState<InviteDraft[]>([])
+  const [inviteDrafts, setInviteDrafts] = useState<InviteDraftEntry[]>([])
   const [inviteError, setInviteError] = useState<string | null>(null)
-  const [manualInviteText, setManualInviteText] = useState('')
+  const [manualEntry, setManualEntry] = useState({
+    name: '',
+    email: '',
+    role: 'user' as InviteDraft['role'],
+    method: 'one_time_code' as InviteDraft['method'],
+  })
+  const [manualErrors, setManualErrors] = useState<InviteDraftErrors>({})
+  const [selectedDraftIds, setSelectedDraftIds] = useState<string[]>([])
+  const [recentImportIds, setRecentImportIds] = useState<string[]>([])
+  const [lastImportCount, setLastImportCount] = useState(0)
+  const bulkDeleteDialog = useDisclosure()
+  const clearAllDialog = useDisclosure()
+  const bulkDeleteCancelRef = React.useRef<HTMLButtonElement | null>(null)
+  const clearAllCancelRef = React.useRef<HTMLButtonElement | null>(null)
   const resultsModal = useDisclosure()
 
   const courseLimit = useMemo(() => {
@@ -153,6 +207,12 @@ export const CreateOrganizationModal: React.FC<CreateOrganizationModalProps> = (
       })).filter((entry) => !entry.courseId),
     [monthlyAssignments, courseLimit],
   )
+  const inviteStats = useMemo(() => {
+    const total = inviteDrafts.length
+    const valid = inviteDrafts.filter((draft) => draft.isValid).length
+    const invalid = total - valid
+    return { total, valid, invalid }
+  }, [inviteDrafts])
 
   const sortedCourses = useMemo(
     () => [...courses].sort((a, b) => a.title.localeCompare(b.title)),
@@ -173,7 +233,11 @@ export const CreateOrganizationModal: React.FC<CreateOrganizationModalProps> = (
       setMonthlyAssignments({})
       setInviteDrafts([])
       setInviteError(null)
-      setManualInviteText('')
+      setManualEntry({ name: '', email: '', role: 'user', method: 'one_time_code' })
+      setManualErrors({})
+      setSelectedDraftIds([])
+      setRecentImportIds([])
+      setLastImportCount(0)
       return
     }
 
@@ -213,72 +277,105 @@ export const CreateOrganizationModal: React.FC<CreateOrganizationModalProps> = (
     setForm((prev) => ({ ...prev, [key]: value }))
   }
 
-  const mergeInviteDrafts = (incoming: InviteDraft[]) => {
-    setInviteDrafts((prev) => {
-      const next = new Map<string, InviteDraft>()
-      const add = (draft: InviteDraft) => {
-        const key = `${draft.email || draft.name}-${draft.role}-${draft.method}`
-        if (!next.has(key)) next.set(key, draft)
-      }
-      prev.forEach(add)
-      incoming.forEach(add)
-      return Array.from(next.values())
-    })
+  const buildInviteDraftEntry = (draft: InviteDraft, source?: InviteDraftEntry['source'], rowNumber?: number): InviteDraftEntry => ({
+    ...draft,
+    isValid: true,
+    errors: {},
+    source,
+    rowNumber,
+    addedAt: Date.now(),
+    isNew: source === 'csv',
+  })
+
+  const validateInviteDraft = (
+    draft: InviteDraftEntry,
+    emailCounts: Map<string, number>,
+  ): InviteDraftErrors => {
+    const errors: InviteDraftErrors = {}
+    const name = draft.name.trim()
+    if (!name) {
+      errors.name = 'Name is required.'
+    } else if (name.length < 2) {
+      errors.name = 'Name must be at least 2 characters.'
+    } else if (!nameRegex.test(name)) {
+      errors.name = 'Name should not include special characters.'
+    }
+
+    const normalizedEmail = normalizeEmail(draft.email || '')
+    if (draft.method === 'email' && !normalizedEmail) {
+      errors.email = 'Email is required for email invitations.'
+    }
+    if (normalizedEmail && !emailRegex.test(normalizedEmail)) {
+      errors.email = 'Enter a valid email address.'
+    }
+    if (normalizedEmail && (emailCounts.get(normalizedEmail) || 0) > 1) {
+      errors.email = 'Duplicate email detected.'
+    }
+
+    if (!inviteRoleOptions.includes(draft.role)) {
+      errors.role = 'Select a valid role.'
+    }
+    if (!inviteMethodOptions.includes(draft.method)) {
+      errors.method = 'Select a valid invitation method.'
+    }
+    if (draft.method === 'email' && !normalizedEmail) {
+      errors.method = 'Email is required when using email invitations.'
+    }
+
+    return errors
   }
 
-  const parseManualInvites = (text: string): InviteDraft[] => {
-    const lines = text
-      .split(/\r?\n/)
-      .map((line) => line.trim())
-      .filter(Boolean)
-    if (!lines.length) {
-      return []
-    }
-    return lines.map((line, index) => {
-      const [rawName, rawEmail, rawRole, rawMethod] = line.split(',').map((value) => value.trim())
-      const rowNumber = index + 1
-      if (!rawName) {
-        throw new Error(`Manual list row ${rowNumber}: name is required`)
+  const recomputeInviteDrafts = (drafts: InviteDraftEntry[]) => {
+    const emailCounts = drafts.reduce((map, draft) => {
+      const normalized = normalizeEmail(draft.email || '')
+      if (normalized) {
+        map.set(normalized, (map.get(normalized) || 0) + 1)
       }
-      const normalizedEmail = rawEmail ? normalizeEmail(rawEmail) : ''
-      const role = (rawRole || 'user').toLowerCase() as InviteDraft['role']
-      if (!inviteRoleOptions.includes(role)) {
-        throw new Error(`Manual list row ${rowNumber}: role must be ${inviteRoleOptions.join(', ')}`)
-      }
-      const method = (rawMethod || (normalizedEmail ? 'email' : 'one_time_code')).toLowerCase() as InviteDraft['method']
-      if (!inviteMethodOptions.includes(method)) {
-        throw new Error(`Manual list row ${rowNumber}: method must be ${inviteMethodOptions.join(', ')}`)
-      }
-      if (method === 'email') {
-        if (!normalizedEmail) {
-          throw new Error(`Manual list row ${rowNumber}: email is required for email invitations`)
-        }
-        if (!emailRegex.test(normalizedEmail)) {
-          throw new Error(`Manual list row ${rowNumber}: invalid email format`)
-        }
-      }
+      return map
+    }, new Map<string, number>())
+
+    return drafts.map((draft) => {
+      const errors = validateInviteDraft(draft, emailCounts)
       return {
-        id: `${Date.now()}-${rowNumber}`,
-        name: rawName,
-        email: normalizedEmail,
-        role,
-        method,
+        ...draft,
+        email: normalizeEmail(draft.email || ''),
+        errors,
+        isValid: Object.keys(errors).length === 0,
       }
     })
   }
 
-  const handleManualInviteParse = () => {
-    try {
-      const drafts = parseManualInvites(manualInviteText)
-      if (!drafts.length) {
-        setInviteError('Add at least one user row before parsing.')
-        return
-      }
-      setInviteError(null)
-      mergeInviteDrafts(drafts)
-    } catch (error) {
-      setInviteError(error instanceof Error ? error.message : 'Unable to parse manual user list.')
-    }
+  const addInviteDrafts = (incoming: InviteDraftEntry[]) => {
+    setInviteDrafts((prev) => recomputeInviteDrafts([...prev, ...incoming]))
+  }
+
+  const updateDraftField = (draftId: string, field: InviteDraftField, value: string) => {
+    setInviteDrafts((prev) => {
+      const nextValue =
+        field === 'role' ? (value as InviteDraft['role']) : field === 'method' ? (value as InviteDraft['method']) : value
+      const next = prev.map((draft) =>
+        draft.id === draftId
+          ? {
+              ...draft,
+              [field]: nextValue,
+              method:
+                field === 'email' ? normalizeMethodForEmail(normalizeEmail(value), draft.method) : draft.method,
+              isNew: draft.isNew && draft.source !== 'csv' ? draft.isNew : false,
+            }
+          : draft,
+      )
+      return recomputeInviteDrafts(next)
+    })
+  }
+
+  const removeDrafts = (draftIds: string[]) => {
+    setInviteDrafts((prev) => recomputeInviteDrafts(prev.filter((draft) => !draftIds.includes(draft.id))))
+    setSelectedDraftIds((prev) => prev.filter((id) => !draftIds.includes(id)))
+  }
+
+  const resetManualEntry = () => {
+    setManualEntry({ name: '', email: '', role: 'user', method: 'one_time_code' })
+    setManualErrors({})
   }
 
   const handleInviteFile = async (file?: File | null) => {
@@ -286,10 +383,54 @@ export const CreateOrganizationModal: React.FC<CreateOrganizationModalProps> = (
     try {
       const drafts = await parseInvitationCSV(file)
       setInviteError(null)
-      mergeInviteDrafts(drafts)
+      const entries = drafts.map((draft, index) => buildInviteDraftEntry(draft, 'csv', index + 2))
+      addInviteDrafts(entries)
+      setRecentImportIds(entries.map((entry) => entry.id))
+      setLastImportCount(entries.length)
+      toast({ title: `Imported ${entries.length} user${entries.length === 1 ? '' : 's'} from CSV`, status: 'success' })
     } catch (error) {
       setInviteError(error instanceof Error ? error.message : 'Unable to parse CSV file.')
     }
+  }
+
+  const validateManualEntry = (entry: typeof manualEntry) => {
+    const draft = buildInviteDraftEntry(
+      {
+        id: 'manual-preview',
+        name: entry.name,
+        email: normalizeEmail(entry.email || ''),
+        role: entry.role,
+        method: entry.method,
+      },
+      'manual',
+    )
+    const emailCounts = new Map<string, number>()
+    const normalized = normalizeEmail(draft.email || '')
+    if (normalized) {
+      emailCounts.set(normalized, 1 + inviteDrafts.filter((existing) => normalizeEmail(existing.email) === normalized).length)
+    }
+    const errors = validateInviteDraft(draft, emailCounts)
+    setManualErrors(errors)
+    return errors
+  }
+
+  const handleAddManualEntry = () => {
+    const errors = validateManualEntry(manualEntry)
+    if (Object.keys(errors).length > 0) {
+      setInviteError('Fix validation errors before adding the user.')
+      return
+    }
+    setInviteError(null)
+    const draft: InviteDraft = {
+      id: `${Date.now()}-${Math.round(Math.random() * 1000)}`,
+      name: formatName(manualEntry.name),
+      email: normalizeEmail(manualEntry.email || ''),
+      role: manualEntry.role,
+      method: manualEntry.method,
+    }
+    addInviteDrafts([buildInviteDraftEntry(draft, 'manual')])
+    resetManualEntry()
+    toast({ title: 'User added. Add another if needed.', status: 'success' })
   }
 
   const handleMonthlyAssignmentChange = (monthKey: string, courseId: string) => {
@@ -322,6 +463,9 @@ export const CreateOrganizationModal: React.FC<CreateOrganizationModalProps> = (
       if (!form.teamSize || form.teamSize <= 0) throw new Error('Cohort size must be greater than 0')
       if (courseLimit && emptyMonths.length) {
         throw new Error(`Please assign a course for each of the ${courseLimit} month(s)`)
+      }
+      if (inviteDrafts.some((draft) => !draft.isValid)) {
+        throw new Error('Resolve invitation errors before submitting.')
       }
 
       setIsSubmitting(true)
@@ -640,66 +784,359 @@ export const CreateOrganizationModal: React.FC<CreateOrganizationModalProps> = (
                       </Button>
                     </FormHelperText>
                   </FormControl>
-                  <FormControl>
-                    <FormLabel>Manual list</FormLabel>
-                    <Textarea
-                      value={manualInviteText}
-                      onChange={(e) => setManualInviteText(e.target.value)}
-                      placeholder="Name, Email, Role, Invitation Method"
-                      rows={4}
-                    />
-                    <FormHelperText>
-                      One user per line. Role defaults to user. Invitation method defaults to email when an email is provided.
-                    </FormHelperText>
-                    <HStack spacing={3} mt={2}>
-                      <Button size="sm" variant="outline" onClick={handleManualInviteParse}>
-                        Add users
+                  {lastImportCount > 0 ? (
+                    <Alert status="info" borderRadius="md">
+                      <AlertIcon />
+                      Review {lastImportCount} imported user{lastImportCount === 1 ? '' : 's'} in the table below.
+                    </Alert>
+                  ) : null}
+                  <Box borderWidth="1px" borderRadius="md" p={4} bg="gray.50">
+                    <Text fontWeight="semibold" mb={3}>
+                      Add user manually
+                    </Text>
+                    <Grid
+                      templateColumns={{ base: '1fr', lg: '2fr 2fr 1.3fr 1.3fr auto' }}
+                      gap={3}
+                      alignItems="flex-end"
+                    >
+                      <FormControl isRequired isInvalid={Boolean(manualErrors.name)}>
+                        <FormLabel display="flex" alignItems="center" gap={2}>
+                          Name
+                          <Tooltip label="Minimum 2 characters. Letters, spaces, hyphens, and apostrophes only.">
+                            <InfoIcon color="gray.400" />
+                          </Tooltip>
+                        </FormLabel>
+                        <Input
+                          value={manualEntry.name}
+                          onChange={(e) => {
+                            const value = e.target.value
+                            setManualEntry((prev) => ({ ...prev, name: value }))
+                            validateManualEntry({ ...manualEntry, name: value })
+                          }}
+                          onBlur={(e) => {
+                            const formatted = formatName(e.target.value)
+                            setManualEntry((prev) => ({ ...prev, name: formatted }))
+                            validateManualEntry({ ...manualEntry, name: formatted })
+                          }}
+                          placeholder="Jane Doe"
+                          maxLength={60}
+                          onKeyDown={(e) => {
+                            if (e.key === 'Enter') {
+                              e.preventDefault()
+                              handleAddManualEntry()
+                            }
+                          }}
+                        />
+                        <FormHelperText>{manualEntry.name.length}/60 characters</FormHelperText>
+                        <FormErrorMessage>{manualErrors.name}</FormErrorMessage>
+                      </FormControl>
+                      <FormControl isInvalid={Boolean(manualErrors.email)}>
+                        <FormLabel display="flex" alignItems="center" gap={2}>
+                          Email
+                          <Tooltip label="Optional unless using email invitations.">
+                            <InfoIcon color="gray.400" />
+                          </Tooltip>
+                        </FormLabel>
+                        <Input
+                          value={manualEntry.email}
+                          onChange={(e) => {
+                            const rawEmail = e.target.value
+                            const normalized = normalizeEmail(rawEmail)
+                            const nextMethod = normalizeMethodForEmail(normalized, manualEntry.method)
+                            const nextEntry = { ...manualEntry, email: rawEmail, method: nextMethod }
+                            setManualEntry(nextEntry)
+                            validateManualEntry(nextEntry)
+                          }}
+                          placeholder="jane.doe@example.com"
+                          list="email-domains"
+                          onKeyDown={(e) => {
+                            if (e.key === 'Enter') {
+                              e.preventDefault()
+                              handleAddManualEntry()
+                            }
+                          }}
+                        />
+                        <datalist id="email-domains">
+                          {commonEmailDomains.map((domain) => (
+                            <option key={domain} value={`@${domain}`} />
+                          ))}
+                        </datalist>
+                        <FormHelperText>Auto-selects email invitations when a valid email is entered.</FormHelperText>
+                        <FormErrorMessage>{manualErrors.email}</FormErrorMessage>
+                      </FormControl>
+                      <FormControl isInvalid={Boolean(manualErrors.role)}>
+                        <FormLabel display="flex" alignItems="center" gap={2}>
+                          Role
+                          <Tooltip label="Assign the user role for the invitation.">
+                            <InfoIcon color="gray.400" />
+                          </Tooltip>
+                        </FormLabel>
+                        <Select
+                          value={manualEntry.role}
+                          onChange={(e) => {
+                            const nextEntry = { ...manualEntry, role: e.target.value as InviteDraft['role'] }
+                            setManualEntry(nextEntry)
+                            validateManualEntry(nextEntry)
+                          }}
+                        >
+                          {inviteRoleOptions.map((role) => (
+                            <option key={role} value={role}>
+                              {role}
+                            </option>
+                          ))}
+                        </Select>
+                        <FormErrorMessage>{manualErrors.role}</FormErrorMessage>
+                      </FormControl>
+                      <FormControl isInvalid={Boolean(manualErrors.method)}>
+                        <FormLabel display="flex" alignItems="center" gap={2}>
+                          Method
+                          <Tooltip label="Email sends an invite link. One-time code is for manual sharing.">
+                            <InfoIcon color="gray.400" />
+                          </Tooltip>
+                        </FormLabel>
+                        <Select
+                          value={manualEntry.method}
+                          onChange={(e) => {
+                            const nextEntry = { ...manualEntry, method: e.target.value as InviteDraft['method'] }
+                            setManualEntry(nextEntry)
+                            validateManualEntry(nextEntry)
+                          }}
+                        >
+                          {inviteMethodOptions.map((method) => (
+                            <option key={method} value={method}>
+                              {method}
+                            </option>
+                          ))}
+                        </Select>
+                        <FormErrorMessage>{manualErrors.method}</FormErrorMessage>
+                      </FormControl>
+                      <Button colorScheme="purple" onClick={handleAddManualEntry} alignSelf="flex-end">
+                        Add user
                       </Button>
-                      <Button
-                        size="sm"
-                        variant="ghost"
-                        onClick={() => {
-                          setInviteDrafts([])
-                          setInviteError(null)
-                        }}
-                        isDisabled={!inviteDrafts.length}
-                      >
-                        Clear users
-                      </Button>
-                    </HStack>
-                  </FormControl>
+                    </Grid>
+                  </Box>
                   {inviteError ? (
                     <Alert status="error" borderRadius="md">
                       <AlertIcon />
                       {inviteError}
                     </Alert>
                   ) : null}
-                  {inviteDrafts.length ? (
-                    <Box borderWidth="1px" borderRadius="md" p={3} bg="gray.50">
-                      <Text fontSize="sm" fontWeight="semibold" mb={2}>
-                        {inviteDrafts.length} user{inviteDrafts.length > 1 ? 's' : ''} ready to invite
+                  <Box borderWidth="1px" borderRadius="md" p={4} bg="white">
+                    <HStack justify="space-between" mb={3} flexWrap="wrap">
+                      <Text fontWeight="semibold">Invitation drafts</Text>
+                      <HStack spacing={2}>
+                        <Badge colorScheme="purple">Total: {inviteStats.total}</Badge>
+                        <Badge colorScheme="green">Valid: {inviteStats.valid}</Badge>
+                        <Badge colorScheme={inviteStats.invalid ? 'red' : 'gray'}>
+                          Errors: {inviteStats.invalid}
+                        </Badge>
+                      </HStack>
+                    </HStack>
+                    {inviteStats.invalid ? (
+                      <Alert status="error" mb={3} borderRadius="md">
+                        <AlertIcon />
+                        Fix validation errors before submitting the invitation list.
+                      </Alert>
+                    ) : null}
+                    {inviteDrafts.length ? (
+                      <>
+                        <HStack spacing={3} mb={3} flexWrap="wrap">
+                          <Checkbox
+                            isChecked={selectedDraftIds.length === inviteDrafts.length && inviteDrafts.length > 0}
+                            onChange={(e) => {
+                              setSelectedDraftIds(e.target.checked ? inviteDrafts.map((draft) => draft.id) : [])
+                            }}
+                          >
+                            Select all
+                          </Checkbox>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => {
+                              if (selectedDraftIds.length) bulkDeleteDialog.onOpen()
+                            }}
+                            isDisabled={!selectedDraftIds.length}
+                          >
+                            Delete selected ({selectedDraftIds.length})
+                          </Button>
+                          <Select
+                            size="sm"
+                            maxW="180px"
+                            placeholder="Change role"
+                            onChange={(e) => {
+                              const role = e.target.value as InviteDraft['role']
+                              if (!role || !selectedDraftIds.length) return
+                              setInviteDrafts((prev) =>
+                                recomputeInviteDrafts(
+                                  prev.map((draft) =>
+                                    selectedDraftIds.includes(draft.id) ? { ...draft, role } : draft,
+                                  ),
+                                ),
+                              )
+                            }}
+                          >
+                            {inviteRoleOptions.map((role) => (
+                              <option key={role} value={role}>
+                                {role}
+                              </option>
+                            ))}
+                          </Select>
+                          <Select
+                            size="sm"
+                            maxW="200px"
+                            placeholder="Change method"
+                            onChange={(e) => {
+                              const method = e.target.value as InviteDraft['method']
+                              if (!method || !selectedDraftIds.length) return
+                              setInviteDrafts((prev) =>
+                                recomputeInviteDrafts(
+                                  prev.map((draft) =>
+                                    selectedDraftIds.includes(draft.id) ? { ...draft, method } : draft,
+                                  ),
+                                ),
+                              )
+                            }}
+                          >
+                            {inviteMethodOptions.map((method) => (
+                              <option key={method} value={method}>
+                                {method}
+                              </option>
+                            ))}
+                          </Select>
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            onClick={() => {
+                              if (inviteDrafts.length) clearAllDialog.onOpen()
+                            }}
+                            isDisabled={!inviteDrafts.length}
+                          >
+                            Clear all
+                          </Button>
+                        </HStack>
+                        <Box overflowX="auto">
+                          <Table size="sm" variant="simple">
+                            <Thead>
+                              <Tr>
+                                <Th>#</Th>
+                                <Th>Select</Th>
+                                <Th>Name</Th>
+                                <Th>Email</Th>
+                                <Th>Role</Th>
+                                <Th>Method</Th>
+                                <Th>Status</Th>
+                                <Th>Actions</Th>
+                              </Tr>
+                            </Thead>
+                            <Tbody>
+                              {inviteDrafts.map((draft, index) => {
+                                const hasErrors = !draft.isValid
+                                const isHighlighted = recentImportIds.includes(draft.id)
+                                return (
+                                  <Tr
+                                    key={draft.id}
+                                    bg={hasErrors ? 'red.50' : isHighlighted ? 'blue.50' : 'transparent'}
+                                  >
+                                    <Td>{index + 1}</Td>
+                                    <Td>
+                                      <Checkbox
+                                        isChecked={selectedDraftIds.includes(draft.id)}
+                                        onChange={(e) => {
+                                          setSelectedDraftIds((prev) =>
+                                            e.target.checked
+                                              ? [...prev, draft.id]
+                                              : prev.filter((id) => id !== draft.id),
+                                          )
+                                        }}
+                                      />
+                                    </Td>
+                                    <Td>
+                                      <Editable
+                                        value={draft.name}
+                                        onChange={(value) => updateDraftField(draft.id, 'name', value)}
+                                      >
+                                        <EditablePreview />
+                                        <EditableInput />
+                                      </Editable>
+                                      {draft.errors.name ? (
+                                        <Text fontSize="xs" color="red.500">
+                                          {draft.errors.name}
+                                        </Text>
+                                      ) : null}
+                                    </Td>
+                                    <Td>
+                                      <Editable
+                                        value={draft.email}
+                                        onChange={(value) => updateDraftField(draft.id, 'email', value)}
+                                      >
+                                        <EditablePreview />
+                                        <EditableInput />
+                                      </Editable>
+                                      {draft.errors.email ? (
+                                        <Text fontSize="xs" color="red.500">
+                                          {draft.errors.email}
+                                        </Text>
+                                      ) : null}
+                                    </Td>
+                                    <Td>
+                                      <Select
+                                        size="sm"
+                                        value={draft.role}
+                                        onChange={(e) => updateDraftField(draft.id, 'role', e.target.value)}
+                                      >
+                                        {inviteRoleOptions.map((role) => (
+                                          <option key={role} value={role}>
+                                            {role}
+                                          </option>
+                                        ))}
+                                      </Select>
+                                      {draft.errors.role ? (
+                                        <Text fontSize="xs" color="red.500">
+                                          {draft.errors.role}
+                                        </Text>
+                                      ) : null}
+                                    </Td>
+                                    <Td>
+                                      <Select
+                                        size="sm"
+                                        value={draft.method}
+                                        onChange={(e) => updateDraftField(draft.id, 'method', e.target.value)}
+                                      >
+                                        {inviteMethodOptions.map((method) => (
+                                          <option key={method} value={method}>
+                                            {method}
+                                          </option>
+                                        ))}
+                                      </Select>
+                                      {draft.errors.method ? (
+                                        <Text fontSize="xs" color="red.500">
+                                          {draft.errors.method}
+                                        </Text>
+                                      ) : null}
+                                    </Td>
+                                    <Td>
+                                      <Badge colorScheme={draft.isValid ? 'green' : 'red'}>
+                                        {draft.isValid ? 'Valid' : 'Needs review'}
+                                      </Badge>
+                                    </Td>
+                                    <Td>
+                                      <Button size="xs" variant="ghost" onClick={() => removeDrafts([draft.id])}>
+                                        Delete
+                                      </Button>
+                                    </Td>
+                                  </Tr>
+                                )
+                              })}
+                            </Tbody>
+                          </Table>
+                        </Box>
+                      </>
+                    ) : (
+                      <Text fontSize="sm" color="gray.600">
+                        No users added yet.
                       </Text>
-                      <Stack spacing={1}>
-                        {inviteDrafts.slice(0, 5).map((draft) => (
-                          <Flex key={draft.id} justify="space-between" fontSize="sm">
-                            <Text>{draft.name}</Text>
-                            <Text color="gray.600">
-                              {draft.email || 'No email'} • {draft.role} • {draft.method}
-                            </Text>
-                          </Flex>
-                        ))}
-                        {inviteDrafts.length > 5 ? (
-                          <Text fontSize="sm" color="gray.600">
-                            + {inviteDrafts.length - 5} more
-                          </Text>
-                        ) : null}
-                      </Stack>
-                    </Box>
-                  ) : (
-                    <Text fontSize="sm" color="gray.600">
-                      No users added yet.
-                    </Text>
-                  )}
+                    )}
+                  </Box>
                 </Stack>
               </Box>
 
@@ -733,6 +1170,64 @@ export const CreateOrganizationModal: React.FC<CreateOrganizationModalProps> = (
           </ModalFooter>
         </ModalContent>
       </Modal>
+
+      <AlertDialog
+        isOpen={bulkDeleteDialog.isOpen}
+        leastDestructiveRef={bulkDeleteCancelRef}
+        onClose={bulkDeleteDialog.onClose}
+      >
+        <AlertDialogOverlay />
+        <AlertDialogContent>
+          <AlertDialogHeader>Delete selected invitations?</AlertDialogHeader>
+          <AlertDialogBody>
+            This will remove {selectedDraftIds.length} selected invitation draft
+            {selectedDraftIds.length === 1 ? '' : 's'}.
+          </AlertDialogBody>
+          <AlertDialogFooter>
+            <Button ref={bulkDeleteCancelRef} onClick={bulkDeleteDialog.onClose}>
+              Cancel
+            </Button>
+            <Button
+              colorScheme="red"
+              ml={3}
+              onClick={() => {
+                removeDrafts(selectedDraftIds)
+                bulkDeleteDialog.onClose()
+              }}
+            >
+              Delete
+            </Button>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      <AlertDialog
+        isOpen={clearAllDialog.isOpen}
+        leastDestructiveRef={clearAllCancelRef}
+        onClose={clearAllDialog.onClose}
+      >
+        <AlertDialogOverlay />
+        <AlertDialogContent>
+          <AlertDialogHeader>Clear all invitation drafts?</AlertDialogHeader>
+          <AlertDialogBody>This will remove all invitation drafts currently in the list.</AlertDialogBody>
+          <AlertDialogFooter>
+            <Button ref={clearAllCancelRef} onClick={clearAllDialog.onClose}>
+              Cancel
+            </Button>
+            <Button
+              colorScheme="red"
+              ml={3}
+              onClick={() => {
+                setInviteDrafts([])
+                setSelectedDraftIds([])
+                clearAllDialog.onClose()
+              }}
+            >
+              Clear all
+            </Button>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
       <InvitationResultsModal isOpen={resultsModal.isOpen} onClose={resultsModal.onClose} result={results} />
     </>
