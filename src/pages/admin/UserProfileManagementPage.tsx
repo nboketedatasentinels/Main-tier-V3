@@ -444,7 +444,7 @@ export const UserProfileManagementPage: React.FC<{ viewContext?: ViewContext }> 
       : safeNumber(profileData.milestonesProgress)
 
   return (
-    <Stack spacing={6}>
+    <Stack spacing={6} px={{ base: 4, md: 6, lg: 8 }} py={{ base: 6, md: 8 }}>
       <Flex justify="space-between" align="center" flexWrap="wrap" gap={4}>
         <Stack spacing={2}>
           <HStack>
