@@ -19,6 +19,7 @@ import {
   OrganizationRecord,
 } from '@/types/admin'
 import { normalizeEmail } from '@/utils/email'
+import { checkCapacityThresholds } from './capacityService'
 
 const invitationsCollection = collection(db, 'invitations')
 const usersCollection = collection(db, 'users')
@@ -190,6 +191,10 @@ export const inviteUsersBulk = async (
 
   const success = results.filter((item) => item.status === 'success').length
   const failed = results.length - success
+
+  if (success > 0) {
+    await checkCapacityThresholds(context.organizationId)
+  }
 
   return { total: results.length, success, failed, results }
 }

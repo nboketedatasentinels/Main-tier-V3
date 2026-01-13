@@ -57,6 +57,7 @@ export interface OrganizationRecord {
   assignedMentorId?: string | null
   assignedAmbassadorId?: string | null
   transformationPartnerId?: string | null
+  capacityLastAlertThreshold?: 75 | 90 | 95 | 100 | null
 }
 
 export interface OrganizationMemberStats {

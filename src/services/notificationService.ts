@@ -295,3 +295,57 @@ export const markAllAdminNotificationsRead = async () => {
   const snapshot = await getDocs(adminNotificationsCollection)
   await Promise.all(snapshot.docs.map((docSnap) => updateDoc(docSnap.ref, { is_read: true })))
 }
+
+export const sendCapacityAlert = async (params: {
+  organizationId: string
+  organizationName: string
+  currentMembers: number
+  teamSize: number
+  capacityPercentage: number
+  threshold: 75 | 90 | 95 | 100
+  severity: 'info' | 'warning' | 'critical'
+  targetRoles: string[]
+}) => {
+  const alertMessages: Record<number, string> = {
+    75: 'Approaching capacity',
+    90: 'Nearly full',
+    95: 'Critical capacity',
+    100: 'At capacity',
+  }
+
+  const message = `${alertMessages[params.threshold]}: ${params.organizationName} is using ${
+    params.currentMembers
+  } of ${params.teamSize} licenses (${params.capacityPercentage}%).`
+
+  await addDoc(adminNotificationsCollection, {
+    type: 'system_alert',
+    title: `Capacity alert (${params.threshold}%)`,
+    message,
+    severity: params.severity,
+    metadata: {
+      organizationId: params.organizationId,
+      organizationName: params.organizationName,
+      currentMembers: params.currentMembers,
+      teamSize: params.teamSize,
+      capacityPercentage: params.capacityPercentage,
+      threshold: params.threshold,
+    },
+    target_roles: params.targetRoles,
+    is_read: false,
+    created_at: serverTimestamp(),
+  })
+
+  if (params.threshold >= 95) {
+    await sendEmailNotification({
+      to: 'super_admins',
+      subject: `Critical capacity alert: ${params.organizationName}`,
+      template: 'capacity-alert',
+      data: {
+        ...params,
+        message,
+        actionUrl: `/admin/organizations/${params.organizationId}`,
+        suggestion: 'Consider increasing team size or removing inactive users.',
+      },
+    })
+  }
+}
