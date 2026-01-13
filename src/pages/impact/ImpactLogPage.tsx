@@ -1160,25 +1160,50 @@ export const ImpactLogPage: React.FC = () => {
 
                   {isBusinessWasteRequired ? (
                     <FormControl>
-                      <FormLabel>Specific Activity (8 wastes)</FormLabel>
+                      <FormLabel>ESG Category</FormLabel>
+                      <Select mt={1} value={formValues.esgCategory} onChange={(e) => handleEsgCategoryChange(e.target.value as ESGCategory)}>
+                        <option value={ESGCategory.ENVIRONMENTAL}>Environmental</option>
+                        <option value={ESGCategory.SOCIAL}>Social</option>
+                        <option value={ESGCategory.GOVERNANCE}>Governance</option>
+                      </Select>
+                      <FormHelperText>
+                        {formValues.esgCategory ? ESG_CATEGORY_HELPER_TEXT[formValues.esgCategory] : ''}
+                      </FormHelperText>
+                    </FormControl>
+
+                    <FormControl isDisabled={activityTypeOptions.length === 0}>
+                      <FormLabel>Activity Type</FormLabel>
                       <Select
                         mt={1}
-                        value={formValues.businessActivity}
-                        onChange={(e) => setFormValues((prev) => ({ ...prev, businessActivity: e.target.value }))}
+                        value={formValues.activityType}
+                        onChange={(e) => handleActivityTypeChange(e.target.value)}
+                        isDisabled={activityTypeOptions.length === 0}
                       >
-                        {BUSINESS_SECONDARY_WASTES.map((activity) => (
+                        {activityTypeOptions.map((activity) => (
                           <option key={activity}>{activity}</option>
                         ))}
                       </Select>
-                      <FormHelperText>Choose the waste category most impacted by the activity.</FormHelperText>
+                      <FormHelperText color={activityTypeOptions.length === 0 ? 'red.500' : 'text.muted'}>
+                        {activityTypeOptions.length === 0
+                          ? 'No activity types available for the selected category.'
+                          : `Available activities for ${formatCategoryLabel(activityTypeCategoryLabel)}.`}
+                      </FormHelperText>
                     </FormControl>
-                  ) : (
-                    <FormControl isDisabled>
-                      <FormLabel>Specific Activity (8 wastes)</FormLabel>
-                      <Select mt={1} value="Not required" isDisabled>
-                        <option>Not required for revenue growth</option>
+                  </>
+                )}
+
+                {isBusinessActive && (
+                  <>
+                    <FormControl>
+                      <FormLabel>Primary Business Category</FormLabel>
+                      <Select mt={1} value={formValues.businessCategory} onChange={(e) => handleBusinessCategoryChange(e.target.value as BusinessPrimaryCategory)}>
+                        {BUSINESS_PRIMARY_CATEGORIES.map((category) => (
+                          <option key={category}>{category}</option>
+                        ))}
                       </Select>
-                      <FormHelperText>Secondary waste categories apply to cost savings and efficiency gains only.</FormHelperText>
+                      <FormHelperText>
+                        {formValues.businessCategory ? BUSINESS_CATEGORY_HELPER_TEXT[formValues.businessCategory] : ''}
+                      </FormHelperText>
                     </FormControl>
                   )}
                 </SimpleGrid>
