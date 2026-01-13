@@ -27,6 +27,7 @@ import {
   Select,
   Stack,
   Text,
+  Textarea,
   Tooltip,
   useDisclosure,
   useToast,
@@ -36,6 +37,8 @@ import { ChevronDown, ChevronUp, Eye } from 'lucide-react'
 import {
   BulkInvitationResult,
   CourseOption,
+  InvitationPayload,
+  InviteDraft,
   OrganizationRecord,
   ProgramDurationOption,
 } from '@/types/admin'
@@ -55,6 +58,8 @@ import {
   getMonthAvailabilityStatus,
   getMonthDateRange,
 } from '@/utils/monthlyCourseAssignments'
+import { downloadCSVTemplate, parseInvitationCSV } from '@/utils/csvUtils'
+import { normalizeEmail } from '@/utils/email'
 
 interface CreateOrganizationModalProps {
   isOpen: boolean
@@ -80,7 +85,12 @@ const emptyOrganization: OrganizationRecord = {
   programDuration: undefined,
   monthlyCourseAssignments: {},
   courseAssignmentStructure: 'monthly',
+  teamSize: 0,
 }
+
+const inviteRoleOptions: InviteDraft['role'][] = ['user', 'mentor', 'ambassador', 'team_leader']
+const inviteMethodOptions: InviteDraft['method'][] = ['email', 'one_time_code']
+const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
 
 export const CreateOrganizationModal: React.FC<CreateOrganizationModalProps> = ({
   isOpen,
@@ -95,6 +105,9 @@ export const CreateOrganizationModal: React.FC<CreateOrganizationModalProps> = (
   const [courses, setCourses] = useState<CourseOption[]>([])
   const [results, setResults] = useState<BulkInvitationResult | null>(null)
   const [monthlyAssignments, setMonthlyAssignments] = useState<MonthlyCourseAssignments>({})
+  const [inviteDrafts, setInviteDrafts] = useState<InviteDraft[]>([])
+  const [inviteError, setInviteError] = useState<string | null>(null)
+  const [manualInviteText, setManualInviteText] = useState('')
   const resultsModal = useDisclosure()
 
   const courseLimit = useMemo(() => {
@@ -158,6 +171,9 @@ export const CreateOrganizationModal: React.FC<CreateOrganizationModalProps> = (
       setCourses([])
       setResults(null)
       setMonthlyAssignments({})
+      setInviteDrafts([])
+      setInviteError(null)
+      setManualInviteText('')
       return
     }
 
@@ -197,6 +213,85 @@ export const CreateOrganizationModal: React.FC<CreateOrganizationModalProps> = (
     setForm((prev) => ({ ...prev, [key]: value }))
   }
 
+  const mergeInviteDrafts = (incoming: InviteDraft[]) => {
+    setInviteDrafts((prev) => {
+      const next = new Map<string, InviteDraft>()
+      const add = (draft: InviteDraft) => {
+        const key = `${draft.email || draft.name}-${draft.role}-${draft.method}`
+        if (!next.has(key)) next.set(key, draft)
+      }
+      prev.forEach(add)
+      incoming.forEach(add)
+      return Array.from(next.values())
+    })
+  }
+
+  const parseManualInvites = (text: string): InviteDraft[] => {
+    const lines = text
+      .split(/\r?\n/)
+      .map((line) => line.trim())
+      .filter(Boolean)
+    if (!lines.length) {
+      return []
+    }
+    return lines.map((line, index) => {
+      const [rawName, rawEmail, rawRole, rawMethod] = line.split(',').map((value) => value.trim())
+      const rowNumber = index + 1
+      if (!rawName) {
+        throw new Error(`Manual list row ${rowNumber}: name is required`)
+      }
+      const normalizedEmail = rawEmail ? normalizeEmail(rawEmail) : ''
+      const role = (rawRole || 'user').toLowerCase() as InviteDraft['role']
+      if (!inviteRoleOptions.includes(role)) {
+        throw new Error(`Manual list row ${rowNumber}: role must be ${inviteRoleOptions.join(', ')}`)
+      }
+      const method = (rawMethod || (normalizedEmail ? 'email' : 'one_time_code')).toLowerCase() as InviteDraft['method']
+      if (!inviteMethodOptions.includes(method)) {
+        throw new Error(`Manual list row ${rowNumber}: method must be ${inviteMethodOptions.join(', ')}`)
+      }
+      if (method === 'email') {
+        if (!normalizedEmail) {
+          throw new Error(`Manual list row ${rowNumber}: email is required for email invitations`)
+        }
+        if (!emailRegex.test(normalizedEmail)) {
+          throw new Error(`Manual list row ${rowNumber}: invalid email format`)
+        }
+      }
+      return {
+        id: `${Date.now()}-${rowNumber}`,
+        name: rawName,
+        email: normalizedEmail,
+        role,
+        method,
+      }
+    })
+  }
+
+  const handleManualInviteParse = () => {
+    try {
+      const drafts = parseManualInvites(manualInviteText)
+      if (!drafts.length) {
+        setInviteError('Add at least one user row before parsing.')
+        return
+      }
+      setInviteError(null)
+      mergeInviteDrafts(drafts)
+    } catch (error) {
+      setInviteError(error instanceof Error ? error.message : 'Unable to parse manual user list.')
+    }
+  }
+
+  const handleInviteFile = async (file?: File | null) => {
+    if (!file) return
+    try {
+      const drafts = await parseInvitationCSV(file)
+      setInviteError(null)
+      mergeInviteDrafts(drafts)
+    } catch (error) {
+      setInviteError(error instanceof Error ? error.message : 'Unable to parse CSV file.')
+    }
+  }
+
   const handleMonthlyAssignmentChange = (monthKey: string, courseId: string) => {
     setMonthlyAssignments((prev) => ({
       ...prev,
@@ -224,6 +319,7 @@ export const CreateOrganizationModal: React.FC<CreateOrganizationModalProps> = (
       const isUnique = await validateOrganizationCodeUnique(form.code)
       if (!isUnique) throw new Error('Organization code is already in use')
       if (!form.programDuration) throw new Error('Program duration is required')
+      if (!form.teamSize || form.teamSize <= 0) throw new Error('Cohort size must be greater than 0')
       if (courseLimit && emptyMonths.length) {
         throw new Error(`Please assign a course for each of the ${courseLimit} month(s)`)
       }
@@ -240,9 +336,17 @@ export const CreateOrganizationModal: React.FC<CreateOrganizationModalProps> = (
         programDuration: form.programDuration,
       }
 
+      const invitationPayloads: InvitationPayload[] = inviteDrafts.map((draft) => ({
+        name: draft.name,
+        email: draft.email || undefined,
+        role: draft.role,
+        method: draft.method,
+        organizationId: '',
+      }))
+
       const { organizationId, invitationResult } = await createOrganizationWithInvitations(
         organizationPayload,
-        [],
+        invitationPayloads,
         { adminId, adminName },
       )
 
@@ -340,8 +444,19 @@ export const CreateOrganizationModal: React.FC<CreateOrganizationModalProps> = (
                   </FormControl>
                 </GridItem>
                 <GridItem>
+                  <FormControl isRequired>
+                    <FormLabel>Cohort size</FormLabel>
+                    <Input
+                      type="number"
+                      min={1}
+                      value={form.teamSize || ''}
+                      onChange={(e) => updateField('teamSize', Number(e.target.value))}
+                    />
+                  </FormControl>
+                </GridItem>
+                <GridItem>
                   <FormControl>
-                    <FormLabel>Program start date</FormLabel>
+                    <FormLabel>Cohort start date</FormLabel>
                     <Input
                       type="date"
                       value={form.cohortStartDate ? String(form.cohortStartDate) : ''}
@@ -500,6 +615,92 @@ export const CreateOrganizationModal: React.FC<CreateOrganizationModalProps> = (
                     </Stack>
                   </Box>
                 )}
+              </Box>
+
+              <Box>
+                <Text fontWeight="medium" mb={2}>
+                  User addition
+                </Text>
+                <Stack spacing={3}>
+                  <FormControl>
+                    <FormLabel>Upload CSV</FormLabel>
+                    <Input
+                      type="file"
+                      accept=".csv"
+                      onChange={(e) => {
+                        const file = e.target.files?.[0]
+                        void handleInviteFile(file)
+                        e.target.value = ''
+                      }}
+                    />
+                    <FormHelperText>
+                      Use columns: Name, Email, Role, Invitation Method.
+                      <Button variant="link" size="sm" ml={2} onClick={downloadCSVTemplate}>
+                        Download template
+                      </Button>
+                    </FormHelperText>
+                  </FormControl>
+                  <FormControl>
+                    <FormLabel>Manual list</FormLabel>
+                    <Textarea
+                      value={manualInviteText}
+                      onChange={(e) => setManualInviteText(e.target.value)}
+                      placeholder="Name, Email, Role, Invitation Method"
+                      rows={4}
+                    />
+                    <FormHelperText>
+                      One user per line. Role defaults to user. Invitation method defaults to email when an email is provided.
+                    </FormHelperText>
+                    <HStack spacing={3} mt={2}>
+                      <Button size="sm" variant="outline" onClick={handleManualInviteParse}>
+                        Add users
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        onClick={() => {
+                          setInviteDrafts([])
+                          setInviteError(null)
+                        }}
+                        isDisabled={!inviteDrafts.length}
+                      >
+                        Clear users
+                      </Button>
+                    </HStack>
+                  </FormControl>
+                  {inviteError ? (
+                    <Alert status="error" borderRadius="md">
+                      <AlertIcon />
+                      {inviteError}
+                    </Alert>
+                  ) : null}
+                  {inviteDrafts.length ? (
+                    <Box borderWidth="1px" borderRadius="md" p={3} bg="gray.50">
+                      <Text fontSize="sm" fontWeight="semibold" mb={2}>
+                        {inviteDrafts.length} user{inviteDrafts.length > 1 ? 's' : ''} ready to invite
+                      </Text>
+                      <Stack spacing={1}>
+                        {inviteDrafts.slice(0, 5).map((draft) => (
+                          <Flex key={draft.id} justify="space-between" fontSize="sm">
+                            <Text>{draft.name}</Text>
+                            <Text color="gray.600">
+                              {draft.email || 'No email'} • {draft.role} • {draft.method}
+                            </Text>
+                          </Flex>
+                        ))}
+                        {inviteDrafts.length > 5 ? (
+                          <Text fontSize="sm" color="gray.600">
+                            + {inviteDrafts.length - 5} more
+                          </Text>
+                        ) : null}
+                      </Stack>
+                    </Box>
+                  ) : (
+                    <Text fontSize="sm" color="gray.600">
+                      No users added yet.
+                    </Text>
+                  )}
+                </Stack>
               </Box>
 
               <Grid templateColumns={{ base: '1fr', md: 'repeat(2, 1fr)' }} gap={4}>
