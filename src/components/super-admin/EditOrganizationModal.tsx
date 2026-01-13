@@ -34,24 +34,12 @@ import {
 } from '@chakra-ui/react'
 import { InfoIcon } from '@chakra-ui/icons'
 import { ChevronDown, ChevronUp, Eye } from 'lucide-react'
+import { CourseOption, OrganizationRecord, ProgramDurationOption } from '@/types/admin'
 import {
-  CourseOption,
-  OrganizationLead,
-  OrganizationRecord,
-  ProgramDurationOption,
-} from '@/types/admin'
-import {
-  assignAmbassadorToOrganization,
-  assignMentorToOrganization,
-  assignPartnerToOrganization,
   determineClusterFromTeamSize,
-  fetchAmbassadors,
   fetchAvailableCourses,
-  fetchMentors,
   fetchOrganizationAssignments,
   fetchOrganizationDetails,
-  fetchPartners,
-  unassignLeadershipRole,
 } from '@/services/organizationService'
 import { updateOrganization } from '@/services/superAdminService'
 import {
@@ -70,7 +58,6 @@ interface EditOrganizationModalProps {
   onClose: () => void
   organization?: OrganizationRecord | null
   onUpdated?: (organization: OrganizationRecord) => void
-  partnerAssignmentCounts?: Record<string, number>
 }
 
 const programDurations: ProgramDurationOption[] = [
@@ -100,17 +87,12 @@ export const EditOrganizationModal: React.FC<EditOrganizationModalProps> = ({
   onClose,
   organization,
   onUpdated,
-  partnerAssignmentCounts,
 }) => {
   const toast = useToast()
   const [form, setForm] = useState<OrganizationRecord>(emptyOrganization)
   const [courses, setCourses] = useState<CourseOption[]>([])
-  const [mentors, setMentors] = useState<OrganizationLead[]>([])
-  const [ambassadors, setAmbassadors] = useState<OrganizationLead[]>([])
-  const [partners, setPartners] = useState<OrganizationLead[]>([])
   const [isLoading, setIsLoading] = useState(false)
   const [isSubmitting, setIsSubmitting] = useState(false)
-  const [partnerSearch, setPartnerSearch] = useState('')
   const [monthlyAssignments, setMonthlyAssignments] = useState<MonthlyCourseAssignments>({})
 
   const courseLimit = useMemo(() => {
@@ -162,34 +144,10 @@ export const EditOrganizationModal: React.FC<EditOrganizationModalProps> = ({
     [courses],
   )
 
-  const sortedPartners = useMemo(
-    () => [...partners].sort((a, b) => a.name.localeCompare(b.name)),
-    [partners],
-  )
-
-  const filteredPartners = useMemo(() => {
-    const term = partnerSearch.trim().toLowerCase()
-    if (!term) return sortedPartners
-    return sortedPartners.filter((item) => {
-      const email = item.email?.toLowerCase() ?? ''
-      return item.name.toLowerCase().includes(term) || email.includes(term)
-    })
-  }, [partnerSearch, sortedPartners])
-
-  const buildPartnerLabel = (item: OrganizationLead) => {
-    const emailSuffix = item.email ? ` — ${item.email}` : ''
-    const assignmentCount = partnerAssignmentCounts?.[item.id] ?? 0
-    const countSuffix = assignmentCount > 1 ? ` • ${assignmentCount} orgs` : ''
-    return `${item.name}${emailSuffix}${countSuffix}`
-  }
-
   useEffect(() => {
     if (!isOpen) {
       setForm(emptyOrganization)
       setCourses([])
-      setMentors([])
-      setAmbassadors([])
-      setPartners([])
       setMonthlyAssignments({})
       return
     }
@@ -202,26 +160,13 @@ export const EditOrganizationModal: React.FC<EditOrganizationModalProps> = ({
       if (!organization?.id) return
       setIsLoading(true)
       try {
-        const [
-          courseOptions,
-          mentorOptions,
-          ambassadorOptions,
-          partnerOptions,
-          organizationDetails,
-          assignments,
-        ] = await Promise.all([
+        const [courseOptions, organizationDetails, assignments] = await Promise.all([
           fetchAvailableCourses(),
-          fetchMentors(),
-          fetchAmbassadors(),
-          fetchPartners(),
           fetchOrganizationDetails(organization.id),
           fetchOrganizationAssignments(organization.id),
         ])
 
         setCourses(courseOptions)
-        setMentors(mentorOptions)
-        setAmbassadors(ambassadorOptions)
-        setPartners(partnerOptions)
 
         if (organizationDetails) {
           const totalMonths = resolveProgramMonthCount(organizationDetails.programDuration ?? null)
@@ -318,13 +263,7 @@ export const EditOrganizationModal: React.FC<EditOrganizationModalProps> = ({
 
       setIsSubmitting(true)
       const assignmentArray = getAssignedCourseIdsFromMonthlyAssignments(monthlyAssignments, courseLimit)
-      const {
-        id: _id,
-        assignedMentorId,
-        assignedAmbassadorId,
-        transformationPartnerId,
-        ...payload
-      } = form
+      const { id: _id, ...payload } = form
       await updateOrganization(organization.id, {
         ...payload,
         code: form.code.toUpperCase(),
@@ -332,31 +271,6 @@ export const EditOrganizationModal: React.FC<EditOrganizationModalProps> = ({
         monthlyCourseAssignments: monthlyAssignments,
         courseAssignmentStructure: 'monthly',
       })
-      const leadershipTasks: Array<Promise<void>> = []
-      if (assignedMentorId !== organization.assignedMentorId) {
-        leadershipTasks.push(
-          assignedMentorId
-            ? assignMentorToOrganization(organization.id, assignedMentorId)
-            : unassignLeadershipRole(organization.id, 'mentor'),
-        )
-      }
-      if (assignedAmbassadorId !== organization.assignedAmbassadorId) {
-        leadershipTasks.push(
-          assignedAmbassadorId
-            ? assignAmbassadorToOrganization(organization.id, assignedAmbassadorId)
-            : unassignLeadershipRole(organization.id, 'ambassador'),
-        )
-      }
-      if (transformationPartnerId !== organization.transformationPartnerId) {
-        leadershipTasks.push(
-          transformationPartnerId
-            ? assignPartnerToOrganization(organization.id, transformationPartnerId)
-            : unassignLeadershipRole(organization.id, 'partner'),
-        )
-      }
-      if (leadershipTasks.length) {
-        await Promise.all(leadershipTasks)
-      }
       toast({ title: 'Organization updated successfully', status: 'success' })
       onUpdated?.({ ...form, id: organization.id })
       onClose()
@@ -388,7 +302,7 @@ export const EditOrganizationModal: React.FC<EditOrganizationModalProps> = ({
               <Box>
                 <Text fontWeight="bold">ORGANIZATION DETAILS</Text>
                 <Text color="gray.600" fontSize="sm">
-                  Update organization details, program configuration, and leadership assignments.
+                  Update organization details and program configuration.
                 </Text>
               </Box>
 
@@ -482,35 +396,6 @@ export const EditOrganizationModal: React.FC<EditOrganizationModalProps> = ({
                       value={form.cohortStartDate ? String(form.cohortStartDate) : ''}
                       onChange={(e) => updateField('cohortStartDate', e.target.value)}
                     />
-                  </FormControl>
-                </GridItem>
-                <GridItem>
-                  <FormControl>
-                    <FormLabel>Transformation partner</FormLabel>
-                    <Input
-                      value={partnerSearch}
-                      onChange={(e) => setPartnerSearch(e.target.value)}
-                      placeholder="Search partners"
-                      mb={2}
-                    />
-                    <Select
-                      placeholder="Select partner"
-                      value={form.transformationPartnerId || ''}
-                      onChange={(e) => {
-                        const selectedId = e.target.value
-                        updateField('transformationPartnerId', selectedId || null)
-                      }}
-                    >
-                      <option value="">— No partner —</option>
-                      {filteredPartners.map((partner) => (
-                        <option key={partner.id} value={partner.id}>
-                          {buildPartnerLabel(partner)}
-                        </option>
-                      ))}
-                    </Select>
-                    {!filteredPartners.length && (
-                      <FormHelperText color="gray.600">No partners available.</FormHelperText>
-                    )}
                   </FormControl>
                 </GridItem>
                 <GridItem colSpan={2}>
@@ -680,45 +565,7 @@ export const EditOrganizationModal: React.FC<EditOrganizationModalProps> = ({
                 )}
               </Box>
 
-              <Grid templateColumns={{ base: '1fr', md: 'repeat(3, 1fr)' }} gap={4}>
-                <GridItem>
-                  <FormControl>
-                    <FormLabel>Mentor</FormLabel>
-                    <Select
-                      placeholder="Select mentor"
-                      value={form.assignedMentorId || ''}
-                      onChange={(e) => {
-                        const mentor = mentors.find((m) => m.id === e.target.value)
-                        updateField('assignedMentorId', mentor?.id || null)
-                      }}
-                    >
-                      {mentors.map((mentor) => (
-                        <option key={mentor.id} value={mentor.id}>
-                          {mentor.name}
-                        </option>
-                      ))}
-                    </Select>
-                  </FormControl>
-                </GridItem>
-                <GridItem>
-                  <FormControl>
-                    <FormLabel>Ambassador</FormLabel>
-                    <Select
-                      placeholder="Select ambassador"
-                      value={form.assignedAmbassadorId || ''}
-                      onChange={(e) => {
-                        const ambassador = ambassadors.find((m) => m.id === e.target.value)
-                        updateField('assignedAmbassadorId', ambassador?.id || null)
-                      }}
-                    >
-                      {ambassadors.map((ambassador) => (
-                        <option key={ambassador.id} value={ambassador.id}>
-                          {ambassador.name}
-                        </option>
-                      ))}
-                    </Select>
-                  </FormControl>
-                </GridItem>
+              <Grid templateColumns={{ base: '1fr', md: 'repeat(2, 1fr)' }} gap={4}>
                 <GridItem>
                   <FormControl>
                     <FormLabel>Status</FormLabel>

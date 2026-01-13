@@ -31,12 +31,22 @@ import {
   useToast,
 } from '@chakra-ui/react'
 import { Filter, MoreHorizontal, Search, Sparkles } from 'lucide-react'
+import { AssignAmbassadorModal } from '@/components/super-admin/AssignAmbassadorModal'
+import { AssignMentorModal } from '@/components/super-admin/AssignMentorModal'
 import { AssignPartnerModal } from '@/components/super-admin/AssignPartnerModal'
 import { ConfirmationDialog } from '@/components/super-admin/ConfirmationDialog'
 import { OrganizationDetailsModal } from '@/components/super-admin/OrganizationDetailsModal'
 import { EditOrganizationModal } from '@/components/super-admin/EditOrganizationModal'
 import { CreateOrganizationModal } from '@/components/super-admin/CreateOrganizationModal'
-import { assignPartnerToOrganization, fetchPartners, unassignLeadershipRole } from '@/services/organizationService'
+import {
+  assignAmbassadorToOrganization,
+  assignMentorToOrganization,
+  assignPartnerToOrganization,
+  fetchAmbassadors,
+  fetchMentors,
+  fetchPartners,
+  unassignLeadershipRole,
+} from '@/services/organizationService'
 import {
   deleteOrganization,
   fetchOrganizationMemberStats,
@@ -68,12 +78,20 @@ export const OrganizationManagementPage: React.FC<OrganizationManagementPageProp
   const [partners, setPartners] = useState<OrganizationLead[]>([])
   const [isLoadingPartners, setIsLoadingPartners] = useState(false)
   const [partnersError, setPartnersError] = useState<string | null>(null)
+  const [mentors, setMentors] = useState<OrganizationLead[]>([])
+  const [isLoadingMentors, setIsLoadingMentors] = useState(false)
+  const [mentorsError, setMentorsError] = useState<string | null>(null)
+  const [ambassadors, setAmbassadors] = useState<OrganizationLead[]>([])
+  const [isLoadingAmbassadors, setIsLoadingAmbassadors] = useState(false)
+  const [ambassadorsError, setAmbassadorsError] = useState<string | null>(null)
   const [memberStats, setMemberStats] = useState<OrganizationMemberStats | null>(null)
   const [isLoadingStats, setIsLoadingStats] = useState(false)
 
   const createModal = useDisclosure()
   const editModal = useDisclosure()
-  const assignModal = useDisclosure()
+  const assignPartnerModal = useDisclosure()
+  const assignMentorModal = useDisclosure()
+  const assignAmbassadorModal = useDisclosure()
   const viewModal = useDisclosure()
   const confirmDialog = useDisclosure()
 
@@ -111,6 +129,44 @@ export const OrganizationManagementPage: React.FC<OrganizationManagementPageProp
     }
 
     loadPartners()
+  }, [toast])
+
+  useEffect(() => {
+    const loadMentors = async () => {
+      setIsLoadingMentors(true)
+      setMentorsError(null)
+      try {
+        const mentorOptions = await fetchMentors()
+        setMentors(mentorOptions)
+      } catch (err) {
+        console.error(err)
+        setMentorsError('Unable to load mentors.')
+        toast({ title: 'Unable to load mentors', status: 'error' })
+      } finally {
+        setIsLoadingMentors(false)
+      }
+    }
+
+    loadMentors()
+  }, [toast])
+
+  useEffect(() => {
+    const loadAmbassadors = async () => {
+      setIsLoadingAmbassadors(true)
+      setAmbassadorsError(null)
+      try {
+        const ambassadorOptions = await fetchAmbassadors()
+        setAmbassadors(ambassadorOptions)
+      } catch (err) {
+        console.error(err)
+        setAmbassadorsError('Unable to load ambassadors.')
+        toast({ title: 'Unable to load ambassadors', status: 'error' })
+      } finally {
+        setIsLoadingAmbassadors(false)
+      }
+    }
+
+    loadAmbassadors()
   }, [toast])
 
   useEffect(() => {
@@ -181,7 +237,55 @@ export const OrganizationManagementPage: React.FC<OrganizationManagementPageProp
       metadata: { partnerId },
     })
     toast({ title: 'Partner updated', status: 'success' })
-    assignModal.onClose()
+    assignPartnerModal.onClose()
+  }
+
+  const handleAssignMentor = async (mentorId: string | null) => {
+    if (!selectedOrg?.id) return
+    if (mentorId) {
+      await assignMentorToOrganization(selectedOrg.id, mentorId)
+    } else {
+      await unassignLeadershipRole(selectedOrg.id, 'mentor')
+    }
+    setOrganizations((prev) =>
+      prev.map((org) =>
+        org.id === selectedOrg.id ? { ...org, assignedMentorId: mentorId } : org,
+      ),
+    )
+    await logAdminAction({
+      action: 'Mentor assignment updated',
+      organizationName: selectedOrg.name,
+      organizationCode: selectedOrg.code,
+      adminId,
+      adminName,
+      metadata: { mentorId },
+    })
+    toast({ title: 'Mentor updated', status: 'success' })
+    assignMentorModal.onClose()
+  }
+
+  const handleAssignAmbassador = async (ambassadorId: string | null) => {
+    if (!selectedOrg?.id) return
+    if (ambassadorId) {
+      await assignAmbassadorToOrganization(selectedOrg.id, ambassadorId)
+    } else {
+      await unassignLeadershipRole(selectedOrg.id, 'ambassador')
+    }
+    setOrganizations((prev) =>
+      prev.map((org) =>
+        org.id === selectedOrg.id ? { ...org, assignedAmbassadorId: ambassadorId } : org,
+      ),
+    )
+    await logAdminAction({
+      action: 'Ambassador assignment updated',
+      organizationName: selectedOrg.name,
+      organizationCode: selectedOrg.code,
+      adminId,
+      adminName,
+      metadata: { ambassadorId },
+    })
+    toast({ title: 'Ambassador updated', status: 'success' })
+    assignAmbassadorModal.onClose()
   }
 
   const statusCounts = useMemo(() => {
@@ -391,7 +495,9 @@ export const OrganizationManagementPage: React.FC<OrganizationManagementPageProp
                                 <MenuList>
                                   <MenuItem onClick={() => handleViewOrganization(org)}>View Organisation</MenuItem>
                                   <MenuItem onClick={() => handleEditOrganization(org)}>Edit organization</MenuItem>
-                                  <MenuItem onClick={() => { setSelectedOrg(org); assignModal.onOpen() }}>Assign partner</MenuItem>
+                                  <MenuItem onClick={() => { setSelectedOrg(org); assignMentorModal.onOpen() }}>Assign mentor</MenuItem>
+                                  <MenuItem onClick={() => { setSelectedOrg(org); assignAmbassadorModal.onOpen() }}>Assign ambassador</MenuItem>
+                                  <MenuItem onClick={() => { setSelectedOrg(org); assignPartnerModal.onOpen() }}>Assign partner</MenuItem>
                                   <MenuItem onClick={() => { setPendingDelete(org); confirmDialog.onOpen() }} color="red.500">
                                     Delete
                                   </MenuItem>
@@ -475,13 +581,12 @@ export const OrganizationManagementPage: React.FC<OrganizationManagementPageProp
         }}
         organization={selectedOrg || undefined}
         onUpdated={handleOrganizationUpdated}
-        partnerAssignmentCounts={partnerAssignmentCounts}
       />
       <AssignPartnerModal
-        isOpen={assignModal.isOpen}
+        isOpen={assignPartnerModal.isOpen}
         onClose={() => {
           setSelectedOrg(null)
-          assignModal.onClose()
+          assignPartnerModal.onClose()
         }}
         organization={selectedOrg || undefined}
         onSubmit={handleAssignPartner}
@@ -489,6 +594,30 @@ export const OrganizationManagementPage: React.FC<OrganizationManagementPageProp
         isLoadingPartners={isLoadingPartners}
         partnersError={partnersError}
         partnerAssignmentCounts={partnerAssignmentCounts}
+      />
+      <AssignMentorModal
+        isOpen={assignMentorModal.isOpen}
+        onClose={() => {
+          setSelectedOrg(null)
+          assignMentorModal.onClose()
+        }}
+        organization={selectedOrg || undefined}
+        onSubmit={handleAssignMentor}
+        mentors={mentors}
+        isLoadingMentors={isLoadingMentors}
+        mentorsError={mentorsError}
+      />
+      <AssignAmbassadorModal
+        isOpen={assignAmbassadorModal.isOpen}
+        onClose={() => {
+          setSelectedOrg(null)
+          assignAmbassadorModal.onClose()
+        }}
+        organization={selectedOrg || undefined}
+        onSubmit={handleAssignAmbassador}
+        ambassadors={ambassadors}
+        isLoadingAmbassadors={isLoadingAmbassadors}
+        ambassadorsError={ambassadorsError}
       />
       <ConfirmationDialog
         isOpen={confirmDialog.isOpen}
