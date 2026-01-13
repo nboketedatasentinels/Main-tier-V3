@@ -1306,21 +1306,6 @@ const WeeklyChecklistPage: React.FC = () => {
 
   return (
     <Stack spacing={6} color="text.primary">
-      <SurfaceCard borderColor="border.card">
-        <Stack spacing={4}>
-          <Flex align="center" justify="space-between">
-            <Heading size="sm" color="text.primary">
-              {isMonthBasedJourney ? 'Month & week navigation' : 'Week navigation'}
-            </Heading>
-            {isWeekLocked && (
-              <Tag colorScheme="warning" borderRadius="full" size="sm">
-                <Icon as={Lock} mr={1} /> Locked for review
-              </Tag>
-            )}
-          </Flex>
-          {renderWeekSelector()}
-        </Stack>
-      </SurfaceCard>
       {renderJourneyHeader()}
       {renderWeekSummary()}
       {error && (
