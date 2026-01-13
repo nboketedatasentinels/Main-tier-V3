@@ -48,6 +48,8 @@ export interface UserProfile {
   phoneNumber?: string
   linkedinUrl?: string
   emailVerified?: boolean
+  emailVerificationGracePeriodEnd?: string
+  grandfatheredAt?: string
   
   // Journey & Progress
   journeyType: "4W" | "6W" | "3M" | "6M" | "9M" | "12M";

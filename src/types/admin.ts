@@ -33,6 +33,26 @@ export interface OrganizationRecord {
    * Cohort size and total paid license count (includes users, mentors, ambassadors, and team leaders).
    */
   teamSize?: number
+  /**
+   * Whether email verification is enforced for new users in this organization.
+   */
+  emailVerificationEnforced?: boolean
+  /**
+   * Per-role license allocation counts based on active users.
+   */
+  licenseAllocationByRole?: Record<string, number>
+  /**
+   * User IDs exempted from email verification enforcement.
+   */
+  grandfatheredUsers?: string[]
+  /**
+   * Role-based license weights for capacity calculations.
+   */
+  roleBasedLicenseWeights?: Record<string, number>
+  /**
+   * Remaining licenses based on team size minus weighted usage.
+   */
+  availableLicenses?: number
   status: OrganizationStatus
   createdAt?: Timestamp | string | Date
   updatedAt?: Timestamp | string | Date

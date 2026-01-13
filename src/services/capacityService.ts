@@ -27,17 +27,30 @@ const capacityMetricsCollection = collection(db, 'organization_capacity_metrics'
 const capacityAlertsCollection = collection(db, 'organization_capacity_alerts')
 const adminActivityCollection = collection(db, 'admin_activity_log')
 
-const LICENSE_CONSUMING_ROLES = new Set(['user', 'mentor', 'ambassador', 'team_leader'])
-
-const isLicenseConsumingRole = (role?: string | null) => {
-  if (!role) return false
-  return LICENSE_CONSUMING_ROLES.has(role)
+const DEFAULT_ROLE_WEIGHTS: Record<string, number> = {
+  user: 1,
+  mentor: 1,
+  ambassador: 1,
+  team_leader: 1,
+  partner: 0,
+  admin: 0,
+  super_admin: 0,
 }
 
 const isActiveAccountStatus = (status?: string | null) => {
   if (!status) return true
   const normalized = status.toLowerCase()
   return normalized !== 'suspended' && normalized !== 'inactive'
+}
+
+const resolveRoleWeights = (organization: OrganizationRecord) => ({
+  ...DEFAULT_ROLE_WEIGHTS,
+  ...(organization.roleBasedLicenseWeights ?? {}),
+})
+
+const resolveRoleWeight = (role: string | null | undefined, roleWeights: Record<string, number>) => {
+  if (!role) return 1
+  return roleWeights[role] ?? 1
 }
 
 const resolveCapacityThresholds = (percentage: number): CapacityThresholdLevel | null => {
@@ -59,12 +72,21 @@ const formatCapacityPercentage = (currentMembers: number, teamSize: number) => {
   return Math.round((currentMembers / teamSize) * 100)
 }
 
-const getActiveLicenseMemberCount = async (organizationId: string) => {
+const getActiveLicenseUsage = async (organizationId: string, roleWeights: Record<string, number>) => {
   const snapshot = await getDocs(query(usersCollection, where('assignedOrganizations', 'array-contains', organizationId)))
-  return snapshot.docs.filter((docSnap) => {
+  const licenseAllocationByRole: Record<string, number> = {}
+  let total = 0
+
+  snapshot.docs.forEach((docSnap) => {
     const data = docSnap.data() as { role?: string; accountStatus?: string | null }
-    return isLicenseConsumingRole(data.role) && isActiveAccountStatus(data.accountStatus)
-  }).length
+    if (!isActiveAccountStatus(data.accountStatus)) return
+    const role = data.role || 'user'
+    const weight = resolveRoleWeight(role, roleWeights)
+    licenseAllocationByRole[role] = (licenseAllocationByRole[role] ?? 0) + 1
+    total += weight
+  })
+
+  return { total, licenseAllocationByRole }
 }
 
 const resolveAlertTargetRoles = (organization: OrganizationRecord) => {
@@ -93,8 +115,11 @@ export const calculateOrganizationCapacity = async (organizationId: string) => {
   const orgSnap = await getDoc(doc(organizationsCollection, organizationId))
   if (!orgSnap.exists()) throw new Error('Organization not found.')
   const organization = { id: orgSnap.id, ...(orgSnap.data() as OrganizationRecord) }
-  const currentMembers = await getActiveLicenseMemberCount(organizationId)
+  const roleWeights = resolveRoleWeights(organization)
+  const { total, licenseAllocationByRole } = await getActiveLicenseUsage(organizationId, roleWeights)
+  const currentMembers = total
   const teamSize = organization.teamSize ?? 0
+  const availableLicenses = Math.max(teamSize - currentMembers, 0)
   const capacityPercentage = formatCapacityPercentage(currentMembers, teamSize)
 
   const payload: OrganizationCapacityMetrics = {
@@ -102,6 +127,8 @@ export const calculateOrganizationCapacity = async (organizationId: string) => {
     organizationName: organization.name || 'Unknown organization',
     currentMembers,
     teamSize,
+    availableLicenses,
+    licenseAllocationByRole,
     capacityPercentage,
     lastCalculated: Timestamp.now(),
   }
@@ -119,8 +146,11 @@ export const checkCapacityThresholds = async (organizationId: string) => {
   const orgSnap = await getDoc(orgRef)
   if (!orgSnap.exists()) throw new Error('Organization not found.')
   const organization = { id: orgSnap.id, ...(orgSnap.data() as OrganizationRecord) }
-  const currentMembers = await getActiveLicenseMemberCount(organizationId)
+  const roleWeights = resolveRoleWeights(organization)
+  const { total, licenseAllocationByRole } = await getActiveLicenseUsage(organizationId, roleWeights)
+  const currentMembers = total
   const teamSize = organization.teamSize ?? 0
+  const availableLicenses = Math.max(teamSize - currentMembers, 0)
   const capacityPercentage = formatCapacityPercentage(currentMembers, teamSize)
   const nextThreshold = resolveCapacityThresholds(capacityPercentage)
   const lastThreshold = organization.capacityLastAlertThreshold as CapacityThresholdLevel | null | undefined
@@ -130,6 +160,8 @@ export const checkCapacityThresholds = async (organizationId: string) => {
     organizationName: organization.name || 'Unknown organization',
     currentMembers,
     teamSize,
+    availableLicenses,
+    licenseAllocationByRole,
     capacityPercentage,
     lastCalculated: Timestamp.now(),
   }
@@ -143,6 +175,8 @@ export const checkCapacityThresholds = async (organizationId: string) => {
     if (lastThreshold) {
       await updateDoc(orgRef, {
         capacityLastAlertThreshold: null,
+        availableLicenses,
+        licenseAllocationByRole,
         updatedAt: serverTimestamp(),
       })
     }
@@ -155,6 +189,8 @@ export const checkCapacityThresholds = async (organizationId: string) => {
 
   await updateDoc(orgRef, {
     capacityLastAlertThreshold: nextThreshold,
+    availableLicenses,
+    licenseAllocationByRole,
     updatedAt: serverTimestamp(),
   })
 
