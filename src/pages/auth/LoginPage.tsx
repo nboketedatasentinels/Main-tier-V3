@@ -391,12 +391,12 @@ export const LoginPage: React.FC = () => {
           </Button>
 
           <VStack spacing={2}>
-            <Link as={RouterLink} to="/reset-password" color="brand.flameOrange" fontSize="sm">
+            <Link as={RouterLink} to="/reset-password" color="brand.primary" fontSize="sm">
               Forgot password?
             </Link>
             <Text color="text.secondary" fontSize="sm">
               Don't have an account?{' '}
-              <Link as={RouterLink} to="/signup" color="brand.flameOrange" fontWeight="semibold">
+              <Link as={RouterLink} to="/signup" color="brand.primary" fontWeight="semibold">
                 Sign Up
               </Link>
             </Text>

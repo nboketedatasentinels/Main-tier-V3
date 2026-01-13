@@ -137,7 +137,7 @@ export function ThemeShowcase() {
                     <Box bg="accent.400" p={4} rounded="md" minW="60px">
                       <Text fontSize="xs">400</Text>
                     </Box>
-                    <Box bg="accent.500" p={4} rounded="md" minW="60px" color="white">
+                    <Box bg="accent.500" p={4} rounded="md" minW="60px" color="text.primary">
                       <Text fontSize="xs" fontWeight="bold">
                         500
                       </Text>
@@ -179,7 +179,7 @@ export function ThemeShowcase() {
                       <Box bg="warning.100" p={3} rounded="md" flex={1}>
                         <Text fontSize="xs">100</Text>
                       </Box>
-                      <Box bg="warning.500" p={3} rounded="md" flex={1} color="white">
+                      <Box bg="warning.500" p={3} rounded="md" flex={1} color="text.primary">
                         <Text fontSize="xs" fontWeight="bold">
                           500
                         </Text>
@@ -197,7 +197,7 @@ export function ThemeShowcase() {
                       <Box bg="error.100" p={3} rounded="md" flex={1}>
                         <Text fontSize="xs">100</Text>
                       </Box>
-                      <Box bg="error.500" p={3} rounded="md" flex={1} color="white">
+                      <Box bg="error.500" p={3} rounded="md" flex={1} color="text.primary">
                         <Text fontSize="xs" fontWeight="bold">
                           500
                         </Text>
@@ -407,7 +407,7 @@ export function ThemeShowcase() {
                     <Text fontWeight="semibold">Hero Gradient</Text>
                     <Text fontSize="sm">Purple gradient for hero sections</Text>
                   </Box>
-                  <Box className="gradient-gold" p={6} rounded="xl" color="white">
+                  <Box className="gradient-gold" p={6} rounded="xl" color="text.primary">
                     <Text fontWeight="semibold">Gold Gradient</Text>
                     <Text fontSize="sm">Gold gradient for premium features</Text>
                   </Box>

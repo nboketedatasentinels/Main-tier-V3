@@ -378,7 +378,7 @@ export const PaidMemberDashboard: React.FC = () => {
                         milestone.status === 'complete'
                           ? 'brand.gold'
                           : milestone.status === 'active'
-                            ? 'brand.flameOrange'
+                            ? 'brand.primary'
                             : 'rgba(234, 177, 48, 0.3)'
                       }
                     />

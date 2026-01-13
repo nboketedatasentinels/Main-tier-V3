@@ -52,7 +52,7 @@ export const StatCard = ({
               </Text>
             )}
             {(trendLabel || trendValue) && (
-              <Text fontSize="sm" color="brand.flameOrange" fontWeight="semibold">
+              <Text fontSize="sm" color="brand.primary" fontWeight="semibold">
                 {trendLabel} {trendValue}
               </Text>
             )}

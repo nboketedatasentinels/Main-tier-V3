@@ -63,7 +63,7 @@ const colors = {
   text: {
     primary: '#0F172A',
     secondary: '#334155',
-    muted: '#475569',
+    muted: '#64748B',
     subtle: '#64748B',
     inverse: '#FFFFFF',
   },
@@ -190,7 +190,7 @@ const components = {
     },
     variants: {
       primary: {
-        bg: 'brand.flameOrange',
+        bg: 'brand.primary',
         color: 'white',
         _hover: {
           bg: 'brand.dark',
@@ -323,7 +323,7 @@ const components = {
       },
       success: {
         bg: 'success.500',
-        color: 'white',
+        color: 'text.primary',
       },
       warning: {
         bg: 'tint.accentWarning',
@@ -513,7 +513,7 @@ const styles = {
       fontFamily: 'heading',
     },
     a: {
-      color: 'brand.flameOrange',
+      color: 'brand.primary',
       _hover: {
         color: 'brand.dark',
         textDecoration: 'underline',

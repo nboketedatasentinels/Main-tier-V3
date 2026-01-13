@@ -10,7 +10,7 @@ export default {
         // Brand Colors - Semantic Tokens (Growth.design approach)
         brand: {
           primary: '#350e6f', // Violet
-          dark: '#24084d',    // Deep Purple
+          dark: '#27062e',    // Deep Purple
         },
         // Surface Colors - For backgrounds and cards
         surface: {
@@ -38,7 +38,7 @@ export default {
         },
         // Danger/Destructive Actions
         danger: {
-          DEFAULT: '#ef4444', // Red
+          DEFAULT: '#f4540c', // Orange
         },
         // Tint Tokens - 80% blend toward white for safe backgrounds
         tint: {

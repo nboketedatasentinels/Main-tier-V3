@@ -134,7 +134,7 @@ export const Header: React.FC<HeaderProps> = ({ topOffset = '0' }) => {
               aria-label="Go to homepage"
             >
               <span className="inline-flex h-9 w-9 items-center justify-center rounded-full bg-[#EAB130]">
-                <span className="h-0 w-0 border-y-4 border-y-transparent border-l-[6px] border-l-white" />
+                <span className="h-0 w-0 border-y-4 border-y-transparent border-l-[6px] border-l-[#27062e]" />
               </span>
               <span className={`hidden sm:inline font-semibold ${textColor}`}>T4L</span>
             </button>

@@ -62,7 +62,7 @@ export const BuildVillageModal: React.FC<BuildVillageModalProps> = ({
             </HStack>
 
             <HStack spacing={3} align="flex-start" bg="brand.primaryMuted" p={3} borderRadius="lg">
-              <Icon as={Sparkles} color="brand.flameOrange" boxSize={5} mt={1} />
+              <Icon as={Sparkles} color="brand.primary" boxSize={5} mt={1} />
               <Box>
                 <Text fontWeight="semibold">Shape your rituals</Text>
                 <Text color="brand.subtleText">Add weekly check-ins, challenges, and celebrations that keep momentum high.</Text>
