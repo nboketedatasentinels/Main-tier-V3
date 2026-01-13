@@ -67,6 +67,7 @@ import {
   limit,
   onSnapshot,
   orderBy,
+  QueryConstraint,
   query,
   where,
 } from 'firebase/firestore'
@@ -415,11 +416,14 @@ export const LeadershipBoardPage: React.FC = () => {
     }
 
     setTransactionsLoaded(false)
-    const constraints = [orderBy('createdAt', 'desc'), limit(500)]
+    const constraints: QueryConstraint[] = []
 
     if (!canViewAll && segmentContext?.type === 'corporate_org' && profile.companyId) {
-      constraints.unshift(where('companyId', '==', profile.companyId))
+      constraints.push(where('companyId', '==', profile.companyId))
     }
+
+    constraints.push(orderBy('createdAt', 'desc'))
+    constraints.push(limit(500))
 
     const txQuery = query(collection(db, 'points_transactions'), ...constraints)
     const unsubscribe = onSnapshot(txQuery, (snapshot) => {

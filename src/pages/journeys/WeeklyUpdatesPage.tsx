@@ -82,6 +82,19 @@ interface ProofModalState {
   activity?: ActivityState;
 }
 
+interface MonthMilestone {
+  month: number;
+  startWeek: number;
+  endWeek: number;
+  status: 'completed' | 'current' | 'locked';
+  completionPercent: number;
+}
+
+interface WeekMilestone {
+  week: number;
+  status: 'completed' | 'current' | 'locked';
+}
+
 const rhythmItems = [
   'Sync T4L Calendar to Google/Outlook',
   'Add weekly time block for watching videos',
@@ -628,13 +641,13 @@ const WeeklyChecklistPage: React.FC = () => {
   }, [journey]);
 
   const monthMeta = useCallback(
-    (month: number) => {
+    (month: number): MonthMilestone => {
       if (!journey) {
         return {
           month,
           startWeek: 1,
           endWeek: 4,
-          status: 'locked' as const,
+          status: 'locked',
           completionPercent: 0,
         };
       }
@@ -662,13 +675,16 @@ const WeeklyChecklistPage: React.FC = () => {
     const overviewLabel = isMonthBasedJourney
       ? `Month ${currentMonthNumber} of ${totalMonths} · Week ${journey.currentWeek} of ${journey.programDurationWeeks}`
       : `Week ${journey.currentWeek} of ${journey.programDurationWeeks}`;
-    const milestones = isMonthBasedJourney
+    const monthMilestones: MonthMilestone[] = isMonthBasedJourney
       ? Array.from({ length: totalMonths }, (_, idx) => monthMeta(idx + 1))
-      : Array.from({ length: journey.programDurationWeeks }, (_, idx) => ({
+      : [];
+    const weekMilestones: WeekMilestone[] = !isMonthBasedJourney
+      ? Array.from({ length: journey.programDurationWeeks }, (_, idx) => ({
         week: idx + 1,
         status:
           idx + 1 < journey.currentWeek ? 'completed' : idx + 1 === journey.currentWeek ? 'current' : 'locked',
-      }));
+      }))
+      : [];
 
     return (
       <SurfaceCard borderColor="border.card">
@@ -702,7 +718,7 @@ const WeeklyChecklistPage: React.FC = () => {
           <Progress value={journeyProgress.pct} colorScheme="teal" borderRadius="full" />
           <HStack spacing={2} wrap="wrap">
             {isMonthBasedJourney
-              ? milestones.map((monthItem) => (
+              ? monthMilestones.map((monthItem) => (
                 <Tag
                   key={`month-${monthItem.month}`}
                   colorScheme={
@@ -716,7 +732,7 @@ const WeeklyChecklistPage: React.FC = () => {
                   </HStack>
                 </Tag>
               ))
-              : milestones.map((weekItem) => (
+              : weekMilestones.map((weekItem) => (
                 <Tag
                   key={`week-${weekItem.week}`}
                   colorScheme={
