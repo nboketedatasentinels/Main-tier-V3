@@ -36,7 +36,7 @@ import {
   useToast,
 } from '@chakra-ui/react'
 import { AlertTriangle, CheckCircle, ChevronLeft, ChevronRight, Lock, Plus, ShieldCheck } from 'lucide-react'
-import { addDoc, collection, doc, getDocs, onSnapshot, query, serverTimestamp, setDoc, where } from 'firebase/firestore'
+import { addDoc, collection, doc, getDoc, getDocs, onSnapshot, query, serverTimestamp, setDoc, where } from 'firebase/firestore'
 import { addDays, format } from 'date-fns'
 import { removeUndefinedFields } from '@/utils/firestore'
 import { getIsoWeekNumber } from '@/utils/date'
@@ -49,6 +49,7 @@ import { awardChecklistPoints, revokeChecklistPoints } from '@/services/pointsSe
 import { SurfaceCard } from '@/components/primitives/SurfacePrimitives'
 import { IoradTutorialModal } from '@/components/modals/IoradTutorialModal'
 import { checkTutorialCompletion, markTutorialComplete } from '@/services/tutorialService'
+import { ORG_COLLECTION } from '@/constants/organizations'
 
 const DEFAULT_WEEKLY_TARGET = JOURNEY_META['6W'].weeklyTarget
 
@@ -59,6 +60,27 @@ const JOURNEY_LABELS: Record<JourneyType, string> = {
   '6M': '6-Month Program',
   '9M': '9-Month Program',
   '12M': '12-Month Program',
+}
+
+const MONTH_BASED_JOURNEYS: JourneyType[] = ['3M', '6M', '9M', '12M']
+
+const JOURNEY_MONTH_COUNTS: Record<JourneyType, number> = {
+  '4W': 1,
+  '6W': 1,
+  '3M': 3,
+  '6M': 6,
+  '9M': 9,
+  '12M': 12,
+}
+
+const journeyTypeFromDurationWeeks = (weeks?: number | null): JourneyType | null => {
+  if (!weeks) return null
+  if (weeks <= 4) return '4W'
+  if (weeks <= 6) return '6W'
+  if (weeks <= 12) return '3M'
+  if (weeks <= 24) return '6M'
+  if (weeks <= 36) return '9M'
+  return '12M'
 }
 
 type ActivityStatus = 'not_started' | 'pending' | 'completed'
@@ -266,7 +288,7 @@ const WeeklyChecklistPage: React.FC = () => {
   }, [journeyStartDate, journey]);
 
   const isMonthBasedJourney = useMemo(() => {
-    return journey ? journey.programDurationWeeks >= 12 : false;
+    return journey ? MONTH_BASED_JOURNEYS.includes(journey.journeyType) : false;
   }, [journey]);
 
   const currentMonthNumber = useMemo(() => {
@@ -280,8 +302,9 @@ const WeeklyChecklistPage: React.FC = () => {
 
   const totalMonths = useMemo(() => {
     if (!journey) return 1;
-    return Math.ceil(journey.programDurationWeeks / 4);
-  }, [journey]);
+    if (!isMonthBasedJourney) return 1;
+    return JOURNEY_MONTH_COUNTS[journey.journeyType];
+  }, [journey, isMonthBasedJourney]);
 
   const weekRangeLabel = useCallback(
     (weekNumber: number) => {
@@ -320,7 +343,31 @@ const WeeklyChecklistPage: React.FC = () => {
     try {
       // Free users are automatically assigned to the 4W journey.
       const isFreeTierUser = isFreeUser(profile);
-      const journeyType = isFreeTierUser ? "4W" : profile.journeyType || "6W";
+      let orgJourneyType: JourneyType | null = null;
+
+      if (profile.companyId) {
+        const orgSnap = await getDoc(doc(db, ORG_COLLECTION, profile.companyId));
+        if (orgSnap.exists()) {
+          const orgData = orgSnap.data() as {
+            journeyType?: JourneyType;
+            programDurationWeeks?: number;
+            programDuration?: number | string | null;
+          };
+          const rawDuration = orgData?.programDuration ?? null;
+          const durationNumber = rawDuration === null ? null : Number(rawDuration);
+          const programDurationWeeks = Number.isNaN(durationNumber)
+            ? orgData?.programDurationWeeks ?? null
+            : orgData?.programDurationWeeks ?? (durationNumber ? durationNumber * 4 : null);
+          orgJourneyType =
+            orgData?.journeyType ??
+            journeyTypeFromDurationWeeks(programDurationWeeks) ??
+            null;
+        }
+      }
+
+      const journeyType: JourneyType = isFreeTierUser && !profile.companyId
+        ? '4W'
+        : (orgJourneyType ?? (profile.journeyType as JourneyType) ?? '6W');
       const meta = JOURNEY_META[journeyType];
 
       const journeyConfig: JourneyConfig = {
@@ -332,6 +379,14 @@ const WeeklyChecklistPage: React.FC = () => {
 
       setJourney(journeyConfig);
       setSelectedWeek(journeyConfig.currentWeek);
+
+      if (profile.companyId && profile.journeyType !== journeyType) {
+        await setDoc(
+          doc(db, 'profiles', profile.id),
+          { journeyType },
+          { merge: true },
+        );
+      }
     } catch (err) {
       console.error(err);
       setError('Unable to load your journey settings.');
