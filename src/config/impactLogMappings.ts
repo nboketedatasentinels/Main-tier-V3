@@ -116,16 +116,18 @@ export const toCanonicalActivityType = (value?: string): ActivityType | undefine
 const mapActivityTypesToCategories = <T extends string>(
   categoryMap: Record<T, ActivityType[]>,
 ): Record<ActivityType, T[]> => {
-  const mapping = ACTIVITY_TYPES.reduce((acc, activity) => {
-    acc[activity] = [] as T[]
+  const mapping: Record<ActivityType, T[]> = ACTIVITY_TYPES.reduce((acc, activity) => {
+    acc[activity] = []
     return acc
   }, {} as Record<ActivityType, T[]>)
 
-  ;(Object.entries(categoryMap) as Array<[T, ActivityType[]]>).forEach(([category, activities]) => {
-    activities.forEach((activity) => {
-      mapping[activity].push(category)
-    })
-  })
+  ;(Object.entries(categoryMap) as Array<[T, ActivityType[]]>).forEach(
+    ([category, activities]: [T, ActivityType[]]) => {
+      activities.forEach((activity: ActivityType) => {
+        mapping[activity].push(category)
+      })
+    },
+  )
 
   return mapping
 }

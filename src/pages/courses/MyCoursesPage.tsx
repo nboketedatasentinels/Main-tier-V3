@@ -179,6 +179,13 @@ const normalizeCourseIds = (input?: unknown): string[] => {
   return Array.from(uniqueIds)
 }
 
+const isMonthlyCourseAssignments = (value: unknown): value is MonthlyCourseAssignments => {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) return false
+  return Object.values(value as Record<string, unknown>).every(
+    entry => entry === undefined || entry === null || typeof entry === 'string'
+  )
+}
+
 const badgeColor = (difficulty?: CourseDifficulty) => {
   switch (difficulty) {
     case 'Beginner':
@@ -367,20 +374,19 @@ export const MyCoursesPage: React.FC = () => {
     const resolveOrganizationCourses = async (orgData: Record<string, unknown>) => {
       const rawDuration =
         orgData.programDuration || orgData.program_duration || orgData.duration || orgData.programLength
-      const durationRaw =
+      const programDuration: number | string | null =
         typeof rawDuration === 'number' || typeof rawDuration === 'string' ? rawDuration : null
       const rawMonthlyAssignments = orgData.monthlyCourseAssignments
-      const monthlyCourseAssignments =
-        rawMonthlyAssignments && typeof rawMonthlyAssignments === 'object' && !Array.isArray(rawMonthlyAssignments)
-          ? (rawMonthlyAssignments as MonthlyCourseAssignments)
-          : null
+      const monthlyCourseAssignments = isMonthlyCourseAssignments(rawMonthlyAssignments)
+        ? rawMonthlyAssignments
+        : null
       const courseIds = normalizeCourseIds(
         orgData.courseAssignments || orgData.assignedCourses || orgData.defaultCourses
       )
       const { monthlyAssignments, totalMonths } = normalizeMonthlyAssignments({
         monthlyCourseAssignments,
         courseAssignments: courseIds,
-        programDuration: durationRaw,
+        programDuration,
       })
       const monthlyAssignmentArray = getMonthlyAssignmentsArray(monthlyAssignments, totalMonths)
       const assignedMonthlyCourseIds = monthlyAssignmentArray.filter(Boolean)
