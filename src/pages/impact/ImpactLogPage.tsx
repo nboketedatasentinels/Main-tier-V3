@@ -138,13 +138,6 @@ const businessActivities = [
   'Extra Processing',
 ]
 
-const liftPillarColors: Record<string, string> = {
-  'Leading Self': 'purple',
-  'Fostering Teams': 'blue',
-  'Innovating with Tech': 'green',
-  'Transforming Business': 'orange',
-}
-
 type VerificationTier =
   | 'Tier 1: Self-Reported'
   | 'Tier 2: Partner Verified'
@@ -1085,18 +1078,6 @@ export const ImpactLogPage: React.FC = () => {
                 </Box>
               </SimpleGrid>
 
-              <Box>
-                <Text fontWeight="medium">LIFT Framework Pillars</Text>
-                <HStack spacing={2} mt={2}>
-                  {getPillarsForActivity(
-                    formValues.categoryGroup === 'esg' ? formValues.activityType : formValues.businessActivity,
-                  ).map((pillar) => (
-                    <Badge key={pillar} colorScheme={liftPillarColors[pillar]} px={2} py={1} rounded="md">
-                      {pillar}
-                    </Badge>
-                  ))}
-                </HStack>
-              </Box>
 
               <SimpleGrid columns={{ base: 1, md: 2 }} spacing={3}>
                 <Box>
