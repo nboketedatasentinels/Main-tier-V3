@@ -28,6 +28,7 @@ import { useAuth } from '@/hooks/useAuth'
 import { ActivityCard } from '@/components/dashboard/ActivityCard'
 import { BadgeCard } from '@/components/dashboard/BadgeCard'
 import { useWeeklyGlanceData } from '@/hooks/useWeeklyGlanceData'
+import { resolveOrgContext } from '@/utils/orgContext'
 import { WeeklyInspirationCard } from './components/WeeklyInspirationCard'
 
 interface ActivityItem {
@@ -78,7 +79,8 @@ const milestones = [
 
 export const PaidMemberDashboard: React.FC = () => {
   const { profile } = useAuth()
-  const { inspirationQuote } = useWeeklyGlanceData()
+  const context = resolveOrgContext(profile)
+  const { inspirationQuote } = useWeeklyGlanceData(context)
   const [activities, setActivities] = useState<ActivityItem[]>(initialActivities)
   const [activeBadgeIndex, setActiveBadgeIndex] = useState(0)
 
