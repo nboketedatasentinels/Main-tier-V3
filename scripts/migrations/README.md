@@ -134,3 +134,20 @@ If you need to rollback this migration:
 4. **Monitor for errors** during and after migration
 5. **Have a rollback plan** ready
 6. **Document all changes** and their impact
+
+## Migration: Backfill Email Verification
+
+### File: `backfill-email-verified.mjs`
+
+This migration marks every user profile in the `users` collection as `emailVerified: true`. It only updates profiles where the field is missing or false, and it updates records in batches of 500 to keep the migration safe for large datasets.
+
+### Running the Migration
+
+```bash
+node scripts/migrations/backfill-email-verified.mjs
+```
+
+### Notes
+
+- Ensure the Firebase Admin SDK is configured as described above before running this script.
+- The migration logs progress as it scans and updates user profiles.
