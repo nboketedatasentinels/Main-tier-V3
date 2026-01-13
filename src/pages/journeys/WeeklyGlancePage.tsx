@@ -17,14 +17,13 @@ import { useState } from 'react'
 import { WeeklyPointsCard } from '@/components/journeys/weeklyGlance/WeeklyPointsCard'
 import { SupportTeamCard } from '@/components/journeys/weeklyGlance/SupportTeamCard'
 import { PersonalityProfileCard } from '@/components/journeys/weeklyGlance/PersonalityProfileCard'
-import { MonthlyCourseCard } from '@/components/journeys/weeklyGlance/MonthlyCourseCard'
 import { PeopleImpactedCard } from '@/components/journeys/weeklyGlance/PeopleImpactedCard'
 import { PeerMatchingCard } from '@/components/journeys/weeklyGlance/PeerMatchingCard'
 import { WeeklyInspirationCard } from '@/components/journeys/weeklyGlance/WeeklyInspirationCard'
 import { useWeeklyGlanceData } from '@/hooks/useWeeklyGlanceData'
 import { BuildVillageModal } from '@/components/modals/BuildVillageModal'
 import { useAuth } from '@/hooks/useAuth'
-import { TransformationTier, UserRole } from '@/types'
+import { TransformationTier } from '@/types'
 
 export const WeeklyGlancePage = () => {
   const { profile } = useAuth()
@@ -33,7 +32,6 @@ export const WeeklyGlancePage = () => {
   const [isBuildVillageOpen, setIsBuildVillageOpen] = useState(false)
   const [villageName, setVillageName] = useState('')
   const [villagePurpose, setVillagePurpose] = useState('')
-  const userRole = profile?.role as UserRole | undefined
   const isPaidMember = profile?.membershipStatus === 'paid'
   const isCorporateTier =
     profile?.transformationTier === TransformationTier.CORPORATE_MEMBER ||
@@ -89,6 +87,8 @@ export const WeeklyGlancePage = () => {
           </Alert>
         )}
 
+        <WeeklyInspirationCard data={data.inspirationQuote} loading={data.loading.inspiration} />
+
         <SimpleGrid columns={{ base: 1, md: 2, xl: 3 }} spacing={4} alignItems="stretch">
           <WeeklyPointsCard
             data={data.weeklyPoints}
@@ -98,17 +98,8 @@ export const WeeklyGlancePage = () => {
           />
           <SupportTeamCard data={data.supportAssignment} loading={data.loading.support} />
           <PersonalityProfileCard data={data.personality} loading={data.loading.profile} />
-          <MonthlyCourseCard
-            role={userRole}
-            membershipStatus={profile?.membershipStatus}
-            transformationTier={profile?.transformationTier}
-            data={data.monthlyCourse}
-            loading={data.loading.monthlyCourse}
-            error={data.errors.monthlyCourse}
-          />
           <PeopleImpactedCard count={data.impactCount} loading={data.loading.impact} />
           <PeerMatchingCard matches={data.peerMatches} loading={data.loading.matches} />
-          <WeeklyInspirationCard data={data.inspirationQuote} loading={data.loading.inspiration} />
         </SimpleGrid>
       </Stack>
 

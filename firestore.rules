@@ -31,6 +31,13 @@ service cloud.firestore {
       return hasRole('mentor');
     }
 
+    function isSameCompany(companyId, companyCode) {
+      return isAuthenticated() && (
+        (companyId != null && getProfile(request.auth.uid).companyId == companyId) ||
+        (companyCode != null && getProfile(request.auth.uid).companyCode == companyCode)
+      );
+    }
+
     function isSuperAdmin() {
       return hasRole('super_admin');
     }
@@ -46,6 +53,10 @@ service cloud.firestore {
     function isActiveAccount() {
       return isAuthenticated() && 
         getProfile(request.auth.uid).accountStatus == 'active';
+    }
+
+    function isChecklistOwner(checklistId) {
+      return isAuthenticated() && checklistId.matches('^' + request.auth.uid + '_.*$');
     }
 
     function isValidImpactLog(logData) {
@@ -125,6 +136,23 @@ service cloud.firestore {
       );
     }
 
+    function isOrgPeerProfile() {
+      return isAuthenticated() &&
+        getProfile(request.auth.uid).companyCode == resource.data.companyCode;
+    }
+
+    function isPeerSessionParticipant() {
+      return isAuthenticated() &&
+        resource.data.participants.hasAny([request.auth.uid]);
+    }
+
+    function isSessionRequestParticipant() {
+      return isAuthenticated() && (
+        resource.data.fromUserId == request.auth.uid ||
+        resource.data.toUserId == request.auth.uid
+      );
+    }
+
     // Profiles collection
     match /profiles/{userId} {
       // Users can read their own profile
@@ -138,6 +166,9 @@ service cloud.firestore {
 
       // Mentors can read profiles of assigned mentees
       allow read: if isAuthenticated() && canAccessMenteeProfile(userId);
+
+      // Peers can discover profiles in the same organization
+      allow read: if isOrgPeerProfile();
       
       // Users can create their own profile
       allow create: if isAuthenticated() && isOwner(userId);
@@ -206,6 +237,9 @@ service cloud.firestore {
 
       // Mentors can read assigned mentee records only
       allow read: if isAuthenticated() && canAccessMentee(resource.data);
+
+      // Users can read members of their organization
+      allow read: if isAuthenticated() && isSameCompany(resource.data.companyId, resource.data.companyCode);
       
       // Users can create their own user document
       allow create: if isAuthenticated() && isOwner(userId);
@@ -234,6 +268,15 @@ service cloud.firestore {
           (canAccessUser(userId) && request.resource.data.keys().hasAny(['lastAdjustmentReason', 'updatedAt']))
         );
       }
+    }
+
+    // Support assignments for direct mentorship
+    match /support_assignments/{assignmentId} {
+      allow read: if isAuthenticated() && (
+        resource.data.user_id == request.auth.uid ||
+        isAdmin()
+      );
+      allow create, update, delete: if isAdmin();
     }
 
     // Referral system collections
@@ -314,6 +357,31 @@ service cloud.firestore {
       );
     }
 
+    // Peer connect collections
+    match /peer_sessions/{sessionId} {
+      allow read: if isPeerSessionParticipant() || isSuperAdmin();
+      allow create: if isAuthenticated() && request.resource.data.participants.hasAny([request.auth.uid]);
+      allow update: if isPeerSessionParticipant();
+    }
+
+    match /peer_session_requests/{requestId} {
+      allow read: if isSessionRequestParticipant() || isSuperAdmin();
+      allow create: if isAuthenticated() && request.resource.data.fromUserId == request.auth.uid;
+      allow update: if isSessionRequestParticipant();
+    }
+
+    match /peer_weekly_matches/{matchId} {
+      allow read: if isAuthenticated() && (
+        resource.data.userId == request.auth.uid ||
+        resource.id.matches('^' + request.auth.uid + '-')
+      );
+      allow create: if isAuthenticated() && request.resource.data.userId == request.auth.uid;
+      allow update: if isAuthenticated() && (
+        resource.data.userId == request.auth.uid ||
+        resource.id.matches('^' + request.auth.uid + '-')
+      );
+    }
+
     match /peer_matching_sessions/{sessionId} {
       allow read: if isAuthenticated() && (
         isSuperAdmin() ||
@@ -335,6 +403,11 @@ service cloud.firestore {
       allow write: if isSuperAdmin();
     }
 
+    match /transformation_partners/{partnerId} {
+      allow read: if isAuthenticated();
+      allow write: if isSuperAdmin();
+    }
+
     // Community collections
     match /villages/{villageId} {
       allow read: if isAuthenticated();
@@ -343,8 +416,11 @@ service cloud.firestore {
     }
 
     match /companies/{companyId} {
-      // All authenticated users can read companies
-      allow read: if isAuthenticated();
+      // Users can read their own company, admins can read all
+      allow read: if isAuthenticated() && (
+        isAdmin() ||
+        isSameCompany(companyId, resource.data.code)
+      );
       
       // Super admins can manage all companies
       allow write: if isSuperAdmin();
@@ -517,6 +593,11 @@ service cloud.firestore {
         isSuperAdmin() ||
         canAccessMentee(request.resource.data)
       );
+    }
+
+    match /checklists/{checklistId} {
+      allow read: if isChecklistOwner(checklistId);
+      allow create, update: if isChecklistOwner(checklistId);
     }
 
     match /impact_goals/{goalId} {

@@ -8,11 +8,13 @@ import {
   orderBy,
   query,
   serverTimestamp,
+  setDoc,
   updateDoc,
   where,
   limit,
 } from 'firebase/firestore'
 import { db } from '@/services/firebase'
+import { ORG_COLLECTION } from '@/constants/organizations'
 import type { UserProfile } from '@/types'
 
 export interface BadgeRecord {
@@ -101,7 +103,7 @@ export const fetchUserProfileById = async (userId: string): Promise<UserProfileE
 
 export const fetchOrganizationDetails = async (companyId?: string | null): Promise<OrganizationSummary | null> => {
   if (!companyId) return null
-  const snapshot = await getDoc(doc(db, 'companies', companyId))
+  const snapshot = await getDoc(doc(db, ORG_COLLECTION, companyId))
   if (!snapshot.exists()) return null
   const data = snapshot.data() as { name?: string; code?: string; status?: string }
   return {
@@ -193,6 +195,32 @@ export const updateUserProfile = async (
   }
 
   await updateDoc(doc(db, 'users', userId), payload)
+
+  const hasMentorUpdate = Object.prototype.hasOwnProperty.call(sanitized, 'mentorId')
+  const hasAmbassadorUpdate = Object.prototype.hasOwnProperty.call(sanitized, 'ambassadorId')
+
+  if (hasMentorUpdate || hasAmbassadorUpdate) {
+    const normalizeAssignmentId = (value: unknown) => {
+      if (typeof value !== 'string') return value ?? null
+      const trimmed = value.trim()
+      return trimmed.length ? trimmed : null
+    }
+
+    const supportPayload: Record<string, unknown> = {
+      user_id: userId,
+      assigned_date: serverTimestamp(),
+      updated_at: serverTimestamp(),
+    }
+
+    if (hasMentorUpdate) {
+      supportPayload.mentor_id = normalizeAssignmentId(sanitized.mentorId)
+    }
+    if (hasAmbassadorUpdate) {
+      supportPayload.ambassador_id = normalizeAssignmentId(sanitized.ambassadorId)
+    }
+
+    await setDoc(doc(db, 'support_assignments', userId), supportPayload, { merge: true })
+  }
 
   return { updates: sanitized, error: null }
 }

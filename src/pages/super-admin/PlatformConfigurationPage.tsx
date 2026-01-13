@@ -51,16 +51,16 @@ export const PlatformConfigurationPage: React.FC = () => {
                   <CardBody>
                     <Stack spacing={4}>
                       <HStack justify="space-between">
-                        <Heading size="sm">Database</Heading>
-                        <Badge colorScheme="gray">Read-only</Badge>
+                        <Heading size="sm">Firebase</Heading>
+                        <Badge colorScheme="green">Firestore</Badge>
                       </HStack>
                       <FormControl>
-                        <FormLabel>Primary connection</FormLabel>
-                        <Input value="postgresql://cluster-primary" isReadOnly />
+                        <FormLabel>Project ID</FormLabel>
+                        <Input value="man-tier-v2" isReadOnly />
                       </FormControl>
                       <FormControl>
-                        <FormLabel>Read replica</FormLabel>
-                        <Input value="postgresql://cluster-replica" isReadOnly />
+                        <FormLabel>Database</FormLabel>
+                        <Input value="Cloud Firestore (Native mode)" isReadOnly />
                       </FormControl>
                     </Stack>
                   </CardBody>
