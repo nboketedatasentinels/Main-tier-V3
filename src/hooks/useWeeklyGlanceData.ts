@@ -126,6 +126,7 @@ export const useWeeklyGlanceData = () => {
         monthNumber,
         weeklyTarget,
         pointsEarned: 0,
+        engagementCount: 0,
         status: 'alert',
         createdAt: serverTimestamp(),
         updatedAt: serverTimestamp(),
@@ -176,15 +177,41 @@ export const useWeeklyGlanceData = () => {
       points_earned: data.pointsEarned ?? 0,
       target_points: data.weeklyTarget ?? defaultTarget,
       status: mapStatus(data.status),
-      engagement_count: 0,
+      engagement_count: data.engagementCount ?? 0,
       week_number: data.weekNumber ?? weekNumber,
     })
+    const backfillEngagementCount = async () => {
+      const ledgerQuery = query(
+        collection(db, 'pointsLedger'),
+        where('uid', '==', profile.id),
+        where('weekNumber', '==', weekNumber),
+      )
+      const ledgerSnapshot = await getDocs(ledgerQuery)
+      return ledgerSnapshot.size
+    }
 
     const unsubscribe = onSnapshot(
       progressRef,
       snapshot => {
         if (snapshot.exists()) {
-          setWeeklyPoints(toWeeklyPoints(snapshot.data() as WeeklyProgress, snapshot.id))
+          const data = snapshot.data() as WeeklyProgress
+          setWeeklyPoints(toWeeklyPoints(data, snapshot.id))
+          if (data.engagementCount == null) {
+            void (async () => {
+              try {
+                const engagementCount = await backfillEngagementCount()
+                await updateDoc(progressRef, {
+                  engagementCount,
+                  updatedAt: serverTimestamp(),
+                })
+                setWeeklyPoints(prev =>
+                  prev ? { ...prev, engagement_count: engagementCount } : prev,
+                )
+              } catch (error) {
+                console.warn('Unable to backfill engagement count.', error)
+              }
+            })()
+          }
         } else {
           setWeeklyPoints({
             id: progressRef.id,

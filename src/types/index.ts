@@ -221,6 +221,7 @@ export interface WeeklyProgress {
   monthNumber: number;
   weeklyTarget: number;
   pointsEarned: number;
+  engagementCount?: number;
   status: "on_track" | "warning" | "alert" | "recovery";
   updatedAt: string | Date | { toDate: () => Date };
 }
