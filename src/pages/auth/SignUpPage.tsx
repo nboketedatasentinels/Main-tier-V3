@@ -1,12 +1,10 @@
 import React, { useEffect, useMemo, useState } from "react"
 import { Link as RouterLink, useNavigate, useSearchParams } from "react-router-dom"
 import { motion } from "framer-motion"
-import { Eye, EyeOff, ArrowRight, User, Mail, Lock, Building2, CheckCircle, XCircle, MailCheck } from "lucide-react"
+import { Eye, EyeOff, ArrowRight, User, Mail, Lock, Building2, CheckCircle, XCircle } from "lucide-react"
 import { Spinner, useToast } from "@chakra-ui/react"
-import { sendEmailVerification } from "firebase/auth"
 import { useAuth } from "@/hooks/useAuth"
 import { getFriendlyErrorMessage } from "@/utils/authErrors"
-import { buildActionCodeSettings } from "@/utils/authActionCodeSettings"
 import { validateCompanyCode } from "@/services/organizationService"
 import { auth } from "@/services/firebase"
 import { validateReferralCode } from "@/services/referralService"
@@ -46,15 +44,11 @@ export const SignUpPage: React.FC = () => {
   const [loading, setLoading] = useState(false)
   const [googleLoading, setGoogleLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  const [successMessage, setSuccessMessage] = useState<string | null>(null)
   const [showPassword, setShowPassword] = useState(false)
   const [companyCodeValid, setCompanyCodeValid] = useState<boolean | null>(null)
   const [companyCodeError, setCompanyCodeError] = useState<string | null>(null)
   const [isCheckingCode, setIsCheckingCode] = useState(false)
   const [validatedOrganization, setValidatedOrganization] = useState<Organization | null>(null)
-  const [pendingEmailVerification, setPendingEmailVerification] = useState(false)
-  const [lastVerificationSent, setLastVerificationSent] = useState<number | null>(null)
-  const [resendLoading, setResendLoading] = useState(false)
   const [showTermsModal, setShowTermsModal] = useState(false)
   const [showPrivacyModal, setShowPrivacyModal] = useState(false)
   const [showCompanyCodeModal, setShowCompanyCodeModal] = useState(false)
@@ -173,7 +167,6 @@ export const SignUpPage: React.FC = () => {
   const handleSignUp = async (e: React.FormEvent) => {
     e.preventDefault()
     setError(null)
-    setSuccessMessage(null)
 
     const validationError = validate()
     if (validationError) {
@@ -214,21 +207,12 @@ export const SignUpPage: React.FC = () => {
 
       toast({
         title: "Account created!",
-        description:
-          "Please check your email to verify your account. You can still access the dashboard while we verify your email.",
+        description: "Welcome to Man-Tier. Redirecting you to your dashboard now.",
         status: "success",
-        duration: 7000,
+        duration: 5000,
       })
       if (userId) {
         localStorage.setItem(`t4l.newUserWelcome.${userId}`, "pending")
-      }
-
-      const currentUser = auth.currentUser
-      if (currentUser && !currentUser.emailVerified) {
-        setPendingEmailVerification(true)
-        setSuccessMessage("We sent a verification link to your email.")
-        setLastVerificationSent(Date.now())
-        return
       }
 
       navigate(getLandingPathForRole(profile ?? UserRole.FREE_USER), { replace: true })
@@ -247,36 +231,8 @@ export const SignUpPage: React.FC = () => {
     navigate(getLandingPathForRole(profile ?? UserRole.FREE_USER), { replace: true })
   }, [pendingGoogleNavigation, profileLoading, profile, showCompanyCodeModal, navigate, user])
 
-  const handleResendEmail = async () => {
-    setError(null)
-    setSuccessMessage(null)
-
-    if (lastVerificationSent && Date.now() - lastVerificationSent < 30000) {
-      setError("Please wait 30 seconds before requesting another email.")
-      return
-    }
-
-    try {
-      setResendLoading(true)
-      const currentUser = auth.currentUser
-      if (!currentUser) {
-        setError("No user found for verification. Please sign in again.")
-        return
-      }
-
-      await sendEmailVerification(currentUser, buildActionCodeSettings("/auth/verify-email"))
-      setSuccessMessage("Confirmation email sent! Check your inbox.")
-      setLastVerificationSent(Date.now())
-    } catch (err) {
-      setError(getFriendlyErrorMessage(err))
-    } finally {
-      setResendLoading(false)
-    }
-  }
-
   const handleGoogleSignUp = async () => {
     setError(null)
-    setSuccessMessage(null)
 
     if (!formData.acceptTerms) {
       setError("You must accept the Terms of Use and Privacy Policy.")
@@ -328,61 +284,6 @@ export const SignUpPage: React.FC = () => {
     }
   }
 
-  if (pendingEmailVerification) {
-    return (
-      <div className="w-full">
-        {error && (
-          <div className="mb-5 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
-            {error}
-          </div>
-        )}
-        {successMessage && (
-          <div className="mb-5 rounded-lg border border-green-200 bg-green-50 px-4 py-3 text-sm text-green-700">
-            {successMessage}
-          </div>
-        )}
-        <motion.div
-          initial={{ opacity: 0, y: 14 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.35 }}
-          className="text-center"
-        >
-          <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-purple-50">
-            <MailCheck className="h-6 w-6 text-[#350e6f]" />
-          </div>
-
-          <h1 className="text-2xl md:text-3xl font-bold text-gray-900">Check Your Email</h1>
-          <p className="mt-2 text-sm text-gray-600">
-            We sent a verification link to <span className="font-semibold text-gray-900">{formData.email}</span>
-          </p>
-
-          <div className="mt-6 space-y-3">
-            <div className="rounded-lg border bg-gray-50 px-4 py-3 text-sm text-gray-600">
-              If you don't see it in a few minutes, check your spam folder.
-            </div>
-
-            <button
-              type="button"
-              onClick={handleResendEmail}
-              disabled={resendLoading}
-              className="inline-flex w-full items-center justify-center gap-2 rounded-md border bg-white px-4 py-2 text-sm font-medium text-gray-900 shadow-sm hover:bg-gray-50 disabled:opacity-60"
-            >
-              {resendLoading ? "Sending..." : "Resend Confirmation Email"}
-            </button>
-
-            <button
-              type="button"
-              onClick={() => navigate("/login")}
-              className="inline-flex w-full items-center justify-center gap-2 rounded-md bg-gradient-to-r from-[#350e6f] to-[#27062e] px-4 py-2 text-sm font-medium text-white shadow-sm hover:opacity-95"
-            >
-              Back to Sign In
-            </button>
-          </div>
-        </motion.div>
-      </div>
-    )
-  }
-
   return (
     <div className="w-full">
       {error && (
@@ -391,11 +292,6 @@ export const SignUpPage: React.FC = () => {
         </div>
       )}
 
-      {successMessage && (
-        <div className="mb-5 rounded-lg border border-green-200 bg-green-50 px-4 py-3 text-sm text-green-700">
-          {successMessage}
-        </div>
-      )}
 
       <form onSubmit={handleSignUp} className="space-y-5">
         <div className="text-center">

@@ -9,7 +9,6 @@ import {
   sendPasswordResetEmail,
   onAuthStateChanged,
   createUserWithEmailAndPassword,
-  sendEmailVerification,
   deleteUser,
   signInWithRedirect,
   getAdditionalUserInfo,
@@ -333,7 +332,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
           profileUpdates.avatarUrl = firebaseUser.photoURL
           profileUpdates.photoURL = firebaseUser.photoURL
         }
-        if (firebaseUser.emailVerified && !mergedUser.emailVerified) {
+        if (mergedUser.emailVerified !== true) {
           profileUpdates.emailVerified = true
         }
 
@@ -410,6 +409,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         referredBy: null,
         referralStatus: null,
         isOnboarded: true,
+        emailVerified: true,
         accountStatus: AccountStatus.ACTIVE,
         transformationTier: validatedOrganization
           ? TransformationTier.CORPORATE_MEMBER
@@ -815,6 +815,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         referredBy: null,
         referralStatus: null,
         isOnboarded: true,
+        emailVerified: true,
         accountStatus: AccountStatus.ACTIVE,
         transformationTier: validatedOrganization
           ? TransformationTier.CORPORATE_MEMBER
@@ -899,21 +900,6 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
             stack: (assignmentError as Error)?.stack,
             raw: assignmentError,
           })
-        }
-      }
-
-      try {
-        if (!firebaseUser.emailVerified) {
-          await sendEmailVerification(firebaseUser, buildActionCodeSettings('/auth/verify-email'))
-        }
-      } catch (verificationError) {
-        console.warn('🟠 [Auth] Unable to send verification email', verificationError)
-        const friendlyMessage = getFriendlyErrorMessage(verificationError)
-        setLoading(false)
-        setProfileLoading(false)
-        return {
-          error: new Error(friendlyMessage),
-          userId: uid,
         }
       }
 
