@@ -62,12 +62,9 @@ export async function awardChecklistPoints(params: {
   );
 
   try {
+    const ledgerSnapshot = await getDocs(ledgerQuery);
     await runTransactionWithRetry(async (tx) => {
-      const [ledgerDoc, progressDoc, ledgerSnapshot] = await Promise.all([
-        tx.get(ledgerRef),
-        tx.get(progressRef),
-        getDocs(ledgerQuery),
-      ]);
+      const [ledgerDoc, progressDoc] = await Promise.all([tx.get(ledgerRef), tx.get(progressRef)]);
 
       if (ledgerDoc.exists()) return;
 
@@ -152,12 +149,9 @@ export async function revokeChecklistPoints(params: {
   );
 
   try {
+    const ledgerSnapshot = await getDocs(ledgerQuery);
     await runTransactionWithRetry(async (tx) => {
-      const [ledgerDoc, progressDoc, ledgerSnapshot] = await Promise.all([
-        tx.get(ledgerRef),
-        tx.get(progressRef),
-        getDocs(ledgerQuery),
-      ]);
+      const [ledgerDoc, progressDoc] = await Promise.all([tx.get(ledgerRef), tx.get(progressRef)]);
 
       if (!ledgerDoc.exists()) return;
 
