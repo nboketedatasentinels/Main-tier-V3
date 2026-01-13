@@ -9,6 +9,8 @@ export interface OrganizationCapacityMetrics {
   organizationName: string
   currentMembers: number
   teamSize: number
+  availableLicenses?: number
+  licenseAllocationByRole?: Record<string, number>
   capacityPercentage: number
   lastCalculated?: Timestamp | string | Date | null
 }
