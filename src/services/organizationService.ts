@@ -45,6 +45,13 @@ type OrganizationAccessAttemptPayload = {
   metadata?: Record<string, unknown>
 }
 
+export type OrganizationPartnerValidationResult = {
+  isValid: boolean
+  partnerId?: string
+  partnerName?: string
+  message?: string
+}
+
 
 export const generateOrganizationCode = (name: string) => {
   const validChars = name.toUpperCase().match(/[A-Z0-9]/g) ?? []
@@ -189,6 +196,42 @@ export const fetchOrganizationDetails = async (organizationId: string): Promise<
   const docSnap = await getDoc(doc(db, ORG_COLLECTION, organizationId))
   if (!docSnap.exists()) return null
   return { id: docSnap.id, ...(docSnap.data() as Omit<OrganizationRecord, 'id'>) }
+}
+
+export const validateOrganizationPartner = async (organizationId: string): Promise<OrganizationPartnerValidationResult> => {
+  if (!organizationId) {
+    return { isValid: false, message: 'Organization is missing.' }
+  }
+
+  const orgSnap = await getDoc(doc(db, ORG_COLLECTION, organizationId))
+  if (!orgSnap.exists()) {
+    return { isValid: false, message: 'Organization record could not be found.' }
+  }
+
+  const orgData = orgSnap.data() as { transformation_partner_id?: string | null }
+  const partnerId = orgData.transformation_partner_id
+  if (!partnerId) {
+    return { isValid: false, message: 'Tier 2 verification requires enrollment in the partner program.' }
+  }
+
+  const partnerSnap = await getDoc(doc(db, 'transformation_partners', partnerId))
+  if (!partnerSnap.exists()) {
+    return { isValid: false, message: 'Partner program record could not be verified.' }
+  }
+
+  const partnerData = partnerSnap.data() as { name?: string; displayName?: string; status?: string; isActive?: boolean }
+  const status = partnerData.status?.toLowerCase()
+  const isActive = status ? status === 'active' : partnerData.isActive !== false
+
+  if (!isActive) {
+    return { isValid: false, message: 'Partner program enrollment is inactive.' }
+  }
+
+  return {
+    isValid: true,
+    partnerId,
+    partnerName: partnerData.name || partnerData.displayName,
+  }
 }
 
 
