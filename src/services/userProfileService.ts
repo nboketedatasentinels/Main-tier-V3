@@ -102,7 +102,7 @@ export const fetchUserProfileById = async (userId: string): Promise<UserProfileE
 
 export const fetchOrganizationDetails = async (companyId?: string | null): Promise<OrganizationSummary | null> => {
   if (!companyId) return null
-  const snapshot = await getDoc(doc(db, 'companies', companyId))
+  const snapshot = await getDoc(doc(db, 'organizations', companyId))
   if (!snapshot.exists()) return null
   const data = snapshot.data() as { name?: string; code?: string; status?: string }
   return {

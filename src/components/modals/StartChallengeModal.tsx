@@ -232,7 +232,7 @@ export const StartChallengeModal: React.FC<StartChallengeModalProps> = ({
 
       let company: Organization | null = null;
       if (companyCode) {
-        const companyQuery = query(collection(db, 'companies'), where('code', '==', companyCode));
+        const companyQuery = query(collection(db, 'organizations'), where('code', '==', companyCode));
         const companySnapshot = await getDocs(companyQuery);
         if (!companySnapshot.empty) {
           company = { ...companySnapshot.docs[0].data(), id: companySnapshot.docs[0].id } as Organization;

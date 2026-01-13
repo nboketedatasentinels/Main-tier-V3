@@ -88,7 +88,7 @@ export interface EngagementTrendPoint {
 }
 
 const usersCollection = collection(db, 'users')
-const companiesCollection = collection(db, 'companies')
+const organizationsCollection = collection(db, 'organizations')
 const engagementCollection = collection(db, 'user_engagement_scores')
 const notificationsCollection = collection(db, 'notifications')
 
@@ -153,7 +153,7 @@ export const listenToUsers = (onChange: (users: ManagedUserRecord[]) => void) =>
 }
 
 export const fetchOrganizationsList = async (): Promise<OrganizationOption[]> => {
-  const snapshot = await getDocs(query(companiesCollection, orderBy('name', 'asc')))
+  const snapshot = await getDocs(query(organizationsCollection, orderBy('name', 'asc')))
   return snapshot.docs.map((docSnap) => {
     const data = docSnap.data() as { name?: string; code?: string }
     return { id: docSnap.id, name: data.name || 'Untitled organization', code: data.code }
@@ -257,17 +257,17 @@ export const updateUser = async (userId: string, updates: Partial<ManagedUserRec
 }
 
 export const fetchEngagementRoster = async (): Promise<EngagementRosterEntry[]> => {
-  const [engagementSnapshot, usersSnapshot, companiesSnapshot] = await Promise.all([
+  const [engagementSnapshot, usersSnapshot, organizationsSnapshot] = await Promise.all([
     getDocs(engagementCollection),
     getDocs(usersCollection),
-    getDocs(companiesCollection),
+    getDocs(organizationsCollection),
   ])
 
   const userIndex = new Map<string, ManagedUserRecord>()
   usersSnapshot.docs.forEach((docSnap) => userIndex.set(docSnap.id, mapUser(docSnap)))
 
   const companyIndex = new Map<string, { name?: string; code?: string }>()
-  companiesSnapshot.docs.forEach((docSnap) => {
+  organizationsSnapshot.docs.forEach((docSnap) => {
     const data = docSnap.data() as { name?: string; code?: string }
     companyIndex.set(docSnap.id, data)
   })
