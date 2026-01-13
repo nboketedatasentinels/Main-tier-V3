@@ -27,6 +27,8 @@ User profile documents (indexed by user UID)
   
   // Organization
   companyId?: string
+  companyCode?: string
+  companyName?: string
   villageId?: string
   clusterId?: string
   
@@ -195,12 +197,18 @@ Community groups
 }
 ```
 
-### companies
-Organization profiles
+### organizations
+Organization profiles (canonical collection)
+> Note: `companies` is deprecated and should only be used for legacy migrations.
 ```typescript
 {
   id: string
   name: string
+  code?: string
+  status?: string
+  programDuration?: number
+  courseAssignments?: string[]
+  monthlyCourseAssignments?: Record<string, string | null>
   description: string
   logoUrl?: string
   website?: string

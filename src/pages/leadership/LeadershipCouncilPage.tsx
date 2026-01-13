@@ -56,6 +56,7 @@ import { format, formatDistanceToNow, isAfter, isValid, parseISO } from 'date-fn
 import { db } from '@/services/firebase'
 import { ORG_COLLECTION } from '@/constants/organizations'
 import { useAuth } from '@/hooks/useAuth'
+import { resolveUserOrganizationId } from '@/utils/organizationResolution'
 import { UserProfile } from '@/types'
 
 interface LeadershipProfile extends UserProfile {
@@ -131,6 +132,7 @@ const badgeColor = (status?: string) => {
 export const LeadershipCouncilPage: React.FC = () => {
   const { profile, user } = useAuth()
   const toast = useToast()
+  const organizationResolution = useMemo(() => resolveUserOrganizationId(profile), [profile])
 
   const [directMentorProfile, setDirectMentorProfile] = useState<LeadershipProfile | null>(null)
   const [directAmbassadorProfile, setDirectAmbassadorProfile] = useState<LeadershipProfile | null>(null)
@@ -143,6 +145,7 @@ export const LeadershipCouncilPage: React.FC = () => {
   const [orgAssignmentsError, setOrgAssignmentsError] = useState<string | null>(null)
   const [partnerLoading, setPartnerLoading] = useState(true)
   const [partnerError, setPartnerError] = useState<string | null>(null)
+  const [organizationValidation, setOrganizationValidation] = useState<OrganizationValidationResult | null>(null)
   const [assignmentsRetryKey, setAssignmentsRetryKey] = useState(0)
   const [partnerRetryKey, setPartnerRetryKey] = useState(0)
   const [directAssignmentIds, setDirectAssignmentIds] = useState<{ mentorId: string | null; ambassadorId: string | null }>({
@@ -166,8 +169,10 @@ export const LeadershipCouncilPage: React.FC = () => {
   const sessionsModal = useDisclosure()
   const scheduleModal = useDisclosure()
 
+  const resolvedOrganizationId = organizationValidation?.organizationId ?? organizationResolution.organizationId
+
   const assignmentsLoading = directAssignmentsLoading || orgAssignmentsLoading
-  const hasOrganization = Boolean(profile?.companyId)
+  const hasOrganization = Boolean(resolvedOrganizationId)
 
   const mentorProfile = useMemo(
     () => directMentorProfile ?? orgMentorProfile ?? null,
@@ -357,10 +362,44 @@ export const LeadershipCouncilPage: React.FC = () => {
   }, [directAssignmentIds.ambassadorId, directAssignmentIds.mentorId])
 
   useEffect(() => {
+    let isMounted = true
+
+    if (!organizationResolution.organizationId && !organizationResolution.organizationCode) {
+      setOrganizationValidation(null)
+      return () => {
+        isMounted = false
+      }
+    }
+
+    validateUserOrganizationAccess({
+      organizationId: organizationResolution.organizationId,
+      organizationCode: organizationResolution.organizationCode,
+    })
+      .then((result) => {
+        if (isMounted) {
+          setOrganizationValidation(result)
+        }
+      })
+      .catch((error) => {
+        if (isMounted) {
+          setOrganizationValidation({
+            valid: false,
+            errorCode: 'ORG_NOT_FOUND',
+            message: error instanceof Error ? error.message : 'Organization validation failed.',
+          })
+        }
+      })
+
+    return () => {
+      isMounted = false
+    }
+  }, [organizationResolution])
+
+  useEffect(() => {
     const needsMentor = !directAssignmentIds.mentorId
     const needsAmbassador = !directAssignmentIds.ambassadorId
 
-    if (!profile?.companyId || (!needsMentor && !needsAmbassador)) {
+    if (!resolvedOrganizationId || (!needsMentor && !needsAmbassador)) {
       setOrgMentorProfile(null)
       setOrgAmbassadorProfile(null)
       setOrgAssignmentsError(null)
@@ -416,14 +455,14 @@ export const LeadershipCouncilPage: React.FC = () => {
       ? query(
           collection(db, 'users'),
           where('role', '==', 'mentor'),
-          where('companyId', '==', profile.companyId),
+          where('companyId', '==', resolvedOrganizationId),
         )
       : null
     const ambassadorQuery = needsAmbassador
       ? query(
           collection(db, 'users'),
           where('role', '==', 'ambassador'),
-          where('companyId', '==', profile.companyId),
+          where('companyId', '==', resolvedOrganizationId),
         )
       : null
 
@@ -492,7 +531,7 @@ export const LeadershipCouncilPage: React.FC = () => {
     return () => {
       unsubscribers.forEach((unsubscribe) => unsubscribe())
     }
-  }, [profile?.companyId, assignmentsRetryKey, directAssignmentIds.ambassadorId, directAssignmentIds.mentorId])
+  }, [assignmentsRetryKey, directAssignmentIds.ambassadorId, directAssignmentIds.mentorId, resolvedOrganizationId])
 
   useEffect(() => {
     setPartnerLoading(true)
@@ -539,9 +578,9 @@ export const LeadershipCouncilPage: React.FC = () => {
       )
     }
 
-    if (!profile?.companyId) {
+    if (!resolvedOrganizationId) {
       setPartnerProfile(null)
-      setPartnerError('Your organization is not assigned yet. Please contact your administrator.')
+      setPartnerError(organizationValidation?.message || 'Your organization is not assigned yet. Please contact your administrator.')
       setPartnerLoading(false)
       return () => {
         if (timeoutId) clearTimeout(timeoutId)
@@ -559,7 +598,13 @@ export const LeadershipCouncilPage: React.FC = () => {
           return
         }
         const companyData = snapshot.data() as { transformation_partner_id?: string | null }
-        const partnerId = companyData.transformation_partner_id || 'primary'
+        if (!companyData.transformation_partner_id) {
+          setPartnerProfile(null)
+          setPartnerError('Transformation partner assignment is missing for your organization.')
+          setPartnerLoading(false)
+          return
+        }
+        const partnerId = companyData.transformation_partner_id
         subscribeToPartner(partnerId, true)
       },
       (error) => {
@@ -574,7 +619,7 @@ export const LeadershipCouncilPage: React.FC = () => {
       if (unsubscribePartner) unsubscribePartner()
       if (unsubscribeCompany) unsubscribeCompany()
     }
-  }, [partnerRetryKey, schedulePartnerRetry, profile?.companyId])
+  }, [organizationValidation?.message, partnerRetryKey, resolvedOrganizationId, schedulePartnerRetry])
 
   useEffect(() => {
     const unsubscribe = loadSessions()
