@@ -1,4 +1,5 @@
 import type { Timestamp } from 'firebase/firestore'
+import type { JourneyType } from '@/config/pointsConfig'
 
 export interface AdminActivityLogEntry {
   id: string
@@ -28,11 +29,17 @@ export interface OrganizationRecord {
   id?: string
   name: string
   code: string
+  /**
+   * Cohort size and paid license count.
+   */
   teamSize?: number
   status: OrganizationStatus
   transformationPartner?: string
   createdAt?: Timestamp | string | Date
   updatedAt?: Timestamp | string | Date
+  organizationJourneyType?: JourneyType
+  lastJourneyTypeSync?: Timestamp | string | Date
+  journeyTypeSyncStatus?: 'idle' | 'pending' | 'completed' | 'failed'
   village?: string
   cluster?: string
   programStart?: string
@@ -202,6 +209,9 @@ export interface OrganizationDetailView {
   name: string
   code: string
   status: OrganizationDetailStatus
+  /**
+   * Cohort size and paid license count.
+   */
   teamSize?: number
   village?: string
   cluster?: string

@@ -1,6 +1,7 @@
 // Import and re-export role types and values
 import { UserRole, ALL_STANDARD_ROLES } from './roles';
 import type { StandardRole, AllRoles } from './roles';
+import type { JourneyType } from '@/config/pointsConfig'
 export * from './admin'
 export * from './tutorials'
 
@@ -133,6 +134,9 @@ export interface Organization {
   memberCount: number
   settings?: Record<string, unknown>
   transformation_partner_id?: string | null
+  organizationJourneyType?: JourneyType
+  lastJourneyTypeSync?: string
+  journeyTypeSyncStatus?: 'idle' | 'pending' | 'completed' | 'failed'
 }
 
 export interface PrivacySettings {
@@ -140,8 +144,6 @@ export interface PrivacySettings {
   allowPeerMatching: boolean
   shareImpactPublicly: boolean
 }
-
-import { JourneyType } from "@/config/pointsConfig";
 
 export interface Journey {
   id: string
