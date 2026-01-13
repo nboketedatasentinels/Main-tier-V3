@@ -36,9 +36,8 @@ import { ConfirmationDialog } from '@/components/super-admin/ConfirmationDialog'
 import { OrganizationDetailsModal } from '@/components/super-admin/OrganizationDetailsModal'
 import { EditOrganizationModal } from '@/components/super-admin/EditOrganizationModal'
 import { CreateOrganizationModal } from '@/components/super-admin/CreateOrganizationModal'
-import { fetchPartners } from '@/services/organizationService'
+import { assignPartnerToOrganization, fetchPartners, unassignLeadershipRole } from '@/services/organizationService'
 import {
-  assignPartner,
   deleteOrganization,
   fetchOrganizationMemberStats,
   fetchOrganizations,
@@ -46,7 +45,7 @@ import {
 } from '@/services/superAdminService'
 import { OrganizationLead, OrganizationMemberStats, OrganizationRecord } from '@/types/admin'
 
-type SortKey = keyof Pick<OrganizationRecord, 'name' | 'code' | 'teamSize' | 'status' | 'transformationPartner'>
+type SortKey = 'name' | 'code' | 'teamSize' | 'status' | 'partnerName'
 
 type OrganizationManagementPageProps = {
   adminName: string
@@ -161,17 +160,25 @@ export const OrganizationManagementPage: React.FC<OrganizationManagementPageProp
     confirmDialog.onClose()
   }
 
-  const handleAssignPartner = async (partnerName: string) => {
+  const handleAssignPartner = async (partnerId: string | null) => {
     if (!selectedOrg?.id) return
-    await assignPartner(selectedOrg.id, partnerName)
-    setOrganizations((prev) => prev.map((org) => (org.id === selectedOrg.id ? { ...org, transformationPartner: partnerName } : org)))
+    if (partnerId) {
+      await assignPartnerToOrganization(selectedOrg.id, partnerId)
+    } else {
+      await unassignLeadershipRole(selectedOrg.id, 'partner')
+    }
+    setOrganizations((prev) =>
+      prev.map((org) =>
+        org.id === selectedOrg.id ? { ...org, transformationPartnerId: partnerId } : org,
+      ),
+    )
     await logAdminAction({
       action: 'Partner assignment updated',
       organizationName: selectedOrg.name,
       organizationCode: selectedOrg.code,
       adminId,
       adminName,
-      metadata: { partnerName },
+      metadata: { partnerId },
     })
     toast({ title: 'Partner updated', status: 'success' })
     assignModal.onClose()
@@ -187,6 +194,10 @@ export const OrganizationManagementPage: React.FC<OrganizationManagementPageProp
     )
   }, [organizations])
 
+  const partnerLookup = useMemo(() => {
+    return new Map(partners.map((partner) => [partner.id, partner.name]))
+  }, [partners])
+
   const filteredOrganizations = useMemo(() => {
     return organizations.filter((org) => {
       const matchesSearch = `${org.name} ${org.code} ${org.village || ''} ${org.cluster || ''}`
@@ -201,17 +212,23 @@ export const OrganizationManagementPage: React.FC<OrganizationManagementPageProp
 
   const sortedOrganizations = useMemo(() => {
     return [...filteredOrganizations].sort((a, b) => {
-      const aVal = a[sortKey] || ''
-      const bVal = b[sortKey] || ''
+      const aVal =
+        sortKey === 'partnerName'
+          ? partnerLookup.get(a.transformationPartnerId || '') || ''
+          : a[sortKey as keyof OrganizationRecord] || ''
+      const bVal =
+        sortKey === 'partnerName'
+          ? partnerLookup.get(b.transformationPartnerId || '') || ''
+          : b[sortKey as keyof OrganizationRecord] || ''
       if (aVal === bVal) return 0
       if (sortDir === 'asc') return aVal > bVal ? 1 : -1
       return aVal < bVal ? 1 : -1
     })
-  }, [filteredOrganizations, sortDir, sortKey])
+  }, [filteredOrganizations, partnerLookup, sortDir, sortKey])
 
   const partnerAssignmentCounts = useMemo(() => {
     return organizations.reduce((acc, org) => {
-      const key = (org.assignedPartnerName || org.transformationPartner || '').trim()
+      const key = (org.transformationPartnerId || '').trim()
       if (key) {
         acc[key] = (acc[key] || 0) + 1
       }
@@ -349,7 +366,9 @@ export const OrganizationManagementPage: React.FC<OrganizationManagementPageProp
                         </Th>
                         <Th>Team size</Th>
                         <Th>Status</Th>
-                        <Th>Transformation partner</Th>
+                        <Th cursor="pointer" onClick={() => handleSort('partnerName')}>
+                          Transformation partner
+                        </Th>
                         <Th>Created</Th>
                       </Tr>
                     </Thead>
@@ -383,7 +402,7 @@ export const OrganizationManagementPage: React.FC<OrganizationManagementPageProp
                             <Td>{org.code}</Td>
                             <Td>{org.teamSize || 0}</Td>
                             <Td>{renderStatusBadge(org.status)}</Td>
-                            <Td>{org.transformationPartner || 'Unassigned'}</Td>
+                            <Td>{partnerLookup.get(org.transformationPartnerId || '') || 'Unassigned'}</Td>
                             <Td>{createdAt}</Td>
                           </Tr>
                         )

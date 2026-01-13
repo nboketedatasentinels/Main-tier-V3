@@ -8,6 +8,7 @@ import {
   fetchOrganizationUsers,
   logOrganizationAccessAttempt,
 } from '@/services/organizationService'
+import { fetchUserProfileById } from '@/services/userProfileService'
 import type {
   OrganizationAccountStatusFilter,
   OrganizationDetailView,
@@ -46,7 +47,11 @@ const buildDetailView = (organization: {
   description?: string
   createdAt?: string | Date | { toDate?: () => Date }
   updatedAt?: string | Date | { toDate?: () => Date }
-  transformationPartner?: string
+  transformationPartnerId?: string | null
+  leadershipUpdatedAt?: string | Date | { toDate?: () => Date }
+  leadershipUpdatedBy?: string
+  assignedMentorId?: string | null
+  assignedAmbassadorId?: string | null
   assignedMentorName?: string | null
   assignedMentorEmail?: string | null
   assignedAmbassadorName?: string | null
@@ -67,7 +72,11 @@ const buildDetailView = (organization: {
   cohortStartDate: normalizeDate(organization.cohortStartDate as string | Date | undefined),
   programDuration: organization.programDuration,
   description: organization.description,
-  transformationPartner: organization.transformationPartner,
+  transformationPartnerId: organization.transformationPartnerId ?? null,
+  leadershipUpdatedAt: normalizeDate(organization.leadershipUpdatedAt as string | Date | undefined),
+  leadershipUpdatedBy: organization.leadershipUpdatedBy,
+  assignedMentorId: organization.assignedMentorId ?? null,
+  assignedAmbassadorId: organization.assignedAmbassadorId ?? null,
   assignedMentorName: organization.assignedMentorName ?? null,
   assignedMentorEmail: organization.assignedMentorEmail ?? null,
   assignedAmbassadorName: organization.assignedAmbassadorName ?? null,
@@ -147,10 +156,19 @@ export const useOrganizationDetails = (organizationId?: string) => {
       }
 
       const orgKey = orgRecord.id || organizationId
-      const [userList, stats] = await Promise.all([
+      const [userList, stats, mentorProfile, ambassadorProfile, partnerProfile] = await Promise.all([
         fetchOrganizationUsers(orgKey),
         fetchOrganizationEngagementStats(orgKey),
+        orgRecord.assignedMentorId ? fetchUserProfileById(orgRecord.assignedMentorId) : Promise.resolve(null),
+        orgRecord.assignedAmbassadorId ? fetchUserProfileById(orgRecord.assignedAmbassadorId) : Promise.resolve(null),
+        orgRecord.transformationPartnerId ? fetchUserProfileById(orgRecord.transformationPartnerId) : Promise.resolve(null),
       ])
+
+      const getDisplayName = (profile: typeof mentorProfile) => {
+        if (!profile) return null
+        const fullName = profile.fullName || `${profile.firstName ?? ''} ${profile.lastName ?? ''}`.trim()
+        return fullName || profile.email || null
+      }
 
       let titleList: string[] = []
       if (orgRecord.courseAssignments?.length) {
@@ -159,7 +177,17 @@ export const useOrganizationDetails = (organizationId?: string) => {
         titleList = orgRecord.courseAssignments.map((courseId) => courseMap.get(courseId) || courseId)
       }
 
-      setOrganization(buildDetailView(orgRecord))
+      setOrganization(
+        buildDetailView({
+          ...orgRecord,
+          assignedMentorName: getDisplayName(mentorProfile),
+          assignedMentorEmail: mentorProfile?.email ?? null,
+          assignedAmbassadorName: getDisplayName(ambassadorProfile),
+          assignedAmbassadorEmail: ambassadorProfile?.email ?? null,
+          assignedPartnerName: getDisplayName(partnerProfile),
+          assignedPartnerEmail: partnerProfile?.email ?? null,
+        }),
+      )
       setUsers(userList)
       setStatistics(stats)
       setCourseTitles(titleList)

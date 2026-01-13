@@ -317,7 +317,7 @@ export const OrganizationDetailPage: React.FC = () => {
                       <HStack justify="space-between">
                         <Text fontSize="sm" color="brand.subtleText">Transformation partner</Text>
                         <Text fontWeight="semibold" color="brand.text">
-                          {organization?.transformationPartner || 'Not assigned'}
+                          {organization?.assignedPartnerName || 'Not assigned'}
                         </Text>
                       </HStack>
                       <Divider />

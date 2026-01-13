@@ -41,6 +41,9 @@ import {
   ProgramDurationOption,
 } from '@/types/admin'
 import {
+  assignAmbassadorToOrganization,
+  assignMentorToOrganization,
+  assignPartnerToOrganization,
   determineClusterFromTeamSize,
   fetchAmbassadors,
   fetchAvailableCourses,
@@ -48,6 +51,7 @@ import {
   fetchOrganizationAssignments,
   fetchOrganizationDetails,
   fetchPartners,
+  unassignLeadershipRole,
 } from '@/services/organizationService'
 import { updateOrganization } from '@/services/superAdminService'
 import {
@@ -174,7 +178,7 @@ export const EditOrganizationModal: React.FC<EditOrganizationModalProps> = ({
 
   const buildPartnerLabel = (item: OrganizationLead) => {
     const emailSuffix = item.email ? ` — ${item.email}` : ''
-    const assignmentCount = partnerAssignmentCounts?.[item.name] ?? 0
+    const assignmentCount = partnerAssignmentCounts?.[item.id] ?? 0
     const countSuffix = assignmentCount > 1 ? ` • ${assignmentCount} orgs` : ''
     return `${item.name}${emailSuffix}${countSuffix}`
   }
@@ -314,7 +318,13 @@ export const EditOrganizationModal: React.FC<EditOrganizationModalProps> = ({
 
       setIsSubmitting(true)
       const assignmentArray = getAssignedCourseIdsFromMonthlyAssignments(monthlyAssignments, courseLimit)
-      const { id: _id, ...payload } = form
+      const {
+        id: _id,
+        assignedMentorId,
+        assignedAmbassadorId,
+        transformationPartnerId,
+        ...payload
+      } = form
       await updateOrganization(organization.id, {
         ...payload,
         code: form.code.toUpperCase(),
@@ -322,6 +332,31 @@ export const EditOrganizationModal: React.FC<EditOrganizationModalProps> = ({
         monthlyCourseAssignments: monthlyAssignments,
         courseAssignmentStructure: 'monthly',
       })
+      const leadershipTasks: Array<Promise<void>> = []
+      if (assignedMentorId !== organization.assignedMentorId) {
+        leadershipTasks.push(
+          assignedMentorId
+            ? assignMentorToOrganization(organization.id, assignedMentorId)
+            : unassignLeadershipRole(organization.id, 'mentor'),
+        )
+      }
+      if (assignedAmbassadorId !== organization.assignedAmbassadorId) {
+        leadershipTasks.push(
+          assignedAmbassadorId
+            ? assignAmbassadorToOrganization(organization.id, assignedAmbassadorId)
+            : unassignLeadershipRole(organization.id, 'ambassador'),
+        )
+      }
+      if (transformationPartnerId !== organization.transformationPartnerId) {
+        leadershipTasks.push(
+          transformationPartnerId
+            ? assignPartnerToOrganization(organization.id, transformationPartnerId)
+            : unassignLeadershipRole(organization.id, 'partner'),
+        )
+      }
+      if (leadershipTasks.length) {
+        await Promise.all(leadershipTasks)
+      }
       toast({ title: 'Organization updated successfully', status: 'success' })
       onUpdated?.({ ...form, id: organization.id })
       onClose()
@@ -460,13 +495,10 @@ export const EditOrganizationModal: React.FC<EditOrganizationModalProps> = ({
                     />
                     <Select
                       placeholder="Select partner"
-                      value={form.assignedPartnerId || ''}
+                      value={form.transformationPartnerId || ''}
                       onChange={(e) => {
                         const selectedId = e.target.value
-                        const partner = partners.find((item) => item.id === selectedId)
-                        updateField('assignedPartnerId', selectedId || null)
-                        updateField('assignedPartnerName', partner?.name || null)
-                        updateField('assignedPartnerEmail', partner?.email || null)
+                        updateField('transformationPartnerId', selectedId || null)
                       }}
                     >
                       <option value="">— No partner —</option>
@@ -658,8 +690,6 @@ export const EditOrganizationModal: React.FC<EditOrganizationModalProps> = ({
                       onChange={(e) => {
                         const mentor = mentors.find((m) => m.id === e.target.value)
                         updateField('assignedMentorId', mentor?.id || null)
-                        updateField('assignedMentorName', mentor?.name || null)
-                        updateField('assignedMentorEmail', mentor?.email || null)
                       }}
                     >
                       {mentors.map((mentor) => (
@@ -679,8 +709,6 @@ export const EditOrganizationModal: React.FC<EditOrganizationModalProps> = ({
                       onChange={(e) => {
                         const ambassador = ambassadors.find((m) => m.id === e.target.value)
                         updateField('assignedAmbassadorId', ambassador?.id || null)
-                        updateField('assignedAmbassadorName', ambassador?.name || null)
-                        updateField('assignedAmbassadorEmail', ambassador?.email || null)
                       }}
                     >
                       {ambassadors.map((ambassador) => (

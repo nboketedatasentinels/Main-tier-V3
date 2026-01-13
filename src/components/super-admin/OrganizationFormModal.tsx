@@ -41,13 +41,12 @@ const defaultOrg: OrganizationRecord = {
   code: '',
   status: 'pending',
   teamSize: 10,
-  transformationPartner: '',
   village: '',
   cluster: '',
   programStart: '',
   programEnd: '',
   assignmentCount: 0,
-  partnerId: null,
+  transformationPartnerId: null,
 }
 
 export const OrganizationFormModal: React.FC<Props> = ({
@@ -115,10 +114,7 @@ export const OrganizationFormModal: React.FC<Props> = ({
     })
   }, [partnerSearch, sortedPartners])
 
-  const selectedPartnerId =
-    form.partnerId ||
-    partners.find((item) => item.name === form.transformationPartner)?.id ||
-    ''
+  const selectedPartnerId = form.transformationPartnerId || ''
 
   const buildPartnerLabel = (item: OrganizationLead) => {
     const emailSuffix = item.email ? ` — ${item.email}` : ''
@@ -229,9 +225,7 @@ export const OrganizationFormModal: React.FC<Props> = ({
                 value={selectedPartnerId}
                 onChange={(e) => {
                   const selectedId = e.target.value
-                  const selectedPartner = partners.find((item) => item.id === selectedId)
-                  handleChange('partnerId', selectedId || null)
-                  handleChange('transformationPartner', selectedPartner?.name || '')
+                  handleChange('transformationPartnerId', selectedId || null)
                 }}
                 placeholder="Select partner"
                 isDisabled={isLoadingPartners}

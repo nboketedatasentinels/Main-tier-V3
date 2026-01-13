@@ -34,9 +34,10 @@ export interface OrganizationRecord {
    */
   teamSize?: number
   status: OrganizationStatus
-  transformationPartner?: string
   createdAt?: Timestamp | string | Date
   updatedAt?: Timestamp | string | Date
+  leadershipUpdatedAt?: Timestamp | string | Date
+  leadershipUpdatedBy?: string
   organizationJourneyType?: JourneyType
   lastJourneyTypeSync?: Timestamp | string | Date
   journeyTypeSyncStatus?: 'idle' | 'pending' | 'completed' | 'failed'
@@ -45,7 +46,6 @@ export interface OrganizationRecord {
   programStart?: string
   programEnd?: string
   assignmentCount?: number
-  partnerId?: string | null
   cohortStartDate?: Timestamp | string | Date
   programDuration?: number
   programDurationWeeks?: number
@@ -55,14 +55,8 @@ export interface OrganizationRecord {
   courseAssignmentStructure?: 'monthly' | 'array'
   description?: string
   assignedMentorId?: string | null
-  assignedMentorName?: string | null
-  assignedMentorEmail?: string | null
   assignedAmbassadorId?: string | null
-  assignedAmbassadorName?: string | null
-  assignedAmbassadorEmail?: string | null
-  assignedPartnerId?: string | null
-  assignedPartnerName?: string | null
-  assignedPartnerEmail?: string | null
+  transformationPartnerId?: string | null
 }
 
 export interface OrganizationMemberStats {
@@ -224,7 +218,11 @@ export interface OrganizationDetailView {
   programDurationWeeks?: number
   journeyType?: JourneyType
   description?: string
-  transformationPartner?: string
+  transformationPartnerId?: string | null
+  leadershipUpdatedAt?: string
+  leadershipUpdatedBy?: string
+  assignedMentorId?: string | null
+  assignedAmbassadorId?: string | null
   assignedMentorName?: string | null
   assignedMentorEmail?: string | null
   assignedAmbassadorName?: string | null

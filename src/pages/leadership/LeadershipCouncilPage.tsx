@@ -41,24 +41,14 @@ import {
   VStack,
 } from '@chakra-ui/react'
 import { Building2, Calendar, Download, Eye, ExternalLink, RefreshCcw, Shield, Timer, User, UserCircle2, Users } from 'lucide-react'
-import {
-  Timestamp,
-  addDoc,
-  collection,
-  doc,
-  getDoc,
-  onSnapshot,
-  orderBy,
-  query,
-  serverTimestamp,
-  where,
-} from 'firebase/firestore'
+import { Timestamp, addDoc, collection, onSnapshot, orderBy, query, serverTimestamp, where } from 'firebase/firestore'
 import { format, formatDistanceToNow, isAfter, isValid, parseISO } from 'date-fns'
 import { db } from '@/services/firebase'
 import { useAuth } from '@/hooks/useAuth'
-import { UserProfile } from '@/types'
+import { useOrganizationLeadership } from '@/hooks/useOrganizationLeadership'
+import type { UserProfileExtended } from '@/services/userProfileService'
 
-interface LeadershipProfile extends UserProfile {
+interface LeadershipProfile extends UserProfileExtended {
   availabilityStatus?: string
   companyCode?: string
   companyName?: string
@@ -84,13 +74,9 @@ interface MentorshipSession {
   createdAt?: Date
 }
 
-interface PartnerProfile {
-  id: string
-  name: string
+interface PartnerProfile extends UserProfileExtended {
   title?: string
   bio?: string
-  email?: string
-  timezone?: string
   rating?: number
   ratingCount?: number
   sessionsConducted?: number
@@ -99,7 +85,6 @@ interface PartnerProfile {
   expertise?: string[]
   hobbies?: string[]
   funFact?: string
-  avatarUrl?: string
   officeLocation?: string
   xp?: number
   favoritePillar?: string
@@ -119,6 +104,12 @@ const initialsFromName = (name: string) => {
   return `${first.charAt(0)}${last.charAt(0)}`.toUpperCase()
 }
 
+const displayNameForProfile = (profile?: UserProfileExtended | null) => {
+  if (!profile) return 'Unknown'
+  const fullName = profile.fullName || `${profile.firstName ?? ''} ${profile.lastName ?? ''}`.trim()
+  return fullName || profile.email || 'Unknown'
+}
+
 const badgeColor = (status?: string) => {
   if (!status) return 'secondary'
   const value = status.toLowerCase()
@@ -132,24 +123,14 @@ export const LeadershipCouncilPage: React.FC = () => {
   const { profile, user } = useAuth()
   const toast = useToast()
 
-  const [mentorProfile, setMentorProfile] = useState<LeadershipProfile | null>(null)
-  const [ambassadorProfile, setAmbassadorProfile] = useState<LeadershipProfile | null>(null)
-  const [partnerProfile, setPartnerProfile] = useState<PartnerProfile | null>(null)
-  const [assignmentsLoading, setAssignmentsLoading] = useState(false)
-  const [assignmentsError, setAssignmentsError] = useState<string | null>(null)
-  const [partnerLoading, setPartnerLoading] = useState(true)
-  const [partnerError, setPartnerError] = useState<string | null>(null)
-  const [assignmentsRetryKey, setAssignmentsRetryKey] = useState(0)
-  const [partnerRetryKey, setPartnerRetryKey] = useState(0)
-  const [resolvedAssignmentIds, setResolvedAssignmentIds] = useState<{
-    mentorId: string | null
-    ambassadorId: string | null
-    partnerId: string | null
-  }>({
-    mentorId: null,
-    ambassadorId: null,
-    partnerId: null,
-  })
+  const { profiles, errors, loading: assignmentsLoading, refresh } = useOrganizationLeadership(profile?.companyId)
+  const mentorProfile = profiles.mentor as LeadershipProfile | null
+  const ambassadorProfile = profiles.ambassador as LeadershipProfile | null
+  const partnerProfile = profiles.partner as PartnerProfile | null
+  const mentorError = errors.organization || errors.mentor
+  const ambassadorError = errors.organization || errors.ambassador
+  const partnerError = errors.organization || errors.partner
+  const partnerLoading = assignmentsLoading
 
   const [sessions, setSessions] = useState<MentorshipSession[]>([])
   const [sessionsLoading, setSessionsLoading] = useState(false)
@@ -169,12 +150,8 @@ export const LeadershipCouncilPage: React.FC = () => {
   const hasOrganization = Boolean(profile?.companyId)
 
   const retryAssignments = useCallback(() => {
-    setAssignmentsRetryKey((prev) => prev + 1)
-  }, [])
-
-  const schedulePartnerRetry = useCallback(() => {
-    setPartnerRetryKey((prev) => prev + 1)
-  }, [])
+    refresh()
+  }, [refresh])
 
   const loadSessions = useCallback(() => {
     if (!profile?.id) return () => undefined
@@ -227,131 +204,6 @@ export const LeadershipCouncilPage: React.FC = () => {
 
     return unsubscribe
   }, [profile?.id])
-
-  useEffect(() => {
-    if (!profile?.companyId) {
-      setResolvedAssignmentIds({ mentorId: null, ambassadorId: null, partnerId: null })
-      setAssignmentsLoading(false)
-      setAssignmentsError(null)
-      return () => undefined
-    }
-
-    setAssignmentsLoading(true)
-    setAssignmentsError(null)
-
-    const organizationRef = doc(db, 'organizations', profile.companyId)
-    const unsubscribe = onSnapshot(
-      organizationRef,
-      (snapshot) => {
-        if (!snapshot.exists()) {
-          setAssignmentsError('Organization not found')
-          setResolvedAssignmentIds({ mentorId: null, ambassadorId: null, partnerId: null })
-          setAssignmentsLoading(false)
-          return
-        }
-        const data = snapshot.data() as {
-          assignedMentorId?: string | null
-          assignedAmbassadorId?: string | null
-          transformationPartnerId?: string | null
-        }
-        setResolvedAssignmentIds({
-          mentorId: data.assignedMentorId ?? null,
-          ambassadorId: data.assignedAmbassadorId ?? null,
-          partnerId: data.transformationPartnerId ?? null,
-        })
-        setAssignmentsLoading(false)
-      },
-      (error) => {
-        console.error(error)
-        setAssignmentsError('Failed to load organization leadership')
-        setAssignmentsLoading(false)
-      },
-    )
-
-    return () => {
-      unsubscribe()
-    }
-  }, [profile?.companyId, assignmentsRetryKey])
-
-  useEffect(() => {
-    const { mentorId, ambassadorId } = resolvedAssignmentIds
-
-    if (!mentorId && !ambassadorId) {
-      setMentorProfile(null)
-      setAmbassadorProfile(null)
-      return
-    }
-
-    setAssignmentsLoading(true)
-    setAssignmentsError(null)
-
-    const fetchProfiles = async () => {
-      try {
-        if (mentorId) {
-          const mentorSnap = await getDoc(doc(db, 'profiles', mentorId))
-          const mentorData = mentorSnap.data() as LeadershipProfile | undefined
-          setMentorProfile(
-            mentorSnap.exists() && mentorData
-              ? {
-                  ...mentorData,
-                  id: mentorSnap.id,
-                  fullName: mentorData.fullName || `${mentorData.firstName} ${mentorData.lastName}`.trim(),
-                }
-              : null,
-          )
-        } else {
-          setMentorProfile(null)
-        }
-
-        if (ambassadorId) {
-          const ambassadorSnap = await getDoc(doc(db, 'profiles', ambassadorId))
-          const ambassadorData = ambassadorSnap.data() as LeadershipProfile | undefined
-          setAmbassadorProfile(
-            ambassadorSnap.exists() && ambassadorData
-              ? {
-                  ...ambassadorData,
-                  id: ambassadorSnap.id,
-                  fullName: ambassadorData.fullName || `${ambassadorData.firstName} ${ambassadorData.lastName}`.trim(),
-                }
-              : null,
-          )
-        } else {
-          setAmbassadorProfile(null)
-        }
-      } catch (error) {
-        console.error(error)
-        setAssignmentsError('Failed to load leadership profiles')
-      } finally {
-        setAssignmentsLoading(false)
-      }
-    }
-
-    fetchProfiles()
-  }, [resolvedAssignmentIds, assignmentsRetryKey])
-
-  useEffect(() => {
-    const { partnerId } = resolvedAssignmentIds
-
-    if (!partnerId) {
-      setPartnerProfile(null)
-      setPartnerLoading(false)
-      return
-    }
-
-    setPartnerLoading(true)
-    setPartnerError(null)
-
-    getDoc(doc(db, 'profiles', partnerId))
-      .then((snapshot) => {
-        const partnerData = snapshot.data() as PartnerProfile | undefined
-        setPartnerProfile(snapshot.exists() && partnerData ? { ...partnerData, id: snapshot.id } : null)
-      })
-      .catch((error) => {
-        console.error(error)
-        setPartnerError('Failed to load transformation partner')
-      })
-      .finally(() => setPartnerLoading(false))
-  }, [resolvedAssignmentIds, partnerRetryKey])
 
   useEffect(() => {
     const unsubscribe = loadSessions()
@@ -578,12 +430,12 @@ export const LeadershipCouncilPage: React.FC = () => {
                   </Flex>
                 )}
 
-                {assignmentsError && (
+                {mentorError && (
                   <Alert status="error" rounded="lg" mb={4}>
                     <AlertIcon />
                     <Box>
                       <AlertTitle>We couldn't load your mentor right now.</AlertTitle>
-                      <AlertDescription>{assignmentsError}</AlertDescription>
+                      <AlertDescription>{mentorError}</AlertDescription>
                     </Box>
                     <Button size="sm" leftIcon={<RefreshCcw size={16} />} ml={4} onClick={retryAssignments}>
                       Try again
@@ -591,7 +443,7 @@ export const LeadershipCouncilPage: React.FC = () => {
                   </Alert>
                 )}
 
-                {!assignmentsLoading && !mentorProfile && !assignmentsError && (
+                {!assignmentsLoading && !mentorProfile && !mentorError && (
                   <Flex direction="column" align="center" textAlign="center" p={6} gap={3}>
                     <Icon as={User} boxSize={10} color="text.muted" />
                     <Heading size="sm">No mentor assigned yet</Heading>
@@ -720,12 +572,12 @@ export const LeadershipCouncilPage: React.FC = () => {
                   </Flex>
                 )}
 
-                {assignmentsError && (
+                {ambassadorError && (
                   <Alert status="warning" rounded="lg" mb={4}>
                     <AlertIcon />
                     <Box>
                       <AlertTitle>We couldn't load your ambassador right now.</AlertTitle>
-                      <AlertDescription>{assignmentsError}</AlertDescription>
+                      <AlertDescription>{ambassadorError}</AlertDescription>
                     </Box>
                     <Button size="sm" leftIcon={<RefreshCcw size={16} />} ml={4} onClick={retryAssignments}>
                       Try again
@@ -733,7 +585,7 @@ export const LeadershipCouncilPage: React.FC = () => {
                   </Alert>
                 )}
 
-                {!assignmentsLoading && !ambassadorProfile && !assignmentsError && (
+                {!assignmentsLoading && !ambassadorProfile && !ambassadorError && (
                   <Flex direction="column" align="center" textAlign="center" p={6} gap={3}>
                     <Icon as={User} boxSize={10} color="text.muted" />
                     <Heading size="sm">No ambassador assigned yet</Heading>
@@ -803,11 +655,16 @@ export const LeadershipCouncilPage: React.FC = () => {
                   <Stack spacing={4}>
                     <HStack justify="space-between" align="start" spacing={4} flexWrap="wrap">
                       <HStack spacing={3} align="start">
-                        <Avatar size="lg" name={partnerProfile.name} src={partnerProfile.avatarUrl} bg="brand.primary">
-                          {!partnerProfile.avatarUrl && initialsFromName(partnerProfile.name)}
+                        <Avatar
+                          size="lg"
+                          name={displayNameForProfile(partnerProfile)}
+                          src={partnerProfile.avatarUrl}
+                          bg="brand.primary"
+                        >
+                          {!partnerProfile.avatarUrl && initialsFromName(displayNameForProfile(partnerProfile))}
                         </Avatar>
                         <Box>
-                          <Heading size="sm">{partnerProfile.name}</Heading>
+                          <Heading size="sm">{displayNameForProfile(partnerProfile)}</Heading>
                           <Text color="text.secondary">{partnerProfile.title || 'Transformation Partner'}</Text>
                           <Text color="text.muted" fontSize="sm">
                             {partnerProfile.officeLocation || partnerProfile.timezone || 'Global support'}
@@ -903,7 +760,7 @@ export const LeadershipCouncilPage: React.FC = () => {
                     <Text color="text.secondary">
                       {partnerError || 'Your transformation partner profile is not set up yet. Please contact your administrator for support.'}
                     </Text>
-                    <Button size="sm" leftIcon={<RefreshCcw size={16} />} onClick={schedulePartnerRetry}>
+                    <Button size="sm" leftIcon={<RefreshCcw size={16} />} onClick={retryAssignments}>
                       Try again
                     </Button>
                   </Flex>

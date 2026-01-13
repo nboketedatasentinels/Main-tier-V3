@@ -181,10 +181,7 @@ export const OrganizationDetailsModal: React.FC<Props> = ({
                   <Text fontWeight="bold" color="brand.text">
                     Leadership team
                   </Text>
-                  <InfoItem
-                    label="Transformation partner"
-                    value={organization.assignedPartnerName || organization.transformationPartner || '—'}
-                  />
+                  <InfoItem label="Transformation partner" value={organization.assignedPartnerName || '—'} />
                   <InfoItem label="Partner email" value={organization.assignedPartnerEmail || '—'} />
                   <InfoItem label="Mentor" value={organization.assignedMentorName || organization.assignedMentorEmail || '—'} />
                   <InfoItem label="Mentor email" value={organization.assignedMentorEmail || '—'} />

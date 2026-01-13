@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import {
   Timestamp,
   collection,
@@ -14,11 +14,12 @@ import {
 } from 'firebase/firestore'
 import { db } from '@/services/firebase'
 import { useAuth } from '@/hooks/useAuth'
+import { useOrganizationLeadership } from '@/hooks/useOrganizationLeadership'
 import { getCurrentWeekNumber, getWeekKey } from '@/utils/weekCalculations'
 import { JOURNEY_META, getMonthNumber } from '@/config/pointsConfig'
 import { InspirationQuote } from '@/types'
 import { leadershipQuotes } from '@/services/quotes'
-import { fetchUserProfileById, UserProfileExtended } from '@/services/userProfileService'
+import { UserProfileExtended } from '@/services/userProfileService'
 import type { WeeklyProgress } from '@/types'
 
 export interface WeeklyPoints {
@@ -93,7 +94,6 @@ export const useWeeklyGlanceData = () => {
   const [weeklyHabits, setWeeklyHabits] = useState<WeeklyHabit[]>([])
   const [inspirationQuote, setInspirationQuote] = useState<InspirationQuote | null>(null)
   const [impactCount, setImpactCount] = useState<number>(0)
-  const profileCache = useRef<Map<string, UserProfileExtended | null>>(new Map())
   const [loading, setLoading] = useState<WeeklyGlanceLoadingState>({
     points: true,
     support: true,
@@ -104,6 +104,12 @@ export const useWeeklyGlanceData = () => {
     impact: true,
   })
   const [errors, setErrors] = useState<WeeklyGlanceErrorState>({})
+  const {
+    assignments: leadershipAssignments,
+    profiles: leadershipProfiles,
+    errors: leadershipErrors,
+    loading: leadershipLoading,
+  } = useOrganizationLeadership(profile?.companyId)
 
   const calendarWeekNumber = useMemo(() => getCurrentWeekNumber(), [])
   const weekNumber = useMemo(
@@ -234,120 +240,41 @@ export const useWeeklyGlanceData = () => {
   }, [profile?.id, profile?.journeyType, weekNumber])
 
   useEffect(() => {
-    if (!profile?.id) return
-    setLoading(prev => ({ ...prev, support: true }))
-    let isActive = true
-    let didReceiveSnapshot = false
+    setLoading(prev => ({ ...prev, support: leadershipLoading }))
+  }, [leadershipLoading])
 
-    const supportRef = doc(db, 'support_assignments', profile.id)
-    const supportQuery = query(collection(db, 'support_assignments'), where('user_id', '==', profile.id))
-    const fallbackTimeout = setTimeout(() => {
-      if (isActive && !didReceiveSnapshot) {
-        setLoading(prev => ({ ...prev, support: false }))
-      }
-    }, 5000)
+  useEffect(() => {
+    setErrors(prev => ({
+      ...prev,
+      support: leadershipErrors.organization ? new Error(leadershipErrors.organization) : undefined,
+    }))
+  }, [leadershipErrors.organization])
 
-    const handleSnapshot = async (
-      snapshot: any,
-      options: { docIdFallback?: string; allowFallback?: boolean } = {},
-    ) => {
-      const docData = snapshot?.docs ? snapshot.docs[0] : snapshot
-      const hasDoc = Boolean(docData) && !(docData.exists ? !docData.exists() : false)
-      if (!hasDoc && options.allowFallback) {
-        return
-      }
-      didReceiveSnapshot = true
-      clearTimeout(fallbackTimeout)
-      if (!isActive) return
-      if (!docData) {
-        setSupportAssignment(null)
-        setLoading(prev => ({ ...prev, support: false }))
-        return
-      }
-
-      const data = docData.data() as SupportAssignment
-      const mentorId = data.mentor_id
-      const ambassadorId = data.ambassador_id
-      const getCachedProfile = async (userId: string) => {
-        if (profileCache.current.has(userId)) {
-          return profileCache.current.get(userId) ?? null
-        }
-        const profile = await fetchUserProfileById(userId)
-        profileCache.current.set(userId, profile)
-        return profile
-      }
-
-      const [mentorResult, ambassadorResult] = await Promise.all([
-        mentorId
-          ? getCachedProfile(mentorId)
-              .then(profileData => ({
-                profile: profileData,
-                error: profileData ? undefined : 'Mentor profile not found',
-              }))
-              .catch(() => ({ profile: null, error: 'Unable to load mentor profile' }))
-          : Promise.resolve({ profile: null, error: undefined }),
-        ambassadorId
-          ? getCachedProfile(ambassadorId)
-              .then(profileData => ({
-                profile: profileData,
-                error: profileData ? undefined : 'Ambassador profile not found',
-              }))
-              .catch(() => ({ profile: null, error: 'Unable to load ambassador profile' }))
-          : Promise.resolve({ profile: null, error: undefined }),
-      ])
-
-      if (!isActive) return
-      setSupportAssignment({
-        ...data,
-        id: docData.id || options.docIdFallback || profile.id,
-        user_id: data.user_id || options.docIdFallback || profile.id,
-        mentorProfile: mentorResult.profile,
-        mentorProfileError: mentorResult.error,
-        ambassadorProfile: ambassadorResult.profile,
-        ambassadorProfileError: ambassadorResult.error,
-      })
-      setLoading(prev => ({ ...prev, support: false }))
+  useEffect(() => {
+    if (!profile?.id) {
+      setSupportAssignment(null)
+      return
     }
 
-    const unsubscribeById = onSnapshot(
-      supportRef,
-      snapshot => {
-        void handleSnapshot(snapshot, { docIdFallback: profile.id, allowFallback: true })
-      },
-      error => {
-        if (!isActive) return
-        setErrors(prev => ({ ...prev, support: error as Error }))
-        const errorCode = (error as { code?: string }).code
-        if (errorCode === 'permission-denied' || errorCode === 'not-found') {
-          didReceiveSnapshot = true
-          clearTimeout(fallbackTimeout)
-          setLoading(prev => ({ ...prev, support: false }))
-        }
-      },
-    )
-
-    const unsubscribeByQuery = onSnapshot(
-      supportQuery,
-      snapshot => {
-        if (didReceiveSnapshot) return
-        void handleSnapshot(snapshot)
-      },
-      error => {
-        didReceiveSnapshot = true
-        clearTimeout(fallbackTimeout)
-        if (!isActive) return
-        setErrors(prev => ({ ...prev, support: error as Error }))
-        setLoading(prev => ({ ...prev, support: false }))
-      },
-    )
-
-    return () => {
-      isActive = false
-      clearTimeout(fallbackTimeout)
-      unsubscribeById()
-      unsubscribeByQuery()
-    }
-  }, [profile?.id])
+    setSupportAssignment({
+      id: profile.id,
+      user_id: profile.id,
+      mentor_id: leadershipAssignments.mentorId,
+      ambassador_id: leadershipAssignments.ambassadorId,
+      mentorProfile: leadershipProfiles.mentor,
+      mentorProfileError: leadershipErrors.mentor,
+      ambassadorProfile: leadershipProfiles.ambassador,
+      ambassadorProfileError: leadershipErrors.ambassador,
+    })
+  }, [
+    leadershipAssignments.ambassadorId,
+    leadershipAssignments.mentorId,
+    leadershipErrors.ambassador,
+    leadershipErrors.mentor,
+    leadershipProfiles.ambassador,
+    leadershipProfiles.mentor,
+    profile?.id,
+  ])
 
   useEffect(() => {
     const fetchProfile = async () => {
