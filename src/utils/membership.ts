@@ -24,9 +24,9 @@ export const isComplementaryCourse = (courseTitle?: string | null, courseId?: st
   const normalizedTitle = normalizeCourseKey(courseTitle)
   const normalizedId = normalizeCourseKey(courseId)
   return (
-    (normalizedTitle &&
+    (Boolean(normalizedTitle) &&
       COMPLEMENTARY_COURSE_TITLES.some(title => normalizeCourseKey(title) === normalizedTitle)) ||
-    (normalizedId && COMPLEMENTARY_COURSE_IDS.some(id => normalizeCourseKey(id) === normalizedId))
+    (Boolean(normalizedId) && COMPLEMENTARY_COURSE_IDS.some(id => normalizeCourseKey(id) === normalizedId))
   )
 }
 

@@ -142,7 +142,7 @@ const formatName = (value: string) =>
     .map((segment) => segment.charAt(0).toUpperCase() + segment.slice(1))
     .join(' ')
 
-const normalizeMethodForEmail = (email: string, current: InviteDraft['method']) => {
+const normalizeMethodForEmail = (email: string, current: InviteDraft['method']): InviteDraft['method'] => {
   if (!email) return 'one_time_code'
   if (current === 'one_time_code') return 'email'
   return current

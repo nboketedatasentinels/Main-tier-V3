@@ -41,7 +41,7 @@ import {
   useDisclosure,
   useToast,
 } from '@chakra-ui/react'
-import { addDays, addHours, formatDistanceToNowStrict } from 'date-fns'
+import { addDays, addHours, format, formatDistanceToNowStrict } from 'date-fns'
 import {
   AlarmClockCheck,
   AlarmClockOff,
