@@ -117,7 +117,7 @@ const rewardTiers: RewardTier[] = [
   },
 ]
 
-export const ReferralRewardsPage: React.FC = () => {
+const ReferralRewardsPage: React.FC = () => {
   const { user, profile } = useAuth()
   const toast = useToast()
   const shareModal = useDisclosure()
@@ -649,11 +649,15 @@ export const ReferralRewardsPage: React.FC = () => {
       >
         <Stack spacing={4}>
           <HStack spacing={3}>
-            <Icon as={Rocket} />
-            <Text fontWeight="bold">Ready to Grow Your Crew?</Text>
+            <Icon as={Rocket} color="white" />
+            <Text fontWeight="bold" color="white">
+              Ready to Grow Your Crew?
+            </Text>
           </HStack>
-          <Heading size="md">Share your link and start building your community.</Heading>
-          <Text opacity={0.9} maxW="3xl">
+          <Heading size="md" color="white">
+            Share your link and start building your community.
+          </Heading>
+          <Text opacity={0.9} maxW="3xl" color="white">
             Invite friends, peers, or teammates to Transformation Tier. Each successful signup counts toward your next reward
             and helps expand our community of ambitious leaders.
           </Text>
@@ -723,3 +727,5 @@ export const ReferralRewardsPage: React.FC = () => {
     </Stack>
   )
 }
+
+export default ReferralRewardsPage

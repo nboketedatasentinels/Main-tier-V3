@@ -31,7 +31,7 @@ export const HeroSection: React.FC = () => {
           style={{ fontFamily: 'Poppins, Inter, system-ui, sans-serif' }}
         >
           Digital Transformation Doesn&apos;t Happen Alone.{' '}
-          <span className="text-[#F6D86B]">Even Beyoncé Has a Team.</span>
+          <span className="text-[#FFEAC2]">Even Beyoncé Has a Team.</span>
         </h1>
 
         <p

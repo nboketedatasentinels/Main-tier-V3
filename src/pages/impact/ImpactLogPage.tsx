@@ -69,6 +69,24 @@ import { format, isAfter, isBefore, startOfMonth, subMonths } from 'date-fns'
 import { db } from '@/services/firebase'
 import { useAuth } from '@/hooks/useAuth'
 import { ESGCategory } from '@/types'
+import {
+  BUSINESS_CATEGORY_HELPER_TEXT,
+  BUSINESS_PRIMARY_CATEGORIES,
+  BUSINESS_SECONDARY_WASTES,
+  DEFAULT_BUSINESS_WASTE,
+  ESG_CATEGORY_HELPER_TEXT,
+  businessCategoryRequiresWaste,
+  getActivityTypesForBusinessCategory,
+  getActivityTypesForEsgCategory,
+  getDefaultActivityTypeForCategory,
+  getLiftPillarsForSelection,
+  isActivityTypeAllowedForCategory,
+  isValidBusinessWaste,
+  toCanonicalActivityType,
+  type ActivityType,
+  type BusinessPrimaryCategory,
+  type BusinessSecondaryWaste,
+} from '@/config/impactLogMappings'
 import { isFreeUser } from '@/utils/membership'
 import { removeUndefinedFields } from '@/utils/firestore'
 import { JOURNEY_META, getActivitiesForJourney, getMonthNumber, type ActivityDef, type JourneyType } from '@/config/pointsConfig'
@@ -86,9 +104,9 @@ interface ImpactLogEntry {
   description: string
   categoryGroup: 'esg' | 'business'
   esgCategory?: ESGCategory
-  activityType?: string
-  businessCategory?: string
-  businessActivity?: string
+  activityType?: ActivityType | string
+  businessCategory?: BusinessPrimaryCategory
+  businessActivity?: BusinessSecondaryWaste | string
   liftPillars?: string[]
   date: string
   hours: number
@@ -112,37 +130,6 @@ interface ImpactLogEntry {
   scp: number
   verificationMultiplier: number
   createdAt: string
-}
-
-const esgActivities = [
-  'Workshop Delivered',
-  'Process Change',
-  'Coaching/Mentoring',
-  'Automation',
-  'Policy/Standard',
-  'Training Session',
-  'Community Outreach',
-  'Kaizen/Continuous Improvement',
-  'Pilot/MVP',
-  'Other',
-]
-
-const businessActivities = [
-  'Defects',
-  'Overproduction',
-  'Waiting',
-  'Non-Utilized Talent',
-  'Transportation',
-  'Inventory',
-  'Motion',
-  'Extra Processing',
-]
-
-const liftPillarColors: Record<string, string> = {
-  'Leading Self': 'purple',
-  'Fostering Teams': 'blue',
-  'Innovating with Tech': 'green',
-  'Transforming Business': 'orange',
 }
 
 type VerificationTier =
@@ -183,35 +170,20 @@ const verificationRequirements: Record<VerificationTier, { verifierEmail: boolea
 
 const basePoints = 500
 
-const getPillarsForActivity = (activity?: string): string[] => {
-  if (!activity) return []
-  const normalized = activity.toLowerCase()
-
-  if (normalized.includes('coaching') || normalized.includes('mentoring')) {
-    return ['Fostering Teams', 'Leading Self']
-  }
-
-  if (normalized.includes('automation') || normalized.includes('process')) {
-    return ['Innovating with Tech', 'Transforming Business']
-  }
-
-  if (normalized.includes('training') || normalized.includes('workshop')) {
-    return ['Fostering Teams', 'Leading Self']
-  }
-
-  if (normalized.includes('community') || normalized.includes('outreach')) {
-    return ['Fostering Teams']
-  }
-
-  return ['Transforming Business']
-}
-
 const formatCurrency = (value: number) =>
   value.toLocaleString('en-US', {
     style: 'currency',
     currency: 'USD',
     maximumFractionDigits: 0,
   })
+
+const formatCategoryLabel = (value?: string) => {
+  if (!value) return 'the selected category'
+  return value
+    .toString()
+    .replace(/_/g, ' ')
+    .replace(/\b\w/g, (char) => char.toUpperCase())
+}
 
 const buildCsv = (entries: ImpactLogEntry[]) => {
   const headers = [
@@ -287,14 +259,16 @@ export const ImpactLogPage: React.FC = () => {
   const [loading, setLoading] = useState(true)
   const [monthCursor, setMonthCursor] = useState<Date>(new Date())
   const [isExporting, setIsExporting] = useState(false)
+  const defaultEsgCategory = ESGCategory.ENVIRONMENTAL
+  const defaultBusinessCategory = BUSINESS_PRIMARY_CATEGORIES[0]
   const [formValues, setFormValues] = useState<Partial<ImpactLogEntry>>({
     title: '',
     description: '',
     categoryGroup: 'esg',
-    esgCategory: ESGCategory.ENVIRONMENTAL,
-    activityType: esgActivities[0],
-    businessCategory: 'Cost Savings',
-    businessActivity: businessActivities[0],
+    esgCategory: defaultEsgCategory,
+    activityType: getDefaultActivityTypeForCategory('esg', defaultEsgCategory),
+    businessCategory: defaultBusinessCategory,
+    businessActivity: DEFAULT_BUSINESS_WASTE,
     hours: 1,
     peopleImpacted: 0,
     usdValue: 0,
@@ -303,8 +277,88 @@ export const ImpactLogPage: React.FC = () => {
   })
   const isEsgActive = formValues.categoryGroup === 'esg'
   const isBusinessActive = formValues.categoryGroup === 'business'
+  const esgActivityOptions = useMemo(
+    () => getActivityTypesForEsgCategory(formValues.esgCategory),
+    [formValues.esgCategory],
+  )
+  const businessActivityOptions = useMemo(
+    () => getActivityTypesForBusinessCategory(formValues.businessCategory),
+    [formValues.businessCategory],
+  )
+  const activityTypeOptions = isEsgActive ? esgActivityOptions : businessActivityOptions
+  const activityTypeCategoryLabel = isEsgActive ? formValues.esgCategory : formValues.businessCategory
+  const isBusinessWasteRequired = businessCategoryRequiresWaste(formValues.businessCategory)
+  const liftPillars = useMemo(
+    () =>
+      getLiftPillarsForSelection({
+        categoryGroup: formValues.categoryGroup,
+        esgCategory: formValues.esgCategory,
+        businessCategory: formValues.businessCategory,
+        activityType: formValues.activityType,
+        businessActivity: formValues.businessActivity,
+      }),
+    [
+      formValues.activityType,
+      formValues.businessActivity,
+      formValues.businessCategory,
+      formValues.categoryGroup,
+      formValues.esgCategory,
+    ],
+  )
 
   const preview = useMemo(() => calculateImpactPreview(formValues), [formValues])
+
+  const handleCategoryGroupChange = (group: 'esg' | 'business') => {
+    setFormValues((prev) => {
+      if (group === 'esg') {
+        const nextEsgCategory = prev.esgCategory || defaultEsgCategory
+        return {
+          ...prev,
+          categoryGroup: 'esg',
+          esgCategory: nextEsgCategory,
+          activityType: getDefaultActivityTypeForCategory('esg', nextEsgCategory, prev.activityType),
+          businessCategory: undefined,
+          businessActivity: undefined,
+        }
+      }
+
+      const nextBusinessCategory = prev.businessCategory || defaultBusinessCategory
+      const requiresWaste = businessCategoryRequiresWaste(nextBusinessCategory)
+      return {
+        ...prev,
+        categoryGroup: 'business',
+        businessCategory: nextBusinessCategory,
+        activityType: getDefaultActivityTypeForCategory('business', nextBusinessCategory, prev.activityType),
+        businessActivity: requiresWaste ? prev.businessActivity || DEFAULT_BUSINESS_WASTE : undefined,
+        esgCategory: undefined,
+      }
+    })
+  }
+
+  const handleEsgCategoryChange = (category: ESGCategory) => {
+    setFormValues((prev) => ({
+      ...prev,
+      esgCategory: category,
+      activityType: getDefaultActivityTypeForCategory('esg', category, prev.activityType),
+    }))
+  }
+
+  const handleBusinessCategoryChange = (category: BusinessPrimaryCategory) => {
+    const requiresWaste = businessCategoryRequiresWaste(category)
+    setFormValues((prev) => ({
+      ...prev,
+      businessCategory: category,
+      activityType: getDefaultActivityTypeForCategory('business', category, prev.activityType),
+      businessActivity: requiresWaste ? DEFAULT_BUSINESS_WASTE : undefined,
+    }))
+  }
+
+  const handleActivityTypeChange = (value: string) => {
+    setFormValues((prev) => ({
+      ...prev,
+      activityType: toCanonicalActivityType(value) || value,
+    }))
+  }
 
   const resolveJourneyType = (): JourneyType => {
     if (profile?.journeyType) return profile.journeyType
@@ -428,6 +482,7 @@ export const ImpactLogPage: React.FC = () => {
       hours: filteredEntries.reduce((sum, e) => sum + (e.hours || 0), 0),
       usd: filteredEntries.reduce((sum, e) => sum + (e.usdValue || 0), 0),
       points: filteredEntries.reduce((sum, e) => sum + (e.points || 0), 0),
+      scp: filteredEntries.reduce((sum, e) => sum + (e.scp || 0), 0),
     }
   }, [filteredEntries])
 
@@ -437,6 +492,28 @@ export const ImpactLogPage: React.FC = () => {
     const errors: string[] = []
     const { verificationLevel, verifierEmail, evidenceLink, description, date, hours, peopleImpacted } = formValues
     const requirements = verificationRequirements[(verificationLevel || 'Tier 1: Self-Reported') as VerificationTier]
+    const categoryGroup = formValues.categoryGroup || 'esg'
+
+    if (categoryGroup === 'esg') {
+      if (!formValues.esgCategory) {
+        errors.push('Please choose an ESG category.')
+      }
+      if (!isActivityTypeAllowedForCategory('esg', formValues.esgCategory, formValues.activityType)) {
+        errors.push('Please choose a valid activity type for the selected ESG category.')
+      }
+    } else {
+      if (!formValues.businessCategory) {
+        errors.push('Please choose a primary business category.')
+      }
+      if (!isActivityTypeAllowedForCategory('business', formValues.businessCategory, formValues.activityType)) {
+        errors.push('Please choose a valid activity type for the selected business category.')
+      }
+      if (businessCategoryRequiresWaste(formValues.businessCategory)) {
+        if (!isValidBusinessWaste(formValues.businessActivity)) {
+          errors.push('Please choose a valid business waste activity for the selected primary category.')
+        }
+      }
+    }
 
     if (!description || !date || (!hours && !peopleImpacted)) {
       errors.push('Please complete all required fields (Description, Date, and either Hours or People Impacted).')
@@ -481,18 +558,16 @@ export const ImpactLogPage: React.FC = () => {
         title: formValues.title || 'Impact Activity',
         description: formValues.description || '',
         categoryGroup: formValues.categoryGroup || 'esg',
+        activityType: formValues.activityType,
         ...(formValues.categoryGroup === 'esg'
           ? {
               esgCategory: formValues.esgCategory,
-              activityType: formValues.activityType,
             }
           : {
               businessCategory: formValues.businessCategory,
               businessActivity: formValues.businessActivity,
             }),
-        liftPillars: getPillarsForActivity(
-          formValues.categoryGroup === 'esg' ? formValues.activityType : formValues.businessActivity,
-        ),
+        liftPillars: liftPillars,
         date: formValues.date || format(new Date(), 'yyyy-MM-dd'),
         hours: Number(formValues.hours) || 0,
         peopleImpacted: Number(formValues.peopleImpacted) || 0,
@@ -678,10 +753,10 @@ export const ImpactLogPage: React.FC = () => {
       color: 'green.500',
     },
     {
-      label: 'Points Earned',
-      value: stats.points,
-      help: 'Points from verified activities',
-      icon: Check,
+      label: 'Social Capital Points',
+      value: stats.scp,
+      help: 'Social capital earned from verified impact activities',
+      icon: TrendingUp,
       color: 'orange.500',
     },
   ]
@@ -847,6 +922,7 @@ export const ImpactLogPage: React.FC = () => {
                   <Th isNumeric>Hours</Th>
                   <Th isNumeric>USD</Th>
                   <Th isNumeric>People</Th>
+                  <Th isNumeric>SCP</Th>
                   <Th>Verification</Th>
                   {activeTab === 'personal' && <Th />}
                 </Tr>
@@ -854,13 +930,13 @@ export const ImpactLogPage: React.FC = () => {
               <Tbody>
                 {loading ? (
                   <Tr>
-                    <Td colSpan={activeTab === 'personal' ? 8 : 7}>
+                    <Td colSpan={activeTab === 'personal' ? 9 : 8}>
                       <Skeleton height="18px" />
                     </Td>
                   </Tr>
                 ) : filteredEntries.length === 0 ? (
                   <Tr>
-                    <Td colSpan={activeTab === 'personal' ? 8 : 7}>
+                    <Td colSpan={activeTab === 'personal' ? 9 : 8}>
                       <Text color="text.muted">No entries found for this period.</Text>
                     </Td>
                   </Tr>
@@ -882,6 +958,7 @@ export const ImpactLogPage: React.FC = () => {
                       <Td isNumeric>{entry.hours}</Td>
                       <Td isNumeric>{entry.usdValue?.toLocaleString() || '0'}</Td>
                       <Td isNumeric>{entry.peopleImpacted}</Td>
+                      <Td isNumeric>{entry.scp?.toLocaleString() || '0'}</Td>
                       <Td>
                         <Badge colorScheme={entry.verificationMultiplier > 1 ? 'purple' : 'gray'}>
                           {entry.verificationLevel}
@@ -924,8 +1001,8 @@ export const ImpactLogPage: React.FC = () => {
               </HStack>
               <Stack spacing={2}>
                 <Flex align="center" justify="space-between">
-                  <Text color="text.secondary">Points Today</Text>
-                  <Badge colorScheme="purple">{stats.points.toLocaleString()}</Badge>
+                  <Text color="text.secondary">Social Capital Points</Text>
+                  <Badge colorScheme="purple">{stats.scp.toLocaleString()}</Badge>
                 </Flex>
                 <Flex align="center" justify="space-between">
                   <Text color="text.secondary">Hours this month</Text>
@@ -933,7 +1010,7 @@ export const ImpactLogPage: React.FC = () => {
                 </Flex>
                 <Divider />
                 <Text color="text.secondary" fontWeight="medium">
-                  Daily micro-challenge progress
+                  Daily momentum based on social capital growth
                 </Text>
                 <Button w="full" colorScheme="purple" onClick={onOpen}>
                   Log Impact Now
@@ -993,14 +1070,7 @@ export const ImpactLogPage: React.FC = () => {
                   transition="all 0.2s ease"
                   aria-pressed={isEsgActive}
                   color={isEsgActive ? 'white' : 'gray.600'}
-                  onClick={() =>
-                    setFormValues((prev) => ({
-                      ...prev,
-                      categoryGroup: 'esg',
-                      esgCategory: ESGCategory.ENVIRONMENTAL,
-                      activityType: esgActivities[0],
-                    }))
-                  }
+                  onClick={() => handleCategoryGroupChange('esg')}
                 >
                   ESG Impact
                 </Button>
@@ -1015,88 +1085,107 @@ export const ImpactLogPage: React.FC = () => {
                   transition="all 0.2s ease"
                   aria-pressed={isBusinessActive}
                   color={isBusinessActive ? 'white' : 'gray.600'}
-                  onClick={() =>
-                    setFormValues((prev) => ({
-                      ...prev,
-                      categoryGroup: 'business',
-                      businessCategory: 'Cost Savings',
-                      businessActivity: businessActivities[0],
-                    }))
-                  }
+                  onClick={() => handleCategoryGroupChange('business')}
                 >
                   Business Impact
                 </Button>
               </HStack>
 
-              <SimpleGrid columns={{ base: 1, md: 2 }} spacing={3}>
-                <Box>
-                  <Text fontWeight="medium">ESG Category</Text>
-                  <Select
-                    mt={1}
-                    value={formValues.esgCategory}
-                    onChange={(e) => setFormValues((prev) => ({ ...prev, esgCategory: e.target.value as ESGCategory }))}
-                    isDisabled={formValues.categoryGroup !== 'esg'}
-                  >
-                    <option value={ESGCategory.ENVIRONMENTAL}>Environmental</option>
-                    <option value={ESGCategory.SOCIAL}>Social</option>
-                    <option value={ESGCategory.GOVERNANCE}>Governance</option>
-                  </Select>
-                </Box>
+              {isEsgActive && (
+                <SimpleGrid columns={{ base: 1, md: 2 }} spacing={3}>
+                  <FormControl>
+                    <FormLabel>ESG Category</FormLabel>
+                    <Select mt={1} value={formValues.esgCategory} onChange={(e) => handleEsgCategoryChange(e.target.value as ESGCategory)}>
+                      <option value={ESGCategory.ENVIRONMENTAL}>Environmental</option>
+                      <option value={ESGCategory.SOCIAL}>Social</option>
+                      <option value={ESGCategory.GOVERNANCE}>Governance</option>
+                    </Select>
+                    <FormHelperText>{formValues.esgCategory ? ESG_CATEGORY_HELPER_TEXT[formValues.esgCategory] : ''}</FormHelperText>
+                  </FormControl>
 
-                <Box>
-                  <Text fontWeight="medium">Activity Type</Text>
-                  <Select
-                    mt={1}
-                    value={formValues.activityType}
-                    onChange={(e) => setFormValues((prev) => ({ ...prev, activityType: e.target.value }))}
-                    isDisabled={formValues.categoryGroup !== 'esg'}
-                  >
-                    {esgActivities.map((activity) => (
-                      <option key={activity}>{activity}</option>
-                    ))}
-                  </Select>
-                </Box>
+                  <FormControl isDisabled={activityTypeOptions.length === 0}>
+                    <FormLabel>Activity Type</FormLabel>
+                    <Select
+                      mt={1}
+                      value={formValues.activityType}
+                      onChange={(e) => handleActivityTypeChange(e.target.value)}
+                      isDisabled={activityTypeOptions.length === 0}
+                    >
+                      {activityTypeOptions.map((activity) => (
+                        <option key={activity}>{activity}</option>
+                      ))}
+                    </Select>
+                    <FormHelperText color={activityTypeOptions.length === 0 ? 'red.500' : 'text.muted'}>
+                      {activityTypeOptions.length === 0
+                        ? 'No activity types available for the selected category.'
+                        : `Available activities for ${formatCategoryLabel(activityTypeCategoryLabel)}.`}
+                    </FormHelperText>
+                  </FormControl>
+                </SimpleGrid>
+              )}
 
-                <Box>
-                  <Text fontWeight="medium">Primary Category</Text>
-                  <Select
-                    mt={1}
-                    value={formValues.businessCategory}
-                    onChange={(e) => setFormValues((prev) => ({ ...prev, businessCategory: e.target.value }))}
-                    isDisabled={formValues.categoryGroup !== 'business'}
-                  >
-                    <option>Cost Savings</option>
-                    <option>Efficiency Gains</option>
-                  </Select>
-                </Box>
+              {isBusinessActive && (
+                <SimpleGrid columns={{ base: 1, md: 2 }} spacing={3}>
+                  <FormControl>
+                    <FormLabel>Primary Business Category</FormLabel>
+                    <Select
+                      mt={1}
+                      value={formValues.businessCategory}
+                      onChange={(e) => handleBusinessCategoryChange(e.target.value as BusinessPrimaryCategory)}
+                    >
+                      {BUSINESS_PRIMARY_CATEGORIES.map((category) => (
+                        <option key={category}>{category}</option>
+                      ))}
+                    </Select>
+                    <FormHelperText>
+                      {formValues.businessCategory ? BUSINESS_CATEGORY_HELPER_TEXT[formValues.businessCategory] : ''}
+                    </FormHelperText>
+                  </FormControl>
 
-                <Box>
-                  <Text fontWeight="medium">Specific Activity (8 wastes)</Text>
-                  <Select
-                    mt={1}
-                    value={formValues.businessActivity}
-                    onChange={(e) => setFormValues((prev) => ({ ...prev, businessActivity: e.target.value }))}
-                    isDisabled={formValues.categoryGroup !== 'business'}
-                  >
-                    {businessActivities.map((activity) => (
-                      <option key={activity}>{activity}</option>
-                    ))}
-                  </Select>
-                </Box>
-              </SimpleGrid>
+                  <FormControl isDisabled={activityTypeOptions.length === 0}>
+                    <FormLabel>Activity Type</FormLabel>
+                    <Select
+                      mt={1}
+                      value={formValues.activityType}
+                      onChange={(e) => handleActivityTypeChange(e.target.value)}
+                      isDisabled={activityTypeOptions.length === 0}
+                    >
+                      {activityTypeOptions.map((activity) => (
+                        <option key={activity}>{activity}</option>
+                      ))}
+                    </Select>
+                    <FormHelperText color={activityTypeOptions.length === 0 ? 'red.500' : 'text.muted'}>
+                      {activityTypeOptions.length === 0
+                        ? 'No activity types available for the selected category.'
+                        : `Available activities for ${formatCategoryLabel(activityTypeCategoryLabel)}.`}
+                    </FormHelperText>
+                  </FormControl>
 
-              <Box>
-                <Text fontWeight="medium">LIFT Framework Pillars</Text>
-                <HStack spacing={2} mt={2}>
-                  {getPillarsForActivity(
-                    formValues.categoryGroup === 'esg' ? formValues.activityType : formValues.businessActivity,
-                  ).map((pillar) => (
-                    <Badge key={pillar} colorScheme={liftPillarColors[pillar]} px={2} py={1} rounded="md">
-                      {pillar}
-                    </Badge>
-                  ))}
-                </HStack>
-              </Box>
+                  {isBusinessWasteRequired ? (
+                    <FormControl>
+                      <FormLabel>Specific Activity (8 wastes)</FormLabel>
+                      <Select
+                        mt={1}
+                        value={formValues.businessActivity}
+                        onChange={(e) => setFormValues((prev) => ({ ...prev, businessActivity: e.target.value }))}
+                      >
+                        {BUSINESS_SECONDARY_WASTES.map((activity) => (
+                          <option key={activity}>{activity}</option>
+                        ))}
+                      </Select>
+                      <FormHelperText>Choose the waste category most impacted by the activity.</FormHelperText>
+                    </FormControl>
+                  ) : (
+                    <FormControl isDisabled>
+                      <FormLabel>Specific Activity (8 wastes)</FormLabel>
+                      <Select mt={1} value="Not required" isDisabled>
+                        <option>Not required for revenue growth</option>
+                      </Select>
+                      <FormHelperText>Secondary waste categories apply to cost savings and efficiency gains only.</FormHelperText>
+                    </FormControl>
+                  )}
+                </SimpleGrid>
+              )}
 
               <SimpleGrid columns={{ base: 1, md: 2 }} spacing={3}>
                 <Box>
@@ -1313,13 +1402,7 @@ export const ImpactLogPage: React.FC = () => {
                   <Text fontWeight="bold">Impact Calculation Preview</Text>
                   <Badge colorScheme="purple">{preview.verificationMultiplier.toFixed(1)}×</Badge>
                 </HStack>
-                <SimpleGrid columns={{ base: 1, md: 4 }} spacing={3}>
-                  <Box>
-                    <Text color="text.secondary">Points Earned</Text>
-                    <Text fontSize="2xl" fontWeight="bold">
-                      {preview.points.toLocaleString()}
-                    </Text>
-                  </Box>
+                <SimpleGrid columns={{ base: 1, md: 3 }} spacing={3}>
                   <Box>
                     <Text color="text.secondary">Impact Value</Text>
                     <Text fontSize="2xl" fontWeight="bold">{formatCurrency(preview.impactValue)}</Text>
@@ -1370,18 +1453,12 @@ export const ImpactLogPage: React.FC = () => {
               />
               <Select
                 value={formValues.activityType}
-                onChange={(e) => setFormValues((prev) => ({ ...prev, activityType: e.target.value }))}
+                onChange={(e) => handleActivityTypeChange(e.target.value)}
+                isDisabled={activityTypeOptions.length === 0}
               >
-                <option>Leadership Development</option>
-                <option>Team Building</option>
-                <option>Process Improvement</option>
-                <option>Digital Transformation</option>
-                <option>Mentoring</option>
-                <option>Knowledge Sharing</option>
-                <option>Community Engagement</option>
-                <option>Sustainability</option>
-                <option>Innovation</option>
-                <option>Other</option>
+                {activityTypeOptions.map((activity) => (
+                  <option key={activity}>{activity}</option>
+                ))}
               </Select>
               <SimpleGrid columns={{ base: 1, md: 2 }} spacing={3}>
                 <FormControl>

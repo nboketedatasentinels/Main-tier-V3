@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import {
   Timestamp,
   collection,
@@ -7,22 +7,19 @@ import {
   getDocs,
   onSnapshot,
   query,
+  serverTimestamp,
+  setDoc,
   updateDoc,
   where,
 } from 'firebase/firestore'
 import { db } from '@/services/firebase'
 import { useAuth } from '@/hooks/useAuth'
 import { getCurrentWeekNumber, getWeekKey } from '@/utils/weekCalculations'
-import { getOrCreateWeeklyPoints } from '@/services/weeklyPointsService'
-import { FREE_COURSE } from '@/constants/courseConfig'
-import {
-  MonthlyCourseData,
-  buildMonthlyCourseState,
-  listenToCompanyProgram,
-} from '@/services/monthlyCoursesService'
-import { InspirationQuote, TransformationTier, UserRole } from '@/types'
+import { JOURNEY_META, getMonthNumber } from '@/config/pointsConfig'
+import { InspirationQuote } from '@/types'
 import { leadershipQuotes } from '@/services/quotes'
-import { isFreeUser } from '@/utils/membership'
+import { fetchUserProfileById, UserProfileExtended } from '@/services/userProfileService'
+import type { WeeklyProgress } from '@/types'
 
 export interface WeeklyPoints {
   id: string
@@ -39,6 +36,10 @@ export interface SupportAssignment {
   mentor_id?: string | null
   ambassador_id?: string | null
   assigned_date?: Timestamp
+  mentorProfile?: UserProfileExtended | null
+  mentorProfileError?: string
+  ambassadorProfile?: UserProfileExtended | null
+  ambassadorProfileError?: string
 }
 
 export interface PersonalityProfile {
@@ -71,7 +72,6 @@ interface WeeklyGlanceLoadingState {
   habits: boolean
   inspiration: boolean
   impact: boolean
-  monthlyCourse: boolean
 }
 
 interface WeeklyGlanceErrorState {
@@ -82,7 +82,6 @@ interface WeeklyGlanceErrorState {
   habits?: Error
   inspiration?: Error
   impact?: Error
-  monthlyCourse?: Error
 }
 
 export const useWeeklyGlanceData = () => {
@@ -94,7 +93,7 @@ export const useWeeklyGlanceData = () => {
   const [weeklyHabits, setWeeklyHabits] = useState<WeeklyHabit[]>([])
   const [inspirationQuote, setInspirationQuote] = useState<InspirationQuote | null>(null)
   const [impactCount, setImpactCount] = useState<number>(0)
-  const [monthlyCourse, setMonthlyCourse] = useState<MonthlyCourseData | null>(null)
+  const profileCache = useRef<Map<string, UserProfileExtended | null>>(new Map())
   const [loading, setLoading] = useState<WeeklyGlanceLoadingState>({
     points: true,
     support: true,
@@ -103,47 +102,125 @@ export const useWeeklyGlanceData = () => {
     habits: true,
     inspiration: true,
     impact: true,
-    monthlyCourse: true,
   })
   const [errors, setErrors] = useState<WeeklyGlanceErrorState>({})
 
-  const weekNumber = useMemo(() => getCurrentWeekNumber(), [])
+  const calendarWeekNumber = useMemo(() => getCurrentWeekNumber(), [])
+  const weekNumber = useMemo(
+    () => (profile?.currentWeek && profile.currentWeek > 0 ? profile.currentWeek : calendarWeekNumber),
+    [calendarWeekNumber, profile?.currentWeek],
+  )
   const weekKey = useMemo(() => getWeekKey(), [])
 
   useEffect(() => {
     if (!profile?.id) return
-    getOrCreateWeeklyPoints(profile.id).catch(error => {
-      console.error('Error initializing weekly points:', error)
-    })
-  }, [profile?.id])
+
+    const initializeWeeklyProgress = async () => {
+      const journeyType = profile.journeyType
+      const weeklyTarget = journeyType ? JOURNEY_META[journeyType].weeklyTarget : 0
+      const progressRef = doc(db, 'weeklyProgress', `${profile.id}__${weekNumber}`)
+      const monthNumber = getMonthNumber(weekNumber)
+      const payload = {
+        uid: profile.id,
+        weekNumber,
+        monthNumber,
+        weeklyTarget,
+        pointsEarned: 0,
+        engagementCount: 0,
+        status: 'alert',
+        createdAt: serverTimestamp(),
+        updatedAt: serverTimestamp(),
+      }
+
+      const maxAttempts = 2
+      for (let attempt = 1; attempt <= maxAttempts; attempt += 1) {
+        try {
+          const existing = await getDoc(progressRef)
+          if (!existing.exists()) {
+            await setDoc(progressRef, payload, { merge: true })
+          }
+          return
+        } catch (error) {
+          if (attempt === maxAttempts) {
+            console.warn('Unable to initialize weekly progress document.', error)
+          } else {
+            await new Promise(resolve => setTimeout(resolve, 150 * attempt))
+          }
+        }
+      }
+    }
+
+    initializeWeeklyProgress()
+  }, [profile?.id, profile?.journeyType, weekNumber])
 
   useEffect(() => {
     if (!profile?.id) return
 
-    const weekYear = new Date().getFullYear()
-    const q = query(
-      collection(db, 'weekly_points'),
-      where('user_id', '==', profile.id),
-      where('week_number', '==', weekNumber),
-      where('week_year', '==', weekYear),
-    )
+    const progressRef = doc(db, 'weeklyProgress', `${profile.id}__${weekNumber}`)
+    const defaultTarget = profile?.journeyType ? JOURNEY_META[profile.journeyType].weeklyTarget : 0
+    const mapStatus = (status?: WeeklyProgress['status']): WeeklyPoints['status'] => {
+      switch (status) {
+        case 'on_track':
+          return 'on_track'
+        case 'warning':
+          return 'warning'
+        case 'alert':
+          return 'at_risk'
+        case 'recovery':
+          return 'on_track'
+        default:
+          return 'at_risk'
+      }
+    }
+    const toWeeklyPoints = (data: WeeklyProgress, id: string): WeeklyPoints => ({
+      id,
+      points_earned: data.pointsEarned ?? 0,
+      target_points: data.weeklyTarget ?? defaultTarget,
+      status: mapStatus(data.status),
+      engagement_count: data.engagementCount ?? 0,
+      week_number: data.weekNumber ?? weekNumber,
+    })
+    const backfillEngagementCount = async () => {
+      const ledgerQuery = query(
+        collection(db, 'pointsLedger'),
+        where('uid', '==', profile.id),
+        where('weekNumber', '==', weekNumber),
+      )
+      const ledgerSnapshot = await getDocs(ledgerQuery)
+      return ledgerSnapshot.size
+    }
 
     const unsubscribe = onSnapshot(
-      q,
+      progressRef,
       snapshot => {
-        const docData = snapshot.docs[0]
-        if (docData) {
-          const data = docData.data()
-          setWeeklyPoints({
-            id: docData.id,
-            points_earned: data.points_earned || 0,
-            target_points: data.target_points || 0,
-            status: data.status,
-            engagement_count: data.engagement_count || 0,
-            week_number: data.week_number || weekNumber,
-          })
+        if (snapshot.exists()) {
+          const data = snapshot.data() as WeeklyProgress
+          setWeeklyPoints(toWeeklyPoints(data, snapshot.id))
+          if (data.engagementCount == null) {
+            void (async () => {
+              try {
+                const engagementCount = await backfillEngagementCount()
+                await updateDoc(progressRef, {
+                  engagementCount,
+                  updatedAt: serverTimestamp(),
+                })
+                setWeeklyPoints(prev =>
+                  prev ? { ...prev, engagement_count: engagementCount } : prev,
+                )
+              } catch (error) {
+                console.warn('Unable to backfill engagement count.', error)
+              }
+            })()
+          }
         } else {
-          setWeeklyPoints(null)
+          setWeeklyPoints({
+            id: progressRef.id,
+            points_earned: 0,
+            target_points: defaultTarget,
+            status: 'at_risk',
+            engagement_count: 0,
+            week_number: weekNumber,
+          })
         }
         setLoading(prev => ({ ...prev, points: false }))
       },
@@ -154,30 +231,94 @@ export const useWeeklyGlanceData = () => {
     )
 
     return () => unsubscribe()
-  }, [profile?.id, weekNumber])
+  }, [profile?.id, profile?.journeyType, weekNumber])
 
   useEffect(() => {
-    const fetchSupport = async () => {
-      if (!profile?.id) return
-      setLoading(prev => ({ ...prev, support: true }))
-      try {
-        const supportQuery = query(collection(db, 'support_assignments'), where('user_id', '==', profile.id))
-        const snapshot = await getDocs(supportQuery)
-        const docData = snapshot.docs[0]
-        if (docData) {
-          const data = docData.data() as SupportAssignment
-          setSupportAssignment({ ...data, id: docData.id })
-        } else {
-          setSupportAssignment(null)
-        }
-      } catch (error) {
-        setErrors(prev => ({ ...prev, support: error as Error }))
-      } finally {
+    if (!profile?.id) return
+    setLoading(prev => ({ ...prev, support: true }))
+    let isActive = true
+    let didReceiveSnapshot = false
+
+    const supportQuery = query(collection(db, 'support_assignments'), where('user_id', '==', profile.id))
+    const fallbackTimeout = setTimeout(() => {
+      if (isActive && !didReceiveSnapshot) {
         setLoading(prev => ({ ...prev, support: false }))
       }
+    }, 5000)
+
+    const handleSnapshot = async (snapshot: any) => {
+      didReceiveSnapshot = true
+      clearTimeout(fallbackTimeout)
+      if (!isActive) return
+      const docData = snapshot.docs[0]
+      if (!docData) {
+        setSupportAssignment(null)
+        setLoading(prev => ({ ...prev, support: false }))
+        return
+      }
+
+      const data = docData.data() as SupportAssignment
+      const mentorId = data.mentor_id
+      const ambassadorId = data.ambassador_id
+      const getCachedProfile = async (userId: string) => {
+        if (profileCache.current.has(userId)) {
+          return profileCache.current.get(userId) ?? null
+        }
+        const profile = await fetchUserProfileById(userId)
+        profileCache.current.set(userId, profile)
+        return profile
+      }
+
+      const [mentorResult, ambassadorResult] = await Promise.all([
+        mentorId
+          ? getCachedProfile(mentorId)
+              .then(profileData => ({
+                profile: profileData,
+                error: profileData ? undefined : 'Mentor profile not found',
+              }))
+              .catch(() => ({ profile: null, error: 'Unable to load mentor profile' }))
+          : Promise.resolve({ profile: null, error: undefined }),
+        ambassadorId
+          ? getCachedProfile(ambassadorId)
+              .then(profileData => ({
+                profile: profileData,
+                error: profileData ? undefined : 'Ambassador profile not found',
+              }))
+              .catch(() => ({ profile: null, error: 'Unable to load ambassador profile' }))
+          : Promise.resolve({ profile: null, error: undefined }),
+      ])
+
+      if (!isActive) return
+      setSupportAssignment({
+        ...data,
+        id: docData.id,
+        mentorProfile: mentorResult.profile,
+        mentorProfileError: mentorResult.error,
+        ambassadorProfile: ambassadorResult.profile,
+        ambassadorProfileError: ambassadorResult.error,
+      })
+      setLoading(prev => ({ ...prev, support: false }))
     }
 
-    fetchSupport()
+    const unsubscribe = onSnapshot(
+      supportQuery,
+      snapshot => {
+        void handleSnapshot(snapshot)
+      },
+      error => {
+        didReceiveSnapshot = true
+        clearTimeout(fallbackTimeout)
+        if (!isActive) return
+        setErrors(prev => ({ ...prev, support: error as Error }))
+        setLoading(prev => ({ ...prev, support: false }))
+      },
+    )
+
+    return () => {
+      isActive = false
+      clearTimeout(fallbackTimeout)
+      unsubscribe()
+    }
   }, [profile?.id])
 
   useEffect(() => {
@@ -314,82 +455,6 @@ export const useWeeklyGlanceData = () => {
     return () => unsubscribe();
   }, [profile?.id])
 
-  useEffect(() => {
-    let unsubscribe: (() => void) | null = null
-
-    const resolveFreeCourse = () => {
-      setMonthlyCourse({
-        status: 'free',
-        course: { title: FREE_COURSE.title, externalUrl: FREE_COURSE.externalUrl, id: 'free-course' },
-        enrollmentCode: FREE_COURSE.enrollmentCode,
-        message: 'Kick off the week with quick learning. Use the code below to enroll.',
-      })
-      setErrors(prev => ({ ...prev, monthlyCourse: undefined }))
-      setLoading(prev => ({ ...prev, monthlyCourse: false }))
-    }
-
-    const initializePaidCourseListener = () => {
-      setLoading(prev => ({ ...prev, monthlyCourse: true }))
-
-      unsubscribe = listenToCompanyProgram(
-        profile,
-        async company => {
-          setLoading(prev => ({ ...prev, monthlyCourse: true }))
-          try {
-            if (!company) {
-              setMonthlyCourse({
-                status: 'no_company',
-                message: 'Once you are assigned to a company program, your monthly course will appear here.',
-              })
-              setErrors(prev => ({ ...prev, monthlyCourse: undefined }))
-              return
-            }
-
-            const courseState = await buildMonthlyCourseState(company)
-            setMonthlyCourse(courseState)
-            setErrors(prev => ({ ...prev, monthlyCourse: undefined }))
-          } catch (error) {
-            setErrors(prev => ({ ...prev, monthlyCourse: error as Error }))
-          } finally {
-            setLoading(prev => ({ ...prev, monthlyCourse: false }))
-          }
-        },
-        error => {
-          setErrors(prev => ({ ...prev, monthlyCourse: error as Error }))
-          setLoading(prev => ({ ...prev, monthlyCourse: false }))
-        },
-      )
-    }
-
-    if (!profile) {
-      setMonthlyCourse(null)
-      setLoading(prev => ({ ...prev, monthlyCourse: false }))
-      return () => undefined
-    }
-
-    const isFreeTierUser = isFreeUser(profile)
-    const isCorporateMember =
-      profile?.transformationTier === TransformationTier.CORPORATE_MEMBER ||
-      profile?.transformationTier === TransformationTier.CORPORATE_LEADER
-    const hasPaidAccess =
-      profile?.membershipStatus === 'paid' || profile?.role === UserRole.PAID_MEMBER || isCorporateMember
-
-    if (isFreeTierUser) {
-      resolveFreeCourse()
-      return () => undefined
-    }
-
-    if (hasPaidAccess) {
-      initializePaidCourseListener()
-    } else {
-      setLoading(prev => ({ ...prev, monthlyCourse: false }))
-    }
-
-    return () => {
-      if (unsubscribe) unsubscribe()
-    }
-  }, [profile])
-
   const handleHabitToggle = async (habit: WeeklyHabit) => {
     const nextState = !habit.completed
     setWeeklyHabits(prev => prev.map(item => (item.id === habit.id ? { ...item, completed: nextState } : item)))
@@ -415,7 +480,6 @@ export const useWeeklyGlanceData = () => {
     inspirationQuote,
     impactCount,
     weekNumber,
-    monthlyCourse,
     loading,
     errors,
     handleHabitToggle,

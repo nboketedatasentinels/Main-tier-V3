@@ -1,4 +1,14 @@
-import { doc, increment, runTransaction, serverTimestamp, type Transaction } from "firebase/firestore";
+import {
+  collection,
+  doc,
+  getDocs,
+  increment,
+  query,
+  runTransaction,
+  serverTimestamp,
+  where,
+  type Transaction,
+} from "firebase/firestore";
 import { db } from "@/services/firebase";
 import pointsConfig from "@/config/pointsConfig";
 import type { ActivityDef, JourneyType } from "@/config/pointsConfig";
@@ -45,13 +55,16 @@ export async function awardChecklistPoints(params: {
 
   const ledgerRef = doc(db, "pointsLedger", `${uid}__w${weekNumber}__${activity.id}`);
   const progressRef = doc(db, "weeklyProgress", `${uid}__${weekNumber}`);
+  const ledgerQuery = query(
+    collection(db, "pointsLedger"),
+    where("uid", "==", uid),
+    where("weekNumber", "==", weekNumber)
+  );
 
   try {
+    const ledgerSnapshot = await getDocs(ledgerQuery);
     await runTransactionWithRetry(async (tx) => {
-      const [ledgerDoc, progressDoc] = await Promise.all([
-        tx.get(ledgerRef),
-        tx.get(progressRef),
-      ]);
+      const [ledgerDoc, progressDoc] = await Promise.all([tx.get(ledgerRef), tx.get(progressRef)]);
 
       if (ledgerDoc.exists()) return;
 
@@ -59,6 +72,7 @@ export async function awardChecklistPoints(params: {
         ? progressDoc.data()
         : { pointsEarned: 0, status: "alert" };
       const newPoints = currentProgress.pointsEarned + activity.points;
+      const engagementCount = ledgerSnapshot.size + 1;
 
       const ratio = weeklyTarget > 0 ? newPoints / weeklyTarget : 0;
       let status: "on_track" | "warning" | "alert" | "recovery" = "alert";
@@ -92,6 +106,7 @@ export async function awardChecklistPoints(params: {
           monthNumber,
           weeklyTarget,
           pointsEarned: newPoints,
+          engagementCount,
           status,
           updatedAt: serverTimestamp(),
         },
@@ -127,13 +142,16 @@ export async function revokeChecklistPoints(params: {
 
   const ledgerRef = doc(db, "pointsLedger", `${uid}__w${weekNumber}__${activity.id}`);
   const progressRef = doc(db, "weeklyProgress", `${uid}__${weekNumber}`);
+  const ledgerQuery = query(
+    collection(db, "pointsLedger"),
+    where("uid", "==", uid),
+    where("weekNumber", "==", weekNumber)
+  );
 
   try {
+    const ledgerSnapshot = await getDocs(ledgerQuery);
     await runTransactionWithRetry(async (tx) => {
-      const [ledgerDoc, progressDoc] = await Promise.all([
-        tx.get(ledgerRef),
-        tx.get(progressRef),
-      ]);
+      const [ledgerDoc, progressDoc] = await Promise.all([tx.get(ledgerRef), tx.get(progressRef)]);
 
       if (!ledgerDoc.exists()) return;
 
@@ -142,6 +160,7 @@ export async function revokeChecklistPoints(params: {
         ? progressDoc.data().pointsEarned ?? 0
         : 0;
       const newPoints = Math.max(0, currentPoints - ledgerPoints);
+      const engagementCount = Math.max(0, ledgerSnapshot.size - 1);
 
       const ratio = weeklyTarget > 0 ? newPoints / weeklyTarget : 0;
       let status: "on_track" | "warning" | "alert" | "recovery" = "alert";
@@ -163,6 +182,7 @@ export async function revokeChecklistPoints(params: {
           monthNumber,
           weeklyTarget,
           pointsEarned: newPoints,
+          engagementCount,
           status,
           updatedAt: serverTimestamp(),
         },

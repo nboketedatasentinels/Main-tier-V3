@@ -47,6 +47,7 @@ const brandColors = {
   royalPurple: '#350e6f',
   gold: '#EAB130',
   softGold: '#f9db59',
+  goldLight: '#FFEAC2',
 }
 
 const colors = {
@@ -66,6 +67,7 @@ const colors = {
     muted: '#64748B',
     subtle: '#64748B',
     inverse: '#FFFFFF',
+    accentGold: '#FFEAC2',
   },
   // Border Colors
   border: {
@@ -405,6 +407,9 @@ const components = {
           borderColor: 'border.subtle',
           borderRadius: 'lg',
           bg: 'surface.default',
+          _placeholder: {
+            color: 'text.subtle',
+          },
           _focus: {
             borderColor: 'brand.primary',
             boxShadow: '0 0 0 1px var(--chakra-colors-focusRing-default)',

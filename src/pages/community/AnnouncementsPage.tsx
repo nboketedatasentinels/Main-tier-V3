@@ -421,7 +421,7 @@ const JobsTab = () => (
         'Keep follow-up conversations in-thread so everyone benefits',
         'Avoid duplicate posts—refresh previous listings with updates instead',
       ]}
-      link={import.meta.env.VITE_WHATSAPP_COMMUNITY_LINK || '#'}
+      link="https://chat.whatsapp.com/ImFRIflsS7pGOoHtpTOJy9"
       ctaLabel="Open WhatsApp job board"
       communityName="WhatsApp Job Board"
     />
@@ -453,7 +453,7 @@ const GrantsTab = () => (
         'Keep discussions respectful and consolidate updates in the original thread',
         'Do not share sensitive personal data—link to official forms instead',
       ]}
-      link={import.meta.env.VITE_WHATSAPP_COMMUNITY_LINK || '#'}
+      link="https://chat.whatsapp.com/FAmTJ4AX7fk3CvrWWteDx8"
       ctaLabel="Open WhatsApp grants space"
       communityName="Grants & Funding"
     />

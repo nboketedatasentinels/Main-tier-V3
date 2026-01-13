@@ -29,7 +29,6 @@ import { MentorDashboard } from '@/pages/dashboards/MentorDashboard'
 import { AmbassadorDashboard } from '@/pages/dashboards/AmbassadorDashboard'
 import { CompanyAdminDashboard } from '@/pages/dashboards/CompanyAdminDashboard'
 import { PartnerAdminDashboard } from '@/pages/dashboards/PartnerAdminDashboard'
-import { PaidMemberDashboard } from '@/pages/dashboards/PaidMemberDashboard'
 
 // Feature page imports
 import { JourneysPage } from '@/pages/journeys/JourneysPage'
@@ -43,7 +42,7 @@ import { MyCoursesPage } from '@/pages/courses/MyCoursesPage'
 import { PeerConnectPage } from '@/pages/peer/PeerConnectPage'
 import { LeadershipCouncilPage } from '@/pages/leadership/LeadershipCouncilPage'
 import { AnnouncementsPage } from '@/pages/community/AnnouncementsPage'
-import { ReferralRewardsPage } from '@/pages/community/ReferralRewardsPage'
+import ReferralRewardsPage from '@/pages/community/ReferralRewardsPage'
 import { BookClubPage } from '@/pages/community/BookClubPage'
 import { ShamelessCirclePage } from '@/pages/community/ShamelessCirclePage'
 import { UserProfileManagementPage } from '@/pages/admin/UserProfileManagementPage'
@@ -82,7 +81,7 @@ const DashboardRouter = () => {
     case 'free':
       return <WeeklyGlancePage />
     case 'member':
-      return <PaidMemberDashboard />
+      return <WeeklyGlancePage />
     case 'company':
       return <CompanyAdminDashboard />
     case 'partner':

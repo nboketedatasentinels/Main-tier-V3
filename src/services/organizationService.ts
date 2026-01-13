@@ -1,10 +1,10 @@
 import {
+  DocumentSnapshot,
   Timestamp,
   addDoc,
   collection,
   doc,
   documentId,
-  DocumentSnapshot,
   FirestoreError,
   getDoc,
   getDocs,
@@ -18,6 +18,7 @@ import {
   where,
 } from 'firebase/firestore'
 import { db } from './firebase'
+import { ORG_COLLECTION } from '@/constants/organizations'
 import { Organization } from '@/types'
 import {
   BulkInvitationResult,
@@ -31,7 +32,7 @@ export { checkOrganizationAccess, fetchOrganizationEngagementStats, fetchOrganiz
 
 const safeCodeChars = '23456789ABCDEFGHJKLMNPQRSTUVWXYZ'
 
-const orgCollection = collection(db, 'organizations')
+const orgCollection = collection(db, ORG_COLLECTION)
 const coursesCollection = collection(db, 'courses')
 const usersCollection = collection(db, 'users')
 const adminActivityCollection = collection(db, 'admin_activity_log')
@@ -185,7 +186,7 @@ export const fetchPartners = async (): Promise<OrganizationLead[]> => {
 
 export const fetchOrganizationDetails = async (organizationId: string): Promise<OrganizationRecord | null> => {
   if (!organizationId) return null
-  const docSnap = await getDoc(doc(db, 'organizations', organizationId))
+  const docSnap = await getDoc(doc(db, ORG_COLLECTION, organizationId))
   if (!docSnap.exists()) return null
   return { id: docSnap.id, ...(docSnap.data() as Omit<OrganizationRecord, 'id'>) }
 }
@@ -226,7 +227,7 @@ export const fetchOrganizationByCode = async (organizationCode: string): Promise
 
 export const fetchOrganizationAssignments = async (organizationId: string): Promise<string[]> => {
   if (!organizationId) return []
-  const docSnap = await getDoc(doc(db, 'organizations', organizationId))
+  const docSnap = await getDoc(doc(db, ORG_COLLECTION, organizationId))
   if (!docSnap.exists()) return []
   const data = docSnap.data() as OrganizationRecord
   return data.courseAssignments || []
@@ -234,7 +235,7 @@ export const fetchOrganizationAssignments = async (organizationId: string): Prom
 
 export const incrementOrganizationMemberCount = async (organizationId: string, delta = 1) => {
   if (!organizationId) return
-  await updateDoc(doc(db, 'organizations', organizationId), {
+  await updateDoc(doc(db, ORG_COLLECTION, organizationId), {
     memberCount: increment(delta),
     updatedAt: serverTimestamp(),
   })

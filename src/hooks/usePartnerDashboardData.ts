@@ -14,6 +14,7 @@ import {
 } from 'firebase/firestore'
 import { useAuth } from '@/hooks/useAuth'
 import { db } from '@/services/firebase'
+import { ORG_COLLECTION } from '@/constants/organizations'
 import { listenToAssignedOrganizations, logOrganizationAccessAttempt } from '@/services/organizationService'
 import { listenToOrganizationStatsUpdates, updateOrganizationStatisticsBatch } from '@/services/organizationStatsService'
 import type { OrganizationRecord } from '@/types/admin'
@@ -251,7 +252,7 @@ export const usePartnerDashboardData = (options?: UsePartnerDashboardDataOptions
 
       if (isSuperAdmin) {
         unsubscribe = onSnapshot(
-          query(collection(db, 'organizations'), where('status', '==', 'active')),
+          query(collection(db, ORG_COLLECTION), where('status', '==', 'active')),
           (snapshot) => {
             resetRetry()
             console.debug('[PartnerDashboard] Super admin organizations loaded', {

@@ -59,7 +59,6 @@ These limits are shown to coaches and participants to distinguish the minimum re
 | Attend webinar | 2,000 | Monthly | 2,000 |
 | Complete webinar workbook | 2,000 | Monthly (paired with webinar) | 2,000 |
 | Peer Matching | 1,000 | Weekly | 4,000 |
-| Impact Log Entry | 1,000 | Twice monthly | 2,000 |
 | Book Club Participation | 1,500 | Monthly | 1,500 |
 | Peer to Peer Session | 2,500 | Monthly | 2,500 |
 | LinkedIn engagement (post/comment) | 500 | Twice monthly | 1,000 |

@@ -21,18 +21,17 @@ import {
   Select,
   Skeleton,
   Stack,
-  Textarea,
+  Tag,
   Text,
   UnorderedList,
   ListItem,
   Button,
   Checkbox,
-  CheckboxGroup,
   Tooltip,
   useToast,
   VStack,
 } from '@chakra-ui/react'
-import { ExternalLink, Sparkles } from 'lucide-react'
+import { Award, ExternalLink, Sparkles } from 'lucide-react'
 import { FormEvent, useEffect, useMemo, useState } from 'react'
 import { doc, updateDoc } from 'firebase/firestore'
 import { PersonalityProfile } from '@/hooks/useWeeklyGlanceData'
@@ -53,12 +52,6 @@ export const PersonalityProfileCard = ({ data, loading }: PersonalityProfileCard
   const [saving, setSaving] = useState(false)
   const [localProfile, setLocalProfile] = useState<PersonalityProfile | null>(data)
   const [personalityType, setPersonalityType] = useState(localProfile?.personalityType || '')
-  const [personalityDescription, setPersonalityDescription] = useState(
-    localProfile?.personalityDescription || '',
-  )
-  const [personalityStrengths, setPersonalityStrengths] = useState<string[]>(
-    localProfile?.personalityStrengths || [],
-  )
   const [coreValues, setCoreValues] = useState<string[]>(localProfile?.coreValues || [])
   const [hasCompletedPersonalityTest, setHasCompletedPersonalityTest] = useState(
     Boolean(profile?.hasCompletedPersonalityTest),
@@ -73,8 +66,6 @@ export const PersonalityProfileCard = ({ data, loading }: PersonalityProfileCard
   useEffect(() => {
     setLocalProfile(data)
     setPersonalityType(data?.personalityType || '')
-    setPersonalityDescription(data?.personalityDescription || '')
-    setPersonalityStrengths(data?.personalityStrengths || [])
     setCoreValues(data?.coreValues || [])
   }, [data])
 
@@ -92,6 +83,10 @@ export const PersonalityProfileCard = ({ data, loading }: PersonalityProfileCard
   }, [isModalOpen])
 
   const strengths = localProfile?.personalityStrengths || []
+  const selectedCoreValues = localProfile?.coreValues || []
+  const coreValuePreviewCount = expanded ? selectedCoreValues.length : 3
+  const strengthPreviewCount = expanded ? strengths.length : 3
+  const shouldShowToggle = strengths.length > 3 || selectedCoreValues.length > 3
 
   const personalityOptions = useMemo(
     () => [
@@ -111,22 +106,6 @@ export const PersonalityProfileCard = ({ data, loading }: PersonalityProfileCard
       'ESFJ',
       'ENFJ',
       'ENTJ',
-    ],
-    [],
-  )
-
-  const strengthOptions = useMemo(
-    () => [
-      'Analytical thinking',
-      'Empathy',
-      'Creativity',
-      'Strategic planning',
-      'Collaboration',
-      'Adaptability',
-      'Communication',
-      'Problem solving',
-      'Organization',
-      'Vision casting',
     ],
     [],
   )
@@ -173,8 +152,6 @@ export const PersonalityProfileCard = ({ data, loading }: PersonalityProfileCard
     try {
       const updates = {
         personalityType,
-        personalityStrengths,
-        personalityDescription,
         coreValues,
       }
 
@@ -186,7 +163,10 @@ export const PersonalityProfileCard = ({ data, loading }: PersonalityProfileCard
           hasCompletedValuesTest,
         }),
       ])
-      setLocalProfile(updates)
+      setLocalProfile(prev => ({
+        ...(prev ?? {}),
+        ...updates,
+      }))
       setIsModalOpen(false)
       toast({
         title: 'Profile saved',
@@ -224,12 +204,39 @@ export const PersonalityProfileCard = ({ data, loading }: PersonalityProfileCard
                     Strengths
                   </Text>
                   <UnorderedList pl={5} spacing={1}>
-                    {strengths.slice(0, expanded ? strengths.length : 3).map(item => (
+                    {strengths.slice(0, strengthPreviewCount).map(item => (
                       <ListItem key={item}>{item}</ListItem>
                     ))}
                   </UnorderedList>
                 </>
               )}
+              <Stack spacing={2} pt={strengths.length > 0 ? 1 : 0}>
+                <HStack spacing={2} color="brand.text">
+                  <Icon as={Award} color="yellow.500" />
+                  <Text fontWeight="semibold">Core Values</Text>
+                </HStack>
+                {selectedCoreValues.length > 0 ? (
+                  <HStack spacing={2} flexWrap="wrap">
+                    {selectedCoreValues.slice(0, coreValuePreviewCount).map(value => (
+                      <Tag key={value} colorScheme="yellow" borderRadius="full" px={3} py={1} whiteSpace="nowrap">
+                        <HStack spacing={1}>
+                          <Icon as={Award} size={14} />
+                          <Text>{value}</Text>
+                        </HStack>
+                      </Tag>
+                    ))}
+                  </HStack>
+                ) : (
+                  <Stack spacing={1}>
+                    <Text color="brand.subtleText">No core values selected yet.</Text>
+                    {localProfile?.personalityType && (
+                      <Text fontSize="xs" color="brand.subtleText">
+                        Complete the Personal Values test to add your core values.
+                      </Text>
+                    )}
+                  </Stack>
+                )}
+              </Stack>
               <Collapse in={expanded} animateOpacity>
                 {data?.personalityDescription && (
                   <Text pt={2}>
@@ -237,14 +244,14 @@ export const PersonalityProfileCard = ({ data, loading }: PersonalityProfileCard
                   </Text>
                 )}
               </Collapse>
-              {strengths.length > 3 && (
+              {shouldShowToggle && (
                 <Button variant="ghost" size="sm" alignSelf="flex-start" onClick={() => setExpanded(prev => !prev)}>
                   {expanded ? 'Show less' : 'Show full assessment'}
                 </Button>
               )}
               {!localProfile?.personalityType && (
                 <Button colorScheme="purple" size="sm" onClick={() => setIsModalOpen(true)} alignSelf="flex-start">
-                  Take Personality Test
+                  Take Personality & Values Tests
                 </Button>
               )}
               {localProfile?.personalityType && (
@@ -366,29 +373,6 @@ export const PersonalityProfileCard = ({ data, loading }: PersonalityProfileCard
                       </Select>
                     </Box>
                   </Tooltip>
-                </FormControl>
-
-                <FormControl>
-                  <FormLabel>Top Strengths</FormLabel>
-                  <CheckboxGroup value={personalityStrengths} onChange={values => setPersonalityStrengths(values as string[])}>
-                    <Stack spacing={2} direction={{ base: 'column', md: 'row' }} flexWrap="wrap">
-                      {strengthOptions.map(item => (
-                        <Checkbox key={item} value={item} width={{ base: '100%', md: '45%' }}>
-                          {item}
-                        </Checkbox>
-                      ))}
-                    </Stack>
-                  </CheckboxGroup>
-                </FormControl>
-
-                <FormControl>
-                  <FormLabel>How would you describe this type?</FormLabel>
-                  <Textarea
-                    placeholder="Share a short description or takeaway from your assessment"
-                    value={personalityDescription}
-                    onChange={event => setPersonalityDescription(event.target.value)}
-                    rows={4}
-                  />
                 </FormControl>
 
                 <Divider />

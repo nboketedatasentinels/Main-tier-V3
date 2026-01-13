@@ -14,6 +14,7 @@ import {
   Icon,
   IconButton,
   Skeleton,
+  SkeletonCircle,
   Progress,
   Select,
   SimpleGrid,
@@ -22,7 +23,6 @@ import {
   StatHelpText,
   StatLabel,
   StatNumber,
-  Switch,
   Tab,
   TabList,
   TabPanel,
@@ -35,6 +35,7 @@ import {
   Th,
   Thead,
   Tr,
+  Tooltip,
   useDisclosure,
   useToken,
   useToast,
@@ -60,6 +61,7 @@ import {
 import {
   collection,
   doc,
+  documentId,
   getDocs,
   limit,
   onSnapshot,
@@ -68,40 +70,22 @@ import {
   where,
 } from 'firebase/firestore'
 import { ResponsiveContainer, PieChart, Pie, Cell } from 'recharts'
-import { LeaderboardTimeframe, UserProfile } from '@/types'
+import { Badge as BadgeDefinition, LeaderboardTimeframe, UserProfile } from '@/types'
 import { db } from '@/services/firebase'
 import { useAuth } from '@/hooks/useAuth'
+import { useLeaderboardContext, getLeaderboardContextLabels } from '@/hooks/leaderboard/useLeaderboardContext'
+import { useLeaderboardData } from '@/hooks/leaderboard/useLeaderboardData'
+import { useLeaderboardMetrics } from '@/hooks/leaderboard/useLeaderboardMetrics'
 import { StartChallengeModal } from '@/components/modals/StartChallengeModal'
 
-interface PointsTransaction {
+interface FeaturedBadge {
   id: string
-  userId: string
-  points: number
-  category?: string
-  createdAt: string
-  companyId?: string
-}
-
-interface ChallengeRecord {
-  id: string
-  opponentName: string
-  opponentAvatar?: string
-  opponentId?: string
-  startDate: string
-  endDate: string
-  yourPoints: number
-  opponentPoints: number
-  status: 'active' | 'completed' | 'upcoming'
-  result?: 'win' | 'loss' | 'draw'
-}
-
-interface LeaderboardRow {
-  user: UserProfile
-  activePoints: number
-  totalPoints: number
-  level: number
-  badgeCount: number
-  rank: number
+  name: string
+  description?: string
+  iconUrl?: string
+  color?: string
+  type?: BadgeDefinition['type']
+  earnedAt?: string
 }
 
 const timeframeOptions = [
@@ -153,15 +137,13 @@ export const LeadershipBoardPage: React.FC = () => {
   const [timeframe, setTimeframe] = useState<LeaderboardTimeframe>(LeaderboardTimeframe.ALL_TIME)
   const [sortField, setSortField] = useState<'points' | 'level' | 'name'>('points')
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('desc')
-  const [profiles, setProfiles] = useState<UserProfile[]>([])
   const [currentProfile, setCurrentProfile] = useState<UserProfile | null>(null)
-  const [transactions, setTransactions] = useState<PointsTransaction[]>([])
-  const [challenges, setChallenges] = useState<ChallengeRecord[]>([])
   const [virtualOffset, setVirtualOffset] = useState(0)
   const [leaderboardPage, setLeaderboardPage] = useState(1)
   const [breakdownPage, setBreakdownPage] = useState(1)
-  const [profilesLoaded, setProfilesLoaded] = useState(false)
-  const [transactionsLoaded, setTransactionsLoaded] = useState(false)
+  const [featuredBadges, setFeaturedBadges] = useState<FeaturedBadge[]>([])
+  const [badgesLoading, setBadgesLoading] = useState(false)
+  const [badgesError, setBadgesError] = useState<string | null>(null)
   const [pointsPulse, setPointsPulse] = useState(false)
   const [isRefreshingProfile, setIsRefreshingProfile] = useState(false)
   const [showFilterTip, setShowFilterTip] = useState(() => {
@@ -182,40 +164,120 @@ export const LeadershipBoardPage: React.FC = () => {
     } as UserProfile
   }, [authProfile, currentProfile])
 
+  const context = useLeaderboardContext(profile)
+  const contextLabels = useMemo(() => getLeaderboardContextLabels(context), [context])
+  const isAdminAll = context?.type === 'admin_all'
+  const {
+    label: segmentLabel,
+    memberLabel: segmentMemberLabel,
+    scopeText: segmentScopeText,
+    badgeLabel: segmentBadgeLabel,
+  } = contextLabels
+
+  const segmentIssue = useMemo(() => {
+    if (!profile || !context) return null
+    if (context.type === 'organization' && !context.organizationId) {
+      return 'Organization assignment required to view this leaderboard.'
+    }
+    if (context.type === 'village' && !context.villageId) {
+      return 'Please contact support to join a village.'
+    }
+    if (context.type === 'cluster' && !context.clusterId) {
+      return 'Cluster assignment required to view this leaderboard.'
+    }
+    return null
+  }, [context, profile])
+
+  const { profiles, transactions, challenges, profilesLoaded, transactionsLoaded } = useLeaderboardData({
+    context,
+    profileId: profile?.id,
+  })
+
   const pointsPulseStyle = pointsPulse ? 'pointsPulse 1.2s ease-in-out' : 'none'
 
-  const refetchChallenges = useCallback(async () => {
-    if (!profile) return
+  const fetchFeaturedBadges = useCallback(async () => {
+    if (!profile?.id) return
+    setBadgesLoading(true)
+    setBadgesError(null)
 
-    const challengeQuery = query(
-      collection(db, 'challenges'),
-      where('participants', 'array-contains', profile.id),
-      orderBy('startDate', 'desc'),
-      limit(25),
-    )
-
-    const snapshot = await getDocs(challengeQuery)
-    const loadedChallenges: ChallengeRecord[] = snapshot.docs.map((doc) => {
-      const data = doc.data() as Record<string, unknown>
-      return {
-        id: doc.id,
-        opponentName: (data.opponentName as string) || 'Peer Challenger',
-        opponentAvatar: data.opponentAvatar as string | undefined,
-        opponentId: data.opponentId as string | undefined,
-        startDate: (data.startDate as string) || new Date().toISOString(),
-        endDate: (data.endDate as string) || new Date().toISOString(),
-        yourPoints: (data.yourPoints as number) || 0,
-        opponentPoints: (data.opponentPoints as number) || 0,
-        status: ((data.status as ChallengeRecord['status']) || 'active'),
-        result: data.result as ChallengeRecord['result'],
+    const normalizeEarnedAt = (value: unknown) => {
+      if (!value) return undefined
+      if (typeof value === 'string') return value
+      if (value instanceof Date) return value.toISOString()
+      if (typeof value === 'object' && 'toDate' in value) {
+        return (value as { toDate: () => Date }).toDate().toISOString()
       }
-    })
+      return undefined
+    }
 
-    setChallenges(loadedChallenges)
-  }, [profile])
+    try {
+      const userBadgeQuery = query(
+        collection(db, 'user_badges'),
+        where('userId', '==', profile.id),
+        orderBy('earnedAt', 'desc'),
+        limit(5),
+      )
+      const userBadgeSnapshot = await getDocs(userBadgeQuery)
+      const userBadges = userBadgeSnapshot.docs.map((docItem) => {
+        const data = docItem.data() as { badgeId?: string; earnedAt?: unknown }
+        return {
+          id: docItem.id,
+          badgeId: data.badgeId ?? docItem.id,
+          earnedAt: normalizeEarnedAt(data.earnedAt),
+        }
+      })
+
+      if (!userBadges.length) {
+        setFeaturedBadges([])
+        return
+      }
+
+      const badgeIds = Array.from(new Set(userBadges.map((badge) => badge.badgeId).filter(Boolean))) as string[]
+      const badgeDefsMap = new Map<string, BadgeDefinition>()
+
+      if (badgeIds.length) {
+        const badgeDefsSnapshot = await getDocs(
+          query(collection(db, 'badges'), where(documentId(), 'in', badgeIds))
+        )
+        badgeDefsSnapshot.docs.forEach((docItem) => {
+          const data = docItem.data() as Partial<BadgeDefinition> & { title?: string }
+          badgeDefsMap.set(docItem.id, {
+            id: docItem.id,
+            name: data.name ?? data.title ?? 'Badge',
+            description: data.description ?? '',
+            iconUrl: data.iconUrl ?? '',
+            color: data.color ?? 'gray.500',
+            type: data.type ?? 'special',
+            criteria: data.criteria ?? '',
+            pointsRequired: data.pointsRequired,
+            createdAt: data.createdAt ?? '',
+          })
+        })
+      }
+
+      const mergedBadges = userBadges.map((userBadge) => {
+        const definition = badgeDefsMap.get(userBadge.badgeId)
+        return {
+          id: definition?.id ?? userBadge.badgeId,
+          name: definition?.name ?? 'Badge',
+          description: definition?.description,
+          iconUrl: definition?.iconUrl,
+          color: definition?.color,
+          type: definition?.type,
+          earnedAt: userBadge.earnedAt,
+        }
+      })
+
+      setFeaturedBadges(mergedBadges)
+    } catch (error) {
+      console.error('🔴 [Leaderboard] Failed to load badges', error)
+      setBadgesError('Badges unavailable right now.')
+    } finally {
+      setBadgesLoading(false)
+    }
+  }, [profile?.id])
 
   const handleChallengeCreated = useCallback(() => {
-    refetchChallenges()
     toast({
       title: 'Challenge created',
       description: 'Your opponent will receive a notification.',
@@ -223,72 +285,12 @@ export const LeadershipBoardPage: React.FC = () => {
       duration: 2000,
       isClosable: true,
     })
-  }, [refetchChallenges, toast])
+  }, [toast])
 
   useEffect(() => {
-    const profileQuery = query(collection(db, 'profiles'))
-    const unsubscribe = onSnapshot(profileQuery, (snapshot) => {
-      const loadedProfiles: UserProfile[] = snapshot.docs.map((doc) => doc.data() as UserProfile)
-      setProfiles(loadedProfiles)
-      setProfilesLoaded(true)
-    })
+    void fetchFeaturedBadges()
+  }, [fetchFeaturedBadges])
 
-    return () => unsubscribe()
-  }, [])
-
-  useEffect(() => {
-    const txQuery = query(collection(db, 'points_transactions'), orderBy('createdAt', 'desc'), limit(500))
-    const unsubscribe = onSnapshot(txQuery, (snapshot) => {
-      const loadedTx: PointsTransaction[] = snapshot.docs.map((doc) => {
-        const data = doc.data()
-        return {
-          id: doc.id,
-          userId: data.userId,
-          points: data.points || 0,
-          category: data.category,
-          companyId: data.companyId,
-          createdAt: data.createdAt?.toDate ? data.createdAt.toDate().toISOString() : data.createdAt,
-        }
-      })
-      setTransactions(loadedTx)
-      setTransactionsLoaded(true)
-    })
-
-    return () => unsubscribe()
-  }, [])
-
-  useEffect(() => {
-    if (!profile) return
-
-    const challengeQuery = query(
-      collection(db, 'challenges'),
-      where('participants', 'array-contains', profile.id),
-      orderBy('startDate', 'desc'),
-      limit(25),
-    )
-
-    const unsubscribe = onSnapshot(challengeQuery, (snapshot) => {
-      const loadedChallenges: ChallengeRecord[] = snapshot.docs.map((doc) => {
-        const data = doc.data() as Record<string, unknown>
-        return {
-          id: doc.id,
-          opponentName: (data.opponentName as string) || 'Peer Challenger',
-          opponentAvatar: data.opponentAvatar as string | undefined,
-          opponentId: data.opponentId as string | undefined,
-          startDate: (data.startDate as string) || new Date().toISOString(),
-          endDate: (data.endDate as string) || new Date().toISOString(),
-          yourPoints: (data.yourPoints as number) || 0,
-          opponentPoints: (data.opponentPoints as number) || 0,
-          status: ((data.status as ChallengeRecord['status']) || 'active'),
-          result: data.result as ChallengeRecord['result'],
-        }
-      })
-
-      setChallenges(loadedChallenges)
-    })
-
-    return () => unsubscribe()
-  }, [profile])
 
   useEffect(() => {
     if (!profile?.id) return undefined
@@ -372,90 +374,27 @@ export const LeadershipBoardPage: React.FC = () => {
     localStorage.setItem('leaderboard-filter-tip', 'dismissed')
   }
 
-  const aggregatedPoints = useMemo(() => {
-    const totals: Record<string, number> = {}
-    transactions.forEach((tx) => {
-      const createdAt = tx.createdAt ? new Date(tx.createdAt) : null
-      if (timeframe === LeaderboardTimeframe.CURRENT_JOURNEY && tx.userId !== profile?.id) return
-      if (timeframeStart && createdAt && createdAt < timeframeStart) return
-      totals[tx.userId] = (totals[tx.userId] || 0) + tx.points
-    })
-    return totals
-  }, [profile?.id, timeframe, timeframeStart, transactions])
-
-  const weeklyPoints = useMemo(() => {
-    if (!profile) return 0
-    const start = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000)
-    return transactions.reduce((sum, tx) => {
-      const createdAt = tx.createdAt ? new Date(tx.createdAt) : null
-      if (tx.userId === profile.id && createdAt && createdAt >= start) {
-        return sum + tx.points
-      }
-      return sum
-    }, 0)
-  }, [profile, transactions])
-
-  const monthlyPoints = useMemo(() => {
-    if (!profile) return 0
-    const start = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000)
-    return transactions.reduce((sum, tx) => {
-      const createdAt = tx.createdAt ? new Date(tx.createdAt) : null
-      if (tx.userId === profile.id && createdAt && createdAt >= start) {
-        return sum + tx.points
-      }
-      return sum
-    }, 0)
-  }, [profile, transactions])
-
-  const companySize = useMemo(() => profiles.filter((p) => p.companyId === profile?.companyId).length, [profiles, profile])
-
-  const leaderboardRows: LeaderboardRow[] = useMemo(() => {
-    const rows = profiles
-      .filter((p) => p.privacySettings?.showOnLeaderboard !== false)
-      .map((user) => {
-        const activePoints = timeframe === LeaderboardTimeframe.ALL_TIME ? user.totalPoints : aggregatedPoints[user.id] || 0
-        const badgeCount = Math.max(
-          1,
-          Math.round((timeframe === LeaderboardTimeframe.ALL_TIME ? user.totalPoints : activePoints) / 500),
-        )
-
-        return {
-          user,
-          activePoints,
-          totalPoints: user.totalPoints || 0,
-          level: user.level || 1,
-          badgeCount,
-          rank: 0,
-        }
-      })
-
-    const sorted = rows.sort((a, b) => {
-      if (sortField === 'name') {
-        const aName = a.user.fullName || a.user.firstName
-        const bName = b.user.fullName || b.user.firstName
-        return sortDirection === 'asc' ? aName.localeCompare(bName) : bName.localeCompare(aName)
-      }
-
-      if (sortField === 'level') {
-        return sortDirection === 'asc' ? a.level - b.level : b.level - a.level
-      }
-
-      return sortDirection === 'asc' ? a.activePoints - b.activePoints : b.activePoints - a.activePoints
-    })
-
-    return sorted.map((row, index) => ({ ...row, rank: index + 1 }))
-  }, [aggregatedPoints, profiles, sortDirection, sortField, timeframe])
-
-  const percentile = useMemo(() => {
-    if (!profile) return 'Top 100%'
-    const companyRows = leaderboardRows.filter((row) => row.user.companyId === profile.companyId)
-    const currentRank = companyRows.find((row) => row.user.id === profile.id)?.rank || companyRows.length
-    if (!companyRows.length) return 'Top 100%'
-    const pct = Math.round((currentRank / companyRows.length) * 100)
-    return `Top ${pct}%`
-  }, [leaderboardRows, profile])
-
-  const userRow = useMemo(() => leaderboardRows.find((row) => row.user.id === profile?.id), [leaderboardRows, profile])
+  const {
+    leaderboardRows,
+    userRow,
+    percentile,
+    segmentSize,
+    segmentChallenges,
+    peerRows,
+    cohortStats,
+    breakdownByCategory,
+    segmentStats,
+  } = useLeaderboardMetrics({
+    context,
+    profiles,
+    transactions,
+    challenges,
+    profile,
+    timeframe,
+    sortField,
+    sortDirection,
+    timeframeStart,
+  })
 
   const isPointsReady = Boolean(profile) && profilesLoaded && transactionsLoaded
   const displayTotalPoints = userRow?.totalPoints ?? profile?.totalPoints ?? 0
@@ -520,68 +459,12 @@ export const LeadershipBoardPage: React.FC = () => {
     }
   }, [leaderboardRows, paginatedRows, virtualOffset])
 
-  const peerRows = useMemo(() => {
-    const currentPoints = userRow?.activePoints || 0
-    return leaderboardRows.slice(0, 12).map((row) => ({
-      ...row,
-      delta: row.activePoints - currentPoints,
-    }))
-  }, [leaderboardRows, userRow])
-
-  const cohortStats = useMemo(() => {
-    const active = userRow?.activePoints || 0
-    const total = userRow?.totalPoints || 0
-    const level = displayLevel
-    const maxActive = Math.max(...leaderboardRows.map((row) => row.activePoints), active)
-    const maxTotal = Math.max(...leaderboardRows.map((row) => row.totalPoints), total)
-    const maxLevel = Math.max(...leaderboardRows.map((row) => row.level), level)
-
-    const avgActive = leaderboardRows.length
-      ? Math.round(leaderboardRows.reduce((sum, row) => sum + row.activePoints, 0) / leaderboardRows.length)
-      : 0
-    const avgTotal = leaderboardRows.length
-      ? Math.round(leaderboardRows.reduce((sum, row) => sum + row.totalPoints, 0) / leaderboardRows.length)
-      : 0
-    const avgLevel = leaderboardRows.length
-      ? Math.round(leaderboardRows.reduce((sum, row) => sum + row.level, 0) / leaderboardRows.length)
-      : 1
-
-    return {
-      active,
-      total,
-      level,
-      maxActive: maxActive || active,
-      maxTotal: maxTotal || total,
-      maxLevel: maxLevel || level,
-      avgActive,
-      avgTotal,
-      avgLevel,
-    }
-  }, [displayLevel, leaderboardRows, userRow])
-
-  const breakdownByCategory = useMemo(() => {
-    const categoryTotals: Record<string, number> = {}
-    transactions.forEach((tx) => {
-      if (tx.category) {
-        categoryTotals[tx.category] = (categoryTotals[tx.category] || 0) + tx.points
-      }
-    })
-
-    return Object.entries(categoryTotals).map(([name, value]) => ({
-      name,
-      value,
-      percent: userRow?.activePoints ? Math.round((value / userRow.activePoints) * 100) : 0,
-    }))
-  }, [transactions, userRow?.activePoints])
-
   useEffect(() => {
     const maxPage = Math.max(1, Math.ceil(breakdownByCategory.length / 4))
     if (breakdownPage > maxPage) {
       setBreakdownPage(maxPage)
     }
   }, [breakdownByCategory.length, breakdownPage])
-
-  const companyRows = useMemo(() => leaderboardRows.filter((row) => row.user.companyId === profile?.companyId), [leaderboardRows, profile?.companyId])
 
   const getRankIcon = (rank: number) => {
     if (rank === 1) return <Icon as={Crown} color="accent.warning" />
@@ -592,13 +475,6 @@ export const LeadershipBoardPage: React.FC = () => {
         {rank}
       </Badge>
     )
-  }
-
-  const companyStats = {
-    weeklyPoints,
-    monthlyPoints,
-    activeChallenges: challenges.filter((c) => c.status === 'active').length,
-    badgesEarned: userRow?.badgeCount || 0,
   }
 
   const handleApplyFilters = () => {
@@ -626,7 +502,28 @@ export const LeadershipBoardPage: React.FC = () => {
     setVirtualOffset(offset)
   }
 
-  const emptyChallenges = challenges.filter((challenge) => challenge.status === 'active').length === 0
+  const emptyChallenges = segmentChallenges.filter((challenge) => challenge.status === 'active').length === 0
+
+  if (context?.type === 'free') {
+    return (
+      <Card bg="surface.default" border="1px solid" borderColor="border.subtle">
+        <CardBody>
+          <VStack spacing={3} py={8} textAlign="center">
+            <Icon as={Sparkles} color="brand.primary" boxSize={8} />
+            <Text fontSize="2xl" fontWeight="bold" color="text.primary">
+              Leaderboard unlocked with membership
+            </Text>
+            <Text color="text.secondary">
+              Join an organization or upgrade to see rankings, challenges, and peers.
+            </Text>
+            <Button variant="primary" onClick={() => navigate('/upgrade')}>
+              Upgrade
+            </Button>
+          </VStack>
+        </CardBody>
+      </Card>
+    )
+  }
 
   return (
     <Stack spacing={6}>
@@ -642,6 +539,17 @@ export const LeadershipBoardPage: React.FC = () => {
             Competitive, social, and personalized rankings
           </Text>
           <Text color="text.secondary">Switch between leaderboard and challenge views with real-time data.</Text>
+          <HStack spacing={2} mt={3} flexWrap="wrap">
+            <Badge colorScheme="primary">{segmentBadgeLabel}</Badge>
+            {segmentIssue ? (
+              <Badge colorScheme="orange">{segmentIssue}</Badge>
+            ) : (
+              <Badge colorScheme="green">Segmented privacy enabled</Badge>
+            )}
+            {isAdminAll && (
+              <Badge colorScheme="purple">Admin view: All segments</Badge>
+            )}
+          </HStack>
         </Box>
         <HStack spacing={3}>
           <Button
@@ -725,10 +633,10 @@ export const LeadershipBoardPage: React.FC = () => {
                       <Stat>
                         <StatLabel color="text.muted">Your Current Rank</StatLabel>
                         <StatNumber color="text.primary" display="flex" alignItems="center" gap={2}>
-                          {getRankIcon(userRow?.rank || companyRows.length || 1)}
+                          {getRankIcon(userRow?.rank || leaderboardRows.length || 1)}
                           {userRow?.rank || '—'}
                         </StatNumber>
-                        <StatHelpText color="text.secondary">Across your company</StatHelpText>
+                        <StatHelpText color="text.secondary">{segmentScopeText}</StatHelpText>
                       </Stat>
                       <Stat>
                         <StatLabel color="text.muted">Total Points</StatLabel>
@@ -751,31 +659,31 @@ export const LeadershipBoardPage: React.FC = () => {
                       <Stat>
                         <StatLabel color="text.muted">Weekly Points</StatLabel>
                         <Skeleton isLoaded={isPointsReady} height="32px">
-                          <StatNumber color="text.primary">{formatNumber(companyStats.weeklyPoints)}</StatNumber>
+                          <StatNumber color="text.primary">{formatNumber(segmentStats.weeklyPoints)}</StatNumber>
                         </Skeleton>
                         <StatHelpText color="text.secondary">Last 7 days</StatHelpText>
                       </Stat>
                       <Stat>
                         <StatLabel color="text.muted">Monthly Points</StatLabel>
                         <Skeleton isLoaded={isPointsReady} height="32px">
-                          <StatNumber color="text.primary">{formatNumber(companyStats.monthlyPoints)}</StatNumber>
+                          <StatNumber color="text.primary">{formatNumber(segmentStats.monthlyPoints)}</StatNumber>
                         </Skeleton>
                         <StatHelpText color="text.secondary">Last 30 days</StatHelpText>
                       </Stat>
                       <Stat>
                         <StatLabel color="text.muted">Active Challenges</StatLabel>
-                        <StatNumber color="text.primary">{companyStats.activeChallenges}</StatNumber>
+                        <StatNumber color="text.primary">{segmentStats.activeChallenges}</StatNumber>
                         <StatHelpText color="text.secondary">Live battles</StatHelpText>
                       </Stat>
                       <Stat>
                         <StatLabel color="text.muted">Badges Earned</StatLabel>
-                        <StatNumber color="text.primary">{companyStats.badgesEarned}</StatNumber>
+                        <StatNumber color="text.primary">{segmentStats.badgesEarned}</StatNumber>
                         <StatHelpText color="text.secondary">Achievement count</StatHelpText>
                       </Stat>
                       <Stat>
-                        <StatLabel color="text.muted">Team Members</StatLabel>
-                        <StatNumber color="text.primary">{companySize || 1}</StatNumber>
-                        <StatHelpText color="text.secondary">Company size</StatHelpText>
+                        <StatLabel color="text.muted">{segmentMemberLabel}</StatLabel>
+                        <StatNumber color="text.primary">{segmentSize || 1}</StatNumber>
+                        <StatHelpText color="text.secondary">{segmentLabel} size</StatHelpText>
                       </Stat>
                     </SimpleGrid>
                   </CardBody>
@@ -812,10 +720,48 @@ export const LeadershipBoardPage: React.FC = () => {
                         </Box>
                         <Box p={3} border="1px solid" borderColor="border.subtle" borderRadius="lg">
                           <Text fontSize="xs" color="text.secondary">Featured Badges</Text>
-                          <HStack spacing={2} mt={1}>
-                            <Badge colorScheme="primary">Growth</Badge>
-                            <Badge colorScheme="secondary">Impact</Badge>
-                          </HStack>
+                          {badgesLoading ? (
+                            <HStack spacing={2} mt={2}>
+                              {Array.from({ length: 3 }).map((_, index) => (
+                                <SkeletonCircle key={index} size="8" />
+                              ))}
+                            </HStack>
+                          ) : badgesError ? (
+                            <Text fontSize="xs" color="text.secondary" mt={2}>
+                              {badgesError}
+                            </Text>
+                          ) : featuredBadges.length ? (
+                            <HStack spacing={2} mt={2}>
+                              {featuredBadges.map((badge) => {
+                                const earnedAtLabel = badge.earnedAt
+                                  ? new Date(badge.earnedAt).toLocaleDateString()
+                                  : 'Date unavailable'
+                                return (
+                                  <Tooltip
+                                    key={badge.id}
+                                    label={`${badge.name} • ${earnedAtLabel}`}
+                                    hasArrow
+                                  >
+                                    <Avatar
+                                      size="xs"
+                                      name={badge.name}
+                                      src={badge.iconUrl}
+                                      bg={badge.color ?? 'gray.500'}
+                                      color="white"
+                                      icon={<Icon as={Award} />}
+                                      border="1px solid"
+                                      borderColor="border.subtle"
+                                    />
+                                  </Tooltip>
+                                )
+                              })}
+                            </HStack>
+                          ) : (
+                            <HStack spacing={2} mt={2} color="text.secondary">
+                              <Icon as={Award} boxSize={4} />
+                              <Text fontSize="xs">No badges earned yet.</Text>
+                            </HStack>
+                          )}
                         </Box>
                       </SimpleGrid>
                     </VStack>
@@ -838,13 +784,13 @@ export const LeadershipBoardPage: React.FC = () => {
                   {showFilterTip && (
                     <Flex mt={3} p={3} borderRadius="md" bg="tint.brandPrimary" align="center" gap={3}>
                       <Icon as={AlertCircle} color="brand.primary" />
-                      <Text fontSize="sm" flex="1">First time? Adjust your timeframe, sort order, and admin filters here.</Text>
+                      <Text fontSize="sm" flex="1">First time? Adjust your timeframe and sort order here.</Text>
                       <Button size="xs" onClick={dismissFilterTip}>Got it</Button>
                     </Flex>
                   )}
                 </CardHeader>
                 <CardBody>
-                  <SimpleGrid columns={{ base: 1, md: 4 }} spacing={4}>
+                  <SimpleGrid columns={{ base: 1, md: 3 }} spacing={4}>
                     <Box>
                       <Text fontSize="sm" mb={1}>Timeframe</Text>
                       <Select value={timeframe} onChange={(e) => setTimeframe(e.target.value as LeaderboardTimeframe)}>
@@ -868,13 +814,6 @@ export const LeadershipBoardPage: React.FC = () => {
                         <option value="asc">Ascending</option>
                       </Select>
                     </Box>
-                    <Box>
-                      <Text fontSize="sm" mb={1}>Admin Filters</Text>
-                      <HStack spacing={3}>
-                        <Switch size="lg" colorScheme="primary" />
-                        <Text fontSize="sm">Company / Village / Cluster</Text>
-                      </HStack>
-                    </Box>
                   </SimpleGrid>
                 </CardBody>
               </Card>
@@ -883,7 +822,7 @@ export const LeadershipBoardPage: React.FC = () => {
                 <CardHeader>
                   <Flex justify="space-between" align="center">
                     <Box>
-                      <Text fontWeight="bold">Company Leaderboard</Text>
+                      <Text fontWeight="bold">{segmentLabel} Leaderboard</Text>
                       <Text color="text.secondary">Sorted by points with live updates</Text>
                     </Box>
                     <HStack spacing={2}>
@@ -1066,7 +1005,7 @@ export const LeadershipBoardPage: React.FC = () => {
                   <Flex justify="space-between" align="center">
                     <Box>
                       <Text fontWeight="bold">Points Breakdown</Text>
-                      <Text color="text.secondary">Corporate members only</Text>
+                      <Text color="text.secondary">{segmentLabel} member insights</Text>
                     </Box>
                     <HStack spacing={3}>
                       <IconButton
@@ -1129,11 +1068,11 @@ export const LeadershipBoardPage: React.FC = () => {
                   <Stack color="text.inverse">
                     <Flex align="center" justify="space-between">
                       <Box>
-                        <Text fontSize="sm" opacity={0.9}>Challenge Weeks are Live</Text>
-                        <Text fontSize="2xl" fontWeight="bold">Friendly competitions to spark growth</Text>
+                        <Text fontSize="sm" opacity={0.9} color="white">Challenge Weeks are Live</Text>
+                        <Text fontSize="2xl" fontWeight="bold" color="white">Friendly competitions to spark growth</Text>
                         <HStack spacing={3} mt={2}>
-                          <Icon as={Clock} color="text.inverse" />
-                          <Text>Join or launch a challenge today</Text>
+                          <Icon as={Clock} color="white" />
+                          <Text color="white">Join or launch a challenge today</Text>
                         </HStack>
                       </Box>
                       <Button
@@ -1155,7 +1094,7 @@ export const LeadershipBoardPage: React.FC = () => {
                   <CardBody>
                     <Stat>
                       <StatLabel color="text.muted">Active Challenges</StatLabel>
-                      <StatNumber color="text.primary">{challenges.filter((c) => c.status === 'active').length}</StatNumber>
+                      <StatNumber color="text.primary">{segmentChallenges.filter((c) => c.status === 'active').length}</StatNumber>
                     </Stat>
                   </CardBody>
                 </Card>
@@ -1163,7 +1102,7 @@ export const LeadershipBoardPage: React.FC = () => {
                   <CardBody>
                     <Stat>
                       <StatLabel color="text.muted">Victories</StatLabel>
-                      <StatNumber color="text.primary">{challenges.filter((c) => c.result === 'win').length}</StatNumber>
+                      <StatNumber color="text.primary">{segmentChallenges.filter((c) => c.result === 'win').length}</StatNumber>
                     </Stat>
                   </CardBody>
                 </Card>
@@ -1171,7 +1110,7 @@ export const LeadershipBoardPage: React.FC = () => {
                   <CardBody>
                     <Stat>
                       <StatLabel color="text.muted">Points Earned</StatLabel>
-                      <StatNumber color="text.primary">{formatNumber(challenges.reduce((sum, c) => sum + c.yourPoints, 0))}</StatNumber>
+                      <StatNumber color="text.primary">{formatNumber(segmentChallenges.reduce((sum, c) => sum + c.yourPoints, 0))}</StatNumber>
                     </Stat>
                   </CardBody>
                 </Card>
@@ -1201,7 +1140,7 @@ export const LeadershipBoardPage: React.FC = () => {
                     </VStack>
                   ) : (
                     <Stack spacing={3}>
-                      {challenges
+                      {segmentChallenges
                         .filter((c) => c.status === 'active')
                         .map((challenge) => (
                           <Flex key={challenge.id} p={4} border="1px solid" borderColor="border.subtle" borderRadius="lg" align="center" gap={4}>
@@ -1230,7 +1169,7 @@ export const LeadershipBoardPage: React.FC = () => {
                 </CardHeader>
                 <CardBody>
                   <Stack spacing={3}>
-                    {challenges
+                    {segmentChallenges
                       .filter((c) => c.status === 'completed')
                       .map((challenge) => (
                         <Flex key={challenge.id} p={3} border="1px solid" borderColor="border.subtle" borderRadius="lg" align="center" gap={3}>

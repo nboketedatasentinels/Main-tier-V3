@@ -15,6 +15,7 @@ import {
   where,
 } from 'firebase/firestore'
 import { db } from './firebase'
+import { ORG_COLLECTION } from '@/constants/organizations'
 import {
   AdminActivityLogEntry,
   AdminFormData,
@@ -32,7 +33,7 @@ import {
 
 type TrendPoint = { label: string; value: number }
 
-const orgCollection = collection(db, 'organizations')
+const orgCollection = collection(db, ORG_COLLECTION)
 const usersCollection = collection(db, 'users')
 const auditCollection = collection(db, 'admin_activity_log')
 const engagementCollection = collection(db, 'user_engagement_scores')
@@ -334,17 +335,17 @@ export const createOrganization = async (organization: OrganizationRecord) => {
 }
 
 export const updateOrganization = async (id: string, updates: Partial<OrganizationRecord>) => {
-  const orgRef = doc(db, 'organizations', id)
+  const orgRef = doc(db, ORG_COLLECTION, id)
   await updateDoc(orgRef, { ...updates, updatedAt: serverTimestamp() })
 }
 
 export const deleteOrganization = async (id: string) => {
-  const orgRef = doc(db, 'organizations', id)
+  const orgRef = doc(db, ORG_COLLECTION, id)
   await deleteDoc(orgRef)
 }
 
 export const assignPartner = async (id: string, partnerId: string | null) => {
-  const orgRef = doc(db, 'organizations', id)
+  const orgRef = doc(db, ORG_COLLECTION, id)
   await updateDoc(orgRef, {
     partnerId,
     updatedAt: serverTimestamp(),
