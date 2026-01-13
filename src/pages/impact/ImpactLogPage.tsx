@@ -1184,44 +1184,6 @@ export const ImpactLogPage: React.FC = () => {
                 </SimpleGrid>
               )}
 
-              <Box p={3} bg="surface.subtle" borderRadius="md" border="1px solid" borderColor="border.subtle">
-                <HStack justify="space-between" mb={2}>
-                  <Text fontWeight="medium">LIFT Pillar Assignment</Text>
-                  <Tooltip
-                    label={
-                      <Box p={2}>
-                        <Text fontWeight="bold">Assigned Pillars</Text>
-                        <Text mt={2}>
-                          {liftPillars.length > 0 ? liftPillars.join(', ') : 'Select a category and activity to preview pillars.'}
-                        </Text>
-                      </Box>
-                    }
-                    hasArrow
-                    placement="top"
-                    bg="surface.default"
-                    color="text.primary"
-                    border="1px solid"
-                    borderColor="border.subtle"
-                  >
-                    <Icon as={InfoIcon} color="text.muted" boxSize={4} cursor="pointer" />
-                  </Tooltip>
-                </HStack>
-                {liftPillars.length > 0 ? (
-                  <HStack spacing={2} wrap="wrap">
-                    {liftPillars.map((pillar) => (
-                      <Badge key={pillar} colorScheme="purple" variant="subtle">
-                        {pillar}
-                      </Badge>
-                    ))}
-                  </HStack>
-                ) : (
-                  <Text color="text.muted" fontSize="sm">
-                    Select a category and activity to see the LIFT pillar mapping in real time.
-                  </Text>
-                )}
-              </Box>
-
-
               <SimpleGrid columns={{ base: 1, md: 2 }} spacing={3}>
                 <Box>
                   <Text fontWeight="medium">Title</Text>
