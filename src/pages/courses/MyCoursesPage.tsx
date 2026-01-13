@@ -14,6 +14,7 @@ import {
   HStack,
   VStack,
   Divider,
+  Tooltip,
 } from '@chakra-ui/react'
 import {
   BookOpen,
@@ -810,6 +811,17 @@ export const MyCoursesPage: React.FC = () => {
                     : entry.availability === 'completed'
                       ? 'Completed'
                       : 'Locked'
+                const hasCourse = Boolean(entry.course)
+                const isLoadingCourse = overallLoading && entry.courseId && !entry.course
+                const missingCourse = !overallLoading && entry.courseId && !entry.course
+                const hasLink = Boolean(entry.course?.link)
+                const hasAccess = entry.course ? canAccessCourse(profile, entry.course.title) : false
+                const isLocked = entry.availability === 'locked'
+                const unlockDateLabel =
+                  isLocked && entry.unlockDate
+                    ? entry.unlockDate.toLocaleDateString(undefined, { month: 'short', day: 'numeric' })
+                    : null
+                const canOpen = hasAccess && !isLocked && hasLink
                 return (
                   <Box
                     key={`monthly-${entry.monthNumber}`}
@@ -842,6 +854,72 @@ export const MyCoursesPage: React.FC = () => {
                       <Text fontSize="xs" color="gray.500" mt={2}>
                         Unlocks on {entry.unlockDate.toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}
                       </Text>
+                    )}
+                    {missingCourse && (
+                      <Text fontSize="xs" color="red.500" mt={2}>
+                        Course details unavailable. Contact your administrator.
+                      </Text>
+                    )}
+                    {!entry.courseId && (
+                      <Text fontSize="xs" color="gray.500" mt={2}>
+                        No course assigned for this month yet.
+                      </Text>
+                    )}
+                    {entry.courseId && (
+                      <Stack mt={3} spacing={2}>
+                        {isLoadingCourse ? (
+                          <Button size="sm" colorScheme="purple" borderRadius="full" isLoading loadingText="Loading course">
+                            Loading course
+                          </Button>
+                        ) : (
+                          <Tooltip
+                            label={
+                              !hasCourse
+                                ? missingCourse
+                                  ? 'Course details are unavailable.'
+                                  : 'Course details are still loading.'
+                                : !hasLink
+                                  ? 'Course link has not been provided yet.'
+                                  : isLocked && unlockDateLabel
+                                    ? `Unlocks on ${unlockDateLabel}`
+                                    : isLocked
+                                      ? 'Course is locked until its unlock date.'
+                                      : !hasAccess
+                                        ? 'Upgrade your membership to access this course.'
+                                        : ''
+                            }
+                            isDisabled={!isLocked && hasAccess && hasLink && hasCourse}
+                            hasArrow
+                            shouldWrapChildren
+                          >
+                            <Button
+                              as={canOpen ? 'a' : (RouterLink as React.ElementType)}
+                              href={canOpen ? entry.course?.link : undefined}
+                              to={canOpen ? undefined : '/upgrade'}
+                              target={canOpen ? '_blank' : undefined}
+                              rel={canOpen ? 'noopener noreferrer' : undefined}
+                              size="sm"
+                              colorScheme="purple"
+                              variant="solid"
+                              borderRadius="full"
+                              minW="140px"
+                              isDisabled={!hasCourse || !hasLink || isLocked}
+                              leftIcon={isLocked ? <Lock size={14} /> : undefined}
+                              rightIcon={!isLocked ? <ExternalLink size={16} /> : undefined}
+                            >
+                              {isLocked && unlockDateLabel
+                                ? `Unlocks ${unlockDateLabel}`
+                                : !hasCourse
+                                  ? 'Course unavailable'
+                                  : !hasLink
+                                    ? 'Link unavailable'
+                                    : hasAccess
+                                      ? 'Open course'
+                                      : 'Upgrade to unlock'}
+                            </Button>
+                          </Tooltip>
+                        )}
+                      </Stack>
                     )}
                   </Box>
                 )
