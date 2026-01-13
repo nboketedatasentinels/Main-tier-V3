@@ -29,8 +29,10 @@ import { AuthContext, AuthContextType } from './AuthContextType'
 import { getFriendlyErrorMessage } from '@/utils/authErrors'
 import { incrementOrganizationMemberCount, validateCompanyCode } from '@/services/organizationService'
 import { buildActionCodeSettings } from '@/utils/authActionCodeSettings'
-import { assignFreeCourseToUser, hasFreeCourseAssigned } from '@/services/courseAssignmentService'
-import { isFreeUser } from '@/utils/membership'
+import {
+  assignComplementaryCoursesToUser,
+  hasComplementaryCourseAssigned,
+} from '@/services/courseAssignmentService'
 import { createReferral, generateReferralCode, validateReferralCode } from '@/services/referralService'
 import { JOURNEY_META, type JourneyType } from '@/config/pointsConfig'
 
@@ -61,7 +63,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   })()
   const lastProfileLoadAtRef = useRef<string | null>(initialLastProfileLoadAt)
   const enableProfileRealtime = import.meta.env.VITE_ENABLE_PROFILE_REALTIME === 'true'
-  const freeCourseAssignmentRef = useRef({ inFlight: false, lastAttemptAt: 0, lastUserId: '' })
+  const complementaryCourseAssignmentRef = useRef({ inFlight: false, lastAttemptAt: 0, lastUserId: '' })
   const refreshStateRef = useRef({
     inFlight: false,
     lastRequestAt: 0,
@@ -135,13 +137,10 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     )
   }, [enableProfileRealtime])
 
-  const attemptFreeCourseAssignment = useCallback(
-    async (userId: string, loadedProfile: UserProfile) => {
-      const isFreeTier = isFreeUser(loadedProfile)
-      if (!isFreeTier) return
-
+  const attemptComplementaryCourseAssignment = useCallback(
+    async (userId: string) => {
       const now = Date.now()
-      const assignmentState = freeCourseAssignmentRef.current
+      const assignmentState = complementaryCourseAssignmentRef.current
       if (
         assignmentState.inFlight ||
         (assignmentState.lastUserId === userId && now - assignmentState.lastAttemptAt < 15000)
@@ -154,20 +153,20 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       assignmentState.lastUserId = userId
 
       try {
-        const alreadyAssigned = await hasFreeCourseAssigned(userId)
+        const alreadyAssigned = await hasComplementaryCourseAssigned(userId)
         if (alreadyAssigned) {
-          console.log('🟡 [Auth] Free course already assigned for user', { userId })
+          console.log('🟡 [Auth] Complementary courses already assigned for user', { userId })
           return
         }
 
-        const assigned = await assignFreeCourseToUser(userId)
+        const assigned = await assignComplementaryCoursesToUser(userId)
         if (assigned) {
-          console.log('🟢 [Auth] Auto-assigned free course for user', { userId })
+          console.log('🟢 [Auth] Auto-assigned complementary courses for user', { userId })
         } else {
-          console.log('🟠 [Auth] Free course assignment skipped', { userId })
+          console.log('🟠 [Auth] Complementary course assignment skipped', { userId })
         }
       } catch (error) {
-        console.error('🔴 [Auth] Free course assignment failed', {
+        console.error('🔴 [Auth] Complementary course assignment failed', {
           userId,
           message: (error as Error)?.message,
           stack: (error as Error)?.stack,
@@ -177,7 +176,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         assignmentState.inFlight = false
       }
     },
-    [assignFreeCourseToUser, hasFreeCourseAssigned]
+    [assignComplementaryCoursesToUser, hasComplementaryCourseAssigned]
   )
 
   const extractCustomClaims = useCallback(async (firebaseUser: User) => {
@@ -581,7 +580,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         updateProfileState(ensuredProfile, 'auth-state-change')
         recordProfileLoad(ensuredProfile)
         if (ensuredProfile) {
-          void attemptFreeCourseAssignment(currentUser.uid, ensuredProfile)
+          void attemptComplementaryCourseAssignment(currentUser.uid)
         }
         setProfileLoading(false)
         setLoading(false)
@@ -612,7 +611,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
           console.log('🔁 [Auth] Profile updated via snapshot', updatedProfile.role)
           updateProfileState(updatedProfile, 'realtime-snapshot')
           recordProfileLoad(updatedProfile)
-          void attemptFreeCourseAssignment(currentUser.uid, updatedProfile)
+          void attemptComplementaryCourseAssignment(currentUser.uid)
           setProfileStatus('ready')
         },
         (error) => {
@@ -630,7 +629,13 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       }
       unsubscribe()
     }
-  }, [attemptFreeCourseAssignment, enableProfileRealtime, extractCustomClaims, recordProfileLoad, updateProfileState])
+  }, [
+    attemptComplementaryCourseAssignment,
+    enableProfileRealtime,
+    extractCustomClaims,
+    recordProfileLoad,
+    updateProfileState,
+  ])
 
   /* ------------------------------------------------------------------ */
   /* 🔹 Auth Actions                                                     */
@@ -911,23 +916,21 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         }
       }
 
-      // Auto-assign the free course for eligible free-tier users.
-      if (isFreeUser(profilePayload)) {
-        try {
-          const assigned = await assignFreeCourseToUser(uid)
-          if (assigned) {
-            console.log('🟢 [Auth] Assigned free course after signup', { uid })
-          } else {
-            console.log('🟠 [Auth] Free course assignment skipped after signup', { uid })
-          }
-        } catch (assignmentError) {
-          console.error('🔴 [Auth] Unable to assign free course after signup', {
-            uid,
-            message: (assignmentError as Error)?.message,
-            stack: (assignmentError as Error)?.stack,
-            raw: assignmentError,
-          })
+      // Auto-assign complementary courses so every member can track progress.
+      try {
+        const assigned = await assignComplementaryCoursesToUser(uid)
+        if (assigned) {
+          console.log('🟢 [Auth] Assigned complementary courses after signup', { uid })
+        } else {
+          console.log('🟠 [Auth] Complementary course assignment skipped after signup', { uid })
         }
+      } catch (assignmentError) {
+        console.error('🔴 [Auth] Unable to assign complementary courses after signup', {
+          uid,
+          message: (assignmentError as Error)?.message,
+          stack: (assignmentError as Error)?.stack,
+          raw: assignmentError,
+        })
       }
 
       console.log('🟢 [Auth] signUp success', { uid })
