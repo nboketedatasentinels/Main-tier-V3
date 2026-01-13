@@ -108,7 +108,7 @@ export const useOrganizationProgramCourses = (organizationId: string | null) => 
           courseAssignments,
           programDuration,
         })
-        const monthlyAssignmentArray = getMonthlyAssignmentsArray(monthlyAssignments, totalMonths).filter(Boolean)
+        const monthlyAssignmentArray = getMonthlyAssignmentsArray(monthlyAssignments, totalMonths)
         const orderedCourseIds = Array.from(new Set(monthlyAssignmentArray))
 
         setProgram({

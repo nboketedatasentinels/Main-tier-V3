@@ -1,4 +1,4 @@
-import { JOURNEY_META, type JourneyType } from '@/config/pointsConfig'
+import { JOURNEY_META, type JourneyTimelineDisplayMode, type JourneyType } from '@/config/pointsConfig'
 
 export const JOURNEY_LABELS: Record<JourneyType, string> = {
   '4W': '4-Week Intro',
@@ -79,3 +79,6 @@ export const resolveJourneyType = (params: {
 }
 
 export const getJourneyWeeks = (journeyType: JourneyType): number => JOURNEY_META[journeyType].weeks
+
+export const getJourneyTimelineDisplayMode = (journeyType: JourneyType): JourneyTimelineDisplayMode =>
+  JOURNEY_META[journeyType].timelineDisplay ?? 'duration'
