@@ -73,10 +73,10 @@ import { ResponsiveContainer, PieChart, Pie, Cell } from 'recharts'
 import { Badge as BadgeDefinition, LeaderboardTimeframe, UserProfile } from '@/types'
 import { db } from '@/services/firebase'
 import { useAuth } from '@/hooks/useAuth'
-import { useLeaderboardContext, getLeaderboardContextLabels } from '@/hooks/leaderboard/useLeaderboardContext'
 import { useLeaderboardData } from '@/hooks/leaderboard/useLeaderboardData'
 import { useLeaderboardMetrics } from '@/hooks/leaderboard/useLeaderboardMetrics'
 import { StartChallengeModal } from '@/components/modals/StartChallengeModal'
+import { getOrgScope } from '@/utils/organizationScope'
 
 interface FeaturedBadge {
   id: string
@@ -104,17 +104,6 @@ const sortOptions = [
 const rowHeight = 76
 const virtualizationThreshold = 30
 const pageSize = 25
-
-const toDateFromTimeframe = (timeframe: LeaderboardTimeframe): Date | null => {
-  const now = new Date()
-  if (timeframe === LeaderboardTimeframe.LAST_7_DAYS) {
-    return new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000)
-  }
-  if (timeframe === LeaderboardTimeframe.LAST_30_DAYS) {
-    return new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000)
-  }
-  return null
-}
 
 const formatNumber = (value?: number | null) => {
   const safeValue = typeof value === 'number' && !Number.isNaN(value) ? value : 0
@@ -153,7 +142,6 @@ export const LeadershipBoardPage: React.FC = () => {
   })
   const previousTotalPoints = useRef<number | null>(null)
   const previousLevel = useRef<number | null>(null)
-  const timeframeStart = useMemo(() => toDateFromTimeframe(timeframe), [timeframe])
   const enableProfileRealtime = import.meta.env.VITE_ENABLE_PROFILE_REALTIME === 'true'
 
   const profile = useMemo(() => {
@@ -165,9 +153,34 @@ export const LeadershipBoardPage: React.FC = () => {
     } as UserProfile
   }, [authProfile, currentProfile])
 
-  const context = useLeaderboardContext(profile)
-  const contextLabels = useMemo(() => getLeaderboardContextLabels(context), [context])
-  const isAdminAll = context?.type === 'admin_all'
+  const orgScope = useMemo(() => getOrgScope(profile), [profile])
+  const context = useMemo(() => {
+    if (!profile) return null
+    if (orgScope.isValid) {
+      return {
+        type: 'organization' as const,
+        organizationId: orgScope.companyId,
+        organizationCode: orgScope.companyCode,
+      }
+    }
+    return { type: 'free' as const }
+  }, [orgScope.companyCode, orgScope.companyId, profile])
+  const contextLabels = useMemo(() => {
+    if (context?.type === 'organization') {
+      return {
+        label: 'Organization',
+        memberLabel: 'Organization Members',
+        scopeText: 'Across your organization',
+        badgeLabel: 'Organization View',
+      }
+    }
+    return {
+      label: 'Leaderboard',
+      memberLabel: 'Members',
+      scopeText: 'Across the leaderboard',
+      badgeLabel: 'Leaderboard View',
+    }
+  }, [context?.type])
   const {
     label: segmentLabel,
     memberLabel: segmentMemberLabel,
@@ -178,16 +191,10 @@ export const LeadershipBoardPage: React.FC = () => {
   const segmentIssue = useMemo(() => {
     if (!profile || !context) return null
     if (context.type === 'free') {
-      return 'Join a village to see your peers. Contact support.'
+      return 'Organization assignment required to view your peers. Contact support.'
     }
     if (context.type === 'organization' && !context.organizationId && !context.organizationCode) {
       return 'Organization assignment required to view this leaderboard.'
-    }
-    if (context.type === 'village' && !context.villageId) {
-      return 'Please contact support to join a village.'
-    }
-    if (context.type === 'cluster' && !context.clusterId) {
-      return 'Cluster assignment required to view this leaderboard.'
     }
     return null
   }, [context, profile])
@@ -394,10 +401,8 @@ export const LeadershipBoardPage: React.FC = () => {
     transactions,
     challenges,
     profile,
-    timeframe,
     sortField,
     sortDirection,
-    timeframeStart,
   })
 
   const isPointsReady = Boolean(profile) && profilesLoaded && transactionsLoaded
@@ -528,12 +533,9 @@ export const LeadershipBoardPage: React.FC = () => {
             {segmentIssue ? (
               <Badge colorScheme="orange">{segmentIssue}</Badge>
             ) : (
-              <Badge colorScheme="green">Segmented privacy enabled</Badge>
+              <Badge colorScheme="green">Privacy enabled</Badge>
             )}
             <Badge colorScheme="purple">Context: {context?.type ?? 'unknown'}</Badge>
-            {isAdminAll && (
-              <Badge colorScheme="purple">Admin view: All segments</Badge>
-            )}
           </HStack>
         </Box>
         <HStack spacing={3}>
@@ -609,14 +611,14 @@ export const LeadershipBoardPage: React.FC = () => {
                         Personal leaderboard view
                       </Text>
                       <Text color="text.secondary">
-                        Join a village or organization to see peer rankings and community benchmarks.
+                        Join an organization to see peer rankings and benchmarks.
                       </Text>
                       <Button
                         variant="primary"
                         as="a"
                         href={`mailto:${supportEmail}`}
                       >
-                        Contact support to join a village
+                        Contact support to join an organization.
                       </Button>
                     </VStack>
                   </CardBody>
@@ -878,7 +880,7 @@ export const LeadershipBoardPage: React.FC = () => {
                                     <Box>
                                       <Text fontWeight="bold" color="text.primary">{row.user.fullName}</Text>
                                       <Text fontSize="xs" color="text.secondary">
-                                        {row.user.companyId || 'Independent'} · {row.user.villageId || 'Village TBD'} · {row.user.clusterId || 'Cluster TBD'}
+                                        {row.user.companyName || row.user.companyCode || row.user.companyId || 'Independent'}
                                       </Text>
                                       <HStack spacing={2} mt={1}>
                                         <Badge colorScheme="success">Active</Badge>

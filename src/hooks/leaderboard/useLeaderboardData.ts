@@ -64,22 +64,10 @@ const buildProfilesConstraints = (context: LeaderboardContext | null): QueryCons
   }
 }
 
-const buildTransactionConstraints = (context: LeaderboardContext | null): QueryConstraint[] | null => {
-  if (!context) return null
+const buildTransactionConstraints = (profileId?: string | null): QueryConstraint[] | null => {
+  if (!profileId) return null
 
-  const constraints: QueryConstraint[] = []
-  if (context.type === 'organization') {
-    if (context.organizationId) {
-      constraints.push(where('companyId', '==', context.organizationId))
-    } else if (context.organizationCode) {
-      constraints.push(where('companyCode', '==', context.organizationCode))
-    } else {
-      return null
-    }
-  }
-
-  constraints.push(orderBy('createdAt', 'desc'))
-  constraints.push(limit(500))
+  const constraints: QueryConstraint[] = [where('userId', '==', profileId), orderBy('createdAt', 'desc'), limit(500)]
   return constraints
 }
 
@@ -161,24 +149,13 @@ export const useLeaderboardData = ({
     })
 
     return () => unsubscribe()
-  }, [context])
+  }, [context?.type, profileId])
 
   useEffect(() => {
-    if (context?.type === 'organization' && !context.organizationId && !context.organizationCode) {
-      console.warn('[Leaderboard] Missing organization identifier for transaction query.')
+    const constraints = buildTransactionConstraints(profileId)
+    if (!constraints) {
       setTransactions([])
-      setTransactionsLoaded(true)
-      return undefined
-    }
-
-    const constraints = buildTransactionConstraints(context)
-    if (!constraints || context?.type === 'free') {
-      setTransactions([])
-      const contextType = context?.type
-      setTransactionsLoaded(Boolean(contextType))
-      if (contextType === 'free') {
-        console.log('[Leaderboard] Free context: skipping transactions query.')
-      }
+      setTransactionsLoaded(Boolean(context?.type))
       return undefined
     }
 
@@ -202,7 +179,7 @@ export const useLeaderboardData = ({
     })
 
     return () => unsubscribe()
-  }, [context])
+  }, [context?.type, profileId])
 
   useEffect(() => {
     if (!profileId) {

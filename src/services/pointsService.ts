@@ -120,7 +120,6 @@ export async function awardChecklistPoints(params: {
         updatedAt: serverTimestamp(),
       };
 
-      tx.set(doc(db, "users", uid), profileUpdate, { merge: true });
       tx.set(doc(db, "profiles", uid), profileUpdate, { merge: true });
     });
   } catch (error) {
@@ -196,7 +195,6 @@ export async function revokeChecklistPoints(params: {
         updatedAt: serverTimestamp(),
       };
 
-      tx.set(doc(db, "users", uid), profileUpdate, { merge: true });
       tx.set(doc(db, "profiles", uid), profileUpdate, { merge: true });
     });
   } catch (error) {
