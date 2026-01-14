@@ -442,7 +442,7 @@ const OrganizationCoursesPage: React.FC<{ userId?: string | null; profile: UserP
 
         const nextCourses: NormalizedCourse[] = []
         const nextCourseMap: Record<string, NormalizedCourse> = {}
-        snapshots.forEach((snap, index) => {
+        snapshots.forEach(snap => {
           if (!snap.exists()) {
             return
           }
