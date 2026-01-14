@@ -26,16 +26,25 @@ export const WelcomePage: React.FC = () => {
     setLoading(true)
     try {
       const userRef = doc(db, 'users', user.uid)
+      const profileRef = doc(db, 'profiles', user.uid)
       const updatedProfile = {
         ...profile,
         onboardingComplete: true,
         onboardingSkipped: false,
       }
 
-      await updateDoc(userRef, {
-        onboardingComplete: true,
-        updatedAt: serverTimestamp(),
-      })
+      await Promise.all([
+        updateDoc(profileRef, {
+          onboardingComplete: true,
+          onboardingSkipped: false,
+          updatedAt: serverTimestamp(),
+        }),
+        updateDoc(userRef, {
+          onboardingComplete: true,
+          onboardingSkipped: false,
+          updatedAt: serverTimestamp(),
+        }),
+      ])
 
       toast({
         title: 'Welcome!',
@@ -68,16 +77,25 @@ export const WelcomePage: React.FC = () => {
     setLoading(true)
     try {
       const userRef = doc(db, 'users', user.uid)
+      const profileRef = doc(db, 'profiles', user.uid)
       const updatedProfile = {
         ...profile,
         onboardingComplete: false,
         onboardingSkipped: true,
       }
 
-      await updateDoc(userRef, {
-        onboardingSkipped: true,
-        updatedAt: serverTimestamp(),
-      })
+      await Promise.all([
+        updateDoc(profileRef, {
+          onboardingComplete: false,
+          onboardingSkipped: true,
+          updatedAt: serverTimestamp(),
+        }),
+        updateDoc(userRef, {
+          onboardingComplete: false,
+          onboardingSkipped: true,
+          updatedAt: serverTimestamp(),
+        }),
+      ])
 
       // Navigate to role-based landing page
       const landingPath = getLandingPathForRole(updatedProfile)
