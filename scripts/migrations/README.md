@@ -151,3 +151,32 @@ node scripts/migrations/backfill-email-verified.mjs
 
 - Ensure the Firebase Admin SDK is configured as described above before running this script.
 - The migration logs progress as it scans and updates user profiles.
+
+## Migration: Copy Organization Fields to Profiles
+
+### File: `migrate-org-fields-to-profiles.mjs`
+
+This migration copies organization-related fields from the `users` collection into existing documents in the `profiles` collection. It is idempotent and skips profiles already marked as migrated.
+
+Fields migrated:
+
+- `companyId`
+- `companyCode`
+- `companyName`
+- `transformationTier`
+- `villageId`
+- `clusterId`
+- `corporateVillageId`
+- `cohortIdentifier`
+- `assignedOrganizations`
+
+### Running the Migration
+
+```bash
+node scripts/migrations/migrate-org-fields-to-profiles.mjs
+```
+
+### Notes
+
+- The script writes progress to the `migration_runs` collection and logs a summary report.
+- Profiles that do not exist are skipped and reported.

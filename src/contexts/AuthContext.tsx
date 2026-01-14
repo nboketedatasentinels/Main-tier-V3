@@ -450,12 +450,26 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         updatedAt: new Date().toISOString(),
       }
 
-      await setDoc(userDocRef, {
-        ...profileData,
-        ...(firebaseUser.photoURL ? { avatarUrl: firebaseUser.photoURL } : {}),
-        createdAt: serverTimestamp(),
-        updatedAt: serverTimestamp(),
-      })
+      const profileRef = doc(db, 'profiles', firebaseUser.uid)
+
+      await Promise.all([
+        setDoc(userDocRef, {
+          ...profileData,
+          ...(firebaseUser.photoURL ? { avatarUrl: firebaseUser.photoURL } : {}),
+          createdAt: serverTimestamp(),
+          updatedAt: serverTimestamp(),
+        }),
+        setDoc(
+          profileRef,
+          {
+            ...profileData,
+            ...(firebaseUser.photoURL ? { avatarUrl: firebaseUser.photoURL } : {}),
+            createdAt: serverTimestamp(),
+            updatedAt: serverTimestamp(),
+          },
+          { merge: true },
+        ),
+      ])
 
       if (validatedOrganization?.id) {
         try {
