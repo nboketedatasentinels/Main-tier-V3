@@ -126,6 +126,7 @@ export const LeadershipBoardPage: React.FC = () => {
   const { profile: authProfile, refreshProfile } = useAuth()
   const toast = useToast()
   const { isOpen, onOpen, onClose } = useDisclosure()
+  const supportEmail = 'support@transformation4leaders.com'
   const pointsColors = useToken('colors', [
     'brand.primary',
     'brand.dark',
@@ -176,7 +177,10 @@ export const LeadershipBoardPage: React.FC = () => {
 
   const segmentIssue = useMemo(() => {
     if (!profile || !context) return null
-    if (context.type === 'organization' && !context.organizationId) {
+    if (context.type === 'free') {
+      return 'Join a village to see your peers. Contact support.'
+    }
+    if (context.type === 'organization' && !context.organizationId && !context.organizationCode) {
       return 'Organization assignment required to view this leaderboard.'
     }
     if (context.type === 'village' && !context.villageId) {
@@ -503,27 +507,7 @@ export const LeadershipBoardPage: React.FC = () => {
   }
 
   const emptyChallenges = segmentChallenges.filter((challenge) => challenge.status === 'active').length === 0
-
-  if (context?.type === 'free') {
-    return (
-      <Card bg="surface.default" border="1px solid" borderColor="border.subtle">
-        <CardBody>
-          <VStack spacing={3} py={8} textAlign="center">
-            <Icon as={Sparkles} color="brand.primary" boxSize={8} />
-            <Text fontSize="2xl" fontWeight="bold" color="text.primary">
-              Leaderboard unlocked with membership
-            </Text>
-            <Text color="text.secondary">
-              Join an organization or upgrade to see rankings, challenges, and peers.
-            </Text>
-            <Button variant="primary" onClick={() => navigate('/upgrade')}>
-              Upgrade
-            </Button>
-          </VStack>
-        </CardBody>
-      </Card>
-    )
-  }
+  const isFreeContext = context?.type === 'free'
 
   return (
     <Stack spacing={6}>
@@ -546,6 +530,7 @@ export const LeadershipBoardPage: React.FC = () => {
             ) : (
               <Badge colorScheme="green">Segmented privacy enabled</Badge>
             )}
+            <Badge colorScheme="purple">Context: {context?.type ?? 'unknown'}</Badge>
             {isAdminAll && (
               <Badge colorScheme="purple">Admin view: All segments</Badge>
             )}
@@ -615,6 +600,28 @@ export const LeadershipBoardPage: React.FC = () => {
         <TabPanels>
           <TabPanel px={0}>
             <Stack spacing={6}>
+              {isFreeContext && (
+                <Card bg="surface.default" border="1px solid" borderColor="border.subtle">
+                  <CardBody>
+                    <VStack spacing={3} py={4} textAlign="center">
+                      <Icon as={Sparkles} color="brand.primary" boxSize={7} />
+                      <Text fontSize="xl" fontWeight="bold" color="text.primary">
+                        Personal leaderboard view
+                      </Text>
+                      <Text color="text.secondary">
+                        Join a village or organization to see peer rankings and community benchmarks.
+                      </Text>
+                      <Button
+                        variant="primary"
+                        as="a"
+                        href={`mailto:${supportEmail}`}
+                      >
+                        Contact support to join a village
+                      </Button>
+                    </VStack>
+                  </CardBody>
+                </Card>
+              )}
               <Grid templateColumns={{ base: '1fr', lg: '2fr 1fr' }} gap={4}>
                 <Card bg="surface.default" border="1px solid" borderColor="border.subtle">
                   <CardHeader>
@@ -769,294 +776,302 @@ export const LeadershipBoardPage: React.FC = () => {
                 </Card>
               </Grid>
 
-              <Card bg="surface.default" border="1px solid" borderColor="border.subtle">
-                <CardHeader>
-                  <Flex justify="space-between" align="center">
-                    <Box>
-                      <Text fontWeight="bold">Filters & Sorting</Text>
-                      <Text color="text.secondary">Timeframes, sorting, and tutorials</Text>
-                    </Box>
-                    <HStack spacing={2}>
-                      <Button size="sm" onClick={handleApplyFilters}>Apply</Button>
-                      <Button size="sm" variant="secondary" onClick={handleResetFilters}>Reset</Button>
-                    </HStack>
-                  </Flex>
-                  {showFilterTip && (
-                    <Flex mt={3} p={3} borderRadius="md" bg="tint.brandPrimary" align="center" gap={3}>
-                      <Icon as={AlertCircle} color="brand.primary" />
-                      <Text fontSize="sm" flex="1">First time? Adjust your timeframe and sort order here.</Text>
-                      <Button size="xs" onClick={dismissFilterTip}>Got it</Button>
+              {!isFreeContext && (
+                <Card bg="surface.default" border="1px solid" borderColor="border.subtle">
+                  <CardHeader>
+                    <Flex justify="space-between" align="center">
+                      <Box>
+                        <Text fontWeight="bold">Filters & Sorting</Text>
+                        <Text color="text.secondary">Timeframes, sorting, and tutorials</Text>
+                      </Box>
+                      <HStack spacing={2}>
+                        <Button size="sm" onClick={handleApplyFilters}>Apply</Button>
+                        <Button size="sm" variant="secondary" onClick={handleResetFilters}>Reset</Button>
+                      </HStack>
                     </Flex>
-                  )}
-                </CardHeader>
-                <CardBody>
-                  <SimpleGrid columns={{ base: 1, md: 3 }} spacing={4}>
-                    <Box>
-                      <Text fontSize="sm" mb={1}>Timeframe</Text>
-                      <Select value={timeframe} onChange={(e) => setTimeframe(e.target.value as LeaderboardTimeframe)}>
-                        {timeframeOptions.map((option) => (
-                          <option key={option.value} value={option.value}>{option.label}</option>
-                        ))}
-                      </Select>
-                    </Box>
-                    <Box>
-                      <Text fontSize="sm" mb={1}>Sort Field</Text>
-                      <Select value={sortField} onChange={(e) => setSortField(e.target.value as typeof sortField)}>
-                        {sortOptions.map((option) => (
-                          <option key={option.value} value={option.value}>{option.label}</option>
-                        ))}
-                      </Select>
-                    </Box>
-                    <Box>
-                      <Text fontSize="sm" mb={1}>Direction</Text>
-                      <Select value={sortDirection} onChange={(e) => setSortDirection(e.target.value as typeof sortDirection)}>
-                        <option value="desc">Descending</option>
-                        <option value="asc">Ascending</option>
-                      </Select>
-                    </Box>
-                  </SimpleGrid>
-                </CardBody>
-              </Card>
+                    {showFilterTip && (
+                      <Flex mt={3} p={3} borderRadius="md" bg="tint.brandPrimary" align="center" gap={3}>
+                        <Icon as={AlertCircle} color="brand.primary" />
+                        <Text fontSize="sm" flex="1">First time? Adjust your timeframe and sort order here.</Text>
+                        <Button size="xs" onClick={dismissFilterTip}>Got it</Button>
+                      </Flex>
+                    )}
+                  </CardHeader>
+                  <CardBody>
+                    <SimpleGrid columns={{ base: 1, md: 3 }} spacing={4}>
+                      <Box>
+                        <Text fontSize="sm" mb={1}>Timeframe</Text>
+                        <Select value={timeframe} onChange={(e) => setTimeframe(e.target.value as LeaderboardTimeframe)}>
+                          {timeframeOptions.map((option) => (
+                            <option key={option.value} value={option.value}>{option.label}</option>
+                          ))}
+                        </Select>
+                      </Box>
+                      <Box>
+                        <Text fontSize="sm" mb={1}>Sort Field</Text>
+                        <Select value={sortField} onChange={(e) => setSortField(e.target.value as typeof sortField)}>
+                          {sortOptions.map((option) => (
+                            <option key={option.value} value={option.value}>{option.label}</option>
+                          ))}
+                        </Select>
+                      </Box>
+                      <Box>
+                        <Text fontSize="sm" mb={1}>Direction</Text>
+                        <Select value={sortDirection} onChange={(e) => setSortDirection(e.target.value as typeof sortDirection)}>
+                          <option value="desc">Descending</option>
+                          <option value="asc">Ascending</option>
+                        </Select>
+                      </Box>
+                    </SimpleGrid>
+                  </CardBody>
+                </Card>
+              )}
 
-              <Card bg="surface.default" border="1px solid" borderColor="border.subtle">
-                <CardHeader>
-                  <Flex justify="space-between" align="center">
-                    <Box>
-                      <Text fontWeight="bold">{segmentLabel} Leaderboard</Text>
-                      <Text color="text.secondary">Sorted by points with live updates</Text>
+              {!isFreeContext && (
+                <Card bg="surface.default" border="1px solid" borderColor="border.subtle">
+                  <CardHeader>
+                    <Flex justify="space-between" align="center">
+                      <Box>
+                        <Text fontWeight="bold">{segmentLabel} Leaderboard</Text>
+                        <Text color="text.secondary">Sorted by points with live updates</Text>
+                      </Box>
+                      <HStack spacing={2}>
+                        <Badge colorScheme="primary">Virtualized</Badge>
+                        <Badge colorScheme="primary">Real-time</Badge>
+                      </HStack>
+                    </Flex>
+                  </CardHeader>
+                  <CardBody>
+                    <Box border="1px solid" borderColor="border.subtle" borderRadius="lg" overflow="hidden">
+                      <Box
+                        maxH="420px"
+                        overflowY="auto"
+                        onScroll={leaderboardRows.length > virtualizationThreshold ? onScrollVirtual : undefined}
+                      >
+                        <Table variant="simple" size="md" color="text.primary">
+                          <Thead position="sticky" top={0} bg="surface.default" zIndex={1}>
+                            <Tr>
+                              <Th color="text.muted">Rank</Th>
+                              <Th color="text.muted">Member</Th>
+                              <Th color="text.muted">Level</Th>
+                              <Th color="text.muted">Badges</Th>
+                              <Th color="text.muted" isNumeric>Points</Th>
+                            </Tr>
+                          </Thead>
+                          <Tbody>
+                            {virtualized.paddingTop > 0 && (
+                              <Tr height={`${virtualized.paddingTop}px`}>
+                                <Td colSpan={5} p={0} borderBottom="none" />
+                              </Tr>
+                            )}
+                            {virtualized.rows.map((row) => (
+                              <Tr
+                                key={row.user.id}
+                                bg={row.user.id === profile?.id ? 'tint.brandPrimary' : 'transparent'}
+                                _hover={{ bg: row.user.id === profile?.id ? 'tint.brandPrimary' : 'surface.subtle' }}
+                                height={`${rowHeight}px`}
+                              >
+                                <Td>{getRankIcon(row.rank)}</Td>
+                                <Td>
+                                  <HStack spacing={3}>
+                                    <Avatar size="sm" name={row.user.fullName} src={row.user.avatarUrl} />
+                                    <Box>
+                                      <Text fontWeight="bold" color="text.primary">{row.user.fullName}</Text>
+                                      <Text fontSize="xs" color="text.secondary">
+                                        {row.user.companyId || 'Independent'} · {row.user.villageId || 'Village TBD'} · {row.user.clusterId || 'Cluster TBD'}
+                                      </Text>
+                                      <HStack spacing={2} mt={1}>
+                                        <Badge colorScheme="success">Active</Badge>
+                                        <Badge colorScheme="primary">{row.badgeCount} badges</Badge>
+                                        <Badge
+                                          bg="tint.accentWarning"
+                                          color="text.primary"
+                                          border="1px solid"
+                                          borderColor="accent.warning"
+                                        >
+                                          Level {row.level}
+                                        </Badge>
+                                      </HStack>
+                                    </Box>
+                                  </HStack>
+                                </Td>
+                                <Td color="text.primary">Lvl {row.level}</Td>
+                                <Td>
+                                  <HStack spacing={1}>
+                                    {Array.from({ length: Math.min(row.badgeCount, 4) }).map((_, idx) => (
+                                      <Icon key={idx} as={Star} color="accent.warning" boxSize={4} />
+                                    ))}
+                                  </HStack>
+                                </Td>
+                                <Td isNumeric>
+                                  <Text fontWeight="bold" color="text.primary">{formatNumber(row.activePoints)}</Text>
+                                  <Text fontSize="xs" color="text.secondary">Total {formatNumber(row.totalPoints)}</Text>
+                                </Td>
+                              </Tr>
+                            ))}
+                            {virtualized.paddingBottom > 0 && (
+                              <Tr height={`${virtualized.paddingBottom}px`}>
+                                <Td colSpan={5} p={0} borderBottom="none" />
+                              </Tr>
+                            )}
+                          </Tbody>
+                        </Table>
+                      </Box>
+                      {leaderboardRows.length > leaderboardPage * pageSize && (
+                        <Button
+                          w="full"
+                          variant="secondary"
+                          onClick={() => setLeaderboardPage((prev) => prev + 1)}
+                          borderTopRadius={0}
+                        >
+                          Load more (25 per page)
+                        </Button>
+                      )}
                     </Box>
-                    <HStack spacing={2}>
-                      <Badge colorScheme="primary">Virtualized</Badge>
-                      <Badge colorScheme="primary">Real-time</Badge>
-                    </HStack>
-                  </Flex>
-                </CardHeader>
-                <CardBody>
-                  <Box border="1px solid" borderColor="border.subtle" borderRadius="lg" overflow="hidden">
-                    <Box
-                      maxH="420px"
-                      overflowY="auto"
-                      onScroll={leaderboardRows.length > virtualizationThreshold ? onScrollVirtual : undefined}
-                    >
-                      <Table variant="simple" size="md" color="text.primary">
-                        <Thead position="sticky" top={0} bg="surface.default" zIndex={1}>
+                  </CardBody>
+                </Card>
+              )}
+
+              {!isFreeContext && (
+                <Grid templateColumns={{ base: '1fr', lg: '1fr 1fr' }} gap={4}>
+                  <Card bg="surface.default" border="1px solid" borderColor="border.subtle">
+                    <CardHeader>
+                      <Text fontWeight="bold">Peer Progress</Text>
+                      <Text color="text.secondary">Compare with nearby ranks</Text>
+                    </CardHeader>
+                    <CardBody>
+                      <Table size="sm" color="text.primary">
+                        <Thead bg="surface.default">
                           <Tr>
                             <Th color="text.muted">Rank</Th>
                             <Th color="text.muted">Member</Th>
+                            <Th color="text.muted">Active Points</Th>
+                            <Th color="text.muted">Total</Th>
                             <Th color="text.muted">Level</Th>
-                            <Th color="text.muted">Badges</Th>
-                            <Th color="text.muted" isNumeric>Points</Th>
+                            <Th color="text.muted">Δ vs You</Th>
                           </Tr>
                         </Thead>
                         <Tbody>
-                          {virtualized.paddingTop > 0 && (
-                            <Tr height={`${virtualized.paddingTop}px`}>
-                              <Td colSpan={5} p={0} borderBottom="none" />
-                            </Tr>
-                          )}
-                          {virtualized.rows.map((row) => (
+                          {peerRows.map((row) => (
                             <Tr
                               key={row.user.id}
                               bg={row.user.id === profile?.id ? 'tint.brandPrimary' : 'transparent'}
                               _hover={{ bg: row.user.id === profile?.id ? 'tint.brandPrimary' : 'surface.subtle' }}
-                              height={`${rowHeight}px`}
                             >
-                              <Td>{getRankIcon(row.rank)}</Td>
+                              <Td>{row.rank}</Td>
                               <Td>
-                                <HStack spacing={3}>
-                                  <Avatar size="sm" name={row.user.fullName} src={row.user.avatarUrl} />
-                                  <Box>
-                                    <Text fontWeight="bold" color="text.primary">{row.user.fullName}</Text>
-                                    <Text fontSize="xs" color="text.secondary">
-                                      {row.user.companyId || 'Independent'} · {row.user.villageId || 'Village TBD'} · {row.user.clusterId || 'Cluster TBD'}
-                                    </Text>
-                                    <HStack spacing={2} mt={1}>
-                                      <Badge colorScheme="success">Active</Badge>
-                                      <Badge colorScheme="primary">{row.badgeCount} badges</Badge>
-                                      <Badge
-                                        bg="tint.accentWarning"
-                                        color="text.primary"
-                                        border="1px solid"
-                                        borderColor="accent.warning"
-                                      >
-                                        Level {row.level}
-                                      </Badge>
-                                    </HStack>
-                                  </Box>
+                                <HStack spacing={2}>
+                                  <Avatar size="xs" name={row.user.fullName} src={row.user.avatarUrl} />
+                                  <Text>{row.user.fullName}</Text>
                                 </HStack>
                               </Td>
-                              <Td color="text.primary">Lvl {row.level}</Td>
-                              <Td>
-                                <HStack spacing={1}>
-                                  {Array.from({ length: Math.min(row.badgeCount, 4) }).map((_, idx) => (
-                                    <Icon key={idx} as={Star} color="accent.warning" boxSize={4} />
-                                  ))}
-                                </HStack>
-                              </Td>
-                              <Td isNumeric>
-                                <Text fontWeight="bold" color="text.primary">{formatNumber(row.activePoints)}</Text>
-                                <Text fontSize="xs" color="text.secondary">Total {formatNumber(row.totalPoints)}</Text>
+                              <Td>{formatNumber(row.activePoints)}</Td>
+                              <Td>{formatNumber(row.totalPoints)}</Td>
+                              <Td>{row.level}</Td>
+                              <Td color={row.delta >= 0 ? 'success.500' : 'danger.DEFAULT'}>
+                                {row.delta >= 0 ? '+' : ''}
+                                {formatNumber(row.delta)}
                               </Td>
                             </Tr>
                           ))}
-                          {virtualized.paddingBottom > 0 && (
-                            <Tr height={`${virtualized.paddingBottom}px`}>
-                              <Td colSpan={5} p={0} borderBottom="none" />
-                            </Tr>
-                          )}
                         </Tbody>
                       </Table>
-                    </Box>
-                    {leaderboardRows.length > leaderboardPage * pageSize && (
-                      <Button
-                        w="full"
-                        variant="secondary"
-                        onClick={() => setLeaderboardPage((prev) => prev + 1)}
-                        borderTopRadius={0}
-                      >
-                        Load more (25 per page)
-                      </Button>
-                    )}
-                  </Box>
-                </CardBody>
-              </Card>
+                    </CardBody>
+                  </Card>
 
-              <Grid templateColumns={{ base: '1fr', lg: '1fr 1fr' }} gap={4}>
+                  <Card bg="surface.default" border="1px solid" borderColor="border.subtle">
+                    <CardHeader>
+                      <Text fontWeight="bold">Cohort Comparison</Text>
+                      <Text color="text.secondary">Benchmarks vs cohort max & averages</Text>
+                    </CardHeader>
+                    <CardBody>
+                      <Stack spacing={4}>
+                        <Box>
+                          <HStack justify="space-between">
+                            <Text>Total Points</Text>
+                            <Text color="text.secondary">Avg {formatNumber(cohortStats.avgTotal)}</Text>
+                          </HStack>
+                          <Progress value={(cohortStats.total / cohortStats.maxTotal) * 100} colorScheme="primary" borderRadius="full" />
+                        </Box>
+                        <Box>
+                          <HStack justify="space-between">
+                            <Text>Active Points</Text>
+                            <Text color="text.secondary">Avg {formatNumber(cohortStats.avgActive)}</Text>
+                          </HStack>
+                          <Progress value={(cohortStats.active / cohortStats.maxActive) * 100} colorScheme="secondary" borderRadius="full" />
+                        </Box>
+                        <Box>
+                          <HStack justify="space-between">
+                            <Text>Level</Text>
+                            <Text color="text.secondary">Avg {cohortStats.avgLevel}</Text>
+                          </HStack>
+                          <Progress value={(cohortStats.level / cohortStats.maxLevel) * 100} colorScheme="primary" borderRadius="full" />
+                        </Box>
+                      </Stack>
+                    </CardBody>
+                  </Card>
+                </Grid>
+              )}
+
+              {!isFreeContext && (
                 <Card bg="surface.default" border="1px solid" borderColor="border.subtle">
                   <CardHeader>
-                    <Text fontWeight="bold">Peer Progress</Text>
-                    <Text color="text.secondary">Compare with nearby ranks</Text>
+                    <Flex justify="space-between" align="center">
+                      <Box>
+                        <Text fontWeight="bold">Points Breakdown</Text>
+                        <Text color="text.secondary">{segmentLabel} member insights</Text>
+                      </Box>
+                      <HStack spacing={3}>
+                        <IconButton
+                          aria-label="Previous page"
+                          icon={<ArrowUpAZ />}
+                          variant="secondary"
+                          size="sm"
+                          onClick={() => setBreakdownPage((prev) => Math.max(1, prev - 1))}
+                        />
+                        <IconButton
+                          aria-label="Next page"
+                          icon={<ArrowDownAZ />}
+                          variant="secondary"
+                          size="sm"
+                          onClick={() => setBreakdownPage((prev) => prev + 1)}
+                        />
+                      </HStack>
+                    </Flex>
                   </CardHeader>
                   <CardBody>
-                    <Table size="sm" color="text.primary">
-                      <Thead bg="surface.default">
-                        <Tr>
-                          <Th color="text.muted">Rank</Th>
-                          <Th color="text.muted">Member</Th>
-                          <Th color="text.muted">Active Points</Th>
-                          <Th color="text.muted">Total</Th>
-                          <Th color="text.muted">Level</Th>
-                          <Th color="text.muted">Δ vs You</Th>
-                        </Tr>
-                      </Thead>
-                      <Tbody>
-                        {peerRows.map((row) => (
-                          <Tr
-                            key={row.user.id}
-                            bg={row.user.id === profile?.id ? 'tint.brandPrimary' : 'transparent'}
-                            _hover={{ bg: row.user.id === profile?.id ? 'tint.brandPrimary' : 'surface.subtle' }}
-                          >
-                            <Td>{row.rank}</Td>
-                            <Td>
-                              <HStack spacing={2}>
-                                <Avatar size="xs" name={row.user.fullName} src={row.user.avatarUrl} />
-                                <Text>{row.user.fullName}</Text>
-                              </HStack>
-                            </Td>
-                            <Td>{formatNumber(row.activePoints)}</Td>
-                            <Td>{formatNumber(row.totalPoints)}</Td>
-                            <Td>{row.level}</Td>
-                            <Td color={row.delta >= 0 ? 'success.500' : 'danger.DEFAULT'}>
-                              {row.delta >= 0 ? '+' : ''}
-                              {formatNumber(row.delta)}
-                            </Td>
-                          </Tr>
+                    <Grid templateColumns={{ base: '1fr', md: '1fr 1fr' }} gap={4} alignItems="center">
+                      <Box h="260px">
+                        <ResponsiveContainer width="100%" height="100%">
+                          <PieChart>
+                            <Pie dataKey="value" data={breakdownByCategory} innerRadius={60} outerRadius={90} label>
+                              {breakdownByCategory.map((entry, index) => (
+                                <Cell key={`cell-${entry.name}`} fill={pointsColors[index % pointsColors.length]} />
+                              ))}
+                            </Pie>
+                          </PieChart>
+                        </ResponsiveContainer>
+                      </Box>
+                      <Stack spacing={3}>
+                        {breakdownByCategory.slice((breakdownPage - 1) * 4, (breakdownPage - 1) * 4 + 4).map((category, idx) => (
+                          <Flex key={category.name} align="center" gap={3}>
+                            <Box w={2} h={12} borderRadius="full" bg={pointsColors[idx % pointsColors.length]} />
+                            <Box flex="1">
+                              <Flex justify="space-between">
+                                <Text fontWeight="bold">{category.name}</Text>
+                                <Text>{formatNumber(category.value)} pts</Text>
+                              </Flex>
+                              <Progress value={category.percent} colorScheme="primary" borderRadius="full" />
+                              <Text fontSize="xs" color="text.secondary">{category.percent}% of active points</Text>
+                            </Box>
+                          </Flex>
                         ))}
-                      </Tbody>
-                    </Table>
+                        <Text fontSize="sm" color="text.secondary">Page {breakdownPage} of {Math.max(1, Math.ceil(breakdownByCategory.length / 4))}</Text>
+                      </Stack>
+                    </Grid>
                   </CardBody>
                 </Card>
-
-                <Card bg="surface.default" border="1px solid" borderColor="border.subtle">
-                  <CardHeader>
-                    <Text fontWeight="bold">Cohort Comparison</Text>
-                    <Text color="text.secondary">Benchmarks vs cohort max & averages</Text>
-                  </CardHeader>
-                  <CardBody>
-                    <Stack spacing={4}>
-                      <Box>
-                        <HStack justify="space-between">
-                          <Text>Total Points</Text>
-                          <Text color="text.secondary">Avg {formatNumber(cohortStats.avgTotal)}</Text>
-                        </HStack>
-                        <Progress value={(cohortStats.total / cohortStats.maxTotal) * 100} colorScheme="primary" borderRadius="full" />
-                      </Box>
-                      <Box>
-                        <HStack justify="space-between">
-                          <Text>Active Points</Text>
-                          <Text color="text.secondary">Avg {formatNumber(cohortStats.avgActive)}</Text>
-                        </HStack>
-                        <Progress value={(cohortStats.active / cohortStats.maxActive) * 100} colorScheme="secondary" borderRadius="full" />
-                      </Box>
-                      <Box>
-                        <HStack justify="space-between">
-                          <Text>Level</Text>
-                          <Text color="text.secondary">Avg {cohortStats.avgLevel}</Text>
-                        </HStack>
-                        <Progress value={(cohortStats.level / cohortStats.maxLevel) * 100} colorScheme="primary" borderRadius="full" />
-                      </Box>
-                    </Stack>
-                  </CardBody>
-                </Card>
-              </Grid>
-
-              <Card bg="surface.default" border="1px solid" borderColor="border.subtle">
-                <CardHeader>
-                  <Flex justify="space-between" align="center">
-                    <Box>
-                      <Text fontWeight="bold">Points Breakdown</Text>
-                      <Text color="text.secondary">{segmentLabel} member insights</Text>
-                    </Box>
-                    <HStack spacing={3}>
-                      <IconButton
-                        aria-label="Previous page"
-                        icon={<ArrowUpAZ />}
-                        variant="secondary"
-                        size="sm"
-                        onClick={() => setBreakdownPage((prev) => Math.max(1, prev - 1))}
-                      />
-                      <IconButton
-                        aria-label="Next page"
-                        icon={<ArrowDownAZ />}
-                        variant="secondary"
-                        size="sm"
-                        onClick={() => setBreakdownPage((prev) => prev + 1)}
-                      />
-                    </HStack>
-                  </Flex>
-                </CardHeader>
-                <CardBody>
-                  <Grid templateColumns={{ base: '1fr', md: '1fr 1fr' }} gap={4} alignItems="center">
-                    <Box h="260px">
-                      <ResponsiveContainer width="100%" height="100%">
-                        <PieChart>
-                          <Pie dataKey="value" data={breakdownByCategory} innerRadius={60} outerRadius={90} label>
-                            {breakdownByCategory.map((entry, index) => (
-                              <Cell key={`cell-${entry.name}`} fill={pointsColors[index % pointsColors.length]} />
-                            ))}
-                          </Pie>
-                        </PieChart>
-                      </ResponsiveContainer>
-                    </Box>
-                    <Stack spacing={3}>
-                      {breakdownByCategory.slice((breakdownPage - 1) * 4, (breakdownPage - 1) * 4 + 4).map((category, idx) => (
-                        <Flex key={category.name} align="center" gap={3}>
-                          <Box w={2} h={12} borderRadius="full" bg={pointsColors[idx % pointsColors.length]} />
-                          <Box flex="1">
-                            <Flex justify="space-between">
-                              <Text fontWeight="bold">{category.name}</Text>
-                              <Text>{formatNumber(category.value)} pts</Text>
-                            </Flex>
-                            <Progress value={category.percent} colorScheme="primary" borderRadius="full" />
-                            <Text fontSize="xs" color="text.secondary">{category.percent}% of active points</Text>
-                          </Box>
-                        </Flex>
-                      ))}
-                      <Text fontSize="sm" color="text.secondary">Page {breakdownPage} of {Math.max(1, Math.ceil(breakdownByCategory.length / 4))}</Text>
-                    </Stack>
-                  </Grid>
-                </CardBody>
-              </Card>
+              )}
 
             </Stack>
           </TabPanel>

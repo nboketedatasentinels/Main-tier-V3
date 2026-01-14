@@ -66,10 +66,11 @@ export const useLeaderboardMetrics = ({
   timeframeStart,
 }: LeaderboardMetricsInput) => {
   const segmentProfiles = useMemo(() => {
-    if (!context || context.type === 'free') return []
+    if (!context) return []
+    if (context.type === 'free') return profile ? [profile] : []
     if (context.type === 'admin_all') return profiles
     return profiles.filter((candidate) => isProfileInContext(candidate, context))
-  }, [context, profiles])
+  }, [context, profile, profiles])
 
   const segmentProfileIds = useMemo(() => new Set(segmentProfiles.map((item) => item.id)), [segmentProfiles])
 
@@ -81,6 +82,7 @@ export const useLeaderboardMetrics = ({
 
   const segmentChallenges = useMemo(() => {
     if (context?.type === 'admin_all') return challenges
+    if (context?.type === 'free') return challenges
     if (!segmentProfileIds.size) return []
     return challenges.filter((challenge) => {
       if (!challenge.opponentId) return true
