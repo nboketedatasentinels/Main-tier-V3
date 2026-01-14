@@ -154,6 +154,15 @@ type MatchWindow = {
 }
 
 type OrgScope = { companyId?: string | null; companyCode?: string | null; isValid: boolean }
+type DebugOrgProfile = {
+  id: string
+  companyId?: string | null
+  companyCode?: string | null
+  organizationId?: string | null
+  organizationCode?: string | null
+  name?: string
+  fullName?: string
+}
 
 const MANUAL_REFRESH_COOLDOWN_HOURS = 24
 const WEEKDAY_LABELS = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday']
@@ -208,13 +217,13 @@ const addDaysUtc = (date: Date, days: number) => {
   return next
 }
 
-const debugOrgFetch = async (dbInstance: typeof db, profile: PeerProfile | null, userId: string) => {
+const debugOrgFetch = async (dbInstance: typeof db, profile: DebugOrgProfile | null, userId: string) => {
   const scope: OrgScope = getOrgScope(profile) as OrgScope
 
   console.group('🧪 ORG FETCH DEBUG')
   console.log('userId', userId)
   console.log('profile.id', profile?.id)
-  console.log('profile.companyId', (profile as { companyId?: string | null } | null)?.companyId)
+  console.log('profile.companyId', profile?.companyId)
   console.log('profile.companyCode', profile?.companyCode)
   console.log('scope', scope)
 
