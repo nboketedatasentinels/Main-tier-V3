@@ -66,7 +66,6 @@ import {
   doc,
   getDoc,
   getDocs,
-  orderBy,
   query,
   serverTimestamp,
   setDoc,
@@ -530,28 +529,44 @@ export const PeerConnectPage: React.FC = () => {
 
   useEffect(() => {
     const fetchPeers = async () => {
-      if (!profile) return
+      if (!profile?.id) return
       setLoadingPeers(true)
       try {
-        if (!profile.companyCode) {
+        const peersRef = collection(db, 'profiles')
+        const companyCode = (profile as { companyCode?: string }).companyCode || ''
+        const companyId = (profile as { companyId?: string; organizationId?: string }).companyId
+          || (profile as { organizationId?: string }).organizationId
+          || ''
+
+        if (!companyCode && !companyId) {
           setAvailablePeers([])
+          toast({
+            title: 'No organisation assigned',
+            description: 'You need to be linked to an organisation to see peers.',
+            status: 'info',
+            position: 'top',
+          })
           return
         }
-        const peersRef = collection(db, 'profiles')
-        const peerQuery = query(
-          peersRef,
-          where('companyCode', '==', profile.companyCode || ''),
-          orderBy('firstName', 'asc')
-        )
-        const snapshot = await getDocs(peerQuery)
-        const mappedPeers: PeerProfile[] = snapshot.docs
-          .filter((docSnap) => docSnap.id !== profile.id)
-          .map((docSnap) => {
+
+        const queries = [
+          companyCode ? query(peersRef, where('companyCode', '==', companyCode)) : null,
+          companyId ? query(peersRef, where('companyId', '==', companyId)) : null,
+        ].filter(Boolean) as ReturnType<typeof query>[]
+
+        const snapshots = await Promise.all(queries.map((peerQuery) => getDocs(peerQuery)))
+
+        const merged = new Map<string, PeerProfile>()
+        snapshots.forEach((snapshot) => {
+          snapshot.docs.forEach((docSnap) => {
+            if (docSnap.id === profile.id) return
             const data = docSnap.data()
-            return {
+            merged.set(docSnap.id, {
               id: docSnap.id,
-              name: data.fullName || `${data.firstName || ''} ${data.lastName || ''}`.trim(),
-              email: data.email,
+              name: data.fullName
+                || `${data.firstName || ''} ${data.lastName || ''}`.trim()
+                || 'Unnamed User',
+              email: data.email || '',
               timezone: data.timezone,
               interests: data.interests,
               goals: data.goals,
@@ -561,24 +576,31 @@ export const PeerConnectPage: React.FC = () => {
               calendarLink: data.calendarLink,
               identityTag: data.identityTag,
               avatarUrl: data.avatarUrl,
-            }
+            })
           })
+        })
 
+        const mappedPeers = Array.from(merged.values()).sort((a, b) => a.name.localeCompare(b.name))
         setAvailablePeers(mappedPeers)
-      } catch (error) {
+      } catch (error: unknown) {
         console.error('Error fetching peers', error)
+        const errorMessage = error && typeof error === 'object' && 'code' in error ? (error as { code?: string }).code : undefined
         toast({
           title: 'Unable to load peers',
-          description: 'We could not fetch your organisation peers from Firestore.',
+          description:
+            errorMessage === 'permission-denied'
+              ? 'Permission denied. Your account cannot read peer profiles.'
+              : 'We could not fetch your organisation peers from Firestore.',
           status: 'error',
           position: 'top',
         })
+        setAvailablePeers([])
       } finally {
         setLoadingPeers(false)
       }
     }
     fetchPeers()
-  }, [profile, toast])
+  }, [profile?.id, toast])
 
   useEffect(() => {
     fetchWeeklyMatch()
