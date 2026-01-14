@@ -24,6 +24,11 @@ export interface LeadershipProfiles {
   partner: UserProfileExtended | null
 }
 
+export interface SupportAssignments {
+  mentorId: string | null
+  ambassadorId: string | null
+}
+
 export interface LeadershipErrors {
   organization?: string
   supportAssignments?: string
@@ -50,7 +55,7 @@ const emptyAssignments: LeadershipAssignments = {
   partnerId: null,
 }
 
-const emptySupportAssignments = {
+const emptySupportAssignments: SupportAssignments = {
   mentorId: null,
   ambassadorId: null,
 }
@@ -73,7 +78,7 @@ const resolveAssignmentId = (data: Record<string, unknown>, keys: string[]) => {
 
 export const useOrganizationLeadership = (companyId?: string | null, userId?: string | null) => {
   const [organizationAssignments, setOrganizationAssignments] = useState<LeadershipAssignments>(emptyAssignments)
-  const [supportAssignments, setSupportAssignments] = useState(emptySupportAssignments)
+  const [supportAssignments, setSupportAssignments] = useState<SupportAssignments>(emptySupportAssignments)
   const [profiles, setProfiles] = useState<LeadershipProfiles>(emptyProfiles)
   const [errors, setErrors] = useState<LeadershipErrors>({})
   const [loadingOrganizationAssignments, setLoadingOrganizationAssignments] = useState(false)
