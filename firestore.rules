@@ -137,12 +137,11 @@ service cloud.firestore {
     }
 
     function isOrgPeerProfile() {
-      let userProfile = getProfile(request.auth.uid);
       return isAuthenticated() && (
-        (resource.data.companyId != null && userProfile.companyId == resource.data.companyId) ||
-        (resource.data.companyCode != null && userProfile.companyCode == resource.data.companyCode) ||
-        (resource.data.organizationId != null && userProfile.organizationId == resource.data.organizationId) ||
-        (resource.data.organizationCode != null && userProfile.organizationCode == resource.data.organizationCode)
+        (resource.data.companyId != null &&
+          getProfile(request.auth.uid).companyId == resource.data.companyId) ||
+        (resource.data.companyCode != null &&
+          getProfile(request.auth.uid).companyCode == resource.data.companyCode)
       );
     }
 
