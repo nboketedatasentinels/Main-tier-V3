@@ -123,7 +123,7 @@ export const LeadershipCouncilPage: React.FC = () => {
   const { profile, user } = useAuth()
   const toast = useToast()
 
-  const { profiles, errors, loading: assignmentsLoading, refresh } = useOrganizationLeadership(profile?.companyId)
+  const { profiles, errors, loading: assignmentsLoading, refresh, organization } = useOrganizationLeadership(profile?.companyId)
   const mentorProfile = profiles.mentor as LeadershipProfile | null
   const ambassadorProfile = profiles.ambassador as LeadershipProfile | null
   const partnerProfile = profiles.partner as PartnerProfile | null
@@ -148,6 +148,7 @@ export const LeadershipCouncilPage: React.FC = () => {
   const scheduleModal = useDisclosure()
 
   const hasOrganization = Boolean(profile?.companyId)
+  const showOrgDebug = import.meta.env.DEV && organization.id
 
   const retryAssignments = useCallback(() => {
     refresh()
@@ -379,6 +380,21 @@ export const LeadershipCouncilPage: React.FC = () => {
               Your dedicated mentor, ambassador, and transformation partner are highlighted below. Schedule sessions,
               review upcoming meetings, and explore your leadership network.
             </Text>
+            {showOrgDebug && (
+              <Text fontSize="xs" color="text.muted">
+                Org ID: {organization.id}
+              </Text>
+            )}
+            <Button
+              size="sm"
+              alignSelf="flex-start"
+              leftIcon={<RefreshCcw size={16} />}
+              variant="outline"
+              onClick={retryAssignments}
+              isLoading={assignmentsLoading}
+            >
+              Refresh assignments
+            </Button>
           </Stack>
         </CardBody>
       </Card>
@@ -419,6 +435,15 @@ export const LeadershipCouncilPage: React.FC = () => {
                         {mentorProfile.availabilityStatus}
                       </Badge>
                     )}
+                    <Button
+                      size="xs"
+                      variant="outline"
+                      leftIcon={<RefreshCcw size={14} />}
+                      onClick={retryAssignments}
+                      isLoading={assignmentsLoading}
+                    >
+                      Refresh
+                    </Button>
                   </VStack>
                 </HStack>
               </CardHeader>

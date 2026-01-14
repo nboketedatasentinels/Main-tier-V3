@@ -38,6 +38,7 @@ import {
   Loader2,
   Mail,
   MessageCircle,
+  RefreshCcw,
   Sparkles,
   Star,
   TrendingDown,
@@ -219,8 +220,13 @@ export const CompanyDashboard: React.FC = () => {
     }),
   )
 
-  const { profiles: leadershipProfiles, loading: leadershipLoading, errors: leadershipErrors } =
-    useOrganizationLeadership(profile?.companyId)
+  const {
+    profiles: leadershipProfiles,
+    loading: leadershipLoading,
+    errors: leadershipErrors,
+    organization: leadershipOrganization,
+    refresh: refreshLeadership,
+  } = useOrganizationLeadership(profile?.companyId)
   const assignment = useMemo(
     () => ({
       ambassador: buildSupportLead(leadershipProfiles.ambassador),
@@ -229,6 +235,7 @@ export const CompanyDashboard: React.FC = () => {
     [leadershipProfiles.ambassador, leadershipProfiles.mentor],
   )
   const supportErrorMessage = leadershipErrors.organization
+  const showLeadershipDebug = import.meta.env.DEV && leadershipOrganization.id
 
   const { data: checklistItems, loading: checklistLoading } = useRealtimeCollection<ChecklistItem>(
     'weekly_checklist',
@@ -492,9 +499,25 @@ export const CompanyDashboard: React.FC = () => {
 
           <Card shadow="lg">
             <CardBody>
-              <Text fontWeight="bold" color="gray.500" mb={2}>
-                Support Team
-              </Text>
+              <HStack justify="space-between" mb={2}>
+                <Text fontWeight="bold" color="gray.500">
+                  Support Team
+                </Text>
+                <Button
+                  size="xs"
+                  variant="outline"
+                  leftIcon={<RefreshCcw size={14} />}
+                  onClick={refreshLeadership}
+                  isLoading={leadershipLoading}
+                >
+                  Refresh
+                </Button>
+              </HStack>
+              {showLeadershipDebug && (
+                <Text fontSize="xs" color="gray.400" mb={2}>
+                  Org ID: {leadershipOrganization.id}
+                </Text>
+              )}
               <VStack align="stretch" spacing={4}>
                 {leadershipLoading && (
                   <Text fontSize="sm" color="gray.500">
@@ -518,6 +541,14 @@ export const CompanyDashboard: React.FC = () => {
                   <Text fontWeight="semibold">
                     {assignment?.ambassador?.name || 'No ambassador assigned'}
                   </Text>
+                  {!assignment?.ambassador?.name &&
+                    !leadershipLoading &&
+                    leadershipOrganization.loaded &&
+                    leadershipOrganization.exists && (
+                      <Text fontSize="xs" color="gray.500">
+                        No ambassador is assigned to your organization yet.
+                      </Text>
+                    )}
                   {assignment?.ambassador?.email && (
                     <Button
                       as={Link}
@@ -542,6 +573,22 @@ export const CompanyDashboard: React.FC = () => {
                     )}
                   </HStack>
                   <Text fontWeight="semibold">{assignment?.mentor?.name || 'No mentor assigned'}</Text>
+                  {!assignment?.mentor?.name &&
+                    !leadershipLoading &&
+                    leadershipOrganization.loaded &&
+                    leadershipOrganization.exists && (
+                      <Text fontSize="xs" color="gray.500">
+                        No mentor is assigned to your organization yet.
+                      </Text>
+                    )}
+                  {!assignment?.mentor?.name &&
+                    !leadershipLoading &&
+                    leadershipOrganization.loaded &&
+                    !leadershipOrganization.exists && (
+                      <Text fontSize="xs" color="gray.500">
+                        Organization record not found. Please verify your company ID.
+                      </Text>
+                    )}
                   {assignment?.mentor?.email && (
                     <Button
                       as={Link}
