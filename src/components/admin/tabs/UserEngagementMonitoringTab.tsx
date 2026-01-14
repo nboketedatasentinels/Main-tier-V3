@@ -36,14 +36,17 @@ import {
   EngagementTotals,
   EngagementTrendPoint,
   RiskLevel,
-  fetchEngagementHistory,
-  fetchEngagementRoster,
-  fetchEngagementTrendSeries,
-  fetchOrganizationsList,
-  fetchRecentActivities,
-  listenToUsers,
 } from '@/services/userManagementService'
+import { fetchAdminOrganizationsList, listenToAdminUsers } from '@/services/admin/adminUsersService'
+import {
+  EngagementAvailability,
+  fetchAdminEngagementHistory,
+  fetchAdminEngagementSnapshot,
+  fetchAdminRecentActivities,
+} from '@/services/admin/adminEngagementService'
+import { formatAdminFirestoreError } from '@/services/admin/adminErrors'
 import { ResponsiveContainer, LineChart, Line, XAxis, YAxis, Tooltip, Legend, CartesianGrid } from 'recharts'
+import { useAuth } from '@/hooks/useAuth'
 
 type RosterFilters = {
   organization: string
@@ -79,6 +82,7 @@ const riskLabel = (level: RiskLevel) => level.charAt(0).toUpperCase() + level.sl
 export const UserEngagementMonitoringTab = () => {
   const toast = useToast()
   const { isOpen, onOpen, onClose } = useDisclosure()
+  const { isAdmin } = useAuth()
 
   const [roster, setRoster] = useState<EngagementRosterEntry[]>([])
   const [trendData, setTrendData] = useState<EngagementTrendPoint[]>([])
@@ -91,6 +95,7 @@ export const UserEngagementMonitoringTab = () => {
   >([])
   const [loading, setLoading] = useState(true)
   const [loadError, setLoadError] = useState<string | null>(null)
+  const [availability, setAvailability] = useState<EngagementAvailability>('ready')
   const [detailLoading, setDetailLoading] = useState(false)
 
   const [filters, setFilters] = useState<RosterFilters>({
@@ -102,28 +107,24 @@ export const UserEngagementMonitoringTab = () => {
   })
 
   const resolveLoadError = (err: unknown) => {
-    const code = (err as { code?: string })?.code
-    if (code === 'permission-denied') {
-      return 'Missing permission to read engagement data.'
-    }
-    if (code === 'failed-precondition') {
-      return 'Missing Firestore index for engagement queries.'
-    }
-    return 'Unable to load engagement data.'
+    return formatAdminFirestoreError(err, 'Unable to load engagement data.', {
+      indexMessage: 'Missing Firestore index for engagement queries.',
+      missingCollectionMessage: 'Engagement collection not initialized.',
+    })
   }
 
   const loadEngagementData = async () => {
     try {
       setLoading(true)
       setLoadError(null)
-      const [rosterData, trends, orgs] = await Promise.all([
-        fetchEngagementRoster(),
-        fetchEngagementTrendSeries(),
-        fetchOrganizationsList(),
+      const [{ roster: rosterData, trends, availability: engagementState }, orgs] = await Promise.all([
+        fetchAdminEngagementSnapshot(isAdmin),
+        fetchAdminOrganizationsList(isAdmin),
       ])
 
       setRoster(rosterData)
       setTrendData(trends)
+      setAvailability(engagementState)
       setOrganizations(orgs)
     } catch (err) {
       console.error(err)
@@ -140,7 +141,8 @@ export const UserEngagementMonitoringTab = () => {
   }, [])
 
   useEffect(() => {
-    const unsub = listenToUsers({
+    const unsub = listenToAdminUsers({
+      isAdmin,
       onData: (records) => {
         setMentors(records.filter((u) => u.role === 'mentor').map((u) => ({ id: u.id, name: u.name })))
       },
@@ -206,8 +208,8 @@ export const UserEngagementMonitoringTab = () => {
     onOpen()
     try {
       const [historyData, activities] = await Promise.all([
-        fetchEngagementHistory(entry.userId),
-        fetchRecentActivities(entry.userId),
+        fetchAdminEngagementHistory(isAdmin, entry.userId),
+        fetchAdminRecentActivities(isAdmin, entry.userId),
       ])
       setHistory(historyData)
       setRecentActivity(activities)
@@ -271,16 +273,28 @@ export const UserEngagementMonitoringTab = () => {
     }
 
     if (!filteredRoster.length) {
+      const emptyMessage =
+        availability === 'not_enabled'
+          ? 'Engagement not enabled yet.'
+          : availability === 'no_activity'
+            ? 'No learner activity recorded.'
+            : roster.length === 0
+              ? 'No engagement data yet.'
+              : 'No learners match the selected filters.'
+      const emptyDetail =
+        availability === 'not_enabled'
+          ? 'Engagement collections are not initialized for this environment.'
+          : roster.length === 0
+            ? 'Collections will populate once activity tracking is enabled.'
+            : 'Adjust filters to expand your view of monitored learners.'
       return (
         <Flex py={10} direction="column" align="center" gap={3}>
           <Icon as={BarChart2} boxSize={10} color="gray.300" />
           <Text fontWeight="medium" color="gray.700">
-            {roster.length === 0 ? 'No engagement data yet.' : 'No learners match the selected filters.'}
+            {emptyMessage}
           </Text>
           <Text color="gray.500" fontSize="sm">
-            {roster.length === 0
-              ? 'Collections will populate once activity tracking is enabled.'
-              : 'Adjust filters to expand your view of monitored learners.'}
+            {emptyDetail}
           </Text>
         </Flex>
       )

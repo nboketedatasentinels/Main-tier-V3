@@ -13,21 +13,10 @@ import {
 } from 'firebase/firestore'
 import { db } from './firebase'
 import { RawUpgradeRequest, UpgradeRequest, UpgradeRequestForm, UpgradeRequestStatus } from '@/types/upgrade'
+import { AdminDataError } from '@/services/admin/adminErrors'
 
 const REQUEST_COLLECTION = 'upgrade_requests'
 const ADMIN_NOTIFICATIONS = 'admin_notifications'
-
-export class AdminDataError extends Error {
-  code?: string
-  context?: Record<string, unknown>
-
-  constructor(message: string, code?: string, context?: Record<string, unknown>) {
-    super(message)
-    this.name = 'AdminDataError'
-    this.code = code
-    this.context = context
-  }
-}
 
 const toUpgradeRequest = (snapshotId: string, data: RawUpgradeRequest): UpgradeRequest => {
   return {
