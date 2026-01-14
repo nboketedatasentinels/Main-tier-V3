@@ -75,10 +75,30 @@ export const UsersManagementTab = () => {
     timeframe: 'all',
   })
 
+  const resolveUserLoadError = (err: unknown) => {
+    const code = (err as { code?: string })?.code
+    if (code === 'permission-denied') {
+      return 'Admin access missing. Check custom claims and Firestore rules.'
+    }
+    if (code === 'failed-precondition') {
+      return 'Missing Firestore index for the users query. Check Firebase console logs.'
+    }
+    return 'Unable to load users.'
+  }
+
   useEffect(() => {
-    const unsub = listenToUsers((records) => {
-      setUsers(records)
-      setLoading(false)
+    setLoading(true)
+    setError(null)
+    const unsub = listenToUsers({
+      onData: (records) => {
+        setUsers(records)
+        setLoading(false)
+      },
+      onError: (err) => {
+        console.error(err)
+        setError(resolveUserLoadError(err))
+        setLoading(false)
+      },
     })
 
     fetchOrganizationsList()
