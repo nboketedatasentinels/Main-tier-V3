@@ -35,7 +35,6 @@ import {
 } from '@/services/courseAssignmentService'
 import { createReferral, generateReferralCode, validateReferralCode } from '@/services/referralService'
 import { JOURNEY_META, type JourneyType } from '@/config/pointsConfig'
-import { validateOrgFields } from '@/services/userProfileService'
 
 interface AuthProviderProps {
   children: React.ReactNode
@@ -213,7 +212,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const fetchProfileOnce = useCallback(async (uid: string): Promise<UserProfile | null> => {
     try {
       console.log('🟣 [Auth] fetchProfileOnce:start', { uid })
-      const profileRef = doc(db, 'profiles', uid)
+      const profileRef = doc(db, 'users', uid)
       const profileSnap = await getDoc(profileRef)
       if (!profileSnap.exists()) {
         console.warn('🟠 [Auth] fetchProfileOnce: no profile found')
@@ -289,7 +288,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         email: firebaseUser.email,
       })
 
-      const userDocRef = doc(db, 'profiles', firebaseUser.uid)
+      const userDocRef = doc(db, 'users', firebaseUser.uid)
       const userDocSnap = await getDoc(userDocRef)
 
       console.log('🟣 [Auth] Firestore profile exists?', userDocSnap.exists())
@@ -302,6 +301,30 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
           journeyType: storedUser.journeyType || '4W',
         }
         let mergedUser = baseUser
+
+        console.log('🟣 [Auth] Raw profile loaded', {
+          role: mergedUser.role,
+          membershipStatus: mergedUser.membershipStatus,
+          transformationTier: mergedUser.transformationTier,
+        })
+
+        // Optionally merge learner-facing extras from profiles/{uid}
+        try {
+          const profileExtrasSnap = await getDoc(doc(db, 'profiles', firebaseUser.uid))
+          if (profileExtrasSnap.exists()) {
+            const extras = profileExtrasSnap.data() as Partial<UserProfile>
+            mergedUser = {
+              ...baseUser,
+              ...extras,
+              role: baseUser.role,
+              id: firebaseUser.uid,
+              journeyType: extras.journeyType || baseUser.journeyType || '4W',
+            }
+            console.log('🟣 [Auth] Merged learner profile extras (user doc remains source of truth)')
+          }
+        } catch (extrasError) {
+          console.warn('🟠 [Auth] Unable to merge learner profile extras', extrasError)
+        }
 
         const normalized = normalizeRole(mergedUser.role)
         console.log('🟣 [Auth] Normalized role:', normalized)
@@ -426,10 +449,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         updatedAt: new Date().toISOString(),
       }
 
-      const validatedProfile = await validateOrgFields(profileData)
-
       await setDoc(userDocRef, {
-        ...validatedProfile,
+        ...profileData,
         ...(firebaseUser.photoURL ? { avatarUrl: firebaseUser.photoURL } : {}),
         createdAt: serverTimestamp(),
         updatedAt: serverTimestamp(),
@@ -466,7 +487,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
       console.log('🟣 [Auth] Profile created successfully')
 
-      return validatedProfile as UserProfile
+      return profileData
     } catch (error: unknown) {
       const message = error instanceof Error ? error.message : 'Unknown error'
       const code = error instanceof FirebaseError ? error.code : 'unknown'
@@ -574,23 +595,12 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       }
 
       /* -------- realtime updates (optional) -------- */
-      const profileRef = doc(db, 'profiles', currentUser.uid)
+      const profileRef = doc(db, 'users', currentUser.uid)
       unsubscribeProfile = onSnapshot(
         profileRef,
         (snap) => {
           if (!snap.exists()) return
           const { id: _ignoredId, ...updatedData } = snap.data() as UserProfile
-          if (
-            (updatedData.companyId || updatedData.companyCode || updatedData.organizationId || updatedData.organizationCode) &&
-            !(updatedData.companyId && updatedData.companyCode)
-          ) {
-            console.warn('🟠 [Auth] Inconsistent organization fields detected', {
-              companyId: updatedData.companyId,
-              companyCode: updatedData.companyCode,
-              organizationId: updatedData.organizationId,
-              organizationCode: updatedData.organizationCode,
-            })
-          }
           const updatedProfile: UserProfile = {
             ...updatedData,
             id: snap.id,
@@ -870,11 +880,9 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         ...(userData.gender ? { gender: userData.gender } : {}),
       }
 
-      const validatedProfile = await validateOrgFields(profilePayload)
-
       try {
-        await setDoc(doc(db, 'profiles', uid), {
-          ...validatedProfile,
+        await setDoc(doc(db, 'users', uid), {
+          ...profilePayload,
           createdAt: serverTimestamp(),
           updatedAt: serverTimestamp(),
         })
@@ -976,14 +984,13 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     }
 
     try {
-      const validatedUpdates = await validateOrgFields(updates)
-      await updateDoc(doc(db, 'profiles', user.uid), {
-        ...validatedUpdates,
+      await updateDoc(doc(db, 'users', user.uid), {
+        ...updates,
         updatedAt: serverTimestamp(),
       })
       setProfile((prev) => {
         if (!prev) return prev
-        const merged = { ...prev, ...validatedUpdates }
+        const merged = { ...prev, ...updates }
         return areProfilesEquivalent(prev, merged) ? prev : merged
       })
       return { error: null }

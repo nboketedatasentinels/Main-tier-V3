@@ -15,7 +15,6 @@ import {
 } from 'firebase/firestore'
 import { db } from '@/services/firebase'
 import { ORG_COLLECTION } from '@/constants/organizations'
-import { fetchOrganizationByCode } from '@/services/organizationService'
 import type { UserProfile } from '@/types'
 
 export interface BadgeRecord {
@@ -80,7 +79,7 @@ const normalizeDateString = (value?: unknown): string | undefined => {
 }
 
 export const fetchUserProfileById = async (userId: string): Promise<UserProfileExtended | null> => {
-  const userRef = doc(db, 'profiles', userId)
+  const userRef = doc(db, 'users', userId)
   const snapshot = await getDoc(userRef)
 
   if (!snapshot.exists()) return null
@@ -170,40 +169,6 @@ export const fetchImpactLogSummary = async (userId: string): Promise<ImpactLogSu
   }
 }
 
-export const validateOrgFields = async (profileUpdate: Partial<UserProfile>): Promise<Partial<UserProfile>> => {
-  const next: Partial<UserProfile> = { ...profileUpdate }
-  const companyId = next.companyId ?? next.organizationId ?? null
-  const companyCode = next.companyCode ?? next.organizationCode ?? null
-
-  if (companyId) {
-    next.companyId = companyId
-    next.organizationId = next.organizationId ?? companyId
-  }
-
-  if (companyCode) {
-    next.companyCode = companyCode
-    next.organizationCode = next.organizationCode ?? companyCode
-  }
-
-  if (companyId && !companyCode) {
-    const org = await fetchOrganizationDetails(companyId)
-    if (org?.code) {
-      next.companyCode = org.code
-      next.organizationCode = next.organizationCode ?? org.code
-    }
-  }
-
-  if (companyCode && !companyId) {
-    const org = await fetchOrganizationByCode(companyCode)
-    if (org?.id) {
-      next.companyId = org.id
-      next.organizationId = next.organizationId ?? org.id
-    }
-  }
-
-  return next
-}
-
 export const updateUserProfile = async (
   userId: string,
   updates: Record<string, unknown>,
@@ -218,10 +183,8 @@ export const updateUserProfile = async (
     return { updates: {} as Record<string, unknown>, error: null }
   }
 
-  const validatedUpdates = await validateOrgFields(sanitized as Partial<UserProfile>)
-
   const payload: Record<string, unknown> = {
-    ...validatedUpdates,
+    ...sanitized,
     updatedAt: serverTimestamp(),
   }
 
@@ -231,7 +194,7 @@ export const updateUserProfile = async (
     payload.lastModifiedAt = serverTimestamp()
   }
 
-  await updateDoc(doc(db, 'profiles', userId), payload)
+  await updateDoc(doc(db, 'users', userId), payload)
 
   const hasMentorUpdate = Object.prototype.hasOwnProperty.call(sanitized, 'mentorId')
   const hasAmbassadorUpdate = Object.prototype.hasOwnProperty.call(sanitized, 'ambassadorId')
