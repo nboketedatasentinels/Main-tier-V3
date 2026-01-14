@@ -11,6 +11,7 @@ import {
 import { db } from '@/services/firebase'
 import { TransformationTier, UserProfile } from '@/types'
 import { LeaderboardContext } from './useLeaderboardContext'
+import { fetchOrgMembers, getOrgScope } from '@/utils/organizationScope'
 
 export interface PointsTransaction {
   id: string
@@ -50,12 +51,6 @@ const buildProfilesConstraints = (context: LeaderboardContext | null): QueryCons
     case 'admin_all':
       return []
     case 'organization':
-      if (context.organizationId) {
-        return [where('companyId', '==', context.organizationId)]
-      }
-      if (context.organizationCode) {
-        return [where('companyCode', '==', context.organizationCode)]
-      }
       return null
     case 'village':
       return context.villageId ? [where('villageId', '==', context.villageId)] : null
@@ -74,10 +69,13 @@ const buildTransactionConstraints = (context: LeaderboardContext | null): QueryC
 
   const constraints: QueryConstraint[] = []
   if (context.type === 'organization') {
-    if (!context.organizationId) {
+    if (context.organizationId) {
+      constraints.push(where('companyId', '==', context.organizationId))
+    } else if (context.organizationCode) {
+      constraints.push(where('companyCode', '==', context.organizationCode))
+    } else {
       return null
     }
-    constraints.push(where('companyId', '==', context.organizationId))
   }
 
   constraints.push(orderBy('createdAt', 'desc'))
@@ -100,11 +98,42 @@ export const useLeaderboardData = ({
   const [challengesLoaded, setChallengesLoaded] = useState(false)
 
   useEffect(() => {
-    if (context?.type === 'organization' && !context.organizationId && !context.organizationCode) {
-      console.warn('[Leaderboard] Missing organization identifier for leaderboard query.')
-      setProfiles([])
-      setProfilesLoaded(true)
-      return undefined
+    if (context?.type === 'organization') {
+      const orgScope = getOrgScope({
+        companyId: context.organizationId,
+        organizationId: context.organizationId,
+        companyCode: context.organizationCode,
+        organizationCode: context.organizationCode,
+      })
+      if (!orgScope.isValid) {
+        console.warn('[Leaderboard] Missing organization identifier for leaderboard query.')
+        setProfiles([])
+        setProfilesLoaded(true)
+        return undefined
+      }
+
+      setProfilesLoaded(false)
+      let isActive = true
+      fetchOrgMembers(db, orgScope)
+        .then((members) => {
+          if (!isActive) return
+          setProfiles(members as UserProfile[])
+          setProfilesLoaded(true)
+          console.log('[Leaderboard] Organization profiles fetched', {
+            contextType: context?.type,
+            count: members.length,
+          })
+        })
+        .catch((error) => {
+          console.error('[Leaderboard] Failed to load organization profiles', error)
+          if (!isActive) return
+          setProfiles([])
+          setProfilesLoaded(true)
+        })
+
+      return () => {
+        isActive = false
+      }
     }
 
     const constraints = buildProfilesConstraints(context)
@@ -135,8 +164,8 @@ export const useLeaderboardData = ({
   }, [context])
 
   useEffect(() => {
-    if (context?.type === 'organization' && !context.organizationId) {
-      console.warn('[Leaderboard] Missing organizationId for transaction query.')
+    if (context?.type === 'organization' && !context.organizationId && !context.organizationCode) {
+      console.warn('[Leaderboard] Missing organization identifier for transaction query.')
       setTransactions([])
       setTransactionsLoaded(true)
       return undefined
