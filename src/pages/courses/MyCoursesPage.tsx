@@ -416,9 +416,8 @@ const OrganizationCoursesPage: React.FC<{ userId?: string | null; profile: UserP
   }, [profile])
 
   const { program, loading: programLoading } = useOrganizationProgramCourses(organizationId)
-  const { progressMap, loading: progressLoading } = useUserCourseProgress(userId)
+  const { loading: progressLoading } = useUserCourseProgress(userId)
 
-  const [courses, setCourses] = useState<NormalizedCourse[]>([])
   const [courseMap, setCourseMap] = useState<Record<string, NormalizedCourse>>({})
   const [loadingCourses, setLoadingCourses] = useState(true)
 
@@ -428,7 +427,6 @@ const OrganizationCoursesPage: React.FC<{ userId?: string | null; profile: UserP
     const loadCourses = async () => {
       if (!organizationId || !program || !program.orderedCourseIds.length) {
         if (isActive) {
-          setCourses([])
           setCourseMap({})
           setLoadingCourses(false)
         }
@@ -445,7 +443,6 @@ const OrganizationCoursesPage: React.FC<{ userId?: string | null; profile: UserP
         const nextCourses: NormalizedCourse[] = []
         const nextCourseMap: Record<string, NormalizedCourse> = {}
         snapshots.forEach((snap, index) => {
-          const courseId = orderedCourseIds[index]
           if (!snap.exists()) {
             return
           }
@@ -456,13 +453,11 @@ const OrganizationCoursesPage: React.FC<{ userId?: string | null; profile: UserP
         })
 
         if (isActive) {
-          setCourses(nextCourses)
           setCourseMap(nextCourseMap)
         }
       } catch (loadError) {
         console.error('Error loading organization courses', loadError)
         if (isActive) {
-          setCourses([])
           setCourseMap({})
         }
       } finally {
