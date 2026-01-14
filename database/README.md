@@ -22,6 +22,8 @@ This directory contains the complete database schema for the T4L platform using 
 - **villages** - Community groups
 - **companies** - Organization profiles
 - **events** - Platform events
+- **upgrade_requests** - User-submitted tier or access upgrade requests
+- **admin_notifications** - Admin-facing alert feed
 - **nudge_templates** - Reusable outreach templates
 - **nudges_sent** - Nudge delivery audit trail
 - **nudge_effectiveness** - Engagement lift measurements
