@@ -26,16 +26,39 @@ export const WelcomePage: React.FC = () => {
     setLoading(true)
     try {
       const userRef = doc(db, 'users', user.uid)
+      const profileRef = doc(db, 'profiles', user.uid)
       const updatedProfile = {
         ...profile,
         onboardingComplete: true,
         onboardingSkipped: false,
       }
 
-      await updateDoc(userRef, {
-        onboardingComplete: true,
-        updatedAt: serverTimestamp(),
-      })
+      try {
+        await Promise.all([
+          updateDoc(userRef, {
+            onboardingComplete: true,
+            updatedAt: serverTimestamp(),
+          }),
+          updateDoc(profileRef, {
+            onboardingComplete: true,
+            onboardingSkipped: false,
+            updatedAt: serverTimestamp(),
+          }),
+        ])
+      } catch (updateError) {
+        await Promise.allSettled([
+          updateDoc(userRef, {
+            onboardingComplete: true,
+            updatedAt: serverTimestamp(),
+          }),
+          updateDoc(profileRef, {
+            onboardingComplete: true,
+            onboardingSkipped: false,
+            updatedAt: serverTimestamp(),
+          }),
+        ])
+        throw updateError
+      }
 
       toast({
         title: 'Welcome!',
@@ -68,16 +91,39 @@ export const WelcomePage: React.FC = () => {
     setLoading(true)
     try {
       const userRef = doc(db, 'users', user.uid)
+      const profileRef = doc(db, 'profiles', user.uid)
       const updatedProfile = {
         ...profile,
         onboardingComplete: false,
         onboardingSkipped: true,
       }
 
-      await updateDoc(userRef, {
-        onboardingSkipped: true,
-        updatedAt: serverTimestamp(),
-      })
+      try {
+        await Promise.all([
+          updateDoc(userRef, {
+            onboardingSkipped: true,
+            updatedAt: serverTimestamp(),
+          }),
+          updateDoc(profileRef, {
+            onboardingComplete: false,
+            onboardingSkipped: true,
+            updatedAt: serverTimestamp(),
+          }),
+        ])
+      } catch (updateError) {
+        await Promise.allSettled([
+          updateDoc(userRef, {
+            onboardingSkipped: true,
+            updatedAt: serverTimestamp(),
+          }),
+          updateDoc(profileRef, {
+            onboardingComplete: false,
+            onboardingSkipped: true,
+            updatedAt: serverTimestamp(),
+          }),
+        ])
+        throw updateError
+      }
 
       // Navigate to role-based landing page
       const landingPath = getLandingPathForRole(updatedProfile)
