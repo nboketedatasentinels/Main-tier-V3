@@ -90,6 +90,7 @@ export const UserEngagementMonitoringTab = () => {
     Array<{ title: string; description?: string; timestamp?: Date | null; category?: string; actor?: string; type?: string }>
   >([])
   const [loading, setLoading] = useState(true)
+  const [loadError, setLoadError] = useState<string | null>(null)
   const [detailLoading, setDetailLoading] = useState(false)
 
   const [filters, setFilters] = useState<RosterFilters>({
@@ -100,33 +101,52 @@ export const UserEngagementMonitoringTab = () => {
     timeRange: '30',
   })
 
-  useEffect(() => {
-    const load = async () => {
-      try {
-        setLoading(true)
-        const [rosterData, trends, orgs] = await Promise.all([
-          fetchEngagementRoster(),
-          fetchEngagementTrendSeries(),
-          fetchOrganizationsList(),
-        ])
-
-        setRoster(rosterData)
-        setTrendData(trends)
-        setOrganizations(orgs)
-      } catch (err) {
-        console.error(err)
-        toast({ title: 'Unable to load engagement data', status: 'error' })
-      } finally {
-        setLoading(false)
-      }
+  const resolveLoadError = (err: unknown) => {
+    const code = (err as { code?: string })?.code
+    if (code === 'permission-denied') {
+      return 'Missing permission to read engagement data.'
     }
+    if (code === 'failed-precondition') {
+      return 'Missing Firestore index for engagement queries.'
+    }
+    return 'Unable to load engagement data.'
+  }
 
-    load()
-  }, [toast])
+  const loadEngagementData = async () => {
+    try {
+      setLoading(true)
+      setLoadError(null)
+      const [rosterData, trends, orgs] = await Promise.all([
+        fetchEngagementRoster(),
+        fetchEngagementTrendSeries(),
+        fetchOrganizationsList(),
+      ])
+
+      setRoster(rosterData)
+      setTrendData(trends)
+      setOrganizations(orgs)
+    } catch (err) {
+      console.error(err)
+      const message = resolveLoadError(err)
+      setLoadError(message)
+      toast({ title: message, status: 'error' })
+    } finally {
+      setLoading(false)
+    }
+  }
 
   useEffect(() => {
-    const unsub = listenToUsers((records) => {
-      setMentors(records.filter((u) => u.role === 'mentor').map((u) => ({ id: u.id, name: u.name })))
+    loadEngagementData()
+  }, [])
+
+  useEffect(() => {
+    const unsub = listenToUsers({
+      onData: (records) => {
+        setMentors(records.filter((u) => u.role === 'mentor').map((u) => ({ id: u.id, name: u.name })))
+      },
+      onError: (err) => {
+        console.error(err)
+      },
     })
     return () => unsub()
   }, [])
@@ -236,15 +256,31 @@ export const UserEngagementMonitoringTab = () => {
       )
     }
 
+    if (loadError) {
+      return (
+        <Flex py={10} direction="column" align="center" gap={3}>
+          <Icon as={BarChart2} boxSize={10} color="red.300" />
+          <Text fontWeight="medium" color="red.600">
+            {loadError}
+          </Text>
+          <Button size="sm" variant="outline" colorScheme="purple" onClick={loadEngagementData}>
+            Retry loading
+          </Button>
+        </Flex>
+      )
+    }
+
     if (!filteredRoster.length) {
       return (
         <Flex py={10} direction="column" align="center" gap={3}>
           <Icon as={BarChart2} boxSize={10} color="gray.300" />
           <Text fontWeight="medium" color="gray.700">
-            No learners match the selected filters.
+            {roster.length === 0 ? 'No engagement data yet.' : 'No learners match the selected filters.'}
           </Text>
           <Text color="gray.500" fontSize="sm">
-            Adjust filters to expand your view of monitored learners.
+            {roster.length === 0
+              ? 'Collections will populate once activity tracking is enabled.'
+              : 'Adjust filters to expand your view of monitored learners.'}
           </Text>
         </Flex>
       )

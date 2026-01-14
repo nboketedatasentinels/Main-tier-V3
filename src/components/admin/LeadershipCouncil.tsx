@@ -84,13 +84,20 @@ export const LeadershipCouncil = () => {
   const editModal = useDisclosure()
 
   useEffect(() => {
-    const unsub = listenToUsers((records) => {
-      setAllUsers(records)
-      setLeaders({
-        mentors: records.filter((user) => user.role === 'mentor'),
-        ambassadors: records.filter((user) => user.role === 'ambassador'),
-      })
-      setLoading(false)
+    const unsub = listenToUsers({
+      onData: (records) => {
+        setAllUsers(records)
+        setLeaders({
+          mentors: records.filter((user) => user.role === 'mentor'),
+          ambassadors: records.filter((user) => user.role === 'ambassador'),
+        })
+        setLoading(false)
+      },
+      onError: (err) => {
+        console.error(err)
+        setLoading(false)
+        toast({ title: 'Unable to load leadership roster', status: 'error' })
+      },
     })
 
     fetchOrganizationsList()

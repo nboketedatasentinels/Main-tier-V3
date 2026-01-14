@@ -17,6 +17,18 @@ import { RawUpgradeRequest, UpgradeRequest, UpgradeRequestForm, UpgradeRequestSt
 const REQUEST_COLLECTION = 'upgrade_requests'
 const ADMIN_NOTIFICATIONS = 'admin_notifications'
 
+export class AdminDataError extends Error {
+  code?: string
+  context?: Record<string, unknown>
+
+  constructor(message: string, code?: string, context?: Record<string, unknown>) {
+    super(message)
+    this.name = 'AdminDataError'
+    this.code = code
+    this.context = context
+  }
+}
+
 const toUpgradeRequest = (snapshotId: string, data: RawUpgradeRequest): UpgradeRequest => {
   return {
     id: snapshotId,
@@ -87,9 +99,40 @@ export const checkPendingRequest = async (userId: string): Promise<UpgradeReques
 }
 
 export const getAllUpgradeRequests = async (): Promise<UpgradeRequest[]> => {
-  const q = query(collection(db, REQUEST_COLLECTION), orderBy('requested_at', 'desc'))
-  const snapshot = await getDocs(q)
-  return snapshot.docs.map((docSnap) => toUpgradeRequest(docSnap.id, docSnap.data() as RawUpgradeRequest))
+  const startedAt = performance.now()
+  try {
+    const constraints = [orderBy('requested_at', 'desc')]
+    console.log('🟣 [Admin] upgrade_requests query constraints:', constraints.map((constraint) => String(constraint)))
+
+    const q = query(collection(db, REQUEST_COLLECTION), ...constraints)
+    const snapshot = await getDocs(q)
+    console.log(
+      '🟢 [Admin] upgrade_requests loaded:',
+      snapshot.size,
+      'docs in',
+      Math.round(performance.now() - startedAt),
+      'ms'
+    )
+    return snapshot.docs.map((docSnap) => toUpgradeRequest(docSnap.id, docSnap.data() as RawUpgradeRequest))
+  } catch (err) {
+    const code = (err as { code?: string })?.code ?? 'unknown'
+    const message = (err as { message?: string })?.message
+    console.error('🔴 [Admin] upgrade_requests failed', { code, message, err })
+
+    if (code === 'failed-precondition') {
+      throw new AdminDataError(
+        'Upgrade requests query needs a Firestore composite index (status + requested_at).',
+        code,
+        { hint: 'Open Firebase console error logs to create the index link automatically.' }
+      )
+    }
+
+    if (code === 'permission-denied') {
+      throw new AdminDataError('You do not have permission to view upgrade requests.', code)
+    }
+
+    throw new AdminDataError('Failed to load upgrade requests.', code)
+  }
 }
 
 export const getPendingUpgradeRequests = async (): Promise<UpgradeRequest[]> => {

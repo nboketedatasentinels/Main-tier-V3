@@ -71,9 +71,14 @@ export const UpgradeRequestsPanel: React.FC = () => {
         </HStack>
 
         {error && (
-          <Alert status="error">
+          <Alert status="error" alignItems="flex-start">
             <AlertIcon />
-            {error.message}
+            <Stack spacing={2} flex="1">
+              <Text>{error.message}</Text>
+              <Button size="sm" variant="outline" onClick={refetch} isLoading={loading}>
+                Retry loading
+              </Button>
+            </Stack>
           </Alert>
         )}
 

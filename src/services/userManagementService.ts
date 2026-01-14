@@ -88,7 +88,7 @@ export interface EngagementTrendPoint {
   interventions: number
 }
 
-const usersCollection = collection(db, 'users')
+const usersCollection = collection(db, 'profiles')
 const organizationsCollection = collection(db, ORG_COLLECTION)
 const engagementCollection = collection(db, 'user_engagement_scores')
 const notificationsCollection = collection(db, 'notifications')
@@ -146,11 +146,56 @@ const mapUser = (docSnap: { id: string; data: () => unknown }): ManagedUserRecor
   }
 }
 
-export const listenToUsers = (onChange: (users: ManagedUserRecord[]) => void) => {
-  const usersQuery = query(usersCollection, orderBy('createdAt', 'desc'))
-  return onSnapshot(usersQuery, (snapshot) => {
-    onChange(snapshot.docs.map(mapUser))
-  })
+const buildUsersQuery = () => query(usersCollection, orderBy('createdAt', 'desc'))
+
+export const listenToUsers = ({
+  onData,
+  onError,
+  onStatusChange,
+}: {
+  onData: (users: ManagedUserRecord[]) => void
+  onError?: (error: unknown) => void
+  onStatusChange?: (status: 'connecting' | 'connected' | 'error' | 'retrying', detail?: Record<string, unknown>) => void
+}) => {
+  let unsubscribe: (() => void) | null = null
+  let closed = false
+  let attempt = 0
+
+  const subscribe = () => {
+    if (closed) return
+    onStatusChange?.('connecting')
+    const usersQuery = buildUsersQuery()
+    console.log('🟣 [Admin] listenToUsers => profiles query createdAt desc')
+    unsubscribe = onSnapshot(
+      usersQuery,
+      (snapshot) => {
+        attempt = 0
+        onStatusChange?.('connected')
+        onData(snapshot.docs.map(mapUser))
+      },
+      (err) => {
+        console.error('🔴 [Admin] profiles listener failed', err)
+        onStatusChange?.('error', { error: err })
+        onError?.(err)
+        attempt += 1
+        const delay = Math.min(1000 * 2 ** (attempt - 1), 30000)
+        onStatusChange?.('retrying', { attempt, delay })
+        setTimeout(() => {
+          if (closed) return
+          subscribe()
+        }, delay)
+      }
+    )
+  }
+
+  subscribe()
+
+  return () => {
+    closed = true
+    if (unsubscribe) {
+      unsubscribe()
+    }
+  }
 }
 
 export const fetchOrganizationsList = async (): Promise<OrganizationOption[]> => {
@@ -162,7 +207,7 @@ export const fetchOrganizationsList = async (): Promise<OrganizationOption[]> =>
 }
 
 export const updateUserRole = async (userId: string, role: ManagedUserRole, companyId?: string | null) => {
-  const userRef = doc(db, 'users', userId)
+  const userRef = doc(db, 'profiles', userId)
   const updates: Record<string, unknown> = {
     role,
     updatedAt: serverTimestamp(),
@@ -174,7 +219,7 @@ export const updateUserRole = async (userId: string, role: ManagedUserRole, comp
 }
 
 export const updateMembershipStatus = async (userId: string, membershipStatus: MembershipStatus) => {
-  const userRef = doc(db, 'users', userId)
+  const userRef = doc(db, 'profiles', userId)
   await updateDoc(userRef, {
     membershipStatus,
     updatedAt: serverTimestamp(),
@@ -182,7 +227,7 @@ export const updateMembershipStatus = async (userId: string, membershipStatus: M
 }
 
 export const deleteUserAccount = async (userId: string) => {
-  const userRef = doc(db, 'users', userId)
+  const userRef = doc(db, 'profiles', userId)
   await deleteDoc(userRef)
 }
 
@@ -234,7 +279,7 @@ export const assignRoleToUser = async (
     payload.notes = notes
   }
 
-  await updateDoc(doc(db, 'users', userId), payload)
+  await updateDoc(doc(db, 'profiles', userId), payload)
 
   await addDoc(notificationsCollection, {
     user_id: userId,
@@ -251,7 +296,7 @@ export const assignRoleToUser = async (
 export const updateUser = async (userId: string, updates: Partial<ManagedUserRecord>) => {
   const payload = { ...updates }
   delete (payload as { id?: string }).id
-  await updateDoc(doc(db, 'users', userId), {
+  await updateDoc(doc(db, 'profiles', userId), {
     ...payload,
     updatedAt: serverTimestamp(),
   })
@@ -346,7 +391,7 @@ export const fetchEngagementTrendSeries = async (): Promise<EngagementTrendPoint
 }
 
 export const fetchEngagementHistory = async (userId: string): Promise<Array<{ label: string; engagementScore: number; impactPoints?: number }>> => {
-  const historyCollection = collection(db, 'users', userId, 'engagement_history')
+  const historyCollection = collection(db, 'profiles', userId, 'engagement_history')
   const snapshot = await getDocs(historyCollection)
   if (snapshot.empty) return []
 
@@ -363,7 +408,7 @@ export const fetchEngagementHistory = async (userId: string): Promise<Array<{ la
 export const fetchRecentActivities = async (
   userId: string,
 ): Promise<Array<{ title: string; description?: string; timestamp?: Date | null; category?: string; actor?: string; type?: string }>> => {
-  const activityCollection = collection(db, 'users', userId, 'recent_activity')
+  const activityCollection = collection(db, 'profiles', userId, 'recent_activity')
   const snapshot = await getDocs(activityCollection)
   if (snapshot.empty) return []
 
