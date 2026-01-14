@@ -35,7 +35,7 @@ import {
   useDisclosure,
   useToast,
 } from '@chakra-ui/react'
-import { AlertTriangle, CheckCircle, ChevronLeft, ChevronRight, Lock, Plus, ShieldCheck } from 'lucide-react'
+import { AlertTriangle, CheckCircle, Lock, Plus, ShieldCheck } from 'lucide-react'
 import { addDoc, collection, doc, getDoc, getDocs, onSnapshot, query, serverTimestamp, setDoc, where } from 'firebase/firestore'
 import { addDays, format } from 'date-fns'
 import { removeUndefinedFields } from '@/utils/firestore'
@@ -272,25 +272,11 @@ const WeeklyChecklistPage: React.FC = () => {
     return getMonthNumber(journey.currentWeek);
   }, [journey]);
 
-  const selectedMonthNumber = useMemo(() => {
-    return getMonthNumber(selectedWeek);
-  }, [selectedWeek]);
-
   const totalMonths = useMemo(() => {
     if (!journey) return 1;
     if (!isMonthBasedJourney) return 1;
     return JOURNEY_MONTH_COUNTS[journey.journeyType];
   }, [journey, isMonthBasedJourney]);
-
-  const weekRangeLabel = useCallback(
-    (weekNumber: number) => {
-      if (!journeyStartDate) return null;
-      const weekStart = addDays(journeyStartDate, (weekNumber - 1) * 7);
-      const weekEnd = addDays(weekStart, 6);
-      return `${format(weekStart, 'MMM d')} - ${format(weekEnd, 'MMM d')}`;
-    },
-    [journeyStartDate],
-  );
 
   const getImpactLogDateRange = useCallback(
     (weekNumber: number) => {
