@@ -79,6 +79,7 @@ import { useAuth } from '@/hooks/useAuth'
 import { StartChallengeModal } from '@/components/modals/StartChallengeModal'
 import { removeUndefinedFields } from '@/utils/firestore'
 import { fetchOrgMembers, getOrgScope } from '@/utils/organizationScope'
+import { OrgProfileLike } from '@/utils/organizationTypes'
 
 // Types
 type PeerProfile = {
@@ -153,8 +154,6 @@ type MatchWindow = {
   durationDays?: number
 }
 
-type OrgScope = { companyId?: string | null; companyCode?: string | null; isValid: boolean }
-
 const MANUAL_REFRESH_COOLDOWN_HOURS = 24
 const WEEKDAY_LABELS = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday']
 const WEEKDAY_SHORT_MAP: Record<string, number> = {
@@ -208,14 +207,18 @@ const addDaysUtc = (date: Date, days: number) => {
   return next
 }
 
-const debugOrgFetch = async (dbInstance: typeof db, profile: PeerProfile | null, userId: string) => {
-  const scope: OrgScope = getOrgScope(profile) as OrgScope
+const debugOrgFetch = async (dbInstance: typeof db, profile: OrgProfileLike | null, userId: string) => {
+  const scope = getOrgScope(profile)
 
   console.group('🧪 ORG FETCH DEBUG')
   console.log('userId', userId)
   console.log('profile.id', profile?.id)
-  console.log('profile.companyId', (profile as { companyId?: string | null } | null)?.companyId)
-  console.log('profile.companyCode', profile?.companyCode)
+  console.log('[OrgDebug] Incoming profile org fields', {
+    companyId: profile?.companyId,
+    organizationId: profile?.organizationId,
+    companyCode: profile?.companyCode,
+    organizationCode: profile?.organizationCode,
+  })
   console.log('scope', scope)
 
   try {
@@ -229,46 +232,26 @@ const debugOrgFetch = async (dbInstance: typeof db, profile: PeerProfile | null,
     console.error('profiles collection NOT readable ❌', errorInfo?.code, errorInfo?.message)
   }
 
-  if (scope?.companyId) {
-    try {
-      const companyIdQuery = query(
-        collection(dbInstance, 'profiles'),
-        where('companyId', '==', scope.companyId),
-        limit(10),
-      )
-      const snap1 = await getDocs(companyIdQuery)
-      console.log(
-        'Query by companyId returned:',
-        snap1.size,
-        snap1.docs.map((docSnap) => docSnap.id),
-      )
-    } catch (error: unknown) {
-      const errorInfo = error && typeof error === 'object' ? (error as { code?: string; message?: string }) : undefined
-      console.error('Query by companyId failed:', errorInfo?.code, errorInfo?.message)
-    }
-  } else {
-    console.warn('No scope.companyId to query')
+  if (!scope.isValid) {
+    console.warn('No valid organization scope to query')
+    console.groupEnd()
+    return
   }
 
-  if (scope?.companyCode) {
-    try {
-      const companyCodeQuery = query(
-        collection(dbInstance, 'profiles'),
-        where('companyCode', '==', scope.companyCode),
-        limit(10),
-      )
-      const snap2 = await getDocs(companyCodeQuery)
-      console.log(
-        'Query by companyCode returned:',
-        snap2.size,
-        snap2.docs.map((docSnap) => docSnap.id),
-      )
-    } catch (error: unknown) {
-      const errorInfo = error && typeof error === 'object' ? (error as { code?: string; message?: string }) : undefined
-      console.error('Query by companyCode failed:', errorInfo?.code, errorInfo?.message)
-    }
-  } else {
-    console.warn('No scope.companyCode to query')
+  try {
+    const orgQuery =
+      scope.type === 'company'
+        ? query(collection(dbInstance, 'profiles'), where('companyId', '==', scope.companyId), limit(10))
+        : query(collection(dbInstance, 'profiles'), where('companyCode', '==', scope.companyCode), limit(10))
+    const snap = await getDocs(orgQuery)
+    console.log(
+      `Query by ${scope.type === 'company' ? 'companyId' : 'companyCode'} returned:`,
+      snap.size,
+      snap.docs.map((docSnap) => docSnap.id),
+    )
+  } catch (error: unknown) {
+    const errorInfo = error && typeof error === 'object' ? (error as { code?: string; message?: string }) : undefined
+    console.error('Query by org scope failed:', errorInfo?.code, errorInfo?.message)
   }
 
   console.groupEnd()

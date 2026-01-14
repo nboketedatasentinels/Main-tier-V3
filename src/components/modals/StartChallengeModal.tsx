@@ -215,12 +215,12 @@ export const StartChallengeModal: React.FC<StartChallengeModalProps> = ({
       }
 
       let company: Organization | null = null;
-      if (orgScope.companyId) {
+      if (orgScope.type === 'company') {
         const companyDoc = await getDoc(doc(db, ORG_COLLECTION, orgScope.companyId));
         if (companyDoc.exists()) {
           company = { ...companyDoc.data(), id: companyDoc.id } as Organization;
         }
-      } else if (orgScope.companyCode) {
+      } else if (orgScope.type === 'company_code') {
         const companyQuery = query(collection(db, ORG_COLLECTION), where('code', '==', orgScope.companyCode));
         const companySnapshot = await getDocs(companyQuery);
         if (!companySnapshot.empty) {
@@ -250,9 +250,9 @@ export const StartChallengeModal: React.FC<StartChallengeModalProps> = ({
         challenger_name: challenger.fullName,
         challenged_id: challenged.id,
         challenged_name: challenged.fullName,
-        company_id: orgScope.companyId || company?.id || null,
+        company_id: orgScope.type === 'company' ? orgScope.companyId || company?.id || null : company?.id || null,
         company_name: company?.name || null,
-        company_code: orgScope.companyCode || null,
+        company_code: orgScope.type === 'company_code' ? orgScope.companyCode : null,
         status: 'pending',
         type: challengeType,
         custom_goal: challengeType === 'collaborative' ? customGoal : '',
