@@ -31,6 +31,8 @@ import {
   VerificationRequest,
 } from '@/types/admin'
 import { RiskLevel, RiskReason } from '@/components/admin/RiskAnalysisCard'
+import { useAllUpgradeRequests } from '@/hooks/admin/useAdminUpgradeRequests'
+import type { AdminHealthItem } from '@/components/admin/AdminDataHealthPanel'
 
 type TrendPoint = { label: string; value: number }
 
@@ -44,7 +46,7 @@ const defaultMetrics: SuperAdminDashboardMetrics = {
 }
 
 export const SuperAdminDashboard: React.FC = () => {
-  const { profile } = useAuth()
+  const { profile, profileStatus, lastProfileLoadAt, refreshProfile } = useAuth()
   const adminName = profile?.fullName || profile?.firstName || 'Admin'
   const toast = useToast()
 
@@ -59,9 +61,18 @@ export const SuperAdminDashboard: React.FC = () => {
   const [streamsLoading, setStreamsLoading] = useState(true)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [refreshIndex, setRefreshIndex] = useState(0)
+  const [lastEngagementSuccessAt, setLastEngagementSuccessAt] = useState<Date | null>(null)
+  const [lastUpgradeSuccessAt, setLastUpgradeSuccessAt] = useState<Date | null>(null)
 
   const [registrationTrend, setRegistrationTrend] = useState<TrendPoint[]>([])
   const [userGrowthTrend, setUserGrowthTrend] = useState<TrendPoint[]>([])
+  const {
+    requests: upgradeRequests,
+    loading: upgradeRequestsLoading,
+    error: upgradeRequestsError,
+    refetch: refetchUpgradeRequests,
+  } = useAllUpgradeRequests()
 
   useEffect(() => {
     setLoading(true)
@@ -130,7 +141,7 @@ export const SuperAdminDashboard: React.FC = () => {
     )
 
     return () => unsubscribers.forEach((unsub) => unsub())
-  }, [toast])
+  }, [refreshIndex, toast])
 
   useEffect(() => {
     const unsubscribers: Array<() => void> = []
@@ -166,6 +177,18 @@ export const SuperAdminDashboard: React.FC = () => {
     return () => unsubscribers.forEach((unsub) => unsub())
   }, [])
 
+  useEffect(() => {
+    if (!loading && !error) {
+      setLastEngagementSuccessAt(new Date())
+    }
+  }, [activityLog, error, loading, metrics, registrationTrend, riskAggregate, userGrowthTrend])
+
+  useEffect(() => {
+    if (!upgradeRequestsLoading && !upgradeRequestsError) {
+      setLastUpgradeSuccessAt(new Date())
+    }
+  }, [upgradeRequestsError, upgradeRequestsLoading, upgradeRequests.length])
+
   const riskLevels: RiskLevel[] = useMemo(() => {
     return [
       { label: 'Engaged', count: riskAggregate.riskBuckets.green || 0, color: 'green', reasons: ['Consistent logins'] },
@@ -186,6 +209,49 @@ export const SuperAdminDashboard: React.FC = () => {
   const handleNavigate = (key: string) => {
     setActivePage(key)
   }
+
+  const retryEngagement = () => setRefreshIndex((prev) => prev + 1)
+  const retryProfile = () => {
+    void refreshProfile({ reason: 'super-admin-health-panel' })
+  }
+
+  const healthItems: AdminHealthItem[] = [
+    {
+      label: 'Profiles',
+      status: profileStatus === 'ready' ? 'healthy' : 'error',
+      description: profileStatus === 'ready'
+        ? 'Admin identity and permissions are loaded.'
+        : 'Profile data is still loading or unavailable.',
+      lastSuccessAt: lastProfileLoadAt ? new Date(lastProfileLoadAt) : null,
+      onRetry: retryProfile,
+    },
+    {
+      label: 'Upgrade requests',
+      status: upgradeRequestsLoading
+        ? 'loading'
+        : upgradeRequestsError
+          ? 'warning'
+          : 'healthy',
+      description: upgradeRequestsError
+        ? 'Upgrade approvals are delayed. Check permissions or Firestore rules.'
+        : `Tracking ${upgradeRequests.length} request${upgradeRequests.length === 1 ? '' : 's'}.`,
+      lastSuccessAt: lastUpgradeSuccessAt,
+      onRetry: refetchUpgradeRequests,
+    },
+    {
+      label: 'Engagement signals',
+      status: loading
+        ? 'loading'
+        : error
+          ? 'error'
+          : 'healthy',
+      description: error
+        ? error
+        : 'Engagement trends and risk signals are live.',
+      lastSuccessAt: lastEngagementSuccessAt,
+      onRetry: retryEngagement,
+    },
+  ]
 
   const renderPage = () => {
     switch (activePage) {
@@ -222,6 +288,7 @@ export const SuperAdminDashboard: React.FC = () => {
             error={error}
             streamsLoading={streamsLoading}
             onNavigate={handleNavigate}
+            healthItems={healthItems}
           />
         )
     }
