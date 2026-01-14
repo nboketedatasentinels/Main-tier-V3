@@ -154,6 +154,17 @@ type MatchWindow = {
   durationDays?: number
 }
 
+type OrgScope = { companyId?: string | null; companyCode?: string | null; isValid: boolean }
+type DebugOrgProfile = {
+  id: string
+  companyId?: string | null
+  companyCode?: string | null
+  organizationId?: string | null
+  organizationCode?: string | null
+  name?: string
+  fullName?: string
+}
+
 const MANUAL_REFRESH_COOLDOWN_HOURS = 24
 const WEEKDAY_LABELS = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday']
 const WEEKDAY_SHORT_MAP: Record<string, number> = {
@@ -207,18 +218,14 @@ const addDaysUtc = (date: Date, days: number) => {
   return next
 }
 
-const debugOrgFetch = async (dbInstance: typeof db, profile: OrgProfileLike | null, userId: string) => {
-  const scope = getOrgScope(profile)
+const debugOrgFetch = async (dbInstance: typeof db, profile: DebugOrgProfile | null, userId: string) => {
+  const scope: OrgScope = getOrgScope(profile) as OrgScope
 
   console.group('🧪 ORG FETCH DEBUG')
   console.log('userId', userId)
   console.log('profile.id', profile?.id)
-  console.log('[OrgDebug] Incoming profile org fields', {
-    companyId: profile?.companyId,
-    organizationId: profile?.organizationId,
-    companyCode: profile?.companyCode,
-    organizationCode: profile?.organizationCode,
-  })
+  console.log('profile.companyId', profile?.companyId)
+  console.log('profile.companyCode', profile?.companyCode)
   console.log('scope', scope)
 
   try {
