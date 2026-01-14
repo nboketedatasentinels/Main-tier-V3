@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   Modal,
   ModalOverlay,
@@ -29,6 +29,7 @@ import { Swords, Users, Trophy, Filter, User, Lock } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { db } from '@/services/firebase';
 import { ORG_COLLECTION } from '@/constants/organizations';
+import { fetchOrgMembers, getOrgScope, isProfileInOrg } from '@/utils/organizationScope';
 import {
   collection,
   query,
@@ -38,16 +39,8 @@ import {
   Timestamp,
   doc,
   getDoc,
-  limit,
-  QueryDocumentSnapshot,
-  DocumentData,
 } from 'firebase/firestore';
 import { UserProfile, Organization } from '@/types';
-import {
-  filterProfilesBySegment,
-  getSegmentContext,
-  isProfileInSegment,
-} from '@/utils/leaderboardSegmentation';
 
 
 // --- INTERFACES ---
@@ -100,10 +93,8 @@ export const StartChallengeModal: React.FC<StartChallengeModalProps> = ({
   const [success, setSuccess] = useState(false);
 
   const [userLevel, setUserLevel] = useState(1);
-  const [companyCode, setCompanyCode] = useState<string | undefined>(undefined);
 
   const { user, profile } = useAuth();
-  const segmentContext = useMemo(() => getSegmentContext(profile), [profile]);
 
   // --- DATA FETCHING ---
   const fetchPotentialOpponents = useCallback(async () => {
@@ -111,34 +102,25 @@ export const StartChallengeModal: React.FC<StartChallengeModalProps> = ({
     setLoading(true);
     setError(null);
     try {
-      const profilesRef = collection(db, 'profiles');
-      const mapProfiles = (docs: QueryDocumentSnapshot<DocumentData>[]) =>
-        docs.map(docSnap => ({ ...docSnap.data(), id: docSnap.id } as UserProfile));
-
-      if (!segmentContext?.filterValue) {
+      const orgScope = getOrgScope(profile);
+      if (!orgScope.isValid) {
         setUsers([]);
-        setError('Segment details are missing. Please refresh your profile.');
+        setError('Organization details are missing. Please refresh your profile.');
         return;
       }
 
-      const segmentQuery = query(
-        profilesRef,
-        where(segmentContext.filterField, '==', segmentContext.filterValue),
-        limit(50)
-      );
-
-      const segmentSnapshot = await getDocs(segmentQuery);
-      const segmentProfiles = filterProfilesBySegment(mapProfiles(segmentSnapshot.docs), profile)
-        .filter(p => p.id !== user.uid);
-
-      const userOptions: UserOption[] = segmentProfiles.map(p => ({
+      const members = await fetchOrgMembers(db, orgScope, user.uid);
+      const userOptions: UserOption[] = members.map((member) => {
+        const p = member as unknown as UserProfile;
+        return ({
         id: p.id,
         name: p.fullName || `${p.firstName || ''} ${p.lastName || ''}`.trim(),
         email: p.email,
         level: p.level || 1,
         points: p.totalPoints || 0,
         recommended: false,
-      }));
+        });
+      });
 
       if (userOptions.length === 0) {
         setError('No users available to challenge right now.');
@@ -149,7 +131,7 @@ export const StartChallengeModal: React.FC<StartChallengeModalProps> = ({
     } finally {
       setLoading(false);
     }
-  }, [profile, segmentContext, user]);
+  }, [profile, user]);
 
   // --- FILTERING LOGIC ---
   const applyOpponentFilter = useCallback(() => {
@@ -223,17 +205,23 @@ export const StartChallengeModal: React.FC<StartChallengeModalProps> = ({
         throw new Error('Opponent profile could not be loaded.');
       }
 
-      if (segmentContext && !segmentContext.filterValue) {
-        throw new Error('Segment details are missing. Please refresh your profile.');
+      const orgScope = getOrgScope(challenger);
+      if (!orgScope.isValid) {
+        throw new Error('Organization details are missing. Please refresh your profile.');
       }
 
-      if (segmentContext && !isProfileInSegment(challenged, segmentContext)) {
-        throw new Error('You can only challenge members of your segment.');
+      if (!isProfileInOrg(challenged, orgScope)) {
+        throw new Error('You can only challenge members of your organization.');
       }
 
       let company: Organization | null = null;
-      if (companyCode) {
-        const companyQuery = query(collection(db, ORG_COLLECTION), where('code', '==', companyCode));
+      if (orgScope.type === 'company') {
+        const companyDoc = await getDoc(doc(db, ORG_COLLECTION, orgScope.companyId));
+        if (companyDoc.exists()) {
+          company = { ...companyDoc.data(), id: companyDoc.id } as Organization;
+        }
+      } else if (orgScope.type === 'company_code') {
+        const companyQuery = query(collection(db, ORG_COLLECTION), where('code', '==', orgScope.companyCode));
         const companySnapshot = await getDocs(companyQuery);
         if (!companySnapshot.empty) {
           company = { ...companySnapshot.docs[0].data(), id: companySnapshot.docs[0].id } as Organization;
@@ -262,9 +250,9 @@ export const StartChallengeModal: React.FC<StartChallengeModalProps> = ({
         challenger_name: challenger.fullName,
         challenged_id: challenged.id,
         challenged_name: challenged.fullName,
-        company_id: company?.id || null,
+        company_id: orgScope.type === 'company' ? orgScope.companyId || company?.id || null : company?.id || null,
         company_name: company?.name || null,
-        company_code: companyCode || null,
+        company_code: orgScope.type === 'company_code' ? orgScope.companyCode : null,
         status: 'pending',
         type: challengeType,
         custom_goal: challengeType === 'collaborative' ? customGoal : '',
@@ -313,9 +301,6 @@ export const StartChallengeModal: React.FC<StartChallengeModalProps> = ({
 
   // --- EFFECTS ---
   useEffect(() => {
-    if (profile?.companyCode) {
-      setCompanyCode(profile.companyCode);
-    }
     if (profile?.level) {
       setUserLevel(profile.level);
     }

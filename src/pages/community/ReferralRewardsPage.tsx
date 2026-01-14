@@ -166,7 +166,7 @@ const ReferralRewardsPage: React.FC = () => {
 
   const referralLink = useMemo(() => {
     const sanitizedBase = baseAppUrl.endsWith('/') ? baseAppUrl.slice(0, -1) : baseAppUrl
-    return referralCode ? `${sanitizedBase}/auth?ref=${referralCode}` : `${sanitizedBase}/auth`
+    return referralCode ? `${sanitizedBase}/join?ref=${referralCode}` : `${sanitizedBase}/join`
   }, [baseAppUrl, referralCode])
 
   const nextTier = rewardTiers.find(tier => referralCount < tier.required)

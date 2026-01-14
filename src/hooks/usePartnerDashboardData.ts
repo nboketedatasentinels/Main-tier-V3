@@ -18,6 +18,7 @@ import { ORG_COLLECTION } from '@/constants/organizations'
 import { listenToAssignedOrganizations, logOrganizationAccessAttempt } from '@/services/organizationService'
 import { listenToOrganizationStatsUpdates, updateOrganizationStatisticsBatch } from '@/services/organizationStatsService'
 import type { OrganizationRecord } from '@/types/admin'
+import { formatAdminFirestoreError } from '@/services/admin/adminErrors'
 import {
   build14DayRegistrationTrend,
   calculateUserRiskStatus,
@@ -79,7 +80,7 @@ interface UsePartnerDashboardDataOptions {
   selectedOrg?: string
 }
 
-const USERS_QUERY = query(collection(db, 'users'), where('accountStatus', '==', 'active'))
+const USERS_QUERY = query(collection(db, 'profiles'), where('accountStatus', '==', 'active'))
 
 const normalizeTimestamp = (value?: unknown): string | null => {
   if (!value) return null
@@ -116,8 +117,12 @@ export const usePartnerDashboardData = (options?: UsePartnerDashboardDataOptions
   const [organizationsLoading, setOrganizationsLoading] = useState<boolean>(true)
   const [organizationsError, setOrganizationsError] = useState<string | null>(null)
   const [organizationsReady, setOrganizationsReady] = useState<boolean>(false)
+  const [lastOrganizationsSuccessAt, setLastOrganizationsSuccessAt] = useState<Date | null>(null)
   const [notificationCount, setNotificationCount] = useState<number>(0)
   const [interventions, setInterventions] = useState<PartnerInterventionSummary[]>([])
+  const [lastUsersSuccessAt, setLastUsersSuccessAt] = useState<Date | null>(null)
+  const [organizationsRefreshIndex, setOrganizationsRefreshIndex] = useState(0)
+  const [usersRefreshIndex, setUsersRefreshIndex] = useState(0)
   const lastAccessAttempt = useRef<string | null>(null)
   const organizationsRetryAttempts = useRef(0)
   const usersRetryAttempts = useRef(0)
@@ -166,10 +171,9 @@ export const usePartnerDashboardData = (options?: UsePartnerDashboardDataOptions
   }, [organizationLookup, selectedOrg])
 
   const formatFirestoreError = (error: unknown, fallback: string) => {
-    if (error instanceof Error) {
-      return `${fallback} (${error.message})`
-    }
-    return fallback
+    return formatAdminFirestoreError(error, fallback, {
+      indexMessage: 'Missing Firestore index required for this query.',
+    })
   }
 
   useEffect(() => {
@@ -199,6 +203,9 @@ export const usePartnerDashboardData = (options?: UsePartnerDashboardDataOptions
     }
     console.debug('[PartnerDashboard] Profile ready, loading dashboard data.')
   }, [profileStatus])
+
+  const retryOrganizations = () => setOrganizationsRefreshIndex((prev) => prev + 1)
+  const retryUsers = () => setUsersRefreshIndex((prev) => prev + 1)
 
   useEffect(() => {
     if (profileStatus !== 'ready') {
@@ -276,6 +283,7 @@ export const usePartnerDashboardData = (options?: UsePartnerDashboardDataOptions
             setOrganizations(scoped)
             setOrganizationsLoading(false)
             setOrganizationsReady(true)
+            setLastOrganizationsSuccessAt(new Date())
           },
           (error) => {
             console.error('Failed to load organizations', error)
@@ -331,6 +339,7 @@ export const usePartnerDashboardData = (options?: UsePartnerDashboardDataOptions
           setOrganizations(scoped)
           setOrganizationsLoading(false)
           setOrganizationsReady(true)
+          setLastOrganizationsSuccessAt(new Date())
         },
         {
           status: 'active',
@@ -349,7 +358,7 @@ export const usePartnerDashboardData = (options?: UsePartnerDashboardDataOptions
       if (retryTimeout) clearTimeout(retryTimeout)
       if (unsubscribe) unsubscribe()
     }
-  }, [assignedOrganizations, assignmentKey, isSuperAdmin, profileStatus, user?.uid])
+  }, [assignedOrganizations, assignmentKey, isSuperAdmin, organizationsRefreshIndex, profileStatus, user?.uid])
 
   useEffect(() => {
     if (profileStatus !== 'ready') {
@@ -455,6 +464,8 @@ export const usePartnerDashboardData = (options?: UsePartnerDashboardDataOptions
 
   type FirestorePartnerUser = Partial<PartnerUser> & {
     full_name?: string
+    firstName?: string
+    lastName?: string
     companyCode?: string
     company_code?: string
     accountStatus?: string
@@ -627,10 +638,17 @@ export const usePartnerDashboardData = (options?: UsePartnerDashboardDataOptions
                     : undefined,
                 ].filter((reason): reason is string => typeof reason === 'string' && reason.length > 0)
 
+                const displayName =
+                  data.name ||
+                  data.fullName ||
+                  data.full_name ||
+                  [data.firstName, data.lastName].filter(Boolean).join(' ').trim() ||
+                  'Unknown User'
+
                 hydratedUsers.push({
                   id: docSnap.id,
-                  name: data.name || data.fullName || data.full_name || 'Unknown User',
-                  fullName: data.fullName || data.full_name || data.name,
+                  name: displayName,
+                  fullName: data.fullName || data.full_name || displayName,
                   createdAt: normalizedCreatedAt || undefined,
                   lastActiveAt: normalizeTimestamp(data.lastActiveAt || data.last_active_at) || undefined,
                   programStartDate: normalizedProgramStart || undefined,
@@ -661,6 +679,7 @@ export const usePartnerDashboardData = (options?: UsePartnerDashboardDataOptions
 
             setUsers(hydratedUsers)
             setUsersLoading(false)
+            setLastUsersSuccessAt(new Date())
           } catch (error) {
             console.error('[PartnerDashboard] Failed to process user snapshot', error)
             scheduleRetry(error)
@@ -689,6 +708,7 @@ export const usePartnerDashboardData = (options?: UsePartnerDashboardDataOptions
     profileStatus,
     selectedOrg,
     selectedOrgKeys,
+    usersRefreshIndex,
   ])
 
   useEffect(() => {
@@ -923,16 +943,20 @@ export const usePartnerDashboardData = (options?: UsePartnerDashboardDataOptions
       organizationsError: null,
       organizationsLoading: true,
       organizationsReady: false,
+      lastOrganizationsSuccessAt: null,
       profile,
       riskLevels: { engaged: 0, watch: 0, concern: 0, critical: 0 },
       selectedOrg,
       setSelectedOrg,
       usersError: null,
       usersLoading: true,
+      lastUsersSuccessAt: null,
       updateUserPoints: async () => undefined,
       users: [],
       interventions: [],
       daysUntil,
+      retryOrganizations,
+      retryUsers,
     }
   }
 
@@ -949,16 +973,20 @@ export const usePartnerDashboardData = (options?: UsePartnerDashboardDataOptions
     organizationsError,
     organizationsLoading,
     organizationsReady,
+    lastOrganizationsSuccessAt,
     profile,
     riskLevels,
     selectedOrg,
     setSelectedOrg,
     usersError,
     usersLoading,
+    lastUsersSuccessAt,
     updateUserPoints,
     users,
     interventions,
     daysUntil,
+    retryOrganizations,
+    retryUsers,
   }
 }
 

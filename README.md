@@ -177,6 +177,12 @@ If the nudge templates or campaigns fail to load:
 3. Ensure Firestore indexes exist for common nudge queries (see `database/firestore-schema.md`).
 4. Seed starter templates with `node scripts/seed-nudge-templates.mjs` if the collection is empty.
 
+## 🧱 Firestore Index Deployment
+
+The leaderboard transaction queries rely on composite indexes defined in `firestore.indexes.json`.
+Deploy indexes with the Firebase CLI (`firebase deploy --only firestore:indexes`) or
+create them manually in the Firebase Console under Firestore Database → Indexes.
+
 ## 📝 Development Scripts
 
 - `npm run dev` - Start development server

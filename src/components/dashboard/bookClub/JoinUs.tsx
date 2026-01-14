@@ -4,7 +4,7 @@ import { addDoc, collection, serverTimestamp } from 'firebase/firestore'
 import { useAuth } from '@/hooks/useAuth'
 import { db } from '@/services/firebase'
 
-const HUB_URL = 'https://chat.whatsapp.com/GlioRkWeQ36LxxFeBZc8SW'
+const HUB_URL = 'https://chat.whatsapp.com/IJO0RJlUX9CDO1vciAHIsu'
 
 export const JoinUs: React.FC = () => {
   const { user, profile } = useAuth()

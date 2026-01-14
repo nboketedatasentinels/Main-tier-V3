@@ -387,6 +387,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         : validatedOrganization
           ? UserRole.PAID_MEMBER
           : UserRole.FREE_USER
+      const normalizedRole = normalizeRole(role || UserRole.PAID_MEMBER)
       const { firstName, lastName, fullName } = getNameParts(
         firebaseUser.displayName,
         firebaseUser.email
@@ -413,7 +414,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         firstName,
         lastName,
         fullName,
-        role,
+        role: normalizedRole,
         membershipStatus: validatedOrganization ? 'paid' : 'free',
         ...(firebaseUser.photoURL ? { avatarUrl: firebaseUser.photoURL } : {}),
         totalPoints: 0,
@@ -443,18 +444,32 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
           defaultRoute: '/app/weekly-glance',
           lockedToFreeExperience: validatedOrganization
             ? false
-            : ['user', 'free_user'].includes(normalizeRole(role)),
+            : ['user', 'free_user'].includes(normalizedRole),
         },
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
       }
 
-      await setDoc(userDocRef, {
-        ...profileData,
-        ...(firebaseUser.photoURL ? { avatarUrl: firebaseUser.photoURL } : {}),
-        createdAt: serverTimestamp(),
-        updatedAt: serverTimestamp(),
-      })
+      const profileRef = doc(db, 'profiles', firebaseUser.uid)
+
+      await Promise.all([
+        setDoc(userDocRef, {
+          ...profileData,
+          ...(firebaseUser.photoURL ? { avatarUrl: firebaseUser.photoURL } : {}),
+          createdAt: serverTimestamp(),
+          updatedAt: serverTimestamp(),
+        }),
+        setDoc(
+          profileRef,
+          {
+            ...profileData,
+            ...(firebaseUser.photoURL ? { avatarUrl: firebaseUser.photoURL } : {}),
+            createdAt: serverTimestamp(),
+            updatedAt: serverTimestamp(),
+          },
+          { merge: true },
+        ),
+      ])
 
       if (validatedOrganization?.id) {
         try {
@@ -810,7 +825,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         : validatedOrganization
           ? UserRole.PAID_MEMBER
           : UserRole.FREE_USER
-      const normalizedRole = normalizeRole(role)
+      const normalizedRole = normalizeRole(role || UserRole.PAID_MEMBER)
       let generatedReferralCode: string | null = null
       try {
         generatedReferralCode = await generateReferralCode(uid)

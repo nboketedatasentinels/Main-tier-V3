@@ -66,7 +66,7 @@ import {
   doc,
   getDoc,
   getDocs,
-  orderBy,
+  limit,
   query,
   serverTimestamp,
   setDoc,
@@ -78,6 +78,8 @@ import { db } from '@/services/firebase'
 import { useAuth } from '@/hooks/useAuth'
 import { StartChallengeModal } from '@/components/modals/StartChallengeModal'
 import { removeUndefinedFields } from '@/utils/firestore'
+import { fetchOrgMembers, getOrgScope, type OrgScope } from '@/utils/organizationScope'
+import { OrgProfileLike } from '@/utils/organizationTypes'
 
 // Types
 type PeerProfile = {
@@ -152,6 +154,16 @@ type MatchWindow = {
   durationDays?: number
 }
 
+type DebugOrgProfile = {
+  id: string
+  companyId?: string | null
+  companyCode?: string | null
+  organizationId?: string | null
+  organizationCode?: string | null
+  name?: string
+  fullName?: string
+}
+
 const MANUAL_REFRESH_COOLDOWN_HOURS = 24
 const WEEKDAY_LABELS = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday']
 const WEEKDAY_SHORT_MAP: Record<string, number> = {
@@ -203,6 +215,52 @@ const addDaysUtc = (date: Date, days: number) => {
   const next = new Date(date)
   next.setUTCDate(next.getUTCDate() + days)
   return next
+}
+
+const debugOrgFetch = async (dbInstance: typeof db, profile: DebugOrgProfile | null, userId: string) => {
+  const scope = getOrgScope(profile)
+
+  console.group('🧪 ORG FETCH DEBUG')
+  console.log('userId', userId)
+  console.log('profile.id', profile?.id)
+  console.log('profile.companyId', profile?.companyId)
+  console.log('profile.companyCode', profile?.companyCode)
+  console.log('scope', scope)
+
+  try {
+    const sanitySnap = await getDocs(query(collection(dbInstance, 'profiles'), limit(3)))
+    console.log(
+      'profiles collection readable ✅ sample:',
+      sanitySnap.docs.map((docSnap) => docSnap.id),
+    )
+  } catch (error: unknown) {
+    const errorInfo = error && typeof error === 'object' ? (error as { code?: string; message?: string }) : undefined
+    console.error('profiles collection NOT readable ❌', errorInfo?.code, errorInfo?.message)
+  }
+
+  if (!scope.isValid) {
+    console.warn('No valid organization scope to query')
+    console.groupEnd()
+    return
+  }
+
+  try {
+    const orgQuery =
+      scope.type === 'company'
+        ? query(collection(dbInstance, 'profiles'), where('companyId', '==', scope.companyId), limit(10))
+        : query(collection(dbInstance, 'profiles'), where('companyCode', '==', scope.companyCode), limit(10))
+    const snap = await getDocs(orgQuery)
+    console.log(
+      `Query by ${scope.type === 'company' ? 'companyId' : 'companyCode'} returned:`,
+      snap.size,
+      snap.docs.map((docSnap) => docSnap.id),
+    )
+  } catch (error: unknown) {
+    const errorInfo = error && typeof error === 'object' ? (error as { code?: string; message?: string }) : undefined
+    console.error('Query by org scope failed:', errorInfo?.code, errorInfo?.message)
+  }
+
+  console.groupEnd()
 }
 
 const getPreferredDayOnOrBefore = (date: Date, preferredDay: number) => {
@@ -530,55 +588,68 @@ export const PeerConnectPage: React.FC = () => {
 
   useEffect(() => {
     const fetchPeers = async () => {
-      if (!profile) return
+      if (!profile?.id) return
       setLoadingPeers(true)
       try {
-        if (!profile.companyCode) {
+        const orgScope = getOrgScope(profile)
+        if (!orgScope.isValid) {
           setAvailablePeers([])
+          toast({
+            title: 'No organisation assigned',
+            description: 'You need to be linked to an organisation to see peers.',
+            status: 'info',
+            position: 'top',
+          })
           return
         }
-        const peersRef = collection(db, 'profiles')
-        const peerQuery = query(
-          peersRef,
-          where('companyCode', '==', profile.companyCode || ''),
-          orderBy('firstName', 'asc')
-        )
-        const snapshot = await getDocs(peerQuery)
-        const mappedPeers: PeerProfile[] = snapshot.docs
-          .filter((docSnap) => docSnap.id !== profile.id)
-          .map((docSnap) => {
-            const data = docSnap.data()
-            return {
-              id: docSnap.id,
-              name: data.fullName || `${data.firstName || ''} ${data.lastName || ''}`.trim(),
-              email: data.email,
-              timezone: data.timezone,
-              interests: data.interests,
-              goals: data.goals,
-              companyCode: data.companyCode ?? undefined,
-              corporateVillageId: data.corporateVillageId,
-              cohortIdentifier: data.cohortIdentifier,
-              calendarLink: data.calendarLink,
-              identityTag: data.identityTag,
-              avatarUrl: data.avatarUrl,
-            }
-          })
 
+        await debugOrgFetch(db, profile, user?.uid ?? '')
+        const members = await fetchOrgMembers(db, orgScope, user?.uid ?? '')
+        const mappedPeers = members.map((data) => ({
+          id: String(data.id),
+          name: String(
+            data.fullName
+              || `${data.firstName || ''} ${data.lastName || ''}`.trim()
+              || 'Unnamed User',
+          ),
+          email: String(data.email || ''),
+          timezone: data.timezone as PeerProfile['timezone'],
+          interests: data.interests as PeerProfile['interests'],
+          goals: data.goals as PeerProfile['goals'],
+          companyCode: typeof data.companyCode === 'string' ? data.companyCode : undefined,
+          corporateVillageId: data.corporateVillageId as PeerProfile['corporateVillageId'],
+          cohortIdentifier: data.cohortIdentifier as PeerProfile['cohortIdentifier'],
+          calendarLink: data.calendarLink as PeerProfile['calendarLink'],
+          identityTag: data.identityTag as PeerProfile['identityTag'],
+          avatarUrl: data.avatarUrl as PeerProfile['avatarUrl'],
+        }))
         setAvailablePeers(mappedPeers)
-      } catch (error) {
+      } catch (error: unknown) {
         console.error('Error fetching peers', error)
+        const errorMessage = error && typeof error === 'object' && 'code' in error ? (error as { code?: string }).code : undefined
         toast({
           title: 'Unable to load peers',
-          description: 'We could not fetch your organisation peers from Firestore.',
+          description:
+            errorMessage === 'permission-denied'
+              ? 'Permission denied. Your account cannot read peer profiles.'
+              : 'We could not fetch your organisation peers from Firestore.',
           status: 'error',
           position: 'top',
         })
+        setAvailablePeers([])
       } finally {
         setLoadingPeers(false)
       }
     }
     fetchPeers()
-  }, [profile, toast])
+  }, [
+    profile?.id,
+    profile?.companyId,
+    profile?.companyCode,
+    profile?.assignedOrganizations,
+    user?.uid,
+    toast,
+  ])
 
   useEffect(() => {
     fetchWeeklyMatch()

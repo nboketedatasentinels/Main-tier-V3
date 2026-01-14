@@ -42,37 +42,65 @@ export const useLeaderboardContext = (profile: UserProfile | null): LeaderboardC
     if (!profile) return null
 
     if (isAdminRole(profile.role)) {
+      console.log('[Leaderboard] Context selected', { type: 'admin_all', reason: 'admin role detected' })
       return { type: 'admin_all' }
     }
 
-    if (isCorporateProfile(profile)) {
-      return { type: 'organization', organizationId: profile.companyId, organizationCode: profile.companyCode }
-    }
-
-    if (isPaidProfile(profile)) {
-      return { type: 'community' }
-    }
-
-    if (isFreeProfile(profile)) {
-      return { type: 'free' }
-    }
-
     if (profile.companyId) {
+      console.log('[Leaderboard] Context selected', {
+        type: 'organization',
+        reason: 'companyId present',
+        companyId: profile.companyId,
+      })
       return { type: 'organization', organizationId: profile.companyId, organizationCode: profile.companyCode }
     }
 
     if (profile.companyCode) {
+      console.log('[Leaderboard] Context selected', {
+        type: 'organization',
+        reason: 'companyCode present',
+        companyCode: profile.companyCode,
+      })
       return { type: 'organization', organizationCode: profile.companyCode }
     }
 
     if (profile.villageId) {
+      console.log('[Leaderboard] Context selected', {
+        type: 'village',
+        reason: 'villageId present',
+        villageId: profile.villageId,
+      })
       return { type: 'village', villageId: profile.villageId }
     }
 
     if (profile.clusterId) {
+      console.log('[Leaderboard] Context selected', {
+        type: 'cluster',
+        reason: 'clusterId present',
+        clusterId: profile.clusterId,
+      })
       return { type: 'cluster', clusterId: profile.clusterId }
     }
 
+    if (isCorporateProfile(profile)) {
+      console.log('[Leaderboard] Context selected', {
+        type: 'organization',
+        reason: 'corporate tier without org identifiers',
+      })
+      return { type: 'organization', organizationId: profile.companyId, organizationCode: profile.companyCode }
+    }
+
+    if (isPaidProfile(profile)) {
+      console.log('[Leaderboard] Context selected', { type: 'community', reason: 'paid individual tier' })
+      return { type: 'community' }
+    }
+
+    if (isFreeProfile(profile)) {
+      console.log('[Leaderboard] Context selected', { type: 'free', reason: 'free individual tier' })
+      return { type: 'free' }
+    }
+
+    console.log('[Leaderboard] Context selected', { type: 'free', reason: 'default fallback' })
     return { type: 'free' }
   }, [profile])
 
