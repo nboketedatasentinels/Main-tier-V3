@@ -109,7 +109,7 @@ export const useWeeklyGlanceData = () => {
     profiles: leadershipProfiles,
     errors: leadershipErrors,
     loading: leadershipLoading,
-  } = useOrganizationLeadership(profile?.companyId)
+  } = useOrganizationLeadership(profile?.companyId, profile?.id)
 
   const calendarWeekNumber = useMemo(() => getCurrentWeekNumber(), [])
   const weekNumber = useMemo(

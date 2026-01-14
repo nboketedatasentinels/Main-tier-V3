@@ -224,9 +224,11 @@ export const CompanyDashboard: React.FC = () => {
     profiles: leadershipProfiles,
     loading: leadershipLoading,
     errors: leadershipErrors,
+    assignmentSources: leadershipSources,
     organization: leadershipOrganization,
+    supportAssignment: supportAssignmentStatus,
     refresh: refreshLeadership,
-  } = useOrganizationLeadership(profile?.companyId)
+  } = useOrganizationLeadership(profile?.companyId, profile?.id)
   const assignment = useMemo(
     () => ({
       ambassador: buildSupportLead(leadershipProfiles.ambassador),
@@ -234,8 +236,10 @@ export const CompanyDashboard: React.FC = () => {
     }),
     [leadershipProfiles.ambassador, leadershipProfiles.mentor],
   )
-  const supportErrorMessage = leadershipErrors.organization
-  const showLeadershipDebug = import.meta.env.DEV && leadershipOrganization.id
+  const supportErrorMessage = leadershipErrors.organization || leadershipErrors.supportAssignments
+  const showLeadershipDebug = import.meta.env.DEV && (leadershipOrganization.id || supportAssignmentStatus.id)
+  const mentorSourceLabel =
+    leadershipSources.mentor === 'user' ? 'User-specific mentor' : leadershipSources.mentor === 'organization' ? 'Organization mentor' : null
 
   const { data: checklistItems, loading: checklistLoading } = useRealtimeCollection<ChecklistItem>(
     'weekly_checklist',
@@ -514,9 +518,20 @@ export const CompanyDashboard: React.FC = () => {
                 </Button>
               </HStack>
               {showLeadershipDebug && (
-                <Text fontSize="xs" color="gray.400" mb={2}>
-                  Org ID: {leadershipOrganization.id}
-                </Text>
+                <VStack align="start" spacing={1} mb={2}>
+                  <Text fontSize="xs" color="gray.400">
+                    Org ID: {leadershipOrganization.id ?? 'None'}
+                  </Text>
+                  <Text fontSize="xs" color="gray.400">
+                    Support assignments: {supportAssignmentStatus.loaded ? (supportAssignmentStatus.exists ? 'Loaded' : 'None') : 'Not checked'}
+                  </Text>
+                  <Text fontSize="xs" color="gray.400">
+                    Mentor source: {leadershipSources.mentor ?? 'None'}
+                  </Text>
+                  <Text fontSize="xs" color="gray.400">
+                    Ambassador source: {leadershipSources.ambassador ?? 'None'}
+                  </Text>
+                </VStack>
               )}
               <VStack align="stretch" spacing={4}>
                 {leadershipLoading && (
@@ -573,12 +588,19 @@ export const CompanyDashboard: React.FC = () => {
                     )}
                   </HStack>
                   <Text fontWeight="semibold">{assignment?.mentor?.name || 'No mentor assigned'}</Text>
+                  {mentorSourceLabel && (
+                    <Badge mt={2} colorScheme="purple" variant="subtle" alignSelf="flex-start">
+                      {mentorSourceLabel}
+                    </Badge>
+                  )}
                   {!assignment?.mentor?.name &&
                     !leadershipLoading &&
                     leadershipOrganization.loaded &&
                     leadershipOrganization.exists && (
                       <Text fontSize="xs" color="gray.500">
-                        No mentor is assigned to your organization yet.
+                        {supportAssignmentStatus.loaded
+                          ? 'No mentor is assigned to you or your organization yet.'
+                          : 'No mentor is assigned to your organization yet.'}
                       </Text>
                     )}
                   {!assignment?.mentor?.name &&
@@ -587,6 +609,15 @@ export const CompanyDashboard: React.FC = () => {
                     !leadershipOrganization.exists && (
                       <Text fontSize="xs" color="gray.500">
                         Organization record not found. Please verify your company ID.
+                      </Text>
+                    )}
+                  {!assignment?.mentor?.name &&
+                    !leadershipLoading &&
+                    leadershipOrganization.loaded &&
+                    leadershipOrganization.exists &&
+                    supportAssignmentStatus.loaded && (
+                      <Text fontSize="xs" color="gray.500">
+                        If you were recently assigned a mentor, ask your administrator to confirm your user assignment and organization support roles.
                       </Text>
                     )}
                   {assignment?.mentor?.email && (
