@@ -66,6 +66,7 @@ import {
   doc,
   getDoc,
   getDocs,
+  limit,
   query,
   serverTimestamp,
   setDoc,
@@ -152,6 +153,8 @@ type MatchWindow = {
   durationDays?: number
 }
 
+type OrgScope = { companyId?: string | null; companyCode?: string | null; isValid: boolean }
+
 const MANUAL_REFRESH_COOLDOWN_HOURS = 24
 const WEEKDAY_LABELS = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday']
 const WEEKDAY_SHORT_MAP: Record<string, number> = {
@@ -203,6 +206,72 @@ const addDaysUtc = (date: Date, days: number) => {
   const next = new Date(date)
   next.setUTCDate(next.getUTCDate() + days)
   return next
+}
+
+const debugOrgFetch = async (dbInstance: typeof db, profile: PeerProfile | null, userId: string) => {
+  const scope: OrgScope = getOrgScope(profile) as OrgScope
+
+  console.group('🧪 ORG FETCH DEBUG')
+  console.log('userId', userId)
+  console.log('profile.id', profile?.id)
+  console.log('profile.companyId', (profile as { companyId?: string | null } | null)?.companyId)
+  console.log('profile.companyCode', profile?.companyCode)
+  console.log('scope', scope)
+
+  try {
+    const sanitySnap = await getDocs(query(collection(dbInstance, 'profiles'), limit(3)))
+    console.log(
+      'profiles collection readable ✅ sample:',
+      sanitySnap.docs.map((docSnap) => docSnap.id),
+    )
+  } catch (error: unknown) {
+    const errorInfo = error && typeof error === 'object' ? (error as { code?: string; message?: string }) : undefined
+    console.error('profiles collection NOT readable ❌', errorInfo?.code, errorInfo?.message)
+  }
+
+  if (scope?.companyId) {
+    try {
+      const companyIdQuery = query(
+        collection(dbInstance, 'profiles'),
+        where('companyId', '==', scope.companyId),
+        limit(10),
+      )
+      const snap1 = await getDocs(companyIdQuery)
+      console.log(
+        'Query by companyId returned:',
+        snap1.size,
+        snap1.docs.map((docSnap) => docSnap.id),
+      )
+    } catch (error: unknown) {
+      const errorInfo = error && typeof error === 'object' ? (error as { code?: string; message?: string }) : undefined
+      console.error('Query by companyId failed:', errorInfo?.code, errorInfo?.message)
+    }
+  } else {
+    console.warn('No scope.companyId to query')
+  }
+
+  if (scope?.companyCode) {
+    try {
+      const companyCodeQuery = query(
+        collection(dbInstance, 'profiles'),
+        where('companyCode', '==', scope.companyCode),
+        limit(10),
+      )
+      const snap2 = await getDocs(companyCodeQuery)
+      console.log(
+        'Query by companyCode returned:',
+        snap2.size,
+        snap2.docs.map((docSnap) => docSnap.id),
+      )
+    } catch (error: unknown) {
+      const errorInfo = error && typeof error === 'object' ? (error as { code?: string; message?: string }) : undefined
+      console.error('Query by companyCode failed:', errorInfo?.code, errorInfo?.message)
+    }
+  } else {
+    console.warn('No scope.companyCode to query')
+  }
+
+  console.groupEnd()
 }
 
 const getPreferredDayOnOrBefore = (date: Date, preferredDay: number) => {
@@ -545,7 +614,8 @@ export const PeerConnectPage: React.FC = () => {
           return
         }
 
-        const members = await fetchOrgMembers(db, orgScope, profile.id)
+        await debugOrgFetch(db, profile, user?.uid ?? '')
+        const members = await fetchOrgMembers(db, orgScope, user?.uid ?? '')
         const mappedPeers = members.map((data) => ({
           id: String(data.id),
           name: String(
@@ -583,7 +653,14 @@ export const PeerConnectPage: React.FC = () => {
       }
     }
     fetchPeers()
-  }, [profile?.id, toast])
+  }, [
+    profile?.id,
+    profile?.companyId,
+    profile?.companyCode,
+    profile?.assignedOrganizations,
+    user?.uid,
+    toast,
+  ])
 
   useEffect(() => {
     fetchWeeklyMatch()
