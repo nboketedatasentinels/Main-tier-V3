@@ -77,6 +77,7 @@ import { db } from '@/services/firebase'
 import { useAuth } from '@/hooks/useAuth'
 import { StartChallengeModal } from '@/components/modals/StartChallengeModal'
 import { removeUndefinedFields } from '@/utils/firestore'
+import { fetchOrgMembers, getOrgScope } from '@/utils/organizationScope'
 
 // Types
 type PeerProfile = {
@@ -532,13 +533,8 @@ export const PeerConnectPage: React.FC = () => {
       if (!profile?.id) return
       setLoadingPeers(true)
       try {
-        const peersRef = collection(db, 'profiles')
-        const companyCode = (profile as { companyCode?: string }).companyCode || ''
-        const companyId = (profile as { companyId?: string; organizationId?: string }).companyId
-          || (profile as { organizationId?: string }).organizationId
-          || ''
-
-        if (!companyCode && !companyId) {
+        const orgScope = getOrgScope(profile)
+        if (!orgScope.isValid) {
           setAvailablePeers([])
           toast({
             title: 'No organisation assigned',
@@ -549,38 +545,25 @@ export const PeerConnectPage: React.FC = () => {
           return
         }
 
-        const queries = [
-          companyCode ? query(peersRef, where('companyCode', '==', companyCode)) : null,
-          companyId ? query(peersRef, where('companyId', '==', companyId)) : null,
-        ].filter(Boolean) as ReturnType<typeof query>[]
-
-        const snapshots = await Promise.all(queries.map((peerQuery) => getDocs(peerQuery)))
-
-        const merged = new Map<string, PeerProfile>()
-        snapshots.forEach((snapshot) => {
-          snapshot.docs.forEach((docSnap) => {
-            if (docSnap.id === profile.id) return
-            const data = docSnap.data()
-            merged.set(docSnap.id, {
-              id: docSnap.id,
-              name: data.fullName
-                || `${data.firstName || ''} ${data.lastName || ''}`.trim()
-                || 'Unnamed User',
-              email: data.email || '',
-              timezone: data.timezone,
-              interests: data.interests,
-              goals: data.goals,
-              companyCode: data.companyCode ?? undefined,
-              corporateVillageId: data.corporateVillageId,
-              cohortIdentifier: data.cohortIdentifier,
-              calendarLink: data.calendarLink,
-              identityTag: data.identityTag,
-              avatarUrl: data.avatarUrl,
-            })
-          })
-        })
-
-        const mappedPeers = Array.from(merged.values()).sort((a, b) => a.name.localeCompare(b.name))
+        const members = await fetchOrgMembers(db, orgScope, profile.id)
+        const mappedPeers = members.map((data) => ({
+          id: String(data.id),
+          name: String(
+            data.fullName
+              || `${data.firstName || ''} ${data.lastName || ''}`.trim()
+              || 'Unnamed User',
+          ),
+          email: String(data.email || ''),
+          timezone: data.timezone as PeerProfile['timezone'],
+          interests: data.interests as PeerProfile['interests'],
+          goals: data.goals as PeerProfile['goals'],
+          companyCode: data.companyCode ?? undefined,
+          corporateVillageId: data.corporateVillageId as PeerProfile['corporateVillageId'],
+          cohortIdentifier: data.cohortIdentifier as PeerProfile['cohortIdentifier'],
+          calendarLink: data.calendarLink as PeerProfile['calendarLink'],
+          identityTag: data.identityTag as PeerProfile['identityTag'],
+          avatarUrl: data.avatarUrl as PeerProfile['avatarUrl'],
+        }))
         setAvailablePeers(mappedPeers)
       } catch (error: unknown) {
         console.error('Error fetching peers', error)
