@@ -6,11 +6,8 @@ import type { StandardRole } from '@/types'
  * Always returns Firestore-compatible role strings
  */
 export const normalizeRole = (role: unknown): StandardRole => {
-  console.log('🔶 normalizeRole: input →', role, 'type:', typeof role)
-
   if (!role) {
-    console.warn('🔶 normalizeRole: empty role received')
-    return 'user'
+    return 'paid_member'
   }
 
   const roleString = role
@@ -18,8 +15,6 @@ export const normalizeRole = (role: unknown): StandardRole => {
     .trim()
     .toLowerCase()
     .replace(/[-\s]+/g, '_')
-
-  console.log('🔶 normalizeRole: normalized string →', roleString)
 
   let result: StandardRole
 
@@ -68,7 +63,6 @@ export const normalizeRole = (role: unknown): StandardRole => {
       break
   }
 
-  console.log('🔶 normalizeRole: result →', result)
   return result
 }
 
@@ -110,7 +104,6 @@ export const toUserRoleEnum = (role?: string | UserRole | null): UserRole | null
 export const isAdminRole = (role: unknown): boolean => {
   const normalized = normalizeRole(role)
   const isAdmin = normalized === 'super_admin' || normalized === 'partner' || normalized === 'admin'
-  console.log('🛂 isAdminRole:', role, '→', isAdmin)
   return isAdmin
 }
 
@@ -119,7 +112,6 @@ export const isAdminRole = (role: unknown): boolean => {
  */
 export const isSuperAdminRole = (role: unknown): boolean => {
   const isSuper = normalizeRole(role) === 'super_admin'
-  console.log('👑 isSuperAdminRole:', role, '→', isSuper)
   return isSuper
 }
 /**

@@ -192,10 +192,28 @@ export const LeadershipBoardPage: React.FC = () => {
     return null
   }, [context, profile])
 
-  const { profiles, transactions, challenges, profilesLoaded, transactionsLoaded } = useLeaderboardData({
+  const {
+    profiles,
+    transactions,
+    challenges,
+    profilesLoaded,
+    transactionsLoaded,
+    errorMessage,
+  } = useLeaderboardData({
     context,
     profileId: profile?.id,
   })
+
+  useEffect(() => {
+    if (!errorMessage) return
+    toast({
+      title: 'Unable to load leaderboard data.',
+      description: errorMessage,
+      status: 'error',
+      duration: 6000,
+      isClosable: true,
+    })
+  }, [errorMessage, toast])
 
   const pointsPulseStyle = pointsPulse ? 'pointsPulse 1.2s ease-in-out' : 'none'
 
