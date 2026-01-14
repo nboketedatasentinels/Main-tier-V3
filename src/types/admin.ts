@@ -1,4 +1,5 @@
 import type { Timestamp } from 'firebase/firestore'
+import type { JourneyType } from '@/config/pointsConfig'
 
 export interface AdminActivityLogEntry {
   id: string
@@ -28,32 +29,67 @@ export interface OrganizationRecord {
   id?: string
   name: string
   code: string
+  /**
+   * Cohort size and total paid license count (includes users, mentors, ambassadors, and team leaders).
+   */
   teamSize?: number
+  /**
+   * Whether email verification is enforced for new users in this organization.
+   */
+  emailVerificationEnforced?: boolean
+  /**
+   * Per-role license allocation counts based on active users.
+   */
+  licenseAllocationByRole?: Record<string, number>
+  /**
+   * User IDs exempted from email verification enforcement.
+   */
+  grandfatheredUsers?: string[]
+  /**
+   * Role-based license weights for capacity calculations.
+   */
+  roleBasedLicenseWeights?: Record<string, number>
+  /**
+   * Remaining licenses based on team size minus weighted usage.
+   */
+  availableLicenses?: number
   status: OrganizationStatus
-  transformationPartner?: string
   createdAt?: Timestamp | string | Date
   updatedAt?: Timestamp | string | Date
+  leadershipUpdatedAt?: Timestamp | string | Date
+  leadershipUpdatedBy?: string
+  organizationJourneyType?: JourneyType
+  lastJourneyTypeSync?: Timestamp | string | Date
+  journeyTypeSyncStatus?: 'idle' | 'pending' | 'completed' | 'failed'
   village?: string
   cluster?: string
   programStart?: string
   programEnd?: string
   assignmentCount?: number
-  partnerId?: string | null
   cohortStartDate?: Timestamp | string | Date
   programDuration?: number
+  programDurationWeeks?: number
+  journeyType?: JourneyType
   courseAssignments?: string[]
   monthlyCourseAssignments?: Record<string, string>
   courseAssignmentStructure?: 'monthly' | 'array'
   description?: string
   assignedMentorId?: string | null
+  assignedMentorAt?: Timestamp | string | Date
+  assignedMentorBy?: string | null
   assignedMentorName?: string | null
   assignedMentorEmail?: string | null
   assignedAmbassadorId?: string | null
+  assignedAmbassadorAt?: Timestamp | string | Date
+  assignedAmbassadorBy?: string | null
   assignedAmbassadorName?: string | null
   assignedAmbassadorEmail?: string | null
-  assignedPartnerId?: string | null
+  transformationPartnerId?: string | null
+  assignedPartnerAt?: Timestamp | string | Date
+  assignedPartnerBy?: string | null
   assignedPartnerName?: string | null
   assignedPartnerEmail?: string | null
+  capacityLastAlertThreshold?: 75 | 90 | 95 | 100 | null
 }
 
 export interface OrganizationMemberStats {
@@ -110,6 +146,8 @@ export interface AdminUserRecord {
   email?: string
   role: AdminRole
   assignedOrganizations?: string[]
+  assignedOrganizationsUpdatedAt?: Timestamp | string | Date
+  assignedOrganizationsUpdatedBy?: string | null
   accountStatus?: 'active' | 'suspended'
   lastActive?: Timestamp | string | Date
   createdAt?: Timestamp | string | Date
@@ -202,6 +240,9 @@ export interface OrganizationDetailView {
   name: string
   code: string
   status: OrganizationDetailStatus
+  /**
+   * Cohort size and paid license count.
+   */
   teamSize?: number
   village?: string
   cluster?: string
@@ -209,8 +250,14 @@ export interface OrganizationDetailView {
   programEnd?: string
   cohortStartDate?: string
   programDuration?: number
+  programDurationWeeks?: number
+  journeyType?: JourneyType
   description?: string
-  transformationPartner?: string
+  transformationPartnerId?: string | null
+  leadershipUpdatedAt?: string
+  leadershipUpdatedBy?: string
+  assignedMentorId?: string | null
+  assignedAmbassadorId?: string | null
   assignedMentorName?: string | null
   assignedMentorEmail?: string | null
   assignedAmbassadorName?: string | null

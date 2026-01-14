@@ -14,7 +14,7 @@ import {
   updateDoc,
   where,
 } from 'firebase/firestore'
-import { db } from './firebase'
+import { auth, db } from './firebase'
 import { ORG_COLLECTION } from '@/constants/organizations'
 import {
   AdminActivityLogEntry,
@@ -38,6 +38,9 @@ const usersCollection = collection(db, 'users')
 const auditCollection = collection(db, 'admin_activity_log')
 const engagementCollection = collection(db, 'user_engagement_scores')
 const adminRoles: AdminRole[] = ['super_admin', 'partner', 'admin', 'mentor', 'ambassador', 'team_leader']
+
+const getActorId = () => auth.currentUser?.uid
+const getActorName = () => auth.currentUser?.displayName || undefined
 
 export const fetchDashboardMetrics = async (
   filters?: Partial<{ organizationCodes: string[]; organizationIds: string[]; trendDays: number }>,
@@ -344,14 +347,6 @@ export const deleteOrganization = async (id: string) => {
   await deleteDoc(orgRef)
 }
 
-export const assignPartner = async (id: string, partnerId: string | null) => {
-  const orgRef = doc(db, ORG_COLLECTION, id)
-  await updateDoc(orgRef, {
-    partnerId,
-    updatedAt: serverTimestamp(),
-  })
-}
-
 export const fetchEngagementRiskAggregates = async (): Promise<EngagementRiskAggregate> => {
   const snapshot = await getDocs(engagementCollection)
   const byRisk: Record<string, number> = {}
@@ -485,6 +480,8 @@ export const deleteAdminUser = async (adminId: string) => {
 
 export const assignOrganizations = async (adminId: string, orgIds: string[]) => {
   const adminRef = doc(db, 'users', adminId)
+  const actorId = getActorId()
+  const actorName = getActorName()
   // assignedOrganizations MUST contain organization document IDs only, never codes.
   const sanitizedOrgIds = Array.from(
     new Set(
@@ -494,9 +491,16 @@ export const assignOrganizations = async (adminId: string, orgIds: string[]) => 
         .filter(Boolean),
     ),
   )
-  await updateDoc(adminRef, { assignedOrganizations: sanitizedOrgIds, updatedAt: serverTimestamp() })
+  await updateDoc(adminRef, {
+    assignedOrganizations: sanitizedOrgIds,
+    assignedOrganizationsUpdatedAt: serverTimestamp(),
+    assignedOrganizationsUpdatedBy: actorId || null,
+    updatedAt: serverTimestamp(),
+  })
   await logAdminAction({
     action: 'admin_orgs_updated',
+    adminId: actorId,
+    adminName: actorName,
     userId: adminId,
     metadata: { orgIds: sanitizedOrgIds },
   })

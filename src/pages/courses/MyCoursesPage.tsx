@@ -16,19 +16,10 @@ import {
   Divider,
   Tooltip,
 } from '@chakra-ui/react'
-import {
-  BookOpen,
-  Clock,
-  ExternalLink,
-  Sparkles,
-  ListPlus,
-  ArrowUpRight,
-  CheckCircle2,
-  CalendarDays,
-  Lock,
-} from 'lucide-react'
+import { BookOpen, Clock, ExternalLink, Sparkles, ArrowUpRight, CheckCircle2, CalendarDays, Lock } from 'lucide-react'
 import { doc, getDoc } from 'firebase/firestore'
 import { Link as RouterLink } from 'react-router-dom'
+import { addDays } from 'date-fns'
 import { useAuth } from '@/hooks/useAuth'
 import { useOrganizationProgramCourses } from '@/hooks/useOrganizationProgramCourses'
 import { useUserCourseProgress } from '@/hooks/useUserCourseProgress'
@@ -41,9 +32,16 @@ import {
 } from '@/utils/courseMappings'
 import {
   formatMonthRange,
+  getMonthlyAssignmentsArray,
   getMonthAvailabilityStatus,
   getMonthDateRange,
 } from '@/utils/monthlyCourseAssignments'
+import {
+  getJourneyLabel,
+  getJourneyTimelineDisplayMode,
+  getJourneyWeeks,
+  isMonthBasedJourney,
+} from '@/utils/journeyType'
 import type { UserProfile } from '@/types'
 
 interface NormalizedCourse {
@@ -58,7 +56,7 @@ interface NormalizedCourse {
   image?: string
 }
 
-const FREE_TIER_COURSE_ID = 'transformational-leadership'
+const COMPLEMENTARY_COURSE_ID = 'transformational-leadership'
 
 const COURSE_IMAGE_FILENAMES: Record<string, string> = {
   'AI Stacking 101': 'course-ai-stacking-101.avif',
@@ -88,6 +86,35 @@ const formatStatus = (status?: string) => {
     .join(' ')
 }
 
+const getWeekDateRange = (cohortStartDate: Date, weekIndex: number) => {
+  const startDate = addDays(cohortStartDate, weekIndex * 7)
+  const endDate = addDays(startDate, 7)
+  return { startDate, endDate }
+}
+
+const formatWeekRange = (startDate: Date, endDate: Date) => {
+  const formatter = new Intl.DateTimeFormat('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
+  const endDisplay = new Date(endDate)
+  endDisplay.setDate(endDisplay.getDate() - 1)
+  return `${formatter.format(startDate)} – ${formatter.format(endDisplay)}`
+}
+
+const getWeekAvailabilityStatus = (params: {
+  cohortStartDate: Date | null
+  currentDate: Date
+  weekIndex: number
+}) => {
+  const { cohortStartDate, currentDate, weekIndex } = params
+  if (!cohortStartDate) {
+    return weekIndex === 0 ? 'current' : 'locked'
+  }
+
+  const { startDate, endDate } = getWeekDateRange(cohortStartDate, weekIndex)
+  if (currentDate < startDate) return 'locked'
+  if (currentDate >= endDate) return 'completed'
+  return 'current'
+}
+
 const badgeColor = (difficulty?: CourseDifficulty) => {
   switch (difficulty) {
     case 'Beginner':
@@ -109,8 +136,8 @@ const buildCourseFromDoc = (courseId: string, data: Record<string, unknown>): No
   return {
     id: courseId,
     title,
-    description: (data.description || details?.description || 'Description not available.') as string,
-    link: (data.link || details?.link) as string | undefined,
+    description: (details?.description || data.description || 'Description not available.') as string,
+    link: (details?.link || data.link) as string | undefined,
     status: formatStatus(data.status as string | undefined),
     estimatedMinutes: metadata?.estimatedMinutes,
     difficulty: metadata?.difficulty,
@@ -134,12 +161,12 @@ const FreeTierCoursesPage: React.FC<{ userId?: string | null; profile: UserProfi
       try {
         setLoading(true)
         setError(null)
-        const courseRef = doc(db, 'courses', FREE_TIER_COURSE_ID)
+        const courseRef = doc(db, 'courses', COMPLEMENTARY_COURSE_ID)
         const courseSnap = await getDoc(courseRef)
         if (!courseSnap.exists()) {
           if (isActive) {
             setCourse(null)
-            setError('The complimentary course could not be found.')
+            setError('The complementary course could not be found.')
           }
           return
         }
@@ -150,7 +177,7 @@ const FreeTierCoursesPage: React.FC<{ userId?: string | null; profile: UserProfi
         console.error('Error loading free tier course', fetchError)
         if (isActive) {
           setCourse(null)
-          setError('Unable to load the complimentary course right now.')
+          setError('Unable to load the complementary course right now.')
         }
       } finally {
         if (isActive) {
@@ -175,7 +202,7 @@ const FreeTierCoursesPage: React.FC<{ userId?: string | null; profile: UserProfi
   }, [course, progressMap])
 
   const headerDescription =
-    'You have access to one complimentary course—Transformational Leadership. Upgrade anytime to unlock the full learning library.'
+    'Transformational Leadership is a complementary course available to every member. Upgrade anytime to unlock the full learning library while keeping access to this course.'
 
   return (
     <Stack spacing={8} py={2} as="section">
@@ -210,7 +237,7 @@ const FreeTierCoursesPage: React.FC<{ userId?: string | null; profile: UserProfi
                 Free tier experience
               </Badge>
               <Text color="orange.700" fontSize="sm">
-                You are viewing the complimentary course catalog.
+                You are viewing the complementary course catalog.
               </Text>
               <Button
                 as={RouterLink}
@@ -230,7 +257,7 @@ const FreeTierCoursesPage: React.FC<{ userId?: string | null; profile: UserProfi
       <Stack spacing={4} as="section">
         <HStack justify="space-between" align="center">
           <Heading size="md" color="gray.800">
-            Complimentary course
+            Complementary course
           </Heading>
           <Badge colorScheme="purple" variant="subtle" borderRadius="full">
             1 course
@@ -285,7 +312,7 @@ const FreeTierCoursesPage: React.FC<{ userId?: string | null; profile: UserProfi
               >
                 <HStack spacing={3}>
                   <Badge colorScheme="purple" borderRadius="full" px={3} py={1} fontWeight="bold">
-                    Complimentary
+                    Complementary - Available to All
                   </Badge>
                   <Text fontWeight="semibold" color="purple.900">
                     {courseWithProgress.title}
@@ -342,7 +369,7 @@ const FreeTierCoursesPage: React.FC<{ userId?: string | null; profile: UserProfi
                     </VStack>
 
                     {courseWithProgress.link && (() => {
-                      const hasAccess = canAccessCourse(profile, courseWithProgress.title)
+                      const hasAccess = canAccessCourse(profile, courseWithProgress.title, courseWithProgress.id)
                       const canOpen = hasAccess
                       return (
                         <Button
@@ -388,14 +415,11 @@ const OrganizationCoursesPage: React.FC<{ userId?: string | null; profile: UserP
     return null
   }, [profile])
 
-  const { program, loading: programLoading, error: programError } = useOrganizationProgramCourses(organizationId)
-  const { progressMap, loading: progressLoading } = useUserCourseProgress(userId)
+  const { program, loading: programLoading } = useOrganizationProgramCourses(organizationId)
+  const { loading: progressLoading } = useUserCourseProgress(userId)
 
-  const [courses, setCourses] = useState<NormalizedCourse[]>([])
   const [courseMap, setCourseMap] = useState<Record<string, NormalizedCourse>>({})
-  const [missingCourseIds, setMissingCourseIds] = useState<string[]>([])
   const [loadingCourses, setLoadingCourses] = useState(true)
-  const [coursesError, setCoursesError] = useState<string | null>(null)
 
   useEffect(() => {
     let isActive = true
@@ -403,18 +427,14 @@ const OrganizationCoursesPage: React.FC<{ userId?: string | null; profile: UserP
     const loadCourses = async () => {
       if (!organizationId || !program || !program.orderedCourseIds.length) {
         if (isActive) {
-          setCourses([])
           setCourseMap({})
-          setMissingCourseIds([])
           setLoadingCourses(false)
-          setCoursesError(null)
         }
         return
       }
 
       try {
         setLoadingCourses(true)
-        setCoursesError(null)
         const orderedCourseIds = program.orderedCourseIds
         const snapshots = await Promise.all(
           orderedCourseIds.map(courseId => getDoc(doc(db, 'courses', courseId)))
@@ -422,12 +442,8 @@ const OrganizationCoursesPage: React.FC<{ userId?: string | null; profile: UserP
 
         const nextCourses: NormalizedCourse[] = []
         const nextCourseMap: Record<string, NormalizedCourse> = {}
-        const missing: string[] = []
-
-        snapshots.forEach((snap, index) => {
-          const courseId = orderedCourseIds[index]
+        snapshots.forEach(snap => {
           if (!snap.exists()) {
-            missing.push(courseId)
             return
           }
 
@@ -437,17 +453,12 @@ const OrganizationCoursesPage: React.FC<{ userId?: string | null; profile: UserP
         })
 
         if (isActive) {
-          setCourses(nextCourses)
           setCourseMap(nextCourseMap)
-          setMissingCourseIds(missing)
         }
       } catch (loadError) {
         console.error('Error loading organization courses', loadError)
         if (isActive) {
-          setCourses([])
           setCourseMap({})
-          setMissingCourseIds([])
-          setCoursesError('Unable to load organization courses.')
         }
       } finally {
         if (isActive) {
@@ -463,24 +474,21 @@ const OrganizationCoursesPage: React.FC<{ userId?: string | null; profile: UserP
     }
   }, [organizationId, program])
 
-  const coursesWithProgress = useMemo(
-    () =>
-      courses.map(course => ({
-        ...course,
-        progress: progressMap.get(course.id) ?? progressMap.get(course.title.trim().toLowerCase()),
-      })),
-    [courses, progressMap]
-  )
-
-  const courseMonthIndexLookup = useMemo(() => {
-    const map = new Map<string, number>()
-    if (!program) return map
-    Object.entries(program.monthlyAssignments).forEach(([key, courseId]) => {
-      if (!courseId || map.has(courseId)) return
-      map.set(courseId, Number(key) - 1)
-    })
-    return map
+  const journeyType = program?.journeyType ?? null
+  const journeyLabel = journeyType ? getJourneyLabel(journeyType) : null
+  const isWeeklyTimeline = journeyType ? !isMonthBasedJourney(journeyType) : false
+  const totalWeeks = program?.programDurationWeeks ?? (journeyType ? getJourneyWeeks(journeyType) : null)
+  const journeyTimelineDisplay = journeyType ? getJourneyTimelineDisplayMode(journeyType) : 'duration'
+  const fallbackAssignments = useMemo(() => {
+    if (!program) return []
+    return getMonthlyAssignmentsArray(program.monthlyAssignments, program.totalMonths)
   }, [program])
+  const assignmentList = useMemo(() => {
+    if (!program) return []
+    return program.courseAssignments.length ? program.courseAssignments : fallbackAssignments
+  }, [program, fallbackAssignments])
+  const assignedCourseIds = useMemo(() => assignmentList.filter(Boolean), [assignmentList])
+  const assignedCourseCount = useMemo(() => assignedCourseIds.length, [assignedCourseIds])
 
   const monthlyProgramTimeline = useMemo(() => {
     if (!program || !program.totalMonths) return []
@@ -507,14 +515,79 @@ const OrganizationCoursesPage: React.FC<{ userId?: string | null; profile: UserP
     })
   }, [program, courseMap])
 
-  const nextUnlockDate = useMemo(() => {
-    const nextLocked = monthlyProgramTimeline.find(entry => entry.availability === 'locked')
-    return nextLocked?.unlockDate || null
-  }, [monthlyProgramTimeline])
+  const weeklyProgramTimeline = useMemo(() => {
+    if (!program) return []
+    const now = new Date()
+    const durationWeeks = totalWeeks ?? assignedCourseIds.length
+    const displayAssignments =
+      journeyTimelineDisplay === 'course-count'
+        ? assignedCourseIds
+        : Array.from({ length: durationWeeks }, (_, index) => assignmentList[index] || '')
+    if (!displayAssignments.length) return []
+    return displayAssignments.map((courseId, index) => {
+      const course = courseId ? courseMap[courseId] : undefined
+      const availability = getWeekAvailabilityStatus({
+        cohortStartDate: program.cohortStartDate,
+        currentDate: now,
+        weekIndex: index,
+      })
+      const weekRange = program.cohortStartDate ? getWeekDateRange(program.cohortStartDate, index) : null
+      const dateRange = weekRange ? formatWeekRange(weekRange.startDate, weekRange.endDate) : undefined
+      const unlockDate = weekRange ? weekRange.startDate : null
+      return {
+        weekNumber: index + 1,
+        courseId,
+        course,
+        availability,
+        dateRange,
+        unlockDate,
+      }
+    })
+  }, [program, totalWeeks, assignmentList, assignedCourseIds, courseMap, journeyTimelineDisplay])
 
-  const assignedCourseCount = useMemo(() => coursesWithProgress.length, [coursesWithProgress])
+  const timelineEntries = useMemo(() => {
+    if (isWeeklyTimeline) {
+      return weeklyProgramTimeline.map(entry => ({
+        ...entry,
+        periodNumber: entry.weekNumber,
+        periodLabel: 'week' as const,
+      }))
+    }
+    return monthlyProgramTimeline.map(entry => ({
+      ...entry,
+      periodNumber: entry.monthNumber,
+      periodLabel: 'month' as const,
+    }))
+  }, [isWeeklyTimeline, monthlyProgramTimeline, weeklyProgramTimeline])
+
+  const nextUnlockDate = useMemo(() => {
+    const nextLocked = timelineEntries.find(entry => entry.availability === 'locked')
+    return nextLocked?.unlockDate || null
+  }, [timelineEntries])
+
+  const timelineHeading = useMemo(() => {
+    if (isWeeklyTimeline) {
+      return journeyTimelineDisplay === 'course-count' ? 'Assigned course timeline' : 'Weekly program timeline'
+    }
+    return 'Monthly program timeline'
+  }, [isWeeklyTimeline, journeyTimelineDisplay])
+  const timelineCountLabel = useMemo(() => {
+    if (!program) return ''
+    if (isWeeklyTimeline) {
+      if (journeyTimelineDisplay === 'course-count' && timelineEntries.length) {
+        const suffix = timelineEntries.length === 1 ? 'course' : 'courses'
+        return `${timelineEntries.length} ${suffix}`
+      }
+      return `${totalWeeks ?? timelineEntries.length} weeks`
+    }
+    return `${program.totalMonths ?? timelineEntries.length} months`
+  }, [program, isWeeklyTimeline, journeyTimelineDisplay, timelineEntries.length, totalWeeks])
+  const shouldShowJourneyLabel =
+    journeyLabel &&
+    !(isWeeklyTimeline && journeyTimelineDisplay === 'course-count' && assignedCourseCount && assignedCourseCount < (totalWeeks ?? 0))
 
   const overallLoading = programLoading || loadingCourses || progressLoading
+  const cohortStartDate = program?.cohortStartDate ?? null
 
   const headerDescription = useMemo(() => {
     if (!userId) return 'Sign in to view the courses that have been assigned to you.'
@@ -524,7 +597,8 @@ const OrganizationCoursesPage: React.FC<{ userId?: string | null; profile: UserP
   }, [userId, organizationId])
 
   const hasOrganization = Boolean(organizationId)
-  const hasProgram = Boolean(program?.orderedCourseIds.length)
+  const hasProgram = Boolean(program)
+  const hasTimeline = timelineEntries.length > 0
 
   return (
     <Stack spacing={8} py={2} as="section">
@@ -574,14 +648,14 @@ const OrganizationCoursesPage: React.FC<{ userId?: string | null; profile: UserP
         </Flex>
       </Box>
 
-      {hasOrganization && hasProgram && program?.totalMonths && program.totalMonths > 0 && (
+      {hasOrganization && hasProgram && hasTimeline && (
         <Stack spacing={4} as="section">
           <HStack justify="space-between" align="center">
             <Heading size="md" color="gray.800">
-              Monthly program timeline
+              {timelineHeading}
             </Heading>
             <Badge colorScheme="purple" borderRadius="full">
-              {program.totalMonths} months
+              {shouldShowJourneyLabel ? journeyLabel : timelineCountLabel}
             </Badge>
           </HStack>
 
@@ -591,8 +665,8 @@ const OrganizationCoursesPage: React.FC<{ userId?: string | null; profile: UserP
                 <Icon as={CalendarDays} color="purple.600" />
                 <Text fontWeight="medium">
                   Cohort start:{' '}
-                  {program.cohortStartDate
-                    ? program.cohortStartDate.toLocaleDateString(undefined, {
+                  {cohortStartDate
+                    ? cohortStartDate.toLocaleDateString(undefined, {
                         month: 'short',
                         day: 'numeric',
                         year: 'numeric',
@@ -608,7 +682,7 @@ const OrganizationCoursesPage: React.FC<{ userId?: string | null; profile: UserP
             </HStack>
 
             <SimpleGrid columns={{ base: 1, md: 2, xl: 3 }} spacing={4} mt={4}>
-              {monthlyProgramTimeline.map(entry => {
+              {timelineEntries.map(entry => {
                 const statusColor =
                   entry.availability === 'current'
                     ? 'green'
@@ -617,7 +691,9 @@ const OrganizationCoursesPage: React.FC<{ userId?: string | null; profile: UserP
                       : 'gray'
                 const statusLabel =
                   entry.availability === 'current'
-                    ? 'Current month'
+                    ? isWeeklyTimeline
+                      ? 'Current week'
+                      : 'Current month'
                     : entry.availability === 'completed'
                       ? 'Completed'
                       : 'Locked'
@@ -625,7 +701,7 @@ const OrganizationCoursesPage: React.FC<{ userId?: string | null; profile: UserP
                 const isLoadingCourse = overallLoading && entry.courseId && !entry.course
                 const missingCourse = !overallLoading && entry.courseId && !entry.course
                 const hasLink = Boolean(entry.course?.link)
-                const hasAccess = entry.course ? canAccessCourse(profile, entry.course.title) : false
+                const hasAccess = entry.course ? canAccessCourse(profile, entry.course.title, entry.course.id) : false
                 const isLocked = entry.availability === 'locked'
                 const unlockDateLabel =
                   isLocked && entry.unlockDate
@@ -634,7 +710,7 @@ const OrganizationCoursesPage: React.FC<{ userId?: string | null; profile: UserP
                 const canOpen = hasAccess && !isLocked && hasLink
                 return (
                   <Box
-                    key={`monthly-${entry.monthNumber}`}
+                    key={`${entry.periodLabel}-${entry.periodNumber}`}
                     borderWidth="1px"
                     borderRadius="2xl"
                     p={4}
@@ -642,7 +718,9 @@ const OrganizationCoursesPage: React.FC<{ userId?: string | null; profile: UserP
                   >
                     <HStack justify="space-between" mb={2}>
                       <Badge colorScheme={statusColor} borderRadius="full">
-                        Month {entry.monthNumber}
+                        {entry.periodLabel === 'week'
+                          ? `Week ${entry.periodNumber}`
+                          : `Month ${entry.periodNumber}`}
                       </Badge>
                       <HStack spacing={1} color="gray.600">
                         <Icon
@@ -661,7 +739,8 @@ const OrganizationCoursesPage: React.FC<{ userId?: string | null; profile: UserP
                       {entry.course?.title || (entry.courseId ? 'Course assigned' : 'Course not assigned')}
                     </Heading>
                     <Text fontSize="sm" color="gray.600" mb={2}>
-                      {entry.course?.description || 'Your monthly course assignment.'}
+                      {entry.course?.description ||
+                        `Your ${entry.periodLabel === 'week' ? 'weekly' : 'monthly'} course assignment.`}
                     </Text>
                     {entry.dateRange && (
                       <Badge variant="subtle" colorScheme="gray" borderRadius="full">
@@ -680,7 +759,7 @@ const OrganizationCoursesPage: React.FC<{ userId?: string | null; profile: UserP
                     )}
                     {!entry.courseId && (
                       <Text fontSize="xs" color="gray.500" mt={2}>
-                        No course assigned for this month yet.
+                        No course assigned for this {entry.periodLabel} yet.
                       </Text>
                     )}
                     {entry.courseId && (
@@ -747,224 +826,18 @@ const OrganizationCoursesPage: React.FC<{ userId?: string | null; profile: UserP
         </Stack>
       )}
 
-      <Stack spacing={4} as="section">
-        <HStack justify="space-between" align="center">
-          <Heading size="md" color="gray.800">
-            Assigned courses
+      {hasOrganization && hasProgram && !hasTimeline && (
+        <Box borderWidth="1px" borderRadius="2xl" p={5} bg="white" boxShadow="sm">
+          <Heading size="sm" color="gray.800" mb={2}>
+            Courses are still being assigned
           </Heading>
-          <HStack spacing={3}>
-            <Badge colorScheme="purple" variant="subtle" borderRadius="full">
-              {assignedCourseCount} total courses
-            </Badge>
-            {hasOrganization && (
-              <Badge colorScheme="purple" borderRadius="full">
-                Organization program
-              </Badge>
-            )}
-          </HStack>
-        </HStack>
+          <Text color="gray.600" fontSize="sm">
+            Your organization hasn&apos;t assigned any courses to this program yet. Check back soon or contact your
+            administrator for updates.
+          </Text>
+        </Box>
+      )}
 
-        {overallLoading && (
-          <Flex align="center" justify="center" py={10} direction="column" gap={3}>
-            <Spinner size="lg" color="purple.500" />
-            <Text color="gray.600">Loading your courses…</Text>
-          </Flex>
-        )}
-
-        {!overallLoading && !hasOrganization && (
-          <Flex
-            direction="column"
-            align="center"
-            justify="center"
-            py={12}
-            border="1px solid"
-            borderColor="gray.100"
-            borderRadius="2xl"
-            bg="white"
-            gap={3}
-          >
-            <Icon as={BookOpen} boxSize={10} color="gray.300" />
-            <Heading size="sm" color="gray.800">
-              No organization assigned
-            </Heading>
-            <Text color="gray.500" textAlign="center" maxW="lg">
-              You are not assigned to an organization yet. Contact your administrator to get started.
-            </Text>
-          </Flex>
-        )}
-
-        {!overallLoading && hasOrganization && !hasProgram && !programError && (
-          <Flex
-            direction="column"
-            align="center"
-            justify="center"
-            py={12}
-            border="1px solid"
-            borderColor="gray.100"
-            borderRadius="2xl"
-            bg="white"
-            gap={3}
-          >
-            <Icon as={BookOpen} boxSize={10} color="gray.300" />
-            <Heading size="sm" color="gray.800">
-              Learning journey not published
-            </Heading>
-            <Text color="gray.500" textAlign="center" maxW="lg">
-              Your organization has not published a learning journey yet.
-            </Text>
-          </Flex>
-        )}
-
-        {!overallLoading && (programError || coursesError) && (
-          <Flex
-            direction="column"
-            align="center"
-            justify="center"
-            py={12}
-            border="1px solid"
-            borderColor="gray.100"
-            borderRadius="2xl"
-            bg="white"
-            gap={3}
-          >
-            <Icon as={BookOpen} boxSize={10} color="gray.300" />
-            <Heading size="sm" color="gray.800">
-              Unable to load courses
-            </Heading>
-            <Text color="gray.500" textAlign="center" maxW="lg">
-              {programError || coursesError}
-            </Text>
-          </Flex>
-        )}
-
-        {!overallLoading && missingCourseIds.length > 0 && (
-          <Box borderWidth="1px" borderRadius="2xl" p={4} bg="orange.50" borderColor="orange.100">
-            <Text color="orange.700" fontSize="sm">
-              A course assigned in the program could not be found. Please contact support.
-            </Text>
-          </Box>
-        )}
-
-        {!overallLoading && hasOrganization && hasProgram && coursesWithProgress.length > 0 && (
-          <SimpleGrid columns={{ base: 1, md: 2, xl: 3 }} spacing={6}>
-            {coursesWithProgress.map(course => (
-              <Box
-                key={`${course.id}-${course.title}`}
-                as="article"
-                borderRadius="3xl"
-                overflow="hidden"
-                border="1px solid"
-                borderColor="gray.100"
-                boxShadow="md"
-              >
-                <Box
-                  bgGradient="linear(to-r, purple.50, purple.100)"
-                  p={4}
-                  display="flex"
-                  alignItems="center"
-                  justifyContent="space-between"
-                >
-                  <HStack spacing={3}>
-                    <Badge colorScheme="purple" borderRadius="full" px={3} py={1} fontWeight="bold">
-                      Assigned course
-                    </Badge>
-                    <Text fontWeight="semibold" color="purple.900">
-                      {course.title}
-                    </Text>
-                  </HStack>
-                  <HStack spacing={2} color="purple.700">
-                    <Icon as={ListPlus} />
-                    <Text fontSize="sm">Course assigned</Text>
-                  </HStack>
-                </Box>
-
-                <Stack spacing={0} divider={<Divider />} p={4} bg="white">
-                  <Box py={3}>
-                    <HStack justify="space-between" align="start" spacing={3}>
-                      <VStack align="start" spacing={1} flex={1}>
-                        <Heading size="sm" color="gray.800">
-                          {course.title}
-                        </Heading>
-                        <Text color="gray.600" fontSize="sm">
-                          {course.description}
-                        </Text>
-                        <HStack spacing={3} flexWrap="wrap">
-                          {courseMonthIndexLookup.has(course.id) && (
-                            <Badge colorScheme="purple" variant="subtle" borderRadius="full">
-                              Month {courseMonthIndexLookup.get(course.id)! + 1}
-                            </Badge>
-                          )}
-                          {course.difficulty && (
-                            <Badge colorScheme={badgeColor(course.difficulty)} variant="outline" borderRadius="full">
-                              {course.difficulty}
-                            </Badge>
-                          )}
-                          {course.estimatedMinutes && (
-                            <HStack spacing={1} color="gray.500">
-                              <Icon as={Clock} boxSize={4} />
-                              <Text fontSize="xs">{formatDuration(course.estimatedMinutes)}</Text>
-                            </HStack>
-                          )}
-                        </HStack>
-
-                        {typeof course.progress === 'number' && (
-                          <Box pt={1} width="full">
-                            <Progress value={course.progress} size="sm" colorScheme="purple" borderRadius="full" aria-hidden />
-                            <Text fontSize="xs" color="gray.500" mt={1}>
-                              {course.progress.toFixed(0)}% complete
-                            </Text>
-                          </Box>
-                        )}
-                      </VStack>
-
-                      {course.link && (() => {
-                        const hasAccess = canAccessCourse(profile, course.title)
-                        const monthIndex = courseMonthIndexLookup.get(course.id)
-                        const availability =
-                          monthIndex !== undefined
-                            ? getMonthAvailabilityStatus({
-                                cohortStartDate: program?.cohortStartDate || null,
-                                currentDate: new Date(),
-                                monthIndex,
-                              })
-                            : null
-                        const isLocked = availability === 'locked'
-                        const unlockDate =
-                          isLocked && program?.cohortStartDate && monthIndex !== undefined
-                            ? getMonthDateRange(program.cohortStartDate, monthIndex).startDate
-                            : null
-                        const canOpen = hasAccess && !isLocked
-                        return (
-                          <Button
-                            as={canOpen ? 'a' : (RouterLink as React.ElementType)}
-                            href={canOpen ? course.link : undefined}
-                            to={canOpen ? undefined : '/upgrade'}
-                            target={canOpen ? '_blank' : undefined}
-                            rel={canOpen ? 'noopener noreferrer' : undefined}
-                            size="sm"
-                            colorScheme="purple"
-                            rightIcon={<ExternalLink size={16} />}
-                            variant="solid"
-                            borderRadius="full"
-                            minW="120px"
-                            isDisabled={isLocked}
-                          >
-                            {isLocked && unlockDate
-                              ? `Unlocks ${unlockDate.toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}`
-                              : hasAccess
-                                ? 'Open course'
-                                : 'Upgrade to unlock'}
-                          </Button>
-                        )
-                      })()}
-                    </HStack>
-                  </Box>
-                </Stack>
-              </Box>
-            ))}
-          </SimpleGrid>
-        )}
-      </Stack>
     </Stack>
   )
 }

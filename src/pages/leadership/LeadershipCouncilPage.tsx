@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import React, { useCallback, useEffect, useMemo, useState } from 'react'
 import {
   Alert,
   AlertDescription,
@@ -41,24 +41,14 @@ import {
   VStack,
 } from '@chakra-ui/react'
 import { Building2, Calendar, Download, Eye, ExternalLink, RefreshCcw, Shield, Timer, User, UserCircle2, Users } from 'lucide-react'
-import {
-  Timestamp,
-  addDoc,
-  collection,
-  doc,
-  onSnapshot,
-  orderBy,
-  query,
-  serverTimestamp,
-  where,
-} from 'firebase/firestore'
+import { Timestamp, addDoc, collection, onSnapshot, orderBy, query, serverTimestamp, where } from 'firebase/firestore'
 import { format, formatDistanceToNow, isAfter, isValid, parseISO } from 'date-fns'
 import { db } from '@/services/firebase'
-import { ORG_COLLECTION } from '@/constants/organizations'
 import { useAuth } from '@/hooks/useAuth'
-import { UserProfile } from '@/types'
+import { useOrganizationLeadership } from '@/hooks/useOrganizationLeadership'
+import type { UserProfileExtended } from '@/services/userProfileService'
 
-interface LeadershipProfile extends UserProfile {
+interface LeadershipProfile extends UserProfileExtended {
   availabilityStatus?: string
   companyCode?: string
   companyName?: string
@@ -84,13 +74,9 @@ interface MentorshipSession {
   createdAt?: Date
 }
 
-interface PartnerProfile {
-  id: string
-  name: string
+interface PartnerProfile extends UserProfileExtended {
   title?: string
   bio?: string
-  email?: string
-  timezone?: string
   rating?: number
   ratingCount?: number
   sessionsConducted?: number
@@ -99,7 +85,6 @@ interface PartnerProfile {
   expertise?: string[]
   hobbies?: string[]
   funFact?: string
-  avatarUrl?: string
   officeLocation?: string
   xp?: number
   favoritePillar?: string
@@ -119,6 +104,12 @@ const initialsFromName = (name: string) => {
   return `${first.charAt(0)}${last.charAt(0)}`.toUpperCase()
 }
 
+const displayNameForProfile = (profile?: UserProfileExtended | null) => {
+  if (!profile) return 'Unknown'
+  const fullName = profile.fullName || `${profile.firstName ?? ''} ${profile.lastName ?? ''}`.trim()
+  return fullName || profile.email || 'Unknown'
+}
+
 const badgeColor = (status?: string) => {
   if (!status) return 'secondary'
   const value = status.toLowerCase()
@@ -132,24 +123,22 @@ export const LeadershipCouncilPage: React.FC = () => {
   const { profile, user } = useAuth()
   const toast = useToast()
 
-  const [directMentorProfile, setDirectMentorProfile] = useState<LeadershipProfile | null>(null)
-  const [directAmbassadorProfile, setDirectAmbassadorProfile] = useState<LeadershipProfile | null>(null)
-  const [orgMentorProfile, setOrgMentorProfile] = useState<LeadershipProfile | null>(null)
-  const [orgAmbassadorProfile, setOrgAmbassadorProfile] = useState<LeadershipProfile | null>(null)
-  const [partnerProfile, setPartnerProfile] = useState<PartnerProfile | null>(null)
-  const [directAssignmentsLoading, setDirectAssignmentsLoading] = useState(false)
-  const [orgAssignmentsLoading, setOrgAssignmentsLoading] = useState(false)
-  const [directAssignmentsError, setDirectAssignmentsError] = useState<string | null>(null)
-  const [orgAssignmentsError, setOrgAssignmentsError] = useState<string | null>(null)
-  const [partnerLoading, setPartnerLoading] = useState(true)
-  const [partnerError, setPartnerError] = useState<string | null>(null)
-  const [assignmentsRetryKey, setAssignmentsRetryKey] = useState(0)
-  const [partnerRetryKey, setPartnerRetryKey] = useState(0)
-  const [directAssignmentIds, setDirectAssignmentIds] = useState<{ mentorId: string | null; ambassadorId: string | null }>({
-    mentorId: null,
-    ambassadorId: null,
-  })
-  const partnerRetryCountRef = useRef(0)
+  const {
+    profiles,
+    errors,
+    loading: assignmentsLoading,
+    refresh,
+    organization,
+    assignmentSources,
+    supportAssignment: supportAssignmentStatus,
+  } = useOrganizationLeadership(profile?.companyId, profile?.id)
+  const mentorProfile = profiles.mentor as LeadershipProfile | null
+  const ambassadorProfile = profiles.ambassador as LeadershipProfile | null
+  const partnerProfile = profiles.partner as PartnerProfile | null
+  const mentorError = errors.organization || errors.supportAssignments || errors.mentor
+  const ambassadorError = errors.organization || errors.supportAssignments || errors.ambassador
+  const partnerError = errors.organization || errors.partner
+  const partnerLoading = assignmentsLoading
 
   const [sessions, setSessions] = useState<MentorshipSession[]>([])
   const [sessionsLoading, setSessionsLoading] = useState(false)
@@ -166,31 +155,18 @@ export const LeadershipCouncilPage: React.FC = () => {
   const sessionsModal = useDisclosure()
   const scheduleModal = useDisclosure()
 
-  const assignmentsLoading = directAssignmentsLoading || orgAssignmentsLoading
   const hasOrganization = Boolean(profile?.companyId)
-
-  const mentorProfile = useMemo(
-    () => directMentorProfile ?? orgMentorProfile ?? null,
-    [directMentorProfile, orgMentorProfile],
-  )
-
-  const ambassadorProfile = useMemo(
-    () => directAmbassadorProfile ?? orgAmbassadorProfile ?? null,
-    [directAmbassadorProfile, orgAmbassadorProfile],
-  )
-
-  const assignmentsError = useMemo(() => {
-    if (mentorProfile || ambassadorProfile) return null
-    return directAssignmentsError || orgAssignmentsError
-  }, [mentorProfile, ambassadorProfile, directAssignmentsError, orgAssignmentsError])
+  const showOrgDebug = import.meta.env.DEV && (organization.id || supportAssignmentStatus.id)
+  const mentorSourceLabel =
+    assignmentSources.mentor === 'user'
+      ? 'User-specific mentor'
+      : assignmentSources.mentor === 'organization'
+        ? 'Organization mentor'
+        : null
 
   const retryAssignments = useCallback(() => {
-    setAssignmentsRetryKey((prev) => prev + 1)
-  }, [])
-
-  const schedulePartnerRetry = useCallback(() => {
-    setPartnerRetryKey((prev) => prev + 1)
-  }, [])
+    refresh()
+  }, [refresh])
 
   const loadSessions = useCallback(() => {
     if (!profile?.id) return () => undefined
@@ -243,338 +219,6 @@ export const LeadershipCouncilPage: React.FC = () => {
 
     return unsubscribe
   }, [profile?.id])
-
-  useEffect(() => {
-    if (!profile?.id) {
-      setDirectAssignmentIds({ mentorId: null, ambassadorId: null })
-      setDirectMentorProfile(null)
-      setDirectAmbassadorProfile(null)
-      setDirectAssignmentsLoading(false)
-      setDirectAssignmentsError(null)
-      return
-    }
-    setDirectAssignmentsLoading(true)
-    setDirectAssignmentsError(null)
-    let didReceiveSnapshot = false
-
-    const supportQuery = query(
-      collection(db, 'support_assignments'),
-      where('user_id', '==', profile.id),
-    )
-
-    const timeoutId = setTimeout(() => {
-      if (!didReceiveSnapshot) {
-        setDirectAssignmentsLoading(false)
-      }
-    }, 5000)
-
-    const unsubscribe = onSnapshot(
-      supportQuery,
-      (snapshot) => {
-        didReceiveSnapshot = true
-        const docSnapshot = snapshot.docs[0]
-        if (docSnapshot) {
-          const data = docSnapshot.data() as { mentor_id?: string | null; ambassador_id?: string | null }
-          setDirectAssignmentIds({
-            mentorId: data.mentor_id ?? null,
-            ambassadorId: data.ambassador_id ?? null,
-          })
-        } else {
-          setDirectAssignmentIds({ mentorId: null, ambassadorId: null })
-        }
-        setDirectAssignmentsLoading(false)
-      },
-      (error) => {
-        didReceiveSnapshot = true
-        setDirectAssignmentsError(error.message)
-        setDirectAssignmentsLoading(false)
-      },
-    )
-
-    return () => {
-      clearTimeout(timeoutId)
-      unsubscribe()
-    }
-  }, [profile?.id, assignmentsRetryKey])
-
-  useEffect(() => {
-    const unsubscribers: Array<() => void> = []
-    if (directAssignmentIds.mentorId) {
-      const mentorRef = doc(db, 'users', directAssignmentIds.mentorId)
-      const unsub = onSnapshot(
-        mentorRef,
-        (snap) => {
-          const mentorData = snap.data() as LeadershipProfile | undefined
-          if (mentorData) {
-            setDirectMentorProfile({
-              ...mentorData,
-              id: directAssignmentIds.mentorId as string,
-              fullName: mentorData.fullName || `${mentorData.firstName} ${mentorData.lastName}`.trim(),
-            })
-          } else {
-            setDirectMentorProfile(null)
-          }
-        },
-        (error) => {
-          setDirectAssignmentsError(error.message)
-          setDirectMentorProfile(null)
-        },
-      )
-      unsubscribers.push(unsub)
-    } else {
-      setDirectMentorProfile(null)
-    }
-
-    if (directAssignmentIds.ambassadorId) {
-      const ambassadorRef = doc(db, 'users', directAssignmentIds.ambassadorId)
-      const unsub = onSnapshot(
-        ambassadorRef,
-        (snap) => {
-          const ambassadorData = snap.data() as LeadershipProfile | undefined
-          if (ambassadorData) {
-            setDirectAmbassadorProfile({
-              ...ambassadorData,
-              id: directAssignmentIds.ambassadorId as string,
-              fullName: ambassadorData.fullName || `${ambassadorData.firstName} ${ambassadorData.lastName}`.trim(),
-            })
-          } else {
-            setDirectAmbassadorProfile(null)
-          }
-        },
-        (error) => {
-          setDirectAssignmentsError(error.message)
-          setDirectAmbassadorProfile(null)
-        },
-      )
-      unsubscribers.push(unsub)
-    } else {
-      setDirectAmbassadorProfile(null)
-    }
-
-    return () => {
-      unsubscribers.forEach((unsubscribe) => unsubscribe())
-    }
-  }, [directAssignmentIds.ambassadorId, directAssignmentIds.mentorId])
-
-  useEffect(() => {
-    const needsMentor = !directAssignmentIds.mentorId
-    const needsAmbassador = !directAssignmentIds.ambassadorId
-
-    if (!profile?.companyId || (!needsMentor && !needsAmbassador)) {
-      setOrgMentorProfile(null)
-      setOrgAmbassadorProfile(null)
-      setOrgAssignmentsError(null)
-      setOrgAssignmentsLoading(false)
-      return () => undefined
-    }
-
-    if (!needsMentor) {
-      setOrgMentorProfile(null)
-    }
-    if (!needsAmbassador) {
-      setOrgAmbassadorProfile(null)
-    }
-
-    setOrgAssignmentsLoading(needsMentor || needsAmbassador)
-    setOrgAssignmentsError(null)
-    let mentorLoaded = !needsMentor
-    let ambassadorLoaded = !needsAmbassador
-    const unsubscribers: Array<() => void> = []
-
-    const getLastActive = (leader: LeadershipProfile) => {
-      const dateValue = leader.lastActive || leader.lastActiveAt || leader.registrationDate
-      if (!dateValue) return 0
-      const parsed = new Date(dateValue)
-      return isValid(parsed) ? parsed.getTime() : 0
-    }
-
-    const isActiveLeader = (leader: LeadershipProfile, role: 'mentor' | 'ambassador') => {
-      const status = leader.accountStatus?.toLowerCase()
-      if (status === 'inactive' || status === 'suspended') return false
-      if (role === 'ambassador' && leader.isActiveAmbassador === false) return false
-      return true
-    }
-
-    const selectLeader = (leaders: LeadershipProfile[], role: 'mentor' | 'ambassador') => {
-      const activeLeaders = leaders.filter((leader) => isActiveLeader(leader, role))
-      const pool = activeLeaders.length ? activeLeaders : leaders
-      return pool
-        .sort((a, b) => {
-          const diff = getLastActive(b) - getLastActive(a)
-          if (diff !== 0) return diff
-          return (a.fullName || a.firstName || '').localeCompare(b.fullName || b.firstName || '')
-        })[0]
-    }
-
-    const handleLoaded = () => {
-      if (mentorLoaded && ambassadorLoaded) {
-        setOrgAssignmentsLoading(false)
-      }
-    }
-
-    const mentorQuery = needsMentor
-      ? query(
-          collection(db, 'users'),
-          where('role', '==', 'mentor'),
-          where('companyId', '==', profile.companyId),
-        )
-      : null
-    const ambassadorQuery = needsAmbassador
-      ? query(
-          collection(db, 'users'),
-          where('role', '==', 'ambassador'),
-          where('companyId', '==', profile.companyId),
-        )
-      : null
-
-    if (mentorQuery) {
-      unsubscribers.push(
-        onSnapshot(
-          mentorQuery,
-          (snapshot) => {
-            const leaders = snapshot.docs.map((docSnapshot) => {
-              const data = docSnapshot.data() as LeadershipProfile
-              return {
-                ...data,
-                id: docSnapshot.id,
-                fullName: data.fullName || `${data.firstName} ${data.lastName}`.trim(),
-              }
-            })
-
-            const selected = leaders.length ? selectLeader(leaders, 'mentor') : undefined
-            setOrgMentorProfile(selected || null)
-            mentorLoaded = true
-            handleLoaded()
-          },
-          (error) => {
-            mentorLoaded = true
-            setOrgMentorProfile(null)
-            setOrgAssignmentsError(error.message)
-            handleLoaded()
-          },
-        ),
-      )
-    } else {
-      mentorLoaded = true
-    }
-
-    if (ambassadorQuery) {
-      unsubscribers.push(
-        onSnapshot(
-          ambassadorQuery,
-          (snapshot) => {
-            const leaders = snapshot.docs.map((docSnapshot) => {
-              const data = docSnapshot.data() as LeadershipProfile
-              return {
-                ...data,
-                id: docSnapshot.id,
-                fullName: data.fullName || `${data.firstName} ${data.lastName}`.trim(),
-              }
-            })
-
-            const selected = leaders.length ? selectLeader(leaders, 'ambassador') : undefined
-            setOrgAmbassadorProfile(selected || null)
-            ambassadorLoaded = true
-            handleLoaded()
-          },
-          (error) => {
-            ambassadorLoaded = true
-            setOrgAmbassadorProfile(null)
-            setOrgAssignmentsError(error.message)
-            handleLoaded()
-          },
-        ),
-      )
-    } else {
-      ambassadorLoaded = true
-    }
-
-    return () => {
-      unsubscribers.forEach((unsubscribe) => unsubscribe())
-    }
-  }, [profile?.companyId, assignmentsRetryKey, directAssignmentIds.ambassadorId, directAssignmentIds.mentorId])
-
-  useEffect(() => {
-    setPartnerLoading(true)
-    setPartnerError(null)
-    let timeoutId: ReturnType<typeof setTimeout> | null = null
-    let unsubscribePartner: (() => void) | null = null
-    let unsubscribeCompany: (() => void) | null = null
-
-    const subscribeToPartner = (partnerId: string, allowFallback: boolean) => {
-      if (unsubscribePartner) {
-        unsubscribePartner()
-      }
-      const partnerRef = doc(db, 'transformation_partners', partnerId)
-      unsubscribePartner = onSnapshot(
-        partnerRef,
-        (snapshot) => {
-          if (snapshot.exists()) {
-            const partnerData = snapshot.data() as PartnerProfile
-            setPartnerProfile({ ...partnerData, id: snapshot.id })
-            setPartnerError(null)
-          } else if (allowFallback && partnerId !== 'primary') {
-            subscribeToPartner('primary', false)
-            return
-          } else {
-            setPartnerProfile(null)
-            setPartnerError('Transformation partner details are not yet available.')
-          }
-          setPartnerLoading(false)
-          partnerRetryCountRef.current = 0
-        },
-        (error) => {
-          setPartnerProfile(null)
-          setPartnerError(error.message)
-          setPartnerLoading(false)
-
-          if (partnerRetryCountRef.current < 3) {
-            const delay = Math.min(1000 * 2 ** partnerRetryCountRef.current, 8000)
-            timeoutId = setTimeout(() => {
-              partnerRetryCountRef.current += 1
-              schedulePartnerRetry()
-            }, delay)
-          }
-        },
-      )
-    }
-
-    if (!profile?.companyId) {
-      setPartnerProfile(null)
-      setPartnerError('Your organization is not assigned yet. Please contact your administrator.')
-      setPartnerLoading(false)
-      return () => {
-        if (timeoutId) clearTimeout(timeoutId)
-      }
-    }
-
-    const companyRef = doc(db, ORG_COLLECTION, profile.companyId)
-    unsubscribeCompany = onSnapshot(
-      companyRef,
-      (snapshot) => {
-        if (!snapshot.exists()) {
-          setPartnerProfile(null)
-          setPartnerError('Organization details could not be loaded.')
-          setPartnerLoading(false)
-          return
-        }
-        const companyData = snapshot.data() as { transformation_partner_id?: string | null }
-        const partnerId = companyData.transformation_partner_id || 'primary'
-        subscribeToPartner(partnerId, true)
-      },
-      (error) => {
-        setPartnerProfile(null)
-        setPartnerError(error.message)
-        setPartnerLoading(false)
-      },
-    )
-
-    return () => {
-      if (timeoutId) clearTimeout(timeoutId)
-      if (unsubscribePartner) unsubscribePartner()
-      if (unsubscribeCompany) unsubscribeCompany()
-    }
-  }, [partnerRetryKey, schedulePartnerRetry, profile?.companyId])
 
   useEffect(() => {
     const unsubscribe = loadSessions()
@@ -750,6 +394,32 @@ export const LeadershipCouncilPage: React.FC = () => {
               Your dedicated mentor, ambassador, and transformation partner are highlighted below. Schedule sessions,
               review upcoming meetings, and explore your leadership network.
             </Text>
+            {showOrgDebug && (
+              <Stack spacing={1}>
+                <Text fontSize="xs" color="text.muted">
+                  Org ID: {organization.id ?? 'None'}
+                </Text>
+                <Text fontSize="xs" color="text.muted">
+                  Support assignments: {supportAssignmentStatus.loaded ? (supportAssignmentStatus.exists ? 'Loaded' : 'None') : 'Not checked'}
+                </Text>
+                <Text fontSize="xs" color="text.muted">
+                  Mentor source: {assignmentSources.mentor ?? 'None'}
+                </Text>
+                <Text fontSize="xs" color="text.muted">
+                  Ambassador source: {assignmentSources.ambassador ?? 'None'}
+                </Text>
+              </Stack>
+            )}
+            <Button
+              size="sm"
+              alignSelf="flex-start"
+              leftIcon={<RefreshCcw size={16} />}
+              variant="outline"
+              onClick={retryAssignments}
+              isLoading={assignmentsLoading}
+            >
+              Refresh assignments
+            </Button>
           </Stack>
         </CardBody>
       </Card>
@@ -775,6 +445,11 @@ export const LeadershipCouncilPage: React.FC = () => {
                           : 'Supporting your organization'}
                       </Text>
                     </HStack>
+                    {mentorSourceLabel && (
+                      <Badge mt={3} width="fit-content" colorScheme="purple" variant="subtle">
+                        {mentorSourceLabel}
+                      </Badge>
+                    )}
                   </Box>
                   <VStack spacing={3} align="end">
                     <Avatar
@@ -790,6 +465,15 @@ export const LeadershipCouncilPage: React.FC = () => {
                         {mentorProfile.availabilityStatus}
                       </Badge>
                     )}
+                    <Button
+                      size="xs"
+                      variant="outline"
+                      leftIcon={<RefreshCcw size={14} />}
+                      onClick={retryAssignments}
+                      isLoading={assignmentsLoading}
+                    >
+                      Refresh
+                    </Button>
                   </VStack>
                 </HStack>
               </CardHeader>
@@ -801,12 +485,12 @@ export const LeadershipCouncilPage: React.FC = () => {
                   </Flex>
                 )}
 
-                {assignmentsError && (
+                {mentorError && (
                   <Alert status="error" rounded="lg" mb={4}>
                     <AlertIcon />
                     <Box>
                       <AlertTitle>We couldn't load your mentor right now.</AlertTitle>
-                      <AlertDescription>{assignmentsError}</AlertDescription>
+                      <AlertDescription>{mentorError}</AlertDescription>
                     </Box>
                     <Button size="sm" leftIcon={<RefreshCcw size={16} />} ml={4} onClick={retryAssignments}>
                       Try again
@@ -814,15 +498,22 @@ export const LeadershipCouncilPage: React.FC = () => {
                   </Alert>
                 )}
 
-                {!assignmentsLoading && !mentorProfile && !assignmentsError && (
+                {!assignmentsLoading && !mentorProfile && !mentorError && (
                   <Flex direction="column" align="center" textAlign="center" p={6} gap={3}>
                     <Icon as={User} boxSize={10} color="text.muted" />
                     <Heading size="sm">No mentor assigned yet</Heading>
                     <Text color="text.secondary">
                       {hasOrganization
-                        ? 'Please contact your administrator for support.'
+                        ? supportAssignmentStatus.loaded
+                          ? 'We checked your user assignment and your organization. No mentor is assigned yet.'
+                          : 'Please contact your administrator for support.'
                         : 'Your account is not linked to an organization yet. Please contact your administrator.'}
                     </Text>
+                    {hasOrganization && supportAssignmentStatus.loaded && (
+                      <Text color="text.secondary" fontSize="sm">
+                        If you recently received a mentor, ask your administrator to confirm both your user-specific assignment and the organization-wide mentor.
+                      </Text>
+                    )}
                   </Flex>
                 )}
 
@@ -943,12 +634,12 @@ export const LeadershipCouncilPage: React.FC = () => {
                   </Flex>
                 )}
 
-                {assignmentsError && (
+                {ambassadorError && (
                   <Alert status="warning" rounded="lg" mb={4}>
                     <AlertIcon />
                     <Box>
                       <AlertTitle>We couldn't load your ambassador right now.</AlertTitle>
-                      <AlertDescription>{assignmentsError}</AlertDescription>
+                      <AlertDescription>{ambassadorError}</AlertDescription>
                     </Box>
                     <Button size="sm" leftIcon={<RefreshCcw size={16} />} ml={4} onClick={retryAssignments}>
                       Try again
@@ -956,7 +647,7 @@ export const LeadershipCouncilPage: React.FC = () => {
                   </Alert>
                 )}
 
-                {!assignmentsLoading && !ambassadorProfile && !assignmentsError && (
+                {!assignmentsLoading && !ambassadorProfile && !ambassadorError && (
                   <Flex direction="column" align="center" textAlign="center" p={6} gap={3}>
                     <Icon as={User} boxSize={10} color="text.muted" />
                     <Heading size="sm">No ambassador assigned yet</Heading>
@@ -1026,11 +717,16 @@ export const LeadershipCouncilPage: React.FC = () => {
                   <Stack spacing={4}>
                     <HStack justify="space-between" align="start" spacing={4} flexWrap="wrap">
                       <HStack spacing={3} align="start">
-                        <Avatar size="lg" name={partnerProfile.name} src={partnerProfile.avatarUrl} bg="brand.primary">
-                          {!partnerProfile.avatarUrl && initialsFromName(partnerProfile.name)}
+                        <Avatar
+                          size="lg"
+                          name={displayNameForProfile(partnerProfile)}
+                          src={partnerProfile.avatarUrl}
+                          bg="brand.primary"
+                        >
+                          {!partnerProfile.avatarUrl && initialsFromName(displayNameForProfile(partnerProfile))}
                         </Avatar>
                         <Box>
-                          <Heading size="sm">{partnerProfile.name}</Heading>
+                          <Heading size="sm">{displayNameForProfile(partnerProfile)}</Heading>
                           <Text color="text.secondary">{partnerProfile.title || 'Transformation Partner'}</Text>
                           <Text color="text.muted" fontSize="sm">
                             {partnerProfile.officeLocation || partnerProfile.timezone || 'Global support'}
@@ -1126,7 +822,7 @@ export const LeadershipCouncilPage: React.FC = () => {
                     <Text color="text.secondary">
                       {partnerError || 'Your transformation partner profile is not set up yet. Please contact your administrator for support.'}
                     </Text>
-                    <Button size="sm" leftIcon={<RefreshCcw size={16} />} onClick={schedulePartnerRetry}>
+                    <Button size="sm" leftIcon={<RefreshCcw size={16} />} onClick={retryAssignments}>
                       Try again
                     </Button>
                   </Flex>

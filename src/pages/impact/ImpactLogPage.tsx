@@ -92,6 +92,7 @@ import { removeUndefinedFields } from '@/utils/firestore'
 import { JOURNEY_META, getActivitiesForJourney, getMonthNumber, type ActivityDef, type JourneyType } from '@/config/pointsConfig'
 import { awardChecklistPoints, revokeChecklistPoints } from '@/services/pointsService'
 import { isValidUrl } from '@/utils/validation'
+import { validateOrganizationPartner } from '@/services/organizationService'
 /**
  * Represents a single impact log entry.
  * The requirements for `verifierEmail` and `evidenceLink` are conditional based on the `verificationLevel`.
@@ -125,6 +126,9 @@ interface ImpactLogEntry {
   verifierEmail?: string
   /** A URL to evidence supporting the impact. Required for Tier 3 and Tier 4. */
   evidenceLink?: string
+  transformationPartnerId?: string
+  transformationPartnerName?: string
+  partnerValidationStatus?: 'active' | 'inactive' | 'unknown'
   points: number
   impactValue: number
   scp: number
@@ -259,6 +263,12 @@ export const ImpactLogPage: React.FC = () => {
   const [loading, setLoading] = useState(true)
   const [monthCursor, setMonthCursor] = useState<Date>(new Date())
   const [isExporting, setIsExporting] = useState(false)
+  const [partnerValidation, setPartnerValidation] = useState<{
+    status: 'idle' | 'loading' | 'valid' | 'invalid' | 'error'
+    partnerId?: string
+    partnerName?: string
+    message?: string
+  }>({ status: 'idle' })
   const defaultEsgCategory = ESGCategory.ENVIRONMENTAL
   const defaultBusinessCategory = BUSINESS_PRIMARY_CATEGORIES[0]
   const [formValues, setFormValues] = useState<Partial<ImpactLogEntry>>({
@@ -307,6 +317,12 @@ export const ImpactLogPage: React.FC = () => {
   )
 
   const preview = useMemo(() => calculateImpactPreview(formValues), [formValues])
+  const isTier2Eligible = partnerValidation.status === 'valid'
+  const tier2HelperText = isTier2Eligible
+    ? partnerValidation.partnerName
+      ? `Partner verified with ${partnerValidation.partnerName}.`
+      : 'Partner verification is available for your organization.'
+    : partnerValidation.message || 'Tier 2 verification requires partner program enrollment.'
 
   const handleCategoryGroupChange = (group: 'esg' | 'business') => {
     setFormValues((prev) => {
@@ -383,6 +399,58 @@ export const ImpactLogPage: React.FC = () => {
     const weekNumber = Math.floor(diffDays / 7) + 1
     return Math.min(Math.max(1, weekNumber), meta.weeks)
   }
+
+  useEffect(() => {
+    let isMounted = true
+
+    if (!profile?.companyId) {
+      setPartnerValidation({
+        status: 'invalid',
+        message: 'Tier 2 verification is available only for organizations enrolled in the partner program.',
+      })
+      return () => {
+        isMounted = false
+      }
+    }
+
+    setPartnerValidation({ status: 'loading' })
+
+    validateOrganizationPartner(profile.companyId)
+      .then((result) => {
+        if (!isMounted) return
+        if (result.isValid) {
+          setPartnerValidation({
+            status: 'valid',
+            partnerId: result.partnerId,
+            partnerName: result.partnerName,
+          })
+        } else {
+          setPartnerValidation({
+            status: 'invalid',
+            message: result.message || 'Partner program enrollment could not be validated.',
+          })
+        }
+      })
+      .catch((error) => {
+        if (!isMounted) return
+        const message = error instanceof Error ? error.message : 'Unable to verify partner enrollment right now.'
+        setPartnerValidation({ status: 'error', message })
+      })
+
+    return () => {
+      isMounted = false
+    }
+  }, [profile?.companyId])
+
+  useEffect(() => {
+    if (!isTier2Eligible && formValues.verificationLevel === 'Tier 2: Partner Verified') {
+      setFormValues((prev) => ({
+        ...prev,
+        verificationLevel: 'Tier 1: Self-Reported',
+        verifierEmail: '',
+      }))
+    }
+  }, [formValues.verificationLevel, isTier2Eligible])
 
   useEffect(() => {
     if (!user?.uid) return
@@ -538,6 +606,10 @@ export const ImpactLogPage: React.FC = () => {
       }
     }
 
+    if (verificationLevel === 'Tier 2: Partner Verified' && !isTier2Eligible) {
+      errors.push(tier2HelperText)
+    }
+
     if (errors.length > 0) {
       errors.forEach((error) => {
         toast({
@@ -576,6 +648,13 @@ export const ImpactLogPage: React.FC = () => {
         verificationLevel: formValues.verificationLevel || 'Tier 1: Self-Reported',
         ...(formValues.verifierEmail ? { verifierEmail: formValues.verifierEmail } : {}),
         ...(formValues.evidenceLink ? { evidenceLink: formValues.evidenceLink } : {}),
+        ...(formValues.verificationLevel === 'Tier 2: Partner Verified'
+          ? {
+              transformationPartnerId: partnerValidation.partnerId,
+              transformationPartnerName: partnerValidation.partnerName,
+              partnerValidationStatus: isTier2Eligible ? 'active' : 'inactive',
+            }
+          : {}),
         points: preview.points,
         impactValue: preview.impactValue,
         scp: preview.scp,
@@ -1319,6 +1398,13 @@ export const ImpactLogPage: React.FC = () => {
                     >
                       <Icon as={InfoIcon} color="text.muted" ml={2} boxSize={4} cursor="pointer" />
                     </Tooltip>
+                    {!isTier2Eligible && (
+                      <Tooltip label={tier2HelperText} hasArrow placement="top-start">
+                        <Badge ml={2} colorScheme="yellow" cursor="pointer">
+                          Tier 2 locked
+                        </Badge>
+                      </Tooltip>
+                    )}
                   </Text>
                   <Select
                     mt={1}
@@ -1335,12 +1421,25 @@ export const ImpactLogPage: React.FC = () => {
                     }}
                   >
                     {Object.keys(verificationMultipliers).map((tier) => (
-                      <option key={tier}>{tier}</option>
+                      <option key={tier} disabled={tier === 'Tier 2: Partner Verified' && !isTier2Eligible}>
+                        {tier}
+                      </option>
                     ))}
                   </Select>
                   <Text fontSize="sm" color="text.muted" mt={1}>
                     {verificationRequirements[(formValues.verificationLevel || 'Tier 1: Self-Reported') as VerificationTier]?.description}
+                    {formValues.verificationLevel === 'Tier 2: Partner Verified' && (
+                      <Text as="span" color="purple.600">
+                        {' '}
+                        {tier2HelperText}
+                      </Text>
+                    )}
                   </Text>
+                  {!isTier2Eligible && partnerValidation.status === 'loading' && (
+                    <Text fontSize="sm" color="text.muted" mt={1}>
+                      Checking partner enrollment...
+                    </Text>
+                  )}
                 </Box>
                 <Box>
                   <Text fontWeight="medium">

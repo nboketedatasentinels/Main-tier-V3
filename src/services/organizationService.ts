@@ -13,11 +13,12 @@ import {
   orderBy,
   QuerySnapshot,
   query,
+  runTransaction,
   serverTimestamp,
   updateDoc,
   where,
 } from 'firebase/firestore'
-import { db } from './firebase'
+import { auth, db } from './firebase'
 import { ORG_COLLECTION } from '@/constants/organizations'
 import { Organization } from '@/types'
 import {
@@ -27,6 +28,11 @@ import {
   OrganizationLead,
   OrganizationRecord,
 } from '@/types/admin'
+import {
+  normalizeDurationWeeks,
+  resolveDurationWeeksFromProgramDuration,
+  resolveJourneyType,
+} from '@/utils/journeyType'
 import { inviteUsersBulk } from './invitationService'
 export { checkOrganizationAccess, fetchOrganizationEngagementStats, fetchOrganizationUsers } from './organizationUserService'
 
@@ -37,12 +43,55 @@ const coursesCollection = collection(db, 'courses')
 const usersCollection = collection(db, 'users')
 const adminActivityCollection = collection(db, 'admin_activity_log')
 
+export type LeadershipRole = 'mentor' | 'ambassador' | 'partner'
+
+const leadershipRoleConfig: Record<
+  LeadershipRole,
+  {
+    field: keyof OrganizationRecord
+    assignedAtField: keyof OrganizationRecord
+    assignedByField: keyof OrganizationRecord
+    requiredRole: string
+  }
+> = {
+  mentor: {
+    field: 'assignedMentorId',
+    assignedAtField: 'assignedMentorAt',
+    assignedByField: 'assignedMentorBy',
+    requiredRole: 'mentor',
+  },
+  ambassador: {
+    field: 'assignedAmbassadorId',
+    assignedAtField: 'assignedAmbassadorAt',
+    assignedByField: 'assignedAmbassadorBy',
+    requiredRole: 'ambassador',
+  },
+  partner: {
+    field: 'transformationPartnerId',
+    assignedAtField: 'assignedPartnerAt',
+    assignedByField: 'assignedPartnerBy',
+    requiredRole: 'partner',
+  },
+}
+
+const assertLeadershipRole = (role: string): role is LeadershipRole =>
+  role === 'mentor' || role === 'ambassador' || role === 'partner'
+
+const getActorId = () => auth.currentUser?.uid || 'system'
+
 type OrganizationAccessAttemptPayload = {
   userId: string
   organizationId?: string
   organizationCode?: string
   reason?: string
   metadata?: Record<string, unknown>
+}
+
+export type OrganizationPartnerValidationResult = {
+  isValid: boolean
+  partnerId?: string
+  partnerName?: string
+  message?: string
 }
 
 
@@ -102,6 +151,13 @@ const normalizeTimestamp = (value?: Timestamp | string | Date): string => {
   return ''
 }
 
+const normalizeProgramDurationWeeks = (
+  programDurationWeeks?: number | string | null,
+  programDuration?: number | string | null,
+): number | null => {
+  return normalizeDurationWeeks(programDurationWeeks) ?? resolveDurationWeeksFromProgramDuration(programDuration)
+}
+
 
 const normalizeOrganizationStatus = (status?: string): Organization['status'] => {
   if (status === 'active' || status === 'inactive' || status === 'suspended') return status
@@ -138,6 +194,14 @@ export const validateCompanyCode = async (
     memberCount?: number
     settings?: Record<string, unknown>
   }
+  const rawProgramDuration =
+    data.programDuration ?? (data as { program_duration?: number | string | null }).program_duration ?? null
+  const programDurationWeeks = normalizeProgramDurationWeeks(data.programDurationWeeks, rawProgramDuration)
+  const journeyType = resolveJourneyType({
+    journeyType: data.journeyType,
+    programDurationWeeks,
+    programDuration: rawProgramDuration,
+  })
   const status = normalizeOrganizationStatus(data.status)
   if (status !== 'active') {
     return { valid: false, error: 'Company is not active.' }
@@ -154,6 +218,9 @@ export const validateCompanyCode = async (
       updatedAt: normalizeTimestamp(data.updatedAt),
       memberCount: data.memberCount ?? 0,
       settings: data.settings,
+      journeyType: journeyType ?? undefined,
+      programDurationWeeks: programDurationWeeks ?? undefined,
+      cohortStartDate: normalizeTimestamp(data.cohortStartDate),
     },
   }
 }
@@ -180,8 +247,125 @@ export const fetchAmbassadors = async (): Promise<OrganizationLead[]> => {
 }
 
 export const fetchPartners = async (): Promise<OrganizationLead[]> => {
-  const snapshot = await getDocs(query(usersCollection, where('role', 'in', ['partner', 'admin'])))
+  const snapshot = await getDocs(query(usersCollection, where('role', '==', 'partner')))
   return snapshot.docs.map(buildLead)
+}
+
+const validateLeadershipIds = (organizationId: string, userId: string, role: LeadershipRole) => {
+  if (!organizationId?.trim()) throw new Error('Organization is required.')
+  if (!userId?.trim()) throw new Error('User ID is required.')
+  if (!assertLeadershipRole(role)) throw new Error('Invalid leadership role.')
+}
+
+const buildLeadershipAuditEntry = (params: {
+  action: string
+  organizationId: string
+  userId?: string | null
+  role: LeadershipRole
+  actorId: string
+  previousUserId?: string | null
+}) => ({
+  action: params.action,
+  organizationId: params.organizationId,
+  userId: params.userId ?? null,
+  adminId: params.actorId,
+  createdAt: serverTimestamp(),
+  metadata: {
+    role: params.role,
+    assignedUserId: params.userId ?? null,
+    previousUserId: params.previousUserId ?? null,
+  },
+})
+
+const assignLeadershipRole = async (organizationId: string, userId: string, role: LeadershipRole) => {
+  validateLeadershipIds(organizationId, userId, role)
+  const actorId = getActorId()
+  const roleConfig = leadershipRoleConfig[role]
+  const organizationRef = doc(db, ORG_COLLECTION, organizationId)
+  const userRef = doc(usersCollection, userId)
+  const auditRef = doc(adminActivityCollection)
+
+  await runTransaction(db, async (transaction) => {
+    const [organizationSnap, userSnap] = await Promise.all([
+      transaction.get(organizationRef),
+      transaction.get(userRef),
+    ])
+    if (!organizationSnap.exists()) {
+      throw new Error('Organization record not found.')
+    }
+    if (!userSnap.exists()) {
+      throw new Error('User record not found.')
+    }
+
+    const userData = userSnap.data() as { role?: string }
+    if (userData.role !== roleConfig.requiredRole) {
+      throw new Error(`User role must be ${roleConfig.requiredRole}.`)
+    }
+
+    transaction.update(organizationRef, {
+      [roleConfig.field]: userId,
+      [roleConfig.assignedAtField]: serverTimestamp(),
+      [roleConfig.assignedByField]: actorId,
+      leadershipUpdatedAt: serverTimestamp(),
+      leadershipUpdatedBy: actorId,
+    })
+    transaction.set(
+      auditRef,
+      buildLeadershipAuditEntry({
+        action: 'leadership_assigned',
+        organizationId,
+        userId,
+        role,
+        actorId,
+        previousUserId: (organizationSnap.data() as OrganizationRecord)[roleConfig.field] as string | null,
+      }),
+    )
+  })
+}
+
+export const assignMentorToOrganization = async (organizationId: string, mentorId: string) =>
+  assignLeadershipRole(organizationId, mentorId, 'mentor')
+
+export const assignAmbassadorToOrganization = async (organizationId: string, ambassadorId: string) =>
+  assignLeadershipRole(organizationId, ambassadorId, 'ambassador')
+
+export const assignPartnerToOrganization = async (organizationId: string, partnerId: string) =>
+  assignLeadershipRole(organizationId, partnerId, 'partner')
+
+export const unassignLeadershipRole = async (organizationId: string, role: string) => {
+  if (!organizationId?.trim()) throw new Error('Organization is required.')
+  if (!assertLeadershipRole(role)) throw new Error('Invalid leadership role.')
+  const actorId = getActorId()
+  const roleConfig = leadershipRoleConfig[role]
+  const organizationRef = doc(db, ORG_COLLECTION, organizationId)
+  const auditRef = doc(adminActivityCollection)
+
+  await runTransaction(db, async (transaction) => {
+    const organizationSnap = await transaction.get(organizationRef)
+    if (!organizationSnap.exists()) {
+      throw new Error('Organization record not found.')
+    }
+    const previousUserId = (organizationSnap.data() as OrganizationRecord)[roleConfig.field] as string | null
+
+    transaction.update(organizationRef, {
+      [roleConfig.field]: null,
+      [roleConfig.assignedAtField]: null,
+      [roleConfig.assignedByField]: actorId,
+      leadershipUpdatedAt: serverTimestamp(),
+      leadershipUpdatedBy: actorId,
+    })
+    transaction.set(
+      auditRef,
+      buildLeadershipAuditEntry({
+        action: 'leadership_unassigned',
+        organizationId,
+        userId: null,
+        role,
+        actorId,
+        previousUserId,
+      }),
+    )
+  })
 }
 
 export const fetchOrganizationDetails = async (organizationId: string): Promise<OrganizationRecord | null> => {
@@ -189,6 +373,42 @@ export const fetchOrganizationDetails = async (organizationId: string): Promise<
   const docSnap = await getDoc(doc(db, ORG_COLLECTION, organizationId))
   if (!docSnap.exists()) return null
   return { id: docSnap.id, ...(docSnap.data() as Omit<OrganizationRecord, 'id'>) }
+}
+
+export const validateOrganizationPartner = async (organizationId: string): Promise<OrganizationPartnerValidationResult> => {
+  if (!organizationId) {
+    return { isValid: false, message: 'Organization is missing.' }
+  }
+
+  const orgSnap = await getDoc(doc(db, ORG_COLLECTION, organizationId))
+  if (!orgSnap.exists()) {
+    return { isValid: false, message: 'Organization record could not be found.' }
+  }
+
+  const orgData = orgSnap.data() as { transformation_partner_id?: string | null }
+  const partnerId = orgData.transformation_partner_id
+  if (!partnerId) {
+    return { isValid: false, message: 'Tier 2 verification requires enrollment in the partner program.' }
+  }
+
+  const partnerSnap = await getDoc(doc(db, 'transformation_partners', partnerId))
+  if (!partnerSnap.exists()) {
+    return { isValid: false, message: 'Partner program record could not be verified.' }
+  }
+
+  const partnerData = partnerSnap.data() as { name?: string; displayName?: string; status?: string; isActive?: boolean }
+  const status = partnerData.status?.toLowerCase()
+  const isActive = status ? status === 'active' : partnerData.isActive !== false
+
+  if (!isActive) {
+    return { isValid: false, message: 'Partner program enrollment is inactive.' }
+  }
+
+  return {
+    isValid: true,
+    partnerId,
+    partnerName: partnerData.name || partnerData.displayName,
+  }
 }
 
 

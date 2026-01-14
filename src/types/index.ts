@@ -1,7 +1,9 @@
 // Import and re-export role types and values
 import { UserRole, ALL_STANDARD_ROLES } from './roles';
 import type { StandardRole, AllRoles } from './roles';
+import { JourneyType } from '@/config/pointsConfig';
 export * from './admin'
+export * from './capacity'
 export * from './tutorials'
 
 export { UserRole, ALL_STANDARD_ROLES };
@@ -46,6 +48,8 @@ export interface UserProfile {
   phoneNumber?: string
   linkedinUrl?: string
   emailVerified?: boolean
+  emailVerificationGracePeriodEnd?: string
+  grandfatheredAt?: string
   
   // Journey & Progress
   journeyType: "4W" | "6W" | "3M" | "6M" | "9M" | "12M";
@@ -73,10 +77,16 @@ export interface UserProfile {
   timezone?: string
   availabilityStatus?: string
   notes?: string
+  matchRefreshPreference?: 'weekly' | 'biweekly' | 'on-demand' | 'disabled'
+  preferredMatchDay?: number
+  matchNotificationPreference?: 'email' | 'in_app' | 'both'
+  lastMatchRefreshDate?: string
 
   // Leadership relations
   mentorId?: string
   ambassadorId?: string
+  mentorOverrideId?: string | null
+  ambassadorOverrideId?: string | null
   isActiveAmbassador?: boolean
   
   // Account Management
@@ -131,6 +141,9 @@ export interface Organization {
   memberCount: number
   settings?: Record<string, unknown>
   transformation_partner_id?: string | null
+  journeyType?: JourneyType
+  programDurationWeeks?: number
+  cohortStartDate?: string
 }
 
 export interface PrivacySettings {
@@ -138,8 +151,6 @@ export interface PrivacySettings {
   allowPeerMatching: boolean
   shareImpactPublicly: boolean
 }
-
-import { JourneyType } from "@/config/pointsConfig";
 
 export interface Journey {
   id: string

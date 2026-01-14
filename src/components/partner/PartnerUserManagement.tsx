@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react'
+import React, { useEffect, useMemo, useState } from 'react'
 import {
   Badge,
   Box,
@@ -14,10 +14,9 @@ import {
   Flex,
   FormControl,
   FormLabel,
-  Grid,
-  GridItem,
   HStack,
   Input,
+  Link,
   Modal,
   ModalBody,
   ModalCloseButton,
@@ -31,6 +30,7 @@ import {
   Table,
   Tbody,
   Td,
+  Textarea,
   Text,
   Th,
   Thead,
@@ -40,13 +40,19 @@ import {
   Switch,
   VStack,
 } from '@chakra-ui/react'
-import { AlertTriangle, CheckCircle2, Clock, ShieldAlert } from 'lucide-react'
+import { CheckCircle2, Clock, ShieldAlert } from 'lucide-react'
 import { formatDistanceToNow } from 'date-fns'
 import { addDoc, collection, serverTimestamp } from 'firebase/firestore'
 import { PartnerUser, PartnerOrganization, PartnerRiskLevel } from '@/hooks/usePartnerDashboardData'
 import { useAuth } from '@/hooks/useAuth'
 import { db } from '@/services/firebase'
 import UserNudgeHistoryPanel from '@/components/partner/nudges/UserNudgeHistoryPanel'
+import {
+  approvePointsVerificationRequest,
+  listenToPointsVerificationRequests,
+  rejectPointsVerificationRequest,
+  type PointsVerificationRequest,
+} from '@/services/pointsVerificationService'
 
 interface PartnerUserManagementProps {
   users: PartnerUser[]
@@ -90,6 +96,22 @@ const getSortableValue = (user: PartnerUser, key: string) => {
   }
 }
 
+const formatRequestTimestamp = (value?: unknown) => {
+  if (!value) return 'Recently submitted'
+  if (value instanceof Date) return formatDistanceToNow(value, { addSuffix: true })
+  if (typeof value === 'number') return formatDistanceToNow(new Date(value), { addSuffix: true })
+  if (typeof (value as { toDate?: () => Date }).toDate === 'function') {
+    return formatDistanceToNow((value as { toDate: () => Date }).toDate(), { addSuffix: true })
+  }
+  if (typeof value === 'string') {
+    const dateValue = new Date(value)
+    if (!Number.isNaN(dateValue.getTime())) {
+      return formatDistanceToNow(dateValue, { addSuffix: true })
+    }
+  }
+  return 'Recently submitted'
+}
+
 export const PartnerUserManagement: React.FC<PartnerUserManagementProps> = ({
   users,
   usersLoading,
@@ -111,8 +133,14 @@ export const PartnerUserManagement: React.FC<PartnerUserManagementProps> = ({
   const [selection, setSelection] = useState<string[]>([])
   const [processingBulk, setProcessingBulk] = useState(false)
   const [bulkAction, setBulkAction] = useState('')
+  const [verificationRequests, setVerificationRequests] = useState<PointsVerificationRequest[]>([])
+  const [approvalsLoading, setApprovalsLoading] = useState(true)
+  const [approvalActionId, setApprovalActionId] = useState<string | null>(null)
+  const [selectedRequest, setSelectedRequest] = useState<PointsVerificationRequest | null>(null)
+  const [rejectReason, setRejectReason] = useState('')
   const drawer = useDisclosure()
   const adjustmentModal = useDisclosure()
+  const rejectionModal = useDisclosure()
   const toast = useToast()
   const { profile } = useAuth()
 
@@ -156,11 +184,23 @@ export const PartnerUserManagement: React.FC<PartnerUserManagementProps> = ({
 
   const leaders = useMemo(() => filtered.filter(user => user.role === 'mentor' || user.role === 'team_leader'), [filtered])
 
-  const pendingApprovals = useMemo(
-    () =>
-      filtered.filter(user => user.riskReasons?.some(reason => reason.toLowerCase().includes('verification'))),
-    [filtered],
-  )
+  const approvalUsers = useMemo(() => (selectedOrg === 'all' ? users : filtered), [filtered, selectedOrg, users])
+
+  const approvalQueue = useMemo(() => {
+    if (!verificationRequests.length) return []
+    const lookup = new Map(approvalUsers.map((user) => [user.id, user]))
+    return verificationRequests
+      .filter((request) => lookup.has(request.user_id))
+      .map((request) => ({ request, user: lookup.get(request.user_id)! }))
+  }, [approvalUsers, verificationRequests])
+
+  useEffect(() => {
+    const unsubscribe = listenToPointsVerificationRequests((items) => {
+      setVerificationRequests(items)
+      setApprovalsLoading(false)
+    })
+    return () => unsubscribe()
+  }, [])
 
   const openUser = (user: PartnerUser) => {
     setSelectedUser(user)
@@ -202,6 +242,79 @@ export const PartnerUserManagement: React.FC<PartnerUserManagementProps> = ({
       adjustmentModal.onClose()
     } finally {
       setLoadingAdjustment(false)
+    }
+  }
+
+  const handleApproveRequest = async (request: PointsVerificationRequest) => {
+    setApprovalActionId(request.id)
+    try {
+      await approvePointsVerificationRequest({
+        request,
+        approver: {
+          id: profile?.id ?? null,
+          name: profile?.fullName ?? null,
+        },
+      })
+      toast({
+        title: 'Points approved',
+        description: 'Points have been awarded and the request is now approved.',
+        status: 'success',
+        duration: 4000,
+        isClosable: true,
+      })
+    } catch (error) {
+      console.error('Failed to approve points verification request', error)
+      toast({
+        title: 'Approval failed',
+        description: 'We could not approve this request. Please retry.',
+        status: 'error',
+        duration: 4000,
+        isClosable: true,
+      })
+    } finally {
+      setApprovalActionId(null)
+    }
+  }
+
+  const openRejectModal = (request: PointsVerificationRequest) => {
+    setSelectedRequest(request)
+    setRejectReason('')
+    rejectionModal.onOpen()
+  }
+
+  const handleRejectRequest = async () => {
+    if (!selectedRequest) return
+    setApprovalActionId(selectedRequest.id)
+    try {
+      await rejectPointsVerificationRequest({
+        request: selectedRequest,
+        approver: {
+          id: profile?.id ?? null,
+          name: profile?.fullName ?? null,
+        },
+        reason: rejectReason || undefined,
+      })
+      toast({
+        title: 'Request rejected',
+        description: 'The submission has been rejected and points were not awarded.',
+        status: 'info',
+        duration: 4000,
+        isClosable: true,
+      })
+      rejectionModal.onClose()
+      setSelectedRequest(null)
+      setRejectReason('')
+    } catch (error) {
+      console.error('Failed to reject points verification request', error)
+      toast({
+        title: 'Rejection failed',
+        description: 'We could not reject this request. Please retry.',
+        status: 'error',
+        duration: 4000,
+        isClosable: true,
+      })
+    } finally {
+      setApprovalActionId(null)
     }
   }
 
@@ -444,7 +557,7 @@ export const PartnerUserManagement: React.FC<PartnerUserManagementProps> = ({
           colorScheme="purple"
           size="sm"
           onClick={() => setActiveTab('approvals')}
-          rightIcon={<Badge colorScheme="blue">{pendingApprovals.length}</Badge>}
+          rightIcon={<Badge colorScheme="blue">{approvalQueue.length}</Badge>}
         >
           Approvals
         </Button>
@@ -680,61 +793,72 @@ export const PartnerUserManagement: React.FC<PartnerUserManagementProps> = ({
       {activeTab === 'approvals' && (
         <Stack spacing={4}>
           <Text fontWeight="semibold" color="brand.text">Pending approvals</Text>
-          <Grid templateColumns={{ base: '1fr', md: '1fr 1fr' }} gap={4}>
-            <GridItem>
-              <Box p={4} borderRadius="xl" border="1px solid" borderColor="brand.border" bg="white" boxShadow="sm">
-                <HStack justify="space-between" mb={3}>
-                  <Text fontWeight="bold">Standard submissions</Text>
-                  <Badge colorScheme="blue">Queued</Badge>
+          <Box p={4} borderRadius="xl" border="1px solid" borderColor="brand.border" bg="white" boxShadow="sm">
+            <HStack justify="space-between" mb={3}>
+              <Text fontWeight="bold">Points upload requests</Text>
+              <Badge colorScheme="blue">{approvalQueue.length} pending</Badge>
+            </HStack>
+            <Stack spacing={3}>
+              {approvalsLoading && (
+                <HStack spacing={3} py={4}>
+                  <Spinner size="sm" />
+                  <Text color="brand.subtleText">Loading requests...</Text>
                 </HStack>
-                <Stack spacing={3}>
-                  {pendingApprovals.slice(0, 3).map(user => (
-                    <Box key={user.id} p={3} borderRadius="md" border="1px solid" borderColor="brand.border" bg="brand.accent">
-                      <Text fontWeight="semibold" color="brand.text">{user.name}</Text>
-                      <Text fontSize="sm" color="brand.subtleText">{user.companyCode}</Text>
-                      <HStack spacing={2} mt={2}>
-                        <Button size="xs" colorScheme="green">Approve</Button>
-                        <Button size="xs" colorScheme="red" variant="outline">Reject</Button>
-                        <Button size="xs" variant="ghost">More info</Button>
+              )}
+              {!approvalsLoading &&
+                approvalQueue.map(({ request, user }) => (
+                  <Box key={request.id} p={3} borderRadius="md" border="1px solid" borderColor="brand.border" bg="brand.accent">
+                    <HStack justify="space-between" align="flex-start" wrap="wrap" gap={3}>
+                      <Stack spacing={1}>
+                        <Text fontWeight="semibold" color="brand.text">{user.name}</Text>
+                        <Text fontSize="sm" color="brand.subtleText">{user.companyCode}</Text>
+                        <Text fontSize="sm" color="brand.subtleText">
+                          {request.activity_title || 'Activity submission'} • Week {request.week} • {request.points ?? 0} pts
+                        </Text>
+                        <Text fontSize="xs" color="brand.subtleText">
+                          Submitted {formatRequestTimestamp(request.created_at)}
+                        </Text>
+                        {request.proof_url && (
+                          <Link href={request.proof_url} isExternal color="purple.600" fontSize="sm">
+                            View proof
+                          </Link>
+                        )}
+                        {request.notes && (
+                          <Text fontSize="sm" color="brand.subtleText">
+                            Notes: {request.notes}
+                          </Text>
+                        )}
+                      </Stack>
+                      <HStack spacing={2}>
+                        <Button
+                          size="xs"
+                          colorScheme="green"
+                          onClick={() => handleApproveRequest(request)}
+                          isLoading={approvalActionId === request.id}
+                        >
+                          Approve
+                        </Button>
+                        <Button
+                          size="xs"
+                          colorScheme="red"
+                          variant="outline"
+                          onClick={() => openRejectModal(request)}
+                          isDisabled={approvalActionId === request.id}
+                        >
+                          Reject
+                        </Button>
                       </HStack>
-                    </Box>
-                  ))}
-                  {!pendingApprovals.length && (
-                    <HStack spacing={3}>
-                      <ShieldAlert color="orange" />
-                      <Text color="brand.subtleText">No pending verification requests</Text>
                     </HStack>
-                  )}
-                </Stack>
-              </Box>
-            </GridItem>
-            <GridItem>
-              <Box p={4} borderRadius="xl" border="1px solid" borderColor="brand.border" bg="white" boxShadow="sm">
-                <HStack justify="space-between" mb={3}>
-                  <Text fontWeight="bold">Peer matching sessions</Text>
-                  <Badge colorScheme="purple">Dual confirmation</Badge>
+                  </Box>
+                ))}
+              {!approvalsLoading && !approvalQueue.length && (
+                <HStack spacing={3}>
+                  <ShieldAlert color="orange" />
+                  <Text color="brand.subtleText">No pending verification requests</Text>
                 </HStack>
-                <Stack spacing={3}>
-                  {pendingApprovals.slice(0, 2).map(user => (
-                    <Box key={user.id} p={3} borderRadius="md" border="1px solid" borderColor="brand.border" bg="brand.accent">
-                      <Text fontWeight="semibold" color="brand.text">Session with {user.name}</Text>
-                      <Text fontSize="sm" color="brand.subtleText">Awaiting both confirmations</Text>
-                      <HStack spacing={2} mt={2}>
-                        <Button size="xs" colorScheme="green">Approve</Button>
-                        <Button size="xs" variant="outline">Mark more info</Button>
-                      </HStack>
-                    </Box>
-                  ))}
-                  {!pendingApprovals.length && (
-                    <HStack spacing={3}>
-                      <AlertTriangle color="orange" />
-                      <Text color="brand.subtleText">No peer sessions awaiting approval</Text>
-                    </HStack>
-                  )}
-                </Stack>
-              </Box>
-            </GridItem>
-          </Grid>
+              )}
+            </Stack>
+          </Box>
         </Stack>
       )}
 
@@ -836,6 +960,43 @@ export const PartnerUserManagement: React.FC<PartnerUserManagementProps> = ({
           </DrawerFooter>
         </DrawerContent>
       </Drawer>
+
+      <Modal isOpen={rejectionModal.isOpen} onClose={rejectionModal.onClose} size="md">
+        <ModalOverlay />
+        <ModalContent>
+          <ModalHeader>Reject points upload</ModalHeader>
+          <ModalCloseButton />
+          <ModalBody>
+            <Stack spacing={3}>
+              <Text fontSize="sm" color="brand.subtleText">
+                Provide an optional reason for rejecting this points upload. The learner will not receive points.
+              </Text>
+              <Textarea
+                placeholder="Add a brief reason (optional)"
+                value={rejectReason}
+                onChange={(e) => setRejectReason(e.target.value)}
+              />
+              {selectedRequest && (
+                <Text fontSize="xs" color="brand.subtleText">
+                  Request: {selectedRequest.activity_title || 'Activity submission'} • Week {selectedRequest.week}
+                </Text>
+              )}
+            </Stack>
+          </ModalBody>
+          <ModalFooter>
+            <Button variant="ghost" mr={3} onClick={rejectionModal.onClose}>
+              Cancel
+            </Button>
+            <Button
+              colorScheme="red"
+              onClick={handleRejectRequest}
+              isLoading={approvalActionId === selectedRequest?.id}
+            >
+              Reject request
+            </Button>
+          </ModalFooter>
+        </ModalContent>
+      </Modal>
 
       <Modal isOpen={adjustmentModal.isOpen} onClose={adjustmentModal.onClose} size="md">
         <ModalOverlay />

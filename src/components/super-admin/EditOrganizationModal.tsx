@@ -1,5 +1,10 @@
 import React, { useEffect, useMemo, useState } from 'react'
 import {
+  Accordion,
+  AccordionButton,
+  AccordionIcon,
+  AccordionItem,
+  AccordionPanel,
   Alert,
   AlertIcon,
   Box,
@@ -17,6 +22,7 @@ import {
   Input,
   InputGroup,
   InputLeftAddon,
+  InputRightElement,
   Modal,
   ModalBody,
   ModalCloseButton,
@@ -27,27 +33,25 @@ import {
   Select,
   Spinner,
   Stack,
+  Table,
+  Tbody,
+  Td,
   Text,
   Textarea,
+  Th,
+  Thead,
   Tooltip,
+  Tr,
   useToast,
 } from '@chakra-ui/react'
 import { InfoIcon } from '@chakra-ui/icons'
 import { ChevronDown, ChevronUp, Eye } from 'lucide-react'
-import {
-  CourseOption,
-  OrganizationLead,
-  OrganizationRecord,
-  ProgramDurationOption,
-} from '@/types/admin'
+import { CourseOption, OrganizationRecord, ProgramDurationOption } from '@/types/admin'
 import {
   determineClusterFromTeamSize,
-  fetchAmbassadors,
   fetchAvailableCourses,
-  fetchMentors,
   fetchOrganizationAssignments,
   fetchOrganizationDetails,
-  fetchPartners,
 } from '@/services/organizationService'
 import { updateOrganization } from '@/services/superAdminService'
 import {
@@ -60,13 +64,19 @@ import {
   getMonthDateRange,
   resolveProgramMonthCount,
 } from '@/utils/monthlyCourseAssignments'
+import {
+  clusterBoundaries,
+  clusterTiers,
+  getClusterDisplayName,
+  getClusterShortName,
+  getClusterTierByName,
+} from '@/utils/clusterTiers'
 
 interface EditOrganizationModalProps {
   isOpen: boolean
   onClose: () => void
   organization?: OrganizationRecord | null
   onUpdated?: (organization: OrganizationRecord) => void
-  partnerAssignmentCounts?: Record<string, number>
 }
 
 const programDurations: ProgramDurationOption[] = [
@@ -96,17 +106,12 @@ export const EditOrganizationModal: React.FC<EditOrganizationModalProps> = ({
   onClose,
   organization,
   onUpdated,
-  partnerAssignmentCounts,
 }) => {
   const toast = useToast()
   const [form, setForm] = useState<OrganizationRecord>(emptyOrganization)
   const [courses, setCourses] = useState<CourseOption[]>([])
-  const [mentors, setMentors] = useState<OrganizationLead[]>([])
-  const [ambassadors, setAmbassadors] = useState<OrganizationLead[]>([])
-  const [partners, setPartners] = useState<OrganizationLead[]>([])
   const [isLoading, setIsLoading] = useState(false)
   const [isSubmitting, setIsSubmitting] = useState(false)
-  const [partnerSearch, setPartnerSearch] = useState('')
   const [monthlyAssignments, setMonthlyAssignments] = useState<MonthlyCourseAssignments>({})
 
   const courseLimit = useMemo(() => {
@@ -153,34 +158,70 @@ export const EditOrganizationModal: React.FC<EditOrganizationModalProps> = ({
     [monthlyAssignments, courseLimit],
   )
 
-  const sortedPartners = useMemo(
-    () => [...partners].sort((a, b) => a.name.localeCompare(b.name)),
-    [partners],
+  const sortedCourses = useMemo(
+    () => [...courses].sort((a, b) => a.title.localeCompare(b.title)),
+    [courses],
   )
-
-  const filteredPartners = useMemo(() => {
-    const term = partnerSearch.trim().toLowerCase()
-    if (!term) return sortedPartners
-    return sortedPartners.filter((item) => {
-      const email = item.email?.toLowerCase() ?? ''
-      return item.name.toLowerCase().includes(term) || email.includes(term)
-    })
-  }, [partnerSearch, sortedPartners])
-
-  const buildPartnerLabel = (item: OrganizationLead) => {
-    const emailSuffix = item.email ? ` — ${item.email}` : ''
-    const assignmentCount = partnerAssignmentCounts?.[item.name] ?? 0
-    const countSuffix = assignmentCount > 1 ? ` • ${assignmentCount} orgs` : ''
-    return `${item.name}${emailSuffix}${countSuffix}`
-  }
+  const clusterDisplayName = useMemo(() => getClusterDisplayName(form.cluster), [form.cluster])
+  const clusterShortName = useMemo(() => getClusterShortName(form.cluster), [form.cluster])
+  const clusterTier = useMemo(() => getClusterTierByName(form.cluster), [form.cluster])
+  const clusterHelperColor = clusterTier.colorScheme === 'gray' ? 'gray.600' : `${clusterTier.colorScheme}.600`
+  const hasValidTeamSize = (form.teamSize || 0) > 0
+  const isClusterAssigned = (form.teamSize || 0) >= 4 && Boolean(form.cluster)
+  const nextBoundary = clusterBoundaries.find((boundary) => boundary > (form.teamSize || 0))
+  const transitionHint = hasValidTeamSize && nextBoundary ? `${nextBoundary - 1}→${nextBoundary}` : null
+  const isClusterBoundary = clusterBoundaries.includes(form.teamSize || 0) && hasValidTeamSize
+  const boundaryTier = clusterTiers.find((tier) => tier.min === form.teamSize)
+  const nextBoundaryTier = boundaryTier
+    ? clusterTiers[clusterTiers.findIndex((tier) => tier.name === boundaryTier.name) + 1]
+    : undefined
+  const clusterProgressMax = 50
+  const clusterProgressValue = Math.min(form.teamSize || 0, clusterProgressMax)
+  const clusterProgressPercent = (clusterProgressValue / clusterProgressMax) * 100
+  const clusterHighlightBg = `${clusterTier.colorScheme}.50`
+  const clusterTooltipContent = (
+    <Box>
+      <Text fontWeight="semibold" mb={2}>
+        Cluster breakdown
+      </Text>
+      <Table size="sm" variant="simple">
+        <Thead>
+          <Tr>
+            <Th>Cluster</Th>
+            <Th>Range</Th>
+            <Th>Badge</Th>
+          </Tr>
+        </Thead>
+        <Tbody>
+          {clusterTiers.map((tier) => (
+            <Tr key={tier.name}>
+              <Td>{tier.shortName}</Td>
+              <Td>{tier.rangeLabel} users</Td>
+              <Td>
+                <Badge colorScheme={tier.colorScheme} variant="subtle">
+                  {tier.shortName}
+                </Badge>
+              </Td>
+            </Tr>
+          ))}
+        </Tbody>
+      </Table>
+      <Text fontSize="xs" color="gray.600" mt={2}>
+        No Cluster (1-3), Kalahari (4-10), Sahara (11-20), Sahel (21-40), Serengeti (41+).
+      </Text>
+    </Box>
+  )
+  const clusterHelperText = isClusterAssigned
+    ? `Assigned to ${clusterShortName} based on cohort size.`
+    : 'No cluster assigned (1-3 users).'
+  const boundaryAlertText = nextBoundaryTier
+    ? `Cluster tier: ${clusterShortName}. Adding 1 more user keeps you in ${clusterShortName}; ${nextBoundaryTier.shortName} begins at ${nextBoundaryTier.min} users.`
+    : `Cluster tier: ${clusterShortName}. You're in the highest tier.`
 
   useEffect(() => {
     if (!isOpen) {
       setForm(emptyOrganization)
       setCourses([])
-      setMentors([])
-      setAmbassadors([])
-      setPartners([])
       setMonthlyAssignments({})
       return
     }
@@ -193,26 +234,13 @@ export const EditOrganizationModal: React.FC<EditOrganizationModalProps> = ({
       if (!organization?.id) return
       setIsLoading(true)
       try {
-        const [
-          courseOptions,
-          mentorOptions,
-          ambassadorOptions,
-          partnerOptions,
-          organizationDetails,
-          assignments,
-        ] = await Promise.all([
+        const [courseOptions, organizationDetails, assignments] = await Promise.all([
           fetchAvailableCourses(),
-          fetchMentors(),
-          fetchAmbassadors(),
-          fetchPartners(),
           fetchOrganizationDetails(organization.id),
           fetchOrganizationAssignments(organization.id),
         ])
 
         setCourses(courseOptions)
-        setMentors(mentorOptions)
-        setAmbassadors(ambassadorOptions)
-        setPartners(partnerOptions)
 
         if (organizationDetails) {
           const totalMonths = resolveProgramMonthCount(organizationDetails.programDuration ?? null)
@@ -243,6 +271,13 @@ export const EditOrganizationModal: React.FC<EditOrganizationModalProps> = ({
 
     fetchData()
   }, [isOpen, organization, toast])
+
+  useEffect(() => {
+    if (!isOpen) return
+    if ((form.teamSize ?? 0) > 0 && !form.cluster) {
+      setForm((prev) => ({ ...prev, cluster: determineClusterFromTeamSize(prev.teamSize) }))
+    }
+  }, [form.cluster, form.teamSize, isOpen])
 
   useEffect(() => {
     if (!isOpen) return
@@ -302,7 +337,9 @@ export const EditOrganizationModal: React.FC<EditOrganizationModalProps> = ({
       if (!form.code) throw new Error('Organization code is required')
       if (!isCodeValidLength) throw new Error('Organization code must be exactly 6 characters')
       if (!form.programDuration) throw new Error('Program duration is required')
-      if (!form.teamSize || form.teamSize <= 0) throw new Error('Cohort size must be greater than 0')
+      if (!form.teamSize || form.teamSize <= 0) {
+        throw new Error('Cohort size must be greater than 0 to assign a cluster')
+      }
       if (courseLimit && emptyMonths.length) {
         throw new Error(`Please assign a course for each of the ${courseLimit} month(s)`)
       }
@@ -317,7 +354,11 @@ export const EditOrganizationModal: React.FC<EditOrganizationModalProps> = ({
         monthlyCourseAssignments: monthlyAssignments,
         courseAssignmentStructure: 'monthly',
       })
-      toast({ title: 'Organization updated successfully', status: 'success' })
+      toast({
+        title: 'Organization updated successfully',
+        description: `Cluster: ${clusterDisplayName}`,
+        status: 'success',
+      })
       onUpdated?.({ ...form, id: organization.id })
       onClose()
     } catch (error) {
@@ -348,7 +389,7 @@ export const EditOrganizationModal: React.FC<EditOrganizationModalProps> = ({
               <Box>
                 <Text fontWeight="bold">ORGANIZATION DETAILS</Text>
                 <Text color="gray.600" fontSize="sm">
-                  Update organization details, program configuration, and leadership assignments.
+                  Update organization details and program configuration.
                 </Text>
               </Box>
 
@@ -394,12 +435,6 @@ export const EditOrganizationModal: React.FC<EditOrganizationModalProps> = ({
                   </FormControl>
                 </GridItem>
                 <GridItem>
-                  <FormControl>
-                    <FormLabel>Cluster</FormLabel>
-                    <Input value={form.cluster} isReadOnly placeholder="Auto-calculated" />
-                  </FormControl>
-                </GridItem>
-                <GridItem>
                   <FormControl isRequired>
                     <FormLabel>Cohort size</FormLabel>
                     <Input
@@ -408,6 +443,41 @@ export const EditOrganizationModal: React.FC<EditOrganizationModalProps> = ({
                       onChange={(e) => handleTeamSizeChange(e.target.value)}
                       min={1}
                     />
+                    <FormHelperText color={hasValidTeamSize ? clusterHelperColor : 'gray.500'}>
+                      {hasValidTeamSize
+                        ? `Cohort size determines cluster tier: ${clusterDisplayName}.`
+                        : 'Enter a cohort size to preview the cluster tier.'}
+                    </FormHelperText>
+                    {transitionHint ? (
+                      <FormHelperText color="gray.500">Next tier transition: {transitionHint} users</FormHelperText>
+                    ) : null}
+                  </FormControl>
+                </GridItem>
+                <GridItem>
+                  <FormControl>
+                    <FormLabel display="flex" alignItems="center" gap={2}>
+                      Cluster
+                      <Tooltip label={clusterTooltipContent} placement="top" maxW="360px">
+                        <InfoIcon color="gray.400" />
+                      </Tooltip>
+                    </FormLabel>
+                    <InputGroup>
+                      <Input
+                        value={clusterDisplayName}
+                        isReadOnly
+                        placeholder="Auto-calculated from cohort size"
+                      />
+                      {isClusterAssigned ? (
+                        <InputRightElement width="auto" mr={2}>
+                          <Badge colorScheme={clusterTier.colorScheme} variant="subtle">
+                            {clusterShortName}
+                          </Badge>
+                        </InputRightElement>
+                      ) : null}
+                    </InputGroup>
+                    <FormHelperText color={isClusterAssigned ? clusterHelperColor : 'gray.600'}>
+                      {clusterHelperText}
+                    </FormHelperText>
                   </FormControl>
                 </GridItem>
                 <GridItem>
@@ -434,6 +504,14 @@ export const EditOrganizationModal: React.FC<EditOrganizationModalProps> = ({
                     </FormErrorMessage>
                   </FormControl>
                 </GridItem>
+                {isClusterBoundary ? (
+                  <GridItem colSpan={{ base: 1, md: 2 }}>
+                    <Alert status="info" borderRadius="md">
+                      <AlertIcon />
+                      {boundaryAlertText}
+                    </Alert>
+                  </GridItem>
+                ) : null}
                 <GridItem>
                   <FormControl>
                     <FormLabel>Program start date</FormLabel>
@@ -444,38 +522,6 @@ export const EditOrganizationModal: React.FC<EditOrganizationModalProps> = ({
                     />
                   </FormControl>
                 </GridItem>
-                <GridItem>
-                  <FormControl>
-                    <FormLabel>Transformation partner</FormLabel>
-                    <Input
-                      value={partnerSearch}
-                      onChange={(e) => setPartnerSearch(e.target.value)}
-                      placeholder="Search partners"
-                      mb={2}
-                    />
-                    <Select
-                      placeholder="Select partner"
-                      value={form.assignedPartnerId || ''}
-                      onChange={(e) => {
-                        const selectedId = e.target.value
-                        const partner = partners.find((item) => item.id === selectedId)
-                        updateField('assignedPartnerId', selectedId || null)
-                        updateField('assignedPartnerName', partner?.name || null)
-                        updateField('assignedPartnerEmail', partner?.email || null)
-                      }}
-                    >
-                      <option value="">— No partner —</option>
-                      {filteredPartners.map((partner) => (
-                        <option key={partner.id} value={partner.id}>
-                          {buildPartnerLabel(partner)}
-                        </option>
-                      ))}
-                    </Select>
-                    {!filteredPartners.length && (
-                      <FormHelperText color="gray.600">No partners available.</FormHelperText>
-                    )}
-                  </FormControl>
-                </GridItem>
                 <GridItem colSpan={2}>
                   <FormControl>
                     <FormLabel>Description</FormLabel>
@@ -484,6 +530,119 @@ export const EditOrganizationModal: React.FC<EditOrganizationModalProps> = ({
                       onChange={(e) => updateField('description', e.target.value)}
                     />
                   </FormControl>
+                </GridItem>
+                <GridItem colSpan={{ base: 1, md: 2 }}>
+                  <Accordion allowToggle>
+                    <AccordionItem borderWidth="1px" borderRadius="md" overflow="hidden">
+                      <AccordionButton bg="gray.50">
+                        <Box flex="1" textAlign="left" fontWeight="semibold">
+                          Cluster tier reference guide
+                        </Box>
+                        <AccordionIcon />
+                      </AccordionButton>
+                      <AccordionPanel bg="gray.50">
+                        <Table size="sm" variant="simple">
+                          <Thead>
+                            <Tr>
+                              <Th>Cluster Name</Th>
+                              <Th>Cohort Size Range</Th>
+                              <Th>Color Badge</Th>
+                            </Tr>
+                          </Thead>
+                          <Tbody>
+                            {clusterTiers.map((tier) => (
+                              <Tr key={tier.name} bg={tier.name === clusterDisplayName ? clusterHighlightBg : 'transparent'}>
+                                <Td>
+                                  {tier.shortName}
+                                </Td>
+                                <Td>{tier.rangeLabel} users</Td>
+                                <Td>
+                                  <Badge colorScheme={tier.colorScheme} variant="subtle">
+                                    {tier.shortName}
+                                  </Badge>
+                                </Td>
+                              </Tr>
+                            ))}
+                          </Tbody>
+                        </Table>
+                        <Box mt={4}>
+                          <Text fontSize="sm" fontWeight="semibold" mb={2}>
+                            Cluster progression
+                          </Text>
+                          <Box position="relative" h="10px" bg="gray.200" borderRadius="full" overflow="hidden">
+                            <Flex h="100%">
+                              {clusterTiers.map((tier) => {
+                                const rangeMax = tier.max ?? clusterProgressMax
+                                const rangeStart = Math.max(tier.min, 1)
+                                const cappedMax = Math.min(rangeMax, clusterProgressMax)
+                                const widthPercent =
+                                  ((cappedMax - rangeStart + 1) / clusterProgressMax) * 100
+                                return (
+                                  <Box
+                                    key={tier.name}
+                                    w={`${widthPercent}%`}
+                                    bg={`${tier.colorScheme}.400`}
+                                  />
+                                )
+                              })}
+                            </Flex>
+                            {clusterBoundaries.map((boundary) => {
+                              const left = `${(boundary / clusterProgressMax) * 100}%`
+                              const boundaryTierName =
+                                clusterTiers.find((tier) => tier.min === boundary)?.shortName ?? 'New tier'
+                              return (
+                                <Tooltip
+                                  key={boundary}
+                                  label={`${boundary} users: ${boundaryTierName} begins`}
+                                  placement="top"
+                                >
+                                  <Box
+                                    position="absolute"
+                                    top="-4px"
+                                    left={left}
+                                    transform="translateX(-50%)"
+                                    w="2px"
+                                    h="18px"
+                                    bg="gray.600"
+                                  />
+                                </Tooltip>
+                              )
+                            })}
+                            {hasValidTeamSize ? (
+                              <Tooltip label={`${form.teamSize} users`} placement="top">
+                                <Box
+                                  position="absolute"
+                                  top="-7px"
+                                  left={`${clusterProgressPercent}%`}
+                                  transform="translateX(-50%)"
+                                  w="18px"
+                                  h="18px"
+                                  bg="white"
+                                  borderWidth="2px"
+                                  borderColor={`${clusterTier.colorScheme}.500`}
+                                  borderRadius="full"
+                                />
+                              </Tooltip>
+                            ) : null}
+                          </Box>
+                          <Grid templateColumns="repeat(5, 1fr)" mt={2} fontSize="xs" color="gray.600">
+                            {clusterTiers.map((tier) => (
+                              <Text key={tier.name} textAlign="center">
+                                {tier.shortName}
+                              </Text>
+                            ))}
+                          </Grid>
+                          <HStack justify="space-between" mt={1} fontSize="xs" color="gray.500">
+                            <Text>1-3</Text>
+                            <Text>4</Text>
+                            <Text>11</Text>
+                            <Text>21</Text>
+                            <Text>41+</Text>
+                          </HStack>
+                        </Box>
+                      </AccordionPanel>
+                    </AccordionItem>
+                  </Accordion>
                 </GridItem>
               </Grid>
 
@@ -546,7 +705,7 @@ export const EditOrganizationModal: React.FC<EditOrganizationModalProps> = ({
                           onChange={(e) => handleMonthlyAssignmentChange(monthKey, e.target.value)}
                           bg="white"
                         >
-                          {courses.map((course) => (
+                          {sortedCourses.map((course) => (
                             <option key={course.id} value={course.id}>
                               {course.title}
                             </option>
@@ -592,6 +751,9 @@ export const EditOrganizationModal: React.FC<EditOrganizationModalProps> = ({
                         <Text fontSize="sm">Admin preview</Text>
                       </HStack>
                     </HStack>
+                    <Text fontSize="sm" color="gray.600" mb={3}>
+                      Cluster assignment: {clusterDisplayName}
+                    </Text>
                     <Stack spacing={2}>
                       {monthlySummary.map((entry) => (
                         <Flex key={entry.month} justify="space-between" align="center">
@@ -643,49 +805,7 @@ export const EditOrganizationModal: React.FC<EditOrganizationModalProps> = ({
                 )}
               </Box>
 
-              <Grid templateColumns={{ base: '1fr', md: 'repeat(3, 1fr)' }} gap={4}>
-                <GridItem>
-                  <FormControl>
-                    <FormLabel>Mentor</FormLabel>
-                    <Select
-                      placeholder="Select mentor"
-                      value={form.assignedMentorId || ''}
-                      onChange={(e) => {
-                        const mentor = mentors.find((m) => m.id === e.target.value)
-                        updateField('assignedMentorId', mentor?.id || null)
-                        updateField('assignedMentorName', mentor?.name || null)
-                        updateField('assignedMentorEmail', mentor?.email || null)
-                      }}
-                    >
-                      {mentors.map((mentor) => (
-                        <option key={mentor.id} value={mentor.id}>
-                          {mentor.name}
-                        </option>
-                      ))}
-                    </Select>
-                  </FormControl>
-                </GridItem>
-                <GridItem>
-                  <FormControl>
-                    <FormLabel>Ambassador</FormLabel>
-                    <Select
-                      placeholder="Select ambassador"
-                      value={form.assignedAmbassadorId || ''}
-                      onChange={(e) => {
-                        const ambassador = ambassadors.find((m) => m.id === e.target.value)
-                        updateField('assignedAmbassadorId', ambassador?.id || null)
-                        updateField('assignedAmbassadorName', ambassador?.name || null)
-                        updateField('assignedAmbassadorEmail', ambassador?.email || null)
-                      }}
-                    >
-                      {ambassadors.map((ambassador) => (
-                        <option key={ambassador.id} value={ambassador.id}>
-                          {ambassador.name}
-                        </option>
-                      ))}
-                    </Select>
-                  </FormControl>
-                </GridItem>
+              <Grid templateColumns={{ base: '1fr', md: 'repeat(2, 1fr)' }} gap={4}>
                 <GridItem>
                   <FormControl>
                     <FormLabel>Status</FormLabel>

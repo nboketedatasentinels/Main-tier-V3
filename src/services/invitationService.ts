@@ -2,6 +2,7 @@ import {
   addDoc,
   collection,
   doc,
+  getDoc,
   getDocs,
   query,
   serverTimestamp,
@@ -9,6 +10,7 @@ import {
   where,
 } from 'firebase/firestore'
 import { db } from './firebase'
+import { ORG_COLLECTION } from '@/constants/organizations'
 import {
   BulkInvitationResult,
   InvitationMethod,
@@ -16,11 +18,46 @@ import {
   InvitationResultEntry,
   OrganizationRecord,
 } from '@/types/admin'
+import { normalizeEmail } from '@/utils/email'
+import { checkCapacityThresholds } from './capacityService'
 
 const invitationsCollection = collection(db, 'invitations')
 const usersCollection = collection(db, 'users')
+const organizationsCollection = collection(db, ORG_COLLECTION)
 
 const codeChars = '23456789ABCDEFGHJKLMNPQRSTUVWXYZ'
+
+const LICENSE_CONSUMING_ROLES = new Set(['user', 'mentor', 'ambassador', 'team_leader'])
+
+const isLicenseConsumingRole = (role?: string | null) => {
+  if (!role) return false
+  return LICENSE_CONSUMING_ROLES.has(role)
+}
+
+const isActiveAccountStatus = (status?: string | null) => {
+  if (!status) return true
+  const normalized = status.toLowerCase()
+  return normalized !== 'suspended' && normalized !== 'inactive'
+}
+
+const getOrganizationLicenseSnapshot = async (organizationId: string) => {
+  const orgSnap = await getDoc(doc(organizationsCollection, organizationId))
+  if (!orgSnap.exists()) {
+    throw new Error('Organization not found for invitation validation.')
+  }
+  const data = orgSnap.data() as OrganizationRecord
+  return {
+    teamSize: data.teamSize ?? 0,
+  }
+}
+
+const getActiveLicenseMemberCount = async (organizationId: string) => {
+  const snapshot = await getDocs(query(usersCollection, where('assignedOrganizations', 'array-contains', organizationId)))
+  return snapshot.docs.filter((docSnap) => {
+    const data = docSnap.data() as { role?: string; accountStatus?: string | null }
+    return isLicenseConsumingRole(data.role) && isActiveAccountStatus(data.accountStatus)
+  }).length
+}
 
 export const generateOneTimeCode = () => {
   return Array.from({ length: 8 })
@@ -46,7 +83,8 @@ export const createInvitation = async (data: {
 }
 
 const findExistingUserByEmail = async (email: string) => {
-  const snapshot = await getDocs(query(usersCollection, where('email', '==', email)))
+  const normalizedEmail = normalizeEmail(email)
+  const snapshot = await getDocs(query(usersCollection, where('email', '==', normalizedEmail)))
   if (snapshot.empty) return null
   const docSnap = snapshot.docs[0]
   return { id: docSnap.id, ...(docSnap.data() as Partial<OrganizationRecord>) }
@@ -55,7 +93,8 @@ const findExistingUserByEmail = async (email: string) => {
 const createOrUpdateUser = async (
   payload: Omit<InvitationPayload, 'method' | 'organizationId'> & { organizationId: string },
 ) => {
-  const existing = payload.email ? await findExistingUserByEmail(payload.email) : null
+  const normalizedEmail = payload.email ? normalizeEmail(payload.email) : undefined
+  const existing = normalizedEmail ? await findExistingUserByEmail(normalizedEmail) : null
 
   if (existing?.id) {
     const userRef = doc(db, 'users', existing.id)
@@ -68,7 +107,7 @@ const createOrUpdateUser = async (
 
   const docRef = await addDoc(usersCollection, {
     name: payload.name,
-    email: payload.email,
+    email: normalizedEmail,
     role: payload.role,
     assignedOrganizations: [payload.organizationId],
     createdAt: serverTimestamp(),
@@ -82,14 +121,27 @@ export const inviteUsersBulk = async (
   context: { organizationId: string; organizationName: string },
 ): Promise<BulkInvitationResult> => {
   const results: InvitationResultEntry[] = []
+  const { teamSize } = await getOrganizationLicenseSnapshot(context.organizationId)
+  if (!teamSize || teamSize <= 0) {
+    throw new Error('Cohort size must be set before inviting users.')
+  }
+  const currentMembers = await getActiveLicenseMemberCount(context.organizationId)
+  const requestedSeats = invitations.filter((invite) => isLicenseConsumingRole(invite.role)).length
+  const availableSeats = Math.max(teamSize - currentMembers, 0)
+  if (requestedSeats > availableSeats) {
+    throw new Error(
+      `Cannot add ${requestedSeats} members. ${currentMembers} of ${teamSize} licenses already in use. Only ${availableSeats} licenses available.`,
+    )
+  }
   for (const invitation of invitations) {
     try {
       if (invitation.method === 'email') {
         if (!invitation.email) throw new Error('Email is required for email invitations')
-        const userId = await createOrUpdateUser(invitation)
+        const normalizedEmail = normalizeEmail(invitation.email)
+        const userId = await createOrUpdateUser({ ...invitation, email: normalizedEmail })
         await createInvitation({
           name: invitation.name,
-          email: invitation.email,
+          email: normalizedEmail,
           role: invitation.role,
           method: 'email',
           organizationId: context.organizationId,
@@ -97,17 +149,18 @@ export const inviteUsersBulk = async (
         results.push({
           id: userId,
           name: invitation.name,
-          email: invitation.email,
+          email: normalizedEmail,
           role: invitation.role,
           method: 'email',
           status: 'success',
           message: 'Invitation email queued',
         })
       } else {
+        const normalizedEmail = invitation.email ? normalizeEmail(invitation.email) : undefined
         const code = generateOneTimeCode()
         await createInvitation({
           name: invitation.name,
-          email: invitation.email,
+          email: normalizedEmail,
           role: invitation.role,
           method: 'one_time_code',
           organizationId: context.organizationId,
@@ -116,7 +169,7 @@ export const inviteUsersBulk = async (
         results.push({
           id: `${invitation.name}-${code}`,
           name: invitation.name,
-          email: invitation.email,
+          email: normalizedEmail,
           role: invitation.role,
           method: 'one_time_code',
           status: 'success',
@@ -138,6 +191,10 @@ export const inviteUsersBulk = async (
 
   const success = results.filter((item) => item.status === 'success').length
   const failed = results.length - success
+
+  if (success > 0) {
+    await checkCapacityThresholds(context.organizationId)
+  }
 
   return { total: results.length, success, failed, results }
 }

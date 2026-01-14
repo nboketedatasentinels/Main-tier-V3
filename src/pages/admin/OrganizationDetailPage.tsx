@@ -60,7 +60,7 @@ export const OrganizationDetailPage: React.FC = () => {
   const { organizationId } = useParams()
   const navigate = useNavigate()
   const toast = useToast()
-  const { profile, user } = useAuth()
+  const { profile, user, isSuperAdmin } = useAuth()
   const unauthorizedLogged = useRef(false)
 
   const {
@@ -112,8 +112,13 @@ export const OrganizationDetailPage: React.FC = () => {
     navigate('/unauthorized', { replace: true })
   }, [error, navigate, organization, organizationId, profile, toast, user])
 
+  const breadcrumbBase = isSuperAdmin
+    ? { label: 'Super admin', path: '/super-admin/dashboard' }
+    : { label: 'Dashboard', path: '/admin/dashboard' }
+  const organizationListPath = breadcrumbBase.path
+
   const handleBack = () => {
-    navigate('/admin/dashboard')
+    navigate(organizationListPath)
   }
 
   const handleViewUser = (userId: string) => {
@@ -181,10 +186,10 @@ export const OrganizationDetailPage: React.FC = () => {
       <Stack spacing={6}>
         <Breadcrumb fontSize="sm" color="brand.subtleText">
           <BreadcrumbItem>
-            <BreadcrumbLink onClick={() => navigate('/admin/dashboard')}>Dashboard</BreadcrumbLink>
+            <BreadcrumbLink onClick={() => navigate(breadcrumbBase.path)}>{breadcrumbBase.label}</BreadcrumbLink>
           </BreadcrumbItem>
           <BreadcrumbItem>
-            <BreadcrumbLink onClick={() => navigate('/admin/dashboard')}>Organizations</BreadcrumbLink>
+            <BreadcrumbLink onClick={() => navigate(organizationListPath)}>Organizations</BreadcrumbLink>
           </BreadcrumbItem>
           <BreadcrumbItem isCurrentPage>
             <BreadcrumbLink>{organization?.name || 'Organization'}</BreadcrumbLink>
@@ -317,7 +322,7 @@ export const OrganizationDetailPage: React.FC = () => {
                       <HStack justify="space-between">
                         <Text fontSize="sm" color="brand.subtleText">Transformation partner</Text>
                         <Text fontWeight="semibold" color="brand.text">
-                          {organization?.transformationPartner || 'Not assigned'}
+                          {organization?.assignedPartnerName || 'Not assigned'}
                         </Text>
                       </HStack>
                       <Divider />

@@ -31,22 +31,30 @@ import {
   useToast,
 } from '@chakra-ui/react'
 import { Filter, MoreHorizontal, Search, Sparkles } from 'lucide-react'
+import { useNavigate } from 'react-router-dom'
+import { AssignAmbassadorModal } from '@/components/super-admin/AssignAmbassadorModal'
+import { AssignMentorModal } from '@/components/super-admin/AssignMentorModal'
 import { AssignPartnerModal } from '@/components/super-admin/AssignPartnerModal'
 import { ConfirmationDialog } from '@/components/super-admin/ConfirmationDialog'
-import { OrganizationDetailsModal } from '@/components/super-admin/OrganizationDetailsModal'
 import { EditOrganizationModal } from '@/components/super-admin/EditOrganizationModal'
 import { CreateOrganizationModal } from '@/components/super-admin/CreateOrganizationModal'
-import { fetchPartners } from '@/services/organizationService'
 import {
-  assignPartner,
+  assignAmbassadorToOrganization,
+  assignMentorToOrganization,
+  assignPartnerToOrganization,
+  fetchAmbassadors,
+  fetchMentors,
+  fetchPartners,
+  unassignLeadershipRole,
+} from '@/services/organizationService'
+import {
   deleteOrganization,
-  fetchOrganizationMemberStats,
   fetchOrganizations,
   logAdminAction,
 } from '@/services/superAdminService'
-import { OrganizationLead, OrganizationMemberStats, OrganizationRecord } from '@/types/admin'
+import { OrganizationLead, OrganizationRecord } from '@/types/admin'
 
-type SortKey = keyof Pick<OrganizationRecord, 'name' | 'code' | 'teamSize' | 'status' | 'transformationPartner'>
+type SortKey = 'name' | 'code' | 'teamSize' | 'status' | 'partnerName'
 
 type OrganizationManagementPageProps = {
   adminName: string
@@ -54,6 +62,7 @@ type OrganizationManagementPageProps = {
 }
 
 export const OrganizationManagementPage: React.FC<OrganizationManagementPageProps> = ({ adminName, adminId }) => {
+  const navigate = useNavigate()
   const toast = useToast()
   const [organizations, setOrganizations] = useState<OrganizationRecord[]>([])
   const [loading, setLoading] = useState(true)
@@ -64,18 +73,22 @@ export const OrganizationManagementPage: React.FC<OrganizationManagementPageProp
   const [page, setPage] = useState(1)
 
   const [selectedOrg, setSelectedOrg] = useState<OrganizationRecord | null>(null)
-  const [viewOrg, setViewOrg] = useState<OrganizationRecord | null>(null)
   const [pendingDelete, setPendingDelete] = useState<OrganizationRecord | null>(null)
   const [partners, setPartners] = useState<OrganizationLead[]>([])
   const [isLoadingPartners, setIsLoadingPartners] = useState(false)
   const [partnersError, setPartnersError] = useState<string | null>(null)
-  const [memberStats, setMemberStats] = useState<OrganizationMemberStats | null>(null)
-  const [isLoadingStats, setIsLoadingStats] = useState(false)
+  const [mentors, setMentors] = useState<OrganizationLead[]>([])
+  const [isLoadingMentors, setIsLoadingMentors] = useState(false)
+  const [mentorsError, setMentorsError] = useState<string | null>(null)
+  const [ambassadors, setAmbassadors] = useState<OrganizationLead[]>([])
+  const [isLoadingAmbassadors, setIsLoadingAmbassadors] = useState(false)
+  const [ambassadorsError, setAmbassadorsError] = useState<string | null>(null)
 
   const createModal = useDisclosure()
   const editModal = useDisclosure()
-  const assignModal = useDisclosure()
-  const viewModal = useDisclosure()
+  const assignPartnerModal = useDisclosure()
+  const assignMentorModal = useDisclosure()
+  const assignAmbassadorModal = useDisclosure()
   const confirmDialog = useDisclosure()
 
   const loadOrganizations = useCallback(async () => {
@@ -115,22 +128,42 @@ export const OrganizationManagementPage: React.FC<OrganizationManagementPageProp
   }, [toast])
 
   useEffect(() => {
-    const loadMemberStats = async () => {
-      if (!viewModal.isOpen || !viewOrg) return
-      setIsLoadingStats(true)
+    const loadMentors = async () => {
+      setIsLoadingMentors(true)
+      setMentorsError(null)
       try {
-        const stats = await fetchOrganizationMemberStats({ id: viewOrg.id, code: viewOrg.code })
-        setMemberStats(stats)
+        const mentorOptions = await fetchMentors()
+        setMentors(mentorOptions)
       } catch (err) {
         console.error(err)
-        toast({ title: 'Unable to load organization stats', status: 'error' })
+        setMentorsError('Unable to load mentors.')
+        toast({ title: 'Unable to load mentors', status: 'error' })
       } finally {
-        setIsLoadingStats(false)
+        setIsLoadingMentors(false)
       }
     }
 
-    loadMemberStats()
-  }, [toast, viewModal.isOpen, viewOrg])
+    loadMentors()
+  }, [toast])
+
+  useEffect(() => {
+    const loadAmbassadors = async () => {
+      setIsLoadingAmbassadors(true)
+      setAmbassadorsError(null)
+      try {
+        const ambassadorOptions = await fetchAmbassadors()
+        setAmbassadors(ambassadorOptions)
+      } catch (err) {
+        console.error(err)
+        setAmbassadorsError('Unable to load ambassadors.')
+        toast({ title: 'Unable to load ambassadors', status: 'error' })
+      } finally {
+        setIsLoadingAmbassadors(false)
+      }
+    }
+
+    loadAmbassadors()
+  }, [toast])
 
   const handleOrganizationCreated = async (org: OrganizationRecord) => {
     setOrganizations((prev) => [org, ...prev])
@@ -161,20 +194,76 @@ export const OrganizationManagementPage: React.FC<OrganizationManagementPageProp
     confirmDialog.onClose()
   }
 
-  const handleAssignPartner = async (partnerName: string) => {
+  const handleAssignPartner = async (partnerId: string | null) => {
     if (!selectedOrg?.id) return
-    await assignPartner(selectedOrg.id, partnerName)
-    setOrganizations((prev) => prev.map((org) => (org.id === selectedOrg.id ? { ...org, transformationPartner: partnerName } : org)))
+    if (partnerId) {
+      await assignPartnerToOrganization(selectedOrg.id, partnerId)
+    } else {
+      await unassignLeadershipRole(selectedOrg.id, 'partner')
+    }
+    setOrganizations((prev) =>
+      prev.map((org) =>
+        org.id === selectedOrg.id ? { ...org, transformationPartnerId: partnerId } : org,
+      ),
+    )
     await logAdminAction({
       action: 'Partner assignment updated',
       organizationName: selectedOrg.name,
       organizationCode: selectedOrg.code,
       adminId,
       adminName,
-      metadata: { partnerName },
+      metadata: { partnerId },
     })
     toast({ title: 'Partner updated', status: 'success' })
-    assignModal.onClose()
+    assignPartnerModal.onClose()
+  }
+
+  const handleAssignMentor = async (mentorId: string | null) => {
+    if (!selectedOrg?.id) return
+    if (mentorId) {
+      await assignMentorToOrganization(selectedOrg.id, mentorId)
+    } else {
+      await unassignLeadershipRole(selectedOrg.id, 'mentor')
+    }
+    setOrganizations((prev) =>
+      prev.map((org) =>
+        org.id === selectedOrg.id ? { ...org, assignedMentorId: mentorId } : org,
+      ),
+    )
+    await logAdminAction({
+      action: 'Mentor assignment updated',
+      organizationName: selectedOrg.name,
+      organizationCode: selectedOrg.code,
+      adminId,
+      adminName,
+      metadata: { mentorId },
+    })
+    toast({ title: 'Mentor updated', status: 'success' })
+    assignMentorModal.onClose()
+  }
+
+  const handleAssignAmbassador = async (ambassadorId: string | null) => {
+    if (!selectedOrg?.id) return
+    if (ambassadorId) {
+      await assignAmbassadorToOrganization(selectedOrg.id, ambassadorId)
+    } else {
+      await unassignLeadershipRole(selectedOrg.id, 'ambassador')
+    }
+    setOrganizations((prev) =>
+      prev.map((org) =>
+        org.id === selectedOrg.id ? { ...org, assignedAmbassadorId: ambassadorId } : org,
+      ),
+    )
+    await logAdminAction({
+      action: 'Ambassador assignment updated',
+      organizationName: selectedOrg.name,
+      organizationCode: selectedOrg.code,
+      adminId,
+      adminName,
+      metadata: { ambassadorId },
+    })
+    toast({ title: 'Ambassador updated', status: 'success' })
+    assignAmbassadorModal.onClose()
   }
 
   const statusCounts = useMemo(() => {
@@ -186,6 +275,10 @@ export const OrganizationManagementPage: React.FC<OrganizationManagementPageProp
       { active: 0, inactive: 0, pending: 0, suspended: 0, watch: 0 } as Record<string, number>,
     )
   }, [organizations])
+
+  const partnerLookup = useMemo(() => {
+    return new Map(partners.map((partner) => [partner.id, partner.name]))
+  }, [partners])
 
   const filteredOrganizations = useMemo(() => {
     return organizations.filter((org) => {
@@ -201,17 +294,23 @@ export const OrganizationManagementPage: React.FC<OrganizationManagementPageProp
 
   const sortedOrganizations = useMemo(() => {
     return [...filteredOrganizations].sort((a, b) => {
-      const aVal = a[sortKey] || ''
-      const bVal = b[sortKey] || ''
+      const aVal =
+        sortKey === 'partnerName'
+          ? partnerLookup.get(a.transformationPartnerId || '') || ''
+          : a[sortKey as keyof OrganizationRecord] || ''
+      const bVal =
+        sortKey === 'partnerName'
+          ? partnerLookup.get(b.transformationPartnerId || '') || ''
+          : b[sortKey as keyof OrganizationRecord] || ''
       if (aVal === bVal) return 0
       if (sortDir === 'asc') return aVal > bVal ? 1 : -1
       return aVal < bVal ? 1 : -1
     })
-  }, [filteredOrganizations, sortDir, sortKey])
+  }, [filteredOrganizations, partnerLookup, sortDir, sortKey])
 
   const partnerAssignmentCounts = useMemo(() => {
     return organizations.reduce((acc, org) => {
-      const key = (org.assignedPartnerName || org.transformationPartner || '').trim()
+      const key = (org.transformationPartnerId || '').trim()
       if (key) {
         acc[key] = (acc[key] || 0) + 1
       }
@@ -246,27 +345,15 @@ export const OrganizationManagementPage: React.FC<OrganizationManagementPageProp
     setSortDir('asc')
   }
 
-  const handleCloseViewModal = () => {
-    viewModal.onClose()
-    setViewOrg(null)
-    setMemberStats(null)
-  }
-
   const handleViewOrganization = (org: OrganizationRecord) => {
-    setViewOrg(org)
-    setMemberStats(null)
-    viewModal.onOpen()
+    const organizationKey = org.code || org.id
+    if (!organizationKey) return
+    navigate(`/super-admin/organization/${organizationKey}`)
   }
 
   const handleEditOrganization = (org: OrganizationRecord) => {
     setSelectedOrg(org)
     editModal.onOpen()
-  }
-
-  const handleEditFromView = () => {
-    if (!viewOrg) return
-    handleCloseViewModal()
-    handleEditOrganization(viewOrg)
   }
 
   const handleOrganizationUpdated = async (updates: OrganizationRecord) => {
@@ -349,7 +436,9 @@ export const OrganizationManagementPage: React.FC<OrganizationManagementPageProp
                         </Th>
                         <Th>Team size</Th>
                         <Th>Status</Th>
-                        <Th>Transformation partner</Th>
+                        <Th cursor="pointer" onClick={() => handleSort('partnerName')}>
+                          Transformation partner
+                        </Th>
                         <Th>Created</Th>
                       </Tr>
                     </Thead>
@@ -372,7 +461,9 @@ export const OrganizationManagementPage: React.FC<OrganizationManagementPageProp
                                 <MenuList>
                                   <MenuItem onClick={() => handleViewOrganization(org)}>View Organisation</MenuItem>
                                   <MenuItem onClick={() => handleEditOrganization(org)}>Edit organization</MenuItem>
-                                  <MenuItem onClick={() => { setSelectedOrg(org); assignModal.onOpen() }}>Assign partner</MenuItem>
+                                  <MenuItem onClick={() => { setSelectedOrg(org); assignMentorModal.onOpen() }}>Assign mentor</MenuItem>
+                                  <MenuItem onClick={() => { setSelectedOrg(org); assignAmbassadorModal.onOpen() }}>Assign ambassador</MenuItem>
+                                  <MenuItem onClick={() => { setSelectedOrg(org); assignPartnerModal.onOpen() }}>Assign partner</MenuItem>
                                   <MenuItem onClick={() => { setPendingDelete(org); confirmDialog.onOpen() }} color="red.500">
                                     Delete
                                   </MenuItem>
@@ -383,7 +474,7 @@ export const OrganizationManagementPage: React.FC<OrganizationManagementPageProp
                             <Td>{org.code}</Td>
                             <Td>{org.teamSize || 0}</Td>
                             <Td>{renderStatusBadge(org.status)}</Td>
-                            <Td>{org.transformationPartner || 'Unassigned'}</Td>
+                            <Td>{partnerLookup.get(org.transformationPartnerId || '') || 'Unassigned'}</Td>
                             <Td>{createdAt}</Td>
                           </Tr>
                         )
@@ -439,16 +530,6 @@ export const OrganizationManagementPage: React.FC<OrganizationManagementPageProp
         onCreated={handleOrganizationCreated}
         adminId={adminId}
         adminName={adminName}
-        partners={partners}
-        partnerAssignmentCounts={partnerAssignmentCounts}
-      />
-      <OrganizationDetailsModal
-        isOpen={viewModal.isOpen}
-        onClose={handleCloseViewModal}
-        organization={viewOrg}
-        memberStats={memberStats}
-        isLoadingStats={isLoadingStats}
-        onEdit={viewOrg ? handleEditFromView : undefined}
       />
       <EditOrganizationModal
         isOpen={editModal.isOpen}
@@ -458,13 +539,12 @@ export const OrganizationManagementPage: React.FC<OrganizationManagementPageProp
         }}
         organization={selectedOrg || undefined}
         onUpdated={handleOrganizationUpdated}
-        partnerAssignmentCounts={partnerAssignmentCounts}
       />
       <AssignPartnerModal
-        isOpen={assignModal.isOpen}
+        isOpen={assignPartnerModal.isOpen}
         onClose={() => {
           setSelectedOrg(null)
-          assignModal.onClose()
+          assignPartnerModal.onClose()
         }}
         organization={selectedOrg || undefined}
         onSubmit={handleAssignPartner}
@@ -472,6 +552,30 @@ export const OrganizationManagementPage: React.FC<OrganizationManagementPageProp
         isLoadingPartners={isLoadingPartners}
         partnersError={partnersError}
         partnerAssignmentCounts={partnerAssignmentCounts}
+      />
+      <AssignMentorModal
+        isOpen={assignMentorModal.isOpen}
+        onClose={() => {
+          setSelectedOrg(null)
+          assignMentorModal.onClose()
+        }}
+        organization={selectedOrg || undefined}
+        onSubmit={handleAssignMentor}
+        mentors={mentors}
+        isLoadingMentors={isLoadingMentors}
+        mentorsError={mentorsError}
+      />
+      <AssignAmbassadorModal
+        isOpen={assignAmbassadorModal.isOpen}
+        onClose={() => {
+          setSelectedOrg(null)
+          assignAmbassadorModal.onClose()
+        }}
+        organization={selectedOrg || undefined}
+        onSubmit={handleAssignAmbassador}
+        ambassadors={ambassadors}
+        isLoadingAmbassadors={isLoadingAmbassadors}
+        ambassadorsError={ambassadorsError}
       />
       <ConfirmationDialog
         isOpen={confirmDialog.isOpen}

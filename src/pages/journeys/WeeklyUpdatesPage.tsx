@@ -35,8 +35,8 @@ import {
   useDisclosure,
   useToast,
 } from '@chakra-ui/react'
-import { AlertTriangle, CheckCircle, ChevronLeft, ChevronRight, Lock, Plus, ShieldCheck } from 'lucide-react'
-import { addDoc, collection, doc, getDocs, onSnapshot, query, serverTimestamp, setDoc, where } from 'firebase/firestore'
+import { AlertTriangle, CheckCircle, Lock, Plus, ShieldCheck } from 'lucide-react'
+import { addDoc, collection, doc, getDoc, getDocs, onSnapshot, query, serverTimestamp, setDoc, where } from 'firebase/firestore'
 import { addDays, format } from 'date-fns'
 import { removeUndefinedFields } from '@/utils/firestore'
 import { getIsoWeekNumber } from '@/utils/date'
@@ -49,17 +49,15 @@ import { awardChecklistPoints, revokeChecklistPoints } from '@/services/pointsSe
 import { SurfaceCard } from '@/components/primitives/SurfacePrimitives'
 import { IoradTutorialModal } from '@/components/modals/IoradTutorialModal'
 import { checkTutorialCompletion, markTutorialComplete } from '@/services/tutorialService'
+import { ORG_COLLECTION } from '@/constants/organizations'
+import {
+  JOURNEY_LABELS,
+  JOURNEY_MONTH_COUNTS,
+  MONTH_BASED_JOURNEYS,
+  resolveJourneyType,
+} from '@/utils/journeyType'
 
 const DEFAULT_WEEKLY_TARGET = JOURNEY_META['6W'].weeklyTarget
-
-const JOURNEY_LABELS: Record<JourneyType, string> = {
-  '4W': '4-Week Intro',
-  '6W': '6-Week Full',
-  '3M': '3-Month Program',
-  '6M': '6-Month Program',
-  '9M': '9-Month Program',
-  '12M': '12-Month Program',
-}
 
 type ActivityStatus = 'not_started' | 'pending' | 'completed'
 
@@ -266,7 +264,7 @@ const WeeklyChecklistPage: React.FC = () => {
   }, [journeyStartDate, journey]);
 
   const isMonthBasedJourney = useMemo(() => {
-    return journey ? journey.programDurationWeeks >= 12 : false;
+    return journey ? MONTH_BASED_JOURNEYS.includes(journey.journeyType) : false;
   }, [journey]);
 
   const currentMonthNumber = useMemo(() => {
@@ -274,24 +272,11 @@ const WeeklyChecklistPage: React.FC = () => {
     return getMonthNumber(journey.currentWeek);
   }, [journey]);
 
-  const selectedMonthNumber = useMemo(() => {
-    return getMonthNumber(selectedWeek);
-  }, [selectedWeek]);
-
   const totalMonths = useMemo(() => {
     if (!journey) return 1;
-    return Math.ceil(journey.programDurationWeeks / 4);
-  }, [journey]);
-
-  const weekRangeLabel = useCallback(
-    (weekNumber: number) => {
-      if (!journeyStartDate) return null;
-      const weekStart = addDays(journeyStartDate, (weekNumber - 1) * 7);
-      const weekEnd = addDays(weekStart, 6);
-      return `${format(weekStart, 'MMM d')} - ${format(weekEnd, 'MMM d')}`;
-    },
-    [journeyStartDate],
-  );
+    if (!isMonthBasedJourney) return 1;
+    return JOURNEY_MONTH_COUNTS[journey.journeyType];
+  }, [journey, isMonthBasedJourney]);
 
   const getImpactLogDateRange = useCallback(
     (weekNumber: number) => {
@@ -320,7 +305,32 @@ const WeeklyChecklistPage: React.FC = () => {
     try {
       // Free users are automatically assigned to the 4W journey.
       const isFreeTierUser = isFreeUser(profile);
-      const journeyType = isFreeTierUser ? "4W" : profile.journeyType || "6W";
+      let orgJourneyType: JourneyType | null = null;
+
+      if (profile.companyId) {
+        const orgSnap = await getDoc(doc(db, ORG_COLLECTION, profile.companyId));
+        if (orgSnap.exists()) {
+          const orgData = orgSnap.data() as {
+            journeyType?: JourneyType;
+            programDurationWeeks?: number;
+            programDuration?: number | string | null;
+          };
+          const rawDuration = orgData?.programDuration ?? null;
+          const durationNumber = rawDuration === null ? null : Number(rawDuration);
+          const programDurationWeeks = Number.isNaN(durationNumber)
+            ? orgData?.programDurationWeeks ?? null
+            : orgData?.programDurationWeeks ?? (durationNumber ? durationNumber * 4 : null);
+          orgJourneyType = resolveJourneyType({
+            journeyType: orgData?.journeyType,
+            programDurationWeeks,
+            programDuration: durationNumber,
+          })
+        }
+      }
+
+      const journeyType: JourneyType = isFreeTierUser && !profile.companyId
+        ? '4W'
+        : (orgJourneyType ?? (profile.journeyType as JourneyType) ?? '6W');
       const meta = JOURNEY_META[journeyType];
 
       const journeyConfig: JourneyConfig = {
@@ -332,6 +342,14 @@ const WeeklyChecklistPage: React.FC = () => {
 
       setJourney(journeyConfig);
       setSelectedWeek(journeyConfig.currentWeek);
+
+      if (profile.companyId && profile.journeyType !== journeyType) {
+        await setDoc(
+          doc(db, 'profiles', profile.id),
+          { journeyType },
+          { merge: true },
+        );
+      }
     } catch (err) {
       console.error(err);
       setError('Unable to load your journey settings.');
@@ -801,168 +819,6 @@ const WeeklyChecklistPage: React.FC = () => {
     }
   }
 
-  const renderWeekSelector = () => {
-    if (!journey) return null;
-
-    const { journeyType, currentWeek } = journey;
-    const meta = JOURNEY_META[journeyType];
-    const totalWeeks = meta.weeks;
-
-    if (journeyType === '4W' || journeyType === '6W') {
-      const weeks = Array.from({ length: totalWeeks }, (_, idx) => idx + 1);
-      return (
-        <HStack spacing={2} wrap="wrap">
-          {weeks.map(week => {
-            const isLocked = week > currentWeek;
-            const isCompleted = week < currentWeek;
-            return (
-              <Tooltip
-                key={week}
-                label={isLocked ? 'Locked until you reach this week' : isCompleted ? 'Completed week' : 'Current week'}
-              >
-                <Button
-                  size="sm"
-                  variant={selectedWeek === week ? 'solid' : 'outline'}
-                  colorScheme={selectedWeek === week ? 'teal' : 'gray'}
-                  leftIcon={isCompleted ? <Icon as={CheckCircle} /> : undefined}
-                  rightIcon={isLocked ? <Icon as={Lock} /> : undefined}
-                  onClick={() => setSelectedWeek(week)}
-                  isDisabled={isLocked}
-                >
-                  Week {week}
-                </Button>
-              </Tooltip>
-            );
-          })}
-        </HStack>
-      );
-    }
-
-    const currentMonth = selectedMonthNumber;
-    const weeksInMonth = Array.from({ length: 4 }, (_, i) => (currentMonth - 1) * 4 + i + 1).filter(
-      week => week <= totalWeeks,
-    );
-    const months = Array.from({ length: totalMonths }, (_, idx) => monthMeta(idx + 1));
-
-    return (
-      <Stack spacing={3} bg="gray.900" p={4} borderRadius="lg">
-        <Flex align="center" justify="space-between">
-          <Button
-            size="sm"
-            leftIcon={<Icon as={ChevronLeft} />}
-            isDisabled={currentMonth <= 1}
-            onClick={() => {
-              const previousMonth = Math.max(1, currentMonth - 1);
-              const previousMeta = monthMeta(previousMonth);
-              setSelectedWeek(previousMeta.startWeek);
-            }}
-          >
-            Previous Month
-          </Button>
-          <Text color="white" fontWeight="bold">
-            Month {currentMonth} of {totalMonths}
-          </Text>
-          <Button
-            size="sm"
-            rightIcon={<Icon as={ChevronRight} />}
-            isDisabled={currentMonth >= totalMonths || currentMonth >= currentMonthNumber}
-            onClick={() => {
-              const nextMonth = Math.min(totalMonths, currentMonth + 1);
-              const nextMeta = monthMeta(nextMonth);
-              const nextWeek = nextMonth === currentMonthNumber ? journey.currentWeek : nextMeta.startWeek;
-              if (nextMonth <= currentMonthNumber) {
-                setSelectedWeek(nextWeek);
-              }
-            }}
-          >
-            Next Month
-          </Button>
-        </Flex>
-        <SimpleGrid columns={{ base: 1, md: 3 }} spacing={2}>
-          {months.map(month => {
-            const isLocked = month.status === 'locked';
-            const isCurrent = month.status === 'current';
-            const monthLabel = `Month ${month.month}`;
-            const rangeLabel = `Weeks ${month.startWeek}-${month.endWeek}`;
-            const buttonLabel = isLocked
-              ? `${monthLabel} • Locked`
-              : month.status === 'completed'
-                ? `${monthLabel} • Completed`
-                : `${monthLabel} • Current`;
-            return (
-              <Tooltip
-                key={month.month}
-                label={
-                  isLocked
-                    ? `Unlocks once you reach Week ${month.startWeek}`
-                    : `${rangeLabel} (${month.completionPercent}% complete)`
-                }
-              >
-                <Button
-                  size="sm"
-                  variant={isCurrent ? 'solid' : 'outline'}
-                  colorScheme={month.status === 'completed' ? 'green' : isCurrent ? 'teal' : 'gray'}
-                  leftIcon={month.status === 'completed' ? <Icon as={CheckCircle} /> : undefined}
-                  rightIcon={isLocked ? <Icon as={Lock} /> : undefined}
-                  isDisabled={isLocked}
-                  onClick={() => {
-                    const nextWeek = month.month === currentMonthNumber ? journey.currentWeek : month.startWeek;
-                    setSelectedWeek(nextWeek);
-                  }}
-                >
-                  <Stack spacing={0} align="flex-start">
-                    <Text>{buttonLabel}</Text>
-                    <Text fontSize="xs" color={isCurrent ? 'whiteAlpha.900' : 'gray.300'}>
-                      {rangeLabel}
-                    </Text>
-                  </Stack>
-                </Button>
-              </Tooltip>
-            );
-          })}
-        </SimpleGrid>
-        <HStack spacing={2} justify="center" wrap="wrap">
-          {weeksInMonth.map(weekNumber => {
-            const isLocked = weekNumber > currentWeek;
-            const isCompleted = weekNumber < currentWeek;
-            const weekLabel = `Month ${getMonthNumber(weekNumber)} · Week ${weekNumber}`;
-            const relativeWeek = weekNumber - (currentMonth - 1) * 4;
-            const rangeLabel = weekRangeLabel(weekNumber);
-            return (
-              <Tooltip
-                key={weekNumber}
-                label={
-                  isLocked
-                    ? 'Locked until you reach this week'
-                    : rangeLabel
-                      ? `${rangeLabel} • Week ${relativeWeek} of 4`
-                      : `Week ${relativeWeek} of 4`
-                }
-              >
-                <Button
-                  variant={selectedWeek === weekNumber ? 'solid' : 'outline'}
-                  colorScheme={selectedWeek === weekNumber ? 'teal' : 'gray'}
-                  size="sm"
-                  leftIcon={isCompleted ? <Icon as={CheckCircle} /> : undefined}
-                  rightIcon={isLocked ? <Icon as={Lock} /> : undefined}
-                  isDisabled={isLocked}
-                  onClick={() => setSelectedWeek(weekNumber)}
-                >
-                  <Stack spacing={0} align="flex-start">
-                    <Text>{weekLabel}</Text>
-                    <Text fontSize="xs" color="gray.400">
-                      Week {relativeWeek} of 4
-                    </Text>
-                  </Stack>
-                </Button>
-              </Tooltip>
-            )
-          })}
-        </HStack>
-      </Stack>
-    );
-  };
-
   const renderActivityCard = (activity: ActivityState) => {
     const disabled = isWeekLocked
     const requiresPartnerApproval = journey?.isPaid && activity.requiresApproval
@@ -1306,21 +1162,6 @@ const WeeklyChecklistPage: React.FC = () => {
 
   return (
     <Stack spacing={6} color="text.primary">
-      <SurfaceCard borderColor="border.card">
-        <Stack spacing={4}>
-          <Flex align="center" justify="space-between">
-            <Heading size="sm" color="text.primary">
-              {isMonthBasedJourney ? 'Month & week navigation' : 'Week navigation'}
-            </Heading>
-            {isWeekLocked && (
-              <Tag colorScheme="warning" borderRadius="full" size="sm">
-                <Icon as={Lock} mr={1} /> Locked for review
-              </Tag>
-            )}
-          </Flex>
-          {renderWeekSelector()}
-        </Stack>
-      </SurfaceCard>
       {renderJourneyHeader()}
       {renderWeekSummary()}
       {error && (

@@ -50,7 +50,13 @@ const buildProfilesConstraints = (context: LeaderboardContext | null): QueryCons
     case 'admin_all':
       return []
     case 'organization':
-      return context.organizationId ? [where('companyId', '==', context.organizationId)] : null
+      if (context.organizationId) {
+        return [where('companyId', '==', context.organizationId)]
+      }
+      if (context.organizationCode) {
+        return [where('companyCode', '==', context.organizationCode)]
+      }
+      return null
     case 'village':
       return context.villageId ? [where('villageId', '==', context.villageId)] : null
     case 'cluster':
@@ -67,7 +73,10 @@ const buildTransactionConstraints = (context: LeaderboardContext | null): QueryC
   if (!context) return null
 
   const constraints: QueryConstraint[] = []
-  if (context.type === 'organization' && context.organizationId) {
+  if (context.type === 'organization') {
+    if (!context.organizationId) {
+      return null
+    }
     constraints.push(where('companyId', '==', context.organizationId))
   }
 
@@ -91,10 +100,18 @@ export const useLeaderboardData = ({
   const [challengesLoaded, setChallengesLoaded] = useState(false)
 
   useEffect(() => {
+    if (context?.type === 'organization' && !context.organizationId && !context.organizationCode) {
+      console.warn('[Leaderboard] Missing organization identifier for leaderboard query.')
+      setProfiles([])
+      setProfilesLoaded(true)
+      return undefined
+    }
+
     const constraints = buildProfilesConstraints(context)
     if (!constraints) {
       setProfiles([])
-      setProfilesLoaded(Boolean(context) && context?.type !== 'free')
+      const contextType = context?.type
+      setProfilesLoaded(Boolean(contextType) && contextType !== 'free')
       return undefined
     }
 
@@ -110,10 +127,18 @@ export const useLeaderboardData = ({
   }, [context])
 
   useEffect(() => {
+    if (context?.type === 'organization' && !context.organizationId) {
+      console.warn('[Leaderboard] Missing organizationId for transaction query.')
+      setTransactions([])
+      setTransactionsLoaded(true)
+      return undefined
+    }
+
     const constraints = buildTransactionConstraints(context)
     if (!constraints || context?.type === 'free') {
       setTransactions([])
-      setTransactionsLoaded(Boolean(context) && context?.type !== 'free')
+      const contextType = context?.type
+      setTransactionsLoaded(Boolean(contextType) && contextType !== 'free')
       return undefined
     }
 

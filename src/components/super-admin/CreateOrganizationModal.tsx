@@ -1,11 +1,25 @@
-import React, { ChangeEvent, useEffect, useMemo, useRef, useState } from 'react'
+import React, { useEffect, useMemo, useState } from 'react'
 import {
   Alert,
+  AlertDialog,
+  AlertDialogBody,
+  AlertDialogContent,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogOverlay,
   AlertIcon,
+  Accordion,
+  AccordionButton,
+  AccordionIcon,
+  AccordionItem,
+  AccordionPanel,
   Badge,
   Box,
   Button,
-  Divider,
+  Checkbox,
+  Editable,
+  EditableInput,
+  EditablePreview,
   Flex,
   FormControl,
   FormErrorMessage,
@@ -18,6 +32,7 @@ import {
   Input,
   InputGroup,
   InputLeftAddon,
+  InputRightElement,
   Modal,
   ModalBody,
   ModalCloseButton,
@@ -27,33 +42,35 @@ import {
   ModalOverlay,
   Select,
   Stack,
+  Table,
+  Tbody,
+  Td,
   Text,
-  Textarea,
+  Th,
+  Thead,
   Tooltip,
+  Tr,
   useDisclosure,
   useToast,
 } from '@chakra-ui/react'
 import { InfoIcon } from '@chakra-ui/icons'
-import { ChevronDown, ChevronUp, Eye, Plus, Upload, X } from 'lucide-react'
+import { ChevronDown, ChevronUp, Eye } from 'lucide-react'
 import {
   BulkInvitationResult,
   CourseOption,
+  InvitationPayload,
   InviteDraft,
-  OrganizationLead,
   OrganizationRecord,
   ProgramDurationOption,
 } from '@/types/admin'
 import {
   createOrganizationWithInvitations,
   determineClusterFromTeamSize,
-  fetchAmbassadors,
   fetchAvailableCourses,
-  fetchMentors,
   generateOrganizationCode,
   validateOrganizationCodeUnique,
 } from '@/services/organizationService'
 import { InvitationResultsModal } from './InvitationResultsModal'
-import { downloadCSVTemplate, parseInvitationCSV } from '@/utils/csvUtils'
 import {
   MonthlyCourseAssignments,
   buildMonthlyAssignmentsFromArray,
@@ -63,8 +80,15 @@ import {
   getMonthAvailabilityStatus,
   getMonthDateRange,
 } from '@/utils/monthlyCourseAssignments'
-
-const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+import { downloadCSVTemplate, parseInvitationCSV } from '@/utils/csvUtils'
+import { normalizeEmail } from '@/utils/email'
+import {
+  clusterBoundaries,
+  clusterTiers,
+  getClusterDisplayName,
+  getClusterShortName,
+  getClusterTierByName,
+} from '@/utils/clusterTiers'
 
 interface CreateOrganizationModalProps {
   isOpen: boolean
@@ -72,8 +96,6 @@ interface CreateOrganizationModalProps {
   onCreated?: (organization: OrganizationRecord) => void
   adminName?: string
   adminId?: string
-  partners?: { id: string; name: string; email?: string }[]
-  partnerAssignmentCounts?: Record<string, number>
 }
 
 const programDurations: ProgramDurationOption[] = [
@@ -88,22 +110,42 @@ const emptyOrganization: OrganizationRecord = {
   name: '',
   code: '',
   status: 'pending',
-  teamSize: 0,
-  village: '',
-  cluster: '',
-  description: '',
   courseAssignments: [],
   programDuration: undefined,
   monthlyCourseAssignments: {},
   courseAssignmentStructure: 'monthly',
+  teamSize: 0,
+  cluster: '',
 }
 
-const blankInvite: InviteDraft = {
-  id: 'invite-0',
-  name: '',
-  email: '',
-  role: 'user',
-  method: 'email',
+const inviteRoleOptions: InviteDraft['role'][] = ['user', 'mentor', 'ambassador', 'team_leader']
+const inviteMethodOptions: InviteDraft['method'][] = ['email', 'one_time_code']
+const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+const nameRegex = /^[A-Za-z][A-Za-z\s'-]*$/
+const commonEmailDomains = ['gmail.com', 'outlook.com', 'hotmail.com', 'yahoo.com', 'icloud.com']
+
+type InviteDraftField = 'name' | 'email' | 'role' | 'method'
+type InviteDraftErrors = Partial<Record<InviteDraftField, string>>
+type InviteDraftEntry = InviteDraft & {
+  isValid: boolean
+  errors: InviteDraftErrors
+  source?: 'manual' | 'csv'
+  rowNumber?: number
+  addedAt: number
+  isNew?: boolean
+}
+
+const formatName = (value: string) =>
+  value
+    .trim()
+    .split(/\s+/)
+    .map((segment) => segment.charAt(0).toUpperCase() + segment.slice(1))
+    .join(' ')
+
+const normalizeMethodForEmail = (email: string, current: InviteDraft['method']): InviteDraft['method'] => {
+  if (!email) return 'one_time_code'
+  if (current === 'one_time_code') return 'email'
+  return current
 }
 
 export const CreateOrganizationModal: React.FC<CreateOrganizationModalProps> = ({
@@ -112,21 +154,30 @@ export const CreateOrganizationModal: React.FC<CreateOrganizationModalProps> = (
   onCreated,
   adminId,
   adminName,
-  partners = [],
-  partnerAssignmentCounts,
 }) => {
   const toast = useToast()
   const [form, setForm] = useState<OrganizationRecord>(emptyOrganization)
-  const [inviteDrafts, setInviteDrafts] = useState<InviteDraft[]>([blankInvite])
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [courses, setCourses] = useState<CourseOption[]>([])
-  const [mentors, setMentors] = useState<OrganizationLead[]>([])
-  const [ambassadors, setAmbassadors] = useState<OrganizationLead[]>([])
   const [results, setResults] = useState<BulkInvitationResult | null>(null)
-  const [partnerSearch, setPartnerSearch] = useState('')
   const [monthlyAssignments, setMonthlyAssignments] = useState<MonthlyCourseAssignments>({})
+  const [inviteDrafts, setInviteDrafts] = useState<InviteDraftEntry[]>([])
+  const [inviteError, setInviteError] = useState<string | null>(null)
+  const [manualEntry, setManualEntry] = useState({
+    name: '',
+    email: '',
+    role: 'user' as InviteDraft['role'],
+    method: 'one_time_code' as InviteDraft['method'],
+  })
+  const [manualErrors, setManualErrors] = useState<InviteDraftErrors>({})
+  const [selectedDraftIds, setSelectedDraftIds] = useState<string[]>([])
+  const [recentImportIds, setRecentImportIds] = useState<string[]>([])
+  const [lastImportCount, setLastImportCount] = useState(0)
+  const bulkDeleteDialog = useDisclosure()
+  const clearAllDialog = useDisclosure()
+  const bulkDeleteCancelRef = React.useRef<HTMLButtonElement | null>(null)
+  const clearAllCancelRef = React.useRef<HTMLButtonElement | null>(null)
   const resultsModal = useDisclosure()
-  const fileInputRef = useRef<HTMLInputElement | null>(null)
 
   const courseLimit = useMemo(() => {
     const option = programDurations.find((duration) => duration.value === form.programDuration)
@@ -171,27 +222,72 @@ export const CreateOrganizationModal: React.FC<CreateOrganizationModalProps> = (
       })).filter((entry) => !entry.courseId),
     [monthlyAssignments, courseLimit],
   )
+  const inviteStats = useMemo(() => {
+    const total = inviteDrafts.length
+    const valid = inviteDrafts.filter((draft) => draft.isValid).length
+    const invalid = total - valid
+    return { total, valid, invalid }
+  }, [inviteDrafts])
 
-  const sortedPartners = useMemo(
-    () => [...partners].sort((a, b) => a.name.localeCompare(b.name)),
-    [partners],
+  const sortedCourses = useMemo(
+    () => [...courses].sort((a, b) => a.title.localeCompare(b.title)),
+    [courses],
   )
-
-  const filteredPartners = useMemo(() => {
-    const term = partnerSearch.trim().toLowerCase()
-    if (!term) return sortedPartners
-    return sortedPartners.filter((item) => {
-      const email = item.email?.toLowerCase() ?? ''
-      return item.name.toLowerCase().includes(term) || email.includes(term)
-    })
-  }, [partnerSearch, sortedPartners])
-
-  const buildPartnerLabel = (item: OrganizationLead) => {
-    const emailSuffix = item.email ? ` — ${item.email}` : ''
-    const assignmentCount = partnerAssignmentCounts?.[item.name] ?? 0
-    const countSuffix = assignmentCount > 1 ? ` • ${assignmentCount} orgs` : ''
-    return `${item.name}${emailSuffix}${countSuffix}`
-  }
+  const clusterDisplayName = useMemo(() => getClusterDisplayName(form.cluster), [form.cluster])
+  const clusterShortName = useMemo(() => getClusterShortName(form.cluster), [form.cluster])
+  const clusterTier = useMemo(() => getClusterTierByName(form.cluster), [form.cluster])
+  const clusterHelperColor = clusterTier.colorScheme === 'gray' ? 'gray.600' : `${clusterTier.colorScheme}.600`
+  const hasValidTeamSize = (form.teamSize || 0) > 0
+  const isClusterAssigned = (form.teamSize || 0) >= 4 && Boolean(form.cluster)
+  const nextBoundary = clusterBoundaries.find((boundary) => boundary > (form.teamSize || 0))
+  const transitionHint = hasValidTeamSize && nextBoundary ? `${nextBoundary - 1}→${nextBoundary}` : null
+  const isClusterBoundary = clusterBoundaries.includes(form.teamSize || 0) && hasValidTeamSize
+  const boundaryTier = clusterTiers.find((tier) => tier.min === form.teamSize)
+  const nextBoundaryTier = boundaryTier
+    ? clusterTiers[clusterTiers.findIndex((tier) => tier.name === boundaryTier.name) + 1]
+    : undefined
+  const clusterProgressMax = 50
+  const clusterProgressValue = Math.min(form.teamSize || 0, clusterProgressMax)
+  const clusterProgressPercent = (clusterProgressValue / clusterProgressMax) * 100
+  const clusterHighlightBg = `${clusterTier.colorScheme}.50`
+  const clusterTooltipContent = (
+    <Box>
+      <Text fontWeight="semibold" mb={2}>
+        Cluster breakdown
+      </Text>
+      <Table size="sm" variant="simple">
+        <Thead>
+          <Tr>
+            <Th>Cluster</Th>
+            <Th>Range</Th>
+            <Th>Badge</Th>
+          </Tr>
+        </Thead>
+        <Tbody>
+          {clusterTiers.map((tier) => (
+            <Tr key={tier.name}>
+              <Td>{tier.shortName}</Td>
+              <Td>{tier.rangeLabel} users</Td>
+              <Td>
+                <Badge colorScheme={tier.colorScheme} variant="subtle">
+                  {tier.shortName}
+                </Badge>
+              </Td>
+            </Tr>
+          ))}
+        </Tbody>
+      </Table>
+      <Text fontSize="xs" color="gray.600" mt={2}>
+        No Cluster (1-3), Kalahari (4-10), Sahara (11-20), Sahel (21-40), Serengeti (41+).
+      </Text>
+    </Box>
+  )
+  const clusterHelperText = isClusterAssigned
+    ? `Assigned to ${clusterShortName} based on cohort size.`
+    : 'No cluster assigned (1-3 users).'
+  const boundaryAlertText = nextBoundaryTier
+    ? `Cluster tier: ${clusterShortName}. Adding 1 more user keeps you in ${clusterShortName}; ${nextBoundaryTier.shortName} begins at ${nextBoundaryTier.min} users.`
+    : `Cluster tier: ${clusterShortName}. You're in the highest tier.`
 
   useEffect(() => {
     if (form.name && !form.code) {
@@ -202,25 +298,23 @@ export const CreateOrganizationModal: React.FC<CreateOrganizationModalProps> = (
   useEffect(() => {
     if (!isOpen) {
       setForm(emptyOrganization)
-      setInviteDrafts([blankInvite])
       setCourses([])
-      setMentors([])
-      setAmbassadors([])
       setResults(null)
       setMonthlyAssignments({})
+      setInviteDrafts([])
+      setInviteError(null)
+      setManualEntry({ name: '', email: '', role: 'user', method: 'one_time_code' })
+      setManualErrors({})
+      setSelectedDraftIds([])
+      setRecentImportIds([])
+      setLastImportCount(0)
       return
     }
 
     const fetchData = async () => {
       try {
-        const [courseOptions, mentorOptions, ambassadorOptions] = await Promise.all([
-          fetchAvailableCourses(),
-          fetchMentors(),
-          fetchAmbassadors(),
-        ])
+        const [courseOptions] = await Promise.all([fetchAvailableCourses()])
         setCourses(courseOptions)
-        setMentors(mentorOptions)
-        setAmbassadors(ambassadorOptions)
       } catch (error) {
         console.error(error)
         toast({ title: 'Unable to load form data', status: 'error' })
@@ -259,6 +353,162 @@ export const CreateOrganizationModal: React.FC<CreateOrganizationModalProps> = (
     setForm((prev) => ({ ...prev, teamSize: parsed, cluster }))
   }
 
+  const buildInviteDraftEntry = (draft: InviteDraft, source?: InviteDraftEntry['source'], rowNumber?: number): InviteDraftEntry => ({
+    ...draft,
+    isValid: true,
+    errors: {},
+    source,
+    rowNumber,
+    addedAt: Date.now(),
+    isNew: source === 'csv',
+  })
+
+  const validateInviteDraft = (
+    draft: InviteDraftEntry,
+    emailCounts: Map<string, number>,
+  ): InviteDraftErrors => {
+    const errors: InviteDraftErrors = {}
+    const name = draft.name.trim()
+    if (!name) {
+      errors.name = 'Name is required.'
+    } else if (name.length < 2) {
+      errors.name = 'Name must be at least 2 characters.'
+    } else if (!nameRegex.test(name)) {
+      errors.name = 'Name should not include special characters.'
+    }
+
+    const normalizedEmail = normalizeEmail(draft.email || '')
+    if (draft.method === 'email' && !normalizedEmail) {
+      errors.email = 'Email is required for email invitations.'
+    }
+    if (normalizedEmail && !emailRegex.test(normalizedEmail)) {
+      errors.email = 'Enter a valid email address.'
+    }
+    if (normalizedEmail && (emailCounts.get(normalizedEmail) || 0) > 1) {
+      errors.email = 'Duplicate email detected.'
+    }
+
+    if (!inviteRoleOptions.includes(draft.role)) {
+      errors.role = 'Select a valid role.'
+    }
+    if (!inviteMethodOptions.includes(draft.method)) {
+      errors.method = 'Select a valid invitation method.'
+    }
+    if (draft.method === 'email' && !normalizedEmail) {
+      errors.method = 'Email is required when using email invitations.'
+    }
+
+    return errors
+  }
+
+  const recomputeInviteDrafts = (drafts: InviteDraftEntry[]) => {
+    const emailCounts = drafts.reduce((map, draft) => {
+      const normalized = normalizeEmail(draft.email || '')
+      if (normalized) {
+        map.set(normalized, (map.get(normalized) || 0) + 1)
+      }
+      return map
+    }, new Map<string, number>())
+
+    return drafts.map((draft) => {
+      const errors = validateInviteDraft(draft, emailCounts)
+      return {
+        ...draft,
+        email: normalizeEmail(draft.email || ''),
+        errors,
+        isValid: Object.keys(errors).length === 0,
+      }
+    })
+  }
+
+  const addInviteDrafts = (incoming: InviteDraftEntry[]) => {
+    setInviteDrafts((prev) => recomputeInviteDrafts([...prev, ...incoming]))
+  }
+
+  const updateDraftField = (draftId: string, field: InviteDraftField, value: string) => {
+    setInviteDrafts((prev) => {
+      const nextValue =
+        field === 'role' ? (value as InviteDraft['role']) : field === 'method' ? (value as InviteDraft['method']) : value
+      const next = prev.map((draft) =>
+        draft.id === draftId
+          ? {
+              ...draft,
+              [field]: nextValue,
+              method:
+                field === 'email' ? normalizeMethodForEmail(normalizeEmail(value), draft.method) : draft.method,
+              isNew: draft.isNew && draft.source !== 'csv' ? draft.isNew : false,
+            }
+          : draft,
+      )
+      return recomputeInviteDrafts(next)
+    })
+  }
+
+  const removeDrafts = (draftIds: string[]) => {
+    setInviteDrafts((prev) => recomputeInviteDrafts(prev.filter((draft) => !draftIds.includes(draft.id))))
+    setSelectedDraftIds((prev) => prev.filter((id) => !draftIds.includes(id)))
+  }
+
+  const resetManualEntry = () => {
+    setManualEntry({ name: '', email: '', role: 'user', method: 'one_time_code' })
+    setManualErrors({})
+  }
+
+  const handleInviteFile = async (file?: File | null) => {
+    if (!file) return
+    try {
+      const drafts = await parseInvitationCSV(file)
+      setInviteError(null)
+      const entries = drafts.map((draft, index) => buildInviteDraftEntry(draft, 'csv', index + 2))
+      addInviteDrafts(entries)
+      setRecentImportIds(entries.map((entry) => entry.id))
+      setLastImportCount(entries.length)
+      toast({ title: `Imported ${entries.length} user${entries.length === 1 ? '' : 's'} from CSV`, status: 'success' })
+    } catch (error) {
+      setInviteError(error instanceof Error ? error.message : 'Unable to parse CSV file.')
+    }
+  }
+
+  const validateManualEntry = (entry: typeof manualEntry) => {
+    const draft = buildInviteDraftEntry(
+      {
+        id: 'manual-preview',
+        name: entry.name,
+        email: normalizeEmail(entry.email || ''),
+        role: entry.role,
+        method: entry.method,
+      },
+      'manual',
+    )
+    const emailCounts = new Map<string, number>()
+    const normalized = normalizeEmail(draft.email || '')
+    if (normalized) {
+      emailCounts.set(normalized, 1 + inviteDrafts.filter((existing) => normalizeEmail(existing.email) === normalized).length)
+    }
+    const errors = validateInviteDraft(draft, emailCounts)
+    setManualErrors(errors)
+    return errors
+  }
+
+  const handleAddManualEntry = () => {
+    const errors = validateManualEntry(manualEntry)
+    if (Object.keys(errors).length > 0) {
+      setInviteError('Fix validation errors before adding the user.')
+      return
+    }
+    setInviteError(null)
+    const draft: InviteDraft = {
+      id: `${Date.now()}-${Math.round(Math.random() * 1000)}`,
+      name: formatName(manualEntry.name),
+      email: normalizeEmail(manualEntry.email || ''),
+      role: manualEntry.role,
+      method: manualEntry.method,
+    }
+    addInviteDrafts([buildInviteDraftEntry(draft, 'manual')])
+    resetManualEntry()
+    toast({ title: 'User added. Add another if needed.', status: 'success' })
+  }
+
   const handleMonthlyAssignmentChange = (monthKey: string, courseId: string) => {
     setMonthlyAssignments((prev) => ({
       ...prev,
@@ -278,71 +528,6 @@ export const CreateOrganizationModal: React.FC<CreateOrganizationModalProps> = (
     })
   }
 
-  const handleInviteChange = (id: string, field: keyof InviteDraft, value: string) => {
-    setInviteDrafts((prev) => prev.map((draft) => (draft.id === id ? { ...draft, [field]: value } : draft)))
-  }
-
-  const addInviteDraft = () => {
-    if (inviteDrafts.length >= (form.teamSize || 0)) {
-      toast({ title: 'Invitation count cannot exceed cohort size', status: 'warning' })
-      return
-    }
-    setInviteDrafts((prev) => [
-      ...prev,
-      {
-        ...blankInvite,
-        id: `invite-${Date.now()}`,
-      },
-    ])
-  }
-
-  const removeInviteDraft = (id: string) => {
-    if (inviteDrafts.length === 1) return
-    setInviteDrafts((prev) => prev.filter((draft) => draft.id !== id))
-  }
-
-  const handleCsvUpload = async (event: ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0]
-    if (!file) return
-    try {
-      const drafts = await parseInvitationCSV(file)
-      if (drafts.length > (form.teamSize || drafts.length)) {
-        toast({ title: 'Import exceeds cohort size', status: 'error' })
-        return
-      }
-      setInviteDrafts(drafts)
-      toast({ title: `Imported ${drafts.length} invitations`, status: 'success' })
-    } catch (error) {
-      toast({
-        title: 'Unable to process CSV',
-        description: error instanceof Error ? error.message : 'Unknown error',
-        status: 'error',
-      })
-    } finally {
-      if (fileInputRef.current) fileInputRef.current.value = ''
-    }
-  }
-
-  const validateInvitations = () => {
-    const trimmed = inviteDrafts.filter((draft) => draft.name || draft.email)
-    const emails = new Set<string>()
-    for (const draft of trimmed) {
-      if (!draft.name.trim()) {
-        throw new Error('Invitation name is required')
-      }
-      if (draft.method === 'email') {
-        if (!draft.email.trim()) throw new Error('Email is required for email invitations')
-        if (!emailRegex.test(draft.email.trim())) throw new Error(`Invalid email: ${draft.email}`)
-        if (emails.has(draft.email.trim())) throw new Error(`Duplicate email: ${draft.email}`)
-        emails.add(draft.email.trim())
-      }
-    }
-    if (trimmed.length > (form.teamSize || 0)) {
-      throw new Error('Invitations cannot exceed cohort size')
-    }
-    return trimmed
-  }
-
   const handleSubmit = async () => {
     try {
       if (!form.name || form.name.length < 3) throw new Error('Organization name must be at least 3 characters')
@@ -351,12 +536,15 @@ export const CreateOrganizationModal: React.FC<CreateOrganizationModalProps> = (
       const isUnique = await validateOrganizationCodeUnique(form.code)
       if (!isUnique) throw new Error('Organization code is already in use')
       if (!form.programDuration) throw new Error('Program duration is required')
-      if (!form.teamSize || form.teamSize <= 0) throw new Error('Cohort size must be greater than 0')
+      if (!form.teamSize || form.teamSize <= 0) {
+        throw new Error('Cohort size must be greater than 0 to assign a cluster')
+      }
       if (courseLimit && emptyMonths.length) {
         throw new Error(`Please assign a course for each of the ${courseLimit} month(s)`)
       }
-
-      const invitations = validateInvitations()
+      if (inviteDrafts.some((draft) => !draft.isValid)) {
+        throw new Error('Resolve invitation errors before submitting.')
+      }
 
       setIsSubmitting(true)
       const assignmentArray = getAssignedCourseIdsFromMonthlyAssignments(monthlyAssignments, courseLimit)
@@ -370,15 +558,17 @@ export const CreateOrganizationModal: React.FC<CreateOrganizationModalProps> = (
         programDuration: form.programDuration,
       }
 
+      const invitationPayloads: InvitationPayload[] = inviteDrafts.map((draft) => ({
+        name: draft.name,
+        email: draft.email || undefined,
+        role: draft.role,
+        method: draft.method,
+        organizationId: '',
+      }))
+
       const { organizationId, invitationResult } = await createOrganizationWithInvitations(
         organizationPayload,
-        invitations.map((invite) => ({
-          name: invite.name.trim(),
-          email: invite.email.trim() || undefined,
-          role: invite.role,
-          method: invite.method,
-          organizationId: '',
-        })),
+        invitationPayloads,
         { adminId, adminName },
       )
 
@@ -390,7 +580,11 @@ export const CreateOrganizationModal: React.FC<CreateOrganizationModalProps> = (
         setResults(invitationResult)
         resultsModal.onOpen()
       }
-      toast({ title: 'Organization created successfully', status: 'success' })
+      toast({
+        title: 'Organization created successfully',
+        description: `Cluster: ${clusterDisplayName}`,
+        status: 'success',
+      })
       onClose()
     } catch (error) {
       toast({
@@ -403,8 +597,6 @@ export const CreateOrganizationModal: React.FC<CreateOrganizationModalProps> = (
     }
   }
 
-  const invitationCountColor = inviteDrafts.length > (form.teamSize || 0) ? 'red.500' : 'gray.600'
-
   return (
     <>
       <Modal isOpen={isOpen} onClose={onClose} size="5xl" scrollBehavior="inside">
@@ -415,9 +607,9 @@ export const CreateOrganizationModal: React.FC<CreateOrganizationModalProps> = (
           <ModalBody>
             <Stack spacing={8}>
               <Box>
-                <Text fontWeight="bold">1. ORGANIZATION DETAILS</Text>
+                <Text fontWeight="bold">Organization details</Text>
                 <Text color="gray.600" fontSize="sm">
-                  Configure the organization profile, program duration, and leadership assignments.
+                  Configure the organization profile and program duration details.
                 </Text>
               </Box>
 
@@ -457,29 +649,6 @@ export const CreateOrganizationModal: React.FC<CreateOrganizationModalProps> = (
                   </FormControl>
                 </GridItem>
                 <GridItem>
-                  <FormControl>
-                    <FormLabel>Village</FormLabel>
-                    <Input value={form.village} onChange={(e) => updateField('village', e.target.value)} />
-                  </FormControl>
-                </GridItem>
-                <GridItem>
-                  <FormControl>
-                    <FormLabel>Cluster</FormLabel>
-                    <Input value={form.cluster} isReadOnly placeholder="Auto-calculated" />
-                  </FormControl>
-                </GridItem>
-                <GridItem>
-                  <FormControl isRequired>
-                    <FormLabel>Cohort size</FormLabel>
-                    <Input
-                      type="number"
-                      value={form.teamSize || ''}
-                      onChange={(e) => handleTeamSizeChange(e.target.value)}
-                      min={1}
-                    />
-                  </FormControl>
-                </GridItem>
-                <GridItem>
                   <FormControl isRequired>
                     <FormLabel>Program duration</FormLabel>
                     <Select
@@ -501,8 +670,62 @@ export const CreateOrganizationModal: React.FC<CreateOrganizationModalProps> = (
                   </FormControl>
                 </GridItem>
                 <GridItem>
+                  <FormControl isRequired>
+                    <FormLabel>Cohort size</FormLabel>
+                    <Input
+                      type="number"
+                      min={1}
+                      value={form.teamSize || ''}
+                      onChange={(e) => handleTeamSizeChange(e.target.value)}
+                    />
+                    <FormHelperText color={hasValidTeamSize ? clusterHelperColor : 'gray.500'}>
+                      {hasValidTeamSize
+                        ? `Cohort size determines cluster tier: ${clusterDisplayName}.`
+                        : 'Enter a cohort size to preview the cluster tier.'}
+                    </FormHelperText>
+                    {transitionHint ? (
+                      <FormHelperText color="gray.500">Next tier transition: {transitionHint} users</FormHelperText>
+                    ) : null}
+                  </FormControl>
+                </GridItem>
+                <GridItem>
                   <FormControl>
-                    <FormLabel>Program start date</FormLabel>
+                    <FormLabel display="flex" alignItems="center" gap={2}>
+                      Cluster
+                      <Tooltip label={clusterTooltipContent} placement="top" maxW="360px">
+                        <InfoIcon color="gray.400" />
+                      </Tooltip>
+                    </FormLabel>
+                    <InputGroup>
+                      <Input
+                        value={clusterDisplayName}
+                        isReadOnly
+                        placeholder="Auto-calculated from cohort size"
+                      />
+                      {isClusterAssigned ? (
+                        <InputRightElement width="auto" mr={2}>
+                          <Badge colorScheme={clusterTier.colorScheme} variant="subtle">
+                            {clusterShortName}
+                          </Badge>
+                        </InputRightElement>
+                      ) : null}
+                    </InputGroup>
+                    <FormHelperText color={isClusterAssigned ? clusterHelperColor : 'gray.600'}>
+                      {clusterHelperText}
+                    </FormHelperText>
+                  </FormControl>
+                </GridItem>
+                {isClusterBoundary ? (
+                  <GridItem colSpan={{ base: 1, md: 2 }}>
+                    <Alert status="info" borderRadius="md">
+                      <AlertIcon />
+                      {boundaryAlertText}
+                    </Alert>
+                  </GridItem>
+                ) : null}
+                <GridItem>
+                  <FormControl>
+                    <FormLabel>Cohort start date</FormLabel>
                     <Input
                       type="date"
                       value={form.cohortStartDate ? String(form.cohortStartDate) : ''}
@@ -510,45 +733,118 @@ export const CreateOrganizationModal: React.FC<CreateOrganizationModalProps> = (
                     />
                   </FormControl>
                 </GridItem>
-                <GridItem>
-                  <FormControl>
-                    <FormLabel>Transformation partner</FormLabel>
-                    <Input
-                      value={partnerSearch}
-                      onChange={(e) => setPartnerSearch(e.target.value)}
-                      placeholder="Search partners"
-                      mb={2}
-                    />
-                    <Select
-                      placeholder="Select partner"
-                      value={form.assignedPartnerId || ''}
-                      onChange={(e) => {
-                        const partner = partners.find((item) => item.id === e.target.value)
-                        updateField('assignedPartnerId', e.target.value || null)
-                        updateField('assignedPartnerName', partner?.name || null)
-                        updateField('assignedPartnerEmail', partner?.email || null)
-                      }}
-                    >
-                      <option value="">— No partner —</option>
-                      {filteredPartners.map((partner) => (
-                        <option key={partner.id} value={partner.id}>
-                          {buildPartnerLabel(partner)}
-                        </option>
-                      ))}
-                    </Select>
-                    {!filteredPartners.length && (
-                      <FormHelperText color="gray.600">No partners available.</FormHelperText>
-                    )}
-                  </FormControl>
-                </GridItem>
-                <GridItem colSpan={2}>
-                  <FormControl>
-                    <FormLabel>Description</FormLabel>
-                    <Textarea
-                      value={(form as { description?: string }).description || ''}
-                      onChange={(e) => updateField('description', e.target.value)}
-                    />
-                  </FormControl>
+                <GridItem colSpan={{ base: 1, md: 2 }}>
+                  <Accordion allowToggle>
+                    <AccordionItem borderWidth="1px" borderRadius="md" overflow="hidden">
+                      <AccordionButton bg="gray.50">
+                        <Box flex="1" textAlign="left" fontWeight="semibold">
+                          Cluster tier reference guide
+                        </Box>
+                        <AccordionIcon />
+                      </AccordionButton>
+                      <AccordionPanel bg="gray.50">
+                        <Table size="sm" variant="simple">
+                          <Thead>
+                            <Tr>
+                              <Th>Cluster Name</Th>
+                              <Th>Cohort Size Range</Th>
+                              <Th>Color Badge</Th>
+                            </Tr>
+                          </Thead>
+                          <Tbody>
+                            {clusterTiers.map((tier) => (
+                              <Tr key={tier.name} bg={tier.name === clusterDisplayName ? clusterHighlightBg : 'transparent'}>
+                                <Td>
+                                  {tier.shortName}
+                                </Td>
+                                <Td>{tier.rangeLabel} users</Td>
+                                <Td>
+                                  <Badge colorScheme={tier.colorScheme} variant="subtle">
+                                    {tier.shortName}
+                                  </Badge>
+                                </Td>
+                              </Tr>
+                            ))}
+                          </Tbody>
+                        </Table>
+                        <Box mt={4}>
+                          <Text fontSize="sm" fontWeight="semibold" mb={2}>
+                            Cluster progression
+                          </Text>
+                          <Box position="relative" h="10px" bg="gray.200" borderRadius="full" overflow="hidden">
+                            <Flex h="100%">
+                              {clusterTiers.map((tier) => {
+                                const rangeMax = tier.max ?? clusterProgressMax
+                                const rangeStart = Math.max(tier.min, 1)
+                                const cappedMax = Math.min(rangeMax, clusterProgressMax)
+                                const widthPercent =
+                                  ((cappedMax - rangeStart + 1) / clusterProgressMax) * 100
+                                return (
+                                  <Box
+                                    key={tier.name}
+                                    w={`${widthPercent}%`}
+                                    bg={`${tier.colorScheme}.400`}
+                                  />
+                                )
+                              })}
+                            </Flex>
+                            {clusterBoundaries.map((boundary) => {
+                              const left = `${(boundary / clusterProgressMax) * 100}%`
+                              const boundaryTierName =
+                                clusterTiers.find((tier) => tier.min === boundary)?.shortName ?? 'New tier'
+                              return (
+                                <Tooltip
+                                  key={boundary}
+                                  label={`${boundary} users: ${boundaryTierName} begins`}
+                                  placement="top"
+                                >
+                                  <Box
+                                    position="absolute"
+                                    top="-4px"
+                                    left={left}
+                                    transform="translateX(-50%)"
+                                    w="2px"
+                                    h="18px"
+                                    bg="gray.600"
+                                  />
+                                </Tooltip>
+                              )
+                            })}
+                            {hasValidTeamSize ? (
+                              <Tooltip label={`${form.teamSize} users`} placement="top">
+                                <Box
+                                  position="absolute"
+                                  top="-7px"
+                                  left={`${clusterProgressPercent}%`}
+                                  transform="translateX(-50%)"
+                                  w="18px"
+                                  h="18px"
+                                  bg="white"
+                                  borderWidth="2px"
+                                  borderColor={`${clusterTier.colorScheme}.500`}
+                                  borderRadius="full"
+                                />
+                              </Tooltip>
+                            ) : null}
+                          </Box>
+                          <Grid templateColumns="repeat(5, 1fr)" mt={2} fontSize="xs" color="gray.600">
+                            {clusterTiers.map((tier) => (
+                              <Text key={tier.name} textAlign="center">
+                                {tier.shortName}
+                              </Text>
+                            ))}
+                          </Grid>
+                          <HStack justify="space-between" mt={1} fontSize="xs" color="gray.500">
+                            <Text>1-3</Text>
+                            <Text>4</Text>
+                            <Text>11</Text>
+                            <Text>21</Text>
+                            <Text>41+</Text>
+                          </HStack>
+                        </Box>
+                      </AccordionPanel>
+                    </AccordionItem>
+                  </Accordion>
                 </GridItem>
               </Grid>
 
@@ -611,7 +907,7 @@ export const CreateOrganizationModal: React.FC<CreateOrganizationModalProps> = (
                           onChange={(e) => handleMonthlyAssignmentChange(monthKey, e.target.value)}
                           bg="white"
                         >
-                          {courses.map((course) => (
+                          {sortedCourses.map((course) => (
                             <option key={course.id} value={course.id}>
                               {course.title}
                             </option>
@@ -652,6 +948,9 @@ export const CreateOrganizationModal: React.FC<CreateOrganizationModalProps> = (
                         <Text fontSize="sm">Admin preview</Text>
                       </HStack>
                     </HStack>
+                    <Text fontSize="sm" color="gray.600" mb={3}>
+                      Cluster assignment: {clusterDisplayName}
+                    </Text>
                     <Stack spacing={2}>
                       {monthlySummary.map((entry) => (
                         <Flex key={entry.month} justify="space-between" align="center">
@@ -703,49 +1002,386 @@ export const CreateOrganizationModal: React.FC<CreateOrganizationModalProps> = (
                 )}
               </Box>
 
-              <Grid templateColumns={{ base: '1fr', md: 'repeat(3, 1fr)' }} gap={4}>
-                <GridItem>
+              <Box>
+                <Text fontWeight="medium" mb={2}>
+                  User addition
+                </Text>
+                <Stack spacing={3}>
                   <FormControl>
-                    <FormLabel>Mentor</FormLabel>
-                    <Select
-                      placeholder="Select mentor"
-                      value={form.assignedMentorId || ''}
+                    <FormLabel>Upload CSV</FormLabel>
+                    <Input
+                      type="file"
+                      accept=".csv"
                       onChange={(e) => {
-                        const mentor = mentors.find((m) => m.id === e.target.value)
-                        updateField('assignedMentorId', mentor?.id || null)
-                        updateField('assignedMentorName', mentor?.name || null)
-                        updateField('assignedMentorEmail', mentor?.email || null)
+                        const file = e.target.files?.[0]
+                        void handleInviteFile(file)
+                        e.target.value = ''
                       }}
-                    >
-                      {mentors.map((mentor) => (
-                        <option key={mentor.id} value={mentor.id}>
-                          {mentor.name}
-                        </option>
-                      ))}
-                    </Select>
+                    />
+                    <FormHelperText>
+                      Use columns: Name, Email, Role, Invitation Method.
+                      <Button variant="link" size="sm" ml={2} onClick={downloadCSVTemplate}>
+                        Download template
+                      </Button>
+                    </FormHelperText>
                   </FormControl>
-                </GridItem>
-                <GridItem>
-                  <FormControl>
-                    <FormLabel>Ambassador</FormLabel>
-                    <Select
-                      placeholder="Select ambassador"
-                      value={form.assignedAmbassadorId || ''}
-                      onChange={(e) => {
-                        const ambassador = ambassadors.find((m) => m.id === e.target.value)
-                        updateField('assignedAmbassadorId', ambassador?.id || null)
-                        updateField('assignedAmbassadorName', ambassador?.name || null)
-                        updateField('assignedAmbassadorEmail', ambassador?.email || null)
-                      }}
+                  {lastImportCount > 0 ? (
+                    <Alert status="info" borderRadius="md">
+                      <AlertIcon />
+                      Review {lastImportCount} imported user{lastImportCount === 1 ? '' : 's'} in the table below.
+                    </Alert>
+                  ) : null}
+                  <Box borderWidth="1px" borderRadius="md" p={4} bg="gray.50">
+                    <Text fontWeight="semibold" mb={3}>
+                      Add user manually
+                    </Text>
+                    <Grid
+                      templateColumns={{ base: '1fr', lg: '2fr 2fr 1.3fr 1.3fr auto' }}
+                      gap={3}
+                      alignItems="flex-end"
                     >
-                      {ambassadors.map((ambassador) => (
-                        <option key={ambassador.id} value={ambassador.id}>
-                          {ambassador.name}
-                        </option>
-                      ))}
-                    </Select>
-                  </FormControl>
-                </GridItem>
+                      <FormControl isRequired isInvalid={Boolean(manualErrors.name)}>
+                        <FormLabel display="flex" alignItems="center" gap={2}>
+                          Name
+                          <Tooltip label="Minimum 2 characters. Letters, spaces, hyphens, and apostrophes only.">
+                            <InfoIcon color="gray.400" />
+                          </Tooltip>
+                        </FormLabel>
+                        <Input
+                          value={manualEntry.name}
+                          onChange={(e) => {
+                            const value = e.target.value
+                            setManualEntry((prev) => ({ ...prev, name: value }))
+                            validateManualEntry({ ...manualEntry, name: value })
+                          }}
+                          onBlur={(e) => {
+                            const formatted = formatName(e.target.value)
+                            setManualEntry((prev) => ({ ...prev, name: formatted }))
+                            validateManualEntry({ ...manualEntry, name: formatted })
+                          }}
+                          placeholder="Jane Doe"
+                          maxLength={60}
+                          onKeyDown={(e) => {
+                            if (e.key === 'Enter') {
+                              e.preventDefault()
+                              handleAddManualEntry()
+                            }
+                          }}
+                        />
+                        <FormHelperText>{manualEntry.name.length}/60 characters</FormHelperText>
+                        <FormErrorMessage>{manualErrors.name}</FormErrorMessage>
+                      </FormControl>
+                      <FormControl isInvalid={Boolean(manualErrors.email)}>
+                        <FormLabel display="flex" alignItems="center" gap={2}>
+                          Email
+                          <Tooltip label="Optional unless using email invitations.">
+                            <InfoIcon color="gray.400" />
+                          </Tooltip>
+                        </FormLabel>
+                        <Input
+                          value={manualEntry.email}
+                          onChange={(e) => {
+                            const rawEmail = e.target.value
+                            const normalized = normalizeEmail(rawEmail)
+                            const nextMethod = normalizeMethodForEmail(normalized, manualEntry.method)
+                            const nextEntry = { ...manualEntry, email: rawEmail, method: nextMethod }
+                            setManualEntry(nextEntry)
+                            validateManualEntry(nextEntry)
+                          }}
+                          placeholder="jane.doe@example.com"
+                          list="email-domains"
+                          onKeyDown={(e) => {
+                            if (e.key === 'Enter') {
+                              e.preventDefault()
+                              handleAddManualEntry()
+                            }
+                          }}
+                        />
+                        <datalist id="email-domains">
+                          {commonEmailDomains.map((domain) => (
+                            <option key={domain} value={`@${domain}`} />
+                          ))}
+                        </datalist>
+                        <FormHelperText>Auto-selects email invitations when a valid email is entered.</FormHelperText>
+                        <FormErrorMessage>{manualErrors.email}</FormErrorMessage>
+                      </FormControl>
+                      <FormControl isInvalid={Boolean(manualErrors.role)}>
+                        <FormLabel display="flex" alignItems="center" gap={2}>
+                          Role
+                          <Tooltip label="Assign the user role for the invitation.">
+                            <InfoIcon color="gray.400" />
+                          </Tooltip>
+                        </FormLabel>
+                        <Select
+                          value={manualEntry.role}
+                          onChange={(e) => {
+                            const nextEntry = { ...manualEntry, role: e.target.value as InviteDraft['role'] }
+                            setManualEntry(nextEntry)
+                            validateManualEntry(nextEntry)
+                          }}
+                        >
+                          {inviteRoleOptions.map((role) => (
+                            <option key={role} value={role}>
+                              {role}
+                            </option>
+                          ))}
+                        </Select>
+                        <FormErrorMessage>{manualErrors.role}</FormErrorMessage>
+                      </FormControl>
+                      <FormControl isInvalid={Boolean(manualErrors.method)}>
+                        <FormLabel display="flex" alignItems="center" gap={2}>
+                          Method
+                          <Tooltip label="Email sends an invite link. One-time code is for manual sharing.">
+                            <InfoIcon color="gray.400" />
+                          </Tooltip>
+                        </FormLabel>
+                        <Select
+                          value={manualEntry.method}
+                          onChange={(e) => {
+                            const nextEntry = { ...manualEntry, method: e.target.value as InviteDraft['method'] }
+                            setManualEntry(nextEntry)
+                            validateManualEntry(nextEntry)
+                          }}
+                        >
+                          {inviteMethodOptions.map((method) => (
+                            <option key={method} value={method}>
+                              {method}
+                            </option>
+                          ))}
+                        </Select>
+                        <FormErrorMessage>{manualErrors.method}</FormErrorMessage>
+                      </FormControl>
+                      <Button colorScheme="purple" onClick={handleAddManualEntry} alignSelf="flex-end">
+                        Add user
+                      </Button>
+                    </Grid>
+                  </Box>
+                  {inviteError ? (
+                    <Alert status="error" borderRadius="md">
+                      <AlertIcon />
+                      {inviteError}
+                    </Alert>
+                  ) : null}
+                  <Box borderWidth="1px" borderRadius="md" p={4} bg="white">
+                    <HStack justify="space-between" mb={3} flexWrap="wrap">
+                      <Text fontWeight="semibold">Invitation drafts</Text>
+                      <HStack spacing={2}>
+                        <Badge colorScheme="purple">Total: {inviteStats.total}</Badge>
+                        <Badge colorScheme="green">Valid: {inviteStats.valid}</Badge>
+                        <Badge colorScheme={inviteStats.invalid ? 'red' : 'gray'}>
+                          Errors: {inviteStats.invalid}
+                        </Badge>
+                      </HStack>
+                    </HStack>
+                    {inviteStats.invalid ? (
+                      <Alert status="error" mb={3} borderRadius="md">
+                        <AlertIcon />
+                        Fix validation errors before submitting the invitation list.
+                      </Alert>
+                    ) : null}
+                    {inviteDrafts.length ? (
+                      <>
+                        <HStack spacing={3} mb={3} flexWrap="wrap">
+                          <Checkbox
+                            isChecked={selectedDraftIds.length === inviteDrafts.length && inviteDrafts.length > 0}
+                            onChange={(e) => {
+                              setSelectedDraftIds(e.target.checked ? inviteDrafts.map((draft) => draft.id) : [])
+                            }}
+                          >
+                            Select all
+                          </Checkbox>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => {
+                              if (selectedDraftIds.length) bulkDeleteDialog.onOpen()
+                            }}
+                            isDisabled={!selectedDraftIds.length}
+                          >
+                            Delete selected ({selectedDraftIds.length})
+                          </Button>
+                          <Select
+                            size="sm"
+                            maxW="180px"
+                            placeholder="Change role"
+                            onChange={(e) => {
+                              const role = e.target.value as InviteDraft['role']
+                              if (!role || !selectedDraftIds.length) return
+                              setInviteDrafts((prev) =>
+                                recomputeInviteDrafts(
+                                  prev.map((draft) =>
+                                    selectedDraftIds.includes(draft.id) ? { ...draft, role } : draft,
+                                  ),
+                                ),
+                              )
+                            }}
+                          >
+                            {inviteRoleOptions.map((role) => (
+                              <option key={role} value={role}>
+                                {role}
+                              </option>
+                            ))}
+                          </Select>
+                          <Select
+                            size="sm"
+                            maxW="200px"
+                            placeholder="Change method"
+                            onChange={(e) => {
+                              const method = e.target.value as InviteDraft['method']
+                              if (!method || !selectedDraftIds.length) return
+                              setInviteDrafts((prev) =>
+                                recomputeInviteDrafts(
+                                  prev.map((draft) =>
+                                    selectedDraftIds.includes(draft.id) ? { ...draft, method } : draft,
+                                  ),
+                                ),
+                              )
+                            }}
+                          >
+                            {inviteMethodOptions.map((method) => (
+                              <option key={method} value={method}>
+                                {method}
+                              </option>
+                            ))}
+                          </Select>
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            onClick={() => {
+                              if (inviteDrafts.length) clearAllDialog.onOpen()
+                            }}
+                            isDisabled={!inviteDrafts.length}
+                          >
+                            Clear all
+                          </Button>
+                        </HStack>
+                        <Box overflowX="auto">
+                          <Table size="sm" variant="simple">
+                            <Thead>
+                              <Tr>
+                                <Th>#</Th>
+                                <Th>Select</Th>
+                                <Th>Name</Th>
+                                <Th>Email</Th>
+                                <Th>Role</Th>
+                                <Th>Method</Th>
+                                <Th>Status</Th>
+                                <Th>Actions</Th>
+                              </Tr>
+                            </Thead>
+                            <Tbody>
+                              {inviteDrafts.map((draft, index) => {
+                                const hasErrors = !draft.isValid
+                                const isHighlighted = recentImportIds.includes(draft.id)
+                                return (
+                                  <Tr
+                                    key={draft.id}
+                                    bg={hasErrors ? 'red.50' : isHighlighted ? 'blue.50' : 'transparent'}
+                                  >
+                                    <Td>{index + 1}</Td>
+                                    <Td>
+                                      <Checkbox
+                                        isChecked={selectedDraftIds.includes(draft.id)}
+                                        onChange={(e) => {
+                                          setSelectedDraftIds((prev) =>
+                                            e.target.checked
+                                              ? [...prev, draft.id]
+                                              : prev.filter((id) => id !== draft.id),
+                                          )
+                                        }}
+                                      />
+                                    </Td>
+                                    <Td>
+                                      <Editable
+                                        value={draft.name}
+                                        onChange={(value) => updateDraftField(draft.id, 'name', value)}
+                                      >
+                                        <EditablePreview />
+                                        <EditableInput />
+                                      </Editable>
+                                      {draft.errors.name ? (
+                                        <Text fontSize="xs" color="red.500">
+                                          {draft.errors.name}
+                                        </Text>
+                                      ) : null}
+                                    </Td>
+                                    <Td>
+                                      <Editable
+                                        value={draft.email}
+                                        onChange={(value) => updateDraftField(draft.id, 'email', value)}
+                                      >
+                                        <EditablePreview />
+                                        <EditableInput />
+                                      </Editable>
+                                      {draft.errors.email ? (
+                                        <Text fontSize="xs" color="red.500">
+                                          {draft.errors.email}
+                                        </Text>
+                                      ) : null}
+                                    </Td>
+                                    <Td>
+                                      <Select
+                                        size="sm"
+                                        value={draft.role}
+                                        onChange={(e) => updateDraftField(draft.id, 'role', e.target.value)}
+                                      >
+                                        {inviteRoleOptions.map((role) => (
+                                          <option key={role} value={role}>
+                                            {role}
+                                          </option>
+                                        ))}
+                                      </Select>
+                                      {draft.errors.role ? (
+                                        <Text fontSize="xs" color="red.500">
+                                          {draft.errors.role}
+                                        </Text>
+                                      ) : null}
+                                    </Td>
+                                    <Td>
+                                      <Select
+                                        size="sm"
+                                        value={draft.method}
+                                        onChange={(e) => updateDraftField(draft.id, 'method', e.target.value)}
+                                      >
+                                        {inviteMethodOptions.map((method) => (
+                                          <option key={method} value={method}>
+                                            {method}
+                                          </option>
+                                        ))}
+                                      </Select>
+                                      {draft.errors.method ? (
+                                        <Text fontSize="xs" color="red.500">
+                                          {draft.errors.method}
+                                        </Text>
+                                      ) : null}
+                                    </Td>
+                                    <Td>
+                                      <Badge colorScheme={draft.isValid ? 'green' : 'red'}>
+                                        {draft.isValid ? 'Valid' : 'Needs review'}
+                                      </Badge>
+                                    </Td>
+                                    <Td>
+                                      <Button size="xs" variant="ghost" onClick={() => removeDrafts([draft.id])}>
+                                        Delete
+                                      </Button>
+                                    </Td>
+                                  </Tr>
+                                )
+                              })}
+                            </Tbody>
+                          </Table>
+                        </Box>
+                      </>
+                    ) : (
+                      <Text fontSize="sm" color="gray.600">
+                        No users added yet.
+                      </Text>
+                    )}
+                  </Box>
+                </Stack>
+              </Box>
+
+              <Grid templateColumns={{ base: '1fr', md: 'repeat(2, 1fr)' }} gap={4}>
                 <GridItem>
                   <FormControl>
                     <FormLabel>Status</FormLabel>
@@ -763,94 +1399,6 @@ export const CreateOrganizationModal: React.FC<CreateOrganizationModalProps> = (
                 </GridItem>
               </Grid>
 
-              <Divider />
-
-              <Box>
-                <Text fontWeight="bold">2. ADD USERS</Text>
-                <Text color="gray.600" fontSize="sm">
-                  Invite learners via email or one-time codes. Import CSV for bulk setup.
-                </Text>
-              </Box>
-
-              <Flex justify="space-between" align={{ base: 'stretch', md: 'center' }} direction={{ base: 'column', md: 'row' }}>
-                <HStack spacing={3} mb={{ base: 3, md: 0 }}>
-                  <Button leftIcon={<Plus size={16} />} onClick={addInviteDraft}>
-                    Add manual entry
-                  </Button>
-                  <Button leftIcon={<Upload size={16} />} onClick={() => fileInputRef.current?.click()}>
-                    Upload CSV
-                  </Button>
-                  <Button variant="ghost" onClick={downloadCSVTemplate}>
-                    Download template
-                  </Button>
-                </HStack>
-                <Text fontWeight="medium" color={invitationCountColor}>
-                  {inviteDrafts.length} / {form.teamSize || 0} invitations
-                </Text>
-              </Flex>
-
-              <input
-                ref={fileInputRef}
-                type="file"
-                accept=".csv"
-                style={{ display: 'none' }}
-                onChange={handleCsvUpload}
-              />
-
-              <Stack spacing={3}>
-                {inviteDrafts.map((draft) => (
-                  <Box key={draft.id} borderWidth="1px" borderRadius="md" p={3}>
-                    <Grid templateColumns={{ base: '1fr', md: 'repeat(4, 1fr)' }} gap={3} alignItems="center">
-                      <FormControl isRequired>
-                        <FormLabel>Name</FormLabel>
-                        <Input value={draft.name} onChange={(e) => handleInviteChange(draft.id, 'name', e.target.value)} />
-                      </FormControl>
-                      <FormControl isRequired={draft.method === 'email'}>
-                        <FormLabel>Email</FormLabel>
-                        <Input value={draft.email} onChange={(e) => handleInviteChange(draft.id, 'email', e.target.value)} />
-                      </FormControl>
-                      <FormControl>
-                        <FormLabel>Role</FormLabel>
-                        <Select
-                          value={draft.role}
-                          onChange={(e) => handleInviteChange(draft.id, 'role', e.target.value)}
-                        >
-                          <option value="user">User</option>
-                          <option value="mentor">Mentor</option>
-                          <option value="ambassador">Ambassador</option>
-                          <option value="partner">Partner</option>
-                          <option value="admin">Admin</option>
-                        </Select>
-                      </FormControl>
-                      <FormControl>
-                        <FormLabel>Method</FormLabel>
-                        <Select
-                          value={draft.method}
-                          onChange={(e) => handleInviteChange(draft.id, 'method', e.target.value)}
-                        >
-                          <option value="email">Email</option>
-                          <option value="one_time_code">One-time code</option>
-                        </Select>
-                      </FormControl>
-                      <GridItem colSpan={4} textAlign="right">
-                        <IconButton
-                          aria-label="Remove invitation"
-                          size="sm"
-                          icon={<X size={14} />}
-                          variant="ghost"
-                          onClick={() => removeInviteDraft(draft.id)}
-                          isDisabled={inviteDrafts.length === 1}
-                        />
-                      </GridItem>
-                    </Grid>
-                  </Box>
-                ))}
-              </Stack>
-
-              <Alert status="warning" borderRadius="md">
-                <AlertIcon />
-                If your admin session is out of sync, refresh before submitting to avoid inconsistent permissions.
-              </Alert>
             </Stack>
           </ModalBody>
           <ModalFooter>
@@ -863,6 +1411,64 @@ export const CreateOrganizationModal: React.FC<CreateOrganizationModalProps> = (
           </ModalFooter>
         </ModalContent>
       </Modal>
+
+      <AlertDialog
+        isOpen={bulkDeleteDialog.isOpen}
+        leastDestructiveRef={bulkDeleteCancelRef}
+        onClose={bulkDeleteDialog.onClose}
+      >
+        <AlertDialogOverlay />
+        <AlertDialogContent>
+          <AlertDialogHeader>Delete selected invitations?</AlertDialogHeader>
+          <AlertDialogBody>
+            This will remove {selectedDraftIds.length} selected invitation draft
+            {selectedDraftIds.length === 1 ? '' : 's'}.
+          </AlertDialogBody>
+          <AlertDialogFooter>
+            <Button ref={bulkDeleteCancelRef} onClick={bulkDeleteDialog.onClose}>
+              Cancel
+            </Button>
+            <Button
+              colorScheme="red"
+              ml={3}
+              onClick={() => {
+                removeDrafts(selectedDraftIds)
+                bulkDeleteDialog.onClose()
+              }}
+            >
+              Delete
+            </Button>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      <AlertDialog
+        isOpen={clearAllDialog.isOpen}
+        leastDestructiveRef={clearAllCancelRef}
+        onClose={clearAllDialog.onClose}
+      >
+        <AlertDialogOverlay />
+        <AlertDialogContent>
+          <AlertDialogHeader>Clear all invitation drafts?</AlertDialogHeader>
+          <AlertDialogBody>This will remove all invitation drafts currently in the list.</AlertDialogBody>
+          <AlertDialogFooter>
+            <Button ref={clearAllCancelRef} onClick={clearAllDialog.onClose}>
+              Cancel
+            </Button>
+            <Button
+              colorScheme="red"
+              ml={3}
+              onClick={() => {
+                setInviteDrafts([])
+                setSelectedDraftIds([])
+                clearAllDialog.onClose()
+              }}
+            >
+              Clear all
+            </Button>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
       <InvitationResultsModal isOpen={resultsModal.isOpen} onClose={resultsModal.onClose} result={results} />
     </>

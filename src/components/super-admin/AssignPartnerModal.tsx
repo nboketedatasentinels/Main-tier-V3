@@ -25,7 +25,7 @@ interface Props {
   isOpen: boolean
   onClose: () => void
   organization?: OrganizationRecord | null
-  onSubmit: (partnerName: string) => Promise<void>
+  onSubmit: (partnerId: string | null) => Promise<void>
   partners: OrganizationLead[]
   isLoadingPartners?: boolean
   partnersError?: string | null
@@ -47,7 +47,7 @@ export const AssignPartnerModal: React.FC<Props> = ({
   const [loading, setLoading] = useState(false)
 
   useEffect(() => {
-    setPartner(organization?.transformationPartner || '')
+    setPartner(organization?.transformationPartnerId || '')
   }, [organization])
 
   const sortedPartners = useMemo(
@@ -65,20 +65,20 @@ export const AssignPartnerModal: React.FC<Props> = ({
   }, [partnerSearch, sortedPartners])
 
   const missingPartner =
-    partner && !partners.some((item) => item.name === partner)
-      ? { id: `current-${partner}`, name: partner }
+    partner && !partners.some((item) => item.id === partner)
+      ? { id: partner, name: `Current partner (${partner})` }
       : null
 
   const buildPartnerLabel = (item: OrganizationLead) => {
     const emailSuffix = item.email ? ` — ${item.email}` : ''
-    const assignmentCount = partnerAssignmentCounts?.[item.name] ?? 0
+    const assignmentCount = partnerAssignmentCounts?.[item.id] ?? 0
     const countSuffix = assignmentCount > 1 ? ` • ${assignmentCount} orgs` : ''
     return `${item.name}${emailSuffix}${countSuffix}`
   }
 
   const handleSubmit = async () => {
     setLoading(true)
-    await onSubmit(partner)
+    await onSubmit(partner ? partner : null)
     setLoading(false)
     onClose()
   }
@@ -113,10 +113,10 @@ export const AssignPartnerModal: React.FC<Props> = ({
               >
                 <option value="">— No partner —</option>
                 {missingPartner ? (
-                  <option value={missingPartner.name}>{missingPartner.name}</option>
+                  <option value={missingPartner.id}>{missingPartner.name}</option>
                 ) : null}
                 {filteredPartners.map((partnerOption) => (
-                  <option key={partnerOption.id} value={partnerOption.name}>
+                  <option key={partnerOption.id} value={partnerOption.id}>
                     {buildPartnerLabel(partnerOption)}
                   </option>
                 ))}
@@ -138,7 +138,10 @@ export const AssignPartnerModal: React.FC<Props> = ({
             </FormControl>
             {organization && (
               <Stack spacing={1} fontSize="sm" color="gray.600">
-                <Text>Current partner: {organization.transformationPartner || 'Unassigned'}</Text>
+                <Text>
+                  Current partner:{' '}
+                  {partners.find((item) => item.id === organization.transformationPartnerId)?.name || 'Unassigned'}
+                </Text>
                 <Badge colorScheme={organization.status === 'active' ? 'green' : 'orange'} w="fit-content">
                   {organization.status}
                 </Badge>

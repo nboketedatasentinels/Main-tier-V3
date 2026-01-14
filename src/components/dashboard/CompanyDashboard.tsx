@@ -38,6 +38,7 @@ import {
   Loader2,
   Mail,
   MessageCircle,
+  RefreshCcw,
   Sparkles,
   Star,
   TrendingDown,
@@ -60,6 +61,7 @@ import {
 } from 'firebase/firestore'
 import { db } from '@/services/firebase'
 import { useAuth } from '@/hooks/useAuth'
+import { useOrganizationLeadership } from '@/hooks/useOrganizationLeadership'
 import { isFreeUser } from '@/utils/membership'
 
 interface WeeklyAggregation {
@@ -74,17 +76,10 @@ interface WeeklyAggregation {
   peopleImpactedChange: number
 }
 
-interface Assignment {
-  ambassador?: {
-    name: string
-    available?: boolean
-    contact?: string
-  }
-  mentor?: {
-    name: string
-    available?: boolean
-    calendar?: string
-  }
+interface SupportLeadSummary {
+  name: string
+  email?: string
+  availabilityStatus?: string
 }
 
 interface ChecklistItem {
@@ -151,6 +146,26 @@ const normalizeTransactionDate = (value?: unknown): Date | null => {
   return Number.isNaN(dateValue.getTime()) ? null : dateValue
 }
 
+const buildSupportLead = (
+  profile?: {
+    fullName?: string
+    firstName?: string
+    lastName?: string
+    email?: string
+    availabilityStatus?: string
+  } | null,
+): SupportLeadSummary | null => {
+  if (!profile) return null
+  const name = profile.fullName || `${profile.firstName ?? ''} ${profile.lastName ?? ''}`.trim() || profile.email || 'Unknown'
+  return {
+    name,
+    email: profile.email,
+    availabilityStatus: profile.availabilityStatus,
+  }
+}
+
+const isLeadAvailable = (status?: string) => status?.toLowerCase().includes('available')
+
 const couponLink =
   'https://www.t4leader.com/challenge-page/transformational-leadership?programId=d4e58ca0-f0e6-4f12-b2a8-9dc5fcf6e335'
 
@@ -205,14 +220,26 @@ export const CompanyDashboard: React.FC = () => {
     }),
   )
 
-  const { data: assignments } = useRealtimeCollection<Assignment>(
-    'user_assignments',
-    profile?.id ? [where('userId', '==', profile.id), limit(1)] : [],
-    (_, data) => ({
-      ambassador: data.ambassador,
-      mentor: data.mentor,
+  const {
+    profiles: leadershipProfiles,
+    loading: leadershipLoading,
+    errors: leadershipErrors,
+    assignmentSources: leadershipSources,
+    organization: leadershipOrganization,
+    supportAssignment: supportAssignmentStatus,
+    refresh: refreshLeadership,
+  } = useOrganizationLeadership(profile?.companyId, profile?.id)
+  const assignment = useMemo(
+    () => ({
+      ambassador: buildSupportLead(leadershipProfiles.ambassador),
+      mentor: buildSupportLead(leadershipProfiles.mentor),
     }),
+    [leadershipProfiles.ambassador, leadershipProfiles.mentor],
   )
+  const supportErrorMessage = leadershipErrors.organization || leadershipErrors.supportAssignments
+  const showLeadershipDebug = import.meta.env.DEV && (leadershipOrganization.id || supportAssignmentStatus.id)
+  const mentorSourceLabel =
+    leadershipSources.mentor === 'user' ? 'User-specific mentor' : leadershipSources.mentor === 'organization' ? 'Organization mentor' : null
 
   const { data: checklistItems, loading: checklistLoading } = useRealtimeCollection<ChecklistItem>(
     'weekly_checklist',
@@ -293,7 +320,6 @@ export const CompanyDashboard: React.FC = () => {
   }, [weekStart, faqEntries])
 
   const weekly = weeklyMetrics[0]
-  const assignment = assignments[0]
 
   const checklistProgress = useMemo(() => {
     if (!checklistItems.length) return { completed: 0, total: 0, percent: 0 }
@@ -477,24 +503,71 @@ export const CompanyDashboard: React.FC = () => {
 
           <Card shadow="lg">
             <CardBody>
-              <Text fontWeight="bold" color="gray.500" mb={2}>
-                Support Team
-              </Text>
+              <HStack justify="space-between" mb={2}>
+                <Text fontWeight="bold" color="gray.500">
+                  Support Team
+                </Text>
+                <Button
+                  size="xs"
+                  variant="outline"
+                  leftIcon={<RefreshCcw size={14} />}
+                  onClick={refreshLeadership}
+                  isLoading={leadershipLoading}
+                >
+                  Refresh
+                </Button>
+              </HStack>
+              {showLeadershipDebug && (
+                <VStack align="start" spacing={1} mb={2}>
+                  <Text fontSize="xs" color="gray.400">
+                    Org ID: {leadershipOrganization.id ?? 'None'}
+                  </Text>
+                  <Text fontSize="xs" color="gray.400">
+                    Support assignments: {supportAssignmentStatus.loaded ? (supportAssignmentStatus.exists ? 'Loaded' : 'None') : 'Not checked'}
+                  </Text>
+                  <Text fontSize="xs" color="gray.400">
+                    Mentor source: {leadershipSources.mentor ?? 'None'}
+                  </Text>
+                  <Text fontSize="xs" color="gray.400">
+                    Ambassador source: {leadershipSources.ambassador ?? 'None'}
+                  </Text>
+                </VStack>
+              )}
               <VStack align="stretch" spacing={4}>
+                {leadershipLoading && (
+                  <Text fontSize="sm" color="gray.500">
+                    Loading support team...
+                  </Text>
+                )}
+                {supportErrorMessage && (
+                  <Text fontSize="sm" color="red.500">
+                    {supportErrorMessage}
+                  </Text>
+                )}
                 <Box>
                   <HStack justify="space-between" mb={1}>
                     <Text fontSize="sm" color="gray.500" fontWeight="bold">
                       Ambassador Status
                     </Text>
-                    {assignment?.ambassador?.available && <Badge colorScheme="green">Available</Badge>}
+                    {isLeadAvailable(assignment.ambassador?.availabilityStatus) && (
+                      <Badge colorScheme="green">Available</Badge>
+                    )}
                   </HStack>
                   <Text fontWeight="semibold">
                     {assignment?.ambassador?.name || 'No ambassador assigned'}
                   </Text>
-                  {assignment?.ambassador?.contact && (
+                  {!assignment?.ambassador?.name &&
+                    !leadershipLoading &&
+                    leadershipOrganization.loaded &&
+                    leadershipOrganization.exists && (
+                      <Text fontSize="xs" color="gray.500">
+                        No ambassador is assigned to your organization yet.
+                      </Text>
+                    )}
+                  {assignment?.ambassador?.email && (
                     <Button
                       as={Link}
-                      href={`mailto:${assignment.ambassador.contact}`}
+                      href={`mailto:${assignment.ambassador.email}`}
                       leftIcon={<Mail size={16} />}
                       size="sm"
                       variant="outline"
@@ -510,18 +583,51 @@ export const CompanyDashboard: React.FC = () => {
                     <Text fontSize="sm" color="gray.500" fontWeight="bold">
                       Mentor
                     </Text>
-                    {assignment?.mentor?.available && <Badge colorScheme="green">Available</Badge>}
+                    {isLeadAvailable(assignment.mentor?.availabilityStatus) && (
+                      <Badge colorScheme="green">Available</Badge>
+                    )}
                   </HStack>
                   <Text fontWeight="semibold">{assignment?.mentor?.name || 'No mentor assigned'}</Text>
-                {assignment?.mentor?.calendar && (
-                  <Button
-                    as={Link}
-                    href={assignment.mentor.calendar}
-                    leftIcon={<CalendarClock size={16} />}
+                  {mentorSourceLabel && (
+                    <Badge mt={2} colorScheme="purple" variant="subtle" alignSelf="flex-start">
+                      {mentorSourceLabel}
+                    </Badge>
+                  )}
+                  {!assignment?.mentor?.name &&
+                    !leadershipLoading &&
+                    leadershipOrganization.loaded &&
+                    leadershipOrganization.exists && (
+                      <Text fontSize="xs" color="gray.500">
+                        {supportAssignmentStatus.loaded
+                          ? 'No mentor is assigned to you or your organization yet.'
+                          : 'No mentor is assigned to your organization yet.'}
+                      </Text>
+                    )}
+                  {!assignment?.mentor?.name &&
+                    !leadershipLoading &&
+                    leadershipOrganization.loaded &&
+                    !leadershipOrganization.exists && (
+                      <Text fontSize="xs" color="gray.500">
+                        Organization record not found. Please verify your company ID.
+                      </Text>
+                    )}
+                  {!assignment?.mentor?.name &&
+                    !leadershipLoading &&
+                    leadershipOrganization.loaded &&
+                    leadershipOrganization.exists &&
+                    supportAssignmentStatus.loaded && (
+                      <Text fontSize="xs" color="gray.500">
+                        If you were recently assigned a mentor, ask your administrator to confirm your user assignment and organization support roles.
+                      </Text>
+                    )}
+                  {assignment?.mentor?.email && (
+                    <Button
+                      as={Link}
+                      href="/app/leadership-council"
+                      leftIcon={<CalendarClock size={16} />}
                       size="sm"
                       variant="outline"
                       mt={2}
-                      target="_blank"
                     >
                       Schedule
                     </Button>
