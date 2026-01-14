@@ -352,7 +352,6 @@ export const PeerConnectPage: React.FC = () => {
         await Promise.all([
           setDoc(matchRef, matchPayload),
           updateDoc(doc(db, 'profiles', user.uid), { lastMatchRefreshDate: serverTimestamp(), updatedAt: serverTimestamp() }),
-          updateDoc(doc(db, 'users', user.uid), { lastMatchRefreshDate: serverTimestamp(), updatedAt: serverTimestamp() }),
         ])
         setWeeklyMatch({
           matchId: matchRef.id,
@@ -427,7 +426,6 @@ export const PeerConnectPage: React.FC = () => {
       await Promise.all([
         setDoc(doc(db, 'peer_weekly_matches', matchDocId), matchPayload, { merge: true }),
         updateDoc(doc(db, 'profiles', user.uid), { lastMatchRefreshDate: serverTimestamp(), updatedAt: serverTimestamp() }),
-        updateDoc(doc(db, 'users', user.uid), { lastMatchRefreshDate: serverTimestamp(), updatedAt: serverTimestamp() }),
       ])
       setWeeklyMatch({
         matchId: matchDocId,

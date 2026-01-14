@@ -1,10 +1,11 @@
 import { useMemo } from 'react'
-import { LeaderboardTimeframe, TransformationTier, UserProfile } from '@/types'
+import { UserProfile } from '@/types'
 import {
   ChallengeRecord,
   PointsTransaction,
 } from './useLeaderboardData'
-import { LeaderboardContext, normalizeLeaderboardTier } from './useLeaderboardContext'
+import { LeaderboardContext } from './useLeaderboardContext'
+import { getOrgScope, isProfileInOrg } from '@/utils/organizationScope'
 
 export interface LeaderboardRow {
   user: UserProfile
@@ -21,37 +22,8 @@ interface LeaderboardMetricsInput {
   transactions: PointsTransaction[]
   challenges: ChallengeRecord[]
   profile: UserProfile | null
-  timeframe: LeaderboardTimeframe
   sortField: 'points' | 'level' | 'name'
   sortDirection: 'asc' | 'desc'
-  timeframeStart: Date | null
-}
-
-const isProfileInContext = (candidate: UserProfile, context: LeaderboardContext | null): boolean => {
-  if (!context) return false
-  switch (context.type) {
-    case 'admin_all':
-      return true
-    case 'organization':
-      if (context.organizationId) {
-        return candidate.companyId === context.organizationId
-      }
-      if (context.organizationCode) {
-        return candidate.companyCode === context.organizationCode
-      }
-      return false
-    case 'village':
-      return Boolean(context.villageId && candidate.villageId === context.villageId)
-    case 'cluster':
-      return Boolean(context.clusterId && candidate.clusterId === context.clusterId)
-    case 'community': {
-      const tier = normalizeLeaderboardTier(candidate.transformationTier)
-      return tier === TransformationTier.INDIVIDUAL_PAID || candidate.membershipStatus === 'paid'
-    }
-    case 'free':
-    default:
-      return false
-  }
 }
 
 export const useLeaderboardMetrics = ({
@@ -60,28 +32,27 @@ export const useLeaderboardMetrics = ({
   transactions,
   challenges,
   profile,
-  timeframe,
   sortField,
   sortDirection,
-  timeframeStart,
 }: LeaderboardMetricsInput) => {
+  const orgScope = useMemo(() => getOrgScope(profile), [profile])
   const segmentProfiles = useMemo(() => {
     if (!context) return []
     if (context.type === 'free') return profile ? [profile] : []
-    if (context.type === 'admin_all') return profiles
-    return profiles.filter((candidate) => isProfileInContext(candidate, context))
-  }, [context, profile, profiles])
+    if (context.type === 'organization') {
+      return profiles.filter((candidate) => isProfileInOrg(candidate, orgScope))
+    }
+    return []
+  }, [context, orgScope, profile, profiles])
 
   const segmentProfileIds = useMemo(() => new Set(segmentProfiles.map((item) => item.id)), [segmentProfiles])
 
   const segmentTransactions = useMemo(() => {
-    if (context?.type === 'admin_all') return transactions
-    if (!segmentProfileIds.size) return []
-    return transactions.filter((tx) => segmentProfileIds.has(tx.userId))
-  }, [context?.type, segmentProfileIds, transactions])
+    if (!profile?.id) return []
+    return transactions.filter((tx) => tx.userId === profile.id)
+  }, [profile?.id, transactions])
 
   const segmentChallenges = useMemo(() => {
-    if (context?.type === 'admin_all') return challenges
     if (context?.type === 'free') return challenges
     if (!segmentProfileIds.size) return []
     return challenges.filter((challenge) => {
@@ -89,17 +60,6 @@ export const useLeaderboardMetrics = ({
       return segmentProfileIds.has(challenge.opponentId)
     })
   }, [challenges, context?.type, segmentProfileIds])
-
-  const aggregatedPoints = useMemo(() => {
-    const totals: Record<string, number> = {}
-    segmentTransactions.forEach((tx) => {
-      const createdAt = tx.createdAt ? new Date(tx.createdAt) : null
-      if (timeframe === LeaderboardTimeframe.CURRENT_JOURNEY && tx.userId !== profile?.id) return
-      if (timeframeStart && createdAt && createdAt < timeframeStart) return
-      totals[tx.userId] = (totals[tx.userId] || 0) + tx.points
-    })
-    return totals
-  }, [profile?.id, segmentTransactions, timeframe, timeframeStart])
 
   const weeklyPoints = useMemo(() => {
     if (!profile) return 0
@@ -130,24 +90,14 @@ export const useLeaderboardMetrics = ({
   const leaderboardRows: LeaderboardRow[] = useMemo(() => {
     const rows = segmentProfiles
       .filter((candidate) => candidate.privacySettings?.showOnLeaderboard !== false)
-      .map((user) => {
-        const activePoints = timeframe === LeaderboardTimeframe.ALL_TIME
-          ? user.totalPoints
-          : aggregatedPoints[user.id] || 0
-        const badgeCount = Math.max(
-          1,
-          Math.round((timeframe === LeaderboardTimeframe.ALL_TIME ? user.totalPoints : activePoints) / 500),
-        )
-
-        return {
-          user,
-          activePoints,
-          totalPoints: user.totalPoints || 0,
-          level: user.level || 1,
-          badgeCount,
-          rank: 0,
-        }
-      })
+      .map((user) => ({
+        user,
+        rank: 0,
+        totalPoints: user.totalPoints || 0,
+        activePoints: user.activePoints || user.totalPoints || 0,
+        level: user.level || 1,
+        badgeCount: user.badges?.length || 0,
+      }))
 
     const sorted = rows.sort((a, b) => {
       if (sortField === 'name') {
@@ -160,11 +110,11 @@ export const useLeaderboardMetrics = ({
         return sortDirection === 'asc' ? a.level - b.level : b.level - a.level
       }
 
-      return sortDirection === 'asc' ? a.activePoints - b.activePoints : b.activePoints - a.activePoints
+      return sortDirection === 'asc' ? a.totalPoints - b.totalPoints : b.totalPoints - a.totalPoints
     })
 
     return sorted.map((row, index) => ({ ...row, rank: index + 1 }))
-  }, [aggregatedPoints, segmentProfiles, sortDirection, sortField, timeframe])
+  }, [segmentProfiles, sortDirection, sortField])
 
   const percentile = useMemo(() => {
     if (!profile) return 'Top 100%'
