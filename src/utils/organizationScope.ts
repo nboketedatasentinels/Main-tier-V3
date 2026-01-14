@@ -1,35 +1,36 @@
 import { collection, getDocs, query, where, type Firestore } from 'firebase/firestore'
+import { OrgProfileLike } from './organizationTypes'
 
-export type OrgScope = {
-  companyId?: string
-  companyCode?: string
-  isValid: boolean
-}
-
-type OrgProfileLike = {
-  companyId?: string | null
-  organizationId?: string | null
-  companyCode?: string | null
-  organizationCode?: string | null
-}
+export type OrgScope =
+  | { isValid: true; type: 'company'; companyId: string }
+  | { isValid: true; type: 'company_code'; companyCode: string }
+  | { isValid: false }
 
 export const getOrgScope = (profile?: OrgProfileLike | null): OrgScope => {
-  const companyId = profile?.companyId || profile?.organizationId || ''
-  const companyCode = profile?.companyCode || profile?.organizationCode || ''
-  return {
-    companyId: companyId || undefined,
-    companyCode: companyCode || undefined,
-    isValid: Boolean(companyId || companyCode),
+  if (!profile) return { isValid: false }
+  if (profile.companyId) {
+    return { isValid: true, type: 'company', companyId: profile.companyId }
   }
+  if (profile.organizationId) {
+    return { isValid: true, type: 'company', companyId: profile.organizationId }
+  }
+  if (profile.companyCode) {
+    return { isValid: true, type: 'company_code', companyCode: profile.companyCode }
+  }
+  if (profile.organizationCode) {
+    return { isValid: true, type: 'company_code', companyCode: profile.organizationCode }
+  }
+  return { isValid: false }
 }
 
 export const isProfileInOrg = (profile: OrgProfileLike | null | undefined, orgScope: OrgScope): boolean => {
   if (!orgScope.isValid || !profile) return false
-  const profileCompanyId = profile.companyId || profile.organizationId
+  if (orgScope.type === 'company') {
+    const profileCompanyId = profile.companyId || profile.organizationId
+    return profileCompanyId === orgScope.companyId
+  }
   const profileCompanyCode = profile.companyCode || profile.organizationCode
-  if (orgScope.companyId && profileCompanyId === orgScope.companyId) return true
-  if (orgScope.companyCode && profileCompanyCode === orgScope.companyCode) return true
-  return false
+  return profileCompanyCode === orgScope.companyCode
 }
 
 export const fetchOrgMembers = async (
@@ -39,25 +40,22 @@ export const fetchOrgMembers = async (
 ): Promise<Record<string, unknown>[]> => {
   if (!orgScope.isValid) return []
   const peersRef = collection(db, 'profiles')
-  const queries = [
-    orgScope.companyId ? query(peersRef, where('companyId', '==', orgScope.companyId)) : null,
-    orgScope.companyCode ? query(peersRef, where('companyCode', '==', orgScope.companyCode)) : null,
-  ].filter(Boolean) as ReturnType<typeof query>[]
+  const peerQuery =
+    orgScope.type === 'company'
+      ? query(peersRef, where('companyId', '==', orgScope.companyId))
+      : query(peersRef, where('companyCode', '==', orgScope.companyCode))
 
-  const snapshots = await Promise.all(queries.map((peerQuery) => getDocs(peerQuery)))
-  const merged = new Map<string, Record<string, unknown>>()
+  console.log('[OrgMembers] Running query with scope', orgScope)
+  const snapshot = await getDocs(peerQuery)
+  const members = snapshot.docs
+    .filter((docSnap) => !(excludeId && docSnap.id === excludeId))
+    .map((docSnap) => ({ id: docSnap.id, ...docSnap.data() }))
+    .sort((a, b) =>
+      String(a.fullName || '').localeCompare(String(b.fullName || '')),
+    )
 
-  snapshots.forEach((snapshot) => {
-    snapshot.docs.forEach((docSnap) => {
-      if (excludeId && docSnap.id === excludeId) return
-      const data = docSnap.data()
-      if (data) {
-        merged.set(docSnap.id, { id: docSnap.id, ...data })
-      }
-    })
-  })
+  console.log('[OrgMembers] Fetched profiles', members)
+  console.log('[OrgMembers] Fetched profiles count', members.length)
 
-  return Array.from(merged.values()).sort((a, b) =>
-    String(a.fullName || '').localeCompare(String(b.fullName || '')),
-  )
+  return members
 }
