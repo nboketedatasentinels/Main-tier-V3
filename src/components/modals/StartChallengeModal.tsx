@@ -33,6 +33,7 @@ import { fetchOrgMembers, getOrgScope, isProfileInOrg } from '@/utils/organizati
 import {
   collection,
   query,
+  where,
   getDocs,
   addDoc,
   Timestamp,
@@ -110,7 +111,7 @@ export const StartChallengeModal: React.FC<StartChallengeModalProps> = ({
 
       const members = await fetchOrgMembers(db, orgScope, user.uid);
       const userOptions: UserOption[] = members.map((member) => {
-        const p = member as UserProfile;
+        const p = member as unknown as UserProfile;
         return ({
         id: p.id,
         name: p.fullName || `${p.firstName || ''} ${p.lastName || ''}`.trim(),

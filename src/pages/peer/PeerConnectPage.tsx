@@ -557,7 +557,7 @@ export const PeerConnectPage: React.FC = () => {
           timezone: data.timezone as PeerProfile['timezone'],
           interests: data.interests as PeerProfile['interests'],
           goals: data.goals as PeerProfile['goals'],
-          companyCode: data.companyCode ?? undefined,
+          companyCode: typeof data.companyCode === 'string' ? data.companyCode : undefined,
           corporateVillageId: data.corporateVillageId as PeerProfile['corporateVillageId'],
           cohortIdentifier: data.cohortIdentifier as PeerProfile['cohortIdentifier'],
           calendarLink: data.calendarLink as PeerProfile['calendarLink'],

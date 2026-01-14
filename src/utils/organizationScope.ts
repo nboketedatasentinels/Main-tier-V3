@@ -50,7 +50,10 @@ export const fetchOrgMembers = async (
   snapshots.forEach((snapshot) => {
     snapshot.docs.forEach((docSnap) => {
       if (excludeId && docSnap.id === excludeId) return
-      merged.set(docSnap.id, { id: docSnap.id, ...docSnap.data() })
+      const data = docSnap.data()
+      if (data) {
+        merged.set(docSnap.id, { id: docSnap.id, ...data })
+      }
     })
   })
 

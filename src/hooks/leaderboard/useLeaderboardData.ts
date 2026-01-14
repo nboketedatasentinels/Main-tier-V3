@@ -117,7 +117,7 @@ export const useLeaderboardData = ({
       fetchOrgMembers(db, orgScope)
         .then((members) => {
           if (!isActive) return
-          setProfiles(members as UserProfile[])
+          setProfiles(members as unknown as UserProfile[])
           setProfilesLoaded(true)
           console.log('[Leaderboard] Organization profiles fetched', {
             contextType: context?.type,
