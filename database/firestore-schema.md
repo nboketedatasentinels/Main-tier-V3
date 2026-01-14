@@ -44,6 +44,39 @@ User profile documents (indexed by user UID)
 }
 ```
 
+### upgrade_requests
+User-submitted tier or access upgrade requests (one doc per request)
+```typescript
+{
+  id: string
+  user_id: string
+  request_type: 'individual' | 'corporate_approval' | 'tier_change'
+  current_tier?: string | null
+  requested_tier?: string | null
+  status: 'pending' | 'approved' | 'rejected' | 'completed'
+  message?: string | null
+  admin_notes?: string | null
+  contact_preference?: 'email' | 'phone' | null
+  contact_details?: string | null
+  requested_at: Timestamp
+  reviewed_at?: Timestamp | null
+  reviewed_by?: string | null
+}
+```
+
+### admin_notifications
+Admin-facing notification feed for operational alerts
+```typescript
+{
+  id: string
+  type: string
+  message: string
+  metadata?: Record<string, unknown>
+  created_at: Timestamp
+  read_at?: Timestamp | null
+}
+```
+
 ### organizations
 Organization settings and program configuration
 ```typescript
@@ -505,6 +538,8 @@ Create composite indexes for common queries:
    - `role`, `totalPoints` (descending)
    - `companyId`, `totalPoints` (descending)
    - `villageId`, `totalPoints` (descending)
+   - `createdAt` (descending)
+   - `companyId`, `createdAt` (descending)
 
 2. **impactLogs** subcollection:
    - `createdAt` (descending)
@@ -534,6 +569,10 @@ Create composite indexes for common queries:
 
 9. **nudge_campaigns** collection:
    - `start_date` (descending)
+
+10. **upgrade_requests** collection:
+   - `status`, `requested_at` (descending)
+   - `user_id`, `requested_at` (descending)
 
 ## Initial Data Setup
 
