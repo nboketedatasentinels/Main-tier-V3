@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import {
   Badge,
   Box,
+  Button,
   Card,
   CardBody,
   Flex,
@@ -12,6 +13,7 @@ import {
   Progress,
   SimpleGrid,
   Skeleton,
+  SkeletonText,
   Stack,
   Text,
   VStack,
@@ -36,6 +38,7 @@ import {
   logOrganizationAccessAttempt,
 } from '@/services/organizationService'
 import type { OrganizationRecord, OrganizationStatistics } from '@/types/admin'
+import { formatDistanceToNow } from 'date-fns'
 
 type CompanyPageKey = 'overview' | 'users' | 'organizations' | 'reports' | 'settings' | 'support'
 type CompanyOrg = OrganizationCardProps & { code: string; id?: string }
@@ -122,7 +125,7 @@ const UserManagementSection: React.FC<{
 )
 
 export const CompanyAdminDashboard: React.FC = () => {
-  const { profile, assignedOrganizations, isSuperAdmin, user, profileStatus } = useAuth()
+  const { profile, assignedOrganizations, isSuperAdmin, user, profileStatus, lastProfileLoadAt } = useAuth()
   const navigate = useNavigate()
   const adminName = profile?.fullName || profile?.firstName || 'Admin'
   const [activePage, setActivePage] = useState<CompanyPageKey>('overview')
@@ -133,6 +136,9 @@ export const CompanyAdminDashboard: React.FC = () => {
   const [organizationStats, setOrganizationStats] = useState<Record<string, OrganizationStatistics>>({})
   const [organizationsError, setOrganizationsError] = useState<string | null>(null)
   const [organizationsLoading, setOrganizationsLoading] = useState(true)
+  const [lastOrganizationsSuccessAt, setLastOrganizationsSuccessAt] = useState<Date | null>(null)
+  const [lastStatsSuccessAt, setLastStatsSuccessAt] = useState<Date | null>(null)
+  const [refreshIndex, setRefreshIndex] = useState(0)
   const retryTimeoutRef = useRef<number | null>(null)
   const unsubscribeRef = useRef<(() => void) | null>(null)
   const assignedCount = assignedOrganizations?.length || 0
@@ -164,6 +170,7 @@ export const CompanyAdminDashboard: React.FC = () => {
           setOrganizationRecords(orgs)
           setOrganizationsError(null)
           setOrganizationsLoading(false)
+          setLastOrganizationsSuccessAt(new Date())
         },
         {
           onError: (error) => {
@@ -189,7 +196,7 @@ export const CompanyAdminDashboard: React.FC = () => {
         window.clearTimeout(retryTimeoutRef.current)
       }
     }
-  }, [profileStatus, user?.uid])
+  }, [profileStatus, refreshIndex, user?.uid])
 
   useEffect(() => {
     let isActive = true
@@ -209,6 +216,7 @@ export const CompanyAdminDashboard: React.FC = () => {
         )
         if (!isActive) return
         setOrganizationStats(Object.fromEntries(entries))
+        setLastStatsSuccessAt(new Date())
       } catch (error) {
         console.error('Failed to load organization statistics', error)
         if (!isActive) return
@@ -397,6 +405,17 @@ export const CompanyAdminDashboard: React.FC = () => {
           <Text fontSize="3xl" fontWeight="bold" color="brand.text">
             Welcome back, {adminName}
           </Text>
+          <Stack spacing={1}>
+            <Text fontSize="xs" color="brand.subtleText">
+              Profile last loaded {lastProfileLoadAt ? formatDistanceToNow(new Date(lastProfileLoadAt)) : 'not yet'} ago.
+            </Text>
+            <Text fontSize="xs" color="brand.subtleText">
+              Organizations last fetched {lastOrganizationsSuccessAt ? formatDistanceToNow(lastOrganizationsSuccessAt) : 'not yet'} ago.
+            </Text>
+            <Text fontSize="xs" color="brand.subtleText">
+              Engagement stats last fetched {lastStatsSuccessAt ? formatDistanceToNow(lastStatsSuccessAt) : 'not yet'} ago.
+            </Text>
+          </Stack>
           {organizationsError && (
             <Badge colorScheme="red" w="fit-content">
               {organizationsError}
@@ -415,6 +434,11 @@ export const CompanyAdminDashboard: React.FC = () => {
             <Text color="orange.200" fontSize="sm">
               No organizations are assigned to this account yet. Contact a super admin to request access.
             </Text>
+          )}
+          {organizationsError && (
+            <Button size="xs" variant="outline" onClick={retryOrganizations}>
+              Retry loading organizations
+            </Button>
           )}
         </Stack>
         <StatusBadge status="active" />
@@ -573,9 +597,20 @@ export const CompanyAdminDashboard: React.FC = () => {
             </HStack>
             <DashboardErrorBoundary context="Company Admin organizations">
               <SimpleGrid columns={{ base: 1, md: 2, xl: 4 }} spacing={3}>
-                {filteredOrganizations.map(company => (
-                  <OrganizationCard key={company.name} {...company} onViewClick={() => handleViewOrganization(company.code)} />
-                ))}
+                {organizationsLoading ? (
+                  [1, 2, 3, 4].map((item) => (
+                    <Card key={item} bg="white" border="1px solid" borderColor="brand.border">
+                      <CardBody>
+                        <Skeleton height="16px" width="60%" />
+                        <SkeletonText mt="2" noOfLines={2} spacing="2" />
+                      </CardBody>
+                    </Card>
+                  ))
+                ) : (
+                  filteredOrganizations.map(company => (
+                    <OrganizationCard key={company.name} {...company} onViewClick={() => handleViewOrganization(company.code)} />
+                  ))
+                )}
               </SimpleGrid>
             </DashboardErrorBoundary>
           </Stack>
@@ -696,7 +731,18 @@ export const CompanyAdminDashboard: React.FC = () => {
               </VStack>
               <Badge colorScheme="purple">Scoped</Badge>
             </HStack>
-            {filteredOrganizations.length ? (
+            {organizationsLoading ? (
+              <SimpleGrid columns={{ base: 1, md: 2, xl: 3 }} spacing={4}>
+                {[1, 2, 3].map((item) => (
+                  <Card key={item} bg="white" border="1px solid" borderColor="brand.border">
+                    <CardBody>
+                      <Skeleton height="16px" width="60%" />
+                      <SkeletonText mt="2" noOfLines={2} spacing="2" />
+                    </CardBody>
+                  </Card>
+                ))}
+              </SimpleGrid>
+            ) : filteredOrganizations.length ? (
               <DashboardErrorBoundary context="Company Admin organizations">
                 <SimpleGrid columns={{ base: 1, md: 2, xl: 3 }} spacing={4}>
                   {filteredOrganizations.map(org => (
@@ -820,6 +866,8 @@ export const CompanyAdminDashboard: React.FC = () => {
       setActivePage(normalized)
     }
   }
+
+  const retryOrganizations = () => setRefreshIndex((prev) => prev + 1)
 
   if (profileStatus !== 'ready') {
     return (

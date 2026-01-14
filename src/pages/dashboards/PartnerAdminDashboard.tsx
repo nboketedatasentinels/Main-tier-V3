@@ -14,7 +14,9 @@ import {
   Text,
   VStack,
   Skeleton,
+  SkeletonText,
 } from '@chakra-ui/react'
+import { formatDistanceToNow } from 'date-fns'
 import { Bell, Building2, Gauge, Sparkles, Users } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
 import { MetricCard } from '@/components/admin/MetricCard'
@@ -42,7 +44,7 @@ import type { NudgeTemplateRecord } from '@/types/nudges'
 
 export const PartnerAdminDashboard: React.FC = () => {
   const navigate = useNavigate()
-  const { assignedOrganizations, isSuperAdmin, user, refreshProfile, profileStatus } = useAuth()
+  const { assignedOrganizations, isSuperAdmin, user, refreshProfile, profileStatus, lastProfileLoadAt } = useAuth()
   const {
     assignedOrgCount,
     engagementTrend,
@@ -51,6 +53,7 @@ export const PartnerAdminDashboard: React.FC = () => {
     organizationsError,
     organizationsLoading,
     organizationsReady,
+    lastOrganizationsSuccessAt,
     riskLevels,
     selectedOrg,
     setSelectedOrg,
@@ -58,6 +61,9 @@ export const PartnerAdminDashboard: React.FC = () => {
     users,
     usersError,
     usersLoading,
+    lastUsersSuccessAt,
+    retryOrganizations,
+    retryUsers,
     dataQualityWarnings,
     interventions,
     daysUntil,
@@ -251,6 +257,16 @@ export const PartnerAdminDashboard: React.FC = () => {
                 <Button size="sm" colorScheme="red" onClick={refreshOrganizations} isLoading={refreshingOrganizations}>
                   Retry loading data
                 </Button>
+                {organizationsError ? (
+                  <Button size="sm" variant="outline" onClick={retryOrganizations}>
+                    Retry organizations
+                  </Button>
+                ) : null}
+                {usersError ? (
+                  <Button size="sm" variant="outline" onClick={retryUsers}>
+                    Retry users
+                  </Button>
+                ) : null}
                 <Button size="sm" variant="outline" onClick={() => navigate('/login', { replace: true })}>
                   Back to login
                 </Button>
@@ -270,6 +286,17 @@ export const PartnerAdminDashboard: React.FC = () => {
               <Text color="brand.subtleText">
                 Welcome back! You can see {assignedOrgCount} assigned organization{assignedOrgCount === 1 ? '' : 's'} with filters applied to all data.
               </Text>
+              <Stack spacing={1}>
+                <Text fontSize="xs" color="brand.subtleText">
+                  Profile last loaded {lastProfileLoadAt ? formatDistanceToNow(new Date(lastProfileLoadAt)) : 'not yet'} ago.
+                </Text>
+                <Text fontSize="xs" color="brand.subtleText">
+                  Organizations last fetched {lastOrganizationsSuccessAt ? formatDistanceToNow(lastOrganizationsSuccessAt) : 'not yet'} ago.
+                </Text>
+                <Text fontSize="xs" color="brand.subtleText">
+                  Users last fetched {lastUsersSuccessAt ? formatDistanceToNow(lastUsersSuccessAt) : 'not yet'} ago.
+                </Text>
+              </Stack>
               <HStack spacing={3}>
                 <Badge colorScheme="green">Real-time</Badge>
                 <Badge colorScheme="purple">Partner scoped</Badge>
@@ -289,30 +316,43 @@ export const PartnerAdminDashboard: React.FC = () => {
       </Card>
 
       <SimpleGrid columns={{ base: 1, md: 2, xl: 4 }} spacing={4}>
-        <MetricCard
-          icon={Users}
-          label="Active members (30d)"
-          value={metrics.activeMembers.toString()}
-          helper={metrics.deltas.activeMembers}
-        />
-        <MetricCard
-          icon={Gauge}
-          label="Engagement rate"
-          value={`${metrics.engagementRate}%`}
-          helper={metrics.deltas.engagementRate}
-        />
-        <MetricCard
-          icon={Sparkles}
-          label="New registrations (7d)"
-          value={metrics.newRegistrations.toString()}
-          helper={metrics.deltas.newRegistrations}
-        />
-        <MetricCard
-          icon={Building2}
-          label="Managed companies"
-          value={metrics.managedCompanies.toString()}
-          helper={`Active ${managedBreakdown.active} / Inactive ${managedBreakdown.inactive}`}
-        />
+        {organizationsLoading || usersLoading ? (
+          [1, 2, 3, 4].map((item) => (
+            <Card key={item} bg="white" border="1px solid" borderColor="brand.border">
+              <CardBody>
+                <Skeleton height="16px" width="40%" />
+                <SkeletonText mt="3" noOfLines={2} spacing="3" />
+              </CardBody>
+            </Card>
+          ))
+        ) : (
+          <>
+            <MetricCard
+              icon={Users}
+              label="Active members (30d)"
+              value={metrics.activeMembers.toString()}
+              helper={metrics.deltas.activeMembers}
+            />
+            <MetricCard
+              icon={Gauge}
+              label="Engagement rate"
+              value={`${metrics.engagementRate}%`}
+              helper={metrics.deltas.engagementRate}
+            />
+            <MetricCard
+              icon={Sparkles}
+              label="New registrations (7d)"
+              value={metrics.newRegistrations.toString()}
+              helper={metrics.deltas.newRegistrations}
+            />
+            <MetricCard
+              icon={Building2}
+              label="Managed companies"
+              value={metrics.managedCompanies.toString()}
+              helper={`Active ${managedBreakdown.active} / Inactive ${managedBreakdown.inactive}`}
+            />
+          </>
+        )}
       </SimpleGrid>
 
       <Card bg="white" border="1px solid" borderColor="brand.border">
@@ -323,22 +363,38 @@ export const PartnerAdminDashboard: React.FC = () => {
               <Badge colorScheme="teal">Assigned</Badge>
             </HStack>
             <SimpleGrid columns={{ base: 1, md: 2, xl: 4 }} spacing={3}>
-              {orgCards.map(company => (
-                <Box
-                  key={company.name}
-                  p={3}
-                  borderRadius="md"
-                  border="1px solid"
-                  borderColor="brand.border"
-                  bg="brand.accent"
-                >
-                  <Text fontWeight="semibold" color="brand.text">{company.name}</Text>
-                  <Text fontSize="sm" color="brand.subtleText">Active users: {company.activeUsers}</Text>
-                  <Badge mt={2} colorScheme={company.change.includes('-') ? 'red' : 'green'}>
-                    {company.change} this week
-                  </Badge>
-                </Box>
-              ))}
+              {organizationsLoading ? (
+                [1, 2, 3, 4].map((item) => (
+                  <Box
+                    key={item}
+                    p={3}
+                    borderRadius="md"
+                    border="1px solid"
+                    borderColor="brand.border"
+                    bg="brand.accent"
+                  >
+                    <Skeleton height="16px" width="60%" />
+                    <SkeletonText mt="2" noOfLines={2} spacing="2" />
+                  </Box>
+                ))
+              ) : (
+                orgCards.map(company => (
+                  <Box
+                    key={company.name}
+                    p={3}
+                    borderRadius="md"
+                    border="1px solid"
+                    borderColor="brand.border"
+                    bg="brand.accent"
+                  >
+                    <Text fontWeight="semibold" color="brand.text">{company.name}</Text>
+                    <Text fontSize="sm" color="brand.subtleText">Active users: {company.activeUsers}</Text>
+                    <Badge mt={2} colorScheme={company.change.includes('-') ? 'red' : 'green'}>
+                      {company.change} this week
+                    </Badge>
+                  </Box>
+                ))
+              )}
             </SimpleGrid>
           </Stack>
         </CardBody>

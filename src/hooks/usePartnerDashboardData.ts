@@ -117,8 +117,12 @@ export const usePartnerDashboardData = (options?: UsePartnerDashboardDataOptions
   const [organizationsLoading, setOrganizationsLoading] = useState<boolean>(true)
   const [organizationsError, setOrganizationsError] = useState<string | null>(null)
   const [organizationsReady, setOrganizationsReady] = useState<boolean>(false)
+  const [lastOrganizationsSuccessAt, setLastOrganizationsSuccessAt] = useState<Date | null>(null)
   const [notificationCount, setNotificationCount] = useState<number>(0)
   const [interventions, setInterventions] = useState<PartnerInterventionSummary[]>([])
+  const [lastUsersSuccessAt, setLastUsersSuccessAt] = useState<Date | null>(null)
+  const [organizationsRefreshIndex, setOrganizationsRefreshIndex] = useState(0)
+  const [usersRefreshIndex, setUsersRefreshIndex] = useState(0)
   const lastAccessAttempt = useRef<string | null>(null)
   const organizationsRetryAttempts = useRef(0)
   const usersRetryAttempts = useRef(0)
@@ -200,6 +204,9 @@ export const usePartnerDashboardData = (options?: UsePartnerDashboardDataOptions
     console.debug('[PartnerDashboard] Profile ready, loading dashboard data.')
   }, [profileStatus])
 
+  const retryOrganizations = () => setOrganizationsRefreshIndex((prev) => prev + 1)
+  const retryUsers = () => setUsersRefreshIndex((prev) => prev + 1)
+
   useEffect(() => {
     if (profileStatus !== 'ready') {
       return
@@ -276,6 +283,7 @@ export const usePartnerDashboardData = (options?: UsePartnerDashboardDataOptions
             setOrganizations(scoped)
             setOrganizationsLoading(false)
             setOrganizationsReady(true)
+            setLastOrganizationsSuccessAt(new Date())
           },
           (error) => {
             console.error('Failed to load organizations', error)
@@ -331,6 +339,7 @@ export const usePartnerDashboardData = (options?: UsePartnerDashboardDataOptions
           setOrganizations(scoped)
           setOrganizationsLoading(false)
           setOrganizationsReady(true)
+          setLastOrganizationsSuccessAt(new Date())
         },
         {
           status: 'active',
@@ -349,7 +358,7 @@ export const usePartnerDashboardData = (options?: UsePartnerDashboardDataOptions
       if (retryTimeout) clearTimeout(retryTimeout)
       if (unsubscribe) unsubscribe()
     }
-  }, [assignedOrganizations, assignmentKey, isSuperAdmin, profileStatus, user?.uid])
+  }, [assignedOrganizations, assignmentKey, isSuperAdmin, organizationsRefreshIndex, profileStatus, user?.uid])
 
   useEffect(() => {
     if (profileStatus !== 'ready') {
@@ -670,6 +679,7 @@ export const usePartnerDashboardData = (options?: UsePartnerDashboardDataOptions
 
             setUsers(hydratedUsers)
             setUsersLoading(false)
+            setLastUsersSuccessAt(new Date())
           } catch (error) {
             console.error('[PartnerDashboard] Failed to process user snapshot', error)
             scheduleRetry(error)
@@ -698,6 +708,7 @@ export const usePartnerDashboardData = (options?: UsePartnerDashboardDataOptions
     profileStatus,
     selectedOrg,
     selectedOrgKeys,
+    usersRefreshIndex,
   ])
 
   useEffect(() => {
@@ -932,16 +943,20 @@ export const usePartnerDashboardData = (options?: UsePartnerDashboardDataOptions
       organizationsError: null,
       organizationsLoading: true,
       organizationsReady: false,
+      lastOrganizationsSuccessAt: null,
       profile,
       riskLevels: { engaged: 0, watch: 0, concern: 0, critical: 0 },
       selectedOrg,
       setSelectedOrg,
       usersError: null,
       usersLoading: true,
+      lastUsersSuccessAt: null,
       updateUserPoints: async () => undefined,
       users: [],
       interventions: [],
       daysUntil,
+      retryOrganizations,
+      retryUsers,
     }
   }
 
@@ -958,16 +973,20 @@ export const usePartnerDashboardData = (options?: UsePartnerDashboardDataOptions
     organizationsError,
     organizationsLoading,
     organizationsReady,
+    lastOrganizationsSuccessAt,
     profile,
     riskLevels,
     selectedOrg,
     setSelectedOrg,
     usersError,
     usersLoading,
+    lastUsersSuccessAt,
     updateUserPoints,
     users,
     interventions,
     daysUntil,
+    retryOrganizations,
+    retryUsers,
   }
 }
 

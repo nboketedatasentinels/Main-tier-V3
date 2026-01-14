@@ -20,6 +20,8 @@ import {
   GridItem,
   HStack,
   SimpleGrid,
+  Skeleton,
+  SkeletonText,
   Spinner,
   Stack,
   Text,
@@ -40,6 +42,7 @@ import { EngagementChart } from '@/components/admin/EngagementChart'
 import { MetricCard } from '@/components/admin/MetricCard'
 import { RiskAnalysisCard, RiskLevel, RiskReason } from '@/components/admin/RiskAnalysisCard'
 import { AdminNotificationsList } from '@/components/admin/AdminNotificationsList'
+import { AdminDataHealthPanel, AdminHealthItem } from '@/components/admin/AdminDataHealthPanel'
 import {
   AdminActivityLogEntry,
   RegistrationRecord,
@@ -67,6 +70,7 @@ type OverviewPageProps = {
   error: string | null
   streamsLoading: boolean
   onNavigate: (key: string) => void
+  healthItems: AdminHealthItem[]
 }
 
 export const OverviewPage: React.FC<OverviewPageProps> = ({
@@ -85,6 +89,7 @@ export const OverviewPage: React.FC<OverviewPageProps> = ({
   error,
   streamsLoading,
   onNavigate,
+  healthItems,
 }) => {
   const notificationsDrawer = useDisclosure()
 
@@ -131,10 +136,34 @@ export const OverviewPage: React.FC<OverviewPageProps> = ({
         </Alert>
       )}
 
+      <AdminDataHealthPanel items={healthItems} />
+
       {loading ? (
-        <Flex justify="center" align="center" py={12}>
-          <Spinner size="xl" />
-        </Flex>
+        <Stack spacing={6}>
+          <SimpleGrid columns={{ base: 1, sm: 2, xl: 4 }} spacing={4}>
+            {[1, 2, 3, 4].map((item) => (
+              <Card key={item} bg="white" border="1px solid" borderColor="brand.border">
+                <CardBody>
+                  <Skeleton height="18px" width="40%" />
+                  <SkeletonText mt="3" noOfLines={2} spacing="3" />
+                </CardBody>
+              </Card>
+            ))}
+          </SimpleGrid>
+          <Grid templateColumns={{ base: '1fr', xl: '2fr 1fr' }} gap={6}>
+            {[1, 2].map((item) => (
+              <Card key={item} bg="white" border="1px solid" borderColor="brand.border">
+                <CardBody>
+                  <Skeleton height="16px" width="50%" />
+                  <Skeleton height="220px" mt={4} borderRadius="lg" />
+                </CardBody>
+              </Card>
+            ))}
+          </Grid>
+          <Flex justify="center" align="center" py={6}>
+            <Spinner size="lg" />
+          </Flex>
+        </Stack>
       ) : (
         <>
           <SimpleGrid columns={{ base: 1, sm: 2, xl: 4 }} spacing={4}>
