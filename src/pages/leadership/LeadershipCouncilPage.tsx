@@ -123,12 +123,20 @@ export const LeadershipCouncilPage: React.FC = () => {
   const { profile, user } = useAuth()
   const toast = useToast()
 
-  const { profiles, errors, loading: assignmentsLoading, refresh, organization } = useOrganizationLeadership(profile?.companyId)
+  const {
+    profiles,
+    errors,
+    loading: assignmentsLoading,
+    refresh,
+    organization,
+    assignmentSources,
+    supportAssignment: supportAssignmentStatus,
+  } = useOrganizationLeadership(profile?.companyId, profile?.id)
   const mentorProfile = profiles.mentor as LeadershipProfile | null
   const ambassadorProfile = profiles.ambassador as LeadershipProfile | null
   const partnerProfile = profiles.partner as PartnerProfile | null
-  const mentorError = errors.organization || errors.mentor
-  const ambassadorError = errors.organization || errors.ambassador
+  const mentorError = errors.organization || errors.supportAssignments || errors.mentor
+  const ambassadorError = errors.organization || errors.supportAssignments || errors.ambassador
   const partnerError = errors.organization || errors.partner
   const partnerLoading = assignmentsLoading
 
@@ -148,7 +156,13 @@ export const LeadershipCouncilPage: React.FC = () => {
   const scheduleModal = useDisclosure()
 
   const hasOrganization = Boolean(profile?.companyId)
-  const showOrgDebug = import.meta.env.DEV && organization.id
+  const showOrgDebug = import.meta.env.DEV && (organization.id || supportAssignmentStatus.id)
+  const mentorSourceLabel =
+    assignmentSources.mentor === 'user'
+      ? 'User-specific mentor'
+      : assignmentSources.mentor === 'organization'
+        ? 'Organization mentor'
+        : null
 
   const retryAssignments = useCallback(() => {
     refresh()
@@ -381,9 +395,20 @@ export const LeadershipCouncilPage: React.FC = () => {
               review upcoming meetings, and explore your leadership network.
             </Text>
             {showOrgDebug && (
-              <Text fontSize="xs" color="text.muted">
-                Org ID: {organization.id}
-              </Text>
+              <Stack spacing={1}>
+                <Text fontSize="xs" color="text.muted">
+                  Org ID: {organization.id ?? 'None'}
+                </Text>
+                <Text fontSize="xs" color="text.muted">
+                  Support assignments: {supportAssignmentStatus.loaded ? (supportAssignmentStatus.exists ? 'Loaded' : 'None') : 'Not checked'}
+                </Text>
+                <Text fontSize="xs" color="text.muted">
+                  Mentor source: {assignmentSources.mentor ?? 'None'}
+                </Text>
+                <Text fontSize="xs" color="text.muted">
+                  Ambassador source: {assignmentSources.ambassador ?? 'None'}
+                </Text>
+              </Stack>
             )}
             <Button
               size="sm"
@@ -420,6 +445,11 @@ export const LeadershipCouncilPage: React.FC = () => {
                           : 'Supporting your organization'}
                       </Text>
                     </HStack>
+                    {mentorSourceLabel && (
+                      <Badge mt={3} width="fit-content" colorScheme="purple" variant="subtle">
+                        {mentorSourceLabel}
+                      </Badge>
+                    )}
                   </Box>
                   <VStack spacing={3} align="end">
                     <Avatar
@@ -474,9 +504,16 @@ export const LeadershipCouncilPage: React.FC = () => {
                     <Heading size="sm">No mentor assigned yet</Heading>
                     <Text color="text.secondary">
                       {hasOrganization
-                        ? 'Please contact your administrator for support.'
+                        ? supportAssignmentStatus.loaded
+                          ? 'We checked your user assignment and your organization. No mentor is assigned yet.'
+                          : 'Please contact your administrator for support.'
                         : 'Your account is not linked to an organization yet. Please contact your administrator.'}
                     </Text>
+                    {hasOrganization && supportAssignmentStatus.loaded && (
+                      <Text color="text.secondary" fontSize="sm">
+                        If you recently received a mentor, ask your administrator to confirm both your user-specific assignment and the organization-wide mentor.
+                      </Text>
+                    )}
                   </Flex>
                 )}
 
