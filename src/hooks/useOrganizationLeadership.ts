@@ -23,6 +23,12 @@ export interface LeadershipErrors {
   partner?: string
 }
 
+export interface OrganizationStatus {
+  id: string | null
+  exists: boolean
+  loaded: boolean
+}
+
 const emptyAssignments: LeadershipAssignments = {
   mentorId: null,
   ambassadorId: null,
@@ -35,6 +41,16 @@ const emptyProfiles: LeadershipProfiles = {
   partner: null,
 }
 
+const resolveAssignmentId = (data: Record<string, unknown>, keys: string[]) => {
+  for (const key of keys) {
+    const value = data[key]
+    if (typeof value === 'string' && value.trim()) {
+      return value
+    }
+  }
+  return null
+}
+
 export const useOrganizationLeadership = (companyId?: string | null) => {
   const [assignments, setAssignments] = useState<LeadershipAssignments>(emptyAssignments)
   const [profiles, setProfiles] = useState<LeadershipProfiles>(emptyProfiles)
@@ -42,6 +58,8 @@ export const useOrganizationLeadership = (companyId?: string | null) => {
   const [loadingAssignments, setLoadingAssignments] = useState(false)
   const [loadingProfiles, setLoadingProfiles] = useState(false)
   const [refreshKey, setRefreshKey] = useState(0)
+  const [organizationExists, setOrganizationExists] = useState(false)
+  const [organizationLoaded, setOrganizationLoaded] = useState(false)
 
   const refresh = useCallback(() => {
     setRefreshKey((prev) => prev + 1)
@@ -53,6 +71,9 @@ export const useOrganizationLeadership = (companyId?: string | null) => {
       setProfiles(emptyProfiles)
       setErrors({})
       setLoadingAssignments(false)
+      setLoadingProfiles(false)
+      setOrganizationExists(false)
+      setOrganizationLoaded(false)
       return () => undefined
     }
 
@@ -63,21 +84,38 @@ export const useOrganizationLeadership = (companyId?: string | null) => {
     const unsubscribe = onSnapshot(
       orgRef,
       (snapshot) => {
+        setOrganizationLoaded(true)
         if (!snapshot.exists()) {
+          setOrganizationExists(false)
           setErrors((prev) => ({ ...prev, organization: 'Organization not found.' }))
           setAssignments(emptyAssignments)
           setLoadingAssignments(false)
           return
         }
-        const data = snapshot.data() as {
-          assignedMentorId?: string | null
-          assignedAmbassadorId?: string | null
-          transformationPartnerId?: string | null
-        }
+        setOrganizationExists(true)
+        const data = snapshot.data() as Record<string, unknown>
+        const mentorId = resolveAssignmentId(data, [
+          'assignedMentorId',
+          'mentorId',
+          'mentor_id',
+          'assigned_mentor_id',
+        ])
+        const ambassadorId = resolveAssignmentId(data, [
+          'assignedAmbassadorId',
+          'ambassadorId',
+          'ambassador_id',
+          'assigned_ambassador_id',
+        ])
+        const partnerId = resolveAssignmentId(data, [
+          'transformationPartnerId',
+          'partnerId',
+          'partner_id',
+          'transformation_partner_id',
+        ])
         setAssignments({
-          mentorId: data.assignedMentorId ?? null,
-          ambassadorId: data.assignedAmbassadorId ?? null,
-          partnerId: data.transformationPartnerId ?? null,
+          mentorId,
+          ambassadorId,
+          partnerId,
         })
         setLoadingAssignments(false)
       },
@@ -86,6 +124,8 @@ export const useOrganizationLeadership = (companyId?: string | null) => {
         setErrors((prev) => ({ ...prev, organization: 'Failed to load organization leadership.' }))
         setAssignments(emptyAssignments)
         setLoadingAssignments(false)
+        setOrganizationExists(false)
+        setOrganizationLoaded(true)
       },
     )
 
@@ -113,7 +153,7 @@ export const useOrganizationLeadership = (companyId?: string | null) => {
       try {
         const profile = await fetchUserProfileById(userId)
         if (!profile) {
-          return { profile: null, error: `${roleLabel} profile not found` }
+          return { profile: null, error: `${roleLabel} assigned but profile not found` }
         }
         return { profile, error: undefined }
       } catch (error) {
@@ -150,12 +190,23 @@ export const useOrganizationLeadership = (companyId?: string | null) => {
   }, [assignments])
 
   const loading = useMemo(() => loadingAssignments || loadingProfiles, [loadingAssignments, loadingProfiles])
+  const organization = useMemo<OrganizationStatus>(
+    () => ({
+      id: companyId ?? null,
+      exists: organizationExists,
+      loaded: organizationLoaded,
+    }),
+    [companyId, organizationExists, organizationLoaded],
+  )
 
   return {
     assignments,
     profiles,
     errors,
     loading,
+    loadingAssignments,
+    loadingProfiles,
+    organization,
     refresh,
   }
 }

@@ -59,10 +59,19 @@ Organization settings and program configuration
   journeyType?: '4W' | '6W' | '3M' | '6M' | '9M' | '12M'
   courseAssignments?: string[]
   monthlyCourseAssignments?: Record<string, string>
+  // Leadership assignments (preferred field names)
+  assignedMentorId?: string | null
+  assignedAmbassadorId?: string | null
+  transformationPartnerId?: string | null
   createdAt?: Timestamp
   updatedAt?: Timestamp
 }
 ```
+
+Legacy leadership assignment field names that are still supported by the client:
+- mentorId / mentor_id / assigned_mentor_id
+- ambassadorId / ambassador_id / assigned_ambassador_id
+- partnerId / partner_id / transformation_partner_id
 
 ### journeys
 Available journey templates
