@@ -157,6 +157,17 @@ service cloud.firestore {
       );
     }
 
+    function orgFieldsUnchanged() {
+      return request.resource.data.companyId == resource.data.companyId &&
+        request.resource.data.companyCode == resource.data.companyCode &&
+        request.resource.data.companyName == resource.data.companyName &&
+        request.resource.data.villageId == resource.data.villageId &&
+        request.resource.data.clusterId == resource.data.clusterId &&
+        request.resource.data.corporateVillageId == resource.data.corporateVillageId &&
+        request.resource.data.cohortIdentifier == resource.data.cohortIdentifier &&
+        request.resource.data.assignedOrganizations == resource.data.assignedOrganizations;
+    }
+
     // Profiles collection
     match /profiles/{userId} {
       // Users can read their own profile
@@ -177,14 +188,11 @@ service cloud.firestore {
       // Users can create their own profile
       allow create: if isAuthenticated() && isOwner(userId);
       
-      // Users can update their own profile, but cannot change their role
+      // Users can update their own profile, but cannot change their role or org fields
       allow update: if isAuthenticated() && isOwner(userId) && (
         !request.resource.data.keys().hasAny(['role']) ||
         request.resource.data.role == resource.data.role
-      ) && (
-        !request.resource.data.keys().hasAny(['assignedOrganizations']) ||
-        request.resource.data.assignedOrganizations.size() <= 100
-      );
+      ) && orgFieldsUnchanged();
       
       // Super admins can update any profile
       allow update: if isSuperAdmin();

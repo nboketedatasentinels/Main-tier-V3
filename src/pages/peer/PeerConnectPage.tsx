@@ -78,7 +78,7 @@ import { db } from '@/services/firebase'
 import { useAuth } from '@/hooks/useAuth'
 import { StartChallengeModal } from '@/components/modals/StartChallengeModal'
 import { removeUndefinedFields } from '@/utils/firestore'
-import { fetchOrgMembers, getOrgScope } from '@/utils/organizationScope'
+import { fetchOrgMembers, getOrgScope, type OrgScope } from '@/utils/organizationScope'
 import { OrgProfileLike } from '@/utils/organizationTypes'
 
 // Types
@@ -154,7 +154,6 @@ type MatchWindow = {
   durationDays?: number
 }
 
-type OrgScope = { companyId?: string | null; companyCode?: string | null; isValid: boolean }
 type DebugOrgProfile = {
   id: string
   companyId?: string | null
@@ -219,7 +218,7 @@ const addDaysUtc = (date: Date, days: number) => {
 }
 
 const debugOrgFetch = async (dbInstance: typeof db, profile: DebugOrgProfile | null, userId: string) => {
-  const scope: OrgScope = getOrgScope(profile) as OrgScope
+  const scope = getOrgScope(profile)
 
   console.group('🧪 ORG FETCH DEBUG')
   console.log('userId', userId)
