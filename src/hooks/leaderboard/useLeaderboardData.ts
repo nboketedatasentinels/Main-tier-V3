@@ -111,16 +111,24 @@ export const useLeaderboardData = ({
     if (!constraints) {
       setProfiles([])
       const contextType = context?.type
-      setProfilesLoaded(Boolean(contextType) && contextType !== 'free')
+      setProfilesLoaded(Boolean(contextType))
+      if (contextType === 'free') {
+        console.log('[Leaderboard] Free context: skipping profiles query.')
+      }
       return undefined
     }
 
     setProfilesLoaded(false)
+    console.log('[Leaderboard] Profiles query constraints', { contextType: context?.type, constraints })
     const profilesQuery = query(collection(db, 'profiles'), ...constraints)
     const unsubscribe = onSnapshot(profilesQuery, (snapshot) => {
       const loadedProfiles: UserProfile[] = snapshot.docs.map((doc) => doc.data() as UserProfile)
       setProfiles(loadedProfiles)
       setProfilesLoaded(true)
+      console.log('[Leaderboard] Profiles fetched', {
+        contextType: context?.type,
+        count: loadedProfiles.length,
+      })
     })
 
     return () => unsubscribe()
@@ -138,11 +146,15 @@ export const useLeaderboardData = ({
     if (!constraints || context?.type === 'free') {
       setTransactions([])
       const contextType = context?.type
-      setTransactionsLoaded(Boolean(contextType) && contextType !== 'free')
+      setTransactionsLoaded(Boolean(contextType))
+      if (contextType === 'free') {
+        console.log('[Leaderboard] Free context: skipping transactions query.')
+      }
       return undefined
     }
 
     setTransactionsLoaded(false)
+    console.log('[Leaderboard] Transactions query constraints', { contextType: context?.type, constraints })
     const txQuery = query(collection(db, 'points_transactions'), ...constraints)
     const unsubscribe = onSnapshot(txQuery, (snapshot) => {
       const loadedTx: PointsTransaction[] = snapshot.docs.map((doc) => {
