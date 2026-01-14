@@ -18,6 +18,7 @@ import { ORG_COLLECTION } from '@/constants/organizations'
 import { listenToAssignedOrganizations, logOrganizationAccessAttempt } from '@/services/organizationService'
 import { listenToOrganizationStatsUpdates, updateOrganizationStatisticsBatch } from '@/services/organizationStatsService'
 import type { OrganizationRecord } from '@/types/admin'
+import { formatAdminFirestoreError } from '@/services/admin/adminErrors'
 import {
   build14DayRegistrationTrend,
   calculateUserRiskStatus,
@@ -79,7 +80,7 @@ interface UsePartnerDashboardDataOptions {
   selectedOrg?: string
 }
 
-const USERS_QUERY = query(collection(db, 'users'), where('accountStatus', '==', 'active'))
+const USERS_QUERY = query(collection(db, 'profiles'), where('accountStatus', '==', 'active'))
 
 const normalizeTimestamp = (value?: unknown): string | null => {
   if (!value) return null
@@ -166,10 +167,9 @@ export const usePartnerDashboardData = (options?: UsePartnerDashboardDataOptions
   }, [organizationLookup, selectedOrg])
 
   const formatFirestoreError = (error: unknown, fallback: string) => {
-    if (error instanceof Error) {
-      return `${fallback} (${error.message})`
-    }
-    return fallback
+    return formatAdminFirestoreError(error, fallback, {
+      indexMessage: 'Missing Firestore index required for this query.',
+    })
   }
 
   useEffect(() => {
@@ -455,6 +455,8 @@ export const usePartnerDashboardData = (options?: UsePartnerDashboardDataOptions
 
   type FirestorePartnerUser = Partial<PartnerUser> & {
     full_name?: string
+    firstName?: string
+    lastName?: string
     companyCode?: string
     company_code?: string
     accountStatus?: string
@@ -627,10 +629,17 @@ export const usePartnerDashboardData = (options?: UsePartnerDashboardDataOptions
                     : undefined,
                 ].filter((reason): reason is string => typeof reason === 'string' && reason.length > 0)
 
+                const displayName =
+                  data.name ||
+                  data.fullName ||
+                  data.full_name ||
+                  [data.firstName, data.lastName].filter(Boolean).join(' ').trim() ||
+                  'Unknown User'
+
                 hydratedUsers.push({
                   id: docSnap.id,
-                  name: data.name || data.fullName || data.full_name || 'Unknown User',
-                  fullName: data.fullName || data.full_name || data.name,
+                  name: displayName,
+                  fullName: data.fullName || data.full_name || displayName,
                   createdAt: normalizedCreatedAt || undefined,
                   lastActiveAt: normalizeTimestamp(data.lastActiveAt || data.last_active_at) || undefined,
                   programStartDate: normalizedProgramStart || undefined,

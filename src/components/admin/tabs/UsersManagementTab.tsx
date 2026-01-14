@@ -42,11 +42,11 @@ import {
   bulkUpdateMembershipStatus,
   bulkUpdateRole,
   deleteUserAccount,
-  fetchOrganizationsList,
-  listenToUsers,
   updateMembershipStatus,
   updateUserRole,
 } from '@/services/userManagementService'
+import { fetchAdminOrganizationsList, listenToAdminUsers } from '@/services/admin/adminUsersService'
+import { formatAdminFirestoreError } from '@/services/admin/adminErrors'
 
 const roleOptions: ManagedUserRole[] = ['user', 'partner', 'admin', 'super_admin', 'team_leader', 'mentor', 'ambassador']
 const membershipOptions: MembershipStatus[] = ['free', 'paid', 'inactive']
@@ -58,7 +58,7 @@ const formatDate = (date?: Date | null) => {
 
 export const UsersManagementTab = () => {
   const toast = useToast()
-  const { isSuperAdmin, assignedOrganizations } = useAuth()
+  const { isAdmin, isSuperAdmin, assignedOrganizations } = useAuth()
   const [users, setUsers] = useState<ManagedUserRecord[]>([])
   const [organizations, setOrganizations] = useState<Array<{ id: string; name: string; code?: string }>>([])
   const [loading, setLoading] = useState(true)
@@ -76,20 +76,16 @@ export const UsersManagementTab = () => {
   })
 
   const resolveUserLoadError = (err: unknown) => {
-    const code = (err as { code?: string })?.code
-    if (code === 'permission-denied') {
-      return 'Admin access missing. Check custom claims and Firestore rules.'
-    }
-    if (code === 'failed-precondition') {
-      return 'Missing Firestore index for the users query. Check Firebase console logs.'
-    }
-    return 'Unable to load users.'
+    return formatAdminFirestoreError(err, 'Unable to load users.', {
+      indexMessage: 'Missing Firestore index for the users query. Check Firebase console logs.',
+    })
   }
 
   useEffect(() => {
     setLoading(true)
     setError(null)
-    const unsub = listenToUsers({
+    const unsub = listenToAdminUsers({
+      isAdmin,
       onData: (records) => {
         setUsers(records)
         setLoading(false)
@@ -101,11 +97,11 @@ export const UsersManagementTab = () => {
       },
     })
 
-    fetchOrganizationsList()
+    fetchAdminOrganizationsList(isAdmin)
       .then(setOrganizations)
       .catch((err) => {
         console.error(err)
-        setError('Unable to load organizations')
+        setError(formatAdminFirestoreError(err, 'Unable to load organizations.'))
       })
 
     return () => unsub()

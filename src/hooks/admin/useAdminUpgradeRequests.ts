@@ -1,13 +1,15 @@
 import { useCallback, useEffect, useState } from 'react'
 import {
-  getAllUpgradeRequests,
-  getPendingUpgradeRequests,
-  getUserRequestsForAdmin,
-  updateUpgradeRequestStatus,
-} from '@/services/upgradeRequestService'
+  fetchAdminPendingUpgradeRequests,
+  fetchAdminUpgradeRequests,
+  fetchAdminUserRequests,
+  updateAdminUpgradeRequestStatus,
+} from '@/services/admin/adminUpgradeService'
 import { UpgradeRequest, UpgradeRequestStatus } from '@/types/upgrade'
+import { useAuth } from '@/hooks/useAuth'
 
 export const useAllUpgradeRequests = () => {
+  const { isAdmin } = useAuth()
   const [requests, setRequests] = useState<UpgradeRequest[]>([])
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<Error | null>(null)
@@ -16,14 +18,14 @@ export const useAllUpgradeRequests = () => {
     setLoading(true)
     setError(null)
     try {
-      const data = await getAllUpgradeRequests()
+      const data = await fetchAdminUpgradeRequests(isAdmin)
       setRequests(data)
     } catch (err) {
       setError(err as Error)
     } finally {
       setLoading(false)
     }
-  }, [])
+  }, [isAdmin])
 
   useEffect(() => {
     fetchRequests()
@@ -33,6 +35,7 @@ export const useAllUpgradeRequests = () => {
 }
 
 export const useUpdateRequestStatus = () => {
+  const { isAdmin } = useAuth()
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<Error | null>(null)
 
@@ -41,7 +44,7 @@ export const useUpdateRequestStatus = () => {
       setLoading(true)
       setError(null)
       try {
-        return await updateUpgradeRequestStatus(requestId, status, notes, reviewedBy)
+        return await updateAdminUpgradeRequestStatus(isAdmin, requestId, status, notes, reviewedBy)
       } catch (err) {
         setError(err as Error)
         return null
@@ -49,28 +52,36 @@ export const useUpdateRequestStatus = () => {
         setLoading(false)
       }
     },
-    []
+    [isAdmin]
   )
 
   return { mutate, loading, error }
 }
 
 export const usePendingRequestCount = () => {
+  const { isAdmin } = useAuth()
   const [count, setCount] = useState(0)
+  const [error, setError] = useState<Error | null>(null)
 
   useEffect(() => {
     const fetchCount = async () => {
-      const pending = await getPendingUpgradeRequests()
-      setCount(pending.length)
+      try {
+        const pending = await fetchAdminPendingUpgradeRequests(isAdmin)
+        setCount(pending.length)
+        setError(null)
+      } catch (err) {
+        setError(err as Error)
+      }
     }
 
     fetchCount()
-  }, [])
+  }, [isAdmin])
 
-  return count
+  return { count, error }
 }
 
 export const useUserRequestsForAdmin = (userId: string | null | undefined) => {
+  const { isAdmin } = useAuth()
   const [requests, setRequests] = useState<UpgradeRequest[]>([])
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<Error | null>(null)
@@ -81,7 +92,7 @@ export const useUserRequestsForAdmin = (userId: string | null | undefined) => {
       setLoading(true)
       setError(null)
       try {
-        const data = await getUserRequestsForAdmin(userId)
+        const data = await fetchAdminUserRequests(isAdmin, userId)
         setRequests(data)
       } catch (err) {
         setError(err as Error)
@@ -91,7 +102,7 @@ export const useUserRequestsForAdmin = (userId: string | null | undefined) => {
     }
 
     fetchRequests()
-  }, [userId])
+  }, [isAdmin, userId])
 
   return { requests, loading, error }
 }
