@@ -268,6 +268,108 @@ export interface ActivityCatalogEntry {
   updatedAt: string
 }
 
+export interface ActivityDefinition {
+  id: string
+  title: string
+  description: string
+  category: string
+  points: number
+  maxPerWindow: number
+  maxPerClaim?: number
+  requiresApproval?: boolean
+  verification?: 'honor' | 'mentor_approval' | 'partner_approval'
+  isActive: boolean
+  tags?: string[]
+  createdAt: string
+  updatedAt: string
+}
+
+export interface TwoWeekWindow {
+  id: string
+  journeyType: JourneyType
+  windowNumber: number
+  startDate: string
+  endDate: string
+  weekStart: number
+  weekEnd: number
+  label?: string
+  status: 'upcoming' | 'open' | 'closed'
+  createdAt: string
+  updatedAt: string
+}
+
+export interface WindowTarget {
+  id: string
+  journeyType: JourneyType
+  windowNumber: number
+  targetPoints: number
+  minPoints?: number
+  maxPoints?: number
+  createdAt: string
+  updatedAt: string
+}
+
+export interface ActivityClaim {
+  id: string
+  uid: string
+  orgId?: string
+  activityId: string
+  windowId: string
+  windowNumber: number
+  status: 'draft' | 'pending' | 'approved' | 'rejected' | 'voided'
+  pointsClaimed: number
+  proofUrl?: string
+  notes?: string
+  submittedAt?: string
+  reviewedAt?: string
+  reviewedBy?: string
+  rejectionReason?: string
+  createdAt: string
+  updatedAt: string
+}
+
+export interface PointsLedgerEntry {
+  id: string
+  uid: string
+  activityId: string
+  activityClaimId?: string
+  windowId?: string
+  windowNumber?: number
+  weekNumber?: number
+  points: number
+  source: 'activity_claim' | 'weekly_checklist' | 'impact_log' | 'manual_adjustment'
+  status: 'posted' | 'voided'
+  createdAt: string
+  updatedAt: string
+}
+
+export interface BadgeAward {
+  id: string
+  uid: string
+  badgeId: string
+  windowId?: string
+  windowNumber?: number
+  reason?: string
+  awardedAt: string
+  awardedBy?: string
+  createdAt: string
+  updatedAt: string
+}
+
+export interface NotificationQueueEntry {
+  id: string
+  uid: string
+  type: 'achievement' | 'approval' | 'reminder' | 'system'
+  channel: 'in_app' | 'email' | 'sms'
+  payload: Record<string, unknown>
+  status: 'queued' | 'processing' | 'sent' | 'failed'
+  scheduledFor?: string
+  attempts: number
+  lastAttemptAt?: string
+  createdAt: string
+  updatedAt: string
+}
+
 // Weekly Activity Tracking
 export interface WeeklyProgress {
   uid: string;

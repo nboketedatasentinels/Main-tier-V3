@@ -19,6 +19,13 @@ This directory contains the complete database schema for the T4L platform using 
 - **journey_configs** - Canonical journey configuration baseline
 - **activities** - Available activities with points
 - **activity_catalog** - Activity catalog metadata baseline
+- **activityDefinitions** - Window-first activity definitions
+- **twoWeekWindows** - Two-week program windows
+- **windowTargets** - Window-level points targets
+- **activityClaims** - Activity claim submissions and approvals
+- **pointsLedger** - Points ledger with window metadata
+- **badgeAwards** - Awarded badges tied to windows
+- **notificationQueue** - Back-office notification queue
 - **courses** - Available courses
 - **badges** - Achievement badges
 - **villages** - Community groups
@@ -106,4 +113,15 @@ node scripts/seed-journey-activity-catalog.mjs
 ```
 
 The script loads `database/seed-data/journey-configs.json` and `database/seed-data/activity-catalog.json` and upserts
+records by ID.
+
+## Window configuration seed data
+
+Use `scripts/seed-window-configs.mjs` to seed window-first activity definitions and window targets:
+
+```bash
+node scripts/seed-window-configs.mjs
+```
+
+The script loads `database/seed-data/activity-definitions.json` and `database/seed-data/window-targets.json` and upserts
 records by ID.
