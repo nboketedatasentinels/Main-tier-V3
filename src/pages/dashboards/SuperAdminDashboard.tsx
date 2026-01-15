@@ -10,6 +10,7 @@ import { SecurityAuditPage } from '@/pages/super-admin/SecurityAuditPage'
 import { SystemSettingsPage } from '@/pages/super-admin/SystemSettingsPage'
 import { UserManagementPage } from '@/pages/super-admin/UserManagementPage'
 import { AdminOversightPage } from '@/pages/super-admin/AdminOversightPage'
+import { ApprovalCenterPage } from '@/pages/super-admin/ApprovalCenterPage'
 import {
   listenToAdminActivityLog,
   listenToDashboardMetrics,
@@ -259,6 +260,8 @@ export const SuperAdminDashboard: React.FC = () => {
         return <OrganizationManagementPage adminName={adminName} adminId={profile?.id} />
       case 'users':
         return <UserManagementPage />
+      case 'approvals':
+        return <ApprovalCenterPage />
       case 'admin-oversight':
         return <AdminOversightPage adminName={adminName} adminId={profile?.id} />
       case 'settings':

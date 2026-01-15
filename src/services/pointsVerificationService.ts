@@ -2,6 +2,7 @@ import {
   collection,
   doc,
   getDoc,
+  limit,
   onSnapshot,
   orderBy,
   query,
@@ -97,6 +98,37 @@ export const listenToPointsVerificationRequests = (
       }),
     )
   })
+}
+
+export const listenToAllPointsVerificationRequests = (
+  onChange: (requests: PointsVerificationRequest[]) => void,
+  options?: { status?: PointsVerificationRequestStatus | 'all'; limit?: number },
+  onError?: (error: unknown) => void,
+) => {
+  const constraints = [orderBy('created_at', 'desc')]
+  if (options?.status && options.status !== 'all') {
+    constraints.push(where('status', '==', options.status))
+  }
+  if (options?.limit) {
+    constraints.push(limit(options.limit))
+  }
+
+  const verificationQuery = query(collection(db, 'points_verification_requests'), ...constraints)
+
+  return onSnapshot(
+    verificationQuery,
+    (snapshot) => {
+      onChange(
+        snapshot.docs.map((docSnap) => {
+          const data = docSnap.data() as PointsVerificationRequest
+          return { ...data, id: docSnap.id }
+        }),
+      )
+    },
+    (error) => {
+      onError?.(error)
+    },
+  )
 }
 
 export const approvePointsVerificationRequest = async (params: {
