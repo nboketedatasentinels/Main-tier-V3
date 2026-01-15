@@ -38,6 +38,7 @@ import { LeadershipBoardPage } from '@/pages/leaderboard/LeadershipBoardPage'
 import { ProfilePage } from '@/pages/profile/ProfilePage'
 import { WeeklyUpdatesPage } from '@/pages/journeys/WeeklyUpdatesPage'
 import { WeeklyGlancePage } from '@/pages/journeys/WeeklyGlancePage'
+import { LearnerDashboardPage } from '@/pages/journeys/LearnerDashboardPage'
 import { MyCoursesPage } from '@/pages/courses/MyCoursesPage'
 import { PeerConnectPage } from '@/pages/peer/PeerConnectPage'
 import { LeadershipCouncilPage } from '@/pages/leadership/LeadershipCouncilPage'
@@ -190,6 +191,7 @@ export const AppRoutes = () => {
           {/* Feature routes */}
           <Route path="journeys" element={<JourneysPage />} />
           <Route path="weekly-glance" element={<WeeklyGlancePage />} />
+          <Route path="learner-dashboard" element={<LearnerDashboardPage />} />
           
           {/* Learner-specific routes with mentor restriction */}
           <Route 
