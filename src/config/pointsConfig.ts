@@ -1,3 +1,5 @@
+import { getWindowNumber } from "@/utils/windowCalculations";
+
 export type JourneyType = "4W" | "6W" | "3M" | "6M" | "9M" | "12M";
 export type JourneyTimelineDisplayMode = "duration" | "course-count";
 
@@ -196,7 +198,7 @@ export function getActivitiesForJourney(journeyType: JourneyType): ActivityDef[]
 
 // For 3M+ show month indicator: Month = ceil(week/4)
 export function getMonthNumber(weekNumber: number): number {
-  return Math.ceil(weekNumber / 4);
+  return getWindowNumber(weekNumber);
 }
 
 // Default export for consumers that prefer object access
