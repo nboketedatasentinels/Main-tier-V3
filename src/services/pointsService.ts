@@ -3,6 +3,8 @@ import {
   doc,
   getDocs,
   increment,
+  limit,
+  orderBy,
   query,
   runTransaction,
   serverTimestamp,
@@ -60,13 +62,55 @@ export async function awardChecklistPoints(params: {
     where("uid", "==", uid),
     where("weekNumber", "==", weekNumber)
   );
+  const weeklyActivityQuery = query(
+    collection(db, "pointsLedger"),
+    where("uid", "==", uid),
+    where("weekNumber", "==", weekNumber),
+    where("activityId", "==", activity.id)
+  );
+  const windowActivityQuery = query(
+    collection(db, "pointsLedger"),
+    where("uid", "==", uid),
+    where("monthNumber", "==", monthNumber),
+    where("activityId", "==", activity.id)
+  );
+  const lastActivityQuery = query(
+    collection(db, "pointsLedger"),
+    where("uid", "==", uid),
+    where("activityId", "==", activity.id),
+    orderBy("weekNumber", "desc"),
+    limit(1)
+  );
 
   try {
     const ledgerSnapshot = await getDocs(ledgerQuery);
     await runTransactionWithRetry(async (tx) => {
-      const [ledgerDoc, progressDoc] = await Promise.all([tx.get(ledgerRef), tx.get(progressRef)]);
+      const [ledgerDoc, progressDoc, weeklyActivitySnapshot, windowActivitySnapshot, lastActivitySnapshot] =
+        await Promise.all([
+          tx.get(ledgerRef),
+          tx.get(progressRef),
+          tx.get(weeklyActivityQuery),
+          tx.get(windowActivityQuery),
+          tx.get(lastActivityQuery),
+        ]);
 
       if (ledgerDoc.exists()) return;
+
+      const maxPerWeek = activity.maxPerWeek ?? 1;
+      if (maxPerWeek && weeklyActivitySnapshot.size >= maxPerWeek) {
+        throw new Error("Weekly activity limit reached");
+      }
+
+      if (activity.maxPerMonth && windowActivitySnapshot.size >= activity.maxPerMonth) {
+        throw new Error("Window activity limit reached");
+      }
+
+      if (activity.cooldownWeeks && lastActivitySnapshot.size > 0) {
+        const lastWeekNumber = lastActivitySnapshot.docs[0]?.data()?.weekNumber as number | undefined;
+        if (lastWeekNumber && weekNumber - lastWeekNumber <= activity.cooldownWeeks) {
+          throw new Error("Activity cooldown in effect");
+        }
+      }
 
       const currentProgress = progressDoc.exists()
         ? progressDoc.data()

@@ -255,6 +255,7 @@ export interface ActivityCatalogEntry {
   points: number
   maxPerMonth: number
   maxPerWeek?: number
+  cooldownWeeks?: number
   requiresApproval?: boolean
   verification?: 'honor' | 'partner_approval'
   isFreeTier?: boolean
@@ -263,6 +264,10 @@ export interface ActivityCatalogEntry {
   tags?: string[]
   flexibleWeeks?: boolean
   frequencyNote?: string
+  visibility?: {
+    requiresMentor?: boolean
+    requiresAmbassador?: boolean
+  }
   isActive: boolean
   createdAt: string
   updatedAt: string
