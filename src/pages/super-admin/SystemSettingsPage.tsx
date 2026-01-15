@@ -11,6 +11,11 @@ import {
   Heading,
   HStack,
   Input,
+  NumberDecrementStepper,
+  NumberIncrementStepper,
+  NumberInput,
+  NumberInputField,
+  NumberInputStepper,
   SimpleGrid,
   Stack,
   Switch,
@@ -25,6 +30,23 @@ export const SystemSettingsPage: React.FC = () => {
   const [emailSettings, setEmailSettings] = useState({ fromName: 'Super Admin', fromEmail: 'no-reply@example.com' })
   const [notifications, setNotifications] = useState({ audits: true, engagement: true, outages: false })
   const [featureFlags, setFeatureFlags] = useState({ betaTools: true, sandboxMode: false, scoringV2: true })
+  const [passMarkSettings, setPassMarkSettings] = useState({
+    baseMark: 72,
+    adjustment: 4,
+    autoAdjust: true,
+    recentAverage: 76,
+    floor: 60,
+    ceiling: 95,
+  })
+
+  const resolvedAdjustment = passMarkSettings.autoAdjust
+    ? Math.round((passMarkSettings.recentAverage - passMarkSettings.baseMark) / 4)
+    : passMarkSettings.adjustment
+
+  const effectivePassMark = Math.min(
+    passMarkSettings.ceiling,
+    Math.max(passMarkSettings.floor, passMarkSettings.baseMark + resolvedAdjustment),
+  )
 
   const handleSave = () => {
     toast({ title: 'Settings saved', status: 'success' })
@@ -34,6 +56,14 @@ export const SystemSettingsPage: React.FC = () => {
     setEmailSettings({ fromName: 'Super Admin', fromEmail: 'no-reply@example.com' })
     setNotifications({ audits: true, engagement: true, outages: false })
     setFeatureFlags({ betaTools: true, sandboxMode: false, scoringV2: true })
+    setPassMarkSettings({
+      baseMark: 72,
+      adjustment: 4,
+      autoAdjust: true,
+      recentAverage: 76,
+      floor: 60,
+      ceiling: 95,
+    })
     toast({ title: 'Settings reset', status: 'info' })
   }
 
@@ -140,6 +170,97 @@ export const SystemSettingsPage: React.FC = () => {
                       onChange={(checked) => setFeatureFlags((prev) => ({ ...prev, scoringV2: checked }))}
                     />
                   </SimpleGrid>
+                </Stack>
+              </CardBody>
+            </Card>
+
+            <Card bg="gray.50" border="1px solid" borderColor="brand.border">
+              <CardBody>
+                <Stack spacing={4}>
+                  <HStack justify="space-between">
+                    <Heading size="sm">Dynamic pass mark adjustment</Heading>
+                    <Badge colorScheme="purple">Learning</Badge>
+                  </HStack>
+                  <Text color="brand.subtleText">
+                    Adjust assessment pass marks automatically based on recent cohort performance. Manual overrides are used when auto-adjust is off.
+                  </Text>
+                  <SimpleGrid columns={{ base: 1, md: 2 }} spacing={4}>
+                    <FormControl>
+                      <FormLabel>Base pass mark (%)</FormLabel>
+                      <NumberInput
+                        value={passMarkSettings.baseMark}
+                        min={50}
+                        max={100}
+                        onChange={(_, value) => setPassMarkSettings((prev) => ({ ...prev, baseMark: value }))}
+                      >
+                        <NumberInputField />
+                        <NumberInputStepper>
+                          <NumberIncrementStepper />
+                          <NumberDecrementStepper />
+                        </NumberInputStepper>
+                      </NumberInput>
+                    </FormControl>
+                    <FormControl>
+                      <FormLabel>Recent cohort average (%)</FormLabel>
+                      <NumberInput
+                        value={passMarkSettings.recentAverage}
+                        min={50}
+                        max={100}
+                        onChange={(_, value) => setPassMarkSettings((prev) => ({ ...prev, recentAverage: value }))}
+                      >
+                        <NumberInputField />
+                        <NumberInputStepper>
+                          <NumberIncrementStepper />
+                          <NumberDecrementStepper />
+                        </NumberInputStepper>
+                      </NumberInput>
+                    </FormControl>
+                    <FormControl>
+                      <FormLabel>Manual adjustment (%)</FormLabel>
+                      <NumberInput
+                        value={passMarkSettings.adjustment}
+                        min={-10}
+                        max={10}
+                        onChange={(_, value) => setPassMarkSettings((prev) => ({ ...prev, adjustment: value }))}
+                        isDisabled={passMarkSettings.autoAdjust}
+                      >
+                        <NumberInputField />
+                        <NumberInputStepper>
+                          <NumberIncrementStepper />
+                          <NumberDecrementStepper />
+                        </NumberInputStepper>
+                      </NumberInput>
+                    </FormControl>
+                    <FormControl>
+                      <FormLabel>Auto-adjust</FormLabel>
+                      <Switch
+                        isChecked={passMarkSettings.autoAdjust}
+                        onChange={(e) => setPassMarkSettings((prev) => ({ ...prev, autoAdjust: e.target.checked }))}
+                      />
+                    </FormControl>
+                  </SimpleGrid>
+
+                  <Card bg="white" border="1px solid" borderColor="brand.border">
+                    <CardBody>
+                      <Stack spacing={2}>
+                        <Text fontWeight="semibold" color="brand.text">
+                          Current pass mark
+                        </Text>
+                        <HStack spacing={3}>
+                          <Heading size="md">{effectivePassMark}%</Heading>
+                          <Badge colorScheme={effectivePassMark >= passMarkSettings.baseMark ? 'green' : 'yellow'}>
+                            {resolvedAdjustment >= 0 ? '+' : ''}
+                            {resolvedAdjustment}% adjustment
+                          </Badge>
+                        </HStack>
+                        <Text fontSize="sm" color="brand.subtleText">
+                          {passMarkSettings.autoAdjust
+                            ? `Auto-adjusted using a recent cohort average of ${passMarkSettings.recentAverage}%.`
+                            : 'Manual override applied. Turn on auto-adjust to follow cohort trends.'}
+                        </Text>
+                      </Stack>
+                    </CardBody>
+                  </Card>
                 </Stack>
               </CardBody>
             </Card>
