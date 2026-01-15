@@ -35,7 +35,7 @@ import {
   useDisclosure,
   useToast,
 } from '@chakra-ui/react'
-import { AlertTriangle, CheckCircle, Lock, Plus, ShieldCheck } from 'lucide-react'
+import { AlertTriangle, CalendarRange, CheckCircle, Lock, Plus, ShieldCheck } from 'lucide-react'
 import { addDoc, collection, doc, getDoc, getDocs, onSnapshot, query, serverTimestamp, setDoc, where } from 'firebase/firestore'
 import { addDays, format } from 'date-fns'
 import { removeUndefinedFields } from '@/utils/firestore'
@@ -56,6 +56,7 @@ import {
   MONTH_BASED_JOURNEYS,
   resolveJourneyType,
 } from '@/utils/journeyType'
+import { getWindowNumber, getWindowRange, getWindowWeekNumber } from '@/utils/windowCalculations'
 
 const DEFAULT_WEEKLY_TARGET = JOURNEY_META['6W'].weeklyTarget
 
@@ -163,6 +164,26 @@ const statusLabelMap: Record<ActivityStatus, string> = {
   completed: 'Completed',
 }
 
+const isActivityAvailableForWeek = (params: {
+  activity: ActivityDef
+  windowWeek: number
+  weekCount: number
+  windowCount: number
+}) => {
+  const { activity, windowWeek, weekCount, windowCount } = params
+  const isCompletedThisWeek = weekCount > 0
+  const isScheduled = Boolean(activity.flexibleWeeks) || activity.week === windowWeek
+  if (!isScheduled && !isCompletedThisWeek) return false
+
+  const weeklyMaxed = activity.maxPerWeek ? weekCount >= activity.maxPerWeek : false
+  const windowMaxed = windowCount >= activity.maxPerMonth
+
+  if (weeklyMaxed && !isCompletedThisWeek) return false
+  if (windowMaxed && !isCompletedThisWeek) return false
+
+  return true
+}
+
 const WeeklyChecklistPage: React.FC = () => {
   const { user, profile } = useAuth()
   const [journey, setJourney] = useState<JourneyConfig | null>(null)
@@ -241,6 +262,39 @@ const WeeklyChecklistPage: React.FC = () => {
     allWeeksProgress.forEach(week => map.set(week.weekNumber, week));
     return map;
   }, [allWeeksProgress]);
+
+  const windowMeta = useMemo(() => {
+    if (!journey) {
+      return {
+        windowNumber: 1,
+        startWeek: selectedWeek,
+        endWeek: selectedWeek,
+        windowWeeks: 1,
+      };
+    }
+    return getWindowRange(selectedWeek, journey.programDurationWeeks);
+  }, [journey, selectedWeek]);
+
+  const windowProgress = useMemo(() => {
+    if (!journey) {
+      return {
+        windowNumber: 1,
+        target: 0,
+        earned: 0,
+        pct: 0,
+        startWeek: selectedWeek,
+        endWeek: selectedWeek,
+      };
+    }
+    const { windowNumber, startWeek, endWeek, windowWeeks } = windowMeta;
+    const target = weeklyTarget * windowWeeks;
+    const earned = allWeeksProgress.reduce((sum, week) => {
+      if (week.weekNumber < startWeek || week.weekNumber > endWeek) return sum;
+      return sum + (week.pointsEarned ?? 0);
+    }, 0);
+    const pct = target > 0 ? Math.min(100, Math.round((earned / target) * 100)) : 0;
+    return { windowNumber, target, earned, pct, startWeek, endWeek };
+  }, [allWeeksProgress, journey, selectedWeek, weeklyTarget, windowMeta]);
 
   const tierLabel = useMemo(() => {
     if (!profile) return 'Member';
@@ -362,6 +416,8 @@ const WeeklyChecklistPage: React.FC = () => {
     setError('');
     try {
       const activityDefs = getActivitiesForJourney(journey.journeyType);
+      const windowNumber = getWindowNumber(selectedWeek);
+      const windowWeek = getWindowWeekNumber(selectedWeek);
 
       const ledgerQuery = query(
         collection(db, 'pointsLedger'),
@@ -371,11 +427,36 @@ const WeeklyChecklistPage: React.FC = () => {
 
       const ledgerSnapshot = await getDocs(ledgerQuery);
       const completedActivities = new Set(ledgerSnapshot.docs.map(d => d.data().activityId));
+      const weekActivityCounts = ledgerSnapshot.docs.reduce<Record<string, number>>((acc, docItem) => {
+        const activityId = docItem.data().activityId as string | undefined;
+        if (!activityId) return acc;
+        acc[activityId] = (acc[activityId] ?? 0) + 1;
+        return acc;
+      }, {});
 
-      const activityStates: ActivityState[] = activityDefs.map(def => ({
-        ...def,
-        status: completedActivities.has(def.id) ? 'completed' : 'not_started',
-      }));
+      const windowLedgerQuery = query(
+        collection(db, 'pointsLedger'),
+        where('uid', '==', user.uid),
+        where('monthNumber', '==', windowNumber),
+      );
+      const windowLedgerSnapshot = await getDocs(windowLedgerQuery);
+      const windowActivityCounts = windowLedgerSnapshot.docs.reduce<Record<string, number>>((acc, docItem) => {
+        const activityId = docItem.data().activityId as string | undefined;
+        if (!activityId) return acc;
+        acc[activityId] = (acc[activityId] ?? 0) + 1;
+        return acc;
+      }, {});
+
+      const activityStates: ActivityState[] = activityDefs
+        .filter(def => {
+          const weekCount = weekActivityCounts[def.id] ?? 0;
+          const windowCount = windowActivityCounts[def.id] ?? 0;
+          return isActivityAvailableForWeek({ activity: def, windowWeek, weekCount, windowCount });
+        })
+        .map(def => ({
+          ...def,
+          status: completedActivities.has(def.id) ? 'completed' : 'not_started',
+        }));
 
       setActivities(activityStates);
     } catch (err) {
@@ -1120,14 +1201,14 @@ const WeeklyChecklistPage: React.FC = () => {
         <Stack spacing={3}>
           <HStack justify="space-between">
             <Heading size="sm" color="#273240">
-              Week {selectedWeek} summary
+              Week {selectedWeek} summary · Window {windowProgress.windowNumber}
             </Heading>
             <Tag colorScheme={progressStatus.color}>
               {progressStatus.label} • {progressStatus.pct}%
             </Tag>
           </HStack>
           <Progress value={progressStatus.pct} colorScheme={progressStatus.color} borderRadius="full" />
-          <SimpleGrid columns={{ base: 1, md: 3 }} spacing={4}>
+          <SimpleGrid columns={{ base: 1, md: 4 }} spacing={4}>
             <StatCard
               label="Activities completed"
               value={`${pendingCounts.completed} of ${pendingCounts.total}`}
@@ -1137,6 +1218,11 @@ const WeeklyChecklistPage: React.FC = () => {
               label="Weekly points"
               value={`${weeklyPointsEarned} / ${weeklyTarget}`}
               icon={<Icon as={Plus} color="accent.warning" />}
+            />
+            <StatCard
+              label={`Window ${windowProgress.windowNumber} points`}
+              value={`${windowProgress.earned} / ${windowProgress.target}`}
+              icon={<Icon as={CalendarRange} color="purple.400" />}
             />
             <StatCard
               label="Status"
