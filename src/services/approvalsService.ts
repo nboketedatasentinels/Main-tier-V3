@@ -4,7 +4,7 @@ import { ApprovalRecord, ApprovalSource, ApprovalWorkflowType } from '@/types/ap
 import { awardChecklistPoints } from './pointsService';
 import { PointsVerificationRequest } from './pointsVerificationService';
 import { getActivitiesForJourney } from '@/config/pointsConfig';
-import { createNotification } from './notificationService';
+import { createInAppNotification } from './notificationService';
 
 /**
  * Creates a new approval request in the `approvals` collection.
@@ -127,7 +127,7 @@ export async function rejectRequest(
       reviewedAt: serverTimestamp(),
     });
 
-    await createNotification({
+    await createInAppNotification({
       userId: approvalRecord.userId,
       title: 'Activity Submission Rejected',
       message: `Your submission for "${approvalRecord.title}" was rejected. Reason: ${rejectionReason}`,
