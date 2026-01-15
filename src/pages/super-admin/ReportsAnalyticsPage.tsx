@@ -81,6 +81,37 @@ export const ReportsAnalyticsPage: React.FC<ReportsAnalyticsPageProps> = ({ metr
               </Stack>
             </CardBody>
           </Card>
+
+          <Card bg="gray.50" border="1px solid" borderColor="brand.border">
+            <CardBody>
+              <Stack spacing={4}>
+                <HStack justify="space-between">
+                  <HStack spacing={2}>
+                    <TrendingUp size={18} />
+                    <Text fontWeight="bold">Operational analytics dashboards</Text>
+                  </HStack>
+                  <Badge colorScheme="green">Live</Badge>
+                </HStack>
+                <Text fontSize="sm" color="brand.subtleText">
+                  Monitor alert response times, reporting throughput, and health checks for every organization.
+                </Text>
+                <SimpleGrid columns={{ base: 1, md: 2, xl: 4 }} spacing={4}>
+                  <InsightCard title="Alert response" value="42 min" helper="Median resolution time" />
+                  <InsightCard title="Reports exported" value="128" helper="Last 30 days" />
+                  <InsightCard title="Automation coverage" value="86%" helper="Journeys with alerts" />
+                  <InsightCard title="Data health" value="98%" helper="Sync success rate" />
+                </SimpleGrid>
+                <HStack spacing={3}>
+                  <Button leftIcon={<Download size={16} />} variant="outline">
+                    Export operations CSV
+                  </Button>
+                  <Button leftIcon={<BarChart3 size={16} />} colorScheme="purple">
+                    Open analytics workspace
+                  </Button>
+                </HStack>
+              </Stack>
+            </CardBody>
+          </Card>
         </Stack>
       </CardBody>
     </Card>
