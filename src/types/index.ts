@@ -144,6 +144,8 @@ export interface Organization {
   journeyType?: JourneyType
   programDurationWeeks?: number
   cohortStartDate?: string
+  hasMentor?: boolean
+  hasAmbassador?: boolean
 }
 
 export interface PrivacySettings {
@@ -169,6 +171,27 @@ export interface Journey {
   isPremium: boolean
   courses?: Course[]
   phases?: JourneyPhase[]
+  createdAt: string
+  updatedAt: string
+}
+
+export interface JourneyConfig {
+  id: string
+  journeyType: JourneyType
+  name: string
+  description: string
+  durationWeeks: number
+  totalPointsTarget: number
+  weeklyPointsTarget: number
+  minPointsPerWeek: number
+  maxPointsPerWeek?: number
+  maxPointsTotal?: number
+  completionThresholdPct?: number
+  timelineDisplay?: 'duration' | 'course-count'
+  activityIds: string[]
+  mode?: 'intro' | 'full'
+  isActive: boolean
+  isPremium: boolean
   createdAt: string
   updatedAt: string
 }
@@ -222,6 +245,27 @@ export interface Activity {
   requiresProof: boolean
   isRecurring: boolean
   createdAt: string
+}
+
+export interface ActivityCatalogEntry {
+  id: string
+  baseId: string
+  title: string
+  description: string
+  points: number
+  maxPerMonth: number
+  maxPerWeek?: number
+  requiresApproval?: boolean
+  verification?: 'honor' | 'partner_approval'
+  isFreeTier?: boolean
+  week: number
+  category: string
+  tags?: string[]
+  flexibleWeeks?: boolean
+  frequencyNote?: string
+  isActive: boolean
+  createdAt: string
+  updatedAt: string
 }
 
 // Weekly Activity Tracking

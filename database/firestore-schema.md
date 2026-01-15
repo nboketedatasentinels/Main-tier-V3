@@ -96,6 +96,9 @@ Organization settings and program configuration
   assignedMentorId?: string | null
   assignedAmbassadorId?: string | null
   transformationPartnerId?: string | null
+  // Leadership availability flags
+  hasMentor?: boolean
+  hasAmbassador?: boolean
   createdAt?: Timestamp
   updatedAt?: Timestamp
 }
@@ -124,6 +127,56 @@ Available journey templates
   badgeId?: string
   isActive: boolean
   isPremium: boolean
+  createdAt: Timestamp
+  updatedAt: Timestamp
+}
+```
+
+### journey_configs
+Canonical journey configuration baseline (one doc per journey type)
+```typescript
+{
+  id: string
+  journeyType: '4W' | '6W' | '3M' | '6M' | '9M' | '12M'
+  name: string
+  description: string
+  durationWeeks: number
+  totalPointsTarget: number
+  weeklyPointsTarget: number
+  minPointsPerWeek: number
+  maxPointsPerWeek?: number
+  maxPointsTotal?: number
+  completionThresholdPct?: number
+  timelineDisplay?: 'duration' | 'course-count'
+  activityIds: string[]
+  mode?: 'intro' | 'full'
+  isActive: boolean
+  isPremium: boolean
+  createdAt: Timestamp
+  updatedAt: Timestamp
+}
+```
+
+### activity_catalog
+Activity catalog definitions with metadata baseline
+```typescript
+{
+  id: string
+  baseId: string
+  title: string
+  description: string
+  points: number
+  maxPerMonth: number
+  maxPerWeek?: number
+  requiresApproval?: boolean
+  verification?: 'honor' | 'partner_approval'
+  isFreeTier?: boolean
+  week: number
+  category: string
+  tags?: string[]
+  flexibleWeeks?: boolean
+  frequencyNote?: string
+  isActive: boolean
   createdAt: Timestamp
   updatedAt: Timestamp
 }
@@ -462,8 +515,18 @@ service cloud.firestore {
       allow read: if isAuthenticated();
       allow write: if hasRole('super_admin');
     }
+
+    match /journey_configs/{journeyConfigId} {
+      allow read: if isAuthenticated();
+      allow write: if hasRole('super_admin');
+    }
     
     match /activities/{activityId} {
+      allow read: if isAuthenticated();
+      allow write: if hasRole('super_admin');
+    }
+
+    match /activity_catalog/{activityId} {
       allow read: if isAuthenticated();
       allow write: if hasRole('super_admin');
     }
@@ -574,6 +637,12 @@ Create composite indexes for common queries:
    - `status`, `requested_at` (descending)
    - `user_id`, `requested_at` (descending)
 
+11. **journey_configs** collection:
+   - `isActive`, `journeyType` (ascending)
+
+12. **activity_catalog** collection:
+   - `isActive`, `category` (ascending)
+
 ## Initial Data Setup
 
 Use Firebase Admin SDK or console to populate initial data:
@@ -602,3 +671,7 @@ const journeys = [
   // ... more journeys
 ];
 ```
+
+Baseline seed data for the new `journey_configs` and `activity_catalog` collections lives in:
+- `database/seed-data/journey-configs.json`
+- `database/seed-data/activity-catalog.json`

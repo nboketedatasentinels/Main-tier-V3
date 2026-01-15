@@ -16,7 +16,9 @@ This directory contains the complete database schema for the T4L platform using 
 ### Core Collections
 - **profiles** - User profiles and settings
 - **journeys** - Available transformation journeys
+- **journey_configs** - Canonical journey configuration baseline
 - **activities** - Available activities with points
+- **activity_catalog** - Activity catalog metadata baseline
 - **courses** - Available courses
 - **badges** - Achievement badges
 - **villages** - Community groups
@@ -94,3 +96,14 @@ node scripts/seed-nudge-templates.mjs
 ```
 
 The script uses the same Firebase Admin credentials as other migrations. It skips templates that already exist by name.
+
+## Journey + activity catalog seed data
+
+Use `scripts/seed-journey-activity-catalog.mjs` to create baseline journey configs and activity catalog entries:
+
+```bash
+node scripts/seed-journey-activity-catalog.mjs
+```
+
+The script loads `database/seed-data/journey-configs.json` and `database/seed-data/activity-catalog.json` and upserts
+records by ID.

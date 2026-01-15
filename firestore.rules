@@ -326,7 +326,17 @@ service cloud.firestore {
       allow write: if isSuperAdmin();
     }
 
+    match /journey_configs/{journeyConfigId} {
+      allow read: if isAuthenticated();
+      allow write: if isSuperAdmin();
+    }
+
     match /activities/{activityId} {
+      allow read: if isAuthenticated();
+      allow write: if isSuperAdmin();
+    }
+
+    match /activity_catalog/{activityId} {
       allow read: if isAuthenticated();
       allow write: if isSuperAdmin();
     }

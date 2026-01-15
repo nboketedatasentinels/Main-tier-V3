@@ -89,6 +89,8 @@ export interface OrganizationRecord {
   assignedPartnerBy?: string | null
   assignedPartnerName?: string | null
   assignedPartnerEmail?: string | null
+  hasMentor?: boolean
+  hasAmbassador?: boolean
   capacityLastAlertThreshold?: 75 | 90 | 95 | 100 | null
 }
 
