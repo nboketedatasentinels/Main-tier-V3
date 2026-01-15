@@ -17,7 +17,7 @@ import {
   SkeletonText,
 } from '@chakra-ui/react'
 import { formatDistanceToNow } from 'date-fns'
-import { Bell, Building2, Gauge, Sparkles, Users } from 'lucide-react'
+import { Bell, Building2, Gauge, Mail, Sparkles, Users } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
 import { MetricCard } from '@/components/admin/MetricCard'
 import { EngagementChart } from '@/components/admin/EngagementChart'
@@ -218,6 +218,16 @@ export const PartnerAdminDashboard: React.FC = () => {
     )
   }, [organizations])
 
+  const digestSummary = useMemo(() => {
+    const atRiskCount = riskLevels.critical + riskLevels.concern
+    return [
+      { label: 'Critical alerts', value: atRiskCount, color: 'red' },
+      { label: 'Watchlist', value: riskLevels.watch, color: 'yellow' },
+      { label: 'Open interventions', value: interventions.length, color: 'purple' },
+      { label: 'Unread notifications', value: notificationCount, color: 'orange' },
+    ]
+  }, [interventions.length, notificationCount, riskLevels.concern, riskLevels.critical, riskLevels.watch])
+
   const handleViewOrganization = (orgCode: string) => {
     const normalized = orgCode.toLowerCase()
     const allowed =
@@ -412,6 +422,48 @@ export const PartnerAdminDashboard: React.FC = () => {
             onSelectOrg={setSelectedOrg}
             updateUserPoints={updateUserPoints}
           />
+        </CardBody>
+      </Card>
+
+      <Card bg="white" border="1px solid" borderColor="brand.border">
+        <CardBody>
+          <Stack spacing={4}>
+            <HStack justify="space-between" align="center">
+              <HStack spacing={2}>
+                <Mail size={18} />
+                <Text fontWeight="bold" color="brand.text">Automated alerts & partner digest</Text>
+              </HStack>
+              <Badge colorScheme="purple">Weekly summary</Badge>
+            </HStack>
+            <Text fontSize="sm" color="brand.subtleText">
+              Next digest goes out automatically on Monday mornings. Your latest engagement alerts are included below.
+            </Text>
+            <SimpleGrid columns={{ base: 1, md: 4 }} spacing={3}>
+              {digestSummary.map(item => (
+                <Box
+                  key={item.label}
+                  p={3}
+                  borderRadius="md"
+                  border="1px solid"
+                  borderColor="brand.border"
+                  bg="brand.accent"
+                >
+                  <HStack justify="space-between">
+                    <Text fontWeight="semibold" color="brand.text">{item.label}</Text>
+                    <Badge colorScheme={item.color}>{item.value}</Badge>
+                  </HStack>
+                </Box>
+              ))}
+            </SimpleGrid>
+            <HStack justify="space-between" align="center">
+              <Text fontSize="sm" color="brand.subtleText">
+                Last refreshed {lastUsersSuccessAt ? formatDistanceToNow(lastUsersSuccessAt) : 'not yet'} ago.
+              </Text>
+              <Button variant="outline" leftIcon={<Mail size={16} />}>
+                Send digest now
+              </Button>
+            </HStack>
+          </Stack>
         </CardBody>
       </Card>
 
