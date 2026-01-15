@@ -17,3 +17,7 @@ This folder contains documentation for learners, partners, admins, and internal 
 
 - [QA Automated Test Suite](./qa-test-suite.md)
 - [Migration Reconciliation Report Template](./migration-reconciliation-report.md)
+
+## Architecture & Governance
+
+- [Architecture, Rules, and Ownership Lock](./architecture-lock.md)
