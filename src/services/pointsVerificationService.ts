@@ -12,7 +12,13 @@ import {
   type Timestamp,
 } from 'firebase/firestore'
 import { db } from '@/services/firebase'
-import { getActivitiesForJourney, type ActivityDef, type JourneyType } from '@/config/pointsConfig'
+import {
+  FULL_ACTIVITIES,
+  getActivitiesForJourney,
+  type ActivityDef,
+  type ActivityId,
+  type JourneyType,
+} from '@/config/pointsConfig'
 import { awardChecklistPoints } from '@/services/pointsService'
 
 export type PointsVerificationRequestStatus = 'pending' | 'approved' | 'rejected'
@@ -72,13 +78,44 @@ const updateChecklistActivityStatus = async (
   })
 }
 
-const getActivityForJourney = (journeyType: JourneyType, activityId: string): ActivityDef => {
+const buildFallbackActivity = (
+  request: Pick<PointsVerificationRequest, 'activity_id' | 'activity_title' | 'points' | 'week'>,
+): ActivityDef => ({
+  id: request.activity_id as ActivityId,
+  baseId: request.activity_id,
+  title: request.activity_title ?? 'Manual activity',
+  description: 'Legacy or custom activity submitted for approval.',
+  points: request.points ?? 0,
+  maxPerMonth: 1,
+  week: request.week,
+  category: 'Legacy',
+  requiresApproval: true,
+  verification: 'partner_approval',
+  flexibleWeeks: true,
+})
+
+const getActivityForJourney = (
+  journeyType: JourneyType,
+  request: Pick<PointsVerificationRequest, 'activity_id' | 'activity_title' | 'points' | 'week'>,
+): ActivityDef => {
   const activities = getActivitiesForJourney(journeyType)
-  const activity = activities.find((item) => item.id === activityId)
-  if (!activity) {
-    throw new Error('Activity not found for journey type')
+  const activity = activities.find((item) => item.id === request.activity_id)
+  if (activity) return activity
+
+  const fallbackActivity = FULL_ACTIVITIES.find((item) => item.id === request.activity_id)
+  if (fallbackActivity) {
+    console.warn('Points verification activity not in journey config. Using full catalog.', {
+      journeyType,
+      activityId: request.activity_id,
+    })
+    return fallbackActivity
   }
-  return activity
+
+  console.warn('Points verification activity missing from catalog. Using fallback metadata.', {
+    journeyType,
+    activityId: request.activity_id,
+  })
+  return buildFallbackActivity(request)
 }
 
 export const listenToPointsVerificationRequests = (
@@ -137,7 +174,7 @@ export const approvePointsVerificationRequest = async (params: {
 }) => {
   const { request, approver } = params
   const journeyType = await getJourneyTypeForUser(request.user_id)
-  const activity = getActivityForJourney(journeyType, request.activity_id)
+  const activity = getActivityForJourney(journeyType, request)
 
   await awardChecklistPoints({
     uid: request.user_id,
