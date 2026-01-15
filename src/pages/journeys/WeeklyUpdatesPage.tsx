@@ -57,6 +57,11 @@ import {
   resolveJourneyType,
 } from '@/utils/journeyType'
 import { getWindowNumber, getWindowRange, getWindowWeekNumber } from '@/utils/windowCalculations'
+import {
+  calculateActivityAvailability,
+  type ActivityAvailabilityReason,
+  type ActivityAvailabilityResult,
+} from '@/utils/activityStateManager'
 
 const DEFAULT_WEEKLY_TARGET = JOURNEY_META['6W'].weeklyTarget
 
@@ -67,6 +72,7 @@ type ActivityState = ActivityDef & {
   proofUrl?: string
   notes?: string
   hasInteracted?: boolean
+  availability: ActivityAvailabilityResult
 }
 
 interface JourneyConfig {
@@ -164,24 +170,13 @@ const statusLabelMap: Record<ActivityStatus, string> = {
   completed: 'Completed',
 }
 
-const isActivityAvailableForWeek = (params: {
-  activity: ActivityDef
-  windowWeek: number
-  weekCount: number
-  windowCount: number
-}) => {
-  const { activity, windowWeek, weekCount, windowCount } = params
-  const isCompletedThisWeek = weekCount > 0
-  const isScheduled = Boolean(activity.flexibleWeeks) || activity.week === windowWeek
-  if (!isScheduled && !isCompletedThisWeek) return false
-
-  const weeklyMaxed = activity.maxPerWeek ? weekCount >= activity.maxPerWeek : false
-  const windowMaxed = windowCount >= activity.maxPerMonth
-
-  if (weeklyMaxed && !isCompletedThisWeek) return false
-  if (windowMaxed && !isCompletedThisWeek) return false
-
-  return true
+const availabilityReasonLabels: Record<ActivityAvailabilityReason, string> = {
+  scheduled: 'Scheduled later this window',
+  cooldown: 'Cooldown in effect',
+  max_per_week: 'Weekly limit reached',
+  max_per_window: 'Window limit reached',
+  missing_mentor: 'Mentor required',
+  missing_ambassador: 'Ambassador required',
 }
 
 const WeeklyChecklistPage: React.FC = () => {
@@ -418,6 +413,8 @@ const WeeklyChecklistPage: React.FC = () => {
       const activityDefs = getActivitiesForJourney(journey.journeyType);
       const windowNumber = getWindowNumber(selectedWeek);
       const windowWeek = getWindowWeekNumber(selectedWeek);
+      const hasMentor = Boolean(profile?.mentorId || profile?.mentorOverrideId);
+      const hasAmbassador = Boolean(profile?.ambassadorId || profile?.ambassadorOverrideId);
 
       const ledgerQuery = query(
         collection(db, 'pointsLedger'),
@@ -446,16 +443,27 @@ const WeeklyChecklistPage: React.FC = () => {
         acc[activityId] = (acc[activityId] ?? 0) + 1;
         return acc;
       }, {});
+      const lastCompletionWeekByActivity = windowLedgerSnapshot.docs.reduce<Record<string, number>>((acc, docItem) => {
+        const activityId = docItem.data().activityId as string | undefined;
+        const weekNumber = docItem.data().weekNumber as number | undefined;
+        if (!activityId || !weekNumber) return acc;
+        const current = acc[activityId] ?? 0;
+        acc[activityId] = Math.max(current, weekNumber);
+        return acc;
+      }, {});
 
       const activityStates: ActivityState[] = activityDefs
-        .filter(def => {
-          const weekCount = weekActivityCounts[def.id] ?? 0;
-          const windowCount = windowActivityCounts[def.id] ?? 0;
-          return isActivityAvailableForWeek({ activity: def, windowWeek, weekCount, windowCount });
-        })
         .map(def => ({
           ...def,
           status: completedActivities.has(def.id) ? 'completed' : 'not_started',
+          availability: calculateActivityAvailability(def, {
+            windowWeek,
+            weekCount: weekActivityCounts[def.id] ?? 0,
+            windowCount: windowActivityCounts[def.id] ?? 0,
+            lastCompletedWeek: lastCompletionWeekByActivity[def.id],
+            hasMentor,
+            hasAmbassador,
+          }),
         }));
 
       setActivities(activityStates);
@@ -465,7 +473,7 @@ const WeeklyChecklistPage: React.FC = () => {
     } finally {
       setActivityLoading(false);
     }
-  }, [journey, selectedWeek, user]);
+  }, [journey, profile?.ambassadorId, profile?.ambassadorOverrideId, profile?.mentorId, profile?.mentorOverrideId, selectedWeek, user]);
 
   const checkCalendarSyncTutorial = useCallback(async () => {
     if (!user) return
@@ -581,6 +589,14 @@ const WeeklyChecklistPage: React.FC = () => {
 
   const handleActivityUpdate = async (activity: ActivityState, nextStatus: ActivityStatus) => {
     if (!user || !journey) return;
+    if (activity.availability.state !== 'available') {
+      toast({
+        title: 'Activity unavailable',
+        description: availabilityReasonLabels[activity.availability.reason ?? 'scheduled'],
+        status: 'warning',
+      });
+      return;
+    }
 
     try {
       if (nextStatus === 'completed') {
@@ -658,6 +674,14 @@ const WeeklyChecklistPage: React.FC = () => {
 
   const submitProof = async () => {
     if (!proofModal.activity || !user) return
+    if (proofModal.activity.availability.state !== 'available') {
+      toast({
+        title: 'Activity unavailable',
+        description: availabilityReasonLabels[proofModal.activity.availability.reason ?? 'scheduled'],
+        status: 'warning',
+      })
+      return
+    }
     try {
       const payload = removeUndefinedFields({
         user_id: user.uid,
@@ -900,8 +924,22 @@ const WeeklyChecklistPage: React.FC = () => {
     }
   }
 
+  const getAvailabilityMessage = (activity: ActivityState) => {
+    if (activity.availability.state === 'available') return null
+    if (activity.availability.reason === 'scheduled') {
+      return `Available in week ${activity.week} of this window.`
+    }
+    if (activity.availability.reason === 'cooldown' && activity.availability.cooldownRemainingWeeks) {
+      return `Available in ${activity.availability.cooldownRemainingWeeks} week(s).`
+    }
+    if (activity.availability.reason) {
+      return availabilityReasonLabels[activity.availability.reason]
+    }
+    return 'Locked'
+  }
+
   const renderActivityCard = (activity: ActivityState) => {
-    const disabled = isWeekLocked
+    const disabled = isWeekLocked || activity.availability.state !== 'available'
     const requiresPartnerApproval = journey?.isPaid && activity.requiresApproval
     const isHonorBased = !activity.requiresApproval
     const yesDisabled = disabled || activity.status === 'completed'
@@ -909,6 +947,7 @@ const WeeklyChecklistPage: React.FC = () => {
 
     const showProofBadge = requiresPartnerApproval
     const showFreeBadge = activity.isFreeTier && !journey?.isPaid
+    const availabilityMessage = getAvailabilityMessage(activity)
 
     return (
       <Box
@@ -945,6 +984,12 @@ const WeeklyChecklistPage: React.FC = () => {
                 </Tooltip>
               )}
               {showFreeBadge && <Badge colorScheme="secondary">Free tier</Badge>}
+              {activity.availability.state === 'locked' && (
+                <Badge colorScheme="gray">Locked</Badge>
+              )}
+              {activity.availability.state === 'exhausted' && (
+                <Badge colorScheme="orange">Exhausted</Badge>
+              )}
               <Tag colorScheme="primary">{activity.category}</Tag>
             </HStack>
             <HStack spacing={2}>
@@ -964,6 +1009,11 @@ const WeeklyChecklistPage: React.FC = () => {
             <Text color="text.secondary" fontSize="sm">
               {activity.description}
             </Text>
+            {availabilityMessage && (
+              <Text color="text.muted" fontSize="sm">
+                {availabilityMessage}
+              </Text>
+            )}
           </Stack>
           <Stack align="flex-end" spacing={2}>
             <Tag

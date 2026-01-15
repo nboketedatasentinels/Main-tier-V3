@@ -23,6 +23,7 @@ export type ActivityDef = {
   points: number;
   maxPerMonth: number;
   maxPerWeek?: number;
+  cooldownWeeks?: number;
   requiresApproval?: boolean;
   isFreeTier?: boolean;
   week: number;
@@ -31,6 +32,10 @@ export type ActivityDef = {
   verification?: "honor" | "partner_approval";
   flexibleWeeks?: boolean;
   frequencyNote?: string;
+  visibility?: {
+    requiresMentor?: boolean;
+    requiresAmbassador?: boolean;
+  };
 };
 
 export const REFERRAL_POINTS = 100;
