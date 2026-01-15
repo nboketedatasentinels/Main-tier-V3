@@ -20,10 +20,13 @@ import { PersonalityProfileCard } from '@/components/journeys/weeklyGlance/Perso
 import { PeopleImpactedCard } from '@/components/journeys/weeklyGlance/PeopleImpactedCard'
 import { PeerMatchingCard } from '@/components/journeys/weeklyGlance/PeerMatchingCard'
 import { WeeklyInspirationCard } from '@/components/journeys/weeklyGlance/WeeklyInspirationCard'
+import { ActivityFeedCard } from '@/components/journeys/weeklyGlance/ActivityFeedCard'
+import { LearnerWindowCard } from '@/components/journeys/weeklyGlance/LearnerWindowCard'
 import { useWeeklyGlanceData } from '@/hooks/useWeeklyGlanceData'
 import { BuildVillageModal } from '@/components/modals/BuildVillageModal'
 import { useAuth } from '@/hooks/useAuth'
 import { TransformationTier } from '@/types'
+import { calculateWeekProgress, getDaysRemainingInWeek, getWeekDateRange } from '@/utils/weekCalculations'
 
 export const WeeklyGlancePage = () => {
   const { profile } = useAuth()
@@ -52,6 +55,46 @@ export const WeeklyGlancePage = () => {
     setVillageName('')
     setVillagePurpose('')
   }
+  const weekRange = getWeekDateRange()
+  const daysRemaining = getDaysRemainingInWeek()
+  const earnedPoints = data.weeklyPoints?.points_earned || 0
+  const targetPoints = data.weeklyPoints?.target_points || 0
+  const weekProgress = calculateWeekProgress(earnedPoints, targetPoints)
+  const completedHabits = data.weeklyHabits.filter(habit => habit.completed).length
+  const activityFeedItems = [
+    {
+      id: 'weekly-points',
+      title: 'Weekly points updated',
+      description: `${earnedPoints} points logged toward your ${targetPoints || 0} point goal.`,
+      timestamp: `Week ${data.weekNumber} • ${daysRemaining} days left`,
+      status: earnedPoints >= targetPoints && targetPoints > 0 ? 'complete' : earnedPoints > 0 ? 'pending' : 'attention',
+    },
+    {
+      id: 'weekly-habits',
+      title: 'Habits check-in',
+      description: `${completedHabits} of ${data.weeklyHabits.length} habits completed this week.`,
+      timestamp: 'Habit tracker',
+      status: completedHabits === data.weeklyHabits.length && data.weeklyHabits.length > 0 ? 'complete' : 'pending',
+    },
+    {
+      id: 'mentor-assignment',
+      title: data.supportAssignment?.mentorProfile ? 'Mentor confirmed' : 'Mentor assignment pending',
+      description: data.supportAssignment?.mentorProfile
+        ? `Your mentor ${data.supportAssignment.mentorProfile.firstName || 'coach'} is ready for your next check-in.`
+        : 'We are confirming your mentor assignment. Expect an update soon.',
+      timestamp: 'Leadership Council',
+      status: data.supportAssignment?.mentorProfile ? 'complete' : 'pending',
+    },
+    {
+      id: 'peer-matching',
+      title: data.peerMatches.length > 0 ? 'Peer match ready' : 'Peer matching in progress',
+      description: data.peerMatches.length > 0
+        ? 'Review your latest peer connection in Peer Connect.'
+        : 'We are still pairing you with a peer ally.',
+      timestamp: data.peerMatches.length > 0 ? 'New match' : 'Matching queue',
+      status: data.peerMatches.length > 0 ? 'complete' : 'pending',
+    },
+  ] as const
 
   return (
     <Box p={{ base: 4, md: 6 }}>
@@ -90,12 +133,22 @@ export const WeeklyGlancePage = () => {
         <WeeklyInspirationCard data={data.inspirationQuote} loading={data.loading.inspiration} />
 
         <SimpleGrid columns={{ base: 1, md: 2, xl: 3 }} spacing={4} alignItems="stretch">
+          <LearnerWindowCard
+            weekLabel={`Week ${data.weekNumber} • ${weekRange.label}`}
+            daysRemaining={daysRemaining}
+            progressValue={weekProgress}
+            targetPoints={targetPoints}
+            earnedPoints={earnedPoints}
+            focusAreas={['Leadership reflection', 'Mentor session', 'Impact action']}
+            nextMilestone={`Week ${data.weekNumber + 1} readiness review`}
+          />
           <WeeklyPointsCard
             data={data.weeklyPoints}
             loading={data.loading.points}
             error={data.errors.points}
             onNavigate={() => navigate('/app/weekly-checklist')}
           />
+          <ActivityFeedCard items={[...activityFeedItems]} />
           <SupportTeamCard data={data.supportAssignment} loading={data.loading.support} />
           <PersonalityProfileCard data={data.personality} loading={data.loading.profile} />
           <PeopleImpactedCard count={data.impactCount} loading={data.loading.impact} />

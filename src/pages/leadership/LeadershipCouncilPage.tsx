@@ -40,7 +40,22 @@ import {
   useToast,
   VStack,
 } from '@chakra-ui/react'
-import { Building2, Calendar, Download, Eye, ExternalLink, RefreshCcw, Shield, Timer, User, UserCircle2, Users } from 'lucide-react'
+import {
+  AlertTriangle,
+  Building2,
+  Calendar,
+  CheckCircle2,
+  Clock3,
+  Download,
+  Eye,
+  ExternalLink,
+  RefreshCcw,
+  Shield,
+  Timer,
+  User,
+  UserCircle2,
+  Users,
+} from 'lucide-react'
 import { Timestamp, addDoc, collection, onSnapshot, orderBy, query, serverTimestamp, where } from 'firebase/firestore'
 import { format, formatDistanceToNow, isAfter, isValid, parseISO } from 'date-fns'
 import { db } from '@/services/firebase'
@@ -156,6 +171,8 @@ export const LeadershipCouncilPage: React.FC = () => {
   const scheduleModal = useDisclosure()
 
   const hasOrganization = Boolean(profile?.companyId)
+  const organizationReady = organization.loaded && organization.exists
+  const supportAssignmentsReady = supportAssignmentStatus.loaded
   const showOrgDebug = import.meta.env.DEV && (organization.id || supportAssignmentStatus.id)
   const mentorSourceLabel =
     assignmentSources.mentor === 'user'
@@ -163,6 +180,60 @@ export const LeadershipCouncilPage: React.FC = () => {
       : assignmentSources.mentor === 'organization'
         ? 'Organization mentor'
         : null
+  const canScheduleSession = Boolean(mentorProfile) && hasOrganization && organizationReady && supportAssignmentsReady && !assignmentsLoading
+  const scheduleDisabledReason = !hasOrganization
+    ? 'Link your account to an organization to unlock mentor scheduling.'
+    : !organizationReady
+      ? 'We are still confirming your organization details.'
+      : !supportAssignmentsReady
+        ? 'Support assignments are still loading.'
+        : !mentorProfile
+          ? 'A mentor must be assigned before scheduling.'
+          : null
+  const gatingSteps = [
+    {
+      id: 'organization',
+      title: 'Organization linked',
+      description: hasOrganization
+        ? 'Organization connection confirmed.'
+        : 'Add an organization to unlock assignments.',
+      status: hasOrganization ? (organizationReady ? 'complete' : 'pending') : 'blocked',
+    },
+    {
+      id: 'support',
+      title: 'Assignments checked',
+      description: supportAssignmentsReady
+        ? supportAssignmentStatus.exists
+          ? 'User assignments loaded.'
+          : 'No user-level assignments yet.'
+        : 'Checking support assignments.',
+      status: supportAssignmentsReady ? 'complete' : 'pending',
+    },
+    {
+      id: 'mentor',
+      title: 'Mentor ready',
+      description: mentorProfile ? 'Mentor profile loaded.' : 'Mentor assignment needed.',
+      status: mentorProfile ? 'complete' : assignmentsLoading ? 'pending' : 'blocked',
+    },
+    {
+      id: 'ambassador',
+      title: 'Ambassador ready',
+      description: ambassadorProfile ? 'Ambassador profile loaded.' : 'Ambassador assignment needed.',
+      status: ambassadorProfile ? 'complete' : assignmentsLoading ? 'pending' : 'blocked',
+    },
+  ] as const
+
+  const gateStatusColor = (status: 'complete' | 'pending' | 'blocked') => {
+    if (status === 'complete') return 'green'
+    if (status === 'pending') return 'yellow'
+    return 'red'
+  }
+
+  const gateStatusIcon = (status: 'complete' | 'pending' | 'blocked') => {
+    if (status === 'complete') return CheckCircle2
+    if (status === 'pending') return Clock3
+    return AlertTriangle
+  }
 
   const retryAssignments = useCallback(() => {
     refresh()
@@ -424,6 +495,48 @@ export const LeadershipCouncilPage: React.FC = () => {
         </CardBody>
       </Card>
 
+      <Card borderColor="border.subtle" borderWidth="1px" bg="surface.default">
+        <CardBody>
+          <Stack spacing={4}>
+            <HStack justify="space-between" flexWrap="wrap">
+              <Box>
+                <Text fontSize="sm" fontWeight="semibold" color="text.primary">
+                  Assignment readiness
+                </Text>
+                <Text fontSize="sm" color="text.secondary">
+                  Complete each step to unlock mentor and ambassador connections.
+                </Text>
+              </Box>
+              <Badge colorScheme={assignmentsLoading ? 'yellow' : 'green'} variant="subtle">
+                {assignmentsLoading ? 'Checking assignments' : 'Status updated'}
+              </Badge>
+            </HStack>
+            <SimpleGrid columns={{ base: 1, md: 2 }} spacing={4}>
+              {gatingSteps.map((step) => (
+                <Box key={step.id} p={4} border="1px solid" borderColor="border.subtle" rounded="lg" bg="surface.subtle">
+                  <HStack justify="space-between" align="start">
+                    <HStack spacing={3}>
+                      <Icon as={gateStatusIcon(step.status)} color={`${gateStatusColor(step.status)}.500`} />
+                      <Box>
+                        <Text fontWeight="semibold" color="text.primary">
+                          {step.title}
+                        </Text>
+                        <Text fontSize="sm" color="text.secondary">
+                          {step.description}
+                        </Text>
+                      </Box>
+                    </HStack>
+                    <Badge colorScheme={gateStatusColor(step.status)} variant="subtle">
+                      {step.status}
+                    </Badge>
+                  </HStack>
+                </Box>
+              ))}
+            </SimpleGrid>
+          </Stack>
+        </CardBody>
+      </Card>
+
       <Grid templateColumns="1fr" gap={6} alignItems="start">
         <GridItem>
           <Stack spacing={6}>
@@ -521,13 +634,13 @@ export const LeadershipCouncilPage: React.FC = () => {
                   <Stack spacing={4}>
                     <HStack spacing={3} flexWrap="wrap">
                       <Tooltip
-                        label={mentorProfile ? 'Schedule with your assigned mentor' : 'You are only able to schedule with your assigned mentor'}
+                        label={scheduleDisabledReason || 'Schedule with your assigned mentor'}
                         placement="top"
                       >
                         <Button
                           leftIcon={<Calendar size={18} />}
                           variant="outline"
-                          isDisabled={!mentorProfile || scheduleSubmitting}
+                          isDisabled={!canScheduleSession || scheduleSubmitting}
                           onClick={scheduleModal.onOpen}
                         >
                           Schedule a session
