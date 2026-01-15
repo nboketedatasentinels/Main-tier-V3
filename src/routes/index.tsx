@@ -47,6 +47,7 @@ import { BookClubPage } from '@/pages/community/BookClubPage'
 import { ShamelessCirclePage } from '@/pages/community/ShamelessCirclePage'
 import { UserProfileManagementPage } from '@/pages/admin/UserProfileManagementPage'
 import { OrganizationDetailPage } from '@/pages/admin/OrganizationDetailPage'
+import ApprovalQueuePage from '@/pages/admin/ApprovalQueuePage'
 
 // Error pages
 import { NotFoundPage } from '@/pages/errors/NotFoundPage'
@@ -156,6 +157,7 @@ export const AppRoutes = () => {
           <Route path="dashboard" element={<AdminDashboard />} />
           <Route path="organization/:organizationId" element={<OrganizationDetailPage />} />
           <Route path="user/:userId" element={<UserProfileManagementPage viewContext="admin" />} />
+          <Route path="approvals" element={<ApprovalQueuePage />} />
           <Route index element={<Navigate to="/admin/dashboard" replace />} />
         </Route>
 

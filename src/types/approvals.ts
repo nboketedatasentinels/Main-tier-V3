@@ -18,4 +18,7 @@ export interface ApprovalRecord {
   points?: number | null
   source: ApprovalSource
   searchText: string
+  rejectionReason?: string
+  reviewedBy?: string
+  reviewedAt?: Date | null
 }

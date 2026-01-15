@@ -42,6 +42,8 @@ import { removeUndefinedFields } from '@/utils/firestore'
 import { getIsoWeekNumber } from '@/utils/date'
 import { db } from '@/services/firebase'
 import { useAuth } from '@/hooks/useAuth'
+import { createApprovalRequest } from '@/services/approvalsService'
+import { PointsVerificationRequest } from '@/services/pointsVerificationService'
 import { CALENDAR_SYNC_TUTORIAL, WeeklyProgress } from '@/types'
 import { isFreeUser } from '@/utils/membership'
 import { JOURNEY_META, getMonthNumber, getActivitiesForJourney, type ActivityDef, type JourneyType } from '@/config/pointsConfig'
@@ -683,19 +685,28 @@ const WeeklyChecklistPage: React.FC = () => {
       return
     }
     try {
-      const payload = removeUndefinedFields({
+      const { activity } = proofModal
+
+      const sourcePayload: Omit<PointsVerificationRequest, 'id'> = {
         user_id: user.uid,
         week: selectedWeek,
-        activity_id: proofModal.activity.id,
-        activity_title: proofModal.activity.title,
-        points: proofModal.activity.points,
-        proof_url: proofModal.activity.proofUrl,
-        notes: proofModal.activity.notes,
+        activity_id: activity.id,
+        activity_title: activity.title,
+        points: activity.points,
+        proof_url: activity.proofUrl,
+        notes: activity.notes,
         status: 'pending',
         created_at: serverTimestamp(),
-      })
+      }
 
-      await addDoc(collection(db, 'points_verification_requests'), payload)
+      await createApprovalRequest({
+        userId: user.uid,
+        type: 'points_verification',
+        title: activity.title,
+        source: sourcePayload,
+        summary: activity.notes,
+        points: activity.points,
+      })
 
       await persistChecklist(
         activities.map(activity =>
