@@ -182,6 +182,136 @@ Activity catalog definitions with metadata baseline
 }
 ```
 
+### activityDefinitions
+Window-first activity definitions (replaces weekly activity logic)
+```typescript
+{
+  id: string
+  title: string
+  description: string
+  category: string
+  points: number
+  maxPerWindow: number
+  maxPerClaim?: number
+  requiresApproval?: boolean
+  verification?: 'honor' | 'mentor_approval' | 'partner_approval'
+  isActive: boolean
+  tags?: string[]
+  createdAt: Timestamp
+  updatedAt: Timestamp
+}
+```
+
+### twoWeekWindows
+Two-week program windows for window-based progress tracking
+```typescript
+{
+  id: string
+  journeyType: '4W' | '6W' | '3M' | '6M' | '9M' | '12M'
+  windowNumber: number
+  startDate: Timestamp
+  endDate: Timestamp
+  weekStart: number
+  weekEnd: number
+  label?: string
+  status: 'upcoming' | 'open' | 'closed'
+  createdAt: Timestamp
+  updatedAt: Timestamp
+}
+```
+
+### windowTargets
+Window-level point targets by journey type
+```typescript
+{
+  id: string
+  journeyType: '4W' | '6W' | '3M' | '6M' | '9M' | '12M'
+  windowNumber: number
+  targetPoints: number
+  minPoints?: number
+  maxPoints?: number
+  createdAt: Timestamp
+  updatedAt: Timestamp
+}
+```
+
+### activityClaims
+User-submitted activity claims for approval workflows
+```typescript
+{
+  id: string
+  uid: string
+  orgId?: string
+  activityId: string
+  windowId: string
+  windowNumber: number
+  status: 'draft' | 'pending' | 'approved' | 'rejected' | 'voided'
+  pointsClaimed: number
+  proofUrl?: string
+  notes?: string
+  submittedAt?: Timestamp
+  reviewedAt?: Timestamp
+  reviewedBy?: string
+  rejectionReason?: string
+  createdAt: Timestamp
+  updatedAt: Timestamp
+}
+```
+
+### pointsLedger
+Point awards ledger (extended for window-first tracking)
+```typescript
+{
+  id: string
+  uid: string
+  activityId: string
+  activityClaimId?: string
+  windowId?: string
+  windowNumber?: number
+  weekNumber?: number
+  points: number
+  source: 'activity_claim' | 'weekly_checklist' | 'impact_log' | 'manual_adjustment'
+  status: 'posted' | 'voided'
+  createdAt: Timestamp
+  updatedAt: Timestamp
+}
+```
+
+### badgeAwards
+Awarded badges tied to windows and milestones
+```typescript
+{
+  id: string
+  uid: string
+  badgeId: string
+  windowId?: string
+  windowNumber?: number
+  reason?: string
+  awardedAt: Timestamp
+  awardedBy?: string
+  createdAt: Timestamp
+  updatedAt: Timestamp
+}
+```
+
+### notificationQueue
+Back-office notification queue for async delivery
+```typescript
+{
+  id: string
+  uid: string
+  type: 'achievement' | 'approval' | 'reminder' | 'system'
+  channel: 'in_app' | 'email' | 'sms'
+  payload: Record<string, unknown>
+  status: 'queued' | 'processing' | 'sent' | 'failed'
+  scheduledFor?: Timestamp
+  attempts: number
+  lastAttemptAt?: Timestamp
+  createdAt: Timestamp
+  updatedAt: Timestamp
+}
+```
+
 ### userJourneys
 User enrollment in journeys (subcollection under profiles)
 ```typescript
@@ -641,7 +771,21 @@ Create composite indexes for common queries:
    - `isActive`, `journeyType` (ascending)
 
 12. **activity_catalog** collection:
-   - `isActive`, `category` (ascending)
+  - `isActive`, `category` (ascending)
+
+13. **twoWeekWindows** collection:
+  - `journeyType`, `windowNumber` (ascending)
+
+14. **windowTargets** collection:
+  - `journeyType`, `windowNumber` (ascending)
+
+15. **activityClaims** collection:
+  - `uid`, `windowId` (ascending)
+  - `status`, `windowId` (ascending)
+
+16. **pointsLedger** collection:
+  - `uid`, `windowId` (ascending)
+  - `uid`, `weekNumber` (ascending)
 
 ## Initial Data Setup
 
@@ -675,3 +819,7 @@ const journeys = [
 Baseline seed data for the new `journey_configs` and `activity_catalog` collections lives in:
 - `database/seed-data/journey-configs.json`
 - `database/seed-data/activity-catalog.json`
+
+Baseline seed data for the window-first configuration collections lives in:
+- `database/seed-data/activity-definitions.json`
+- `database/seed-data/window-targets.json`
