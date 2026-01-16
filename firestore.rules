@@ -3,12 +3,20 @@ service cloud.firestore {
   match /databases/{database}/documents {
 
     // Helper functions
-    function isAuthenticated() {
+    function signedIn() {
       return request.auth != null;
+    }
+
+    function isAuthenticated() {
+      return signedIn();
     }
 
     function isOwner(userId) {
       return request.auth.uid == userId;
+    }
+
+    function isSelf(userId) {
+      return isOwner(userId);
     }
 
     function getProfile(userId) {
@@ -16,38 +24,78 @@ service cloud.firestore {
     }
 
     function getUserRole() {
-      return isAuthenticated() ? getProfile(request.auth.uid).role : null;
+      return signedIn() ? getProfile(request.auth.uid).role : null;
     }
 
     function hasRole(role) {
-      return isAuthenticated() && getUserRole() == role;
+      return signedIn() && (
+        getUserRole() == role ||
+        (role == 'super_admin' && getProfile(request.auth.uid).roles.superAdmin == true) ||
+        (role == 'partner' && getProfile(request.auth.uid).roles.partner == true) ||
+        (role == 'mentor' && getProfile(request.auth.uid).roles.mentor == true) ||
+        (role == 'ambassador' && getProfile(request.auth.uid).roles.ambassador == true)
+      );
     }
 
     function hasAnyRole(roles) {
-      return isAuthenticated() && getUserRole() in roles;
+      return signedIn() && (
+        getUserRole() in roles ||
+        (getProfile(request.auth.uid).roles.superAdmin == true && 'super_admin' in roles) ||
+        (getProfile(request.auth.uid).roles.partner == true && 'partner' in roles)
+      );
+    }
+
+    function isSuperAdmin() {
+      return signedIn()
+        && exists(/databases/$(database)/documents/profiles/$(request.auth.uid))
+        && (
+          get(/databases/$(database)/documents/profiles/$(request.auth.uid)).data.roles.superAdmin == true ||
+          get(/databases/$(database)/documents/profiles/$(request.auth.uid)).data.role == 'super_admin'
+        );
+    }
+
+    function isPartner() {
+      return signedIn()
+        && exists(/databases/$(database)/documents/profiles/$(request.auth.uid))
+        && (
+          get(/databases/$(database)/documents/profiles/$(request.auth.uid)).data.roles.partner == true ||
+          get(/databases/$(database)/documents/profiles/$(request.auth.uid)).data.role == 'partner'
+        );
     }
 
     function isMentor() {
-      return hasRole('mentor');
+      return signedIn()
+        && exists(/databases/$(database)/documents/profiles/$(request.auth.uid))
+        && (
+          get(/databases/$(database)/documents/profiles/$(request.auth.uid)).data.roles.mentor == true ||
+          get(/databases/$(database)/documents/profiles/$(request.auth.uid)).data.role == 'mentor'
+        );
+    }
+
+    function isAmbassador() {
+      return signedIn()
+        && exists(/databases/$(database)/documents/profiles/$(request.auth.uid))
+        && (
+          get(/databases/$(database)/documents/profiles/$(request.auth.uid)).data.roles.ambassador == true ||
+          get(/databases/$(database)/documents/profiles/$(request.auth.uid)).data.role == 'ambassador'
+        );
+    }
+
+    function isAdmin() {
+      return isSuperAdmin() || isPartner();
     }
 
     function isSameCompany(companyId, companyCode) {
-      return isAuthenticated() && (
+      return signedIn() && (
         (companyId != null && getProfile(request.auth.uid).companyId == companyId) ||
         (companyCode != null && getProfile(request.auth.uid).companyCode == companyCode)
       );
     }
 
-    function isSuperAdmin() {
-      return hasRole('super_admin');
-    }
-
-    function isPartner() {
-      return hasRole('partner');
-    }
-
-    function isAdmin() {
-      return hasAnyRole(['super_admin', 'partner']);
+    // Partner access to a specific learner (by assignment)
+    function partnerCanAccessLearner(learnerId) {
+      return isPartner()
+        && exists(/databases/$(database)/documents/partnerAssignments/$(request.auth.uid)/learners/$(learnerId));
     }
 
     function isActiveAccount() {
@@ -169,21 +217,16 @@ service cloud.firestore {
     }
 
     // Profiles collection
-    match /profiles/{userId} {
+    match /profiles/{uid} {
       // Users can read their own profile
-      allow read: if isAuthenticated() && isOwner(userId);
-      
-      // Admins can read profiles in their assigned organizations
-      allow read: if isAdmin() && (
+      allow read: if signedIn() && (
+        isSelf(uid) ||
         isSuperAdmin() ||
-        canAccessUser(userId)
+        partnerCanAccessLearner(uid) ||
+        (isMentor() && partnerCanAccessLearner(uid)) ||
+        canAccessMenteeProfile(uid) ||
+        isOrgPeerProfile()
       );
-
-      // Mentors can read profiles of assigned mentees
-      allow read: if isAuthenticated() && canAccessMenteeProfile(userId);
-
-      // Peers can discover profiles in the same organization
-      allow read: if isOrgPeerProfile();
       
       // Users can create their own profile
       allow create: if isAuthenticated() && isOwner(userId);
@@ -746,6 +789,55 @@ service cloud.firestore {
     match /user_engagement_scores/{scoreId} {
       allow read: if isAuthenticated() && (isSuperAdmin() || isAdmin());
       allow create, update: if isSuperAdmin();
+    }
+
+    // ---------- Points ledger ----------
+    match /pointsLedger/{docId} {
+      // Learner can read their ledger; partner can read assigned learners; super admin can read all
+      allow read: if signedIn() && (
+        isSuperAdmin()
+        || resource.data.uid == request.auth.uid
+        || partnerCanAccessLearner(resource.data.uid)
+      );
+
+      // Only Partner or Super Admin can write ledger entries.
+      allow create, update, delete: if isSuperAdmin() || isPartner();
+    }
+
+    // ---------- Weekly progress ----------
+    match /weeklyProgress/{docId} {
+      allow read: if signedIn() && (
+        isSuperAdmin()
+        || resource.data.uid == request.auth.uid
+        || partnerCanAccessLearner(resource.data.uid)
+      );
+      allow write: if isSuperAdmin() || isPartner();
+    }
+
+    // ---------- Window progress (new system) ----------
+    match /windowProgress/{docId} {
+      allow read: if signedIn() && (
+        isSuperAdmin()
+        || resource.data.uid == request.auth.uid
+        || partnerCanAccessLearner(resource.data.uid)
+      );
+      allow write: if isSuperAdmin() || isPartner();
+    }
+
+    // ---------- Partner assignments ----------
+    match /partnerAssignments/{partnerId}/learners/{learnerId} {
+      allow read: if isSuperAdmin() || (isPartner() && request.auth.uid == partnerId);
+      allow write: if isSuperAdmin(); // only super admin assigns
+    }
+
+    match /dashboardMetrics/{id} {
+      allow read: if isSuperAdmin();
+      allow write: if isSuperAdmin();
+    }
+
+    // Default deny
+    match /{document=**} {
+      allow read, write: if false;
     }
   }
 }

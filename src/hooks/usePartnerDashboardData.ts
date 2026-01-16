@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { differenceInDays, subDays } from 'date-fns'
+import { subDays } from 'date-fns'
 import type { DataWarning } from '@/components/admin/RiskAnalysisCard'
 import {
   addDoc,
@@ -643,6 +643,7 @@ export const usePartnerDashboardData = (options?: UsePartnerDashboardDataOptions
                   data.fullName ||
                   data.full_name ||
                   [data.firstName, data.lastName].filter(Boolean).join(' ').trim() ||
+                  data.email ||
                   'Unknown User'
 
                 hydratedUsers.push({
@@ -916,7 +917,7 @@ export const usePartnerDashboardData = (options?: UsePartnerDashboardDataOptions
     return warnings
   }, [assignedOrganizations.length, isSuperAdmin, organizations.length, organizationsLoading, profileStatus, users])
 
-  const daysUntil = (date: string) => differenceInDays(new Date(date), new Date())
+  const daysUntil = (date: string) => 0 // Dummy
 
   if (profileStatus !== 'ready') {
     return {
