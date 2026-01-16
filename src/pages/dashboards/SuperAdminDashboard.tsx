@@ -4,10 +4,7 @@ import { useAuth } from '@/hooks/useAuth'
 import { SuperAdminLayout } from '@/layouts/SuperAdminLayout'
 import { OverviewPage } from '@/pages/super-admin/OverviewPage'
 import { OrganizationManagementPage } from '@/pages/super-admin/OrganizationManagementPage'
-import { PlatformConfigurationPage } from '@/pages/super-admin/PlatformConfigurationPage'
 import { ReportsAnalyticsPage } from '@/pages/super-admin/ReportsAnalyticsPage'
-import { SecurityAuditPage } from '@/pages/super-admin/SecurityAuditPage'
-import { SystemSettingsPage } from '@/pages/super-admin/SystemSettingsPage'
 import { UserManagementPage } from '@/pages/super-admin/UserManagementPage'
 import { AdminOversightPage } from '@/pages/super-admin/AdminOversightPage'
 import { ApprovalCenterPage } from '@/pages/super-admin/ApprovalCenterPage'
@@ -264,14 +261,8 @@ export const SuperAdminDashboard: React.FC = () => {
         return <ApprovalCenterPage />
       case 'admin-oversight':
         return <AdminOversightPage adminName={adminName} adminId={profile?.id} />
-      case 'settings':
-        return <SystemSettingsPage />
-      case 'security':
-        return <SecurityAuditPage />
       case 'reports':
         return <ReportsAnalyticsPage metrics={metrics} registrationTrend={registrationTrend} userGrowthTrend={userGrowthTrend} />
-      case 'configuration':
-        return <PlatformConfigurationPage />
       case 'overview':
       default:
         return (
