@@ -15,6 +15,8 @@ import { db } from "@/services/firebase";
 import pointsConfig from "@/config/pointsConfig";
 import type { ActivityDef, JourneyType } from "@/config/pointsConfig";
 import { calculateLevel, calculateUserTotalPoints } from "@/utils/points";
+import { hasCompletedJourney } from "@/utils/completion";
+import { awardBadge } from "./badgeService";
 
 const { JOURNEY_META, getMonthNumber } = pointsConfig;
 
@@ -167,6 +169,24 @@ export async function awardChecklistPoints(params: {
       tx.set(doc(db, "users", uid), profileUpdate, { merge: true });
       tx.set(doc(db, "profiles", uid), profileUpdate, { merge: true });
     });
+
+    // Post-transaction logic
+    const finalPoints = (await calculateUserTotalPoints(uid)) ?? 0;
+    if (hasCompletedJourney(finalPoints, journeyType)) {
+      await awardBadge(uid, "journey-completion");
+    }
+
+    if (activity.id.includes('peer')) {
+      const peerActivitiesQuery = query(
+        collection(db, 'pointsLedger'),
+        where('uid', '==', uid),
+        where('activityId', 'in', ['peer_matching', 'peer_to_peer'])
+      );
+      const peerActivitiesSnapshot = await getDocs(peerActivitiesQuery);
+      if (peerActivitiesSnapshot.size >= 5) {
+        await awardBadge(uid, 'peer-collaborator');
+      }
+    }
   } catch (error) {
     console.error("🔴 [Points] Failed to award checklist points", error);
     throw error;

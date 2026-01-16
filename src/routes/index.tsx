@@ -45,10 +45,11 @@ import { LeadershipCouncilPage } from '@/pages/leadership/LeadershipCouncilPage'
 import { AnnouncementsPage } from '@/pages/community/AnnouncementsPage'
 import ReferralRewardsPage from '@/pages/community/ReferralRewardsPage'
 import { BookClubPage } from '@/pages/community/BookClubPage'
-import { ShamelessCirclePage } from '@/pages/community/ShamelessCirclePage'
-import { UserProfileManagementPage } from '@/pages/admin/UserProfileManagementPage'
-import { OrganizationDetailPage } from '@/pages/admin/OrganizationDetailPage'
-import ApprovalQueuePage from '@/pages/admin/ApprovalQueuePage'
+import { ShamelessCirclePage } from '@/pages/community/ShamelessCirclePage';
+import { UserProfileManagementPage } from '@/pages/admin/UserProfileManagementPage';
+import { OrganizationDetailPage } from '@/pages/admin/OrganizationDetailPage';
+import ApprovalQueuePage from '@/pages/admin/ApprovalQueuePage';
+import BadgeGalleryPage from '@/pages/badges/BadgeGalleryPage';
 
 // Error pages
 import { NotFoundPage } from '@/pages/errors/NotFoundPage'
@@ -242,6 +243,7 @@ export const AppRoutes = () => {
           <Route path="book-club" element={<BookClubPage />} />
           <Route path="shameless-circle" element={<ShamelessCirclePage />} />
           <Route path="profile" element={<ProfilePage />} />
+          <Route path="badge-gallery" element={<BadgeGalleryPage />} />
           <Route path="dashboard/*" element={<DashboardRouter />} />
         </Route>
 
