@@ -95,16 +95,23 @@ export async function awardChecklistPoints(params: {
   );
 
   try {
-    const ledgerSnapshot = await getDocs(ledgerQuery);
+    const [
+      ledgerSnapshot,
+      weeklyActivitySnapshot,
+      windowActivitySnapshot,
+      lastActivitySnapshot,
+    ] = await Promise.all([
+      getDocs(ledgerQuery),
+      getDocs(weeklyActivityQuery),
+      getDocs(windowActivityQuery),
+      getDocs(lastActivityQuery),
+    ]);
+
     await runTransactionWithRetry(async (tx) => {
-      const [ledgerDoc, progressDoc, weeklyActivitySnapshot, windowActivitySnapshot, lastActivitySnapshot] =
-        await Promise.all([
-          tx.get(ledgerRef),
-          tx.get(progressRef),
-          tx.get(weeklyActivityQuery),
-          tx.get(windowActivityQuery),
-          tx.get(lastActivityQuery),
-        ]);
+      const [ledgerDoc, progressDoc] = await Promise.all([
+        tx.get(ledgerRef),
+        tx.get(progressRef),
+      ]);
 
       if (ledgerDoc.exists()) return;
 
