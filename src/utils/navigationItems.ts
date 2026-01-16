@@ -72,8 +72,6 @@ export const buildPartnerNavItems = (): NavigationSection[] => [
       { key: 'users', label: 'User Management', icon: Users },
       { key: 'organization-management', label: 'Organizations', icon: Building2 },
       { key: 'reports', label: 'Reports', icon: BarChart3 },
-      { key: 'job-board', label: 'Job Board', icon: Sparkles },
-      { key: 'grants', label: 'Grants & Funding', icon: Gift },
       { key: 'settings', label: 'Settings', icon: Settings },
       { key: 'support', label: 'Support', icon: Headphones },
     ],
