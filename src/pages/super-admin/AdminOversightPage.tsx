@@ -46,7 +46,7 @@ import {
 import { fetchAssignedOrganizations } from '@/services/organizationService'
 import { AdminFormData, AdminMetrics, AdminUserRecord, OrganizationRecord } from '@/types/admin'
 
-interface PartnerOversightPageProps {
+interface AdminOversightPageProps {
   adminName?: string
   adminId?: string
 }
@@ -65,7 +65,7 @@ const statusColorMap: Record<string, string> = {
   suspended: 'red',
 }
 
-export const PartnerOversightPage: React.FC<PartnerOversightPageProps> = ({ adminName, adminId }) => {
+export const AdminOversightPage: React.FC<AdminOversightPageProps> = ({ adminName, adminId }) => {
   const { profile } = useAuth()
   const toast = useToast()
   const formModal = useDisclosure()

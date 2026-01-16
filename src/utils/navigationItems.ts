@@ -43,7 +43,7 @@ export const buildSuperAdminNavItems = (): NavigationSection[] => [
       { key: 'organizations', label: 'Organization Management', icon: Workflow },
       { key: 'users', label: 'User Management', icon: Users },
       { key: 'approvals', label: 'Approval Center', icon: ClipboardCheck },
-      { key: 'admin-oversight', label: 'Partner Oversight', icon: ShieldCheck },
+      { key: 'admin-oversight', label: 'Admin Oversight', icon: ShieldCheck },
       { key: 'reports', label: 'Reports & Analytics', icon: BarChart3 },
     ],
   },
@@ -65,12 +65,12 @@ export const buildAmbassadorNavItems = (): NavigationSection[] => [
 
 export const buildPartnerNavItems = (): NavigationSection[] => [
   {
-    title: 'Partner Operations',
+    title: 'Administration',
     items: [
       { key: 'overview', label: 'Overview', icon: LayoutDashboard },
-      { key: 'approvals', label: 'Approval Center', icon: ClipboardCheck },
-      { key: 'learners', label: 'Learners', icon: Users },
       { key: 'at-risk', label: 'At Risk', icon: TrendingUp },
+      { key: 'users', label: 'User Management', icon: Users },
+      { key: 'organization-management', label: 'Organizations', icon: Building2 },
       { key: 'reports', label: 'Reports', icon: BarChart3 },
       { key: 'settings', label: 'Settings', icon: Settings },
       { key: 'support', label: 'Support', icon: Headphones },

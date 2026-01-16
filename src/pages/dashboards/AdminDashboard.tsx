@@ -1,5 +1,7 @@
 import React from 'react'
-import { PartnerDashboardPage as PartnerDashboard } from '@/pages/partner/PartnerDashboardPage'
+import { useAuth } from '@/hooks/useAuth'
+import { normalizeRole } from '@/utils/role'
+import { PartnerDashboard } from './PartnerDashboard'
 import { DashboardErrorBoundary } from '@/components/ui/DashboardErrorBoundary'
 
 /**

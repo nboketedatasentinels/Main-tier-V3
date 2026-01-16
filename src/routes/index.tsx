@@ -24,10 +24,10 @@ import { WelcomePage } from '@/pages/onboarding/WelcomePage'
 
 // Dashboard imports
 import { AdminDashboard } from '@/pages/dashboards/AdminDashboard'
-import { SuperAdminDashboardPage as SuperAdminDashboard } from '@/pages/super-admin/SuperAdminDashboardPage'
+import { SuperAdminDashboard } from '@/pages/dashboards/SuperAdminDashboard'
 import { MentorDashboard } from '@/pages/dashboards/MentorDashboard'
 import { AmbassadorDashboard } from '@/pages/dashboards/AmbassadorDashboard'
-import { PartnerDashboardPage as PartnerDashboard } from '@/pages/partner/PartnerDashboardPage'
+import { PartnerDashboard } from '@/pages/dashboards/PartnerDashboard'
 
 // Feature page imports
 import { JourneysPage } from '@/pages/journeys/JourneysPage'
