@@ -1,6 +1,6 @@
 import type { ActivityDef } from '@/config/pointsConfig'
 
-export type ActivityAvailabilityState = 'available' | 'locked' | 'exhausted'
+export type ActivityAvailabilityState = 'available' | 'locked' | 'exhausted' | 'next_window' | 'permanently_exhausted'
 export type ActivityAvailabilityReason =
   | 'scheduled'
   | 'cooldown'
@@ -8,6 +8,8 @@ export type ActivityAvailabilityReason =
   | 'max_per_window'
   | 'missing_mentor'
   | 'missing_ambassador'
+  | 'one_time_used'
+  | 'window_cap_reached'
 
 export type ActivityScheduleMode = 'fixed' | 'flexible'
 
@@ -27,6 +29,7 @@ export type ActivityAvailabilityContext = {
   windowWeek: number
   weekCount: number
   windowCount: number
+  totalCompletedAllTime: number
   lastCompletedWeek?: number
   hasMentor?: boolean
   hasAmbassador?: boolean
@@ -39,10 +42,20 @@ export type ActivityAvailabilityResult = {
   isScheduledForWeek: boolean
 }
 
-export const getActivityFrequencyLimits = (activity: ActivityDef) => ({
-  maxPerWeek: activity.maxPerWeek ?? 1,
-  maxPerWindow: activity.maxPerMonth,
-})
+export const getActivityFrequencyLimits = (activity: ActivityDef) => {
+  if (activity.activityPolicy) {
+    return {
+      maxPerWeek: activity.activityPolicy.maxPerWeek ?? null,
+      maxPerWindow: activity.activityPolicy.maxPerWindow ?? null,
+      maxTotal: activity.activityPolicy.maxTotal ?? null,
+    }
+  }
+  return {
+    maxPerWeek: activity.maxPerWeek ?? null,
+    maxPerWindow: activity.maxPerMonth,
+    maxTotal: null,
+  }
+}
 
 export const classifyActivityBehavior = (activity: ActivityDef): ActivityBehavior => {
   const { maxPerWeek, maxPerWindow } = getActivityFrequencyLimits(activity)
@@ -50,7 +63,7 @@ export const classifyActivityBehavior = (activity: ActivityDef): ActivityBehavio
   return {
     schedule: activity.flexibleWeeks ? 'flexible' : 'fixed',
     maxPerWeek,
-    maxPerWindow,
+    maxPerWindow: maxPerWindow ?? 999,
     cooldownWeeks: activity.cooldownWeeks ?? 0,
     requiresApproval: Boolean(activity.requiresApproval),
     visibility: {
@@ -65,15 +78,18 @@ export const calculateActivityAvailability = (
   context: ActivityAvailabilityContext,
 ): ActivityAvailabilityResult => {
   const behavior = classifyActivityBehavior(activity)
+  const policy = activity.activityPolicy
   const {
     windowWeek,
     weekCount,
     windowCount,
+    totalCompletedAllTime,
     lastCompletedWeek,
     hasMentor,
     hasAmbassador,
   } = context
 
+  // 1. Visibility Checks
   if (behavior.visibility.requiresMentor && !hasMentor) {
     return { state: 'locked', reason: 'missing_mentor', isScheduledForWeek: false }
   }
@@ -82,6 +98,22 @@ export const calculateActivityAvailability = (
     return { state: 'locked', reason: 'missing_ambassador', isScheduledForWeek: false }
   }
 
+  // 2. Policy-driven Availability
+  if (policy?.type === 'one_time') {
+    const maxTotal = policy.maxTotal ?? 1
+    if (totalCompletedAllTime >= maxTotal) {
+      return { state: 'permanently_exhausted', reason: 'one_time_used', isScheduledForWeek: true }
+    }
+  }
+
+  if (policy?.type === 'window_limited') {
+    const maxPerWindow = policy.maxPerWindow ?? 1
+    if (windowCount >= maxPerWindow) {
+      return { state: 'next_window', reason: 'window_cap_reached', isScheduledForWeek: true }
+    }
+  }
+
+  // 3. Frequency Limits (legacy and ongoing)
   if (behavior.maxPerWeek && weekCount >= behavior.maxPerWeek) {
     return { state: 'exhausted', reason: 'max_per_week', isScheduledForWeek: true }
   }
@@ -90,11 +122,13 @@ export const calculateActivityAvailability = (
     return { state: 'exhausted', reason: 'max_per_window', isScheduledForWeek: true }
   }
 
+  // 4. Scheduling Checks
   const isScheduledForWeek = behavior.schedule === 'flexible' || activity.week === windowWeek
   if (!isScheduledForWeek) {
     return { state: 'locked', reason: 'scheduled', isScheduledForWeek }
   }
 
+  // 5. Cooldown Checks
   if (behavior.cooldownWeeks > 0 && typeof lastCompletedWeek === 'number') {
     const weeksSince = windowWeek - lastCompletedWeek
     if (weeksSince <= behavior.cooldownWeeks) {
@@ -108,4 +142,46 @@ export const calculateActivityAvailability = (
   }
 
   return { state: 'available', isScheduledForWeek }
+}
+
+/**
+ * Filter activities based on policy type and availability state.
+ */
+export const getVisibleActivities = (
+  activities: any[], // ActivityState[]
+): any[] => {
+  const stateOrder: Record<ActivityAvailabilityState, number> = {
+    available: 0,
+    next_window: 1,
+    exhausted: 2,
+    locked: 3,
+    permanently_exhausted: 4,
+  }
+
+  return activities
+    .filter(a => {
+      // Hide permanently exhausted one-time activities
+      if (a.availability.state === 'permanently_exhausted') return false
+      return true
+    })
+    .sort((a, b) => {
+      // Sort by availability state
+      return stateOrder[a.availability.state as ActivityAvailabilityState] - stateOrder[b.availability.state as ActivityAvailabilityState]
+    })
+}
+
+/**
+ * Get message for when an activity will be available again.
+ */
+export const getNextWindowAvailabilityMessage = (
+  activity: ActivityDef,
+  currentWindow: number,
+): string => {
+  if (activity.activityPolicy?.type === 'window_limited') {
+    return `Available again in Window ${currentWindow + 1}`
+  }
+  if (activity.activityPolicy?.type === 'ongoing') {
+    return 'Resets next window'
+  }
+  return 'Locked until next window'
 }

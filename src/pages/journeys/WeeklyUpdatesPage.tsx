@@ -61,6 +61,7 @@ import {
 import { getWindowNumber, getWindowRange, getWindowWeekNumber } from '@/utils/windowCalculations'
 import {
   calculateActivityAvailability,
+  getVisibleActivities,
   type ActivityAvailabilityReason,
   type ActivityAvailabilityResult,
 } from '@/utils/activityStateManager'
@@ -185,6 +186,8 @@ const availabilityReasonLabels: Record<ActivityAvailabilityReason, string> = {
   max_per_window: 'Window limit reached',
   missing_mentor: 'Mentor required',
   missing_ambassador: 'Ambassador required',
+  one_time_used: 'Activity already completed',
+  window_cap_reached: 'Window limit reached',
 }
 
 const WeeklyChecklistPage: React.FC = () => {
@@ -431,7 +434,23 @@ const WeeklyChecklistPage: React.FC = () => {
         where('weekNumber', '==', selectedWeek)
       );
 
-      const ledgerSnapshot = await getDocs(ledgerQuery);
+      const windowLedgerQuery = query(
+        collection(db, 'pointsLedger'),
+        where('uid', '==', user.uid),
+        where('monthNumber', '==', windowNumber),
+      );
+
+      const globalLedgerQuery = query(
+        collection(db, 'pointsLedger'),
+        where('uid', '==', user.uid)
+      );
+
+      const [ledgerSnapshot, windowLedgerSnapshot, globalLedgerSnapshot] = await Promise.all([
+        getDocs(ledgerQuery),
+        getDocs(windowLedgerQuery),
+        getDocs(globalLedgerQuery)
+      ]);
+
       const completedActivities = new Set(ledgerSnapshot.docs.map(d => d.data().activityId));
       const weekActivityCounts = ledgerSnapshot.docs.reduce<Record<string, number>>((acc, docItem) => {
         const activityId = docItem.data().activityId as string | undefined;
@@ -440,18 +459,20 @@ const WeeklyChecklistPage: React.FC = () => {
         return acc;
       }, {});
 
-      const windowLedgerQuery = query(
-        collection(db, 'pointsLedger'),
-        where('uid', '==', user.uid),
-        where('monthNumber', '==', windowNumber),
-      );
-      const windowLedgerSnapshot = await getDocs(windowLedgerQuery);
       const windowActivityCounts = windowLedgerSnapshot.docs.reduce<Record<string, number>>((acc, docItem) => {
         const activityId = docItem.data().activityId as string | undefined;
         if (!activityId) return acc;
         acc[activityId] = (acc[activityId] ?? 0) + 1;
         return acc;
       }, {});
+
+      const totalCompletedAllTime = globalLedgerSnapshot.docs.reduce<Record<string, number>>((acc, docItem) => {
+        const activityId = docItem.data().activityId as string | undefined;
+        if (!activityId) return acc;
+        acc[activityId] = (acc[activityId] ?? 0) + 1;
+        return acc;
+      }, {});
+
       const lastCompletionWeekByActivity = windowLedgerSnapshot.docs.reduce<Record<string, number>>((acc, docItem) => {
         const activityId = docItem.data().activityId as string | undefined;
         const weekNumber = docItem.data().weekNumber as number | undefined;
@@ -469,6 +490,7 @@ const WeeklyChecklistPage: React.FC = () => {
             windowWeek,
             weekCount: weekActivityCounts[def.id] ?? 0,
             windowCount: windowActivityCounts[def.id] ?? 0,
+            totalCompletedAllTime: totalCompletedAllTime[def.id] ?? 0,
             lastCompletedWeek: lastCompletionWeekByActivity[def.id],
             hasMentor,
             hasAmbassador,
@@ -1371,7 +1393,7 @@ const WeeklyChecklistPage: React.FC = () => {
                 </Stack>
               ) : (
                 <Stack spacing={3}>
-                  {activities.length ? activities.map(renderActivityCard) : (
+                  {activities.length ? getVisibleActivities(activities).map(renderActivityCard) : (
                     <Center py={8}>
                       <Stack spacing={2} align="center">
                         <Text color="text.secondary">No activities found for this week.</Text>
