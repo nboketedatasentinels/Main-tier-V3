@@ -102,6 +102,12 @@ interface WeekMilestone {
   status: 'completed' | 'current' | 'locked' | 'incomplete';
 }
 
+interface WindowProgressData {
+  pointsEarned: number;
+  windowTarget: number;
+  status: 'on_track' | 'warning' | 'alert';
+}
+
 const rhythmItems = [
   'Sync T4L Calendar to Google/Outlook',
   'Add weekly time block for watching videos',
@@ -200,6 +206,7 @@ const WeeklyChecklistPage: React.FC = () => {
   const toast = useToast()
   const activityRefs = useRef<Record<string, HTMLDivElement | null>>({})
   const [weeklyProgress, setWeeklyProgress] = useState<WeeklyProgress | null>(null)
+  const [windowProgressData, setWindowProgressData] = useState<WindowProgressData | null>(null);
   const [allWeeksProgress, setAllWeeksProgress] = useState<WeeklyProgress[]>([])
   const {
     completed: rhythmCompleted,
@@ -494,15 +501,31 @@ const WeeklyChecklistPage: React.FC = () => {
 
   useEffect(() => {
     if (!user) return;
-    const progressRef = doc(db, "weeklyProgress", `${user.uid}__${selectedWeek}`);
-    const unsubscribe = onSnapshot(progressRef, (doc) => {
-      if (doc.exists()) {
-        setWeeklyProgress(normalizeWeeklyProgress(doc.data() as WeeklyProgress & { points_earned?: number; weekly_target?: number }));
-      } else {
-        setWeeklyProgress(null);
-      }
-    });
-    return () => unsubscribe();
+
+    const useWindowProgress = import.meta.env.VITE_FEATURE_FLAG_PARALLEL_WINDOW_TRACKING === 'true';
+
+    if (useWindowProgress) {
+      const windowNumber = getWindowNumber(selectedWeek);
+      const progressRef = doc(db, "windowProgress", `${user.uid}__${windowNumber}`);
+      const unsubscribe = onSnapshot(progressRef, (doc) => {
+        if (doc.exists()) {
+          setWindowProgressData(doc.data() as WindowProgressData);
+        } else {
+          setWindowProgressData(null);
+        }
+      });
+      return () => unsubscribe();
+    } else {
+      const progressRef = doc(db, "weeklyProgress", `${user.uid}__${selectedWeek}`);
+      const unsubscribe = onSnapshot(progressRef, (doc) => {
+        if (doc.exists()) {
+          setWeeklyProgress(normalizeWeeklyProgress(doc.data() as WeeklyProgress & { points_earned?: number; weekly_target?: number }));
+        } else {
+          setWeeklyProgress(null);
+        }
+      });
+      return () => unsubscribe();
+    }
   }, [normalizeWeeklyProgress, selectedWeek, user]);
 
   useEffect(() => {
@@ -769,19 +792,33 @@ const WeeklyChecklistPage: React.FC = () => {
   }, [journey, selectedWeek]);
 
   const progressStatus = useMemo(() => {
-    if (!weeklyProgress) return { color: 'gray', label: 'Loading...', pct: 0 };
-    const { pointsEarned, weeklyTarget } = weeklyProgress;
-    const pct = weeklyTarget > 0 ? Math.min(100, Math.round((pointsEarned / weeklyTarget) * 100)) : 0;
+    const useWindowProgress = import.meta.env.VITE_FEATURE_FLAG_PARALLEL_WINDOW_TRACKING === 'true';
 
-    if (pct >= 100) return { color: 'green', label: 'On Track', pct };
-    if (pct >= 75) return { color: 'yellow', label: 'Warning', pct };
-    return { color: 'red', label: 'Alert', pct };
-  }, [weeklyProgress]);
+    if (useWindowProgress) {
+      if (!windowProgressData) return { color: 'gray', label: 'Loading...', pct: 0 };
+      const { pointsEarned, windowTarget } = windowProgressData;
+      const pct = windowTarget > 0 ? Math.min(100, Math.round((pointsEarned / windowTarget) * 100)) : 0;
+      if (pct >= 100) return { color: 'green', label: 'On Track', pct };
+      if (pct >= 75) return { color: 'yellow', label: 'Warning', pct };
+      return { color: 'red', label: 'Alert', pct };
+    } else {
+      if (!weeklyProgress) return { color: 'gray', label: 'Loading...', pct: 0 };
+      const { pointsEarned, weeklyTarget } = weeklyProgress;
+      const pct = weeklyTarget > 0 ? Math.min(100, Math.round((pointsEarned / weeklyTarget) * 100)) : 0;
+      if (pct >= 100) return { color: 'green', label: 'On Track', pct };
+      if (pct >= 75) return { color: 'yellow', label: 'Warning', pct };
+      return { color: 'red', label: 'Alert', pct };
+    }
+  }, [weeklyProgress, windowProgressData]);
 
   const weeklyPointsEarned = useMemo(() => {
+    const useWindowProgress = import.meta.env.VITE_FEATURE_FLAG_PARALLEL_WINDOW_TRACKING === 'true';
+    if (useWindowProgress) {
+        return windowProgressData?.pointsEarned ?? pendingCounts.points;
+    }
     if (weeklyProgress) return weeklyProgress.pointsEarned;
     return pendingCounts.points;
-  }, [pendingCounts.points, weeklyProgress]);
+  }, [pendingCounts.points, weeklyProgress, windowProgressData]);
 
   const journeyProgress = useMemo(() => {
     if (!journey) {

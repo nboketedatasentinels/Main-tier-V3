@@ -17,6 +17,7 @@ import type { ActivityDef, JourneyType } from "@/config/pointsConfig";
 import { calculateLevel, calculateUserTotalPoints } from "@/utils/points";
 import { hasCompletedJourney } from "@/utils/completion";
 import { awardBadge } from "./badgeService";
+import { updateWindowOnAward, updateWindowOnRevoke } from "./windowProgressService";
 
 const { JOURNEY_META, getMonthNumber } = pointsConfig;
 
@@ -168,6 +169,10 @@ export async function awardChecklistPoints(params: {
 
       tx.set(doc(db, "users", uid), profileUpdate, { merge: true });
       tx.set(doc(db, "profiles", uid), profileUpdate, { merge: true });
+
+      if (import.meta.env.VITE_FEATURE_FLAG_PARALLEL_WINDOW_TRACKING === 'true') {
+        await updateWindowOnAward(tx, { uid, journeyType, weekNumber, activity });
+      }
     });
 
     // Post-transaction logic
@@ -262,6 +267,10 @@ export async function revokeChecklistPoints(params: {
 
       tx.set(doc(db, "users", uid), profileUpdate, { merge: true });
       tx.set(doc(db, "profiles", uid), profileUpdate, { merge: true });
+
+      if (import.meta.env.VITE_FEATURE_FLAG_PARALLEL_WINDOW_TRACKING === 'true') {
+        await updateWindowOnRevoke(tx, { uid, journeyType, weekNumber, activity });
+      }
     });
   } catch (error) {
     console.error("🔴 [Points] Failed to revoke checklist points", error);
