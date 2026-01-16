@@ -192,11 +192,13 @@ export function useWeeklyChecklistViewModel() {
     weekCompleted: Set<string>
     weekCounts: Record<string, number>
     windowCounts: Record<string, number>
+    totalCompletedAllTime: Record<string, number>
     lastCompletedWeekByActivity: Record<string, number>
   }>({
     weekCompleted: new Set(),
     weekCounts: {},
     windowCounts: {},
+    totalCompletedAllTime: {},
     lastCompletedWeekByActivity: {},
   })
 
@@ -217,8 +219,17 @@ export function useWeeklyChecklistViewModel() {
           where('uid', '==', user.uid),
           where('monthNumber', '==', windowNumber),
         )
+        // Global query for all-time counts
+        const globalQ = query(
+          collection(db, 'pointsLedger'),
+          where('uid', '==', user.uid),
+        )
 
-        const [weekSnap, windowSnap] = await Promise.all([getDocs(weekQ), getDocs(windowQ)])
+        const [weekSnap, windowSnap, globalSnap] = await Promise.all([
+          getDocs(weekQ),
+          getDocs(windowQ),
+          getDocs(globalQ)
+        ])
 
         const weekCompleted = new Set<string>()
         const weekCounts: Record<string, number> = {}
@@ -244,10 +255,18 @@ export function useWeeklyChecklistViewModel() {
           }
         })
 
+        const totalCompletedAllTime: Record<string, number> = {}
+        globalSnap.docs.forEach(d => {
+          const row = d.data() as LedgerRow
+          if (!row.activityId) return
+          totalCompletedAllTime[row.activityId] = (totalCompletedAllTime[row.activityId] ?? 0) + 1
+        })
+
         setLedgerCache({
           weekCompleted,
           weekCounts,
           windowCounts,
+          totalCompletedAllTime,
           lastCompletedWeekByActivity,
         })
       } catch (e) {
@@ -279,6 +298,7 @@ export function useWeeklyChecklistViewModel() {
         windowWeek,
         weekCount: ledgerCache.weekCounts[def.id] ?? 0,
         windowCount: ledgerCache.windowCounts[def.id] ?? 0,
+        totalCompletedAllTime: ledgerCache.totalCompletedAllTime[def.id] ?? 0,
         lastCompletedWeek: ledgerCache.lastCompletedWeekByActivity[def.id],
         hasMentor,
         hasAmbassador,

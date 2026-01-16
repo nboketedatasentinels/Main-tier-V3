@@ -15,14 +15,26 @@ export type ActivityId =
   | "lift_module"
   | "impact_log";
 
+export type ActivityPolicyType = "one_time" | "window_limited" | "ongoing";
+
+export interface ActivityPolicy {
+  type: ActivityPolicyType;
+  maxTotal?: number;
+  maxPerWindow?: number;
+  maxPerWeek?: number;
+}
+
 export type ActivityDef = {
   id: ActivityId;
   baseId: string;
   title: string;
   description: string;
   points: number;
+  /** @deprecated Use activityPolicy instead */
   maxPerMonth: number;
+  /** @deprecated Use activityPolicy instead */
   maxPerWeek?: number;
+  activityPolicy?: ActivityPolicy;
   cooldownWeeks?: number;
   requiresApproval?: boolean;
   isFreeTier?: boolean;
@@ -49,6 +61,10 @@ export const FULL_ACTIVITIES: ActivityDef[] = [
     description: "Engage with weekly podcast content.",
     points: 1000,
     maxPerMonth: 3,
+    activityPolicy: {
+      type: "ongoing",
+      maxPerWindow: 3,
+    },
     week: 1,
     category: "Learning",
     isFreeTier: true,
@@ -63,6 +79,10 @@ export const FULL_ACTIVITIES: ActivityDef[] = [
     description: "Apply learnings from the podcast.",
     points: 1000,
     maxPerMonth: 3,
+    activityPolicy: {
+      type: "ongoing",
+      maxPerWindow: 3,
+    },
     week: 1,
     category: "Application",
     requiresApproval: true,
@@ -76,6 +96,10 @@ export const FULL_ACTIVITIES: ActivityDef[] = [
     description: "Participate in a live webinar session and submit attendance for partner approval.",
     points: 2000,
     maxPerMonth: 1,
+    activityPolicy: {
+      type: "one_time",
+      maxTotal: 1,
+    },
     week: 2,
     category: "Community",
     requiresApproval: true,
@@ -90,6 +114,10 @@ export const FULL_ACTIVITIES: ActivityDef[] = [
     description: "Complete exercises from the webinar.",
     points: 2000,
     maxPerMonth: 1,
+    activityPolicy: {
+      type: "one_time",
+      maxTotal: 1,
+    },
     week: 2,
     category: "Application",
     requiresApproval: true,
@@ -104,6 +132,11 @@ export const FULL_ACTIVITIES: ActivityDef[] = [
     points: 1000,
     maxPerMonth: 4,
     maxPerWeek: 1,
+    activityPolicy: {
+      type: "ongoing",
+      maxPerWindow: 4,
+      maxPerWeek: 1,
+    },
     week: 3,
     category: "Networking",
     flexibleWeeks: true,
@@ -116,6 +149,10 @@ export const FULL_ACTIVITIES: ActivityDef[] = [
     description: "Engage in book club discussions and share proof for partner approval (1,500 points once per month).",
     points: 1500,
     maxPerMonth: 1,
+    activityPolicy: {
+      type: "one_time",
+      maxTotal: 1,
+    },
     week: 4,
     category: "Community",
     requiresApproval: true,
@@ -130,6 +167,10 @@ export const FULL_ACTIVITIES: ActivityDef[] = [
     description: "Group-oriented peer-to-peer activity with partner oversight to guide structure and outcomes.",
     points: 2500,
     maxPerMonth: 1,
+    activityPolicy: {
+      type: "window_limited",
+      maxPerWindow: 1,
+    },
     week: 4,
     category: "Networking",
     requiresApproval: true,
@@ -143,6 +184,10 @@ export const FULL_ACTIVITIES: ActivityDef[] = [
     description: "Share insights on LinkedIn and route the post for partner approval (twice per month).",
     points: 500,
     maxPerMonth: 2,
+    activityPolicy: {
+      type: "window_limited",
+      maxPerWindow: 2,
+    },
     week: 3,
     category: "Brand",
     requiresApproval: true,
@@ -157,6 +202,10 @@ export const FULL_ACTIVITIES: ActivityDef[] = [
     description: "Complete a LIFT course module and submit proof. Points awarded after partner approval.",
     points: 3000,
     maxPerMonth: 1,
+    activityPolicy: {
+      type: "window_limited",
+      maxPerWindow: 1,
+    },
     week: 2,
     category: "Learning",
     requiresApproval: true,
@@ -171,6 +220,11 @@ export const FULL_ACTIVITIES: ActivityDef[] = [
     points: 500,
     maxPerMonth: 4,
     maxPerWeek: 1,
+    activityPolicy: {
+      type: "window_limited",
+      maxPerWindow: 4,
+      maxPerWeek: 1,
+    },
     week: 4,
     category: "Impact",
     isFreeTier: true,
