@@ -55,6 +55,15 @@ export async function awardChecklistPoints(params: {
 }) {
   const { uid, journeyType, weekNumber, activity, source = "weekly_checklist" } = params;
 
+  if (!uid) throw new Error('[PointsService] uid is required')
+  if (!journeyType) throw new Error('[PointsService] journeyType is required')
+  if (typeof weekNumber !== 'number') throw new Error('[PointsService] weekNumber is required')
+  if (!activity || !activity.id) {
+    throw new Error(
+      `[PointsService] activity.id is required. Got: ${JSON.stringify(activity)}`
+    )
+  }
+
   const monthNumber = getMonthNumber(weekNumber);
   const weeklyTarget = JOURNEY_META[journeyType].weeklyTarget;
 
@@ -205,6 +214,15 @@ export async function revokeChecklistPoints(params: {
   activity: ActivityDef;
 }) {
   const { uid, journeyType, weekNumber, activity } = params;
+
+  if (!uid) throw new Error('[PointsService] uid is required')
+  if (!journeyType) throw new Error('[PointsService] journeyType is required')
+  if (typeof weekNumber !== 'number') throw new Error('[PointsService] weekNumber is required')
+  if (!activity || !activity.id) {
+    throw new Error(
+      `[PointsService] activity.id is required. Got: ${JSON.stringify(activity)}`
+    )
+  }
 
   const monthNumber = getMonthNumber(weekNumber);
   const weeklyTarget = JOURNEY_META[journeyType].weeklyTarget;

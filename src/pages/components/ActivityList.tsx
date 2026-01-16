@@ -29,7 +29,7 @@ export const ActivityList = ({
         </Center>
       ) : (
         <Stack spacing={3}>
-          {activities.map(activity => (
+          {activities.filter(a => a?.id).map(activity => (
             <WeeklyActivityCard
               key={activity.id}
               activity={activity}
