@@ -24,7 +24,7 @@ import { EngagementChart } from '@/components/admin/EngagementChart'
 import { RiskAnalysisCard } from '@/components/admin/RiskAnalysisCard'
 import { StatusBadge } from '@/components/admin/StatusBadge'
 import { OrganizationCard } from '@/components/admin/OrganizationCard'
-import PartnerDashboardLayout from '@/layouts/PartnerDashboardLayout'
+import PartnerLayout from '@/layouts/PartnerLayout'
 import { DashboardErrorBoundary } from '@/components/ui/DashboardErrorBoundary'
 import { PartnerInterventionPanel } from '@/components/partner/PartnerInterventionPanel'
 import { PartnerUserManagement } from '@/components/partner/PartnerUserManagement'
@@ -41,8 +41,9 @@ import { useAuth } from '@/hooks/useAuth'
 import { logOrganizationAccessAttempt } from '@/services/organizationService'
 import { getActiveNudgeTemplates } from '@/services/nudgeService'
 import type { NudgeTemplateRecord } from '@/types/nudges'
+import { buildPartnerNavItems } from '@/utils/navigationItems'
 
-export const PartnerAdminDashboard: React.FC = () => {
+export const PartnerDashboard: React.FC = () => {
   const navigate = useNavigate()
   const { assignedOrganizations, isSuperAdmin, user, refreshProfile, profileStatus, lastProfileLoadAt } = useAuth()
   const {
@@ -74,7 +75,7 @@ export const PartnerAdminDashboard: React.FC = () => {
   const enableProfileRealtime = import.meta.env.VITE_ENABLE_PROFILE_REALTIME === 'true'
   const supportEmail = 'support@transformation4leaders.com'
 
-  type PartnerPageKey = 'overview' | 'users' | 'job-board' | 'grants' | 'organization-management' | 'at-risk'
+  type PartnerPageKey = 'overview' | 'users' | 'job-board' | 'grants' | 'organization-management' | 'at-risk' | 'reports' | 'settings' | 'support'
   const [activePage, setActivePage] = useState<PartnerPageKey>('overview')
   const [activeTemplates, setActiveTemplates] = useState<NudgeTemplateRecord[]>([])
   const [templateLoadError, setTemplateLoadError] = useState<string | null>(null)
@@ -149,18 +150,7 @@ export const PartnerAdminDashboard: React.FC = () => {
     console.debug('[PartnerDashboard] Auth assigned organizations', assignedOrganizations)
   }, [assignedOrganizations])
 
-  const partnerNavItems = [
-    { key: 'overview', label: 'Overview', description: 'Metrics & trends' },
-    { key: 'at-risk', label: 'At Risk', description: 'Risk monitoring & nudges' },
-    { key: 'users', label: 'Users', description: 'Learners & leaders' },
-    {
-      key: 'organization-management',
-      label: 'Organisation Management',
-      description: 'Assigned organisations',
-    },
-    { key: 'job-board', label: 'Job Board', description: 'Opportunities' },
-    { key: 'grants', label: 'Grants & Funding', description: 'Partner resources' },
-  ]
+  const navSections = useMemo(() => buildPartnerNavItems(), [])
 
   const riskReasons = useMemo(() => {
     const counts: Record<string, number> = {}
@@ -921,7 +911,7 @@ export const PartnerAdminDashboard: React.FC = () => {
                 </Stack>
               </Box>
             ) : organizations.length ? (
-              <DashboardErrorBoundary context="Partner Admin organizations">
+              <DashboardErrorBoundary context="Partner organizations">
                 <SimpleGrid columns={{ base: 1, md: 2, xl: 3 }} spacing={3}>
                   {organizations.map(org => (
                     <OrganizationCard
@@ -963,6 +953,77 @@ export const PartnerAdminDashboard: React.FC = () => {
     </Stack>
   )
 
+  const renderReports = () => (
+    <Stack spacing={6}>
+      <Card bg="white" border="1px solid" borderColor="brand.border">
+        <CardBody>
+          <Stack spacing={3}>
+            <Text fontWeight="bold" color="brand.text">Reports</Text>
+            <Text fontSize="sm" color="brand.subtleText">
+              Analytics and engagement reports will appear here. Customize filters by organization to export scoped summaries.
+            </Text>
+            <SimpleGrid columns={{ base: 1, md: 3 }} spacing={3}>
+              {['Engagement by org', 'At-risk trends', 'Data quality'].map(report => (
+                <Box
+                  key={report}
+                  p={3}
+                  borderRadius="md"
+                  border="1px solid"
+                  borderColor="brand.border"
+                  bg="brand.accent"
+                >
+                  <Text fontWeight="semibold" color="brand.text">{report}</Text>
+                  <Text fontSize="sm" color="brand.subtleText">Coming soon</Text>
+                </Box>
+              ))}
+            </SimpleGrid>
+          </Stack>
+        </CardBody>
+      </Card>
+    </Stack>
+  )
+
+  const renderSettings = () => (
+    <Stack spacing={6}>
+      <Card bg="white" border="1px solid" borderColor="brand.border">
+        <CardBody>
+          <Stack spacing={3}>
+            <Text fontWeight="bold" color="brand.text">Settings</Text>
+            <Text fontSize="sm" color="brand.subtleText">
+              Manage dashboard preferences, notification thresholds, and organization defaults.
+            </Text>
+            <SimpleGrid columns={{ base: 1, md: 3 }} spacing={3}>
+              {['Notification rules', 'Organization defaults', 'Access control'].map(setting => (
+                <Box key={setting} p={3} borderRadius="md" border="1px solid" borderColor="brand.border" bg="brand.accent">
+                  <Text fontWeight="semibold" color="brand.text">{setting}</Text>
+                  <Text fontSize="sm" color="brand.subtleText">Configuration coming soon</Text>
+                </Box>
+              ))}
+            </SimpleGrid>
+          </Stack>
+        </CardBody>
+      </Card>
+    </Stack>
+  )
+
+  const renderSupport = () => (
+    <Stack spacing={6}>
+      <Card bg="white" border="1px solid" borderColor="brand.border">
+        <CardBody>
+          <Stack spacing={3}>
+            <Text fontWeight="bold" color="brand.text">Support</Text>
+            <Text fontSize="sm" color="brand.subtleText">
+              Need help? Reach out to support or review the upcoming knowledge base articles for partner admins.
+            </Text>
+            <Badge colorScheme="blue" w="fit-content">
+              Live chat coming soon
+            </Badge>
+          </Stack>
+        </CardBody>
+      </Card>
+    </Stack>
+  )
+
   const renderPage = () => {
     switch (activePage) {
       case 'users':
@@ -975,6 +1036,12 @@ export const PartnerAdminDashboard: React.FC = () => {
         return renderGrantsPage()
       case 'at-risk':
         return renderAtRiskPage()
+      case 'reports':
+        return renderReports()
+      case 'settings':
+        return renderSettings()
+      case 'support':
+        return renderSupport()
       case 'overview':
       default:
         return renderOverview()
@@ -983,7 +1050,7 @@ export const PartnerAdminDashboard: React.FC = () => {
 
   const handleNavigate = (key: string) => {
     const normalized = key as PartnerPageKey
-    if (['overview', 'users', 'job-board', 'grants', 'organization-management', 'at-risk'].includes(normalized)) {
+    if (['overview', 'users', 'job-board', 'grants', 'organization-management', 'at-risk', 'reports', 'settings', 'support'].includes(normalized)) {
       setActivePage(normalized)
     } else {
       setActivePage('overview')
@@ -992,12 +1059,12 @@ export const PartnerAdminDashboard: React.FC = () => {
 
   if (profileStatus !== 'ready') {
     return (
-      <PartnerDashboardLayout
+      <PartnerLayout
         organizations={organizations}
         selectedOrg={selectedOrg}
         onSelectOrg={setSelectedOrg}
         notificationCount={notificationCount}
-        navItems={partnerNavItems}
+        navSections={navSections}
         onNavigate={handleNavigate}
         activeItem={activePage}
       >
@@ -1009,23 +1076,23 @@ export const PartnerAdminDashboard: React.FC = () => {
           <Skeleton height="180px" borderRadius="md" />
           <Skeleton height="180px" borderRadius="md" />
         </Stack>
-      </PartnerDashboardLayout>
+      </PartnerLayout>
     )
   }
 
   return (
-    <PartnerDashboardLayout
+    <PartnerLayout
       organizations={organizations}
       selectedOrg={selectedOrg}
       onSelectOrg={setSelectedOrg}
       notificationCount={notificationCount}
-      navItems={partnerNavItems}
+      navSections={navSections}
       onNavigate={handleNavigate}
       activeItem={activePage}
     >
       {renderPage()}
-    </PartnerDashboardLayout>
+    </PartnerLayout>
   )
 }
 
-export default PartnerAdminDashboard
+export default PartnerDashboard

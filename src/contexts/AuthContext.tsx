@@ -876,7 +876,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
           defaultRoute: '/app/weekly-glance',
           lockedToFreeExperience: validatedOrganization
             ? false
-            : normalizedRole === 'user' || normalizedRole === 'free_user',
+            : ['user', 'free_user'].includes(normalizedRole),
         },
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
@@ -1093,12 +1093,12 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   /* ------------------------------------------------------------------ */
   const normalizedRole = normalizeRole(profile?.role)
 
-  const isAdmin = normalizedRole === 'partner' || normalizedRole === 'admin' || normalizedRole === 'super_admin'
+  const isAdmin = normalizedRole === 'partner' || normalizedRole === 'super_admin'
   const isSuperAdmin = normalizedRole === 'super_admin'
   const isMentor = normalizedRole === 'mentor'
   const isAmbassador = normalizedRole === 'ambassador'
   const isPaid =
-    ['partner', 'admin', 'mentor', 'ambassador', 'team_leader', 'super_admin'].includes(
+    ['partner', 'mentor', 'ambassador', 'super_admin'].includes(
       normalizedRole ?? ''
     ) ||
     normalizedRole === 'paid_member' ||

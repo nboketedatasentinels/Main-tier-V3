@@ -27,7 +27,7 @@ const organizationsCollection = collection(db, ORG_COLLECTION)
 
 const codeChars = '23456789ABCDEFGHJKLMNPQRSTUVWXYZ'
 
-const LICENSE_CONSUMING_ROLES = new Set(['user', 'mentor', 'ambassador', 'team_leader'])
+const LICENSE_CONSUMING_ROLES = new Set(['user', 'mentor', 'ambassador'])
 
 const isLicenseConsumingRole = (role?: string | null) => {
   if (!role) return false

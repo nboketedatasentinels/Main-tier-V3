@@ -24,6 +24,7 @@ import {
 } from 'firebase/firestore'
 import type { WeeklyProgress } from '@/types'
 import { removeUndefinedFields } from '@/utils/firestore'
+import { normalizeRole } from '@/utils/role'
 import { getWindowNumber } from '@/utils/windowCalculations'
 import { revokeChecklistPoints } from '@/services/pointsService'
 import { createApprovalRequest } from '@/services/approvalsService'
@@ -61,22 +62,8 @@ type LedgerRow = {
 }
 
 function isAdminProfile(profile: any): boolean {
-  // Best-effort safe detection; extend to match your real schema.
-  const role = (profile?.role ?? profile?.userRole ?? '').toString().toLowerCase()
-  const roles: string[] = Array.isArray(profile?.roles) ? profile.roles : []
-  const flags = {
-    isAdmin: !!profile?.isAdmin,
-    isSuperAdmin: !!profile?.isSuperAdmin,
-    isPartnerAdmin: !!profile?.isPartnerAdmin,
-  }
-  return (
-    flags.isSuperAdmin ||
-    flags.isAdmin ||
-    flags.isPartnerAdmin ||
-    role.includes('super') ||
-    role.includes('admin') ||
-    roles.map(r => r.toLowerCase()).some(r => r.includes('admin') || r.includes('super'))
-  )
+  const normalized = normalizeRole(profile?.role || profile?.userRole)
+  return normalized === 'super_admin' || normalized === 'partner'
 }
 
 export function useWeeklyChecklistViewModel() {

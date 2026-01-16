@@ -167,25 +167,21 @@ const personalityTypes = [
 const coreValueOptions = CORE_VALUES
 
 const roleDisplayMap: Record<StandardRole, string> = {
-  user: 'Member',
-  free_user: 'Free Member',
-  paid_member: 'Paid Member',
-  team_leader: 'Team Leader',
+  user: 'Learner',
+  free_user: 'Learner',
+  paid_member: 'Learner',
   mentor: 'Mentor',
   ambassador: 'Ambassador',
-  admin: 'Administrator',
-  partner: 'Administrator',
-  super_admin: 'Super Administrator',
+  partner: 'Partner',
+  super_admin: 'Super Admin',
 }
 
 const roleColorMap: Record<StandardRole, string> = {
   user: 'gray',
   free_user: 'gray',
   paid_member: 'green',
-  team_leader: 'blue',
   mentor: 'purple',
   ambassador: 'blue',
-  admin: 'red',
   partner: 'red',
   super_admin: 'red',
 }

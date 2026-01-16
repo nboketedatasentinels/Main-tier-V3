@@ -43,11 +43,11 @@ service cloud.firestore {
     }
 
     function isPartner() {
-      return hasAnyRole(['partner', 'company_admin', 'admin']);
+      return hasRole('partner');
     }
 
     function isAdmin() {
-      return hasAnyRole(['super_admin', 'admin', 'company_admin', 'partner']);
+      return hasAnyRole(['super_admin', 'partner']);
     }
 
     function isActiveAccount() {

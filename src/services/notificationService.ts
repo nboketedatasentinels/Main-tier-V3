@@ -225,7 +225,7 @@ export const notifyPartnerOfLearnerAlert = async (params: {
     title: `Organization Learner Alert`,
     message,
     severity: 'warning',
-    target_roles: ['partner', 'admin'],
+    target_roles: ['partner'],
     related_id: params.organizationId,
     metadata: {
       learnerId: params.learnerId,
@@ -341,7 +341,7 @@ export const createStatusChangeNotification = async (params: {
     title: `Status shift: ${params.newStatus.replace('_', ' ')}`,
     message,
     severity: copy.severity,
-    target_roles: ['partner', 'admin', 'super_admin'],
+    target_roles: ['partner', 'super_admin'],
     related_id: params.userId,
     metadata: {
       weekNumber: params.weekNumber,
@@ -366,7 +366,7 @@ export const createPartnerDigestNotification = async (params: {
     title: params.title,
     message: params.message,
     severity: 'info',
-    target_roles: ['partner', 'admin', 'super_admin'],
+    target_roles: ['partner', 'super_admin'],
     metadata: {
       summary: params.summary,
       generatedFor: params.generatedFor,

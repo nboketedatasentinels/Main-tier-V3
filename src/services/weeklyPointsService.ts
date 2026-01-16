@@ -163,7 +163,7 @@ const createEngagementAlertIfNeeded = async (params: {
     title: 'Participant engagement alert',
     message,
     severity: 'warning',
-    target_roles: ['partner', 'admin', 'super_admin'],
+    target_roles: ['partner', 'super_admin'],
     related_id: userId,
     metadata: {
       week_number: weekNumber,

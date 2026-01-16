@@ -88,9 +88,9 @@ export const getLandingPathForRole = (
     return '/super-admin/dashboard'
   }
 
-  // Priority 3: Partner/Admin (company admin)
-  if (normalizedRole === 'partner' || normalizedRole === 'admin') {
-    console.log('🔷 Admin detected → /admin/dashboard')
+  // Priority 3: Partner
+  if (normalizedRole === 'partner') {
+    console.log('🔷 Partner detected → /admin/dashboard')
     return '/admin/dashboard'
   }
 
@@ -122,7 +122,7 @@ export const getLandingPathForRole = (
     return '/ambassador/dashboard'
   }
 
-  // Priority 6: Learners (user / team_leader / free_user / paid_member)
+  // Priority 6: Learners (user / free_user / paid_member)
   if (profile) {
     const needsOnboarding =
       !profile.onboardingComplete && !profile.onboardingSkipped

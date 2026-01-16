@@ -16,7 +16,6 @@ export const getDashboardPathForRole = (role?: string | null) => {
     case 'ambassador':
       return '/ambassador/dashboard'
 
-    case 'admin':
     case 'partner':
       return '/admin/dashboard'
 

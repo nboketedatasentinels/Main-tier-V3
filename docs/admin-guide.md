@@ -5,7 +5,7 @@ This guide covers administrative workflows for managing users, cohorts, and plat
 ## Access & Roles
 
 - **Super Admins** manage global configuration and can access all admin areas.
-- **Admins / Company Admins** manage organization-specific data and users.
+- **Partners** manage organization-specific data and users for their assigned organizations.
 - **Mentors** focus on cohort engagement and learner support.
 
 ## User Management

@@ -182,7 +182,7 @@ export const PartnerUserManagement: React.FC<PartnerUserManagementProps> = ({
     [filtered],
   )
 
-  const leaders = useMemo(() => filtered.filter(user => user.role === 'mentor' || user.role === 'team_leader'), [filtered])
+  const leaders = useMemo(() => filtered.filter(user => user.role === 'mentor' || user.role === 'user'), [filtered])
 
   const approvalUsers = useMemo(() => (selectedOrg === 'all' ? users : filtered), [filtered, selectedOrg, users])
 
@@ -728,7 +728,7 @@ export const PartnerUserManagement: React.FC<PartnerUserManagementProps> = ({
 
       {activeTab === 'leaders' && (
         <Stack spacing={4}>
-          <Text fontWeight="semibold" color="brand.text">Mentors & Team Leaders</Text>
+          <Text fontWeight="semibold" color="brand.text">Mentors & Leaders</Text>
           <Table size="md" variant="simple">
             <Thead>
               <Tr>

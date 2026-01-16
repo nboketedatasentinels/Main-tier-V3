@@ -27,8 +27,7 @@ import { AdminDashboard } from '@/pages/dashboards/AdminDashboard'
 import { SuperAdminDashboard } from '@/pages/dashboards/SuperAdminDashboard'
 import { MentorDashboard } from '@/pages/dashboards/MentorDashboard'
 import { AmbassadorDashboard } from '@/pages/dashboards/AmbassadorDashboard'
-import { CompanyAdminDashboard } from '@/pages/dashboards/CompanyAdminDashboard'
-import { PartnerAdminDashboard } from '@/pages/dashboards/PartnerAdminDashboard'
+import { PartnerDashboard } from '@/pages/dashboards/PartnerDashboard'
 
 // Feature page imports
 import { JourneysPage } from '@/pages/journeys/JourneysPage'
@@ -86,10 +85,10 @@ const DashboardRouter = () => {
       return <WeeklyGlancePage />
     case 'member':
       return <WeeklyGlancePage />
-    case 'company':
-      return <CompanyAdminDashboard />
     case 'partner':
-      return <PartnerAdminDashboard />
+    case 'admin':
+    case 'company':
+      return <PartnerDashboard />
     default:
       return <Navigate to="/app/weekly-glance" replace />
   }
@@ -159,7 +158,7 @@ export const AppRoutes = () => {
         >
           <Route path="dashboard" element={<AdminDashboard />} />
           <Route path="organization/:organizationId" element={<OrganizationDetailPage />} />
-          <Route path="user/:userId" element={<UserProfileManagementPage viewContext="admin" />} />
+          <Route path="user/:userId" element={<UserProfileManagementPage viewContext="partner" />} />
           <Route path="approvals" element={<ApprovalQueuePage />} />
           <Route path="partner-assignment" element={<PartnerAssignmentPage />} />
           <Route index element={<Navigate to="/admin/dashboard" replace />} />
