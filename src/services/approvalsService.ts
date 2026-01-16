@@ -1,6 +1,7 @@
 import { collection, addDoc, serverTimestamp, doc, updateDoc, writeBatch, getDoc } from 'firebase/firestore';
 import { db } from '@/services/firebase';
 import { ApprovalRecord, ApprovalSource, ApprovalWorkflowType } from '@/types/approvals';
+import { ApprovalType } from '@/config/pointsConfig';
 import { awardChecklistPoints } from './pointsService';
 import { PointsVerificationRequest } from './pointsVerificationService';
 import { getActivitiesForJourney } from '@/config/pointsConfig';
@@ -21,27 +22,30 @@ import { createInAppNotification } from './notificationService';
 export async function createApprovalRequest(params: {
   userId: string;
   type: ApprovalWorkflowType;
+  approvalType?: ApprovalType;
   title: string;
   source: ApprovalSource;
   summary?: string;
   points?: number;
+  status?: string;
 }): Promise<string> {
-  const { userId, type, title, source, summary, points } = params;
+  const { userId, type, approvalType, title, source, summary, points, status = 'pending' } = params;
 
   try {
     const approvalData = {
       userId,
       type,
+      approvalType,
       title,
       source,
       summary: summary || null,
       points: points || null,
-      status: 'pending',
+      status,
       createdAt: serverTimestamp(),
       reviewedAt: null,
       reviewedBy: null,
       rejectionReason: null,
-      searchText: `${title.toLowerCase()} ${userId.toLowerCase()}`,
+      searchText: `${title.toLowerCase()} ${userId.toLowerCase()} ${approvalType || ''}`,
     };
 
     const approvalRef = await addDoc(collection(db, 'approvals'), approvalData);

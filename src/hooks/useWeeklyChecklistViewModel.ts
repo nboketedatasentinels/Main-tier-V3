@@ -25,8 +25,9 @@ import {
 import type { WeeklyProgress } from '@/types'
 import { removeUndefinedFields } from '@/utils/firestore'
 import { getWindowNumber } from '@/utils/windowCalculations'
-import { awardChecklistPoints, revokeChecklistPoints } from '@/services/pointsService'
+import { revokeChecklistPoints } from '@/services/pointsService'
 import { createApprovalRequest } from '@/services/approvalsService'
+import { handleActivityCompletion } from '@/utils/activityRouter'
 import type { PointsVerificationRequest } from '@/services/pointsVerificationService'
 
 export type ActivityStatus = 'not_started' | 'pending' | 'completed'
@@ -321,6 +322,36 @@ export function useWeeklyChecklistViewModel() {
   }, [user, selectedWeek])
 
   /* ------------------------------------------------------------------ */
+  /* Real-time Checklist Status Update                                   */
+  /* ------------------------------------------------------------------ */
+  useEffect(() => {
+    if (!user) return;
+    const ref = doc(db, 'checklists', `${user.uid}_${selectedWeek}`);
+    return onSnapshot(ref, snap => {
+      if (snap.exists()) {
+        const data = snap.data();
+        if (data.activities) {
+          setActivities(prev => {
+            return prev.map(activity => {
+              const remote = data.activities.find((a: any) => a.id === activity.id);
+              if (remote && remote.status !== activity.status) {
+                return {
+                  ...activity,
+                  status: remote.status,
+                  hasInteracted: remote.hasInteracted ?? activity.hasInteracted,
+                  proofUrl: remote.proofUrl ?? activity.proofUrl,
+                  notes: remote.notes ?? activity.notes
+                };
+              }
+              return activity;
+            });
+          });
+        }
+      }
+    });
+  }, [user, selectedWeek]);
+
+  /* ------------------------------------------------------------------ */
   /* All weeks progress (realtime)                                        */
   /* ------------------------------------------------------------------ */
   useEffect(() => {
@@ -377,6 +408,18 @@ export function useWeeklyChecklistViewModel() {
     [persistChecklist],
   )
 
+  /* ------------------------------------------------------------------ */
+  /* Proof modal + approval flow                                          */
+  /* ------------------------------------------------------------------ */
+  const openProofModal = useCallback((activity: ActivityState) => {
+    setProofModal({
+      isOpen: true,
+      activityId: activity.id,
+      proofUrl: activity.proofUrl ?? '',
+      notes: activity.notes ?? '',
+    })
+  }, [])
+
   const markCompleted = useCallback(
     async (activity: ActivityState | undefined) => {
       if (!user || !journey) return
@@ -402,25 +445,26 @@ export function useWeeklyChecklistViewModel() {
         return
       }
 
-      try {
-        await awardChecklistPoints({
-          uid: user.uid,
-          journeyType: journey.journeyType,
-          weekNumber: selectedWeek,
-          activity,
-        })
-
-        await setActivityStatusLocal(activity.id, { status: 'completed', hasInteracted: true })
-      } catch (e) {
-        console.error(e)
-        toast({
-          title: 'Update Failed',
-          description: 'Could not award points. Please try again.',
-          status: 'error',
-        })
-      }
+      await handleActivityCompletion({
+        uid: user.uid,
+        journeyType: journey.journeyType,
+        weekNumber: selectedWeek,
+        activity,
+        onProofRequired: (act) => openProofModal(act),
+        onSuccess: async (status) => {
+          await setActivityStatusLocal(activity.id, { status, hasInteracted: true })
+        },
+        onError: (e) => {
+          console.error(e)
+          toast({
+            title: 'Update Failed',
+            description: 'Could not award points. Please try again.',
+            status: 'error',
+          })
+        }
+      })
     },
-    [canMutateActivity, isAdmin, journey, selectedWeek, setActivityStatusLocal, toast, user],
+    [canMutateActivity, isAdmin, journey, selectedWeek, setActivityStatusLocal, toast, user, openProofModal],
   )
 
   const markNotStarted = useCallback(
@@ -472,18 +516,6 @@ export function useWeeklyChecklistViewModel() {
     },
     [isAdmin, isWeekLocked, journey, selectedWeek, setActivityStatusLocal, toast, user],
   )
-
-  /* ------------------------------------------------------------------ */
-  /* Proof modal + approval flow                                          */
-  /* ------------------------------------------------------------------ */
-  const openProofModal = useCallback((activity: ActivityState) => {
-    setProofModal({
-      isOpen: true,
-      activityId: activity.id,
-      proofUrl: activity.proofUrl ?? '',
-      notes: activity.notes ?? '',
-    })
-  }, [])
 
   const closeProofModal = useCallback(() => {
     setProofModal({ isOpen: false, proofUrl: '', notes: '' })

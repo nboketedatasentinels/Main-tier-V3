@@ -17,6 +17,8 @@ export type ActivityId =
 
 export type ActivityPolicyType = "one_time" | "window_limited" | "ongoing";
 
+export type ApprovalType = "auto" | "self" | "partner_approved" | "partner_issued";
+
 export interface ActivityPolicy {
   type: ActivityPolicyType;
   maxTotal?: number;
@@ -36,6 +38,7 @@ export type ActivityDef = {
   maxPerWeek?: number;
   activityPolicy?: ActivityPolicy;
   cooldownWeeks?: number;
+  approvalType: ApprovalType;
   requiresApproval?: boolean;
   isFreeTier?: boolean;
   week: number;
@@ -67,6 +70,7 @@ export const FULL_ACTIVITIES: ActivityDef[] = [
     },
     week: 1,
     category: "Learning",
+    approvalType: "self",
     isFreeTier: true,
     verification: "honor",
     flexibleWeeks: true,
@@ -85,6 +89,7 @@ export const FULL_ACTIVITIES: ActivityDef[] = [
     },
     week: 1,
     category: "Application",
+    approvalType: "partner_approved",
     requiresApproval: true,
     verification: "partner_approval",
     flexibleWeeks: true,
@@ -102,6 +107,7 @@ export const FULL_ACTIVITIES: ActivityDef[] = [
     },
     week: 2,
     category: "Community",
+    approvalType: "partner_approved",
     requiresApproval: true,
     verification: "partner_approval",
     flexibleWeeks: true,
@@ -120,6 +126,7 @@ export const FULL_ACTIVITIES: ActivityDef[] = [
     },
     week: 2,
     category: "Application",
+    approvalType: "partner_approved",
     requiresApproval: true,
     verification: "partner_approval",
     flexibleWeeks: true,
@@ -139,6 +146,7 @@ export const FULL_ACTIVITIES: ActivityDef[] = [
     },
     week: 3,
     category: "Networking",
+    approvalType: "auto",
     flexibleWeeks: true,
     frequencyNote: "Earn up to 1,000 points per week; complete in any week.",
   },
@@ -155,6 +163,7 @@ export const FULL_ACTIVITIES: ActivityDef[] = [
     },
     week: 4,
     category: "Community",
+    approvalType: "partner_approved",
     requiresApproval: true,
     verification: "partner_approval",
     flexibleWeeks: true,
@@ -173,6 +182,7 @@ export const FULL_ACTIVITIES: ActivityDef[] = [
     },
     week: 4,
     category: "Networking",
+    approvalType: "partner_approved",
     requiresApproval: true,
     verification: "partner_approval",
     flexibleWeeks: true,
@@ -190,6 +200,7 @@ export const FULL_ACTIVITIES: ActivityDef[] = [
     },
     week: 3,
     category: "Brand",
+    approvalType: "partner_approved",
     requiresApproval: true,
     verification: "partner_approval",
     flexibleWeeks: true,
@@ -208,6 +219,7 @@ export const FULL_ACTIVITIES: ActivityDef[] = [
     },
     week: 2,
     category: "Learning",
+    approvalType: "partner_approved",
     requiresApproval: true,
     verification: "partner_approval",
     flexibleWeeks: true,
@@ -227,6 +239,7 @@ export const FULL_ACTIVITIES: ActivityDef[] = [
     },
     week: 4,
     category: "Impact",
+    approvalType: "self",
     isFreeTier: true,
     verification: "honor",
     flexibleWeeks: true,

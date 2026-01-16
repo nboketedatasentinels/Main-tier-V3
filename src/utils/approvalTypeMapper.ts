@@ -17,6 +17,11 @@ const approvalTypeMap: Record<ApprovalWorkflowType, ApprovalTypeMeta> = {
     description: 'Tier upgrades and corporate approval requests.',
     badgeColor: 'blue',
   },
+  partner_issued: {
+    label: 'Partner Issued',
+    description: 'Activities directly assigned by a partner.',
+    badgeColor: 'teal',
+  },
 }
 
 export const getApprovalTypeMeta = (type: ApprovalWorkflowType): ApprovalTypeMeta => approvalTypeMap[type]

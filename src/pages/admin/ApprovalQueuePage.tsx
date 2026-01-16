@@ -20,6 +20,9 @@ import {
   useDisclosure,
   useToast,
   Checkbox,
+  Badge,
+  HStack,
+  Select,
 } from '@chakra-ui/react';
 import { collection, query, where, onSnapshot } from 'firebase/firestore';
 import { db } from '@/services/firebase';
@@ -30,6 +33,7 @@ import { useAuth } from '@/hooks/useAuth';
 const ApprovalQueuePage: React.FC = () => {
   const { user } = useAuth();
   const [requests, setRequests] = useState<ApprovalRecord[]>([]);
+  const [filterType, setFilterType] = useState<string>('all');
   const [selectedRequests, setSelectedRequests] = useState<string[]>([]);
   const [selectedRequest, setSelectedRequest] = useState<ApprovalRecord | null>(null);
   const [rejectionReason, setRejectionReason] = useState('');
@@ -137,17 +141,34 @@ const ApprovalQueuePage: React.FC = () => {
     }
   };
 
+  const filteredRequests = requests.filter(r => {
+    if (filterType === 'all') return true;
+    if (filterType === 'partner_issued') return r.approvalType === 'partner_issued' || r.type === 'partner_issued';
+    if (filterType === 'partner_approved') return r.approvalType === 'partner_approved' || r.type === 'points_verification';
+    return true;
+  });
+
   return (
     <Box>
       <Heading mb={4}>Approval Queue</Heading>
-      <Button
-        colorScheme="blue"
-        mb={4}
-        onClick={handleBulkApprove}
-        isDisabled={selectedRequests.length === 0}
-      >
-        Bulk Approve ({selectedRequests.length})
-      </Button>
+      <HStack mb={4} spacing={4}>
+        <Button
+          colorScheme="blue"
+          onClick={handleBulkApprove}
+          isDisabled={selectedRequests.length === 0}
+        >
+          Bulk Approve ({selectedRequests.length})
+        </Button>
+        <Select
+          maxW="200px"
+          value={filterType}
+          onChange={(e) => setFilterType(e.target.value)}
+        >
+          <option value="all">All Types</option>
+          <option value="partner_approved">Partner Approved</option>
+          <option value="partner_issued">Partner Issued</option>
+        </Select>
+      </HStack>
       <Table variant="simple">
         <Thead>
           <Tr>
@@ -158,13 +179,14 @@ const ApprovalQueuePage: React.FC = () => {
               />
             </Th>
             <Th>User ID</Th>
+            <Th>Type</Th>
             <Th>Title</Th>
             <Th>Points</Th>
             <Th>Actions</Th>
           </Tr>
         </Thead>
         <Tbody>
-          {requests.map((request) => (
+          {filteredRequests.map((request) => (
             <Tr key={request.id}>
               <Td>
                 <Checkbox
@@ -173,6 +195,11 @@ const ApprovalQueuePage: React.FC = () => {
                 />
               </Td>
               <Td>{request.userId}</Td>
+              <Td>
+                <Badge colorScheme={request.approvalType === 'partner_issued' || request.type === 'partner_issued' ? 'blue' : 'purple'}>
+                  {request.approvalType === 'partner_issued' || request.type === 'partner_issued' ? 'Partner Issued' : 'Partner Approved'}
+                </Badge>
+              </Td>
               <Td>{request.title}</Td>
               <Td>{request.points}</Td>
               <Td>
