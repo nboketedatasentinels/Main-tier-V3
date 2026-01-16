@@ -138,7 +138,7 @@ export interface TaskNotificationRecord {
   severity?: string
 }
 
-export type AdminRole = 'super_admin' | 'partner' | 'admin' | 'mentor' | 'ambassador' | 'team_leader'
+export type AdminRole = 'super_admin' | 'partner' | 'mentor' | 'ambassador'
 
 export interface AdminUserRecord {
   id: string
@@ -171,7 +171,6 @@ export interface AdminMetrics {
   partners: number
   mentors: number
   ambassadors: number
-  teamLeaders: number
 }
 
 export type InvitationMethod = 'email' | 'one_time_code'
@@ -295,7 +294,6 @@ export type OrganizationUserRoleFilter =
   | 'all'
   | 'user'
   | 'mentor'
-  | 'team_leader'
   | 'ambassador'
   | 'partner'
 

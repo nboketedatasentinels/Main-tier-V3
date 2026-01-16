@@ -68,14 +68,17 @@ export const buildAmbassadorNavItems = (): NavigationSection[] => [
   },
 ]
 
-export const buildCompanyAdminNavItems = (): NavigationSection[] => [
+export const buildPartnerNavItems = (): NavigationSection[] => [
   {
     title: 'Administration',
     items: [
       { key: 'overview', label: 'Overview', icon: LayoutDashboard },
+      { key: 'at-risk', label: 'At Risk', icon: TrendingUp },
       { key: 'users', label: 'User Management', icon: Users },
-      { key: 'organizations', label: 'Organizations', icon: Building2 },
+      { key: 'organization-management', label: 'Organizations', icon: Building2 },
       { key: 'reports', label: 'Reports', icon: BarChart3 },
+      { key: 'job-board', label: 'Job Board', icon: Sparkles },
+      { key: 'grants', label: 'Grants & Funding', icon: Gift },
       { key: 'settings', label: 'Settings', icon: Settings },
       { key: 'support', label: 'Support', icon: Headphones },
     ],

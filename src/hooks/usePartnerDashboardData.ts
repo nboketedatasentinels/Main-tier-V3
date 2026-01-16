@@ -58,7 +58,7 @@ export interface PartnerUser {
   riskStatus: PartnerRiskLevel | 'at_risk'
   weeklyEarned: number
   weeklyRequired: number
-  role?: 'learner' | 'mentor' | 'team_leader'
+  role?: 'learner' | 'mentor' | 'user'
   riskReasons?: string[]
   registrationDate?: string
   interventions?: number

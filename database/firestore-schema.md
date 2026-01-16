@@ -13,7 +13,7 @@ User profile documents (indexed by user UID)
   firstName: string
   lastName: string
   fullName: string
-  role: 'free_user' | 'paid_member' | 'mentor' | 'ambassador' | 'company_admin' | 'super_admin'
+  role: 'free_user' | 'paid_member' | 'mentor' | 'ambassador' | 'partner' | 'super_admin'
   avatarUrl?: string
   bio?: string
   phoneNumber?: string
@@ -675,39 +675,39 @@ service cloud.firestore {
     match /villages/{villageId} {
       allow read: if isAuthenticated();
       allow create: if isAuthenticated();
-      allow update, delete: if hasRole('super_admin') || hasRole('company_admin');
+      allow update, delete: if hasRole('super_admin') || hasRole('partner');
     }
     
     match /companies/{companyId} {
       allow read: if isAuthenticated();
-      allow write: if hasRole('super_admin') || hasRole('company_admin');
+      allow write: if hasRole('super_admin') || hasRole('partner');
     }
     
     match /events/{eventId} {
       allow read: if isAuthenticated();
       allow create: if isAuthenticated();
-      allow update, delete: if hasRole('super_admin') || hasRole('company_admin');
+      allow update, delete: if hasRole('super_admin') || hasRole('partner');
     }
 
     // Nudge collections (admin/partner access)
     match /nudge_templates/{templateId} {
-      allow read: if hasRole('super_admin') || hasRole('company_admin') || hasRole('admin') || hasRole('partner');
-      allow create, update, delete: if hasRole('super_admin') || hasRole('company_admin') || hasRole('admin') || hasRole('partner');
+      allow read: if hasRole('super_admin') || hasRole('partner');
+      allow create, update, delete: if hasRole('super_admin') || hasRole('partner');
     }
 
     match /nudges_sent/{nudgeId} {
-      allow read: if hasRole('super_admin') || hasRole('company_admin') || hasRole('admin') || hasRole('partner');
-      allow create, update: if hasRole('super_admin') || hasRole('company_admin') || hasRole('admin') || hasRole('partner');
+      allow read: if hasRole('super_admin') || hasRole('partner');
+      allow create, update: if hasRole('super_admin') || hasRole('partner');
     }
 
     match /nudge_effectiveness/{effectivenessId} {
-      allow read: if hasRole('super_admin') || hasRole('company_admin') || hasRole('admin') || hasRole('partner');
-      allow create: if hasRole('super_admin') || hasRole('company_admin') || hasRole('admin') || hasRole('partner');
+      allow read: if hasRole('super_admin') || hasRole('partner');
+      allow create: if hasRole('super_admin') || hasRole('partner');
     }
 
     match /nudge_campaigns/{campaignId} {
-      allow read: if hasRole('super_admin') || hasRole('company_admin') || hasRole('admin') || hasRole('partner');
-      allow create, update, delete: if hasRole('super_admin') || hasRole('company_admin') || hasRole('admin') || hasRole('partner');
+      allow read: if hasRole('super_admin') || hasRole('partner');
+      allow create, update, delete: if hasRole('super_admin') || hasRole('partner');
     }
 
     match /user_points/{pointsId} {
