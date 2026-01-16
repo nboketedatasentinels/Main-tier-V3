@@ -24,6 +24,7 @@ import {
 } from 'firebase/firestore'
 import type { WeeklyProgress } from '@/types'
 import { removeUndefinedFields } from '@/utils/firestore'
+import { getWindowNumber } from '@/utils/windowCalculations'
 import { awardChecklistPoints, revokeChecklistPoints } from '@/services/pointsService'
 import { createApprovalRequest } from '@/services/approvalsService'
 import type { PointsVerificationRequest } from '@/services/pointsVerificationService'
@@ -75,12 +76,6 @@ function isAdminProfile(profile: any): boolean {
     role.includes('admin') ||
     roles.map(r => r.toLowerCase()).some(r => r.includes('admin') || r.includes('super'))
   )
-}
-
-function getWindowNumberFallback(weekNumber: number) {
-  // Your codebase has getWindowNumber/getWindowWeekNumber;
-  // in case this hook is used standalone, keep a safe default: 4-week windows.
-  return Math.ceil(weekNumber / 4)
 }
 
 export function useWeeklyChecklistViewModel() {
@@ -210,7 +205,7 @@ export function useWeeklyChecklistViewModel() {
 
     const load = async () => {
       try {
-        const windowNumber = getWindowNumberFallback(selectedWeek)
+        const windowNumber = getWindowNumber(selectedWeek)
 
         const weekQ = query(
           collection(db, 'pointsLedger'),
@@ -363,8 +358,18 @@ export function useWeeklyChecklistViewModel() {
   )
 
   const markCompleted = useCallback(
-    async (activity: ActivityState) => {
+    async (activity: ActivityState | undefined) => {
       if (!user || !journey) return
+
+      if (!activity?.id) {
+        console.error('[WeeklyChecklist] markCompleted called with invalid activity', activity)
+        toast({
+          title: 'Internal error',
+          description: 'Invalid activity selected.',
+          status: 'error',
+        })
+        return
+      }
 
       if (!canMutateActivity(activity)) {
         toast({
@@ -399,8 +404,18 @@ export function useWeeklyChecklistViewModel() {
   )
 
   const markNotStarted = useCallback(
-    async (activity: ActivityState) => {
+    async (activity: ActivityState | undefined) => {
       if (!user || !journey) return
+
+      if (!activity?.id) {
+        console.error('[WeeklyChecklist] markNotStarted called with invalid activity', activity)
+        toast({
+          title: 'Internal error',
+          description: 'Invalid activity selected.',
+          status: 'error',
+        })
+        return
+      }
 
       // Admin can revoke; non-admin must satisfy normal restrictions too (esp. lock/hasInteracted)
       if (!isAdmin && (!journey || isWeekLocked || activity.hasInteracted)) {
