@@ -88,6 +88,10 @@ export interface UserProfile {
   mentorOverrideId?: string | null
   ambassadorOverrideId?: string | null
   isActiveAmbassador?: boolean
+
+  // Journey Status
+  journeyStatus?: 'active' | 'completed' | 'failed' | 'abandoned'
+  completedAt?: string
   
   // Account Management
   accountStatus?: AccountStatus | string

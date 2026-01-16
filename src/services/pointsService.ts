@@ -15,9 +15,9 @@ import { db } from "@/services/firebase";
 import pointsConfig from "@/config/pointsConfig";
 import type { ActivityDef, JourneyType } from "@/config/pointsConfig";
 import { calculateLevel, calculateUserTotalPoints } from "@/utils/points";
-import { hasCompletedJourney } from "@/utils/completion";
 import { awardBadge } from "./badgeService";
 import { updateWindowOnAward, updateWindowOnRevoke } from "./windowProgressService";
+import { checkAndHandleJourneyCompletion } from "./journeyCompletionService";
 
 const { JOURNEY_META, getMonthNumber } = pointsConfig;
 
@@ -193,10 +193,12 @@ export async function awardChecklistPoints(params: {
     });
 
     // Post-transaction logic
-    const finalPoints = (await calculateUserTotalPoints(uid)) ?? 0;
-    if (hasCompletedJourney(finalPoints, journeyType)) {
-      await awardBadge(uid, "journey-completion");
-    }
+    // Check for journey completion after points are awarded
+    setTimeout(() => {
+      checkAndHandleJourneyCompletion(uid, journeyType).catch(err =>
+        console.error('Error checking journey completion:', err)
+      );
+    }, 100);
 
     if (activity.id.includes('peer')) {
       const peerActivitiesQuery = query(

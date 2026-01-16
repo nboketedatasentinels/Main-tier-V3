@@ -29,6 +29,7 @@ import { ActivityCard } from '@/components/dashboard/ActivityCard'
 import { BadgeCard } from '@/components/dashboard/BadgeCard'
 import { useWeeklyGlanceData } from '@/hooks/useWeeklyGlanceData'
 import { WeeklyInspirationCard } from './components/WeeklyInspirationCard'
+import { JourneyCompletionBanner } from '@/components/journeys/JourneyCompletionBanner'
 import pointsConfig from '@/config/pointsConfig'
 
 interface ActivityItem {
@@ -130,6 +131,7 @@ export const PaidMemberDashboard: React.FC = () => {
 
   return (
     <Stack spacing={8}>
+      <JourneyCompletionBanner />
       <Flex
         aria-label="Dashboard welcome panel"
         align={{ base: 'flex-start', md: 'center' }}
