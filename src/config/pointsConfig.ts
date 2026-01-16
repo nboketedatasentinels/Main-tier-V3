@@ -254,14 +254,56 @@ export const INTRO_ACTIVITIES: ActivityDef[] = FULL_ACTIVITIES.filter(
 
 export const JOURNEY_META: Record<
   JourneyType,
-  { weeks: number; weeklyTarget: number; mode: "intro" | "full"; timelineDisplay: JourneyTimelineDisplayMode }
+  {
+    weeks: number;
+    weeklyTarget: number;
+    mode: "intro" | "full";
+    timelineDisplay: JourneyTimelineDisplayMode;
+    completionThresholdPct?: number;
+  }
 > = {
-  "4W":  { weeks: 4,  weeklyTarget: 2500, mode: "intro", timelineDisplay: "duration" },
-  "6W":  { weeks: 6,  weeklyTarget: 4000, mode: "full",  timelineDisplay: "course-count" },
-  "3M":  { weeks: 12, weeklyTarget: 4000, mode: "full",  timelineDisplay: "duration" },
-  "6M":  { weeks: 24, weeklyTarget: 4000, mode: "full",  timelineDisplay: "duration" },
-  "9M":  { weeks: 36, weeklyTarget: 4000, mode: "full",  timelineDisplay: "duration" },
-  "12M": { weeks: 48, weeklyTarget: 4000, mode: "full",  timelineDisplay: "duration" },
+  "4W": {
+    weeks: 4,
+    weeklyTarget: 2500,
+    mode: "intro",
+    timelineDisplay: "duration",
+    completionThresholdPct: 67,
+  },
+  "6W": {
+    weeks: 6,
+    weeklyTarget: 4000,
+    mode: "full",
+    timelineDisplay: "course-count",
+    completionThresholdPct: 67,
+  },
+  "3M": {
+    weeks: 12,
+    weeklyTarget: 4000,
+    mode: "full",
+    timelineDisplay: "duration",
+    completionThresholdPct: 67,
+  },
+  "6M": {
+    weeks: 24,
+    weeklyTarget: 4000,
+    mode: "full",
+    timelineDisplay: "duration",
+    completionThresholdPct: 67,
+  },
+  "9M": {
+    weeks: 36,
+    weeklyTarget: 4000,
+    mode: "full",
+    timelineDisplay: "duration",
+    completionThresholdPct: 67,
+  },
+  "12M": {
+    weeks: 48,
+    weeklyTarget: 4000,
+    mode: "full",
+    timelineDisplay: "duration",
+    completionThresholdPct: 67,
+  },
 };
 
 export function getActivitiesForJourney(journeyType: JourneyType): ActivityDef[] {
