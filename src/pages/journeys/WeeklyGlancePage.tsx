@@ -11,11 +11,10 @@ import {
   SimpleGrid,
   Stack,
   Text,
-  Progress,
-  Badge,
 } from '@chakra-ui/react'
+import { useCallback, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { useState, useMemo } from 'react'
+
 import { WeeklyPointsCard } from '@/components/journeys/weeklyGlance/WeeklyPointsCard'
 import { SupportTeamCard } from '@/components/journeys/weeklyGlance/SupportTeamCard'
 import { PersonalityProfileCard } from '@/components/journeys/weeklyGlance/PersonalityProfileCard'
@@ -24,6 +23,7 @@ import { PeerMatchingCard } from '@/components/journeys/weeklyGlance/PeerMatchin
 import { WeeklyInspirationCard } from '@/components/journeys/weeklyGlance/WeeklyInspirationCard'
 import { ActivityFeedCard } from '@/components/journeys/weeklyGlance/ActivityFeedCard'
 import { LearnerWindowCard } from '@/components/journeys/weeklyGlance/LearnerWindowCard'
+
 import { useWeeklyGlanceData } from '@/hooks/useWeeklyGlanceData'
 import { BuildVillageModal } from '@/components/modals/BuildVillageModal'
 import { useAuth } from '@/hooks/useAuth'
@@ -34,228 +34,322 @@ import {
   getWeekDateRange,
 } from '@/utils/weekCalculations'
 
-export const WeeklyGlancePage = () => {
+/**
+ * Domain helpers (keeps business rules out of JSX as much as possible)
+ */
+function isCorporateUser(profile: any) {
+  const tier = profile?.transformationTier
+  return (
+    tier === TransformationTier.CORPORATE_MEMBER ||
+    tier === TransformationTier.CORPORATE_LEADER
+  )
+}
+
+function isPaidUser(profile: any) {
+  return profile?.membershipStatus === 'paid'
+}
+
+function canCreateVillage(profile: any) {
+  // If they already belong to ANY village/company context, or are paid/corporate, do not show CTA
+  const hasVillageContext =
+    !!profile?.villageId || !!profile?.companyId || !!profile?.corporateVillageId
+  if (hasVillageContext) return false
+  if (isPaidUser(profile)) return false
+  if (isCorporateUser(profile)) return false
+  return true
+}
+
+/**
+ * Activity feed builder (extensible + testable)
+ */
+type ActivityFeedStatus = 'complete' | 'pending' | 'attention'
+type ActivityFeedItem = {
+  id: string
+  title: string
+  description: string
+  timestamp: string
+  status: ActivityFeedStatus
+}
+
+function buildWeeklyActivityFeed(params: {
+  earnedPoints: number
+  targetPoints: number
+  weekNumber: number
+  daysRemaining: number
+  completedHabits: number
+  totalHabits: number
+  mentorFirstName?: string | null
+  hasMentor: boolean
+  peerMatchCount: number
+}): readonly ActivityFeedItem[] {
+  const {
+    earnedPoints,
+    targetPoints,
+    weekNumber,
+    daysRemaining,
+    completedHabits,
+    totalHabits,
+    mentorFirstName,
+    hasMentor,
+    peerMatchCount,
+  } = params
+
+  const pointsStatus: ActivityFeedStatus =
+    targetPoints > 0 && earnedPoints >= targetPoints
+      ? 'complete'
+      : earnedPoints > 0
+        ? 'pending'
+        : 'attention'
+
+  const habitsStatus: ActivityFeedStatus =
+    totalHabits > 0 && completedHabits === totalHabits ? 'complete' : 'pending'
+
+  const mentorStatus: ActivityFeedStatus = hasMentor ? 'complete' : 'pending'
+
+  const peerStatus: ActivityFeedStatus = peerMatchCount > 0 ? 'complete' : 'pending'
+
+  return [
+    {
+      id: 'weekly-points',
+      title: 'Weekly points updated',
+      description: `${earnedPoints} points logged toward your ${targetPoints || 0} point goal.`,
+      timestamp: `Week ${weekNumber} • ${daysRemaining} days left`,
+      status: pointsStatus,
+    },
+    {
+      id: 'weekly-habits',
+      title: 'Habits check-in',
+      description: `${completedHabits} of ${totalHabits} habits completed this week.`,
+      timestamp: 'Habit tracker',
+      status: habitsStatus,
+    },
+    {
+      id: 'mentor-assignment',
+      title: hasMentor ? 'Mentor confirmed' : 'Mentor assignment pending',
+      description: hasMentor
+        ? `Your mentor ${mentorFirstName || 'coach'} is ready for your next check-in.`
+        : 'We are confirming your mentor assignment. Expect an update soon.',
+      timestamp: 'Leadership Council',
+      status: mentorStatus,
+    },
+    {
+      id: 'peer-matching',
+      title: peerMatchCount > 0 ? 'Peer match ready' : 'Peer matching in progress',
+      description:
+        peerMatchCount > 0
+          ? 'Review your latest peer connection in Peer Connect.'
+          : 'We are still pairing you with a peer ally.',
+      timestamp: peerMatchCount > 0 ? 'New match' : 'Matching queue',
+      status: peerStatus,
+    },
+  ] as const
+}
+
+/**
+ * View-model hook: normalizes data + centralizes derived values
+ */
+function useWeeklyGlanceViewModel() {
   const { profile } = useAuth()
-  const navigate = useNavigate()
   const data = useWeeklyGlanceData()
+
+  // Normalize collection shapes so UI never has to guard against undefined
+  const weeklyHabits = data.weeklyHabits ?? []
+  const peerMatches = data.peerMatches ?? []
+
+  const weekRange = useMemo(() => getWeekDateRange(), [])
+  const daysRemaining = useMemo(() => getDaysRemainingInWeek(), [])
+
+  const earnedPoints = data.weeklyPoints?.points_earned ?? 0
+  const targetPoints = data.weeklyPoints?.target_points ?? 0
+
+  const weekProgress = useMemo(
+    () => calculateWeekProgress(earnedPoints, targetPoints),
+    [earnedPoints, targetPoints]
+  )
+
+  const completedHabits = useMemo(
+    () => weeklyHabits.filter(h => h.completed).length,
+    [weeklyHabits]
+  )
+
+  const shouldShowBuildVillageCard = useMemo(
+    () => canCreateVillage(profile),
+    [profile]
+  )
+
+  const hasError = useMemo(
+    () => Object.values(data.errors ?? {}).some(Boolean),
+    [data.errors]
+  )
+
+  const mentorProfile = data.supportAssignment?.mentorProfile
+  const activityFeedItems = useMemo(
+    () =>
+      buildWeeklyActivityFeed({
+        earnedPoints,
+        targetPoints,
+        weekNumber: data.weekNumber,
+        daysRemaining,
+        completedHabits,
+        totalHabits: weeklyHabits.length,
+        hasMentor: !!mentorProfile,
+        mentorFirstName: mentorProfile?.firstName ?? null,
+        peerMatchCount: peerMatches.length,
+      }),
+    [
+      earnedPoints,
+      targetPoints,
+      data.weekNumber,
+      daysRemaining,
+      completedHabits,
+      weeklyHabits.length,
+      mentorProfile?.firstName,
+      peerMatches.length,
+      mentorProfile,
+    ]
+  )
+
+  return {
+    profile,
+    data,
+    weeklyHabits,
+    peerMatches,
+
+    weekRange,
+    daysRemaining,
+    earnedPoints,
+    targetPoints,
+    weekProgress,
+    completedHabits,
+
+    shouldShowBuildVillageCard,
+    hasError,
+    activityFeedItems,
+  }
+}
+
+export const WeeklyGlancePage = () => {
+  const navigate = useNavigate()
+  const {
+    data,
+    weekRange,
+    daysRemaining,
+    earnedPoints,
+    targetPoints,
+    weekProgress,
+    shouldShowBuildVillageCard,
+    hasError,
+    activityFeedItems,
+  } = useWeeklyGlanceViewModel()
 
   const [isBuildVillageOpen, setIsBuildVillageOpen] = useState(false)
   const [villageName, setVillageName] = useState('')
   const [villagePurpose, setVillagePurpose] = useState('')
 
-  const isPaidMember = profile?.membershipStatus === 'paid'
-  const isCorporateTier =
-    profile?.transformationTier === TransformationTier.CORPORATE_MEMBER ||
-    profile?.transformationTier === TransformationTier.CORPORATE_LEADER
-
-  const shouldShowBuildVillageCard =
-    !profile?.villageId &&
-    !profile?.companyId &&
-    !profile?.corporateVillageId &&
-    !isPaidMember &&
-    !isCorporateTier
-
-  const hasError = Object.values(data.errors).some(Boolean)
-
-  const weekRange = getWeekDateRange()
-  const daysRemaining = getDaysRemainingInWeek()
-  const earnedPoints = data.weeklyPoints?.points_earned || 0
-  const targetPoints = data.weeklyPoints?.target_points || 0
-  const weekProgress = calculateWeekProgress(earnedPoints, targetPoints)
+  const openVillageModal = useCallback(() => setIsBuildVillageOpen(true), [])
+  const closeVillageModal = useCallback(() => setIsBuildVillageOpen(false), [])
 
   /**
-   * Determine the single most important action for this user THIS WEEK
+   * NOTE: This is still “optimistic UI”.
+   * If/when you wire actual creation, make this async and handle error/loading.
    */
-  const primaryAction = useMemo(() => {
-    if (earnedPoints === 0) {
-      return {
-        label: 'Start your week',
-        description: 'Complete your Weekly Checklist to unlock points and momentum.',
-        cta: 'Complete Weekly Checklist',
-        action: () => navigate('/app/weekly-checklist'),
-      }
-    }
+  const handleCreateVillage = useCallback(() => {
+    setIsBuildVillageOpen(false)
+    setVillageName('')
+    setVillagePurpose('')
+  }, [])
 
-    if (data.impactCount === 0) {
-      return {
-        label: 'Create your first impact',
-        description: 'Log one meaningful action to start your impact journey.',
-        cta: 'Log Impact',
-        action: () => navigate('/app/impact-log'),
-      }
-    }
-
-    if (data.peerMatches.length === 0) {
-      return {
-        label: 'Build accountability',
-        description: 'Match with a peer to stay consistent and supported.',
-        cta: 'Start Peer Matching',
-        action: () => navigate('/app/peer-connect'),
-      }
-    }
-
-    return {
-      label: 'Stay on track',
-      description: 'You’re progressing well. Finish strong this week.',
-      cta: 'Review Weekly Progress',
-      action: () => navigate('/app/weekly-checklist'),
-    }
-  }, [earnedPoints, data.impactCount, data.peerMatches.length, navigate])
+  const handleNavigateChecklist = useCallback(() => {
+    navigate('/app/weekly-checklist')
+  }, [navigate])
 
   return (
     <Box p={{ base: 4, md: 6 }}>
       <Stack spacing={6}>
-
-        {/* BUILD VILLAGE PROMPT */}
         {shouldShowBuildVillageCard && (
           <Card bg="brand.primaryMuted" border="1px" borderColor="brand.border">
             <CardBody>
               <Stack
                 direction={{ base: 'column', md: 'row' }}
                 spacing={4}
-                justify="space-between"
                 align="flex-start"
+                justify="space-between"
               >
                 <Stack spacing={1}>
                   <Heading size="md" color="#273240">
                     Build Your Village
                   </Heading>
                   <Text color="#273240">
-                    Rally peers, collaborate consistently, and track collective impact.
+                    Rally your peers by creating a village to collaborate and track your collective impact.
                   </Text>
                 </Stack>
                 <Button
                   colorScheme="yellow"
-                  onClick={() => setIsBuildVillageOpen(true)}
+                  onClick={openVillageModal}
+                  alignSelf={{ base: 'flex-start', md: 'center' }}
                 >
-                  Create Village
+                  Open Build Village
                 </Button>
               </Stack>
             </CardBody>
           </Card>
         )}
 
-        {/* PAGE HEADER */}
         <Stack spacing={1}>
           <Heading size="lg" color="#273240">
             This Week at a Glance
           </Heading>
           <Text color="#273240">
-            Focused actions, measurable progress, and meaningful support.
+            Your personalized dashboard for weekly progress, habits, and support.
           </Text>
         </Stack>
 
-        {/* PRIMARY WEEKLY ACTION BANNER */}
-        <Card border="1px solid" borderColor="purple.200" bg="purple.50">
-          <CardBody>
-            <Stack
-              direction={{ base: 'column', md: 'row' }}
-              spacing={4}
-              justify="space-between"
-              align="center"
-            >
-              <Stack spacing={1}>
-                <Badge colorScheme="purple" w="fit-content">
-                  This Week’s Priority
-                </Badge>
-                <Heading size="md">{primaryAction.label}</Heading>
-                <Text color="gray.600">{primaryAction.description}</Text>
-                <Progress
-                  value={weekProgress}
-                  size="sm"
-                  colorScheme="purple"
-                  max={100}
-                  borderRadius="md"
-                />
-                <Text fontSize="sm" color="gray.500">
-                  {daysRemaining} days remaining
-                </Text>
-              </Stack>
-              <Button
-                colorScheme="purple"
-                size="lg"
-                onClick={primaryAction.action}
-              >
-                {primaryAction.cta}
-              </Button>
-            </Stack>
-          </CardBody>
-        </Card>
-
-        {/* ERROR STATE */}
         {hasError && (
           <Alert status="warning" rounded="md">
             <AlertIcon />
             <Box>
               <AlertTitle>Some sections failed to load</AlertTitle>
-              <AlertDescription>
-                Data may be incomplete. Refresh to retry.
-              </AlertDescription>
+              <AlertDescription>Data may be incomplete. Try refreshing the page.</AlertDescription>
             </Box>
           </Alert>
         )}
 
-        {/* INSPIRATION */}
-        <WeeklyInspirationCard
-          data={data.inspirationQuote}
-          loading={data.loading.inspiration}
-        />
+        <WeeklyInspirationCard data={data.inspirationQuote} loading={data.loading.inspiration} />
 
-        {/* MAIN GRID */}
-        <SimpleGrid columns={{ base: 1, md: 2, xl: 3 }} spacing={4}>
+        <SimpleGrid columns={{ base: 1, md: 2, xl: 3 }} spacing={4} alignItems="stretch">
           <LearnerWindowCard
             weekLabel={`Week ${data.weekNumber} • ${weekRange.label}`}
             daysRemaining={daysRemaining}
             progressValue={weekProgress}
             targetPoints={targetPoints}
             earnedPoints={earnedPoints}
-            focusAreas={[
-              'Leadership reflection',
-              'Mentor engagement',
-              'Impact action',
-            ]}
-            nextMilestone={`Prepare for Week ${data.weekNumber + 1}`}
+            focusAreas={['Leadership reflection', 'Mentor session', 'Impact action']}
+            nextMilestone={`Week ${data.weekNumber + 1} readiness review`}
           />
 
           <WeeklyPointsCard
             data={data.weeklyPoints}
             loading={data.loading.points}
             error={data.errors.points}
-            onNavigate={() => navigate('/app/weekly-checklist')}
+            onNavigate={handleNavigateChecklist}
           />
 
-          <ActivityFeedCard items={data.activityFeedItems ?? []} />
+          <ActivityFeedCard items={[...activityFeedItems]} />
 
-          <SupportTeamCard
-            data={data.supportAssignment}
-            loading={data.loading.support}
-          />
+          <SupportTeamCard data={data.supportAssignment} loading={data.loading.support} />
 
-          <PersonalityProfileCard
-            data={data.personality}
-            loading={data.loading.profile}
-          />
+          <PersonalityProfileCard data={data.personality} loading={data.loading.profile} />
 
-          <PeopleImpactedCard
-            count={data.impactCount}
-            loading={data.loading.impact}
-          />
+          <PeopleImpactedCard count={data.impactCount} loading={data.loading.impact} />
 
-          <PeerMatchingCard
-            matches={data.peerMatches}
-            loading={data.loading.matches}
-          />
+          <PeerMatchingCard matches={data.peerMatches ?? []} loading={data.loading.matches} />
         </SimpleGrid>
       </Stack>
 
       <BuildVillageModal
         isOpen={isBuildVillageOpen}
-        onCreate={() => {
-          setIsBuildVillageOpen(false)
-          setVillageName('')
-          setVillagePurpose('')
-        }}
-        onSkip={() => setIsBuildVillageOpen(false)}
+        onCreate={handleCreateVillage}
+        onSkip={closeVillageModal}
         villageName={villageName}
         villagePurpose={villagePurpose}
         onVillageNameChange={setVillageName}
