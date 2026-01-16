@@ -18,6 +18,7 @@ import { calculateLevel, calculateUserTotalPoints } from "@/utils/points";
 import { awardBadge } from "./badgeService";
 import { updateWindowOnAward, updateWindowOnRevoke } from "./windowProgressService";
 import { checkAndHandleJourneyCompletion } from "./journeyCompletionService";
+import { detectStatusChangeAndNudge } from "./nudgeMonitorService";
 
 const { JOURNEY_META, getMonthNumber } = pointsConfig;
 
@@ -177,6 +178,19 @@ export async function awardChecklistPoints(params: {
         { merge: true }
       );
 
+      // Trigger nudges asynchronously after transaction
+      // Note: We use setTimeout to ensure it happens after tx completes
+      setTimeout(() => {
+        detectStatusChangeAndNudge({
+          uid,
+          journeyType,
+          previousStatus: currentProgress.status,
+          currentStatus: status,
+          pointsEarned: newPoints,
+          windowTarget: weeklyTarget,
+        }).catch(err => console.error('[PointsService] Nudge trigger failed:', err));
+      }, 100);
+
       const profileUpdate = {
         totalPoints,
         level,
@@ -285,6 +299,18 @@ export async function revokeChecklistPoints(params: {
         },
         { merge: true }
       );
+
+      // Trigger nudges asynchronously after transaction
+      setTimeout(() => {
+        detectStatusChangeAndNudge({
+          uid,
+          journeyType,
+          previousStatus: progressDoc.data()?.status || 'alert',
+          currentStatus: status,
+          pointsEarned: newPoints,
+          windowTarget: weeklyTarget,
+        }).catch(err => console.error('[PointsService] Revoke nudge trigger failed:', err));
+      }, 100);
 
       const profileUpdate = {
         totalPoints,

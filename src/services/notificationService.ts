@@ -187,6 +187,55 @@ export const sendBelowTargetAlert = async (notification: {
   }
 }
 
+export const notifyMentorOfLearnerAlert = async (params: {
+  mentorId: string
+  learnerId: string
+  learnerName: string
+  status: string
+  pointsEarned: number
+  windowTarget: number
+}) => {
+  const message = `${params.learnerName} has fallen into "${params.status}" status (${params.pointsEarned} / ${params.windowTarget} pts). Consider reaching out to provide support.`
+
+  await createInAppNotification({
+    userId: params.mentorId,
+    type: 'engagement_alert',
+    title: `Learner Status Alert: ${params.learnerName}`,
+    message,
+    metadata: {
+      learnerId: params.learnerId,
+      learnerName: params.learnerName,
+      status: params.status,
+      pointsEarned: params.pointsEarned,
+      windowTarget: params.windowTarget
+    }
+  })
+}
+
+export const notifyPartnerOfLearnerAlert = async (params: {
+  organizationId: string
+  learnerId: string
+  learnerName: string
+  status: string
+}) => {
+  const message = `Learner ${params.learnerName} from your organization is currently in "${params.status}" status.`
+
+  await addDoc(adminNotificationsCollection, {
+    type: 'engagement_alert',
+    title: `Organization Learner Alert`,
+    message,
+    severity: 'warning',
+    target_roles: ['partner', 'admin'],
+    related_id: params.organizationId,
+    metadata: {
+      learnerId: params.learnerId,
+      learnerName: params.learnerName,
+      status: params.status
+    },
+    created_at: serverTimestamp(),
+  })
+}
+
 export const sendRecoveryNotification = async (notification: {
   userId: string
   relatedId?: string

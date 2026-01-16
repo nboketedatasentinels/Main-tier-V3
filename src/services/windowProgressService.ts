@@ -2,6 +2,7 @@ import { doc, serverTimestamp, type Transaction } from "firebase/firestore";
 import { db } from "@/services/firebase";
 import { JOURNEY_META, type ActivityDef, type JourneyType } from "@/config/pointsConfig";
 import { getWindowNumber, getWindowRange, PARALLEL_WINDOW_SIZE_WEEKS } from "@/utils/windowCalculations";
+import { detectStatusChangeAndNudge } from "./nudgeMonitorService";
 
 /**
  * Updates the windowProgress document when points are awarded.
@@ -60,6 +61,18 @@ export async function updateWindowOnAward(
     },
     { merge: true }
   );
+
+  // Trigger nudges asynchronously after transaction
+  setTimeout(() => {
+    detectStatusChangeAndNudge({
+      uid,
+      journeyType,
+      previousStatus,
+      currentStatus: status,
+      pointsEarned: newPoints,
+      windowTarget,
+    }).catch(err => console.error('[WindowProgress] Nudge trigger failed:', err));
+  }, 100);
 }
 
 /**
@@ -123,4 +136,16 @@ export async function updateWindowOnRevoke(
         },
         { merge: true }
     );
+
+    // Trigger nudges asynchronously after transaction
+    setTimeout(() => {
+        detectStatusChangeAndNudge({
+            uid,
+            journeyType,
+            previousStatus,
+            currentStatus: status,
+            pointsEarned: newPoints,
+            windowTarget,
+        }).catch(err => console.error('[WindowProgress] Nudge trigger failed:', err));
+    }, 100);
 }
