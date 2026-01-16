@@ -39,3 +39,21 @@ export const getWindowTarget = (params: {
     targetPoints: Math.max(0, weeklyTarget * windowWeeks),
   }
 }
+
+export const getWindowTargetByJourney = (journeyType: string, weeklyTarget: number): number => {
+  switch (journeyType) {
+    case '6W':
+      return 13500
+    case '3M':
+    case '6M':
+      return 12500
+    case '9M':
+      return 12600
+    case '4W':
+      return 5000 // 2500 * 2
+    case '12M':
+      return 8000 // 4000 * 2
+    default:
+      return weeklyTarget * PARALLEL_WINDOW_SIZE_WEEKS
+  }
+}

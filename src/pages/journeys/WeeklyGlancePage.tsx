@@ -23,6 +23,7 @@ import { PeerMatchingCard } from '@/components/journeys/weeklyGlance/PeerMatchin
 import { WeeklyInspirationCard } from '@/components/journeys/weeklyGlance/WeeklyInspirationCard'
 import { ActivityFeedCard } from '@/components/journeys/weeklyGlance/ActivityFeedCard'
 import { LearnerWindowCard } from '@/components/journeys/weeklyGlance/LearnerWindowCard'
+import { WindowSummaryCard } from '@/components/journeys/weeklyGlance/WindowSummaryCard'
 
 import { useWeeklyGlanceData } from '@/hooks/useWeeklyGlanceData'
 import { BuildVillageModal } from '@/components/modals/BuildVillageModal'
@@ -182,6 +183,12 @@ function useWeeklyGlanceViewModel() {
     [data.errors]
   )
 
+  const isParallelTrackingEnabled = import.meta.env.VITE_FEATURE_FLAG_PARALLEL_WINDOW_TRACKING === 'true'
+
+  if (isParallelTrackingEnabled) {
+    console.log('[WeeklyGlance] Parallel window tracking enabled')
+  }
+
   const mentorProfile = data.supportAssignment?.mentorProfile
   const activityFeedItems = useMemo(
     () =>
@@ -225,6 +232,7 @@ function useWeeklyGlanceViewModel() {
     shouldShowBuildVillageCard,
     hasError,
     activityFeedItems,
+    isParallelTrackingEnabled,
   }
 }
 
@@ -240,6 +248,7 @@ export const WeeklyGlancePage = () => {
     shouldShowBuildVillageCard,
     hasError,
     activityFeedItems,
+    isParallelTrackingEnabled,
   } = useWeeklyGlanceViewModel()
 
   const [isBuildVillageOpen, setIsBuildVillageOpen] = useState(false)
@@ -317,15 +326,19 @@ export const WeeklyGlancePage = () => {
         <WeeklyInspirationCard data={data.inspirationQuote} loading={data.loading.inspiration} />
 
         <SimpleGrid columns={{ base: 1, md: 2, xl: 3 }} spacing={4} alignItems="stretch">
-          <LearnerWindowCard
-            weekLabel={`Week ${data.weekNumber} • ${weekRange.label}`}
-            daysRemaining={daysRemaining}
-            progressValue={weekProgress}
-            targetPoints={targetPoints}
-            earnedPoints={earnedPoints}
-            focusAreas={['Leadership reflection', 'Mentor session', 'Impact action']}
-            nextMilestone={`Week ${data.weekNumber + 1} readiness review`}
-          />
+          {isParallelTrackingEnabled ? (
+            <WindowSummaryCard />
+          ) : (
+            <LearnerWindowCard
+              weekLabel={`Week ${data.weekNumber} • ${weekRange.label}`}
+              daysRemaining={daysRemaining}
+              progressValue={weekProgress}
+              targetPoints={targetPoints}
+              earnedPoints={earnedPoints}
+              focusAreas={['Leadership reflection', 'Mentor session', 'Impact action']}
+              nextMilestone={`Week ${data.weekNumber + 1} readiness review`}
+            />
+          )}
 
           <WeeklyPointsCard
             data={data.weeklyPoints}

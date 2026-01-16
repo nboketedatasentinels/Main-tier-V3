@@ -22,6 +22,7 @@ import { PeerMatchingCard } from '@/components/journeys/weeklyGlance/PeerMatchin
 import { WeeklyInspirationCard } from '@/components/journeys/weeklyGlance/WeeklyInspirationCard'
 import { ActivityFeedCard } from '@/components/journeys/weeklyGlance/ActivityFeedCard'
 import { LearnerWindowCard } from '@/components/journeys/weeklyGlance/LearnerWindowCard'
+import { WindowSummaryCard } from '@/components/journeys/weeklyGlance/WindowSummaryCard'
 import { ActivityHistoryTable } from '@/components/journeys/dashboard/ActivityHistoryTable'
 import { MiniJourneyTimeline } from '@/components/journeys/dashboard/MiniJourneyTimeline'
 import { JourneyCompletionOverview } from '@/components/journeys/dashboard/JourneyCompletionOverview'
@@ -50,6 +51,11 @@ export const LearnerDashboardPage = () => {
     !isCorporateTier
 
   const hasError = Object.values(data.errors).some(Boolean)
+  const isParallelTrackingEnabled = import.meta.env.VITE_FEATURE_FLAG_PARALLEL_WINDOW_TRACKING === 'true'
+
+  if (isParallelTrackingEnabled) {
+    console.log('[Dashboard] Parallel window tracking enabled')
+  }
 
   const handleOpenVillageModal = () => setIsBuildVillageOpen(true)
   const handleCloseVillageModal = () => setIsBuildVillageOpen(false)
@@ -136,15 +142,19 @@ export const LearnerDashboardPage = () => {
         <WeeklyInspirationCard data={data.inspirationQuote} loading={data.loading.inspiration} />
 
         <SimpleGrid columns={{ base: 1, md: 2, xl: 3 }} spacing={4} alignItems="stretch">
-          <LearnerWindowCard
-            weekLabel={`Week ${data.weekNumber} • ${weekRange.label}`}
-            daysRemaining={daysRemaining}
-            progressValue={weekProgress}
-            targetPoints={targetPoints}
-            earnedPoints={earnedPoints}
-            focusAreas={data.focusAreas.map(fa => fa.title)}
-            nextMilestone={`Week ${data.weekNumber + 1} readiness review`}
-          />
+          {isParallelTrackingEnabled ? (
+            <WindowSummaryCard />
+          ) : (
+            <LearnerWindowCard
+              weekLabel={`Week ${data.weekNumber} • ${weekRange.label}`}
+              daysRemaining={daysRemaining}
+              progressValue={weekProgress}
+              targetPoints={targetPoints}
+              earnedPoints={earnedPoints}
+              focusAreas={data.focusAreas.map(fa => fa.title)}
+              nextMilestone={`Week ${data.weekNumber + 1} readiness review`}
+            />
+          )}
           <WeeklyPointsCard
             data={data.weeklyPoints}
             loading={data.loading.points}

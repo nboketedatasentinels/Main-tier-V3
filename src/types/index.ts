@@ -387,6 +387,17 @@ export interface WeeklyProgress {
   updatedAt: string | Date | { toDate: () => Date };
 }
 
+export interface WindowProgress {
+  uid: string;
+  journeyType: string;
+  windowNumber: number;
+  pointsEarned: number;
+  windowTarget: number;
+  status: 'on_track' | 'warning' | 'alert' | 'recovery';
+  previousStatus?: 'on_track' | 'warning' | 'alert' | 'recovery';
+  updatedAt?: any;
+}
+
 export enum ActivityStatus {
   NOT_STARTED = 'not_started',
   PENDING = 'pending',
