@@ -27,7 +27,8 @@ export const WeeklyActivityCard = ({
   onOpenProof: (activity: ActivityState) => void
 }) => {
   const isPaid = Boolean(journey?.isPaid)
-  const requiresPartnerApproval = Boolean(isPaid && activity.requiresApproval)
+  const requiresPartnerApproval = Boolean(isPaid && (activity.approvalType === 'partner_approved' || activity.requiresApproval))
+  const isPartnerIssued = activity.approvalType === 'partner_issued'
 
   const lockedByWeek = isWeekLocked && !isAdmin
   const lockedByAvailability = activity.availability.state !== 'available' && !isAdmin
@@ -46,6 +47,10 @@ export const WeeklyActivityCard = ({
 
     if (activity.availability.state === 'exhausted') {
       return 'Cap reached for this window.'
+    }
+
+    if (isPartnerIssued && activity.status === 'not_started') {
+      return 'Your partner will assign this activity to you.'
     }
 
     if (lockedByAvailability) return 'This activity is locked or exhausted right now.'
@@ -90,6 +95,14 @@ export const WeeklyActivityCard = ({
             {requiresPartnerApproval ? (
               <Tooltip label="Partner approval required. Submit proof for verification.">
                 <Badge colorScheme="purple">Partner approval</Badge>
+              </Tooltip>
+            ) : isPartnerIssued ? (
+              <Tooltip label="Assigned directly by your partner.">
+                <Badge colorScheme="blue">Partner issued</Badge>
+              </Tooltip>
+            ) : activity.approvalType === 'auto' ? (
+              <Tooltip label="Automatically verified by the system.">
+                <Badge colorScheme="teal">Auto verified</Badge>
               </Tooltip>
             ) : (
               <Tooltip label="Self-verified (honor based)">
@@ -156,6 +169,15 @@ export const WeeklyActivityCard = ({
           >
             Submit proof
           </Button>
+        ) : isPartnerIssued ? (
+          <Button
+            size="sm"
+            colorScheme="blue"
+            variant="outline"
+            isDisabled={true}
+          >
+            {activity.status === 'completed' ? 'Assigned' : 'Awaiting Assignment'}
+          </Button>
         ) : (
           <Button
             size="sm"
@@ -164,7 +186,7 @@ export const WeeklyActivityCard = ({
             isDisabled={disabled || activity.status === 'completed'}
             onClick={() => onMarkCompleted(activity)}
           >
-            Yes
+            {activity.approvalType === 'self' ? 'Confirm (Honor System)' : 'Mark Complete'}
           </Button>
         )}
 

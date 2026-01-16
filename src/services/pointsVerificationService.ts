@@ -89,6 +89,7 @@ const buildFallbackActivity = (
   maxPerMonth: 1,
   week: request.week,
   category: 'Legacy',
+  approvalType: 'partner_approved',
   requiresApproval: true,
   verification: 'partner_approval',
   flexibleWeeks: true,

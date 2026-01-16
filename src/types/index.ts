@@ -1,7 +1,7 @@
 // Import and re-export role types and values
 import { UserRole, ALL_STANDARD_ROLES } from './roles';
 import type { StandardRole, AllRoles } from './roles';
-import { JourneyType } from '@/config/pointsConfig';
+import { JourneyType, ApprovalType } from '@/config/pointsConfig';
 export * from './admin'
 export * from './capacity'
 export * from './tutorials'
@@ -256,6 +256,7 @@ export interface ActivityCatalogEntry {
   maxPerMonth: number
   maxPerWeek?: number
   cooldownWeeks?: number
+  approvalType?: ApprovalType
   requiresApproval?: boolean
   verification?: 'honor' | 'partner_approval'
   isFreeTier?: boolean
@@ -281,6 +282,7 @@ export interface ActivityDefinition {
   points: number
   maxPerWindow: number
   maxPerClaim?: number
+  approvalType?: ApprovalType
   requiresApproval?: boolean
   verification?: 'honor' | 'mentor_approval' | 'partner_approval'
   isActive: boolean

@@ -159,6 +159,7 @@ export async function awardChecklistPoints(params: {
         points: activity.points,
         createdAt: serverTimestamp(),
         source,
+        approvalType: activity.approvalType,
       });
 
       tx.set(

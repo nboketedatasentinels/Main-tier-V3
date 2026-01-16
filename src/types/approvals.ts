@@ -1,15 +1,17 @@
 import { PointsVerificationRequest } from '@/services/pointsVerificationService'
 import { UpgradeRequest } from '@/types/upgrade'
+import { ApprovalType } from '@/config/pointsConfig'
 
-export type ApprovalWorkflowType = 'points_verification' | 'upgrade_request'
+export type ApprovalWorkflowType = 'points_verification' | 'upgrade_request' | 'partner_issued'
 
 export type ApprovalStatus = 'pending' | 'approved' | 'rejected' | 'completed'
 
-export type ApprovalSource = PointsVerificationRequest | UpgradeRequest
+export type ApprovalSource = PointsVerificationRequest | UpgradeRequest | Record<string, any>
 
 export interface ApprovalRecord {
   id: string
   type: ApprovalWorkflowType
+  approvalType?: ApprovalType
   status: ApprovalStatus
   createdAt: Date | null
   userId: string

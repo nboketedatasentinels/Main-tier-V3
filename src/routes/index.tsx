@@ -49,6 +49,7 @@ import { ShamelessCirclePage } from '@/pages/community/ShamelessCirclePage';
 import { UserProfileManagementPage } from '@/pages/admin/UserProfileManagementPage';
 import { OrganizationDetailPage } from '@/pages/admin/OrganizationDetailPage';
 import ApprovalQueuePage from '@/pages/admin/ApprovalQueuePage';
+import PartnerAssignmentPage from '@/pages/admin/PartnerAssignmentPage';
 import BadgeGalleryPage from '@/pages/badges/BadgeGalleryPage';
 
 // Error pages
@@ -160,6 +161,7 @@ export const AppRoutes = () => {
           <Route path="organization/:organizationId" element={<OrganizationDetailPage />} />
           <Route path="user/:userId" element={<UserProfileManagementPage viewContext="admin" />} />
           <Route path="approvals" element={<ApprovalQueuePage />} />
+          <Route path="partner-assignment" element={<PartnerAssignmentPage />} />
           <Route index element={<Navigate to="/admin/dashboard" replace />} />
         </Route>
 
