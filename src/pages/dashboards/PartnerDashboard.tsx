@@ -75,7 +75,7 @@ export const PartnerDashboard: React.FC = () => {
   const enableProfileRealtime = import.meta.env.VITE_ENABLE_PROFILE_REALTIME === 'true'
   const supportEmail = 'support@transformation4leaders.com'
 
-  type PartnerPageKey = 'overview' | 'users' | 'job-board' | 'grants' | 'organization-management' | 'at-risk' | 'reports' | 'settings' | 'support'
+  type PartnerPageKey = 'overview' | 'users' | 'organization-management' | 'at-risk' | 'reports' | 'settings' | 'support'
   const [activePage, setActivePage] = useState<PartnerPageKey>('overview')
   const [activeTemplates, setActiveTemplates] = useState<NudgeTemplateRecord[]>([])
   const [templateLoadError, setTemplateLoadError] = useState<string | null>(null)
@@ -684,85 +684,6 @@ export const PartnerDashboard: React.FC = () => {
     </Stack>
   )
 
-  const renderJobBoardPage = () => (
-    <Stack spacing={6}>
-      <Card bg="white" border="1px solid" borderColor="brand.border">
-        <CardBody>
-          <Stack spacing={4}>
-            <HStack justify="space-between" align="center">
-              <VStack align="flex-start" spacing={0}>
-                <Text fontWeight="bold" color="brand.text">Job Board</Text>
-                <Text fontSize="sm" color="brand.subtleText">
-                  Opportunities curated for assigned organizations
-                </Text>
-              </VStack>
-              <Badge colorScheme="green">Coming soon</Badge>
-            </HStack>
-            <SimpleGrid columns={{ base: 1, md: 2 }} spacing={3}>
-              {[1, 2, 3, 4].map(job => (
-                <Box
-                  key={job}
-                  p={4}
-                  borderRadius="md"
-                  border="1px solid"
-                  borderColor="brand.border"
-                  bg="brand.accent"
-                >
-                  <Text fontWeight="semibold" color="brand.text">Strategic role {job}</Text>
-                  <Text fontSize="sm" color="brand.subtleText">
-                    Placeholder posting for managed organizations.
-                  </Text>
-                  <Badge mt={2} colorScheme="purple">
-                    Partner scoped
-                  </Badge>
-                </Box>
-              ))}
-            </SimpleGrid>
-          </Stack>
-        </CardBody>
-      </Card>
-    </Stack>
-  )
-
-  const renderGrantsPage = () => (
-    <Stack spacing={6}>
-      <Card bg="white" border="1px solid" borderColor="brand.border">
-        <CardBody>
-          <Stack spacing={4}>
-            <HStack justify="space-between" align="center">
-              <VStack align="flex-start" spacing={0}>
-                <Text fontWeight="bold" color="brand.text">Grants & Funding</Text>
-                <Text fontSize="sm" color="brand.subtleText">Resources available for partner orgs</Text>
-              </VStack>
-              <Badge colorScheme="blue">Placeholder</Badge>
-            </HStack>
-            <Stack spacing={3}>
-              {[1, 2, 3].map(grant => (
-                <HStack
-                  key={grant}
-                  justify="space-between"
-                  p={3}
-                  borderRadius="md"
-                  border="1px solid"
-                  borderColor="brand.border"
-                  bg="brand.accent"
-                  align={{ base: 'flex-start', md: 'center' }}
-                  spacing={4}
-                >
-                  <VStack align="flex-start" spacing={0}>
-                    <Text fontWeight="semibold" color="brand.text">Funding opportunity {grant}</Text>
-                    <Text fontSize="sm" color="brand.subtleText">Guided application flow coming soon.</Text>
-                  </VStack>
-                  <Badge colorScheme="teal">Soon</Badge>
-                </HStack>
-              ))}
-            </Stack>
-          </Stack>
-        </CardBody>
-      </Card>
-    </Stack>
-  )
-
   const renderOrganizationManagementPage = () => (
     <Stack spacing={6}>
       {(organizationsError || usersError) && (
@@ -1030,10 +951,6 @@ export const PartnerDashboard: React.FC = () => {
         return renderUsersPage()
       case 'organization-management':
         return renderOrganizationManagementPage()
-      case 'job-board':
-        return renderJobBoardPage()
-      case 'grants':
-        return renderGrantsPage()
       case 'at-risk':
         return renderAtRiskPage()
       case 'reports':
@@ -1050,7 +967,7 @@ export const PartnerDashboard: React.FC = () => {
 
   const handleNavigate = (key: string) => {
     const normalized = key as PartnerPageKey
-    if (['overview', 'users', 'job-board', 'grants', 'organization-management', 'at-risk', 'reports', 'settings', 'support'].includes(normalized)) {
+    if (['overview', 'users', 'organization-management', 'at-risk', 'reports', 'settings', 'support'].includes(normalized)) {
       setActivePage(normalized)
     } else {
       setActivePage('overview')
