@@ -41,6 +41,20 @@ export interface PartnerOrganization {
   warning?: string
 }
 
+export interface DashboardDebugInfo {
+  totalInSnapshot: number
+  keptCount: number
+  rejectedNoMatch: number
+  rejectedSelectedOrg: number
+  mismatchSamples: Array<{
+    id: string
+    userOrgKeys: string[]
+    assignedKeys?: string[]
+    reason: string
+  }>
+  assignedOrgKeys: string[]
+}
+
 export interface PartnerUser {
   id: string
   name: string
@@ -78,6 +92,7 @@ export interface PartnerInterventionSummary {
 
 interface UsePartnerDashboardDataOptions {
   selectedOrg?: string
+  debugMode?: boolean
 }
 
 const USERS_QUERY = query(collection(db, 'profiles'), where('accountStatus', '==', 'active'))
@@ -123,6 +138,7 @@ export const usePartnerDashboardData = (options?: UsePartnerDashboardDataOptions
   const [lastUsersSuccessAt, setLastUsersSuccessAt] = useState<Date | null>(null)
   const [organizationsRefreshIndex, setOrganizationsRefreshIndex] = useState(0)
   const [usersRefreshIndex, setUsersRefreshIndex] = useState(0)
+  const [debugInfo, setDebugInfo] = useState<DashboardDebugInfo | null>(null)
   const lastAccessAttempt = useRef<string | null>(null)
   const organizationsRetryAttempts = useRef(0)
   const usersRetryAttempts = useRef(0)
@@ -151,13 +167,20 @@ export const usePartnerDashboardData = (options?: UsePartnerDashboardDataOptions
 
   const assignedOrgKeys = useMemo(() => {
     const keys = new Set<string>()
-    assignedOrganizations.forEach((org) => keys.add(org.toLowerCase()))
+    assignedOrganizations.forEach((org) => {
+      if (org) keys.add(org.trim().toLowerCase())
+    })
     if (organizationsReady) {
       organizations.forEach((org) => {
-        if (org.id) keys.add(org.id.toLowerCase())
-        if (org.code) keys.add(org.code.toLowerCase())
+        if (org.id) keys.add(org.id.trim().toLowerCase())
+        if (org.code) keys.add(org.code.trim().toLowerCase())
       })
     }
+    console.debug('[PartnerDashboard] Computed assignedOrgKeys', {
+      count: keys.size,
+      keys: Array.from(keys),
+      ready: organizationsReady,
+    })
     return keys
   }, [assignedOrganizations, organizations, organizationsReady])
 
@@ -534,6 +557,18 @@ export const usePartnerDashboardData = (options?: UsePartnerDashboardDataOptions
           try {
             resetRetry()
             const seenUserIds = new Set<string>()
+            const totalDocs = snapshot.size
+            let rejectedNoMatch = 0
+            let rejectedSelectedOrg = 0
+            const mismatchSamples: any[] = []
+
+            console.debug('[PartnerDashboard] Filtering users', {
+              totalInSnapshot: totalDocs,
+              assignedOrgKeys: Array.from(assignedOrgKeys),
+              isSuperAdmin,
+              selectedOrg,
+            })
+
             const filteredDocs = snapshot.docs.filter((docSnap) => {
               if (seenUserIds.has(docSnap.id)) return false
               seenUserIds.add(docSnap.id)
@@ -546,14 +581,25 @@ export const usePartnerDashboardData = (options?: UsePartnerDashboardDataOptions
                 data.organizationId,
               ]
                 .filter((value): value is string => !!value)
-                .map((value) => value.toLowerCase())
+                .map((value) => value.trim().toLowerCase())
 
-              if (
-                organizationsReady &&
-                !isSuperAdmin &&
-                (!assignedOrgKeys.size || !userOrgKeys.some((key) => assignedOrgKeys.has(key)))
-              ) {
-                return false
+              if (organizationsReady && !isSuperAdmin && !options?.debugMode) {
+                if (!assignedOrgKeys.size) {
+                  rejectedNoMatch++
+                  if (mismatchSamples.length < 5) {
+                    mismatchSamples.push({ id: docSnap.id, reason: 'No assigned org keys', userOrgKeys })
+                  }
+                  return false
+                }
+
+                const match = userOrgKeys.some((key) => assignedOrgKeys.has(key))
+                if (!match) {
+                  rejectedNoMatch++
+                  if (mismatchSamples.length < 5) {
+                    mismatchSamples.push({ id: docSnap.id, reason: 'Org mismatch', userOrgKeys, assignedKeys: Array.from(assignedOrgKeys) })
+                  }
+                  return false
+                }
               }
 
               if (
@@ -562,11 +608,30 @@ export const usePartnerDashboardData = (options?: UsePartnerDashboardDataOptions
                 selectedOrg &&
                 !userOrgKeys.some((key) => selectedOrgKeys.has(key))
               ) {
+                rejectedSelectedOrg++
                 return false
               }
 
               return true
             })
+
+            const currentDebugInfo: DashboardDebugInfo = {
+              totalInSnapshot: totalDocs,
+              keptCount: filteredDocs.length,
+              rejectedNoMatch,
+              rejectedSelectedOrg,
+              mismatchSamples,
+              assignedOrgKeys: Array.from(assignedOrgKeys),
+            }
+
+            console.debug('[PartnerDashboard] User filtering results', currentDebugInfo)
+
+            if (mismatchSamples.length > 0) {
+              console.table(mismatchSamples)
+            }
+
+            if (!isMounted) return
+            setDebugInfo(currentDebugInfo)
 
             const userIds = filteredDocs.map((docSnap) => docSnap.id)
             const weeklyPoints = await fetchWeeklyPointsByUser(userIds)
@@ -913,8 +978,15 @@ export const usePartnerDashboardData = (options?: UsePartnerDashboardDataOptions
       })
     }
 
+    if (debugInfo && debugInfo.rejectedNoMatch > 0) {
+      warnings.push({
+        message: `${debugInfo.rejectedNoMatch} learner${debugInfo.rejectedNoMatch === 1 ? '' : 's'} filtered out due to organization key mismatch`,
+        severity: 'warning',
+      })
+    }
+
     return warnings
-  }, [assignedOrganizations.length, isSuperAdmin, organizations.length, organizationsLoading, profileStatus, users])
+  }, [assignedOrganizations.length, isSuperAdmin, organizations.length, organizationsLoading, profileStatus, users, debugInfo])
 
   const daysUntil = (date: string) => differenceInDays(new Date(date), new Date())
 
@@ -987,6 +1059,7 @@ export const usePartnerDashboardData = (options?: UsePartnerDashboardDataOptions
     daysUntil,
     retryOrganizations,
     retryUsers,
+    debugInfo,
   }
 }
 
