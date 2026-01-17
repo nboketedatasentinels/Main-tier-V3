@@ -577,3 +577,17 @@ export const listenToTaskNotifications = (onChange: (tasks: TaskNotificationReco
     )
   })
 }
+
+export const listenToUsers = (
+  onChange: (users: AdminUserRecord[]) => void,
+  onError?: (error: FirestoreError) => void,
+) => {
+  const usersQuery = query(usersCollection, orderBy('createdAt', 'desc'))
+  return onSnapshot(
+    usersQuery,
+    (snapshot) => {
+      onChange(snapshot.docs.map(mapAdminDoc))
+    },
+    onError,
+  )
+}

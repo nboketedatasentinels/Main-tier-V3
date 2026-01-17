@@ -3,7 +3,8 @@ import { Box, Tab, TabList, TabPanel, TabPanels, Tabs, Alert, AlertIcon } from '
 import { UsersManagementTab } from './tabs/UsersManagementTab'
 import { UserEngagementMonitoringTab } from './tabs/UserEngagementMonitoringTab'
 import { LeadershipCouncil } from './LeadershipCouncil'
-import { listenToUsers } from '@/services/superAdminService' // ✅ adjust if your listener lives elsewhere
+import { listenToUsers, listenToOrganizations } from '@/services/superAdminService'
+import { OrganizationOption, ManagedUserRecord } from '@/services/userManagementService'
 
 const TAB_STORAGE_KEY = 'user-management-active-tab'
 
@@ -13,10 +14,9 @@ const TAB_STORAGE_KEY = 'user-management-active-tab'
  * - All tabs share the same dataset
  * - Prevents lazy-tab lifecycle issues + duplicate subscriptions
  */
-type ManagedUser = Record<string, any> // ✅ replace with your real User type
 
 function useManagedUsers() {
-  const [users, setUsers] = useState<ManagedUser[]>([])
+  const [users, setUsers] = useState<ManagedUserRecord[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
@@ -26,8 +26,22 @@ function useManagedUsers() {
 
     // 🔁 Subscribe once
     const unsubscribe = listenToUsers(
-      (items: ManagedUser[]) => {
-        setUsers(items || [])
+      (items) => {
+        const mapped = items.map((user) => ({
+          id: user.id,
+          name: user.fullName || `${user.firstName || ''} ${user.lastName || ''}`.trim() || 'Unknown',
+          email: user.email,
+          role: user.role as any,
+          membershipStatus: 'free' as const,
+          companyId: user.assignedOrganizations?.[0] || null,
+          companyName: null,
+          companyCode: null,
+          lastActive: user.lastActive instanceof Date ? user.lastActive : null,
+          createdAt: user.createdAt instanceof Date ? user.createdAt : null,
+          accountStatus: user.accountStatus,
+          notes: '',
+        })) as ManagedUserRecord[]
+        setUsers(mapped)
         setLoading(false)
       },
       (err: unknown) => {
@@ -49,6 +63,43 @@ function useManagedUsers() {
   return { users, loading, error }
 }
 
+function useManagedOrganizations() {
+  const [organizations, setOrganizations] = useState<OrganizationOption[]>([])
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    setLoading(true)
+
+    const unsubscribe = listenToOrganizations(
+      (items) => {
+        const mapped = items
+          .filter((org) => org.id)
+          .map((org) => ({
+            id: org.id!,
+            name: org.name,
+            code: org.code,
+          }))
+        setOrganizations(mapped)
+        setLoading(false)
+      },
+      (err: unknown) => {
+        console.error('[UserManagementWithTabs] listenToOrganizations failed:', err)
+        setLoading(false)
+      },
+    )
+
+    return () => {
+      try {
+        unsubscribe?.()
+      } catch (e) {
+        console.warn('[UserManagementWithTabs] org unsubscribe failed:', e)
+      }
+    }
+  }, [])
+
+  return { organizations, loading }
+}
+
 export const UserManagementWithTabs = () => {
   const [tabIndex, setTabIndex] = useState(() => {
     if (typeof window === 'undefined') return 0
@@ -64,16 +115,18 @@ export const UserManagementWithTabs = () => {
   }, [tabIndex])
 
   const { users, loading, error } = useManagedUsers()
+  const { organizations, loading: loadingOrgs } = useManagedOrganizations()
 
   // Optional: derived subsets per tab (keeps tab components simpler)
   const memo = useMemo(() => {
     return {
       users,
+      organizations,
       // Example placeholders if you want derived sets:
       // engagedUsers: users.filter(u => u.engagementScore >= 75),
       // councilCandidates: users.filter(u => u.role === 'mentor' || u.role === 'ambassador'),
     }
-  }, [users])
+  }, [users, organizations])
 
   return (
     <Box bg="gray.50" minH="calc(100vh - 120px)" p={{ base: 4, md: 6 }} borderRadius="3xl">
@@ -105,11 +158,11 @@ export const UserManagementWithTabs = () => {
           </TabPanel>
 
           <TabPanel px={0}>
-            <UserEngagementMonitoringTab users={memo.users} loading={loading} />
+            <UserEngagementMonitoringTab users={memo.users} organizations={memo.organizations} />
           </TabPanel>
 
           <TabPanel px={0}>
-            <LeadershipCouncil users={memo.users} loading={loading} />
+            <LeadershipCouncil users={memo.users} organizations={memo.organizations} loadingUsers={loading || loadingOrgs} />
           </TabPanel>
         </TabPanels>
       </Tabs>

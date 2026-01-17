@@ -27,7 +27,7 @@ import {
   useToast,
 } from '@chakra-ui/react'
 import { formatDistanceToNow } from 'date-fns'
-import { Edit, Plus, Search, Trash2, UserSquare2, Users } from 'lucide-react'
+import { Plus, Search, UserSquare2, Users } from 'lucide-react'
 import { useAuth } from '@/hooks/useAuth'
 import {
   ManagedUserRecord,
@@ -312,7 +312,139 @@ export const LeadershipCouncil = (props: LeadershipCouncilProps) => {
         </Stack>
       )}
 
-      {/* ASSIGN + EDIT MODALS intentionally preserved */}
+      <Modal isOpen={assignModal.isOpen} onClose={assignModal.onClose} size="md">
+        <ModalOverlay />
+        <ModalContent>
+          <ModalHeader>Add {ROLE_LABELS[assignRole]}</ModalHeader>
+          <ModalCloseButton />
+          <ModalBody>
+            <Stack spacing={4}>
+              <Box>
+                <Text fontWeight="semibold" mb={2}>
+                  Select User
+                </Text>
+                <Select
+                  placeholder="Choose a user"
+                  value={selectedUserId}
+                  onChange={(e) => setSelectedUserId(e.target.value)}
+                >
+                  {availableUsers.map((u) => (
+                    <option key={u.id} value={u.id}>
+                      {u.name} ({u.email})
+                    </option>
+                  ))}
+                </Select>
+              </Box>
+
+              <Box>
+                <Text fontWeight="semibold" mb={2}>
+                  Organization (Optional)
+                </Text>
+                <Select
+                  placeholder="No organization"
+                  value={selectedOrgId || ''}
+                  onChange={(e) => setSelectedOrgId(e.target.value || undefined)}
+                >
+                  {organizations.map((org) => (
+                    <option key={org.id} value={org.id}>
+                      {org.name} ({org.code})
+                    </option>
+                  ))}
+                </Select>
+              </Box>
+
+              <Box>
+                <Text fontWeight="semibold" mb={2}>
+                  Notes
+                </Text>
+                <Textarea
+                  value={notes}
+                  onChange={(e) => setNotes(e.target.value)}
+                  placeholder="Add any notes..."
+                />
+              </Box>
+            </Stack>
+          </ModalBody>
+          <ModalFooter>
+            <Button variant="ghost" mr={3} onClick={assignModal.onClose}>
+              Cancel
+            </Button>
+            <Button colorScheme="purple" isLoading={saving} onClick={handlePromote}>
+              Assign Role
+            </Button>
+          </ModalFooter>
+        </ModalContent>
+      </Modal>
+
+      <Modal isOpen={editModal.isOpen} onClose={editModal.onClose} size="md">
+        <ModalOverlay />
+        <ModalContent>
+          <ModalHeader>Edit Leadership Member</ModalHeader>
+          <ModalCloseButton />
+          <ModalBody>
+            {editingUser && (
+              <Stack spacing={4}>
+                <Box>
+                  <Text fontWeight="semibold" mb={2}>
+                    User
+                  </Text>
+                  <Text>{editingUser.name}</Text>
+                  <Text fontSize="sm" color="gray.500">
+                    {editingUser.email}
+                  </Text>
+                </Box>
+
+                <Box>
+                  <Text fontWeight="semibold" mb={2}>
+                    Organization
+                  </Text>
+                  <Select
+                    value={editingOrgId || ''}
+                    onChange={(e) => setEditingOrgId(e.target.value || undefined)}
+                  >
+                    <option value="">No organization</option>
+                    {organizations.map((org) => (
+                      <option key={org.id} value={org.id}>
+                        {org.name} ({org.code})
+                      </option>
+                    ))}
+                  </Select>
+                </Box>
+
+                <Box>
+                  <Text fontWeight="semibold" mb={2}>
+                    Status
+                  </Text>
+                  <Select value={editingStatus} onChange={(e) => setEditingStatus(e.target.value)}>
+                    <option value="active">Active</option>
+                    <option value="inactive">Inactive</option>
+                    <option value="suspended">Suspended</option>
+                  </Select>
+                </Box>
+
+                <Box>
+                  <Text fontWeight="semibold" mb={2}>
+                    Notes
+                  </Text>
+                  <Textarea
+                    value={editingNotes}
+                    onChange={(e) => setEditingNotes(e.target.value)}
+                    placeholder="Add any notes..."
+                  />
+                </Box>
+              </Stack>
+            )}
+          </ModalBody>
+          <ModalFooter>
+            <Button variant="ghost" mr={3} onClick={editModal.onClose}>
+              Cancel
+            </Button>
+            <Button colorScheme="purple" isLoading={saving} onClick={handleSaveEdit}>
+              Save Changes
+            </Button>
+          </ModalFooter>
+        </ModalContent>
+      </Modal>
     </Stack>
   )
 }
