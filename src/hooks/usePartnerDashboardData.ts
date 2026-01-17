@@ -2,7 +2,6 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import { differenceInDays, subDays } from 'date-fns'
 import type { DataWarning } from '@/components/admin/RiskAnalysisCard'
 import {
-  addDoc,
   collection,
   collectionGroup,
   getDocs,
@@ -10,7 +9,6 @@ import {
   or,
   orderBy,
   query,
-  serverTimestamp,
   where,
 } from 'firebase/firestore'
 import { useAuth } from '@/hooks/useAuth'
@@ -27,6 +25,7 @@ import {
   mapWeeklyPointsToProgress,
   WeeklyPointsRecord,
 } from '@/utils/partnerProgress'
+import { recordEngagementAction } from '@/services/engagementService'
 
 export type PartnerRiskLevel = 'engaged' | 'watch' | 'concern' | 'critical'
 
@@ -73,7 +72,7 @@ export interface PartnerUser {
   riskStatus: PartnerRiskLevel | 'at_risk'
   weeklyEarned: number
   weeklyRequired: number
-  role?: 'learner' | 'mentor' | 'user'
+  role?: 'learner' | 'mentor' | 'user' | 'team_leader'
   riskReasons?: string[]
   registrationDate?: string
   interventions?: number
@@ -976,14 +975,15 @@ export const usePartnerDashboardData = (options?: UsePartnerDashboardDataOptions
       ),
     )
 
-    await addDoc(collection(db, 'users', userId, 'engagement_actions'), {
-      action_type: 'manual_adjustment',
-      action_label: reason,
-      actor_id: profile?.id ?? null,
-      actor_name: profile?.fullName ?? null,
-      timestamp: serverTimestamp(),
-      user_id: userId,
-      delta,
+    await recordEngagementAction({
+      userId,
+      actionLabel: reason,
+      actorId: profile?.id ?? null,
+      actorName: profile?.fullName ?? null,
+      additionalData: {
+        action_type: 'manual_adjustment', // Override default if needed, or just let it be manual_adjustment
+        delta,
+      },
     })
   }
 
