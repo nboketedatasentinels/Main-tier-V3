@@ -165,24 +165,30 @@ export const usePartnerDashboardData = (options?: UsePartnerDashboardDataOptions
     return mapping
   }, [organizations])
 
-  const assignedOrgKeys = useMemo(() => {
+  const rawAssignedKeys = useMemo(() => {
     const keys = new Set<string>()
     assignedOrganizations.forEach((org) => {
-      if (org) keys.add(org.trim().toLowerCase())
+      if (org) keys.add(org.trim())
     })
     if (organizationsReady) {
       organizations.forEach((org) => {
-        if (org.id) keys.add(org.id.trim().toLowerCase())
-        if (org.code) keys.add(org.code.trim().toLowerCase())
+        if (org.id) keys.add(org.id.trim())
+        if (org.code) keys.add(org.code.trim())
       })
     }
-    console.debug('[PartnerDashboard] Computed assignedOrgKeys', {
+    return Array.from(keys).filter(Boolean)
+  }, [assignedOrganizations, organizations, organizationsReady])
+
+  const assignedOrgKeys = useMemo(() => {
+    const keys = new Set<string>()
+    rawAssignedKeys.forEach((key) => keys.add(key.toLowerCase()))
+    console.debug('[PartnerDashboard] Computed assignedOrgKeys (normalized)', {
       count: keys.size,
       keys: Array.from(keys),
       ready: organizationsReady,
     })
     return keys
-  }, [assignedOrganizations, organizations, organizationsReady])
+  }, [rawAssignedKeys, organizationsReady])
 
   const selectedOrgKeys = useMemo(() => {
     if (!selectedOrg || selectedOrg === 'all') return new Set<string>()
@@ -554,16 +560,15 @@ export const usePartnerDashboardData = (options?: UsePartnerDashboardDataOptions
       let q = USERS_QUERY
 
       if (!isSuperAdmin) {
-        const assignedIds = Array.from(assignedOrgKeys).filter(Boolean)
-        if (assignedIds.length > 0) {
+        const queryKeys = rawAssignedKeys.slice(0, 15)
+        if (queryKeys.length > 0) {
           // Scoping the query by organization keys is required for security rules
           // and to ensure the Partner only sees their data.
           // Firestore allows a maximum of 30 terms across all 'in' clauses in a single query.
           // Since we use two 'in' clauses within an 'or' block, we slice to 15 to stay within limits.
-          const limitedIds = assignedIds.slice(0, 15)
           q = query(
             q,
-            or(where('companyCode', 'in', limitedIds), where('companyId', 'in', limitedIds)),
+            or(where('companyCode', 'in', queryKeys), where('companyId', 'in', queryKeys)),
           )
         } else {
           console.debug('[PartnerDashboard] No organizations assigned. Skipping user fetch.')
@@ -1100,7 +1105,7 @@ export const usePartnerDashboardData = (options?: UsePartnerDashboardDataOptions
     usersLoading,
     lastUsersSuccessAt,
     updateUserPoints,
-    users,
+    users: filteredUsers,
     interventions,
     daysUntil,
     retryOrganizations,
