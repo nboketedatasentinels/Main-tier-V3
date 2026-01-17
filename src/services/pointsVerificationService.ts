@@ -1,26 +1,14 @@
 import {
   QueryConstraint,
   collection,
-  doc,
-  getDoc,
   limit,
   onSnapshot,
   orderBy,
   query,
-  serverTimestamp,
-  updateDoc,
   where,
-  type Timestamp,
 } from 'firebase/firestore'
-import { db } from '@/services/firebase'
-import {
-  FULL_ACTIVITIES,
-  getActivitiesForJourney,
-  type ActivityDef,
-  type ActivityId,
-  type JourneyType,
-} from '@/config/pointsConfig'
-import { awardChecklistPoints } from '@/services/pointsService'
+import { httpsCallable } from 'firebase/functions'
+import { db, functions } from '@/services/firebase'
 
 export type PointsVerificationRequestStatus = 'pending' | 'approved' | 'rejected'
 
@@ -34,11 +22,11 @@ export interface PointsVerificationRequest {
   proof_url?: string
   notes?: string
   status?: PointsVerificationRequestStatus
-  created_at?: Timestamp | string | Date
-  approved_at?: Timestamp | string | Date
+  created_at?: any
+  approved_at?: any
   approved_by?: string | null
   approved_by_name?: string | null
-  rejected_at?: Timestamp | string | Date
+  rejected_at?: any
   rejected_by?: string | null
   rejected_by_name?: string | null
   rejection_reason?: string | null
@@ -49,77 +37,9 @@ interface ApproverInfo {
   name?: string | null
 }
 
-const getJourneyTypeForUser = async (userId: string): Promise<JourneyType> => {
-  const userSnap = await getDoc(doc(db, 'users', userId))
-  if (userSnap.exists()) {
-    const journeyType = userSnap.data()?.journeyType as JourneyType | undefined
-    if (journeyType) return journeyType
-  }
-  return '6W'
-}
-
-const updateChecklistActivityStatus = async (
-  userId: string,
-  week: number,
-  activityId: string,
-  status: 'completed' | 'pending' | 'not_started',
-) => {
-  const checklistRef = doc(db, 'checklists', `${userId}_${week}`)
-  const checklistSnap = await getDoc(checklistRef)
-  if (!checklistSnap.exists()) return
-
-  const data = checklistSnap.data() as { activities?: { id: string; status?: string }[] }
-  const activities = data.activities ?? []
-  const nextActivities = activities.map((activity) =>
-    activity.id === activityId ? { ...activity, status } : activity,
-  )
-  await updateDoc(checklistRef, {
-    activities: nextActivities,
-    updatedAt: serverTimestamp(),
-  })
-}
-
-const buildFallbackActivity = (
-  request: Pick<PointsVerificationRequest, 'activity_id' | 'activity_title' | 'points' | 'week'>,
-): ActivityDef => ({
-  id: request.activity_id as ActivityId,
-  baseId: request.activity_id,
-  title: request.activity_title ?? 'Manual activity',
-  description: 'Legacy or custom activity submitted for approval.',
-  points: request.points ?? 0,
-  maxPerMonth: 1,
-  week: request.week,
-  category: 'Legacy',
-  approvalType: 'partner_approved',
-  requiresApproval: true,
-  verification: 'partner_approval',
-  flexibleWeeks: true,
-})
-
-const getActivityForJourney = (
-  journeyType: JourneyType,
-  request: Pick<PointsVerificationRequest, 'activity_id' | 'activity_title' | 'points' | 'week'>,
-): ActivityDef => {
-  const activities = getActivitiesForJourney(journeyType)
-  const activity = activities.find((item) => item.id === request.activity_id)
-  if (activity) return activity
-
-  const fallbackActivity = FULL_ACTIVITIES.find((item) => item.id === request.activity_id)
-  if (fallbackActivity) {
-    console.warn('Points verification activity not in journey config. Using full catalog.', {
-      journeyType,
-      activityId: request.activity_id,
-    })
-    return fallbackActivity
-  }
-
-  console.warn('Points verification activity missing from catalog. Using fallback metadata.', {
-    journeyType,
-    activityId: request.activity_id,
-  })
-  return buildFallbackActivity(request)
-}
-
+/**
+ * Listens to pending points verification requests.
+ */
 export const listenToPointsVerificationRequests = (
   onChange: (requests: PointsVerificationRequest[]) => void,
 ) => {
@@ -139,6 +59,9 @@ export const listenToPointsVerificationRequests = (
   })
 }
 
+/**
+ * Listens to all points verification requests with filters.
+ */
 export const listenToAllPointsVerificationRequests = (
   onChange: (requests: PointsVerificationRequest[]) => void,
   options?: { status?: PointsVerificationRequestStatus | 'all'; limit?: number },
@@ -170,44 +93,40 @@ export const listenToAllPointsVerificationRequests = (
   )
 }
 
+/**
+ * Approves a points verification request via a secure Cloud Function.
+ */
 export const approvePointsVerificationRequest = async (params: {
   request: PointsVerificationRequest
   approver?: ApproverInfo
 }) => {
-  const { request, approver } = params
-  const journeyType = await getJourneyTypeForUser(request.user_id)
-  const activity = getActivityForJourney(journeyType, request)
-
-  await awardChecklistPoints({
-    uid: request.user_id,
-    journeyType,
-    weekNumber: request.week,
-    activity,
-    source: 'partner_approval',
-  })
-
-  await updateChecklistActivityStatus(request.user_id, request.week, request.activity_id, 'completed')
-
-  await updateDoc(doc(db, 'points_verification_requests', request.id), {
-    status: 'approved',
-    approved_at: serverTimestamp(),
-    approved_by: approver?.id ?? null,
-    approved_by_name: approver?.name ?? null,
+  const approveRequest = httpsCallable<any, { success: boolean }>(
+    functions,
+    'approvePointsVerificationRequest'
+  )
+  return approveRequest({
+    requestId: params.request.id,
+    approverId: params.approver?.id,
+    approverName: params.approver?.name,
   })
 }
 
+/**
+ * Rejects a points verification request via a secure Cloud Function.
+ */
 export const rejectPointsVerificationRequest = async (params: {
   request: PointsVerificationRequest
   approver?: ApproverInfo
   reason?: string
 }) => {
-  const { request, approver, reason } = params
-  await updateChecklistActivityStatus(request.user_id, request.week, request.activity_id, 'not_started')
-  await updateDoc(doc(db, 'points_verification_requests', request.id), {
-    status: 'rejected',
-    rejected_at: serverTimestamp(),
-    rejected_by: approver?.id ?? null,
-    rejected_by_name: approver?.name ?? null,
-    rejection_reason: reason ?? null,
+  const rejectRequest = httpsCallable<any, { success: boolean }>(
+    functions,
+    'rejectPointsVerificationRequest'
+  )
+  return rejectRequest({
+    requestId: params.request.id,
+    approverId: params.approver?.id,
+    approverName: params.approver?.name,
+    reason: params.reason,
   })
 }
