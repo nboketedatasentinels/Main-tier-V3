@@ -125,11 +125,19 @@ export const PartnerUserManagement: React.FC<PartnerUserManagementProps> = ({
     [organizations],
   )
 
-  const safeUsers = usersLoading ? [] : (users ?? [])
   const filtered = useMemo(() => {
+    const safeUsers = usersLoading ? [] : (users ?? [])
     if (selectedOrg === 'all') return safeUsers
-    return safeUsers.filter(u => u.companyCode === selectedOrg)
-  }, [safeUsers, selectedOrg])
+
+    const selectedKey = selectedOrg.toLowerCase()
+
+    return safeUsers.filter((u) =>
+      [u.companyCode, u.organizationId]
+        .filter((v): v is string => typeof v === 'string' && v.length > 0)
+        .map((v) => v.toLowerCase())
+        .includes(selectedKey),
+    )
+  }, [users, usersLoading, selectedOrg])
 
   const learnerUsers = useMemo(
     () => filtered.filter(u => u.role === 'learner'),
