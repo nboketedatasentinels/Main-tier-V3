@@ -114,9 +114,12 @@ service cloud.firestore {
 
     function canAccessUser(userId) {
       return isSuperAdmin() || (
-        isPartner() && getProfile(request.auth.uid).assignedOrganizations.hasAny([
-          getProfile(userId).companyCode
-        ])
+        isPartner() && (
+          getProfile(request.auth.uid).assignedOrganizations.hasAny([
+            getProfile(userId).companyCode,
+            getProfile(userId).companyId
+          ])
+        )
       );
     }
 
