@@ -239,7 +239,7 @@ export const PartnerDashboard: React.FC = () => {
       })
       return
     }
-    navigate(`/admin/organization/${orgCode}`)
+    navigate(`/partner/organization/${orgCode}`)
   }
 
   const renderOverview = () => (

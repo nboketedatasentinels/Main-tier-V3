@@ -60,7 +60,6 @@ export const normalizeRole = (role: unknown): StandardRole => {
 
 /**
  * 🎯 Convert role string → UserRole enum
- * NOTE: COMPANY_ADMIN enum value === 'partner'
  */
 export const toUserRoleEnum = (role?: string | UserRole | null): UserRole | null => {
   if (!role) return null

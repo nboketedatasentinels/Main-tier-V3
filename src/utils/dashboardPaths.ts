@@ -17,10 +17,10 @@ export const getDashboardPathForRole = (role?: string | null) => {
       return '/ambassador/dashboard'
 
     case 'partner':
-      return '/admin/dashboard'
+      return '/partner/dashboard'
 
     case 'super_admin':
-      return '/super-admin/dashboard'
+      return '/admin/dashboard'
 
     default:
       return '/app/weekly-glance'

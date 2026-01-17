@@ -23,7 +23,6 @@ import { UpgradePage } from '@/pages/upgrade/UpgradePage'
 import { WelcomePage } from '@/pages/onboarding/WelcomePage'
 
 // Dashboard imports
-import { AdminDashboard } from '@/pages/dashboards/AdminDashboard'
 import { SuperAdminDashboard } from '@/pages/dashboards/SuperAdminDashboard'
 import { MentorDashboard } from '@/pages/dashboards/MentorDashboard'
 import { AmbassadorDashboard } from '@/pages/dashboards/AmbassadorDashboard'
@@ -147,16 +146,32 @@ export const AppRoutes = () => {
           <Route index element={<Navigate to="/ambassador/dashboard" replace />} />
         </Route>
 
-        {/* Admin routes */}
+        {/* Partner routes */}
         <Route
-          path="/admin"
+          path="/partner"
           element={
-            <ProtectedRoute requireAdmin>
+            <ProtectedRoute requiredRoles={[UserRole.PARTNER]}>
               <Outlet />
             </ProtectedRoute>
           }
         >
-          <Route path="dashboard" element={<AdminDashboard />} />
+          <Route path="dashboard" element={<PartnerDashboard />} />
+          <Route path="organization/:organizationId" element={<OrganizationDetailPage />} />
+          <Route path="user/:userId" element={<UserProfileManagementPage viewContext="partner" />} />
+          <Route path="partner-assignment" element={<PartnerAssignmentPage />} />
+          <Route index element={<Navigate to="/partner/dashboard" replace />} />
+        </Route>
+
+        {/* Admin routes (Super Admin) */}
+        <Route
+          path="/admin"
+          element={
+            <ProtectedRoute requireSuperAdmin>
+              <Outlet />
+            </ProtectedRoute>
+          }
+        >
+          <Route path="dashboard" element={<SuperAdminDashboard />} />
           <Route path="organization/:organizationId" element={<OrganizationDetailPage />} />
           <Route path="user/:userId" element={<UserProfileManagementPage viewContext="partner" />} />
           <Route path="approvals" element={<ApprovalQueuePage />} />
@@ -164,19 +179,8 @@ export const AppRoutes = () => {
           <Route index element={<Navigate to="/admin/dashboard" replace />} />
         </Route>
 
-        {/* Super Admin routes */}
-        <Route
-          path="/super-admin"
-          element={
-            <ProtectedRoute requiredRoles={[UserRole.SUPER_ADMIN]}>
-              <Outlet />
-            </ProtectedRoute>
-          }
-        >
-          <Route path="dashboard" element={<SuperAdminDashboard />} />
-          <Route path="organization/:organizationId" element={<OrganizationDetailPage />} />
-          <Route index element={<Navigate to="/super-admin/dashboard" replace />} />
-        </Route>
+        {/* Legacy Super Admin redirect */}
+        <Route path="/super-admin/*" element={<Navigate to="/admin/dashboard" replace />} />
 
         {/* Protected main app routes */}
         <Route

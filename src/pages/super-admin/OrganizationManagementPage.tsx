@@ -348,7 +348,7 @@ export const OrganizationManagementPage: React.FC<OrganizationManagementPageProp
   const handleViewOrganization = (org: OrganizationRecord) => {
     const organizationKey = org.code || org.id
     if (!organizationKey) return
-    navigate(`/super-admin/organization/${organizationKey}`)
+    navigate(`/admin/organization/${organizationKey}`)
   }
 
   const handleEditOrganization = (org: OrganizationRecord) => {
