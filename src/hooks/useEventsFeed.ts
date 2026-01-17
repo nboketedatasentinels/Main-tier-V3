@@ -79,7 +79,7 @@ export const useEventsFeed = (): UseEventsFeedResult => {
             const isAdmin =
               profile?.role === UserRole.SUPER_ADMIN ||
               profile?.role === UserRole.AMBASSADOR ||
-              profile?.role === UserRole.COMPANY_ADMIN
+              profile?.role === UserRole.PARTNER
 
             if (isAdmin) return true
             return event.status === 'published'

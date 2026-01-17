@@ -32,8 +32,8 @@ The system provides sophisticated user routing based on roles, account status, o
 2. **Centralized Landing Path Logic** (`/src/utils/roleRouting.ts`):
    - `getLandingPathForRole(role, profile, redirectUrl)` implements priority-based routing:
      1. redirectUrl query parameter (payment/external flows)
-     2. super_admin → `/super-admin/dashboard`
-     3. partner (company_admin) → `/admin/dashboard`
+     2. super_admin → `/admin/dashboard`
+     3. partner (company_admin) → `/partner/dashboard`
      4. mentor → `/mentor/dashboard` (conditional based on transformationTier)
      5. ambassador → `/ambassador/dashboard`
      6. Regular users → onboarding check → preferred route → default by membership
@@ -152,8 +152,8 @@ Computed boolean properties for easy role checking:
 The `getLandingPathForRole` function implements the following priority:
 
 1. **redirectUrl Query Parameter** - External/payment flows take precedence
-2. **Super Admin** - Redirect to `/super-admin/dashboard`
-3. **Partner** - Redirect to `/admin/dashboard`
+2. **Super Admin** - Redirect to `/admin/dashboard`
+3. **Partner** - Redirect to `/partner/dashboard`
 4. **Mentor (Conditional)** - Based on transformationTier:
    - Corporate mentors → `/mentor/dashboard`
    - Individual mentors → preferredDashboardRoute or `/mentor/dashboard`
@@ -230,11 +230,11 @@ Protection checks (in order):
 /suspended              - Account suspended page
 /welcome                - Onboarding page
 
-/super-admin
+/admin
   /dashboard            - Super admin dashboard (requireSuperAdmin)
 
-/admin
-  /dashboard            - Unified Partner dashboard (requireAdmin)
+/partner
+  /dashboard            - Partner dashboard (requirePartner)
 
 /mentor
   /dashboard            - Mentor dashboard (requireMentor)
@@ -426,8 +426,8 @@ For each role, create test users:
 ### Test Scenarios
 
 1. **Login Flow**:
-   - ✓ Super admin → `/super-admin/dashboard`
-   - ✓ Admin → `/admin/dashboard`
+   - ✓ Super admin → `/admin/dashboard`
+   - ✓ Admin → `/partner/dashboard`
    - ✓ Mentor with corporate tier → `/mentor/dashboard`
    - ✓ Ambassador → `/ambassador/dashboard`
    - ✓ Paid member → `/app/dashboard/member`

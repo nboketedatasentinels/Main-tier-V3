@@ -84,14 +84,14 @@ export const getLandingPathForRole = (
 
   // Priority 2: Super Admin
   if (normalizedRole === 'super_admin') {
-    console.log('🔷 Super admin detected → /super-admin/dashboard')
-    return '/super-admin/dashboard'
+    console.log('🔷 Super admin detected → /admin/dashboard')
+    return '/admin/dashboard'
   }
 
   // Priority 3: Partner
   if (normalizedRole === 'partner') {
-    console.log('🔷 Partner detected → /admin/dashboard')
-    return '/admin/dashboard'
+    console.log('🔷 Partner detected → /partner/dashboard')
+    return '/partner/dashboard'
   }
 
   // Priority 4: Mentor (conditional corporate)
