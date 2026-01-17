@@ -125,9 +125,18 @@ export const PartnerUserManagement: React.FC<PartnerUserManagementProps> = ({
     [organizations],
   )
 
-  const filtered = users
+  const safeUsers = usersLoading ? [] : (users ?? [])
+  const filtered = useMemo(() => {
+    if (selectedOrg === 'all') return safeUsers
+    return safeUsers.filter(u => u.companyCode === selectedOrg)
+  }, [safeUsers, selectedOrg])
 
-  const { sortKey, sortDir, toggleSort, sortedUsers } = usePartnerUserSorting(filtered)
+  const learnerUsers = useMemo(
+    () => filtered.filter(u => u.role === 'learner'),
+    [filtered],
+  )
+
+  const { sortKey, sortDir, toggleSort, sortedUsers } = usePartnerUserSorting(learnerUsers)
   const { selection, toggleSelection, clearSelection, selectAll } = useUserSelection()
   const { bulkAction, setBulkAction, bulkApply, isProcessing: processingBulk } = usePartnerBulkActions(
     selection,
@@ -139,7 +148,18 @@ export const PartnerUserManagement: React.FC<PartnerUserManagementProps> = ({
     actionId: approvalActionId,
     handleApprove: handleApproveRequest,
     handleReject: performRejectRequest,
-  } = usePointsApprovalQueue(filtered, activeTab === 'approvals')
+  } = usePointsApprovalQueue(learnerUsers, activeTab === 'approvals')
+
+  useEffect(() => {
+    console.log('[PartnerUserManagement]', {
+      usersLength: users?.length ?? 0,
+      filteredLength: filtered.length,
+      learnerLength: learnerUsers.length,
+      sortedLength: sortedUsers.length,
+      selectedOrg,
+      usersLoading,
+    })
+  }, [users, filtered, learnerUsers, sortedUsers, selectedOrg, usersLoading])
 
   // Pagination & Derived State
   useEffect(() => {
@@ -150,7 +170,7 @@ export const PartnerUserManagement: React.FC<PartnerUserManagementProps> = ({
   const paginated = sortedUsers.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE)
   const waitingForOrganizations = organizationsLoading && !organizationsReady
 
-  const atRiskUsers = useMemo(() => filtered.filter(isAtRisk), [filtered])
+  const atRiskUsers = useMemo(() => learnerUsers.filter(isAtRisk), [learnerUsers])
   const leaders = useMemo(() => filtered.filter(isLeader), [filtered])
 
   const openUser = (user: PartnerUser) => {
