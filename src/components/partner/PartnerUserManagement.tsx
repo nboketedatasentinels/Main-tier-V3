@@ -125,11 +125,7 @@ export const PartnerUserManagement: React.FC<PartnerUserManagementProps> = ({
     [organizations],
   )
 
-  const filtered = useMemo(() => {
-    if (selectedOrg === 'all') return users
-    const normalized = selectedOrg.toLowerCase()
-    return users.filter((user) => user.companyCode?.toLowerCase() === normalized)
-  }, [users, selectedOrg])
+  const filtered = users
 
   const { sortKey, sortDir, toggleSort, sortedUsers } = usePartnerUserSorting(filtered)
   const { selection, toggleSelection, clearSelection, selectAll } = useUserSelection()
@@ -143,7 +139,7 @@ export const PartnerUserManagement: React.FC<PartnerUserManagementProps> = ({
     actionId: approvalActionId,
     handleApprove: handleApproveRequest,
     handleReject: performRejectRequest,
-  } = usePointsApprovalQueue(selectedOrg === 'all' ? users : filtered, activeTab === 'approvals')
+  } = usePointsApprovalQueue(filtered, activeTab === 'approvals')
 
   // Pagination & Derived State
   useEffect(() => {
