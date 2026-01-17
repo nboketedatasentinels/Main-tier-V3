@@ -1,4 +1,5 @@
 import {
+  QueryConstraint,
   collection,
   doc,
   getDoc,
@@ -143,7 +144,7 @@ export const listenToAllPointsVerificationRequests = (
   options?: { status?: PointsVerificationRequestStatus | 'all'; limit?: number },
   onError?: (error: unknown) => void,
 ) => {
-  const constraints = [orderBy('created_at', 'desc')]
+  const constraints: QueryConstraint[] = [orderBy('created_at', 'desc')]
   if (options?.status && options.status !== 'all') {
     constraints.push(where('status', '==', options.status))
   }

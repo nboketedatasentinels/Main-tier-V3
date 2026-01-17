@@ -7,6 +7,7 @@ import {
   collectionGroup,
   getDocs,
   onSnapshot,
+  or,
   orderBy,
   query,
   serverTimestamp,
@@ -551,8 +552,38 @@ export const usePartnerDashboardData = (options?: UsePartnerDashboardDataOptions
     }
 
     const subscribe = () => {
+      let q = USERS_QUERY
+
+      if (!isSuperAdmin) {
+        const assignedIds = Array.from(assignedOrgKeys).filter(Boolean)
+        if (assignedIds.length > 0) {
+          // Scoping the query by organization keys is required for security rules
+          // and to ensure the Partner only sees their data.
+          // Firestore allows a maximum of 30 terms across all 'in' clauses in a single query.
+          // Since we use two 'in' clauses within an 'or' block, we slice to 15 to stay within limits.
+          const limitedIds = assignedIds.slice(0, 15)
+          q = query(
+            q,
+            or(where('companyCode', 'in', limitedIds), where('companyId', 'in', limitedIds)),
+          )
+        } else {
+          console.debug('[PartnerDashboard] No organizations assigned. Skipping user fetch.')
+          setUsers([])
+          setUsersLoading(false)
+          setDebugInfo({
+            totalInSnapshot: 0,
+            keptCount: 0,
+            rejectedNoMatch: 0,
+            rejectedSelectedOrg: 0,
+            mismatchSamples: [],
+            assignedOrgKeys: [],
+          })
+          return
+        }
+      }
+
       unsubscribe = onSnapshot(
-        USERS_QUERY,
+        q,
         async (snapshot) => {
           try {
             resetRetry()
@@ -801,8 +832,23 @@ export const usePartnerDashboardData = (options?: UsePartnerDashboardDataOptions
     }
     if (!user?.uid) return
 
+    let q = query(collection(db, 'interventions'), orderBy('opened_at', 'desc'))
+
+    if (!isSuperAdmin) {
+      const assignedIds = Array.from(assignedOrgKeys).filter(Boolean)
+      if (assignedIds.length > 0) {
+        // Scoping the query by organization keys is required for security rules.
+        // We use organization_code as it's the most common field in interventions.
+        // Since we only use one 'in' clause here, we can use up to 30 values.
+        q = query(q, where('organization_code', 'in', assignedIds.slice(0, 30)))
+      } else {
+        setInterventions([])
+        return
+      }
+    }
+
     const unsubscribe = onSnapshot(
-      query(collection(db, 'interventions'), orderBy('opened_at', 'desc')),
+      q,
       (snapshot) => {
         const scoped = snapshot.docs
           .map((docSnap) => {
