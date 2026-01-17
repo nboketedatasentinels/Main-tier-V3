@@ -52,6 +52,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null)
   const [profile, setProfile] = useState<UserProfile | null>(null)
   const [loading, setLoading] = useState(true)
+  const [signingOut, setSigningOut] = useState(false)
   const [profileLoading, setProfileLoading] = useState(true)
   const [profileStatus, setProfileStatus] = useState<'loading' | 'ready'>('loading')
   const [profileError, setProfileError] = useState<Error | null>(null)
@@ -966,11 +967,49 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   }
 
   const signOut = async () => {
-    console.log('🟡 [Auth] signOut')
-    await firebaseSignOut(auth)
-    setUser(null)
-    setProfile(null)
-    setClaimsRole(null)
+    if (signingOut) {
+      console.warn('🟡 [Auth] signOut: already in progress')
+      return { error: new Error('Sign out already in progress') }
+    }
+
+    setSigningOut(true)
+    console.log('🟡 [Auth] signOut:start')
+
+    const timeoutId = setTimeout(() => {
+      console.warn('🟠 [Auth] signOut: timeout fallback triggered')
+      window.location.href = '/login'
+    }, 10000)
+
+    try {
+      // Logic to preserve preferences if needed before clearing state
+      if (profile?.companyCode) {
+        localStorage.setItem('t4l.lastSelectedOrg', profile.companyCode)
+      }
+
+      if (profile?.dashboardPreferences) {
+        localStorage.setItem('t4l.dashboardPreferences', JSON.stringify(profile.dashboardPreferences))
+      }
+
+      await firebaseSignOut(auth)
+      clearTimeout(timeoutId)
+
+      console.log('🟢 [Auth] signOut: success')
+
+      setUser(null)
+      setProfile(null)
+      setClaimsRole(null)
+
+      // Use window.location for reliable navigation and state clearing
+      window.location.href = '/login'
+      return { error: null }
+    } catch (error) {
+      console.error('🔴 [Auth] signOut failed', error)
+      // Navigate anyway on failure to ensure user isn't stuck
+      window.location.href = '/login'
+      return { error: error instanceof Error ? error : new Error('Sign out failed') }
+    } finally {
+      setSigningOut(false)
+    }
   }
 
   const resetPassword = async (email: string) => {
@@ -1113,6 +1152,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     profileLoading,
     profileStatus,
     profileError,
+    signingOut,
     lastProfileLoadAt: lastProfileLoadAtRef.current,
     signIn,
     signUp,

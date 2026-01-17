@@ -56,7 +56,7 @@ const sectionLabelStyles = {
 } as const
 
 export const MainLayout: React.FC = () => {
-  const { profile, signOut } = useAuth()
+  const { profile, signOut, signingOut } = useAuth()
   const location = useLocation()
   const navigate = useNavigate()
   const { isOpen, onOpen, onClose } = useDisclosure()
@@ -107,8 +107,16 @@ export const MainLayout: React.FC = () => {
   }, [welcomeKey])
 
   const handleSignOut = async () => {
-    await signOut()
-    navigate('/login')
+    const result = await signOut()
+    if (result.error) {
+      toast({
+        title: 'Logout failed',
+        description: result.error.message,
+        status: 'error',
+        duration: 5000,
+        isClosable: true,
+      })
+    }
   }
 
   const handleVillageCreated = () => {
@@ -277,6 +285,8 @@ export const MainLayout: React.FC = () => {
               size="sm"
               onClick={handleSignOut}
               colorScheme="red"
+              isLoading={signingOut}
+              isDisabled={signingOut}
             >
               Sign Out
             </Button>
@@ -334,7 +344,7 @@ export const MainLayout: React.FC = () => {
               <MenuList bg="white" borderColor="brand.border">
                 <MenuItem onClick={() => navigate('/app/profile')}>Profile</MenuItem>
                 <MenuDivider />
-                <MenuItem onClick={handleSignOut}>Sign Out</MenuItem>
+                <MenuItem onClick={handleSignOut} isDisabled={signingOut}>Sign Out</MenuItem>
               </MenuList>
             </Menu>
           </HStack>

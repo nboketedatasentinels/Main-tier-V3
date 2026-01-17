@@ -29,7 +29,7 @@ import {
 } from '@chakra-ui/react'
 import { Bell, LogOut, Menu, RefreshCw, Sparkles } from 'lucide-react'
 import { useAuth } from '@/hooks/useAuth'
-import { type NavigationItem, type NavigationSection, buildPartnerNavItems } from '@/utils/navigationItems'
+import { type NavigationSection, buildPartnerNavItems } from '@/utils/navigationItems'
 
 interface PartnerLayoutProps {
   children: React.ReactNode
@@ -54,7 +54,7 @@ export const PartnerLayout: React.FC<PartnerLayoutProps> = ({
 }) => {
   const sidebarWidth = '280px'
   const disclosure = useDisclosure()
-  const { profile, signOut, refreshProfile, profileLoading, lastProfileLoadAt, isAdmin, profileStatus } = useAuth()
+  const { profile, signOut, signingOut, refreshProfile, profileLoading, lastProfileLoadAt, isAdmin, profileStatus } = useAuth()
   const enableProfileRealtime = import.meta.env.VITE_ENABLE_PROFILE_REALTIME === 'true'
   const toast = useToast()
   const [showRefreshHint, setShowRefreshHint] = React.useState(false)
@@ -111,6 +111,19 @@ export const PartnerLayout: React.FC<PartnerLayoutProps> = ({
     }, 1000)
     return () => window.clearInterval(interval)
   }, [profileStatus])
+
+  const handleLogout = React.useCallback(async () => {
+    const result = await signOut()
+    if (result.error) {
+      toast({
+        title: 'Logout failed',
+        description: result.error.message,
+        status: 'error',
+        duration: 5000,
+        isClosable: true,
+      })
+    }
+  }, [signOut, toast])
 
   const handleManualRefresh = React.useCallback(async () => {
     const result = await refreshProfile({ reason: 'partner-dashboard-manual' })
@@ -230,7 +243,9 @@ export const PartnerLayout: React.FC<PartnerLayoutProps> = ({
           leftIcon={<LogOut size={14} />}
           variant="outline"
           colorScheme="gray"
-          onClick={() => signOut()}
+          onClick={handleLogout}
+          isLoading={signingOut}
+          isDisabled={signingOut}
         >
           Sign out
         </Button>
@@ -289,7 +304,9 @@ export const PartnerLayout: React.FC<PartnerLayoutProps> = ({
         display={{ base: 'inline-flex', md: 'inline-flex' }}
         leftIcon={<LogOut size={16} />}
         variant="outline"
-        onClick={() => signOut()}
+        onClick={handleLogout}
+        isLoading={signingOut}
+        isDisabled={signingOut}
       >
         Logout
       </Button>
@@ -342,7 +359,13 @@ export const PartnerLayout: React.FC<PartnerLayoutProps> = ({
             <Stack spacing={6}>
               <ProfileSection />
               {renderNav()}
-              <Button leftIcon={<LogOut size={16} />} variant="outline" onClick={() => signOut()}>
+              <Button
+                leftIcon={<LogOut size={16} />}
+                variant="outline"
+                onClick={handleLogout}
+                isLoading={signingOut}
+                isDisabled={signingOut}
+              >
                 Logout
               </Button>
             </Stack>
