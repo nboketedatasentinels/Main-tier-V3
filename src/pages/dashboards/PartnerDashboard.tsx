@@ -15,6 +15,12 @@ import {
   VStack,
   Skeleton,
   SkeletonText,
+  Accordion,
+  AccordionItem,
+  AccordionButton,
+  AccordionPanel,
+  AccordionIcon,
+  Code,
 } from '@chakra-ui/react'
 import { formatDistanceToNow } from 'date-fns'
 import { Bell, Building2, Gauge, Mail, Sparkles, Users } from 'lucide-react'
@@ -46,6 +52,7 @@ import { buildPartnerNavItems } from '@/utils/navigationItems'
 export const PartnerDashboard: React.FC = () => {
   const navigate = useNavigate()
   const { assignedOrganizations, isSuperAdmin, user, refreshProfile, profileStatus, lastProfileLoadAt } = useAuth()
+  const [debugMode, setDebugMode] = useState(false)
   const {
     assignedOrgCount,
     engagementTrend,
@@ -71,7 +78,8 @@ export const PartnerDashboard: React.FC = () => {
     atRiskUsers,
     managedBreakdown,
     notificationCount,
-  } = usePartnerDashboardData()
+    debugInfo,
+  } = usePartnerDashboardData({ debugMode })
   const enableProfileRealtime = import.meta.env.VITE_ENABLE_PROFILE_REALTIME === 'true'
   const supportEmail = 'support@transformation4leaders.com'
 
@@ -301,10 +309,27 @@ export const PartnerDashboard: React.FC = () => {
                 <Badge colorScheme="green">Real-time</Badge>
                 <Badge colorScheme="purple">Partner scoped</Badge>
                 {organizationsLoading ? (
-                  <Badge colorScheme="gray">Loading organizations...</Badge>
+                  <Badge colorScheme="gray" variant="subtle">
+                    <HStack spacing={1}>
+                      <Skeleton height="10px" width="10px" borderRadius="full" />
+                      <Text>Loading organizations...</Text>
+                    </HStack>
+                  </Badge>
                 ) : assignedOrganizations.length === 0 ? (
                   <Badge colorScheme="yellow">No organizations assigned</Badge>
-                ) : null}
+                ) : (
+                  <Badge colorScheme="green">Organizations loaded</Badge>
+                )}
+                {usersLoading ? (
+                  <Badge colorScheme="gray" variant="subtle">
+                    <HStack spacing={1}>
+                      <Skeleton height="10px" width="10px" borderRadius="full" />
+                      <Text>Loading users...</Text>
+                    </HStack>
+                  </Badge>
+                ) : (
+                  <Badge colorScheme="green">Users ready</Badge>
+                )}
                 <Button size="xs" variant="outline" onClick={refreshOrganizations} isLoading={refreshingOrganizations}>
                   Sync profile
                 </Button>
@@ -654,8 +679,142 @@ export const PartnerDashboard: React.FC = () => {
     </Stack>
   )
 
+  const renderDebugInfo = () => {
+    if (!debugInfo) return null
+
+    return (
+      <Accordion allowToggle mt={4}>
+        <AccordionItem border="1px dashed" borderColor="gray.300" borderRadius="md" bg="gray.50">
+          <h2>
+            <AccordionButton>
+              <Box flex="1" textAlign="left" fontWeight="bold" fontSize="sm">
+                <HStack>
+                  <Gauge size={14} />
+                  <Text>Dashboard Debug Info</Text>
+                  {debugInfo.rejectedNoMatch > 0 && (
+                    <Badge colorScheme="orange" ml={2}>
+                      {debugInfo.rejectedNoMatch} Mismatched
+                    </Badge>
+                  )}
+                </HStack>
+              </Box>
+              <AccordionIcon />
+            </AccordionButton>
+          </h2>
+          <AccordionPanel pb={4}>
+            <VStack align="flex-start" spacing={4}>
+              <SimpleGrid columns={{ base: 2, md: 4 }} spacing={4} w="full">
+                <Box>
+                  <Text fontSize="xs" color="gray.500">Snapshot Total</Text>
+                  <Text fontWeight="bold">{debugInfo.totalInSnapshot}</Text>
+                </Box>
+                <Box>
+                  <Text fontSize="xs" color="gray.500">Kept</Text>
+                  <Text fontWeight="bold" color="green.600">{debugInfo.keptCount}</Text>
+                </Box>
+                <Box>
+                  <Text fontSize="xs" color="gray.500">Rejected (Org Mismatch)</Text>
+                  <Text fontWeight="bold" color={debugInfo.rejectedNoMatch > 0 ? "orange.600" : "inherit"}>
+                    {debugInfo.rejectedNoMatch}
+                  </Text>
+                </Box>
+                <Box>
+                  <Text fontSize="xs" color="gray.500">Rejected (Filter)</Text>
+                  <Text fontWeight="bold">{debugInfo.rejectedSelectedOrg}</Text>
+                </Box>
+              </SimpleGrid>
+
+              <Divider />
+
+              <Box w="full">
+                <Text fontSize="xs" fontWeight="bold" color="gray.600" mb={2}>Assigned Organization Keys:</Text>
+                <HStack wrap="wrap" spacing={2}>
+                  {debugInfo.assignedOrgKeys.length > 0 ? (
+                    debugInfo.assignedOrgKeys.map(key => (
+                      <Code key={key} fontSize="xs" colorScheme="purple">{key}</Code>
+                    ))
+                  ) : (
+                    <Text fontSize="xs" fontStyle="italic">No keys assigned in profile</Text>
+                  )}
+                </HStack>
+              </Box>
+
+              {debugInfo.mismatchSamples.length > 0 && (
+                <Box w="full">
+                  <Text fontSize="xs" fontWeight="bold" color="gray.600" mb={2}>Samples of Mismatched Users:</Text>
+                  <VStack align="flex-start" spacing={2} w="full">
+                    {debugInfo.mismatchSamples.map((sample, idx) => (
+                      <Box key={idx} p={2} bg="white" border="1px solid" borderColor="gray.200" borderRadius="md" w="full" fontSize="xs">
+                        <HStack justify="space-between">
+                          <Text fontWeight="bold">{sample.id}</Text>
+                          <Badge size="xs" colorScheme="red">{sample.reason}</Badge>
+                        </HStack>
+                        <Text mt={1} color="gray.600">User Org Fields: {sample.userOrgKeys.length > 0 ? sample.userOrgKeys.join(', ') : '(Empty)'}</Text>
+                      </Box>
+                    ))}
+                    {debugInfo.rejectedNoMatch > 5 && (
+                      <Text fontSize="xs" color="gray.500" fontStyle="italic">...and {debugInfo.rejectedNoMatch - 5} more</Text>
+                    )}
+                  </VStack>
+                </Box>
+              )}
+
+              <HStack spacing={3}>
+                <Button size="xs" variant="outline" onClick={() => console.log('Full Dashboard Debug:', debugInfo)}>
+                  Log Full Debug Data to Console
+                </Button>
+                {isSuperAdmin && (
+                  <Button
+                    size="xs"
+                    colorScheme={debugMode ? "red" : "gray"}
+                    variant={debugMode ? "solid" : "outline"}
+                    onClick={() => setDebugMode(!debugMode)}
+                  >
+                    {debugMode ? "Disable Debug Mode (Filtering Off)" : "Enable Debug Mode (Bypass Filtering)"}
+                  </Button>
+                )}
+              </HStack>
+            </VStack>
+          </AccordionPanel>
+        </AccordionItem>
+      </Accordion>
+    )
+  }
+
   const renderUsersPage = () => (
     <Stack spacing={6}>
+      {users.length === 0 && !usersLoading && debugInfo && debugInfo.rejectedNoMatch > 0 && (
+        <Card bg="orange.50" border="1px solid" borderColor="orange.200">
+          <CardBody>
+            <HStack spacing={4} align="flex-start">
+              <Box color="orange.500" mt={1}><Users size={24} /></Box>
+              <Stack spacing={3} flex={1}>
+                <VStack align="flex-start" spacing={0}>
+                  <Text fontWeight="bold" color="orange.800">Learners found but not matching assignments</Text>
+                  <Text fontSize="sm" color="orange.700">
+                    We found {debugInfo.rejectedNoMatch} active learners in the database, but they don't match your assigned organizations ({debugInfo.assignedOrgKeys.join(', ') || 'none'}).
+                  </Text>
+                </VStack>
+                <HStack>
+                  <Button
+                    as="a"
+                    href={`mailto:${supportEmail}?subject=Organization Access Request&body=I am unable to see users for my assigned organizations. My assigned keys are: ${debugInfo.assignedOrgKeys.join(', ')}`}
+                    size="sm"
+                    colorScheme="orange"
+                    leftIcon={<Mail size={16} />}
+                  >
+                    Request Organization Access
+                  </Button>
+                  <Button size="sm" variant="ghost" color="orange.700" onClick={refreshOrganizations}>
+                    Refresh data
+                  </Button>
+                </HStack>
+              </Stack>
+            </HStack>
+          </CardBody>
+        </Card>
+      )}
+
       <Card bg="white" border="1px solid" borderColor="brand.border">
         <CardBody>
           <Stack spacing={3}>
@@ -668,6 +827,7 @@ export const PartnerDashboard: React.FC = () => {
               </VStack>
               <Badge colorScheme="purple">Scoped</Badge>
             </HStack>
+
             <PartnerUserManagement
               users={users}
               usersLoading={usersLoading}
@@ -678,6 +838,8 @@ export const PartnerDashboard: React.FC = () => {
               onSelectOrg={setSelectedOrg}
               updateUserPoints={updateUserPoints}
             />
+
+            {renderDebugInfo()}
           </Stack>
         </CardBody>
       </Card>
