@@ -6,7 +6,6 @@ import {
   collectionGroup,
   getDocs,
   onSnapshot,
-  or,
   orderBy,
   query,
   where,
@@ -95,7 +94,7 @@ interface UsePartnerDashboardDataOptions {
   debugMode?: boolean
 }
 
-const USERS_QUERY = query(collection(db, 'profiles'), where('accountStatus', '==', 'active'))
+const USERS_QUERY = collection(db, 'profiles')
 
 const normalizeTimestamp = (value?: unknown): string | null => {
   if (!value) return null
@@ -243,6 +242,7 @@ export const usePartnerDashboardData = (options?: UsePartnerDashboardDataOptions
     let isMounted = true
     let unsubscribe: (() => void) | undefined
     let retryTimeout: ReturnType<typeof setTimeout> | undefined
+    organizationsRetryAttempts.current = 0
 
     const resetRetry = () => {
       organizationsRetryAttempts.current = 0
@@ -503,7 +503,9 @@ export const usePartnerDashboardData = (options?: UsePartnerDashboardDataOptions
     programStartDate?: unknown
     program_start_date?: unknown
     companyId?: string
+    company_id?: string
     organizationId?: string
+    organization_id?: string
     lastActiveAt?: unknown
     last_active_at?: unknown
     lastActive?: unknown
@@ -519,7 +521,9 @@ export const usePartnerDashboardData = (options?: UsePartnerDashboardDataOptions
     if (profileStatus !== 'ready') {
       return
     }
-    if (!organizationsReady) {
+    const canLoadUsers =
+      organizationsReady || isSuperAdmin || options?.debugMode || assignedOrganizations.length > 0
+    if (!canLoadUsers) {
       console.debug('[PartnerDashboard] Waiting for organizations before loading users.')
       setUsersLoading(true)
       setUsersError(null)
@@ -531,6 +535,7 @@ export const usePartnerDashboardData = (options?: UsePartnerDashboardDataOptions
 
     setUsersLoading(true)
     setUsersError(null)
+    usersRetryAttempts.current = 0
 
     const resetRetry = () => {
       usersRetryAttempts.current = 0
@@ -559,31 +564,23 @@ export const usePartnerDashboardData = (options?: UsePartnerDashboardDataOptions
     const subscribe = () => {
       let q = USERS_QUERY
 
-      if (!isSuperAdmin) {
-        const queryKeys = rawAssignedKeys.slice(0, 15)
-        if (queryKeys.length > 0) {
-          // Scoping the query by organization keys is required for security rules
-          // and to ensure the Partner only sees their data.
-          // Firestore allows a maximum of 30 terms across all 'in' clauses in a single query.
-          // Since we use two 'in' clauses within an 'or' block, we slice to 15 to stay within limits.
-          q = query(
-            q,
-            or(where('companyCode', 'in', queryKeys), where('companyId', 'in', queryKeys)),
-          )
-        } else {
-          console.debug('[PartnerDashboard] No organizations assigned. Skipping user fetch.')
-          setUsers([])
-          setUsersLoading(false)
-          setDebugInfo({
-            totalInSnapshot: 0,
-            keptCount: 0,
-            rejectedNoMatch: 0,
-            rejectedSelectedOrg: 0,
-            mismatchSamples: [],
-            assignedOrgKeys: [],
-          })
-          return
-        }
+      // Issue 3: Broaden query, narrow in memory.
+      // We rely on Firestore security rules to enforce organizational scoping
+      // rather than overly-restrictive client-side query filters that might
+      // miss legacy fields or case-sensitive matches.
+      if (!isSuperAdmin && !options?.debugMode && rawAssignedKeys.length === 0) {
+        console.debug('[PartnerDashboard] No organizations assigned. Skipping user fetch.')
+        setUsers([])
+        setUsersLoading(false)
+        setDebugInfo({
+          totalInSnapshot: 0,
+          keptCount: 0,
+          rejectedNoMatch: 0,
+          rejectedSelectedOrg: 0,
+          mismatchSamples: [],
+          assignedOrgKeys: [],
+        })
+        return
       }
 
       unsubscribe = onSnapshot(
@@ -609,16 +606,33 @@ export const usePartnerDashboardData = (options?: UsePartnerDashboardDataOptions
               seenUserIds.add(docSnap.id)
 
               const data = docSnap.data() as FirestorePartnerUser
+
+              // Issue 2: Filter out non-learner roles before org matching
+              // to prevent them from skewing debug counts or causing false rejection logs.
+              if (data.role && data.role !== 'learner') {
+                return false
+              }
+
+              // Issue 1: Include onboarding and paused users.
+              // Since we broadened the Firestore query, we enforce the status filter in-memory.
+              const accountStatus = (data.accountStatus || (data as any).status || 'active').toLowerCase()
+              const allowedStatuses = ['active', 'onboarding', 'paused']
+              if (!allowedStatuses.includes(accountStatus)) {
+                return false
+              }
+
               const userOrgKeys = [
                 data.companyCode,
                 data.company_code,
                 data.companyId,
+                data.company_id,
                 data.organizationId,
+                data.organization_id,
               ]
                 .filter((value): value is string => !!value)
                 .map((value) => value.trim().toLowerCase())
 
-              if (organizationsReady && !isSuperAdmin && !options?.debugMode) {
+              if (!isSuperAdmin && !options?.debugMode) {
                 if (!assignedOrgKeys.size) {
                   rejectedNoMatch++
                   if (mismatchSamples.length < 5) {
@@ -631,7 +645,12 @@ export const usePartnerDashboardData = (options?: UsePartnerDashboardDataOptions
                 if (!match) {
                   rejectedNoMatch++
                   if (mismatchSamples.length < 5) {
-                    mismatchSamples.push({ id: docSnap.id, reason: 'Org mismatch', userOrgKeys, assignedKeys: Array.from(assignedOrgKeys) })
+                    mismatchSamples.push({
+                      id: docSnap.id,
+                      reason: 'Org mismatch',
+                      userOrgKeys,
+                      assignedKeys: Array.from(assignedOrgKeys),
+                    })
                   }
                   return false
                 }
@@ -757,7 +776,9 @@ export const usePartnerDashboardData = (options?: UsePartnerDashboardDataOptions
                   organizationId: rawOrganizationId ? rawOrganizationId.toLowerCase() : undefined,
                   progressPercent,
                   currentWeek,
-                  status: (data.accountStatus as PartnerUser['status']) || 'Active',
+                  status:
+                    ((data.accountStatus || (data as any).status) as PartnerUser['status']) ||
+                    'Active',
                   lastActive: normalizedLastActive,
                   riskStatus,
                   weeklyEarned,
