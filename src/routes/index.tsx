@@ -95,7 +95,12 @@ const DashboardRouter = () => {
 
 export const AppRoutes = () => {
   return (
-    <BrowserRouter>
+    <BrowserRouter
+      future={{
+        v7_startTransition: true,
+        v7_relativeSplatPath: true,
+      }}
+    >
       <Routes>
         {/* Public routes */}
         <Route path="/" element={<HomePage />} />

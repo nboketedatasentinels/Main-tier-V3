@@ -594,9 +594,14 @@ export const usePartnerDashboardData = (options?: UsePartnerDashboardDataOptions
             let rejectedSelectedOrg = 0
             const mismatchSamples: any[] = []
 
+            // Fix 3: Normalize org keys once before filtering
+            const normalizedAssignedKeys = new Set(
+              Array.from(assignedOrgKeys).map((k) => k.trim().toLowerCase()),
+            )
+
             console.debug('[PartnerDashboard] Filtering users', {
               totalInSnapshot: totalDocs,
-              assignedOrgKeys: Array.from(assignedOrgKeys),
+              assignedOrgKeys: Array.from(normalizedAssignedKeys),
               isSuperAdmin,
               selectedOrg,
             })
@@ -626,16 +631,22 @@ export const usePartnerDashboardData = (options?: UsePartnerDashboardDataOptions
                 .filter((value): value is string => !!value)
                 .map((value) => value.trim().toLowerCase())
 
+              const hasUserOrgKeys = userOrgKeys.length > 0
+
               if (!isSuperAdmin && !options?.debugMode) {
-                if (!assignedOrgKeys.size) {
-                  rejectedNoMatch++
-                  if (mismatchSamples.length < 5) {
-                    mismatchSamples.push({ id: docSnap.id, reason: 'No assigned org keys', userOrgKeys })
-                  }
-                  return false
+                // Fix 1: Stop rejecting users with empty orgs (immediate)
+                if (!normalizedAssignedKeys.size) {
+                  // Allow user through if partner has no assigned orgs — fallback visibility
+                  return true
                 }
 
-                const match = userOrgKeys.some((key) => assignedOrgKeys.has(key))
+                // Fix 2: If user has NO org keys, allow them when partner has ONE org
+                if (!hasUserOrgKeys && normalizedAssignedKeys.size === 1) {
+                  // HARD FALLBACK: single-org partner sees orphaned users
+                  return true
+                }
+
+                const match = userOrgKeys.some((key) => normalizedAssignedKeys.has(key))
                 if (!match) {
                   rejectedNoMatch++
                   if (mismatchSamples.length < 5) {
@@ -643,7 +654,7 @@ export const usePartnerDashboardData = (options?: UsePartnerDashboardDataOptions
                       id: docSnap.id,
                       reason: 'Org mismatch',
                       userOrgKeys,
-                      assignedKeys: Array.from(assignedOrgKeys),
+                      assignedKeys: Array.from(normalizedAssignedKeys),
                     })
                   }
                   return false
