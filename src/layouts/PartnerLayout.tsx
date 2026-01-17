@@ -112,18 +112,47 @@ export const PartnerLayout: React.FC<PartnerLayoutProps> = ({
     return () => window.clearInterval(interval)
   }, [profileStatus])
 
+  const [localSigningOut, setLocalSigningOut] = React.useState(false)
+
   const handleLogout = React.useCallback(async () => {
-    const result = await signOut()
-    if (result.error) {
-      toast({
-        title: 'Logout failed',
-        description: result.error.message,
-        status: 'error',
-        duration: 5000,
-        isClosable: true,
-      })
+    const timestamp = new Date().toISOString()
+    console.log(`[${timestamp}] 🖱️ [PartnerLayout] Logout button clicked`)
+
+    if (localSigningOut || signingOut) {
+      console.warn(`[${new Date().toISOString()}] ⚠️ [PartnerLayout] Logout already in progress, ignoring click`)
+      return
     }
-  }, [signOut, toast])
+
+    setLocalSigningOut(true)
+
+    try {
+      console.log(`[${new Date().toISOString()}] 🔄 [PartnerLayout] Calling AuthContext.signOut()`)
+      const result = await signOut()
+
+      if (result.error) {
+        // Only show toast if it's NOT the "already in progress" error
+        if (result.error.message !== 'Sign out already in progress') {
+          console.error(`[${new Date().toISOString()}] 🔴 [PartnerLayout] Logout failed`, result.error)
+          toast({
+            title: 'Logout failed',
+            description: result.error.message,
+            status: 'error',
+            duration: 5000,
+            isClosable: true,
+          })
+          // Reset local state so they can try again if it actually failed
+          setLocalSigningOut(false)
+        } else {
+          console.warn(`[${new Date().toISOString()}] 🟡 [PartnerLayout] Sign out already in progress (caught error)`)
+        }
+      } else {
+        console.log(`[${new Date().toISOString()}] ✅ [PartnerLayout] AuthContext.signOut() returned success`)
+      }
+    } catch (err) {
+      console.error(`[${new Date().toISOString()}] 🔴 [PartnerLayout] Unexpected error during logout`, err)
+      setLocalSigningOut(false)
+    }
+  }, [signOut, toast, localSigningOut, signingOut])
 
   const handleManualRefresh = React.useCallback(async () => {
     const result = await refreshProfile({ reason: 'partner-dashboard-manual' })
@@ -244,10 +273,10 @@ export const PartnerLayout: React.FC<PartnerLayoutProps> = ({
           variant="outline"
           colorScheme="gray"
           onClick={handleLogout}
-          isLoading={signingOut}
-          isDisabled={signingOut}
+          isLoading={localSigningOut || signingOut}
+          isDisabled={localSigningOut || signingOut}
         >
-          Sign out
+          {localSigningOut ? 'Signing out...' : 'Sign out'}
         </Button>
       </VStack>
     </HStack>
@@ -305,10 +334,10 @@ export const PartnerLayout: React.FC<PartnerLayoutProps> = ({
         leftIcon={<LogOut size={16} />}
         variant="outline"
         onClick={handleLogout}
-        isLoading={signingOut}
-        isDisabled={signingOut}
+        isLoading={localSigningOut || signingOut}
+        isDisabled={localSigningOut || signingOut}
       >
-        Logout
+        {localSigningOut ? 'Signing out...' : 'Logout'}
       </Button>
     </HStack>
   )
@@ -363,10 +392,10 @@ export const PartnerLayout: React.FC<PartnerLayoutProps> = ({
                 leftIcon={<LogOut size={16} />}
                 variant="outline"
                 onClick={handleLogout}
-                isLoading={signingOut}
-                isDisabled={signingOut}
+                isLoading={localSigningOut || signingOut}
+                isDisabled={localSigningOut || signingOut}
               >
-                Logout
+                {localSigningOut ? 'Signing out...' : 'Logout'}
               </Button>
             </Stack>
           </DrawerBody>

@@ -967,47 +967,63 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   }
 
   const signOut = async () => {
+    const timestamp = new Date().toISOString()
     if (signingOut) {
-      console.warn('🟡 [Auth] signOut: already in progress')
+      console.warn(`[${timestamp}] 🟡 [Auth] signOut: already in progress (guard triggered)`)
       return { error: new Error('Sign out already in progress') }
     }
 
     setSigningOut(true)
-    console.log('🟡 [Auth] signOut:start')
+    console.log(`[${timestamp}] 🟡 [Auth] signOut:start`, { uid: user?.uid, email: user?.email })
 
     const timeoutId = setTimeout(() => {
-      console.warn('🟠 [Auth] signOut: timeout fallback triggered')
+      const timeoutTs = new Date().toISOString()
+      console.warn(`[${timeoutTs}] 🟠 [Auth] signOut: timeout fallback (5s) triggered. Forcing navigation.`)
       window.location.href = '/login'
-    }, 10000)
+    }, 5000)
 
     try {
       // Logic to preserve preferences if needed before clearing state
       if (profile?.companyCode) {
+        console.log(`[${new Date().toISOString()}] 🟣 [Auth] Preserving companyCode in localStorage`, profile.companyCode)
         localStorage.setItem('t4l.lastSelectedOrg', profile.companyCode)
       }
 
       if (profile?.dashboardPreferences) {
+        console.log(`[${new Date().toISOString()}] 🟣 [Auth] Preserving dashboardPreferences in localStorage`)
         localStorage.setItem('t4l.dashboardPreferences', JSON.stringify(profile.dashboardPreferences))
       }
 
+      console.log(`[${new Date().toISOString()}] 🟡 [Auth] Calling Firebase signOut...`)
       await firebaseSignOut(auth)
-      clearTimeout(timeoutId)
 
-      console.log('🟢 [Auth] signOut: success')
+      console.log(`[${new Date().toISOString()}] 🟢 [Auth] Firebase signOut success`)
 
       setUser(null)
       setProfile(null)
       setClaimsRole(null)
 
-      // Use window.location for reliable navigation and state clearing
+      console.log(`[${new Date().toISOString()}] 🚀 [Auth] Redirecting to /login via window.location.href (current: ${window.location.pathname})`)
+
+      // Clear timeout before navigation
+      clearTimeout(timeoutId)
+
       window.location.href = '/login'
       return { error: null }
     } catch (error) {
-      console.error('🔴 [Auth] signOut failed', error)
+      const errorTs = new Date().toISOString()
+      console.error(`[${errorTs}] 🔴 [Auth] signOut failed`, error)
+
+      // Clear timeout on error too
+      clearTimeout(timeoutId)
+
       // Navigate anyway on failure to ensure user isn't stuck
+      console.log(`[${errorTs}] 🚀 [Auth] Fallback redirecting to /login after error`)
       window.location.href = '/login'
       return { error: error instanceof Error ? error : new Error('Sign out failed') }
     } finally {
+      // We don't strictly need to setSigningOut(false) if the page is redirecting,
+      // but it's good practice for any components that might stay mounted
       setSigningOut(false)
     }
   }
