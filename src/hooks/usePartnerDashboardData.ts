@@ -562,7 +562,7 @@ export const usePartnerDashboardData = (options?: UsePartnerDashboardDataOptions
     }
 
     const subscribe = () => {
-      let q = USERS_QUERY
+      const q = USERS_QUERY
 
       // Issue 3: Broaden query, narrow in memory.
       // We rely on Firestore security rules to enforce organizational scoping
@@ -606,12 +606,6 @@ export const usePartnerDashboardData = (options?: UsePartnerDashboardDataOptions
               seenUserIds.add(docSnap.id)
 
               const data = docSnap.data() as FirestorePartnerUser
-
-              // Issue 2: Filter out non-learner roles before org matching
-              // to prevent them from skewing debug counts or causing false rejection logs.
-              if (data.role && data.role !== 'learner') {
-                return false
-              }
 
               // Issue 1: Include onboarding and paused users.
               // Since we broadened the Firestore query, we enforce the status filter in-memory.
