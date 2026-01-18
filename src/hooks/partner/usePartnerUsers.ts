@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState, useRef, useCallback } from 'react'
-import { collection, onSnapshot } from 'firebase/firestore'
+import { collection, onSnapshot, query, where, Query, DocumentData } from 'firebase/firestore'
 import { db } from '@/services/firebase'
 import { useAuth } from '@/hooks/useAuth'
 import { useRetryLogic } from '@/hooks/useRetryLogic'
@@ -17,6 +17,9 @@ import {
   getProgramWeekNumber,
   mapWeeklyPointsToProgress,
 } from '@/utils/partnerProgress'
+
+// Firestore 'in' query limit
+const FIRESTORE_IN_QUERY_LIMIT = 30
 
 export type PartnerRiskLevel = 'engaged' | 'watch' | 'concern' | 'critical'
 
@@ -81,6 +84,53 @@ interface UsePartnerUsersOptions {
 }
 
 const USERS_COLLECTION = collection(db, 'profiles')
+
+/**
+ * Creates chunked Firestore queries to handle the 30-value limit on 'in' queries.
+ * Returns an array of queries, each covering up to FIRESTORE_IN_QUERY_LIMIT org keys.
+ */
+const createChunkedOrgQueries = (
+  orgKeys: string[],
+  isSuperAdmin: boolean
+): { queries: Query<DocumentData>[]; hasQueryLimitWarning: boolean } => {
+  if (isSuperAdmin || orgKeys.length === 0) {
+    // Super admins get all users, no org filtering needed at query level
+    return { queries: [], hasQueryLimitWarning: false }
+  }
+
+  // Dedupe and normalize org keys
+  const uniqueKeys = Array.from(new Set(orgKeys.map((k) => k.toLowerCase()).filter(Boolean)))
+
+  if (uniqueKeys.length === 0) {
+    return { queries: [], hasQueryLimitWarning: false }
+  }
+
+  const hasQueryLimitWarning = uniqueKeys.length > FIRESTORE_IN_QUERY_LIMIT
+
+  if (hasQueryLimitWarning) {
+    logger.warn(
+      `[PartnerUsers] Organization keys (${uniqueKeys.length}) exceed Firestore limit of ${FIRESTORE_IN_QUERY_LIMIT}. ` +
+      `Using chunked queries to fetch all users.`
+    )
+  }
+
+  const queries: Query<DocumentData>[] = []
+
+  // Split into chunks of FIRESTORE_IN_QUERY_LIMIT
+  for (let i = 0; i < uniqueKeys.length; i += FIRESTORE_IN_QUERY_LIMIT) {
+    const chunk = uniqueKeys.slice(i, i + FIRESTORE_IN_QUERY_LIMIT)
+
+    // Query on companyCode field (the canonical field per firestore-schema.md)
+    // We use companyCode as the primary field since it's the documented canonical field
+    const q = query(
+      USERS_COLLECTION,
+      where('companyCode', 'in', chunk)
+    )
+    queries.push(q)
+  }
+
+  return { queries, hasQueryLimitWarning }
+}
 
 export const usePartnerUsers = (options: UsePartnerUsersOptions) => {
   const {
@@ -174,288 +224,350 @@ export const usePartnerUsers = (options: UsePartnerUsersOptions) => {
         return
       }
 
-      unsubscribe = onSnapshot(
-        USERS_COLLECTION,
-        async (snapshot) => {
-          // FIX #1: Increment snapshot ID and abort any in-flight processing
-          const currentSnapshotId = ++processingRef.current.snapshotId
+      // OPTIMIZATION: Use server-side filtering with chunked queries instead of full collection scan
+      const { queries: orgQueries, hasQueryLimitWarning } = createChunkedOrgQueries(
+        rawAssignedKeys,
+        isSuperAdmin || debugMode
+      )
 
-          if (processingRef.current.abortController) {
-            processingRef.current.abortController.abort()
-          }
-          processingRef.current.abortController = new AbortController()
-          const { signal } = processingRef.current.abortController
+      // For super admins or debug mode, we still need a query (but without org filtering)
+      const queriesToExecute = orgQueries.length > 0 ? orgQueries : [USERS_COLLECTION]
 
-          try {
-            retry.reset()
+      logger.debug('[PartnerUsers] Setting up queries', {
+        queryCount: queriesToExecute.length,
+        isSuperAdmin,
+        debugMode,
+        assignedOrgCount: rawAssignedKeys.length,
+        hasQueryLimitWarning,
+      })
 
-            // Check if we should abort before heavy processing
-            if (signal.aborted || !isMounted) return
+      // Track all unsubscribe functions for multiple queries
+      const unsubscribers: (() => void)[] = []
 
-            const seenUserIds = new Set<string>()
-            const totalDocs = snapshot.size
-            let rejectedNoMatch = 0
-            let rejectedSelectedOrg = 0
-            const mismatchSamples: MismatchSample[] = []
+      // Accumulated docs from all queries
+      const accumulatedDocsMap = new Map<string, { id: string; data: () => FirestorePartnerUser }>()
+      let pendingSnapshots = queriesToExecute.length
+      let hasReceivedInitialData = false
 
-            logger.debug('[PartnerUsers] Filtering users', {
-              totalInSnapshot: totalDocs,
-              assignedOrgKeys: Array.from(assignedOrgKeys),
-              isSuperAdmin,
-              selectedOrg,
-            })
+      const processAccumulatedDocs = async () => {
+        // FIX #1: Increment snapshot ID and abort any in-flight processing
+        const currentSnapshotId = ++processingRef.current.snapshotId
 
-            const filteredDocs = snapshot.docs.filter((docSnap) => {
-              if (seenUserIds.has(docSnap.id)) return false
-              seenUserIds.add(docSnap.id)
+        if (processingRef.current.abortController) {
+          processingRef.current.abortController.abort()
+        }
+        processingRef.current.abortController = new AbortController()
+        const { signal } = processingRef.current.abortController
 
-              const data = docSnap.data() as FirestorePartnerUser
+        try {
+          retry.reset()
 
-              const accountStatus = (
-                data.accountStatus || data.status || 'active'
-              ).toLowerCase()
-              const allowedStatuses = ['active', 'onboarding', 'paused']
-              if (!allowedStatuses.includes(accountStatus)) {
-                return false
-              }
+          // Check if we should abort before heavy processing
+          if (signal.aborted || !isMounted) return
 
-              // FIX #6: Use centralized normalization
-              const userOrgKeys = createOrgKeySet([
-                data.companyCode,
-                data.company_code,
-                data.companyId,
-                data.company_id,
-                data.organizationId,
-                data.organization_id,
-              ])
+          const allDocs = Array.from(accumulatedDocsMap.values())
+          const seenUserIds = new Set<string>()
+          let rejectedNoMatch = 0
+          let rejectedSelectedOrg = 0
+          const mismatchSamples: MismatchSample[] = []
 
-              if (!isSuperAdmin && !debugMode) {
-                if (!assignedOrgKeys.size) {
-                  rejectedNoMatch++
-                  if (mismatchSamples.length < 5) {
-                    mismatchSamples.push({
-                      id: docSnap.id,
-                      reason: 'No assigned org keys',
-                      userOrgKeys: Array.from(userOrgKeys),
-                    })
-                  }
-                  return false
-                }
+          logger.debug('[PartnerUsers] Processing accumulated docs', {
+            totalDocs: allDocs.length,
+            assignedOrgKeys: Array.from(assignedOrgKeys),
+            isSuperAdmin,
+            selectedOrg,
+          })
 
-                const match = Array.from(userOrgKeys).some((key) => assignedOrgKeys.has(key))
-                if (!match) {
-                  rejectedNoMatch++
-                  if (mismatchSamples.length < 5) {
-                    mismatchSamples.push({
-                      id: docSnap.id,
-                      reason: 'Org mismatch',
-                      userOrgKeys: Array.from(userOrgKeys),
-                      assignedKeys: Array.from(assignedOrgKeys),
-                    })
-                  }
-                  return false
-                }
-              }
+          const filteredDocs = allDocs.filter((docWrapper) => {
+            if (seenUserIds.has(docWrapper.id)) return false
+            seenUserIds.add(docWrapper.id)
 
-              // FIX #13: Remove redundant filtering - selectedOrg filtering happens here only
-              if (
-                organizationsReady &&
-                selectedOrg !== 'all' &&
-                selectedOrg &&
-                !Array.from(userOrgKeys).some((key) => selectedOrgKeys.has(key))
-              ) {
-                rejectedSelectedOrg++
-                return false
-              }
+            const data = docWrapper.data()
 
-              return true
-            })
-
-            // Check abort before expensive operation
-            if (signal.aborted || !isMounted) return
-
-            const currentDebugInfo: DashboardDebugInfo = {
-              totalInSnapshot: totalDocs,
-              keptCount: filteredDocs.length,
-              rejectedNoMatch,
-              rejectedSelectedOrg,
-              mismatchSamples,
-              assignedOrgKeys: Array.from(assignedOrgKeys),
+            const accountStatus = (
+              data.accountStatus || data.status || 'active'
+            ).toLowerCase()
+            const allowedStatuses = ['active', 'onboarding', 'paused']
+            if (!allowedStatuses.includes(accountStatus)) {
+              return false
             }
 
-            logger.debug('[PartnerUsers] User filtering results', currentDebugInfo)
-            logger.table(mismatchSamples)
+            // FIX #6: Use centralized normalization
+            const userOrgKeys = createOrgKeySet([
+              data.companyCode,
+              data.company_code,
+              data.companyId,
+              data.company_id,
+              data.organizationId,
+              data.organization_id,
+            ])
 
-            setDebugInfo(currentDebugInfo)
+            // Server-side filtering already handled org matching, but we still validate
+            // in case of data inconsistencies (e.g., legacy field variants)
+            if (!isSuperAdmin && !debugMode) {
+              if (!assignedOrgKeys.size) {
+                rejectedNoMatch++
+                if (mismatchSamples.length < 5) {
+                  mismatchSamples.push({
+                    id: docWrapper.id,
+                    reason: 'No assigned org keys',
+                    userOrgKeys: Array.from(userOrgKeys),
+                  })
+                }
+                return false
+              }
 
-            const userIds = filteredDocs.map((docSnap) => docSnap.id)
+              const match = Array.from(userOrgKeys).some((key) => assignedOrgKeys.has(key))
+              if (!match) {
+                rejectedNoMatch++
+                if (mismatchSamples.length < 5) {
+                  mismatchSamples.push({
+                    id: docWrapper.id,
+                    reason: 'Org mismatch',
+                    userOrgKeys: Array.from(userOrgKeys),
+                    assignedKeys: Array.from(assignedOrgKeys),
+                  })
+                }
+                return false
+              }
+            }
 
-            // FIX #1: Check abort before and after async operation
-            if (signal.aborted || !isMounted) return
-
-            const { pointsByUser, hasPartialFailure, errors } = await fetchWeeklyPointsByUser(userIds)
-
-            // Check if this snapshot is still current after async operation
+            // Filter by selected organization
             if (
-              signal.aborted ||
-              !isMounted ||
-              currentSnapshotId !== processingRef.current.snapshotId
+              organizationsReady &&
+              selectedOrg !== 'all' &&
+              selectedOrg &&
+              !Array.from(userOrgKeys).some((key) => selectedOrgKeys.has(key))
             ) {
-              return
+              rejectedSelectedOrg++
+              return false
             }
 
-            // FIX #7: Warn about partial failures
-            if (hasPartialFailure) {
-              logger.warn('[PartnerUsers] Some weekly points batches failed to load', {
-                errorCount: errors.length,
+            return true
+          })
+
+          // Check abort before expensive operation
+          if (signal.aborted || !isMounted) return
+
+          const currentDebugInfo: DashboardDebugInfo = {
+            totalInSnapshot: allDocs.length,
+            keptCount: filteredDocs.length,
+            rejectedNoMatch,
+            rejectedSelectedOrg,
+            mismatchSamples,
+            assignedOrgKeys: Array.from(assignedOrgKeys),
+          }
+
+          logger.debug('[PartnerUsers] User filtering results', currentDebugInfo)
+          if (mismatchSamples.length > 0) {
+            logger.table(mismatchSamples)
+          }
+
+          setDebugInfo(currentDebugInfo)
+
+          const userIds = filteredDocs.map((docWrapper) => docWrapper.id)
+
+          // FIX #1: Check abort before and after async operation
+          if (signal.aborted || !isMounted) return
+
+          const { pointsByUser, hasPartialFailure, errors } = await fetchWeeklyPointsByUser(userIds)
+
+          // Check if this snapshot is still current after async operation
+          if (
+            signal.aborted ||
+            !isMounted ||
+            currentSnapshotId !== processingRef.current.snapshotId
+          ) {
+            return
+          }
+
+          // FIX #7: Warn about partial failures
+          if (hasPartialFailure) {
+            logger.warn('[PartnerUsers] Some weekly points batches failed to load', {
+              errorCount: errors.length,
+            })
+          }
+
+          const hydratedUsers: PartnerUser[] = []
+
+          filteredDocs.forEach((docWrapper) => {
+            try {
+              const data = docWrapper.data()
+
+              const rawCompanyCode = data.companyCode || data.company_code || ''
+              const rawOrganizationId = data.companyId || data.organizationId || ''
+              const companyCode =
+                rawCompanyCode.trim().length > 0
+                  ? rawCompanyCode.toLowerCase()
+                  : rawOrganizationId
+                    ? organizationLookup.get(rawOrganizationId.toLowerCase()) ||
+                      rawOrganizationId.toLowerCase()
+                    : ''
+
+              const normalizedCreatedAt = normalizeTimestamp(data.createdAt || data.created_at)
+              const normalizedRegistrationDate =
+                normalizeTimestamp(
+                  data.registrationDate ||
+                    data.registration_date ||
+                    data.createdAt ||
+                    data.created_at
+                ) || undefined
+              const normalizedProgramStart =
+                normalizeTimestamp(
+                  data.programStartDate ||
+                    data.program_start_date ||
+                    normalizedRegistrationDate
+                ) || normalizedRegistrationDate
+              const normalizedLastActive =
+                normalizeTimestamp(
+                  data.lastActiveAt ||
+                    data.last_active_at ||
+                    data.lastActive ||
+                    data.last_active ||
+                    normalizedRegistrationDate
+                ) || new Date().toISOString()
+
+              const currentWeek = getProgramWeekNumber(normalizedProgramStart || undefined)
+              const progress = mapWeeklyPointsToProgress(
+                pointsByUser[docWrapper.id] || [],
+                currentWeek
+              )
+              const riskResult = calculateUserRiskStatus(
+                progress.current_week,
+                progress.earned_points,
+                progress.required_points,
+                data.nudgeResponseScore
+              )
+
+              const weeklyRequirement = progress.required_points[currentWeek] || 0
+              const weeklyEarned = progress.earned_points[currentWeek] || 0
+              const progressPercent = weeklyRequirement
+                ? Math.min(100, Math.round((weeklyEarned / weeklyRequirement) * 100))
+                : data.progressPercent || 0
+
+              const riskStatus: PartnerRiskLevel | 'at_risk' =
+                riskResult.status === 'at_risk'
+                  ? 'at_risk'
+                  : progressPercent >= 95
+                    ? 'engaged'
+                    : progressPercent >= 80
+                      ? 'watch'
+                      : progressPercent >= 60
+                        ? 'concern'
+                        : 'critical'
+
+              const riskReasons = [
+                ...(data.riskReasons || []),
+                ...(riskResult.reason ? [riskResult.reason] : []),
+                data.nudgeResponseScore && data.nudgeResponseScore >= 0.7
+                  ? 'Responds well to nudges'
+                  : undefined,
+              ].filter(
+                (reason): reason is string => typeof reason === 'string' && reason.length > 0
+              )
+
+              const displayName =
+                data.name ||
+                data.fullName ||
+                data.full_name ||
+                [data.firstName, data.lastName].filter(Boolean).join(' ').trim() ||
+                'Unknown User'
+
+              hydratedUsers.push({
+                id: docWrapper.id,
+                name: displayName,
+                fullName: data.fullName || data.full_name || displayName,
+                createdAt: normalizedCreatedAt || undefined,
+                lastActiveAt:
+                  normalizeTimestamp(data.lastActiveAt || data.last_active_at) || undefined,
+                programStartDate: normalizedProgramStart || undefined,
+                email: data.email || '',
+                companyCode,
+                organizationId: rawOrganizationId
+                  ? rawOrganizationId.toLowerCase()
+                  : undefined,
+                progressPercent,
+                currentWeek,
+                status:
+                  ((data.accountStatus || data.status) as PartnerUser['status']) || 'Active',
+                lastActive: normalizedLastActive,
+                riskStatus,
+                weeklyEarned,
+                weeklyRequired: weeklyRequirement,
+                role: data.role,
+                riskReasons,
+                registrationDate: normalizedRegistrationDate || undefined,
+                interventions: data.interventions || 0,
+              })
+            } catch (err) {
+              logger.error('[PartnerUsers] Failed to transform user record', {
+                userId: docWrapper.id,
+                error: err,
               })
             }
+          })
 
-            const hydratedUsers: PartnerUser[] = []
-
-            filteredDocs.forEach((docSnap) => {
-              try {
-                const data = docSnap.data() as FirestorePartnerUser
-
-                const rawCompanyCode = data.companyCode || data.company_code || ''
-                const rawOrganizationId = data.companyId || data.organizationId || ''
-                const companyCode =
-                  rawCompanyCode.trim().length > 0
-                    ? rawCompanyCode.toLowerCase()
-                    : rawOrganizationId
-                      ? organizationLookup.get(rawOrganizationId.toLowerCase()) ||
-                        rawOrganizationId.toLowerCase()
-                      : ''
-
-                const normalizedCreatedAt = normalizeTimestamp(data.createdAt || data.created_at)
-                const normalizedRegistrationDate =
-                  normalizeTimestamp(
-                    data.registrationDate ||
-                      data.registration_date ||
-                      data.createdAt ||
-                      data.created_at
-                  ) || undefined
-                const normalizedProgramStart =
-                  normalizeTimestamp(
-                    data.programStartDate ||
-                      data.program_start_date ||
-                      normalizedRegistrationDate
-                  ) || normalizedRegistrationDate
-                const normalizedLastActive =
-                  normalizeTimestamp(
-                    data.lastActiveAt ||
-                      data.last_active_at ||
-                      data.lastActive ||
-                      data.last_active ||
-                      normalizedRegistrationDate
-                  ) || new Date().toISOString()
-
-                const currentWeek = getProgramWeekNumber(normalizedProgramStart || undefined)
-                const progress = mapWeeklyPointsToProgress(
-                  pointsByUser[docSnap.id] || [],
-                  currentWeek
-                )
-                const riskResult = calculateUserRiskStatus(
-                  progress.current_week,
-                  progress.earned_points,
-                  progress.required_points,
-                  data.nudgeResponseScore
-                )
-
-                const weeklyRequirement = progress.required_points[currentWeek] || 0
-                const weeklyEarned = progress.earned_points[currentWeek] || 0
-                const progressPercent = weeklyRequirement
-                  ? Math.min(100, Math.round((weeklyEarned / weeklyRequirement) * 100))
-                  : data.progressPercent || 0
-
-                const riskStatus: PartnerRiskLevel | 'at_risk' =
-                  riskResult.status === 'at_risk'
-                    ? 'at_risk'
-                    : progressPercent >= 95
-                      ? 'engaged'
-                      : progressPercent >= 80
-                        ? 'watch'
-                        : progressPercent >= 60
-                          ? 'concern'
-                          : 'critical'
-
-                const riskReasons = [
-                  ...(data.riskReasons || []),
-                  ...(riskResult.reason ? [riskResult.reason] : []),
-                  data.nudgeResponseScore && data.nudgeResponseScore >= 0.7
-                    ? 'Responds well to nudges'
-                    : undefined,
-                ].filter(
-                  (reason): reason is string => typeof reason === 'string' && reason.length > 0
-                )
-
-                const displayName =
-                  data.name ||
-                  data.fullName ||
-                  data.full_name ||
-                  [data.firstName, data.lastName].filter(Boolean).join(' ').trim() ||
-                  'Unknown User'
-
-                hydratedUsers.push({
-                  id: docSnap.id,
-                  name: displayName,
-                  fullName: data.fullName || data.full_name || displayName,
-                  createdAt: normalizedCreatedAt || undefined,
-                  lastActiveAt:
-                    normalizeTimestamp(data.lastActiveAt || data.last_active_at) || undefined,
-                  programStartDate: normalizedProgramStart || undefined,
-                  email: data.email || '',
-                  companyCode,
-                  organizationId: rawOrganizationId
-                    ? rawOrganizationId.toLowerCase()
-                    : undefined,
-                  progressPercent,
-                  currentWeek,
-                  status:
-                    ((data.accountStatus || data.status) as PartnerUser['status']) || 'Active',
-                  lastActive: normalizedLastActive,
-                  riskStatus,
-                  weeklyEarned,
-                  weeklyRequired: weeklyRequirement,
-                  role: data.role,
-                  riskReasons,
-                  registrationDate: normalizedRegistrationDate || undefined,
-                  interventions: data.interventions || 0,
-                })
-              } catch (err) {
-                logger.error('[PartnerUsers] Failed to transform user record', {
-                  userId: docSnap.id,
-                  error: err,
-                })
-              }
-            })
-
-            // Final abort check before state update
-            if (
-              signal.aborted ||
-              !isMounted ||
-              currentSnapshotId !== processingRef.current.snapshotId
-            ) {
-              return
-            }
-
-            logger.debug('[PartnerUsers] Users loaded', { count: hydratedUsers.length })
-
-            setUsers(hydratedUsers)
-            setLoading(false)
-            setLastSuccessAt(new Date())
-          } catch (err) {
-            if (signal.aborted || !isMounted) return
-            logger.error('[PartnerUsers] Failed to process user snapshot', err)
-            retry.scheduleRetry(err, subscribe, setError, setLoading)
+          // Final abort check before state update
+          if (
+            signal.aborted ||
+            !isMounted ||
+            currentSnapshotId !== processingRef.current.snapshotId
+          ) {
+            return
           }
-        },
-        (err) => {
-          if (!isMounted) return
-          logger.error('Failed to load users for partner dashboard', err)
+
+          logger.debug('[PartnerUsers] Users loaded', { count: hydratedUsers.length })
+
+          setUsers(hydratedUsers)
+          setLoading(false)
+          setLastSuccessAt(new Date())
+        } catch (err) {
+          if (signal.aborted || !isMounted) return
+          logger.error('[PartnerUsers] Failed to process user snapshot', err)
           retry.scheduleRetry(err, subscribe, setError, setLoading)
         }
-      )
+      }
+
+      // Set up listeners for each query
+      queriesToExecute.forEach((q, queryIndex) => {
+        const unsub = onSnapshot(
+          q,
+          (snapshot) => {
+            if (!isMounted) return
+
+            // Update accumulated docs for this query's results
+            snapshot.docs.forEach((docSnap) => {
+              accumulatedDocsMap.set(docSnap.id, {
+                id: docSnap.id,
+                data: () => docSnap.data() as FirestorePartnerUser,
+              })
+            })
+
+            // Track if all initial snapshots have been received
+            if (!hasReceivedInitialData) {
+              pendingSnapshots--
+              if (pendingSnapshots <= 0) {
+                hasReceivedInitialData = true
+                void processAccumulatedDocs()
+              }
+            } else {
+              // After initial load, process on each update
+              void processAccumulatedDocs()
+            }
+          },
+          (err) => {
+            if (!isMounted) return
+            logger.error(`[PartnerUsers] Query ${queryIndex} failed`, err)
+            retry.scheduleRetry(err, subscribe, setError, setLoading)
+          }
+        )
+        unsubscribers.push(unsub)
+      })
+
+      // Store cleanup function
+      unsubscribe = () => {
+        unsubscribers.forEach((unsub) => unsub())
+      }
     }
 
     subscribe()

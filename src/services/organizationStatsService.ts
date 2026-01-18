@@ -30,8 +30,11 @@ type OrganizationStatsSnapshot = OrganizationStatistics & {
 const usersCollection = collection(db, 'users')
 const organizationsCollection = collection(db, ORG_COLLECTION)
 
-const COMPANY_CODE_FIELDS = ['companyCode', 'company_code', 'organization_code'] as const
-const COMPANY_ID_FIELDS = ['companyId', 'organizationId'] as const
+// Primary field for organization membership (per firestore-schema.md)
+const PRIMARY_COMPANY_CODE_FIELD = 'companyCode'
+// Legacy fields still checked for backwards compatibility
+const LEGACY_COMPANY_CODE_FIELDS = ['company_code', 'organization_code'] as const
+const LEGACY_COMPANY_ID_FIELDS = ['companyId', 'organizationId'] as const
 
 const statsCache = new Map<string, { value: OrganizationStatsSnapshot; expiresAt: number }>()
 
@@ -70,13 +73,6 @@ const parseTimestamp = (value?: unknown): Date | null => {
 
 const toIsoString = (value: Date | null): string | undefined => (value ? value.toISOString() : undefined)
 
-const normalizeCodes = (code?: string): string[] => {
-  if (!code) return []
-  const trimmed = code.trim()
-  if (!trimmed) return []
-  return Array.from(new Set([trimmed, trimmed.toUpperCase(), trimmed.toLowerCase()]))
-}
-
 const resolveOrganizationId = async (organizationCode?: string) => {
   if (!organizationCode) return null
   const trimmed = organizationCode.trim()
@@ -86,29 +82,67 @@ const resolveOrganizationId = async (organizationCode?: string) => {
   return snapshot.docs[0].id
 }
 
+/**
+ * OPTIMIZED: Fetch organization users with reduced query count.
+ *
+ * Previously this created up to 15 parallel queries (3 code variants × 3 fields + 3 id variants × 2 fields).
+ * Now it uses a two-phase approach:
+ * 1. Primary query on canonical 'companyCode' field (single query, lowercase normalized)
+ * 2. Fallback to legacy fields only if primary returns no results
+ *
+ * This reduces typical queries from 15 to 1-3.
+ */
 const fetchOrganizationUserDocs = async (organizationKey: OrganizationKey) => {
-  const codeCandidates = normalizeCodes(organizationKey.organizationCode)
-  const idCandidates = normalizeCodes(organizationKey.organizationId)
+  const normalizedCode = organizationKey.organizationCode?.trim().toLowerCase()
+  const normalizedId = organizationKey.organizationId?.trim().toLowerCase()
 
-  const queries = [
-    ...codeCandidates.flatMap((code) =>
-      COMPANY_CODE_FIELDS.map((field) => query(usersCollection, where(field, '==', code))),
-    ),
-    ...idCandidates.flatMap((id) =>
-      COMPANY_ID_FIELDS.map((field) => query(usersCollection, where(field, '==', id))),
-    ),
-  ]
+  if (!normalizedCode && !normalizedId) return []
 
-  if (!queries.length) return []
-
-  const snapshots = await Promise.all(queries.map((queryRef) => getDocs(queryRef)))
   const userMap = new Map<string, { data: () => unknown }>()
 
-  snapshots.forEach((snapshot) => {
-    snapshot.docs.forEach((docSnap) => {
+  // Phase 1: Query on primary canonical field (companyCode) with lowercase value
+  // This is the expected field per firestore-schema.md
+  if (normalizedCode) {
+    const primaryQuery = query(usersCollection, where(PRIMARY_COMPANY_CODE_FIELD, '==', normalizedCode))
+    const primarySnapshot = await getDocs(primaryQuery)
+
+    primarySnapshot.docs.forEach((docSnap) => {
       userMap.set(docSnap.id, docSnap)
     })
-  })
+
+    // If we found users with primary field, return early (most common case)
+    if (userMap.size > 0) {
+      return Array.from(userMap.values())
+    }
+  }
+
+  // Phase 2: Fallback to legacy fields if primary returned no results
+  // This handles data that hasn't been migrated yet
+  const legacyQueries: ReturnType<typeof query>[] = []
+
+  if (normalizedCode) {
+    // Try legacy code fields
+    LEGACY_COMPANY_CODE_FIELDS.forEach((field) => {
+      legacyQueries.push(query(usersCollection, where(field, '==', normalizedCode)))
+    })
+  }
+
+  if (normalizedId) {
+    // Try ID fields
+    LEGACY_COMPANY_ID_FIELDS.forEach((field) => {
+      legacyQueries.push(query(usersCollection, where(field, '==', normalizedId)))
+    })
+  }
+
+  if (legacyQueries.length > 0) {
+    const legacySnapshots = await Promise.all(legacyQueries.map((q) => getDocs(q)))
+
+    legacySnapshots.forEach((snapshot) => {
+      snapshot.docs.forEach((docSnap) => {
+        userMap.set(docSnap.id, docSnap)
+      })
+    })
+  }
 
   return Array.from(userMap.values())
 }
@@ -248,6 +282,15 @@ export const updateOrganizationStatisticsBatch = async (
   return results
 }
 
+/**
+ * OPTIMIZED: Listen to organization user changes with reduced listener count.
+ *
+ * Previously this created up to 15 listeners per organization.
+ * Now it uses a single listener on the canonical 'companyCode' field.
+ *
+ * Note: If data uses legacy fields exclusively, stats may not update in real-time
+ * until the data is migrated. However, manual refresh and batch updates still work.
+ */
 export const listenToOrganizationStatsUpdates = (
   organization: Pick<OrganizationRecord, 'id' | 'code'>,
   options?: { debounceMs?: number; onError?: (error: unknown) => void; cacheTtlMs?: number },
@@ -285,21 +328,34 @@ export const listenToOrganizationStatsUpdates = (
     }, debounceMs)
   }
 
-  const codeCandidates = normalizeCodes(organization.code)
-  const idCandidates = normalizeCodes(organization.id)
+  // OPTIMIZED: Single listener on canonical field instead of multiple listeners
+  const normalizedCode = organization.code?.trim().toLowerCase()
+  const subscriptions: (() => void)[] = []
 
-  const subscriptions = [
-    ...codeCandidates.flatMap((code) =>
-      COMPANY_CODE_FIELDS.map((field) =>
-        onSnapshot(query(usersCollection, where(field, '==', code)), handleSnapshot, options?.onError),
-      ),
-    ),
-    ...idCandidates.flatMap((id) =>
-      COMPANY_ID_FIELDS.map((field) =>
-        onSnapshot(query(usersCollection, where(field, '==', id)), handleSnapshot, options?.onError),
-      ),
-    ),
-  ]
+  if (normalizedCode) {
+    // Primary listener on canonical companyCode field
+    subscriptions.push(
+      onSnapshot(
+        query(usersCollection, where(PRIMARY_COMPANY_CODE_FIELD, '==', normalizedCode)),
+        handleSnapshot,
+        options?.onError
+      )
+    )
+  }
+
+  // Optionally add a single fallback listener for organizationId if code is not available
+  if (!normalizedCode && organization.id) {
+    const normalizedId = organization.id.trim().toLowerCase()
+    if (normalizedId) {
+      subscriptions.push(
+        onSnapshot(
+          query(usersCollection, where('organizationId', '==', normalizedId)),
+          handleSnapshot,
+          options?.onError
+        )
+      )
+    }
+  }
 
   return () => {
     if (timeoutId) {
