@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react'
 import { Outlet, useLocation, useNavigate } from 'react-router-dom'
+import { RouteTransition } from '@/components/RouteTransition'
 import {
   Box,
   Flex,
@@ -357,7 +358,9 @@ export const MainLayout: React.FC = () => {
           overflowY="auto"
           p={{ base: 4, md: 8 }}
         >
-          <Outlet />
+          <RouteTransition>
+            <Outlet />
+          </RouteTransition>
         </Box>
       </Flex>
 
