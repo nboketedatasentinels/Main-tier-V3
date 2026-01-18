@@ -496,7 +496,7 @@ export const UsersManagementTab = () => {
                             <Tooltip label="View and edit profile">
                               <Button
                                 as={RouterLink}
-                                to={`/admin/user/${user.id}`}
+                                to={`${window.location.pathname.startsWith('/partner') ? '/partner' : '/admin'}/user/${user.id}`}
                                 size="sm"
                                 variant="outline"
                                 colorScheme="purple"

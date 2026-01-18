@@ -6,6 +6,10 @@ export type NudgeTemplateCategory =
   | 'Critical Alert'
   | 'Encouragement'
   | 'Resource Sharing'
+  | 'Status Warning'
+  | 'Status Alert'
+  | 'Status Recovery'
+  | 'Status On Track'
 
 export type NudgeChannel = 'email' | 'in_app' | 'both'
 
@@ -65,16 +69,37 @@ export interface NudgePersonalizationTokens {
   organizationName: string
   daysInactive: number
   engagementScore: number
+  pointsGap?: number
+  weeklyTarget?: number
+  streakCount?: number
+  mentorName?: string
 }
 
 export interface NudgeAutomationRule {
   id: string
   label: string
-  trigger: 'days_inactive' | 'risk_level' | 'engagement_score'
+  trigger: 'days_inactive' | 'risk_level' | 'engagement_score' | 'status_change'
   threshold: number
   templateType: NudgeTemplateCategory
   frequencyLimitDays: number
   quietHours: { start: string; end: string }
   cooldownDays: number
   active: boolean
+}
+
+export interface StatusNudgeCooldown {
+  id: string
+  user_id: string
+  status_type: string
+  last_nudge_at: FirestoreTimestamp
+}
+
+export interface StatusTransitionLog {
+  id: string
+  user_id: string
+  previous_status: string
+  current_status: string
+  changed_at: FirestoreTimestamp
+  points_earned: number
+  window_target: number
 }

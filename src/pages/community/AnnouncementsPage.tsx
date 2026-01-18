@@ -299,7 +299,7 @@ const EventsTab: React.FC = () => {
   const { profile } = useAuth()
   const { events, loading: eventsLoading, error } = useEventsFeed()
   const isAdmin =
-    profile?.role === UserRole.SUPER_ADMIN || profile?.role === UserRole.AMBASSADOR || profile?.role === UserRole.COMPANY_ADMIN
+    profile?.role === UserRole.SUPER_ADMIN || profile?.role === UserRole.AMBASSADOR || profile?.role === UserRole.PARTNER
 
   const description = events.length
     ? 'All upcoming workshops, gatherings, learning sessions, and book club meetups now live on T4Leader. Head there to explore the full schedule and RSVP.'

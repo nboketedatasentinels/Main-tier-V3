@@ -2,6 +2,48 @@ import { Badge } from '@/types/badge';
 
 export const badges: Badge[] = [
   {
+    id: '4w-starter',
+    name: '4W Starter',
+    description: 'Congratulations on completing your 4-week starter journey! You have officially begun your leadership transformation.',
+    image: '/badges/4w-starter.png',
+    journeyType: '4W',
+  },
+  {
+    id: '6w-powerful',
+    name: '6W Powerful',
+    description: 'Outstanding achievement! You have completed the 6-week Powerful journey and demonstrated significant growth.',
+    image: '/badges/6w-powerful.png',
+    journeyType: '6W',
+  },
+  {
+    id: '3m-innovator',
+    name: '3M Innovator',
+    description: 'Masterfully done! Your 3-month journey as an Innovator has reached its peak, showing your creative leadership potential.',
+    image: '/badges/3m-innovator.png',
+    journeyType: '3M',
+  },
+  {
+    id: '6m-pioneer',
+    name: '6M Pioneer',
+    description: 'A true Pioneer! You have successfully navigated the 6-month journey, paving the way for future leadership excellence.',
+    image: '/badges/6m-pioneer.png',
+    journeyType: '6M',
+  },
+  {
+    id: '9m-conqueror',
+    name: '9M Conqueror',
+    description: 'Victory is yours! Completing the 9-month Conqueror journey proves your mastery over complex leadership challenges.',
+    image: '/badges/9m-conqueror.png',
+    journeyType: '9M',
+  },
+  {
+    id: '12m-ultimate',
+    name: '12M Ultimate',
+    description: 'The Ultimate Transformation! You have completed the full 12-month journey, achieving the highest level of leadership mastery.',
+    image: '/badges/12m-ultimate.png',
+    journeyType: '12M',
+  },
+  {
     id: 'journey-completion',
     name: 'Journey Completion',
     description: 'Awarded for completing your leadership journey.',

@@ -7,6 +7,7 @@ import {
   initializeFirestore,
 } from 'firebase/firestore'
 import { getStorage, FirebaseStorage } from 'firebase/storage'
+import { getFunctions, Functions } from 'firebase/functions'
 
 const requiredFirebaseEnvVars = [
   'VITE_FIREBASE_API_KEY',
@@ -90,3 +91,4 @@ export const db: Firestore = enableLongPolling
   ? initializeFirestore(app, firestoreSettings)
   : getFirestore(app)
 export const storage: FirebaseStorage = getStorage(app)
+export const functions: Functions = getFunctions(app)

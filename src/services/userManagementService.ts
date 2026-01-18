@@ -14,7 +14,7 @@ import {
 import { db } from './firebase'
 import { ORG_COLLECTION } from '@/constants/organizations'
 
-export type ManagedUserRole = 'user' | 'partner' | 'admin' | 'super_admin' | 'team_leader' | 'mentor' | 'ambassador'
+export type ManagedUserRole = 'user' | 'partner' | 'super_admin' | 'mentor' | 'ambassador'
 export type MembershipStatus = 'free' | 'paid' | 'inactive'
 
 export interface OrganizationOption {

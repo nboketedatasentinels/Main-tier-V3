@@ -29,36 +29,32 @@ import {
 } from '@chakra-ui/react'
 import { Bell, LogOut, Menu, RefreshCw, Sparkles } from 'lucide-react'
 import { useAuth } from '@/hooks/useAuth'
-import { type NavigationItem } from '@/utils/navigationItems'
+import { type NavigationSection, buildPartnerNavItems } from '@/utils/navigationItems'
 
-export type PartnerNavItem = Omit<NavigationItem, 'key'> & {
-  key?: string
-}
-
-interface PartnerDashboardLayoutProps {
+interface PartnerLayoutProps {
   children: React.ReactNode
   organizations: { code: string; name: string }[]
   selectedOrg: string
   onSelectOrg: (org: string) => void
   notificationCount?: number
-  navItems?: PartnerNavItem[]
+  navSections?: NavigationSection[]
   activeItem?: string
   onNavigate?: (key: string) => void
 }
 
-export const PartnerDashboardLayout: React.FC<PartnerDashboardLayoutProps> = ({
+export const PartnerLayout: React.FC<PartnerLayoutProps> = ({
   children,
   organizations,
   selectedOrg,
   onSelectOrg,
   notificationCount = 0,
-  navItems = [],
+  navSections,
   activeItem,
   onNavigate,
 }) => {
   const sidebarWidth = '280px'
   const disclosure = useDisclosure()
-  const { profile, signOut, refreshProfile, profileLoading, lastProfileLoadAt, isAdmin, profileStatus } = useAuth()
+  const { profile, signOut, signingOut, refreshProfile, profileLoading, lastProfileLoadAt, isAdmin, profileStatus } = useAuth()
   const enableProfileRealtime = import.meta.env.VITE_ENABLE_PROFILE_REALTIME === 'true'
   const toast = useToast()
   const [showRefreshHint, setShowRefreshHint] = React.useState(false)
@@ -66,14 +62,7 @@ export const PartnerDashboardLayout: React.FC<PartnerDashboardLayoutProps> = ({
   const [profileSyncWarning, setProfileSyncWarning] = React.useState(false)
   const profileLoadingSinceRef = React.useRef<number | null>(null)
   const assignedCount = organizations.length || profile?.assignedOrganizations?.length || 0
-  const menuItems = navItems.length
-    ? navItems
-    : [
-        { key: 'overview', label: 'Overview', icon: Sparkles },
-        { key: 'users', label: 'Users', icon: Sparkles },
-        { key: 'job-board', label: 'Job Board', icon: Sparkles },
-        { key: 'grants', label: 'Grants & Funding', icon: Sparkles },
-      ]
+  const sections = navSections?.length ? navSections : buildPartnerNavItems()
 
   const orgOptions = organizations.length ? organizations : []
 
@@ -123,6 +112,48 @@ export const PartnerDashboardLayout: React.FC<PartnerDashboardLayoutProps> = ({
     return () => window.clearInterval(interval)
   }, [profileStatus])
 
+  const [localSigningOut, setLocalSigningOut] = React.useState(false)
+
+  const handleLogout = React.useCallback(async () => {
+    const timestamp = new Date().toISOString()
+    console.log(`[${timestamp}] 🖱️ [PartnerLayout] Logout button clicked`)
+
+    if (localSigningOut || signingOut) {
+      console.warn(`[${new Date().toISOString()}] ⚠️ [PartnerLayout] Logout already in progress, ignoring click`)
+      return
+    }
+
+    setLocalSigningOut(true)
+
+    try {
+      console.log(`[${new Date().toISOString()}] 🔄 [PartnerLayout] Calling AuthContext.signOut()`)
+      const result = await signOut()
+
+      if (result.error) {
+        // Only show toast if it's NOT the "already in progress" error
+        if (result.error.message !== 'Sign out already in progress') {
+          console.error(`[${new Date().toISOString()}] 🔴 [PartnerLayout] Logout failed`, result.error)
+          toast({
+            title: 'Logout failed',
+            description: result.error.message,
+            status: 'error',
+            duration: 5000,
+            isClosable: true,
+          })
+          // Reset local state so they can try again if it actually failed
+          setLocalSigningOut(false)
+        } else {
+          console.warn(`[${new Date().toISOString()}] 🟡 [PartnerLayout] Sign out already in progress (caught error)`)
+        }
+      } else {
+        console.log(`[${new Date().toISOString()}] ✅ [PartnerLayout] AuthContext.signOut() returned success`)
+      }
+    } catch (err) {
+      console.error(`[${new Date().toISOString()}] 🔴 [PartnerLayout] Unexpected error during logout`, err)
+      setLocalSigningOut(false)
+    }
+  }, [signOut, toast, localSigningOut, signingOut])
+
   const handleManualRefresh = React.useCallback(async () => {
     const result = await refreshProfile({ reason: 'partner-dashboard-manual' })
     if (result.error) {
@@ -158,58 +189,65 @@ export const PartnerDashboardLayout: React.FC<PartnerDashboardLayoutProps> = ({
   }, [handleManualRefresh])
 
   const renderNav = () => (
-    <VStack align="stretch" spacing={2} py={4} px={2}>
-      {menuItems.map(item => (
-        <HStack
-          key={item.key || item.label}
-          spacing={3}
-          px={3}
-          py={2}
-          borderRadius="md"
-          cursor="pointer"
-          _hover={{ bg: 'brand.accent' }}
-          bg={(item.key || item.label.toLowerCase()) === activeItem ? 'brand.accent' : undefined}
-          border="1px solid"
-          borderColor={(item.key || item.label.toLowerCase()) === activeItem ? 'brand.border' : 'transparent'}
-          transition="all 0.2s"
-          onClick={() => onNavigate?.(item.key || item.label.toLowerCase())}
-          aria-current={(item.key || item.label.toLowerCase()) === activeItem ? 'page' : undefined}
-        >
-          {item.icon && (
-            <Box
-              p={1.5}
-              borderRadius="lg"
-              bg="brand.accent"
-              border="1px solid"
-              borderColor="brand.border"
-            >
-              <Icon as={item.icon} color="brand.text" />
-            </Box>
-          )}
-          <VStack align="flex-start" spacing={0} flex={1}>
-            <Text fontSize="xs" fontWeight="semibold" color="brand.text">
-              {item.label}
+    <Stack spacing={4} py={4} px={2}>
+      {sections.map(section => (
+        <Stack key={section.title ?? 'navigation'} spacing={2}>
+          {section.title && (
+            <Text fontSize="xs" color="brand.subtleText" px={2} textTransform="uppercase" letterSpacing="wide">
+              {section.title}
             </Text>
-            {'description' in item && item.description && (
-              <Text fontSize="2xs" color="brand.subtleText">
-                {item.description}
-              </Text>
-            )}
+          )}
+          <VStack align="stretch" spacing={2}>
+            {section.items.map(item => (
+              <HStack
+                key={item.key}
+                spacing={3}
+                px={3}
+                py={2}
+                borderRadius="md"
+                cursor="pointer"
+                _hover={{ bg: 'brand.accent' }}
+                bg={activeItem === item.key ? 'brand.accent' : undefined}
+                border="1px solid"
+                borderColor={activeItem === item.key ? 'brand.border' : 'transparent'}
+                transition="all 0.2s"
+                onClick={() => onNavigate?.(item.key)}
+                aria-current={activeItem === item.key ? 'page' : undefined}
+              >
+                {item.icon && (
+                  <Box p={2} borderRadius="lg" bg="white" border="1px solid" borderColor="brand.border">
+                    <Icon as={item.icon} color="brand.text" />
+                  </Box>
+                )}
+                <VStack align="flex-start" spacing={0} flex={1}>
+                  <Text fontSize="sm" fontWeight="semibold" color="brand.text">
+                    {item.label}
+                  </Text>
+                  {item.description && (
+                    <Text fontSize="xs" color="brand.subtleText">
+                      {item.description}
+                    </Text>
+                  )}
+                </VStack>
+                {item.key !== 'support' && (
+                  <Badge colorScheme="purple" variant="subtle">
+                    Scoped
+                  </Badge>
+                )}
+              </HStack>
+            ))}
           </VStack>
-          <Badge colorScheme="purple" variant="subtle" fontSize="xs">
-            Scoped
-          </Badge>
-        </HStack>
+        </Stack>
       ))}
-    </VStack>
+    </Stack>
   )
 
   const ProfileSection = () => (
     <HStack spacing={3} p={3} borderRadius="lg" bg="brand.accent" align="flex-start">
-      <Avatar name={profile?.fullName || 'Partner Admin'} size="sm" />
+      <Avatar name={profile?.fullName || 'Partner'} size="sm" />
       <VStack align="flex-start" spacing={0} flex={1}>
         <Text fontWeight="bold" color="brand.text" fontSize="sm">
-          {profile?.fullName || 'Partner Admin'}
+          {profile?.fullName || 'Partner'}
         </Text>
         <HStack spacing={2} align="center">
           <Text fontSize="xs" color="brand.subtleText">
@@ -234,9 +272,11 @@ export const PartnerDashboardLayout: React.FC<PartnerDashboardLayoutProps> = ({
           leftIcon={<LogOut size={14} />}
           variant="outline"
           colorScheme="gray"
-          onClick={() => signOut()}
+          onClick={handleLogout}
+          isLoading={localSigningOut || signingOut}
+          isDisabled={localSigningOut || signingOut}
         >
-          Sign out
+          {localSigningOut ? 'Signing out...' : 'Sign out'}
         </Button>
       </VStack>
     </HStack>
@@ -293,9 +333,11 @@ export const PartnerDashboardLayout: React.FC<PartnerDashboardLayoutProps> = ({
         display={{ base: 'inline-flex', md: 'inline-flex' }}
         leftIcon={<LogOut size={16} />}
         variant="outline"
-        onClick={() => signOut()}
+        onClick={handleLogout}
+        isLoading={localSigningOut || signingOut}
+        isDisabled={localSigningOut || signingOut}
       >
-        Logout
+        {localSigningOut ? 'Signing out...' : 'Logout'}
       </Button>
     </HStack>
   )
@@ -319,10 +361,10 @@ export const PartnerDashboardLayout: React.FC<PartnerDashboardLayoutProps> = ({
             </Box>
             <VStack align="flex-start" spacing={0}>
               <Text fontWeight="bold" color="brand.text" fontSize="sm">
-                Transformation Partner
+                Partner
               </Text>
               <Text fontSize="2xs" color="brand.subtleText">
-                Scoped access dashboard
+                Organization oversight
               </Text>
             </VStack>
           </HStack>
@@ -346,8 +388,14 @@ export const PartnerDashboardLayout: React.FC<PartnerDashboardLayoutProps> = ({
             <Stack spacing={6}>
               <ProfileSection />
               {renderNav()}
-              <Button leftIcon={<LogOut size={16} />} variant="outline" onClick={() => signOut()}>
-                Logout
+              <Button
+                leftIcon={<LogOut size={16} />}
+                variant="outline"
+                onClick={handleLogout}
+                isLoading={localSigningOut || signingOut}
+                isDisabled={localSigningOut || signingOut}
+              >
+                {localSigningOut ? 'Signing out...' : 'Logout'}
               </Button>
             </Stack>
           </DrawerBody>
@@ -362,7 +410,7 @@ export const PartnerDashboardLayout: React.FC<PartnerDashboardLayoutProps> = ({
                 Partner Dashboard
               </Text>
               <Text fontSize="3xl" fontWeight="bold" color="brand.text">
-                {profile?.fullName || 'Partner Admin'}
+                {profile?.fullName || 'Partner'}
               </Text>
               <Text color="brand.subtleText" maxW="760px">
                 Real-time oversight for assigned organizations with scoped interventions, approvals, and mentor engagement tools.
@@ -428,4 +476,4 @@ export const PartnerDashboardLayout: React.FC<PartnerDashboardLayoutProps> = ({
   )
 }
 
-export default PartnerDashboardLayout
+export default PartnerLayout

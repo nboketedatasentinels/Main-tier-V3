@@ -61,6 +61,7 @@ import {
 import { getWindowNumber, getWindowRange, getWindowWeekNumber } from '@/utils/windowCalculations'
 import {
   calculateActivityAvailability,
+  getVisibleActivities,
   type ActivityAvailabilityReason,
   type ActivityAvailabilityResult,
 } from '@/utils/activityStateManager'
@@ -100,6 +101,12 @@ interface MonthMilestone {
 interface WeekMilestone {
   week: number;
   status: 'completed' | 'current' | 'locked' | 'incomplete';
+}
+
+interface WindowProgressData {
+  pointsEarned: number;
+  windowTarget: number;
+  status: 'on_track' | 'warning' | 'alert';
 }
 
 const rhythmItems = [
@@ -179,6 +186,8 @@ const availabilityReasonLabels: Record<ActivityAvailabilityReason, string> = {
   max_per_window: 'Window limit reached',
   missing_mentor: 'Mentor required',
   missing_ambassador: 'Ambassador required',
+  one_time_used: 'Activity already completed',
+  window_cap_reached: 'Window limit reached',
 }
 
 const WeeklyChecklistPage: React.FC = () => {
@@ -200,6 +209,7 @@ const WeeklyChecklistPage: React.FC = () => {
   const toast = useToast()
   const activityRefs = useRef<Record<string, HTMLDivElement | null>>({})
   const [weeklyProgress, setWeeklyProgress] = useState<WeeklyProgress | null>(null)
+  const [windowProgressData, setWindowProgressData] = useState<WindowProgressData | null>(null);
   const [allWeeksProgress, setAllWeeksProgress] = useState<WeeklyProgress[]>([])
   const {
     completed: rhythmCompleted,
@@ -424,7 +434,23 @@ const WeeklyChecklistPage: React.FC = () => {
         where('weekNumber', '==', selectedWeek)
       );
 
-      const ledgerSnapshot = await getDocs(ledgerQuery);
+      const windowLedgerQuery = query(
+        collection(db, 'pointsLedger'),
+        where('uid', '==', user.uid),
+        where('monthNumber', '==', windowNumber),
+      );
+
+      const globalLedgerQuery = query(
+        collection(db, 'pointsLedger'),
+        where('uid', '==', user.uid)
+      );
+
+      const [ledgerSnapshot, windowLedgerSnapshot, globalLedgerSnapshot] = await Promise.all([
+        getDocs(ledgerQuery),
+        getDocs(windowLedgerQuery),
+        getDocs(globalLedgerQuery)
+      ]);
+
       const completedActivities = new Set(ledgerSnapshot.docs.map(d => d.data().activityId));
       const weekActivityCounts = ledgerSnapshot.docs.reduce<Record<string, number>>((acc, docItem) => {
         const activityId = docItem.data().activityId as string | undefined;
@@ -433,18 +459,20 @@ const WeeklyChecklistPage: React.FC = () => {
         return acc;
       }, {});
 
-      const windowLedgerQuery = query(
-        collection(db, 'pointsLedger'),
-        where('uid', '==', user.uid),
-        where('monthNumber', '==', windowNumber),
-      );
-      const windowLedgerSnapshot = await getDocs(windowLedgerQuery);
       const windowActivityCounts = windowLedgerSnapshot.docs.reduce<Record<string, number>>((acc, docItem) => {
         const activityId = docItem.data().activityId as string | undefined;
         if (!activityId) return acc;
         acc[activityId] = (acc[activityId] ?? 0) + 1;
         return acc;
       }, {});
+
+      const totalCompletedAllTime = globalLedgerSnapshot.docs.reduce<Record<string, number>>((acc, docItem) => {
+        const activityId = docItem.data().activityId as string | undefined;
+        if (!activityId) return acc;
+        acc[activityId] = (acc[activityId] ?? 0) + 1;
+        return acc;
+      }, {});
+
       const lastCompletionWeekByActivity = windowLedgerSnapshot.docs.reduce<Record<string, number>>((acc, docItem) => {
         const activityId = docItem.data().activityId as string | undefined;
         const weekNumber = docItem.data().weekNumber as number | undefined;
@@ -462,6 +490,7 @@ const WeeklyChecklistPage: React.FC = () => {
             windowWeek,
             weekCount: weekActivityCounts[def.id] ?? 0,
             windowCount: windowActivityCounts[def.id] ?? 0,
+            totalCompletedAllTime: totalCompletedAllTime[def.id] ?? 0,
             lastCompletedWeek: lastCompletionWeekByActivity[def.id],
             hasMentor,
             hasAmbassador,
@@ -494,15 +523,31 @@ const WeeklyChecklistPage: React.FC = () => {
 
   useEffect(() => {
     if (!user) return;
-    const progressRef = doc(db, "weeklyProgress", `${user.uid}__${selectedWeek}`);
-    const unsubscribe = onSnapshot(progressRef, (doc) => {
-      if (doc.exists()) {
-        setWeeklyProgress(normalizeWeeklyProgress(doc.data() as WeeklyProgress & { points_earned?: number; weekly_target?: number }));
-      } else {
-        setWeeklyProgress(null);
-      }
-    });
-    return () => unsubscribe();
+
+    const useWindowProgress = import.meta.env.VITE_FEATURE_FLAG_PARALLEL_WINDOW_TRACKING === 'true';
+
+    if (useWindowProgress) {
+      const windowNumber = getWindowNumber(selectedWeek);
+      const progressRef = doc(db, "windowProgress", `${user.uid}__${windowNumber}`);
+      const unsubscribe = onSnapshot(progressRef, (doc) => {
+        if (doc.exists()) {
+          setWindowProgressData(doc.data() as WindowProgressData);
+        } else {
+          setWindowProgressData(null);
+        }
+      });
+      return () => unsubscribe();
+    } else {
+      const progressRef = doc(db, "weeklyProgress", `${user.uid}__${selectedWeek}`);
+      const unsubscribe = onSnapshot(progressRef, (doc) => {
+        if (doc.exists()) {
+          setWeeklyProgress(normalizeWeeklyProgress(doc.data() as WeeklyProgress & { points_earned?: number; weekly_target?: number }));
+        } else {
+          setWeeklyProgress(null);
+        }
+      });
+      return () => unsubscribe();
+    }
   }, [normalizeWeeklyProgress, selectedWeek, user]);
 
   useEffect(() => {
@@ -769,19 +814,33 @@ const WeeklyChecklistPage: React.FC = () => {
   }, [journey, selectedWeek]);
 
   const progressStatus = useMemo(() => {
-    if (!weeklyProgress) return { color: 'gray', label: 'Loading...', pct: 0 };
-    const { pointsEarned, weeklyTarget } = weeklyProgress;
-    const pct = weeklyTarget > 0 ? Math.min(100, Math.round((pointsEarned / weeklyTarget) * 100)) : 0;
+    const useWindowProgress = import.meta.env.VITE_FEATURE_FLAG_PARALLEL_WINDOW_TRACKING === 'true';
 
-    if (pct >= 100) return { color: 'green', label: 'On Track', pct };
-    if (pct >= 75) return { color: 'yellow', label: 'Warning', pct };
-    return { color: 'red', label: 'Alert', pct };
-  }, [weeklyProgress]);
+    if (useWindowProgress) {
+      if (!windowProgressData) return { color: 'gray', label: 'Loading...', pct: 0 };
+      const { pointsEarned, windowTarget } = windowProgressData;
+      const pct = windowTarget > 0 ? Math.min(100, Math.round((pointsEarned / windowTarget) * 100)) : 0;
+      if (pct >= 100) return { color: 'green', label: 'On Track', pct };
+      if (pct >= 75) return { color: 'yellow', label: 'Warning', pct };
+      return { color: 'red', label: 'Alert', pct };
+    } else {
+      if (!weeklyProgress) return { color: 'gray', label: 'Loading...', pct: 0 };
+      const { pointsEarned, weeklyTarget } = weeklyProgress;
+      const pct = weeklyTarget > 0 ? Math.min(100, Math.round((pointsEarned / weeklyTarget) * 100)) : 0;
+      if (pct >= 100) return { color: 'green', label: 'On Track', pct };
+      if (pct >= 75) return { color: 'yellow', label: 'Warning', pct };
+      return { color: 'red', label: 'Alert', pct };
+    }
+  }, [weeklyProgress, windowProgressData]);
 
   const weeklyPointsEarned = useMemo(() => {
+    const useWindowProgress = import.meta.env.VITE_FEATURE_FLAG_PARALLEL_WINDOW_TRACKING === 'true';
+    if (useWindowProgress) {
+        return windowProgressData?.pointsEarned ?? pendingCounts.points;
+    }
     if (weeklyProgress) return weeklyProgress.pointsEarned;
     return pendingCounts.points;
-  }, [pendingCounts.points, weeklyProgress]);
+  }, [pendingCounts.points, weeklyProgress, windowProgressData]);
 
   const journeyProgress = useMemo(() => {
     if (!journey) {
@@ -1334,7 +1393,7 @@ const WeeklyChecklistPage: React.FC = () => {
                 </Stack>
               ) : (
                 <Stack spacing={3}>
-                  {activities.length ? activities.map(renderActivityCard) : (
+                  {activities.length ? getVisibleActivities(activities).map(renderActivityCard) : (
                     <Center py={8}>
                       <Stack spacing={2} align="center">
                         <Text color="text.secondary">No activities found for this week.</Text>

@@ -17,8 +17,10 @@ import {
   VStack,
   useBreakpointValue,
   useDisclosure,
+  useToast,
 } from '@chakra-ui/react'
 import { LogOut, Menu } from 'lucide-react'
+import { useAuth } from '@/hooks/useAuth'
 import { NotificationDropdown } from '@/components/notifications/NotificationDropdown'
 import { buildMentorNavItems, NavigationSection } from '@/utils/navigationItems'
 
@@ -83,7 +85,22 @@ export const MentorDashboardLayout: React.FC<MentorDashboardLayoutProps> = ({
   avatarUrl,
   navSections,
 }) => {
+  const { signOut, signingOut } = useAuth()
+  const toast = useToast()
   const sections = useMemo(() => navSections || buildMentorNavItems(), [navSections])
+  const handleLogout = async () => {
+    const result = await signOut()
+    if (result.error) {
+      toast({
+        title: 'Logout failed',
+        description: result.error.message,
+        status: 'error',
+        duration: 5000,
+        isClosable: true,
+      })
+    }
+  }
+
   const sidebarWidth = useBreakpointValue({ base: '64px', lg: '256px' })
   const isMobile = useBreakpointValue({ base: true, lg: false })
   const drawer = useDisclosure()
@@ -125,6 +142,10 @@ export const MentorDashboardLayout: React.FC<MentorDashboardLayoutProps> = ({
               leftIcon={<Icon as={LogOut} />}
               justifyContent="flex-start"
               color="brand.text"
+              onClick={handleLogout}
+              isLoading={signingOut}
+              isDisabled={signingOut}
+              w="full"
             >
               Logout
             </Button>
@@ -159,6 +180,10 @@ export const MentorDashboardLayout: React.FC<MentorDashboardLayoutProps> = ({
                 leftIcon={<Icon as={LogOut} />}
                 justifyContent="flex-start"
                 color="brand.text"
+                onClick={handleLogout}
+                isLoading={signingOut}
+                isDisabled={signingOut}
+                w="full"
               >
                 Logout
               </Button>
