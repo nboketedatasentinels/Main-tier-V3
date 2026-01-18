@@ -51,7 +51,7 @@ export const fetchOrgMembers = async (
     .filter((docSnap) => !(excludeId && docSnap.id === excludeId))
     .map((docSnap) => ({ id: docSnap.id, ...docSnap.data() }))
     .sort((a, b) =>
-      String(a.fullName || '').localeCompare(String(b.fullName || '')),
+      String((a as any).fullName || '').localeCompare(String((b as any).fullName || '')),
     )
 
   console.log('[OrgMembers] Fetched profiles', members)

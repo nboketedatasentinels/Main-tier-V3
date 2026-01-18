@@ -651,6 +651,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     extractCustomClaims,
     recordProfileLoad,
     updateProfileState,
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    // Note: `auth` is intentionally excluded - it's a stable Firebase instance
   ])
 
   /* ------------------------------------------------------------------ */

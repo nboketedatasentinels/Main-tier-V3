@@ -1,4 +1,4 @@
-import { collection, addDoc, serverTimestamp, doc, updateDoc, writeBatch, getDoc } from 'firebase/firestore';
+import { collection, addDoc, serverTimestamp, doc, updateDoc, getDoc } from 'firebase/firestore';
 import { db } from '@/services/firebase';
 import { ApprovalRecord, ApprovalSource, ApprovalWorkflowType } from '@/types/approvals';
 import { ApprovalType } from '@/config/pointsConfig';

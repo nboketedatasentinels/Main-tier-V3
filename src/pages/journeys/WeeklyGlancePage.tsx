@@ -210,9 +210,8 @@ function useWeeklyGlanceViewModel() {
       daysRemaining,
       completedHabits,
       weeklyHabits.length,
-      mentorProfile?.firstName,
-      peerMatches.length,
       mentorProfile,
+      peerMatches.length,
     ]
   )
 

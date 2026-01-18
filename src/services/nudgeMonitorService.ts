@@ -60,7 +60,6 @@ async function logStatusTransition(params: {
 
 export async function checkNudgeCooldown(uid: string, statusType: string, cooldownHours: number): Promise<boolean> {
   try {
-    const cooldownId = `${uid}__${statusType}`
     const cooldownDoc = await getDocs(query(
       collection(db, 'nudge_cooldowns'),
       where('user_id', '==', uid),

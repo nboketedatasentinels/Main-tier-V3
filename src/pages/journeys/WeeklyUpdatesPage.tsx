@@ -36,7 +36,7 @@ import {
   useToast,
 } from '@chakra-ui/react'
 import { AlertTriangle, CalendarRange, CheckCircle, Lock, Plus, ShieldCheck } from 'lucide-react'
-import { addDoc, collection, doc, getDoc, getDocs, onSnapshot, query, serverTimestamp, setDoc, where } from 'firebase/firestore'
+import { collection, doc, getDoc, getDocs, onSnapshot, query, serverTimestamp, setDoc, where } from 'firebase/firestore'
 import { addDays, format } from 'date-fns'
 import { removeUndefinedFields } from '@/utils/firestore'
 import { getIsoWeekNumber } from '@/utils/date'

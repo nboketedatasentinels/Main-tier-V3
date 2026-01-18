@@ -28,6 +28,8 @@ export type NotificationType =
   | 'system_event'
   | 'progress_report'
   | 'mentee_checkin'
+  | 'approval'
+  | 'badge_awarded'
   | 'unknown'
 
 export interface NotificationRecord {

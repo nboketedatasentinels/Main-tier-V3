@@ -90,7 +90,7 @@ export const MainLayout: React.FC = () => {
         setShowWelcomeModal(true)
       }
     }
-  }, [buildVillageKey, location.pathname, profile, welcomeKey])
+  }, [buildVillageKey, isFreeUser, location.pathname, profile, welcomeKey])
 
   useEffect(() => {
     if (!welcomeKey) return

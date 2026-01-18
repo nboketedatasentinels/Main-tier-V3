@@ -36,8 +36,9 @@ import {
   EngagementTotals,
   EngagementTrendPoint,
   RiskLevel,
+  ManagedUserRecord,
+  OrganizationOption,
 } from '@/services/userManagementService'
-import { fetchAdminOrganizationsList, listenToAdminUsers } from '@/services/admin/adminUsersService'
 import {
   EngagementAvailability,
   fetchAdminEngagementHistory,
@@ -79,14 +80,18 @@ const trendIcon = (trend: 'up' | 'down' | 'flat') => {
 
 const riskLabel = (level: RiskLevel) => level.charAt(0).toUpperCase() + level.slice(1)
 
-export const UserEngagementMonitoringTab = () => {
+interface UserEngagementMonitoringTabProps {
+  users: ManagedUserRecord[]
+  organizations: OrganizationOption[]
+}
+
+export const UserEngagementMonitoringTab = ({ users: propUsers, organizations: propOrganizations }: UserEngagementMonitoringTabProps) => {
   const toast = useToast()
   const { isOpen, onOpen, onClose } = useDisclosure()
   const { isAdmin } = useAuth()
 
   const [roster, setRoster] = useState<EngagementRosterEntry[]>([])
   const [trendData, setTrendData] = useState<EngagementTrendPoint[]>([])
-  const [organizations, setOrganizations] = useState<Array<{ id: string; name: string; code?: string }>>([])
   const [mentors, setMentors] = useState<Array<{ id: string; name: string }>>([])
   const [selectedEntry, setSelectedEntry] = useState<EngagementRosterEntry | null>(null)
   const [history, setHistory] = useState<Array<{ label: string; engagementScore: number; impactPoints?: number }>>([])
@@ -117,15 +122,11 @@ export const UserEngagementMonitoringTab = () => {
     try {
       setLoading(true)
       setLoadError(null)
-      const [{ roster: rosterData, trends, availability: engagementState }, orgs] = await Promise.all([
-        fetchAdminEngagementSnapshot(isAdmin),
-        fetchAdminOrganizationsList(isAdmin),
-      ])
+      const { roster: rosterData, trends, availability: engagementState } = await fetchAdminEngagementSnapshot(isAdmin)
 
       setRoster(rosterData)
       setTrendData(trends)
       setAvailability(engagementState)
-      setOrganizations(orgs)
     } catch (err) {
       console.error(err)
       const message = resolveLoadError(err)
@@ -138,20 +139,11 @@ export const UserEngagementMonitoringTab = () => {
 
   useEffect(() => {
     loadEngagementData()
-  }, [])
+  }, [isAdmin, toast])
 
   useEffect(() => {
-    const unsub = listenToAdminUsers({
-      isAdmin,
-      onData: (records) => {
-        setMentors(records.filter((u) => u.role === 'mentor').map((u) => ({ id: u.id, name: u.name })))
-      },
-      onError: (err) => {
-        console.error(err)
-      },
-    })
-    return () => unsub()
-  }, [])
+    setMentors(propUsers.filter((u) => u.role === 'mentor').map((u) => ({ id: u.id, name: u.name })))
+  }, [propUsers])
 
   const filteredRoster = useMemo(() => {
     const now = new Date()
@@ -395,7 +387,7 @@ export const UserEngagementMonitoringTab = () => {
             <SimpleGrid columns={{ base: 1, md: 2, lg: 3 }} spacing={3}>
               <Select value={filters.organization} onChange={(e) => setFilters((prev) => ({ ...prev, organization: e.target.value }))}>
                 <option value="all">All organizations</option>
-                {organizations.map((org) => (
+                {propOrganizations.map((org) => (
                   <option key={org.id} value={org.code || org.id}>
                     {org.name}
                   </option>

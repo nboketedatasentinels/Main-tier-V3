@@ -87,7 +87,7 @@ const getActiveLicenseUsage = async (organizationId: string, roleWeights: Record
   return { total, licenseAllocationByRole }
 }
 
-const resolveAlertTargetRoles = (organization: OrganizationRecord) => {
+const resolveAlertTargetRoles = () => {
   const targets: string[] = ['super_admin', 'partner']
   return targets
 }
@@ -218,7 +218,7 @@ export const checkCapacityThresholds = async (organizationId: string) => {
 
   await recordAdminActivity(triggeredAlert, organization.code)
 
-  const targetRoles = resolveAlertTargetRoles(organization)
+  const targetRoles = resolveAlertTargetRoles()
   await sendCapacityAlert({
     organizationId,
     organizationName: organization.name || 'Unknown organization',
