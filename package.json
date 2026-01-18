@@ -12,7 +12,10 @@
     "format": "prettier --write \"src/**/*.{ts,tsx,js,jsx,json,css,md}\"",
     "typecheck": "tsc --noEmit",
     "qa": "npm run lint && npm run typecheck && npm run build",
-    "test": "npm run qa"
+    "test": "npm run qa",
+    "diagnose:partner-orgs": "node scripts/diagnose-partner-org-mismatch.mjs",
+    "fix:partner-orgs": "node scripts/fix-user-organization-assignments.mjs",
+    "fix:partner-orgs:dry-run": "node scripts/fix-user-organization-assignments.mjs --dry-run"
   },
   "dependencies": {
     "@chakra-ui/icons": "^2.2.4",

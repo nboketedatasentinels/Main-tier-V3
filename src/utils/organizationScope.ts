@@ -39,7 +39,7 @@ export const fetchOrgMembers = async (
   excludeId?: string,
 ): Promise<Record<string, unknown>[]> => {
   if (!orgScope.isValid) return []
-  const peersRef = collection(db, 'profiles')
+  const peersRef = collection(db, 'users')
   const peerQuery =
     orgScope.type === 'company'
       ? query(peersRef, where('companyId', '==', orgScope.companyId))

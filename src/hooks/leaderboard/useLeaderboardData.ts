@@ -196,7 +196,7 @@ export const useLeaderboardData = ({
 
     setProfilesLoaded(false)
     console.log('[Leaderboard] Profiles query constraints', { contextType: context?.type, constraints })
-    const profilesQuery = query(collection(db, 'profiles'), ...constraints)
+    const profilesQuery = query(collection(db, 'users'), ...constraints)
     const unsubscribe = onSnapshot(
       profilesQuery,
       (snapshot) => {
