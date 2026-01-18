@@ -8,7 +8,7 @@ import { usePartnerInterventions } from '@/hooks/partner/usePartnerInterventions
 import { usePartnerMetrics } from '@/hooks/partner/usePartnerMetrics'
 import { logOrganizationAccessAttempt } from '@/services/organizationService'
 import { recordEngagementAction } from '@/services/engagementService'
-import { logger, normalizeOrgKey, createOrgKeySet } from '@/utils/partnerDashboardUtils'
+import { logger, normalizeOrgKey } from '@/utils/partnerDashboardUtils'
 import type { DataWarning } from '@/components/admin/RiskAnalysisCard'
 
 // Re-export types for backward compatibility
