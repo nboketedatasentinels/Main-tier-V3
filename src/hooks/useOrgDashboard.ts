@@ -4,23 +4,22 @@
  */
 
 import { useEffect, useState, useCallback } from 'react'
+import { Timestamp } from 'firebase/firestore'
 import { useAuth } from './useAuth'
 import { normalizeRole } from '@/utils/role'
 import {
   getOrgConfiguration,
-  getPassMarkAdjustments,
-  updateOrgLeadership,
   updateOrgFeatures,
   updateOrgPassMarkConfig,
   addOrgRule,
   updateOrgRule,
   deleteOrgRule,
+  assignLeadershipToOrg,
+  removeLeadershipFromOrg,
 } from '../services/orgConfigurationService'
 import {
   getLeadershipRoster,
   getLeadershipStats,
-  assignLeadershipToOrg,
-  removeLeadershipFromOrg,
 } from '../services/leadershipService'
 import {
   getHiddenActivitiesForOrg,
@@ -53,8 +52,9 @@ interface UseOrgDashboardReturn {
   // Leadership
   leadership: LeadershipAssignment[]
   leadershipStats: {
-    mentorUtilization?: number
-    ambassadorUtilization?: number
+    mentorUtilization: number | null
+    ambassadorUtilization: number | null
+    partnerUtilization: number | null
     capacityRemaining: {
       mentor: number | null
       ambassador: number | null
@@ -117,7 +117,7 @@ interface UseOrgDashboardReturn {
  * Hook for organization dashboard
  */
 export function useOrgDashboard(orgId?: string): UseOrgDashboardReturn {
-  const { user } = useAuth()
+  const { user, profile } = useAuth()
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
@@ -141,8 +141,8 @@ export function useOrgDashboard(orgId?: string): UseOrgDashboardReturn {
   // Rules
   const [rules, setRules] = useState<OrganizationRule[]>([])
 
-  // Get org ID from user or parameter
-  const currentOrgId = orgId || user?.orgId
+  // Get org ID from profile or parameter
+  const currentOrgId = orgId || profile?.companyId
 
   /**
    * Get org configuration
@@ -211,7 +211,15 @@ export function useOrgDashboard(orgId?: string): UseOrgDashboardReturn {
           currentOrgId,
           role,
           userId,
-          { name, email, capacity, skills: skills || [] },
+          {
+            name,
+            email,
+            capacity,
+            skills: skills || [],
+            available: true,
+            utilized: 0,
+            assignedSince: Timestamp.now(),
+          },
           user.uid
         )
 
@@ -575,12 +583,12 @@ export function useOrgDashboard(orgId?: string): UseOrgDashboardReturn {
  * For viewing and managing leadership roster
  */
 export function useLeadershipRoster(orgId?: string) {
-  const { user } = useAuth()
+  const { profile } = useAuth()
   const [roster, setRoster] = useState<LeadershipAssignment[]>([])
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
-  const currentOrgId = orgId || user?.orgId
+  const currentOrgId = orgId || profile?.companyId
 
   const getRoster = useCallback(async () => {
     if (!currentOrgId) return

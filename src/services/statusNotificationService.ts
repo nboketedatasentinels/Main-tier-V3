@@ -199,7 +199,7 @@ export async function sendAtRiskWarning(
     })
 
     // Queue email for later (not immediate)
-    const alertRef = await addDoc(collection(db, 'status_alerts'), {
+    await addDoc(collection(db, 'status_alerts'), {
       userId,
       type: 'at_risk_warning',
       status: 'pending',

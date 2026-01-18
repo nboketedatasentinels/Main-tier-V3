@@ -214,14 +214,15 @@ export async function awardChecklistPoints(params: {
     });
 
     // Post-transaction logic - trigger nudges after transaction commits
-    if (transactionResult) {
+    const txResult = transactionResult as { previousStatus: string; currentStatus: string; newPoints: number } | null;
+    if (txResult) {
       try {
         await detectStatusChangeAndNudge({
           uid,
           journeyType,
-          previousStatus: transactionResult.previousStatus,
-          currentStatus: transactionResult.currentStatus,
-          pointsEarned: transactionResult.newPoints,
+          previousStatus: txResult.previousStatus,
+          currentStatus: txResult.currentStatus,
+          pointsEarned: txResult.newPoints,
           windowTarget: weeklyTarget,
         });
       } catch (err) {

@@ -5,15 +5,12 @@
 
 import {
   doc,
-  getDoc,
   setDoc,
   updateDoc,
   query,
   collection,
   where,
   getDocs,
-  arrayUnion,
-  arrayRemove,
   Timestamp,
   serverTimestamp,
 } from 'firebase/firestore'
@@ -495,7 +492,7 @@ export async function logLeadershipActivity(
  */
 export async function getLeadershipActivitySummary(
   orgId: string,
-  role: LeadershipRole,
+  _role: LeadershipRole,
   daysBack: number = 7
 ): Promise<{
   totalActivities: number

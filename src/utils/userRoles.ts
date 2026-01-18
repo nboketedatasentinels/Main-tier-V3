@@ -1,5 +1,4 @@
 import { PartnerUser } from '@/hooks/usePartnerDashboardData'
-import { normalizeRole } from '@/utils/role'
 import { isAdminLike } from '@/utils/permissions'
 
 /**

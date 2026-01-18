@@ -8,12 +8,9 @@ import {
   getDoc,
   setDoc,
   updateDoc,
-  query,
   collection,
-  where,
   getDocs,
   Timestamp,
-  serverTimestamp,
 } from 'firebase/firestore'
 import { db } from '@/services/firebase'
 import {
@@ -30,8 +27,8 @@ import { isLeadershipAvailable, leadershipHasCapacity } from './leadershipServic
  */
 export async function calculateLearnerPassMark(
   orgId: string,
-  learnerUserId: string,
-  windowId: string
+  _learnerUserId: string,
+  _windowId: string
 ): Promise<{
   passmark: number
   basePassmark: number
@@ -189,7 +186,7 @@ export async function getLearnerPassMarkInfo(
 
     if (config?.passMark.activityOverrides) {
       Object.entries(config.passMark.activityOverrides).forEach(([activityId, override]) => {
-        if (override.visibleWhen === 'always' || override.visible !== false) {
+        if (override.visibleWhen === 'always' || override.visibleWhen !== 'never') {
           visibleActivities.push(activityId)
         } else {
           hiddenActivities.push({
@@ -273,7 +270,7 @@ export async function updateLearnerPassMarkAdjustment(
   learnerUserId: string,
   windowId: string,
   updates: Partial<LearnerPassMarkAdjustment>,
-  userId: string = 'system'
+  _userId: string = 'system'
 ): Promise<void> {
   try {
     const adjustmentId = `${learnerUserId}-${windowId}-${orgId}`

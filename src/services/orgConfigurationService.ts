@@ -12,9 +12,7 @@ import {
   collection,
   where,
   getDocs,
-  writeBatch,
   Timestamp,
-  FieldValue,
   serverTimestamp,
 } from 'firebase/firestore'
 import { db } from '@/services/firebase'
@@ -27,7 +25,6 @@ import {
   LeadershipAssignment,
   OrganizationRule,
   ConfigurationChangeRecord,
-  PassMarkAdjustmentReason,
 } from '../types/organization'
 
 /**
@@ -362,7 +359,7 @@ export async function updateOrgPassMarkConfig(
  */
 export async function getPassMarkAdjustments(orgId: string): Promise<{
   base: number
-  adjustments: Record<PassMarkAdjustmentReason, number>
+  adjustments: PassMarkConfiguration['adjustments']
 }> {
   try {
     const config = await getOrgConfiguration(orgId)
