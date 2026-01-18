@@ -235,8 +235,24 @@ export const MentorDashboard: React.FC = () => {
     if (typeof window === 'undefined') return
     const storedHistory = localStorage.getItem(storageKey)
     const storedFilters = localStorage.getItem(savedKey)
-    if (storedHistory) setSearchHistory(JSON.parse(storedHistory))
-    if (storedFilters) setSavedFilters(JSON.parse(storedFilters))
+
+    if (storedHistory) {
+      try {
+        setSearchHistory(JSON.parse(storedHistory))
+      } catch (error) {
+        console.error('Failed to parse search history from localStorage', error)
+        localStorage.removeItem(storageKey)
+      }
+    }
+
+    if (storedFilters) {
+      try {
+        setSavedFilters(JSON.parse(storedFilters))
+      } catch (error) {
+        console.error('Failed to parse saved filters from localStorage', error)
+        localStorage.removeItem(savedKey)
+      }
+    }
   }, [profile?.id])
 
   useEffect(() => {

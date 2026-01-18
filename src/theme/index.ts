@@ -293,6 +293,33 @@ const components = {
           bg: 'surface.subtle',
         },
       },
+      subtle: {
+        container: {
+          boxShadow: 'xs',
+          bg: 'surface.subtle',
+          borderColor: 'border.subtle',
+        },
+      },
+      hero: {
+        container: {
+          boxShadow: 'lg',
+          borderWidth: '2px',
+          borderColor: 'brand.primary',
+          bg: 'surface.default',
+          position: 'relative',
+          _before: {
+            content: '""',
+            position: 'absolute',
+            top: 0,
+            left: 0,
+            right: 0,
+            height: '4px',
+            bg: 'linear-gradient(90deg, brand.primary 0%, accent.warning 100%)',
+            borderTopLeftRadius: 'xl',
+            borderTopRightRadius: 'xl',
+          },
+        },
+      },
       interactive: {
         container: {
           cursor: 'pointer',

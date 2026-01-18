@@ -7,6 +7,8 @@ import { detectStatusChangeAndNudge } from "./nudgeMonitorService";
 /**
  * Updates the windowProgress document when points are awarded.
  * This function is designed to be called from within an existing Firestore transaction.
+ *
+ * @returns Nudge data that should be processed after the transaction commits
  */
 export async function updateWindowOnAward(
   transaction: Transaction,
@@ -16,7 +18,14 @@ export async function updateWindowOnAward(
     weekNumber: number;
     activity: ActivityDef;
   }
-) {
+): Promise<{
+  uid: string;
+  journeyType: JourneyType;
+  previousStatus: string;
+  currentStatus: string;
+  pointsEarned: number;
+  windowTarget: number;
+} | null> {
   const { uid, journeyType, weekNumber, activity } = params;
 
   const programDurationWeeks = JOURNEY_META[journeyType].weeks;
@@ -62,22 +71,22 @@ export async function updateWindowOnAward(
     { merge: true }
   );
 
-  // Trigger nudges asynchronously after transaction
-  setTimeout(() => {
-    detectStatusChangeAndNudge({
-      uid,
-      journeyType,
-      previousStatus,
-      currentStatus: status,
-      pointsEarned: newPoints,
-      windowTarget,
-    }).catch(err => console.error('[WindowProgress] Nudge trigger failed:', err));
-  }, 100);
+  // Return nudge data for post-transaction processing
+  return {
+    uid,
+    journeyType,
+    previousStatus,
+    currentStatus: status,
+    pointsEarned: newPoints,
+    windowTarget,
+  };
 }
 
 /**
  * Updates the windowProgress document when points are revoked.
  * This function is designed to be called from within an existing Firestore transaction.
+ *
+ * @returns Nudge data that should be processed after the transaction commits
  */
 export async function updateWindowOnRevoke(
   transaction: Transaction,
@@ -87,7 +96,14 @@ export async function updateWindowOnRevoke(
     weekNumber: number;
     activity: ActivityDef;
   }
-) {
+): Promise<{
+  uid: string;
+  journeyType: JourneyType;
+  previousStatus: string;
+  currentStatus: string;
+  pointsEarned: number;
+  windowTarget: number;
+} | null> {
     const { uid, journeyType, weekNumber, activity } = params;
 
     const programDurationWeeks = JOURNEY_META[journeyType].weeks;
@@ -101,7 +117,7 @@ export async function updateWindowOnRevoke(
     const progressDoc = await transaction.get(progressRef);
 
     if (!progressDoc.exists()) {
-      return;
+      return null;
     }
 
     const currentData = progressDoc.data();
@@ -137,15 +153,13 @@ export async function updateWindowOnRevoke(
         { merge: true }
     );
 
-    // Trigger nudges asynchronously after transaction
-    setTimeout(() => {
-        detectStatusChangeAndNudge({
-            uid,
-            journeyType,
-            previousStatus,
-            currentStatus: status,
-            pointsEarned: newPoints,
-            windowTarget,
-        }).catch(err => console.error('[WindowProgress] Nudge trigger failed:', err));
-    }, 100);
+    // Return nudge data for post-transaction processing
+    return {
+        uid,
+        journeyType,
+        previousStatus,
+        currentStatus: status,
+        pointsEarned: newPoints,
+        windowTarget,
+    };
 }

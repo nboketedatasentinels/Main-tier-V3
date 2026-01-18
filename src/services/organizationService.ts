@@ -77,6 +77,11 @@ const leadershipRoleConfig: Record<
 const assertLeadershipRole = (role: string): role is LeadershipRole =>
   role === 'mentor' || role === 'ambassador' || role === 'partner'
 
+/**
+ * Gets the current actor ID. This should only be used as a fallback.
+ * Prefer passing actorId explicitly to avoid race conditions during auth state changes.
+ * @deprecated Pass actorId explicitly to service functions instead
+ */
 const getActorId = () => auth.currentUser?.uid || 'system'
 
 type OrganizationAccessAttemptPayload = {
@@ -277,9 +282,14 @@ const buildLeadershipAuditEntry = (params: {
   },
 })
 
-const assignLeadershipRole = async (organizationId: string, userId: string, role: LeadershipRole) => {
+const assignLeadershipRole = async (
+  organizationId: string,
+  userId: string,
+  role: LeadershipRole,
+  actorId?: string,
+) => {
   validateLeadershipIds(organizationId, userId, role)
-  const actorId = getActorId()
+  const resolvedActorId = actorId || getActorId()
   const roleConfig = leadershipRoleConfig[role]
   const organizationRef = doc(db, ORG_COLLECTION, organizationId)
   const userRef = doc(usersCollection, userId)
@@ -305,9 +315,9 @@ const assignLeadershipRole = async (organizationId: string, userId: string, role
     transaction.update(organizationRef, {
       [roleConfig.field]: userId,
       [roleConfig.assignedAtField]: serverTimestamp(),
-      [roleConfig.assignedByField]: actorId,
+      [roleConfig.assignedByField]: resolvedActorId,
       leadershipUpdatedAt: serverTimestamp(),
-      leadershipUpdatedBy: actorId,
+      leadershipUpdatedBy: resolvedActorId,
     })
     transaction.set(
       auditRef,
@@ -316,26 +326,26 @@ const assignLeadershipRole = async (organizationId: string, userId: string, role
         organizationId,
         userId,
         role,
-        actorId,
+        actorId: resolvedActorId,
         previousUserId: (organizationSnap.data() as OrganizationRecord)[roleConfig.field] as string | null,
       }),
     )
   })
 }
 
-export const assignMentorToOrganization = async (organizationId: string, mentorId: string) =>
-  assignLeadershipRole(organizationId, mentorId, 'mentor')
+export const assignMentorToOrganization = async (organizationId: string, mentorId: string, actorId?: string) =>
+  assignLeadershipRole(organizationId, mentorId, 'mentor', actorId)
 
-export const assignAmbassadorToOrganization = async (organizationId: string, ambassadorId: string) =>
-  assignLeadershipRole(organizationId, ambassadorId, 'ambassador')
+export const assignAmbassadorToOrganization = async (organizationId: string, ambassadorId: string, actorId?: string) =>
+  assignLeadershipRole(organizationId, ambassadorId, 'ambassador', actorId)
 
-export const assignPartnerToOrganization = async (organizationId: string, partnerId: string) =>
-  assignLeadershipRole(organizationId, partnerId, 'partner')
+export const assignPartnerToOrganization = async (organizationId: string, partnerId: string, actorId?: string) =>
+  assignLeadershipRole(organizationId, partnerId, 'partner', actorId)
 
-export const unassignLeadershipRole = async (organizationId: string, role: string) => {
+export const unassignLeadershipRole = async (organizationId: string, role: string, actorId?: string) => {
   if (!organizationId?.trim()) throw new Error('Organization is required.')
   if (!assertLeadershipRole(role)) throw new Error('Invalid leadership role.')
-  const actorId = getActorId()
+  const resolvedActorId = actorId || getActorId()
   const roleConfig = leadershipRoleConfig[role]
   const organizationRef = doc(db, ORG_COLLECTION, organizationId)
   const auditRef = doc(adminActivityCollection)
@@ -350,9 +360,9 @@ export const unassignLeadershipRole = async (organizationId: string, role: strin
     transaction.update(organizationRef, {
       [roleConfig.field]: null,
       [roleConfig.assignedAtField]: null,
-      [roleConfig.assignedByField]: actorId,
+      [roleConfig.assignedByField]: resolvedActorId,
       leadershipUpdatedAt: serverTimestamp(),
-      leadershipUpdatedBy: actorId,
+      leadershipUpdatedBy: resolvedActorId,
     })
     transaction.set(
       auditRef,
@@ -361,7 +371,7 @@ export const unassignLeadershipRole = async (organizationId: string, role: strin
         organizationId,
         userId: null,
         role,
-        actorId,
+        actorId: resolvedActorId,
         previousUserId,
       }),
     )
