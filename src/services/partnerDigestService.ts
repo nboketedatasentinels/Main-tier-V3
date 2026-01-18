@@ -28,7 +28,7 @@ import type {
  */
 export async function generatePartnerDigest(
   partnerId: string,
-  _partnerEmail: string,
+  partnerEmail: string,
   orgId: string,
   digestDate: string = new Date().toISOString().split('T')[0],
 ): Promise<PartnerDailyDigest | null> {
@@ -160,7 +160,7 @@ export async function generatePartnerDigest(
       inactiveCount,
       recoveredCount,
       newAtRiskCount,
-      recoveredCountDelta,
+      recoveredCount: recoveredCountDelta,
       completedMilestones: 0,
       atRiskLearners,
       teamAverageEngagementScore,
@@ -331,7 +331,7 @@ export async function schedulePartnerDigest(
       updatedAt: Timestamp.now(),
     }
 
-    await updateDoc(doc(db, 'digest_schedules', scheduleId), { ...scheduleRecord }).catch(async () => {
+    await updateDoc(doc(db, 'digest_schedules', scheduleId), scheduleRecord).catch(async () => {
       await addDoc(collection(db, 'digest_schedules'), scheduleRecord)
     })
 
@@ -349,12 +349,12 @@ function calculateNextDigestTime(
   frequency: string,
   preferredTime: string,
   preferredDay?: string,
-  _timezone: string = 'UTC',
+  timezone: string = 'UTC',
 ): Timestamp {
   const now = new Date()
   const [hours, minutes] = preferredTime.split(':').map(Number)
 
-  const nextTime = new Date()
+  let nextTime = new Date()
   nextTime.setHours(hours, minutes, 0, 0)
 
   if (nextTime <= now) {

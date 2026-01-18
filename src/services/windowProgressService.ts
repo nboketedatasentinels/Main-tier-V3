@@ -3,6 +3,7 @@ import { db } from "@/services/firebase";
 import { JOURNEY_META, type ActivityDef, type JourneyType } from "@/config/pointsConfig";
 import { getWindowNumber, getWindowRange, PARALLEL_WINDOW_SIZE_WEEKS } from "@/utils/windowCalculations";
 import { calculateEngagementStatus } from "@/utils/statusCalculation";
+import { detectStatusChangeAndNudge } from "./nudgeMonitorService";
 
 /**
  * Updates the windowProgress document when points are awarded.

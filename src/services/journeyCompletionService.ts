@@ -1,4 +1,4 @@
-import { doc, serverTimestamp, collection, runTransaction } from 'firebase/firestore';
+import { doc, setDoc, serverTimestamp, collection, addDoc, runTransaction } from 'firebase/firestore';
 import { db } from './firebase';
 import { evaluateJourneyCompletion, CompletionResult } from '@/utils/completion';
 import { JourneyType } from '@/config/pointsConfig';

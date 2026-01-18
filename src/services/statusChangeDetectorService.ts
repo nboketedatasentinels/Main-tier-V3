@@ -92,7 +92,7 @@ export function shouldCreateAlert(
 export function generateSuggestedActions(
   newStatus: LearnerStatus,
   engagementScore: number,
-  _daysSinceActivity: number,
+  daysSinceActivity: number,
   completionRate: number,
 ): string[] {
   const actions: string[] = []
@@ -203,7 +203,7 @@ export async function createStatusChangeAlert(
  * Generate alert content based on status transition
  */
 function generateAlertContent(
-  _newStatus: LearnerStatus,
+  newStatus: LearnerStatus,
   alertType: AlertType,
   metrics: {
     engagementScore: number
@@ -315,7 +315,7 @@ export async function triggerAutomationRules(
  */
 function evaluateRuleConditions(rule: AutomationRule, event: StatusTransitionEvent): boolean {
   return rule.conditions.every((condition) => {
-    const eventValue = (event as unknown as Record<string, unknown>)[condition.field]
+    const eventValue = (event as Record<string, unknown>)[condition.field]
 
     switch (condition.operator) {
       case 'equals':

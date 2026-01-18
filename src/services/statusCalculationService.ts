@@ -9,6 +9,7 @@ import {
   getDoc,
   getDocs,
   query,
+  updateDoc,
   setDoc,
   where,
   Timestamp,
@@ -51,7 +52,7 @@ const DEFAULT_CONFIG: StatusCalculationConfig = {
  * Score = (recentActivity * 0.4) + (completionRate * 0.3) + (consistency * 0.2) + (streakBonus * 0.1)
  */
 export async function calculateEngagementScore(
-  _userId: string,
+  userId: string,
   metrics: EngagementMetrics,
   journeyContext?: {
     currentWindowNumber: number
@@ -181,7 +182,7 @@ export async function calculateDaysSinceLastActivity(userId: string): Promise<nu
  */
 export async function getCurrentWindowProgress(
   userId: string,
-  _orgId?: string,
+  orgId?: string,
 ): Promise<{
   currentWindowNumber: number
   pointsInWindow: number

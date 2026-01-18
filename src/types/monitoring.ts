@@ -248,7 +248,7 @@ export interface PartnerDailyDigest {
   
   // Changes since last digest
   newAtRiskCount: number
-  recoveredCountDelta: number
+  recoveredCount: number
   completedMilestones: number
   
   // Learner details

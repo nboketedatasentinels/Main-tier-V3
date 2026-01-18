@@ -13,11 +13,8 @@ interface UserProfileData {
   notificationSettings?: NotificationSettings
   firstName?: string
   lastName?: string
-  fullName?: string
   email?: string
   fcmToken?: string
-  mentorId?: string
-  organizationId?: string
   [key: string]: unknown
 }
 
@@ -129,7 +126,7 @@ export async function triggerNudgeByStatus(params: {
         await notifyMentorOfLearnerAlert({
           mentorId: userProfile.mentorId,
           learnerId: uid,
-          learnerName: userProfile.fullName || 'Learner',
+          learnerName: userProfile.fullName,
           status: 'alert',
           pointsEarned,
           windowTarget
@@ -141,7 +138,7 @@ export async function triggerNudgeByStatus(params: {
         await notifyPartnerOfLearnerAlert({
           organizationId: userProfile.organizationId,
           learnerId: uid,
-          learnerName: userProfile.fullName || 'Learner',
+          learnerName: userProfile.fullName,
           status: 'alert'
         })
       }

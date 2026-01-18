@@ -4,11 +4,20 @@
  */
 
 import {
+  doc,
+  getDoc,
+  query,
+  collection,
+  where,
+  getDocs,
   Timestamp,
+  serverTimestamp,
 } from 'firebase/firestore'
+import { db } from '@/services/firebase'
 import {
   OrganizationRule,
   RuleCondition,
+  RuleActionType,
   RuleAction,
   PassMarkAdjustmentActionConfig,
   HideActivityActionConfig,
@@ -105,7 +114,7 @@ export function getValueFromContext(
 export async function executeRuleAction(
   orgId: string,
   action: RuleAction,
-  _context: Record<string, unknown>,
+  context: Record<string, unknown>,
   userId: string = 'system'
 ): Promise<{ success: boolean; message: string }> {
   try {
@@ -165,7 +174,7 @@ export async function executeRuleAction(
 async function executeAdjustPassMarkAction(
   orgId: string,
   config: PassMarkAdjustmentActionConfig,
-  _userId: string
+  userId: string
 ): Promise<{ success: boolean; message: string }> {
   try {
     const orgConfig = await getOrgConfiguration(orgId)
@@ -173,19 +182,9 @@ async function executeAdjustPassMarkAction(
       return { success: false, message: 'Organization configuration not found' }
     }
 
-    // Map snake_case reason to camelCase adjustment key
-    const reasonToKey: Record<string, keyof typeof orgConfig.passMark.adjustments> = {
-      'no_mentor': 'noMentorAvailable',
-      'no_ambassador': 'noAmbassadorAvailable',
-      'no_partner': 'noPartnerAvailable',
-      'capacity_limited': 'limitedCapacity',
-    }
-
-    const adjustmentKey = reasonToKey[config.reason]
-    if (adjustmentKey) {
-      const adjustments = { ...orgConfig.passMark.adjustments }
-      adjustments[adjustmentKey] = config.amount
-    }
+    // Update in configuration
+    const adjustments = { ...orgConfig.passMark.adjustments }
+    adjustments[config.reason] = config.amount
 
     // This would be persisted via orgConfigurationService
     return {
@@ -201,9 +200,9 @@ async function executeAdjustPassMarkAction(
  * Execute hide activity action
  */
 async function executeHideActivityAction(
-  _orgId: string,
+  orgId: string,
   config: HideActivityActionConfig,
-  _userId: string
+  userId: string
 ): Promise<{ success: boolean; message: string }> {
   try {
     // This would call activityVisibilityService.hideActivity
@@ -220,9 +219,9 @@ async function executeHideActivityAction(
  * Execute show activity action
  */
 async function executeShowActivityAction(
-  _orgId: string,
+  orgId: string,
   config: HideActivityActionConfig,
-  _userId: string
+  userId: string
 ): Promise<{ success: boolean; message: string }> {
   try {
     // This would call activityVisibilityService.showActivity
@@ -257,9 +256,9 @@ async function executeNotifyAction(
  * Execute disable feature action
  */
 async function executeDisableFeatureAction(
-  _orgId: string,
+  orgId: string,
   config: Record<string, unknown>,
-  _userId: string
+  userId: string
 ): Promise<{ success: boolean; message: string }> {
   try {
     const feature = config.feature as string
@@ -466,9 +465,9 @@ function generateActionPreview(action: RuleAction): string {
  * Get rule execution history
  */
 export async function getRuleExecutionHistory(
-  _orgId: string,
-  _ruleId?: string,
-  _limit: number = 50
+  orgId: string,
+  ruleId?: string,
+  limit: number = 50
 ): Promise<
   Array<{
     ruleId: string

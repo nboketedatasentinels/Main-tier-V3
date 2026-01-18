@@ -52,8 +52,6 @@ const notificationCategoryMap: Record<NotificationType, string> = {
   system_event: 'system_alerts',
   progress_report: 'important_updates',
   mentee_checkin: 'important_updates',
-  approval: 'action_required',
-  badge_awarded: 'important_updates',
   unknown: 'other',
 }
 

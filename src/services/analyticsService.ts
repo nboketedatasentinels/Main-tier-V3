@@ -1,5 +1,6 @@
 import { addDoc, collection, serverTimestamp } from 'firebase/firestore';
 import { db } from './firebase';
+import { getFriendlyErrorMessage } from '@/utils/firestoreErrorHandling';
 
 export interface AnalyticsEvent {
   userId?: string | null;

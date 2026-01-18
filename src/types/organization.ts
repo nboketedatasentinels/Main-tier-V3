@@ -141,7 +141,7 @@ export interface ActivityPassMarkOverride {
   passMark?: number
   leadershipDependency?: LeadershipRole | null
   alternateActivityId?: string
-  visibleWhen?: 'always' | 'leadership_available' | 'capacity_available' | 'never'
+  visibleWhen?: 'always' | 'leadership_available' | 'capacity_available'
 }
 
 /**
