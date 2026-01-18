@@ -88,6 +88,33 @@ const buildTransactionConstraints = (context: LeaderboardContext | null): QueryC
   return constraints
 }
 
+const buildChallengeConstraints = (
+  context: LeaderboardContext | null,
+  profileId: string | null | undefined
+): QueryConstraint[] | null => {
+  if (!profileId) return null
+
+  const constraints: QueryConstraint[] = []
+
+  // Filter by participant
+  constraints.push(where('participants', 'array-contains', profileId))
+
+  // Add organization filtering to prevent cross-org challenge visibility
+  if (context?.type === 'organization') {
+    if (context.organizationId) {
+      constraints.push(where('company_id', '==', context.organizationId))
+    } else if (context.organizationCode) {
+      constraints.push(where('company_code', '==', context.organizationCode))
+    } else {
+      return null
+    }
+  }
+
+  constraints.push(orderBy('startDate', 'desc'))
+  constraints.push(limit(25))
+  return constraints
+}
+
 export const useLeaderboardData = ({
   context,
   profileId,
@@ -297,20 +324,20 @@ export const useLeaderboardData = ({
   }, [context, transactionsRetry])
 
   useEffect(() => {
-    if (!profileId) {
+    const constraints = buildChallengeConstraints(context, profileId)
+    if (!constraints) {
       setChallenges([])
       setChallengesLoaded(true)
+      if (context?.type === 'organization' && (!context.organizationId && !context.organizationCode)) {
+        console.warn('[Leaderboard] Missing organization identifier for challenge query.')
+      }
       return
     }
 
-    const challengeQuery = query(
-      collection(db, 'challenges'),
-      where('participants', 'array-contains', profileId),
-      orderBy('startDate', 'desc'),
-      limit(25),
-    )
+    const challengeQuery = query(collection(db, 'challenges'), ...constraints)
 
     setChallengesLoaded(false)
+    console.log('[Leaderboard] Challenges query constraints', { contextType: context?.type, constraints })
     const unsubscribe = onSnapshot(
       challengeQuery,
       (snapshot) => {
@@ -333,6 +360,10 @@ export const useLeaderboardData = ({
         setChallenges(loadedChallenges)
         setChallengesLoaded(true)
         setErrorMessage(null)
+        console.log('[Leaderboard] Challenges fetched', {
+          contextType: context?.type,
+          count: loadedChallenges.length,
+        })
       },
       (error) => {
         handleSnapshotError(
@@ -352,7 +383,7 @@ export const useLeaderboardData = ({
         clearTimeout(challengesRetryTimeout.current)
       }
     }
-  }, [profileId, challengesRetry])
+  }, [context, profileId, challengesRetry])
 
   return {
     profiles,
