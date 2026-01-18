@@ -8,8 +8,6 @@ import {
   Card,
   CardBody,
   Heading,
-  HStack,
-  Icon,
   SimpleGrid,
   Stack,
   Text,
@@ -36,7 +34,6 @@ import {
   getDaysRemainingInWeek,
   getWeekDateRange,
 } from '@/utils/weekCalculations'
-import { Target } from 'lucide-react'
 
 /**
  * Domain helpers (keeps business rules out of JSX as much as possible)
@@ -256,7 +253,6 @@ export const WeeklyGlancePage = () => {
   const [isBuildVillageOpen, setIsBuildVillageOpen] = useState(false)
   const [villageName, setVillageName] = useState('')
   const [villagePurpose, setVillagePurpose] = useState('')
-  const [showAllCards, setShowAllCards] = useState(false)
 
   const openVillageModal = useCallback(() => setIsBuildVillageOpen(true), [])
   const closeVillageModal = useCallback(() => setIsBuildVillageOpen(false), [])
@@ -288,10 +284,10 @@ export const WeeklyGlancePage = () => {
                 justify="space-between"
               >
                 <Stack spacing={1}>
-                  <Heading size="md" color="text.primary">
+                  <Heading size="md" color="#273240">
                     Build Your Village
                   </Heading>
-                  <Text color="text.primary">
+                  <Text color="#273240">
                     Rally your peers by creating a village to collaborate and track your collective impact.
                   </Text>
                 </Stack>
@@ -308,10 +304,10 @@ export const WeeklyGlancePage = () => {
         )}
 
         <Stack spacing={1}>
-          <Heading size="lg" color="text.primary">
+          <Heading size="lg" color="#273240">
             This Week at a Glance
           </Heading>
-          <Text color="text.primary">
+          <Text color="#273240">
             Your personalized dashboard for weekly progress, habits, and support.
           </Text>
         </Stack>
@@ -329,7 +325,6 @@ export const WeeklyGlancePage = () => {
         <WeeklyInspirationCard data={data.inspirationQuote} loading={data.loading.inspiration} />
 
         <SimpleGrid columns={{ base: 1, md: 2, xl: 3 }} spacing={4} alignItems="stretch">
-          {/* Priority Cards - Always Visible */}
           {isParallelTrackingEnabled ? (
             <WindowSummaryCard />
           ) : (
@@ -351,32 +346,16 @@ export const WeeklyGlancePage = () => {
             onNavigate={handleNavigateChecklist}
           />
 
-          <ActivityFeedCard items={[...activityFeedItems.slice(0, 2)]} />
+          <ActivityFeedCard items={[...activityFeedItems]} />
 
-          {/* Additional Cards - Shown when expanded */}
-          {showAllCards && (
-            <>
-              <SupportTeamCard data={data.supportAssignment} loading={data.loading.support} />
-              <PersonalityProfileCard data={data.personality} loading={data.loading.profile} />
-              <PeopleImpactedCard count={data.impactCount} loading={data.loading.impact} />
-              <PeerMatchingCard matches={data.peerMatches ?? []} loading={data.loading.matches} />
-            </>
-          )}
+          <SupportTeamCard data={data.supportAssignment} loading={data.loading.support} />
+
+          <PersonalityProfileCard data={data.personality} loading={data.loading.profile} />
+
+          <PeopleImpactedCard count={data.impactCount} loading={data.loading.impact} />
+
+          <PeerMatchingCard matches={data.peerMatches ?? []} loading={data.loading.matches} />
         </SimpleGrid>
-
-        {/* Show More/Less Button */}
-        <HStack justify="center" mt={4}>
-          <Button
-            onClick={() => setShowAllCards(!showAllCards)}
-            variant={showAllCards ? 'ghost' : 'outline'}
-            colorScheme="purple"
-            size="md"
-            width={{ base: 'full', md: 'auto' }}
-            rightIcon={showAllCards ? undefined : <Icon as={Target} boxSize={4} />}
-          >
-            {showAllCards ? 'Show Less ↑' : 'View All Metrics'}
-          </Button>
-        </HStack>
       </Stack>
 
       <BuildVillageModal

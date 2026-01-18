@@ -45,12 +45,7 @@ const useRhythmState = () => {
   useEffect(() => {
     const stored = localStorage.getItem(storageKey)
     if (stored) {
-      try {
-        setCompleted(JSON.parse(stored))
-      } catch (error) {
-        console.error('Failed to parse rhythm state from localStorage', error)
-        localStorage.removeItem(storageKey) // Clear corrupted data
-      }
+      setCompleted(JSON.parse(stored))
     }
   }, [storageKey])
 

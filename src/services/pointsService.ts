@@ -108,14 +108,6 @@ export async function awardChecklistPoints(params: {
       getDocs(lastActivityQuery),
     ]);
 
-    // Variables to capture from transaction for post-transaction operations
-    let transactionResult: {
-      previousStatus: string;
-      currentStatus: string;
-      newPoints: number;
-    } | null = null;
-    let windowNudgeData: Awaited<ReturnType<typeof import('./windowProgressService').updateWindowOnAward>> = null;
-
     await runTransactionWithRetry(async (tx) => {
       const [ledgerDoc, progressDoc] = await Promise.all([
         tx.get(ledgerRef),
@@ -186,6 +178,19 @@ export async function awardChecklistPoints(params: {
         { merge: true }
       );
 
+      // Trigger nudges asynchronously after transaction
+      // Note: We use setTimeout to ensure it happens after tx completes
+      setTimeout(() => {
+        detectStatusChangeAndNudge({
+          uid,
+          journeyType,
+          previousStatus: currentProgress.status,
+          currentStatus: status,
+          pointsEarned: newPoints,
+          windowTarget: weeklyTarget,
+        }).catch(err => console.error('[PointsService] Nudge trigger failed:', err));
+      }, 100);
+
       const profileUpdate = {
         totalPoints,
         level,
@@ -197,49 +202,17 @@ export async function awardChecklistPoints(params: {
       tx.set(doc(db, "profiles", uid), profileUpdate, { merge: true });
 
       if (import.meta.env.VITE_FEATURE_FLAG_PARALLEL_WINDOW_TRACKING === 'true') {
-        windowNudgeData = await updateWindowOnAward(tx, { uid, journeyType, weekNumber, activity });
+        await updateWindowOnAward(tx, { uid, journeyType, weekNumber, activity });
       }
-
-      // Capture transaction result for post-transaction operations
-      transactionResult = {
-        previousStatus: currentProgress.status,
-        currentStatus: status,
-        newPoints,
-      };
     });
 
-    // Post-transaction logic - trigger nudges after transaction commits
-    if (transactionResult) {
-      try {
-        await detectStatusChangeAndNudge({
-          uid,
-          journeyType,
-          previousStatus: transactionResult.previousStatus,
-          currentStatus: transactionResult.currentStatus,
-          pointsEarned: transactionResult.newPoints,
-          windowTarget: weeklyTarget,
-        });
-      } catch (err) {
-        // Log but don't fail the overall operation - nudges are non-critical
-        console.error('[PointsService] Nudge trigger failed:', err);
-      }
-    }
-
-    // Trigger window nudges if window tracking was updated
-    if (windowNudgeData) {
-      try {
-        await detectStatusChangeAndNudge(windowNudgeData);
-      } catch (err) {
-        console.error('[PointsService] Window nudge trigger failed:', err);
-      }
-    }
-
+    // Post-transaction logic
     // Check for journey completion after points are awarded
-    try {
-      await checkAndHandleJourneyCompletion(uid, journeyType);
-    } catch (err) {
-      console.error('[PointsService] Error checking journey completion:', err);
-    }
+    setTimeout(() => {
+      checkAndHandleJourneyCompletion(uid, journeyType).catch(err =>
+        console.error('Error checking journey completion:', err)
+      );
+    }, 100);
 
     if (activity.id.includes('peer')) {
       const peerActivitiesQuery = query(

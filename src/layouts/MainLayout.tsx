@@ -1,7 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react'
 import { Outlet, useLocation, useNavigate } from 'react-router-dom'
 import {
-  Badge,
   Box,
   Flex,
   VStack,
@@ -32,18 +31,20 @@ import {
   Users,
   ClipboardList,
   Gavel,
+  Megaphone,
+  Gift,
+  BookMarked,
   BookOpen,
+  Sparkles,
   Search,
   Trophy,
   LogOut,
   CalendarDays,
-  Lock,
 } from 'lucide-react'
 import { useAuth } from '@/hooks/useAuth'
 import { BuildVillageModal } from '@/components/modals/BuildVillageModal'
 import { ConfirmationWelcomeModal } from '@/components/modals/ConfirmationWelcomeModal'
 import { NotificationDropdown } from '@/components/notifications/NotificationDropdown'
-import { MobileBottomNav } from '@/components/navigation/MobileBottomNav'
 import { isFreeUser as isFreeTierUser } from '@/utils/membership'
 
 const HEADER_HEIGHT = '72px'
@@ -143,13 +144,22 @@ export const MainLayout: React.FC = () => {
       {
         label: 'MY JOURNEY',
         items: [
-          { label: 'Dashboard', path: '/app/weekly-glance', icon: CalendarDays, requiresPaid: false },
-          { label: 'Weekly Checklist', path: '/app/weekly-checklist', icon: ClipboardList, requiresPaid: false },
-          { label: 'Impact Log', path: '/app/impact', icon: Target, requiresPaid: false },
-          { label: 'Peer Connect', path: '/app/peer-connect', icon: Users, requiresPaid: true },
-          { label: 'Leadership Council', path: '/app/leadership-council', icon: Gavel, requiresPaid: true },
-          { label: 'My Courses', path: '/app/courses', icon: BookOpen, requiresPaid: false },
-          { label: 'Leaderboard', path: '/app/leaderboard', icon: Trophy, requiresPaid: false },
+          { label: 'Dashboard', path: '/app/weekly-glance', icon: CalendarDays },
+          { label: 'Weekly Checklist', path: '/app/weekly-checklist', icon: ClipboardList },
+          { label: 'Leadership Board', path: '/app/leadership-board', icon: Trophy },
+          { label: 'My Courses', path: '/app/courses', icon: BookOpen },
+          { label: 'Peer Connect', path: '/app/peer-connect', icon: Users },
+          { label: 'Impact Log', path: '/app/impact', icon: Target },
+          { label: 'Leadership Council', path: '/app/leadership-council', icon: Gavel },
+        ],
+      },
+      {
+        label: 'COMMUNITY',
+        items: [
+          { label: 'Events', path: '/app/announcements', icon: Megaphone },
+          { label: 'Referral Rewards', path: '/app/referral-rewards', icon: Gift },
+          { label: 'Global Book Club', path: '/app/book-club', icon: BookMarked },
+          { label: 'Shameless Circle', path: '/app/shameless-circle', icon: Sparkles },
         ],
       },
     ],
@@ -160,8 +170,7 @@ export const MainLayout: React.FC = () => {
     return navigationSections.map(section => ({
       ...section,
       items: section.items.filter(item => {
-        // Hide leaderboard for mentors
-        if (isMentor && item.label === 'Leaderboard') {
+        if (isMentor && item.label === 'Leadership Board') {
           return false
         }
         return true
@@ -169,8 +178,10 @@ export const MainLayout: React.FC = () => {
     }))
   }, [isMentor, navigationSections])
 
-  const handleNavigation = (path: string, requiresPaid: boolean) => {
-    if (isFreeUser && requiresPaid) {
+  const handleNavigation = (path: string) => {
+    const restrictedPaths = ['/app/peer-connect', '/app/leadership-council']
+
+    if (isFreeUser && restrictedPaths.some(restricted => path.startsWith(restricted))) {
       toast({
         title: 'Upgrade required',
         description: 'This feature is available to paid members. Upgrade to continue.',
@@ -178,7 +189,7 @@ export const MainLayout: React.FC = () => {
         duration: 3500,
         isClosable: true,
       })
-      navigate('/upgrade', { replace: false })
+      navigate('/app/weekly-glance', { replace: true })
       onClose()
       return
     }
@@ -197,24 +208,20 @@ export const MainLayout: React.FC = () => {
           <VStack align="stretch" spacing={1}>
             {section.items.map(item => {
               const isActive = location.pathname.startsWith(item.path)
-              const isLocked = isFreeUser && item.requiresPaid
-              const iconColor = isLocked ? 'brand.subtleText' : (isActive ? 'brand.text' : 'brand.subtleText')
 
               return (
                 <Button
                   key={item.path}
                   leftIcon={<item.icon size={18} />}
-                  rightIcon={isLocked ? <Lock size={14} /> : undefined}
                   variant="ghost"
                   justifyContent="flex-start"
-                  onClick={() => handleNavigation(item.path, item.requiresPaid)}
+                  onClick={() => handleNavigation(item.path)}
                   bg={isActive ? 'brand.primaryMuted' : 'transparent'}
-                  color={iconColor}
+                  color={isActive ? 'brand.text' : 'brand.subtleText'}
                   _hover={{ bg: 'brand.primaryMuted', color: 'brand.text' }}
                   height="42px"
                   fontWeight={isActive ? 'semibold' : 'medium'}
                   fontSize="13px"
-                  opacity={isLocked ? 0.7 : 1}
                 >
                   {item.label}
                 </Button>
@@ -264,16 +271,9 @@ export const MainLayout: React.FC = () => {
             <HStack align="center" spacing={3}>
               <Avatar size="sm" name={profile?.fullName} src={profile?.avatarUrl} bg="brand.primary" color="white" />
               <Box flex="1">
-                <HStack spacing={2} align="center">
-                  <Text fontSize="sm" fontWeight="semibold" color="brand.text">
-                    {profile?.fullName || 'Your name'}
-                  </Text>
-                  {isFreeUser && (
-                    <Badge size="sm" colorScheme="purple" fontSize="10px" px={2} py={0.5}>
-                      Free
-                    </Badge>
-                  )}
-                </HStack>
+                <Text fontSize="sm" fontWeight="semibold" color="brand.text">
+                  {profile?.fullName || 'Your name'}
+                </Text>
                 <Text fontSize="xs" color="brand.subtleText">
                   {profile?.totalPoints ? `${profile.totalPoints} points` : 'Logged in'}
                 </Text>
@@ -356,7 +356,6 @@ export const MainLayout: React.FC = () => {
           height={`calc(100vh - ${HEADER_HEIGHT})`}
           overflowY="auto"
           p={{ base: 4, md: 8 }}
-          pb={{ base: '80px', md: 8 }}
         >
           <Outlet />
         </Box>
@@ -390,9 +389,6 @@ export const MainLayout: React.FC = () => {
         firstName={profile?.firstName}
         role={profile?.role}
       />
-
-      {/* Mobile Bottom Navigation */}
-      <MobileBottomNav />
     </Flex>
   )
 }

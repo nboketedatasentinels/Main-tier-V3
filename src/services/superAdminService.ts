@@ -39,16 +39,7 @@ const auditCollection = collection(db, 'admin_activity_log')
 const engagementCollection = collection(db, 'user_engagement_scores')
 const adminRoles: AdminRole[] = ['super_admin', 'partner', 'mentor', 'ambassador']
 
-/**
- * Gets the current actor ID. This should only be used as a fallback.
- * Prefer passing actorId explicitly to avoid race conditions during auth state changes.
- * @deprecated Pass actorId explicitly to service functions instead
- */
 const getActorId = () => auth.currentUser?.uid
-/**
- * Gets the current actor name. This should only be used as a fallback.
- * @deprecated Pass actorName explicitly to service functions instead
- */
 const getActorName = () => auth.currentUser?.displayName || undefined
 
 export const fetchDashboardMetrics = async (
@@ -487,15 +478,10 @@ export const deleteAdminUser = async (adminId: string) => {
   })
 }
 
-export const assignOrganizations = async (
-  adminId: string,
-  orgIds: string[],
-  actorId?: string,
-  actorName?: string,
-) => {
+export const assignOrganizations = async (adminId: string, orgIds: string[]) => {
   const adminRef = doc(db, 'users', adminId)
-  const resolvedActorId = actorId || getActorId()
-  const resolvedActorName = actorName || getActorName()
+  const actorId = getActorId()
+  const actorName = getActorName()
   // assignedOrganizations MUST contain organization document IDs only, never codes.
   const sanitizedOrgIds = Array.from(
     new Set(
@@ -508,13 +494,13 @@ export const assignOrganizations = async (
   await updateDoc(adminRef, {
     assignedOrganizations: sanitizedOrgIds,
     assignedOrganizationsUpdatedAt: serverTimestamp(),
-    assignedOrganizationsUpdatedBy: resolvedActorId || null,
+    assignedOrganizationsUpdatedBy: actorId || null,
     updatedAt: serverTimestamp(),
   })
   await logAdminAction({
     action: 'admin_orgs_updated',
-    adminId: resolvedActorId,
-    adminName: resolvedActorName,
+    adminId: actorId,
+    adminName: actorName,
     userId: adminId,
     metadata: { orgIds: sanitizedOrgIds },
   })
