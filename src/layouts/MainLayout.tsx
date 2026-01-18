@@ -1,6 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react'
 import { Outlet, useLocation, useNavigate } from 'react-router-dom'
-import { normalizeRole } from '@/utils/role'
 import {
   Badge,
   Box,
@@ -72,7 +71,7 @@ export const MainLayout: React.FC = () => {
   }, [])
 
   const isFreeUser = isFreeTierUser(profile)
-  const isMentor = normalizeRole(profile?.role) === 'mentor'
+  const isMentor = profile?.role === 'mentor'
 
   useEffect(() => {
     if (!profile) return

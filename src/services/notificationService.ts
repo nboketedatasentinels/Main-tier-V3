@@ -19,7 +19,6 @@ import {
   NotificationType,
   WeeklyTargetAlert,
 } from '@/types/notifications'
-import { executeWithPartialFailureRecovery } from '@/utils/firestoreErrorHandling'
 
 const notificationsCollection = collection(db, 'notifications')
 const adminNotificationsCollection = collection(db, 'admin_notifications')
@@ -59,18 +58,7 @@ export const markAllNotificationsRead = async (userId: string) => {
   const updates = snapshot.docs.map((docSnap) =>
     updateDoc(docSnap.ref, { is_read: true, read: true }),
   )
-
-  // Use executeWithPartialFailureRecovery to mark all possible notifications as read
-  const { results, failures } = await executeWithPartialFailureRecovery(
-    updates,
-    'notificationService.markAllNotificationsRead'
-  )
-
-  if (failures.length > 0) {
-    console.warn(`[notificationService] Failed to mark ${failures.length} notification(s) as read`)
-  }
-
-  return { marked: results.length, failed: failures.length }
+  await Promise.all(updates)
 }
 
 export const updateNotificationAction = async (
@@ -187,15 +175,7 @@ export const sendBelowTargetAlert = async (notification: {
     Boolean,
   ) as string[]
 
-  // Use executeWithPartialFailureRecovery to ensure some alerts are sent even if others fail
-  const { failures } = await executeWithPartialFailureRecovery(
-    targets.map((target) => createInAppNotification({ ...basePayload, userId: target })),
-    'notificationService.sendBelowTargetAlert'
-  )
-
-  if (failures.length > 0) {
-    console.error(`[notificationService] Failed to send alert to ${failures.length} recipient(s)`)
-  }
+  await Promise.all(targets.map((target) => createInAppNotification({ ...basePayload, userId: target })))
 
   if (notification.alertLevel !== 'warning') {
     await sendEmailNotification({
@@ -448,18 +428,7 @@ export const markAdminNotificationRead = async (notificationId: string) => {
 
 export const markAllAdminNotificationsRead = async () => {
   const snapshot = await getDocs(adminNotificationsCollection)
-
-  // Use executeWithPartialFailureRecovery to mark all possible notifications as read
-  const { results, failures } = await executeWithPartialFailureRecovery(
-    snapshot.docs.map((docSnap) => updateDoc(docSnap.ref, { is_read: true })),
-    'notificationService.markAllAdminNotificationsRead'
-  )
-
-  if (failures.length > 0) {
-    console.warn(`[notificationService] Failed to mark ${failures.length} admin notification(s) as read`)
-  }
-
-  return { marked: results.length, failed: failures.length }
+  await Promise.all(snapshot.docs.map((docSnap) => updateDoc(docSnap.ref, { is_read: true })))
 }
 
 export const sendCapacityAlert = async (params: {

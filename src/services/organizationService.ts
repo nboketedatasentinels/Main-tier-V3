@@ -33,7 +33,6 @@ import {
   resolveDurationWeeksFromProgramDuration,
   resolveJourneyType,
 } from '@/utils/journeyType'
-import { normalizeTimestampToString as normalizeTimestamp } from '@/utils/dateNormalization'
 import { inviteUsersBulk } from './invitationService'
 export { checkOrganizationAccess, fetchOrganizationEngagementStats, fetchOrganizationUsers } from './organizationUserService'
 
@@ -147,6 +146,14 @@ export const fetchAvailableCourses = async (): Promise<CourseOption[]> => {
     const data = docSnap.data() as { title?: string; description?: string }
     return { id: docSnap.id, title: data.title || 'Untitled course', description: data.description }
   })
+}
+
+const normalizeTimestamp = (value?: Timestamp | string | Date): string => {
+  if (!value) return ''
+  if (typeof value === 'string') return value
+  if (value instanceof Date) return value.toISOString()
+  if ('toDate' in value) return value.toDate().toISOString()
+  return ''
 }
 
 const normalizeProgramDurationWeeks = (

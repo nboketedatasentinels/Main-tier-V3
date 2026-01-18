@@ -1,6 +1,4 @@
 import {
-  Alert,
-  AlertIcon,
   Badge,
   Box,
   Divider,
@@ -11,18 +9,35 @@ import {
   Text,
   VStack,
 } from '@chakra-ui/react'
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useState } from 'react'
+import { collection, onSnapshot, orderBy, query } from 'firebase/firestore'
+import { db } from '@/services/firebase'
 import { useAdminNotifications } from '@/hooks/useAdminNotifications'
 import { AdminNotificationsList } from './AdminNotificationsList'
-import { LoadingCoordinator } from '@/utils/firestoreErrorHandling'
-import {
-  listenToPointsVerifications,
-  listenToRegistrations,
-  listenToSystemAlerts,
-  type VerificationRequest,
-  type Registration,
-  type SystemAlert,
-} from '@/services/adminNotificationsService'
+
+interface VerificationRequest {
+  id: string
+  userName: string
+  activityTitle: string
+  points: number
+  created_at?: string
+}
+
+interface Registration {
+  id: string
+  name: string
+  email: string
+  company?: string
+  created_at?: string
+}
+
+interface SystemAlert {
+  id: string
+  level: string
+  message: string
+  component?: string
+  created_at?: string
+}
 
 export const RealTimeNotificationCenter = () => {
   const { notifications, loading: adminLoading } = useAdminNotifications({ role: 'super_admin' })
@@ -30,71 +45,35 @@ export const RealTimeNotificationCenter = () => {
   const [registrations, setRegistrations] = useState<Registration[]>([])
   const [systemAlerts, setSystemAlerts] = useState<SystemAlert[]>([])
   const [loading, setLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
-
-  // Create loading coordinator to manage parallel listeners
-  const coordinator = useMemo(() => new LoadingCoordinator(setLoading), [])
 
   useEffect(() => {
-    setError(null)
+    const verificationQuery = query(collection(db, 'points_verifications'), orderBy('created_at', 'desc'))
+    const registrationQuery = query(collection(db, 'registrations'), orderBy('created_at', 'desc'))
+    const systemAlertsQuery = query(collection(db, 'system_health_alerts'), orderBy('created_at', 'desc'))
 
-    // Mark all 3 operations as started
-    coordinator.start('verifications')
-    coordinator.start('registrations')
-    coordinator.start('alerts')
-
-    // Use service layer functions
-    const unsubVerify = listenToPointsVerifications(
-      (data) => {
-        setVerifications(data)
-        coordinator.complete('verifications')
-      },
-      (err) => {
-        setError(err.message)
-        coordinator.complete('verifications')
-      }
-    )
-
-    const unsubRegistration = listenToRegistrations(
-      (data) => {
-        setRegistrations(data)
-        coordinator.complete('registrations')
-      },
-      (err) => {
-        setError(err.message)
-        coordinator.complete('registrations')
-      }
-    )
-
-    const unsubSystemAlerts = listenToSystemAlerts(
-      (data) => {
-        setSystemAlerts(data)
-        coordinator.complete('alerts')
-      },
-      (err) => {
-        setError(err.message)
-        coordinator.complete('alerts')
-      }
-    )
+    const unsubVerify = onSnapshot(verificationQuery, (snapshot) => {
+      setVerifications(snapshot.docs.map((doc) => ({ ...(doc.data() as VerificationRequest), id: doc.id })))
+      setLoading(false)
+    })
+    const unsubRegistration = onSnapshot(registrationQuery, (snapshot) => {
+      setRegistrations(snapshot.docs.map((doc) => ({ ...(doc.data() as Registration), id: doc.id })))
+      setLoading(false)
+    })
+    const unsubSystemAlerts = onSnapshot(systemAlertsQuery, (snapshot) => {
+      setSystemAlerts(snapshot.docs.map((doc) => ({ ...(doc.data() as SystemAlert), id: doc.id })))
+      setLoading(false)
+    })
 
     return () => {
       unsubVerify()
       unsubRegistration()
       unsubSystemAlerts()
     }
-  }, [coordinator])
+  }, [])
 
   return (
     <Stack spacing={6}>
       <Heading size="lg">Real-time Notification Center</Heading>
-
-      {error && (
-        <Alert status="error">
-          <AlertIcon />
-          {error}
-        </Alert>
-      )}
-
       {(loading || adminLoading) && (
         <Flex justify="center" py={4}>
           <Spinner />

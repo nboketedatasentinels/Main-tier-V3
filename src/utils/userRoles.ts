@@ -1,6 +1,4 @@
 import { PartnerUser } from '@/hooks/usePartnerDashboardData'
-import { normalizeRole } from '@/utils/role'
-import { isAdminLike } from '@/utils/permissions'
 
 /**
  * Checks if a user has a leader role (mentor or team_leader).
@@ -19,8 +17,9 @@ export const isAtRisk = (user: PartnerUser): boolean => {
 }
 
 /**
- * Checks if a profile can approve points (uses consolidated admin check).
+ * Checks if a profile can approve points (placeholder for more complex permission logic).
  */
 export const canApprove = (profile: any): boolean => {
-  return isAdminLike(profile)
+  if (!profile) return false
+  return profile.role === 'partner' || profile.role === 'admin' || profile.role === 'super_admin'
 }

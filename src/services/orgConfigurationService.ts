@@ -17,7 +17,7 @@ import {
   FieldValue,
   serverTimestamp,
 } from 'firebase/firestore'
-import { db } from '@/services/firebase'
+import { db } from '../config/firebase'
 import {
   OrganizationConfiguration,
   OrganizationLeadership,

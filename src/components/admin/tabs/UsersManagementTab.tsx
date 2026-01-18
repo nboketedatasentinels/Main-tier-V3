@@ -48,7 +48,7 @@ import {
 import { fetchAdminOrganizationsList } from '@/services/admin/adminUsersService'
 import { formatAdminFirestoreError } from '@/services/admin/adminErrors'
 
-const roleOptions: ManagedUserRole[] = ['user', 'partner', 'super_admin', 'team_leader', 'mentor', 'ambassador']
+const roleOptions: ManagedUserRole[] = ['user', 'partner', 'admin', 'super_admin', 'team_leader', 'mentor', 'ambassador']
 const membershipOptions: MembershipStatus[] = ['free', 'paid', 'inactive']
 
 const formatDate = (date?: Date | null) => {

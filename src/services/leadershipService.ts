@@ -17,10 +17,9 @@ import {
   Timestamp,
   serverTimestamp,
 } from 'firebase/firestore'
-import { db } from '@/services/firebase'
+import { db } from '../config/firebase'
 import { LeadershipAssignment, LeadershipRole } from '../types/organization'
 import { getOrgConfiguration, recordConfigurationChange } from './orgConfigurationService'
-import { normalizeRole } from '@/utils/role'
 
 /**
  * Get leadership roster for organization
@@ -43,7 +42,7 @@ export async function getLeadershipRoster(
 export async function getOrgMentor(orgId: string): Promise<LeadershipAssignment | null> {
   try {
     const roster = await getLeadershipRoster(orgId)
-    return roster.find((l) => normalizeRole(l.role) === 'mentor') || null
+    return roster.find((l) => l.role === 'mentor') || null
   } catch (error) {
     console.error('Error getting org mentor:', error)
     return null
@@ -56,7 +55,7 @@ export async function getOrgMentor(orgId: string): Promise<LeadershipAssignment 
 export async function getOrgAmbassador(orgId: string): Promise<LeadershipAssignment | null> {
   try {
     const roster = await getLeadershipRoster(orgId)
-    return roster.find((l) => normalizeRole(l.role) === 'ambassador') || null
+    return roster.find((l) => l.role === 'ambassador') || null
   } catch (error) {
     console.error('Error getting org ambassador:', error)
     return null
@@ -69,7 +68,7 @@ export async function getOrgAmbassador(orgId: string): Promise<LeadershipAssignm
 export async function getOrgPartner(orgId: string): Promise<LeadershipAssignment | null> {
   try {
     const roster = await getLeadershipRoster(orgId)
-    return roster.find((l) => normalizeRole(l.role) === 'partner') || null
+    return roster.find((l) => l.role === 'partner') || null
   } catch (error) {
     console.error('Error getting org partner:', error)
     return null

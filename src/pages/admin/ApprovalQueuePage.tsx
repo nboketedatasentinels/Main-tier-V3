@@ -42,28 +42,16 @@ const ApprovalQueuePage: React.FC = () => {
 
   useEffect(() => {
     const q = query(collection(db, 'approvals'), where('status', '==', 'pending'));
-    const unsubscribe = onSnapshot(
-      q,
-      (querySnapshot) => {
-        const approvalRequests: ApprovalRecord[] = [];
-        querySnapshot.forEach((doc) => {
-          approvalRequests.push({ id: doc.id, ...doc.data() } as ApprovalRecord);
-        });
-        setRequests(approvalRequests);
-      },
-      (error) => {
-        console.error('[ApprovalQueuePage] Error loading approval queue:', error);
-        toast({
-          title: 'Unable to load approval queue',
-          description: 'Please check your connection and refresh the page.',
-          status: 'error',
-        });
-        setRequests([]);
-      }
-    );
+    const unsubscribe = onSnapshot(q, (querySnapshot) => {
+      const approvalRequests: ApprovalRecord[] = [];
+      querySnapshot.forEach((doc) => {
+        approvalRequests.push({ id: doc.id, ...doc.data() } as ApprovalRecord);
+      });
+      setRequests(approvalRequests);
+    });
 
     return () => unsubscribe();
-  }, [toast]);
+  }, []);
 
   const handleApprove = async (approvalId: string) => {
     if (!user) return;

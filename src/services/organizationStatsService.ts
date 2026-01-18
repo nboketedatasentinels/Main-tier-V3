@@ -13,7 +13,6 @@ import {
 import { db } from './firebase'
 import { ORG_COLLECTION } from '@/constants/organizations'
 import type { OrganizationRecord, OrganizationStatistics } from '@/types/admin'
-import { executeWithPartialFailureRecovery } from '@/utils/firestoreErrorHandling'
 
 type OrganizationKey = {
   organizationId?: string
@@ -102,19 +101,10 @@ const fetchOrganizationUserDocs = async (organizationKey: OrganizationKey) => {
 
   if (!queries.length) return []
 
-  // Use executeWithPartialFailureRecovery to handle field query failures gracefully
-  const { results, failures } = await executeWithPartialFailureRecovery(
-    queries.map((queryRef) => getDocs(queryRef)),
-    'organizationStatsService.fetchOrganizationUserDocuments'
-  )
-
-  if (failures.length > 0) {
-    console.warn(`[organizationStatsService] ${failures.length} field query(ies) failed, using available results`)
-  }
-
+  const snapshots = await Promise.all(queries.map((queryRef) => getDocs(queryRef)))
   const userMap = new Map<string, { data: () => unknown }>()
 
-  results.forEach((snapshot) => {
+  snapshots.forEach((snapshot) => {
     snapshot.docs.forEach((docSnap) => {
       userMap.set(docSnap.id, docSnap)
     })

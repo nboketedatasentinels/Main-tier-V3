@@ -1,7 +1,8 @@
 import React, { useCallback, useState } from 'react'
 import { ArrowUpRight } from 'lucide-react'
+import { addDoc, collection, serverTimestamp } from 'firebase/firestore'
 import { useAuth } from '@/hooks/useAuth'
-import { logBookClubVisit } from '@/services/analyticsService'
+import { db } from '@/services/firebase'
 
 const HUB_URL = 'https://chat.whatsapp.com/IJO0RJlUX9CDO1vciAHIsu'
 
@@ -12,12 +13,13 @@ export const JoinUs: React.FC = () => {
   const logHubVisit = useCallback(async () => {
     try {
       setIsLogging(true)
-      await logBookClubVisit(
-        user?.uid ?? null,
-        profile?.email ?? null,
-        profile?.fullName ?? null,
-        'global_book_club_page'
-      )
+      await addDoc(collection(db, 'bookClubVisits'), {
+        userId: user?.uid ?? null,
+        userEmail: profile?.email ?? null,
+        userName: profile?.fullName ?? null,
+        source: 'global_book_club_page',
+        clickedAt: serverTimestamp(),
+      })
     } catch (error) {
       console.error('Error logging book club hub visit:', error)
     } finally {

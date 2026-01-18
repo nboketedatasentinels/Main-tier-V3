@@ -4,20 +4,6 @@ import { createInAppNotification, sendEmailNotification, notifyMentorOfLearnerAl
 import { checkNudgeCooldown, updateNudgeCooldown } from './nudgeMonitorService'
 import type { NudgeTemplateRecord, NudgeTemplateCategory } from '@/types/nudges'
 
-interface NotificationSettings {
-  statusNudgesEnabled?: boolean
-  statusNudgePreferences?: Record<string, boolean>
-}
-
-interface UserProfileData {
-  notificationSettings?: NotificationSettings
-  firstName?: string
-  lastName?: string
-  email?: string
-  fcmToken?: string
-  [key: string]: unknown
-}
-
 export async function triggerNudgeByStatus(params: {
   uid: string
   journeyType: string
@@ -71,7 +57,7 @@ export async function triggerNudgeByStatus(params: {
   if (!userProfile) return
 
   // Check user preferences
-  const settings = userProfile.notificationSettings
+  const settings = userProfile.notificationSettings as any
   if (settings) {
     if (settings.statusNudgesEnabled === false) return
     if (settings.statusNudgePreferences) {
@@ -182,13 +168,13 @@ async function fetchLatestTemplate(category: NudgeTemplateCategory): Promise<Nud
   return { id: snapshot.docs[0].id, ...snapshot.docs[0].data() } as NudgeTemplateRecord
 }
 
-async function fetchUserProfile(uid: string): Promise<UserProfileData | null> {
+async function fetchUserProfile(uid: string) {
   const profileDoc = await getDoc(doc(db, 'profiles', uid))
   if (!profileDoc.exists()) return null
-  return profileDoc.data() as UserProfileData
+  return profileDoc.data()
 }
 
-function buildPersonalizedMessage(template: string, tokens: Record<string, unknown>): string {
+function buildPersonalizedMessage(template: string, tokens: any) {
   let result = template
   Object.keys(tokens).forEach(key => {
     const value = tokens[key]

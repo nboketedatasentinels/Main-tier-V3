@@ -1,7 +1,6 @@
 import { Timestamp, collection, doc, DocumentSnapshot, getDoc, getDocs, query, where } from 'firebase/firestore'
 import { type OrganizationStatistics, type OrganizationUserProfile } from '@/types/admin'
 import { db } from './firebase'
-import { executeWithPartialFailureRecovery } from '@/utils/firestoreErrorHandling'
 
 const usersCollection = collection(db, 'users')
 
@@ -21,33 +20,24 @@ const parseUserDate = (value?: Timestamp | string | Date | number | null): Date 
 const fetchOrganizationUserDocs = async (organizationKey: string): Promise<DocumentSnapshot[]> => {
   const trimmed = organizationKey.trim()
   if (!trimmed) return []
-
-  // Use executeWithPartialFailureRecovery to handle field variant query failures
-  const { results, failures } = await executeWithPartialFailureRecovery([
-    getDocs(query(usersCollection, where('companyCode', '==', trimmed))),
-    getDocs(query(usersCollection, where('company_code', '==', trimmed))),
-    getDocs(query(usersCollection, where('organization_code', '==', trimmed))),
-    getDocs(query(usersCollection, where('companyId', '==', trimmed))),
-    getDocs(query(usersCollection, where('organizationId', '==', trimmed))),
-  ], 'organizationUserService.fetchOrganizationUserDocs')
-
-  if (failures.length > 0) {
-    console.warn(`[organizationUserService] ${failures.length} field query(ies) failed, merging available results`)
-  }
-
-  const usersMap = new Map<string, DocumentSnapshot>()
   const [
     companySnapshot,
     legacyCompanySnapshot,
     orgCodeSnapshot,
     companyIdSnapshot,
     organizationIdSnapshot,
-  ] = results
-
-  if (companySnapshot) companySnapshot.docs.forEach((docSnap) => usersMap.set(docSnap.id, docSnap))
-  if (legacyCompanySnapshot) legacyCompanySnapshot.docs.forEach((docSnap) => usersMap.set(docSnap.id, docSnap))
-  if (orgCodeSnapshot) orgCodeSnapshot.docs.forEach((docSnap) => usersMap.set(docSnap.id, docSnap))
-  if (companyIdSnapshot) companyIdSnapshot.docs.forEach((docSnap) => usersMap.set(docSnap.id, docSnap))
+  ] = await Promise.all([
+    getDocs(query(usersCollection, where('companyCode', '==', trimmed))),
+    getDocs(query(usersCollection, where('company_code', '==', trimmed))),
+    getDocs(query(usersCollection, where('organization_code', '==', trimmed))),
+    getDocs(query(usersCollection, where('companyId', '==', trimmed))),
+    getDocs(query(usersCollection, where('organizationId', '==', trimmed))),
+  ])
+  const usersMap = new Map<string, DocumentSnapshot>()
+  companySnapshot.docs.forEach((docSnap) => usersMap.set(docSnap.id, docSnap))
+  legacyCompanySnapshot.docs.forEach((docSnap) => usersMap.set(docSnap.id, docSnap))
+  orgCodeSnapshot.docs.forEach((docSnap) => usersMap.set(docSnap.id, docSnap))
+  companyIdSnapshot.docs.forEach((docSnap) => usersMap.set(docSnap.id, docSnap))
   organizationIdSnapshot.docs.forEach((docSnap) => usersMap.set(docSnap.id, docSnap))
   return Array.from(usersMap.values())
 }

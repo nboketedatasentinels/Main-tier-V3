@@ -28,15 +28,23 @@ export interface WeeklyPointsData {
   updated_at: Timestamp
 }
 
-import { calculateLegacyWeeklyStatus } from '@/utils/statusCalculation'
-
 const MINIMUM_WEEKLY_TARGET_POINTS = 4000
 const LOW_WEEKLY_POINTS_ALERT_THRESHOLD = MINIMUM_WEEKLY_TARGET_POINTS
 
 // NOTE: The weekly_points collection is deprecated in favor of weeklyProgress.
 // Keep this module for legacy partner dashboards and future migration cleanup.
 
-export const calculateWeeklyStatus = calculateLegacyWeeklyStatus
+export const calculateWeeklyStatus = (
+  earned: number,
+  target: number,
+): 'on_track' | 'warning' | 'at_risk' => {
+  if (target === 0) return 'on_track'
+  const percentage = (earned / target) * 100
+
+  if (percentage >= 70) return 'on_track'
+  if (percentage >= 40) return 'warning'
+  return 'at_risk'
+}
 
 export const getOrCreateWeeklyPoints = async (userId: string): Promise<void> => {
   const weekNumber = getCurrentWeekNumber()
