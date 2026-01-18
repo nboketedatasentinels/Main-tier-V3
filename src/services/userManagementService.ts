@@ -13,8 +13,10 @@ import {
 } from 'firebase/firestore'
 import { db } from './firebase'
 import { ORG_COLLECTION } from '@/constants/organizations'
+import { parseDateValue } from '@/utils/dateNormalization'
+import { executeWithPartialFailureRecovery } from '@/utils/firestoreErrorHandling'
 
-export type ManagedUserRole = 'user' | 'partner' | 'admin' | 'super_admin' | 'team_leader' | 'mentor' | 'ambassador'
+export type ManagedUserRole = 'user' | 'partner' | 'super_admin' | 'team_leader' | 'mentor' | 'ambassador'
 export type MembershipStatus = 'free' | 'paid' | 'inactive'
 
 export interface OrganizationOption {
@@ -92,18 +94,6 @@ const usersCollection = collection(db, 'users')
 const organizationsCollection = collection(db, ORG_COLLECTION)
 const engagementCollection = collection(db, 'user_engagement_scores')
 const notificationsCollection = collection(db, 'notifications')
-
-const parseDateValue = (value?: unknown): Date | null => {
-  if (!value) return null
-  if (value instanceof Timestamp) return value.toDate()
-  if (typeof value === 'number') return new Date(value)
-  if (typeof value === 'string') {
-    const parsed = new Date(value)
-    return Number.isNaN(parsed.getTime()) ? null : parsed
-  }
-  const maybeDate = (value as { toDate?: () => Date })?.toDate?.()
-  return maybeDate || null
-}
 
 const mapUser = (docSnap: { id: string; data: () => unknown }): ManagedUserRecord => {
   const data = docSnap.data() as Partial<ManagedUserRecord> & {
@@ -303,20 +293,36 @@ export const updateUser = async (userId: string, updates: Partial<ManagedUserRec
 }
 
 export const fetchEngagementRoster = async (): Promise<EngagementRosterEntry[]> => {
-  const [engagementSnapshot, usersSnapshot, companiesSnapshot] = await Promise.all([
+  // Use executeWithPartialFailureRecovery to load roster even if one collection fails
+  const { results, failures } = await executeWithPartialFailureRecovery([
     getDocs(engagementCollection),
     getDocs(usersCollection),
     getDocs(organizationsCollection),
-  ])
+  ], 'userManagementService.fetchEngagementRoster')
+
+  if (failures.length > 0) {
+    console.warn(`[userManagementService] ${failures.length} collection(s) failed to load, roster may be incomplete`)
+  }
+
+  const [engagementSnapshot, usersSnapshot, companiesSnapshot] = results
 
   const userIndex = new Map<string, ManagedUserRecord>()
-  usersSnapshot.docs.forEach((docSnap) => userIndex.set(docSnap.id, mapUser(docSnap)))
+  if (usersSnapshot) {
+    usersSnapshot.docs.forEach((docSnap) => userIndex.set(docSnap.id, mapUser(docSnap)))
+  }
 
   const companyIndex = new Map<string, { name?: string; code?: string }>()
-  companiesSnapshot.docs.forEach((docSnap) => {
-    const data = docSnap.data() as { name?: string; code?: string }
-    companyIndex.set(docSnap.id, data)
-  })
+  if (companiesSnapshot) {
+    companiesSnapshot.docs.forEach((docSnap) => {
+      const data = docSnap.data() as { name?: string; code?: string }
+      companyIndex.set(docSnap.id, data)
+    })
+  }
+
+  if (!engagementSnapshot) {
+    console.error('[userManagementService] Engagement collection failed to load')
+    return []
+  }
 
   return engagementSnapshot.docs.map((docSnap) => {
     const data = docSnap.data() as Partial<EngagementRosterEntry> & {

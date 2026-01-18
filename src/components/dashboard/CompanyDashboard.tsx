@@ -173,23 +173,36 @@ const useRealtimeCollection = <T,>(
   path: string,
   constraints: QueryConstraint[],
   mapper: (docId: string, data: Record<string, any>) => T,
+  onError?: (error: Error) => void
 ) => {
   const [data, setData] = useState<T[]>([])
   const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<Error | null>(null)
   const constraintsKey = useMemo(() => JSON.stringify(constraints), [constraints])
 
   useEffect(() => {
     const baseQuery = constraints.length ? query(collection(db, path), ...constraints) : collection(db, path)
 
-    const unsub = onSnapshot(baseQuery, (snapshot) => {
-      setData(snapshot.docs.map((d) => mapper(d.id, d.data())))
-      setLoading(false)
-    })
+    const unsub = onSnapshot(
+      baseQuery,
+      (snapshot) => {
+        setData(snapshot.docs.map((d) => mapper(d.id, d.data())))
+        setError(null)
+        setLoading(false)
+      },
+      (err) => {
+        console.error(`[useRealtimeCollection] Error loading ${path}:`, err)
+        const errorObj = new Error(`Unable to load ${path}. Please check your connection.`)
+        setError(errorObj)
+        setLoading(false)
+        onError?.(errorObj)
+      }
+    )
 
     return () => unsub()
-  }, [constraints, constraintsKey, mapper, path])
+  }, [constraints, constraintsKey, mapper, path, onError])
 
-  return { data, loading }
+  return { data, loading, error }
 }
 
 export const CompanyDashboard: React.FC = () => {
@@ -292,18 +305,32 @@ export const CompanyDashboard: React.FC = () => {
 
   useEffect(() => {
     if (!profile?.id) return
-    const unsub = onSnapshot(doc(db, 'lift_progress', profile.id), (snap) => {
-      if (snap.exists()) {
-        const data = snap.data() as Partial<LiftProgress>
+    const unsub = onSnapshot(
+      doc(db, 'lift_progress', profile.id),
+      (snap) => {
+        if (snap.exists()) {
+          const data = snap.data() as Partial<LiftProgress>
+          setLiftProgress({
+            educationHours: data.educationHours ?? 0,
+            educationTarget: data.educationTarget ?? 10,
+            verifiedHours: data.verifiedHours ?? 0,
+            selfAttestedHours: data.selfAttestedHours ?? 0,
+            givingTarget: data.givingTarget ?? 10,
+          })
+        }
+      },
+      (error) => {
+        console.error('[CompanyDashboard] Error loading LIFT progress:', error)
+        // Set default values on error
         setLiftProgress({
-          educationHours: data.educationHours ?? 0,
-          educationTarget: data.educationTarget ?? 10,
-          verifiedHours: data.verifiedHours ?? 0,
-          selfAttestedHours: data.selfAttestedHours ?? 0,
-          givingTarget: data.givingTarget ?? 10,
+          educationHours: 0,
+          educationTarget: 10,
+          verifiedHours: 0,
+          selfAttestedHours: 0,
+          givingTarget: 10,
         })
       }
-    })
+    )
     return () => unsub()
   }, [profile?.id])
 

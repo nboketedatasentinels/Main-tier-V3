@@ -10,11 +10,16 @@ export const normalizeRole = (role: unknown): StandardRole => {
     return 'paid_member'
   }
 
-  const roleString = role
-    .toString()
-    .trim()
-    .toLowerCase()
-    .replace(/[-\s]+/g, '_')
+  // Safely convert to string, handling null/undefined
+  let roleString: string
+  try {
+    roleString = String(role)
+      .trim()
+      .toLowerCase()
+      .replace(/[-\s]+/g, '_')
+  } catch {
+    return 'paid_member'
+  }
 
   let result: StandardRole
 

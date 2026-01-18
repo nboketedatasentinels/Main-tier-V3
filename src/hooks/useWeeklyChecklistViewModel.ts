@@ -303,9 +303,16 @@ export function useWeeklyChecklistViewModel() {
   useEffect(() => {
     if (!user) return
     const ref = doc(db, 'weeklyProgress', `${user.uid}__${selectedWeek}`)
-    return onSnapshot(ref, snap => {
-      setWeeklyProgress(snap.exists() ? (snap.data() as WeeklyProgress) : null)
-    })
+    return onSnapshot(
+      ref,
+      snap => {
+        setWeeklyProgress(snap.exists() ? (snap.data() as WeeklyProgress) : null)
+      },
+      (error) => {
+        console.error('[useWeeklyChecklistViewModel] Error loading weekly progress:', error)
+        setWeeklyProgress(null)
+      }
+    )
   }, [user, selectedWeek])
 
   /* ------------------------------------------------------------------ */
@@ -314,28 +321,35 @@ export function useWeeklyChecklistViewModel() {
   useEffect(() => {
     if (!user) return;
     const ref = doc(db, 'checklists', `${user.uid}_${selectedWeek}`);
-    return onSnapshot(ref, snap => {
-      if (snap.exists()) {
-        const data = snap.data();
-        if (data.activities) {
-          setActivities(prev => {
-            return prev.map(activity => {
-              const remote = data.activities.find((a: any) => a.id === activity.id);
-              if (remote && remote.status !== activity.status) {
-                return {
-                  ...activity,
-                  status: remote.status,
-                  hasInteracted: remote.hasInteracted ?? activity.hasInteracted,
-                  proofUrl: remote.proofUrl ?? activity.proofUrl,
-                  notes: remote.notes ?? activity.notes
-                };
-              }
-              return activity;
+    return onSnapshot(
+      ref,
+      snap => {
+        if (snap.exists()) {
+          const data = snap.data();
+          if (data.activities) {
+            setActivities(prev => {
+              return prev.map(activity => {
+                const remote = data.activities.find((a: any) => a.id === activity.id);
+                if (remote && remote.status !== activity.status) {
+                  return {
+                    ...activity,
+                    status: remote.status,
+                    hasInteracted: remote.hasInteracted ?? activity.hasInteracted,
+                    proofUrl: remote.proofUrl ?? activity.proofUrl,
+                    notes: remote.notes ?? activity.notes
+                  };
+                }
+                return activity;
+              });
             });
-          });
+          }
         }
+      },
+      (error) => {
+        console.error('[useWeeklyChecklistViewModel] Error loading checklist status:', error)
+        // Don't update activities on error - keep current state
       }
-    });
+    );
   }, [user, selectedWeek]);
 
   /* ------------------------------------------------------------------ */
@@ -348,9 +362,16 @@ export function useWeeklyChecklistViewModel() {
       where('uid', '==', user.uid),
       where('weekNumber', '<=', journey.programDurationWeeks),
     )
-    return onSnapshot(q, snap => {
-      setAllWeeksProgress(snap.docs.map(d => d.data() as WeeklyProgress))
-    })
+    return onSnapshot(
+      q,
+      snap => {
+        setAllWeeksProgress(snap.docs.map(d => d.data() as WeeklyProgress))
+      },
+      (error) => {
+        console.error('[useWeeklyChecklistViewModel] Error loading all weeks progress:', error)
+        setAllWeeksProgress([])
+      }
+    )
   }, [user, journey])
 
   /* ------------------------------------------------------------------ */

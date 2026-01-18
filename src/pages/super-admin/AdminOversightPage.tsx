@@ -1,4 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { normalizeRole } from '@/utils/role'
 import {
   Alert,
   AlertIcon,
@@ -93,9 +94,9 @@ export const AdminOversightPage: React.FC<AdminOversightPageProps> = ({ adminNam
   const updateMetrics = useCallback((adminList: AdminUserRecord[]) => {
     const total = adminList.length
     const active = adminList.filter((admin) => admin.accountStatus !== 'suspended').length
-    const partners = adminList.filter((admin) => admin.role === 'partner').length
-    const mentors = adminList.filter((admin) => admin.role === 'mentor').length
-    const ambassadors = adminList.filter((admin) => admin.role === 'ambassador').length
+    const partners = adminList.filter((admin) => normalizeRole(admin.role) === 'partner').length
+    const mentors = adminList.filter((admin) => normalizeRole(admin.role) === 'mentor').length
+    const ambassadors = adminList.filter((admin) => normalizeRole(admin.role) === 'ambassador').length
     setMetrics({ total, active, partners, mentors, ambassadors })
   }, [])
 
@@ -270,7 +271,7 @@ export const AdminOversightPage: React.FC<AdminOversightPageProps> = ({ adminNam
   }
 
   const handleToggleStatus = async (admin: AdminUserRecord) => {
-    if (admin.role === 'super_admin') {
+    if (normalizeRole(admin.role) === 'super_admin') {
       toast({ title: 'Cannot change status for super admin accounts', status: 'warning' })
       return
     }

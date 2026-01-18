@@ -15,10 +15,12 @@ import { db } from "@/services/firebase";
 import pointsConfig from "@/config/pointsConfig";
 import type { ActivityDef, JourneyType } from "@/config/pointsConfig";
 import { calculateLevel, calculateUserTotalPoints } from "@/utils/points";
+import { calculateEngagementStatus } from "@/utils/statusCalculation";
 import { awardBadge } from "./badgeService";
 import { updateWindowOnAward, updateWindowOnRevoke } from "./windowProgressService";
 import { checkAndHandleJourneyCompletion } from "./journeyCompletionService";
 import { detectStatusChangeAndNudge } from "./nudgeMonitorService";
+import { executeWithPartialFailureRecovery } from "@/utils/firestoreErrorHandling";
 
 const { JOURNEY_META, getMonthNumber } = pointsConfig;
 
@@ -96,17 +98,24 @@ export async function awardChecklistPoints(params: {
   );
 
   try {
+    // Use executeWithPartialFailureRecovery to gracefully handle partial query failures
+    const { results, failures } = await executeWithPartialFailureRecovery([
+      getDocs(ledgerQuery),
+      getDocs(weeklyActivityQuery),
+      getDocs(windowActivityQuery),
+      getDocs(lastActivityQuery),
+    ], 'pointsService.awardChecklistPoints');
+
+    if (failures.length > 0) {
+      console.warn(`[pointsService] ${failures.length} query(ies) failed, proceeding with available data`);
+    }
+
     const [
       ledgerSnapshot,
       weeklyActivitySnapshot,
       windowActivitySnapshot,
       lastActivitySnapshot,
-    ] = await Promise.all([
-      getDocs(ledgerQuery),
-      getDocs(weeklyActivityQuery),
-      getDocs(windowActivityQuery),
-      getDocs(lastActivityQuery),
-    ]);
+    ] = results;
 
     // Variables to capture from transaction for post-transaction operations
     let transactionResult: {
@@ -146,15 +155,11 @@ export async function awardChecklistPoints(params: {
       const newPoints = currentProgress.pointsEarned + activity.points;
       const engagementCount = ledgerSnapshot.size + 1;
 
-      const ratio = weeklyTarget > 0 ? newPoints / weeklyTarget : 0;
-      let status: "on_track" | "warning" | "alert" | "recovery" = "alert";
-      if (ratio >= 1) {
-        status = currentProgress.status === "alert" ? "recovery" : "on_track";
-      } else if (ratio >= 0.75) {
-        status = "warning";
-      } else {
-        status = "alert";
-      }
+      const status = calculateEngagementStatus(
+        newPoints,
+        weeklyTarget,
+        currentProgress.status as "on_track" | "warning" | "alert" | "recovery"
+      );
 
       const currentTotal = await calculateUserTotalPoints(uid, { transaction: tx });
       const totalPoints = Math.max(0, currentTotal + activity.points);
@@ -294,17 +299,16 @@ export async function revokeChecklistPoints(params: {
       if (!ledgerDoc.exists()) return;
 
       const ledgerPoints = ledgerDoc.data()?.points ?? activity.points;
-      const currentPoints = progressDoc.exists()
-        ? progressDoc.data().pointsEarned ?? 0
-        : 0;
+      const currentProgressData = progressDoc.exists() ? progressDoc.data() : null;
+      const currentPoints = currentProgressData?.pointsEarned ?? 0;
       const newPoints = Math.max(0, currentPoints - ledgerPoints);
       const engagementCount = Math.max(0, ledgerSnapshot.size - 1);
 
-      const ratio = weeklyTarget > 0 ? newPoints / weeklyTarget : 0;
-      let status: "on_track" | "warning" | "alert" | "recovery" = "alert";
-      if (ratio >= 1) status = "on_track";
-      else if (ratio >= 0.75) status = "warning";
-      else status = "alert";
+      const status = calculateEngagementStatus(
+        newPoints,
+        weeklyTarget,
+        currentProgressData?.status as "on_track" | "warning" | "alert" | "recovery" | undefined
+      );
 
       const currentTotal = await calculateUserTotalPoints(uid, { transaction: tx });
       const totalPoints = Math.max(0, currentTotal - ledgerPoints);

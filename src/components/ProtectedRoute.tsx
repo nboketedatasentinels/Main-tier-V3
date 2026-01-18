@@ -4,6 +4,7 @@ import { useAuth } from '@/hooks/useAuth'
 import type { UserRole } from '@/types'
 import { AccountStatus } from '@/types'
 import { normalizeRole } from '@/utils/role'
+import { isAdminLike } from '@/utils/permissions'
 import { AppLoader } from '@/components/ui/AppLoader'
 
 type Props = {
@@ -88,8 +89,8 @@ export const ProtectedRoute: React.FC<Props> = ({
     return <Navigate to="/unauthorized" replace />
   }
 
-  // Admin requirement - allow partner and super_admin
-  if (requireAdmin && userRole !== 'partner' && userRole !== 'super_admin') {
+  // Admin requirement - use consolidated admin check
+  if (requireAdmin && !isAdminLike(profile)) {
     return <Navigate to="/unauthorized" replace />
   }
 

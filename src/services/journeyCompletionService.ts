@@ -1,4 +1,4 @@
-import { doc, setDoc, serverTimestamp, collection, addDoc } from 'firebase/firestore';
+import { doc, setDoc, serverTimestamp, collection, addDoc, runTransaction } from 'firebase/firestore';
 import { db } from './firebase';
 import { evaluateJourneyCompletion, CompletionResult } from '@/utils/completion';
 import { JourneyType } from '@/config/pointsConfig';
@@ -14,31 +14,36 @@ export const updateJourneyStatus = async (
   status: 'active' | 'completed' | 'failed' | 'abandoned',
   completionDetails?: CompletionResult
 ) => {
-  const userRef = doc(db, 'users', userId);
-  const updates: any = {
-    journeyStatus: status,
-    updatedAt: serverTimestamp(),
-  };
+  await runTransaction(db, async (transaction) => {
+    const userRef = doc(db, 'users', userId);
 
-  if (status === 'completed') {
-    updates.completedAt = new Date().toISOString();
-  }
+    const updates: Record<string, unknown> = {
+      journeyStatus: status,
+      updatedAt: serverTimestamp(),
+    };
 
-  await setDoc(userRef, updates, { merge: true });
+    if (status === 'completed') {
+      updates.completedAt = new Date().toISOString();
+    }
 
-  if (status === 'completed' && completionDetails) {
-    const historyRef = collection(db, 'users', userId, 'journeyHistory');
-    await addDoc(historyRef, {
-      journeyType: completionDetails.journeyType,
-      status,
-      pointsEarned: completionDetails.pointsEarned,
-      passMark: completionDetails.passMark,
-      totalTarget: completionDetails.totalTarget,
-      adjustmentDetails: completionDetails.adjustmentDetails,
-      completedAt: serverTimestamp(),
-      createdAt: serverTimestamp(),
-    });
-  }
+    // Update user status
+    transaction.set(userRef, updates, { merge: true });
+
+    // Add to journey history if completed
+    if (status === 'completed' && completionDetails) {
+      const historyRef = doc(collection(db, 'users', userId, 'journeyHistory'));
+      transaction.set(historyRef, {
+        journeyType: completionDetails.journeyType,
+        status,
+        pointsEarned: completionDetails.pointsEarned,
+        passMark: completionDetails.passMark,
+        totalTarget: completionDetails.totalTarget,
+        adjustmentDetails: completionDetails.adjustmentDetails,
+        completedAt: serverTimestamp(),
+        createdAt: serverTimestamp(),
+      });
+    }
+  });
 };
 
 export const checkAndHandleJourneyCompletion = async (userId: string, journeyType: JourneyType) => {

@@ -457,14 +457,26 @@ export const ImpactLogPage: React.FC = () => {
     if (!user?.uid) return
 
     const q = query(collection(db, 'impact_logs'), where('userId', '==', user.uid), orderBy('createdAt', 'desc'))
-    const unsubscribe = onSnapshot(q, (snapshot) => {
-      const data = snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() })) as ImpactLogEntry[]
-      setEntries(data)
-      setLoading(false)
-    })
+    const unsubscribe = onSnapshot(
+      q,
+      (snapshot) => {
+        const data = snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() })) as ImpactLogEntry[]
+        setEntries(data)
+        setLoading(false)
+      },
+      (error) => {
+        console.error('[ImpactLogPage] Error loading personal impact logs:', error)
+        toast({
+          title: 'Unable to load your impact logs',
+          description: 'Please check your connection and try again.',
+          status: 'error',
+        })
+        setLoading(false)
+      }
+    )
 
     return () => unsubscribe()
-  }, [user?.uid])
+  }, [user?.uid, toast])
 
   useEffect(() => {
     if (!profile?.companyId) {
@@ -477,10 +489,18 @@ export const ImpactLogPage: React.FC = () => {
       where('companyId', '==', profile.companyId),
       orderBy('createdAt', 'desc'),
     )
-    const unsubscribe = onSnapshot(q, (snapshot) => {
-      const data = snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() })) as ImpactLogEntry[]
-      setCompanyEntries(data)
-    })
+    const unsubscribe = onSnapshot(
+      q,
+      (snapshot) => {
+        const data = snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() })) as ImpactLogEntry[]
+        setCompanyEntries(data)
+      },
+      (error) => {
+        console.error('[ImpactLogPage] Error loading company impact logs:', error)
+        // Set empty array on error to avoid showing stale data
+        setCompanyEntries([])
+      }
+    )
 
     return () => unsubscribe()
   }, [profile?.companyId])

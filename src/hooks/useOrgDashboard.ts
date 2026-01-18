@@ -5,6 +5,7 @@
 
 import { useEffect, useState, useCallback } from 'react'
 import { useAuth } from './useAuth'
+import { normalizeRole } from '@/utils/role'
 import {
   getOrgConfiguration,
   getPassMarkAdjustments,
@@ -600,17 +601,17 @@ export function useLeadershipRoster(orgId?: string) {
   }, [currentOrgId])
 
   const getMentors = useCallback(
-    () => roster.filter((l) => l.role === 'mentor'),
+    () => roster.filter((l) => normalizeRole(l.role) === 'mentor'),
     [roster]
   )
 
   const getAmbassadors = useCallback(
-    () => roster.filter((l) => l.role === 'ambassador'),
+    () => roster.filter((l) => normalizeRole(l.role) === 'ambassador'),
     [roster]
   )
 
   const getPartners = useCallback(
-    () => roster.filter((l) => l.role === 'partner'),
+    () => roster.filter((l) => normalizeRole(l.role) === 'partner'),
     [roster]
   )
 

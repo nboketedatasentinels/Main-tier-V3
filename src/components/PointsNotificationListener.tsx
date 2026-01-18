@@ -31,34 +31,46 @@ export const PointsNotificationListener = () => {
       orderBy('created_at', 'desc'),
     )
 
-    const unsubscribeAlerts = onSnapshot(alertsQuery, (snapshot) => {
-      snapshot.docChanges().forEach((change) => {
-        if (change.type === 'added') {
-          const alert = { ...(change.doc.data() as WeeklyTargetAlert), id: change.doc.id }
-          if (alert.type === 'warning') {
-            toast({
-              title: "Heads up! You're close to missing this week's minimum points",
-              description: alert.message,
-              status: 'warning',
-            })
+    const unsubscribeAlerts = onSnapshot(
+      alertsQuery,
+      (snapshot) => {
+        snapshot.docChanges().forEach((change) => {
+          if (change.type === 'added') {
+            const alert = { ...(change.doc.data() as WeeklyTargetAlert), id: change.doc.id }
+            if (alert.type === 'warning') {
+              toast({
+                title: "Heads up! You're close to missing this week's minimum points",
+                description: alert.message,
+                status: 'warning',
+              })
+            }
+            if (alert.type === 'alert') {
+              toast({
+                title: "You're falling behind on this week's minimum points",
+                description: alert.message,
+                status: 'error',
+              })
+            }
+            if (alert.type === 'recovery') {
+              toast({
+                title: 'Nice recovery! You are back on track',
+                description: alert.message,
+                status: 'success',
+              })
+            }
           }
-          if (alert.type === 'alert') {
-            toast({
-              title: "You're falling behind on this week's minimum points",
-              description: alert.message,
-              status: 'error',
-            })
-          }
-          if (alert.type === 'recovery') {
-            toast({
-              title: 'Nice recovery! You are back on track',
-              description: alert.message,
-              status: 'success',
-            })
-          }
-        }
-      })
-    })
+        })
+      },
+      (error) => {
+        console.error('[PointsNotificationListener] Error loading alerts:', error)
+        // Alerts are critical - show error to user
+        toast({
+          title: 'Unable to load point alerts',
+          description: 'Please check your connection. You may miss important notifications.',
+          status: 'error',
+        })
+      }
+    )
 
     return () => {
       emitter.removeEventListener('pointsAwarded', pointsListener)

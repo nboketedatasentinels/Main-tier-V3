@@ -14,13 +14,13 @@ import {
   Switch,
   Text,
   VStack,
+  useToast,
 } from '@chakra-ui/react'
 import { useEffect, useState } from 'react'
-import { doc, getDoc, setDoc } from 'firebase/firestore'
 import { NotificationsList } from './NotificationsList'
 import { useAuth } from '@/hooks/useAuth'
-import { db } from '@/services/firebase'
 import { NotificationSettingsPreferences } from '@/types/notifications'
+import { getNotificationPreferences, saveNotificationPreferences } from '@/services/notificationSettingsService'
 
 const defaultPreferences: NotificationSettingsPreferences = {
   emailNotificationsEnabled: true,
@@ -53,6 +53,7 @@ const defaultPreferences: NotificationSettingsPreferences = {
 
 export const NotificationSettings = () => {
   const { user } = useAuth()
+  const toast = useToast()
   const [preferences, setPreferences] = useState<NotificationSettingsPreferences>(
     defaultPreferences,
   )
@@ -61,15 +62,22 @@ export const NotificationSettings = () => {
   useEffect(() => {
     const fetchPreferences = async () => {
       if (!user) return
-      const ref = doc(db, 'notification_settings', user.uid)
-      const snapshot = await getDoc(ref)
-      if (snapshot.exists()) {
-        setPreferences({ ...defaultPreferences, ...(snapshot.data() as NotificationSettingsPreferences) })
+
+      try {
+        const prefs = await getNotificationPreferences(user.uid)
+        setPreferences({ ...defaultPreferences, ...prefs })
+      } catch (error) {
+        console.error('Error loading notification preferences:', error)
+        toast({
+          title: 'Error loading preferences',
+          description: 'Using default settings',
+          status: 'warning',
+        })
       }
     }
 
     fetchPreferences()
-  }, [user])
+  }, [user, toast])
 
   const toggleCategory = (
     channel: 'emailNotificationPreferences' | 'inAppNotificationPreferences',
@@ -89,10 +97,24 @@ export const NotificationSettings = () => {
 
   const handleSave = async () => {
     if (!user) return
+
     setSaving(true)
-    const ref = doc(db, 'notification_settings', user.uid)
-    await setDoc(ref, preferences, { merge: true })
-    setSaving(false)
+    try {
+      await saveNotificationPreferences(user.uid, preferences)
+      toast({
+        title: 'Preferences saved',
+        status: 'success',
+      })
+    } catch (error) {
+      console.error('Error saving preferences:', error)
+      toast({
+        title: 'Error saving preferences',
+        description: 'Please try again',
+        status: 'error',
+      })
+    } finally {
+      setSaving(false)
+    }
   }
 
   return (

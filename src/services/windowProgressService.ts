@@ -2,6 +2,7 @@ import { doc, serverTimestamp, type Transaction } from "firebase/firestore";
 import { db } from "@/services/firebase";
 import { JOURNEY_META, type ActivityDef, type JourneyType } from "@/config/pointsConfig";
 import { getWindowNumber, getWindowRange, PARALLEL_WINDOW_SIZE_WEEKS } from "@/utils/windowCalculations";
+import { calculateEngagementStatus } from "@/utils/statusCalculation";
 import { detectStatusChangeAndNudge } from "./nudgeMonitorService";
 
 /**
@@ -43,18 +44,11 @@ export async function updateWindowOnAward(
   const previousStatus = currentData?.status ?? "alert";
   const newPoints = currentPoints + activity.points;
 
-  const ratio = windowTarget > 0 ? newPoints / windowTarget : 0;
-  let status: "on_track" | "warning" | "alert" | "recovery" = "alert";
-  if (ratio >= 1) {
-    status = "on_track";
-  } else if (ratio >= 0.75) {
-    status = "warning";
-  }
-
-  // Apply Recovery when status moves from alert to on_track or warning
-  if (previousStatus === "alert" && (status === "on_track" || status === "warning")) {
-    status = "recovery";
-  }
+  const status = calculateEngagementStatus(
+    newPoints,
+    windowTarget,
+    previousStatus as "on_track" | "warning" | "alert" | "recovery"
+  );
 
   transaction.set(
     progressRef,

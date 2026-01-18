@@ -15,7 +15,7 @@ import {
   Timestamp,
   serverTimestamp,
 } from 'firebase/firestore'
-import { db } from '../config/firebase'
+import { db } from '@/services/firebase'
 import {
   LearnerPassMarkAdjustment,
   PassMarkAdjustmentReason,

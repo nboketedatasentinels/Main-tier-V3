@@ -80,7 +80,9 @@ export async function checkNudgeCooldown(uid: string, statusType: string, cooldo
     return diffHours >= cooldownHours
   } catch (error) {
     console.error('[NudgeMonitor] Error checking cooldown:', error)
-    return true // Default to allowing if error
+    // On error, be conservative and block the nudge to avoid spamming users
+    // This is safer than defaulting to 'true' which could send unwanted nudges
+    return false
   }
 }
 
