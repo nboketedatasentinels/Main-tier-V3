@@ -11,7 +11,7 @@ async function checkRetroactiveCompletions() {
     console.log(`Found ${usersSnap.size} users to check.`);
 
     let processedCount = 0;
-    let completionCount = 0;
+    const completionCount = 0;
 
     for (const userDoc of usersSnap.docs) {
       const userData = userDoc.data();

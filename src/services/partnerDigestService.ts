@@ -158,9 +158,8 @@ export async function generatePartnerDigest(
       activeMembers,
       atRiskCount,
       inactiveCount,
-      recoveredCount,
-      newAtRiskCount,
       recoveredCount: recoveredCountDelta,
+      newAtRiskCount,
       completedMilestones: 0,
       atRiskLearners,
       teamAverageEngagementScore,
@@ -354,7 +353,7 @@ function calculateNextDigestTime(
   const now = new Date()
   const [hours, minutes] = preferredTime.split(':').map(Number)
 
-  let nextTime = new Date()
+  const nextTime = new Date()
   nextTime.setHours(hours, minutes, 0, 0)
 
   if (nextTime <= now) {
