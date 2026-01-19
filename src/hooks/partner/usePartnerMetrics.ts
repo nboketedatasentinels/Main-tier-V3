@@ -1,7 +1,6 @@
 import { useMemo } from 'react'
 import { subDays, differenceInDays } from 'date-fns'
-import type { PartnerUser, PartnerRiskLevel } from '@/hooks/partner/usePartnerUsers'
-import type { PartnerOrganization } from '@/hooks/partner/usePartnerOrganizations'
+import type { PartnerUser, PartnerRiskLevel, PartnerOrganization } from '@/hooks/partner/usePartnerAdminData'
 import { build14DayRegistrationTrend } from '@/utils/partnerProgress'
 
 interface UsePartnerMetricsOptions {

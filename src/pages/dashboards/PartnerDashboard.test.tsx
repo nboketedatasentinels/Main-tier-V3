@@ -112,6 +112,29 @@ const defaultDashboardReturn = {
     managedBreakdown: { active: 0, inactive: 0 },
     notificationCount: 0,
     debugInfo: null,
+    snapshot: {
+        partnerId: 'test-user',
+        assignments: [],
+        assignedOrganizationIds: [],
+        organizations: [],
+        users: [],
+        analytics: {
+            metrics: {
+                activeMembers: 0,
+                engagementRate: 0,
+                newRegistrations: 0,
+                managedCompanies: 0,
+                deltas: {},
+            },
+            engagementTrend: [],
+            riskLevels: { engaged: 0, watch: 0, concern: 0, critical: 0 },
+            atRiskUsers: [],
+            managedBreakdown: { active: 0, inactive: 0 },
+            daysUntil: vi.fn(),
+        },
+        organizationLookup: new Map(),
+        assignedOrgKeys: new Set(),
+    },
 }
 
 const renderComponent = () => {
@@ -183,6 +206,23 @@ describe('PartnerDashboard', () => {
                 { name: 'Org 2', status: 'active', activeUsers: 50, newThisWeek: 3 },
             ],
             assignedOrgCount: 2,
+            snapshot: {
+                ...defaultDashboardReturn.snapshot,
+                organizations: [
+                    { name: 'Org 1', status: 'active', activeUsers: 50, newThisWeek: 2 },
+                    { name: 'Org 2', status: 'active', activeUsers: 50, newThisWeek: 3 },
+                ],
+                analytics: {
+                    ...defaultDashboardReturn.snapshot.analytics,
+                    metrics: {
+                        activeMembers: 100,
+                        engagementRate: 85,
+                        newRegistrations: 5,
+                        managedCompanies: 3,
+                        deltas: {},
+                    },
+                },
+            },
         })
 
         renderComponent()

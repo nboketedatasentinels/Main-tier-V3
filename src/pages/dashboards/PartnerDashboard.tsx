@@ -59,18 +59,13 @@ export const PartnerDashboard: React.FC = () => {
   const {
     assignedOrgCount,
     assignedOrganizations,
-    engagementTrend,
-    metrics,
-    organizations,
     organizationsError,
     organizationsLoading,
     organizationsReady,
     lastOrganizationsSuccessAt,
-    riskLevels,
     selectedOrg,
     setSelectedOrg,
     updateUserPoints,
-    users,
     usersError,
     usersLoading,
     lastUsersSuccessAt,
@@ -78,15 +73,16 @@ export const PartnerDashboard: React.FC = () => {
     retryUsers,
     dataQualityWarnings,
     interventions,
-    daysUntil,
-    atRiskUsers,
-    managedBreakdown,
     notificationCount,
     notifications,
     notificationsLoading,
     notificationsError,
     debugInfo,
+    snapshot,
   } = usePartnerDashboardData({ debugMode })
+  const { organizations, users, analytics } = snapshot
+  const { metrics, engagementTrend, riskLevels, atRiskUsers, managedBreakdown, daysUntil } =
+    analytics
   const enableProfileRealtime = import.meta.env.VITE_ENABLE_PROFILE_REALTIME === 'true'
   const supportEmail = 'support@transformation4leaders.com'
   const formatDistanceToNowSafe = (
@@ -289,7 +285,7 @@ export const PartnerDashboard: React.FC = () => {
 
     if (scopedDigestOrgIds.length === 0) {
       toast({
-        title: 'No assigned organizations',
+        title: 'No organisations assigned yet',
         description: 'Assign at least one organization before sending a digest.',
         status: 'error',
         duration: 6000,
@@ -459,7 +455,7 @@ export const PartnerDashboard: React.FC = () => {
                     </HStack>
                   </Badge>
                 ) : assignedOrganizations.length === 0 ? (
-                  <Badge colorScheme="yellow">No organizations assigned</Badge>
+                  <Badge colorScheme="yellow">No organisations assigned yet</Badge>
                 ) : (
                   <Badge colorScheme="green">Organizations loaded</Badge>
                 )}
@@ -1241,7 +1237,7 @@ export const PartnerDashboard: React.FC = () => {
               <Box p={4} borderRadius="md" border="1px solid" borderColor="brand.border" bg="brand.accent">
                 <Stack spacing={2}>
                   <Text color="brand.subtleText" fontWeight="semibold">
-                    No organizations assigned yet
+                    No organisations assigned yet
                   </Text>
                   <Text color="brand.subtleText" fontSize="sm">
                     Assigned organizations will appear here once a super admin connects your account.

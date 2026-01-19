@@ -2,11 +2,8 @@ import { useEffect, useMemo, useRef, useState, useCallback } from 'react'
 import { collection, limit, onSnapshot, orderBy, query, where } from 'firebase/firestore'
 import { db } from '@/services/firebase'
 import { useAuth } from '@/hooks/useAuth'
-import { usePartnerOrganizations } from '@/hooks/partner/usePartnerOrganizations'
-import { usePartnerUsers } from '@/hooks/partner/usePartnerUsers'
+import { usePartnerAdminData } from '@/hooks/partner/usePartnerAdminData'
 import { usePartnerInterventions } from '@/hooks/partner/usePartnerInterventions'
-import { usePartnerMetrics } from '@/hooks/partner/usePartnerMetrics'
-import { usePartnerAdminSnapshot } from '@/hooks/partner/usePartnerAdminSnapshot'
 import { logOrganizationAccessAttempt } from '@/services/organizationService'
 import { recordEngagementAction } from '@/services/engagementService'
 import { logger, normalizeOrgKey } from '@/utils/partnerDashboardUtils'
@@ -14,8 +11,7 @@ import type { DataWarning } from '@/components/admin/RiskAnalysisCard'
 import type { NotificationRecord } from '@/types/notifications'
 
 // Re-export types for backward compatibility
-export type { PartnerRiskLevel, PartnerUser } from '@/hooks/partner/usePartnerUsers'
-export type { PartnerOrganization } from '@/hooks/partner/usePartnerOrganizations'
+export type { PartnerRiskLevel, PartnerUser, PartnerOrganization } from '@/hooks/partner/usePartnerAdminData'
 export type { PartnerInterventionSummary } from '@/hooks/partner/usePartnerInterventions'
 export type { DashboardDebugInfo } from '@/utils/partnerDashboardUtils'
 
@@ -29,11 +25,6 @@ interface UsePartnerDashboardDataOptions {
 // ============================================================================
 export const usePartnerDashboardData = (options?: UsePartnerDashboardDataOptions) => {
   const { profile, isSuperAdmin, user, profileStatus } = useAuth()
-  const {
-    assignedOrganizationIds,
-    loading: assignmentsLoading,
-    error: assignmentsError,
-  } = usePartnerAdminSnapshot({ enabled: profileStatus === 'ready' && !isSuperAdmin })
 
   const [selectedOrg, setSelectedOrg] = useState<string>(options?.selectedOrg || 'all')
   const [notificationCount, setNotificationCount] = useState<number>(0)
@@ -42,19 +33,33 @@ export const usePartnerDashboardData = (options?: UsePartnerDashboardDataOptions
   const [notificationsError, setNotificationsError] = useState<string | null>(null)
   const lastAccessAttempt = useRef<string | null>(null)
 
-  // Use composed hooks
   const {
-    organizations,
-    loading: organizationsLoading,
-    error: organizationsError,
-    ready: organizationsReady,
-    lastSuccessAt: lastOrganizationsSuccessAt,
-    organizationLookup,
-    assignedOrgKeys,
+    snapshot,
+    loading: adminDataLoading,
+    error: adminDataError,
+    organizationsLoading,
+    organizationsError,
+    organizationsReady,
+    usersLoading,
+    usersError,
+    lastOrganizationsSuccessAt,
+    lastUsersSuccessAt,
     retryOrganizations,
-  } = usePartnerOrganizations({
+    retryUsers,
+    debugInfo,
+    assignmentsLoading,
+    assignmentsError,
+  } = usePartnerAdminData(user?.uid, {
     enabled: profileStatus === 'ready',
+    selectedOrg,
+    debugMode: options?.debugMode,
   })
+
+  const organizations = snapshot.organizations
+  const users = snapshot.users
+  const assignedOrganizationIds = snapshot.assignedOrganizationIds
+  const organizationLookup = snapshot.organizationLookup
+  const assignedOrgKeys = snapshot.assignedOrgKeys
 
   // FIX #14: Derive selectedOrgKeys only from necessary dependencies
   const selectedOrgKeys = useMemo(() => {
@@ -68,23 +73,6 @@ export const usePartnerDashboardData = (options?: UsePartnerDashboardDataOptions
     return keys
   }, [organizationLookup, selectedOrg])
 
-  const {
-    users,
-    loading: usersLoading,
-    error: usersError,
-    lastSuccessAt: lastUsersSuccessAt,
-    debugInfo,
-    retryUsers,
-  } = usePartnerUsers({
-    selectedOrg,
-    assignedOrgKeys,
-    rawAssignedOrganizations: assignedOrganizationIds,
-    organizationLookup,
-    organizationsReady,
-    debugMode: options?.debugMode,
-    enabled: profileStatus === 'ready',
-  })
-
   const { interventions, hasQueryLimitWarning } = usePartnerInterventions({
     selectedOrg,
     assignedOrgKeys,
@@ -92,17 +80,8 @@ export const usePartnerDashboardData = (options?: UsePartnerDashboardDataOptions
     enabled: profileStatus === 'ready',
   })
 
-  const {
-    metrics,
-    engagementTrend,
-    riskLevels,
-    atRiskUsers,
-    managedBreakdown,
-    daysUntil,
-  } = usePartnerMetrics({
-    users,
-    organizations,
-  })
+  const { metrics, engagementTrend, riskLevels, atRiskUsers, managedBreakdown, daysUntil } =
+    snapshot.analytics
 
   // Reset selected org when it becomes invalid
   useEffect(() => {
@@ -363,6 +342,9 @@ export const usePartnerDashboardData = (options?: UsePartnerDashboardDataOptions
       daysUntil,
       retryOrganizations,
       retryUsers,
+      snapshot,
+      adminDataLoading,
+      adminDataError,
     }
   }
 
@@ -397,6 +379,9 @@ export const usePartnerDashboardData = (options?: UsePartnerDashboardDataOptions
     retryOrganizations,
     retryUsers,
     debugInfo,
+    snapshot,
+    adminDataLoading,
+    adminDataError,
   }
 }
 

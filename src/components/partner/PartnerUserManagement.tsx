@@ -223,6 +223,12 @@ export const PartnerUserManagement: React.FC<PartnerUserManagementProps> = ({
   const totalPages = Math.max(1, Math.ceil(sortedUsers.length / PAGE_SIZE))
   const paginated = sortedUsers.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE)
   const waitingForOrganizations = organizationsLoading && !organizationsReady
+  const emptyUsersMessage = useMemo(() => {
+    if (!organizationsReady) return 'No users found in this organisation'
+    if (!organizations.length) return 'No organisations assigned yet'
+    if (selectedOrg !== 'all') return 'No users found in this organisation'
+    return 'No users found in your assigned organisations'
+  }, [organizations.length, organizationsReady, selectedOrg])
 
   const atRiskUsers = useMemo(() => learnerUsers.filter(isAtRisk), [learnerUsers])
   const leaders = useMemo(() => filtered.filter(isLeader), [filtered])
@@ -517,7 +523,7 @@ export const PartnerUserManagement: React.FC<PartnerUserManagementProps> = ({
                     <HStack spacing={3} py={6} justify="center">
                       <CheckCircle2 color="green" />
                       <Text color="brand.subtleText">
-                        No learners found for the selected company
+                        {emptyUsersMessage}
                       </Text>
                     </HStack>
                   </Td>
