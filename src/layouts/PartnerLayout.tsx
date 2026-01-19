@@ -224,11 +224,6 @@ export const PartnerLayout: React.FC<PartnerLayoutProps> = ({
                     </Text>
                   )}
                 </VStack>
-                {item.key !== 'support' && (
-                  <Badge colorScheme="purple" variant="subtle">
-                    Scoped
-                  </Badge>
-                )}
               </Button>
             ))}
           </VStack>
