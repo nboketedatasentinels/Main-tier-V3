@@ -71,6 +71,14 @@ export const usePartnerAdminSnapshot = (options: UsePartnerAdminSnapshotOptions 
     [activeAssignments],
   )
 
+  const assignedOrganizationCodes = useMemo(
+    () =>
+      activeAssignments
+        .map((assignment) => assignment.companyCode)
+        .filter((companyCode) => companyCode && companyCode.length > 0),
+    [activeAssignments],
+  )
+
   const assignmentKey = useMemo(
     () => assignedOrganizationIds.slice().sort().join('|'),
     [assignedOrganizationIds],
@@ -81,6 +89,7 @@ export const usePartnerAdminSnapshot = (options: UsePartnerAdminSnapshotOptions 
     assignments,
     activeAssignments,
     assignedOrganizationIds,
+    assignedOrganizationCodes,
     assignmentKey,
     loading,
     error,

@@ -93,7 +93,9 @@ const pageSize = 50
 
 export const useOrganizationDetails = (organizationId?: string) => {
   const { user, isAdmin, isSuperAdmin } = useAuth()
-  const { assignedOrganizationIds } = usePartnerAdminSnapshot({ enabled: isAdmin && !isSuperAdmin })
+  const { assignedOrganizationIds, assignedOrganizationCodes } = usePartnerAdminSnapshot({
+    enabled: isAdmin && !isSuperAdmin,
+  })
   const [organization, setOrganization] = useState<OrganizationDetailView | null>(null)
   const [users, setUsers] = useState<OrganizationUserProfile[]>([])
   const [statistics, setStatistics] = useState<OrganizationStatistics | null>(null)
@@ -138,9 +140,14 @@ export const useOrganizationDetails = (organizationId?: string) => {
       }
 
       const accessResult = await checkOrganizationAccess(user.uid, organizationId, orgRecord.code)
+      const normalizedOrganizationId = organizationId.trim().toLowerCase()
+      const normalizedAssignedCodes = assignedOrganizationCodes.map((code) => code.toLowerCase())
+      const normalizedOrgCode = orgRecord.code?.trim().toLowerCase()
       const matchesAssignedOrg =
         assignedOrganizationIds.includes(organizationId) ||
-        (orgRecord.id ? assignedOrganizationIds.includes(orgRecord.id) : false)
+        (orgRecord.id ? assignedOrganizationIds.includes(orgRecord.id) : false) ||
+        (normalizedOrganizationId ? normalizedAssignedCodes.includes(normalizedOrganizationId) : false) ||
+        (normalizedOrgCode ? normalizedAssignedCodes.includes(normalizedOrgCode) : false)
 
       if (!isSuperAdmin && !accessResult.authorized && !matchesAssignedOrg) {
         if (user?.uid) {
@@ -198,7 +205,14 @@ export const useOrganizationDetails = (organizationId?: string) => {
     } finally {
       setLoading(false)
     }
-  }, [assignedOrganizationIds, isAdmin, isSuperAdmin, organizationId, user?.uid])
+  }, [
+    assignedOrganizationCodes,
+    assignedOrganizationIds,
+    isAdmin,
+    isSuperAdmin,
+    organizationId,
+    user?.uid,
+  ])
 
   useEffect(() => {
     loadDetails()
