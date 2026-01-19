@@ -23,7 +23,7 @@ import {
   Code,
   useToast,
 } from '@chakra-ui/react'
-import { formatDistanceToNow } from 'date-fns'
+import { formatDistanceToNow, isValid } from 'date-fns'
 import { Bell, Building2, Gauge, Mail, Sparkles, Users } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
 import { MetricCard } from '@/components/admin/MetricCard'
@@ -88,6 +88,22 @@ export const PartnerDashboard: React.FC = () => {
   } = usePartnerDashboardData({ debugMode })
   const enableProfileRealtime = import.meta.env.VITE_ENABLE_PROFILE_REALTIME === 'true'
   const supportEmail = 'support@transformation4leaders.com'
+  const formatDistanceToNowSafe = (
+    value: Date | string | number | null | undefined,
+    fallback: string,
+    options?: Parameters<typeof formatDistanceToNow>[1],
+  ) => {
+    if (!value) {
+      return fallback
+    }
+
+    const dateValue = value instanceof Date ? value : new Date(value)
+    if (!isValid(dateValue)) {
+      return fallback
+    }
+
+    return formatDistanceToNow(dateValue, options)
+  }
 
   type PartnerPageKey = 'overview' | 'users' | 'organization-management' | 'at-risk' | 'reports' | 'settings' | 'support'
   const [activePage, setActivePage] = useState<PartnerPageKey>('overview')
@@ -422,13 +438,13 @@ export const PartnerDashboard: React.FC = () => {
               </Text>
               <Stack spacing={1}>
                 <Text fontSize="xs" color="brand.subtleText">
-                  Profile last loaded {lastProfileLoadAt ? formatDistanceToNow(new Date(lastProfileLoadAt)) : 'not yet'} ago.
+                  Profile last loaded {formatDistanceToNowSafe(lastProfileLoadAt, 'not yet')} ago.
                 </Text>
                 <Text fontSize="xs" color="brand.subtleText">
-                  Organizations last fetched {lastOrganizationsSuccessAt ? formatDistanceToNow(lastOrganizationsSuccessAt) : 'not yet'} ago.
+                  Organizations last fetched {formatDistanceToNowSafe(lastOrganizationsSuccessAt, 'not yet')} ago.
                 </Text>
                 <Text fontSize="xs" color="brand.subtleText">
-                  Users last fetched {lastUsersSuccessAt ? formatDistanceToNow(lastUsersSuccessAt) : 'not yet'} ago.
+                  Users last fetched {formatDistanceToNowSafe(lastUsersSuccessAt, 'not yet')} ago.
                 </Text>
               </Stack>
               <HStack spacing={3}>
@@ -598,7 +614,7 @@ export const PartnerDashboard: React.FC = () => {
             </SimpleGrid>
             <HStack justify="space-between" align="center">
               <Text fontSize="sm" color="brand.subtleText">
-                Last refreshed {lastUsersSuccessAt ? formatDistanceToNow(lastUsersSuccessAt) : 'not yet'} ago.
+                Last refreshed {formatDistanceToNowSafe(lastUsersSuccessAt, 'not yet')} ago.
               </Text>
               <Button
                 variant="outline"
@@ -681,9 +697,7 @@ export const PartnerDashboard: React.FC = () => {
                       ? `/partner/organization/${organizationId}`
                       : null
                   const actionLabel = relatedId ? 'View learner' : organizationId ? 'View organization' : null
-                  const timestamp = notification.created_at
-                    ? formatDistanceToNow(new Date(notification.created_at), { addSuffix: true })
-                    : 'Just now'
+                  const timestamp = formatDistanceToNowSafe(notification.created_at, 'Just now', { addSuffix: true })
 
                   return (
                     <HStack
