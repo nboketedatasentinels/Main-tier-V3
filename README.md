@@ -190,6 +190,13 @@ create them manually in the Firebase Console under Firestore Database → Indexe
 - `npm run preview` - Preview production build
 - `npm run lint` - Run ESLint
 - `npm run format` - Format code with Prettier
+- `npm run typecheck` - Run TypeScript type checking
+- `npm run qa` - Run lint, typecheck, and build for QA validation
+- `npm run test` - Alias for the QA suite
+
+## 📚 Documentation
+
+See the [Documentation Hub](./docs/README.md) for learner, partner, admin, QA, and migration references.
 
 ## 🤝 Contributing
 

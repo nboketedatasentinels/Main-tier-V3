@@ -88,7 +88,7 @@ export interface EngagementTrendPoint {
   interventions: number
 }
 
-const usersCollection = collection(db, 'profiles')
+const usersCollection = collection(db, 'users')
 const organizationsCollection = collection(db, ORG_COLLECTION)
 const engagementCollection = collection(db, 'user_engagement_scores')
 const notificationsCollection = collection(db, 'notifications')

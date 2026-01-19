@@ -23,12 +23,10 @@ import { UpgradePage } from '@/pages/upgrade/UpgradePage'
 import { WelcomePage } from '@/pages/onboarding/WelcomePage'
 
 // Dashboard imports
-import { AdminDashboard } from '@/pages/dashboards/AdminDashboard'
 import { SuperAdminDashboard } from '@/pages/dashboards/SuperAdminDashboard'
 import { MentorDashboard } from '@/pages/dashboards/MentorDashboard'
 import { AmbassadorDashboard } from '@/pages/dashboards/AmbassadorDashboard'
-import { CompanyAdminDashboard } from '@/pages/dashboards/CompanyAdminDashboard'
-import { PartnerAdminDashboard } from '@/pages/dashboards/PartnerAdminDashboard'
+import { PartnerDashboard } from '@/pages/dashboards/PartnerDashboard'
 
 // Feature page imports
 import { JourneysPage } from '@/pages/journeys/JourneysPage'
@@ -36,17 +34,21 @@ import { ImpactLogPage } from '@/pages/impact/ImpactLogPage'
 import { LeaderboardPage } from '@/pages/leaderboard/LeaderboardPage'
 import { LeadershipBoardPage } from '@/pages/leaderboard/LeadershipBoardPage'
 import { ProfilePage } from '@/pages/profile/ProfilePage'
-import { WeeklyUpdatesPage } from '@/pages/journeys/WeeklyUpdatesPage'
+import { WeeklyUpdatesPage } from '@/pages/WeeklyChecklistPage'
 import { WeeklyGlancePage } from '@/pages/journeys/WeeklyGlancePage'
+import { LearnerDashboardPage } from '@/pages/journeys/LearnerDashboardPage'
 import { MyCoursesPage } from '@/pages/courses/MyCoursesPage'
 import { PeerConnectPage } from '@/pages/peer/PeerConnectPage'
 import { LeadershipCouncilPage } from '@/pages/leadership/LeadershipCouncilPage'
 import { AnnouncementsPage } from '@/pages/community/AnnouncementsPage'
 import ReferralRewardsPage from '@/pages/community/ReferralRewardsPage'
 import { BookClubPage } from '@/pages/community/BookClubPage'
-import { ShamelessCirclePage } from '@/pages/community/ShamelessCirclePage'
-import { UserProfileManagementPage } from '@/pages/admin/UserProfileManagementPage'
-import { OrganizationDetailPage } from '@/pages/admin/OrganizationDetailPage'
+import { ShamelessCirclePage } from '@/pages/community/ShamelessCirclePage';
+import { UserProfileManagementPage } from '@/pages/admin/UserProfileManagementPage';
+import { OrganizationDetailPage } from '@/pages/admin/OrganizationDetailPage';
+import ApprovalQueuePage from '@/pages/admin/ApprovalQueuePage';
+import PartnerAssignmentPage from '@/pages/admin/PartnerAssignmentPage';
+import BadgeGalleryPage from '@/pages/badges/BadgeGalleryPage';
 
 // Error pages
 import { NotFoundPage } from '@/pages/errors/NotFoundPage'
@@ -82,10 +84,10 @@ const DashboardRouter = () => {
       return <WeeklyGlancePage />
     case 'member':
       return <WeeklyGlancePage />
-    case 'company':
-      return <CompanyAdminDashboard />
     case 'partner':
-      return <PartnerAdminDashboard />
+    case 'admin':
+    case 'company':
+      return <PartnerDashboard />
     default:
       return <Navigate to="/app/weekly-glance" replace />
   }
@@ -93,7 +95,12 @@ const DashboardRouter = () => {
 
 export const AppRoutes = () => {
   return (
-    <BrowserRouter>
+    <BrowserRouter
+      future={{
+        v7_startTransition: true,
+        v7_relativeSplatPath: true,
+      }}
+    >
       <Routes>
         {/* Public routes */}
         <Route path="/" element={<HomePage />} />
@@ -144,34 +151,41 @@ export const AppRoutes = () => {
           <Route index element={<Navigate to="/ambassador/dashboard" replace />} />
         </Route>
 
-        {/* Admin routes */}
+        {/* Partner routes */}
         <Route
-          path="/admin"
+          path="/partner"
           element={
-            <ProtectedRoute requireAdmin>
+            <ProtectedRoute requiredRoles={[UserRole.PARTNER]}>
               <Outlet />
             </ProtectedRoute>
           }
         >
-          <Route path="dashboard" element={<AdminDashboard />} />
+          <Route path="dashboard" element={<PartnerDashboard />} />
           <Route path="organization/:organizationId" element={<OrganizationDetailPage />} />
-          <Route path="user/:userId" element={<UserProfileManagementPage viewContext="admin" />} />
-          <Route index element={<Navigate to="/admin/dashboard" replace />} />
+          <Route path="user/:userId" element={<UserProfileManagementPage viewContext="partner" />} />
+          <Route path="partner-assignment" element={<PartnerAssignmentPage />} />
+          <Route index element={<Navigate to="/partner/dashboard" replace />} />
         </Route>
 
-        {/* Super Admin routes */}
+        {/* Admin routes (Super Admin) */}
         <Route
-          path="/super-admin"
+          path="/admin"
           element={
-            <ProtectedRoute requiredRoles={[UserRole.SUPER_ADMIN]}>
+            <ProtectedRoute requireSuperAdmin>
               <Outlet />
             </ProtectedRoute>
           }
         >
           <Route path="dashboard" element={<SuperAdminDashboard />} />
           <Route path="organization/:organizationId" element={<OrganizationDetailPage />} />
-          <Route index element={<Navigate to="/super-admin/dashboard" replace />} />
+          <Route path="user/:userId" element={<UserProfileManagementPage viewContext="partner" />} />
+          <Route path="approvals" element={<ApprovalQueuePage />} />
+          <Route path="partner-assignment" element={<PartnerAssignmentPage />} />
+          <Route index element={<Navigate to="/admin/dashboard" replace />} />
         </Route>
+
+        {/* Legacy Super Admin redirect */}
+        <Route path="/super-admin/*" element={<Navigate to="/admin/dashboard" replace />} />
 
         {/* Protected main app routes */}
         <Route
@@ -188,6 +202,7 @@ export const AppRoutes = () => {
           {/* Feature routes */}
           <Route path="journeys" element={<JourneysPage />} />
           <Route path="weekly-glance" element={<WeeklyGlancePage />} />
+          <Route path="learner-dashboard" element={<LearnerDashboardPage />} />
           
           {/* Learner-specific routes with mentor restriction */}
           <Route 
@@ -238,6 +253,7 @@ export const AppRoutes = () => {
           <Route path="book-club" element={<BookClubPage />} />
           <Route path="shameless-circle" element={<ShamelessCirclePage />} />
           <Route path="profile" element={<ProfilePage />} />
+          <Route path="badge-gallery" element={<BadgeGalleryPage />} />
           <Route path="dashboard/*" element={<DashboardRouter />} />
         </Route>
 

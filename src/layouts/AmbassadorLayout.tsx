@@ -22,6 +22,7 @@ import {
   VStack,
   useBreakpointValue,
   useDisclosure,
+  useToast,
 } from '@chakra-ui/react'
 import { Menu as MenuIcon, Medal, TrendingUp, X } from 'lucide-react'
 import { NotificationDropdown } from '@/components/notifications/NotificationDropdown'
@@ -110,15 +111,29 @@ export const AmbassadorLayout: React.FC<AmbassadorLayoutProps> = ({
   navSections,
   subtitle = 'Grow the community and track your impact',
 }) => {
-  const { signOut } = useAuth()
+  const { signOut, signingOut } = useAuth()
+  const toast = useToast()
   const sections = useMemo(() => navSections || buildAmbassadorNavItems(), [navSections])
   const accountItems = useMemo(() => buildCommonAccountItems(), [])
   const drawer = useDisclosure()
   const isMobile = useBreakpointValue({ base: true, lg: false })
 
+  const handleLogout = async () => {
+    const result = await signOut()
+    if (result.error) {
+      toast({
+        title: 'Logout failed',
+        description: result.error.message,
+        status: 'error',
+        duration: 5000,
+        isClosable: true,
+      })
+    }
+  }
+
   const handleAccountNavigate = (key: string) => {
     if (key === 'logout') {
-      signOut()
+      handleLogout()
       return
     }
 
@@ -251,7 +266,7 @@ export const AmbassadorLayout: React.FC<AmbassadorLayoutProps> = ({
                     {item.label}
                   </MenuItem>
                 ))}
-                <MenuItem onClick={() => signOut()}>Logout</MenuItem>
+                <MenuItem onClick={handleLogout} isDisabled={signingOut}>Logout</MenuItem>
               </MenuList>
             </Menu>
           </HStack>

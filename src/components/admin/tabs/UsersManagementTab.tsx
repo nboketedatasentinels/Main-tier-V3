@@ -45,7 +45,7 @@ import {
   updateMembershipStatus,
   updateUserRole,
 } from '@/services/userManagementService'
-import { fetchAdminOrganizationsList, listenToAdminUsers } from '@/services/admin/adminUsersService'
+import { fetchAdminOrganizationsList } from '@/services/admin/adminUsersService'
 import { formatAdminFirestoreError } from '@/services/admin/adminErrors'
 
 const roleOptions: ManagedUserRole[] = ['user', 'partner', 'admin', 'super_admin', 'team_leader', 'mentor', 'ambassador']
@@ -56,12 +56,15 @@ const formatDate = (date?: Date | null) => {
   return new Intl.DateTimeFormat(undefined, { month: 'short', day: 'numeric', year: 'numeric' }).format(date)
 }
 
-export const UsersManagementTab = () => {
+interface UsersManagementTabProps {
+  users: ManagedUserRecord[]
+  loading: boolean
+}
+
+export const UsersManagementTab = ({ users: propUsers, loading: propLoading }: UsersManagementTabProps) => {
   const toast = useToast()
   const { isAdmin, isSuperAdmin, assignedOrganizations } = useAuth()
-  const [users, setUsers] = useState<ManagedUserRecord[]>([])
   const [organizations, setOrganizations] = useState<Array<{ id: string; name: string; code?: string }>>([])
-  const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [selectedIds, setSelectedIds] = useState<string[]>([])
   const [bulkLoading, setBulkLoading] = useState(false)
@@ -75,48 +78,25 @@ export const UsersManagementTab = () => {
     timeframe: 'all',
   })
 
-  const resolveUserLoadError = (err: unknown) => {
-    return formatAdminFirestoreError(err, 'Unable to load users.', {
-      indexMessage: 'Missing Firestore index for the users query. Check Firebase console logs.',
-    })
-  }
-
   useEffect(() => {
-    setLoading(true)
-    setError(null)
-    const unsub = listenToAdminUsers({
-      isAdmin,
-      onData: (records) => {
-        setUsers(records)
-        setLoading(false)
-      },
-      onError: (err) => {
-        console.error(err)
-        setError(resolveUserLoadError(err))
-        setLoading(false)
-      },
-    })
-
     fetchAdminOrganizationsList(isAdmin)
       .then(setOrganizations)
       .catch((err) => {
         console.error(err)
         setError(formatAdminFirestoreError(err, 'Unable to load organizations.'))
       })
+  }, [isAdmin])
 
-    return () => unsub()
-  }, [])
-
-  const visibleTimeframeFilter = useMemo(() => users.some((user) => !!user.lastActive), [users])
+  const visibleTimeframeFilter = useMemo(() => propUsers.some((user) => !!user.lastActive), [propUsers])
 
   const accessibleUsers = useMemo(() => {
-    if (isSuperAdmin || !assignedOrganizations?.length) return users
-    return users.filter((user) => {
+    if (isSuperAdmin || !assignedOrganizations?.length) return propUsers
+    return propUsers.filter((user) => {
       const organizationId = user.companyId
       if (!organizationId) return false
       return assignedOrganizations.includes(organizationId)
     })
-  }, [assignedOrganizations, isSuperAdmin, users])
+  }, [assignedOrganizations, isSuperAdmin, propUsers])
 
   const filteredUsers = useMemo(() => {
     const now = new Date()
@@ -248,7 +228,7 @@ export const UsersManagementTab = () => {
   }
 
   const handleDelete = async (userId: string) => {
-    const user = users.find((u) => u.id === userId)
+    const user = propUsers.find((u) => u.id === userId)
     const confirmMessage = `Are you sure you want to delete ${user?.name || 'this user'}? This action cannot be undone.`
     if (!window.confirm(confirmMessage)) return
 
@@ -382,7 +362,7 @@ export const UsersManagementTab = () => {
             )}
 
             <Box border="1px solid" borderColor="gray.200" borderRadius="xl" overflowX="auto">
-              {loading ? (
+              {propLoading ? (
                 <Flex py={10} justify="center" align="center" gap={3}>
                   <Spinner color="purple.500" />
                   <Text color="gray.600">Loading users…</Text>
@@ -496,7 +476,7 @@ export const UsersManagementTab = () => {
                             <Tooltip label="View and edit profile">
                               <Button
                                 as={RouterLink}
-                                to={`/admin/user/${user.id}`}
+                                to={`${window.location.pathname.startsWith('/partner') ? '/partner' : '/admin'}/user/${user.id}`}
                                 size="sm"
                                 variant="outline"
                                 colorScheme="purple"

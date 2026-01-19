@@ -8,23 +8,32 @@ The system provides sophisticated user routing based on roles, account status, o
 
 ## Recent Updates
 
-### Role Normalization & Admin Routing Fix (December 2025)
+### Role Consolidation & Partner Terminology (January 2026)
 
-**Critical Bug Fixed**: Admins were being incorrectly redirected to the learner dashboard (`/app/dashboard/free`) instead of their proper admin dashboard.
+**Overview**: The application roles have been consolidated to simplify the permission model and unify the administrative experience.
 
 **Key Changes**:
-1. **Centralized Role Normalization** (`/src/utils/role.ts`):
-   - Single source of truth for role normalization via `normalizeRole()` function
-   - Maps legacy role values to standardized Firestore vocabulary:
-     - `company_admin` / `admin` → `partner`
-     - Other roles remain as-is (super_admin, mentor, ambassador, team_leader, user, free_user, paid_member)
-   - Provides helper functions: `toUserRole()`, `isAdminRole()`, `isSuperAdminRole()`, `rolesMatch()`
+1. **Role Consolidation**:
+   - `company_admin` and `admin` roles have been merged into a single `partner` role.
+   - `team_leader` role has been removed; these users are now standard `user` (Learner) accounts.
+   - Simplified hierarchy: `super_admin` > `partner` > `mentor` / `ambassador` > `user`.
+
+2. **Centralized Role Normalization** (`/src/utils/role.ts`):
+   - Single source of truth for role normalization via `normalizeRole()` function.
+   - Maps legacy role values to consolidated vocabulary:
+     - `company_admin` / `admin` / `administrator` → `partner`
+     - `team_leader` / `teamleader` → `user`
+   - Provides helper functions: `toUserRole()`, `isAdminRole()`, `isSuperAdminRole()`.
+
+3. **Unified Partner Dashboard**:
+   - Replaced separate `CompanyAdminDashboard` and `PartnerAdminDashboard` with a single, unified `PartnerDashboard`.
+   - All partner-level users now land on `/admin/dashboard`.
    
 2. **Centralized Landing Path Logic** (`/src/utils/roleRouting.ts`):
    - `getLandingPathForRole(role, profile, redirectUrl)` implements priority-based routing:
      1. redirectUrl query parameter (payment/external flows)
-     2. super_admin → `/super-admin/dashboard`
-     3. partner (company_admin) → `/admin/dashboard`
+     2. super_admin → `/admin/dashboard`
+     3. partner (company_admin) → `/partner/dashboard`
      4. mentor → `/mentor/dashboard` (conditional based on transformationTier)
      5. ambassador → `/ambassador/dashboard`
      6. Regular users → onboarding check → preferred route → default by membership
@@ -90,10 +99,9 @@ interface UserProfile {
 ```typescript
 enum UserRole {
   USER = 'user',
-  TEAM_LEADER = 'team_leader',
   AMBASSADOR = 'ambassador',
   MENTOR = 'mentor',
-  COMPANY_ADMIN = 'partner',     // Stored as 'partner' in Firestore
+  PARTNER = 'partner',           // Consolidated Partner role
   SUPER_ADMIN = 'super_admin',
   FREE_USER = 'free_user',
   PAID_MEMBER = 'paid_member',
@@ -119,11 +127,11 @@ enum TransformationTier {
 #### Role Flags
 Computed boolean properties for easy role checking:
 
-- `isAdmin` - true for COMPANY_ADMIN (partner) or SUPER_ADMIN
-- `isSuperAdmin` - true for SUPER_ADMIN only
-- `isMentor` - true for MENTOR
-- `isAmbassador` - true for AMBASSADOR
-- `isPaid` - true for paid roles (PAID_MEMBER and above)
+- `isAdmin` - true for `partner` or `super_admin`
+- `isSuperAdmin` - true for `super_admin` only
+- `isMentor` - true for `mentor`
+- `isAmbassador` - true for `ambassador`
+- `isPaid` - true for paid roles (`paid_member`, `mentor`, `ambassador`, `partner`, `super_admin`)
 - `isCorporateMember` - true if transformationTier contains "corporate"
 
 #### Organization Access
@@ -144,12 +152,13 @@ Computed boolean properties for easy role checking:
 The `getLandingPathForRole` function implements the following priority:
 
 1. **redirectUrl Query Parameter** - External/payment flows take precedence
-2. **Super Admin & Admin** - Redirect to `/super-admin/dashboard` or `/admin/dashboard`
-3. **Mentor (Conditional)** - Based on transformationTier:
+2. **Super Admin** - Redirect to `/admin/dashboard`
+3. **Partner** - Redirect to `/partner/dashboard`
+4. **Mentor (Conditional)** - Based on transformationTier:
    - Corporate mentors → `/mentor/dashboard`
    - Individual mentors → preferredDashboardRoute or `/mentor/dashboard`
-4. **Ambassador** - Redirect to `/ambassador/dashboard`
-5. **Regular Users** - With onboarding check:
+5. **Ambassador** - Redirect to `/ambassador/dashboard`
+6. **Learners (user, free_user, paid_member)** - With onboarding check:
    - Incomplete onboarding → `/welcome`
    - Complete → preferredDashboardRoute or default by membership
 
@@ -221,11 +230,11 @@ Protection checks (in order):
 /suspended              - Account suspended page
 /welcome                - Onboarding page
 
-/super-admin
+/admin
   /dashboard            - Super admin dashboard (requireSuperAdmin)
 
-/admin
-  /dashboard            - Admin dashboard (requireAdmin)
+/partner
+  /dashboard            - Partner dashboard (requirePartner)
 
 /mentor
   /dashboard            - Mentor dashboard (requireMentor)
@@ -388,10 +397,10 @@ For each role, create test users:
   assignedOrganizations: [] // Has access to all
 }
 
-// Admin
+// Partner
 {
-  email: 'admin@test.com',
-  role: 'admin',
+  email: 'partner@test.com',
+  role: 'partner',
   accountStatus: 'active',
   transformationTier: 'individual_free',
   assignedOrganizations: ['org-123', 'org-456']
@@ -417,8 +426,8 @@ For each role, create test users:
 ### Test Scenarios
 
 1. **Login Flow**:
-   - ✓ Super admin → `/super-admin/dashboard`
-   - ✓ Admin → `/admin/dashboard`
+   - ✓ Super admin → `/admin/dashboard`
+   - ✓ Admin → `/partner/dashboard`
    - ✓ Mentor with corporate tier → `/mentor/dashboard`
    - ✓ Ambassador → `/ambassador/dashboard`
    - ✓ Paid member → `/app/dashboard/member`

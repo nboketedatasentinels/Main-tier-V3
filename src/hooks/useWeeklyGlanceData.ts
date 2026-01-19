@@ -65,6 +65,11 @@ export interface WeeklyHabit {
   completed_at?: Timestamp | null
 }
 
+export interface FocusArea {
+  id: string;
+  title: string;
+}
+
 interface WeeklyGlanceLoadingState {
   points: boolean
   support: boolean
@@ -73,6 +78,7 @@ interface WeeklyGlanceLoadingState {
   habits: boolean
   inspiration: boolean
   impact: boolean
+  focus: boolean;
 }
 
 interface WeeklyGlanceErrorState {
@@ -83,6 +89,7 @@ interface WeeklyGlanceErrorState {
   habits?: Error
   inspiration?: Error
   impact?: Error
+  focus?: Error;
 }
 
 export const useWeeklyGlanceData = () => {
@@ -94,6 +101,7 @@ export const useWeeklyGlanceData = () => {
   const [weeklyHabits, setWeeklyHabits] = useState<WeeklyHabit[]>([])
   const [inspirationQuote, setInspirationQuote] = useState<InspirationQuote | null>(null)
   const [impactCount, setImpactCount] = useState<number>(0)
+  const [focusAreas, setFocusAreas] = useState<FocusArea[]>([]);
   const [loading, setLoading] = useState<WeeklyGlanceLoadingState>({
     points: true,
     support: true,
@@ -102,6 +110,7 @@ export const useWeeklyGlanceData = () => {
     habits: true,
     inspiration: true,
     impact: true,
+    focus: true,
   })
   const [errors, setErrors] = useState<WeeklyGlanceErrorState>({})
   const {
@@ -426,6 +435,28 @@ export const useWeeklyGlanceData = () => {
     }
   }
 
+  useEffect(() => {
+    const fetchFocusAreas = async () => {
+      if (!profile?.id) return;
+      setLoading(prev => ({ ...prev, focus: true }));
+      try {
+        // Mocking the focus areas for now
+        const mockFocusAreas: FocusArea[] = [
+          { id: '1', title: 'Leadership Reflection' },
+          { id: '2', title: 'Mentor Session' },
+          { id: '3', title: 'Impact Action' },
+        ];
+        setFocusAreas(mockFocusAreas);
+      } catch (error) {
+        setErrors(prev => ({ ...prev, focus: error as Error }));
+      } finally {
+        setLoading(prev => ({ ...prev, focus: false }));
+      }
+    };
+
+    fetchFocusAreas();
+  }, [profile?.id]);
+
   return {
     weeklyPoints,
     supportAssignment,
@@ -434,6 +465,7 @@ export const useWeeklyGlanceData = () => {
     weeklyHabits,
     inspirationQuote,
     impactCount,
+    focusAreas,
     weekNumber,
     loading,
     errors,

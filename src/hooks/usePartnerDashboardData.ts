@@ -1,136 +1,38 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
-import { differenceInDays, subDays } from 'date-fns'
-import type { DataWarning } from '@/components/admin/RiskAnalysisCard'
-import {
-  addDoc,
-  collection,
-  collectionGroup,
-  getDocs,
-  onSnapshot,
-  orderBy,
-  query,
-  serverTimestamp,
-  where,
-} from 'firebase/firestore'
-import { useAuth } from '@/hooks/useAuth'
+import { useEffect, useMemo, useRef, useState, useCallback } from 'react'
+import { collection, onSnapshot, query, where } from 'firebase/firestore'
 import { db } from '@/services/firebase'
-import { ORG_COLLECTION } from '@/constants/organizations'
-import { listenToAssignedOrganizations, logOrganizationAccessAttempt } from '@/services/organizationService'
-import { listenToOrganizationStatsUpdates, updateOrganizationStatisticsBatch } from '@/services/organizationStatsService'
-import type { OrganizationRecord } from '@/types/admin'
-import { formatAdminFirestoreError } from '@/services/admin/adminErrors'
-import {
-  build14DayRegistrationTrend,
-  calculateUserRiskStatus,
-  getProgramWeekNumber,
-  mapWeeklyPointsToProgress,
-  WeeklyPointsRecord,
-} from '@/utils/partnerProgress'
+import { useAuth } from '@/hooks/useAuth'
+import { usePartnerOrganizations } from '@/hooks/partner/usePartnerOrganizations'
+import { usePartnerUsers } from '@/hooks/partner/usePartnerUsers'
+import { usePartnerInterventions } from '@/hooks/partner/usePartnerInterventions'
+import { usePartnerMetrics } from '@/hooks/partner/usePartnerMetrics'
+import { logOrganizationAccessAttempt } from '@/services/organizationService'
+import { recordEngagementAction } from '@/services/engagementService'
+import { logger, normalizeOrgKey } from '@/utils/partnerDashboardUtils'
+import type { DataWarning } from '@/components/admin/RiskAnalysisCard'
 
-export type PartnerRiskLevel = 'engaged' | 'watch' | 'concern' | 'critical'
-
-export interface PartnerOrganization {
-  id?: string
-  code: string
-  name: string
-  status: 'active' | 'watch' | 'paused'
-  activeUsers: number
-  newThisWeek: number
-  lastActive?: string
-  tags?: string[]
-  warning?: string
-}
-
-export interface PartnerUser {
-  id: string
-  name: string
-  fullName?: string
-  createdAt?: string
-  lastActiveAt?: string
-  programStartDate?: string
-  email: string
-  companyCode: string
-  organizationId?: string
-  progressPercent: number
-  currentWeek: number
-  status: 'Active' | 'Paused' | 'Onboarding'
-  lastActive: string
-  riskStatus: PartnerRiskLevel | 'at_risk'
-  weeklyEarned: number
-  weeklyRequired: number
-  role?: 'learner' | 'mentor' | 'team_leader'
-  riskReasons?: string[]
-  registrationDate?: string
-  interventions?: number
-}
-
-export interface PartnerInterventionSummary {
-  id: string
-  name: string
-  target: string
-  reason: string
-  status: 'active' | 'watch' | 'critical'
-  deadline: string
-  organizationCode?: string
-  userId?: string
-  partnerId?: string
-}
+// Re-export types for backward compatibility
+export type { PartnerRiskLevel, PartnerUser } from '@/hooks/partner/usePartnerUsers'
+export type { PartnerOrganization } from '@/hooks/partner/usePartnerOrganizations'
+export type { PartnerInterventionSummary } from '@/hooks/partner/usePartnerInterventions'
+export type { DashboardDebugInfo } from '@/utils/partnerDashboardUtils'
 
 interface UsePartnerDashboardDataOptions {
   selectedOrg?: string
+  debugMode?: boolean
 }
 
-const USERS_QUERY = query(collection(db, 'profiles'), where('accountStatus', '==', 'active'))
-
-const normalizeTimestamp = (value?: unknown): string | null => {
-  if (!value) return null
-
-  if (value instanceof Date) {
-    return isNaN(value.getTime()) ? null : value.toISOString()
-  }
-
-  if (typeof value === 'number') {
-    const dateValue = new Date(value)
-    return isNaN(dateValue.getTime()) ? null : dateValue.toISOString()
-  }
-
-  if (typeof (value as { toDate?: () => Date }).toDate === 'function') {
-    const dateValue = (value as { toDate: () => Date }).toDate()
-    return isNaN(dateValue.getTime()) ? null : dateValue.toISOString()
-  }
-
-  if (typeof value === 'string') {
-    const dateValue = new Date(value)
-    return isNaN(dateValue.getTime()) ? null : dateValue.toISOString()
-  }
-
-  return null
-}
-
+// ============================================================================
+// FIX #15: Refactored hook that composes smaller, focused hooks
+// ============================================================================
 export const usePartnerDashboardData = (options?: UsePartnerDashboardDataOptions) => {
   const { assignedOrganizations = [], profile, isSuperAdmin, user, profileStatus } = useAuth()
-  const [selectedOrg, setSelectedOrg] = useState<string>(options?.selectedOrg || 'all')
-  const [users, setUsers] = useState<PartnerUser[]>([])
-  const [usersLoading, setUsersLoading] = useState<boolean>(true)
-  const [usersError, setUsersError] = useState<string | null>(null)
-  const [organizations, setOrganizations] = useState<PartnerOrganization[]>([])
-  const [organizationsLoading, setOrganizationsLoading] = useState<boolean>(true)
-  const [organizationsError, setOrganizationsError] = useState<string | null>(null)
-  const [organizationsReady, setOrganizationsReady] = useState<boolean>(false)
-  const [lastOrganizationsSuccessAt, setLastOrganizationsSuccessAt] = useState<Date | null>(null)
-  const [notificationCount, setNotificationCount] = useState<number>(0)
-  const [interventions, setInterventions] = useState<PartnerInterventionSummary[]>([])
-  const [lastUsersSuccessAt, setLastUsersSuccessAt] = useState<Date | null>(null)
-  const [organizationsRefreshIndex, setOrganizationsRefreshIndex] = useState(0)
-  const [usersRefreshIndex, setUsersRefreshIndex] = useState(0)
-  const lastAccessAttempt = useRef<string | null>(null)
-  const organizationsRetryAttempts = useRef(0)
-  const usersRetryAttempts = useRef(0)
-  const assignmentKey = useMemo(
-    () => assignedOrganizations.slice().filter(Boolean).sort().join('|'),
-    [assignedOrganizations],
-  )
 
+  const [selectedOrg, setSelectedOrg] = useState<string>(options?.selectedOrg || 'all')
+  const [notificationCount, setNotificationCount] = useState<number>(0)
+  const lastAccessAttempt = useRef<string | null>(null)
+
+<<<<<<< HEAD
   // Stable key for organization stats subscriptions to prevent unnecessary restarts
   const organizationIdsKey = useMemo(
     () => organizations.map((org) => org.id || org.code).filter(Boolean).sort().join('|'),
@@ -166,33 +68,76 @@ export const usePartnerDashboardData = (options?: UsePartnerDashboardDataOptions
     }
     return keys
   }, [assignedOrganizations, organizations, organizationsReady])
+=======
+  // Use composed hooks
+  const {
+    organizations,
+    loading: organizationsLoading,
+    error: organizationsError,
+    ready: organizationsReady,
+    lastSuccessAt: lastOrganizationsSuccessAt,
+    organizationLookup,
+    assignedOrgKeys,
+    retryOrganizations,
+  } = usePartnerOrganizations({
+    enabled: profileStatus === 'ready',
+  })
+>>>>>>> Journeys
 
+  // FIX #14: Derive selectedOrgKeys only from necessary dependencies
   const selectedOrgKeys = useMemo(() => {
     if (!selectedOrg || selectedOrg === 'all') return new Set<string>()
-    const selected = selectedOrg.toLowerCase()
-    const keys = new Set<string>([selected])
-    const mapped = organizationLookup.get(selected)
+    const normalizedSelected = normalizeOrgKey(selectedOrg)
+    if (!normalizedSelected) return new Set<string>()
+
+    const keys = new Set<string>([normalizedSelected])
+    const mapped = organizationLookup.get(normalizedSelected)
     if (mapped) keys.add(mapped)
     return keys
   }, [organizationLookup, selectedOrg])
 
-  const formatFirestoreError = (error: unknown, fallback: string) => {
-    return formatAdminFirestoreError(error, fallback, {
-      indexMessage: 'Missing Firestore index required for this query.',
-    })
-  }
+  const {
+    users,
+    loading: usersLoading,
+    error: usersError,
+    lastSuccessAt: lastUsersSuccessAt,
+    debugInfo,
+    retryUsers,
+  } = usePartnerUsers({
+    selectedOrg,
+    assignedOrgKeys,
+    organizationLookup,
+    organizationsReady,
+    debugMode: options?.debugMode,
+    enabled: profileStatus === 'ready',
+  })
 
+  const { interventions, hasQueryLimitWarning } = usePartnerInterventions({
+    selectedOrg,
+    assignedOrgKeys,
+    selectedOrgKeys,
+    enabled: profileStatus === 'ready',
+  })
+
+  const {
+    metrics,
+    engagementTrend,
+    riskLevels,
+    atRiskUsers,
+    managedBreakdown,
+    daysUntil,
+  } = usePartnerMetrics({
+    users,
+    organizations,
+  })
+
+  // Reset selected org when it becomes invalid
   useEffect(() => {
-    console.debug('[PartnerDashboard] Assignment key updated', { assignmentKey })
-    if (!assignmentKey) {
-      console.debug('[PartnerDashboard] No assigned organizations in auth context.')
-    } else {
-      console.debug('[PartnerDashboard] Auth assignments updated', {
-        assignments: assignedOrganizations,
-      })
-    }
-  }, [assignedOrganizations, assignmentKey])
+    if (profileStatus !== 'ready') return
+    if (selectedOrg === 'all') return
+    if (organizationsLoading) return
 
+<<<<<<< HEAD
   useEffect(() => {
     if (profileStatus !== 'ready') {
       console.debug('[PartnerDashboard] Waiting for profile readiness before loading dashboard data.', {
@@ -408,15 +353,30 @@ export const usePartnerDashboardData = (options?: UsePartnerDashboardDataOptions
       unsubscribers.forEach((unsubscribe) => unsubscribe())
     }
   }, [organizationIdsKey, profileStatus])
+=======
+    const selected = selectedOrg.toLowerCase()
+    const stillValid = organizations.some(
+      (org) =>
+        org.code?.toLowerCase() === selected || org.id?.toLowerCase() === selected
+    )
 
-  useEffect(() => {
-    if (profileStatus !== 'ready') {
-      return
+    if (!stillValid) {
+      setSelectedOrg('all')
     }
+  }, [organizations, organizationsLoading, profileStatus, selectedOrg])
+>>>>>>> Journeys
+
+  // Log unauthorized access attempts
+  useEffect(() => {
+    if (profileStatus !== 'ready') return
     if (isSuperAdmin || selectedOrg === 'all') return
+
     const hasAccess =
-      assignedOrgKeys.size > 0 && Array.from(selectedOrgKeys).some((key) => assignedOrgKeys.has(key))
+      assignedOrgKeys.size > 0 &&
+      Array.from(selectedOrgKeys).some((key) => assignedOrgKeys.has(key))
+
     if (hasAccess) return
+
     const selectedKey = selectedOrg.toLowerCase()
     if (!user?.uid || lastAccessAttempt.current === selectedKey) return
 
@@ -426,9 +386,11 @@ export const usePartnerDashboardData = (options?: UsePartnerDashboardDataOptions
       organizationCode: selectedKey,
       reason: 'partner_dashboard_selection',
     })
-  }, [assignedOrgKeys, isSuperAdmin, selectedOrg, selectedOrgKeys, user?.uid])
+  }, [assignedOrgKeys, isSuperAdmin, profileStatus, selectedOrg, selectedOrgKeys, user?.uid])
 
+  // Notifications subscription
   useEffect(() => {
+<<<<<<< HEAD
     if (profileStatus !== 'ready') {
       return
     }
@@ -728,12 +690,15 @@ export const usePartnerDashboardData = (options?: UsePartnerDashboardDataOptions
     if (profileStatus !== 'ready') {
       return
     }
+=======
+    if (profileStatus !== 'ready') return
+>>>>>>> Journeys
     if (!profile?.id) return
 
     const notificationsQuery = query(
       collection(db, 'notifications'),
       where('user_id', '==', profile.id),
-      where('is_read', '==', false),
+      where('is_read', '==', false)
     )
 
     const unsubscribe = onSnapshot(notificationsQuery, (snapshot) => {
@@ -741,156 +706,52 @@ export const usePartnerDashboardData = (options?: UsePartnerDashboardDataOptions
     })
 
     return () => unsubscribe()
-  }, [profile?.id])
+  }, [profile?.id, profileStatus])
 
-  useEffect(() => {
-    if (profileStatus !== 'ready') {
-      return
-    }
-    if (!user?.uid) return
-
-    const unsubscribe = onSnapshot(
-      query(collection(db, 'interventions'), orderBy('opened_at', 'desc')),
-      (snapshot) => {
-        const scoped = snapshot.docs
-          .map((docSnap) => {
-            const data = docSnap.data() as Partial<PartnerInterventionSummary> & {
-              partner_id?: string
-              organization_code?: string
-              opened_at?: string
-            }
-
-            return {
-              id: docSnap.id,
-              name: data.name || 'Intervention',
-              target: data.target || 'Assigned learner',
-              reason: data.reason || 'Intervention in progress',
-              status: (data.status as PartnerInterventionSummary['status']) || 'active',
-              deadline: data.deadline || data.opened_at || new Date().toISOString(),
-              organizationCode: data.organizationCode || data.organization_code,
-              userId: data.userId,
-              partnerId: data.partner_id,
-            }
-          })
-          .filter((item) => {
-            const orgCode = item.organizationCode?.toLowerCase()
-            if (!isSuperAdmin && item.partnerId && item.partnerId !== user.uid) return false
-            if (
-              !isSuperAdmin &&
-              (!assignedOrgKeys.size || (orgCode && !assignedOrgKeys.has(orgCode)))
-            )
-              return false
-            if (selectedOrg !== 'all' && selectedOrg && orgCode && !selectedOrgKeys.has(orgCode)) return false
-            return true
-          })
-
-        setInterventions(scoped)
-      },
-    )
-
-    return () => unsubscribe()
-  }, [assignedOrgKeys, isSuperAdmin, selectedOrg, selectedOrgKeys, user?.uid])
-
-  const filteredUsers = useMemo(() => {
-    if (selectedOrg === 'all' || !organizationsReady) return users
-    return users.filter((user) => {
-      const userKeys = [user.companyCode, user.organizationId]
-        .filter((value): value is string => typeof value === 'string' && value.length > 0)
-        .map((value) => value.toLowerCase())
-      return userKeys.some((key) => selectedOrgKeys.has(key))
-    })
-  }, [organizationsReady, selectedOrg, selectedOrgKeys, users])
-
-  const managedCompanies = organizations.length
-
-  const metrics = useMemo(() => {
-    const activeWindow = subDays(new Date(), 30)
-    const newWindow = subDays(new Date(), 7)
-
-    const activeMembers = filteredUsers.filter((user) => new Date(user.lastActive) >= activeWindow).length
-    const engagementRate = Math.round(
-      filteredUsers.reduce((acc, user) => acc + user.progressPercent, 0) / Math.max(filteredUsers.length, 1),
-    )
-    const newRegistrations = filteredUsers.filter(
-      (user) => user.registrationDate && new Date(user.registrationDate) >= newWindow,
-    ).length
-    const managed = managedCompanies
-
-    return {
-      activeMembers,
-      engagementRate,
-      newRegistrations,
-      managedCompanies: managed,
-      deltas: {
-        activeMembers: `${activeMembers} active in 30d`,
-        engagementRate: `${engagementRate}% avg progress`,
-        newRegistrations: `${newRegistrations} in last 7d`,
-        managedCompanies: `${managed} assigned`,
-      },
-    }
-  }, [filteredUsers, managedCompanies])
-
-  const engagementTrend = useMemo(() => {
-    return build14DayRegistrationTrend(filteredUsers.map((user) => user.registrationDate))
-  }, [filteredUsers])
-
-  const riskLevels = useMemo(() => {
-    const levelCounts: Record<PartnerRiskLevel, number> = {
-      engaged: 0,
-      watch: 0,
-      concern: 0,
-      critical: 0,
-    }
-
-    filteredUsers.forEach((user) => {
-      if (user.riskStatus === 'at_risk') {
-        levelCounts.concern += 1
-      } else {
-        levelCounts[user.riskStatus as PartnerRiskLevel] += 1
+  // ============================================================================
+  // FIX #9: updateUserPoints now properly persists to Firestore
+  // ============================================================================
+  const updateUserPoints = useCallback(
+    async (userId: string, delta: number, reason: string) => {
+      if (!profile?.id) {
+        logger.warn('[PartnerDashboard] Cannot update points: no profile ID')
+        return
       }
-    })
 
-    return levelCounts
-  }, [filteredUsers])
+      // Optimistic update for immediate UI feedback
+      // Note: This will be reconciled when the Firestore snapshot updates
+      // The real persistence happens through recordEngagementAction
+      
+      try {
+        await recordEngagementAction({
+          userId,
+          actionLabel: reason,
+          actorId: profile.id,
+          actorName: profile.fullName ?? null,
+          additionalData: {
+            action_type: 'manual_points_adjustment',
+            delta,
+            // This should trigger a cloud function to update weekly_points
+            requires_points_update: true,
+          },
+        })
 
-  const atRiskUsers = useMemo(() => {
-    return filteredUsers.filter((user) => ['watch', 'concern', 'critical', 'at_risk'].includes(user.riskStatus))
-  }, [filteredUsers])
+        logger.debug('[PartnerDashboard] Points adjustment recorded', {
+          userId,
+          delta,
+          reason,
+        })
+      } catch (error) {
+        logger.error('[PartnerDashboard] Failed to record points adjustment', error)
+        throw error // Re-throw so caller can handle
+      }
+    },
+    [profile?.id, profile?.fullName]
+  )
 
-  const assignedOrgCount = organizations.length || assignedOrganizations?.length || 0
-
-  const managedBreakdown = useMemo(() => {
-    const active = organizations.filter((org) => org.status === 'active').length
-    const inactive = organizations.length - active
-    return { active, inactive }
-  }, [organizations])
-
-  const updateUserPoints = async (userId: string, delta: number, reason: string) => {
-    setUsers((prev) =>
-      prev.map((user) =>
-        user.id === userId
-          ? {
-              ...user,
-              weeklyEarned: Math.max(0, user.weeklyEarned + delta),
-              riskReasons: [...(user.riskReasons ?? []), `Adjustment: ${reason}`],
-            }
-          : user,
-      ),
-    )
-
-    await addDoc(collection(db, 'users', userId, 'engagement_actions'), {
-      action_type: 'manual_adjustment',
-      action_label: reason,
-      actor_id: profile?.id ?? null,
-      actor_name: profile?.fullName ?? null,
-      timestamp: serverTimestamp(),
-      user_id: userId,
-      delta,
-    })
-  }
-
+  // Data quality warnings
   const dataQualityWarnings = useMemo(() => {
-    const warnings = [] as DataWarning[]
+    const warnings: DataWarning[] = []
 
     if (!organizationsLoading && !isSuperAdmin && !organizations.length) {
       warnings.push({
@@ -905,12 +766,13 @@ export const usePartnerDashboardData = (options?: UsePartnerDashboardDataOptions
       organizations.length > 0
     ) {
       warnings.push({
-        message: 'Some assigned organizations could not be resolved. Please re-sync your profile.',
+        message:
+          'Some assigned organizations could not be resolved. Please re-sync your profile.',
         severity: 'warning',
       })
     }
 
-    const missingAssignments = users.filter((user) => !user.companyCode).length
+    const missingAssignments = users.filter((u) => !u.companyCode).length
     if (missingAssignments) {
       warnings.push({
         message: `${missingAssignments} learner${missingAssignments === 1 ? '' : 's'} missing organization assignment`,
@@ -918,7 +780,9 @@ export const usePartnerDashboardData = (options?: UsePartnerDashboardDataOptions
       })
     }
 
-    const missingPoints = users.filter((user) => !user.weeklyRequired && !user.weeklyEarned).length
+    const missingPoints = users.filter(
+      (u) => !u.weeklyRequired && !u.weeklyEarned
+    ).length
     if (missingPoints) {
       warnings.push({
         message: `${missingPoints} learner${missingPoints === 1 ? ' is' : 's are'} missing weekly points data`,
@@ -926,11 +790,37 @@ export const usePartnerDashboardData = (options?: UsePartnerDashboardDataOptions
       })
     }
 
+    if (debugInfo && debugInfo.rejectedNoMatch > 0) {
+      warnings.push({
+        message: `${debugInfo.rejectedNoMatch} learner${debugInfo.rejectedNoMatch === 1 ? '' : 's'} filtered out due to organization key mismatch`,
+        severity: 'warning',
+      })
+    }
+
+    // FIX #3: Warn about query truncation
+    if (hasQueryLimitWarning) {
+      warnings.push({
+        message:
+          'You have access to more than 30 organizations. Some interventions may not be displayed.',
+        severity: 'warning',
+      })
+    }
+
     return warnings
-  }, [assignedOrganizations.length, isSuperAdmin, organizations.length, organizationsLoading, profileStatus, users])
+  }, [
+    assignedOrganizations.length,
+    debugInfo,
+    hasQueryLimitWarning,
+    isSuperAdmin,
+    organizations.length,
+    organizationsLoading,
+    profileStatus,
+    users,
+  ])
 
-  const daysUntil = (date: string) => differenceInDays(new Date(date), new Date())
+  const assignedOrgCount = organizations.length || assignedOrganizations?.length || 0
 
+  // Return loading state if profile not ready
   if (profileStatus !== 'ready') {
     return {
       assignedOrgCount: 0,
@@ -1000,6 +890,7 @@ export const usePartnerDashboardData = (options?: UsePartnerDashboardDataOptions
     daysUntil,
     retryOrganizations,
     retryUsers,
+    debugInfo,
   }
 }
 

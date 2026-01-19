@@ -13,7 +13,7 @@ User profile documents (indexed by user UID)
   firstName: string
   lastName: string
   fullName: string
-  role: 'free_user' | 'paid_member' | 'mentor' | 'ambassador' | 'company_admin' | 'super_admin'
+  role: 'free_user' | 'paid_member' | 'mentor' | 'ambassador' | 'partner' | 'super_admin'
   avatarUrl?: string
   bio?: string
   phoneNumber?: string
@@ -96,6 +96,9 @@ Organization settings and program configuration
   assignedMentorId?: string | null
   assignedAmbassadorId?: string | null
   transformationPartnerId?: string | null
+  // Leadership availability flags
+  hasMentor?: boolean
+  hasAmbassador?: boolean
   createdAt?: Timestamp
   updatedAt?: Timestamp
 }
@@ -124,6 +127,186 @@ Available journey templates
   badgeId?: string
   isActive: boolean
   isPremium: boolean
+  createdAt: Timestamp
+  updatedAt: Timestamp
+}
+```
+
+### journey_configs
+Canonical journey configuration baseline (one doc per journey type)
+```typescript
+{
+  id: string
+  journeyType: '4W' | '6W' | '3M' | '6M' | '9M' | '12M'
+  name: string
+  description: string
+  durationWeeks: number
+  totalPointsTarget: number
+  weeklyPointsTarget: number
+  minPointsPerWeek: number
+  maxPointsPerWeek?: number
+  maxPointsTotal?: number
+  completionThresholdPct?: number
+  timelineDisplay?: 'duration' | 'course-count'
+  activityIds: string[]
+  mode?: 'intro' | 'full'
+  isActive: boolean
+  isPremium: boolean
+  createdAt: Timestamp
+  updatedAt: Timestamp
+}
+```
+
+### activity_catalog
+Activity catalog definitions with metadata baseline
+```typescript
+{
+  id: string
+  baseId: string
+  title: string
+  description: string
+  points: number
+  maxPerMonth: number
+  maxPerWeek?: number
+  requiresApproval?: boolean
+  verification?: 'honor' | 'partner_approval'
+  isFreeTier?: boolean
+  week: number
+  category: string
+  tags?: string[]
+  flexibleWeeks?: boolean
+  frequencyNote?: string
+  isActive: boolean
+  createdAt: Timestamp
+  updatedAt: Timestamp
+}
+```
+
+### activityDefinitions
+Window-first activity definitions (replaces weekly activity logic)
+```typescript
+{
+  id: string
+  title: string
+  description: string
+  category: string
+  points: number
+  maxPerWindow: number
+  maxPerClaim?: number
+  requiresApproval?: boolean
+  verification?: 'honor' | 'mentor_approval' | 'partner_approval'
+  isActive: boolean
+  tags?: string[]
+  createdAt: Timestamp
+  updatedAt: Timestamp
+}
+```
+
+### twoWeekWindows
+Two-week program windows for window-based progress tracking
+```typescript
+{
+  id: string
+  journeyType: '4W' | '6W' | '3M' | '6M' | '9M' | '12M'
+  windowNumber: number
+  startDate: Timestamp
+  endDate: Timestamp
+  weekStart: number
+  weekEnd: number
+  label?: string
+  status: 'upcoming' | 'open' | 'closed'
+  createdAt: Timestamp
+  updatedAt: Timestamp
+}
+```
+
+### windowTargets
+Window-level point targets by journey type
+```typescript
+{
+  id: string
+  journeyType: '4W' | '6W' | '3M' | '6M' | '9M' | '12M'
+  windowNumber: number
+  targetPoints: number
+  minPoints?: number
+  maxPoints?: number
+  createdAt: Timestamp
+  updatedAt: Timestamp
+}
+```
+
+### activityClaims
+User-submitted activity claims for approval workflows
+```typescript
+{
+  id: string
+  uid: string
+  orgId?: string
+  activityId: string
+  windowId: string
+  windowNumber: number
+  status: 'draft' | 'pending' | 'approved' | 'rejected' | 'voided'
+  pointsClaimed: number
+  proofUrl?: string
+  notes?: string
+  submittedAt?: Timestamp
+  reviewedAt?: Timestamp
+  reviewedBy?: string
+  rejectionReason?: string
+  createdAt: Timestamp
+  updatedAt: Timestamp
+}
+```
+
+### pointsLedger
+Point awards ledger (extended for window-first tracking)
+```typescript
+{
+  id: string
+  uid: string
+  activityId: string
+  activityClaimId?: string
+  windowId?: string
+  windowNumber?: number
+  weekNumber?: number
+  points: number
+  source: 'activity_claim' | 'weekly_checklist' | 'impact_log' | 'manual_adjustment'
+  status: 'posted' | 'voided'
+  createdAt: Timestamp
+  updatedAt: Timestamp
+}
+```
+
+### badgeAwards
+Awarded badges tied to windows and milestones
+```typescript
+{
+  id: string
+  uid: string
+  badgeId: string
+  windowId?: string
+  windowNumber?: number
+  reason?: string
+  awardedAt: Timestamp
+  awardedBy?: string
+  createdAt: Timestamp
+  updatedAt: Timestamp
+}
+```
+
+### notificationQueue
+Back-office notification queue for async delivery
+```typescript
+{
+  id: string
+  uid: string
+  type: 'achievement' | 'approval' | 'reminder' | 'system'
+  channel: 'in_app' | 'email' | 'sms'
+  payload: Record<string, unknown>
+  status: 'queued' | 'processing' | 'sent' | 'failed'
+  scheduledFor?: Timestamp
+  attempts: number
+  lastAttemptAt?: Timestamp
   createdAt: Timestamp
   updatedAt: Timestamp
 }
@@ -462,8 +645,18 @@ service cloud.firestore {
       allow read: if isAuthenticated();
       allow write: if hasRole('super_admin');
     }
+
+    match /journey_configs/{journeyConfigId} {
+      allow read: if isAuthenticated();
+      allow write: if hasRole('super_admin');
+    }
     
     match /activities/{activityId} {
+      allow read: if isAuthenticated();
+      allow write: if hasRole('super_admin');
+    }
+
+    match /activity_catalog/{activityId} {
       allow read: if isAuthenticated();
       allow write: if hasRole('super_admin');
     }
@@ -482,39 +675,39 @@ service cloud.firestore {
     match /villages/{villageId} {
       allow read: if isAuthenticated();
       allow create: if isAuthenticated();
-      allow update, delete: if hasRole('super_admin') || hasRole('company_admin');
+      allow update, delete: if hasRole('super_admin') || hasRole('partner');
     }
     
     match /companies/{companyId} {
       allow read: if isAuthenticated();
-      allow write: if hasRole('super_admin') || hasRole('company_admin');
+      allow write: if hasRole('super_admin') || hasRole('partner');
     }
     
     match /events/{eventId} {
       allow read: if isAuthenticated();
       allow create: if isAuthenticated();
-      allow update, delete: if hasRole('super_admin') || hasRole('company_admin');
+      allow update, delete: if hasRole('super_admin') || hasRole('partner');
     }
 
     // Nudge collections (admin/partner access)
     match /nudge_templates/{templateId} {
-      allow read: if hasRole('super_admin') || hasRole('company_admin') || hasRole('admin') || hasRole('partner');
-      allow create, update, delete: if hasRole('super_admin') || hasRole('company_admin') || hasRole('admin') || hasRole('partner');
+      allow read: if hasRole('super_admin') || hasRole('partner');
+      allow create, update, delete: if hasRole('super_admin') || hasRole('partner');
     }
 
     match /nudges_sent/{nudgeId} {
-      allow read: if hasRole('super_admin') || hasRole('company_admin') || hasRole('admin') || hasRole('partner');
-      allow create, update: if hasRole('super_admin') || hasRole('company_admin') || hasRole('admin') || hasRole('partner');
+      allow read: if hasRole('super_admin') || hasRole('partner');
+      allow create, update: if hasRole('super_admin') || hasRole('partner');
     }
 
     match /nudge_effectiveness/{effectivenessId} {
-      allow read: if hasRole('super_admin') || hasRole('company_admin') || hasRole('admin') || hasRole('partner');
-      allow create: if hasRole('super_admin') || hasRole('company_admin') || hasRole('admin') || hasRole('partner');
+      allow read: if hasRole('super_admin') || hasRole('partner');
+      allow create: if hasRole('super_admin') || hasRole('partner');
     }
 
     match /nudge_campaigns/{campaignId} {
-      allow read: if hasRole('super_admin') || hasRole('company_admin') || hasRole('admin') || hasRole('partner');
-      allow create, update, delete: if hasRole('super_admin') || hasRole('company_admin') || hasRole('admin') || hasRole('partner');
+      allow read: if hasRole('super_admin') || hasRole('partner');
+      allow create, update, delete: if hasRole('super_admin') || hasRole('partner');
     }
 
     match /user_points/{pointsId} {
@@ -574,6 +767,26 @@ Create composite indexes for common queries:
    - `status`, `requested_at` (descending)
    - `user_id`, `requested_at` (descending)
 
+11. **journey_configs** collection:
+   - `isActive`, `journeyType` (ascending)
+
+12. **activity_catalog** collection:
+  - `isActive`, `category` (ascending)
+
+13. **twoWeekWindows** collection:
+  - `journeyType`, `windowNumber` (ascending)
+
+14. **windowTargets** collection:
+  - `journeyType`, `windowNumber` (ascending)
+
+15. **activityClaims** collection:
+  - `uid`, `windowId` (ascending)
+  - `status`, `windowId` (ascending)
+
+16. **pointsLedger** collection:
+  - `uid`, `windowId` (ascending)
+  - `uid`, `weekNumber` (ascending)
+
 ## Initial Data Setup
 
 Use Firebase Admin SDK or console to populate initial data:
@@ -602,3 +815,11 @@ const journeys = [
   // ... more journeys
 ];
 ```
+
+Baseline seed data for the new `journey_configs` and `activity_catalog` collections lives in:
+- `database/seed-data/journey-configs.json`
+- `database/seed-data/activity-catalog.json`
+
+Baseline seed data for the window-first configuration collections lives in:
+- `database/seed-data/activity-definitions.json`
+- `database/seed-data/window-targets.json`
