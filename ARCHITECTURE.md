@@ -36,7 +36,7 @@ This document captures the target architecture, routing map, and dashboard layou
 ### State & Data Layer
 - React Context API + custom hooks for auth, user profile, notifications, feature flags
 - `services/` for API clients, strongly typed responses, error normalization, and retries where safe
-- Centralized RBAC helpers: `hasRole`, `hasAnyRole`, `assertRole` exported from `useAuth()`
+- Centralized RBAC helpers: `isAdmin`, `isSuperAdmin`, `hasRole`, `hasAnyRole` exported from `useAuth()`
 
 ## 3. Application Architecture
 
@@ -90,10 +90,10 @@ src/
 
 ### Core Member Experience
 - `/dashboard` – Default redirect based on role
-- `/dashboard/member` – Member dashboard (free & paid variants)
+- `/dashboard/member` – Learner dashboard (free & paid variants)
 - `/dashboard/mentor` – Mentor dashboard
 - `/dashboard/ambassador` – Ambassador dashboard
-- `/dashboard/company-admin` – Company admin dashboard
+- `/dashboard/partner` – Partner dashboard
 - `/dashboard/super-admin` – Super admin tools
 - `/journeys` – Journey catalog & enrollment
 - `/journeys/:journeyId` – Journey detail with weekly map
@@ -151,11 +151,10 @@ src/
 - **Community impact**: charts for reach, engagement, leaderboard for referrals.
 - **Announcements & tips**: playbook links and suggested actions.
 
-### Company Admin Dashboard
+### Partner Dashboard
 - **Org overview**: total users, active seats, engagement level, risk distribution.
 - **Usage analytics**: charts for points, impact hours/USD, completion rates.
 - **Team management**: user table with filters, bulk actions, invite by code; upgrade requests widget.
-- **Events & schedules**: calendar and quick create with QR generation.
 - **Reports**: exports, audit summaries, compliance notices.
 
 ### Super Admin Dashboard

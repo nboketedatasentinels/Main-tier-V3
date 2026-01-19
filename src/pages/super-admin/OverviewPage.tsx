@@ -33,7 +33,6 @@ import {
   Building2,
   GitBranch,
   List,
-  ShieldAlert,
   Sparkles,
   TrendingUp,
   Users,
@@ -256,12 +255,6 @@ export const OverviewPage: React.FC<OverviewPageProps> = ({
                       </Button>
                       <Button leftIcon={<TrendingUp size={16} />} variant="ghost" onClick={() => onNavigate('reports')}>
                         Engagement insights
-                      </Button>
-                      <Button leftIcon={<ShieldAlert size={16} />} variant="ghost" onClick={() => onNavigate('security')}>
-                        Security rules
-                      </Button>
-                      <Button leftIcon={<GitBranch size={16} />} variant="ghost" onClick={() => onNavigate('security')}>
-                        Audit activity
                       </Button>
                     </SimpleGrid>
                   </Stack>

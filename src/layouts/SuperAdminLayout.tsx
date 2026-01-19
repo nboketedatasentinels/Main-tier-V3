@@ -22,6 +22,7 @@ import {
   VStack,
   useBreakpointValue,
   useDisclosure,
+  useToast,
 } from '@chakra-ui/react'
 import { LogOut, Menu as MenuIcon, Shield, Sparkles, X } from 'lucide-react'
 import { NotificationDropdown } from '@/components/notifications/NotificationDropdown'
@@ -110,15 +111,29 @@ export const SuperAdminLayout: React.FC<SuperAdminLayoutProps> = ({
   navSections,
   subtitle = 'Platform Control Center',
 }) => {
-  const { signOut } = useAuth()
+  const { signOut, signingOut } = useAuth()
+  const toast = useToast()
   const sections = useMemo(() => navSections || buildSuperAdminNavItems(), [navSections])
   const accountItems = useMemo(() => buildCommonAccountItems(), [])
   const drawer = useDisclosure()
   const isMobile = useBreakpointValue({ base: true, lg: false })
 
+  const handleLogout = async () => {
+    const result = await signOut()
+    if (result.error) {
+      toast({
+        title: 'Logout failed',
+        description: result.error.message,
+        status: 'error',
+        duration: 5000,
+        isClosable: true,
+      })
+    }
+  }
+
   const handleAccountNavigate = (key: string) => {
     if (key === 'logout') {
-      signOut()
+      handleLogout()
       return
     }
 
@@ -173,7 +188,9 @@ export const SuperAdminLayout: React.FC<SuperAdminLayoutProps> = ({
           variant="ghost"
           justifyContent="flex-start"
           color="brand.text"
-          onClick={() => signOut()}
+          onClick={handleLogout}
+          isLoading={signingOut}
+          isDisabled={signingOut}
           mt="auto"
         >
           Logout
@@ -256,7 +273,7 @@ export const SuperAdminLayout: React.FC<SuperAdminLayoutProps> = ({
                     {item.label}
                   </MenuItem>
                 ))}
-                <MenuItem icon={<Icon as={LogOut} />} onClick={() => signOut()}>
+                <MenuItem icon={<Icon as={LogOut} />} onClick={handleLogout} isDisabled={signingOut}>
                   Logout
                 </MenuItem>
               </MenuList>

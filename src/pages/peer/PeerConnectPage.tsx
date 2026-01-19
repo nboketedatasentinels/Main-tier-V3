@@ -78,8 +78,7 @@ import { db } from '@/services/firebase'
 import { useAuth } from '@/hooks/useAuth'
 import { StartChallengeModal } from '@/components/modals/StartChallengeModal'
 import { removeUndefinedFields } from '@/utils/firestore'
-import { fetchOrgMembers, getOrgScope, type OrgScope } from '@/utils/organizationScope'
-import { OrgProfileLike } from '@/utils/organizationTypes'
+import { fetchOrgMembers, getOrgScope } from '@/utils/organizationScope'
 
 // Types
 type PeerProfile = {

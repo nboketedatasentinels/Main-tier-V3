@@ -118,7 +118,7 @@ const emptyOrganization: OrganizationRecord = {
   cluster: '',
 }
 
-const inviteRoleOptions: InviteDraft['role'][] = ['user', 'mentor', 'ambassador', 'team_leader']
+const inviteRoleOptions: InviteDraft['role'][] = ['user', 'mentor', 'ambassador']
 const inviteMethodOptions: InviteDraft['method'][] = ['email', 'one_time_code']
 const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
 const nameRegex = /^[A-Za-z][A-Za-z\s'-]*$/

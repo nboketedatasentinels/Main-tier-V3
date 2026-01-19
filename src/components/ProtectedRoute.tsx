@@ -66,7 +66,6 @@ export const ProtectedRoute: React.FC<Props> = ({
   }
 
   // Get normalized role for admin/super_admin comparisons
-  // (these require normalization due to partner/company_admin/admin variations)
   const userRole = normalizeRole(profile?.role)
 
   // Check account status
@@ -89,8 +88,8 @@ export const ProtectedRoute: React.FC<Props> = ({
     return <Navigate to="/unauthorized" replace />
   }
 
-  // Admin requirement - allow admin, partner, and super_admin
-  if (requireAdmin && userRole !== 'partner' && userRole !== 'admin' && userRole !== 'super_admin') {
+  // Admin requirement - allow partner and super_admin
+  if (requireAdmin && userRole !== 'partner' && userRole !== 'super_admin') {
     return <Navigate to="/unauthorized" replace />
   }
 

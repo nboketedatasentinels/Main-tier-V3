@@ -88,10 +88,11 @@ import {
   type BusinessSecondaryWaste,
 } from '@/config/impactLogMappings'
 import { isFreeUser } from '@/utils/membership'
-import { removeUndefinedFields } from '@/utils/firestore'
-import { JOURNEY_META, getActivitiesForJourney, getMonthNumber, type ActivityDef, type JourneyType } from '@/config/pointsConfig'
-import { awardChecklistPoints, revokeChecklistPoints } from '@/services/pointsService'
-import { isValidUrl } from '@/utils/validation'
+import { removeUndefinedFields } from '@/utils/firestore';
+import { JOURNEY_META, getActivitiesForJourney, getMonthNumber, type ActivityDef, type JourneyType } from '@/config/pointsConfig';
+import { awardChecklistPoints, revokeChecklistPoints } from '@/services/pointsService';
+import { isValidUrl } from '@/utils/validation';
+import { awardBadge } from '@/services/badgeService';
 import { validateOrganizationPartner } from '@/services/organizationService'
 /**
  * Represents a single impact log entry.
@@ -662,9 +663,15 @@ export const ImpactLogPage: React.FC = () => {
         createdAt: new Date().toISOString(),
       })
 
-      await addDoc(collection(db, 'impact_logs'), payload)
+      await addDoc(collection(db, 'impact_logs'), payload);
 
-      const journeyType = resolveJourneyType()
+      const impactLogsQuery = query(collection(db, 'impact_logs'), where('userId', '==', user.uid));
+      const impactLogsSnapshot = await getDocs(impactLogsQuery);
+      if (impactLogsSnapshot.size >= 10) {
+        await awardBadge(user.uid, 'impact-master');
+      }
+
+      const journeyType = resolveJourneyType();
       const activity = resolveImpactActivity(journeyType)
       const weekNumber = resolveWeekNumberForDate(payload.date, journeyType)
       const monthNumber = getMonthNumber(weekNumber)

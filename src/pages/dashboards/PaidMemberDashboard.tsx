@@ -23,12 +23,14 @@ import {
   Text,
   VStack,
 } from '@chakra-ui/react'
-import { CalendarClock, Compass, Flame, Rocket, Star, TrendingUp } from 'lucide-react'
+import { Award, CalendarClock, CheckCircle, Circle, Compass, Flame, Rocket, Star, TrendingUp } from 'lucide-react'
 import { useAuth } from '@/hooks/useAuth'
 import { ActivityCard } from '@/components/dashboard/ActivityCard'
 import { BadgeCard } from '@/components/dashboard/BadgeCard'
 import { useWeeklyGlanceData } from '@/hooks/useWeeklyGlanceData'
 import { WeeklyInspirationCard } from './components/WeeklyInspirationCard'
+import { JourneyCompletionBanner } from '@/components/journeys/JourneyCompletionBanner'
+import pointsConfig from '@/config/pointsConfig'
 
 interface ActivityItem {
   title: string
@@ -81,6 +83,12 @@ export const PaidMemberDashboard: React.FC = () => {
   const { inspirationQuote } = useWeeklyGlanceData()
   const [activities, setActivities] = useState<ActivityItem[]>(initialActivities)
   const [activeBadgeIndex, setActiveBadgeIndex] = useState(0)
+  const journeyWeeks = useMemo(() => {
+    if (profile?.programDurationWeeks) return profile.programDurationWeeks
+    if (profile?.journeyType) return pointsConfig.JOURNEY_META[profile.journeyType].weeks
+    return 6
+  }, [profile?.journeyType, profile?.programDurationWeeks])
+  const currentWeek = profile?.currentWeek || 1
 
   const completedActivities = useMemo(
     () => activities.filter(activity => activity.completed).length,
@@ -91,6 +99,19 @@ export const PaidMemberDashboard: React.FC = () => {
     if (!activities.length) return 0
     return Math.round((completedActivities / activities.length) * 100)
   }, [activities.length, completedActivities])
+
+  const journeyCompletionPct = useMemo(() => {
+    if (!journeyWeeks) return 0
+    return Math.min(100, Math.round((currentWeek / journeyWeeks) * 100))
+  }, [currentWeek, journeyWeeks])
+
+  const isJourneyComplete = journeyCompletionPct >= 100
+
+  const completionSteps = [
+    { label: 'Finish final week activities', complete: currentWeek >= journeyWeeks },
+    { label: 'Submit final impact log', complete: completionRate >= 80 },
+    { label: 'Confirm mentor sign-off', complete: isJourneyComplete },
+  ]
 
   const toggleActivity = (title: string) => {
     setActivities(prev =>
@@ -110,6 +131,7 @@ export const PaidMemberDashboard: React.FC = () => {
 
   return (
     <Stack spacing={8}>
+      <JourneyCompletionBanner />
       <Flex
         aria-label="Dashboard welcome panel"
         align={{ base: 'flex-start', md: 'center' }}
@@ -312,6 +334,49 @@ export const PaidMemberDashboard: React.FC = () => {
           </Card>
         </GridItem>
       </Grid>
+
+      <Card>
+        <CardBody>
+          <Stack spacing={4}>
+            <HStack justify="space-between" align="center">
+              <HStack spacing={2}>
+                <Icon as={Award} color="brand.gold" />
+                <Text fontWeight="bold" color="brand.text">
+                  Journey completion badge
+                </Text>
+              </HStack>
+              <Tag colorScheme={isJourneyComplete ? 'green' : 'purple'}>
+                {isJourneyComplete ? 'Ready to claim' : 'In progress'}
+              </Tag>
+            </HStack>
+            <Text fontSize="sm" color="brand.subtleText">
+              Complete the steps below to unlock your final journey badge and celebrate your growth.
+            </Text>
+            <Progress value={journeyCompletionPct} borderRadius="full" />
+            <HStack justify="space-between">
+              <Text fontSize="sm" color="brand.subtleText">
+                {journeyCompletionPct}% complete
+              </Text>
+              <Text fontSize="sm" color="brand.subtleText">
+                Week {currentWeek} of {journeyWeeks}
+              </Text>
+            </HStack>
+            <Stack spacing={2}>
+              {completionSteps.map(step => (
+                <HStack key={step.label} spacing={3}>
+                  <Icon as={step.complete ? CheckCircle : Circle} color={step.complete ? 'green.400' : 'gray.400'} />
+                  <Text color="brand.text" fontWeight="semibold">
+                    {step.label}
+                  </Text>
+                </HStack>
+              ))}
+            </Stack>
+            <Button colorScheme="purple" isDisabled={!isJourneyComplete}>
+              Claim completion badge
+            </Button>
+          </Stack>
+        </CardBody>
+      </Card>
 
       <Grid templateColumns={{ base: '1fr', xl: '3fr 2fr' }} gap={6}>
         <GridItem>

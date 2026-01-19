@@ -31,9 +31,7 @@ const DEFAULT_ROLE_WEIGHTS: Record<string, number> = {
   user: 1,
   mentor: 1,
   ambassador: 1,
-  team_leader: 1,
   partner: 0,
-  admin: 0,
   super_admin: 0,
 }
 
@@ -89,9 +87,8 @@ const getActiveLicenseUsage = async (organizationId: string, roleWeights: Record
   return { total, licenseAllocationByRole }
 }
 
-const resolveAlertTargetRoles = (organization: OrganizationRecord) => {
-  const targets: string[] = ['super_admin', 'admin']
-  if (organization.transformationPartnerId) targets.push('partner')
+const resolveAlertTargetRoles = () => {
+  const targets: string[] = ['super_admin', 'partner']
   return targets
 }
 
@@ -221,7 +218,7 @@ export const checkCapacityThresholds = async (organizationId: string) => {
 
   await recordAdminActivity(triggeredAlert, organization.code)
 
-  const targetRoles = resolveAlertTargetRoles(organization)
+  const targetRoles = resolveAlertTargetRoles()
   await sendCapacityAlert({
     organizationId,
     organizationName: organization.name || 'Unknown organization',
