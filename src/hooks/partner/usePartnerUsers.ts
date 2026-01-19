@@ -58,8 +58,6 @@ type FirestorePartnerUser = Partial<PartnerUser> & {
   registration_date?: unknown
   programStartDate?: unknown
   program_start_date?: unknown
-  companyId?: string
-  company_id?: string
   organizationId?: string
   organization_id?: string
   lastActiveAt?: unknown
@@ -86,19 +84,13 @@ interface UsePartnerUsersOptions {
 
 const USERS_COLLECTION = collection(db, 'profiles')
 
-const expandAssignments = (assignments: string[], organizationLookup: Map<string, string>) => {
+const expandAssignments = (assignments: string[]) => {
   const expanded = new Set<string>()
   assignments.forEach((entry) => {
     if (typeof entry !== 'string') return
     const trimmed = entry.trim()
     if (!trimmed) return
     expanded.add(trimmed)
-    const normalized = normalizeOrgKey(trimmed)
-    if (!normalized) return
-    const mapped = organizationLookup.get(normalized)
-    if (mapped) {
-      expanded.add(mapped)
-    }
   })
   return Array.from(expanded)
 }
@@ -110,10 +102,6 @@ const buildQueryKeys = (assignments: string[]): string[] => {
     const trimmed = entry.trim()
     if (!trimmed) return
     deduped.add(trimmed)
-    const upper = trimmed.toUpperCase()
-    const lower = trimmed.toLowerCase()
-    deduped.add(upper)
-    deduped.add(lower)
   })
   return Array.from(deduped)
 }
@@ -132,8 +120,8 @@ const createChunkedOrgQueries = (
     return { queries: [], hasQueryLimitWarning: false }
   }
 
-  // Dedupe and normalize org keys
-  const uniqueKeys = Array.from(new Set(orgKeys.map((k) => k.toLowerCase()).filter(Boolean)))
+  // Dedupe org keys without altering case (organization IDs are case-sensitive)
+  const uniqueKeys = Array.from(new Set(orgKeys.map((k) => k.trim()).filter(Boolean)))
 
   if (uniqueKeys.length === 0) {
     return { queries: [], hasQueryLimitWarning: false }
@@ -149,7 +137,7 @@ const createChunkedOrgQueries = (
   }
 
   const queries: Query<DocumentData>[] = []
-  const queryFields = ['companyCode', 'companyId', 'organizationId'] as const
+  const queryFields = ['organizationId', 'organization_id'] as const
 
   // Split into chunks of FIRESTORE_IN_QUERY_LIMIT
   for (let i = 0; i < uniqueKeys.length; i += FIRESTORE_IN_QUERY_LIMIT) {
@@ -214,9 +202,9 @@ export const usePartnerUsers = (options: UsePartnerUsersOptions) => {
   // FIX #5: Include all dependencies and handle rawAssignedKeys properly
   const rawAssignedKeys = useMemo(() => {
     const sourceAssignments = rawAssignedOrganizations.length ? rawAssignedOrganizations : assignedOrganizations
-    const expandedAssignments = expandAssignments(sourceAssignments, organizationLookup)
+    const expandedAssignments = expandAssignments(sourceAssignments)
     return buildQueryKeys(expandedAssignments)
-  }, [assignedOrganizations, organizationLookup, rawAssignedOrganizations])
+  }, [assignedOrganizations, rawAssignedOrganizations])
 
   useEffect(() => {
     if (profileStatus !== 'ready' || !enabled) {
@@ -333,10 +321,6 @@ export const usePartnerUsers = (options: UsePartnerUsersOptions) => {
 
             // FIX #6: Use centralized normalization
             const userOrgKeys = createOrgKeySet([
-              data.companyCode,
-              data.company_code,
-              data.companyId,
-              data.company_id,
               data.organizationId,
               data.organization_id,
             ])
@@ -434,7 +418,7 @@ export const usePartnerUsers = (options: UsePartnerUsersOptions) => {
               const data = docWrapper.data()
 
               const rawCompanyCode = data.companyCode || data.company_code || ''
-              const rawOrganizationId = data.companyId || data.organizationId || ''
+              const rawOrganizationId = data.organizationId || data.organization_id || ''
               const companyCode =
                 rawCompanyCode.trim().length > 0
                   ? rawCompanyCode.toLowerCase()

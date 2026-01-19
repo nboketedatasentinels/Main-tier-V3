@@ -29,11 +29,12 @@ import {
 } from '@chakra-ui/react'
 import { Bell, LogOut, Menu, RefreshCw, Sparkles } from 'lucide-react'
 import { useAuth } from '@/hooks/useAuth'
+import { usePartnerAdminSnapshot } from '@/hooks/partner/usePartnerAdminSnapshot'
 import { type NavigationSection, buildPartnerNavItems } from '@/utils/navigationItems'
 
 interface PartnerLayoutProps {
   children: React.ReactNode
-  organizations: { code: string; name: string }[]
+  organizations: { id?: string; code: string; name: string }[]
   selectedOrg: string
   onSelectOrg: (org: string) => void
   notificationCount?: number
@@ -55,13 +56,14 @@ export const PartnerLayout: React.FC<PartnerLayoutProps> = ({
   const sidebarWidth = '280px'
   const disclosure = useDisclosure()
   const { profile, signOut, signingOut, refreshProfile, profileLoading, lastProfileLoadAt, isAdmin, profileStatus } = useAuth()
+  const { assignedOrganizationIds } = usePartnerAdminSnapshot({ enabled: isAdmin })
   const enableProfileRealtime = import.meta.env.VITE_ENABLE_PROFILE_REALTIME === 'true'
   const toast = useToast()
   const [showRefreshHint, setShowRefreshHint] = React.useState(false)
   const [lastUpdatedLabel, setLastUpdatedLabel] = React.useState('Not yet loaded')
   const [profileSyncWarning, setProfileSyncWarning] = React.useState(false)
   const profileLoadingSinceRef = React.useRef<number | null>(null)
-  const assignedCount = organizations.length || profile?.assignedOrganizations?.length || 0
+  const assignedCount = organizations.length || assignedOrganizationIds.length || 0
   const sections = navSections?.length ? navSections : buildPartnerNavItems()
 
   const orgOptions = organizations.length ? organizations : []
@@ -286,7 +288,7 @@ export const PartnerLayout: React.FC<PartnerLayoutProps> = ({
       >
         <option value="all">All Companies</option>
         {orgOptions.map(org => (
-          <option key={org.code} value={org.code}>
+          <option key={org.id || org.code} value={org.id || org.code}>
             {org.name}
           </option>
         ))}

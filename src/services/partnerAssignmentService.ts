@@ -14,16 +14,42 @@ import { FULL_ACTIVITIES, JourneyType } from "@/config/pointsConfig";
 import { UserProfile } from "@/types";
 import { createApprovalRequest } from "./approvalsService";
 
-export async function getEligibleLearnersForActivity(_activityId: string, companyId?: string) {
-  try {
-    let q = query(collection(db, "profiles"));
+const chunkList = <T,>(items: T[], size: number): T[][] => {
+  const chunks: T[][] = []
+  for (let index = 0; index < items.length; index += size) {
+    chunks.push(items.slice(index, index + size))
+  }
+  return chunks
+}
 
-    if (companyId) {
-      q = query(q, where("companyId", "==", companyId));
+export async function getEligibleLearnersForActivity(
+  _activityId: string,
+  organizationIds?: string[],
+) {
+  try {
+    const profilesCollection = collection(db, "profiles")
+    const normalized = (organizationIds || []).filter((id) => !!id)
+
+    if (!normalized.length) {
+      const snapshot = await getDocs(query(profilesCollection))
+      return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as UserProfile))
     }
 
-    const snapshot = await getDocs(q);
-    return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as UserProfile));
+    const chunks = chunkList(normalized, 30)
+    const snapshots = await Promise.all(
+      chunks.map((chunk) =>
+        getDocs(query(profilesCollection, where("organizationId", "in", chunk))),
+      ),
+    )
+
+    const userMap = new Map<string, UserProfile>()
+    snapshots.forEach((snapshot) => {
+      snapshot.docs.forEach((docSnap) => {
+        userMap.set(docSnap.id, { id: docSnap.id, ...docSnap.data() } as UserProfile)
+      })
+    })
+
+    return Array.from(userMap.values())
   } catch (error) {
     console.error("[PartnerAssignmentService] Failed to fetch eligible learners", error);
     throw error;

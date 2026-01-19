@@ -6,6 +6,7 @@ import { usePartnerOrganizations } from '@/hooks/partner/usePartnerOrganizations
 import { usePartnerUsers } from '@/hooks/partner/usePartnerUsers'
 import { usePartnerInterventions } from '@/hooks/partner/usePartnerInterventions'
 import { usePartnerMetrics } from '@/hooks/partner/usePartnerMetrics'
+import { usePartnerAdminSnapshot } from '@/hooks/partner/usePartnerAdminSnapshot'
 import { logOrganizationAccessAttempt } from '@/services/organizationService'
 import { recordEngagementAction } from '@/services/engagementService'
 import { logger, normalizeOrgKey } from '@/utils/partnerDashboardUtils'
@@ -27,7 +28,12 @@ interface UsePartnerDashboardDataOptions {
 // FIX #15: Refactored hook that composes smaller, focused hooks
 // ============================================================================
 export const usePartnerDashboardData = (options?: UsePartnerDashboardDataOptions) => {
-  const { assignedOrganizations = [], profile, isSuperAdmin, user, profileStatus } = useAuth()
+  const { profile, isSuperAdmin, user, profileStatus } = useAuth()
+  const {
+    assignedOrganizationIds,
+    loading: assignmentsLoading,
+    error: assignmentsError,
+  } = usePartnerAdminSnapshot({ enabled: profileStatus === 'ready' && !isSuperAdmin })
 
   const [selectedOrg, setSelectedOrg] = useState<string>(options?.selectedOrg || 'all')
   const [notificationCount, setNotificationCount] = useState<number>(0)
@@ -72,7 +78,7 @@ export const usePartnerDashboardData = (options?: UsePartnerDashboardDataOptions
   } = usePartnerUsers({
     selectedOrg,
     assignedOrgKeys,
-    rawAssignedOrganizations: assignedOrganizations,
+    rawAssignedOrganizations: assignedOrganizationIds,
     organizationLookup,
     organizationsReady,
     debugMode: options?.debugMode,
@@ -238,7 +244,7 @@ export const usePartnerDashboardData = (options?: UsePartnerDashboardDataOptions
   const dataQualityWarnings = useMemo(() => {
     const warnings: DataWarning[] = []
 
-    if (!organizationsLoading && !isSuperAdmin && !organizations.length) {
+    if (!organizationsLoading && !isSuperAdmin && !organizations.length && !assignmentsLoading) {
       warnings.push({
         message: 'No organizations are assigned to this account yet.',
         severity: 'warning',
@@ -247,7 +253,7 @@ export const usePartnerDashboardData = (options?: UsePartnerDashboardDataOptions
 
     if (
       profileStatus === 'ready' &&
-      assignedOrganizations.length > organizations.length &&
+      assignedOrganizationIds.length > organizations.length &&
       organizations.length > 0
     ) {
       warnings.push({
@@ -257,7 +263,7 @@ export const usePartnerDashboardData = (options?: UsePartnerDashboardDataOptions
       })
     }
 
-    const missingAssignments = users.filter((u) => !u.companyCode).length
+    const missingAssignments = users.filter((u) => !u.organizationId).length
     if (missingAssignments) {
       warnings.push({
         message: `${missingAssignments} learner${missingAssignments === 1 ? '' : 's'} missing organization assignment`,
@@ -282,6 +288,13 @@ export const usePartnerDashboardData = (options?: UsePartnerDashboardDataOptions
       })
     }
 
+    if (assignmentsError) {
+      warnings.push({
+        message: assignmentsError,
+        severity: 'warning',
+      })
+    }
+
     // FIX #3: Warn about query truncation
     if (hasQueryLimitWarning) {
       warnings.push({
@@ -293,7 +306,9 @@ export const usePartnerDashboardData = (options?: UsePartnerDashboardDataOptions
 
     return warnings
   }, [
-    assignedOrganizations.length,
+    assignedOrganizationIds.length,
+    assignmentsError,
+    assignmentsLoading,
     debugInfo,
     hasQueryLimitWarning,
     isSuperAdmin,
@@ -303,13 +318,13 @@ export const usePartnerDashboardData = (options?: UsePartnerDashboardDataOptions
     users,
   ])
 
-  const assignedOrgCount = organizations.length || assignedOrganizations?.length || 0
+  const assignedOrgCount = organizations.length || assignedOrganizationIds?.length || 0
 
   // Return loading state if profile not ready
   if (profileStatus !== 'ready') {
     return {
       assignedOrgCount: 0,
-      assignedOrganizations: assignedOrganizations ?? [],
+      assignedOrganizations: assignedOrganizationIds ?? [],
       atRiskUsers: [],
       dataQualityWarnings: [],
       engagementTrend: [],
@@ -353,7 +368,7 @@ export const usePartnerDashboardData = (options?: UsePartnerDashboardDataOptions
 
   return {
     assignedOrgCount,
-    assignedOrganizations: assignedOrganizations ?? [],
+    assignedOrganizations: assignedOrganizationIds ?? [],
     atRiskUsers,
     dataQualityWarnings,
     engagementTrend,

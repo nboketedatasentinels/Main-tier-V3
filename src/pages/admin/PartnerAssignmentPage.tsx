@@ -22,6 +22,7 @@ import {
   useColorModeValue,
 } from '@chakra-ui/react';
 import { useAuth } from '@/hooks/useAuth';
+import { usePartnerAdminSnapshot } from '@/hooks/partner/usePartnerAdminSnapshot';
 import {
   getEligibleLearnersForActivity,
   assignActivityToLearner
@@ -31,6 +32,7 @@ import { UserProfile } from '@/types';
 
 export const PartnerAssignmentPage: React.FC = () => {
   const { user, profile } = useAuth();
+  const { assignedOrganizationIds } = usePartnerAdminSnapshot({ enabled: true })
   const toast = useToast();
 
   const [learners, setLearners] = useState<UserProfile[]>([]);
@@ -48,15 +50,19 @@ export const PartnerAssignmentPage: React.FC = () => {
     const loadLearners = async () => {
       try {
         // Partners might only see learners in their assigned organizations
-        const companyId = (profile?.assignedOrganizations?.[0] || profile?.companyId || undefined) as string | undefined;
-        const data = await getEligibleLearnersForActivity('', companyId);
+        const organizationIds = assignedOrganizationIds.length
+          ? assignedOrganizationIds
+          : profile?.organizationId
+            ? [profile.organizationId]
+            : [];
+        const data = await getEligibleLearnersForActivity('', organizationIds);
         setLearners(data);
       } catch (error) {
         console.error(error);
       }
     };
     loadLearners();
-  }, [profile]);
+  }, [assignedOrganizationIds, profile]);
 
   const handleAssign = async () => {
     if (!selectedActivity || selectedLearners.length === 0) {

@@ -555,6 +555,25 @@ const fetchOrganizationsByAssignments = async (assignments: string[]): Promise<O
   return Array.from(orgMap.values()).sort((a, b) => (a.name || '').localeCompare(b.name || ''))
 }
 
+export const fetchOrganizationsByIds = async (organizationIds: string[]): Promise<OrganizationRecord[]> => {
+  const normalized = normalizeAssignments(organizationIds)
+  if (!normalized.length) return []
+
+  const idChunks = chunkList(normalized, 10)
+  const snapshots = await Promise.all(
+    idChunks.map((chunk) => getDocs(query(orgCollection, where(documentId(), 'in', chunk)))),
+  )
+
+  const orgMap = new Map<string, OrganizationRecord>()
+  snapshots.forEach((snapshot) => {
+    snapshot.docs.forEach((docSnap) => {
+      orgMap.set(docSnap.id, buildOrganizationRecord(docSnap))
+    })
+  })
+
+  return Array.from(orgMap.values()).sort((a, b) => (a.name || '').localeCompare(b.name || ''))
+}
+
 export const fetchAssignedOrganizations = async (userId: string): Promise<OrganizationRecord[]> => {
   if (!userId) return []
   const userSnap = await getDoc(doc(usersCollection, userId))
@@ -623,6 +642,54 @@ const listenToOrganizationsByAssignments = (
       onError,
     )
     unsubscribers.push(unsubscribeCode)
+  })
+
+  return () => {
+    unsubscribers.forEach((unsubscribe) => unsubscribe())
+  }
+}
+
+export const listenToOrganizationsByIds = (
+  organizationIds: string[],
+  onChange: (organizations: OrganizationRecord[]) => void,
+  onError?: (error: FirestoreError) => void,
+) => {
+  const normalized = normalizeAssignments(organizationIds)
+  if (!normalized.length) {
+    onChange([])
+    return () => undefined
+  }
+
+  const idChunks = chunkList(normalized, 10)
+  const listenerMaps = new Map<string, Map<string, OrganizationRecord>>()
+  const unsubscribers: Array<() => void> = []
+
+  const emitCombined = () => {
+    const combined = new Map<string, OrganizationRecord>()
+    listenerMaps.forEach((map) => {
+      map.forEach((org, id) => {
+        combined.set(id, org)
+      })
+    })
+    onChange(Array.from(combined.values()).sort((a, b) => (a.name || '').localeCompare(b.name || '')))
+  }
+
+  idChunks.forEach((chunk, index) => {
+    const idKey = `id-${index}`
+    const unsubscribeId = onSnapshot(
+      query(orgCollection, where(documentId(), 'in', chunk)),
+      (snapshot: QuerySnapshot) => {
+        listenerMaps.set(
+          idKey,
+          new Map(
+            snapshot.docs.map((docSnap: DocumentSnapshot) => [docSnap.id, buildOrganizationRecord(docSnap)]),
+          ),
+        )
+        emitCombined()
+      },
+      onError,
+    )
+    unsubscribers.push(unsubscribeId)
   })
 
   return () => {
