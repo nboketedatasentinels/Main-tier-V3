@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState, useCallback } from 'react'
-import { collection, onSnapshot, query, where } from 'firebase/firestore'
+import { collection, limit, onSnapshot, orderBy, query, where } from 'firebase/firestore'
 import { db } from '@/services/firebase'
 import { useAuth } from '@/hooks/useAuth'
 import { usePartnerOrganizations } from '@/hooks/partner/usePartnerOrganizations'
@@ -10,6 +10,7 @@ import { logOrganizationAccessAttempt } from '@/services/organizationService'
 import { recordEngagementAction } from '@/services/engagementService'
 import { logger, normalizeOrgKey } from '@/utils/partnerDashboardUtils'
 import type { DataWarning } from '@/components/admin/RiskAnalysisCard'
+import type { NotificationRecord } from '@/types/notifications'
 
 // Re-export types for backward compatibility
 export type { PartnerRiskLevel, PartnerUser } from '@/hooks/partner/usePartnerUsers'
@@ -30,6 +31,9 @@ export const usePartnerDashboardData = (options?: UsePartnerDashboardDataOptions
 
   const [selectedOrg, setSelectedOrg] = useState<string>(options?.selectedOrg || 'all')
   const [notificationCount, setNotificationCount] = useState<number>(0)
+  const [notifications, setNotifications] = useState<NotificationRecord[]>([])
+  const [notificationsLoading, setNotificationsLoading] = useState<boolean>(true)
+  const [notificationsError, setNotificationsError] = useState<string | null>(null)
   const lastAccessAttempt = useRef<string | null>(null)
 
   // Use composed hooks
@@ -131,7 +135,7 @@ export const usePartnerDashboardData = (options?: UsePartnerDashboardDataOptions
     })
   }, [assignedOrgKeys, isSuperAdmin, profileStatus, selectedOrg, selectedOrgKeys, user?.uid])
 
-  // Notifications subscription
+  // Notifications subscription (unread count)
   useEffect(() => {
     if (profileStatus !== 'ready') return
     if (!profile?.id) return
@@ -145,6 +149,45 @@ export const usePartnerDashboardData = (options?: UsePartnerDashboardDataOptions
     const unsubscribe = onSnapshot(notificationsQuery, (snapshot) => {
       setNotificationCount(snapshot.size)
     })
+
+    return () => unsubscribe()
+  }, [profile?.id, profileStatus])
+
+  // Recent notifications for the partner dashboard
+  useEffect(() => {
+    if (profileStatus !== 'ready' || !profile?.id) {
+      setNotifications([])
+      setNotificationsLoading(false)
+      return
+    }
+
+    setNotificationsLoading(true)
+    setNotificationsError(null)
+
+    const notificationsQuery = query(
+      collection(db, 'notifications'),
+      where('user_id', '==', profile.id),
+      orderBy('created_at', 'desc'),
+      limit(5),
+    )
+
+    const unsubscribe = onSnapshot(
+      notificationsQuery,
+      (snapshot) => {
+        const items = snapshot.docs.map((docSnap) => ({
+          ...(docSnap.data() as NotificationRecord),
+          id: docSnap.id,
+        }))
+        setNotifications(items)
+        setNotificationsLoading(false)
+      },
+      (error) => {
+        console.error('[PartnerDashboard] Failed to load notifications', error)
+        setNotifications([])
+        setNotificationsLoading(false)
+        setNotificationsError('Unable to load recent notifications.')
+      },
+    )
 
     return () => unsubscribe()
   }, [profile?.id, profileStatus])
@@ -283,6 +326,9 @@ export const usePartnerDashboardData = (options?: UsePartnerDashboardDataOptions
         },
       },
       notificationCount: 0,
+      notifications: [],
+      notificationsLoading: true,
+      notificationsError: null,
       organizations: [],
       organizationsError: null,
       organizationsLoading: true,
@@ -313,6 +359,9 @@ export const usePartnerDashboardData = (options?: UsePartnerDashboardDataOptions
     managedBreakdown,
     metrics,
     notificationCount,
+    notifications,
+    notificationsLoading,
+    notificationsError,
     organizations,
     organizationsError,
     organizationsLoading,
