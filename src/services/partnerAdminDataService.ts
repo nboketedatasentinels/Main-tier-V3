@@ -40,13 +40,21 @@ export const fetchPartnerAdminSnapshot = async (
         .filter((orgId): orgId is string => !!orgId),
     ),
   )
+  const assignedOrganizationKeys = Array.from(
+    new Set(
+      assignedOrganizations
+        .flatMap((assignment) => [assignment.organizationId, assignment.companyCode])
+        .map((key) => key?.trim())
+        .filter((key): key is string => !!key),
+    ),
+  )
 
   const organizations = assignedOrganizationIds.length
     ? await fetchOrganizationsByIds(assignedOrganizationIds)
     : []
 
   const userSnapshots = await Promise.all(
-    assignedOrganizationIds.map((organizationId) => fetchOrganizationUsers(organizationId)),
+    assignedOrganizationKeys.map((organizationKey) => fetchOrganizationUsers(organizationKey)),
   )
   const usersMap = new Map<string, PartnerAdminDataSnapshot['users'][number]>()
   userSnapshots.forEach((users) => {
