@@ -187,9 +187,14 @@ export const PartnerLayout: React.FC<PartnerLayoutProps> = ({
           )}
           <VStack align="stretch" spacing={2}>
             {section.items.map(item => (
-              <HStack
+              <Button
                 key={item.key}
-                spacing={3}
+                variant="unstyled"
+                w="full"
+                display="flex"
+                alignItems="center"
+                justifyContent="flex-start"
+                gap={3}
                 px={3}
                 py={2}
                 borderRadius="md"
@@ -222,7 +227,7 @@ export const PartnerLayout: React.FC<PartnerLayoutProps> = ({
                     Scoped
                   </Badge>
                 )}
-              </HStack>
+              </Button>
             ))}
           </VStack>
         </Stack>
