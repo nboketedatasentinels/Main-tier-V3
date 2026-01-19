@@ -536,7 +536,13 @@ const fetchOrganizationsByAssignments = async (assignments: string[]): Promise<O
   const idChunks = chunkList(normalized, 10)
 
   const snapshots = await Promise.all(
-    idChunks.map((chunk) => getDocs(query(orgCollection, where(documentId(), 'in', chunk)))),
+    idChunks.flatMap((chunk) => {
+      const upperChunk = Array.from(new Set(chunk.map((entry) => entry.toUpperCase())))
+      return [
+        getDocs(query(orgCollection, where(documentId(), 'in', chunk))),
+        getDocs(query(orgCollection, where('code', 'in', upperChunk))),
+      ]
+    }),
   )
 
   const orgMap = new Map<string, OrganizationRecord>()
@@ -583,12 +589,16 @@ const listenToOrganizationsByAssignments = (
   }
 
   idChunks.forEach((chunk, index) => {
-    const key = `id-${index}`
-    const unsubscribe = onSnapshot(
+    const upperChunk = Array.from(new Set(chunk.map((entry) => entry.toUpperCase())))
+
+    const idKey = `id-${index}`
+    const codeKey = `code-${index}`
+
+    const unsubscribeId = onSnapshot(
       query(orgCollection, where(documentId(), 'in', chunk)),
       (snapshot: QuerySnapshot) => {
         listenerMaps.set(
-          key,
+          idKey,
           new Map(
             snapshot.docs.map((docSnap: DocumentSnapshot) => [docSnap.id, buildOrganizationRecord(docSnap)]),
           ),
@@ -597,7 +607,22 @@ const listenToOrganizationsByAssignments = (
       },
       onError,
     )
-    unsubscribers.push(unsubscribe)
+    unsubscribers.push(unsubscribeId)
+
+    const unsubscribeCode = onSnapshot(
+      query(orgCollection, where('code', 'in', upperChunk)),
+      (snapshot: QuerySnapshot) => {
+        listenerMaps.set(
+          codeKey,
+          new Map(
+            snapshot.docs.map((docSnap: DocumentSnapshot) => [docSnap.id, buildOrganizationRecord(docSnap)]),
+          ),
+        )
+        emitCombined()
+      },
+      onError,
+    )
+    unsubscribers.push(unsubscribeCode)
   })
 
   return () => {

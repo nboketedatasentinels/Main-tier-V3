@@ -68,6 +68,7 @@ export const usePartnerDashboardData = (options?: UsePartnerDashboardDataOptions
   } = usePartnerUsers({
     selectedOrg,
     assignedOrgKeys,
+    rawAssignedOrganizations: assignedOrganizations,
     organizationLookup,
     organizationsReady,
     debugMode: options?.debugMode,

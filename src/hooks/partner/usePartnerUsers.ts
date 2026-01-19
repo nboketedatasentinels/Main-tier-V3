@@ -77,6 +77,7 @@ type FirestorePartnerUser = Partial<PartnerUser> & {
 interface UsePartnerUsersOptions {
   selectedOrg: string
   assignedOrgKeys: Set<string>
+  rawAssignedOrganizations?: string[]
   organizationLookup: Map<string, string>
   organizationsReady: boolean
   debugMode?: boolean
@@ -84,6 +85,21 @@ interface UsePartnerUsersOptions {
 }
 
 const USERS_COLLECTION = collection(db, 'profiles')
+
+const buildQueryKeys = (assignments: string[]): string[] => {
+  const deduped = new Set<string>()
+  assignments.forEach((entry) => {
+    if (typeof entry !== 'string') return
+    const trimmed = entry.trim()
+    if (!trimmed) return
+    deduped.add(trimmed)
+    const upper = trimmed.toUpperCase()
+    const lower = trimmed.toLowerCase()
+    deduped.add(upper)
+    deduped.add(lower)
+  })
+  return Array.from(deduped)
+}
 
 /**
  * Creates chunked Firestore queries to handle the 30-value limit on 'in' queries.
@@ -134,6 +150,7 @@ export const usePartnerUsers = (options: UsePartnerUsersOptions) => {
   const {
     selectedOrg,
     assignedOrgKeys,
+    rawAssignedOrganizations = [],
     organizationLookup,
     organizationsReady,
     debugMode = false,
@@ -179,8 +196,11 @@ export const usePartnerUsers = (options: UsePartnerUsersOptions) => {
 
   // FIX #5: Include all dependencies and handle rawAssignedKeys properly
   const rawAssignedKeys = useMemo(() => {
-    return Array.from(assignedOrgKeys)
-  }, [assignedOrgKeys])
+    if (rawAssignedOrganizations.length) {
+      return buildQueryKeys(rawAssignedOrganizations)
+    }
+    return buildQueryKeys(assignedOrganizations)
+  }, [assignedOrganizations, rawAssignedOrganizations])
 
   useEffect(() => {
     if (profileStatus !== 'ready' || !enabled) {
@@ -191,7 +211,11 @@ export const usePartnerUsers = (options: UsePartnerUsersOptions) => {
     }
 
     const canLoadUsers =
-      organizationsReady || isSuperAdmin || debugMode || assignedOrganizations.length > 0
+      organizationsReady ||
+      isSuperAdmin ||
+      debugMode ||
+      rawAssignedOrganizations.length > 0 ||
+      assignedOrganizations.length > 0
 
     if (!canLoadUsers) {
       logger.debug('[PartnerUsers] Waiting for organizations before loading users.')
@@ -590,6 +614,7 @@ export const usePartnerUsers = (options: UsePartnerUsersOptions) => {
     organizationsReady,
     profileStatus,
     rawAssignedKeys,
+    rawAssignedOrganizations.length,
     refreshIndex,
     retry,
     selectedOrg,
