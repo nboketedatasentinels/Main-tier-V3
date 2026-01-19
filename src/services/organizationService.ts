@@ -34,6 +34,7 @@ import {
   resolveJourneyType,
 } from '@/utils/journeyType'
 import { inviteUsersBulk } from './invitationService'
+import { removeUndefinedFields } from '@/utils/firestore'
 export { checkOrganizationAccess, fetchOrganizationEngagementStats, fetchOrganizationUsers } from './organizationUserService'
 
 const safeCodeChars = '23456789ABCDEFGHJKLMNPQRSTUVWXYZ'
@@ -509,7 +510,7 @@ export const logOrganizationAccessAttempt = async ({
   metadata,
 }: OrganizationAccessAttemptPayload) => {
   if (!userId) return
-  await addDoc(adminActivityCollection, {
+  const payload = removeUndefinedFields({
     action: 'organization_access_attempt',
     adminId: userId,
     userId,
@@ -522,6 +523,7 @@ export const logOrganizationAccessAttempt = async ({
     },
     createdAt: serverTimestamp(),
   })
+  await addDoc(adminActivityCollection, payload)
 }
 
 export const fetchOrganizationByCode = async (organizationCode: string): Promise<OrganizationRecord | null> => {
@@ -567,7 +569,7 @@ export const createOrganizationWithInvitations = async (
 
   const orgRef = await addDoc(orgCollection, { ...payload, updatedAt: serverTimestamp() })
 
-  await addDoc(adminActivityCollection, {
+  const auditEntry = removeUndefinedFields({
     action: 'Organization created',
     organizationName: organization.name,
     organizationCode: organization.code,
@@ -576,6 +578,7 @@ export const createOrganizationWithInvitations = async (
     createdAt: serverTimestamp(),
     metadata: { via: 'CreateOrganizationModal' },
   })
+  await addDoc(adminActivityCollection, auditEntry)
 
   if (!invitations.length) {
     return { organizationId: orgRef.id, invitationResult: null }

@@ -19,6 +19,7 @@ import { auth, db } from './firebase'
 import { ORG_COLLECTION } from '@/constants/organizations'
 import { fetchOrganizationsByIds } from '@/services/organizationService'
 import { upsertPartnerAssignments } from '@/services/partnerAdminService'
+import { removeUndefinedFields } from '@/utils/firestore'
 import {
   AdminActivityLogEntry,
   AdminFormData,
@@ -416,10 +417,11 @@ export const listenToAdminActivityLog = (
 }
 
 export const logAdminAction = async (entry: Omit<AdminActivityLogEntry, 'id' | 'createdAt'>) => {
-  await addDoc(auditCollection, {
+  const sanitizedEntry = removeUndefinedFields({
     ...entry,
     createdAt: serverTimestamp(),
   })
+  await addDoc(auditCollection, sanitizedEntry)
 }
 
 export const fetchAdminUsers = async (): Promise<AdminUserRecord[]> => {
