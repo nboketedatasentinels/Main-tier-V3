@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useAuth } from '@/hooks/useAuth'
+import { usePartnerAdminSnapshot } from '@/hooks/partner/usePartnerAdminSnapshot'
 import {
   checkOrganizationAccess,
   fetchAvailableCourses,
@@ -91,7 +92,8 @@ const buildDetailView = (organization: {
 const pageSize = 50
 
 export const useOrganizationDetails = (organizationId?: string) => {
-  const { user, isAdmin, isSuperAdmin, assignedOrganizations } = useAuth()
+  const { user, isAdmin, isSuperAdmin } = useAuth()
+  const { assignedOrganizationIds } = usePartnerAdminSnapshot({ enabled: isAdmin && !isSuperAdmin })
   const [organization, setOrganization] = useState<OrganizationDetailView | null>(null)
   const [users, setUsers] = useState<OrganizationUserProfile[]>([])
   const [statistics, setStatistics] = useState<OrganizationStatistics | null>(null)
@@ -137,9 +139,8 @@ export const useOrganizationDetails = (organizationId?: string) => {
 
       const accessResult = await checkOrganizationAccess(user.uid, organizationId, orgRecord.code)
       const matchesAssignedOrg =
-        assignedOrganizations.includes(organizationId) ||
-        (orgRecord.id ? assignedOrganizations.includes(orgRecord.id) : false) ||
-        (orgRecord.code ? assignedOrganizations.includes(orgRecord.code) : false)
+        assignedOrganizationIds.includes(organizationId) ||
+        (orgRecord.id ? assignedOrganizationIds.includes(orgRecord.id) : false)
 
       if (!isSuperAdmin && !accessResult.authorized && !matchesAssignedOrg) {
         if (user?.uid) {
@@ -197,7 +198,7 @@ export const useOrganizationDetails = (organizationId?: string) => {
     } finally {
       setLoading(false)
     }
-  }, [assignedOrganizations, isAdmin, isSuperAdmin, organizationId, user?.uid])
+  }, [assignedOrganizationIds, isAdmin, isSuperAdmin, organizationId, user?.uid])
 
   useEffect(() => {
     loadDetails()

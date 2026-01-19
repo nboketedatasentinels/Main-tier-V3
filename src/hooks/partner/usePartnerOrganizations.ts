@@ -3,8 +3,9 @@ import { collection, onSnapshot, query, where } from 'firebase/firestore'
 import { db } from '@/services/firebase'
 import { ORG_COLLECTION } from '@/constants/organizations'
 import { useAuth } from '@/hooks/useAuth'
+import { usePartnerAdminSnapshot } from '@/hooks/partner/usePartnerAdminSnapshot'
 import { useRetryLogic } from '@/hooks/useRetryLogic'
-import { listenToAssignedOrganizations } from '@/services/organizationService'
+import { listenToOrganizationsByIds } from '@/services/organizationService'
 import {
   listenToOrganizationStatsUpdates,
   updateOrganizationStatisticsBatch,
@@ -30,7 +31,12 @@ interface UsePartnerOrganizationsOptions {
 
 export const usePartnerOrganizations = (options: UsePartnerOrganizationsOptions = {}) => {
   const { enabled = true } = options
-  const { assignedOrganizations = [], isSuperAdmin, user, profileStatus } = useAuth()
+  const { isSuperAdmin, user, profileStatus } = useAuth()
+  const {
+    assignedOrganizationIds,
+    assignmentKey: partnerAssignmentKey,
+    loading: assignmentsLoading,
+  } = usePartnerAdminSnapshot({ enabled: enabled && !isSuperAdmin })
 
   const [organizations, setOrganizations] = useState<PartnerOrganization[]>([])
   const [loading, setLoading] = useState(true)
@@ -50,8 +56,8 @@ export const usePartnerOrganizations = (options: UsePartnerOrganizationsOptions 
   })
 
   const assignmentKey = useMemo(
-    () => assignedOrganizations.slice().filter(Boolean).sort().join('|'),
-    [assignedOrganizations]
+    () => (isSuperAdmin ? 'all' : partnerAssignmentKey),
+    [isSuperAdmin, partnerAssignmentKey],
   )
 
   // Derived organization key sets for filtering
@@ -75,7 +81,7 @@ export const usePartnerOrganizations = (options: UsePartnerOrganizationsOptions 
 
   // FIX #6: Use centralized normalization for org keys
   const assignedOrgKeys = useMemo(() => {
-    const keys: string[] = [...assignedOrganizations.filter(Boolean)]
+    const keys: string[] = [...assignedOrganizationIds.filter(Boolean)]
 
     if (ready) {
       organizations.forEach((org) => {
@@ -85,7 +91,7 @@ export const usePartnerOrganizations = (options: UsePartnerOrganizationsOptions 
     }
 
     return createOrgKeySet(keys)
-  }, [assignedOrganizations, organizations, ready])
+  }, [assignedOrganizationIds, organizations, ready])
 
   const retryOrganizations = useCallback(() => {
     setRefreshIndex((prev) => prev + 1)
@@ -111,6 +117,13 @@ export const usePartnerOrganizations = (options: UsePartnerOrganizationsOptions 
       if (!isMounted) return
       setLoading(true)
       setError(null)
+
+      if (!isSuperAdmin && assignmentsLoading) {
+        setOrganizations([])
+        setLoading(true)
+        setReady(false)
+        return
+      }
 
       if (!user?.uid) {
         setOrganizations([])
@@ -159,8 +172,13 @@ export const usePartnerOrganizations = (options: UsePartnerOrganizationsOptions 
           handleError
         )
       } else {
-        unsubscribe = listenToAssignedOrganizations(
-          user.uid,
+        if (!assignedOrganizationIds.length) {
+          handleSnapshot([])
+          return
+        }
+
+        unsubscribe = listenToOrganizationsByIds(
+          assignedOrganizationIds,
           (assignedOrgs) => {
             logger.debug('[PartnerOrganizations] Assigned organizations loaded', {
               count: assignedOrgs.length,
@@ -181,10 +199,7 @@ export const usePartnerOrganizations = (options: UsePartnerOrganizationsOptions 
             })
             handleSnapshot(scoped)
           },
-          {
-            status: 'active',
-            onError: handleError,
-          }
+          handleError,
         )
       }
     }
@@ -196,7 +211,17 @@ export const usePartnerOrganizations = (options: UsePartnerOrganizationsOptions 
       retry.cleanup()
       if (unsubscribe) unsubscribe()
     }
-  }, [assignmentKey, enabled, isSuperAdmin, profileStatus, refreshIndex, retry, user?.uid])
+  }, [
+    assignmentKey,
+    assignmentsLoading,
+    enabled,
+    isSuperAdmin,
+    profileStatus,
+    refreshIndex,
+    retry,
+    user?.uid,
+    assignedOrganizationIds,
+  ])
 
   // FIX #2: Organization stats listeners with proper cleanup
   useEffect(() => {
