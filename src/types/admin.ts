@@ -84,6 +84,7 @@ export interface OrganizationRecord {
   assignedAmbassadorBy?: string | null
   assignedAmbassadorName?: string | null
   assignedAmbassadorEmail?: string | null
+  partnerId?: string | null
   transformationPartnerId?: string | null
   assignedPartnerAt?: Timestamp | string | Date
   assignedPartnerBy?: string | null
@@ -139,6 +140,22 @@ export interface TaskNotificationRecord {
 }
 
 export type AdminRole = 'super_admin' | 'partner' | 'mentor' | 'ambassador'
+
+export type PartnerAssignmentStatus = 'active' | 'watch' | 'paused' | 'inactive'
+
+export interface PartnerAssignment {
+  organizationId: string
+  companyCode?: string
+  status?: PartnerAssignmentStatus
+}
+
+export interface PartnerAdminSnapshot {
+  partnerId: string
+  role: 'partner'
+  assignedOrganizations: PartnerAssignment[]
+  createdAt?: Timestamp | string | Date
+  updatedAt?: Timestamp | string | Date
+}
 
 export interface AdminUserRecord {
   id: string

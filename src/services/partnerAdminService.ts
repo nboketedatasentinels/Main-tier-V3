@@ -1,133 +1,86 @@
-import {
-  collection,
-  doc,
-  documentId,
-  getDoc,
-  getDocs,
-  query,
-  where,
-} from 'firebase/firestore'
-import { db } from './firebase'
-import { ORG_COLLECTION } from '@/constants/organizations'
-import type {
-  PartnerAdminRootDoc,
-  PartnerAdminSnapshot,
-} from '@/types/partnerAdmin'
-import type { OrganizationRecord, UserProfile } from '@/types'
+import { doc, getDoc, onSnapshot, serverTimestamp, setDoc } from 'firebase/firestore'
+import { db } from '@/services/firebase'
+import type { PartnerAdminSnapshot, PartnerAssignment } from '@/types/admin'
 
-const PARTNER_COLLECTION = 'transformation_partners'
-const PROFILES_COLLECTION = 'profiles'
+const PARTNERS_COLLECTION = 'partners'
 
-const partnersCollection = collection(db, PARTNER_COLLECTION)
-const organizationsCollection = collection(db, ORG_COLLECTION)
-const profilesCollection = collection(db, PROFILES_COLLECTION)
+const normalizeAssignment = (assignment: PartnerAssignment): PartnerAssignment | null => {
+  const organizationId = assignment.organizationId?.trim()
+  if (!organizationId) return null
 
-const normalizeAssignments = (assignedOrganizations?: string[]): string[] => {
-  const normalized: string[] = []
+  return {
+    organizationId,
+    companyCode: assignment.companyCode?.trim() || undefined,
+    status: assignment.status ?? 'active',
+  }
+}
+
+const normalizeAssignments = (assignments: PartnerAssignment[] = []): PartnerAssignment[] => {
+  const normalized: PartnerAssignment[] = []
   const seen = new Set<string>()
 
-  ;(assignedOrganizations || []).forEach((entry) => {
-    if (typeof entry !== 'string') return
-    const trimmed = entry.trim()
-    if (!trimmed || seen.has(trimmed)) return
-    seen.add(trimmed)
-    normalized.push(trimmed)
+  assignments.forEach((assignment) => {
+    const normalizedAssignment = normalizeAssignment(assignment)
+    if (!normalizedAssignment) return
+    if (seen.has(normalizedAssignment.organizationId)) return
+    seen.add(normalizedAssignment.organizationId)
+    normalized.push(normalizedAssignment)
   })
 
   return normalized
 }
 
-const chunkList = <T,>(items: T[], size: number): T[][] => {
-  const chunks: T[][] = []
-  for (let index = 0; index < items.length; index += size) {
-    chunks.push(items.slice(index, index + size))
-  }
-  return chunks
-}
-
-const mapPartnerDoc = (partnerId: string, data: Record<string, unknown>): PartnerAdminRootDoc => ({
-  id: partnerId,
-  ...(data as Omit<PartnerAdminRootDoc, 'id'>),
+const buildSnapshot = (partnerId: string, data: Partial<PartnerAdminSnapshot>): PartnerAdminSnapshot => ({
+  partnerId,
+  role: 'partner',
+  assignedOrganizations: normalizeAssignments(data.assignedOrganizations || []),
+  createdAt: data.createdAt,
+  updatedAt: data.updatedAt,
 })
 
-const mapOrganizationDoc = (docSnap: { id: string; data: () => unknown }): OrganizationRecord => ({
-  id: docSnap.id,
-  ...(docSnap.data() as Omit<OrganizationRecord, 'id'>),
-})
-
-const mapUserDoc = (docSnap: { id: string; data: () => unknown }): UserProfile => ({
-  id: docSnap.id,
-  ...(docSnap.data() as Omit<UserProfile, 'id'>),
-})
-
-const isActiveOrganization = (organization: OrganizationRecord) => organization.status === 'active'
-
-const fetchOrganizations = async (organizationIds: string[]) => {
-  if (!organizationIds.length) return []
-
-  const idChunks = chunkList(organizationIds, 10)
-  const snapshots = await Promise.all(
-    idChunks.map((chunk) => getDocs(query(organizationsCollection, where(documentId(), 'in', chunk)))),
-  )
-
-  return snapshots.flatMap((snapshot) => snapshot.docs.map(mapOrganizationDoc))
-}
-
-const fetchUsersForOrganizations = async (organizationIds: string[]) => {
-  if (!organizationIds.length) return []
-
-  const idChunks = chunkList(organizationIds, 10)
-  const snapshots = await Promise.all(
-    idChunks.map((chunk) =>
-      getDocs(query(profilesCollection, where('companyId', 'in', chunk))),
-    ),
-  )
-
-  const usersMap = new Map<string, UserProfile>()
-  snapshots.forEach((snapshot) => {
-    snapshot.docs.forEach((docSnap) => {
-      usersMap.set(docSnap.id, mapUserDoc(docSnap))
-    })
-  })
-
-  return Array.from(usersMap.values())
-}
-
-export const fetchPartnerAdminSnapshot = async (
+export const listenToPartnerAdminSnapshot = (
   partnerId: string,
-  partnerDocData?: Record<string, unknown>,
-): Promise<PartnerAdminSnapshot> => {
+  onChange: (snapshot: PartnerAdminSnapshot | null) => void,
+  onError?: (error: unknown) => void,
+) => {
   if (!partnerId) {
-    return {
-      partner: null,
-      organizations: [],
-      users: [],
-    }
+    onChange(null)
+    return () => undefined
   }
 
-  let partner: PartnerAdminRootDoc | null = null
+  const partnerRef = doc(db, PARTNERS_COLLECTION, partnerId)
+  return onSnapshot(
+    partnerRef,
+    (snapshot) => {
+      if (!snapshot.exists()) {
+        onChange(null)
+        return
+      }
+      onChange(buildSnapshot(snapshot.id, snapshot.data() as PartnerAdminSnapshot))
+    },
+    (error) => {
+      onError?.(error)
+    },
+  )
+}
 
-  if (partnerDocData) {
-    partner = mapPartnerDoc(partnerId, partnerDocData)
-  } else {
-    const partnerSnap = await getDoc(doc(partnersCollection, partnerId))
-    if (partnerSnap.exists()) {
-      partner = mapPartnerDoc(partnerSnap.id, partnerSnap.data() as Record<string, unknown>)
-    }
+export const upsertPartnerAssignments = async (
+  partnerId: string,
+  assignments: PartnerAssignment[],
+) => {
+  if (!partnerId) return
+  const partnerRef = doc(db, PARTNERS_COLLECTION, partnerId)
+  const existingSnap = await getDoc(partnerRef)
+  const payload: Partial<PartnerAdminSnapshot> = {
+    partnerId,
+    role: 'partner',
+    assignedOrganizations: normalizeAssignments(assignments),
+    updatedAt: serverTimestamp(),
   }
 
-  const assignedOrganizations = normalizeAssignments(partner?.assignedOrganizations)
-  const organizations = await fetchOrganizations(assignedOrganizations)
-  const activeOrganizations = organizations.filter(isActiveOrganization)
-  const activeOrganizationIds = activeOrganizations
-    .map((org) => org.id)
-    .filter((id): id is string => Boolean(id))
-
-  const users = await fetchUsersForOrganizations(activeOrganizationIds)
-
-  return {
-    partner,
-    organizations: activeOrganizations,
-    users,
+  if (!existingSnap.exists()) {
+    payload.createdAt = serverTimestamp()
   }
+
+  await setDoc(partnerRef, payload, { merge: true })
 }

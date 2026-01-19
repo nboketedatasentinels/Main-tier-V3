@@ -5,6 +5,7 @@ import {
   deleteDoc,
   doc,
   FirestoreError,
+  getDoc,
   getDocs,
   limit,
   onSnapshot,
@@ -16,11 +17,14 @@ import {
 } from 'firebase/firestore'
 import { auth, db } from './firebase'
 import { ORG_COLLECTION } from '@/constants/organizations'
+import { fetchOrganizationsByIds } from '@/services/organizationService'
+import { upsertPartnerAssignments } from '@/services/partnerAdminService'
 import {
   AdminActivityLogEntry,
   AdminFormData,
   AdminRole,
   AdminUserRecord,
+  PartnerAssignment,
   EngagementRiskAggregate,
   OrganizationMemberStats,
   OrganizationRecord,
@@ -30,6 +34,7 @@ import {
   TaskNotificationRecord,
   VerificationRequest,
 } from '@/types/admin'
+import { normalizeRole } from '@/utils/role'
 
 type TrendPoint = { label: string; value: number }
 
@@ -498,9 +503,32 @@ export const assignOrganizations = async (adminId: string, orgIds: string[]) => 
     assignedOrganizationsUpdatedBy: actorId || null,
     updatedAt: serverTimestamp(),
   }
+
+  const adminSnapshot = await getDoc(adminRef)
+  const adminRole = normalizeRole((adminSnapshot.data() as { role?: string } | undefined)?.role)
+
+  const partnerAssignments: PartnerAssignment[] =
+    adminRole === 'partner'
+      ? await (async () => {
+        const orgRecords = await fetchOrganizationsByIds(sanitizedOrgIds)
+        const orgById = new Map(orgRecords.map((org) => [org.id, org]))
+        return sanitizedOrgIds.map((organizationId) => {
+          const orgRecord = orgById.get(organizationId)
+          return {
+            organizationId,
+            companyCode: orgRecord?.code,
+            status: orgRecord?.status ?? 'active',
+          }
+        })
+      })()
+      : []
+
   await Promise.all([
     updateDoc(adminRef, updatePayload),
     updateDoc(profileRef, updatePayload),
+    adminRole === 'partner'
+      ? upsertPartnerAssignments(adminId, partnerAssignments)
+      : Promise.resolve(),
   ])
   await logAdminAction({
     action: 'admin_orgs_updated',

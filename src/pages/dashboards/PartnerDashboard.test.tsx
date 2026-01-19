@@ -80,6 +80,7 @@ const defaultAuthReturn = {
 }
 
 const defaultDashboardReturn = {
+    assignedOrganizations: [],
     assignedOrgCount: 0,
     engagementTrend: [],
     metrics: {

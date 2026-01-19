@@ -35,6 +35,7 @@ import {
 import { ChevronDown, Eye, Filter, Search, Trash2 } from 'lucide-react'
 import { Link as RouterLink } from 'react-router-dom'
 import { useAuth } from '@/hooks/useAuth'
+import { usePartnerAdminSnapshot } from '@/hooks/partner/usePartnerAdminSnapshot'
 import {
   ManagedUserRecord,
   ManagedUserRole,
@@ -63,7 +64,8 @@ interface UsersManagementTabProps {
 
 export const UsersManagementTab = ({ users: propUsers, loading: propLoading }: UsersManagementTabProps) => {
   const toast = useToast()
-  const { isAdmin, isSuperAdmin, assignedOrganizations } = useAuth()
+  const { isAdmin, isSuperAdmin } = useAuth()
+  const { assignedOrganizationIds } = usePartnerAdminSnapshot({ enabled: isAdmin && !isSuperAdmin })
   const [organizations, setOrganizations] = useState<Array<{ id: string; name: string; code?: string }>>([])
   const [error, setError] = useState<string | null>(null)
   const [selectedIds, setSelectedIds] = useState<string[]>([])
@@ -90,13 +92,13 @@ export const UsersManagementTab = ({ users: propUsers, loading: propLoading }: U
   const visibleTimeframeFilter = useMemo(() => propUsers.some((user) => !!user.lastActive), [propUsers])
 
   const accessibleUsers = useMemo(() => {
-    if (isSuperAdmin || !assignedOrganizations?.length) return propUsers
+    if (isSuperAdmin || !assignedOrganizationIds?.length) return propUsers
     return propUsers.filter((user) => {
       const organizationId = user.companyId
       if (!organizationId) return false
-      return assignedOrganizations.includes(organizationId)
+      return assignedOrganizationIds.includes(organizationId)
     })
-  }, [assignedOrganizations, isSuperAdmin, propUsers])
+  }, [assignedOrganizationIds, isSuperAdmin, propUsers])
 
   const filteredUsers = useMemo(() => {
     const now = new Date()
@@ -111,8 +113,7 @@ export const UsersManagementTab = ({ users: propUsers, loading: propLoading }: U
       const matchesMembership = filters.membershipStatus === 'all' || user.membershipStatus === filters.membershipStatus
       const matchesOrg =
         filters.organization === 'all' ||
-        user.companyId === filters.organization ||
-        user.companyCode === filters.organization
+        user.companyId === filters.organization
 
       const matchesTimeframe = (() => {
         if (filters.timeframe === 'all') return true
@@ -305,7 +306,7 @@ export const UsersManagementTab = ({ users: propUsers, loading: propLoading }: U
                 >
                   <option value="all">All organizations</option>
                   {organizations.map((org) => (
-                    <option key={org.id} value={org.code || org.id}>
+                    <option key={org.id} value={org.id}>
                       {org.name}
                     </option>
                   ))}

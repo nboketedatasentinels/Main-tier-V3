@@ -53,11 +53,12 @@ import { buildPartnerNavItems } from '@/utils/navigationItems'
 
 export const PartnerDashboard: React.FC = () => {
   const navigate = useNavigate()
-  const { assignedOrganizations, isSuperAdmin, user, refreshProfile, profileStatus, lastProfileLoadAt } = useAuth()
+  const { isSuperAdmin, user, refreshProfile, profileStatus, lastProfileLoadAt } = useAuth()
   const toast = useToast()
   const [debugMode, setDebugMode] = useState(false)
   const {
     assignedOrgCount,
+    assignedOrganizations,
     engagementTrend,
     metrics,
     organizations,
@@ -179,7 +180,7 @@ export const PartnerDashboard: React.FC = () => {
   }, [enableProfileRealtime, refreshIfVisible])
 
   useEffect(() => {
-    console.debug('[PartnerDashboard] Auth assigned organizations', assignedOrganizations)
+    console.debug('[PartnerDashboard] Partner assignments', assignedOrganizations)
   }, [assignedOrganizations])
 
   const navSections = useMemo(() => buildPartnerNavItems(), [])
@@ -187,7 +188,7 @@ export const PartnerDashboard: React.FC = () => {
     const scoped = assignedOrganizations.length
       ? assignedOrganizations
       : organizations.map(org => org.id || org.code || '').filter(Boolean)
-    return Array.from(new Set(scoped.map(orgId => orgId.toLowerCase())))
+    return Array.from(new Set(scoped))
   }, [assignedOrganizations, organizations])
 
   const riskReasons = useMemo(() => {

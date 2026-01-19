@@ -69,6 +69,7 @@ export interface UserProfile {
   companyId?: string | null
   companyCode?: string | null
   companyName?: string | null
+  organizationId?: string | null
   villageId?: string
   clusterId?: string
   corporateVillageId?: string
