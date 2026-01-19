@@ -6,11 +6,12 @@ const PARTNERS_COLLECTION = 'partners'
 
 const normalizeAssignment = (assignment: PartnerAssignment): PartnerAssignment | null => {
   const organizationId = assignment.organizationId?.trim()
-  if (!organizationId) return null
+  const companyCode = assignment.companyCode?.trim()
+  if (!organizationId && !companyCode) return null
 
   return {
-    organizationId,
-    companyCode: assignment.companyCode?.trim() || undefined,
+    organizationId: organizationId || undefined,
+    companyCode: companyCode || undefined,
     status: assignment.status ?? 'active',
   }
 }
@@ -22,8 +23,11 @@ const normalizeAssignments = (assignments: PartnerAssignment[] = []): PartnerAss
   assignments.forEach((assignment) => {
     const normalizedAssignment = normalizeAssignment(assignment)
     if (!normalizedAssignment) return
-    if (seen.has(normalizedAssignment.organizationId)) return
-    seen.add(normalizedAssignment.organizationId)
+    const dedupeKey =
+      normalizedAssignment.organizationId || normalizedAssignment.companyCode || ''
+    if (!dedupeKey) return
+    if (seen.has(dedupeKey)) return
+    seen.add(dedupeKey)
     normalized.push(normalizedAssignment)
   })
 

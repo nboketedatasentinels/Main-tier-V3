@@ -144,7 +144,7 @@ export type AdminRole = 'super_admin' | 'partner' | 'mentor' | 'ambassador'
 export type PartnerAssignmentStatus = 'active' | 'watch' | 'paused' | 'inactive'
 
 export interface PartnerAssignment {
-  organizationId: string
+  organizationId?: string | null
   companyCode?: string
   status?: PartnerAssignmentStatus
 }

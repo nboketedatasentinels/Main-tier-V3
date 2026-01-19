@@ -11,10 +11,11 @@ const normalizeAssignments = (assignments: PartnerAssignment[] = []): PartnerAss
   assignments
     .map((assignment) => {
       const organizationId = assignment.organizationId?.trim()
-      if (!organizationId) return null
+      const companyCode = assignment.companyCode?.trim()
+      if (!organizationId && !companyCode) return null
       return {
-        organizationId,
-        companyCode: assignment.companyCode?.trim() || undefined,
+        organizationId: organizationId || undefined,
+        companyCode: companyCode || undefined,
         status: assignment.status ?? 'active',
       }
     })
