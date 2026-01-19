@@ -172,11 +172,6 @@ export const PartnerUserManagement: React.FC<PartnerUserManagementProps> = ({
     if (selectedOrg === 'all') return safeUsers
 
     const selectedKey = selectedOrg.toLowerCase()
-
-<<<<<<< HEAD
-  const totalPages = Math.max(1, Math.ceil(sorted.length / PAGE_SIZE))
-  const paginated = sorted.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE)
-=======
     return safeUsers.filter((u) =>
       [u.companyCode, u.organizationId]
         .filter((v): v is string => typeof v === 'string' && v.length > 0)
@@ -184,7 +179,6 @@ export const PartnerUserManagement: React.FC<PartnerUserManagementProps> = ({
         .includes(selectedKey),
     )
   }, [users, usersLoading, selectedOrg])
->>>>>>> Journeys
 
   const learnerUsers = useMemo(
     () => filtered.filter(u => u.role === 'learner'),
