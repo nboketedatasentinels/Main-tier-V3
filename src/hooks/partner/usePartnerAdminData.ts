@@ -231,6 +231,10 @@ export const usePartnerAdminData = (
       (nextSnapshot) => {
         setPartnerSnapshot(nextSnapshot)
         setAssignmentsLoading(false)
+        console.log('[PartnerAdminData] Partner doc loaded', {
+          partnerId,
+          assignedOrgCount: nextSnapshot?.assignedOrganizations?.length ?? 0,
+        })
       },
       (err) => {
         console.error('[PartnerAdminData] Failed to load partner assignments', err)
@@ -346,6 +350,7 @@ export const usePartnerAdminData = (
             logger.debug('[PartnerAdminData] Super admin organizations loaded', {
               count: snapshot.size,
             })
+            console.log('[PartnerAdminData] Org query result count (super admin)', snapshot.size)
             const scoped = snapshot.docs.map((docSnap) => {
               const data = docSnap.data() as Partial<PartnerOrganization>
               return {
@@ -376,6 +381,7 @@ export const usePartnerAdminData = (
             logger.debug('[PartnerAdminData] Assigned organizations loaded', {
               count: assignedOrgs.length,
             })
+            console.log('[PartnerAdminData] Org query result count (assigned)', assignedOrgs.length)
             const scoped = assignedOrgs.map((org) => {
               const data = org as PartnerOrganization
               return {
@@ -813,6 +819,7 @@ export const usePartnerAdminData = (
           }
 
           logger.debug('[PartnerAdminData] Users loaded', { count: hydratedUsers.length })
+          console.log('[PartnerAdminData] Users query result count', hydratedUsers.length)
 
           setUsers(hydratedUsers)
           setUsersLoading(false)
