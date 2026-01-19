@@ -64,6 +64,7 @@ export const PartnerDashboardLayout: React.FC<PartnerDashboardLayoutProps> = ({
   const [showRefreshHint, setShowRefreshHint] = React.useState(false)
   const [lastUpdatedLabel, setLastUpdatedLabel] = React.useState('Not yet loaded')
   const [profileSyncWarning, setProfileSyncWarning] = React.useState(false)
+  const [isLoggingOut, setIsLoggingOut] = React.useState(false)
   const profileLoadingSinceRef = React.useRef<number | null>(null)
   const assignedCount = organizations.length || profile?.assignedOrganizations?.length || 0
   const menuItems = navItems.length
@@ -143,6 +144,17 @@ export const PartnerDashboardLayout: React.FC<PartnerDashboardLayoutProps> = ({
       isClosable: true,
     })
   }, [refreshProfile, toast])
+
+  const handleLogout = React.useCallback(async () => {
+    if (isLoggingOut) return
+    setIsLoggingOut(true)
+    try {
+      await signOut()
+    } catch (error) {
+      console.error('Logout error:', error)
+      setIsLoggingOut(false)
+    }
+  }, [signOut, isLoggingOut])
 
   React.useEffect(() => {
     const handler = (event: KeyboardEvent) => {
@@ -234,7 +246,9 @@ export const PartnerDashboardLayout: React.FC<PartnerDashboardLayoutProps> = ({
           leftIcon={<LogOut size={14} />}
           variant="outline"
           colorScheme="gray"
-          onClick={() => signOut()}
+          onClick={handleLogout}
+          isLoading={isLoggingOut}
+          isDisabled={isLoggingOut}
         >
           Sign out
         </Button>
@@ -293,7 +307,9 @@ export const PartnerDashboardLayout: React.FC<PartnerDashboardLayoutProps> = ({
         display={{ base: 'inline-flex', md: 'inline-flex' }}
         leftIcon={<LogOut size={16} />}
         variant="outline"
-        onClick={() => signOut()}
+        onClick={handleLogout}
+        isLoading={isLoggingOut}
+        isDisabled={isLoggingOut}
       >
         Logout
       </Button>
@@ -346,7 +362,13 @@ export const PartnerDashboardLayout: React.FC<PartnerDashboardLayoutProps> = ({
             <Stack spacing={6}>
               <ProfileSection />
               {renderNav()}
-              <Button leftIcon={<LogOut size={16} />} variant="outline" onClick={() => signOut()}>
+              <Button
+                leftIcon={<LogOut size={16} />}
+                variant="outline"
+                onClick={handleLogout}
+                isLoading={isLoggingOut}
+                isDisabled={isLoggingOut}
+              >
                 Logout
               </Button>
             </Stack>
