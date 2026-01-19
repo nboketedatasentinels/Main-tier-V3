@@ -315,6 +315,8 @@ export interface OrganizationUserProfile {
   lastActive?: Date | null
   createdAt?: Date | null
   avatarUrl?: string | null
+  organizationId?: string | null
+  companyCode?: string | null
 }
 
 export interface OrganizationStatistics {
