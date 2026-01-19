@@ -8,12 +8,12 @@ interface PageTransitionLoaderProps {
 
 export const PageTransitionLoader: React.FC<PageTransitionLoaderProps> = ({
   fullScreen = true,
-  size = 'medium',
+  size = 'large',
 }) => {
   const sizeMap = {
-    small: 120,
-    medium: 160,
-    large: 220,
+    small: 160,
+    medium: 220,
+    large: 320,
   };
 
   const loaderSize = sizeMap[size];
@@ -23,7 +23,7 @@ export const PageTransitionLoader: React.FC<PageTransitionLoaderProps> = ({
       src="https://lottie.host/d9b4b8ae-2d44-4bc6-b80a-4d709d78bee5/MxsdsRgn1I.lottie"
       loop
       autoplay
-      style={{ width: loaderSize, height: loaderSize, maxWidth: '60vw' }}
+      style={{ width: loaderSize, height: loaderSize, maxWidth: '70vw' }}
     />
   );
 
