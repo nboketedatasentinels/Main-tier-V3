@@ -42,6 +42,7 @@ const orgCollection = collection(db, ORG_COLLECTION)
 const coursesCollection = collection(db, 'courses')
 const usersCollection = collection(db, 'users')
 const adminActivityCollection = collection(db, 'admin_activity_log')
+const partnersCollection = collection(db, 'partners')
 
 export type LeadershipRole = 'mentor' | 'ambassador' | 'partner'
 
@@ -277,6 +278,23 @@ const buildLeadershipAuditEntry = (params: {
   },
 })
 
+const buildPartnerAssignmentEntry = (organizationId: string, organization: OrganizationRecord) => ({
+  organizationId,
+  companyCode: organization.code || '',
+  status: organization.status,
+})
+
+const normalizePartnerAssignments = (
+  assignments?: Array<{ organizationId?: string } | string> | null,
+): { organizationId: string }[] => {
+  if (!Array.isArray(assignments)) return []
+  return assignments
+    .map((assignment) =>
+      typeof assignment === 'string' ? { organizationId: assignment } : assignment,
+    )
+    .filter((assignment): assignment is { organizationId: string } => !!assignment?.organizationId)
+}
+
 const assignLeadershipRole = async (organizationId: string, userId: string, role: LeadershipRole) => {
   validateLeadershipIds(organizationId, userId, role)
   const actorId = getActorId()
@@ -284,6 +302,7 @@ const assignLeadershipRole = async (organizationId: string, userId: string, role
   const organizationRef = doc(db, ORG_COLLECTION, organizationId)
   const userRef = doc(usersCollection, userId)
   const auditRef = doc(adminActivityCollection)
+  const partnerRef = role === 'partner' ? doc(partnersCollection, userId) : null
 
   await runTransaction(db, async (transaction) => {
     const [organizationSnap, userSnap] = await Promise.all([
@@ -301,14 +320,18 @@ const assignLeadershipRole = async (organizationId: string, userId: string, role
     if (userData.role !== roleConfig.requiredRole) {
       throw new Error(`User role must be ${roleConfig.requiredRole}.`)
     }
+    const organizationData = organizationSnap.data() as OrganizationRecord
 
     transaction.update(organizationRef, {
       [roleConfig.field]: userId,
       [roleConfig.assignedAtField]: serverTimestamp(),
       [roleConfig.assignedByField]: actorId,
+      ...(role === 'partner' ? { partnerId: userId } : {}),
       leadershipUpdatedAt: serverTimestamp(),
       leadershipUpdatedBy: actorId,
     })
+    const previousUserId = (organizationSnap.data() as OrganizationRecord)[roleConfig.field] as string | null
+
     transaction.set(
       auditRef,
       buildLeadershipAuditEntry({
@@ -317,9 +340,53 @@ const assignLeadershipRole = async (organizationId: string, userId: string, role
         userId,
         role,
         actorId,
-        previousUserId: (organizationSnap.data() as OrganizationRecord)[roleConfig.field] as string | null,
+        previousUserId,
       }),
     )
+
+    if (partnerRef) {
+      const partnerSnap = await transaction.get(partnerRef)
+      const currentAssignments = normalizePartnerAssignments(
+        partnerSnap.exists()
+          ? (partnerSnap.data() as { assignedOrganizations?: { organizationId: string }[] }).assignedOrganizations
+          : [],
+      )
+      const nextAssignments = [
+        ...currentAssignments.filter((assignment) => assignment.organizationId !== organizationId),
+        buildPartnerAssignmentEntry(organizationId, organizationData),
+      ]
+      transaction.set(
+        partnerRef,
+        {
+          assignedOrganizations: nextAssignments,
+          updatedAt: serverTimestamp(),
+        },
+        { merge: true },
+      )
+
+      if (previousUserId && previousUserId !== userId) {
+        const previousPartnerRef = doc(partnersCollection, previousUserId)
+        const previousPartnerSnap = await transaction.get(previousPartnerRef)
+        if (previousPartnerSnap.exists()) {
+          const previousAssignments = normalizePartnerAssignments(
+            (previousPartnerSnap.data() as {
+              assignedOrganizations?: { organizationId: string }[]
+            }).assignedOrganizations,
+          )
+          const cleanedAssignments = previousAssignments.filter(
+            (assignment) => assignment.organizationId !== organizationId,
+          )
+          transaction.set(
+            previousPartnerRef,
+            {
+              assignedOrganizations: cleanedAssignments,
+              updatedAt: serverTimestamp(),
+            },
+            { merge: true },
+          )
+        }
+      }
+    }
   })
 }
 
@@ -351,6 +418,7 @@ export const unassignLeadershipRole = async (organizationId: string, role: strin
       [roleConfig.field]: null,
       [roleConfig.assignedAtField]: null,
       [roleConfig.assignedByField]: actorId,
+      ...(role === 'partner' ? { partnerId: null } : {}),
       leadershipUpdatedAt: serverTimestamp(),
       leadershipUpdatedBy: actorId,
     })
@@ -365,6 +433,27 @@ export const unassignLeadershipRole = async (organizationId: string, role: strin
         previousUserId,
       }),
     )
+
+    if (role === 'partner' && previousUserId) {
+      const currentPartnerRef = doc(partnersCollection, previousUserId)
+      const partnerSnap = await transaction.get(currentPartnerRef)
+      if (partnerSnap.exists()) {
+        const currentAssignments = normalizePartnerAssignments(
+          (partnerSnap.data() as {
+            assignedOrganizations?: { organizationId: string }[]
+          }).assignedOrganizations,
+        )
+        const nextAssignments = currentAssignments.filter((assignment) => assignment.organizationId !== organizationId)
+        transaction.set(
+          currentPartnerRef,
+          {
+            assignedOrganizations: nextAssignments,
+            updatedAt: serverTimestamp(),
+          },
+          { merge: true },
+        )
+      }
+    }
   })
 }
 

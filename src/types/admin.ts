@@ -84,6 +84,7 @@ export interface OrganizationRecord {
   assignedAmbassadorBy?: string | null
   assignedAmbassadorName?: string | null
   assignedAmbassadorEmail?: string | null
+  partnerId?: string | null
   transformationPartnerId?: string | null
   assignedPartnerAt?: Timestamp | string | Date
   assignedPartnerBy?: string | null
