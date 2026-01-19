@@ -277,6 +277,16 @@ export const PartnerUserManagement: React.FC<PartnerUserManagementProps> = ({
       setAdjustmentValue(1) // Reset to minimum valid value
       setAdjustmentReason('')
       adjustmentModal.onClose()
+    } catch (error) {
+      const errorDetails = error instanceof Error ? error.message : String(error)
+      console.error('Failed to update user points', errorDetails)
+      toast({
+        title: 'Unable to update points',
+        description: `Please review the adjustment and try again. If this keeps happening, contact support with: ${errorDetails}`,
+        status: 'error',
+        duration: 6000,
+        isClosable: true,
+      })
     } finally {
       setLoadingAdjustment(false)
     }
