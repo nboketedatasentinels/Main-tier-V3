@@ -21,6 +21,7 @@ import {
   AccordionPanel,
   AccordionIcon,
   Code,
+  useToast,
 } from '@chakra-ui/react'
 import { formatDistanceToNow } from 'date-fns'
 import { Bell, Building2, Gauge, Mail, Sparkles, Users } from 'lucide-react'
@@ -46,12 +47,14 @@ import { usePartnerDashboardData } from '@/hooks/usePartnerDashboardData'
 import { useAuth } from '@/hooks/useAuth'
 import { logOrganizationAccessAttempt } from '@/services/organizationService'
 import { getActiveNudgeTemplates } from '@/services/nudgeService'
+import { generatePartnerDigest, sendPartnerDigestEmail } from '@/services/partnerDigestService'
 import type { NudgeTemplateRecord } from '@/types/nudges'
 import { buildPartnerNavItems } from '@/utils/navigationItems'
 
 export const PartnerDashboard: React.FC = () => {
   const navigate = useNavigate()
   const { assignedOrganizations, isSuperAdmin, user, refreshProfile, profileStatus, lastProfileLoadAt } = useAuth()
+  const toast = useToast()
   const [debugMode, setDebugMode] = useState(false)
   const {
     assignedOrgCount,
@@ -89,6 +92,8 @@ export const PartnerDashboard: React.FC = () => {
   const [templateLoadError, setTemplateLoadError] = useState<string | null>(null)
   const [templateLoading, setTemplateLoading] = useState(false)
   const [refreshingOrganizations, setRefreshingOrganizations] = useState(false)
+  const [digestSending, setDigestSending] = useState(false)
+  const [digestStatusMessage, setDigestStatusMessage] = useState<string | null>(null)
   const initialRefreshRef = useRef(false)
 
   const loadTemplates = useCallback(async () => {
@@ -159,6 +164,12 @@ export const PartnerDashboard: React.FC = () => {
   }, [assignedOrganizations])
 
   const navSections = useMemo(() => buildPartnerNavItems(), [])
+  const scopedDigestOrgIds = useMemo(() => {
+    const scoped = assignedOrganizations.length
+      ? assignedOrganizations
+      : organizations.map(org => org.id || org.code || '').filter(Boolean)
+    return Array.from(new Set(scoped.map(orgId => orgId.toLowerCase())))
+  }, [assignedOrganizations, organizations])
 
   const riskReasons = useMemo(() => {
     const counts: Record<string, number> = {}
@@ -241,6 +252,86 @@ export const PartnerDashboard: React.FC = () => {
     }
     navigate(`/partner/organization/${orgCode}`)
   }
+
+  const handleSendDigest = useCallback(async () => {
+    if (digestSending) return
+
+    if (!user?.uid) {
+      toast({
+        title: 'Unable to send digest',
+        description: 'Please sign in again before sending a partner digest.',
+        status: 'error',
+        duration: 6000,
+        isClosable: true,
+      })
+      return
+    }
+
+    if (scopedDigestOrgIds.length === 0) {
+      toast({
+        title: 'No assigned organizations',
+        description: 'Assign at least one organization before sending a digest.',
+        status: 'error',
+        duration: 6000,
+        isClosable: true,
+      })
+      return
+    }
+
+    setDigestSending(true)
+    setDigestStatusMessage(null)
+
+    try {
+      const results = await Promise.all(
+        scopedDigestOrgIds.map(async (orgId) => {
+          const digest = await generatePartnerDigest(user.uid, user.email ?? '', orgId)
+          if (!digest) {
+            return { orgId, status: 'failed' as const }
+          }
+          const sent = await sendPartnerDigestEmail(digest)
+          return { orgId, status: sent ? 'sent' as const : 'failed' as const }
+        }),
+      )
+
+      const sentCount = results.filter(result => result.status === 'sent').length
+      const failedCount = results.length - sentCount
+
+      if (sentCount > 0) {
+        setDigestStatusMessage(
+          `Digest sent to ${sentCount} organization${sentCount === 1 ? '' : 's'} just now.`,
+        )
+      }
+
+      if (failedCount > 0) {
+        toast({
+          title: 'Some digests failed',
+          description: `We couldn't send ${failedCount} digest${failedCount === 1 ? '' : 's'}. Try again or contact support.`,
+          status: 'error',
+          duration: 7000,
+          isClosable: true,
+        })
+      } else {
+        toast({
+          title: 'Digest sent',
+          description: 'Partner digest email sent successfully.',
+          status: 'success',
+          duration: 4000,
+          isClosable: true,
+        })
+      }
+    } catch (error) {
+      console.error('Failed to send partner digest', error)
+      toast({
+        title: 'Digest send failed',
+        description: error instanceof Error ? error.message : 'Unexpected error while sending the digest.',
+        status: 'error',
+        duration: 7000,
+        isClosable: true,
+      })
+    } finally {
+      setDigestSending(false)
+    }
+  }, [digestSending, scopedDigestOrgIds, toast, user?.email, user?.uid])
 
   const renderOverview = () => (
     <Stack spacing={8}>
@@ -506,10 +597,22 @@ export const PartnerDashboard: React.FC = () => {
               <Text fontSize="sm" color="brand.subtleText">
                 Last refreshed {lastUsersSuccessAt ? formatDistanceToNow(lastUsersSuccessAt) : 'not yet'} ago.
               </Text>
-              <Button variant="outline" leftIcon={<Mail size={16} />}>
+              <Button
+                variant="outline"
+                leftIcon={<Mail size={16} />}
+                onClick={handleSendDigest}
+                isLoading={digestSending}
+                isDisabled={digestSending || scopedDigestOrgIds.length === 0}
+                loadingText="Sending"
+              >
                 Send digest now
               </Button>
             </HStack>
+            {digestStatusMessage ? (
+              <Text fontSize="xs" color="green.600">
+                {digestStatusMessage}
+              </Text>
+            ) : null}
           </Stack>
         </CardBody>
       </Card>
