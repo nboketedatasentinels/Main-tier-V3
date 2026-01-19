@@ -78,6 +78,9 @@ export const PartnerDashboard: React.FC = () => {
     atRiskUsers,
     managedBreakdown,
     notificationCount,
+    notifications,
+    notificationsLoading,
+    notificationsError,
     debugInfo,
   } = usePartnerDashboardData({ debugMode })
   const enableProfileRealtime = import.meta.env.VITE_ENABLE_PROFILE_REALTIME === 'true'
@@ -522,32 +525,107 @@ export const PartnerDashboard: React.FC = () => {
               <Badge colorScheme="red">{notificationCount} unread</Badge>
             </HStack>
             <Divider />
-            <Stack spacing={3}>
-              {[1, 2, 3].map(item => (
-                <HStack
-                  key={item}
-                  justify="space-between"
-                  p={3}
-                  borderRadius="md"
-                  border="1px solid"
-                  borderColor="brand.border"
-                  bg="brand.accent"
-                >
-                  <HStack spacing={3}>
-                    <Box p={2} borderRadius="md" bg="white" border="1px solid" borderColor="brand.border">
-                      <Bell size={16} />
-                    </Box>
-                    <VStack align="flex-start" spacing={0}>
-                      <Text fontWeight="semibold" color="brand.text">At-risk alert</Text>
-                      <Text fontSize="sm" color="brand.subtleText">
-                        Learner activity dropped in the past week. Review interventions.
-                      </Text>
-                    </VStack>
+            {notificationsLoading ? (
+              <Stack spacing={3}>
+                {[1, 2, 3].map((item) => (
+                  <HStack
+                    key={item}
+                    justify="space-between"
+                    p={3}
+                    borderRadius="md"
+                    border="1px solid"
+                    borderColor="brand.border"
+                    bg="brand.accent"
+                  >
+                    <HStack spacing={3} flex={1}>
+                      <Skeleton height="32px" width="32px" borderRadius="md" />
+                      <Box flex={1}>
+                        <Skeleton height="14px" width="40%" />
+                        <SkeletonText mt="2" noOfLines={2} spacing="2" />
+                      </Box>
+                    </HStack>
+                    <Skeleton height="20px" width="70px" borderRadius="full" />
                   </HStack>
-                  <Badge colorScheme="purple">Unread</Badge>
-                </HStack>
-              ))}
-            </Stack>
+                ))}
+              </Stack>
+            ) : notificationsError ? (
+              <Box p={3} borderRadius="md" border="1px solid" borderColor="red.200" bg="red.50">
+                <Stack spacing={2}>
+                  <Text fontWeight="semibold" color="red.700">Notifications unavailable</Text>
+                  <Text fontSize="sm" color="red.700">{notificationsError}</Text>
+                </Stack>
+              </Box>
+            ) : notifications.length === 0 ? (
+              <Box p={3} borderRadius="md" border="1px dashed" borderColor="gray.200" bg="gray.50">
+                <Text fontSize="sm" color="gray.600">
+                  You are all caught up. New partner alerts will appear here.
+                </Text>
+              </Box>
+            ) : (
+              <Stack spacing={3}>
+                {notifications.map((notification) => {
+                  const relatedId =
+                    (notification.metadata as { learnerId?: string; organizationId?: string; relatedId?: string } | undefined)
+                      ?.learnerId
+                      ?? (notification.metadata as { relatedId?: string; organizationId?: string } | undefined)?.relatedId
+                      ?? notification.related_id
+                  const organizationId =
+                    (notification.metadata as { organizationId?: string } | undefined)?.organizationId
+                    ?? (notification.metadata as { relatedId?: string } | undefined)?.relatedId
+                  const actionLink = relatedId
+                    ? `/partner/user/${relatedId}`
+                    : organizationId
+                      ? `/partner/organization/${organizationId}`
+                      : null
+                  const actionLabel = relatedId ? 'View learner' : organizationId ? 'View organization' : null
+                  const timestamp = notification.created_at
+                    ? formatDistanceToNow(new Date(notification.created_at), { addSuffix: true })
+                    : 'Just now'
+
+                  return (
+                    <HStack
+                      key={notification.id}
+                      justify="space-between"
+                      p={3}
+                      borderRadius="md"
+                      border="1px solid"
+                      borderColor="brand.border"
+                      bg="brand.accent"
+                      align="flex-start"
+                    >
+                      <HStack spacing={3} flex={1} align="flex-start">
+                        <Box p={2} borderRadius="md" bg="white" border="1px solid" borderColor="brand.border">
+                          <Bell size={16} />
+                        </Box>
+                        <VStack align="flex-start" spacing={1} flex={1}>
+                          <Text fontWeight="semibold" color="brand.text">
+                            {notification.title || 'Partner alert'}
+                          </Text>
+                          <Text fontSize="sm" color="brand.subtleText">
+                            {notification.message}
+                          </Text>
+                          <Text fontSize="xs" color="brand.subtleText">
+                            {timestamp}
+                          </Text>
+                          {actionLink && actionLabel ? (
+                            <Button
+                              size="xs"
+                              variant="outline"
+                              onClick={() => navigate(actionLink)}
+                            >
+                              {actionLabel}
+                            </Button>
+                          ) : null}
+                        </VStack>
+                      </HStack>
+                      <Badge colorScheme={notification.is_read || notification.read ? 'gray' : 'purple'}>
+                        {notification.is_read || notification.read ? 'Read' : 'Unread'}
+                      </Badge>
+                    </HStack>
+                  )
+                })}
+              </Stack>
+            )}
           </Stack>
         </CardBody>
       </Card>
