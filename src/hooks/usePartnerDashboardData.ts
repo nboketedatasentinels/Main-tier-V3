@@ -98,7 +98,6 @@ export const usePartnerDashboardData = (options?: UsePartnerDashboardDataOptions
     if (profileStatus !== 'ready') return
     if (selectedOrg === 'all') return
     if (organizationsLoading) return
-
     const selected = selectedOrg.toLowerCase()
     const stillValid = organizations.some(
       (org) =>

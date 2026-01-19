@@ -172,7 +172,6 @@ export const PartnerUserManagement: React.FC<PartnerUserManagementProps> = ({
     if (selectedOrg === 'all') return safeUsers
 
     const selectedKey = selectedOrg.toLowerCase()
-
     return safeUsers.filter((u) =>
       [u.companyCode, u.organizationId]
         .filter((v): v is string => typeof v === 'string' && v.length > 0)
@@ -495,7 +494,7 @@ export const PartnerUserManagement: React.FC<PartnerUserManagementProps> = ({
                     <HStack spacing={3} py={6} justify="center">
                       <Spinner size="sm" />
                       <Text color="brand.subtleText">
-                        {waitingForOrganizations ? 'Waiting for organizations...' : 'Loading learners...'}
+                        Loading learners...
                       </Text>
                     </HStack>
                   </Td>
@@ -569,7 +568,7 @@ export const PartnerUserManagement: React.FC<PartnerUserManagementProps> = ({
                     <HStack spacing={3} py={6} justify="center">
                       <Spinner size="sm" />
                       <Text color="brand.subtleText">
-                        {waitingForOrganizations ? 'Waiting for organizations...' : 'Loading learners...'}
+                        Loading learners...
                       </Text>
                     </HStack>
                   </Td>

@@ -244,6 +244,38 @@ export const PartnerDashboard: React.FC = () => {
 
   const renderOverview = () => (
     <Stack spacing={8}>
+      {(organizationsLoading || usersLoading) && !organizationsError && !usersError && (
+        <Card bg="blue.50" border="1px solid" borderColor="blue.200">
+          <CardBody>
+            <Stack spacing={3}>
+              <Text fontWeight="semibold" color="blue.700">
+                Loading dashboard data...
+              </Text>
+              <HStack spacing={3} wrap="wrap">
+                {organizationsLoading ? (
+                  <Badge colorScheme="blue">Organizations loading...</Badge>
+                ) : organizationsReady ? (
+                  <Badge colorScheme="green">Organizations loaded ✓</Badge>
+                ) : null}
+                {usersLoading ? (
+                  <Badge colorScheme="blue">Users loading...</Badge>
+                ) : (
+                  <Badge colorScheme="green">Users loaded ✓</Badge>
+                )}
+              </HStack>
+              <Text fontSize="xs" color="blue.600">
+                {organizationsLoading && usersLoading
+                  ? 'Loading organizations and users in parallel...'
+                  : organizationsLoading
+                    ? 'Organizations are loading, users will follow...'
+                    : usersLoading
+                      ? 'Users are loading...'
+                      : 'Data loaded successfully'}
+              </Text>
+            </Stack>
+          </CardBody>
+        </Card>
+      )}
       {(organizationsError || usersError) && (
         <Card bg="red.50" border="1px solid" borderColor="red.200">
           <CardBody>
