@@ -5,6 +5,7 @@ import { JourneyType, ApprovalType } from '@/config/pointsConfig';
 export * from './admin'
 export * from './capacity'
 export * from './tutorials'
+export * from './partnerAdmin'
 
 export { UserRole, ALL_STANDARD_ROLES };
 export type { StandardRole, AllRoles };
