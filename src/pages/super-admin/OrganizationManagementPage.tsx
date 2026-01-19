@@ -203,7 +203,7 @@ export const OrganizationManagementPage: React.FC<OrganizationManagementPageProp
     }
     setOrganizations((prev) =>
       prev.map((org) =>
-        org.id === selectedOrg.id ? { ...org, transformationPartnerId: partnerId } : org,
+        org.id === selectedOrg.id ? { ...org, partnerId, transformationPartnerId: partnerId } : org,
       ),
     )
     await logAdminAction({

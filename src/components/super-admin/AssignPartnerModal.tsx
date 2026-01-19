@@ -47,7 +47,7 @@ export const AssignPartnerModal: React.FC<Props> = ({
   const [loading, setLoading] = useState(false)
 
   useEffect(() => {
-    setPartner(organization?.transformationPartnerId || '')
+    setPartner(organization?.partnerId || organization?.transformationPartnerId || '')
   }, [organization])
 
   const sortedPartners = useMemo(
@@ -140,7 +140,8 @@ export const AssignPartnerModal: React.FC<Props> = ({
               <Stack spacing={1} fontSize="sm" color="gray.600">
                 <Text>
                   Current partner:{' '}
-                  {partners.find((item) => item.id === organization.transformationPartnerId)?.name || 'Unassigned'}
+                  {partners.find((item) => item.id === (organization.partnerId || organization.transformationPartnerId))
+                    ?.name || 'Unassigned'}
                 </Text>
                 <Badge colorScheme={organization.status === 'active' ? 'green' : 'orange'} w="fit-content">
                   {organization.status}
