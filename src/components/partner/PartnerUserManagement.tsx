@@ -174,7 +174,6 @@ export const PartnerUserManagement: React.FC<PartnerUserManagementProps> = ({
 
   const totalPages = Math.max(1, Math.ceil(sorted.length / PAGE_SIZE))
   const paginated = sorted.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE)
-  const waitingForOrganizations = organizationsLoading && !organizationsReady
 
   const atRiskUsers = useMemo(
     () =>
@@ -575,7 +574,7 @@ export const PartnerUserManagement: React.FC<PartnerUserManagementProps> = ({
                     <HStack spacing={3} py={6} justify="center">
                       <Spinner size="sm" />
                       <Text color="brand.subtleText">
-                        {waitingForOrganizations ? 'Waiting for organizations...' : 'Loading learners...'}
+                        Loading learners...
                       </Text>
                     </HStack>
                   </Td>
@@ -648,7 +647,7 @@ export const PartnerUserManagement: React.FC<PartnerUserManagementProps> = ({
                     <HStack spacing={3} py={6} justify="center">
                       <Spinner size="sm" />
                       <Text color="brand.subtleText">
-                        {waitingForOrganizations ? 'Waiting for organizations...' : 'Loading learners...'}
+                        Loading learners...
                       </Text>
                     </HStack>
                   </Td>

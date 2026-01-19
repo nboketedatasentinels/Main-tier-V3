@@ -131,6 +131,12 @@ export const usePartnerDashboardData = (options?: UsePartnerDashboardDataOptions
     [assignedOrganizations],
   )
 
+  // Stable key for organization stats subscriptions to prevent unnecessary restarts
+  const organizationIdsKey = useMemo(
+    () => organizations.map((org) => org.id || org.code).filter(Boolean).sort().join('|'),
+    [organizations],
+  )
+
   const organizationLookup = useMemo(() => {
     if (!organizations.length) return new Map<string, string>()
     const mapping = new Map<string, string>()
@@ -364,8 +370,13 @@ export const usePartnerDashboardData = (options?: UsePartnerDashboardDataOptions
     if (profileStatus !== 'ready') {
       return
     }
-    if (!organizations.length) return undefined
+    if (!organizations.length || !organizationIdsKey) return undefined
     let isMounted = true
+
+    console.debug('[PartnerDashboard] Setting up organization stats listeners', {
+      organizationIdsKey,
+      count: organizations.length,
+    })
 
     const updateStats = async () => {
       try {
@@ -391,9 +402,12 @@ export const usePartnerDashboardData = (options?: UsePartnerDashboardDataOptions
 
     return () => {
       isMounted = false
+      console.debug('[PartnerDashboard] Cleaning up organization stats listeners', {
+        organizationIdsKey,
+      })
       unsubscribers.forEach((unsubscribe) => unsubscribe())
     }
-  }, [organizations])
+  }, [organizationIdsKey, profileStatus])
 
   useEffect(() => {
     if (profileStatus !== 'ready') {
@@ -490,12 +504,8 @@ export const usePartnerDashboardData = (options?: UsePartnerDashboardDataOptions
     if (profileStatus !== 'ready') {
       return
     }
-    if (!organizationsReady) {
-      console.debug('[PartnerDashboard] Waiting for organizations before loading users.')
-      setUsersLoading(true)
-      setUsersError(null)
-      return
-    }
+    // Remove hard dependency - allow users to load in parallel with organizations
+    // We'll filter by organization scope after both are loaded
     let isMounted = true
     let retryTimeout: ReturnType<typeof setTimeout> | undefined
     let unsubscribe: (() => void) | undefined
@@ -548,21 +558,24 @@ export const usePartnerDashboardData = (options?: UsePartnerDashboardDataOptions
                 .filter((value): value is string => !!value)
                 .map((value) => value.toLowerCase())
 
-              if (
-                organizationsReady &&
-                !isSuperAdmin &&
-                (!assignedOrgKeys.size || !userOrgKeys.some((key) => assignedOrgKeys.has(key)))
-              ) {
-                return false
-              }
+              // Only filter by organization scope if organizations are ready
+              // This allows users to load even while organizations are still loading
+              if (organizationsReady) {
+                if (
+                  !isSuperAdmin &&
+                  assignedOrgKeys.size > 0 &&
+                  !userOrgKeys.some((key) => assignedOrgKeys.has(key))
+                ) {
+                  return false
+                }
 
-              if (
-                organizationsReady &&
-                selectedOrg !== 'all' &&
-                selectedOrg &&
-                !userOrgKeys.some((key) => selectedOrgKeys.has(key))
-              ) {
-                return false
+                if (
+                  selectedOrg !== 'all' &&
+                  selectedOrg &&
+                  !userOrgKeys.some((key) => selectedOrgKeys.has(key))
+                ) {
+                  return false
+                }
               }
 
               return true
@@ -704,7 +717,7 @@ export const usePartnerDashboardData = (options?: UsePartnerDashboardDataOptions
     assignedOrgKeys,
     isSuperAdmin,
     organizationLookup,
-    organizationsReady,
+    organizationsReady, // Keep this to trigger re-filtering when orgs become ready
     profileStatus,
     selectedOrg,
     selectedOrgKeys,
