@@ -20,6 +20,7 @@ import type {
   OrganizationCapacityMetrics,
 } from '@/types/capacity'
 import { sendCapacityAlert } from './notificationService'
+import { removeUndefinedFields } from '@/utils/firestore'
 
 const organizationsCollection = collection(db, ORG_COLLECTION)
 const usersCollection = collection(db, 'users')
@@ -93,7 +94,7 @@ const resolveAlertTargetRoles = () => {
 }
 
 const recordAdminActivity = async (alert: OrganizationCapacityAlert, organizationCode?: string) => {
-  await addDoc(adminActivityCollection, {
+  const payload = removeUndefinedFields({
     action: 'capacity_alert_triggered',
     organizationName: alert.organizationName,
     organizationCode,
@@ -106,6 +107,7 @@ const recordAdminActivity = async (alert: OrganizationCapacityAlert, organizatio
     },
     createdAt: serverTimestamp(),
   })
+  await addDoc(adminActivityCollection, payload)
 }
 
 export const calculateOrganizationCapacity = async (organizationId: string) => {
