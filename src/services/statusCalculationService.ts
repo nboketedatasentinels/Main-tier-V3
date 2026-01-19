@@ -9,8 +9,8 @@ import {
   getDoc,
   getDocs,
   query,
-  updateDoc,
   setDoc,
+  // updateDoc,
   where,
   Timestamp,
 } from 'firebase/firestore'
@@ -52,7 +52,7 @@ const DEFAULT_CONFIG: StatusCalculationConfig = {
  * Score = (recentActivity * 0.4) + (completionRate * 0.3) + (consistency * 0.2) + (streakBonus * 0.1)
  */
 export async function calculateEngagementScore(
-  userId: string,
+  _userId: string,
   metrics: EngagementMetrics,
   journeyContext?: {
     currentWindowNumber: number
@@ -182,7 +182,7 @@ export async function calculateDaysSinceLastActivity(userId: string): Promise<nu
  */
 export async function getCurrentWindowProgress(
   userId: string,
-  orgId?: string,
+  _orgId?: string,
 ): Promise<{
   currentWindowNumber: number
   pointsInWindow: number
@@ -492,7 +492,7 @@ export async function getAtRiskLearners(
 export async function getRecoveryCandidates(orgId: string, hoursBack: number = 24): Promise<LearnerStatusRecord[]> {
   try {
     const cutoffTime = new Date(Date.now() - hoursBack * 60 * 60 * 1000)
-    
+
     const statusQuery = query(
       collection(db, 'learner_status'),
       where('orgId', '==', orgId),

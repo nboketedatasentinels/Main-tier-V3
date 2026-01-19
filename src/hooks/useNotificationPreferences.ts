@@ -201,7 +201,7 @@ export function useNotificationPreferences(userId: string): UseNotificationPrefe
  * Custom hook to get learner status dashboard data
  */
 export function useLearnerStatusDashboard(userId: string) {
-  const [statusData, setStatusData] = useState(null)
+  const [statusData, setStatusData] = useState<any>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<Error | null>(null)
 
@@ -245,7 +245,7 @@ export function useLearnerStatusDashboard(userId: string) {
  * Custom hook to get partner dashboard data
  */
 export function usePartnerDashboard(partnerId: string, orgId: string) {
-  const [dashboardData, setDashboardData] = useState(null)
+  const [dashboardData, setDashboardData] = useState<any>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<Error | null>(null)
 

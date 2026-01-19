@@ -15,7 +15,7 @@ import {
   Timestamp,
   serverTimestamp,
 } from 'firebase/firestore'
-import { db } from '../config/firebase'
+import { db } from '../services/firebase'
 import {
   ActivityVisibility,
   VisibilityReason,
@@ -213,7 +213,7 @@ export async function hideActivity(
     if (config && config.passMark.activityOverrides) {
       const overrides = { ...config.passMark.activityOverrides }
       if (!overrides[activityId]) {
-        overrides[activityId] = {}
+        overrides[activityId] = { activityId }
       }
       overrides[activityId].visibleWhen = 'never'
       overrides[activityId].alternateActivityId = alternativeActivityId

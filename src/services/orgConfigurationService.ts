@@ -12,12 +12,12 @@ import {
   collection,
   where,
   getDocs,
-  writeBatch,
+  // writeBatch,
   Timestamp,
-  FieldValue,
+  // FieldValue,
   serverTimestamp,
 } from 'firebase/firestore'
-import { db } from '../config/firebase'
+import { db } from '../services/firebase'
 import {
   OrganizationConfiguration,
   OrganizationLeadership,
@@ -370,13 +370,25 @@ export async function getPassMarkAdjustments(orgId: string): Promise<{
       const defaultConfig = getDefaultOrgConfiguration(orgId)
       return {
         base: defaultConfig.passMark.basePassMark,
-        adjustments: defaultConfig.passMark.adjustments,
+        adjustments: {
+          no_mentor: defaultConfig.passMark.adjustments.noMentorAvailable ?? 0,
+          no_ambassador: defaultConfig.passMark.adjustments.noAmbassadorAvailable ?? 0,
+          no_partner: defaultConfig.passMark.adjustments.noPartnerAvailable ?? 0,
+          capacity_limited: defaultConfig.passMark.adjustments.limitedCapacity ?? 0,
+          custom: 0,
+        },
       }
     }
 
     return {
       base: config.passMark.basePassMark,
-      adjustments: config.passMark.adjustments,
+      adjustments: {
+        no_mentor: config.passMark.adjustments.noMentorAvailable ?? 0,
+        no_ambassador: config.passMark.adjustments.noAmbassadorAvailable ?? 0,
+        no_partner: config.passMark.adjustments.noPartnerAvailable ?? 0,
+        capacity_limited: config.passMark.adjustments.limitedCapacity ?? 0,
+        custom: 0,
+      },
     }
   } catch (error) {
     console.error('Error getting pass mark adjustments:', error)

@@ -466,6 +466,7 @@ export const createOrganizationWithInvitations = async (
   invitations: InvitationPayload[],
   adminContext?: { adminId?: string; adminName?: string },
 ): Promise<{ organizationId: string; invitationResult: BulkInvitationResult | null }> => {
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const { createdAt: _createdAt, updatedAt: _updatedAt, ...organizationData } = organization
   const payload: Omit<OrganizationRecord, 'createdAt' | 'updatedAt'> & {
     createdAt: Timestamp | ReturnType<typeof serverTimestamp>
@@ -503,14 +504,14 @@ const normalizeAssignments = (assignedOrganizations?: string[]): string[] => {
   const normalized: string[] = []
   const seen = new Set<string>()
 
-  ;(assignedOrganizations || []).forEach((entry) => {
-    if (typeof entry !== 'string') return
-    const trimmed = entry.trim()
-    if (!trimmed) return
-    if (seen.has(trimmed)) return
-    seen.add(trimmed)
-    normalized.push(trimmed)
-  })
+    ; (assignedOrganizations || []).forEach((entry) => {
+      if (typeof entry !== 'string') return
+      const trimmed = entry.trim()
+      if (!trimmed) return
+      if (seen.has(trimmed)) return
+      seen.add(trimmed)
+      normalized.push(trimmed)
+    })
 
   return normalized
 }

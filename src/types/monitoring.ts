@@ -27,35 +27,35 @@ export interface LearnerStatusRecord {
   currentStatus: LearnerStatus
   previousStatus?: LearnerStatus
   statusChangedAt: Timestamp
-  
+
   // Engagement Metrics
   engagementScore: number // 0-100
   completionRate: number // 0-100
   consistencyScore: number // 0-100
   lastActivityDate?: Timestamp
   daysSinceLastActivity: number
-  
+
   // Window Progress
   currentWindowNumber: number
   pointsInCurrentWindow: number
   targetPointsForWindow: number
   windowProgressPercentage: number
-  
+
   // Recovery Tracking
   recoveryStartedAt?: Timestamp
   recoveryNotificationSent?: boolean
   consecutiveActiveWeeks: number
-  
+
   // Alert Management
   alertSeverity?: AlertSeverity
   alertReason?: string
   alertsSentToday: number
   lastAlertSentAt?: Timestamp
-  
+
   // Thresholds crossed
   engagementDropDetected?: boolean
   missedDeadlineCount: number
-  
+
   updatedAt: Timestamp
   calculatedAt: Timestamp
 }
@@ -83,16 +83,16 @@ export interface EngagementMetrics {
   userId: string
   orgId?: string
   date: string // YYYY-MM-DD format
-  
+
   // Daily activity
   pointsEarned: number
   activitiesCompleted: number
   activitiesAttempted: number
-  
+
   // Streaks
   dailyActiveStreakDays: number
   isActiveToday: boolean
-  
+
   // Rolling metrics
   last7DaysPoints: number
   last14DaysPoints: number
@@ -100,11 +100,11 @@ export interface EngagementMetrics {
   last7DaysActivityCount: number
   last14DaysActivityCount: number
   last30DaysActivityCount: number
-  
+
   // Calculated fields
   dailyAverage: number
   weeklyTrend: 'increasing' | 'stable' | 'decreasing'
-  
+
   createdAt: Timestamp
 }
 
@@ -131,26 +131,26 @@ export interface StatusAlertRecord {
   type: AlertType
   status: 'pending' | 'sent' | 'failed' | 'skipped' | 'deferred'
   channels: Array<'email' | 'in_app'>
-  
+
   // Alert Content
   message: string
   title: string
   actionRequired: boolean
   actionUrl?: string
   suggestedActions?: string[]
-  
+
   // Alert Properties
   severity: AlertSeverity
   reasonCode: string
   statusChangeTriggered?: LearnerStatus
-  
+
   // Retry Handling
   attemptCount: number
   maxRetries: number
   lastAttemptAt?: Timestamp
   nextRetryAt?: Timestamp
   lastError?: string
-  
+
   // Timing
   scheduledFor?: Timestamp
   createdAt: Timestamp
@@ -160,11 +160,11 @@ export interface StatusAlertRecord {
 export interface NotificationPreferences {
   id: string
   userId: string
-  
+
   // Global toggles
   emailNotificationsEnabled: boolean
   inAppNotificationsEnabled: boolean
-  
+
   // Status alerts
   statusAlerts: {
     enabled: boolean
@@ -172,12 +172,12 @@ export interface NotificationPreferences {
     includeAtRiskWarnings: boolean
     includeInactiveNotices: boolean
   }
-  
+
   // Recovery notifications
   recoveryNotifications: {
     enabled: boolean
   }
-  
+
   // Weekly content
   weeklyDigests: {
     enabled: boolean
@@ -185,7 +185,7 @@ export interface NotificationPreferences {
     preferredDay: string // e.g., 'monday'
     preferredTime: string // HH:MM UTC
   }
-  
+
   // For partners/mentors
   partnerAlerts?: {
     enabled: boolean
@@ -194,13 +194,13 @@ export interface NotificationPreferences {
     includeWeeklyDigest: boolean
     dailyDigestTime?: string // HH:MM UTC
   }
-  
+
   // Do Not Disturb
   doNotDisturbEnabled?: boolean
   doNotDisturbStart?: string // HH:MM
   doNotDisturbEnd?: string // HH:MM
   doNotDisturbTimezone?: string
-  
+
   updatedAt: Timestamp
   updatedBy?: string
 }
@@ -238,19 +238,19 @@ export interface PartnerDailyDigest {
   orgId: string
   digestDate: string // YYYY-MM-DD
   status: 'pending' | 'sent' | 'failed'
-  
+
   // Summary statistics
   totalTeamMembers: number
   activeMembers: number
   atRiskCount: number
   inactiveCount: number
   recoveredCount: number
-  
+
   // Changes since last digest
   newAtRiskCount: number
-  recoveredCount: number
+  newRecoveredCount: number
   completedMilestones: number
-  
+
   // Learner details
   atRiskLearners: Array<{
     userId: string
@@ -262,18 +262,18 @@ export interface PartnerDailyDigest {
     recoveryTips: string[]
     statusChangedAt: Timestamp
   }>
-  
+
   // Performance metrics
   teamAverageEngagementScore: number
   teamCompletionRate: number
   weeklyPointsAverage: number
-  
+
   // Summary for email
   summaryText: string
   criticalItems: string[]
-  
+
   metadata?: Record<string, unknown>
-  
+
   createdAt: Timestamp
   sentAt?: Timestamp
   nextDigestAt?: Timestamp
@@ -283,16 +283,16 @@ export interface DigestSchedule {
   id: string
   partnerId: string
   orgId: string
-  
+
   frequency: 'daily' | 'weekly' | 'biweekly'
   preferredTime: string // HH:MM UTC
   preferredDay?: string // for weekly/biweekly: 'monday', 'tuesday', etc.
   timezone?: string // IANA timezone
-  
+
   enabled: boolean
   lastDigestSentAt?: Timestamp
   nextDigestAt?: Timestamp
-  
+
   updatedAt: Timestamp
 }
 
@@ -315,14 +315,14 @@ export interface StatusCalculationConfig {
     daysInRecoveryBeforeActive: number // default: 7
     pointsRequiredToRecover: number // default: minimum weekly target
   }
-  
+
   // Alert configuration
   alerts: {
     maxAlertsPerDay: number // default: 3
     alertDebounceMinutes: number // default: 60 - don't send same alert twice within this window
     earlyWarningDaysBefore: number // default: 3 - warn before at_risk threshold
   }
-  
+
   // Calculation frequency
   recalculationIntervalMinutes: number // default: 60
   metricsUpdateIntervalHours: number // default: 24
@@ -360,19 +360,19 @@ export interface AutomationRule {
   name: string
   description: string
   enabled: boolean
-  
+
   trigger: RuleTrigger
   conditions: Array<{
     field: string
     operator: 'equals' | 'gte' | 'lte' | 'gt' | 'lt' | 'contains'
     value: unknown
   }>
-  
+
   actions: Array<{
     type: 'create_alert' | 'send_notification' | 'assign_nudge' | 'escalate_to_mentor'
     config: Record<string, unknown>
   }>
-  
+
   priority: number // 1-10, higher = more important
   createdAt: Timestamp
   updatedAt: Timestamp
@@ -387,15 +387,15 @@ export interface WeeklyActivityReport {
   orgId?: string
   weekNumber: number
   windowId: string
-  
+
   targetPoints: number
   pointsEarned: number
   activitiesRequired: number
   activitiesCompleted: number
-  
+
   complianceStatus: 'on_track' | 'behind' | 'at_risk' | 'critical'
   completionPercentage: number
-  
+
   activities: Array<{
     id: string
     title: string
@@ -403,7 +403,7 @@ export interface WeeklyActivityReport {
     pointsEarned?: number
     completedAt?: Timestamp
   }>
-  
+
   calculatedAt: Timestamp
 }
 

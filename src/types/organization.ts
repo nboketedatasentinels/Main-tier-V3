@@ -141,7 +141,7 @@ export interface ActivityPassMarkOverride {
   passMark?: number
   leadershipDependency?: LeadershipRole | null
   alternateActivityId?: string
-  visibleWhen?: 'always' | 'leadership_available' | 'capacity_available'
+  visibleWhen?: 'always' | 'leadership_available' | 'capacity_available' | 'never'
 }
 
 /**
@@ -250,10 +250,10 @@ export interface RuleAction {
   type: RuleActionType
   priority: number
   config:
-    | PassMarkAdjustmentActionConfig
-    | HideActivityActionConfig
-    | NotifyActionConfig
-    | Record<string, unknown>
+  | PassMarkAdjustmentActionConfig
+  | HideActivityActionConfig
+  | NotifyActionConfig
+  | Record<string, unknown>
 }
 
 /**
@@ -492,14 +492,14 @@ export interface ConfigurationChangeRecord {
   orgId: string
 
   changeType:
-    | 'leadership_assigned'
-    | 'leadership_removed'
-    | 'feature_enabled'
-    | 'feature_disabled'
-    | 'pass_mark_updated'
-    | 'activity_visibility_changed'
-    | 'rule_created'
-    | 'rule_modified'
+  | 'leadership_assigned'
+  | 'leadership_removed'
+  | 'feature_enabled'
+  | 'feature_disabled'
+  | 'pass_mark_updated'
+  | 'activity_visibility_changed'
+  | 'rule_created'
+  | 'rule_modified'
 
   before?: Record<string, unknown>
   after?: Record<string, unknown>

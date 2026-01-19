@@ -4,20 +4,12 @@
  */
 
 import {
-  doc,
-  getDoc,
-  query,
-  collection,
-  where,
-  getDocs,
   Timestamp,
-  serverTimestamp,
 } from 'firebase/firestore'
-import { db } from '../config/firebase'
 import {
   OrganizationRule,
   RuleCondition,
-  RuleActionType,
+  // RuleActionType,
   RuleAction,
   PassMarkAdjustmentActionConfig,
   HideActivityActionConfig,
@@ -114,7 +106,7 @@ export function getValueFromContext(
 export async function executeRuleAction(
   orgId: string,
   action: RuleAction,
-  context: Record<string, unknown>,
+  _context: Record<string, unknown>,
   userId: string = 'system'
 ): Promise<{ success: boolean; message: string }> {
   try {
@@ -174,7 +166,7 @@ export async function executeRuleAction(
 async function executeAdjustPassMarkAction(
   orgId: string,
   config: PassMarkAdjustmentActionConfig,
-  userId: string
+  _userId: string
 ): Promise<{ success: boolean; message: string }> {
   try {
     const orgConfig = await getOrgConfiguration(orgId)
@@ -184,7 +176,12 @@ async function executeAdjustPassMarkAction(
 
     // Update in configuration
     const adjustments = { ...orgConfig.passMark.adjustments }
-    adjustments[config.reason] = config.amount
+    // Map reason to config key
+    if (config.reason === 'no_mentor') adjustments.noMentorAvailable = config.amount
+    else if (config.reason === 'no_ambassador') adjustments.noAmbassadorAvailable = config.amount
+    else if (config.reason === 'no_partner') adjustments.noPartnerAvailable = config.amount
+    else if (config.reason === 'capacity_limited') adjustments.limitedCapacity = config.amount
+    // custom is not stored in standard adjustments object structure efficiently without strict typing, ignoring for now or handling as custom override
 
     // This would be persisted via orgConfigurationService
     return {
@@ -200,9 +197,9 @@ async function executeAdjustPassMarkAction(
  * Execute hide activity action
  */
 async function executeHideActivityAction(
-  orgId: string,
+  _orgId: string,
   config: HideActivityActionConfig,
-  userId: string
+  _userId: string
 ): Promise<{ success: boolean; message: string }> {
   try {
     // This would call activityVisibilityService.hideActivity
@@ -219,9 +216,9 @@ async function executeHideActivityAction(
  * Execute show activity action
  */
 async function executeShowActivityAction(
-  orgId: string,
+  _orgId: string,
   config: HideActivityActionConfig,
-  userId: string
+  _userId: string
 ): Promise<{ success: boolean; message: string }> {
   try {
     // This would call activityVisibilityService.showActivity
@@ -256,9 +253,9 @@ async function executeNotifyAction(
  * Execute disable feature action
  */
 async function executeDisableFeatureAction(
-  orgId: string,
+  _orgId: string,
   config: Record<string, unknown>,
-  userId: string
+  _userId: string
 ): Promise<{ success: boolean; message: string }> {
   try {
     const feature = config.feature as string
@@ -301,6 +298,8 @@ export async function executeApplicableRules(
 > {
   try {
     const config = await getOrgConfiguration(orgId)
+    // unused variables
+    void userId
     if (!config || !config.journeyRules) return []
 
     const results: Array<{
@@ -465,9 +464,9 @@ function generateActionPreview(action: RuleAction): string {
  * Get rule execution history
  */
 export async function getRuleExecutionHistory(
-  orgId: string,
-  ruleId?: string,
-  limit: number = 50
+  _orgId: string,
+  _ruleId?: string,
+  _limit: number = 50
 ): Promise<
   Array<{
     ruleId: string

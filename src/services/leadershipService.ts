@@ -5,19 +5,19 @@
 
 import {
   doc,
-  getDoc,
+  // getDoc,
   setDoc,
   updateDoc,
   query,
   collection,
   where,
   getDocs,
-  arrayUnion,
-  arrayRemove,
+  // arrayUnion,
+  // arrayRemove,
   Timestamp,
   serverTimestamp,
 } from 'firebase/firestore'
-import { db } from '../config/firebase'
+import { db } from '../services/firebase'
 import { LeadershipAssignment, LeadershipRole } from '../types/organization'
 import { getOrgConfiguration, recordConfigurationChange } from './orgConfigurationService'
 
@@ -295,20 +295,20 @@ export async function getLeadershipStats(
       capacityRemaining: {
         mentor: leadership.mentorCapacity
           ? Math.max(
-              0,
-              leadership.mentorCapacity -
-                Math.floor(((leadership.mentorUtilization || 0) / 100) * (leadership.mentorCapacity || 0))
-            )
+            0,
+            leadership.mentorCapacity -
+            Math.floor(((leadership.mentorUtilization || 0) / 100) * (leadership.mentorCapacity || 0))
+          )
           : null,
         ambassador: leadership.ambassadorCapacity
           ? Math.max(
-              0,
-              leadership.ambassadorCapacity -
-                Math.floor(
-                  ((leadership.ambassadorUtilization || 0) / 100) *
-                    (leadership.ambassadorCapacity || 0)
-                )
+            0,
+            leadership.ambassadorCapacity -
+            Math.floor(
+              ((leadership.ambassadorUtilization || 0) / 100) *
+              (leadership.ambassadorCapacity || 0)
             )
+          )
           : null,
         partner: null,
       },
@@ -494,7 +494,7 @@ export async function logLeadershipActivity(
  */
 export async function getLeadershipActivitySummary(
   orgId: string,
-  role: LeadershipRole,
+  _role: LeadershipRole,
   daysBack: number = 7
 ): Promise<{
   totalActivities: number

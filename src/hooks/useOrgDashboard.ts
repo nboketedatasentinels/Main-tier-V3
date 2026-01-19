@@ -5,21 +5,21 @@
 
 import { useEffect, useState, useCallback } from 'react'
 import { useAuth } from './useAuth'
+import { Timestamp } from 'firebase/firestore'
 import {
   getOrgConfiguration,
-  getPassMarkAdjustments,
-  updateOrgLeadership,
+  // getPassMarkAdjustments,
   updateOrgFeatures,
   updateOrgPassMarkConfig,
   addOrgRule,
   updateOrgRule,
   deleteOrgRule,
+  assignLeadershipToOrg,
+  removeLeadershipFromOrg,
 } from '../services/orgConfigurationService'
 import {
   getLeadershipRoster,
   getLeadershipStats,
-  assignLeadershipToOrg,
-  removeLeadershipFromOrg,
 } from '../services/leadershipService'
 import {
   getHiddenActivitiesForOrg,
@@ -52,8 +52,8 @@ interface UseOrgDashboardReturn {
   // Leadership
   leadership: LeadershipAssignment[]
   leadershipStats: {
-    mentorUtilization?: number
-    ambassadorUtilization?: number
+    mentorUtilization?: number | null
+    ambassadorUtilization?: number | null
     capacityRemaining: {
       mentor: number | null
       ambassador: number | null
@@ -141,7 +141,7 @@ export function useOrgDashboard(orgId?: string): UseOrgDashboardReturn {
   const [rules, setRules] = useState<OrganizationRule[]>([])
 
   // Get org ID from user or parameter
-  const currentOrgId = orgId || user?.orgId
+  const currentOrgId = orgId || (user as { orgId?: string } | null)?.orgId
 
   /**
    * Get org configuration
@@ -210,7 +210,15 @@ export function useOrgDashboard(orgId?: string): UseOrgDashboardReturn {
           currentOrgId,
           role,
           userId,
-          { name, email, capacity, skills: skills || [] },
+          {
+            name,
+            email,
+            capacity,
+            skills: skills || [],
+            available: true,
+            utilized: 0,
+            assignedSince: Timestamp.now(),
+          },
           user.uid
         )
 
@@ -579,7 +587,7 @@ export function useLeadershipRoster(orgId?: string) {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
-  const currentOrgId = orgId || user?.orgId
+  const currentOrgId = orgId || (user as { orgId?: string } | null)?.orgId
 
   const getRoster = useCallback(async () => {
     if (!currentOrgId) return
