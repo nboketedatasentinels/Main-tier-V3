@@ -86,6 +86,23 @@ interface UsePartnerUsersOptions {
 
 const USERS_COLLECTION = collection(db, 'profiles')
 
+const expandAssignments = (assignments: string[], organizationLookup: Map<string, string>) => {
+  const expanded = new Set<string>()
+  assignments.forEach((entry) => {
+    if (typeof entry !== 'string') return
+    const trimmed = entry.trim()
+    if (!trimmed) return
+    expanded.add(trimmed)
+    const normalized = normalizeOrgKey(trimmed)
+    if (!normalized) return
+    const mapped = organizationLookup.get(normalized)
+    if (mapped) {
+      expanded.add(mapped)
+    }
+  })
+  return Array.from(expanded)
+}
+
 const buildQueryKeys = (assignments: string[]): string[] => {
   const deduped = new Set<string>()
   assignments.forEach((entry) => {
@@ -196,11 +213,10 @@ export const usePartnerUsers = (options: UsePartnerUsersOptions) => {
 
   // FIX #5: Include all dependencies and handle rawAssignedKeys properly
   const rawAssignedKeys = useMemo(() => {
-    if (rawAssignedOrganizations.length) {
-      return buildQueryKeys(rawAssignedOrganizations)
-    }
-    return buildQueryKeys(assignedOrganizations)
-  }, [assignedOrganizations, rawAssignedOrganizations])
+    const sourceAssignments = rawAssignedOrganizations.length ? rawAssignedOrganizations : assignedOrganizations
+    const expandedAssignments = expandAssignments(sourceAssignments, organizationLookup)
+    return buildQueryKeys(expandedAssignments)
+  }, [assignedOrganizations, organizationLookup, rawAssignedOrganizations])
 
   useEffect(() => {
     if (profileStatus !== 'ready' || !enabled) {
