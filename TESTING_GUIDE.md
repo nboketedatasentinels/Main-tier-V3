@@ -23,48 +23,44 @@ Before testing, ensure you have test accounts for each role type:
 - [ ] Navigate to `/login`
 - [ ] Enter super admin credentials
 - [ ] Click "Sign In"
-- [ ] **Expected**: Redirect to `/super-admin/dashboard`
+- [ ] **Expected**: Redirect to `/admin/dashboard`
 - [ ] **Expected**: No stops at learner dashboards
 - [ ] **Expected**: SuperAdminDashboard component renders
 
 **Test**: Super admin navigates to `/app`
 - [ ] While logged in as super admin, navigate to `/app`
-- [ ] **Expected**: Redirect to `/super-admin/dashboard`
+- [ ] **Expected**: Redirect to `/admin/dashboard`
 
 **Test**: Super admin access to other dashboards
+- [ ] Navigate to `/partner/dashboard`
+- [ ] **Expected**: Access granted (super admins can access partner areas)
+
+### 2. Partner (Admin) Login Flow
+
+**Test**: Partner user logs in
+- [ ] Navigate to `/login`
+- [ ] Enter partner credentials (role = 'partner')
+- [ ] Click "Sign In"
+- [ ] **Expected**: Redirect to `/partner/dashboard`
+- [ ] **Expected**: PartnerDashboard component renders
+- [ ] **Expected**: NO error message about "No admin dashboard available"
+
+**Test**: Partner navigates to `/app`
+- [ ] While logged in as partner, navigate to `/app`
+- [ ] **Expected**: Redirect to `/partner/dashboard`
+
+**Test**: Partner access restrictions
 - [ ] Navigate to `/admin/dashboard`
-- [ ] **Expected**: Access granted (super admins can access admin areas)
+- [ ] **Expected**: Redirect to `/unauthorized` (Super Admin only area)
 
-### 2. Admin Login Flow
+### 3. Legacy Admin Login Flow
 
-**Test**: Admin user logs in
+**Test**: Legacy admin user logs in
 - [ ] Navigate to `/login`
 - [ ] Enter admin credentials (role = 'admin')
 - [ ] Click "Sign In"
-- [ ] **Expected**: Redirect to `/admin/dashboard`
-- [ ] **Expected**: CompanyAdminDashboard component renders
-- [ ] **Expected**: NO error message about "No admin dashboard available"
-
-**Test**: Admin navigates to `/app`
-- [ ] While logged in as admin, navigate to `/app`
-- [ ] **Expected**: Redirect to `/admin/dashboard`
-
-**Test**: Admin access restrictions
-- [ ] Navigate to `/super-admin/dashboard`
-- [ ] **Expected**: Redirect to `/unauthorized`
-
-### 3. Company Admin Login Flow
-
-**Test**: Company admin user logs in
-- [ ] Navigate to `/login`
-- [ ] Enter company admin credentials (role = 'company_admin')
-- [ ] Click "Sign In"
-- [ ] **Expected**: Redirect to `/admin/dashboard`
-- [ ] **Expected**: CompanyAdminDashboard component renders
-
-**Test**: Company admin navigates to `/app`
-- [ ] While logged in as company admin, navigate to `/app`
-- [ ] **Expected**: Redirect to `/admin/dashboard`
+- [ ] **Expected**: Redirect to `/partner/dashboard` (Admin role is normalized to partner)
+- [ ] **Expected**: PartnerDashboard component renders
 
 ### 4. Mentor Login Flow (Corporate Tier)
 

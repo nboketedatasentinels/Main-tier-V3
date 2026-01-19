@@ -185,6 +185,10 @@ export const groupTemplatesByCategory = (templates: NudgeTemplateRecord[]) => {
       'Critical Alert': [],
       'Encouragement': [],
       'Resource Sharing': [],
+      'Status Warning': [],
+      'Status Alert': [],
+      'Status Recovery': [],
+      'Status On Track': [],
     },
   )
 }

@@ -112,9 +112,10 @@ export const OrganizationDetailPage: React.FC = () => {
     navigate('/unauthorized', { replace: true })
   }, [error, navigate, organization, organizationId, profile, toast, user])
 
+  const isPartnerView = window.location.pathname.startsWith('/partner')
   const breadcrumbBase = isSuperAdmin
-    ? { label: 'Super admin', path: '/super-admin/dashboard' }
-    : { label: 'Dashboard', path: '/admin/dashboard' }
+    ? { label: 'Super admin', path: '/admin/dashboard' }
+    : { label: 'Partner', path: '/partner/dashboard' }
   const organizationListPath = breadcrumbBase.path
 
   const handleBack = () => {
@@ -122,7 +123,8 @@ export const OrganizationDetailPage: React.FC = () => {
   }
 
   const handleViewUser = (userId: string) => {
-    navigate(`/admin/user/${userId}`)
+    const base = isPartnerView ? '/partner' : '/admin'
+    navigate(`${base}/user/${userId}`)
   }
 
   const matchRegex = useMemo(() => {
@@ -478,10 +480,8 @@ export const OrganizationDetailPage: React.FC = () => {
                   <option value="all">All roles</option>
                   <option value="user">User</option>
                   <option value="mentor">Mentor</option>
-                  <option value="team_leader">Team Leader</option>
                   <option value="ambassador">Ambassador</option>
                   <option value="partner">Partner</option>
-                  <option value="admin">Admin</option>
                 </Select>
                 <Select
                   value={membershipFilter}

@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react'
+import React, { useEffect, useMemo, useState, useCallback } from 'react'
 import {
   Badge,
   Box,
@@ -42,17 +42,14 @@ import {
 } from '@chakra-ui/react'
 import { CheckCircle2, Clock, ShieldAlert } from 'lucide-react'
 import { formatDistanceToNow } from 'date-fns'
-import { addDoc, collection, serverTimestamp } from 'firebase/firestore'
 import { PartnerUser, PartnerOrganization, PartnerRiskLevel } from '@/hooks/usePartnerDashboardData'
-import { useAuth } from '@/hooks/useAuth'
-import { db } from '@/services/firebase'
 import UserNudgeHistoryPanel from '@/components/partner/nudges/UserNudgeHistoryPanel'
-import {
-  approvePointsVerificationRequest,
-  listenToPointsVerificationRequests,
-  rejectPointsVerificationRequest,
-  type PointsVerificationRequest,
-} from '@/services/pointsVerificationService'
+import { type PointsVerificationRequest } from '@/services/pointsVerificationService'
+import { usePartnerUserSorting, SortKey } from '@/hooks/partner/usePartnerUserSorting'
+import { useUserSelection } from '@/hooks/partner/useUserSelection'
+import { usePartnerBulkActions } from '@/hooks/partner/usePartnerBulkActions'
+import { usePointsApprovalQueue } from '@/hooks/partner/usePointsApprovalQueue'
+import { isLeader, isAtRisk } from '@/utils/userRoles'
 
 interface PartnerUserManagementProps {
   users: PartnerUser[]
@@ -75,41 +72,48 @@ const riskColor: Record<PartnerRiskLevel | 'at_risk', string> = {
   at_risk: 'red',
 }
 
-const getSortableValue = (user: PartnerUser, key: string) => {
-  switch (key) {
-    case 'name':
-      return user.name
-    case 'company':
-      return user.companyCode
-    case 'progress':
-      return user.progressPercent
-    case 'week':
-      return user.currentWeek
-    case 'status':
-      return user.status
-    case 'lastActive': {
-      const lastActiveTime = new Date(user.lastActive).getTime()
-      return Number.isNaN(lastActiveTime) ? -Infinity : lastActiveTime
-    }
-    default:
-      return ''
-  }
+// ============================================================================
+// FIX #10: Type-safe Firestore Timestamp handling with proper type guard
+// ============================================================================
+interface FirestoreTimestamp {
+  toDate: () => Date
 }
 
-const formatRequestTimestamp = (value?: unknown) => {
-  if (!value) return 'Recently submitted'
-  if (value instanceof Date) return formatDistanceToNow(value, { addSuffix: true })
-  if (typeof value === 'number') return formatDistanceToNow(new Date(value), { addSuffix: true })
-  if (typeof (value as { toDate?: () => Date }).toDate === 'function') {
-    return formatDistanceToNow((value as { toDate: () => Date }).toDate(), { addSuffix: true })
-  }
+function isFirestoreTimestamp(value: unknown): value is FirestoreTimestamp {
+  return (
+    typeof value === 'object' &&
+    value !== null &&
+    'toDate' in value &&
+    typeof (value as FirestoreTimestamp).toDate === 'function'
+  )
+}
+
+function parseTimestamp(value: unknown): Date | null {
+  if (!value) return null
+  if (value instanceof Date) return value
+  if (typeof value === 'number') return new Date(value)
+  if (isFirestoreTimestamp(value)) return value.toDate()
   if (typeof value === 'string') {
     const dateValue = new Date(value)
-    if (!Number.isNaN(dateValue.getTime())) {
-      return formatDistanceToNow(dateValue, { addSuffix: true })
-    }
+    if (!Number.isNaN(dateValue.getTime())) return dateValue
   }
-  return 'Recently submitted'
+  return null
+}
+
+const formatRequestTimestamp = (value?: unknown): string => {
+  const date = parseTimestamp(value)
+  if (!date) return 'Recently submitted'
+  return formatDistanceToNow(date, { addSuffix: true })
+}
+
+// ============================================================================
+// FIX #9: Centralized date formatting to avoid repeated parsing
+// ============================================================================
+const formatLastActive = (lastActive: string | Date | null | undefined): string => {
+  if (!lastActive) return 'Unknown'
+  const date = parseTimestamp(lastActive)
+  if (!date || isNaN(date.getTime())) return 'Unknown'
+  return formatDistanceToNow(date, { addSuffix: true })
 }
 
 export const PartnerUserManagement: React.FC<PartnerUserManagementProps> = ({
@@ -123,104 +127,138 @@ export const PartnerUserManagement: React.FC<PartnerUserManagementProps> = ({
   updateUserPoints,
 }) => {
   const [activeTab, setActiveTab] = useState<'users' | 'risk' | 'leaders' | 'approvals'>('users')
-  const [sortKey, setSortKey] = useState('lastActive')
-  const [sortDir, setSortDir] = useState<'asc' | 'desc'>('desc')
   const [page, setPage] = useState(1)
   const [selectedUser, setSelectedUser] = useState<PartnerUser | null>(null)
   const [adjustmentReason, setAdjustmentReason] = useState('')
-  const [adjustmentValue, setAdjustmentValue] = useState(0)
+  const [adjustmentValue, setAdjustmentValue] = useState(1) // FIX #6: Default to 1, not 0
   const [loadingAdjustment, setLoadingAdjustment] = useState(false)
-  const [selection, setSelection] = useState<string[]>([])
-  const [processingBulk, setProcessingBulk] = useState(false)
-  const [bulkAction, setBulkAction] = useState('')
-  const [verificationRequests, setVerificationRequests] = useState<PointsVerificationRequest[]>([])
-  const [approvalsLoading, setApprovalsLoading] = useState(true)
-  const [approvalActionId, setApprovalActionId] = useState<string | null>(null)
   const [selectedRequest, setSelectedRequest] = useState<PointsVerificationRequest | null>(null)
   const [rejectReason, setRejectReason] = useState('')
+  // FIX #7: Controlled state for nudge preferences
+  const [nudgeEnabled, setNudgeEnabled] = useState(true)
+
   const drawer = useDisclosure()
   const adjustmentModal = useDisclosure()
   const rejectionModal = useDisclosure()
   const toast = useToast()
-  const { profile } = useAuth()
 
-  const organizationOptions = useMemo(
-    () => [
-      { code: 'all', name: 'All Companies' },
-      ...organizations.map((org) => ({
-        ...org,
-        code: org.code || org.id || 'unknown',
-        name: org.name || org.code || org.id || 'Unknown organization',
-      })),
-    ],
-    [organizations],
-  )
+  // ============================================================================
+  // FIX #2: Added validation to prevent duplicate keys from missing org codes
+  // ============================================================================
+  const organizationOptions = useMemo(() => {
+    const seenCodes = new Set<string>()
+    const validOrgs = organizations
+      .map((org, index) => {
+        // Generate a unique code, falling back to index-based ID if needed
+        let code = org.code || org.id || `org-${index}`
+        // Ensure uniqueness
+        if (seenCodes.has(code.toLowerCase())) {
+          code = `${code}-${index}`
+        }
+        seenCodes.add(code.toLowerCase())
+        
+        return {
+          ...org,
+          code,
+          name: org.name || org.code || org.id || 'Unknown organization',
+        }
+      })
+    
+    return [{ code: 'all', name: 'All Companies' }, ...validOrgs]
+  }, [organizations])
 
   const filtered = useMemo(() => {
-    if (selectedOrg === 'all') return users
-    const normalized = selectedOrg.toLowerCase()
-    return users.filter((user) => user.companyCode?.toLowerCase() === normalized)
-  }, [users, selectedOrg])
+    const safeUsers = usersLoading ? [] : (users ?? [])
+    if (selectedOrg === 'all') return safeUsers
 
-  const sorted = useMemo(() => {
-    return [...filtered].sort((a, b) => {
-      const aVal = getSortableValue(a, sortKey)
-      const bVal = getSortableValue(b, sortKey)
-      if (aVal < bVal) return sortDir === 'asc' ? -1 : 1
-      if (aVal > bVal) return sortDir === 'asc' ? 1 : -1
-      return 0
-    })
-  }, [filtered, sortDir, sortKey])
+    const selectedKey = selectedOrg.toLowerCase()
 
-  const totalPages = Math.max(1, Math.ceil(sorted.length / PAGE_SIZE))
-  const paginated = sorted.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE)
-  const waitingForOrganizations = organizationsLoading && !organizationsReady
+    return safeUsers.filter((u) =>
+      [u.companyCode, u.organizationId]
+        .filter((v): v is string => typeof v === 'string' && v.length > 0)
+        .map((v) => v.toLowerCase())
+        .includes(selectedKey),
+    )
+  }, [users, usersLoading, selectedOrg])
 
-  const atRiskUsers = useMemo(
-    () =>
-      filtered.filter(user => ['watch', 'concern', 'critical', 'at_risk'].includes(user.riskStatus)),
+  const learnerUsers = useMemo(
+    () => filtered.filter(u => u.role === 'learner'),
     [filtered],
   )
 
-  const leaders = useMemo(() => filtered.filter(user => user.role === 'mentor' || user.role === 'team_leader'), [filtered])
+  const { sortKey, sortDir, toggleSort, sortedUsers } = usePartnerUserSorting(learnerUsers)
+  const { selection, toggleSelection, clearSelection, selectAll } = useUserSelection()
+  const { bulkAction, setBulkAction, bulkApply, isProcessing: processingBulk } = usePartnerBulkActions(
+    selection,
+    clearSelection,
+  )
+  const {
+    approvalQueue,
+    loading: approvalsLoading,
+    actionId: approvalActionId,
+    handleApprove: handleApproveRequest,
+    handleReject: performRejectRequest,
+  } = usePointsApprovalQueue(learnerUsers, activeTab === 'approvals')
 
-  const approvalUsers = useMemo(() => (selectedOrg === 'all' ? users : filtered), [filtered, selectedOrg, users])
-
-  const approvalQueue = useMemo(() => {
-    if (!verificationRequests.length) return []
-    const lookup = new Map(approvalUsers.map((user) => [user.id, user]))
-    return verificationRequests
-      .filter((request) => lookup.has(request.user_id))
-      .map((request) => ({ request, user: lookup.get(request.user_id)! }))
-  }, [approvalUsers, verificationRequests])
-
+  // ============================================================================
+  // FIX #8: Remove console.log in production, wrap in development check
+  // ============================================================================
   useEffect(() => {
-    const unsubscribe = listenToPointsVerificationRequests((items) => {
-      setVerificationRequests(items)
-      setApprovalsLoading(false)
-    })
-    return () => unsubscribe()
-  }, [])
+    if (process.env.NODE_ENV === 'development') {
+      console.log('[PartnerUserManagement]', {
+        usersLength: users?.length ?? 0,
+        filteredLength: filtered.length,
+        learnerLength: learnerUsers.length,
+        sortedLength: sortedUsers.length,
+        selectedOrg,
+        usersLoading,
+      })
+    }
+  }, [users, filtered, learnerUsers, sortedUsers, selectedOrg, usersLoading])
+
+  // Pagination & Derived State
+  useEffect(() => {
+    setPage(1)
+  }, [selectedOrg, sortKey, sortDir])
+
+  const totalPages = Math.max(1, Math.ceil(sortedUsers.length / PAGE_SIZE))
+  const paginated = sortedUsers.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE)
+  const waitingForOrganizations = organizationsLoading && !organizationsReady
+
+  const atRiskUsers = useMemo(() => learnerUsers.filter(isAtRisk), [learnerUsers])
+  const leaders = useMemo(() => filtered.filter(isLeader), [filtered])
+
+  // ============================================================================
+  // FIX #4: Memoized callback to prevent stale closure issues with selectAll
+  // ============================================================================
+  const atRiskUserIds = useMemo(() => atRiskUsers.map(u => u.id), [atRiskUsers])
+  
+  const handleSelectAllAtRisk = useCallback(
+    (checked: boolean) => {
+      if (checked) {
+        selectAll(atRiskUserIds)
+      } else {
+        clearSelection()
+      }
+    },
+    [atRiskUserIds, selectAll, clearSelection]
+  )
 
   const openUser = (user: PartnerUser) => {
     setSelectedUser(user)
+    // Reset nudge state when opening a new user
+    setNudgeEnabled(true)
     drawer.onOpen()
   }
 
-  const toggleSort = (key: string) => {
-    if (key === sortKey) {
-      setSortDir(prev => (prev === 'asc' ? 'desc' : 'asc'))
-    } else {
-      setSortKey(key)
-      setSortDir('asc')
-    }
-  }
-
+  // ============================================================================
+  // FIX #6: Updated validation to match input constraints (min=1)
+  // ============================================================================
   const handleAdjustment = async () => {
     if (!selectedUser) return
-    if (adjustmentValue <= 0) {
+    if (adjustmentValue < 1) {
       toast({
-        title: 'Points must be positive',
+        title: 'Points must be at least 1',
         status: 'warning',
         duration: 3000,
         isClosable: true,
@@ -237,42 +275,11 @@ export const PartnerUserManagement: React.FC<PartnerUserManagementProps> = ({
         duration: 4000,
         isClosable: true,
       })
-      setAdjustmentValue(0)
+      setAdjustmentValue(1) // Reset to minimum valid value
       setAdjustmentReason('')
       adjustmentModal.onClose()
     } finally {
       setLoadingAdjustment(false)
-    }
-  }
-
-  const handleApproveRequest = async (request: PointsVerificationRequest) => {
-    setApprovalActionId(request.id)
-    try {
-      await approvePointsVerificationRequest({
-        request,
-        approver: {
-          id: profile?.id ?? null,
-          name: profile?.fullName ?? null,
-        },
-      })
-      toast({
-        title: 'Points approved',
-        description: 'Points have been awarded and the request is now approved.',
-        status: 'success',
-        duration: 4000,
-        isClosable: true,
-      })
-    } catch (error) {
-      console.error('Failed to approve points verification request', error)
-      toast({
-        title: 'Approval failed',
-        description: 'We could not approve this request. Please retry.',
-        status: 'error',
-        duration: 4000,
-        isClosable: true,
-      })
-    } finally {
-      setApprovalActionId(null)
     }
   }
 
@@ -284,116 +291,17 @@ export const PartnerUserManagement: React.FC<PartnerUserManagementProps> = ({
 
   const handleRejectRequest = async () => {
     if (!selectedRequest) return
-    setApprovalActionId(selectedRequest.id)
-    try {
-      await rejectPointsVerificationRequest({
-        request: selectedRequest,
-        approver: {
-          id: profile?.id ?? null,
-          name: profile?.fullName ?? null,
-        },
-        reason: rejectReason || undefined,
-      })
-      toast({
-        title: 'Request rejected',
-        description: 'The submission has been rejected and points were not awarded.',
-        status: 'info',
-        duration: 4000,
-        isClosable: true,
-      })
-      rejectionModal.onClose()
-      setSelectedRequest(null)
-      setRejectReason('')
-    } catch (error) {
-      console.error('Failed to reject points verification request', error)
-      toast({
-        title: 'Rejection failed',
-        description: 'We could not reject this request. Please retry.',
-        status: 'error',
-        duration: 4000,
-        isClosable: true,
-      })
-    } finally {
-      setApprovalActionId(null)
-    }
-  }
-
-  const toggleSelection = (id: string) => {
-    setSelection(prev => (prev.includes(id) ? prev.filter(item => item !== id) : [...prev, id]))
-  }
-
-  const bulkApply = async (actionLabel: string) => {
-    const actionToApply = actionLabel || bulkAction
-    if (!selection.length) {
-      toast({ title: 'Please select at least one user', status: 'error' })
-      return
-    }
-
-    if (!actionToApply) {
-      toast({ title: 'Select an action to apply', status: 'error' })
-      return
-    }
-
-    setProcessingBulk(true)
-    try {
-      const results = await Promise.allSettled(
-        selection.map((userId) =>
-          addDoc(collection(db, 'users', userId, 'engagement_actions'), {
-            action_type: actionToApply.toLowerCase().replace(/\s+/g, '_'),
-            action_label: actionToApply,
-            actor_id: profile?.id ?? null,
-            actor_name: profile?.fullName ?? null,
-            timestamp: serverTimestamp(),
-            user_id: userId,
-          }),
-        ),
-      )
-
-      const failedIds = results
-        .map((result, idx) => (result.status === 'rejected' ? selection[idx] : null))
-        .filter((id): id is string => typeof id === 'string')
-      const successCount = results.length - failedIds.length
-
-      if (failedIds.length && successCount) {
-        console.warn('[PartnerDashboard] Bulk action partially failed', {
-          action: actionToApply,
-          failedIds,
-        })
-        toast({
-          title: 'Bulk action partially completed',
-          description: `${successCount} of ${selection.length} user(s) updated. ${failedIds.length} failed.`,
-          status: 'warning',
-        })
-        setSelection(failedIds)
-      } else if (failedIds.length) {
-        console.error('[PartnerDashboard] Bulk action failed', { action: actionToApply, failedIds })
-        toast({
-          title: 'Bulk action failed',
-          description: 'No updates were applied. Please retry.',
-          status: 'error',
-        })
-      } else {
-        toast({
-          title: `${actionToApply} applied`,
-          description: `${selection.length} user(s) updated`,
-          status: 'success',
-        })
-        setSelection([])
-        setBulkAction('')
-      }
-    } catch (error) {
-      console.error(error)
-      toast({ title: 'Failed to apply action', status: 'error' })
-    } finally {
-      setProcessingBulk(false)
-    }
+    await performRejectRequest(selectedRequest, rejectReason)
+    rejectionModal.onClose()
+    setSelectedRequest(null)
+    setRejectReason('')
   }
 
   const renderTableHeader = () => (
     <Thead>
       <Tr>
         {['Name/Email', 'Company', 'Progress %', 'Current Week', 'Status', 'Last Active', 'Risk'].map((header, idx) => {
-          const sortMapping = ['name', 'company', 'progress', 'week', 'status', 'lastActive', 'risk']
+          const sortMapping: SortKey[] = ['name', 'company', 'progress', 'week', 'status', 'lastActive', 'risk']
           const key = sortMapping[idx] || 'name'
           return (
             <Th
@@ -413,11 +321,11 @@ export const PartnerUserManagement: React.FC<PartnerUserManagementProps> = ({
     </Thead>
   )
 
+  // ============================================================================
+  // FIX #9: Use centralized formatLastActive function
+  // ============================================================================
   const renderUserRow = (user: PartnerUser) => {
-    const lastActiveDate = new Date(user.lastActive)
-    const lastActiveLabel = isNaN(lastActiveDate.getTime())
-      ? 'Unknown'
-      : formatDistanceToNow(lastActiveDate, { addSuffix: true })
+    const lastActiveLabel = formatLastActive(user.lastActive)
 
     return (
       <Tr key={user.id} _hover={{ bg: 'brand.accent' }} cursor="pointer" onClick={() => openUser(user)}>
@@ -478,7 +386,7 @@ export const PartnerUserManagement: React.FC<PartnerUserManagementProps> = ({
     >
       <HStack spacing={3}>
         <Badge colorScheme="purple">{selection.length} user(s) selected</Badge>
-        <Button size="sm" onClick={() => setSelection([])} variant="ghost">
+        <Button size="sm" onClick={clearSelection} variant="ghost">
           Clear selection
         </Button>
       </HStack>
@@ -507,6 +415,18 @@ export const PartnerUserManagement: React.FC<PartnerUserManagementProps> = ({
         </HStack>
     </Flex>
   )
+
+  // ============================================================================
+  // FIX #1: Helper function for pagination display text
+  // ============================================================================
+  const renderPaginationText = () => {
+    if (sortedUsers.length === 0) {
+      return 'No users to display'
+    }
+    const start = (page - 1) * PAGE_SIZE + 1
+    const end = Math.min(page * PAGE_SIZE, sortedUsers.length)
+    return `Showing ${start} to ${end} of ${sortedUsers.length} users`
+  }
 
   return (
     <Stack spacing={6}>
@@ -581,15 +501,14 @@ export const PartnerUserManagement: React.FC<PartnerUserManagementProps> = ({
                   </Td>
                 </Tr>
               )}
+              {/* FIX #5: Removed dead code path - simplified empty state message */}
               {!usersLoading && !paginated.length && (
                 <Tr>
                   <Td colSpan={7}>
                     <HStack spacing={3} py={6} justify="center">
                       <CheckCircle2 color="green" />
                       <Text color="brand.subtleText">
-                        {usersLoading
-                          ? 'Loading learners...'
-                          : 'No learners found for the selected company'}
+                        No learners found for the selected company
                       </Text>
                     </HStack>
                   </Td>
@@ -599,8 +518,9 @@ export const PartnerUserManagement: React.FC<PartnerUserManagementProps> = ({
           </Table>
 
           <Flex justify="space-between" align="center" wrap="wrap" gap={3}>
+            {/* FIX #1: Use helper function that handles empty state */}
             <Text fontSize="sm" color="brand.subtleText">
-              Showing {(page - 1) * PAGE_SIZE + 1} to {Math.min(page * PAGE_SIZE, sorted.length)} of {sorted.length} users
+              {renderPaginationText()}
             </Text>
             <HStack spacing={3}>
               <Button size="sm" onClick={() => setPage(prev => Math.max(1, prev - 1))} isDisabled={page === 1}>
@@ -622,12 +542,13 @@ export const PartnerUserManagement: React.FC<PartnerUserManagementProps> = ({
             <Thead>
               <Tr>
                 <Th>
+                  {/* FIX #4: Use memoized callback to prevent stale closure */}
                   <Checkbox
                     size="lg"
                     borderRadius="md"
-                    onChange={e =>
-                      setSelection(e.target.checked ? atRiskUsers.map(u => u.id) : [])
-                    }
+                    isChecked={selection.length > 0 && selection.length === atRiskUserIds.length}
+                    isIndeterminate={selection.length > 0 && selection.length < atRiskUserIds.length}
+                    onChange={e => handleSelectAllAtRisk(e.target.checked)}
                   />
                 </Th>
                 <Th>Name/Email</Th>
@@ -697,7 +618,10 @@ export const PartnerUserManagement: React.FC<PartnerUserManagementProps> = ({
                     </Text>
                   </Td>
                   <Td>
-                    <Text fontSize="sm">{formatDistanceToNow(new Date(user.lastActive), { addSuffix: true })}</Text>
+                    {/* FIX #9: Use centralized formatLastActive */}
+                    <Text fontSize="sm">
+                      {formatLastActive(user.lastActive)}
+                    </Text>
                   </Td>
                   <Td>
                     <Badge colorScheme="green">Ready</Badge>
@@ -709,13 +633,14 @@ export const PartnerUserManagement: React.FC<PartnerUserManagementProps> = ({
                   </Td>
                 </Tr>
               ))}
+              {/* FIX #5: Simplified empty state - removed dead code path */}
               {!usersLoading && !atRiskUsers.length && (
                 <Tr>
                   <Td colSpan={10}>
                     <HStack spacing={3} py={6} justify="center">
                       <CheckCircle2 color="green" />
                       <Text color="brand.subtleText">
-                        {usersLoading ? 'Loading learners...' : 'All learners on track!'}
+                        All learners on track!
                       </Text>
                     </HStack>
                   </Td>
@@ -728,7 +653,7 @@ export const PartnerUserManagement: React.FC<PartnerUserManagementProps> = ({
 
       {activeTab === 'leaders' && (
         <Stack spacing={4}>
-          <Text fontWeight="semibold" color="brand.text">Mentors & Team Leaders</Text>
+          <Text fontWeight="semibold" color="brand.text">Mentors & Leaders</Text>
           <Table size="md" variant="simple">
             <Thead>
               <Tr>
@@ -764,7 +689,10 @@ export const PartnerUserManagement: React.FC<PartnerUserManagementProps> = ({
                   <Td>
                     <Badge colorScheme="purple" textTransform="capitalize">{leader.role}</Badge>
                   </Td>
-                  <Td>{formatDistanceToNow(new Date(leader.lastActive), { addSuffix: true })}</Td>
+                  <Td>
+                    {/* FIX #9: Use centralized formatLastActive */}
+                    {formatLastActive(leader.lastActive)}
+                  </Td>
                   <Td>
                     <HStack spacing={2}>
                       <Button size="xs" variant="outline">View Details</Button>
@@ -773,13 +701,14 @@ export const PartnerUserManagement: React.FC<PartnerUserManagementProps> = ({
                   </Td>
                 </Tr>
               ))}
+              {/* FIX #5: Simplified empty state - removed dead code path */}
               {!usersLoading && !leaders.length && (
                 <Tr>
                   <Td colSpan={5}>
                     <HStack spacing={3} py={6} justify="center">
                       <Clock />
                       <Text color="brand.subtleText">
-                        {usersLoading ? 'Loading leaders...' : 'No mentors or leaders in scope'}
+                        No mentors or leaders in scope
                       </Text>
                     </HStack>
                   </Td>
@@ -917,8 +846,9 @@ export const PartnerUserManagement: React.FC<PartnerUserManagementProps> = ({
                 <Stack spacing={2}>
                   <Text fontWeight="semibold">Risk reasons</Text>
                   <VStack align="flex-start" spacing={1}>
-                    {(selectedUser.riskReasons ?? ['No risk notes yet']).map(reason => (
-                      <Badge key={reason} colorScheme="orange" variant="subtle">
+                    {/* FIX #3: Use index-based key to handle duplicate reasons */}
+                    {(selectedUser.riskReasons ?? ['No risk notes yet']).map((reason, index) => (
+                      <Badge key={`${reason}-${index}`} colorScheme="orange" variant="subtle">
                         {reason}
                       </Badge>
                     ))}
@@ -934,7 +864,12 @@ export const PartnerUserManagement: React.FC<PartnerUserManagementProps> = ({
                   <Text fontWeight="semibold">Nudge preferences</Text>
                   <HStack justify="space-between">
                     <Text fontSize="sm" color="brand.subtleText">Allow nudge notifications</Text>
-                    <Switch colorScheme="purple" defaultChecked />
+                    {/* FIX #7: Controlled Switch component */}
+                    <Switch
+                      colorScheme="purple"
+                      isChecked={nudgeEnabled}
+                      onChange={(e) => setNudgeEnabled(e.target.checked)}
+                    />
                   </HStack>
                   <Text fontSize="xs" color="brand.subtleText">
                     Preferences are honored across email and in-app channels.
@@ -1007,11 +942,12 @@ export const PartnerUserManagement: React.FC<PartnerUserManagementProps> = ({
             <Stack spacing={3}>
               <FormControl>
                 <FormLabel>Points</FormLabel>
+                {/* FIX #6: min=1 to match validation logic */}
                 <Input
                   type="number"
                   value={adjustmentValue}
                   onChange={e => setAdjustmentValue(Number(e.target.value))}
-                  min={0}
+                  min={1}
                 />
               </FormControl>
               <FormControl>

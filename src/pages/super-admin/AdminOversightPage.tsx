@@ -55,10 +55,8 @@ type SortKey = 'name' | 'email' | 'role' | 'status' | 'lastActive'
 
 const roleColorMap: Record<string, string> = {
   partner: 'purple',
-  admin: 'purple',
   mentor: 'blue',
   ambassador: 'teal',
-  team_leader: 'orange',
   super_admin: 'gray',
 }
 
@@ -90,17 +88,15 @@ export const AdminOversightPage: React.FC<AdminOversightPageProps> = ({ adminNam
     partners: 0,
     mentors: 0,
     ambassadors: 0,
-    teamLeaders: 0,
   })
 
   const updateMetrics = useCallback((adminList: AdminUserRecord[]) => {
     const total = adminList.length
     const active = adminList.filter((admin) => admin.accountStatus !== 'suspended').length
-    const partners = adminList.filter((admin) => admin.role === 'partner' || admin.role === 'admin').length
+    const partners = adminList.filter((admin) => admin.role === 'partner').length
     const mentors = adminList.filter((admin) => admin.role === 'mentor').length
     const ambassadors = adminList.filter((admin) => admin.role === 'ambassador').length
-    const teamLeaders = adminList.filter((admin) => admin.role === 'team_leader').length
-    setMetrics({ total, active, partners, mentors, ambassadors, teamLeaders })
+    setMetrics({ total, active, partners, mentors, ambassadors })
   }, [])
 
   const adminUpdateTimeout = useRef<ReturnType<typeof setTimeout> | null>(null)
@@ -251,7 +247,7 @@ export const AdminOversightPage: React.FC<AdminOversightPageProps> = ({ adminNam
       }
       toast({
         title: `Assigned ${assignedNames.length} organization${assignedNames.length === 1 ? '' : 's'} to ${
-          selectedAdmin.fullName || 'admin'
+          selectedAdmin.fullName || 'partner'
         }`,
         description: assignedNames.length
           ? `Assigned organizations: ${assignedNames.join(', ')}. The admin will see these organizations immediately if they're logged in.`
@@ -341,10 +337,8 @@ export const AdminOversightPage: React.FC<AdminOversightPageProps> = ({ adminNam
   const roleLabel = (role: string) =>
     ({
       partner: 'Partner',
-      admin: 'Admin',
       mentor: 'Mentor',
       ambassador: 'Ambassador',
-      team_leader: 'Team Leader',
       super_admin: 'Super Admin',
     }[role] || role)
 
@@ -479,13 +473,12 @@ export const AdminOversightPage: React.FC<AdminOversightPageProps> = ({ adminNam
         </Button>
       </Flex>
 
-      <SimpleGrid columns={[1, 2, 3]} spacing={4} mb={6}>
+      <SimpleGrid columns={[1, 2, 3, 5]} spacing={4} mb={6}>
         <MetricCard label="Total Admins" value={metrics.total} icon={ShieldCheck} helper="All admin roles" />
         <MetricCard label="Active Admins" value={metrics.active} icon={ShieldCheck} helper="Currently active" />
         <MetricCard label="Partners" value={metrics.partners} icon={ShieldCheck} helper="Company administrators" />
         <MetricCard label="Mentors" value={metrics.mentors} icon={ShieldCheck} helper="Active mentors" />
         <MetricCard label="Ambassadors" value={metrics.ambassadors} icon={ShieldCheck} helper="Community ambassadors" />
-        <MetricCard label="Team Leaders" value={metrics.teamLeaders} icon={ShieldCheck} helper="Team leadership" />
       </SimpleGrid>
 
       <Box borderWidth="1px" borderRadius="lg" p={4} mb={4}>
@@ -504,10 +497,8 @@ export const AdminOversightPage: React.FC<AdminOversightPageProps> = ({ adminNam
           >
             <option value="all">All Roles</option>
             <option value="partner">Partner</option>
-            <option value="admin">Admin</option>
             <option value="mentor">Mentor</option>
             <option value="ambassador">Ambassador</option>
-            <option value="team_leader">Team Leader</option>
           </Select>
           <Select
             placeholder="All Statuses"

@@ -12,6 +12,7 @@ import {
 } from 'firebase/firestore'
 import { db } from './firebase'
 import { getCurrentWeekNumber, getWeekDateRange } from '@/utils/weekCalculations'
+import { createStatusChangeNotification } from '@/services/notificationService'
 
 export interface WeeklyPointsData {
   user_id: string
@@ -162,7 +163,7 @@ const createEngagementAlertIfNeeded = async (params: {
     title: 'Participant engagement alert',
     message,
     severity: 'warning',
-    target_roles: ['partner', 'admin', 'super_admin'],
+    target_roles: ['partner', 'super_admin'],
     related_id: userId,
     metadata: {
       week_number: weekNumber,
@@ -232,6 +233,19 @@ export const updateWeeklyPoints = async (userId: string): Promise<void> => {
       },
       { merge: true },
     )
+
+    const previousStatus = existingData.status as WeeklyPointsData['status'] | undefined
+    if (previousStatus && previousStatus !== status) {
+      await createStatusChangeNotification({
+        userId,
+        weekNumber,
+        weekYear,
+        previousStatus: previousStatus === 'at_risk' ? 'at_risk' : previousStatus,
+        newStatus: status === 'at_risk' ? 'at_risk' : status,
+        pointsEarned,
+        targetPoints,
+      })
+    }
 
     await createEngagementAlertIfNeeded({
       userId,

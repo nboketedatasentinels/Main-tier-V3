@@ -15,16 +15,22 @@ import {
   VStack,
   Skeleton,
   SkeletonText,
+  Accordion,
+  AccordionItem,
+  AccordionButton,
+  AccordionPanel,
+  AccordionIcon,
+  Code,
 } from '@chakra-ui/react'
 import { formatDistanceToNow } from 'date-fns'
-import { Bell, Building2, Gauge, Sparkles, Users } from 'lucide-react'
+import { Bell, Building2, Gauge, Mail, Sparkles, Users } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
 import { MetricCard } from '@/components/admin/MetricCard'
 import { EngagementChart } from '@/components/admin/EngagementChart'
 import { RiskAnalysisCard } from '@/components/admin/RiskAnalysisCard'
 import { StatusBadge } from '@/components/admin/StatusBadge'
 import { OrganizationCard } from '@/components/admin/OrganizationCard'
-import PartnerDashboardLayout from '@/layouts/PartnerDashboardLayout'
+import PartnerLayout from '@/layouts/PartnerLayout'
 import { DashboardErrorBoundary } from '@/components/ui/DashboardErrorBoundary'
 import { PartnerInterventionPanel } from '@/components/partner/PartnerInterventionPanel'
 import { PartnerUserManagement } from '@/components/partner/PartnerUserManagement'
@@ -41,10 +47,12 @@ import { useAuth } from '@/hooks/useAuth'
 import { logOrganizationAccessAttempt } from '@/services/organizationService'
 import { getActiveNudgeTemplates } from '@/services/nudgeService'
 import type { NudgeTemplateRecord } from '@/types/nudges'
+import { buildPartnerNavItems } from '@/utils/navigationItems'
 
-export const PartnerAdminDashboard: React.FC = () => {
+export const PartnerDashboard: React.FC = () => {
   const navigate = useNavigate()
   const { assignedOrganizations, isSuperAdmin, user, refreshProfile, profileStatus, lastProfileLoadAt } = useAuth()
+  const [debugMode, setDebugMode] = useState(false)
   const {
     assignedOrgCount,
     engagementTrend,
@@ -70,11 +78,12 @@ export const PartnerAdminDashboard: React.FC = () => {
     atRiskUsers,
     managedBreakdown,
     notificationCount,
-  } = usePartnerDashboardData()
+    debugInfo,
+  } = usePartnerDashboardData({ debugMode })
   const enableProfileRealtime = import.meta.env.VITE_ENABLE_PROFILE_REALTIME === 'true'
   const supportEmail = 'support@transformation4leaders.com'
 
-  type PartnerPageKey = 'overview' | 'users' | 'job-board' | 'grants' | 'organization-management' | 'at-risk'
+  type PartnerPageKey = 'overview' | 'users' | 'organization-management' | 'at-risk' | 'reports' | 'settings' | 'support'
   const [activePage, setActivePage] = useState<PartnerPageKey>('overview')
   const [activeTemplates, setActiveTemplates] = useState<NudgeTemplateRecord[]>([])
   const [templateLoadError, setTemplateLoadError] = useState<string | null>(null)
@@ -149,18 +158,7 @@ export const PartnerAdminDashboard: React.FC = () => {
     console.debug('[PartnerDashboard] Auth assigned organizations', assignedOrganizations)
   }, [assignedOrganizations])
 
-  const partnerNavItems = [
-    { key: 'overview', label: 'Overview', description: 'Metrics & trends' },
-    { key: 'at-risk', label: 'At Risk', description: 'Risk monitoring & nudges' },
-    { key: 'users', label: 'Users', description: 'Learners & leaders' },
-    {
-      key: 'organization-management',
-      label: 'Organisation Management',
-      description: 'Assigned organisations',
-    },
-    { key: 'job-board', label: 'Job Board', description: 'Opportunities' },
-    { key: 'grants', label: 'Grants & Funding', description: 'Partner resources' },
-  ]
+  const navSections = useMemo(() => buildPartnerNavItems(), [])
 
   const riskReasons = useMemo(() => {
     const counts: Record<string, number> = {}
@@ -218,6 +216,16 @@ export const PartnerAdminDashboard: React.FC = () => {
     )
   }, [organizations])
 
+  const digestSummary = useMemo(() => {
+    const atRiskCount = riskLevels.critical + riskLevels.concern
+    return [
+      { label: 'Critical alerts', value: atRiskCount, color: 'red' },
+      { label: 'Watchlist', value: riskLevels.watch, color: 'yellow' },
+      { label: 'Open interventions', value: interventions.length, color: 'purple' },
+      { label: 'Unread notifications', value: notificationCount, color: 'orange' },
+    ]
+  }, [interventions.length, notificationCount, riskLevels.concern, riskLevels.critical, riskLevels.watch])
+
   const handleViewOrganization = (orgCode: string) => {
     const normalized = orgCode.toLowerCase()
     const allowed =
@@ -231,7 +239,7 @@ export const PartnerAdminDashboard: React.FC = () => {
       })
       return
     }
-    navigate(`/admin/organization/${orgCode}`)
+    navigate(`/partner/organization/${orgCode}`)
   }
 
   const renderOverview = () => (
@@ -301,10 +309,27 @@ export const PartnerAdminDashboard: React.FC = () => {
                 <Badge colorScheme="green">Real-time</Badge>
                 <Badge colorScheme="purple">Partner scoped</Badge>
                 {organizationsLoading ? (
-                  <Badge colorScheme="gray">Loading organizations...</Badge>
+                  <Badge colorScheme="gray" variant="subtle">
+                    <HStack spacing={1}>
+                      <Skeleton height="10px" width="10px" borderRadius="full" />
+                      <Text>Loading organizations...</Text>
+                    </HStack>
+                  </Badge>
                 ) : assignedOrganizations.length === 0 ? (
                   <Badge colorScheme="yellow">No organizations assigned</Badge>
-                ) : null}
+                ) : (
+                  <Badge colorScheme="green">Organizations loaded</Badge>
+                )}
+                {usersLoading ? (
+                  <Badge colorScheme="gray" variant="subtle">
+                    <HStack spacing={1}>
+                      <Skeleton height="10px" width="10px" borderRadius="full" />
+                      <Text>Loading users...</Text>
+                    </HStack>
+                  </Badge>
+                ) : (
+                  <Badge colorScheme="green">Users ready</Badge>
+                )}
                 <Button size="xs" variant="outline" onClick={refreshOrganizations} isLoading={refreshingOrganizations}>
                   Sync profile
                 </Button>
@@ -412,6 +437,48 @@ export const PartnerAdminDashboard: React.FC = () => {
             onSelectOrg={setSelectedOrg}
             updateUserPoints={updateUserPoints}
           />
+        </CardBody>
+      </Card>
+
+      <Card bg="white" border="1px solid" borderColor="brand.border">
+        <CardBody>
+          <Stack spacing={4}>
+            <HStack justify="space-between" align="center">
+              <HStack spacing={2}>
+                <Mail size={18} />
+                <Text fontWeight="bold" color="brand.text">Automated alerts & partner digest</Text>
+              </HStack>
+              <Badge colorScheme="purple">Weekly summary</Badge>
+            </HStack>
+            <Text fontSize="sm" color="brand.subtleText">
+              Next digest goes out automatically on Monday mornings. Your latest engagement alerts are included below.
+            </Text>
+            <SimpleGrid columns={{ base: 1, md: 4 }} spacing={3}>
+              {digestSummary.map(item => (
+                <Box
+                  key={item.label}
+                  p={3}
+                  borderRadius="md"
+                  border="1px solid"
+                  borderColor="brand.border"
+                  bg="brand.accent"
+                >
+                  <HStack justify="space-between">
+                    <Text fontWeight="semibold" color="brand.text">{item.label}</Text>
+                    <Badge colorScheme={item.color}>{item.value}</Badge>
+                  </HStack>
+                </Box>
+              ))}
+            </SimpleGrid>
+            <HStack justify="space-between" align="center">
+              <Text fontSize="sm" color="brand.subtleText">
+                Last refreshed {lastUsersSuccessAt ? formatDistanceToNow(lastUsersSuccessAt) : 'not yet'} ago.
+              </Text>
+              <Button variant="outline" leftIcon={<Mail size={16} />}>
+                Send digest now
+              </Button>
+            </HStack>
+          </Stack>
         </CardBody>
       </Card>
 
@@ -612,8 +679,142 @@ export const PartnerAdminDashboard: React.FC = () => {
     </Stack>
   )
 
+  const renderDebugInfo = () => {
+    if (!debugInfo) return null
+
+    return (
+      <Accordion allowToggle mt={4}>
+        <AccordionItem border="1px dashed" borderColor="gray.300" borderRadius="md" bg="gray.50">
+          <h2>
+            <AccordionButton>
+              <Box flex="1" textAlign="left" fontWeight="bold" fontSize="sm">
+                <HStack>
+                  <Gauge size={14} />
+                  <Text>Dashboard Debug Info</Text>
+                  {debugInfo.rejectedNoMatch > 0 && (
+                    <Badge colorScheme="orange" ml={2}>
+                      {debugInfo.rejectedNoMatch} Mismatched
+                    </Badge>
+                  )}
+                </HStack>
+              </Box>
+              <AccordionIcon />
+            </AccordionButton>
+          </h2>
+          <AccordionPanel pb={4}>
+            <VStack align="flex-start" spacing={4}>
+              <SimpleGrid columns={{ base: 2, md: 4 }} spacing={4} w="full">
+                <Box>
+                  <Text fontSize="xs" color="gray.500">Snapshot Total</Text>
+                  <Text fontWeight="bold">{debugInfo.totalInSnapshot}</Text>
+                </Box>
+                <Box>
+                  <Text fontSize="xs" color="gray.500">Kept</Text>
+                  <Text fontWeight="bold" color="green.600">{debugInfo.keptCount}</Text>
+                </Box>
+                <Box>
+                  <Text fontSize="xs" color="gray.500">Rejected (Org Mismatch)</Text>
+                  <Text fontWeight="bold" color={debugInfo.rejectedNoMatch > 0 ? "orange.600" : "inherit"}>
+                    {debugInfo.rejectedNoMatch}
+                  </Text>
+                </Box>
+                <Box>
+                  <Text fontSize="xs" color="gray.500">Rejected (Filter)</Text>
+                  <Text fontWeight="bold">{debugInfo.rejectedSelectedOrg}</Text>
+                </Box>
+              </SimpleGrid>
+
+              <Divider />
+
+              <Box w="full">
+                <Text fontSize="xs" fontWeight="bold" color="gray.600" mb={2}>Assigned Organization Keys:</Text>
+                <HStack wrap="wrap" spacing={2}>
+                  {debugInfo.assignedOrgKeys.length > 0 ? (
+                    debugInfo.assignedOrgKeys.map(key => (
+                      <Code key={key} fontSize="xs" colorScheme="purple">{key}</Code>
+                    ))
+                  ) : (
+                    <Text fontSize="xs" fontStyle="italic">No keys assigned in profile</Text>
+                  )}
+                </HStack>
+              </Box>
+
+              {debugInfo.mismatchSamples.length > 0 && (
+                <Box w="full">
+                  <Text fontSize="xs" fontWeight="bold" color="gray.600" mb={2}>Samples of Mismatched Users:</Text>
+                  <VStack align="flex-start" spacing={2} w="full">
+                    {debugInfo.mismatchSamples.map((sample, idx) => (
+                      <Box key={idx} p={2} bg="white" border="1px solid" borderColor="gray.200" borderRadius="md" w="full" fontSize="xs">
+                        <HStack justify="space-between">
+                          <Text fontWeight="bold">{sample.id}</Text>
+                          <Badge size="xs" colorScheme="red">{sample.reason}</Badge>
+                        </HStack>
+                        <Text mt={1} color="gray.600">User Org Fields: {sample.userOrgKeys.length > 0 ? sample.userOrgKeys.join(', ') : '(Empty)'}</Text>
+                      </Box>
+                    ))}
+                    {debugInfo.rejectedNoMatch > 5 && (
+                      <Text fontSize="xs" color="gray.500" fontStyle="italic">...and {debugInfo.rejectedNoMatch - 5} more</Text>
+                    )}
+                  </VStack>
+                </Box>
+              )}
+
+              <HStack spacing={3}>
+                <Button size="xs" variant="outline" onClick={() => console.log('Full Dashboard Debug:', debugInfo)}>
+                  Log Full Debug Data to Console
+                </Button>
+                {isSuperAdmin && (
+                  <Button
+                    size="xs"
+                    colorScheme={debugMode ? "red" : "gray"}
+                    variant={debugMode ? "solid" : "outline"}
+                    onClick={() => setDebugMode(!debugMode)}
+                  >
+                    {debugMode ? "Disable Debug Mode (Filtering Off)" : "Enable Debug Mode (Bypass Filtering)"}
+                  </Button>
+                )}
+              </HStack>
+            </VStack>
+          </AccordionPanel>
+        </AccordionItem>
+      </Accordion>
+    )
+  }
+
   const renderUsersPage = () => (
     <Stack spacing={6}>
+      {users.length === 0 && !usersLoading && debugInfo && debugInfo.rejectedNoMatch > 0 && (
+        <Card bg="orange.50" border="1px solid" borderColor="orange.200">
+          <CardBody>
+            <HStack spacing={4} align="flex-start">
+              <Box color="orange.500" mt={1}><Users size={24} /></Box>
+              <Stack spacing={3} flex={1}>
+                <VStack align="flex-start" spacing={0}>
+                  <Text fontWeight="bold" color="orange.800">Learners found but not matching assignments</Text>
+                  <Text fontSize="sm" color="orange.700">
+                    We found {debugInfo.rejectedNoMatch} active learners in the database, but they don't match your assigned organizations ({debugInfo.assignedOrgKeys.join(', ') || 'none'}).
+                  </Text>
+                </VStack>
+                <HStack>
+                  <Button
+                    as="a"
+                    href={`mailto:${supportEmail}?subject=Organization Access Request&body=I am unable to see users for my assigned organizations. My assigned keys are: ${debugInfo.assignedOrgKeys.join(', ')}`}
+                    size="sm"
+                    colorScheme="orange"
+                    leftIcon={<Mail size={16} />}
+                  >
+                    Request Organization Access
+                  </Button>
+                  <Button size="sm" variant="ghost" color="orange.700" onClick={refreshOrganizations}>
+                    Refresh data
+                  </Button>
+                </HStack>
+              </Stack>
+            </HStack>
+          </CardBody>
+        </Card>
+      )}
+
       <Card bg="white" border="1px solid" borderColor="brand.border">
         <CardBody>
           <Stack spacing={3}>
@@ -626,6 +827,7 @@ export const PartnerAdminDashboard: React.FC = () => {
               </VStack>
               <Badge colorScheme="purple">Scoped</Badge>
             </HStack>
+
             <PartnerUserManagement
               users={users}
               usersLoading={usersLoading}
@@ -636,85 +838,8 @@ export const PartnerAdminDashboard: React.FC = () => {
               onSelectOrg={setSelectedOrg}
               updateUserPoints={updateUserPoints}
             />
-          </Stack>
-        </CardBody>
-      </Card>
-    </Stack>
-  )
 
-  const renderJobBoardPage = () => (
-    <Stack spacing={6}>
-      <Card bg="white" border="1px solid" borderColor="brand.border">
-        <CardBody>
-          <Stack spacing={4}>
-            <HStack justify="space-between" align="center">
-              <VStack align="flex-start" spacing={0}>
-                <Text fontWeight="bold" color="brand.text">Job Board</Text>
-                <Text fontSize="sm" color="brand.subtleText">
-                  Opportunities curated for assigned organizations
-                </Text>
-              </VStack>
-              <Badge colorScheme="green">Coming soon</Badge>
-            </HStack>
-            <SimpleGrid columns={{ base: 1, md: 2 }} spacing={3}>
-              {[1, 2, 3, 4].map(job => (
-                <Box
-                  key={job}
-                  p={4}
-                  borderRadius="md"
-                  border="1px solid"
-                  borderColor="brand.border"
-                  bg="brand.accent"
-                >
-                  <Text fontWeight="semibold" color="brand.text">Strategic role {job}</Text>
-                  <Text fontSize="sm" color="brand.subtleText">
-                    Placeholder posting for managed organizations.
-                  </Text>
-                  <Badge mt={2} colorScheme="purple">
-                    Partner scoped
-                  </Badge>
-                </Box>
-              ))}
-            </SimpleGrid>
-          </Stack>
-        </CardBody>
-      </Card>
-    </Stack>
-  )
-
-  const renderGrantsPage = () => (
-    <Stack spacing={6}>
-      <Card bg="white" border="1px solid" borderColor="brand.border">
-        <CardBody>
-          <Stack spacing={4}>
-            <HStack justify="space-between" align="center">
-              <VStack align="flex-start" spacing={0}>
-                <Text fontWeight="bold" color="brand.text">Grants & Funding</Text>
-                <Text fontSize="sm" color="brand.subtleText">Resources available for partner orgs</Text>
-              </VStack>
-              <Badge colorScheme="blue">Placeholder</Badge>
-            </HStack>
-            <Stack spacing={3}>
-              {[1, 2, 3].map(grant => (
-                <HStack
-                  key={grant}
-                  justify="space-between"
-                  p={3}
-                  borderRadius="md"
-                  border="1px solid"
-                  borderColor="brand.border"
-                  bg="brand.accent"
-                  align={{ base: 'flex-start', md: 'center' }}
-                  spacing={4}
-                >
-                  <VStack align="flex-start" spacing={0}>
-                    <Text fontWeight="semibold" color="brand.text">Funding opportunity {grant}</Text>
-                    <Text fontSize="sm" color="brand.subtleText">Guided application flow coming soon.</Text>
-                  </VStack>
-                  <Badge colorScheme="teal">Soon</Badge>
-                </HStack>
-              ))}
-            </Stack>
+            {renderDebugInfo()}
           </Stack>
         </CardBody>
       </Card>
@@ -869,7 +994,7 @@ export const PartnerAdminDashboard: React.FC = () => {
                 </Stack>
               </Box>
             ) : organizations.length ? (
-              <DashboardErrorBoundary context="Partner Admin organizations">
+              <DashboardErrorBoundary context="Partner organizations">
                 <SimpleGrid columns={{ base: 1, md: 2, xl: 3 }} spacing={3}>
                   {organizations.map(org => (
                     <OrganizationCard
@@ -911,18 +1036,91 @@ export const PartnerAdminDashboard: React.FC = () => {
     </Stack>
   )
 
+  const renderReports = () => (
+    <Stack spacing={6}>
+      <Card bg="white" border="1px solid" borderColor="brand.border">
+        <CardBody>
+          <Stack spacing={3}>
+            <Text fontWeight="bold" color="brand.text">Reports</Text>
+            <Text fontSize="sm" color="brand.subtleText">
+              Analytics and engagement reports will appear here. Customize filters by organization to export scoped summaries.
+            </Text>
+            <SimpleGrid columns={{ base: 1, md: 3 }} spacing={3}>
+              {['Engagement by org', 'At-risk trends', 'Data quality'].map(report => (
+                <Box
+                  key={report}
+                  p={3}
+                  borderRadius="md"
+                  border="1px solid"
+                  borderColor="brand.border"
+                  bg="brand.accent"
+                >
+                  <Text fontWeight="semibold" color="brand.text">{report}</Text>
+                  <Text fontSize="sm" color="brand.subtleText">Coming soon</Text>
+                </Box>
+              ))}
+            </SimpleGrid>
+          </Stack>
+        </CardBody>
+      </Card>
+    </Stack>
+  )
+
+  const renderSettings = () => (
+    <Stack spacing={6}>
+      <Card bg="white" border="1px solid" borderColor="brand.border">
+        <CardBody>
+          <Stack spacing={3}>
+            <Text fontWeight="bold" color="brand.text">Settings</Text>
+            <Text fontSize="sm" color="brand.subtleText">
+              Manage dashboard preferences, notification thresholds, and organization defaults.
+            </Text>
+            <SimpleGrid columns={{ base: 1, md: 3 }} spacing={3}>
+              {['Notification rules', 'Organization defaults', 'Access control'].map(setting => (
+                <Box key={setting} p={3} borderRadius="md" border="1px solid" borderColor="brand.border" bg="brand.accent">
+                  <Text fontWeight="semibold" color="brand.text">{setting}</Text>
+                  <Text fontSize="sm" color="brand.subtleText">Configuration coming soon</Text>
+                </Box>
+              ))}
+            </SimpleGrid>
+          </Stack>
+        </CardBody>
+      </Card>
+    </Stack>
+  )
+
+  const renderSupport = () => (
+    <Stack spacing={6}>
+      <Card bg="white" border="1px solid" borderColor="brand.border">
+        <CardBody>
+          <Stack spacing={3}>
+            <Text fontWeight="bold" color="brand.text">Support</Text>
+            <Text fontSize="sm" color="brand.subtleText">
+              Need help? Reach out to support or review the upcoming knowledge base articles for partner admins.
+            </Text>
+            <Badge colorScheme="blue" w="fit-content">
+              Live chat coming soon
+            </Badge>
+          </Stack>
+        </CardBody>
+      </Card>
+    </Stack>
+  )
+
   const renderPage = () => {
     switch (activePage) {
       case 'users':
         return renderUsersPage()
       case 'organization-management':
         return renderOrganizationManagementPage()
-      case 'job-board':
-        return renderJobBoardPage()
-      case 'grants':
-        return renderGrantsPage()
       case 'at-risk':
         return renderAtRiskPage()
+      case 'reports':
+        return renderReports()
+      case 'settings':
+        return renderSettings()
+      case 'support':
+        return renderSupport()
       case 'overview':
       default:
         return renderOverview()
@@ -931,7 +1129,7 @@ export const PartnerAdminDashboard: React.FC = () => {
 
   const handleNavigate = (key: string) => {
     const normalized = key as PartnerPageKey
-    if (['overview', 'users', 'job-board', 'grants', 'organization-management', 'at-risk'].includes(normalized)) {
+    if (['overview', 'users', 'organization-management', 'at-risk', 'reports', 'settings', 'support'].includes(normalized)) {
       setActivePage(normalized)
     } else {
       setActivePage('overview')
@@ -940,12 +1138,12 @@ export const PartnerAdminDashboard: React.FC = () => {
 
   if (profileStatus !== 'ready') {
     return (
-      <PartnerDashboardLayout
+      <PartnerLayout
         organizations={organizations}
         selectedOrg={selectedOrg}
         onSelectOrg={setSelectedOrg}
         notificationCount={notificationCount}
-        navItems={partnerNavItems}
+        navSections={navSections}
         onNavigate={handleNavigate}
         activeItem={activePage}
       >
@@ -957,23 +1155,23 @@ export const PartnerAdminDashboard: React.FC = () => {
           <Skeleton height="180px" borderRadius="md" />
           <Skeleton height="180px" borderRadius="md" />
         </Stack>
-      </PartnerDashboardLayout>
+      </PartnerLayout>
     )
   }
 
   return (
-    <PartnerDashboardLayout
+    <PartnerLayout
       organizations={organizations}
       selectedOrg={selectedOrg}
       onSelectOrg={setSelectedOrg}
       notificationCount={notificationCount}
-      navItems={partnerNavItems}
+      navSections={navSections}
       onNavigate={handleNavigate}
       activeItem={activePage}
     >
       {renderPage()}
-    </PartnerDashboardLayout>
+    </PartnerLayout>
   )
 }
 
-export default PartnerAdminDashboard
+export default PartnerDashboard

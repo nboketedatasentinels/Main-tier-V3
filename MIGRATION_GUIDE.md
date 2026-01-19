@@ -309,3 +309,62 @@ Real-time listeners are configured at app startup. Restart the dev server or red
 If you cannot enable the flag immediately:
 - Use the “Refresh profile” button in the Partner Dashboard header/sidebar.
 - Watch for the “Refresh suggested” prompt after 30 minutes of inactivity.
+
+---
+
+# Role Consolidation Migration Guide (January 2026)
+
+This guide documents the consolidation of administrative and learner roles to simplify the application's permission model.
+
+## Overview
+
+The role system has been simplified by merging administrative roles and removing the dedicated team leader role.
+
+**Changes**:
+- `admin` role → **merged into `partner`**
+- `company_admin` role → **merged into `partner`**
+- `team_leader` role → **removed (migrated to standard `user` role)**
+
+## Mapping Table
+
+| Old Role Value | New Role Value | New Category |
+| :--- | :--- | :--- |
+| `admin` | `partner` | Partner |
+| `company_admin` | `partner` | Partner |
+| `partner` | `partner` | Partner |
+| `team_leader` | `user` | Learner |
+| `teamleader` | `user` | Learner |
+
+## Code Changes
+
+### 1. Unified Helper Functions
+Use the updated helpers in `@/utils/role` and `@/utils/permissions`:
+- `isAdminRole(role)`: Returns true for `partner` and `super_admin`.
+- `isPartnerAdmin(profile)`: Returns true for `partner`.
+- `getRoleLabel(profile)`: Returns "Partner" for partner roles and "Learner" for user roles.
+
+### 2. Dashboard Consolidation
+The `CompanyAdminDashboard` and `PartnerAdminDashboard` have been replaced by a single `PartnerDashboard`. All partner-level users are now routed to `/admin/dashboard`.
+
+### 3. Enum Updates
+The `UserRole` enum has been updated. References to `UserRole.ADMIN`, `UserRole.COMPANY_ADMIN`, and `UserRole.TEAM_LEADER` should be replaced with `UserRole.PARTNER` or `UserRole.USER` as appropriate.
+
+## Database Migration
+
+A migration script is provided to update existing documents in the `profiles` and `users` collections.
+
+**Location**: `scripts/migrations/migrate-roles.ts`
+
+**Usage**:
+```bash
+# Dry run (preview changes)
+./node_modules/.bin/tsx scripts/migrations/migrate-roles.ts
+
+# Live migration (apply changes)
+./node_modules/.bin/tsx scripts/migrations/migrate-roles.ts --live
+```
+
+The script will:
+1. Scan `profiles` and `users` collections.
+2. Map old roles to new values.
+3. Update documents while preserving the old role in `role_migrated_from` and recording the timestamp in `role_migrated_at`.

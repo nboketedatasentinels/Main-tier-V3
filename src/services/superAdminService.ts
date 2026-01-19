@@ -37,7 +37,7 @@ const orgCollection = collection(db, ORG_COLLECTION)
 const usersCollection = collection(db, 'profiles')
 const auditCollection = collection(db, 'admin_activity_log')
 const engagementCollection = collection(db, 'user_engagement_scores')
-const adminRoles: AdminRole[] = ['super_admin', 'partner', 'admin', 'mentor', 'ambassador', 'team_leader']
+const adminRoles: AdminRole[] = ['super_admin', 'partner', 'mentor', 'ambassador']
 
 const getActorId = () => auth.currentUser?.uid
 const getActorName = () => auth.currentUser?.displayName || undefined
@@ -576,4 +576,18 @@ export const listenToTaskNotifications = (onChange: (tasks: TaskNotificationReco
       }),
     )
   })
+}
+
+export const listenToUsers = (
+  onChange: (users: AdminUserRecord[]) => void,
+  onError?: (error: FirestoreError) => void,
+) => {
+  const usersQuery = query(usersCollection, orderBy('createdAt', 'desc'))
+  return onSnapshot(
+    usersQuery,
+    (snapshot) => {
+      onChange(snapshot.docs.map(mapAdminDoc))
+    },
+    onError,
+  )
 }

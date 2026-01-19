@@ -55,7 +55,7 @@ import {
 } from '@/services/userProfileService'
 import { deleteUserAccount } from '@/services/userManagementService'
 
-type ViewContext = 'admin' | 'mentor'
+type ViewContext = 'partner' | 'mentor'
 
 const formatDateTime = (value?: string) => {
   if (!value) return 'Not available'
@@ -636,11 +636,9 @@ export const UserProfileManagementPage: React.FC<{ viewContext?: ViewContext }> 
                         <option value="user">User</option>
                         <option value="paid_member">Paid Member</option>
                         <option value="free_user">Free User</option>
-                        <option value="team_leader">Team Leader</option>
                         <option value="mentor">Mentor</option>
                         <option value="ambassador">Ambassador</option>
-                        <option value="partner">Partner Admin</option>
-                        <option value="admin">Admin</option>
+                        <option value="partner">Partner</option>
                         <option value="super_admin">Super Admin</option>
                       </Select>
                     </FormControl>

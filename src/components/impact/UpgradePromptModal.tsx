@@ -27,12 +27,12 @@ interface EnhancedUpgradePromptModalProps {
   message: string
   benefits?: string[]
   ctaText?: string
-  targetTier?: 'paid' | 'admin'
+  targetTier?: 'paid' | 'partner'
   isOpen: boolean
   onClose: () => void
 }
 
-const defaultBenefits: Record<'paid' | 'admin', string[]> = {
+const defaultBenefits: Record<'paid' | 'partner', string[]> = {
   paid: [
     'Unlimited impact entries per month',
     'Organization-level analytics and insights',
@@ -41,7 +41,7 @@ const defaultBenefits: Record<'paid' | 'admin', string[]> = {
     'Access to Business impact tracking',
     'Priority support from our team',
   ],
-  admin: [
+  partner: [
     'Create and manage impact events',
     'Generate QR codes for volunteer check-in',
     'Track real-time event participation',
@@ -65,7 +65,7 @@ export const ImpactUpgradePromptModal: React.FC<EnhancedUpgradePromptModalProps>
   const resolvedBenefits = useMemo(() => benefits ?? defaultBenefits[targetTier], [benefits, targetTier])
 
   const handleCta = () => {
-    if (targetTier === 'admin') {
+    if (targetTier === 'partner') {
       navigate('/contact?inquiry=partner-access')
     } else {
       navigate('/upgrade')

@@ -36,8 +36,6 @@ import {
   ManagedUserRecord,
   OrganizationOption,
   assignRoleToUser,
-  fetchOrganizationsList,
-  listenToUsers,
   updateUser,
 } from '@/services/userManagementService'
 
@@ -54,7 +52,13 @@ const statusBadge = (status?: string) => {
   return { bg: 'gray.100', color: 'gray.600', label: 'Unknown' }
 }
 
-export const LeadershipCouncil = () => {
+interface LeadershipCouncilProps {
+  users: ManagedUserRecord[]
+  organizations: OrganizationOption[]
+  loadingUsers: boolean
+}
+
+export const LeadershipCouncil = ({ users: propUsers, organizations: propOrganizations, loadingUsers }: LeadershipCouncilProps) => {
   const toast = useToast()
   const { isAdmin, isSuperAdmin } = useAuth()
   const canViewLeadership = isAdmin || isSuperAdmin
@@ -62,10 +66,7 @@ export const LeadershipCouncil = () => {
 
   const [activeRole, setActiveRole] = useState<LeadershipRole>('mentor')
   const [leaders, setLeaders] = useState<{ mentors: ManagedUserRecord[]; ambassadors: ManagedUserRecord[] }>({ mentors: [], ambassadors: [] })
-  const [allUsers, setAllUsers] = useState<ManagedUserRecord[]>([])
-  const [companies, setCompanies] = useState<OrganizationOption[]>([])
   const [search, setSearch] = useState('')
-  const [loading, setLoading] = useState(true)
   const [isAssigning, setIsAssigning] = useState(false)
   const [isUpdating, setIsUpdating] = useState(false)
   const [removingId, setRemovingId] = useState<string | null>(null)
@@ -84,31 +85,11 @@ export const LeadershipCouncil = () => {
   const editModal = useDisclosure()
 
   useEffect(() => {
-    const unsub = listenToUsers({
-      onData: (records) => {
-        setAllUsers(records)
-        setLeaders({
-          mentors: records.filter((user) => user.role === 'mentor'),
-          ambassadors: records.filter((user) => user.role === 'ambassador'),
-        })
-        setLoading(false)
-      },
-      onError: (err) => {
-        console.error(err)
-        setLoading(false)
-        toast({ title: 'Unable to load leadership roster', status: 'error' })
-      },
+    setLeaders({
+      mentors: propUsers.filter((user) => user.role === 'mentor'),
+      ambassadors: propUsers.filter((user) => user.role === 'ambassador'),
     })
-
-    fetchOrganizationsList()
-      .then(setCompanies)
-      .catch((err) => {
-        console.error(err)
-        toast({ title: 'Unable to load organizations', status: 'error' })
-      })
-
-    return () => unsub()
-  }, [toast])
+  }, [propUsers])
 
   const activeLabel = roleLabels[activeRole]
 
@@ -121,13 +102,13 @@ export const LeadershipCouncil = () => {
   }, [activeRole, leaders.ambassadors, leaders.mentors, search])
 
   const availableMembers = useMemo(
-    () => allUsers.filter((user) => !['mentor', 'ambassador'].includes(user.role)),
-    [allUsers],
+    () => propUsers.filter((user) => !['mentor', 'ambassador'].includes(user.role)),
+    [propUsers],
   )
 
   const organizationOptions = useMemo(
-    () => companies.map((company) => ({ value: company.id, label: `${company.name}${company.code ? ` (${company.code})` : ''}` })),
-    [companies],
+    () => propOrganizations.map((company) => ({ value: company.id, label: `${company.name}${company.code ? ` (${company.code})` : ''}` })),
+    [propOrganizations],
   )
 
   const clearPromotionForm = () => {
@@ -144,7 +125,7 @@ export const LeadershipCouncil = () => {
 
     try {
       setIsAssigning(true)
-      const company = companies.find((org) => org.id === selectedCompanyId)
+      const company = propOrganizations.find((org) => org.id === selectedCompanyId)
       await assignRoleToUser(selectedUserId, assignRole, company || null, assignmentNotes)
       toast({ title: `${activeLabel} assigned successfully.`, status: 'success' })
       assignModal.onClose()
@@ -169,7 +150,7 @@ export const LeadershipCouncil = () => {
     if (!editingMember) return
     try {
       setIsUpdating(true)
-      const company = companies.find((org) => org.id === editingCompanyId)
+      const company = propOrganizations.find((org) => org.id === editingCompanyId)
       const updates: Partial<ManagedUserRecord> = {
         companyId: company?.id || null,
         companyCode: company?.code || null,
@@ -352,7 +333,7 @@ export const LeadershipCouncil = () => {
                   </HStack>
                 </Box>
 
-                {loading ? (
+                {loadingUsers ? (
                   <Flex py={8} justify="center" align="center" gap={2}>
                     <Icon as={UsersIcon} color="purple.500" />
                     <Text color="gray.600">Loading leadership records…</Text>
