@@ -46,7 +46,7 @@
     "@typescript-eslint/eslint-plugin": "^6.19.0",
     "@typescript-eslint/parser": "^6.19.0",
     "@vitejs/plugin-react": "^4.2.1",
-    "@vitest/ui": "^4.0.17",
+    "@vitest/ui": "^1.2.1",
     "autoprefixer": "^10.4.17",
     "dotenv": "^17.2.3",
     "eslint": "^8.56.0",
@@ -60,7 +60,7 @@
     "tsx": "^4.21.0",
     "typescript": "^5.3.3",
     "vite": "^5.0.12",
-    "vitest": "^4.0.17"
+    "vitest": "^1.2.1"
   },
   "keywords": [
     "leadership",

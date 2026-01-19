@@ -60,6 +60,7 @@ export const PartnerLayout: React.FC<PartnerLayoutProps> = ({
   const [showRefreshHint, setShowRefreshHint] = React.useState(false)
   const [lastUpdatedLabel, setLastUpdatedLabel] = React.useState('Not yet loaded')
   const [profileSyncWarning, setProfileSyncWarning] = React.useState(false)
+  const [isLoggingOut, setIsLoggingOut] = React.useState(false)
   const profileLoadingSinceRef = React.useRef<number | null>(null)
   const assignedCount = organizations.length || profile?.assignedOrganizations?.length || 0
   const sections = navSections?.length ? navSections : buildPartnerNavItems()
@@ -175,6 +176,17 @@ export const PartnerLayout: React.FC<PartnerLayoutProps> = ({
     })
   }, [refreshProfile, toast])
 
+  const handleLogout = React.useCallback(async () => {
+    if (isLoggingOut) return
+    setIsLoggingOut(true)
+    try {
+      await signOut()
+    } catch (error) {
+      console.error('Logout error:', error)
+      setIsLoggingOut(false)
+    }
+  }, [signOut, isLoggingOut])
+
   React.useEffect(() => {
     const handler = (event: KeyboardEvent) => {
       const target = event.target as HTMLElement | null
@@ -273,8 +285,13 @@ export const PartnerLayout: React.FC<PartnerLayoutProps> = ({
           variant="outline"
           colorScheme="gray"
           onClick={handleLogout}
+<<<<<<< HEAD:src/layouts/PartnerDashboardLayout.tsx
+          isLoading={isLoggingOut}
+          isDisabled={isLoggingOut}
+=======
           isLoading={localSigningOut || signingOut}
           isDisabled={localSigningOut || signingOut}
+>>>>>>> Journeys:src/layouts/PartnerLayout.tsx
         >
           {localSigningOut ? 'Signing out...' : 'Sign out'}
         </Button>
@@ -334,8 +351,13 @@ export const PartnerLayout: React.FC<PartnerLayoutProps> = ({
         leftIcon={<LogOut size={16} />}
         variant="outline"
         onClick={handleLogout}
+<<<<<<< HEAD:src/layouts/PartnerDashboardLayout.tsx
+        isLoading={isLoggingOut}
+        isDisabled={isLoggingOut}
+=======
         isLoading={localSigningOut || signingOut}
         isDisabled={localSigningOut || signingOut}
+>>>>>>> Journeys:src/layouts/PartnerLayout.tsx
       >
         {localSigningOut ? 'Signing out...' : 'Logout'}
       </Button>
@@ -392,10 +414,17 @@ export const PartnerLayout: React.FC<PartnerLayoutProps> = ({
                 leftIcon={<LogOut size={16} />}
                 variant="outline"
                 onClick={handleLogout}
+<<<<<<< HEAD:src/layouts/PartnerDashboardLayout.tsx
+                isLoading={isLoggingOut}
+                isDisabled={isLoggingOut}
+              >
+                Logout
+=======
                 isLoading={localSigningOut || signingOut}
                 isDisabled={localSigningOut || signingOut}
               >
                 {localSigningOut ? 'Signing out...' : 'Logout'}
+>>>>>>> Journeys:src/layouts/PartnerLayout.tsx
               </Button>
             </Stack>
           </DrawerBody>
