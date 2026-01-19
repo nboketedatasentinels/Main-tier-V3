@@ -157,6 +157,24 @@ export interface PartnerAdminSnapshot {
   updatedAt?: Timestamp | string | Date
 }
 
+export interface PartnerAdminPointsOverview {
+  totalPoints: number
+  weeklyPoints: number
+  pendingPoints: number
+  approvedPoints: number
+  rejectedPoints: number
+}
+
+export interface PartnerAdminDataSnapshot {
+  partnerId: string
+  assignedOrganizations: PartnerAssignment[]
+  organizations: OrganizationRecord[]
+  users: OrganizationUserProfile[]
+  pointsOverview: PartnerAdminPointsOverview
+  createdAt?: Timestamp | string | Date
+  updatedAt?: Timestamp | string | Date
+}
+
 export interface AdminUserRecord {
   id: string
   firstName?: string
