@@ -107,7 +107,8 @@ service cloud.firestore {
     function canAccessOrganization(orgCode, orgId) {
       return isSuperAdmin() || (
         isPartner() && (
-          getProfile(request.auth.uid).assignedOrganizations.hasAny([orgCode, orgId])
+          orgId != null &&
+          get(/databases/$(database)/documents/organizations/$(orgId)).data.partnerId == request.auth.uid
         )
       );
     }
@@ -115,10 +116,7 @@ service cloud.firestore {
     function canAccessUser(userId) {
       return isSuperAdmin() || (
         isPartner() && (
-          getProfile(request.auth.uid).assignedOrganizations.hasAny([
-            getProfile(userId).companyCode,
-            getProfile(userId).companyId
-          ])
+          get(/databases/$(database)/documents/users/$(userId)).data.partnerId == request.auth.uid
         )
       );
     }
@@ -249,6 +247,9 @@ service cloud.firestore {
       
       // Super admins can read all users, company admins can read based on profiles
       allow read: if isSuperAdmin() || canAccessUser(userId);
+
+      // Partners can read assigned users
+      allow read: if isPartner() && resource.data.partnerId == request.auth.uid;
 
       // Mentors can read assigned mentee records only
       allow read: if isAuthenticated() && canAccessMentee(resource.data);
@@ -448,6 +449,11 @@ service cloud.firestore {
       allow write: if isSuperAdmin();
     }
 
+    match /partners/{partnerId} {
+      allow read: if isAuthenticated() && isOwner(partnerId);
+      allow write: if isSuperAdmin();
+    }
+
     // Community collections
     match /villages/{villageId} {
       allow read: if isAuthenticated();
@@ -473,7 +479,7 @@ service cloud.firestore {
     match /organizations/{orgId} {
       allow read: if isAuthenticated() && (
         isSuperAdmin() || 
-        canAccessOrganization(resource.data.code, orgId)
+        (isPartner() && resource.data.partnerId == request.auth.uid)
       );
       allow write: if isSuperAdmin();
     }
