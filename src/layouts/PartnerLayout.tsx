@@ -61,7 +61,6 @@ export const PartnerLayout: React.FC<PartnerLayoutProps> = ({
   const [lastUpdatedLabel, setLastUpdatedLabel] = React.useState('Not yet loaded')
   const [profileSyncWarning, setProfileSyncWarning] = React.useState(false)
   const profileLoadingSinceRef = React.useRef<number | null>(null)
-  const [localSigningOut, setLocalSigningOut] = React.useState(false)
   const assignedCount = organizations.length || profile?.assignedOrganizations?.length || 0
   const sections = navSections?.length ? navSections : buildPartnerNavItems()
 
@@ -117,13 +116,6 @@ export const PartnerLayout: React.FC<PartnerLayoutProps> = ({
     const timestamp = new Date().toISOString()
     console.log(`[${timestamp}] 🖱️ [PartnerLayout] Logout button clicked`)
 
-    if (localSigningOut || signingOut) {
-      console.warn(`[${new Date().toISOString()}] ⚠️ [PartnerLayout] Logout already in progress, ignoring click`)
-      return
-    }
-
-    setLocalSigningOut(true)
-
     try {
       console.log(`[${new Date().toISOString()}] 🔄 [PartnerLayout] Calling AuthContext.signOut()`)
       const result = await signOut()
@@ -139,8 +131,6 @@ export const PartnerLayout: React.FC<PartnerLayoutProps> = ({
             duration: 5000,
             isClosable: true,
           })
-          // Reset local state so they can try again if it actually failed
-          setLocalSigningOut(false)
         } else {
           console.warn(`[${new Date().toISOString()}] 🟡 [PartnerLayout] Sign out already in progress (caught error)`)
         }
@@ -149,9 +139,8 @@ export const PartnerLayout: React.FC<PartnerLayoutProps> = ({
       }
     } catch (err) {
       console.error(`[${new Date().toISOString()}] 🔴 [PartnerLayout] Unexpected error during logout`, err)
-      setLocalSigningOut(false)
     }
-  }, [signOut, toast, localSigningOut, signingOut])
+  }, [signOut, toast])
 
   const handleManualRefresh = React.useCallback(async () => {
     const result = await refreshProfile({ reason: 'partner-dashboard-manual' })
@@ -272,10 +261,10 @@ export const PartnerLayout: React.FC<PartnerLayoutProps> = ({
           variant="outline"
           colorScheme="gray"
           onClick={handleLogout}
-          isLoading={localSigningOut || signingOut}
-          isDisabled={localSigningOut || signingOut}
+          isLoading={signingOut}
+          isDisabled={signingOut}
         >
-          {localSigningOut ? 'Signing out...' : 'Sign out'}
+          {signingOut ? 'Signing out...' : 'Sign out'}
         </Button>
       </VStack>
     </HStack>
@@ -333,10 +322,10 @@ export const PartnerLayout: React.FC<PartnerLayoutProps> = ({
         leftIcon={<LogOut size={16} />}
         variant="outline"
         onClick={handleLogout}
-        isLoading={localSigningOut || signingOut}
-        isDisabled={localSigningOut || signingOut}
+        isLoading={signingOut}
+        isDisabled={signingOut}
       >
-        {localSigningOut ? 'Signing out...' : 'Logout'}
+        {signingOut ? 'Signing out...' : 'Logout'}
       </Button>
     </HStack>
   )
@@ -391,10 +380,10 @@ export const PartnerLayout: React.FC<PartnerLayoutProps> = ({
                 leftIcon={<LogOut size={16} />}
                 variant="outline"
                 onClick={handleLogout}
-                isLoading={localSigningOut || signingOut}
-                isDisabled={localSigningOut || signingOut}
+                isLoading={signingOut}
+                isDisabled={signingOut}
               >
-                {localSigningOut ? 'Signing out...' : 'Logout'}
+                {signingOut ? 'Signing out...' : 'Logout'}
               </Button>
             </Stack>
           </DrawerBody>
