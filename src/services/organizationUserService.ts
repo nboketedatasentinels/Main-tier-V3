@@ -151,7 +151,13 @@ export const fetchOrganizationUsers = async (organizationKey: string): Promise<O
       createdAt?: Timestamp | string | Date | number
       avatarUrl?: string
       photoURL?: string
+      organizationId?: string
+      organization_id?: string
+      companyCode?: string
+      company_code?: string
     }
+    const organizationId = data.organizationId || data.organization_id || null
+    const companyCode = data.companyCode || data.company_code || null
     const fullName =
       data.fullName ||
       data.name ||
@@ -168,6 +174,8 @@ export const fetchOrganizationUsers = async (organizationKey: string): Promise<O
       lastActive: parseUserDate(data.lastActiveAt || data.lastActive),
       createdAt: parseUserDate(data.createdAt),
       avatarUrl: data.avatarUrl ?? data.photoURL ?? null,
+      organizationId: organizationId?.trim() || null,
+      companyCode: companyCode?.trim() || null,
     }
   })
 }

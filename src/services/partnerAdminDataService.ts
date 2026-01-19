@@ -1,3 +1,5 @@
+import { fetchOrganizationsByIds } from '@/services/organizationService'
+import { fetchOrganizationUsers } from '@/services/organizationUserService'
 import type {
   PartnerAdminDataSnapshot,
   PartnerAdminPointsOverview,
@@ -31,12 +33,33 @@ export const fetchPartnerAdminSnapshot = async (
   data: Partial<PartnerAdminSnapshot>,
 ): Promise<PartnerAdminDataSnapshot> => {
   const assignedOrganizations = normalizeAssignments(data.assignedOrganizations || [])
+  const assignedOrganizationIds = Array.from(
+    new Set(
+      assignedOrganizations
+        .map((assignment) => assignment.organizationId?.trim())
+        .filter((orgId): orgId is string => !!orgId),
+    ),
+  )
+
+  const organizations = assignedOrganizationIds.length
+    ? await fetchOrganizationsByIds(assignedOrganizationIds)
+    : []
+
+  const userSnapshots = await Promise.all(
+    assignedOrganizationIds.map((organizationId) => fetchOrganizationUsers(organizationId)),
+  )
+  const usersMap = new Map<string, PartnerAdminDataSnapshot['users'][number]>()
+  userSnapshots.forEach((users) => {
+    users.forEach((user) => {
+      usersMap.set(user.id, user)
+    })
+  })
 
   return {
     partnerId,
     assignedOrganizations,
-    organizations: [],
-    users: [],
+    organizations,
+    users: Array.from(usersMap.values()),
     pointsOverview: buildEmptyPointsOverview(),
     createdAt: data.createdAt,
     updatedAt: data.updatedAt,
