@@ -88,6 +88,7 @@ const USERS_COLLECTION = collection(db, 'profiles')
 /**
  * Creates chunked Firestore queries to handle the 30-value limit on 'in' queries.
  * Returns an array of queries, each covering up to FIRESTORE_IN_QUERY_LIMIT org keys.
+ * We query multiple org identifier fields to handle mixed assignment formats.
  */
 const createChunkedOrgQueries = (
   orgKeys: string[],
@@ -115,18 +116,15 @@ const createChunkedOrgQueries = (
   }
 
   const queries: Query<DocumentData>[] = []
+  const queryFields = ['companyCode', 'companyId', 'organizationId'] as const
 
   // Split into chunks of FIRESTORE_IN_QUERY_LIMIT
   for (let i = 0; i < uniqueKeys.length; i += FIRESTORE_IN_QUERY_LIMIT) {
     const chunk = uniqueKeys.slice(i, i + FIRESTORE_IN_QUERY_LIMIT)
 
-    // Query on companyCode field (the canonical field per firestore-schema.md)
-    // We use companyCode as the primary field since it's the documented canonical field
-    const q = query(
-      USERS_COLLECTION,
-      where('companyCode', 'in', chunk)
-    )
-    queries.push(q)
+    queryFields.forEach((field) => {
+      queries.push(query(USERS_COLLECTION, where(field, 'in', chunk)))
+    })
   }
 
   return { queries, hasQueryLimitWarning }
