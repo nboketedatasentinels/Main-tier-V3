@@ -480,6 +480,7 @@ export const deleteAdminUser = async (adminId: string) => {
 
 export const assignOrganizations = async (adminId: string, orgIds: string[]) => {
   const adminRef = doc(db, 'users', adminId)
+  const profileRef = doc(db, 'profiles', adminId)
   const actorId = getActorId()
   const actorName = getActorName()
   // assignedOrganizations MUST contain organization document IDs only, never codes.
@@ -491,12 +492,16 @@ export const assignOrganizations = async (adminId: string, orgIds: string[]) => 
         .filter(Boolean),
     ),
   )
-  await updateDoc(adminRef, {
+  const updatePayload = {
     assignedOrganizations: sanitizedOrgIds,
     assignedOrganizationsUpdatedAt: serverTimestamp(),
     assignedOrganizationsUpdatedBy: actorId || null,
     updatedAt: serverTimestamp(),
-  })
+  }
+  await Promise.all([
+    updateDoc(adminRef, updatePayload),
+    updateDoc(profileRef, updatePayload),
+  ])
   await logAdminAction({
     action: 'admin_orgs_updated',
     adminId: actorId,
