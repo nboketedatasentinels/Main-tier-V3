@@ -244,6 +244,7 @@ export const usePartnerUsers = (options: UsePartnerUsersOptions) => {
 
       // Accumulated docs from all queries
       const accumulatedDocsMap = new Map<string, { id: string; data: () => FirestorePartnerUser }>()
+      const queryDocIdsMap = new Map<number, Set<string>>()
       let pendingSnapshots = queriesToExecute.length
       let hasReceivedInitialData = false
 
@@ -533,12 +534,37 @@ export const usePartnerUsers = (options: UsePartnerUsersOptions) => {
           (snapshot) => {
             if (!isMounted) return
 
-            // Update accumulated docs for this query's results
-            snapshot.docs.forEach((docSnap) => {
+            const queryDocIds =
+              queryDocIdsMap.get(queryIndex) || new Set<string>()
+            queryDocIdsMap.set(queryIndex, queryDocIds)
+
+            let hasDocChanges = false
+
+            snapshot.docChanges().forEach((change) => {
+              const docSnap = change.doc
+
+              if (change.type === 'removed') {
+                queryDocIds.delete(docSnap.id)
+                let stillReferenced = false
+                for (const ids of queryDocIdsMap.values()) {
+                  if (ids.has(docSnap.id)) {
+                    stillReferenced = true
+                    break
+                  }
+                }
+                if (!stillReferenced) {
+                  accumulatedDocsMap.delete(docSnap.id)
+                }
+                hasDocChanges = true
+                return
+              }
+
+              queryDocIds.add(docSnap.id)
               accumulatedDocsMap.set(docSnap.id, {
                 id: docSnap.id,
                 data: () => docSnap.data() as FirestorePartnerUser,
               })
+              hasDocChanges = true
             })
 
             // Track if all initial snapshots have been received
@@ -548,7 +574,7 @@ export const usePartnerUsers = (options: UsePartnerUsersOptions) => {
                 hasReceivedInitialData = true
                 void processAccumulatedDocs()
               }
-            } else {
+            } else if (hasDocChanges) {
               // After initial load, process on each update
               void processAccumulatedDocs()
             }
