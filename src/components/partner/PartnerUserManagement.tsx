@@ -113,6 +113,12 @@ const formatLastActive = (lastActive: string | Date | null | undefined): string 
   if (!lastActive) return 'Unknown'
   const date = parseTimestamp(lastActive)
   if (!date || isNaN(date.getTime())) return 'Unknown'
+
+  const now = new Date()
+  const minValidDate = new Date('2020-01-01')
+  if (date < minValidDate) return 'Unknown'
+  if (date > now) return 'Just now'
+
   return formatDistanceToNow(date, { addSuffix: true })
 }
 
@@ -136,6 +142,7 @@ export const PartnerUserManagement: React.FC<PartnerUserManagementProps> = ({
   const [rejectReason, setRejectReason] = useState('')
   // FIX #7: Controlled state for nudge preferences
   const [nudgeEnabled, setNudgeEnabled] = useState(true)
+  const [adminNotes, setAdminNotes] = useState('')
 
   const drawer = useDisclosure()
   const adjustmentModal = useDisclosure()
@@ -169,10 +176,10 @@ export const PartnerUserManagement: React.FC<PartnerUserManagementProps> = ({
 
   const filtered = useMemo(() => {
     const safeUsers = usersLoading ? [] : (users ?? [])
-    if (selectedOrg === 'all') return safeUsers
+    const normalizedSelectedOrg = (selectedOrg || 'all').toLowerCase()
+    if (normalizedSelectedOrg === 'all') return safeUsers
 
-    const selectedKey = selectedOrg.toLowerCase()
-    return safeUsers.filter((u) => u.organizationId?.toLowerCase() === selectedKey)
+    return safeUsers.filter((u) => u.organizationId?.toLowerCase() === normalizedSelectedOrg)
   }, [users, usersLoading, selectedOrg])
 
   const learnerUsers = useMemo(
@@ -213,7 +220,7 @@ export const PartnerUserManagement: React.FC<PartnerUserManagementProps> = ({
   // Pagination & Derived State
   useEffect(() => {
     setPage(1)
-  }, [selectedOrg, sortKey, sortDir])
+  }, [selectedOrg, sortKey, sortDir, activeTab])
 
   const totalPages = Math.max(1, Math.ceil(sortedUsers.length / PAGE_SIZE))
   const paginated = sortedUsers.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE)
@@ -246,10 +253,19 @@ export const PartnerUserManagement: React.FC<PartnerUserManagementProps> = ({
 
   const openUser = (user: PartnerUser) => {
     setSelectedUser(user)
-    // Reset nudge state when opening a new user
-    setNudgeEnabled(true)
+    setNudgeEnabled(user.nudgeEnabled ?? true)
+    setAdminNotes(user.adminNotes ?? '')
     drawer.onOpen()
   }
+
+  useEffect(() => {
+    if (activeTab !== 'risk') return
+    if (!selection.length) return
+    const validSelection = selection.filter((id) => atRiskUserIds.includes(id))
+    if (validSelection.length !== selection.length) {
+      clearSelection()
+    }
+  }, [activeTab, atRiskUserIds, selection, clearSelection])
 
   // ============================================================================
   // FIX #6: Updated validation to match input constraints (min=1)
@@ -774,6 +790,7 @@ export const PartnerUserManagement: React.FC<PartnerUserManagementProps> = ({
                           colorScheme="green"
                           onClick={() => handleApproveRequest(request)}
                           isLoading={approvalActionId === request.id}
+                          isDisabled={approvalActionId !== null}
                         >
                           Approve
                         </Button>
@@ -782,7 +799,7 @@ export const PartnerUserManagement: React.FC<PartnerUserManagementProps> = ({
                           colorScheme="red"
                           variant="outline"
                           onClick={() => openRejectModal(request)}
-                          isDisabled={approvalActionId === request.id}
+                          isDisabled={approvalActionId !== null}
                         >
                           Reject
                         </Button>
@@ -807,6 +824,8 @@ export const PartnerUserManagement: React.FC<PartnerUserManagementProps> = ({
         onClose={() => {
           drawer.onClose()
           setSelectedUser(null)
+          setNudgeEnabled(true)
+          setAdminNotes('')
         }}
         size="md"
       >
@@ -835,20 +854,26 @@ export const PartnerUserManagement: React.FC<PartnerUserManagementProps> = ({
                   <Text fontSize="sm" color="brand.subtleText">
                     Earned {selectedUser.weeklyEarned} / {selectedUser.weeklyRequired} points this week.
                   </Text>
-                  <HStack spacing={2}>
-                    <Box bg="brand.accent" borderRadius="full" h="10px" flex={1} position="relative">
-                      <Box
-                        position="absolute"
-                        left={0}
-                        top={0}
-                        bottom={0}
-                        borderRadius="full"
-                        bg={selectedUser.weeklyEarned >= selectedUser.weeklyRequired ? 'green.400' : 'indigo.500'}
-                        width={`${Math.min(100, (selectedUser.weeklyEarned / Math.max(selectedUser.weeklyRequired, 1)) * 100)}%`}
-                      />
-                    </Box>
-                    <Text fontSize="sm">{selectedUser.progressPercent}%</Text>
-                  </HStack>
+                  {selectedUser.weeklyRequired > 0 ? (
+                    <HStack spacing={2}>
+                      <Box bg="brand.accent" borderRadius="full" h="10px" flex={1} position="relative">
+                        <Box
+                          position="absolute"
+                          left={0}
+                          top={0}
+                          bottom={0}
+                          borderRadius="full"
+                          bg={selectedUser.weeklyEarned >= selectedUser.weeklyRequired ? 'green.400' : 'indigo.500'}
+                          width={`${Math.min(100, (selectedUser.weeklyEarned / selectedUser.weeklyRequired) * 100)}%`}
+                        />
+                      </Box>
+                      <Text fontSize="sm">{selectedUser.progressPercent}%</Text>
+                    </HStack>
+                  ) : (
+                    <Text fontSize="sm" color="brand.subtleText">
+                      No weekly requirement set
+                    </Text>
+                  )}
                   <Button size="sm" onClick={adjustmentModal.onOpen} colorScheme="purple">
                     Adjust points
                   </Button>
@@ -887,7 +912,11 @@ export const PartnerUserManagement: React.FC<PartnerUserManagementProps> = ({
                 </Stack>
                 <Stack spacing={2}>
                   <Text fontWeight="semibold">Admin follow-up notes</Text>
-                  <Input placeholder="Add a quick note about manual outreach" />
+                  <Input
+                    placeholder="Add a quick note about manual outreach"
+                    value={adminNotes}
+                    onChange={(e) => setAdminNotes(e.target.value)}
+                  />
                   <Text fontSize="xs" color="brand.subtleText">
                     Recommended next action: schedule a follow-up in 5 days if no response.
                   </Text>
