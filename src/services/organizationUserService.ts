@@ -2,7 +2,7 @@ import { Timestamp, collection, doc, DocumentSnapshot, getDoc, getDocs, query, w
 import { type OrganizationStatistics, type OrganizationUserProfile } from '@/types/admin'
 import { db } from './firebase'
 
-const usersCollection = collection(db, 'users')
+const usersCollection = collection(db, 'profiles')
 
 const parseUserDate = (value?: Timestamp | string | Date | number | null): Date | null => {
   if (!value) return null
@@ -136,6 +136,7 @@ export const fetchOrganizationEngagementStats = async (organizationKey: string):
 export const fetchOrganizationUsers = async (organizationKey: string): Promise<OrganizationUserProfile[]> => {
   if (!organizationKey) return []
   const docs = await fetchOrganizationUserDocs(organizationKey)
+  console.log('[PartnerData] fetched users:', docs.length)
   return docs.map((docSnap) => {
     const data = docSnap.data() as {
       fullName?: string
@@ -168,14 +169,14 @@ export const fetchOrganizationUsers = async (organizationKey: string): Promise<O
       id: docSnap.id,
       name: fullName,
       email: data.email,
-      role: data.role || 'user',
+      role: (data.role ?? 'learner').toLowerCase(),
       membershipStatus: data.membershipStatus || 'inactive',
       accountStatus: data.accountStatus || 'active',
       lastActive: parseUserDate(data.lastActiveAt || data.lastActive),
       createdAt: parseUserDate(data.createdAt),
       avatarUrl: data.avatarUrl ?? data.photoURL ?? null,
-      organizationId: organizationId?.trim() || null,
-      companyCode: companyCode?.trim() || null,
+      organizationId: organizationId?.trim().toLowerCase() || null,
+      companyCode: companyCode?.trim().toLowerCase() || null,
     }
   })
 }
