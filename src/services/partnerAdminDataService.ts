@@ -51,6 +51,7 @@ export const fetchPartnerAdminSnapshot = async (
   partnerId: string,
   data: Partial<PartnerAdminSnapshot>,
 ): Promise<PartnerAdminDataSnapshot> => {
+  console.error('🔥 fetchPartnerAdminSnapshot IS RUNNING 🔥')
   const assignedOrganizations = normalizeAssignments(data.assignedOrganizations || [])
   const assignedOrganizationIds = Array.from(
     new Set(
