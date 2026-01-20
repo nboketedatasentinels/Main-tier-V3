@@ -66,16 +66,16 @@ export const usePartnerAdminSnapshot = (options: UsePartnerAdminSnapshotOptions 
   const assignedOrganizationIds = useMemo(
     () =>
       activeAssignments
-        .map((assignment) => assignment.organizationId)
-        .filter((organizationId) => organizationId && organizationId.length > 0),
+        .map((assignment) => assignment.organizationId?.trim())
+        .filter((organizationId): organizationId is string => !!organizationId),
     [activeAssignments],
   )
 
   const assignedOrganizationCodes = useMemo(
     () =>
       activeAssignments
-        .map((assignment) => assignment.companyCode)
-        .filter((companyCode) => companyCode && companyCode.length > 0),
+        .map((assignment) => assignment.companyCode?.trim())
+        .filter((companyCode): companyCode is string => !!companyCode),
     [activeAssignments],
   )
 

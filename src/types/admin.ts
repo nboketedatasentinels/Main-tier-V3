@@ -1,4 +1,4 @@
-import type { Timestamp } from 'firebase/firestore'
+import type { FieldValue, Timestamp } from 'firebase/firestore'
 import type { JourneyType } from '@/config/pointsConfig'
 
 export interface AdminActivityLogEntry {
@@ -153,8 +153,8 @@ export interface PartnerAdminSnapshot {
   partnerId: string
   role: 'partner'
   assignedOrganizations: PartnerAssignment[]
-  createdAt?: Timestamp | string | Date
-  updatedAt?: Timestamp | string | Date
+  createdAt?: Timestamp | string | Date | FieldValue
+  updatedAt?: Timestamp | string | Date | FieldValue
 }
 
 export interface PartnerAdminUser {
