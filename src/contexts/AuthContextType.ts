@@ -44,7 +44,7 @@ export interface AuthContextType {
   // Organization Access
   assignedOrganizations: string[]
   hasFullOrganizationAccess: boolean
-  canAccessOrganization: (organizationId: string) => boolean
+  canAccessOrganization: (organizationId: string) => Promise<boolean>
   
   // Dashboard Preferences
   updateDashboardPreferences: (preferences: DashboardPreferences) => Promise<{ error: Error | null }>

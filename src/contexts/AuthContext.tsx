@@ -33,6 +33,7 @@ import {
   assignComplementaryCoursesToUser,
   hasComplementaryCourseAssigned,
 } from '@/services/courseAssignmentService'
+import { canAccessOrganization } from '@/services/organizationAccessService'
 import { createReferral, generateReferralCode, validateReferralCode } from '@/services/referralService'
 import { JOURNEY_META, type JourneyType } from '@/config/pointsConfig'
 
@@ -1229,9 +1230,14 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       profile?.transformationTier?.toLowerCase().includes('corporate') ?? false,
     assignedOrganizations: profile?.assignedOrganizations ?? [],
     hasFullOrganizationAccess: normalizedRole === 'super_admin',
-    canAccessOrganization: (organizationId: string) =>
-      normalizedRole === 'super_admin' ||
-      profile?.assignedOrganizations?.includes(organizationId) === true,
+    canAccessOrganization: async (organizationId: string) => {
+      if (!organizationId || !user?.uid || !profile?.role) return false
+      return canAccessOrganization({
+        role: profile.role,
+        userId: user.uid,
+        organizationId,
+      })
+    },
     updateDashboardPreferences: async () => ({ error: null }),
     claimsRole,
     refreshAdminSession,

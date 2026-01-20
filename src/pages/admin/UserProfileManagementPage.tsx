@@ -104,6 +104,7 @@ export const UserProfileManagementPage: React.FC<{ viewContext?: ViewContext }> 
   const [coreValuesInput, setCoreValuesInput] = useState('')
   const [notesInput, setNotesInput] = useState('')
   const accessLoggedRef = useRef(false)
+  const [canAccessProfile, setCanAccessProfile] = useState<boolean | null>(null)
 
   const isMentorView = viewContext === 'mentor' || isMentor
 
@@ -160,17 +161,38 @@ export const UserProfileManagementPage: React.FC<{ viewContext?: ViewContext }> 
     ])
   }, [isMentorView, isSuperAdmin])
 
-  const canAccessProfile = useMemo(() => {
-    if (!profileData || !viewerProfile) return false
-    if (isSuperAdmin) return true
+  useEffect(() => {
+    if (!profileData || !viewerProfile) {
+      setCanAccessProfile(false)
+      return
+    }
+    if (isSuperAdmin) {
+      setCanAccessProfile(true)
+      return
+    }
     if (isMentorView) {
-      return profileData.mentorId === viewerProfile.id
+      setCanAccessProfile(profileData.mentorId === viewerProfile.id)
+      return
     }
     if (isAdmin) {
-      if (!profileData.companyId) return false
-      return canAccessOrganization(profileData.companyId)
+      if (!profileData.companyId) {
+        setCanAccessProfile(false)
+        return
+      }
+      let isMounted = true
+      setCanAccessProfile(null)
+      void canAccessOrganization(profileData.companyId)
+        .then((allowed) => {
+          if (isMounted) setCanAccessProfile(allowed)
+        })
+        .catch(() => {
+          if (isMounted) setCanAccessProfile(false)
+        })
+      return () => {
+        isMounted = false
+      }
     }
-    return false
+    setCanAccessProfile(false)
   }, [canAccessOrganization, isAdmin, isMentorView, isSuperAdmin, profileData, viewerProfile])
 
   useEffect(() => {
@@ -214,7 +236,7 @@ export const UserProfileManagementPage: React.FC<{ viewContext?: ViewContext }> 
   }, [userId])
 
   useEffect(() => {
-    if (!profileData || !viewerProfile || accessLoggedRef.current) return
+    if (!profileData || !viewerProfile || accessLoggedRef.current || canAccessProfile === null) return
     const allowed = canAccessProfile
     const reason = allowed ? 'allowed' : 'denied'
     logUserProfileAccess({
@@ -425,6 +447,14 @@ export const UserProfileManagementPage: React.FC<{ viewContext?: ViewContext }> 
     return (
       <Flex minH="60vh" align="center" justify="center">
         <Text color="red.500">Unable to load profile.</Text>
+      </Flex>
+    )
+  }
+
+  if (canAccessProfile === null) {
+    return (
+      <Flex minH="60vh" align="center" justify="center">
+        <Spinner size="xl" />
       </Flex>
     )
   }

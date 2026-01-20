@@ -103,20 +103,29 @@ service cloud.firestore {
       return request.auth.token.role == role;
     }
 
+    function partnerHasOrgAccess(orgId) {
+      return isAuthenticated() &&
+        orgId != null &&
+        exists(/databases/$(database)/documents/partner_organizations/$(request.auth.uid + '_' + orgId));
+    }
+
+    function isPartnerWithOrgAccess() {
+      return isPartner() && (
+        partnerHasOrgAccess(resource.data.companyId) ||
+        partnerHasOrgAccess(resource.data.organizationId)
+      );
+    }
+
     // Organization access validation
     function canAccessOrganization(orgCode, orgId) {
-      return isSuperAdmin() || (
-        isPartner() && (
-          orgId != null &&
-          get(/databases/$(database)/documents/organizations/$(orgId)).data.partnerId == request.auth.uid
-        )
-      );
+      return isSuperAdmin() || (isPartner() && partnerHasOrgAccess(orgId));
     }
 
     function canAccessUser(userId) {
       return isSuperAdmin() || (
         isPartner() && (
-          get(/databases/$(database)/documents/users/$(userId)).data.partnerId == request.auth.uid
+          partnerHasOrgAccess(getProfile(userId).companyId) ||
+          partnerHasOrgAccess(getProfile(userId).organizationId)
         )
       );
     }
@@ -167,6 +176,11 @@ service cloud.firestore {
         request.resource.data.corporateVillageId == resource.data.corporateVillageId &&
         request.resource.data.cohortIdentifier == resource.data.cohortIdentifier &&
         request.resource.data.assignedOrganizations == resource.data.assignedOrganizations;
+    }
+
+    match /partner_organizations/{id} {
+      allow read: if request.auth != null &&
+        request.auth.uid == resource.data.partnerId;
     }
 
     // Profiles collection
@@ -248,8 +262,8 @@ service cloud.firestore {
       // Super admins can read all users, company admins can read based on profiles
       allow read: if isSuperAdmin() || canAccessUser(userId);
 
-      // Partners can read assigned users
-      allow read: if isPartner() && resource.data.partnerId == request.auth.uid;
+      // Partners can read users in assigned organizations
+      allow read: if isPartnerWithOrgAccess();
 
       // Mentors can read assigned mentee records only
       allow read: if isAuthenticated() && canAccessMentee(resource.data);

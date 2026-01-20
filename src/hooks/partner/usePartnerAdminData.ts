@@ -6,7 +6,6 @@ import { useAuth } from '@/hooks/useAuth'
 import { useRetryLogic } from '@/hooks/useRetryLogic'
 import { useWeeklyPointsFetcher } from '@/hooks/partner/useWeeklyPointsFetcher'
 import { usePartnerMetrics } from '@/hooks/partner/usePartnerMetrics'
-import { listenToPartnerAdminSnapshot } from '@/services/partnerAdminService'
 import { listenToOrganizationsByIds } from '@/services/organizationService'
 import {
   listenToOrganizationStatsUpdates,
@@ -25,7 +24,7 @@ import {
   getProgramWeekNumber,
   mapWeeklyPointsToProgress,
 } from '@/utils/partnerProgress'
-import type { PartnerAdminSnapshot, PartnerAssignment } from '@/types/admin'
+import type { PartnerAssignment } from '@/types/admin'
 
 // Firestore 'in' query limit
 const FIRESTORE_IN_QUERY_LIMIT = 30
@@ -169,7 +168,7 @@ const createChunkedOrgQueries = (
   }
 
   const queries: Query<DocumentData>[] = []
-  const queryFields = ['organizationId', 'organization_id'] as const
+  const queryFields = ['organizationId', 'organization_id', 'companyCode', 'company_code'] as const
 
   for (let i = 0; i < uniqueKeys.length; i += FIRESTORE_IN_QUERY_LIMIT) {
     const chunk = uniqueKeys.slice(i, i + FIRESTORE_IN_QUERY_LIMIT)
@@ -187,14 +186,18 @@ export const usePartnerAdminData = (
   options: UsePartnerAdminDataOptions = {},
 ) => {
   const { enabled = true, selectedOrg = 'all', debugMode = false } = options
-  const { profileStatus, isSuperAdmin, assignedOrganizations } = useAuth()
-  const [partnerSnapshot, setPartnerSnapshot] = useState<PartnerAdminSnapshot | null>(null)
+  const { profileStatus, isSuperAdmin } = useAuth()
   const [assignmentsLoading, setAssignmentsLoading] = useState(true)
   const [assignmentsError, setAssignmentsError] = useState<string | null>(null)
+  const [assignedOrganizationIds, setAssignedOrganizationIds] = useState<string[]>([])
 
   const assignments = useMemo(
-    () => partnerSnapshot?.assignedOrganizations ?? [],
-    [partnerSnapshot?.assignedOrganizations],
+    () =>
+      assignedOrganizationIds.map((organizationId) => ({
+        organizationId,
+        status: 'active',
+      })),
+    [assignedOrganizationIds],
   )
 
   const activeAssignments = useMemo(
@@ -202,24 +205,16 @@ export const usePartnerAdminData = (
     [assignments],
   )
 
-  const assignedOrganizationIds = useMemo(
-    () =>
-      activeAssignments
-        .map((assignment) => assignment.organizationId?.trim())
-        .filter((organizationId): organizationId is string => !!organizationId),
-    [activeAssignments],
-  )
-
   useEffect(() => {
     if (!enabled || profileStatus !== 'ready') {
-      setPartnerSnapshot(null)
+      setAssignedOrganizationIds([])
       setAssignmentsLoading(true)
       setAssignmentsError(null)
       return
     }
 
     if (isSuperAdmin || !partnerId) {
-      setPartnerSnapshot(null)
+      setAssignedOrganizationIds([])
       setAssignmentsLoading(false)
       setAssignmentsError(null)
       return
@@ -228,19 +223,34 @@ export const usePartnerAdminData = (
     setAssignmentsLoading(true)
     setAssignmentsError(null)
 
-    const unsubscribe = listenToPartnerAdminSnapshot(
-      partnerId,
-      (nextSnapshot) => {
-        setPartnerSnapshot(nextSnapshot)
+    const assignmentsQuery = query(
+      collection(db, 'partner_organizations'),
+      where('partnerId', '==', partnerId),
+    )
+
+    const unsubscribe = onSnapshot(
+      assignmentsQuery,
+      (snapshot) => {
+        const orgIds = snapshot.docs
+          .map((docSnap) => {
+            const data = docSnap.data() as { organizationId?: string }
+            if (data.organizationId) return data.organizationId.trim()
+            const [, organizationId] = docSnap.id.split('_')
+            return organizationId?.trim() || ''
+          })
+          .filter((organizationId): organizationId is string => !!organizationId)
+
+        const deduped = Array.from(new Set(orgIds))
+        setAssignedOrganizationIds(deduped)
         setAssignmentsLoading(false)
-        console.log('[PartnerAdminData] Partner doc loaded', {
+        console.log('[PartnerAdminData] Partner organizations loaded', {
           partnerId,
-          assignedOrgCount: nextSnapshot?.assignedOrganizations?.length ?? 0,
+          assignedOrgCount: deduped.length,
         })
       },
       (err) => {
         console.error('[PartnerAdminData] Failed to load partner assignments', err)
-        setPartnerSnapshot(null)
+        setAssignedOrganizationIds([])
         setAssignmentsLoading(false)
         setAssignmentsError('Unable to load partner assignments.')
       },
@@ -488,10 +498,14 @@ export const usePartnerAdminData = (
   }, [])
 
   const rawAssignedKeys = useMemo(() => {
-    const sourceAssignments = assignedOrganizationIds.length ? assignedOrganizationIds : assignedOrganizations
-    const expandedAssignments = expandAssignments(sourceAssignments)
-    return buildQueryKeys(expandedAssignments)
-  }, [assignedOrganizationIds, assignedOrganizations])
+    const baseKeys = assignedOrganizationIds.length ? assignedOrganizationIds : []
+    const expandedAssignments = expandAssignments(baseKeys)
+    const expandedFromOrganizations = organizationsReady
+      ? organizations.flatMap((org) => [org.id, org.code]).filter(Boolean)
+      : []
+    const combined = [...expandedAssignments, ...expandedFromOrganizations]
+    return buildQueryKeys(combined)
+  }, [assignedOrganizationIds, organizations, organizationsReady])
 
   const processingRef = useRef<{
     snapshotId: number
@@ -510,11 +524,9 @@ export const usePartnerAdminData = (
     }
 
     const canLoadUsers =
-      organizationsReady ||
       isSuperAdmin ||
       debugMode ||
-      assignedOrganizationIds.length > 0 ||
-      assignedOrganizations.length > 0
+      (organizationsReady && assignedOrganizationIds.length > 0)
 
     if (!canLoadUsers) {
       logger.debug('[PartnerAdminData] Waiting for organizations before loading users.')
@@ -612,6 +624,8 @@ export const usePartnerAdminData = (
             const userOrgKeys = createOrgKeySet([
               data.organizationId,
               data.organization_id,
+              data.companyCode,
+              data.company_code,
             ])
 
             if (!isSuperAdmin && !debugMode) {
@@ -909,7 +923,6 @@ export const usePartnerAdminData = (
   }, [
     assignedOrgKeys,
     assignedOrganizationIds.length,
-    assignedOrganizations.length,
     debugMode,
     enabled,
     fetchWeeklyPointsByUser,
