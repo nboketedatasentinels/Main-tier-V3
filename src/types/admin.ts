@@ -157,6 +157,31 @@ export interface PartnerAdminSnapshot {
   updatedAt?: Timestamp | string | Date
 }
 
+export interface PartnerAdminUser {
+  id: string
+  name: string
+  fullName?: string
+  createdAt?: string
+  lastActiveAt?: string
+  programStartDate?: string
+  email: string
+  companyCode: string
+  organizationId?: string
+  progressPercent: number
+  currentWeek: number
+  status: 'Active' | 'Paused' | 'Onboarding'
+  lastActive: string
+  riskStatus: 'engaged' | 'watch' | 'concern' | 'critical' | 'at_risk'
+  weeklyEarned: number
+  weeklyRequired: number
+  role?: 'learner' | 'mentor' | 'user' | 'team_leader'
+  riskReasons?: string[]
+  registrationDate?: string
+  interventions?: number
+  nudgeEnabled?: boolean
+  adminNotes?: string
+}
+
 export interface PartnerAdminPointsOverview {
   totalPoints: number
   weeklyPoints: number
@@ -169,7 +194,7 @@ export interface PartnerAdminDataSnapshot {
   partnerId: string
   assignedOrganizations: PartnerAssignment[]
   organizations: OrganizationRecord[]
-  users: OrganizationUserProfile[]
+  users: PartnerAdminUser[]
   pointsOverview: PartnerAdminPointsOverview
   usersFetchedAt?: Date
   createdAt?: Timestamp | string | Date

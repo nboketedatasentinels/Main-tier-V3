@@ -79,43 +79,7 @@ export const usePartnerDashboardData = (options?: UsePartnerDashboardDataOptions
     }))
   }, [adminSnapshot?.organizations])
 
-  const users = useMemo(() => {
-    if (!adminSnapshot?.users?.length) return []
-    return adminSnapshot.users.map((userRecord) => {
-      const companyCode = userRecord.companyCode?.trim() || userRecord.organizationId?.trim() || ''
-      const organizationId = userRecord.organizationId?.trim() || undefined
-      const lastActive =
-        userRecord.lastActive?.toISOString() ||
-        userRecord.createdAt?.toISOString() ||
-        new Date(0).toISOString()
-      const registrationDate = userRecord.createdAt?.toISOString()
-      const role = ['learner', 'mentor', 'user', 'team_leader'].includes(userRecord.role)
-        ? (userRecord.role as 'learner' | 'mentor' | 'user' | 'team_leader')
-        : 'user'
-      return {
-        id: userRecord.id,
-        name: userRecord.name,
-        fullName: userRecord.name,
-        createdAt: userRecord.createdAt?.toISOString(),
-        lastActiveAt: userRecord.lastActive?.toISOString(),
-        programStartDate: registrationDate,
-        email: userRecord.email || '',
-        companyCode,
-        organizationId,
-        progressPercent: 0,
-        currentWeek: 0,
-        status: userRecord.accountStatus === 'suspended' ? 'Paused' : 'Active',
-        lastActive,
-        riskStatus: 'watch',
-        weeklyEarned: 0,
-        weeklyRequired: 0,
-        role,
-        riskReasons: [],
-        registrationDate,
-        interventions: 0,
-      }
-    })
-  }, [adminSnapshot?.users])
+  const users = useMemo(() => adminSnapshot?.users ?? [], [adminSnapshot?.users])
 
   const organizationLookup = useMemo(() => {
     if (!organizations.length) return new Map<string, string>()
