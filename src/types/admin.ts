@@ -171,6 +171,7 @@ export interface PartnerAdminDataSnapshot {
   organizations: OrganizationRecord[]
   users: OrganizationUserProfile[]
   pointsOverview: PartnerAdminPointsOverview
+  usersFetchedAt?: Date
   createdAt?: Timestamp | string | Date
   updatedAt?: Timestamp | string | Date
 }

@@ -69,6 +69,7 @@ export const fetchPartnerAdminSnapshot = async (
     assignedOrganizations,
     organizations,
     users: Array.from(usersMap.values()),
+    usersFetchedAt: new Date(),
     pointsOverview: buildEmptyPointsOverview(),
     createdAt: data.createdAt,
     updatedAt: data.updatedAt,
