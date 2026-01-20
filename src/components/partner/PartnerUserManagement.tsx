@@ -146,25 +146,25 @@ export const PartnerUserManagement: React.FC<PartnerUserManagementProps> = ({
   // FIX #2: Added validation to prevent duplicate keys from missing org codes
   // ============================================================================
   const organizationOptions = useMemo(() => {
-    const seenCodes = new Set<string>()
+    const seenIds = new Set<string>()
     const validOrgs = organizations
       .map((org, index) => {
-        // Generate a unique code, falling back to index-based ID if needed
-        let code = org.code || org.id || `org-${index}`
+        // Generate a unique id, falling back to index-based ID if needed
+        let id = org.id || org.code || `org-${index}`
         // Ensure uniqueness
-        if (seenCodes.has(code.toLowerCase())) {
-          code = `${code}-${index}`
+        if (seenIds.has(id.toLowerCase())) {
+          id = `${id}-${index}`
         }
-        seenCodes.add(code.toLowerCase())
-        
+        seenIds.add(id.toLowerCase())
+
         return {
           ...org,
-          code,
+          id,
           name: org.name || org.code || org.id || 'Unknown organization',
         }
       })
-    
-    return [{ code: 'all', name: 'All Companies' }, ...validOrgs]
+
+    return [{ id: 'all', name: 'All Companies' }, ...validOrgs]
   }, [organizations])
 
   const filtered = useMemo(() => {
@@ -172,12 +172,7 @@ export const PartnerUserManagement: React.FC<PartnerUserManagementProps> = ({
     if (selectedOrg === 'all') return safeUsers
 
     const selectedKey = selectedOrg.toLowerCase()
-    return safeUsers.filter((u) =>
-      [u.companyCode, u.organizationId]
-        .filter((v): v is string => typeof v === 'string' && v.length > 0)
-        .map((v) => v.toLowerCase())
-        .includes(selectedKey),
-    )
+    return safeUsers.filter((u) => u.organizationId?.toLowerCase() === selectedKey)
   }, [users, usersLoading, selectedOrg])
 
   const learnerUsers = useMemo(
@@ -454,7 +449,7 @@ export const PartnerUserManagement: React.FC<PartnerUserManagementProps> = ({
         </Stack>
         <Select maxW="240px" value={selectedOrg} onChange={e => onSelectOrg(e.target.value)}>
           {organizationOptions.map(org => (
-            <option key={org.code} value={org.code}>
+            <option key={org.id} value={org.id}>
               {org.name}
             </option>
           ))}
