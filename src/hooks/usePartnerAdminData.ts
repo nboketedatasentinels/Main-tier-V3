@@ -8,7 +8,13 @@ import type { PartnerAdminDataSnapshot, PartnerAdminSnapshot } from '@/types/adm
 export const usePartnerAdminData = (
   partnerId?: string | null,
   assignedOrganizations: string[] = [],
-) => {
+): {
+  snapshot: PartnerAdminDataSnapshot | null
+  loading: boolean
+  error: string | null
+  refresh: () => void
+  debugInfo: DashboardDebugInfo | null
+} => {
   const [snapshot, setSnapshot] = useState<PartnerAdminDataSnapshot | null>(null)
   const [loading, setLoading] = useState<boolean>(() => !!partnerId)
   const [error, setError] = useState<string | null>(null)
