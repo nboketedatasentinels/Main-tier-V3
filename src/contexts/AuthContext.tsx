@@ -73,6 +73,21 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     circuitBrokenUntil: 0,
   })
   const pendingCompanyCodeKey = 't4l.pendingCompanyCode'
+  const offlineErrorMessage = 'Network error. Please check your connection.'
+
+  const buildOfflineError = useCallback(() => new Error(offlineErrorMessage), [offlineErrorMessage])
+
+  const isOfflineError = useCallback((error: unknown) => {
+    if (typeof navigator !== 'undefined' && navigator.onLine === false) return true
+    const code = error instanceof FirebaseError
+      ? error.code
+      : typeof error === 'object' && error && 'code' in error
+        ? (error as { code?: string }).code
+        : undefined
+    if (code === 'unavailable' || code === 'auth/network-request-failed') return true
+    if (error instanceof Error && /offline/i.test(error.message)) return true
+    return false
+  }, [])
 
   useEffect(() => {
     profileRef.current = profile
@@ -235,6 +250,10 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       })
       return rawProfile
     } catch (error) {
+      if (isOfflineError(error)) {
+        console.warn('🟠 [Auth] fetchProfileOnce offline', { uid })
+        throw buildOfflineError()
+      }
       console.error('🔴 [Auth] fetchProfileOnce error', {
         uid,
         message: (error as Error)?.message,
@@ -243,9 +262,15 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       })
       return null
     }
-  }, [])
+  }, [buildOfflineError, isOfflineError])
 
   const fetchProfileWithRetry = async (firebaseUser: User, attempts = 3): Promise<UserProfile | null> => {
+    if (typeof navigator !== 'undefined' && navigator.onLine === false) {
+      const offlineError = buildOfflineError()
+      setProfileError(offlineError)
+      return null
+    }
+
     let lastError: Error | null = null
     for (let attempt = 1; attempt <= attempts; attempt += 1) {
       const delayMs = Math.min(500 * 2 ** (attempt - 1), 3000)
@@ -262,6 +287,10 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         }
         lastError = new Error('Profile unavailable after fetch attempt.')
       } catch (error) {
+        if (isOfflineError(error)) {
+          lastError = buildOfflineError()
+          break
+        }
         lastError = error instanceof Error ? error : new Error('Profile fetch failed.')
       }
 
@@ -505,6 +534,10 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
       return profileData
     } catch (error: unknown) {
+      if (isOfflineError(error)) {
+        console.warn('🟠 [Auth] fetchOrCreateProfile offline', { uid: firebaseUser.uid })
+        throw buildOfflineError()
+      }
       const message = error instanceof Error ? error.message : 'Unknown error'
       const code = error instanceof FirebaseError ? error.code : 'unknown'
 
@@ -530,7 +563,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       }
       return null
     }
-  }, [getNameParts, pendingCompanyCodeKey])
+  }, [buildOfflineError, getNameParts, isOfflineError, pendingCompanyCodeKey])
 
   const refreshAdminSession = async () => {
     if (!user) return
@@ -1135,6 +1168,13 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       setProfileLoading(false)
       return { error: null, profile: refreshed }
     } catch (error) {
+      if (isOfflineError(error)) {
+        const offlineError = buildOfflineError()
+        console.warn('🟠 [Auth] refreshProfile offline', { reason })
+        setProfileError(offlineError)
+        setProfileLoading(false)
+        return { error: offlineError, profile: null as UserProfile | null }
+      }
       console.error('🔴 [Auth] refreshProfile error', { reason, error })
       setProfileError(error as Error)
       setProfileLoading(false)
@@ -1142,7 +1182,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     } finally {
       refreshState.inFlight = false
     }
-  }, [fetchOrCreateUserDoc, fetchProfileOnce, recordProfileLoad, updateProfileState])
+  }, [buildOfflineError, fetchOrCreateUserDoc, fetchProfileOnce, isOfflineError, recordProfileLoad, updateProfileState])
 
   /* ------------------------------------------------------------------ */
   /* 🔹 Role Flags (LOGGED)                                              */
