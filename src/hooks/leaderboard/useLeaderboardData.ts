@@ -31,8 +31,9 @@ export interface ChallengeRecord {
   endDate: string
   yourPoints: number
   opponentPoints: number
-  status: 'active' | 'completed' | 'upcoming'
+  status: 'active' | 'completed' | 'upcoming' | 'pending'
   result?: 'win' | 'loss' | 'draw'
+  type?: 'competitive' | 'collaborative'
 }
 
 interface LeaderboardDataState {
@@ -88,30 +89,37 @@ const buildTransactionConstraints = (context: LeaderboardContext | null): QueryC
   return constraints
 }
 
+// FIX: Updated challenge constraints to query by participant, not by org
+// Organization filtering is done client-side after fetching
 const buildChallengeConstraints = (
-  context: LeaderboardContext | null,
   profileId: string | null | undefined
 ): QueryConstraint[] | null => {
   if (!profileId) return null
 
   const constraints: QueryConstraint[] = []
 
-  // Filter by participant
+  // Query challenges where this user is a participant
+  // Using 'participants' array field that includes both challenger_id and challenged_id
   constraints.push(where('participants', 'array-contains', profileId))
+  constraints.push(orderBy('created_at', 'desc'))
+  constraints.push(limit(50))
 
-  // Add organization filtering to prevent cross-org challenge visibility
-  if (context?.type === 'organization') {
-    if (context.organizationId) {
-      constraints.push(where('company_id', '==', context.organizationId))
-    } else if (context.organizationCode) {
-      constraints.push(where('company_code', '==', context.organizationCode))
-    } else {
-      return null
-    }
-  }
+  return constraints
+}
 
-  constraints.push(orderBy('startDate', 'desc'))
+// FIX: Alternative query using challenger_id/challenged_id if participants array doesn't exist
+const buildLegacyChallengeConstraints = (
+  profileId: string | null | undefined,
+  isChallenger: boolean
+): QueryConstraint[] | null => {
+  if (!profileId) return null
+
+  const constraints: QueryConstraint[] = []
+  const field = isChallenger ? 'challenger_id' : 'challenged_id'
+  constraints.push(where(field, '==', profileId))
+  constraints.push(orderBy('created_at', 'desc'))
   constraints.push(limit(25))
+
   return constraints
 }
 
@@ -323,67 +331,187 @@ export const useLeaderboardData = ({
     }
   }, [context, transactionsRetry])
 
+  // FIX: Completely rewritten challenge fetching logic
+  // Now queries by participant and handles legacy data structures
   useEffect(() => {
-    const constraints = buildChallengeConstraints(context, profileId)
-    if (!constraints) {
+    if (!profileId) {
       setChallenges([])
       setChallengesLoaded(true)
-      if (context?.type === 'organization' && (!context.organizationId && !context.organizationCode)) {
-        console.warn('[Leaderboard] Missing organization identifier for challenge query.')
-      }
+      console.log('[Leaderboard] No profileId, skipping challenges query.')
       return
     }
 
-    const challengeQuery = query(collection(db, 'challenges'), ...constraints)
-
     setChallengesLoaded(false)
-    console.log('[Leaderboard] Challenges query constraints', { contextType: context?.type, constraints })
-    const unsubscribe = onSnapshot(
-      challengeQuery,
-      (snapshot) => {
-        const loadedChallenges: ChallengeRecord[] = snapshot.docs.map((doc) => {
-          const data = doc.data() as Record<string, unknown>
-          return {
-            id: doc.id,
-            opponentName: (data.opponentName as string) || 'Peer Challenger',
-            opponentAvatar: data.opponentAvatar as string | undefined,
-            opponentId: data.opponentId as string | undefined,
-            startDate: (data.startDate as string) || new Date().toISOString(),
-            endDate: (data.endDate as string) || new Date().toISOString(),
-            yourPoints: (data.yourPoints as number) || 0,
-            opponentPoints: (data.opponentPoints as number) || 0,
-            status: (data.status as ChallengeRecord['status']) || 'active',
-            result: data.result as ChallengeRecord['result'],
-          }
-        })
+    console.log('[Leaderboard] Starting challenges query for profileId:', profileId)
 
-        setChallenges(loadedChallenges)
-        setChallengesLoaded(true)
-        setErrorMessage(null)
-        console.log('[Leaderboard] Challenges fetched', {
-          contextType: context?.type,
-          count: loadedChallenges.length,
-        })
-      },
-      (error) => {
-        handleSnapshotError(
-          'challenges',
-          error,
-          setChallengesLoaded,
-          challengesRetry,
-          setChallengesRetry,
-          challengesRetryTimeout
-        )
+    // Helper to convert Firestore data to ChallengeRecord
+    const mapChallenge = (doc: any, currentUserId: string): ChallengeRecord => {
+      const data = doc.data() as Record<string, unknown>
+      
+      // Determine if current user is challenger or challenged
+      const isChallenger = data.challenger_id === currentUserId
+      const opponentId = isChallenger ? data.challenged_id : data.challenger_id
+      const opponentName = isChallenger 
+        ? (data.challenged_name as string) || 'Opponent'
+        : (data.challenger_name as string) || 'Opponent'
+      
+      // Get points for current user and opponent
+      const metrics = data.metrics as Record<string, { total?: number }> | undefined
+      const yourPoints = isChallenger 
+        ? (metrics?.challenger?.total || 0)
+        : (metrics?.challenged?.total || 0)
+      const opponentPoints = isChallenger
+        ? (metrics?.challenged?.total || 0)
+        : (metrics?.challenger?.total || 0)
+
+      // Parse dates
+      const parseDate = (val: unknown): string => {
+        if (!val) return new Date().toISOString()
+        if (typeof val === 'string') return val
+        if (val instanceof Date) return val.toISOString()
+        if (typeof val === 'object' && 'toDate' in val) {
+          return (val as { toDate: () => Date }).toDate().toISOString()
+        }
+        return new Date().toISOString()
       }
-    )
 
-    return () => {
-      unsubscribe()
-      if (challengesRetryTimeout.current) {
-        clearTimeout(challengesRetryTimeout.current)
+      // Determine result for completed challenges
+      let result: ChallengeRecord['result'] | undefined
+      if (data.status === 'completed') {
+        if (yourPoints > opponentPoints) result = 'win'
+        else if (yourPoints < opponentPoints) result = 'loss'
+        else result = 'draw'
+      }
+
+      return {
+        id: doc.id,
+        opponentName,
+        opponentId: opponentId as string | undefined,
+        opponentAvatar: undefined, // Could be fetched separately if needed
+        startDate: parseDate(data.start_date),
+        endDate: parseDate(data.end_date),
+        yourPoints,
+        opponentPoints,
+        status: (data.status as ChallengeRecord['status']) || 'pending',
+        result,
+        type: data.type as ChallengeRecord['type'],
       }
     }
-  }, [context, profileId, challengesRetry])
+
+    // Try the participants array query first
+    const participantsConstraints = buildChallengeConstraints(profileId)
+    
+    if (participantsConstraints) {
+      const challengeQuery = query(collection(db, 'challenges'), ...participantsConstraints)
+      
+      const unsubscribe = onSnapshot(
+        challengeQuery,
+        (snapshot) => {
+          if (snapshot.docs.length > 0) {
+            // participants array query worked
+            const loadedChallenges = snapshot.docs.map((doc) => mapChallenge(doc, profileId))
+            setChallenges(loadedChallenges)
+            setChallengesLoaded(true)
+            setErrorMessage(null)
+            console.log('[Leaderboard] Challenges fetched via participants array', {
+              count: loadedChallenges.length,
+              statuses: loadedChallenges.map(c => c.status),
+            })
+          } else {
+            // Fall back to legacy queries
+            console.log('[Leaderboard] No results from participants query, trying legacy queries...')
+            fetchLegacyChallenges()
+          }
+        },
+        (error) => {
+          console.error('[Leaderboard] Participants query error, trying legacy:', error)
+          fetchLegacyChallenges()
+        }
+      )
+
+      const fetchLegacyChallenges = async () => {
+        try {
+          // Query as challenger
+          const challengerConstraints = buildLegacyChallengeConstraints(profileId, true)
+          const challengedConstraints = buildLegacyChallengeConstraints(profileId, false)
+
+          const challengerQuery = challengerConstraints 
+            ? query(collection(db, 'challenges'), ...challengerConstraints)
+            : null
+          const challengedQuery = challengedConstraints
+            ? query(collection(db, 'challenges'), ...challengedConstraints)
+            : null
+
+          const results: ChallengeRecord[] = []
+          const seenIds = new Set<string>()
+
+          if (challengerQuery) {
+            const challengerUnsubscribe = onSnapshot(
+              challengerQuery,
+              (snapshot) => {
+                snapshot.docs.forEach((doc) => {
+                  if (!seenIds.has(doc.id)) {
+                    seenIds.add(doc.id)
+                    results.push(mapChallenge(doc, profileId))
+                  }
+                })
+              },
+              (error) => console.error('[Leaderboard] Challenger query error:', error)
+            )
+          }
+
+          if (challengedQuery) {
+            const challengedUnsubscribe = onSnapshot(
+              challengedQuery,
+              (snapshot) => {
+                snapshot.docs.forEach((doc) => {
+                  if (!seenIds.has(doc.id)) {
+                    seenIds.add(doc.id)
+                    results.push(mapChallenge(doc, profileId))
+                  }
+                })
+                
+                // Sort by created_at desc and update state
+                results.sort((a, b) => new Date(b.startDate).getTime() - new Date(a.startDate).getTime())
+                setChallenges(results)
+                setChallengesLoaded(true)
+                console.log('[Leaderboard] Challenges fetched via legacy queries', {
+                  count: results.length,
+                })
+              },
+              (error) => {
+                console.error('[Leaderboard] Challenged query error:', error)
+                setChallenges([])
+                setChallengesLoaded(true)
+              }
+            )
+          }
+
+          // If no queries, mark as loaded
+          if (!challengerQuery && !challengedQuery) {
+            setChallenges([])
+            setChallengesLoaded(true)
+          }
+        } catch (error) {
+          console.error('[Leaderboard] Legacy challenges fetch error:', error)
+          setChallenges([])
+          setChallengesLoaded(true)
+        }
+      }
+
+      return () => {
+        unsubscribe()
+        if (challengesRetryTimeout.current) {
+          clearTimeout(challengesRetryTimeout.current)
+        }
+      }
+    }
+
+    // No valid constraints
+    setChallenges([])
+    setChallengesLoaded(true)
+    return undefined
+  }, [profileId, challengesRetry])
 
   return {
     profiles,
