@@ -79,10 +79,14 @@ export const PartnerDashboard: React.FC = () => {
     notificationsError,
     debugInfo,
     snapshot,
+    adminDataLoading,
   } = usePartnerDashboardData({ debugMode })
   const { organizations, users, analytics } = snapshot
   const { metrics, engagementTrend, riskLevels, atRiskUsers, managedBreakdown, daysUntil } =
     analytics
+  const snapshotUsers = snapshot?.users ?? []
+  const snapshotOrganizations = snapshot?.organizations ?? []
+  const snapshotLoading = adminDataLoading
   const enableProfileRealtime = import.meta.env.VITE_ENABLE_PROFILE_REALTIME === 'true'
   const supportEmail = 'support@transformation4leaders.com'
   const formatDistanceToNowSafe = (
@@ -567,11 +571,11 @@ export const PartnerDashboard: React.FC = () => {
       <Card bg="white" border="1px solid" borderColor="brand.border">
         <CardBody>
           <PartnerUserManagement
-            users={users}
-            usersLoading={usersLoading}
-            organizations={organizations}
-            organizationsLoading={organizationsLoading}
-            organizationsReady={organizationsReady}
+            users={snapshotUsers}
+            usersLoading={snapshotLoading}
+            organizations={snapshotOrganizations}
+            organizationsLoading={snapshotLoading}
+            organizationsReady={!snapshotLoading}
             selectedOrg={selectedOrg}
             onSelectOrg={setSelectedOrg}
             updateUserPoints={updateUserPoints}
@@ -1053,11 +1057,11 @@ export const PartnerDashboard: React.FC = () => {
             </HStack>
 
             <PartnerUserManagement
-              users={users}
-              usersLoading={usersLoading}
-              organizations={organizations}
-              organizationsLoading={organizationsLoading}
-              organizationsReady={organizationsReady}
+              users={snapshotUsers}
+              usersLoading={snapshotLoading}
+              organizations={snapshotOrganizations}
+              organizationsLoading={snapshotLoading}
+              organizationsReady={!snapshotLoading}
               selectedOrg={selectedOrg}
               onSelectOrg={setSelectedOrg}
               updateUserPoints={updateUserPoints}
