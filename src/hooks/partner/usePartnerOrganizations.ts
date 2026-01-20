@@ -81,7 +81,7 @@ export const usePartnerOrganizations = (options: UsePartnerOrganizationsOptions 
 
   // FIX #6: Use centralized normalization for org keys
   const assignedOrgKeys = useMemo(() => {
-    const keys: string[] = [...assignedOrganizationIds.filter(Boolean)]
+    const keys: string[] = [...assignedOrganizationIds]
 
     if (ready) {
       organizations.forEach((org) => {

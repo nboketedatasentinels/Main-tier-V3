@@ -26,6 +26,7 @@ import {
   AdminRole,
   AdminUserRecord,
   PartnerAssignment,
+  PartnerAssignmentStatus,
   EngagementRiskAggregate,
   OrganizationMemberStats,
   OrganizationRecord,
@@ -47,6 +48,24 @@ const adminRoles: AdminRole[] = ['super_admin', 'partner', 'mentor', 'ambassador
 
 const getActorId = () => auth.currentUser?.uid
 const getActorName = () => auth.currentUser?.displayName || undefined
+
+const mapOrganizationStatusToPartnerAssignment = (
+  status?: OrganizationRecord['status'],
+): PartnerAssignmentStatus => {
+  switch (status) {
+    case 'watch':
+      return 'watch'
+    case 'inactive':
+      return 'inactive'
+    case 'suspended':
+      return 'paused'
+    case 'pending':
+      return 'inactive'
+    case 'active':
+    default:
+      return 'active'
+  }
+}
 
 export const fetchDashboardMetrics = async (
   filters?: Partial<{ organizationCodes: string[]; organizationIds: string[]; trendDays: number }>,
@@ -519,7 +538,7 @@ export const assignOrganizations = async (adminId: string, orgIds: string[]) => 
           return {
             organizationId,
             companyCode: orgRecord?.code,
-            status: orgRecord?.status ?? 'active',
+            status: mapOrganizationStatusToPartnerAssignment(orgRecord?.status),
           }
         })
       })()

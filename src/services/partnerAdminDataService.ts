@@ -12,18 +12,17 @@ import { db } from './firebase'
 const FIRESTORE_IN_QUERY_LIMIT = 30
 
 const normalizeAssignments = (assignments: PartnerAssignment[] = []): PartnerAssignment[] =>
-  assignments
-    .map((assignment) => {
-      const organizationId = assignment.organizationId?.trim()
-      const companyCode = assignment.companyCode?.trim()
-      if (!organizationId && !companyCode) return null
-      return {
-        organizationId: organizationId || undefined,
-        companyCode: companyCode || undefined,
-        status: assignment.status ?? 'active',
-      }
+  assignments.reduce<PartnerAssignment[]>((normalized, assignment) => {
+    const organizationId = assignment.organizationId?.trim()
+    const companyCode = assignment.companyCode?.trim()
+    if (!organizationId && !companyCode) return normalized
+    normalized.push({
+      organizationId: organizationId || undefined,
+      companyCode: companyCode || undefined,
+      status: assignment.status ?? 'active',
     })
-    .filter((assignment): assignment is PartnerAssignment => !!assignment)
+    return normalized
+  }, [])
 
 const buildEmptyPointsOverview = (): PartnerAdminPointsOverview => ({
   totalPoints: 0,

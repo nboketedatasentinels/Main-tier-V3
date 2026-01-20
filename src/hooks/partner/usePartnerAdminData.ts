@@ -65,6 +65,8 @@ export interface PartnerUser {
   riskReasons?: string[]
   registrationDate?: string
   interventions?: number
+  nudgeEnabled?: boolean
+  adminNotes?: string
 }
 
 type FirestorePartnerUser = Partial<PartnerUser> & {
@@ -203,8 +205,8 @@ export const usePartnerAdminData = (
   const assignedOrganizationIds = useMemo(
     () =>
       activeAssignments
-        .map((assignment) => assignment.organizationId)
-        .filter((organizationId) => organizationId && organizationId.length > 0),
+        .map((assignment) => assignment.organizationId?.trim())
+        .filter((organizationId): organizationId is string => !!organizationId),
     [activeAssignments],
   )
 
@@ -290,7 +292,7 @@ export const usePartnerAdminData = (
   }, [organizations])
 
   const assignedOrgKeys = useMemo(() => {
-    const keys: string[] = [...assignedOrganizationIds.filter(Boolean)]
+    const keys: string[] = [...assignedOrganizationIds]
 
     if (organizationsReady) {
       organizations.forEach((org) => {

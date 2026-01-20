@@ -44,6 +44,8 @@ export interface PartnerUser {
   riskReasons?: string[]
   registrationDate?: string
   interventions?: number
+  nudgeEnabled?: boolean
+  adminNotes?: string
 }
 
 // FIX #12: Proper types instead of `any`
