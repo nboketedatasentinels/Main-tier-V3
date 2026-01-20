@@ -111,8 +111,18 @@ const fetchUsersByCompanyCodes = async (
           data.email ||
           'Unknown user'
 
-        // Normalize role to lowercase
-        const role = (data.role || 'learner').toLowerCase()
+        // Normalize role to lowercase and map legacy roles to standard roles
+        const rawRole = (data.role || 'learner').toLowerCase()
+        // Map legacy/variant roles to standard roles
+        // "paid_member" and similar are organization-backed learners
+        const roleMapping: Record<string, string> = {
+          'paid_member': 'learner',
+          'paid_user': 'learner',
+          'member': 'learner',
+          'user': 'learner',
+          'student': 'learner',
+        }
+        const role = roleMapping[rawRole] || rawRole
 
         // Normalize status
         const accountStatus = data.accountStatus || data.status || 'active'
