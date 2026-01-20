@@ -152,6 +152,10 @@ export async function awardChecklistPoints(params: {
       const totalPoints = Math.max(0, currentTotal + activity.points);
       const level = calculateLevel(totalPoints);
 
+      if (import.meta.env.VITE_FEATURE_FLAG_PARALLEL_WINDOW_TRACKING === 'true') {
+        await updateWindowOnAward(tx, { uid, journeyType, weekNumber, activity });
+      }
+
       tx.set(ledgerRef, {
         uid,
         weekNumber,
@@ -200,10 +204,6 @@ export async function awardChecklistPoints(params: {
 
       tx.set(doc(db, "users", uid), profileUpdate, { merge: true });
       tx.set(doc(db, "profiles", uid), profileUpdate, { merge: true });
-
-      if (import.meta.env.VITE_FEATURE_FLAG_PARALLEL_WINDOW_TRACKING === 'true') {
-        await updateWindowOnAward(tx, { uid, journeyType, weekNumber, activity });
-      }
     });
 
     // Post-transaction logic
@@ -283,6 +283,10 @@ export async function revokeChecklistPoints(params: {
       const totalPoints = Math.max(0, currentTotal - ledgerPoints);
       const level = calculateLevel(totalPoints);
 
+      if (import.meta.env.VITE_FEATURE_FLAG_PARALLEL_WINDOW_TRACKING === 'true') {
+        await updateWindowOnRevoke(tx, { uid, journeyType, weekNumber, activity });
+      }
+
       tx.delete(ledgerRef);
 
       tx.set(
@@ -321,10 +325,6 @@ export async function revokeChecklistPoints(params: {
 
       tx.set(doc(db, "users", uid), profileUpdate, { merge: true });
       tx.set(doc(db, "profiles", uid), profileUpdate, { merge: true });
-
-      if (import.meta.env.VITE_FEATURE_FLAG_PARALLEL_WINDOW_TRACKING === 'true') {
-        await updateWindowOnRevoke(tx, { uid, journeyType, weekNumber, activity });
-      }
     });
   } catch (error) {
     console.error("🔴 [Points] Failed to revoke checklist points", error);
