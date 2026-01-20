@@ -4,18 +4,12 @@ import { db } from './firebase'
 
 // ============================================================================
 // CRITICAL FIX: Changed from 'users' to 'profiles'
-// 
-// The bug: Partner dashboard was querying the 'users' collection, but user data
-// actually lives in the 'profiles' collection. This caused:
-// - Metrics to show numbers (computed elsewhere from profiles)
-// - Partner UI to show "No users found" (because 'users' collection is empty/different)
-// - Super Admin to see users (because it reads from profiles)
 // ============================================================================
 const profilesCollection = collection(db, 'profiles')
-
-// Keep a reference to users collection for operations that still need it
-// (e.g., checkOrganizationAccess which checks assignedOrganizations on users)
 const usersCollection = collection(db, 'users')
+
+// DEBUG: Log on module load to confirm this file is being used
+console.log('[organizationUserService] ✅ Module loaded - querying PROFILES collection')
 
 const parseUserDate = (value?: Timestamp | string | Date | number | null): Date | null => {
   if (!value) return null
@@ -32,11 +26,19 @@ const parseUserDate = (value?: Timestamp | string | Date | number | null): Date 
 
 /**
  * Fetch profile documents for users belonging to an organization.
- * Queries the 'profiles' collection (not 'users') using multiple field variants.
  */
 const fetchOrganizationUserDocs = async (organizationKey: string): Promise<DocumentSnapshot[]> => {
   const trimmed = organizationKey.trim()
-  if (!trimmed) return []
+  
+  // DEBUG: Log every call
+  console.log('[fetchOrganizationUserDocs] 🔍 Called with organizationKey:', trimmed)
+  
+  if (!trimmed) {
+    console.log('[fetchOrganizationUserDocs] ⚠️ Empty organizationKey, returning []')
+    return []
+  }
+  
+  console.log('[fetchOrganizationUserDocs] 📡 Querying PROFILES collection...')
   
   // Query profiles collection with all possible organization identifier fields
   const [
@@ -53,6 +55,15 @@ const fetchOrganizationUserDocs = async (organizationKey: string): Promise<Docum
     getDocs(query(profilesCollection, where('organizationId', '==', trimmed))),
   ])
   
+  // DEBUG: Log results from each query
+  console.log('[fetchOrganizationUserDocs] 📊 Query results:', {
+    companyCode: companySnapshot.docs.length,
+    company_code: legacyCompanySnapshot.docs.length,
+    organization_code: orgCodeSnapshot.docs.length,
+    companyId: companyIdSnapshot.docs.length,
+    organizationId: organizationIdSnapshot.docs.length,
+  })
+  
   // Deduplicate by document ID
   const usersMap = new Map<string, DocumentSnapshot>()
   companySnapshot.docs.forEach((docSnap) => usersMap.set(docSnap.id, docSnap))
@@ -61,13 +72,27 @@ const fetchOrganizationUserDocs = async (organizationKey: string): Promise<Docum
   companyIdSnapshot.docs.forEach((docSnap) => usersMap.set(docSnap.id, docSnap))
   organizationIdSnapshot.docs.forEach((docSnap) => usersMap.set(docSnap.id, docSnap))
   
-  return Array.from(usersMap.values())
+  const result = Array.from(usersMap.values())
+  console.log('[fetchOrganizationUserDocs] ✅ Total unique profiles found:', result.length)
+  
+  // DEBUG: Log sample data from first profile
+  if (result.length > 0) {
+    const sampleData = result[0].data()
+    console.log('[fetchOrganizationUserDocs] 📋 Sample profile data:', {
+      id: result[0].id,
+      name: sampleData?.name || sampleData?.fullName,
+      email: sampleData?.email,
+      role: sampleData?.role,
+      organizationId: sampleData?.organizationId,
+      companyCode: sampleData?.companyCode,
+    })
+  }
+  
+  return result
 }
 
 /**
  * Check whether a user has access to an organization based on assigned organizations.
- * Note: This still queries the 'users' collection because assignedOrganizations
- * is stored there for admin/partner users.
  */
 export const checkOrganizationAccess = async (
   userId: string,
@@ -93,7 +118,6 @@ export const checkOrganizationAccess = async (
 
 /**
  * Calculate engagement and membership statistics for an organization.
- * Now queries 'profiles' collection.
  */
 export const fetchOrganizationEngagementStats = async (organizationKey: string): Promise<OrganizationStatistics> => {
   if (!organizationKey) {
@@ -128,7 +152,6 @@ export const fetchOrganizationEngagementStats = async (organizationKey: string):
       engagementScore?: number
       engagementRate?: number
     }
-    // Check both accountStatus and status fields
     const accountStatus = data.accountStatus || data.status || 'active'
     if (accountStatus === 'active' || accountStatus === 'Active') {
       activeMembers += 1
@@ -160,47 +183,40 @@ export const fetchOrganizationEngagementStats = async (organizationKey: string):
 
 /**
  * Fetch user profiles associated with an organization.
- * 
- * CRITICAL FIX: Now queries 'profiles' collection and maps all fields
- * with proper defaults so the UI renders correctly.
  */
 export const fetchOrganizationUsers = async (organizationKey: string): Promise<OrganizationUserProfile[]> => {
-  if (!organizationKey) return []
+  console.log('[fetchOrganizationUsers] 🚀 Called with organizationKey:', organizationKey)
+  
+  if (!organizationKey) {
+    console.log('[fetchOrganizationUsers] ⚠️ Empty organizationKey, returning []')
+    return []
+  }
   
   const docs = await fetchOrganizationUserDocs(organizationKey)
   
-  return docs.map((docSnap) => {
+  console.log('[fetchOrganizationUsers] 📊 Processing', docs.length, 'profiles')
+  
+  const result = docs.map((docSnap) => {
     const data = docSnap.data() as {
-      // Name fields
       fullName?: string
       name?: string
       firstName?: string
       lastName?: string
       email?: string
-      
-      // Role and status
       role?: string
       membershipStatus?: OrganizationUserProfile['membershipStatus']
       accountStatus?: OrganizationUserProfile['accountStatus']
       status?: string
-      
-      // Timestamps
       lastActiveAt?: Timestamp | string | Date | number
       lastActive?: Timestamp | string | Date | number
       updatedAt?: Timestamp | string | Date | number
       createdAt?: Timestamp | string | Date | number
-      
-      // Avatar
       avatarUrl?: string
       photoURL?: string
-      
-      // Organization identifiers
       organizationId?: string
       organization_id?: string
       companyCode?: string
       company_code?: string
-      
-      // Progress fields (for PartnerUser compatibility)
       progressPercent?: number
       progress_percent?: number
       currentWeek?: number
@@ -209,25 +225,19 @@ export const fetchOrganizationUsers = async (organizationKey: string): Promise<O
       weekly_earned?: number
       weeklyRequired?: number
       weekly_required?: number
-      
-      // Risk fields
       riskStatus?: string
       risk_status?: string
       riskReasons?: string[]
       risk_reasons?: string[]
-      
-      // Nudge fields
       nudgeEnabled?: boolean
       nudge_enabled?: boolean
       adminNotes?: string
       admin_notes?: string
     }
     
-    // Resolve organization identifiers
     const organizationId = data.organizationId || data.organization_id || null
     const companyCode = data.companyCode || data.company_code || null
     
-    // Resolve name with fallbacks
     const fullName =
       data.fullName ||
       data.name ||
@@ -235,15 +245,12 @@ export const fetchOrganizationUsers = async (organizationKey: string): Promise<O
       data.email ||
       'Unknown user'
     
-    // Resolve role (normalize to lowercase)
     const rawRole = data.role || 'learner'
     const role = rawRole.toLowerCase() as OrganizationUserProfile['role']
     
-    // Resolve status
     const accountStatus = data.accountStatus || data.status || 'active'
     const normalizedStatus = accountStatus === 'Active' ? 'active' : accountStatus
     
-    // Resolve lastActive with multiple fallbacks
     const lastActive = parseUserDate(
       data.lastActiveAt || data.lastActive || data.updatedAt || null
     )
@@ -261,11 +268,6 @@ export const fetchOrganizationUsers = async (organizationKey: string): Promise<O
       avatarUrl: data.avatarUrl ?? data.photoURL ?? null,
       organizationId: organizationId?.trim() || null,
       companyCode: companyCode?.trim() || null,
-      
-      // ========================================================================
-      // REQUIRED DEFAULTS for PartnerUser compatibility
-      // Without these, the UI will have silent failures or show incorrect data
-      // ========================================================================
       progressPercent: data.progressPercent ?? data.progress_percent ?? 0,
       currentWeek: data.currentWeek ?? data.current_week ?? 0,
       weeklyEarned: data.weeklyEarned ?? data.weekly_earned ?? 0,
@@ -276,4 +278,8 @@ export const fetchOrganizationUsers = async (organizationKey: string): Promise<O
       adminNotes: data.adminNotes ?? data.admin_notes ?? '',
     }
   })
+  
+  console.log('[fetchOrganizationUsers] ✅ Returning', result.length, 'users')
+  
+  return result
 }
