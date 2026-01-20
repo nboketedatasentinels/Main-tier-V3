@@ -73,7 +73,7 @@ const riskColor: Record<PartnerRiskLevel | 'at_risk', string> = {
 }
 
 // ============================================================================
-// FIX #10: Type-safe Firestore Timestamp handling with proper type guard
+// Type-safe Firestore Timestamp handling with proper type guard
 // ============================================================================
 interface FirestoreTimestamp {
   toDate: () => Date
@@ -107,7 +107,7 @@ const formatRequestTimestamp = (value?: unknown): string => {
 }
 
 // ============================================================================
-// FIX #9: Centralized date formatting to avoid repeated parsing
+// Centralized date formatting to avoid repeated parsing
 // ============================================================================
 const formatLastActive = (lastActive: string | Date | null | undefined): string => {
   if (!lastActive) return 'Unknown'
@@ -120,6 +120,56 @@ const formatLastActive = (lastActive: string | Date | null | undefined): string 
   if (date > now) return 'Just now'
 
   return formatDistanceToNow(date, { addSuffix: true })
+}
+
+// ============================================================================
+// CRITICAL FIX: Helper to build organization key sets for bidirectional matching
+// ============================================================================
+/**
+ * Creates a Set of lowercase organization keys from an array of potential identifiers.
+ * Filters out null, undefined, and empty strings.
+ */
+function createOrgKeySet(keys: (string | null | undefined)[]): Set<string> {
+  return new Set(
+    keys
+      .filter((v): v is string => typeof v === 'string' && v.length > 0)
+      .map((v) => v.toLowerCase())
+  )
+}
+
+/**
+ * Builds a complete set of keys for a selected organization by looking up
+ * both its ID and code from the organizations array.
+ */
+function buildSelectedOrgKeys(
+  selectedOrg: string,
+  organizations: PartnerOrganization[]
+): Set<string> {
+  const normalizedSelectedOrg = selectedOrg.toLowerCase()
+  const keys = new Set<string>([normalizedSelectedOrg])
+
+  // Find the organization object to get both its ID and code
+  const selectedOrgObj = organizations.find(
+    (org) =>
+      org.id?.toLowerCase() === normalizedSelectedOrg ||
+      org.code?.toLowerCase() === normalizedSelectedOrg
+  )
+
+  if (selectedOrgObj) {
+    if (selectedOrgObj.id) keys.add(selectedOrgObj.id.toLowerCase())
+    if (selectedOrgObj.code) keys.add(selectedOrgObj.code.toLowerCase())
+  }
+
+  return keys
+}
+
+/**
+ * Checks if a user belongs to the selected organization by comparing
+ * all user org identifiers against all selected org keys.
+ */
+function userMatchesOrg(user: PartnerUser, selectedOrgKeys: Set<string>): boolean {
+  const userOrgKeys = createOrgKeySet([user.organizationId, user.companyCode])
+  return Array.from(userOrgKeys).some((key) => selectedOrgKeys.has(key))
 }
 
 export const PartnerUserManagement: React.FC<PartnerUserManagementProps> = ({
@@ -136,11 +186,10 @@ export const PartnerUserManagement: React.FC<PartnerUserManagementProps> = ({
   const [page, setPage] = useState(1)
   const [selectedUser, setSelectedUser] = useState<PartnerUser | null>(null)
   const [adjustmentReason, setAdjustmentReason] = useState('')
-  const [adjustmentValue, setAdjustmentValue] = useState(1) // FIX #6: Default to 1, not 0
+  const [adjustmentValue, setAdjustmentValue] = useState(1)
   const [loadingAdjustment, setLoadingAdjustment] = useState(false)
   const [selectedRequest, setSelectedRequest] = useState<PointsVerificationRequest | null>(null)
   const [rejectReason, setRejectReason] = useState('')
-  // FIX #7: Controlled state for nudge preferences
   const [nudgeEnabled, setNudgeEnabled] = useState(true)
   const [adminNotes, setAdminNotes] = useState('')
 
@@ -150,13 +199,13 @@ export const PartnerUserManagement: React.FC<PartnerUserManagementProps> = ({
   const toast = useToast()
 
   // ============================================================================
-  // FIX #2: Added validation to prevent duplicate keys from missing org codes
+  // Organization dropdown options - ensures unique keys
   // ============================================================================
   const organizationOptions = useMemo(() => {
     const seenIds = new Set<string>()
     const validOrgs = organizations.map((org, index) => {
-      // Prefer org.id as the canonical selection value
-      let id = org.id || `org-${index}`
+      // Generate a unique id, falling back to index-based ID if needed
+      let id = org.id || org.code || `org-${index}`
       // Ensure uniqueness
       if (seenIds.has(id.toLowerCase())) {
         id = `${id}-${index}`
@@ -170,27 +219,60 @@ export const PartnerUserManagement: React.FC<PartnerUserManagementProps> = ({
       }
     })
 
-    return [{ id: 'all', name: 'All Companies' }, ...validOrgs]
+    return [{ id: 'all', code: 'all', name: 'All Companies' }, ...validOrgs]
   }, [organizations])
 
+  // ============================================================================
+  // CRITICAL FIX: Bidirectional organization matching
+  // 
+  // The bug: Partners are assigned to orgs by Firestore document ID (e.g., "s1nzr7yaee16x4fdhztd")
+  // but users have companyCode values that are human-readable (e.g., "acme").
+  // 
+  // The fix: When filtering, we need to:
+  // 1. Look up the selected org to get BOTH its ID and code
+  // 2. Check the user's organizationId AND companyCode against BOTH values
+  // ============================================================================
   const filtered = useMemo(() => {
-    const safeUsers = (usersLoading && !(users?.length)) ? [] : (users ?? [])
+    const safeUsers = usersLoading ? [] : (users ?? [])
     const normalizedSelectedOrg = (selectedOrg || 'all').toLowerCase()
+
+    // "All" shows all users
     if (normalizedSelectedOrg === 'all') return safeUsers
 
-    return safeUsers.filter((u) => u.organizationId?.toLowerCase() === normalizedSelectedOrg)
-  }, [users, usersLoading, selectedOrg])
+    // Build a set of all valid keys for the selected organization
+    const selectedOrgKeys = buildSelectedOrgKeys(selectedOrg, organizations)
 
-  const learnerUsers = useMemo(() => {
-    return filtered.filter(u => (u.role ?? '').toLowerCase() === 'learner')
-  }, [filtered])
+    // Debug logging in development
+    if (process.env.NODE_ENV === 'development') {
+      console.log('[PartnerUserManagement] Filtering users', {
+        selectedOrg,
+        selectedOrgKeys: Array.from(selectedOrgKeys),
+        totalUsers: safeUsers.length,
+        sampleUserOrgData: safeUsers.slice(0, 3).map((u) => ({
+          name: u.name,
+          organizationId: u.organizationId,
+          companyCode: u.companyCode,
+        })),
+      })
+    }
+
+    // Filter users that match ANY of the selected org keys
+    return safeUsers.filter((u) => userMatchesOrg(u, selectedOrgKeys))
+  }, [users, usersLoading, selectedOrg, organizations])
+
+  const learnerUsers = useMemo(
+    () => filtered.filter((u) => u.role === 'learner'),
+    [filtered]
+  )
 
   const { sortKey, sortDir, toggleSort, sortedUsers } = usePartnerUserSorting(learnerUsers)
   const { selection, toggleSelection, clearSelection, selectAll } = useUserSelection()
-  const { bulkAction, setBulkAction, bulkApply, isProcessing: processingBulk } = usePartnerBulkActions(
-    selection,
-    clearSelection,
-  )
+  const {
+    bulkAction,
+    setBulkAction,
+    bulkApply,
+    isProcessing: processingBulk,
+  } = usePartnerBulkActions(selection, clearSelection)
   const {
     approvalQueue,
     loading: approvalsLoading,
@@ -199,29 +281,32 @@ export const PartnerUserManagement: React.FC<PartnerUserManagementProps> = ({
     handleReject: performRejectRequest,
   } = usePointsApprovalQueue(learnerUsers, activeTab === 'approvals')
 
-  // ============================================================================
-  // FIX #8: Remove console.log in production, wrap in development check
-  // ============================================================================
+  // Debug logging in development
   useEffect(() => {
     if (process.env.NODE_ENV === 'development') {
-      const roles = new Map<string, number>()
-      for (const user of users ?? []) {
-        const role = String(user.role)
-        roles.set(role, (roles.get(role) ?? 0) + 1)
-      }
-      console.log('[PartnerUserManagement] role distribution', Object.fromEntries(roles))
-      console.log('[PartnerUserManagement]', {
+      console.log('[PartnerUserManagement] State update', {
         usersLength: users?.length ?? 0,
         filteredLength: filtered.length,
         learnerLength: learnerUsers.length,
         sortedLength: sortedUsers.length,
         selectedOrg,
         usersLoading,
+        organizationsLength: organizations.length,
+        organizationsReady,
       })
     }
-  }, [users, filtered, learnerUsers, sortedUsers, selectedOrg, usersLoading])
+  }, [
+    users,
+    filtered,
+    learnerUsers,
+    sortedUsers,
+    selectedOrg,
+    usersLoading,
+    organizations,
+    organizationsReady,
+  ])
 
-  // Pagination & Derived State
+  // Reset pagination on filter/sort/tab changes
   useEffect(() => {
     setPage(1)
   }, [selectedOrg, sortKey, sortDir, activeTab])
@@ -229,8 +314,9 @@ export const PartnerUserManagement: React.FC<PartnerUserManagementProps> = ({
   const totalPages = Math.max(1, Math.ceil(sortedUsers.length / PAGE_SIZE))
   const paginated = sortedUsers.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE)
   const waitingForOrganizations = organizationsLoading && !organizationsReady
+
   const emptyUsersMessage = useMemo(() => {
-    if (!organizationsReady) return 'No users found in this organisation'
+    if (!organizationsReady) return 'Loading organizations...'
     if (!organizations.length) return 'No organisations assigned yet'
     if (selectedOrg !== 'all') return 'No users found in this organisation'
     return 'No users found in your assigned organisations'
@@ -239,11 +325,8 @@ export const PartnerUserManagement: React.FC<PartnerUserManagementProps> = ({
   const atRiskUsers = useMemo(() => learnerUsers.filter(isAtRisk), [learnerUsers])
   const leaders = useMemo(() => filtered.filter(isLeader), [filtered])
 
-  // ============================================================================
-  // FIX #4: Memoized callback to prevent stale closure issues with selectAll
-  // ============================================================================
-  const atRiskUserIds = useMemo(() => atRiskUsers.map(u => u.id), [atRiskUsers])
-  
+  const atRiskUserIds = useMemo(() => atRiskUsers.map((u) => u.id), [atRiskUsers])
+
   const handleSelectAllAtRisk = useCallback(
     (checked: boolean) => {
       if (checked) {
@@ -262,6 +345,7 @@ export const PartnerUserManagement: React.FC<PartnerUserManagementProps> = ({
     drawer.onOpen()
   }
 
+  // Clear stale selections when at-risk list changes
   useEffect(() => {
     if (activeTab !== 'risk') return
     if (!selection.length) return
@@ -271,9 +355,6 @@ export const PartnerUserManagement: React.FC<PartnerUserManagementProps> = ({
     }
   }, [activeTab, atRiskUserIds, selection, clearSelection])
 
-  // ============================================================================
-  // FIX #6: Updated validation to match input constraints (min=1)
-  // ============================================================================
   const handleAdjustment = async () => {
     if (!selectedUser) return
     if (adjustmentValue < 1) {
@@ -287,7 +368,11 @@ export const PartnerUserManagement: React.FC<PartnerUserManagementProps> = ({
     }
     setLoadingAdjustment(true)
     try {
-      await updateUserPoints(selectedUser.id, adjustmentValue, adjustmentReason || 'Manual adjustment')
+      await updateUserPoints(
+        selectedUser.id,
+        adjustmentValue,
+        adjustmentReason || 'Manual adjustment'
+      )
       toast({
         title: 'Points updated',
         description: `${adjustmentValue} points applied to ${selectedUser.name}`,
@@ -295,7 +380,7 @@ export const PartnerUserManagement: React.FC<PartnerUserManagementProps> = ({
         duration: 4000,
         isClosable: true,
       })
-      setAdjustmentValue(1) // Reset to minimum valid value
+      setAdjustmentValue(1)
       setAdjustmentReason('')
       adjustmentModal.onClose()
     } catch (error) {
@@ -330,8 +415,24 @@ export const PartnerUserManagement: React.FC<PartnerUserManagementProps> = ({
   const renderTableHeader = () => (
     <Thead>
       <Tr>
-        {['Name/Email', 'Company', 'Progress %', 'Current Week', 'Status', 'Last Active', 'Risk'].map((header, idx) => {
-          const sortMapping: SortKey[] = ['name', 'company', 'progress', 'week', 'status', 'lastActive', 'risk']
+        {[
+          'Name/Email',
+          'Company',
+          'Progress %',
+          'Current Week',
+          'Status',
+          'Last Active',
+          'Risk',
+        ].map((header, idx) => {
+          const sortMapping: SortKey[] = [
+            'name',
+            'company',
+            'progress',
+            'week',
+            'status',
+            'lastActive',
+            'risk',
+          ]
           const key = sortMapping[idx] || 'name'
           return (
             <Th
@@ -342,7 +443,9 @@ export const PartnerUserManagement: React.FC<PartnerUserManagementProps> = ({
             >
               <HStack spacing={2}>
                 <Text>{header}</Text>
-                {sortKey === key && <Badge colorScheme="purple">{sortDir === 'asc' ? '▲' : '▼'}</Badge>}
+                {sortKey === key && (
+                  <Badge colorScheme="purple">{sortDir === 'asc' ? '▲' : '▼'}</Badge>
+                )}
               </HStack>
             </Th>
           )
@@ -351,14 +454,16 @@ export const PartnerUserManagement: React.FC<PartnerUserManagementProps> = ({
     </Thead>
   )
 
-  // ============================================================================
-  // FIX #9: Use centralized formatLastActive function
-  // ============================================================================
   const renderUserRow = (user: PartnerUser) => {
     const lastActiveLabel = formatLastActive(user.lastActive)
 
     return (
-      <Tr key={user.id} _hover={{ bg: 'brand.accent' }} cursor="pointer" onClick={() => openUser(user)}>
+      <Tr
+        key={user.id}
+        _hover={{ bg: 'brand.accent' }}
+        cursor="pointer"
+        onClick={() => openUser(user)}
+      >
         <Td>
           <VStack align="flex-start" spacing={0}>
             <Text fontWeight="semibold" color="brand.text">
@@ -388,7 +493,9 @@ export const PartnerUserManagement: React.FC<PartnerUserManagementProps> = ({
         </Td>
         <Td>{user.currentWeek}</Td>
         <Td>
-          <Badge colorScheme={user.status === 'Active' ? 'green' : 'yellow'}>{user.status}</Badge>
+          <Badge colorScheme={user.status === 'Active' ? 'green' : 'yellow'}>
+            {user.status}
+          </Badge>
         </Td>
         <Td>
           <Text fontSize="sm">{lastActiveLabel}</Text>
@@ -420,35 +527,32 @@ export const PartnerUserManagement: React.FC<PartnerUserManagementProps> = ({
           Clear selection
         </Button>
       </HStack>
-        <HStack spacing={3}>
-          <Select
-            size="sm"
-            placeholder="Select action"
-            maxW="220px"
-            value={bulkAction}
-            onChange={e => setBulkAction(e.target.value)}
-          >
-            <option value="Active Intervention">Active Intervention</option>
-            <option value="Mentor Follow-up">Mentor Follow-up</option>
-            <option value="Overdue Acknowledgement">Overdue Acknowledgement</option>
-            <option value="Active Escalation">Active Escalation</option>
-          </Select>
+      <HStack spacing={3}>
+        <Select
+          size="sm"
+          placeholder="Select action"
+          maxW="220px"
+          value={bulkAction}
+          onChange={(e) => setBulkAction(e.target.value)}
+        >
+          <option value="Active Intervention">Active Intervention</option>
+          <option value="Mentor Follow-up">Mentor Follow-up</option>
+          <option value="Overdue Acknowledgement">Overdue Acknowledgement</option>
+          <option value="Active Escalation">Active Escalation</option>
+        </Select>
         <Button
-            size="sm"
-            colorScheme="purple"
-            isLoading={processingBulk}
-            isDisabled={!selection.length}
-            onClick={() => bulkApply(bulkAction)}
-          >
-            Apply to Selected
-          </Button>
-        </HStack>
+          size="sm"
+          colorScheme="purple"
+          isLoading={processingBulk}
+          isDisabled={!selection.length}
+          onClick={() => bulkApply(bulkAction)}
+        >
+          Apply to Selected
+        </Button>
+      </HStack>
     </Flex>
   )
 
-  // ============================================================================
-  // FIX #1: Helper function for pagination display text
-  // ============================================================================
   const renderPaginationText = () => {
     if (sortedUsers.length === 0) {
       return 'No users to display'
@@ -460,15 +564,23 @@ export const PartnerUserManagement: React.FC<PartnerUserManagementProps> = ({
 
   return (
     <Stack spacing={6}>
-      <Flex justify="space-between" align={{ base: 'flex-start', md: 'center' }} gap={3} wrap="wrap">
+      <Flex
+        justify="space-between"
+        align={{ base: 'flex-start', md: 'center' }}
+        gap={3}
+        wrap="wrap"
+      >
         <Stack spacing={1}>
-          <Text fontWeight="bold" color="brand.text">User management</Text>
+          <Text fontWeight="bold" color="brand.text">
+            User management
+          </Text>
           <Text fontSize="sm" color="brand.subtleText">
-            Filtered to your assigned organizations. Manual adjustments are logged for auditability.
+            Filtered to your assigned organizations. Manual adjustments are logged for
+            auditability.
           </Text>
         </Stack>
-        <Select maxW="240px" value={selectedOrg} onChange={e => onSelectOrg(e.target.value)}>
-          {organizationOptions.map(org => (
+        <Select maxW="240px" value={selectedOrg} onChange={(e) => onSelectOrg(e.target.value)}>
+          {organizationOptions.map((org) => (
             <option key={org.id} value={org.id}>
               {org.name}
             </option>
@@ -524,22 +636,17 @@ export const PartnerUserManagement: React.FC<PartnerUserManagementProps> = ({
                   <Td colSpan={7}>
                     <HStack spacing={3} py={6} justify="center">
                       <Spinner size="sm" />
-                      <Text color="brand.subtleText">
-                        Loading learners...
-                      </Text>
+                      <Text color="brand.subtleText">Loading learners...</Text>
                     </HStack>
                   </Td>
                 </Tr>
               )}
-              {/* FIX #5: Removed dead code path - simplified empty state message */}
               {!usersLoading && !paginated.length && (
                 <Tr>
                   <Td colSpan={7}>
                     <HStack spacing={3} py={6} justify="center">
                       <CheckCircle2 color="green" />
-                      <Text color="brand.subtleText">
-                        {emptyUsersMessage}
-                      </Text>
+                      <Text color="brand.subtleText">{emptyUsersMessage}</Text>
                     </HStack>
                   </Td>
                 </Tr>
@@ -548,15 +655,22 @@ export const PartnerUserManagement: React.FC<PartnerUserManagementProps> = ({
           </Table>
 
           <Flex justify="space-between" align="center" wrap="wrap" gap={3}>
-            {/* FIX #1: Use helper function that handles empty state */}
             <Text fontSize="sm" color="brand.subtleText">
               {renderPaginationText()}
             </Text>
             <HStack spacing={3}>
-              <Button size="sm" onClick={() => setPage(prev => Math.max(1, prev - 1))} isDisabled={page === 1}>
+              <Button
+                size="sm"
+                onClick={() => setPage((prev) => Math.max(1, prev - 1))}
+                isDisabled={page === 1}
+              >
                 Previous
               </Button>
-              <Button size="sm" onClick={() => setPage(prev => Math.min(totalPages, prev + 1))} isDisabled={page === totalPages}>
+              <Button
+                size="sm"
+                onClick={() => setPage((prev) => Math.min(totalPages, prev + 1))}
+                isDisabled={page === totalPages}
+              >
                 Next
               </Button>
             </HStack>
@@ -566,19 +680,20 @@ export const PartnerUserManagement: React.FC<PartnerUserManagementProps> = ({
 
       {activeTab === 'risk' && (
         <Stack spacing={4}>
-          <Text fontWeight="semibold" color="brand.text">Active Alerts</Text>
+          <Text fontWeight="semibold" color="brand.text">
+            Active Alerts
+          </Text>
           {selection.length > 0 && renderBulkToolbar()}
           <Table size="md" variant="simple">
             <Thead>
               <Tr>
                 <Th>
-                  {/* FIX #4: Use memoized callback to prevent stale closure */}
                   <Checkbox
                     size="lg"
                     borderRadius="md"
                     isChecked={selection.length > 0 && selection.length === atRiskUserIds.length}
                     isIndeterminate={selection.length > 0 && selection.length < atRiskUserIds.length}
-                    onChange={e => handleSelectAllAtRisk(e.target.checked)}
+                    onChange={(e) => handleSelectAllAtRisk(e.target.checked)}
                   />
                 </Th>
                 <Th>Name/Email</Th>
@@ -598,14 +713,12 @@ export const PartnerUserManagement: React.FC<PartnerUserManagementProps> = ({
                   <Td colSpan={10}>
                     <HStack spacing={3} py={6} justify="center">
                       <Spinner size="sm" />
-                      <Text color="brand.subtleText">
-                        Loading learners...
-                      </Text>
+                      <Text color="brand.subtleText">Loading learners...</Text>
                     </HStack>
                   </Td>
                 </Tr>
               )}
-              {atRiskUsers.map(user => (
+              {atRiskUsers.map((user) => (
                 <Tr key={user.id}>
                   <Td>
                     <Checkbox
@@ -617,8 +730,12 @@ export const PartnerUserManagement: React.FC<PartnerUserManagementProps> = ({
                   </Td>
                   <Td>
                     <VStack align="flex-start" spacing={0}>
-                      <Text fontWeight="semibold" color="brand.text">{user.name}</Text>
-                      <Text fontSize="sm" color="brand.subtleText">{user.email}</Text>
+                      <Text fontWeight="semibold" color="brand.text">
+                        {user.name}
+                      </Text>
+                      <Text fontSize="sm" color="brand.subtleText">
+                        {user.email}
+                      </Text>
                     </VStack>
                   </Td>
                   <Td textTransform="capitalize">{user.companyCode}</Td>
@@ -648,30 +765,29 @@ export const PartnerUserManagement: React.FC<PartnerUserManagementProps> = ({
                     </Text>
                   </Td>
                   <Td>
-                    {/* FIX #9: Use centralized formatLastActive */}
-                    <Text fontSize="sm">
-                      {formatLastActive(user.lastActive)}
-                    </Text>
+                    <Text fontSize="sm">{formatLastActive(user.lastActive)}</Text>
                   </Td>
                   <Td>
                     <Badge colorScheme="green">Ready</Badge>
                   </Td>
                   <Td>
-                    <Button size="xs" colorScheme="purple" variant="outline" onClick={() => openUser(user)}>
+                    <Button
+                      size="xs"
+                      colorScheme="purple"
+                      variant="outline"
+                      onClick={() => openUser(user)}
+                    >
                       Quick nudge
                     </Button>
                   </Td>
                 </Tr>
               ))}
-              {/* FIX #5: Simplified empty state - removed dead code path */}
               {!usersLoading && !atRiskUsers.length && (
                 <Tr>
                   <Td colSpan={10}>
                     <HStack spacing={3} py={6} justify="center">
                       <CheckCircle2 color="green" />
-                      <Text color="brand.subtleText">
-                        All learners on track!
-                      </Text>
+                      <Text color="brand.subtleText">All learners on track!</Text>
                     </HStack>
                   </Td>
                 </Tr>
@@ -683,7 +799,9 @@ export const PartnerUserManagement: React.FC<PartnerUserManagementProps> = ({
 
       {activeTab === 'leaders' && (
         <Stack spacing={4}>
-          <Text fontWeight="semibold" color="brand.text">Mentors & Leaders</Text>
+          <Text fontWeight="semibold" color="brand.text">
+            Mentors & Leaders
+          </Text>
           <Table size="md" variant="simple">
             <Thead>
               <Tr>
@@ -701,45 +819,51 @@ export const PartnerUserManagement: React.FC<PartnerUserManagementProps> = ({
                     <HStack spacing={3} py={6} justify="center">
                       <Spinner size="sm" />
                       <Text color="brand.subtleText">
-                        {waitingForOrganizations ? 'Waiting for organizations...' : 'Loading leaders...'}
+                        {waitingForOrganizations
+                          ? 'Waiting for organizations...'
+                          : 'Loading leaders...'}
                       </Text>
                     </HStack>
                   </Td>
                 </Tr>
               )}
-              {leaders.map(leader => (
+              {leaders.map((leader) => (
                 <Tr key={leader.id}>
                   <Td>
                     <VStack align="flex-start" spacing={0}>
-                      <Text fontWeight="semibold" color="brand.text">{leader.name}</Text>
-                      <Text fontSize="sm" color="brand.subtleText">{leader.email}</Text>
+                      <Text fontWeight="semibold" color="brand.text">
+                        {leader.name}
+                      </Text>
+                      <Text fontSize="sm" color="brand.subtleText">
+                        {leader.email}
+                      </Text>
                     </VStack>
                   </Td>
                   <Td textTransform="capitalize">{leader.companyCode}</Td>
                   <Td>
-                    <Badge colorScheme="purple" textTransform="capitalize">{leader.role}</Badge>
+                    <Badge colorScheme="purple" textTransform="capitalize">
+                      {leader.role}
+                    </Badge>
                   </Td>
-                  <Td>
-                    {/* FIX #9: Use centralized formatLastActive */}
-                    {formatLastActive(leader.lastActive)}
-                  </Td>
+                  <Td>{formatLastActive(leader.lastActive)}</Td>
                   <Td>
                     <HStack spacing={2}>
-                      <Button size="xs" variant="outline">View Details</Button>
-                      <Button size="xs" variant="outline">Assign to Learner</Button>
+                      <Button size="xs" variant="outline">
+                        View Details
+                      </Button>
+                      <Button size="xs" variant="outline">
+                        Assign to Learner
+                      </Button>
                     </HStack>
                   </Td>
                 </Tr>
               ))}
-              {/* FIX #5: Simplified empty state - removed dead code path */}
               {!usersLoading && !leaders.length && (
                 <Tr>
                   <Td colSpan={5}>
                     <HStack spacing={3} py={6} justify="center">
                       <Clock />
-                      <Text color="brand.subtleText">
-                        No mentors or leaders in scope
-                      </Text>
+                      <Text color="brand.subtleText">No mentors or leaders in scope</Text>
                     </HStack>
                   </Td>
                 </Tr>
@@ -751,8 +875,17 @@ export const PartnerUserManagement: React.FC<PartnerUserManagementProps> = ({
 
       {activeTab === 'approvals' && (
         <Stack spacing={4}>
-          <Text fontWeight="semibold" color="brand.text">Pending approvals</Text>
-          <Box p={4} borderRadius="xl" border="1px solid" borderColor="brand.border" bg="white" boxShadow="sm">
+          <Text fontWeight="semibold" color="brand.text">
+            Pending approvals
+          </Text>
+          <Box
+            p={4}
+            borderRadius="xl"
+            border="1px solid"
+            borderColor="brand.border"
+            bg="white"
+            boxShadow="sm"
+          >
             <HStack justify="space-between" mb={3}>
               <Text fontWeight="bold">Points upload requests</Text>
               <Badge colorScheme="blue">{approvalQueue.length} pending</Badge>
@@ -766,13 +899,25 @@ export const PartnerUserManagement: React.FC<PartnerUserManagementProps> = ({
               )}
               {!approvalsLoading &&
                 approvalQueue.map(({ request, user }) => (
-                  <Box key={request.id} p={3} borderRadius="md" border="1px solid" borderColor="brand.border" bg="brand.accent">
+                  <Box
+                    key={request.id}
+                    p={3}
+                    borderRadius="md"
+                    border="1px solid"
+                    borderColor="brand.border"
+                    bg="brand.accent"
+                  >
                     <HStack justify="space-between" align="flex-start" wrap="wrap" gap={3}>
                       <Stack spacing={1}>
-                        <Text fontWeight="semibold" color="brand.text">{user.name}</Text>
-                        <Text fontSize="sm" color="brand.subtleText">{user.companyCode}</Text>
+                        <Text fontWeight="semibold" color="brand.text">
+                          {user.name}
+                        </Text>
                         <Text fontSize="sm" color="brand.subtleText">
-                          {request.activity_title || 'Activity submission'} • Week {request.week} • {request.points ?? 0} pts
+                          {user.companyCode}
+                        </Text>
+                        <Text fontSize="sm" color="brand.subtleText">
+                          {request.activity_title || 'Activity submission'} • Week {request.week}{' '}
+                          • {request.points ?? 0} pts
                         </Text>
                         <Text fontSize="xs" color="brand.subtleText">
                           Submitted {formatRequestTimestamp(request.created_at)}
@@ -845,30 +990,50 @@ export const PartnerUserManagement: React.FC<PartnerUserManagementProps> = ({
             {selectedUser && (
               <Stack spacing={4}>
                 <VStack align="flex-start" spacing={1}>
-                  <Text fontSize="xl" fontWeight="bold">{selectedUser.name}</Text>
+                  <Text fontSize="xl" fontWeight="bold">
+                    {selectedUser.name}
+                  </Text>
                   <Text color="brand.subtleText">{selectedUser.email}</Text>
                 </VStack>
                 <HStack spacing={3}>
-                  <Badge colorScheme="purple" textTransform="capitalize">{selectedUser.companyCode}</Badge>
-                  <Badge colorScheme={riskColor[selectedUser.riskStatus]}>Risk: {selectedUser.riskStatus}</Badge>
+                  <Badge colorScheme="purple" textTransform="capitalize">
+                    {selectedUser.companyCode}
+                  </Badge>
+                  <Badge colorScheme={riskColor[selectedUser.riskStatus]}>
+                    Risk: {selectedUser.riskStatus}
+                  </Badge>
                 </HStack>
                 <Divider />
                 <Stack spacing={2}>
                   <Text fontWeight="semibold">Weekly progress</Text>
                   <Text fontSize="sm" color="brand.subtleText">
-                    Earned {selectedUser.weeklyEarned} / {selectedUser.weeklyRequired} points this week.
+                    Earned {selectedUser.weeklyEarned} / {selectedUser.weeklyRequired} points this
+                    week.
                   </Text>
                   {selectedUser.weeklyRequired > 0 ? (
                     <HStack spacing={2}>
-                      <Box bg="brand.accent" borderRadius="full" h="10px" flex={1} position="relative">
+                      <Box
+                        bg="brand.accent"
+                        borderRadius="full"
+                        h="10px"
+                        flex={1}
+                        position="relative"
+                      >
                         <Box
                           position="absolute"
                           left={0}
                           top={0}
                           bottom={0}
                           borderRadius="full"
-                          bg={selectedUser.weeklyEarned >= selectedUser.weeklyRequired ? 'green.400' : 'indigo.500'}
-                          width={`${Math.min(100, (selectedUser.weeklyEarned / selectedUser.weeklyRequired) * 100)}%`}
+                          bg={
+                            selectedUser.weeklyEarned >= selectedUser.weeklyRequired
+                              ? 'green.400'
+                              : 'indigo.500'
+                          }
+                          width={`${Math.min(
+                            100,
+                            (selectedUser.weeklyEarned / selectedUser.weeklyRequired) * 100
+                          )}%`}
                         />
                       </Box>
                       <Text fontSize="sm">{selectedUser.progressPercent}%</Text>
@@ -885,7 +1050,6 @@ export const PartnerUserManagement: React.FC<PartnerUserManagementProps> = ({
                 <Stack spacing={2}>
                   <Text fontWeight="semibold">Risk reasons</Text>
                   <VStack align="flex-start" spacing={1}>
-                    {/* FIX #3: Use index-based key to handle duplicate reasons */}
                     {(selectedUser.riskReasons ?? ['No risk notes yet']).map((reason, index) => (
                       <Badge key={`${reason}-${index}`} colorScheme="orange" variant="subtle">
                         {reason}
@@ -902,8 +1066,9 @@ export const PartnerUserManagement: React.FC<PartnerUserManagementProps> = ({
                 <Stack spacing={3}>
                   <Text fontWeight="semibold">Nudge preferences</Text>
                   <HStack justify="space-between">
-                    <Text fontSize="sm" color="brand.subtleText">Allow nudge notifications</Text>
-                    {/* FIX #7: Controlled Switch component */}
+                    <Text fontSize="sm" color="brand.subtleText">
+                      Allow nudge notifications
+                    </Text>
                     <Switch
                       colorScheme="purple"
                       isChecked={nudgeEnabled}
@@ -932,7 +1097,11 @@ export const PartnerUserManagement: React.FC<PartnerUserManagementProps> = ({
             <Button variant="outline" mr={3} onClick={drawer.onClose}>
               Close
             </Button>
-            <Button colorScheme="purple" onClick={adjustmentModal.onOpen} isDisabled={!selectedUser}>
+            <Button
+              colorScheme="purple"
+              onClick={adjustmentModal.onOpen}
+              isDisabled={!selectedUser}
+            >
               Add intervention
             </Button>
           </DrawerFooter>
@@ -947,7 +1116,8 @@ export const PartnerUserManagement: React.FC<PartnerUserManagementProps> = ({
           <ModalBody>
             <Stack spacing={3}>
               <Text fontSize="sm" color="brand.subtleText">
-                Provide an optional reason for rejecting this points upload. The learner will not receive points.
+                Provide an optional reason for rejecting this points upload. The learner will not
+                receive points.
               </Text>
               <Textarea
                 placeholder="Add a brief reason (optional)"
@@ -956,7 +1126,8 @@ export const PartnerUserManagement: React.FC<PartnerUserManagementProps> = ({
               />
               {selectedRequest && (
                 <Text fontSize="xs" color="brand.subtleText">
-                  Request: {selectedRequest.activity_title || 'Activity submission'} • Week {selectedRequest.week}
+                  Request: {selectedRequest.activity_title || 'Activity submission'} • Week{' '}
+                  {selectedRequest.week}
                 </Text>
               )}
             </Stack>
@@ -985,11 +1156,10 @@ export const PartnerUserManagement: React.FC<PartnerUserManagementProps> = ({
             <Stack spacing={3}>
               <FormControl>
                 <FormLabel>Points</FormLabel>
-                {/* FIX #6: min=1 to match validation logic */}
                 <Input
                   type="number"
                   value={adjustmentValue}
-                  onChange={e => setAdjustmentValue(Number(e.target.value))}
+                  onChange={(e) => setAdjustmentValue(Number(e.target.value))}
                   min={1}
                 />
               </FormControl>
@@ -998,11 +1168,12 @@ export const PartnerUserManagement: React.FC<PartnerUserManagementProps> = ({
                 <Input
                   value={adjustmentReason}
                   placeholder="Mentor follow-up, activity approval, etc."
-                  onChange={e => setAdjustmentReason(e.target.value)}
+                  onChange={(e) => setAdjustmentReason(e.target.value)}
                 />
               </FormControl>
               <Text fontSize="sm" color="brand.subtleText">
-                Adjustments are logged to the admin activity trail and reflected in weekly_points for this learner.
+                Adjustments are logged to the admin activity trail and reflected in weekly_points
+                for this learner.
               </Text>
             </Stack>
           </ModalBody>
