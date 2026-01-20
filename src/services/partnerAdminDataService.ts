@@ -32,7 +32,7 @@ const buildEmptyPointsOverview = (): PartnerAdminPointsOverview => ({
   rejectedPoints: 0,
 })
 
-const normalizeDateString = (value?: Timestamp | string | Date | number | null): string | null => {
+const normalizeDateString = (value?: unknown): string | null => {
   if (!value) return null
   if (value instanceof Date) return value.toISOString()
   if (typeof value === 'number') return new Date(value).toISOString()

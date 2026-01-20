@@ -50,6 +50,7 @@ import { getActiveNudgeTemplates } from '@/services/nudgeService'
 import { generatePartnerDigest, sendPartnerDigestEmail } from '@/services/partnerDigestService'
 import type { NudgeTemplateRecord } from '@/types/nudges'
 import { buildPartnerNavItems } from '@/utils/navigationItems'
+import type { MismatchSample } from '@/utils/partnerDashboardUtils'
 
 export const PartnerDashboard: React.FC = () => {
   const navigate = useNavigate()
@@ -958,7 +959,7 @@ export const PartnerDashboard: React.FC = () => {
                 <Text fontSize="xs" fontWeight="bold" color="gray.600" mb={2}>Assigned Organization Keys:</Text>
                 <HStack wrap="wrap" spacing={2}>
                   {debugInfo.assignedOrgKeys.length > 0 ? (
-                    debugInfo.assignedOrgKeys.map(key => (
+                    debugInfo.assignedOrgKeys.map((key: string) => (
                       <Code key={key} fontSize="xs" colorScheme="purple">{key}</Code>
                     ))
                   ) : (
@@ -971,7 +972,7 @@ export const PartnerDashboard: React.FC = () => {
                 <Box w="full">
                   <Text fontSize="xs" fontWeight="bold" color="gray.600" mb={2}>Samples of Mismatched Users:</Text>
                   <VStack align="flex-start" spacing={2} w="full">
-                    {debugInfo.mismatchSamples.map((sample, idx) => (
+                    {debugInfo.mismatchSamples.map((sample: MismatchSample, idx: number) => (
                       <Box key={idx} p={2} bg="white" border="1px solid" borderColor="gray.200" borderRadius="md" w="full" fontSize="xs">
                         <HStack justify="space-between">
                           <Text fontWeight="bold">{sample.id}</Text>

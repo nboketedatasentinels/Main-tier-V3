@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from 'react'
 import { doc, onSnapshot } from 'firebase/firestore'
 import { db } from '@/services/firebase'
 import { fetchPartnerAdminSnapshot } from '@/services/partnerAdminDataService'
+import type { DashboardDebugInfo } from '@/utils/partnerDashboardUtils'
 import type { PartnerAdminDataSnapshot, PartnerAdminSnapshot } from '@/types/admin'
 
 export const usePartnerAdminData = (partnerId?: string | null) => {
@@ -9,6 +10,7 @@ export const usePartnerAdminData = (partnerId?: string | null) => {
   const [loading, setLoading] = useState<boolean>(() => !!partnerId)
   const [error, setError] = useState<string | null>(null)
   const [refreshIndex, setRefreshIndex] = useState(0)
+  const debugInfo: DashboardDebugInfo | null = null
 
   const refresh = useCallback(() => {
     setRefreshIndex((prev) => prev + 1)
@@ -67,5 +69,5 @@ export const usePartnerAdminData = (partnerId?: string | null) => {
     }
   }, [partnerId, refreshIndex])
 
-  return { snapshot, loading, error, refresh }
+  return { snapshot, loading, error, refresh, debugInfo }
 }
