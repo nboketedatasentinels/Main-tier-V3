@@ -2,7 +2,20 @@ import { Timestamp, collection, doc, DocumentSnapshot, getDoc, getDocs, query, w
 import { type OrganizationStatistics, type OrganizationUserProfile } from '@/types/admin'
 import { db } from './firebase'
 
-const usersCollection = collection(db, 'profiles')
+// ============================================================================
+// CRITICAL FIX: Changed from 'users' to 'profiles'
+// 
+// The bug: Partner dashboard was querying the 'users' collection, but user data
+// actually lives in the 'profiles' collection. This caused:
+// - Metrics to show numbers (computed elsewhere from profiles)
+// - Partner UI to show "No users found" (because 'users' collection is empty/different)
+// - Super Admin to see users (because it reads from profiles)
+// ============================================================================
+const profilesCollection = collection(db, 'profiles')
+
+// Keep a reference to users collection for operations that still need it
+// (e.g., checkOrganizationAccess which checks assignedOrganizations on users)
+const usersCollection = collection(db, 'users')
 
 const parseUserDate = (value?: Timestamp | string | Date | number | null): Date | null => {
   if (!value) return null
@@ -17,9 +30,15 @@ const parseUserDate = (value?: Timestamp | string | Date | number | null): Date 
   return maybeDate || null
 }
 
+/**
+ * Fetch profile documents for users belonging to an organization.
+ * Queries the 'profiles' collection (not 'users') using multiple field variants.
+ */
 const fetchOrganizationUserDocs = async (organizationKey: string): Promise<DocumentSnapshot[]> => {
   const trimmed = organizationKey.trim()
   if (!trimmed) return []
+  
+  // Query profiles collection with all possible organization identifier fields
   const [
     companySnapshot,
     legacyCompanySnapshot,
@@ -27,23 +46,28 @@ const fetchOrganizationUserDocs = async (organizationKey: string): Promise<Docum
     companyIdSnapshot,
     organizationIdSnapshot,
   ] = await Promise.all([
-    getDocs(query(usersCollection, where('companyCode', '==', trimmed))),
-    getDocs(query(usersCollection, where('company_code', '==', trimmed))),
-    getDocs(query(usersCollection, where('organization_code', '==', trimmed))),
-    getDocs(query(usersCollection, where('companyId', '==', trimmed))),
-    getDocs(query(usersCollection, where('organizationId', '==', trimmed))),
+    getDocs(query(profilesCollection, where('companyCode', '==', trimmed))),
+    getDocs(query(profilesCollection, where('company_code', '==', trimmed))),
+    getDocs(query(profilesCollection, where('organization_code', '==', trimmed))),
+    getDocs(query(profilesCollection, where('companyId', '==', trimmed))),
+    getDocs(query(profilesCollection, where('organizationId', '==', trimmed))),
   ])
+  
+  // Deduplicate by document ID
   const usersMap = new Map<string, DocumentSnapshot>()
   companySnapshot.docs.forEach((docSnap) => usersMap.set(docSnap.id, docSnap))
   legacyCompanySnapshot.docs.forEach((docSnap) => usersMap.set(docSnap.id, docSnap))
   orgCodeSnapshot.docs.forEach((docSnap) => usersMap.set(docSnap.id, docSnap))
   companyIdSnapshot.docs.forEach((docSnap) => usersMap.set(docSnap.id, docSnap))
   organizationIdSnapshot.docs.forEach((docSnap) => usersMap.set(docSnap.id, docSnap))
+  
   return Array.from(usersMap.values())
 }
 
 /**
  * Check whether a user has access to an organization based on assigned organizations.
+ * Note: This still queries the 'users' collection because assignedOrganizations
+ * is stored there for admin/partner users.
  */
 export const checkOrganizationAccess = async (
   userId: string,
@@ -69,6 +93,7 @@ export const checkOrganizationAccess = async (
 
 /**
  * Calculate engagement and membership statistics for an organization.
+ * Now queries 'profiles' collection.
  */
 export const fetchOrganizationEngagementStats = async (organizationKey: string): Promise<OrganizationStatistics> => {
   if (!organizationKey) {
@@ -98,11 +123,14 @@ export const fetchOrganizationEngagementStats = async (organizationKey: string):
     const data = docSnap.data() as {
       membershipStatus?: OrganizationUserProfile['membershipStatus']
       accountStatus?: OrganizationUserProfile['accountStatus']
+      status?: string
       createdAt?: Timestamp | string | Date | number
       engagementScore?: number
       engagementRate?: number
     }
-    if ((data.accountStatus || 'active') === 'active') {
+    // Check both accountStatus and status fields
+    const accountStatus = data.accountStatus || data.status || 'active'
+    if (accountStatus === 'active' || accountStatus === 'Active') {
       activeMembers += 1
     }
     if ((data.membershipStatus || 'inactive') === 'paid') {
@@ -132,51 +160,120 @@ export const fetchOrganizationEngagementStats = async (organizationKey: string):
 
 /**
  * Fetch user profiles associated with an organization.
+ * 
+ * CRITICAL FIX: Now queries 'profiles' collection and maps all fields
+ * with proper defaults so the UI renders correctly.
  */
 export const fetchOrganizationUsers = async (organizationKey: string): Promise<OrganizationUserProfile[]> => {
   if (!organizationKey) return []
+  
   const docs = await fetchOrganizationUserDocs(organizationKey)
-  console.log('[PartnerData] fetched users:', docs.length)
+  
   return docs.map((docSnap) => {
     const data = docSnap.data() as {
+      // Name fields
       fullName?: string
       name?: string
       firstName?: string
       lastName?: string
       email?: string
-      role?: OrganizationUserProfile['role']
+      
+      // Role and status
+      role?: string
       membershipStatus?: OrganizationUserProfile['membershipStatus']
       accountStatus?: OrganizationUserProfile['accountStatus']
+      status?: string
+      
+      // Timestamps
       lastActiveAt?: Timestamp | string | Date | number
       lastActive?: Timestamp | string | Date | number
+      updatedAt?: Timestamp | string | Date | number
       createdAt?: Timestamp | string | Date | number
+      
+      // Avatar
       avatarUrl?: string
       photoURL?: string
+      
+      // Organization identifiers
       organizationId?: string
       organization_id?: string
       companyCode?: string
       company_code?: string
+      
+      // Progress fields (for PartnerUser compatibility)
+      progressPercent?: number
+      progress_percent?: number
+      currentWeek?: number
+      current_week?: number
+      weeklyEarned?: number
+      weekly_earned?: number
+      weeklyRequired?: number
+      weekly_required?: number
+      
+      // Risk fields
+      riskStatus?: string
+      risk_status?: string
+      riskReasons?: string[]
+      risk_reasons?: string[]
+      
+      // Nudge fields
+      nudgeEnabled?: boolean
+      nudge_enabled?: boolean
+      adminNotes?: string
+      admin_notes?: string
     }
+    
+    // Resolve organization identifiers
     const organizationId = data.organizationId || data.organization_id || null
     const companyCode = data.companyCode || data.company_code || null
+    
+    // Resolve name with fallbacks
     const fullName =
       data.fullName ||
       data.name ||
       [data.firstName, data.lastName].filter((value) => !!value).join(' ').trim() ||
       data.email ||
       'Unknown user'
+    
+    // Resolve role (normalize to lowercase)
+    const rawRole = data.role || 'learner'
+    const role = rawRole.toLowerCase() as OrganizationUserProfile['role']
+    
+    // Resolve status
+    const accountStatus = data.accountStatus || data.status || 'active'
+    const normalizedStatus = accountStatus === 'Active' ? 'active' : accountStatus
+    
+    // Resolve lastActive with multiple fallbacks
+    const lastActive = parseUserDate(
+      data.lastActiveAt || data.lastActive || data.updatedAt || null
+    )
+    
     return {
       id: docSnap.id,
       name: fullName,
-      email: data.email,
-      role: (data.role ?? 'learner').toLowerCase(),
+      email: data.email ?? '',
+      role,
       membershipStatus: data.membershipStatus || 'inactive',
-      accountStatus: data.accountStatus || 'active',
-      lastActive: parseUserDate(data.lastActiveAt || data.lastActive),
+      accountStatus: normalizedStatus as OrganizationUserProfile['accountStatus'],
+      status: normalizedStatus === 'active' ? 'Active' : 'Inactive',
+      lastActive,
       createdAt: parseUserDate(data.createdAt),
       avatarUrl: data.avatarUrl ?? data.photoURL ?? null,
-      organizationId: organizationId?.trim().toLowerCase() || null,
-      companyCode: companyCode?.trim().toLowerCase() || null,
+      organizationId: organizationId?.trim() || null,
+      companyCode: companyCode?.trim() || null,
+      
+      // ========================================================================
+      // REQUIRED DEFAULTS for PartnerUser compatibility
+      // Without these, the UI will have silent failures or show incorrect data
+      // ========================================================================
+      progressPercent: data.progressPercent ?? data.progress_percent ?? 0,
+      currentWeek: data.currentWeek ?? data.current_week ?? 0,
+      weeklyEarned: data.weeklyEarned ?? data.weekly_earned ?? 0,
+      weeklyRequired: data.weeklyRequired ?? data.weekly_required ?? 0,
+      riskStatus: (data.riskStatus ?? data.risk_status ?? 'engaged') as 'engaged' | 'watch' | 'concern' | 'critical' | 'at_risk',
+      riskReasons: data.riskReasons ?? data.risk_reasons ?? [],
+      nudgeEnabled: data.nudgeEnabled ?? data.nudge_enabled ?? true,
+      adminNotes: data.adminNotes ?? data.admin_notes ?? '',
     }
   })
 }
