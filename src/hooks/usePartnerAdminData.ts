@@ -2,10 +2,12 @@ import { useCallback, useEffect, useState } from 'react'
 import { doc, onSnapshot } from 'firebase/firestore'
 import { db } from '@/services/firebase'
 import { fetchPartnerAdminSnapshot } from '@/services/partnerAdminDataService'
+import { useAuth } from '@/hooks/useAuth'
 import type { DashboardDebugInfo } from '@/utils/partnerDashboardUtils'
 import type { PartnerAdminDataSnapshot, PartnerAdminSnapshot } from '@/types/admin'
 
 export const usePartnerAdminData = (partnerId?: string | null) => {
+  const { assignedOrganizations } = useAuth()
   const [snapshot, setSnapshot] = useState<PartnerAdminDataSnapshot | null>(null)
   const [loading, setLoading] = useState<boolean>(() => !!partnerId)
   const [error, setError] = useState<string | null>(null)
@@ -42,7 +44,11 @@ export const usePartnerAdminData = (partnerId?: string | null) => {
 
         try {
           const data = docSnap.data() as PartnerAdminSnapshot
-          const nextSnapshot = await fetchPartnerAdminSnapshot(partnerId, data)
+          const nextSnapshot = await fetchPartnerAdminSnapshot(
+            partnerId,
+            data,
+            assignedOrganizations,
+          )
           if (!isActive) return
           setSnapshot(nextSnapshot)
           setLoading(false)
@@ -67,7 +73,7 @@ export const usePartnerAdminData = (partnerId?: string | null) => {
       isActive = false
       unsubscribe()
     }
-  }, [partnerId, refreshIndex])
+  }, [assignedOrganizations, partnerId, refreshIndex])
 
   return { snapshot, loading, error, refresh, debugInfo }
 }

@@ -27,54 +27,41 @@ const parseUserDate = (value?: Timestamp | string | Date | number | null): Date 
 /**
  * Fetch profile documents for users belonging to an organization.
  */
-const fetchOrganizationUserDocs = async (organizationKey: string): Promise<DocumentSnapshot[]> => {
-  const trimmed = organizationKey.trim()
-  
+export const fetchOrganizationUserDocs = async (
+  organizationKeys: string[],
+): Promise<DocumentSnapshot[]> => {
+  const trimmedKeys = organizationKeys
+    .map((key) => key?.trim())
+    .filter((key): key is string => !!key)
+
   // DEBUG: Log every call
-  console.log('[fetchOrganizationUserDocs] 🔍 Called with organizationKey:', trimmed)
-  
-  if (!trimmed) {
-    console.log('[fetchOrganizationUserDocs] ⚠️ Empty organizationKey, returning []')
+  console.log('[fetchOrganizationUserDocs] 🔍 Called with organizationKeys:', trimmedKeys)
+
+  if (!trimmedKeys.length) {
+    console.log('[fetchOrganizationUserDocs] ⚠️ Empty organizationKeys, returning []')
     return []
   }
-  
+
   console.log('[fetchOrganizationUserDocs] 📡 Querying PROFILES collection...')
-  
-  // Query profiles collection with all possible organization identifier fields
-  const [
-    companySnapshot,
-    legacyCompanySnapshot,
-    orgCodeSnapshot,
-    companyIdSnapshot,
-    organizationIdSnapshot,
-  ] = await Promise.all([
-    getDocs(query(profilesCollection, where('companyCode', '==', trimmed))),
-    getDocs(query(profilesCollection, where('company_code', '==', trimmed))),
-    getDocs(query(profilesCollection, where('organization_code', '==', trimmed))),
-    getDocs(query(profilesCollection, where('companyId', '==', trimmed))),
-    getDocs(query(profilesCollection, where('organizationId', '==', trimmed))),
-  ])
-  
-  // DEBUG: Log results from each query
-  console.log('[fetchOrganizationUserDocs] 📊 Query results:', {
-    companyCode: companySnapshot.docs.length,
-    company_code: legacyCompanySnapshot.docs.length,
-    organization_code: orgCodeSnapshot.docs.length,
-    companyId: companyIdSnapshot.docs.length,
-    organizationId: organizationIdSnapshot.docs.length,
-  })
-  
-  // Deduplicate by document ID
+
+  const snapshots = await Promise.all(
+    trimmedKeys.flatMap((trimmed) => [
+      getDocs(query(profilesCollection, where('companyCode', '==', trimmed))),
+      getDocs(query(profilesCollection, where('company_code', '==', trimmed))),
+      getDocs(query(profilesCollection, where('organization_code', '==', trimmed))),
+      getDocs(query(profilesCollection, where('companyId', '==', trimmed))),
+      getDocs(query(profilesCollection, where('organizationId', '==', trimmed))),
+    ]),
+  )
+
   const usersMap = new Map<string, DocumentSnapshot>()
-  companySnapshot.docs.forEach((docSnap) => usersMap.set(docSnap.id, docSnap))
-  legacyCompanySnapshot.docs.forEach((docSnap) => usersMap.set(docSnap.id, docSnap))
-  orgCodeSnapshot.docs.forEach((docSnap) => usersMap.set(docSnap.id, docSnap))
-  companyIdSnapshot.docs.forEach((docSnap) => usersMap.set(docSnap.id, docSnap))
-  organizationIdSnapshot.docs.forEach((docSnap) => usersMap.set(docSnap.id, docSnap))
-  
+  snapshots.forEach((snapshot) => {
+    snapshot.docs.forEach((docSnap) => usersMap.set(docSnap.id, docSnap))
+  })
+
   const result = Array.from(usersMap.values())
   console.log('[fetchOrganizationUserDocs] ✅ Total unique profiles found:', result.length)
-  
+
   // DEBUG: Log sample data from first profile
   if (result.length > 0) {
     const sampleData = result[0].data()
@@ -87,7 +74,7 @@ const fetchOrganizationUserDocs = async (organizationKey: string): Promise<Docum
       companyCode: sampleData?.companyCode,
     })
   }
-  
+
   return result
 }
 
@@ -130,7 +117,7 @@ export const fetchOrganizationEngagementStats = async (organizationKey: string):
     }
   }
 
-  const docs = await fetchOrganizationUserDocs(organizationKey)
+  const docs = await fetchOrganizationUserDocs([organizationKey])
   const now = new Date()
   const weekAgo = new Date(now)
   weekAgo.setDate(now.getDate() - 7)
@@ -184,7 +171,9 @@ export const fetchOrganizationEngagementStats = async (organizationKey: string):
 /**
  * Fetch user profiles associated with an organization.
  */
-export const fetchOrganizationUsers = async (organizationKey: string): Promise<OrganizationUserProfile[]> => {
+export const fetchOrganizationUsers = async (
+  organizationKey: string,
+): Promise<OrganizationUserProfile[]> => {
   console.log('[fetchOrganizationUsers] 🚀 Called with organizationKey:', organizationKey)
   
   if (!organizationKey) {
@@ -192,7 +181,7 @@ export const fetchOrganizationUsers = async (organizationKey: string): Promise<O
     return []
   }
   
-  const docs = await fetchOrganizationUserDocs(organizationKey)
+  const docs = await fetchOrganizationUserDocs([organizationKey])
   
   console.log('[fetchOrganizationUsers] 📊 Processing', docs.length, 'profiles')
   
@@ -282,4 +271,41 @@ export const fetchOrganizationUsers = async (organizationKey: string): Promise<O
   console.log('[fetchOrganizationUsers] ✅ Returning', result.length, 'users')
   
   return result
+}
+
+export const fetchOrganizationUsersForPartner = async (
+  organizationKeys: string[],
+): Promise<OrganizationUserProfile[]> => {
+  if (!organizationKeys.length) return []
+
+  const docs = await fetchOrganizationUserDocs(organizationKeys)
+
+  return docs.map((docSnap) => {
+    const data = docSnap.data() as any
+
+    const organizationId =
+      data.organizationId ||
+      data.organization_id ||
+      data.companyId ||
+      data.companyCode ||
+      null
+
+    return {
+      id: docSnap.id,
+      name:
+        data.fullName ||
+        data.name ||
+        [data.firstName, data.lastName].filter(Boolean).join(' ') ||
+        data.email ||
+        'Unknown user',
+      email: data.email ?? '',
+      role: (data.role ?? 'learner').toLowerCase(),
+      accountStatus: data.accountStatus ?? 'active',
+      membershipStatus: data.membershipStatus ?? 'inactive',
+      organizationId: organizationId?.toLowerCase() ?? null,
+      companyCode: data.companyCode?.toLowerCase() ?? null,
+      lastActive: parseUserDate(data.lastActiveAt || data.lastActive),
+      createdAt: parseUserDate(data.createdAt),
+    }
+  })
 }

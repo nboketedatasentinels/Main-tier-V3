@@ -103,17 +103,12 @@ export const usePartnerDashboardData = (options?: UsePartnerDashboardDataOptions
   const organizationsReady = !adminDataLoading && !adminDataError
 
   const assignedOrgKeys = useMemo(() => {
-    const keys: string[] = [...assignedOrganizationIds]
-
-    if (organizationsReady) {
-      organizations.forEach((org) => {
-        if (org.id) keys.push(org.id)
-        if (org.code) keys.push(org.code)
-      })
-    }
+    const keys = (profile?.assignedOrganizations ?? [])
+      .map((key) => key?.trim().toLowerCase())
+      .filter(Boolean)
 
     return createOrgKeySet(keys)
-  }, [assignedOrganizationIds, organizations, organizationsReady])
+  }, [profile?.assignedOrganizations])
 
   const { metrics, engagementTrend, riskLevels, atRiskUsers, managedBreakdown, daysUntil } =
     usePartnerMetrics({ users, organizations })
