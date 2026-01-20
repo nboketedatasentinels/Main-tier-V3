@@ -154,38 +154,36 @@ export const PartnerUserManagement: React.FC<PartnerUserManagementProps> = ({
   // ============================================================================
   const organizationOptions = useMemo(() => {
     const seenIds = new Set<string>()
-    const validOrgs = organizations
-      .map((org, index) => {
-        // Generate a unique id, falling back to index-based ID if needed
-        let id = org.id || org.code || `org-${index}`
-        // Ensure uniqueness
-        if (seenIds.has(id.toLowerCase())) {
-          id = `${id}-${index}`
-        }
-        seenIds.add(id.toLowerCase())
+    const validOrgs = organizations.map((org, index) => {
+      // Prefer org.id as the canonical selection value
+      let id = org.id || `org-${index}`
+      // Ensure uniqueness
+      if (seenIds.has(id.toLowerCase())) {
+        id = `${id}-${index}`
+      }
+      seenIds.add(id.toLowerCase())
 
-        return {
-          ...org,
-          id,
-          name: org.name || org.code || org.id || 'Unknown organization',
-        }
-      })
+      return {
+        ...org,
+        id,
+        name: org.name || org.code || org.id || 'Unknown organization',
+      }
+    })
 
     return [{ id: 'all', name: 'All Companies' }, ...validOrgs]
   }, [organizations])
 
   const filtered = useMemo(() => {
-    const safeUsers = usersLoading ? [] : (users ?? [])
+    const safeUsers = (usersLoading && !(users?.length)) ? [] : (users ?? [])
     const normalizedSelectedOrg = (selectedOrg || 'all').toLowerCase()
     if (normalizedSelectedOrg === 'all') return safeUsers
 
     return safeUsers.filter((u) => u.organizationId?.toLowerCase() === normalizedSelectedOrg)
   }, [users, usersLoading, selectedOrg])
 
-  const learnerUsers = useMemo(
-    () => filtered.filter(u => u.role === 'learner'),
-    [filtered],
-  )
+  const learnerUsers = useMemo(() => {
+    return filtered.filter(u => (u.role ?? '').toLowerCase() === 'learner')
+  }, [filtered])
 
   const { sortKey, sortDir, toggleSort, sortedUsers } = usePartnerUserSorting(learnerUsers)
   const { selection, toggleSelection, clearSelection, selectAll } = useUserSelection()
@@ -206,6 +204,12 @@ export const PartnerUserManagement: React.FC<PartnerUserManagementProps> = ({
   // ============================================================================
   useEffect(() => {
     if (process.env.NODE_ENV === 'development') {
+      const roles = new Map<string, number>()
+      for (const user of users ?? []) {
+        const role = String(user.role)
+        roles.set(role, (roles.get(role) ?? 0) + 1)
+      }
+      console.log('[PartnerUserManagement] role distribution', Object.fromEntries(roles))
       console.log('[PartnerUserManagement]', {
         usersLength: users?.length ?? 0,
         filteredLength: filtered.length,
