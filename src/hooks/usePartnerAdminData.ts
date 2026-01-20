@@ -2,12 +2,13 @@ import { useCallback, useEffect, useState } from 'react'
 import { doc, onSnapshot } from 'firebase/firestore'
 import { db } from '@/services/firebase'
 import { fetchPartnerAdminSnapshot } from '@/services/partnerAdminDataService'
-import { useAuth } from '@/hooks/useAuth'
 import type { DashboardDebugInfo } from '@/utils/partnerDashboardUtils'
 import type { PartnerAdminDataSnapshot, PartnerAdminSnapshot } from '@/types/admin'
 
-export const usePartnerAdminData = (partnerId?: string | null) => {
-  const { assignedOrganizations } = useAuth()
+export const usePartnerAdminData = (
+  partnerId?: string | null,
+  assignedOrganizations: string[] = [],
+) => {
   const [snapshot, setSnapshot] = useState<PartnerAdminDataSnapshot | null>(null)
   const [loading, setLoading] = useState<boolean>(() => !!partnerId)
   const [error, setError] = useState<string | null>(null)

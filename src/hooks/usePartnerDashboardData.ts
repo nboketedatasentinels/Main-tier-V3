@@ -26,7 +26,7 @@ interface UsePartnerDashboardDataOptions {
 // FIX #15: Refactored hook that composes smaller, focused hooks
 // ============================================================================
 export const usePartnerDashboardData = (options?: UsePartnerDashboardDataOptions) => {
-  const { profile, isSuperAdmin, user, profileStatus } = useAuth()
+  const { profile, isSuperAdmin, user, profileStatus, assignedOrganizations } = useAuth()
 
   const [selectedOrg, setSelectedOrg] = useState<string>(options?.selectedOrg || 'all')
   const [notificationCount, setNotificationCount] = useState<number>(0)
@@ -42,7 +42,7 @@ export const usePartnerDashboardData = (options?: UsePartnerDashboardDataOptions
     error: adminDataError,
     refresh: refreshAdminSnapshot,
     debugInfo,
-  } = usePartnerAdminSnapshotData(partnerId)
+  } = usePartnerAdminSnapshotData(partnerId, assignedOrganizations)
 
   const assignments = useMemo(
     () => adminSnapshot?.assignedOrganizations ?? [],
