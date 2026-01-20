@@ -7,7 +7,7 @@ import { usePartnerMetrics } from '@/hooks/partner/usePartnerMetrics'
 import { usePartnerAdminData as usePartnerAdminSnapshotData } from '@/hooks/usePartnerAdminData'
 import { logOrganizationAccessAttempt } from '@/services/organizationService'
 import { recordEngagementAction } from '@/services/engagementService'
-import { logger, normalizeOrgKey, createOrgKeySet, type DashboardDebugInfo } from '@/utils/partnerDashboardUtils'
+import { logger, normalizeOrgKey, createOrgKeySet } from '@/utils/partnerDashboardUtils'
 import type { DataWarning } from '@/components/admin/RiskAnalysisCard'
 import type { NotificationRecord } from '@/types/notifications'
 import type { PartnerAssignment } from '@/types/admin'
@@ -41,6 +41,7 @@ export const usePartnerDashboardData = (options?: UsePartnerDashboardDataOptions
     loading: adminDataLoading,
     error: adminDataError,
     refresh: refreshAdminSnapshot,
+    debugInfo,
   } = usePartnerAdminSnapshotData(partnerId)
 
   const assignments = useMemo(
@@ -182,7 +183,6 @@ export const usePartnerDashboardData = (options?: UsePartnerDashboardDataOptions
   const lastUsersSuccessAt = adminSnapshot?.usersFetchedAt ?? null
   const retryOrganizations = refreshAdminSnapshot
   const retryUsers = refreshAdminSnapshot
-  const debugInfo: DashboardDebugInfo | null = null
 
   // Reset selected org when it becomes invalid
   useEffect(() => {

@@ -127,7 +127,7 @@ export const fetchPartnerAdminSnapshot = async (
     users,
     usersFetchedAt: new Date(),
     pointsOverview: buildEmptyPointsOverview(),
-    createdAt: data.createdAt,
-    updatedAt: data.updatedAt,
+    createdAt: normalizeDateString(data.createdAt ?? null) ?? undefined,
+    updatedAt: normalizeDateString(data.updatedAt ?? null) ?? undefined,
   }
 }
