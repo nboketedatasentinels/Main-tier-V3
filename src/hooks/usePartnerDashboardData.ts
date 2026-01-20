@@ -4,13 +4,12 @@ import { db } from '@/services/firebase'
 import { useAuth } from '@/hooks/useAuth'
 import { usePartnerInterventions } from '@/hooks/partner/usePartnerInterventions'
 import { usePartnerMetrics } from '@/hooks/partner/usePartnerMetrics'
-import { usePartnerAdminData as usePartnerAdminSnapshotData } from '@/hooks/usePartnerAdminData'
+import { usePartnerAdminData as usePartnerAdminSnapshotData } from '@/hooks/partner/usePartnerAdminData'
 import { logOrganizationAccessAttempt } from '@/services/organizationService'
 import { recordEngagementAction } from '@/services/engagementService'
-import { logger, normalizeOrgKey, createOrgKeySet } from '@/utils/partnerDashboardUtils'
+import { logger, normalizeOrgKey } from '@/utils/partnerDashboardUtils'
 import type { DataWarning } from '@/components/admin/RiskAnalysisCard'
 import type { NotificationRecord } from '@/types/notifications'
-import type { PartnerAssignment } from '@/types/admin'
 
 // Re-export types for backward compatibility
 export type { PartnerRiskLevel, PartnerUser, PartnerOrganization } from '@/hooks/partner/usePartnerAdminData'
@@ -26,7 +25,7 @@ interface UsePartnerDashboardDataOptions {
 // FIX #15: Refactored hook that composes smaller, focused hooks
 // ============================================================================
 export const usePartnerDashboardData = (options?: UsePartnerDashboardDataOptions) => {
-  const { profile, isSuperAdmin, user, profileStatus, assignedOrganizations } = useAuth()
+  const { profile, isSuperAdmin, user, profileStatus } = useAuth()
 
   const [selectedOrg, setSelectedOrg] = useState<string>(options?.selectedOrg || 'all')
   const [notificationCount, setNotificationCount] = useState<number>(0)
@@ -40,29 +39,17 @@ export const usePartnerDashboardData = (options?: UsePartnerDashboardDataOptions
     snapshot: adminSnapshot,
     loading: adminDataLoading,
     error: adminDataError,
-    refresh: refreshAdminSnapshot,
     debugInfo,
-  } = usePartnerAdminSnapshotData(partnerId, assignedOrganizations)
-
-  const assignments = useMemo(
-    () => adminSnapshot?.assignedOrganizations ?? [],
-    [adminSnapshot?.assignedOrganizations],
-  )
-
-  const activeAssignments = useMemo(
-    () =>
-      assignments.filter((assignment: PartnerAssignment) =>
-        !assignment.status || assignment.status === 'active'
-      ),
-    [assignments],
-  )
+    retryOrganizations,
+    retryUsers,
+  } = usePartnerAdminSnapshotData(partnerId, {
+    debugMode: options?.debugMode,
+    selectedOrg,
+  })
 
   const assignedOrganizationIds = useMemo(
-    () =>
-      activeAssignments
-        .map((assignment) => assignment.organizationId?.trim())
-        .filter((organizationId): organizationId is string => !!organizationId),
-    [activeAssignments],
+    () => adminSnapshot?.assignedOrganizationIds ?? [],
+    [adminSnapshot?.assignedOrganizationIds],
   )
 
   const organizations = useMemo(() => {
@@ -103,12 +90,8 @@ export const usePartnerDashboardData = (options?: UsePartnerDashboardDataOptions
   const organizationsReady = !adminDataLoading && !adminDataError
 
   const assignedOrgKeys = useMemo(() => {
-    const keys = (profile?.assignedOrganizations ?? [])
-      .map((key) => key?.trim().toLowerCase())
-      .filter(Boolean)
-
-    return createOrgKeySet(keys)
-  }, [profile?.assignedOrganizations])
+    return adminSnapshot?.assignedOrgKeys ?? new Set<string>()
+  }, [adminSnapshot?.assignedOrgKeys])
 
   const { metrics, engagementTrend, riskLevels, atRiskUsers, managedBreakdown, daysUntil } =
     usePartnerMetrics({ users, organizations })
@@ -116,7 +99,7 @@ export const usePartnerDashboardData = (options?: UsePartnerDashboardDataOptions
   const snapshot = useMemo(
     () => ({
       partnerId: adminSnapshot?.partnerId ?? user?.uid ?? null,
-      assignments: activeAssignments,
+      assignments: adminSnapshot?.assignments ?? [],
       assignedOrganizationIds,
       organizations,
       users,
@@ -132,8 +115,8 @@ export const usePartnerDashboardData = (options?: UsePartnerDashboardDataOptions
       assignedOrgKeys,
     }),
     [
-      activeAssignments,
       adminSnapshot?.partnerId,
+      adminSnapshot?.assignments,
       assignedOrgKeys,
       assignedOrganizationIds,
       atRiskUsers,
@@ -176,9 +159,6 @@ export const usePartnerDashboardData = (options?: UsePartnerDashboardDataOptions
   const assignmentsError = adminDataError
   const lastOrganizationsSuccessAt = null
   const lastUsersSuccessAt = adminSnapshot?.usersFetchedAt ?? null
-  const retryOrganizations = refreshAdminSnapshot
-  const retryUsers = refreshAdminSnapshot
-
   // Reset selected org when it becomes invalid
   useEffect(() => {
     if (profileStatus !== 'ready') return

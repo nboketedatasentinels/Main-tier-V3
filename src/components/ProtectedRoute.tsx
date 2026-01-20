@@ -1,4 +1,4 @@
-import React from 'react'
+import React, { useEffect, useState } from 'react'
 import { Navigate, useLocation } from 'react-router-dom'
 import { useAuth } from '@/hooks/useAuth'
 import type { UserRole } from '@/types'
@@ -45,6 +45,28 @@ export const ProtectedRoute: React.FC<Props> = ({
     canAccessOrganization,
   } = useAuth()
   const location = useLocation()
+  const [partnerHasOrgAccess, setPartnerHasOrgAccess] = useState<boolean | null>(null)
+
+  useEffect(() => {
+    if (!requireOrganization || !user || !profile) {
+      setPartnerHasOrgAccess(null)
+      return
+    }
+
+    let isMounted = true
+    setPartnerHasOrgAccess(null)
+    void canAccessOrganization(requireOrganization)
+      .then((allowed) => {
+        if (isMounted) setPartnerHasOrgAccess(allowed)
+      })
+      .catch(() => {
+        if (isMounted) setPartnerHasOrgAccess(false)
+      })
+
+    return () => {
+      isMounted = false
+    }
+  }, [canAccessOrganization, profile, requireOrganization, user])
 
   // Block render until auth + profile are known
   if (loading || profileLoading) return <AppLoader />
@@ -109,8 +131,13 @@ export const ProtectedRoute: React.FC<Props> = ({
   }
 
   // Check for organization access requirement
-  if (requireOrganization && !canAccessOrganization(requireOrganization)) {
-    return <Navigate to="/unauthorized" replace />
+  if (requireOrganization && userRole === 'partner') {
+    if (partnerHasOrgAccess === null) {
+      return <AppLoader />
+    }
+    if (!partnerHasOrgAccess) {
+      return <Navigate to="/unauthorized" replace />
+    }
   }
 
   // Check for specific role requirements

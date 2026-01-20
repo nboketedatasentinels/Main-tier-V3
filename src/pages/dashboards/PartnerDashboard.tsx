@@ -54,9 +54,18 @@ import type { MismatchSample } from '@/utils/partnerDashboardUtils'
 
 export const PartnerDashboard: React.FC = () => {
   const navigate = useNavigate()
-  const { isSuperAdmin, user, refreshProfile, profileStatus, lastProfileLoadAt } = useAuth()
+  const {
+    isSuperAdmin,
+    user,
+    profile,
+    canAccessOrganization,
+    refreshProfile,
+    profileStatus,
+    lastProfileLoadAt,
+  } = useAuth()
   const toast = useToast()
   const [debugMode, setDebugMode] = useState(false)
+  const [partnerOrgAccess, setPartnerOrgAccess] = useState<boolean | null>(null)
   const {
     assignedOrgCount,
     assignedOrganizations,
@@ -85,6 +94,7 @@ export const PartnerDashboard: React.FC = () => {
   const { organizations, users, analytics } = snapshot
   const { metrics, engagementTrend, riskLevels, atRiskUsers, managedBreakdown, daysUntil } =
     analytics
+  const partnerId = user?.uid ?? null
   const snapshotUsers = snapshot?.users ?? []
   const snapshotOrganizations = snapshot?.organizations ?? []
   const snapshotLoading = adminDataLoading
@@ -116,6 +126,16 @@ export const PartnerDashboard: React.FC = () => {
   const [digestSending, setDigestSending] = useState(false)
   const [digestStatusMessage, setDigestStatusMessage] = useState<string | null>(null)
   const initialRefreshRef = useRef(false)
+  const selectedOrgId = useMemo(() => {
+    if (!selectedOrg || selectedOrg === 'all') return null
+    const selectedNormalized = selectedOrg.toLowerCase()
+    const match = organizations.find((org) =>
+      [org.id, org.code].some(
+        (value) => value?.toLowerCase() === selectedNormalized
+      )
+    )
+    return match?.id || null
+  }, [organizations, selectedOrg])
 
   const loadTemplates = useCallback(async () => {
     setTemplateLoading(true)
@@ -138,6 +158,27 @@ export const PartnerDashboard: React.FC = () => {
   useEffect(() => {
     void loadTemplates()
   }, [loadTemplates])
+
+  useEffect(() => {
+    if (profile?.role !== 'partner' || !selectedOrgId) {
+      setPartnerOrgAccess(true)
+      return
+    }
+
+    let isMounted = true
+    setPartnerOrgAccess(null)
+    void canAccessOrganization(selectedOrgId)
+      .then((allowed) => {
+        if (isMounted) setPartnerOrgAccess(allowed)
+      })
+      .catch(() => {
+        if (isMounted) setPartnerOrgAccess(false)
+      })
+
+    return () => {
+      isMounted = false
+    }
+  }, [canAccessOrganization, profile?.role, selectedOrgId])
 
   const refreshIfVisible = useCallback((reason: string) => {
     if (typeof document !== 'undefined' && document.visibilityState !== 'visible') {
@@ -932,6 +973,40 @@ export const PartnerDashboard: React.FC = () => {
           </h2>
           <AccordionPanel pb={4}>
             <VStack align="flex-start" spacing={4}>
+              {import.meta.env.DEV && (
+                <Box w="full">
+                  <Text fontSize="xs" fontWeight="bold" color="gray.600" mb={2}>
+                    Partner Debug Panel (DEV ONLY)
+                  </Text>
+                  <SimpleGrid columns={{ base: 1, md: 2 }} spacing={3}>
+                    <Box>
+                      <Text fontSize="xs" color="gray.500">Role</Text>
+                      <Text fontWeight="bold">{profile?.role || 'unknown'}</Text>
+                    </Box>
+                    <Box>
+                      <Text fontSize="xs" color="gray.500">Partner ID</Text>
+                      <Text fontWeight="bold">{partnerId || 'n/a'}</Text>
+                    </Box>
+                    <Box>
+                      <Text fontSize="xs" color="gray.500">Assigned Org IDs</Text>
+                      <Text fontWeight="bold">
+                        {assignedOrganizations.length ? assignedOrganizations.join(', ') : 'none'}
+                      </Text>
+                    </Box>
+                    <Box>
+                      <Text fontSize="xs" color="gray.500">Selected Org ID</Text>
+                      <Text fontWeight="bold">{selectedOrgId || 'all'}</Text>
+                    </Box>
+                    <Box>
+                      <Text fontSize="xs" color="gray.500">Partner Org Access</Text>
+                      <Text fontWeight="bold">
+                        {partnerOrgAccess === null ? 'checking' : partnerOrgAccess ? 'true' : 'false'}
+                      </Text>
+                    </Box>
+                  </SimpleGrid>
+                  <Divider mt={3} />
+                </Box>
+              )}
               <SimpleGrid columns={{ base: 2, md: 4 }} spacing={4} w="full">
                 <Box>
                   <Text fontSize="xs" color="gray.500">Snapshot Total</Text>
@@ -1384,6 +1459,33 @@ export const PartnerDashboard: React.FC = () => {
           <Skeleton height="180px" borderRadius="md" />
           <Skeleton height="180px" borderRadius="md" />
         </Stack>
+      </PartnerLayout>
+    )
+  }
+
+  if (profile?.role === 'partner' && selectedOrgId && partnerOrgAccess === false) {
+    return (
+      <PartnerLayout
+        organizations={organizations}
+        selectedOrg={selectedOrg}
+        onSelectOrg={setSelectedOrg}
+        notificationCount={notificationCount}
+        navSections={navSections}
+        onNavigate={handleNavigate}
+        activeItem={activePage}
+      >
+        <Card bg="red.50" border="1px solid" borderColor="red.200">
+          <CardBody>
+            <Stack spacing={2}>
+              <Text fontWeight="bold" color="red.700">
+                Access denied
+              </Text>
+              <Text color="red.600">
+                You do not have access to the selected organization. Please choose another organization or contact support.
+              </Text>
+            </Stack>
+          </CardBody>
+        </Card>
       </PartnerLayout>
     )
   }

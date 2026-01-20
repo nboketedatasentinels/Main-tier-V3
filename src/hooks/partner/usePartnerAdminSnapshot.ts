@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
+import { collection, onSnapshot, query, where } from 'firebase/firestore'
+import { db } from '@/services/firebase'
 import { useAuth } from '@/hooks/useAuth'
-import { listenToPartnerAdminSnapshot } from '@/services/partnerAdminService'
 import type { PartnerAdminSnapshot, PartnerAssignment } from '@/types/admin'
 
 interface UsePartnerAdminSnapshotOptions {
@@ -17,6 +18,7 @@ export const usePartnerAdminSnapshot = (options: UsePartnerAdminSnapshotOptions 
   const [snapshot, setSnapshot] = useState<PartnerAdminSnapshot | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [assignedOrganizationIds, setAssignedOrganizationIds] = useState<string[]>([])
 
   useEffect(() => {
     if (!enabled || profileStatus !== 'ready') {
@@ -28,6 +30,7 @@ export const usePartnerAdminSnapshot = (options: UsePartnerAdminSnapshotOptions 
 
     if (isSuperAdmin || !user?.uid) {
       setSnapshot(null)
+      setAssignedOrganizationIds([])
       setLoading(false)
       setError(null)
       return
@@ -36,15 +39,39 @@ export const usePartnerAdminSnapshot = (options: UsePartnerAdminSnapshotOptions 
     setLoading(true)
     setError(null)
 
-    const unsubscribe = listenToPartnerAdminSnapshot(
-      user.uid,
-      (nextSnapshot) => {
-        setSnapshot(nextSnapshot)
+    const assignmentsQuery = query(
+      collection(db, 'partner_organizations'),
+      where('partnerId', '==', user.uid),
+    )
+
+    const unsubscribe = onSnapshot(
+      assignmentsQuery,
+      (snapshot) => {
+        const orgIds = snapshot.docs
+          .map((docSnap) => {
+            const data = docSnap.data() as { organizationId?: string }
+            if (data.organizationId) return data.organizationId.trim()
+            const [, organizationId] = docSnap.id.split('_')
+            return organizationId?.trim() || ''
+          })
+          .filter((organizationId): organizationId is string => !!organizationId)
+
+        const deduped = Array.from(new Set(orgIds))
+        setAssignedOrganizationIds(deduped)
+        setSnapshot({
+          partnerId: user.uid,
+          role: 'partner',
+          assignedOrganizations: deduped.map((organizationId) => ({
+            organizationId,
+            status: 'active',
+          })),
+        })
         setLoading(false)
       },
       (err) => {
         console.error('[PartnerAdminSnapshot] Failed to load partner assignments', err)
         setSnapshot(null)
+        setAssignedOrganizationIds([])
         setLoading(false)
         setError('Unable to load partner assignments.')
       },
@@ -63,7 +90,7 @@ export const usePartnerAdminSnapshot = (options: UsePartnerAdminSnapshotOptions 
     [assignments],
   )
 
-  const assignedOrganizationIds = useMemo(
+  const activeAssignmentIds = useMemo(
     () =>
       activeAssignments
         .map((assignment) => assignment.organizationId?.trim())
@@ -88,7 +115,7 @@ export const usePartnerAdminSnapshot = (options: UsePartnerAdminSnapshotOptions 
     snapshot,
     assignments,
     activeAssignments,
-    assignedOrganizationIds,
+    assignedOrganizationIds: assignedOrganizationIds.length ? assignedOrganizationIds : activeAssignmentIds,
     assignedOrganizationCodes,
     assignmentKey,
     loading,

@@ -1,14 +1,13 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useAuth } from '@/hooks/useAuth'
-import { usePartnerAdminSnapshot } from '@/hooks/partner/usePartnerAdminSnapshot'
 import {
-  checkOrganizationAccess,
   fetchAvailableCourses,
   fetchOrganizationByCode,
   fetchOrganizationEngagementStats,
   fetchOrganizationUsers,
   logOrganizationAccessAttempt,
 } from '@/services/organizationService'
+import { canAccessOrganization } from '@/services/organizationAccessService'
 import { fetchUserProfileById } from '@/services/userProfileService'
 import type {
   OrganizationAccountStatusFilter,
@@ -92,10 +91,7 @@ const buildDetailView = (organization: {
 const pageSize = 50
 
 export const useOrganizationDetails = (organizationId?: string) => {
-  const { user, isAdmin, isSuperAdmin } = useAuth()
-  const { assignedOrganizationIds, assignedOrganizationCodes } = usePartnerAdminSnapshot({
-    enabled: isAdmin && !isSuperAdmin,
-  })
+  const { user, isAdmin, isSuperAdmin, profile } = useAuth()
   const [organization, setOrganization] = useState<OrganizationDetailView | null>(null)
   const [users, setUsers] = useState<OrganizationUserProfile[]>([])
   const [statistics, setStatistics] = useState<OrganizationStatistics | null>(null)
@@ -139,17 +135,13 @@ export const useOrganizationDetails = (organizationId?: string) => {
         return
       }
 
-      const accessResult = await checkOrganizationAccess(user.uid, organizationId, orgRecord.code)
-      const normalizedOrganizationId = organizationId.trim().toLowerCase()
-      const normalizedAssignedCodes = assignedOrganizationCodes.map((code) => code.toLowerCase())
-      const normalizedOrgCode = orgRecord.code?.trim().toLowerCase()
-      const matchesAssignedOrg =
-        assignedOrganizationIds.includes(organizationId) ||
-        (orgRecord.id ? assignedOrganizationIds.includes(orgRecord.id) : false) ||
-        (normalizedOrganizationId ? normalizedAssignedCodes.includes(normalizedOrganizationId) : false) ||
-        (normalizedOrgCode ? normalizedAssignedCodes.includes(normalizedOrgCode) : false)
+      const accessAllowed = await canAccessOrganization({
+        role: profile?.role || '',
+        userId: user.uid,
+        organizationId: orgRecord.id || organizationId,
+      })
 
-      if (!isSuperAdmin && !accessResult.authorized && !matchesAssignedOrg) {
+      if (!isSuperAdmin && !accessAllowed) {
         if (user?.uid) {
           void logOrganizationAccessAttempt({
             userId: user.uid,
@@ -206,8 +198,7 @@ export const useOrganizationDetails = (organizationId?: string) => {
       setLoading(false)
     }
   }, [
-    assignedOrganizationCodes,
-    assignedOrganizationIds,
+    profile?.role,
     isAdmin,
     isSuperAdmin,
     organizationId,
