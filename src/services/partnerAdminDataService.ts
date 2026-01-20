@@ -1,4 +1,5 @@
-import { collection, getDocs, query, where, type Timestamp } from 'firebase/firestore'
+import { collection, getDocs, query, where, Timestamp } from 'firebase/firestore'
+import { fetchOrganizationUserDocs } from '@/services/organizationUserService'
 import { fetchOrganizationsByIds } from '@/services/organizationService'
 import type {
   PartnerAdminDataSnapshot,
@@ -6,6 +7,7 @@ import type {
   PartnerAdminPointsOverview,
   PartnerAdminSnapshot,
   PartnerAssignment,
+  OrganizationUserProfile,
 } from '@/types/admin'
 import { db } from './firebase'
 
@@ -46,9 +48,60 @@ const normalizeDateString = (value?: unknown): string | null => {
   return null
 }
 
+const parseUserDate = (value?: Timestamp | string | Date | number | null): Date | null => {
+  if (!value) return null
+  if (value instanceof Date) return value
+  if (value instanceof Timestamp) return value.toDate()
+  if (typeof value === 'number') return new Date(value)
+  if (typeof value === 'string') {
+    const parsed = new Date(value)
+    return Number.isNaN(parsed.getTime()) ? null : parsed
+  }
+  const maybeDate = (value as { toDate?: () => Date })?.toDate?.()
+  return maybeDate || null
+}
+
+export const fetchOrganizationUsersForPartner = async (
+  organizationKeys: string[],
+): Promise<OrganizationUserProfile[]> => {
+  if (!organizationKeys.length) return []
+
+  const docs = await fetchOrganizationUserDocs(organizationKeys)
+
+  return docs.map((docSnap) => {
+    const data = docSnap.data() as any
+
+    const organizationId =
+      data.organizationId ||
+      data.organization_id ||
+      data.companyId ||
+      data.companyCode ||
+      null
+
+    return {
+      id: docSnap.id,
+      name:
+        data.fullName ||
+        data.name ||
+        [data.firstName, data.lastName].filter(Boolean).join(' ') ||
+        data.email ||
+        'Unknown user',
+      email: data.email ?? '',
+      role: (data.role ?? 'learner').toLowerCase(),
+      accountStatus: data.accountStatus ?? 'active',
+      membershipStatus: data.membershipStatus ?? 'inactive',
+      organizationId: organizationId?.toLowerCase() ?? null,
+      companyCode: data.companyCode?.toLowerCase() ?? null,
+      lastActive: parseUserDate(data.lastActiveAt || data.lastActive),
+      createdAt: parseUserDate(data.createdAt),
+    }
+  })
+}
+
 export const fetchPartnerAdminSnapshot = async (
   partnerId: string,
   data: Partial<PartnerAdminSnapshot>,
+  assignedOrganizationKeys: string[] = [],
 ): Promise<PartnerAdminDataSnapshot> => {
   const assignedOrganizations = normalizeAssignments(data.assignedOrganizations || [])
   const assignedOrganizationIds = Array.from(
@@ -69,10 +122,9 @@ export const fetchPartnerAdminSnapshot = async (
 
   const users: PartnerAdminUser[] = []
 
-  for (const chunk of orgIdChunks) {
-    const q = query(collection(db, 'profiles'), where('organizationId', 'in', chunk))
-    const snap = await getDocs(q)
-    snap.forEach((docSnap) => {
+  if (assignedOrganizationKeys.length) {
+    const docs = await fetchOrganizationUserDocs(assignedOrganizationKeys)
+    docs.forEach((docSnap) => {
       const data = docSnap.data() as {
         name?: string
         firstName?: string
@@ -118,6 +170,57 @@ export const fetchPartnerAdminSnapshot = async (
         adminNotes: data.adminNotes ?? '',
       })
     })
+  } else {
+    for (const chunk of orgIdChunks) {
+      const q = query(collection(db, 'profiles'), where('organizationId', 'in', chunk))
+      const snap = await getDocs(q)
+      snap.forEach((docSnap) => {
+        const data = docSnap.data() as {
+          name?: string
+          firstName?: string
+          lastName?: string
+          email?: string
+          organizationId?: string
+          companyCode?: string
+          role?: string
+          status?: string
+          progressPercent?: number
+          currentWeek?: number
+          weeklyEarned?: number
+          weeklyRequired?: number
+          lastActive?: Timestamp | string | Date | number | null
+          updatedAt?: Timestamp | string | Date | number | null
+          riskStatus?: PartnerAdminUser['riskStatus']
+          riskReasons?: string[]
+          nudgeEnabled?: boolean
+          adminNotes?: string
+        }
+
+        const name =
+          data.name ?? `${data.firstName ?? ''} ${data.lastName ?? ''}`.trim()
+
+        users.push({
+          id: docSnap.id,
+          name: name || '',
+          email: data.email ?? '',
+          organizationId: data.organizationId,
+          companyCode: data.companyCode ?? '',
+          role: (data.role ?? 'learner').toLowerCase() as PartnerAdminUser['role'],
+          status: (data.status ?? 'Active') as PartnerAdminUser['status'],
+          progressPercent: data.progressPercent ?? 0,
+          currentWeek: data.currentWeek ?? 0,
+          weeklyEarned: data.weeklyEarned ?? 0,
+          weeklyRequired: data.weeklyRequired ?? 0,
+          lastActive:
+            normalizeDateString(data.lastActive ?? data.updatedAt ?? null) ??
+            new Date(0).toISOString(),
+          riskStatus: data.riskStatus ?? 'engaged',
+          riskReasons: data.riskReasons ?? [],
+          nudgeEnabled: data.nudgeEnabled ?? true,
+          adminNotes: data.adminNotes ?? '',
+        })
+      })
+    }
   }
 
   return {
