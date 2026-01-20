@@ -272,8 +272,21 @@ export const StartChallengeModal: React.FC<StartChallengeModalProps> = ({
 
       const fetchProfile = async (userId: string) => {
         if (profile?.id === userId) return profile;
-        const profileDoc = await getDoc(doc(db, 'profiles', userId));
-        return profileDoc.exists() ? ({ ...profileDoc.data(), id: profileDoc.id } as UserProfile) : null;
+
+        const [profileDoc, userDoc] = await Promise.all([
+          getDoc(doc(db, 'profiles', userId)),
+          getDoc(doc(db, 'users', userId)),
+        ]);
+
+        if (!profileDoc.exists() && !userDoc.exists()) {
+          return null;
+        }
+
+        return ({
+          ...(userDoc.exists() ? userDoc.data() : {}),
+          ...(profileDoc.exists() ? profileDoc.data() : {}),
+          id: userId,
+        } as UserProfile);
       };
 
       const challenger = await fetchProfile(user.uid);
