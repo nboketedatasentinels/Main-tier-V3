@@ -28,6 +28,7 @@ import {
   OrganizationLead,
   OrganizationRecord,
 } from '@/types/admin'
+import type { PartnerOrganization } from '@/hooks/usePartnerDashboardData'
 import {
   normalizeDurationWeeks,
   resolveDurationWeeksFromProgramDuration,
@@ -92,6 +93,38 @@ export type OrganizationPartnerValidationResult = {
   partnerId?: string
   partnerName?: string
   message?: string
+}
+
+export const fetchOrganizationsByIds = async (
+  organizationIds: string[],
+): Promise<PartnerOrganization[]> => {
+  if (!organizationIds.length) return []
+
+  const chunks: string[][] = []
+  for (let i = 0; i < organizationIds.length; i += 10) {
+    chunks.push(organizationIds.slice(i, i + 10))
+  }
+
+  const results: PartnerOrganization[] = []
+
+  for (const chunk of chunks) {
+    const snap = await getDocs(
+      query(collection(db, 'organizations'), where(documentId(), 'in', chunk)),
+    )
+
+    snap.docs.forEach((docSnap) => {
+      const data = docSnap.data()
+      results.push({
+        id: docSnap.id,
+        code: data.code ?? null,
+        name: data.name ?? data.companyName ?? 'Unnamed organization',
+        cluster: data.cluster ?? null,
+        status: data.status ?? 'active',
+      })
+    })
+  }
+
+  return results
 }
 
 
