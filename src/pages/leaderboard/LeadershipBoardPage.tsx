@@ -1021,30 +1021,42 @@ export const LeadershipBoardPage: React.FC = () => {
                   <Card bg="surface.default" border="1px solid" borderColor="border.subtle">
                     <CardHeader>
                       <Text fontWeight="bold">Cohort Comparison</Text>
-                      <Text color="text.secondary">Benchmarks vs cohort max & averages</Text>
+                      <Text color="text.secondary">Your performance vs cohort</Text>
                     </CardHeader>
                     <CardBody>
                       <Stack spacing={4}>
                         <Box>
-                          <HStack justify="space-between">
+                          <HStack justify="space-between" mb={1}>
                             <Text>Total Points</Text>
-                            <Text color="text.secondary">Avg {formatNumber(cohortStats.avgTotal)}</Text>
+                            <HStack spacing={2}>
+                              <Text fontWeight="semibold">{formatNumber(cohortStats.total)}</Text>
+                              <Text color="text.secondary" fontSize="sm">/ max {formatNumber(cohortStats.maxTotal)}</Text>
+                            </HStack>
                           </HStack>
                           <Progress value={(cohortStats.total / cohortStats.maxTotal) * 100} colorScheme="primary" borderRadius="full" />
+                          <Text color="text.secondary" fontSize="xs" mt={1}>Cohort avg: {formatNumber(cohortStats.avgTotal)}</Text>
                         </Box>
                         <Box>
-                          <HStack justify="space-between">
+                          <HStack justify="space-between" mb={1}>
                             <Text>Active Points</Text>
-                            <Text color="text.secondary">Avg {formatNumber(cohortStats.avgActive)}</Text>
+                            <HStack spacing={2}>
+                              <Text fontWeight="semibold">{formatNumber(cohortStats.active)}</Text>
+                              <Text color="text.secondary" fontSize="sm">/ max {formatNumber(cohortStats.maxActive)}</Text>
+                            </HStack>
                           </HStack>
                           <Progress value={(cohortStats.active / cohortStats.maxActive) * 100} colorScheme="secondary" borderRadius="full" />
+                          <Text color="text.secondary" fontSize="xs" mt={1}>Cohort avg: {formatNumber(cohortStats.avgActive)}</Text>
                         </Box>
                         <Box>
-                          <HStack justify="space-between">
+                          <HStack justify="space-between" mb={1}>
                             <Text>Level</Text>
-                            <Text color="text.secondary">Avg {cohortStats.avgLevel}</Text>
+                            <HStack spacing={2}>
+                              <Text fontWeight="semibold">{cohortStats.level}</Text>
+                              <Text color="text.secondary" fontSize="sm">/ max {cohortStats.maxLevel}</Text>
+                            </HStack>
                           </HStack>
                           <Progress value={(cohortStats.level / cohortStats.maxLevel) * 100} colorScheme="primary" borderRadius="full" />
+                          <Text color="text.secondary" fontSize="xs" mt={1}>Cohort avg: {cohortStats.avgLevel}</Text>
                         </Box>
                       </Stack>
                     </CardBody>
