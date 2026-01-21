@@ -75,6 +75,26 @@ const riskColor: Record<PartnerRiskLevel | 'at_risk', string> = {
   at_risk: 'red',
 }
 
+const normalizeDateValue = (value?: unknown) => {
+  if (!value) return null
+  if (value instanceof Date) return value
+  if (typeof value === 'number') return new Date(value)
+  if (typeof (value as { toDate?: () => Date }).toDate === 'function') {
+    return (value as { toDate: () => Date }).toDate()
+  }
+  if (typeof value === 'string') {
+    const dateValue = new Date(value)
+    if (!Number.isNaN(dateValue.getTime())) return dateValue
+  }
+  return null
+}
+
+const formatLastActiveLabel = (value?: unknown) => {
+  const parsed = normalizeDateValue(value)
+  if (!parsed) return 'Unknown'
+  return formatDistanceToNow(parsed, { addSuffix: true })
+}
+
 const getSortableValue = (user: PartnerUser, key: string) => {
   switch (key) {
     case 'name':
@@ -88,8 +108,8 @@ const getSortableValue = (user: PartnerUser, key: string) => {
     case 'status':
       return user.status
     case 'lastActive': {
-      const lastActiveTime = new Date(user.lastActive).getTime()
-      return Number.isNaN(lastActiveTime) ? -Infinity : lastActiveTime
+      const lastActiveDate = normalizeDateValue(user.lastActive)
+      return lastActiveDate ? lastActiveDate.getTime() : -Infinity
     }
     default:
       return ''
@@ -97,19 +117,9 @@ const getSortableValue = (user: PartnerUser, key: string) => {
 }
 
 const formatRequestTimestamp = (value?: unknown) => {
-  if (!value) return 'Recently submitted'
-  if (value instanceof Date) return formatDistanceToNow(value, { addSuffix: true })
-  if (typeof value === 'number') return formatDistanceToNow(new Date(value), { addSuffix: true })
-  if (typeof (value as { toDate?: () => Date }).toDate === 'function') {
-    return formatDistanceToNow((value as { toDate: () => Date }).toDate(), { addSuffix: true })
-  }
-  if (typeof value === 'string') {
-    const dateValue = new Date(value)
-    if (!Number.isNaN(dateValue.getTime())) {
-      return formatDistanceToNow(dateValue, { addSuffix: true })
-    }
-  }
-  return 'Recently submitted'
+  const parsed = normalizeDateValue(value)
+  if (!parsed) return 'Recently submitted'
+  return formatDistanceToNow(parsed, { addSuffix: true })
 }
 
 export const PartnerUserManagement: React.FC<PartnerUserManagementProps> = ({
@@ -135,7 +145,7 @@ export const PartnerUserManagement: React.FC<PartnerUserManagementProps> = ({
   const [bulkAction, setBulkAction] = useState('')
   const [verificationRequests, setVerificationRequests] = useState<PointsVerificationRequest[]>([])
   const [approvalsLoading, setApprovalsLoading] = useState(true)
-  const [approvalActionId, setApprovalActionId] = useState<string | null>(null)
+  const [approvalActionIds, setApprovalActionIds] = useState<Set<string>>(new Set())
   const [selectedRequest, setSelectedRequest] = useState<PointsVerificationRequest | null>(null)
   const [rejectReason, setRejectReason] = useState('')
   const drawer = useDisclosure()
@@ -156,11 +166,21 @@ export const PartnerUserManagement: React.FC<PartnerUserManagementProps> = ({
     [organizations],
   )
 
+  const organizationCodeLookup = useMemo(() => {
+    const lookup = new Map<string, string>()
+    organizations.forEach((org) => {
+      if (org.code) lookup.set(org.code.toLowerCase(), org.code.toLowerCase())
+      if (org.id) lookup.set(org.id.toLowerCase(), org.code?.toLowerCase() ?? org.id.toLowerCase())
+    })
+    return lookup
+  }, [organizations])
+
   const filtered = useMemo(() => {
     if (selectedOrg === 'all') return users
     const normalized = selectedOrg.toLowerCase()
-    return users.filter((user) => user.companyCode?.toLowerCase() === normalized)
-  }, [users, selectedOrg])
+    const companyCode = organizationCodeLookup.get(normalized) ?? normalized
+    return users.filter((user) => user.companyCode?.toLowerCase() === companyCode)
+  }, [organizationCodeLookup, users, selectedOrg])
 
   const sorted = useMemo(() => {
     return [...filtered].sort((a, b) => {
@@ -189,9 +209,10 @@ export const PartnerUserManagement: React.FC<PartnerUserManagementProps> = ({
   const approvalQueue = useMemo(() => {
     if (!verificationRequests.length) return []
     const lookup = new Map(approvalUsers.map((user) => [user.id, user]))
-    return verificationRequests
-      .filter((request) => lookup.has(request.user_id))
-      .map((request) => ({ request, user: lookup.get(request.user_id)! }))
+    return verificationRequests.flatMap((request) => {
+      const user = lookup.get(request.user_id)
+      return user ? [{ request, user }] : []
+    })
   }, [approvalUsers, verificationRequests])
 
   useEffect(() => {
@@ -201,6 +222,14 @@ export const PartnerUserManagement: React.FC<PartnerUserManagementProps> = ({
     })
     return () => unsubscribe()
   }, [])
+
+  useEffect(() => {
+    setPage(1)
+  }, [selectedOrg])
+
+  useEffect(() => {
+    setSelection([])
+  }, [activeTab])
 
   const openUser = (user: PartnerUser) => {
     setSelectedUser(user)
@@ -246,7 +275,7 @@ export const PartnerUserManagement: React.FC<PartnerUserManagementProps> = ({
   }
 
   const handleApproveRequest = async (request: PointsVerificationRequest) => {
-    setApprovalActionId(request.id)
+    setApprovalActionIds((prev) => new Set(prev).add(request.id))
     try {
       await approvePointsVerificationRequest({
         request,
@@ -272,7 +301,11 @@ export const PartnerUserManagement: React.FC<PartnerUserManagementProps> = ({
         isClosable: true,
       })
     } finally {
-      setApprovalActionId(null)
+      setApprovalActionIds((prev) => {
+        const next = new Set(prev)
+        next.delete(request.id)
+        return next
+      })
     }
   }
 
@@ -284,7 +317,7 @@ export const PartnerUserManagement: React.FC<PartnerUserManagementProps> = ({
 
   const handleRejectRequest = async () => {
     if (!selectedRequest) return
-    setApprovalActionId(selectedRequest.id)
+    setApprovalActionIds((prev) => new Set(prev).add(selectedRequest.id))
     try {
       await rejectPointsVerificationRequest({
         request: selectedRequest,
@@ -314,7 +347,11 @@ export const PartnerUserManagement: React.FC<PartnerUserManagementProps> = ({
         isClosable: true,
       })
     } finally {
-      setApprovalActionId(null)
+      setApprovalActionIds((prev) => {
+        const next = new Set(prev)
+        next.delete(selectedRequest.id)
+        return next
+      })
     }
   }
 
@@ -414,10 +451,7 @@ export const PartnerUserManagement: React.FC<PartnerUserManagementProps> = ({
   )
 
   const renderUserRow = (user: PartnerUser) => {
-    const lastActiveDate = new Date(user.lastActive)
-    const lastActiveLabel = isNaN(lastActiveDate.getTime())
-      ? 'Unknown'
-      : formatDistanceToNow(lastActiveDate, { addSuffix: true })
+    const lastActiveLabel = formatLastActiveLabel(user.lastActive)
 
     return (
       <Tr key={user.id} _hover={{ bg: 'brand.accent' }} cursor="pointer" onClick={() => openUser(user)}>
@@ -697,7 +731,7 @@ export const PartnerUserManagement: React.FC<PartnerUserManagementProps> = ({
                     </Text>
                   </Td>
                   <Td>
-                    <Text fontSize="sm">{formatDistanceToNow(new Date(user.lastActive), { addSuffix: true })}</Text>
+                    <Text fontSize="sm">{formatLastActiveLabel(user.lastActive)}</Text>
                   </Td>
                   <Td>
                     <Badge colorScheme="green">Ready</Badge>
@@ -764,7 +798,7 @@ export const PartnerUserManagement: React.FC<PartnerUserManagementProps> = ({
                   <Td>
                     <Badge colorScheme="purple" textTransform="capitalize">{leader.role}</Badge>
                   </Td>
-                  <Td>{formatDistanceToNow(new Date(leader.lastActive), { addSuffix: true })}</Td>
+                  <Td>{formatLastActiveLabel(leader.lastActive)}</Td>
                   <Td>
                     <HStack spacing={2}>
                       <Button size="xs" variant="outline">View Details</Button>
@@ -834,7 +868,7 @@ export const PartnerUserManagement: React.FC<PartnerUserManagementProps> = ({
                           size="xs"
                           colorScheme="green"
                           onClick={() => handleApproveRequest(request)}
-                          isLoading={approvalActionId === request.id}
+                          isLoading={approvalActionIds.has(request.id)}
                         >
                           Approve
                         </Button>
@@ -843,7 +877,7 @@ export const PartnerUserManagement: React.FC<PartnerUserManagementProps> = ({
                           colorScheme="red"
                           variant="outline"
                           onClick={() => openRejectModal(request)}
-                          isDisabled={approvalActionId === request.id}
+                          isDisabled={approvalActionIds.has(request.id)}
                         >
                           Reject
                         </Button>
@@ -990,7 +1024,7 @@ export const PartnerUserManagement: React.FC<PartnerUserManagementProps> = ({
             <Button
               colorScheme="red"
               onClick={handleRejectRequest}
-              isLoading={approvalActionId === selectedRequest?.id}
+              isLoading={selectedRequest ? approvalActionIds.has(selectedRequest.id) : false}
             >
               Reject request
             </Button>
