@@ -7,7 +7,6 @@ import type { PartnerAdminDataSnapshot, PartnerAdminSnapshot } from '@/types/adm
 
 export const usePartnerAdminData = (
   partnerId?: string | null,
-  assignedOrganizations: string[] = [],
 ): {
   snapshot: PartnerAdminDataSnapshot | null
   loading: boolean
@@ -51,11 +50,7 @@ export const usePartnerAdminData = (
 
         try {
           const data = docSnap.data() as PartnerAdminSnapshot
-          const nextSnapshot = await fetchPartnerAdminSnapshot(
-            partnerId,
-            data,
-            assignedOrganizations,
-          )
+          const nextSnapshot = await fetchPartnerAdminSnapshot(partnerId, data)
           if (!isActive) return
           setSnapshot(nextSnapshot)
           setLoading(false)
@@ -80,7 +75,7 @@ export const usePartnerAdminData = (
       isActive = false
       unsubscribe()
     }
-  }, [assignedOrganizations, partnerId, refreshIndex])
+  }, [partnerId, refreshIndex])
 
   return { snapshot, loading, error, refresh, debugInfo }
 }

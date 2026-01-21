@@ -1,6 +1,7 @@
 import { collection, getDocs, query, where } from 'firebase/firestore'
 import { db } from '@/services/firebase'
 import { fetchOrganizationsByIds } from '@/services/organizationService'
+import { normalizeTimestamp } from '@/utils/partnerDashboardUtils'
 import type {
   PartnerAdminDataSnapshot,
   PartnerAdminPointsOverview,
@@ -23,19 +24,20 @@ import type {
 
 const usersCollection = collection(db, 'users')
 
-const normalizeAssignments = (assignments: PartnerAssignment[] = []): PartnerAssignment[] =>
-  assignments
-    .map((assignment) => {
-      const organizationId = assignment.organizationId?.trim()
-      const companyCode = assignment.companyCode?.trim()
-      if (!organizationId && !companyCode) return null
-      return {
-        organizationId: organizationId || undefined,
-        companyCode: companyCode || undefined,
-        status: assignment.status ?? 'active',
-      }
+const normalizeAssignments = (assignments: PartnerAssignment[] = []): PartnerAssignment[] => {
+  const normalized: PartnerAssignment[] = []
+  assignments.forEach((assignment) => {
+    const organizationId = assignment.organizationId?.trim()
+    const companyCode = assignment.companyCode?.trim()
+    if (!organizationId && !companyCode) return
+    normalized.push({
+      organizationId: organizationId || undefined,
+      companyCode: companyCode || undefined,
+      status: assignment.status ?? 'active',
     })
-    .filter((assignment): assignment is PartnerAssignment => !!assignment)
+  })
+  return normalized
+}
 
 const buildEmptyPointsOverview = (): PartnerAdminPointsOverview => ({
   totalPoints: 0,
@@ -124,22 +126,43 @@ const fetchUsersByCompanyCodes = async (
         }
         const role = roleMapping[rawRole] || rawRole
 
+        const normalizedRole: 'learner' | 'mentor' | 'user' | 'team_leader' =
+          role === 'mentor'
+            ? 'mentor'
+            : role === 'team_leader'
+              ? 'team_leader'
+              : role === 'user'
+                ? 'user'
+                : 'learner'
+
         // Normalize status
         const accountStatus = data.accountStatus || data.status || 'active'
         const normalizedStatus = accountStatus === 'Active' ? 'active' : accountStatus
+        const partnerStatus: 'Active' | 'Paused' | 'Onboarding' =
+          normalizedStatus === 'onboarding'
+            ? 'Onboarding'
+            : normalizedStatus === 'paused' || normalizedStatus === 'inactive'
+              ? 'Paused'
+              : 'Active'
+
+        const normalizedLastActive =
+          normalizeTimestamp(data.lastActiveAt || data.lastActive || data.updatedAt || data.createdAt) ||
+          new Date().toISOString()
+
+        const normalizedCreatedAt = normalizeTimestamp(data.createdAt) || undefined
 
         usersMap.set(docSnap.id, {
           id: docSnap.id,
           name: fullName,
           email: data.email ?? '',
-          role: role as 'learner' | 'mentor' | 'ambassador' | 'admin' | 'user',
+          role: normalizedRole,
           membershipStatus: (data.membershipStatus || 'inactive') as 'active' | 'inactive' | 'paid' | 'trial',
           accountStatus: normalizedStatus as 'active' | 'inactive' | 'suspended',
-          status: normalizedStatus === 'active' ? 'Active' : 'Inactive',
-          lastActive: data.lastActiveAt || data.lastActive || data.updatedAt || null,
-          createdAt: data.createdAt || null,
+          status: partnerStatus,
+          lastActive: normalizedLastActive,
+          createdAt: normalizedCreatedAt,
           avatarUrl: data.avatarUrl ?? data.photoURL ?? null,
-          organizationId: data.organizationId?.trim() || null,
+          organizationId: data.organizationId?.trim() || undefined,
           companyCode: data.companyCode?.trim() || code, // Use the code we queried with as fallback
           
           // Progress fields with defaults

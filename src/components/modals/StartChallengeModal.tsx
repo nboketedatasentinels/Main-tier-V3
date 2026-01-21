@@ -72,6 +72,17 @@ type DurationPreset = 'weekly' | 'monthly';
 
 // --- HELPER: Check if two profiles are in the same organization ---
 // This handles the ID/code mismatch by checking ALL possible identifier combinations
+const getProfileOrganizationCode = (profile: UserProfile): string | null => {
+  const record = profile as unknown as Record<string, unknown>;
+  if (typeof record.organizationCode === 'string' && record.organizationCode.trim()) {
+    return record.organizationCode;
+  }
+  if (typeof record.organization_code === 'string' && record.organization_code.trim()) {
+    return record.organization_code;
+  }
+  return null;
+};
+
 const areProfilesInSameOrg = (profile1: UserProfile | null, profile2: UserProfile | null): boolean => {
   if (!profile1 || !profile2) return false;
 
@@ -82,9 +93,10 @@ const areProfilesInSameOrg = (profile1: UserProfile | null, profile2: UserProfil
     if (profile.companyId) identifiers.add(profile.companyId);
     if (profile.companyCode) identifiers.add(profile.companyCode);
     if (profile.organizationId) identifiers.add(profile.organizationId);
-    if (profile.organizationCode) identifiers.add(profile.organizationCode);
+    const organizationCode = getProfileOrganizationCode(profile);
+    if (organizationCode) identifiers.add(organizationCode);
     // Handle snake_case variants if they exist
-    const p = profile as Record<string, unknown>;
+    const p = profile as unknown as Record<string, unknown>;
     if (p.company_id && typeof p.company_id === 'string') identifiers.add(p.company_id);
     if (p.company_code && typeof p.company_code === 'string') identifiers.add(p.company_code);
     if (p.organization_id && typeof p.organization_id === 'string') identifiers.add(p.organization_id);
@@ -114,6 +126,7 @@ const areProfilesInSameOrg = (profile1: UserProfile | null, profile2: UserProfil
 // --- HELPER: Resolve organization details from profile ---
 // Fetches the organization document to get both ID and code
 const resolveOrganization = async (profile: UserProfile): Promise<Organization | null> => {
+  const organizationCode = getProfileOrganizationCode(profile);
   // Try to find organization by companyId first
   if (profile.companyId) {
     const orgDoc = await getDoc(doc(db, ORG_COLLECTION, profile.companyId));
@@ -140,8 +153,8 @@ const resolveOrganization = async (profile: UserProfile): Promise<Organization |
   }
 
   // Try by organizationCode
-  if (profile.organizationCode && profile.organizationCode !== profile.companyCode) {
-    const codeQuery = query(collection(db, ORG_COLLECTION), where('code', '==', profile.organizationCode));
+  if (organizationCode && organizationCode !== profile.companyCode) {
+    const codeQuery = query(collection(db, ORG_COLLECTION), where('code', '==', organizationCode));
     const snapshot = await getDocs(codeQuery);
     if (!snapshot.empty) {
       return { ...snapshot.docs[0].data(), id: snapshot.docs[0].id } as Organization;
@@ -301,20 +314,22 @@ export const StartChallengeModal: React.FC<StartChallengeModalProps> = ({
 
       // FIX: Use the new organization matching function that handles ID/code mismatches
       if (!areProfilesInSameOrg(challenger, challenged)) {
+        const challengerOrganizationCode = getProfileOrganizationCode(challenger);
+        const challengedOrganizationCode = getProfileOrganizationCode(challenged);
         console.error('[Challenge] Organization mismatch:', {
           challenger: {
             id: challenger.id,
             companyId: challenger.companyId,
             companyCode: challenger.companyCode,
             organizationId: challenger.organizationId,
-            organizationCode: challenger.organizationCode,
+            organizationCode: challengerOrganizationCode,
           },
           challenged: {
             id: challenged.id,
             companyId: challenged.companyId,
             companyCode: challenged.companyCode,
             organizationId: challenged.organizationId,
-            organizationCode: challenged.organizationCode,
+            organizationCode: challengedOrganizationCode,
           },
         });
         throw new Error('You can only challenge members of your organization.');
@@ -346,6 +361,7 @@ export const StartChallengeModal: React.FC<StartChallengeModalProps> = ({
 
       // FIX: Build challenge object with BOTH company_id AND company_code
       // This ensures challenges can be queried by either identifier
+      const challengerOrganizationCode = getProfileOrganizationCode(challenger);
       const challengeData = {
         challenger_id: challenger.id,
         challenger_name: challenger.fullName,
@@ -353,7 +369,7 @@ export const StartChallengeModal: React.FC<StartChallengeModalProps> = ({
         challenged_name: challenged.fullName,
         // Store BOTH identifiers to support queries by either
         company_id: company?.id || challenger.companyId || challenger.organizationId || null,
-        company_code: company?.code || challenger.companyCode || challenger.organizationCode || null,
+        company_code: company?.code || challenger.companyCode || challengerOrganizationCode || null,
         company_name: company?.name || null,
         // Also store as participants array for easier querying
         participants: [challenger.id, challenged.id],

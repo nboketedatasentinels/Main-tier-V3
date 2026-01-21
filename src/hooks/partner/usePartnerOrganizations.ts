@@ -179,11 +179,11 @@ export const usePartnerOrganizations = (options: UsePartnerOrganizationsOptions 
 
         unsubscribe = listenToOrganizationsByIds(
           assignedOrganizationIds,
-          (assignedOrgs) => {
+          (assignedOrgs: OrganizationRecord[]) => {
             logger.debug('[PartnerOrganizations] Assigned organizations loaded', {
               count: assignedOrgs.length,
             })
-            const scoped = assignedOrgs.map((org) => {
+            const scoped = assignedOrgs.map((org: OrganizationRecord) => {
               const data = org as OrganizationRecord & Partial<PartnerOrganization>
               return {
                 id: data.id,
