@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { collection, onSnapshot, query, where, type Query, type DocumentData } from 'firebase/firestore'
+import { collection, doc, onSnapshot, query, where, type Query, type DocumentData } from 'firebase/firestore'
 import { db } from '@/services/firebase'
 import { ORG_COLLECTION } from '@/constants/organizations'
 import { useAuth } from '@/hooks/useAuth'
@@ -122,6 +122,27 @@ interface UsePartnerAdminDataOptions {
 const isActiveAssignment = (assignment: PartnerAssignment) =>
   !assignment.status || assignment.status === 'active'
 
+const parseAssignedOrganizationIds = (value: unknown): string[] => {
+  if (!Array.isArray(value)) return []
+
+  const ids: string[] = []
+
+  value.forEach((entry) => {
+    if (typeof entry === 'string') {
+      const trimmed = entry.trim()
+      if (trimmed) ids.push(trimmed)
+      return
+    }
+
+    if (entry && typeof entry === 'object') {
+      const organizationId = (entry as { organizationId?: string }).organizationId?.trim()
+      if (organizationId) ids.push(organizationId)
+    }
+  })
+
+  return Array.from(new Set(ids))
+}
+
 const expandAssignments = (assignments: string[]) => {
   const expanded = new Set<string>()
   assignments.forEach((entry) => {
@@ -223,27 +244,21 @@ export const usePartnerAdminData = (
     setAssignmentsLoading(true)
     setAssignmentsError(null)
 
-    const assignmentsQuery = query(
-      collection(db, 'partner_organizations'),
-      where('partnerId', '==', partnerId),
-    )
-
     const unsubscribe = onSnapshot(
-      assignmentsQuery,
-      (snapshot) => {
-        const orgIds = snapshot.docs
-          .map((docSnap) => {
-            const data = docSnap.data() as { organizationId?: string }
-            if (data.organizationId) return data.organizationId.trim()
-            const [, organizationId] = docSnap.id.split('_')
-            return organizationId?.trim() || ''
-          })
-          .filter((organizationId): organizationId is string => !!organizationId)
+      doc(db, 'partners', partnerId),
+      (docSnap) => {
+        if (!docSnap.exists()) {
+          setAssignedOrganizationIds([])
+          setAssignmentsLoading(false)
+          setAssignmentsError('Partner record not found.')
+          return
+        }
 
-        const deduped = Array.from(new Set(orgIds))
+        const data = docSnap.data() as { assignedOrganizations?: unknown }
+        const deduped = parseAssignedOrganizationIds(data.assignedOrganizations)
         setAssignedOrganizationIds(deduped)
         setAssignmentsLoading(false)
-        console.log('[PartnerAdminData] Partner organizations loaded', {
+        console.log('[PartnerAdminData] Partner assignments loaded (partners collection)', {
           partnerId,
           assignedOrgCount: deduped.length,
         })
