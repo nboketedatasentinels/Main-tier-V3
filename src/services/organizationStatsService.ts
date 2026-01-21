@@ -296,15 +296,15 @@ export const listenToOrganizationStatsUpdates = (
   options?: { debounceMs?: number; onError?: (error: unknown) => void; cacheTtlMs?: number },
 ) => {
   const debounceMs = options?.debounceMs ?? 1500
-  let timeoutId: ReturnType<typeof setTimeout> | null = null
+  let timeoutId: number | null = null
   let isProcessing = false
   let pending = false
 
   const handleSnapshot = () => {
     if (timeoutId) {
-      clearTimeout(timeoutId)
+      window.clearTimeout(timeoutId)
     }
-    timeoutId = setTimeout(async () => {
+    timeoutId = window.setTimeout(async () => {
       if (isProcessing) {
         pending = true
         return
@@ -359,7 +359,7 @@ export const listenToOrganizationStatsUpdates = (
 
   return () => {
     if (timeoutId) {
-      clearTimeout(timeoutId)
+      window.clearTimeout(timeoutId)
     }
     subscriptions.forEach((unsubscribe) => unsubscribe())
   }
