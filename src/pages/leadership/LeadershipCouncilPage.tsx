@@ -146,7 +146,7 @@ export const LeadershipCouncilPage: React.FC = () => {
     organization,
     assignmentSources,
     supportAssignment: supportAssignmentStatus,
-  } = useOrganizationLeadership(profile?.companyId, profile?.id)
+  } = useOrganizationLeadership(profile?.companyId, profile?.id, profile)
   const mentorProfile = profiles.mentor as LeadershipProfile | null
   const ambassadorProfile = profiles.ambassador as LeadershipProfile | null
   const partnerProfile = profiles.partner as PartnerProfile | null
@@ -179,7 +179,9 @@ export const LeadershipCouncilPage: React.FC = () => {
       ? 'User-specific mentor'
       : assignmentSources.mentor === 'organization'
         ? 'Organization mentor'
-        : null
+        : assignmentSources.mentor === 'profile'
+          ? 'Profile mentor'
+          : null
   const canScheduleSession = Boolean(mentorProfile) && hasOrganization && organizationReady && supportAssignmentsReady && !assignmentsLoading
   const scheduleDisabledReason = !hasOrganization
     ? 'Link your account to an organization to unlock mentor scheduling.'

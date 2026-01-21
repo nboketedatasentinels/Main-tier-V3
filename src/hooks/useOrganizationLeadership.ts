@@ -10,7 +10,7 @@ export interface LeadershipAssignments {
   partnerId: string | null
 }
 
-export type LeadershipAssignmentSource = 'user' | 'organization' | null
+export type LeadershipAssignmentSource = 'user' | 'organization' | 'profile' | null
 
 export interface LeadershipAssignmentSources {
   mentor: LeadershipAssignmentSource
@@ -76,7 +76,16 @@ const resolveAssignmentId = (data: Record<string, unknown>, keys: string[]) => {
   return null
 }
 
-export const useOrganizationLeadership = (companyId?: string | null, userId?: string | null) => {
+export interface ProfileAssignments {
+  mentorId?: string | null
+  ambassadorId?: string | null
+}
+
+export const useOrganizationLeadership = (
+  companyId?: string | null,
+  userId?: string | null,
+  profile?: ProfileAssignments | null
+) => {
   const [organizationAssignments, setOrganizationAssignments] = useState<LeadershipAssignments>(emptyAssignments)
   const [supportAssignments, setSupportAssignments] = useState<SupportAssignments>(emptySupportAssignments)
   const [profiles, setProfiles] = useState<LeadershipProfiles>(emptyProfiles)
@@ -211,26 +220,30 @@ export const useOrganizationLeadership = (companyId?: string | null, userId?: st
   }, [userId, refreshKey])
 
   const assignments = useMemo<LeadershipAssignments>(() => {
-    const mentorId = supportAssignments.mentorId ?? organizationAssignments.mentorId ?? null
-    const ambassadorId = supportAssignments.ambassadorId ?? organizationAssignments.ambassadorId ?? null
+    const mentorId = supportAssignments.mentorId ?? organizationAssignments.mentorId ?? profile?.mentorId ?? null
+    const ambassadorId = supportAssignments.ambassadorId ?? organizationAssignments.ambassadorId ?? profile?.ambassadorId ?? null
     const partnerId = organizationAssignments.partnerId ?? null
     return { mentorId, ambassadorId, partnerId }
-  }, [organizationAssignments, supportAssignments])
+  }, [organizationAssignments, supportAssignments, profile?.mentorId, profile?.ambassadorId])
 
   const assignmentSources = useMemo<LeadershipAssignmentSources>(() => {
     const mentor = supportAssignments.mentorId
       ? 'user'
       : organizationAssignments.mentorId
         ? 'organization'
-        : null
+        : profile?.mentorId
+          ? 'profile'
+          : null
     const ambassador = supportAssignments.ambassadorId
       ? 'user'
       : organizationAssignments.ambassadorId
         ? 'organization'
-        : null
+        : profile?.ambassadorId
+          ? 'profile'
+          : null
     const partner = organizationAssignments.partnerId ? 'organization' : null
     return { mentor, ambassador, partner }
-  }, [organizationAssignments, supportAssignments])
+  }, [organizationAssignments, supportAssignments, profile?.mentorId, profile?.ambassadorId])
 
   useEffect(() => {
     const { mentorId, ambassadorId, partnerId } = assignments
