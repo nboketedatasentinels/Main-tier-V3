@@ -6,7 +6,10 @@
       "Bash(npx tsc:*)",
       "Bash(npx eslint:*)",
       "Bash(npm run dev:*)",
-      "Bash(timeout:*)"
+      "Bash(timeout:*)",
+      "Bash(npm run build)",
+      "Bash(move:*)",
+      "Bash(git checkout:*)"
     ]
   }
 }

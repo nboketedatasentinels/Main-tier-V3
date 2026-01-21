@@ -180,6 +180,9 @@ export interface PartnerAdminUser {
   interventions?: number
   nudgeEnabled?: boolean
   adminNotes?: string
+  membershipStatus?: 'active' | 'inactive' | 'paid' | 'trial'
+  accountStatus?: 'active' | 'inactive' | 'suspended'
+  avatarUrl?: string | null
 }
 
 export interface PartnerAdminPointsOverview {
