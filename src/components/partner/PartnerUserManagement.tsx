@@ -290,6 +290,7 @@ export const PartnerUserManagement: React.FC<PartnerUserManagementProps> = ({
         learnerLength: learnerUsers.length,
         sortedLength: sortedUsers.length,
         selectedOrg,
+        firstUserRole: users?.[0]?.role,
         usersLoading,
         organizationsLength: organizations.length,
         organizationsReady,
