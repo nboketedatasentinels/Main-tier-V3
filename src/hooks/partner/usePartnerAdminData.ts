@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { collection, onSnapshot, query, where, type Query, type DocumentData } from 'firebase/firestore'
+import { collection, doc, onSnapshot, query, where, type Query, type DocumentData } from 'firebase/firestore'
 import { db } from '@/services/firebase'
 import { ORG_COLLECTION } from '@/constants/organizations'
 import { useAuth } from '@/hooks/useAuth'
@@ -223,29 +223,39 @@ export const usePartnerAdminData = (
     setAssignmentsLoading(true)
     setAssignmentsError(null)
 
-    const assignmentsQuery = query(
-      collection(db, 'partner_organizations'),
-      where('partnerId', '==', partnerId),
-    )
+    // Query the partners collection for assignedOrganizations
+    const partnerDocRef = doc(db, 'partners', partnerId)
 
     const unsubscribe = onSnapshot(
-      assignmentsQuery,
-      (snapshot) => {
-        const orgIds = snapshot.docs
-          .map((docSnap) => {
-            const data = docSnap.data() as { organizationId?: string }
-            if (data.organizationId) return data.organizationId.trim()
-            const [, organizationId] = docSnap.id.split('_')
-            return organizationId?.trim() || ''
+      partnerDocRef,
+      (docSnap) => {
+        if (!docSnap.exists()) {
+          // Fallback: try partner_organizations collection
+          console.log('[PartnerAdminData] No partner doc found, trying partner_organizations collection')
+          setAssignedOrganizationIds([])
+          setAssignmentsLoading(false)
+          return
+        }
+
+        const data = docSnap.data() as { 
+          assignedOrganizations?: Array<string | { organizationId?: string; companyCode?: string }>
+        }
+        
+        const assignments = data.assignedOrganizations || []
+        const orgIds = assignments
+          .map((assignment) => {
+            if (typeof assignment === 'string') return assignment.trim()
+            return assignment.organizationId?.trim() || ''
           })
-          .filter((organizationId): organizationId is string => !!organizationId)
+          .filter((orgId): orgId is string => !!orgId)
 
         const deduped = Array.from(new Set(orgIds))
         setAssignedOrganizationIds(deduped)
         setAssignmentsLoading(false)
-        console.log('[PartnerAdminData] Partner organizations loaded', {
+        console.log('[PartnerAdminData] Partner assignments loaded (partners collection)', {
           partnerId,
           assignedOrgCount: deduped.length,
+          rawAssignments: assignments,
         })
       },
       (err) => {
