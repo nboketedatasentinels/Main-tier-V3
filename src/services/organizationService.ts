@@ -34,7 +34,6 @@ import {
   resolveJourneyType,
 } from '@/utils/journeyType'
 import { inviteUsersBulk } from './invitationService'
-import { removeUndefinedFields } from '@/utils/firestore'
 export { checkOrganizationAccess, fetchOrganizationEngagementStats, fetchOrganizationUsers } from './organizationUserService'
 
 const safeCodeChars = '23456789ABCDEFGHJKLMNPQRSTUVWXYZ'
@@ -43,7 +42,6 @@ const orgCollection = collection(db, ORG_COLLECTION)
 const coursesCollection = collection(db, 'courses')
 const usersCollection = collection(db, 'users')
 const adminActivityCollection = collection(db, 'admin_activity_log')
-const partnersCollection = collection(db, 'partners')
 
 export type LeadershipRole = 'mentor' | 'ambassador' | 'partner'
 
@@ -279,23 +277,6 @@ const buildLeadershipAuditEntry = (params: {
   },
 })
 
-const buildPartnerAssignmentEntry = (organizationId: string, organization: OrganizationRecord) => ({
-  organizationId,
-  companyCode: organization.code || '',
-  status: organization.status,
-})
-
-const normalizePartnerAssignments = (
-  assignments?: Array<{ organizationId?: string } | string> | null,
-): { organizationId: string }[] => {
-  if (!Array.isArray(assignments)) return []
-  return assignments
-    .map((assignment) =>
-      typeof assignment === 'string' ? { organizationId: assignment } : assignment,
-    )
-    .filter((assignment): assignment is { organizationId: string } => !!assignment?.organizationId)
-}
-
 const assignLeadershipRole = async (organizationId: string, userId: string, role: LeadershipRole) => {
   validateLeadershipIds(organizationId, userId, role)
   const actorId = getActorId()
@@ -303,7 +284,6 @@ const assignLeadershipRole = async (organizationId: string, userId: string, role
   const organizationRef = doc(db, ORG_COLLECTION, organizationId)
   const userRef = doc(usersCollection, userId)
   const auditRef = doc(adminActivityCollection)
-  const partnerRef = role === 'partner' ? doc(partnersCollection, userId) : null
 
   await runTransaction(db, async (transaction) => {
     const [organizationSnap, userSnap] = await Promise.all([
@@ -321,18 +301,14 @@ const assignLeadershipRole = async (organizationId: string, userId: string, role
     if (userData.role !== roleConfig.requiredRole) {
       throw new Error(`User role must be ${roleConfig.requiredRole}.`)
     }
-    const organizationData = organizationSnap.data() as OrganizationRecord
 
     transaction.update(organizationRef, {
       [roleConfig.field]: userId,
       [roleConfig.assignedAtField]: serverTimestamp(),
       [roleConfig.assignedByField]: actorId,
-      ...(role === 'partner' ? { partnerId: userId } : {}),
       leadershipUpdatedAt: serverTimestamp(),
       leadershipUpdatedBy: actorId,
     })
-    const previousUserId = (organizationSnap.data() as OrganizationRecord)[roleConfig.field] as string | null
-
     transaction.set(
       auditRef,
       buildLeadershipAuditEntry({
@@ -341,53 +317,9 @@ const assignLeadershipRole = async (organizationId: string, userId: string, role
         userId,
         role,
         actorId,
-        previousUserId,
+        previousUserId: (organizationSnap.data() as OrganizationRecord)[roleConfig.field] as string | null,
       }),
     )
-
-    if (partnerRef) {
-      const partnerSnap = await transaction.get(partnerRef)
-      const currentAssignments = normalizePartnerAssignments(
-        partnerSnap.exists()
-          ? (partnerSnap.data() as { assignedOrganizations?: { organizationId: string }[] }).assignedOrganizations
-          : [],
-      )
-      const nextAssignments = [
-        ...currentAssignments.filter((assignment) => assignment.organizationId !== organizationId),
-        buildPartnerAssignmentEntry(organizationId, organizationData),
-      ]
-      transaction.set(
-        partnerRef,
-        {
-          assignedOrganizations: nextAssignments,
-          updatedAt: serverTimestamp(),
-        },
-        { merge: true },
-      )
-
-      if (previousUserId && previousUserId !== userId) {
-        const previousPartnerRef = doc(partnersCollection, previousUserId)
-        const previousPartnerSnap = await transaction.get(previousPartnerRef)
-        if (previousPartnerSnap.exists()) {
-          const previousAssignments = normalizePartnerAssignments(
-            (previousPartnerSnap.data() as {
-              assignedOrganizations?: { organizationId: string }[]
-            }).assignedOrganizations,
-          )
-          const cleanedAssignments = previousAssignments.filter(
-            (assignment) => assignment.organizationId !== organizationId,
-          )
-          transaction.set(
-            previousPartnerRef,
-            {
-              assignedOrganizations: cleanedAssignments,
-              updatedAt: serverTimestamp(),
-            },
-            { merge: true },
-          )
-        }
-      }
-    }
   })
 }
 
@@ -419,7 +351,6 @@ export const unassignLeadershipRole = async (organizationId: string, role: strin
       [roleConfig.field]: null,
       [roleConfig.assignedAtField]: null,
       [roleConfig.assignedByField]: actorId,
-      ...(role === 'partner' ? { partnerId: null } : {}),
       leadershipUpdatedAt: serverTimestamp(),
       leadershipUpdatedBy: actorId,
     })
@@ -434,27 +365,6 @@ export const unassignLeadershipRole = async (organizationId: string, role: strin
         previousUserId,
       }),
     )
-
-    if (role === 'partner' && previousUserId) {
-      const currentPartnerRef = doc(partnersCollection, previousUserId)
-      const partnerSnap = await transaction.get(currentPartnerRef)
-      if (partnerSnap.exists()) {
-        const currentAssignments = normalizePartnerAssignments(
-          (partnerSnap.data() as {
-            assignedOrganizations?: { organizationId: string }[]
-          }).assignedOrganizations,
-        )
-        const nextAssignments = currentAssignments.filter((assignment) => assignment.organizationId !== organizationId)
-        transaction.set(
-          currentPartnerRef,
-          {
-            assignedOrganizations: nextAssignments,
-            updatedAt: serverTimestamp(),
-          },
-          { merge: true },
-        )
-      }
-    }
   })
 }
 
@@ -510,7 +420,7 @@ export const logOrganizationAccessAttempt = async ({
   metadata,
 }: OrganizationAccessAttemptPayload) => {
   if (!userId) return
-  const payload = removeUndefinedFields({
+  await addDoc(adminActivityCollection, {
     action: 'organization_access_attempt',
     adminId: userId,
     userId,
@@ -523,7 +433,6 @@ export const logOrganizationAccessAttempt = async ({
     },
     createdAt: serverTimestamp(),
   })
-  await addDoc(adminActivityCollection, payload)
 }
 
 export const fetchOrganizationByCode = async (organizationCode: string): Promise<OrganizationRecord | null> => {
@@ -557,7 +466,6 @@ export const createOrganizationWithInvitations = async (
   invitations: InvitationPayload[],
   adminContext?: { adminId?: string; adminName?: string },
 ): Promise<{ organizationId: string; invitationResult: BulkInvitationResult | null }> => {
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const { createdAt: _createdAt, updatedAt: _updatedAt, ...organizationData } = organization
   const payload: Omit<OrganizationRecord, 'createdAt' | 'updatedAt'> & {
     createdAt: Timestamp | ReturnType<typeof serverTimestamp>
@@ -569,7 +477,7 @@ export const createOrganizationWithInvitations = async (
 
   const orgRef = await addDoc(orgCollection, { ...payload, updatedAt: serverTimestamp() })
 
-  const auditEntry = removeUndefinedFields({
+  await addDoc(adminActivityCollection, {
     action: 'Organization created',
     organizationName: organization.name,
     organizationCode: organization.code,
@@ -578,7 +486,6 @@ export const createOrganizationWithInvitations = async (
     createdAt: serverTimestamp(),
     metadata: { via: 'CreateOrganizationModal' },
   })
-  await addDoc(adminActivityCollection, auditEntry)
 
   if (!invitations.length) {
     return { organizationId: orgRef.id, invitationResult: null }
@@ -596,14 +503,14 @@ const normalizeAssignments = (assignedOrganizations?: string[]): string[] => {
   const normalized: string[] = []
   const seen = new Set<string>()
 
-    ; (assignedOrganizations || []).forEach((entry) => {
-      if (typeof entry !== 'string') return
-      const trimmed = entry.trim()
-      if (!trimmed) return
-      if (seen.has(trimmed)) return
-      seen.add(trimmed)
-      normalized.push(trimmed)
-    })
+  ;(assignedOrganizations || []).forEach((entry) => {
+    if (typeof entry !== 'string') return
+    const trimmed = entry.trim()
+    if (!trimmed) return
+    if (seen.has(trimmed)) return
+    seen.add(trimmed)
+    normalized.push(trimmed)
+  })
 
   return normalized
 }
@@ -627,31 +534,6 @@ const fetchOrganizationsByAssignments = async (assignments: string[]): Promise<O
 
   const idChunks = chunkList(normalized, 10)
 
-  const snapshots = await Promise.all(
-    idChunks.flatMap((chunk) => {
-      const upperChunk = Array.from(new Set(chunk.map((entry) => entry.toUpperCase())))
-      return [
-        getDocs(query(orgCollection, where(documentId(), 'in', chunk))),
-        getDocs(query(orgCollection, where('code', 'in', upperChunk))),
-      ]
-    }),
-  )
-
-  const orgMap = new Map<string, OrganizationRecord>()
-  snapshots.forEach((snapshot) => {
-    snapshot.docs.forEach((docSnap) => {
-      orgMap.set(docSnap.id, buildOrganizationRecord(docSnap))
-    })
-  })
-
-  return Array.from(orgMap.values()).sort((a, b) => (a.name || '').localeCompare(b.name || ''))
-}
-
-export const fetchOrganizationsByIds = async (organizationIds: string[]): Promise<OrganizationRecord[]> => {
-  const normalized = normalizeAssignments(organizationIds)
-  if (!normalized.length) return []
-
-  const idChunks = chunkList(normalized, 10)
   const snapshots = await Promise.all(
     idChunks.map((chunk) => getDocs(query(orgCollection, where(documentId(), 'in', chunk)))),
   )
@@ -700,16 +582,12 @@ const listenToOrganizationsByAssignments = (
   }
 
   idChunks.forEach((chunk, index) => {
-    const upperChunk = Array.from(new Set(chunk.map((entry) => entry.toUpperCase())))
-
-    const idKey = `id-${index}`
-    const codeKey = `code-${index}`
-
-    const unsubscribeId = onSnapshot(
+    const key = `id-${index}`
+    const unsubscribe = onSnapshot(
       query(orgCollection, where(documentId(), 'in', chunk)),
       (snapshot: QuerySnapshot) => {
         listenerMaps.set(
-          idKey,
+          key,
           new Map(
             snapshot.docs.map((docSnap: DocumentSnapshot) => [docSnap.id, buildOrganizationRecord(docSnap)]),
           ),
@@ -718,70 +596,7 @@ const listenToOrganizationsByAssignments = (
       },
       onError,
     )
-    unsubscribers.push(unsubscribeId)
-
-    const unsubscribeCode = onSnapshot(
-      query(orgCollection, where('code', 'in', upperChunk)),
-      (snapshot: QuerySnapshot) => {
-        listenerMaps.set(
-          codeKey,
-          new Map(
-            snapshot.docs.map((docSnap: DocumentSnapshot) => [docSnap.id, buildOrganizationRecord(docSnap)]),
-          ),
-        )
-        emitCombined()
-      },
-      onError,
-    )
-    unsubscribers.push(unsubscribeCode)
-  })
-
-  return () => {
-    unsubscribers.forEach((unsubscribe) => unsubscribe())
-  }
-}
-
-export const listenToOrganizationsByIds = (
-  organizationIds: string[],
-  onChange: (organizations: OrganizationRecord[]) => void,
-  onError?: (error: FirestoreError) => void,
-) => {
-  const normalized = normalizeAssignments(organizationIds)
-  if (!normalized.length) {
-    onChange([])
-    return () => undefined
-  }
-
-  const idChunks = chunkList(normalized, 10)
-  const listenerMaps = new Map<string, Map<string, OrganizationRecord>>()
-  const unsubscribers: Array<() => void> = []
-
-  const emitCombined = () => {
-    const combined = new Map<string, OrganizationRecord>()
-    listenerMaps.forEach((map) => {
-      map.forEach((org, id) => {
-        combined.set(id, org)
-      })
-    })
-    onChange(Array.from(combined.values()).sort((a, b) => (a.name || '').localeCompare(b.name || '')))
-  }
-
-  idChunks.forEach((chunk, index) => {
-    const idKey = `id-${index}`
-    const unsubscribeId = onSnapshot(
-      query(orgCollection, where(documentId(), 'in', chunk)),
-      (snapshot: QuerySnapshot) => {
-        listenerMaps.set(
-          idKey,
-          new Map(
-            snapshot.docs.map((docSnap: DocumentSnapshot) => [docSnap.id, buildOrganizationRecord(docSnap)]),
-          ),
-        )
-        emitCombined()
-      },
-      onError,
-    )
-    unsubscribers.push(unsubscribeId)
+    unsubscribers.push(unsubscribe)
   })
 
   return () => {
