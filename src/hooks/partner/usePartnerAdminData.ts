@@ -314,11 +314,8 @@ export const usePartnerAdminData = (
     return createOrgKeySet(keys)
   }, [assignedOrganizationIds, organizations, organizationsReady])
 
-  // FIX: Stabilize assignedOrgKeys as a string for dependency comparison
-  const assignedOrgKeysString = useMemo(
-    () => Array.from(assignedOrgKeys).sort().join('|'),
-    [assignedOrgKeys]
-  )
+  // FIX: Track if organizations effect has initialized to prevent re-running
+  const orgsInitializedRef = useRef(false)
 
   useEffect(() => {
     if (profileStatus !== 'ready' || !enabled) {
@@ -326,24 +323,25 @@ export const usePartnerAdminData = (
       setOrganizationsLoading(true)
       setOrganizationsError(null)
       setOrganizationsReady(false)
+      orgsInitializedRef.current = false
+      return
+    }
+
+    // FIX: Skip if already initialized with same assignment key
+    if (orgsInitializedRef.current && orgRefreshIndex === 0) {
       return
     }
 
     let isMounted = true
     let unsubscribe: (() => void) | undefined
-    let hasReceivedInitialSnapshot = false
 
     retryOrganizationsHandler.setMounted(true)
     retryOrganizationsHandler.reset()
 
     const subscribe = () => {
       if (!isMounted) return
-      
-      // Only set loading on initial subscription, not on every call
-      if (!hasReceivedInitialSnapshot) {
-        setOrganizationsLoading(true)
-        setOrganizationsError(null)
-      }
+      setOrganizationsLoading(true)
+      setOrganizationsError(null)
 
       if (!isSuperAdmin && assignmentsLoading) {
         setOrganizations([])
@@ -355,13 +353,7 @@ export const usePartnerAdminData = (
       const handleSnapshot = (orgs: PartnerOrganization[]) => {
         if (!isMounted) return
         retryOrganizationsHandler.reset()
-        
-        // Only log on initial load, not on every update
-        if (!hasReceivedInitialSnapshot) {
-          hasReceivedInitialSnapshot = true
-          console.log('[PartnerAdminData] Org query result count (assigned)', orgs.length)
-        }
-        
+        orgsInitializedRef.current = true
         setOrganizations(orgs)
         setOrganizationsLoading(false)
         setOrganizationsReady(true)
@@ -438,7 +430,7 @@ export const usePartnerAdminData = (
       retryOrganizationsHandler.cleanup()
       if (unsubscribe) unsubscribe()
     }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [
     assignmentKey,
     assignmentsLoading,
@@ -446,29 +438,22 @@ export const usePartnerAdminData = (
     isSuperAdmin,
     orgRefreshIndex,
     profileStatus,
-    // NOTE: retryOrganizationsHandler intentionally excluded - accessed via ref/closure
-    assignedOrganizationIds.length, // Use length instead of array reference
+    // NOTE: retryOrganizationsHandler and assignedOrganizationIds intentionally excluded
   ])
 
-  // FIX: Stabilize organizations key to prevent stats effect from re-running on every org update
-  const organizationsKey = useMemo(
-    () => organizations.map((org) => org.id).sort().join('|'),
-    [organizations]
-  )
-
-  // FIX: Track if stats have been initialized to prevent re-running on org data changes
-  const statsInitializedRef = useRef<string | null>(null)
+  // FIX: Track if stats have been initialized
+  const statsInitializedRef = useRef(false)
 
   useEffect(() => {
     if (profileStatus !== 'ready' || !organizations.length) {
       return
     }
 
-    // Only initialize stats once per set of organizations
-    if (statsInitializedRef.current === organizationsKey) {
+    // FIX: Only initialize stats once
+    if (statsInitializedRef.current) {
       return
     }
-    statsInitializedRef.current = organizationsKey
+    statsInitializedRef.current = true
 
     statsListenersRef.current.forEach((unsub) => unsub())
     statsListenersRef.current = []
@@ -502,8 +487,7 @@ export const usePartnerAdminData = (
       statsListenersRef.current.forEach((unsub) => unsub())
       statsListenersRef.current = []
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [organizationsKey, profileStatus])
+  }, [organizations, profileStatus])
 
   const [users, setUsers] = useState<PartnerUser[]>([])
   const [usersLoading, setUsersLoading] = useState(true)
@@ -516,31 +500,16 @@ export const usePartnerAdminData = (
   const retryUsersHandler = useRetryLogic({ maxRetries: 3 })
   const { fetchWeeklyPointsByUser } = useWeeklyPointsFetcher()
 
-  // FIX: Stabilize selectedOrgKeys - only recalculate when selectedOrg actually changes
-  const selectedOrgKeysRef = useRef<Set<string>>(new Set())
   const selectedOrgKeys = useMemo(() => {
-    if (!selectedOrg || selectedOrg === 'all') {
-      selectedOrgKeysRef.current = new Set<string>()
-      return selectedOrgKeysRef.current
-    }
+    if (!selectedOrg || selectedOrg === 'all') return new Set<string>()
     const normalizedSelected = normalizeOrgKey(selectedOrg)
-    if (!normalizedSelected) {
-      selectedOrgKeysRef.current = new Set<string>()
-      return selectedOrgKeysRef.current
-    }
+    if (!normalizedSelected) return new Set<string>()
 
     const keys = new Set<string>([normalizedSelected])
     const mapped = organizationLookup.get(normalizedSelected)
     if (mapped) keys.add(mapped)
-    selectedOrgKeysRef.current = keys
     return keys
   }, [organizationLookup, selectedOrg])
-
-  // FIX: Stabilize selectedOrgKeys as a string for dependency comparison
-  const selectedOrgKeysString = useMemo(
-    () => Array.from(selectedOrgKeys).sort().join('|'),
-    [selectedOrgKeys]
-  )
 
   const retryUsers = useCallback(() => {
     setUsersRefreshIndex((prev) => prev + 1)
@@ -556,12 +525,6 @@ export const usePartnerAdminData = (
     return buildQueryKeys(combined)
   }, [assignedOrganizationIds, organizations, organizationsReady])
 
-  // FIX: Stabilize rawAssignedKeys as a string for dependency comparison
-  const rawAssignedKeysString = useMemo(
-    () => rawAssignedKeys.join('|'),
-    [rawAssignedKeys]
-  )
-
   const processingRef = useRef<{
     snapshotId: number
     abortController: AbortController | null
@@ -570,17 +533,17 @@ export const usePartnerAdminData = (
     abortController: null,
   })
 
-  // FIX: Store current values in refs to avoid stale closures while keeping dependencies stable
-  const stableRefs = useRef({
+  // FIX: Store current filter values in refs to avoid stale closures and prevent re-runs
+  const filterRefsRef = useRef({
     assignedOrgKeys,
     selectedOrgKeys,
     organizationLookup,
     selectedOrg,
   })
 
-  // Update refs when values change (without triggering effect re-run)
+  // Update filter refs when values change (without triggering the main effect)
   useEffect(() => {
-    stableRefs.current = {
+    filterRefsRef.current = {
       assignedOrgKeys,
       selectedOrgKeys,
       organizationLookup,
@@ -588,11 +551,15 @@ export const usePartnerAdminData = (
     }
   }, [assignedOrgKeys, selectedOrgKeys, organizationLookup, selectedOrg])
 
+  // FIX: Track if users have been loaded to prevent infinite loop
+  const usersInitializedRef = useRef(false)
+
   useEffect(() => {
     if (profileStatus !== 'ready' || !enabled) {
       setUsers([])
       setUsersLoading(true)
       setUsersError(null)
+      usersInitializedRef.current = false
       return
     }
 
@@ -608,6 +575,11 @@ export const usePartnerAdminData = (
       return
     }
 
+    // FIX: Skip if already initialized (unless manually refreshed)
+    if (usersInitializedRef.current && usersRefreshIndex === 0) {
+      return
+    }
+
     let isMounted = true
     let unsubscribe: (() => void) | undefined
 
@@ -615,11 +587,8 @@ export const usePartnerAdminData = (
     retryUsersHandler.reset()
 
     const subscribe = () => {
-      // FIX: Access current values from refs inside subscribe
-      const currentAssignedOrgKeys = stableRefs.current.assignedOrgKeys
-      const currentSelectedOrgKeys = stableRefs.current.selectedOrgKeys
-      const currentOrganizationLookup = stableRefs.current.organizationLookup
-      const currentSelectedOrg = stableRefs.current.selectedOrg
+      // Read current filter values from refs
+      const currentFilters = filterRefsRef.current
 
       if (!isSuperAdmin && !debugMode && rawAssignedKeys.length === 0) {
         logger.debug('[PartnerAdminData] No organizations assigned. Skipping user fetch.')
@@ -634,6 +603,7 @@ export const usePartnerAdminData = (
           assignedOrgKeys: [],
         })
         setHasQueryLimitWarning(false)
+        usersInitializedRef.current = true
         return
       }
 
@@ -668,11 +638,8 @@ export const usePartnerAdminData = (
         processingRef.current.abortController = new AbortController()
         const { signal } = processingRef.current.abortController
 
-        // FIX: Re-read refs at processing time to get latest values
-        const latestAssignedOrgKeys = stableRefs.current.assignedOrgKeys
-        const latestSelectedOrgKeys = stableRefs.current.selectedOrgKeys
-        const latestOrganizationLookup = stableRefs.current.organizationLookup
-        const latestSelectedOrg = stableRefs.current.selectedOrg
+        // FIX: Read latest filter values from refs
+        const latestFilters = filterRefsRef.current
 
         try {
           retryUsersHandler.reset()
@@ -687,9 +654,9 @@ export const usePartnerAdminData = (
 
           logger.debug('[PartnerAdminData] Processing accumulated user docs', {
             totalDocs: allDocs.length,
-            assignedOrgKeys: Array.from(latestAssignedOrgKeys),
+            assignedOrgKeys: Array.from(latestFilters.assignedOrgKeys),
             isSuperAdmin,
-            selectedOrg: latestSelectedOrg,
+            selectedOrg: latestFilters.selectedOrg,
           })
 
           const filteredDocs = allDocs.filter((docWrapper) => {
@@ -714,7 +681,7 @@ export const usePartnerAdminData = (
             ])
 
             if (!isSuperAdmin && !debugMode) {
-              if (!latestAssignedOrgKeys.size) {
+              if (!latestFilters.assignedOrgKeys.size) {
                 rejectedNoMatch++
                 if (mismatchSamples.length < 5) {
                   mismatchSamples.push({
@@ -726,7 +693,7 @@ export const usePartnerAdminData = (
                 return false
               }
 
-              const match = Array.from(userOrgKeys).some((key) => latestAssignedOrgKeys.has(key))
+              const match = Array.from(userOrgKeys).some((key) => latestFilters.assignedOrgKeys.has(key))
               if (!match) {
                 rejectedNoMatch++
                 if (mismatchSamples.length < 5) {
@@ -734,7 +701,7 @@ export const usePartnerAdminData = (
                     id: docWrapper.id,
                     reason: 'Org mismatch',
                     userOrgKeys: Array.from(userOrgKeys),
-                    assignedKeys: Array.from(latestAssignedOrgKeys),
+                    assignedKeys: Array.from(latestFilters.assignedOrgKeys),
                   })
                 }
                 return false
@@ -743,9 +710,9 @@ export const usePartnerAdminData = (
 
             if (
               organizationsReady &&
-              latestSelectedOrg !== 'all' &&
-              latestSelectedOrg &&
-              !Array.from(userOrgKeys).some((key) => latestSelectedOrgKeys.has(key))
+              latestFilters.selectedOrg !== 'all' &&
+              latestFilters.selectedOrg &&
+              !Array.from(userOrgKeys).some((key) => latestFilters.selectedOrgKeys.has(key))
             ) {
               rejectedSelectedOrg++
               return false
@@ -762,7 +729,7 @@ export const usePartnerAdminData = (
             rejectedNoMatch,
             rejectedSelectedOrg,
             mismatchSamples,
-            assignedOrgKeys: Array.from(latestAssignedOrgKeys),
+            assignedOrgKeys: Array.from(latestFilters.assignedOrgKeys),
           }
 
           logger.debug('[PartnerAdminData] User filtering results', currentDebugInfo)
@@ -804,7 +771,7 @@ export const usePartnerAdminData = (
                 rawCompanyCode.trim().length > 0
                   ? rawCompanyCode.toLowerCase()
                   : rawOrganizationId
-                    ? latestOrganizationLookup.get(rawOrganizationId.toLowerCase()) ||
+                    ? latestFilters.organizationLookup.get(rawOrganizationId.toLowerCase()) ||
                       rawOrganizationId.toLowerCase()
                     : ''
 
@@ -922,6 +889,7 @@ export const usePartnerAdminData = (
           logger.debug('[PartnerAdminData] Users loaded', { count: hydratedUsers.length })
           console.log('[PartnerAdminData] Users query result count', hydratedUsers.length)
 
+          usersInitializedRef.current = true
           setUsers(hydratedUsers)
           setUsersLoading(false)
           setLastUsersSuccessAt(new Date())
@@ -1005,22 +973,18 @@ export const usePartnerAdminData = (
       }
       if (unsubscribe) unsubscribe()
     }
-    // FIX: Removed unstable object/Set/Map dependencies
-    // Now using string representations for stable comparisons
-    // The refs are updated separately and read inside subscribe()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [
+    // FIX: Minimal stable dependencies - filter values accessed via refs
     assignedOrganizationIds.length,
-    assignedOrgKeysString,          // FIX: Use string instead of Set
     debugMode,
     enabled,
     fetchWeeklyPointsByUser,
     isSuperAdmin,
     organizationsReady,
     profileStatus,
-    rawAssignedKeysString,          // FIX: Use string instead of array
-    selectedOrgKeysString,          // FIX: Use string instead of Set
+    rawAssignedKeys.length, // Use length instead of array reference
     usersRefreshIndex,
-    // FIX: Removed retryUsersHandler - it's accessed via closure and doesn't need to trigger re-runs
   ])
 
   const analytics = usePartnerMetrics({ users, organizations })
