@@ -397,7 +397,7 @@ export const useWeeklyGlanceData = () => {
     }
 
     setLoading(prev => ({ ...prev, impact: true }));
-    const impactQuery = query(collection(db, 'impact_logs'), where('user_id', '==', profile.id));
+    const impactQuery = query(collection(db, 'impact_logs'), where('userId', '==', profile.id));
 
     const unsubscribe = onSnapshot(
       impactQuery,
