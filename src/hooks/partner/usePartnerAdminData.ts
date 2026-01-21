@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { collection, doc, onSnapshot, query, where, type Query, type DocumentData } from 'firebase/firestore'
+import { collection, onSnapshot, query, where, type Query, type DocumentData } from 'firebase/firestore'
 import { db } from '@/services/firebase'
 import { ORG_COLLECTION } from '@/constants/organizations'
 import { useAuth } from '@/hooks/useAuth'
@@ -122,27 +122,6 @@ interface UsePartnerAdminDataOptions {
 const isActiveAssignment = (assignment: PartnerAssignment) =>
   !assignment.status || assignment.status === 'active'
 
-const parseAssignedOrganizationIds = (value: unknown): string[] => {
-  if (!Array.isArray(value)) return []
-
-  const ids: string[] = []
-
-  value.forEach((entry) => {
-    if (typeof entry === 'string') {
-      const trimmed = entry.trim()
-      if (trimmed) ids.push(trimmed)
-      return
-    }
-
-    if (entry && typeof entry === 'object') {
-      const organizationId = (entry as { organizationId?: string }).organizationId?.trim()
-      if (organizationId) ids.push(organizationId)
-    }
-  })
-
-  return Array.from(new Set(ids))
-}
-
 const expandAssignments = (assignments: string[]) => {
   const expanded = new Set<string>()
   assignments.forEach((entry) => {
@@ -244,21 +223,27 @@ export const usePartnerAdminData = (
     setAssignmentsLoading(true)
     setAssignmentsError(null)
 
-    const unsubscribe = onSnapshot(
-      doc(db, 'partners', partnerId),
-      (docSnap) => {
-        if (!docSnap.exists()) {
-          setAssignedOrganizationIds([])
-          setAssignmentsLoading(false)
-          setAssignmentsError('Partner record not found.')
-          return
-        }
+    const assignmentsQuery = query(
+      collection(db, 'partner_organizations'),
+      where('partnerId', '==', partnerId),
+    )
 
-        const data = docSnap.data() as { assignedOrganizations?: unknown }
-        const deduped = parseAssignedOrganizationIds(data.assignedOrganizations)
+    const unsubscribe = onSnapshot(
+      assignmentsQuery,
+      (snapshot) => {
+        const orgIds = snapshot.docs
+          .map((docSnap) => {
+            const data = docSnap.data() as { organizationId?: string }
+            if (data.organizationId) return data.organizationId.trim()
+            const [, organizationId] = docSnap.id.split('_')
+            return organizationId?.trim() || ''
+          })
+          .filter((organizationId): organizationId is string => !!organizationId)
+
+        const deduped = Array.from(new Set(orgIds))
         setAssignedOrganizationIds(deduped)
         setAssignmentsLoading(false)
-        console.log('[PartnerAdminData] Partner assignments loaded (partners collection)', {
+        console.log('[PartnerAdminData] Partner organizations loaded', {
           partnerId,
           assignedOrgCount: deduped.length,
         })
@@ -346,14 +331,19 @@ export const usePartnerAdminData = (
 
     let isMounted = true
     let unsubscribe: (() => void) | undefined
+    let hasReceivedInitialSnapshot = false
 
     retryOrganizationsHandler.setMounted(true)
     retryOrganizationsHandler.reset()
 
     const subscribe = () => {
       if (!isMounted) return
-      setOrganizationsLoading(true)
-      setOrganizationsError(null)
+      
+      // Only set loading on initial subscription, not on every call
+      if (!hasReceivedInitialSnapshot) {
+        setOrganizationsLoading(true)
+        setOrganizationsError(null)
+      }
 
       if (!isSuperAdmin && assignmentsLoading) {
         setOrganizations([])
@@ -365,6 +355,13 @@ export const usePartnerAdminData = (
       const handleSnapshot = (orgs: PartnerOrganization[]) => {
         if (!isMounted) return
         retryOrganizationsHandler.reset()
+        
+        // Only log on initial load, not on every update
+        if (!hasReceivedInitialSnapshot) {
+          hasReceivedInitialSnapshot = true
+          console.log('[PartnerAdminData] Org query result count (assigned)', orgs.length)
+        }
+        
         setOrganizations(orgs)
         setOrganizationsLoading(false)
         setOrganizationsReady(true)
@@ -383,7 +380,6 @@ export const usePartnerAdminData = (
             logger.debug('[PartnerAdminData] Super admin organizations loaded', {
               count: snapshot.size,
             })
-            console.log('[PartnerAdminData] Org query result count (super admin)', snapshot.size)
             const scoped = snapshot.docs.map((docSnap) => {
               const data = docSnap.data() as Partial<PartnerOrganization>
               return {
@@ -414,7 +410,6 @@ export const usePartnerAdminData = (
             logger.debug('[PartnerAdminData] Assigned organizations loaded', {
               count: assignedOrgs.length,
             })
-            console.log('[PartnerAdminData] Org query result count (assigned)', assignedOrgs.length)
             const scoped = assignedOrgs.map((org) => {
               const data = org as PartnerOrganization
               return {
@@ -443,6 +438,7 @@ export const usePartnerAdminData = (
       retryOrganizationsHandler.cleanup()
       if (unsubscribe) unsubscribe()
     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [
     assignmentKey,
     assignmentsLoading,
@@ -450,14 +446,29 @@ export const usePartnerAdminData = (
     isSuperAdmin,
     orgRefreshIndex,
     profileStatus,
-    retryOrganizationsHandler,
-    assignedOrganizationIds,
+    // NOTE: retryOrganizationsHandler intentionally excluded - accessed via ref/closure
+    assignedOrganizationIds.length, // Use length instead of array reference
   ])
+
+  // FIX: Stabilize organizations key to prevent stats effect from re-running on every org update
+  const organizationsKey = useMemo(
+    () => organizations.map((org) => org.id).sort().join('|'),
+    [organizations]
+  )
+
+  // FIX: Track if stats have been initialized to prevent re-running on org data changes
+  const statsInitializedRef = useRef<string | null>(null)
 
   useEffect(() => {
     if (profileStatus !== 'ready' || !organizations.length) {
       return
     }
+
+    // Only initialize stats once per set of organizations
+    if (statsInitializedRef.current === organizationsKey) {
+      return
+    }
+    statsInitializedRef.current = organizationsKey
 
     statsListenersRef.current.forEach((unsub) => unsub())
     statsListenersRef.current = []
@@ -491,7 +502,8 @@ export const usePartnerAdminData = (
       statsListenersRef.current.forEach((unsub) => unsub())
       statsListenersRef.current = []
     }
-  }, [organizations, profileStatus])
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [organizationsKey, profileStatus])
 
   const [users, setUsers] = useState<PartnerUser[]>([])
   const [usersLoading, setUsersLoading] = useState(true)
