@@ -29,14 +29,14 @@ export const isAdminLike = (profile?: UserProfile | null) =>
  */
 const extractAssignedOrgIdentifiers = (profile: UserProfile | null | undefined): Set<string> => {
   const identifiers = new Set<string>()
-  
+
   if (!profile?.assignedOrganizations) return identifiers
-  
-  const assignments = profile.assignedOrganizations
-  
-  // Handle if it's not an array (safety check)
+
+  // Cast to unknown first for runtime safety checks (the type says string[] but runtime data may vary)
+  const assignments = profile.assignedOrganizations as unknown
+
+  // Handle if it's not an array (safety check for runtime data inconsistencies)
   if (!Array.isArray(assignments)) {
-    // Could be a single string or object
     if (typeof assignments === 'string') {
       identifiers.add(assignments.toLowerCase())
     }

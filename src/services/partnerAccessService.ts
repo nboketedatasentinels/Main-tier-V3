@@ -7,11 +7,31 @@ export const canPartnerAccessOrganization = async (
 ): Promise<boolean> => {
   if (!partnerId || !organizationId) return false
 
-  const snap = await getDoc(
+  // Check 1: Legacy partner_organizations collection
+  const legacySnap = await getDoc(
     doc(db, 'partner_organizations', `${partnerId}_${organizationId}`)
   )
+  if (legacySnap.exists()) return true
 
-  return snap.exists()
+  // Check 2: Modern partners collection with assignedOrganizations array
+  const partnerSnap = await getDoc(doc(db, 'partners', partnerId))
+  if (!partnerSnap.exists()) return false
+
+  const data = partnerSnap.data() as {
+    assignedOrganizations?: Array<string | { organizationId?: string; companyCode?: string }>
+  }
+
+  const assignments = data.assignedOrganizations || []
+  const normalizedOrgId = organizationId.trim().toLowerCase()
+
+  return assignments.some((assignment) => {
+    if (typeof assignment === 'string') {
+      return assignment.trim().toLowerCase() === normalizedOrgId
+    }
+    const assignedId = assignment.organizationId?.trim().toLowerCase()
+    const assignedCode = assignment.companyCode?.trim().toLowerCase()
+    return assignedId === normalizedOrgId || assignedCode === normalizedOrgId
+  })
 }
 
 export const fetchPartnerOrganizationIds = async (partnerId: string): Promise<string[]> => {
