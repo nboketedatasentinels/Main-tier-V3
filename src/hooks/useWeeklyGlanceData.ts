@@ -15,7 +15,7 @@ import {
 import { db } from '@/services/firebase'
 import { useAuth } from '@/hooks/useAuth'
 import { useOrganizationLeadership } from '@/hooks/useOrganizationLeadership'
-import { getCurrentWeekNumber, getWeekKey } from '@/utils/weekCalculations'
+import { getWeekKey } from '@/utils/weekCalculations'
 import { JOURNEY_META, getMonthNumber } from '@/config/pointsConfig'
 import { InspirationQuote } from '@/types'
 import { leadershipQuotes } from '@/services/quotes'
@@ -120,10 +120,9 @@ export const useWeeklyGlanceData = () => {
     loading: leadershipLoading,
   } = useOrganizationLeadership(profile?.companyId, profile?.id)
 
-  const calendarWeekNumber = useMemo(() => getCurrentWeekNumber(), [])
   const weekNumber = useMemo(
-    () => (profile?.currentWeek && profile.currentWeek > 0 ? profile.currentWeek : calendarWeekNumber),
-    [calendarWeekNumber, profile?.currentWeek],
+    () => profile?.currentWeek || 1,
+    [profile?.currentWeek],
   )
   const weekKey = useMemo(() => getWeekKey(), [])
 

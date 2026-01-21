@@ -12,7 +12,9 @@
       "Bash(git checkout:*)",
       "Bash(npm run qa:*)",
       "Bash(npm run lint)",
-      "Bash(echo:*)"
+      "Bash(echo:*)",
+      "Bash(dir /s \"c:\\\\Users\\\\Kekab\\\\Man-tier-v2\\\\src\")",
+      "Bash(dir:*)"
     ]
   }
 }
