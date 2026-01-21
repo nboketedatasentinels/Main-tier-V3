@@ -127,6 +127,55 @@ export const fetchOrganizationsByIds = async (
   return results
 }
 
+export const listenToOrganizationsByIds = (
+  organizationIds: string[],
+  onUpdate: (organizations: OrganizationRecord[]) => void,
+  onError?: (error: FirestoreError) => void,
+): (() => void) => {
+  if (!organizationIds.length) {
+    onUpdate([])
+    return () => {}
+  }
+
+  const chunks: string[][] = []
+  for (let i = 0; i < organizationIds.length; i += 10) {
+    chunks.push(organizationIds.slice(i, i + 10))
+  }
+
+  const chunkData = new Map<number, OrganizationRecord[]>()
+
+  const emit = () => {
+    const combined: OrganizationRecord[] = []
+    chunkData.forEach((records) => {
+      combined.push(...records)
+    })
+    onUpdate(combined)
+  }
+
+  const unsubscribes = chunks.map((chunk, index) =>
+    onSnapshot(
+      query(collection(db, 'organizations'), where(documentId(), 'in', chunk)),
+      (snapshot: QuerySnapshot) => {
+        const records = snapshot.docs.map((docSnap) => ({
+          id: docSnap.id,
+          ...(docSnap.data() as OrganizationRecord),
+        }))
+        chunkData.set(index, records)
+        emit()
+      },
+      (error) => {
+        if (onError) {
+          onError(error)
+        }
+      },
+    ),
+  )
+
+  return () => {
+    unsubscribes.forEach((unsubscribe) => unsubscribe())
+  }
+}
+
 
 export const generateOrganizationCode = (name: string) => {
   const validChars = name.toUpperCase().match(/[A-Z0-9]/g) ?? []
