@@ -55,6 +55,8 @@ const mapOrganizationStatusToPartnerAssignment = (
   switch (status) {
     case 'watch':
       return 'watch'
+    case 'paused':
+      return 'paused'
     case 'inactive':
       return 'inactive'
     case 'suspended':

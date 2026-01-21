@@ -23,7 +23,7 @@ export interface SuperAdminDashboardMetrics {
   newRegistrations: number
 }
 
-export type OrganizationStatus = 'active' | 'inactive' | 'pending' | 'suspended' | 'watch'
+export type OrganizationStatus = 'active' | 'inactive' | 'pending' | 'suspended' | 'watch' | 'paused'
 
 export interface OrganizationRecord {
   id?: string

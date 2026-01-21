@@ -28,7 +28,6 @@ import {
   OrganizationLead,
   OrganizationRecord,
 } from '@/types/admin'
-import type { PartnerOrganization } from '@/hooks/usePartnerDashboardData'
 import {
   normalizeDurationWeeks,
   resolveDurationWeeksFromProgramDuration,
@@ -97,7 +96,7 @@ export type OrganizationPartnerValidationResult = {
 
 export const fetchOrganizationsByIds = async (
   organizationIds: string[],
-): Promise<PartnerOrganization[]> => {
+): Promise<OrganizationRecord[]> => {
   if (!organizationIds.length) return []
 
   const chunks: string[][] = []
@@ -105,7 +104,7 @@ export const fetchOrganizationsByIds = async (
     chunks.push(organizationIds.slice(i, i + 10))
   }
 
-  const results: PartnerOrganization[] = []
+  const results: OrganizationRecord[] = []
 
   for (const chunk of chunks) {
     const snap = await getDocs(
@@ -116,10 +115,10 @@ export const fetchOrganizationsByIds = async (
       const data = docSnap.data()
       results.push({
         id: docSnap.id,
-        code: data.code ?? null,
-        name: data.name ?? data.companyName ?? 'Unnamed organization',
+        code: data.code ?? docSnap.id,
+        name: data.name ?? data.companyName ?? docSnap.id ?? 'Unnamed organization',
         cluster: data.cluster ?? null,
-        status: data.status ?? 'active',
+        status: (data.status ?? 'active') as OrganizationRecord['status'],
       })
     })
   }

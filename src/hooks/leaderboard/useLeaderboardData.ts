@@ -139,7 +139,6 @@ export const useLeaderboardData = ({
   const [errorMessage, setErrorMessage] = useState<string | null>(null)
   const [profilesRetry, setProfilesRetry] = useState(0)
   const [transactionsRetry, setTransactionsRetry] = useState(0)
-  const [challengesRetry, setChallengesRetry] = useState(0)
 
   const scheduleRetry = (
     label: string,
@@ -446,7 +445,7 @@ export const useLeaderboardData = ({
           const seenIds = new Set<string>()
 
           if (challengerQuery) {
-            const challengerUnsubscribe = onSnapshot(
+            onSnapshot(
               challengerQuery,
               (snapshot) => {
                 snapshot.docs.forEach((doc) => {
@@ -461,7 +460,7 @@ export const useLeaderboardData = ({
           }
 
           if (challengedQuery) {
-            const challengedUnsubscribe = onSnapshot(
+            onSnapshot(
               challengedQuery,
               (snapshot) => {
                 snapshot.docs.forEach((doc) => {
@@ -511,7 +510,7 @@ export const useLeaderboardData = ({
     setChallenges([])
     setChallengesLoaded(true)
     return undefined
-  }, [profileId, challengesRetry])
+  }, [profileId])
 
   return {
     profiles,

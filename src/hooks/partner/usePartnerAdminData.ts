@@ -24,7 +24,7 @@ import {
   getProgramWeekNumber,
   mapWeeklyPointsToProgress,
 } from '@/utils/partnerProgress'
-import type { PartnerAssignment } from '@/types/admin'
+import type { OrganizationRecord, PartnerAssignment } from '@/types/admin'
 
 // Firestore 'in' query limit
 const FIRESTORE_IN_QUERY_LIMIT = 30
@@ -111,6 +111,7 @@ export interface PartnerAdminDataSnapshot {
   analytics: PartnerAdminAnalytics
   organizationLookup: Map<string, string>
   assignedOrgKeys: Set<string>
+  usersFetchedAt?: Date | null
 }
 
 interface UsePartnerAdminDataOptions {
@@ -191,11 +192,11 @@ export const usePartnerAdminData = (
   const [assignmentsError, setAssignmentsError] = useState<string | null>(null)
   const [assignedOrganizationIds, setAssignedOrganizationIds] = useState<string[]>([])
 
-  const assignments = useMemo(
+  const assignments = useMemo<PartnerAssignment[]>(
     () =>
       assignedOrganizationIds.map((organizationId) => ({
         organizationId,
-        status: 'active',
+        status: 'active' as const,
       })),
     [assignedOrganizationIds],
   )
@@ -408,12 +409,12 @@ export const usePartnerAdminData = (
 
         unsubscribe = listenToOrganizationsByIds(
           assignedOrganizationIds,
-          (assignedOrgs) => {
+          (assignedOrgs: OrganizationRecord[]) => {
             logger.debug('[PartnerAdminData] Assigned organizations loaded', {
               count: assignedOrgs.length,
             })
             const scoped = assignedOrgs.map((org) => {
-              const data = org as PartnerOrganization
+              const data = org as OrganizationRecord & Partial<PartnerOrganization>
               return {
                 id: data.id,
                 code: data.code || data.id || '',
@@ -529,7 +530,9 @@ export const usePartnerAdminData = (
     const baseKeys = assignedOrganizationIds.length ? assignedOrganizationIds : []
     const expandedAssignments = expandAssignments(baseKeys)
     const expandedFromOrganizations = organizationsReady
-      ? organizations.flatMap((org) => [org.id, org.code]).filter(Boolean)
+      ? organizations
+          .flatMap((org) => [org.id, org.code])
+          .filter((value): value is string => Boolean(value))
       : []
     const combined = [...expandedAssignments, ...expandedFromOrganizations]
     return buildQueryKeys(combined)
@@ -597,9 +600,6 @@ export const usePartnerAdminData = (
     retryUsersHandler.reset()
 
     const subscribe = () => {
-      // Read current filter values from refs
-      const currentFilters = filterRefsRef.current
-
       if (!isSuperAdmin && !debugMode && rawAssignedKeys.length === 0) {
         logger.debug('[PartnerAdminData] No organizations assigned. Skipping user fetch.')
         setUsers([])
@@ -1009,12 +1009,14 @@ export const usePartnerAdminData = (
       analytics,
       organizationLookup,
       assignedOrgKeys,
+      usersFetchedAt: lastUsersSuccessAt,
     }),
     [
       activeAssignments,
       analytics,
       assignedOrgKeys,
       assignedOrganizationIds,
+      lastUsersSuccessAt,
       organizationLookup,
       organizations,
       partnerId,
