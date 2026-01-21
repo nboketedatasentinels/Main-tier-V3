@@ -7,7 +7,7 @@ import {
 } from '@/services/notificationService'
 
 interface UseAdminNotificationsOptions {
-  role: 'partner' | 'admin' | 'super_admin'
+  role: 'partner' | 'super_admin'
   enabled?: boolean
   limit?: number
   filters?: NotificationCategory[]
@@ -31,8 +31,7 @@ export const useAdminNotifications = ({
       const filtered = items
         .filter((item) => {
           if (!item.target_roles) return true
-          if (item.target_roles.includes(role)) return true
-          return role === 'admin' && item.target_roles.includes('partner')
+          return item.target_roles.includes(role)
         })
         .slice(0, limit)
       setNotifications(filtered)

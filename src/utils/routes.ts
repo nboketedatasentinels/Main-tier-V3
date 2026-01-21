@@ -63,9 +63,9 @@ export const getLandingPathForRole = (
   // Priority 2: Role-based redirection
   switch (role) {
     case UserRole.SUPER_ADMIN:
-      return '/super-admin/dashboard';
-    case UserRole.COMPANY_ADMIN:
       return '/admin/dashboard';
+    case UserRole.PARTNER:
+      return '/partner/dashboard';
     case UserRole.MENTOR: {
       // Mentor conditional redirect based on transformationTier
       if (profile?.transformationTier) {

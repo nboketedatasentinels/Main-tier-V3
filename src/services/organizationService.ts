@@ -94,6 +94,87 @@ export type OrganizationPartnerValidationResult = {
   message?: string
 }
 
+export const fetchOrganizationsByIds = async (
+  organizationIds: string[],
+): Promise<OrganizationRecord[]> => {
+  if (!organizationIds.length) return []
+
+  const chunks: string[][] = []
+  for (let i = 0; i < organizationIds.length; i += 10) {
+    chunks.push(organizationIds.slice(i, i + 10))
+  }
+
+  const results: OrganizationRecord[] = []
+
+  for (const chunk of chunks) {
+    const snap = await getDocs(
+      query(collection(db, 'organizations'), where(documentId(), 'in', chunk)),
+    )
+
+    snap.docs.forEach((docSnap) => {
+      const data = docSnap.data()
+      results.push({
+        id: docSnap.id,
+        code: data.code ?? docSnap.id,
+        name: data.name ?? data.companyName ?? docSnap.id ?? 'Unnamed organization',
+        cluster: data.cluster ?? null,
+        status: (data.status ?? 'active') as OrganizationRecord['status'],
+      })
+    })
+  }
+
+  return results
+}
+
+export const listenToOrganizationsByIds = (
+  organizationIds: string[],
+  onUpdate: (organizations: OrganizationRecord[]) => void,
+  onError?: (error: FirestoreError) => void,
+): (() => void) => {
+  if (!organizationIds.length) {
+    onUpdate([])
+    return () => {}
+  }
+
+  const chunks: string[][] = []
+  for (let i = 0; i < organizationIds.length; i += 10) {
+    chunks.push(organizationIds.slice(i, i + 10))
+  }
+
+  const chunkData = new Map<number, OrganizationRecord[]>()
+
+  const emit = () => {
+    const combined: OrganizationRecord[] = []
+    chunkData.forEach((records) => {
+      combined.push(...records)
+    })
+    onUpdate(combined)
+  }
+
+  const unsubscribes = chunks.map((chunk, index) =>
+    onSnapshot(
+      query(collection(db, 'organizations'), where(documentId(), 'in', chunk)),
+      (snapshot: QuerySnapshot) => {
+        const records = snapshot.docs.map((docSnap) => ({
+          id: docSnap.id,
+          ...(docSnap.data() as OrganizationRecord),
+        }))
+        chunkData.set(index, records)
+        emit()
+      },
+      (error) => {
+        if (onError) {
+          onError(error)
+        }
+      },
+    ),
+  )
+
+  return () => {
+    unsubscribes.forEach((unsubscribe) => unsubscribe())
+  }
+}
+
 
 export const generateOrganizationCode = (name: string) => {
   const validChars = name.toUpperCase().match(/[A-Z0-9]/g) ?? []

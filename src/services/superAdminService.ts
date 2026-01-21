@@ -5,6 +5,7 @@ import {
   deleteDoc,
   doc,
   FirestoreError,
+  getDoc,
   getDocs,
   limit,
   onSnapshot,
@@ -16,11 +17,16 @@ import {
 } from 'firebase/firestore'
 import { auth, db } from './firebase'
 import { ORG_COLLECTION } from '@/constants/organizations'
+import { fetchOrganizationsByIds } from '@/services/organizationService'
+import { upsertPartnerAssignments } from '@/services/partnerAdminService'
+import { removeUndefinedFields } from '@/utils/firestore'
 import {
   AdminActivityLogEntry,
   AdminFormData,
   AdminRole,
   AdminUserRecord,
+  PartnerAssignment,
+  PartnerAssignmentStatus,
   EngagementRiskAggregate,
   OrganizationMemberStats,
   OrganizationRecord,
@@ -30,6 +36,7 @@ import {
   TaskNotificationRecord,
   VerificationRequest,
 } from '@/types/admin'
+import { normalizeRole } from '@/utils/role'
 
 type TrendPoint = { label: string; value: number }
 
@@ -37,10 +44,30 @@ const orgCollection = collection(db, ORG_COLLECTION)
 const usersCollection = collection(db, 'profiles')
 const auditCollection = collection(db, 'admin_activity_log')
 const engagementCollection = collection(db, 'user_engagement_scores')
-const adminRoles: AdminRole[] = ['super_admin', 'partner', 'admin', 'mentor', 'ambassador', 'team_leader']
+const adminRoles: AdminRole[] = ['super_admin', 'partner', 'mentor', 'ambassador']
 
 const getActorId = () => auth.currentUser?.uid
 const getActorName = () => auth.currentUser?.displayName || undefined
+
+const mapOrganizationStatusToPartnerAssignment = (
+  status?: OrganizationRecord['status'],
+): PartnerAssignmentStatus => {
+  switch (status) {
+    case 'watch':
+      return 'watch'
+    case 'paused':
+      return 'paused'
+    case 'inactive':
+      return 'inactive'
+    case 'suspended':
+      return 'paused'
+    case 'pending':
+      return 'inactive'
+    case 'active':
+    default:
+      return 'active'
+  }
+}
 
 export const fetchDashboardMetrics = async (
   filters?: Partial<{ organizationCodes: string[]; organizationIds: string[]; trendDays: number }>,
@@ -411,10 +438,11 @@ export const listenToAdminActivityLog = (
 }
 
 export const logAdminAction = async (entry: Omit<AdminActivityLogEntry, 'id' | 'createdAt'>) => {
-  await addDoc(auditCollection, {
+  const sanitizedEntry = removeUndefinedFields({
     ...entry,
     createdAt: serverTimestamp(),
   })
+  await addDoc(auditCollection, sanitizedEntry)
 }
 
 export const fetchAdminUsers = async (): Promise<AdminUserRecord[]> => {
@@ -480,6 +508,7 @@ export const deleteAdminUser = async (adminId: string) => {
 
 export const assignOrganizations = async (adminId: string, orgIds: string[]) => {
   const adminRef = doc(db, 'users', adminId)
+  const profileRef = doc(db, 'profiles', adminId)
   const actorId = getActorId()
   const actorName = getActorName()
   // assignedOrganizations MUST contain organization document IDs only, never codes.
@@ -491,12 +520,39 @@ export const assignOrganizations = async (adminId: string, orgIds: string[]) => 
         .filter(Boolean),
     ),
   )
-  await updateDoc(adminRef, {
+  const updatePayload = {
     assignedOrganizations: sanitizedOrgIds,
     assignedOrganizationsUpdatedAt: serverTimestamp(),
     assignedOrganizationsUpdatedBy: actorId || null,
     updatedAt: serverTimestamp(),
-  })
+  }
+
+  const adminSnapshot = await getDoc(adminRef)
+  const adminRole = normalizeRole((adminSnapshot.data() as { role?: string } | undefined)?.role)
+
+  const partnerAssignments: PartnerAssignment[] =
+    adminRole === 'partner'
+      ? await (async () => {
+        const orgRecords = await fetchOrganizationsByIds(sanitizedOrgIds)
+        const orgById = new Map(orgRecords.map((org) => [org.id, org]))
+        return sanitizedOrgIds.map((organizationId) => {
+          const orgRecord = orgById.get(organizationId)
+          return {
+            organizationId,
+            companyCode: orgRecord?.code,
+            status: mapOrganizationStatusToPartnerAssignment(orgRecord?.status),
+          }
+        })
+      })()
+      : []
+
+  await Promise.all([
+    updateDoc(adminRef, updatePayload),
+    updateDoc(profileRef, updatePayload),
+    adminRole === 'partner'
+      ? upsertPartnerAssignments(adminId, partnerAssignments)
+      : Promise.resolve(),
+  ])
   await logAdminAction({
     action: 'admin_orgs_updated',
     adminId: actorId,
@@ -576,4 +632,18 @@ export const listenToTaskNotifications = (onChange: (tasks: TaskNotificationReco
       }),
     )
   })
+}
+
+export const listenToUsers = (
+  onChange: (users: AdminUserRecord[]) => void,
+  onError?: (error: FirestoreError) => void,
+) => {
+  const usersQuery = query(usersCollection, orderBy('createdAt', 'desc'))
+  return onSnapshot(
+    usersQuery,
+    (snapshot) => {
+      onChange(snapshot.docs.map(mapAdminDoc))
+    },
+    onError,
+  )
 }

@@ -3,6 +3,8 @@ import {
   doc,
   getDocs,
   increment,
+  limit,
+  orderBy,
   query,
   runTransaction,
   serverTimestamp,
@@ -13,6 +15,10 @@ import { db } from "@/services/firebase";
 import pointsConfig from "@/config/pointsConfig";
 import type { ActivityDef, JourneyType } from "@/config/pointsConfig";
 import { calculateLevel, calculateUserTotalPoints } from "@/utils/points";
+import { awardBadge } from "./badgeService";
+import { updateWindowOnAward, updateWindowOnRevoke } from "./windowProgressService";
+import { checkAndHandleJourneyCompletion } from "./journeyCompletionService";
+import { detectStatusChangeAndNudge } from "./nudgeMonitorService";
 
 const { JOURNEY_META, getMonthNumber } = pointsConfig;
 
@@ -50,6 +56,15 @@ export async function awardChecklistPoints(params: {
 }) {
   const { uid, journeyType, weekNumber, activity, source = "weekly_checklist" } = params;
 
+  if (!uid) throw new Error('[PointsService] uid is required')
+  if (!journeyType) throw new Error('[PointsService] journeyType is required')
+  if (typeof weekNumber !== 'number') throw new Error('[PointsService] weekNumber is required')
+  if (!activity || !activity.id) {
+    throw new Error(
+      `[PointsService] activity.id is required. Got: ${JSON.stringify(activity)}`
+    )
+  }
+
   const monthNumber = getMonthNumber(weekNumber);
   const weeklyTarget = JOURNEY_META[journeyType].weeklyTarget;
 
@@ -60,13 +75,62 @@ export async function awardChecklistPoints(params: {
     where("uid", "==", uid),
     where("weekNumber", "==", weekNumber)
   );
+  const weeklyActivityQuery = query(
+    collection(db, "pointsLedger"),
+    where("uid", "==", uid),
+    where("weekNumber", "==", weekNumber),
+    where("activityId", "==", activity.id)
+  );
+  const windowActivityQuery = query(
+    collection(db, "pointsLedger"),
+    where("uid", "==", uid),
+    where("monthNumber", "==", monthNumber),
+    where("activityId", "==", activity.id)
+  );
+  const lastActivityQuery = query(
+    collection(db, "pointsLedger"),
+    where("uid", "==", uid),
+    where("activityId", "==", activity.id),
+    orderBy("weekNumber", "desc"),
+    limit(1)
+  );
 
   try {
-    const ledgerSnapshot = await getDocs(ledgerQuery);
+    const [
+      ledgerSnapshot,
+      weeklyActivitySnapshot,
+      windowActivitySnapshot,
+      lastActivitySnapshot,
+    ] = await Promise.all([
+      getDocs(ledgerQuery),
+      getDocs(weeklyActivityQuery),
+      getDocs(windowActivityQuery),
+      getDocs(lastActivityQuery),
+    ]);
+
     await runTransactionWithRetry(async (tx) => {
-      const [ledgerDoc, progressDoc] = await Promise.all([tx.get(ledgerRef), tx.get(progressRef)]);
+      const [ledgerDoc, progressDoc] = await Promise.all([
+        tx.get(ledgerRef),
+        tx.get(progressRef),
+      ]);
 
       if (ledgerDoc.exists()) return;
+
+      const maxPerWeek = activity.maxPerWeek ?? 1;
+      if (maxPerWeek && weeklyActivitySnapshot.size >= maxPerWeek) {
+        throw new Error("Weekly activity limit reached");
+      }
+
+      if (activity.maxPerMonth && windowActivitySnapshot.size >= activity.maxPerMonth) {
+        throw new Error("Window activity limit reached");
+      }
+
+      if (activity.cooldownWeeks && lastActivitySnapshot.size > 0) {
+        const lastWeekNumber = lastActivitySnapshot.docs[0]?.data()?.weekNumber as number | undefined;
+        if (lastWeekNumber && weekNumber - lastWeekNumber <= activity.cooldownWeeks) {
+          throw new Error("Activity cooldown in effect");
+        }
+      }
 
       const currentProgress = progressDoc.exists()
         ? progressDoc.data()
@@ -88,6 +152,10 @@ export async function awardChecklistPoints(params: {
       const totalPoints = Math.max(0, currentTotal + activity.points);
       const level = calculateLevel(totalPoints);
 
+      if (import.meta.env.VITE_FEATURE_FLAG_PARALLEL_WINDOW_TRACKING === 'true') {
+        await updateWindowOnAward(tx, { uid, journeyType, weekNumber, activity });
+      }
+
       tx.set(ledgerRef, {
         uid,
         weekNumber,
@@ -96,6 +164,7 @@ export async function awardChecklistPoints(params: {
         points: activity.points,
         createdAt: serverTimestamp(),
         source,
+        approvalType: activity.approvalType,
       });
 
       tx.set(
@@ -113,6 +182,19 @@ export async function awardChecklistPoints(params: {
         { merge: true }
       );
 
+      // Trigger nudges asynchronously after transaction
+      // Note: We use setTimeout to ensure it happens after tx completes
+      setTimeout(() => {
+        detectStatusChangeAndNudge({
+          uid,
+          journeyType,
+          previousStatus: currentProgress.status,
+          currentStatus: status,
+          pointsEarned: newPoints,
+          windowTarget: weeklyTarget,
+        }).catch(err => console.error('[PointsService] Nudge trigger failed:', err));
+      }, 100);
+
       const profileUpdate = {
         totalPoints,
         level,
@@ -123,6 +205,26 @@ export async function awardChecklistPoints(params: {
       tx.set(doc(db, "users", uid), profileUpdate, { merge: true });
       tx.set(doc(db, "profiles", uid), profileUpdate, { merge: true });
     });
+
+    // Post-transaction logic
+    // Check for journey completion after points are awarded
+    setTimeout(() => {
+      checkAndHandleJourneyCompletion(uid, journeyType).catch(err =>
+        console.error('Error checking journey completion:', err)
+      );
+    }, 100);
+
+    if (activity.id.includes('peer')) {
+      const peerActivitiesQuery = query(
+        collection(db, 'pointsLedger'),
+        where('uid', '==', uid),
+        where('activityId', 'in', ['peer_matching', 'peer_to_peer'])
+      );
+      const peerActivitiesSnapshot = await getDocs(peerActivitiesQuery);
+      if (peerActivitiesSnapshot.size >= 5) {
+        await awardBadge(uid, 'peer-collaborator');
+      }
+    }
   } catch (error) {
     console.error("🔴 [Points] Failed to award checklist points", error);
     throw error;
@@ -136,6 +238,15 @@ export async function revokeChecklistPoints(params: {
   activity: ActivityDef;
 }) {
   const { uid, journeyType, weekNumber, activity } = params;
+
+  if (!uid) throw new Error('[PointsService] uid is required')
+  if (!journeyType) throw new Error('[PointsService] journeyType is required')
+  if (typeof weekNumber !== 'number') throw new Error('[PointsService] weekNumber is required')
+  if (!activity || !activity.id) {
+    throw new Error(
+      `[PointsService] activity.id is required. Got: ${JSON.stringify(activity)}`
+    )
+  }
 
   const monthNumber = getMonthNumber(weekNumber);
   const weeklyTarget = JOURNEY_META[journeyType].weeklyTarget;
@@ -172,6 +283,10 @@ export async function revokeChecklistPoints(params: {
       const totalPoints = Math.max(0, currentTotal - ledgerPoints);
       const level = calculateLevel(totalPoints);
 
+      if (import.meta.env.VITE_FEATURE_FLAG_PARALLEL_WINDOW_TRACKING === 'true') {
+        await updateWindowOnRevoke(tx, { uid, journeyType, weekNumber, activity });
+      }
+
       tx.delete(ledgerRef);
 
       tx.set(
@@ -188,6 +303,18 @@ export async function revokeChecklistPoints(params: {
         },
         { merge: true }
       );
+
+      // Trigger nudges asynchronously after transaction
+      setTimeout(() => {
+        detectStatusChangeAndNudge({
+          uid,
+          journeyType,
+          previousStatus: progressDoc.data()?.status || 'alert',
+          currentStatus: status,
+          pointsEarned: newPoints,
+          windowTarget: weeklyTarget,
+        }).catch(err => console.error('[PointsService] Revoke nudge trigger failed:', err));
+      }, 100);
 
       const profileUpdate = {
         totalPoints,

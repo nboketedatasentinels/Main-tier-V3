@@ -8,6 +8,7 @@ import {
   Card,
   CardBody,
   CardHeader,
+  Collapse,
   Flex,
   Grid,
   HStack,
@@ -47,6 +48,9 @@ import {
   ArrowUpAZ,
   ArrowUpRight,
   Award,
+  CheckCircle,
+  ChevronDown,
+  ChevronRight,
   Clock,
   Crown,
   Info,
@@ -76,7 +80,9 @@ import { useAuth } from '@/hooks/useAuth'
 import { useLeaderboardContext, getLeaderboardContextLabels } from '@/hooks/leaderboard/useLeaderboardContext'
 import { useLeaderboardData } from '@/hooks/leaderboard/useLeaderboardData'
 import { useLeaderboardMetrics } from '@/hooks/leaderboard/useLeaderboardMetrics'
+import { useUserActivityHistory } from '@/hooks/leaderboard/useUserActivityHistory'
 import { StartChallengeModal } from '@/components/modals/StartChallengeModal'
+import { format } from 'date-fns'
 
 interface FeaturedBadge {
   id: string
@@ -151,6 +157,7 @@ export const LeadershipBoardPage: React.FC = () => {
     const stored = localStorage.getItem('leaderboard-filter-tip')
     return stored !== 'dismissed'
   })
+  const [expandedCategories, setExpandedCategories] = useState<Set<string>>(new Set())
   const previousTotalPoints = useRef<number | null>(null)
   const previousLevel = useRef<number | null>(null)
   const timeframeStart = useMemo(() => toDateFromTimeframe(timeframe), [timeframe])
@@ -214,6 +221,20 @@ export const LeadershipBoardPage: React.FC = () => {
       isClosable: true,
     })
   }, [errorMessage, toast])
+
+  const { activityHistoryByCategory, isLoading: activityHistoryLoading } = useUserActivityHistory(profile?.id)
+
+  const toggleCategory = useCallback((categoryName: string) => {
+    setExpandedCategories((prev) => {
+      const newSet = new Set(prev)
+      if (newSet.has(categoryName)) {
+        newSet.delete(categoryName)
+      } else {
+        newSet.add(categoryName)
+      }
+      return newSet
+    })
+  }, [])
 
   const pointsPulseStyle = pointsPulse ? 'pointsPulse 1.2s ease-in-out' : 'none'
 
@@ -1000,30 +1021,42 @@ export const LeadershipBoardPage: React.FC = () => {
                   <Card bg="surface.default" border="1px solid" borderColor="border.subtle">
                     <CardHeader>
                       <Text fontWeight="bold">Cohort Comparison</Text>
-                      <Text color="text.secondary">Benchmarks vs cohort max & averages</Text>
+                      <Text color="text.secondary">Your performance vs cohort</Text>
                     </CardHeader>
                     <CardBody>
                       <Stack spacing={4}>
                         <Box>
-                          <HStack justify="space-between">
+                          <HStack justify="space-between" mb={1}>
                             <Text>Total Points</Text>
-                            <Text color="text.secondary">Avg {formatNumber(cohortStats.avgTotal)}</Text>
+                            <HStack spacing={2}>
+                              <Text fontWeight="semibold">{formatNumber(cohortStats.total)}</Text>
+                              <Text color="text.secondary" fontSize="sm">/ max {formatNumber(cohortStats.maxTotal)}</Text>
+                            </HStack>
                           </HStack>
                           <Progress value={(cohortStats.total / cohortStats.maxTotal) * 100} colorScheme="primary" borderRadius="full" />
+                          <Text color="text.secondary" fontSize="xs" mt={1}>Cohort avg: {formatNumber(cohortStats.avgTotal)}</Text>
                         </Box>
                         <Box>
-                          <HStack justify="space-between">
+                          <HStack justify="space-between" mb={1}>
                             <Text>Active Points</Text>
-                            <Text color="text.secondary">Avg {formatNumber(cohortStats.avgActive)}</Text>
+                            <HStack spacing={2}>
+                              <Text fontWeight="semibold">{formatNumber(cohortStats.active)}</Text>
+                              <Text color="text.secondary" fontSize="sm">/ max {formatNumber(cohortStats.maxActive)}</Text>
+                            </HStack>
                           </HStack>
                           <Progress value={(cohortStats.active / cohortStats.maxActive) * 100} colorScheme="secondary" borderRadius="full" />
+                          <Text color="text.secondary" fontSize="xs" mt={1}>Cohort avg: {formatNumber(cohortStats.avgActive)}</Text>
                         </Box>
                         <Box>
-                          <HStack justify="space-between">
+                          <HStack justify="space-between" mb={1}>
                             <Text>Level</Text>
-                            <Text color="text.secondary">Avg {cohortStats.avgLevel}</Text>
+                            <HStack spacing={2}>
+                              <Text fontWeight="semibold">{cohortStats.level}</Text>
+                              <Text color="text.secondary" fontSize="sm">/ max {cohortStats.maxLevel}</Text>
+                            </HStack>
                           </HStack>
                           <Progress value={(cohortStats.level / cohortStats.maxLevel) * 100} colorScheme="primary" borderRadius="full" />
+                          <Text color="text.secondary" fontSize="xs" mt={1}>Cohort avg: {cohortStats.avgLevel}</Text>
                         </Box>
                       </Stack>
                     </CardBody>
@@ -1072,17 +1105,59 @@ export const LeadershipBoardPage: React.FC = () => {
                       </Box>
                       <Stack spacing={3}>
                         {breakdownByCategory.slice((breakdownPage - 1) * 4, (breakdownPage - 1) * 4 + 4).map((category, idx) => (
-                          <Flex key={category.name} align="center" gap={3}>
-                            <Box w={2} h={12} borderRadius="full" bg={pointsColors[idx % pointsColors.length]} />
-                            <Box flex="1">
-                              <Flex justify="space-between">
-                                <Text fontWeight="bold">{category.name}</Text>
-                                <Text>{formatNumber(category.value)} pts</Text>
-                              </Flex>
-                              <Progress value={category.percent} colorScheme="primary" borderRadius="full" />
-                              <Text fontSize="xs" color="text.secondary">{category.percent}% of active points</Text>
-                            </Box>
-                          </Flex>
+                          <Box key={category.name}>
+                            <Flex
+                              align="center"
+                              gap={3}
+                              cursor="pointer"
+                              onClick={() => toggleCategory(category.name)}
+                              _hover={{ bg: 'surface.subtle' }}
+                              borderRadius="md"
+                              p={1}
+                              mx={-1}
+                            >
+                              <Box w={2} h={12} borderRadius="full" bg={pointsColors[idx % pointsColors.length]} />
+                              <Box flex="1">
+                                <Flex justify="space-between" align="center">
+                                  <HStack>
+                                    <Text fontWeight="bold">{category.name}</Text>
+                                    <Icon
+                                      as={expandedCategories.has(category.name) ? ChevronDown : ChevronRight}
+                                      boxSize={4}
+                                      color="text.secondary"
+                                    />
+                                  </HStack>
+                                  <Text>{formatNumber(category.value)} pts</Text>
+                                </Flex>
+                                <Progress value={category.percent} colorScheme="primary" borderRadius="full" />
+                                <Text fontSize="xs" color="text.secondary">{category.percent}% of active points</Text>
+                              </Box>
+                            </Flex>
+                            <Collapse in={expandedCategories.has(category.name)} animateOpacity>
+                              <Stack pl={6} spacing={2} mt={2} mb={2}>
+                                {activityHistoryLoading ? (
+                                  <Skeleton height="20px" />
+                                ) : activityHistoryByCategory[category.name]?.length ? (
+                                  activityHistoryByCategory[category.name].map((activity) => (
+                                    <Flex key={activity.id} justify="space-between" align="center" fontSize="sm">
+                                      <HStack spacing={2}>
+                                        <Icon as={CheckCircle} color="success.500" boxSize={3} />
+                                        <Text>{activity.activityTitle}</Text>
+                                      </HStack>
+                                      <HStack spacing={4}>
+                                        <Text color="text.secondary" fontSize="xs">
+                                          {format(activity.createdAt, 'MMM d')}
+                                        </Text>
+                                        <Text fontWeight="medium" color="success.600">+{formatNumber(activity.points)}</Text>
+                                      </HStack>
+                                    </Flex>
+                                  ))
+                                ) : (
+                                  <Text fontSize="sm" color="text.secondary">No activities in this category yet</Text>
+                                )}
+                              </Stack>
+                            </Collapse>
+                          </Box>
                         ))}
                         <Text fontSize="sm" color="text.secondary">Page {breakdownPage} of {Math.max(1, Math.ceil(breakdownByCategory.length / 4))}</Text>
                       </Stack>

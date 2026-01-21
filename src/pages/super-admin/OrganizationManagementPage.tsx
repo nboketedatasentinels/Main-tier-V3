@@ -203,7 +203,7 @@ export const OrganizationManagementPage: React.FC<OrganizationManagementPageProp
     }
     setOrganizations((prev) =>
       prev.map((org) =>
-        org.id === selectedOrg.id ? { ...org, transformationPartnerId: partnerId } : org,
+        org.id === selectedOrg.id ? { ...org, partnerId, transformationPartnerId: partnerId } : org,
       ),
     )
     await logAdminAction({
@@ -348,7 +348,7 @@ export const OrganizationManagementPage: React.FC<OrganizationManagementPageProp
   const handleViewOrganization = (org: OrganizationRecord) => {
     const organizationKey = org.code || org.id
     if (!organizationKey) return
-    navigate(`/super-admin/organization/${organizationKey}`)
+    navigate(`/admin/organization/${organizationKey}`)
   }
 
   const handleEditOrganization = (org: OrganizationRecord) => {

@@ -33,6 +33,7 @@ import {
   assignComplementaryCoursesToUser,
   hasComplementaryCourseAssigned,
 } from '@/services/courseAssignmentService'
+import { canAccessOrganization } from '@/services/organizationAccessService'
 import { createReferral, generateReferralCode, validateReferralCode } from '@/services/referralService'
 import { JOURNEY_META, type JourneyType } from '@/config/pointsConfig'
 
@@ -52,6 +53,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null)
   const [profile, setProfile] = useState<UserProfile | null>(null)
   const [loading, setLoading] = useState(true)
+  const [signingOut, setSigningOut] = useState(false)
   const [profileLoading, setProfileLoading] = useState(true)
   const [profileStatus, setProfileStatus] = useState<'loading' | 'ready'>('loading')
   const [profileError, setProfileError] = useState<Error | null>(null)
@@ -72,6 +74,21 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     circuitBrokenUntil: 0,
   })
   const pendingCompanyCodeKey = 't4l.pendingCompanyCode'
+  const offlineErrorMessage = 'Network error. Please check your connection.'
+
+  const buildOfflineError = useCallback(() => new Error(offlineErrorMessage), [offlineErrorMessage])
+
+  const isOfflineError = useCallback((error: unknown) => {
+    if (typeof navigator !== 'undefined' && navigator.onLine === false) return true
+    const code = error instanceof FirebaseError
+      ? error.code
+      : typeof error === 'object' && error && 'code' in error
+        ? (error as { code?: string }).code
+        : undefined
+    if (code === 'unavailable' || code === 'auth/network-request-failed') return true
+    if (error instanceof Error && /offline/i.test(error.message)) return true
+    return false
+  }, [])
 
   useEffect(() => {
     profileRef.current = profile
@@ -234,6 +251,10 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       })
       return rawProfile
     } catch (error) {
+      if (isOfflineError(error)) {
+        console.warn('🟠 [Auth] fetchProfileOnce offline', { uid })
+        throw buildOfflineError()
+      }
       console.error('🔴 [Auth] fetchProfileOnce error', {
         uid,
         message: (error as Error)?.message,
@@ -242,9 +263,15 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       })
       return null
     }
-  }, [])
+  }, [buildOfflineError, isOfflineError])
 
   const fetchProfileWithRetry = async (firebaseUser: User, attempts = 3): Promise<UserProfile | null> => {
+    if (typeof navigator !== 'undefined' && navigator.onLine === false) {
+      const offlineError = buildOfflineError()
+      setProfileError(offlineError)
+      return null
+    }
+
     let lastError: Error | null = null
     for (let attempt = 1; attempt <= attempts; attempt += 1) {
       const delayMs = Math.min(500 * 2 ** (attempt - 1), 3000)
@@ -261,6 +288,10 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         }
         lastError = new Error('Profile unavailable after fetch attempt.')
       } catch (error) {
+        if (isOfflineError(error)) {
+          lastError = buildOfflineError()
+          break
+        }
         lastError = error instanceof Error ? error : new Error('Profile fetch failed.')
       }
 
@@ -504,6 +535,10 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
       return profileData
     } catch (error: unknown) {
+      if (isOfflineError(error)) {
+        console.warn('🟠 [Auth] fetchOrCreateProfile offline', { uid: firebaseUser.uid })
+        throw buildOfflineError()
+      }
       const message = error instanceof Error ? error.message : 'Unknown error'
       const code = error instanceof FirebaseError ? error.code : 'unknown'
 
@@ -529,7 +564,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       }
       return null
     }
-  }, [getNameParts, pendingCompanyCodeKey])
+  }, [buildOfflineError, getNameParts, isOfflineError, pendingCompanyCodeKey])
 
   const refreshAdminSession = async () => {
     if (!user) return
@@ -650,6 +685,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     extractCustomClaims,
     recordProfileLoad,
     updateProfileState,
+// Note: `auth` is intentionally excluded - it's a stable Firebase instance
   ])
 
   /* ------------------------------------------------------------------ */
@@ -876,7 +912,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
           defaultRoute: '/app/weekly-glance',
           lockedToFreeExperience: validatedOrganization
             ? false
-            : normalizedRole === 'user' || normalizedRole === 'free_user',
+            : ['user', 'free_user'].includes(normalizedRole),
         },
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
@@ -966,11 +1002,65 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   }
 
   const signOut = async () => {
-    console.log('🟡 [Auth] signOut')
-    await firebaseSignOut(auth)
-    setUser(null)
-    setProfile(null)
-    setClaimsRole(null)
+    const timestamp = new Date().toISOString()
+    if (signingOut) {
+      console.warn(`[${timestamp}] 🟡 [Auth] signOut: already in progress (guard triggered)`)
+      return { error: new Error('Sign out already in progress') }
+    }
+
+    setSigningOut(true)
+    console.log(`[${timestamp}] 🟡 [Auth] signOut:start`, { uid: user?.uid, email: user?.email })
+
+    const timeoutId = setTimeout(() => {
+      const timeoutTs = new Date().toISOString()
+      console.warn(`[${timeoutTs}] 🟠 [Auth] signOut: timeout fallback (5s) triggered. Forcing navigation.`)
+      window.location.href = '/login'
+    }, 5000)
+
+    try {
+      // Logic to preserve preferences if needed before clearing state
+      if (profile?.companyCode) {
+        console.log(`[${new Date().toISOString()}] 🟣 [Auth] Preserving companyCode in localStorage`, profile.companyCode)
+        localStorage.setItem('t4l.lastSelectedOrg', profile.companyCode)
+      }
+
+      if (profile?.dashboardPreferences) {
+        console.log(`[${new Date().toISOString()}] 🟣 [Auth] Preserving dashboardPreferences in localStorage`)
+        localStorage.setItem('t4l.dashboardPreferences', JSON.stringify(profile.dashboardPreferences))
+      }
+
+      console.log(`[${new Date().toISOString()}] 🟡 [Auth] Calling Firebase signOut...`)
+      await firebaseSignOut(auth)
+
+      console.log(`[${new Date().toISOString()}] 🟢 [Auth] Firebase signOut success`)
+
+      setUser(null)
+      setProfile(null)
+      setClaimsRole(null)
+
+      console.log(`[${new Date().toISOString()}] 🚀 [Auth] Redirecting to /login via window.location.href (current: ${window.location.pathname})`)
+
+      // Clear timeout before navigation
+      clearTimeout(timeoutId)
+
+      window.location.href = '/login'
+      return { error: null }
+    } catch (error) {
+      const errorTs = new Date().toISOString()
+      console.error(`[${errorTs}] 🔴 [Auth] signOut failed`, error)
+
+      // Clear timeout on error too
+      clearTimeout(timeoutId)
+
+      // Navigate anyway on failure to ensure user isn't stuck
+      console.log(`[${errorTs}] 🚀 [Auth] Fallback redirecting to /login after error`)
+      window.location.href = '/login'
+      return { error: error instanceof Error ? error : new Error('Sign out failed') }
+    } finally {
+      // We don't strictly need to setSigningOut(false) if the page is redirecting,
+      // but it's good practice for any components that might stay mounted
+      setSigningOut(false)
+    }
   }
 
   const resetPassword = async (email: string) => {
@@ -1079,6 +1169,13 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       setProfileLoading(false)
       return { error: null, profile: refreshed }
     } catch (error) {
+      if (isOfflineError(error)) {
+        const offlineError = buildOfflineError()
+        console.warn('🟠 [Auth] refreshProfile offline', { reason })
+        setProfileError(offlineError)
+        setProfileLoading(false)
+        return { error: offlineError, profile: null as UserProfile | null }
+      }
       console.error('🔴 [Auth] refreshProfile error', { reason, error })
       setProfileError(error as Error)
       setProfileLoading(false)
@@ -1086,19 +1183,19 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     } finally {
       refreshState.inFlight = false
     }
-  }, [fetchOrCreateUserDoc, fetchProfileOnce, recordProfileLoad, updateProfileState])
+  }, [buildOfflineError, fetchOrCreateUserDoc, fetchProfileOnce, isOfflineError, recordProfileLoad, updateProfileState])
 
   /* ------------------------------------------------------------------ */
   /* 🔹 Role Flags (LOGGED)                                              */
   /* ------------------------------------------------------------------ */
   const normalizedRole = normalizeRole(profile?.role)
 
-  const isAdmin = normalizedRole === 'partner' || normalizedRole === 'admin' || normalizedRole === 'super_admin'
+  const isAdmin = normalizedRole === 'partner' || normalizedRole === 'super_admin'
   const isSuperAdmin = normalizedRole === 'super_admin'
   const isMentor = normalizedRole === 'mentor'
   const isAmbassador = normalizedRole === 'ambassador'
   const isPaid =
-    ['partner', 'admin', 'mentor', 'ambassador', 'team_leader', 'super_admin'].includes(
+    ['partner', 'mentor', 'ambassador', 'super_admin'].includes(
       normalizedRole ?? ''
     ) ||
     normalizedRole === 'paid_member' ||
@@ -1113,6 +1210,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     profileLoading,
     profileStatus,
     profileError,
+    signingOut,
     lastProfileLoadAt: lastProfileLoadAtRef.current,
     signIn,
     signUp,
@@ -1132,9 +1230,14 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       profile?.transformationTier?.toLowerCase().includes('corporate') ?? false,
     assignedOrganizations: profile?.assignedOrganizations ?? [],
     hasFullOrganizationAccess: normalizedRole === 'super_admin',
-    canAccessOrganization: (organizationId: string) =>
-      normalizedRole === 'super_admin' ||
-      profile?.assignedOrganizations?.includes(organizationId) === true,
+    canAccessOrganization: async (organizationId: string) => {
+      if (!organizationId || !user?.uid || !profile?.role) return false
+      return canAccessOrganization({
+        role: profile.role,
+        userId: user.uid,
+        organizationId,
+      })
+    },
     updateDashboardPreferences: async () => ({ error: null }),
     claimsRole,
     refreshAdminSession,

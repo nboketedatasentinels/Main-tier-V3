@@ -1,7 +1,7 @@
 // Import and re-export role types and values
 import { UserRole, ALL_STANDARD_ROLES } from './roles';
 import type { StandardRole, AllRoles } from './roles';
-import { JourneyType } from '@/config/pointsConfig';
+import { JourneyType, ApprovalType } from '@/config/pointsConfig';
 export * from './admin'
 export * from './capacity'
 export * from './tutorials'
@@ -68,6 +68,7 @@ export interface UserProfile {
   companyId?: string | null
   companyCode?: string | null
   companyName?: string | null
+  organizationId?: string | null
   villageId?: string
   clusterId?: string
   corporateVillageId?: string
@@ -88,6 +89,10 @@ export interface UserProfile {
   mentorOverrideId?: string | null
   ambassadorOverrideId?: string | null
   isActiveAmbassador?: boolean
+
+  // Journey Status
+  journeyStatus?: 'active' | 'completed' | 'failed' | 'abandoned'
+  completedAt?: string
   
   // Account Management
   accountStatus?: AccountStatus | string
@@ -144,6 +149,8 @@ export interface Organization {
   journeyType?: JourneyType
   programDurationWeeks?: number
   cohortStartDate?: string
+  hasMentor?: boolean
+  hasAmbassador?: boolean
 }
 
 export interface PrivacySettings {
@@ -169,6 +176,27 @@ export interface Journey {
   isPremium: boolean
   courses?: Course[]
   phases?: JourneyPhase[]
+  createdAt: string
+  updatedAt: string
+}
+
+export interface JourneyConfig {
+  id: string
+  journeyType: JourneyType
+  name: string
+  description: string
+  durationWeeks: number
+  totalPointsTarget: number
+  weeklyPointsTarget: number
+  minPointsPerWeek: number
+  maxPointsPerWeek?: number
+  maxPointsTotal?: number
+  completionThresholdPct?: number
+  timelineDisplay?: 'duration' | 'course-count'
+  activityIds: string[]
+  mode?: 'intro' | 'full'
+  isActive: boolean
+  isPremium: boolean
   createdAt: string
   updatedAt: string
 }
@@ -224,6 +252,136 @@ export interface Activity {
   createdAt: string
 }
 
+export interface ActivityCatalogEntry {
+  id: string
+  baseId: string
+  title: string
+  description: string
+  points: number
+  maxPerMonth: number
+  maxPerWeek?: number
+  cooldownWeeks?: number
+  approvalType?: ApprovalType
+  requiresApproval?: boolean
+  verification?: 'honor' | 'partner_approval'
+  isFreeTier?: boolean
+  week: number
+  category: string
+  tags?: string[]
+  flexibleWeeks?: boolean
+  frequencyNote?: string
+  visibility?: {
+    requiresMentor?: boolean
+    requiresAmbassador?: boolean
+  }
+  isActive: boolean
+  createdAt: string
+  updatedAt: string
+}
+
+export interface ActivityDefinition {
+  id: string
+  title: string
+  description: string
+  category: string
+  points: number
+  maxPerWindow: number
+  maxPerClaim?: number
+  approvalType?: ApprovalType
+  requiresApproval?: boolean
+  verification?: 'honor' | 'mentor_approval' | 'partner_approval'
+  isActive: boolean
+  tags?: string[]
+  createdAt: string
+  updatedAt: string
+}
+
+export interface TwoWeekWindow {
+  id: string
+  journeyType: JourneyType
+  windowNumber: number
+  startDate: string
+  endDate: string
+  weekStart: number
+  weekEnd: number
+  label?: string
+  status: 'upcoming' | 'open' | 'closed'
+  createdAt: string
+  updatedAt: string
+}
+
+export interface WindowTarget {
+  id: string
+  journeyType: JourneyType
+  windowNumber: number
+  targetPoints: number
+  minPoints?: number
+  maxPoints?: number
+  createdAt: string
+  updatedAt: string
+}
+
+export interface ActivityClaim {
+  id: string
+  uid: string
+  orgId?: string
+  activityId: string
+  windowId: string
+  windowNumber: number
+  status: 'draft' | 'pending' | 'approved' | 'rejected' | 'voided'
+  pointsClaimed: number
+  proofUrl?: string
+  notes?: string
+  submittedAt?: string
+  reviewedAt?: string
+  reviewedBy?: string
+  rejectionReason?: string
+  createdAt: string
+  updatedAt: string
+}
+
+export interface PointsLedgerEntry {
+  id: string
+  uid: string
+  activityId: string
+  activityClaimId?: string
+  windowId?: string
+  windowNumber?: number
+  weekNumber?: number
+  points: number
+  source: 'activity_claim' | 'weekly_checklist' | 'impact_log' | 'manual_adjustment'
+  status: 'posted' | 'voided'
+  createdAt: string
+  updatedAt: string
+}
+
+export interface BadgeAward {
+  id: string
+  uid: string
+  badgeId: string
+  windowId?: string
+  windowNumber?: number
+  reason?: string
+  awardedAt: string
+  awardedBy?: string
+  createdAt: string
+  updatedAt: string
+}
+
+export interface NotificationQueueEntry {
+  id: string
+  uid: string
+  type: 'achievement' | 'approval' | 'reminder' | 'system'
+  channel: 'in_app' | 'email' | 'sms'
+  payload: Record<string, unknown>
+  status: 'queued' | 'processing' | 'sent' | 'failed'
+  scheduledFor?: string
+  attempts: number
+  lastAttemptAt?: string
+  createdAt: string
+  updatedAt: string
+}
+
 // Weekly Activity Tracking
 export interface WeeklyProgress {
   uid: string;
@@ -234,6 +392,17 @@ export interface WeeklyProgress {
   engagementCount?: number;
   status: "on_track" | "warning" | "alert" | "recovery";
   updatedAt: string | Date | { toDate: () => Date };
+}
+
+export interface WindowProgress {
+  uid: string;
+  journeyType: string;
+  windowNumber: number;
+  pointsEarned: number;
+  windowTarget: number;
+  status: 'on_track' | 'warning' | 'alert' | 'recovery';
+  previousStatus?: 'on_track' | 'warning' | 'alert' | 'recovery';
+  updatedAt?: any;
 }
 
 export enum ActivityStatus {

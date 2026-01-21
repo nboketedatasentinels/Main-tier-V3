@@ -33,11 +33,9 @@ interface AdminFormModalProps {
 }
 
 const roleOptions: { value: AdminRole; label: string }[] = [
-  { value: 'partner', label: 'Partner (Company Admin)' },
-  { value: 'admin', label: 'Admin' },
+  { value: 'partner', label: 'Partner' },
   { value: 'mentor', label: 'Mentor' },
   { value: 'ambassador', label: 'Ambassador' },
-  { value: 'team_leader', label: 'Team Leader' },
 ]
 
 const defaultState: AdminFormData = {
@@ -93,8 +91,8 @@ export const AdminFormModal: React.FC<AdminFormModalProps> = ({
     if (!formData.email) nextErrors.email = 'Email is required'
     else if (!emailValid) nextErrors.email = 'Invalid email format'
     if (!formData.role) nextErrors.role = 'Role is required'
-    if ((formData.role === 'partner' || formData.role === 'admin') && !formData.assignedOrganizations.length)
-      nextErrors.assignedOrganizations = 'Admin users must be assigned to at least one organization'
+    if (formData.role === 'partner' && !formData.assignedOrganizations.length)
+      nextErrors.assignedOrganizations = 'Partner users must be assigned to at least one organization'
     const missingOrganizations = formData.assignedOrganizations.filter((orgId) => !organizationLookup.has(orgId))
     const inactiveOrganizations = selectedOrganizations.filter((org) => org?.status && org.status !== 'active')
     if (missingOrganizations.length) {

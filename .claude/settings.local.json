@@ -1,0 +1,20 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npm run typecheck:*)",
+      "Bash(grep:*)",
+      "Bash(npx tsc:*)",
+      "Bash(npx eslint:*)",
+      "Bash(npm run dev:*)",
+      "Bash(timeout:*)",
+      "Bash(npm run build)",
+      "Bash(move:*)",
+      "Bash(git checkout:*)",
+      "Bash(npm run qa:*)",
+      "Bash(npm run lint)",
+      "Bash(echo:*)",
+      "Bash(dir /s \"c:\\\\Users\\\\Kekab\\\\Man-tier-v2\\\\src\")",
+      "Bash(dir:*)"
+    ]
+  }
+}

@@ -55,7 +55,7 @@ import {
 } from '@/services/userProfileService'
 import { deleteUserAccount } from '@/services/userManagementService'
 
-type ViewContext = 'admin' | 'mentor'
+type ViewContext = 'partner' | 'mentor'
 
 const formatDateTime = (value?: string) => {
   if (!value) return 'Not available'
@@ -104,6 +104,7 @@ export const UserProfileManagementPage: React.FC<{ viewContext?: ViewContext }> 
   const [coreValuesInput, setCoreValuesInput] = useState('')
   const [notesInput, setNotesInput] = useState('')
   const accessLoggedRef = useRef(false)
+  const [canAccessProfile, setCanAccessProfile] = useState<boolean | null>(null)
 
   const isMentorView = viewContext === 'mentor' || isMentor
 
@@ -160,17 +161,38 @@ export const UserProfileManagementPage: React.FC<{ viewContext?: ViewContext }> 
     ])
   }, [isMentorView, isSuperAdmin])
 
-  const canAccessProfile = useMemo(() => {
-    if (!profileData || !viewerProfile) return false
-    if (isSuperAdmin) return true
+  useEffect(() => {
+    if (!profileData || !viewerProfile) {
+      setCanAccessProfile(false)
+      return
+    }
+    if (isSuperAdmin) {
+      setCanAccessProfile(true)
+      return
+    }
     if (isMentorView) {
-      return profileData.mentorId === viewerProfile.id
+      setCanAccessProfile(profileData.mentorId === viewerProfile.id)
+      return
     }
     if (isAdmin) {
-      if (!profileData.companyId) return false
-      return canAccessOrganization(profileData.companyId)
+      if (!profileData.companyId) {
+        setCanAccessProfile(false)
+        return
+      }
+      let isMounted = true
+      setCanAccessProfile(null)
+      void canAccessOrganization(profileData.companyId)
+        .then((allowed) => {
+          if (isMounted) setCanAccessProfile(allowed)
+        })
+        .catch(() => {
+          if (isMounted) setCanAccessProfile(false)
+        })
+      return () => {
+        isMounted = false
+      }
     }
-    return false
+    setCanAccessProfile(false)
   }, [canAccessOrganization, isAdmin, isMentorView, isSuperAdmin, profileData, viewerProfile])
 
   useEffect(() => {
@@ -214,7 +236,7 @@ export const UserProfileManagementPage: React.FC<{ viewContext?: ViewContext }> 
   }, [userId])
 
   useEffect(() => {
-    if (!profileData || !viewerProfile || accessLoggedRef.current) return
+    if (!profileData || !viewerProfile || accessLoggedRef.current || canAccessProfile === null) return
     const allowed = canAccessProfile
     const reason = allowed ? 'allowed' : 'denied'
     logUserProfileAccess({
@@ -429,6 +451,14 @@ export const UserProfileManagementPage: React.FC<{ viewContext?: ViewContext }> 
     )
   }
 
+  if (canAccessProfile === null) {
+    return (
+      <Flex minH="60vh" align="center" justify="center">
+        <Spinner size="xl" />
+      </Flex>
+    )
+  }
+
   if (!canAccessProfile) {
     return <UnauthorizedPage />
   }
@@ -636,11 +666,9 @@ export const UserProfileManagementPage: React.FC<{ viewContext?: ViewContext }> 
                         <option value="user">User</option>
                         <option value="paid_member">Paid Member</option>
                         <option value="free_user">Free User</option>
-                        <option value="team_leader">Team Leader</option>
                         <option value="mentor">Mentor</option>
                         <option value="ambassador">Ambassador</option>
-                        <option value="partner">Partner Admin</option>
-                        <option value="admin">Admin</option>
+                        <option value="partner">Partner</option>
                         <option value="super_admin">Super Admin</option>
                       </Select>
                     </FormControl>

@@ -26,7 +26,6 @@ import {
   InputGroup,
   InputLeftElement,
   Link,
-  Progress,
   Radio,
   RadioGroup,
   Select,
@@ -67,7 +66,6 @@ import {
   Save,
   Settings,
   Shield,
-  RefreshCcw,
   TrendingUp,
   Twitter,
   Upload,
@@ -86,14 +84,10 @@ import {
   signOut as firebaseSignOut,
 } from 'firebase/auth'
 import {
-  collection,
   doc,
   getDoc,
-  getDocs,
-  query,
   serverTimestamp,
   updateDoc,
-  where,
 } from 'firebase/firestore'
 import { getDownloadURL, ref, uploadBytes } from 'firebase/storage'
 import { auth, db, storage } from '@/services/firebase'
@@ -103,6 +97,7 @@ import { TransformationTier } from '@/types'
 import { normalizeRole } from '@/utils/role'
 import { validateCompanyCode } from '@/services/organizationService'
 import { CORE_VALUES } from '@/config/personality-data'
+import BadgeDisplay from '@/components/profile/BadgeDisplay'
 
 interface ProfileData {
   id: string
@@ -134,17 +129,6 @@ interface ProfileData {
   clusterName?: string
 }
 
-interface BadgeRecord {
-  id: string
-  title: string
-  description?: string
-  criteria?: string
-  type?: string
-  earned: boolean
-  earnedAt?: string
-  progressPercentage?: number
-}
-
 const personalityTypes = [
   'INTJ',
   'INTP',
@@ -167,25 +151,21 @@ const personalityTypes = [
 const coreValueOptions = CORE_VALUES
 
 const roleDisplayMap: Record<StandardRole, string> = {
-  user: 'Member',
-  free_user: 'Free Member',
-  paid_member: 'Paid Member',
-  team_leader: 'Team Leader',
+  user: 'Learner',
+  free_user: 'Learner',
+  paid_member: 'Learner',
   mentor: 'Mentor',
   ambassador: 'Ambassador',
-  admin: 'Administrator',
-  partner: 'Administrator',
-  super_admin: 'Super Administrator',
+  partner: 'Partner',
+  super_admin: 'Super Admin',
 }
 
 const roleColorMap: Record<StandardRole, string> = {
   user: 'gray',
   free_user: 'gray',
   paid_member: 'green',
-  team_leader: 'blue',
   mentor: 'purple',
   ambassador: 'blue',
-  admin: 'red',
   partner: 'red',
   super_admin: 'red',
 }
@@ -309,9 +289,6 @@ export const ProfilePage: React.FC = () => {
   const [isSaving, setIsSaving] = useState(false)
   const [profilePictureFile, setProfilePictureFile] = useState<File | null>(null)
   const [previewUrl, setPreviewUrl] = useState<string | null>(null)
-  const [badges, setBadges] = useState<BadgeRecord[]>([])
-  const [badgesLoading, setBadgesLoading] = useState(true)
-  const [badgesError, setBadgesError] = useState<string | null>(null)
   const [emailFormOpen, setEmailFormOpen] = useState(false)
   const [passwordFormOpen, setPasswordFormOpen] = useState(false)
   const [emailForm, setEmailForm] = useState({ newEmail: '', password: '' })
@@ -409,76 +386,9 @@ export const ProfilePage: React.FC = () => {
     }
   }, [buildProfileFromDoc, navigate, user])
 
-  const loadUserBadges = useCallback(async () => {
-    if (!user) {
-      setBadgesLoading(false)
-      return
-    }
-    setBadgesLoading(true)
-    setBadgesError(null)
-    try {
-      const badgeDefsSnap = await getDocs(collection(db, 'badges'))
-      type BadgeDefinition = {
-        id: string
-        title?: string
-        name?: string
-        description?: string
-        criteria?: string
-        type?: string
-      }
-
-      const badgeDefs: BadgeDefinition[] = badgeDefsSnap.docs.map((docItem) => ({
-        id: docItem.id,
-        ...(docItem.data() as Record<string, unknown>),
-      }))
-
-      const userBadgesSnap = await getDocs(query(collection(db, 'user_badges'), where('userId', '==', user.uid)))
-      type UserBadgePayload = { badgeId?: string; earnedAt?: string; progressPercentage?: number }
-
-      const userBadgeMap = new Map(
-        userBadgesSnap.docs.map((docItem) => {
-          const payload = docItem.data() as UserBadgePayload
-          return [payload.badgeId, { ...payload, id: docItem.id }]
-        }),
-      )
-
-      const combined: BadgeRecord[] = badgeDefs.map((def) => {
-        const userBadge = userBadgeMap.get(def.id)
-        const earned = Boolean(userBadge?.earnedAt)
-        return {
-          id: def.id,
-          title: def.title || def.name || 'Achievement',
-          description: def.description,
-          criteria: def.criteria,
-          type: def.type,
-          earned,
-          earnedAt: userBadge?.earnedAt,
-          progressPercentage: userBadge?.progressPercentage || 0,
-        }
-      })
-
-      combined.sort((a, b) => {
-        if (a.earned && !b.earned) return -1
-        if (!a.earned && b.earned) return 1
-        return (b.earnedAt || '').localeCompare(a.earnedAt || '')
-      })
-
-      setBadges(combined)
-    } catch (err) {
-      console.error(err)
-      setBadgesError('Unable to load badges right now.')
-    } finally {
-      setBadgesLoading(false)
-    }
-  }, [user])
-
   useEffect(() => {
     fetchUserProfile()
   }, [fetchUserProfile])
-
-  useEffect(() => {
-    loadUserBadges()
-  }, [loadUserBadges])
 
   useEffect(() => {
     setCompanyCode(profileData?.companyCode || '')
@@ -840,8 +750,6 @@ export const ProfilePage: React.FC = () => {
   const handleUpgrade = () => {
     navigate('/upgrade')
   }
-
-  const badgeBackground = (earned: boolean) => (earned ? 'green.50' : 'gray.50')
 
   const headerActions = profileData?.membershipStatus === 'free'
 
@@ -1299,74 +1207,10 @@ export const ProfilePage: React.FC = () => {
                     <CardHeader>
                       <Flex justify="space-between" align="center">
                         <Text fontWeight="semibold">Badges & Achievements</Text>
-                        {badges.length > 0 && (
-                          <Tooltip label="Refresh badges">
-                            <Button variant="ghost" size="sm" onClick={loadUserBadges} leftIcon={<RefreshCcw size={14} />}>
-                              Refresh
-                            </Button>
-                          </Tooltip>
-                        )}
                       </Flex>
                     </CardHeader>
                     <CardBody>
-                      {badgesLoading ? (
-                        <Center py={6} color="brand.subtleText">
-                          <Spinner size="sm" mr={2} />
-                          <Text>Loading badges...</Text>
-                        </Center>
-                      ) : badgesError ? (
-                        <VStack spacing={3} align="stretch" bg="red.50" border="1px solid" borderColor="red.100" p={4} rounded="lg">
-                          <HStack spacing={2} color="red.600">
-                            <Icon as={AlertCircle} />
-                            <Text>{badgesError}</Text>
-                          </HStack>
-                          <Button size="sm" onClick={loadUserBadges} leftIcon={<RefreshCcw size={14} />}>
-                            Try again
-                          </Button>
-                        </VStack>
-                      ) : badges.length === 0 ? (
-                        <VStack spacing={3} py={6} color="brand.subtleText">
-                          <Icon as={Award} />
-                          <Text textAlign="center">No badges yet. Keep engaging to earn your first badge!</Text>
-                        </VStack>
-                      ) : (
-                        <Grid templateColumns={{ base: '1fr', md: 'repeat(2, 1fr)' }} gap={4}>
-                          {badges.map((badge) => (
-                            <Box key={badge.id} border="1px solid" borderColor="brand.border" rounded="lg" bg={badgeBackground(Boolean(badge.earned))} p={4}>
-                              <Flex justify="space-between" align="center" mb={2}>
-                                <HStack spacing={2}>
-                                  <Center bg={badge.earned ? 'green.100' : 'gray.100'} rounded="full" p={2}>
-                                    <Icon as={Award} color={badge.earned ? 'green.500' : 'gray.500'} />
-                                  </Center>
-                                  <Box>
-                                    <Text fontWeight="semibold">{badge.title}</Text>
-                                    <Text fontSize="xs" textTransform="uppercase" color="brand.subtleText">
-                                      {badge.type || 'Achievement'}
-                                    </Text>
-                                  </Box>
-                                </HStack>
-                                {badge.earned && <Tag colorScheme="green">Earned</Tag>}
-                              </Flex>
-                              <Text fontSize="sm" color="brand.text" mb={2}>
-                                {badge.earned ? badge.description || 'Badge earned' : badge.criteria || 'Complete the requirement to earn this badge.'}
-                              </Text>
-                              {!badge.earned && (
-                                <>
-                                  <Progress value={badge.progressPercentage || 0} borderRadius="full" mb={2} />
-                                  <Text fontSize="xs" color="brand.subtleText">
-                                    {badge.progressPercentage || 0}% complete
-                                  </Text>
-                                </>
-                              )}
-                              {badge.earnedAt && (
-                                <Text fontSize="xs" color="brand.subtleText" mt={1}>
-                                  Earned on {formatDate(badge.earnedAt)}
-                                </Text>
-                              )}
-                            </Box>
-                          ))}
-                        </Grid>
-                      )}
+                      <BadgeDisplay />
                     </CardBody>
                   </Card>
 

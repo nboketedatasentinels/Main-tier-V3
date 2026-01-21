@@ -39,20 +39,43 @@ export const fetchOrgMembers = async (
   excludeId?: string,
 ): Promise<Record<string, unknown>[]> => {
   if (!orgScope.isValid) return []
-  const peersRef = collection(db, 'profiles')
-  const peerQuery =
-    orgScope.type === 'company'
-      ? query(peersRef, where('companyId', '==', orgScope.companyId))
-      : query(peersRef, where('companyCode', '==', orgScope.companyCode))
 
-  console.log('[OrgMembers] Running query with scope', orgScope)
-  const snapshot = await getDocs(peerQuery)
-  const members = snapshot.docs
-    .filter((docSnap) => !(excludeId && docSnap.id === excludeId))
-    .map((docSnap) => ({ id: docSnap.id, ...docSnap.data() }))
-    .sort((a, b) =>
-      String(a.fullName || '').localeCompare(String(b.fullName || '')),
-    )
+  // CRITICAL FIX: Changed from 'users' to 'profiles' - user data is stored in profiles collection
+  const peersRef = collection(db, 'profiles')
+
+  // Query multiple field variants to catch all organization members
+  const orgValue = orgScope.type === 'company' ? orgScope.companyId : orgScope.companyCode
+
+  const queries = [
+    query(peersRef, where('companyId', '==', orgValue)),
+    query(peersRef, where('companyCode', '==', orgValue)),
+    query(peersRef, where('organizationId', '==', orgValue)),
+    query(peersRef, where('organizationCode', '==', orgValue)),
+    query(peersRef, where('company_code', '==', orgValue)),
+    query(peersRef, where('organization_code', '==', orgValue)),
+  ]
+
+  console.log('[OrgMembers] Running queries with scope', orgScope, 'value:', orgValue)
+
+  const snapshots = await Promise.all(queries.map((q) => getDocs(q)))
+
+  // Deduplicate by user ID
+  const membersMap = new Map<string, Record<string, unknown>>()
+  snapshots.forEach((snapshot) => {
+    snapshot.docs
+      .filter((docSnap) => !(excludeId && docSnap.id === excludeId))
+      .forEach((docSnap) => {
+        if (!membersMap.has(docSnap.id)) {
+          membersMap.set(docSnap.id, { id: docSnap.id, ...docSnap.data() })
+        }
+      })
+  })
+
+  const members = Array.from(membersMap.values()).sort((a, b) =>
+    String((a as Record<string, unknown>).fullName || '').localeCompare(
+      String((b as Record<string, unknown>).fullName || ''),
+    ),
+  )
 
   console.log('[OrgMembers] Fetched profiles', members)
   console.log('[OrgMembers] Fetched profiles count', members.length)

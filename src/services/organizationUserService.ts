@@ -2,7 +2,14 @@ import { Timestamp, collection, doc, DocumentSnapshot, getDoc, getDocs, query, w
 import { type OrganizationStatistics, type OrganizationUserProfile } from '@/types/admin'
 import { db } from './firebase'
 
+// ============================================================================
+// CRITICAL FIX: Changed from 'users' to 'profiles'
+// ============================================================================
+const profilesCollection = collection(db, 'profiles')
 const usersCollection = collection(db, 'users')
+
+// DEBUG: Log on module load to confirm this file is being used
+console.log('[organizationUserService] ✅ Module loaded - querying PROFILES collection')
 
 const parseUserDate = (value?: Timestamp | string | Date | number | null): Date | null => {
   if (!value) return null
@@ -17,29 +24,58 @@ const parseUserDate = (value?: Timestamp | string | Date | number | null): Date 
   return maybeDate || null
 }
 
-const fetchOrganizationUserDocs = async (organizationKey: string): Promise<DocumentSnapshot[]> => {
-  const trimmed = organizationKey.trim()
-  if (!trimmed) return []
-  const [
-    companySnapshot,
-    legacyCompanySnapshot,
-    orgCodeSnapshot,
-    companyIdSnapshot,
-    organizationIdSnapshot,
-  ] = await Promise.all([
-    getDocs(query(usersCollection, where('companyCode', '==', trimmed))),
-    getDocs(query(usersCollection, where('company_code', '==', trimmed))),
-    getDocs(query(usersCollection, where('organization_code', '==', trimmed))),
-    getDocs(query(usersCollection, where('companyId', '==', trimmed))),
-    getDocs(query(usersCollection, where('organizationId', '==', trimmed))),
-  ])
+/**
+ * Fetch profile documents for users belonging to an organization.
+ */
+export const fetchOrganizationUserDocs = async (
+  organizationKeys: string[],
+): Promise<DocumentSnapshot[]> => {
+  const trimmedKeys = organizationKeys
+    .map((key) => key?.trim())
+    .filter((key): key is string => !!key)
+
+  // DEBUG: Log every call
+  console.log('[fetchOrganizationUserDocs] 🔍 Called with organizationKeys:', trimmedKeys)
+
+  if (!trimmedKeys.length) {
+    console.log('[fetchOrganizationUserDocs] ⚠️ Empty organizationKeys, returning []')
+    return []
+  }
+
+  console.log('[fetchOrganizationUserDocs] 📡 Querying PROFILES collection...')
+
+  const snapshots = await Promise.all(
+    trimmedKeys.flatMap((trimmed) => [
+      getDocs(query(profilesCollection, where('companyCode', '==', trimmed))),
+      getDocs(query(profilesCollection, where('company_code', '==', trimmed))),
+      getDocs(query(profilesCollection, where('organization_code', '==', trimmed))),
+      getDocs(query(profilesCollection, where('companyId', '==', trimmed))),
+      getDocs(query(profilesCollection, where('organizationId', '==', trimmed))),
+    ]),
+  )
+
   const usersMap = new Map<string, DocumentSnapshot>()
-  companySnapshot.docs.forEach((docSnap) => usersMap.set(docSnap.id, docSnap))
-  legacyCompanySnapshot.docs.forEach((docSnap) => usersMap.set(docSnap.id, docSnap))
-  orgCodeSnapshot.docs.forEach((docSnap) => usersMap.set(docSnap.id, docSnap))
-  companyIdSnapshot.docs.forEach((docSnap) => usersMap.set(docSnap.id, docSnap))
-  organizationIdSnapshot.docs.forEach((docSnap) => usersMap.set(docSnap.id, docSnap))
-  return Array.from(usersMap.values())
+  snapshots.forEach((snapshot) => {
+    snapshot.docs.forEach((docSnap) => usersMap.set(docSnap.id, docSnap))
+  })
+
+  const result = Array.from(usersMap.values())
+  console.log('[fetchOrganizationUserDocs] ✅ Total unique profiles found:', result.length)
+
+  // DEBUG: Log sample data from first profile
+  if (result.length > 0) {
+    const sampleData = result[0].data()
+    console.log('[fetchOrganizationUserDocs] 📋 Sample profile data:', {
+      id: result[0].id,
+      name: sampleData?.name || sampleData?.fullName,
+      email: sampleData?.email,
+      role: sampleData?.role,
+      organizationId: sampleData?.organizationId,
+      companyCode: sampleData?.companyCode,
+    })
+  }
+
+  return result
 }
 
 /**
@@ -81,7 +117,7 @@ export const fetchOrganizationEngagementStats = async (organizationKey: string):
     }
   }
 
-  const docs = await fetchOrganizationUserDocs(organizationKey)
+  const docs = await fetchOrganizationUserDocs([organizationKey])
   const now = new Date()
   const weekAgo = new Date(now)
   weekAgo.setDate(now.getDate() - 7)
@@ -98,11 +134,13 @@ export const fetchOrganizationEngagementStats = async (organizationKey: string):
     const data = docSnap.data() as {
       membershipStatus?: OrganizationUserProfile['membershipStatus']
       accountStatus?: OrganizationUserProfile['accountStatus']
+      status?: string
       createdAt?: Timestamp | string | Date | number
       engagementScore?: number
       engagementRate?: number
     }
-    if ((data.accountStatus || 'active') === 'active') {
+    const accountStatus = data.accountStatus || data.status || 'active'
+    if (accountStatus === 'active' || accountStatus === 'Active') {
       activeMembers += 1
     }
     if ((data.membershipStatus || 'inactive') === 'paid') {
@@ -133,41 +171,141 @@ export const fetchOrganizationEngagementStats = async (organizationKey: string):
 /**
  * Fetch user profiles associated with an organization.
  */
-export const fetchOrganizationUsers = async (organizationKey: string): Promise<OrganizationUserProfile[]> => {
-  if (!organizationKey) return []
-  const docs = await fetchOrganizationUserDocs(organizationKey)
-  return docs.map((docSnap) => {
+export const fetchOrganizationUsers = async (
+  organizationKey: string,
+): Promise<OrganizationUserProfile[]> => {
+  console.log('[fetchOrganizationUsers] 🚀 Called with organizationKey:', organizationKey)
+  
+  if (!organizationKey) {
+    console.log('[fetchOrganizationUsers] ⚠️ Empty organizationKey, returning []')
+    return []
+  }
+  
+  const docs = await fetchOrganizationUserDocs([organizationKey])
+  
+  console.log('[fetchOrganizationUsers] 📊 Processing', docs.length, 'profiles')
+  
+  const result = docs.map((docSnap) => {
     const data = docSnap.data() as {
       fullName?: string
       name?: string
       firstName?: string
       lastName?: string
       email?: string
-      role?: OrganizationUserProfile['role']
+      role?: string
       membershipStatus?: OrganizationUserProfile['membershipStatus']
       accountStatus?: OrganizationUserProfile['accountStatus']
+      status?: string
       lastActiveAt?: Timestamp | string | Date | number
       lastActive?: Timestamp | string | Date | number
+      updatedAt?: Timestamp | string | Date | number
       createdAt?: Timestamp | string | Date | number
       avatarUrl?: string
       photoURL?: string
+      organizationId?: string
+      organization_id?: string
+      companyCode?: string
+      company_code?: string
+      progressPercent?: number
+      progress_percent?: number
+      currentWeek?: number
+      current_week?: number
+      weeklyEarned?: number
+      weekly_earned?: number
+      weeklyRequired?: number
+      weekly_required?: number
+      riskStatus?: string
+      risk_status?: string
+      riskReasons?: string[]
+      risk_reasons?: string[]
+      nudgeEnabled?: boolean
+      nudge_enabled?: boolean
+      adminNotes?: string
+      admin_notes?: string
     }
+    
+    const organizationId = data.organizationId || data.organization_id || null
+    const companyCode = data.companyCode || data.company_code || null
+    
     const fullName =
       data.fullName ||
       data.name ||
       [data.firstName, data.lastName].filter((value) => !!value).join(' ').trim() ||
       data.email ||
       'Unknown user'
+    
+    const rawRole = data.role || 'learner'
+    const role = rawRole.toLowerCase() as OrganizationUserProfile['role']
+    
+    const accountStatus = data.accountStatus || data.status || 'active'
+    const normalizedStatus = accountStatus === 'Active' ? 'active' : accountStatus
+    
+    const lastActive = parseUserDate(
+      data.lastActiveAt || data.lastActive || data.updatedAt || null
+    )
+    
     return {
       id: docSnap.id,
       name: fullName,
-      email: data.email,
-      role: data.role || 'user',
+      email: data.email ?? '',
+      role,
       membershipStatus: data.membershipStatus || 'inactive',
-      accountStatus: data.accountStatus || 'active',
-      lastActive: parseUserDate(data.lastActiveAt || data.lastActive),
+      accountStatus: normalizedStatus as OrganizationUserProfile['accountStatus'],
+      status: normalizedStatus === 'active' ? 'Active' : 'Inactive',
+      lastActive,
       createdAt: parseUserDate(data.createdAt),
       avatarUrl: data.avatarUrl ?? data.photoURL ?? null,
+      organizationId: organizationId?.trim() || null,
+      companyCode: companyCode?.trim() || null,
+      progressPercent: data.progressPercent ?? data.progress_percent ?? 0,
+      currentWeek: data.currentWeek ?? data.current_week ?? 0,
+      weeklyEarned: data.weeklyEarned ?? data.weekly_earned ?? 0,
+      weeklyRequired: data.weeklyRequired ?? data.weekly_required ?? 0,
+      riskStatus: (data.riskStatus ?? data.risk_status ?? 'engaged') as 'engaged' | 'watch' | 'concern' | 'critical' | 'at_risk',
+      riskReasons: data.riskReasons ?? data.risk_reasons ?? [],
+      nudgeEnabled: data.nudgeEnabled ?? data.nudge_enabled ?? true,
+      adminNotes: data.adminNotes ?? data.admin_notes ?? '',
+    }
+  })
+  
+  console.log('[fetchOrganizationUsers] ✅ Returning', result.length, 'users')
+  
+  return result
+}
+
+export const fetchOrganizationUsersForPartner = async (
+  organizationKeys: string[],
+): Promise<OrganizationUserProfile[]> => {
+  if (!organizationKeys.length) return []
+
+  const docs = await fetchOrganizationUserDocs(organizationKeys)
+
+  return docs.map((docSnap) => {
+    const data = docSnap.data() as any
+
+    const organizationId =
+      data.organizationId ||
+      data.organization_id ||
+      data.companyId ||
+      data.companyCode ||
+      null
+
+    return {
+      id: docSnap.id,
+      name:
+        data.fullName ||
+        data.name ||
+        [data.firstName, data.lastName].filter(Boolean).join(' ') ||
+        data.email ||
+        'Unknown user',
+      email: data.email ?? '',
+      role: (data.role ?? 'learner').toLowerCase(),
+      accountStatus: data.accountStatus ?? 'active',
+      membershipStatus: data.membershipStatus ?? 'inactive',
+      organizationId: organizationId?.toLowerCase() ?? null,
+      companyCode: data.companyCode?.toLowerCase() ?? null,
+      lastActive: parseUserDate(data.lastActiveAt || data.lastActive),
+      createdAt: parseUserDate(data.createdAt),
     }
   })
 }

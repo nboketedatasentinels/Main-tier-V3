@@ -10,12 +10,12 @@ describe('getLandingPathForRole', () => {
 
   it('should return the super admin dashboard for SUPER_ADMIN role', () => {
     const path = getLandingPathForRole(UserRole.SUPER_ADMIN);
-    expect(path).toBe('/super-admin/dashboard');
+    expect(path).toBe('/admin/dashboard');
   });
 
-  it('should return the admin dashboard for COMPANY_ADMIN role', () => {
-    const path = getLandingPathForRole(UserRole.COMPANY_ADMIN);
-    expect(path).toBe('/admin/dashboard');
+  it('should return the admin dashboard for PARTNER role', () => {
+    const path = getLandingPathForRole(UserRole.PARTNER);
+    expect(path).toBe('/partner/dashboard');
   });
 
   it('should return the mentor dashboard for MENTOR role', () => {

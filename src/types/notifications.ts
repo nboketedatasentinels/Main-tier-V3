@@ -28,6 +28,8 @@ export type NotificationType =
   | 'system_event'
   | 'progress_report'
   | 'mentee_checkin'
+  | 'approval'
+  | 'badge_awarded'
   | 'unknown'
 
 export interface NotificationRecord {
@@ -65,6 +67,13 @@ export type NotificationSettingsPreferences = {
   emailNotificationFrequency: 'instant' | 'hourly' | 'daily'
   inAppNotificationFrequency: 'instant' | 'hourly' | 'daily'
   notificationDigestMode: 'instant' | 'daily' | 'weekly'
+  statusNudgesEnabled: boolean
+  statusNudgePreferences: {
+    warning: boolean
+    alert: boolean
+    recovery: boolean
+    on_track: boolean
+  }
 }
 
 export type AdminNotificationSeverity = 'info' | 'warning' | 'critical' | 'success' | 'default'

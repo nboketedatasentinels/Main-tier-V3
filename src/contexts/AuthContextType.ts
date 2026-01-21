@@ -12,6 +12,7 @@ export interface AuthContextType {
   profileStatus: 'loading' | 'ready'
   profileError: Error | null
   lastProfileLoadAt: string | null
+  signingOut: boolean
   signIn: (email: string, password: string) => Promise<{ error: Error | null }>
   signUp: (
     email: string,
@@ -24,7 +25,7 @@ export interface AuthContextType {
     },
     referralCode?: string
   ) => Promise<{ error: Error | null; userId?: string }>
-  signOut: () => Promise<void>
+  signOut: () => Promise<{ error: Error | null }>
   signInWithMagicLink: (email: string) => Promise<{ error: Error | null }>
   signInWithGoogle: () => Promise<{ error: Error | null; isNewUser?: boolean; redirect?: boolean }>
   resetPassword: (email: string) => Promise<{ error: Error | null }>
@@ -43,7 +44,7 @@ export interface AuthContextType {
   // Organization Access
   assignedOrganizations: string[]
   hasFullOrganizationAccess: boolean
-  canAccessOrganization: (organizationId: string) => boolean
+  canAccessOrganization: (organizationId: string) => Promise<boolean>
   
   // Dashboard Preferences
   updateDashboardPreferences: (preferences: DashboardPreferences) => Promise<{ error: Error | null }>

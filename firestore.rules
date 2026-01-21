@@ -43,11 +43,11 @@ service cloud.firestore {
     }
 
     function isPartner() {
-      return hasAnyRole(['partner', 'company_admin', 'admin']);
+      return hasRole('partner');
     }
 
     function isAdmin() {
-      return hasAnyRole(['super_admin', 'admin', 'company_admin', 'partner']);
+      return hasAnyRole(['super_admin', 'partner']);
     }
 
     function isActiveAccount() {
@@ -103,20 +103,30 @@ service cloud.firestore {
       return request.auth.token.role == role;
     }
 
+    function partnerHasOrgAccess(orgId) {
+      return isAuthenticated() &&
+        orgId != null &&
+        exists(/databases/$(database)/documents/partner_organizations/$(request.auth.uid + '_' + orgId));
+    }
+
+    function isPartnerWithOrgAccess() {
+      return isPartner() && (
+        partnerHasOrgAccess(resource.data.companyId) ||
+        partnerHasOrgAccess(resource.data.organizationId)
+      );
+    }
+
     // Organization access validation
     function canAccessOrganization(orgCode, orgId) {
-      return isSuperAdmin() || (
-        isPartner() && (
-          getProfile(request.auth.uid).assignedOrganizations.hasAny([orgCode, orgId])
-        )
-      );
+      return isSuperAdmin() || (isPartner() && partnerHasOrgAccess(orgId));
     }
 
     function canAccessUser(userId) {
       return isSuperAdmin() || (
-        isPartner() && getProfile(request.auth.uid).assignedOrganizations.hasAny([
-          getProfile(userId).companyCode
-        ])
+        isPartner() && (
+          partnerHasOrgAccess(getProfile(userId).companyId) ||
+          partnerHasOrgAccess(getProfile(userId).organizationId)
+        )
       );
     }
 
@@ -166,6 +176,11 @@ service cloud.firestore {
         request.resource.data.corporateVillageId == resource.data.corporateVillageId &&
         request.resource.data.cohortIdentifier == resource.data.cohortIdentifier &&
         request.resource.data.assignedOrganizations == resource.data.assignedOrganizations;
+    }
+
+    match /partner_organizations/{id} {
+      allow read: if request.auth != null &&
+        request.auth.uid == resource.data.partnerId;
     }
 
     // Profiles collection
@@ -247,6 +262,9 @@ service cloud.firestore {
       // Super admins can read all users, company admins can read based on profiles
       allow read: if isSuperAdmin() || canAccessUser(userId);
 
+      // Partners can read users in assigned organizations
+      allow read: if isPartnerWithOrgAccess();
+
       // Mentors can read assigned mentee records only
       allow read: if isAuthenticated() && canAccessMentee(resource.data);
 
@@ -326,7 +344,32 @@ service cloud.firestore {
       allow write: if isSuperAdmin();
     }
 
+    match /journey_configs/{journeyConfigId} {
+      allow read: if isAuthenticated();
+      allow write: if isSuperAdmin();
+    }
+
     match /activities/{activityId} {
+      allow read: if isAuthenticated();
+      allow write: if isSuperAdmin();
+    }
+
+    match /activity_catalog/{activityId} {
+      allow read: if isAuthenticated();
+      allow write: if isSuperAdmin();
+    }
+
+    match /activityDefinitions/{activityId} {
+      allow read: if isAuthenticated();
+      allow write: if isSuperAdmin();
+    }
+
+    match /twoWeekWindows/{windowId} {
+      allow read: if isAuthenticated();
+      allow write: if isSuperAdmin();
+    }
+
+    match /windowTargets/{targetId} {
       allow read: if isAuthenticated();
       allow write: if isSuperAdmin();
     }
@@ -420,6 +463,11 @@ service cloud.firestore {
       allow write: if isSuperAdmin();
     }
 
+    match /partners/{partnerId} {
+      allow read: if isAuthenticated() && isOwner(partnerId);
+      allow write: if isSuperAdmin();
+    }
+
     // Community collections
     match /villages/{villageId} {
       allow read: if isAuthenticated();
@@ -445,7 +493,7 @@ service cloud.firestore {
     match /organizations/{orgId} {
       allow read: if isAuthenticated() && (
         isSuperAdmin() || 
-        canAccessOrganization(resource.data.code, orgId)
+        (isPartner() && resource.data.partnerId == request.auth.uid)
       );
       allow write: if isSuperAdmin();
     }
@@ -486,6 +534,41 @@ service cloud.firestore {
         request.resource.data.userId == request.auth.uid || 
         isSuperAdmin()
       );
+    }
+
+    match /pointsLedger/{entryId} {
+      allow read: if isAuthenticated() && (
+        request.auth.uid == resource.data.uid ||
+        isAdmin()
+      );
+      allow create, update: if isAuthenticated() && (
+        request.resource.data.uid == request.auth.uid ||
+        isAdmin()
+      );
+    }
+
+    match /activityClaims/{claimId} {
+      allow read: if isAuthenticated() && (
+        request.auth.uid == resource.data.uid ||
+        isAdmin()
+      );
+      allow create: if isAuthenticated() && request.resource.data.uid == request.auth.uid;
+      allow update: if isAuthenticated() && (
+        request.auth.uid == resource.data.uid ||
+        isAdmin()
+      );
+    }
+
+    match /badgeAwards/{awardId} {
+      allow read: if isAuthenticated() && (
+        request.auth.uid == resource.data.uid ||
+        isAdmin()
+      );
+      allow create, update: if isAdmin();
+    }
+
+    match /notificationQueue/{notificationId} {
+      allow read, create, update: if isAdmin();
     }
 
     match /tutorial_completions/{completionId} {

@@ -228,7 +228,7 @@ export const CompanyDashboard: React.FC = () => {
     organization: leadershipOrganization,
     supportAssignment: supportAssignmentStatus,
     refresh: refreshLeadership,
-  } = useOrganizationLeadership(profile?.companyId, profile?.id)
+  } = useOrganizationLeadership(profile?.companyId, profile?.id, profile)
   const assignment = useMemo(
     () => ({
       ambassador: buildSupportLead(leadershipProfiles.ambassador),
@@ -239,7 +239,13 @@ export const CompanyDashboard: React.FC = () => {
   const supportErrorMessage = leadershipErrors.organization || leadershipErrors.supportAssignments
   const showLeadershipDebug = import.meta.env.DEV && (leadershipOrganization.id || supportAssignmentStatus.id)
   const mentorSourceLabel =
-    leadershipSources.mentor === 'user' ? 'User-specific mentor' : leadershipSources.mentor === 'organization' ? 'Organization mentor' : null
+    leadershipSources.mentor === 'user'
+      ? 'User-specific mentor'
+      : leadershipSources.mentor === 'organization'
+        ? 'Organization mentor'
+        : leadershipSources.mentor === 'profile'
+          ? 'Profile mentor'
+          : null
 
   const { data: checklistItems, loading: checklistLoading } = useRealtimeCollection<ChecklistItem>(
     'weekly_checklist',

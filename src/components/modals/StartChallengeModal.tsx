@@ -29,7 +29,7 @@ import { Swords, Users, Trophy, Filter, User, Lock } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { db } from '@/services/firebase';
 import { ORG_COLLECTION } from '@/constants/organizations';
-import { fetchOrgMembers, getOrgScope, isProfileInOrg } from '@/utils/organizationScope';
+import { fetchOrgMembers, getOrgScope } from '@/utils/organizationScope';
 import {
   collection,
   query,
@@ -69,6 +69,100 @@ interface UserOption {
 type ChallengeType = 'competitive' | 'collaborative';
 type OpponentFilter = 'suggested' | 'similar-level' | 'all';
 type DurationPreset = 'weekly' | 'monthly';
+
+// --- HELPER: Check if two profiles are in the same organization ---
+// This handles the ID/code mismatch by checking ALL possible identifier combinations
+const getProfileOrganizationCode = (profile: UserProfile): string | null => {
+  const record = profile as unknown as Record<string, unknown>;
+  if (typeof record.organizationCode === 'string' && record.organizationCode.trim()) {
+    return record.organizationCode;
+  }
+  if (typeof record.organization_code === 'string' && record.organization_code.trim()) {
+    return record.organization_code;
+  }
+  return null;
+};
+
+const areProfilesInSameOrg = (profile1: UserProfile | null, profile2: UserProfile | null): boolean => {
+  if (!profile1 || !profile2) return false;
+
+  // Collect all organization identifiers for each profile
+  const getOrgIdentifiers = (profile: UserProfile): Set<string> => {
+    const identifiers = new Set<string>();
+    
+    if (profile.companyId) identifiers.add(profile.companyId);
+    if (profile.companyCode) identifiers.add(profile.companyCode);
+    if (profile.organizationId) identifiers.add(profile.organizationId);
+    const organizationCode = getProfileOrganizationCode(profile);
+    if (organizationCode) identifiers.add(organizationCode);
+    // Handle snake_case variants if they exist
+    const p = profile as unknown as Record<string, unknown>;
+    if (p.company_id && typeof p.company_id === 'string') identifiers.add(p.company_id);
+    if (p.company_code && typeof p.company_code === 'string') identifiers.add(p.company_code);
+    if (p.organization_id && typeof p.organization_id === 'string') identifiers.add(p.organization_id);
+    if (p.organization_code && typeof p.organization_code === 'string') identifiers.add(p.organization_code);
+    
+    return identifiers;
+  };
+
+  const ids1 = getOrgIdentifiers(profile1);
+  const ids2 = getOrgIdentifiers(profile2);
+
+  // Check if there's ANY overlap between the two sets
+  for (const id of ids1) {
+    if (ids2.has(id)) {
+      console.log('[Challenge] ✅ Organization match found:', id);
+      return true;
+    }
+  }
+
+  console.log('[Challenge] ❌ No organization match:', { 
+    challenger: Array.from(ids1), 
+    challenged: Array.from(ids2) 
+  });
+  return false;
+};
+
+// --- HELPER: Resolve organization details from profile ---
+// Fetches the organization document to get both ID and code
+const resolveOrganization = async (profile: UserProfile): Promise<Organization | null> => {
+  const organizationCode = getProfileOrganizationCode(profile);
+  // Try to find organization by companyId first
+  if (profile.companyId) {
+    const orgDoc = await getDoc(doc(db, ORG_COLLECTION, profile.companyId));
+    if (orgDoc.exists()) {
+      return { ...orgDoc.data(), id: orgDoc.id } as Organization;
+    }
+  }
+
+  // Try by organizationId
+  if (profile.organizationId && profile.organizationId !== profile.companyId) {
+    const orgDoc = await getDoc(doc(db, ORG_COLLECTION, profile.organizationId));
+    if (orgDoc.exists()) {
+      return { ...orgDoc.data(), id: orgDoc.id } as Organization;
+    }
+  }
+
+  // Try to find by companyCode
+  if (profile.companyCode) {
+    const codeQuery = query(collection(db, ORG_COLLECTION), where('code', '==', profile.companyCode));
+    const snapshot = await getDocs(codeQuery);
+    if (!snapshot.empty) {
+      return { ...snapshot.docs[0].data(), id: snapshot.docs[0].id } as Organization;
+    }
+  }
+
+  // Try by organizationCode
+  if (organizationCode && organizationCode !== profile.companyCode) {
+    const codeQuery = query(collection(db, ORG_COLLECTION), where('code', '==', organizationCode));
+    const snapshot = await getDocs(codeQuery);
+    if (!snapshot.empty) {
+      return { ...snapshot.docs[0].data(), id: snapshot.docs[0].id } as Organization;
+    }
+  }
+
+  return null;
+};
 
 // --- COMPONENT ---
 export const StartChallengeModal: React.FC<StartChallengeModalProps> = ({
@@ -191,8 +285,21 @@ export const StartChallengeModal: React.FC<StartChallengeModalProps> = ({
 
       const fetchProfile = async (userId: string) => {
         if (profile?.id === userId) return profile;
-        const profileDoc = await getDoc(doc(db, 'profiles', userId));
-        return profileDoc.exists() ? ({ ...profileDoc.data(), id: profileDoc.id } as UserProfile) : null;
+
+        const [profileDoc, userDoc] = await Promise.all([
+          getDoc(doc(db, 'profiles', userId)),
+          getDoc(doc(db, 'users', userId)),
+        ]);
+
+        if (!profileDoc.exists() && !userDoc.exists()) {
+          return null;
+        }
+
+        return ({
+          ...(userDoc.exists() ? userDoc.data() : {}),
+          ...(profileDoc.exists() ? profileDoc.data() : {}),
+          id: userId,
+        } as UserProfile);
       };
 
       const challenger = await fetchProfile(user.uid);
@@ -205,27 +312,35 @@ export const StartChallengeModal: React.FC<StartChallengeModalProps> = ({
         throw new Error('Opponent profile could not be loaded.');
       }
 
-      const orgScope = getOrgScope(challenger);
-      if (!orgScope.isValid) {
-        throw new Error('Organization details are missing. Please refresh your profile.');
-      }
-
-      if (!isProfileInOrg(challenged, orgScope)) {
+      // FIX: Use the new organization matching function that handles ID/code mismatches
+      if (!areProfilesInSameOrg(challenger, challenged)) {
+        const challengerOrganizationCode = getProfileOrganizationCode(challenger);
+        const challengedOrganizationCode = getProfileOrganizationCode(challenged);
+        console.error('[Challenge] Organization mismatch:', {
+          challenger: {
+            id: challenger.id,
+            companyId: challenger.companyId,
+            companyCode: challenger.companyCode,
+            organizationId: challenger.organizationId,
+            organizationCode: challengerOrganizationCode,
+          },
+          challenged: {
+            id: challenged.id,
+            companyId: challenged.companyId,
+            companyCode: challenged.companyCode,
+            organizationId: challenged.organizationId,
+            organizationCode: challengedOrganizationCode,
+          },
+        });
         throw new Error('You can only challenge members of your organization.');
       }
 
-      let company: Organization | null = null;
-      if (orgScope.type === 'company') {
-        const companyDoc = await getDoc(doc(db, ORG_COLLECTION, orgScope.companyId));
-        if (companyDoc.exists()) {
-          company = { ...companyDoc.data(), id: companyDoc.id } as Organization;
-        }
-      } else if (orgScope.type === 'company_code') {
-        const companyQuery = query(collection(db, ORG_COLLECTION), where('code', '==', orgScope.companyCode));
-        const companySnapshot = await getDocs(companyQuery);
-        if (!companySnapshot.empty) {
-          company = { ...companySnapshot.docs[0].data(), id: companySnapshot.docs[0].id } as Organization;
-        }
+      // FIX: Resolve the organization to get BOTH the ID and code
+      // This ensures challenges are stored with complete org info for querying
+      const company = await resolveOrganization(challenger);
+      
+      if (!company) {
+        console.warn('[Challenge] Could not resolve organization, using profile values');
       }
 
       // Calculate dates
@@ -244,15 +359,20 @@ export const StartChallengeModal: React.FC<StartChallengeModalProps> = ({
       const finalDescription = description ||
         `${durationPreset.charAt(0).toUpperCase() + durationPreset.slice(1)} ${challengeType} challenge`;
 
-      // Build challenge object
+      // FIX: Build challenge object with BOTH company_id AND company_code
+      // This ensures challenges can be queried by either identifier
+      const challengerOrganizationCode = getProfileOrganizationCode(challenger);
       const challengeData = {
         challenger_id: challenger.id,
         challenger_name: challenger.fullName,
         challenged_id: challenged.id,
         challenged_name: challenged.fullName,
-        company_id: orgScope.type === 'company' ? orgScope.companyId || company?.id || null : company?.id || null,
+        // Store BOTH identifiers to support queries by either
+        company_id: company?.id || challenger.companyId || challenger.organizationId || null,
+        company_code: company?.code || challenger.companyCode || challengerOrganizationCode || null,
         company_name: company?.name || null,
-        company_code: orgScope.type === 'company_code' ? orgScope.companyCode : null,
+        // Also store as participants array for easier querying
+        participants: [challenger.id, challenged.id],
         status: 'pending',
         type: challengeType,
         custom_goal: challengeType === 'collaborative' ? customGoal : '',
@@ -272,6 +392,14 @@ export const StartChallengeModal: React.FC<StartChallengeModalProps> = ({
         result: { challengerScore: 0, challengedScore: 0 },
       };
 
+      console.log('[Challenge] Creating challenge with data:', {
+        challenger_id: challengeData.challenger_id,
+        challenged_id: challengeData.challenged_id,
+        company_id: challengeData.company_id,
+        company_code: challengeData.company_code,
+        participants: challengeData.participants,
+      });
+
       // Insert into challenges table
       const challengeDocRef = await addDoc(collection(db, 'challenges'), challengeData);
 
@@ -285,6 +413,8 @@ export const StartChallengeModal: React.FC<StartChallengeModalProps> = ({
         created_at: Timestamp.now(),
       });
 
+      console.log('[Challenge] ✅ Challenge created successfully:', challengeDocRef.id);
+
       setSuccess(true);
       setTimeout(() => {
         onChallengeCreated();
@@ -293,6 +423,7 @@ export const StartChallengeModal: React.FC<StartChallengeModalProps> = ({
       }, 2000);
 
     } catch (err) {
+      console.error('[Challenge] ❌ Error creating challenge:', err);
       setError(err instanceof Error ? err.message : 'Failed to create challenge.');
     } finally {
       setLoading(false);

@@ -1,13 +1,13 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useAuth } from '@/hooks/useAuth'
 import {
-  checkOrganizationAccess,
   fetchAvailableCourses,
   fetchOrganizationByCode,
   fetchOrganizationEngagementStats,
   fetchOrganizationUsers,
   logOrganizationAccessAttempt,
 } from '@/services/organizationService'
+import { canAccessOrganization } from '@/services/organizationAccessService'
 import { fetchUserProfileById } from '@/services/userProfileService'
 import type {
   OrganizationAccountStatusFilter,
@@ -91,7 +91,7 @@ const buildDetailView = (organization: {
 const pageSize = 50
 
 export const useOrganizationDetails = (organizationId?: string) => {
-  const { user, isAdmin, isSuperAdmin, assignedOrganizations } = useAuth()
+  const { user, isAdmin, isSuperAdmin, profile } = useAuth()
   const [organization, setOrganization] = useState<OrganizationDetailView | null>(null)
   const [users, setUsers] = useState<OrganizationUserProfile[]>([])
   const [statistics, setStatistics] = useState<OrganizationStatistics | null>(null)
@@ -135,13 +135,13 @@ export const useOrganizationDetails = (organizationId?: string) => {
         return
       }
 
-      const accessResult = await checkOrganizationAccess(user.uid, organizationId, orgRecord.code)
-      const matchesAssignedOrg =
-        assignedOrganizations.includes(organizationId) ||
-        (orgRecord.id ? assignedOrganizations.includes(orgRecord.id) : false) ||
-        (orgRecord.code ? assignedOrganizations.includes(orgRecord.code) : false)
+      const accessAllowed = await canAccessOrganization({
+        role: profile?.role || '',
+        userId: user.uid,
+        organizationId: orgRecord.id || organizationId,
+      })
 
-      if (!isSuperAdmin && !accessResult.authorized && !matchesAssignedOrg) {
+      if (!isSuperAdmin && !accessAllowed) {
         if (user?.uid) {
           void logOrganizationAccessAttempt({
             userId: user.uid,
@@ -197,7 +197,13 @@ export const useOrganizationDetails = (organizationId?: string) => {
     } finally {
       setLoading(false)
     }
-  }, [assignedOrganizations, isAdmin, isSuperAdmin, organizationId, user?.uid])
+  }, [
+    profile?.role,
+    isAdmin,
+    isSuperAdmin,
+    organizationId,
+    user?.uid,
+  ])
 
   useEffect(() => {
     loadDetails()

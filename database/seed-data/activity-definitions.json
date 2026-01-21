@@ -1,0 +1,39 @@
+[
+  {
+    "id": "coaching_session",
+    "title": "Attend coaching session",
+    "description": "Attend a scheduled mentor or partner coaching session.",
+    "category": "coaching",
+    "points": 2000,
+    "maxPerWindow": 2,
+    "requiresApproval": true,
+    "verification": "mentor_approval",
+    "isActive": true,
+    "tags": ["mentor", "coaching"]
+  },
+  {
+    "id": "peer_collaboration",
+    "title": "Complete peer collaboration",
+    "description": "Participate in a peer collaboration session and log outcomes.",
+    "category": "peer",
+    "points": 1500,
+    "maxPerWindow": 2,
+    "requiresApproval": true,
+    "verification": "partner_approval",
+    "isActive": true,
+    "tags": ["peer", "collaboration"]
+  },
+  {
+    "id": "impact_log",
+    "title": "Submit impact log",
+    "description": "Log verified impact outcomes within the current window.",
+    "category": "impact",
+    "points": 1000,
+    "maxPerWindow": 4,
+    "maxPerClaim": 1,
+    "requiresApproval": false,
+    "verification": "honor",
+    "isActive": true,
+    "tags": ["impact", "reflection"]
+  }
+]
