@@ -1,4 +1,4 @@
-import { collection, getDocs, query, where, type Firestore } from 'firebase/firestore'
+import { collection, getDocs, onSnapshot, query, where, type Firestore } from 'firebase/firestore'
 import { OrgProfileLike } from './organizationTypes'
 
 export type OrgScope =
@@ -81,4 +81,101 @@ export const fetchOrgMembers = async (
   console.log('[OrgMembers] Fetched profiles count', members.length)
 
   return members
+}
+
+export type OrgMembersCallback = (members: Record<string, unknown>[]) => void
+export type OrgMembersErrorCallback = (error: unknown) => void
+
+export const listenToOrgMembers = (
+  db: Firestore,
+  orgScope: OrgScope,
+  onMembers: OrgMembersCallback,
+  onError?: OrgMembersErrorCallback,
+  excludeId?: string,
+): (() => void) => {
+  if (!orgScope.isValid) {
+    onMembers([])
+    return () => {}
+  }
+
+  const peersRef = collection(db, 'profiles')
+  const orgValue = orgScope.type === 'company' ? orgScope.companyId : orgScope.companyCode
+
+  const queries = [
+    query(peersRef, where('companyId', '==', orgValue)),
+    query(peersRef, where('companyCode', '==', orgValue)),
+    query(peersRef, where('organizationId', '==', orgValue)),
+    query(peersRef, where('organizationCode', '==', orgValue)),
+    query(peersRef, where('company_code', '==', orgValue)),
+    query(peersRef, where('organization_code', '==', orgValue)),
+  ]
+
+  const membersMap = new Map<string, Record<string, unknown>>()
+  const queryDocIds = new Map<number, Set<string>>()
+  let pendingInitial = queries.length
+  let hasReceivedInitialData = false
+  const unsubscribers: (() => void)[] = []
+
+  const emitMembers = () => {
+    const members = Array.from(membersMap.values())
+      .filter((m) => !(excludeId && m.id === excludeId))
+      .sort((a, b) =>
+        String((a as Record<string, unknown>).fullName || '').localeCompare(
+          String((b as Record<string, unknown>).fullName || ''),
+        ),
+      )
+    onMembers(members)
+  }
+
+  queries.forEach((q, queryIndex) => {
+    const unsub = onSnapshot(
+      q,
+      (snapshot) => {
+        const ids = queryDocIds.get(queryIndex) || new Set<string>()
+        queryDocIds.set(queryIndex, ids)
+
+        snapshot.docChanges().forEach((change) => {
+          const docSnap = change.doc
+          if (change.type === 'removed') {
+            ids.delete(docSnap.id)
+            let stillReferenced = false
+            for (const otherIds of queryDocIds.values()) {
+              if (otherIds.has(docSnap.id)) {
+                stillReferenced = true
+                break
+              }
+            }
+            if (!stillReferenced) {
+              membersMap.delete(docSnap.id)
+            }
+          } else {
+            ids.add(docSnap.id)
+            membersMap.set(docSnap.id, { id: docSnap.id, ...docSnap.data() })
+          }
+        })
+
+        if (!hasReceivedInitialData) {
+          pendingInitial--
+          if (pendingInitial <= 0) {
+            hasReceivedInitialData = true
+            emitMembers()
+          }
+        } else {
+          emitMembers()
+        }
+      },
+      (error) => {
+        console.error(`[OrgMembers] Real-time query ${queryIndex} error`, error)
+        onError?.(error)
+      },
+    )
+    unsubscribers.push(unsub)
+  })
+
+  console.log('[OrgMembers] Real-time listeners started with scope', orgScope, 'value:', orgValue)
+
+  return () => {
+    unsubscribers.forEach((unsub) => unsub())
+    console.log('[OrgMembers] Real-time listeners cleaned up')
+  }
 }
