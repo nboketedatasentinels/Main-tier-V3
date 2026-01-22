@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useMemo, useState } from 'react'
+import React, { useCallback, useEffect, useState } from 'react'
 import {
   Avatar,
   Badge,
@@ -8,7 +8,6 @@ import {
   CardBody,
   CardHeader,
   Center,
-  chakra,
   Alert,
   AlertIcon,
   Checkbox,
@@ -21,7 +20,6 @@ import {
   GridItem,
   HStack,
   Icon,
-  Image,
   Input,
   InputGroup,
   InputLeftElement,
@@ -45,10 +43,8 @@ import {
 } from '@chakra-ui/react'
 import {
   AlertCircle,
-  Award,
   Brain,
   Building,
-  Calendar,
   Check,
   CheckCircle,
   ChevronRight,
@@ -56,12 +52,10 @@ import {
   Edit,
   ExternalLink,
   Github,
-  Heart,
   Key,
   Linkedin,
   Loader2,
   Lock,
-  LogOut,
   Mail as MailIcon,
   Save,
   Settings,
@@ -69,7 +63,6 @@ import {
   TrendingUp,
   Twitter,
   Upload,
-  User,
   Users,
   X,
   XCircle,
@@ -81,7 +74,6 @@ import {
   reauthenticateWithCredential,
   updateEmail,
   updatePassword,
-  signOut as firebaseSignOut,
 } from 'firebase/auth'
 import {
   doc,
@@ -160,16 +152,6 @@ const roleDisplayMap: Record<StandardRole, string> = {
   super_admin: 'Super Admin',
 }
 
-const roleColorMap: Record<StandardRole, string> = {
-  user: 'gray',
-  free_user: 'gray',
-  paid_member: 'green',
-  mentor: 'purple',
-  ambassador: 'blue',
-  partner: 'red',
-  super_admin: 'red',
-}
-
 const statusColorMap: Record<ProfileData['accountStatus'], string> = {
   active: 'green',
   inactive: 'orange',
@@ -224,30 +206,6 @@ const timezoneOptions = [
   'Australia/Sydney',
 ]
 
-const formatDate = (value?: string) => {
-  if (!value) return 'Not available'
-  const date = new Date(value)
-  if (Number.isNaN(date.getTime())) return 'Not available'
-  return date.toLocaleDateString(undefined, { month: 'long', day: 'numeric', year: 'numeric' })
-}
-
-const AvatarInitials: React.FC<{ name: string }> = ({ name }) => {
-  const initials = useMemo(() => name.slice(0, 2).toUpperCase(), [name])
-  return (
-    <Center
-      w="64px"
-      h="64px"
-      rounded="full"
-      bg="brand.primary"
-      color="white"
-      fontWeight="bold"
-      fontSize="xl"
-    >
-      {initials}
-    </Center>
-  )
-}
-
 const PaymentHistory: React.FC = () => {
   return (
     <Card mt={6} borderColor="brand.border">
@@ -288,7 +246,6 @@ export const ProfilePage: React.FC = () => {
   const [isEditing, setIsEditing] = useState(false)
   const [isSaving, setIsSaving] = useState(false)
   const [profilePictureFile, setProfilePictureFile] = useState<File | null>(null)
-  const [previewUrl, setPreviewUrl] = useState<string | null>(null)
   const [emailFormOpen, setEmailFormOpen] = useState(false)
   const [passwordFormOpen, setPasswordFormOpen] = useState(false)
   const [emailForm, setEmailForm] = useState({ newEmail: '', password: '' })
@@ -452,9 +409,11 @@ export const ProfilePage: React.FC = () => {
 
   const handleProfilePictureChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
-    if (!file) return
+    if (!file || !editedData) return
     setProfilePictureFile(file)
-    setPreviewUrl(URL.createObjectURL(file))
+    // Update editedData with preview URL for immediate display in the banner avatar
+    const previewUrl = URL.createObjectURL(file)
+    setEditedData({ ...editedData, profilePictureUrl: previewUrl })
   }
 
   const uploadProfilePicture = async (): Promise<string | undefined> => {
@@ -544,7 +503,6 @@ export const ProfilePage: React.FC = () => {
     setIsEditing(false)
     setEditedData(profileData)
     setProfilePictureFile(null)
-    setPreviewUrl(null)
     setPersonalityTestError(null)
     setValuesTestError(null)
     setPersonalityFormError(null)
@@ -742,16 +700,25 @@ export const ProfilePage: React.FC = () => {
     }
   }
 
-  const handleSignOut = async () => {
-    await firebaseSignOut(auth)
-    navigate('/login')
-  }
-
   const handleUpgrade = () => {
     navigate('/upgrade')
   }
 
-  const headerActions = profileData?.membershipStatus === 'free'
+  // Build subtitle for profile banner
+  const buildSubtitle = () => {
+    const parts: string[] = []
+    parts.push(roleDisplayMap[profileData?.role || 'user'])
+    if (profileData?.personalityType) {
+      parts.push(profileData.personalityType)
+    }
+    if (profileData?.registrationDate) {
+      const date = new Date(profileData.registrationDate)
+      if (!Number.isNaN(date.getTime())) {
+        parts.push(`Member since ${date.toLocaleDateString(undefined, { month: 'short', year: 'numeric' })}`)
+      }
+    }
+    return parts.join(' · ')
+  }
 
   if (loading) {
     return (
@@ -779,62 +746,68 @@ export const ProfilePage: React.FC = () => {
   }
 
   return (
-    <Box>
-      <Box position="sticky" top={0} zIndex={50} bg="white" boxShadow="sm" px={6} py={4} mb={6} borderBottom="1px solid" borderColor="brand.border">
-        <Flex justify="space-between" align="center">
-          <HStack spacing={3}>
-            <Center w="40px" h="40px" bg="brand.primaryMuted" rounded="lg" fontWeight="bold" color="brand.primary">
-              MP
-            </Center>
-            <Text fontWeight="bold" fontSize="lg">
-              Member Portal
-            </Text>
-          </HStack>
-          <HStack spacing={3}>
-            {headerActions && (
-              <Button leftIcon={<Lock size={18} />} variant="secondary" onClick={handleUpgrade}>
-                Upgrade
-              </Button>
-            )}
-            <Button variant="ghost" leftIcon={<LogOut size={18} />} onClick={handleSignOut}>
-              Sign Out
-            </Button>
-          </HStack>
-        </Flex>
-      </Box>
-
-      <Card mb={8} borderColor="brand.border" bg="linear-gradient(135deg, #eef0fb, #ffffff)">
-        <CardBody>
-          <Flex justify="space-between" align={{ base: 'flex-start', md: 'center' }} direction={{ base: 'column', md: 'row' }} gap={4}>
+    <Box px={{ base: 4, md: 6 }} py={6}>
+      {/* Simplified Profile Banner */}
+      <Card mb={8} borderColor="brand.border" boxShadow="card">
+        <CardBody py={6}>
+          <Flex justify="space-between" align="center">
             <HStack spacing={4} align="center">
-              {editedData.profilePictureUrl ? (
-                <Avatar src={editedData.profilePictureUrl} name={editedData.fullName} size="lg" />
-              ) : (
-                <AvatarInitials name={editedData.fullName} />
-              )}
+              <Box position="relative" cursor="pointer" as="label">
+                {editedData.profilePictureUrl ? (
+                  <Avatar src={editedData.profilePictureUrl} name={editedData.fullName} size="xl" />
+                ) : (
+                  <Center
+                    w="96px"
+                    h="96px"
+                    rounded="full"
+                    bg="brand.primary"
+                    color="white"
+                    fontWeight="bold"
+                    fontSize="2xl"
+                  >
+                    {editedData.fullName.slice(0, 2).toUpperCase()}
+                  </Center>
+                )}
+                <Center
+                  position="absolute"
+                  bottom={0}
+                  right={0}
+                  w="28px"
+                  h="28px"
+                  bg="white"
+                  rounded="full"
+                  border="2px solid"
+                  borderColor="brand.border"
+                  boxShadow="sm"
+                >
+                  <Icon as={Upload} size={14} color="brand.subtleText" />
+                </Center>
+                <Input
+                  type="file"
+                  accept="image/*"
+                  display="none"
+                  onChange={handleProfilePictureChange}
+                />
+              </Box>
               <Box>
-                <Text fontWeight="bold" fontSize="2xl">
+                <Text fontWeight="bold" fontSize="2xl" color="brand.text">
                   {profileData.fullName}
                 </Text>
-                <HStack spacing={3} mt={2} flexWrap="wrap">
-                  <Badge colorScheme={roleColorMap[profileData.role] || 'gray'}>{roleDisplayMap[profileData.role]}</Badge>
-                  <Badge colorScheme={statusColorMap[profileData.accountStatus] || 'gray'}>{profileData.accountStatus === 'active' ? 'Active' : profileData.accountStatus === 'inactive' ? 'Inactive' : 'Pending'}</Badge>
-                  <Badge colorScheme={profileData.membershipStatus === 'paid' ? 'yellow' : 'gray'}>
-                    {profileData.membershipStatus === 'paid' ? 'Paid Member' : 'Free Account'}
-                  </Badge>
-                </HStack>
+                <Text fontSize="sm" color="brand.subtleText" mt={1}>
+                  {buildSubtitle()}
+                </Text>
               </Box>
             </HStack>
-            <HStack spacing={3}>
-              {headerActions && (
-                <Button leftIcon={<Lock size={18} />} onClick={handleUpgrade}>
-                  Upgrade
-                </Button>
-              )}
-              <Button variant="secondary" leftIcon={<LogOut size={18} />} onClick={handleSignOut}>
-                Sign Out
+            <Tooltip label="Edit profile" hasArrow>
+              <Button
+                size="sm"
+                variant="ghost"
+                onClick={() => setIsEditing(true)}
+                aria-label="Edit profile"
+              >
+                <Icon as={Edit} size={18} />
               </Button>
-            </HStack>
+            </Tooltip>
           </Flex>
         </CardBody>
       </Card>
@@ -856,19 +829,16 @@ export const ProfilePage: React.FC = () => {
 
         <TabPanels>
           <TabPanel px={0}>
-            <Grid templateColumns={{ base: '1fr', lg: '2fr 1fr' }} gap={6}>
+            <Grid templateColumns={{ base: '1fr', lg: '7fr 5fr' }} gap={8}>
+              {/* Left Column - About Me */}
               <GridItem>
-                <Card borderColor="brand.border">
-                  <CardHeader>
+                <Card borderColor="brand.border" boxShadow="card">
+                  <CardHeader pb={2}>
                     <Flex justify="space-between" align="center">
                       <Text fontWeight="semibold" fontSize="lg">
-                        Personal Information
+                        About Me
                       </Text>
-                      {!isEditing ? (
-                        <Button size="sm" leftIcon={<Edit size={16} />} variant="secondary" onClick={() => setIsEditing(true)}>
-                          Edit
-                        </Button>
-                      ) : (
+                      {isEditing && (
                         <HStack spacing={2}>
                           <Button size="sm" variant="ghost" leftIcon={<X size={16} />} onClick={handleCancelEdit}>
                             Cancel
@@ -880,306 +850,172 @@ export const ProfilePage: React.FC = () => {
                       )}
                     </Flex>
                   </CardHeader>
-                  <CardBody>
+                  <CardBody pt={4}>
                     <VStack align="stretch" spacing={6}>
-                      <FormControl>
-                        <FormLabel>Full Name</FormLabel>
-                        {!isEditing ? (
-                          <HStack spacing={2} color="brand.text">
-                            <Icon as={User} />
-                            <Text>{profileData.fullName}</Text>
-                          </HStack>
-                        ) : (
-                          <Input value={editedData.fullName} onChange={(e) => handleInputChange('fullName', e.target.value)} />
-                        )}
-                      </FormControl>
+                      {/* Name & Email Section */}
+                      <Box>
+                        <FormControl mb={4}>
+                          <FormLabel fontSize="sm" color="brand.subtleText" mb={1}>Full Name</FormLabel>
+                          {!isEditing ? (
+                            <Text fontSize="lg" fontWeight="medium" color="brand.text">{profileData.fullName}</Text>
+                          ) : (
+                            <Input value={editedData.fullName} onChange={(e) => handleInputChange('fullName', e.target.value)} />
+                          )}
+                        </FormControl>
 
-                      <FormControl>
-                        <FormLabel>Profile Picture</FormLabel>
-                        {!isEditing ? (
-                          <HStack spacing={3}>
-                            {profileData.profilePictureUrl ? (
-                              <Avatar src={profileData.profilePictureUrl} size="sm" />
-                            ) : (
-                              <AvatarInitials name={profileData.fullName} />
-                            )}
-                            <Text color="brand.subtleText">Used across your profile</Text>
-                          </HStack>
-                        ) : (
-                          <HStack spacing={3} align="center">
-                            {previewUrl || editedData.profilePictureUrl ? (
-                              <Image
-                                src={previewUrl || editedData.profilePictureUrl}
-                                alt="Profile preview"
-                                boxSize="96px"
-                                objectFit="cover"
-                                rounded="full"
-                                border="1px solid"
-                                borderColor="brand.border"
-                              />
-                            ) : (
-                              <AvatarInitials name={profileData.fullName} />
-                            )}
-                            <Button as="label" leftIcon={<Upload size={16} />} variant="secondary">
-                              Upload
-                              <Input type="file" accept="image/*" display="none" onChange={handleProfilePictureChange} />
-                            </Button>
-                          </HStack>
-                        )}
-                      </FormControl>
-
-                      <FormControl>
-                        <FormLabel>Email Address</FormLabel>
-                        {!isEditing ? (
-                          <HStack spacing={2} color="brand.text">
-                            <Icon as={MailIcon} />
-                            <Text>{profileData.email}</Text>
-                          </HStack>
-                        ) : (
-                          <Input type="email" value={editedData.email} onChange={(e) => handleInputChange('email', e.target.value)} />
-                        )}
-                      </FormControl>
-
-                      <FormControl>
-                        <FormLabel>Personality Type</FormLabel>
-                        {isEditing && (
-                          <Alert status="info" borderRadius="lg" mb={3} bg="blue.50" border="1px solid" borderColor="blue.200">
-                            <HStack align="start" spacing={3}>
-                              <AlertIcon color="blue.500" mt={1} />
-                              <VStack align="start" spacing={2}>
-                                <Text fontWeight="semibold" color="blue.800">
-                                  Required: Take the test first
-                                </Text>
-                                <Button
-                                  as={Link}
-                                  href="https://www.16personalities.com/free-personality-test"
-                                  isExternal
-                                  variant="outline"
-                                  colorScheme="blue"
-                                  rightIcon={<Icon as={ExternalLink} />}
-                                  size="sm"
-                                >
-                                  Take the 16 Personalities test
-                                </Button>
-                                <Checkbox
-                                  isChecked={Boolean(editedData.hasCompletedPersonalityTest)}
-                                  onChange={(e) => {
-                                    handleInputChange('hasCompletedPersonalityTest', e.target.checked)
-                                    setPersonalityTestError(null)
-                                  }}
-                                >
-                                  I have completed the 16 Personalities test
-                                </Checkbox>
-                                {personalityTestError && (
-                                  <Text fontSize="sm" color="red.500">
-                                    {personalityTestError}
-                                  </Text>
-                                )}
-                              </VStack>
+                        <FormControl>
+                          <FormLabel fontSize="sm" color="brand.subtleText" mb={1}>Email Address</FormLabel>
+                          {!isEditing ? (
+                            <HStack spacing={2} color="brand.text">
+                              <Icon as={MailIcon} size={16} color="brand.subtleText" />
+                              <Text>{profileData.email}</Text>
                             </HStack>
-                          </Alert>
-                        )}
+                          ) : (
+                            <Input type="email" value={editedData.email} onChange={(e) => handleInputChange('email', e.target.value)} />
+                          )}
+                        </FormControl>
+                      </Box>
+
+                      <Divider borderColor="brand.border" />
+
+                      {/* Bio Section */}
+                      <FormControl>
+                        <FormLabel fontSize="sm" color="brand.subtleText" mb={1}>Bio</FormLabel>
                         {!isEditing ? (
-                          <HStack spacing={2} color="brand.text">
-                            <Icon as={Brain} />
-                            <Text>{profileData.personalityType || 'Not set'}</Text>
-                          </HStack>
-                        ) : (
-                          <Tooltip
-                            label="Complete the 16 Personalities test to unlock this field."
-                            isDisabled={Boolean(editedData.hasCompletedPersonalityTest)}
-                            hasArrow
-                          >
-                            <Box opacity={editedData.hasCompletedPersonalityTest ? 1 : 0.6}>
-                              <chakra.select
-                                value={editedData.personalityType || ''}
-                                onChange={(e) => {
-                                  handleInputChange('personalityType', e.target.value)
-                                  setPersonalityFormError(null)
-                                }}
-                                className="chakra-select"
-                                style={{ padding: '12px', borderRadius: '12px', border: '1px solid #e6e8f3' }}
-                                disabled={!editedData.hasCompletedPersonalityTest}
+                          profileData.bio ? (
+                            <Text whiteSpace="pre-wrap" color="brand.text" lineHeight="tall">
+                              {profileData.bio}
+                            </Text>
+                          ) : (
+                            <Box py={2}>
+                              <Text color="brand.subtleText" mb={2}>Add a bio to help others get to know you</Text>
+                              <Button
+                                size="sm"
+                                variant="ghost"
+                                color="brand.primary"
+                                leftIcon={<Edit size={14} />}
+                                onClick={() => setIsEditing(true)}
+                                p={0}
+                                h="auto"
+                                _hover={{ bg: 'transparent', textDecoration: 'underline' }}
                               >
-                                <option value="">Select personality type</option>
-                                {personalityTypes.map((type) => (
-                                  <option key={type} value={type}>
-                                    {type}
-                                  </option>
-                                ))}
-                              </chakra.select>
+                                Add a bio
+                              </Button>
                             </Box>
-                          </Tooltip>
+                          )
+                        ) : (
+                          <Textarea
+                            value={editedData.bio}
+                            rows={4}
+                            onChange={(e) => handleInputChange('bio', e.target.value)}
+                            placeholder="Tell others about yourself..."
+                          />
                         )}
                       </FormControl>
 
+                      <Divider borderColor="brand.border" />
+
+                      {/* Social Links Section */}
                       <FormControl>
-                        <FormLabel>Core Values (select exactly 5)</FormLabel>
-                        {isEditing && (
-                          <Alert status="info" borderRadius="lg" mb={3} bg="blue.50" border="1px solid" borderColor="blue.200">
-                            <HStack align="start" spacing={3}>
-                              <AlertIcon color="blue.500" mt={1} />
-                              <VStack align="start" spacing={2}>
-                                <Text fontWeight="semibold" color="blue.800">
-                                  Required: Take the test first
-                                </Text>
-                                <Button
-                                  as={Link}
-                                  href="https://personalvalu.es/"
-                                  isExternal
-                                  variant="outline"
-                                  colorScheme="blue"
-                                  rightIcon={<Icon as={ExternalLink} />}
-                                  size="sm"
-                                >
-                                  Take the Personal Values test
-                                </Button>
-                                <Checkbox
-                                  isChecked={Boolean(editedData.hasCompletedValuesTest)}
-                                  onChange={(e) => {
-                                    handleInputChange('hasCompletedValuesTest', e.target.checked)
-                                    setValuesTestError(null)
-                                  }}
-                                >
-                                  I have completed the Personal Values test
-                                </Checkbox>
-                                {valuesTestError && (
-                                  <Text fontSize="sm" color="red.500">
-                                    {valuesTestError}
-                                  </Text>
-                                )}
-                              </VStack>
-                            </HStack>
-                          </Alert>
-                        )}
+                        <FormLabel fontSize="sm" color="brand.subtleText" mb={2}>Social Links</FormLabel>
                         {!isEditing ? (
-                          <HStack spacing={2} flexWrap="wrap">
-                            {profileData.coreValues.length === 0 ? (
-                              <Text color="brand.subtleText">No core values selected</Text>
-                            ) : (
-                              profileData.coreValues.map((value) => (
-                                <Tag key={value} colorScheme="yellow" borderRadius="full" px={3} py={1}>
-                                  <HStack spacing={1}>
-                                    <Icon as={Award} size={14} />
-                                    <Text>{value}</Text>
+                          editedData.socialLinks.linkedin || editedData.socialLinks.twitter || editedData.socialLinks.github ? (
+                            <HStack spacing={3} flexWrap="wrap">
+                              {editedData.socialLinks.linkedin && (
+                                <Link href={editedData.socialLinks.linkedin} isExternal>
+                                  <HStack spacing={1} color="brand.primary" _hover={{ textDecoration: 'underline' }}>
+                                    <Icon as={Linkedin} size={16} />
+                                    <Text fontSize="sm">LinkedIn</Text>
                                   </HStack>
-                                </Tag>
-                              ))
-                            )}
-                          </HStack>
-                        ) : (
-                          <Tooltip
-                            label="Complete the Personal Values test to unlock this section."
-                            isDisabled={Boolean(editedData.hasCompletedValuesTest)}
-                            hasArrow
-                          >
-                            <Box opacity={editedData.hasCompletedValuesTest ? 1 : 0.6}>
-                              <Grid templateColumns={{ base: 'repeat(2, 1fr)', md: 'repeat(4, 1fr)' }} gap={3}>
-                                {coreValueOptions.map((value) => {
-                                  const selected = editedData.coreValues.includes(value)
-                                  const disabled =
-                                    !editedData.hasCompletedValuesTest ||
-                                    (!selected && editedData.coreValues.length >= 5)
-                                  return (
-                                    <Box
-                                      key={value}
-                                      border="1px solid"
-                                      borderColor={selected ? 'yellow.400' : 'brand.border'}
-                                      bg={selected ? 'yellow.50' : 'white'}
-                                      rounded="lg"
-                                      p={3}
-                                      cursor={disabled ? 'not-allowed' : 'pointer'}
-                                      opacity={disabled ? 0.5 : 1}
-                                      onClick={() => !disabled && handleCoreValueToggle(value)}
-                                    >
-                                      <HStack spacing={2}>
-                                        <Icon as={Heart} color={selected ? 'yellow.500' : 'brand.subtleText'} />
-                                        <Text fontWeight="medium">{value}</Text>
-                                      </HStack>
-                                    </Box>
-                                  )
-                                })}
-                              </Grid>
-                              <Text fontSize="xs" color="brand.subtleText" textAlign="right" mt={2}>
-                                {editedData.coreValues.length}/5 values selected
-                              </Text>
+                                </Link>
+                              )}
+                              {editedData.socialLinks.twitter && (
+                                <Link href={editedData.socialLinks.twitter} isExternal>
+                                  <HStack spacing={1} color="brand.primary" _hover={{ textDecoration: 'underline' }}>
+                                    <Icon as={Twitter} size={16} />
+                                    <Text fontSize="sm">Twitter</Text>
+                                  </HStack>
+                                </Link>
+                              )}
+                              {editedData.socialLinks.github && (
+                                <Link href={editedData.socialLinks.github} isExternal>
+                                  <HStack spacing={1} color="brand.primary" _hover={{ textDecoration: 'underline' }}>
+                                    <Icon as={Github} size={16} />
+                                    <Text fontSize="sm">GitHub</Text>
+                                  </HStack>
+                                </Link>
+                              )}
+                            </HStack>
+                          ) : (
+                            <Box py={2}>
+                              <Text color="brand.subtleText" mb={2}>Connect your accounts</Text>
+                              <HStack spacing={2}>
+                                <Tooltip label="Add LinkedIn" hasArrow>
+                                  <Button
+                                    size="sm"
+                                    variant="outline"
+                                    onClick={() => setIsEditing(true)}
+                                    borderColor="brand.border"
+                                    _hover={{ borderColor: 'brand.primary' }}
+                                  >
+                                    <Icon as={Linkedin} size={16} />
+                                  </Button>
+                                </Tooltip>
+                                <Tooltip label="Add Twitter" hasArrow>
+                                  <Button
+                                    size="sm"
+                                    variant="outline"
+                                    onClick={() => setIsEditing(true)}
+                                    borderColor="brand.border"
+                                    _hover={{ borderColor: 'brand.primary' }}
+                                  >
+                                    <Icon as={Twitter} size={16} />
+                                  </Button>
+                                </Tooltip>
+                                <Tooltip label="Add GitHub" hasArrow>
+                                  <Button
+                                    size="sm"
+                                    variant="outline"
+                                    onClick={() => setIsEditing(true)}
+                                    borderColor="brand.border"
+                                    _hover={{ borderColor: 'brand.primary' }}
+                                  >
+                                    <Icon as={Github} size={16} />
+                                  </Button>
+                                </Tooltip>
+                              </HStack>
                             </Box>
-                          </Tooltip>
-                        )}
-                        {personalityFormError && (
-                          <Text fontSize="sm" color="red.500" mt={2}>
-                            {personalityFormError}
-                          </Text>
-                        )}
-                      </FormControl>
-
-                      <FormControl>
-                        <FormLabel>Bio</FormLabel>
-                        {!isEditing ? (
-                          <Text whiteSpace="pre-wrap" color="brand.text">
-                            {profileData.bio || 'No bio provided'}
-                          </Text>
-                        ) : (
-                          <Textarea value={editedData.bio} rows={3} onChange={(e) => handleInputChange('bio', e.target.value)} placeholder="No bio provided" />
-                        )}
-                      </FormControl>
-
-                      <FormControl>
-                        <FormLabel>Social Links</FormLabel>
-                        {!isEditing ? (
-                          <VStack align="flex-start" spacing={2}>
-                            {editedData.socialLinks.linkedin || editedData.socialLinks.twitter || editedData.socialLinks.github ? (
-                              <>
-                                {editedData.socialLinks.linkedin && (
-                                  <Link href={editedData.socialLinks.linkedin} isExternal color="brand.primary">
-                                    LinkedIn
-                                  </Link>
-                                )}
-                                {editedData.socialLinks.twitter && (
-                                  <Link href={editedData.socialLinks.twitter} isExternal color="brand.primary">
-                                    Twitter
-                                  </Link>
-                                )}
-                                {editedData.socialLinks.github && (
-                                  <Link href={editedData.socialLinks.github} isExternal color="brand.primary">
-                                    GitHub
-                                  </Link>
-                                )}
-                              </>
-                            ) : (
-                              <Text color="brand.subtleText">No social links</Text>
-                            )}
-                          </VStack>
+                          )
                         ) : (
                           <VStack spacing={3} align="stretch">
-                            <InputGroup>
+                            <InputGroup size="sm">
                               <InputLeftElement pointerEvents="none">
-                                <Icon as={Linkedin} color="brand.subtleText" />
+                                <Icon as={Linkedin} color="brand.subtleText" size={16} />
                               </InputLeftElement>
                               <Input
-                                placeholder="LinkedIn"
+                                placeholder="LinkedIn profile URL"
                                 value={editedData.socialLinks.linkedin || ''}
                                 onChange={(e) => handleSocialLinkChange('linkedin', e.target.value)}
                                 type="url"
                               />
                             </InputGroup>
-                            <InputGroup>
+                            <InputGroup size="sm">
                               <InputLeftElement pointerEvents="none">
-                                <Icon as={Twitter} color="brand.subtleText" />
+                                <Icon as={Twitter} color="brand.subtleText" size={16} />
                               </InputLeftElement>
                               <Input
-                                placeholder="Twitter"
+                                placeholder="Twitter profile URL"
                                 value={editedData.socialLinks.twitter || ''}
                                 onChange={(e) => handleSocialLinkChange('twitter', e.target.value)}
                                 type="url"
                               />
                             </InputGroup>
-                            <InputGroup>
+                            <InputGroup size="sm">
                               <InputLeftElement pointerEvents="none">
-                                <Icon as={Github} color="brand.subtleText" />
+                                <Icon as={Github} color="brand.subtleText" size={16} />
                               </InputLeftElement>
                               <Input
-                                placeholder="GitHub"
+                                placeholder="GitHub profile URL"
                                 value={editedData.socialLinks.github || ''}
                                 onChange={(e) => handleSocialLinkChange('github', e.target.value)}
                                 type="url"
@@ -1188,83 +1024,262 @@ export const ProfilePage: React.FC = () => {
                           </VStack>
                         )}
                       </FormControl>
-
-                      <FormControl>
-                        <FormLabel>Member Since</FormLabel>
-                        <HStack spacing={2} color="brand.text">
-                          <Icon as={Calendar} />
-                          <Text>{formatDate(profileData.registrationDate)}</Text>
-                        </HStack>
-                      </FormControl>
                     </VStack>
                   </CardBody>
                 </Card>
               </GridItem>
 
+              {/* Right Column */}
               <GridItem>
                 <VStack spacing={6}>
-                  <Card borderColor="brand.border">
-                    <CardHeader>
-                      <Flex justify="space-between" align="center">
-                        <Text fontWeight="semibold">Badges & Achievements</Text>
-                      </Flex>
-                    </CardHeader>
-                    <CardBody>
-                      <BadgeDisplay />
+                  {/* Account Status Card */}
+                  <Card
+                    borderColor={profileData.membershipStatus === 'paid' ? 'green.200' : 'brand.border'}
+                    bg={profileData.membershipStatus === 'paid' ? 'green.50' : 'white'}
+                    boxShadow="card"
+                    w="full"
+                  >
+                    <CardBody py={4}>
+                      <HStack spacing={3} justify="space-between">
+                        <HStack spacing={3}>
+                          <Center
+                            w="40px"
+                            h="40px"
+                            rounded="lg"
+                            bg={profileData.membershipStatus === 'paid' ? 'green.100' : 'gray.100'}
+                          >
+                            <Icon
+                              as={profileData.membershipStatus === 'paid' ? CheckCircle : Lock}
+                              color={profileData.membershipStatus === 'paid' ? 'green.600' : 'gray.500'}
+                              size={20}
+                            />
+                          </Center>
+                          <Box>
+                            <Text fontWeight="semibold" fontSize="sm">
+                              {profileData.membershipStatus === 'paid' ? 'Paid Member' : 'Free Account'}
+                            </Text>
+                            <Text fontSize="xs" color="brand.subtleText">
+                              {profileData.membershipStatus === 'paid' ? 'Full access to all features' : 'Limited access'}
+                            </Text>
+                          </Box>
+                        </HStack>
+                        {profileData.membershipStatus === 'free' && (
+                          <Button size="xs" variant="secondary" onClick={handleUpgrade}>
+                            Upgrade
+                          </Button>
+                        )}
+                      </HStack>
                     </CardBody>
                   </Card>
 
-                  <Card borderColor="brand.border">
-                    <CardHeader>
-                      <Text fontWeight="semibold">Organization Information</Text>
+                  {/* Personality & Values Card */}
+                  <Card borderColor="brand.border" boxShadow="card" w="full">
+                    <CardHeader pb={2}>
+                      <Text fontWeight="semibold" fontSize="sm">Personality & Values</Text>
                     </CardHeader>
-                    <CardBody>
+                    <CardBody pt={2}>
                       <VStack align="stretch" spacing={4}>
-                        <HStack spacing={3} align="center">
-                          <Icon as={profileData.membershipStatus === 'paid' ? Check : Lock} color={profileData.membershipStatus === 'paid' ? 'green.500' : 'gray.500'} />
-                          <Box>
-                            <Text fontWeight="bold">{profileData.membershipStatus === 'paid' ? 'Paid Member' : 'Free Account'}</Text>
-                            {profileData.membershipStatus === 'free' && (
-                              <Button mt={2} size="sm" variant="secondary" onClick={handleUpgrade}>
-                                Upgrade
+                        {/* Personality Type */}
+                        <Box>
+                          <Text fontSize="xs" color="brand.subtleText" mb={1}>Personality Type</Text>
+                          {profileData.personalityType ? (
+                            <HStack spacing={2}>
+                              <Icon as={Brain} size={16} color="brand.primary" />
+                              <Text fontWeight="medium">{profileData.personalityType}</Text>
+                            </HStack>
+                          ) : (
+                            <Box>
+                              <Text fontSize="sm" color="brand.subtleText" mb={1}>Find your type</Text>
+                              <Button
+                                as={Link}
+                                href="https://www.16personalities.com/free-personality-test"
+                                isExternal
+                                size="xs"
+                                variant="ghost"
+                                color="brand.primary"
+                                rightIcon={<ExternalLink size={12} />}
+                                p={0}
+                                h="auto"
+                                _hover={{ textDecoration: 'underline' }}
+                              >
+                                Take the test
                               </Button>
-                            )}
-                          </Box>
-                        </HStack>
+                            </Box>
+                          )}
+                        </Box>
 
-                        {profileData.membershipStatus === 'paid' && (
-                          <VStack align="stretch" spacing={3}>
-                            <HStack spacing={2}>
-                              <Icon as={Building} />
-                              <Text fontWeight="medium">Company</Text>
+                        <Divider borderColor="brand.border" />
+
+                        {/* Core Values */}
+                        <Box>
+                          <Text fontSize="xs" color="brand.subtleText" mb={2}>Core Values</Text>
+                          {profileData.coreValues.length > 0 ? (
+                            <HStack spacing={2} flexWrap="wrap">
+                              {profileData.coreValues.map((value) => (
+                                <Tag key={value} size="sm" colorScheme="yellow" borderRadius="full">
+                                  {value}
+                                </Tag>
+                              ))}
                             </HStack>
-                            <Text color="brand.text">{profileData.companyName || 'Not assigned'}</Text>
-                            <HStack spacing={2}>
-                              <Icon as={Key} />
-                              <Text fontWeight="medium">Company Code</Text>
-                            </HStack>
-                            <Tag bg="gray.100" color="brand.text" fontFamily="mono">
-                              {profileData.companyCode || 'N/A'}
-                            </Tag>
-                            <HStack spacing={2}>
-                              <Icon as={Users} />
-                              <Text fontWeight="medium">Village</Text>
-                            </HStack>
-                            <Text color="brand.text">{profileData.villageName || 'Not assigned'}</Text>
-                            {profileData.clusterName && (
-                              <>
-                                <HStack spacing={2}>
-                                  <Icon as={Users} />
-                                  <Text fontWeight="medium">Cluster</Text>
-                                </HStack>
-                                <Text color="brand.text">{profileData.clusterName}</Text>
-                              </>
-                            )}
-                          </VStack>
+                          ) : (
+                            <Box>
+                              <Text fontSize="sm" color="brand.subtleText" mb={1}>Discover your values</Text>
+                              <Button
+                                as={Link}
+                                href="https://personalvalu.es/"
+                                isExternal
+                                size="xs"
+                                variant="ghost"
+                                color="brand.primary"
+                                rightIcon={<ExternalLink size={12} />}
+                                p={0}
+                                h="auto"
+                                _hover={{ textDecoration: 'underline' }}
+                              >
+                                Take the test
+                              </Button>
+                            </Box>
+                          )}
+                        </Box>
+
+                        {/* Edit personality button when in edit mode */}
+                        {isEditing && (
+                          <>
+                            <Divider borderColor="brand.border" />
+                            <Box>
+                              <Alert status="info" borderRadius="md" size="sm" bg="blue.50" border="1px solid" borderColor="blue.200">
+                                <AlertIcon color="blue.500" />
+                                <VStack align="start" spacing={1} flex={1}>
+                                  <Text fontSize="xs" fontWeight="medium">Update your personality profile</Text>
+                                  <HStack spacing={2}>
+                                    <Checkbox
+                                      size="sm"
+                                      isChecked={Boolean(editedData.hasCompletedPersonalityTest)}
+                                      onChange={(e) => {
+                                        handleInputChange('hasCompletedPersonalityTest', e.target.checked)
+                                        setPersonalityTestError(null)
+                                      }}
+                                    >
+                                      <Text fontSize="xs">I completed the personality test</Text>
+                                    </Checkbox>
+                                  </HStack>
+                                  <HStack spacing={2}>
+                                    <Checkbox
+                                      size="sm"
+                                      isChecked={Boolean(editedData.hasCompletedValuesTest)}
+                                      onChange={(e) => {
+                                        handleInputChange('hasCompletedValuesTest', e.target.checked)
+                                        setValuesTestError(null)
+                                      }}
+                                    >
+                                      <Text fontSize="xs">I completed the values test</Text>
+                                    </Checkbox>
+                                  </HStack>
+                                </VStack>
+                              </Alert>
+                              {editedData.hasCompletedPersonalityTest && (
+                                <FormControl mt={3}>
+                                  <FormLabel fontSize="xs">Select Type</FormLabel>
+                                  <Select
+                                    size="sm"
+                                    value={editedData.personalityType || ''}
+                                    onChange={(e) => handleInputChange('personalityType', e.target.value)}
+                                  >
+                                    <option value="">Select...</option>
+                                    {personalityTypes.map((type) => (
+                                      <option key={type} value={type}>{type}</option>
+                                    ))}
+                                  </Select>
+                                </FormControl>
+                              )}
+                              {editedData.hasCompletedValuesTest && (
+                                <FormControl mt={3}>
+                                  <FormLabel fontSize="xs">Select 5 Values</FormLabel>
+                                  <Grid templateColumns="repeat(2, 1fr)" gap={2}>
+                                    {coreValueOptions.map((value) => {
+                                      const selected = editedData.coreValues.includes(value)
+                                      const disabled = !selected && editedData.coreValues.length >= 5
+                                      return (
+                                        <Box
+                                          key={value}
+                                          border="1px solid"
+                                          borderColor={selected ? 'yellow.400' : 'brand.border'}
+                                          bg={selected ? 'yellow.50' : 'white'}
+                                          rounded="md"
+                                          p={2}
+                                          cursor={disabled ? 'not-allowed' : 'pointer'}
+                                          opacity={disabled ? 0.5 : 1}
+                                          onClick={() => !disabled && handleCoreValueToggle(value)}
+                                          fontSize="xs"
+                                        >
+                                          {value}
+                                        </Box>
+                                      )
+                                    })}
+                                  </Grid>
+                                  <Text fontSize="xs" color="brand.subtleText" mt={1}>
+                                    {editedData.coreValues.length}/5 selected
+                                  </Text>
+                                </FormControl>
+                              )}
+                              {(personalityTestError || valuesTestError || personalityFormError) && (
+                                <Text fontSize="xs" color="red.500" mt={2}>
+                                  {personalityTestError || valuesTestError || personalityFormError}
+                                </Text>
+                              )}
+                            </Box>
+                          </>
                         )}
                       </VStack>
                     </CardBody>
                   </Card>
+
+                  {/* Badges & Achievements Card */}
+                  <Card borderColor="brand.border" boxShadow="card" w="full">
+                    <CardHeader pb={2}>
+                      <Text fontWeight="semibold" fontSize="sm">Badges & Achievements</Text>
+                    </CardHeader>
+                    <CardBody pt={2}>
+                      <BadgeDisplay />
+                    </CardBody>
+                  </Card>
+
+                  {/* Organization Info Card (for paid members) */}
+                  {profileData.membershipStatus === 'paid' && (
+                    <Card borderColor="brand.border" boxShadow="card" w="full">
+                      <CardHeader pb={2}>
+                        <Text fontWeight="semibold" fontSize="sm">Organization</Text>
+                      </CardHeader>
+                      <CardBody pt={2}>
+                        <VStack align="stretch" spacing={3}>
+                          <Box>
+                            <Text fontSize="xs" color="brand.subtleText">Company</Text>
+                            <HStack spacing={2}>
+                              <Icon as={Building} size={14} color="brand.subtleText" />
+                              <Text fontSize="sm" fontWeight="medium">{profileData.companyName || 'Not assigned'}</Text>
+                            </HStack>
+                          </Box>
+                          <Box>
+                            <Text fontSize="xs" color="brand.subtleText">Company Code</Text>
+                            <Tag size="sm" bg="gray.100" fontFamily="mono">{profileData.companyCode || 'N/A'}</Tag>
+                          </Box>
+                          <Box>
+                            <Text fontSize="xs" color="brand.subtleText">Village</Text>
+                            <HStack spacing={2}>
+                              <Icon as={Users} size={14} color="brand.subtleText" />
+                              <Text fontSize="sm">{profileData.villageName || 'Not assigned'}</Text>
+                            </HStack>
+                          </Box>
+                          {profileData.clusterName && (
+                            <Box>
+                              <Text fontSize="xs" color="brand.subtleText">Cluster</Text>
+                              <Text fontSize="sm">{profileData.clusterName}</Text>
+                            </Box>
+                          )}
+                        </VStack>
+                      </CardBody>
+                    </Card>
+                  )}
                 </VStack>
               </GridItem>
             </Grid>
@@ -1709,13 +1724,6 @@ export const ProfilePage: React.FC = () => {
                     </CardBody>
                   </Card>
 
-                  <Card borderColor="brand.border">
-                    <CardBody>
-                      <Button variant="ghost" leftIcon={<LogOut size={16} />} width="full" onClick={handleSignOut}>
-                        Sign Out
-                      </Button>
-                    </CardBody>
-                  </Card>
                 </VStack>
               </GridItem>
             </Grid>
