@@ -3,6 +3,7 @@ import {
   Button,
   Card,
   CardBody,
+  Divider,
   HStack,
   Icon,
   Skeleton,
@@ -10,21 +11,25 @@ import {
   Text,
   VStack,
 } from '@chakra-ui/react'
-import { Mail, MessageCircle } from 'lucide-react'
-import { SupportAssignment } from '@/hooks/useWeeklyGlanceData'
+import { Mail, MessageCircle, Users } from 'lucide-react'
+import { PeerMatch, SupportAssignment } from '@/hooks/useWeeklyGlanceData'
 
 interface SupportTeamCardProps {
   data: SupportAssignment | null
   loading: boolean
+  peerMatches: PeerMatch[]
+  peerMatchesLoading: boolean
 }
 
-export const SupportTeamCard = ({ data, loading }: SupportTeamCardProps) => {
+export const SupportTeamCard = ({ data, loading, peerMatches, peerMatchesLoading }: SupportTeamCardProps) => {
   const mentorProfile = data?.mentorProfile ?? null
   const ambassadorProfile = data?.ambassadorProfile ?? null
   const hasAssignedIds = Boolean(data?.mentor_id || data?.ambassador_id)
   const hasMentor = Boolean(mentorProfile)
   const hasAmbassador = Boolean(ambassadorProfile)
   const showEmptyState = !loading && !hasMentor && !hasAmbassador
+  const completedMatches = peerMatches.filter(match => match.status === 'matched')
+  const hasPeerMatch = completedMatches.length > 0
   const supportErrorMessages = [data?.mentorProfileError, data?.ambassadorProfileError].filter(
     (message): message is string => Boolean(message),
   )
@@ -40,9 +45,9 @@ export const SupportTeamCard = ({ data, loading }: SupportTeamCardProps) => {
 
   return (
     <Card h="100%" variant="outline" borderColor="border.subtle">
-      <CardBody>
+      <CardBody p={6}>
         <Stack spacing={4}>
-          <Text fontWeight="bold" color="#273240">Support Team</Text>
+          <Text fontWeight="bold" fontSize="md" color="#273240">Support Team</Text>
           <Skeleton isLoaded={!loading} rounded="md">
             <Stack spacing={3}>
               {hasMentor && mentorProfile && (
@@ -62,7 +67,9 @@ export const SupportTeamCard = ({ data, loading }: SupportTeamCardProps) => {
                         )}
                       </VStack>
                     </HStack>
-                    <Button size="sm" leftIcon={<Icon as={Mail} />}>Contact</Button>
+                    <Button size="sm" variant="ghost" leftIcon={<Icon as={Mail} />}>
+                      Contact
+                    </Button>
                   </HStack>
                 </VStack>
               )}
@@ -84,7 +91,9 @@ export const SupportTeamCard = ({ data, loading }: SupportTeamCardProps) => {
                         )}
                       </VStack>
                     </HStack>
-                    <Button size="sm" leftIcon={<Icon as={MessageCircle} />}>Message</Button>
+                    <Button size="sm" variant="ghost" leftIcon={<Icon as={MessageCircle} />}>
+                      Message
+                    </Button>
                   </HStack>
                 </VStack>
               )}
@@ -112,6 +121,33 @@ export const SupportTeamCard = ({ data, loading }: SupportTeamCardProps) => {
               )}
             </Stack>
           </Skeleton>
+
+          <Divider />
+
+          <Stack spacing={2}>
+            <HStack spacing={2}>
+              <Icon as={Users} color="brand.primary" />
+              <Text fontWeight="semibold" color="#273240">
+                Peer Matching
+              </Text>
+            </HStack>
+            <Skeleton isLoaded={!peerMatchesLoading} rounded="md">
+              <Stack spacing={2}>
+                {hasPeerMatch ? (
+                  <Text fontSize="sm" color="text.secondary">
+                    You have {completedMatches.length} peer ally{completedMatches.length === 1 ? '' : 's'} ready to connect.
+                  </Text>
+                ) : (
+                  <Text fontSize="sm" color="text.secondary">
+                    Find your peer ally to stay accountable this week.
+                  </Text>
+                )}
+                <Button size="sm" variant={hasPeerMatch ? 'link' : 'solid'} colorScheme="purple" alignSelf="flex-start">
+                  {hasPeerMatch ? 'View peer matches' : 'Find your peer ally'}
+                </Button>
+              </Stack>
+            </Skeleton>
+          </Stack>
         </Stack>
       </CardBody>
     </Card>
