@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useState } from 'react'
+import React, { useCallback, useEffect, useMemo, useState } from 'react'
 import {
   Avatar,
   Badge,
@@ -8,6 +8,7 @@ import {
   CardBody,
   CardHeader,
   Center,
+  Collapse,
   Alert,
   AlertIcon,
   Checkbox,
@@ -58,7 +59,6 @@ import {
   Lock,
   Mail as MailIcon,
   Save,
-  Settings,
   Shield,
   TrendingUp,
   Twitter,
@@ -206,9 +206,17 @@ const timezoneOptions = [
   'Australia/Sydney',
 ]
 
-const PaymentHistory: React.FC = () => {
+const PaymentHistory: React.FC<{ hasRecords: boolean }> = ({ hasRecords }) => {
+  if (!hasRecords) {
+    return (
+      <Text fontSize="sm" color="brand.subtleText">
+        No payment history — upgrade to start your subscription.
+      </Text>
+    )
+  }
+
   return (
-    <Card mt={6} borderColor="brand.border">
+    <Card mt={6} borderColor="brand.border" boxShadow="card">
       <CardHeader>
         <Flex justify="space-between" align="center">
           <Box>
@@ -265,6 +273,21 @@ export const ProfilePage: React.FC = () => {
   const [personalityFormError, setPersonalityFormError] = useState<string | null>(null)
   const [matchPreferencesSaving, setMatchPreferencesSaving] = useState(false)
   const [matchPreferencesMessage, setMatchPreferencesMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null)
+  const [showAdvancedMatching, setShowAdvancedMatching] = useState(false)
+  const [accountSettingsSaving, setAccountSettingsSaving] = useState(false)
+
+  const hasAccountSettingsChanges = useMemo(() => {
+    if (!editedData || !profileData) return false
+    const normalizedCompanyCode = companyCode.trim().toUpperCase()
+    const currentCompanyCode = (profileData.companyCode || '').trim().toUpperCase()
+    const hasCompanyChange = Boolean(normalizedCompanyCode) && normalizedCompanyCode !== currentCompanyCode
+    const hasMatchChanges = editedData.matchRefreshPreference !== profileData.matchRefreshPreference
+      || editedData.preferredMatchDay !== profileData.preferredMatchDay
+      || editedData.matchNotificationPreference !== profileData.matchNotificationPreference
+      || editedData.timezone !== profileData.timezone
+    const hasVisibilityChange = editedData.leaderboardVisibility !== profileData.leaderboardVisibility
+    return hasCompanyChange || hasMatchChanges || hasVisibilityChange
+  }, [companyCode, editedData, profileData])
 
   const buildProfileFromDoc = useCallback(
     (docData: Record<string, unknown>): ProfileData => ({
@@ -700,6 +723,49 @@ export const ProfilePage: React.FC = () => {
     }
   }
 
+  const handleSaveAccountSettings = async () => {
+    if (!editedData || !profileData) return
+    setAccountSettingsSaving(true)
+    const normalizedCompanyCode = companyCode.trim().toUpperCase()
+    const currentCompanyCode = (profileData.companyCode || '').trim().toUpperCase()
+
+    try {
+      const tasks: Array<Promise<void>> = [
+        handleSaveMatchPreferences(),
+        handleSaveVisibilityPreference(),
+      ]
+
+      if (normalizedCompanyCode && normalizedCompanyCode !== currentCompanyCode) {
+        tasks.push(handleCompanyCodeSave())
+      }
+
+      await Promise.all(tasks)
+    } finally {
+      setAccountSettingsSaving(false)
+    }
+  }
+
+  const handleCopyAccountId = async () => {
+    if (!profileData?.id) return
+    try {
+      await navigator.clipboard.writeText(profileData.id)
+      toast({
+        title: 'Account ID copied',
+        description: 'Share this with support if they ask for it.',
+        status: 'success',
+        duration: 3000,
+      })
+    } catch (err) {
+      console.error(err)
+      toast({
+        title: 'Unable to copy ID',
+        description: 'Please try again.',
+        status: 'error',
+        duration: 3000,
+      })
+    }
+  }
+
   const handleUpgrade = () => {
     navigate('/upgrade')
   }
@@ -1032,46 +1098,6 @@ export const ProfilePage: React.FC = () => {
               {/* Right Column */}
               <GridItem>
                 <VStack spacing={6}>
-                  {/* Account Status Card */}
-                  <Card
-                    borderColor={profileData.membershipStatus === 'paid' ? 'green.200' : 'brand.border'}
-                    bg={profileData.membershipStatus === 'paid' ? 'green.50' : 'white'}
-                    boxShadow="card"
-                    w="full"
-                  >
-                    <CardBody py={4}>
-                      <HStack spacing={3} justify="space-between">
-                        <HStack spacing={3}>
-                          <Center
-                            w="40px"
-                            h="40px"
-                            rounded="lg"
-                            bg={profileData.membershipStatus === 'paid' ? 'green.100' : 'gray.100'}
-                          >
-                            <Icon
-                              as={profileData.membershipStatus === 'paid' ? CheckCircle : Lock}
-                              color={profileData.membershipStatus === 'paid' ? 'green.600' : 'gray.500'}
-                              size={20}
-                            />
-                          </Center>
-                          <Box>
-                            <Text fontWeight="semibold" fontSize="sm">
-                              {profileData.membershipStatus === 'paid' ? 'Paid Member' : 'Free Account'}
-                            </Text>
-                            <Text fontSize="xs" color="brand.subtleText">
-                              {profileData.membershipStatus === 'paid' ? 'Full access to all features' : 'Limited access'}
-                            </Text>
-                          </Box>
-                        </HStack>
-                        {profileData.membershipStatus === 'free' && (
-                          <Button size="xs" variant="secondary" onClick={handleUpgrade}>
-                            Upgrade
-                          </Button>
-                        )}
-                      </HStack>
-                    </CardBody>
-                  </Card>
-
                   {/* Personality & Values Card */}
                   <Card borderColor="brand.border" boxShadow="card" w="full">
                     <CardHeader pb={2}>
@@ -1289,158 +1315,399 @@ export const ProfilePage: React.FC = () => {
             <Grid templateColumns={{ base: '1fr', lg: '2fr 1fr' }} gap={6}>
               <GridItem>
                 <VStack spacing={6}>
-                  <Card borderColor="brand.border">
+                  <Card borderColor="brand.border" boxShadow="card">
                     <CardHeader>
-                      <Flex justify="space-between" align="center">
-                        <Box>
-                          <Text fontWeight="semibold">Email Settings</Text>
-                          <Text fontSize="sm" color="brand.subtleText">
-                            Keep your contact email up to date
-                          </Text>
-                        </Box>
-                        <Button size="sm" variant="secondary" onClick={() => setEmailFormOpen((prev) => !prev)}>
-                          {emailFormOpen ? 'Close' : 'Change Email'}
-                        </Button>
-                      </Flex>
+                      <Box>
+                        <Text fontWeight="semibold" fontSize="lg">Account &amp; Security</Text>
+                        <Text fontSize="sm" color="brand.subtleText">
+                          Manage your login details and account status in one place.
+                        </Text>
+                      </Box>
                     </CardHeader>
                     <CardBody>
-                      {!emailFormOpen ? (
-                        <HStack spacing={2} color="brand.text">
-                          <Icon as={MailIcon} />
-                          <Text>{profileData.email}</Text>
-                        </HStack>
-                      ) : (
-                        <VStack align="stretch" spacing={4} as="form" onSubmit={handleChangeEmail}>
-                          <FormControl>
-                            <FormLabel>Current Email</FormLabel>
-                            <Box bg="brand.primaryMuted" p={3} rounded="lg" display="flex" alignItems="center" gap={2}>
-                              <Icon as={MailIcon} color="brand.primary" />
+                      <VStack align="stretch" spacing={6}>
+                        <Box>
+                          <Flex justify="space-between" align={{ base: 'flex-start', md: 'center' }} gap={4}>
+                            <Box>
+                              <Text fontWeight="semibold">Email</Text>
+                              <Text fontSize="sm" color="brand.subtleText">
+                                Keep your contact email up to date.
+                              </Text>
+                            </Box>
+                            <Button size="sm" variant="secondary" onClick={() => setEmailFormOpen((prev) => !prev)}>
+                              {emailFormOpen ? 'Close' : 'Change Email'}
+                            </Button>
+                          </Flex>
+                          {!emailFormOpen ? (
+                            <HStack spacing={2} color="brand.text" mt={3}>
+                              <Icon as={MailIcon} />
                               <Text>{profileData.email}</Text>
-                            </Box>
-                          </FormControl>
-                          <FormControl isRequired>
-                            <FormLabel>New Email Address</FormLabel>
-                            <Input
-                              type="email"
-                              value={emailForm.newEmail}
-                              onChange={(e) => setEmailForm({ ...emailForm, newEmail: e.target.value })}
-                            />
-                          </FormControl>
-                          <FormControl isRequired>
-                            <FormLabel>Current Password</FormLabel>
-                            <Input
-                              type="password"
-                              value={emailForm.password}
-                              onChange={(e) => setEmailForm({ ...emailForm, password: e.target.value })}
-                            />
-                          </FormControl>
-                          {emailMessage && (
-                            <Box
-                              bg={emailMessage.type === 'success' ? 'green.50' : 'red.50'}
-                              border="1px solid"
-                              borderColor={emailMessage.type === 'success' ? 'green.100' : 'red.100'}
-                              p={3}
-                              rounded="md"
-                            >
-                              <HStack spacing={2} color={emailMessage.type === 'success' ? 'green.600' : 'red.600'}>
-                                <Icon as={emailMessage.type === 'success' ? Check : AlertCircle} />
-                                <Text>{emailMessage.text}</Text>
+                            </HStack>
+                          ) : (
+                            <VStack align="stretch" spacing={4} as="form" onSubmit={handleChangeEmail} mt={4}>
+                              <FormControl>
+                                <FormLabel>Current Email</FormLabel>
+                                <Box bg="brand.primaryMuted" p={3} rounded="lg" display="flex" alignItems="center" gap={2}>
+                                  <Icon as={MailIcon} color="brand.primary" />
+                                  <Text>{profileData.email}</Text>
+                                </Box>
+                              </FormControl>
+                              <FormControl isRequired>
+                                <FormLabel>New Email Address</FormLabel>
+                                <Input
+                                  type="email"
+                                  value={emailForm.newEmail}
+                                  onChange={(e) => setEmailForm({ ...emailForm, newEmail: e.target.value })}
+                                />
+                              </FormControl>
+                              <FormControl isRequired>
+                                <FormLabel>Current Password</FormLabel>
+                                <Input
+                                  type="password"
+                                  value={emailForm.password}
+                                  onChange={(e) => setEmailForm({ ...emailForm, password: e.target.value })}
+                                />
+                              </FormControl>
+                              {emailMessage && (
+                                <Box
+                                  bg={emailMessage.type === 'success' ? 'green.50' : 'red.50'}
+                                  border="1px solid"
+                                  borderColor={emailMessage.type === 'success' ? 'green.100' : 'red.100'}
+                                  p={3}
+                                  rounded="md"
+                                >
+                                  <HStack spacing={2} color={emailMessage.type === 'success' ? 'green.600' : 'red.600'}>
+                                    <Icon as={emailMessage.type === 'success' ? Check : AlertCircle} />
+                                    <Text>{emailMessage.text}</Text>
+                                  </HStack>
+                                </Box>
+                              )}
+                              <HStack spacing={2}>
+                                <Button variant="ghost" onClick={() => setEmailFormOpen(false)}>
+                                  Cancel
+                                </Button>
+                                <Button type="submit">Update Email</Button>
                               </HStack>
-                            </Box>
+                            </VStack>
                           )}
-                          <HStack spacing={2}>
-                            <Button variant="ghost" onClick={() => setEmailFormOpen(false)}>
-                              Cancel
+                        </Box>
+
+                        <Divider borderColor="brand.border" />
+
+                        <Box>
+                          <Flex justify="space-between" align={{ base: 'flex-start', md: 'center' }} gap={4}>
+                            <Box>
+                              <Text fontWeight="semibold">Password</Text>
+                              <Text fontSize="sm" color="brand.subtleText">
+                                Update your password regularly for better security.
+                              </Text>
+                            </Box>
+                            <Button size="sm" variant="secondary" onClick={() => setPasswordFormOpen((prev) => !prev)}>
+                              {passwordFormOpen ? 'Close' : 'Change Password'}
                             </Button>
-                            <Button type="submit">Update Email</Button>
+                          </Flex>
+                          {!passwordFormOpen ? (
+                            <HStack spacing={2} color="brand.text" mt={3}>
+                              <Icon as={Key} />
+                              <Text>••••••••</Text>
+                            </HStack>
+                          ) : (
+                            <VStack align="stretch" spacing={4} as="form" onSubmit={handleChangePassword} mt={4}>
+                              <FormControl isRequired>
+                                <FormLabel>Current Password</FormLabel>
+                                <Input
+                                  type="password"
+                                  value={passwordForm.currentPassword}
+                                  onChange={(e) => setPasswordForm({ ...passwordForm, currentPassword: e.target.value })}
+                                />
+                              </FormControl>
+                              <FormControl isRequired>
+                                <FormLabel>New Password</FormLabel>
+                                <Input
+                                  type="password"
+                                  value={passwordForm.newPassword}
+                                  onChange={(e) => setPasswordForm({ ...passwordForm, newPassword: e.target.value })}
+                                />
+                                <FormHelperText>Password must be at least 8 characters</FormHelperText>
+                              </FormControl>
+                              <FormControl isRequired>
+                                <FormLabel>Confirm New Password</FormLabel>
+                                <Input
+                                  type="password"
+                                  value={passwordForm.confirmPassword}
+                                  onChange={(e) => setPasswordForm({ ...passwordForm, confirmPassword: e.target.value })}
+                                />
+                              </FormControl>
+                              {passwordMessage && (
+                                <Box
+                                  bg={passwordMessage.type === 'success' ? 'green.50' : 'red.50'}
+                                  border="1px solid"
+                                  borderColor={passwordMessage.type === 'success' ? 'green.100' : 'red.100'}
+                                  p={3}
+                                  rounded="md"
+                                >
+                                  <HStack spacing={2} color={passwordMessage.type === 'success' ? 'green.600' : 'red.600'}>
+                                    <Icon as={passwordMessage.type === 'success' ? Check : AlertCircle} />
+                                    <Text>{passwordMessage.text}</Text>
+                                  </HStack>
+                                </Box>
+                              )}
+                              <HStack spacing={2}>
+                                <Button variant="ghost" onClick={() => setPasswordFormOpen(false)}>
+                                  Cancel
+                                </Button>
+                                <Button type="submit">Update Password</Button>
+                              </HStack>
+                            </VStack>
+                          )}
+                        </Box>
+
+                        <Divider borderColor="brand.border" />
+
+                        <Box>
+                          <Text fontWeight="semibold">Account Security</Text>
+                          <Text fontSize="sm" color="brand.subtleText" mt={1}>
+                            For support, you can share your account ID if requested.
+                          </Text>
+                          <HStack spacing={3} mt={3} align="center">
+                            <Icon as={Shield} color="brand.subtleText" />
+                            <Box>
+                              <Text fontWeight="medium">Account Status</Text>
+                              <Badge colorScheme={statusColorMap[profileData.accountStatus] || 'gray'}>
+                                {profileData.accountStatus === 'active' ? 'Active' : profileData.accountStatus === 'inactive' ? 'Inactive' : 'Pending'}
+                              </Badge>
+                            </Box>
                           </HStack>
-                        </VStack>
-                      )}
+                          <HStack spacing={3} mt={4} align="center">
+                            <Text fontSize="sm" color="brand.subtleText">
+                              Account ID (support only)
+                            </Text>
+                            <Button variant="link" size="sm" color="brand.primary" onClick={handleCopyAccountId}>
+                              Copy ID
+                            </Button>
+                          </HStack>
+                        </Box>
+                      </VStack>
                     </CardBody>
                   </Card>
 
-                  <Card borderColor="brand.border">
+                  <Card borderColor="brand.border" boxShadow="card">
                     <CardHeader>
-                      <Flex justify="space-between" align="center">
-                        <Box>
-                          <Text fontWeight="semibold">Password Settings</Text>
-                          <Text fontSize="sm" color="brand.subtleText">
-                            Keep your account secure
-                          </Text>
-                        </Box>
-                        <Button size="sm" variant="secondary" onClick={() => setPasswordFormOpen((prev) => !prev)}>
-                          {passwordFormOpen ? 'Close' : 'Change Password'}
-                        </Button>
-                      </Flex>
+                      <Text fontWeight="semibold" fontSize="lg">Preferences</Text>
+                      <Text fontSize="sm" color="brand.subtleText" mt={1}>
+                        Manage peer matching and leaderboard visibility in one place.
+                      </Text>
                     </CardHeader>
                     <CardBody>
-                      {!passwordFormOpen ? (
-                        <HStack spacing={2} color="brand.text">
-                          <Icon as={Key} />
-                          <Text>••••••••</Text>
-                        </HStack>
-                      ) : (
-                        <VStack align="stretch" spacing={4} as="form" onSubmit={handleChangePassword}>
-                          <FormControl isRequired>
-                            <FormLabel>Current Password</FormLabel>
-                            <Input
-                              type="password"
-                              value={passwordForm.currentPassword}
-                              onChange={(e) => setPasswordForm({ ...passwordForm, currentPassword: e.target.value })}
-                            />
-                          </FormControl>
-                          <FormControl isRequired>
-                            <FormLabel>New Password</FormLabel>
-                            <Input
-                              type="password"
-                              value={passwordForm.newPassword}
-                              onChange={(e) => setPasswordForm({ ...passwordForm, newPassword: e.target.value })}
-                            />
-                            <FormHelperText>Password must be at least 8 characters</FormHelperText>
-                          </FormControl>
-                          <FormControl isRequired>
-                            <FormLabel>Confirm New Password</FormLabel>
-                            <Input
-                              type="password"
-                              value={passwordForm.confirmPassword}
-                              onChange={(e) => setPasswordForm({ ...passwordForm, confirmPassword: e.target.value })}
-                            />
-                          </FormControl>
-                          {passwordMessage && (
-                            <Box
-                              bg={passwordMessage.type === 'success' ? 'green.50' : 'red.50'}
-                              border="1px solid"
-                              borderColor={passwordMessage.type === 'success' ? 'green.100' : 'red.100'}
-                              p={3}
-                              rounded="md"
-                            >
-                              <HStack spacing={2} color={passwordMessage.type === 'success' ? 'green.600' : 'red.600'}>
-                                <Icon as={passwordMessage.type === 'success' ? Check : AlertCircle} />
-                                <Text>{passwordMessage.text}</Text>
-                              </HStack>
-                            </Box>
-                          )}
-                          <HStack spacing={2}>
-                            <Button variant="ghost" onClick={() => setPasswordFormOpen(false)}>
-                              Cancel
-                            </Button>
-                            <Button type="submit">Update Password</Button>
-                          </HStack>
-                        </VStack>
-                      )}
-                    </CardBody>
-                  </Card>
-
-                  <Card borderColor="brand.border">
-                    <CardHeader>
-                      <Flex justify="space-between" align="center">
+                      <VStack align="stretch" spacing={6}>
                         <Box>
-                          <Text fontWeight="semibold">Company Code</Text>
-                          <Text fontSize="sm" color="brand.subtleText">
-                            Add or update your company code to unlock corporate perks.
+                          <Text fontWeight="semibold">Peer Matching</Text>
+                          <Text fontSize="sm" color="brand.subtleText" mt={1}>
+                            Control how often you receive a new peer match and how we notify you.
                           </Text>
                         </Box>
-                      </Flex>
+
+                        <FormControl display="flex" alignItems="center" justifyContent="space-between">
+                          <Box>
+                            <FormLabel mb={1}>Automatic matching</FormLabel>
+                            <Text fontSize="sm" color="brand.subtleText">
+                              Disable if you only want to request matches manually.
+                            </Text>
+                          </Box>
+                          <Switch
+                            isChecked={editedData.matchRefreshPreference !== 'disabled'}
+                            onChange={(event) =>
+                              handleInputChange(
+                                'matchRefreshPreference',
+                                event.target.checked ? 'weekly' : 'disabled'
+                              )
+                            }
+                          />
+                        </FormControl>
+
+                        <Grid templateColumns={{ base: '1fr', md: '1fr 1fr' }} gap={4}>
+                          <FormControl>
+                            <HStack justify="space-between" align="center">
+                              <FormLabel mb={0}>Refresh frequency</FormLabel>
+                              <Select
+                                maxW="200px"
+                                value={editedData.matchRefreshPreference || 'weekly'}
+                                onChange={(event) =>
+                                  handleInputChange('matchRefreshPreference', event.target.value as ProfileData['matchRefreshPreference'])
+                                }
+                              >
+                                {matchRefreshOptions.map((option) => (
+                                  <option key={option.value} value={option.value}>
+                                    {option.label}
+                                  </option>
+                                ))}
+                              </Select>
+                            </HStack>
+                          </FormControl>
+
+                          <FormControl isDisabled={!['weekly', 'biweekly'].includes(editedData.matchRefreshPreference || '')}>
+                            <HStack justify="space-between" align="center">
+                              <FormLabel mb={0}>Preferred match day</FormLabel>
+                              <Select
+                                maxW="200px"
+                                value={editedData.preferredMatchDay ?? 1}
+                                onChange={(event) => handleInputChange('preferredMatchDay', Number(event.target.value))}
+                              >
+                                {weekdayOptions.map((option) => (
+                                  <option key={option.value} value={option.value}>
+                                    {option.label}
+                                  </option>
+                                ))}
+                              </Select>
+                            </HStack>
+                          </FormControl>
+                        </Grid>
+
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          alignSelf="flex-start"
+                          onClick={() => setShowAdvancedMatching((prev) => !prev)}
+                        >
+                          {showAdvancedMatching ? 'Hide advanced settings' : 'Advanced settings'}
+                        </Button>
+
+                        <Collapse in={showAdvancedMatching} animateOpacity>
+                          <VStack align="stretch" spacing={4}>
+                            <FormControl>
+                              <HStack justify="space-between" align="center">
+                                <FormLabel mb={0}>Notification preference</FormLabel>
+                                <Select
+                                  maxW="220px"
+                                  value={editedData.matchNotificationPreference || 'both'}
+                                  onChange={(event) =>
+                                    handleInputChange('matchNotificationPreference', event.target.value as ProfileData['matchNotificationPreference'])
+                                  }
+                                >
+                                  {matchNotificationOptions.map((option) => (
+                                    <option key={option.value} value={option.value}>
+                                      {option.label}
+                                    </option>
+                                  ))}
+                                </Select>
+                              </HStack>
+                            </FormControl>
+
+                            <FormControl>
+                              <HStack justify="space-between" align="center">
+                                <FormLabel mb={0}>Match timezone</FormLabel>
+                                <Select
+                                  maxW="220px"
+                                  value={editedData.timezone || ''}
+                                  onChange={(event) => handleInputChange('timezone', event.target.value)}
+                                >
+                                  {timezoneOptions.map((zone) => (
+                                    <option key={zone} value={zone}>
+                                      {zone}
+                                    </option>
+                                  ))}
+                                </Select>
+                              </HStack>
+                              <FormHelperText>
+                                Match timing is calculated using this timezone.
+                              </FormHelperText>
+                            </FormControl>
+                          </VStack>
+                        </Collapse>
+
+                        {matchPreferencesMessage && (
+                          <Box
+                            bg={matchPreferencesMessage.type === 'success' ? 'green.50' : 'red.50'}
+                            border="1px solid"
+                            borderColor={matchPreferencesMessage.type === 'success' ? 'green.100' : 'red.100'}
+                            p={3}
+                            rounded="md"
+                          >
+                            <HStack spacing={2} color={matchPreferencesMessage.type === 'success' ? 'green.600' : 'red.600'}>
+                              <Icon as={matchPreferencesMessage.type === 'success' ? Check : AlertCircle} />
+                              <Text>{matchPreferencesMessage.text}</Text>
+                            </HStack>
+                          </Box>
+                        )}
+
+                        <Divider borderColor="brand.border" />
+
+                        <Box>
+                          <Text fontWeight="semibold">Leaderboard Privacy</Text>
+                          <Text fontSize="sm" color="brand.subtleText" mt={1}>
+                            Decide who can view your ranking and recent activity on leaderboards.
+                          </Text>
+                        </Box>
+
+                        <RadioGroup
+                          value={editedData.leaderboardVisibility}
+                          onChange={(value) => handleInputChange('leaderboardVisibility', value as ProfileData['leaderboardVisibility'])}
+                        >
+                          <VStack align="stretch" spacing={4}>
+                            {[
+                              {
+                                value: 'public',
+                                title: 'Public',
+                                description: 'Visible on company and village leaderboards across the community.',
+                              },
+                              {
+                                value: 'company',
+                                title: 'Company Only',
+                                description: 'Only teammates and cohort members can see your ranking and activity.',
+                              },
+                              {
+                                value: 'private',
+                                title: 'Hidden',
+                                description: 'Keep your ranking private while you continue to earn points.',
+                              },
+                            ].map((option) => (
+                              <Box
+                                key={option.value}
+                                border="1px solid"
+                                borderColor={editedData.leaderboardVisibility === option.value ? 'brand.primary' : 'brand.border'}
+                                bg={editedData.leaderboardVisibility === option.value ? 'purple.50' : 'white'}
+                                rounded="lg"
+                                p={5}
+                              >
+                                <Radio value={option.value} colorScheme="purple">
+                                  <Text fontWeight="semibold">{option.title}</Text>
+                                  <Text fontSize="sm" color="brand.subtleText" mt={1}>
+                                    {option.description}
+                                  </Text>
+                                </Radio>
+                              </Box>
+                            ))}
+                          </VStack>
+                        </RadioGroup>
+
+                        {visibilityMessage && (
+                          <Box
+                            bg={visibilityMessage.type === 'success' ? 'green.50' : 'red.50'}
+                            border="1px solid"
+                            borderColor={visibilityMessage.type === 'success' ? 'green.100' : 'red.100'}
+                            p={3}
+                            rounded="md"
+                          >
+                            <HStack spacing={2} color={visibilityMessage.type === 'success' ? 'green.600' : 'red.600'}>
+                              <Icon as={visibilityMessage.type === 'success' ? Check : AlertCircle} />
+                              <Text>{visibilityMessage.text}</Text>
+                            </HStack>
+                          </Box>
+                        )}
+                      </VStack>
+                    </CardBody>
+                  </Card>
+                </VStack>
+              </GridItem>
+
+              <GridItem>
+                <VStack spacing={6}>
+                  <Card borderColor="brand.border" boxShadow="card">
+                    <CardHeader>
+                      <Text fontWeight="semibold" fontSize="lg">Organization</Text>
+                      <Text fontSize="sm" color="brand.subtleText" mt={1}>
+                        Company code and affiliation status.
+                      </Text>
                     </CardHeader>
                     <CardBody>
                       <VStack align="stretch" spacing={4}>
@@ -1454,12 +1721,18 @@ export const ProfilePage: React.FC = () => {
                           </Text>
                         </Box>
                         <FormControl>
-                          <FormLabel>Company Code</FormLabel>
-                          <Input
-                            value={companyCode}
-                            onChange={(event) => setCompanyCode(event.target.value.toUpperCase().slice(0, 6))}
-                            placeholder="Enter 6-character code"
-                          />
+                          <HStack justify="space-between" align="center">
+                            <FormLabel mb={0}>Company Code</FormLabel>
+                            <Input
+                              maxW="200px"
+                              value={companyCode}
+                              onChange={(event) => setCompanyCode(event.target.value.toUpperCase().slice(0, 6))}
+                              placeholder="6-character code"
+                            />
+                          </HStack>
+                          <FormHelperText>
+                            Use Save Changes below to apply updates.
+                          </FormHelperText>
                         </FormControl>
                         {companyCodeValid && companyOrganization && !companyCodeChecking && (
                           <Box bg="green.50" border="1px solid" borderColor="green.100" p={3} rounded="md">
@@ -1482,388 +1755,106 @@ export const ProfilePage: React.FC = () => {
                             Checking company code...
                           </Text>
                         )}
-                        <Button
-                          onClick={handleCompanyCodeSave}
-                          isLoading={companyCodeSaving}
-                          loadingText="Saving..."
-                          isDisabled={!companyCode.trim()}
-                        >
-                          Save Company Code
-                        </Button>
-                      </VStack>
-                    </CardBody>
-                  </Card>
-
-                  <Card borderColor="brand.border">
-                    <CardHeader>
-                      <Text fontWeight="semibold">Peer Matching Preferences</Text>
-                      <Text fontSize="sm" color="brand.subtleText" mt={1}>
-                        Control how often you receive a new peer match and how we notify you.
-                      </Text>
-                    </CardHeader>
-                    <CardBody>
-                      <VStack align="stretch" spacing={4}>
-                        <FormControl display="flex" alignItems="center" justifyContent="space-between">
-                          <Box>
-                            <FormLabel mb={1}>Automatic matching</FormLabel>
-                            <Text fontSize="sm" color="brand.subtleText">
-                              Disable if you only want to request matches manually.
-                            </Text>
-                          </Box>
-                          <Switch
-                            isChecked={editedData.matchRefreshPreference !== 'disabled'}
-                            onChange={(event) =>
-                              handleInputChange(
-                                'matchRefreshPreference',
-                                event.target.checked ? 'weekly' : 'disabled'
-                              )
-                            }
-                          />
-                        </FormControl>
-
-                        <FormControl>
-                          <FormLabel>Refresh frequency</FormLabel>
-                          <Select
-                            value={editedData.matchRefreshPreference || 'weekly'}
-                            onChange={(event) =>
-                              handleInputChange('matchRefreshPreference', event.target.value as ProfileData['matchRefreshPreference'])
-                            }
-                          >
-                            {matchRefreshOptions.map((option) => (
-                              <option key={option.value} value={option.value}>
-                                {option.label}
-                              </option>
-                            ))}
-                          </Select>
-                        </FormControl>
-
-                        <FormControl isDisabled={!['weekly', 'biweekly'].includes(editedData.matchRefreshPreference || '')}>
-                          <FormLabel>Preferred match day</FormLabel>
-                          <Select
-                            value={editedData.preferredMatchDay ?? 1}
-                            onChange={(event) => handleInputChange('preferredMatchDay', Number(event.target.value))}
-                          >
-                            {weekdayOptions.map((option) => (
-                              <option key={option.value} value={option.value}>
-                                {option.label}
-                              </option>
-                            ))}
-                          </Select>
-                        </FormControl>
-
-                        <FormControl>
-                          <FormLabel>Notification preference</FormLabel>
-                          <Select
-                            value={editedData.matchNotificationPreference || 'both'}
-                            onChange={(event) =>
-                              handleInputChange('matchNotificationPreference', event.target.value as ProfileData['matchNotificationPreference'])
-                            }
-                          >
-                            {matchNotificationOptions.map((option) => (
-                              <option key={option.value} value={option.value}>
-                                {option.label}
-                              </option>
-                            ))}
-                          </Select>
-                        </FormControl>
-
-                        <FormControl>
-                          <FormLabel>Match timezone</FormLabel>
-                          <Select
-                            value={editedData.timezone || ''}
-                            onChange={(event) => handleInputChange('timezone', event.target.value)}
-                          >
-                            {timezoneOptions.map((zone) => (
-                              <option key={zone} value={zone}>
-                                {zone}
-                              </option>
-                            ))}
-                          </Select>
-                          <FormHelperText>
-                            Match timing is calculated using this timezone.
-                          </FormHelperText>
-                        </FormControl>
-
-                        <Button onClick={handleSaveMatchPreferences} isLoading={matchPreferencesSaving} loadingText="Saving...">
-                          Save Peer Matching Preferences
-                        </Button>
-
-                        {matchPreferencesMessage && (
-                          <Box
-                            bg={matchPreferencesMessage.type === 'success' ? 'green.50' : 'red.50'}
-                            border="1px solid"
-                            borderColor={matchPreferencesMessage.type === 'success' ? 'green.100' : 'red.100'}
-                            p={3}
-                            rounded="md"
-                          >
-                            <HStack spacing={2} color={matchPreferencesMessage.type === 'success' ? 'green.600' : 'red.600'}>
-                              <Icon as={matchPreferencesMessage.type === 'success' ? Check : AlertCircle} />
-                              <Text>{matchPreferencesMessage.text}</Text>
-                            </HStack>
-                          </Box>
+                        {companyCodeSaving && (
+                          <Text fontSize="sm" color="brand.subtleText">
+                            Saving company code...
+                          </Text>
                         )}
                       </VStack>
                     </CardBody>
                   </Card>
-
-                  <Card borderColor="brand.border">
-                    <CardHeader>
-                      <Text fontWeight="semibold">Leaderboard Privacy</Text>
-                      <Text fontSize="sm" color="brand.subtleText" mt={1}>
-                        Decide who can view your ranking and recent activity on public leaderboards.
-                      </Text>
-                    </CardHeader>
-                    <CardBody>
-                      <RadioGroup
-                        value={editedData.leaderboardVisibility}
-                        onChange={(value) => handleInputChange('leaderboardVisibility', value as ProfileData['leaderboardVisibility'])}
-                      >
-                        <VStack align="stretch" spacing={3}>
-                          <Box
-                            border="2px solid"
-                            borderColor={editedData.leaderboardVisibility === 'public' ? 'brand.primary' : 'brand.border'}
-                            rounded="lg"
-                            p={4}
-                          >
-                            <Radio value="public" colorScheme="purple">
-                              <Text fontWeight="medium">Public</Text>
-                              <Text fontSize="sm" color="brand.subtleText">
-                                Visible on company and village leaderboards across the community.
-                              </Text>
-                            </Radio>
-                          </Box>
-                          <Box
-                            border="2px solid"
-                            borderColor={editedData.leaderboardVisibility === 'company' ? 'brand.primary' : 'brand.border'}
-                            rounded="lg"
-                            p={4}
-                          >
-                            <Radio value="company" colorScheme="purple">
-                              <Text fontWeight="medium">Company Only</Text>
-                              <Text fontSize="sm" color="brand.subtleText">
-                                Only teammates and cohort members can see your ranking and activity.
-                              </Text>
-                            </Radio>
-                          </Box>
-                          <Box
-                            border="2px solid"
-                            borderColor={editedData.leaderboardVisibility === 'private' ? 'brand.primary' : 'brand.border'}
-                            rounded="lg"
-                            p={4}
-                          >
-                            <Radio value="private" colorScheme="purple">
-                              <Text fontWeight="medium">Hidden</Text>
-                              <Text fontSize="sm" color="brand.subtleText">
-                                Keep your ranking private while you continue to earn points.
-                              </Text>
-                            </Radio>
-                          </Box>
-                        </VStack>
-                      </RadioGroup>
-                      <Button mt={4} onClick={handleSaveVisibilityPreference} isLoading={visibilitySaving} loadingText="Saving...">
-                        Save Visibility Preference
-                      </Button>
-                      {visibilityMessage && (
-                        <Box
-                          mt={3}
-                          bg={visibilityMessage.type === 'success' ? 'green.50' : 'red.50'}
-                          border="1px solid"
-                          borderColor={visibilityMessage.type === 'success' ? 'green.100' : 'red.100'}
-                          p={3}
-                          rounded="md"
-                        >
-                          <HStack spacing={2} color={visibilityMessage.type === 'success' ? 'green.600' : 'red.600'}>
-                            <Icon as={visibilityMessage.type === 'success' ? Check : AlertCircle} />
-                            <Text>{visibilityMessage.text}</Text>
-                          </HStack>
-                        </Box>
-                      )}
-                    </CardBody>
-                  </Card>
-                </VStack>
-              </GridItem>
-
-              <GridItem>
-                <VStack spacing={6}>
-                  <Card borderColor="brand.border">
-                    <CardHeader>
-                      <Text fontWeight="semibold">Account Security</Text>
-                    </CardHeader>
-                    <CardBody>
-                      <VStack align="stretch" spacing={4}>
-                        <HStack spacing={3}>
-                          <Icon as={Settings} />
-                          <Box>
-                            <Text fontWeight="medium">Last Login</Text>
-                            <Text color="brand.subtleText" fontSize="sm">
-                              {profile?.lastActiveAt ? new Date(profile.lastActiveAt).toLocaleString() : 'Not available'}
-                            </Text>
-                          </Box>
-                        </HStack>
-                        <Divider />
-                        <HStack spacing={3}>
-                          <Icon as={Shield} />
-                          <Box>
-                            <Text fontWeight="medium">Account Status</Text>
-                            <Badge colorScheme={statusColorMap[profileData.accountStatus] || 'gray'}>
-                              {profileData.accountStatus === 'active' ? 'Active' : profileData.accountStatus === 'inactive' ? 'Inactive' : 'Pending'}
-                            </Badge>
-                          </Box>
-                        </HStack>
-                        <Divider />
-                        <HStack spacing={3}>
-                          <Icon as={Settings} />
-                          <Box>
-                            <Text fontWeight="medium">Account ID</Text>
-                            <Text fontSize="sm" fontFamily="mono" bg="brand.primaryMuted" p={2} rounded="md">
-                              {profileData.id}
-                            </Text>
-                          </Box>
-                        </HStack>
-                      </VStack>
-                    </CardBody>
-                  </Card>
-
                 </VStack>
               </GridItem>
             </Grid>
+
+            <Box position="sticky" bottom={0} bg="white" pt={4} pb={2} borderTop="1px solid" borderColor="brand.border" mt={6} zIndex={1}>
+              <Flex justify="flex-end">
+                <Button
+                  onClick={handleSaveAccountSettings}
+                  isLoading={accountSettingsSaving || matchPreferencesSaving || visibilitySaving || companyCodeSaving}
+                  loadingText="Saving..."
+                  isDisabled={!hasAccountSettingsChanges}
+                >
+                  Save Changes
+                </Button>
+              </Flex>
+            </Box>
           </TabPanel>
 
           <TabPanel px={0}>
-            <Grid templateColumns={{ base: '1fr', lg: '2fr 1fr' }} gap={6}>
-              <GridItem>
-                <VStack spacing={6}>
-                  <Card borderColor="brand.border">
-                    <CardBody>
-                      <Box
-                        border="1px solid"
-                        borderColor={profileData.membershipStatus === 'paid' ? 'green.300' : 'orange.200'}
-                        bg={profileData.membershipStatus === 'paid' ? 'green.50' : 'orange.50'}
-                        p={5}
-                        rounded="lg"
-                      >
-                        <Flex justify="space-between" align="center" mb={3}>
-                          <Box>
-                            <Text fontWeight="bold">{membershipCopy[profileData.membershipStatus].title}</Text>
-                            <Text color="brand.subtleText">
-                              {membershipCopy[profileData.membershipStatus].description}
-                            </Text>
-                          </Box>
-                          <Tag colorScheme={profileData.membershipStatus === 'paid' ? 'green' : 'orange'}>
-                            {membershipCopy[profileData.membershipStatus].badge}
-                          </Tag>
-                        </Flex>
+            <Box maxW="700px" mx="auto">
+              <HStack spacing={2} fontSize="sm" color="brand.subtleText" mb={4}>
+                <Button variant="link" size="sm" onClick={() => navigate('/app/leaderboard')}>
+                  Dashboard
+                </Button>
+                <Text>/</Text>
+                <Text color="brand.text">Membership</Text>
+              </HStack>
+            </Box>
 
-                        {profileData.membershipStatus === 'paid' ? (
-                          <VStack align="stretch" spacing={2}>
-                            <Box>
-                              <Text fontWeight="semibold">Company Code</Text>
-                              <Text fontFamily="mono" bg="white" border="1px solid" borderColor="brand.border" p={2} rounded="md">
-                                {profileData.companyCode || 'N/A'}
-                              </Text>
-                            </Box>
-                            <Text>Organization: {profileData.companyName || 'Not assigned'}</Text>
-                            <Text>Village: {profileData.villageName || 'Not assigned'}</Text>
-                            {profileData.clusterName && <Text>Cluster: {profileData.clusterName}</Text>}
-                          </VStack>
-                        ) : (
-                          <Button mt={4} leftIcon={<Lock size={16} />} onClick={handleUpgrade}>
-                            Upgrade to Full Access
-                          </Button>
-                        )}
-                      </Box>
-                    </CardBody>
-                  </Card>
+            <VStack spacing={6} align="stretch" maxW="700px" mx="auto">
+              <Card borderColor="brand.border" boxShadow="card">
+                <CardBody>
+                  <Flex justify="space-between" align={{ base: 'flex-start', md: 'center' }} gap={4}>
+                    <Box>
+                      <Text fontWeight="bold" fontSize="lg">{membershipCopy[profileData.membershipStatus].title}</Text>
+                      <Text color="brand.subtleText" fontSize="sm">
+                        {membershipCopy[profileData.membershipStatus].description}
+                      </Text>
+                    </Box>
+                  </Flex>
+                </CardBody>
+              </Card>
 
-                  <Card borderColor="brand.border">
-                    <CardHeader>
-                      <Text fontWeight="semibold">Feature Comparison</Text>
-                    </CardHeader>
-                    <CardBody>
-                      <Grid templateColumns={{ base: 'repeat(3, 1fr)' }} gap={3} fontWeight="semibold" mb={2}>
-                        <Text>Feature</Text>
-                        <Text textAlign="center">Free</Text>
-                        <Text textAlign="center" bg="brand.primary" color="white" rounded="md" py={1}>
-                          Paid
-                        </Text>
-                      </Grid>
-                      {[{
-                        label: 'Orientation Content',
-                        free: true,
-                        paid: true,
-                      },
-                      { label: 'Points Tracking', free: true, paid: true },
-                      { label: 'Weekly Activities', free: false, paid: true },
-                      { label: 'Learning Clusters', free: false, paid: true },
-                      { label: 'Transformation Partner', free: false, paid: true },
-                      { label: 'Live Sessions', free: false, paid: true },
-                      { label: 'Certification', free: false, paid: true }].map((row) => (
-                        <Grid templateColumns={{ base: 'repeat(3, 1fr)' }} gap={3} alignItems="center" py={2} key={row.label} borderBottom="1px solid" borderColor="brand.border">
-                          <Text fontWeight="medium">{row.label}</Text>
-                          <Center>
-                            {row.free ? <Icon as={Check} color="green.500" /> : <Text color="brand.subtleText">—</Text>}
-                          </Center>
-                          <Center>
-                            {row.paid ? <Icon as={Check} color="green.500" /> : <Text color="brand.subtleText">—</Text>}
-                          </Center>
-                        </Grid>
-                      ))}
-                      {profileData.membershipStatus === 'free' && (
-                        <Center mt={4}>
-                          <Button leftIcon={<Lock size={16} />} onClick={handleUpgrade}>
-                            Upgrade to Full Access
-                          </Button>
-                        </Center>
-                      )}
-                    </CardBody>
-                  </Card>
-
-                  <PaymentHistory />
-
+              <Card borderColor="brand.border" boxShadow="card">
+                <CardHeader>
+                  <Text fontWeight="semibold" fontSize="lg">Feature Comparison</Text>
+                </CardHeader>
+                <CardBody>
+                  <Grid templateColumns={{ base: '2fr 1fr 1fr' }} gap={3} fontWeight="semibold" mb={2}>
+                    <Text>Feature</Text>
+                    <Text textAlign="center">Free</Text>
+                    <Text textAlign="center" bg="purple.50" color="brand.text" rounded="md" py={1}>
+                      Paid
+                    </Text>
+                  </Grid>
+                  {[{
+                    label: 'Orientation Content',
+                    free: true,
+                    paid: true,
+                  },
+                  { label: 'Points Tracking', free: true, paid: true },
+                  { label: 'Weekly Activities', free: false, paid: true },
+                  { label: 'Learning Clusters', free: false, paid: true },
+                  { label: 'Transformation Partner', free: false, paid: true },
+                  { label: 'Live Sessions', free: false, paid: true },
+                  { label: 'Certification', free: false, paid: true }].map((row) => (
+                    <Grid templateColumns={{ base: '2fr 1fr 1fr' }} gap={3} alignItems="center" py={2} key={row.label} borderBottom="1px solid" borderColor="brand.border">
+                      <Text fontWeight="medium">{row.label}</Text>
+                      <Center>
+                        <Icon as={Check} color={row.free ? 'green.500' : 'gray.300'} />
+                      </Center>
+                      <Center bg="purple.50" rounded="md" py={2}>
+                        <Icon as={Check} color={row.paid ? 'green.500' : 'gray.300'} />
+                      </Center>
+                    </Grid>
+                  ))}
                   {profileData.membershipStatus === 'free' && (
-                    <Card borderColor="brand.border" bg="yellow.50">
-                      <CardHeader>
-                        <Text fontWeight="semibold">How to Upgrade</Text>
-                      </CardHeader>
-                      <CardBody>
-                        <VStack align="stretch" spacing={4}>
-                          {[1, 2, 3].map((step) => (
-                            <HStack align="flex-start" spacing={3} key={step}>
-                              <Center bg="yellow.200" color="yellow.700" rounded="full" w="32px" h="32px" fontWeight="bold">
-                                {step}
-                              </Center>
-                              <Box>
-                                <Text fontWeight="semibold">
-                                  {step === 1 && 'Get a Company Code'}
-                                  {step === 2 && 'Enter Your Code'}
-                                  {step === 3 && 'Enjoy Full Access'}
-                                </Text>
-                                <Text color="brand.subtleText">
-                                  {step === 1 && 'Contact your organization administrator or our sales team to get a valid company code'}
-                                  {step === 2 && 'Go to the upgrade page and enter your company code'}
-                                  {step === 3 && 'Immediately gain access to all premium features and content'}
-                                </Text>
-                              </Box>
-                            </HStack>
-                          ))}
-                          <Button variant="secondary" leftIcon={<CreditCard size={16} />} onClick={handleUpgrade}>
-                            Go to Upgrade Page
-                          </Button>
-                        </VStack>
-                      </CardBody>
-                    </Card>
+                    <Center mt={4}>
+                      <Button leftIcon={<Lock size={16} />} onClick={handleUpgrade}>
+                        Upgrade to Full Access
+                      </Button>
+                    </Center>
                   )}
-                </VStack>
-              </GridItem>
+                </CardBody>
+              </Card>
 
-              <GridItem>
-                <VStack spacing={6}>
-                  <Button variant="ghost" rightIcon={<ChevronRight />} onClick={() => navigate('/app/leaderboard')}>
-                    Back to Dashboard
-                  </Button>
-                </VStack>
-              </GridItem>
-            </Grid>
+              {profileData.membershipStatus === 'paid' ? (
+                <PaymentHistory hasRecords />
+              ) : (
+                <PaymentHistory hasRecords={false} />
+              )}
+            </VStack>
           </TabPanel>
         </TabPanels>
       </Tabs>
