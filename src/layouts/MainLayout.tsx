@@ -29,6 +29,7 @@ import {
   useToast,
 } from '@chakra-ui/react'
 import {
+  LucideIcon,
   Menu as MenuIcon,
   Target,
   Users,
@@ -49,6 +50,21 @@ import { BuildVillageModal } from '@/components/modals/BuildVillageModal'
 import { ConfirmationWelcomeModal } from '@/components/modals/ConfirmationWelcomeModal'
 import { NotificationDropdown } from '@/components/notifications/NotificationDropdown'
 import { isFreeUser as isFreeTierUser } from '@/utils/membership'
+
+interface NavItem {
+  label: string
+  path: string
+  icon: LucideIcon
+  isPrimary?: boolean
+  badge?: {
+    label: string
+  }
+}
+
+interface NavSection {
+  label: string
+  items: NavItem[]
+}
 
 const HEADER_HEIGHT = '72px'
 const sectionLabelStyles = {
@@ -142,7 +158,7 @@ export const MainLayout: React.FC = () => {
     setShowWelcomeModal(false)
   }
 
-  const navigationSections = useMemo(
+  const navigationSections = useMemo<NavSection[]>(
     () => [
       {
         label: 'MY JOURNEY',
@@ -408,7 +424,7 @@ export const MainLayout: React.FC = () => {
       </Flex>
 
       {/* Mobile Drawer */}
-      <Drawer isOpen={isOpen} placement="left" onClose={onClose} motionPreset="slideInLeft">
+      <Drawer isOpen={isOpen} placement="left" onClose={onClose}>
         <DrawerOverlay bg="rgba(0, 0, 0, 0.65)" />
         <DrawerContent bg="brand.deepPlum" color="white">
           <DrawerCloseButton color="whiteAlpha.900" />
