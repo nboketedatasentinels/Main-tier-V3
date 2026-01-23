@@ -1357,7 +1357,12 @@ export const LeadershipBoardPage: React.FC = () => {
                   <Card bg="surface.default" border="1px solid" borderColor="border.subtle">
                     <CardHeader>
                       <Flex justify="space-between" align="center">
-                        <Text fontWeight="bold">Your Challenges</Text>
+                        <Box>
+                          <Text fontWeight="bold">Your Challenges</Text>
+                          <Text fontSize="sm" color="text.secondary" mt={1}>
+                            Earn points by completing your Weekly Checklist. Your progress is reflected here in real-time.
+                          </Text>
+                        </Box>
                         <Button size="sm" onClick={onOpen}>New Challenge</Button>
                       </Flex>
                     </CardHeader>
@@ -1382,15 +1387,19 @@ export const LeadershipBoardPage: React.FC = () => {
                                   </Text>
                                   <Progress mt={2} value={(challenge.yourPoints / Math.max(challenge.yourPoints + challenge.opponentPoints, 1)) * 100} colorScheme="primary" borderRadius="full" />
                                 </Box>
-                                <VStack spacing={1} align="flex-end">
-                                  <Text fontWeight="bold">You {formatNumber(challenge.yourPoints)}</Text>
-                                  <Text color="text.secondary">Opponent {formatNumber(challenge.opponentPoints)}</Text>
+                                <VStack spacing={1} align="flex-end" minW="120px">
+                                  <Text fontWeight="bold" color="brand.primary" fontSize="lg">
+                                    You: {formatNumber(challenge.yourPoints)}
+                                  </Text>
+                                  <Text color="text.secondary" fontSize="sm">
+                                    {challenge.opponentName}: {formatNumber(challenge.opponentPoints)}
+                                  </Text>
                                   <Badge colorScheme={
                                     challenge.status === 'pending'
                                       ? 'orange'
                                       : (challenge.yourPoints >= challenge.opponentPoints ? 'success' : 'red')
                                   }>
-                                    {challenge.status}
+                                    {challenge.status.toUpperCase()}
                                   </Badge>
                                 </VStack>
                               </Flex>
