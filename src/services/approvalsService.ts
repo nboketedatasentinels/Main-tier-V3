@@ -1,5 +1,6 @@
 import { collection, addDoc, serverTimestamp, doc, updateDoc, getDoc } from 'firebase/firestore';
 import { db } from '@/services/firebase';
+import { removeUndefinedFields } from '@/utils/firestore';
 import { ApprovalRecord, ApprovalSource, ApprovalWorkflowType } from '@/types/approvals';
 import { ApprovalType } from '@/config/pointsConfig';
 import { awardChecklistPoints } from './pointsService';
@@ -32,7 +33,7 @@ export async function createApprovalRequest(params: {
   const { userId, type, approvalType, title, source, summary, points, status = 'pending' } = params;
 
   try {
-    const approvalData = {
+    const approvalData = removeUndefinedFields({
       userId,
       type,
       approvalType,
@@ -46,7 +47,7 @@ export async function createApprovalRequest(params: {
       reviewedBy: null,
       rejectionReason: null,
       searchText: `${title.toLowerCase()} ${userId.toLowerCase()} ${approvalType || ''}`,
-    };
+    });
 
     const approvalRef = await addDoc(collection(db, 'approvals'), approvalData);
 

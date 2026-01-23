@@ -25,7 +25,7 @@ import {
   Divider,
   Badge,
 } from '@chakra-ui/react';
-import { Swords, Users, Trophy, Filter, User, Lock } from 'lucide-react';
+import { Swords, Users, Trophy, User, Lock } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { db } from '@/services/firebase';
 import { ORG_COLLECTION } from '@/constants/organizations';
@@ -61,13 +61,12 @@ interface UserOption {
   id: string;
   name: string;
   email: string;
-  level: number;
   points: number;
   recommended: boolean;
 }
 
 type ChallengeType = 'competitive' | 'collaborative';
-type OpponentFilter = 'suggested' | 'similar-level' | 'all';
+type OpponentFilter = 'suggested' | 'all';
 type DurationPreset = 'weekly' | 'monthly';
 
 // --- HELPER: Check if two profiles are in the same organization ---
@@ -186,8 +185,6 @@ export const StartChallengeModal: React.FC<StartChallengeModalProps> = ({
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
 
-  const [userLevel, setUserLevel] = useState(1);
-
   const { user, profile } = useAuth();
 
   // --- DATA FETCHING ---
@@ -210,7 +207,6 @@ export const StartChallengeModal: React.FC<StartChallengeModalProps> = ({
         id: p.id,
         name: p.fullName || `${p.firstName || ''} ${p.lastName || ''}`.trim(),
         email: p.email,
-        level: p.level || 1,
         points: p.totalPoints || 0,
         recommended: false,
         });
@@ -231,20 +227,13 @@ export const StartChallengeModal: React.FC<StartChallengeModalProps> = ({
   const applyOpponentFilter = useCallback(() => {
     let sortedUsers = [...users];
     if (opponentFilter === 'suggested') {
-      sortedUsers.sort((a, b) => {
-        const levelDiffA = Math.abs(a.level - userLevel);
-        const levelDiffB = Math.abs(b.level - userLevel);
-        if (levelDiffA !== levelDiffB) return levelDiffA - levelDiffB;
-        return b.points - a.points;
-      });
+      sortedUsers.sort((a, b) => b.points - a.points);
       sortedUsers = sortedUsers.map((u, i) => ({ ...u, recommended: i < 3 }));
-    } else if (opponentFilter === 'similar-level') {
-      sortedUsers = sortedUsers.filter(u => Math.abs(u.level - userLevel) <= 2);
     } else { // 'all'
       sortedUsers.sort((a, b) => a.name.localeCompare(b.name));
     }
     setFilteredUsers(sortedUsers);
-  }, [users, opponentFilter, userLevel]);
+  }, [users, opponentFilter]);
 
   // --- FORM LOGIC & VALIDATION ---
   const validateForm = () => {
@@ -345,7 +334,6 @@ export const StartChallengeModal: React.FC<StartChallengeModalProps> = ({
 
       // Calculate dates
       const startDate = new Date();
-      startDate.setDate(startDate.getDate() + 1);
       startDate.setHours(0, 0, 0, 0);
 
       const endDate = new Date(startDate);
@@ -354,6 +342,7 @@ export const StartChallengeModal: React.FC<StartChallengeModalProps> = ({
       } else {
         endDate.setDate(endDate.getDate() + 30);
       }
+      endDate.setHours(23, 59, 59, 999);
 
       // Auto-generated description
       const finalDescription = description ||
@@ -432,12 +421,6 @@ export const StartChallengeModal: React.FC<StartChallengeModalProps> = ({
 
   // --- EFFECTS ---
   useEffect(() => {
-    if (profile?.level) {
-      setUserLevel(profile.level);
-    }
-  }, [profile]);
-
-  useEffect(() => {
     if (isOpen) {
       if (preselectedUser) {
         setSelectedUserId(preselectedUser.id);
@@ -457,7 +440,7 @@ export const StartChallengeModal: React.FC<StartChallengeModalProps> = ({
 
   // --- DERIVED STATE & CONSTANTS ---
   const startDate = new Date();
-  startDate.setDate(startDate.getDate() + 1);
+  startDate.setHours(0, 0, 0, 0);
 
   const getEndDate = () => {
     const end = new Date(startDate);
@@ -466,6 +449,7 @@ export const StartChallengeModal: React.FC<StartChallengeModalProps> = ({
     } else {
       end.setDate(end.getDate() + 30);
     }
+    end.setHours(23, 59, 59, 999);
     return end;
   };
   const endDate = getEndDate();
@@ -571,15 +555,6 @@ export const StartChallengeModal: React.FC<StartChallengeModalProps> = ({
                       Suggested
                     </Button>
                     <Button
-                      leftIcon={<Filter size={16} />}
-                      size="sm"
-                      variant={opponentFilter === 'similar-level' ? 'solid' : 'outline'}
-                      colorScheme={opponentFilter === 'similar-level' ? 'brand' : 'neutral'}
-                      onClick={() => setOpponentFilter('similar-level')}
-                    >
-                      Similar Level
-                    </Button>
-                    <Button
                       leftIcon={<Users size={16} />}
                       size="sm"
                       variant={opponentFilter === 'all' ? 'solid' : 'outline'}
@@ -631,7 +606,6 @@ export const StartChallengeModal: React.FC<StartChallengeModalProps> = ({
                             </VStack>
                           </HStack>
                           <VStack align="flex-end" spacing={0}>
-                            <Text fontSize="sm" color="neutral.700">Level {u.level}</Text>
                             <Text fontSize="xs" color="neutral.500">{u.points.toLocaleString()} XP</Text>
                           </VStack>
                         </HStack>
@@ -687,7 +661,8 @@ export const StartChallengeModal: React.FC<StartChallengeModalProps> = ({
                       <Text>• Both participants earn bonus XP if the goal is reached.</Text>
                     </>
                   )}
-                   <Text>• The challenged person must accept to start.</Text>
+                  <Text>• Earn points by completing your Weekly Checklist.</Text>
+                  <Text>• The challenged person must accept to start.</Text>
                 </VStack>
               </Box>
 

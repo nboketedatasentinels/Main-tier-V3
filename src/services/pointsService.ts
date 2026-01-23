@@ -1,6 +1,7 @@
 import {
   collection,
   doc,
+  getDoc,
   getDocs,
   increment,
   limit,
@@ -21,6 +22,20 @@ import { checkAndHandleJourneyCompletion } from "./journeyCompletionService";
 import { detectStatusChangeAndNudge } from "./nudgeMonitorService";
 
 const { JOURNEY_META, getMonthNumber } = pointsConfig;
+
+// Helper to parse Firestore dates robustly
+const parseDate = (val: unknown): Date | null => {
+  if (!val) return null;
+  if (val instanceof Date) return val;
+  if (val && typeof val === 'object' && 'toDate' in val && typeof (val as { toDate: unknown }).toDate === 'function') {
+    return (val as { toDate: () => Date }).toDate();
+  }
+  if (typeof val === 'string') {
+    const d = new Date(val);
+    return isNaN(d.getTime()) ? null : d;
+  }
+  return null;
+};
 
 const RETRYABLE_TRANSACTION_CODES = new Set(["aborted", "failed-precondition", "unavailable"]);
 
@@ -95,18 +110,29 @@ export async function awardChecklistPoints(params: {
     limit(1)
   );
 
+  const activeChallengesQuery = query(
+    collection(db, "challenges"),
+    where("participants", "array-contains", uid)
+  );
+
   try {
     const [
       ledgerSnapshot,
       weeklyActivitySnapshot,
       windowActivitySnapshot,
       lastActivitySnapshot,
+      activeChallengesSnapshot,
+      profileSnap,
     ] = await Promise.all([
       getDocs(ledgerQuery),
       getDocs(weeklyActivityQuery),
       getDocs(windowActivityQuery),
       getDocs(lastActivityQuery),
+      getDocs(activeChallengesQuery),
+      getDoc(doc(db, "profiles", uid)),
     ]);
+
+    const companyId = profileSnap.exists() ? profileSnap.data()?.companyId : null;
 
     await runTransactionWithRetry(async (tx) => {
       const [ledgerDoc, progressDoc] = await Promise.all([
@@ -204,6 +230,37 @@ export async function awardChecklistPoints(params: {
 
       tx.set(doc(db, "users", uid), profileUpdate, { merge: true });
       tx.set(doc(db, "profiles", uid), profileUpdate, { merge: true });
+
+      // Record transaction for leaderboard and activity feeds
+      tx.set(doc(collection(db, "points_transactions")), {
+        userId: uid,
+        points: activity.points,
+        category: activity.category || "Other",
+        reason: activity.title,
+        createdAt: serverTimestamp(),
+        companyId: companyId || null,
+      });
+
+      // Update active challenges metrics
+      activeChallengesSnapshot.docs.forEach((challengeDoc) => {
+        const challengeData = challengeDoc.data();
+
+        // Only process active challenges
+        if (challengeData.status !== 'active') return;
+
+        const start = parseDate(challengeData.start_date);
+        const end = parseDate(challengeData.end_date);
+        const now = new Date();
+
+        if (start && end && now >= start && now <= end) {
+          const isChallenger = challengeData.challenger_id === uid;
+          const field = isChallenger ? "metrics.challenger.total" : "metrics.challenged.total";
+          tx.update(challengeDoc.ref, {
+            [field]: increment(activity.points),
+            updatedAt: serverTimestamp(),
+          });
+        }
+      });
     });
 
     // Post-transaction logic
@@ -259,8 +316,20 @@ export async function revokeChecklistPoints(params: {
     where("weekNumber", "==", weekNumber)
   );
 
+  const activeChallengesQuery = query(
+    collection(db, "challenges"),
+    where("participants", "array-contains", uid)
+  );
+
   try {
-    const ledgerSnapshot = await getDocs(ledgerQuery);
+    const [ledgerSnapshot, activeChallengesSnapshot, profileSnap] = await Promise.all([
+      getDocs(ledgerQuery),
+      getDocs(activeChallengesQuery),
+      getDoc(doc(db, "profiles", uid)),
+    ]);
+
+    const companyId = profileSnap.exists() ? profileSnap.data()?.companyId : null;
+
     await runTransactionWithRetry(async (tx) => {
       const [ledgerDoc, progressDoc] = await Promise.all([tx.get(ledgerRef), tx.get(progressRef)]);
 
@@ -325,6 +394,37 @@ export async function revokeChecklistPoints(params: {
 
       tx.set(doc(db, "users", uid), profileUpdate, { merge: true });
       tx.set(doc(db, "profiles", uid), profileUpdate, { merge: true });
+
+      // Record transaction for leaderboard and activity feeds
+      tx.set(doc(collection(db, "points_transactions")), {
+        userId: uid,
+        points: -ledgerPoints,
+        category: activity.category || "Other",
+        reason: activity.title,
+        createdAt: serverTimestamp(),
+        companyId: companyId || null,
+      });
+
+      // Update active challenges metrics
+      activeChallengesSnapshot.docs.forEach((challengeDoc) => {
+        const challengeData = challengeDoc.data();
+
+        // Only process active challenges
+        if (challengeData.status !== 'active') return;
+
+        const start = parseDate(challengeData.start_date);
+        const end = parseDate(challengeData.end_date);
+        const now = new Date();
+
+        if (start && end && now >= start && now <= end) {
+          const isChallenger = challengeData.challenger_id === uid;
+          const field = isChallenger ? "metrics.challenger.total" : "metrics.challenged.total";
+          tx.update(challengeDoc.ref, {
+            [field]: increment(-ledgerPoints),
+            updatedAt: serverTimestamp(),
+          });
+        }
+      });
     });
   } catch (error) {
     console.error("🔴 [Points] Failed to revoke checklist points", error);

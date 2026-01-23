@@ -36,7 +36,7 @@ export const SupportTeamCard = ({ data, loading, peerMatches, peerMatchesLoading
 
   const getDisplayName = (profile: NonNullable<typeof mentorProfile>) => {
     const name = profile.fullName || `${profile.firstName ?? ''} ${profile.lastName ?? ''}`.trim()
-    return name || profile.email || 'Unknown name'
+    return name || 'Unknown name'
   }
 
   const getAvatarSrc = (profile: NonNullable<typeof mentorProfile>) => {
@@ -60,16 +60,19 @@ export const SupportTeamCard = ({ data, loading, peerMatches, peerMatchesLoading
                         <Text fontSize="sm" color="text.secondary">
                           {getDisplayName(mentorProfile)}
                         </Text>
-                        {mentorProfile.email && (
-                          <Text fontSize="xs" color="text.secondary">
-                            {mentorProfile.email}
-                          </Text>
-                        )}
                       </VStack>
                     </HStack>
-                    <Button size="sm" variant="ghost" leftIcon={<Icon as={Mail} />}>
-                      Contact
-                    </Button>
+                    {mentorProfile.email && (
+                      <Button
+                        as="a"
+                        href={`mailto:${mentorProfile.email}`}
+                        size="sm"
+                        variant="ghost"
+                        leftIcon={<Icon as={Mail} />}
+                      >
+                        Contact
+                      </Button>
+                    )}
                   </HStack>
                 </VStack>
               )}
@@ -84,16 +87,19 @@ export const SupportTeamCard = ({ data, loading, peerMatches, peerMatchesLoading
                         <Text fontSize="sm" color="text.secondary">
                           {getDisplayName(ambassadorProfile)}
                         </Text>
-                        {ambassadorProfile.email && (
-                          <Text fontSize="xs" color="text.secondary">
-                            {ambassadorProfile.email}
-                          </Text>
-                        )}
                       </VStack>
                     </HStack>
-                    <Button size="sm" variant="ghost" leftIcon={<Icon as={MessageCircle} />}>
-                      Message
-                    </Button>
+                    {ambassadorProfile.email && (
+                      <Button
+                        as="a"
+                        href={`mailto:${ambassadorProfile.email}`}
+                        size="sm"
+                        variant="ghost"
+                        leftIcon={<Icon as={MessageCircle} />}
+                      >
+                        Message
+                      </Button>
+                    )}
                   </HStack>
                 </VStack>
               )}

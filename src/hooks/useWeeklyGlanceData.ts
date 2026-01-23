@@ -5,7 +5,9 @@ import {
   doc,
   getDoc,
   getDocs,
+  limit,
   onSnapshot,
+  orderBy,
   query,
   serverTimestamp,
   setDoc,
@@ -16,7 +18,7 @@ import { db } from '@/services/firebase'
 import { useAuth } from '@/hooks/useAuth'
 import { useOrganizationLeadership } from '@/hooks/useOrganizationLeadership'
 import { getWeekKey } from '@/utils/weekCalculations'
-import { JOURNEY_META, getMonthNumber } from '@/config/pointsConfig'
+import { JOURNEY_META, getMonthNumber, FULL_ACTIVITIES } from '@/config/pointsConfig'
 import { InspirationQuote } from '@/types'
 import { leadershipQuotes } from '@/services/quotes'
 import { UserProfileExtended } from '@/services/userProfileService'
@@ -70,6 +72,15 @@ export interface FocusArea {
   title: string;
 }
 
+export interface LedgerEntry {
+  id: string
+  activityId: string
+  activityTitle: string
+  points: number
+  createdAt: Date
+  weekNumber: number
+}
+
 interface WeeklyGlanceLoadingState {
   points: boolean
   support: boolean
@@ -78,7 +89,8 @@ interface WeeklyGlanceLoadingState {
   habits: boolean
   inspiration: boolean
   impact: boolean
-  focus: boolean;
+  focus: boolean
+  ledger: boolean
 }
 
 interface WeeklyGlanceErrorState {
@@ -89,7 +101,8 @@ interface WeeklyGlanceErrorState {
   habits?: Error
   inspiration?: Error
   impact?: Error
-  focus?: Error;
+  focus?: Error
+  ledger?: Error
 }
 
 export const useWeeklyGlanceData = () => {
@@ -102,6 +115,7 @@ export const useWeeklyGlanceData = () => {
   const [inspirationQuote, setInspirationQuote] = useState<InspirationQuote | null>(null)
   const [impactCount, setImpactCount] = useState<number>(0)
   const [focusAreas, setFocusAreas] = useState<FocusArea[]>([]);
+  const [ledgerEntries, setLedgerEntries] = useState<LedgerEntry[]>([])
   const [loading, setLoading] = useState<WeeklyGlanceLoadingState>({
     points: true,
     support: true,
@@ -111,6 +125,7 @@ export const useWeeklyGlanceData = () => {
     inspiration: true,
     impact: true,
     focus: true,
+    ledger: true,
   })
   const [errors, setErrors] = useState<WeeklyGlanceErrorState>({})
   const {
@@ -435,6 +450,47 @@ export const useWeeklyGlanceData = () => {
   }
 
   useEffect(() => {
+    if (!profile?.id) {
+      setLoading(prev => ({ ...prev, ledger: false }))
+      return
+    }
+
+    const ledgerQuery = query(
+      collection(db, 'pointsLedger'),
+      where('uid', '==', profile.id),
+      orderBy('createdAt', 'desc'),
+      limit(10)
+    )
+
+    const unsubscribe = onSnapshot(
+      ledgerQuery,
+      snapshot => {
+        const entries = snapshot.docs.map(docSnapshot => {
+          const data = docSnapshot.data()
+          const activityDef = FULL_ACTIVITIES.find(a => a.id === data.activityId)
+          return {
+            id: docSnapshot.id,
+            activityId: data.activityId,
+            activityTitle: activityDef?.title || data.activityId,
+            points: data.points,
+            createdAt: data.createdAt?.toDate() || new Date(),
+            weekNumber: data.weekNumber,
+          }
+        })
+        setLedgerEntries(entries)
+        setLoading(prev => ({ ...prev, ledger: false }))
+      },
+      error => {
+        console.error('Error fetching ledger entries:', error)
+        setErrors(prev => ({ ...prev, ledger: error as Error }))
+        setLoading(prev => ({ ...prev, ledger: false }))
+      }
+    )
+
+    return () => unsubscribe()
+  }, [profile?.id])
+
+  useEffect(() => {
     const fetchFocusAreas = async () => {
       if (!profile?.id) return;
       setLoading(prev => ({ ...prev, focus: true }));
@@ -465,6 +521,7 @@ export const useWeeklyGlanceData = () => {
     inspirationQuote,
     impactCount,
     focusAreas,
+    ledgerEntries,
     weekNumber,
     loading,
     errors,

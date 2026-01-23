@@ -15,7 +15,6 @@ import {
   HStack,
   Heading,
   Icon,
-  IconButton,
   Modal,
   ModalBody,
   ModalCloseButton,
@@ -26,7 +25,6 @@ import {
   Progress,
   SimpleGrid,
   Skeleton,
-  Spinner,
   Stack,
   Tag,
   Text,
@@ -39,18 +37,15 @@ import { AlertTriangle, CalendarRange, CheckCircle, Lock, Plus, ShieldCheck } fr
 import { collection, doc, getDoc, getDocs, onSnapshot, query, serverTimestamp, setDoc, where } from 'firebase/firestore'
 import { addDays, format } from 'date-fns'
 import { removeUndefinedFields } from '@/utils/firestore'
-import { getIsoWeekNumber } from '@/utils/date'
 import { db } from '@/services/firebase'
 import { useAuth } from '@/hooks/useAuth'
 import { createApprovalRequest } from '@/services/approvalsService'
 import { PointsVerificationRequest } from '@/services/pointsVerificationService'
-import { CALENDAR_SYNC_TUTORIAL, WeeklyProgress } from '@/types'
+import { WeeklyProgress } from '@/types'
 import { isFreeUser } from '@/utils/membership'
 import { JOURNEY_META, getMonthNumber, getActivitiesForJourney, type ActivityDef, type JourneyType } from '@/config/pointsConfig'
 import { awardChecklistPoints, revokeChecklistPoints } from '@/services/pointsService'
 import { SurfaceCard } from '@/components/primitives/SurfacePrimitives'
-import { IoradTutorialModal } from '@/components/modals/IoradTutorialModal'
-import { checkTutorialCompletion, markTutorialComplete } from '@/services/tutorialService'
 import { ORG_COLLECTION } from '@/constants/organizations'
 import {
   JOURNEY_LABELS,
@@ -109,15 +104,6 @@ interface WindowProgressData {
   status: 'on_track' | 'warning' | 'alert';
 }
 
-const rhythmItems = [
-  'Sync T4L Calendar to Google/Outlook',
-  'Add weekly time block for watching videos',
-  'Add weekly time block for completing missions',
-  'Add weekly time block for point tracking',
-  'Accept first live session invite',
-]
-
-const CALENDAR_SYNC_ITEM = 'Sync T4L Calendar to Google/Outlook'
 
 const weeklyGuidance: Record<number, string[]> = {
   1: [
@@ -139,39 +125,6 @@ const weeklyGuidance: Record<number, string[]> = {
   6: ['Record your transformation recap', 'Request endorsements from peers', 'Lock in final points to hit 100%'],
 }
 
-const useRhythmState = () => {
-  const today = new Date()
-  const calendarWeek = getIsoWeekNumber(today)
-  const storageKey = `rhythm-${today.getFullYear()}-W${calendarWeek}`
-  const [completed, setCompleted] = useState<Record<string, boolean>>({})
-
-  useEffect(() => {
-    const stored = localStorage.getItem(storageKey)
-    if (stored) {
-      setCompleted(JSON.parse(stored))
-    }
-  }, [storageKey])
-
-  const toggleItem = (item: string) => {
-    setCompleted(prev => {
-      const next = { ...prev, [item]: !prev[item] }
-      localStorage.setItem(storageKey, JSON.stringify(next))
-      return next
-    })
-  }
-
-  const setItemCompletion = (item: string, value: boolean) => {
-    setCompleted(prev => {
-      const next = { ...prev, [item]: value }
-      localStorage.setItem(storageKey, JSON.stringify(next))
-      return next
-    })
-  }
-
-  const totalPoints = useMemo(() => Object.values(completed).filter(Boolean).length * 50, [completed])
-
-  return { completed, toggleItem, setItemCompletion, totalPoints, calendarWeek }
-}
 
 const statusLabelMap: Record<ActivityStatus, string> = {
   not_started: 'Not started',
@@ -211,23 +164,6 @@ const WeeklyChecklistPage: React.FC = () => {
   const [weeklyProgress, setWeeklyProgress] = useState<WeeklyProgress | null>(null)
   const [windowProgressData, setWindowProgressData] = useState<WindowProgressData | null>(null);
   const [allWeeksProgress, setAllWeeksProgress] = useState<WeeklyProgress[]>([])
-  const {
-    completed: rhythmCompleted,
-    toggleItem,
-    setItemCompletion,
-    totalPoints: rhythmPoints,
-    calendarWeek,
-  } = useRhythmState()
-  const {
-    isOpen: isTutorialModalOpen,
-    onOpen: openTutorialModal,
-    onClose: closeTutorialModal,
-  } = useDisclosure()
-  const [tutorialCompleted, setTutorialCompleted] = useState(false)
-  const [tutorialLoading, setTutorialLoading] = useState(false)
-  const [tutorialError, setTutorialError] = useState<string | null>(null)
-  const [tutorialSaving, setTutorialSaving] = useState(false)
-  const [tutorialSaveError, setTutorialSaveError] = useState<string | null>(null)
 
   const persistChecklist = async (updatedActivities: ActivityState[]) => {
     if (!user) return
@@ -506,21 +442,6 @@ const WeeklyChecklistPage: React.FC = () => {
     }
   }, [journey, profile?.ambassadorId, profile?.ambassadorOverrideId, profile?.mentorId, profile?.mentorOverrideId, selectedWeek, user]);
 
-  const checkCalendarSyncTutorial = useCallback(async () => {
-    if (!user) return
-    setTutorialLoading(true)
-    setTutorialError(null)
-    try {
-      const completion = await checkTutorialCompletion(user.uid, CALENDAR_SYNC_TUTORIAL.id)
-      setTutorialCompleted(Boolean(completion))
-    } catch (err) {
-      console.error(err)
-      setTutorialError('Unable to load tutorial status. Please retry.')
-    } finally {
-      setTutorialLoading(false)
-    }
-  }, [user])
-
   useEffect(() => {
     if (!user) return;
 
@@ -611,10 +532,10 @@ const WeeklyChecklistPage: React.FC = () => {
   const calculateProgress = useCallback(() => {
     const completedActivities = activities.filter(a => a.status === 'completed')
     const pendingActivities = activities.filter(a => a.status === 'pending')
-    const earnedPoints = completedActivities.reduce((sum, activity) => sum + activity.points, 0) + rhythmPoints
+    const earnedPoints = completedActivities.reduce((sum, activity) => sum + activity.points, 0)
     setPendingCounts({ completed: completedActivities.length, total: activities.length, points: earnedPoints })
     return { completedActivities, pendingActivities, earnedPoints }
-  }, [activities, rhythmPoints])
+  }, [activities])
 
   useEffect(() => {
     fetchJourney()
@@ -623,10 +544,6 @@ const WeeklyChecklistPage: React.FC = () => {
   useEffect(() => {
     fetchWeeklyData()
   }, [fetchWeeklyData])
-
-  useEffect(() => {
-    checkCalendarSyncTutorial()
-  }, [checkCalendarSyncTutorial])
 
   useEffect(() => {
     setProgressLoading(true)
@@ -687,38 +604,6 @@ const WeeklyChecklistPage: React.FC = () => {
     onOpen()
   }
 
-  const handleTutorialComplete = async () => {
-    if (!user) return
-    setTutorialSaving(true)
-    setTutorialSaveError(null)
-    try {
-      await markTutorialComplete(user.uid, CALENDAR_SYNC_TUTORIAL.id)
-      setTutorialCompleted(true)
-      setItemCompletion(CALENDAR_SYNC_ITEM, true)
-      toast({
-        title: 'Tutorial complete',
-        description: 'You can now mark the calendar sync item as done.',
-        status: 'success',
-      })
-      closeTutorialModal()
-    } catch (err) {
-      console.error(err)
-      setTutorialSaveError('Unable to save tutorial completion. Please retry.')
-    } finally {
-      setTutorialSaving(false)
-    }
-  }
-
-  const handleOpenTutorialModal = () => {
-    setTutorialSaveError(null)
-    openTutorialModal()
-  }
-
-  const handleCloseTutorialModal = () => {
-    setTutorialSaveError(null)
-    closeTutorialModal()
-  }
-
   const submitProof = async () => {
     if (!proofModal.activity || !user) return
     if (proofModal.activity.availability.state !== 'available') {
@@ -747,6 +632,7 @@ const WeeklyChecklistPage: React.FC = () => {
       await createApprovalRequest({
         userId: user.uid,
         type: 'points_verification',
+        approvalType: activity.approvalType,
         title: activity.title,
         source: sourcePayload,
         summary: activity.notes,
@@ -1143,83 +1029,6 @@ const WeeklyChecklistPage: React.FC = () => {
     )
   }
 
-  const renderParticipationRhythm = () => (
-    <Box borderWidth="1px" borderColor="border.card" p={4} borderRadius="lg" bg="surface.default">
-      <HStack justify="space-between" mb={2}>
-        <Heading size="sm" color="text.primary">
-          Participation Rhythm
-        </Heading>
-        <Tag colorScheme="primary">+{rhythmPoints} pts</Tag>
-      </HStack>
-      {tutorialError && (
-        <Alert status="warning" borderRadius="md" mb={3}>
-          <AlertIcon />
-          <AlertDescription>{tutorialError}</AlertDescription>
-          <IconButton
-            aria-label="Retry tutorial status"
-            size="sm"
-            ml="auto"
-            onClick={checkCalendarSyncTutorial}
-            icon={tutorialLoading ? <Spinner size="xs" /> : <Icon as={Plus} />}
-            isDisabled={tutorialLoading}
-            variant="outline"
-          />
-        </Alert>
-      )}
-      <Stack spacing={2}>
-        {rhythmItems.map(item => (
-          <Flex key={item} align="center" justify="space-between" p={2} borderRadius="md" bg="surface.subtle">
-            <HStack spacing={2}>
-              <Text color="text.secondary">{item}</Text>
-              {item === CALENDAR_SYNC_ITEM && (
-                <Badge colorScheme="orange" variant="subtle">
-                  Tutorial Required
-                </Badge>
-              )}
-            </HStack>
-            <Tooltip
-              label={
-                item === CALENDAR_SYNC_ITEM
-                  ? 'Complete the calendar sync tutorial before marking this as done.'
-                  : ''
-              }
-              isDisabled={item !== CALENDAR_SYNC_ITEM}
-            >
-              <Button
-                size="sm"
-                leftIcon={
-                  rhythmCompleted[item] ? (
-                    <Icon as={CheckCircle} />
-                  ) : tutorialLoading && item === CALENDAR_SYNC_ITEM ? (
-                    <Spinner size="xs" />
-                  ) : (
-                    <Icon as={Plus} />
-                  )
-                }
-                colorScheme={rhythmCompleted[item] ? 'primary' : undefined}
-                borderColor={rhythmCompleted[item] ? undefined : 'border.strong'}
-                color={rhythmCompleted[item] ? undefined : 'text.primary'}
-                variant={rhythmCompleted[item] ? 'solid' : 'outline'}
-                onClick={() => {
-                  if (item === CALENDAR_SYNC_ITEM && !tutorialCompleted) {
-                    handleOpenTutorialModal()
-                    return
-                  }
-                  toggleItem(item)
-                }}
-                isDisabled={tutorialLoading && item === CALENDAR_SYNC_ITEM}
-              >
-                {rhythmCompleted[item] ? 'Completed' : 'Mark done'}
-              </Button>
-            </Tooltip>
-          </Flex>
-        ))}
-      </Stack>
-      <Text color="text.muted" fontSize="sm" mt={2}>
-        Saved locally for calendar week {calendarWeek}. Perfect for building your weekly habits.
-      </Text>
-    </Box>
-  )
 
   const renderGuidanceCard = () => {
     if (normalizedJourneyType !== '6W') return null
@@ -1407,7 +1216,6 @@ const WeeklyChecklistPage: React.FC = () => {
               )}
             </SurfaceCard>
             {renderGuidanceCard()}
-            {renderParticipationRhythm()}
           </Stack>
         </GridItem>
 
@@ -1441,15 +1249,6 @@ const WeeklyChecklistPage: React.FC = () => {
       </Grid>
 
       {renderProofModal()}
-      <IoradTutorialModal
-        isOpen={isTutorialModalOpen}
-        onClose={handleCloseTutorialModal}
-        onComplete={handleTutorialComplete}
-        tutorialUrl={CALENDAR_SYNC_TUTORIAL.url}
-        isSubmitting={tutorialSaving}
-        error={tutorialSaveError}
-        onRetry={tutorialSaveError ? handleTutorialComplete : undefined}
-      />
     </Stack>
   )
 }

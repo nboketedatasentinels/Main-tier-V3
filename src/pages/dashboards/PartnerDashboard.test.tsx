@@ -24,7 +24,6 @@ vi.mock('@/services/nudgeService', () => ({
 
 // Mock child components that might be complex
 vi.mock('@/layouts/PartnerLayout', () => ({
-    // eslint-disable-next-line react/display-name
     default: ({ children }: { children: React.ReactNode }) => <div data-testid="partner-layout">{children}</div>,
 }))
 
