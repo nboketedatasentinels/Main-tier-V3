@@ -77,7 +77,9 @@ import {
 } from 'firebase/firestore'
 import { ResponsiveContainer, PieChart, Pie, Cell } from 'recharts'
 import { Badge as BadgeDefinition, LeaderboardTimeframe, UserProfile, UserRole } from '@/types'
+import { OrganizationRecord } from '@/types/admin'
 import { db } from '@/services/firebase'
+import { fetchOrganizationsByIds } from '@/services/organizationService'
 import { useAuth } from '@/hooks/useAuth'
 import { useLeaderboardContext, getLeaderboardContextLabels } from '@/hooks/leaderboard/useLeaderboardContext'
 import { useLeaderboardData } from '@/hooks/leaderboard/useLeaderboardData'
@@ -160,6 +162,7 @@ export const LeadershipBoardPage: React.FC = () => {
     return stored !== 'dismissed'
   })
   const [expandedCategories, setExpandedCategories] = useState<Set<string>>(new Set())
+  const [organizationsMap, setOrganizationsMap] = useState<Record<string, OrganizationRecord>>({})
   const previousTotalPoints = useRef<number | null>(null)
   const timeframeStart = useMemo(() => toDateFromTimeframe(timeframe), [timeframe])
   const enableProfileRealtime = import.meta.env.VITE_ENABLE_PROFILE_REALTIME === 'true'
@@ -336,6 +339,32 @@ export const LeadershipBoardPage: React.FC = () => {
     void fetchFeaturedBadges()
   }, [fetchFeaturedBadges])
 
+  useEffect(() => {
+    if (profiles.length > 0) {
+      const orgIds = Array.from(
+        new Set(
+          profiles
+            .map((p) => p.companyId || p.organizationId)
+            .filter((id): id is string => Boolean(id))
+        )
+      )
+
+      if (orgIds.length > 0) {
+        fetchOrganizationsByIds(orgIds)
+          .then((orgs) => {
+            const newMap: Record<string, OrganizationRecord> = {}
+            orgs.forEach((org) => {
+              if (org.id) newMap[org.id] = org
+            })
+            setOrganizationsMap((prev) => ({ ...prev, ...newMap }))
+          })
+          .catch((err) => {
+            console.error('🔴 [Leaderboard] Failed to fetch organizations', err)
+          })
+      }
+    }
+  }, [profiles])
+
 
   useEffect(() => {
     if (!profile?.id) return undefined
@@ -509,6 +538,11 @@ export const LeadershipBoardPage: React.FC = () => {
       setBreakdownPage(maxPage)
     }
   }, [breakdownByCategory.length, breakdownPage])
+
+  const getDisplayName = (user: UserProfile) => {
+    const name = user.fullName || `${user.firstName ?? ''} ${user.lastName ?? ''}`.trim()
+    return name || 'Unknown member'
+  }
 
   const getRankIcon = (rank: number) => {
     if (rank === 1) return <Icon as={Crown} color="accent.warning" />
@@ -982,11 +1016,11 @@ export const LeadershipBoardPage: React.FC = () => {
                                   <Td>{getRankIcon(row.rank)}</Td>
                                   <Td>
                                     <HStack spacing={3}>
-                                      <Avatar size="sm" name={row.user.fullName} src={row.user.avatarUrl} />
+                                      <Avatar size="sm" name={getDisplayName(row.user)} src={row.user.avatarUrl} />
                                       <Box>
-                                        <Text fontWeight="bold" color="text.primary">{row.user.fullName}</Text>
+                                        <Text fontWeight="bold" color="text.primary">{getDisplayName(row.user)}</Text>
                                         <Text fontSize="xs" color="text.secondary">
-                                          {row.user.companyId || 'Independent'} · {row.user.villageId || 'Village TBD'} · {row.user.clusterId || 'Cluster TBD'}
+                                          {organizationsMap[row.user.companyId || row.user.organizationId || '']?.name || row.user.companyName || row.user.companyId || 'Independent'} · {organizationsMap[row.user.companyId || row.user.organizationId || '']?.village || row.user.villageId || 'Village TBD'} · {organizationsMap[row.user.companyId || row.user.organizationId || '']?.cluster || row.user.clusterId || 'Cluster TBD'}
                                         </Text>
                                         <HStack spacing={2} mt={1}>
                                           <Badge colorScheme="success">Active</Badge>
@@ -1079,8 +1113,8 @@ export const LeadershipBoardPage: React.FC = () => {
                               <Td>{row.rank}</Td>
                               <Td>
                                 <HStack spacing={2}>
-                                  <Avatar size="xs" name={row.user.fullName} src={row.user.avatarUrl} />
-                                  <Text>{row.user.fullName}</Text>
+                                  <Avatar size="xs" name={getDisplayName(row.user)} src={row.user.avatarUrl} />
+                                  <Text>{getDisplayName(row.user)}</Text>
                                 </HStack>
                               </Td>
                               <Td>{formatNumber(row.activePoints)}</Td>
