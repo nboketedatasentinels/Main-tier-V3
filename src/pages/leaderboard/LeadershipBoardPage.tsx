@@ -46,7 +46,6 @@ import {
   AlertCircle,
   ArrowDownAZ,
   ArrowUpAZ,
-  ArrowUpRight,
   Award,
   CheckCircle,
   ChevronDown,
@@ -54,7 +53,6 @@ import {
   ChevronRight,
   Clock,
   Crown,
-  Info,
   Lock,
   Medal,
   RefreshCw,
@@ -575,24 +573,6 @@ export const LeadershipBoardPage: React.FC = () => {
             onClick={handleManualRefresh}
           >
             Refresh
-          </Button>
-          <Button
-            bg="surface.default"
-            color="brand.primary"
-            border="1px solid"
-            borderColor="brand.primary"
-            _hover={{ bg: 'tint.brandPrimary' }}
-            leftIcon={<Icon as={Info} />}
-            onClick={onOpen}
-          >
-            Start a Challenge
-          </Button>
-          <Button
-            onClick={() => navigate('/app/peer-connect')}
-            variant="primary"
-            rightIcon={<Icon as={ArrowUpRight} />}
-          >
-            Open Peer Connect
           </Button>
         </HStack>
       </Flex>
