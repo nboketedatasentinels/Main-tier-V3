@@ -208,6 +208,7 @@ export const LeadershipBoardPage: React.FC = () => {
     challenges,
     profilesLoaded,
     transactionsLoaded,
+    challengesLoaded,
     errorMessage,
   } = useLeaderboardData({
     context,
@@ -425,7 +426,6 @@ export const LeadershipBoardPage: React.FC = () => {
     userRow,
     percentile,
     segmentSize,
-    segmentChallenges,
     peerRows,
     cohortStats,
     breakdownByCategory,
@@ -536,7 +536,7 @@ export const LeadershipBoardPage: React.FC = () => {
     setVirtualOffset(offset)
   }
 
-  const emptyChallenges = segmentChallenges.filter((challenge) => challenge.status === 'active').length === 0
+  const emptyChallenges = challenges.filter((c) => c.status === 'active' || c.status === 'pending').length === 0
   const isFreeContext = context?.type === 'free'
 
   return (
@@ -756,7 +756,7 @@ export const LeadershipBoardPage: React.FC = () => {
                           <StatHelpText color="text.secondary">Last 30 days</StatHelpText>
                         </Stat>
                         <Stat>
-                          <StatLabel color="text.muted">Active Challenges</StatLabel>
+                          <StatLabel color="text.muted">Active & Pending</StatLabel>
                           <StatNumber color="text.primary" fontSize="lg">{segmentStats.activeChallenges}</StatNumber>
                           <StatHelpText color="text.secondary">Live matchups</StatHelpText>
                         </Stat>
@@ -1300,8 +1300,10 @@ export const LeadershipBoardPage: React.FC = () => {
                 <Card bg="surface.default" border="1px solid" borderColor="border.subtle">
                   <CardBody>
                     <Stat>
-                      <StatLabel color="text.muted">Active Challenges</StatLabel>
-                      <StatNumber color="text.primary">{segmentChallenges.filter((c) => c.status === 'active').length}</StatNumber>
+                      <StatLabel color="text.muted">Active & Pending</StatLabel>
+                      <StatNumber color="text.primary">
+                        {challenges.filter((c) => c.status === 'active' || c.status === 'pending').length}
+                      </StatNumber>
                     </Stat>
                   </CardBody>
                 </Card>
@@ -1309,7 +1311,7 @@ export const LeadershipBoardPage: React.FC = () => {
                   <CardBody>
                     <Stat>
                       <StatLabel color="text.muted">Victories</StatLabel>
-                      <StatNumber color="text.primary">{segmentChallenges.filter((c) => c.result === 'win').length}</StatNumber>
+                      <StatNumber color="text.primary">{challenges.filter((c) => c.result === 'win').length}</StatNumber>
                     </Stat>
                   </CardBody>
                 </Card>
@@ -1317,7 +1319,7 @@ export const LeadershipBoardPage: React.FC = () => {
                   <CardBody>
                     <Stat>
                       <StatLabel color="text.muted">Points Earned</StatLabel>
-                      <StatNumber color="text.primary">{formatNumber(segmentChallenges.reduce((sum, c) => sum + c.yourPoints, 0))}</StatNumber>
+                      <StatNumber color="text.primary">{formatNumber(challenges.reduce((sum, c) => sum + c.yourPoints, 0))}</StatNumber>
                     </Stat>
                   </CardBody>
                 </Card>
@@ -1331,59 +1333,90 @@ export const LeadershipBoardPage: React.FC = () => {
                 </Card>
               </SimpleGrid>
 
-              <Card bg="surface.default" border="1px solid" borderColor="border.subtle">
-                <CardHeader>
-                  <Flex justify="space-between" align="center">
-                    <Text fontWeight="bold">Your Challenges</Text>
-                    <Button size="sm" onClick={onOpen}>New Challenge</Button>
-                  </Flex>
-                </CardHeader>
-                <CardBody>
-                  {emptyChallenges ? (
-                    <VStack spacing={3} py={8} color="text.secondary">
-                      <Icon as={Users} boxSize={12} />
-                      <Text fontWeight="bold">No Active Challenges</Text>
-                      <Text>Start your first head-to-head battle to climb faster.</Text>
-                    </VStack>
-                  ) : (
-                    <Stack spacing={3}>
-                      {segmentChallenges
-                        .filter((c) => c.status === 'active')
-                        .map((challenge) => (
-                          <Flex key={challenge.id} p={4} border="1px solid" borderColor="border.subtle" borderRadius="lg" align="center" gap={4}>
-                            <Avatar name={challenge.opponentName} src={challenge.opponentAvatar} />
-                            <Box flex="1">
-                              <Text fontWeight="bold">vs {challenge.opponentName}</Text>
-                              <Text fontSize="sm" color="text.secondary">{challenge.startDate} → {challenge.endDate}</Text>
-                              <Progress mt={2} value={(challenge.yourPoints / Math.max(challenge.yourPoints, challenge.opponentPoints || 1)) * 100} colorScheme="primary" borderRadius="full" />
-                            </Box>
-                            <VStack spacing={1} align="flex-end">
-                              <Text fontWeight="bold">You {formatNumber(challenge.yourPoints)}</Text>
-                              <Text color="text.secondary">Opponent {formatNumber(challenge.opponentPoints)}</Text>
-                              <Badge colorScheme={challenge.yourPoints >= challenge.opponentPoints ? 'success' : 'error'}>{challenge.status}</Badge>
-                            </VStack>
-                          </Flex>
-                        ))}
-                    </Stack>
-                  )}
-                </CardBody>
-              </Card>
+              {!challengesLoaded ? (
+                <Stack spacing={4}>
+                  <Skeleton height="120px" borderRadius="xl" />
+                  <SimpleGrid columns={{ base: 2, md: 4 }} spacing={4}>
+                    <Skeleton height="80px" borderRadius="lg" />
+                    <Skeleton height="80px" borderRadius="lg" />
+                    <Skeleton height="80px" borderRadius="lg" />
+                    <Skeleton height="80px" borderRadius="lg" />
+                  </SimpleGrid>
+                  <Card variant="outline">
+                    <CardBody>
+                      <Stack spacing={4}>
+                        <Skeleton height="24px" width="150px" />
+                        <Skeleton height="60px" borderRadius="lg" />
+                        <Skeleton height="60px" borderRadius="lg" />
+                      </Stack>
+                    </CardBody>
+                  </Card>
+                </Stack>
+              ) : (
+                <>
+                  <Card bg="surface.default" border="1px solid" borderColor="border.subtle">
+                    <CardHeader>
+                      <Flex justify="space-between" align="center">
+                        <Text fontWeight="bold">Your Challenges</Text>
+                        <Button size="sm" onClick={onOpen}>New Challenge</Button>
+                      </Flex>
+                    </CardHeader>
+                    <CardBody>
+                      {emptyChallenges ? (
+                        <VStack spacing={3} py={8} color="text.secondary">
+                          <Icon as={Users} boxSize={12} />
+                          <Text fontWeight="bold">No Active or Pending Challenges</Text>
+                          <Text>Start your first head-to-head battle to climb faster.</Text>
+                        </VStack>
+                      ) : (
+                        <Stack spacing={3}>
+                          {challenges
+                            .filter((c) => c.status === 'active' || c.status === 'pending')
+                            .map((challenge) => (
+                              <Flex key={challenge.id} p={4} border="1px solid" borderColor="border.subtle" borderRadius="lg" align="center" gap={4}>
+                                <Avatar name={challenge.opponentName} src={challenge.opponentAvatar} />
+                                <Box flex="1">
+                                  <Text fontWeight="bold">vs {challenge.opponentName}</Text>
+                                  <Text fontSize="sm" color="text.secondary">
+                                    {format(new Date(challenge.startDate), 'MMM d')} → {format(new Date(challenge.endDate), 'MMM d')}
+                                  </Text>
+                                  <Progress mt={2} value={(challenge.yourPoints / Math.max(challenge.yourPoints + challenge.opponentPoints, 1)) * 100} colorScheme="primary" borderRadius="full" />
+                                </Box>
+                                <VStack spacing={1} align="flex-end">
+                                  <Text fontWeight="bold">You {formatNumber(challenge.yourPoints)}</Text>
+                                  <Text color="text.secondary">Opponent {formatNumber(challenge.opponentPoints)}</Text>
+                                  <Badge colorScheme={
+                                    challenge.status === 'pending'
+                                      ? 'orange'
+                                      : (challenge.yourPoints >= challenge.opponentPoints ? 'success' : 'red')
+                                  }>
+                                    {challenge.status}
+                                  </Badge>
+                                </VStack>
+                              </Flex>
+                            ))}
+                        </Stack>
+                      )}
+                    </CardBody>
+                  </Card>
 
-              <Card bg="surface.default" border="1px solid" borderColor="border.subtle">
-                <CardHeader>
-                  <Text fontWeight="bold">Challenge History</Text>
-                  <Text color="text.secondary">Wins, losses, and stats</Text>
-                </CardHeader>
-                <CardBody>
-                  <Stack spacing={3}>
-                    {segmentChallenges
-                      .filter((c) => c.status === 'completed')
-                      .map((challenge) => (
+                  <Card bg="surface.default" border="1px solid" borderColor="border.subtle">
+                    <CardHeader>
+                      <Text fontWeight="bold">Challenge History</Text>
+                      <Text color="text.secondary">Wins, losses, and stats</Text>
+                    </CardHeader>
+                    <CardBody>
+                      <Stack spacing={3}>
+                        {challenges
+                          .filter((c) => c.status === 'completed')
+                          .map((challenge) => (
                         <Flex key={challenge.id} p={3} border="1px solid" borderColor="border.subtle" borderRadius="lg" align="center" gap={3}>
                           <Icon as={Award} color={challenge.result === 'win' ? 'success.400' : 'danger.DEFAULT'} />
                           <Box flex="1">
                             <Text fontWeight="bold">{challenge.opponentName}</Text>
-                            <Text fontSize="sm" color="text.secondary">{challenge.startDate} → {challenge.endDate}</Text>
+                            <Text fontSize="sm" color="text.secondary">
+                              {format(new Date(challenge.startDate), 'MMM d')} → {format(new Date(challenge.endDate), 'MMM d')}
+                            </Text>
                           </Box>
                           <Text fontWeight="bold">{challenge.result?.toUpperCase() || 'DRAW'}</Text>
                         </Flex>
@@ -1391,6 +1424,8 @@ export const LeadershipBoardPage: React.FC = () => {
                   </Stack>
                 </CardBody>
               </Card>
+                </>
+              )}
             </Stack>
           </TabPanel>
         </TabPanels>
