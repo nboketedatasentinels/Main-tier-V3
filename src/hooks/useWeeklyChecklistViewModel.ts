@@ -555,8 +555,9 @@ export function useWeeklyChecklistViewModel() {
       await createApprovalRequest({
         userId: user.uid,
         type: 'points_verification',
+        approvalType: activity.approvalType,
         title: activity.title,
-          source: sourcePayload,
+        source: sourcePayload,
         summary: proofModal.notes?.trim(),
         points: activity.points,
       })
