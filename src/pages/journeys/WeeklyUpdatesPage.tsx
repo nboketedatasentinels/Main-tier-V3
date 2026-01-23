@@ -632,6 +632,7 @@ const WeeklyChecklistPage: React.FC = () => {
       await createApprovalRequest({
         userId: user.uid,
         type: 'points_verification',
+        approvalType: activity.approvalType,
         title: activity.title,
         source: sourcePayload,
         summary: activity.notes,
