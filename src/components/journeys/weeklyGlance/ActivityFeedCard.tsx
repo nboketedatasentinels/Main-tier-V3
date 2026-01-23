@@ -28,7 +28,7 @@ const statusIconMap: Record<ActivityFeedStatus, typeof CheckCircle2> = {
 }
 
 export const ActivityFeedCard = ({ items }: ActivityFeedCardProps) => {
-  const visibleItems = items.slice(0, 3)
+  const visibleItems = items.slice(0, 5)
 
   return (
     <Card h="100%" variant="outline" borderColor="border.subtle">
@@ -70,7 +70,7 @@ export const ActivityFeedCard = ({ items }: ActivityFeedCardProps) => {
             ))}
           </VStack>
 
-          {items.length > 3 && (
+          {items.length > 5 && (
             <Button variant="link" size="sm" alignSelf="flex-start" color="brand.primary">
               View all activity
             </Button>
