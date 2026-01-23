@@ -11,7 +11,7 @@ import {
 import { db } from '@/services/firebase'
 import { TransformationTier, UserProfile } from '@/types'
 import { LeaderboardContext } from './useLeaderboardContext'
-import { fetchOrgMembers, getOrgScope } from '@/utils/organizationScope'
+import { getOrgScope, listenToOrgMembers } from '@/utils/organizationScope'
 
 export interface PointsTransaction {
   id: string
@@ -193,27 +193,36 @@ export const useLeaderboardData = ({
       }
 
       setProfilesLoaded(false)
-      let isActive = true
-      fetchOrgMembers(db, orgScope)
-        .then((members) => {
-          if (!isActive) return
+
+      const unsubscribe = listenToOrgMembers(
+        db,
+        orgScope,
+        (members) => {
           setProfiles(members as unknown as UserProfile[])
           setProfilesLoaded(true)
-          console.log('[Leaderboard] Organization profiles fetched', {
+          setErrorMessage(null)
+          console.log('[Leaderboard] Organization profiles updated (real-time)', {
             contextType: context?.type,
             count: members.length,
           })
-        })
-        .catch((error) => {
-          console.error('[Leaderboard] Failed to load organization profiles', error)
-          if (!isActive) return
-          setProfiles([])
-          setProfilesLoaded(true)
-          setErrorMessage('Unable to load leaderboard data. Please refresh the page.')
-        })
+        },
+        (error) => {
+          handleSnapshotError(
+            'organization_profiles',
+            error,
+            setProfilesLoaded,
+            profilesRetry,
+            setProfilesRetry,
+            profilesRetryTimeout,
+          )
+        },
+      )
 
       return () => {
-        isActive = false
+        unsubscribe()
+        if (profilesRetryTimeout.current) {
+          clearTimeout(profilesRetryTimeout.current)
+        }
       }
     }
 

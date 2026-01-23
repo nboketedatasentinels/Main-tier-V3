@@ -864,43 +864,6 @@ export const LeadershipCouncilPage: React.FC = () => {
 
                     <Text color="text.primary">{partnerProfile.bio || 'Dedicated program partner supporting your transformation journey.'}</Text>
 
-                    <SimpleGrid columns={{ base: 1, md: 3 }} spacing={4}>
-                      <Box p={4} border="1px solid" borderColor="border.subtle" rounded="lg" bg="surface.subtle">
-                        <Text fontSize="xs" textTransform="uppercase" color="text.muted" fontWeight="semibold">
-                          Session statistics
-                        </Text>
-                        <Text fontWeight="bold" color="text.primary" mt={2}>
-                          {partnerProfile.sessionsConducted || 0} sessions
-                        </Text>
-                        {partnerProfile.nextSession && (
-                          <Text fontSize="sm" color="text.secondary">Next: {partnerProfile.nextSession}</Text>
-                        )}
-                      </Box>
-                      <Box p={4} border="1px solid" borderColor="border.subtle" rounded="lg" bg="surface.subtle">
-                        <Text fontSize="xs" textTransform="uppercase" color="text.muted" fontWeight="semibold">
-                          Expertise
-                        </Text>
-                        <Text mt={2} color="text.primary">
-                          {partnerProfile.expertise?.join(', ') || 'Leadership, change management, growth.'}
-                        </Text>
-                      </Box>
-                      <Box p={4} border="1px solid" borderColor="border.subtle" rounded="lg" bg="surface.subtle">
-                        <Text fontSize="xs" textTransform="uppercase" color="text.muted" fontWeight="semibold">
-                          Resources shared
-                        </Text>
-                        <VStack align="start" spacing={2} mt={2}>
-                          {(partnerProfile.resources || []).map((resource) => (
-                            <Link key={resource.url} href={resource.url} color="brand.primary" isExternal>
-                              {resource.label}
-                            </Link>
-                          ))}
-                          {(!partnerProfile.resources || partnerProfile.resources.length === 0) && (
-                            <Text color="text.secondary">Guides and templates coming soon.</Text>
-                          )}
-                        </VStack>
-                      </Box>
-                    </SimpleGrid>
-
                     <Divider />
 
                     <SimpleGrid columns={{ base: 1, md: 2 }} spacing={4}>
