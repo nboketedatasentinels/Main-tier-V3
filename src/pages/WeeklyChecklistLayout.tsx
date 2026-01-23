@@ -4,7 +4,6 @@ import { ActivityList } from './components/ActivityList'
 import { ProofModal } from './components/ProofModal'
 import { WeeklySummary } from './components/WeeklySummary'
 import { JourneyHeader } from './components/JourneyHeader'
-import { ParticipationRhythm } from './components/ParticipationRhythm'
 import { GamificationPanel } from './components/GamificationPanel'
 
 type VM = ReturnType<typeof useWeeklyChecklistViewModel>
@@ -36,7 +35,6 @@ export const WeeklyChecklistLayout = ({ vm }: { vm: VM }) => {
 
         <GridItem>
           <Stack spacing={4}>
-            <ParticipationRhythm />
             <GamificationPanel activities={vm.activities} />
           </Stack>
         </GridItem>
