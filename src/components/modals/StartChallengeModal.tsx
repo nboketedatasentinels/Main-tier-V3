@@ -334,7 +334,6 @@ export const StartChallengeModal: React.FC<StartChallengeModalProps> = ({
 
       // Calculate dates
       const startDate = new Date();
-      startDate.setDate(startDate.getDate() + 1);
       startDate.setHours(0, 0, 0, 0);
 
       const endDate = new Date(startDate);
@@ -343,6 +342,7 @@ export const StartChallengeModal: React.FC<StartChallengeModalProps> = ({
       } else {
         endDate.setDate(endDate.getDate() + 30);
       }
+      endDate.setHours(23, 59, 59, 999);
 
       // Auto-generated description
       const finalDescription = description ||
@@ -440,7 +440,7 @@ export const StartChallengeModal: React.FC<StartChallengeModalProps> = ({
 
   // --- DERIVED STATE & CONSTANTS ---
   const startDate = new Date();
-  startDate.setDate(startDate.getDate() + 1);
+  startDate.setHours(0, 0, 0, 0);
 
   const getEndDate = () => {
     const end = new Date(startDate);
@@ -449,6 +449,7 @@ export const StartChallengeModal: React.FC<StartChallengeModalProps> = ({
     } else {
       end.setDate(end.getDate() + 30);
     }
+    end.setHours(23, 59, 59, 999);
     return end;
   };
   const endDate = getEndDate();
