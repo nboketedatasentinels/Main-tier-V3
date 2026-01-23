@@ -708,11 +708,11 @@ export const ImpactLogPage: React.FC = () => {
                 uid: user.uid,
                 journeyType,
                 weekNumber,
-                activity,
+                activity: { ...activity, points: payload.points },
                 source: 'impact_log_submission',
               })
               toastTitle = 'Impact logged and points awarded!'
-              toastDescription = `You earned ${activity.points} points.${weekSuffix}`
+              toastDescription = `You earned ${payload.points} points.${weekSuffix}`
             } catch (awardError) {
               if (import.meta.env.DEV) {
                 console.error('Impact log points award failed', awardError)
