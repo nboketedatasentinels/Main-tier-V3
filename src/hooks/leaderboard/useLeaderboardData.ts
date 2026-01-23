@@ -1,11 +1,13 @@
 import { Dispatch, MutableRefObject, SetStateAction, useEffect, useRef, useState } from 'react'
 import {
   collection,
+  DocumentData,
   limit,
   onSnapshot,
   orderBy,
   query,
   QueryConstraint,
+  QueryDocumentSnapshot,
   where,
 } from 'firebase/firestore'
 import { db } from '@/services/firebase'
@@ -123,6 +125,63 @@ const buildLegacyChallengeConstraints = (
   return constraints
 }
 
+// Helper to convert Firestore data to ChallengeRecord
+const mapChallenge = (
+  doc: QueryDocumentSnapshot<DocumentData>,
+  currentUserId: string
+): ChallengeRecord => {
+  const data = doc.data()
+
+  // Determine if current user is challenger or challenged
+  const isChallenger = data.challenger_id === currentUserId
+  const opponentId = isChallenger ? data.challenged_id : data.challenger_id
+  const opponentName = isChallenger
+    ? (data.challenged_name as string) || 'Opponent'
+    : (data.challenger_name as string) || 'Opponent'
+
+  // Get points for current user and opponent
+  const metrics = data.metrics as Record<string, { total?: number }> | undefined
+  const yourPoints = isChallenger
+    ? (metrics?.challenger?.total || 0)
+    : (metrics?.challenged?.total || 0)
+  const opponentPoints = isChallenger
+    ? (metrics?.challenged?.total || 0)
+    : (metrics?.challenger?.total || 0)
+
+  // Parse dates
+  const parseDate = (val: unknown): string => {
+    if (!val) return new Date().toISOString()
+    if (typeof val === 'string') return val
+    if (val instanceof Date) return val.toISOString()
+    if (typeof val === 'object' && 'toDate' in val) {
+      return (val as { toDate: () => Date }).toDate().toISOString()
+    }
+    return new Date().toISOString()
+  }
+
+  // Determine result for completed challenges
+  let result: ChallengeRecord['result'] | undefined
+  if (data.status === 'completed') {
+    if (yourPoints > opponentPoints) result = 'win'
+    else if (yourPoints < opponentPoints) result = 'loss'
+    else result = 'draw'
+  }
+
+  return {
+    id: doc.id,
+    opponentName,
+    opponentId: opponentId as string | undefined,
+    opponentAvatar: undefined, // Could be fetched separately if needed
+    startDate: parseDate(data.start_date),
+    endDate: parseDate(data.end_date),
+    yourPoints,
+    opponentPoints,
+    status: (data.status as ChallengeRecord['status']) || 'pending',
+    result,
+    type: data.type as ChallengeRecord['type'],
+  }
+}
+
 export const useLeaderboardData = ({
   context,
   profileId,
@@ -161,7 +220,6 @@ export const useLeaderboardData = ({
 
   const profilesRetryTimeout = useRef<ReturnType<typeof setTimeout> | null>(null)
   const transactionsRetryTimeout = useRef<ReturnType<typeof setTimeout> | null>(null)
-  const challengesRetryTimeout = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   const handleSnapshotError = (
     label: string,
@@ -339,186 +397,90 @@ export const useLeaderboardData = ({
     }
   }, [context, transactionsRetry])
 
-  // FIX: Completely rewritten challenge fetching logic
-  // Now queries by participant and handles legacy data structures
+  // Robust real-time challenge fetching that handles legacy and new schemas
   useEffect(() => {
     if (!profileId) {
       setChallenges([])
       setChallengesLoaded(true)
-      console.log('[Leaderboard] No profileId, skipping challenges query.')
-      return
+      return undefined
     }
 
     setChallengesLoaded(false)
-    console.log('[Leaderboard] Starting challenges query for profileId:', profileId)
 
-    // Helper to convert Firestore data to ChallengeRecord
-    const mapChallenge = (doc: any, currentUserId: string): ChallengeRecord => {
-      const data = doc.data() as Record<string, unknown>
-      
-      // Determine if current user is challenger or challenged
-      const isChallenger = data.challenger_id === currentUserId
-      const opponentId = isChallenger ? data.challenged_id : data.challenger_id
-      const opponentName = isChallenger 
-        ? (data.challenged_name as string) || 'Opponent'
-        : (data.challenger_name as string) || 'Opponent'
-      
-      // Get points for current user and opponent
-      const metrics = data.metrics as Record<string, { total?: number }> | undefined
-      const yourPoints = isChallenger 
-        ? (metrics?.challenger?.total || 0)
-        : (metrics?.challenged?.total || 0)
-      const opponentPoints = isChallenger
-        ? (metrics?.challenged?.total || 0)
-        : (metrics?.challenger?.total || 0)
-
-      // Parse dates
-      const parseDate = (val: unknown): string => {
-        if (!val) return new Date().toISOString()
-        if (typeof val === 'string') return val
-        if (val instanceof Date) return val.toISOString()
-        if (typeof val === 'object' && 'toDate' in val) {
-          return (val as { toDate: () => Date }).toDate().toISOString()
-        }
-        return new Date().toISOString()
-      }
-
-      // Determine result for completed challenges
-      let result: ChallengeRecord['result'] | undefined
-      if (data.status === 'completed') {
-        if (yourPoints > opponentPoints) result = 'win'
-        else if (yourPoints < opponentPoints) result = 'loss'
-        else result = 'draw'
-      }
-
-      return {
-        id: doc.id,
-        opponentName,
-        opponentId: opponentId as string | undefined,
-        opponentAvatar: undefined, // Could be fetched separately if needed
-        startDate: parseDate(data.start_date),
-        endDate: parseDate(data.end_date),
-        yourPoints,
-        opponentPoints,
-        status: (data.status as ChallengeRecord['status']) || 'pending',
-        result,
-        type: data.type as ChallengeRecord['type'],
-      }
+    // Store sub-results to merge them reactively
+    const subResults = {
+      participants: [] as ChallengeRecord[],
+      challenger: [] as ChallengeRecord[],
+      challenged: [] as ChallengeRecord[],
     }
 
-    // Try the participants array query first
-    const participantsConstraints = buildChallengeConstraints(profileId)
-    
-    if (participantsConstraints) {
-      const challengeQuery = query(collection(db, 'challenges'), ...participantsConstraints)
-      
-      const unsubscribe = onSnapshot(
-        challengeQuery,
-        (snapshot) => {
-          if (snapshot.docs.length > 0) {
-            // participants array query worked
-            const loadedChallenges = snapshot.docs.map((doc) => mapChallenge(doc, profileId))
-            setChallenges(loadedChallenges)
-            setChallengesLoaded(true)
-            setErrorMessage(null)
-            console.log('[Leaderboard] Challenges fetched via participants array', {
-              count: loadedChallenges.length,
-              statuses: loadedChallenges.map(c => c.status),
-            })
-          } else {
-            // Fall back to legacy queries
-            console.log('[Leaderboard] No results from participants query, trying legacy queries...')
-            fetchLegacyChallenges()
-          }
-        },
-        (error) => {
-          console.error('[Leaderboard] Participants query error, trying legacy:', error)
-          fetchLegacyChallenges()
+    const mergeAndSet = () => {
+      const all = [...subResults.participants, ...subResults.challenger, ...subResults.challenged]
+      const seen = new Set<string>()
+      const unique: ChallengeRecord[] = []
+
+      for (const c of all) {
+        if (!seen.has(c.id)) {
+          seen.add(c.id)
+          unique.push(c)
         }
+      }
+
+      unique.sort((a, b) => new Date(b.startDate).getTime() - new Date(a.startDate).getTime())
+      setChallenges(unique)
+      setChallengesLoaded(true)
+      setErrorMessage(null)
+    }
+
+    // Query 1: New participants array schema
+    const q1Constraints = buildChallengeConstraints(profileId)
+    const q1 = q1Constraints ? query(collection(db, 'challenges'), ...q1Constraints) : null
+
+    // Query 2: Legacy challenger_id schema
+    const q2Constraints = buildLegacyChallengeConstraints(profileId, true)
+    const q2 = q2Constraints ? query(collection(db, 'challenges'), ...q2Constraints) : null
+
+    // Query 3: Legacy challenged_id schema
+    const q3Constraints = buildLegacyChallengeConstraints(profileId, false)
+    const q3 = q3Constraints ? query(collection(db, 'challenges'), ...q3Constraints) : null
+
+    const unsubscribers: (() => void)[] = []
+
+    if (q1) {
+      unsubscribers.push(
+        onSnapshot(q1, (snap) => {
+          subResults.participants = snap.docs.map((doc) => mapChallenge(doc, profileId))
+          mergeAndSet()
+        }, (err) => console.error('[Leaderboard] Challenges Q1 error:', err))
       )
-
-      const fetchLegacyChallenges = async () => {
-        try {
-          // Query as challenger
-          const challengerConstraints = buildLegacyChallengeConstraints(profileId, true)
-          const challengedConstraints = buildLegacyChallengeConstraints(profileId, false)
-
-          const challengerQuery = challengerConstraints 
-            ? query(collection(db, 'challenges'), ...challengerConstraints)
-            : null
-          const challengedQuery = challengedConstraints
-            ? query(collection(db, 'challenges'), ...challengedConstraints)
-            : null
-
-          const results: ChallengeRecord[] = []
-          const seenIds = new Set<string>()
-
-          if (challengerQuery) {
-            onSnapshot(
-              challengerQuery,
-              (snapshot) => {
-                snapshot.docs.forEach((doc) => {
-                  if (!seenIds.has(doc.id)) {
-                    seenIds.add(doc.id)
-                    results.push(mapChallenge(doc, profileId))
-                  }
-                })
-              },
-              (error) => console.error('[Leaderboard] Challenger query error:', error)
-            )
-          }
-
-          if (challengedQuery) {
-            onSnapshot(
-              challengedQuery,
-              (snapshot) => {
-                snapshot.docs.forEach((doc) => {
-                  if (!seenIds.has(doc.id)) {
-                    seenIds.add(doc.id)
-                    results.push(mapChallenge(doc, profileId))
-                  }
-                })
-                
-                // Sort by created_at desc and update state
-                results.sort((a, b) => new Date(b.startDate).getTime() - new Date(a.startDate).getTime())
-                setChallenges(results)
-                setChallengesLoaded(true)
-                console.log('[Leaderboard] Challenges fetched via legacy queries', {
-                  count: results.length,
-                })
-              },
-              (error) => {
-                console.error('[Leaderboard] Challenged query error:', error)
-                setChallenges([])
-                setChallengesLoaded(true)
-              }
-            )
-          }
-
-          // If no queries, mark as loaded
-          if (!challengerQuery && !challengedQuery) {
-            setChallenges([])
-            setChallengesLoaded(true)
-          }
-        } catch (error) {
-          console.error('[Leaderboard] Legacy challenges fetch error:', error)
-          setChallenges([])
-          setChallengesLoaded(true)
-        }
-      }
-
-      return () => {
-        unsubscribe()
-        if (challengesRetryTimeout.current) {
-          clearTimeout(challengesRetryTimeout.current)
-        }
-      }
     }
 
-    // No valid constraints
-    setChallenges([])
-    setChallengesLoaded(true)
-    return undefined
+    if (q2) {
+      unsubscribers.push(
+        onSnapshot(q2, (snap) => {
+          subResults.challenger = snap.docs.map((doc) => mapChallenge(doc, profileId))
+          mergeAndSet()
+        }, (err) => console.error('[Leaderboard] Challenges Q2 error:', err))
+      )
+    }
+
+    if (q3) {
+      unsubscribers.push(
+        onSnapshot(q3, (snap) => {
+          subResults.challenged = snap.docs.map((doc) => mapChallenge(doc, profileId))
+          mergeAndSet()
+        }, (err) => console.error('[Leaderboard] Challenges Q3 error:', err))
+      )
+    }
+
+    if (unsubscribers.length === 0) {
+      setChallenges([])
+      setChallengesLoaded(true)
+    }
+
+    return () => {
+      unsubscribers.forEach((unsub) => unsub())
+    }
   }, [profileId])
 
   return {

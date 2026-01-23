@@ -219,7 +219,7 @@ export const useLeaderboardMetrics = ({
   const segmentStats = {
     weeklyPoints,
     monthlyPoints,
-    activeChallenges: segmentChallenges.filter((c) => c.status === 'active').length,
+    activeChallenges: segmentChallenges.filter((c) => c.status === 'active' || c.status === 'pending').length,
     badgesEarned: userRow?.badgeCount || 0,
   }
 
