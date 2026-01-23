@@ -107,7 +107,6 @@ const timeframeOptions = [
 
 const sortOptions = [
   { label: 'Sort by Points', value: 'points' },
-  { label: 'Sort by Level', value: 'level' },
   { label: 'Sort by Name', value: 'name' },
 ]
 
@@ -147,7 +146,7 @@ export const LeadershipBoardPage: React.FC = () => {
     'tint.brandPrimary',
   ])
   const [timeframe, setTimeframe] = useState<LeaderboardTimeframe>(LeaderboardTimeframe.LAST_7_DAYS)
-  const [sortField, setSortField] = useState<'points' | 'level' | 'name'>('points')
+  const [sortField, setSortField] = useState<'points' | 'name'>('points')
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('desc')
   const [currentProfile, setCurrentProfile] = useState<UserProfile | null>(null)
   const [virtualOffset, setVirtualOffset] = useState(0)
@@ -164,7 +163,6 @@ export const LeadershipBoardPage: React.FC = () => {
   })
   const [expandedCategories, setExpandedCategories] = useState<Set<string>>(new Set())
   const previousTotalPoints = useRef<number | null>(null)
-  const previousLevel = useRef<number | null>(null)
   const timeframeStart = useMemo(() => toDateFromTimeframe(timeframe), [timeframe])
   const enableProfileRealtime = import.meta.env.VITE_ENABLE_PROFILE_REALTIME === 'true'
 
@@ -446,15 +444,8 @@ export const LeadershipBoardPage: React.FC = () => {
 
   const isPointsReady = Boolean(profile) && profilesLoaded && transactionsLoaded
   const displayTotalPoints = userRow?.totalPoints ?? profile?.totalPoints ?? 0
-  const displayLevel = userRow?.level ?? profile?.level ?? 1
-  const levelStep = 500
-  const pointsIntoLevel = displayTotalPoints % levelStep
-  const pointsToNextLevel = Math.max(levelStep - pointsIntoLevel, 0)
-  const levelProgress = Math.min(100, (pointsIntoLevel / levelStep) * 100)
   const weeklyTarget = 200
   const weeklyProgress = Math.min(100, (segmentStats.weeklyPoints / weeklyTarget) * 100)
-  const nextBadgeAt = Math.max(levelStep, Math.ceil((displayTotalPoints + 1) / levelStep) * levelStep)
-  const pointsToNextBadge = Math.max(nextBadgeAt - displayTotalPoints, 0)
   const percentileValue = leaderboardRows.length
     ? Math.round(((userRow?.rank ?? leaderboardRows.length) / leaderboardRows.length) * 100)
     : 100
@@ -470,9 +461,8 @@ export const LeadershipBoardPage: React.FC = () => {
   useEffect(() => {
     if (!profile) return
 
-    if (previousTotalPoints.current === null || previousLevel.current === null) {
+    if (previousTotalPoints.current === null) {
       previousTotalPoints.current = displayTotalPoints
-      previousLevel.current = displayLevel
       return
     }
 
@@ -488,19 +478,8 @@ export const LeadershipBoardPage: React.FC = () => {
       })
     }
 
-    if (displayLevel > (previousLevel.current ?? 0)) {
-      toast({
-        title: 'Level up!',
-        description: `You reached level ${displayLevel}.`,
-        status: 'success',
-        duration: 2500,
-        isClosable: true,
-      })
-    }
-
     previousTotalPoints.current = displayTotalPoints
-    previousLevel.current = displayLevel
-  }, [displayLevel, displayTotalPoints, profile, toast])
+  }, [displayTotalPoints, profile, toast])
 
   useEffect(() => {
     if (!pointsPulse) return undefined
@@ -743,20 +722,6 @@ export const LeadershipBoardPage: React.FC = () => {
                         <Stack spacing={4}>
                           <Box>
                             <HStack justify="space-between">
-                              <Text fontWeight="semibold">Level progress</Text>
-                              <Text fontSize="sm" color="text.secondary">
-                                Level {displayLevel}
-                              </Text>
-                            </HStack>
-                            <Progress value={levelProgress} colorScheme="purple" borderRadius="full" mt={2} />
-                            <Text fontSize="xs" color="text.secondary" mt={1}>
-                              {pointsToNextLevel === 0
-                                ? 'Level up unlocked.'
-                                : `${formatNumber(pointsToNextLevel)} points to Level ${displayLevel + 1}`}
-                            </Text>
-                          </Box>
-                          <Box>
-                            <HStack justify="space-between">
                               <Text fontWeight="semibold">Weekly momentum</Text>
                               <Text fontSize="sm" color="text.secondary">
                                 Goal {formatNumber(weeklyTarget)}
@@ -771,7 +736,7 @@ export const LeadershipBoardPage: React.FC = () => {
                           </Box>
                         </Stack>
                       </Grid>
-                      <SimpleGrid columns={{ base: 2, md: 4 }} spacing={3}>
+                      <SimpleGrid columns={{ base: 2, md: 3 }} spacing={3}>
                         <Stat>
                           <StatLabel color="text.muted">Total Points</StatLabel>
                           <Skeleton isLoaded={isPointsReady} height="28px">
@@ -780,15 +745,6 @@ export const LeadershipBoardPage: React.FC = () => {
                             </StatNumber>
                           </Skeleton>
                           <StatHelpText color="text.secondary">Lifetime XP earned</StatHelpText>
-                        </Stat>
-                        <Stat>
-                          <StatLabel color="text.muted">Current Level</StatLabel>
-                          <Skeleton isLoaded={isPointsReady} height="28px">
-                            <StatNumber color="text.primary" fontSize="lg" animation={pointsPulseStyle}>
-                              {displayLevel}
-                            </StatNumber>
-                          </Skeleton>
-                          <StatHelpText color="text.secondary">You’re gaining momentum</StatHelpText>
                         </Stat>
                         <Stat>
                           <StatLabel color="text.muted">Monthly Points</StatLabel>
@@ -833,22 +789,11 @@ export const LeadershipBoardPage: React.FC = () => {
                         <Box>
                           <Text fontWeight="bold">{profile?.fullName || 'You'}</Text>
                           <Text color="text.secondary">
-                            Level {displayLevel} · {formatNumber(displayTotalPoints)} pts
+                            {formatNumber(displayTotalPoints)} pts
                           </Text>
                         </Box>
                       </HStack>
-                      <SimpleGrid columns={3} spacing={3}>
-                        <Box p={3} border="1px solid" borderColor="border.subtle" borderRadius="lg">
-                          <HStack spacing={1}>
-                            <Text fontSize="xs" color="text.secondary">Active Points</Text>
-                            <Tooltip label="Points earned in the selected timeframe." hasArrow>
-                              <Box as="span" color="text.muted">
-                                <Icon as={Info} boxSize={3} />
-                              </Box>
-                            </Tooltip>
-                          </HStack>
-                          <Text fontWeight="bold">{formatNumber(userRow?.activePoints || 0)}</Text>
-                        </Box>
+                      <SimpleGrid columns={2} spacing={3}>
                         <Box p={3} border="1px solid" borderColor="border.subtle" borderRadius="lg">
                           <Text fontSize="xs" color="text.secondary">Total Points</Text>
                           <Text fontWeight="bold" animation={pointsPulseStyle}>
@@ -908,9 +853,6 @@ export const LeadershipBoardPage: React.FC = () => {
                                   />
                                 ))}
                               </HStack>
-                              <Text fontSize="xs" color="text.secondary">
-                                Next badge unlocks in {formatNumber(pointsToNextBadge)} points.
-                              </Text>
                             </VStack>
                           )}
                         </Box>
@@ -1018,7 +960,6 @@ export const LeadershipBoardPage: React.FC = () => {
                             <Tr>
                               <Th color="text.muted">Rank</Th>
                               <Th color="text.muted">Member</Th>
-                              <Th color="text.muted">Level</Th>
                               <Th color="text.muted">Badges</Th>
                               <Th color="text.muted">Trend</Th>
                               <Th color="text.muted" isNumeric>Points</Th>
@@ -1027,7 +968,7 @@ export const LeadershipBoardPage: React.FC = () => {
                           <Tbody>
                             {virtualized.paddingTop > 0 && (
                               <Tr height={`${virtualized.paddingTop}px`}>
-                                <Td colSpan={6} p={0} borderBottom="none" />
+                                <Td colSpan={5} p={0} borderBottom="none" />
                               </Tr>
                             )}
                             {virtualized.rows.map((row) => {
@@ -1070,19 +1011,10 @@ export const LeadershipBoardPage: React.FC = () => {
                                         <HStack spacing={2} mt={1}>
                                           <Badge colorScheme="success">Active</Badge>
                                           <Badge colorScheme="primary">{row.badgeCount} badges</Badge>
-                                          <Badge
-                                            bg="tint.accentWarning"
-                                            color="text.primary"
-                                            border="1px solid"
-                                            borderColor="accent.warning"
-                                          >
-                                            Level {row.level}
-                                          </Badge>
                                         </HStack>
                                       </Box>
                                     </HStack>
                                   </Td>
-                                  <Td color="text.primary">Lvl {row.level}</Td>
                                   <Td>
                                     <HStack spacing={1}>
                                       {Array.from({ length: Math.min(row.badgeCount, 4) }).map((_, idx) => (
@@ -1118,7 +1050,7 @@ export const LeadershipBoardPage: React.FC = () => {
                             })}
                             {virtualized.paddingBottom > 0 && (
                               <Tr height={`${virtualized.paddingBottom}px`}>
-                                <Td colSpan={6} p={0} borderBottom="none" />
+                                <Td colSpan={5} p={0} borderBottom="none" />
                               </Tr>
                             )}
                           </Tbody>
@@ -1154,7 +1086,6 @@ export const LeadershipBoardPage: React.FC = () => {
                             <Th color="text.muted">Member</Th>
                             <Th color="text.muted">Active Points</Th>
                             <Th color="text.muted">Total</Th>
-                            <Th color="text.muted">Level</Th>
                             <Th color="text.muted">Gap vs You</Th>
                           </Tr>
                         </Thead>
@@ -1174,7 +1105,6 @@ export const LeadershipBoardPage: React.FC = () => {
                               </Td>
                               <Td>{formatNumber(row.activePoints)}</Td>
                               <Td>{formatNumber(row.totalPoints)}</Td>
-                              <Td>{row.level}</Td>
                               <Td color={row.delta >= 0 ? 'success.500' : 'danger.DEFAULT'}>
                                 {row.delta >= 0 ? '+' : ''}
                                 {formatNumber(row.delta)}
@@ -1226,21 +1156,6 @@ export const LeadershipBoardPage: React.FC = () => {
                             borderRadius="full"
                           />
                           <Text color="text.secondary" fontSize="xs" mt={1}>Cohort avg: {formatNumber(cohortStats.avgActive)}</Text>
-                        </Box>
-                        <Box>
-                          <HStack justify="space-between" mb={1}>
-                            <Text>Level</Text>
-                            <HStack spacing={2}>
-                              <Text fontWeight="semibold">{cohortStats.level}</Text>
-                              <Text color="text.secondary" fontSize="sm">of level {cohortStats.maxLevel}</Text>
-                            </HStack>
-                          </HStack>
-                          <Progress
-                            value={(cohortStats.level / Math.max(cohortStats.maxLevel, 1)) * 100}
-                            colorScheme="primary"
-                            borderRadius="full"
-                          />
-                          <Text color="text.secondary" fontSize="xs" mt={1}>Cohort avg: {cohortStats.avgLevel}</Text>
                         </Box>
                       </Stack>
                     </CardBody>
