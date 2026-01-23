@@ -36,6 +36,7 @@ export interface ChallengeRecord {
   status: 'active' | 'completed' | 'upcoming' | 'pending'
   result?: 'win' | 'loss' | 'draw'
   type?: 'competitive' | 'collaborative'
+  isChallenger: boolean
 }
 
 interface LeaderboardDataState {
@@ -179,6 +180,7 @@ const mapChallenge = (
     status: (data.status as ChallengeRecord['status']) || 'pending',
     result,
     type: data.type as ChallengeRecord['type'],
+    isChallenger,
   }
 }
 

@@ -95,17 +95,25 @@ export async function awardChecklistPoints(params: {
     limit(1)
   );
 
+  const activeChallengesQuery = query(
+    collection(db, "challenges"),
+    where("participants", "array-contains", uid),
+    where("status", "==", "active")
+  );
+
   try {
     const [
       ledgerSnapshot,
       weeklyActivitySnapshot,
       windowActivitySnapshot,
       lastActivitySnapshot,
+      activeChallengesSnapshot,
     ] = await Promise.all([
       getDocs(ledgerQuery),
       getDocs(weeklyActivityQuery),
       getDocs(windowActivityQuery),
       getDocs(lastActivityQuery),
+      getDocs(activeChallengesQuery),
     ]);
 
     await runTransactionWithRetry(async (tx) => {
@@ -204,6 +212,23 @@ export async function awardChecklistPoints(params: {
 
       tx.set(doc(db, "users", uid), profileUpdate, { merge: true });
       tx.set(doc(db, "profiles", uid), profileUpdate, { merge: true });
+
+      // Update active challenges metrics
+      activeChallengesSnapshot.docs.forEach((challengeDoc) => {
+        const challengeData = challengeDoc.data();
+        const start = challengeData.start_date?.toDate();
+        const end = challengeData.end_date?.toDate();
+        const now = new Date();
+
+        if (start && end && now >= start && now <= end) {
+          const isChallenger = challengeData.challenger_id === uid;
+          const field = isChallenger ? "metrics.challenger.total" : "metrics.challenged.total";
+          tx.update(challengeDoc.ref, {
+            [field]: increment(activity.points),
+            updatedAt: serverTimestamp(),
+          });
+        }
+      });
     });
 
     // Post-transaction logic
@@ -259,8 +284,18 @@ export async function revokeChecklistPoints(params: {
     where("weekNumber", "==", weekNumber)
   );
 
+  const activeChallengesQuery = query(
+    collection(db, "challenges"),
+    where("participants", "array-contains", uid),
+    where("status", "==", "active")
+  );
+
   try {
-    const ledgerSnapshot = await getDocs(ledgerQuery);
+    const [ledgerSnapshot, activeChallengesSnapshot] = await Promise.all([
+      getDocs(ledgerQuery),
+      getDocs(activeChallengesQuery),
+    ]);
+
     await runTransactionWithRetry(async (tx) => {
       const [ledgerDoc, progressDoc] = await Promise.all([tx.get(ledgerRef), tx.get(progressRef)]);
 
@@ -325,6 +360,23 @@ export async function revokeChecklistPoints(params: {
 
       tx.set(doc(db, "users", uid), profileUpdate, { merge: true });
       tx.set(doc(db, "profiles", uid), profileUpdate, { merge: true });
+
+      // Update active challenges metrics
+      activeChallengesSnapshot.docs.forEach((challengeDoc) => {
+        const challengeData = challengeDoc.data();
+        const start = challengeData.start_date?.toDate();
+        const end = challengeData.end_date?.toDate();
+        const now = new Date();
+
+        if (start && end && now >= start && now <= end) {
+          const isChallenger = challengeData.challenger_id === uid;
+          const field = isChallenger ? "metrics.challenger.total" : "metrics.challenged.total";
+          tx.update(challengeDoc.ref, {
+            [field]: increment(-ledgerPoints),
+            updatedAt: serverTimestamp(),
+          });
+        }
+      });
     });
   } catch (error) {
     console.error("🔴 [Points] Failed to revoke checklist points", error);

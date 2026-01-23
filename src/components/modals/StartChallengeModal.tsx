@@ -660,7 +660,8 @@ export const StartChallengeModal: React.FC<StartChallengeModalProps> = ({
                       <Text>• Both participants earn bonus XP if the goal is reached.</Text>
                     </>
                   )}
-                   <Text>• The challenged person must accept to start.</Text>
+                  <Text>• Earn points by completing your Weekly Checklist.</Text>
+                  <Text>• The challenged person must accept to start.</Text>
                 </VStack>
               </Box>
 
