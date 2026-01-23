@@ -16,6 +16,7 @@ import {
 } from '@chakra-ui/react'
 import { useCallback, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
+import { formatDistanceToNow } from 'date-fns'
 
 import { WeeklyPointsCard } from '@/components/journeys/weeklyGlance/WeeklyPointsCard'
 import { SupportTeamCard } from '@/components/journeys/weeklyGlance/SupportTeamCard'
@@ -27,10 +28,10 @@ import { LearnerWindowCard } from '@/components/journeys/weeklyGlance/LearnerWin
 import { NextMilestoneCard } from '@/components/journeys/weeklyGlance/NextMilestoneCard'
 import { WindowSummaryCard } from '@/components/journeys/weeklyGlance/WindowSummaryCard'
 
-import { useWeeklyGlanceData } from '@/hooks/useWeeklyGlanceData'
+import { useWeeklyGlanceData, type LedgerEntry } from '@/hooks/useWeeklyGlanceData'
 import { BuildVillageModal } from '@/components/modals/BuildVillageModal'
 import { useAuth } from '@/hooks/useAuth'
-import { TransformationTier } from '@/types'
+import { TransformationTier, type UserProfile } from '@/types'
 import {
   calculateWeekProgress,
   getDaysRemainingInWeek,
@@ -40,7 +41,7 @@ import {
 /**
  * Domain helpers (keeps business rules out of JSX as much as possible)
  */
-function isCorporateUser(profile: any) {
+function isCorporateUser(profile: UserProfile | null | undefined) {
   const tier = profile?.transformationTier
   return (
     tier === TransformationTier.CORPORATE_MEMBER ||
@@ -48,11 +49,11 @@ function isCorporateUser(profile: any) {
   )
 }
 
-function isPaidUser(profile: any) {
+function isPaidUser(profile: UserProfile | null | undefined) {
   return profile?.membershipStatus === 'paid'
 }
 
-function canCreateVillage(profile: any) {
+function canCreateVillage(profile: UserProfile | null | undefined) {
   // If they already belong to ANY village/company context, or are paid/corporate, do not show CTA
   const hasVillageContext =
     !!profile?.villageId || !!profile?.companyId || !!profile?.corporateVillageId
@@ -84,6 +85,7 @@ function buildWeeklyActivityFeed(params: {
   mentorFirstName?: string | null
   hasMentor: boolean
   peerMatchCount: number
+  ledgerEntries: LedgerEntry[]
 }): readonly ActivityFeedItem[] {
   const {
     earnedPoints,
@@ -95,6 +97,7 @@ function buildWeeklyActivityFeed(params: {
     mentorFirstName,
     hasMentor,
     peerMatchCount,
+    ledgerEntries,
   } = params
 
   const pointsStatus: ActivityFeedStatus =
@@ -111,10 +114,18 @@ function buildWeeklyActivityFeed(params: {
 
   const peerStatus: ActivityFeedStatus = peerMatchCount > 0 ? 'complete' : 'pending'
 
-  return [
+  const activityEntries: ActivityFeedItem[] = ledgerEntries.map(entry => ({
+    id: entry.id,
+    title: entry.activityTitle,
+    description: `${entry.points} points earned towards your goal.`,
+    timestamp: formatDistanceToNow(entry.createdAt, { addSuffix: true }),
+    status: 'complete',
+  }))
+
+  const statusItems: ActivityFeedItem[] = [
     {
       id: 'weekly-points',
-      title: 'Weekly points updated',
+      title: 'Weekly points summary',
       description: `${earnedPoints} points logged toward your ${targetPoints || 0} point goal.`,
       timestamp: `Week ${weekNumber} • ${daysRemaining} days left`,
       status: pointsStatus,
@@ -145,7 +156,9 @@ function buildWeeklyActivityFeed(params: {
       timestamp: peerMatchCount > 0 ? 'New match available' : 'Matching in progress',
       status: peerStatus,
     },
-  ] as const
+  ]
+
+  return [...activityEntries, ...statusItems]
 }
 
 /**
@@ -156,8 +169,8 @@ function useWeeklyGlanceViewModel() {
   const data = useWeeklyGlanceData()
 
   // Normalize collection shapes so UI never has to guard against undefined
-  const weeklyHabits = data.weeklyHabits ?? []
-  const peerMatches = data.peerMatches ?? []
+  const weeklyHabits = useMemo(() => data.weeklyHabits ?? [], [data.weeklyHabits])
+  const peerMatches = useMemo(() => data.peerMatches ?? [], [data.peerMatches])
 
   const weekRange = useMemo(() => getWeekDateRange(), [])
   const daysRemaining = useMemo(() => getDaysRemainingInWeek(), [])
@@ -192,6 +205,7 @@ function useWeeklyGlanceViewModel() {
   }
 
   const mentorProfile = data.supportAssignment?.mentorProfile
+  const ledgerEntries = useMemo(() => data.ledgerEntries ?? [], [data.ledgerEntries])
   const activityFeedItems = useMemo(
     () =>
       buildWeeklyActivityFeed({
@@ -204,6 +218,7 @@ function useWeeklyGlanceViewModel() {
         hasMentor: !!mentorProfile,
         mentorFirstName: mentorProfile?.firstName ?? null,
         peerMatchCount: peerMatches.length,
+        ledgerEntries,
       }),
     [
       earnedPoints,
@@ -214,6 +229,7 @@ function useWeeklyGlanceViewModel() {
       weeklyHabits.length,
       mentorProfile,
       peerMatches.length,
+      ledgerEntries,
     ]
   )
 
