@@ -1,6 +1,7 @@
 import {
   collection,
   doc,
+  getDoc,
   getDocs,
   increment,
   limit,
@@ -121,13 +122,17 @@ export async function awardChecklistPoints(params: {
       windowActivitySnapshot,
       lastActivitySnapshot,
       activeChallengesSnapshot,
+      profileSnap,
     ] = await Promise.all([
       getDocs(ledgerQuery),
       getDocs(weeklyActivityQuery),
       getDocs(windowActivityQuery),
       getDocs(lastActivityQuery),
       getDocs(activeChallengesQuery),
+      getDoc(doc(db, "profiles", uid)),
     ]);
+
+    const companyId = profileSnap.exists() ? profileSnap.data()?.companyId : null;
 
     await runTransactionWithRetry(async (tx) => {
       const [ledgerDoc, progressDoc] = await Promise.all([
@@ -226,6 +231,16 @@ export async function awardChecklistPoints(params: {
       tx.set(doc(db, "users", uid), profileUpdate, { merge: true });
       tx.set(doc(db, "profiles", uid), profileUpdate, { merge: true });
 
+      // Record transaction for leaderboard and activity feeds
+      tx.set(doc(collection(db, "points_transactions")), {
+        userId: uid,
+        points: activity.points,
+        category: activity.category || "Other",
+        reason: activity.title,
+        createdAt: serverTimestamp(),
+        companyId: companyId || null,
+      });
+
       // Update active challenges metrics
       activeChallengesSnapshot.docs.forEach((challengeDoc) => {
         const challengeData = challengeDoc.data();
@@ -307,10 +322,13 @@ export async function revokeChecklistPoints(params: {
   );
 
   try {
-    const [ledgerSnapshot, activeChallengesSnapshot] = await Promise.all([
+    const [ledgerSnapshot, activeChallengesSnapshot, profileSnap] = await Promise.all([
       getDocs(ledgerQuery),
       getDocs(activeChallengesQuery),
+      getDoc(doc(db, "profiles", uid)),
     ]);
+
+    const companyId = profileSnap.exists() ? profileSnap.data()?.companyId : null;
 
     await runTransactionWithRetry(async (tx) => {
       const [ledgerDoc, progressDoc] = await Promise.all([tx.get(ledgerRef), tx.get(progressRef)]);
@@ -376,6 +394,16 @@ export async function revokeChecklistPoints(params: {
 
       tx.set(doc(db, "users", uid), profileUpdate, { merge: true });
       tx.set(doc(db, "profiles", uid), profileUpdate, { merge: true });
+
+      // Record transaction for leaderboard and activity feeds
+      tx.set(doc(collection(db, "points_transactions")), {
+        userId: uid,
+        points: -ledgerPoints,
+        category: activity.category || "Other",
+        reason: activity.title,
+        createdAt: serverTimestamp(),
+        companyId: companyId || null,
+      });
 
       // Update active challenges metrics
       activeChallengesSnapshot.docs.forEach((challengeDoc) => {

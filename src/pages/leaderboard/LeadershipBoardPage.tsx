@@ -229,6 +229,31 @@ export const LeadershipBoardPage: React.FC = () => {
 
   const { activityHistoryByCategory, isLoading: activityHistoryLoading } = useUserActivityHistory(profile?.id)
 
+  const userBreakdown = useMemo(() => {
+    const categoryTotals: Record<string, number> = {}
+    let totalPoints = 0
+
+    Object.entries(activityHistoryByCategory).forEach(([category, entries]) => {
+      const filteredEntries = timeframeStart
+        ? entries.filter((e) => e.createdAt >= timeframeStart)
+        : entries
+
+      const catTotal = filteredEntries.reduce((sum, e) => sum + e.points, 0)
+      if (catTotal > 0) {
+        categoryTotals[category] = catTotal
+        totalPoints += catTotal
+      }
+    })
+
+    return Object.entries(categoryTotals)
+      .map(([name, value]) => ({
+        name,
+        value,
+        percent: totalPoints > 0 ? Math.round((value / totalPoints) * 100) : 0,
+      }))
+      .sort((a, b) => b.value - a.value)
+  }, [activityHistoryByCategory, timeframeStart])
+
   const toggleCategory = useCallback((categoryName: string) => {
     setExpandedCategories((prev) => {
       const newSet = new Set(prev)
@@ -455,7 +480,6 @@ export const LeadershipBoardPage: React.FC = () => {
     segmentSize,
     peerRows,
     cohortStats,
-    breakdownByCategory,
     segmentStats,
   } = useLeaderboardMetrics({
     context,
@@ -533,11 +557,11 @@ export const LeadershipBoardPage: React.FC = () => {
   }, [leaderboardRows, paginatedRows, virtualOffset])
 
   useEffect(() => {
-    const maxPage = Math.max(1, Math.ceil(breakdownByCategory.length / 4))
+    const maxPage = Math.max(1, Math.ceil(userBreakdown.length / 4))
     if (breakdownPage > maxPage) {
       setBreakdownPage(maxPage)
     }
-  }, [breakdownByCategory.length, breakdownPage])
+  }, [userBreakdown.length, breakdownPage])
 
   const getDisplayName = (user: UserProfile) => {
     const name = user.fullName || `${user.firstName ?? ''} ${user.lastName ?? ''}`.trim()
@@ -1182,8 +1206,8 @@ export const LeadershipBoardPage: React.FC = () => {
                   <CardHeader>
                     <Flex justify="space-between" align="center">
                       <Box>
-                        <Text fontWeight="bold">Points Breakdown</Text>
-                        <Text color="text.secondary">{segmentLabel} member insights</Text>
+                        <Text fontWeight="bold">Your Points Breakdown</Text>
+                        <Text color="text.secondary">Personal insights across categories</Text>
                       </Box>
                       <HStack spacing={3}>
                         <IconButton
@@ -1208,8 +1232,8 @@ export const LeadershipBoardPage: React.FC = () => {
                       <Box h="260px">
                         <ResponsiveContainer width="100%" height="100%">
                           <PieChart>
-                            <Pie dataKey="value" data={breakdownByCategory} innerRadius={60} outerRadius={90} label>
-                              {breakdownByCategory.map((entry, index) => (
+                            <Pie dataKey="value" data={userBreakdown} innerRadius={60} outerRadius={90} label>
+                              {userBreakdown.map((entry, index) => (
                                 <Cell key={`cell-${entry.name}`} fill={pointsColors[index % pointsColors.length]} />
                               ))}
                             </Pie>
@@ -1217,7 +1241,7 @@ export const LeadershipBoardPage: React.FC = () => {
                         </ResponsiveContainer>
                       </Box>
                       <Stack spacing={3}>
-                        {breakdownByCategory.slice((breakdownPage - 1) * 4, (breakdownPage - 1) * 4 + 4).map((category, idx) => (
+                        {userBreakdown.slice((breakdownPage - 1) * 4, (breakdownPage - 1) * 4 + 4).map((category, idx) => (
                           <Box key={category.name}>
                             <Flex
                               align="center"
@@ -1272,7 +1296,7 @@ export const LeadershipBoardPage: React.FC = () => {
                             </Collapse>
                           </Box>
                         ))}
-                        <Text fontSize="sm" color="text.secondary">Page {breakdownPage} of {Math.max(1, Math.ceil(breakdownByCategory.length / 4))}</Text>
+                        <Text fontSize="sm" color="text.secondary">Page {breakdownPage} of {Math.max(1, Math.ceil(userBreakdown.length / 4))}</Text>
                       </Stack>
                     </Grid>
                   </CardBody>
