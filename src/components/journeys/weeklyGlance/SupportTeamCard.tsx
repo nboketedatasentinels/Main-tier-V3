@@ -11,7 +11,8 @@ import {
   Text,
   VStack,
 } from '@chakra-ui/react'
-import { Mail, MessageCircle, Users } from 'lucide-react'
+import { CalendarClock, Mail, MessageCircle, Users } from 'lucide-react'
+import { Link } from 'react-router-dom'
 import { PeerMatch, SupportAssignment } from '@/hooks/useWeeklyGlanceData'
 
 interface SupportTeamCardProps {
@@ -36,7 +37,7 @@ export const SupportTeamCard = ({ data, loading, peerMatches, peerMatchesLoading
 
   const getDisplayName = (profile: NonNullable<typeof mentorProfile>) => {
     const name = profile.fullName || `${profile.firstName ?? ''} ${profile.lastName ?? ''}`.trim()
-    return name || 'Unknown name'
+    return name || profile.email || 'Unknown name'
   }
 
   const getAvatarSrc = (profile: NonNullable<typeof mentorProfile>) => {
@@ -50,41 +51,41 @@ export const SupportTeamCard = ({ data, loading, peerMatches, peerMatchesLoading
           <Text fontWeight="bold" fontSize="md" color="#273240">Support Team</Text>
           <Skeleton isLoaded={!loading} rounded="md">
             <Stack spacing={3}>
-              {hasMentor && mentorProfile && (
+              {hasMentor && mentorProfile && mentorProfile.id !== ambassadorProfile?.id && (
                 <VStack align="start" spacing={2} p={3} borderWidth="1px" borderColor="border.subtle" rounded="md">
                   <HStack spacing={3} w="100%" justify="space-between">
                     <HStack spacing={2}>
                       <Avatar size="sm" name={getDisplayName(mentorProfile)} src={getAvatarSrc(mentorProfile)} />
                       <VStack spacing={0} align="start">
-                        <Text fontWeight="semibold">Mentor</Text>
-                        <Text fontSize="sm" color="text.secondary">
+                        <Text fontSize="xs" color="text.secondary">Mentor</Text>
+                        <Text fontWeight="semibold">
                           {getDisplayName(mentorProfile)}
                         </Text>
                       </VStack>
                     </HStack>
                     {mentorProfile.email && (
                       <Button
-                        as="a"
-                        href={`mailto:${mentorProfile.email}`}
+                        as={Link}
+                        to="/app/leadership-council"
                         size="sm"
                         variant="ghost"
-                        leftIcon={<Icon as={Mail} />}
+                        leftIcon={<Icon as={CalendarClock} />}
                       >
-                        Contact
+                        Schedule
                       </Button>
                     )}
                   </HStack>
                 </VStack>
               )}
 
-              {hasAmbassador && ambassadorProfile && (
+              {hasAmbassador && ambassadorProfile && ambassadorProfile.id !== mentorProfile?.id && (
                 <VStack align="start" spacing={2} p={3} borderWidth="1px" borderColor="border.subtle" rounded="md">
                   <HStack spacing={3} w="100%" justify="space-between">
                     <HStack spacing={2}>
                       <Avatar size="sm" name={getDisplayName(ambassadorProfile)} src={getAvatarSrc(ambassadorProfile)} />
                       <VStack spacing={0} align="start">
-                        <Text fontWeight="semibold">Ambassador</Text>
-                        <Text fontSize="sm" color="text.secondary">
+                        <Text fontSize="xs" color="text.secondary">Ambassador</Text>
+                        <Text fontWeight="semibold">
                           {getDisplayName(ambassadorProfile)}
                         </Text>
                       </VStack>
@@ -99,6 +100,44 @@ export const SupportTeamCard = ({ data, loading, peerMatches, peerMatchesLoading
                       >
                         Message
                       </Button>
+                    )}
+                  </HStack>
+                </VStack>
+              )}
+
+              {hasMentor && hasAmbassador && mentorProfile && ambassadorProfile && mentorProfile.id === ambassadorProfile.id && (
+                <VStack align="start" spacing={2} p={3} borderWidth="1px" borderColor="border.subtle" rounded="md">
+                  <HStack spacing={3} w="100%" justify="space-between">
+                    <HStack spacing={2}>
+                      <Avatar size="sm" name={getDisplayName(mentorProfile)} src={getAvatarSrc(mentorProfile)} />
+                      <VStack spacing={0} align="start">
+                        <Text fontSize="xs" color="text.secondary">Mentor & Ambassador</Text>
+                        <Text fontWeight="semibold">
+                          {getDisplayName(mentorProfile)}
+                        </Text>
+                      </VStack>
+                    </HStack>
+                    {mentorProfile.email && (
+                      <HStack spacing={2}>
+                        <Button
+                          as={Link}
+                          to="/app/leadership-council"
+                          size="sm"
+                          variant="ghost"
+                          leftIcon={<Icon as={CalendarClock} />}
+                        >
+                          Schedule
+                        </Button>
+                        <Button
+                          as="a"
+                          href={`mailto:${mentorProfile.email}`}
+                          size="sm"
+                          variant="ghost"
+                          leftIcon={<Icon as={Mail} />}
+                        >
+                          Message
+                        </Button>
+                      </HStack>
                     )}
                   </HStack>
                 </VStack>
