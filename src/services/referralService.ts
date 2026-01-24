@@ -8,6 +8,8 @@ import {
 import { db } from '@/services/firebase'
 import { calculateLevel } from '@/utils/points'
 import { REFERRAL_MAX_PER_USER, REFERRAL_POINTS } from '@/config/pointsConfig'
+import { createInAppNotification } from './notificationService'
+import { REWARD_TIERS } from '@/config/referralRewards'
 
 type ReferralStatus = 'pending' | 'credited' | 'rejected'
 
@@ -149,6 +151,9 @@ export async function creditReferralPoints(
   referredUid: string
 ): Promise<{ success: boolean; error?: Error }> {
   try {
+    let referrerId: string | null = null
+    let newReferralCount = 0
+
     await runTransaction(db, async (tx) => {
       const referralRef = doc(referralsCollection, referredUid)
       const referralSnap = await tx.get(referralRef)
@@ -166,6 +171,8 @@ export async function creditReferralPoints(
       if (!referrerUid) {
         throw new Error('Referral record is missing referrer information.')
       }
+
+      referrerId = referrerUid
 
       const referrerUserRef = doc(usersCollection, referrerUid)
       const referrerProfileRef = doc(profilesCollection, referrerUid)
@@ -204,6 +211,7 @@ export async function creditReferralPoints(
 
       const updatedTotalPoints = currentTotalPoints + REFERRAL_POINTS
       const updatedReferralCount = currentReferralCount + 1
+      newReferralCount = updatedReferralCount
       const updatedLevel = calculateLevel(updatedTotalPoints)
 
       tx.set(
@@ -252,6 +260,28 @@ export async function creditReferralPoints(
         { merge: true }
       )
     })
+
+    if (referrerId) {
+      // Send notification for successful referral
+      await createInAppNotification({
+        userId: referrerId,
+        type: 'referral_success',
+        title: 'Referral Successful! 🎉',
+        message: `Your referral was successful! You've earned ${REFERRAL_POINTS} points.`,
+      })
+
+      // Check for tier unlocks
+      const tier = REWARD_TIERS.find((t) => t.required === newReferralCount)
+      if (tier) {
+        await createInAppNotification({
+          userId: referrerId,
+          type: 'referral_reward',
+          title: `New Reward Unlocked: ${tier.title}! 🏆`,
+          message: `Congratulations! You've reached ${newReferralCount} referrals and unlocked: ${tier.reward}.`,
+          metadata: { tierId: tier.id },
+        })
+      }
+    }
 
     return { success: true }
   } catch (error) {
