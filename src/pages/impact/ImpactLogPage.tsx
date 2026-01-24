@@ -204,6 +204,7 @@ const buildCsv = (entries: ImpactLogEntry[]) => {
     'Points',
     'Impact Value',
     'SCP',
+    'Outcome Label',
     'Evidence',
   ]
 
@@ -220,6 +221,7 @@ const buildCsv = (entries: ImpactLogEntry[]) => {
     entry.points,
     entry.impactValue,
     entry.scp,
+    entry.outcomeLabel || '',
     entry.evidenceLink || '',
   ])
 
@@ -1035,6 +1037,11 @@ export const ImpactLogPage: React.FC = () => {
                         <Text color="text.muted" fontSize="sm" noOfLines={1}>
                           {entry.description}
                         </Text>
+                        {entry.outcomeLabel && (
+                          <Text color="purple.600" fontSize="xs" fontWeight="medium" mt={1}>
+                            Outcome: {entry.outcomeLabel}
+                          </Text>
+                        )}
                       </Td>
                       <Td>
                         <Badge colorScheme={entry.categoryGroup === 'esg' ? 'green' : 'blue'}>
@@ -1492,15 +1499,17 @@ export const ImpactLogPage: React.FC = () => {
                     />
                   </InputGroup>
                 </Box>
-                <Box>
-                  <Text fontWeight="medium">Outcome Metric Label</Text>
+                <FormControl>
+                  <FormLabel fontWeight="medium">Outcome Metric Label</FormLabel>
                   <Input
-                    mt={1}
-                    placeholder="USD saved, Hours reduced"
+                    placeholder="e.g., USD saved, Hours reduced, Trees planted"
                     value={formValues.outcomeLabel}
                     onChange={(e) => setFormValues((prev) => ({ ...prev, outcomeLabel: e.target.value }))}
                   />
-                </Box>
+                  <FormHelperText>
+                    Specify the label for your primary metric. You can describe your outcomes freely here.
+                  </FormHelperText>
+                </FormControl>
               </SimpleGrid>
 
               <Box p={4} bgGradient="linear(to-r, blue.50, purple.50)" border="1px solid" borderColor="purple.100" rounded="lg">
