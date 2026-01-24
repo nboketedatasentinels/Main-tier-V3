@@ -480,6 +480,15 @@ export const LeadershipCouncilPage: React.FC = () => {
               Leadership Council
             </Badge>
             <Heading size="lg">Stay connected with the people supporting your transformation journey.</Heading>
+            {profile?.companyName && (
+              <HStack spacing={2} color="brand.primary" fontWeight="semibold">
+                <Icon as={Building2} size={20} />
+                <Text fontSize="lg">
+                  {profile.companyName}
+                  {profile.companyCode && ` (${profile.companyCode})`}
+                </Text>
+              </HStack>
+            )}
             <Text color="text.secondary">
               Your dedicated mentor, ambassador, and transformation partner are highlighted below. Schedule sessions,
               review upcoming meetings, and explore your leadership network.
@@ -571,18 +580,13 @@ export const LeadershipCouncilPage: React.FC = () => {
                     </Heading>
                     <HStack spacing={2} color="text.muted" mt={2}>
                       <Icon as={Building2} />
-                      <Text>
-                        {mentorProfile?.companyCode
-                          ? `Supporting company code ${mentorProfile.companyCode}`
-                          : 'Supporting your organization'}
-                      </Text>
+                      <Text>Supporting your organization</Text>
                     </HStack>
                     {isSamePerson && (
                       <HStack spacing={2} color="text.muted" mt={1}>
                         <Icon as={Users} />
                         <Text>
                           {ambassadorProfile?.companyName || 'Organization-wide ambassador'}
-                          {ambassadorProfile?.companyCode ? ` (${ambassadorProfile.companyCode})` : ''}
                         </Text>
                       </HStack>
                     )}
@@ -813,7 +817,6 @@ export const LeadershipCouncilPage: React.FC = () => {
                           <Icon as={Users} />
                           <Text>
                             {ambassadorProfile.companyName || 'Organization-wide'}
-                            {ambassadorProfile.companyCode ? ` (${ambassadorProfile.companyCode})` : ''}
                           </Text>
                         </HStack>
                       </Box>
