@@ -585,9 +585,7 @@ export const LeadershipCouncilPage: React.FC = () => {
                     {isSamePerson && (
                       <HStack spacing={2} color="text.muted" mt={1}>
                         <Icon as={Users} />
-                        <Text>
-                          {ambassadorProfile?.companyName || 'Organization-wide ambassador'}
-                        </Text>
+                        <Text>Supporting your organization</Text>
                       </HStack>
                     )}
                     {mentorSourceLabel && (
@@ -815,9 +813,7 @@ export const LeadershipCouncilPage: React.FC = () => {
                         </Text>
                         <HStack spacing={3} mt={3} color="text.secondary">
                           <Icon as={Users} />
-                          <Text>
-                            {ambassadorProfile.companyName || 'Organization-wide'}
-                          </Text>
+                          <Text>Supporting your organization</Text>
                         </HStack>
                       </Box>
                       <VStack spacing={3} align="center">
