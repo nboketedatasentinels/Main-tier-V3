@@ -137,8 +137,8 @@ const mapChallenge = (
   const isChallenger = data.challenger_id === currentUserId
   const opponentId = isChallenger ? data.challenged_id : data.challenger_id
   const opponentName = isChallenger
-    ? (data.challenged_name as string) || 'Opponent'
-    : (data.challenger_name as string) || 'Opponent'
+    ? (data.challenged_name as string) || (data.challenged_email as string)?.split('@')[0] || 'Opponent'
+    : (data.challenger_name as string) || (data.challenger_email as string)?.split('@')[0] || 'Opponent'
 
   // Get points for current user and opponent
   const metrics = data.metrics as Record<string, { total?: number }> | undefined

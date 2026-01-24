@@ -80,6 +80,7 @@ import { Badge as BadgeDefinition, LeaderboardTimeframe, UserProfile, UserRole }
 import { OrganizationRecord } from '@/types/admin'
 import { db } from '@/services/firebase'
 import { fetchOrganizationsByIds } from '@/services/organizationService'
+import { respondToChallenge } from '@/services/notificationService'
 import { useAuth } from '@/hooks/useAuth'
 import { useLeaderboardContext, getLeaderboardContextLabels } from '@/hooks/leaderboard/useLeaderboardContext'
 import { useLeaderboardData } from '@/hooks/leaderboard/useLeaderboardData'
@@ -471,6 +472,27 @@ export const LeadershipBoardPage: React.FC = () => {
   const dismissFilterTip = () => {
     setShowFilterTip(false)
     localStorage.setItem('leaderboard-filter-tip', 'dismissed')
+  }
+
+  const handleChallengeAction = async (challengeId: string, action: 'accepted' | 'declined') => {
+    try {
+      await respondToChallenge(challengeId, action)
+      toast({
+        title: `Challenge ${action}`,
+        description: `You have ${action} the challenge.`,
+        status: action === 'accepted' ? 'success' : 'info',
+        duration: 3000,
+        isClosable: true,
+      })
+    } catch (error) {
+      toast({
+        title: 'Action failed',
+        description: 'Unable to update challenge status.',
+        status: 'error',
+        duration: 3000,
+        isClosable: true,
+      })
+    }
   }
 
   const {
@@ -1439,6 +1461,31 @@ export const LeadershipBoardPage: React.FC = () => {
                                   }>
                                     {challenge.status.toUpperCase()}
                                   </Badge>
+                                  {challenge.status === 'pending' && !challenge.isChallenger && (
+                                    <HStack spacing={2} mt={2}>
+                                      <Button
+                                        size="xs"
+                                        colorScheme="green"
+                                        onClick={(e) => {
+                                          e.stopPropagation()
+                                          handleChallengeAction(challenge.id, 'accepted')
+                                        }}
+                                      >
+                                        Accept
+                                      </Button>
+                                      <Button
+                                        size="xs"
+                                        colorScheme="red"
+                                        variant="outline"
+                                        onClick={(e) => {
+                                          e.stopPropagation()
+                                          handleChallengeAction(challenge.id, 'declined')
+                                        }}
+                                      >
+                                        Decline
+                                      </Button>
+                                    </HStack>
+                                  )}
                                 </VStack>
                               </Flex>
                             ))}
