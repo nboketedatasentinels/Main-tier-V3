@@ -63,6 +63,7 @@ export interface UserProfile {
   referralCode?: string | null
   referredBy?: string | null
   referralStatus?: 'pending' | 'credited' | 'rejected' | null
+  claimedRewards?: number[]
   
   // Organization
   companyId?: string | null
