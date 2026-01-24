@@ -86,9 +86,9 @@ const formatStatus = (status?: string) => {
     .join(' ')
 }
 
-const getWeekDateRange = (cohortStartDate: Date, weekIndex: number) => {
+const getWeekDateRange = (cohortStartDate: Date, weekIndex: number, weeksPerBlock: number = 1) => {
   const startDate = addDays(cohortStartDate, weekIndex * 7)
-  const endDate = addDays(startDate, 7)
+  const endDate = addDays(startDate, weeksPerBlock * 7)
   return { startDate, endDate }
 }
 
@@ -103,13 +103,14 @@ const getWeekAvailabilityStatus = (params: {
   cohortStartDate: Date | null
   currentDate: Date
   weekIndex: number
+  weeksPerBlock?: number
 }) => {
-  const { cohortStartDate, currentDate, weekIndex } = params
+  const { cohortStartDate, currentDate, weekIndex, weeksPerBlock = 1 } = params
   if (!cohortStartDate) {
     return weekIndex === 0 ? 'current' : 'locked'
   }
 
-  const { startDate, endDate } = getWeekDateRange(cohortStartDate, weekIndex)
+  const { startDate, endDate } = getWeekDateRange(cohortStartDate, weekIndex, weeksPerBlock)
   if (currentDate < startDate) return 'locked'
   if (currentDate >= endDate) return 'completed'
   return 'current'
@@ -523,19 +524,36 @@ const OrganizationCoursesPage: React.FC<{ userId?: string | null; profile: UserP
       journeyTimelineDisplay === 'course-count'
         ? assignedCourseIds
         : Array.from({ length: durationWeeks }, (_, index) => assignmentList[index] || '')
+
     if (!displayAssignments.length) return []
+
+    const is6W = journeyType === '6W'
+    const weeksPerBlock = is6W ? 2 : 1
+
     return displayAssignments.map((courseId, index) => {
       const course = courseId ? courseMap[courseId] : undefined
+      const startWeekIndex = index * weeksPerBlock
+
       const availability = getWeekAvailabilityStatus({
         cohortStartDate: program.cohortStartDate,
         currentDate: now,
-        weekIndex: index,
+        weekIndex: startWeekIndex,
+        weeksPerBlock,
       })
-      const weekRange = program.cohortStartDate ? getWeekDateRange(program.cohortStartDate, index) : null
+
+      const weekRange = program.cohortStartDate
+        ? getWeekDateRange(program.cohortStartDate, startWeekIndex, weeksPerBlock)
+        : null
       const dateRange = weekRange ? formatWeekRange(weekRange.startDate, weekRange.endDate) : undefined
       const unlockDate = weekRange ? weekRange.startDate : null
+
+      const displayLabel = is6W
+        ? `Weeks ${startWeekIndex + 1}–${startWeekIndex + weeksPerBlock}`
+        : undefined
+
       return {
         weekNumber: index + 1,
+        displayLabel,
         courseId,
         course,
         availability,
@@ -543,7 +561,15 @@ const OrganizationCoursesPage: React.FC<{ userId?: string | null; profile: UserP
         unlockDate,
       }
     })
-  }, [program, totalWeeks, assignmentList, assignedCourseIds, courseMap, journeyTimelineDisplay])
+  }, [
+    program,
+    totalWeeks,
+    assignmentList,
+    assignedCourseIds,
+    courseMap,
+    journeyTimelineDisplay,
+    journeyType,
+  ])
 
   const timelineEntries = useMemo(() => {
     if (isWeeklyTimeline) {
@@ -557,6 +583,7 @@ const OrganizationCoursesPage: React.FC<{ userId?: string | null; profile: UserP
       ...entry,
       periodNumber: entry.monthNumber,
       periodLabel: 'month' as const,
+      displayLabel: undefined as string | undefined,
     }))
   }, [isWeeklyTimeline, monthlyProgramTimeline, weeklyProgramTimeline])
 
@@ -718,9 +745,10 @@ const OrganizationCoursesPage: React.FC<{ userId?: string | null; profile: UserP
                   >
                     <HStack justify="space-between" mb={2}>
                       <Badge colorScheme={statusColor} borderRadius="full">
-                        {entry.periodLabel === 'week'
-                          ? `Week ${entry.periodNumber}`
-                          : `Month ${entry.periodNumber}`}
+                        {entry.displayLabel ||
+                          (entry.periodLabel === 'week'
+                            ? `Week ${entry.periodNumber}`
+                            : `Month ${entry.periodNumber}`)}
                       </Badge>
                       <HStack spacing={1} color="gray.600">
                         <Icon
