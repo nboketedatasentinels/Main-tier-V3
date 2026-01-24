@@ -188,7 +188,7 @@ const timezoneOptions = [
 ]
 
 const defaultSessionDescription =
-  'Bring together exactly three peers for a transformation dialogue that sparks shared insight and collaborative momentum.'
+  'Bring together at least two peers for a transformation dialogue that sparks shared insight and collaborative momentum.'
 
 const getTimezoneDateParts = (date: Date, timeZone: string) => {
   const formatter = new Intl.DateTimeFormat('en-US', {
@@ -849,8 +849,8 @@ export const PeerConnectPage: React.FC = () => {
     if (!sessionForm.date) errors.date = 'Please select a date'
     if (!sessionForm.time) errors.time = 'Please select a time'
     if (!sessionForm.timezone) errors.timezone = 'Please select a time zone'
-    if (sessionForm.participants.length !== 3)
-      errors.participants = 'Select exactly 3 participants for your group session so you can host a four-person conversation.'
+    if (sessionForm.participants.length < 2)
+      errors.participants = 'Select at least 2 participants for your group session so you can host a three-person conversation including yourself.'
     setFormErrors(errors)
     return Object.keys(errors).length === 0
   }
@@ -940,8 +940,8 @@ export const PeerConnectPage: React.FC = () => {
       setSessionForm((prev) => ({ ...prev, participants: prev.participants.filter((id) => id !== peerId) }))
       return
     }
-    if (sessionForm.participants.length >= 3) {
-      setFormErrors((prev) => ({ ...prev, participants: 'You already selected 3 participants. Deselect someone to invite a different peer.' }))
+    if (sessionForm.participants.length >= 10) {
+      setFormErrors((prev) => ({ ...prev, participants: 'You already selected 10 participants. Deselect someone to invite a different peer.' }))
       return
     }
     setFormErrors((prev) => ({ ...prev, participants: '' }))
@@ -1644,7 +1644,7 @@ export const PeerConnectPage: React.FC = () => {
 
               <Stack spacing={3}>
                 <FormControl isInvalid={Boolean(formErrors.participants)}>
-                  <FormLabel>Select 3 participants</FormLabel>
+                  <FormLabel>Select participants (minimum 2)</FormLabel>
                   <InputGroup mb={2}>
                     <InputLeftElement pointerEvents="none">
                       <Search size={16} opacity={0.65} />
@@ -1652,7 +1652,7 @@ export const PeerConnectPage: React.FC = () => {
                     <Input placeholder="Search peers" value={participantFilter} onChange={(e) => setParticipantFilter(e.target.value)} />
                   </InputGroup>
                   <Text fontSize="xs" color="brand.subtleText" mb={2}>
-                    {sessionForm.participants.length} of 3 selected
+                    {sessionForm.participants.length} selected
                   </Text>
                   <Stack spacing={2} maxH="220px" overflowY="auto" border="1px solid" borderColor="border.subtle" borderRadius="lg" p={2}>
                     {filteredParticipants.map((peer) => (
@@ -1669,7 +1669,7 @@ export const PeerConnectPage: React.FC = () => {
                         <Checkbox
                           isChecked={sessionForm.participants.includes(peer.id)}
                           onChange={() => toggleParticipant(peer.id)}
-                          isDisabled={!sessionForm.participants.includes(peer.id) && sessionForm.participants.length >= 3}
+                          isDisabled={!sessionForm.participants.includes(peer.id) && sessionForm.participants.length >= 10}
                         />
                       </Flex>
                     ))}
@@ -1706,7 +1706,7 @@ export const PeerConnectPage: React.FC = () => {
                   <HStack align="center" spacing={2}>
                     <Icon as={Target} w={4} h={4} color="brand.primary" />
                     <Text fontSize="sm" color="brand.subtleText">
-                      Exactly 3 participants are required so you host a four-person conversation including you.
+                      At least 2 participants are required so you can host a session with three or more people including yourself.
                     </Text>
                   </HStack>
                 </Box>
