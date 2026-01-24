@@ -1,5 +1,6 @@
 import {
   Box,
+  Button,
   HStack,
   Icon,
   IconButton,
@@ -70,9 +71,15 @@ const resolveTimestamp = (value?: unknown): string => {
   return formatDistanceToNow(date, { addSuffix: true })
 }
 
-export const NotificationItem = ({ notification, onMarkRead }: NotificationItemProps) => {
+export const NotificationItem = ({
+  notification,
+  onMarkRead,
+  onAction,
+}: NotificationItemProps) => {
   const isRead = notification.is_read || notification.read
   const timestamp = resolveTimestamp(notification.created_at)
+  const hasAction =
+    notification.type === 'challenge_request' && !notification.action_response
 
   return (
     <Box
@@ -132,6 +139,26 @@ export const NotificationItem = ({ notification, onMarkRead }: NotificationItemP
             <Text color="gray.400" fontSize="xs" mt={1}>
               {timestamp}
             </Text>
+          )}
+
+          {hasAction && onAction && (
+            <HStack spacing={2} mt={3}>
+              <Button
+                size="xs"
+                colorScheme="brand"
+                variant="solid"
+                onClick={() => onAction('accepted')}
+              >
+                Accept
+              </Button>
+              <Button
+                size="xs"
+                variant="outline"
+                onClick={() => onAction('declined')}
+              >
+                Decline
+              </Button>
+            </HStack>
           )}
         </Stack>
 

@@ -115,13 +115,27 @@ const relativeTime = (date: Date) => {
 }
 
 const initialsFromName = (name: string) => {
-  const [first = '', last = ''] = name.split(' ')
+  if (!name || typeof name !== 'string') return ''
+  const trimmed = name.trim()
+  if (!trimmed) return ''
+
+  // For emails, return the first letter
+  if (trimmed.includes('@')) {
+    return trimmed.charAt(0).toUpperCase()
+  }
+
+  const parts = trimmed.split(/\s+/)
+  if (parts.length === 1) return parts[0].charAt(0).toUpperCase()
+
+  const first = parts[0] || ''
+  const last = parts[parts.length - 1] || ''
   return `${first.charAt(0)}${last.charAt(0)}`.toUpperCase()
 }
 
 const displayNameForProfile = (profile?: UserProfileExtended | null) => {
   if (!profile) return 'Unknown'
-  const fullName = profile.fullName || `${profile.firstName ?? ''} ${profile.lastName ?? ''}`.trim()
+  const nameFromParts = `${profile.firstName ?? ''} ${profile.lastName ?? ''}`.trim()
+  const fullName = (profile.fullName || '').trim() || nameFromParts
   return fullName || profile.email || 'Unknown'
 }
 
@@ -154,6 +168,8 @@ export const LeadershipCouncilPage: React.FC = () => {
   const ambassadorError = errors.organization || errors.supportAssignments || errors.ambassador
   const partnerError = errors.organization || errors.partner
   const partnerLoading = assignmentsLoading
+
+  const isSamePerson = Boolean(mentorProfile?.id && ambassadorProfile?.id && mentorProfile.id === ambassadorProfile.id)
 
   const [sessions, setSessions] = useState<MentorshipSession[]>([])
   const [sessionsLoading, setSessionsLoading] = useState(false)
@@ -337,7 +353,7 @@ export const LeadershipCouncilPage: React.FC = () => {
 
       toast({
         title: 'Session scheduled',
-        description: `Your session with ${mentorProfile.firstName || mentorProfile.fullName} is set for ${formatDisplayDate(
+        description: `Your session with ${displayNameForProfile(mentorProfile)} is set for ${formatDisplayDate(
           scheduledAt,
         )} at ${format(scheduledAt, 'h:mm a')}.`,
         status: 'success',
@@ -369,7 +385,7 @@ export const LeadershipCouncilPage: React.FC = () => {
       'BEGIN:VCALENDAR',
       'VERSION:2.0',
       'BEGIN:VEVENT',
-      `SUMMARY:Mentorship session with ${mentorProfile?.fullName || 'Mentor'}`,
+      `SUMMARY:Mentorship session with ${mentorProfile ? displayNameForProfile(mentorProfile) : 'Mentor'}`,
       `DTSTART:${format(start, "yyyyMMdd'T'HHmmss")}`,
       `DTEND:${format(end, "yyyyMMdd'T'HHmmss")}`,
       `DESCRIPTION:${session.topic}${session.agenda ? `\\n${session.agenda}` : ''}`,
@@ -437,8 +453,9 @@ export const LeadershipCouncilPage: React.FC = () => {
   const mentorSessionsSummary = useMemo(() => {
     if (sessionsLoading) return 'Checking your schedule...'
     if (sessions.length === 0) return 'No sessions scheduled yet. Use the schedule button to plan your next conversation.'
-    return `Your next ${sessions.length} session(s) with ${mentorProfile?.firstName || mentorProfile?.fullName || 'your mentor'} at a glance`
-  }, [sessions.length, sessionsLoading, mentorProfile?.firstName, mentorProfile?.fullName])
+    const mentorName = mentorProfile ? displayNameForProfile(mentorProfile) : 'your mentor'
+    return `Your next ${sessions.length} session(s) with ${mentorName} at a glance`
+  }, [sessions.length, sessionsLoading, mentorProfile])
 
   if (!user) {
     return (
@@ -463,6 +480,15 @@ export const LeadershipCouncilPage: React.FC = () => {
               Leadership Council
             </Badge>
             <Heading size="lg">Stay connected with the people supporting your transformation journey.</Heading>
+            {profile?.companyName && (
+              <HStack spacing={2} color="brand.primary" fontWeight="semibold">
+                <Icon as={Building2} size={20} />
+                <Text fontSize="lg">
+                  {profile.companyName}
+                  {profile.companyCode && ` (${profile.companyCode})`}
+                </Text>
+              </HStack>
+            )}
             <Text color="text.secondary">
               Your dedicated mentor, ambassador, and transformation partner are highlighted below. Schedule sessions,
               review upcoming meetings, and explore your leadership network.
@@ -547,19 +573,21 @@ export const LeadershipCouncilPage: React.FC = () => {
                 <HStack justify="space-between" align="start">
                   <Box>
                     <Text fontSize="xs" textTransform="uppercase" color="text.muted" fontWeight="semibold">
-                      Mentor Assignment
+                      {isSamePerson ? 'Mentor & Ambassador Assignment' : 'Mentor Assignment'}
                     </Text>
                     <Heading size="md" color="text.primary">
-                      {mentorProfile?.fullName || mentorProfile?.firstName ? mentorProfile.fullName || mentorProfile.firstName : 'No mentor assigned'}
+                      {mentorProfile ? displayNameForProfile(mentorProfile) : 'No mentor assigned'}
                     </Heading>
                     <HStack spacing={2} color="text.muted" mt={2}>
                       <Icon as={Building2} />
-                      <Text>
-                        {mentorProfile?.companyCode
-                          ? `Supporting company code ${mentorProfile.companyCode}`
-                          : 'Supporting your organization'}
-                      </Text>
+                      <Text>Supporting your organization</Text>
                     </HStack>
+                    {isSamePerson && (
+                      <HStack spacing={2} color="text.muted" mt={1}>
+                        <Icon as={Users} />
+                        <Text>Supporting your organization</Text>
+                      </HStack>
+                    )}
                     {mentorSourceLabel && (
                       <Badge mt={3} width="fit-content" colorScheme="purple" variant="subtle">
                         {mentorSourceLabel}
@@ -569,11 +597,13 @@ export const LeadershipCouncilPage: React.FC = () => {
                   <VStack spacing={3} align="end">
                     <Avatar
                       size="lg"
-                      name={mentorProfile?.fullName}
+                      name={mentorProfile ? displayNameForProfile(mentorProfile) : undefined}
                       src={mentorProfile?.avatarUrl}
                       bg="brand.primary"
                     >
-                      {!mentorProfile?.avatarUrl && mentorProfile?.fullName && initialsFromName(mentorProfile.fullName)}
+                      {!mentorProfile?.avatarUrl && mentorProfile && (
+                        initialsFromName(displayNameForProfile(mentorProfile))
+                      )}
                     </Avatar>
                     {mentorProfile?.availabilityStatus && (
                       <Badge colorScheme={badgeColor(mentorProfile.availabilityStatus)} variant="subtle">
@@ -732,82 +762,82 @@ export const LeadershipCouncilPage: React.FC = () => {
               </CardBody>
             </Card>
 
-            <Card borderColor="border.subtle" borderWidth="1px" bg="surface.default">
-              <CardHeader pb={0}>
-                <Text fontSize="xs" textTransform="uppercase" color="text.muted" fontWeight="semibold">
-                  Ambassador Assignment
-                </Text>
-                <Heading size="md" color="text.primary" mt={1}>
-                  {ambassadorProfile?.fullName || 'Your ambassador is here to champion your progress'}
-                </Heading>
-              </CardHeader>
-              <CardBody>
-                {assignmentsLoading && (
-                  <Flex align="center" gap={3} p={4} border="1px dashed" borderColor="border.subtle" rounded="xl">
-                    <Spinner />
-                    <Text color="text.secondary">Loading your ambassador assignment...</Text>
-                  </Flex>
-                )}
+            {!isSamePerson && (
+              <Card borderColor="border.subtle" borderWidth="1px" bg="surface.default">
+                <CardHeader pb={0}>
+                  <Text fontSize="xs" textTransform="uppercase" color="text.muted" fontWeight="semibold">
+                    Ambassador Assignment
+                  </Text>
+                  <Heading size="md" color="text.primary" mt={1}>
+                    {ambassadorProfile ? displayNameForProfile(ambassadorProfile) : 'Your ambassador is here to champion your progress'}
+                  </Heading>
+                </CardHeader>
+                <CardBody>
+                  {assignmentsLoading && (
+                    <Flex align="center" gap={3} p={4} border="1px dashed" borderColor="border.subtle" rounded="xl">
+                      <Spinner />
+                      <Text color="text.secondary">Loading your ambassador assignment...</Text>
+                    </Flex>
+                  )}
 
-                {ambassadorError && (
-                  <Alert status="warning" rounded="lg" mb={4}>
-                    <AlertIcon />
-                    <Box>
-                      <AlertTitle>We couldn't load your ambassador right now.</AlertTitle>
-                      <AlertDescription>{ambassadorError}</AlertDescription>
-                    </Box>
-                    <Button size="sm" leftIcon={<RefreshCcw size={16} />} ml={4} onClick={retryAssignments}>
-                      Try again
-                    </Button>
-                  </Alert>
-                )}
+                  {ambassadorError && (
+                    <Alert status="warning" rounded="lg" mb={4}>
+                      <AlertIcon />
+                      <Box>
+                        <AlertTitle>We couldn't load your ambassador right now.</AlertTitle>
+                        <AlertDescription>{ambassadorError}</AlertDescription>
+                      </Box>
+                      <Button size="sm" leftIcon={<RefreshCcw size={16} />} ml={4} onClick={retryAssignments}>
+                        Try again
+                      </Button>
+                    </Alert>
+                  )}
 
-                {!assignmentsLoading && !ambassadorProfile && !ambassadorError && (
-                  <Flex direction="column" align="center" textAlign="center" p={6} gap={3}>
-                    <Icon as={User} boxSize={10} color="text.muted" />
-                    <Heading size="sm">No ambassador assigned yet</Heading>
-                    <Text color="text.secondary">
-                      {hasOrganization
-                        ? "Your community hasn't been paired with an ambassador. Please contact your administrator for support."
-                        : 'Your account is not linked to an organization yet. Please contact your administrator.'}
-                    </Text>
-                  </Flex>
-                )}
-
-                {ambassadorProfile && (
-                  <Flex direction={{ base: 'column', md: 'row' }} justify="space-between" gap={4} align="center">
-                    <Box>
-                      <Text color="text.primary">
-                        Your ambassador is here to champion your progress and connect you with new opportunities.
+                  {!assignmentsLoading && !ambassadorProfile && !ambassadorError && (
+                    <Flex direction="column" align="center" textAlign="center" p={6} gap={3}>
+                      <Icon as={User} boxSize={10} color="text.muted" />
+                      <Heading size="sm">No ambassador assigned yet</Heading>
+                      <Text color="text.secondary">
+                        {hasOrganization
+                          ? "Your community hasn't been paired with an ambassador. Please contact your administrator for support."
+                          : 'Your account is not linked to an organization yet. Please contact your administrator.'}
                       </Text>
-                      <HStack spacing={3} mt={3} color="text.secondary">
-                        <Icon as={Users} />
-                        <Text>
-                          {ambassadorProfile.companyName || 'Organization-wide'}
-                          {ambassadorProfile.companyCode ? ` (${ambassadorProfile.companyCode})` : ''}
+                    </Flex>
+                  )}
+
+                  {ambassadorProfile && (
+                    <Flex direction={{ base: 'column', md: 'row' }} justify="space-between" gap={4} align="center">
+                      <Box>
+                        <Text color="text.primary">
+                          Your ambassador is here to champion your progress and connect you with new opportunities.
                         </Text>
-                      </HStack>
-                    </Box>
-                    <VStack spacing={3} align="center">
-                      <Avatar
-                        size="lg"
-                        name={ambassadorProfile.fullName}
-                        src={ambassadorProfile.avatarUrl}
-                        bg="brand.primary"
-                      >
-                        {!ambassadorProfile.avatarUrl && ambassadorProfile.fullName &&
-                          initialsFromName(ambassadorProfile.fullName)}
-                      </Avatar>
-                      {ambassadorProfile.availabilityStatus && (
-                        <Badge colorScheme={badgeColor(ambassadorProfile.availabilityStatus)} variant="subtle">
-                          {ambassadorProfile.availabilityStatus}
-                        </Badge>
-                      )}
-                    </VStack>
-                  </Flex>
-                )}
-              </CardBody>
-            </Card>
+                        <HStack spacing={3} mt={3} color="text.secondary">
+                          <Icon as={Users} />
+                          <Text>Supporting your organization</Text>
+                        </HStack>
+                      </Box>
+                      <VStack spacing={3} align="center">
+                        <Avatar
+                          size="lg"
+                          name={displayNameForProfile(ambassadorProfile)}
+                          src={ambassadorProfile.avatarUrl}
+                          bg="brand.primary"
+                        >
+                          {!ambassadorProfile.avatarUrl && (
+                            initialsFromName(displayNameForProfile(ambassadorProfile))
+                          )}
+                        </Avatar>
+                        {ambassadorProfile.availabilityStatus && (
+                          <Badge colorScheme={badgeColor(ambassadorProfile.availabilityStatus)} variant="subtle">
+                            {ambassadorProfile.availabilityStatus}
+                          </Badge>
+                        )}
+                      </VStack>
+                    </Flex>
+                  )}
+                </CardBody>
+              </Card>
+            )}
 
             <Card borderColor="border.subtle" borderWidth="1px" bg="surface.default">
               <CardHeader pb={2}>
@@ -876,7 +906,7 @@ export const LeadershipCouncilPage: React.FC = () => {
                           <HStack spacing={2} mt={2}>
                             <Icon as={ExternalLink} color="text.muted" />
                             <Link href={`mailto:${partnerProfile.email}`} color="brand.primary">
-                              {partnerProfile.email}
+                              {displayNameForProfile(partnerProfile) === partnerProfile.email ? 'Send email' : partnerProfile.email}
                             </Link>
                           </HStack>
                         )}
@@ -921,7 +951,9 @@ export const LeadershipCouncilPage: React.FC = () => {
               </Box>
               <Box>
                 <Heading size="md">Upcoming mentor sessions</Heading>
-                <Text color="text.secondary">Your scheduled time with {mentorProfile?.fullName || 'your mentor'}</Text>
+                <Text color="text.secondary">
+                  Your scheduled time with {mentorProfile ? displayNameForProfile(mentorProfile) : 'your mentor'}
+                </Text>
               </Box>
             </HStack>
           </ModalHeader>

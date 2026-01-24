@@ -241,12 +241,12 @@ export async function awardChecklistPoints(params: {
         companyId: companyId || null,
       });
 
-      // Update active challenges metrics
+      // Update active/pending challenges metrics
       activeChallengesSnapshot.docs.forEach((challengeDoc) => {
         const challengeData = challengeDoc.data();
 
-        // Only process active challenges
-        if (challengeData.status !== 'active') return;
+        // Process both active and pending challenges to ensure points start counting immediately
+        if (challengeData.status !== 'active' && challengeData.status !== 'pending') return;
 
         const start = parseDate(challengeData.start_date);
         const end = parseDate(challengeData.end_date);
@@ -405,12 +405,12 @@ export async function revokeChecklistPoints(params: {
         companyId: companyId || null,
       });
 
-      // Update active challenges metrics
+      // Update active/pending challenges metrics
       activeChallengesSnapshot.docs.forEach((challengeDoc) => {
         const challengeData = challengeDoc.data();
 
-        // Only process active challenges
-        if (challengeData.status !== 'active') return;
+        // Process both active and pending challenges to ensure points start counting immediately
+        if (challengeData.status !== 'active' && challengeData.status !== 'pending') return;
 
         const start = parseDate(challengeData.start_date);
         const end = parseDate(challengeData.end_date);

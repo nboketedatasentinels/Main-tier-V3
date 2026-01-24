@@ -30,6 +30,8 @@ export type NotificationType =
   | 'mentee_checkin'
   | 'approval'
   | 'badge_awarded'
+  | 'referral_success'
+  | 'referral_reward'
   | 'unknown'
 
 export interface NotificationRecord {
