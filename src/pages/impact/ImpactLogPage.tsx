@@ -1344,7 +1344,7 @@ export const ImpactLogPage: React.FC = () => {
                   </InputGroup>
                 </FormControl>
                 <FormControl>
-                  <FormLabel htmlFor="impact-financial">Financial Impact</FormLabel>
+                  <FormLabel htmlFor="impact-financial">Financial Impact ($)</FormLabel>
                   <InputGroup>
                     <InputLeftElement pointerEvents="none">
                       <Icon as={ShieldCheck} color="text.muted" />
