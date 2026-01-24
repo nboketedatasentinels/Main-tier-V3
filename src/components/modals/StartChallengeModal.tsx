@@ -301,6 +301,15 @@ export const StartChallengeModal: React.FC<StartChallengeModalProps> = ({
         throw new Error('Opponent profile could not be loaded.');
       }
 
+      const getDisplayName = (u: UserProfile) => {
+        return (
+          u.fullName ||
+          `${u.firstName || ''} ${u.lastName || ''}`.trim() ||
+          u.email?.split('@')[0] ||
+          'Unknown member'
+        );
+      };
+
       // FIX: Use the new organization matching function that handles ID/code mismatches
       if (!areProfilesInSameOrg(challenger, challenged)) {
         const challengerOrganizationCode = getProfileOrganizationCode(challenger);
@@ -353,9 +362,9 @@ export const StartChallengeModal: React.FC<StartChallengeModalProps> = ({
       const challengerOrganizationCode = getProfileOrganizationCode(challenger);
       const challengeData = {
         challenger_id: challenger.id,
-        challenger_name: challenger.fullName,
+        challenger_name: getDisplayName(challenger),
         challenged_id: challenged.id,
-        challenged_name: challenged.fullName,
+        challenged_name: getDisplayName(challenged),
         // Store BOTH identifiers to support queries by either
         company_id: company?.id || challenger.companyId || challenger.organizationId || null,
         company_code: company?.code || challenger.companyCode || challengerOrganizationCode || null,

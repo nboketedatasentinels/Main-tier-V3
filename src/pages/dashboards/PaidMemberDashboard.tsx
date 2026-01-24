@@ -1,6 +1,7 @@
 import React, { useMemo, useState } from 'react'
 import {
   Avatar,
+  Badge,
   Box,
   Button,
   Card,
@@ -23,11 +24,26 @@ import {
   Text,
   VStack,
 } from '@chakra-ui/react'
-import { Award, CalendarClock, CheckCircle, Circle, Compass, Flame, Rocket, Star, TrendingUp } from 'lucide-react'
+import {
+  Award,
+  CalendarClock,
+  CheckCircle,
+  Circle,
+  Compass,
+  Flame,
+  Rocket,
+  Star,
+  Swords,
+  TrendingUp,
+  Trophy,
+} from 'lucide-react'
+import { useNavigate } from 'react-router-dom'
 import { useAuth } from '@/hooks/useAuth'
 import { ActivityCard } from '@/components/dashboard/ActivityCard'
 import { BadgeCard } from '@/components/dashboard/BadgeCard'
 import { useWeeklyGlanceData } from '@/hooks/useWeeklyGlanceData'
+import { useLeaderboardData } from '@/hooks/leaderboard/useLeaderboardData'
+import { useLeaderboardContext } from '@/hooks/leaderboard/useLeaderboardContext'
 import { WeeklyInspirationCard } from './components/WeeklyInspirationCard'
 import { JourneyCompletionBanner } from '@/components/journeys/JourneyCompletionBanner'
 import pointsConfig from '@/config/pointsConfig'
@@ -79,8 +95,20 @@ const milestones = [
 ]
 
 export const PaidMemberDashboard: React.FC = () => {
+  const navigate = useNavigate()
   const { profile } = useAuth()
   const { inspirationQuote } = useWeeklyGlanceData()
+
+  const leaderboardContext = useLeaderboardContext(profile)
+  const { challenges } = useLeaderboardData({
+    context: leaderboardContext,
+    profileId: profile?.id,
+  })
+
+  const activeChallenges = useMemo(() => {
+    return challenges.filter((c) => c.status === 'active' || c.status === 'pending')
+  }, [challenges])
+
   const [activities, setActivities] = useState<ActivityItem[]>(initialActivities)
   const [activeBadgeIndex, setActiveBadgeIndex] = useState(0)
   const journeyWeeks = useMemo(() => {
@@ -212,7 +240,8 @@ export const PaidMemberDashboard: React.FC = () => {
 
       <Grid templateColumns={{ base: '1fr', xl: '2fr 1fr' }} gap={6}>
         <GridItem>
-          <Card aria-label="Weekly progress overview">
+          <Stack spacing={6}>
+            <Card aria-label="Weekly progress overview">
             <CardBody>
               <HStack justify="space-between" align="flex-start" mb={4}>
                 <Box>
@@ -251,6 +280,55 @@ export const PaidMemberDashboard: React.FC = () => {
               </SimpleGrid>
             </CardBody>
           </Card>
+
+          {activeChallenges.length > 0 && (
+            <Card border="1px solid" borderColor="brand.border">
+              <CardBody>
+                <HStack justify="space-between" mb={4}>
+                  <HStack spacing={2}>
+                    <Icon as={Swords} color="brand.primary" />
+                    <Text fontWeight="bold" color="brand.text">
+                      Active Challenges
+                    </Text>
+                  </HStack>
+                  <Button
+                    size="xs"
+                    variant="ghost"
+                    rightIcon={<Icon as={Trophy} size={14} />}
+                    onClick={() => navigate('/app/leadership-board')}
+                  >
+                    View All
+                  </Button>
+                </HStack>
+                <Stack spacing={3}>
+                  {activeChallenges.slice(0, 2).map((challenge) => (
+                    <Flex
+                      key={challenge.id}
+                      p={3}
+                      borderRadius="lg"
+                      bg="brand.primaryMuted"
+                      align="center"
+                      justify="space-between"
+                    >
+                      <HStack spacing={3}>
+                        <Avatar size="sm" name={challenge.opponentName} src={challenge.opponentAvatar} />
+                        <Box>
+                          <Text fontSize="sm" fontWeight="bold">vs {challenge.opponentName}</Text>
+                          <Text fontSize="xs" color="brand.subtleText">
+                            {challenge.status === 'pending' ? 'Waiting to start' : `${challenge.yourPoints} vs ${challenge.opponentPoints} XP`}
+                          </Text>
+                        </Box>
+                      </HStack>
+                      <Badge colorScheme={challenge.status === 'pending' ? 'orange' : 'purple'}>
+                        {challenge.status.toUpperCase()}
+                      </Badge>
+                    </Flex>
+                  ))}
+                </Stack>
+              </CardBody>
+            </Card>
+          )}
+          </Stack>
         </GridItem>
 
         <GridItem>
