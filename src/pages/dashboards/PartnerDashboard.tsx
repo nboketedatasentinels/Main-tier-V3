@@ -826,7 +826,7 @@ export const PartnerDashboard: React.FC = () => {
     </Stack>
   )
 
-  const handleAtRiskAction = useCallback(async (action: string, caseId: string, additionalData?: any) => {
+  const handleAtRiskAction = useCallback(async (action: string, caseId: string, additionalData?: Record<string, unknown>) => {
     logger.debug('[PartnerDashboard] At-Risk Action', { action, caseId, additionalData })
 
     try {
