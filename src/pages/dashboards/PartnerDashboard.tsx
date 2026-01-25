@@ -6,8 +6,6 @@ import {
   Card,
   CardBody,
   Divider,
-  Grid,
-  GridItem,
   HStack,
   SimpleGrid,
   Stack,
@@ -27,30 +25,19 @@ import { formatDistanceToNow, isValid } from 'date-fns'
 import { Bell, Building2, Gauge, Mail, Sparkles, Users } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
 import { MetricCard } from '@/components/admin/MetricCard'
-import { EngagementChart } from '@/components/admin/EngagementChart'
-import { RiskAnalysisCard } from '@/components/admin/RiskAnalysisCard'
 import { OrganizationCard } from '@/components/admin/OrganizationCard'
 import PartnerLayout from '@/layouts/PartnerLayout'
 import { DashboardErrorBoundary } from '@/components/ui/DashboardErrorBoundary'
-import { PartnerInterventionPanel } from '@/components/partner/PartnerInterventionPanel'
+import { AtRiskCommandPanel } from '@/components/partner/AtRiskCommandPanel'
 import { PartnerUserManagement } from '@/components/partner/PartnerUserManagement'
 import { usePointsApprovalQueue } from '@/hooks/partner/usePointsApprovalQueue'
-import NudgeControlPanel from '@/components/partner/nudges/NudgeControlPanel'
-import NudgeTemplateManager from '@/components/partner/nudges/NudgeTemplateManager'
-import NudgeEffectivenessDashboard from '@/components/partner/nudges/NudgeEffectivenessDashboard'
-import NudgeAutomationRules from '@/components/partner/nudges/NudgeAutomationRules'
-import NudgeHistory from '@/components/partner/nudges/NudgeHistory'
-import RealTimeEffectivenessMonitor from '@/components/partner/nudges/RealTimeEffectivenessMonitor'
-import TemplatePerformanceAnalytics from '@/components/partner/nudges/TemplatePerformanceAnalytics'
-import NudgeInsightsReportGenerator from '@/components/partner/nudges/NudgeInsightsReportGenerator'
 import { usePartnerDashboardData } from '@/hooks/usePartnerDashboardData'
 import { useAuth } from '@/hooks/useAuth'
 import { logOrganizationAccessAttempt } from '@/services/organizationService'
-import { getActiveNudgeTemplates } from '@/services/nudgeService'
+import { recordEngagementAction } from '@/services/engagementService'
 import { generatePartnerDigest, sendPartnerDigestEmail } from '@/services/partnerDigestService'
-import type { NudgeTemplateRecord } from '@/types/nudges'
 import { buildPartnerNavItems } from '@/utils/navigationItems'
-import type { MismatchSample } from '@/utils/partnerDashboardUtils'
+import { logger, type MismatchSample } from '@/utils/partnerDashboardUtils'
 
 export const PartnerDashboard: React.FC = () => {
   const navigate = useNavigate()
@@ -93,7 +80,6 @@ export const PartnerDashboard: React.FC = () => {
     riskLevels,
     atRiskUsers,
     managedBreakdown,
-    daysUntil = () => 0
   } = analytics || {}
   const partnerId = user?.uid ?? null
   const snapshotUsers = snapshot?.users ?? []
@@ -126,9 +112,6 @@ export const PartnerDashboard: React.FC = () => {
     return formatDistanceToNow(dateValue, options)
   }
 
-  const [activeTemplates, setActiveTemplates] = useState<NudgeTemplateRecord[]>([])
-  const [templateLoadError, setTemplateLoadError] = useState<string | null>(null)
-  const [templateLoading, setTemplateLoading] = useState(false)
   const [refreshingOrganizations, setRefreshingOrganizations] = useState(false)
   const [digestSending, setDigestSending] = useState(false)
   const [digestStatusMessage, setDigestStatusMessage] = useState<string | null>(null)
@@ -143,28 +126,6 @@ export const PartnerDashboard: React.FC = () => {
     )
     return match?.id || null
   }, [organizations, selectedOrg])
-
-  const loadTemplates = useCallback(async () => {
-    setTemplateLoading(true)
-    setTemplateLoadError(null)
-    try {
-      const templates = await getActiveNudgeTemplates()
-      setActiveTemplates(templates)
-    } catch (error) {
-      const message = error instanceof Error ? error.message : 'Unknown error'
-      console.error('Failed to load nudge templates', error)
-      setActiveTemplates([])
-      setTemplateLoadError(
-        `Nudge templates could not be loaded. Please confirm your Firebase configuration and Firestore access. (${message})`,
-      )
-    } finally {
-      setTemplateLoading(false)
-    }
-  }, [])
-
-  useEffect(() => {
-    void loadTemplates()
-  }, [loadTemplates])
 
   useEffect(() => {
     if (profile?.role !== 'partner' || !selectedOrgId) {
@@ -865,161 +826,47 @@ export const PartnerDashboard: React.FC = () => {
     </Stack>
   )
 
+  const handleAtRiskAction = useCallback(async (action: string, caseId: string, additionalData?: any) => {
+    logger.debug('[PartnerDashboard] At-Risk Action', { action, caseId, additionalData })
+
+    try {
+      if (action === 'start_intervention') {
+        await recordEngagementAction({
+          userId: interventions.find(i => i.id === caseId)?.userId || '',
+          actionLabel: 'Started Intervention',
+          actorId: profile?.id ?? null,
+          actorName: profile?.fullName ?? null,
+          additionalData: { intervention_id: caseId, action_type: 'intervention_start' }
+        })
+      }
+
+      toast({
+        title: 'Action recorded',
+        description: `Action "${action}" has been logged for this case.`,
+        status: 'success',
+        duration: 3000,
+        isClosable: true,
+      })
+    } catch (error) {
+      logger.error('Failed to record at-risk action', error)
+      toast({
+        title: 'Action failed',
+        description: 'We could not record your action. Please try again.',
+        status: 'error',
+      })
+    }
+  }, [interventions, profile?.fullName, profile?.id, toast])
+
   const renderAtRiskPage = () => (
-    <Stack spacing={8}>
-      <Grid templateColumns={{ base: '1fr', xl: '2fr 1fr' }} gap={6}>
-        <GridItem>
-          <Card bg="white" border="1px solid" borderColor="brand.border">
-            <CardBody>
-              <EngagementChart
-                data={engagementTrend}
-                title="Engagement trends"
-                subtitle="14-day activity across assigned organizations"
-                valueLabel="Registrations"
-              />
-            </CardBody>
-          </Card>
-        </GridItem>
-        <GridItem>
-          <RiskAnalysisCard
-            title="At-risk accounts"
-            badgeLabel="Partner scoped"
-            badgeColor="purple"
-            levels={riskLevelList}
-            reasons={riskReasons}
-            warnings={dataQualityWarnings}
-            scopeNote="Only assigned organizations are included"
-          />
-        </GridItem>
-      </Grid>
-
-      <Card bg="white" border="1px solid" borderColor="brand.border">
-        <CardBody>
-          <Stack spacing={4}>
-            <HStack justify="space-between" align="center">
-              <Text fontWeight="bold" color="brand.text">Intervention panel</Text>
-              <Badge colorScheme="purple">Automated reminders</Badge>
-            </HStack>
-            <PartnerInterventionPanel interventions={interventions} daysUntil={daysUntil} />
-          </Stack>
-        </CardBody>
-      </Card>
-
-      <Card bg="white" border="1px solid" borderColor="brand.border">
-        <CardBody>
-          <Stack spacing={3}>
-            <HStack justify="space-between" align="center">
-              <Text fontWeight="bold" color="brand.text">Risk signals</Text>
-              <Badge colorScheme="orange">Data quality</Badge>
-            </HStack>
-            <SimpleGrid columns={{ base: 1, md: 2, xl: 4 }} spacing={3}>
-              {riskReasons.map(reason => (
-                <Box
-                  key={reason.label}
-                  p={3}
-                  borderRadius="md"
-                  border="1px solid"
-                  borderColor="brand.border"
-                  bg="brand.accent"
-                >
-                  <HStack justify="space-between">
-                    <Text fontWeight="semibold" color="brand.text">{reason.label}</Text>
-                    <Badge colorScheme={reason.color}>{reason.count}</Badge>
-                  </HStack>
-                </Box>
-              ))}
-            </SimpleGrid>
-            {dataQualityWarnings.map(warning => (
-              <HStack
-                key={warning.message}
-                justify="space-between"
-                p={3}
-                borderRadius="md"
-                bg="yellow.50"
-                color="orange.700"
-                border="1px solid"
-                borderColor="yellow.200"
-              >
-                <Text fontSize="sm">{warning.message}</Text>
-                <Badge colorScheme="orange">Review</Badge>
-              </HStack>
-            ))}
-          </Stack>
-        </CardBody>
-      </Card>
-
-      <Card bg="white" border="1px solid" borderColor="brand.border">
-        <CardBody>
-          {templateLoadError ? (
-            <Stack
-              spacing={3}
-              p={4}
-              mb={4}
-              border="1px solid"
-              borderColor="red.200"
-              bg="red.50"
-              borderRadius="lg"
-            >
-              <Text fontWeight="semibold" color="red.700">Nudge templates unavailable</Text>
-              <Text fontSize="sm" color="red.700">
-                {templateLoadError} If the issue persists, contact support at {supportEmail}.
-              </Text>
-              <HStack>
-                <Button size="sm" colorScheme="red" onClick={() => void loadTemplates()} isLoading={templateLoading}>
-                  Retry
-                </Button>
-                <Button size="sm" variant="outline" onClick={() => setTemplateLoadError(null)}>
-                  Dismiss
-                </Button>
-              </HStack>
-            </Stack>
-          ) : null}
-          <NudgeControlPanel users={atRiskUsers} templates={activeTemplates} />
-        </CardBody>
-      </Card>
-
-      <Card bg="white" border="1px solid" borderColor="brand.border">
-        <CardBody>
-          <NudgeTemplateManager />
-        </CardBody>
-      </Card>
-
-      <Card bg="white" border="1px solid" borderColor="brand.border">
-        <CardBody>
-          <NudgeAutomationRules />
-        </CardBody>
-      </Card>
-
-      <Card bg="white" border="1px solid" borderColor="brand.border">
-        <CardBody>
-          <RealTimeEffectivenessMonitor />
-        </CardBody>
-      </Card>
-
-      <Card bg="white" border="1px solid" borderColor="brand.border">
-        <CardBody>
-          <NudgeEffectivenessDashboard />
-        </CardBody>
-      </Card>
-
-      <Card bg="white" border="1px solid" borderColor="brand.border">
-        <CardBody>
-          <TemplatePerformanceAnalytics />
-        </CardBody>
-      </Card>
-
-      <Card bg="white" border="1px solid" borderColor="brand.border">
-        <CardBody>
-          <NudgeHistory />
-        </CardBody>
-      </Card>
-
-      <Card bg="white" border="1px solid" borderColor="brand.border">
-        <CardBody>
-          <NudgeInsightsReportGenerator />
-        </CardBody>
-      </Card>
-    </Stack>
+    <AtRiskCommandPanel
+      engagementTrend={engagementTrend}
+      riskLevelList={riskLevelList}
+      riskReasons={riskReasons}
+      dataQualityWarnings={dataQualityWarnings}
+      interventions={interventions}
+      atRiskUsers={atRiskUsers}
+      onAction={handleAtRiskAction}
+    />
   )
 
   const renderDebugInfo = () => {
