@@ -85,9 +85,13 @@ export const AtRiskCommandPanel: React.FC<AtRiskCommandPanelProps> = ({
 
   const selectedCase = interventions.find(i => i.id === selectedCaseId)
 
-  const handleCaseAction = async (action: string, additionalData?: Record<string, unknown>) => {
-    if (!selectedCaseId || !onAction) return
-    await onAction(action, selectedCaseId, additionalData)
+  const handleCaseAction = async (
+    action: string,
+    caseId: string,
+    additionalData?: Record<string, unknown>,
+  ) => {
+    if (!onAction) return
+    await onAction(action, caseId, additionalData)
   }
 
   const renderOverview = () => (
