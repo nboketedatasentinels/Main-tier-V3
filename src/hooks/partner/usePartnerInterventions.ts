@@ -9,11 +9,16 @@ export interface PartnerInterventionSummary {
   name: string
   target: string
   reason: string
-  status: 'active' | 'watch' | 'critical'
+  status: 'active' | 'watch' | 'critical' | 'escalated'
   deadline: string
   organizationCode?: string
   userId?: string
   partnerId?: string
+  openedAt?: string
+  statusChangedAt?: string
+  riskVerdicts?: string[]
+  assignedAdminName?: string
+  escalationReason?: string
 }
 
 interface UsePartnerInterventionsOptions {
@@ -91,6 +96,11 @@ export const usePartnerInterventions = (options: UsePartnerInterventionsOptions)
             organizationCode: data.organizationCode || data.organization_code,
             userId: data.userId,
             partnerId: data.partner_id,
+            openedAt: data.openedAt || data.opened_at,
+            statusChangedAt: (data as any).status_changed_at || data.opened_at,
+            riskVerdicts: (data as any).risk_verdicts || ['Behind on engagement targets'],
+            assignedAdminName: (data as any).assigned_admin_name || 'Governance Team',
+            escalationReason: (data as any).escalation_reason || 'SLA Breach',
           }
         })
         .filter((item) => {
