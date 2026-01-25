@@ -227,7 +227,7 @@ export async function sendPartnerDigestEmail(digest: PartnerDailyDigest): Promis
         actions: l.suggestedActions.join(', '),
       })),
       summaryText: digest.summaryText,
-      dashboardUrl: `${process.env.VITE_APP_URL}/mentor/dashboard?org=${digest.orgId}`,
+      dashboardUrl: `${import.meta.env.VITE_APP_URL}/mentor/dashboard?org=${digest.orgId}`,
     }
 
     // Send email

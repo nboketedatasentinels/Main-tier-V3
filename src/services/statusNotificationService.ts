@@ -161,7 +161,7 @@ export async function sendRecoveryNotification(
           pointsEarned,
           streakDays,
           encouragementMessage,
-          celebrationUrl: `${process.env.VITE_APP_URL}/dashboard?view=recovery`,
+          celebrationUrl: `${import.meta.env.VITE_APP_URL}/dashboard?view=recovery`,
         },
       })
     }
