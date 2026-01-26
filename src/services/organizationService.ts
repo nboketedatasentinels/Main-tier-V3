@@ -519,11 +519,25 @@ export const logOrganizationAccessAttempt = async ({
 
 export const fetchOrganizationByCode = async (organizationCode: string): Promise<OrganizationRecord | null> => {
   if (!organizationCode) return null
+
+  // First try by code (existing behavior)
   const trimmed = organizationCode.trim().toUpperCase()
   const snapshot = await getDocs(query(orgCollection, where('code', '==', trimmed)))
-  if (snapshot.empty) return null
-  const docSnap = snapshot.docs[0]
-  return { id: docSnap.id, ...(docSnap.data() as Omit<OrganizationRecord, 'id'>) }
+
+  if (!snapshot.empty) {
+    const docSnap = snapshot.docs[0]
+    return { id: docSnap.id, ...(docSnap.data() as Omit<OrganizationRecord, 'id'>) }
+  }
+
+  // Fallback: try by document ID (for cases where ID is passed instead of code)
+  const docRef = doc(db, ORG_COLLECTION, organizationCode.trim())
+  const docSnap = await getDoc(docRef)
+
+  if (docSnap.exists()) {
+    return { id: docSnap.id, ...(docSnap.data() as Omit<OrganizationRecord, 'id'>) }
+  }
+
+  return null
 }
 
 

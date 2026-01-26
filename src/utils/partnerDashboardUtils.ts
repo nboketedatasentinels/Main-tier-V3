@@ -46,7 +46,7 @@ export const normalizeTimestamp = (value?: unknown): string | null => {
 // ============================================================================
 // FIX #10: Conditional logging that respects environment
 // ============================================================================
-const isDevelopment = process.env.NODE_ENV === 'development'
+const isDevelopment = import.meta.env.DEV
 
 export const logger = {
   debug: (message: string, data?: unknown) => {

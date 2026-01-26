@@ -5,6 +5,21 @@ import { PartnerDashboard } from './PartnerDashboard'
 import { BrowserRouter } from 'react-router-dom'
 import { ChakraProvider } from '@chakra-ui/react'
 
+// Mock matchMedia
+Object.defineProperty(window, 'matchMedia', {
+    writable: true,
+    value: vi.fn().mockImplementation(query => ({
+        matches: false,
+        media: query,
+        onchange: null,
+        addListener: vi.fn(), // Deprecated
+        removeListener: vi.fn(), // Deprecated
+        addEventListener: vi.fn(),
+        removeEventListener: vi.fn(),
+        dispatchEvent: vi.fn(),
+    })),
+})
+
 // Mock the hooks
 vi.mock('@/hooks/usePartnerDashboardData', () => ({
     usePartnerDashboardData: vi.fn(),
@@ -18,6 +33,16 @@ vi.mock('@/services/organizationService', () => ({
     logOrganizationAccessAttempt: vi.fn(),
 }))
 
+vi.mock('@/services/engagementService', () => ({
+    recordEngagementAction: vi.fn(),
+    bulkRecordEngagementActions: vi.fn(),
+}))
+
+vi.mock('@/services/partnerDigestService', () => ({
+    generatePartnerDigest: vi.fn(),
+    sendPartnerDigestEmail: vi.fn(),
+}))
+
 vi.mock('@/services/nudgeService', () => ({
     getActiveNudgeTemplates: vi.fn().mockResolvedValue([]),
 }))
@@ -27,16 +52,18 @@ vi.mock('@/layouts/PartnerLayout', () => ({
     default: ({ children }: { children: React.ReactNode }) => <div data-testid="partner-layout">{children}</div>,
 }))
 
-vi.mock('@/components/admin/MetricCard', () => ({
-    MetricCard: ({ label, value }: { label: string; value: string }) => (
-        <div data-testid="metric-card">
-            {label}: {value}
-        </div>
-    ),
-}))
-
 vi.mock('@/components/partner/PartnerUserManagement', () => ({
     PartnerUserManagement: () => <div data-testid="partner-user-management">User Management</div>,
+}))
+
+vi.mock('@/hooks/partner/usePointsApprovalQueue', () => ({
+    usePointsApprovalQueue: () => ({
+        approvalQueue: [],
+        loading: false,
+        actionId: null,
+        handleApprove: vi.fn(),
+        handleReject: vi.fn(),
+    }),
 }))
 
 vi.mock('@/components/partner/nudges/NudgeControlPanel', () => ({
@@ -61,6 +88,10 @@ vi.mock('@/components/admin/OrganizationCard', () => ({
 
 vi.mock('@/components/partner/PartnerInterventionPanel', () => ({
     PartnerInterventionPanel: () => <div data-testid="partner-intervention-panel">Partner Intervention Panel</div>,
+}))
+
+vi.mock('@/components/partner/AtRiskCommandPanel', () => ({
+    AtRiskCommandPanel: () => <div data-testid="at-risk-command-panel">At-Risk Command Panel</div>,
 }))
 
 import { usePartnerDashboardData } from '@/hooks/usePartnerDashboardData'
@@ -110,6 +141,9 @@ const defaultDashboardReturn = {
     atRiskUsers: [],
     managedBreakdown: { active: 0, inactive: 0 },
     notificationCount: 0,
+    notifications: [],
+    notificationsLoading: false,
+    notificationsError: null,
     debugInfo: null,
     snapshot: {
         partnerId: 'test-user',
@@ -186,8 +220,8 @@ describe('PartnerDashboard', () => {
         renderComponent()
 
         expect(screen.getByText('We hit a problem loading your dashboard data.')).toBeInTheDocument()
-        expect(screen.getByText('Organizations: Failed to fetch organizations')).toBeInTheDocument()
-        expect(screen.getByText('Retry organizations')).toBeInTheDocument()
+        // The error details are now on the dedicated organization management page, not the overview
+        expect(screen.getByText('Retry loading data')).toBeInTheDocument()
     })
 
     it('renders success state with metrics', () => {
@@ -226,24 +260,40 @@ describe('PartnerDashboard', () => {
 
         renderComponent()
 
-        expect(screen.getByText('Scoped overview')).toBeInTheDocument()
-        // Check for metric cards
-        expect(screen.getByText('Active members (30d): 100')).toBeInTheDocument()
-        expect(screen.getByText('Engagement rate: 85%')).toBeInTheDocument()
-        expect(screen.getByText('New registrations (7d): 5')).toBeInTheDocument()
-        expect(screen.getByText('Managed companies: 3')).toBeInTheDocument()
+        expect(screen.getByText('Partner Overview')).toBeInTheDocument()
+        // Check for activity summary metrics
+        expect(screen.getByText('Activity Summary')).toBeInTheDocument()
+        expect(screen.getByText('Active members (30d)')).toBeInTheDocument()
+        expect(screen.getByText('100')).toBeInTheDocument()
+        expect(screen.getByText('Engagement rate')).toBeInTheDocument()
+        expect(screen.getByText('85%')).toBeInTheDocument()
+        expect(screen.getByText('New registrations (7d)')).toBeInTheDocument()
+        expect(screen.getByText('5')).toBeInTheDocument()
+        expect(screen.getByText('Managed companies')).toBeInTheDocument()
+        expect(screen.getByText('3')).toBeInTheDocument()
 
         // Check for organizations
-        expect(screen.getByText('Managed companies')).toBeInTheDocument()
+        expect(screen.getByText('Organization Health Snapshot')).toBeInTheDocument()
         expect(screen.getByText('Org 1')).toBeInTheDocument()
         expect(screen.getByText('Org 2')).toBeInTheDocument()
     })
 
-    it('handles organization selection', () => {
+    it('handles organization selection', async () => {
         // Since PartnerUserManagement is mocked, we can't test the actual interaction inside it easily here,
-        // but we can verify it renders.
+        // but we can verify it renders when navigating to the users page.
         renderComponent()
-        expect(screen.getByTestId('partner-user-management')).toBeInTheDocument()
+
+        // User management should NOT be on the overview page now
+        expect(screen.queryByTestId('partner-user-management')).not.toBeInTheDocument()
+
+        // Click on "Invite your first learner" to navigate to users page
+        const inviteButton = screen.getByRole('button', { name: /invite your first learner/i })
+        fireEvent.click(inviteButton)
+
+        // Now it should be in the document
+        await waitFor(() => {
+            expect(screen.getByTestId('partner-user-management')).toBeInTheDocument()
+        })
     })
 
     it('displays real-time notifications', () => {
@@ -254,7 +304,7 @@ describe('PartnerDashboard', () => {
 
         renderComponent()
 
-        expect(screen.getByText('Real-time notifications')).toBeInTheDocument()
+        expect(screen.getByText('Recent Activity')).toBeInTheDocument()
         expect(screen.getByText('5 unread')).toBeInTheDocument()
     })
 })

@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
-import { doc, onSnapshot } from 'firebase/firestore'
+import { collection, doc, onSnapshot, query as firestoreQuery, where } from 'firebase/firestore'
 import { db } from '@/services/firebase'
 import { useAuth } from '@/hooks/useAuth'
 import type { PartnerAdminSnapshot, PartnerAssignment } from '@/types/admin'
@@ -46,66 +46,123 @@ export const usePartnerAdminSnapshot = (options: UsePartnerAdminSnapshotOptions 
   const { enabled = true } = options
   const { user, profileStatus, isSuperAdmin } = useAuth()
 
-  const [snapshot, setSnapshot] = useState<PartnerAdminSnapshot | null>(null)
-  const [loading, setLoading] = useState(true)
+  const [assignmentsFromDoc, setAssignmentsFromDoc] = useState<PartnerAssignment[]>([])
+  const [assignmentsFromQuery, setAssignmentsFromQuery] = useState<PartnerAssignment[]>([])
+  const [docLoading, setDocLoading] = useState(true)
+  const [queryLoading, setQueryLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
-  const [assignedOrganizationIds, setAssignedOrganizationIds] = useState<string[]>([])
+
+  // Derived state for the final snapshot
+  const snapshot = useMemo<PartnerAdminSnapshot | null>(() => {
+    if (!user?.uid) return null
+    if (docLoading && queryLoading) return null // Wait for at least one source (or both if we want to be strict, but relaxed is better for UX)
+
+    // Merge assignments with deduplication
+    const allAssignments = [...assignmentsFromDoc, ...assignmentsFromQuery]
+    const seenIds = new Set<string>()
+    const uniqueAssignments: PartnerAssignment[] = []
+
+    allAssignments.forEach((assignment) => {
+      const id = assignment.organizationId
+      if (id && !seenIds.has(id)) {
+        seenIds.add(id)
+        uniqueAssignments.push(assignment)
+      }
+    })
+
+    return {
+      partnerId: user.uid,
+      role: 'partner',
+      assignedOrganizations: uniqueAssignments,
+    }
+  }, [user?.uid, assignmentsFromDoc, assignmentsFromQuery, docLoading, queryLoading])
+
+  const assignedOrganizationIds = useMemo(() => {
+    return snapshot?.assignedOrganizations
+      .map((a) => a.organizationId)
+      .filter((id): id is string => !!id) ?? []
+  }, [snapshot])
 
   useEffect(() => {
     if (!enabled || profileStatus !== 'ready') {
-      setSnapshot(null)
-      setLoading(true)
+      setAssignmentsFromDoc([])
+      setAssignmentsFromQuery([])
+      setDocLoading(true)
+      setQueryLoading(true)
       setError(null)
       return
     }
 
     if (isSuperAdmin || !user?.uid) {
-      setSnapshot(null)
-      setAssignedOrganizationIds([])
-      setLoading(false)
+      setAssignmentsFromDoc([])
+      setAssignmentsFromQuery([])
+      setDocLoading(false)
+      setQueryLoading(false)
       setError(null)
       return
     }
 
-    setLoading(true)
+    setDocLoading(true)
+    setQueryLoading(true)
     setError(null)
 
-    const unsubscribe = onSnapshot(
+    // 1. Listen to the partner document (Legacy source)
+    const unsubscribeDoc = onSnapshot(
       doc(db, 'partners', user.uid),
       (docSnap) => {
         if (!docSnap.exists()) {
-          setSnapshot(null)
-          setAssignedOrganizationIds([])
-          setLoading(false)
-          setError('Partner record not found.')
+          setAssignmentsFromDoc([])
+          setDocLoading(false)
+          // Don't error here, rely on the query
           return
         }
 
         const data = docSnap.data() as { assignedOrganizations?: unknown }
-        const assignments = parseAssignedOrganizations(data.assignedOrganizations)
-        const orgIds = assignments
-          .map((assignment) => assignment.organizationId?.trim())
-          .filter((organizationId): organizationId is string => !!organizationId)
-        const deduped = Array.from(new Set(orgIds))
-        setAssignedOrganizationIds(deduped)
-        setSnapshot({
-          partnerId: user.uid,
-          role: 'partner',
-          assignedOrganizations: assignments,
-        })
-        setLoading(false)
+        const parsed = parseAssignedOrganizations(data.assignedOrganizations)
+        setAssignmentsFromDoc(parsed)
+        setDocLoading(false)
       },
       (err) => {
-        console.error('[PartnerAdminSnapshot] Failed to load partner assignments', err)
-        setSnapshot(null)
-        setAssignedOrganizationIds([])
-        setLoading(false)
-        setError('Unable to load partner assignments.')
-      },
+        console.error('[PartnerAdminSnapshot] Failed to load partner doc', err)
+        setAssignmentsFromDoc([])
+        setDocLoading(false)
+        // We don't set global error here to allow the query to succeed
+      }
     )
 
-    return () => unsubscribe()
+    // 2. Listen to the organizations collection (Source of Truth)
+    const organizationsQuery = firestoreQuery(
+      collection(db, 'organizations'),
+      where('transformationPartnerId', '==', user.uid),
+      where('status', 'in', ['active', 'watch', 'paused']) // Exclude inactive/suspended if desired, or keep all
+    )
+
+    const unsubscribeQuery = onSnapshot(
+      organizationsQuery,
+      (querySnap) => {
+        const fromQuery: PartnerAssignment[] = querySnap.docs.map((doc) => ({
+          organizationId: doc.id,
+          status: 'active', // Default to active for queried orgs, or map from org status
+          companyCode: doc.data().code,
+        }))
+        setAssignmentsFromQuery(fromQuery)
+        setQueryLoading(false)
+      },
+      (err) => {
+        console.error('[PartnerAdminSnapshot] Failed to query organizations', err)
+        setAssignmentsFromQuery([])
+        setQueryLoading(false)
+        setError('Unable to load partner organizations.')
+      }
+    )
+
+    return () => {
+      unsubscribeDoc()
+      unsubscribeQuery()
+    }
   }, [enabled, isSuperAdmin, profileStatus, user?.uid])
+
+  const loading = docLoading && queryLoading
 
   const assignments = useMemo(
     () => snapshot?.assignedOrganizations ?? [],
