@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
-import { collection, doc, onSnapshot, query, where } from 'firebase/firestore'
+import { collection, doc, onSnapshot, query as firestoreQuery, where } from 'firebase/firestore'
 import { db } from '@/services/firebase'
 import { useAuth } from '@/hooks/useAuth'
 import type { PartnerAdminSnapshot, PartnerAssignment } from '@/types/admin'
@@ -131,7 +131,7 @@ export const usePartnerAdminSnapshot = (options: UsePartnerAdminSnapshotOptions 
     )
 
     // 2. Listen to the organizations collection (Source of Truth)
-    const organizationsQuery = query(
+    const organizationsQuery = firestoreQuery(
       collection(db, 'organizations'),
       where('transformationPartnerId', '==', user.uid),
       where('status', 'in', ['active', 'watch', 'paused']) // Exclude inactive/suspended if desired, or keep all
