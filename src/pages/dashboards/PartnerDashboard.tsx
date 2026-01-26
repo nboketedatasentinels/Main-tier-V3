@@ -1,12 +1,18 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import {
+  Avatar,
   Badge,
   Box,
   Button,
   Card,
   CardBody,
   Divider,
+  FormControl,
+  FormLabel,
   HStack,
+  Input,
+  InputGroup,
+  InputRightElement,
   SimpleGrid,
   Stack,
   Text,
@@ -22,8 +28,10 @@ import {
   useToast,
 } from '@chakra-ui/react'
 import { formatDistanceToNow, isValid } from 'date-fns'
-import { AlertTriangle, Bell, Building2, ClipboardCheck, Gauge, Mail, Sparkles, Users } from 'lucide-react'
+import { AlertTriangle, Bell, Building2, ClipboardCheck, Eye, EyeOff, Gauge, Key, Mail, Save, Sparkles, User, Users } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
+import { EmailAuthProvider, reauthenticateWithCredential, updatePassword } from 'firebase/auth'
+import { auth } from '@/services/firebase'
 import { OrganizationCard } from '@/components/admin/OrganizationCard'
 import PartnerLayout from '@/layouts/PartnerLayout'
 import { DashboardErrorBoundary } from '@/components/ui/DashboardErrorBoundary'
@@ -82,9 +90,18 @@ export const PartnerDashboard: React.FC = () => {
   const partnerId = user?.uid ?? null
   const snapshotUsers = snapshot?.users ?? []
 
-  type PartnerPageKey = 'overview' | 'users' | 'organization-management' | 'at-risk' | 'reports' | 'settings' | 'support'
+  type PartnerPageKey = 'overview' | 'users' | 'organization-management' | 'at-risk' | 'reports' | 'settings' | 'support' | 'profile'
   const [activePage, setActivePage] = useState<PartnerPageKey>('overview')
   const [showAllNotifications, setShowAllNotifications] = useState(false)
+
+  // Profile page state
+  const [currentPassword, setCurrentPassword] = useState('')
+  const [newPassword, setNewPassword] = useState('')
+  const [confirmPassword, setConfirmPassword] = useState('')
+  const [showCurrentPassword, setShowCurrentPassword] = useState(false)
+  const [showNewPassword, setShowNewPassword] = useState(false)
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false)
+  const [isChangingPassword, setIsChangingPassword] = useState(false)
 
   const { approvalQueue: pendingApprovals } = usePointsApprovalQueue(
     snapshotUsers,
@@ -1393,6 +1410,217 @@ export const PartnerDashboard: React.FC = () => {
     </Stack>
   )
 
+  const handlePasswordChange = async () => {
+    if (!auth.currentUser) {
+      toast({
+        title: 'Not authenticated',
+        description: 'Please sign in again to change your password.',
+        status: 'error',
+        duration: 5000,
+        isClosable: true,
+      })
+      return
+    }
+
+    if (newPassword !== confirmPassword) {
+      toast({
+        title: 'Passwords do not match',
+        description: 'Please ensure both password fields match.',
+        status: 'error',
+        duration: 5000,
+        isClosable: true,
+      })
+      return
+    }
+
+    if (newPassword.length < 8) {
+      toast({
+        title: 'Password too short',
+        description: 'Password must be at least 8 characters long.',
+        status: 'error',
+        duration: 5000,
+        isClosable: true,
+      })
+      return
+    }
+
+    setIsChangingPassword(true)
+    try {
+      const credential = EmailAuthProvider.credential(
+        auth.currentUser.email || '',
+        currentPassword
+      )
+      await reauthenticateWithCredential(auth.currentUser, credential)
+      await updatePassword(auth.currentUser, newPassword)
+
+      toast({
+        title: 'Password updated',
+        description: 'Your password has been changed successfully.',
+        status: 'success',
+        duration: 5000,
+        isClosable: true,
+      })
+
+      setCurrentPassword('')
+      setNewPassword('')
+      setConfirmPassword('')
+    } catch (error) {
+      console.error('Password change error:', error)
+      toast({
+        title: 'Password change failed',
+        description: error instanceof Error ? error.message : 'Unable to change password. Please check your current password.',
+        status: 'error',
+        duration: 5000,
+        isClosable: true,
+      })
+    } finally {
+      setIsChangingPassword(false)
+    }
+  }
+
+  const renderProfile = () => (
+    <Stack spacing={6}>
+      {/* Profile Information */}
+      <Card bg="white" border="1px solid" borderColor="brand.border">
+        <CardBody>
+          <Stack spacing={4}>
+            <HStack spacing={4}>
+              <Avatar size="xl" name={profile?.fullName || 'Partner'} />
+              <VStack align="flex-start" spacing={1}>
+                <Text fontSize="xl" fontWeight="bold" color="brand.text">
+                  {profile?.fullName || 'Partner'}
+                </Text>
+                <Badge colorScheme="purple">Partner</Badge>
+                <Text fontSize="sm" color="brand.subtleText">
+                  {profile?.email || user?.email || 'No email'}
+                </Text>
+              </VStack>
+            </HStack>
+            <Divider />
+            <SimpleGrid columns={{ base: 1, md: 2 }} spacing={4}>
+              <Box>
+                <Text fontSize="sm" color="brand.subtleText">Role</Text>
+                <Text fontWeight="medium" color="brand.text">Partner Administrator</Text>
+              </Box>
+              <Box>
+                <Text fontSize="sm" color="brand.subtleText">Organizations Managed</Text>
+                <Text fontWeight="medium" color="brand.text">{assignedOrgCount}</Text>
+              </Box>
+            </SimpleGrid>
+          </Stack>
+        </CardBody>
+      </Card>
+
+      {/* Change Password */}
+      <Card bg="white" border="1px solid" borderColor="brand.border">
+        <CardBody>
+          <Stack spacing={4}>
+            <HStack>
+              <Key size={20} />
+              <Text fontWeight="bold" color="brand.text">Change Password</Text>
+            </HStack>
+            <Text fontSize="sm" color="brand.subtleText">
+              Update your password to keep your account secure.
+            </Text>
+            <Stack spacing={3} maxW="400px">
+              <FormControl>
+                <FormLabel fontSize="sm">Current Password</FormLabel>
+                <InputGroup>
+                  <Input
+                    type={showCurrentPassword ? 'text' : 'password'}
+                    value={currentPassword}
+                    onChange={(e) => setCurrentPassword(e.target.value)}
+                    placeholder="Enter current password"
+                  />
+                  <InputRightElement>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => setShowCurrentPassword(!showCurrentPassword)}
+                    >
+                      {showCurrentPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+                    </Button>
+                  </InputRightElement>
+                </InputGroup>
+              </FormControl>
+              <FormControl>
+                <FormLabel fontSize="sm">New Password</FormLabel>
+                <InputGroup>
+                  <Input
+                    type={showNewPassword ? 'text' : 'password'}
+                    value={newPassword}
+                    onChange={(e) => setNewPassword(e.target.value)}
+                    placeholder="Enter new password"
+                  />
+                  <InputRightElement>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => setShowNewPassword(!showNewPassword)}
+                    >
+                      {showNewPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+                    </Button>
+                  </InputRightElement>
+                </InputGroup>
+              </FormControl>
+              <FormControl>
+                <FormLabel fontSize="sm">Confirm New Password</FormLabel>
+                <InputGroup>
+                  <Input
+                    type={showConfirmPassword ? 'text' : 'password'}
+                    value={confirmPassword}
+                    onChange={(e) => setConfirmPassword(e.target.value)}
+                    placeholder="Confirm new password"
+                  />
+                  <InputRightElement>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                    >
+                      {showConfirmPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+                    </Button>
+                  </InputRightElement>
+                </InputGroup>
+              </FormControl>
+              <Button
+                colorScheme="purple"
+                leftIcon={<Save size={16} />}
+                onClick={handlePasswordChange}
+                isLoading={isChangingPassword}
+                isDisabled={!currentPassword || !newPassword || !confirmPassword}
+              >
+                Update Password
+              </Button>
+            </Stack>
+          </Stack>
+        </CardBody>
+      </Card>
+
+      {/* Account Information */}
+      <Card bg="white" border="1px solid" borderColor="brand.border">
+        <CardBody>
+          <Stack spacing={3}>
+            <HStack>
+              <User size={20} />
+              <Text fontWeight="bold" color="brand.text">Account Information</Text>
+            </HStack>
+            <SimpleGrid columns={{ base: 1, md: 2 }} spacing={4}>
+              <Box>
+                <Text fontSize="sm" color="brand.subtleText">User ID</Text>
+                <Text fontWeight="medium" color="brand.text" fontSize="sm">{user?.uid || 'N/A'}</Text>
+              </Box>
+              <Box>
+                <Text fontSize="sm" color="brand.subtleText">Email</Text>
+                <Text fontWeight="medium" color="brand.text">{profile?.email || user?.email || 'N/A'}</Text>
+              </Box>
+            </SimpleGrid>
+          </Stack>
+        </CardBody>
+      </Card>
+    </Stack>
+  )
+
   const renderSettings = () => (
     <Stack spacing={6}>
       <Card bg="white" border="1px solid" borderColor="brand.border">
@@ -1448,6 +1676,8 @@ export const PartnerDashboard: React.FC = () => {
         return renderSettings()
       case 'support':
         return renderSupport()
+      case 'profile':
+        return renderProfile()
       case 'overview':
       default:
         return renderOverview()
@@ -1456,7 +1686,7 @@ export const PartnerDashboard: React.FC = () => {
 
   const handleNavigate = (key: string) => {
     const normalized = key as PartnerPageKey
-    if (['overview', 'users', 'organization-management', 'at-risk', 'reports', 'settings', 'support'].includes(normalized)) {
+    if (['overview', 'users', 'organization-management', 'at-risk', 'reports', 'settings', 'support', 'profile'].includes(normalized)) {
       setActivePage(normalized)
     } else {
       setActivePage('overview')
