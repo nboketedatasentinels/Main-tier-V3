@@ -55,14 +55,11 @@ export const PartnerLayout: React.FC<PartnerLayoutProps> = ({
 }) => {
   const sidebarWidth = '280px'
   const disclosure = useDisclosure()
-  const { profile, signOut, signingOut, refreshProfile, profileLoading, lastProfileLoadAt, isAdmin, profileStatus } = useAuth()
+  const { profile, signOut, signingOut, refreshProfile, profileLoading, lastProfileLoadAt, isAdmin } = useAuth()
   const { assignedOrganizationIds } = usePartnerAdminSnapshot({ enabled: isAdmin })
   const enableProfileRealtime = import.meta.env.VITE_ENABLE_PROFILE_REALTIME === 'true'
   const toast = useToast()
-  const [showRefreshHint, setShowRefreshHint] = React.useState(false)
   const [lastUpdatedLabel, setLastUpdatedLabel] = React.useState('Not yet loaded')
-  const [profileSyncWarning, setProfileSyncWarning] = React.useState(false)
-  const profileLoadingSinceRef = React.useRef<number | null>(null)
   const assignedCount = organizations.length || assignedOrganizationIds.length || 0
   const sections = navSections?.length ? navSections : buildPartnerNavItems()
 
@@ -77,13 +74,10 @@ export const PartnerLayout: React.FC<PartnerLayoutProps> = ({
 
   const updateRefreshHint = React.useCallback(() => {
     if (!lastProfileLoadAt) {
-      setShowRefreshHint(false)
       setLastUpdatedLabel(formatLastUpdated(null))
       return
     }
     const lastDate = new Date(lastProfileLoadAt)
-    const minutesSince = (Date.now() - lastDate.getTime()) / (1000 * 60)
-    setShowRefreshHint(minutesSince >= 30)
     setLastUpdatedLabel(formatLastUpdated(lastProfileLoadAt))
   }, [lastProfileLoadAt])
 
@@ -92,27 +86,6 @@ export const PartnerLayout: React.FC<PartnerLayoutProps> = ({
     const interval = window.setInterval(updateRefreshHint, 60 * 1000)
     return () => window.clearInterval(interval)
   }, [updateRefreshHint])
-
-  React.useEffect(() => {
-    if (profileStatus === 'loading') {
-      profileLoadingSinceRef.current = profileLoadingSinceRef.current ?? Date.now()
-    } else {
-      profileLoadingSinceRef.current = null
-      setProfileSyncWarning(false)
-    }
-  }, [profileStatus])
-
-  React.useEffect(() => {
-    const interval = window.setInterval(() => {
-      if (profileStatus !== 'loading' || !profileLoadingSinceRef.current) {
-        setProfileSyncWarning(false)
-        return
-      }
-      const elapsedMs = Date.now() - profileLoadingSinceRef.current
-      setProfileSyncWarning(elapsedMs > 15000)
-    }, 1000)
-    return () => window.clearInterval(interval)
-  }, [profileStatus])
 
   const handleLogout = React.useCallback(async () => {
     const timestamp = new Date().toISOString()
@@ -288,15 +261,6 @@ export const PartnerLayout: React.FC<PartnerLayoutProps> = ({
           </option>
         ))}
       </Select>
-      <Tooltip label="Refresh profile (Alt+Shift+R)" placement="bottom">
-        <IconButton
-          aria-label="Refresh profile"
-          icon={<RefreshCw size={16} />}
-          variant="outline"
-          onClick={() => void handleManualRefresh()}
-          isLoading={profileLoading}
-        />
-      </Tooltip>
       <Box position="relative">
         <IconButton aria-label="Notifications" icon={<Bell />} variant="outline" />
         {notificationCount > 0 && (
@@ -400,48 +364,11 @@ export const PartnerLayout: React.FC<PartnerLayoutProps> = ({
                 Partner Dashboard
               </Text>
               <Text fontSize="3xl" fontWeight="bold" color="brand.text">
-                {profile?.fullName || 'Partner'}
+                Welcome back, {profile?.fullName || 'Partner'}
               </Text>
               <Text color="brand.subtleText" maxW="760px">
-                Real-time oversight for assigned organizations with scoped interventions, approvals, and mentor engagement tools.
+                Your partner workspace for learners, organizations, and interventions.
               </Text>
-              <HStack spacing={3} align="center" flexWrap="wrap">
-                <Badge colorScheme={profileStatus === 'ready' ? 'green' : 'orange'}>
-                  {profileStatus === 'ready' ? 'Profile synced' : 'Profile syncing'}
-                </Badge>
-                <Text fontSize="xs" color="brand.subtleText">
-                  Profile last updated: {lastUpdatedLabel}
-                </Text>
-                <Button
-                  size="xs"
-                  variant="outline"
-                  onClick={() => void handleManualRefresh()}
-                  isLoading={profileLoading}
-                >
-                  Sync Profile
-                </Button>
-              </HStack>
-              {showRefreshHint && (
-                <HStack spacing={3} pt={2}>
-                  <Badge colorScheme="orange">Refresh suggested</Badge>
-                  <Button
-                    size="xs"
-                    variant="outline"
-                    onClick={() => void handleManualRefresh()}
-                    isLoading={profileLoading}
-                  >
-                    Refresh now
-                    </Button>
-                </HStack>
-              )}
-              {profileSyncWarning && (
-                <HStack spacing={2} pt={2}>
-                  <Badge colorScheme="red">Profile sync delayed</Badge>
-                  <Text fontSize="xs" color="red.600">
-                    Profile has not loaded within the expected timeframe.
-                  </Text>
-                </HStack>
-              )}
             </VStack>
             <HeaderControls />
           </Flex>
