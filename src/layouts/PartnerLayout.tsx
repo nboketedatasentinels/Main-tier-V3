@@ -1,7 +1,6 @@
 import React from 'react'
 import {
   Avatar,
-  Badge,
   Box,
   Button,
   Divider,
@@ -15,6 +14,11 @@ import {
   HStack,
   Icon,
   IconButton,
+  Menu as ChakraMenu,
+  MenuButton,
+  MenuDivider,
+  MenuItem,
+  MenuList,
   Select,
   Stack,
   Text,
@@ -27,7 +31,8 @@ import {
   useToast,
   useDisclosure,
 } from '@chakra-ui/react'
-import { Bell, LogOut, Menu, RefreshCw, Sparkles } from 'lucide-react'
+import { LogOut, Menu, RefreshCw, Sparkles, User } from 'lucide-react'
+import { NotificationDropdown } from '@/components/notifications/NotificationDropdown'
 import { useAuth } from '@/hooks/useAuth'
 import { usePartnerAdminSnapshot } from '@/hooks/partner/usePartnerAdminSnapshot'
 import { type NavigationSection, buildPartnerNavItems } from '@/utils/navigationItems'
@@ -37,7 +42,6 @@ interface PartnerLayoutProps {
   organizations: { id?: string; code: string; name: string }[]
   selectedOrg: string
   onSelectOrg: (org: string) => void
-  notificationCount?: number
   navSections?: NavigationSection[]
   activeItem?: string
   onNavigate?: (key: string) => void
@@ -48,7 +52,6 @@ export const PartnerLayout: React.FC<PartnerLayoutProps> = ({
   organizations,
   selectedOrg,
   onSelectOrg,
-  notificationCount = 0,
   navSections,
   activeItem,
   onNavigate,
@@ -77,7 +80,6 @@ export const PartnerLayout: React.FC<PartnerLayoutProps> = ({
       setLastUpdatedLabel(formatLastUpdated(null))
       return
     }
-    const lastDate = new Date(lastProfileLoadAt)
     setLastUpdatedLabel(formatLastUpdated(lastProfileLoadAt))
   }, [lastProfileLoadAt])
 
@@ -261,21 +263,30 @@ export const PartnerLayout: React.FC<PartnerLayoutProps> = ({
           </option>
         ))}
       </Select>
-      <Box position="relative">
-        <IconButton aria-label="Notifications" icon={<Bell />} variant="outline" />
-        {notificationCount > 0 && (
-          <Badge
-            position="absolute"
-            top="-6px"
-            right="-6px"
-            colorScheme="red"
-            borderRadius="full"
-            px={2}
+      <NotificationDropdown />
+      <ChakraMenu>
+        <MenuButton
+          as={Button}
+          variant="outline"
+          leftIcon={<Avatar size="sm" name={profile?.fullName || 'Partner'} />}
+          display={{ base: 'none', md: 'inline-flex' }}
+        >
+          <Text fontSize="sm" noOfLines={1} maxW="150px">
+            {profile?.fullName || 'Partner'}
+          </Text>
+        </MenuButton>
+        <MenuList>
+          <MenuItem icon={<User size={16} />}>Profile</MenuItem>
+          <MenuDivider />
+          <MenuItem
+            icon={<LogOut size={16} />}
+            onClick={handleLogout}
+            isDisabled={signingOut}
           >
-            {notificationCount}
-          </Badge>
-        )}
-      </Box>
+            {signingOut ? 'Signing out...' : 'Sign out'}
+          </MenuItem>
+        </MenuList>
+      </ChakraMenu>
       <IconButton
         aria-label="Open navigation"
         icon={<Menu />}
@@ -283,16 +294,6 @@ export const PartnerLayout: React.FC<PartnerLayoutProps> = ({
         display={{ base: 'inline-flex', md: 'none' }}
         onClick={disclosure.onOpen}
       />
-      <Button
-        display={{ base: 'inline-flex', md: 'inline-flex' }}
-        leftIcon={<LogOut size={16} />}
-        variant="outline"
-        onClick={handleLogout}
-        isLoading={signingOut}
-        isDisabled={signingOut}
-      >
-        {signingOut ? 'Signing out...' : 'Logout'}
-      </Button>
     </HStack>
   )
 

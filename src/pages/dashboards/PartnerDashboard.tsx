@@ -1469,7 +1469,6 @@ export const PartnerDashboard: React.FC = () => {
         organizations={organizations}
         selectedOrg={selectedOrg}
         onSelectOrg={setSelectedOrg}
-        notificationCount={notificationCount}
         navSections={navSections}
         onNavigate={handleNavigate}
         activeItem={activePage}
@@ -1492,7 +1491,6 @@ export const PartnerDashboard: React.FC = () => {
         organizations={organizations}
         selectedOrg={selectedOrg}
         onSelectOrg={setSelectedOrg}
-        notificationCount={notificationCount}
         navSections={navSections}
         onNavigate={handleNavigate}
         activeItem={activePage}
@@ -1518,7 +1516,6 @@ export const PartnerDashboard: React.FC = () => {
       organizations={organizations}
       selectedOrg={selectedOrg}
       onSelectOrg={setSelectedOrg}
-      notificationCount={notificationCount}
       navSections={navSections}
       onNavigate={handleNavigate}
       activeItem={activePage}
