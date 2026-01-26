@@ -3,6 +3,7 @@ import { Outlet, useLocation, useNavigate } from 'react-router-dom'
 import { RouteTransition } from '@/components/RouteTransition'
 import {
   Box,
+  Badge,
   Flex,
   VStack,
   HStack,
@@ -21,12 +22,14 @@ import {
   DrawerContent,
   DrawerCloseButton,
   DrawerBody,
+  Divider,
   InputGroup,
   InputLeftElement,
   Input,
   useToast,
 } from '@chakra-ui/react'
 import {
+  LucideIcon,
   Menu as MenuIcon,
   Target,
   Users,
@@ -47,6 +50,21 @@ import { BuildVillageModal } from '@/components/modals/BuildVillageModal'
 import { ConfirmationWelcomeModal } from '@/components/modals/ConfirmationWelcomeModal'
 import { NotificationDropdown } from '@/components/notifications/NotificationDropdown'
 import { isFreeUser as isFreeTierUser } from '@/utils/membership'
+
+interface NavItem {
+  label: string
+  path: string
+  icon: LucideIcon
+  isPrimary?: boolean
+  badge?: {
+    label: string
+  }
+}
+
+interface NavSection {
+  label: string
+  items: NavItem[]
+}
 
 const HEADER_HEIGHT = '72px'
 const sectionLabelStyles = {
@@ -140,15 +158,15 @@ export const MainLayout: React.FC = () => {
     setShowWelcomeModal(false)
   }
 
-  const navigationSections = useMemo(
+  const navigationSections = useMemo<NavSection[]>(
     () => [
       {
         label: 'MY JOURNEY',
         items: [
-          { label: 'Dashboard', path: '/app/weekly-glance', icon: CalendarDays },
-          { label: 'Weekly Checklist', path: '/app/weekly-checklist', icon: ClipboardList },
+          { label: 'Dashboard', path: '/app/weekly-glance', icon: CalendarDays, isPrimary: true },
+          { label: 'Weekly Checklist', path: '/app/weekly-checklist', icon: ClipboardList, isPrimary: true },
           { label: 'Leadership Board', path: '/app/leadership-board', icon: Trophy },
-          { label: 'My Courses', path: '/app/courses', icon: BookOpen },
+          { label: 'My Courses', path: '/app/courses', icon: BookOpen, badge: { label: '1 new' }, isPrimary: true },
           { label: 'Peer Connect', path: '/app/peer-connect', icon: Users },
           { label: 'Impact Log', path: '/app/impact', icon: Target },
           { label: 'Leadership Council', path: '/app/leadership-council', icon: Gavel },
@@ -157,7 +175,7 @@ export const MainLayout: React.FC = () => {
       {
         label: 'COMMUNITY',
         items: [
-          { label: 'Events', path: '/app/announcements', icon: Megaphone },
+          { label: 'Events', path: '/app/announcements', icon: Megaphone, badge: { label: '2' } },
           { label: 'Referral Rewards', path: '/app/referral-rewards', icon: Gift },
           { label: 'Global Book Club', path: '/app/book-club', icon: BookMarked },
           { label: 'Shameless Circle', path: '/app/shameless-circle', icon: Sparkles },
@@ -199,40 +217,81 @@ export const MainLayout: React.FC = () => {
     onClose()
   }
 
-  const NavContent = () => (
-    <VStack align="stretch" spacing={5} pt={4}>
-      {filteredNavigation.map(section => (
-        <Box key={section.label}>
-          <Text mb={2} {...sectionLabelStyles}>
-            {section.label}
-          </Text>
-          <VStack align="stretch" spacing={1}>
-            {section.items.map(item => {
-              const isActive = location.pathname.startsWith(item.path)
+  const NavContent = ({ variant }: { variant: 'sidebar' | 'drawer' }) => {
+    const isDark = variant === 'drawer'
+    const sectionTextColor = isDark ? 'whiteAlpha.700' : sectionLabelStyles.color
+    const activeBorder = isDark ? 'whiteAlpha.900' : 'brand.primary'
+    const activeText = isDark ? 'white' : 'brand.text'
+    const inactiveText = isDark ? 'whiteAlpha.900' : 'brand.subtleText'
+    const hoverBg = isDark ? 'whiteAlpha.100' : 'brand.primaryMuted'
+    const activeBg = isDark ? 'whiteAlpha.100' : 'brand.primaryMuted'
+    const dividerColor = isDark ? 'whiteAlpha.200' : 'brand.border'
+    const badgeStyles = isDark
+      ? { bg: 'whiteAlpha.200', color: 'whiteAlpha.900' }
+      : { bg: 'brand.primaryMuted', color: 'brand.text' }
 
-              return (
-                <Button
-                  key={item.path}
-                  leftIcon={<item.icon size={18} />}
-                  variant="ghost"
-                  justifyContent="flex-start"
-                  onClick={() => handleNavigation(item.path)}
-                  bg={isActive ? 'brand.primaryMuted' : 'transparent'}
-                  color={isActive ? 'brand.text' : 'brand.subtleText'}
-                  _hover={{ bg: 'brand.primaryMuted', color: 'brand.text' }}
-                  height="42px"
-                  fontWeight={isActive ? 'semibold' : 'medium'}
-                  fontSize="13px"
-                >
-                  {item.label}
-                </Button>
-              )
-            })}
-          </VStack>
-        </Box>
-      ))}
-    </VStack>
-  )
+    return (
+      <VStack align="stretch" spacing={6} pt={4}>
+        {filteredNavigation.map((section, sectionIndex) => (
+          <Box key={section.label}>
+            <Text
+              mb={3}
+              fontSize="xs"
+              fontWeight="semibold"
+              letterSpacing="0.12em"
+              textTransform="uppercase"
+              color={sectionTextColor}
+            >
+              {section.label}
+            </Text>
+            <VStack align="stretch" spacing={2}>
+              {section.items.map(item => {
+                const isActive = location.pathname.startsWith(item.path)
+                const fontWeight = isActive || item.isPrimary ? 'semibold' : 'medium'
+
+                return (
+                  <Button
+                    key={item.path}
+                    variant="ghost"
+                    justifyContent="flex-start"
+                    onClick={() => handleNavigation(item.path)}
+                    bg={isActive ? activeBg : 'transparent'}
+                    color={isActive ? activeText : inactiveText}
+                    _hover={{ bg: hoverBg, color: activeText }}
+                    minH="48px"
+                    px={4}
+                    borderLeftWidth="4px"
+                    borderLeftColor={isActive ? activeBorder : 'transparent'}
+                    borderRadius="md"
+                    fontWeight={fontWeight}
+                    fontSize="sm"
+                    aria-current={isActive ? 'page' : undefined}
+                  >
+                    <HStack spacing={3} w="full" justify="space-between">
+                      <HStack spacing={3}>
+                        <Box color={isActive ? activeText : inactiveText}>
+                          <item.icon size={20} />
+                        </Box>
+                        <Text>{item.label}</Text>
+                      </HStack>
+                      {item.badge && (
+                        <Badge px={2} borderRadius="full" fontSize="xs" {...badgeStyles}>
+                          {item.badge.label}
+                        </Badge>
+                      )}
+                    </HStack>
+                  </Button>
+                )
+              })}
+            </VStack>
+            {sectionIndex < filteredNavigation.length - 1 && (
+              <Divider mt={6} borderColor={dividerColor} />
+            )}
+          </Box>
+        ))}
+      </VStack>
+    )
+  }
 
   return (
     <Flex minH="100vh" h="100vh" bg="brand.accent" color="brand.text" overflow="hidden">
@@ -264,7 +323,7 @@ export const MainLayout: React.FC = () => {
 
           {/* Navigation */}
           <Box flex="1">
-            <NavContent />
+            <NavContent variant="sidebar" />
           </Box>
 
           {/* User Info */}
@@ -366,15 +425,55 @@ export const MainLayout: React.FC = () => {
 
       {/* Mobile Drawer */}
       <Drawer isOpen={isOpen} placement="left" onClose={onClose}>
-        <DrawerOverlay />
-        <DrawerContent bg="brand.deepPlum">
-          <DrawerCloseButton color="brand.textLight" />
-          <DrawerBody pt={12}>
-            <VStack align="stretch" spacing={4}>
-              <Text fontSize="2xl" fontWeight="bold" color="brand.gold" mb={4}>
-                T4L Menu
-              </Text>
-              <NavContent />
+        <DrawerOverlay bg="rgba(0, 0, 0, 0.65)" />
+        <DrawerContent bg="brand.deepPlum" color="white">
+          <DrawerCloseButton color="whiteAlpha.900" />
+          <DrawerBody pt={10} pb={6} display="flex" flexDirection="column">
+            <VStack align="stretch" spacing={6} flex="1">
+              <HStack spacing={3} align="center">
+                <Avatar size="sm" name={profile?.fullName} src={profile?.avatarUrl} bg="whiteAlpha.200" />
+                <Box>
+                  <Text fontWeight="semibold" color="white">
+                    {profile?.fullName || "User's name"}
+                  </Text>
+                  <Button
+                    variant="link"
+                    color="whiteAlpha.700"
+                    fontSize="sm"
+                    onClick={() => handleNavigation('/app/profile')}
+                  >
+                    View Profile
+                  </Button>
+                </Box>
+              </HStack>
+
+              <NavContent variant="drawer" />
+            </VStack>
+
+            <Divider borderColor="whiteAlpha.200" mt={6} />
+            <VStack align="stretch" spacing={2} pt={4}>
+              <Button
+                variant="ghost"
+                justifyContent="flex-start"
+                color="whiteAlpha.800"
+                fontSize="sm"
+                onClick={() => handleNavigation('/app/profile')}
+                minH="44px"
+              >
+                Settings
+              </Button>
+              <Button
+                variant="ghost"
+                justifyContent="flex-start"
+                color="whiteAlpha.700"
+                fontSize="sm"
+                onClick={handleSignOut}
+                isLoading={signingOut}
+                isDisabled={signingOut}
+                minH="44px"
+              >
+                Sign Out
+              </Button>
             </VStack>
           </DrawerBody>
         </DrawerContent>

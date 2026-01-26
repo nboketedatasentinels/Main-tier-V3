@@ -31,7 +31,6 @@ import { PartnerDashboard } from '@/pages/dashboards/PartnerDashboard'
 // Feature page imports
 import { JourneysPage } from '@/pages/journeys/JourneysPage'
 import { ImpactLogPage } from '@/pages/impact/ImpactLogPage'
-import { LeaderboardPage } from '@/pages/leaderboard/LeaderboardPage'
 import { LeadershipBoardPage } from '@/pages/leaderboard/LeadershipBoardPage'
 import { ProfilePage } from '@/pages/profile/ProfilePage'
 import { WeeklyUpdatesPage } from '@/pages/WeeklyChecklistPage'
@@ -213,14 +212,7 @@ export const AppRoutes = () => {
               </ProtectedRoute>
             } 
           />
-          <Route 
-            path="leaderboard" 
-            element={
-              <ProtectedRoute restrictMentor>
-                <LeaderboardPage />
-              </ProtectedRoute>
-            } 
-          />
+          <Route path="leaderboard" element={<Navigate to="/app/leadership-board" replace />} />
           <Route path="leadership-board" element={<LeadershipBoardPage />} />
           <Route path="weekly-checklist" element={<WeeklyUpdatesPage />} />
           <Route path="courses" element={<MyCoursesPage />} />

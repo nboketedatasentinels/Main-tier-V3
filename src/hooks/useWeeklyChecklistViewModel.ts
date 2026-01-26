@@ -193,40 +193,30 @@ export function useWeeklyChecklistViewModel() {
   useEffect(() => {
     if (!user) return
 
-    const load = async () => {
+    const windowNumber = getWindowNumber(selectedWeek)
+
+    const weekQ = query(
+      collection(db, 'pointsLedger'),
+      where('uid', '==', user.uid),
+      where('weekNumber', '==', selectedWeek),
+    )
+    const windowQ = query(
+      collection(db, 'pointsLedger'),
+      where('uid', '==', user.uid),
+      where('monthNumber', '==', windowNumber),
+    )
+    const globalQ = query(
+      collection(db, 'pointsLedger'),
+      where('uid', '==', user.uid),
+    )
+
+    // Window and Global counts remain one-time for efficiency
+    const loadStaticCounts = async () => {
       try {
-        const windowNumber = getWindowNumber(selectedWeek)
-
-        const weekQ = query(
-          collection(db, 'pointsLedger'),
-          where('uid', '==', user.uid),
-          where('weekNumber', '==', selectedWeek),
-        )
-        const windowQ = query(
-          collection(db, 'pointsLedger'),
-          where('uid', '==', user.uid),
-          where('monthNumber', '==', windowNumber),
-        )
-        // Global query for all-time counts
-        const globalQ = query(
-          collection(db, 'pointsLedger'),
-          where('uid', '==', user.uid),
-        )
-
-        const [weekSnap, windowSnap, globalSnap] = await Promise.all([
-          getDocs(weekQ),
+        const [windowSnap, globalSnap] = await Promise.all([
           getDocs(windowQ),
           getDocs(globalQ)
         ])
-
-        const weekCompleted = new Set<string>()
-        const weekCounts: Record<string, number> = {}
-        weekSnap.docs.forEach(d => {
-          const row = d.data() as LedgerRow
-          if (!row.activityId) return
-          weekCompleted.add(row.activityId)
-          weekCounts[row.activityId] = (weekCounts[row.activityId] ?? 0) + 1
-        })
 
         const windowCounts: Record<string, number> = {}
         const lastCompletedWeekByActivity: Record<string, number> = {}
@@ -250,20 +240,38 @@ export function useWeeklyChecklistViewModel() {
           totalCompletedAllTime[row.activityId] = (totalCompletedAllTime[row.activityId] ?? 0) + 1
         })
 
-        setLedgerCache({
-          weekCompleted,
-          weekCounts,
+        setLedgerCache(prev => ({
+          ...prev,
           windowCounts,
           totalCompletedAllTime,
           lastCompletedWeekByActivity,
-        })
+        }))
       } catch (e) {
-        console.error(e)
-        // don’t hard-fail UI; availability will still compute with empty counts
+        console.error('[ledgerCache] static load failed', e)
       }
     }
 
-    load()
+    const unsubWeek = onSnapshot(weekQ, snap => {
+      const weekCompleted = new Set<string>()
+      const weekCounts: Record<string, number> = {}
+      snap.docs.forEach(d => {
+        const row = d.data() as LedgerRow
+        if (!row.activityId) return
+        weekCompleted.add(row.activityId)
+        weekCounts[row.activityId] = (weekCounts[row.activityId] ?? 0) + 1
+      })
+      setLedgerCache(prev => ({
+        ...prev,
+        weekCompleted,
+        weekCounts,
+      }))
+    }, (e) => console.error('[ledgerCache] week listener failed', e))
+
+    loadStaticCounts()
+
+    return () => {
+      unsubWeek()
+    }
   }, [selectedWeek, user])
 
   /* ------------------------------------------------------------------ */
@@ -362,8 +370,8 @@ export function useWeeklyChecklistViewModel() {
   )
 
   const earnedPoints = useMemo(
-    () => activities.reduce((sum, a) => (a.status === 'completed' ? sum + a.points : sum), 0),
-    [activities],
+    () => weeklyProgress?.pointsEarned ?? 0,
+    [weeklyProgress],
   )
 
   /* ------------------------------------------------------------------ */
@@ -555,8 +563,9 @@ export function useWeeklyChecklistViewModel() {
       await createApprovalRequest({
         userId: user.uid,
         type: 'points_verification',
+        approvalType: activity.approvalType,
         title: activity.title,
-          source: sourcePayload,
+        source: sourcePayload,
         summary: proofModal.notes?.trim(),
         points: activity.points,
       })

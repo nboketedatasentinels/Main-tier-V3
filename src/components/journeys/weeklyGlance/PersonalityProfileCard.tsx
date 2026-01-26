@@ -1,9 +1,7 @@
 import {
-  Badge,
   Box,
   Card,
   CardBody,
-  Collapse,
   Divider,
   FormControl,
   FormLabel,
@@ -47,7 +45,6 @@ interface PersonalityProfileCardProps {
 export const PersonalityProfileCard = ({ data, loading }: PersonalityProfileCardProps) => {
   const { profile, user } = useAuth()
   const toast = useToast()
-  const [expanded, setExpanded] = useState(false)
   const [isModalOpen, setIsModalOpen] = useState(false)
   const [saving, setSaving] = useState(false)
   const [localProfile, setLocalProfile] = useState<PersonalityProfile | null>(data)
@@ -84,9 +81,7 @@ export const PersonalityProfileCard = ({ data, loading }: PersonalityProfileCard
 
   const strengths = localProfile?.personalityStrengths || []
   const selectedCoreValues = localProfile?.coreValues || []
-  const coreValuePreviewCount = expanded ? selectedCoreValues.length : 3
-  const strengthPreviewCount = expanded ? strengths.length : 3
-  const shouldShowToggle = strengths.length > 3 || selectedCoreValues.length > 3
+  const strengthPreviewCount = strengths.length
 
   const personalityOptions = useMemo(
     () => [
@@ -185,14 +180,13 @@ export const PersonalityProfileCard = ({ data, loading }: PersonalityProfileCard
 
   return (
     <Card h="100%" variant="outline" borderColor="border.subtle">
-      <CardBody>
+      <CardBody p={6}>
         <Stack spacing={3}>
           <HStack justify="space-between">
             <HStack>
               <Icon as={Sparkles} color="brand.primary" />
-              <Text fontWeight="bold" color="#273240">Personality Profile</Text>
+              <Text fontWeight="bold" fontSize="md" color="#273240">Personality Profile</Text>
             </HStack>
-            {localProfile?.personalityType && <Badge colorScheme="purple">{localProfile.personalityType}</Badge>}
           </HStack>
 
           <Skeleton isLoaded={!loading} rounded="md">
@@ -211,13 +205,13 @@ export const PersonalityProfileCard = ({ data, loading }: PersonalityProfileCard
                 </>
               )}
               <Stack spacing={2} pt={strengths.length > 0 ? 1 : 0}>
-                <HStack spacing={2} color="brand.text">
-                  <Icon as={Award} color="yellow.500" />
-                  <Text fontWeight="semibold">Core Values</Text>
-                </HStack>
+                  <HStack spacing={2} color="brand.text">
+                    <Icon as={Award} color="yellow.500" />
+                    <Text fontWeight="semibold">Core Values</Text>
+                  </HStack>
                 {selectedCoreValues.length > 0 ? (
                   <HStack spacing={2} flexWrap="wrap">
-                    {selectedCoreValues.slice(0, coreValuePreviewCount).map(value => (
+                    {selectedCoreValues.map(value => (
                       <Tag key={value} colorScheme="yellow" borderRadius="full" px={3} py={1} whiteSpace="nowrap">
                         <HStack spacing={1}>
                           <Icon as={Award} size={14} />
@@ -237,28 +231,18 @@ export const PersonalityProfileCard = ({ data, loading }: PersonalityProfileCard
                   </Stack>
                 )}
               </Stack>
-              <Collapse in={expanded} animateOpacity>
-                {data?.personalityDescription && (
-                  <Text pt={2}>
-                    Understanding your type helps us match you with the right habits, allies, and learning experiences.
-                  </Text>
-                )}
-              </Collapse>
-              {shouldShowToggle && (
-                <Button variant="ghost" size="sm" alignSelf="flex-start" onClick={() => setExpanded(prev => !prev)}>
-                  {expanded ? 'Show less' : 'Show full assessment'}
-                </Button>
-              )}
-              {!localProfile?.personalityType && (
-                <Button colorScheme="purple" size="sm" onClick={() => setIsModalOpen(true)} alignSelf="flex-start">
-                  Take Personality & Values Tests
-                </Button>
-              )}
-              {localProfile?.personalityType && (
-                <Button variant="ghost" size="sm" onClick={() => setIsModalOpen(true)} alignSelf="flex-start">
-                  Update personality details
-                </Button>
-              )}
+              <Text fontSize="sm" color="brand.subtleText">
+                Understanding your type helps us match you with the right habits, allies, and learning experiences.
+              </Text>
+              <Button
+                variant={localProfile?.personalityType ? 'link' : 'solid'}
+                colorScheme="purple"
+                size="sm"
+                onClick={() => setIsModalOpen(true)}
+                alignSelf="flex-start"
+              >
+                View & Edit Profile
+              </Button>
             </Stack>
           </Skeleton>
         </Stack>

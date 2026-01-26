@@ -247,70 +247,105 @@ export const usePartnerAdminData = (
     setQueryAssignmentsLoading(true)
     setAssignmentsError(null)
 
-    // 1. Partner Doc Listener
+    // 1. Modern Source: partners/${partnerId} document
     const partnerDocRef = doc(db, 'partners', partnerId)
-    const unsubscribeDoc = onSnapshot(
+
+    // 2. Legacy Source: partner_organizations collection where partnerId == partnerId
+    const legacyQuery = query(
+      collection(db, 'partner_organizations'),
+      where('partnerId', '==', partnerId)
+    )
+
+    let partnerDocOrgIds: string[] = []
+    let legacyOrgIds: string[] = []
+    let partnerDocLoaded = false
+    let legacyLoaded = false
+    let partnerDocErrorOccurred = false
+    let legacyErrorOccurred = false
+
+    const updateCombinedAssignments = () => {
+      const combined = Array.from(new Set([...partnerDocOrgIds, ...legacyOrgIds]))
+      setAssignedOrganizationIds(combined)
+
+      // Only stop loading when both listeners have responded at least once
+      if (partnerDocLoaded && legacyLoaded) {
+        setAssignmentsLoading(false)
+
+        if (partnerDocErrorOccurred && legacyErrorOccurred) {
+          setAssignmentsError('Unable to load partner assignments from any source.')
+        } else {
+          setAssignmentsError(null)
+        }
+      }
+
+      console.log('[PartnerAdminData] Combined partner assignments updated', {
+        partnerId,
+        totalCount: combined.length,
+        fromPartnerDoc: partnerDocOrgIds.length,
+        fromLegacy: legacyOrgIds.length,
+        loading: !(partnerDocLoaded && legacyLoaded)
+      })
+    }
+
+    const unsubPartnerDoc = onSnapshot(
       partnerDocRef,
       (docSnap) => {
-        if (!docSnap.exists()) {
-          console.log('[PartnerAdminData] No partner doc found')
-          setAssignmentsFromDoc([])
-          setDocAssignmentsLoading(false)
-          return
+        if (docSnap.exists()) {
+          const data = docSnap.data() as {
+            assignedOrganizations?: Array<string | { organizationId?: string; companyCode?: string }>
+          }
+          const raw = data.assignedOrganizations || []
+          partnerDocOrgIds = raw
+            .map((assignment) => {
+              if (typeof assignment === 'string') return assignment.trim()
+              return assignment.organizationId?.trim() || ''
+            })
+            .filter((orgId): orgId is string => !!orgId)
+        } else {
+          partnerDocOrgIds = []
         }
+        partnerDocLoaded = true
+        partnerDocErrorOccurred = false
+        updateCombinedAssignments()
+      },
+      (err) => {
+        console.error('[PartnerAdminData] Modern assignments load failed', err)
+        partnerDocLoaded = true
+        partnerDocErrorOccurred = true
+        updateCombinedAssignments()
+      }
+    )
 
-        const data = docSnap.data() as {
-          assignedOrganizations?: Array<string | { organizationId?: string; companyCode?: string }>
-        }
-
-        const assignments = data.assignedOrganizations || []
-        const orgIds = assignments
-          .map((assignment) => {
-            if (typeof assignment === 'string') return assignment.trim()
-            return assignment.organizationId?.trim() || ''
+    const unsubLegacy = onSnapshot(
+      legacyQuery,
+      (snap) => {
+        legacyOrgIds = snap.docs
+          .map((docSnap) => {
+            const data = docSnap.data() as { organizationId?: string }
+            if (data.organizationId) return data.organizationId.trim()
+            // Fallback to extracting from ID if organizationId field is missing
+            // ID format is usually partnerId_organizationId
+            const parts = docSnap.id.split('_')
+            if (parts.length > 1) return parts[1].trim()
+            return ''
           })
           .filter((orgId): orgId is string => !!orgId)
 
-        setAssignmentsFromDoc(orgIds)
-        setDocAssignmentsLoading(false)
+        legacyLoaded = true
+        legacyErrorOccurred = false
+        updateCombinedAssignments()
       },
       (err) => {
-        console.error('[PartnerAdminData] Failed to load partner assignments from doc', err)
-        setAssignmentsFromDoc([])
-        setDocAssignmentsLoading(false)
-        // Don't set global error if query might succeed
-      },
-    )
-
-    // 2. Organizations Query Listener
-    const orgsQuery = query(
-      collection(db, ORG_COLLECTION),
-      where('transformationPartnerId', '==', partnerId),
-      where('status', 'in', ['active', 'watch', 'paused'])
-    )
-
-    const unsubscribeQuery = onSnapshot(
-      orgsQuery,
-      (snapshot) => {
-        const ids = snapshot.docs.map(doc => doc.id)
-        setAssignmentsFromQuery(ids)
-        setQueryAssignmentsLoading(false)
-        console.log('[PartnerAdminData] Partner assignments loaded (direct query)', {
-          partnerId,
-          count: ids.length
-        })
-      },
-      (err) => {
-        console.error('[PartnerAdminData] Failed to query partner organizations', err)
-        setAssignmentsFromQuery([])
-        setQueryAssignmentsLoading(false)
-        setAssignmentsError('Unable to load partner assignments.')
+        console.error('[PartnerAdminData] Legacy assignments load failed', err)
+        legacyLoaded = true
+        legacyErrorOccurred = true
+        updateCombinedAssignments()
       }
     )
 
     return () => {
-      unsubscribeDoc()
-      unsubscribeQuery()
+      unsubPartnerDoc()
+      unsubLegacy()
     }
   }, [enabled, isSuperAdmin, partnerId, profileStatus])
 

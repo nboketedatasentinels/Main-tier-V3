@@ -3,6 +3,7 @@ import {
   Button,
   Card,
   CardBody,
+  Divider,
   HStack,
   Icon,
   Skeleton,
@@ -10,21 +11,26 @@ import {
   Text,
   VStack,
 } from '@chakra-ui/react'
-import { Mail, MessageCircle } from 'lucide-react'
-import { SupportAssignment } from '@/hooks/useWeeklyGlanceData'
+import { CalendarClock, Mail, MessageCircle, Users } from 'lucide-react'
+import { Link } from 'react-router-dom'
+import { PeerMatch, SupportAssignment } from '@/hooks/useWeeklyGlanceData'
 
 interface SupportTeamCardProps {
   data: SupportAssignment | null
   loading: boolean
+  peerMatches: PeerMatch[]
+  peerMatchesLoading: boolean
 }
 
-export const SupportTeamCard = ({ data, loading }: SupportTeamCardProps) => {
+export const SupportTeamCard = ({ data, loading, peerMatches, peerMatchesLoading }: SupportTeamCardProps) => {
   const mentorProfile = data?.mentorProfile ?? null
   const ambassadorProfile = data?.ambassadorProfile ?? null
   const hasAssignedIds = Boolean(data?.mentor_id || data?.ambassador_id)
   const hasMentor = Boolean(mentorProfile)
   const hasAmbassador = Boolean(ambassadorProfile)
   const showEmptyState = !loading && !hasMentor && !hasAmbassador
+  const completedMatches = peerMatches.filter(match => match.status === 'matched')
+  const hasPeerMatch = completedMatches.length > 0
   const supportErrorMessages = [data?.mentorProfileError, data?.ambassadorProfileError].filter(
     (message): message is string => Boolean(message),
   )
@@ -40,51 +46,99 @@ export const SupportTeamCard = ({ data, loading }: SupportTeamCardProps) => {
 
   return (
     <Card h="100%" variant="outline" borderColor="border.subtle">
-      <CardBody>
+      <CardBody p={6}>
         <Stack spacing={4}>
-          <Text fontWeight="bold" color="#273240">Support Team</Text>
+          <Text fontWeight="bold" fontSize="md" color="#273240">Support Team</Text>
           <Skeleton isLoaded={!loading} rounded="md">
             <Stack spacing={3}>
-              {hasMentor && mentorProfile && (
+              {hasMentor && mentorProfile && mentorProfile.id !== ambassadorProfile?.id && (
                 <VStack align="start" spacing={2} p={3} borderWidth="1px" borderColor="border.subtle" rounded="md">
                   <HStack spacing={3} w="100%" justify="space-between">
                     <HStack spacing={2}>
                       <Avatar size="sm" name={getDisplayName(mentorProfile)} src={getAvatarSrc(mentorProfile)} />
                       <VStack spacing={0} align="start">
-                        <Text fontWeight="semibold">Mentor</Text>
-                        <Text fontSize="sm" color="text.secondary">
+                        <Text fontSize="xs" color="text.secondary">Mentor</Text>
+                        <Text fontWeight="semibold">
                           {getDisplayName(mentorProfile)}
                         </Text>
-                        {mentorProfile.email && (
-                          <Text fontSize="xs" color="text.secondary">
-                            {mentorProfile.email}
-                          </Text>
-                        )}
                       </VStack>
                     </HStack>
-                    <Button size="sm" leftIcon={<Icon as={Mail} />}>Contact</Button>
+                    {mentorProfile.email && (
+                      <Button
+                        as={Link}
+                        to="/app/leadership-council"
+                        size="sm"
+                        variant="ghost"
+                        leftIcon={<Icon as={CalendarClock} />}
+                      >
+                        Schedule
+                      </Button>
+                    )}
                   </HStack>
                 </VStack>
               )}
 
-              {hasAmbassador && ambassadorProfile && (
+              {hasAmbassador && ambassadorProfile && ambassadorProfile.id !== mentorProfile?.id && (
                 <VStack align="start" spacing={2} p={3} borderWidth="1px" borderColor="border.subtle" rounded="md">
                   <HStack spacing={3} w="100%" justify="space-between">
                     <HStack spacing={2}>
                       <Avatar size="sm" name={getDisplayName(ambassadorProfile)} src={getAvatarSrc(ambassadorProfile)} />
                       <VStack spacing={0} align="start">
-                        <Text fontWeight="semibold">Ambassador</Text>
-                        <Text fontSize="sm" color="text.secondary">
+                        <Text fontSize="xs" color="text.secondary">Ambassador</Text>
+                        <Text fontWeight="semibold">
                           {getDisplayName(ambassadorProfile)}
                         </Text>
-                        {ambassadorProfile.email && (
-                          <Text fontSize="xs" color="text.secondary">
-                            {ambassadorProfile.email}
-                          </Text>
-                        )}
                       </VStack>
                     </HStack>
-                    <Button size="sm" leftIcon={<Icon as={MessageCircle} />}>Message</Button>
+                    {ambassadorProfile.email && (
+                      <Button
+                        as="a"
+                        href={`mailto:${ambassadorProfile.email}`}
+                        size="sm"
+                        variant="ghost"
+                        leftIcon={<Icon as={MessageCircle} />}
+                      >
+                        Message
+                      </Button>
+                    )}
+                  </HStack>
+                </VStack>
+              )}
+
+              {hasMentor && hasAmbassador && mentorProfile && ambassadorProfile && mentorProfile.id === ambassadorProfile.id && (
+                <VStack align="start" spacing={2} p={3} borderWidth="1px" borderColor="border.subtle" rounded="md">
+                  <HStack spacing={3} w="100%" justify="space-between">
+                    <HStack spacing={2}>
+                      <Avatar size="sm" name={getDisplayName(mentorProfile)} src={getAvatarSrc(mentorProfile)} />
+                      <VStack spacing={0} align="start">
+                        <Text fontSize="xs" color="text.secondary">Mentor & Ambassador</Text>
+                        <Text fontWeight="semibold">
+                          {getDisplayName(mentorProfile)}
+                        </Text>
+                      </VStack>
+                    </HStack>
+                    {mentorProfile.email && (
+                      <HStack spacing={2}>
+                        <Button
+                          as={Link}
+                          to="/app/leadership-council"
+                          size="sm"
+                          variant="ghost"
+                          leftIcon={<Icon as={CalendarClock} />}
+                        >
+                          Schedule
+                        </Button>
+                        <Button
+                          as="a"
+                          href={`mailto:${mentorProfile.email}`}
+                          size="sm"
+                          variant="ghost"
+                          leftIcon={<Icon as={Mail} />}
+                        >
+                          Message
+                        </Button>
+                      </HStack>
+                    )}
                   </HStack>
                 </VStack>
               )}
@@ -112,6 +166,33 @@ export const SupportTeamCard = ({ data, loading }: SupportTeamCardProps) => {
               )}
             </Stack>
           </Skeleton>
+
+          <Divider />
+
+          <Stack spacing={2}>
+            <HStack spacing={2}>
+              <Icon as={Users} color="brand.primary" />
+              <Text fontWeight="semibold" color="#273240">
+                Peer Matching
+              </Text>
+            </HStack>
+            <Skeleton isLoaded={!peerMatchesLoading} rounded="md">
+              <Stack spacing={2}>
+                {hasPeerMatch ? (
+                  <Text fontSize="sm" color="text.secondary">
+                    You have {completedMatches.length} peer ally{completedMatches.length === 1 ? '' : 's'} ready to connect.
+                  </Text>
+                ) : (
+                  <Text fontSize="sm" color="text.secondary">
+                    Find your peer ally to stay accountable this week.
+                  </Text>
+                )}
+                <Button size="sm" variant={hasPeerMatch ? 'link' : 'solid'} colorScheme="purple" alignSelf="flex-start">
+                  {hasPeerMatch ? 'View peer matches' : 'Find your peer ally'}
+                </Button>
+              </Stack>
+            </Skeleton>
+          </Stack>
         </Stack>
       </CardBody>
     </Card>

@@ -1,5 +1,6 @@
-import { Card, CardBody, HStack, Icon, Skeleton, Stack, Text } from '@chakra-ui/react'
+import { Card, CardBody, HStack, Icon, Link, Skeleton, Stack, Text } from '@chakra-ui/react'
 import { TrendingUp, Users } from 'lucide-react'
+import { Link as RouterLink } from 'react-router-dom'
 
 interface PeopleImpactedCardProps {
   count: number
@@ -9,22 +10,27 @@ interface PeopleImpactedCardProps {
 export const PeopleImpactedCard = ({ count, loading }: PeopleImpactedCardProps) => {
   return (
     <Card h="100%" variant="outline" borderColor="border.subtle" _hover={{ shadow: 'sm' }}>
-      <CardBody>
+      <CardBody p={6}>
         <Stack spacing={3}>
           <HStack justify="space-between">
             <HStack spacing={2}>
               <Icon as={Users} color="brand.primary" />
-              <Text fontWeight="bold" color="#273240">People Impacted</Text>
+              <Text fontWeight="bold" fontSize="md" color="#273240">People Impacted</Text>
             </HStack>
-            <HStack spacing={1} color="#273240">
-              <Icon as={TrendingUp} boxSize={4} />
-              <Text fontSize="sm">Track your impact</Text>
-            </HStack>
+            <Link as={RouterLink} to="/app/impact" color="brand.primary" fontSize="sm" fontWeight="semibold">
+              Track your impact
+            </Link>
           </HStack>
           <Skeleton isLoaded={!loading} rounded="md">
-            <Text fontSize="4xl" fontWeight="bold" color="#273240">
-              {count}
-            </Text>
+            <Stack spacing={1}>
+              <Text fontSize="4xl" fontWeight="bold" color="#273240">
+                {count}
+              </Text>
+              <HStack spacing={1} color="text.secondary">
+                <Icon as={TrendingUp} boxSize={4} />
+                <Text fontSize="sm">people this month</Text>
+              </HStack>
+            </Stack>
           </Skeleton>
           <Text color="text.secondary" fontSize="sm">
             Celebrate each person you support. Log activities to see this grow.

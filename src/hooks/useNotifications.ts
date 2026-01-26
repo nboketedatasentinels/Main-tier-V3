@@ -32,6 +32,8 @@ const notificationCategoryMap: Record<NotificationType, NotificationCategory> = 
   mentee_checkin: 'important_updates',
   approval: 'action_required',
   badge_awarded: 'important_updates',
+  referral_success: 'important_updates',
+  referral_reward: 'important_updates',
   unknown: 'other',
 }
 

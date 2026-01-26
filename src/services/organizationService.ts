@@ -115,11 +115,12 @@ export const fetchOrganizationsByIds = async (
       const data = docSnap.data()
       results.push({
         id: docSnap.id,
+        ...data,
         code: data.code ?? docSnap.id,
         name: data.name ?? data.companyName ?? docSnap.id ?? 'Unnamed organization',
         cluster: data.cluster ?? null,
         status: (data.status ?? 'active') as OrganizationRecord['status'],
-      })
+      } as OrganizationRecord)
     })
   }
 

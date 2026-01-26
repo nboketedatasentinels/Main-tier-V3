@@ -7,10 +7,12 @@ import {
   Button,
   Card,
   CardBody,
+  Grid,
+  GridItem,
   Heading,
-  SimpleGrid,
   Stack,
   Text,
+  useBreakpointValue,
 } from '@chakra-ui/react'
 import { useNavigate } from 'react-router-dom'
 import { useState } from 'react'
@@ -18,10 +20,10 @@ import { WeeklyPointsCard } from '@/components/journeys/weeklyGlance/WeeklyPoint
 import { SupportTeamCard } from '@/components/journeys/weeklyGlance/SupportTeamCard'
 import { PersonalityProfileCard } from '@/components/journeys/weeklyGlance/PersonalityProfileCard'
 import { PeopleImpactedCard } from '@/components/journeys/weeklyGlance/PeopleImpactedCard'
-import { PeerMatchingCard } from '@/components/journeys/weeklyGlance/PeerMatchingCard'
 import { WeeklyInspirationCard } from '@/components/journeys/weeklyGlance/WeeklyInspirationCard'
 import { ActivityFeedCard } from '@/components/journeys/weeklyGlance/ActivityFeedCard'
 import { LearnerWindowCard } from '@/components/journeys/weeklyGlance/LearnerWindowCard'
+import { NextMilestoneCard } from '@/components/journeys/weeklyGlance/NextMilestoneCard'
 import { WindowSummaryCard } from '@/components/journeys/weeklyGlance/WindowSummaryCard'
 import { ActivityHistoryTable } from '@/components/journeys/dashboard/ActivityHistoryTable'
 import { MiniJourneyTimeline } from '@/components/journeys/dashboard/MiniJourneyTimeline'
@@ -39,6 +41,8 @@ export const LearnerDashboardPage = () => {
   const [isBuildVillageOpen, setIsBuildVillageOpen] = useState(false)
   const [villageName, setVillageName] = useState('')
   const [villagePurpose, setVillagePurpose] = useState('')
+  const [showMore, setShowMore] = useState(false)
+  const isMobile = useBreakpointValue({ base: true, md: false }) ?? false
   const isPaidMember = profile?.membershipStatus === 'paid'
   const isCorporateTier =
     profile?.transformationTier === TransformationTier.CORPORATE_MEMBER ||
@@ -141,32 +145,64 @@ export const LearnerDashboardPage = () => {
 
         <WeeklyInspirationCard data={data.inspirationQuote} loading={data.loading.inspiration} />
 
-        <SimpleGrid columns={{ base: 1, md: 2, xl: 3 }} spacing={4} alignItems="stretch">
-          {isParallelTrackingEnabled ? (
-            <WindowSummaryCard />
-          ) : (
-            <LearnerWindowCard
-              weekLabel={`Week ${data.weekNumber} • ${weekRange.label}`}
-              daysRemaining={daysRemaining}
-              progressValue={weekProgress}
-              targetPoints={targetPoints}
-              earnedPoints={earnedPoints}
-              focusAreas={data.focusAreas.map(fa => fa.title)}
-              nextMilestone={`Week ${data.weekNumber + 1} readiness review`}
+        <Grid templateColumns={{ base: '1fr', md: 'repeat(12, 1fr)' }} gap={6} alignItems="stretch">
+          <GridItem colSpan={{ base: 1, md: 6 }} order={{ base: 1, md: 1 }}>
+            {isParallelTrackingEnabled ? (
+              <WindowSummaryCard />
+            ) : (
+              <LearnerWindowCard
+                weekLabel={`Week ${data.weekNumber} • ${weekRange.label}`}
+                daysRemaining={daysRemaining}
+                progressValue={weekProgress}
+                targetPoints={targetPoints}
+                earnedPoints={earnedPoints}
+                focusAreas={data.focusAreas.map(fa => fa.title)}
+                nextMilestone={`Week ${data.weekNumber + 1} readiness review`}
+              />
+            )}
+          </GridItem>
+          <GridItem colSpan={{ base: 1, md: 6 }} order={{ base: 2, md: 2 }}>
+            <WeeklyPointsCard
+              data={data.weeklyPoints}
+              loading={data.loading.points}
+              error={data.errors.points}
+              onNavigate={() => navigate('/app/weekly-checklist')}
             />
+          </GridItem>
+          <GridItem colSpan={{ base: 1, md: 8 }} order={{ base: 3, md: 3 }}>
+            <ActivityFeedCard items={[...activityFeedItems]} />
+          </GridItem>
+          <GridItem colSpan={{ base: 1, md: 4 }} order={{ base: 5, md: 4 }}>
+            <NextMilestoneCard
+              milestone={`Week ${data.weekNumber + 1} readiness review`}
+              daysRemaining={daysRemaining}
+              onNavigate={() => navigate('/app/weekly-checklist')}
+            />
+          </GridItem>
+          <GridItem colSpan={{ base: 1, md: 4 }} order={{ base: 4, md: 5 }}>
+            <SupportTeamCard
+              data={data.supportAssignment}
+              loading={data.loading.support}
+              peerMatches={data.peerMatches}
+              peerMatchesLoading={data.loading.matches}
+            />
+          </GridItem>
+          {(!isMobile || showMore) && (
+            <GridItem colSpan={{ base: 1, md: 4 }} order={{ base: 6, md: 6 }}>
+              <PersonalityProfileCard data={data.personality} loading={data.loading.profile} />
+            </GridItem>
           )}
-          <WeeklyPointsCard
-            data={data.weeklyPoints}
-            loading={data.loading.points}
-            error={data.errors.points}
-            onNavigate={() => navigate('/app/weekly-checklist')}
-          />
-          <ActivityFeedCard items={[...activityFeedItems]} />
-          <SupportTeamCard data={data.supportAssignment} loading={data.loading.support} />
-          <PersonalityProfileCard data={data.personality} loading={data.loading.profile} />
-          <PeopleImpactedCard count={data.impactCount} loading={data.loading.impact} />
-          <PeerMatchingCard matches={data.peerMatches} loading={data.loading.matches} />
-        </SimpleGrid>
+          {(!isMobile || showMore) && (
+            <GridItem colSpan={{ base: 1, md: 4 }} order={{ base: 7, md: 7 }}>
+              <PeopleImpactedCard count={data.impactCount} loading={data.loading.impact} />
+            </GridItem>
+          )}
+        </Grid>
+        {isMobile && (
+          <Button variant="outline" onClick={() => setShowMore(prev => !prev)} alignSelf="flex-start">
+            {showMore ? 'Show less' : 'View more'}
+          </Button>
+        )}
         <JourneyCompletionOverview />
         <MiniJourneyTimeline />
         <ActivityHistoryTable />

@@ -69,6 +69,37 @@ export const updateNotificationAction = async (
   await updateDoc(notificationRef, { action_response, is_read: true, read: true })
 }
 
+export const respondToChallenge = async (challengeId: string, action: 'accepted' | 'declined') => {
+  const challengeRef = doc(db, 'challenges', challengeId)
+  const challengeSnap = await getDoc(challengeRef)
+  if (!challengeSnap.exists()) return
+
+  const challengeData = challengeSnap.data() as Record<string, unknown>
+  const responderName = (challengeData.challenged_name as string) || 'Your peer'
+  const challengerId = challengeData.challenger_id as string | undefined
+  const status = action === 'accepted' ? 'active' : 'declined'
+
+  await updateDoc(challengeRef, {
+    status,
+    responded_at: serverTimestamp(),
+    accepted_at: action === 'accepted' ? serverTimestamp() : null,
+    declined_at: action === 'declined' ? serverTimestamp() : null,
+  })
+
+  if (challengerId) {
+    await addDoc(notificationsCollection, {
+      user_id: challengerId,
+      type: 'challenge_response',
+      title: 'Challenge response',
+      message: `${responderName} ${action === 'accepted' ? 'accepted' : 'declined'} your challenge.`,
+      related_id: challengeId,
+      is_read: false,
+      read: false,
+      created_at: serverTimestamp(),
+    })
+  }
+}
+
 export const handleNotificationAction = async (
   notification: NotificationRecord,
   action_response: NotificationRecord['action_response'],
@@ -77,38 +108,11 @@ export const handleNotificationAction = async (
   await updateDoc(notificationRef, { action_response, is_read: true, read: true })
 
   if (
-    notification.type === 'challenge_request'
-    && notification.related_id
-    && (action_response === 'accepted' || action_response === 'declined')
+    notification.type === 'challenge_request' &&
+    notification.related_id &&
+    (action_response === 'accepted' || action_response === 'declined')
   ) {
-    const challengeRef = doc(db, 'challenges', notification.related_id)
-    const challengeSnap = await getDoc(challengeRef)
-    if (!challengeSnap.exists()) return
-
-    const challengeData = challengeSnap.data() as Record<string, unknown>
-    const responderName = (challengeData.challenged_name as string) || 'Your peer'
-    const challengerId = challengeData.challenger_id as string | undefined
-    const status = action_response === 'accepted' ? 'active' : 'declined'
-
-    await updateDoc(challengeRef, {
-      status,
-      responded_at: serverTimestamp(),
-      accepted_at: action_response === 'accepted' ? serverTimestamp() : null,
-      declined_at: action_response === 'declined' ? serverTimestamp() : null,
-    })
-
-    if (challengerId) {
-      await addDoc(notificationsCollection, {
-        user_id: challengerId,
-        type: 'challenge_response',
-        title: 'Challenge response',
-        message: `${responderName} ${action_response === 'accepted' ? 'accepted' : 'declined'} your challenge.`,
-        related_id: notification.related_id,
-        is_read: false,
-        read: false,
-        created_at: serverTimestamp(),
-      })
-    }
+    await respondToChallenge(notification.related_id, action_response)
   }
 }
 
