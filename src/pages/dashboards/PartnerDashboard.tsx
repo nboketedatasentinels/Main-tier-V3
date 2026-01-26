@@ -812,20 +812,20 @@ export const PartnerDashboard: React.FC = () => {
                 <Stack spacing={4}>
                   {visibleNotifications.map((group) => {
                     const notification = group.latestNotification
-                    const relatedId =
-                      (notification.metadata as { learnerId?: string; organizationId?: string; relatedId?: string } | undefined)
-                        ?.learnerId
-                        ?? (notification.metadata as { relatedId?: string; organizationId?: string } | undefined)?.relatedId
-                        ?? notification.related_id
+                    // Extract learner ID only from explicit metadata fields (not from generic related_id)
+                    const learnerId =
+                      (notification.metadata as { learnerId?: string } | undefined)?.learnerId
+                    // Extract organization ID from metadata or fall back to related_id
                     const organizationId =
                       (notification.metadata as { organizationId?: string } | undefined)?.organizationId
-                      ?? (notification.metadata as { relatedId?: string } | undefined)?.relatedId
-                    const actionLink = relatedId
-                      ? `/partner/user/${relatedId}`
+                      ?? notification.related_id
+                    // Only link to user if we have an explicit learnerId
+                    const actionLink = learnerId
+                      ? `/partner/user/${learnerId}`
                       : organizationId
                         ? `/partner/organization/${organizationId}`
                         : null
-                    const actionLabel = relatedId ? 'View learner' : organizationId ? 'View organization' : null
+                    const actionLabel = learnerId ? 'View learner' : organizationId ? 'View organization' : null
                     const timestamp = formatDistanceToNowSafe(notification.created_at, 'Just now', { addSuffix: true })
                     const isUnread = group.unreadCount > 0
                     const lowerTitle = group.title.toLowerCase()
