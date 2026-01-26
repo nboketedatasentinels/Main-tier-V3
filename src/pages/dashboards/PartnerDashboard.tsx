@@ -615,21 +615,6 @@ export const PartnerDashboard: React.FC = () => {
 
       <Card bg="white" border="1px solid" borderColor="brand.border">
         <CardBody>
-          <PartnerUserManagement
-            users={snapshotUsers}
-            usersLoading={snapshotLoading}
-            organizations={snapshotOrganizations}
-            organizationsLoading={snapshotLoading}
-            organizationsReady={!snapshotLoading}
-            selectedOrg={selectedOrg}
-            onSelectOrg={setSelectedOrg}
-            updateUserPoints={updateUserPoints}
-          />
-        </CardBody>
-      </Card>
-
-      <Card bg="white" border="1px solid" borderColor="brand.border">
-        <CardBody>
           <Stack spacing={4}>
             <HStack justify="space-between" align="center">
               <HStack spacing={2}>
