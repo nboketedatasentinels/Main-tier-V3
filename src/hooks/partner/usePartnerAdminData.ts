@@ -188,9 +188,27 @@ export const usePartnerAdminData = (
 ) => {
   const { enabled = true, selectedOrg = 'all', debugMode = false } = options
   const { profileStatus, isSuperAdmin } = useAuth()
-  const [assignmentsLoading, setAssignmentsLoading] = useState(true)
+  const [docAssignmentsLoading, setDocAssignmentsLoading] = useState(true)
+  const [queryAssignmentsLoading, setQueryAssignmentsLoading] = useState(true)
   const [assignmentsError, setAssignmentsError] = useState<string | null>(null)
+
+  const [assignmentsFromDoc, setAssignmentsFromDoc] = useState<string[]>([])
+  const [assignmentsFromQuery, setAssignmentsFromQuery] = useState<string[]>([])
   const [assignedOrganizationIds, setAssignedOrganizationIds] = useState<string[]>([])
+
+  // Combine assignments when sources update
+  useEffect(() => {
+    const combined = Array.from(new Set([...assignmentsFromDoc, ...assignmentsFromQuery]))
+    // Only update if changed to prevent loops
+    setAssignedOrganizationIds(prev => {
+      if (prev.length === combined.length && prev.every(id => combined.includes(id))) {
+        return prev
+      }
+      return combined
+    })
+  }, [assignmentsFromDoc, assignmentsFromQuery])
+
+  const assignmentsLoading = docAssignmentsLoading && queryAssignmentsLoading
 
   const assignments = useMemo<PartnerAssignment[]>(
     () =>
@@ -208,40 +226,43 @@ export const usePartnerAdminData = (
 
   useEffect(() => {
     if (!enabled || profileStatus !== 'ready') {
-      setAssignedOrganizationIds([])
-      setAssignmentsLoading(true)
+      setAssignmentsFromDoc([])
+      setAssignmentsFromQuery([])
+      setDocAssignmentsLoading(true)
+      setQueryAssignmentsLoading(true)
       setAssignmentsError(null)
       return
     }
 
     if (isSuperAdmin || !partnerId) {
-      setAssignedOrganizationIds([])
-      setAssignmentsLoading(false)
+      setAssignmentsFromDoc([])
+      setAssignmentsFromQuery([])
+      setDocAssignmentsLoading(false)
+      setQueryAssignmentsLoading(false)
       setAssignmentsError(null)
       return
     }
 
-    setAssignmentsLoading(true)
+    setDocAssignmentsLoading(true)
+    setQueryAssignmentsLoading(true)
     setAssignmentsError(null)
 
-    // Query the partners collection for assignedOrganizations
+    // 1. Partner Doc Listener
     const partnerDocRef = doc(db, 'partners', partnerId)
-
-    const unsubscribe = onSnapshot(
+    const unsubscribeDoc = onSnapshot(
       partnerDocRef,
       (docSnap) => {
         if (!docSnap.exists()) {
-          // Fallback: try partner_organizations collection
-          console.log('[PartnerAdminData] No partner doc found, trying partner_organizations collection')
-          setAssignedOrganizationIds([])
-          setAssignmentsLoading(false)
+          console.log('[PartnerAdminData] No partner doc found')
+          setAssignmentsFromDoc([])
+          setDocAssignmentsLoading(false)
           return
         }
 
-        const data = docSnap.data() as { 
+        const data = docSnap.data() as {
           assignedOrganizations?: Array<string | { organizationId?: string; companyCode?: string }>
         }
-        
+
         const assignments = data.assignedOrganizations || []
         const orgIds = assignments
           .map((assignment) => {
@@ -250,24 +271,47 @@ export const usePartnerAdminData = (
           })
           .filter((orgId): orgId is string => !!orgId)
 
-        const deduped = Array.from(new Set(orgIds))
-        setAssignedOrganizationIds(deduped)
-        setAssignmentsLoading(false)
-        console.log('[PartnerAdminData] Partner assignments loaded (partners collection)', {
-          partnerId,
-          assignedOrgCount: deduped.length,
-          rawAssignments: assignments,
-        })
+        setAssignmentsFromDoc(orgIds)
+        setDocAssignmentsLoading(false)
       },
       (err) => {
-        console.error('[PartnerAdminData] Failed to load partner assignments', err)
-        setAssignedOrganizationIds([])
-        setAssignmentsLoading(false)
-        setAssignmentsError('Unable to load partner assignments.')
+        console.error('[PartnerAdminData] Failed to load partner assignments from doc', err)
+        setAssignmentsFromDoc([])
+        setDocAssignmentsLoading(false)
+        // Don't set global error if query might succeed
       },
     )
 
-    return () => unsubscribe()
+    // 2. Organizations Query Listener
+    const orgsQuery = query(
+      collection(db, ORG_COLLECTION),
+      where('transformationPartnerId', '==', partnerId),
+      where('status', 'in', ['active', 'watch', 'paused'])
+    )
+
+    const unsubscribeQuery = onSnapshot(
+      orgsQuery,
+      (snapshot) => {
+        const ids = snapshot.docs.map(doc => doc.id)
+        setAssignmentsFromQuery(ids)
+        setQueryAssignmentsLoading(false)
+        console.log('[PartnerAdminData] Partner assignments loaded (direct query)', {
+          partnerId,
+          count: ids.length
+        })
+      },
+      (err) => {
+        console.error('[PartnerAdminData] Failed to query partner organizations', err)
+        setAssignmentsFromQuery([])
+        setQueryAssignmentsLoading(false)
+        setAssignmentsError('Unable to load partner assignments.')
+      }
+    )
+
+    return () => {
+      unsubscribeDoc()
+      unsubscribeQuery()
+    }
   }, [enabled, isSuperAdmin, partnerId, profileStatus])
 
   const [organizations, setOrganizations] = useState<PartnerOrganization[]>([])
@@ -531,8 +575,8 @@ export const usePartnerAdminData = (
     const expandedAssignments = expandAssignments(baseKeys)
     const expandedFromOrganizations = organizationsReady
       ? organizations
-          .flatMap((org) => [org.id, org.code])
-          .filter((value): value is string => Boolean(value))
+        .flatMap((org) => [org.id, org.code])
+        .filter((value): value is string => Boolean(value))
       : []
     const combined = [...expandedAssignments, ...expandedFromOrganizations]
     return buildQueryKeys(combined)
@@ -782,30 +826,30 @@ export const usePartnerAdminData = (
                   ? rawCompanyCode.toLowerCase()
                   : rawOrganizationId
                     ? latestFilters.organizationLookup.get(rawOrganizationId.toLowerCase()) ||
-                      rawOrganizationId.toLowerCase()
+                    rawOrganizationId.toLowerCase()
                     : ''
 
               const normalizedCreatedAt = normalizeTimestamp(data.createdAt || data.created_at)
               const normalizedRegistrationDate =
                 normalizeTimestamp(
                   data.registrationDate ||
-                    data.registration_date ||
-                    data.createdAt ||
-                    data.created_at
+                  data.registration_date ||
+                  data.createdAt ||
+                  data.created_at
                 ) || undefined
               const normalizedProgramStart =
                 normalizeTimestamp(
                   data.programStartDate ||
-                    data.program_start_date ||
-                    normalizedRegistrationDate
+                  data.program_start_date ||
+                  normalizedRegistrationDate
                 ) || normalizedRegistrationDate
               const normalizedLastActive =
                 normalizeTimestamp(
                   data.lastActiveAt ||
-                    data.last_active_at ||
-                    data.lastActive ||
-                    data.last_active ||
-                    normalizedRegistrationDate
+                  data.last_active_at ||
+                  data.lastActive ||
+                  data.last_active ||
+                  normalizedRegistrationDate
                 ) || new Date().toISOString()
 
               const currentWeek = getProgramWeekNumber(normalizedProgramStart || undefined)
