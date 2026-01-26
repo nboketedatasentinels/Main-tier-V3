@@ -81,8 +81,8 @@ export const MonthlyCourseCard = ({ role, membershipStatus, transformationTier, 
     if (data?.status === 'no_company') {
       return (
         <Stack spacing={3}>
-          <Text fontWeight="bold" color="#273240">Course of the Month</Text>
-          <Text color="#273240" fontSize="sm">
+          <Text fontWeight="bold" color="text.primary">Course of the Month</Text>
+          <Text color="text.primary" fontSize="sm">
             Paid members need to be assigned to a company program to see their monthly course.
           </Text>
           <Alert status="info" rounded="md" variant="subtle">
@@ -96,8 +96,8 @@ export const MonthlyCourseCard = ({ role, membershipStatus, transformationTier, 
     if (data?.status === 'pending_assignment') {
       return (
         <Stack spacing={3}>
-          <Text fontWeight="bold" color="#273240">Course of the Month</Text>
-          <Text color="#273240" fontSize="sm">
+          <Text fontWeight="bold" color="text.primary">Course of the Month</Text>
+          <Text color="text.primary" fontSize="sm">
             We're waiting for your admin to finalize course assignments. Check back soon.
           </Text>
           <Alert status="info" rounded="md" variant="subtle">
@@ -115,8 +115,8 @@ export const MonthlyCourseCard = ({ role, membershipStatus, transformationTier, 
       <Stack spacing={3}>
         <HStack justify="space-between" align="flex-start">
           <Stack spacing={1}>
-            <Text fontWeight="bold" color="#273240">Course of the Month</Text>
-            <Text color="#273240" fontSize="sm">
+            <Text fontWeight="bold" color="text.primary">Course of the Month</Text>
+            <Text color="text.primary" fontSize="sm">
               {data?.message || 'Stay on pace with your company\'s learning plan.'}
             </Text>
           </Stack>
@@ -124,11 +124,11 @@ export const MonthlyCourseCard = ({ role, membershipStatus, transformationTier, 
         </HStack>
 
         <Stack spacing={1}>
-          <Text fontSize="lg" fontWeight="bold" color="#273240">
+          <Text fontSize="lg" fontWeight="bold" color="text.primary">
             {courseTitle}
           </Text>
           {data?.course?.description && (
-            <Text color="#273240" fontSize="sm">
+            <Text color="text.primary" fontSize="sm">
               {data.course.description}
             </Text>
           )}
@@ -136,13 +136,13 @@ export const MonthlyCourseCard = ({ role, membershipStatus, transformationTier, 
 
         <HStack spacing={3}>
           {monthLabel && (
-            <HStack spacing={1} color="#273240" fontSize="sm">
+            <HStack spacing={1} color="text.primary" fontSize="sm">
               <CalendarIcon />
               <Text>{monthLabel}</Text>
             </HStack>
           )}
           {data?.status === 'completed' && (
-            <HStack spacing={1} color="#273240" fontSize="sm">
+            <HStack spacing={1} color="text.primary" fontSize="sm">
               <InfoIcon />
               <Text>Congratulations on completing your program!</Text>
             </HStack>
@@ -158,24 +158,24 @@ export const MonthlyCourseCard = ({ role, membershipStatus, transformationTier, 
 
   const renderFreeContent = () => (
     <Stack spacing={3}>
-      <Text fontWeight="bold" color="#273240">Free Course Access</Text>
-      <Text color="#273240" fontSize="sm">
+      <Text fontWeight="bold" color="text.primary">Free Course Access</Text>
+      <Text color="text.primary" fontSize="sm">
         {data?.message || 'Kick off the week with quick learning. Use the code below to enroll.'}
       </Text>
       <HStack justify="space-between" align="flex-start">
         <Stack spacing={1}>
-          <Text fontSize="lg" fontWeight="bold" color="#273240">
+          <Text fontSize="lg" fontWeight="bold" color="text.primary">
             {courseTitle}
           </Text>
-          <Text color="#273240" fontSize="sm">
+          <Text color="text.primary" fontSize="sm">
             {FREE_COURSE.durationLabel}
           </Text>
         </Stack>
         <ExternalLinkButton href={courseUrl} />
       </HStack>
       <HStack spacing={3}>
-        <Text fontWeight="semibold" color="#273240">Enrollment Code</Text>
-        <Text bg="brand.primaryMuted" px={2} py={1} rounded="md" color="#273240">
+        <Text fontWeight="semibold" color="text.primary">Enrollment Code</Text>
+        <Text bg="brand.primaryMuted" px={2} py={1} rounded="md" color="text.primary">
           {enrollmentCode}
         </Text>
       </HStack>

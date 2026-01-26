@@ -117,8 +117,8 @@ export const LearnerDashboardPage = () => {
             <CardBody>
               <Stack direction={{ base: 'column', md: 'row' }} spacing={4} align="flex-start" justify="space-between">
                 <Stack spacing={1}>
-                  <Heading size="md" color="#273240">Build Your Village</Heading>
-                  <Text color="#273240">Rally your peers by creating a village to collaborate and track your collective impact.</Text>
+                  <Heading size="md" color="text.primary">Build Your Village</Heading>
+                  <Text color="text.primary">Rally your peers by creating a village to collaborate and track your collective impact.</Text>
                 </Stack>
                 <Button colorScheme="yellow" onClick={handleOpenVillageModal} alignSelf={{ base: 'flex-start', md: 'center' }}>
                   Open Build Village
@@ -129,8 +129,8 @@ export const LearnerDashboardPage = () => {
         )}
 
         <Stack spacing={1}>
-          <Heading size="lg" color="#273240">This Week at a Glance</Heading>
-          <Text color="#273240">Your personalized dashboard for weekly progress, habits, and support.</Text>
+          <Heading size="lg" color="text.primary">This Week at a Glance</Heading>
+          <Text color="text.primary">Your personalized dashboard for weekly progress, habits, and support.</Text>
         </Stack>
 
         {hasError && (

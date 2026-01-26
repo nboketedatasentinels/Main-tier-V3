@@ -1129,7 +1129,7 @@ const WeeklyChecklistPage: React.FC = () => {
       <Box p={4} borderWidth="1px" borderColor="gray.700" bg="white" borderRadius="lg">
         <Stack spacing={3}>
           <HStack justify="space-between">
-            <Heading size="sm" color="#273240">
+            <Heading size="sm" color="text.primary">
               Week {selectedWeek} summary · Window {windowProgress.windowNumber}
             </Heading>
             <Tag colorScheme={progressStatus.color}>
@@ -1256,12 +1256,12 @@ const WeeklyChecklistPage: React.FC = () => {
 const StatCard: React.FC<{ label: string; value: string; icon: React.ReactNode }> = ({ label, value, icon }) => (
   <SurfaceCard borderColor="gray.700" borderRadius="lg" bg="white">
     <HStack justify="space-between" mb={1}>
-      <Text color="#273240" fontSize="sm">
+      <Text color="text.primary" fontSize="sm">
         {label}
       </Text>
       {icon}
     </HStack>
-    <Heading size="md" color="#273240">
+    <Heading size="md" color="text.primary">
       {value}
     </Heading>
   </SurfaceCard>

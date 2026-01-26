@@ -56,7 +56,7 @@ export const WeeklyPointsCard = ({ data, loading, error, onNavigate }: WeeklyPoi
           <HStack justify="space-between">
             <HStack>
               <Icon as={Target} color="brand.primary" />
-              <Text fontWeight="bold" fontSize="md" color="#273240">Weekly Points</Text>
+              <Text fontWeight="bold" fontSize="md" color="text.primary">Weekly Points</Text>
             </HStack>
             {data?.status && (
               <Badge colorScheme={statusColor} variant="subtle">
@@ -71,13 +71,13 @@ export const WeeklyPointsCard = ({ data, loading, error, onNavigate }: WeeklyPoi
                 <Text fontSize="xs" color="text.secondary">
                   Target
                 </Text>
-                <Text fontWeight="bold" color="#273240">{data ? `${targetPoints} pts` : '--'}</Text>
+                <Text fontWeight="bold" color="text.primary">{data ? `${targetPoints} pts` : '--'}</Text>
               </HStack>
               <HStack justify="space-between">
                 <Text fontSize="xs" color="text.secondary">
                   Earned
                 </Text>
-                <Text color="#273240">{data ? `${earnedPoints} pts` : '--'}</Text>
+                <Text color="text.primary">{data ? `${earnedPoints} pts` : '--'}</Text>
               </HStack>
               <Progress colorScheme="brand" value={progress} height="8px" rounded="full" />
               {data && (
@@ -107,7 +107,7 @@ export const WeeklyPointsCard = ({ data, loading, error, onNavigate }: WeeklyPoi
           </Skeleton>
 
           {error && (
-            <HStack color="#273240" fontSize="sm">
+            <HStack color="text.primary" fontSize="sm">
               <Icon as={AlertCircle} />
               <Text>Unable to load weekly points.</Text>
             </HStack>

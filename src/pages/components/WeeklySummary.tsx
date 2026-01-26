@@ -38,7 +38,7 @@ export const WeeklySummary = ({
     <Box p={4} borderWidth="1px" borderColor="gray.700" bg="white" borderRadius="lg">
       <Stack spacing={3}>
         <HStack justify="space-between">
-          <Heading size="sm" color="#273240">
+          <Heading size="sm" color="text.primary">
             Week {week} summary · Window {windowNumber}
           </Heading>
           <Tag colorScheme={progressStatus.color}>

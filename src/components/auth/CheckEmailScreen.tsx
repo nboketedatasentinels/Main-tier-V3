@@ -25,8 +25,8 @@ export function CheckEmailScreen({
         className="rounded-2xl border bg-white p-6 shadow-sm"
       >
         <div className="flex items-center gap-3">
-          <div className="h-11 w-11 rounded-full bg-[#eef0fb] flex items-center justify-center">
-            <Mail className="h-5 w-5 text-[#350e6f]" />
+          <div className="h-11 w-11 rounded-full bg-brand-indigo-50 flex items-center justify-center">
+            <Mail className="h-5 w-5 text-brand-primary" />
           </div>
           <div>
             <h2 className="text-lg font-semibold text-gray-900">{title}</h2>
@@ -54,7 +54,7 @@ export function CheckEmailScreen({
         <div className="mt-6 flex items-center justify-center">
           <RouterLink
             to="/login"
-            className="inline-flex items-center gap-2 text-sm text-[#4540c0] hover:underline"
+            className="inline-flex items-center gap-2 text-sm text-brand-primary hover:underline"
           >
             <ArrowLeft className="h-4 w-4" />
             Back to Sign In

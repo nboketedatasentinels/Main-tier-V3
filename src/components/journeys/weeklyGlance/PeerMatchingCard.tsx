@@ -19,7 +19,7 @@ export const PeerMatchingCard = ({ matches, loading }: PeerMatchingCardProps) =>
           <HStack justify="space-between">
             <HStack spacing={2}>
               <Icon as={Users} color="brand.primary" />
-              <Text fontWeight="bold" color="#273240">Peer Matching</Text>
+              <Text fontWeight="bold" color="text.primary">Peer Matching</Text>
             </HStack>
             <Badge colorScheme={completed.length ? 'green' : 'gray'}>{completed.length} matches</Badge>
           </HStack>
@@ -29,8 +29,8 @@ export const PeerMatchingCard = ({ matches, loading }: PeerMatchingCardProps) =>
               {pending.slice(0, 2).map(match => (
                 <HStack key={match.id} justify="space-between" p={2} borderWidth="1px" borderColor="border.subtle" rounded="md">
                   <HStack spacing={2}>
-                    <Icon as={UserPlus} color="#273240" />
-                    <Text color="#273240">Request to {match.matched_user_id}</Text>
+                    <Icon as={UserPlus} color="text.primary" />
+                    <Text color="text.primary">Request to {match.matched_user_id}</Text>
                   </HStack>
                   <Badge colorScheme="yellow">Pending</Badge>
                 </HStack>
@@ -38,8 +38,8 @@ export const PeerMatchingCard = ({ matches, loading }: PeerMatchingCardProps) =>
               {completed.slice(0, 2).map(match => (
                 <HStack key={match.id} justify="space-between" p={2} borderWidth="1px" borderColor="border.subtle" rounded="md">
                   <HStack spacing={2}>
-                    <Icon as={CalendarClock} color="#273240" />
-                    <Text color="#273240">Matched with {match.matched_user_id}</Text>
+                    <Icon as={CalendarClock} color="text.primary" />
+                    <Text color="text.primary">Matched with {match.matched_user_id}</Text>
                   </HStack>
                   <Badge colorScheme="green">Connected</Badge>
                 </HStack>

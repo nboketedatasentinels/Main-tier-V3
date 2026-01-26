@@ -185,7 +185,7 @@ export const PersonalityProfileCard = ({ data, loading }: PersonalityProfileCard
           <HStack justify="space-between">
             <HStack>
               <Icon as={Sparkles} color="brand.primary" />
-              <Text fontWeight="bold" fontSize="md" color="#273240">Personality Profile</Text>
+              <Text fontWeight="bold" fontSize="md" color="text.primary">Personality Profile</Text>
             </HStack>
           </HStack>
 
