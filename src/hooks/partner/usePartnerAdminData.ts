@@ -269,8 +269,6 @@ export const usePartnerAdminData = (
 
       // Only stop loading when both listeners have responded at least once
       if (partnerDocLoaded && legacyLoaded) {
-        setAssignmentsLoading(false)
-
         if (partnerDocErrorOccurred && legacyErrorOccurred) {
           setAssignmentsError('Unable to load partner assignments from any source.')
         } else {
@@ -306,12 +304,14 @@ export const usePartnerAdminData = (
         }
         partnerDocLoaded = true
         partnerDocErrorOccurred = false
+        setDocAssignmentsLoading(false)
         updateCombinedAssignments()
       },
       (err) => {
         console.error('[PartnerAdminData] Modern assignments load failed', err)
         partnerDocLoaded = true
         partnerDocErrorOccurred = true
+        setDocAssignmentsLoading(false)
         updateCombinedAssignments()
       }
     )
@@ -333,12 +333,14 @@ export const usePartnerAdminData = (
 
         legacyLoaded = true
         legacyErrorOccurred = false
+        setQueryAssignmentsLoading(false)
         updateCombinedAssignments()
       },
       (err) => {
         console.error('[PartnerAdminData] Legacy assignments load failed', err)
         legacyLoaded = true
         legacyErrorOccurred = true
+        setQueryAssignmentsLoading(false)
         updateCombinedAssignments()
       }
     )
