@@ -32,6 +32,7 @@ import {
   useDisclosure,
 } from '@chakra-ui/react'
 import { LogOut, Menu, RefreshCw, Sparkles, User } from 'lucide-react'
+import { useNavigate } from 'react-router-dom'
 import { NotificationDropdown } from '@/components/notifications/NotificationDropdown'
 import { useAuth } from '@/hooks/useAuth'
 import { usePartnerAdminSnapshot } from '@/hooks/partner/usePartnerAdminSnapshot'
@@ -58,6 +59,7 @@ export const PartnerLayout: React.FC<PartnerLayoutProps> = ({
 }) => {
   const sidebarWidth = '280px'
   const disclosure = useDisclosure()
+  const navigate = useNavigate()
   const { profile, signOut, signingOut, refreshProfile, profileLoading, lastProfileLoadAt, isAdmin } = useAuth()
   const { assignedOrganizationIds } = usePartnerAdminSnapshot({ enabled: isAdmin })
   const enableProfileRealtime = import.meta.env.VITE_ENABLE_PROFILE_REALTIME === 'true'
@@ -276,7 +278,7 @@ export const PartnerLayout: React.FC<PartnerLayoutProps> = ({
           </Text>
         </MenuButton>
         <MenuList>
-          <MenuItem icon={<User size={16} />}>Profile</MenuItem>
+          <MenuItem icon={<User size={16} />} onClick={() => navigate('/app/profile')}>Profile</MenuItem>
           <MenuDivider />
           <MenuItem
             icon={<LogOut size={16} />}
