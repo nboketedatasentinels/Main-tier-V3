@@ -22,9 +22,8 @@ import {
   useToast,
 } from '@chakra-ui/react'
 import { formatDistanceToNow, isValid } from 'date-fns'
-import { Bell, Building2, Gauge, Mail, Sparkles, Users } from 'lucide-react'
+import { AlertTriangle, Bell, Building2, ClipboardCheck, Gauge, Mail, Sparkles, Users } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
-import { MetricCard } from '@/components/admin/MetricCard'
 import { OrganizationCard } from '@/components/admin/OrganizationCard'
 import PartnerLayout from '@/layouts/PartnerLayout'
 import { DashboardErrorBoundary } from '@/components/ui/DashboardErrorBoundary'
@@ -79,13 +78,13 @@ export const PartnerDashboard: React.FC = () => {
     engagementTrend,
     riskLevels,
     atRiskUsers,
-    managedBreakdown,
   } = analytics || {}
   const partnerId = user?.uid ?? null
   const snapshotUsers = snapshot?.users ?? []
 
   type PartnerPageKey = 'overview' | 'users' | 'organization-management' | 'at-risk' | 'reports' | 'settings' | 'support'
   const [activePage, setActivePage] = useState<PartnerPageKey>('overview')
+  const [showAllNotifications, setShowAllNotifications] = useState(false)
 
   const { approvalQueue: pendingApprovals } = usePointsApprovalQueue(
     snapshotUsers,
@@ -196,14 +195,47 @@ export const PartnerDashboard: React.FC = () => {
   const navSections = useMemo(() => buildPartnerNavItems(), [])
 
   const groupedNotifications = useMemo(() => {
-    const groups: Record<string, typeof notifications> = {}
-    notifications.forEach((n) => {
-      const title = n.title || 'General'
-      const key = title.split(':')[0].trim() // Group by main category
-      if (!groups[key]) groups[key] = []
-      groups[key].push(n)
+    const groups = new Map<string, {
+      id: string
+      title: string
+      message: string
+      count: number
+      unreadCount: number
+      latestNotification: typeof notifications[number]
+      latestTimestamp: number
+    }>()
+
+    notifications.forEach((notification) => {
+      const title = notification.title || 'General'
+      const message = notification.message || ''
+      const key = `${title}::${message}`
+      const createdAt = notification.created_at ? new Date(notification.created_at).getTime() : Date.now()
+      const isUnread = !notification.is_read && !notification.read
+
+      if (!groups.has(key)) {
+        groups.set(key, {
+          id: notification.id,
+          title,
+          message,
+          count: 1,
+          unreadCount: isUnread ? 1 : 0,
+          latestNotification: notification,
+          latestTimestamp: createdAt,
+        })
+        return
+      }
+
+      const existing = groups.get(key)
+      if (!existing) return
+      existing.count += 1
+      existing.unreadCount += isUnread ? 1 : 0
+      if (createdAt >= existing.latestTimestamp) {
+        existing.latestNotification = notification
+        existing.latestTimestamp = createdAt
+      }
     })
-    return groups
+
+    return Array.from(groups.values()).sort((a, b) => b.latestTimestamp - a.latestTimestamp)
   }, [notifications])
   const scopedDigestOrgIds = useMemo(() => {
     const scoped = assignedOrganizations.length
@@ -268,15 +300,6 @@ export const PartnerDashboard: React.FC = () => {
     )
   }, [organizations])
 
-  const digestSummary = useMemo(() => {
-    const atRiskCount = riskLevels.critical + riskLevels.concern
-    return [
-      { label: 'Critical alerts', value: atRiskCount, color: 'red' },
-      { label: 'Watchlist', value: riskLevels.watch, color: 'yellow' },
-      { label: 'Open interventions', value: interventions.length, color: 'purple' },
-      { label: 'Unread notifications', value: notificationCount, color: 'orange' },
-    ]
-  }, [interventions.length, notificationCount, riskLevels.concern, riskLevels.critical, riskLevels.watch])
 
   const handleViewOrganization = (orgCode: string) => {
     const normalized = orgCode.toLowerCase()
@@ -374,442 +397,537 @@ export const PartnerDashboard: React.FC = () => {
     }
   }, [digestSending, scopedDigestOrgIds, toast, user?.email, user?.uid])
 
-  const renderOverview = () => (
-    <Stack spacing={8}>
-      <VStack align="flex-start" spacing={1}>
-        <Text fontSize="3xl" fontWeight="bold" color="brand.text">
-          Partner Overview
-        </Text>
-        <Text color="brand.subtleText">
-          Your active learners, risks, and interventions today
-        </Text>
-      </VStack>
+  const renderOverview = () => {
+    const learnersAtRiskCount = riskLevels.critical + riskLevels.concern
+    const overdueCheckinsCount = interventions.length
+    const pendingApprovalsCount = pendingApprovals.length
+    const scopeSummary = `${assignedOrgCount} organization${assignedOrgCount === 1 ? '' : 's'} · ${users.length} learner${users.length === 1 ? '' : 's'} in scope · Transformation Partner · Engagement tracking active`
+    const isEmptyState =
+      metrics.activeMembers === 0
+      && metrics.engagementRate === 0
+      && metrics.newRegistrations === 0
+      && metrics.managedCompanies === 0
+    const managedCompanyLabel = metrics.managedCompanies === 1 ? 'company' : 'companies'
 
-      <HStack spacing={4} wrap="wrap">
-        <Card bg="red.50" border="1px solid" borderColor="red.200" flex={1} minW="200px">
-          <CardBody p={4}>
-            <HStack spacing={3}>
-              <Box color="red.500"><Users size={20} /></Box>
-              <VStack align="flex-start" spacing={0}>
-                <Text fontSize="lg" fontWeight="bold" color="red.700">{riskLevels.critical + riskLevels.concern}</Text>
-                <Text fontSize="xs" color="red.600">Learners at risk</Text>
-              </VStack>
-            </HStack>
-          </CardBody>
-        </Card>
-        <Card bg="orange.50" border="1px solid" borderColor="orange.200" flex={1} minW="200px">
-          <CardBody p={4}>
-            <HStack spacing={3}>
-              <Box color="orange.500"><Bell size={20} /></Box>
-              <VStack align="flex-start" spacing={0}>
-                <Text fontSize="lg" fontWeight="bold" color="orange.700">{interventions.length}</Text>
-                <Text fontSize="xs" color="orange.600">Overdue check-ins</Text>
-              </VStack>
-            </HStack>
-          </CardBody>
-        </Card>
-        <Card bg="blue.50" border="1px solid" borderColor="blue.200" flex={1} minW="200px">
-          <CardBody p={4}>
-            <HStack spacing={3}>
-              <Box color="blue.500"><Sparkles size={20} /></Box>
-              <VStack align="flex-start" spacing={0}>
-                <Text fontSize="lg" fontWeight="bold" color="blue.700">{pendingApprovals.length}</Text>
-                <Text fontSize="xs" color="blue.600">Approvals pending</Text>
-              </VStack>
-            </HStack>
-          </CardBody>
-        </Card>
-      </HStack>
+    const alertCards = [
+      {
+        key: 'risk',
+        count: learnersAtRiskCount,
+        label: learnersAtRiskCount === 1 ? 'Learner at risk' : 'Learners at risk',
+        color: 'red',
+        icon: Users,
+        onClick: () => setActivePage('at-risk'),
+      },
+      {
+        key: 'checkins',
+        count: overdueCheckinsCount,
+        label: overdueCheckinsCount === 1 ? 'Overdue check-in' : 'Overdue check-ins',
+        color: 'yellow',
+        icon: Bell,
+        onClick: () => setActivePage('at-risk'),
+      },
+      {
+        key: 'approvals',
+        count: pendingApprovalsCount,
+        label: pendingApprovalsCount === 1 ? 'Approval pending' : 'Approvals pending',
+        color: 'green',
+        icon: ClipboardCheck,
+        onClick: () => setActivePage('users'),
+      },
+    ]
 
-      {(organizationsLoading || usersLoading) && !organizationsError && !usersError && (
-        <Card bg="blue.50" border="1px solid" borderColor="blue.200">
-          <CardBody>
-            <Stack spacing={3}>
-              <Text fontWeight="semibold" color="blue.700">
-                Loading dashboard data...
+    const activityMetrics = [
+      { label: 'Active members (30d)', value: metrics.activeMembers.toString(), icon: Users },
+      { label: 'Engagement rate', value: `${metrics.engagementRate}%`, icon: Gauge },
+      { label: 'New registrations (7d)', value: metrics.newRegistrations.toString(), icon: Sparkles },
+      { label: `Managed ${managedCompanyLabel}`, value: metrics.managedCompanies.toString(), icon: Building2 },
+    ]
+
+    const visibleNotifications = showAllNotifications ? groupedNotifications : groupedNotifications.slice(0, 4)
+
+    return (
+      <Stack spacing={8}>
+        <VStack align="flex-start" spacing={1}>
+          <Text fontSize="sm" color="brand.subtleText">
+            Partner Dashboard
+          </Text>
+          <Text fontSize="3xl" fontWeight="bold" color="brand.text">
+            Partner Overview
+          </Text>
+          <Text color="brand.subtleText">
+            Your active learners, risks, and interventions today
+          </Text>
+        </VStack>
+
+        <Card bg="white" border="1px solid" borderColor="brand.border">
+          <CardBody py={3}>
+            <Text fontSize="sm" color="brand.subtleText">
+              {scopeSummary}
+            </Text>
+          </CardBody>
+        </Card>
+
+        <SimpleGrid columns={{ base: 1, md: 3 }} spacing={4}>
+          {alertCards.map((card) => {
+            const isMuted = card.count === 0
+            const accentColor = isMuted ? 'gray' : card.color
+            const Icon = card.icon
+            return (
+              <Card
+                key={card.key}
+                bg={isMuted ? 'gray.50' : `${accentColor}.50`}
+                border="1px solid"
+                borderColor={isMuted ? 'gray.200' : `${accentColor}.200`}
+                cursor="pointer"
+                transition="all 0.2s"
+                _hover={{ shadow: 'sm', borderColor: isMuted ? 'gray.300' : `${accentColor}.300` }}
+                onClick={card.onClick}
+                minH="150px"
+                h="100%"
+              >
+                <CardBody p={5} h="100%">
+                  <Stack spacing={3} h="100%" justify="space-between">
+                    <HStack spacing={3} align="center">
+                      <Box color={`${accentColor}.500`}>
+                        <Icon size={20} />
+                      </Box>
+                      <Text fontSize="3xl" fontWeight="bold" color={`${accentColor}.700`}>
+                        {card.count}
+                      </Text>
+                    </HStack>
+                    <Text fontWeight="semibold" color={`${accentColor}.700`}>
+                      {card.label}
+                    </Text>
+                    <Button
+                      size="sm"
+                      variant="link"
+                      colorScheme={accentColor === 'gray' ? 'gray' : accentColor}
+                      onClick={card.onClick}
+                      alignSelf="flex-start"
+                    >
+                      View all →
+                    </Button>
+                  </Stack>
+                </CardBody>
+              </Card>
+            )
+          })}
+        </SimpleGrid>
+
+        {(organizationsLoading || usersLoading) && !organizationsError && !usersError && (
+          <Card bg="blue.50" border="1px solid" borderColor="blue.200">
+            <CardBody>
+              <Stack spacing={3}>
+                <Text fontWeight="semibold" color="blue.700">
+                  Loading dashboard data...
+                </Text>
+                <HStack spacing={3} wrap="wrap">
+                  {organizationsLoading ? (
+                    <Badge colorScheme="blue">Organizations loading...</Badge>
+                  ) : organizationsReady ? (
+                    <Badge colorScheme="green">Organizations loaded ✓</Badge>
+                  ) : null}
+                  {usersLoading ? (
+                    <Badge colorScheme="blue">Users loading...</Badge>
+                  ) : (
+                    <Badge colorScheme="green">Users loaded ✓</Badge>
+                  )}
+                </HStack>
+              </Stack>
+            </CardBody>
+          </Card>
+        )}
+
+        {(organizationsError || usersError) && (
+          <Card bg="red.50" border="1px solid" borderColor="red.200">
+            <CardBody>
+              <Stack spacing={3}>
+                <Text fontWeight="semibold" color="red.700">
+                  We hit a problem loading your dashboard data.
+                </Text>
+                <HStack>
+                  <Button size="sm" colorScheme="red" onClick={refreshOrganizations} isLoading={refreshingOrganizations}>
+                    Retry loading data
+                  </Button>
+                </HStack>
+              </Stack>
+            </CardBody>
+          </Card>
+        )}
+
+        <Stack spacing={4}>
+          <HStack justify="space-between" align="center" wrap="wrap" spacing={3}>
+            <VStack align="flex-start" spacing={0}>
+              <Text fontWeight="bold" color="brand.text">Performance Snapshot</Text>
+              <Text fontSize="sm" color="brand.subtleText">
+                A quick read on activity and organization health.
               </Text>
-              <HStack spacing={3} wrap="wrap">
-                {organizationsLoading ? (
-                  <Badge colorScheme="blue">Organizations loading...</Badge>
-                ) : organizationsReady ? (
-                  <Badge colorScheme="green">Organizations loaded ✓</Badge>
-                ) : null}
-                {usersLoading ? (
-                  <Badge colorScheme="blue">Users loading...</Badge>
-                ) : (
-                  <Badge colorScheme="green">Users loaded ✓</Badge>
-                )}
-              </HStack>
-            </Stack>
-          </CardBody>
-        </Card>
-      )}
-
-      {(organizationsError || usersError) && (
-        <Card bg="red.50" border="1px solid" borderColor="red.200">
-          <CardBody>
-            <Stack spacing={3}>
-              <Text fontWeight="semibold" color="red.700">
-                We hit a problem loading your dashboard data.
-              </Text>
-              <HStack>
-                <Button size="sm" colorScheme="red" onClick={refreshOrganizations} isLoading={refreshingOrganizations}>
-                  Retry loading data
-                </Button>
-              </HStack>
-            </Stack>
-          </CardBody>
-        </Card>
-      )}
-
-      <Card bg="white" border="1px solid" borderColor="brand.border">
-        <CardBody>
-          <HStack justify="space-between" align="center">
-            <VStack align="flex-start" spacing={4} w="full">
-              <HStack justify="space-between" w="full">
-                <Text fontWeight="bold" color="brand.text">Scope Summary</Text>
-                <Badge colorScheme="purple">Active Tracking</Badge>
-              </HStack>
-              <SimpleGrid columns={{ base: 2, md: 4 }} spacing={8} w="full">
-                <VStack align="flex-start" spacing={0}>
-                  <Text fontSize="xs" color="brand.subtleText">Organizations assigned</Text>
-                  <Text fontWeight="bold" fontSize="lg">{assignedOrgCount}</Text>
-                </VStack>
-                <VStack align="flex-start" spacing={0}>
-                  <Text fontSize="xs" color="brand.subtleText">Learners in scope</Text>
-                  <Text fontWeight="bold" fontSize="lg">{users.length}</Text>
-                </VStack>
-                <VStack align="flex-start" spacing={0}>
-                  <Text fontSize="xs" color="brand.subtleText">Engagement tracking</Text>
-                  <Badge colorScheme="green">Active</Badge>
-                </VStack>
-                <VStack align="flex-start" spacing={0}>
-                  <Text fontSize="xs" color="brand.subtleText">Your role</Text>
-                  <Text fontWeight="bold">Transformation Partner</Text>
-                </VStack>
-              </SimpleGrid>
             </VStack>
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={refreshOrganizations}
+              isLoading={refreshingOrganizations}
+            >
+              Refresh data
+            </Button>
           </HStack>
-        </CardBody>
-      </Card>
 
-      <SimpleGrid columns={{ base: 1, md: 2, xl: 4 }} spacing={4}>
-        {organizationsLoading || usersLoading ? (
-          [1, 2, 3, 4].map((item) => (
-            <Card key={item} bg="white" border="1px solid" borderColor="brand.border">
+          {isEmptyState && (
+            <Card bg="purple.50" border="1px solid" borderColor="purple.200">
               <CardBody>
-                <Skeleton height="16px" width="40%" />
-                <SkeletonText mt="3" noOfLines={2} spacing="3" />
+                <Stack spacing={2}>
+                  <Text fontWeight="bold" color="purple.700">Welcome! Here's how to get started.</Text>
+                  <Text fontSize="sm" color="purple.700">
+                    1) Invite learners · 2) Set up check-ins · 3) Monitor progress
+                  </Text>
+                </Stack>
               </CardBody>
             </Card>
-          ))
-        ) : (
-          <>
-            <MetricCard
-              icon={Users}
-              label="Active members (30d)"
-              value={metrics.activeMembers.toString()}
-              helper={metrics.deltas.activeMembers}
-              statusLabel={metrics.activeMembers > 0 ? 'Normal' : 'Action Required'}
-              guidanceText={metrics.activeMembers === 0 ? 'Encourage registrations' : undefined}
-              onClick={() => setActivePage('users')}
-            />
-            <MetricCard
-              icon={Gauge}
-              label="Engagement rate"
-              value={`${metrics.engagementRate}%`}
-              helper={metrics.deltas.engagementRate}
-              statusLabel={metrics.engagementRate < 20 ? 'Action Required' : 'Normal'}
-              guidanceText={metrics.engagementRate === 0 ? 'No engagement signals yet' : undefined}
-              onClick={() => setActivePage('at-risk')}
-            />
-            <MetricCard
-              icon={Sparkles}
-              label="New registrations (7d)"
-              value={metrics.newRegistrations.toString()}
-              helper={metrics.deltas.newRegistrations}
-              statusLabel="Normal"
-              onClick={() => setActivePage('users')}
-            />
-            <MetricCard
-              icon={Building2}
-              label="Managed companies"
-              value={metrics.managedCompanies.toString()}
-              helper={`Active ${managedBreakdown.active} / Inactive ${managedBreakdown.inactive}`}
-              statusLabel="Normal"
-              onClick={() => setActivePage('organization-management')}
-            />
-          </>
-        )}
-      </SimpleGrid>
+          )}
 
-      <Card bg="white" border="1px solid" borderColor="brand.border">
-        <CardBody>
-          <Stack spacing={4}>
-            <HStack justify="space-between" align="center">
-              <Text fontWeight="bold" color="brand.text">Organization Health Snapshot</Text>
-              <Button size="sm" variant="link" colorScheme="purple" onClick={() => setActivePage('organization-management')}>View all</Button>
-            </HStack>
-            <SimpleGrid columns={{ base: 1, md: 2, xl: 4 }} spacing={3}>
-              {organizationsLoading ? (
-                [1, 2, 3, 4].map((item) => (
-                  <Box
-                    key={item}
-                    p={3}
-                    borderRadius="md"
-                    border="1px solid"
-                    borderColor="brand.border"
-                    bg="brand.accent"
-                  >
-                    <Skeleton height="16px" width="60%" />
-                    <SkeletonText mt="2" noOfLines={2} spacing="2" />
-                  </Box>
-                ))
-              ) : (
-                orgCards.map(company => (
-                  <Box
-                    key={company.name}
-                    p={4}
-                    borderRadius="lg"
-                    border="1px solid"
-                    borderColor="brand.border"
-                    bg="brand.accent"
-                    transition="all 0.2s"
-                    _hover={{ borderColor: 'brand.primary', shadow: 'sm' }}
-                  >
-                    <VStack align="flex-start" spacing={3}>
-                      <HStack justify="space-between" w="full">
-                        <Text fontWeight="bold" color="brand.text" noOfLines={1}>{company.name}</Text>
-                        <Badge colorScheme={company.status === 'active' ? 'green' : 'orange'}>
-                          {company.status}
-                        </Badge>
-                      </HStack>
-                      <SimpleGrid columns={2} spacing={2} w="full">
-                        <VStack align="flex-start" spacing={0}>
-                          <Text fontSize="2xs" color="brand.subtleText" textTransform="uppercase">Active Users</Text>
-                          <Text fontWeight="bold" fontSize="sm">{company.activeUsers}</Text>
-                        </VStack>
-                        <VStack align="flex-start" spacing={0}>
-                          <Text fontSize="2xs" color="brand.subtleText" textTransform="uppercase">Trend</Text>
-                          <Badge size="xs" colorScheme={company.change.includes('-') ? 'red' : 'green'}>
-                            {company.change}
-                          </Badge>
-                        </VStack>
-                      </SimpleGrid>
-                      <HStack justify="space-between" w="full">
-                        <Badge variant="subtle" colorScheme={company.status === 'active' ? 'green' : 'red'}>
-                          {company.status === 'active' ? 'Healthy' : 'At Risk'}
-                        </Badge>
-                        <Button size="xs" variant="outline" onClick={() => handleViewOrganization(company.name)}>
-                          Manage
-                        </Button>
-                      </HStack>
-                    </VStack>
-                  </Box>
-                ))
-              )}
-            </SimpleGrid>
-          </Stack>
-        </CardBody>
-      </Card>
-
-      <Card bg="white" border="1px solid" borderColor="brand.border">
-        <CardBody>
-          <Stack spacing={4}>
-            <HStack justify="space-between" align="center">
-              <HStack spacing={2}>
-                <Mail size={18} />
-                <Text fontWeight="bold" color="brand.text">Automated alerts & partner digest</Text>
-              </HStack>
-              <Badge colorScheme="purple">Weekly summary</Badge>
-            </HStack>
-            <Text fontSize="sm" color="brand.subtleText">
-              Next digest goes out automatically on Monday mornings. Your latest engagement alerts are included below.
-            </Text>
-            <SimpleGrid columns={{ base: 1, md: 4 }} spacing={3}>
-              {digestSummary.map(item => (
-                <Box
-                  key={item.label}
-                  p={4}
-                  borderRadius="lg"
-                  border="1px solid"
-                  borderColor="brand.border"
-                  bg="brand.accent"
-                  position="relative"
-                  overflow="hidden"
-                >
-                  <VStack align="flex-start" spacing={1}>
-                    <Text fontSize="2xs" fontWeight="bold" color="brand.subtleText" textTransform="uppercase">
-                      {item.label}
-                    </Text>
-                    <HStack justify="space-between" w="full">
-                      <Text fontWeight="bold" fontSize="2xl" color={`${item.color}.600`}>
-                        {item.value}
-                      </Text>
-                      {item.value > 0 && item.color === 'red' && (
-                        <Badge colorScheme="red" variant="solid">Critical</Badge>
-                      )}
-                    </HStack>
-                  </VStack>
-                </Box>
-              ))}
-            </SimpleGrid>
-            <HStack justify="space-between" align="center">
-              <Text fontSize="xs" color="brand.subtleText">
-                Recipient: Your Transformation Partner email
-              </Text>
-              <Button
-                variant="solid"
-                colorScheme="purple"
-                leftIcon={<Mail size={16} />}
-                onClick={handleSendDigest}
-                isLoading={digestSending}
-                isDisabled={digestSending || scopedDigestOrgIds.length === 0}
-                loadingText="Sending"
-              >
-                Send digest now
-              </Button>
-            </HStack>
-            {digestStatusMessage ? (
-              <Text fontSize="xs" color="green.600">
-                {digestStatusMessage}
-              </Text>
-            ) : null}
-          </Stack>
-        </CardBody>
-      </Card>
-
-      <Card bg="white" border="1px solid" borderColor="brand.border">
-        <CardBody>
-          <Stack spacing={3}>
-            <HStack justify="space-between" align="center">
-              <Text fontWeight="bold" color="brand.text">Real-time notifications</Text>
-              <Badge colorScheme="red">{notificationCount} unread</Badge>
-            </HStack>
-            <Divider />
-            {notificationsLoading ? (
-              <Stack spacing={3}>
-                {[1, 2, 3].map((item) => (
-                  <HStack
-                    key={item}
-                    justify="space-between"
-                    p={3}
-                    borderRadius="md"
-                    border="1px solid"
-                    borderColor="brand.border"
-                    bg="brand.accent"
-                  >
-                    <HStack spacing={3} flex={1}>
-                      <Skeleton height="32px" width="32px" borderRadius="md" />
-                      <Box flex={1}>
-                        <Skeleton height="14px" width="40%" />
-                        <SkeletonText mt="2" noOfLines={2} spacing="2" />
-                      </Box>
-                    </HStack>
-                    <Skeleton height="20px" width="70px" borderRadius="full" />
-                  </HStack>
-                ))}
-              </Stack>
-            ) : notificationsError ? (
-              <Box p={3} borderRadius="md" border="1px solid" borderColor="red.200" bg="red.50">
-                <Stack spacing={2}>
-                  <Text fontWeight="semibold" color="red.700">Notifications unavailable</Text>
-                  <Text fontSize="sm" color="red.700">{notificationsError}</Text>
-                </Stack>
-              </Box>
-            ) : notifications.length === 0 ? (
-              <Box p={3} borderRadius="md" border="1px dashed" borderColor="gray.200" bg="gray.50">
-                <Text fontSize="sm" color="gray.600">
-                  You are all caught up. New partner alerts will appear here.
-                </Text>
-              </Box>
-            ) : (
-              <Stack spacing={6}>
-                {Object.entries(groupedNotifications).map(([groupTitle, groupItems]) => (
-                  <Stack key={groupTitle} spacing={3}>
-                    <Text fontSize="xs" fontWeight="bold" color="brand.subtleText" textTransform="uppercase" letterSpacing="wider">
-                      {groupTitle}
-                    </Text>
-                    {groupItems.map((notification) => {
-                      const relatedId =
-                        (notification.metadata as { learnerId?: string; organizationId?: string; relatedId?: string } | undefined)
-                          ?.learnerId
-                          ?? (notification.metadata as { relatedId?: string; organizationId?: string } | undefined)?.relatedId
-                          ?? notification.related_id
-                      const organizationId =
-                        (notification.metadata as { organizationId?: string } | undefined)?.organizationId
-                        ?? (notification.metadata as { relatedId?: string } | undefined)?.relatedId
-                      const actionLink = relatedId
-                        ? `/partner/user/${relatedId}`
-                        : organizationId
-                          ? `/partner/organization/${organizationId}`
-                          : null
-                      const actionLabel = relatedId ? 'View learner' : organizationId ? 'View organization' : null
-                      const timestampRaw = notification.created_at
-                      const isOverdue = timestampRaw && (new Date().getTime() - new Date(timestampRaw).getTime() > 24 * 60 * 60 * 1000)
-                      const timestamp = formatDistanceToNowSafe(notification.created_at, 'Just now', { addSuffix: true })
-                      const severity = notification.title?.toLowerCase().includes('critical') || notification.message?.toLowerCase().includes('critical') ? 'red' : 'purple'
-
+          <SimpleGrid columns={{ base: 1, lg: 2 }} spacing={4}>
+            <Card bg="white" border="1px solid" borderColor="brand.border">
+              <CardBody>
+                <Stack spacing={4}>
+                  <Text fontWeight="bold" color="brand.text">Activity Summary</Text>
+                  <SimpleGrid columns={{ base: 2, md: 2 }} spacing={4}>
+                    {activityMetrics.map((metric) => {
+                      const MetricIcon = metric.icon
                       return (
-                        <HStack
-                          key={notification.id}
-                          justify="space-between"
-                          p={4}
-                          borderRadius="lg"
-                          border="1px solid"
-                          borderColor={severity === 'red' ? 'red.200' : 'brand.border'}
-                          bg={severity === 'red' ? 'red.50' : 'brand.accent'}
-                          align="flex-start"
-                          transition="all 0.2s"
-                          _hover={{ shadow: 'sm' }}
-                        >
-                          <HStack spacing={4} flex={1} align="flex-start">
-                            <Box p={2} borderRadius="md" bg="white" border="1px solid" borderColor="brand.border" color={`${severity}.500`}>
-                              <Bell size={18} />
-                            </Box>
-                            <VStack align="flex-start" spacing={1} flex={1}>
-                              <HStack spacing={2}>
-                                <Text fontWeight="bold" color="brand.text">
-                                  {notification.title || 'Partner alert'}
-                                </Text>
-                                {isOverdue && !notification.is_read && (
-                                  <Badge colorScheme="orange" variant="outline" size="xs">Overdue</Badge>
-                                )}
-                              </HStack>
-                              <Text fontSize="sm" color="brand.subtleText">
-                                {notification.message}
-                              </Text>
-                              <Text fontSize="xs" fontWeight="medium" color="brand.subtleText">
-                                {timestamp}
-                              </Text>
-                              {actionLink && actionLabel ? (
-                                <Button
-                                  size="xs"
-                                  colorScheme={severity}
-                                  variant="ghost"
-                                  onClick={() => navigate(actionLink)}
-                                  mt={2}
-                                >
-                                  {actionLabel}
-                                </Button>
-                              ) : null}
-                            </VStack>
-                          </HStack>
-                          <Badge colorScheme={notification.is_read || notification.read ? 'gray' : severity}>
-                            {notification.is_read || notification.read ? 'Read' : 'New'}
-                          </Badge>
+                        <HStack key={metric.label} spacing={3} align="center">
+                          <Box color="brand.primary">
+                            <MetricIcon size={18} />
+                          </Box>
+                          <VStack align="flex-start" spacing={0}>
+                            <Text fontSize="xs" color="brand.subtleText">
+                              {metric.label}
+                            </Text>
+                            <Text fontWeight="bold" fontSize="lg" color="brand.text">
+                              {metric.value}
+                            </Text>
+                          </VStack>
                         </HStack>
                       )
                     })}
+                  </SimpleGrid>
+                </Stack>
+              </CardBody>
+            </Card>
+
+            <Card bg="white" border="1px solid" borderColor="brand.border">
+              <CardBody>
+                <Stack spacing={4}>
+                  <HStack justify="space-between" align="center">
+                    <Text fontWeight="bold" color="brand.text">Organization Health Snapshot</Text>
+                    <Button size="sm" variant="link" colorScheme="purple" onClick={() => setActivePage('organization-management')}>
+                      View All Organizations
+                    </Button>
+                  </HStack>
+                  <SimpleGrid columns={{ base: 1, md: 2 }} spacing={3}>
+                    {organizationsLoading ? (
+                      [1, 2, 3, 4].map((item) => (
+                        <Box
+                          key={item}
+                          p={3}
+                          borderRadius="md"
+                          border="1px solid"
+                          borderColor="brand.border"
+                          bg="brand.accent"
+                        >
+                          <Skeleton height="16px" width="60%" />
+                          <SkeletonText mt="2" noOfLines={2} spacing="2" />
+                        </Box>
+                      ))
+                    ) : (
+                      orgCards.slice(0, 4).map(company => {
+                        const isHealthy = company.status === 'active'
+                        const statusColor = isHealthy ? 'green' : 'orange'
+                        return (
+                          <Box
+                            key={company.name}
+                            p={4}
+                            borderRadius="lg"
+                            border="1px solid"
+                            borderColor="brand.border"
+                            bg="brand.accent"
+                            transition="all 0.2s"
+                            _hover={{ borderColor: 'brand.primary', shadow: 'sm' }}
+                          >
+                            <Stack spacing={2}>
+                              <Text fontWeight="bold" color="brand.text" noOfLines={1}>{company.name}</Text>
+                              <Text fontSize="sm" color="brand.subtleText">
+                                {company.activeUsers} active users
+                              </Text>
+                              <HStack spacing={2}>
+                                <Badge colorScheme={statusColor}>{isHealthy ? 'Healthy' : 'Needs attention'}</Badge>
+                                <Text fontSize="xs" color="brand.subtleText">
+                                  {isHealthy ? 'All learners on track' : 'Learners need follow-up'}
+                                </Text>
+                              </HStack>
+                              <Button size="xs" variant="outline" onClick={() => handleViewOrganization(company.name)}>
+                                Manage Organization
+                              </Button>
+                            </Stack>
+                          </Box>
+                        )
+                      })
+                    )}
+                  </SimpleGrid>
+                </Stack>
+              </CardBody>
+            </Card>
+          </SimpleGrid>
+        </Stack>
+
+        <Stack spacing={4}>
+          <Text fontWeight="bold" color="brand.text">Quick Actions</Text>
+          <SimpleGrid columns={{ base: 1, md: 3 }} spacing={4}>
+            <Card bg="white" border="1px solid" borderColor="brand.border">
+              <CardBody>
+                <Stack spacing={3}>
+                  <HStack spacing={2}>
+                    <Mail size={18} />
+                    <Text fontWeight="bold" color="brand.text">Digest & Alerts</Text>
+                  </HStack>
+                  <Text fontSize="sm" color="brand.subtleText">
+                    {overdueCheckinsCount} overdue alert{overdueCheckinsCount === 1 ? '' : 's'} · {notificationCount} unread notification{notificationCount === 1 ? '' : 's'}
+                  </Text>
+                  <Button
+                    variant="solid"
+                    colorScheme="purple"
+                    leftIcon={<Mail size={16} />}
+                    onClick={handleSendDigest}
+                    isLoading={digestSending}
+                    isDisabled={digestSending || scopedDigestOrgIds.length === 0}
+                    loadingText="Sending"
+                  >
+                    Send digest now
+                  </Button>
+                  <HStack spacing={2}>
+                    <Text fontSize="xs" color="brand.subtleText">
+                      Digest sent to: {user?.email ?? 'your email'}
+                    </Text>
+                    <Button size="xs" variant="link" colorScheme="purple" onClick={() => setActivePage('settings')}>
+                      Edit
+                    </Button>
+                  </HStack>
+                  {digestStatusMessage ? (
+                    <Text fontSize="xs" color="green.600">
+                      {digestStatusMessage}
+                    </Text>
+                  ) : null}
+                </Stack>
+              </CardBody>
+            </Card>
+
+            <Card bg="white" border="1px solid" borderColor="brand.border">
+              <CardBody>
+                <Stack spacing={3}>
+                  <HStack spacing={2}>
+                    <Users size={18} />
+                    <Text fontWeight="bold" color="brand.text">Invite Learners</Text>
+                  </HStack>
+                  <Text fontSize="sm" color="brand.subtleText">
+                    {metrics.activeMembers === 0
+                      ? 'Kickstart engagement by inviting your first learner.'
+                      : 'Bring new learners into your programs.'}
+                  </Text>
+                  <Button colorScheme="purple" onClick={() => setActivePage('users')}>
+                    {metrics.activeMembers === 0 ? 'Invite your first learner →' : 'Invite learners →'}
+                  </Button>
+                </Stack>
+              </CardBody>
+            </Card>
+
+            <Card bg="white" border="1px solid" borderColor="brand.border">
+              <CardBody>
+                <Stack spacing={3}>
+                  <HStack spacing={2}>
+                    <Building2 size={18} />
+                    <Text fontWeight="bold" color="brand.text">Manage Organizations</Text>
+                  </HStack>
+                  <Text fontSize="sm" color="brand.subtleText">
+                    {assignedOrgCount} organization{assignedOrgCount === 1 ? '' : 's'} assigned to you.
+                  </Text>
+                  <Button variant="outline" colorScheme="purple" onClick={() => setActivePage('organization-management')}>
+                    Manage Organization
+                  </Button>
+                </Stack>
+              </CardBody>
+            </Card>
+          </SimpleGrid>
+        </Stack>
+
+        <Card bg="white" border="1px solid" borderColor="brand.border">
+          <CardBody>
+            <Stack spacing={3}>
+              <HStack justify="space-between" align="center" wrap="wrap" spacing={3}>
+                <HStack spacing={2}>
+                  <Bell size={18} />
+                  <Text fontWeight="bold" color="brand.text">Recent Activity</Text>
+                </HStack>
+                <Badge colorScheme={notificationCount > 0 ? 'red' : 'gray'}>
+                  {notificationCount} unread
+                </Badge>
+              </HStack>
+              <Divider />
+              {notificationsLoading ? (
+                <Stack spacing={3}>
+                  {[1, 2, 3].map((item) => (
+                    <HStack
+                      key={item}
+                      justify="space-between"
+                      p={3}
+                      borderRadius="md"
+                      border="1px solid"
+                      borderColor="brand.border"
+                      bg="brand.accent"
+                    >
+                      <HStack spacing={3} flex={1}>
+                        <Skeleton height="32px" width="32px" borderRadius="md" />
+                        <Box flex={1}>
+                          <Skeleton height="14px" width="40%" />
+                          <SkeletonText mt="2" noOfLines={2} spacing="2" />
+                        </Box>
+                      </HStack>
+                      <Skeleton height="20px" width="70px" borderRadius="full" />
+                    </HStack>
+                  ))}
+                </Stack>
+              ) : notificationsError ? (
+                <Box p={3} borderRadius="md" border="1px solid" borderColor="red.200" bg="red.50">
+                  <Stack spacing={2}>
+                    <Text fontWeight="semibold" color="red.700">Notifications unavailable</Text>
+                    <Text fontSize="sm" color="red.700">{notificationsError}</Text>
                   </Stack>
-                ))}
-              </Stack>
-            )}
-          </Stack>
-        </CardBody>
-      </Card>
-    </Stack>
-  )
+                </Box>
+              ) : notifications.length === 0 ? (
+                <Box p={3} borderRadius="md" border="1px dashed" borderColor="gray.200" bg="gray.50">
+                  <Text fontSize="sm" color="gray.600">
+                    You are all caught up. New partner alerts will appear here.
+                  </Text>
+                </Box>
+              ) : (
+                <Stack spacing={4}>
+                  {visibleNotifications.map((group) => {
+                    const notification = group.latestNotification
+                    const relatedId =
+                      (notification.metadata as { learnerId?: string; organizationId?: string; relatedId?: string } | undefined)
+                        ?.learnerId
+                        ?? (notification.metadata as { relatedId?: string; organizationId?: string } | undefined)?.relatedId
+                        ?? notification.related_id
+                    const organizationId =
+                      (notification.metadata as { organizationId?: string } | undefined)?.organizationId
+                      ?? (notification.metadata as { relatedId?: string } | undefined)?.relatedId
+                    const actionLink = relatedId
+                      ? `/partner/user/${relatedId}`
+                      : organizationId
+                        ? `/partner/organization/${organizationId}`
+                        : null
+                    const actionLabel = relatedId ? 'View learner' : organizationId ? 'View organization' : null
+                    const timestamp = formatDistanceToNowSafe(notification.created_at, 'Just now', { addSuffix: true })
+                    const isUnread = group.unreadCount > 0
+                    const lowerTitle = group.title.toLowerCase()
+                    const notificationType = lowerTitle.includes('challenge')
+                      ? { icon: Sparkles, color: 'purple' }
+                      : lowerTitle.includes('assignment') || lowerTitle.includes('approval')
+                        ? { icon: ClipboardCheck, color: 'blue' }
+                        : lowerTitle.includes('alert') || lowerTitle.includes('overdue')
+                          ? { icon: AlertTriangle, color: 'red' }
+                          : { icon: Bell, color: 'gray' }
+                    const NotificationIcon = notificationType.icon
+
+                    return (
+                      <HStack
+                        key={group.id}
+                        justify="space-between"
+                        p={4}
+                        borderRadius="lg"
+                        border="1px solid"
+                        borderColor={notificationType.color === 'red' ? 'red.200' : 'brand.border'}
+                        bg={notificationType.color === 'red' ? 'red.50' : 'brand.accent'}
+                        align="flex-start"
+                        transition="all 0.2s"
+                        _hover={{ shadow: 'sm' }}
+                        cursor={actionLink ? 'pointer' : 'default'}
+                        onClick={actionLink ? () => navigate(actionLink) : undefined}
+                      >
+                        <HStack spacing={4} flex={1} align="flex-start">
+                          <Box
+                            p={2}
+                            borderRadius="md"
+                            bg="white"
+                            border="1px solid"
+                            borderColor="brand.border"
+                            color={`${notificationType.color}.500`}
+                          >
+                            <NotificationIcon size={18} />
+                          </Box>
+                          <VStack align="flex-start" spacing={1} flex={1}>
+                            <HStack spacing={2} align="center">
+                              <Text fontWeight="bold" color="brand.text">
+                                {group.count > 1 ? `${group.count} new ${group.title}` : group.title}
+                              </Text>
+                              {isUnread && (
+                                <Badge colorScheme={notificationType.color === 'gray' ? 'purple' : notificationType.color} variant="solid">
+                                  {group.unreadCount > 1 ? `${group.unreadCount} new` : 'New'}
+                                </Badge>
+                              )}
+                            </HStack>
+                            <Text fontSize="sm" color="brand.subtleText">
+                              {group.message}
+                            </Text>
+                            <Text fontSize="xs" fontWeight="medium" color="brand.subtleText">
+                              {timestamp}
+                            </Text>
+                            {actionLink && actionLabel ? (
+                              <Button
+                                size="sm"
+                                colorScheme={notificationType.color === 'gray' ? 'purple' : notificationType.color}
+                                variant="solid"
+                                onClick={(event) => {
+                                  event.stopPropagation()
+                                  navigate(actionLink)
+                                }}
+                                mt={2}
+                              >
+                                {actionLabel}
+                              </Button>
+                            ) : null}
+                          </VStack>
+                        </HStack>
+                      </HStack>
+                    )
+                  })}
+                  {groupedNotifications.length > 4 && !showAllNotifications && (
+                    <Button
+                      variant="link"
+                      colorScheme="purple"
+                      alignSelf="flex-start"
+                      onClick={() => setShowAllNotifications(true)}
+                    >
+                      View all notifications →
+                    </Button>
+                  )}
+                  {showAllNotifications && groupedNotifications.length > 4 && (
+                    <Button
+                      variant="link"
+                      colorScheme="purple"
+                      alignSelf="flex-start"
+                      onClick={() => setShowAllNotifications(false)}
+                    >
+                      Show fewer notifications
+                    </Button>
+                  )}
+                </Stack>
+              )}
+            </Stack>
+          </CardBody>
+        </Card>
+      </Stack>
+    )
+  }
 
   const handleAtRiskAction = useCallback(async (action: string, caseId: string, additionalData?: Record<string, unknown>) => {
     logger.debug('[PartnerDashboard] At-Risk Action', { action, caseId, additionalData })

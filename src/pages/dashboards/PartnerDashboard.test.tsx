@@ -52,14 +52,6 @@ vi.mock('@/layouts/PartnerLayout', () => ({
     default: ({ children }: { children: React.ReactNode }) => <div data-testid="partner-layout">{children}</div>,
 }))
 
-vi.mock('@/components/admin/MetricCard', () => ({
-    MetricCard: ({ label, value, onClick }: { label: string; value: string; onClick?: () => void }) => (
-        <div data-testid="metric-card" onClick={onClick}>
-            {label}: {value}
-        </div>
-    ),
-}))
-
 vi.mock('@/components/partner/PartnerUserManagement', () => ({
     PartnerUserManagement: () => <div data-testid="partner-user-management">User Management</div>,
 }))
@@ -269,11 +261,16 @@ describe('PartnerDashboard', () => {
         renderComponent()
 
         expect(screen.getByText('Partner Overview')).toBeInTheDocument()
-        // Check for metric cards
-        expect(screen.getByText('Active members (30d): 100')).toBeInTheDocument()
-        expect(screen.getByText('Engagement rate: 85%')).toBeInTheDocument()
-        expect(screen.getByText('New registrations (7d): 5')).toBeInTheDocument()
-        expect(screen.getByText('Managed companies: 3')).toBeInTheDocument()
+        // Check for activity summary metrics
+        expect(screen.getByText('Activity Summary')).toBeInTheDocument()
+        expect(screen.getByText('Active members (30d)')).toBeInTheDocument()
+        expect(screen.getByText('100')).toBeInTheDocument()
+        expect(screen.getByText('Engagement rate')).toBeInTheDocument()
+        expect(screen.getByText('85%')).toBeInTheDocument()
+        expect(screen.getByText('New registrations (7d)')).toBeInTheDocument()
+        expect(screen.getByText('5')).toBeInTheDocument()
+        expect(screen.getByText('Managed companies')).toBeInTheDocument()
+        expect(screen.getByText('3')).toBeInTheDocument()
 
         // Check for organizations
         expect(screen.getByText('Organization Health Snapshot')).toBeInTheDocument()
@@ -289,10 +286,9 @@ describe('PartnerDashboard', () => {
         // User management should NOT be on the overview page now
         expect(screen.queryByTestId('partner-user-management')).not.toBeInTheDocument()
 
-        // Click on "Active members (30d)" metric card to navigate to users page
-        // The mock renders "Active members (30d): 0" by default
-        const usersMetricCard = screen.getByText(/Active members \(30d\): 0/)
-        fireEvent.click(usersMetricCard)
+        // Click on "Invite your first learner" to navigate to users page
+        const inviteButton = screen.getByRole('button', { name: /invite your first learner/i })
+        fireEvent.click(inviteButton)
 
         // Now it should be in the document
         await waitFor(() => {
@@ -308,7 +304,7 @@ describe('PartnerDashboard', () => {
 
         renderComponent()
 
-        expect(screen.getByText('Real-time notifications')).toBeInTheDocument()
+        expect(screen.getByText('Recent Activity')).toBeInTheDocument()
         expect(screen.getByText('5 unread')).toBeInTheDocument()
     })
 })
