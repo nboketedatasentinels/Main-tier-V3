@@ -53,6 +53,12 @@ export interface AuthContextType {
   claimsRole: string | null
   refreshAdminSession: () => Promise<void>
   refreshProfile: (options?: { reason?: string }) => Promise<{ error: Error | null; profile: UserProfile | null }>
+
+  // Account Linking
+  pendingLinkEmail: string | null
+  showAccountLinkingModal: boolean
+  linkGoogleAccount: (password: string) => Promise<{ error: Error | null }>
+  dismissAccountLinking: () => void
 }
 
 export const AuthContext = createContext<AuthContextType | undefined>(undefined)

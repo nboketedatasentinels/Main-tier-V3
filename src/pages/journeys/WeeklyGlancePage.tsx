@@ -304,10 +304,10 @@ export const WeeklyGlancePage = () => {
                 justify="space-between"
               >
                 <Stack spacing={1}>
-                  <Heading size="md" color="#273240">
+                  <Heading size="md" color="text.primary">
                     Build Your Village
                   </Heading>
-                  <Text color="#273240">
+                  <Text color="text.primary">
                     Rally your peers by creating a village to collaborate and track your collective impact.
                   </Text>
                 </Stack>
@@ -324,10 +324,10 @@ export const WeeklyGlancePage = () => {
         )}
 
         <Stack spacing={1}>
-          <Heading size="lg" color="#273240">
+          <Heading size="lg" color="text.primary">
             This Week at a Glance
           </Heading>
-          <Text color="#273240">
+          <Text color="text.primary">
             Your personalized dashboard for weekly progress, habits, and support.
           </Text>
         </Stack>

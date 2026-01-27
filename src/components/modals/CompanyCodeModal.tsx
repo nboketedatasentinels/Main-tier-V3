@@ -127,7 +127,7 @@ export const CompanyCodeModal: React.FC<CompanyCodeModalProps> = ({
       companyName: companyName ?? undefined,
       role: UserRole.PAID_MEMBER,
       membershipStatus: 'paid',
-      transformationTier: companyId ? TransformationTier.CORPORATE_MEMBER : TransformationTier.INDIVIDUAL_FREE,
+      transformationTier: companyId ? TransformationTier.CORPORATE_MEMBER : TransformationTier.INDIVIDUAL_PAID,
       dashboardPreferences: updatedPreferences,
     })
     setIsSubmitting(false)

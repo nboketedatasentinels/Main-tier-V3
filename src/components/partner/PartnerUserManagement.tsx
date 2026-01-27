@@ -151,13 +151,22 @@ export const PartnerUserManagement: React.FC<PartnerUserManagementProps> = ({
   const toast = useToast()
   const { profile } = useAuth()
 
+  // Extract organization IDs for server-side approval filtering
+  const partnerOrganizationIds = useMemo(
+    () => organizations.map((org) => org.id).filter(Boolean) as string[],
+    [organizations],
+  )
+
   const {
     approvalQueue,
     loading: approvalsLoading,
     actionId: approvalActionId,
     handleApprove: handleApproveRequest,
     handleReject: handleRejectRequestBase,
-  } = usePointsApprovalQueue(users, activeTab === 'approvals')
+  } = usePointsApprovalQueue(users, activeTab === 'approvals', {
+    organizationIds: partnerOrganizationIds,
+    enabled: true,
+  })
 
   const organizationOptions = useMemo(
     () => [

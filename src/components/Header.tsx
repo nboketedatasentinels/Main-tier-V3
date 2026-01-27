@@ -130,11 +130,11 @@ export const Header: React.FC<HeaderProps> = ({ topOffset = '0' }) => {
             <button
               type="button"
               onClick={() => navigate('/')}
-              className="flex items-center gap-2 focus:outline-none focus:ring-2 focus:ring-[#5A0DA0] rounded-md"
+              className="flex items-center gap-2 focus:outline-none focus:ring-2 focus:ring-brand-indigo-500 rounded-md"
               aria-label="Go to homepage"
             >
-              <span className="inline-flex h-9 w-9 items-center justify-center rounded-full bg-[#EAB130]">
-                <span className="h-0 w-0 border-y-4 border-y-transparent border-l-[6px] border-l-[#27062e]" />
+              <span className="inline-flex h-9 w-9 items-center justify-center rounded-full bg-accent-gold-500">
+                <span className="h-0 w-0 border-y-4 border-y-transparent border-l-[6px] border-l-brand-dark" />
               </span>
               <span className={`hidden sm:inline font-semibold ${textColor}`}>T4L</span>
             </button>
@@ -155,8 +155,8 @@ export const Header: React.FC<HeaderProps> = ({ topOffset = '0' }) => {
                 type="button"
                 onClick={goUpgrade}
                 className="inline-flex items-center gap-2 rounded-full px-4 py-2 text-sm font-semibold shadow-sm
-                  bg-gradient-to-r from-[#FDB038] to-[#EAB130] text-[#27062e] hover:opacity-95
-                  focus:outline-none focus:ring-2 focus:ring-[#5A0DA0]"
+                  bg-gradient-to-r from-accent-gold-400 to-accent-gold-500 text-brand-dark hover:opacity-95
+                  focus:outline-none focus:ring-2 focus:ring-brand-indigo-500"
               >
                 <Crown className="h-4 w-4" />
                 Upgrade
@@ -167,8 +167,8 @@ export const Header: React.FC<HeaderProps> = ({ topOffset = '0' }) => {
               type="button"
               onClick={isAuthed ? goDashboard : goSignIn}
               className="inline-flex items-center justify-center rounded-full px-4 py-2 text-sm font-semibold
-                bg-[#5A0DA0] text-white hover:opacity-95 shadow-sm
-                focus:outline-none focus:ring-2 focus:ring-[#5A0DA0]"
+                bg-brand-indigo-500 text-white hover:opacity-95 shadow-sm
+                focus:outline-none focus:ring-2 focus:ring-brand-indigo-500"
             >
               {isAuthed ? 'Dashboard' : 'Sign In'}
             </button>
@@ -177,7 +177,7 @@ export const Header: React.FC<HeaderProps> = ({ topOffset = '0' }) => {
           <button
             ref={triggerRef}
             type="button"
-            className="md:hidden inline-flex h-11 w-11 items-center justify-center rounded-full bg-white/80 shadow-sm backdrop-blur focus:outline-none focus:ring-2 focus:ring-[#5A0DA0]"
+            className="md:hidden inline-flex h-11 w-11 items-center justify-center rounded-full bg-white/80 shadow-sm backdrop-blur focus:outline-none focus:ring-2 focus:ring-brand-indigo-500"
             aria-label="Toggle navigation menu"
             aria-expanded={isMenuOpen}
             onClick={() => setIsMenuOpen(v => !v)}
@@ -201,8 +201,8 @@ export const Header: React.FC<HeaderProps> = ({ topOffset = '0' }) => {
                 <button
                   type="button"
                   onClick={goUpgrade}
-                  className="w-full h-12 rounded-xl bg-gradient-to-r from-[#FDB038] to-[#EAB130]
-                    text-[#27062e] font-semibold text-lg shadow-sm hover:opacity-95
+                  className="w-full h-12 rounded-xl bg-gradient-to-r from-accent-gold-400 to-accent-gold-500
+                    text-brand-dark font-semibold text-lg shadow-sm hover:opacity-95
                     inline-flex items-center justify-center gap-2"
                 >
                   <Lock className="h-5 w-5" />
@@ -213,7 +213,7 @@ export const Header: React.FC<HeaderProps> = ({ topOffset = '0' }) => {
               <button
                 type="button"
                 onClick={isAuthed ? goDashboard : goSignIn}
-                className="w-full h-12 rounded-xl bg-[#5A0DA0] text-white font-semibold text-lg shadow-sm hover:opacity-95"
+                className="w-full h-12 rounded-xl bg-brand-indigo-500 text-white font-semibold text-lg shadow-sm hover:opacity-95"
               >
                 {isAuthed ? 'Dashboard' : 'Sign In'}
               </button>

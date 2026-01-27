@@ -15,7 +15,7 @@ export const NextMilestoneCard = ({ milestone, daysRemaining, onNavigate }: Next
         <Stack spacing={4}>
           <HStack spacing={2}>
             <Icon as={Flag} color="brand.primary" />
-            <Text fontWeight="bold" fontSize="md" color="#273240">
+            <Text fontWeight="bold" fontSize="md" color="text.primary">
               Next Milestone
             </Text>
           </HStack>

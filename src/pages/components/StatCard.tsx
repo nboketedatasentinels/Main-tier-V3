@@ -11,12 +11,12 @@ interface StatCardProps {
 export const StatCard: React.FC<StatCardProps> = ({ label, value, icon }) => (
   <SurfaceCard borderColor="gray.700" borderRadius="lg" bg="white">
     <HStack justify="space-between" mb={1}>
-      <Text color="#273240" fontSize="sm">
+      <Text color="text.primary" fontSize="sm">
         {label}
       </Text>
       {icon}
     </HStack>
-    <Heading size="md" color="#273240">
+    <Heading size="md" color="text.primary">
       {value}
     </Heading>
   </SurfaceCard>

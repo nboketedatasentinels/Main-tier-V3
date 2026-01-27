@@ -48,7 +48,7 @@ export const SupportTeamCard = ({ data, loading, peerMatches, peerMatchesLoading
     <Card h="100%" variant="outline" borderColor="border.subtle">
       <CardBody p={6}>
         <Stack spacing={4}>
-          <Text fontWeight="bold" fontSize="md" color="#273240">Support Team</Text>
+          <Text fontWeight="bold" fontSize="md" color="text.primary">Support Team</Text>
           <Skeleton isLoaded={!loading} rounded="md">
             <Stack spacing={3}>
               {hasMentor && mentorProfile && mentorProfile.id !== ambassadorProfile?.id && (
@@ -172,7 +172,7 @@ export const SupportTeamCard = ({ data, loading, peerMatches, peerMatchesLoading
           <Stack spacing={2}>
             <HStack spacing={2}>
               <Icon as={Users} color="brand.primary" />
-              <Text fontWeight="semibold" color="#273240">
+              <Text fontWeight="semibold" color="text.primary">
                 Peer Matching
               </Text>
             </HStack>
