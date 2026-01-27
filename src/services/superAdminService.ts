@@ -469,6 +469,33 @@ export const createAdminUser = async (
   adminData: AdminFormData & Partial<AdminUserRecord> & { createdBy?: string; createdByName?: string },
 ) => {
   const { createdBy, createdByName, ...rest } = adminData
+
+  // Check if user with this email already exists
+  const existingUserQuery = query(usersCollection, where('email', '==', adminData.email), limit(1))
+  const existingUserSnapshot = await getDocs(existingUserQuery)
+
+  if (!existingUserSnapshot.empty) {
+    // User exists - update their existing profile instead of creating a duplicate
+    const existingDoc = existingUserSnapshot.docs[0]
+    const existingId = existingDoc.id
+    const updatePayload = {
+      ...rest,
+      fullName: adminData.fullName || `${adminData.firstName} ${adminData.lastName}`.trim(),
+      accountStatus: adminData.accountStatus || 'active',
+      updatedAt: serverTimestamp(),
+    }
+    await updateDoc(doc(db, 'profiles', existingId), updatePayload)
+    await logAdminAction({
+      action: 'admin_role_assigned',
+      adminId: createdBy,
+      adminName: createdByName,
+      userId: existingId,
+      metadata: { role: adminData.role, organizations: adminData.assignedOrganizations, wasExistingUser: true },
+    })
+    return existingId
+  }
+
+  // User doesn't exist - create new document (for inviting new admins)
   const payload = {
     ...rest,
     fullName: adminData.fullName || `${adminData.firstName} ${adminData.lastName}`.trim(),

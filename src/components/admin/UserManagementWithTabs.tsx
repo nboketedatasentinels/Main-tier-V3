@@ -27,20 +27,30 @@ function useManagedUsers() {
     // 🔁 Subscribe once
     const unsubscribe = listenToUsers(
       (items) => {
-        const mapped = items.map((user) => ({
-          id: user.id,
-          name: user.fullName || `${user.firstName || ''} ${user.lastName || ''}`.trim() || 'Unknown',
-          email: user.email,
-          role: user.role as any,
-          membershipStatus: 'free' as const,
-          companyId: user.assignedOrganizations?.[0] || null,
-          companyName: null,
-          companyCode: null,
-          lastActive: user.lastActive instanceof Date ? user.lastActive : null,
-          createdAt: user.createdAt instanceof Date ? user.createdAt : null,
-          accountStatus: user.accountStatus,
-          notes: '',
-        })) as ManagedUserRecord[]
+        const mapped = items.map((user) => {
+          // Type assertion to access fields not in AdminUserRecord but present in Firestore
+          const userData = user as typeof user & {
+            companyId?: string
+            companyCode?: string
+            companyName?: string
+            membershipStatus?: string
+          }
+          return {
+            id: user.id,
+            name: user.fullName || `${user.firstName || ''} ${user.lastName || ''}`.trim() || 'Unknown',
+            email: user.email,
+            role: user.role as any,
+            membershipStatus: (userData.membershipStatus as 'free' | 'paid' | 'inactive') || 'free',
+            // Check companyId first (set at signup), then fall back to assignedOrganizations (for admins)
+            companyId: userData.companyId || user.assignedOrganizations?.[0] || null,
+            companyName: userData.companyName || null,
+            companyCode: userData.companyCode || null,
+            lastActive: user.lastActive instanceof Date ? user.lastActive : null,
+            createdAt: user.createdAt instanceof Date ? user.createdAt : null,
+            accountStatus: user.accountStatus,
+            notes: '',
+          }
+        }) as ManagedUserRecord[]
         setUsers(mapped)
         setLoading(false)
       },

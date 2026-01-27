@@ -956,11 +956,24 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       }
 
       try {
-        await setDoc(doc(db, 'users', uid), {
-          ...profilePayload,
-          createdAt: serverTimestamp(),
-          updatedAt: serverTimestamp(),
-        })
+        // Write to both users and profiles collections for consistency
+        // Users collection is primary, profiles is used by admin dashboards
+        await Promise.all([
+          setDoc(doc(db, 'users', uid), {
+            ...profilePayload,
+            createdAt: serverTimestamp(),
+            updatedAt: serverTimestamp(),
+          }),
+          setDoc(
+            doc(db, 'profiles', uid),
+            {
+              ...profilePayload,
+              createdAt: serverTimestamp(),
+              updatedAt: serverTimestamp(),
+            },
+            { merge: true }
+          ),
+        ])
       } catch (profileError) {
         await deleteUser(firebaseUser).catch((cleanupError) => {
           console.error('🔴 [Auth] Failed to cleanup auth user after profile error', cleanupError)
