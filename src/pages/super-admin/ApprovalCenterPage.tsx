@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react'
+import React, { useCallback, useEffect, useMemo, useState } from 'react'
 import {
   Alert,
   AlertIcon,
@@ -54,6 +54,8 @@ import {
 } from '@/services/pointsVerificationService'
 import { ApprovalRecord, ApprovalStatus, ApprovalWorkflowType } from '@/types/approvals'
 import { getApprovalTypeMeta } from '@/utils/approvalTypeMapper'
+import { doc, getDoc } from 'firebase/firestore'
+import { db } from '@/services/firebase'
 
 const toDate = (value?: unknown): Date | null => {
   if (!value) return null
@@ -96,7 +98,7 @@ const normalizeName = (value: string) =>
     .map((part) => part[0]?.toUpperCase() + part.slice(1))
     .join(' ')
 
-const getUserDisplayName = (userId?: string | null) => {
+const formatUserIdFallback = (userId?: string | null) => {
   if (!userId) return 'Unknown user'
   if (userId.includes('@')) {
     return normalizeName(userId.split('@')[0])
@@ -172,6 +174,7 @@ const ApprovalCenterPage: React.FC = () => {
   const [quickFilters, setQuickFilters] = useState({ highValue: false, overdue: false, firstTime: false })
   const [pageSize, setPageSize] = useState(20)
   const [page, setPage] = useState(1)
+  const [userProfiles, setUserProfiles] = useState<Map<string, string>>(new Map())
   const rejectModal = useDisclosure()
   const bulkModal = useDisclosure()
   const isMobile = useBreakpointValue({ base: true, md: false })
@@ -233,6 +236,64 @@ const ApprovalCenterPage: React.FC = () => {
       return bTime - aTime
     })
   }, [upgradeRequests, verificationRequests])
+
+  // Fetch user profiles to display actual names
+  useEffect(() => {
+    const fetchUserNames = async () => {
+      const userIds = [...new Set(approvalRecords.map((r) => r.userId).filter(Boolean))] as string[]
+      if (userIds.length === 0) return
+
+      const profileMap = new Map<string, string>()
+
+      // Fetch profiles in parallel (batch of 10 to avoid Firestore limits)
+      for (let i = 0; i < userIds.length; i += 10) {
+        const batch = userIds.slice(i, i + 10)
+        const results = await Promise.all(
+          batch.map(async (userId) => {
+            try {
+              const profileSnap = await getDoc(doc(db, 'profiles', userId))
+              if (profileSnap.exists()) {
+                const data = profileSnap.data()
+                const name =
+                  data.fullName ||
+                  [data.firstName, data.lastName].filter(Boolean).join(' ').trim() ||
+                  data.email ||
+                  null
+                return [userId, name] as [string, string | null]
+              }
+            } catch {
+              // Ignore errors for individual profiles
+            }
+            return [userId, null] as [string, string | null]
+          })
+        )
+        results.forEach(([id, name]) => {
+          if (name) profileMap.set(id, name)
+        })
+      }
+
+      setUserProfiles(profileMap)
+    }
+
+    if (approvalRecords.length > 0) {
+      fetchUserNames()
+    }
+  }, [approvalRecords])
+
+  // Get user display name - uses fetched profile name if available, otherwise falls back to formatting userId
+  const getUserDisplayName = useCallback(
+    (userId?: string | null) => {
+      if (!userId) return 'Unknown user'
+
+      // Check if we have the actual name from profile
+      const profileName = userProfiles.get(userId)
+      if (profileName) return profileName
+
+      // Fallback to formatting userId
+      return formatUserIdFallback(userId)
+    },
+    [userProfiles]
+  )
 
   const userRequestCounts = useMemo(() => {
     const counts = new Map<string, number>()

@@ -1,14 +1,20 @@
 import {
   QueryConstraint,
   collection,
+  doc,
+  getDoc,
   limit,
   onSnapshot,
   orderBy,
   query,
+  serverTimestamp,
+  updateDoc,
   where,
 } from 'firebase/firestore'
-import { httpsCallable } from 'firebase/functions'
-import { db, functions } from '@/services/firebase'
+import { db } from '@/services/firebase'
+import { awardChecklistPoints } from './pointsService'
+import { getActivitiesForJourney } from '@/config/pointsConfig'
+import { createInAppNotification } from './notificationService'
 
 export type PointsVerificationRequestStatus = 'pending' | 'approved' | 'rejected'
 
@@ -94,39 +100,74 @@ export const listenToAllPointsVerificationRequests = (
 }
 
 /**
- * Approves a points verification request via a secure Cloud Function.
+ * Approves a points verification request by updating Firestore directly and awarding points.
  */
 export const approvePointsVerificationRequest = async (params: {
   request: PointsVerificationRequest
   approver?: ApproverInfo
 }) => {
-  const approveRequest = httpsCallable<any, { success: boolean }>(
-    functions,
-    'approvePointsVerificationRequest'
-  )
-  return approveRequest({
-    requestId: params.request.id,
-    approverId: params.approver?.id,
-    approverName: params.approver?.name,
+  const requestRef = doc(db, 'points_verification_requests', params.request.id)
+
+  // Get user profile for journey type
+  const userProfileRef = doc(db, 'profiles', params.request.user_id)
+  const userProfileSnap = await getDoc(userProfileRef)
+  if (!userProfileSnap.exists()) {
+    throw new Error('User profile not found')
+  }
+
+  const journeyType = userProfileSnap.data().journeyType
+  const activities = getActivitiesForJourney(journeyType)
+  const activity = activities.find((a) => a.id === params.request.activity_id)
+
+  if (!activity) {
+    throw new Error('Activity not found')
+  }
+
+  // Update request status
+  await updateDoc(requestRef, {
+    status: 'approved',
+    approved_by: params.approver?.id ?? null,
+    approved_by_name: params.approver?.name ?? null,
+    approved_at: serverTimestamp(),
   })
+
+  // Award points
+  await awardChecklistPoints({
+    uid: params.request.user_id,
+    journeyType,
+    weekNumber: params.request.week,
+    activity,
+    source: 'approval',
+  })
+
+  return { data: { success: true } }
 }
 
 /**
- * Rejects a points verification request via a secure Cloud Function.
+ * Rejects a points verification request by updating Firestore directly and notifying the user.
  */
 export const rejectPointsVerificationRequest = async (params: {
   request: PointsVerificationRequest
   approver?: ApproverInfo
   reason?: string
 }) => {
-  const rejectRequest = httpsCallable<any, { success: boolean }>(
-    functions,
-    'rejectPointsVerificationRequest'
-  )
-  return rejectRequest({
-    requestId: params.request.id,
-    approverId: params.approver?.id,
-    approverName: params.approver?.name,
-    reason: params.reason,
+  const requestRef = doc(db, 'points_verification_requests', params.request.id)
+
+  await updateDoc(requestRef, {
+    status: 'rejected',
+    rejected_by: params.approver?.id ?? null,
+    rejected_by_name: params.approver?.name ?? null,
+    rejected_at: serverTimestamp(),
+    rejection_reason: params.reason ?? null,
   })
+
+  // Notify user of rejection
+  await createInAppNotification({
+    userId: params.request.user_id,
+    title: 'Activity Submission Rejected',
+    message: `Your submission for "${params.request.activity_title || params.request.activity_id}" was rejected.${params.reason ? ` Reason: ${params.reason}` : ''}`,
+    type: 'approval',
+  })
+
+  return { data: { success: true } }
 }

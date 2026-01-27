@@ -15,13 +15,17 @@ Structured Learning Journeys
 4-week to 12-month transformation programs with weekly checklists and completion logic
 
 Gamification Engine
-Points system with:
+Window-based points system with:
 
-minimum weekly requirements
+2-week windows as the core unit (learners think in "this fortnight")
+
+minimum points per window (not activities)
 
 badges & levels
 
 leaderboards (global / organization / village / cluster)
+
+See docs/points-system.md for complete reference
 
 Impact Tracking
 Log and visualize:
@@ -360,6 +364,41 @@ Transaction Safety
 
 Points must use Firestore transactions.
 
+Points System (Core Concepts)
+
+Core Principle: Learners are guided by minimum POINTS per 2-week window, not activities.
+
+Window-Based Architecture:
+
+All journeys divided into 2-week windows
+
+Learners think in "this fortnight" - never months
+
+Activities unlock, lock, rotate, and disappear temporarily
+
+Points alone determine progress and passing
+
+Journey Types:
+| Journey | Windows | Pass Mark | Max Points | Per Window Target |
+|---------|---------|-----------|------------|-------------------|
+| 6-Week | 3 | 40,000 | 60,000 | ~14,000 |
+| 3-Month | 6 | 75,000 | 113,000 | 12,000-13,000 |
+| 6-Month | 12 | 150,000 | 226,000 | 12,000-13,500 |
+| 9-Month | 18 | 227,000 | 339,000 | 12,500-13,000 |
+
+Activity Types:
+- One-Time: Claim once → permanently disabled
+- Window-Limited: Max 1 claim per window, reappears next window
+- Ongoing: Always visible, hard-capped by total frequency
+
+Points Claiming Methods:
+- Auto Marks: Platform-tracked activities
+- Self-Reporting: User marks complete
+- Partner Approved: User submits evidence, partner reviews
+- Partner-Issued: Partner awards directly from Admin portal
+
+See docs/points-system.md for complete reference including implementation code.
+
 Cloud Functions
 
 Only call via httpsCallable.
@@ -430,6 +469,8 @@ MIGRATION_GUIDE.md
 database/firestore-schema.md
 
 THEME_CONTRACT.md
+
+docs/points-system.md
 
 docs/README.md
 
