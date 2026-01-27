@@ -438,7 +438,7 @@ export const StartChallengeModal: React.FC<StartChallengeModalProps> = ({
       }
     } else {
       // Reset form when modal closes
-      setTimeout(resetForm, 300); // Delay to allow animation
+      setTimeout(() => resetForm(), 300); // Delay to allow animation
     }
   }, [isOpen, preselectedUser, fetchPotentialOpponents]);
 
