@@ -304,7 +304,7 @@ const EventsTab: React.FC = () => {
 
   const description = events.length
     ? 'All upcoming workshops, gatherings, learning sessions, and book club meetups now live on T4Leader. Head there to explore the full schedule and RSVP.'
-    : "We've moved event discovery and book club updates to our dedicated T4Leader calendar. See what's coming up and reserve your spot."
+    : "See what's coming up and reserve your spot."
 
   return (
     <Stack spacing={4}>
