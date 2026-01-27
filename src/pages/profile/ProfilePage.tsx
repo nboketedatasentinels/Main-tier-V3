@@ -84,7 +84,7 @@ import {
 import { getDownloadURL, ref, uploadBytes } from 'firebase/storage'
 import { auth, db, storage } from '@/services/firebase'
 import { useAuth } from '@/hooks/useAuth'
-import type { StandardRole, Organization } from '@/types'
+import type { StandardRole, Organization, DashboardPreferences } from '@/types'
 import { TransformationTier, UserRole } from '@/types'
 import { normalizeRole } from '@/utils/role'
 import { validateCompanyCode } from '@/services/organizationService'
@@ -108,6 +108,7 @@ interface ProfileData {
   matchRefreshPreference?: 'weekly' | 'biweekly' | 'on-demand' | 'disabled'
   preferredMatchDay?: number
   matchNotificationPreference?: 'email' | 'in_app' | 'both'
+  dashboardPreferences?: DashboardPreferences
   socialLinks: {
     linkedin?: string
     twitter?: string
