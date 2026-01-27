@@ -18,12 +18,25 @@ import {
 } from '@chakra-ui/react'
 import { useAuth } from '@/hooks/useAuth'
 import { PasswordChangeModal } from '@/components/PasswordChangeModal'
+import { AccountLinkingModal } from '@/components/auth/AccountLinkingModal'
 import { getLandingPathForRole } from '@/utils/roleRouting'
 import { getFriendlyErrorMessage } from '@/utils/authErrors'
 import { GoogleIcon } from '@/components/icons/GoogleIcon'
 
 export const LoginPage: React.FC = () => {
-  const { signIn, signInWithMagicLink, signInWithGoogle, user, profile, profileLoading, refreshProfile } = useAuth()
+  const {
+    signIn,
+    signInWithMagicLink,
+    signInWithGoogle,
+    user,
+    profile,
+    profileLoading,
+    refreshProfile,
+    pendingLinkEmail,
+    showAccountLinkingModal,
+    linkGoogleAccount,
+    dismissAccountLinking,
+  } = useAuth()
   const navigate = useNavigate()
   const toast = useToast()
   const [searchParams] = useSearchParams()
@@ -412,6 +425,13 @@ export const LoginPage: React.FC = () => {
           onSuccess={handlePasswordChangeSuccess}
         />
       )}
+
+      <AccountLinkingModal
+        isOpen={showAccountLinkingModal}
+        onClose={dismissAccountLinking}
+        email={pendingLinkEmail || ''}
+        onLinkAccount={linkGoogleAccount}
+      />
     </>
   )
 }

@@ -18,7 +18,8 @@
       "Bash(npm run lint:*)",
       "Bash(ls -la \"c:\\\\Users\\\\Kekab\\\\Man-tier-v2\\\\src\"\" 2>/dev/null || echo \"src dir not found \")",
       "Bash(find:*)",
-      "Bash(findstr:*)"
+      "Bash(findstr:*)",
+      "Bash(xargs ls:*)"
     ]
   }
 }

@@ -12,6 +12,8 @@ import {
   deleteUser,
   signInWithRedirect,
   getAdditionalUserInfo,
+  linkWithCredential,
+  OAuthCredential,
 } from 'firebase/auth'
 import { doc, getDoc, setDoc, serverTimestamp, onSnapshot, updateDoc } from 'firebase/firestore'
 
@@ -75,6 +77,11 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   })
   const pendingCompanyCodeKey = 't4l.pendingCompanyCode'
   const offlineErrorMessage = 'Network error. Please check your connection.'
+
+  // Account linking state
+  const [pendingLinkCredential, setPendingLinkCredential] = useState<OAuthCredential | null>(null)
+  const [pendingLinkEmail, setPendingLinkEmail] = useState<string | null>(null)
+  const [showAccountLinkingModal, setShowAccountLinkingModal] = useState(false)
 
   const buildOfflineError = useCallback(() => new Error(offlineErrorMessage), [offlineErrorMessage])
 
@@ -767,6 +774,23 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     } catch (error) {
       console.error('🔴 [Auth] signInWithGoogle failed', error)
 
+      // Handle account exists with different credential - offer to link accounts
+      if (error instanceof FirebaseError && error.code === 'auth/account-exists-with-different-credential') {
+        console.warn('🟠 [Auth] Account exists with different credential. Prompting for account linking.')
+        const credential = GoogleAuthProvider.credentialFromError(error)
+        const email = (error as FirebaseError & { customData?: { email?: string } }).customData?.email
+
+        if (credential && email) {
+          setPendingLinkCredential(credential)
+          setPendingLinkEmail(email)
+          setShowAccountLinkingModal(true)
+          setLoading(false)
+          setProfileLoading(false)
+          // Return a specific error that indicates linking is needed
+          return { error: new Error('Account linking required. Please enter your password to link your Google account.') }
+        }
+      }
+
       if (error instanceof FirebaseError && error.code === 'auth/popup-blocked') {
         console.warn('🟠 [Auth] Popup blocked. Falling back to redirect sign-in.')
         try {
@@ -1186,6 +1210,48 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   }, [buildOfflineError, fetchOrCreateUserDoc, fetchProfileOnce, isOfflineError, recordProfileLoad, updateProfileState])
 
   /* ------------------------------------------------------------------ */
+  /* 🔹 Account Linking                                                  */
+  /* ------------------------------------------------------------------ */
+  const linkGoogleAccount = useCallback(async (password: string): Promise<{ error: Error | null }> => {
+    if (!pendingLinkCredential || !pendingLinkEmail) {
+      return { error: new Error('No pending account to link') }
+    }
+
+    console.log('🟡 [Auth] linkGoogleAccount:start', { email: pendingLinkEmail })
+    setLoading(true)
+
+    try {
+      // First, sign in with email/password to get the existing user
+      const emailCredential = await signInWithEmailAndPassword(auth, pendingLinkEmail, password)
+      console.log('🟢 [Auth] Email sign-in successful, linking Google credential')
+
+      // Link the Google credential to the existing account
+      await linkWithCredential(emailCredential.user, pendingLinkCredential)
+      console.log('🟢 [Auth] Account linking successful', { uid: emailCredential.user.uid })
+
+      // Clear pending link state
+      setPendingLinkCredential(null)
+      setPendingLinkEmail(null)
+      setShowAccountLinkingModal(false)
+      setLoading(false)
+
+      return { error: null }
+    } catch (error) {
+      console.error('🔴 [Auth] linkGoogleAccount failed', error)
+      setLoading(false)
+
+      const friendlyMessage = getFriendlyErrorMessage(error)
+      return { error: new Error(friendlyMessage) }
+    }
+  }, [pendingLinkCredential, pendingLinkEmail])
+
+  const dismissAccountLinking = useCallback(() => {
+    setPendingLinkCredential(null)
+    setPendingLinkEmail(null)
+    setShowAccountLinkingModal(false)
+  }, [])
+
+  /* ------------------------------------------------------------------ */
   /* 🔹 Role Flags (LOGGED)                                              */
   /* ------------------------------------------------------------------ */
   const normalizedRole = normalizeRole(profile?.role)
@@ -1242,6 +1308,11 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     claimsRole,
     refreshAdminSession,
     refreshProfile,
+    // Account Linking
+    pendingLinkEmail,
+    showAccountLinkingModal,
+    linkGoogleAccount,
+    dismissAccountLinking,
   }
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>
