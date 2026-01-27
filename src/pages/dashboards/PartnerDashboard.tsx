@@ -103,11 +103,25 @@ export const PartnerDashboard: React.FC = () => {
   const [showConfirmPassword, setShowConfirmPassword] = useState(false)
   const [isChangingPassword, setIsChangingPassword] = useState(false)
 
+  const snapshotOrganizations = useMemo(
+    () => snapshot?.organizations ?? [],
+    [snapshot?.organizations],
+  )
+
+  // Extract organization IDs for server-side approval filtering
+  const partnerOrganizationIds = useMemo(
+    () => snapshotOrganizations.map((org) => org.id).filter(Boolean) as string[],
+    [snapshotOrganizations],
+  )
+
   const { approvalQueue: pendingApprovals } = usePointsApprovalQueue(
     snapshotUsers,
-    activePage === 'overview' || activePage === 'users'
+    activePage === 'overview' || activePage === 'users',
+    {
+      organizationIds: partnerOrganizationIds,
+      enabled: true,
+    },
   )
-  const snapshotOrganizations = snapshot?.organizations ?? []
   const snapshotLoading = adminDataLoading
   const enableProfileRealtime = import.meta.env.VITE_ENABLE_PROFILE_REALTIME === 'true'
   const supportEmail = 'support@transformation4leaders.com'

@@ -617,8 +617,12 @@ const WeeklyChecklistPage: React.FC = () => {
     try {
       const { activity } = proofModal
 
+      // Get user's organizationId from profile for approval filtering
+      const userOrganizationId = profile?.organizationId || profile?.companyId || null
+
       const sourcePayload: Omit<PointsVerificationRequest, 'id'> = {
         user_id: user.uid,
+        organizationId: userOrganizationId,
         week: selectedWeek,
         activity_id: activity.id,
         activity_title: activity.title,
@@ -631,6 +635,7 @@ const WeeklyChecklistPage: React.FC = () => {
 
       await createApprovalRequest({
         userId: user.uid,
+        organizationId: userOrganizationId,
         type: 'points_verification',
         approvalType: activity.approvalType,
         title: activity.title,

@@ -22,6 +22,7 @@ export type PointsVerificationRequestStatus = 'pending' | 'approved' | 'rejected
 export interface PointsVerificationRequest {
   id: string
   user_id: string
+  organizationId?: string | null
   week: number
   activity_id: string
   activity_title?: string
@@ -80,6 +81,52 @@ export const listenToAllPointsVerificationRequests = (
   }
   if (options?.limit) {
     constraints.push(limit(options.limit))
+  }
+
+  const verificationQuery = query(collection(db, 'points_verification_requests'), ...constraints)
+
+  return onSnapshot(
+    verificationQuery,
+    (snapshot) => {
+      onChange(
+        snapshot.docs.map((docSnap) => {
+          const data = docSnap.data() as PointsVerificationRequest
+          return { ...data, id: docSnap.id }
+        }),
+      )
+    },
+    (error) => {
+      onError?.(error)
+    },
+  )
+}
+
+/**
+ * Listens to pending points verification requests filtered by organization IDs.
+ * For partners, pass their assigned organization IDs.
+ * For admins/super_admins, pass empty array or undefined to get all.
+ */
+export const listenToPointsVerificationRequestsByOrganizations = (
+  onChange: (requests: PointsVerificationRequest[]) => void,
+  organizationIds?: string[],
+  onError?: (error: unknown) => void,
+) => {
+  const constraints: QueryConstraint[] = [
+    where('status', '==', 'pending'),
+    orderBy('created_at', 'desc'),
+  ]
+
+  // If organizationIds provided and not empty, add organization filter
+  // Note: Firestore 'in' queries are limited to 30 items
+  if (organizationIds && organizationIds.length > 0) {
+    if (organizationIds.length > 30) {
+      console.warn(
+        '[pointsVerificationService] Organization IDs exceed Firestore limit of 30. ' +
+          'Only first 30 organizations will be queried.',
+      )
+    }
+    const queryOrgIds = organizationIds.slice(0, 30)
+    constraints.push(where('organizationId', 'in', queryOrgIds))
   }
 
   const verificationQuery = query(collection(db, 'points_verification_requests'), ...constraints)

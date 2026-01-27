@@ -22,6 +22,7 @@ import { createInAppNotification } from './notificationService';
  */
 export async function createApprovalRequest(params: {
   userId: string;
+  organizationId?: string | null;
   type: ApprovalWorkflowType;
   approvalType?: ApprovalType;
   title: string;
@@ -30,11 +31,22 @@ export async function createApprovalRequest(params: {
   points?: number;
   status?: string;
 }): Promise<string> {
-  const { userId, type, approvalType, title, source, summary, points, status = 'pending' } = params;
+  const {
+    userId,
+    organizationId,
+    type,
+    approvalType,
+    title,
+    source,
+    summary,
+    points,
+    status = 'pending',
+  } = params;
 
   try {
     const approvalData = removeUndefinedFields({
       userId,
+      organizationId: organizationId || null,
       type,
       approvalType,
       title,
