@@ -85,7 +85,7 @@ import { getDownloadURL, ref, uploadBytes } from 'firebase/storage'
 import { auth, db, storage } from '@/services/firebase'
 import { useAuth } from '@/hooks/useAuth'
 import type { StandardRole, Organization } from '@/types'
-import { TransformationTier } from '@/types'
+import { TransformationTier, UserRole } from '@/types'
 import { normalizeRole } from '@/utils/role'
 import { validateCompanyCode } from '@/services/organizationService'
 import { CORE_VALUES } from '@/config/personality-data'
@@ -676,6 +676,17 @@ export const ProfilePage: React.FC = () => {
     }
 
     setCompanyCodeSaving(true)
+    const membershipUpdates = {
+      membershipStatus: 'paid' as const,
+      role: UserRole.PAID_MEMBER,
+      transformationTier: companyOrganization
+        ? TransformationTier.CORPORATE_MEMBER
+        : TransformationTier.INDIVIDUAL_PAID,
+      dashboardPreferences: {
+        ...(profileData.dashboardPreferences ?? {}),
+        lockedToFreeExperience: false,
+      },
+    }
     const updates = {
       companyCode: trimmedCode,
       companyId: companyOrganization?.id ?? null,
@@ -685,12 +696,13 @@ export const ProfilePage: React.FC = () => {
 
     try {
       await Promise.all([
-        updateDoc(doc(db, 'profiles', user.uid), updates),
+        updateDoc(doc(db, 'profiles', user.uid), {
+          ...updates,
+          ...membershipUpdates,
+        }),
         updateDoc(doc(db, 'users', user.uid), {
           ...updates,
-          transformationTier: companyOrganization
-            ? TransformationTier.CORPORATE_MEMBER
-            : TransformationTier.INDIVIDUAL_FREE,
+          ...membershipUpdates,
         }),
       ])
 
@@ -698,6 +710,7 @@ export const ProfilePage: React.FC = () => {
         ...profileData,
         companyCode: trimmedCode,
         companyName: companyOrganization?.name ?? profileData.companyName,
+        ...membershipUpdates,
       }
       setProfileData(updatedProfile)
       setEditedData(updatedProfile)
