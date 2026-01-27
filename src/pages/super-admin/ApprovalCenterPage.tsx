@@ -149,7 +149,7 @@ const ApprovalCenterPage: React.FC = () => {
     requests: verificationRequests,
     loading: verificationLoading,
     error: verificationError,
-  } = useAdminPointsVerificationRequests('all', 40)
+  } = useAdminPointsVerificationRequests('all')
   const { mutate, loading: updatingUpgrade } = useUpdateRequestStatus()
   const [statusTab, setStatusTab] = useState<'pending' | 'approved' | 'rejected'>('pending')
   const [workflowFilter, setWorkflowFilter] = useState<ApprovalWorkflowType | 'all'>('all')
