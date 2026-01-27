@@ -94,7 +94,8 @@ const AnnouncementsHeader = () => (
 const TabNavigation: React.FC<{
   activeTab: TabKey
   onChange: (tab: TabKey) => void
-}> = ({ activeTab, onChange }) => {
+  tabs: Array<{ key: TabKey; label: string; description: string; icon: React.ElementType; hidden?: boolean }>
+}> = ({ activeTab, onChange, tabs }) => {
   const visibleTabs = tabs.filter((tab) => !tab.hidden)
   return (
     <ButtonGroup spacing={3} flexWrap="wrap">
@@ -467,15 +468,25 @@ export const AnnouncementsPage: React.FC = () => {
   const [error, setError] = useState<string | null>(null)
   const { isOpen, onOpen, onClose } = useDisclosure()
   const [activeAnnouncement, setActiveAnnouncement] = useState<Announcement | null>(null)
+  const { profile } = useAuth()
+  const hasOrganization = Boolean(profile?.companyId || profile?.organizationId || profile?.companyCode)
+  const hasPaidAccess = profile?.membershipStatus === 'paid' && hasOrganization
+  const tabConfig = useMemo(
+    () =>
+      tabs.map((tab) =>
+        !hasPaidAccess && (tab.key === 'jobs' || tab.key === 'grants') ? { ...tab, hidden: true } : tab,
+      ),
+    [hasPaidAccess],
+  )
 
   const tabFromUrl = (searchParams.get('tab') as TabKey) || DEFAULT_TAB
-  const activeTab: TabKey = tabs.some((tab) => tab.key === tabFromUrl) ? tabFromUrl : DEFAULT_TAB
+  const activeTab: TabKey = tabConfig.some((tab) => tab.key === tabFromUrl && !tab.hidden) ? tabFromUrl : DEFAULT_TAB
 
   useEffect(() => {
-    if (tabFromUrl === 'announcements') {
-      setSearchParams(buildSearchParams('events'))
+    if (tabFromUrl !== activeTab) {
+      setSearchParams(buildSearchParams(activeTab))
     }
-  }, [tabFromUrl, setSearchParams])
+  }, [activeTab, tabFromUrl, setSearchParams])
 
   useEffect(() => {
     setLoading(false)
@@ -522,16 +533,16 @@ export const AnnouncementsPage: React.FC = () => {
   }
 
   const announcementDescription = useMemo(() => {
-    const tabDetails = tabs.find((tab) => tab.key === activeTab)
+    const tabDetails = tabConfig.find((tab) => tab.key === activeTab)
     return tabDetails?.description || ''
-  }, [activeTab])
+  }, [activeTab, tabConfig])
 
   return (
     <Stack spacing={6} pb={10}>
       <AnnouncementsHeader />
 
       <Stack spacing={2}>
-        <TabNavigation activeTab={activeTab} onChange={handleTabChange} />
+        <TabNavigation activeTab={activeTab} onChange={handleTabChange} tabs={tabConfig} />
         <Text color="text.secondary" fontSize="sm">
           {announcementDescription}
         </Text>
