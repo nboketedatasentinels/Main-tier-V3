@@ -62,6 +62,7 @@ type FirestorePartnerUser = Partial<PartnerUser> & {
   program_start_date?: unknown
   organizationId?: string
   organization_id?: string
+  companyId?: string
   lastActiveAt?: unknown
   last_active_at?: unknown
   lastActive?: unknown
@@ -139,7 +140,8 @@ const createChunkedOrgQueries = (
   }
 
   const queries: Query<DocumentData>[] = []
-  const queryFields = ['organizationId', 'organization_id'] as const
+  // Query multiple fields to handle different naming conventions (companyId is set at signup)
+  const queryFields = ['organizationId', 'organization_id', 'companyId'] as const
 
   // Split into chunks of FIRESTORE_IN_QUERY_LIMIT
   for (let i = 0; i < uniqueKeys.length; i += FIRESTORE_IN_QUERY_LIMIT) {
@@ -420,7 +422,7 @@ export const usePartnerUsers = (options: UsePartnerUsersOptions) => {
               const data = docWrapper.data()
 
               const rawCompanyCode = data.companyCode || data.company_code || ''
-              const rawOrganizationId = data.organizationId || data.organization_id || ''
+              const rawOrganizationId = data.organizationId || data.organization_id || data.companyId || ''
               const companyCode =
                 rawCompanyCode.trim().length > 0
                   ? rawCompanyCode.toLowerCase()

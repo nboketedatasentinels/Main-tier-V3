@@ -488,7 +488,7 @@ export const createAdminUser = async (
 }
 
 export const updateAdminUser = async (adminId: string, updates: Partial<AdminUserRecord>) => {
-  const adminRef = doc(db, 'users', adminId)
+  const adminRef = doc(db, 'profiles', adminId)
   await updateDoc(adminRef, { ...updates, updatedAt: serverTimestamp() })
   await logAdminAction({
     action: 'admin_updated',
@@ -498,7 +498,7 @@ export const updateAdminUser = async (adminId: string, updates: Partial<AdminUse
 }
 
 export const deleteAdminUser = async (adminId: string) => {
-  const adminRef = doc(db, 'users', adminId)
+  const adminRef = doc(db, 'profiles', adminId)
   await deleteDoc(adminRef)
   await logAdminAction({
     action: 'admin_deleted',
@@ -563,7 +563,7 @@ export const assignOrganizations = async (adminId: string, orgIds: string[]) => 
 }
 
 export const updateAdminRole = async (adminId: string, newRole: AdminRole) => {
-  const adminRef = doc(db, 'users', adminId)
+  const adminRef = doc(db, 'profiles', adminId)
   await updateDoc(adminRef, { role: newRole, updatedAt: serverTimestamp() })
   await logAdminAction({
     action: 'admin_role_updated',
@@ -573,7 +573,7 @@ export const updateAdminRole = async (adminId: string, newRole: AdminRole) => {
 }
 
 export const toggleAdminStatus = async (adminId: string, status: 'active' | 'suspended') => {
-  const adminRef = doc(db, 'users', adminId)
+  const adminRef = doc(db, 'profiles', adminId)
   await updateDoc(adminRef, { accountStatus: status, updatedAt: serverTimestamp() })
   await logAdminAction({
     action: 'admin_status_updated',
