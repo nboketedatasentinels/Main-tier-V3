@@ -90,7 +90,7 @@ const getDisplayDate = (value?: unknown) => {
 
 const normalizeName = (value: string) =>
   value
-    .replace(/[_-.]+/g, ' ')
+    .replace(/[_.-]+/g, ' ')
     .split(' ')
     .filter(Boolean)
     .map((part) => part[0]?.toUpperCase() + part.slice(1))
