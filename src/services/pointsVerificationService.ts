@@ -15,6 +15,7 @@ import { db } from '@/services/firebase'
 import { awardChecklistPoints } from './pointsService'
 import { getActivitiesForJourney } from '@/config/pointsConfig'
 import { createInAppNotification } from './notificationService'
+import { resolveJourneyType } from '@/utils/journeyType'
 
 export type PointsVerificationRequestStatus = 'pending' | 'approved' | 'rejected'
 
@@ -115,7 +116,13 @@ export const approvePointsVerificationRequest = async (params: {
     throw new Error('User profile not found')
   }
 
-  const journeyType = userProfileSnap.data().journeyType
+  const profileData = userProfileSnap.data()
+  const journeyType =
+    resolveJourneyType({
+      journeyType: profileData.journeyType,
+      programDurationWeeks: profileData.programDurationWeeks,
+      programDuration: profileData.programDuration,
+    }) ?? '6W'
   const activities = getActivitiesForJourney(journeyType)
   const activity = activities.find((a) => a.id === params.request.activity_id)
 

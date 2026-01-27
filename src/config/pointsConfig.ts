@@ -306,8 +306,10 @@ export const JOURNEY_META: Record<
   },
 };
 
-export function getActivitiesForJourney(journeyType: JourneyType): ActivityDef[] {
-  return JOURNEY_META[journeyType].mode === "intro" ? INTRO_ACTIVITIES : FULL_ACTIVITIES;
+export function getActivitiesForJourney(journeyType?: JourneyType | null): ActivityDef[] {
+  const meta = journeyType ? JOURNEY_META[journeyType] : undefined;
+  if (!meta) return FULL_ACTIVITIES;
+  return meta.mode === "intro" ? INTRO_ACTIVITIES : FULL_ACTIVITIES;
 }
 
 // For 3M+ show month indicator: Month = ceil(week/4)
