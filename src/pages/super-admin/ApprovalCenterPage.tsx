@@ -251,11 +251,13 @@ const ApprovalCenterPage: React.FC = () => {
         const results = await Promise.all(
           batch.map(async (userId) => {
             try {
-              const profileSnap = await getDoc(doc(db, 'profiles', userId))
+              const profileSnap = await getDoc(doc(db, 'users', userId))
               if (profileSnap.exists()) {
                 const data = profileSnap.data()
                 const name =
+                  data.name ||
                   data.fullName ||
+                  data.full_name ||
                   [data.firstName, data.lastName].filter(Boolean).join(' ').trim() ||
                   data.email ||
                   null
