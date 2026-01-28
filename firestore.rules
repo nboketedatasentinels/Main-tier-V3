@@ -141,7 +141,7 @@ service cloud.firestore {
       allow delete: if isSuperAdmin();
     }
 
-    // Upgrade requests collection
+    // Upgrade requests
     match /upgrade_requests/{requestId} {
       allow read: if isAuthenticated() && (
         request.auth.uid == resource.data.user_id ||
@@ -152,11 +152,11 @@ service cloud.firestore {
       allow delete: if isSuperAdmin();
     }
 
-    // Admin notifications collection
+    // Admin notifications
     match /admin_notifications/{notificationId} {
       allow read: if isPartnerOrAdmin();
       allow create: if isAuthenticated();
-      allow update, delete: if isPartnerOrAdmin();
+      allow update, delete: if isSuperAdmin();
     }
 
     // Villages collection
