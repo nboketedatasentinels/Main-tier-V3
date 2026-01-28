@@ -21,7 +21,11 @@
       "Bash(findstr:*)",
       "Bash(xargs ls:*)",
       "Bash(npm install:*)",
-      "Bash(npx playwright install:*)"
+      "Bash(npx playwright install:*)",
+      "Bash(netstat:*)",
+      "Bash(where npx:*)",
+      "Bash(npx playwright:*)",
+      "Bash(more:*)"
     ]
   }
 }

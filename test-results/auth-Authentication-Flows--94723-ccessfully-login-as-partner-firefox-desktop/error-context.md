@@ -1,0 +1,49 @@
+# Page snapshot
+
+```yaml
+- generic [active] [ref=e1]:
+  - generic [ref=e4]:
+    - generic [ref=e9]:
+      - img [ref=e12]
+      - heading "T4L" [level=2] [ref=e15]
+      - paragraph [ref=e16]: Transformation 4 Leaders — track your growth, earn points, and lead change with confidence.
+    - generic [ref=e20]:
+      - paragraph [ref=e21]: Sign In
+      - group [ref=e22]:
+        - generic [ref=e23]: Email*
+        - textbox "Email" [ref=e24]:
+          - /placeholder: your@email.com
+          - text: test-partner@example.com
+      - group [ref=e25]:
+        - generic [ref=e26]: Password*
+        - textbox "Password" [ref=e27]:
+          - /placeholder: ••••••••
+          - text: testpass123
+      - button "Loading... Signing in..." [disabled] [ref=e28]:
+        - generic [ref=e31]: Loading...
+        - text: Signing in...
+      - generic [ref=e32]:
+        - separator [ref=e33]
+        - paragraph [ref=e34]: OR
+        - separator [ref=e35]
+      - button "Loading... Send Magic Link" [disabled] [ref=e36]:
+        - generic [ref=e39]: Loading...
+        - generic [ref=e40]: Send Magic Link
+      - button "Continue with Google" [ref=e41] [cursor=pointer]:
+        - img [ref=e43]
+        - text: Continue with Google
+      - generic [ref=e48]:
+        - link "Forgot password?" [ref=e49] [cursor=pointer]:
+          - /url: /reset-password
+        - paragraph [ref=e50]:
+          - text: Don't have an account?
+          - link "Sign Up" [ref=e51] [cursor=pointer]:
+            - /url: /signup
+  - generic:
+    - region "Notifications-top"
+    - region "Notifications-top-left"
+    - region "Notifications-top-right"
+    - region "Notifications-bottom-left"
+    - region "Notifications-bottom"
+    - region "Notifications-bottom-right"
+```
