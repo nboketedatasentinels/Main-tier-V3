@@ -141,6 +141,24 @@ service cloud.firestore {
       allow delete: if isSuperAdmin();
     }
 
+    // Upgrade requests collection
+    match /upgrade_requests/{requestId} {
+      allow read: if isAuthenticated() && (
+        request.auth.uid == resource.data.user_id ||
+        isPartnerOrAdmin()
+      );
+      allow create: if isAuthenticated() && request.auth.uid == request.resource.data.user_id;
+      allow update: if isPartnerOrAdmin();
+      allow delete: if isSuperAdmin();
+    }
+
+    // Admin notifications collection
+    match /admin_notifications/{notificationId} {
+      allow read: if isPartnerOrAdmin();
+      allow create: if isAuthenticated();
+      allow update, delete: if isPartnerOrAdmin();
+    }
+
     // Villages collection
     match /villages/{villageId} {
       allow read: if isAuthenticated();
