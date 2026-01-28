@@ -19,6 +19,7 @@ import { auth, db } from './firebase'
 import { ORG_COLLECTION } from '@/constants/organizations'
 import { fetchOrganizationsByIds } from '@/services/organizationService'
 import { upsertPartnerAssignments } from '@/services/partnerAdminService'
+import { bulkSyncPartnerOrganizations } from '@/services/partnerAssignmentSyncService'
 import { removeUndefinedFields } from '@/utils/firestore'
 import {
   AdminActivityLogEntry,
@@ -555,7 +556,9 @@ export const assignOrganizations = async (adminId: string, orgIds: string[]) => 
   }
 
   const adminSnapshot = await getDoc(adminRef)
-  const adminRole = normalizeRole((adminSnapshot.data() as { role?: string } | undefined)?.role)
+  const adminData = adminSnapshot.data() as { role?: string; assignedOrganizations?: string[] } | undefined
+  const adminRole = normalizeRole(adminData?.role)
+  const previousOrgIds = (adminData?.assignedOrganizations || []) as string[]
 
   const partnerAssignments: PartnerAssignment[] =
     adminRole === 'partner'
@@ -580,6 +583,12 @@ export const assignOrganizations = async (adminId: string, orgIds: string[]) => 
       ? upsertPartnerAssignments(adminId, partnerAssignments)
       : Promise.resolve(),
   ])
+
+  // Sync organization documents if this is a partner assignment
+  if (adminRole === 'partner') {
+    await bulkSyncPartnerOrganizations(adminId, sanitizedOrgIds, previousOrgIds)
+  }
+
   await logAdminAction({
     action: 'admin_orgs_updated',
     adminId: actorId,

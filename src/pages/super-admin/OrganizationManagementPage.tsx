@@ -42,9 +42,9 @@ import {
   assignAmbassadorToOrganization,
   assignMentorToOrganization,
   assignPartnerToOrganization,
-  fetchAmbassadors,
-  fetchMentors,
-  fetchPartners,
+  listenToAmbassadors,
+  listenToMentors,
+  listenToPartners,
   unassignLeadershipRole,
 } from '@/services/organizationService'
 import {
@@ -109,60 +109,57 @@ export const OrganizationManagementPage: React.FC<OrganizationManagementPageProp
   }, [loadOrganizations])
 
   useEffect(() => {
-    const loadPartners = async () => {
-      setIsLoadingPartners(true)
-      setPartnersError(null)
-      try {
-        const partnerOptions = await fetchPartners()
+    setIsLoadingPartners(true)
+    setPartnersError(null)
+    const unsubscribe = listenToPartners(
+      (partnerOptions) => {
         setPartners(partnerOptions)
-      } catch (err) {
-        console.error(err)
+        setIsLoadingPartners(false)
+      },
+      (error) => {
+        console.error(error)
         setPartnersError('Unable to load partners.')
         toast({ title: 'Unable to load partners', status: 'error' })
-      } finally {
         setIsLoadingPartners(false)
-      }
-    }
-
-    loadPartners()
+      },
+    )
+    return unsubscribe
   }, [toast])
 
   useEffect(() => {
-    const loadMentors = async () => {
-      setIsLoadingMentors(true)
-      setMentorsError(null)
-      try {
-        const mentorOptions = await fetchMentors()
+    setIsLoadingMentors(true)
+    setMentorsError(null)
+    const unsubscribe = listenToMentors(
+      (mentorOptions) => {
         setMentors(mentorOptions)
-      } catch (err) {
-        console.error(err)
+        setIsLoadingMentors(false)
+      },
+      (error) => {
+        console.error(error)
         setMentorsError('Unable to load mentors.')
         toast({ title: 'Unable to load mentors', status: 'error' })
-      } finally {
         setIsLoadingMentors(false)
-      }
-    }
-
-    loadMentors()
+      },
+    )
+    return unsubscribe
   }, [toast])
 
   useEffect(() => {
-    const loadAmbassadors = async () => {
-      setIsLoadingAmbassadors(true)
-      setAmbassadorsError(null)
-      try {
-        const ambassadorOptions = await fetchAmbassadors()
+    setIsLoadingAmbassadors(true)
+    setAmbassadorsError(null)
+    const unsubscribe = listenToAmbassadors(
+      (ambassadorOptions) => {
         setAmbassadors(ambassadorOptions)
-      } catch (err) {
-        console.error(err)
+        setIsLoadingAmbassadors(false)
+      },
+      (error) => {
+        console.error(error)
         setAmbassadorsError('Unable to load ambassadors.')
         toast({ title: 'Unable to load ambassadors', status: 'error' })
-      } finally {
         setIsLoadingAmbassadors(false)
-      }
-    }
-
-    loadAmbassadors()
+      },
+    )
+    return unsubscribe
   }, [toast])
 
   const handleOrganizationCreated = async (org: OrganizationRecord) => {
