@@ -238,6 +238,20 @@ service cloud.firestore {
       allow write: if isSuperAdmin();
     }
 
+    // User courses collection
+    match /user_courses/{courseId} {
+      allow read: if isAuthenticated() && (
+        request.auth.uid == resource.data.user_id ||
+        isPartnerOrAdmin()
+      );
+      allow create: if isAuthenticated() && request.auth.uid == request.resource.data.user_id;
+      allow update: if isAuthenticated() && (
+        request.auth.uid == resource.data.user_id ||
+        isPartnerOrAdmin()
+      );
+      allow delete: if isSuperAdmin();
+    }
+
     // Default: deny all other access
     match /{document=**} {
       allow read, write: if false;
