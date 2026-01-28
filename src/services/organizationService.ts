@@ -34,6 +34,10 @@ import {
   resolveJourneyType,
 } from '@/utils/journeyType'
 import { inviteUsersBulk } from './invitationService'
+import {
+  syncOrganizationPartnerChange,
+  syncRemovePartnerFromOrganization,
+} from './partnerAssignmentSyncService'
 export { checkOrganizationAccess, fetchOrganizationEngagementStats, fetchOrganizationUsers } from './organizationUserService'
 
 const safeCodeChars = '23456789ABCDEFGHJKLMNPQRSTUVWXYZ'
@@ -367,6 +371,8 @@ const assignLeadershipRole = async (organizationId: string, userId: string, role
   const userRef = doc(usersCollection, userId)
   const auditRef = doc(adminActivityCollection)
 
+  let previousUserId: string | null = null
+
   await runTransaction(db, async (transaction) => {
     const [organizationSnap, userSnap] = await Promise.all([
       transaction.get(organizationRef),
@@ -384,6 +390,8 @@ const assignLeadershipRole = async (organizationId: string, userId: string, role
       throw new Error(`User role must be ${roleConfig.requiredRole}.`)
     }
 
+    previousUserId = (organizationSnap.data() as OrganizationRecord)[roleConfig.field] as string | null
+
     transaction.update(organizationRef, {
       [roleConfig.field]: userId,
       [roleConfig.assignedAtField]: serverTimestamp(),
@@ -399,10 +407,15 @@ const assignLeadershipRole = async (organizationId: string, userId: string, role
         userId,
         role,
         actorId,
-        previousUserId: (organizationSnap.data() as OrganizationRecord)[roleConfig.field] as string | null,
+        previousUserId,
       }),
     )
   })
+
+  // Sync partner's assignedOrganizations if this is a partner assignment
+  if (role === 'partner') {
+    await syncOrganizationPartnerChange(organizationId, userId, previousUserId)
+  }
 }
 
 export const assignMentorToOrganization = async (organizationId: string, mentorId: string) =>
@@ -422,12 +435,14 @@ export const unassignLeadershipRole = async (organizationId: string, role: strin
   const organizationRef = doc(db, ORG_COLLECTION, organizationId)
   const auditRef = doc(adminActivityCollection)
 
+  let previousUserId: string | null = null
+
   await runTransaction(db, async (transaction) => {
     const organizationSnap = await transaction.get(organizationRef)
     if (!organizationSnap.exists()) {
       throw new Error('Organization record not found.')
     }
-    const previousUserId = (organizationSnap.data() as OrganizationRecord)[roleConfig.field] as string | null
+    previousUserId = (organizationSnap.data() as OrganizationRecord)[roleConfig.field] as string | null
 
     transaction.update(organizationRef, {
       [roleConfig.field]: null,
@@ -448,6 +463,11 @@ export const unassignLeadershipRole = async (organizationId: string, role: strin
       }),
     )
   })
+
+  // Sync partner's assignedOrganizations if this was a partner unassignment
+  if (role === 'partner' && previousUserId) {
+    await syncRemovePartnerFromOrganization(previousUserId, organizationId)
+  }
 }
 
 export const fetchOrganizationDetails = async (organizationId: string): Promise<OrganizationRecord | null> => {
@@ -773,4 +793,58 @@ export const listenToAssignedOrganizations = (
       unsubscribeOrganizations()
     }
   }
+}
+
+/**
+ * Real-time listener for partners.
+ * Updates automatically when users gain/lose the partner role.
+ */
+export const listenToPartners = (
+  onChange: (partners: OrganizationLead[]) => void,
+  onError?: (error: FirestoreError) => void,
+) => {
+  const partnerQuery = query(usersCollection, where('role', '==', 'partner'))
+  return onSnapshot(
+    partnerQuery,
+    (snapshot) => {
+      onChange(snapshot.docs.map(buildLead))
+    },
+    onError,
+  )
+}
+
+/**
+ * Real-time listener for mentors.
+ * Updates automatically when users gain/lose the mentor role.
+ */
+export const listenToMentors = (
+  onChange: (mentors: OrganizationLead[]) => void,
+  onError?: (error: FirestoreError) => void,
+) => {
+  const mentorQuery = query(usersCollection, where('role', '==', 'mentor'))
+  return onSnapshot(
+    mentorQuery,
+    (snapshot) => {
+      onChange(snapshot.docs.map(buildLead))
+    },
+    onError,
+  )
+}
+
+/**
+ * Real-time listener for ambassadors.
+ * Updates automatically when users gain/lose the ambassador role.
+ */
+export const listenToAmbassadors = (
+  onChange: (ambassadors: OrganizationLead[]) => void,
+  onError?: (error: FirestoreError) => void,
+) => {
+  const ambassadorQuery = query(usersCollection, where('role', '==', 'ambassador'))
+  return onSnapshot(
+    ambassadorQuery,
+    (snapshot) => {
+      onChange(snapshot.docs.map(buildLead))
+    },
+    onError,
+  )
 }
