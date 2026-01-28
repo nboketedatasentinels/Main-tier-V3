@@ -4,7 +4,7 @@ import {
   doc,
   getDoc,
   serverTimestamp,
-  writeBatch,
+  updateDoc,
 } from 'firebase/firestore'
 import { db } from './firebase'
 import { ORG_COLLECTION } from '@/constants/organizations'
@@ -20,6 +20,24 @@ import { ORG_COLLECTION } from '@/constants/organizations'
  */
 
 /**
+ * Safely update a document, ignoring errors if the document doesn't exist.
+ */
+const safeUpdate = async (
+  collectionName: string,
+  docId: string,
+  data: Record<string, unknown>,
+): Promise<void> => {
+  try {
+    const docRef = doc(db, collectionName, docId)
+    await updateDoc(docRef, data)
+  } catch (error) {
+    // Silently ignore if document doesn't exist - this is expected for some users
+    // who may only have a profile or user document but not both
+    console.debug(`[PartnerSync] Could not update ${collectionName}/${docId}:`, error)
+  }
+}
+
+/**
  * Sync partner's assignedOrganizations when an organization's partner changes.
  * Called after assignLeadershipRole() updates the organization.
  */
@@ -30,37 +48,29 @@ export const syncOrganizationPartnerChange = async (
 ): Promise<void> => {
   if (newPartnerId === previousPartnerId) return
 
-  const batch = writeBatch(db)
+  const updates: Promise<void>[] = []
 
   // Remove org from previous partner's assignedOrganizations
   if (previousPartnerId) {
-    const prevPartnerRef = doc(db, 'profiles', previousPartnerId)
-    const prevPartnerUserRef = doc(db, 'users', previousPartnerId)
-    batch.update(prevPartnerRef, {
+    const removeData = {
       assignedOrganizations: arrayRemove(organizationId),
       assignedOrganizationsUpdatedAt: serverTimestamp(),
-    })
-    batch.update(prevPartnerUserRef, {
-      assignedOrganizations: arrayRemove(organizationId),
-      assignedOrganizationsUpdatedAt: serverTimestamp(),
-    })
+    }
+    updates.push(safeUpdate('profiles', previousPartnerId, removeData))
+    updates.push(safeUpdate('users', previousPartnerId, removeData))
   }
 
   // Add org to new partner's assignedOrganizations
   if (newPartnerId) {
-    const newPartnerRef = doc(db, 'profiles', newPartnerId)
-    const newPartnerUserRef = doc(db, 'users', newPartnerId)
-    batch.update(newPartnerRef, {
+    const addData = {
       assignedOrganizations: arrayUnion(organizationId),
       assignedOrganizationsUpdatedAt: serverTimestamp(),
-    })
-    batch.update(newPartnerUserRef, {
-      assignedOrganizations: arrayUnion(organizationId),
-      assignedOrganizationsUpdatedAt: serverTimestamp(),
-    })
+    }
+    updates.push(safeUpdate('profiles', newPartnerId, addData))
+    updates.push(safeUpdate('users', newPartnerId, addData))
   }
 
-  await batch.commit()
+  await Promise.all(updates)
 }
 
 /**
@@ -82,36 +92,42 @@ export const bulkSyncPartnerOrganizations = async (
 
   if (addedOrgs.length === 0 && removedOrgs.length === 0) return
 
-  const batch = writeBatch(db)
+  const updates: Promise<void>[] = []
 
   // Set transformationPartnerId on newly added organizations
   for (const orgId of addedOrgs) {
-    const orgRef = doc(db, ORG_COLLECTION, orgId)
-    batch.update(orgRef, {
-      transformationPartnerId: partnerId,
-      assignedPartnerAt: serverTimestamp(),
-      leadershipUpdatedAt: serverTimestamp(),
-    })
+    updates.push(
+      safeUpdate(ORG_COLLECTION, orgId, {
+        transformationPartnerId: partnerId,
+        assignedPartnerAt: serverTimestamp(),
+        leadershipUpdatedAt: serverTimestamp(),
+      }),
+    )
   }
 
   // Clear transformationPartnerId from removed organizations (only if it matches this partner)
   for (const orgId of removedOrgs) {
     const orgRef = doc(db, ORG_COLLECTION, orgId)
-    // Need to check if current partner matches before clearing
-    const orgSnap = await getDoc(orgRef)
-    if (orgSnap.exists()) {
-      const orgData = orgSnap.data()
-      if (orgData.transformationPartnerId === partnerId) {
-        batch.update(orgRef, {
-          transformationPartnerId: null,
-          assignedPartnerAt: null,
-          leadershipUpdatedAt: serverTimestamp(),
-        })
+    try {
+      const orgSnap = await getDoc(orgRef)
+      if (orgSnap.exists()) {
+        const orgData = orgSnap.data()
+        if (orgData.transformationPartnerId === partnerId) {
+          updates.push(
+            safeUpdate(ORG_COLLECTION, orgId, {
+              transformationPartnerId: null,
+              assignedPartnerAt: null,
+              leadershipUpdatedAt: serverTimestamp(),
+            }),
+          )
+        }
       }
+    } catch (error) {
+      console.debug(`[PartnerSync] Could not check org ${orgId}:`, error)
     }
   }
 
-  await batch.commit()
+  await Promise.all(updates)
 }
 
 /**
@@ -122,19 +138,13 @@ export const syncRemovePartnerFromOrganization = async (
   partnerId: string,
   organizationId: string,
 ): Promise<void> => {
-  const batch = writeBatch(db)
-
-  const partnerRef = doc(db, 'profiles', partnerId)
-  const partnerUserRef = doc(db, 'users', partnerId)
-
-  batch.update(partnerRef, {
+  const removeData = {
     assignedOrganizations: arrayRemove(organizationId),
     assignedOrganizationsUpdatedAt: serverTimestamp(),
-  })
-  batch.update(partnerUserRef, {
-    assignedOrganizations: arrayRemove(organizationId),
-    assignedOrganizationsUpdatedAt: serverTimestamp(),
-  })
+  }
 
-  await batch.commit()
+  await Promise.all([
+    safeUpdate('profiles', partnerId, removeData),
+    safeUpdate('users', partnerId, removeData),
+  ])
 }
