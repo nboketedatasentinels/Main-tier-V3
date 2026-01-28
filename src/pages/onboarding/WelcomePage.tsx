@@ -13,7 +13,6 @@ import { useAuth } from '@/hooks/useAuth'
 import { doc, setDoc, serverTimestamp } from 'firebase/firestore'
 import { db } from '@/services/firebase'
 import { getLandingPathForRole } from '@/utils/roleRouting'
-import { creditReferralPoints } from '@/services/referralService'
 
 export const WelcomePage: React.FC = () => {
   const { profile, user } = useAuth()
@@ -47,14 +46,9 @@ export const WelcomePage: React.FC = () => {
         }, { merge: true }),
       ])
 
-      // Credit referral points if this user was referred
-      if (profile.referredBy && profile.referralStatus === 'pending') {
-        try {
-          await creditReferralPoints(user.uid)
-        } catch (error) {
-          console.error('🟠 [Onboarding] Failed to credit referral points', error)
-        }
-      }
+      // Note: Referral points are now awarded automatically via Cloud Function
+      // when the referred user completes their first platform activity (writes to pointsLedger).
+      // This ensures genuine engagement before rewarding the referrer.
 
       toast({
         title: 'Welcome!',
