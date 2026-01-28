@@ -1,5 +1,4 @@
 import React, { useMemo } from 'react'
-import DatePicker from 'react-datepicker'
 import {
   Box,
   FormControl,
@@ -10,8 +9,7 @@ import {
   Text,
   VStack,
 } from '@chakra-ui/react'
-import { format, addDays, setHours, setMinutes, isAfter, isBefore, startOfDay } from 'date-fns'
-import 'react-datepicker/dist/react-datepicker.css'
+import { format, addDays, setHours, setMinutes } from 'date-fns'
 
 // Comprehensive world timezones grouped by region
 const TIMEZONE_GROUPS = {
@@ -161,65 +159,25 @@ export const DateTimePicker: React.FC<DateTimePickerProps> = ({
     }
   }, [])
 
-  // Filter dates - only allow future dates
-  const filterDate = (date: Date) => {
-    const today = startOfDay(new Date())
-    if (isBefore(date, today)) return false
-    if (minDate && isBefore(date, startOfDay(minDate))) return false
-    if (maxDate && isAfter(date, startOfDay(maxDate))) return false
-    return true
-  }
+  const selectedDateValue = selectedDate ? format(selectedDate, 'yyyy-MM-dd') : ''
+  const minDateValue = minDate ? format(minDate, 'yyyy-MM-dd') : undefined
+  const maxDateValue = maxDate ? format(maxDate, 'yyyy-MM-dd') : undefined
 
   return (
     <VStack spacing={4} align="stretch" w="100%">
       {/* Date Picker */}
       <FormControl isInvalid={Boolean(dateError)} isRequired={isRequired}>
         <FormLabel fontSize="sm" mb={1}>{dateLabel}</FormLabel>
-        <Box
-          sx={{
-            '.react-datepicker-wrapper': { width: '100%' },
-            '.react-datepicker__input-container': { width: '100%' },
-            '.react-datepicker': {
-              fontFamily: 'inherit',
-              border: '1px solid',
-              borderColor: 'border.subtle',
-              borderRadius: 'lg',
-              boxShadow: 'lg',
-            },
-            '.react-datepicker__header': {
-              bg: 'surface.subtle',
-              borderBottom: '1px solid',
-              borderColor: 'border.subtle',
-            },
-            '.react-datepicker__day--selected': {
-              bg: 'primary.500',
-              color: 'white',
-            },
-            '.react-datepicker__day:hover': {
-              bg: 'primary.100',
-            },
-            '.react-datepicker__day--disabled': {
-              color: 'gray.300',
-            },
-          }}
-        >
-          <DatePicker
-            selected={selectedDate}
-            onChange={onDateChange}
-            filterDate={filterDate}
-            minDate={minDate}
-            maxDate={maxDate}
-            dateFormat="EEEE, MMMM d, yyyy"
-            placeholderText="Select a date"
-            customInput={
-              <Input
-                placeholder="Select a date"
-                cursor="pointer"
-                readOnly
-              />
-            }
-            popperPlacement="bottom-start"
-            showPopperArrow={false}
+        <Box>
+          <Input
+            type="date"
+            value={selectedDateValue}
+            min={minDateValue}
+            max={maxDateValue}
+            onChange={(event) => {
+              const value = event.target.value
+              onDateChange(value ? new Date(`${value}T00:00:00`) : null)
+            }}
           />
         </Box>
         {dateError && (
