@@ -194,6 +194,13 @@ export const updateUserProfile = async (
     payload.lastModifiedAt = serverTimestamp()
   }
 
+  // Add role change audit trail if role is being updated
+  const hasRoleUpdate = Object.prototype.hasOwnProperty.call(sanitized, 'role')
+  if (hasRoleUpdate && actor) {
+    payload.roleChangedBy = actor.id
+    payload.roleChangedAt = serverTimestamp()
+  }
+
   await updateDoc(doc(db, 'users', userId), payload)
 
   const hasMentorUpdate = Object.prototype.hasOwnProperty.call(sanitized, 'mentorId')

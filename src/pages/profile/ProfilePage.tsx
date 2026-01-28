@@ -87,7 +87,7 @@ import { useAuth } from '@/hooks/useAuth'
 import type { StandardRole, Organization, DashboardPreferences } from '@/types'
 import { TransformationTier, UserRole } from '@/types'
 import { normalizeRole } from '@/utils/role'
-import { validateCompanyCode } from '@/services/organizationService'
+import { incrementOrganizationMemberCount, validateCompanyCode } from '@/services/organizationService'
 import { CORE_VALUES } from '@/config/personality-data'
 import BadgeDisplay from '@/components/profile/BadgeDisplay'
 
@@ -245,7 +245,7 @@ const PaymentHistory: React.FC<{ hasRecords: boolean }> = ({ hasRecords }) => {
 
 export const ProfilePage: React.FC = () => {
   const navigate = useNavigate()
-  const { user, profile } = useAuth()
+  const { user, profile, refreshProfile } = useAuth()
   const toast = useToast()
 
   const [loading, setLoading] = useState(true)
@@ -695,6 +695,9 @@ export const ProfilePage: React.FC = () => {
       updatedAt: serverTimestamp(),
     }
 
+    const shouldIncrementMemberCount =
+      !!companyOrganization?.id && companyOrganization.id !== profile?.companyId
+
     try {
       await Promise.all([
         updateDoc(doc(db, 'profiles', user.uid), {
@@ -707,6 +710,16 @@ export const ProfilePage: React.FC = () => {
         }),
       ])
 
+      if (companyOrganization?.id && shouldIncrementMemberCount) {
+        try {
+          await incrementOrganizationMemberCount(companyOrganization.id)
+        } catch (incrementError) {
+          console.warn('Unable to increment organization member count', incrementError)
+        }
+      }
+
+      await refreshProfile({ reason: 'company-code-upgrade' })
+
       const updatedProfile = {
         ...profileData,
         companyCode: trimmedCode,
@@ -717,10 +730,10 @@ export const ProfilePage: React.FC = () => {
       setEditedData(updatedProfile)
 
       toast({
-        title: 'Company code updated',
+        title: 'You are now a paid member',
         description: companyOrganization?.name
-          ? `Connected to ${companyOrganization.name}.`
-          : 'Company code saved successfully.',
+          ? `Connected to ${companyOrganization.name}. Your membership has been upgraded.`
+          : 'Company code saved successfully. Your membership has been upgraded.',
         status: 'success',
         duration: 4000,
       })

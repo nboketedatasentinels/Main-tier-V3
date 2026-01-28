@@ -37,6 +37,12 @@ export const syncUserToProfile = functions
     try {
       console.log(`Syncing user ${userId} to profiles collection...`);
 
+      // userData is guaranteed to exist since change.after.exists is true
+      if (!userData) {
+        console.error(`User data is unexpectedly undefined for ${userId}`);
+        return;
+      }
+
       // Merge the user data into profiles collection
       // This ensures profiles always has the latest data from users
       await db.collection("profiles").doc(userId).set(
