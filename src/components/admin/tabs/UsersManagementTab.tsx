@@ -81,13 +81,13 @@ export const UsersManagementTab = ({ users: propUsers, loading: propLoading }: U
   })
 
   useEffect(() => {
-    fetchAdminOrganizationsList(isAdmin)
+    fetchAdminOrganizationsList()
       .then(setOrganizations)
       .catch((err) => {
         console.error(err)
         setError(formatAdminFirestoreError(err, 'Unable to load organizations.'))
       })
-  }, [isAdmin])
+  }, [])
 
   const visibleTimeframeFilter = useMemo(() => propUsers.some((user) => !!user.lastActive), [propUsers])
 

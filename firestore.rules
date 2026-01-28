@@ -12,7 +12,9 @@ service cloud.firestore {
     }
 
     function getUserRole() {
-      return get(/databases/$(database)/documents/profiles/$(request.auth.uid)).data.role;
+      return isAuthenticated() && exists(/databases/$(database)/documents/profiles/$(request.auth.uid))
+        ? get(/databases/$(database)/documents/profiles/$(request.auth.uid)).data.get('role', '')
+        : '';
     }
 
     function isSuperAdmin() {

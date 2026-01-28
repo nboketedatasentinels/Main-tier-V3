@@ -698,8 +698,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
         updateProfileState(ensuredProfile, 'auth-state-change')
         recordProfileLoad(ensuredProfile)
-        void maybeNormalizeStoredRole(ensuredProfile, currentUser.uid)
         if (ensuredProfile) {
+          void maybeNormalizeStoredRole(ensuredProfile, currentUser.uid)
           void attemptComplementaryCourseAssignment(currentUser.uid)
         }
         setProfileLoading(false)
