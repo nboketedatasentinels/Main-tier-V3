@@ -442,7 +442,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         organizationJourneyType: validatedOrganization?.journeyType ?? null,
       })
       const programDurationWeeks = JOURNEY_META[resolvedJourneyType].weeks
-      const journeyStartDate = validatedOrganization?.cohortStartDate || undefined
+      const journeyStartDate = validatedOrganization?.cohortStartDate ?? null
 
       console.log('🟣 [Auth] Creating new profile with role:', role)
 
@@ -898,7 +898,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         organizationJourneyType: validatedOrganization?.journeyType ?? null,
       })
       const programDurationWeeks = JOURNEY_META[resolvedJourneyType].weeks
-      const journeyStartDate = validatedOrganization?.cohortStartDate || undefined
+      const journeyStartDate = validatedOrganization?.cohortStartDate ?? null
 
       const profileData: UserProfile = {
         id: uid,

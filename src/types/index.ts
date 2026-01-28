@@ -54,7 +54,7 @@ export interface UserProfile {
   // Journey & Progress
   journeyType: "4W" | "6W" | "3M" | "6M" | "9M" | "12M";
   programDurationWeeks?: number;
-  journeyStartDate?: string;
+  journeyStartDate?: string | null;
   currentJourneyId?: string
   currentWeek?: number
   totalPoints: number
