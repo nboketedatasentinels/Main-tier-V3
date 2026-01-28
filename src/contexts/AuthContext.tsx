@@ -43,6 +43,26 @@ interface AuthProviderProps {
   children: React.ReactNode
 }
 
+const normalizeRoleKey = (role: unknown) => {
+  if (!role) return ''
+  return role.toString().trim().toLowerCase().replace(/[-\s]+/g, '_')
+}
+
+const roleAliasKeys = new Set([
+  'company_admin',
+  'admin',
+  'administrator',
+  'partner',
+  'super_admin',
+  'superadmin',
+  'super',
+  'mentor',
+  'ambassador',
+  'free_user',
+  'paid_member',
+  'user',
+])
+
 const resolveInitialJourneyType = (params: {
   isFreeTierUser: boolean
   organizationJourneyType?: JourneyType | null
@@ -66,6 +86,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     return localStorage.getItem('lastProfileLoadAt')
   })()
   const lastProfileLoadAtRef = useRef<string | null>(initialLastProfileLoadAt)
+  const roleNormalizationRef = useRef({ userId: '', role: '' })
   const enableProfileRealtime = import.meta.env.VITE_ENABLE_PROFILE_REALTIME === 'true'
   const complementaryCourseAssignmentRef = useRef({ inFlight: false, lastAttemptAt: 0, lastUserId: '' })
   const refreshStateRef = useRef({
@@ -114,6 +135,47 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     if (!assignments?.length) return ''
     return [...assignments].sort().join('|')
   }
+
+  const maybeNormalizeStoredRole = useCallback(
+    async (profileToNormalize: UserProfile, userId: string) => {
+      const rawRole = profileToNormalize.role
+      if (!rawRole) return
+
+      const normalized = normalizeRole(rawRole)
+      const aliasKey = normalizeRoleKey(rawRole)
+      const shouldNormalize =
+        aliasKey &&
+        roleAliasKeys.has(aliasKey) &&
+        rawRole.toString() !== normalized &&
+        (roleNormalizationRef.current.userId !== userId || roleNormalizationRef.current.role !== rawRole.toString())
+
+      if (!shouldNormalize) return
+
+      roleNormalizationRef.current = { userId, role: rawRole.toString() }
+
+      try {
+        await Promise.all([
+          updateDoc(doc(db, 'profiles', userId), {
+            role: normalized,
+            updatedAt: serverTimestamp(),
+          }),
+          updateDoc(doc(db, 'users', userId), {
+            role: normalized,
+            updatedAt: serverTimestamp(),
+          }),
+        ])
+        console.log('🟣 [Auth] Normalized stored role value', { userId, from: rawRole, to: normalized })
+      } catch (error) {
+        console.warn('🟠 [Auth] Unable to normalize stored role value', {
+          userId,
+          message: (error as Error)?.message,
+          stack: (error as Error)?.stack,
+          raw: error,
+        })
+      }
+    },
+    []
+  )
 
   const areProfilesEquivalent = (previous: UserProfile | null, next: UserProfile | null) => {
     if (previous === next) return true
@@ -636,6 +698,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
         updateProfileState(ensuredProfile, 'auth-state-change')
         recordProfileLoad(ensuredProfile)
+        void maybeNormalizeStoredRole(ensuredProfile, currentUser.uid)
         if (ensuredProfile) {
           void attemptComplementaryCourseAssignment(currentUser.uid)
         }
@@ -668,6 +731,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
           console.log('🔁 [Auth] Profile updated via snapshot', updatedProfile.role)
           updateProfileState(updatedProfile, 'realtime-snapshot')
           recordProfileLoad(updatedProfile)
+          void maybeNormalizeStoredRole(updatedProfile, currentUser.uid)
           void attemptComplementaryCourseAssignment(currentUser.uid)
           setProfileStatus('ready')
         },
@@ -690,6 +754,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     attemptComplementaryCourseAssignment,
     enableProfileRealtime,
     extractCustomClaims,
+    maybeNormalizeStoredRole,
     recordProfileLoad,
     updateProfileState,
 // Note: `auth` is intentionally excluded - it's a stable Firebase instance
