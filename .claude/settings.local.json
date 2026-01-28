@@ -25,7 +25,9 @@
       "Bash(netstat:*)",
       "Bash(where npx:*)",
       "Bash(npx playwright:*)",
-      "Bash(more:*)"
+      "Bash(more:*)",
+      "Bash(ls -la \"c:\\\\Users\\\\Kekab\\\\Man-tier-v2\\\\src\\\\services\"\" | grep -i \"admin|user \")",
+      "Bash(ls:*)"
     ]
   }
 }

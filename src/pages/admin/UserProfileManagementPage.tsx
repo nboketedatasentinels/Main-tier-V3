@@ -53,7 +53,7 @@ import {
   type ImpactLogSummary,
   type UserProfileExtended,
 } from '@/services/userProfileService'
-import { deleteUserAccount } from '@/services/userManagementService'
+import { deleteUserAccount, fetchOrganizationsList, type OrganizationOption } from '@/services/userManagementService'
 
 type ViewContext = 'partner' | 'mentor'
 
@@ -105,6 +105,9 @@ export const UserProfileManagementPage: React.FC<{ viewContext?: ViewContext }> 
   const [notesInput, setNotesInput] = useState('')
   const accessLoggedRef = useRef(false)
   const [canAccessProfile, setCanAccessProfile] = useState<boolean | null>(null)
+  const [organizationsList, setOrganizationsList] = useState<OrganizationOption[]>([])
+  const [organizationsLoading, setOrganizationsLoading] = useState(false)
+  const [selectedOrganizationId, setSelectedOrganizationId] = useState<string>('')
 
   const isMentorView = viewContext === 'mentor' || isMentor
 
@@ -250,12 +253,33 @@ export const UserProfileManagementPage: React.FC<{ viewContext?: ViewContext }> 
     accessLoggedRef.current = true
   }, [canAccessProfile, profileData, viewerProfile])
 
+  // Fetch organizations list when entering edit mode (for role promotion)
+  useEffect(() => {
+    if (!isEditing || !isSuperAdmin) return
+    if (organizationsList.length > 0) return
+
+    const loadOrganizations = async () => {
+      setOrganizationsLoading(true)
+      try {
+        const orgs = await fetchOrganizationsList()
+        setOrganizationsList(orgs)
+      } catch (err) {
+        console.error('Failed to fetch organizations', err)
+      } finally {
+        setOrganizationsLoading(false)
+      }
+    }
+
+    loadOrganizations()
+  }, [isEditing, isSuperAdmin, organizationsList.length])
+
   const handleEditToggle = () => {
     if (!profileData) return
     setIsEditing(true)
     setEditedProfile(profileData)
     setCoreValuesInput((profileData.coreValues || []).join(', '))
     setNotesInput(profileData.notes || '')
+    setSelectedOrganizationId(profileData.companyId || '')
   }
 
   const handleCancel = () => {
@@ -264,7 +288,21 @@ export const UserProfileManagementPage: React.FC<{ viewContext?: ViewContext }> 
     setEditedProfile(profileData)
     setCoreValuesInput((profileData.coreValues || []).join(', '))
     setNotesInput(profileData.notes || '')
+    setSelectedOrganizationId(profileData.companyId || '')
   }
+
+  // Determine if organization selection is required for role promotion
+  const requiresOrganizationSelection = useMemo(() => {
+    if (!editedProfile || !profileData) return false
+    const originalRole = profileData.role
+    const newRole = editedProfile.role
+    // Only require org selection when promoting from free_user to paid_member
+    // and user doesn't already have an organization
+    if (originalRole === 'free_user' && newRole === 'paid_member' && !profileData.companyId) {
+      return true
+    }
+    return false
+  }, [editedProfile, profileData])
 
   const handleSave = async () => {
     if (!profileData || !editedProfile || !userId) return
@@ -327,6 +365,24 @@ export const UserProfileManagementPage: React.FC<{ viewContext?: ViewContext }> 
     }
     if (editableFields.has('role') && editedProfile.role !== profileData.role) {
       updates.role = editedProfile.role
+      // When promoting from free_user to paid_member, also update membership status
+      if (profileData.role === 'free_user' && editedProfile.role === 'paid_member') {
+        updates.membershipStatus = 'paid'
+      }
+    }
+
+    // Handle organization assignment during free user promotion
+    if (requiresOrganizationSelection) {
+      if (!selectedOrganizationId) {
+        toast({ title: 'Please select an organization for the promoted user', status: 'warning' })
+        return
+      }
+      const selectedOrg = organizationsList.find((org) => org.id === selectedOrganizationId)
+      if (selectedOrg) {
+        updates.companyId = selectedOrg.id
+        updates.companyCode = selectedOrg.code || ''
+        updates.companyName = selectedOrg.name
+      }
     }
     if (editableFields.has('notes') && notesInput !== (profileData.notes || '')) {
       updates.notes = notesInput
@@ -363,16 +419,26 @@ export const UserProfileManagementPage: React.FC<{ viewContext?: ViewContext }> 
 
     setIsSaving(true)
     const previous = profileData
-    const optimistic = {
-      ...profileData,
+    const optimisticUpdates = {
       ...updates,
       coreValues,
       notes: notesInput,
       lastModifiedByName: viewerProfile?.fullName || viewerProfile?.email || 'Unknown admin',
       lastModifiedAt: new Date().toISOString(),
+    }
+    const optimistic = {
+      ...profileData,
+      ...optimisticUpdates,
     } as UserProfileExtended
     setProfileData(optimistic)
     setEditedProfile(optimistic)
+    // Update organization state if organization was assigned
+    if (organization && updates.companyId && updates.companyId !== organization.id) {
+      const selectedOrg = organizationsList.find((org) => org.id === updates.companyId)
+      if (selectedOrg) {
+        setOrganization({ id: selectedOrg.id, name: selectedOrg.name, code: selectedOrg.code })
+      }
+    }
 
     try {
       const allowedFieldsList = Array.from(editableFields)
@@ -382,13 +448,33 @@ export const UserProfileManagementPage: React.FC<{ viewContext?: ViewContext }> 
         allowedFieldsList,
         viewerProfile ? { id: viewerProfile.id, name: viewerProfile.fullName || viewerProfile.email } : null,
       )
-      toast({ title: 'Profile updated', status: 'success' })
+      // Provide specific feedback for role changes
+      const roleChanged = updates.role && updates.role !== profileData.role
+      if (roleChanged && requiresOrganizationSelection) {
+        const selectedOrg = organizationsList.find((org) => org.id === selectedOrganizationId)
+        toast({
+          title: 'User promoted successfully',
+          description: `Role changed to ${updates.role}${selectedOrg ? ` and assigned to ${selectedOrg.name}` : ''}`,
+          status: 'success',
+          duration: 5000,
+        })
+      } else if (roleChanged) {
+        toast({
+          title: 'Role updated',
+          description: `Role changed from ${profileData.role} to ${updates.role}`,
+          status: 'success',
+          duration: 4000,
+        })
+      } else {
+        toast({ title: 'Profile updated', status: 'success' })
+      }
       setIsEditing(false)
+      setSelectedOrganizationId('')
     } catch (err) {
       console.error(err)
       setProfileData(previous)
       setEditedProfile(previous)
-      toast({ title: 'Unable to save changes', status: 'error' })
+      toast({ title: 'Unable to save changes', status: 'error', description: 'Please try again.' })
     } finally {
       setIsSaving(false)
     }
@@ -672,6 +758,26 @@ export const UserProfileManagementPage: React.FC<{ viewContext?: ViewContext }> 
                         <option value="super_admin">Super Admin</option>
                       </Select>
                     </FormControl>
+                    {requiresOrganizationSelection && (
+                      <FormControl isRequired>
+                        <FormLabel>Assign to Organization</FormLabel>
+                        <Select
+                          placeholder={organizationsLoading ? 'Loading organizations...' : 'Select organization'}
+                          value={selectedOrganizationId}
+                          onChange={(event) => setSelectedOrganizationId(event.target.value)}
+                          isDisabled={!isEditing || organizationsLoading}
+                        >
+                          {organizationsList.map((org) => (
+                            <option key={org.id} value={org.id}>
+                              {org.name} {org.code ? `(${org.code})` : ''}
+                            </option>
+                          ))}
+                        </Select>
+                        <Text fontSize="xs" color="orange.500" mt={1}>
+                          Required when promoting from free user to paid member
+                        </Text>
+                      </FormControl>
+                    )}
                     <FormControl>
                       <FormLabel>Membership status</FormLabel>
                       <Select
