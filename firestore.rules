@@ -275,6 +275,25 @@ service cloud.firestore {
       allow delete: if isSuperAdmin();
     }
 
+    // System health alerts
+    match /system_health_alerts/{alertId} {
+      allow read: if isSuperAdmin();
+      allow write: if isSuperAdmin();
+    }
+
+    // Task notifications
+    match /task_notifications/{taskId} {
+      allow read: if isSuperAdmin();
+      allow write: if isSuperAdmin();
+    }
+
+    // Admin activity log
+    match /admin_activity_log/{entryId} {
+      allow read: if isSuperAdmin();
+      allow create: if isAuthenticated();
+      allow update, delete: if isSuperAdmin();
+    }
+
     // Default: deny all other access
     match /{document=**} {
       allow read, write: if false;
