@@ -68,6 +68,48 @@ export interface CreateSessionParams {
   creatorEmail: string
 }
 
+const isNonEmptyString = (value: unknown): value is string =>
+  typeof value === 'string' && value.trim().length > 0
+
+const isValidDate = (value: unknown): value is Date =>
+  value instanceof Date && !Number.isNaN(value.getTime())
+
+const normalizeParticipants = (participants: string[], createdBy: string): string[] => {
+  const unique = new Set(
+    participants
+      .filter((participant) => isNonEmptyString(participant))
+      .map((participant) => participant.trim())
+  )
+  unique.delete(createdBy)
+  return Array.from(unique)
+}
+
+const assertValidCreateParams = (params: CreateSessionParams): string[] => {
+  if (!isNonEmptyString(params.title)) {
+    throw new Error('Session title is required')
+  }
+  if (!isNonEmptyString(params.createdBy)) {
+    throw new Error('Session creator is required')
+  }
+  if (!isNonEmptyString(params.timezone)) {
+    throw new Error('Session timezone is required')
+  }
+  if (!isValidDate(params.scheduledAt)) {
+    throw new Error('Session scheduledAt must be a valid date')
+  }
+
+  const normalizedParticipants = normalizeParticipants(params.participants, params.createdBy)
+  if (normalizedParticipants.length === 0) {
+    throw new Error('At least one participant is required')
+  }
+
+  if (!isNonEmptyString(params.creatorName) || !isNonEmptyString(params.creatorEmail)) {
+    throw new Error('Creator name and email are required')
+  }
+
+  return normalizedParticipants
+}
+
 // Helper to get user's journey info for points
 async function getUserJourneyInfo(uid: string): Promise<{ journeyType: JourneyType; weekNumber: number } | null> {
   try {
@@ -92,6 +134,7 @@ async function getUserJourneyInfo(uid: string): Promise<{ journeyType: JourneyTy
  */
 export async function createPeerSession(params: CreateSessionParams): Promise<string> {
   const batch = writeBatch(db)
+  const normalizedParticipants = assertValidCreateParams(params)
 
   // Generate session document reference
   const sessionRef = doc(collection(db, 'peer_sessions'))
@@ -103,7 +146,7 @@ export async function createPeerSession(params: CreateSessionParams): Promise<st
     platform: params.platform,
     meetingLink: params.meetingLink,
     timezone: params.timezone,
-    participants: [params.createdBy, ...params.participants],
+    participants: [params.createdBy, ...normalizedParticipants],
     status: 'scheduled',
     scheduledAt: scheduledAtTimestamp,
     confirmationDeadline: Timestamp.fromDate(addDays(params.scheduledAt, -1)),
@@ -117,7 +160,10 @@ export async function createPeerSession(params: CreateSessionParams): Promise<st
   batch.set(sessionRef, sessionPayload)
 
   // Create invitation documents for each participant (excluding creator)
-  for (const participantId of params.participants) {
+  for (const participantId of normalizedParticipants) {
+    if (!isNonEmptyString(participantId)) {
+      continue
+    }
     const inviteRef = doc(collection(db, 'peer_session_requests'))
     batch.set(inviteRef, removeUndefinedFields({
       sessionId: sessionRef.id,
@@ -258,6 +304,13 @@ export async function respondToInvitation(inviteId: string, accepted: boolean): 
   }
 
   const inviteData = inviteSnap.data()
+  if (
+    !isNonEmptyString(inviteData.sessionId) ||
+    !isNonEmptyString(inviteData.fromUserId) ||
+    !isNonEmptyString(inviteData.toUserId)
+  ) {
+    throw new Error('Invitation data is missing required fields')
+  }
 
   // Check if already responded
   if (inviteData.status !== 'pending') {
@@ -283,34 +336,72 @@ export function subscribeToUserSessions(
   )
 
   return onSnapshot(sessionsQuery, (snapshot) => {
-    const sessions: PeerSession[] = snapshot.docs.map((docSnap) => {
-      const data = docSnap.data()
-      return {
-        id: docSnap.id,
-        title: data.title || 'Peer Session',
-        description: data.description,
-        platform: data.platform || 'Zoom',
-        meetingLink: data.meetingLink,
-        timezone: data.timezone || 'UTC',
-        participants: data.participants || [],
-        status: data.status || 'pending',
-        scheduledAt: data.scheduledAt?.toDate?.() || new Date(),
-        confirmationDeadline: data.confirmationDeadline?.toDate?.() || new Date(),
-        confirmations: data.confirmations || {},
-        noShows: data.noShows,
-        createdBy: data.createdBy,
-        createdAt: data.createdAt?.toDate?.() || new Date(),
-        updatedAt: data.updatedAt?.toDate?.(),
-        pointsAwarded: data.pointsAwarded,
+    const sessions: PeerSession[] = []
+    const skippedSessionIds: string[] = []
+
+    for (const docSnap of snapshot.docs) {
+      try {
+        const data = docSnap.data()
+        if (!Array.isArray(data.participants) || data.participants.length === 0) {
+          skippedSessionIds.push(docSnap.id)
+          continue
+        }
+        if (!isNonEmptyString(data.createdBy)) {
+          skippedSessionIds.push(docSnap.id)
+          continue
+        }
+
+        const scheduledAt = data.scheduledAt?.toDate?.()
+        const confirmationDeadline = data.confirmationDeadline?.toDate?.()
+        if (!scheduledAt || !confirmationDeadline) {
+          skippedSessionIds.push(docSnap.id)
+          continue
+        }
+
+        sessions.push({
+          id: docSnap.id,
+          title: data.title || 'Peer Session',
+          description: data.description,
+          platform: data.platform || 'Zoom',
+          meetingLink: data.meetingLink,
+          timezone: data.timezone || 'UTC',
+          participants: data.participants || [],
+          status: data.status || 'pending',
+          scheduledAt,
+          confirmationDeadline,
+          confirmations: data.confirmations || {},
+          noShows: data.noShows,
+          createdBy: data.createdBy,
+          createdAt: data.createdAt?.toDate?.() || new Date(),
+          updatedAt: data.updatedAt?.toDate?.(),
+          pointsAwarded: data.pointsAwarded,
+        })
+      } catch (error) {
+        console.warn('[PeerSessionService] Skipping malformed session document', {
+          sessionId: docSnap.id,
+          error,
+        })
       }
-    })
+    }
+
+    if (skippedSessionIds.length > 0) {
+      console.warn('[PeerSessionService] Skipped sessions with missing fields', {
+        userId,
+        sessionIds: skippedSessionIds,
+      })
+    }
 
     // Sort by scheduled date descending (most recent first)
     sessions.sort((a, b) => b.scheduledAt.getTime() - a.scheduledAt.getTime())
 
     callback(sessions)
   }, (error) => {
-    console.error('[PeerSessionService] Sessions subscription error:', error)
+    console.error('[PeerSessionService] Sessions subscription error:', {
+      userId,
+      code: (error as { code?: string }).code,
+      message: error.message,
+      error,
+    })
     callback([])
   })
 }
@@ -329,27 +420,58 @@ export function subscribeToUserInvitations(
   )
 
   return onSnapshot(invitesQuery, (snapshot) => {
-    const invitations: PeerSessionRequest[] = snapshot.docs.map((docSnap) => {
-      const data = docSnap.data()
-      return {
-        id: docSnap.id,
-        sessionId: data.sessionId,
-        fromUserId: data.fromUserId,
-        fromName: data.fromName || 'Peer',
-        fromEmail: data.fromEmail || '',
-        toUserId: data.toUserId,
-        status: data.status || 'pending',
-        createdAt: data.createdAt?.toDate?.() || new Date(),
-        respondedAt: data.respondedAt?.toDate?.(),
+    const invitations: PeerSessionRequest[] = []
+    const skippedInviteIds: string[] = []
+
+    for (const docSnap of snapshot.docs) {
+      try {
+        const data = docSnap.data()
+        if (
+          !isNonEmptyString(data.sessionId) ||
+          !isNonEmptyString(data.fromUserId) ||
+          !isNonEmptyString(data.toUserId)
+        ) {
+          skippedInviteIds.push(docSnap.id)
+          continue
+        }
+
+        invitations.push({
+          id: docSnap.id,
+          sessionId: data.sessionId,
+          fromUserId: data.fromUserId,
+          fromName: data.fromName || 'Peer',
+          fromEmail: data.fromEmail || '',
+          toUserId: data.toUserId,
+          status: data.status || 'pending',
+          createdAt: data.createdAt?.toDate?.() || new Date(),
+          respondedAt: data.respondedAt?.toDate?.(),
+        })
+      } catch (error) {
+        console.warn('[PeerSessionService] Skipping malformed invitation document', {
+          inviteId: docSnap.id,
+          error,
+        })
       }
-    })
+    }
+
+    if (skippedInviteIds.length > 0) {
+      console.warn('[PeerSessionService] Skipped invitations with missing fields', {
+        userId,
+        inviteIds: skippedInviteIds,
+      })
+    }
 
     // Sort by creation date descending (most recent first)
     invitations.sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime())
 
     callback(invitations)
   }, (error) => {
-    console.error('[PeerSessionService] Invitations subscription error:', error)
+    console.error('[PeerSessionService] Invitations subscription error:', {
+      userId,
+      code: (error as { code?: string }).code,
+      message: error.message,
+      error,
+    })
     callback([])
   })
 }
