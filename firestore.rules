@@ -129,11 +129,11 @@ service cloud.firestore {
 
     // Notifications collection
     match /notifications/{notificationId} {
-      allow read: if isAuthenticated() && request.auth.uid == resource.data.userId;
+      allow read: if isAuthenticated() && request.auth.uid == resource.data.user_id;
       allow create: if isAuthenticated();
-      allow update: if isAuthenticated() && request.auth.uid == resource.data.userId;
+      allow update: if isAuthenticated() && request.auth.uid == resource.data.user_id;
       allow delete: if isAuthenticated() && (
-        request.auth.uid == resource.data.userId ||
+        request.auth.uid == resource.data.user_id ||
         isSuperAdmin()
       );
     }
@@ -216,14 +216,14 @@ service cloud.firestore {
     // Peer matching collections
     match /peer_weekly_matches/{matchId} {
       allow read: if isAuthenticated() && (
-        request.auth.uid == resource.data.userId ||
+        request.auth.uid == resource.data.user_id ||
         request.auth.uid == resource.data.user1_id ||
         request.auth.uid == resource.data.user2_id ||
         isPartnerOrAdmin()
       );
-      allow create: if isAuthenticated() && request.auth.uid == request.resource.data.userId;
+      allow create: if isAuthenticated() && request.auth.uid == request.resource.data.user_id;
       allow update: if isAuthenticated() && (
-        request.auth.uid == resource.data.userId ||
+        request.auth.uid == resource.data.user_id ||
         request.auth.uid == resource.data.user1_id ||
         request.auth.uid == resource.data.user2_id ||
         isPartnerOrAdmin()
@@ -308,16 +308,16 @@ service cloud.firestore {
     // Impact logs collection
     match /impact_logs/{logId} {
       allow read: if isAuthenticated() && (
-        request.auth.uid == resource.data.userId ||
+        request.auth.uid == resource.data.user_id ||
         isPartnerOrAdmin()
       );
-      allow create: if isAuthenticated() && request.auth.uid == request.resource.data.userId;
+      allow create: if isAuthenticated() && request.auth.uid == request.resource.data.user_id;
       allow update: if isAuthenticated() && (
-        request.auth.uid == resource.data.userId ||
+        request.auth.uid == resource.data.user_id ||
         isPartnerOrAdmin()
       );
       allow delete: if isAuthenticated() && (
-        request.auth.uid == resource.data.userId ||
+        request.auth.uid == resource.data.user_id ||
         isSuperAdmin()
       );
     }
@@ -363,7 +363,7 @@ service cloud.firestore {
     // Nudges sent
     match /nudges_sent/{nudgeId} {
       allow read: if isAuthenticated() && (
-        request.auth.uid == resource.data.userId ||
+        request.auth.uid == resource.data.user_id ||
         isPartnerOrAdmin()
       );
       allow create: if isPartnerOrAdmin();
