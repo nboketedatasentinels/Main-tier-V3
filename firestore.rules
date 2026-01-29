@@ -227,6 +227,7 @@ service cloud.firestore {
         request.auth.uid == resource.data.user_id ||
         request.auth.uid == resource.data.user1_id ||
         request.auth.uid == resource.data.user2_id ||
+        matchId.matches(request.auth.uid + '-.*') ||
         isPartnerOrAdmin()
       );
       allow create: if isAuthenticated() && request.auth.uid == request.resource.data.user_id;
