@@ -189,7 +189,7 @@ export const PartnerDashboard: React.FC = () => {
   const refreshOrganizations = useCallback(async () => {
     setRefreshingOrganizations(true)
     try {
-      await refreshProfile({ reason: 'partner-dashboard-org-refresh' })
+      await refreshProfile({ reason: 'partner-dashboard-org-refresh', isManual: true })
     } finally {
       setRefreshingOrganizations(false)
     }

@@ -95,6 +95,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     windowStart: 0,
     requestCount: 0,
     circuitBrokenUntil: 0,
+    lastManualAttemptAt: 0,
   })
   const pendingCompanyCodeKey = 't4l.pendingCompanyCode'
   const offlineErrorMessage = 'Network error. Please check your connection.'
@@ -1212,11 +1213,16 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     }
   }
 
-  const refreshProfile = useCallback(async (options?: { reason?: string }) => {
+  const refreshProfile = useCallback(async (options?: { reason?: string; isManual?: boolean }) => {
     const currentUser = auth.currentUser
     const reason = options?.reason || 'manual'
+    const isManual = options?.isManual ?? reason.includes('manual')
     const now = Date.now()
     const refreshState = refreshStateRef.current
+    const maxRequests = isManual ? 10 : 6
+    const windowMs = isManual ? 45000 : 30000
+    const circuitBreakerMs = isManual ? 20000 : 30000
+    const manualCooldownMs = 10000
 
     if (!currentUser) {
       const error = new Error('No authenticated user to refresh')
@@ -1226,11 +1232,40 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     }
 
     if (refreshState.circuitBrokenUntil > now) {
-      console.warn('🟠 [Auth] refreshProfile circuit breaker engaged', {
-        reason,
-        resumeAt: new Date(refreshState.circuitBrokenUntil).toISOString(),
-      })
-      return { error: new Error('Profile refresh temporarily paused to prevent a loop.'), profile: profileRef.current }
+      if (isManual) {
+        const timeSinceManualAttempt = now - refreshState.lastManualAttemptAt
+        if (timeSinceManualAttempt < manualCooldownMs) {
+          const error = new Error('Please wait a few seconds before retrying your profile refresh.')
+          console.warn('🟠 [Auth] refreshProfile manual retry blocked by cooldown', {
+            reason,
+            waitMs: manualCooldownMs - timeSinceManualAttempt,
+          })
+          setProfileError(error)
+          setProfileLoading(false)
+          return { error, profile: profileRef.current }
+        }
+        console.info('🟢 [Auth] refreshProfile manual retry resetting circuit breaker', { reason })
+        refreshState.circuitBrokenUntil = 0
+        refreshState.requestCount = 0
+        refreshState.windowStart = now
+      } else {
+        const error = new Error('Profile refresh paused to prevent repeated attempts. Please wait and try again.')
+        console.warn('🟠 [Auth] refreshProfile circuit breaker engaged', {
+          reason,
+          resumeAt: new Date(refreshState.circuitBrokenUntil).toISOString(),
+        })
+        setProfileError(error)
+        setProfileLoading(false)
+        return { error, profile: profileRef.current }
+      }
+    }
+
+    if (typeof navigator !== 'undefined' && navigator.onLine === false) {
+      const offlineError = buildOfflineError()
+      console.warn('🟠 [Auth] refreshProfile offline (preflight)', { reason })
+      setProfileError(offlineError)
+      setProfileLoading(false)
+      return { error: offlineError, profile: null as UserProfile | null }
     }
 
     if (refreshState.inFlight) {
@@ -1243,25 +1278,37 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       return { error: null, profile: profileRef.current }
     }
 
-    if (now - refreshState.windowStart > 30000) {
+    if (now - refreshState.windowStart > windowMs) {
       refreshState.windowStart = now
       refreshState.requestCount = 0
     }
     refreshState.requestCount += 1
-    if (refreshState.requestCount > 6) {
-      refreshState.circuitBrokenUntil = now + 30000
+    console.info('🧭 [Auth] refreshProfile attempt recorded', {
+      reason,
+      requestCount: refreshState.requestCount,
+      isManual,
+    })
+    if (refreshState.requestCount > maxRequests) {
+      refreshState.circuitBrokenUntil = now + circuitBreakerMs
       console.warn('🔴 [Auth] refreshProfile loop detected, opening circuit breaker', {
         reason,
         requestCount: refreshState.requestCount,
       })
-      return { error: new Error('Profile refresh paused due to excessive refresh attempts.'), profile: profileRef.current }
+      const error = new Error('Too many profile refresh attempts. Please wait a moment and try again.')
+      setProfileError(error)
+      setProfileLoading(false)
+      return { error, profile: profileRef.current }
     }
 
     refreshState.inFlight = true
     refreshState.lastRequestAt = now
-    console.log('🟡 [Auth] profile refresh requested', { uid: currentUser.uid, reason })
+    if (isManual) {
+      refreshState.lastManualAttemptAt = now
+    }
+    console.log('🟡 [Auth] profile refresh requested', { uid: currentUser.uid, reason, isManual })
 
     try {
+      setProfileError(null)
       setProfileLoading(true)
       const refreshedRaw = (await fetchProfileOnce(currentUser.uid)) ?? (await fetchOrCreateUserDoc(currentUser))
       const refreshed = refreshedRaw
