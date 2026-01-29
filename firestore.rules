@@ -403,11 +403,65 @@ service cloud.firestore {
       allow update, delete: if isSuperAdmin();
     }
 
+    // Points verification requests collection
+    match /points_verification_requests/{requestId} {
+      allow read: if isAuthenticated();
+      allow create: if isAuthenticated();
+      allow update: if isPartnerOrAdmin();
+      allow delete: if isSuperAdmin();
+    }
+
+    // Partner organizations collection
+    match /partner_organizations/{partnerOrgId} {
+      allow read: if isAuthenticated();
+      allow create: if isPartnerOrAdmin();
+      allow update: if isPartnerOrAdmin();
+      allow delete: if isSuperAdmin();
+    }
+
     // Registrations collection
     match /registrations/{registrationId} {
       allow read: if isAuthenticated();
       allow create: if true;  // Allow during signup
       allow update: if isOwner(resource.data.user_id) || isSuperAdmin();
+      allow delete: if isSuperAdmin();
+    }
+
+    // Partners collection
+    match /partners/{partnerId} {
+      allow read: if isAuthenticated() && (
+        request.auth.uid == resource.data.userId ||
+        isPartnerOrAdmin()
+      );
+      allow create: if isPartnerOrAdmin();
+      allow update: if isPartnerOrAdmin();
+      allow delete: if isSuperAdmin();
+    }
+
+    // Organization capacity metrics
+    match /organization_capacity_metrics/{metricId} {
+      allow read: if isAuthenticated();
+      allow create: if isPartnerOrAdmin();
+      allow update: if isPartnerOrAdmin();
+      allow delete: if isSuperAdmin();
+    }
+
+    // Organization capacity alerts
+    match /organization_capacity_alerts/{alertId} {
+      allow read: if isAuthenticated();
+      allow create: if isPartnerOrAdmin();
+      allow update: if isPartnerOrAdmin();
+      allow delete: if isSuperAdmin();
+    }
+
+    // Invitations collection
+    match /invitations/{invitationId} {
+      allow read: if isAuthenticated() && (
+        request.auth.uid == resource.data.invitedEmail ||
+        isPartnerOrAdmin()
+      );
+      allow create: if isPartnerOrAdmin();
+      allow update: if isPartnerOrAdmin();
       allow delete: if isSuperAdmin();
     }
 
