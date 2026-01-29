@@ -293,18 +293,18 @@ service cloud.firestore {
     // Peer session requests/invitations
     match /peer_session_requests/{requestId} {
       allow read: if isAuthenticated() && (
-        (hasPeerSessionRequestFields(resource.data) && (
-          request.auth.uid == resource.data.fromUserId ||
-          request.auth.uid == resource.data.toUserId
-        )) ||
+        request.auth.uid == resource.data.fromUserId ||
+        request.auth.uid == resource.data.toUserId ||
+        request.auth.uid == resource.data.from_user_id ||
+        request.auth.uid == resource.data.to_user_id ||
         isPartnerOrAdmin()
       );
       allow create: if isAuthenticated() && request.auth.uid == request.resource.data.fromUserId;
       allow update: if isAuthenticated() && (
-        (hasPeerSessionRequestFields(resource.data) && (
-          request.auth.uid == resource.data.fromUserId ||
-          request.auth.uid == resource.data.toUserId
-        )) ||
+        request.auth.uid == resource.data.fromUserId ||
+        request.auth.uid == resource.data.toUserId ||
+        request.auth.uid == resource.data.from_user_id ||
+        request.auth.uid == resource.data.to_user_id ||
         isPartnerOrAdmin()
       );
       allow delete: if isPartnerOrAdmin();
