@@ -456,10 +456,7 @@ service cloud.firestore {
 
     // Invitations collection
     match /invitations/{invitationId} {
-      allow read: if isAuthenticated() && (
-        request.auth.uid == resource.data.invitedEmail ||
-        isPartnerOrAdmin()
-      );
+      allow read: if isAuthenticated();
       allow create: if isPartnerOrAdmin();
       allow update: if isPartnerOrAdmin();
       allow delete: if isSuperAdmin();
@@ -467,15 +464,9 @@ service cloud.firestore {
 
     // Checklists collection
     match /checklists/{checklistId} {
-      allow read: if isAuthenticated() && (
-        request.auth.uid == resource.data.uid ||
-        isPartnerOrAdmin()
-      );
+      allow read: if isAuthenticated();
       allow create: if isAuthenticated();
-      allow update: if isAuthenticated() && (
-        request.auth.uid == resource.data.uid ||
-        isPartnerOrAdmin()
-      );
+      allow update: if isAuthenticated();
       allow delete: if isSuperAdmin();
     }
 
