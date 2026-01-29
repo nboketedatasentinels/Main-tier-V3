@@ -430,7 +430,7 @@ service cloud.firestore {
     // Partners collection
     match /partners/{partnerId} {
       allow read: if isAuthenticated() && (
-        request.auth.uid == resource.data.userId ||
+        request.auth.uid == partnerId ||
         isPartnerOrAdmin()
       );
       allow create: if isPartnerOrAdmin();
@@ -462,6 +462,20 @@ service cloud.firestore {
       );
       allow create: if isPartnerOrAdmin();
       allow update: if isPartnerOrAdmin();
+      allow delete: if isSuperAdmin();
+    }
+
+    // Checklists collection
+    match /checklists/{checklistId} {
+      allow read: if isAuthenticated() && (
+        request.auth.uid == resource.data.uid ||
+        isPartnerOrAdmin()
+      );
+      allow create: if isAuthenticated();
+      allow update: if isAuthenticated() && (
+        request.auth.uid == resource.data.uid ||
+        isPartnerOrAdmin()
+      );
       allow delete: if isSuperAdmin();
     }
 
