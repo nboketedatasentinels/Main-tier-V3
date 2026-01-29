@@ -12,6 +12,7 @@ import { resolveJourneyType } from '@/utils/journeyType'
 import { calculateActivityAvailability } from '@/utils/activityStateManager'
 import { db } from '@/services/firebase'
 import {
+  addDoc,
   collection,
   doc,
   getDoc,
@@ -547,9 +548,13 @@ export function useWeeklyChecklistViewModel() {
     }
 
     try {
+      // Get user's organization ID from profile
+      const userOrganizationId = profile?.organizationId || profile?.companyId || null
+
         const sourcePayload: PointsVerificationRequest = {
           id: '', // ID will be assigned by the server or is not used for creation
         user_id: user.uid,
+        organizationId: userOrganizationId,
         week: selectedWeek,
         activity_id: activity.id,
         activity_title: activity.title,
@@ -560,12 +565,31 @@ export function useWeeklyChecklistViewModel() {
           created_at: serverTimestamp() as any,
       }
 
+      // Write to points_verification_requests collection (primary collection for dashboards)
+      const verificationRequestRef = await addDoc(
+        collection(db, 'points_verification_requests'),
+        removeUndefinedFields({
+          user_id: user.uid,
+          organizationId: userOrganizationId,
+          week: selectedWeek,
+          activity_id: activity.id,
+          activity_title: activity.title,
+          points: activity.points,
+          proof_url: proofModal.proofUrl.trim(),
+          notes: proofModal.notes?.trim(),
+          status: 'pending',
+          created_at: serverTimestamp(),
+        })
+      )
+
+      // Also write to approvals collection for backward compatibility
       await createApprovalRequest({
         userId: user.uid,
+        organizationId: userOrganizationId,
         type: 'points_verification',
         approvalType: activity.approvalType,
         title: activity.title,
-        source: sourcePayload,
+        source: { ...sourcePayload, id: verificationRequestRef.id },
         summary: proofModal.notes?.trim(),
         points: activity.points,
       })

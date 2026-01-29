@@ -55,7 +55,7 @@ export const usePartnerAdminSnapshot = (options: UsePartnerAdminSnapshotOptions 
   // Derived state for the final snapshot
   const snapshot = useMemo<PartnerAdminSnapshot | null>(() => {
     if (!user?.uid) return null
-    if (docLoading && queryLoading) return null // Wait for at least one source (or both if we want to be strict, but relaxed is better for UX)
+    if (docLoading || queryLoading) return null // Wait for both sources to complete
 
     // Merge assignments with deduplication
     const allAssignments = [...assignmentsFromDoc, ...assignmentsFromQuery]
@@ -63,9 +63,11 @@ export const usePartnerAdminSnapshot = (options: UsePartnerAdminSnapshotOptions 
     const uniqueAssignments: PartnerAssignment[] = []
 
     allAssignments.forEach((assignment) => {
-      const id = assignment.organizationId
-      if (id && !seenIds.has(id)) {
-        seenIds.add(id)
+      // FIX: Use organizationId OR companyCode as deduplication key
+      // This prevents filtering out assignments that only have companyCode
+      const key = assignment.organizationId || assignment.companyCode
+      if (key && !seenIds.has(key)) {
+        seenIds.add(key)
         uniqueAssignments.push(assignment)
       }
     })
@@ -78,8 +80,9 @@ export const usePartnerAdminSnapshot = (options: UsePartnerAdminSnapshotOptions 
   }, [user?.uid, assignmentsFromDoc, assignmentsFromQuery, docLoading, queryLoading])
 
   const assignedOrganizationIds = useMemo(() => {
+    // FIX: Return organizationId OR companyCode to handle both identifier types
     return snapshot?.assignedOrganizations
-      .map((a) => a.organizationId)
+      .map((a) => a.organizationId || a.companyCode)
       .filter((id): id is string => !!id) ?? []
   }, [snapshot])
 
@@ -162,7 +165,41 @@ export const usePartnerAdminSnapshot = (options: UsePartnerAdminSnapshotOptions 
     }
   }, [enabled, isSuperAdmin, profileStatus, user?.uid])
 
-  const loading = docLoading && queryLoading
+  // FIX: Loading until both sources complete (not just when both are loading)
+  const loading = docLoading || queryLoading
+
+  // FIX: Set error when no assignments found (after both sources complete)
+  useEffect(() => {
+    if (loading || isSuperAdmin) return
+
+    if (snapshot && snapshot.assignedOrganizations.length === 0) {
+      setError('No organizations assigned. Please contact your administrator.')
+    } else if (error && snapshot && snapshot.assignedOrganizations.length > 0) {
+      setError(null) // Clear error if assignments are found
+    }
+  }, [loading, snapshot, isSuperAdmin, error])
+
+  // Debug logging (only in development)
+  useEffect(() => {
+    if (process.env.NODE_ENV === 'development' && snapshot) {
+      console.log('[PartnerAdminSnapshot] Assignment Resolution', {
+        partnerId: user?.uid,
+        assignmentsFromDoc: assignmentsFromDoc.length,
+        assignmentsFromQuery: assignmentsFromQuery.length,
+        uniqueAssignments: snapshot.assignedOrganizations.length,
+        assignedIds: assignedOrganizationIds,
+        assignments: snapshot.assignedOrganizations.map(a => ({
+          orgId: a.organizationId,
+          code: a.companyCode,
+          status: a.status
+        })),
+        docLoading,
+        queryLoading,
+        loading,
+        error,
+      })
+    }
+  }, [snapshot, assignedOrganizationIds, docLoading, queryLoading, loading, error, user?.uid, assignmentsFromDoc, assignmentsFromQuery])
 
   const assignments = useMemo(
     () => snapshot?.assignedOrganizations ?? [],
