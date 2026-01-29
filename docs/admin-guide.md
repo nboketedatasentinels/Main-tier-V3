@@ -20,6 +20,12 @@ This guide covers administrative workflows for managing users, cohorts, and plat
 - Assign admins to organizations via `assignedOrganizations`.
 - Update cohort identifiers for reporting alignment.
 
+## Partner Assignment Management
+
+- Use **Admin Oversight** to update partner admin assignments (assigned organizations drive dashboard visibility).
+- Use **Organization Management** to set the primary transformation partner on each organization.
+- After changes, verify partner dashboards load the correct organizations and users.
+
 ## Operational Checks
 
 - Validate login routing for each role after updates.
