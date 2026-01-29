@@ -29,6 +29,24 @@ service cloud.firestore {
       return isAuthenticated() && (getUserRole() == 'partner' || getUserRole() == 'super_admin');
     }
 
+    function isNonEmptyString(value) {
+      return value is string && value.size() > 0;
+    }
+
+    function isValidPartnerAssignment(assignment) {
+      return assignment is map
+        && assignment.keys().hasOnly(['organizationId', 'companyCode', 'status'])
+        && isNonEmptyString(assignment.organizationId)
+        && isNonEmptyString(assignment.companyCode)
+        && (!('status' in assignment) || assignment.status in ['active', 'watch', 'paused', 'inactive']);
+    }
+
+    function hasValidPartnerAssignments(data) {
+      return !('assignedOrganizations' in data)
+        || (data.assignedOrganizations is list
+          && data.assignedOrganizations.all(assignment, isValidPartnerAssignment(assignment)));
+    }
+
     // Users collection
     match /users/{userId} {
       allow read: if isAuthenticated();
@@ -433,8 +451,8 @@ service cloud.firestore {
         request.auth.uid == partnerId ||
         isPartnerOrAdmin()
       );
-      allow create: if isPartnerOrAdmin();
-      allow update: if isPartnerOrAdmin();
+      allow create: if isPartnerOrAdmin() && hasValidPartnerAssignments(request.resource.data);
+      allow update: if isPartnerOrAdmin() && hasValidPartnerAssignments(request.resource.data);
       allow delete: if isSuperAdmin();
     }
 

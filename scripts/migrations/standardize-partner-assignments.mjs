@@ -20,7 +20,7 @@
 
 import { initializeApp, cert } from 'firebase-admin/app'
 import { getFirestore, FieldValue } from 'firebase-admin/firestore'
-import { readFileSync } from 'fs'
+import { existsSync, readFileSync } from 'fs'
 import { resolve, dirname } from 'path'
 import { fileURLToPath } from 'url'
 
@@ -45,13 +45,33 @@ if (specificPartner) {
 }
 
 // Initialize Firebase Admin
+const resolveServiceAccountPath = () => {
+  const configuredPath = process.env.FIREBASE_SERVICE_ACCOUNT_PATH
+  if (configuredPath) {
+    return resolve(__dirname, configuredPath)
+  }
+
+  const candidates = [
+    resolve(__dirname, '../../service-account-key.json'),
+    resolve(__dirname, '../../serviceAccountKey.json'),
+  ]
+
+  return candidates.find((candidate) => existsSync(candidate))
+}
+
 let serviceAccount
 try {
-  const serviceAccountPath = resolve(__dirname, '../../serviceAccountKey.json')
+  const serviceAccountPath = resolveServiceAccountPath()
+  if (!serviceAccountPath) {
+    throw new Error('No service account key file found.')
+  }
   serviceAccount = JSON.parse(readFileSync(serviceAccountPath, 'utf8'))
 } catch (err) {
   console.error('❌ Failed to load service account key')
-  console.error('   Make sure serviceAccountKey.json exists in the project root')
+  console.error(
+    '   Make sure service-account-key.json exists in the project root (or set FIREBASE_SERVICE_ACCOUNT_PATH)',
+  )
+  console.error(`   Error: ${err.message}`)
   process.exit(1)
 }
 

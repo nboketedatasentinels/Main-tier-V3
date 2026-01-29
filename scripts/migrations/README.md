@@ -181,6 +181,29 @@ node scripts/migrations/migrate-org-fields-to-profiles.mjs
 - The script writes progress to the `migration_runs` collection and logs a summary report.
 - Profiles that do not exist are skipped and reported.
 
+## Migration: Standardize Partner Assignments
+
+### File: `standardize-partner-assignments.mjs`
+
+This migration ensures all partner assignment entries in `partners/{partnerId}` contain both `organizationId` and
+`companyCode` fields so partner dashboards can query consistently.
+
+### Running the Migration
+
+```bash
+node scripts/migrations/standardize-partner-assignments.mjs --dry-run
+```
+
+Optional flags:
+
+- `--partner-id=abc123` to target a single partner document for validation.
+- `--verbose` to log detailed assignment changes.
+
+### Notes
+
+- This script reads organizations to resolve missing identifiers.
+- Ensure `service-account-key.json` is available in the project root or set `FIREBASE_SERVICE_ACCOUNT_PATH`.
+
 ## Reconciliation: Validate Organization Field Migration
 
 ### File: `reconcile-org-fields.mjs`
