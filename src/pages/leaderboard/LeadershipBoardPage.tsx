@@ -446,7 +446,7 @@ export const LeadershipBoardPage: React.FC = () => {
 
   const handleManualRefresh = async () => {
     setIsRefreshingProfile(true)
-    const result = await refreshProfile({ reason: 'leaderboard-manual' })
+    const result = await refreshProfile({ reason: 'leaderboard-manual', isManual: true })
     setIsRefreshingProfile(false)
 
     if (result.error) {

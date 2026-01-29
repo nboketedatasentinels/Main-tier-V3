@@ -52,7 +52,7 @@ export interface AuthContextType {
   // Custom Claims
   claimsRole: string | null
   refreshAdminSession: () => Promise<void>
-  refreshProfile: (options?: { reason?: string }) => Promise<{ error: Error | null; profile: UserProfile | null }>
+  refreshProfile: (options?: { reason?: string; isManual?: boolean }) => Promise<{ error: Error | null; profile: UserProfile | null }>
 
   // Account Linking
   pendingLinkEmail: string | null

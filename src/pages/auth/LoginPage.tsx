@@ -165,8 +165,9 @@ export const LoginPage: React.FC = () => {
 
   const handleProfileRefresh = async () => {
     console.log('🔵 LoginPage: Manual profile refresh triggered')
+    if (profileLoading || refreshingProfile) return
     setRefreshingProfile(true)
-    const { error } = await refreshProfile({ reason: 'login-manual' })
+    const { error } = await refreshProfile({ reason: 'login-manual', isManual: true })
     if (error) {
       toast({
         title: 'Profile refresh failed',
@@ -361,6 +362,13 @@ export const LoginPage: React.FC = () => {
             <Alert status="warning" borderRadius="md">
               <AlertIcon />
               We're still loading your profile. You can retry below.
+            </Alert>
+          )}
+
+          {user && !profile && profileLoading && !profileTimeoutReached && (
+            <Alert status="info" borderRadius="md">
+              <AlertIcon />
+              We're loading your profile now. This should only take a moment.
             </Alert>
           )}
 
