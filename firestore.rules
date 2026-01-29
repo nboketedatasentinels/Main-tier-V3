@@ -264,7 +264,10 @@ service cloud.firestore {
         request.auth.uid == resource.data.user_id ||
         isPartnerOrAdmin()
       );
-      allow create: if isAuthenticated() && request.auth.uid == request.resource.data.user_id;
+      allow create: if isAuthenticated() && (
+        request.auth.uid == request.resource.data.user_id ||
+        isPartnerOrAdmin()
+      );
       allow update: if isAuthenticated() && (
         request.auth.uid == resource.data.user_id ||
         isPartnerOrAdmin()
