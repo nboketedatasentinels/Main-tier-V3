@@ -287,6 +287,8 @@ service cloud.firestore {
         listHasUid(resource.data.participantIds, request.auth.uid) ||
         listHasUid(resource.data.participant_ids, request.auth.uid) ||
         request.auth.uid == resource.data.createdBy ||
+        request.auth.uid == resource.data.creatorId ||
+        request.auth.uid == resource.data.created_by ||
         isPartnerOrAdmin()
       );
       allow create: if isAuthenticated();
@@ -295,6 +297,8 @@ service cloud.firestore {
         listHasUid(resource.data.participantIds, request.auth.uid) ||
         listHasUid(resource.data.participant_ids, request.auth.uid) ||
         request.auth.uid == resource.data.createdBy ||
+        request.auth.uid == resource.data.creatorId ||
+        request.auth.uid == resource.data.created_by ||
         isPartnerOrAdmin()
       );
       allow delete: if isPartnerOrAdmin();
@@ -309,7 +313,10 @@ service cloud.firestore {
         request.auth.uid == resource.data.to_user_id ||
         isPartnerOrAdmin()
       );
-      allow create: if isAuthenticated() && request.auth.uid == request.resource.data.fromUserId;
+      allow create: if isAuthenticated() && (
+        request.auth.uid == request.resource.data.fromUserId ||
+        request.auth.uid == request.resource.data.from_user_id
+      );
       allow update: if isAuthenticated() && (
         request.auth.uid == resource.data.fromUserId ||
         request.auth.uid == resource.data.toUserId ||
