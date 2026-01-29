@@ -11,7 +11,6 @@ export interface WeekAdvancementInfoBannerProps {
 
 export const WeekAdvancementInfoBanner: React.FC<WeekAdvancementInfoBannerProps> = ({
   currentWeek,
-  journeyType,
   variant = 'default'
 }) => {
   // Generate appropriate message based on current week
