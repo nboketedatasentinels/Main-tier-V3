@@ -55,6 +55,27 @@ service cloud.firestore {
       return data.keys().hasAll(['fromUserId', 'toUserId']);
     }
 
+    function isWeeklyMatchOwner(data) {
+      return isAuthenticated() && data is map && (
+        request.auth.uid == data.user_id ||
+        request.auth.uid == data.userId
+      );
+    }
+
+    function isWeeklyMatchParticipant(matchId) {
+      return isAuthenticated() && (
+        matchId.matches(request.auth.uid + '-.*') ||
+        (resource != null && (
+          request.auth.uid == resource.data.user_id ||
+          request.auth.uid == resource.data.userId ||
+          request.auth.uid == resource.data.user1_id ||
+          request.auth.uid == resource.data.user2_id ||
+          request.auth.uid == resource.data.peer_id ||
+          request.auth.uid == resource.data.peerId
+        ))
+      );
+    }
+
     // Users collection
     match /users/{userId} {
       allow read, write: if request.auth != null;
@@ -223,18 +244,15 @@ service cloud.firestore {
 
     // Peer matching collections
     match /peer_weekly_matches/{matchId} {
-      allow read: if isAuthenticated() && (
-        request.auth.uid == resource.data.user_id ||
-        request.auth.uid == resource.data.user1_id ||
-        request.auth.uid == resource.data.user2_id ||
-        matchId.matches(request.auth.uid + '-.*') ||
-        isPartnerOrAdmin()
-      );
-      allow create: if isAuthenticated() && request.auth.uid == request.resource.data.user_id;
+      allow read: if isWeeklyMatchParticipant(matchId) || isPartnerOrAdmin();
+      allow create: if isWeeklyMatchOwner(request.resource.data);
       allow update: if isAuthenticated() && (
         request.auth.uid == resource.data.user_id ||
+        request.auth.uid == resource.data.userId ||
         request.auth.uid == resource.data.user1_id ||
         request.auth.uid == resource.data.user2_id ||
+        request.auth.uid == resource.data.peer_id ||
+        request.auth.uid == resource.data.peerId ||
         isPartnerOrAdmin()
       );
       allow delete: if isSuperAdmin();
