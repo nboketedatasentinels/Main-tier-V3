@@ -31,7 +31,7 @@ service cloud.firestore {
 
     // Users collection
     match /users/{userId} {
-      allow read: if isOwner(userId) || isPartnerOrAdmin();
+      allow read: if isAuthenticated();
       allow create: if isAuthenticated();
       allow update: if isOwner(userId) || isPartnerOrAdmin();
       allow delete: if isSuperAdmin();
@@ -187,16 +187,58 @@ service cloud.firestore {
     // Peer matching collections
     match /peer_weekly_matches/{matchId} {
       allow read: if isAuthenticated() && (
+        request.auth.uid == resource.data.userId ||
         request.auth.uid == resource.data.user1_id ||
         request.auth.uid == resource.data.user2_id ||
         isPartnerOrAdmin()
       );
-      allow create: if isPartnerOrAdmin();
+      allow create: if isAuthenticated() && request.auth.uid == request.resource.data.userId;
       allow update: if isAuthenticated() && (
+        request.auth.uid == resource.data.userId ||
         request.auth.uid == resource.data.user1_id ||
         request.auth.uid == resource.data.user2_id ||
         isPartnerOrAdmin()
       );
+      allow delete: if isSuperAdmin();
+    }
+
+    // Peer sessions
+    match /peer_sessions/{sessionId} {
+      allow read: if isAuthenticated() && (
+        request.auth.uid in resource.data.participants ||
+        isPartnerOrAdmin()
+      );
+      allow create: if isAuthenticated();
+      allow update: if isAuthenticated() && (
+        request.auth.uid in resource.data.participants ||
+        isPartnerOrAdmin()
+      );
+      allow delete: if isPartnerOrAdmin();
+    }
+
+    // Peer session requests/invitations
+    match /peer_session_requests/{requestId} {
+      allow read: if isAuthenticated() && (
+        request.auth.uid == resource.data.fromUserId ||
+        request.auth.uid == resource.data.toUserId ||
+        isPartnerOrAdmin()
+      );
+      allow create: if isAuthenticated() && request.auth.uid == request.resource.data.fromUserId;
+      allow update: if isAuthenticated() && (
+        request.auth.uid == resource.data.fromUserId ||
+        request.auth.uid == resource.data.toUserId ||
+        isPartnerOrAdmin()
+      );
+      allow delete: if isPartnerOrAdmin();
+    }
+
+    // Support assignments
+    match /support_assignments/{userId} {
+      allow read: if isAuthenticated() && (
+        request.auth.uid == userId ||
+        isPartnerOrAdmin()
+      );
+      allow create, update: if isPartnerOrAdmin();
       allow delete: if isSuperAdmin();
     }
 
@@ -256,6 +298,13 @@ service cloud.firestore {
     match /activity_catalog/{activityId} {
       allow read: if true;
       allow write: if isSuperAdmin();
+    }
+
+    // Events collection
+    match /events/{eventId} {
+      allow read: if isAuthenticated();
+      allow create: if isPartnerOrAdmin();
+      allow update, delete: if isSuperAdmin();
     }
 
     // User courses collection
