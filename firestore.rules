@@ -242,6 +242,40 @@ service cloud.firestore {
       allow delete: if isSuperAdmin();
     }
 
+    // Peer matches
+    match /peer_matches/{matchId} {
+      allow read: if isAuthenticated() && (
+        request.auth.uid == resource.data.user_id ||
+        isPartnerOrAdmin()
+      );
+      allow create: if isAuthenticated() && request.auth.uid == request.resource.data.user_id;
+      allow update: if isAuthenticated() && (
+        request.auth.uid == resource.data.user_id ||
+        isPartnerOrAdmin()
+      );
+      allow delete: if isSuperAdmin();
+    }
+
+    // Weekly habits
+    match /weekly_habits/{habitId} {
+      allow read: if isAuthenticated() && (
+        request.auth.uid == resource.data.user_id ||
+        isPartnerOrAdmin()
+      );
+      allow create: if isAuthenticated() && request.auth.uid == request.resource.data.user_id;
+      allow update: if isAuthenticated() && (
+        request.auth.uid == resource.data.user_id ||
+        isPartnerOrAdmin()
+      );
+      allow delete: if isSuperAdmin();
+    }
+
+    // Inspiration quotes
+    match /inspiration_quotes/{quoteId} {
+      allow read: if isAuthenticated();
+      allow write: if isSuperAdmin();
+    }
+
     // Impact logs collection
     match /impact_logs/{logId} {
       allow read: if isAuthenticated() && (
@@ -261,15 +295,34 @@ service cloud.firestore {
 
     // Badges collection
     match /badges/{badgeId} {
-      allow read: if true;
+      allow read: if isAuthenticated();
       allow write: if isSuperAdmin();
     }
 
-    // User badges collection
+    // User badges collection (camelCase)
     match /userBadges/{badgeAwardId} {
       allow read: if isAuthenticated();
       allow create: if isPartnerOrAdmin();
       allow update, delete: if isSuperAdmin();
+    }
+
+    // User badges collection (snake_case)
+    match /user_badges/{badgeAwardId} {
+      allow read: if isAuthenticated();
+      allow create: if isPartnerOrAdmin();
+      allow update, delete: if isSuperAdmin();
+    }
+
+    // Courses collection
+    match /courses/{courseId} {
+      allow read: if isAuthenticated();
+      allow create, update, delete: if isSuperAdmin();
+    }
+
+    // Organization courses collection
+    match /organization_courses/{courseId} {
+      allow read: if isAuthenticated();
+      allow create, update, delete: if isPartnerOrAdmin();
     }
 
     // Nudge templates
@@ -341,6 +394,21 @@ service cloud.firestore {
       allow read: if isSuperAdmin();
       allow create: if isAuthenticated();
       allow update, delete: if isSuperAdmin();
+    }
+
+    // Points verifications collection
+    match /points_verifications/{verificationId} {
+      allow read: if isAuthenticated();
+      allow create: if isAuthenticated();
+      allow update, delete: if isSuperAdmin();
+    }
+
+    // Registrations collection
+    match /registrations/{registrationId} {
+      allow read: if isAuthenticated();
+      allow create: if true;  // Allow during signup
+      allow update: if isOwner(resource.data.user_id) || isSuperAdmin();
+      allow delete: if isSuperAdmin();
     }
 
     // Default: deny all other access

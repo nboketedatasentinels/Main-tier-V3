@@ -27,11 +27,17 @@ import { ActivityFeedCard } from '@/components/journeys/weeklyGlance/ActivityFee
 import { LearnerWindowCard } from '@/components/journeys/weeklyGlance/LearnerWindowCard'
 import { NextMilestoneCard } from '@/components/journeys/weeklyGlance/NextMilestoneCard'
 import { WindowSummaryCard } from '@/components/journeys/weeklyGlance/WindowSummaryCard'
+import { WeekAdvancementInfoBanner } from '@/components/journeys/WeekAdvancementInfoBanner'
+import { WeekStatusSummaryCard } from '@/components/journeys/WeekStatusSummaryCard'
+import { WindowWeekRelationshipCard } from '@/components/journeys/WindowWeekRelationshipCard'
+import { PendingApprovalsSection } from '@/components/journeys/PendingApprovalsSection'
 
 import { useWeeklyGlanceData, type LedgerEntry } from '@/hooks/useWeeklyGlanceData'
 import { BuildVillageModal } from '@/components/modals/BuildVillageModal'
 import { useAuth } from '@/hooks/useAuth'
 import { TransformationTier, type UserProfile } from '@/types'
+import { useWeekAdvancementCriteria } from '@/hooks/useWeekAdvancementCriteria'
+import { getWindowRange, PARALLEL_WINDOW_SIZE_WEEKS } from '@/utils/windowCalculations'
 import {
   calculateWeekProgress,
   getDaysRemainingInWeek,
@@ -256,6 +262,7 @@ function useWeeklyGlanceViewModel() {
 export const WeeklyGlancePage = () => {
   const navigate = useNavigate()
   const {
+    profile,
     data,
     weekRange,
     daysRemaining,
@@ -267,6 +274,9 @@ export const WeeklyGlancePage = () => {
     activityFeedItems,
     isParallelTrackingEnabled,
   } = useWeeklyGlanceViewModel()
+
+  // Week advancement eligibility tracking
+  const { eligibility, loading: eligibilityLoading, error: eligibilityError } = useWeekAdvancementCriteria(profile)
 
   const [isBuildVillageOpen, setIsBuildVillageOpen] = useState(false)
   const [villageName, setVillageName] = useState('')
@@ -290,6 +300,11 @@ export const WeeklyGlancePage = () => {
   const handleNavigateChecklist = useCallback(() => {
     navigate('/app/weekly-checklist')
   }, [navigate])
+
+  // Calculate window range for WindowWeekRelationshipCard
+  const windowMeta = profile && profile.currentWeek
+    ? getWindowRange(profile.currentWeek, profile.programDurationWeeks, PARALLEL_WINDOW_SIZE_WEEKS)
+    : { windowNumber: 1, startWeek: 1, endWeek: 2, windowWeeks: 2 }
 
   return (
     <Box p={{ base: 4, md: 6 }}>
@@ -342,6 +357,14 @@ export const WeeklyGlancePage = () => {
           </Alert>
         )}
 
+        {profile && (
+          <WeekAdvancementInfoBanner
+            currentWeek={profile.currentWeek ?? data.weekNumber}
+            journeyType={profile.journeyType}
+            variant="compact"
+          />
+        )}
+
         <WeeklyInspirationCard data={data.inspirationQuote} loading={data.loading.inspiration} />
 
         <Grid
@@ -374,11 +397,32 @@ export const WeeklyGlancePage = () => {
             />
           </GridItem>
 
-          <GridItem colSpan={{ base: 1, md: 8 }} order={{ base: 3, md: 3 }}>
+          <GridItem colSpan={{ base: 1, md: 6 }} order={{ base: 3, md: 3 }}>
+            <WeekStatusSummaryCard
+              eligibility={eligibility}
+              loading={eligibilityLoading}
+              error={eligibilityError}
+            />
+          </GridItem>
+
+          <GridItem colSpan={{ base: 1, md: 6 }} order={{ base: 4, md: 4 }}>
+            {profile && (
+              <WindowWeekRelationshipCard
+                currentWeek={profile.currentWeek ?? data.weekNumber}
+                windowNumber={windowMeta.windowNumber}
+                windowStartWeek={windowMeta.startWeek}
+                windowEndWeek={windowMeta.endWeek}
+                journeyType={profile.journeyType}
+                totalWeeks={profile.programDurationWeeks}
+              />
+            )}
+          </GridItem>
+
+          <GridItem colSpan={{ base: 1, md: 8 }} order={{ base: 5, md: 5 }}>
             <ActivityFeedCard items={[...activityFeedItems]} />
           </GridItem>
 
-          <GridItem colSpan={{ base: 1, md: 4 }} order={{ base: 5, md: 4 }}>
+          <GridItem colSpan={{ base: 1, md: 4 }} order={{ base: 6, md: 6 }}>
             <NextMilestoneCard
               milestone={`Week ${data.weekNumber + 1} readiness review`}
               daysRemaining={daysRemaining}
@@ -386,7 +430,15 @@ export const WeeklyGlancePage = () => {
             />
           </GridItem>
 
-          <GridItem colSpan={{ base: 1, md: 4 }} order={{ base: 4, md: 5 }}>
+          <GridItem colSpan={{ base: 1, md: 4 }} order={{ base: 7, md: 7 }}>
+            <PendingApprovalsSection
+              pendingRequests={eligibility?.pendingApprovals ?? []}
+              currentWeek={profile?.currentWeek}
+              loading={eligibilityLoading}
+            />
+          </GridItem>
+
+          <GridItem colSpan={{ base: 1, md: 4 }} order={{ base: 8, md: 8 }}>
             <SupportTeamCard
               data={data.supportAssignment}
               loading={data.loading.support}
@@ -396,13 +448,13 @@ export const WeeklyGlancePage = () => {
           </GridItem>
 
           {(!isMobile || showMore) && (
-            <GridItem colSpan={{ base: 1, md: 4 }} order={{ base: 6, md: 6 }}>
+            <GridItem colSpan={{ base: 1, md: 4 }} order={{ base: 9, md: 9 }}>
               <PersonalityProfileCard data={data.personality} loading={data.loading.profile} />
             </GridItem>
           )}
 
           {(!isMobile || showMore) && (
-            <GridItem colSpan={{ base: 1, md: 4 }} order={{ base: 7, md: 7 }}>
+            <GridItem colSpan={{ base: 1, md: 4 }} order={{ base: 10, md: 10 }}>
               <PeopleImpactedCard count={data.impactCount} loading={data.loading.impact} />
             </GridItem>
           )}
