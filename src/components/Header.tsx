@@ -133,9 +133,11 @@ export const Header: React.FC<HeaderProps> = ({ topOffset = '0' }) => {
               className="flex items-center gap-2 focus:outline-none focus:ring-2 focus:ring-brand-indigo-500 rounded-md"
               aria-label="Go to homepage"
             >
-              <span className="inline-flex h-9 w-9 items-center justify-center rounded-full bg-accent-gold-500">
-                <span className="h-0 w-0 border-y-4 border-y-transparent border-l-[6px] border-l-brand-dark" />
-              </span>
+              <img
+                src="/t4.png"
+                alt="T4L Logo"
+                className="h-9 w-9 rounded-full object-cover"
+              />
               <span className={`hidden sm:inline font-semibold ${textColor}`}>T4L</span>
             </button>
 
