@@ -27,7 +27,13 @@
       "Bash(npx playwright:*)",
       "Bash(more:*)",
       "Bash(ls -la \"c:\\\\Users\\\\Kekab\\\\Man-tier-v2\\\\src\\\\services\"\" | grep -i \"admin|user \")",
-      "Bash(ls:*)"
+      "Bash(ls:*)",
+      "Bash(node scripts/seed-peer-matches.mjs:*)",
+      "Bash(npm ls:*)",
+      "Bash(firebase login:*)",
+      "Bash(firebase projects:list:*)",
+      "Bash(gcloud --version:*)",
+      "Bash(firebase deploy:*)"
     ]
   }
 }

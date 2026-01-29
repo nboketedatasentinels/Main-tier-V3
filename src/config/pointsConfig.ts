@@ -13,7 +13,10 @@ export type ActivityId =
   | "peer_to_peer"
   | "linkedin"
   | "lift_module"
-  | "impact_log";
+  | "impact_log"
+  | "referral_bonus"
+  | "peer_session_confirmation"
+  | "peer_session_no_show_report";
 
 export type ActivityPolicyType = "one_time" | "window_limited" | "ongoing";
 
@@ -55,6 +58,76 @@ export type ActivityDef = {
 
 export const REFERRAL_POINTS = 100;
 export const REFERRAL_MAX_PER_USER = 100;
+
+/**
+ * Referral bonus activity definition for proper ledger integration.
+ * Used when awarding points for successful referrals.
+ * This activity is partner_issued (awarded by system/Cloud Function).
+ */
+export const REFERRAL_ACTIVITY: ActivityDef = {
+  id: "referral_bonus",
+  baseId: "referral_bonus",
+  title: "Referral Bonus",
+  description: "Points awarded for successfully referring a new user who completes their first activity.",
+  points: REFERRAL_POINTS,
+  maxPerMonth: REFERRAL_MAX_PER_USER, // Effectively unlimited per month, capped by total
+  activityPolicy: {
+    type: "ongoing",
+    maxTotal: REFERRAL_MAX_PER_USER,
+  },
+  week: 1, // Can be awarded in any week
+  category: "Referral",
+  approvalType: "partner_issued", // Awarded by system/Cloud Function
+  isFreeTier: true,
+  flexibleWeeks: true,
+  frequencyNote: "Awarded when a referred user completes their first platform activity.",
+};
+
+/**
+ * Peer session confirmation activity - awarded when both participants confirm a scheduled session.
+ * Points are awarded to BOTH participants when mutual confirmation occurs.
+ */
+export const PEER_SESSION_CONFIRMATION_ACTIVITY: ActivityDef = {
+  id: "peer_session_confirmation",
+  baseId: "peer_session_confirmation",
+  title: "Peer Session Confirmed",
+  description: "Both participants confirmed the scheduled peer session before the deadline.",
+  points: 50,
+  maxPerMonth: 20, // Allow multiple sessions per month
+  activityPolicy: {
+    type: "ongoing",
+    maxPerWindow: 10,
+  },
+  week: 1, // Can be awarded in any week
+  category: "Networking",
+  approvalType: "auto", // Automatically awarded by system
+  isFreeTier: true,
+  flexibleWeeks: true,
+  frequencyNote: "Awarded when both peers confirm a session before the confirmation deadline.",
+};
+
+/**
+ * Peer session no-show report activity - awarded for accountability when reporting a no-show.
+ * Encourages users to report when their peer doesn't show up.
+ */
+export const PEER_SESSION_NO_SHOW_ACTIVITY: ActivityDef = {
+  id: "peer_session_no_show_report",
+  baseId: "peer_session_no_show_report",
+  title: "No-Show Accountability",
+  description: "Reported peer no-show for accountability tracking after the session time.",
+  points: 25,
+  maxPerMonth: 10, // Reasonable cap on no-show reports
+  activityPolicy: {
+    type: "ongoing",
+    maxPerWindow: 5,
+  },
+  week: 1, // Can be awarded in any week
+  category: "Networking",
+  approvalType: "auto", // Automatically awarded by system
+  isFreeTier: true,
+  flexibleWeeks: true,
+  frequencyNote: "Awarded when you report that your peer did not attend the scheduled session.",
+};
 
 export const FULL_ACTIVITIES: ActivityDef[] = [
   {
@@ -326,6 +399,9 @@ const pointsConfig = {
   getMonthNumber,
   REFERRAL_POINTS,
   REFERRAL_MAX_PER_USER,
+  REFERRAL_ACTIVITY,
+  PEER_SESSION_CONFIRMATION_ACTIVITY,
+  PEER_SESSION_NO_SHOW_ACTIVITY,
 };
 
 export default pointsConfig;

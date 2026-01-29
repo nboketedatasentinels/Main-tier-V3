@@ -122,7 +122,7 @@ export const UserEngagementMonitoringTab = ({ users: propUsers, organizations: p
     try {
       setLoading(true)
       setLoadError(null)
-      const { roster: rosterData, trends, availability: engagementState } = await fetchAdminEngagementSnapshot(isAdmin)
+      const { roster: rosterData, trends, availability: engagementState } = await fetchAdminEngagementSnapshot()
 
       setRoster(rosterData)
       setTrendData(trends)
@@ -200,8 +200,8 @@ export const UserEngagementMonitoringTab = ({ users: propUsers, organizations: p
     onOpen()
     try {
       const [historyData, activities] = await Promise.all([
-        fetchAdminEngagementHistory(isAdmin, entry.userId),
-        fetchAdminRecentActivities(isAdmin, entry.userId),
+        fetchAdminEngagementHistory(entry.userId),
+        fetchAdminRecentActivities(entry.userId),
       ])
       setHistory(historyData)
       setRecentActivity(activities)

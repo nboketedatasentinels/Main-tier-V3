@@ -41,7 +41,7 @@ import {
   useDisclosure,
   useToast,
 } from '@chakra-ui/react'
-import { addDays, addHours, format, formatDistanceToNowStrict } from 'date-fns'
+import { addHours, format, formatDistanceToNowStrict } from 'date-fns'
 import {
   AlarmClockCheck,
   AlarmClockOff,
@@ -61,7 +61,6 @@ import {
   X,
 } from 'lucide-react'
 import {
-  addDoc,
   collection,
   doc,
   getDoc,
@@ -70,15 +69,22 @@ import {
   query,
   serverTimestamp,
   setDoc,
-  Timestamp,
   updateDoc,
   where,
 } from 'firebase/firestore'
 import { db } from '@/services/firebase'
 import { useAuth } from '@/hooks/useAuth'
 import { StartChallengeModal } from '@/components/modals/StartChallengeModal'
-import { removeUndefinedFields } from '@/utils/firestore'
 import { fetchOrgMembers, getOrgScope } from '@/utils/organizationScope'
+import {
+  createPeerSession,
+  confirmSession,
+  reportNoShow as reportNoShowService,
+  respondToInvitation,
+  subscribeToUserSessions,
+  subscribeToUserInvitations,
+} from '@/services/peerSessionService'
+import { DateTimePicker } from '@/components/scheduling/DateTimePicker'
 
 // Types
 type PeerProfile = {
@@ -174,18 +180,6 @@ const WEEKDAY_SHORT_MAP: Record<string, number> = {
   Fri: 5,
   Sat: 6,
 }
-
-const timezoneOptions = [
-  'America/New_York',
-  'America/Chicago',
-  'America/Denver',
-  'America/Los_Angeles',
-  'Europe/London',
-  'Europe/Paris',
-  'Asia/Singapore',
-  'Asia/Kolkata',
-  'Australia/Sydney',
-]
 
 const defaultSessionDescription =
   'Bring together at least two peers for a transformation dialogue that sparks shared insight and collaborative momentum.'
@@ -331,15 +325,25 @@ export const PeerConnectPage: React.FC = () => {
   const [weeklyMatch, setWeeklyMatch] = useState<WeeklyMatch | null>(null)
   const [pendingInvites, setPendingInvites] = useState<Invitation[]>([])
   const [sessions, setSessions] = useState<PeerSession[]>([])
-  const [sessionForm, setSessionForm] = useState({
+  const [sessionForm, setSessionForm] = useState<{
+    title: string
+    description: string
+    platform: string
+    meetingLink: string
+    timezone: string
+    rememberTimezone: boolean
+    participants: string[]
+    date: Date | null
+    time: string
+  }>({
     title: 'Group Transformation Session',
     description: defaultSessionDescription,
     platform: 'Zoom',
     meetingLink: 'https://zoom.us/',
     timezone: profile?.timezone || Intl.DateTimeFormat().resolvedOptions().timeZone,
     rememberTimezone: true,
-    participants: [] as string[],
-    date: '',
+    participants: [],
+    date: null,
     time: '',
   })
   const [formErrors, setFormErrors] = useState<Record<string, string>>({})
@@ -525,57 +529,50 @@ export const PeerConnectPage: React.FC = () => {
     weeklyMatch?.refreshCount,
   ])
 
-  const fetchInvitesAndSessions = useCallback(async () => {
+  // Real-time subscription for sessions and invitations
+  useEffect(() => {
     if (!user) return
+
     setLoadingSessions(true)
-    try {
-      const inviteRef = collection(db, 'peer_session_requests')
-      const inviteSnapshot = await getDocs(query(inviteRef, where('toUserId', '==', user.uid)))
-      const mappedInvites: Invitation[] = inviteSnapshot.docs.map((docSnap) => {
-        const data = docSnap.data()
-        return {
-          id: docSnap.id,
-          fromName: data.fromName || 'Peer',
-          fromEmail: data.fromEmail || 'peer@example.com',
-        }
-      })
-      setPendingInvites(mappedInvites)
-      const sessionRef = collection(db, 'peer_sessions')
-      const sessionSnapshot = await getDocs(query(sessionRef, where('participants', 'array-contains', user.uid)))
-      const mappedSessions: PeerSession[] = sessionSnapshot.docs.map((docSnap) => {
-        const data = docSnap.data()
-        return {
-          id: docSnap.id,
-          title: data.title || 'Weekly Peer Date',
-          scheduledAt: data.scheduledAt?.toDate?.() || new Date(),
-          timezone: data.timezone || profile?.timezone || 'UTC',
-          platform: (data.platform as PeerSession['platform']) || 'Zoom',
-          link: data.meetingLink,
-          status: (data.status as PeerSession['status']) || 'pending',
-          confirmationDeadline: data.confirmationDeadline?.toDate?.() || addDays(new Date(), 1),
-          youConfirmed: Boolean(data.confirmations?.[user.uid]),
-          peerConfirmed: Boolean(Object.keys(data.confirmations || {}).length > 1),
-        }
-      })
+
+    // Subscribe to sessions in real-time
+    const unsubscribeSessions = subscribeToUserSessions(user.uid, (sessionData) => {
+      const mappedSessions: PeerSession[] = sessionData.map((session) => ({
+        id: session.id,
+        title: session.title || 'Weekly Peer Date',
+        scheduledAt: session.scheduledAt,
+        timezone: session.timezone || profile?.timezone || 'UTC',
+        platform: session.platform as PeerSession['platform'],
+        link: session.meetingLink,
+        status: session.status as PeerSession['status'],
+        confirmationDeadline: session.confirmationDeadline,
+        youConfirmed: Boolean(session.confirmations?.[user.uid]),
+        peerConfirmed: Object.keys(session.confirmations || {}).filter(k => k !== user.uid).some(k => session.confirmations[k]),
+      }))
       setSessions(mappedSessions)
-    } catch (error) {
-      console.error('Error fetching sessions', error)
-      setSessions([])
-      setPendingInvites([])
-      toast({
-        title: 'Unable to load peer sessions',
-        description: 'We could not retrieve invitations or sessions from Firestore. Please try again shortly.',
-        status: 'error',
-        position: 'top',
-      })
-    } finally {
       setLoadingSessions(false)
+    })
+
+    // Subscribe to invitations in real-time
+    const unsubscribeInvites = subscribeToUserInvitations(user.uid, (inviteData) => {
+      const mappedInvites: Invitation[] = inviteData.map((invite) => ({
+        id: invite.id,
+        fromName: invite.fromName || 'Peer',
+        fromEmail: invite.fromEmail || 'peer@example.com',
+      }))
+      setPendingInvites(mappedInvites)
+    })
+
+    // Cleanup subscriptions on unmount
+    return () => {
+      unsubscribeSessions()
+      unsubscribeInvites()
     }
-  }, [toast, user])
+  }, [user, profile?.timezone])
 
   const onChallengeCreated = () => {
     fetchWeeklyMatch()
-    fetchInvitesAndSessions()
+    // Sessions and invitations update automatically via real-time listeners
     toast({
       title: 'Challenge created',
       description: `Your opponent will receive a Firebase-backed notification.`,
@@ -661,9 +658,7 @@ export const PeerConnectPage: React.FC = () => {
     void updateMatchStatus('viewed')
   }, [updateMatchStatus, weeklyMatch])
 
-  useEffect(() => {
-    fetchInvitesAndSessions()
-  }, [fetchInvitesAndSessions])
+  // Sessions and invitations are now handled by real-time subscriptions above
 
   const filteredParticipants = useMemo(() => {
     const queryString = participantFilter.toLowerCase()
@@ -761,32 +756,30 @@ export const PeerConnectPage: React.FC = () => {
   const confirmMeeting = async (sessionId: string) => {
     if (!user) return
     try {
-      const sessionRef = doc(db, 'peer_sessions', sessionId)
-      await updateDoc(sessionRef, {
-        [`confirmations.${user.uid}`]: true,
-        updatedAt: serverTimestamp(),
-      })
-      setSessions((prev) =>
-        prev.map((session) =>
-          session.id === sessionId
-            ? {
-                ...session,
-                youConfirmed: true,
-                status: session.peerConfirmed ? 'confirmed' : session.status,
-              }
-            : session
-        )
-      )
-      toast({
-        title: 'Meetup confirmed',
-        description: '50 points unlock when both peers confirm before the deadline.',
-        status: 'success',
-        position: 'top',
-      })
+      const result = await confirmSession(sessionId, user.uid)
+
+      // Note: UI will update automatically via real-time listener
+
+      if (result.pointsAwarded) {
+        toast({
+          title: 'Session confirmed!',
+          description: 'Both participants confirmed. 50 points awarded to each of you!',
+          status: 'success',
+          position: 'top',
+        })
+      } else {
+        toast({
+          title: 'Meetup confirmed',
+          description: '50 points will unlock when your peer also confirms before the deadline.',
+          status: 'success',
+          position: 'top',
+        })
+      }
     } catch (error) {
+      console.error('Confirmation failed:', error)
       toast({
         title: 'Confirmation failed',
-        description: 'We could not record your confirmation in Firestore.',
+        description: 'We could not record your confirmation. Please try again.',
         status: 'error',
         position: 'top',
       })
@@ -796,23 +789,30 @@ export const PeerConnectPage: React.FC = () => {
   const reportNoShow = async (sessionId: string) => {
     if (!user) return
     try {
-      const sessionRef = doc(db, 'peer_sessions', sessionId)
-      await updateDoc(sessionRef, {
-        status: 'no_show',
-        [`noShows.${user.uid}`]: true,
-        updatedAt: serverTimestamp(),
-      })
-      setSessions((prev) => prev.map((session) => (session.id === sessionId ? { ...session, status: 'no_show' } : session)))
-      toast({
-        title: 'No-show reported',
-        description: 'You earn 25 points for accountability. Your peer will be notified.',
-        status: 'info',
-        position: 'top',
-      })
+      const pointsAwarded = await reportNoShowService(sessionId, user.uid)
+
+      // Note: UI will update automatically via real-time listener
+
+      if (pointsAwarded) {
+        toast({
+          title: 'No-show reported',
+          description: 'You earned 25 points for accountability. Your peer will be notified.',
+          status: 'info',
+          position: 'top',
+        })
+      } else {
+        toast({
+          title: 'No-show reported',
+          description: 'Your peer will be notified about the missed session.',
+          status: 'info',
+          position: 'top',
+        })
+      }
     } catch (error) {
+      console.error('No-show report failed:', error)
       toast({
         title: 'Could not report',
-        description: 'Firebase did not accept the update. Try again later.',
+        description: 'Please try again later.',
         status: 'error',
         position: 'top',
       })
@@ -822,21 +822,20 @@ export const PeerConnectPage: React.FC = () => {
   const respondToInvite = async (inviteId: string, accepted: boolean) => {
     if (!user) return
     try {
-      const inviteRef = doc(db, 'peer_session_requests', inviteId)
-      await updateDoc(inviteRef, {
-        status: accepted ? 'accepted' : 'declined',
-        respondedAt: serverTimestamp(),
-      })
-      setPendingInvites((prev) => prev.filter((invite) => invite.id !== inviteId))
+      await respondToInvitation(inviteId, accepted)
+
+      // Note: UI will update automatically via real-time listener
+
       toast({
         title: accepted ? 'Invitation accepted' : 'Invitation declined',
         status: accepted ? 'success' : 'info',
         position: 'top',
       })
     } catch (error) {
+      console.error('Invitation response failed:', error)
       toast({
         title: 'Unable to update invitation',
-        description: 'A Firebase error occurred while updating your invitation.',
+        description: 'Please try again.',
         status: 'error',
         position: 'top',
       })
@@ -851,6 +850,17 @@ export const PeerConnectPage: React.FC = () => {
     if (!sessionForm.timezone) errors.timezone = 'Please select a time zone'
     if (sessionForm.participants.length < 2)
       errors.participants = 'Select at least 2 participants for your group session so you can host a three-person conversation including yourself.'
+
+    // Validate that date/time is in the future
+    if (sessionForm.date && sessionForm.time) {
+      const [hours, minutes] = sessionForm.time.split(':').map(Number)
+      const scheduledDate = new Date(sessionForm.date)
+      scheduledDate.setHours(hours, minutes, 0, 0)
+      if (scheduledDate <= new Date()) {
+        errors.date = 'Session must be scheduled in the future'
+      }
+    }
+
     setFormErrors(errors)
     return Object.keys(errors).length === 0
   }
@@ -858,62 +868,34 @@ export const PeerConnectPage: React.FC = () => {
   const createSession = async () => {
     if (!user || !profile) return
     if (!validateSessionForm()) return
+    if (!sessionForm.date) return
 
     try {
-      const scheduledAt = Timestamp.fromDate(new Date(`${sessionForm.date}T${sessionForm.time}:00`))
-      const sessionPayload = removeUndefinedFields({
+      // Construct scheduled date from date + time
+      const [hours, minutes] = sessionForm.time.split(':').map(Number)
+      const scheduledAt = new Date(sessionForm.date)
+      scheduledAt.setHours(hours, minutes, 0, 0)
+
+      // Use the atomic service to create session and invitations together
+      await createPeerSession({
         title: sessionForm.title,
         description: sessionForm.description,
-        platform: sessionForm.platform,
-        ...(sessionForm.meetingLink ? { meetingLink: sessionForm.meetingLink } : {}),
+        platform: sessionForm.platform as 'Zoom' | 'Google Meet' | 'Zoho Meet',
+        meetingLink: sessionForm.meetingLink || undefined,
         timezone: sessionForm.timezone,
-        participants: [user.uid, ...sessionForm.participants],
-        status: 'scheduled',
+        participants: sessionForm.participants,
         scheduledAt,
-        confirmationDeadline: Timestamp.fromDate(addDays(scheduledAt.toDate(), -1)),
         createdBy: user.uid,
-        createdAt: serverTimestamp(),
-        confirmations: { [user.uid]: true },
+        creatorName: profile.fullName || 'Peer',
+        creatorEmail: profile.email || '',
       })
 
-      const sessionRef = await addDoc(collection(db, 'peer_sessions'), sessionPayload)
-
-      await Promise.all(
-        sessionForm.participants.map((peerId) =>
-          addDoc(
-            collection(db, 'peer_session_requests'),
-            removeUndefinedFields({
-              sessionId: sessionRef.id,
-              fromUserId: user.uid,
-              fromName: profile.fullName,
-              fromEmail: profile.email,
-              toUserId: peerId,
-              status: 'pending',
-              createdAt: serverTimestamp(),
-            })
-          )
-        )
-      )
-
+      // Update timezone preference if user enabled it
       if (sessionForm.rememberTimezone) {
         await updateDoc(doc(db, 'profiles', user.uid), { timezone: sessionForm.timezone, updatedAt: serverTimestamp() })
       }
 
-      setSessions((prev) => [
-        {
-          id: sessionRef.id,
-          title: sessionForm.title,
-          scheduledAt: scheduledAt.toDate(),
-          timezone: sessionForm.timezone,
-          platform: sessionForm.platform as PeerSession['platform'],
-          link: sessionForm.meetingLink,
-          status: 'scheduled',
-          confirmationDeadline: addDays(scheduledAt.toDate(), -1),
-          youConfirmed: true,
-          peerConfirmed: false,
-        },
-        ...prev,
-      ])
+      // Note: UI will update automatically via real-time listener
 
       toast({
         title: 'Session Created!',
@@ -923,15 +905,28 @@ export const PeerConnectPage: React.FC = () => {
         icon: <Check size={18} />,
       })
 
+      // Reset form and close modal
+      setSessionForm({
+        title: 'Group Transformation Session',
+        description: defaultSessionDescription,
+        platform: 'Zoom',
+        meetingLink: 'https://zoom.us/',
+        timezone: profile?.timezone || Intl.DateTimeFormat().resolvedOptions().timeZone,
+        rememberTimezone: true,
+        participants: [],
+        date: null,
+        time: '',
+      })
+
       setTimeout(() => sessionModal.onClose(), 500)
     } catch (error) {
+      console.error('Session creation failed:', error)
       toast({
         title: 'Could not create session',
-        description: 'Firebase prevented us from saving this session. Please try again.',
+        description: 'Please try again.',
         status: 'error',
         position: 'top',
       })
-      console.error('Session creation failed', error)
     }
   }
 
@@ -1614,32 +1609,12 @@ export const PeerConnectPage: React.FC = () => {
                   />
                 </FormControl>
 
-                <FormControl isInvalid={Boolean(formErrors.timezone)}>
-                  <FormLabel>Time Zone</FormLabel>
-                  <Select
-                    value={sessionForm.timezone}
-                    onChange={(e) => setSessionForm((prev) => ({ ...prev, timezone: e.target.value }))}
-                  >
-                    <option value="">Select a timezone</option>
-                    {timezoneOptions.map((tz) => (
-                      <option key={tz} value={tz}>
-                        {tz}
-                      </option>
-                    ))}
-                  </Select>
-                  <Checkbox
-                    mt={2}
-                    isChecked={sessionForm.rememberTimezone}
-                    onChange={(e) => setSessionForm((prev) => ({ ...prev, rememberTimezone: e.target.checked }))}
-                  >
-                    Remember this time zone
-                  </Checkbox>
-                  {formErrors.timezone && (
-                    <Text fontSize="xs" color="red.500" mt={1}>
-                      {formErrors.timezone}
-                    </Text>
-                  )}
-                </FormControl>
+                <Checkbox
+                  isChecked={sessionForm.rememberTimezone}
+                  onChange={(e) => setSessionForm((prev) => ({ ...prev, rememberTimezone: e.target.checked }))}
+                >
+                  Remember this time zone for future sessions
+                </Checkbox>
               </Stack>
 
               <Stack spacing={3}>
@@ -1681,26 +1656,21 @@ export const PeerConnectPage: React.FC = () => {
                   )}
                 </FormControl>
 
-                <SimpleGrid columns={{ base: 1, sm: 2 }} spacing={3}>
-                  <FormControl isInvalid={Boolean(formErrors.date)}>
-                    <FormLabel>Date</FormLabel>
-                    <Input type="date" value={sessionForm.date} onChange={(e) => setSessionForm((prev) => ({ ...prev, date: e.target.value }))} />
-                    {formErrors.date && (
-                      <Text fontSize="xs" color="red.500" mt={1}>
-                        {formErrors.date}
-                      </Text>
-                    )}
-                  </FormControl>
-                  <FormControl isInvalid={Boolean(formErrors.time)}>
-                    <FormLabel>Time</FormLabel>
-                    <Input type="time" value={sessionForm.time} onChange={(e) => setSessionForm((prev) => ({ ...prev, time: e.target.value }))} />
-                    {formErrors.time && (
-                      <Text fontSize="xs" color="red.500" mt={1}>
-                        {formErrors.time}
-                      </Text>
-                    )}
-                  </FormControl>
-                </SimpleGrid>
+                <DateTimePicker
+                  selectedDate={sessionForm.date}
+                  selectedTime={sessionForm.time}
+                  selectedTimezone={sessionForm.timezone}
+                  onDateChange={(date) => setSessionForm((prev) => ({ ...prev, date }))}
+                  onTimeChange={(time) => setSessionForm((prev) => ({ ...prev, time }))}
+                  onTimezoneChange={(timezone) => setSessionForm((prev) => ({ ...prev, timezone }))}
+                  dateError={formErrors.date}
+                  timeError={formErrors.time}
+                  timezoneError={formErrors.timezone}
+                  dateLabel="Session Date"
+                  timeLabel="Session Time"
+                  timezoneLabel="Time Zone"
+                  isRequired
+                />
 
                 <Box borderRadius="lg" border="1px dashed" borderColor="border.subtle" p={3} bg="surface.subtle">
                   <HStack align="center" spacing={2}>
