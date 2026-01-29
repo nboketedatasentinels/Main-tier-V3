@@ -313,26 +313,58 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const fetchProfileOnce = useCallback(async (uid: string): Promise<UserProfile | null> => {
     try {
       console.log('🟣 [Auth] fetchProfileOnce:start', { uid })
-      const profileRef = doc(db, 'users', uid)
-      const profileSnap = await getDoc(profileRef)
-      if (!profileSnap.exists()) {
-        console.warn('🟠 [Auth] fetchProfileOnce: no profile found')
-        return null
+      
+      // First, try to fetch from users collection (primary source)
+      const usersRef = doc(db, 'users', uid)
+      const usersSnap = await getDoc(usersRef)
+      if (usersSnap.exists()) {
+        const { id: _ignoredId, ...profileData } = usersSnap.data() as UserProfile
+        const rawProfile = {
+          ...profileData,
+          id: uid,
+          journeyType: profileData.journeyType || '4W',
+        } as UserProfile
+        const rawRole = rawProfile.role ?? UserRole.USER
+        const normalizedRole = normalizeRole(rawRole)
+        rawProfile.role = normalizedRole as StandardRole
+        console.log('🟣 [Auth] fetchProfileOnce: resolved profile from users collection', {
+          id: rawProfile.id,
+          role: rawProfile.role,
+        })
+        return rawProfile
       }
-      const { id: _ignoredId, ...profileData } = profileSnap.data() as UserProfile
-      const rawProfile = {
-        ...profileData,
-        id: uid,
-        journeyType: profileData.journeyType || '4W',
-      } as UserProfile
-      const rawRole = rawProfile.role ?? UserRole.USER
-      const normalizedRole = normalizeRole(rawRole)
-      rawProfile.role = normalizedRole as StandardRole
-      console.log('🟣 [Auth] fetchProfileOnce: resolved profile', {
-        id: rawProfile.id,
-        role: rawProfile.role,
-      })
-      return rawProfile
+      
+      console.warn('🟠 [Auth] fetchProfileOnce: no profile found in users collection, trying profiles collection...')
+      
+      // Fallback: try to fetch from profiles collection (legacy or sync source)
+      const profilesRef = doc(db, 'profiles', uid)
+      const profilesSnap = await getDoc(profilesRef)
+      if (profilesSnap.exists()) {
+        const { id: _ignoredId, ...profileData } = profilesSnap.data() as UserProfile
+        const rawProfile = {
+          ...profileData,
+          id: uid,
+          journeyType: profileData.journeyType || '4W',
+        } as UserProfile
+        const rawRole = rawProfile.role ?? UserRole.USER
+        const normalizedRole = normalizeRole(rawRole)
+        rawProfile.role = normalizedRole as StandardRole
+        console.log('🟣 [Auth] fetchProfileOnce: resolved profile from profiles collection (fallback)', {
+          id: rawProfile.id,
+          role: rawProfile.role,
+        })
+        // Sync this profile back to users collection to prevent future fallbacks
+        try {
+          await setDoc(usersRef, rawProfile, { merge: true })
+          console.log('🟣 [Auth] fetchProfileOnce: synced profile from profiles to users collection')
+        } catch (syncError) {
+          console.warn('🟠 [Auth] fetchProfileOnce: failed to sync profile to users collection', syncError)
+        }
+        return rawProfile
+      }
+      
+      console.warn('🟠 [Auth] fetchProfileOnce: no profile found in either collection')
+      return null
     } catch (error) {
       if (isOfflineError(error)) {
         console.warn('🟠 [Auth] fetchProfileOnce offline', { uid })
@@ -405,7 +437,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       const userDocRef = doc(db, 'users', firebaseUser.uid)
       const userDocSnap = await getDoc(userDocRef)
 
-      console.log('🟣 [Auth] Firestore profile exists?', userDocSnap.exists())
+      console.log('🟣 [Auth] Firestore profile exists in users collection?', userDocSnap.exists())
 
       if (userDocSnap.exists()) {
         const { id: _ignoredId, ...storedUser } = userDocSnap.data() as UserProfile
@@ -469,7 +501,36 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         return mergedUser
       }
 
-      /* ---------------- Create profile ---------------- */
+      /* -------- Check profiles collection as fallback -------- */
+      console.log('🟠 [Auth] Profile not found in users collection, checking profiles collection...')
+      try {
+        const profileDocRef = doc(db, 'profiles', firebaseUser.uid)
+        const profileDocSnap = await getDoc(profileDocRef)
+        
+        if (profileDocSnap.exists()) {
+          console.log('🟡 [Auth] Profile found in profiles collection (fallback), syncing to users collection...')
+          const { id: _ignoredId, ...storedProfile } = profileDocSnap.data() as UserProfile
+          const baseProfile: UserProfile = {
+            ...storedProfile,
+            id: firebaseUser.uid,
+            journeyType: storedProfile.journeyType || '4W',
+          }
+          
+          // Sync to users collection for consistency
+          try {
+            await setDoc(userDocRef, baseProfile, { merge: true })
+            console.log('🟣 [Auth] Profile synced from profiles to users collection')
+          } catch (syncError) {
+            console.warn('🟠 [Auth] Failed to sync profile to users collection, continuing anyway', syncError)
+          }
+          
+          return baseProfile
+        }
+      } catch (fallbackError) {
+        console.warn('🟠 [Auth] Failed to check profiles collection fallback', fallbackError)
+      }
+
+      /* -------- Create new profile if doesn't exist -------- */
       let validatedOrganization:
         | Awaited<ReturnType<typeof validateCompanyCode>>['organization']
         | null = null
