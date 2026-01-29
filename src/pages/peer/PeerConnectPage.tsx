@@ -377,7 +377,8 @@ export const PeerConnectPage: React.FC = () => {
       const matchDoc = await getDoc(matchRef)
       if (matchDoc.exists()) {
         const data = matchDoc.data()
-        const matchedPeer = availablePeers.find((peer) => peer.id === data.peerId)
+        const storedPeerId = data.peer_id ?? data.peerId
+        const matchedPeer = availablePeers.find((peer) => peer.id === storedPeerId)
         if (matchedPeer) {
           setWeeklyMatch({
             matchId: matchRef.id,
@@ -395,8 +396,8 @@ export const PeerConnectPage: React.FC = () => {
       const deterministicPeer = availablePeers[Math.abs(Number.parseInt(user.uid.slice(-3), 10)) % availablePeers.length]
       if (deterministicPeer) {
         const matchPayload = {
-          peerId: deterministicPeer.id,
-          userId: user.uid,
+          peer_id: deterministicPeer.id,
+          user_id: user.uid,
           matchKey: matchWindow.key,
           matchRefreshPreference: matchPreferences.refreshPreference,
           preferredMatchDay: matchPreferences.preferredMatchDay,
@@ -469,8 +470,8 @@ export const PeerConnectPage: React.FC = () => {
       const nextPeer = selectNextPeer(currentPeerId, refreshCount)
       if (!nextPeer) return
       const matchPayload = {
-        peerId: nextPeer.id,
-        userId: user.uid,
+        peer_id: nextPeer.id,
+        user_id: user.uid,
         matchKey: matchWindow.key,
         matchRefreshPreference: matchPreferences.refreshPreference,
         preferredMatchDay: matchPreferences.preferredMatchDay,
