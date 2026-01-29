@@ -50,7 +50,7 @@ service cloud.firestore {
     // Users collection
     match /users/{userId} {
       allow read: if request.auth != null;
-      allow create: if request.auth != null && request.auth.uid == userId;
+      allow create: if request.auth != null;
       allow update: if isOwner(userId) || isPartnerOrAdmin();
       allow delete: if isSuperAdmin();
     }
@@ -58,7 +58,7 @@ service cloud.firestore {
     // Profiles collection
     match /profiles/{userId} {
       allow read: if request.auth != null;
-      allow create: if request.auth != null && request.auth.uid == userId;
+      allow create: if request.auth != null;
       allow update: if isOwner(userId) || isPartnerOrAdmin();
       allow delete: if isSuperAdmin();
     }
