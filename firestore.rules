@@ -391,19 +391,19 @@ service cloud.firestore {
 
     // System health alerts
     match /system_health_alerts/{alertId} {
-      allow read: if isSuperAdmin();
+      allow read: if isPartnerOrAdmin();
       allow write: if isSuperAdmin();
     }
 
     // Task notifications
     match /task_notifications/{taskId} {
-      allow read: if isSuperAdmin();
+      allow read: if isPartnerOrAdmin();
       allow write: if isSuperAdmin();
     }
 
     // Admin activity log
     match /admin_activity_log/{entryId} {
-      allow read: if isSuperAdmin();
+      allow read: if isPartnerOrAdmin();
       allow create: if isAuthenticated();
       allow update, delete: if isSuperAdmin();
     }
