@@ -217,13 +217,18 @@ service cloud.firestore {
     match /peer_weekly_matches/{matchId} {
       allow read: if isAuthenticated() && (
         request.auth.uid == resource.data.user_id ||
+        request.auth.uid == resource.data.userId ||
         request.auth.uid == resource.data.user1_id ||
         request.auth.uid == resource.data.user2_id ||
         isPartnerOrAdmin()
       );
-      allow create: if isAuthenticated() && request.auth.uid == request.resource.data.user_id;
+      allow create: if isAuthenticated() && (
+        request.auth.uid == request.resource.data.user_id ||
+        request.auth.uid == request.resource.data.userId
+      );
       allow update: if isAuthenticated() && (
         request.auth.uid == resource.data.user_id ||
+        request.auth.uid == resource.data.userId ||
         request.auth.uid == resource.data.user1_id ||
         request.auth.uid == resource.data.user2_id ||
         isPartnerOrAdmin()
