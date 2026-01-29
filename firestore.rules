@@ -33,6 +33,12 @@ service cloud.firestore {
       return value is string && value.size() > 0;
     }
 
+    function getUserCompanyId() {
+      return isAuthenticated() && exists(/databases/$(database)/documents/profiles/$(request.auth.uid))
+        ? get(/databases/$(database)/documents/profiles/$(request.auth.uid)).data.get('companyId', '')
+        : '';
+    }
+
     function isValidPartnerAssignment(assignment) {
       return assignment is map
         && assignment.keys().hasOnly(['organizationId', 'companyCode', 'status'])
@@ -352,15 +358,23 @@ service cloud.firestore {
     match /impact_logs/{logId} {
       allow read: if isAuthenticated() && (
         request.auth.uid == resource.data.user_id ||
+        request.auth.uid == resource.data.userId ||
+        (resource.data.companyId is string && resource.data.companyId == getUserCompanyId()) ||
         isPartnerOrAdmin()
       );
-      allow create: if isAuthenticated() && request.auth.uid == request.resource.data.user_id;
+      allow create: if isAuthenticated() && (
+        request.auth.uid == request.resource.data.user_id ||
+        request.auth.uid == request.resource.data.userId ||
+        isPartnerOrAdmin()
+      );
       allow update: if isAuthenticated() && (
         request.auth.uid == resource.data.user_id ||
+        request.auth.uid == resource.data.userId ||
         isPartnerOrAdmin()
       );
       allow delete: if isAuthenticated() && (
         request.auth.uid == resource.data.user_id ||
+        request.auth.uid == resource.data.userId ||
         isSuperAdmin()
       );
     }
