@@ -138,6 +138,23 @@ service cloud.firestore {
       );
     }
 
+    // Weekly target alerts
+    match /weekly_target_alerts/{alertId} {
+      allow read: if isAuthenticated() && (
+        request.auth.uid == resource.data.user_id ||
+        isPartnerOrAdmin()
+      );
+      allow create: if isAuthenticated() && (
+        request.auth.uid == request.resource.data.user_id ||
+        isPartnerOrAdmin()
+      );
+      allow update: if isAuthenticated() && (
+        request.auth.uid == resource.data.user_id ||
+        isPartnerOrAdmin()
+      );
+      allow delete: if isSuperAdmin();
+    }
+
     // Organizations collection
     match /organizations/{orgId} {
       allow read: if isAuthenticated();
