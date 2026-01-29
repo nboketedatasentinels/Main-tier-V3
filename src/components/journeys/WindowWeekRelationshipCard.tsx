@@ -2,7 +2,7 @@ import React from 'react'
 import { Box, Card, CardBody, HStack, Stack, Text, Badge, Icon, Flex } from '@chakra-ui/react'
 import { Calendar } from 'lucide-react'
 import { JourneyType } from '@/config/pointsConfig'
-import { getWindowNumber, PARALLEL_WINDOW_SIZE_WEEKS } from '@/utils/windowCalculations'
+import { PARALLEL_WINDOW_SIZE_WEEKS } from '@/utils/windowCalculations'
 
 export interface WindowWeekRelationshipCardProps {
   currentWeek: number
