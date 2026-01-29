@@ -183,6 +183,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     return (
       previous.id === next.id &&
       previous.role === next.role &&
+      normalizeRole(previous.role) === normalizeRole(next.role) &&
       previous.membershipStatus === next.membershipStatus &&
       previous.accountStatus === next.accountStatus &&
       previous.transformationTier === next.transformationTier &&
@@ -207,7 +208,20 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
   const updateProfileState = useCallback((nextProfile: UserProfile | null, reason: string) => {
     setProfile((prev) => {
-      if (areProfilesEquivalent(prev, nextProfile)) {
+      const shouldUpdateProfile = (() => {
+        if (!prev && !nextProfile) return false
+        if (!prev || !nextProfile) return true
+        const prevNormalizedRole = normalizeRole(prev.role)
+        const nextNormalizedRole = normalizeRole(nextProfile.role)
+        return (
+          prev.id !== nextProfile.id ||
+          prev.role !== nextProfile.role ||
+          prevNormalizedRole !== nextNormalizedRole ||
+          !areProfilesEquivalent(prev, nextProfile)
+        )
+      })()
+
+      if (!shouldUpdateProfile) {
         console.log('🟢 [Auth] Profile unchanged, skipping state update', { reason })
         return prev
       }
@@ -310,10 +324,9 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         id: uid,
         journeyType: profileData.journeyType || '4W',
       } as UserProfile
-      const normalizedRole = normalizeRole(rawProfile.role)
-      if (normalizedRole) {
-        rawProfile.role = normalizedRole as StandardRole
-      }
+      const rawRole = rawProfile.role ?? UserRole.USER
+      const normalizedRole = normalizeRole(rawRole)
+      rawProfile.role = normalizedRole as StandardRole
       console.log('🟣 [Auth] fetchProfileOnce: resolved profile', {
         id: rawProfile.id,
         role: rawProfile.role,
@@ -426,14 +439,10 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
           console.warn('🟠 [Auth] Unable to merge learner profile extras', extrasError)
         }
 
-        const normalized = normalizeRole(mergedUser.role)
-        console.log('🟣 [Auth] Normalized role:', normalized)
-
-        if (normalized) {
-          mergedUser.role = normalized as StandardRole
-        } else {
-          console.warn('🟠 [Auth] Invalid role detected:', mergedUser.role)
-        }
+        const rawRole = mergedUser.role ?? UserRole.USER
+        const normalizedRole = normalizeRole(rawRole)
+        console.log('🟣 [Auth] Normalized role:', { raw: rawRole, normalized: normalizedRole })
+        mergedUser.role = normalizedRole as StandardRole
 
         const profileUpdates: Partial<UserProfile> = {}
         if (firebaseUser.photoURL && !mergedUser.avatarUrl) {
@@ -680,20 +689,13 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
       let userProfile = await fetchProfileWithRetry(currentUser)
 
-      if (!userProfile?.role) {
-        console.warn('🟠 [Auth] Profile loaded without role, applying fallback role:user')
-        userProfile = userProfile
-          ? { ...userProfile, role: (normalizeRole(userProfile.role) as StandardRole) || UserRole.USER }
-          : null
-      }
-
       if (isActive) {
         const ensuredProfile = userProfile
           ? { ...userProfile, assignedOrganizations: userProfile.assignedOrganizations ?? [] }
           : null
         console.log('🟢 [Auth] Profile resolved', {
           role: ensuredProfile?.role,
-          normalized: normalizeRole(ensuredProfile?.role),
+          normalized: ensuredProfile?.role,
         })
 
         updateProfileState(ensuredProfile, 'auth-state-change')
@@ -721,11 +723,13 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         (snap) => {
           if (!snap.exists()) return
           const { id: _ignoredId, ...updatedData } = snap.data() as UserProfile
+          const rawRole = updatedData.role ?? UserRole.USER
+          const normalizedRole = normalizeRole(rawRole)
           const updatedProfile: UserProfile = {
             ...updatedData,
             id: snap.id,
             journeyType: updatedData.journeyType || '4W',
-            role: (normalizeRole(updatedData.role) as StandardRole) ?? updatedData.role,
+            role: normalizedRole as StandardRole,
             assignedOrganizations: updatedData.assignedOrganizations ?? [],
           }
           console.log('🔁 [Auth] Profile updated via snapshot', updatedProfile.role)
