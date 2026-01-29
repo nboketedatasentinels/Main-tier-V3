@@ -57,6 +57,10 @@ service cloud.firestore {
       return data.keys().hasAll(['participants']) && data.participants is list;
     }
 
+    function listHasUid(listValue, uid) {
+      return listValue is list && uid in listValue;
+    }
+
     function hasPeerSessionRequestFields(data) {
       return data.keys().hasAll(['fromUserId', 'toUserId']);
     }
@@ -279,12 +283,18 @@ service cloud.firestore {
     // Peer sessions
     match /peer_sessions/{sessionId} {
       allow read: if isAuthenticated() && (
-        (hasParticipantsList(resource.data) && request.auth.uid in resource.data.participants) ||
+        listHasUid(resource.data.participants, request.auth.uid) ||
+        listHasUid(resource.data.participantIds, request.auth.uid) ||
+        listHasUid(resource.data.participant_ids, request.auth.uid) ||
+        request.auth.uid == resource.data.createdBy ||
         isPartnerOrAdmin()
       );
       allow create: if isAuthenticated();
       allow update: if isAuthenticated() && (
-        (hasParticipantsList(resource.data) && request.auth.uid in resource.data.participants) ||
+        listHasUid(resource.data.participants, request.auth.uid) ||
+        listHasUid(resource.data.participantIds, request.auth.uid) ||
+        listHasUid(resource.data.participant_ids, request.auth.uid) ||
+        request.auth.uid == resource.data.createdBy ||
         isPartnerOrAdmin()
       );
       allow delete: if isPartnerOrAdmin();
