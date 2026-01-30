@@ -22,7 +22,6 @@ import { AccountLinkingModal } from '@/components/auth/AccountLinkingModal'
 import { getLandingPathForRole } from '@/utils/roleRouting'
 import { getFriendlyErrorMessage } from '@/utils/authErrors'
 import { GoogleIcon } from '@/components/icons/GoogleIcon'
-import { PageTransitionLoader } from '@/components/PageTransitionLoader'
 
 export const LoginPage: React.FC = () => {
   const {
@@ -53,7 +52,6 @@ export const LoginPage: React.FC = () => {
   const [showPasswordChangeModal, setShowPasswordChangeModal] = useState(false)
   const [profileTimeoutReached, setProfileTimeoutReached] = useState(false)
   const [refreshingProfile, setRefreshingProfile] = useState(false)
-  const showAuthLoader = loading || googleLoading || (user && profileLoading)
 
   useEffect(() => {
     const refCode = searchParams.get('ref')?.trim()
@@ -305,7 +303,6 @@ export const LoginPage: React.FC = () => {
     <>
       <form onSubmit={handleLogin}>
         <VStack spacing={6} align="stretch">
-          {showAuthLoader && <PageTransitionLoader fullScreen={false} size="medium" />}
           <Text fontSize="2xl" fontWeight="bold" color="text.primary" textAlign="center">
             Sign In
           </Text>

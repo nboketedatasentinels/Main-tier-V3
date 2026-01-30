@@ -1,8 +1,7 @@
 import { useUserBadges } from '@/hooks/useUserBadges';
 import { useNavigate } from 'react-router-dom';
-import { Box, Text, Button, VStack, HStack, Center, Icon, Image } from '@chakra-ui/react';
+import { Box, Text, Button, Spinner, VStack, HStack, Center, Icon, Image } from '@chakra-ui/react';
 import { Award, ChevronRight } from 'lucide-react';
-import { PageTransitionLoader } from '@/components/PageTransitionLoader';
 
 const BadgeDisplay = () => {
   const { userBadges, loading, error } = useUserBadges();
@@ -11,7 +10,7 @@ const BadgeDisplay = () => {
   if (loading) {
     return (
       <Center py={4}>
-        <PageTransitionLoader fullScreen={false} size="small" inline />
+        <Spinner size="sm" color="brand.primary" />
       </Center>
     );
   }

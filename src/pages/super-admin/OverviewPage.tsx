@@ -18,6 +18,7 @@ import {
   HStack,
   SimpleGrid,
   Skeleton,
+  Spinner,
   Stack,
   Text,
   useDisclosure,
@@ -49,7 +50,6 @@ import { RiskAnomalyRadar, Signal } from './components/RiskAnomalyRadar'
 import { OperationalCommands } from './components/OperationalCommands'
 import { SystemIntelligenceFeed, FeedEvent } from './components/SystemIntelligenceFeed'
 import { CollapsibleMetrics } from './components/CollapsibleMetrics'
-import { PageTransitionLoader } from '@/components/PageTransitionLoader'
 
 type TrendPoint = { label: string; value: number }
 
@@ -241,7 +241,7 @@ export const OverviewPage: React.FC<OverviewPageProps> = ({
             <Skeleton height="150px" borderRadius="xl" />
           </SimpleGrid>
           <Flex justify="center" align="center" py={6}>
-            <PageTransitionLoader fullScreen={false} size="medium" />
+            <Spinner size="lg" />
           </Flex>
         </Stack>
       ) : (

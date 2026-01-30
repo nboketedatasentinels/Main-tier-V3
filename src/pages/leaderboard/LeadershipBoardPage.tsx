@@ -88,7 +88,6 @@ import { useLeaderboardMetrics } from '@/hooks/leaderboard/useLeaderboardMetrics
 import { useUserActivityHistory } from '@/hooks/leaderboard/useUserActivityHistory'
 import { StartChallengeModal } from '@/components/modals/StartChallengeModal'
 import { format } from 'date-fns'
-import { PageTransitionLoader } from '@/components/PageTransitionLoader'
 
 interface FeaturedBadge {
   id: string
@@ -517,7 +516,6 @@ export const LeadershipBoardPage: React.FC = () => {
   })
 
   const isPointsReady = Boolean(profile) && profilesLoaded && transactionsLoaded
-  const isLeaderboardLoading = !profilesLoaded || !transactionsLoaded
   const displayTotalPoints = userRow?.totalPoints ?? profile?.totalPoints ?? 0
   const weeklyTarget = 200
   const weeklyProgress = Math.min(100, (segmentStats.weeklyPoints / weeklyTarget) * 100)
@@ -618,10 +616,6 @@ export const LeadershipBoardPage: React.FC = () => {
 
   const emptyChallenges = challenges.filter((c) => c.status === 'active' || c.status === 'pending').length === 0
   const isFreeContext = context?.type === 'free'
-
-  if (isLeaderboardLoading) {
-    return <PageTransitionLoader fullScreen={false} size="large" />
-  }
 
   return (
     <Stack spacing={6}>

@@ -8,6 +8,7 @@ import {
   HStack,
   Heading,
   Select,
+  Spinner,
   Stack,
   Table,
   Tbody,
@@ -27,7 +28,6 @@ import {
 } from '@/hooks/admin/useAdminUpgradeRequests'
 import { UpgradeRequest, UpgradeRequestStatus } from '@/types/upgrade'
 import { useAuth } from '@/hooks/useAuth'
-import { PageTransitionLoader } from '@/components/PageTransitionLoader'
 
 const statusColors: Record<UpgradeRequestStatus, string> = {
   pending: 'yellow',
@@ -120,10 +120,10 @@ export const UpgradeRequestsPanel: React.FC<UpgradeRequestsPanelProps> = ({
 
         {resolvedLoading ? (
           <Stack spacing={3}>
-            <Stack spacing={2} align="center">
-              <PageTransitionLoader fullScreen={false} size="small" />
+            <HStack spacing={3}>
+              <Spinner />
               <Text>Loading requests...</Text>
-            </Stack>
+            </HStack>
             <Stack spacing={2}>
               {[1, 2, 3].map((item) => (
                 <Box key={item} borderRadius="md" border="1px solid" borderColor="gray.200" p={3}>
