@@ -405,8 +405,8 @@ export const WeeklyGlancePage = () => {
             />
           </GridItem>
 
-          <GridItem colSpan={{ base: 1, md: 6 }} order={{ base: 4, md: 4 }}>
-            {profile && (
+          {profile && (
+            <GridItem colSpan={{ base: 1, md: 6 }} order={{ base: 4, md: 4 }}>
               <WindowWeekRelationshipCard
                 currentWeek={profile.currentWeek ?? data.weekNumber}
                 windowNumber={windowMeta.windowNumber}
@@ -415,8 +415,8 @@ export const WeeklyGlancePage = () => {
                 journeyType={profile.journeyType}
                 totalWeeks={profile.programDurationWeeks}
               />
-            )}
-          </GridItem>
+            </GridItem>
+          )}
 
           <GridItem colSpan={{ base: 1, md: 8 }} order={{ base: 5, md: 5 }}>
             <ActivityFeedCard items={[...activityFeedItems]} />
