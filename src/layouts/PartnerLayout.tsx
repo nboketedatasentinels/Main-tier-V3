@@ -36,6 +36,7 @@ import { NotificationDropdown } from '@/components/notifications/NotificationDro
 import { useAuth } from '@/hooks/useAuth'
 import { usePartnerAdminSnapshot } from '@/hooks/partner/usePartnerAdminSnapshot'
 import { type NavigationSection, buildPartnerNavItems } from '@/utils/navigationItems'
+import { PageTransitionLoader } from '@/components/PageTransitionLoader'
 
 interface PartnerLayoutProps {
   children: React.ReactNode
@@ -299,6 +300,7 @@ export const PartnerLayout: React.FC<PartnerLayoutProps> = ({
 
   return (
     <Flex minH="100vh" h="100vh" bg="brand.canvas" overflow="hidden">
+      {signingOut && <PageTransitionLoader fullScreen />}
       <Box
         display={{ base: 'none', md: 'block' }}
         w={sidebarWidth}

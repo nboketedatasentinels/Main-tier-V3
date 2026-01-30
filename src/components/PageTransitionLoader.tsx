@@ -4,15 +4,17 @@ import { DotLottieReact } from '@lottiefiles/dotlottie-react';
 interface PageTransitionLoaderProps {
   fullScreen?: boolean;
   size?: 'small' | 'medium' | 'large';
+  inline?: boolean;
 }
 
 export const PageTransitionLoader: React.FC<PageTransitionLoaderProps> = ({
   fullScreen = true,
   size = 'large',
+  inline = false,
 }) => {
   const sizeMap = {
-    small: 160,
-    medium: 220,
+    small: 96,
+    medium: 200,
     large: 320,
   };
 
@@ -29,15 +31,18 @@ export const PageTransitionLoader: React.FC<PageTransitionLoaderProps> = ({
 
   if (fullScreen) {
     return (
-      <div className="fixed inset-0 z-50 flex items-center justify-center bg-surface-default">
+      <div
+        className="fixed inset-0 flex items-center justify-center bg-surface-default"
+        style={{ zIndex: 9999 }}
+      >
         {animation}
       </div>
     );
   }
 
-  return (
-    <div className="flex items-center justify-center py-8">
-      {animation}
-    </div>
-  );
+  const containerClassName = inline
+    ? 'inline-flex items-center justify-center'
+    : 'flex items-center justify-center py-8';
+
+  return <div className={containerClassName}>{animation}</div>;
 };

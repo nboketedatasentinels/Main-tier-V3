@@ -2,7 +2,7 @@ import React, { useEffect, useMemo, useState } from "react"
 import { Link as RouterLink, useNavigate, useSearchParams } from "react-router-dom"
 import { motion } from "framer-motion"
 import { Eye, EyeOff, ArrowRight, User, Mail, Lock, Building2, CheckCircle, XCircle } from "lucide-react"
-import { Spinner, useToast } from "@chakra-ui/react"
+import { useToast } from "@chakra-ui/react"
 import { useAuth } from "@/hooks/useAuth"
 import { getFriendlyErrorMessage } from "@/utils/authErrors"
 import { validateCompanyCode } from "@/services/organizationService"
@@ -14,6 +14,7 @@ import { TermsOfUseModal } from "@/components/modals/TermsOfUseModal"
 import { PrivacyPolicyModal } from "@/components/modals/PrivacyPolicyModal"
 import { GoogleIcon } from "@/components/icons/GoogleIcon"
 import { CompanyCodeModal } from "@/components/modals/CompanyCodeModal"
+import { PageTransitionLoader } from "@/components/PageTransitionLoader"
 
 interface FormData {
   fullName: string
@@ -55,6 +56,7 @@ export const SignUpPage: React.FC = () => {
   const [pendingGoogleNavigation, setPendingGoogleNavigation] = useState(false)
   const [referralCode, setReferralCode] = useState<string | null>(null)
   const [referralStatus, setReferralStatus] = useState<"idle" | "checking" | "valid" | "invalid">("idle")
+  const showAuthLoader = loading || googleLoading || profileLoading
 
   useEffect(() => {
     const queryRef = searchParams.get("ref")?.trim()
@@ -299,11 +301,17 @@ export const SignUpPage: React.FC = () => {
           <p className="mt-1 text-sm text-gray-600">Start your transformation journey.</p>
         </div>
 
+        {showAuthLoader && (
+          <div className="flex justify-center">
+            <PageTransitionLoader fullScreen={false} size="medium" />
+          </div>
+        )}
+
         {referralCode && (
           <div className="rounded-lg border border-purple-100 bg-purple-50 px-4 py-3 text-sm text-purple-700">
             {referralStatus === "checking" && (
               <div className="inline-flex items-center gap-2">
-                <Spinner size="xs" />
+                <PageTransitionLoader fullScreen={false} size="small" inline />
                 <span>Checking referral code...</span>
               </div>
             )}
@@ -398,7 +406,7 @@ export const SignUpPage: React.FC = () => {
           </div>
           {isCheckingCode && (
             <div className="mt-2 inline-flex items-center gap-2 text-sm text-gray-600 transition-all">
-              <Spinner size="xs" />
+              <PageTransitionLoader fullScreen={false} size="small" inline />
               <span>Verifying code...</span>
             </div>
           )}

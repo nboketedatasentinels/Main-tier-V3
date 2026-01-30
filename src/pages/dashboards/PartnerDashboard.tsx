@@ -45,6 +45,7 @@ import { recordEngagementAction } from '@/services/engagementService'
 import { generatePartnerDigest, sendPartnerDigestEmail } from '@/services/partnerDigestService'
 import { buildPartnerNavItems } from '@/utils/navigationItems'
 import { logger, type MismatchSample } from '@/utils/partnerDashboardUtils'
+import { PageTransitionLoader } from '@/components/PageTransitionLoader'
 
 export const PartnerDashboard: React.FC = () => {
   const navigate = useNavigate()
@@ -1721,9 +1722,7 @@ export const PartnerDashboard: React.FC = () => {
           <Text fontSize="sm" color="brand.subtleText">
             Initializing dashboard...
           </Text>
-          <Skeleton height="28px" width="220px" />
-          <Skeleton height="180px" borderRadius="md" />
-          <Skeleton height="180px" borderRadius="md" />
+          <PageTransitionLoader fullScreen={false} size="medium" />
         </Stack>
       </PartnerLayout>
     )

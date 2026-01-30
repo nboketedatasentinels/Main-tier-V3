@@ -20,7 +20,6 @@ import {
   MenuItem,
   MenuList,
   Select,
-  Spinner,
   Stack,
   Table,
   Tbody,
@@ -36,6 +35,7 @@ import { ChevronDown, Eye, Filter, Search, Trash2 } from 'lucide-react'
 import { Link as RouterLink } from 'react-router-dom'
 import { useAuth } from '@/hooks/useAuth'
 import { usePartnerAdminSnapshot } from '@/hooks/partner/usePartnerAdminSnapshot'
+import { PageTransitionLoader } from '@/components/PageTransitionLoader'
 import {
   ManagedUserRecord,
   ManagedUserRole,
@@ -364,10 +364,10 @@ export const UsersManagementTab = ({ users: propUsers, loading: propLoading }: U
 
             <Box border="1px solid" borderColor="gray.200" borderRadius="xl" overflowX="auto">
               {propLoading ? (
-                <Flex py={10} justify="center" align="center" gap={3}>
-                  <Spinner color="purple.500" />
+                <Stack py={6} spacing={3} align="center">
+                  <PageTransitionLoader fullScreen={false} size="small" />
                   <Text color="gray.600">Loading users…</Text>
-                </Flex>
+                </Stack>
               ) : error ? (
                 <Flex py={6} justify="center" align="center">
                   <Text color="red.500">{error}</Text>

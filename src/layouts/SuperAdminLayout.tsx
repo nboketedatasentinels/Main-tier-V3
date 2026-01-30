@@ -28,6 +28,7 @@ import { LogOut, Menu as MenuIcon, Shield, Sparkles, X } from 'lucide-react'
 import { NotificationDropdown } from '@/components/notifications/NotificationDropdown'
 import { useAuth } from '@/hooks/useAuth'
 import { buildCommonAccountItems, buildSuperAdminNavItems, NavigationItem, NavigationSection } from '@/utils/navigationItems'
+import { PageTransitionLoader } from '@/components/PageTransitionLoader'
 
 interface SuperAdminLayoutProps {
   children: React.ReactNode
@@ -176,6 +177,7 @@ export const SuperAdminLayout: React.FC<SuperAdminLayoutProps> = ({
 
   return (
     <Flex minH="100vh" h="100vh" bg="brand.accent" overflow="hidden">
+      {signingOut && <PageTransitionLoader fullScreen />}
       <Box
         as="nav"
         w={{ base: '0', lg: '280px' }}
