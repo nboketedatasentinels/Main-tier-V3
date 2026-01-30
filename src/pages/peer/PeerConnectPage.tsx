@@ -534,40 +534,57 @@ export const PeerConnectPage: React.FC = () => {
   useEffect(() => {
     if (!user || loading || profileLoading) return
 
-    setLoadingSessions(true)
+    let isActive = true
+    let unsubscribeSessions: (() => void) | null = null
+    let unsubscribeInvites: (() => void) | null = null
 
-    // Subscribe to sessions in real-time
-    const unsubscribeSessions = subscribeToUserSessions(user.uid, (sessionData) => {
-      const mappedSessions: PeerSession[] = sessionData.map((session) => ({
-        id: session.id,
-        title: session.title || 'Weekly Peer Date',
-        scheduledAt: session.scheduledAt,
-        timezone: session.timezone || profile?.timezone || 'UTC',
-        platform: session.platform as PeerSession['platform'],
-        link: session.meetingLink,
-        status: session.status as PeerSession['status'],
-        confirmationDeadline: session.confirmationDeadline,
-        youConfirmed: Boolean(session.confirmations?.[user.uid]),
-        peerConfirmed: Object.keys(session.confirmations || {}).filter(k => k !== user.uid).some(k => session.confirmations[k]),
-      }))
-      setSessions(mappedSessions)
-      setLoadingSessions(false)
-    })
+    const startSubscriptions = async () => {
+      try {
+        await user.getIdToken()
+      } catch (error) {
+        console.warn('[PeerConnect] Unable to refresh auth token before subscribing', error)
+      }
 
-    // Subscribe to invitations in real-time
-    const unsubscribeInvites = subscribeToUserInvitations(user.uid, (inviteData) => {
-      const mappedInvites: Invitation[] = inviteData.map((invite) => ({
-        id: invite.id,
-        fromName: invite.fromName || 'Peer',
-        fromEmail: invite.fromEmail || 'peer@example.com',
-      }))
-      setPendingInvites(mappedInvites)
-    })
+      if (!isActive) return
+
+      setLoadingSessions(true)
+
+      // Subscribe to sessions in real-time
+      unsubscribeSessions = subscribeToUserSessions(user.uid, (sessionData) => {
+        const mappedSessions: PeerSession[] = sessionData.map((session) => ({
+          id: session.id,
+          title: session.title || 'Weekly Peer Date',
+          scheduledAt: session.scheduledAt,
+          timezone: session.timezone || profile?.timezone || 'UTC',
+          platform: session.platform as PeerSession['platform'],
+          link: session.meetingLink,
+          status: session.status as PeerSession['status'],
+          confirmationDeadline: session.confirmationDeadline,
+          youConfirmed: Boolean(session.confirmations?.[user.uid]),
+          peerConfirmed: Object.keys(session.confirmations || {}).filter(k => k !== user.uid).some(k => session.confirmations[k]),
+        }))
+        setSessions(mappedSessions)
+        setLoadingSessions(false)
+      })
+
+      // Subscribe to invitations in real-time
+      unsubscribeInvites = subscribeToUserInvitations(user.uid, (inviteData) => {
+        const mappedInvites: Invitation[] = inviteData.map((invite) => ({
+          id: invite.id,
+          fromName: invite.fromName || 'Peer',
+          fromEmail: invite.fromEmail || 'peer@example.com',
+        }))
+        setPendingInvites(mappedInvites)
+      })
+    }
+
+    void startSubscriptions()
 
     // Cleanup subscriptions on unmount
     return () => {
-      unsubscribeSessions()
-      unsubscribeInvites()
+      isActive = false
+      if (unsubscribeSessions) unsubscribeSessions()
+      if (unsubscribeInvites) unsubscribeInvites()
     }
   }, [loading, profile?.timezone, profileLoading, user])
 
