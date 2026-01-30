@@ -99,6 +99,7 @@ import { TransformationTier, UserRole } from '@/types'
 import { normalizeRole } from '@/utils/role'
 import { incrementOrganizationMemberCount, validateCompanyCode } from '@/services/organizationService'
 import { fetchVillageById, VillageSummary } from '@/services/villageService'
+import { listVillageInvitations } from '@/services/villageInvitationService'
 import { CORE_VALUES } from '@/config/personality-data'
 import BadgeDisplay from '@/components/profile/BadgeDisplay'
 
@@ -293,6 +294,8 @@ export const ProfilePage: React.FC = () => {
   const [villageDetails, setVillageDetails] = useState<VillageSummary | null>(null)
   const [villageLoading, setVillageLoading] = useState(false)
   const [villageError, setVillageError] = useState<string | null>(null)
+  const [pendingVillageInvites, setPendingVillageInvites] = useState(0)
+  const [shareableInviteCode, setShareableInviteCode] = useState<string | null>(null)
   const [isLeaveVillageOpen, setIsLeaveVillageOpen] = useState(false)
   const [isLeavingVillage, setIsLeavingVillage] = useState(false)
   const cancelLeaveRef = useRef<HTMLButtonElement | null>(null)
@@ -399,6 +402,9 @@ export const ProfilePage: React.FC = () => {
   )
   const isPaidMember = profileData?.membershipStatus === 'paid'
   const shouldShowVillageCard = !isPaidMember && Boolean(villageId)
+  const villageMemberLimit = 10
+  const isVillageNearCapacity = (villageDetails?.memberCount ?? 0) >= villageMemberLimit - 2
+  const isVillageAtCapacity = (villageDetails?.memberCount ?? 0) >= villageMemberLimit
 
   useEffect(() => {
     let isMounted = true
@@ -433,6 +439,33 @@ export const ProfilePage: React.FC = () => {
     }
 
     loadVillageDetails()
+
+    return () => {
+      isMounted = false
+    }
+  }, [isPaidMember, villageId])
+
+  useEffect(() => {
+    if (!villageId || isPaidMember) {
+      setPendingVillageInvites(0)
+      setShareableInviteCode(null)
+      return
+    }
+
+    let isMounted = true
+    const loadInvites = async () => {
+      try {
+        const invites = await listVillageInvitations({ villageId, status: 'pending' })
+        if (!isMounted) return
+        setPendingVillageInvites(invites.length)
+        const shareableInvite = invites.find((invite) => !invite.email)
+        setShareableInviteCode(shareableInvite?.invitationCode ?? null)
+      } catch (error) {
+        console.error('Failed to load village invites', error)
+      }
+    }
+
+    void loadInvites()
 
     return () => {
       isMounted = false
@@ -499,12 +532,25 @@ export const ProfilePage: React.FC = () => {
 
   const handleManageVillage = () => {
     if (!villageId) return
-    navigate(`/app/villages/${villageId}`)
+    navigate(`/app/villages/${villageId}/manage`)
   }
 
   const handleInviteVillage = () => {
     if (!villageId) return
     navigate(`/app/villages/${villageId}/invite`)
+  }
+
+  const handleCopyVillageInviteLink = async () => {
+    if (!shareableInviteCode) return
+    const inviteLink = `${window.location.origin}/app/villages/join/${shareableInviteCode}`
+    if (navigator.clipboard) {
+      await navigator.clipboard.writeText(inviteLink)
+      toast({
+        title: 'Invite link copied',
+        status: 'success',
+        duration: 2000,
+      })
+    }
   }
 
   const handleLeaveVillage = async () => {
@@ -1496,7 +1542,43 @@ export const ProfilePage: React.FC = () => {
                             </Box>
                             <Box>
                               <Text fontSize="xs" color="brand.subtleText">Members</Text>
-                              <Text fontSize="sm">{villageDetails?.memberCount ?? 0}</Text>
+                              <HStack spacing={2}>
+                                <Text fontSize="sm">
+                                  {villageDetails?.memberCount ?? 0}/{villageMemberLimit}
+                                </Text>
+                                {isVillageAtCapacity && (
+                                  <Badge colorScheme="red" fontSize="xs">At capacity</Badge>
+                                )}
+                                {!isVillageAtCapacity && isVillageNearCapacity && (
+                                  <Badge colorScheme="orange" fontSize="xs">Near capacity</Badge>
+                                )}
+                              </HStack>
+                            </Box>
+                            <Box>
+                              <Text fontSize="xs" color="brand.subtleText">Pending invites</Text>
+                              <HStack spacing={2}>
+                                <Text fontSize="sm">{pendingVillageInvites}</Text>
+                                {pendingVillageInvites > 0 && (
+                                  <Badge colorScheme="purple" fontSize="xs">{pendingVillageInvites} pending</Badge>
+                                )}
+                              </HStack>
+                            </Box>
+                            <Box>
+                              <Text fontSize="xs" color="brand.subtleText">Shareable invite link</Text>
+                              {shareableInviteCode ? (
+                                <HStack spacing={2}>
+                                  <Text fontSize="xs" color="brand.subtleText" noOfLines={1}>
+                                    {`${window.location.origin}/app/villages/join/${shareableInviteCode}`}
+                                  </Text>
+                                  <Button size="xs" variant="outline" onClick={handleCopyVillageInviteLink}>
+                                    Copy link
+                                  </Button>
+                                </HStack>
+                              ) : (
+                                <Text fontSize="sm" color="brand.subtleText">
+                                  Generate a shareable code from the invite page.
+                                </Text>
+                              )}
                             </Box>
                             <Box>
                               <Text fontSize="xs" color="brand.subtleText">Role</Text>
@@ -1526,7 +1608,7 @@ export const ProfilePage: React.FC = () => {
                                 variant="outline"
                                 leftIcon={<Icon as={UserPlus} />}
                                 onClick={handleInviteVillage}
-                                isDisabled={!villageId}
+                                isDisabled={!villageId || isVillageAtCapacity}
                               >
                                 Invite Members
                               </Button>

@@ -48,6 +48,10 @@ import { OrganizationDetailPage } from '@/pages/admin/OrganizationDetailPage';
 import ApprovalQueuePage from '@/pages/admin/ApprovalQueuePage';
 import PartnerAssignmentPage from '@/pages/admin/PartnerAssignmentPage';
 import BadgeGalleryPage from '@/pages/badges/BadgeGalleryPage';
+import { VillageInvitePage } from '@/pages/villages/VillageInvitePage'
+import { AcceptVillageInvitePage } from '@/pages/villages/AcceptVillageInvitePage'
+import { VillageManagePage } from '@/pages/villages/VillageManagePage'
+import { VillageCreatorRoute } from '@/components/VillageCreatorRoute'
 
 // Error pages
 import { NotFoundPage } from '@/pages/errors/NotFoundPage'
@@ -246,6 +250,31 @@ export const AppRoutes = () => {
           <Route path="shameless-circle" element={<ShamelessCirclePage />} />
           <Route path="profile" element={<ProfilePage />} />
           <Route path="badge-gallery" element={<BadgeGalleryPage />} />
+          <Route path="villages/join/:invitationCode" element={<AcceptVillageInvitePage />} />
+          <Route
+            path="villages/:villageId/invite"
+            element={
+              <VillageCreatorRoute>
+                <VillageInvitePage />
+              </VillageCreatorRoute>
+            }
+          />
+          <Route
+            path="villages/:villageId/manage"
+            element={
+              <VillageCreatorRoute>
+                <VillageManagePage />
+              </VillageCreatorRoute>
+            }
+          />
+          <Route
+            path="villages/:villageId/members"
+            element={
+              <VillageCreatorRoute>
+                <VillageManagePage />
+              </VillageCreatorRoute>
+            }
+          />
           <Route path="dashboard/*" element={<DashboardRouter />} />
         </Route>
 
