@@ -90,6 +90,20 @@ service cloud.firestore {
       );
     }
 
+    function isVillageCreator(villageId) {
+      return isAuthenticated()
+        && exists(/databases/$(database)/documents/villages/$(villageId))
+        && get(/databases/$(database)/documents/villages/$(villageId)).data.creatorId == request.auth.uid;
+    }
+
+    function isInvitationInvitee(invite) {
+      return isAuthenticated()
+        && (
+          (!('email' in invite) || invite.email == null) ||
+          invite.email == request.auth.token.email
+        );
+    }
+
     // Users collection
     match /users/{userId} {
       allow read, write: if request.auth != null;
@@ -263,7 +277,33 @@ service cloud.firestore {
           && request.resource.data.creatorId == request.auth.uid
           && listHasUid(request.resource.data.memberIds, request.auth.uid)
         );
-      allow update, delete: if isPartnerOrAdmin();
+      allow update: if isPartnerOrAdmin()
+        || (
+          isAuthenticated()
+          && resource.data.creatorId == request.auth.uid
+          && request.resource.data.creatorId == resource.data.creatorId
+          && request.resource.data.memberCount <= 10
+        );
+      allow delete: if isPartnerOrAdmin();
+    }
+
+    // Village invitations collection
+    match /village_invitations/{invitationId} {
+      allow read: if isAuthenticated() && (
+        isVillageCreator(resource.data.villageId) ||
+        isInvitationInvitee(resource.data)
+      );
+      allow create: if isAuthenticated() && (
+        isPartnerOrAdmin() ||
+        isVillageCreator(request.resource.data.villageId)
+      );
+      allow update: if isAuthenticated() && (
+        isPartnerOrAdmin() ||
+        isVillageCreator(resource.data.villageId) ||
+        (isInvitationInvitee(resource.data)
+          && request.resource.data.status in ['accepted', 'declined'])
+      );
+      allow delete: if isPartnerOrAdmin();
     }
 
     // Clusters collection
