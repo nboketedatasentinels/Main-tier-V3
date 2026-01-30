@@ -187,7 +187,14 @@ export const SupportTeamCard = ({ data, loading, peerMatches, peerMatchesLoading
                     Find your peer ally to stay accountable this week.
                   </Text>
                 )}
-                <Button size="sm" variant={hasPeerMatch ? 'link' : 'solid'} colorScheme="purple" alignSelf="flex-start">
+                <Button
+                  as={Link}
+                  to="/app/peer-connect"
+                  size="sm"
+                  variant={hasPeerMatch ? 'link' : 'solid'}
+                  colorScheme="purple"
+                  alignSelf="flex-start"
+                >
                   {hasPeerMatch ? 'View peer matches' : 'Find your peer ally'}
                 </Button>
               </Stack>
