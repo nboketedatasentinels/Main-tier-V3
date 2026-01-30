@@ -165,12 +165,15 @@ export const ConfirmationWelcomeModal: React.FC<ConfirmationWelcomeModalProps> =
                     to={action.href}
                     onClick={onAcknowledge}
                     justifyContent="space-between"
-                    rightIcon={<Icon as={ArrowRight} />}
-                    leftIcon={<Icon as={action.icon} />}
+                    rightIcon={<Icon as={ArrowRight} color="brand.gold" />}
+                    leftIcon={<Icon as={action.icon} color="brand.gold" />}
                     variant="outline"
                     colorScheme="yellow"
                     borderColor="brand.border"
                     bg="brand.primaryMuted"
+                    color="brand.text"
+                    _hover={{ bg: 'brand.primaryMuted', borderColor: 'brand.gold', color: 'brand.text' }}
+                    _active={{ bg: 'brand.primaryMuted', borderColor: 'brand.gold', color: 'brand.text' }}
                   >
                     {action.label}
                   </Button>
