@@ -71,7 +71,14 @@ const SidebarNav = ({
                 _hover={{ bg: isActive ? '#3D0C69' : 'brand.primaryMuted' }}
                 onClick={() => onNavigate?.(item.key)}
               >
-                {item.label}
+                <HStack justify="space-between" flex="1">
+                  <Text>{item.label}</Text>
+                  {typeof item.badgeCount === 'number' && item.badgeCount > 0 && (
+                    <Badge colorScheme="red" borderRadius="full">
+                      {item.badgeCount}
+                    </Badge>
+                  )}
+                </HStack>
               </Button>
             )
           })}

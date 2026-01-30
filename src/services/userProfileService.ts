@@ -238,3 +238,53 @@ export const logUserProfileAccess = async (log: ProfileAccessLog) => {
     createdAt: serverTimestamp(),
   })
 }
+
+export const upgradeUserToOrganization = async (params: {
+  userId: string
+  organizationId: string
+  newRole?: 'paid_member'
+  adminId?: string | null
+}) => {
+  const { userId, organizationId, newRole = 'paid_member', adminId } = params
+  if (!userId || !organizationId) {
+    throw new Error('Missing user or organization for upgrade.')
+  }
+
+  const orgSnap = await getDoc(doc(db, ORG_COLLECTION, organizationId))
+  if (!orgSnap.exists()) {
+    throw new Error('Organization not found.')
+  }
+  const orgData = orgSnap.data() as { status?: string }
+  if (orgData.status && orgData.status !== 'active') {
+    throw new Error('Organization is not active.')
+  }
+
+  const usersSnap = await getDoc(doc(db, 'users', userId))
+  const profileSnap = await getDoc(doc(db, 'profiles', userId))
+  const sourceData = (usersSnap.exists() ? usersSnap.data() : profileSnap.data()) as UserProfile | undefined
+  if (!sourceData) {
+    throw new Error('User profile not found.')
+  }
+  if (sourceData.role !== 'free_user') {
+    throw new Error('User is not eligible for upgrade.')
+  }
+
+  const updates: Record<string, unknown> = {
+    role: newRole,
+    membershipStatus: 'paid',
+    organizationId,
+    companyId: organizationId,
+    updatedAt: serverTimestamp(),
+  }
+
+  if (adminId) {
+    updates.lastModifiedBy = adminId
+    updates.lastModifiedAt = serverTimestamp()
+  }
+
+  const userRef = doc(db, 'users', userId)
+  const profileRef = doc(db, 'profiles', userId)
+  await Promise.all([updateDoc(userRef, updates), updateDoc(profileRef, updates)])
+
+  return { ...sourceData, ...updates, id: userId }
+}

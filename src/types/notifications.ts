@@ -3,6 +3,7 @@ export type NotificationCategory =
   | 'important_updates'
   | 'mentions'
   | 'system_alerts'
+  | 'upgrade_request'
   | 'other'
 
 export type NotificationActionResponse = 'accepted' | 'declined' | 'acknowledged' | null
