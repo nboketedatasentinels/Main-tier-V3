@@ -276,19 +276,17 @@ export const ProfilePage: React.FC = () => {
   const [matchPreferencesMessage, setMatchPreferencesMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null)
   const [showAdvancedMatching, setShowAdvancedMatching] = useState(false)
   const [accountSettingsSaving, setAccountSettingsSaving] = useState(false)
+  const [organizationMessage, setOrganizationMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null)
 
   const hasAccountSettingsChanges = useMemo(() => {
     if (!editedData || !profileData) return false
-    const normalizedCompanyCode = companyCode.trim().toUpperCase()
-    const currentCompanyCode = (profileData.companyCode || '').trim().toUpperCase()
-    const hasCompanyChange = Boolean(normalizedCompanyCode) && normalizedCompanyCode !== currentCompanyCode
     const hasMatchChanges = editedData.matchRefreshPreference !== profileData.matchRefreshPreference
       || editedData.preferredMatchDay !== profileData.preferredMatchDay
       || editedData.matchNotificationPreference !== profileData.matchNotificationPreference
       || editedData.timezone !== profileData.timezone
     const hasVisibilityChange = editedData.leaderboardVisibility !== profileData.leaderboardVisibility
-    return hasCompanyChange || hasMatchChanges || hasVisibilityChange
-  }, [companyCode, editedData, profileData])
+    return hasMatchChanges || hasVisibilityChange
+  }, [editedData, profileData])
 
   const buildProfileFromDoc = useCallback(
     (docData: Record<string, unknown>): ProfileData => ({
@@ -409,6 +407,12 @@ export const ProfilePage: React.FC = () => {
       cancelled = true
     }
   }, [companyCode])
+
+  useEffect(() => {
+    if (organizationMessage?.type !== 'success') return
+    const timer = window.setTimeout(() => setOrganizationMessage(null), 6000)
+    return () => window.clearTimeout(timer)
+  }, [organizationMessage])
 
   const handleInputChange = <K extends keyof ProfileData>(field: K, value: ProfileData[K]) => {
     if (!editedData) return
@@ -645,6 +649,15 @@ export const ProfilePage: React.FC = () => {
   const handleCompanyCodeSave = async () => {
     if (!user || !profileData) return
     const trimmedCode = companyCode.trim().toUpperCase()
+    const currentCompanyCode = (profileData.companyCode || '').trim().toUpperCase()
+
+    if (trimmedCode === currentCompanyCode && profileData.companyId) {
+      setOrganizationMessage({
+        type: 'error',
+        text: `You're already connected to ${profileData.companyName || 'this organization'}.`,
+      })
+      return
+    }
 
     if (!trimmedCode) {
       toast({
@@ -677,6 +690,7 @@ export const ProfilePage: React.FC = () => {
     }
 
     setCompanyCodeSaving(true)
+    setOrganizationMessage(null)
     const membershipUpdates = {
       membershipStatus: 'paid' as const,
       role: UserRole.PAID_MEMBER,
@@ -729,6 +743,13 @@ export const ProfilePage: React.FC = () => {
       setProfileData(updatedProfile)
       setEditedData(updatedProfile)
 
+      setOrganizationMessage({
+        type: 'success',
+        text: companyOrganization?.name
+          ? `Connected to ${companyOrganization.name}. Your membership is now paid—check your dashboard for new features.`
+          : 'Company code saved successfully. Your membership is now paid—check your dashboard for new features.',
+      })
+
       toast({
         title: 'You are now a paid member',
         description: companyOrganization?.name
@@ -739,6 +760,10 @@ export const ProfilePage: React.FC = () => {
       })
     } catch (err) {
       console.error(err)
+      setOrganizationMessage({
+        type: 'error',
+        text: 'We could not connect this organization. Please try again or contact support.',
+      })
       toast({
         title: 'Unable to update company code',
         description: 'Please try again or contact support.',
@@ -753,20 +778,9 @@ export const ProfilePage: React.FC = () => {
   const handleSaveAccountSettings = async () => {
     if (!editedData || !profileData) return
     setAccountSettingsSaving(true)
-    const normalizedCompanyCode = companyCode.trim().toUpperCase()
-    const currentCompanyCode = (profileData.companyCode || '').trim().toUpperCase()
 
     try {
-      const tasks: Array<Promise<void>> = [
-        handleSaveMatchPreferences(),
-        handleSaveVisibilityPreference(),
-      ]
-
-      if (normalizedCompanyCode && normalizedCompanyCode !== currentCompanyCode) {
-        tasks.push(handleCompanyCodeSave())
-      }
-
-      await Promise.all(tasks)
+      await Promise.all([handleSaveMatchPreferences(), handleSaveVisibilityPreference()])
     } finally {
       setAccountSettingsSaving(false)
     }
@@ -812,6 +826,12 @@ export const ProfilePage: React.FC = () => {
     }
     return parts.join(' · ')
   }
+
+  const normalizedCompanyCode = companyCode.trim().toUpperCase()
+  const currentCompanyCode = (profileData.companyCode || '').trim().toUpperCase()
+  const isAlreadyConnected = Boolean(normalizedCompanyCode)
+    && normalizedCompanyCode === currentCompanyCode
+    && Boolean(profileData.companyId)
 
   if (loading) {
     return (
@@ -1748,26 +1768,68 @@ export const ProfilePage: React.FC = () => {
                           </Text>
                         </Box>
                         <FormControl>
-                          <HStack justify="space-between" align="center">
-                            <FormLabel mb={0}>Company Code</FormLabel>
+                          <FormLabel>Company Code</FormLabel>
+                          <HStack align="center">
                             <Input
                               maxW="200px"
                               value={companyCode}
-                              onChange={(event) => setCompanyCode(event.target.value.toUpperCase().slice(0, 6))}
+                              onChange={(event) => {
+                                setCompanyCode(event.target.value.toUpperCase().slice(0, 6))
+                                setOrganizationMessage(null)
+                              }}
                               placeholder="6-character code"
                             />
+                            <Button
+                              colorScheme="purple"
+                              onClick={handleCompanyCodeSave}
+                              isLoading={companyCodeSaving}
+                              loadingText="Connecting"
+                              isDisabled={
+                                companyCodeChecking
+                                || companyCodeSaving
+                                || companyCodeValid === false
+                                || isAlreadyConnected
+                                || normalizedCompanyCode.length !== 6
+                              }
+                            >
+                              Connect to Organization
+                            </Button>
                           </HStack>
                           <FormHelperText>
-                            Use Save Changes below to apply updates.
+                            Enter your organization code to unlock paid member features.
                           </FormHelperText>
                         </FormControl>
+                        {isAlreadyConnected && (
+                          <Box bg="blue.50" border="1px solid" borderColor="blue.100" p={3} rounded="md">
+                            <HStack spacing={2} color="blue.700">
+                              <Icon as={CheckCircle} />
+                              <Text fontSize="sm">
+                                You're already connected to {profileData.companyName || 'this organization'}.
+                              </Text>
+                            </HStack>
+                          </Box>
+                        )}
+                        {profileData.membershipStatus === 'free' && (
+                          <Box bg="purple.50" border="1px solid" borderColor="purple.100" p={3} rounded="md">
+                            <Text fontSize="sm" fontWeight="semibold" color="purple.700">
+                              Connecting this code upgrades you to paid.
+                            </Text>
+                            <Text fontSize="sm" color="brand.subtleText" mt={1}>
+                              Unlock organization dashboards, peer matching enhancements, and full course access.
+                            </Text>
+                          </Box>
+                        )}
                         {companyCodeValid && companyOrganization && !companyCodeChecking && (
-                          <Box bg="green.50" border="1px solid" borderColor="green.100" p={3} rounded="md">
+                          <VStack align="stretch" spacing={2} bg="green.50" border="1px solid" borderColor="green.100" p={3} rounded="md">
                             <HStack spacing={2} color="green.600">
                               <Icon as={CheckCircle} />
                               <Text fontSize="sm">Valid company code ({companyOrganization.name})</Text>
                             </HStack>
-                          </Box>
+                            <HStack spacing={3} fontSize="sm" color="green.700">
+                              <Text>Members: {companyOrganization.memberCount ?? 0}</Text>
+                              <Text>Upgrade path: Free → Paid</Text>
+                            </HStack>
+                          </VStack>
                         )}
                         {companyCodeValid === false && !companyCodeChecking && (
                           <Box bg="red.50" border="1px solid" borderColor="red.100" p={3} rounded="md">
@@ -1784,8 +1846,22 @@ export const ProfilePage: React.FC = () => {
                         )}
                         {companyCodeSaving && (
                           <Text fontSize="sm" color="brand.subtleText">
-                            Saving company code...
+                            Connecting to organization...
                           </Text>
+                        )}
+                        {organizationMessage && (
+                          <Box
+                            bg={organizationMessage.type === 'success' ? 'green.50' : 'red.50'}
+                            border="1px solid"
+                            borderColor={organizationMessage.type === 'success' ? 'green.100' : 'red.100'}
+                            p={3}
+                            rounded="md"
+                          >
+                            <HStack spacing={2} color={organizationMessage.type === 'success' ? 'green.600' : 'red.600'}>
+                              <Icon as={organizationMessage.type === 'success' ? CheckCircle : AlertCircle} />
+                              <Text fontSize="sm">{organizationMessage.text}</Text>
+                            </HStack>
+                          </Box>
                         )}
                       </VStack>
                     </CardBody>
@@ -1794,18 +1870,19 @@ export const ProfilePage: React.FC = () => {
               </GridItem>
             </Grid>
 
-            <Box position="sticky" bottom={0} bg="white" pt={4} pb={2} borderTop="1px solid" borderColor="brand.border" mt={6} zIndex={1}>
-              <Flex justify="flex-end">
-                <Button
-                  onClick={handleSaveAccountSettings}
-                  isLoading={accountSettingsSaving || matchPreferencesSaving || visibilitySaving || companyCodeSaving}
-                  loadingText="Saving..."
-                  isDisabled={!hasAccountSettingsChanges}
-                >
-                  Save Changes
-                </Button>
-              </Flex>
-            </Box>
+            {hasAccountSettingsChanges && (
+              <Box position="sticky" bottom={0} bg="white" pt={4} pb={2} borderTop="1px solid" borderColor="brand.border" mt={6} zIndex={1}>
+                <Flex justify="flex-end">
+                  <Button
+                    onClick={handleSaveAccountSettings}
+                    isLoading={accountSettingsSaving || matchPreferencesSaving || visibilitySaving}
+                    loadingText="Saving..."
+                  >
+                    Save Changes
+                  </Button>
+                </Flex>
+              </Box>
+            )}
           </TabPanel>
 
           <TabPanel px={0}>
