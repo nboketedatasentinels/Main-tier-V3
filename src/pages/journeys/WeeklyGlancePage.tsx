@@ -29,7 +29,6 @@ import { ActivityFeedCard } from '@/components/journeys/weeklyGlance/ActivityFee
 import { LearnerWindowCard } from '@/components/journeys/weeklyGlance/LearnerWindowCard'
 import { NextMilestoneCard } from '@/components/journeys/weeklyGlance/NextMilestoneCard'
 import { WindowSummaryCard } from '@/components/journeys/weeklyGlance/WindowSummaryCard'
-import { WeekAdvancementInfoBanner } from '@/components/journeys/WeekAdvancementInfoBanner'
 import { WeekStatusSummaryCard } from '@/components/journeys/WeekStatusSummaryCard'
 
 import { useWeeklyGlanceData, type LedgerEntry } from '@/hooks/useWeeklyGlanceData'
@@ -453,14 +452,6 @@ export const WeeklyGlancePage = () => {
               <AlertDescription>Data may be incomplete. Try refreshing the page.</AlertDescription>
             </Box>
           </Alert>
-        )}
-
-        {profile && (
-          <WeekAdvancementInfoBanner
-            currentWeek={profile.currentWeek ?? data.weekNumber}
-            journeyType={profile.journeyType}
-            variant="compact"
-          />
         )}
 
         <WeeklyInspirationCard data={data.inspirationQuote} loading={data.loading.inspiration} />
