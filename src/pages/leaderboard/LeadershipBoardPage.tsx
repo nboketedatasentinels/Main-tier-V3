@@ -137,7 +137,7 @@ export const LeadershipBoardPage: React.FC = () => {
   const toast = useToast()
   const { isOpen, onOpen, onClose } = useDisclosure()
   const { isOpen: isFiltersOpen, onToggle: onToggleFilters } = useDisclosure({ defaultIsOpen: false })
-  const supportEmail = 'support@transformation4leaders.com'
+  const supportEmail = 'transform@t4leader.com'
   const pointsColors = useToken('colors', [
     'brand.primary',
     'brand.dark',
