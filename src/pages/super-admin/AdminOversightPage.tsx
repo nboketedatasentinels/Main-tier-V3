@@ -5,6 +5,7 @@ import {
   Badge,
   Box,
   Button,
+  Divider,
   Flex,
   Heading,
   IconButton,
@@ -89,6 +90,20 @@ export const AdminOversightPage: React.FC<AdminOversightPageProps> = ({ adminNam
     mentors: 0,
     ambassadors: 0,
   })
+
+  const partnerAssignmentSummary = useMemo(() => {
+    const partnerAdmins = admins.filter((admin) => admin.role === 'partner')
+    const unassignedPartners = partnerAdmins.filter((admin) => !(admin.assignedOrganizations || []).length)
+    const totalAssignments = partnerAdmins.reduce(
+      (total, admin) => total + (admin.assignedOrganizations || []).length,
+      0,
+    )
+    return {
+      partnerCount: partnerAdmins.length,
+      unassignedCount: unassignedPartners.length,
+      totalAssignments,
+    }
+  }, [admins])
 
   const updateMetrics = useCallback((adminList: AdminUserRecord[]) => {
     const total = adminList.length
@@ -481,6 +496,34 @@ export const AdminOversightPage: React.FC<AdminOversightPageProps> = ({ adminNam
         <MetricCard label="Ambassadors" value={metrics.ambassadors} icon={ShieldCheck} helper="Community ambassadors" />
       </SimpleGrid>
 
+      <Box borderWidth="1px" borderRadius="lg" p={4} mb={6} bg="gray.50">
+        <Flex align="center" flexWrap="wrap" gap={4}>
+          <Box>
+            <Text fontWeight="semibold">Partner assignment health</Text>
+            <Text fontSize="sm" color="gray.600">
+              {partnerAssignmentSummary.partnerCount
+                ? `${partnerAssignmentSummary.partnerCount} partner admin${partnerAssignmentSummary.partnerCount === 1 ? '' : 's'} with ${
+                  partnerAssignmentSummary.totalAssignments
+                } active assignment${partnerAssignmentSummary.totalAssignments === 1 ? '' : 's'}.`
+                : 'No partner admins found yet.'}
+            </Text>
+            <Text fontSize="sm" color={partnerAssignmentSummary.unassignedCount ? 'orange.600' : 'green.600'}>
+              {partnerAssignmentSummary.unassignedCount
+                ? `${partnerAssignmentSummary.unassignedCount} partner admin${partnerAssignmentSummary.unassignedCount === 1 ? '' : 's'} still need assignments.`
+                : 'All partner admins have assignments.'}
+            </Text>
+          </Box>
+          <Spacer />
+          <Button
+            variant="solid"
+            colorScheme="purple"
+            onClick={() => setFilters({ role: 'partner', status: 'all', organization: 'all' })}
+          >
+            Review Partner Assignments
+          </Button>
+        </Flex>
+      </Box>
+
       <Box borderWidth="1px" borderRadius="lg" p={4} mb={4}>
         <Flex gap={3} flexWrap="wrap">
           <Input
@@ -527,6 +570,11 @@ export const AdminOversightPage: React.FC<AdminOversightPageProps> = ({ adminNam
             Clear Filters
           </Button>
         </Flex>
+        <Divider mt={4} />
+        <Text mt={3} fontSize="sm" color="gray.500">
+          Partner assignments drive the organizations visible in partner dashboards. Use the admin form to add or remove
+          organization access.
+        </Text>
       </Box>
 
       <Box borderWidth="1px" borderRadius="lg" overflow="hidden">

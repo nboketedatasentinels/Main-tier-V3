@@ -273,7 +273,7 @@ export const SignUpPage: React.FC = () => {
 
       toast({
         title: "Signed in with Google!",
-        description: "Welcome to Man-Tier.",
+        description: "Welcome to Transformational Leader.",
         status: "success",
         duration: 5000,
       })

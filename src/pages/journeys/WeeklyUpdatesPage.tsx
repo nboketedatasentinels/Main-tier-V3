@@ -1192,6 +1192,19 @@ const WeeklyChecklistPage: React.FC = () => {
         </Alert>
       )}
 
+      {isWeekLocked && (
+        <Alert status="info" borderRadius="md">
+          <AlertIcon />
+          <Stack spacing={1}>
+            <AlertTitle>Week {selectedWeek} is Locked</AlertTitle>
+            <AlertDescription>
+              Complete Week {journey?.currentWeek ?? 1} milestones to unlock this week.
+              Week advancement is based on earning target points and completing pending approvals, not calendar time.
+            </AlertDescription>
+          </Stack>
+        </Alert>
+      )}
+
       <Grid templateColumns={{ base: '1fr', xl: '2fr 1fr' }} gap={6} alignItems="start">
         <GridItem>
           <Stack spacing={4}>

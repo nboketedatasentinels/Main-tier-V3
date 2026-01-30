@@ -52,10 +52,18 @@ import {
   rejectPointsVerificationRequest,
   PointsVerificationRequest,
 } from '@/services/pointsVerificationService'
+import { UpgradeRequestActionModal } from '@/components/super-admin/UpgradeRequestActionModal'
+import {
+  approveUpgradeRequestWithOrganizationAssignment,
+  approveUpgradeRequestWithNewOrganization,
+  rejectUpgradeRequest,
+} from '@/services/upgradeApprovalService'
 import { ApprovalRecord, ApprovalStatus, ApprovalWorkflowType } from '@/types/approvals'
 import { getApprovalTypeMeta } from '@/utils/approvalTypeMapper'
 import { doc, getDoc } from 'firebase/firestore'
 import { db } from '@/services/firebase'
+import type { UpgradeRequest } from '@/types/upgrade'
+import type { OrganizationRecord } from '@/types/admin'
 
 const toDate = (value?: unknown): Date | null => {
   if (!value) return null
@@ -128,18 +136,29 @@ const matchesStatusTab = (status: ApprovalStatus, tab: 'pending' | 'approved' | 
   return status === tab
 }
 
-const rejectionTemplates = [
-  'This activity was already credited.',
-  'Please provide supporting evidence to verify the activity.',
-  'Duplicate submission detected. Submit only one request per activity.',
-]
+const rejectionTemplates: Record<ApprovalWorkflowType, string[]> = {
+  points_verification: [
+    'This activity was already credited.',
+    'Please provide supporting evidence to verify the activity.',
+    'Duplicate submission detected. Submit only one request per activity.',
+  ],
+  upgrade_request: [
+    'We need more details about your organization to complete this upgrade.',
+    'Your current account is already associated with an organization.',
+    'Please contact support to validate eligibility before upgrading.',
+  ],
+  partner_issued: [
+    'We need more details to review this partner-issued request.',
+    'The provided information does not match our partner records.',
+    'Please contact support to verify partner eligibility before proceeding.',
+  ],
+}
 
-const rejectionReasonOptions = [
-  'Insufficient evidence',
-  'Duplicate request',
-  'Invalid activity',
-  'Other',
-]
+const rejectionReasonOptions: Record<ApprovalWorkflowType, string[]> = {
+  points_verification: ['Insufficient evidence', 'Duplicate request', 'Invalid activity', 'Other'],
+  upgrade_request: ['Eligibility issue', 'Organization conflict', 'Missing details', 'Other'],
+  partner_issued: ['Partner eligibility issue', 'Missing details', 'Data mismatch', 'Other'],
+}
 
 const ApprovalCenterPage: React.FC = () => {
   const toast = useToast()
@@ -150,7 +169,7 @@ const ApprovalCenterPage: React.FC = () => {
     loading: verificationLoading,
     error: verificationError,
   } = useAdminPointsVerificationRequests('all')
-  const { mutate, loading: updatingUpgrade } = useUpdateRequestStatus()
+  const { loading: updatingUpgrade } = useUpdateRequestStatus()
   const [statusTab, setStatusTab] = useState<'pending' | 'approved' | 'rejected'>('pending')
   const [workflowFilter, setWorkflowFilter] = useState<ApprovalWorkflowType | 'all'>('all')
   const [search, setSearch] = useState('')
@@ -175,8 +194,11 @@ const ApprovalCenterPage: React.FC = () => {
   const [pageSize, setPageSize] = useState(20)
   const [page, setPage] = useState(1)
   const [userProfiles, setUserProfiles] = useState<Map<string, string>>(new Map())
+  const [selectedUpgradeRequest, setSelectedUpgradeRequest] = useState<UpgradeRequest | null>(null)
+  const [upgradeSubmitting, setUpgradeSubmitting] = useState(false)
   const rejectModal = useDisclosure()
   const bulkModal = useDisclosure()
+  const upgradeModal = useDisclosure()
   const isMobile = useBreakpointValue({ base: true, md: false })
 
   const approvalRecords = useMemo<ApprovalRecord[]>(() => {
@@ -187,6 +209,9 @@ const ApprovalCenterPage: React.FC = () => {
         request.current_tier,
         request.message,
         request.request_type,
+        request.villageName,
+        request.userDetails?.fullName,
+        request.userDetails?.email,
       ]
         .filter(Boolean)
         .join(' ')
@@ -479,8 +504,7 @@ const ApprovalCenterPage: React.FC = () => {
         },
       })
     } else {
-      await mutate(record.id, 'approved', undefined, profile?.id)
-      refetch()
+      throw new Error('Upgrade approvals require organization assignment.')
     }
   }
 
@@ -495,12 +519,24 @@ const ApprovalCenterPage: React.FC = () => {
         reason: reason || undefined,
       })
     } else {
-      await mutate(record.id, 'rejected', reason || undefined, profile?.id)
+      const upgradeRequest = record.source as UpgradeRequest
+      await rejectUpgradeRequest({
+        requestId: record.id,
+        userId: upgradeRequest.user_id,
+        adminId: profile?.id ?? null,
+        adminName: profile?.fullName ?? null,
+        reason: reason || undefined,
+      })
       refetch()
     }
   }
 
   const handleApprove = async (record: ApprovalRecord) => {
+    if (record.type === 'upgrade_request') {
+      setSelectedUpgradeRequest(record.source as UpgradeRequest)
+      upgradeModal.onOpen()
+      return
+    }
     setActionId(record.id)
     try {
       await approveRecord(record)
@@ -510,6 +546,62 @@ const ApprovalCenterPage: React.FC = () => {
       toast({ title: 'Approval failed', status: 'error', duration: 3000, isClosable: true })
     } finally {
       setActionId(null)
+    }
+  }
+
+  const handleUpgradeApprovalExisting = async (payload: {
+    organizationId: string
+    sendWelcomeEmail: boolean
+    notes?: string
+  }) => {
+    if (!selectedUpgradeRequest) return
+    setUpgradeSubmitting(true)
+    try {
+      await approveUpgradeRequestWithOrganizationAssignment({
+        requestId: selectedUpgradeRequest.id,
+        organizationId: payload.organizationId,
+        adminId: profile?.id ?? null,
+        adminName: profile?.fullName ?? null,
+        notes: payload.notes,
+        sendWelcomeEmail: payload.sendWelcomeEmail,
+      })
+      toast({ title: 'Upgrade approved', status: 'success', duration: 3000, isClosable: true })
+      upgradeModal.onClose()
+      setSelectedUpgradeRequest(null)
+      refetch()
+    } catch (error) {
+      console.error(error)
+      toast({ title: 'Upgrade approval failed', status: 'error', duration: 3000, isClosable: true })
+    } finally {
+      setUpgradeSubmitting(false)
+    }
+  }
+
+  const handleUpgradeApprovalNew = async (payload: {
+    organizationData: OrganizationRecord
+    sendWelcomeEmail: boolean
+    notes?: string
+  }) => {
+    if (!selectedUpgradeRequest) return
+    setUpgradeSubmitting(true)
+    try {
+      await approveUpgradeRequestWithNewOrganization({
+        requestId: selectedUpgradeRequest.id,
+        organizationData: payload.organizationData,
+        adminId: profile?.id ?? null,
+        adminName: profile?.fullName ?? null,
+        notes: payload.notes,
+        sendWelcomeEmail: payload.sendWelcomeEmail,
+      })
+      toast({ title: 'Upgrade approved', status: 'success', duration: 3000, isClosable: true })
+      upgradeModal.onClose()
+      setSelectedUpgradeRequest(null)
+      refetch()
+    } catch (error) {
+      console.error(error)
+      toast({ title: 'Upgrade approval failed', status: 'error', duration: 3000, isClosable: true })
+    } finally {
+      setUpgradeSubmitting(false)
     }
   }
 
@@ -551,7 +643,11 @@ const ApprovalCenterPage: React.FC = () => {
     setBulkLoading(true)
     try {
       const reason = [bulkRejectCategory, bulkRejectReason].filter(Boolean).join(' — ')
-      for (const record of selectedRecords) {
+      const actionableRecords =
+        bulkAction === 'approve'
+          ? selectedRecords.filter((record) => record.type === 'points_verification')
+          : selectedRecords
+      for (const record of actionableRecords) {
         if (bulkAction === 'approve') {
           await approveRecord(record)
         } else {
@@ -561,12 +657,21 @@ const ApprovalCenterPage: React.FC = () => {
       toast({
         title:
           bulkAction === 'approve'
-            ? `Approved ${selectedRecords.length} requests totaling ${totalSelectedPoints.toLocaleString()} points.`
+            ? `Approved ${actionableRecords.length} requests totaling ${totalSelectedPoints.toLocaleString()} points.`
             : `Rejected ${selectedRecords.length} requests.`,
         status: bulkAction === 'approve' ? 'success' : 'info',
         duration: 3000,
         isClosable: true,
       })
+      if (bulkAction === 'approve' && actionableRecords.length !== selectedRecords.length) {
+        toast({
+          title: 'Upgrade approvals require organization assignment',
+          description: 'Upgrade requests must be approved individually with an organization assignment.',
+          status: 'warning',
+          duration: 4000,
+          isClosable: true,
+        })
+      }
       clearSelection()
       bulkModal.onClose()
     } catch (error) {
@@ -842,6 +947,8 @@ const ApprovalCenterPage: React.FC = () => {
                     const isOverdue = differenceInDays(new Date(), record.createdAt ?? new Date()) > 7
                     const isFirstTime = record.userId ? (userRequestCounts.get(record.userId) ?? 0) <= 1 : false
                     const submitted = getDisplayDate(record.createdAt ?? undefined)
+                    const upgradeSource = record.type === 'upgrade_request' ? (record.source as UpgradeRequest) : null
+                    const villageBadge = upgradeSource?.villageName
                     const rowBg = isOverdue
                       ? 'red.50'
                       : isHighValue
@@ -901,10 +1008,20 @@ const ApprovalCenterPage: React.FC = () => {
                                   {record.summary}
                                 </Text>
                               )}
+                              {upgradeSource?.userDetails?.email && (
+                                <Text fontSize="xs" color="gray.600">
+                                  {upgradeSource.userDetails.email}
+                                </Text>
+                              )}
                               {getDecisionSummary(record) && (
                                 <Text fontSize="xs" color="gray.500">
                                   {getDecisionSummary(record)}
                                 </Text>
+                              )}
+                              {villageBadge && (
+                                <Badge colorScheme="purple" variant="subtle" alignSelf="flex-start">
+                                  {villageBadge}
+                                </Badge>
                               )}
                             </Stack>
                           </Td>
@@ -969,38 +1086,96 @@ const ApprovalCenterPage: React.FC = () => {
                           <Td colSpan={6} p={0} border="none">
                             <Collapse in={expandedId === record.id} animateOpacity>
                               <Box px={6} py={4} bg="gray.50" borderTopWidth="1px">
-                                <SimpleGrid columns={{ base: 1, md: 3 }} spacing={4}>
-                                  <Box>
-                                    <Text fontSize="sm" fontWeight="semibold" mb={1}>
-                                      Full description
-                                    </Text>
-                                    <Text fontSize="sm" color="gray.600">
-                                      {record.summary ?? 'No additional description provided.'}
-                                    </Text>
-                                  </Box>
-                                  <Box>
-                                    <Text fontSize="sm" fontWeight="semibold" mb={1}>
-                                      User history
-                                    </Text>
-                                    <Text fontSize="sm" color="gray.600">
-                                      {(userRequestCounts.get(record.userId ?? '') ?? 0).toString()} previous requests, 0 rejections
-                                    </Text>
-                                  </Box>
-                                  <Box>
-                                    <Text fontSize="sm" fontWeight="semibold" mb={1}>
-                                      Supporting evidence
-                                    </Text>
-                                    {record.type === 'points_verification' && (record.source as PointsVerificationRequest).proof_url ? (
-                                      <Link color="blue.600" href={(record.source as PointsVerificationRequest).proof_url} isExternal>
-                                        View attachment
-                                      </Link>
-                                    ) : (
-                                      <Text fontSize="sm" color="gray.600">
-                                        No attachments
+                                {record.type === 'upgrade_request' ? (
+                                  <SimpleGrid columns={{ base: 1, md: 3 }} spacing={4}>
+                                    <Box>
+                                      <Text fontSize="sm" fontWeight="semibold" mb={1}>
+                                        User profile
                                       </Text>
-                                    )}
-                                  </Box>
-                                </SimpleGrid>
+                                      <Text fontSize="sm" color="gray.600">
+                                        {(record.source as UpgradeRequest).userDetails?.fullName ||
+                                          getUserDisplayName(record.userId)}
+                                      </Text>
+                                      <Text fontSize="sm" color="gray.600">
+                                        {(record.source as UpgradeRequest).userDetails?.email || getUserSubtitle(record.userId)}
+                                      </Text>
+                                      <Text fontSize="sm" color="gray.600">
+                                        Role: {(record.source as UpgradeRequest).userDetails?.role || '—'}
+                                      </Text>
+                                    </Box>
+                                    <Box>
+                                      <Text fontSize="sm" fontWeight="semibold" mb={1}>
+                                        Village details
+                                      </Text>
+                                      <Text fontSize="sm" color="gray.600">
+                                        {(record.source as UpgradeRequest).villageName || 'No village assigned'}
+                                      </Text>
+                                      <Text fontSize="sm" color="gray.600">
+                                        {(record.source as UpgradeRequest).villageDescription || 'No description provided.'}
+                                      </Text>
+                                    </Box>
+                                    <Box>
+                                      <Text fontSize="sm" fontWeight="semibold" mb={1}>
+                                        Request details
+                                      </Text>
+                                      <Text fontSize="sm" color="gray.600">
+                                        {(record.source as UpgradeRequest).message || 'No message provided.'}
+                                      </Text>
+                                      <Text fontSize="sm" color="gray.600">
+                                        Contact: {(record.source as UpgradeRequest).contact_preference || '—'}{' '}
+                                        {(record.source as UpgradeRequest).contact_details || ''}
+                                      </Text>
+                                      <Text fontSize="sm" color="gray.600">
+                                        Submitted {submitted.label}
+                                      </Text>
+                                    </Box>
+                                    <Box gridColumn={{ base: 'auto', md: '1 / -1' }}>
+                                      <HStack spacing={3} mt={2}>
+                                        <Link color="purple.600" href="/super-admin?tab=organizations">
+                                          View organizations
+                                        </Link>
+                                        <Link color="purple.600" href="/super-admin?tab=organizations&create=true">
+                                          Create organization
+                                        </Link>
+                                      </HStack>
+                                    </Box>
+                                  </SimpleGrid>
+                                ) : (
+                                  <SimpleGrid columns={{ base: 1, md: 3 }} spacing={4}>
+                                    <Box>
+                                      <Text fontSize="sm" fontWeight="semibold" mb={1}>
+                                        Full description
+                                      </Text>
+                                      <Text fontSize="sm" color="gray.600">
+                                        {record.summary ?? 'No additional description provided.'}
+                                      </Text>
+                                    </Box>
+                                    <Box>
+                                      <Text fontSize="sm" fontWeight="semibold" mb={1}>
+                                        User history
+                                      </Text>
+                                      <Text fontSize="sm" color="gray.600">
+                                        {(userRequestCounts.get(record.userId ?? '') ?? 0).toString()} previous requests, 0
+                                        rejections
+                                      </Text>
+                                    </Box>
+                                    <Box>
+                                      <Text fontSize="sm" fontWeight="semibold" mb={1}>
+                                        Supporting evidence
+                                      </Text>
+                                      {record.type === 'points_verification' &&
+                                      (record.source as PointsVerificationRequest).proof_url ? (
+                                        <Link color="blue.600" href={(record.source as PointsVerificationRequest).proof_url} isExternal>
+                                          View attachment
+                                        </Link>
+                                      ) : (
+                                        <Text fontSize="sm" color="gray.600">
+                                          No attachments
+                                        </Text>
+                                      )}
+                                    </Box>
+                                  </SimpleGrid>
+                                )}
                                 <Box mt={4}>
                                   <Text fontSize="sm" fontWeight="semibold" mb={2}>
                                     Notes for admin comments
@@ -1175,6 +1350,20 @@ const ApprovalCenterPage: React.FC = () => {
         </Flex>
       )}
 
+      {selectedUpgradeRequest && (
+        <UpgradeRequestActionModal
+          isOpen={upgradeModal.isOpen}
+          onClose={() => {
+            upgradeModal.onClose()
+            setSelectedUpgradeRequest(null)
+          }}
+          request={selectedUpgradeRequest}
+          isSubmitting={upgradeSubmitting}
+          onAssignExisting={handleUpgradeApprovalExisting}
+          onCreateNew={handleUpgradeApprovalNew}
+        />
+      )}
+
       <Modal isOpen={rejectModal.isOpen} onClose={rejectModal.onClose} size="lg" isCentered>
         <ModalOverlay />
         <ModalContent>
@@ -1188,7 +1377,10 @@ const ApprovalCenterPage: React.FC = () => {
               <FormControl>
                 <FormLabel fontSize="sm">Reason</FormLabel>
                 <Select value={rejectCategory} onChange={(e) => setRejectCategory(e.target.value)} placeholder="Select reason">
-                  {rejectionReasonOptions.map((reason) => (
+                  {(selectedReject?.type
+                    ? rejectionReasonOptions[selectedReject.type]
+                    : rejectionReasonOptions.points_verification
+                  ).map((reason: string) => (
                     <option key={reason} value={reason}>
                       {reason}
                     </option>
@@ -1208,7 +1400,10 @@ const ApprovalCenterPage: React.FC = () => {
                   Templates
                 </Text>
                 <HStack spacing={2} wrap="wrap">
-                  {rejectionTemplates.map((template) => (
+                  {(selectedReject?.type
+                    ? rejectionTemplates[selectedReject.type]
+                    : rejectionTemplates.points_verification
+                  ).map((template: string) => (
                     <Button
                       key={template}
                       size="xs"
@@ -1258,7 +1453,7 @@ const ApprovalCenterPage: React.FC = () => {
                       onChange={(e) => setBulkRejectCategory(e.target.value)}
                       placeholder="Select reason"
                     >
-                      {rejectionReasonOptions.map((reason) => (
+                      {rejectionReasonOptions.points_verification.map((reason) => (
                         <option key={reason} value={reason}>
                           {reason}
                         </option>

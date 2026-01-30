@@ -12,9 +12,11 @@ service cloud.firestore {
     }
 
     function getUserRole() {
-      return isAuthenticated() && exists(/databases/$(database)/documents/profiles/$(request.auth.uid))
-        ? get(/databases/$(database)/documents/profiles/$(request.auth.uid)).data.get('role', '')
-        : '';
+      return isAuthenticated() && exists(/databases/$(database)/documents/users/$(request.auth.uid))
+        ? get(/databases/$(database)/documents/users/$(request.auth.uid)).data.get('role', '')
+        : (isAuthenticated() && exists(/databases/$(database)/documents/profiles/$(request.auth.uid))
+          ? get(/databases/$(database)/documents/profiles/$(request.auth.uid)).data.get('role', '')
+          : '');
     }
 
     function isSuperAdmin() {
@@ -29,20 +31,117 @@ service cloud.firestore {
       return isAuthenticated() && (getUserRole() == 'partner' || getUserRole() == 'super_admin');
     }
 
+    function isNonEmptyString(value) {
+      return value is string && value.size() > 0;
+    }
+
+    function getUserCompanyId() {
+      return isAuthenticated() && exists(/databases/$(database)/documents/users/$(request.auth.uid))
+        ? get(/databases/$(database)/documents/users/$(request.auth.uid)).data.get('companyId', '')
+        : (isAuthenticated() && exists(/databases/$(database)/documents/profiles/$(request.auth.uid))
+          ? get(/databases/$(database)/documents/profiles/$(request.auth.uid)).data.get('companyId', '')
+          : '');
+    }
+
+    function isValidPartnerAssignment(assignment) {
+      return assignment is map
+        && assignment.keys().hasOnly(['organizationId', 'companyCode', 'status'])
+        && isNonEmptyString(assignment.organizationId)
+        && isNonEmptyString(assignment.companyCode)
+        && (!('status' in assignment) || assignment.status in ['active', 'watch', 'paused', 'inactive']);
+    }
+
+    function hasValidPartnerAssignments(data) {
+      return !('assignedOrganizations' in data)
+        || (data.assignedOrganizations is list
+          && data.assignedOrganizations.all(assignment, isValidPartnerAssignment(assignment)));
+    }
+
+    function hasParticipantsList(data) {
+      return data.keys().hasAll(['participants']) && data.participants is list;
+    }
+
+    function listHasUid(listValue, uid) {
+      return listValue is list && uid in listValue;
+    }
+
+    function hasPeerSessionRequestFields(data) {
+      return data.keys().hasAll(['fromUserId', 'toUserId']);
+    }
+
+    function isWeeklyMatchOwner(data) {
+      return isAuthenticated() && data is map && (
+        request.auth.uid == data.user_id ||
+        request.auth.uid == data.userId
+      );
+    }
+
+    function isWeeklyMatchParticipant(matchId) {
+      return isAuthenticated() && (
+        matchId.matches(request.auth.uid + '-.*') ||
+        (resource != null && (
+          request.auth.uid == resource.data.user_id ||
+          request.auth.uid == resource.data.userId ||
+          request.auth.uid == resource.data.user1_id ||
+          request.auth.uid == resource.data.user2_id ||
+          request.auth.uid == resource.data.peer_id ||
+          request.auth.uid == resource.data.peerId
+        ))
+      );
+    }
+
+    function isVillageCreator(villageId) {
+      return isAuthenticated()
+        && exists(/databases/$(database)/documents/villages/$(villageId))
+        && get(/databases/$(database)/documents/villages/$(villageId)).data.creatorId == request.auth.uid;
+    }
+
+    function isVillageMember(villageId) {
+      return isAuthenticated()
+        && exists(/databases/$(database)/documents/villages/$(villageId))
+        && listHasUid(
+          get(/databases/$(database)/documents/villages/$(villageId)).data.memberIds,
+          request.auth.uid
+        );
+    }
+
+    function isInvitationInvitee(invite) {
+      return isAuthenticated()
+        && (
+          (!('email' in invite) || invite.email == null) ||
+          invite.email == request.auth.token.email
+        );
+    }
+
     // Users collection
     match /users/{userId} {
-      allow read: if isAuthenticated();
-      allow create: if isAuthenticated();
-      allow update: if isOwner(userId) || isPartnerOrAdmin();
-      allow delete: if isSuperAdmin();
+      allow read, write: if request.auth != null;
     }
 
     // Profiles collection
     match /profiles/{userId} {
-      allow read: if isAuthenticated();
-      allow create: if isAuthenticated();
-      allow update: if isOwner(userId) || isPartnerOrAdmin();
-      allow delete: if isSuperAdmin();
+      allow read, write: if request.auth != null;
+    }
+
+    // Engagement monitoring collections (admin only)
+    match /user_engagement_scores/{scoreId} {
+      allow read: if isPartnerOrAdmin();
+      allow write: if isSuperAdmin();
+    }
+
+    match /engagement_trends/{trendId} {
+      allow read: if isPartnerOrAdmin();
+      allow write: if isSuperAdmin();
+    }
+
+    match /profiles/{userId}/engagement_history/{entryId} {
+      allow read: if isPartnerOrAdmin();
+      allow write: if isSuperAdmin();
+    }
+
+    match /profiles/{userId}/recent_activity/{entryId} {
+      allow read: if isPartnerOrAdmin();
+      allow write: if isSuperAdmin();
     }
 
     // Referral codes collection
@@ -117,13 +216,30 @@ service cloud.firestore {
 
     // Notifications collection
     match /notifications/{notificationId} {
-      allow read: if isAuthenticated() && request.auth.uid == resource.data.userId;
+      allow read: if isAuthenticated() && request.auth.uid == resource.data.user_id;
       allow create: if isAuthenticated();
-      allow update: if isAuthenticated() && request.auth.uid == resource.data.userId;
+      allow update: if isAuthenticated() && request.auth.uid == resource.data.user_id;
       allow delete: if isAuthenticated() && (
-        request.auth.uid == resource.data.userId ||
+        request.auth.uid == resource.data.user_id ||
         isSuperAdmin()
       );
+    }
+
+    // Weekly target alerts
+    match /weekly_target_alerts/{alertId} {
+      allow read: if isAuthenticated() && (
+        request.auth.uid == resource.data.user_id ||
+        isPartnerOrAdmin()
+      );
+      allow create: if isAuthenticated() && (
+        request.auth.uid == request.resource.data.user_id ||
+        isPartnerOrAdmin()
+      );
+      allow update: if isAuthenticated() && (
+        request.auth.uid == resource.data.user_id ||
+        isPartnerOrAdmin()
+      );
+      allow delete: if isSuperAdmin();
     }
 
     // Organizations collection
@@ -164,7 +280,44 @@ service cloud.firestore {
     // Villages collection
     match /villages/{villageId} {
       allow read: if isAuthenticated();
-      allow create, update, delete: if isPartnerOrAdmin();
+      allow create: if isPartnerOrAdmin()
+        || (
+          isAuthenticated()
+          && request.resource.data.creatorId == request.auth.uid
+          && listHasUid(request.resource.data.memberIds, request.auth.uid)
+        );
+      allow update: if isPartnerOrAdmin()
+        || (
+          isAuthenticated()
+          && resource.data.creatorId == request.auth.uid
+          && request.resource.data.creatorId == resource.data.creatorId
+          && request.resource.data.memberCount <= 10
+        );
+      allow delete: if isPartnerOrAdmin();
+    }
+
+    // Village invitations collection
+    match /village_invitations/{invitationId} {
+      allow read: if isAuthenticated() && (
+        isVillageCreator(resource.data.villageId) ||
+        isVillageMember(resource.data.villageId) ||
+        isInvitationInvitee(resource.data)
+      );
+      allow create: if isAuthenticated() && (
+        isPartnerOrAdmin() ||
+        (
+          (isVillageCreator(request.resource.data.villageId) || isVillageMember(request.resource.data.villageId))
+          && request.resource.data.invitedBy == request.auth.uid
+        )
+      );
+      allow update: if isAuthenticated() && (
+        isPartnerOrAdmin() ||
+        isVillageCreator(resource.data.villageId) ||
+        (isVillageMember(resource.data.villageId) && request.auth.uid == resource.data.invitedBy) ||
+        (isInvitationInvitee(resource.data)
+          && request.resource.data.status in ['accepted', 'declined'])
+      );
+      allow delete: if isPartnerOrAdmin();
     }
 
     // Clusters collection
@@ -186,17 +339,27 @@ service cloud.firestore {
 
     // Peer matching collections
     match /peer_weekly_matches/{matchId} {
+      allow read: if isWeeklyMatchParticipant(matchId) || isPartnerOrAdmin();
+      allow create: if isWeeklyMatchOwner(request.resource.data);
       allow read: if isAuthenticated() && (
+        request.auth.uid == resource.data.user_id ||
         request.auth.uid == resource.data.userId ||
         request.auth.uid == resource.data.user1_id ||
         request.auth.uid == resource.data.user2_id ||
         isPartnerOrAdmin()
       );
-      allow create: if isAuthenticated() && request.auth.uid == request.resource.data.userId;
+      allow create: if isAuthenticated() && (
+        request.auth.uid == request.resource.data.user_id ||
+        request.auth.uid == request.resource.data.userId
+      );
       allow update: if isAuthenticated() && (
+        request.auth.uid == resource.data.user_id ||
+        request.auth.uid == resource.data.userId ||
         request.auth.uid == resource.data.userId ||
         request.auth.uid == resource.data.user1_id ||
         request.auth.uid == resource.data.user2_id ||
+        request.auth.uid == resource.data.peer_id ||
+        request.auth.uid == resource.data.peerId ||
         isPartnerOrAdmin()
       );
       allow delete: if isSuperAdmin();
@@ -205,12 +368,22 @@ service cloud.firestore {
     // Peer sessions
     match /peer_sessions/{sessionId} {
       allow read: if isAuthenticated() && (
-        request.auth.uid in resource.data.participants ||
+        listHasUid(resource.data.participants, request.auth.uid) ||
+        listHasUid(resource.data.participantIds, request.auth.uid) ||
+        listHasUid(resource.data.participant_ids, request.auth.uid) ||
+        request.auth.uid == resource.data.createdBy ||
+        request.auth.uid == resource.data.creatorId ||
+        request.auth.uid == resource.data.created_by ||
         isPartnerOrAdmin()
       );
       allow create: if isAuthenticated();
       allow update: if isAuthenticated() && (
-        request.auth.uid in resource.data.participants ||
+        listHasUid(resource.data.participants, request.auth.uid) ||
+        listHasUid(resource.data.participantIds, request.auth.uid) ||
+        listHasUid(resource.data.participant_ids, request.auth.uid) ||
+        request.auth.uid == resource.data.createdBy ||
+        request.auth.uid == resource.data.creatorId ||
+        request.auth.uid == resource.data.created_by ||
         isPartnerOrAdmin()
       );
       allow delete: if isPartnerOrAdmin();
@@ -221,12 +394,19 @@ service cloud.firestore {
       allow read: if isAuthenticated() && (
         request.auth.uid == resource.data.fromUserId ||
         request.auth.uid == resource.data.toUserId ||
+        request.auth.uid == resource.data.from_user_id ||
+        request.auth.uid == resource.data.to_user_id ||
         isPartnerOrAdmin()
       );
-      allow create: if isAuthenticated() && request.auth.uid == request.resource.data.fromUserId;
+      allow create: if isAuthenticated() && (
+        request.auth.uid == request.resource.data.fromUserId ||
+        request.auth.uid == request.resource.data.from_user_id
+      );
       allow update: if isAuthenticated() && (
         request.auth.uid == resource.data.fromUserId ||
         request.auth.uid == resource.data.toUserId ||
+        request.auth.uid == resource.data.from_user_id ||
+        request.auth.uid == resource.data.to_user_id ||
         isPartnerOrAdmin()
       );
       allow delete: if isPartnerOrAdmin();
@@ -242,18 +422,60 @@ service cloud.firestore {
       allow delete: if isSuperAdmin();
     }
 
+    // Peer matches
+    match /peer_matches/{matchId} {
+      allow read: if isAuthenticated() && (
+        request.auth.uid == resource.data.user_id ||
+        isPartnerOrAdmin()
+      );
+      allow create: if isAuthenticated() && request.auth.uid == request.resource.data.user_id;
+      allow update: if isAuthenticated() && (
+        request.auth.uid == resource.data.user_id ||
+        isPartnerOrAdmin()
+      );
+      allow delete: if isSuperAdmin();
+    }
+
+    // Weekly habits
+    match /weekly_habits/{habitId} {
+      allow read: if isAuthenticated() && (
+        request.auth.uid == resource.data.user_id ||
+        isPartnerOrAdmin()
+      );
+      allow create: if isAuthenticated() && request.auth.uid == request.resource.data.user_id;
+      allow update: if isAuthenticated() && (
+        request.auth.uid == resource.data.user_id ||
+        isPartnerOrAdmin()
+      );
+      allow delete: if isSuperAdmin();
+    }
+
+    // Inspiration quotes
+    match /inspiration_quotes/{quoteId} {
+      allow read: if isAuthenticated();
+      allow write: if isSuperAdmin();
+    }
+
     // Impact logs collection
     match /impact_logs/{logId} {
       allow read: if isAuthenticated() && (
+        request.auth.uid == resource.data.user_id ||
         request.auth.uid == resource.data.userId ||
+        (resource.data.companyId is string && resource.data.companyId == getUserCompanyId()) ||
         isPartnerOrAdmin()
       );
-      allow create: if isAuthenticated() && request.auth.uid == request.resource.data.userId;
+      allow create: if isAuthenticated() && (
+        request.auth.uid == request.resource.data.user_id ||
+        request.auth.uid == request.resource.data.userId ||
+        isPartnerOrAdmin()
+      );
       allow update: if isAuthenticated() && (
+        request.auth.uid == resource.data.user_id ||
         request.auth.uid == resource.data.userId ||
         isPartnerOrAdmin()
       );
       allow delete: if isAuthenticated() && (
+        request.auth.uid == resource.data.user_id ||
         request.auth.uid == resource.data.userId ||
         isSuperAdmin()
       );
@@ -261,15 +483,34 @@ service cloud.firestore {
 
     // Badges collection
     match /badges/{badgeId} {
-      allow read: if true;
+      allow read: if isAuthenticated();
       allow write: if isSuperAdmin();
     }
 
-    // User badges collection
+    // User badges collection (camelCase)
     match /userBadges/{badgeAwardId} {
       allow read: if isAuthenticated();
       allow create: if isPartnerOrAdmin();
       allow update, delete: if isSuperAdmin();
+    }
+
+    // User badges collection (snake_case)
+    match /user_badges/{badgeAwardId} {
+      allow read: if isAuthenticated();
+      allow create: if isPartnerOrAdmin();
+      allow update, delete: if isSuperAdmin();
+    }
+
+    // Courses collection
+    match /courses/{courseId} {
+      allow read: if isAuthenticated();
+      allow create, update, delete: if isSuperAdmin();
+    }
+
+    // Organization courses collection
+    match /organization_courses/{courseId} {
+      allow read: if isAuthenticated();
+      allow create, update, delete: if isPartnerOrAdmin();
     }
 
     // Nudge templates
@@ -281,7 +522,7 @@ service cloud.firestore {
     // Nudges sent
     match /nudges_sent/{nudgeId} {
       allow read: if isAuthenticated() && (
-        request.auth.uid == resource.data.userId ||
+        request.auth.uid == resource.data.user_id ||
         isPartnerOrAdmin()
       );
       allow create: if isPartnerOrAdmin();
@@ -326,21 +567,95 @@ service cloud.firestore {
 
     // System health alerts
     match /system_health_alerts/{alertId} {
-      allow read: if isSuperAdmin();
+      allow read: if isPartnerOrAdmin();
       allow write: if isSuperAdmin();
     }
 
     // Task notifications
     match /task_notifications/{taskId} {
-      allow read: if isSuperAdmin();
+      allow read: if isPartnerOrAdmin();
       allow write: if isSuperAdmin();
     }
 
     // Admin activity log
     match /admin_activity_log/{entryId} {
-      allow read: if isSuperAdmin();
+      allow read: if isPartnerOrAdmin();
       allow create: if isAuthenticated();
       allow update, delete: if isSuperAdmin();
+    }
+
+    // Points verifications collection
+    match /points_verifications/{verificationId} {
+      allow read: if isAuthenticated();
+      allow create: if isAuthenticated();
+      allow update, delete: if isSuperAdmin();
+    }
+
+    // Points verification requests collection
+    match /points_verification_requests/{requestId} {
+      allow read: if isAuthenticated();
+      allow create: if isAuthenticated();
+      allow update: if isPartnerOrAdmin();
+      allow delete: if isSuperAdmin();
+    }
+
+    // Partner organizations collection
+    match /partner_organizations/{partnerOrgId} {
+      allow read: if isAuthenticated();
+      allow create: if isPartnerOrAdmin();
+      allow update: if isPartnerOrAdmin();
+      allow delete: if isSuperAdmin();
+    }
+
+    // Registrations collection
+    match /registrations/{registrationId} {
+      allow read: if isAuthenticated();
+      allow create: if true;  // Allow during signup
+      allow update: if isOwner(resource.data.user_id) || isSuperAdmin();
+      allow delete: if isSuperAdmin();
+    }
+
+    // Partners collection
+    match /partners/{partnerId} {
+      allow read: if isAuthenticated() && (
+        request.auth.uid == partnerId ||
+        isPartnerOrAdmin()
+      );
+      allow create: if isPartnerOrAdmin() && hasValidPartnerAssignments(request.resource.data);
+      allow update: if isPartnerOrAdmin() && hasValidPartnerAssignments(request.resource.data);
+      allow delete: if isSuperAdmin();
+    }
+
+    // Organization capacity metrics
+    match /organization_capacity_metrics/{metricId} {
+      allow read: if isAuthenticated();
+      allow create: if isPartnerOrAdmin();
+      allow update: if isPartnerOrAdmin();
+      allow delete: if isSuperAdmin();
+    }
+
+    // Organization capacity alerts
+    match /organization_capacity_alerts/{alertId} {
+      allow read: if isAuthenticated();
+      allow create: if isPartnerOrAdmin();
+      allow update: if isPartnerOrAdmin();
+      allow delete: if isSuperAdmin();
+    }
+
+    // Invitations collection
+    match /invitations/{invitationId} {
+      allow read: if isAuthenticated();
+      allow create: if isPartnerOrAdmin();
+      allow update: if isPartnerOrAdmin();
+      allow delete: if isSuperAdmin();
+    }
+
+    // Checklists collection
+    match /checklists/{checklistId} {
+      allow read: if isAuthenticated();
+      allow create: if isAuthenticated();
+      allow update: if isAuthenticated();
+      allow delete: if isSuperAdmin();
     }
 
     // Default: deny all other access

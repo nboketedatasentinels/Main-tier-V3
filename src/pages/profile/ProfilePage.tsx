@@ -1,5 +1,11 @@
-import React, { useCallback, useEffect, useMemo, useState } from 'react'
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import {
+  AlertDialog,
+  AlertDialogBody,
+  AlertDialogContent,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogOverlay,
   Avatar,
   Badge,
   Box,
@@ -46,6 +52,7 @@ import {
   AlertCircle,
   Brain,
   Building,
+  Calendar,
   Check,
   CheckCircle,
   ChevronRight,
@@ -58,11 +65,14 @@ import {
   Loader2,
   Lock,
   Mail as MailIcon,
+  LogOut,
   Save,
+  Settings,
   Shield,
   TrendingUp,
   Twitter,
   Upload,
+  UserPlus,
   Users,
   X,
   XCircle,
@@ -88,6 +98,8 @@ import type { StandardRole, Organization, DashboardPreferences } from '@/types'
 import { TransformationTier, UserRole } from '@/types'
 import { normalizeRole } from '@/utils/role'
 import { incrementOrganizationMemberCount, validateCompanyCode } from '@/services/organizationService'
+import { fetchVillageById, VillageSummary } from '@/services/villageService'
+import { listVillageInvitations } from '@/services/villageInvitationService'
 import { CORE_VALUES } from '@/config/personality-data'
 import BadgeDisplay from '@/components/profile/BadgeDisplay'
 
@@ -118,6 +130,8 @@ interface ProfileData {
   registrationDate?: string
   companyName?: string
   companyCode?: string
+  companyId?: string | null
+  villageId?: string | null
   villageName?: string
   clusterName?: string
 }
@@ -276,19 +290,25 @@ export const ProfilePage: React.FC = () => {
   const [matchPreferencesMessage, setMatchPreferencesMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null)
   const [showAdvancedMatching, setShowAdvancedMatching] = useState(false)
   const [accountSettingsSaving, setAccountSettingsSaving] = useState(false)
+  const [organizationMessage, setOrganizationMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null)
+  const [villageDetails, setVillageDetails] = useState<VillageSummary | null>(null)
+  const [villageLoading, setVillageLoading] = useState(false)
+  const [villageError, setVillageError] = useState<string | null>(null)
+  const [pendingVillageInvites, setPendingVillageInvites] = useState(0)
+  const [shareableInviteCode, setShareableInviteCode] = useState<string | null>(null)
+  const [isLeaveVillageOpen, setIsLeaveVillageOpen] = useState(false)
+  const [isLeavingVillage, setIsLeavingVillage] = useState(false)
+  const cancelLeaveRef = useRef<HTMLButtonElement | null>(null)
 
   const hasAccountSettingsChanges = useMemo(() => {
     if (!editedData || !profileData) return false
-    const normalizedCompanyCode = companyCode.trim().toUpperCase()
-    const currentCompanyCode = (profileData.companyCode || '').trim().toUpperCase()
-    const hasCompanyChange = Boolean(normalizedCompanyCode) && normalizedCompanyCode !== currentCompanyCode
     const hasMatchChanges = editedData.matchRefreshPreference !== profileData.matchRefreshPreference
       || editedData.preferredMatchDay !== profileData.preferredMatchDay
       || editedData.matchNotificationPreference !== profileData.matchNotificationPreference
       || editedData.timezone !== profileData.timezone
     const hasVisibilityChange = editedData.leaderboardVisibility !== profileData.leaderboardVisibility
-    return hasCompanyChange || hasMatchChanges || hasVisibilityChange
-  }, [companyCode, editedData, profileData])
+    return hasMatchChanges || hasVisibilityChange
+  }, [editedData, profileData])
 
   const buildProfileFromDoc = useCallback(
     (docData: Record<string, unknown>): ProfileData => ({
@@ -334,6 +354,7 @@ export const ProfilePage: React.FC = () => {
       registrationDate: (docData.registrationDate as string) || (docData.createdAt as string),
       companyName: docData.companyName as string,
       companyCode: docData.companyCode as string,
+      villageId: (docData.villageId as string) || null,
       villageName: docData.villageName as string,
       clusterName: docData.clusterName as string,
     }),
@@ -375,6 +396,82 @@ export const ProfilePage: React.FC = () => {
     setCompanyCode(profileData?.companyCode || '')
   }, [profileData?.companyCode])
 
+  const villageId = useMemo(
+    () => profile?.villageId || profileData?.villageId || null,
+    [profile?.villageId, profileData?.villageId],
+  )
+  const isPaidMember = profileData?.membershipStatus === 'paid'
+  const shouldShowVillageCard = !isPaidMember && Boolean(villageId)
+  const villageMemberLimit = 10
+  const isVillageNearCapacity = (villageDetails?.memberCount ?? 0) >= villageMemberLimit - 2
+  const isVillageAtCapacity = (villageDetails?.memberCount ?? 0) >= villageMemberLimit
+
+  useEffect(() => {
+    let isMounted = true
+
+    const loadVillageDetails = async () => {
+      if (!villageId || isPaidMember) {
+        if (isMounted) {
+          setVillageDetails(null)
+          setVillageLoading(false)
+          setVillageError(null)
+        }
+        return
+      }
+
+      if (isMounted) {
+        setVillageLoading(true)
+        setVillageError(null)
+      }
+
+      const details = await fetchVillageById(villageId)
+
+      if (!isMounted) return
+
+      if (!details) {
+        setVillageDetails(null)
+        setVillageError('We could not load your village details. Please try again later.')
+      } else {
+        setVillageDetails(details)
+        setVillageError(null)
+      }
+      setVillageLoading(false)
+    }
+
+    loadVillageDetails()
+
+    return () => {
+      isMounted = false
+    }
+  }, [isPaidMember, villageId])
+
+  useEffect(() => {
+    if (!villageId || isPaidMember) {
+      setPendingVillageInvites(0)
+      setShareableInviteCode(null)
+      return
+    }
+
+    let isMounted = true
+    const loadInvites = async () => {
+      try {
+        const invites = await listVillageInvitations({ villageId, status: 'pending' })
+        if (!isMounted) return
+        setPendingVillageInvites(invites.length)
+        const shareableInvite = invites.find((invite) => !invite.email)
+        setShareableInviteCode(shareableInvite?.invitationCode ?? null)
+      } catch (error) {
+        console.error('Failed to load village invites', error)
+      }
+    }
+
+    void loadInvites()
+
+    return () => {
+      isMounted = false
+    }
+  }, [isPaidMember, villageId])
+
   useEffect(() => {
     const trimmedCode = companyCode.trim().toUpperCase()
 
@@ -410,6 +507,12 @@ export const ProfilePage: React.FC = () => {
     }
   }, [companyCode])
 
+  useEffect(() => {
+    if (organizationMessage?.type !== 'success') return
+    const timer = window.setTimeout(() => setOrganizationMessage(null), 6000)
+    return () => window.clearTimeout(timer)
+  }, [organizationMessage])
+
   const handleInputChange = <K extends keyof ProfileData>(field: K, value: ProfileData[K]) => {
     if (!editedData) return
     setEditedData({ ...editedData, [field]: value })
@@ -418,6 +521,67 @@ export const ProfilePage: React.FC = () => {
   const handleSocialLinkChange = (platform: keyof ProfileData['socialLinks'], value: string) => {
     if (!editedData) return
     setEditedData({ ...editedData, socialLinks: { ...editedData.socialLinks, [platform]: value } })
+  }
+
+  const formatVillageDate = (value?: string) => {
+    if (!value) return 'Unknown'
+    const parsed = new Date(value)
+    if (Number.isNaN(parsed.getTime())) return 'Unknown'
+    return new Intl.DateTimeFormat('en-US', { month: 'short', day: 'numeric', year: 'numeric' }).format(parsed)
+  }
+
+  const handleManageVillage = () => {
+    if (!villageId) return
+    navigate(`/app/villages/${villageId}/manage`)
+  }
+
+  const handleInviteVillage = () => {
+    if (!villageId) return
+    navigate(`/app/villages/${villageId}/invite`)
+  }
+
+  const handleCopyVillageInviteLink = async () => {
+    if (!shareableInviteCode) return
+    const inviteLink = `${window.location.origin}/app/villages/join/${shareableInviteCode}`
+    if (navigator.clipboard) {
+      await navigator.clipboard.writeText(inviteLink)
+      toast({
+        title: 'Invite link copied',
+        status: 'success',
+        duration: 2000,
+      })
+    }
+  }
+
+  const handleLeaveVillage = async () => {
+    if (!user) return
+    setIsLeavingVillage(true)
+    try {
+      await Promise.all([
+        updateDoc(doc(db, 'users', user.uid), { villageId: null, updatedAt: serverTimestamp() }),
+        updateDoc(doc(db, 'profiles', user.uid), { villageId: null, updatedAt: serverTimestamp() }),
+      ])
+      await refreshProfile({ reason: 'village-left' })
+      setVillageDetails(null)
+      setVillageError(null)
+      toast({
+        title: 'You left the village',
+        description: 'Your village affiliation has been removed.',
+        status: 'success',
+        duration: 4000,
+      })
+    } catch (leaveError) {
+      console.error('Failed to leave village', leaveError)
+      toast({
+        title: 'Unable to leave village',
+        description: 'Please try again or contact support if the issue persists.',
+        status: 'error',
+        duration: 5000,
+      })
+    } finally {
+      setIsLeavingVillage(false)
+      setIsLeaveVillageOpen(false)
+    }
   }
 
   const handleCoreValueToggle = (value: string) => {
@@ -645,6 +809,15 @@ export const ProfilePage: React.FC = () => {
   const handleCompanyCodeSave = async () => {
     if (!user || !profileData) return
     const trimmedCode = companyCode.trim().toUpperCase()
+    const currentCompanyCode = (profileData.companyCode || '').trim().toUpperCase()
+
+    if (trimmedCode === currentCompanyCode && profileData.companyId) {
+      setOrganizationMessage({
+        type: 'error',
+        text: `You're already connected to ${profileData.companyName || 'this organization'}.`,
+      })
+      return
+    }
 
     if (!trimmedCode) {
       toast({
@@ -677,6 +850,7 @@ export const ProfilePage: React.FC = () => {
     }
 
     setCompanyCodeSaving(true)
+    setOrganizationMessage(null)
     const membershipUpdates = {
       membershipStatus: 'paid' as const,
       role: UserRole.PAID_MEMBER,
@@ -729,6 +903,13 @@ export const ProfilePage: React.FC = () => {
       setProfileData(updatedProfile)
       setEditedData(updatedProfile)
 
+      setOrganizationMessage({
+        type: 'success',
+        text: companyOrganization?.name
+          ? `Connected to ${companyOrganization.name}. Your membership is now paid—check your dashboard for new features.`
+          : 'Company code saved successfully. Your membership is now paid—check your dashboard for new features.',
+      })
+
       toast({
         title: 'You are now a paid member',
         description: companyOrganization?.name
@@ -739,6 +920,10 @@ export const ProfilePage: React.FC = () => {
       })
     } catch (err) {
       console.error(err)
+      setOrganizationMessage({
+        type: 'error',
+        text: 'We could not connect this organization. Please try again or contact support.',
+      })
       toast({
         title: 'Unable to update company code',
         description: 'Please try again or contact support.',
@@ -753,20 +938,9 @@ export const ProfilePage: React.FC = () => {
   const handleSaveAccountSettings = async () => {
     if (!editedData || !profileData) return
     setAccountSettingsSaving(true)
-    const normalizedCompanyCode = companyCode.trim().toUpperCase()
-    const currentCompanyCode = (profileData.companyCode || '').trim().toUpperCase()
 
     try {
-      const tasks: Array<Promise<void>> = [
-        handleSaveMatchPreferences(),
-        handleSaveVisibilityPreference(),
-      ]
-
-      if (normalizedCompanyCode && normalizedCompanyCode !== currentCompanyCode) {
-        tasks.push(handleCompanyCodeSave())
-      }
-
-      await Promise.all(tasks)
+      await Promise.all([handleSaveMatchPreferences(), handleSaveVisibilityPreference()])
     } finally {
       setAccountSettingsSaving(false)
     }
@@ -812,6 +986,12 @@ export const ProfilePage: React.FC = () => {
     }
     return parts.join(' · ')
   }
+
+  const normalizedCompanyCode = companyCode.trim().toUpperCase()
+  const currentCompanyCode = (profileData?.companyCode || '').trim().toUpperCase()
+  const isAlreadyConnected = Boolean(normalizedCompanyCode)
+    && normalizedCompanyCode === currentCompanyCode
+    && Boolean(profileData?.companyId)
 
   if (loading) {
     return (
@@ -1297,8 +1477,8 @@ export const ProfilePage: React.FC = () => {
                     </CardBody>
                   </Card>
 
-                  {/* Organization Info Card (for paid members) */}
-                  {profileData.membershipStatus === 'paid' && (
+                  {/* Organization Info Card (paid members only) */}
+                  {isPaidMember && (
                     <Card borderColor="brand.border" boxShadow="card" w="full">
                       <CardHeader pb={2}>
                         <Text fontWeight="semibold" fontSize="sm">Organization</Text>
@@ -1330,6 +1510,121 @@ export const ProfilePage: React.FC = () => {
                             </Box>
                           )}
                         </VStack>
+                      </CardBody>
+                    </Card>
+                  )}
+
+                  {/* Village Info Card (free members with a village) */}
+                  {shouldShowVillageCard && (
+                    <Card borderColor="brand.border" boxShadow="card" w="full">
+                      <CardHeader pb={2}>
+                        <Text fontWeight="semibold" fontSize="sm">Village Information</Text>
+                      </CardHeader>
+                      <CardBody pt={2}>
+                        {villageLoading ? (
+                          <HStack spacing={3}>
+                            <Spinner size="sm" />
+                            <Text fontSize="sm" color="brand.subtleText">Loading village details...</Text>
+                          </HStack>
+                        ) : villageError ? (
+                          <Alert status="error" borderRadius="md">
+                            <AlertIcon />
+                            <Text fontSize="sm">{villageError}</Text>
+                          </Alert>
+                        ) : (
+                          <VStack align="stretch" spacing={4}>
+                            <Box>
+                              <Text fontSize="xs" color="brand.subtleText">Village</Text>
+                              <HStack spacing={2}>
+                                <Icon as={Users} size={14} color="brand.subtleText" />
+                                <Text fontSize="sm" fontWeight="medium">{villageDetails?.name || 'Your village'}</Text>
+                              </HStack>
+                            </Box>
+                            <Box>
+                              <Text fontSize="xs" color="brand.subtleText">Members</Text>
+                              <HStack spacing={2}>
+                                <Text fontSize="sm">
+                                  {villageDetails?.memberCount ?? 0}/{villageMemberLimit}
+                                </Text>
+                                {isVillageAtCapacity && (
+                                  <Badge colorScheme="red" fontSize="xs">At capacity</Badge>
+                                )}
+                                {!isVillageAtCapacity && isVillageNearCapacity && (
+                                  <Badge colorScheme="orange" fontSize="xs">Near capacity</Badge>
+                                )}
+                              </HStack>
+                            </Box>
+                            <Box>
+                              <Text fontSize="xs" color="brand.subtleText">Pending invites</Text>
+                              <HStack spacing={2}>
+                                <Text fontSize="sm">{pendingVillageInvites}</Text>
+                                {pendingVillageInvites > 0 && (
+                                  <Badge colorScheme="purple" fontSize="xs">{pendingVillageInvites} pending</Badge>
+                                )}
+                              </HStack>
+                            </Box>
+                            <Box>
+                              <Text fontSize="xs" color="brand.subtleText">Shareable invite link</Text>
+                              {shareableInviteCode ? (
+                                <HStack spacing={2}>
+                                  <Text fontSize="xs" color="brand.subtleText" noOfLines={1}>
+                                    {`${window.location.origin}/app/villages/join/${shareableInviteCode}`}
+                                  </Text>
+                                  <Button size="xs" variant="outline" onClick={handleCopyVillageInviteLink}>
+                                    Copy link
+                                  </Button>
+                                </HStack>
+                              ) : (
+                                <Text fontSize="sm" color="brand.subtleText">
+                                  Generate a shareable code from the invite page.
+                                </Text>
+                              )}
+                            </Box>
+                            <Box>
+                              <Text fontSize="xs" color="brand.subtleText">Role</Text>
+                              <Text fontSize="sm">
+                                {villageDetails?.creatorId && profile?.id === villageDetails.creatorId ? 'Founder' : 'Member'}
+                              </Text>
+                            </Box>
+                            <Box>
+                              <Text fontSize="xs" color="brand.subtleText">Joined</Text>
+                              <HStack spacing={2}>
+                                <Icon as={Calendar} size={14} color="brand.subtleText" />
+                                <Text fontSize="sm">{formatVillageDate(villageDetails?.createdAt)}</Text>
+                              </HStack>
+                            </Box>
+                            <HStack spacing={3} flexWrap="wrap">
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                leftIcon={<Icon as={Settings} />}
+                                onClick={handleManageVillage}
+                                isDisabled={!villageId}
+                              >
+                                Manage Village
+                              </Button>
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                leftIcon={<Icon as={UserPlus} />}
+                                onClick={handleInviteVillage}
+                                isDisabled={!villageId || isVillageAtCapacity}
+                              >
+                                Invite Members
+                              </Button>
+                              <Button
+                                size="sm"
+                                colorScheme="red"
+                                variant="outline"
+                                leftIcon={<Icon as={LogOut} />}
+                                onClick={() => setIsLeaveVillageOpen(true)}
+                                isLoading={isLeavingVillage}
+                              >
+                                Leave Village
+                              </Button>
+                            </HStack>
+                          </VStack>
+                        )}
                       </CardBody>
                     </Card>
                   )}
@@ -1748,26 +2043,68 @@ export const ProfilePage: React.FC = () => {
                           </Text>
                         </Box>
                         <FormControl>
-                          <HStack justify="space-between" align="center">
-                            <FormLabel mb={0}>Company Code</FormLabel>
+                          <FormLabel>Company Code</FormLabel>
+                          <HStack align="center">
                             <Input
                               maxW="200px"
                               value={companyCode}
-                              onChange={(event) => setCompanyCode(event.target.value.toUpperCase().slice(0, 6))}
+                              onChange={(event) => {
+                                setCompanyCode(event.target.value.toUpperCase().slice(0, 6))
+                                setOrganizationMessage(null)
+                              }}
                               placeholder="6-character code"
                             />
+                            <Button
+                              colorScheme="purple"
+                              onClick={handleCompanyCodeSave}
+                              isLoading={companyCodeSaving}
+                              loadingText="Connecting"
+                              isDisabled={
+                                companyCodeChecking
+                                || companyCodeSaving
+                                || companyCodeValid === false
+                                || isAlreadyConnected
+                                || normalizedCompanyCode.length !== 6
+                              }
+                            >
+                              Connect to Organization
+                            </Button>
                           </HStack>
                           <FormHelperText>
-                            Use Save Changes below to apply updates.
+                            Enter your organization code to unlock paid member features.
                           </FormHelperText>
                         </FormControl>
+                        {isAlreadyConnected && (
+                          <Box bg="blue.50" border="1px solid" borderColor="blue.100" p={3} rounded="md">
+                            <HStack spacing={2} color="blue.700">
+                              <Icon as={CheckCircle} />
+                              <Text fontSize="sm">
+                                You're already connected to {profileData.companyName || 'this organization'}.
+                              </Text>
+                            </HStack>
+                          </Box>
+                        )}
+                        {profileData.membershipStatus === 'free' && (
+                          <Box bg="purple.50" border="1px solid" borderColor="purple.100" p={3} rounded="md">
+                            <Text fontSize="sm" fontWeight="semibold" color="purple.700">
+                              Connecting this code upgrades you to paid.
+                            </Text>
+                            <Text fontSize="sm" color="brand.subtleText" mt={1}>
+                              Unlock organization dashboards, peer matching enhancements, and full course access.
+                            </Text>
+                          </Box>
+                        )}
                         {companyCodeValid && companyOrganization && !companyCodeChecking && (
-                          <Box bg="green.50" border="1px solid" borderColor="green.100" p={3} rounded="md">
+                          <VStack align="stretch" spacing={2} bg="green.50" border="1px solid" borderColor="green.100" p={3} rounded="md">
                             <HStack spacing={2} color="green.600">
                               <Icon as={CheckCircle} />
                               <Text fontSize="sm">Valid company code ({companyOrganization.name})</Text>
                             </HStack>
-                          </Box>
+                            <HStack spacing={3} fontSize="sm" color="green.700">
+                              <Text>Members: {companyOrganization.memberCount ?? 0}</Text>
+                              <Text>Upgrade path: Free → Paid</Text>
+                            </HStack>
+                          </VStack>
                         )}
                         {companyCodeValid === false && !companyCodeChecking && (
                           <Box bg="red.50" border="1px solid" borderColor="red.100" p={3} rounded="md">
@@ -1784,8 +2121,22 @@ export const ProfilePage: React.FC = () => {
                         )}
                         {companyCodeSaving && (
                           <Text fontSize="sm" color="brand.subtleText">
-                            Saving company code...
+                            Connecting to organization...
                           </Text>
+                        )}
+                        {organizationMessage && (
+                          <Box
+                            bg={organizationMessage.type === 'success' ? 'green.50' : 'red.50'}
+                            border="1px solid"
+                            borderColor={organizationMessage.type === 'success' ? 'green.100' : 'red.100'}
+                            p={3}
+                            rounded="md"
+                          >
+                            <HStack spacing={2} color={organizationMessage.type === 'success' ? 'green.600' : 'red.600'}>
+                              <Icon as={organizationMessage.type === 'success' ? CheckCircle : AlertCircle} />
+                              <Text fontSize="sm">{organizationMessage.text}</Text>
+                            </HStack>
+                          </Box>
                         )}
                       </VStack>
                     </CardBody>
@@ -1794,18 +2145,19 @@ export const ProfilePage: React.FC = () => {
               </GridItem>
             </Grid>
 
-            <Box position="sticky" bottom={0} bg="white" pt={4} pb={2} borderTop="1px solid" borderColor="brand.border" mt={6} zIndex={1}>
-              <Flex justify="flex-end">
-                <Button
-                  onClick={handleSaveAccountSettings}
-                  isLoading={accountSettingsSaving || matchPreferencesSaving || visibilitySaving || companyCodeSaving}
-                  loadingText="Saving..."
-                  isDisabled={!hasAccountSettingsChanges}
-                >
-                  Save Changes
-                </Button>
-              </Flex>
-            </Box>
+            {hasAccountSettingsChanges && (
+              <Box position="sticky" bottom={0} bg="white" pt={4} pb={2} borderTop="1px solid" borderColor="brand.border" mt={6} zIndex={1}>
+                <Flex justify="flex-end">
+                  <Button
+                    onClick={handleSaveAccountSettings}
+                    isLoading={accountSettingsSaving || matchPreferencesSaving || visibilitySaving}
+                    loadingText="Saving..."
+                  >
+                    Save Changes
+                  </Button>
+                </Flex>
+              </Box>
+            )}
           </TabPanel>
 
           <TabPanel px={0}>
@@ -1885,6 +2237,28 @@ export const ProfilePage: React.FC = () => {
           </TabPanel>
         </TabPanels>
       </Tabs>
+
+      <AlertDialog
+        isOpen={isLeaveVillageOpen}
+        leastDestructiveRef={cancelLeaveRef}
+        onClose={() => setIsLeaveVillageOpen(false)}
+      >
+        <AlertDialogOverlay />
+        <AlertDialogContent>
+          <AlertDialogHeader>Leave your village?</AlertDialogHeader>
+          <AlertDialogBody>
+            Leaving the village will remove your affiliation and related access. You can join another village later.
+          </AlertDialogBody>
+          <AlertDialogFooter>
+            <Button ref={cancelLeaveRef} onClick={() => setIsLeaveVillageOpen(false)} variant="ghost">
+              Cancel
+            </Button>
+            <Button colorScheme="red" onClick={handleLeaveVillage} ml={3} isLoading={isLeavingVillage}>
+              Leave Village
+            </Button>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </Box>
   )
 }

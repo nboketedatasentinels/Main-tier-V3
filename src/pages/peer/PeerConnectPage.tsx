@@ -72,7 +72,7 @@ import {
   updateDoc,
   where,
 } from 'firebase/firestore'
-import { db } from '@/services/firebase'
+import { auth, db } from '@/services/firebase'
 import { useAuth } from '@/hooks/useAuth'
 import { StartChallengeModal } from '@/components/modals/StartChallengeModal'
 import { fetchOrgMembers, getOrgScope } from '@/utils/organizationScope'
@@ -315,7 +315,7 @@ const buildMatchWindow = (preferences: MatchPreferences): MatchWindow => {
 }
 
 export const PeerConnectPage: React.FC = () => {
-  const { user, profile } = useAuth()
+  const { user, profile, loading, profileLoading } = useAuth()
   const toast = useToast()
   const challengeModal = useDisclosure()
   const sessionModal = useDisclosure()
@@ -377,7 +377,8 @@ export const PeerConnectPage: React.FC = () => {
       const matchDoc = await getDoc(matchRef)
       if (matchDoc.exists()) {
         const data = matchDoc.data()
-        const matchedPeer = availablePeers.find((peer) => peer.id === data.peerId)
+        const storedPeerId = data.peer_id ?? data.peerId
+        const matchedPeer = availablePeers.find((peer) => peer.id === storedPeerId)
         if (matchedPeer) {
           setWeeklyMatch({
             matchId: matchRef.id,
@@ -395,8 +396,8 @@ export const PeerConnectPage: React.FC = () => {
       const deterministicPeer = availablePeers[Math.abs(Number.parseInt(user.uid.slice(-3), 10)) % availablePeers.length]
       if (deterministicPeer) {
         const matchPayload = {
-          peerId: deterministicPeer.id,
-          userId: user.uid,
+          peer_id: deterministicPeer.id,
+          user_id: user.uid,
           matchKey: matchWindow.key,
           matchRefreshPreference: matchPreferences.refreshPreference,
           preferredMatchDay: matchPreferences.preferredMatchDay,
@@ -469,8 +470,8 @@ export const PeerConnectPage: React.FC = () => {
       const nextPeer = selectNextPeer(currentPeerId, refreshCount)
       if (!nextPeer) return
       const matchPayload = {
-        peerId: nextPeer.id,
-        userId: user.uid,
+        peer_id: nextPeer.id,
+        user_id: user.uid,
         matchKey: matchWindow.key,
         matchRefreshPreference: matchPreferences.refreshPreference,
         preferredMatchDay: matchPreferences.preferredMatchDay,
@@ -531,44 +532,68 @@ export const PeerConnectPage: React.FC = () => {
 
   // Real-time subscription for sessions and invitations
   useEffect(() => {
-    if (!user) return
+    if (!user || loading || profileLoading) return
 
-    setLoadingSessions(true)
+    let isActive = true
+    let unsubscribeSessions: (() => void) | null = null
+    let unsubscribeInvites: (() => void) | null = null
 
-    // Subscribe to sessions in real-time
-    const unsubscribeSessions = subscribeToUserSessions(user.uid, (sessionData) => {
-      const mappedSessions: PeerSession[] = sessionData.map((session) => ({
-        id: session.id,
-        title: session.title || 'Weekly Peer Date',
-        scheduledAt: session.scheduledAt,
-        timezone: session.timezone || profile?.timezone || 'UTC',
-        platform: session.platform as PeerSession['platform'],
-        link: session.meetingLink,
-        status: session.status as PeerSession['status'],
-        confirmationDeadline: session.confirmationDeadline,
-        youConfirmed: Boolean(session.confirmations?.[user.uid]),
-        peerConfirmed: Object.keys(session.confirmations || {}).filter(k => k !== user.uid).some(k => session.confirmations[k]),
-      }))
-      setSessions(mappedSessions)
-      setLoadingSessions(false)
-    })
+    const startSubscriptions = async () => {
+      try {
+        await user.getIdToken()
+      } catch (error) {
+        console.warn('[PeerConnect] Unable to refresh auth token before subscribing', error)
+      }
 
-    // Subscribe to invitations in real-time
-    const unsubscribeInvites = subscribeToUserInvitations(user.uid, (inviteData) => {
-      const mappedInvites: Invitation[] = inviteData.map((invite) => ({
-        id: invite.id,
-        fromName: invite.fromName || 'Peer',
-        fromEmail: invite.fromEmail || 'peer@example.com',
-      }))
-      setPendingInvites(mappedInvites)
-    })
+      if (!isActive) return
+      if (!auth.currentUser?.uid || auth.currentUser.uid !== user.uid) {
+        console.warn('[PeerConnect] Auth user mismatch; skipping session subscriptions', {
+          authUid: auth.currentUser?.uid ?? null,
+          userUid: user.uid,
+        })
+        return
+      }
+
+      setLoadingSessions(true)
+
+      // Subscribe to sessions in real-time
+      unsubscribeSessions = subscribeToUserSessions(user.uid, (sessionData) => {
+        const mappedSessions: PeerSession[] = sessionData.map((session) => ({
+          id: session.id,
+          title: session.title || 'Weekly Peer Date',
+          scheduledAt: session.scheduledAt,
+          timezone: session.timezone || profile?.timezone || 'UTC',
+          platform: session.platform as PeerSession['platform'],
+          link: session.meetingLink,
+          status: session.status as PeerSession['status'],
+          confirmationDeadline: session.confirmationDeadline,
+          youConfirmed: Boolean(session.confirmations?.[user.uid]),
+          peerConfirmed: Object.keys(session.confirmations || {}).filter(k => k !== user.uid).some(k => session.confirmations[k]),
+        }))
+        setSessions(mappedSessions)
+        setLoadingSessions(false)
+      })
+
+      // Subscribe to invitations in real-time
+      unsubscribeInvites = subscribeToUserInvitations(user.uid, (inviteData) => {
+        const mappedInvites: Invitation[] = inviteData.map((invite) => ({
+          id: invite.id,
+          fromName: invite.fromName || 'Peer',
+          fromEmail: invite.fromEmail || 'peer@example.com',
+        }))
+        setPendingInvites(mappedInvites)
+      })
+    }
+
+    void startSubscriptions()
 
     // Cleanup subscriptions on unmount
     return () => {
-      unsubscribeSessions()
-      unsubscribeInvites()
+      isActive = false
+      if (unsubscribeSessions) unsubscribeSessions()
+      if (unsubscribeInvites) unsubscribeInvites()
     }
-  }, [user, profile?.timezone])
+  }, [loading, profile?.timezone, profileLoading, user])
 
   const onChallengeCreated = () => {
     fetchWeeklyMatch()

@@ -12,6 +12,19 @@ export interface UpgradeRequest {
   status: UpgradeRequestStatus
   message?: string | null
   admin_notes?: string | null
+  villageId?: string | null
+  villageName?: string | null
+  villageDescription?: string | null
+  userDetails?: {
+    fullName?: string | null
+    firstName?: string | null
+    lastName?: string | null
+    email?: string | null
+    role?: string | null
+    phoneNumber?: string | null
+    companyId?: string | null
+    organizationId?: string | null
+  } | null
   requested_at: string
   reviewed_at?: string | null
   reviewed_by?: string | null

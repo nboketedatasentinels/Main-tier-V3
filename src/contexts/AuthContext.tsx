@@ -95,6 +95,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     windowStart: 0,
     requestCount: 0,
     circuitBrokenUntil: 0,
+    lastManualAttemptAt: 0,
   })
   const pendingCompanyCodeKey = 't4l.pendingCompanyCode'
   const offlineErrorMessage = 'Network error. Please check your connection.'
@@ -183,12 +184,16 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     return (
       previous.id === next.id &&
       previous.role === next.role &&
+      normalizeRole(previous.role) === normalizeRole(next.role) &&
       previous.membershipStatus === next.membershipStatus &&
       previous.accountStatus === next.accountStatus &&
       previous.transformationTier === next.transformationTier &&
       previous.companyId === next.companyId &&
       previous.companyCode === next.companyCode &&
       previous.companyName === next.companyName &&
+      previous.villageId === next.villageId &&
+      previous.corporateVillageId === next.corporateVillageId &&
+      previous.clusterId === next.clusterId &&
       previous.email === next.email &&
       previous.firstName === next.firstName &&
       previous.lastName === next.lastName &&
@@ -207,7 +212,20 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
   const updateProfileState = useCallback((nextProfile: UserProfile | null, reason: string) => {
     setProfile((prev) => {
-      if (areProfilesEquivalent(prev, nextProfile)) {
+      const shouldUpdateProfile = (() => {
+        if (!prev && !nextProfile) return false
+        if (!prev || !nextProfile) return true
+        const prevNormalizedRole = normalizeRole(prev.role)
+        const nextNormalizedRole = normalizeRole(nextProfile.role)
+        return (
+          prev.id !== nextProfile.id ||
+          prev.role !== nextProfile.role ||
+          prevNormalizedRole !== nextNormalizedRole ||
+          !areProfilesEquivalent(prev, nextProfile)
+        )
+      })()
+
+      if (!shouldUpdateProfile) {
         console.log('🟢 [Auth] Profile unchanged, skipping state update', { reason })
         return prev
       }
@@ -298,27 +316,58 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const fetchProfileOnce = useCallback(async (uid: string): Promise<UserProfile | null> => {
     try {
       console.log('🟣 [Auth] fetchProfileOnce:start', { uid })
-      const profileRef = doc(db, 'users', uid)
-      const profileSnap = await getDoc(profileRef)
-      if (!profileSnap.exists()) {
-        console.warn('🟠 [Auth] fetchProfileOnce: no profile found')
-        return null
-      }
-      const { id: _ignoredId, ...profileData } = profileSnap.data() as UserProfile
-      const rawProfile = {
-        ...profileData,
-        id: uid,
-        journeyType: profileData.journeyType || '4W',
-      } as UserProfile
-      const normalizedRole = normalizeRole(rawProfile.role)
-      if (normalizedRole) {
+      
+      // First, try to fetch from users collection (primary source)
+      const usersRef = doc(db, 'users', uid)
+      const usersSnap = await getDoc(usersRef)
+      if (usersSnap.exists()) {
+        const { id: _ignoredId, ...profileData } = usersSnap.data() as UserProfile
+        const rawProfile = {
+          ...profileData,
+          id: uid,
+          journeyType: profileData.journeyType || '4W',
+        } as UserProfile
+        const rawRole = rawProfile.role ?? UserRole.USER
+        const normalizedRole = normalizeRole(rawRole)
         rawProfile.role = normalizedRole as StandardRole
+        console.log('🟣 [Auth] fetchProfileOnce: resolved profile from users collection', {
+          id: rawProfile.id,
+          role: rawProfile.role,
+        })
+        return rawProfile
       }
-      console.log('🟣 [Auth] fetchProfileOnce: resolved profile', {
-        id: rawProfile.id,
-        role: rawProfile.role,
-      })
-      return rawProfile
+      
+      console.warn('🟠 [Auth] fetchProfileOnce: no profile found in users collection, trying profiles collection...')
+      
+      // Fallback: try to fetch from profiles collection (legacy or sync source)
+      const profilesRef = doc(db, 'profiles', uid)
+      const profilesSnap = await getDoc(profilesRef)
+      if (profilesSnap.exists()) {
+        const { id: _ignoredId, ...profileData } = profilesSnap.data() as UserProfile
+        const rawProfile = {
+          ...profileData,
+          id: uid,
+          journeyType: profileData.journeyType || '4W',
+        } as UserProfile
+        const rawRole = rawProfile.role ?? UserRole.USER
+        const normalizedRole = normalizeRole(rawRole)
+        rawProfile.role = normalizedRole as StandardRole
+        console.log('🟣 [Auth] fetchProfileOnce: resolved profile from profiles collection (fallback)', {
+          id: rawProfile.id,
+          role: rawProfile.role,
+        })
+        // Sync this profile back to users collection to prevent future fallbacks
+        try {
+          await setDoc(usersRef, rawProfile, { merge: true })
+          console.log('🟣 [Auth] fetchProfileOnce: synced profile from profiles to users collection')
+        } catch (syncError) {
+          console.warn('🟠 [Auth] fetchProfileOnce: failed to sync profile to users collection', syncError)
+        }
+        return rawProfile
+      }
+      
+      console.warn('🟠 [Auth] fetchProfileOnce: no profile found in either collection')
+      return null
     } catch (error) {
       if (isOfflineError(error)) {
         console.warn('🟠 [Auth] fetchProfileOnce offline', { uid })
@@ -391,7 +440,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       const userDocRef = doc(db, 'users', firebaseUser.uid)
       const userDocSnap = await getDoc(userDocRef)
 
-      console.log('🟣 [Auth] Firestore profile exists?', userDocSnap.exists())
+      console.log('🟣 [Auth] Firestore profile exists in users collection?', userDocSnap.exists())
 
       if (userDocSnap.exists()) {
         const { id: _ignoredId, ...storedUser } = userDocSnap.data() as UserProfile
@@ -426,14 +475,10 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
           console.warn('🟠 [Auth] Unable to merge learner profile extras', extrasError)
         }
 
-        const normalized = normalizeRole(mergedUser.role)
-        console.log('🟣 [Auth] Normalized role:', normalized)
-
-        if (normalized) {
-          mergedUser.role = normalized as StandardRole
-        } else {
-          console.warn('🟠 [Auth] Invalid role detected:', mergedUser.role)
-        }
+        const rawRole = mergedUser.role ?? UserRole.USER
+        const normalizedRole = normalizeRole(rawRole)
+        console.log('🟣 [Auth] Normalized role:', { raw: rawRole, normalized: normalizedRole })
+        mergedUser.role = normalizedRole as StandardRole
 
         const profileUpdates: Partial<UserProfile> = {}
         if (firebaseUser.photoURL && !mergedUser.avatarUrl) {
@@ -459,7 +504,36 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         return mergedUser
       }
 
-      /* ---------------- Create profile ---------------- */
+      /* -------- Check profiles collection as fallback -------- */
+      console.log('🟠 [Auth] Profile not found in users collection, checking profiles collection...')
+      try {
+        const profileDocRef = doc(db, 'profiles', firebaseUser.uid)
+        const profileDocSnap = await getDoc(profileDocRef)
+        
+        if (profileDocSnap.exists()) {
+          console.log('🟡 [Auth] Profile found in profiles collection (fallback), syncing to users collection...')
+          const { id: _ignoredId, ...storedProfile } = profileDocSnap.data() as UserProfile
+          const baseProfile: UserProfile = {
+            ...storedProfile,
+            id: firebaseUser.uid,
+            journeyType: storedProfile.journeyType || '4W',
+          }
+          
+          // Sync to users collection for consistency
+          try {
+            await setDoc(userDocRef, baseProfile, { merge: true })
+            console.log('🟣 [Auth] Profile synced from profiles to users collection')
+          } catch (syncError) {
+            console.warn('🟠 [Auth] Failed to sync profile to users collection, continuing anyway', syncError)
+          }
+          
+          return baseProfile
+        }
+      } catch (fallbackError) {
+        console.warn('🟠 [Auth] Failed to check profiles collection fallback', fallbackError)
+      }
+
+      /* -------- Create new profile if doesn't exist -------- */
       let validatedOrganization:
         | Awaited<ReturnType<typeof validateCompanyCode>>['organization']
         | null = null
@@ -680,20 +754,13 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
       let userProfile = await fetchProfileWithRetry(currentUser)
 
-      if (!userProfile?.role) {
-        console.warn('🟠 [Auth] Profile loaded without role, applying fallback role:user')
-        userProfile = userProfile
-          ? { ...userProfile, role: (normalizeRole(userProfile.role) as StandardRole) || UserRole.USER }
-          : null
-      }
-
       if (isActive) {
         const ensuredProfile = userProfile
           ? { ...userProfile, assignedOrganizations: userProfile.assignedOrganizations ?? [] }
           : null
         console.log('🟢 [Auth] Profile resolved', {
           role: ensuredProfile?.role,
-          normalized: normalizeRole(ensuredProfile?.role),
+          normalized: ensuredProfile?.role,
         })
 
         updateProfileState(ensuredProfile, 'auth-state-change')
@@ -721,11 +788,13 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         (snap) => {
           if (!snap.exists()) return
           const { id: _ignoredId, ...updatedData } = snap.data() as UserProfile
+          const rawRole = updatedData.role ?? UserRole.USER
+          const normalizedRole = normalizeRole(rawRole)
           const updatedProfile: UserProfile = {
             ...updatedData,
             id: snap.id,
             journeyType: updatedData.journeyType || '4W',
-            role: (normalizeRole(updatedData.role) as StandardRole) ?? updatedData.role,
+            role: normalizedRole as StandardRole,
             assignedOrganizations: updatedData.assignedOrganizations ?? [],
           }
           console.log('🔁 [Auth] Profile updated via snapshot', updatedProfile.role)
@@ -1208,11 +1277,16 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     }
   }
 
-  const refreshProfile = useCallback(async (options?: { reason?: string }) => {
+  const refreshProfile = useCallback(async (options?: { reason?: string; isManual?: boolean }) => {
     const currentUser = auth.currentUser
     const reason = options?.reason || 'manual'
+    const isManual = options?.isManual ?? reason.includes('manual')
     const now = Date.now()
     const refreshState = refreshStateRef.current
+    const maxRequests = isManual ? 10 : 6
+    const windowMs = isManual ? 45000 : 30000
+    const circuitBreakerMs = isManual ? 20000 : 30000
+    const manualCooldownMs = 10000
 
     if (!currentUser) {
       const error = new Error('No authenticated user to refresh')
@@ -1222,11 +1296,40 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     }
 
     if (refreshState.circuitBrokenUntil > now) {
-      console.warn('🟠 [Auth] refreshProfile circuit breaker engaged', {
-        reason,
-        resumeAt: new Date(refreshState.circuitBrokenUntil).toISOString(),
-      })
-      return { error: new Error('Profile refresh temporarily paused to prevent a loop.'), profile: profileRef.current }
+      if (isManual) {
+        const timeSinceManualAttempt = now - refreshState.lastManualAttemptAt
+        if (timeSinceManualAttempt < manualCooldownMs) {
+          const error = new Error('Please wait a few seconds before retrying your profile refresh.')
+          console.warn('🟠 [Auth] refreshProfile manual retry blocked by cooldown', {
+            reason,
+            waitMs: manualCooldownMs - timeSinceManualAttempt,
+          })
+          setProfileError(error)
+          setProfileLoading(false)
+          return { error, profile: profileRef.current }
+        }
+        console.info('🟢 [Auth] refreshProfile manual retry resetting circuit breaker', { reason })
+        refreshState.circuitBrokenUntil = 0
+        refreshState.requestCount = 0
+        refreshState.windowStart = now
+      } else {
+        const error = new Error('Profile refresh paused to prevent repeated attempts. Please wait and try again.')
+        console.warn('🟠 [Auth] refreshProfile circuit breaker engaged', {
+          reason,
+          resumeAt: new Date(refreshState.circuitBrokenUntil).toISOString(),
+        })
+        setProfileError(error)
+        setProfileLoading(false)
+        return { error, profile: profileRef.current }
+      }
+    }
+
+    if (typeof navigator !== 'undefined' && navigator.onLine === false) {
+      const offlineError = buildOfflineError()
+      console.warn('🟠 [Auth] refreshProfile offline (preflight)', { reason })
+      setProfileError(offlineError)
+      setProfileLoading(false)
+      return { error: offlineError, profile: null as UserProfile | null }
     }
 
     if (refreshState.inFlight) {
@@ -1239,25 +1342,37 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       return { error: null, profile: profileRef.current }
     }
 
-    if (now - refreshState.windowStart > 30000) {
+    if (now - refreshState.windowStart > windowMs) {
       refreshState.windowStart = now
       refreshState.requestCount = 0
     }
     refreshState.requestCount += 1
-    if (refreshState.requestCount > 6) {
-      refreshState.circuitBrokenUntil = now + 30000
+    console.info('🧭 [Auth] refreshProfile attempt recorded', {
+      reason,
+      requestCount: refreshState.requestCount,
+      isManual,
+    })
+    if (refreshState.requestCount > maxRequests) {
+      refreshState.circuitBrokenUntil = now + circuitBreakerMs
       console.warn('🔴 [Auth] refreshProfile loop detected, opening circuit breaker', {
         reason,
         requestCount: refreshState.requestCount,
       })
-      return { error: new Error('Profile refresh paused due to excessive refresh attempts.'), profile: profileRef.current }
+      const error = new Error('Too many profile refresh attempts. Please wait a moment and try again.')
+      setProfileError(error)
+      setProfileLoading(false)
+      return { error, profile: profileRef.current }
     }
 
     refreshState.inFlight = true
     refreshState.lastRequestAt = now
-    console.log('🟡 [Auth] profile refresh requested', { uid: currentUser.uid, reason })
+    if (isManual) {
+      refreshState.lastManualAttemptAt = now
+    }
+    console.log('🟡 [Auth] profile refresh requested', { uid: currentUser.uid, reason, isManual })
 
     try {
+      setProfileError(null)
       setProfileLoading(true)
       const refreshedRaw = (await fetchProfileOnce(currentUser.uid)) ?? (await fetchOrCreateUserDoc(currentUser))
       const refreshed = refreshedRaw

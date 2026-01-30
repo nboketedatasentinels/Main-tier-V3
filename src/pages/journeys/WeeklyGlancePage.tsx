@@ -13,10 +13,12 @@ import {
   Stack,
   Text,
   useBreakpointValue,
+  useToast,
 } from '@chakra-ui/react'
 import { useCallback, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { formatDistanceToNow } from 'date-fns'
+import { FirestoreError } from 'firebase/firestore'
 
 import { WeeklyPointsCard } from '@/components/journeys/weeklyGlance/WeeklyPointsCard'
 import { SupportTeamCard } from '@/components/journeys/weeklyGlance/SupportTeamCard'
@@ -27,11 +29,15 @@ import { ActivityFeedCard } from '@/components/journeys/weeklyGlance/ActivityFee
 import { LearnerWindowCard } from '@/components/journeys/weeklyGlance/LearnerWindowCard'
 import { NextMilestoneCard } from '@/components/journeys/weeklyGlance/NextMilestoneCard'
 import { WindowSummaryCard } from '@/components/journeys/weeklyGlance/WindowSummaryCard'
+import { WeekStatusSummaryCard } from '@/components/journeys/WeekStatusSummaryCard'
 
 import { useWeeklyGlanceData, type LedgerEntry } from '@/hooks/useWeeklyGlanceData'
 import { BuildVillageModal } from '@/components/modals/BuildVillageModal'
 import { useAuth } from '@/hooks/useAuth'
 import { TransformationTier, type UserProfile } from '@/types'
+import { useWeekAdvancementCriteria } from '@/hooks/useWeekAdvancementCriteria'
+import { updateUserVillageId } from '@/services/userProfileService'
+import { checkVillageNameExists, createVillage } from '@/services/villageService'
 import {
   calculateWeekProgress,
   getDaysRemainingInWeek,
@@ -165,7 +171,7 @@ function buildWeeklyActivityFeed(params: {
  * View-model hook: normalizes data + centralizes derived values
  */
 function useWeeklyGlanceViewModel() {
-  const { profile } = useAuth()
+  const { profile, refreshProfile } = useAuth()
   const data = useWeeklyGlanceData()
 
   // Normalize collection shapes so UI never has to guard against undefined
@@ -235,6 +241,7 @@ function useWeeklyGlanceViewModel() {
 
   return {
     profile,
+    refreshProfile,
     data,
     weeklyHabits,
     peerMatches,
@@ -255,7 +262,10 @@ function useWeeklyGlanceViewModel() {
 
 export const WeeklyGlancePage = () => {
   const navigate = useNavigate()
+  const toast = useToast()
   const {
+    profile,
+    refreshProfile,
     data,
     weekRange,
     daysRemaining,
@@ -268,24 +278,130 @@ export const WeeklyGlancePage = () => {
     isParallelTrackingEnabled,
   } = useWeeklyGlanceViewModel()
 
+  // Week advancement eligibility tracking
+  const { eligibility, loading: eligibilityLoading, error: eligibilityError } = useWeekAdvancementCriteria(profile)
+
   const [isBuildVillageOpen, setIsBuildVillageOpen] = useState(false)
   const [villageName, setVillageName] = useState('')
   const [villagePurpose, setVillagePurpose] = useState('')
+  const [isCreatingVillage, setIsCreatingVillage] = useState(false)
+  const [villageError, setVillageError] = useState<string | undefined>()
   const [showMore, setShowMore] = useState(false)
   const isMobile = useBreakpointValue({ base: true, md: false }) ?? false
 
-  const openVillageModal = useCallback(() => setIsBuildVillageOpen(true), [])
-  const closeVillageModal = useCallback(() => setIsBuildVillageOpen(false), [])
-
-  /**
-   * NOTE: This is still “optimistic UI”.
-   * If/when you wire actual creation, make this async and handle error/loading.
-   */
-  const handleCreateVillage = useCallback(() => {
-    setIsBuildVillageOpen(false)
+  const resetVillageForm = useCallback(() => {
     setVillageName('')
     setVillagePurpose('')
+    setVillageError(undefined)
   }, [])
+
+  const openVillageModal = useCallback(() => {
+    setVillageError(undefined)
+    setIsBuildVillageOpen(true)
+  }, [])
+
+  const closeVillageModal = useCallback(() => {
+    if (isCreatingVillage) return
+    setIsBuildVillageOpen(false)
+    setVillageError(undefined)
+  }, [isCreatingVillage])
+
+  const resolveVillageErrorMessage = useCallback((error: unknown): string => {
+    if (error && typeof error === 'object' && 'code' in error) {
+      const firestoreError = error as FirestoreError
+      switch (firestoreError.code) {
+        case 'permission-denied':
+          return "You don't have permission to create a village. Please contact support."
+        case 'unavailable':
+        case 'deadline-exceeded':
+          return 'Unable to create village. Please check your connection and try again.'
+        default:
+          return 'Something went wrong. Please try again.'
+      }
+    }
+
+    if (error instanceof Error) {
+      return error.message
+    }
+
+    return 'Something went wrong. Please try again.'
+  }, [])
+
+  const handleCreateVillage = useCallback(async () => {
+    const trimmedName = villageName.trim()
+    const trimmedPurpose = villagePurpose.trim()
+    const profileId = profile?.id?.trim()
+
+    if (!trimmedName) {
+      setVillageError('Please enter a village name.')
+      return
+    }
+
+    if (!profileId) {
+      const message = 'We could not verify your profile. Please refresh and try again.'
+      setVillageError(message)
+      toast({
+        status: 'error',
+        title: 'Unable to create village',
+        description: message,
+      })
+      return
+    }
+
+    setIsCreatingVillage(true)
+    setVillageError(undefined)
+
+    try {
+      const nameExists = await checkVillageNameExists(trimmedName)
+      if (nameExists) {
+        const message = 'A village with this name already exists. Please choose a different name.'
+        setVillageError(message)
+        toast({
+          status: 'error',
+          title: 'Village name taken',
+          description: message,
+        })
+        return
+      }
+
+      const villageId = await createVillage({
+        name: trimmedName,
+        description: trimmedPurpose,
+        creatorId: profileId,
+      })
+
+      await updateUserVillageId(profileId, villageId)
+      await refreshProfile({ reason: 'village-created' })
+
+      toast({
+        status: 'success',
+        title: `Your village "${trimmedName}" has been created!`,
+        description: 'You can access your village anytime from the navigation.',
+      })
+
+      setIsBuildVillageOpen(false)
+      resetVillageForm()
+    } catch (error) {
+      console.error('Failed to create village', error)
+      const message = resolveVillageErrorMessage(error)
+      setVillageError(message)
+      toast({
+        status: 'error',
+        title: 'Unable to create village',
+        description: message,
+      })
+    } finally {
+      setIsCreatingVillage(false)
+    }
+  }, [
+    profile?.id,
+    resetVillageForm,
+    resolveVillageErrorMessage,
+    toast,
+    villageName,
+    villagePurpose,
+    refreshProfile,
+  ])
 
   const handleNavigateChecklist = useCallback(() => {
     navigate('/app/weekly-checklist')
@@ -374,11 +490,19 @@ export const WeeklyGlancePage = () => {
             />
           </GridItem>
 
-          <GridItem colSpan={{ base: 1, md: 8 }} order={{ base: 3, md: 3 }}>
+          <GridItem colSpan={{ base: 1, md: 6 }} order={{ base: 3, md: 3 }}>
+            <WeekStatusSummaryCard
+              eligibility={eligibility}
+              loading={eligibilityLoading}
+              error={eligibilityError}
+            />
+          </GridItem>
+
+          <GridItem colSpan={{ base: 1, md: 8 }} order={{ base: 5, md: 5 }}>
             <ActivityFeedCard items={[...activityFeedItems]} />
           </GridItem>
 
-          <GridItem colSpan={{ base: 1, md: 4 }} order={{ base: 5, md: 4 }}>
+          <GridItem colSpan={{ base: 1, md: 4 }} order={{ base: 6, md: 6 }}>
             <NextMilestoneCard
               milestone={`Week ${data.weekNumber + 1} readiness review`}
               daysRemaining={daysRemaining}
@@ -386,7 +510,7 @@ export const WeeklyGlancePage = () => {
             />
           </GridItem>
 
-          <GridItem colSpan={{ base: 1, md: 4 }} order={{ base: 4, md: 5 }}>
+          <GridItem colSpan={{ base: 1, md: 4 }} order={{ base: 7, md: 7 }}>
             <SupportTeamCard
               data={data.supportAssignment}
               loading={data.loading.support}
@@ -396,13 +520,13 @@ export const WeeklyGlancePage = () => {
           </GridItem>
 
           {(!isMobile || showMore) && (
-            <GridItem colSpan={{ base: 1, md: 4 }} order={{ base: 6, md: 6 }}>
+            <GridItem colSpan={{ base: 1, md: 4 }} order={{ base: 8, md: 8 }}>
               <PersonalityProfileCard data={data.personality} loading={data.loading.profile} />
             </GridItem>
           )}
 
           {(!isMobile || showMore) && (
-            <GridItem colSpan={{ base: 1, md: 4 }} order={{ base: 7, md: 7 }}>
+            <GridItem colSpan={{ base: 1, md: 4 }} order={{ base: 9, md: 9 }}>
               <PeopleImpactedCard count={data.impactCount} loading={data.loading.impact} />
             </GridItem>
           )}
@@ -423,6 +547,8 @@ export const WeeklyGlancePage = () => {
         villagePurpose={villagePurpose}
         onVillageNameChange={setVillageName}
         onVillagePurposeChange={setVillagePurpose}
+        isLoading={isCreatingVillage}
+        error={villageError}
       />
     </Box>
   )

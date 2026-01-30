@@ -30,6 +30,7 @@ const defaultPreferences: NotificationSettingsPreferences = {
     important_updates: true,
     mentions: true,
     system_alerts: true,
+    upgrade_request: true,
     other: true,
   },
   inAppNotificationPreferences: {
@@ -37,6 +38,7 @@ const defaultPreferences: NotificationSettingsPreferences = {
     important_updates: true,
     mentions: true,
     system_alerts: true,
+    upgrade_request: true,
     other: true,
   },
   emailNotificationFrequency: 'instant',
