@@ -62,6 +62,7 @@ Utility Scripts
 node scripts/seed-nudge-templates.mjs
 node scripts/seed-journey-activity-catalog.mjs
 node scripts/seed-window-configs.mjs
+node scripts/seed-courses.mjs
 node scripts/migrations/add-role-based-fields.mjs
 
 # Weekly points management
