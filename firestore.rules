@@ -12,9 +12,11 @@ service cloud.firestore {
     }
 
     function getUserRole() {
-      return isAuthenticated() && exists(/databases/$(database)/documents/profiles/$(request.auth.uid))
-        ? get(/databases/$(database)/documents/profiles/$(request.auth.uid)).data.get('role', '')
-        : '';
+      return isAuthenticated() && exists(/databases/$(database)/documents/users/$(request.auth.uid))
+        ? get(/databases/$(database)/documents/users/$(request.auth.uid)).data.get('role', '')
+        : (isAuthenticated() && exists(/databases/$(database)/documents/profiles/$(request.auth.uid))
+          ? get(/databases/$(database)/documents/profiles/$(request.auth.uid)).data.get('role', '')
+          : '');
     }
 
     function isSuperAdmin() {
@@ -34,9 +36,11 @@ service cloud.firestore {
     }
 
     function getUserCompanyId() {
-      return isAuthenticated() && exists(/databases/$(database)/documents/profiles/$(request.auth.uid))
-        ? get(/databases/$(database)/documents/profiles/$(request.auth.uid)).data.get('companyId', '')
-        : '';
+      return isAuthenticated() && exists(/databases/$(database)/documents/users/$(request.auth.uid))
+        ? get(/databases/$(database)/documents/users/$(request.auth.uid)).data.get('companyId', '')
+        : (isAuthenticated() && exists(/databases/$(database)/documents/profiles/$(request.auth.uid))
+          ? get(/databases/$(database)/documents/profiles/$(request.auth.uid)).data.get('companyId', '')
+          : '');
     }
 
     function isValidPartnerAssignment(assignment) {
@@ -94,6 +98,27 @@ service cloud.firestore {
     // Profiles collection
     match /profiles/{userId} {
       allow read, write: if request.auth != null;
+    }
+
+    // Engagement monitoring collections (admin only)
+    match /user_engagement_scores/{scoreId} {
+      allow read: if isPartnerOrAdmin();
+      allow write: if isSuperAdmin();
+    }
+
+    match /engagement_trends/{trendId} {
+      allow read: if isPartnerOrAdmin();
+      allow write: if isSuperAdmin();
+    }
+
+    match /profiles/{userId}/engagement_history/{entryId} {
+      allow read: if isPartnerOrAdmin();
+      allow write: if isSuperAdmin();
+    }
+
+    match /profiles/{userId}/recent_activity/{entryId} {
+      allow read: if isPartnerOrAdmin();
+      allow write: if isSuperAdmin();
     }
 
     // Referral codes collection
