@@ -136,7 +136,7 @@ const matchesStatusTab = (status: ApprovalStatus, tab: 'pending' | 'approved' | 
   return status === tab
 }
 
-const rejectionTemplates: Record<'points_verification' | 'upgrade_request', string[]> = {
+const rejectionTemplates: Record<ApprovalWorkflowType, string[]> = {
   points_verification: [
     'This activity was already credited.',
     'Please provide supporting evidence to verify the activity.',
@@ -147,11 +147,17 @@ const rejectionTemplates: Record<'points_verification' | 'upgrade_request', stri
     'Your current account is already associated with an organization.',
     'Please contact support to validate eligibility before upgrading.',
   ],
+  partner_issued: [
+    'We need more details to review this partner-issued request.',
+    'The provided information does not match our partner records.',
+    'Please contact support to verify partner eligibility before proceeding.',
+  ],
 }
 
-const rejectionReasonOptions: Record<'points_verification' | 'upgrade_request', string[]> = {
+const rejectionReasonOptions: Record<ApprovalWorkflowType, string[]> = {
   points_verification: ['Insufficient evidence', 'Duplicate request', 'Invalid activity', 'Other'],
   upgrade_request: ['Eligibility issue', 'Organization conflict', 'Missing details', 'Other'],
+  partner_issued: ['Partner eligibility issue', 'Missing details', 'Data mismatch', 'Other'],
 }
 
 const ApprovalCenterPage: React.FC = () => {
@@ -163,7 +169,7 @@ const ApprovalCenterPage: React.FC = () => {
     loading: verificationLoading,
     error: verificationError,
   } = useAdminPointsVerificationRequests('all')
-  const { mutate, loading: updatingUpgrade } = useUpdateRequestStatus()
+  const { loading: updatingUpgrade } = useUpdateRequestStatus()
   const [statusTab, setStatusTab] = useState<'pending' | 'approved' | 'rejected'>('pending')
   const [workflowFilter, setWorkflowFilter] = useState<ApprovalWorkflowType | 'all'>('all')
   const [search, setSearch] = useState('')
@@ -1374,7 +1380,7 @@ const ApprovalCenterPage: React.FC = () => {
                   {(selectedReject?.type
                     ? rejectionReasonOptions[selectedReject.type]
                     : rejectionReasonOptions.points_verification
-                  ).map((reason) => (
+                  ).map((reason: string) => (
                     <option key={reason} value={reason}>
                       {reason}
                     </option>
@@ -1397,7 +1403,7 @@ const ApprovalCenterPage: React.FC = () => {
                   {(selectedReject?.type
                     ? rejectionTemplates[selectedReject.type]
                     : rejectionTemplates.points_verification
-                  ).map((template) => (
+                  ).map((template: string) => (
                     <Button
                       key={template}
                       size="xs"
