@@ -28,7 +28,6 @@ import { LearnerWindowCard } from '@/components/journeys/weeklyGlance/LearnerWin
 import { NextMilestoneCard } from '@/components/journeys/weeklyGlance/NextMilestoneCard'
 import { WindowSummaryCard } from '@/components/journeys/weeklyGlance/WindowSummaryCard'
 import { WeekAdvancementInfoBanner } from '@/components/journeys/WeekAdvancementInfoBanner'
-import { WeekStatusSummaryCard } from '@/components/journeys/WeekStatusSummaryCard'
 import { WindowWeekRelationshipCard } from '@/components/journeys/WindowWeekRelationshipCard'
 
 import { useWeeklyGlanceData, type LedgerEntry } from '@/hooks/useWeeklyGlanceData'
