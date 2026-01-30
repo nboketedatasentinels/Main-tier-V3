@@ -39,7 +39,7 @@ import { TransformationTier } from '@/types'
 import { calculateWeekProgress, getDaysRemainingInWeek, getWeekDateRange } from '@/utils/weekCalculations'
 
 export const LearnerDashboardPage = () => {
-  const { profile } = useAuth()
+  const { profile, refreshProfile } = useAuth()
   const navigate = useNavigate()
   const toast = useToast()
   const data = useWeeklyGlanceData()
@@ -150,6 +150,7 @@ export const LearnerDashboardPage = () => {
       })
 
       await updateUserVillageId(profileId, villageId)
+      await refreshProfile({ reason: 'village-created' })
 
       toast({
         status: 'success',

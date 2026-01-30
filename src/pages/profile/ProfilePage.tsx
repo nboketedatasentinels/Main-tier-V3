@@ -1,5 +1,11 @@
-import React, { useCallback, useEffect, useMemo, useState } from 'react'
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import {
+  AlertDialog,
+  AlertDialogBody,
+  AlertDialogContent,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogOverlay,
   Avatar,
   Badge,
   Box,
@@ -46,6 +52,7 @@ import {
   AlertCircle,
   Brain,
   Building,
+  Calendar,
   Check,
   CheckCircle,
   ChevronRight,
@@ -58,11 +65,14 @@ import {
   Loader2,
   Lock,
   Mail as MailIcon,
+  LogOut,
   Save,
+  Settings,
   Shield,
   TrendingUp,
   Twitter,
   Upload,
+  UserPlus,
   Users,
   X,
   XCircle,
@@ -88,6 +98,7 @@ import type { StandardRole, Organization, DashboardPreferences } from '@/types'
 import { TransformationTier, UserRole } from '@/types'
 import { normalizeRole } from '@/utils/role'
 import { incrementOrganizationMemberCount, validateCompanyCode } from '@/services/organizationService'
+import { fetchVillageById, VillageSummary } from '@/services/villageService'
 import { CORE_VALUES } from '@/config/personality-data'
 import BadgeDisplay from '@/components/profile/BadgeDisplay'
 
@@ -119,6 +130,7 @@ interface ProfileData {
   companyName?: string
   companyCode?: string
   companyId?: string | null
+  villageId?: string | null
   villageName?: string
   clusterName?: string
 }
@@ -278,6 +290,12 @@ export const ProfilePage: React.FC = () => {
   const [showAdvancedMatching, setShowAdvancedMatching] = useState(false)
   const [accountSettingsSaving, setAccountSettingsSaving] = useState(false)
   const [organizationMessage, setOrganizationMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null)
+  const [villageDetails, setVillageDetails] = useState<VillageSummary | null>(null)
+  const [villageLoading, setVillageLoading] = useState(false)
+  const [villageError, setVillageError] = useState<string | null>(null)
+  const [isLeaveVillageOpen, setIsLeaveVillageOpen] = useState(false)
+  const [isLeavingVillage, setIsLeavingVillage] = useState(false)
+  const cancelLeaveRef = useRef<HTMLButtonElement | null>(null)
 
   const hasAccountSettingsChanges = useMemo(() => {
     if (!editedData || !profileData) return false
@@ -333,6 +351,7 @@ export const ProfilePage: React.FC = () => {
       registrationDate: (docData.registrationDate as string) || (docData.createdAt as string),
       companyName: docData.companyName as string,
       companyCode: docData.companyCode as string,
+      villageId: (docData.villageId as string) || null,
       villageName: docData.villageName as string,
       clusterName: docData.clusterName as string,
     }),
@@ -373,6 +392,52 @@ export const ProfilePage: React.FC = () => {
   useEffect(() => {
     setCompanyCode(profileData?.companyCode || '')
   }, [profileData?.companyCode])
+
+  const villageId = useMemo(
+    () => profile?.villageId || profileData?.villageId || null,
+    [profile?.villageId, profileData?.villageId],
+  )
+  const isPaidMember = profileData?.membershipStatus === 'paid'
+  const shouldShowVillageCard = !isPaidMember && Boolean(villageId)
+
+  useEffect(() => {
+    let isMounted = true
+
+    const loadVillageDetails = async () => {
+      if (!villageId || isPaidMember) {
+        if (isMounted) {
+          setVillageDetails(null)
+          setVillageLoading(false)
+          setVillageError(null)
+        }
+        return
+      }
+
+      if (isMounted) {
+        setVillageLoading(true)
+        setVillageError(null)
+      }
+
+      const details = await fetchVillageById(villageId)
+
+      if (!isMounted) return
+
+      if (!details) {
+        setVillageDetails(null)
+        setVillageError('We could not load your village details. Please try again later.')
+      } else {
+        setVillageDetails(details)
+        setVillageError(null)
+      }
+      setVillageLoading(false)
+    }
+
+    loadVillageDetails()
+
+    return () => {
+      isMounted = false
+    }
+  }, [isPaidMember, villageId])
 
   useEffect(() => {
     const trimmedCode = companyCode.trim().toUpperCase()
@@ -423,6 +488,54 @@ export const ProfilePage: React.FC = () => {
   const handleSocialLinkChange = (platform: keyof ProfileData['socialLinks'], value: string) => {
     if (!editedData) return
     setEditedData({ ...editedData, socialLinks: { ...editedData.socialLinks, [platform]: value } })
+  }
+
+  const formatVillageDate = (value?: string) => {
+    if (!value) return 'Unknown'
+    const parsed = new Date(value)
+    if (Number.isNaN(parsed.getTime())) return 'Unknown'
+    return new Intl.DateTimeFormat('en-US', { month: 'short', day: 'numeric', year: 'numeric' }).format(parsed)
+  }
+
+  const handleManageVillage = () => {
+    if (!villageId) return
+    navigate(`/app/villages/${villageId}`)
+  }
+
+  const handleInviteVillage = () => {
+    if (!villageId) return
+    navigate(`/app/villages/${villageId}/invite`)
+  }
+
+  const handleLeaveVillage = async () => {
+    if (!user) return
+    setIsLeavingVillage(true)
+    try {
+      await Promise.all([
+        updateDoc(doc(db, 'users', user.uid), { villageId: null, updatedAt: serverTimestamp() }),
+        updateDoc(doc(db, 'profiles', user.uid), { villageId: null, updatedAt: serverTimestamp() }),
+      ])
+      await refreshProfile({ reason: 'village-left' })
+      setVillageDetails(null)
+      setVillageError(null)
+      toast({
+        title: 'You left the village',
+        description: 'Your village affiliation has been removed.',
+        status: 'success',
+        duration: 4000,
+      })
+    } catch (leaveError) {
+      console.error('Failed to leave village', leaveError)
+      toast({
+        title: 'Unable to leave village',
+        description: 'Please try again or contact support if the issue persists.',
+        status: 'error',
+        duration: 5000,
+      })
+    } finally {
+      setIsLeavingVillage(false)
+      setIsLeaveVillageOpen(false)
+    }
   }
 
   const handleCoreValueToggle = (value: string) => {
@@ -1318,8 +1431,8 @@ export const ProfilePage: React.FC = () => {
                     </CardBody>
                   </Card>
 
-                  {/* Organization Info Card (for paid members) */}
-                  {profileData.membershipStatus === 'paid' && (
+                  {/* Organization Info Card (paid members only) */}
+                  {isPaidMember && (
                     <Card borderColor="brand.border" boxShadow="card" w="full">
                       <CardHeader pb={2}>
                         <Text fontWeight="semibold" fontSize="sm">Organization</Text>
@@ -1351,6 +1464,85 @@ export const ProfilePage: React.FC = () => {
                             </Box>
                           )}
                         </VStack>
+                      </CardBody>
+                    </Card>
+                  )}
+
+                  {/* Village Info Card (free members with a village) */}
+                  {shouldShowVillageCard && (
+                    <Card borderColor="brand.border" boxShadow="card" w="full">
+                      <CardHeader pb={2}>
+                        <Text fontWeight="semibold" fontSize="sm">Village Information</Text>
+                      </CardHeader>
+                      <CardBody pt={2}>
+                        {villageLoading ? (
+                          <HStack spacing={3}>
+                            <Spinner size="sm" />
+                            <Text fontSize="sm" color="brand.subtleText">Loading village details...</Text>
+                          </HStack>
+                        ) : villageError ? (
+                          <Alert status="error" borderRadius="md">
+                            <AlertIcon />
+                            <Text fontSize="sm">{villageError}</Text>
+                          </Alert>
+                        ) : (
+                          <VStack align="stretch" spacing={4}>
+                            <Box>
+                              <Text fontSize="xs" color="brand.subtleText">Village</Text>
+                              <HStack spacing={2}>
+                                <Icon as={Users} size={14} color="brand.subtleText" />
+                                <Text fontSize="sm" fontWeight="medium">{villageDetails?.name || 'Your village'}</Text>
+                              </HStack>
+                            </Box>
+                            <Box>
+                              <Text fontSize="xs" color="brand.subtleText">Members</Text>
+                              <Text fontSize="sm">{villageDetails?.memberCount ?? 0}</Text>
+                            </Box>
+                            <Box>
+                              <Text fontSize="xs" color="brand.subtleText">Role</Text>
+                              <Text fontSize="sm">
+                                {villageDetails?.creatorId && profile?.id === villageDetails.creatorId ? 'Founder' : 'Member'}
+                              </Text>
+                            </Box>
+                            <Box>
+                              <Text fontSize="xs" color="brand.subtleText">Joined</Text>
+                              <HStack spacing={2}>
+                                <Icon as={Calendar} size={14} color="brand.subtleText" />
+                                <Text fontSize="sm">{formatVillageDate(villageDetails?.createdAt)}</Text>
+                              </HStack>
+                            </Box>
+                            <HStack spacing={3} flexWrap="wrap">
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                leftIcon={<Icon as={Settings} />}
+                                onClick={handleManageVillage}
+                                isDisabled={!villageId}
+                              >
+                                Manage Village
+                              </Button>
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                leftIcon={<Icon as={UserPlus} />}
+                                onClick={handleInviteVillage}
+                                isDisabled={!villageId}
+                              >
+                                Invite Members
+                              </Button>
+                              <Button
+                                size="sm"
+                                colorScheme="red"
+                                variant="outline"
+                                leftIcon={<Icon as={LogOut} />}
+                                onClick={() => setIsLeaveVillageOpen(true)}
+                                isLoading={isLeavingVillage}
+                              >
+                                Leave Village
+                              </Button>
+                            </HStack>
+                          </VStack>
+                        )}
                       </CardBody>
                     </Card>
                   )}
@@ -1963,6 +2155,28 @@ export const ProfilePage: React.FC = () => {
           </TabPanel>
         </TabPanels>
       </Tabs>
+
+      <AlertDialog
+        isOpen={isLeaveVillageOpen}
+        leastDestructiveRef={cancelLeaveRef}
+        onClose={() => setIsLeaveVillageOpen(false)}
+      >
+        <AlertDialogOverlay />
+        <AlertDialogContent>
+          <AlertDialogHeader>Leave your village?</AlertDialogHeader>
+          <AlertDialogBody>
+            Leaving the village will remove your affiliation and related access. You can join another village later.
+          </AlertDialogBody>
+          <AlertDialogFooter>
+            <Button ref={cancelLeaveRef} onClick={() => setIsLeaveVillageOpen(false)} variant="ghost">
+              Cancel
+            </Button>
+            <Button colorScheme="red" onClick={handleLeaveVillage} ml={3} isLoading={isLeavingVillage}>
+              Leave Village
+            </Button>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </Box>
   )
 }
