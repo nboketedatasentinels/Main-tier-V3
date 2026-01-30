@@ -15,7 +15,7 @@ import { readFile } from 'fs/promises'
 const COURSE_TITLE = 'Transformational Leadership'
 const COURSE_DETAILS = {
   description: 'Guide teams through change with vision and trust.',
-  link: 'https://t4leader.com/program/transformational-leadership',
+  link: 'https://www.t4leader.com/challenge-page/transformational-leadership?programId=d4e58ca0-f0e6-4f12-b2a8-9dc5fcf6e335',
 }
 const COURSE_METADATA = {
   estimatedMinutes: 140,

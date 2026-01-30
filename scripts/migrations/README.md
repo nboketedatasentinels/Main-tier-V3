@@ -152,6 +152,24 @@ node scripts/migrations/backfill-email-verified.mjs
 - Ensure the Firebase Admin SDK is configured as described above before running this script.
 - The migration logs progress as it scans and updates user profiles.
 
+## Migration: Create Transformational Leadership Course Document
+
+### File: `create-transformational-leadership-course.mjs`
+
+This migration creates the complementary `transformational-leadership` course document in the `courses` collection.
+It is safe to run multiple times and will skip creation if the document already exists.
+
+### Running the Migration
+
+```bash
+node scripts/migrations/create-transformational-leadership-course.mjs
+```
+
+### Notes
+
+- The script sets the course title, description, link, and active status to match the complementary course UI.
+- Update the service account and `FIREBASE_PROJECT_ID` environment variable as described above before running.
+
 ## Migration: Copy Organization Fields to Profiles
 
 ### File: `migrate-org-fields-to-profiles.mjs`
