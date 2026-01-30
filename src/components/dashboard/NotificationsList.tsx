@@ -5,7 +5,6 @@ import {
   HStack,
   Icon,
   IconButton,
-  Spinner,
   Stack,
   Text,
   VStack,
@@ -31,6 +30,7 @@ import {
 } from '@/services/notificationService'
 import { NotificationRecord } from '@/types/notifications'
 import { formatDistanceToNow } from 'date-fns'
+import { PageTransitionLoader } from '@/components/PageTransitionLoader'
 
 const notificationIcon = (type: NotificationRecord['type']) => {
   switch (type) {
@@ -228,7 +228,7 @@ export const NotificationsList = () => {
       {loading ? (
         <Flex justify="center" py={8}>
           <HStack spacing={2}>
-            <Spinner color="gray.400" size="sm" />
+            <PageTransitionLoader fullScreen={false} size="small" inline />
             <Text color="gray.500" fontSize="sm">Loading...</Text>
           </HStack>
         </Flex>

@@ -50,6 +50,7 @@ import { BuildVillageModal } from '@/components/modals/BuildVillageModal'
 import { ConfirmationWelcomeModal } from '@/components/modals/ConfirmationWelcomeModal'
 import { NotificationDropdown } from '@/components/notifications/NotificationDropdown'
 import { isFreeUser as isFreeTierUser } from '@/utils/membership'
+import { PageTransitionLoader } from '@/components/PageTransitionLoader'
 
 interface NavItem {
   label: string
@@ -295,6 +296,7 @@ export const MainLayout: React.FC = () => {
 
   return (
     <Flex minH="100vh" h="100vh" bg="brand.accent" color="brand.text" overflow="hidden">
+      {signingOut && <PageTransitionLoader fullScreen />}
       {/* Desktop Sidebar */}
       <Box
         w={{ base: '0', md: '260px' }}

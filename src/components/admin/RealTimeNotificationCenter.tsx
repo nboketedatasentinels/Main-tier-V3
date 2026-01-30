@@ -4,7 +4,6 @@ import {
   Divider,
   Flex,
   Heading,
-  Spinner,
   Stack,
   Text,
   VStack,
@@ -14,6 +13,7 @@ import { collection, onSnapshot, orderBy, query } from 'firebase/firestore'
 import { db } from '@/services/firebase'
 import { useAdminNotifications } from '@/hooks/useAdminNotifications'
 import { AdminNotificationsList } from './AdminNotificationsList'
+import { PageTransitionLoader } from '@/components/PageTransitionLoader'
 
 interface VerificationRequest {
   id: string
@@ -76,7 +76,7 @@ export const RealTimeNotificationCenter = () => {
       <Heading size="lg">Real-time Notification Center</Heading>
       {(loading || adminLoading) && (
         <Flex justify="center" py={4}>
-          <Spinner />
+          <PageTransitionLoader fullScreen={false} size="small" />
         </Flex>
       )}
 
