@@ -633,12 +633,14 @@ export const LeadershipBoardPage: React.FC = () => {
 
   const emptyChallenges = challenges.filter((c) => c.status === 'active' || c.status === 'pending').length === 0
   const isFreeContext = context?.type === 'free'
+  const isVillageContext = context?.type === 'village'
+  const shouldShowVillageSection = isFreeContext || isVillageContext
   const villageId = profile?.villageId ?? null
 
   useEffect(() => {
     let isActive = true
 
-    if (!isFreeContext || !villageId) {
+    if (!shouldShowVillageSection || !villageId) {
       setVillageDetails(null)
       setVillageError(null)
       setIsVillageCreator(false)
@@ -682,7 +684,7 @@ export const LeadershipBoardPage: React.FC = () => {
     return () => {
       isActive = false
     }
-  }, [isFreeContext, profile?.id, toast, villageId])
+  }, [shouldShowVillageSection, profile?.id, toast, villageId])
 
   const handleLeaveVillage = useCallback(async () => {
     if (!profile?.id || !villageId) return
@@ -811,7 +813,7 @@ export const LeadershipBoardPage: React.FC = () => {
         <TabPanels>
           <TabPanel px={0}>
             <Stack spacing={6}>
-              {isFreeContext && (
+              {shouldShowVillageSection && (
                 <Card bg="surface.default" border="1px solid" borderColor="border.subtle">
                   <CardBody>
                     {isVillageLoading && villageId ? (
@@ -1678,7 +1680,7 @@ export const LeadershipBoardPage: React.FC = () => {
         </TabPanels>
       </Tabs>
 
-      {isFreeContext && (
+      {shouldShowVillageSection && (
         <Modal isOpen={isLeaveOpen} onClose={onLeaveClose} isCentered>
           <ModalOverlay />
           <ModalContent>
