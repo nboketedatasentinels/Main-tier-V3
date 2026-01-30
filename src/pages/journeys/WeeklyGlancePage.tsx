@@ -241,6 +241,7 @@ function useWeeklyGlanceViewModel() {
 
   return {
     profile,
+    refreshProfile,
     data,
     weeklyHabits,
     peerMatches,
@@ -264,6 +265,7 @@ export const WeeklyGlancePage = () => {
   const toast = useToast()
   const {
     profile,
+    refreshProfile,
     data,
     weekRange,
     daysRemaining,
