@@ -29,7 +29,6 @@ import { NextMilestoneCard } from '@/components/journeys/weeklyGlance/NextMilest
 import { WindowSummaryCard } from '@/components/journeys/weeklyGlance/WindowSummaryCard'
 import { WeekAdvancementInfoBanner } from '@/components/journeys/WeekAdvancementInfoBanner'
 import { WeekStatusSummaryCard } from '@/components/journeys/WeekStatusSummaryCard'
-import { WindowWeekRelationshipCard } from '@/components/journeys/WindowWeekRelationshipCard'
 import { PendingApprovalsSection } from '@/components/journeys/PendingApprovalsSection'
 
 import { useWeeklyGlanceData, type LedgerEntry } from '@/hooks/useWeeklyGlanceData'
@@ -37,7 +36,6 @@ import { BuildVillageModal } from '@/components/modals/BuildVillageModal'
 import { useAuth } from '@/hooks/useAuth'
 import { TransformationTier, type UserProfile } from '@/types'
 import { useWeekAdvancementCriteria } from '@/hooks/useWeekAdvancementCriteria'
-import { getWindowRange, PARALLEL_WINDOW_SIZE_WEEKS } from '@/utils/windowCalculations'
 import {
   calculateWeekProgress,
   getDaysRemainingInWeek,
@@ -301,11 +299,6 @@ export const WeeklyGlancePage = () => {
     navigate('/app/weekly-checklist')
   }, [navigate])
 
-  // Calculate window range for WindowWeekRelationshipCard
-  const windowMeta = profile && profile.currentWeek
-    ? getWindowRange(profile.currentWeek, profile.programDurationWeeks, PARALLEL_WINDOW_SIZE_WEEKS)
-    : { windowNumber: 1, startWeek: 1, endWeek: 2, windowWeeks: 2 }
-
   return (
     <Box p={{ base: 4, md: 6 }}>
       <Stack spacing={6}>
@@ -404,19 +397,6 @@ export const WeeklyGlancePage = () => {
               error={eligibilityError}
             />
           </GridItem>
-
-          {profile && (
-            <GridItem colSpan={{ base: 1, md: 6 }} order={{ base: 4, md: 4 }}>
-              <WindowWeekRelationshipCard
-                currentWeek={profile.currentWeek ?? data.weekNumber}
-                windowNumber={windowMeta.windowNumber}
-                windowStartWeek={windowMeta.startWeek}
-                windowEndWeek={windowMeta.endWeek}
-                journeyType={profile.journeyType}
-                totalWeeks={profile.programDurationWeeks}
-              />
-            </GridItem>
-          )}
 
           <GridItem colSpan={{ base: 1, md: 8 }} order={{ base: 5, md: 5 }}>
             <ActivityFeedCard items={[...activityFeedItems]} />
