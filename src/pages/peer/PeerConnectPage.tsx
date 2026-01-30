@@ -72,7 +72,7 @@ import {
   updateDoc,
   where,
 } from 'firebase/firestore'
-import { db } from '@/services/firebase'
+import { auth, db } from '@/services/firebase'
 import { useAuth } from '@/hooks/useAuth'
 import { StartChallengeModal } from '@/components/modals/StartChallengeModal'
 import { fetchOrgMembers, getOrgScope } from '@/utils/organizationScope'
@@ -546,6 +546,13 @@ export const PeerConnectPage: React.FC = () => {
       }
 
       if (!isActive) return
+      if (!auth.currentUser?.uid || auth.currentUser.uid !== user.uid) {
+        console.warn('[PeerConnect] Auth user mismatch; skipping session subscriptions', {
+          authUid: auth.currentUser?.uid ?? null,
+          userUid: user.uid,
+        })
+        return
+      }
 
       setLoadingSessions(true)
 
