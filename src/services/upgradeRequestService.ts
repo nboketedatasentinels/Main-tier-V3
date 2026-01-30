@@ -17,6 +17,9 @@ import { AdminDataError } from '@/services/admin/adminErrors'
 
 const REQUEST_COLLECTION = 'upgrade_requests'
 const ADMIN_NOTIFICATIONS = 'admin_notifications'
+const USERS_COLLECTION = 'users'
+const PROFILES_COLLECTION = 'profiles'
+const VILLAGES_COLLECTION = 'villages'
 
 const toUpgradeRequest = (snapshotId: string, data: RawUpgradeRequest): UpgradeRequest => {
   return {
@@ -28,6 +31,10 @@ const toUpgradeRequest = (snapshotId: string, data: RawUpgradeRequest): UpgradeR
     status: data.status,
     message: data.message ?? null,
     admin_notes: data.admin_notes ?? null,
+    villageId: data.villageId ?? null,
+    villageName: data.villageName ?? null,
+    villageDescription: data.villageDescription ?? null,
+    userDetails: data.userDetails ?? null,
     requested_at: data.requested_at?.toDate().toISOString() ?? new Date().toISOString(),
     reviewed_at: data.reviewed_at?.toDate().toISOString() ?? null,
     reviewed_by: data.reviewed_by ?? null,
@@ -37,6 +44,46 @@ const toUpgradeRequest = (snapshotId: string, data: RawUpgradeRequest): UpgradeR
 }
 
 export const createUpgradeRequest = async (userId: string, requestData: UpgradeRequestForm) => {
+  const userSnapshot = await getDoc(doc(db, USERS_COLLECTION, userId))
+  let profileData: Record<string, unknown> | null = null
+  if (userSnapshot.exists()) {
+    profileData = userSnapshot.data() as Record<string, unknown>
+  } else {
+    const profileSnapshot = await getDoc(doc(db, PROFILES_COLLECTION, userId))
+    if (profileSnapshot.exists()) {
+      profileData = profileSnapshot.data() as Record<string, unknown>
+    }
+  }
+
+  const villageId = (profileData?.villageId as string | undefined) || null
+  let villageName: string | null = (profileData?.villageName as string | undefined) || null
+  let villageDescription: string | null =
+    (profileData?.villageDescription as string | undefined) ||
+    (profileData?.villagePurpose as string | undefined) ||
+    null
+
+  if (villageId) {
+    const villageSnapshot = await getDoc(doc(db, VILLAGES_COLLECTION, villageId))
+    if (villageSnapshot.exists()) {
+      const villageData = villageSnapshot.data() as { name?: string; description?: string }
+      villageName = villageData.name || villageName
+      villageDescription = villageData.description || villageDescription
+    }
+  }
+
+  const userDetails = profileData
+    ? {
+        fullName: (profileData.fullName as string | undefined) || null,
+        firstName: (profileData.firstName as string | undefined) || null,
+        lastName: (profileData.lastName as string | undefined) || null,
+        email: (profileData.email as string | undefined) || null,
+        role: (profileData.role as string | undefined) || null,
+        phoneNumber: (profileData.phoneNumber as string | undefined) || null,
+        companyId: (profileData.companyId as string | undefined) || null,
+        organizationId: (profileData.organizationId as string | undefined) || null,
+      }
+    : null
+
   const docRef = await addDoc(collection(db, REQUEST_COLLECTION), {
     user_id: userId,
     request_type: requestData.requestType,
@@ -47,6 +94,10 @@ export const createUpgradeRequest = async (userId: string, requestData: UpgradeR
     admin_notes: null,
     contact_preference: requestData.contactPreference ?? null,
     contact_details: requestData.contactDetails ?? null,
+    villageId,
+    villageName,
+    villageDescription,
+    userDetails,
     requested_at: serverTimestamp(),
   })
 
@@ -55,8 +106,21 @@ export const createUpgradeRequest = async (userId: string, requestData: UpgradeR
 
   await addDoc(collection(db, ADMIN_NOTIFICATIONS), {
     type: 'upgrade_request',
-    message: 'New upgrade request submitted',
-    metadata: { userId, requestedTier: requestData.requestedTier ?? requestData.requestType },
+    category: 'upgrade_request',
+    message: `New upgrade request from ${userDetails?.fullName || userDetails?.email || 'a user'}`,
+    is_read: false,
+    read: false,
+    target_roles: ['super_admin'],
+    metadata: {
+      userId,
+      userName: userDetails?.fullName || userDetails?.firstName || userDetails?.email || userId,
+      userEmail: userDetails?.email || null,
+      currentTier: requestData.currentTier ?? null,
+      requestedTier: requestData.requestedTier ?? requestData.requestType,
+      villageName,
+      requestId: docRef.id,
+      route: `/super-admin?tab=approvals&requestId=${docRef.id}`,
+    },
     created_at: serverTimestamp(),
   })
 

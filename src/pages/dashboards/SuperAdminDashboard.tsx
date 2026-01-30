@@ -31,6 +31,8 @@ import {
 import { RiskLevel, RiskReason } from '@/components/admin/RiskAnalysisCard'
 import { useAllUpgradeRequests } from '@/hooks/admin/useAdminUpgradeRequests'
 import type { AdminHealthItem } from '@/components/admin/AdminDataHealthPanel'
+import { useAdminNotifications } from '@/hooks/useAdminNotifications'
+import { buildSuperAdminNavItems } from '@/utils/navigationItems'
 
 type TrendPoint = { label: string; value: number }
 
@@ -62,6 +64,7 @@ export const SuperAdminDashboard: React.FC = () => {
   const [refreshIndex, setRefreshIndex] = useState(0)
   const [lastEngagementSuccessAt, setLastEngagementSuccessAt] = useState<Date | null>(null)
   const [lastUpgradeSuccessAt, setLastUpgradeSuccessAt] = useState<Date | null>(null)
+  const [lastUpgradeNotificationId, setLastUpgradeNotificationId] = useState<string | null>(null)
 
   const [registrationTrend, setRegistrationTrend] = useState<TrendPoint[]>([])
   const [userGrowthTrend, setUserGrowthTrend] = useState<TrendPoint[]>([])
@@ -71,6 +74,10 @@ export const SuperAdminDashboard: React.FC = () => {
     error: upgradeRequestsError,
     refetch: refetchUpgradeRequests,
   } = useAllUpgradeRequests()
+  const { notifications: upgradeNotifications, unreadCount: unreadUpgradeCount } = useAdminNotifications({
+    role: 'super_admin',
+    filters: ['upgrade_request'],
+  })
 
   useEffect(() => {
     setLoading(true)
@@ -187,6 +194,33 @@ export const SuperAdminDashboard: React.FC = () => {
     }
   }, [upgradeRequestsError, upgradeRequestsLoading, upgradeRequests.length])
 
+  useEffect(() => {
+    if (!upgradeNotifications.length) return
+    const latest = upgradeNotifications[0]
+    if (latest.id === lastUpgradeNotificationId) return
+    if (!latest.is_read) {
+      toast({
+        title: 'New upgrade request',
+        description: latest.message,
+        status: 'info',
+        duration: 5000,
+        isClosable: true,
+      })
+    }
+    setLastUpgradeNotificationId(latest.id)
+  }, [lastUpgradeNotificationId, toast, upgradeNotifications])
+
+  const navSections = useMemo(() => {
+    const sections = buildSuperAdminNavItems()
+    return sections.map((section) => ({
+      ...section,
+      items: section.items.map((item) => ({
+        ...item,
+        badgeCount: item.key === 'approvals' ? unreadUpgradeCount : item.badgeCount,
+      })),
+    }))
+  }, [unreadUpgradeCount])
+
   const riskLevels: RiskLevel[] = useMemo(() => {
     return [
       { label: 'Engaged', count: riskAggregate.riskBuckets.green || 0, color: 'green', reasons: ['Consistent logins'] },
@@ -294,6 +328,7 @@ export const SuperAdminDashboard: React.FC = () => {
       avatarUrl={profile?.avatarUrl}
       activeItem={activePage}
       onNavigate={handleNavigate}
+      navSections={navSections}
     >
       {renderPage()}
     </SuperAdminLayout>

@@ -22,6 +22,7 @@ export type NavigationItem = {
   label: string
   icon?: React.ElementType
   description?: string
+  badgeCount?: number
 }
 
 export type NavigationSection = {
