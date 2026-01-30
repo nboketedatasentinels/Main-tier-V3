@@ -434,9 +434,11 @@ Community groups
   description: string
   creatorId: string
   companyId?: string
+  memberIds: string[]
   memberCount: number
   isActive: boolean
   createdAt: Timestamp
+  updatedAt: Timestamp
 }
 ```
 
