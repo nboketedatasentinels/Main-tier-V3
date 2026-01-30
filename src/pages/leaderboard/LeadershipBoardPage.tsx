@@ -14,8 +14,16 @@ import {
   HStack,
   Icon,
   IconButton,
+  Modal,
+  ModalBody,
+  ModalCloseButton,
+  ModalContent,
+  ModalFooter,
+  ModalHeader,
+  ModalOverlay,
   Skeleton,
   SkeletonCircle,
+  Spinner,
   Progress,
   Select,
   SimpleGrid,
@@ -73,6 +81,8 @@ import {
   onSnapshot,
   orderBy,
   query,
+  serverTimestamp,
+  updateDoc,
   where,
 } from 'firebase/firestore'
 import { ResponsiveContainer, PieChart, Pie, Cell } from 'recharts'
@@ -81,6 +91,7 @@ import { OrganizationRecord } from '@/types/admin'
 import { db } from '@/services/firebase'
 import { fetchOrganizationsByIds } from '@/services/organizationService'
 import { respondToChallenge } from '@/services/notificationService'
+import { fetchVillageById, removeMemberFromVillage, VillageSummary } from '@/services/villageService'
 import { useAuth } from '@/hooks/useAuth'
 import { useLeaderboardContext, getLeaderboardContextLabels } from '@/hooks/leaderboard/useLeaderboardContext'
 import { useLeaderboardData } from '@/hooks/leaderboard/useLeaderboardData'
@@ -137,6 +148,7 @@ export const LeadershipBoardPage: React.FC = () => {
   const toast = useToast()
   const { isOpen, onOpen, onClose } = useDisclosure()
   const { isOpen: isFiltersOpen, onToggle: onToggleFilters } = useDisclosure({ defaultIsOpen: false })
+  const { isOpen: isLeaveOpen, onOpen: onLeaveOpen, onClose: onLeaveClose } = useDisclosure()
   const supportEmail = 'transform@t4leader.com'
   const pointsColors = useToken('colors', [
     'brand.primary',
@@ -158,6 +170,11 @@ export const LeadershipBoardPage: React.FC = () => {
   const [badgesError, setBadgesError] = useState<string | null>(null)
   const [pointsPulse, setPointsPulse] = useState(false)
   const [isRefreshingProfile, setIsRefreshingProfile] = useState(false)
+  const [villageDetails, setVillageDetails] = useState<VillageSummary | null>(null)
+  const [isVillageLoading, setIsVillageLoading] = useState(false)
+  const [villageError, setVillageError] = useState<string | null>(null)
+  const [isVillageCreator, setIsVillageCreator] = useState(false)
+  const [isLeavingVillage, setIsLeavingVillage] = useState(false)
   const [showFilterTip, setShowFilterTip] = useState(() => {
     const stored = localStorage.getItem('leaderboard-filter-tip')
     return stored !== 'dismissed'
@@ -616,6 +633,86 @@ export const LeadershipBoardPage: React.FC = () => {
 
   const emptyChallenges = challenges.filter((c) => c.status === 'active' || c.status === 'pending').length === 0
   const isFreeContext = context?.type === 'free'
+  const villageId = profile?.villageId ?? null
+
+  useEffect(() => {
+    let isActive = true
+
+    if (!isFreeContext || !villageId) {
+      setVillageDetails(null)
+      setVillageError(null)
+      setIsVillageCreator(false)
+      setIsVillageLoading(false)
+      return () => {
+        isActive = false
+      }
+    }
+
+    const loadVillage = async () => {
+      setIsVillageLoading(true)
+      setVillageError(null)
+      try {
+        const village = await fetchVillageById(villageId)
+        if (!isActive) return
+        if (!village) {
+          setVillageDetails(null)
+          setIsVillageCreator(false)
+          setVillageError('Village not found')
+          toast({ title: 'Village not found', status: 'error' })
+          return
+        }
+        setVillageDetails(village)
+        setIsVillageCreator(Boolean(profile?.id && village.creatorId === profile.id))
+      } catch (error) {
+        if (!isActive) return
+        console.error('Failed to fetch village details', error)
+        setVillageDetails(null)
+        setIsVillageCreator(false)
+        setVillageError('Unable to load village details')
+        toast({ title: 'Unable to load village details', status: 'error' })
+      } finally {
+        if (isActive) {
+          setIsVillageLoading(false)
+        }
+      }
+    }
+
+    void loadVillage()
+
+    return () => {
+      isActive = false
+    }
+  }, [isFreeContext, profile?.id, toast, villageId])
+
+  const handleLeaveVillage = useCallback(async () => {
+    if (!profile?.id || !villageId) return
+    setIsLeavingVillage(true)
+    try {
+      await removeMemberFromVillage({ villageId, userId: profile.id })
+      await Promise.all([
+        updateDoc(doc(db, 'users', profile.id), { villageId: null, updatedAt: serverTimestamp() }),
+        updateDoc(doc(db, 'profiles', profile.id), { villageId: null, updatedAt: serverTimestamp() }),
+      ])
+      toast({ title: 'You have left the village', status: 'success' })
+      onLeaveClose()
+      setVillageDetails(null)
+      setIsVillageCreator(false)
+      await refreshProfile({ reason: 'leave-village', isManual: true })
+    } catch (error) {
+      console.error('Failed to leave village', error)
+      toast({
+        title: 'Unable to leave village',
+        description: error instanceof Error ? error.message : undefined,
+        status: 'error',
+      })
+    } finally {
+      setIsLeavingVillage(false)
+    }
+  }, [onLeaveClose, profile?.id, refreshProfile, toast, villageId])
+
+  const villageRouteId = villageDetails?.id ?? villageId
+  const villageActionDisabled = isVillageLoading || isLeavingVillage
+  const shouldShowVillageCard = Boolean(villageDetails && villageId && !villageError)
 
   return (
     <Stack spacing={6}>
@@ -717,22 +814,78 @@ export const LeadershipBoardPage: React.FC = () => {
               {isFreeContext && (
                 <Card bg="surface.default" border="1px solid" borderColor="border.subtle">
                   <CardBody>
-                    <VStack spacing={3} py={4} textAlign="center">
-                      <Icon as={Sparkles} color="brand.primary" boxSize={7} />
-                      <Text fontSize="xl" fontWeight="bold" color="text.primary">
-                        Personal leaderboard view
-                      </Text>
-                      <Text color="text.secondary">
-                        Join a village or organization to see peer rankings and community benchmarks.
-                      </Text>
-                      <Button
-                        variant="primary"
-                        as="a"
-                        href={`mailto:${supportEmail}`}
-                      >
-                        Contact support to join a village
-                      </Button>
-                    </VStack>
+                    {isVillageLoading && villageId ? (
+                      <VStack spacing={3} py={6} textAlign="center">
+                        <Spinner color="brand.primary" />
+                        <Text fontSize="sm" color="text.secondary">
+                          Loading your village details...
+                        </Text>
+                      </VStack>
+                    ) : shouldShowVillageCard && villageRouteId ? (
+                      <VStack spacing={4} py={4} textAlign="center">
+                        <Icon as={isVillageCreator ? Crown : Users} color="brand.primary" boxSize={7} />
+                        <Text fontSize="xl" fontWeight="bold" color="text.primary">
+                          {isVillageCreator ? 'Village Creator' : 'Village Member'}
+                        </Text>
+                        <Text color="text.secondary">
+                          {isVillageCreator
+                            ? 'Manage your village community and invite new members.'
+                            : 'View your village community or leave anytime.'}
+                        </Text>
+                        <Stack
+                          direction={{ base: 'column', sm: 'row' }}
+                          spacing={3}
+                          w="full"
+                          justify="center"
+                        >
+                          <Button
+                            variant="primary"
+                            leftIcon={<Icon as={Users} />}
+                            onClick={() => navigate(`/app/villages/${villageRouteId}/manage`)}
+                            isDisabled={villageActionDisabled}
+                          >
+                            {isVillageCreator ? 'Manage Village' : 'View Village'}
+                          </Button>
+                          {isVillageCreator ? (
+                            <Button
+                              variant="secondary"
+                              leftIcon={<Icon as={Sparkles} />}
+                              onClick={() => navigate(`/app/villages/${villageRouteId}/invite`)}
+                              isDisabled={villageActionDisabled}
+                            >
+                              Invite Members
+                            </Button>
+                          ) : (
+                            <Button
+                              variant="ghost"
+                              colorScheme="red"
+                              onClick={onLeaveOpen}
+                              isLoading={isLeavingVillage}
+                              isDisabled={villageActionDisabled}
+                            >
+                              Leave Village
+                            </Button>
+                          )}
+                        </Stack>
+                      </VStack>
+                    ) : (
+                      <VStack spacing={3} py={4} textAlign="center">
+                        <Icon as={Sparkles} color="brand.primary" boxSize={7} />
+                        <Text fontSize="xl" fontWeight="bold" color="text.primary">
+                          Personal leaderboard view
+                        </Text>
+                        <Text color="text.secondary">
+                          Join a village or organization to see peer rankings and community benchmarks.
+                        </Text>
+                        <Button
+                          variant="primary"
+                          as="a"
+                          href={`mailto:${supportEmail}`}
+                        >
+                          Contact support to join a village
+                        </Button>
+                      </VStack>
+                    )}
                   </CardBody>
                 </Card>
               )}
@@ -1524,6 +1677,32 @@ export const LeadershipBoardPage: React.FC = () => {
           </TabPanel>
         </TabPanels>
       </Tabs>
+
+      {isFreeContext && (
+        <Modal isOpen={isLeaveOpen} onClose={onLeaveClose} isCentered>
+          <ModalOverlay />
+          <ModalContent>
+            <ModalHeader>Leave village</ModalHeader>
+            <ModalCloseButton />
+            <ModalBody>
+              <Text fontWeight="semibold" mb={2}>
+                Are you sure you want to leave this village?
+              </Text>
+              <Text color="text.secondary">
+                You will need an invitation to rejoin.
+              </Text>
+            </ModalBody>
+            <ModalFooter>
+              <Button variant="ghost" mr={3} onClick={onLeaveClose} isDisabled={isLeavingVillage}>
+                Cancel
+              </Button>
+              <Button colorScheme="red" onClick={handleLeaveVillage} isLoading={isLeavingVillage}>
+                Leave Village
+              </Button>
+            </ModalFooter>
+          </ModalContent>
+        </Modal>
+      )}
 
       <StartChallengeModal
         isOpen={isOpen}
