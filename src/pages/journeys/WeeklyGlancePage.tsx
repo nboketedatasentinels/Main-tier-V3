@@ -28,7 +28,6 @@ import { LearnerWindowCard } from '@/components/journeys/weeklyGlance/LearnerWin
 import { NextMilestoneCard } from '@/components/journeys/weeklyGlance/NextMilestoneCard'
 import { WindowSummaryCard } from '@/components/journeys/weeklyGlance/WindowSummaryCard'
 import { WeekAdvancementInfoBanner } from '@/components/journeys/WeekAdvancementInfoBanner'
-import { WeekStatusSummaryCard } from '@/components/journeys/WeekStatusSummaryCard'
 import { WindowWeekRelationshipCard } from '@/components/journeys/WindowWeekRelationshipCard'
 
 import { useWeeklyGlanceData, type LedgerEntry } from '@/hooks/useWeeklyGlanceData'
@@ -393,14 +392,6 @@ export const WeeklyGlancePage = () => {
               loading={data.loading.points}
               error={data.errors.points}
               onNavigate={handleNavigateChecklist}
-            />
-          </GridItem>
-
-          <GridItem colSpan={{ base: 1, md: 6 }} order={{ base: 3, md: 3 }}>
-            <WeekStatusSummaryCard
-              eligibility={eligibility}
-              loading={eligibilityLoading}
-              error={eligibilityError}
             />
           </GridItem>
 
