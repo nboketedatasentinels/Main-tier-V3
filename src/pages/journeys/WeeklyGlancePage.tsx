@@ -171,7 +171,7 @@ function buildWeeklyActivityFeed(params: {
  * View-model hook: normalizes data + centralizes derived values
  */
 function useWeeklyGlanceViewModel() {
-  const { profile } = useAuth()
+  const { profile, refreshProfile } = useAuth()
   const data = useWeeklyGlanceData()
 
   // Normalize collection shapes so UI never has to guard against undefined
@@ -369,6 +369,7 @@ export const WeeklyGlancePage = () => {
       })
 
       await updateUserVillageId(profileId, villageId)
+      await refreshProfile({ reason: 'village-created' })
 
       toast({
         status: 'success',
@@ -397,6 +398,7 @@ export const WeeklyGlancePage = () => {
     toast,
     villageName,
     villagePurpose,
+    refreshProfile,
   ])
 
   const handleNavigateChecklist = useCallback(() => {

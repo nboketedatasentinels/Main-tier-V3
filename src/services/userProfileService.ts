@@ -242,18 +242,27 @@ export const updateUserVillageId = async (userId: string, villageId: string): Pr
   }
 
   const userRef = doc(db, 'users', userId)
+  const profileRef = doc(db, 'profiles', userId)
 
   await runTransaction(db, async (transaction) => {
-    const snapshot = await transaction.get(userRef)
+    const [userSnapshot, profileSnapshot] = await Promise.all([
+      transaction.get(userRef),
+      transaction.get(profileRef),
+    ])
 
-    if (!snapshot.exists()) {
+    if (!userSnapshot.exists() || !profileSnapshot.exists()) {
       throw new Error('User profile not found.')
     }
 
-    transaction.update(userRef, {
+    const payload = {
       villageId,
       updatedAt: serverTimestamp(),
-    })
+    }
+
+    await Promise.all([
+      Promise.resolve(transaction.update(userRef, payload)),
+      Promise.resolve(transaction.update(profileRef, payload)),
+    ])
   })
 }
 

@@ -1,5 +1,15 @@
-import { addDoc, collection, getCountFromServer, query, serverTimestamp, where } from 'firebase/firestore'
+import { addDoc, collection, getCountFromServer, getDoc, query, serverTimestamp, where, doc } from 'firebase/firestore'
 import { db } from '@/services/firebase'
+
+export interface VillageSummary {
+  id: string
+  name: string
+  description?: string
+  creatorId: string
+  memberCount: number
+  isActive: boolean
+  createdAt?: string
+}
 
 export const checkVillageNameExists = async (name: string): Promise<boolean> => {
   const trimmed = name.trim()
@@ -12,6 +22,42 @@ export const checkVillageNameExists = async (name: string): Promise<boolean> => 
   )
 
   return snapshot.data().count > 0
+}
+
+export const fetchVillageById = async (villageId?: string | null): Promise<VillageSummary | null> => {
+  if (!villageId?.trim()) return null
+
+  try {
+    const villageSnap = await getDoc(doc(db, 'villages', villageId))
+    if (!villageSnap.exists()) return null
+    const data = villageSnap.data() as {
+      name?: string
+      description?: string
+      creatorId?: string
+      memberCount?: number
+      isActive?: boolean
+      createdAt?: { toDate?: () => Date } | string
+    }
+    const createdAt =
+      typeof data.createdAt === 'string'
+        ? data.createdAt
+        : data.createdAt?.toDate
+          ? data.createdAt.toDate().toISOString()
+          : undefined
+
+    return {
+      id: villageSnap.id,
+      name: data.name || 'Unnamed village',
+      description: data.description,
+      creatorId: data.creatorId || '',
+      memberCount: data.memberCount ?? 0,
+      isActive: data.isActive ?? true,
+      createdAt,
+    }
+  } catch (error) {
+    console.error('Failed to fetch village details', error)
+    return null
+  }
 }
 
 export const createVillage = async (params: {

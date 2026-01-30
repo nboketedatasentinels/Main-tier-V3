@@ -191,6 +191,9 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       previous.companyId === next.companyId &&
       previous.companyCode === next.companyCode &&
       previous.companyName === next.companyName &&
+      previous.villageId === next.villageId &&
+      previous.corporateVillageId === next.corporateVillageId &&
+      previous.clusterId === next.clusterId &&
       previous.email === next.email &&
       previous.firstName === next.firstName &&
       previous.lastName === next.lastName &&
