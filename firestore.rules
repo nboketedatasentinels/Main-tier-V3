@@ -257,7 +257,13 @@ service cloud.firestore {
     // Villages collection
     match /villages/{villageId} {
       allow read: if isAuthenticated();
-      allow create, update, delete: if isPartnerOrAdmin();
+      allow create: if isPartnerOrAdmin()
+        || (
+          isAuthenticated()
+          && request.resource.data.creatorId == request.auth.uid
+          && listHasUid(request.resource.data.memberIds, request.auth.uid)
+        );
+      allow update, delete: if isPartnerOrAdmin();
     }
 
     // Clusters collection
