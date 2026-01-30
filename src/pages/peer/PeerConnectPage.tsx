@@ -315,7 +315,7 @@ const buildMatchWindow = (preferences: MatchPreferences): MatchWindow => {
 }
 
 export const PeerConnectPage: React.FC = () => {
-  const { user, profile } = useAuth()
+  const { user, profile, loading, profileLoading } = useAuth()
   const toast = useToast()
   const challengeModal = useDisclosure()
   const sessionModal = useDisclosure()
@@ -532,7 +532,7 @@ export const PeerConnectPage: React.FC = () => {
 
   // Real-time subscription for sessions and invitations
   useEffect(() => {
-    if (!user) return
+    if (!user || loading || profileLoading) return
 
     setLoadingSessions(true)
 
@@ -569,7 +569,7 @@ export const PeerConnectPage: React.FC = () => {
       unsubscribeSessions()
       unsubscribeInvites()
     }
-  }, [user, profile?.timezone])
+  }, [loading, profile?.timezone, profileLoading, user])
 
   const onChallengeCreated = () => {
     fetchWeeklyMatch()
