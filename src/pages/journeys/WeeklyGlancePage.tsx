@@ -30,7 +30,6 @@ import { WindowSummaryCard } from '@/components/journeys/weeklyGlance/WindowSumm
 import { WeekAdvancementInfoBanner } from '@/components/journeys/WeekAdvancementInfoBanner'
 import { WeekStatusSummaryCard } from '@/components/journeys/WeekStatusSummaryCard'
 import { WindowWeekRelationshipCard } from '@/components/journeys/WindowWeekRelationshipCard'
-import { PendingApprovalsSection } from '@/components/journeys/PendingApprovalsSection'
 
 import { useWeeklyGlanceData, type LedgerEntry } from '@/hooks/useWeeklyGlanceData'
 import { BuildVillageModal } from '@/components/modals/BuildVillageModal'
@@ -431,14 +430,6 @@ export const WeeklyGlancePage = () => {
           </GridItem>
 
           <GridItem colSpan={{ base: 1, md: 4 }} order={{ base: 7, md: 7 }}>
-            <PendingApprovalsSection
-              pendingRequests={eligibility?.pendingApprovals ?? []}
-              currentWeek={profile?.currentWeek}
-              loading={eligibilityLoading}
-            />
-          </GridItem>
-
-          <GridItem colSpan={{ base: 1, md: 4 }} order={{ base: 8, md: 8 }}>
             <SupportTeamCard
               data={data.supportAssignment}
               loading={data.loading.support}
@@ -448,13 +439,13 @@ export const WeeklyGlancePage = () => {
           </GridItem>
 
           {(!isMobile || showMore) && (
-            <GridItem colSpan={{ base: 1, md: 4 }} order={{ base: 9, md: 9 }}>
+            <GridItem colSpan={{ base: 1, md: 4 }} order={{ base: 8, md: 8 }}>
               <PersonalityProfileCard data={data.personality} loading={data.loading.profile} />
             </GridItem>
           )}
 
           {(!isMobile || showMore) && (
-            <GridItem colSpan={{ base: 1, md: 4 }} order={{ base: 10, md: 10 }}>
+            <GridItem colSpan={{ base: 1, md: 4 }} order={{ base: 9, md: 9 }}>
               <PeopleImpactedCard count={data.impactCount} loading={data.loading.impact} />
             </GridItem>
           )}
