@@ -134,16 +134,7 @@ export const WeekStatusSummaryCard: React.FC<WeekStatusSummaryCardProps> = ({
   }
 
   if (!eligibility) {
-    return (
-      <Card variant="outline" borderColor="border.subtle" h="100%">
-        <CardBody p={6}>
-          <Alert status="info" borderRadius="md">
-            <AlertIcon />
-            <Text fontSize="sm">Week status unavailable</Text>
-          </Alert>
-        </CardBody>
-      </Card>
-    )
+    return null
   }
 
   const hasPendingApprovals = eligibility.pendingApprovals.length > 0
