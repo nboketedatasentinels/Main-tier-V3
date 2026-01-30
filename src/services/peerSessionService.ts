@@ -12,7 +12,7 @@ import {
   writeBatch,
   type Unsubscribe,
 } from 'firebase/firestore'
-import { db } from '@/services/firebase'
+import { auth, db } from '@/services/firebase'
 import { awardChecklistPoints } from '@/services/pointsService'
 import {
   PEER_SESSION_CONFIRMATION_ACTIVITY,
@@ -396,10 +396,13 @@ export function subscribeToUserSessions(
 
     callback(sessions)
   }, (error) => {
+    const projectId = db.app.options.projectId ?? 'unknown'
     console.error('[PeerSessionService] Sessions subscription error:', {
       userId,
       code: (error as { code?: string }).code,
       message: error.message,
+      projectId,
+      authUid: auth.currentUser?.uid ?? null,
       error,
     })
     callback([])
@@ -466,10 +469,13 @@ export function subscribeToUserInvitations(
 
     callback(invitations)
   }, (error) => {
+    const projectId = db.app.options.projectId ?? 'unknown'
     console.error('[PeerSessionService] Invitations subscription error:', {
       userId,
       code: (error as { code?: string }).code,
       message: error.message,
+      projectId,
+      authUid: auth.currentUser?.uid ?? null,
       error,
     })
     callback([])
