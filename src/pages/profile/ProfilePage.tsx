@@ -118,6 +118,7 @@ interface ProfileData {
   registrationDate?: string
   companyName?: string
   companyCode?: string
+  companyId?: string | null
   villageName?: string
   clusterName?: string
 }
@@ -828,10 +829,10 @@ export const ProfilePage: React.FC = () => {
   }
 
   const normalizedCompanyCode = companyCode.trim().toUpperCase()
-  const currentCompanyCode = (profileData.companyCode || '').trim().toUpperCase()
+  const currentCompanyCode = (profileData?.companyCode || '').trim().toUpperCase()
   const isAlreadyConnected = Boolean(normalizedCompanyCode)
     && normalizedCompanyCode === currentCompanyCode
-    && Boolean(profileData.companyId)
+    && Boolean(profileData?.companyId)
 
   if (loading) {
     return (
