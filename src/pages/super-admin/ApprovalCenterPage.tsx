@@ -64,7 +64,6 @@ import { doc, getDoc } from 'firebase/firestore'
 import { db } from '@/services/firebase'
 import type { UpgradeRequest } from '@/types/upgrade'
 import type { OrganizationRecord } from '@/types/admin'
-import { PageTransitionLoader } from '@/components/PageTransitionLoader'
 
 const toDate = (value?: unknown): Date | null => {
   if (!value) return null
@@ -906,7 +905,13 @@ const ApprovalCenterPage: React.FC = () => {
           <Text fontSize="sm" color="gray.500">
             Loading approvals...
           </Text>
-          <PageTransitionLoader fullScreen={false} size="medium" />
+          <Box borderWidth="1px" borderRadius="lg" bg="white" p={4}>
+            <Stack spacing={4}>
+              {[...Array(5)].map((_, index) => (
+                <Skeleton key={index} height="48px" />
+              ))}
+            </Stack>
+          </Box>
         </Stack>
       ) : filteredRecords.length === 0 ? (
         renderEmptyState()

@@ -18,6 +18,7 @@ import {
   MenuList,
   Select,
   SimpleGrid,
+  Spinner,
   Stack,
   Table,
   Tbody,
@@ -53,7 +54,6 @@ import {
 } from '@/services/superAdminService'
 import { triggerPeerMatching } from '@/services/peerMatchingService'
 import { OrganizationLead, OrganizationRecord } from '@/types/admin'
-import { PageTransitionLoader } from '@/components/PageTransitionLoader'
 
 type SortKey = 'name' | 'code' | 'teamSize' | 'status' | 'partnerName'
 
@@ -453,7 +453,7 @@ export const OrganizationManagementPage: React.FC<OrganizationManagementPageProp
 
             {loading ? (
               <Flex justify="center" align="center" py={12}>
-                <PageTransitionLoader fullScreen={false} size="medium" />
+                <Spinner size="lg" />
               </Flex>
             ) : (
               <Stack spacing={6}>

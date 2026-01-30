@@ -23,7 +23,6 @@ import { LogOut, Menu } from 'lucide-react'
 import { useAuth } from '@/hooks/useAuth'
 import { NotificationDropdown } from '@/components/notifications/NotificationDropdown'
 import { buildMentorNavItems, NavigationSection } from '@/utils/navigationItems'
-import { PageTransitionLoader } from '@/components/PageTransitionLoader'
 
 interface MentorDashboardLayoutProps {
   children: React.ReactNode
@@ -109,7 +108,6 @@ export const MentorDashboardLayout: React.FC<MentorDashboardLayoutProps> = ({
 
   return (
     <Flex minH="100vh" h="100vh" bg="brand.accent" overflow="hidden">
-      {signingOut && <PageTransitionLoader fullScreen />}
       <Box
         as="nav"
         w={sidebarWidth}

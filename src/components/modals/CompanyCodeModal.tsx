@@ -21,7 +21,6 @@ import { CheckCircle, XCircle } from 'lucide-react'
 import { incrementOrganizationMemberCount, validateCompanyCode } from '@/services/organizationService'
 import { useAuth } from '@/hooks/useAuth'
 import { TransformationTier, UserRole } from '@/types'
-import { PageTransitionLoader } from '@/components/PageTransitionLoader'
 
 interface CompanyCodeModalProps {
   isOpen: boolean
@@ -207,10 +206,9 @@ export const CompanyCodeModal: React.FC<CompanyCodeModalProps> = ({
               </Box>
             )}
             {isCheckingCode && (
-              <HStack spacing={2} color="gray.500">
-                <PageTransitionLoader fullScreen={false} size="small" inline />
-                <Text fontSize="sm">Checking company code...</Text>
-              </HStack>
+              <Text fontSize="sm" color="gray.500">
+                Checking company code...
+              </Text>
             )}
           </VStack>
         </ModalBody>

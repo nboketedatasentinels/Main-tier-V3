@@ -7,7 +7,6 @@ import { useAuth } from "@/hooks/useAuth"
 import { CheckEmailScreen } from "@/components/auth/CheckEmailScreen"
 import { auth } from "@/services/firebase"
 import { getFriendlyErrorMessage } from "@/utils/authErrors"
-import { PageTransitionLoader } from "@/components/PageTransitionLoader"
 
 export const ResetPasswordPage: React.FC = () => {
   const { resetPassword } = useAuth()
@@ -96,10 +95,7 @@ export const ResetPasswordPage: React.FC = () => {
     if (resetLoading && !resetComplete && !resetError && !resetEmail) {
       return (
         <div className="rounded-lg border border-gray-200 bg-white px-4 py-6 text-center text-sm text-gray-700">
-          <div className="flex flex-col items-center gap-3">
-            <PageTransitionLoader fullScreen={false} size="medium" />
-            Verifying your reset link...
-          </div>
+          Verifying your reset link...
         </div>
       )
     }
@@ -139,11 +135,6 @@ export const ResetPasswordPage: React.FC = () => {
         </p>
 
         <form onSubmit={handleResetSubmit} className="space-y-5">
-          {resetLoading && (
-            <div className="flex justify-center">
-              <PageTransitionLoader fullScreen={false} size="small" />
-            </div>
-          )}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">New password</label>
             <input
@@ -228,11 +219,6 @@ export const ResetPasswordPage: React.FC = () => {
       )}
 
       <form onSubmit={handleSubmit} className="space-y-5">
-        {loading && (
-          <div className="flex justify-center">
-            <PageTransitionLoader fullScreen={false} size="small" />
-          </div>
-        )}
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-1">Email</label>
           <div className="relative">

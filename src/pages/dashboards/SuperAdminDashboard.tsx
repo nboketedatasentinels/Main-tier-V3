@@ -33,7 +33,6 @@ import { useAllUpgradeRequests } from '@/hooks/admin/useAdminUpgradeRequests'
 import type { AdminHealthItem } from '@/components/admin/AdminDataHealthPanel'
 import { useAdminNotifications } from '@/hooks/useAdminNotifications'
 import { buildSuperAdminNavItems } from '@/utils/navigationItems'
-import { PageTransitionLoader } from '@/components/PageTransitionLoader'
 
 type TrendPoint = { label: string; value: number }
 
@@ -300,9 +299,6 @@ export const SuperAdminDashboard: React.FC = () => {
         return <ReportsAnalyticsPage metrics={metrics} registrationTrend={registrationTrend} userGrowthTrend={userGrowthTrend} />
       case 'overview':
       default:
-        if (loading && !error) {
-          return <PageTransitionLoader fullScreen={false} size="large" />
-        }
         return (
           <OverviewPage
             adminName={adminName}

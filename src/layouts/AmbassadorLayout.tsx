@@ -28,7 +28,6 @@ import { Menu as MenuIcon, Medal, TrendingUp, X } from 'lucide-react'
 import { NotificationDropdown } from '@/components/notifications/NotificationDropdown'
 import { buildAmbassadorNavItems, buildCommonAccountItems, NavigationItem, NavigationSection } from '@/utils/navigationItems'
 import { useAuth } from '@/hooks/useAuth'
-import { PageTransitionLoader } from '@/components/PageTransitionLoader'
 
 interface AmbassadorLayoutProps {
   children: React.ReactNode
@@ -165,7 +164,6 @@ export const AmbassadorLayout: React.FC<AmbassadorLayoutProps> = ({
 
   return (
     <Flex minH="100vh" h="100vh" bg="brand.accent" overflow="hidden">
-      {signingOut && <PageTransitionLoader fullScreen />}
       <Box
         as="nav"
         w={{ base: '0', lg: '260px' }}
