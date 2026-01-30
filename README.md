@@ -193,6 +193,7 @@ create them manually in the Firebase Console under Firestore Database → Indexe
 - `npm run typecheck` - Run TypeScript type checking
 - `npm run qa` - Run lint, typecheck, and build for QA validation
 - `npm run test` - Alias for the QA suite
+- `npm run seed-courses` - Populate the Firestore `courses` collection from `src/utils/courseMappings.ts`
 
 ## 📚 Documentation
 

@@ -17,13 +17,12 @@ import {
   Tooltip,
 } from '@chakra-ui/react'
 import { BookOpen, Clock, ExternalLink, Sparkles, ArrowUpRight, CheckCircle2, CalendarDays, Lock } from 'lucide-react'
-import { doc, getDoc } from 'firebase/firestore'
 import { Link as RouterLink } from 'react-router-dom'
 import { addDays } from 'date-fns'
 import { useAuth } from '@/hooks/useAuth'
 import { useOrganizationProgramCourses } from '@/hooks/useOrganizationProgramCourses'
 import { useUserCourseProgress } from '@/hooks/useUserCourseProgress'
-import { db } from '@/services/firebase'
+import { getCourseDocument, getCourseDocuments } from '@/services/courseService'
 import { canAccessCourse, isFreeUser } from '@/utils/membership'
 import {
   COURSE_DETAILS_MAPPING,
@@ -146,6 +145,24 @@ const buildCourseFromDoc = (courseId: string, data: Record<string, unknown>): No
   }
 }
 
+const buildCourseFromMapping = (courseId: string): NormalizedCourse | null => {
+  const entry = Object.entries(COURSE_DETAILS_MAPPING).find(([, details]) => details.slug === courseId)
+  if (!entry) return null
+
+  const [title, details] = entry
+  const metadata = COURSE_METADATA_MAPPING[title]
+
+  return {
+    id: courseId,
+    title,
+    description: details.description,
+    link: details.link,
+    estimatedMinutes: metadata?.estimatedMinutes,
+    difficulty: metadata?.difficulty,
+    image: COURSE_IMAGE_FILENAMES[title],
+  }
+}
+
 const FreeTierCoursesPage: React.FC<{ userId?: string | null; profile: UserProfile | null }> = ({
   userId,
   profile,
@@ -162,12 +179,12 @@ const FreeTierCoursesPage: React.FC<{ userId?: string | null; profile: UserProfi
       try {
         setLoading(true)
         setError(null)
-        const courseRef = doc(db, 'courses', COMPLEMENTARY_COURSE_ID)
-        const courseSnap = await getDoc(courseRef)
+        const courseSnap = await getCourseDocument(COMPLEMENTARY_COURSE_ID)
         if (!courseSnap.exists()) {
+          const fallbackCourse = buildCourseFromMapping(COMPLEMENTARY_COURSE_ID)
           if (isActive) {
-            setCourse(null)
-            setError('The complementary course could not be found.')
+            setCourse(fallbackCourse)
+            setError(fallbackCourse ? null : 'The complementary course could not be found.')
           }
           return
         }
@@ -176,9 +193,10 @@ const FreeTierCoursesPage: React.FC<{ userId?: string | null; profile: UserProfi
         }
       } catch (fetchError) {
         console.error('Error loading free tier course', fetchError)
+        const fallbackCourse = buildCourseFromMapping(COMPLEMENTARY_COURSE_ID)
         if (isActive) {
-          setCourse(null)
-          setError('Unable to load the complementary course right now.')
+          setCourse(fallbackCourse)
+          setError(fallbackCourse ? null : 'Unable to load the complementary course right now.')
         }
       } finally {
         if (isActive) {
@@ -437,9 +455,7 @@ const OrganizationCoursesPage: React.FC<{ userId?: string | null; profile: UserP
       try {
         setLoadingCourses(true)
         const orderedCourseIds = program.orderedCourseIds
-        const snapshots = await Promise.all(
-          orderedCourseIds.map(courseId => getDoc(doc(db, 'courses', courseId)))
-        )
+        const snapshots = await getCourseDocuments(orderedCourseIds)
 
         const nextCourses: NormalizedCourse[] = []
         const nextCourseMap: Record<string, NormalizedCourse> = {}
