@@ -96,6 +96,15 @@ service cloud.firestore {
         && get(/databases/$(database)/documents/villages/$(villageId)).data.creatorId == request.auth.uid;
     }
 
+    function isVillageMember(villageId) {
+      return isAuthenticated()
+        && exists(/databases/$(database)/documents/villages/$(villageId))
+        && listHasUid(
+          get(/databases/$(database)/documents/villages/$(villageId)).data.memberIds,
+          request.auth.uid
+        );
+    }
+
     function isInvitationInvitee(invite) {
       return isAuthenticated()
         && (
@@ -291,15 +300,20 @@ service cloud.firestore {
     match /village_invitations/{invitationId} {
       allow read: if isAuthenticated() && (
         isVillageCreator(resource.data.villageId) ||
+        isVillageMember(resource.data.villageId) ||
         isInvitationInvitee(resource.data)
       );
       allow create: if isAuthenticated() && (
         isPartnerOrAdmin() ||
-        isVillageCreator(request.resource.data.villageId)
+        (
+          (isVillageCreator(request.resource.data.villageId) || isVillageMember(request.resource.data.villageId))
+          && request.resource.data.invitedBy == request.auth.uid
+        )
       );
       allow update: if isAuthenticated() && (
         isPartnerOrAdmin() ||
         isVillageCreator(resource.data.villageId) ||
+        (isVillageMember(resource.data.villageId) && request.auth.uid == resource.data.invitedBy) ||
         (isInvitationInvitee(resource.data)
           && request.resource.data.status in ['accepted', 'declined'])
       );
