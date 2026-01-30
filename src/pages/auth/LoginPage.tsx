@@ -239,6 +239,7 @@ export const LoginPage: React.FC = () => {
 
       toast({
         title: 'Signed in with Google!',
+        description: 'Welcome to Transformational Leader.',
         status: 'success',
         duration: 3000,
       })
