@@ -7,6 +7,7 @@ import {
   getDocs,
   orderBy,
   query,
+  runTransaction,
   serverTimestamp,
   setDoc,
   updateDoc,
@@ -230,6 +231,30 @@ export const updateUserProfile = async (
   }
 
   return { updates: sanitized, error: null }
+}
+
+export const updateUserVillageId = async (userId: string, villageId: string): Promise<void> => {
+  if (!userId.trim()) {
+    throw new Error('User id is required.')
+  }
+  if (!villageId.trim()) {
+    throw new Error('Village id is required.')
+  }
+
+  const userRef = doc(db, 'users', userId)
+
+  await runTransaction(db, async (transaction) => {
+    const snapshot = await transaction.get(userRef)
+
+    if (!snapshot.exists()) {
+      throw new Error('User profile not found.')
+    }
+
+    transaction.update(userRef, {
+      villageId,
+      updatedAt: serverTimestamp(),
+    })
+  })
 }
 
 export const logUserProfileAccess = async (log: ProfileAccessLog) => {

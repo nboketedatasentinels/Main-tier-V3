@@ -13,9 +13,11 @@ import {
   Stack,
   Text,
   useBreakpointValue,
+  useToast,
 } from '@chakra-ui/react'
 import { useNavigate } from 'react-router-dom'
 import { useState } from 'react'
+import { FirestoreError } from 'firebase/firestore'
 import { WeeklyPointsCard } from '@/components/journeys/weeklyGlance/WeeklyPointsCard'
 import { SupportTeamCard } from '@/components/journeys/weeklyGlance/SupportTeamCard'
 import { PersonalityProfileCard } from '@/components/journeys/weeklyGlance/PersonalityProfileCard'
@@ -31,16 +33,21 @@ import { JourneyCompletionOverview } from '@/components/journeys/dashboard/Journ
 import { useWeeklyGlanceData } from '@/hooks/useWeeklyGlanceData'
 import { BuildVillageModal } from '@/components/modals/BuildVillageModal'
 import { useAuth } from '@/hooks/useAuth'
+import { updateUserVillageId } from '@/services/userProfileService'
+import { checkVillageNameExists, createVillage } from '@/services/villageService'
 import { TransformationTier } from '@/types'
 import { calculateWeekProgress, getDaysRemainingInWeek, getWeekDateRange } from '@/utils/weekCalculations'
 
 export const LearnerDashboardPage = () => {
   const { profile } = useAuth()
   const navigate = useNavigate()
+  const toast = useToast()
   const data = useWeeklyGlanceData()
   const [isBuildVillageOpen, setIsBuildVillageOpen] = useState(false)
   const [villageName, setVillageName] = useState('')
   const [villagePurpose, setVillagePurpose] = useState('')
+  const [isCreatingVillage, setIsCreatingVillage] = useState(false)
+  const [villageError, setVillageError] = useState<string | undefined>()
   const [showMore, setShowMore] = useState(false)
   const isMobile = useBreakpointValue({ base: true, md: false }) ?? false
   const isPaidMember = profile?.membershipStatus === 'paid'
@@ -61,13 +68,111 @@ export const LearnerDashboardPage = () => {
     console.log('[Dashboard] Parallel window tracking enabled')
   }
 
-  const handleOpenVillageModal = () => setIsBuildVillageOpen(true)
-  const handleCloseVillageModal = () => setIsBuildVillageOpen(false)
-  const handleCreateVillage = () => {
-    setIsBuildVillageOpen(false)
+  const resetVillageForm = () => {
     setVillageName('')
     setVillagePurpose('')
+    setVillageError(undefined)
   }
+
+  const handleOpenVillageModal = () => {
+    setVillageError(undefined)
+    setIsBuildVillageOpen(true)
+  }
+
+  const handleCloseVillageModal = () => {
+    if (isCreatingVillage) return
+    setIsBuildVillageOpen(false)
+    setVillageError(undefined)
+  }
+
+  const resolveVillageErrorMessage = (error: unknown): string => {
+    if (error && typeof error === 'object' && 'code' in error) {
+      const firestoreError = error as FirestoreError
+      switch (firestoreError.code) {
+        case 'permission-denied':
+          return "You don't have permission to create a village. Please contact support."
+        case 'unavailable':
+        case 'deadline-exceeded':
+          return 'Unable to create village. Please check your connection and try again.'
+        default:
+          return 'Something went wrong. Please try again.'
+      }
+    }
+
+    if (error instanceof Error) {
+      return error.message
+    }
+
+    return 'Something went wrong. Please try again.'
+  }
+
+  const handleCreateVillage = async () => {
+    const trimmedName = villageName.trim()
+    const trimmedPurpose = villagePurpose.trim()
+    const profileId = profile?.id?.trim()
+
+    if (!trimmedName) {
+      setVillageError('Please enter a village name.')
+      return
+    }
+
+    if (!profileId) {
+      const message = 'We could not verify your profile. Please refresh and try again.'
+      setVillageError(message)
+      toast({
+        status: 'error',
+        title: 'Unable to create village',
+        description: message,
+      })
+      return
+    }
+
+    setIsCreatingVillage(true)
+    setVillageError(undefined)
+
+    try {
+      const nameExists = await checkVillageNameExists(trimmedName)
+      if (nameExists) {
+        const message = 'A village with this name already exists. Please choose a different name.'
+        setVillageError(message)
+        toast({
+          status: 'error',
+          title: 'Village name taken',
+          description: message,
+        })
+        return
+      }
+
+      const villageId = await createVillage({
+        name: trimmedName,
+        description: trimmedPurpose,
+        creatorId: profileId,
+      })
+
+      await updateUserVillageId(profileId, villageId)
+
+      toast({
+        status: 'success',
+        title: `Your village \"${trimmedName}\" has been created!`,
+        description: 'You can access your village anytime from the navigation.',
+      })
+
+      setIsBuildVillageOpen(false)
+      resetVillageForm()
+    } catch (error) {
+      console.error('Failed to create village', error)
+      const message = resolveVillageErrorMessage(error)
+      setVillageError(message)
+      toast({
+        status: 'error',
+        title: 'Unable to create village',
+        description: message,
+      })
+    } finally {
+      setIsCreatingVillage(false)
+    }
+  }
+
   const weekRange = getWeekDateRange()
   const daysRemaining = getDaysRemainingInWeek()
   const earnedPoints = data.weeklyPoints?.points_earned || 0
@@ -214,8 +319,20 @@ export const LearnerDashboardPage = () => {
         onSkip={handleCloseVillageModal}
         villageName={villageName}
         villagePurpose={villagePurpose}
-        onVillageNameChange={setVillageName}
-        onVillagePurposeChange={setVillagePurpose}
+        onVillageNameChange={(value) => {
+          setVillageName(value)
+          if (villageError) {
+            setVillageError(undefined)
+          }
+        }}
+        onVillagePurposeChange={(value) => {
+          setVillagePurpose(value)
+          if (villageError) {
+            setVillageError(undefined)
+          }
+        }}
+        isLoading={isCreatingVillage}
+        error={villageError}
       />
     </Box>
   )
