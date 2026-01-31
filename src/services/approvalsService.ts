@@ -7,6 +7,7 @@ import { awardChecklistPoints } from './pointsService';
 import { PointsVerificationRequest } from './pointsVerificationService';
 import { getActivitiesForJourney } from '@/config/pointsConfig';
 import { createInAppNotification } from './notificationService';
+import { logAdminAction } from './superAdminService';
 
 /**
  * Creates a new approval request in the `approvals` collection.
@@ -104,6 +105,23 @@ export async function approveRequest(approvalId: string, reviewedBy: string): Pr
       reviewedAt: serverTimestamp(),
     });
 
+    // Log admin action
+    try {
+      await logAdminAction({
+        action: 'approval_request_approved',
+        adminId: reviewedBy,
+        userId: approvalRecord.userId,
+        metadata: {
+          approvalId,
+          type: approvalRecord.type,
+          title: approvalRecord.title,
+          points: approvalRecord.points,
+        },
+      });
+    } catch (error) {
+      console.error('[approvalsService] Failed to log admin action:', error);
+    }
+
     await awardChecklistPoints({
       uid: approvalRecord.userId,
       journeyType: journeyType,
@@ -143,6 +161,23 @@ export async function rejectRequest(
       rejectionReason,
       reviewedAt: serverTimestamp(),
     });
+
+    // Log admin action
+    try {
+      await logAdminAction({
+        action: 'approval_request_rejected',
+        adminId: reviewedBy,
+        userId: approvalRecord.userId,
+        metadata: {
+          approvalId,
+          type: approvalRecord.type,
+          title: approvalRecord.title,
+          reason: rejectionReason,
+        },
+      });
+    } catch (error) {
+      console.error('[approvalsService] Failed to log admin action:', error);
+    }
 
     await createInAppNotification({
       userId: approvalRecord.userId,
