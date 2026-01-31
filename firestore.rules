@@ -354,14 +354,17 @@ service cloud.firestore {
 
     // Peer matching collections
     match /peer_weekly_matches/{matchId} {
-      allow read: if isWeeklyMatchParticipant(matchId) || isPartnerOrAdmin();
-      allow create: if isWeeklyMatchOwner(request.resource.data);
-      allow read: if isAuthenticated() && (
-        request.auth.uid == resource.data.user_id ||
-        request.auth.uid == resource.data.userId ||
-        request.auth.uid == resource.data.user1_id ||
-        request.auth.uid == resource.data.user2_id ||
-        isPartnerOrAdmin()
+      allow get: if isWeeklyMatchParticipant(matchId) || isPartnerOrAdmin();
+      allow list: if isAuthenticated() && (
+        isPartnerOrAdmin() ||
+        (
+          resource.data.user_id == request.auth.uid ||
+          resource.data.userId == request.auth.uid ||
+          resource.data.user1_id == request.auth.uid ||
+          resource.data.user2_id == request.auth.uid ||
+          resource.data.peer_id == request.auth.uid ||
+          resource.data.peerId == request.auth.uid
+        )
       );
       allow create: if isAuthenticated() && (
         request.auth.uid == request.resource.data.user_id ||
@@ -369,7 +372,6 @@ service cloud.firestore {
       );
       allow update: if isAuthenticated() && (
         request.auth.uid == resource.data.user_id ||
-        request.auth.uid == resource.data.userId ||
         request.auth.uid == resource.data.userId ||
         request.auth.uid == resource.data.user1_id ||
         request.auth.uid == resource.data.user2_id ||
@@ -606,13 +608,6 @@ service cloud.firestore {
       allow update, delete: if isSuperAdmin();
     }
 
-    // Points verification requests collection
-    match /points_verification_requests/{requestId} {
-      allow read: if isAuthenticated();
-      allow create: if isAuthenticated();
-      allow update: if isPartnerOrAdmin();
-      allow delete: if isSuperAdmin();
-    }
 
     // Partner organizations collection
     match /partner_organizations/{partnerOrgId} {

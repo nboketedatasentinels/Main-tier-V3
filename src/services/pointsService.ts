@@ -15,7 +15,7 @@ import {
 import { db } from "@/services/firebase";
 import pointsConfig from "@/config/pointsConfig";
 import type { ActivityDef, JourneyType } from "@/config/pointsConfig";
-import { calculateLevel, calculateUserTotalPoints } from "@/utils/points";
+import { calculateLevel } from "@/utils/points";
 import { awardBadge } from "./badgeService";
 import { updateWindowOnAward, updateWindowOnRevoke } from "./windowProgressService";
 import { checkAndHandleJourneyCompletion } from "./journeyCompletionService";
@@ -135,9 +135,10 @@ export async function awardChecklistPoints(params: {
     const companyId = profileSnap.exists() ? profileSnap.data()?.companyId : null;
 
     await runTransactionWithRetry(async (tx) => {
-      const [ledgerDoc, progressDoc] = await Promise.all([
+      const [ledgerDoc, progressDoc, userDoc] = await Promise.all([
         tx.get(ledgerRef),
         tx.get(progressRef),
+        tx.get(doc(db, "users", uid)),
       ]);
 
       if (ledgerDoc.exists()) return;
@@ -174,7 +175,7 @@ export async function awardChecklistPoints(params: {
         status = "alert";
       }
 
-      const currentTotal = await calculateUserTotalPoints(uid, { transaction: tx });
+      const currentTotal = userDoc.exists() ? (userDoc.data()?.totalPoints ?? 0) : 0;
       const totalPoints = Math.max(0, currentTotal + activity.points);
       const level = calculateLevel(totalPoints);
 
@@ -331,7 +332,11 @@ export async function revokeChecklistPoints(params: {
     const companyId = profileSnap.exists() ? profileSnap.data()?.companyId : null;
 
     await runTransactionWithRetry(async (tx) => {
-      const [ledgerDoc, progressDoc] = await Promise.all([tx.get(ledgerRef), tx.get(progressRef)]);
+      const [ledgerDoc, progressDoc, userDoc] = await Promise.all([
+        tx.get(ledgerRef),
+        tx.get(progressRef),
+        tx.get(doc(db, "users", uid)),
+      ]);
 
       if (!ledgerDoc.exists()) return;
 
@@ -348,7 +353,7 @@ export async function revokeChecklistPoints(params: {
       else if (ratio >= 0.75) status = "warning";
       else status = "alert";
 
-      const currentTotal = await calculateUserTotalPoints(uid, { transaction: tx });
+      const currentTotal = userDoc.exists() ? (userDoc.data()?.totalPoints ?? 0) : 0;
       const totalPoints = Math.max(0, currentTotal - ledgerPoints);
       const level = calculateLevel(totalPoints);
 
