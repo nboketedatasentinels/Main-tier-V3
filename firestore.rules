@@ -116,7 +116,10 @@ service cloud.firestore {
     function isOrganizationCodeLookup() {
       return request.query != null
         && request.query.where.size() == 1
-        && request.query.where[0].fieldPath == 'code'
+        && (
+          request.query.where[0].fieldPath == 'code' ||
+          request.query.where[0].field == 'code'
+        )
         && request.query.where[0].op == '=='
         && request.query.limit != null
         && request.query.limit <= 1;

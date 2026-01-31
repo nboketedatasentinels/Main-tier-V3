@@ -4,7 +4,7 @@ import {
   initializeTestEnvironment,
   RulesTestEnvironment,
 } from "@firebase/rules-unit-testing";
-import { doc, getDoc, setDoc, updateDoc, collection, query, where, getDocs } from "firebase/firestore";
+import { doc, getDoc, setDoc, updateDoc, collection, query, where, getDocs, limit } from "firebase/firestore";
 import { readFileSync } from "fs";
 import { resolve, dirname } from "path";
 import { fileURLToPath } from "url";
@@ -37,6 +37,10 @@ describe("Firestore Security Rules", () => {
 
   function getAuthenticatedContext(uid: string, email: string = "user@example.com") {
     return testEnv.authenticatedContext(uid, { email });
+  }
+
+  function getUnauthenticatedContext() {
+    return testEnv.unauthenticatedContext();
   }
 
   describe("Users & Profiles Collections", () => {
@@ -191,6 +195,20 @@ describe("Firestore Security Rules", () => {
       const db = getAuthenticatedContext("partner2").firestore();
       const requestDoc = doc(db, "approvals/request1");
       await assertSucceeds(updateDoc(requestDoc, { status: "approved" }));
+    });
+  });
+
+  describe("Organizations", () => {
+    it("allows unauthenticated lookup by company code with limit 1", async () => {
+      await testEnv.withSecurityRulesDisabled(async (context) => {
+        const adminDb = context.firestore();
+        await setDoc(doc(adminDb, "organizations/org1"), { code: "AB1234", status: "active" });
+      });
+
+      const db = getUnauthenticatedContext().firestore();
+      const orgs = collection(db, "organizations");
+      const orgQuery = query(orgs, where("code", "==", "AB1234"), limit(1));
+      await assertSucceeds(getDocs(orgQuery));
     });
   });
 });
