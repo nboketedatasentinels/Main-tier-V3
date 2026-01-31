@@ -9,6 +9,7 @@ import {
   getDoc,
   getDocs,
   increment,
+  limit,
   onSnapshot,
   orderBy,
   QuerySnapshot,
@@ -270,7 +271,7 @@ export const validateCompanyCode = async (
     return { valid: false, error: 'Company code is required.' }
   }
 
-  const snapshot = await getDocs(query(orgCollection, where('code', '==', trimmed)))
+  const snapshot = await getDocs(query(orgCollection, where('code', '==', trimmed), limit(1)))
   if (snapshot.empty) {
     return { valid: false, error: 'Company code not found.' }
   }

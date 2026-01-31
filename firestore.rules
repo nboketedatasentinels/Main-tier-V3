@@ -113,6 +113,15 @@ service cloud.firestore {
         );
     }
 
+    function isOrganizationCodeLookup() {
+      return request.query != null
+        && request.query.where.size() == 1
+        && request.query.where[0].fieldPath == 'code'
+        && request.query.where[0].op == '=='
+        && request.query.limit != null
+        && request.query.limit <= 1;
+    }
+
     // Users collection
     match /users/{userId} {
       allow read, write: if request.auth != null;
@@ -244,7 +253,7 @@ service cloud.firestore {
 
     // Organizations collection
     match /organizations/{orgId} {
-      allow read: if isAuthenticated();
+      allow read: if isAuthenticated() || isOrganizationCodeLookup();
       allow create, update, delete: if isPartnerOrAdmin();
     }
 
