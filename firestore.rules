@@ -183,13 +183,19 @@ service cloud.firestore {
 
     // Points ledger collection
     match /pointsLedger/{entryId} {
-      allow read: if isAuthenticated() && (
-        request.auth.uid == resource.data.uid ||
+      // Allow get by docId prefix (to support transaction.get on non-existent docs)
+      allow get: if isAuthenticated() && (
+        entryId.matches(request.auth.uid + '__.*') ||
         isPartnerOrAdmin()
       );
-      // Only server-side (Cloud Functions) or the owner can create
+      // Allow list only when query is constrained to uid == request.auth.uid
+      allow list: if isAuthenticated() && (
+        resource.data.uid == request.auth.uid ||
+        isPartnerOrAdmin()
+      );
+      // Allow create only for owner docId + uid match
       allow create: if isAuthenticated() && (
-        request.auth.uid == request.resource.data.uid ||
+        (request.resource.data.uid == request.auth.uid && entryId.matches(request.auth.uid + '__.*')) ||
         isPartnerOrAdmin()
       );
       // Only admins can update/delete ledger entries

@@ -11,7 +11,7 @@ import {
   serverTimestamp,
   where,
   type Transaction,
-} from "firebase/firestore";
+} from "./firestoreDebug";
 import { db } from "@/services/firebase";
 import pointsConfig from "@/config/pointsConfig";
 import type { ActivityDef, JourneyType } from "@/config/pointsConfig";

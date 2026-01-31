@@ -154,7 +154,7 @@ export const LearnerDashboardPage = () => {
 
       toast({
         status: 'success',
-        title: `Your village \"${trimmedName}\" has been created!`,
+        title: `Your village "${trimmedName}" has been created!`,
         description: 'You can access your village anytime from the navigation.',
       })
 
