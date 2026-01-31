@@ -752,7 +752,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
       await extractCustomClaims(currentUser)
 
-      let userProfile = await fetchProfileWithRetry(currentUser)
+      const userProfile = await fetchProfileWithRetry(currentUser)
 
       if (isActive) {
         const ensuredProfile = userProfile
