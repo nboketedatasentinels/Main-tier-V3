@@ -16,6 +16,7 @@ import { awardChecklistPoints } from './pointsService'
 import { getActivitiesForJourney } from '@/config/pointsConfig'
 import { createInAppNotification } from './notificationService'
 import { resolveJourneyType } from '@/utils/journeyType'
+import { logAdminAction } from './superAdminService'
 
 export type PointsVerificationRequestStatus = 'pending' | 'approved' | 'rejected'
 
@@ -185,6 +186,23 @@ export const approvePointsVerificationRequest = async (params: {
     approved_at: serverTimestamp(),
   })
 
+  // Log admin action
+  try {
+    await logAdminAction({
+      action: 'points_request_approved',
+      adminId: params.approver?.id || undefined,
+      adminName: params.approver?.name || undefined,
+      userId: params.request.user_id,
+      metadata: {
+        requestId: params.request.id,
+        activityId: params.request.activity_id,
+        points: activity.points,
+      },
+    })
+  } catch (error) {
+    console.error('[pointsVerificationService] Failed to log admin action:', error)
+  }
+
   // Award points
   await awardChecklistPoints({
     uid: params.request.user_id,
@@ -214,6 +232,23 @@ export const rejectPointsVerificationRequest = async (params: {
     rejected_at: serverTimestamp(),
     rejection_reason: params.reason ?? null,
   })
+
+  // Log admin action
+  try {
+    await logAdminAction({
+      action: 'points_request_rejected',
+      adminId: params.approver?.id || undefined,
+      adminName: params.approver?.name || undefined,
+      userId: params.request.user_id,
+      metadata: {
+        requestId: params.request.id,
+        activityId: params.request.activity_id,
+        reason: params.reason,
+      },
+    })
+  } catch (error) {
+    console.error('[pointsVerificationService] Failed to log admin action:', error)
+  }
 
   // Notify user of rejection
   await createInAppNotification({
