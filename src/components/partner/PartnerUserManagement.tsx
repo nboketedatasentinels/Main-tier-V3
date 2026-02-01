@@ -50,6 +50,7 @@ import { usePointsApprovalQueue } from '@/hooks/partner/usePointsApprovalQueue'
 import { db } from '@/services/firebase'
 import UserNudgeHistoryPanel from '@/components/partner/nudges/UserNudgeHistoryPanel'
 import { type PointsVerificationRequest } from '@/services/pointsVerificationService'
+import { getDisplayName } from '@/utils/displayName'
 
 interface PartnerUserManagementProps {
   users: PartnerUser[]
@@ -97,7 +98,7 @@ const getSortableValue = (user: PartnerUser, key: string) => {
     case 'risk':
       return user.riskStatus
     case 'name':
-      return user.name
+      return getDisplayName(user, 'Member')
     case 'company':
       return user.companyCode
     case 'progress':
@@ -395,6 +396,7 @@ export const PartnerUserManagement: React.FC<PartnerUserManagementProps> = ({
   const renderUserRow = (user: PartnerUser) => {
     const lastActiveLabel = formatLastActiveLabel(user.lastActive)
     const isExpanded = expandedRows.has(user.id)
+    const displayName = getDisplayName(user, 'Member')
 
     return (
       <React.Fragment key={user.id}>
@@ -410,7 +412,7 @@ export const PartnerUserManagement: React.FC<PartnerUserManagementProps> = ({
           <Td>
             <VStack align="flex-start" spacing={0}>
               <Text fontWeight="semibold" color="brand.text">
-                {user.name}
+                {displayName}
               </Text>
               <Text fontSize="sm" color="brand.subtleText">
                 {user.email}
@@ -692,7 +694,7 @@ export const PartnerUserManagement: React.FC<PartnerUserManagementProps> = ({
                   </Td>
                   <Td>
                     <VStack align="flex-start" spacing={0}>
-                      <Text fontWeight="semibold" color="brand.text">{user.name}</Text>
+                      <Text fontWeight="semibold" color="brand.text">{getDisplayName(user, 'Member')}</Text>
                       <Text fontSize="sm" color="brand.subtleText">{user.email}</Text>
                     </VStack>
                   </Td>
@@ -782,7 +784,7 @@ export const PartnerUserManagement: React.FC<PartnerUserManagementProps> = ({
                 <Tr key={leader.id}>
                   <Td>
                     <VStack align="flex-start" spacing={0}>
-                      <Text fontWeight="semibold" color="brand.text">{leader.name}</Text>
+                      <Text fontWeight="semibold" color="brand.text">{getDisplayName(leader, 'Member')}</Text>
                       <Text fontSize="sm" color="brand.subtleText">{leader.email}</Text>
                     </VStack>
                   </Td>
@@ -836,7 +838,7 @@ export const PartnerUserManagement: React.FC<PartnerUserManagementProps> = ({
                   <Box key={request.id} p={3} borderRadius="md" border="1px solid" borderColor="brand.border" bg="brand.accent">
                     <HStack justify="space-between" align="flex-start" wrap="wrap" gap={3}>
                       <Stack spacing={1}>
-                        <Text fontWeight="semibold" color="brand.text">{user.name}</Text>
+                        <Text fontWeight="semibold" color="brand.text">{getDisplayName(user, 'Member')}</Text>
                         <Text fontSize="sm" color="brand.subtleText">{user.companyCode}</Text>
                         <Text fontSize="sm" color="brand.subtleText">
                           {request.activity_title || 'Activity submission'} • Week {request.week} • {request.points ?? 0} pts
@@ -899,8 +901,8 @@ export const PartnerUserManagement: React.FC<PartnerUserManagementProps> = ({
       >
         <DrawerOverlay />
         <DrawerContent>
-          <DrawerHeader borderBottomWidth="1px">User details</DrawerHeader>
-          <DrawerBody>
+        <DrawerHeader borderBottomWidth="1px">User details</DrawerHeader>
+        <DrawerBody>
             {!selectedUser && (
               <Flex align="center" justify="center" h="100%">
                 <Spinner />
@@ -909,7 +911,7 @@ export const PartnerUserManagement: React.FC<PartnerUserManagementProps> = ({
             {selectedUser && (
               <Stack spacing={4}>
                 <VStack align="flex-start" spacing={1}>
-                  <Text fontSize="xl" fontWeight="bold">{selectedUser.name}</Text>
+                  <Text fontSize="xl" fontWeight="bold">{getDisplayName(selectedUser, 'Member')}</Text>
                   <Text color="brand.subtleText">{selectedUser.email}</Text>
                 </VStack>
                 <HStack spacing={3}>

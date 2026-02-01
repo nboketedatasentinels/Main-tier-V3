@@ -113,14 +113,44 @@ service cloud.firestore {
         );
     }
 
+    function isOrganizationCodeLookup() {
+      return request.query != null
+        && request.query.where.size() == 1
+        && (
+          request.query.where[0].fieldPath == 'code' ||
+          request.query.where[0].field == 'code'
+        )
+        && request.query.where[0].op == '=='
+        && request.query.limit != null
+        && request.query.limit <= 1;
+    }
+
     // Users collection
     match /users/{userId} {
-      allow read, write: if request.auth != null;
+      allow read: if isAuthenticated();
+      allow create: if isAuthenticated() && (
+        isSuperAdmin() ||
+        (isOwner(userId) && (!('role' in request.resource.data) || request.resource.data.role == 'user'))
+      );
+      allow update: if isAuthenticated() && (
+        isSuperAdmin() ||
+        (isOwner(userId) && (!request.resource.data.diff(resource.data).affectedKeys().hasAny(['role'])))
+      );
+      allow delete: if isSuperAdmin();
     }
 
     // Profiles collection
     match /profiles/{userId} {
-      allow read, write: if request.auth != null;
+      allow read: if isAuthenticated();
+      allow create: if isAuthenticated() && (
+        isSuperAdmin() ||
+        (isOwner(userId) && (!('role' in request.resource.data) || request.resource.data.role == 'user'))
+      );
+      allow update: if isAuthenticated() && (
+        isSuperAdmin() ||
+        (isOwner(userId) && (!request.resource.data.diff(resource.data).affectedKeys().hasAny(['role'])))
+      );
+      allow delete: if isSuperAdmin();
     }
 
     // Engagement monitoring collections (admin only)
@@ -174,13 +204,19 @@ service cloud.firestore {
 
     // Points ledger collection
     match /pointsLedger/{entryId} {
-      allow read: if isAuthenticated() && (
-        request.auth.uid == resource.data.uid ||
+      // Allow get by docId prefix (to support transaction.get on non-existent docs)
+      allow get: if isAuthenticated() && (
+        entryId.matches(request.auth.uid + '__.*') ||
         isPartnerOrAdmin()
       );
-      // Only server-side (Cloud Functions) or the owner can create
+      // Allow list only when query is constrained to uid == request.auth.uid
+      allow list: if isAuthenticated() && (
+        resource.data.uid == request.auth.uid ||
+        isPartnerOrAdmin()
+      );
+      // Allow create only for owner docId + uid match
       allow create: if isAuthenticated() && (
-        request.auth.uid == request.resource.data.uid ||
+        (request.resource.data.uid == request.auth.uid && entryId.matches(request.auth.uid + '__.*')) ||
         isPartnerOrAdmin()
       );
       // Only admins can update/delete ledger entries
@@ -189,7 +225,15 @@ service cloud.firestore {
 
     // Weekly progress collection
     match /weeklyProgress/{progressId} {
-      allow read: if isAuthenticated();
+      allow get: if isAuthenticated() && (
+        progressId.matches(request.auth.uid + '__.*') ||
+        isPartnerOrAdmin()
+      );
+      allow list: if isAuthenticated() && (
+        isPartnerOrAdmin() ||
+        resource.data.uid == request.auth.uid ||
+        resource.data.userId == request.auth.uid
+      );
       allow create, update: if isAuthenticated() && (
         progressId.matches(request.auth.uid + '__.*') ||
         isPartnerOrAdmin()
@@ -199,7 +243,15 @@ service cloud.firestore {
 
     // Window progress collection
     match /windowProgress/{progressId} {
-      allow read: if isAuthenticated();
+      allow get: if isAuthenticated() && (
+        progressId.matches(request.auth.uid + '__.*') ||
+        isPartnerOrAdmin()
+      );
+      allow list: if isAuthenticated() && (
+        isPartnerOrAdmin() ||
+        resource.data.uid == request.auth.uid ||
+        resource.data.userId == request.auth.uid
+      );
       allow create, update: if isAuthenticated() && (
         progressId.matches(request.auth.uid + '__.*') ||
         isPartnerOrAdmin()
@@ -244,7 +296,7 @@ service cloud.firestore {
 
     // Organizations collection
     match /organizations/{orgId} {
-      allow read: if isAuthenticated();
+      allow read: if isAuthenticated() || isOrganizationCodeLookup();
       allow create, update, delete: if isPartnerOrAdmin();
     }
 
@@ -255,7 +307,9 @@ service cloud.firestore {
         isPartnerOrAdmin()
       );
       allow create: if isAuthenticated() && request.auth.uid == request.resource.data.user_id;
-      allow update: if isPartnerOrAdmin();
+      allow update: if isPartnerOrAdmin() && (
+        resource.data.user_id != request.auth.uid || isSuperAdmin()
+      );
       allow delete: if isSuperAdmin();
     }
 
@@ -275,6 +329,13 @@ service cloud.firestore {
       allow read: if isPartnerOrAdmin();
       allow create: if isAuthenticated();
       allow update, delete: if isSuperAdmin();
+    }
+
+    // Admin actions collection (for secure, auditable updates)
+    match /admin_actions/{actionId} {
+      allow read: if isPartnerOrAdmin();
+      allow create: if isPartnerOrAdmin() && request.resource.data.createdBy == request.auth.uid;
+      allow update, delete: if false; // Immutable log
     }
 
     // Villages collection
@@ -339,14 +400,17 @@ service cloud.firestore {
 
     // Peer matching collections
     match /peer_weekly_matches/{matchId} {
-      allow read: if isWeeklyMatchParticipant(matchId) || isPartnerOrAdmin();
-      allow create: if isWeeklyMatchOwner(request.resource.data);
-      allow read: if isAuthenticated() && (
-        request.auth.uid == resource.data.user_id ||
-        request.auth.uid == resource.data.userId ||
-        request.auth.uid == resource.data.user1_id ||
-        request.auth.uid == resource.data.user2_id ||
-        isPartnerOrAdmin()
+      allow get: if isWeeklyMatchParticipant(matchId) || isPartnerOrAdmin();
+      allow list: if isAuthenticated() && (
+        isPartnerOrAdmin() ||
+        (
+          resource.data.user_id == request.auth.uid ||
+          resource.data.userId == request.auth.uid ||
+          resource.data.user1_id == request.auth.uid ||
+          resource.data.user2_id == request.auth.uid ||
+          resource.data.peer_id == request.auth.uid ||
+          resource.data.peerId == request.auth.uid
+        )
       );
       allow create: if isAuthenticated() && (
         request.auth.uid == request.resource.data.user_id ||
@@ -354,7 +418,6 @@ service cloud.firestore {
       );
       allow update: if isAuthenticated() && (
         request.auth.uid == resource.data.user_id ||
-        request.auth.uid == resource.data.userId ||
         request.auth.uid == resource.data.userId ||
         request.auth.uid == resource.data.user1_id ||
         request.auth.uid == resource.data.user2_id ||
@@ -580,24 +643,24 @@ service cloud.firestore {
     // Admin activity log
     match /admin_activity_log/{entryId} {
       allow read: if isPartnerOrAdmin();
-      allow create: if isAuthenticated();
+      allow create: if false; // Only Admin SDK (Cloud Functions)
       allow update, delete: if isSuperAdmin();
     }
 
     // Points verifications collection
     match /points_verifications/{verificationId} {
-      allow read: if isAuthenticated();
-      allow create: if isAuthenticated();
+      allow read: if isAuthenticated() && (
+        resource.data.userId == request.auth.uid ||
+        resource.data.user_id == request.auth.uid ||
+        isPartnerOrAdmin()
+      );
+      allow create: if isAuthenticated() && (
+        request.resource.data.userId == request.auth.uid ||
+        request.resource.data.user_id == request.auth.uid
+      );
       allow update, delete: if isSuperAdmin();
     }
 
-    // Points verification requests collection
-    match /points_verification_requests/{requestId} {
-      allow read: if isAuthenticated();
-      allow create: if isAuthenticated();
-      allow update: if isPartnerOrAdmin();
-      allow delete: if isSuperAdmin();
-    }
 
     // Partner organizations collection
     match /partner_organizations/{partnerOrgId} {
@@ -655,6 +718,79 @@ service cloud.firestore {
       allow read: if isAuthenticated();
       allow create: if isAuthenticated();
       allow update: if isAuthenticated();
+      allow delete: if isSuperAdmin();
+    }
+
+    // Week advancement log
+    match /week_advancement_log/{logId} {
+      allow read: if isPartnerOrAdmin();
+      allow create: if isPartnerOrAdmin();
+      allow update, delete: if isSuperAdmin();
+    }
+
+    // Weekly points collection (legacy)
+    match /weekly_points/{docId} {
+      allow get: if isAuthenticated() && (
+        resource.data.user_id == request.auth.uid ||
+        isPartnerOrAdmin()
+      );
+      allow list: if isAuthenticated() && (
+        isPartnerOrAdmin() ||
+        resource.data.user_id == request.auth.uid
+      );
+      allow create, update: if isAuthenticated() && (
+        request.resource.data.user_id == request.auth.uid ||
+        isPartnerOrAdmin()
+      );
+      allow delete: if isSuperAdmin();
+    }
+
+    // User points collection (legacy)
+    match /user_points/{docId} {
+      allow get: if isAuthenticated() && (
+        resource.data.userId == request.auth.uid ||
+        isPartnerOrAdmin()
+      );
+      allow list: if isAuthenticated() && (
+        isPartnerOrAdmin() ||
+        resource.data.userId == request.auth.uid
+      );
+      allow create, update: if isAuthenticated() && (
+        request.resource.data.userId == request.auth.uid ||
+        isPartnerOrAdmin()
+      );
+      allow delete: if isSuperAdmin();
+    }
+
+    // Journeys collection
+    match /journeys/{journeyId} {
+      allow read: if isAuthenticated();
+      allow write: if isSuperAdmin();
+    }
+
+    // Weekly activities subcollection
+    match /profiles/{userId}/weeklyActivities/{activityId} {
+      allow read: if isAuthenticated() && (
+        userId == request.auth.uid ||
+        isPartnerOrAdmin()
+      );
+      allow create, update: if isAuthenticated() && (
+        userId == request.auth.uid ||
+        isPartnerOrAdmin()
+      );
+      allow delete: if isSuperAdmin();
+    }
+
+    // Approvals collection
+    match /approvals/{approvalId} {
+      allow read: if isAuthenticated() && (
+        resource.data.userId == request.auth.uid ||
+        isPartnerOrAdmin()
+      );
+      allow create: if isAuthenticated() && request.resource.data.userId == request.auth.uid;
+      allow update: if isPartnerOrAdmin() && (
+        resource.data.userId != request.auth.uid || isSuperAdmin()
+      );
       allow delete: if isSuperAdmin();
     }
 

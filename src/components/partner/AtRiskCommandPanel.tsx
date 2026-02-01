@@ -58,6 +58,7 @@ import type { PartnerInterventionSummary } from '@/hooks/partner/usePartnerInter
 import type { NudgeTemplateRecord } from '@/types/nudges'
 import type { DataWarning, RiskLevel, RiskReason } from '@/components/admin/RiskAnalysisCard'
 import { Check, Filter, HelpCircle, Info, Plus } from 'lucide-react'
+import { getDisplayName } from '@/utils/displayName'
 
 interface AtRiskCommandPanelProps {
   engagementTrend: { label: string; value: number }[]
@@ -460,7 +461,7 @@ export const AtRiskCommandPanel: React.FC<AtRiskCommandPanelProps> = ({
                         </Td>
                         <Td>
                           <VStack align="flex-start" spacing={0}>
-                            <Text fontWeight="semibold">{user.fullName ?? user.name}</Text>
+                            <Text fontWeight="semibold">{getDisplayName(user, 'Member')}</Text>
                             <Text fontSize="xs" color="brand.subtleText">{user.email}</Text>
                           </VStack>
                         </Td>
@@ -647,7 +648,7 @@ export const AtRiskCommandPanel: React.FC<AtRiskCommandPanelProps> = ({
                     <Tbody>
                       {atRiskUsers.slice(0, 6).map(user => (
                         <Tr key={user.id}>
-                          <Td>{user.fullName ?? user.name}</Td>
+                          <Td>{getDisplayName(user, 'Member')}</Td>
                           <Td>
                             <Badge colorScheme={riskScoreColor(buildRiskScore(user))}>{user.riskStatus}</Badge>
                           </Td>

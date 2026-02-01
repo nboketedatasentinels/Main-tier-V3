@@ -30,6 +30,7 @@ import {
 import { CheckCircle, Clock, Lock, AlertTriangle } from 'lucide-react'
 import { UserProfile } from '@/types'
 import { AdvancementEligibility } from '@/services/weekAdvancementService'
+import { getDisplayName } from '@/utils/displayName'
 
 export interface UserAdvancementStatus {
   profile: UserProfile
@@ -266,7 +267,7 @@ export const WeekAdvancementQueue: React.FC<WeekAdvancementQueueProps> = ({
                       <Td>
                         <Stack spacing={0}>
                           <Text fontWeight="medium" fontSize="sm">
-                            {profile.fullName || `${profile.firstName} ${profile.lastName}`}
+                            {getDisplayName(profile, 'Member')}
                           </Text>
                           <Text fontSize="xs" color="text.secondary">
                             {profile.email}
@@ -333,7 +334,7 @@ export const WeekAdvancementQueue: React.FC<WeekAdvancementQueueProps> = ({
                               variant="outline"
                               colorScheme="orange"
                               leftIcon={<Icon as={AlertTriangle} boxSize={3} />}
-                              onClick={() => openOverrideModal(profile.id, profile.fullName || profile.firstName)}
+                              onClick={() => openOverrideModal(profile.id, getDisplayName(profile, 'Member'))}
                               isLoading={isAdvancing}
                             >
                               Override

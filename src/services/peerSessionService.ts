@@ -10,6 +10,8 @@ import {
   updateDoc,
   where,
   writeBatch,
+  type DocumentData,
+  type QueryDocumentSnapshot,
   type Unsubscribe,
 } from 'firebase/firestore'
 import { auth, db } from '@/services/firebase'
@@ -73,6 +75,74 @@ const isNonEmptyString = (value: unknown): value is string =>
 
 const isValidDate = (value: unknown): value is Date =>
   value instanceof Date && !Number.isNaN(value.getTime())
+
+const coerceDate = (value: unknown): Date | null => {
+  if (!value) return null
+  if (value instanceof Date) return isValidDate(value) ? value : null
+  if (typeof (value as { toDate?: () => Date }).toDate === 'function') {
+    const coerced = (value as { toDate: () => Date }).toDate()
+    return isValidDate(coerced) ? coerced : null
+  }
+  if (typeof value === 'string' || typeof value === 'number') {
+    const coerced = new Date(value)
+    return isValidDate(coerced) ? coerced : null
+  }
+  return null
+}
+
+const resolveParticipants = (data: DocumentData): string[] => {
+  const candidates = [data.participants, data.participantIds, data.participant_ids]
+  for (const candidate of candidates) {
+    if (Array.isArray(candidate) && candidate.length > 0) {
+      return candidate.filter((value) => isNonEmptyString(value))
+    }
+  }
+  return []
+}
+
+const resolveCreatedBy = (data: DocumentData): string => {
+  const candidates = [data.createdBy, data.creatorId, data.created_by]
+  for (const candidate of candidates) {
+    if (isNonEmptyString(candidate)) return candidate
+  }
+  return ''
+}
+
+const resolveMeetingLink = (data: DocumentData): string | undefined => {
+  if (isNonEmptyString(data.meetingLink)) return data.meetingLink
+  if (isNonEmptyString(data.meeting_link)) return data.meeting_link
+  return undefined
+}
+
+const parseSessionDoc = (docSnap: QueryDocumentSnapshot<DocumentData>): PeerSession | null => {
+  const data = docSnap.data()
+  const scheduledAt = coerceDate(data.scheduledAt ?? data.scheduled_at)
+  if (!scheduledAt) return null
+
+  const confirmationDeadline =
+    coerceDate(data.confirmationDeadline ?? data.confirmation_deadline) ?? addDays(scheduledAt, -1)
+  const createdAt = coerceDate(data.createdAt ?? data.created_at) ?? new Date()
+  const updatedAt = coerceDate(data.updatedAt ?? data.updated_at) ?? undefined
+
+  return {
+    id: docSnap.id,
+    title: data.title || 'Peer Session',
+    description: data.description,
+    platform: data.platform || 'Zoom',
+    meetingLink: resolveMeetingLink(data),
+    timezone: data.timezone || 'UTC',
+    participants: resolveParticipants(data),
+    status: data.status || 'pending',
+    scheduledAt,
+    confirmationDeadline,
+    confirmations: data.confirmations || {},
+    noShows: data.noShows,
+    createdBy: resolveCreatedBy(data),
+    createdAt,
+    updatedAt,
+    pointsAwarded: data.pointsAwarded,
+  }
+}
 
 const normalizeParticipants = (participants: string[], createdBy: string): string[] => {
   const unique = new Set(
@@ -330,83 +400,78 @@ export function subscribeToUserSessions(
   userId: string,
   callback: (sessions: PeerSession[]) => void
 ): Unsubscribe {
-  const sessionsQuery = query(
-    collection(db, 'peer_sessions'),
-    where('participants', 'array-contains', userId)
-  )
+  const queries = [
+    { key: 'participants', query: query(collection(db, 'peer_sessions'), where('participants', 'array-contains', userId)) },
+    { key: 'participantIds', query: query(collection(db, 'peer_sessions'), where('participantIds', 'array-contains', userId)) },
+    { key: 'participant_ids', query: query(collection(db, 'peer_sessions'), where('participant_ids', 'array-contains', userId)) },
+    { key: 'createdBy', query: query(collection(db, 'peer_sessions'), where('createdBy', '==', userId)) },
+    { key: 'creatorId', query: query(collection(db, 'peer_sessions'), where('creatorId', '==', userId)) },
+    { key: 'created_by', query: query(collection(db, 'peer_sessions'), where('created_by', '==', userId)) },
+  ]
 
-  return onSnapshot(sessionsQuery, (snapshot) => {
-    const sessions: PeerSession[] = []
-    const skippedSessionIds: string[] = []
+  const docsByKey = new Map<string, QueryDocumentSnapshot<DocumentData>[]>()
 
-    for (const docSnap of snapshot.docs) {
-      try {
-        const data = docSnap.data()
-        if (!Array.isArray(data.participants) || data.participants.length === 0) {
-          skippedSessionIds.push(docSnap.id)
-          continue
+  const emitSessions = () => {
+    const sessionsMap = new Map<string, PeerSession>()
+    const skippedSessionIds = new Set<string>()
+
+    for (const docs of docsByKey.values()) {
+      for (const docSnap of docs) {
+        try {
+          const parsed = parseSessionDoc(docSnap)
+          if (parsed) {
+            sessionsMap.set(parsed.id, parsed)
+          } else {
+            skippedSessionIds.add(docSnap.id)
+          }
+        } catch (error) {
+          console.warn('[PeerSessionService] Skipping malformed session document', {
+            sessionId: docSnap.id,
+            error,
+          })
         }
-        if (!isNonEmptyString(data.createdBy)) {
-          skippedSessionIds.push(docSnap.id)
-          continue
-        }
-
-        const scheduledAt = data.scheduledAt?.toDate?.()
-        const confirmationDeadline = data.confirmationDeadline?.toDate?.()
-        if (!scheduledAt || !confirmationDeadline) {
-          skippedSessionIds.push(docSnap.id)
-          continue
-        }
-
-        sessions.push({
-          id: docSnap.id,
-          title: data.title || 'Peer Session',
-          description: data.description,
-          platform: data.platform || 'Zoom',
-          meetingLink: data.meetingLink,
-          timezone: data.timezone || 'UTC',
-          participants: data.participants || [],
-          status: data.status || 'pending',
-          scheduledAt,
-          confirmationDeadline,
-          confirmations: data.confirmations || {},
-          noShows: data.noShows,
-          createdBy: data.createdBy,
-          createdAt: data.createdAt?.toDate?.() || new Date(),
-          updatedAt: data.updatedAt?.toDate?.(),
-          pointsAwarded: data.pointsAwarded,
-        })
-      } catch (error) {
-        console.warn('[PeerSessionService] Skipping malformed session document', {
-          sessionId: docSnap.id,
-          error,
-        })
       }
     }
 
-    if (skippedSessionIds.length > 0) {
+    if (skippedSessionIds.size > 0) {
       console.warn('[PeerSessionService] Skipped sessions with missing fields', {
         userId,
-        sessionIds: skippedSessionIds,
+        sessionIds: Array.from(skippedSessionIds),
       })
     }
 
-    // Sort by scheduled date descending (most recent first)
+    const sessions = Array.from(sessionsMap.values())
     sessions.sort((a, b) => b.scheduledAt.getTime() - a.scheduledAt.getTime())
-
     callback(sessions)
-  }, (error) => {
-    const projectId = db.app.options.projectId ?? 'unknown'
-    console.error('[PeerSessionService] Sessions subscription error:', {
-      userId,
-      code: (error as { code?: string }).code,
-      message: error.message,
-      projectId,
-      authUid: auth.currentUser?.uid ?? null,
-      error,
-    })
-    callback([])
-  })
+  }
+
+  const unsubscribers = queries.map(({ key, query: sessionsQuery }) =>
+    onSnapshot(
+      sessionsQuery,
+      (snapshot) => {
+        docsByKey.set(key, snapshot.docs)
+        emitSessions()
+      },
+      (error) => {
+        const projectId = db.app.options.projectId ?? 'unknown'
+        console.error('[PeerSessionService] Sessions subscription error:', {
+          userId,
+          code: (error as { code?: string }).code,
+          message: error.message,
+          projectId,
+          authUid: auth.currentUser?.uid ?? null,
+          queryKey: key,
+          error,
+        })
+        docsByKey.set(key, [])
+        emitSessions()
+      }
+    )
+  )
+
+  return () => {
+    unsubscribers.forEach((unsubscribe) => unsubscribe())
+  }
 }
 
 /**

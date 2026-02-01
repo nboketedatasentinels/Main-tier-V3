@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import {
   Box,
   Button,
@@ -41,28 +41,39 @@ export const PartnerAssignmentPage: React.FC = () => {
   const [weekNumber, setWeekNumber] = useState<number>(1);
   const [loading, setLoading] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
+  const [debouncedSearchTerm, setDebouncedSearchTerm] = useState('');
 
-  const partnerIssuedActivities = FULL_ACTIVITIES.filter(
-    a => a.approvalType === 'partner_issued'
+  const partnerIssuedActivities = useMemo(
+    () => FULL_ACTIVITIES.filter((activity) => activity.approvalType === 'partner_issued'),
+    []
   );
+
+  const organizationIds = useMemo(() => {
+    if (assignedOrganizationIds.length) return assignedOrganizationIds;
+    if (profile?.organizationId) return [profile.organizationId];
+    return [];
+  }, [assignedOrganizationIds, profile?.organizationId]);
 
   useEffect(() => {
     const loadLearners = async () => {
       try {
-        // Partners might only see learners in their assigned organizations
-        const organizationIds = assignedOrganizationIds.length
-          ? assignedOrganizationIds
-          : profile?.organizationId
-            ? [profile.organizationId]
-            : [];
         const data = await getEligibleLearnersForActivity('', organizationIds);
         setLearners(data);
       } catch (error) {
         console.error(error);
       }
     };
-    loadLearners();
-  }, [assignedOrganizationIds, profile]);
+    if (organizationIds.length) {
+      loadLearners();
+    } else {
+      setLearners([]);
+    }
+  }, [organizationIds]);
+
+  useEffect(() => {
+    const handler = setTimeout(() => setDebouncedSearchTerm(searchTerm), 250);
+    return () => clearTimeout(handler);
+  }, [searchTerm]);
 
   const handleAssign = async () => {
     if (!selectedActivity || selectedLearners.length === 0) {
@@ -105,10 +116,14 @@ export const PartnerAssignmentPage: React.FC = () => {
     }
   };
 
-  const filteredLearners = learners.filter(l =>
-    l.fullName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    l.email.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  const filteredLearners = useMemo(() => {
+    const normalized = debouncedSearchTerm.toLowerCase();
+    if (!normalized) return learners;
+    return learners.filter((learner) =>
+      learner.fullName.toLowerCase().includes(normalized) ||
+      learner.email.toLowerCase().includes(normalized)
+    );
+  }, [learners, debouncedSearchTerm]);
 
   const toggleLearner = (id: string) => {
     setSelectedLearners(prev =>
