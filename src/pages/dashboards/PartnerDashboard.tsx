@@ -38,6 +38,7 @@ import { DashboardErrorBoundary } from '@/components/ui/DashboardErrorBoundary'
 import { AtRiskCommandPanel } from '@/components/partner/AtRiskCommandPanel'
 import { PartnerUserManagement } from '@/components/partner/PartnerUserManagement'
 import { usePointsApprovalQueue } from '@/hooks/partner/usePointsApprovalQueue'
+import { usePartnerMetrics } from '@/hooks/partner/usePartnerMetrics'
 import { usePartnerDashboardData } from '@/hooks/usePartnerDashboardData'
 import { useAuth } from '@/hooks/useAuth'
 import { logOrganizationAccessAttempt } from '@/services/organizationService'
@@ -81,12 +82,7 @@ export const PartnerDashboard: React.FC = () => {
     adminDataLoading,
   } = usePartnerDashboardData({ debugMode })
   const { organizations, users, analytics } = snapshot
-  const {
-    metrics,
-    engagementTrend,
-    riskLevels,
-    atRiskUsers,
-  } = analytics || {}
+  const { engagementTrend, riskLevels, atRiskUsers } = analytics || {}
   const partnerId = user?.uid ?? null
   const snapshotUsers = snapshot?.users ?? []
 
@@ -108,6 +104,62 @@ export const PartnerDashboard: React.FC = () => {
     [snapshot?.organizations],
   )
 
+  const organizationCodeLookup = useMemo(() => {
+    const lookup = new Map<string, string>()
+    snapshotOrganizations.forEach((org) => {
+      if (org.code) lookup.set(org.code.toLowerCase(), org.code.toLowerCase())
+      if (org.id) lookup.set(org.id.toLowerCase(), org.code?.toLowerCase() ?? org.id.toLowerCase())
+    })
+    return lookup
+  }, [snapshotOrganizations])
+
+  const organizationRouteLookup = useMemo(() => {
+    const lookup = new Map<string, string>()
+    snapshotOrganizations.forEach((org) => {
+      const routeValue = org.id || org.code
+      if (!routeValue) return
+      if (org.id) lookup.set(org.id.toLowerCase(), routeValue)
+      if (org.code) lookup.set(org.code.toLowerCase(), routeValue)
+    })
+    return lookup
+  }, [snapshotOrganizations])
+
+  const scopedOrgKey = useMemo(() => {
+    if (!selectedOrg || selectedOrg === 'all') return null
+    const normalized = selectedOrg.toLowerCase()
+    return organizationCodeLookup.get(normalized) ?? normalized
+  }, [organizationCodeLookup, selectedOrg])
+
+  const overviewOrganizations = useMemo(() => {
+    if (!scopedOrgKey) return snapshotOrganizations
+    const normalized = selectedOrg.toLowerCase()
+    return snapshotOrganizations.filter((org) => {
+      const code = org.code?.toLowerCase()
+      const id = org.id?.toLowerCase()
+      return code === scopedOrgKey || id === scopedOrgKey || code === normalized || id === normalized
+    })
+  }, [snapshotOrganizations, scopedOrgKey, selectedOrg])
+
+  const overviewUsers = useMemo(() => {
+    if (!scopedOrgKey) return snapshotUsers
+    const normalized = selectedOrg.toLowerCase()
+    return snapshotUsers.filter((user) => {
+      const companyCode = user.companyCode?.toLowerCase()
+      const organizationId = user.organizationId?.toLowerCase()
+      return (
+        companyCode === scopedOrgKey ||
+        companyCode === normalized ||
+        organizationId === scopedOrgKey ||
+        organizationId === normalized
+      )
+    })
+  }, [snapshotUsers, scopedOrgKey, selectedOrg])
+
+  const { metrics: overviewMetrics, riskLevels: overviewRiskLevels } = usePartnerMetrics({
+    users: overviewUsers,
+    organizations: overviewOrganizations,
+  })
+
   // Extract organization IDs for server-side approval filtering
   const partnerOrganizationIds = useMemo(
     () => snapshotOrganizations.map((org) => org.id).filter(Boolean) as string[],
@@ -122,6 +174,20 @@ export const PartnerDashboard: React.FC = () => {
       enabled: true,
     },
   )
+  const scopedPendingApprovals = useMemo(() => {
+    if (!scopedOrgKey) return pendingApprovals
+    const normalized = selectedOrg.toLowerCase()
+    return pendingApprovals.filter(({ request, user }) => {
+      const requestOrg = request.organizationId?.toLowerCase()
+      const userOrg = user.companyCode?.toLowerCase()
+      return (
+        requestOrg === scopedOrgKey ||
+        requestOrg === normalized ||
+        userOrg === scopedOrgKey ||
+        userOrg === normalized
+      )
+    })
+  }, [pendingApprovals, scopedOrgKey, selectedOrg])
   const snapshotLoading = adminDataLoading
   const enableProfileRealtime = import.meta.env.VITE_ENABLE_PROFILE_REALTIME === 'true'
   const supportEmail = 'support@transformation4leaders.com'
@@ -140,6 +206,14 @@ export const PartnerDashboard: React.FC = () => {
     }
 
     return formatDistanceToNow(dateValue, options)
+  }
+
+  const sanitizeRouteParam = (value?: string | null) => {
+    if (!value || typeof value !== 'string') return null
+    const trimmed = value.trim()
+    if (!trimmed) return null
+    const segments = trimmed.split('/').filter(Boolean)
+    return segments.length ? segments[segments.length - 1] : null
   }
 
   const [refreshingOrganizations, setRefreshingOrganizations] = useState(false)
@@ -299,14 +373,18 @@ export const PartnerDashboard: React.FC = () => {
     { label: 'Critical', color: 'red' as const, count: riskLevels.critical },
   ]
 
-  const orgCards = organizations.map(org => ({
-    name: org.name || org.code || org.id || 'Unknown organization',
-    status: org.status,
-    activeUsers: org.activeUsers,
-    newThisWeek: org.newThisWeek,
-    admins: 1,
-    change: `+${org.newThisWeek}`,
-  }))
+  const overviewOrgCards = useMemo(
+    () =>
+      overviewOrganizations.map((org) => ({
+        name: org.name || org.code || org.id || 'Unknown organization',
+        status: org.status,
+        activeUsers: org.activeUsers,
+        newThisWeek: org.newThisWeek,
+        admins: 1,
+        change: `+${org.newThisWeek}`,
+      })),
+    [overviewOrganizations],
+  )
 
   const organizationSummary = useMemo(() => {
     return organizations.reduce(
@@ -429,16 +507,25 @@ export const PartnerDashboard: React.FC = () => {
   }, [digestSending, scopedDigestOrgIds, toast, user?.email, user?.uid])
 
   const renderOverview = () => {
-    const learnersAtRiskCount = riskLevels.critical + riskLevels.concern
+    const learnersAtRiskCount = overviewRiskLevels.critical + overviewRiskLevels.concern
     const overdueCheckinsCount = interventions.length
-    const pendingApprovalsCount = pendingApprovals.length
-    const scopeSummary = `${assignedOrgCount} organization${assignedOrgCount === 1 ? '' : 's'} · ${users.length} learner${users.length === 1 ? '' : 's'} in scope · Transformation Partner · Engagement tracking active`
+    const pendingApprovalsCount = scopedPendingApprovals.length
+    const overviewOrgCount =
+      selectedOrg === 'all'
+        ? assignedOrgCount
+        : Math.max(overviewOrganizations.length, selectedOrg ? 1 : 0)
+    const overviewUserCount = overviewUsers.length
+    const scopeSummary = `${overviewOrgCount} organization${overviewOrgCount === 1 ? '' : 's'} · ${overviewUserCount} learner${overviewUserCount === 1 ? '' : 's'} in scope · Transformation Partner · Engagement tracking active`
     const isEmptyState =
-      metrics.activeMembers === 0
-      && metrics.engagementRate === 0
-      && metrics.newRegistrations === 0
-      && metrics.managedCompanies === 0
-    const managedCompanyLabel = metrics.managedCompanies === 1 ? 'company' : 'companies'
+      overviewMetrics.activeMembers === 0
+      && overviewMetrics.engagementRate === 0
+      && overviewMetrics.newRegistrations === 0
+      && overviewMetrics.managedCompanies === 0
+    const managedCompanyLabel = overviewMetrics.managedCompanies === 1 ? 'company' : 'companies'
+    const organizationScopeLabel =
+      selectedOrg === 'all'
+        ? `${assignedOrgCount} organization${assignedOrgCount === 1 ? '' : 's'} assigned to you.`
+        : `${overviewOrgCount} organization${overviewOrgCount === 1 ? '' : 's'} in scope.`
 
     const alertCards = [
       {
@@ -468,10 +555,10 @@ export const PartnerDashboard: React.FC = () => {
     ]
 
     const activityMetrics = [
-      { label: 'Active members (30d)', value: metrics.activeMembers.toString(), icon: Users },
-      { label: 'Engagement rate', value: `${metrics.engagementRate}%`, icon: Gauge },
-      { label: 'New registrations (7d)', value: metrics.newRegistrations.toString(), icon: Sparkles },
-      { label: `Managed ${managedCompanyLabel}`, value: metrics.managedCompanies.toString(), icon: Building2 },
+      { label: 'Active members (30d)', value: overviewMetrics.activeMembers.toString(), icon: Users },
+      { label: 'Engagement rate', value: `${overviewMetrics.engagementRate}%`, icon: Gauge },
+      { label: 'New registrations (7d)', value: overviewMetrics.newRegistrations.toString(), icon: Sparkles },
+      { label: `Managed ${managedCompanyLabel}`, value: overviewMetrics.managedCompanies.toString(), icon: Building2 },
     ]
 
     const visibleNotifications = showAllNotifications ? groupedNotifications : groupedNotifications.slice(0, 4)
@@ -671,7 +758,7 @@ export const PartnerDashboard: React.FC = () => {
                         </Box>
                       ))
                     ) : (
-                      orgCards.slice(0, 4).map(company => {
+                      overviewOrgCards.slice(0, 4).map(company => {
                         const isHealthy = company.status === 'active'
                         const statusColor = isHealthy ? 'green' : 'orange'
                         return (
@@ -760,12 +847,12 @@ export const PartnerDashboard: React.FC = () => {
                     <Text fontWeight="bold" color="brand.text">Invite Learners</Text>
                   </HStack>
                   <Text fontSize="sm" color="brand.subtleText">
-                    {metrics.activeMembers === 0
+                    {overviewMetrics.activeMembers === 0
                       ? 'Kickstart engagement by inviting your first learner.'
                       : 'Bring new learners into your programs.'}
                   </Text>
                   <Button colorScheme="purple" onClick={() => setActivePage('users')}>
-                    {metrics.activeMembers === 0 ? 'Invite your first learner →' : 'Invite learners →'}
+                    {overviewMetrics.activeMembers === 0 ? 'Invite your first learner →' : 'Invite learners →'}
                   </Button>
                 </Stack>
               </CardBody>
@@ -779,7 +866,7 @@ export const PartnerDashboard: React.FC = () => {
                     <Text fontWeight="bold" color="brand.text">Manage Organizations</Text>
                   </HStack>
                   <Text fontSize="sm" color="brand.subtleText">
-                    {assignedOrgCount} organization{assignedOrgCount === 1 ? '' : 's'} assigned to you.
+                    {organizationScopeLabel}
                   </Text>
                   <Button variant="outline" colorScheme="purple" onClick={() => setActivePage('organization-management')}>
                     Manage Organization
@@ -844,19 +931,25 @@ export const PartnerDashboard: React.FC = () => {
                   {visibleNotifications.map((group) => {
                     const notification = group.latestNotification
                     // Extract learner ID only from explicit metadata fields (not from generic related_id)
-                    const learnerId =
+                    const rawLearnerId =
                       (notification.metadata as { learnerId?: string } | undefined)?.learnerId
+                    const learnerId = sanitizeRouteParam(rawLearnerId)
                     // Extract organization ID from metadata or fall back to related_id
-                    const organizationId =
+                    const rawOrganizationId =
                       (notification.metadata as { organizationId?: string } | undefined)?.organizationId
                       ?? notification.related_id
+                    const sanitizedOrganizationId = sanitizeRouteParam(rawOrganizationId)
+                    const organizationRoute =
+                      sanitizedOrganizationId
+                        ? organizationRouteLookup.get(sanitizedOrganizationId.toLowerCase())
+                        : null
                     // Only link to user if we have an explicit learnerId
                     const actionLink = learnerId
                       ? `/partner/user/${learnerId}`
-                      : organizationId
-                        ? `/partner/organization/${organizationId}`
+                      : organizationRoute
+                        ? `/partner/organization/${organizationRoute}`
                         : null
-                    const actionLabel = learnerId ? 'View learner' : organizationId ? 'View organization' : null
+                    const actionLabel = learnerId ? 'View learner' : organizationRoute ? 'View organization' : null
                     const timestamp = formatDistanceToNowSafe(notification.created_at, 'Just now', { addSuffix: true })
                     const isUnread = group.unreadCount > 0
                     const lowerTitle = group.title.toLowerCase()

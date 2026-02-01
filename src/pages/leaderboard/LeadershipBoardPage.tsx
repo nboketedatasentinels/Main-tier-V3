@@ -603,8 +603,14 @@ export const LeadershipBoardPage: React.FC = () => {
   }, [userBreakdown.length, breakdownPage])
 
   const getDisplayName = (user: UserProfile) => {
-    const name = user.fullName || `${user.firstName ?? ''} ${user.lastName ?? ''}`.trim()
-    return name || 'Unknown member'
+    const profile = user as UserProfile & { name?: string; displayName?: string; full_name?: string }
+    const name =
+      profile.fullName ||
+      profile.full_name ||
+      profile.name ||
+      profile.displayName ||
+      `${profile.firstName ?? ''} ${profile.lastName ?? ''}`.trim()
+    return name || profile.email || 'Member'
   }
 
   const getRankIcon = (rank: number) => {

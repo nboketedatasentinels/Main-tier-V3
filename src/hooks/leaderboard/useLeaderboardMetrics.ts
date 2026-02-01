@@ -149,8 +149,24 @@ export const useLeaderboardMetrics = ({
 
     const sorted = rows.sort((a, b) => {
       if (sortField === 'name') {
-        const aName = a.user.fullName || a.user.firstName
-        const bName = b.user.fullName || b.user.firstName
+        const aProfile = a.user as UserProfile & { name?: string; displayName?: string; full_name?: string }
+        const bProfile = b.user as UserProfile & { name?: string; displayName?: string; full_name?: string }
+        const aName =
+          aProfile.fullName ||
+          aProfile.full_name ||
+          aProfile.name ||
+          aProfile.displayName ||
+          `${aProfile.firstName ?? ''} ${aProfile.lastName ?? ''}`.trim() ||
+          aProfile.email ||
+          ''
+        const bName =
+          bProfile.fullName ||
+          bProfile.full_name ||
+          bProfile.name ||
+          bProfile.displayName ||
+          `${bProfile.firstName ?? ''} ${bProfile.lastName ?? ''}`.trim() ||
+          bProfile.email ||
+          ''
         return sortDirection === 'asc' ? aName.localeCompare(bName) : bName.localeCompare(aName)
       }
 
