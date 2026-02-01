@@ -14,11 +14,10 @@ import {
 type Props = {
   isOpen: boolean
   onClose: () => void
-  invitationCode: string
   inviteLink: string
 }
 
-export const VillageInviteCodeModal = ({ isOpen, onClose, invitationCode, inviteLink }: Props) => {
+export const VillageInviteCodeModal = ({ isOpen, onClose, inviteLink }: Props) => {
   const handleCopy = async (value: string) => {
     if (!navigator.clipboard) return
     await navigator.clipboard.writeText(value)
@@ -28,19 +27,12 @@ export const VillageInviteCodeModal = ({ isOpen, onClose, invitationCode, invite
     <Modal isOpen={isOpen} onClose={onClose} size="lg" isCentered>
       <ModalOverlay />
       <ModalContent>
-        <ModalHeader>Shareable invitation</ModalHeader>
+        <ModalHeader>Shareable invite link</ModalHeader>
         <ModalCloseButton />
         <ModalBody>
           <VStack align="start" spacing={3}>
-            <Text fontSize="sm">Invitation code</Text>
-            <Text fontSize="lg" fontWeight="bold" fontFamily="mono">
-              {invitationCode}
-            </Text>
-            <Button size="sm" variant="outline" onClick={() => handleCopy(invitationCode)}>
-              Copy code
-            </Button>
             <Text fontSize="sm" pt={2}>Invite link</Text>
-            <Text fontSize="xs" color="brand.subtleText">
+            <Text fontSize="xs" color="brand.subtleText" noOfLines={2}>
               {inviteLink}
             </Text>
             <Button size="sm" variant="outline" onClick={() => handleCopy(inviteLink)}>

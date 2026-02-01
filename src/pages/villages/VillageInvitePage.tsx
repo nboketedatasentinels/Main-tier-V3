@@ -192,7 +192,7 @@ export const VillageInvitePage = () => {
                 isDisabled={memberCount >= MEMBER_LIMIT}
                 isLoading={inviting}
               >
-                Generate shareable invite code
+                Generate shareable invite link
               </Button>
             </VStack>
           </CardBody>
@@ -216,7 +216,6 @@ export const VillageInvitePage = () => {
         <VillageInviteCodeModal
           isOpen={isCodeModalOpen}
           onClose={() => setIsCodeModalOpen(false)}
-          invitationCode={inviteCode}
           inviteLink={inviteLink}
         />
       )}
