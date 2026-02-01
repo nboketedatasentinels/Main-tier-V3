@@ -100,6 +100,7 @@ import { normalizeRole } from '@/utils/role'
 import { incrementOrganizationMemberCount, validateCompanyCode } from '@/services/organizationService'
 import { fetchVillageById, VillageSummary } from '@/services/villageService'
 import { listVillageInvitations } from '@/services/villageInvitationService'
+import { formatVillageInviteLink } from '@/config/app'
 import { CORE_VALUES } from '@/config/personality-data'
 import BadgeDisplay from '@/components/profile/BadgeDisplay'
 
@@ -296,6 +297,9 @@ export const ProfilePage: React.FC = () => {
   const [villageError, setVillageError] = useState<string | null>(null)
   const [pendingVillageInvites, setPendingVillageInvites] = useState(0)
   const [shareableInviteCode, setShareableInviteCode] = useState<string | null>(null)
+  const shareableInviteLink = useMemo(() => {
+    return shareableInviteCode ? formatVillageInviteLink(shareableInviteCode) : ''
+  }, [shareableInviteCode])
   const [isLeaveVillageOpen, setIsLeaveVillageOpen] = useState(false)
   const [isLeavingVillage, setIsLeavingVillage] = useState(false)
   const cancelLeaveRef = useRef<HTMLButtonElement | null>(null)
@@ -541,10 +545,9 @@ export const ProfilePage: React.FC = () => {
   }
 
   const handleCopyVillageInviteLink = async () => {
-    if (!shareableInviteCode) return
-    const inviteLink = `${window.location.origin}/app/villages/join/${shareableInviteCode}`
+    if (!shareableInviteLink) return
     if (navigator.clipboard) {
-      await navigator.clipboard.writeText(inviteLink)
+      await navigator.clipboard.writeText(shareableInviteLink)
       toast({
         title: 'Invite link copied',
         status: 'success',
@@ -1568,7 +1571,7 @@ export const ProfilePage: React.FC = () => {
                               {shareableInviteCode ? (
                                 <HStack spacing={2}>
                                   <Text fontSize="xs" color="brand.subtleText" noOfLines={1}>
-                                    {`${window.location.origin}/app/villages/join/${shareableInviteCode}`}
+                                    {shareableInviteLink}
                                   </Text>
                                   <Button size="xs" variant="outline" onClick={handleCopyVillageInviteLink}>
                                     Copy link
