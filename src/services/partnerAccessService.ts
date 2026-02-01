@@ -13,8 +13,8 @@ export const canPartnerAccessOrganization = async (
   )
   if (legacySnap.exists()) return true
 
-  // Check 2: Modern partners collection with assignedOrganizations array
-  const partnerSnap = await getDoc(doc(db, 'partners', partnerId))
+  // Check 2: Users collection with assignedOrganizations array
+  const partnerSnap = await getDoc(doc(db, 'users', partnerId))
   if (!partnerSnap.exists()) return false
 
   const data = partnerSnap.data() as {

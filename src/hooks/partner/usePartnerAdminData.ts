@@ -249,8 +249,8 @@ export const usePartnerAdminData = (
     setQueryAssignmentsLoading(true)
     setAssignmentsError(null)
 
-    // 1. Modern Source: partners/${partnerId} document
-    const partnerDocRef = doc(db, 'partners', partnerId)
+    // 1. Modern Source: users/${partnerId} document
+    const partnerDocRef = doc(db, 'users', partnerId)
 
     // 2. Legacy Source: partner_organizations collection where partnerId == partnerId
     const legacyQuery = query(
