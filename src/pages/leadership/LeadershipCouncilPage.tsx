@@ -61,6 +61,7 @@ import { format, formatDistanceToNow, isAfter, isValid, parseISO } from 'date-fn
 import { db } from '@/services/firebase'
 import { useAuth } from '@/hooks/useAuth'
 import { useOrganizationLeadership } from '@/hooks/useOrganizationLeadership'
+import { getDisplayName } from '@/utils/displayName'
 import type { UserProfileExtended } from '@/services/userProfileService'
 
 interface LeadershipProfile extends UserProfileExtended {
@@ -132,12 +133,8 @@ const initialsFromName = (name: string) => {
   return `${first.charAt(0)}${last.charAt(0)}`.toUpperCase()
 }
 
-const displayNameForProfile = (profile?: UserProfileExtended | null) => {
-  if (!profile) return 'Unknown'
-  const nameFromParts = `${profile.firstName ?? ''} ${profile.lastName ?? ''}`.trim()
-  const fullName = (profile.fullName || '').trim() || nameFromParts
-  return fullName || profile.email || 'Unknown'
-}
+const displayNameForProfile = (profile?: UserProfileExtended | null) =>
+  getDisplayName(profile, 'Member')
 
 const badgeColor = (status?: string) => {
   if (!status) return 'secondary'

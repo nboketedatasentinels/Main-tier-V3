@@ -5,6 +5,7 @@ import { UserEngagementMonitoringTab } from './tabs/UserEngagementMonitoringTab'
 import { LeadershipCouncil } from './LeadershipCouncil'
 import { listenToUsers, listenToOrganizations } from '@/services/superAdminService'
 import { OrganizationOption, ManagedUserRecord } from '@/services/userManagementService'
+import { getDisplayName } from '@/utils/displayName'
 
 const TAB_STORAGE_KEY = 'user-management-active-tab'
 
@@ -34,10 +35,13 @@ function useManagedUsers() {
             companyCode?: string
             companyName?: string
             membershipStatus?: string
+            full_name?: string
+            name?: string
+            displayName?: string
           }
           return {
             id: user.id,
-            name: user.fullName || `${user.firstName || ''} ${user.lastName || ''}`.trim() || 'Unknown',
+            name: getDisplayName(userData, 'Member'),
             email: user.email,
             role: user.role as any,
             membershipStatus: (userData.membershipStatus as 'free' | 'paid' | 'inactive') || 'free',

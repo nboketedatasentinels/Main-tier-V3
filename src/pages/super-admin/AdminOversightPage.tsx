@@ -46,6 +46,7 @@ import {
 } from '@/services/superAdminService'
 import { fetchAssignedOrganizations } from '@/services/organizationService'
 import { AdminFormData, AdminMetrics, AdminUserRecord, OrganizationRecord } from '@/types/admin'
+import { getDisplayName } from '@/utils/displayName'
 
 interface AdminOversightPageProps {
   adminName?: string
@@ -262,7 +263,7 @@ export const AdminOversightPage: React.FC<AdminOversightPageProps> = ({ adminNam
       }
       toast({
         title: `Assigned ${assignedNames.length} organization${assignedNames.length === 1 ? '' : 's'} to ${
-          selectedAdmin.fullName || 'partner'
+          getDisplayName(selectedAdmin, 'partner')
         }`,
         description: assignedNames.length
           ? `Assigned organizations: ${assignedNames.join(', ')}. The admin will see these organizations immediately if they're logged in.`
@@ -315,7 +316,7 @@ export const AdminOversightPage: React.FC<AdminOversightPageProps> = ({ adminNam
 
   const filteredAdmins = useMemo(() => {
     const base = admins.filter((admin) => {
-      const name = (admin.fullName || `${admin.firstName || ''} ${admin.lastName || ''}`.trim()).toLowerCase()
+      const name = getDisplayName(admin, 'Admin').toLowerCase()
       const email = (admin.email || '').toLowerCase()
       const matchesSearch =
         !debouncedSearch || name.includes(debouncedSearch) || email.includes(debouncedSearch)
@@ -342,7 +343,7 @@ export const AdminOversightPage: React.FC<AdminOversightPageProps> = ({ adminNam
         }
         case 'name':
         default:
-          return ((a.fullName || '').localeCompare(b.fullName || '')) * direction
+          return (getDisplayName(a, '').localeCompare(getDisplayName(b, ''))) * direction
       }
     })
 
@@ -389,7 +390,7 @@ export const AdminOversightPage: React.FC<AdminOversightPageProps> = ({ adminNam
     return filteredAdmins.map((admin) => (
       <Tr key={admin.id}>
         <Td>
-          <Text fontWeight="semibold">{admin.fullName || `${admin.firstName || ''} ${admin.lastName || ''}`.trim()}</Text>
+          <Text fontWeight="semibold">{getDisplayName(admin, 'Admin')}</Text>
         </Td>
         <Td>
           <Text color="gray.600" fontSize="sm">{admin.email || '—'}</Text>
@@ -607,7 +608,7 @@ export const AdminOversightPage: React.FC<AdminOversightPageProps> = ({ adminNam
         isOpen={deleteDialog.isOpen}
         onClose={deleteDialog.onClose}
         title="Delete Admin"
-        description={`Are you sure you want to delete ${adminToDelete?.fullName || 'this admin'}? This action cannot be undone.`}
+        description={`Are you sure you want to delete ${getDisplayName(adminToDelete, 'this admin')}? This action cannot be undone.`}
         onConfirm={confirmDelete}
         confirmLabel="Delete"
       />

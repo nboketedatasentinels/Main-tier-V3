@@ -97,6 +97,7 @@ import { useLeaderboardContext, getLeaderboardContextLabels } from '@/hooks/lead
 import { useLeaderboardData } from '@/hooks/leaderboard/useLeaderboardData'
 import { useLeaderboardMetrics } from '@/hooks/leaderboard/useLeaderboardMetrics'
 import { useUserActivityHistory } from '@/hooks/leaderboard/useUserActivityHistory'
+import { getDisplayName } from '@/utils/displayName'
 import { StartChallengeModal } from '@/components/modals/StartChallengeModal'
 import { format } from 'date-fns'
 
@@ -601,17 +602,6 @@ export const LeadershipBoardPage: React.FC = () => {
       setBreakdownPage(maxPage)
     }
   }, [userBreakdown.length, breakdownPage])
-
-  const getDisplayName = (user: UserProfile) => {
-    const profile = user as UserProfile & { name?: string; displayName?: string; full_name?: string }
-    const name =
-      profile.fullName ||
-      profile.full_name ||
-      profile.name ||
-      profile.displayName ||
-      `${profile.firstName ?? ''} ${profile.lastName ?? ''}`.trim()
-    return name || profile.email || 'Member'
-  }
 
   const getRankIcon = (rank: number) => {
     if (rank === 1) return <Icon as={Crown} color="accent.warning" />

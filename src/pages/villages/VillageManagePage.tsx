@@ -18,6 +18,7 @@ import { db } from '@/services/firebase'
 import { fetchVillageById, getVillageMembers, removeMemberFromVillage } from '@/services/villageService'
 import { VillageCapacityAlert } from '@/components/villages/VillageCapacityAlert'
 import { VillageMembersList } from '@/components/villages/VillageMembersList'
+import { getDisplayName } from '@/utils/displayName'
 import { RemoveMemberConfirmModal } from '@/components/villages/RemoveMemberConfirmModal'
 
 type Member = {
@@ -43,10 +44,7 @@ export const VillageManagePage = () => {
 
   const selectedMemberName = useMemo(
     () =>
-      selectedMember?.fullName ||
-      `${selectedMember?.firstName ?? ''} ${selectedMember?.lastName ?? ''}`.trim() ||
-      selectedMember?.email ||
-      'member',
+      getDisplayName(selectedMember, 'member'),
     [selectedMember],
   )
 

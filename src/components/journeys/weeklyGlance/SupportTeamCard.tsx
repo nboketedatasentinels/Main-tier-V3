@@ -14,6 +14,7 @@ import {
 import { CalendarClock, Mail, MessageCircle, Users } from 'lucide-react'
 import { Link } from 'react-router-dom'
 import { PeerMatch, SupportAssignment } from '@/hooks/useWeeklyGlanceData'
+import { getDisplayName } from '@/utils/displayName'
 
 interface SupportTeamCardProps {
   data: SupportAssignment | null
@@ -35,11 +36,6 @@ export const SupportTeamCard = ({ data, loading, peerMatches, peerMatchesLoading
     (message): message is string => Boolean(message),
   )
 
-  const getDisplayName = (profile: NonNullable<typeof mentorProfile>) => {
-    const name = profile.fullName || `${profile.firstName ?? ''} ${profile.lastName ?? ''}`.trim()
-    return name || profile.email || 'Unknown name'
-  }
-
   const getAvatarSrc = (profile: NonNullable<typeof mentorProfile>) => {
     return profile.avatarUrl || profile.photoURL || undefined
   }
@@ -55,11 +51,11 @@ export const SupportTeamCard = ({ data, loading, peerMatches, peerMatchesLoading
                 <VStack align="start" spacing={2} p={3} borderWidth="1px" borderColor="border.subtle" rounded="md">
                   <HStack spacing={3} w="100%" justify="space-between">
                     <HStack spacing={2}>
-                      <Avatar size="sm" name={getDisplayName(mentorProfile)} src={getAvatarSrc(mentorProfile)} />
+                      <Avatar size="sm" name={getDisplayName(mentorProfile, 'Member')} src={getAvatarSrc(mentorProfile)} />
                       <VStack spacing={0} align="start">
                         <Text fontSize="xs" color="text.secondary">Mentor</Text>
                         <Text fontWeight="semibold">
-                          {getDisplayName(mentorProfile)}
+                          {getDisplayName(mentorProfile, 'Member')}
                         </Text>
                       </VStack>
                     </HStack>
@@ -82,11 +78,11 @@ export const SupportTeamCard = ({ data, loading, peerMatches, peerMatchesLoading
                 <VStack align="start" spacing={2} p={3} borderWidth="1px" borderColor="border.subtle" rounded="md">
                   <HStack spacing={3} w="100%" justify="space-between">
                     <HStack spacing={2}>
-                      <Avatar size="sm" name={getDisplayName(ambassadorProfile)} src={getAvatarSrc(ambassadorProfile)} />
+                      <Avatar size="sm" name={getDisplayName(ambassadorProfile, 'Member')} src={getAvatarSrc(ambassadorProfile)} />
                       <VStack spacing={0} align="start">
                         <Text fontSize="xs" color="text.secondary">Ambassador</Text>
                         <Text fontWeight="semibold">
-                          {getDisplayName(ambassadorProfile)}
+                          {getDisplayName(ambassadorProfile, 'Member')}
                         </Text>
                       </VStack>
                     </HStack>
@@ -109,11 +105,11 @@ export const SupportTeamCard = ({ data, loading, peerMatches, peerMatchesLoading
                 <VStack align="start" spacing={2} p={3} borderWidth="1px" borderColor="border.subtle" rounded="md">
                   <HStack spacing={3} w="100%" justify="space-between">
                     <HStack spacing={2}>
-                      <Avatar size="sm" name={getDisplayName(mentorProfile)} src={getAvatarSrc(mentorProfile)} />
+                      <Avatar size="sm" name={getDisplayName(mentorProfile, 'Member')} src={getAvatarSrc(mentorProfile)} />
                       <VStack spacing={0} align="start">
                         <Text fontSize="xs" color="text.secondary">Mentor & Ambassador</Text>
                         <Text fontWeight="semibold">
-                          {getDisplayName(mentorProfile)}
+                          {getDisplayName(mentorProfile, 'Member')}
                         </Text>
                       </VStack>
                     </HStack>

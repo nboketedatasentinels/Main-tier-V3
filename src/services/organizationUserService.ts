@@ -1,5 +1,6 @@
 import { Timestamp, collection, doc, DocumentSnapshot, getDoc, getDocs, query, where } from 'firebase/firestore'
 import { type OrganizationStatistics, type OrganizationUserProfile } from '@/types/admin'
+import { getDisplayName, type DisplayNameInput } from '@/utils/displayName'
 import { db } from './firebase'
 
 // ============================================================================
@@ -227,12 +228,7 @@ export const fetchOrganizationUsers = async (
     const organizationId = data.organizationId || data.organization_id || null
     const companyCode = data.companyCode || data.company_code || null
     
-    const fullName =
-      data.fullName ||
-      data.name ||
-      [data.firstName, data.lastName].filter((value) => !!value).join(' ').trim() ||
-      data.email ||
-      'Unknown user'
+    const fullName = getDisplayName(data as DisplayNameInput, 'Member')
     
     const rawRole = data.role || 'learner'
     const role = rawRole.toLowerCase() as OrganizationUserProfile['role']
@@ -292,12 +288,7 @@ export const fetchOrganizationUsersForPartner = async (
 
     return {
       id: docSnap.id,
-      name:
-        data.fullName ||
-        data.name ||
-        [data.firstName, data.lastName].filter(Boolean).join(' ') ||
-        data.email ||
-        'Unknown user',
+      name: getDisplayName(data as DisplayNameInput, 'Member'),
       email: data.email ?? '',
       role: (data.role ?? 'learner').toLowerCase(),
       accountStatus: data.accountStatus ?? 'active',

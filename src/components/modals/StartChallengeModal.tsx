@@ -41,6 +41,7 @@ import {
   getDoc,
 } from 'firebase/firestore';
 import { UserProfile, Organization } from '@/types';
+import { getDisplayName } from '@/utils/displayName';
 
 
 // --- INTERFACES ---
@@ -205,7 +206,7 @@ export const StartChallengeModal: React.FC<StartChallengeModalProps> = ({
         const p = member as unknown as UserProfile;
         return ({
         id: p.id,
-        name: p.fullName || `${p.firstName || ''} ${p.lastName || ''}`.trim(),
+        name: getDisplayName(p, 'Member'),
         email: p.email,
         points: p.totalPoints || 0,
         recommended: false,
@@ -301,15 +302,6 @@ export const StartChallengeModal: React.FC<StartChallengeModalProps> = ({
         throw new Error('Opponent profile could not be loaded.');
       }
 
-      const getDisplayName = (u: UserProfile) => {
-        return (
-          u.fullName ||
-          `${u.firstName || ''} ${u.lastName || ''}`.trim() ||
-          u.email?.split('@')[0] ||
-          'Unknown member'
-        );
-      };
-
       // FIX: Use the new organization matching function that handles ID/code mismatches
       if (!areProfilesInSameOrg(challenger, challenged)) {
         const challengerOrganizationCode = getProfileOrganizationCode(challenger);
@@ -362,9 +354,9 @@ export const StartChallengeModal: React.FC<StartChallengeModalProps> = ({
       const challengerOrganizationCode = getProfileOrganizationCode(challenger);
       const challengeData = {
         challenger_id: challenger.id,
-        challenger_name: getDisplayName(challenger),
+        challenger_name: getDisplayName(challenger, 'Member'),
         challenged_id: challenged.id,
-        challenged_name: getDisplayName(challenged),
+        challenged_name: getDisplayName(challenged, 'Member'),
         // Store BOTH identifiers to support queries by either
         company_id: company?.id || challenger.companyId || challenger.organizationId || null,
         company_code: company?.code || challenger.companyCode || challengerOrganizationCode || null,
