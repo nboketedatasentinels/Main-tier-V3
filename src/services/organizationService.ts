@@ -34,6 +34,7 @@ import {
   resolveDurationWeeksFromProgramDuration,
   resolveJourneyType,
 } from '@/utils/journeyType'
+import { removeUndefinedFields } from '@/utils/firestore'
 import { inviteUsersBulk } from './invitationService'
 import {
   syncOrganizationPartnerChange,
@@ -523,19 +524,23 @@ export const logOrganizationAccessAttempt = async ({
   metadata,
 }: OrganizationAccessAttemptPayload) => {
   if (!userId) return
-  await addDoc(adminActivityCollection, {
+  const sanitizedMetadata = removeUndefinedFields({
+    organizationId,
+    reason,
+    ...metadata,
+  }) as Record<string, unknown> | undefined
+
+  const auditEntry = removeUndefinedFields({
     action: 'organization_access_attempt',
     adminId: userId,
     userId,
     organizationCode,
     severity: 'watch',
-    metadata: {
-      organizationId,
-      reason,
-      ...metadata,
-    },
+    metadata: sanitizedMetadata,
     createdAt: serverTimestamp(),
-  })
+  }) as Record<string, unknown>
+
+  await addDoc(adminActivityCollection, auditEntry)
 }
 
 export const fetchOrganizationByCode = async (organizationCode: string): Promise<OrganizationRecord | null> => {
