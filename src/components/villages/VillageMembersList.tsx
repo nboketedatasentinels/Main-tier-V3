@@ -19,7 +19,7 @@ type Props = {
   onRemove?: (member: Member) => void
 }
 
-export const VillageMembersList = ({ members, creatorId, onRemove }: Props) => {
+export const VillageMembersList = ({ members, creatorId, canRemoveMembers = false, onRemove }: Props) => {
   if (members.length === 0) {
     return <Text fontSize="sm" color="brand.subtleText">No members found.</Text>
   }
