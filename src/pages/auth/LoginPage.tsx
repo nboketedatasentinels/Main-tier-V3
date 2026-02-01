@@ -1,12 +1,15 @@
 import React, { useState, useEffect } from 'react'
 import { useNavigate, Link as RouterLink, useSearchParams } from 'react-router-dom'
 import { motion } from 'framer-motion'
-import { ArrowLeft, CheckCircle2 } from 'lucide-react'
+import { ArrowLeft, CheckCircle2, Eye, EyeOff } from 'lucide-react'
 import {
   VStack,
   FormControl,
   FormLabel,
   Input,
+  InputGroup,
+  InputRightElement,
+  IconButton,
   Button,
   Text,
   Link,
@@ -43,6 +46,7 @@ export const LoginPage: React.FC = () => {
 
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
+  const [showPassword, setShowPassword] = useState(false)
   const [loading, setLoading] = useState(false)
   const [googleLoading, setGoogleLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -337,16 +341,30 @@ export const LoginPage: React.FC = () => {
 
           <FormControl isRequired>
             <FormLabel color="text.primary">Password</FormLabel>
-            <Input
-              type="password"
-              value={password}
-              onChange={e => setPassword(e.target.value)}
-              placeholder="••••••••"
-              bg="surface.default"
-              borderColor="border.subtle"
-              color="text.primary"
-              _placeholder={{ color: 'text.muted' }}
-            />
+            <InputGroup>
+              <Input
+                type={showPassword ? 'text' : 'password'}
+                value={password}
+                onChange={e => setPassword(e.target.value)}
+                placeholder="••••••••"
+                bg="surface.default"
+                borderColor="border.subtle"
+                color="text.primary"
+                _placeholder={{ color: 'text.muted' }}
+                pr="3rem"
+              />
+              <InputRightElement width="3rem">
+                <IconButton
+                  aria-label={showPassword ? 'Hide password' : 'Show password'}
+                  icon={showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setShowPassword(prev => !prev)}
+                  onMouseDown={event => event.preventDefault()}
+                  color="text.secondary"
+                />
+              </InputRightElement>
+            </InputGroup>
           </FormControl>
 
           <Button
