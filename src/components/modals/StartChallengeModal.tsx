@@ -42,6 +42,7 @@ import {
 } from 'firebase/firestore';
 import { UserProfile, Organization } from '@/types';
 import { getDisplayName } from '@/utils/displayName';
+import { getVillageMembers } from '@/services/villageService';
 
 
 // --- INTERFACES ---
@@ -85,6 +86,11 @@ const getProfileOrganizationCode = (profile: UserProfile): string | null => {
 
 const areProfilesInSameOrg = (profile1: UserProfile | null, profile2: UserProfile | null): boolean => {
   if (!profile1 || !profile2) return false;
+
+  if (profile1.villageId && profile2.villageId && profile1.villageId === profile2.villageId) {
+    console.log('[Challenge] ✔️ Match via village:', profile1.villageId);
+    return true;
+  }
 
   // Collect all organization identifiers for each profile
   const getOrgIdentifiers = (profile: UserProfile): Set<string> => {
@@ -189,29 +195,39 @@ export const StartChallengeModal: React.FC<StartChallengeModalProps> = ({
   const { user, profile } = useAuth();
 
   // --- DATA FETCHING ---
+  const buildUserOptions = (members: Record<string, unknown>[]) => {
+    return members.map((member) => {
+      const p = member as UserProfile;
+      return {
+        id: p.id,
+        name: getDisplayName(p, 'Member'),
+        email: p.email,
+        points: p.totalPoints || 0,
+        recommended: false,
+      };
+    });
+  };
+
   const fetchPotentialOpponents = useCallback(async () => {
     if (!user) return;
     setLoading(true);
     setError(null);
     try {
       const orgScope = getOrgScope(profile);
-      if (!orgScope.isValid) {
+      let userOptions: UserOption[] = [];
+
+      if (orgScope.isValid) {
+        const members = await fetchOrgMembers(db, orgScope, user.uid);
+        userOptions = buildUserOptions(members);
+      } else if (profile?.villageId) {
+        const villageMembers = await getVillageMembers(profile.villageId);
+        const villageOptions = buildUserOptions(villageMembers.filter((member) => member.id !== user.uid));
+        userOptions = villageOptions;
+      } else {
         setUsers([]);
-        setError('Organization details are missing. Please refresh your profile.');
+        setError('You have to be a part of an organisation to start a challenge');
         return;
       }
-
-      const members = await fetchOrgMembers(db, orgScope, user.uid);
-      const userOptions: UserOption[] = members.map((member) => {
-        const p = member as unknown as UserProfile;
-        return ({
-        id: p.id,
-        name: getDisplayName(p, 'Member'),
-        email: p.email,
-        points: p.totalPoints || 0,
-        recommended: false,
-        });
-      });
 
       if (userOptions.length === 0) {
         setError('No users available to challenge right now.');
