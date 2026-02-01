@@ -20,6 +20,7 @@ import { VillageCapacityAlert } from '@/components/villages/VillageCapacityAlert
 import { VillageMembersList } from '@/components/villages/VillageMembersList'
 import { getDisplayName } from '@/utils/displayName'
 import { RemoveMemberConfirmModal } from '@/components/villages/RemoveMemberConfirmModal'
+import { useAuth } from '@/hooks/useAuth'
 
 type Member = {
   id: string
@@ -35,6 +36,7 @@ export const VillageManagePage = () => {
   const { villageId } = useParams()
   const navigate = useNavigate()
   const toast = useToast()
+  const { profile } = useAuth()
   const [loading, setLoading] = useState(true)
   const [memberCount, setMemberCount] = useState(0)
   const [creatorId, setCreatorId] = useState<string | undefined>(undefined)
@@ -47,6 +49,8 @@ export const VillageManagePage = () => {
       getDisplayName(selectedMember, 'member'),
     [selectedMember],
   )
+
+  const isVillageCreator = Boolean(creatorId && profile?.id === creatorId)
 
   const loadMembers = async () => {
     if (!villageId) return
@@ -133,7 +137,8 @@ export const VillageManagePage = () => {
             <VillageMembersList
               members={members}
               creatorId={creatorId}
-              onRemove={(member) => setSelectedMember(member)}
+              canRemoveMembers={isVillageCreator}
+              onRemove={isVillageCreator ? (member) => setSelectedMember(member) : undefined}
             />
           </CardBody>
         </Card>

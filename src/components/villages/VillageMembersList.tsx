@@ -15,7 +15,8 @@ type Member = {
 type Props = {
   members: Member[]
   creatorId?: string
-  onRemove: (member: Member) => void
+  canRemoveMembers?: boolean
+  onRemove?: (member: Member) => void
 }
 
 export const VillageMembersList = ({ members, creatorId, onRemove }: Props) => {
@@ -38,7 +39,7 @@ export const VillageMembersList = ({ members, creatorId, onRemove }: Props) => {
                   <Text fontSize="xs" color="brand.subtleText">{member.email}</Text>
                 </VStack>
               </HStack>
-              {!isCreator && (
+              {canRemoveMembers && !isCreator && onRemove && (
                 <Button size="xs" variant="outline" colorScheme="red" onClick={() => onRemove(member)}>
                   Remove
                 </Button>

@@ -21,16 +21,22 @@ export const VillageCreatorRoute = ({ children }: Props) => {
         setAllowed(false)
         return
       }
-      if (profile.villageId && profile.villageId !== villageId) {
+
+      const normalizedVillageId = villageId.trim()
+      const profileVillageId = profile.villageId?.trim()
+
+      if (!normalizedVillageId || !profileVillageId || profileVillageId !== normalizedVillageId) {
         setAllowed(false)
         return
       }
-      const village = await fetchVillageById(villageId)
+
+      const village = await fetchVillageById(normalizedVillageId)
       if (!village) {
         setAllowed(false)
         return
       }
-      setAllowed(village.creatorId === profile.id)
+
+      setAllowed(true)
     }
 
     void checkAccess()
