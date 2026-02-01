@@ -109,9 +109,9 @@ export const usePartnerAdminSnapshot = (options: UsePartnerAdminSnapshotOptions 
     setQueryLoading(true)
     setError(null)
 
-    // 1. Listen to the partner document (Legacy source)
+    // 1. Listen to the user document for assigned organizations
     const unsubscribeDoc = onSnapshot(
-      doc(db, 'partners', user.uid),
+      doc(db, 'users', user.uid),
       (docSnap) => {
         if (!docSnap.exists()) {
           setAssignmentsFromDoc([])

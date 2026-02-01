@@ -76,6 +76,7 @@ import { auth, db } from '@/services/firebase'
 import { useAuth } from '@/hooks/useAuth'
 import { StartChallengeModal } from '@/components/modals/StartChallengeModal'
 import { fetchOrgMembers, getOrgScope } from '@/utils/organizationScope'
+import { getDisplayName } from '@/utils/displayName'
 import {
   createPeerSession,
   confirmSession,
@@ -576,11 +577,14 @@ export const PeerConnectPage: React.FC = () => {
 
       // Subscribe to invitations in real-time
       unsubscribeInvites = subscribeToUserInvitations(user.uid, (inviteData) => {
-        const mappedInvites: Invitation[] = inviteData.map((invite) => ({
-          id: invite.id,
-          fromName: invite.fromName || 'Peer',
-          fromEmail: invite.fromEmail || 'peer@example.com',
-        }))
+        const mappedInvites: Invitation[] = inviteData.map((invite) => {
+          const email = typeof invite.fromEmail === 'string' ? invite.fromEmail : ''
+          return {
+            id: invite.id,
+            fromName: getDisplayName({ name: invite.fromName, email }, 'Peer'),
+            fromEmail: email || 'peer@example.com',
+          }
+        })
         setPendingInvites(mappedInvites)
       })
     }
@@ -626,24 +630,23 @@ export const PeerConnectPage: React.FC = () => {
 
         await debugOrgFetch(db, profile, user?.uid ?? '')
         const members = await fetchOrgMembers(db, orgScope, user?.uid ?? '')
-        const mappedPeers = members.map((data) => ({
-          id: String(data.id),
-          name: String(
-            data.fullName
-              || `${data.firstName || ''} ${data.lastName || ''}`.trim()
-              || 'Unnamed User',
-          ),
-          email: String(data.email || ''),
-          timezone: data.timezone as PeerProfile['timezone'],
-          interests: data.interests as PeerProfile['interests'],
-          goals: data.goals as PeerProfile['goals'],
-          companyCode: typeof data.companyCode === 'string' ? data.companyCode : undefined,
-          corporateVillageId: data.corporateVillageId as PeerProfile['corporateVillageId'],
-          cohortIdentifier: data.cohortIdentifier as PeerProfile['cohortIdentifier'],
-          calendarLink: data.calendarLink as PeerProfile['calendarLink'],
-          identityTag: data.identityTag as PeerProfile['identityTag'],
-          avatarUrl: data.avatarUrl as PeerProfile['avatarUrl'],
-        }))
+        const mappedPeers = members.map((data) => {
+          const email = typeof data.email === 'string' ? data.email : ''
+          return {
+            id: String(data.id),
+            name: getDisplayName({ ...data, email }, 'Member'),
+            email,
+            timezone: data.timezone as PeerProfile['timezone'],
+            interests: data.interests as PeerProfile['interests'],
+            goals: data.goals as PeerProfile['goals'],
+            companyCode: typeof data.companyCode === 'string' ? data.companyCode : undefined,
+            corporateVillageId: data.corporateVillageId as PeerProfile['corporateVillageId'],
+            cohortIdentifier: data.cohortIdentifier as PeerProfile['cohortIdentifier'],
+            calendarLink: data.calendarLink as PeerProfile['calendarLink'],
+            identityTag: data.identityTag as PeerProfile['identityTag'],
+            avatarUrl: data.avatarUrl as PeerProfile['avatarUrl'],
+          }
+        })
         setAvailablePeers(mappedPeers)
       } catch (error: unknown) {
         console.error('Error fetching peers', error)
@@ -777,6 +780,13 @@ export const PeerConnectPage: React.FC = () => {
     }
     return `Deterministic selection refreshes ${matchPreferences.refreshPreference === 'biweekly' ? 'every two weeks' : 'weekly'} based on your preferred day.`
   }, [matchPreferences.refreshPreference])
+
+  const peerDisplayName = useMemo(() => {
+    if (!weeklyMatch) return 'Peer'
+    return getDisplayName(weeklyMatch.peer, 'Peer')
+  }, [weeklyMatch])
+
+  const senderDisplayName = useMemo(() => getDisplayName(profile, 'Your peer'), [profile])
 
   const confirmMeeting = async (sessionId: string) => {
     if (!user) return
@@ -1071,10 +1081,10 @@ export const PeerConnectPage: React.FC = () => {
                     {weeklyMatch ? (
                       <Flex gap={4} align={{ base: 'flex-start', md: 'center' }} direction={{ base: 'column', md: 'row' }}>
                         <HStack spacing={3} flex={1}>
-                          <Avatar name={weeklyMatch.peer.name} src={weeklyMatch.peer.avatarUrl} size="md" />
+                          <Avatar name={peerDisplayName} src={weeklyMatch.peer.avatarUrl} size="md" />
                           <Stack spacing={0}>
                             <Text fontWeight="semibold" color="brand.text">
-                              {weeklyMatch.peer.name}
+                              {peerDisplayName}
                             </Text>
                             <Text fontSize="sm" color="brand.subtleText">
                               {weeklyMatch.peer.email}
@@ -1098,7 +1108,7 @@ export const PeerConnectPage: React.FC = () => {
                           <Button
                             as="a"
                             href={`mailto:${weeklyMatch.peer.email}?subject=${encodeURIComponent(`Peer Match for ${matchWindow.label}`)}&body=${encodeURIComponent(
-                              `Hi ${weeklyMatch.peer.name},%0D%0A%0D%0AWe were paired for this match window (${matchWindow.label}). I'd love to lock in a time to connect. Feel free to grab a slot on my calendar or reply with your availability.%0D%0A%0D%0A- ${profile?.fullName || 'Your peer'}`
+                              `Hi ${peerDisplayName},%0D%0A%0D%0AWe were paired for this match window (${matchWindow.label}). I'd love to lock in a time to connect. Feel free to grab a slot on my calendar or reply with your availability.%0D%0A%0D%0A- ${senderDisplayName}`
                             )}`}
                             leftIcon={<Mail size={18} />}
                             colorScheme="primary"

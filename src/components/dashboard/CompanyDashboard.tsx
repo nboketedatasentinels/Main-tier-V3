@@ -63,6 +63,7 @@ import { db } from '@/services/firebase'
 import { useAuth } from '@/hooks/useAuth'
 import { useOrganizationLeadership } from '@/hooks/useOrganizationLeadership'
 import { isFreeUser } from '@/utils/membership'
+import { getDisplayName } from '@/utils/displayName'
 
 interface WeeklyAggregation {
   id: string
@@ -156,7 +157,7 @@ const buildSupportLead = (
   } | null,
 ): SupportLeadSummary | null => {
   if (!profile) return null
-  const name = profile.fullName || `${profile.firstName ?? ''} ${profile.lastName ?? ''}`.trim() || profile.email || 'Unknown'
+  const name = getDisplayName(profile, 'Support lead')
   return {
     name,
     email: profile.email,
@@ -289,7 +290,11 @@ export const CompanyDashboard: React.FC = () => {
     profile?.companyCode
       ? [where('company_code', '==', profile.companyCode), orderBy('total_points', 'desc'), limit(10)]
       : [],
-    (id, data) => ({ id, name: data.name || 'Teammate', totalPoints: data.total_points || 0 }),
+    (id, data) => ({
+      id,
+      name: getDisplayName(data, 'Teammate'),
+      totalPoints: data.total_points || 0,
+    }),
   )
 
   const { data: faqEntries } = useRealtimeCollection<FAQEntry>(

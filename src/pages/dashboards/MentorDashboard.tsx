@@ -74,6 +74,7 @@ import {
   type RiskLevel,
 } from '@/services/mentorDashboardService'
 import { buildMentorNavItems, type NavigationSection } from '@/utils/navigationItems'
+import { getDisplayName } from '@/utils/displayName'
 
 interface DashboardMentee extends AssignedMentee {
   name: string
@@ -267,11 +268,7 @@ export const MentorDashboard: React.FC = () => {
   const menteeDirectory: DashboardMentee[] = useMemo(
     () =>
       mentees.map((mentee) => {
-        const name =
-          mentee.fullName?.trim() ||
-          `${mentee.firstName || ''} ${mentee.lastName || ''}`.trim() ||
-          mentee.email ||
-          'Mentee'
+        const name = getDisplayName(mentee, 'Mentee')
         const company = mentee.companyName || mentee.companyCode || mentee.assignedOrganizations?.[0] || 'Independent'
         const program = mentee.transformationTier?.toString().replace(/_/g, ' ') || 'Mentorship'
         const programDuration = mentee.cohortIdentifier || mentee.dashboardPreferences?.defaultRoute || '—'

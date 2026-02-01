@@ -5,6 +5,7 @@ import {
   PointsTransaction,
 } from './useLeaderboardData'
 import { LeaderboardContext, normalizeLeaderboardTier } from './useLeaderboardContext'
+import { getDisplayName } from '@/utils/displayName'
 
 export interface LeaderboardRow {
   user: UserProfile
@@ -149,8 +150,8 @@ export const useLeaderboardMetrics = ({
 
     const sorted = rows.sort((a, b) => {
       if (sortField === 'name') {
-        const aName = a.user.fullName || a.user.firstName
-        const bName = b.user.fullName || b.user.firstName
+        const aName = getDisplayName(a.user, '')
+        const bName = getDisplayName(b.user, '')
         return sortDirection === 'asc' ? aName.localeCompare(bName) : bName.localeCompare(aName)
       }
 
