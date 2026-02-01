@@ -174,17 +174,24 @@ const statusColorMap: Record<ProfileData['accountStatus'], string> = {
   pending: 'yellow',
 }
 
-const membershipCopy: Record<ProfileData['membershipStatus'], { title: string; description: string; badge: string }> = {
+const membershipCopy: Record<ProfileData['membershipStatus'], { title: string; description: string; badge: string; statusMessage: string }> = {
   paid: {
     title: 'Paid Membership',
     description: 'Full access to all features and content',
     badge: 'Active',
+    statusMessage: 'You have a paid membership with access to every benefit on the platform.',
   },
   free: {
     title: 'Free Account',
     description: 'Limited access to basic features',
     badge: 'Limited',
+    statusMessage: 'You are on the free tier; upgrade to unlock everything shown in the comparison below.',
   },
+}
+
+const membershipTagColor: Record<ProfileData['membershipStatus'], string> = {
+  paid: 'green',
+  free: 'purple',
 }
 
 const matchRefreshOptions: Array<{ label: string; value: NonNullable<ProfileData['matchRefreshPreference']> }> = [
@@ -2164,16 +2171,6 @@ export const ProfilePage: React.FC = () => {
           </TabPanel>
 
           <TabPanel px={0}>
-            <Box maxW="700px" mx="auto">
-              <HStack spacing={2} fontSize="sm" color="brand.subtleText" mb={4}>
-                <Button variant="link" size="sm" onClick={() => navigate('/app/leaderboard')}>
-                  Dashboard
-                </Button>
-                <Text>/</Text>
-                <Text color="brand.text">Membership</Text>
-              </HStack>
-            </Box>
-
             <VStack spacing={6} align="stretch" maxW="700px" mx="auto">
               <Card borderColor="brand.border" boxShadow="card">
                 <CardBody>
@@ -2184,58 +2181,60 @@ export const ProfilePage: React.FC = () => {
                         {membershipCopy[profileData.membershipStatus].description}
                       </Text>
                     </Box>
+                    <Tag size="sm" colorScheme={membershipTagColor[profileData.membershipStatus]}>
+                      {membershipCopy[profileData.membershipStatus].badge}
+                    </Tag>
                   </Flex>
+                  <Text mt={3} fontSize="sm" color="brand.text">
+                    {membershipCopy[profileData.membershipStatus].statusMessage}
+                  </Text>
                 </CardBody>
               </Card>
 
-              <Card borderColor="brand.border" boxShadow="card">
-                <CardHeader>
-                  <Text fontWeight="semibold" fontSize="lg">Feature Comparison</Text>
-                </CardHeader>
-                <CardBody>
-                  <Grid templateColumns={{ base: '2fr 1fr 1fr' }} gap={3} fontWeight="semibold" mb={2}>
-                    <Text>Feature</Text>
-                    <Text textAlign="center">Free</Text>
-                    <Text textAlign="center" bg="purple.50" color="brand.text" rounded="md" py={1}>
-                      Paid
-                    </Text>
-                  </Grid>
-                  {[{
-                    label: 'Orientation Content',
-                    free: true,
-                    paid: true,
-                  },
-                  { label: 'Points Tracking', free: true, paid: true },
-                  { label: 'Weekly Activities', free: false, paid: true },
-                  { label: 'Learning Clusters', free: false, paid: true },
-                  { label: 'Transformation Partner', free: false, paid: true },
-                  { label: 'Live Sessions', free: false, paid: true },
-                  { label: 'Certification', free: false, paid: true }].map((row) => (
-                    <Grid templateColumns={{ base: '2fr 1fr 1fr' }} gap={3} alignItems="center" py={2} key={row.label} borderBottom="1px solid" borderColor="brand.border">
-                      <Text fontWeight="medium">{row.label}</Text>
-                      <Center>
-                        <Icon as={Check} color={row.free ? 'green.500' : 'gray.300'} />
-                      </Center>
-                      <Center bg="purple.50" rounded="md" py={2}>
-                        <Icon as={Check} color={row.paid ? 'green.500' : 'gray.300'} />
-                      </Center>
+              {profileData.membershipStatus === 'free' && (
+                <Card borderColor="brand.border" boxShadow="card">
+                  <CardHeader>
+                    <Text fontWeight="semibold" fontSize="lg">Feature Comparison</Text>
+                  </CardHeader>
+                  <CardBody>
+                    <Grid templateColumns={{ base: '2fr 1fr 1fr' }} gap={3} fontWeight="semibold" mb={2}>
+                      <Text>Feature</Text>
+                      <Text textAlign="center">Free</Text>
+                      <Text textAlign="center" bg="purple.50" color="brand.text" rounded="md" py={1}>
+                        Paid
+                      </Text>
                     </Grid>
-                  ))}
-                  {profileData.membershipStatus === 'free' && (
+                    {[{
+                      label: 'Orientation Content',
+                      free: true,
+                      paid: true,
+                    },
+                    { label: 'Points Tracking', free: true, paid: true },
+                    { label: 'Weekly Activities', free: false, paid: true },
+                    { label: 'Learning Clusters', free: false, paid: true },
+                    { label: 'Transformation Partner', free: false, paid: true },
+                    { label: 'Live Sessions', free: false, paid: true },
+                    { label: 'Certification', free: false, paid: true }].map((row) => (
+                      <Grid templateColumns={{ base: '2fr 1fr 1fr' }} gap={3} alignItems="center" py={2} key={row.label} borderBottom="1px solid" borderColor="brand.border">
+                        <Text fontWeight="medium">{row.label}</Text>
+                        <Center>
+                          <Icon as={Check} color={row.free ? 'green.500' : 'gray.300'} />
+                        </Center>
+                        <Center bg="purple.50" rounded="md" py={2}>
+                          <Icon as={Check} color={row.paid ? 'green.500' : 'gray.300'} />
+                        </Center>
+                      </Grid>
+                    ))}
                     <Center mt={4}>
                       <Button leftIcon={<Lock size={16} />} onClick={handleUpgrade}>
                         Upgrade to Full Access
                       </Button>
                     </Center>
-                  )}
-                </CardBody>
-              </Card>
-
-              {profileData.membershipStatus === 'paid' ? (
-                <PaymentHistory hasRecords />
-              ) : (
-                <PaymentHistory hasRecords={false} />
+                  </CardBody>
+                </Card>
               )}
+
+              <PaymentHistory hasRecords={profileData.membershipStatus === 'paid'} />
             </VStack>
           </TabPanel>
         </TabPanels>
