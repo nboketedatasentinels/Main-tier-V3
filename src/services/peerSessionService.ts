@@ -117,8 +117,11 @@ const resolveMeetingLink = (data: DocumentData): string | undefined => {
 
 const parseSessionDoc = (docSnap: QueryDocumentSnapshot<DocumentData>): PeerSession | null => {
   const data = docSnap.data()
-  const scheduledAt = coerceDate(data.scheduledAt ?? data.scheduled_at)
-  if (!scheduledAt) return null
+  let scheduledAt = coerceDate(data.scheduledAt ?? data.scheduled_at)
+  if (!scheduledAt) {
+    console.warn('[PeerSessionService] Session missing scheduledAt; defaulting to now', { sessionId: docSnap.id })
+    scheduledAt = new Date()
+  }
 
   const confirmationDeadline =
     coerceDate(data.confirmationDeadline ?? data.confirmation_deadline) ?? addDays(scheduledAt, -1)
