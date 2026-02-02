@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+﻿import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import {
   Avatar,
   Badge,
@@ -87,6 +87,7 @@ import {
   subscribeToUserSessions,
   subscribeToUserInvitations,
 } from '@/services/peerSessionService'
+import type { PeerSession as ServicePeerSession } from '@/services/peerSessionService'
 import { DateTimePicker } from '@/components/scheduling/DateTimePicker'
 
 // Types
@@ -133,6 +134,33 @@ type PeerSession = {
   confirmationDeadline: Date
   youConfirmed: boolean
   peerConfirmed: boolean
+}
+
+const mapServiceSessionToPeerSession = (
+  session: ServicePeerSession,
+  options?: { currentUserId?: string; timezoneFallback?: string },
+): PeerSession => {
+  const currentUserId = options?.currentUserId
+  const timezone = session.timezone || options?.timezoneFallback || 'UTC'
+  const confirmations = session.confirmations || {}
+
+  const youConfirmed = currentUserId ? Boolean(confirmations[currentUserId]) : false
+  const peerConfirmed = Object.entries(confirmations).some(
+    ([participantId, confirmed]) => participantId !== currentUserId && confirmed,
+  )
+
+  return {
+    id: session.id,
+    title: session.title || 'Weekly Peer Date',
+    scheduledAt: session.scheduledAt,
+    timezone,
+    platform: session.platform,
+    link: session.meetingLink,
+    status: session.status as PeerSession['status'],
+    confirmationDeadline: session.confirmationDeadline,
+    youConfirmed,
+    peerConfirmed,
+  }
 }
 
 type Invitation = {
@@ -216,7 +244,7 @@ const addDaysUtc = (date: Date, days: number) => {
 const debugOrgFetch = async (dbInstance: typeof db, profile: DebugOrgProfile | null, userId: string) => {
   const scope = getOrgScope(profile)
 
-  console.group('🧪 ORG FETCH DEBUG')
+  console.group('ðŸ§ª ORG FETCH DEBUG')
   console.log('userId', userId)
   console.log('profile.id', profile?.id)
   console.log('profile.companyId', profile?.companyId)
@@ -226,12 +254,12 @@ const debugOrgFetch = async (dbInstance: typeof db, profile: DebugOrgProfile | n
   try {
     const sanitySnap = await getDocs(query(collection(dbInstance, 'profiles'), limit(3)))
     console.log(
-      'profiles collection readable ✅ sample:',
+      'profiles collection readable âœ… sample:',
       sanitySnap.docs.map((docSnap) => docSnap.id),
     )
   } catch (error: unknown) {
     const errorInfo = error && typeof error === 'object' ? (error as { code?: string; message?: string }) : undefined
-    console.error('profiles collection NOT readable ❌', errorInfo?.code, errorInfo?.message)
+    console.error('profiles collection NOT readable âŒ', errorInfo?.code, errorInfo?.message)
   }
 
   if (!scope.isValid) {
@@ -540,7 +568,14 @@ export const PeerConnectPage: React.FC = () => {
         fetchUserSessions(user.uid),
         fetchUserInvitations(user.uid),
       ])
-      setSessions(initialSessions)
+      setSessions(
+        initialSessions.map((session) =>
+          mapServiceSessionToPeerSession(session, {
+            currentUserId: user?.uid,
+            timezoneFallback: profile?.timezone,
+          }),
+        ),
+      )
       setPendingInvites(
         initialInvites.map((invite) => ({
           id: invite.id,
@@ -551,7 +586,7 @@ export const PeerConnectPage: React.FC = () => {
     } catch (error) {
       console.warn('[PeerConnect] Initial session/invite fetch failed:', error)
     }
-  }, [user])
+  }, [user, profile?.timezone])
 
   // Real-time subscription for sessions and invitations
   useEffect(() => {
@@ -580,18 +615,12 @@ export const PeerConnectPage: React.FC = () => {
       setLoadingSessions(true)
 
       unsubscribeSessions = subscribeToUserSessions(user.uid, (sessionData) => {
-        const mappedSessions: PeerSession[] = sessionData.map((session) => ({
-          id: session.id,
-          title: session.title || 'Weekly Peer Date',
-          scheduledAt: session.scheduledAt,
-          timezone: session.timezone || profile?.timezone || 'UTC',
-          platform: session.platform as PeerSession['platform'],
-          link: session.meetingLink,
-          status: session.status as PeerSession['status'],
-          confirmationDeadline: session.confirmationDeadline,
-          youConfirmed: Boolean(session.confirmations?.[user.uid]),
-          peerConfirmed: Object.keys(session.confirmations || {}).filter((k) => k !== user.uid).some((k) => session.confirmations[k]),
-        }))
+        const mappedSessions: PeerSession[] = sessionData.map((session) =>
+          mapServiceSessionToPeerSession(session, {
+            currentUserId: user.uid,
+            timezoneFallback: profile?.timezone,
+          }),
+        )
         setSessions(mappedSessions)
         setLoadingSessions(false)
       })
@@ -914,6 +943,46 @@ export const PeerConnectPage: React.FC = () => {
     }
   }
 
+  const getTimeZoneOffsetMinutes = (timeZone: string, referenceDate: Date) => {
+    try {
+      const formatter = new Intl.DateTimeFormat('en-US', {
+        timeZone,
+        timeZoneName: 'shortOffset',
+        hour12: false,
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit',
+        hour: '2-digit',
+        minute: '2-digit',
+        second: '2-digit',
+      })
+      const parts = formatter.formatToParts(referenceDate)
+      const tzPart = parts.find((part) => part.type === 'timeZoneName')?.value ?? ''
+      const cleaned = tzPart.replace(/GMT|UTC/g, '')
+      const match = cleaned.match(/([+-])(\d{1,2})(?::?(\d{2}))?/)
+      if (!match) return 0
+      const sign = match[1] === '+' ? 1 : -1
+      const hours = Number(match[2]) || 0
+      const minutes = Number(match[3] ?? 0)
+      return sign * (hours * 60 + minutes)
+    } catch (error) {
+      console.warn('Unable to determine timezone offset for', timeZone, error)
+      return 0
+    }
+  }
+
+  const getScheduledAtFromForm = (date: Date | null, time: string, timeZone: string) => {
+    if (!date || !time || !timeZone) return null
+    const [hours, minutes] = time.split(':').map((value) => Number(value))
+    if (!Number.isFinite(hours) || !Number.isFinite(minutes)) return null
+    const year = date.getFullYear()
+    const month = date.getMonth()
+    const day = date.getDate()
+    const naiveUtc = new Date(Date.UTC(year, month, day, hours, minutes, 0, 0))
+    const offsetMinutes = getTimeZoneOffsetMinutes(timeZone, naiveUtc)
+    return new Date(naiveUtc.getTime() - offsetMinutes * 60 * 1000)
+  }
+
   const validateSessionForm = () => {
     const errors: Record<string, string> = {}
     if (!sessionForm.title.trim()) errors.title = 'Please provide a session title'
@@ -924,11 +993,9 @@ export const PeerConnectPage: React.FC = () => {
       errors.participants = 'Select at least 2 participants for your group session so you can host a three-person conversation including yourself.'
 
     // Validate that date/time is in the future
-    if (sessionForm.date && sessionForm.time) {
-      const [hours, minutes] = sessionForm.time.split(':').map(Number)
-      const scheduledDate = new Date(sessionForm.date)
-      scheduledDate.setHours(hours, minutes, 0, 0)
-      if (scheduledDate <= new Date()) {
+    if (sessionForm.date && sessionForm.time && sessionForm.timezone) {
+      const scheduledAt = getScheduledAtFromForm(sessionForm.date, sessionForm.time, sessionForm.timezone)
+      if (scheduledAt && scheduledAt <= new Date()) {
         errors.date = 'Session must be scheduled in the future'
       }
     }
@@ -943,10 +1010,11 @@ export const PeerConnectPage: React.FC = () => {
     if (!sessionForm.date) return
 
     try {
-      // Construct scheduled date from date + time
-      const [hours, minutes] = sessionForm.time.split(':').map(Number)
-      const scheduledAt = new Date(sessionForm.date)
-      scheduledAt.setHours(hours, minutes, 0, 0)
+      // Construct scheduled date from date, time, and timezone
+      const scheduledAt = getScheduledAtFromForm(sessionForm.date, sessionForm.time, sessionForm.timezone)
+      if (!scheduledAt) {
+        throw new Error('Unable to parse the scheduled session time')
+      }
 
       // Use the atomic service to create session and invitations together
       await createPeerSession({
@@ -1046,7 +1114,7 @@ export const PeerConnectPage: React.FC = () => {
             Peer Connect
           </Heading>
           <Text color="brand.subtleText">
-            Automated weekly matching pairs you one-on-one, while peer-to-peer sessions are partner-supervised group experiences—all anchored in Firebase so
+            Automated weekly matching pairs you one-on-one, while peer-to-peer sessions are partner-supervised group experiencesâ€”all anchored in Firebase so
             your connections stay in sync.
           </Text>
           <SimpleGrid columns={{ base: 1, md: 2 }} spacing={3} pt={1}>
@@ -1338,7 +1406,7 @@ export const PeerConnectPage: React.FC = () => {
                                   {session.title}
                                 </Text>
                                 <Text fontSize="sm" color="brand.subtleText">
-                                  {format(session.scheduledAt, 'EEE, MMM d')} • {format(session.scheduledAt, 'p')} {session.timezone}
+                                  {format(session.scheduledAt, 'EEE, MMM d')} â€¢ {format(session.scheduledAt, 'p')} {session.timezone}
                                 </Text>
                               </Stack>
                               {renderStatusBadge(session.status)}
@@ -1426,7 +1494,7 @@ export const PeerConnectPage: React.FC = () => {
                                 {renderStatusBadge(session.status)}
                               </HStack>
                               <Text fontSize="sm" color="brand.subtleText">
-                                {format(session.scheduledAt, 'EEE, MMM d • p')} {session.timezone}
+                                {format(session.scheduledAt, 'EEE, MMM d â€¢ p')} {session.timezone}
                               </Text>
                               <Text fontSize="xs" color="brand.subtleText">
                                 Confirmation deadline: {format(session.confirmationDeadline, 'MMM d, p')}
@@ -1823,3 +1891,4 @@ export const PeerConnectPage: React.FC = () => {
     </Stack>
   )
 }
+

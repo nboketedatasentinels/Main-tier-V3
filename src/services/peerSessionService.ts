@@ -79,12 +79,42 @@ const isNonEmptyString = (value: unknown): value is string =>
 const isValidDate = (value: unknown): value is Date =>
   value instanceof Date && !Number.isNaN(value.getTime())
 
+const toFiniteNumber = (value: unknown): number | null => {
+  if (typeof value === 'number' && Number.isFinite(value)) return value
+  if (typeof value === 'string') {
+    const parsed = Number(value)
+    return Number.isFinite(parsed) ? parsed : null
+  }
+  if (
+    typeof value === 'object' &&
+    value !== null &&
+    typeof (value as { toNumber?: () => number }).toNumber === 'function'
+  ) {
+    const numberValue = (value as { toNumber: () => number }).toNumber()
+    if (Number.isFinite(numberValue)) return numberValue
+  }
+  return null
+}
+
 const coerceDate = (value: unknown): Date | null => {
   if (!value) return null
   if (value instanceof Date) return isValidDate(value) ? value : null
   if (typeof (value as { toDate?: () => Date }).toDate === 'function') {
     const coerced = (value as { toDate: () => Date }).toDate()
     return isValidDate(coerced) ? coerced : null
+  }
+  if (
+    typeof value === 'object' &&
+    value !== null &&
+    'seconds' in value &&
+    'nanoseconds' in value
+  ) {
+    const seconds = toFiniteNumber((value as { seconds: unknown }).seconds)
+    if (seconds === null) return null
+    const nanoseconds = toFiniteNumber((value as { nanoseconds: unknown }).nanoseconds) ?? 0
+    const millis = seconds * 1000 + Math.floor(nanoseconds / 1000000)
+    const date = new Date(millis)
+    return isValidDate(date) ? date : null
   }
   if (typeof value === 'string' || typeof value === 'number') {
     const coerced = new Date(value)

@@ -9,7 +9,7 @@ import {
   Text,
   useColorModeValue,
 } from '@chakra-ui/react'
-import { Bell, ShieldAlert, Clock } from 'lucide-react'
+import { Bell, Clock } from 'lucide-react'
 
 type CommandCenterHeaderProps = {
   adminName: string
@@ -86,19 +86,6 @@ export const CommandCenterHeader: React.FC<CommandCenterHeaderProps> = ({
               Last check: {lastSystemCheck.toLocaleTimeString()}
             </Text>
           </HStack>
-
-          <Button
-            leftIcon={<ShieldAlert size={18} />}
-            colorScheme="red"
-            variant="outline"
-            size="sm"
-            onClick={() => {
-              // Emergency Mode logic placeholder
-              alert('Emergency Mode activation requested. This action requires secondary authentication.')
-            }}
-          >
-            Emergency Mode
-          </Button>
         </HStack>
       </Flex>
     </Box>
