@@ -80,6 +80,8 @@ import { getDisplayName } from '@/utils/displayName'
 import {
   createPeerSession,
   confirmSession,
+  fetchUserInvitations,
+  fetchUserSessions,
   reportNoShow as reportNoShowService,
   respondToInvitation,
   subscribeToUserSessions,
@@ -590,6 +592,26 @@ export const PeerConnectPage: React.FC = () => {
     }
 
     void startSubscriptions()
+
+    const loadInitialSessionsAndInvites = async () => {
+      try {
+        const [initialSessions, initialInvites] = await Promise.all([
+          fetchUserSessions(user.uid),
+          fetchUserInvitations(user.uid),
+        ])
+        if (!isActive) return
+        setSessions(initialSessions)
+        setPendingInvites(initialInvites.map((invite) => ({
+          id: invite.id,
+          fromName: invite.fromName,
+          fromEmail: invite.fromEmail,
+        })))
+      } catch (error) {
+        console.warn('[PeerConnect] Initial session/invite fetch failed:', error)
+      }
+    }
+
+    void loadInitialSessionsAndInvites()
 
     // Cleanup subscriptions on unmount
     return () => {
