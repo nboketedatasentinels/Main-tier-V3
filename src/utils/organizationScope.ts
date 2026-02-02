@@ -43,7 +43,7 @@ export const getOrgScope = (profile?: OrgProfileLike | null): OrgScope => {
   return { isValid: false }
 }
 
-const buildScopeQueries = (peersRef: CollectionReference, scope: OrgScope): Query[] => {
+export const buildScopeQueries = (peersRef: CollectionReference, scope: OrgScope): Query[] => {
   if (!scope.isValid) return []
 
   const build = (fields: string[], value: string): Query[] => {

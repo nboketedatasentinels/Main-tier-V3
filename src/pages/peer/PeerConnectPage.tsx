@@ -75,7 +75,7 @@ import {
 import { auth, db } from '@/services/firebase'
 import { useAuth } from '@/hooks/useAuth'
 import { StartChallengeModal } from '@/components/modals/StartChallengeModal'
-import { fetchOrgMembers, getOrgScope } from '@/utils/organizationScope'
+import { fetchOrgMembers, getOrgScope, buildScopeQueries } from '@/utils/organizationScope'
 import { getDisplayName } from '@/utils/displayName'
 import {
   createPeerSession,
