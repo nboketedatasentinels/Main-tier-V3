@@ -437,36 +437,58 @@ export const PeerConnectPage: React.FC = () => {
       setWeeklyMatch(null)
       return
     }
-    if (!availablePeers.length) {
-      setWeeklyMatch(null)
-      return
-    }
+
     try {
       console.log('[PeerMatch] Match window key:', matchWindow.key)
       console.log('[PeerMatch] Looking for document ID:', matchDocId)
       console.log('[PeerMatch] Full path:', `peer_weekly_matches/${matchDocId}`)
+
+      // PRIORITY 1: Check if a match document already exists (from Cloud Function or previous manual match)
       const matchRef = doc(db, 'peer_weekly_matches', matchDocId)
       const matchDoc = await getDoc(matchRef)
       console.log('[PeerMatch] Document exists:', matchDoc.exists())
+
       if (matchDoc.exists()) {
         const data = matchDoc.data()
         const storedPeerId = data.peer_id ?? data.peerId
-        const matchedPeer = availablePeers.find((peer) => peer.id === storedPeerId)
-        if (matchedPeer) {
-          setWeeklyMatch(buildWeeklyMatchFromDoc(matchRef.id, data, matchedPeer))
-          return
-        }
-        if (storedPeerId) {
-          console.warn('[PeerMatch] Matched peer missing from org list; fetching profile', storedPeerId)
+
+        if (!storedPeerId) {
+          console.warn('[PeerMatch] Match document exists but has no peerId field')
+        } else {
+          // Try to find peer in availablePeers first (faster)
+          const matchedPeer = availablePeers.find((peer) => peer.id === storedPeerId)
+          if (matchedPeer) {
+            console.log('[PeerMatch] Found matched peer in availablePeers:', storedPeerId)
+            setWeeklyMatch(buildWeeklyMatchFromDoc(matchRef.id, data, matchedPeer))
+            return
+          }
+
+          // Fallback: Fetch peer profile directly from Firestore
+          console.log('[PeerMatch] Peer not in availablePeers, fetching profile directly:', storedPeerId)
           const fallbackPeer = await fetchPeerProfileById(storedPeerId)
           if (fallbackPeer) {
+            console.log('[PeerMatch] Successfully fetched peer profile:', storedPeerId)
             setWeeklyMatch(buildWeeklyMatchFromDoc(matchRef.id, data, fallbackPeer))
+            return
+          } else {
+            console.error('[PeerMatch] Failed to fetch peer profile:', storedPeerId)
+            // Match document exists but peer profile is unavailable
+            setWeeklyMatch(null)
             return
           }
         }
       }
+
+      // PRIORITY 2: No existing match found - create a new one (requires availablePeers)
+      if (!availablePeers.length) {
+        console.log('[PeerMatch] No existing match and no available peers to create new match')
+        setWeeklyMatch(null)
+        return
+      }
+
       const deterministicPeer = availablePeers[Math.abs(Number.parseInt(user.uid.slice(-3), 10)) % availablePeers.length]
       if (deterministicPeer) {
+        console.log('[PeerMatch] Creating new match with peer:', deterministicPeer.id)
         const matchPayload = {
           peer_id: deterministicPeer.id,
           user_id: user.uid,
@@ -499,7 +521,7 @@ export const PeerConnectPage: React.FC = () => {
         })
       }
     } catch (error) {
-      console.error('Error selecting weekly match', error)
+      console.error('[PeerMatch] Error in fetchWeeklyMatch:', error)
     }
   }, [availablePeers, matchDocId, matchPreferences.preferredMatchDay, matchPreferences.refreshPreference, matchWindow.key, profile, user])
 
@@ -757,21 +779,43 @@ export const PeerConnectPage: React.FC = () => {
     if (!matchDocId) return undefined
     if (matchPreferences.refreshPreference === 'disabled') return undefined
     const matchRef = doc(db, 'peer_weekly_matches', matchDocId)
-    const unsubscribe = onSnapshot(matchRef, (snapshot) => {
-      if (!snapshot.exists()) return
+    const unsubscribe = onSnapshot(matchRef, async (snapshot) => {
+      if (!snapshot.exists()) {
+        console.log('[PeerMatch] Real-time: Match document does not exist')
+        return
+      }
+
       const data = snapshot.data()
       const storedPeerId = data.peer_id ?? data.peerId
-      if (!storedPeerId) return
+
+      if (!storedPeerId) {
+        console.warn('[PeerMatch] Real-time: Match document exists but has no peerId')
+        return
+      }
+
+      // Try to find peer in availablePeers first (faster, already loaded)
       const matchedPeer = availablePeers.find((peer) => peer.id === storedPeerId)
       if (matchedPeer) {
+        console.log('[PeerMatch] Real-time: Found peer in availablePeers:', storedPeerId)
         setWeeklyMatch(buildWeeklyMatchFromDoc(matchRef.id, data, matchedPeer))
         return
       }
-      console.warn('[PeerMatch] Matched peer missing from list; fetching profile', storedPeerId)
-      void fetchPeerProfileById(storedPeerId).then((fallbackPeer) => {
-        if (!fallbackPeer) return
-        setWeeklyMatch(buildWeeklyMatchFromDoc(matchRef.id, data, fallbackPeer))
-      })
+
+      // Fallback: Fetch peer profile directly from Firestore (handles automatic matches)
+      console.log('[PeerMatch] Real-time: Peer not in availablePeers, fetching directly:', storedPeerId)
+      try {
+        const fallbackPeer = await fetchPeerProfileById(storedPeerId)
+        if (fallbackPeer) {
+          console.log('[PeerMatch] Real-time: Successfully fetched peer profile:', storedPeerId)
+          setWeeklyMatch(buildWeeklyMatchFromDoc(matchRef.id, data, fallbackPeer))
+        } else {
+          console.error('[PeerMatch] Real-time: Failed to fetch peer profile:', storedPeerId)
+          setWeeklyMatch(null)
+        }
+      } catch (error) {
+        console.error('[PeerMatch] Real-time: Error fetching peer profile:', storedPeerId, error)
+        setWeeklyMatch(null)
+      }
     })
 
     return () => {
