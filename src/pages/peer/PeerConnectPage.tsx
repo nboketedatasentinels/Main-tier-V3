@@ -1323,67 +1323,17 @@ export const PeerConnectPage: React.FC = () => {
                   </Box>
 
                   <Box bg="surface.default" p={6} borderRadius="2xl" border="1px solid" borderColor="border.subtle" boxShadow="sm">
-                    <Flex justify="space-between" align="center" mb={3}>
-                      <Heading size="sm" color="brand.text">
-                        Pending peer invitations
-                      </Heading>
-                      <Badge colorScheme="primary" variant="outline">
-                        {pendingInvites.length} pending
-                      </Badge>
-                    </Flex>
-                    <Stack spacing={3}>
-                      {pendingInvites.length ? (
-                        pendingInvites.map((invite) => (
-                          <Box key={invite.id} p={3} borderRadius="lg" border="1px dashed" borderColor="border.subtle">
-                            <HStack justify="space-between" align="flex-start">
-                              <Stack spacing={0}>
-                                <Text fontWeight="semibold" color="brand.text">
-                                  {invite.fromName}
-                                </Text>
-                                <Text fontSize="sm" color="brand.subtleText">
-                                  {invite.fromEmail}
-                                </Text>
-                              </Stack>
-                              <HStack spacing={2}>
-                                <IconButton
-                                  aria-label="Decline invitation"
-                                  icon={<X size={16} />}
-                                  size="sm"
-                                  variant="ghost"
-                                  onClick={() => respondToInvite(invite.id, false)}
-                                />
-                                <IconButton
-                                  aria-label="Accept invitation"
-                                  icon={<Check size={16} />}
-                                  size="sm"
-                                  colorScheme="success"
-                                  variant="solid"
-                                  onClick={() => respondToInvite(invite.id, true)}
-                                />
-                              </HStack>
-                            </HStack>
-                          </Box>
-                        ))
-                      ) : (
-                        <Text fontSize="sm" color="brand.subtleText">
-                          No pending peer invitations right now.
-                        </Text>
-                      )}
-                    </Stack>
-                  </Box>
-
-                  <Box bg="surface.default" p={6} borderRadius="2xl" border="1px solid" borderColor="border.subtle" boxShadow="sm">
                     <Flex justify="space-between" align={{ base: 'flex-start', md: 'center' }} gap={3} mb={4} direction={{ base: 'column', md: 'row' }}>
                       <Stack spacing={1}>
                         <Heading size="sm" color="brand.text">
-                          Your upcoming peer matching
+                          Scheduled Peer Sessions
                         </Heading>
                         <Text fontSize="sm" color="brand.subtleText">
-                          Confirm early to unlock points. Report no-shows after the confirmation deadline.
+                          Your confirmed and upcoming sessions. Confirm early to unlock points. Report no-shows after the confirmation deadline.
                         </Text>
                       </Stack>
-                      <Badge colorScheme="primary" variant="outline">
-                        {upcomingSessions.length} upcoming
+                      <Badge colorScheme="green" variant="outline">
+                        {upcomingSessions.length} scheduled
                       </Badge>
                     </Flex>
 
@@ -1458,8 +1408,8 @@ export const PeerConnectPage: React.FC = () => {
                       ) : (
                         <Center py={6} flexDirection="column" gap={2} color="brand.subtleText" border="1px dashed" borderColor="border.subtle" borderRadius="xl">
                           <Icon as={AlarmClockCheck} w={5} h={5} />
-                          <Text fontSize="sm">No sessions scheduled yet.</Text>
-                          <Text fontSize="xs">Create a peer session or wait for an invite from your organisation.</Text>
+                          <Text fontSize="sm">No scheduled sessions yet.</Text>
+                          <Text fontSize="xs">Accept an invitation from the sidebar or create a new peer session to get started.</Text>
                         </Center>
                       )}
                     </SimpleGrid>
@@ -1514,16 +1464,21 @@ export const PeerConnectPage: React.FC = () => {
 
               <GridItem>
                     <Box bg="surface.default" p={6} borderRadius="2xl" border="1px solid" borderColor="border.subtle" boxShadow="sm" position="sticky" top={4}>
-                  <Flex justify="space-between" align="center" mb={4}>
+                  <Flex justify="space-between" align="center" mb={2}>
                     <Heading size="sm" color="brand.text">
-                      Peer session invites
+                      Pending Invitations
                     </Heading>
-                    <Icon as={AlarmClockCheck} w={5} h={5} color="green.500" />
+                    <Badge colorScheme={pendingInvites.length > 0 ? 'orange' : 'gray'} variant="solid">
+                      {pendingInvites.length}
+                    </Badge>
                   </Flex>
+                  <Text fontSize="xs" color="brand.subtleText" mb={4}>
+                    Respond to session invitations from peers. Real-time updates.
+                  </Text>
                   <Stack spacing={3}>
                     {pendingInvites.length ? (
                       pendingInvites.map((invite) => (
-                        <Box key={invite.id} p={4} borderRadius="lg" border="1px solid" borderColor="border.subtle" bg="surface.subtle">
+                        <Box key={invite.id} p={4} borderRadius="lg" border="1px dashed" borderColor="orange.300" bg="orange.50">
                           <Text fontWeight="semibold" color="brand.text">
                             {invite.fromName}
                           </Text>
@@ -1541,9 +1496,12 @@ export const PeerConnectPage: React.FC = () => {
                         </Box>
                       ))
                     ) : (
-                      <Text fontSize="sm" color="brand.subtleText">
-                        No new peer session invitations. You will see real-time notifications here.
-                      </Text>
+                      <Box p={3} borderRadius="lg" border="1px solid" borderColor="border.subtle" bg="surface.subtle">
+                        <Icon as={AlarmClockCheck} w={4} h={4} color="green.500" mb={2} />
+                        <Text fontSize="sm" color="brand.subtleText">
+                          All caught up! No pending invitations at the moment.
+                        </Text>
+                      </Box>
                     )}
                   </Stack>
                 </Box>
@@ -1631,7 +1589,6 @@ export const PeerConnectPage: React.FC = () => {
                 </GridItem>
 
                 <GridItem colSpan={{ base: 1, lg: 2 }}>
-                  <SimpleGrid columns={{ base: 1, md: 2 }} spacing={4}>
                     <Box bg="surface.default" p={6} borderRadius="2xl" border="1px solid" borderColor="border.subtle" boxShadow="sm">
                       <Flex justify="space-between" align="center" mb={3}>
                         <Heading size="sm" color="brand.text">
@@ -1691,44 +1648,6 @@ export const PeerConnectPage: React.FC = () => {
                         )}
                       </Stack>
                     </Box>
-
-                    <Box bg="surface.default" p={6} borderRadius="2xl" border="1px solid" borderColor="border.subtle" boxShadow="sm">
-                      <Flex justify="space-between" align="center" mb={3}>
-                        <Heading size="sm" color="brand.text">
-                          Peer session invites
-                        </Heading>
-                        <Badge colorScheme="primary" variant="subtle">
-                          Inbox
-                        </Badge>
-                      </Flex>
-                      <Stack spacing={3}>
-                        {pendingInvites.length ? (
-                          pendingInvites.map((invite) => (
-                            <Box key={invite.id} p={3} borderRadius="lg" border="1px solid" borderColor="border.subtle">
-                              <Text fontWeight="semibold" color="brand.text">
-                                {invite.fromName}
-                              </Text>
-                              <Text fontSize="sm" color="brand.subtleText">
-                                {invite.fromEmail}
-                              </Text>
-                              <HStack spacing={2} mt={2}>
-                                <Button size="sm" variant="ghost" leftIcon={<X size={14} />} onClick={() => respondToInvite(invite.id, false)}>
-                                  Decline
-                                </Button>
-                                <Button size="sm" colorScheme="primary" leftIcon={<Check size={14} />} onClick={() => respondToInvite(invite.id, true)}>
-                                  Accept
-                                </Button>
-                              </HStack>
-                            </Box>
-                          ))
-                        ) : (
-                          <Text fontSize="sm" color="brand.subtleText">
-                            No new invitations. New requests appear instantly via Firebase.
-                          </Text>
-                        )}
-                      </Stack>
-                    </Box>
-                  </SimpleGrid>
                 </GridItem>
               </SimpleGrid>
             </Stack>
