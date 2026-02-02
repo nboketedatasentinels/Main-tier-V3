@@ -533,6 +533,26 @@ export const PeerConnectPage: React.FC = () => {
     weeklyMatch?.refreshCount,
   ])
 
+  const loadSessionsAndInvites = useCallback(async () => {
+    if (!user) return
+    try {
+      const [initialSessions, initialInvites] = await Promise.all([
+        fetchUserSessions(user.uid),
+        fetchUserInvitations(user.uid),
+      ])
+      setSessions(initialSessions)
+      setPendingInvites(
+        initialInvites.map((invite) => ({
+          id: invite.id,
+          fromName: invite.fromName,
+          fromEmail: invite.fromEmail,
+        })),
+      )
+    } catch (error) {
+      console.warn('[PeerConnect] Initial session/invite fetch failed:', error)
+    }
+  }, [user])
+
   // Real-time subscription for sessions and invitations
   useEffect(() => {
     if (!user || loading || profileLoading) return
@@ -559,7 +579,6 @@ export const PeerConnectPage: React.FC = () => {
 
       setLoadingSessions(true)
 
-      // Subscribe to sessions in real-time
       unsubscribeSessions = subscribeToUserSessions(user.uid, (sessionData) => {
         const mappedSessions: PeerSession[] = sessionData.map((session) => ({
           id: session.id,
@@ -571,13 +590,12 @@ export const PeerConnectPage: React.FC = () => {
           status: session.status as PeerSession['status'],
           confirmationDeadline: session.confirmationDeadline,
           youConfirmed: Boolean(session.confirmations?.[user.uid]),
-          peerConfirmed: Object.keys(session.confirmations || {}).filter(k => k !== user.uid).some(k => session.confirmations[k]),
+          peerConfirmed: Object.keys(session.confirmations || {}).filter((k) => k !== user.uid).some((k) => session.confirmations[k]),
         }))
         setSessions(mappedSessions)
         setLoadingSessions(false)
       })
 
-      // Subscribe to invitations in real-time
       unsubscribeInvites = subscribeToUserInvitations(user.uid, (inviteData) => {
         const mappedInvites: Invitation[] = inviteData.map((invite) => {
           const email = typeof invite.fromEmail === 'string' ? invite.fromEmail : ''
@@ -592,34 +610,14 @@ export const PeerConnectPage: React.FC = () => {
     }
 
     void startSubscriptions()
+    void loadSessionsAndInvites()
 
-    const loadInitialSessionsAndInvites = async () => {
-      try {
-        const [initialSessions, initialInvites] = await Promise.all([
-          fetchUserSessions(user.uid),
-          fetchUserInvitations(user.uid),
-        ])
-        if (!isActive) return
-        setSessions(initialSessions)
-        setPendingInvites(initialInvites.map((invite) => ({
-          id: invite.id,
-          fromName: invite.fromName,
-          fromEmail: invite.fromEmail,
-        })))
-      } catch (error) {
-        console.warn('[PeerConnect] Initial session/invite fetch failed:', error)
-      }
-    }
-
-    void loadInitialSessionsAndInvites()
-
-    // Cleanup subscriptions on unmount
     return () => {
       isActive = false
       if (unsubscribeSessions) unsubscribeSessions()
       if (unsubscribeInvites) unsubscribeInvites()
     }
-  }, [loading, profile?.timezone, profileLoading, user])
+  }, [loading, loadSessionsAndInvites, profile?.timezone, profileLoading, user])
 
   const onChallengeCreated = () => {
     fetchWeeklyMatch()
@@ -714,6 +712,22 @@ export const PeerConnectPage: React.FC = () => {
     const queryString = participantFilter.toLowerCase()
     return availablePeers.filter((peer) => peer.name.toLowerCase().includes(queryString) || peer.email.toLowerCase().includes(queryString))
   }, [availablePeers, participantFilter])
+
+  const upcomingSessions = useMemo(() => {
+    const nowMs = Date.now()
+    return sessions.filter(
+      (session) =>
+        !['completed', 'no_show'].includes(session.status) && session.scheduledAt.getTime() >= nowMs,
+    )
+  }, [sessions])
+
+  const pastSessions = useMemo(() => {
+    const nowMs = Date.now()
+    return sessions.filter(
+      (session) =>
+        ['completed', 'no_show'].includes(session.status) || session.scheduledAt.getTime() < nowMs,
+    )
+  }, [sessions])
 
   const matchStatusLabel = useMemo(() => {
     if (!weeklyMatch) return 'Pending'
@@ -888,6 +902,7 @@ export const PeerConnectPage: React.FC = () => {
         status: accepted ? 'success' : 'info',
         position: 'top',
       })
+      await loadSessionsAndInvites()
     } catch (error) {
       console.error('Invitation response failed:', error)
       toast({
@@ -1300,7 +1315,7 @@ export const PeerConnectPage: React.FC = () => {
                         </Text>
                       </Stack>
                       <Badge colorScheme="primary" variant="outline">
-                        {sessions.length} sessions
+                        {upcomingSessions.length} upcoming
                       </Badge>
                     </Flex>
 
@@ -1314,9 +1329,9 @@ export const PeerConnectPage: React.FC = () => {
                             </Text>
                           </HStack>
                         </Center>
-                      ) : sessions.length ? (
-                        sessions.map((session) => (
-                              <Box key={session.id} p={4} borderRadius="xl" border="1px solid" borderColor="border.subtle" bg="surface.default" boxShadow="xs">
+                      ) : upcomingSessions.length ? (
+                        upcomingSessions.map((session) => (
+                          <Box key={session.id} p={4} borderRadius="xl" border="1px solid" borderColor="border.subtle" bg="surface.default" boxShadow="xs">
                             <HStack justify="space-between" align="flex-start" mb={2}>
                               <Stack spacing={0}>
                                 <Text fontWeight="semibold" color="brand.text">
@@ -1380,6 +1395,51 @@ export const PeerConnectPage: React.FC = () => {
                         </Center>
                       )}
                     </SimpleGrid>
+                  </Box>
+                  <Box bg="surface.default" p={6} borderRadius="2xl" border="1px solid" borderColor="border.subtle" boxShadow="sm" mt={4}>
+                    <Flex justify="space-between" align="center" mb={3}>
+                      <Heading size="sm" color="brand.text">
+                        Past peer sessions
+                      </Heading>
+                      <Badge colorScheme="primary" variant="outline">
+                        {pastSessions.length} recorded
+                      </Badge>
+                    </Flex>
+                    {loadingSessions ? (
+                      <Center py={6}>
+                        <HStack spacing={2}>
+                          <Spinner size="sm" />
+                          <Text fontSize="sm" color="brand.subtleText">
+                            Loading session history...
+                          </Text>
+                        </HStack>
+                      </Center>
+                    ) : pastSessions.length ? (
+                      <Stack spacing={3}>
+                        {pastSessions.map((session) => (
+                          <Box key={session.id} p={3} borderRadius="lg" border="1px solid" borderColor="border.subtle" bg="surface.subtle">
+                            <Stack spacing={1}>
+                              <HStack justify="space-between" align="center">
+                                <Text fontWeight="semibold" color="brand.text">
+                                  {session.title}
+                                </Text>
+                                {renderStatusBadge(session.status)}
+                              </HStack>
+                              <Text fontSize="sm" color="brand.subtleText">
+                                {format(session.scheduledAt, 'EEE, MMM d • p')} {session.timezone}
+                              </Text>
+                              <Text fontSize="xs" color="brand.subtleText">
+                                Confirmation deadline: {format(session.confirmationDeadline, 'MMM d, p')}
+                              </Text>
+                            </Stack>
+                          </Box>
+                        ))}
+                      </Stack>
+                    ) : (
+                      <Text fontSize="sm" color="brand.subtleText">
+                        No past sessions yet. Start one to build your history.
+                      </Text>
+                    )}
                   </Box>
                 </Stack>
               </GridItem>
