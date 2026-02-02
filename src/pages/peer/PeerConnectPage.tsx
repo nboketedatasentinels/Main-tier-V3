@@ -66,6 +66,7 @@ import {
   getDoc,
   getDocs,
   limit,
+  onSnapshot,
   query,
   serverTimestamp,
   setDoc,
@@ -345,6 +346,29 @@ const buildMatchWindow = (preferences: MatchPreferences): MatchWindow => {
   }
 }
 
+type WeeklyMatchDocument = Record<string, unknown>
+
+const toDateValue = (value: unknown): Date | undefined => {
+  if (!value) return undefined
+  if (value instanceof Date) return value
+  if (typeof value === 'object' && value !== null && 'toDate' in value) {
+    const toDateFn = (value as { toDate?: () => Date }).toDate
+    if (typeof toDateFn === 'function') return toDateFn()
+  }
+  return undefined
+}
+
+const buildWeeklyMatchFromDoc = (matchId: string, data: WeeklyMatchDocument, peer: PeerProfile): WeeklyMatch => ({
+  matchId,
+  peer,
+  matchReason: (data.matchReason as string) || 'Same company code',
+  matchStatus: (data.matchStatus as MatchStatus) || 'new',
+  createdAt: toDateValue(data.createdAt),
+  lastRefreshAt: toDateValue(data.lastRefreshAt),
+  lastManualRefreshAt: toDateValue(data.lastManualRefreshAt),
+  refreshCount: typeof data.refreshCount === 'number' ? data.refreshCount : undefined,
+})
+
 export const PeerConnectPage: React.FC = () => {
   const { user, profile, loading, profileLoading } = useAuth()
   const toast = useToast()
@@ -411,16 +435,7 @@ export const PeerConnectPage: React.FC = () => {
         const storedPeerId = data.peer_id ?? data.peerId
         const matchedPeer = availablePeers.find((peer) => peer.id === storedPeerId)
         if (matchedPeer) {
-          setWeeklyMatch({
-            matchId: matchRef.id,
-            peer: matchedPeer,
-            matchReason: data.matchReason || 'Same company code',
-            matchStatus: (data.matchStatus as MatchStatus) || 'new',
-            createdAt: data.createdAt?.toDate?.(),
-            lastRefreshAt: data.lastRefreshAt?.toDate?.(),
-            lastManualRefreshAt: data.lastManualRefreshAt?.toDate?.(),
-            refreshCount: data.refreshCount,
-          })
+          setWeeklyMatch(buildWeeklyMatchFromDoc(matchRef.id, data, matchedPeer))
           return
         }
       }
@@ -727,6 +742,27 @@ export const PeerConnectPage: React.FC = () => {
   useEffect(() => {
     fetchWeeklyMatch()
   }, [fetchWeeklyMatch])
+
+  useEffect(() => {
+    if (!matchDocId) return undefined
+    if (matchPreferences.refreshPreference === 'disabled') return undefined
+    if (!availablePeers.length) return undefined
+
+    const matchRef = doc(db, 'peer_weekly_matches', matchDocId)
+    const unsubscribe = onSnapshot(matchRef, (snapshot) => {
+      if (!snapshot.exists()) return
+      const data = snapshot.data()
+      const storedPeerId = data.peer_id ?? data.peerId
+      if (!storedPeerId) return
+      const matchedPeer = availablePeers.find((peer) => peer.id === storedPeerId)
+      if (!matchedPeer) return
+      setWeeklyMatch(buildWeeklyMatchFromDoc(matchRef.id, data, matchedPeer))
+    })
+
+    return () => {
+      unsubscribe()
+    }
+  }, [availablePeers, matchDocId, matchPreferences.refreshPreference])
 
   useEffect(() => {
     if (!weeklyMatch || weeklyMatch.matchStatus !== 'new') return
