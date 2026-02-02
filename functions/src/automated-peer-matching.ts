@@ -140,6 +140,9 @@ const getMatchReason = (orgKey: string): string => {
   return "Same company code";
 };
 
+const MAX_BATCH_WRITE_OPERATIONS = 450;
+const WRITES_PER_MATCH = 3;
+
 // Create peer matches for a group of users
 const createMatchesForGroup = async (
   users: UserProfile[],
@@ -171,9 +174,23 @@ const createMatchesForGroup = async (
   // Shuffle users to randomize matching
   const shuffledUsers = shuffleArray(eligibleUsers);
 
-  const batch = db.batch();
+  let batch = db.batch();
+  let pendingWrites = 0;
   let created = 0;
   let skipped = 0;
+
+  const flushBatch = async () => {
+    if (pendingWrites === 0) return;
+    await batch.commit();
+    batch = db.batch();
+    pendingWrites = 0;
+  };
+
+  const ensureCapacity = async (neededWrites: number) => {
+    if (pendingWrites + neededWrites > MAX_BATCH_WRITE_OPERATIONS) {
+      await flushBatch();
+    }
+  };
 
   // Create pairs by iterating through shuffled users
   for (let i = 0; i < shuffledUsers.length; i++) {
@@ -207,6 +224,7 @@ const createMatchesForGroup = async (
       continue;
     }
 
+    await ensureCapacity(WRITES_PER_MATCH);
     const matchData: PeerMatch = {
       peerId: peer.id,
       userId: user.id,
@@ -222,12 +240,14 @@ const createMatchesForGroup = async (
     };
 
     batch.set(db.collection("peer_weekly_matches").doc(matchDocId), matchData);
+    pendingWrites += 1;
 
     // Update user's lastMatchRefreshDate
     batch.update(db.collection("profiles").doc(user.id), {
       lastMatchRefreshDate: admin.firestore.FieldValue.serverTimestamp(),
       updatedAt: admin.firestore.FieldValue.serverTimestamp(),
     });
+    pendingWrites += 1;
 
     // Create notification for the user about their new match
     const notificationData = {
@@ -246,12 +266,13 @@ const createMatchesForGroup = async (
     };
 
     batch.set(db.collection("notifications").doc(), notificationData);
+    pendingWrites += 1;
 
     created++;
   }
 
+  await flushBatch();
   if (created > 0) {
-    await batch.commit();
     console.log(
       `Created ${created} matches for group ${orgKey} (${skipped} skipped)`
     );
