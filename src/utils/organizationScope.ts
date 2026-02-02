@@ -1,13 +1,33 @@
-import { collection, getDocs, onSnapshot, query, where, type Firestore } from 'firebase/firestore'
+import {
+  collection,
+  CollectionReference,
+  getDocs,
+  onSnapshot,
+  query,
+  Query,
+  where,
+  type Firestore,
+} from 'firebase/firestore'
 import { OrgProfileLike } from './organizationTypes'
 
 export type OrgScope =
   | { isValid: true; type: 'company'; companyId: string }
   | { isValid: true; type: 'company_code'; companyCode: string }
+  | { isValid: true; type: 'village'; villageId: string }
+  | { isValid: true; type: 'cohort'; cohortIdentifier: string }
   | { isValid: false }
 
 export const getOrgScope = (profile?: OrgProfileLike | null): OrgScope => {
   if (!profile) return { isValid: false }
+  if (profile.cohortIdentifier) {
+    return { isValid: true, type: 'cohort', cohortIdentifier: profile.cohortIdentifier }
+  }
+  if (profile.corporateVillageId) {
+    return { isValid: true, type: 'village', villageId: profile.corporateVillageId }
+  }
+  if (profile.villageId) {
+    return { isValid: true, type: 'village', villageId: profile.villageId }
+  }
   if (profile.companyId) {
     return { isValid: true, type: 'company', companyId: profile.companyId }
   }
@@ -23,14 +43,74 @@ export const getOrgScope = (profile?: OrgProfileLike | null): OrgScope => {
   return { isValid: false }
 }
 
+const buildScopeQueries = (peersRef: CollectionReference, scope: OrgScope): Query[] => {
+  if (!scope.isValid) return []
+
+  const build = (fields: string[], value: string): Query[] => {
+    const uniqueFields = Array.from(new Set(fields))
+    return uniqueFields.map((field) => query(peersRef, where(field, '==', value)))
+  }
+
+  if (scope.type === 'company') {
+    return build(
+      [
+        'companyId',
+        'companyCode',
+        'organizationId',
+        'organizationCode',
+        'company_code',
+        'organization_code',
+      ],
+      scope.companyId,
+    )
+  }
+
+  if (scope.type === 'company_code') {
+    return build(
+      [
+        'companyCode',
+        'organizationCode',
+        'company_code',
+        'organization_code',
+        'companyId',
+        'organizationId',
+      ],
+      scope.companyCode,
+    )
+  }
+
+  if (scope.type === 'village') {
+    return build(
+      ['corporateVillageId', 'villageId', 'corporate_village_id', 'village_id'],
+      scope.villageId,
+    )
+  }
+
+  if (scope.type === 'cohort') {
+    return build(['cohortIdentifier', 'cohort_identifier'], scope.cohortIdentifier)
+  }
+
+  return []
+}
+
 export const isProfileInOrg = (profile: OrgProfileLike | null | undefined, orgScope: OrgScope): boolean => {
   if (!orgScope.isValid || !profile) return false
   if (orgScope.type === 'company') {
     const profileCompanyId = profile.companyId || profile.organizationId
     return profileCompanyId === orgScope.companyId
   }
-  const profileCompanyCode = profile.companyCode || profile.organizationCode
-  return profileCompanyCode === orgScope.companyCode
+  if (orgScope.type === 'company_code') {
+    const profileCompanyCode = profile.companyCode || profile.organizationCode
+    return profileCompanyCode === orgScope.companyCode
+  }
+  if (orgScope.type === 'village') {
+    const profileVillageId = profile.corporateVillageId || profile.villageId
+    return profileVillageId === orgScope.villageId
+  }
+  if (orgScope.type === 'cohort') {
+    return profile.cohortIdentifier === orgScope.cohortIdentifier
+  }
+  return false
 }
 
 export const fetchOrgMembers = async (
@@ -43,19 +123,13 @@ export const fetchOrgMembers = async (
   // CRITICAL FIX: Changed from 'users' to 'profiles' - user data is stored in profiles collection
   const peersRef = collection(db, 'profiles')
 
-  // Query multiple field variants to catch all organization members
-  const orgValue = orgScope.type === 'company' ? orgScope.companyId : orgScope.companyCode
+  const queries = buildScopeQueries(peersRef, orgScope)
+  if (!queries.length) {
+    console.warn('[OrgMembers] No queries generated for scope', orgScope)
+    return []
+  }
 
-  const queries = [
-    query(peersRef, where('companyId', '==', orgValue)),
-    query(peersRef, where('companyCode', '==', orgValue)),
-    query(peersRef, where('organizationId', '==', orgValue)),
-    query(peersRef, where('organizationCode', '==', orgValue)),
-    query(peersRef, where('company_code', '==', orgValue)),
-    query(peersRef, where('organization_code', '==', orgValue)),
-  ]
-
-  console.log('[OrgMembers] Running queries with scope', orgScope, 'value:', orgValue)
+  console.log('[OrgMembers] Running queries with scope', orgScope, 'queryCount:', queries.length)
 
   const snapshots = await Promise.all(queries.map((q) => getDocs(q)))
 
@@ -99,16 +173,13 @@ export const listenToOrgMembers = (
   }
 
   const peersRef = collection(db, 'profiles')
-  const orgValue = orgScope.type === 'company' ? orgScope.companyId : orgScope.companyCode
 
-  const queries = [
-    query(peersRef, where('companyId', '==', orgValue)),
-    query(peersRef, where('companyCode', '==', orgValue)),
-    query(peersRef, where('organizationId', '==', orgValue)),
-    query(peersRef, where('organizationCode', '==', orgValue)),
-    query(peersRef, where('company_code', '==', orgValue)),
-    query(peersRef, where('organization_code', '==', orgValue)),
-  ]
+  const queries = buildScopeQueries(peersRef, orgScope)
+  if (!queries.length) {
+    console.warn('[OrgMembers] No queries generated for scope', orgScope)
+    onMembers([])
+    return () => {}
+  }
 
   const membersMap = new Map<string, Record<string, unknown>>()
   const queryDocIds = new Map<number, Set<string>>()
@@ -172,7 +243,7 @@ export const listenToOrgMembers = (
     unsubscribers.push(unsub)
   })
 
-  console.log('[OrgMembers] Real-time listeners started with scope', orgScope, 'value:', orgValue)
+  console.log('[OrgMembers] Real-time listeners started with scope', orgScope, 'queryCount:', queries.length)
 
   return () => {
     unsubscribers.forEach((unsub) => unsub())
