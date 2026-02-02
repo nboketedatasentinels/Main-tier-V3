@@ -316,23 +316,37 @@ const buildMatchWindow = (preferences: MatchPreferences): MatchWindow => {
     }
   }
 
+  // FIX: Use UTC for window calculation to match Cloud Function
   const now = new Date()
-  const { year, month, day } = getTimezoneDateParts(now, preferences.timezone)
-  const todayInTimezone = createTimezoneDate(year, month, day)
-  const weeklyStart = getPreferredDayOnOrBefore(todayInTimezone, preferences.preferredMatchDay)
-  const cycleLength = preferences.refreshPreference === 'biweekly' ? 14 : 7
+  const dayOfWeek = now.getUTCDay()
+  const diff = (dayOfWeek - preferences.preferredMatchDay + 7) % 7
+  const windowStart = new Date(now)
+  windowStart.setUTCDate(now.getUTCDate() - diff)
+  windowStart.setUTCHours(0, 0, 0, 0)
 
-  let startDate = weeklyStart
+  const cycleLength = preferences.refreshPreference === 'biweekly' ? 14 : 7
+  let startDate = windowStart
+
   if (preferences.refreshPreference === 'biweekly') {
-    const referenceAnchor = createTimezoneDate(2024, 1, 1)
-    const referenceStart = getPreferredDayOnOrBefore(referenceAnchor, preferences.preferredMatchDay)
-    const weeksSinceReference = Math.floor((weeklyStart.getTime() - referenceStart.getTime()) / (7 * 24 * 60 * 60 * 1000))
+    // Match Cloud Function's biweekly logic exactly
+    const referenceAnchor = new Date(Date.UTC(2024, 0, 1))
+    const referenceDay = referenceAnchor.getUTCDay()
+    const refDiff = (referenceDay - preferences.preferredMatchDay + 7) % 7
+    referenceAnchor.setUTCDate(referenceAnchor.getUTCDate() - refDiff)
+
+    const weeksSinceReference = Math.floor(
+      (windowStart.getTime() - referenceAnchor.getTime()) / (7 * 24 * 60 * 60 * 1000)
+    )
     const cycleIndex = Math.floor(weeksSinceReference / 2)
-    startDate = addDaysUtc(referenceStart, cycleIndex * 14)
+    startDate = new Date(referenceAnchor)
+    startDate.setUTCDate(referenceAnchor.getUTCDate() + cycleIndex * 14)
   }
 
-  const endDate = addDaysUtc(startDate, cycleLength - 1)
-  const nextRefreshAt = addDaysUtc(startDate, cycleLength)
+  const endDate = new Date(startDate)
+  endDate.setUTCDate(startDate.getUTCDate() + cycleLength - 1)
+
+  const nextRefreshAt = new Date(startDate)
+  nextRefreshAt.setUTCDate(startDate.getUTCDate() + cycleLength)
   const label = `${formatMatchDate(startDate, preferences.timezone)} - ${formatMatchDate(endDate, preferences.timezone)}`
 
   return {
@@ -428,8 +442,12 @@ export const PeerConnectPage: React.FC = () => {
       return
     }
     try {
+      console.log('[PeerMatch] Match window key:', matchWindow.key)
+      console.log('[PeerMatch] Looking for document ID:', matchDocId)
+      console.log('[PeerMatch] Full path:', `peer_weekly_matches/${matchDocId}`)
       const matchRef = doc(db, 'peer_weekly_matches', matchDocId)
       const matchDoc = await getDoc(matchRef)
+      console.log('[PeerMatch] Document exists:', matchDoc.exists())
       if (matchDoc.exists()) {
         const data = matchDoc.data()
         const storedPeerId = data.peer_id ?? data.peerId
