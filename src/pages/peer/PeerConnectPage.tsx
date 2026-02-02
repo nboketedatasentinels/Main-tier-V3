@@ -12,7 +12,6 @@ import {
   GridItem,
   HStack,
   Icon,
-  IconButton,
   Heading,
   Input,
   InputGroup,
@@ -203,44 +202,9 @@ type DebugOrgProfile = {
 
 const MANUAL_REFRESH_COOLDOWN_HOURS = 24
 const WEEKDAY_LABELS = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday']
-const WEEKDAY_SHORT_MAP: Record<string, number> = {
-  Sun: 0,
-  Mon: 1,
-  Tue: 2,
-  Wed: 3,
-  Thu: 4,
-  Fri: 5,
-  Sat: 6,
-}
 
 const defaultSessionDescription =
   'Bring together at least two peers for a transformation dialogue that sparks shared insight and collaborative momentum.'
-
-const getTimezoneDateParts = (date: Date, timeZone: string) => {
-  const formatter = new Intl.DateTimeFormat('en-US', {
-    timeZone,
-    weekday: 'short',
-    year: 'numeric',
-    month: '2-digit',
-    day: '2-digit',
-  })
-  const parts = formatter.formatToParts(date)
-  const lookup = Object.fromEntries(parts.map((part) => [part.type, part.value]))
-  const weekdayIndex = WEEKDAY_SHORT_MAP[lookup.weekday ?? 'Mon'] ?? 1
-  const year = Number(lookup.year)
-  const month = Number(lookup.month)
-  const day = Number(lookup.day)
-  return { year, month, day, weekdayIndex }
-}
-
-const createTimezoneDate = (year: number, month: number, day: number) =>
-  new Date(Date.UTC(year, month - 1, day, 12))
-
-const addDaysUtc = (date: Date, days: number) => {
-  const next = new Date(date)
-  next.setUTCDate(next.getUTCDate() + days)
-  return next
-}
 
 const debugOrgFetch = async (dbInstance: typeof db, profile: DebugOrgProfile | null, userId: string) => {
   const scope = getOrgScope(profile)
@@ -270,28 +234,28 @@ const debugOrgFetch = async (dbInstance: typeof db, profile: DebugOrgProfile | n
   }
 
   try {
-    const orgQuery =
-      scope.type === 'company'
-        ? query(collection(dbInstance, 'profiles'), where('companyId', '==', scope.companyId), limit(10))
-        : query(collection(dbInstance, 'profiles'), where('companyCode', '==', scope.companyCode), limit(10))
-    const snap = await getDocs(orgQuery)
-    console.log(
-      `Query by ${scope.type === 'company' ? 'companyId' : 'companyCode'} returned:`,
-      snap.size,
-      snap.docs.map((docSnap) => docSnap.id),
-    )
+    const peersRef = collection(dbInstance, 'profiles')
+    const scopeQueries = buildScopeQueries(peersRef, scope)
+    if (!scopeQueries.length) {
+      console.warn('[OrgMembers] Debug: No queries generated for scope', scope)
+    } else {
+      const limitedQueries = scopeQueries.map((scopeQuery) => query(scopeQuery, limit(10)))
+      const snapshots = await Promise.all(limitedQueries.map((q) => getDocs(q)))
+      console.log(
+        '[OrgMembers] Scope debug queries returned',
+        snapshots.map((snapshot, index) => ({
+          queryIndex: index,
+          count: snapshot.size,
+          ids: snapshot.docs.map((docSnap) => docSnap.id),
+        })),
+      )
+    }
   } catch (error: unknown) {
     const errorInfo = error && typeof error === 'object' ? (error as { code?: string; message?: string }) : undefined
     console.error('Query by org scope failed:', errorInfo?.code, errorInfo?.message)
   }
 
   console.groupEnd()
-}
-
-const getPreferredDayOnOrBefore = (date: Date, preferredDay: number) => {
-  const currentWeekday = date.getUTCDay()
-  const diff = (currentWeekday - preferredDay + 7) % 7
-  return addDaysUtc(date, -diff)
 }
 
 const formatMatchDate = (date: Date, timeZone: string) =>

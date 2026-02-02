@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
-import { Box, Tab, TabList, TabPanel, TabPanels, Tabs, Alert, AlertIcon } from '@chakra-ui/react'
+import { Box, Tab, TabList, TabPanel, TabPanels, Tabs, Alert, AlertIcon, Badge } from '@chakra-ui/react'
 import { UsersManagementTab } from './tabs/UsersManagementTab'
 import { UserEngagementMonitoringTab } from './tabs/UserEngagementMonitoringTab'
 import { LeadershipCouncil } from './LeadershipCouncil'
@@ -131,14 +131,16 @@ export const UserManagementWithTabs = () => {
   const { users, loading, error } = useManagedUsers()
   const { organizations, loading: loadingOrgs } = useManagedOrganizations()
 
+  // Computed counts for tab badges
+  const userCount = users.length
+  const mentorCount = users.filter(u => u.role === 'mentor').length
+  const ambassadorCount = users.filter(u => u.role === 'ambassador').length
+
   // Optional: derived subsets per tab (keeps tab components simpler)
   const memo = useMemo(() => {
     return {
       users,
       organizations,
-      // Example placeholders if you want derived sets:
-      // engagedUsers: users.filter(u => u.engagementScore >= 75),
-      // councilCandidates: users.filter(u => u.role === 'mentor' || u.role === 'ambassador'),
     }
   }, [users, organizations])
 
@@ -160,9 +162,17 @@ export const UserManagementWithTabs = () => {
         lazyBehavior="keepMounted"
       >
         <TabList overflowX="auto" pb={2}>
-          <Tab whiteSpace="nowrap">Users Management</Tab>
-          <Tab whiteSpace="nowrap">User Engagement</Tab>
-          <Tab whiteSpace="nowrap">Leadership Council</Tab>
+          <Tab whiteSpace="nowrap">
+            Users Management
+            <Badge ml={2} colorScheme="gray" fontSize="xs">{userCount}</Badge>
+          </Tab>
+          <Tab whiteSpace="nowrap">
+            User Engagement
+          </Tab>
+          <Tab whiteSpace="nowrap">
+            Leadership Council
+            <Badge ml={2} colorScheme="gray" fontSize="xs">{mentorCount + ambassadorCount}</Badge>
+          </Tab>
         </TabList>
 
         <TabPanels>

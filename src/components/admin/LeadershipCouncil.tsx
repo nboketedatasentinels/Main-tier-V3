@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import {
+  Avatar,
   Badge,
   Box,
   Button,
@@ -26,6 +27,7 @@ import {
   SimpleGrid,
   Text,
   Textarea,
+  Tooltip,
   useDisclosure,
   useToast,
 } from '@chakra-ui/react'
@@ -38,6 +40,7 @@ import {
   assignRoleToUser,
   updateUser,
 } from '@/services/userManagementService'
+import { getDisplayName, getInitials } from '@/utils/displayName'
 
 type LeadershipRole = 'mentor' | 'ambassador'
 
@@ -100,6 +103,23 @@ export const LeadershipCouncil = ({ users: propUsers, organizations: propOrganiz
       member.name.toLowerCase().includes(query) || (member.email || '').toLowerCase().includes(query) || (member.companyName || '').toLowerCase().includes(query),
     )
   }, [activeRole, leaders.ambassadors, leaders.mentors, search])
+
+  const uniqueOrgCount = useMemo(() => {
+    const allLeaders = [...leaders.mentors, ...leaders.ambassadors]
+    const orgs = new Set(allLeaders.map(m => m.companyId).filter(Boolean))
+    return orgs.size
+  }, [leaders.mentors, leaders.ambassadors])
+
+  // Check if we should show "Last Active" and "Joined" columns
+  const showLastActiveColumn = useMemo(() => {
+    const knownCount = filteredLeaders.filter(m => m.lastActive).length
+    return knownCount / (filteredLeaders.length || 1) > 0.5
+  }, [filteredLeaders])
+
+  const showJoinedColumn = useMemo(() => {
+    const knownCount = filteredLeaders.filter(m => m.createdAt).length
+    return knownCount / (filteredLeaders.length || 1) > 0.5
+  }, [filteredLeaders])
 
   const availableMembers = useMemo(
     () => propUsers.filter((user) => !['mentor', 'ambassador'].includes(user.role)),
@@ -231,7 +251,7 @@ export const LeadershipCouncil = ({ users: propUsers, organizations: propOrganiz
               Mentor &amp; Ambassador oversight
             </Text>
             <Text color="gray.600" mt={2}>
-              Promote trusted members, track their organisation alignment, and ensure our leadership network has the right support.
+              {leaders.mentors.length} active mentor{leaders.mentors.length !== 1 ? 's' : ''} and {leaders.ambassadors.length} ambassador{leaders.ambassadors.length !== 1 ? 's' : ''} across {uniqueOrgCount} organization{uniqueOrgCount !== 1 ? 's' : ''}
             </Text>
           </GridItem>
           <GridItem>
@@ -325,8 +345,8 @@ export const LeadershipCouncil = ({ users: propUsers, organizations: propOrganiz
                     <Text flex="1">Email</Text>
                     <Text flex="1">Company</Text>
                     <Text w="120px">Status</Text>
-                    <Text w="120px">Last Active</Text>
-                    <Text w="120px">Joined</Text>
+                    {showLastActiveColumn && <Text w="120px">Last Active</Text>}
+                    {showJoinedColumn && <Text w="120px">Joined</Text>}
                     <Text w="140px" textAlign="right">
                       Actions
                     </Text>
@@ -349,6 +369,7 @@ export const LeadershipCouncil = ({ users: propUsers, organizations: propOrganiz
                   <Stack divider={<Divider />} spacing={0}>
                     {filteredLeaders.map((member) => {
                       const status = statusBadge(member.accountStatus)
+                      const displayName = getDisplayName(member)
                       return (
                         <Flex
                           key={member.id}
@@ -359,36 +380,40 @@ export const LeadershipCouncil = ({ users: propUsers, organizations: propOrganiz
                           _hover={{ bg: 'gray.50' }}
                           transition="background-color 0.2s ease"
                         >
-                          <Box flex="1">
-                            <Text fontWeight="semibold" color="gray.900">
-                              {member.name}
-                            </Text>
-                            <Text fontSize="xs" color="gray.500">
-                              ID: {member.id}
-                            </Text>
-                          </Box>
+                          <HStack flex="1" spacing={3}>
+                            <Avatar size="sm" name={displayName} />
+                            <Box>
+                              <Text fontWeight="semibold" color="gray.900">
+                                {displayName}
+                              </Text>
+                              <Text fontSize="xs" color="gray.500">
+                                {member.email}
+                              </Text>
+                            </Box>
+                          </HStack>
                           <Text flex="1" color="gray.700">
                             {member.email || '—'}
                           </Text>
-                          <Box flex="1">
-                            <Text fontWeight="medium" color="gray.800">
+                          <Tooltip label={member.companyCode ? `Code: ${member.companyCode}` : ''} placement="top">
+                            <Text flex="1" fontWeight="medium" color="gray.800">
                               {member.companyName || '—'}
                             </Text>
-                            <Text fontSize="xs" color="gray.500" textTransform="uppercase" letterSpacing="widest">
-                              {member.companyCode || ''}
-                            </Text>
-                          </Box>
+                          </Tooltip>
                           <Box w="120px">
                             <Badge bg={status.bg} color={status.color} px={3} py={1} borderRadius="full">
                               {status.label}
                             </Badge>
                           </Box>
-                          <Text w="120px" color="gray.500">
-                            {member.lastActive ? formatDistanceToNow(member.lastActive, { addSuffix: true }) : '—'}
-                          </Text>
-                          <Text w="120px" color="gray.500">
-                            {member.createdAt ? formatDistanceToNow(member.createdAt, { addSuffix: true }) : '—'}
-                          </Text>
+                          {showLastActiveColumn && (
+                            <Text w="120px" color="gray.500">
+                              {member.lastActive ? formatDistanceToNow(member.lastActive, { addSuffix: true }) : '—'}
+                            </Text>
+                          )}
+                          {showJoinedColumn && (
+                            <Text w="120px" color="gray.500">
+                              {member.createdAt ? formatDistanceToNow(member.createdAt, { addSuffix: true }) : '—'}
+                            </Text>
+                          )}
                           <Box w="140px" textAlign="right">
                             {canManageLeadership ? (
                               <HStack spacing={2} justify="flex-end">

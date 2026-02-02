@@ -4,4 +4,7 @@ export type OrgProfileLike = {
   organizationId?: string | null
   companyCode?: string | null
   organizationCode?: string | null
+  corporateVillageId?: string | null
+  villageId?: string | null
+  cohortIdentifier?: string | null
 }
