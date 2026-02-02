@@ -72,7 +72,11 @@ export const ProtectedRoute: React.FC<Props> = ({
   if (loading || profileLoading) return <AppLoader />
 
   if (!user) {
-    return <Navigate to="/login" replace state={{ from: location }} />
+    const redirectPath = `${location.pathname}${location.search}`
+    const loginPath = redirectPath
+      ? `/login?redirect=${encodeURIComponent(redirectPath)}`
+      : '/login'
+    return <Navigate to={loginPath} replace />
   }
 
   if (!profile) {

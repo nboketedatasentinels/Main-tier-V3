@@ -26,6 +26,7 @@ import { VillageInviteEmailForm } from '@/components/villages/VillageInviteEmail
 import { PendingVillageInvitesList } from '@/components/villages/PendingVillageInvitesList'
 import { VillageInviteCodeModal } from '@/components/villages/VillageInviteCodeModal'
 import { useAuth } from '@/hooks/useAuth'
+import { formatVillageInviteLink } from '@/config/app'
 
 const MEMBER_LIMIT = 10
 
@@ -44,7 +45,7 @@ export const VillageInvitePage = () => {
 
   const inviteLink = useMemo(() => {
     if (!inviteCode) return ''
-    return `${window.location.origin}/app/villages/join/${inviteCode}`
+    return formatVillageInviteLink(inviteCode)
   }, [inviteCode])
 
   const loadData = async () => {
@@ -191,7 +192,7 @@ export const VillageInvitePage = () => {
                 isDisabled={memberCount >= MEMBER_LIMIT}
                 isLoading={inviting}
               >
-                Generate shareable invite code
+                Generate shareable invite link
               </Button>
             </VStack>
           </CardBody>
@@ -215,7 +216,6 @@ export const VillageInvitePage = () => {
         <VillageInviteCodeModal
           isOpen={isCodeModalOpen}
           onClose={() => setIsCodeModalOpen(false)}
-          invitationCode={inviteCode}
           inviteLink={inviteLink}
         />
       )}

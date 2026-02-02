@@ -28,7 +28,7 @@ const MEMBER_LIMIT = 10
 
 export const AcceptVillageInvitePage = () => {
   const { invitationCode } = useParams()
-  const { user, profile, isPaid } = useAuth()
+  const { user, profile, isPaid, refreshProfile } = useAuth()
   const navigate = useNavigate()
   const toast = useToast()
   const [loading, setLoading] = useState(true)
@@ -96,6 +96,14 @@ export const AcceptVillageInvitePage = () => {
       }
       await acceptVillageInvitation({ invitationId, villageId, userId: user.uid })
       await updateUserVillageId(user.uid, villageId)
+      try {
+        const { error: refreshError } = await refreshProfile({ reason: 'village-invite-accepted' })
+        if (refreshError) {
+          console.warn('Failed to refresh profile after accepting village invite', refreshError)
+        }
+      } catch (refreshError) {
+        console.warn('Refresh profile threw an error after accepting village invite', refreshError)
+      }
       toast({ title: 'Welcome to the village!', status: 'success' })
       navigate(`/app/profile`)
     } catch (error) {
