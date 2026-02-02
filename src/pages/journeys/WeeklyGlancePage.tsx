@@ -177,6 +177,10 @@ function useWeeklyGlanceViewModel() {
   // Normalize collection shapes so UI never has to guard against undefined
   const weeklyHabits = useMemo(() => data.weeklyHabits ?? [], [data.weeklyHabits])
   const peerMatches = useMemo(() => data.peerMatches ?? [], [data.peerMatches])
+  const activePeerMatches = useMemo(
+    () => peerMatches.filter(match => match.matchStatus !== 'expired'),
+    [peerMatches],
+  )
 
   const weekRange = useMemo(() => getWeekDateRange(), [])
   const daysRemaining = useMemo(() => getDaysRemainingInWeek(), [])
@@ -223,21 +227,21 @@ function useWeeklyGlanceViewModel() {
         totalHabits: weeklyHabits.length,
         hasMentor: !!mentorProfile,
         mentorFirstName: mentorProfile?.firstName ?? null,
-        peerMatchCount: peerMatches.length,
+        peerMatchCount: activePeerMatches.length,
         ledgerEntries,
       }),
-    [
-      earnedPoints,
-      targetPoints,
-      data.weekNumber,
-      daysRemaining,
-      completedHabits,
-      weeklyHabits.length,
-      mentorProfile,
-      peerMatches.length,
-      ledgerEntries,
-    ]
-  )
+      [
+        earnedPoints,
+        targetPoints,
+        data.weekNumber,
+        daysRemaining,
+        completedHabits,
+        weeklyHabits.length,
+        mentorProfile,
+        activePeerMatches.length,
+        ledgerEntries,
+      ]
+    )
 
   return {
     profile,

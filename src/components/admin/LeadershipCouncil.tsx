@@ -40,7 +40,7 @@ import {
   assignRoleToUser,
   updateUser,
 } from '@/services/userManagementService'
-import { getDisplayName, getInitials } from '@/utils/displayName'
+import { getDisplayName } from '@/utils/displayName'
 
 type LeadershipRole = 'mentor' | 'ambassador'
 

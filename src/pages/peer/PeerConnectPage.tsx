@@ -70,7 +70,6 @@ import {
   serverTimestamp,
   setDoc,
   updateDoc,
-  where,
 } from 'firebase/firestore'
 import { auth, db } from '@/services/firebase'
 import { useAuth } from '@/hooks/useAuth'
