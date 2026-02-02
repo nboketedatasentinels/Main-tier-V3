@@ -17,12 +17,14 @@ import {
 } from 'firebase/firestore'
 import { auth, db } from '@/services/firebase'
 import { awardChecklistPoints } from '@/services/pointsService'
+import { createInAppNotification } from '@/services/notificationService'
 import {
   PEER_SESSION_CONFIRMATION_ACTIVITY,
   PEER_SESSION_NO_SHOW_ACTIVITY,
   type JourneyType,
 } from '@/config/pointsConfig'
 import { removeUndefinedFields } from '@/utils/firestore'
+import { getDisplayName, type DisplayNameInput } from '@/utils/displayName'
 import { addDays } from 'date-fns'
 import { getCurrentWeekNumber } from '@/utils/weekCalculations'
 
@@ -244,6 +246,22 @@ const assertValidCreateParams = (params: CreateSessionParams): string[] => {
   return normalizedParticipants
 }
 
+const buildPeerConnectUrl = (sessionId: string) =>
+  `/app/peer-connect?sessionId=${encodeURIComponent(sessionId)}`
+
+const formatSessionDateLabel = (date: Date, timeZone: string) => {
+  try {
+    return new Intl.DateTimeFormat('en-US', {
+      dateStyle: 'medium',
+      timeStyle: 'short',
+      timeZone,
+    }).format(date)
+  } catch (error) {
+    console.warn('[PeerSessionService] Failed to format session date', error)
+    return date.toLocaleString('en-US')
+  }
+}
+
 // Helper to get user's journey info for points
 async function getUserJourneyInfo(uid: string): Promise<{ journeyType: JourneyType; weekNumber: number } | null> {
   try {
@@ -312,6 +330,38 @@ export async function createPeerSession(params: CreateSessionParams): Promise<st
 
   // Atomic commit
   await batch.commit()
+
+  const sessionActionUrl = buildPeerConnectUrl(sessionRef.id)
+  const formattedSessionDate = formatSessionDateLabel(params.scheduledAt, params.timezone)
+  const inviteMessage = `${params.creatorName} invited you to "${params.title}" on ${formattedSessionDate}.`
+
+  await Promise.all(
+    normalizedParticipants.map(async (participantId) => {
+      try {
+        await createInAppNotification({
+          userId: participantId,
+          type: 'session_request',
+          title: 'Peer session invitation',
+          message: inviteMessage,
+          relatedId: sessionRef.id,
+          metadata: {
+            sessionId: sessionRef.id,
+            actionUrl: sessionActionUrl,
+            actionLabel: 'View session',
+            scheduledAt: params.scheduledAt.toISOString(),
+            timezone: params.timezone,
+            creatorName: params.creatorName,
+          },
+        })
+      } catch (error) {
+        console.error('[PeerSessionService] Failed to send invite notification', {
+          participantId,
+          sessionId: sessionRef.id,
+          error,
+        })
+      }
+    }),
+  )
 
   return sessionRef.id
 }
@@ -456,6 +506,39 @@ export async function respondToInvitation(inviteId: string, accepted: boolean): 
     status: accepted ? 'accepted' : 'declined',
     respondedAt: serverTimestamp(),
   })
+
+  if (accepted) {
+    try {
+      const [session, profileSnap] = await Promise.all([
+        getSession(inviteData.sessionId),
+        getDoc(doc(db, 'profiles', toUserId)),
+      ])
+      const inviteeProfile = profileSnap.exists() ? (profileSnap.data() as DisplayNameInput) : undefined
+      const inviteeName = getDisplayName(inviteeProfile, 'Peer')
+      const sessionTitle = session?.title || 'Peer session'
+      const timezone = session?.timezone || 'UTC'
+      const formattedDate = session ? formatSessionDateLabel(session.scheduledAt, timezone) : ''
+      const dateSuffix = formattedDate ? ` scheduled for ${formattedDate}` : ''
+      const sessionLink = buildPeerConnectUrl(inviteData.sessionId)
+
+      await createInAppNotification({
+        userId: inviteData.fromUserId,
+        type: 'session_request',
+        title: 'Session invitation accepted',
+        message: `${inviteeName} accepted your invitation to "${sessionTitle}".${dateSuffix}`,
+        relatedId: inviteData.sessionId,
+        metadata: {
+          sessionId: inviteData.sessionId,
+          actionUrl: sessionLink,
+          actionLabel: 'View session',
+          acceptedBy: inviteeName,
+          status: 'accepted',
+        },
+      })
+    } catch (error) {
+      console.error('[PeerSessionService] Failed to notify inviter about acceptance', error)
+    }
+  }
 }
 
 /**
