@@ -371,8 +371,16 @@ export const StartChallengeModal: React.FC<StartChallengeModalProps> = ({
       const challengeData = {
         challenger_id: challenger.id,
         challenger_name: getDisplayName(challenger, 'Member'),
+        challenger_first_name: challenger.firstName || null,
+        challenger_last_name: challenger.lastName || null,
+        challenger_email: challenger.email || null,
+
         challenged_id: challenged.id,
         challenged_name: getDisplayName(challenged, 'Member'),
+        challenged_first_name: challenged.firstName || null,
+        challenged_last_name: challenged.lastName || null,
+        challenged_email: challenged.email || null,
+
         // Store BOTH identifiers to support queries by either
         company_id: company?.id || challenger.companyId || challenger.organizationId || null,
         company_code: company?.code || challenger.companyCode || challengerOrganizationCode || null,

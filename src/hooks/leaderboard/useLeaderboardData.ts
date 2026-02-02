@@ -14,6 +14,7 @@ import { db } from '@/services/firebase'
 import { TransformationTier, UserProfile } from '@/types'
 import { LeaderboardContext } from './useLeaderboardContext'
 import { getOrgScope, listenToOrgMembers } from '@/utils/organizationScope'
+import { getDisplayName } from '@/utils/displayName'
 
 export interface PointsTransaction {
   id: string
@@ -136,9 +137,26 @@ const mapChallenge = (
   // Determine if current user is challenger or challenged
   const isChallenger = data.challenger_id === currentUserId
   const opponentId = isChallenger ? data.challenged_id : data.challenger_id
-  const opponentName = isChallenger
-    ? (data.challenged_name as string) || (data.challenged_email as string)?.split('@')[0] || 'Opponent'
-    : (data.challenger_name as string) || (data.challenger_email as string)?.split('@')[0] || 'Opponent'
+
+  // Build opponent profile object for getDisplayName
+  const opponentProfile = isChallenger
+    ? {
+        displayName: data.challenged_name as string | undefined,
+        firstName: data.challenged_first_name as string | undefined,
+        lastName: data.challenged_last_name as string | undefined,
+        email: data.challenged_email as string | undefined,
+        uid: opponentId as string | undefined,
+      }
+    : {
+        displayName: data.challenger_name as string | undefined,
+        firstName: data.challenger_first_name as string | undefined,
+        lastName: data.challenger_last_name as string | undefined,
+        email: data.challenger_email as string | undefined,
+        uid: opponentId as string | undefined,
+      }
+
+  // Use centralized display name utility with fallback chain
+  const opponentName = getDisplayName(opponentProfile, 'Opponent')
 
   // Get points for current user and opponent
   const metrics = data.metrics as Record<string, { total?: number }> | undefined
@@ -399,6 +417,32 @@ export const useLeaderboardData = ({
     }
   }, [context, transactionsRetry])
 
+  // Deduplication function to remove duplicate challenges
+  const deduplicateChallenges = (challenges: ChallengeRecord[]): ChallengeRecord[] => {
+    const seen = new Map<string, ChallengeRecord>()
+
+    challenges.forEach((c) => {
+      // Create unique key based on participants and date range
+      const key = [
+        c.opponentId,
+        c.startDate.slice(0, 10),
+        c.endDate.slice(0, 10),
+      ].join('|')
+
+      const existing = seen.get(key)
+      if (!existing) {
+        seen.set(key, c)
+      } else {
+        // Keep the one with higher points or more recent update
+        if (c.yourPoints > existing.yourPoints) {
+          seen.set(key, c)
+        }
+      }
+    })
+
+    return Array.from(seen.values())
+  }
+
   // Robust real-time challenge fetching that handles legacy and new schemas
   useEffect(() => {
     if (!profileId) {
@@ -428,8 +472,11 @@ export const useLeaderboardData = ({
         }
       }
 
-      unique.sort((a, b) => new Date(b.startDate).getTime() - new Date(a.startDate).getTime())
-      setChallenges(unique)
+      // Apply deduplication to remove duplicate challenges based on participants and dates
+      const deduplicated = deduplicateChallenges(unique)
+
+      deduplicated.sort((a, b) => new Date(b.startDate).getTime() - new Date(a.startDate).getTime())
+      setChallenges(deduplicated)
       setChallengesLoaded(true)
       setErrorMessage(null)
     }

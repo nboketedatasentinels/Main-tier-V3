@@ -106,6 +106,42 @@ type PeerProfile = {
   avatarUrl?: string
 }
 
+const mapRecordToPeerProfile = (record: Record<string, unknown>): PeerProfile => {
+  const id = String(record.id)
+  const email = typeof record.email === 'string' ? record.email : ''
+  const displayInput = {
+    ...record,
+    email,
+    uid: id,
+  }
+  return {
+    id,
+    name: getDisplayName(displayInput, 'Member'),
+    email,
+    timezone: record.timezone as PeerProfile['timezone'],
+    interests: record.interests as PeerProfile['interests'],
+    goals: record.goals as PeerProfile['goals'],
+    companyCode: typeof record.companyCode === 'string' ? record.companyCode : undefined,
+    corporateVillageId: record.corporateVillageId as PeerProfile['corporateVillageId'],
+    cohortIdentifier: record.cohortIdentifier as PeerProfile['cohortIdentifier'],
+    calendarLink: record.calendarLink as PeerProfile['calendarLink'],
+    identityTag: record.identityTag as PeerProfile['identityTag'],
+    avatarUrl: record.avatarUrl as PeerProfile['avatarUrl'],
+  }
+}
+
+const fetchPeerProfileById = async (peerId: string): Promise<PeerProfile | null> => {
+  if (!peerId) return null
+  try {
+    const peerDoc = await getDoc(doc(db, 'profiles', peerId))
+    if (!peerDoc.exists()) return null
+    return mapRecordToPeerProfile({ id: peerDoc.id, ...(peerDoc.data() as Record<string, unknown>) })
+  } catch (error) {
+    console.error('[PeerMatch] Failed to fetch peer profile', peerId, error)
+    return null
+  }
+}
+
 interface PreselectedUser {
   id: string
   name: string
@@ -420,6 +456,14 @@ export const PeerConnectPage: React.FC = () => {
           setWeeklyMatch(buildWeeklyMatchFromDoc(matchRef.id, data, matchedPeer))
           return
         }
+        if (storedPeerId) {
+          console.warn('[PeerMatch] Matched peer missing from org list; fetching profile', storedPeerId)
+          const fallbackPeer = await fetchPeerProfileById(storedPeerId)
+          if (fallbackPeer) {
+            setWeeklyMatch(buildWeeklyMatchFromDoc(matchRef.id, data, fallbackPeer))
+            return
+          }
+        }
       }
       const deterministicPeer = availablePeers[Math.abs(Number.parseInt(user.uid.slice(-3), 10)) % availablePeers.length]
       if (deterministicPeer) {
@@ -676,23 +720,7 @@ export const PeerConnectPage: React.FC = () => {
 
         await debugOrgFetch(db, profile, user?.uid ?? '')
         const members = await fetchOrgMembers(db, orgScope, user?.uid ?? '')
-        const mappedPeers = members.map((data) => {
-          const email = typeof data.email === 'string' ? data.email : ''
-          return {
-            id: String(data.id),
-            name: getDisplayName({ ...data, email }, 'Member'),
-            email,
-            timezone: data.timezone as PeerProfile['timezone'],
-            interests: data.interests as PeerProfile['interests'],
-            goals: data.goals as PeerProfile['goals'],
-            companyCode: typeof data.companyCode === 'string' ? data.companyCode : undefined,
-            corporateVillageId: data.corporateVillageId as PeerProfile['corporateVillageId'],
-            cohortIdentifier: data.cohortIdentifier as PeerProfile['cohortIdentifier'],
-            calendarLink: data.calendarLink as PeerProfile['calendarLink'],
-            identityTag: data.identityTag as PeerProfile['identityTag'],
-            avatarUrl: data.avatarUrl as PeerProfile['avatarUrl'],
-          }
-        })
+        const mappedPeers = members.map((data) => mapRecordToPeerProfile(data))
         setAvailablePeers(mappedPeers)
       } catch (error: unknown) {
         console.error('Error fetching peers', error)
@@ -728,8 +756,6 @@ export const PeerConnectPage: React.FC = () => {
   useEffect(() => {
     if (!matchDocId) return undefined
     if (matchPreferences.refreshPreference === 'disabled') return undefined
-    if (!availablePeers.length) return undefined
-
     const matchRef = doc(db, 'peer_weekly_matches', matchDocId)
     const unsubscribe = onSnapshot(matchRef, (snapshot) => {
       if (!snapshot.exists()) return
@@ -737,8 +763,15 @@ export const PeerConnectPage: React.FC = () => {
       const storedPeerId = data.peer_id ?? data.peerId
       if (!storedPeerId) return
       const matchedPeer = availablePeers.find((peer) => peer.id === storedPeerId)
-      if (!matchedPeer) return
-      setWeeklyMatch(buildWeeklyMatchFromDoc(matchRef.id, data, matchedPeer))
+      if (matchedPeer) {
+        setWeeklyMatch(buildWeeklyMatchFromDoc(matchRef.id, data, matchedPeer))
+        return
+      }
+      console.warn('[PeerMatch] Matched peer missing from list; fetching profile', storedPeerId)
+      void fetchPeerProfileById(storedPeerId).then((fallbackPeer) => {
+        if (!fallbackPeer) return
+        setWeeklyMatch(buildWeeklyMatchFromDoc(matchRef.id, data, fallbackPeer))
+      })
     })
 
     return () => {
