@@ -197,7 +197,7 @@ export const StartChallengeModal: React.FC<StartChallengeModalProps> = ({
   // --- DATA FETCHING ---
   const buildUserOptions = (members: Record<string, unknown>[]) => {
     return members.map((member) => {
-      const p = member as UserProfile;
+      const p = member as unknown as UserProfile;
       return {
         id: p.id,
         name: getDisplayName(p, 'Member'),
