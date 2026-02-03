@@ -99,13 +99,40 @@ export async function approveRequest(approvalId: string, reviewedBy: string): Pr
   }
 
   try {
-    await updateDoc(approvalRef, {
+    const approvalPayload = {
       status: 'approved',
       reviewedBy,
       reviewedAt: serverTimestamp(),
-    });
+    };
 
-    // Log admin action
+    await updateDoc(approvalRef, approvalPayload);
+
+    try {
+      await awardChecklistPoints({
+        uid: approvalRecord.userId,
+        journeyType: journeyType,
+        weekNumber: request.week,
+        activity: activity,
+        source: 'approval',
+      });
+    } catch (error) {
+      console.error('[approvalsService] Failed to award checklist points after approval:', error);
+      try {
+        await updateDoc(approvalRef, {
+          status: 'pending',
+          reviewedBy: null,
+          reviewedAt: null,
+        });
+      } catch (revertError) {
+        console.error(
+          '[approvalsService] Failed to revert approval record after award failure:',
+          revertError,
+        );
+      }
+      throw error;
+    }
+
+    // Log admin action (after points are awarded)
     try {
       await logAdminAction({
         action: 'approval_request_approved',
@@ -121,14 +148,6 @@ export async function approveRequest(approvalId: string, reviewedBy: string): Pr
     } catch (error) {
       console.error('[approvalsService] Failed to log admin action:', error);
     }
-
-    await awardChecklistPoints({
-      uid: approvalRecord.userId,
-      journeyType: journeyType,
-      weekNumber: request.week,
-      activity: activity,
-      source: 'approval',
-    });
   } catch (error) {
     console.error('Error approving request:', error);
     throw new Error('Failed to approve request');

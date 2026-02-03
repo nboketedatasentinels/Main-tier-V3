@@ -178,15 +178,40 @@ export const approvePointsVerificationRequest = async (params: {
     throw new Error('Activity not found')
   }
 
-  // Update request status
-  await updateDoc(requestRef, {
+  const approverPayload = {
     status: 'approved',
     approved_by: params.approver?.id ?? null,
     approved_by_name: params.approver?.name ?? null,
     approved_at: serverTimestamp(),
-  })
+  }
 
-  // Log admin action
+  // Update request status before awarding to keep locks in place
+  await updateDoc(requestRef, approverPayload)
+
+  try {
+    await awardChecklistPoints({
+      uid: params.request.user_id,
+      journeyType,
+      weekNumber: params.request.week,
+      activity,
+      source: 'approval',
+    })
+  } catch (error) {
+    console.error('[pointsVerificationService] Failed to award checklist points after approval:', error)
+    try {
+      await updateDoc(requestRef, {
+        status: 'pending',
+        approved_by: null,
+        approved_by_name: null,
+        approved_at: null,
+      })
+    } catch (revertError) {
+      console.error('[pointsVerificationService] Failed to revert approval status after award failure:', revertError)
+    }
+    throw error
+  }
+
+  // Log admin action (after points cleared)
   try {
     await logAdminAction({
       action: 'points_request_approved',
@@ -202,15 +227,6 @@ export const approvePointsVerificationRequest = async (params: {
   } catch (error) {
     console.error('[pointsVerificationService] Failed to log admin action:', error)
   }
-
-  // Award points
-  await awardChecklistPoints({
-    uid: params.request.user_id,
-    journeyType,
-    weekNumber: params.request.week,
-    activity,
-    source: 'approval',
-  })
 
   return { data: { success: true } }
 }
