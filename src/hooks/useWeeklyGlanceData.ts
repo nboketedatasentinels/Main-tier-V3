@@ -366,12 +366,20 @@ export const useWeeklyGlanceData = () => {
       if (!profile?.id) return
       setLoading(prev => ({ ...prev, matches: true }))
       try {
-        const matchesQuery = query(
-          collection(db, 'peer_weekly_matches'),
-          where('userId', '==', profile.id),
+        const matchesCollection = collection(db, 'peer_weekly_matches')
+        const primarySnapshot = await getDocs(
+          query(matchesCollection, where('user_id', '==', profile.id)),
         )
-        const snapshot = await getDocs(matchesQuery)
-        const matchesData: PeerMatch[] = snapshot.docs
+        let matchDocs = primarySnapshot.docs
+
+        if (!matchDocs.length) {
+          const fallbackSnapshot = await getDocs(
+            query(matchesCollection, where('userId', '==', profile.id)),
+          )
+          matchDocs = fallbackSnapshot.docs
+        }
+
+        const matchesData: PeerMatch[] = matchDocs
           .map(docItem => {
             const record = docItem.data() as Record<string, unknown>
             const rawStatus =
