@@ -62,6 +62,7 @@ import { ApprovalRecord, ApprovalStatus, ApprovalWorkflowType } from '@/types/ap
 import { getApprovalTypeMeta } from '@/utils/approvalTypeMapper'
 import { doc, getDoc } from 'firebase/firestore'
 import { db } from '@/services/firebase'
+import { getDisplayName, type DisplayNameInput } from '@/utils/displayName'
 import type { UpgradeRequest } from '@/types/upgrade'
 import type { OrganizationRecord } from '@/types/admin'
 
@@ -270,32 +271,55 @@ const ApprovalCenterPage: React.FC = () => {
 
       const profileMap = new Map<string, string>()
 
+      // Prefill names from upgrade request metadata
+      approvalRecords.forEach((record) => {
+        if (record.type !== 'upgrade_request') return
+        const upgrade = record.source as UpgradeRequest
+        const detail = upgrade.userDetails
+        if (!upgrade.user_id || !detail) return
+        const prefillName = detail.fullName?.trim() ||
+          [detail.firstName, detail.lastName].filter(Boolean).join(' ').trim() ||
+          detail.email ||
+          null
+        if (prefillName) {
+          profileMap.set(upgrade.user_id, prefillName)
+        }
+      })
+
       // Fetch profiles in parallel (batch of 10 to avoid Firestore limits)
       for (let i = 0; i < userIds.length; i += 10) {
         const batch = userIds.slice(i, i + 10)
         const results = await Promise.all(
           batch.map(async (userId) => {
+            const fallbackName = formatUserIdFallback(userId)
             try {
-              const profileSnap = await getDoc(doc(db, 'users', userId))
+              const profileSnap = await getDoc(doc(db, 'profiles', userId))
               if (profileSnap.exists()) {
                 const data = profileSnap.data()
-                const name =
-                  data.name ||
-                  data.fullName ||
-                  data.full_name ||
-                  [data.firstName, data.lastName].filter(Boolean).join(' ').trim() ||
-                  data.email ||
-                  null
-                return [userId, name] as [string, string | null]
+                const displayData = data as Record<string, unknown>
+                const displayNameInput: DisplayNameInput = {
+                  displayName: typeof displayData.displayName === 'string' ? displayData.displayName : undefined,
+                  name: typeof displayData.name === 'string' ? displayData.name : undefined,
+                  fullName: typeof displayData.fullName === 'string' ? displayData.fullName : undefined,
+                  full_name: typeof displayData.full_name === 'string' ? displayData.full_name : undefined,
+                  firstName: typeof displayData.firstName === 'string' ? displayData.firstName : undefined,
+                  lastName: typeof displayData.lastName === 'string' ? displayData.lastName : undefined,
+                  email: typeof displayData.email === 'string' ? displayData.email : undefined,
+                  uid: userId,
+                }
+                const computedName = getDisplayName(displayNameInput, fallbackName)
+                const isFallback = computedName === fallbackName
+                return [userId, computedName, isFallback] as [string, string, boolean]
               }
             } catch {
               // Ignore errors for individual profiles
             }
-            return [userId, null] as [string, string | null]
+            return [userId, fallbackName, true] as [string, string, boolean]
           })
         )
-        results.forEach(([id, name]) => {
-          if (name) profileMap.set(id, name)
+        results.forEach(([id, name, isFallback]) => {
+          if (isFallback && profileMap.has(id)) return
+          profileMap.set(id, name)
         })
       }
 

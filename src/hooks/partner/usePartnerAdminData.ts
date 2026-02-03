@@ -19,6 +19,7 @@ import {
   type DashboardDebugInfo,
   type MismatchSample,
 } from '@/utils/partnerDashboardUtils'
+import { getDisplayName, type DisplayNameInput } from '@/utils/displayName'
 import {
   calculateUserRiskStatus,
   getProgramWeekNumber,
@@ -930,12 +931,18 @@ export const usePartnerAdminData = (
                 (reason): reason is string => typeof reason === 'string' && reason.length > 0
               )
 
-              const displayName =
-                data.name ||
-                data.fullName ||
-                data.full_name ||
-                [data.firstName, data.lastName].filter(Boolean).join(' ').trim() ||
-                'Unknown User'
+              const enrichedData = data as FirestorePartnerUser & { displayName?: string }
+              const displayNameInput: DisplayNameInput = {
+                displayName: typeof enrichedData.displayName === 'string' ? enrichedData.displayName : undefined,
+                name: typeof data.name === 'string' ? data.name : undefined,
+                fullName: typeof data.fullName === 'string' ? data.fullName : undefined,
+                full_name: typeof data.full_name === 'string' ? data.full_name : undefined,
+                firstName: typeof data.firstName === 'string' ? data.firstName : undefined,
+                lastName: typeof data.lastName === 'string' ? data.lastName : undefined,
+                email: typeof data.email === 'string' ? data.email : undefined,
+                uid: docWrapper.id,
+              }
+              const displayName = getDisplayName(displayNameInput, 'Unknown User')
 
               hydratedUsers.push({
                 id: docWrapper.id,
