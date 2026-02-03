@@ -40,7 +40,6 @@ import { CommandCenterHeader } from './components/CommandCenterHeader'
 import { CriticalActionInbox, ActionItem } from './components/CriticalActionInbox'
 import { SystemHealthStrip, HealthKPI } from './components/SystemHealthStrip'
 import { RiskAnomalyRadar, Signal } from './components/RiskAnomalyRadar'
-import { OperationalCommands } from './components/OperationalCommands'
 import { CollapsibleMetrics } from './components/CollapsibleMetrics'
 
 type TrendPoint = { label: string; value: number }
@@ -235,9 +234,6 @@ export const OverviewPage: React.FC<OverviewPageProps> = ({
 
           {/* ZONE 3 — RISK & ANOMALY RADAR */}
           <RiskAnomalyRadar riskSignals={riskSignals} securityCompliance={securitySignals} />
-
-          {/* ZONE 4 — OPERATIONAL COMMANDS */}
-          <OperationalCommands />
 
           {/* ZONE 6 — SYSTEM METRICS (Collapsible) */}
           <CollapsibleMetrics>

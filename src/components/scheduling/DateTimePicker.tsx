@@ -3,13 +3,17 @@ import {
   Box,
   FormControl,
   FormLabel,
+  Icon,
   Input,
+  InputGroup,
+  InputRightElement,
   Select,
   SimpleGrid,
   Text,
   VStack,
 } from '@chakra-ui/react'
 import { format, addDays, setHours, setMinutes } from 'date-fns'
+import { Calendar } from 'lucide-react'
 
 // Comprehensive world timezones grouped by region
 const TIMEZONE_GROUPS = {
@@ -168,7 +172,7 @@ export const DateTimePicker: React.FC<DateTimePickerProps> = ({
       {/* Date Picker */}
       <FormControl isInvalid={Boolean(dateError)} isRequired={isRequired}>
         <FormLabel fontSize="sm" mb={1}>{dateLabel}</FormLabel>
-        <Box>
+        <InputGroup>
           <Input
             type="date"
             value={selectedDateValue}
@@ -179,7 +183,10 @@ export const DateTimePicker: React.FC<DateTimePickerProps> = ({
               onDateChange(value ? new Date(`${value}T00:00:00`) : null)
             }}
           />
-        </Box>
+          <InputRightElement pointerEvents="none">
+            <Icon as={Calendar} boxSize={4} color="brand.subtleText" />
+          </InputRightElement>
+        </InputGroup>
         {dateError && (
           <Text fontSize="xs" color="red.500" mt={1}>
             {dateError}

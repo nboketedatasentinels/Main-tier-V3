@@ -89,7 +89,12 @@ import { Badge as BadgeDefinition, LeaderboardTimeframe, UserProfile, UserRole }
 import { OrganizationRecord } from '@/types/admin'
 import { db } from '@/services/firebase'
 import { fetchOrganizationsByIds } from '@/services/organizationService'
-import { fetchVillageById, removeMemberFromVillage, VillageSummary } from '@/services/villageService'
+import {
+  fetchVillageById,
+  fetchVillagesByIds,
+  removeMemberFromVillage,
+  VillageSummary,
+} from '@/services/villageService'
 import { useAuth } from '@/hooks/useAuth'
 import { useLeaderboardContext, getLeaderboardContextLabels } from '@/hooks/leaderboard/useLeaderboardContext'
 import { useLeaderboardData } from '@/hooks/leaderboard/useLeaderboardData'
@@ -182,6 +187,8 @@ export const LeadershipBoardPage: React.FC = () => {
   })
   const [expandedCategories, setExpandedCategories] = useState<Set<string>>(new Set())
   const [organizationsMap, setOrganizationsMap] = useState<Record<string, OrganizationRecord>>({})
+  const [villageNames, setVillageNames] = useState<Record<string, string>>({})
+  const villageNamesRef = useRef<Record<string, string>>({})
   const previousTotalPoints = useRef<number | null>(null)
   const timeframeStart = useMemo(() => toDateFromTimeframe(timeframe), [timeframe])
   const enableProfileRealtime = import.meta.env.VITE_ENABLE_PROFILE_REALTIME === 'true'
@@ -407,6 +414,38 @@ export const LeadershipBoardPage: React.FC = () => {
           })
       }
     }
+  }, [profiles])
+
+
+  useEffect(() => {
+    if (!profiles.length) return
+
+    const villageIds = Array.from(
+      new Set(
+        profiles
+          .map((p) => p.villageId)
+          .filter((id): id is string => Boolean(id)),
+      ),
+    )
+
+    const missingVillageIds = villageIds.filter((id) => !villageNamesRef.current[id])
+    if (!missingVillageIds.length) return
+
+    fetchVillagesByIds(missingVillageIds)
+      .then((villages) => {
+        if (!villages.length) return
+        setVillageNames((prev) => {
+          const merged = { ...prev }
+          villages.forEach((village) => {
+            merged[village.id] = village.name
+          })
+          villageNamesRef.current = merged
+          return merged
+        })
+      })
+      .catch((err) => {
+        console.error('🔍 [Leaderboard] Failed to fetch villages', err)
+      })
   }, [profiles])
 
 
@@ -1192,6 +1231,17 @@ export const LeadershipBoardPage: React.FC = () => {
                                 : row.user.id === profile?.id
                                   ? '/app/profile'
                                   : null
+                              const organizationKey = row.user.companyId || row.user.organizationId || ''
+                              const organizationRecord = organizationsMap[organizationKey]
+                              const organizationLabel =
+                                organizationRecord?.name || row.user.companyName || row.user.companyId || 'Independent'
+                              const villageLabel =
+                                villageNames[row.user.villageId ?? ''] ||
+                                organizationRecord?.village ||
+                                row.user.villageId ||
+                                'Village TBD'
+                              const clusterLabel =
+                                organizationRecord?.cluster || row.user.clusterId || 'Cluster TBD'
                               return (
                                 <Tr
                                   key={row.user.id}
@@ -1221,7 +1271,7 @@ export const LeadershipBoardPage: React.FC = () => {
                                       <Box>
                                         <Text fontWeight="bold" color="text.primary">{getDisplayName(row.user)}</Text>
                                         <Text fontSize="xs" color="text.secondary">
-                                          {organizationsMap[row.user.companyId || row.user.organizationId || '']?.name || row.user.companyName || row.user.companyId || 'Independent'} · {organizationsMap[row.user.companyId || row.user.organizationId || '']?.village || row.user.villageId || 'Village TBD'} · {organizationsMap[row.user.companyId || row.user.organizationId || '']?.cluster || row.user.clusterId || 'Cluster TBD'}
+                                          {organizationLabel} · {villageLabel} · {clusterLabel}
                                         </Text>
                                         <HStack spacing={2} mt={1}>
                                           <Badge colorScheme="success">Active</Badge>
