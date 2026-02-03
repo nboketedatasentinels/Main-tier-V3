@@ -146,20 +146,8 @@ export const onReferredUserFirstActivity = functions
         return null;
       }
 
-      // Count existing ledger entries for this user (excluding this one)
-      const existingEntriesQuery = await db
-        .collection("pointsLedger")
-        .where("uid", "==", referredUid)
-        .get();
-
-      // This should be 1 (the entry that triggered this function)
-      // If more than 1, this isn't the first activity
-      if (existingEntriesQuery.size > 1) {
-        console.log(
-          `[Referral] User ${referredUid} already has ${existingEntriesQuery.size} ledger entries, not first activity`
-        );
-        return null;
-      }
+      // We rely on referral status to keep this idempotent instead of checking ledger count.
+      // That way we credit the referrer as soon as the referred user completes any activity, even if other points were recorded earlier.
 
       console.log(
         `[Referral] First activity detected for referred user ${referredUid}, crediting referrer ${referrerUid}`

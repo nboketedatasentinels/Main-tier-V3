@@ -954,14 +954,7 @@ export const PeerConnectPage: React.FC = () => {
 
       // Note: UI will update automatically via real-time listener
 
-      if (result.pointsAwarded) {
-        toast({
-          title: 'Session confirmed!',
-          description: 'Both participants confirmed. 50 points awarded to each of you!',
-          status: 'success',
-          position: 'top',
-        })
-      } else {
+      if (!result.pointsAwarded) {
         toast({
           title: 'Meetup confirmed',
           description: '50 points will unlock when your peer also confirms before the deadline.',
@@ -987,14 +980,7 @@ export const PeerConnectPage: React.FC = () => {
 
       // Note: UI will update automatically via real-time listener
 
-      if (pointsAwarded) {
-        toast({
-          title: 'No-show reported',
-          description: 'You earned 25 points for accountability. Your peer will be notified.',
-          status: 'info',
-          position: 'top',
-        })
-      } else {
+      if (!pointsAwarded) {
         toast({
           title: 'No-show reported',
           description: 'Your peer will be notified about the missed session.',

@@ -46,10 +46,13 @@ import {
   CalendarDays,
 } from 'lucide-react'
 import { useAuth } from '@/hooks/useAuth'
+import { useCurrentWindow } from '@/hooks/useCurrentWindow'
 import { BuildVillageModal } from '@/components/modals/BuildVillageModal'
 import { ConfirmationWelcomeModal } from '@/components/modals/ConfirmationWelcomeModal'
+import { PlatformTour } from '@/components/tour/PlatformTour'
 import { NotificationDropdown } from '@/components/notifications/NotificationDropdown'
 import { isFreeUser as isFreeTierUser } from '@/utils/membership'
+import PointsNotificationListener from '@/components/PointsNotificationListener'
 
 interface NavItem {
   label: string
@@ -76,12 +79,14 @@ const sectionLabelStyles = {
 
 export const MainLayout: React.FC = () => {
   const { profile, signOut, signingOut } = useAuth()
+  const windowContext = useCurrentWindow()
   const location = useLocation()
   const navigate = useNavigate()
   const { isOpen, onOpen, onClose } = useDisclosure()
   const toast = useToast()
   const [showVillagePrompt, setShowVillagePrompt] = useState(false)
   const [showWelcomeModal, setShowWelcomeModal] = useState(false)
+  const [showTour, setShowTour] = useState(false)
 
   const buildVillageKey = useMemo(() => (profile ? `t4l.buildVillage.${profile.id}` : null), [profile])
   const welcomeKey = useMemo(() => (profile ? `t4l.newUserWelcome.${profile.id}` : null), [profile])
@@ -103,7 +108,13 @@ export const MainLayout: React.FC = () => {
       }
     }
 
-    if (welcomeKey && location.pathname.startsWith('/app/weekly-glance')) {
+    // Support all dashboard routes, not just weekly-glance
+    if (
+      welcomeKey &&
+      (location.pathname.startsWith('/app/') ||
+        location.pathname.startsWith('/mentor/') ||
+        location.pathname.startsWith('/ambassador/'))
+    ) {
       const shouldWelcome = localStorage.getItem(welcomeKey)
       if (shouldWelcome === 'pending') {
         setShowWelcomeModal(true)
@@ -249,6 +260,15 @@ export const MainLayout: React.FC = () => {
                 const isActive = location.pathname.startsWith(item.path)
                 const fontWeight = isActive || item.isPrimary ? 'semibold' : 'medium'
 
+                // Add data-tour attributes for tour targets
+                const getTourAttribute = (path: string) => {
+                  if (path === '/app/weekly-glance') return 'dashboard'
+                  if (path === '/app/weekly-checklist') return 'weekly-checklist'
+                  if (path === '/app/impact') return 'impact-log'
+                  if (path === '/app/announcements') return 'community'
+                  return undefined
+                }
+
                 return (
                   <Button
                     key={item.path}
@@ -266,6 +286,7 @@ export const MainLayout: React.FC = () => {
                     fontWeight={fontWeight}
                     fontSize="sm"
                     aria-current={isActive ? 'page' : undefined}
+                    data-tour={getTourAttribute(item.path)}
                   >
                     <HStack spacing={3} w="full" justify="space-between">
                       <HStack spacing={3}>
@@ -490,7 +511,13 @@ export const MainLayout: React.FC = () => {
         onAcknowledge={handleWelcomeAcknowledged}
         firstName={profile?.firstName}
         role={profile?.role}
+        windowContext={windowContext}
+        onStartTour={() => setShowTour(true)}
       />
+
+      <PlatformTour isOpen={showTour} onClose={() => setShowTour(false)} />
+
+      <PointsNotificationListener />
     </Flex>
   )
 }

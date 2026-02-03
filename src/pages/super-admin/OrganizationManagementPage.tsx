@@ -30,7 +30,7 @@ import {
   useDisclosure,
   useToast,
 } from '@chakra-ui/react'
-import { Filter, MoreHorizontal, Search, Sparkles, Users } from 'lucide-react'
+import { Filter, MoreHorizontal, Search, Sparkles } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
 import { AssignAmbassadorModal } from '@/components/super-admin/AssignAmbassadorModal'
 import { AssignMentorModal } from '@/components/super-admin/AssignMentorModal'
@@ -52,7 +52,6 @@ import {
   fetchOrganizations,
   logAdminAction,
 } from '@/services/superAdminService'
-import { triggerPeerMatching } from '@/services/peerMatchingService'
 import { OrganizationLead, OrganizationRecord } from '@/types/admin'
 
 type SortKey = 'name' | 'code' | 'teamSize' | 'status' | 'partnerName'
@@ -91,7 +90,6 @@ export const OrganizationManagementPage: React.FC<OrganizationManagementPageProp
   const assignMentorModal = useDisclosure()
   const assignAmbassadorModal = useDisclosure()
   const confirmDialog = useDisclosure()
-  const [isMatchingPeers, setIsMatchingPeers] = useState(false)
 
   const loadOrganizations = useCallback(async () => {
     setLoading(true)
@@ -350,38 +348,6 @@ export const OrganizationManagementPage: React.FC<OrganizationManagementPageProp
     navigate(`/admin/organization/${organizationKey}`)
   }
 
-  const handleTriggerPeerMatching = async () => {
-    setIsMatchingPeers(true)
-    try {
-      const result = await triggerPeerMatching()
-      await logAdminAction({
-        action: 'Peer matching triggered',
-        adminId,
-        adminName,
-        metadata: {
-          totalCreated: result.totalCreated,
-          totalSkipped: result.totalSkipped,
-          groupsProcessed: result.groupsProcessed,
-        },
-      })
-      toast({
-        title: 'Peer matching complete',
-        description: `Created ${result.totalCreated} matches across ${result.groupsProcessed} organizations. ${result.totalSkipped} users skipped.`,
-        status: 'success',
-        duration: 6000,
-      })
-    } catch (error) {
-      console.error('Peer matching failed:', error)
-      toast({
-        title: 'Peer matching failed',
-        description: error instanceof Error ? error.message : 'An unexpected error occurred',
-        status: 'error',
-      })
-    } finally {
-      setIsMatchingPeers(false)
-    }
-  }
-
   const handleEditOrganization = (org: OrganizationRecord) => {
     setSelectedOrg(org)
     editModal.onOpen()
@@ -434,16 +400,6 @@ export const OrganizationManagementPage: React.FC<OrganizationManagementPageProp
                 </Select>
                 <Button leftIcon={<Filter size={16} />} variant="outline" onClick={() => setFilters({ search: '', status: 'all', village: 'all', cluster: 'all' })}>
                   Clear filters
-                </Button>
-                <Button
-                  leftIcon={<Users size={16} />}
-                  variant="outline"
-                  colorScheme="blue"
-                  onClick={handleTriggerPeerMatching}
-                  isLoading={isMatchingPeers}
-                  loadingText="Matching..."
-                >
-                  Trigger peer matching
                 </Button>
                 <Button colorScheme="purple" onClick={createModal.onOpen} leftIcon={<Sparkles size={16} />}>
                   Create organization

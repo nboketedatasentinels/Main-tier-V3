@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import {
+  Badge,
   Box,
   Button,
   Card,
@@ -47,6 +48,8 @@ export const VillageInvitePage = () => {
     if (!inviteCode) return ''
     return formatVillageInviteLink(inviteCode)
   }, [inviteCode])
+
+  const villageDisplayName = villageName || 'Your village'
 
   const loadData = async () => {
     if (!villageId) return
@@ -161,9 +164,24 @@ export const VillageInvitePage = () => {
   return (
     <Box px={{ base: 4, md: 8 }} py={6}>
       <VStack align="stretch" spacing={6}>
-        <HStack justify="space-between">
-          <Heading size="md">Invite members</Heading>
-          <Button variant="ghost" onClick={() => navigate('/app/profile')}>Back to profile</Button>
+        <HStack justify="space-between" align="flex-start">
+          <VStack align="flex-start" spacing={1}>
+            <Heading size="md">Invite members</Heading>
+            <Text fontSize="sm" color="text.secondary">
+              Village:{' '}
+              <Text as="span" fontWeight="semibold" color="brand.primary">
+                {villageDisplayName}
+              </Text>
+            </Text>
+            {villageId && (
+              <Text fontSize="xs" color="text.muted">
+                Village ID: {villageId}
+              </Text>
+            )}
+          </VStack>
+          <Button variant="ghost" onClick={() => navigate('/app/profile')}>
+            Back to profile
+          </Button>
         </HStack>
 
         <Card borderColor="brand.border" boxShadow="card">
@@ -177,7 +195,14 @@ export const VillageInvitePage = () => {
 
         <Card borderColor="brand.border" boxShadow="card">
           <CardHeader>
-            <Text fontWeight="semibold">Send invitations</Text>
+            <HStack justify="space-between" align="center">
+              <Text fontWeight="semibold">Send invitations</Text>
+              {villageName && (
+                <Badge colorScheme="purple" variant="subtle">
+                  {villageDisplayName}
+                </Badge>
+              )}
+            </HStack>
           </CardHeader>
           <CardBody>
             <VStack align="stretch" spacing={4}>
@@ -187,12 +212,13 @@ export const VillageInvitePage = () => {
                 isLoading={inviting}
               />
               <Button
-                variant="outline"
+                variant="accent"
+                w="full"
                 onClick={handleGenerateCode}
                 isDisabled={memberCount >= MEMBER_LIMIT}
                 isLoading={inviting}
               >
-                Generate shareable invite link
+                Generate invite code
               </Button>
             </VStack>
           </CardBody>

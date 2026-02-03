@@ -40,6 +40,7 @@ export const VillageManagePage = () => {
   const [loading, setLoading] = useState(true)
   const [memberCount, setMemberCount] = useState(0)
   const [creatorId, setCreatorId] = useState<string | undefined>(undefined)
+  const [villageName, setVillageName] = useState<string>('Your village')
   const [members, setMembers] = useState<Member[]>([])
   const [selectedMember, setSelectedMember] = useState<Member | null>(null)
   const [removing, setRemoving] = useState(false)
@@ -64,6 +65,7 @@ export const VillageManagePage = () => {
       }
       setMemberCount(village.memberCount)
       setCreatorId(village.creatorId)
+      setVillageName(village.name || 'Your village')
       const list = await getVillageMembers(villageId)
       setMembers(list as Member[])
     } catch (error) {
@@ -113,10 +115,21 @@ export const VillageManagePage = () => {
   return (
     <Box px={{ base: 4, md: 8 }} py={6}>
       <VStack align="stretch" spacing={6}>
-        <HStack justify="space-between">
-          <Heading size="md">Manage village</Heading>
-          <Button variant="ghost" onClick={() => navigate('/app/profile')}>
-            Back to profile
+        <HStack justify="space-between" align="flex-start">
+          <VStack align="flex-start" spacing={1}>
+            <Heading size="md">Manage village</Heading>
+            <Text fontSize="sm" color="text.secondary">
+              Village:{' '}
+              <Text as="span" fontWeight="semibold" color="brand.primary">
+                {villageName}
+              </Text>
+            </Text>
+          </VStack>
+          <Button
+            variant="ghost"
+            onClick={() => navigate('/app/leadership-board')}
+          >
+            Back to leaderboard
           </Button>
         </HStack>
 

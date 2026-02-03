@@ -3,6 +3,7 @@ import {
   arrayRemove,
   arrayUnion,
   collection,
+  doc,
   getCountFromServer,
   getDoc,
   getDocs,
@@ -12,7 +13,7 @@ import {
   serverTimestamp,
   updateDoc,
   where,
-  doc,
+  documentId,
 } from 'firebase/firestore'
 import { db } from '@/services/firebase'
 
@@ -28,6 +29,26 @@ export interface VillageSummary {
   isActive: boolean
   createdAt?: string
 }
+
+const normalizeVillageCreatedAt = (value?: unknown): string | undefined => {
+  if (!value) return undefined
+  if (typeof value === 'string') return value
+  if (value instanceof Date) return value.toISOString()
+  if (typeof value === 'object' && value && 'toDate' in value && typeof (value as { toDate: () => Date }).toDate === 'function') {
+    return (value as { toDate: () => Date }).toDate().toISOString()
+  }
+  return undefined
+}
+
+const buildVillageSummary = (id: string, rawData: Record<string, unknown>): VillageSummary => ({
+  id,
+  name: (rawData.name as string) || 'Unnamed village',
+  description: rawData.description as string | undefined,
+  creatorId: (rawData.creatorId as string) || '',
+  memberCount: typeof rawData.memberCount === 'number' ? rawData.memberCount : 0,
+  isActive: typeof rawData.isActive === 'boolean' ? rawData.isActive : true,
+  createdAt: normalizeVillageCreatedAt(rawData.createdAt),
+})
 
 export const checkVillageNameExists = async (name: string): Promise<boolean> => {
   const trimmed = name.trim()
@@ -48,34 +69,34 @@ export const fetchVillageById = async (villageId?: string | null): Promise<Villa
   try {
     const villageSnap = await getDoc(doc(db, VILLAGES_COLLECTION, villageId))
     if (!villageSnap.exists()) return null
-    const data = villageSnap.data() as {
-      name?: string
-      description?: string
-      creatorId?: string
-      memberCount?: number
-      isActive?: boolean
-      createdAt?: { toDate?: () => Date } | string
-    }
-    const createdAt =
-      typeof data.createdAt === 'string'
-        ? data.createdAt
-        : data.createdAt?.toDate
-          ? data.createdAt.toDate().toISOString()
-          : undefined
-
-    return {
-      id: villageSnap.id,
-      name: data.name || 'Unnamed village',
-      description: data.description,
-      creatorId: data.creatorId || '',
-      memberCount: data.memberCount ?? 0,
-      isActive: data.isActive ?? true,
-      createdAt,
-    }
+    return buildVillageSummary(villageSnap.id, villageSnap.data() as Record<string, unknown>)
   } catch (error) {
     console.error('Failed to fetch village details', error)
     return null
   }
+}
+
+export const fetchVillagesByIds = async (villageIds: string[]): Promise<VillageSummary[]> => {
+  const normalized = villageIds.map((id) => id?.trim()).filter(Boolean)
+  if (!normalized.length) return []
+
+  const chunks: string[][] = []
+  for (let i = 0; i < normalized.length; i += 10) {
+    chunks.push(normalized.slice(i, i + 10))
+  }
+
+  const villages: VillageSummary[] = []
+
+  for (const chunk of chunks) {
+    const snapshot = await getDocs(
+      query(collection(db, VILLAGES_COLLECTION), where(documentId(), 'in', chunk)),
+    )
+    snapshot.docs.forEach((docSnap) => {
+      villages.push(buildVillageSummary(docSnap.id, docSnap.data() as Record<string, unknown>))
+    })
+  }
+
+  return villages
 }
 
 export const createVillage = async (params: {

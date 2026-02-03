@@ -19,13 +19,20 @@ export const VillageInviteEmailForm = ({ onInvite, isDisabled, isLoading }: Prop
 
   return (
     <FormControl>
-      <FormLabel fontSize="sm">Invite by email</FormLabel>
+      <FormLabel fontSize="sm" color="text.primary">
+        Invite by email
+      </FormLabel>
       <HStack>
         <Input
+          variant="outline"
           placeholder="member@example.com"
           value={email}
           onChange={(event) => setEmail(event.target.value)}
           isDisabled={isDisabled}
+          color="text.primary"
+          bg="surface.default"
+          borderColor="border.subtle"
+          _placeholder={{ color: 'text.secondary' }}
         />
         <Button
           colorScheme="purple"
