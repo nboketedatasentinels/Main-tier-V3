@@ -125,8 +125,11 @@ export const VillageManagePage = () => {
               </Text>
             </Text>
           </VStack>
-          <Button variant="ghost" onClick={() => navigate('/app/profile')}>
-            Back to profile
+          <Button
+            variant="ghost"
+            onClick={() => navigate('/app/leadership-board')}
+          >
+            Back to leaderboard
           </Button>
         </HStack>
 
