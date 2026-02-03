@@ -32,8 +32,8 @@ interface UserProfile {
 }
 
 interface PeerMatch {
-  peerId: string;
-  userId: string;
+  peer_id: string;
+  user_id: string;
   matchKey: string;
   matchRefreshPreference: string;
   preferredMatchDay: number;
@@ -226,8 +226,8 @@ const createMatchesForGroup = async (
 
     await ensureCapacity(WRITES_PER_MATCH);
     const matchData: PeerMatch = {
-      peerId: peer.id,
-      userId: user.id,
+      peer_id: peer.id,
+      user_id: user.id,
       matchKey: matchKey,
       matchRefreshPreference: refreshPreference,
       preferredMatchDay: preferredMatchDay,

@@ -9,7 +9,6 @@ import { UserManagementPage } from '@/pages/super-admin/UserManagementPage'
 import { AdminOversightPage } from '@/pages/super-admin/AdminOversightPage'
 import { ApprovalCenterPage } from '@/pages/super-admin/ApprovalCenterPage'
 import {
-  listenToAdminActivityLog,
   listenToDashboardMetrics,
   listenToEngagementRiskAggregates,
   listenToRegistrationTrend,
@@ -20,7 +19,6 @@ import {
   listenToVerificationRequests,
 } from '@/services/superAdminService'
 import {
-  AdminActivityLogEntry,
   EngagementRiskAggregate,
   RegistrationRecord,
   SuperAdminDashboardMetrics,
@@ -52,7 +50,6 @@ export const SuperAdminDashboard: React.FC = () => {
 
   const [activePage, setActivePage] = useState<string>('overview')
   const [metrics, setMetrics] = useState<SuperAdminDashboardMetrics>(defaultMetrics)
-  const [activityLog, setActivityLog] = useState<AdminActivityLogEntry[]>([])
   const [riskAggregate, setRiskAggregate] = useState<EngagementRiskAggregate>({ total: 0, riskBuckets: {} })
   const [registrations, setRegistrations] = useState<RegistrationRecord[]>([])
   const [verificationRequests, setVerificationRequests] = useState<VerificationRequest[]>([])
@@ -109,17 +106,6 @@ export const SuperAdminDashboard: React.FC = () => {
           setLoading(false)
         },
         (err) => handleError('Unable to load engagement risk data from Firebase', err),
-      ),
-    )
-
-    unsubscribers.push(
-      listenToAdminActivityLog(
-        (entries) => {
-          setActivityLog(entries)
-          setLoading(false)
-        },
-        10,
-        (err) => handleError('Unable to load admin activity from Firebase', err),
       ),
     )
 
@@ -186,7 +172,7 @@ export const SuperAdminDashboard: React.FC = () => {
     if (!loading && !error) {
       setLastEngagementSuccessAt(new Date())
     }
-  }, [activityLog, error, loading, metrics, registrationTrend, riskAggregate, userGrowthTrend])
+  }, [error, loading, metrics, registrationTrend, riskAggregate, userGrowthTrend])
 
   useEffect(() => {
     if (!upgradeRequestsLoading && !upgradeRequestsError) {
@@ -311,7 +297,6 @@ export const SuperAdminDashboard: React.FC = () => {
             registrations={registrations}
             verificationRequests={verificationRequests}
             taskNotifications={taskNotifications}
-            activityLog={activityLog}
             loading={loading}
             error={error}
             streamsLoading={streamsLoading}
