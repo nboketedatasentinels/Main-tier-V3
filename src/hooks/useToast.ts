@@ -1,4 +1,4 @@
-import { useToast as useChakraToast } from '@chakra-ui/react'
+import { useToast as useChakraToast, type ToastPosition } from '@chakra-ui/react'
 
 type ToastStatus = 'success' | 'error' | 'warning' | 'info'
 
@@ -6,12 +6,18 @@ interface ToastOptions {
   title: string
   description?: string
   status?: ToastStatus
+  position?: ToastPosition
 }
 
 export const useToast = () => {
   const toast = useChakraToast()
 
-  const notify = ({ title, description, status = 'info' }: ToastOptions) => {
+  const notify = ({
+    title,
+    description,
+    status = 'info',
+    position = 'top-right',
+  }: ToastOptions) => {
     toast({
       title,
       description,
