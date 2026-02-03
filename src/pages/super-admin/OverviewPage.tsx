@@ -16,7 +16,6 @@ import {
   Skeleton,
   Spinner,
   Stack,
-  Text,
   useDisclosure,
 } from '@chakra-ui/react'
 import {
