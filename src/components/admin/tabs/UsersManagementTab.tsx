@@ -32,7 +32,7 @@ import {
   Tooltip,
   useToast,
 } from '@chakra-ui/react'
-import { ChevronDown, Eye, Filter, Search, Trash2 } from 'lucide-react'
+import { ChevronDown, ChevronLeft, ChevronRight, Eye, Filter, Search, Trash2 } from 'lucide-react'
 import { Link as RouterLink } from 'react-router-dom'
 import { useAuth } from '@/hooks/useAuth'
 import { usePartnerAdminSnapshot } from '@/hooks/partner/usePartnerAdminSnapshot'
@@ -51,6 +51,7 @@ import { formatAdminFirestoreError } from '@/services/admin/adminErrors'
 
 const roleOptions: ManagedUserRole[] = ['user', 'partner', 'admin', 'super_admin', 'team_leader', 'mentor', 'ambassador']
 const membershipOptions: MembershipStatus[] = ['free', 'paid', 'inactive']
+const PAGE_SIZE = 25
 
 const formatDate = (date?: Date | null) => {
   if (!date) return 'Unknown'
@@ -72,6 +73,7 @@ export const UsersManagementTab = ({ users: propUsers, loading: propLoading }: U
   const [bulkLoading, setBulkLoading] = useState(false)
   const [roleChangingId, setRoleChangingId] = useState<string | null>(null)
   const [statusChangingId, setStatusChangingId] = useState<string | null>(null)
+  const [page, setPage] = useState(1)
   const [filters, setFilters] = useState({
     search: '',
     role: 'all',
@@ -88,6 +90,11 @@ export const UsersManagementTab = ({ users: propUsers, loading: propLoading }: U
         setError(formatAdminFirestoreError(err, 'Unable to load organizations.'))
       })
   }, [])
+
+  // Reset page when filters change
+  useEffect(() => {
+    setPage(1)
+  }, [filters.search, filters.role, filters.membershipStatus, filters.organization, filters.timeframe])
 
   const visibleTimeframeFilter = useMemo(() => propUsers.some((user) => !!user.lastActive), [propUsers])
 
@@ -126,6 +133,14 @@ export const UsersManagementTab = ({ users: propUsers, loading: propLoading }: U
       return matchesSearch && matchesRole && matchesMembership && matchesOrg && matchesTimeframe
     })
   }, [accessibleUsers, filters.membershipStatus, filters.organization, filters.role, filters.search, filters.timeframe])
+
+  // Paginated slice
+  const paginatedUsers = useMemo(() => {
+    const start = (page - 1) * PAGE_SIZE
+    return filteredUsers.slice(start, start + PAGE_SIZE)
+  }, [filteredUsers, page])
+
+  const totalPages = Math.ceil(filteredUsers.length / PAGE_SIZE)
 
   const membershipBadgeColor: Record<MembershipStatus, string> = {
     free: 'orange',
@@ -247,6 +262,7 @@ export const UsersManagementTab = ({ users: propUsers, loading: propLoading }: U
   }
 
   const headerCheckboxChecked = selectedIds.length > 0 && selectedIds.length === filteredUsers.length
+  const headerCheckboxIndeterminate = selectedIds.length > 0 && selectedIds.length < filteredUsers.length
 
   return (
     <Stack spacing={6}>
@@ -362,6 +378,36 @@ export const UsersManagementTab = ({ users: propUsers, loading: propLoading }: U
               </Flex>
             )}
 
+            {/* Pagination controls (above table) */}
+            {!propLoading && !error && filteredUsers.length > 0 && (
+              <Flex justify="space-between" align="center" py={3} px={4} bg="gray.50" borderRadius="md">
+                <Text fontSize="sm" color="gray.600">
+                  Showing {(page - 1) * PAGE_SIZE + 1}–{Math.min(page * PAGE_SIZE, filteredUsers.length)} of {filteredUsers.length} users
+                </Text>
+                <HStack spacing={2}>
+                  <IconButton
+                    aria-label="Previous page"
+                    icon={<ChevronLeft size={16} />}
+                    size="sm"
+                    variant="outline"
+                    isDisabled={page === 1}
+                    onClick={() => setPage(p => p - 1)}
+                  />
+                  <Text fontSize="sm" fontWeight="medium" minW="80px" textAlign="center">
+                    Page {page} of {totalPages || 1}
+                  </Text>
+                  <IconButton
+                    aria-label="Next page"
+                    icon={<ChevronRight size={16} />}
+                    size="sm"
+                    variant="outline"
+                    isDisabled={page >= totalPages}
+                    onClick={() => setPage(p => p + 1)}
+                  />
+                </HStack>
+              </Flex>
+            )}
+
             <Box border="1px solid" borderColor="gray.200" borderRadius="xl" overflowX="auto">
               {propLoading ? (
                 <Flex py={10} justify="center" align="center" gap={3}>
@@ -379,7 +425,7 @@ export const UsersManagementTab = ({ users: propUsers, loading: propLoading }: U
                       <Th w="50px">
                         <Checkbox
                           isChecked={headerCheckboxChecked}
-                          isIndeterminate={selectedIds.length > 0 && selectedIds.length < filteredUsers.length}
+                          isIndeterminate={headerCheckboxIndeterminate}
                           onChange={(e) => setSelectedIds(e.target.checked ? filteredUsers.map((u) => u.id) : [])}
                           aria-label="Select all"
                         />
@@ -393,7 +439,7 @@ export const UsersManagementTab = ({ users: propUsers, loading: propLoading }: U
                     </Tr>
                   </Thead>
                   <Tbody>
-                    {filteredUsers.map((user) => (
+                    {paginatedUsers.map((user) => (
                       <Tr key={user.id} _hover={{ bg: 'gray.50' }}>
                         <Td>
                           <Checkbox

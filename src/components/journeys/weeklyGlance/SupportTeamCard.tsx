@@ -30,8 +30,9 @@ export const SupportTeamCard = ({ data, loading, peerMatches, peerMatchesLoading
   const hasMentor = Boolean(mentorProfile)
   const hasAmbassador = Boolean(ambassadorProfile)
   const showEmptyState = !loading && !hasMentor && !hasAmbassador
-  const completedMatches = peerMatches.filter(match => match.status === 'matched')
-  const hasPeerMatch = completedMatches.length > 0
+  const activeMatches = peerMatches.filter(match => match.matchStatus !== 'expired')
+  const readyMatchCount = activeMatches.length
+  const hasPeerMatch = readyMatchCount > 0
   const supportErrorMessages = [data?.mentorProfileError, data?.ambassadorProfileError].filter(
     (message): message is string => Boolean(message),
   )
@@ -176,7 +177,7 @@ export const SupportTeamCard = ({ data, loading, peerMatches, peerMatchesLoading
               <Stack spacing={2}>
                 {hasPeerMatch ? (
                   <Text fontSize="sm" color="text.secondary">
-                    You have {completedMatches.length} peer ally{completedMatches.length === 1 ? '' : 's'} ready to connect.
+                    You have {readyMatchCount} peer ally{readyMatchCount === 1 ? '' : 's'} ready to connect.
                   </Text>
                 ) : (
                   <Text fontSize="sm" color="text.secondary">

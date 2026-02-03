@@ -11,17 +11,20 @@ import {
   where,
   writeBatch,
   type DocumentData,
+  type Query,
   type QueryDocumentSnapshot,
   type Unsubscribe,
 } from 'firebase/firestore'
 import { auth, db } from '@/services/firebase'
 import { awardChecklistPoints } from '@/services/pointsService'
+import { createInAppNotification } from '@/services/notificationService'
 import {
   PEER_SESSION_CONFIRMATION_ACTIVITY,
   PEER_SESSION_NO_SHOW_ACTIVITY,
   type JourneyType,
 } from '@/config/pointsConfig'
 import { removeUndefinedFields } from '@/utils/firestore'
+import { getDisplayName, type DisplayNameInput } from '@/utils/displayName'
 import { addDays } from 'date-fns'
 import { getCurrentWeekNumber } from '@/utils/weekCalculations'
 
@@ -76,12 +79,42 @@ const isNonEmptyString = (value: unknown): value is string =>
 const isValidDate = (value: unknown): value is Date =>
   value instanceof Date && !Number.isNaN(value.getTime())
 
+const toFiniteNumber = (value: unknown): number | null => {
+  if (typeof value === 'number' && Number.isFinite(value)) return value
+  if (typeof value === 'string') {
+    const parsed = Number(value)
+    return Number.isFinite(parsed) ? parsed : null
+  }
+  if (
+    typeof value === 'object' &&
+    value !== null &&
+    typeof (value as { toNumber?: () => number }).toNumber === 'function'
+  ) {
+    const numberValue = (value as { toNumber: () => number }).toNumber()
+    if (Number.isFinite(numberValue)) return numberValue
+  }
+  return null
+}
+
 const coerceDate = (value: unknown): Date | null => {
   if (!value) return null
   if (value instanceof Date) return isValidDate(value) ? value : null
   if (typeof (value as { toDate?: () => Date }).toDate === 'function') {
     const coerced = (value as { toDate: () => Date }).toDate()
     return isValidDate(coerced) ? coerced : null
+  }
+  if (
+    typeof value === 'object' &&
+    value !== null &&
+    'seconds' in value &&
+    'nanoseconds' in value
+  ) {
+    const seconds = toFiniteNumber((value as { seconds: unknown }).seconds)
+    if (seconds === null) return null
+    const nanoseconds = toFiniteNumber((value as { nanoseconds: unknown }).nanoseconds) ?? 0
+    const millis = seconds * 1000 + Math.floor(nanoseconds / 1000000)
+    const date = new Date(millis)
+    return isValidDate(date) ? date : null
   }
   if (typeof value === 'string' || typeof value === 'number') {
     const coerced = new Date(value)
@@ -116,8 +149,11 @@ const resolveMeetingLink = (data: DocumentData): string | undefined => {
 
 const parseSessionDoc = (docSnap: QueryDocumentSnapshot<DocumentData>): PeerSession | null => {
   const data = docSnap.data()
-  const scheduledAt = coerceDate(data.scheduledAt ?? data.scheduled_at)
-  if (!scheduledAt) return null
+  let scheduledAt = coerceDate(data.scheduledAt ?? data.scheduled_at)
+  if (!scheduledAt) {
+    console.warn('[PeerSessionService] Session missing scheduledAt; defaulting to now', { sessionId: docSnap.id })
+    scheduledAt = new Date()
+  }
 
   const confirmationDeadline =
     coerceDate(data.confirmationDeadline ?? data.confirmation_deadline) ?? addDays(scheduledAt, -1)
@@ -142,6 +178,66 @@ const parseSessionDoc = (docSnap: QueryDocumentSnapshot<DocumentData>): PeerSess
     updatedAt,
     pointsAwarded: data.pointsAwarded,
   }
+}
+
+type QueryWithKey = {
+  key: string
+  query: Query<DocumentData>
+}
+
+const buildSessionQueries = (userId: string): QueryWithKey[] => {
+  const sessionsRef = collection(db, 'peer_sessions')
+  return [
+    { key: 'participants', query: query(sessionsRef, where('participants', 'array-contains', userId)) },
+    { key: 'participantIds', query: query(sessionsRef, where('participantIds', 'array-contains', userId)) },
+    { key: 'participant_ids', query: query(sessionsRef, where('participant_ids', 'array-contains', userId)) },
+    { key: 'createdBy', query: query(sessionsRef, where('createdBy', '==', userId)) },
+    { key: 'creatorId', query: query(sessionsRef, where('creatorId', '==', userId)) },
+    { key: 'created_by', query: query(sessionsRef, where('created_by', '==', userId)) },
+  ]
+}
+
+const resolveInvitationRecipient = (data: DocumentData): string => {
+  if (isNonEmptyString(data.toUserId)) return data.toUserId
+  if (isNonEmptyString(data.to_user_id)) return data.to_user_id
+  return ''
+}
+
+const parseInvitationDoc = (docSnap: QueryDocumentSnapshot<DocumentData>): PeerSessionRequest | null => {
+  const data = docSnap.data()
+  const toUserId = resolveInvitationRecipient(data)
+  if (!isNonEmptyString(data.sessionId) || !isNonEmptyString(data.fromUserId) || !toUserId) {
+    return null
+  }
+
+  const createdAt = coerceDate(data.createdAt ?? data.created_at) ?? new Date()
+  const respondedAt = coerceDate(data.respondedAt ?? data.responded_at) ?? undefined
+
+  return {
+    id: docSnap.id,
+    sessionId: data.sessionId,
+    fromUserId: data.fromUserId,
+    fromName: data.fromName || 'Peer',
+    fromEmail: data.fromEmail || '',
+    toUserId,
+    status: data.status || 'pending',
+    createdAt,
+    respondedAt,
+  }
+}
+
+const buildInvitationQueries = (userId: string): QueryWithKey[] => {
+  const invitesRef = collection(db, 'peer_session_requests')
+  return [
+    {
+      key: 'toUserId',
+      query: query(invitesRef, where('toUserId', '==', userId), where('status', '==', 'pending')),
+    },
+    {
+      key: 'to_user_id',
+      query: query(invitesRef, where('to_user_id', '==', userId), where('status', '==', 'pending')),
+    },
+  ]
 }
 
 const normalizeParticipants = (participants: string[], createdBy: string): string[] => {
@@ -178,6 +274,22 @@ const assertValidCreateParams = (params: CreateSessionParams): string[] => {
   }
 
   return normalizedParticipants
+}
+
+const buildPeerConnectUrl = (sessionId: string) =>
+  `/app/peer-connect?sessionId=${encodeURIComponent(sessionId)}`
+
+const formatSessionDateLabel = (date: Date, timeZone: string) => {
+  try {
+    return new Intl.DateTimeFormat('en-US', {
+      dateStyle: 'medium',
+      timeStyle: 'short',
+      timeZone,
+    }).format(date)
+  } catch (error) {
+    console.warn('[PeerSessionService] Failed to format session date', error)
+    return date.toLocaleString('en-US')
+  }
 }
 
 // Helper to get user's journey info for points
@@ -248,6 +360,38 @@ export async function createPeerSession(params: CreateSessionParams): Promise<st
 
   // Atomic commit
   await batch.commit()
+
+  const sessionActionUrl = buildPeerConnectUrl(sessionRef.id)
+  const formattedSessionDate = formatSessionDateLabel(params.scheduledAt, params.timezone)
+  const inviteMessage = `${params.creatorName} invited you to "${params.title}" on ${formattedSessionDate}.`
+
+  await Promise.all(
+    normalizedParticipants.map(async (participantId) => {
+      try {
+        await createInAppNotification({
+          userId: participantId,
+          type: 'session_request',
+          title: 'Peer session invitation',
+          message: inviteMessage,
+          relatedId: sessionRef.id,
+          metadata: {
+            sessionId: sessionRef.id,
+            actionUrl: sessionActionUrl,
+            actionLabel: 'View session',
+            scheduledAt: params.scheduledAt.toISOString(),
+            timezone: params.timezone,
+            creatorName: params.creatorName,
+          },
+        })
+      } catch (error) {
+        console.error('[PeerSessionService] Failed to send invite notification', {
+          participantId,
+          sessionId: sessionRef.id,
+          error,
+        })
+      }
+    }),
+  )
 
   return sessionRef.id
 }
@@ -374,10 +518,11 @@ export async function respondToInvitation(inviteId: string, accepted: boolean): 
   }
 
   const inviteData = inviteSnap.data()
+  const toUserId = resolveInvitationRecipient(inviteData)
   if (
     !isNonEmptyString(inviteData.sessionId) ||
     !isNonEmptyString(inviteData.fromUserId) ||
-    !isNonEmptyString(inviteData.toUserId)
+    !toUserId
   ) {
     throw new Error('Invitation data is missing required fields')
   }
@@ -391,6 +536,39 @@ export async function respondToInvitation(inviteId: string, accepted: boolean): 
     status: accepted ? 'accepted' : 'declined',
     respondedAt: serverTimestamp(),
   })
+
+  if (accepted) {
+    try {
+      const [session, profileSnap] = await Promise.all([
+        getSession(inviteData.sessionId),
+        getDoc(doc(db, 'profiles', toUserId)),
+      ])
+      const inviteeProfile = profileSnap.exists() ? (profileSnap.data() as DisplayNameInput) : undefined
+      const inviteeName = getDisplayName(inviteeProfile, 'Peer')
+      const sessionTitle = session?.title || 'Peer session'
+      const timezone = session?.timezone || 'UTC'
+      const formattedDate = session ? formatSessionDateLabel(session.scheduledAt, timezone) : ''
+      const dateSuffix = formattedDate ? ` scheduled for ${formattedDate}` : ''
+      const sessionLink = buildPeerConnectUrl(inviteData.sessionId)
+
+      await createInAppNotification({
+        userId: inviteData.fromUserId,
+        type: 'session_request',
+        title: 'Session invitation accepted',
+        message: `${inviteeName} accepted your invitation to "${sessionTitle}".${dateSuffix}`,
+        relatedId: inviteData.sessionId,
+        metadata: {
+          sessionId: inviteData.sessionId,
+          actionUrl: sessionLink,
+          actionLabel: 'View session',
+          acceptedBy: inviteeName,
+          status: 'accepted',
+        },
+      })
+    } catch (error) {
+      console.error('[PeerSessionService] Failed to notify inviter about acceptance', error)
+    }
+  }
 }
 
 /**
@@ -400,14 +578,7 @@ export function subscribeToUserSessions(
   userId: string,
   callback: (sessions: PeerSession[]) => void
 ): Unsubscribe {
-  const queries = [
-    { key: 'participants', query: query(collection(db, 'peer_sessions'), where('participants', 'array-contains', userId)) },
-    { key: 'participantIds', query: query(collection(db, 'peer_sessions'), where('participantIds', 'array-contains', userId)) },
-    { key: 'participant_ids', query: query(collection(db, 'peer_sessions'), where('participant_ids', 'array-contains', userId)) },
-    { key: 'createdBy', query: query(collection(db, 'peer_sessions'), where('createdBy', '==', userId)) },
-    { key: 'creatorId', query: query(collection(db, 'peer_sessions'), where('creatorId', '==', userId)) },
-    { key: 'created_by', query: query(collection(db, 'peer_sessions'), where('created_by', '==', userId)) },
-  ]
+  const queries = buildSessionQueries(userId)
 
   const docsByKey = new Map<string, QueryDocumentSnapshot<DocumentData>[]>()
 
@@ -481,44 +652,29 @@ export function subscribeToUserInvitations(
   userId: string,
   callback: (invitations: PeerSessionRequest[]) => void
 ): Unsubscribe {
-  const invitesQuery = query(
-    collection(db, 'peer_session_requests'),
-    where('toUserId', '==', userId),
-    where('status', '==', 'pending')
-  )
+  const queries = buildInvitationQueries(userId)
+  const docsByKey = new Map<string, QueryDocumentSnapshot<DocumentData>[]>()
 
-  return onSnapshot(invitesQuery, (snapshot) => {
-    const invitations: PeerSessionRequest[] = []
+  const emitInvitations = () => {
+    const invitationsMap = new Map<string, PeerSessionRequest>()
     const skippedInviteIds: string[] = []
 
-    for (const docSnap of snapshot.docs) {
-      try {
-        const data = docSnap.data()
-        if (
-          !isNonEmptyString(data.sessionId) ||
-          !isNonEmptyString(data.fromUserId) ||
-          !isNonEmptyString(data.toUserId)
-        ) {
+    for (const docs of docsByKey.values()) {
+      for (const docSnap of docs) {
+        try {
+          const parsed = parseInvitationDoc(docSnap)
+          if (parsed) {
+            invitationsMap.set(parsed.id, parsed)
+          } else {
+            skippedInviteIds.push(docSnap.id)
+          }
+        } catch (error) {
+          console.warn('[PeerSessionService] Skipping malformed invitation document', {
+            inviteId: docSnap.id,
+            error,
+          })
           skippedInviteIds.push(docSnap.id)
-          continue
         }
-
-        invitations.push({
-          id: docSnap.id,
-          sessionId: data.sessionId,
-          fromUserId: data.fromUserId,
-          fromName: data.fromName || 'Peer',
-          fromEmail: data.fromEmail || '',
-          toUserId: data.toUserId,
-          status: data.status || 'pending',
-          createdAt: data.createdAt?.toDate?.() || new Date(),
-          respondedAt: data.respondedAt?.toDate?.(),
-        })
-      } catch (error) {
-        console.warn('[PeerSessionService] Skipping malformed invitation document', {
-          inviteId: docSnap.id,
-          error,
-        })
       }
     }
 
@@ -529,22 +685,94 @@ export function subscribeToUserInvitations(
       })
     }
 
-    // Sort by creation date descending (most recent first)
+    const invitations = Array.from(invitationsMap.values())
     invitations.sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime())
-
     callback(invitations)
-  }, (error) => {
-    const projectId = db.app.options.projectId ?? 'unknown'
-    console.error('[PeerSessionService] Invitations subscription error:', {
-      userId,
-      code: (error as { code?: string }).code,
-      message: error.message,
-      projectId,
-      authUid: auth.currentUser?.uid ?? null,
-      error,
-    })
-    callback([])
-  })
+  }
+
+  const unsubscribers = queries.map(({ key, query: invitesQuery }) =>
+    onSnapshot(
+      invitesQuery,
+      (snapshot) => {
+        docsByKey.set(key, snapshot.docs)
+        emitInvitations()
+      },
+      (error) => {
+        const projectId = db.app.options.projectId ?? 'unknown'
+        console.error('[PeerSessionService] Invitations subscription error:', {
+          userId,
+          code: (error as { code?: string }).code,
+          message: error.message,
+          projectId,
+          authUid: auth.currentUser?.uid ?? null,
+          queryKey: key,
+          error,
+        })
+        docsByKey.set(key, [])
+        emitInvitations()
+      }
+    )
+  )
+
+  return () => {
+    unsubscribers.forEach((unsubscribe) => unsubscribe())
+  }
+}
+
+export async function fetchUserSessions(userId: string): Promise<PeerSession[]> {
+  const queries = buildSessionQueries(userId)
+  const sessionsMap = new Map<string, PeerSession>()
+
+  await Promise.all(
+    queries.map(async ({ query: sessionsQuery }) => {
+      try {
+        const snapshot = await getDocs(sessionsQuery)
+        snapshot.docs.forEach((docSnap) => {
+          const parsed = parseSessionDoc(docSnap)
+          if (parsed) {
+            sessionsMap.set(parsed.id, parsed)
+          }
+        })
+      } catch (error) {
+        console.error('[PeerSessionService] Failed to fetch sessions:', {
+          userId,
+          error,
+        })
+      }
+    }),
+  )
+
+  const sessions = Array.from(sessionsMap.values())
+  sessions.sort((a, b) => b.scheduledAt.getTime() - a.scheduledAt.getTime())
+  return sessions
+}
+
+export async function fetchUserInvitations(userId: string): Promise<PeerSessionRequest[]> {
+  const queries = buildInvitationQueries(userId)
+  const invitationsMap = new Map<string, PeerSessionRequest>()
+
+  await Promise.all(
+    queries.map(async ({ query: invitesQuery }) => {
+      try {
+        const snapshot = await getDocs(invitesQuery)
+        snapshot.docs.forEach((docSnap) => {
+          const parsed = parseInvitationDoc(docSnap)
+          if (parsed) {
+            invitationsMap.set(parsed.id, parsed)
+          }
+        })
+      } catch (error) {
+        console.error('[PeerSessionService] Failed to fetch invitations:', {
+          userId,
+          error,
+        })
+      }
+    }),
+  )
+
+  const invitations = Array.from(invitationsMap.values())
+  invitations.sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime())
+  return invitations
 }
 
 /**

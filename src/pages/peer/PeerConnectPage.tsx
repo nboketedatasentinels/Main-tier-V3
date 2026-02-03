@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+﻿import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import {
   Avatar,
   Badge,
@@ -12,7 +12,6 @@ import {
   GridItem,
   HStack,
   Icon,
-  IconButton,
   Heading,
   Input,
   InputGroup,
@@ -66,25 +65,28 @@ import {
   getDoc,
   getDocs,
   limit,
+  onSnapshot,
   query,
   serverTimestamp,
   setDoc,
   updateDoc,
-  where,
 } from 'firebase/firestore'
 import { auth, db } from '@/services/firebase'
 import { useAuth } from '@/hooks/useAuth'
 import { StartChallengeModal } from '@/components/modals/StartChallengeModal'
-import { fetchOrgMembers, getOrgScope } from '@/utils/organizationScope'
+import { fetchOrgMembers, getOrgScope, buildScopeQueries } from '@/utils/organizationScope'
 import { getDisplayName } from '@/utils/displayName'
 import {
   createPeerSession,
   confirmSession,
+  fetchUserInvitations,
+  fetchUserSessions,
   reportNoShow as reportNoShowService,
   respondToInvitation,
   subscribeToUserSessions,
   subscribeToUserInvitations,
 } from '@/services/peerSessionService'
+import type { PeerSession as ServicePeerSession } from '@/services/peerSessionService'
 import { DateTimePicker } from '@/components/scheduling/DateTimePicker'
 
 // Types
@@ -101,6 +103,42 @@ type PeerProfile = {
   calendarLink?: string
   identityTag?: string
   avatarUrl?: string
+}
+
+const mapRecordToPeerProfile = (record: Record<string, unknown>): PeerProfile => {
+  const id = String(record.id)
+  const email = typeof record.email === 'string' ? record.email : ''
+  const displayInput = {
+    ...record,
+    email,
+    uid: id,
+  }
+  return {
+    id,
+    name: getDisplayName(displayInput, 'Member'),
+    email,
+    timezone: record.timezone as PeerProfile['timezone'],
+    interests: record.interests as PeerProfile['interests'],
+    goals: record.goals as PeerProfile['goals'],
+    companyCode: typeof record.companyCode === 'string' ? record.companyCode : undefined,
+    corporateVillageId: record.corporateVillageId as PeerProfile['corporateVillageId'],
+    cohortIdentifier: record.cohortIdentifier as PeerProfile['cohortIdentifier'],
+    calendarLink: record.calendarLink as PeerProfile['calendarLink'],
+    identityTag: record.identityTag as PeerProfile['identityTag'],
+    avatarUrl: record.avatarUrl as PeerProfile['avatarUrl'],
+  }
+}
+
+const fetchPeerProfileById = async (peerId: string): Promise<PeerProfile | null> => {
+  if (!peerId) return null
+  try {
+    const peerDoc = await getDoc(doc(db, 'profiles', peerId))
+    if (!peerDoc.exists()) return null
+    return mapRecordToPeerProfile({ id: peerDoc.id, ...(peerDoc.data() as Record<string, unknown>) })
+  } catch (error) {
+    console.error('[PeerMatch] Failed to fetch peer profile', peerId, error)
+    return null
+  }
 }
 
 interface PreselectedUser {
@@ -131,6 +169,33 @@ type PeerSession = {
   confirmationDeadline: Date
   youConfirmed: boolean
   peerConfirmed: boolean
+}
+
+const mapServiceSessionToPeerSession = (
+  session: ServicePeerSession,
+  options?: { currentUserId?: string; timezoneFallback?: string },
+): PeerSession => {
+  const currentUserId = options?.currentUserId
+  const timezone = session.timezone || options?.timezoneFallback || 'UTC'
+  const confirmations = session.confirmations || {}
+
+  const youConfirmed = currentUserId ? Boolean(confirmations[currentUserId]) : false
+  const peerConfirmed = Object.entries(confirmations).some(
+    ([participantId, confirmed]) => participantId !== currentUserId && confirmed,
+  )
+
+  return {
+    id: session.id,
+    title: session.title || 'Weekly Peer Date',
+    scheduledAt: session.scheduledAt,
+    timezone,
+    platform: session.platform,
+    link: session.meetingLink,
+    status: session.status as PeerSession['status'],
+    confirmationDeadline: session.confirmationDeadline,
+    youConfirmed,
+    peerConfirmed,
+  }
 }
 
 type Invitation = {
@@ -172,49 +237,14 @@ type DebugOrgProfile = {
 
 const MANUAL_REFRESH_COOLDOWN_HOURS = 24
 const WEEKDAY_LABELS = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday']
-const WEEKDAY_SHORT_MAP: Record<string, number> = {
-  Sun: 0,
-  Mon: 1,
-  Tue: 2,
-  Wed: 3,
-  Thu: 4,
-  Fri: 5,
-  Sat: 6,
-}
 
 const defaultSessionDescription =
   'Bring together at least two peers for a transformation dialogue that sparks shared insight and collaborative momentum.'
 
-const getTimezoneDateParts = (date: Date, timeZone: string) => {
-  const formatter = new Intl.DateTimeFormat('en-US', {
-    timeZone,
-    weekday: 'short',
-    year: 'numeric',
-    month: '2-digit',
-    day: '2-digit',
-  })
-  const parts = formatter.formatToParts(date)
-  const lookup = Object.fromEntries(parts.map((part) => [part.type, part.value]))
-  const weekdayIndex = WEEKDAY_SHORT_MAP[lookup.weekday ?? 'Mon'] ?? 1
-  const year = Number(lookup.year)
-  const month = Number(lookup.month)
-  const day = Number(lookup.day)
-  return { year, month, day, weekdayIndex }
-}
-
-const createTimezoneDate = (year: number, month: number, day: number) =>
-  new Date(Date.UTC(year, month - 1, day, 12))
-
-const addDaysUtc = (date: Date, days: number) => {
-  const next = new Date(date)
-  next.setUTCDate(next.getUTCDate() + days)
-  return next
-}
-
 const debugOrgFetch = async (dbInstance: typeof db, profile: DebugOrgProfile | null, userId: string) => {
   const scope = getOrgScope(profile)
 
-  console.group('🧪 ORG FETCH DEBUG')
+  console.group('ðŸ§ª ORG FETCH DEBUG')
   console.log('userId', userId)
   console.log('profile.id', profile?.id)
   console.log('profile.companyId', profile?.companyId)
@@ -224,12 +254,12 @@ const debugOrgFetch = async (dbInstance: typeof db, profile: DebugOrgProfile | n
   try {
     const sanitySnap = await getDocs(query(collection(dbInstance, 'profiles'), limit(3)))
     console.log(
-      'profiles collection readable ✅ sample:',
+      'profiles collection readable âœ… sample:',
       sanitySnap.docs.map((docSnap) => docSnap.id),
     )
   } catch (error: unknown) {
     const errorInfo = error && typeof error === 'object' ? (error as { code?: string; message?: string }) : undefined
-    console.error('profiles collection NOT readable ❌', errorInfo?.code, errorInfo?.message)
+    console.error('profiles collection NOT readable âŒ', errorInfo?.code, errorInfo?.message)
   }
 
   if (!scope.isValid) {
@@ -239,28 +269,28 @@ const debugOrgFetch = async (dbInstance: typeof db, profile: DebugOrgProfile | n
   }
 
   try {
-    const orgQuery =
-      scope.type === 'company'
-        ? query(collection(dbInstance, 'profiles'), where('companyId', '==', scope.companyId), limit(10))
-        : query(collection(dbInstance, 'profiles'), where('companyCode', '==', scope.companyCode), limit(10))
-    const snap = await getDocs(orgQuery)
-    console.log(
-      `Query by ${scope.type === 'company' ? 'companyId' : 'companyCode'} returned:`,
-      snap.size,
-      snap.docs.map((docSnap) => docSnap.id),
-    )
+    const peersRef = collection(dbInstance, 'profiles')
+    const scopeQueries = buildScopeQueries(peersRef, scope)
+    if (!scopeQueries.length) {
+      console.warn('[OrgMembers] Debug: No queries generated for scope', scope)
+    } else {
+      const limitedQueries = scopeQueries.map((scopeQuery) => query(scopeQuery, limit(10)))
+      const snapshots = await Promise.all(limitedQueries.map((q) => getDocs(q)))
+      console.log(
+        '[OrgMembers] Scope debug queries returned',
+        snapshots.map((snapshot, index) => ({
+          queryIndex: index,
+          count: snapshot.size,
+          ids: snapshot.docs.map((docSnap) => docSnap.id),
+        })),
+      )
+    }
   } catch (error: unknown) {
     const errorInfo = error && typeof error === 'object' ? (error as { code?: string; message?: string }) : undefined
     console.error('Query by org scope failed:', errorInfo?.code, errorInfo?.message)
   }
 
   console.groupEnd()
-}
-
-const getPreferredDayOnOrBefore = (date: Date, preferredDay: number) => {
-  const currentWeekday = date.getUTCDay()
-  const diff = (currentWeekday - preferredDay + 7) % 7
-  return addDaysUtc(date, -diff)
 }
 
 const formatMatchDate = (date: Date, timeZone: string) =>
@@ -285,23 +315,37 @@ const buildMatchWindow = (preferences: MatchPreferences): MatchWindow => {
     }
   }
 
+  // FIX: Use UTC for window calculation to match Cloud Function
   const now = new Date()
-  const { year, month, day } = getTimezoneDateParts(now, preferences.timezone)
-  const todayInTimezone = createTimezoneDate(year, month, day)
-  const weeklyStart = getPreferredDayOnOrBefore(todayInTimezone, preferences.preferredMatchDay)
-  const cycleLength = preferences.refreshPreference === 'biweekly' ? 14 : 7
+  const dayOfWeek = now.getUTCDay()
+  const diff = (dayOfWeek - preferences.preferredMatchDay + 7) % 7
+  const windowStart = new Date(now)
+  windowStart.setUTCDate(now.getUTCDate() - diff)
+  windowStart.setUTCHours(0, 0, 0, 0)
 
-  let startDate = weeklyStart
+  const cycleLength = preferences.refreshPreference === 'biweekly' ? 14 : 7
+  let startDate = windowStart
+
   if (preferences.refreshPreference === 'biweekly') {
-    const referenceAnchor = createTimezoneDate(2024, 1, 1)
-    const referenceStart = getPreferredDayOnOrBefore(referenceAnchor, preferences.preferredMatchDay)
-    const weeksSinceReference = Math.floor((weeklyStart.getTime() - referenceStart.getTime()) / (7 * 24 * 60 * 60 * 1000))
+    // Match Cloud Function's biweekly logic exactly
+    const referenceAnchor = new Date(Date.UTC(2024, 0, 1))
+    const referenceDay = referenceAnchor.getUTCDay()
+    const refDiff = (referenceDay - preferences.preferredMatchDay + 7) % 7
+    referenceAnchor.setUTCDate(referenceAnchor.getUTCDate() - refDiff)
+
+    const weeksSinceReference = Math.floor(
+      (windowStart.getTime() - referenceAnchor.getTime()) / (7 * 24 * 60 * 60 * 1000)
+    )
     const cycleIndex = Math.floor(weeksSinceReference / 2)
-    startDate = addDaysUtc(referenceStart, cycleIndex * 14)
+    startDate = new Date(referenceAnchor)
+    startDate.setUTCDate(referenceAnchor.getUTCDate() + cycleIndex * 14)
   }
 
-  const endDate = addDaysUtc(startDate, cycleLength - 1)
-  const nextRefreshAt = addDaysUtc(startDate, cycleLength)
+  const endDate = new Date(startDate)
+  endDate.setUTCDate(startDate.getUTCDate() + cycleLength - 1)
+
+  const nextRefreshAt = new Date(startDate)
+  nextRefreshAt.setUTCDate(startDate.getUTCDate() + cycleLength)
   const label = `${formatMatchDate(startDate, preferences.timezone)} - ${formatMatchDate(endDate, preferences.timezone)}`
 
   return {
@@ -314,6 +358,29 @@ const buildMatchWindow = (preferences: MatchPreferences): MatchWindow => {
     durationDays: cycleLength,
   }
 }
+
+type WeeklyMatchDocument = Record<string, unknown>
+
+const toDateValue = (value: unknown): Date | undefined => {
+  if (!value) return undefined
+  if (value instanceof Date) return value
+  if (typeof value === 'object' && value !== null && 'toDate' in value) {
+    const toDateFn = (value as { toDate?: () => Date }).toDate
+    if (typeof toDateFn === 'function') return toDateFn()
+  }
+  return undefined
+}
+
+const buildWeeklyMatchFromDoc = (matchId: string, data: WeeklyMatchDocument, peer: PeerProfile): WeeklyMatch => ({
+  matchId,
+  peer,
+  matchReason: (data.matchReason as string) || 'Same company code',
+  matchStatus: (data.matchStatus as MatchStatus) || 'new',
+  createdAt: toDateValue(data.createdAt),
+  lastRefreshAt: toDateValue(data.lastRefreshAt),
+  lastManualRefreshAt: toDateValue(data.lastManualRefreshAt),
+  refreshCount: typeof data.refreshCount === 'number' ? data.refreshCount : undefined,
+})
 
 export const PeerConnectPage: React.FC = () => {
   const { user, profile, loading, profileLoading } = useAuth()
@@ -369,33 +436,58 @@ export const PeerConnectPage: React.FC = () => {
       setWeeklyMatch(null)
       return
     }
-    if (!availablePeers.length) {
-      setWeeklyMatch(null)
-      return
-    }
+
     try {
+      console.log('[PeerMatch] Match window key:', matchWindow.key)
+      console.log('[PeerMatch] Looking for document ID:', matchDocId)
+      console.log('[PeerMatch] Full path:', `peer_weekly_matches/${matchDocId}`)
+
+      // PRIORITY 1: Check if a match document already exists (from Cloud Function or previous manual match)
       const matchRef = doc(db, 'peer_weekly_matches', matchDocId)
       const matchDoc = await getDoc(matchRef)
+      console.log('[PeerMatch] Document exists:', matchDoc.exists())
+
       if (matchDoc.exists()) {
         const data = matchDoc.data()
         const storedPeerId = data.peer_id ?? data.peerId
-        const matchedPeer = availablePeers.find((peer) => peer.id === storedPeerId)
-        if (matchedPeer) {
-          setWeeklyMatch({
-            matchId: matchRef.id,
-            peer: matchedPeer,
-            matchReason: data.matchReason || 'Same company code',
-            matchStatus: (data.matchStatus as MatchStatus) || 'new',
-            createdAt: data.createdAt?.toDate?.(),
-            lastRefreshAt: data.lastRefreshAt?.toDate?.(),
-            lastManualRefreshAt: data.lastManualRefreshAt?.toDate?.(),
-            refreshCount: data.refreshCount,
-          })
-          return
+
+        if (!storedPeerId) {
+          console.warn('[PeerMatch] Match document exists but has no peerId field')
+        } else {
+          // Try to find peer in availablePeers first (faster)
+          const matchedPeer = availablePeers.find((peer) => peer.id === storedPeerId)
+          if (matchedPeer) {
+            console.log('[PeerMatch] Found matched peer in availablePeers:', storedPeerId)
+            setWeeklyMatch(buildWeeklyMatchFromDoc(matchRef.id, data, matchedPeer))
+            return
+          }
+
+          // Fallback: Fetch peer profile directly from Firestore
+          console.log('[PeerMatch] Peer not in availablePeers, fetching profile directly:', storedPeerId)
+          const fallbackPeer = await fetchPeerProfileById(storedPeerId)
+          if (fallbackPeer) {
+            console.log('[PeerMatch] Successfully fetched peer profile:', storedPeerId)
+            setWeeklyMatch(buildWeeklyMatchFromDoc(matchRef.id, data, fallbackPeer))
+            return
+          } else {
+            console.error('[PeerMatch] Failed to fetch peer profile:', storedPeerId)
+            // Match document exists but peer profile is unavailable
+            setWeeklyMatch(null)
+            return
+          }
         }
       }
+
+      // PRIORITY 2: No existing match found - create a new one (requires availablePeers)
+      if (!availablePeers.length) {
+        console.log('[PeerMatch] No existing match and no available peers to create new match')
+        setWeeklyMatch(null)
+        return
+      }
+
       const deterministicPeer = availablePeers[Math.abs(Number.parseInt(user.uid.slice(-3), 10)) % availablePeers.length]
       if (deterministicPeer) {
+        console.log('[PeerMatch] Creating new match with peer:', deterministicPeer.id)
         const matchPayload = {
           peer_id: deterministicPeer.id,
           user_id: user.uid,
@@ -428,7 +520,7 @@ export const PeerConnectPage: React.FC = () => {
         })
       }
     } catch (error) {
-      console.error('Error selecting weekly match', error)
+      console.error('[PeerMatch] Error in fetchWeeklyMatch:', error)
     }
   }, [availablePeers, matchDocId, matchPreferences.preferredMatchDay, matchPreferences.refreshPreference, matchWindow.key, profile, user])
 
@@ -531,6 +623,33 @@ export const PeerConnectPage: React.FC = () => {
     weeklyMatch?.refreshCount,
   ])
 
+  const loadSessionsAndInvites = useCallback(async () => {
+    if (!user) return
+    try {
+      const [initialSessions, initialInvites] = await Promise.all([
+        fetchUserSessions(user.uid),
+        fetchUserInvitations(user.uid),
+      ])
+      setSessions(
+        initialSessions.map((session) =>
+          mapServiceSessionToPeerSession(session, {
+            currentUserId: user?.uid,
+            timezoneFallback: profile?.timezone,
+          }),
+        ),
+      )
+      setPendingInvites(
+        initialInvites.map((invite) => ({
+          id: invite.id,
+          fromName: invite.fromName,
+          fromEmail: invite.fromEmail,
+        })),
+      )
+    } catch (error) {
+      console.warn('[PeerConnect] Initial session/invite fetch failed:', error)
+    }
+  }, [user, profile?.timezone])
+
   // Real-time subscription for sessions and invitations
   useEffect(() => {
     if (!user || loading || profileLoading) return
@@ -557,25 +676,17 @@ export const PeerConnectPage: React.FC = () => {
 
       setLoadingSessions(true)
 
-      // Subscribe to sessions in real-time
       unsubscribeSessions = subscribeToUserSessions(user.uid, (sessionData) => {
-        const mappedSessions: PeerSession[] = sessionData.map((session) => ({
-          id: session.id,
-          title: session.title || 'Weekly Peer Date',
-          scheduledAt: session.scheduledAt,
-          timezone: session.timezone || profile?.timezone || 'UTC',
-          platform: session.platform as PeerSession['platform'],
-          link: session.meetingLink,
-          status: session.status as PeerSession['status'],
-          confirmationDeadline: session.confirmationDeadline,
-          youConfirmed: Boolean(session.confirmations?.[user.uid]),
-          peerConfirmed: Object.keys(session.confirmations || {}).filter(k => k !== user.uid).some(k => session.confirmations[k]),
-        }))
+        const mappedSessions: PeerSession[] = sessionData.map((session) =>
+          mapServiceSessionToPeerSession(session, {
+            currentUserId: user.uid,
+            timezoneFallback: profile?.timezone,
+          }),
+        )
         setSessions(mappedSessions)
         setLoadingSessions(false)
       })
 
-      // Subscribe to invitations in real-time
       unsubscribeInvites = subscribeToUserInvitations(user.uid, (inviteData) => {
         const mappedInvites: Invitation[] = inviteData.map((invite) => {
           const email = typeof invite.fromEmail === 'string' ? invite.fromEmail : ''
@@ -590,14 +701,14 @@ export const PeerConnectPage: React.FC = () => {
     }
 
     void startSubscriptions()
+    void loadSessionsAndInvites()
 
-    // Cleanup subscriptions on unmount
     return () => {
       isActive = false
       if (unsubscribeSessions) unsubscribeSessions()
       if (unsubscribeInvites) unsubscribeInvites()
     }
-  }, [loading, profile?.timezone, profileLoading, user])
+  }, [loading, loadSessionsAndInvites, profile?.timezone, profileLoading, user])
 
   const onChallengeCreated = () => {
     fetchWeeklyMatch()
@@ -630,23 +741,7 @@ export const PeerConnectPage: React.FC = () => {
 
         await debugOrgFetch(db, profile, user?.uid ?? '')
         const members = await fetchOrgMembers(db, orgScope, user?.uid ?? '')
-        const mappedPeers = members.map((data) => {
-          const email = typeof data.email === 'string' ? data.email : ''
-          return {
-            id: String(data.id),
-            name: getDisplayName({ ...data, email }, 'Member'),
-            email,
-            timezone: data.timezone as PeerProfile['timezone'],
-            interests: data.interests as PeerProfile['interests'],
-            goals: data.goals as PeerProfile['goals'],
-            companyCode: typeof data.companyCode === 'string' ? data.companyCode : undefined,
-            corporateVillageId: data.corporateVillageId as PeerProfile['corporateVillageId'],
-            cohortIdentifier: data.cohortIdentifier as PeerProfile['cohortIdentifier'],
-            calendarLink: data.calendarLink as PeerProfile['calendarLink'],
-            identityTag: data.identityTag as PeerProfile['identityTag'],
-            avatarUrl: data.avatarUrl as PeerProfile['avatarUrl'],
-          }
-        })
+        const mappedPeers = members.map((data) => mapRecordToPeerProfile(data))
         setAvailablePeers(mappedPeers)
       } catch (error: unknown) {
         console.error('Error fetching peers', error)
@@ -680,6 +775,54 @@ export const PeerConnectPage: React.FC = () => {
   }, [fetchWeeklyMatch])
 
   useEffect(() => {
+    if (!matchDocId) return undefined
+    if (matchPreferences.refreshPreference === 'disabled') return undefined
+    const matchRef = doc(db, 'peer_weekly_matches', matchDocId)
+    const unsubscribe = onSnapshot(matchRef, async (snapshot) => {
+      if (!snapshot.exists()) {
+        console.log('[PeerMatch] Real-time: Match document does not exist')
+        return
+      }
+
+      const data = snapshot.data()
+      const storedPeerId = data.peer_id ?? data.peerId
+
+      if (!storedPeerId) {
+        console.warn('[PeerMatch] Real-time: Match document exists but has no peerId')
+        return
+      }
+
+      // Try to find peer in availablePeers first (faster, already loaded)
+      const matchedPeer = availablePeers.find((peer) => peer.id === storedPeerId)
+      if (matchedPeer) {
+        console.log('[PeerMatch] Real-time: Found peer in availablePeers:', storedPeerId)
+        setWeeklyMatch(buildWeeklyMatchFromDoc(matchRef.id, data, matchedPeer))
+        return
+      }
+
+      // Fallback: Fetch peer profile directly from Firestore (handles automatic matches)
+      console.log('[PeerMatch] Real-time: Peer not in availablePeers, fetching directly:', storedPeerId)
+      try {
+        const fallbackPeer = await fetchPeerProfileById(storedPeerId)
+        if (fallbackPeer) {
+          console.log('[PeerMatch] Real-time: Successfully fetched peer profile:', storedPeerId)
+          setWeeklyMatch(buildWeeklyMatchFromDoc(matchRef.id, data, fallbackPeer))
+        } else {
+          console.error('[PeerMatch] Real-time: Failed to fetch peer profile:', storedPeerId)
+          setWeeklyMatch(null)
+        }
+      } catch (error) {
+        console.error('[PeerMatch] Real-time: Error fetching peer profile:', storedPeerId, error)
+        setWeeklyMatch(null)
+      }
+    })
+
+    return () => {
+      unsubscribe()
+    }
+  }, [availablePeers, matchDocId, matchPreferences.refreshPreference])
+
+  useEffect(() => {
     if (!weeklyMatch || weeklyMatch.matchStatus !== 'new') return
     if (viewedMatchRef.current === weeklyMatch.matchId) return
     viewedMatchRef.current = weeklyMatch.matchId
@@ -692,6 +835,22 @@ export const PeerConnectPage: React.FC = () => {
     const queryString = participantFilter.toLowerCase()
     return availablePeers.filter((peer) => peer.name.toLowerCase().includes(queryString) || peer.email.toLowerCase().includes(queryString))
   }, [availablePeers, participantFilter])
+
+  const upcomingSessions = useMemo(() => {
+    const nowMs = Date.now()
+    return sessions.filter(
+      (session) =>
+        !['completed', 'no_show'].includes(session.status) && session.scheduledAt.getTime() >= nowMs,
+    )
+  }, [sessions])
+
+  const pastSessions = useMemo(() => {
+    const nowMs = Date.now()
+    return sessions.filter(
+      (session) =>
+        ['completed', 'no_show'].includes(session.status) || session.scheduledAt.getTime() < nowMs,
+    )
+  }, [sessions])
 
   const matchStatusLabel = useMemo(() => {
     if (!weeklyMatch) return 'Pending'
@@ -866,6 +1025,7 @@ export const PeerConnectPage: React.FC = () => {
         status: accepted ? 'success' : 'info',
         position: 'top',
       })
+      await loadSessionsAndInvites()
     } catch (error) {
       console.error('Invitation response failed:', error)
       toast({
@@ -875,6 +1035,46 @@ export const PeerConnectPage: React.FC = () => {
         position: 'top',
       })
     }
+  }
+
+  const getTimeZoneOffsetMinutes = (timeZone: string, referenceDate: Date) => {
+    try {
+      const formatter = new Intl.DateTimeFormat('en-US', {
+        timeZone,
+        timeZoneName: 'shortOffset',
+        hour12: false,
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit',
+        hour: '2-digit',
+        minute: '2-digit',
+        second: '2-digit',
+      })
+      const parts = formatter.formatToParts(referenceDate)
+      const tzPart = parts.find((part) => part.type === 'timeZoneName')?.value ?? ''
+      const cleaned = tzPart.replace(/GMT|UTC/g, '')
+      const match = cleaned.match(/([+-])(\d{1,2})(?::?(\d{2}))?/)
+      if (!match) return 0
+      const sign = match[1] === '+' ? 1 : -1
+      const hours = Number(match[2]) || 0
+      const minutes = Number(match[3] ?? 0)
+      return sign * (hours * 60 + minutes)
+    } catch (error) {
+      console.warn('Unable to determine timezone offset for', timeZone, error)
+      return 0
+    }
+  }
+
+  const getScheduledAtFromForm = (date: Date | null, time: string, timeZone: string) => {
+    if (!date || !time || !timeZone) return null
+    const [hours, minutes] = time.split(':').map((value) => Number(value))
+    if (!Number.isFinite(hours) || !Number.isFinite(minutes)) return null
+    const year = date.getFullYear()
+    const month = date.getMonth()
+    const day = date.getDate()
+    const naiveUtc = new Date(Date.UTC(year, month, day, hours, minutes, 0, 0))
+    const offsetMinutes = getTimeZoneOffsetMinutes(timeZone, naiveUtc)
+    return new Date(naiveUtc.getTime() - offsetMinutes * 60 * 1000)
   }
 
   const validateSessionForm = () => {
@@ -887,11 +1087,9 @@ export const PeerConnectPage: React.FC = () => {
       errors.participants = 'Select at least 2 participants for your group session so you can host a three-person conversation including yourself.'
 
     // Validate that date/time is in the future
-    if (sessionForm.date && sessionForm.time) {
-      const [hours, minutes] = sessionForm.time.split(':').map(Number)
-      const scheduledDate = new Date(sessionForm.date)
-      scheduledDate.setHours(hours, minutes, 0, 0)
-      if (scheduledDate <= new Date()) {
+    if (sessionForm.date && sessionForm.time && sessionForm.timezone) {
+      const scheduledAt = getScheduledAtFromForm(sessionForm.date, sessionForm.time, sessionForm.timezone)
+      if (scheduledAt && scheduledAt <= new Date()) {
         errors.date = 'Session must be scheduled in the future'
       }
     }
@@ -906,10 +1104,11 @@ export const PeerConnectPage: React.FC = () => {
     if (!sessionForm.date) return
 
     try {
-      // Construct scheduled date from date + time
-      const [hours, minutes] = sessionForm.time.split(':').map(Number)
-      const scheduledAt = new Date(sessionForm.date)
-      scheduledAt.setHours(hours, minutes, 0, 0)
+      // Construct scheduled date from date, time, and timezone
+      const scheduledAt = getScheduledAtFromForm(sessionForm.date, sessionForm.time, sessionForm.timezone)
+      if (!scheduledAt) {
+        throw new Error('Unable to parse the scheduled session time')
+      }
 
       // Use the atomic service to create session and invitations together
       await createPeerSession({
@@ -1009,7 +1208,7 @@ export const PeerConnectPage: React.FC = () => {
             Peer Connect
           </Heading>
           <Text color="brand.subtleText">
-            Automated weekly matching pairs you one-on-one, while peer-to-peer sessions are partner-supervised group experiences—all anchored in Firebase so
+            Automated weekly matching pairs you one-on-one, while peer-to-peer sessions are partner-supervised group experiencesâ€”all anchored in Firebase so
             your connections stay in sync.
           </Text>
           <SimpleGrid columns={{ base: 1, md: 2 }} spacing={3} pt={1}>
@@ -1218,67 +1417,17 @@ export const PeerConnectPage: React.FC = () => {
                   </Box>
 
                   <Box bg="surface.default" p={6} borderRadius="2xl" border="1px solid" borderColor="border.subtle" boxShadow="sm">
-                    <Flex justify="space-between" align="center" mb={3}>
-                      <Heading size="sm" color="brand.text">
-                        Pending peer invitations
-                      </Heading>
-                      <Badge colorScheme="primary" variant="outline">
-                        {pendingInvites.length} pending
-                      </Badge>
-                    </Flex>
-                    <Stack spacing={3}>
-                      {pendingInvites.length ? (
-                        pendingInvites.map((invite) => (
-                          <Box key={invite.id} p={3} borderRadius="lg" border="1px dashed" borderColor="border.subtle">
-                            <HStack justify="space-between" align="flex-start">
-                              <Stack spacing={0}>
-                                <Text fontWeight="semibold" color="brand.text">
-                                  {invite.fromName}
-                                </Text>
-                                <Text fontSize="sm" color="brand.subtleText">
-                                  {invite.fromEmail}
-                                </Text>
-                              </Stack>
-                              <HStack spacing={2}>
-                                <IconButton
-                                  aria-label="Decline invitation"
-                                  icon={<X size={16} />}
-                                  size="sm"
-                                  variant="ghost"
-                                  onClick={() => respondToInvite(invite.id, false)}
-                                />
-                                <IconButton
-                                  aria-label="Accept invitation"
-                                  icon={<Check size={16} />}
-                                  size="sm"
-                                  colorScheme="success"
-                                  variant="solid"
-                                  onClick={() => respondToInvite(invite.id, true)}
-                                />
-                              </HStack>
-                            </HStack>
-                          </Box>
-                        ))
-                      ) : (
-                        <Text fontSize="sm" color="brand.subtleText">
-                          No pending peer invitations right now.
-                        </Text>
-                      )}
-                    </Stack>
-                  </Box>
-
-                  <Box bg="surface.default" p={6} borderRadius="2xl" border="1px solid" borderColor="border.subtle" boxShadow="sm">
                     <Flex justify="space-between" align={{ base: 'flex-start', md: 'center' }} gap={3} mb={4} direction={{ base: 'column', md: 'row' }}>
                       <Stack spacing={1}>
                         <Heading size="sm" color="brand.text">
-                          Your upcoming peer matching
+                          Scheduled Peer Sessions
                         </Heading>
                         <Text fontSize="sm" color="brand.subtleText">
-                          Confirm early to unlock points. Report no-shows after the confirmation deadline.
+                          Your confirmed and upcoming sessions. Confirm early to unlock points. Report no-shows after the confirmation deadline.
                         </Text>
                       </Stack>
-                      <Badge colorScheme="primary" variant="outline">
-                        {sessions.length} sessions
+                      <Badge colorScheme="green" variant="outline">
+                        {upcomingSessions.length} scheduled
                       </Badge>
                     </Flex>
 
@@ -1292,16 +1441,16 @@ export const PeerConnectPage: React.FC = () => {
                             </Text>
                           </HStack>
                         </Center>
-                      ) : sessions.length ? (
-                        sessions.map((session) => (
-                              <Box key={session.id} p={4} borderRadius="xl" border="1px solid" borderColor="border.subtle" bg="surface.default" boxShadow="xs">
+                      ) : upcomingSessions.length ? (
+                        upcomingSessions.map((session) => (
+                          <Box key={session.id} p={4} borderRadius="xl" border="1px solid" borderColor="border.subtle" bg="surface.default" boxShadow="xs">
                             <HStack justify="space-between" align="flex-start" mb={2}>
                               <Stack spacing={0}>
                                 <Text fontWeight="semibold" color="brand.text">
                                   {session.title}
                                 </Text>
                                 <Text fontSize="sm" color="brand.subtleText">
-                                  {format(session.scheduledAt, 'EEE, MMM d')} • {format(session.scheduledAt, 'p')} {session.timezone}
+                                  {format(session.scheduledAt, 'EEE, MMM d')} â€¢ {format(session.scheduledAt, 'p')} {session.timezone}
                                 </Text>
                               </Stack>
                               {renderStatusBadge(session.status)}
@@ -1353,27 +1502,77 @@ export const PeerConnectPage: React.FC = () => {
                       ) : (
                         <Center py={6} flexDirection="column" gap={2} color="brand.subtleText" border="1px dashed" borderColor="border.subtle" borderRadius="xl">
                           <Icon as={AlarmClockCheck} w={5} h={5} />
-                          <Text fontSize="sm">No sessions scheduled yet.</Text>
-                          <Text fontSize="xs">Create a peer session or wait for an invite from your organisation.</Text>
+                          <Text fontSize="sm">No scheduled sessions yet.</Text>
+                          <Text fontSize="xs">Accept an invitation from the sidebar or create a new peer session to get started.</Text>
                         </Center>
                       )}
                     </SimpleGrid>
+                  </Box>
+                  <Box bg="surface.default" p={6} borderRadius="2xl" border="1px solid" borderColor="border.subtle" boxShadow="sm" mt={4}>
+                    <Flex justify="space-between" align="center" mb={3}>
+                      <Heading size="sm" color="brand.text">
+                        Past peer sessions
+                      </Heading>
+                      <Badge colorScheme="primary" variant="outline">
+                        {pastSessions.length} recorded
+                      </Badge>
+                    </Flex>
+                    {loadingSessions ? (
+                      <Center py={6}>
+                        <HStack spacing={2}>
+                          <Spinner size="sm" />
+                          <Text fontSize="sm" color="brand.subtleText">
+                            Loading session history...
+                          </Text>
+                        </HStack>
+                      </Center>
+                    ) : pastSessions.length ? (
+                      <Stack spacing={3}>
+                        {pastSessions.map((session) => (
+                          <Box key={session.id} p={3} borderRadius="lg" border="1px solid" borderColor="border.subtle" bg="surface.subtle">
+                            <Stack spacing={1}>
+                              <HStack justify="space-between" align="center">
+                                <Text fontWeight="semibold" color="brand.text">
+                                  {session.title}
+                                </Text>
+                                {renderStatusBadge(session.status)}
+                              </HStack>
+                              <Text fontSize="sm" color="brand.subtleText">
+                                {format(session.scheduledAt, 'EEE, MMM d â€¢ p')} {session.timezone}
+                              </Text>
+                              <Text fontSize="xs" color="brand.subtleText">
+                                Confirmation deadline: {format(session.confirmationDeadline, 'MMM d, p')}
+                              </Text>
+                            </Stack>
+                          </Box>
+                        ))}
+                      </Stack>
+                    ) : (
+                      <Text fontSize="sm" color="brand.subtleText">
+                        No past sessions yet. Start one to build your history.
+                      </Text>
+                    )}
                   </Box>
                 </Stack>
               </GridItem>
 
               <GridItem>
                     <Box bg="surface.default" p={6} borderRadius="2xl" border="1px solid" borderColor="border.subtle" boxShadow="sm" position="sticky" top={4}>
-                  <Flex justify="space-between" align="center" mb={4}>
+                  <Flex justify="space-between" align="center" mb={2}>
                     <Heading size="sm" color="brand.text">
-                      Peer session invites
+                      Pending Invitations
                     </Heading>
-                    <Icon as={AlarmClockCheck} w={5} h={5} color="green.500" />
+                    <Badge colorScheme={pendingInvites.length > 0 ? 'orange' : 'gray'} variant="solid">
+                      {pendingInvites.length}
+                    </Badge>
                   </Flex>
+                  <Text fontSize="xs" color="brand.subtleText" mb={4}>
+                    Respond to session invitations from peers. Real-time updates.
+                  </Text>
                   <Stack spacing={3}>
                     {pendingInvites.length ? (
                       pendingInvites.map((invite) => (
-                        <Box key={invite.id} p={4} borderRadius="lg" border="1px solid" borderColor="border.subtle" bg="surface.subtle">
+                        <Box key={invite.id} p={4} borderRadius="lg" border="1px dashed" borderColor="orange.300" bg="orange.50">
                           <Text fontWeight="semibold" color="brand.text">
                             {invite.fromName}
                           </Text>
@@ -1391,9 +1590,12 @@ export const PeerConnectPage: React.FC = () => {
                         </Box>
                       ))
                     ) : (
-                      <Text fontSize="sm" color="brand.subtleText">
-                        No new peer session invitations. You will see real-time notifications here.
-                      </Text>
+                      <Box p={3} borderRadius="lg" border="1px solid" borderColor="border.subtle" bg="surface.subtle">
+                        <Icon as={AlarmClockCheck} w={4} h={4} color="green.500" mb={2} />
+                        <Text fontSize="sm" color="brand.subtleText">
+                          All caught up! No pending invitations at the moment.
+                        </Text>
+                      </Box>
                     )}
                   </Stack>
                 </Box>
@@ -1481,7 +1683,6 @@ export const PeerConnectPage: React.FC = () => {
                 </GridItem>
 
                 <GridItem colSpan={{ base: 1, lg: 2 }}>
-                  <SimpleGrid columns={{ base: 1, md: 2 }} spacing={4}>
                     <Box bg="surface.default" p={6} borderRadius="2xl" border="1px solid" borderColor="border.subtle" boxShadow="sm">
                       <Flex justify="space-between" align="center" mb={3}>
                         <Heading size="sm" color="brand.text">
@@ -1541,44 +1742,6 @@ export const PeerConnectPage: React.FC = () => {
                         )}
                       </Stack>
                     </Box>
-
-                    <Box bg="surface.default" p={6} borderRadius="2xl" border="1px solid" borderColor="border.subtle" boxShadow="sm">
-                      <Flex justify="space-between" align="center" mb={3}>
-                        <Heading size="sm" color="brand.text">
-                          Peer session invites
-                        </Heading>
-                        <Badge colorScheme="primary" variant="subtle">
-                          Inbox
-                        </Badge>
-                      </Flex>
-                      <Stack spacing={3}>
-                        {pendingInvites.length ? (
-                          pendingInvites.map((invite) => (
-                            <Box key={invite.id} p={3} borderRadius="lg" border="1px solid" borderColor="border.subtle">
-                              <Text fontWeight="semibold" color="brand.text">
-                                {invite.fromName}
-                              </Text>
-                              <Text fontSize="sm" color="brand.subtleText">
-                                {invite.fromEmail}
-                              </Text>
-                              <HStack spacing={2} mt={2}>
-                                <Button size="sm" variant="ghost" leftIcon={<X size={14} />} onClick={() => respondToInvite(invite.id, false)}>
-                                  Decline
-                                </Button>
-                                <Button size="sm" colorScheme="primary" leftIcon={<Check size={14} />} onClick={() => respondToInvite(invite.id, true)}>
-                                  Accept
-                                </Button>
-                              </HStack>
-                            </Box>
-                          ))
-                        ) : (
-                          <Text fontSize="sm" color="brand.subtleText">
-                            No new invitations. New requests appear instantly via Firebase.
-                          </Text>
-                        )}
-                      </Stack>
-                    </Box>
-                  </SimpleGrid>
                 </GridItem>
               </SimpleGrid>
             </Stack>
@@ -1741,3 +1904,4 @@ export const PeerConnectPage: React.FC = () => {
     </Stack>
   )
 }
+

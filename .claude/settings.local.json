@@ -33,7 +33,8 @@
       "Bash(firebase login:*)",
       "Bash(firebase projects:list:*)",
       "Bash(gcloud --version:*)",
-      "Bash(firebase deploy:*)"
+      "Bash(firebase deploy:*)",
+      "Bash(firebase functions:list:*)"
     ]
   }
 }

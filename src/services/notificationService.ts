@@ -122,8 +122,9 @@ export const createInAppNotification = async (params: {
   title?: string
   message: string
   metadata?: Record<string, unknown>
+  relatedId?: string
 }) => {
-  await addDoc(notificationsCollection, {
+  const payload: Record<string, unknown> = {
     user_id: params.userId,
     type: params.type,
     notification_type: params.type,
@@ -133,7 +134,13 @@ export const createInAppNotification = async (params: {
     is_read: false,
     read: false,
     created_at: serverTimestamp(),
-  })
+  }
+
+  if (params.relatedId) {
+    payload.related_id = params.relatedId
+  }
+
+  await addDoc(notificationsCollection, payload)
 }
 
 export const sendBelowTargetAlert = async (notification: {

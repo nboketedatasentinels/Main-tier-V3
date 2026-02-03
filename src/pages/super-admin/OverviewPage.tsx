@@ -3,7 +3,6 @@ import {
   Alert,
   AlertDescription,
   AlertIcon,
-  Badge,
   Card,
   CardBody,
   Drawer,
@@ -13,18 +12,13 @@ import {
   DrawerHeader,
   DrawerOverlay,
   Flex,
-  Grid,
-  GridItem,
-  HStack,
   SimpleGrid,
   Skeleton,
   Spinner,
   Stack,
-  Text,
   useDisclosure,
 } from '@chakra-ui/react'
 import {
-  GitBranch,
   Sparkles,
   ShieldAlert,
   Users,
@@ -34,7 +28,6 @@ import { RiskLevel, RiskReason } from '@/components/admin/RiskAnalysisCard'
 import { AdminNotificationsList } from '@/components/admin/AdminNotificationsList'
 import { AdminHealthItem } from '@/components/admin/AdminDataHealthPanel'
 import {
-  AdminActivityLogEntry,
   RegistrationRecord,
   SuperAdminDashboardMetrics,
   SystemAlertRecord,
@@ -48,7 +41,6 @@ import { CriticalActionInbox, ActionItem } from './components/CriticalActionInbo
 import { SystemHealthStrip, HealthKPI } from './components/SystemHealthStrip'
 import { RiskAnomalyRadar, Signal } from './components/RiskAnomalyRadar'
 import { OperationalCommands } from './components/OperationalCommands'
-import { SystemIntelligenceFeed, FeedEvent } from './components/SystemIntelligenceFeed'
 import { CollapsibleMetrics } from './components/CollapsibleMetrics'
 
 type TrendPoint = { label: string; value: number }
@@ -64,7 +56,6 @@ type OverviewPageProps = {
   registrations: RegistrationRecord[]
   verificationRequests: VerificationRequest[]
   taskNotifications: TaskNotificationRecord[]
-  activityLog: AdminActivityLogEntry[]
   loading: boolean
   error: string | null
   streamsLoading: boolean
@@ -81,7 +72,6 @@ export const OverviewPage: React.FC<OverviewPageProps> = ({
   systemAlerts,
   registrations,
   verificationRequests,
-  activityLog,
   loading,
   error,
   onNavigate,
@@ -206,15 +196,6 @@ export const OverviewPage: React.FC<OverviewPageProps> = ({
     ]
   }, [systemAlerts, onNavigate])
 
-  const intelligenceEvents: FeedEvent[] = React.useMemo(() => {
-    return activityLog.map((entry) => ({
-      id: entry.id,
-      type: entry.action.toLowerCase().includes('security') ? 'security' : 'system',
-      message: `${entry.adminName || 'Admin'} performed ${entry.action}`,
-      timestamp: entry.createdAt?.toString() || 'Just now',
-    }))
-  }, [activityLog])
-
   return (
     <Stack spacing={8}>
       <CommandCenterHeader
@@ -257,36 +238,6 @@ export const OverviewPage: React.FC<OverviewPageProps> = ({
 
           {/* ZONE 4 — OPERATIONAL COMMANDS */}
           <OperationalCommands />
-
-          <Grid templateColumns={{ base: '1fr', lg: '2fr 1fr' }} gap={8}>
-            <GridItem>
-              {/* ZONE 5 — INTELLIGENCE FEED */}
-              <SystemIntelligenceFeed events={intelligenceEvents.slice(0, 5)} />
-            </GridItem>
-            <GridItem>
-              {/* Other content if needed, for now just placeholder or extra space */}
-              <Stack spacing={4}>
-                <HStack justify="space-between">
-                  <HStack spacing={2}>
-                    <GitBranch size={16} />
-                    <Text fontWeight="bold" color="brand.text">Master Audit Trail</Text>
-                  </HStack>
-                  <Badge colorScheme="gray">Live</Badge>
-                </HStack>
-                <Stack spacing={3} maxH="300px" overflowY="auto">
-                  {activityLog.map((entry) => (
-                    <HStack key={entry.id} justify="space-between" align="flex-start" borderBottom="1px solid" borderColor="gray.100" pb={2}>
-                      <Stack spacing={0}>
-                        <Text fontSize="sm" fontWeight="semibold" color="gray.800">{entry.action}</Text>
-                        <Text fontSize="xs" color="gray.500">{entry.adminName || 'Unknown'}</Text>
-                      </Stack>
-                      <Text fontSize="xs" color="gray.400">{entry.createdAt?.toString() || 'Just now'}</Text>
-                    </HStack>
-                  ))}
-                </Stack>
-              </Stack>
-            </GridItem>
-          </Grid>
 
           {/* ZONE 6 — SYSTEM METRICS (Collapsible) */}
           <CollapsibleMetrics>

@@ -7,6 +7,18 @@ export const removeUndefinedFields = <T>(value: T): T => {
     return value
   }
 
+  // Don't process special types - return them as-is
+  // This includes: Date, Firestore Timestamp, Firestore FieldValue, etc.
+  if (
+    value instanceof Date ||
+    value.constructor?.name === 'Timestamp' ||
+    value.constructor?.name === 'FieldValue' ||
+    typeof (value as any).toDate === 'function' ||
+    typeof (value as any).isEqual === 'function'
+  ) {
+    return value
+  }
+
   if (Array.isArray(value)) {
     return value.map((item) => removeUndefinedFields(item)) as T
   }

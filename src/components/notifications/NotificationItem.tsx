@@ -81,6 +81,15 @@ export const NotificationItem = ({
   const hasAction =
     notification.type === 'challenge_request' && !notification.action_response
 
+  const actionUrl =
+    typeof notification.metadata?.actionUrl === 'string'
+      ? notification.metadata.actionUrl
+      : null
+  const actionLabel =
+    typeof notification.metadata?.actionLabel === 'string'
+      ? notification.metadata.actionLabel
+      : 'View details'
+
   return (
     <Box
       borderWidth="1px"
@@ -141,23 +150,39 @@ export const NotificationItem = ({
             </Text>
           )}
 
-          {hasAction && onAction && (
+          {(actionUrl || (hasAction && onAction)) && (
             <HStack spacing={2} mt={3}>
-              <Button
-                size="xs"
-                colorScheme="brand"
-                variant="solid"
-                onClick={() => onAction('accepted')}
-              >
-                Accept
-              </Button>
-              <Button
-                size="xs"
-                variant="outline"
-                onClick={() => onAction('declined')}
-              >
-                Decline
-              </Button>
+              {actionUrl && (
+                <Button
+                  size="xs"
+                  variant="outline"
+                  as="a"
+                  href={actionUrl}
+                  target="_blank"
+                  rel="noreferrer"
+                >
+                  {actionLabel}
+                </Button>
+              )}
+              {hasAction && onAction && (
+                <>
+                  <Button
+                    size="xs"
+                    colorScheme="brand"
+                    variant="solid"
+                    onClick={() => onAction('accepted')}
+                  >
+                    Accept
+                  </Button>
+                  <Button
+                    size="xs"
+                    variant="outline"
+                    onClick={() => onAction('declined')}
+                  >
+                    Decline
+                  </Button>
+                </>
+              )}
             </HStack>
           )}
         </Stack>

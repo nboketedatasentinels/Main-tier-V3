@@ -52,11 +52,21 @@ export interface PersonalityProfile {
   coreValues?: string[]
 }
 
+export type PeerMatchStatus = 'new' | 'viewed' | 'contacted' | 'completed' | 'expired'
+
 export interface PeerMatch {
   id: string
-  matched_user_id: string
-  status: string
-  created_at?: Timestamp
+  peerId?: string
+  matchReason?: string
+  matchStatus: PeerMatchStatus
+  matchKey?: string
+  matchRefreshPreference?: string
+  preferredMatchDay?: number
+  refreshCount?: number
+  automatedMatch?: boolean
+  createdAt?: Date
+  lastRefreshAt?: Date
+  lastManualRefreshAt?: Date
 }
 
 export interface WeeklyHabit {
@@ -79,6 +89,31 @@ export interface LedgerEntry {
   points: number
   createdAt: Date
   weekNumber: number
+}
+
+const toDateValue = (value: unknown): Date | undefined => {
+  if (!value) return undefined
+  if (value instanceof Date) return value
+  if (typeof value === 'object' && value !== null) {
+    const candidate = value as { toDate?: () => Date }
+    if (typeof candidate.toDate === 'function') {
+      return candidate.toDate()
+    }
+  }
+  return undefined
+}
+
+const PEER_MATCH_STATUS_VALUES: PeerMatchStatus[] = ['new', 'viewed', 'contacted', 'completed', 'expired']
+
+const normalizePeerMatchStatus = (status?: string | null): PeerMatchStatus => {
+  if (!status) return 'new'
+  const normalized = status.toLowerCase()
+  if (PEER_MATCH_STATUS_VALUES.includes(normalized as PeerMatchStatus)) {
+    return normalized as PeerMatchStatus
+  }
+  if (normalized === 'matched') return 'completed'
+  if (normalized === 'pending') return 'new'
+  return 'new'
 }
 
 interface WeeklyGlanceLoadingState {
@@ -331,12 +366,41 @@ export const useWeeklyGlanceData = () => {
       if (!profile?.id) return
       setLoading(prev => ({ ...prev, matches: true }))
       try {
-        const matchesQuery = query(collection(db, 'peer_matches'), where('user_id', '==', profile.id))
+        const matchesQuery = query(
+          collection(db, 'peer_weekly_matches'),
+          where('userId', '==', profile.id),
+        )
         const snapshot = await getDocs(matchesQuery)
-        const matchesData: PeerMatch[] = snapshot.docs.map(item => ({
-          ...(item.data() as PeerMatch),
-          id: item.id,
-        }))
+        const matchesData: PeerMatch[] = snapshot.docs
+          .map(docItem => {
+            const record = docItem.data() as Record<string, unknown>
+            const rawStatus =
+              (record.matchStatus as string | undefined) || (record.status as string | undefined)
+            return {
+              id: docItem.id,
+              peerId:
+                (record.peerId as string | undefined) ||
+                (record.peer_id as string | undefined),
+              matchReason: typeof record.matchReason === 'string' ? record.matchReason : undefined,
+              matchStatus: normalizePeerMatchStatus(rawStatus),
+              matchKey: typeof record.matchKey === 'string' ? record.matchKey : undefined,
+              matchRefreshPreference:
+                typeof record.matchRefreshPreference === 'string'
+                  ? record.matchRefreshPreference
+                  : undefined,
+              preferredMatchDay:
+                typeof record.preferredMatchDay === 'number' ? record.preferredMatchDay : undefined,
+              refreshCount:
+                typeof record.refreshCount === 'number' ? record.refreshCount : undefined,
+              automatedMatch:
+                typeof record.automatedMatch === 'boolean' ? record.automatedMatch : undefined,
+              createdAt: toDateValue(record.createdAt),
+              lastRefreshAt: toDateValue(record.lastRefreshAt),
+              lastManualRefreshAt: toDateValue(record.lastManualRefreshAt),
+            }
+          })
+          .filter(match => match.matchStatus !== 'expired')
+          .sort((a, b) => (b.createdAt?.getTime() ?? 0) - (a.createdAt?.getTime() ?? 0))
         setPeerMatches(matchesData)
       } catch (error) {
         setErrors(prev => ({ ...prev, matches: error as Error }))

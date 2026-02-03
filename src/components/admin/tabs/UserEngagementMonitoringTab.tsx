@@ -5,10 +5,13 @@ import {
   Button,
   Card,
   CardBody,
+  Center,
   Divider,
   Flex,
   HStack,
+  Heading,
   Icon,
+  ListItem,
   Modal,
   ModalBody,
   ModalCloseButton,
@@ -18,6 +21,7 @@ import {
   ModalOverlay,
   Select,
   SimpleGrid,
+  Spinner,
   Stack,
   Table,
   Tbody,
@@ -26,11 +30,13 @@ import {
   Th,
   Thead,
   Tr,
+  UnorderedList,
+  VStack,
   useDisclosure,
   useToast,
 } from '@chakra-ui/react'
 import { formatDistanceToNow } from 'date-fns'
-import { AlertTriangle, BarChart2, Clock4, Minus, Search, Target, TrendingDown, TrendingUp, UsersRound } from 'lucide-react'
+import { Activity, AlertTriangle, BarChart2, Clock4, Minus, Search, Target, TrendingDown, TrendingUp, UsersRound } from 'lucide-react'
 import {
   EngagementRosterEntry,
   EngagementTotals,
@@ -48,6 +54,7 @@ import {
 import { formatAdminFirestoreError } from '@/services/admin/adminErrors'
 import { ResponsiveContainer, LineChart, Line, XAxis, YAxis, Tooltip, Legend, CartesianGrid } from 'recharts'
 import { useAuth } from '@/hooks/useAuth'
+import { useEngagementConfig } from '@/hooks/useEngagementConfig'
 
 type RosterFilters = {
   organization: string
@@ -89,6 +96,8 @@ export const UserEngagementMonitoringTab = ({ users: propUsers, organizations: p
   const toast = useToast()
   const { isOpen, onOpen, onClose } = useDisclosure()
   const { isAdmin } = useAuth()
+  const { engagementEnabled, isLoading: configLoading, enableEngagement } = useEngagementConfig()
+  const [enabling, setEnabling] = useState(false)
 
   const [roster, setRoster] = useState<EngagementRosterEntry[]>([])
   const [trendData, setTrendData] = useState<EngagementTrendPoint[]>([])
@@ -369,6 +378,61 @@ export const UserEngagementMonitoringTab = ({ users: propUsers, organizations: p
     </HStack>
   ) : null
 
+  // Loading state for config check
+  if (configLoading) {
+    return (
+      <Center py={20}>
+        <Spinner size="lg" color="purple.500" />
+      </Center>
+    )
+  }
+
+  // Feature not enabled — show activation card
+  if (!engagementEnabled) {
+    return (
+      <Box maxW="600px" mx="auto" py={12}>
+        <Card>
+          <CardBody textAlign="center" py={10}>
+            <Icon as={Activity} boxSize={12} color="purple.400" mb={4} />
+            <Heading size="md" mb={2}>Enable Engagement Monitoring</Heading>
+            <Text color="gray.600" mb={6}>
+              Track at-risk learners, create interventions, and monitor recovery trends across your organizations.
+            </Text>
+            <VStack spacing={4}>
+              <Box textAlign="left" w="full" px={6}>
+                <Text fontSize="sm" fontWeight="medium" mb={2}>This will:</Text>
+                <UnorderedList fontSize="sm" color="gray.600" spacing={1}>
+                  <ListItem>Initialize engagement tracking collections</ListItem>
+                  <ListItem>Enable risk scoring for all learners</ListItem>
+                  <ListItem>Allow mentors to create intervention plans</ListItem>
+                </UnorderedList>
+              </Box>
+              <Button
+                colorScheme="purple"
+                size="lg"
+                isLoading={enabling}
+                onClick={async () => {
+                  setEnabling(true)
+                  try {
+                    await enableEngagement()
+                    toast({ title: 'Engagement monitoring enabled', status: 'success' })
+                  } catch (error) {
+                    toast({ title: 'Failed to enable engagement monitoring', status: 'error' })
+                  } finally {
+                    setEnabling(false)
+                  }
+                }}
+              >
+                Enable Engagement Monitoring
+              </Button>
+            </VStack>
+          </CardBody>
+        </Card>
+      </Box>
+    )
+  }
+
+  // Feature enabled — render full dashboard
   return (
     <Stack spacing={6}>
       <Stack spacing={1}>

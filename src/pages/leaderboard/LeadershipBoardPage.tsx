@@ -59,7 +59,6 @@ import {
   ChevronDown,
   ChevronUp,
   ChevronRight,
-  Clock,
   Crown,
   Lock,
   Medal,
@@ -90,7 +89,6 @@ import { Badge as BadgeDefinition, LeaderboardTimeframe, UserProfile, UserRole }
 import { OrganizationRecord } from '@/types/admin'
 import { db } from '@/services/firebase'
 import { fetchOrganizationsByIds } from '@/services/organizationService'
-import { respondToChallenge } from '@/services/notificationService'
 import { fetchVillageById, removeMemberFromVillage, VillageSummary } from '@/services/villageService'
 import { useAuth } from '@/hooks/useAuth'
 import { useLeaderboardContext, getLeaderboardContextLabels } from '@/hooks/leaderboard/useLeaderboardContext'
@@ -99,6 +97,8 @@ import { useLeaderboardMetrics } from '@/hooks/leaderboard/useLeaderboardMetrics
 import { useUserActivityHistory } from '@/hooks/leaderboard/useUserActivityHistory'
 import { getDisplayName } from '@/utils/displayName'
 import { StartChallengeModal } from '@/components/modals/StartChallengeModal'
+import { ChallengesTab } from '@/components/leaderboard/ChallengesTab'
+import { cancelChallenge } from '@/services/challengeService'
 import { format } from 'date-fns'
 
 interface FeaturedBadge {
@@ -492,23 +492,28 @@ export const LeadershipBoardPage: React.FC = () => {
     localStorage.setItem('leaderboard-filter-tip', 'dismissed')
   }
 
-  const handleChallengeAction = async (challengeId: string, action: 'accepted' | 'declined') => {
-    try {
-      await respondToChallenge(challengeId, action)
+  const handleCancelChallenge = async (challengeId: string) => {
+    if (!profile?.id) return
+
+    const confirmed = window.confirm(
+      'Are you sure you want to cancel this challenge? This cannot be undone.'
+    )
+    if (!confirmed) return
+
+    const result = await cancelChallenge(challengeId, profile.id)
+
+    if (result.success) {
       toast({
-        title: `Challenge ${action}`,
-        description: `You have ${action} the challenge.`,
-        status: action === 'accepted' ? 'success' : 'info',
+        title: 'Challenge cancelled',
+        status: 'success',
         duration: 3000,
-        isClosable: true,
       })
-    } catch (error) {
+    } else {
       toast({
-        title: 'Action failed',
-        description: 'Unable to update challenge status.',
+        title: 'Failed to cancel',
+        description: result.error,
         status: 'error',
-        duration: 3000,
-        isClosable: true,
+        duration: 5000,
       })
     }
   }
@@ -627,7 +632,6 @@ export const LeadershipBoardPage: React.FC = () => {
     setVirtualOffset(offset)
   }
 
-  const emptyChallenges = challenges.filter((c) => c.status === 'active' || c.status === 'pending').length === 0
   const isFreeContext = context?.type === 'free'
   const isVillageContext = context?.type === 'village'
   const shouldShowVillageSection = isFreeContext || isVillageContext
@@ -1480,198 +1484,13 @@ export const LeadershipBoardPage: React.FC = () => {
           </TabPanel>
 
           <TabPanel px={0}>
-            <Stack spacing={5}>
-              <Card bgGradient="linear(to-r, brand.primary, brand.dark)" color="text.inverse">
-                <CardBody>
-                  <Stack color="text.inverse">
-                    <Flex align="center" justify="space-between">
-                      <Box>
-                        <Text fontSize="sm" opacity={0.9} color="white">Challenge Weeks are Live</Text>
-                        <Text fontSize="2xl" fontWeight="bold" color="white">Friendly competitions to spark growth</Text>
-                        <HStack spacing={3} mt={2}>
-                          <Icon as={Clock} color="white" />
-                          <Text color="white">Join or launch a challenge today</Text>
-                        </HStack>
-                      </Box>
-                      <Button
-                        bg="surface.default"
-                        color="brand.primary"
-                        _hover={{ bg: 'surface.subtle' }}
-                        onClick={onOpen}
-                        rightIcon={<Icon as={Target} />}
-                      >
-                        Start a Challenge
-                      </Button>
-                    </Flex>
-                  </Stack>
-                </CardBody>
-              </Card>
-
-              <SimpleGrid columns={{ base: 2, md: 4 }} spacing={4}>
-                <Card bg="surface.default" border="1px solid" borderColor="border.subtle">
-                  <CardBody>
-                    <Stat>
-                      <StatLabel color="text.muted">Active & Pending</StatLabel>
-                      <StatNumber color="text.primary">
-                        {challenges.filter((c) => c.status === 'active' || c.status === 'pending').length}
-                      </StatNumber>
-                    </Stat>
-                  </CardBody>
-                </Card>
-                <Card bg="surface.default" border="1px solid" borderColor="border.subtle">
-                  <CardBody>
-                    <Stat>
-                      <StatLabel color="text.muted">Victories</StatLabel>
-                      <StatNumber color="text.primary">{challenges.filter((c) => c.result === 'win').length}</StatNumber>
-                    </Stat>
-                  </CardBody>
-                </Card>
-                <Card bg="surface.default" border="1px solid" borderColor="border.subtle">
-                  <CardBody>
-                    <Stat>
-                      <StatLabel color="text.muted">Points Earned</StatLabel>
-                      <StatNumber color="text.primary">{formatNumber(challenges.reduce((sum, c) => sum + c.yourPoints, 0))}</StatNumber>
-                    </Stat>
-                  </CardBody>
-                </Card>
-                <Card bg="surface.default" border="1px solid" borderColor="border.subtle">
-                  <CardBody>
-                    <Stat>
-                      <StatLabel color="text.muted">Leaderboard Rank</StatLabel>
-                      <StatNumber color="text.primary">{userRow?.rank || '—'}</StatNumber>
-                    </Stat>
-                  </CardBody>
-                </Card>
-              </SimpleGrid>
-
-              {!challengesLoaded ? (
-                <Stack spacing={4}>
-                  <Skeleton height="120px" borderRadius="xl" />
-                  <SimpleGrid columns={{ base: 2, md: 4 }} spacing={4}>
-                    <Skeleton height="80px" borderRadius="lg" />
-                    <Skeleton height="80px" borderRadius="lg" />
-                    <Skeleton height="80px" borderRadius="lg" />
-                    <Skeleton height="80px" borderRadius="lg" />
-                  </SimpleGrid>
-                  <Card variant="outline">
-                    <CardBody>
-                      <Stack spacing={4}>
-                        <Skeleton height="24px" width="150px" />
-                        <Skeleton height="60px" borderRadius="lg" />
-                        <Skeleton height="60px" borderRadius="lg" />
-                      </Stack>
-                    </CardBody>
-                  </Card>
-                </Stack>
-              ) : (
-                <>
-                  <Card bg="surface.default" border="1px solid" borderColor="border.subtle">
-                    <CardHeader>
-                      <Flex justify="space-between" align="center">
-                        <Box>
-                          <Text fontWeight="bold">Your Challenges</Text>
-                          <Text fontSize="sm" color="text.secondary" mt={1}>
-                            Earn points by completing your Weekly Checklist. Your progress is reflected here in real-time.
-                          </Text>
-                        </Box>
-                        <Button size="sm" onClick={onOpen}>New Challenge</Button>
-                      </Flex>
-                    </CardHeader>
-                    <CardBody>
-                      {emptyChallenges ? (
-                        <VStack spacing={3} py={8} color="text.secondary">
-                          <Icon as={Users} boxSize={12} />
-                          <Text fontWeight="bold">No Active or Pending Challenges</Text>
-                          <Text>Start your first head-to-head battle to climb faster.</Text>
-                        </VStack>
-                      ) : (
-                        <Stack spacing={3}>
-                          {challenges
-                            .filter((c) => c.status === 'active' || c.status === 'pending')
-                            .map((challenge) => (
-                              <Flex key={challenge.id} p={4} border="1px solid" borderColor="border.subtle" borderRadius="lg" align="center" gap={4}>
-                                <Avatar name={challenge.opponentName} src={challenge.opponentAvatar} />
-                                <Box flex="1">
-                                  <Text fontWeight="bold">vs {challenge.opponentName}</Text>
-                                  <Text fontSize="sm" color="text.secondary">
-                                    {format(new Date(challenge.startDate), 'MMM d')} → {format(new Date(challenge.endDate), 'MMM d')}
-                                  </Text>
-                                  <Progress mt={2} value={(challenge.yourPoints / Math.max(challenge.yourPoints + challenge.opponentPoints, 1)) * 100} colorScheme="primary" borderRadius="full" />
-                                </Box>
-                                <VStack spacing={1} align="flex-end" minW="120px">
-                                  <Text fontWeight="bold" color="brand.primary" fontSize="lg">
-                                    You: {formatNumber(challenge.yourPoints)}
-                                  </Text>
-                                  <Text color="text.secondary" fontSize="sm">
-                                    {challenge.opponentName}: {formatNumber(challenge.opponentPoints)}
-                                  </Text>
-                                  <Badge colorScheme={
-                                    challenge.status === 'pending'
-                                      ? 'orange'
-                                      : (challenge.yourPoints >= challenge.opponentPoints ? 'success' : 'red')
-                                  }>
-                                    {challenge.status.toUpperCase()}
-                                  </Badge>
-                                  {challenge.status === 'pending' && !challenge.isChallenger && (
-                                    <HStack spacing={2} mt={2}>
-                                      <Button
-                                        size="xs"
-                                        colorScheme="green"
-                                        onClick={(e) => {
-                                          e.stopPropagation()
-                                          handleChallengeAction(challenge.id, 'accepted')
-                                        }}
-                                      >
-                                        Accept
-                                      </Button>
-                                      <Button
-                                        size="xs"
-                                        colorScheme="red"
-                                        variant="outline"
-                                        onClick={(e) => {
-                                          e.stopPropagation()
-                                          handleChallengeAction(challenge.id, 'declined')
-                                        }}
-                                      >
-                                        Decline
-                                      </Button>
-                                    </HStack>
-                                  )}
-                                </VStack>
-                              </Flex>
-                            ))}
-                        </Stack>
-                      )}
-                    </CardBody>
-                  </Card>
-
-                  <Card bg="surface.default" border="1px solid" borderColor="border.subtle">
-                    <CardHeader>
-                      <Text fontWeight="bold">Challenge History</Text>
-                      <Text color="text.secondary">Wins, losses, and stats</Text>
-                    </CardHeader>
-                    <CardBody>
-                      <Stack spacing={3}>
-                        {challenges
-                          .filter((c) => c.status === 'completed')
-                          .map((challenge) => (
-                        <Flex key={challenge.id} p={3} border="1px solid" borderColor="border.subtle" borderRadius="lg" align="center" gap={3}>
-                          <Icon as={Award} color={challenge.result === 'win' ? 'success.400' : 'danger.DEFAULT'} />
-                          <Box flex="1">
-                            <Text fontWeight="bold">{challenge.opponentName}</Text>
-                            <Text fontSize="sm" color="text.secondary">
-                              {format(new Date(challenge.startDate), 'MMM d')} → {format(new Date(challenge.endDate), 'MMM d')}
-                            </Text>
-                          </Box>
-                          <Text fontWeight="bold">{challenge.result?.toUpperCase() || 'DRAW'}</Text>
-                        </Flex>
-                      ))}
-                  </Stack>
-                </CardBody>
-              </Card>
-                </>
-              )}
-            </Stack>
+            <ChallengesTab
+              challenges={challenges}
+              challengesLoaded={challengesLoaded}
+              onStartChallenge={onOpen}
+              onCancelChallenge={handleCancelChallenge}
+              leaderboardRank={userRow?.rank}
+            />
           </TabPanel>
         </TabPanels>
       </Tabs>
