@@ -52,6 +52,7 @@ import { ConfirmationWelcomeModal } from '@/components/modals/ConfirmationWelcom
 import { PlatformTour } from '@/components/tour/PlatformTour'
 import { NotificationDropdown } from '@/components/notifications/NotificationDropdown'
 import { isFreeUser as isFreeTierUser } from '@/utils/membership'
+import PointsNotificationListener from '@/components/PointsNotificationListener'
 
 interface NavItem {
   label: string
@@ -515,6 +516,8 @@ export const MainLayout: React.FC = () => {
       />
 
       <PlatformTour isOpen={showTour} onClose={() => setShowTour(false)} />
+
+      <PointsNotificationListener />
     </Flex>
   )
 }

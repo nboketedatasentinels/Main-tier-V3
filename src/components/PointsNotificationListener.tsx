@@ -1,8 +1,9 @@
 import { useEffect } from 'react'
-import { onSnapshot, orderBy, query, where, collection } from 'firebase/firestore'
+import { collection, limit, onSnapshot, orderBy, query, where } from 'firebase/firestore'
 import { useAuth } from '@/hooks/useAuth'
 import { useToast } from '@/hooks/useToast'
 import { db } from '@/services/firebase'
+import { PEER_SESSION_CONFIRMATION_ACTIVITY, PEER_SESSION_NO_SHOW_ACTIVITY } from '@/config/pointsConfig'
 import emitter from '@/utils/eventEmitter'
 import { WeeklyTargetAlert } from '@/types/notifications'
 
@@ -63,6 +64,67 @@ export const PointsNotificationListener = () => {
     return () => {
       emitter.removeEventListener('pointsAwarded', pointsListener)
       unsubscribeAlerts()
+    }
+  }, [toast, user])
+
+  useEffect(() => {
+    if (!user) return undefined
+
+    const ledgerIds = new Set<string>()
+    let initialSnapshot = true
+
+    const ledgerQuery = query(
+      collection(db, 'pointsLedger'),
+      where('uid', '==', user.uid),
+      orderBy('createdAt', 'desc'),
+      limit(25),
+    )
+
+    const unsubscribeLedger = onSnapshot(
+      ledgerQuery,
+      (snapshot) => {
+        if (initialSnapshot) {
+          snapshot.docs.forEach((docSnap) => ledgerIds.add(docSnap.id))
+          initialSnapshot = false
+          return
+        }
+
+        snapshot.docChanges().forEach((change) => {
+          if (change.type !== 'added') return
+          const docId = change.doc.id
+          if (ledgerIds.has(docId)) return
+          ledgerIds.add(docId)
+
+          const data = change.doc.data()
+          if (data.source !== 'peer_session') return
+          const points = Number(data.points ?? 0)
+          if (!Number.isFinite(points) || points <= 0) return
+
+          const activityId = data.activityId as string | undefined
+          const description =
+            activityId === PEER_SESSION_NO_SHOW_ACTIVITY.id
+              ? PEER_SESSION_NO_SHOW_ACTIVITY.description
+              : PEER_SESSION_CONFIRMATION_ACTIVITY.description
+          const title =
+            activityId === PEER_SESSION_NO_SHOW_ACTIVITY.id
+              ? PEER_SESSION_NO_SHOW_ACTIVITY.title
+              : PEER_SESSION_CONFIRMATION_ACTIVITY.title
+
+          toast({
+            title: `+${points.toLocaleString()} points`,
+            description: description || title || 'Peer session points unlocked.',
+            status: 'success',
+            position: 'top',
+          })
+        })
+      },
+      (error) => {
+        console.error('[PointsNotificationListener] Peer session ledger listener error', error)
+      },
+    )
+
+    return () => {
+      unsubscribeLedger()
     }
   }, [toast, user])
 
