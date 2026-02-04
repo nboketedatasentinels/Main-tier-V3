@@ -39,6 +39,7 @@ export const ProtectedRoute: React.FC<Props> = ({
     loading,
     profileLoading,
     profileError,
+    effectiveRole,
     isMentor,
     isAmbassador,
     isPaid,
@@ -91,8 +92,8 @@ export const ProtectedRoute: React.FC<Props> = ({
     )
   }
 
-  // Get normalized role for admin/super_admin comparisons
-  const userRole = normalizeRole(profile?.role)
+  // Effective role prefers custom claims, then profile.role
+  const userRole = effectiveRole
 
   // Check account status
   const accountStatus = profile.accountStatus?.toString().toLowerCase()
@@ -146,7 +147,7 @@ export const ProtectedRoute: React.FC<Props> = ({
 
   // Check for specific role requirements
   if (requiredRoles && requiredRoles.length > 0) {
-    const allowedRoles = requiredRoles.map(normalizeRole)
+    const allowedRoles = requiredRoles.map((role) => normalizeRole(role))
 
     if (!allowedRoles.includes(userRole)) {
       return <Navigate to="/unauthorized" replace />

@@ -1,5 +1,5 @@
 import { UserProfile, UserRole } from '@/types'
-import { normalizeRole } from './role'
+import { resolveRole } from './role'
 
 export { normalizeRole } from './role'
 
@@ -79,7 +79,7 @@ export const getLandingPathForRole = (
     return redirectUrl
   }
 
-  const normalizedRole = normalizeRole(role) ?? (profile?.mentorId ? 'mentor' : null)
+  const normalizedRole = resolveRole(role) ?? (profile?.mentorId ? 'mentor' : null)
   console.log('🔷 Normalized role:', normalizedRole, 'mentorIdHint:', profile?.mentorId)
 
   // Priority 2: Super Admin

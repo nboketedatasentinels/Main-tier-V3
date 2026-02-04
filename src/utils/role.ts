@@ -1,14 +1,8 @@
 import { UserRole } from '@/types'
 import type { StandardRole } from '@/types'
 
-/**
- * 🔐 Single source of truth for role normalization
- * Always returns Firestore-compatible role strings
- */
-export const normalizeRole = (role: unknown): StandardRole => {
-  if (!role) {
-    return 'paid_member'
-  }
+export const resolveRole = (role: unknown): StandardRole | null => {
+  if (role == null) return null
 
   const roleString = role
     .toString()
@@ -16,51 +10,42 @@ export const normalizeRole = (role: unknown): StandardRole => {
     .toLowerCase()
     .replace(/[-\s]+/g, '_')
 
-  let result: StandardRole
+  if (!roleString) return null
 
   switch (roleString) {
     case 'company_admin':
     case 'admin':
     case 'administrator':
     case 'partner':
-      result = 'partner'
-      break
+      return 'partner'
 
     case 'super_admin':
     case 'superadmin':
     case 'super':
-      result = 'super_admin'
-      break
+      return 'super_admin'
 
     case 'mentor':
-      result = 'mentor'
-      break
+      return 'mentor'
 
     case 'ambassador':
-      result = 'ambassador'
-      break
-
+      return 'ambassador'
 
     case 'free_user':
-      result = 'free_user'
-      break
+      return 'free_user'
 
     case 'paid_member':
-      result = 'paid_member'
-      break
+      return 'paid_member'
 
     case 'user':
     default:
-      result = 'user'
-      break
+      return 'user'
   }
-
-  return result
 }
 
-/**
- * 🎯 Convert role string → UserRole enum
- */
+export const normalizeRole = (role: unknown, fallback: StandardRole = 'user'): StandardRole => {
+  return resolveRole(role) ?? fallback
+}
+
 export const toUserRoleEnum = (role?: string | UserRole | null): UserRole | null => {
   if (!role) return null
 
@@ -85,26 +70,16 @@ export const toUserRoleEnum = (role?: string | UserRole | null): UserRole | null
   }
 }
 
-/**
- * 🛂 Admin check
- */
 export const isAdminRole = (role: unknown): boolean => {
   const normalized = normalizeRole(role)
-  const isAdmin = normalized === 'super_admin' || normalized === 'partner'
-  return isAdmin
+  return normalized === 'super_admin' || normalized === 'partner'
 }
 
-/**
- * 👑 Super Admin check
- */
 export const isSuperAdminRole = (role: unknown): boolean => {
-  const isSuper = normalizeRole(role) === 'super_admin'
-  return isSuper
+  return normalizeRole(role) === 'super_admin'
 }
-/**
- * ✅ Backwards-compatible export (used by dashboardPaths.ts and others)
- * Returns a normalized Firestore role string.
- */
+
 export const toUserRole = (role?: string | UserRole | null): StandardRole => {
   return normalizeRole(role)
 }
+

@@ -51,6 +51,9 @@ export interface AuthContextType {
   
   // Custom Claims
   claimsRole: string | null
+  effectiveRole: StandardRole
+  effectiveRoleSource: 'claims' | 'profile' | 'fallback'
+  effectiveOrganizationId: string | null
   refreshAdminSession: () => Promise<void>
   refreshProfile: (options?: { reason?: string; isManual?: boolean }) => Promise<{ error: Error | null; profile: UserProfile | null }>
 

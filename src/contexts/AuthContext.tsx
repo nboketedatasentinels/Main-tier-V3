@@ -38,6 +38,7 @@ import {
 import { canAccessOrganization } from '@/services/organizationAccessService'
 import { createReferral, generateReferralCode, validateReferralCode } from '@/services/referralService'
 import { JOURNEY_META, type JourneyType } from '@/config/pointsConfig'
+import { resolveEffectiveOrganization, resolveEffectiveRole } from '@/utils/authz'
 
 interface AuthProviderProps {
   children: React.ReactNode
@@ -189,6 +190,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       previous.accountStatus === next.accountStatus &&
       previous.transformationTier === next.transformationTier &&
       previous.companyId === next.companyId &&
+      previous.organizationId === next.organizationId &&
       previous.companyCode === next.companyCode &&
       previous.companyName === next.companyName &&
       previous.villageId === next.villageId &&
@@ -479,6 +481,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
                 'companyId',
                 'companyCode',
                 'companyName',
+                'organizationId',
                 'assignedOrganizations',
                 'accountStatus',
               ] as const satisfies ReadonlyArray<keyof UserProfile>
@@ -1516,18 +1519,23 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   /* ------------------------------------------------------------------ */
   /* 🔹 Role Flags (LOGGED)                                              */
   /* ------------------------------------------------------------------ */
-  const normalizedRole = normalizeRole(profile?.role)
+  const { role: effectiveRole, source: effectiveRoleSource } = resolveEffectiveRole({
+    claimsRole,
+    profileRole: profile?.role,
+    fallback: 'user',
+  })
+  const { organizationId: effectiveOrganizationId } = resolveEffectiveOrganization(profile)
 
-  const isAdmin = normalizedRole === 'partner' || normalizedRole === 'super_admin'
-  const isSuperAdmin = normalizedRole === 'super_admin'
-  const isMentor = normalizedRole === 'mentor'
-  const isAmbassador = normalizedRole === 'ambassador'
+  const isAdmin = effectiveRole === 'partner' || effectiveRole === 'super_admin'
+  const isSuperAdmin = effectiveRole === 'super_admin'
+  const isMentor = effectiveRole === 'mentor'
+  const isAmbassador = effectiveRole === 'ambassador'
   const isPaid =
     ['partner', 'mentor', 'ambassador', 'super_admin'].includes(
-      normalizedRole ?? ''
+      effectiveRole ?? ''
     ) ||
-    normalizedRole === 'paid_member' ||
-    (normalizedRole === 'user' && profile?.membershipStatus === 'paid')
+    effectiveRole === 'paid_member' ||
+    (effectiveRole === 'user' && profile?.membershipStatus === 'paid')
 
   /* ------------------------------------------------------------------ */
   const value: AuthContextType = {
@@ -1547,8 +1555,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     signInWithGoogle,
     resetPassword,
     updateProfile,
-    hasRole: (r: StandardRole) => normalizedRole === r,
-    hasAnyRole: (roles: StandardRole[]) => (normalizedRole ? roles.includes(normalizedRole as StandardRole) : false),
+    hasRole: (r: StandardRole) => effectiveRole === r,
+    hasAnyRole: (roles: StandardRole[]) => roles.includes(effectiveRole),
     isAdmin,
     isSuperAdmin,
     isMentor,
@@ -1557,17 +1565,20 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     isCorporateMember:
       profile?.transformationTier?.toLowerCase().includes('corporate') ?? false,
     assignedOrganizations: profile?.assignedOrganizations ?? [],
-    hasFullOrganizationAccess: normalizedRole === 'super_admin',
+    hasFullOrganizationAccess: effectiveRole === 'super_admin',
     canAccessOrganization: async (organizationId: string) => {
-      if (!organizationId || !user?.uid || !profile?.role) return false
+      if (!organizationId || !user?.uid) return false
       return canAccessOrganization({
-        role: profile.role,
+        role: effectiveRole,
         userId: user.uid,
         organizationId,
       })
     },
     updateDashboardPreferences: async () => ({ error: null }),
     claimsRole,
+    effectiveRole,
+    effectiveRoleSource,
+    effectiveOrganizationId,
     refreshAdminSession,
     refreshProfile,
     // Account Linking

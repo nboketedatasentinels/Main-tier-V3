@@ -53,6 +53,7 @@ export const PartnerDashboard: React.FC = () => {
     isSuperAdmin,
     user,
     profile,
+    effectiveRole,
     canAccessOrganization,
     refreshProfile,
     profileStatus,
@@ -232,7 +233,7 @@ export const PartnerDashboard: React.FC = () => {
   }, [organizations, selectedOrg])
 
   useEffect(() => {
-    if (profile?.role !== 'partner' || !selectedOrgId) {
+    if (effectiveRole !== 'partner' || !selectedOrgId) {
       setPartnerOrgAccess(true)
       return
     }
@@ -250,7 +251,7 @@ export const PartnerDashboard: React.FC = () => {
     return () => {
       isMounted = false
     }
-  }, [canAccessOrganization, profile?.role, selectedOrgId])
+  }, [canAccessOrganization, effectiveRole, selectedOrgId])
 
   const refreshIfVisible = useCallback((reason: string) => {
     if (typeof document !== 'undefined' && document.visibilityState !== 'visible') {
@@ -1822,7 +1823,7 @@ export const PartnerDashboard: React.FC = () => {
     )
   }
 
-  if (profile?.role === 'partner' && selectedOrgId && partnerOrgAccess === false) {
+  if (effectiveRole === 'partner' && selectedOrgId && partnerOrgAccess === false) {
     return (
       <PartnerLayout
         organizations={organizations}
