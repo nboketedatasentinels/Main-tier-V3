@@ -187,8 +187,10 @@ export const UsersManagementTab = ({ users: propUsers, loading: propLoading }: U
     ambassador: 'green',
   }
 
-  const isLeadershipRole = multiOrganizationRoles.has(promotionRoleSelection)
-  const isPaidUserRole = promotionRoleSelection === 'user' && promotionStatusSelection === 'paid'
+  const currentPromotionRole = (promotionRoleSelection || 'user') as ManagedUserRole
+  const currentPromotionStatus = (promotionStatusSelection || 'free') as MembershipStatus
+  const isLeadershipRole = multiOrganizationRoles.has(currentPromotionRole)
+  const isPaidUserRole = currentPromotionRole === 'user' && currentPromotionStatus === 'paid'
   const promotionRequiresOrganization = isLeadershipRole || isPaidUserRole
 
   const toggleSelect = (id: string) => {
@@ -239,9 +241,11 @@ export const UsersManagementTab = ({ users: propUsers, loading: propLoading }: U
     setPromotionLoading(true)
 
     try {
+      const roleValue = (promotionRoleSelection || promotionTarget.role || 'user') as ManagedUserRole
+      const membershipValue = (promotionStatusSelection || promotionTarget.membershipStatus || 'free') as MembershipStatus
       const updates: Partial<ManagedUserRecord> = {
-        role: promotionRoleSelection,
-        membershipStatus: promotionStatusSelection,
+        role: roleValue,
+        membershipStatus: membershipValue,
       }
 
       if (isLeadershipRole) {
