@@ -33,6 +33,7 @@ import {
 import { CreateOrganizationModal } from '@/components/super-admin/CreateOrganizationModal'
 import { fetchAdminOrganizationsList } from '@/services/admin/adminUsersService'
 import type { UpgradeRequest } from '@/types/upgrade'
+import { getDisplayName } from '@/utils/displayName'
 
 type ActionMode = 'existing' | 'new'
 
@@ -62,6 +63,20 @@ export const UpgradeRequestActionModal: React.FC<UpgradeRequestActionModalProps>
   onAssignExisting,
 }) => {
   const toast = useToast()
+  const requesterEmail = request.userDetails?.email?.trim() || ''
+  const requesterName = useMemo(
+    () =>
+      getDisplayName(
+        {
+          fullName: request.userDetails?.fullName ?? undefined,
+          firstName: request.userDetails?.firstName ?? undefined,
+          lastName: request.userDetails?.lastName ?? undefined,
+          email: requesterEmail || undefined,
+        },
+        'Unknown user',
+      ),
+    [request.userDetails?.firstName, request.userDetails?.fullName, request.userDetails?.lastName, requesterEmail],
+  )
   const [mode, setMode] = useState<ActionMode>('existing')
   const [organizations, setOrganizations] = useState<OrganizationOption[]>([])
   const [search, setSearch] = useState('')
@@ -152,7 +167,8 @@ export const UpgradeRequestActionModal: React.FC<UpgradeRequestActionModalProps>
                 Request summary
               </Heading>
               <Text fontSize="sm">
-                {request.userDetails?.fullName || request.user_id} requested {request.requested_tier || 'an upgrade'}.
+                {requesterName}
+                {requesterEmail ? ` (${requesterEmail})` : ''} requested {request.requested_tier || 'an upgrade'}.
               </Text>
               {request.villageName && (
                 <Badge mt={2} colorScheme="purple" variant="subtle">

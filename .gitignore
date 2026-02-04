@@ -44,3 +44,7 @@ lerna-debug.log*
 .env*.local
 *.log
 nul
+
+# Firebase Admin credentials
+service-account-key.json
+*-service-account*.json

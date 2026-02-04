@@ -46,6 +46,7 @@ import { recordEngagementAction } from '@/services/engagementService'
 import { generatePartnerDigest, sendPartnerDigestEmail } from '@/services/partnerDigestService'
 import { buildPartnerNavItems } from '@/utils/navigationItems'
 import { logger, type MismatchSample } from '@/utils/partnerDashboardUtils'
+import { getDisplayName } from '@/utils/displayName'
 
 export const PartnerDashboard: React.FC = () => {
   const navigate = useNavigate()
@@ -85,6 +86,19 @@ export const PartnerDashboard: React.FC = () => {
   const { organizations, users, analytics } = snapshot
   const { engagementTrend, riskLevels, atRiskUsers } = analytics || {}
   const partnerId = user?.uid ?? null
+  const accountDisplayName = useMemo(
+    () =>
+      getDisplayName(
+        {
+          fullName: profile?.fullName ?? undefined,
+          firstName: profile?.firstName ?? undefined,
+          lastName: profile?.lastName ?? undefined,
+          email: profile?.email ?? user?.email ?? undefined,
+        },
+        'Partner',
+      ),
+    [profile, user?.email],
+  )
   const snapshotUsers = snapshot?.users ?? []
 
   type PartnerPageKey = 'overview' | 'users' | 'organization-management' | 'at-risk' | 'reports' | 'settings' | 'support' | 'profile'
@@ -1593,10 +1607,10 @@ export const PartnerDashboard: React.FC = () => {
         <CardBody>
           <Stack spacing={4}>
             <HStack spacing={4}>
-              <Avatar size="xl" name={profile?.fullName || 'Partner'} />
+              <Avatar size="xl" name={accountDisplayName} />
               <VStack align="flex-start" spacing={1}>
                 <Text fontSize="xl" fontWeight="bold" color="brand.text">
-                  {profile?.fullName || 'Partner'}
+                  {accountDisplayName}
                 </Text>
                 <Badge colorScheme="purple">Partner</Badge>
                 <Text fontSize="sm" color="brand.subtleText">
@@ -1715,8 +1729,8 @@ export const PartnerDashboard: React.FC = () => {
             </HStack>
             <SimpleGrid columns={{ base: 1, md: 2 }} spacing={4}>
               <Box>
-                <Text fontSize="sm" color="brand.subtleText">User ID</Text>
-                <Text fontWeight="medium" color="brand.text" fontSize="sm">{user?.uid || 'N/A'}</Text>
+                <Text fontSize="sm" color="brand.subtleText">User</Text>
+                <Text fontWeight="medium" color="brand.text" fontSize="sm">{accountDisplayName || 'N/A'}</Text>
               </Box>
               <Box>
                 <Text fontSize="sm" color="brand.subtleText">Email</Text>

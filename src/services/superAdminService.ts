@@ -478,7 +478,7 @@ export const listenToAdminUsers = (
 export const createAdminUser = async (
   adminData: AdminFormData & Partial<AdminUserRecord> & { createdBy?: string; createdByName?: string },
 ) => {
-  const { createdBy, createdByName, ...rest } = adminData
+  const { createdBy, createdByName, assignedOrganizations, ...rest } = adminData
 
   // Check if user with this email already exists
   const existingUserQuery = query(usersCollection, where('email', '==', adminData.email), limit(1))
@@ -494,13 +494,13 @@ export const createAdminUser = async (
       accountStatus: adminData.accountStatus || 'active',
       updatedAt: serverTimestamp(),
     }
-    await updateDoc(doc(db, 'profiles', existingId), updatePayload)
+    await upsertUserMirrors(existingId, updatePayload)
     await logAdminAction({
       action: 'admin_role_assigned',
       adminId: createdBy,
       adminName: createdByName,
       userId: existingId,
-      metadata: { role: adminData.role, organizations: adminData.assignedOrganizations, wasExistingUser: true },
+      metadata: { role: adminData.role, organizations: assignedOrganizations, wasExistingUser: true },
     })
     return existingId
   }
@@ -513,13 +513,14 @@ export const createAdminUser = async (
     createdAt: serverTimestamp(),
     updatedAt: serverTimestamp(),
   }
-  const docRef = await addDoc(usersCollection, payload)
+  const docRef = doc(usersCollection)
+  await upsertUserMirrors(docRef.id, payload)
   await logAdminAction({
     action: 'admin_created',
     adminId: createdBy,
     adminName: createdByName,
     userId: docRef.id,
-    metadata: { role: adminData.role, organizations: adminData.assignedOrganizations },
+    metadata: { role: adminData.role, organizations: assignedOrganizations },
   })
   return docRef.id
 }

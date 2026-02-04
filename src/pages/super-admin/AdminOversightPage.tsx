@@ -221,7 +221,9 @@ export const AdminOversightPage: React.FC<AdminOversightPageProps> = ({ adminNam
 
   const handleCreateAdmin = async (formData: AdminFormData) => {
     try {
-      await createAdminUser({ ...formData, createdBy: adminId, createdByName: adminName })
+      const { assignedOrganizations } = formData
+      const createdId = await createAdminUser({ ...formData, createdBy: adminId, createdByName: adminName })
+      await assignOrganizations(createdId, assignedOrganizations || [])
       toast({ title: 'Admin created', status: 'success' })
     } catch (error) {
       console.error(error)
@@ -232,16 +234,26 @@ export const AdminOversightPage: React.FC<AdminOversightPageProps> = ({ adminNam
   const handleUpdateAdmin = async (formData: AdminFormData) => {
     if (!selectedAdmin) return
     try {
+      const { assignedOrganizations, ...rest } = formData
+      const nextOrgIds = assignedOrganizations || []
+
       console.debug('[SuperAdmin] Updating admin assignments', {
         adminId: selectedAdmin.id,
         before: selectedAdmin.assignedOrganizations,
-        after: formData.assignedOrganizations,
+        after: nextOrgIds,
       })
-      await updateAdminUser(selectedAdmin.id, formData)
-      await assignOrganizations(selectedAdmin.id, formData.assignedOrganizations || [])
+
+      // If we are removing partner access, clear assignments while the user still has the partner role
+      // so org-level `transformationPartnerId` links are cleaned up consistently.
+      if (selectedAdmin.role === 'partner' && formData.role !== 'partner') {
+        await assignOrganizations(selectedAdmin.id, [])
+      }
+
+      await updateAdminUser(selectedAdmin.id, rest)
+      await assignOrganizations(selectedAdmin.id, nextOrgIds)
       const verifiedOrganizations = await fetchAssignedOrganizations(selectedAdmin.id)
       const verifiedIds = verifiedOrganizations.map((org) => org.id).filter((id): id is string => !!id)
-      const requestedIds = formData.assignedOrganizations || []
+      const requestedIds = nextOrgIds
       const missingIds = requestedIds.filter((orgId) => !verifiedIds.includes(orgId))
       const assignedNames = verifiedOrganizations.map((org) =>
         org.id ? organizationName(org.id) : 'Unknown',

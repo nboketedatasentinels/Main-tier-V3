@@ -110,15 +110,12 @@ const formatUserIdFallback = (userId?: string | null) => {
   if (userId.includes('@')) {
     return normalizeName(userId.split('@')[0])
   }
-  if (userId.length > 8) {
-    return `User ${userId.slice(0, 6).toUpperCase()}`
-  }
-  return normalizeName(userId)
+  return 'Unknown user'
 }
 
 const getUserSubtitle = (userId?: string | null) => {
-  if (!userId) return 'User ID unavailable'
-  return userId.includes('@') ? userId : `ID: ${userId}`
+  if (!userId) return 'Email unavailable'
+  return userId.includes('@') ? userId : 'Email unavailable'
 }
 
 const getRequestTypeBadge = (record: ApprovalRecord) => {
@@ -192,7 +189,7 @@ const ApprovalCenterPage: React.FC = () => {
   const [quickFilters, setQuickFilters] = useState({ highValue: false, overdue: false, firstTime: false })
   const [pageSize, setPageSize] = useState(20)
   const [page, setPage] = useState(1)
-  const [userProfiles, setUserProfiles] = useState<Map<string, string>>(new Map())
+  const [userProfiles, setUserProfiles] = useState<Map<string, { name: string; email?: string | null }>>(new Map())
   const [selectedUpgradeRequest, setSelectedUpgradeRequest] = useState<UpgradeRequest | null>(null)
   const [upgradeSubmitting, setUpgradeSubmitting] = useState(false)
   const rejectModal = useDisclosure()
@@ -267,7 +264,7 @@ const ApprovalCenterPage: React.FC = () => {
       const userIds = [...new Set(approvalRecords.map((r) => r.userId).filter(Boolean))] as string[]
       if (userIds.length === 0) return
 
-      const profileMap = new Map<string, string>()
+      const profileMap = new Map<string, { name: string; email?: string | null }>()
 
       // Prefill names from upgrade request metadata
       approvalRecords.forEach((record) => {
@@ -275,13 +272,17 @@ const ApprovalCenterPage: React.FC = () => {
         const upgrade = record.source as UpgradeRequest
         const detail = upgrade.userDetails
         if (!upgrade.user_id || !detail) return
-        const prefillName = detail.fullName?.trim() ||
-          [detail.firstName, detail.lastName].filter(Boolean).join(' ').trim() ||
-          detail.email ||
-          null
-        if (prefillName) {
-          profileMap.set(upgrade.user_id, prefillName)
-        }
+        const email = detail.email?.trim() || null
+        const prefillName = getDisplayName(
+          {
+            fullName: detail.fullName ?? undefined,
+            firstName: detail.firstName ?? undefined,
+            lastName: detail.lastName ?? undefined,
+            email: email ?? undefined,
+          },
+          formatUserIdFallback(upgrade.user_id),
+        )
+        profileMap.set(upgrade.user_id, { name: prefillName, email })
       })
 
       // Fetch profiles in parallel (batch of 10 to avoid Firestore limits)
@@ -291,10 +292,14 @@ const ApprovalCenterPage: React.FC = () => {
           batch.map(async (userId) => {
             const fallbackName = formatUserIdFallback(userId)
             try {
-              const profileSnap = await getDoc(doc(db, 'profiles', userId))
-              if (profileSnap.exists()) {
-                const data = profileSnap.data()
-                const displayData = data as Record<string, unknown>
+              const [profileSnap, userSnap] = await Promise.all([
+                getDoc(doc(db, 'profiles', userId)),
+                getDoc(doc(db, 'users', userId)),
+              ])
+              const profileData = profileSnap.exists() ? (profileSnap.data() as Record<string, unknown>) : {}
+              const userData = userSnap.exists() ? (userSnap.data() as Record<string, unknown>) : {}
+              const displayData = { ...userData, ...profileData } as Record<string, unknown>
+              if (Object.keys(displayData).length) {
                 const displayNameInput: DisplayNameInput = {
                   displayName: typeof displayData.displayName === 'string' ? displayData.displayName : undefined,
                   name: typeof displayData.name === 'string' ? displayData.name : undefined,
@@ -303,21 +308,21 @@ const ApprovalCenterPage: React.FC = () => {
                   firstName: typeof displayData.firstName === 'string' ? displayData.firstName : undefined,
                   lastName: typeof displayData.lastName === 'string' ? displayData.lastName : undefined,
                   email: typeof displayData.email === 'string' ? displayData.email : undefined,
-                  uid: userId,
                 }
                 const computedName = getDisplayName(displayNameInput, fallbackName)
                 const isFallback = computedName === fallbackName
-                return [userId, computedName, isFallback] as [string, string, boolean]
+                const email = displayNameInput.email ?? null
+                return [userId, { name: computedName, email }, isFallback] as [string, { name: string; email?: string | null }, boolean]
               }
             } catch {
               // Ignore errors for individual profiles
             }
-            return [userId, fallbackName, true] as [string, string, boolean]
+            return [userId, { name: fallbackName, email: null }, true] as [string, { name: string; email?: string | null }, boolean]
           })
         )
-        results.forEach(([id, name, isFallback]) => {
+        results.forEach(([id, entry, isFallback]) => {
           if (isFallback && profileMap.has(id)) return
-          profileMap.set(id, name)
+          profileMap.set(id, entry)
         })
       }
 
@@ -335,13 +340,27 @@ const ApprovalCenterPage: React.FC = () => {
       if (!userId) return 'Unknown user'
 
       // Check if we have the actual name from profile
-      const profileName = userProfiles.get(userId)
-      if (profileName) return profileName
+      const profileEntry = userProfiles.get(userId)
+      if (profileEntry?.name) return profileEntry.name
 
       // Fallback to formatting userId
       return formatUserIdFallback(userId)
     },
     [userProfiles]
+  )
+
+  const getUserEmail = useCallback(
+    (record: ApprovalRecord) => {
+      const userId = record.userId
+      if (!userId) return 'Email unavailable'
+      if (record.type === 'upgrade_request') {
+        const upgrade = record.source as UpgradeRequest
+        const fromRequest = upgrade.userDetails?.email?.trim()
+        if (fromRequest) return fromRequest
+      }
+      return userProfiles.get(userId)?.email || getUserSubtitle(userId)
+    },
+    [userProfiles],
   )
 
   const userRequestCounts = useMemo(() => {
@@ -976,7 +995,7 @@ const ApprovalCenterPage: React.FC = () => {
                                   {getUserDisplayName(record.userId)}
                                 </Button>
                                 <Text fontSize="xs" color="gray.500">
-                                  {getUserSubtitle(record.userId)}
+                                  {getUserEmail(record)}
                                 </Text>
                               </Box>
                             </HStack>
@@ -1091,7 +1110,7 @@ const ApprovalCenterPage: React.FC = () => {
                                           getUserDisplayName(record.userId)}
                                       </Text>
                                       <Text fontSize="sm" color="gray.600">
-                                        {(record.source as UpgradeRequest).userDetails?.email || getUserSubtitle(record.userId)}
+                                        {getUserEmail(record)}
                                       </Text>
                                       <Text fontSize="sm" color="gray.600">
                                         Role: {(record.source as UpgradeRequest).userDetails?.role || '—'}
@@ -1217,7 +1236,7 @@ const ApprovalCenterPage: React.FC = () => {
                       <Box>
                         <Text fontWeight="semibold">{getUserDisplayName(record.userId)}</Text>
                         <Text fontSize="xs" color="gray.500">
-                          {getUserSubtitle(record.userId)}
+                          {getUserEmail(record)}
                         </Text>
                       </Box>
                     </HStack>

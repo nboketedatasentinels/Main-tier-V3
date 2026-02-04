@@ -19,9 +19,9 @@ import {
   Text,
   Wrap,
   WrapItem,
-  Checkbox,
 } from '@chakra-ui/react'
 import { AdminFormData, AdminRole, OrganizationRecord } from '@/types/admin'
+import { OrganizationAssignmentsPicker } from '@/components/super-admin/OrganizationAssignmentsPicker'
 
 interface AdminFormModalProps {
   isOpen: boolean
@@ -108,16 +108,6 @@ export const AdminFormModal: React.FC<AdminFormModalProps> = ({
     setFormData((prev) => ({ ...prev, [key]: value }))
   }
 
-  const handleOrganizationsChange = (orgId: string) => {
-    setFormData((prev) => {
-      const exists = prev.assignedOrganizations.includes(orgId)
-      const nextOrgs = exists
-        ? prev.assignedOrganizations.filter((id) => id !== orgId)
-        : [...prev.assignedOrganizations, orgId]
-      return { ...prev, assignedOrganizations: nextOrgs }
-    })
-  }
-
   const handleSubmit = async () => {
     if (!validate()) return
     setSubmitting(true)
@@ -174,20 +164,13 @@ export const AdminFormModal: React.FC<AdminFormModalProps> = ({
                 Selected organizations will be accessible by this admin.
               </Text>
               {organizations.length ? (
-                <Box borderWidth="1px" borderRadius="md" p={3}>
-                  <Wrap spacing={3}>
-                    {organizations.map((org) => (
-                      <WrapItem key={org.id}>
-                        <Checkbox
-                          isChecked={formData.assignedOrganizations.includes(org.id || '')}
-                          onChange={() => handleOrganizationsChange(org.id || '')}
-                        >
-                          {org.name} {org.code ? `(${org.code})` : `(ID: ${org.id})`}
-                        </Checkbox>
-                      </WrapItem>
-                    ))}
-                  </Wrap>
-                </Box>
+                <OrganizationAssignmentsPicker
+                  organizations={organizations}
+                  value={formData.assignedOrganizations}
+                  onChange={(nextIds) => handleChange('assignedOrganizations', nextIds)}
+                  helperText="Search and add one or more organizations."
+                  allowInactive={false}
+                />
               ) : (
                 <Text color="gray.500">No organizations available.</Text>
               )}

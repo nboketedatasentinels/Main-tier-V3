@@ -23,12 +23,15 @@ import {
   Badge,
   HStack,
   Select,
+  Stack,
+  Text,
 } from '@chakra-ui/react';
 import { collection, query, where, onSnapshot } from 'firebase/firestore';
 import { db } from '@/services/firebase';
 import { approveRequest, rejectRequest, bulkApproveRequests } from '@/services/approvalsService';
 import { ApprovalRecord } from '@/types/approvals';
 import { useAuth } from '@/hooks/useAuth';
+import { useUserDirectory } from '@/hooks/useUserDirectory';
 
 const ApprovalQueuePage: React.FC = () => {
   const { user } = useAuth();
@@ -148,6 +151,8 @@ const ApprovalQueuePage: React.FC = () => {
     return true;
   });
 
+  const { directory: userDirectory } = useUserDirectory(filteredRequests.map((request) => request.userId));
+
   return (
     <Box>
       <Heading mb={4}>Approval Queue</Heading>
@@ -178,7 +183,7 @@ const ApprovalQueuePage: React.FC = () => {
                 onChange={handleSelectAll}
               />
             </Th>
-            <Th>User ID</Th>
+            <Th>User</Th>
             <Th>Type</Th>
             <Th>Title</Th>
             <Th>Points</Th>
@@ -194,7 +199,16 @@ const ApprovalQueuePage: React.FC = () => {
                   onChange={() => handleSelect(request.id)}
                 />
               </Td>
-              <Td>{request.userId}</Td>
+              <Td>
+                <Stack spacing={0}>
+                  <Text fontWeight="semibold">
+                    {userDirectory.get(request.userId)?.name ?? 'Unknown user'}
+                  </Text>
+                  <Text fontSize="sm" color="gray.500">
+                    {userDirectory.get(request.userId)?.email ?? 'Email unavailable'}
+                  </Text>
+                </Stack>
+              </Td>
               <Td>
                 <Badge colorScheme={request.approvalType === 'partner_issued' || request.type === 'partner_issued' ? 'blue' : 'purple'}>
                   {request.approvalType === 'partner_issued' || request.type === 'partner_issued' ? 'Partner Issued' : 'Partner Approved'}
