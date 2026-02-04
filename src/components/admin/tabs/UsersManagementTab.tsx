@@ -60,7 +60,8 @@ const formatDate = (date?: Date | null) => {
   return new Intl.DateTimeFormat(undefined, { month: 'short', day: 'numeric', year: 'numeric' }).format(date)
 }
 
-const formatRoleLabel = (role: ManagedUserRole) => role.replace('_', ' ')
+const formatRoleLabel = (role?: ManagedUserRole | string) =>
+  role ? role.replace('_', ' ') : 'Unknown'
 
 interface UsersManagementTabProps {
   users: ManagedUserRecord[]
