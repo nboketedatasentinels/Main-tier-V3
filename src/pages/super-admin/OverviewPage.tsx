@@ -26,6 +26,7 @@ import {
 import { EngagementChart } from '@/components/admin/EngagementChart'
 import { AdminNotificationsList } from '@/components/admin/AdminNotificationsList'
 import { AdminHealthItem } from '@/components/admin/AdminDataHealthPanel'
+import type { RiskLevel, RiskReason } from '@/components/admin/RiskAnalysisCard'
 import {
   RegistrationRecord,
   SuperAdminDashboardMetrics,
@@ -47,6 +48,8 @@ type OverviewPageProps = {
   metrics: SuperAdminDashboardMetrics
   registrationTrend: TrendPoint[]
   userGrowthTrend: TrendPoint[]
+  riskLevels?: RiskLevel[]
+  riskReasons?: RiskReason[]
   systemAlerts: SystemAlertRecord[]
   registrations: RegistrationRecord[]
   verificationRequests: VerificationRequest[]

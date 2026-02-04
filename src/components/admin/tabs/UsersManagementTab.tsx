@@ -229,6 +229,11 @@ export const UsersManagementTab = ({ users: propUsers, loading: propLoading }: U
     setIsCreatingOrganization(false)
   }
 
+  const handlePromotionModalClose = () => {
+    if (promotionLoading) return
+    closePromotionModal()
+  }
+
   const handlePromotionSubmit = async () => {
     if (!promotionTarget || promotionLoading) return
     const selectedOrgIds = promotionOrgIds.filter(Boolean)
@@ -285,12 +290,23 @@ export const UsersManagementTab = ({ users: propUsers, loading: propLoading }: U
   }
 
   const handleOrganizationCreated = async (organization: OrganizationRecord) => {
-    setOrganizations((prev) => [organization, ...prev.filter((org) => org.id !== organization.id)])
+    const organizationId = organization.id
+    if (!organizationId) {
+      toast({
+        title: 'Organization created but missing an ID',
+        description: 'Please refresh and try again.',
+        status: 'warning',
+      })
+      return
+    }
+
+    const organizationEntry = { id: organizationId, name: organization.name, code: organization.code }
+    setOrganizations((prev) => [organizationEntry, ...prev.filter((org) => org.id !== organizationId)])
     setPromotionOrgIds((prev) => {
       if (promotionRoleSelection === 'user') {
-        return [organization.id]
+        return [organizationId]
       }
-      return prev.includes(organization.id) ? prev : [...prev, organization.id]
+      return prev.includes(organizationId) ? prev : [...prev, organizationId]
     })
   }
 
@@ -664,7 +680,7 @@ export const UsersManagementTab = ({ users: propUsers, loading: propLoading }: U
           </Stack>
         </CardBody>
       </Card>
-      <Modal isOpen={promotionModalOpen} onClose={promotionLoading ? undefined : closePromotionModal} size="lg">
+      <Modal isOpen={promotionModalOpen} onClose={handlePromotionModalClose} size="lg">
         <ModalOverlay />
         <ModalContent>
           <ModalHeader>Promote {promotionTarget?.name || 'this user'}</ModalHeader>
