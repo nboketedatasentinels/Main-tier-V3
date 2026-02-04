@@ -45,13 +45,12 @@ import {
   bulkUpdateMembershipStatus,
   bulkUpdateRole,
   deleteUserAccount,
-  updateMembershipStatus,
-  updateUserRole,
+  updateUser,
 } from '@/services/userManagementService'
 import { fetchAdminOrganizationsList } from '@/services/admin/adminUsersService'
 import { formatAdminFirestoreError } from '@/services/admin/adminErrors'
 
-const roleOptions: ManagedUserRole[] = ['user', 'partner', 'admin', 'super_admin', 'team_leader', 'mentor', 'ambassador']
+const roleOptions: ManagedUserRole[] = ['user', 'partner', 'super_admin', 'mentor', 'ambassador']
 const membershipOptions: MembershipStatus[] = ['free', 'paid', 'inactive']
 const PAGE_SIZE = 25
 
@@ -60,8 +59,24 @@ const formatDate = (date?: Date | null) => {
   return new Intl.DateTimeFormat(undefined, { month: 'short', day: 'numeric', year: 'numeric' }).format(date)
 }
 
-const formatRoleLabel = (role?: ManagedUserRole | string) =>
-  role ? role.replace('_', ' ') : 'Unknown'
+const membershipStatusForSpecialRole: Partial<Record<ManagedUserRole, MembershipStatus>> = {
+  partner: 'paid',
+  super_admin: 'paid',
+  mentor: 'paid',
+  ambassador: 'paid',
+}
+
+const formatRoleLabel = (role?: ManagedUserRole | string, membershipStatus?: MembershipStatus) => {
+  if (!role) return 'Unknown'
+
+  if (role === 'user') {
+    if (membershipStatus === 'paid') return 'Paid member'
+    if (membershipStatus === 'inactive') return 'Inactive member'
+    return 'User'
+  }
+
+  return role.replace('_', ' ')
+}
 
 interface UsersManagementTabProps {
   users: ManagedUserRecord[]
@@ -167,11 +182,16 @@ export const UsersManagementTab = ({ users: propUsers, loading: propLoading }: U
     setSelectedIds((prev) => (prev.includes(id) ? prev.filter((item) => item !== id) : [...prev, id]))
   }
 
-  const handleRoleChange = async (userId: string, role: ManagedUserRole) => {
+  const handleRoleChange = async (user: ManagedUserRecord, role: ManagedUserRole) => {
     if (!isSuperAdmin) return
     try {
-      setRoleChangingId(userId)
-      await updateUserRole(userId, role)
+      setRoleChangingId(user.id)
+      const updates: Partial<ManagedUserRecord> = { role }
+      const forcedStatus = membershipStatusForSpecialRole[role]
+      if (forcedStatus) {
+        updates.membershipStatus = forcedStatus
+      }
+      await updateUser(user.id, updates)
       toast({ title: 'Role updated', description: 'User role updated in Firebase', status: 'success' })
     } catch (err) {
       console.error(err)
@@ -181,10 +201,18 @@ export const UsersManagementTab = ({ users: propUsers, loading: propLoading }: U
     }
   }
 
-  const handleMembershipChange = async (userId: string, membershipStatus: MembershipStatus) => {
+  const handleMembershipChange = async (user: ManagedUserRecord, membershipStatus: MembershipStatus) => {
     try {
-      setStatusChangingId(userId)
-      await updateMembershipStatus(userId, membershipStatus)
+      setStatusChangingId(user.id)
+      const updates: Partial<ManagedUserRecord> = { membershipStatus }
+      const shouldForceUser =
+        membershipStatus === 'free' ||
+        membershipStatus === 'inactive' ||
+        (membershipStatus === 'paid' && user.role === 'user')
+      if (shouldForceUser) {
+        updates.role = 'user'
+      }
+      await updateUser(user.id, updates)
       toast({ title: 'Status updated', description: 'Membership status updated in Firebase', status: 'success' })
     } catch (err) {
       console.error(err)
@@ -477,7 +505,7 @@ export const UsersManagementTab = ({ users: propUsers, loading: propLoading }: U
                         </Td>
                         <Td>
                           <Badge colorScheme={roleBadgeColor[user.role]} textTransform="capitalize">
-                            {formatRoleLabel(user.role)}
+                            {formatRoleLabel(user.role, user.membershipStatus)}
                           </Badge>
                         </Td>
                         <Td>
@@ -534,7 +562,7 @@ export const UsersManagementTab = ({ users: propUsers, loading: propLoading }: U
                                       {roleOptions.map((role) => (
                                         <MenuItem
                                           key={role}
-                                          onClick={() => handleRoleChange(user.id, role)}
+                                          onClick={() => handleRoleChange(user, role)}
                                           isDisabled={role === user.role}
                                         >
                                           {formatRoleLabel(role)}
@@ -546,7 +574,7 @@ export const UsersManagementTab = ({ users: propUsers, loading: propLoading }: U
                                       {membershipOptions.map((status) => (
                                         <MenuItem
                                           key={status}
-                                          onClick={() => handleMembershipChange(user.id, status)}
+                                          onClick={() => handleMembershipChange(user, status)}
                                           isDisabled={status === user.membershipStatus}
                                         >
                                           {status}
