@@ -24,7 +24,6 @@ import {
   Users,
 } from 'lucide-react'
 import { EngagementChart } from '@/components/admin/EngagementChart'
-import { RiskLevel, RiskReason } from '@/components/admin/RiskAnalysisCard'
 import { AdminNotificationsList } from '@/components/admin/AdminNotificationsList'
 import { AdminHealthItem } from '@/components/admin/AdminDataHealthPanel'
 import {
@@ -39,7 +38,6 @@ import {
 import { CommandCenterHeader } from './components/CommandCenterHeader'
 import { CriticalActionInbox, ActionItem } from './components/CriticalActionInbox'
 import { SystemHealthStrip, HealthKPI } from './components/SystemHealthStrip'
-import { RiskAnomalyRadar, Signal } from './components/RiskAnomalyRadar'
 import { CollapsibleMetrics } from './components/CollapsibleMetrics'
 
 type TrendPoint = { label: string; value: number }
@@ -49,8 +47,6 @@ type OverviewPageProps = {
   metrics: SuperAdminDashboardMetrics
   registrationTrend: TrendPoint[]
   userGrowthTrend: TrendPoint[]
-  riskLevels: RiskLevel[]
-  riskReasons: RiskReason[]
   systemAlerts: SystemAlertRecord[]
   registrations: RegistrationRecord[]
   verificationRequests: VerificationRequest[]
@@ -67,7 +63,6 @@ export const OverviewPage: React.FC<OverviewPageProps> = ({
   metrics,
   registrationTrend,
   userGrowthTrend,
-  riskLevels,
   systemAlerts,
   registrations,
   verificationRequests,
@@ -163,38 +158,6 @@ export const OverviewPage: React.FC<OverviewPageProps> = ({
     ]
   }, [healthItems, metrics, systemAlerts])
 
-  const riskSignals: Signal[] = React.useMemo(() => {
-    const atRiskCount = riskLevels.find((l) => l.label === 'Critical')?.count || 0
-    if (atRiskCount === 0) return []
-
-    return [
-      {
-        id: 'engagement-drop',
-        label: 'Engagement drop >30% in 2 organizations',
-        reason: 'Possible onboarding friction or content fatigue.',
-        impact: 'High risk of churn for those cohorts.',
-        actionLabel: 'Investigate org health',
-        onAction: () => onNavigate('reports'),
-      },
-    ]
-  }, [riskLevels, onNavigate])
-
-  const securitySignals: Signal[] = React.useMemo(() => {
-    const criticalAlerts = systemAlerts.filter((a) => a.level === 'critical')
-    if (criticalAlerts.length === 0) return []
-
-    return [
-      {
-        id: 'access-attempts',
-        label: 'Unauthorized access attempts detected',
-        reason: 'Multiple failed login attempts from unusual IP ranges.',
-        impact: 'Potential brute-force attack in progress.',
-        actionLabel: 'Review security logs',
-        onAction: () => onNavigate('admin-oversight'),
-      },
-    ]
-  }, [systemAlerts, onNavigate])
-
   return (
     <Stack spacing={8}>
       <CommandCenterHeader
@@ -231,9 +194,6 @@ export const OverviewPage: React.FC<OverviewPageProps> = ({
 
           {/* ZONE 2 — SYSTEM HEALTH SNAPSHOT */}
           <SystemHealthStrip kpis={healthKPIs} />
-
-          {/* ZONE 3 — RISK & ANOMALY RADAR */}
-          <RiskAnomalyRadar riskSignals={riskSignals} securityCompliance={securitySignals} />
 
           {/* ZONE 6 — SYSTEM METRICS (Collapsible) */}
           <CollapsibleMetrics>

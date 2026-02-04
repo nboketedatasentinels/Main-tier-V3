@@ -51,12 +51,13 @@ import {
   deleteUserAccount,
   updateUser,
 } from '@/services/userManagementService'
-import { createOrganization } from '@/services/superAdminService'
-import { generateOrganizationCode } from '@/services/organizationService'
+import { CreateOrganizationModal } from '@/components/super-admin/CreateOrganizationModal'
 import { fetchAdminOrganizationsList } from '@/services/admin/adminUsersService'
 import { formatAdminFirestoreError } from '@/services/admin/adminErrors'
+import { OrganizationRecord } from '@/types/admin'
 
 const roleOptions: ManagedUserRole[] = ['user', 'partner', 'super_admin', 'mentor', 'ambassador']
+const multiOrganizationRoles = new Set<ManagedUserRole>(['partner', 'mentor', 'ambassador'])
 const membershipOptions: MembershipStatus[] = ['free', 'paid', 'inactive']
 const PAGE_SIZE = 25
 
@@ -84,7 +85,10 @@ interface UsersManagementTabProps {
 
 export const UsersManagementTab = ({ users: propUsers, loading: propLoading }: UsersManagementTabProps) => {
   const toast = useToast()
-  const { isAdmin, isSuperAdmin } = useAuth()
+  const { isAdmin, isSuperAdmin, profile } = useAuth()
+  const adminDisplayName =
+    profile?.fullName || [profile?.firstName, profile?.lastName].filter(Boolean).join(' ').trim() || undefined
+  const adminId = profile?.id
   const { assignedOrganizationIds } = usePartnerAdminSnapshot({ enabled: isAdmin && !isSuperAdmin })
   const [organizations, setOrganizations] = useState<Array<{ id: string; name: string; code?: string }>>([])
   const [error, setError] = useState<string | null>(null)
@@ -95,8 +99,8 @@ export const UsersManagementTab = ({ users: propUsers, loading: propLoading }: U
   const [promotionTarget, setPromotionTarget] = useState<ManagedUserRecord | null>(null)
   const [promotionRoleSelection, setPromotionRoleSelection] = useState<ManagedUserRole>('user')
   const [promotionStatusSelection, setPromotionStatusSelection] = useState<MembershipStatus>('free')
-  const [promotionOrgId, setPromotionOrgId] = useState<string | null>(null)
-  const [newOrganizationName, setNewOrganizationName] = useState('')
+  const [promotionOrgIds, setPromotionOrgIds] = useState<string[]>([])
+  const [isCreatingOrganization, setIsCreatingOrganization] = useState(false)
   const [promotionLoading, setPromotionLoading] = useState(false)
   const [page, setPage] = useState(1)
   const [filters, setFilters] = useState({
@@ -122,18 +126,6 @@ export const UsersManagementTab = ({ users: propUsers, loading: propLoading }: U
   }, [filters.search, filters.role, filters.membershipStatus, filters.organization, filters.timeframe])
 
   const visibleTimeframeFilter = useMemo(() => propUsers.some((user) => !!user.lastActive), [propUsers])
-
-  useEffect(() => {
-    if (promotionRoleSelection !== 'user' && promotionStatusSelection !== 'paid') {
-      setPromotionStatusSelection('paid')
-    }
-  }, [promotionRoleSelection, promotionStatusSelection])
-
-  useEffect(() => {
-    if (promotionStatusSelection !== 'paid' && promotionRoleSelection !== 'user') {
-      setPromotionRoleSelection('user')
-    }
-  }, [promotionStatusSelection, promotionRoleSelection])
 
   const accessibleUsers = useMemo(() => {
     if (isSuperAdmin || !assignedOrganizationIds?.length) return propUsers
@@ -195,65 +187,80 @@ export const UsersManagementTab = ({ users: propUsers, loading: propLoading }: U
     ambassador: 'green',
   }
 
-  const promotionRequiresOrganization =
-    promotionRoleSelection !== 'user' || promotionStatusSelection === 'paid'
+  const isLeadershipRole = multiOrganizationRoles.has(promotionRoleSelection)
+  const isPaidUserRole = promotionRoleSelection === 'user' && promotionStatusSelection === 'paid'
+  const promotionRequiresOrganization = isLeadershipRole || isPaidUserRole
 
   const toggleSelect = (id: string) => {
     setSelectedIds((prev) => (prev.includes(id) ? prev.filter((item) => item !== id) : [...prev, id]))
+  }
+
+  const handleRoleSelectionChange = (newRole: ManagedUserRole) => {
+    setPromotionRoleSelection(newRole)
+    if (newRole !== 'user') {
+      setPromotionStatusSelection('paid')
+    }
+  }
+
+  const handleStatusSelectionChange = (newStatus: MembershipStatus) => {
+    setPromotionStatusSelection(newStatus)
+    if (newStatus !== 'paid') {
+      setPromotionRoleSelection('user')
+    }
   }
 
   const openPromotionModal = (user: ManagedUserRecord) => {
     setPromotionTarget(user)
     setPromotionRoleSelection(user.role)
     setPromotionStatusSelection(user.membershipStatus)
-    setPromotionOrgId(user.companyId || null)
-    setNewOrganizationName('')
+    const assignedOrganizations = user.assignedOrganizations?.filter((id) => Boolean(id)) ?? []
+    const initialOrgIds = user.companyId ? [user.companyId] : assignedOrganizations
+    setPromotionOrgIds(initialOrgIds)
+    setIsCreatingOrganization(false)
     setPromotionModalOpen(true)
   }
 
   const closePromotionModal = () => {
     setPromotionModalOpen(false)
     setPromotionTarget(null)
+    setPromotionOrgIds([])
+    setIsCreatingOrganization(false)
   }
 
   const handlePromotionSubmit = async () => {
     if (!promotionTarget || promotionLoading) return
-    if (promotionRequiresOrganization && !promotionOrgId && !newOrganizationName.trim()) {
-      toast({ title: 'Select or create an organization', status: 'warning' })
+    const selectedOrgIds = promotionOrgIds.filter(Boolean)
+
+    if (promotionRequiresOrganization && !selectedOrgIds.length) {
+      toast({ title: 'Select an organization before continuing', status: 'warning' })
       return
     }
 
     setPromotionLoading(true)
-    let assignedOrgId = promotionOrgId
-    let assignedOrg: OrganizationOption | undefined
 
     try {
-      if (!assignedOrgId && newOrganizationName.trim()) {
-        const trimmedName = newOrganizationName.trim()
-        const code = generateOrganizationCode(trimmedName)
-        const newOrgId = await createOrganization({ name: trimmedName, code, status: 'active' })
-        const createdOrg = { id: newOrgId, name: trimmedName, code }
-        setOrganizations((prev) => [...prev, createdOrg])
-        assignedOrgId = newOrgId
-        assignedOrg = createdOrg
-        setPromotionOrgId(newOrgId)
-      } else if (assignedOrgId) {
-        assignedOrg = organizations.find((org) => org.id === assignedOrgId)
-      }
-
       const updates: Partial<ManagedUserRecord> = {
         role: promotionRoleSelection,
         membershipStatus: promotionStatusSelection,
       }
 
-      if (assignedOrgId) {
-        updates.companyId = assignedOrgId
-        updates.companyName = assignedOrg?.name || null
-        updates.companyCode = assignedOrg?.code || null
-      } else if (!promotionRequiresOrganization) {
+      if (isLeadershipRole) {
         updates.companyId = null
         updates.companyName = null
         updates.companyCode = null
+        updates.assignedOrganizations = selectedOrgIds
+      } else if (isPaidUserRole) {
+        const orgId = selectedOrgIds[0] || null
+        const organization = organizations.find((org) => org.id === orgId)
+        updates.companyId = orgId
+        updates.companyName = organization?.name || null
+        updates.companyCode = organization?.code || null
+        updates.assignedOrganizations = orgId ? [orgId] : []
+      } else {
+        updates.companyId = null
+        updates.companyName = null
+        updates.companyCode = null
+        updates.assignedOrganizations = []
       }
 
       await updateUser(promotionTarget.id, updates)
@@ -265,6 +272,22 @@ export const UsersManagementTab = ({ users: propUsers, loading: propLoading }: U
     } finally {
       setPromotionLoading(false)
     }
+  }
+
+  const togglePromotionOrganization = (orgId: string) => {
+    setPromotionOrgIds((prev) =>
+      prev.includes(orgId) ? prev.filter((id) => id !== orgId) : [...prev, orgId],
+    )
+  }
+
+  const handleOrganizationCreated = async (organization: OrganizationRecord) => {
+    setOrganizations((prev) => [organization, ...prev.filter((org) => org.id !== organization.id)])
+    setPromotionOrgIds((prev) => {
+      if (promotionRoleSelection === 'user') {
+        return [organization.id]
+      }
+      return prev.includes(organization.id) ? prev : [...prev, organization.id]
+    })
   }
 
   const handleBulkRole = async (role: ManagedUserRole) => {
@@ -648,7 +671,7 @@ export const UsersManagementTab = ({ users: propUsers, loading: propLoading }: U
                 <FormLabel>Role</FormLabel>
                 <Select
                   value={promotionRoleSelection}
-                  onChange={(event) => setPromotionRoleSelection(event.target.value as ManagedUserRole)}
+                  onChange={(event) => handleRoleSelectionChange(event.target.value as ManagedUserRole)}
                 >
                   {roleOptions.map((role) => (
                     <option key={role} value={role}>
@@ -662,7 +685,7 @@ export const UsersManagementTab = ({ users: propUsers, loading: propLoading }: U
                 <FormLabel>Membership status</FormLabel>
                 <Select
                   value={promotionStatusSelection}
-                  onChange={(event) => setPromotionStatusSelection(event.target.value as MembershipStatus)}
+                  onChange={(event) => handleStatusSelectionChange(event.target.value as MembershipStatus)}
                 >
                   {membershipOptions.map((status) => (
                     <option key={status} value={status}>
@@ -676,35 +699,65 @@ export const UsersManagementTab = ({ users: propUsers, loading: propLoading }: U
               {promotionRequiresOrganization && (
                 <>
                   <FormControl isRequired>
-                    <FormLabel>Assign organization</FormLabel>
-                    <Select
-                      placeholder="Select existing organization"
-                      value={promotionOrgId ?? ''}
-                      onChange={(event) => setPromotionOrgId(event.target.value || null)}
-                    >
-                      {organizations.map((org) => (
-                        <option key={org.id} value={org.id}>
-                          {org.name || org.code || org.id}
-                          {org.code ? ` (${org.code})` : ''}
-                        </option>
-                      ))}
-                    </Select>
+                    <FormLabel>{isLeadershipRole ? 'Assign organizations' : 'Assign organization'}</FormLabel>
+                    {isLeadershipRole ? (
+                      <Stack spacing={2} maxH="200px" overflowY="auto">
+                        {organizations.length ? (
+                          organizations.map((org) => (
+                            <Checkbox
+                              key={org.id}
+                              isChecked={promotionOrgIds.includes(org.id)}
+                              onChange={() => togglePromotionOrganization(org.id)}
+                            >
+                              <HStack spacing={1}>
+                                <Text fontWeight="semibold">{org.name || org.code || org.id}</Text>
+                                {org.code ? (
+                                  <Text fontSize="xs" color="gray.500">
+                                    ({org.code})
+                                  </Text>
+                                ) : null}
+                              </HStack>
+                            </Checkbox>
+                          ))
+                        ) : (
+                          <Text color="gray.500" fontSize="sm">
+                            No organizations available yet.
+                          </Text>
+                        )}
+                      </Stack>
+                    ) : (
+                      <Select
+                        placeholder="Select existing organization"
+                        value={promotionOrgIds[0] ?? ''}
+                        onChange={(event) => {
+                          const orgId = event.target.value
+                          setPromotionOrgIds(orgId ? [orgId] : [])
+                        }}
+                      >
+                        {organizations.map((org) => (
+                          <option key={org.id} value={org.id}>
+                            {org.name || org.code || org.id}
+                            {org.code ? ` (${org.code})` : ''}
+                          </option>
+                        ))}
+                      </Select>
+                    )}
                     <FormHelperText>
-                      Choose one of the available organizations or create a new one below.
+                      {isLeadershipRole
+                        ? 'Select one or more organizations or create a new one.'
+                        : 'Choose an organization or create a new one below.'}
                     </FormHelperText>
                   </FormControl>
 
-                  <FormControl>
-                    <FormLabel>Create new organization</FormLabel>
-                    <Input
-                      placeholder="New organization name"
-                      value={newOrganizationName}
-                      onChange={(event) => setNewOrganizationName(event.target.value)}
-                    />
-                    <FormHelperText>
-                      Provide a name to generate an organization code and assign this user automatically.
-                    </FormHelperText>
-                  </FormControl>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    colorScheme="purple"
+                    onClick={() => setIsCreatingOrganization(true)}
+                    isDisabled={promotionLoading}
+                  >
+                    Create new organization
+                  </Button>
                 </>
               )}
             </Stack>
@@ -719,6 +772,13 @@ export const UsersManagementTab = ({ users: propUsers, loading: propLoading }: U
           </ModalFooter>
         </ModalContent>
       </Modal>
+      <CreateOrganizationModal
+        isOpen={isCreatingOrganization}
+        onClose={() => setIsCreatingOrganization(false)}
+        onCreated={handleOrganizationCreated}
+        adminId={adminId}
+        adminName={adminDisplayName}
+      />
       <Divider />
     </Stack>
   )
