@@ -9,10 +9,11 @@ import {
   orderBy,
   query,
   serverTimestamp,
-  updateDoc,
+  setDoc,
 } from 'firebase/firestore'
 import { db } from './firebase'
 import { ORG_COLLECTION } from '@/constants/organizations'
+import { removeUndefinedFields } from '@/utils/firestore'
 
 export type ManagedUserRole = 'user' | 'partner' | 'admin' | 'super_admin' | 'team_leader' | 'mentor' | 'ambassador'
 export type MembershipStatus = 'free' | 'paid' | 'inactive'
@@ -93,6 +94,14 @@ const usersCollection = collection(db, 'users')
 const organizationsCollection = collection(db, ORG_COLLECTION)
 const engagementCollection = collection(db, 'user_engagement_scores')
 const notificationsCollection = collection(db, 'notifications')
+
+const upsertUserMirrors = async (userId: string, payload: Record<string, unknown>) => {
+  const cleaned = removeUndefinedFields(payload)
+  await Promise.all([
+    setDoc(doc(db, 'profiles', userId), cleaned, { merge: true }),
+    setDoc(doc(db, 'users', userId), cleaned, { merge: true }),
+  ])
+}
 
 const parseDateValue = (value?: unknown): Date | null => {
   if (!value) return null
@@ -211,7 +220,6 @@ export const fetchOrganizationsList = async (): Promise<OrganizationOption[]> =>
 }
 
 export const updateUserRole = async (userId: string, role: ManagedUserRole, companyId?: string | null) => {
-  const userRef = doc(db, 'profiles', userId)
   const updates: Record<string, unknown> = {
     role,
     updatedAt: serverTimestamp(),
@@ -219,20 +227,21 @@ export const updateUserRole = async (userId: string, role: ManagedUserRole, comp
   if (typeof companyId !== 'undefined') {
     updates.companyId = companyId
   }
-  await updateDoc(userRef, updates)
+  await upsertUserMirrors(userId, updates)
 }
 
 export const updateMembershipStatus = async (userId: string, membershipStatus: MembershipStatus) => {
-  const userRef = doc(db, 'profiles', userId)
-  await updateDoc(userRef, {
+  await upsertUserMirrors(userId, {
     membershipStatus,
     updatedAt: serverTimestamp(),
   })
 }
 
 export const deleteUserAccount = async (userId: string) => {
-  const userRef = doc(db, 'profiles', userId)
-  await deleteDoc(userRef)
+  await Promise.all([
+    deleteDoc(doc(db, 'profiles', userId)),
+    deleteDoc(doc(db, 'users', userId)),
+  ])
 }
 
 export const bulkUpdateRole = async (userIds: string[], role: ManagedUserRole) => {
@@ -283,7 +292,7 @@ export const assignRoleToUser = async (
     payload.notes = notes
   }
 
-  await updateDoc(doc(db, 'profiles', userId), payload)
+  await upsertUserMirrors(userId, payload)
 
   await addDoc(notificationsCollection, {
     user_id: userId,
@@ -300,7 +309,7 @@ export const assignRoleToUser = async (
 export const updateUser = async (userId: string, updates: Partial<ManagedUserRecord>) => {
   const payload = { ...updates }
   delete (payload as { id?: string }).id
-  await updateDoc(doc(db, 'profiles', userId), {
+  await upsertUserMirrors(userId, {
     ...payload,
     updatedAt: serverTimestamp(),
   })

@@ -465,9 +465,38 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
             mergedUser = {
               ...baseUser,
               ...extras,
-              role: baseUser.role,
               id: firebaseUser.uid,
               journeyType: extras.journeyType || baseUser.journeyType || '4W',
+            }
+
+            // Keep users/{uid} aligned with admin-facing canonical fields (stored in profiles/{uid})
+            // so role/membership/org info stays consistent across dashboards.
+            try {
+              const canonicalKeys = [
+                'role',
+                'membershipStatus',
+                'transformationTier',
+                'companyId',
+                'companyCode',
+                'companyName',
+                'assignedOrganizations',
+                'accountStatus',
+              ] as const satisfies ReadonlyArray<keyof UserProfile>
+
+              type CanonicalKey = typeof canonicalKeys[number]
+              const payload: Partial<Record<CanonicalKey, UserProfile[CanonicalKey]>> = {}
+              canonicalKeys.forEach((key) => {
+                const nextValue = mergedUser[key]
+                if (typeof nextValue !== 'undefined' && nextValue !== baseUser[key]) {
+                  payload[key] = nextValue as UserProfile[CanonicalKey]
+                }
+              })
+
+              if (Object.keys(payload).length) {
+                await updateDoc(userDocRef, { ...payload, updatedAt: serverTimestamp() })
+              }
+            } catch (syncError) {
+              console.warn('[Auth] Unable to sync canonical profile fields from profiles → users', syncError)
             }
             console.log('🟣 [Auth] Merged learner profile extras (user doc remains source of truth)')
           }
@@ -723,6 +752,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     console.log('🟠 [Auth] Setting up onAuthStateChanged')
 
     let unsubscribeProfile: (() => void) | null = null
+    let unsubscribeProfileExtras: (() => void) | null = null
     let isActive = true
 
     const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
@@ -731,6 +761,10 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       if (unsubscribeProfile) {
         unsubscribeProfile()
         unsubscribeProfile = null
+      }
+      if (unsubscribeProfileExtras) {
+        unsubscribeProfileExtras()
+        unsubscribeProfileExtras = null
       }
 
       setLoading(true)
@@ -782,9 +816,9 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       }
 
       /* -------- realtime updates (optional) -------- */
-      const profileRef = doc(db, 'users', currentUser.uid)
+      const userProfileDocRef = doc(db, 'users', currentUser.uid)
       unsubscribeProfile = onSnapshot(
-        profileRef,
+        userProfileDocRef,
         (snap) => {
           if (!snap.exists()) return
           const { id: _ignoredId, ...updatedData } = snap.data() as UserProfile
@@ -809,6 +843,38 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         }
       )
 
+      // Also listen to profiles/{uid} so role/membership/org changes written there are reflected
+      // immediately in the signed-in user experience (users/{uid} is still used elsewhere).
+      const profileExtrasDocRef = doc(db, 'profiles', currentUser.uid)
+      unsubscribeProfileExtras = onSnapshot(
+        profileExtrasDocRef,
+        (snap) => {
+          if (!snap.exists()) return
+          const { id: _ignoredId, ...updatedData } = snap.data() as UserProfile
+
+          const base = profileRef.current
+          const merged: UserProfile = {
+            ...(base || {}),
+            ...updatedData,
+            id: snap.id,
+            journeyType: updatedData.journeyType || base?.journeyType || '4W',
+            assignedOrganizations: updatedData.assignedOrganizations ?? base?.assignedOrganizations ?? [],
+          }
+
+          const rawRole = merged.role ?? UserRole.USER
+          merged.role = normalizeRole(rawRole) as StandardRole
+
+          updateProfileState(merged, 'realtime-snapshot:profiles')
+          recordProfileLoad(merged)
+          void maybeNormalizeStoredRole(merged, currentUser.uid)
+          void attemptComplementaryCourseAssignment(currentUser.uid)
+          setProfileStatus('ready')
+        },
+        (error) => {
+          console.error('[Auth] Realtime profiles listener error', error)
+        },
+      )
+
       return unsubscribeProfile
     })
 
@@ -816,6 +882,9 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       isActive = false
       if (unsubscribeProfile) {
         unsubscribeProfile()
+      }
+      if (unsubscribeProfileExtras) {
+        unsubscribeProfileExtras()
       }
       unsubscribe()
     }
