@@ -17,7 +17,7 @@ import {
 import { db } from '@/services/firebase'
 import { useAuth } from '@/hooks/useAuth'
 import { useOrganizationLeadership } from '@/hooks/useOrganizationLeadership'
-import { getWeekKey } from '@/utils/weekCalculations'
+import { getWeekKey, getCurrentWeekNumber } from '@/utils/weekCalculations'
 import { JOURNEY_META, getMonthNumber, FULL_ACTIVITIES } from '@/config/pointsConfig'
 import { InspirationQuote } from '@/types'
 import { leadershipQuotes } from '@/services/quotes'
@@ -175,6 +175,7 @@ export const useWeeklyGlanceData = () => {
     [profile?.currentWeek],
   )
   const weekKey = useMemo(() => getWeekKey(), [])
+  const calendarWeekNumber = useMemo(() => getCurrentWeekNumber(), [])
 
   useEffect(() => {
     if (!profile?.id) return
@@ -454,27 +455,27 @@ export const useWeeklyGlanceData = () => {
       try {
         const quoteQuery = query(
           collection(db, 'inspiration_quotes'),
-          where('week_number', '==', weekNumber),
+          where('week_number', '==', calendarWeekNumber),
         )
         const snapshot = await getDocs(quoteQuery)
         const docData = snapshot.docs[0]
         if (docData) {
           setInspirationQuote({ ...(docData.data() as InspirationQuote), id: docData.id })
         } else {
-          const fallbackQuote = leadershipQuotes[weekNumber % leadershipQuotes.length]
-          setInspirationQuote({ ...fallbackQuote, id: `fallback-${weekNumber}` })
+          const fallbackQuote = leadershipQuotes[calendarWeekNumber % leadershipQuotes.length]
+          setInspirationQuote({ ...fallbackQuote, id: `fallback-${calendarWeekNumber}` })
         }
       } catch (error) {
         setErrors(prev => ({ ...prev, inspiration: error as Error }))
-        const fallbackQuote = leadershipQuotes[weekNumber % leadershipQuotes.length]
-        setInspirationQuote({ ...fallbackQuote, id: `fallback-${weekNumber}` })
+        const fallbackQuote = leadershipQuotes[calendarWeekNumber % leadershipQuotes.length]
+        setInspirationQuote({ ...fallbackQuote, id: `fallback-${calendarWeekNumber}` })
       } finally {
         setLoading(prev => ({ ...prev, inspiration: false }))
       }
     }
 
     fetchQuote()
-  }, [weekNumber])
+  }, [calendarWeekNumber])
 
   useEffect(() => {
     if (!profile?.id) {

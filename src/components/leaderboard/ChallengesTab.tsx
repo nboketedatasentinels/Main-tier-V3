@@ -153,19 +153,19 @@ export const ChallengesTab: React.FC<ChallengesTabProps> = ({
 
         <SimpleGrid columns={{ base: 2, md: 4 }} gap={4}>
           <Stat>
-            <StatLabel opacity={0.8} fontSize="xs">Active & Pending</StatLabel>
+            <StatLabel color="white" opacity={0.8} fontSize="xs">Active & Pending</StatLabel>
             <StatNumber fontSize="2xl">{stats.activeCount}</StatNumber>
           </Stat>
           <Stat>
-            <StatLabel opacity={0.8} fontSize="xs">Victories</StatLabel>
+            <StatLabel color="white" opacity={0.8} fontSize="xs">Victories</StatLabel>
             <StatNumber fontSize="2xl">{stats.victories}</StatNumber>
           </Stat>
           <Stat>
-            <StatLabel opacity={0.8} fontSize="xs">Points Earned</StatLabel>
+            <StatLabel color="white" opacity={0.8} fontSize="xs">Points Earned</StatLabel>
             <StatNumber fontSize="2xl">{stats.totalPoints.toLocaleString()}</StatNumber>
           </Stat>
           <Stat>
-            <StatLabel opacity={0.8} fontSize="xs">Leaderboard Rank</StatLabel>
+            <StatLabel color="white" opacity={0.8} fontSize="xs">Leaderboard Rank</StatLabel>
             <StatNumber fontSize="2xl">#{leaderboardRank ?? '—'}</StatNumber>
           </Stat>
         </SimpleGrid>
