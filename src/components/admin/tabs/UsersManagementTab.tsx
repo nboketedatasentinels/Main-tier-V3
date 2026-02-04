@@ -17,6 +17,8 @@ import {
   InputLeftElement,
   Menu,
   MenuButton,
+  MenuDivider,
+  MenuGroup,
   MenuItem,
   MenuList,
   Select,
@@ -32,7 +34,7 @@ import {
   Tooltip,
   useToast,
 } from '@chakra-ui/react'
-import { ChevronDown, ChevronLeft, ChevronRight, Eye, Filter, Search, Trash2 } from 'lucide-react'
+import { ChevronLeft, ChevronRight, Eye, Filter, Search, Trash2 } from 'lucide-react'
 import { Link as RouterLink } from 'react-router-dom'
 import { useAuth } from '@/hooks/useAuth'
 import { usePartnerAdminSnapshot } from '@/hooks/partner/usePartnerAdminSnapshot'
@@ -57,6 +59,8 @@ const formatDate = (date?: Date | null) => {
   if (!date) return 'Unknown'
   return new Intl.DateTimeFormat(undefined, { month: 'short', day: 'numeric', year: 'numeric' }).format(date)
 }
+
+const formatRoleLabel = (role: ManagedUserRole) => role.replace('_', ' ')
 
 interface UsersManagementTabProps {
   users: ManagedUserRecord[]
@@ -146,6 +150,16 @@ export const UsersManagementTab = ({ users: propUsers, loading: propLoading }: U
     free: 'orange',
     paid: 'green',
     inactive: 'gray',
+  }
+
+  const roleBadgeColor: Record<ManagedUserRole, string> = {
+    user: 'gray',
+    partner: 'purple',
+    admin: 'teal',
+    super_admin: 'pink',
+    team_leader: 'orange',
+    mentor: 'blue',
+    ambassador: 'green',
   }
 
   const toggleSelect = (id: string) => {
@@ -439,7 +453,9 @@ export const UsersManagementTab = ({ users: propUsers, loading: propLoading }: U
                     </Tr>
                   </Thead>
                   <Tbody>
-                    {paginatedUsers.map((user) => (
+                    {paginatedUsers.map((user) => {
+                      const promoteBusy = roleChangingId === user.id || statusChangingId === user.id
+                      return (
                       <Tr key={user.id} _hover={{ bg: 'gray.50' }}>
                         <Td>
                           <Checkbox
@@ -459,47 +475,14 @@ export const UsersManagementTab = ({ users: propUsers, loading: propLoading }: U
                           </Stack>
                         </Td>
                         <Td>
-                          <Menu>
-                            <MenuButton
-                              as={Button}
-                              size="sm"
-                              variant="outline"
-                              rightIcon={<ChevronDown size={14} />}
-                              isDisabled={!isSuperAdmin || roleChangingId === user.id}
-                              isLoading={roleChangingId === user.id}
-                            >
-                              {user.role}
-                            </MenuButton>
-                            <MenuList>
-                              {roleOptions.map((role) => (
-                                <MenuItem key={role} onClick={() => handleRoleChange(user.id, role)}>
-                                  {role.replace('_', ' ')}
-                                </MenuItem>
-                              ))}
-                            </MenuList>
-                          </Menu>
+                          <Badge colorScheme={roleBadgeColor[user.role]} textTransform="capitalize">
+                            {formatRoleLabel(user.role)}
+                          </Badge>
                         </Td>
                         <Td>
-                          <Menu>
-                            <MenuButton
-                              as={Button}
-                              size="sm"
-                              variant="outline"
-                              rightIcon={<ChevronDown size={14} />}
-                              isLoading={statusChangingId === user.id}
-                            >
-                              <Badge colorScheme={membershipBadgeColor[user.membershipStatus]} textTransform="capitalize">
-                                {user.membershipStatus}
-                              </Badge>
-                            </MenuButton>
-                            <MenuList>
-                              {membershipOptions.map((status) => (
-                                <MenuItem key={status} onClick={() => handleMembershipChange(user.id, status)}>
-                                  {status}
-                                </MenuItem>
-                              ))}
-                            </MenuList>
-                          </Menu>
+                          <Badge colorScheme={membershipBadgeColor[user.membershipStatus]} textTransform="capitalize">
+                            {user.membershipStatus}
+                          </Badge>
                         </Td>
                         <Td>
                           {user.companyName ? (
@@ -533,20 +516,59 @@ export const UsersManagementTab = ({ users: propUsers, loading: propLoading }: U
                               </Button>
                             </Tooltip>
                             {isSuperAdmin && (
-                              <IconButton
-                                aria-label={`Delete ${user.name}`}
-                                icon={<Trash2 size={16} />}
-                                variant="outline"
-                                colorScheme="red"
-                                size="sm"
-                                onClick={() => handleDelete(user.id)}
-                                isLoading={statusChangingId === user.id}
-                              />
+                              <>
+                                <Menu>
+                                  <MenuButton
+                                    as={Button}
+                                    size="sm"
+                                    variant="outline"
+                                    colorScheme="purple"
+                                    isDisabled={promoteBusy}
+                                    isLoading={promoteBusy}
+                                  >
+                                    Promote
+                                  </MenuButton>
+                                  <MenuList>
+                                    <MenuGroup title="Change role">
+                                      {roleOptions.map((role) => (
+                                        <MenuItem
+                                          key={role}
+                                          onClick={() => handleRoleChange(user.id, role)}
+                                          isDisabled={role === user.role}
+                                        >
+                                          {formatRoleLabel(role)}
+                                        </MenuItem>
+                                      ))}
+                                    </MenuGroup>
+                                    <MenuDivider />
+                                    <MenuGroup title="Membership status">
+                                      {membershipOptions.map((status) => (
+                                        <MenuItem
+                                          key={status}
+                                          onClick={() => handleMembershipChange(user.id, status)}
+                                          isDisabled={status === user.membershipStatus}
+                                        >
+                                          {status}
+                                        </MenuItem>
+                                      ))}
+                                    </MenuGroup>
+                                  </MenuList>
+                                </Menu>
+                                <IconButton
+                                  aria-label={`Delete ${user.name}`}
+                                  icon={<Trash2 size={16} />}
+                                  variant="outline"
+                                  colorScheme="red"
+                                  size="sm"
+                                  onClick={() => handleDelete(user.id)}
+                                  isLoading={statusChangingId === user.id}
+                                />
+                              </>
                             )}
                           </HStack>
                         </Td>
                       </Tr>
-                    ))}
+                    })}
 
                     {!filteredUsers.length && (
                       <Tr>
