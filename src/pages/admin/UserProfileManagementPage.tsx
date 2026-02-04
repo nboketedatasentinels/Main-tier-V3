@@ -40,6 +40,7 @@ import {
 } from 'lucide-react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { useAuth } from '@/hooks/useAuth'
+import { useUserChecklistProgressSnapshot } from '@/hooks/useUserChecklistProgressSnapshot'
 import { useUserWeeklyProgressSnapshot } from '@/hooks/useUserWeeklyProgressSnapshot'
 import { UnauthorizedPage } from '@/pages/errors/UnauthorizedPage'
 import { NotFoundPage } from '@/pages/errors/NotFoundPage'
@@ -114,6 +115,7 @@ export const UserProfileManagementPage: React.FC<{ viewContext?: ViewContext }> 
 
   const currentWeekNumber = profileData?.currentWeek || 1
   const { weeklyProgress, pendingApprovals } = useUserWeeklyProgressSnapshot(userId, currentWeekNumber)
+  const { checklistProgress } = useUserChecklistProgressSnapshot(userId, currentWeekNumber)
 
   const displayedWeeklyActivityValue =
     isEditing ? editedProfile?.weeklyActivity ?? 0 : weeklyProgress?.engagementCount ?? profileData?.weeklyActivity ?? 0
@@ -561,10 +563,12 @@ export const UserProfileManagementPage: React.FC<{ viewContext?: ViewContext }> 
   const accountBadge = profileData.accountStatus === 'suspended' ? 'red' : 'blue'
   const mentorNotesEditable = editableFields.has('notes')
   const canEdit = editableFields.size > 0
-  const progressPercent =
-    safeNumber(profileData.goalsTotal) > 0
-      ? Math.round((safeNumber(profileData.goalsCompleted) / safeNumber(profileData.goalsTotal)) * 100)
-      : safeNumber(profileData.milestonesProgress)
+
+  const goalsCompletedLive = checklistProgress?.completedActivities ?? safeNumber(profileData.goalsCompleted)
+  const goalsTotalLive = checklistProgress?.totalActivities ?? safeNumber(profileData.goalsTotal)
+  const milestonesProgressLive =
+    goalsTotalLive > 0 ? Math.round((goalsCompletedLive / goalsTotalLive) * 100) : safeNumber(profileData.milestonesProgress)
+  const progressPercent = milestonesProgressLive
 
   return (
     <Stack spacing={6} px={{ base: 4, md: 6, lg: 8 }} py={{ base: 6, md: 8 }}>
@@ -636,7 +640,7 @@ export const UserProfileManagementPage: React.FC<{ viewContext?: ViewContext }> 
               <Text fontSize="xl" fontWeight="bold">
                 {profileData.fullName || profileData.email}
               </Text>
-              <Text color="gray.500">{profileData.email}</Text>
+              <Text color="text.muted">{profileData.email}</Text>
               <HStack spacing={2} flexWrap="wrap">
                 <Badge colorScheme="purple" textTransform="capitalize">
                   {profileData.role?.replace('_', ' ') || 'user'}
@@ -655,11 +659,11 @@ export const UserProfileManagementPage: React.FC<{ viewContext?: ViewContext }> 
               </HStack>
             </Stack>
             <Stack spacing={1} minW="200px">
-              <Text fontSize="sm" color="gray.500">
+              <Text fontSize="sm" color="text.muted">
                 Registered
               </Text>
               <Text fontWeight="semibold">{formatDate(profileData.registrationDate || profileData.createdAt)}</Text>
-              <Text fontSize="sm" color="gray.500">
+              <Text fontSize="sm" color="text.muted">
                 Last active
               </Text>
               <Text fontWeight="semibold">{formatDateTime(profileData.lastActive || profileData.lastActiveAt)}</Text>
@@ -886,11 +890,11 @@ export const UserProfileManagementPage: React.FC<{ viewContext?: ViewContext }> 
                   </FormControl>
                 </SimpleGrid>
                 {organization && (
-                  <Box mt={4} p={4} borderRadius="md" bg="gray.50">
+                  <Box mt={4} p={4} borderRadius="md" bg="surface.subtle" borderWidth="1px" borderColor="border.subtle">
                     <HStack justify="space-between">
                       <Box>
                         <Text fontWeight="semibold">{organization.name}</Text>
-                        <Text fontSize="sm" color="gray.500">
+                        <Text fontSize="sm" color="text.muted">
                           {organization.code || 'No code'} • {organization.status || 'Unknown status'}
                         </Text>
                       </Box>
@@ -913,7 +917,7 @@ export const UserProfileManagementPage: React.FC<{ viewContext?: ViewContext }> 
                     <FormLabel>Goals completed</FormLabel>
                     <Input
                       type="number"
-                      value={editedProfile?.goalsCompleted ?? 0}
+                      value={isEditing ? editedProfile?.goalsCompleted ?? 0 : goalsCompletedLive}
                       onChange={(event) =>
                         setEditedProfile((prev) =>
                           prev ? { ...prev, goalsCompleted: Number(event.target.value) } : prev,
@@ -926,7 +930,7 @@ export const UserProfileManagementPage: React.FC<{ viewContext?: ViewContext }> 
                     <FormLabel>Goals total</FormLabel>
                     <Input
                       type="number"
-                      value={editedProfile?.goalsTotal ?? 0}
+                      value={isEditing ? editedProfile?.goalsTotal ?? 0 : goalsTotalLive}
                       onChange={(event) =>
                         setEditedProfile((prev) => (prev ? { ...prev, goalsTotal: Number(event.target.value) } : prev))
                       }
@@ -937,7 +941,7 @@ export const UserProfileManagementPage: React.FC<{ viewContext?: ViewContext }> 
                     <FormLabel>Milestones progress (%)</FormLabel>
                     <Input
                       type="number"
-                      value={editedProfile?.milestonesProgress ?? 0}
+                      value={isEditing ? editedProfile?.milestonesProgress ?? 0 : milestonesProgressLive}
                       onChange={(event) =>
                         setEditedProfile((prev) =>
                           prev ? { ...prev, milestonesProgress: Number(event.target.value) } : prev,
@@ -985,7 +989,7 @@ export const UserProfileManagementPage: React.FC<{ viewContext?: ViewContext }> 
               <CardBody>
                 <Stack spacing={4}>
                   <Box>
-                    <Text fontSize="sm" color="gray.500">
+                    <Text fontSize="sm" color="text.muted">
                       Total points
                     </Text>
                     <Text fontSize="2xl" fontWeight="bold">
@@ -993,26 +997,26 @@ export const UserProfileManagementPage: React.FC<{ viewContext?: ViewContext }> 
                     </Text>
                   </Box>
                   <Box>
-                    <Text fontSize="sm" color="gray.500">
+                    <Text fontSize="sm" color="text.muted">
                       This week (week {currentWeekNumber})
                     </Text>
                     <Text fontSize="lg" fontWeight="semibold">
                       {weeklyProgress ? `${weeklyProgress.pointsEarned} points · ${weeklyProgress.engagementCount} activities` : 'Not available'}
                     </Text>
                     {(pendingApprovals?.count ?? 0) > 0 && (
-                      <Text fontSize="sm" color="gray.500">
+                      <Text fontSize="sm" color="text.muted">
                         {pendingApprovals?.count} pending approval{pendingApprovals?.count === 1 ? '' : 's'} · {pendingApprovals?.points ?? 0}{' '}
                         pts
                       </Text>
                     )}
                     {weeklyProgress?.status && (
-                      <Text fontSize="sm" color="gray.500">
+                      <Text fontSize="sm" color="text.muted">
                         Status: {weeklyProgress.status}
                       </Text>
                     )}
                   </Box>
                   <Box>
-                    <Text fontSize="sm" color="gray.500">
+                    <Text fontSize="sm" color="text.muted">
                       Current level
                     </Text>
                     <Text fontSize="2xl" fontWeight="bold">
@@ -1020,18 +1024,18 @@ export const UserProfileManagementPage: React.FC<{ viewContext?: ViewContext }> 
                     </Text>
                   </Box>
                   <Box>
-                    <Text fontSize="sm" color="gray.500">
+                    <Text fontSize="sm" color="text.muted">
                       Impact logs
                     </Text>
                     <Text fontSize="lg" fontWeight="semibold">
                       {impactSummary?.totalEntries ?? 0} entries
                     </Text>
-                    <Text fontSize="sm" color="gray.500">
+                    <Text fontSize="sm" color="text.muted">
                       Last entry: {formatDateTime(impactSummary?.lastActivityAt)}
                     </Text>
                   </Box>
                   <Box>
-                    <Text fontSize="sm" color="gray.500">
+                    <Text fontSize="sm" color="text.muted">
                       Progress completion
                     </Text>
                     <HStack>
@@ -1052,13 +1056,13 @@ export const UserProfileManagementPage: React.FC<{ viewContext?: ViewContext }> 
               </CardHeader>
               <CardBody>
                 <Stack spacing={3}>
-                  {badges.length === 0 && <Text color="gray.500">No badges found.</Text>}
+                  {badges.length === 0 && <Text color="text.muted">No badges found.</Text>}
                   {badges.map((badge) => (
-                    <Box key={badge.id} p={3} borderRadius="md" borderWidth="1px" borderColor="gray.200">
+                    <Box key={badge.id} p={3} borderRadius="md" borderWidth="1px" borderColor="border.subtle" bg="surface.elevated">
                       <HStack justify="space-between" align="flex-start">
                         <Box>
                           <Text fontWeight="semibold">{badge.title}</Text>
-                          <Text fontSize="sm" color="gray.500">
+                          <Text fontSize="sm" color="text.muted">
                             {badge.description || badge.criteria || 'No description available.'}
                           </Text>
                         </Box>
@@ -1067,12 +1071,12 @@ export const UserProfileManagementPage: React.FC<{ viewContext?: ViewContext }> 
                         </Badge>
                       </HStack>
                       {badge.progressPercentage !== undefined && (
-                        <Text fontSize="xs" color="gray.500" mt={2}>
+                        <Text fontSize="xs" color="text.muted" mt={2}>
                           {badge.progressPercentage}% complete
                         </Text>
                       )}
                       {badge.earnedAt && (
-                        <Text fontSize="xs" color="gray.500">
+                        <Text fontSize="xs" color="text.muted">
                           Earned on {formatDate(badge.earnedAt)}
                         </Text>
                       )}
@@ -1088,11 +1092,11 @@ export const UserProfileManagementPage: React.FC<{ viewContext?: ViewContext }> 
               </CardHeader>
               <CardBody>
                 <Stack spacing={2}>
-                  <Text fontSize="sm" color="gray.500">
+                  <Text fontSize="sm" color="text.muted">
                     Last modified by
                   </Text>
                   <Text fontWeight="semibold">{profileData.lastModifiedByName || 'Not recorded'}</Text>
-                  <Text fontSize="sm" color="gray.500">
+                  <Text fontSize="sm" color="text.muted">
                     Last modified at
                   </Text>
                   <Text fontWeight="semibold">{formatDateTime(profileData.lastModifiedAt || profileData.updatedAt)}</Text>
@@ -1112,11 +1116,11 @@ export const UserProfileManagementPage: React.FC<{ viewContext?: ViewContext }> 
               <CardBody>
                 <Stack spacing={3}>
                   <HStack justify="space-between">
-                    <Text color="gray.500">Viewer role</Text>
+                    <Text color="text.muted">Viewer role</Text>
                     <Badge colorScheme="purple">{viewerProfile.role}</Badge>
                   </HStack>
                   <HStack justify="space-between">
-                    <Text color="gray.500">Organization access</Text>
+                    <Text color="text.muted">Organization access</Text>
                     <Text fontWeight="semibold">
                       {isSuperAdmin ? 'All organizations' : profileData.companyCode || 'Restricted'}
                     </Text>

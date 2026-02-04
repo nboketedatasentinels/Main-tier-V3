@@ -80,24 +80,55 @@ const normalizeDateString = (value?: unknown): string | undefined => {
 }
 
 export const fetchUserProfileById = async (userId: string): Promise<UserProfileExtended | null> => {
-  const userRef = doc(db, 'users', userId)
-  const snapshot = await getDoc(userRef)
+  const [profileSnap, userSnap] = await Promise.all([
+    getDoc(doc(db, 'profiles', userId)),
+    getDoc(doc(db, 'users', userId)),
+  ])
 
-  if (!snapshot.exists()) return null
+  if (!profileSnap.exists() && !userSnap.exists()) return null
 
-  const data = snapshot.data() as UserProfileExtended
+  const profileData = (profileSnap.exists() ? profileSnap.data() : {}) as Partial<UserProfileExtended>
+  const userData = (userSnap.exists() ? userSnap.data() : {}) as Partial<UserProfileExtended>
+
+  // Prefer canonical `profiles/{userId}` fields, but fall back to `users/{userId}` for legacy/mirrored fields.
+  const merged: Partial<UserProfileExtended> = {
+    ...userData,
+    ...profileData,
+  }
+
+  const preferUserWhenNullish = <K extends keyof UserProfileExtended>(key: K) => {
+    if (merged[key] == null && userData[key] != null) {
+      merged[key] = userData[key] as UserProfileExtended[K]
+    }
+  }
+
+  preferUserWhenNullish('companyId')
+  preferUserWhenNullish('companyCode')
+  preferUserWhenNullish('companyName')
+  preferUserWhenNullish('mentorId')
+  preferUserWhenNullish('ambassadorId')
+  preferUserWhenNullish('villageId')
+  preferUserWhenNullish('clusterId')
+  preferUserWhenNullish('journeyType')
+  preferUserWhenNullish('currentWeek')
+  preferUserWhenNullish('programDurationWeeks')
+  preferUserWhenNullish('totalPoints')
+  preferUserWhenNullish('level')
+
+  const createdAt = normalizeDateString(merged.createdAt) || new Date().toISOString()
+  const updatedAt = normalizeDateString(merged.updatedAt) || new Date().toISOString()
 
   return {
-    ...data,
-    id: snapshot.id,
-    createdAt: normalizeDateString(data.createdAt) || new Date().toISOString(),
-    updatedAt: normalizeDateString(data.updatedAt) || new Date().toISOString(),
-    lastActive: normalizeDateString(data.lastActive),
-    lastActiveAt: normalizeDateString(data.lastActiveAt),
-    registrationDate: normalizeDateString(data.registrationDate),
-    lastModifiedAt: normalizeDateString(data.lastModifiedAt),
-    socialLinks: data.socialLinks || {
-      linkedin: data.linkedinUrl,
+    ...(merged as UserProfileExtended),
+    id: profileSnap.exists() ? profileSnap.id : userSnap.id,
+    createdAt,
+    updatedAt,
+    lastActive: normalizeDateString(merged.lastActive),
+    lastActiveAt: normalizeDateString(merged.lastActiveAt),
+    registrationDate: normalizeDateString(merged.registrationDate),
+    lastModifiedAt: normalizeDateString(merged.lastModifiedAt),
+    socialLinks: merged.socialLinks || {
+      linkedin: merged.linkedinUrl,
     },
   }
 }
@@ -202,7 +233,10 @@ export const updateUserProfile = async (
     payload.roleChangedAt = serverTimestamp()
   }
 
-  await updateDoc(doc(db, 'users', userId), payload)
+  await Promise.all([
+    setDoc(doc(db, 'profiles', userId), payload, { merge: true }),
+    setDoc(doc(db, 'users', userId), payload, { merge: true }),
+  ])
 
   const hasMentorUpdate = Object.prototype.hasOwnProperty.call(sanitized, 'mentorId')
   const hasAmbassadorUpdate = Object.prototype.hasOwnProperty.call(sanitized, 'ambassadorId')

@@ -49,6 +49,10 @@ vi.mock('@/hooks/useUserWeeklyProgressSnapshot', () => ({
   useUserWeeklyProgressSnapshot: vi.fn(),
 }))
 
+vi.mock('@/hooks/useUserChecklistProgressSnapshot', () => ({
+  useUserChecklistProgressSnapshot: vi.fn(),
+}))
+
 import { useAuth } from '@/hooks/useAuth'
 import {
   fetchImpactLogSummary,
@@ -57,6 +61,7 @@ import {
   logUserProfileAccess,
 } from '@/services/userProfileService'
 import { useUserWeeklyProgressSnapshot } from '@/hooks/useUserWeeklyProgressSnapshot'
+import { useUserChecklistProgressSnapshot } from '@/hooks/useUserChecklistProgressSnapshot'
 
 const mockUseAuth = vi.mocked(useAuth)
 const mockFetchUserProfileById = vi.mocked(fetchUserProfileById)
@@ -64,6 +69,7 @@ const mockFetchUserBadges = vi.mocked(fetchUserBadges)
 const mockFetchImpactLogSummary = vi.mocked(fetchImpactLogSummary)
 const mockLogUserProfileAccess = vi.mocked(logUserProfileAccess)
 const mockUseUserWeeklyProgressSnapshot = vi.mocked(useUserWeeklyProgressSnapshot)
+const mockUseUserChecklistProgressSnapshot = vi.mocked(useUserChecklistProgressSnapshot)
 
 describe('UserProfileManagementPage', () => {
   beforeEach(() => {
@@ -105,6 +111,17 @@ describe('UserProfileManagementPage', () => {
         status: 'on_track',
       },
       pendingApprovals: null,
+      loading: false,
+      error: null,
+    })
+
+    mockUseUserChecklistProgressSnapshot.mockReturnValue({
+      checklistProgress: {
+        weekNumber: 2,
+        totalActivities: 8,
+        completedActivities: 5,
+        updatedAt: new Date().toISOString(),
+      },
       loading: false,
       error: null,
     })
