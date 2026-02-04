@@ -456,7 +456,7 @@ export const UsersManagementTab = ({ users: propUsers, loading: propLoading }: U
                     {paginatedUsers.map((user) => {
                       const promoteBusy = roleChangingId === user.id || statusChangingId === user.id
                       return (
-                      <Tr key={user.id} _hover={{ bg: 'gray.50' }}>
+                        <Tr key={user.id} _hover={{ bg: 'gray.50' }}>
                         <Td>
                           <Checkbox
                             isChecked={selectedIds.includes(user.id)}
@@ -567,7 +567,8 @@ export const UsersManagementTab = ({ users: propUsers, loading: propLoading }: U
                             )}
                           </HStack>
                         </Td>
-                      </Tr>
+                        </Tr>
+                    )
                     })}
 
                     {!filteredUsers.length && (
