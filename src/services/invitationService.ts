@@ -6,6 +6,7 @@ import {
   getDocs,
   query,
   serverTimestamp,
+  setDoc,
   updateDoc,
   where,
 } from 'firebase/firestore'
@@ -23,6 +24,7 @@ import { checkCapacityThresholds } from './capacityService'
 
 const invitationsCollection = collection(db, 'invitations')
 const usersCollection = collection(db, 'users')
+const profilesCollection = collection(db, 'profiles')
 const organizationsCollection = collection(db, ORG_COLLECTION)
 
 const codeChars = '23456789ABCDEFGHJKLMNPQRSTUVWXYZ'
@@ -84,10 +86,19 @@ export const createInvitation = async (data: {
 
 const findExistingUserByEmail = async (email: string) => {
   const normalizedEmail = normalizeEmail(email)
-  const snapshot = await getDocs(query(usersCollection, where('email', '==', normalizedEmail)))
-  if (snapshot.empty) return null
-  const docSnap = snapshot.docs[0]
-  return { id: docSnap.id, ...(docSnap.data() as Partial<OrganizationRecord>) }
+
+  // Prefer profiles as the canonical user record (Super Admin user management reads from this collection).
+  const profileSnapshot = await getDocs(query(profilesCollection, where('email', '==', normalizedEmail)))
+  if (!profileSnapshot.empty) {
+    const docSnap = profileSnapshot.docs[0]
+    return { id: docSnap.id, source: 'profiles' as const }
+  }
+
+  // Fallback for legacy/user-access records stored in `users`.
+  const userSnapshot = await getDocs(query(usersCollection, where('email', '==', normalizedEmail)))
+  if (userSnapshot.empty) return null
+  const docSnap = userSnapshot.docs[0]
+  return { id: docSnap.id, source: 'users' as const }
 }
 
 const createOrUpdateUser = async (
@@ -97,12 +108,53 @@ const createOrUpdateUser = async (
   const existing = normalizedEmail ? await findExistingUserByEmail(normalizedEmail) : null
 
   if (existing?.id) {
-    const userRef = doc(db, 'users', existing.id)
-    const assignedOrganizations = Array.isArray((existing as { assignedOrganizations?: string[] }).assignedOrganizations)
-      ? ([...(existing as { assignedOrganizations?: string[] }).assignedOrganizations!, payload.organizationId] as string[])
+    const userId = existing.id
+
+    // Keep the profile role in sync so Super Admin user management reflects assigned roles.
+    if (existing.source === 'profiles') {
+      await updateDoc(doc(db, 'profiles', userId), { role: payload.role, updatedAt: serverTimestamp() })
+    } else {
+      const profileRef = doc(db, 'profiles', userId)
+      const profileSnap = await getDoc(profileRef)
+      if (profileSnap.exists()) {
+        await updateDoc(profileRef, { role: payload.role, updatedAt: serverTimestamp() })
+      }
+    }
+
+    // Ensure `users/{userId}` holds org assignments for access checks + license accounting.
+    const userRef = doc(db, 'users', userId)
+    const userSnap = await getDoc(userRef)
+    const existingAssignments = userSnap.exists()
+      ? ((userSnap.data() as { assignedOrganizations?: unknown })?.assignedOrganizations as unknown)
+      : undefined
+
+    const assignedOrganizations = Array.isArray(existingAssignments)
+      ? Array.from(
+          new Set([
+            ...existingAssignments.filter((id): id is string => typeof id === 'string' && id.trim().length > 0),
+            payload.organizationId,
+          ]),
+        )
       : [payload.organizationId]
-    await updateDoc(userRef, { role: payload.role, assignedOrganizations, updatedAt: serverTimestamp() })
-    return existing.id
+
+    if (userSnap.exists()) {
+      await updateDoc(userRef, { role: payload.role, assignedOrganizations, updatedAt: serverTimestamp() })
+    } else {
+      await setDoc(
+        userRef,
+        {
+          name: payload.name,
+          email: normalizedEmail,
+          role: payload.role,
+          assignedOrganizations,
+          createdAt: serverTimestamp(),
+          updatedAt: serverTimestamp(),
+        },
+        { merge: true },
+      )
+    }
+
+    return userId
   }
 
   const docRef = await addDoc(usersCollection, {

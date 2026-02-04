@@ -1032,11 +1032,11 @@ export const CreateOrganizationModal: React.FC<CreateOrganizationModalProps> = (
                     </Alert>
                   ) : null}
                   <Box borderWidth="1px" borderRadius="md" p={4} bg="gray.50">
-                    <Text fontWeight="semibold" mb={3}>
-                      Add user manually
-                    </Text>
-                    <Grid
-                      templateColumns={{ base: '1fr', lg: '2fr 2fr 1.3fr 1.3fr auto' }}
+                     <Text fontWeight="semibold" mb={3}>
+                       Add user manually
+                     </Text>
+                     <Grid
+                      templateColumns={{ base: '1fr', lg: '2fr 2fr 1.3fr auto' }}
                       gap={3}
                       alignItems="flex-end"
                     >
@@ -1127,29 +1127,6 @@ export const CreateOrganizationModal: React.FC<CreateOrganizationModalProps> = (
                           ))}
                         </Select>
                         <FormErrorMessage>{manualErrors.role}</FormErrorMessage>
-                      </FormControl>
-                      <FormControl isInvalid={Boolean(manualErrors.method)}>
-                        <FormLabel display="flex" alignItems="center" gap={2}>
-                          Method
-                          <Tooltip label="Email sends an invite link. One-time code is for manual sharing.">
-                            <InfoIcon color="gray.400" />
-                          </Tooltip>
-                        </FormLabel>
-                        <Select
-                          value={manualEntry.method}
-                          onChange={(e) => {
-                            const nextEntry = { ...manualEntry, method: e.target.value as InviteDraft['method'] }
-                            setManualEntry(nextEntry)
-                            validateManualEntry(nextEntry)
-                          }}
-                        >
-                          {inviteMethodOptions.map((method) => (
-                            <option key={method} value={method}>
-                              {method}
-                            </option>
-                          ))}
-                        </Select>
-                        <FormErrorMessage>{manualErrors.method}</FormErrorMessage>
                       </FormControl>
                       <Button colorScheme="purple" onClick={handleAddManualEntry} alignSelf="flex-end">
                         Add user
