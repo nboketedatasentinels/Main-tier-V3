@@ -55,7 +55,6 @@ import {
 import { UpgradeRequestActionModal } from '@/components/super-admin/UpgradeRequestActionModal'
 import {
   approveUpgradeRequestWithOrganizationAssignment,
-  approveUpgradeRequestWithNewOrganization,
   rejectUpgradeRequest,
 } from '@/services/upgradeApprovalService'
 import { ApprovalRecord, ApprovalStatus, ApprovalWorkflowType } from '@/types/approvals'
@@ -64,7 +63,6 @@ import { doc, getDoc } from 'firebase/firestore'
 import { db } from '@/services/firebase'
 import { getDisplayName, type DisplayNameInput } from '@/utils/displayName'
 import type { UpgradeRequest } from '@/types/upgrade'
-import type { OrganizationRecord } from '@/types/admin'
 
 const toDate = (value?: unknown): Date | null => {
   if (!value) return null
@@ -584,34 +582,6 @@ const ApprovalCenterPage: React.FC = () => {
       await approveUpgradeRequestWithOrganizationAssignment({
         requestId: selectedUpgradeRequest.id,
         organizationId: payload.organizationId,
-        adminId: profile?.id ?? null,
-        adminName: profile?.fullName ?? null,
-        notes: payload.notes,
-        sendWelcomeEmail: payload.sendWelcomeEmail,
-      })
-      toast({ title: 'Upgrade approved', status: 'success', duration: 3000, isClosable: true })
-      upgradeModal.onClose()
-      setSelectedUpgradeRequest(null)
-      refetch()
-    } catch (error) {
-      console.error(error)
-      toast({ title: 'Upgrade approval failed', status: 'error', duration: 3000, isClosable: true })
-    } finally {
-      setUpgradeSubmitting(false)
-    }
-  }
-
-  const handleUpgradeApprovalNew = async (payload: {
-    organizationData: OrganizationRecord
-    sendWelcomeEmail: boolean
-    notes?: string
-  }) => {
-    if (!selectedUpgradeRequest) return
-    setUpgradeSubmitting(true)
-    try {
-      await approveUpgradeRequestWithNewOrganization({
-        requestId: selectedUpgradeRequest.id,
-        organizationData: payload.organizationData,
         adminId: profile?.id ?? null,
         adminName: profile?.fullName ?? null,
         notes: payload.notes,
@@ -1383,8 +1353,9 @@ const ApprovalCenterPage: React.FC = () => {
           }}
           request={selectedUpgradeRequest}
           isSubmitting={upgradeSubmitting}
+          adminId={profile?.id ?? undefined}
+          adminName={profile?.fullName ?? undefined}
           onAssignExisting={handleUpgradeApprovalExisting}
-          onCreateNew={handleUpgradeApprovalNew}
         />
       )}
 
