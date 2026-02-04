@@ -101,9 +101,17 @@ export const ChallengesTab: React.FC<ChallengesTabProps> = ({
 
   // Empty state component
   const EmptyState = ({ message }: { message: string }) => (
-    <Center py={8} flexDirection="column" color="gray.500">
-      <Icon as={Swords} boxSize={8} mb={2} />
-      <Text color="white">{message}</Text>
+    <Center
+      py={8}
+      flexDirection="column"
+      color="white"
+      textAlign="center"
+      sx={{ '& p': { color: 'white' } }}
+    >
+      <Icon as={Swords} boxSize={8} mb={2} color="white" />
+      <Text as="p" color="white">
+        {message}
+      </Text>
     </Center>
   );
 
