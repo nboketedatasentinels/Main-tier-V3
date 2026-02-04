@@ -1123,16 +1123,14 @@ const ApprovalCenterPage: React.FC = () => {
                                         Submitted {submitted.label}
                                       </Text>
                                     </Box>
-                                    <Box gridColumn={{ base: 'auto', md: '1 / -1' }}>
-                                      <HStack spacing={3} mt={2}>
-                                        <Link color="purple.600" href="/super-admin?tab=organizations">
-                                          View organizations
-                                        </Link>
-                                        <Link color="purple.600" href="/super-admin?tab=organizations&create=true">
-                                          Create organization
-                                        </Link>
-                                      </HStack>
-                                    </Box>
+                                    <HStack spacing={3} mt={2} gridColumn={{ base: 'auto', md: '1 / -1' }}>
+                                      <Link color="purple.600" href="/super-admin?tab=organizations">
+                                        View organizations
+                                      </Link>
+                                      <Link color="purple.600" href="/super-admin?tab=organizations&create=true">
+                                        Create organization
+                                      </Link>
+                                    </HStack>
                                   </SimpleGrid>
                                 ) : (
                                   <SimpleGrid columns={{ base: 1, md: 3 }} spacing={4}>
