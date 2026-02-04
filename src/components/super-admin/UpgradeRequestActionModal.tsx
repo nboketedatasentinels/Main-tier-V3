@@ -28,6 +28,7 @@ import {
   Textarea,
 } from '@chakra-ui/react'
 import { fetchOrganizations } from '@/services/superAdminService'
+import { generateOrganizationCode, validateOrganizationCodeUnique } from '@/services/organizationService'
 import type { OrganizationRecord } from '@/types/admin'
 import type { UpgradeRequest } from '@/types/upgrade'
 
@@ -50,13 +51,6 @@ interface UpgradeRequestActionModalProps {
   }) => Promise<void>
 }
 
-const generateCode = (name: string) =>
-  name
-    .trim()
-    .toUpperCase()
-    .replace(/[^A-Z0-9]+/g, '')
-    .slice(0, 8) || 'ORG'
-
 export const UpgradeRequestActionModal: React.FC<UpgradeRequestActionModalProps> = ({
   isOpen,
   onClose,
@@ -73,7 +67,8 @@ export const UpgradeRequestActionModal: React.FC<UpgradeRequestActionModalProps>
   const [sendWelcomeEmail, setSendWelcomeEmail] = useState(true)
   const [notes, setNotes] = useState('')
   const [newOrgName, setNewOrgName] = useState(request.villageName || '')
-  const [newOrgCode, setNewOrgCode] = useState(generateCode(request.villageName || ''))
+  const [newOrgCode, setNewOrgCode] = useState(generateOrganizationCode(request.villageName || ''))
+  const [codeTouched, setCodeTouched] = useState(false)
   const [programDuration, setProgramDuration] = useState('')
   const [teamSize, setTeamSize] = useState('1')
   const [cohortStartDate, setCohortStartDate] = useState('')
@@ -86,7 +81,8 @@ export const UpgradeRequestActionModal: React.FC<UpgradeRequestActionModalProps>
     setNotes('')
     setSendWelcomeEmail(true)
     setNewOrgName(request.villageName || '')
-    setNewOrgCode(generateCode(request.villageName || ''))
+    setNewOrgCode(generateOrganizationCode(request.villageName || ''))
+    setCodeTouched(false)
     setProgramDuration('')
     setTeamSize('1')
     setCohortStartDate('')
@@ -109,9 +105,10 @@ export const UpgradeRequestActionModal: React.FC<UpgradeRequestActionModalProps>
   }, [isOpen])
 
   useEffect(() => {
+    if (codeTouched) return
     if (!newOrgName.trim()) return
-    setNewOrgCode(generateCode(newOrgName))
-  }, [newOrgName])
+    setNewOrgCode(generateOrganizationCode(newOrgName))
+  }, [codeTouched, newOrgName])
 
   const filteredOrganizations = useMemo(() => {
     const term = search.trim().toLowerCase()
@@ -123,22 +120,48 @@ export const UpgradeRequestActionModal: React.FC<UpgradeRequestActionModalProps>
   const selectedOrg = organizations.find((org) => org.id === selectedOrgId)
 
   const handleAssign = async () => {
-    if (!selectedOrgId) return
+    if (!selectedOrgId) {
+      throw new Error('Select an organization before approving the request.')
+    }
     await onAssignExisting({ organizationId: selectedOrgId, sendWelcomeEmail, notes: notes.trim() || undefined })
   }
 
   const handleCreate = async () => {
-    if (!newOrgName.trim() || !programDuration.trim()) return
+    const trimmedName = newOrgName.trim()
+    if (!trimmedName || trimmedName.length < 3) {
+      throw new Error('Organization name must be at least 3 characters.')
+    }
+
+    const code = (newOrgCode || generateOrganizationCode(trimmedName)).trim().toUpperCase()
+    if (code.length !== 6) {
+      throw new Error('Organization code must be exactly 6 characters.')
+    }
+
+    const isUnique = await validateOrganizationCodeUnique(code)
+    if (!isUnique) {
+      throw new Error('Organization code is already in use.')
+    }
+
+    const duration = Number(programDuration)
+    if (!Number.isFinite(duration) || duration <= 0) {
+      throw new Error('Program duration must be greater than 0.')
+    }
+
+    const size = Number(teamSize)
+    if (!Number.isFinite(size) || size <= 0) {
+      throw new Error('Team size must be greater than 0.')
+    }
+
     const assignments = courseAssignments
       .split(',')
       .map((entry) => entry.trim())
       .filter(Boolean)
     const organizationData: OrganizationRecord = {
-      name: newOrgName.trim(),
-      code: newOrgCode.trim() || generateCode(newOrgName),
+      name: trimmedName,
+      code,
       status: 'active',
-      teamSize: Number(teamSize) || 1,
-      programDuration: Number(programDuration) || undefined,
+      teamSize: size,
+      programDuration: duration,
       cohortStartDate: cohortStartDate || undefined,
       courseAssignments: assignments.length ? assignments : undefined,
       description: useVillageDetails ? request.villageDescription || undefined : undefined,
@@ -232,7 +255,14 @@ export const UpgradeRequestActionModal: React.FC<UpgradeRequestActionModalProps>
                     </FormControl>
                     <FormControl isRequired>
                       <FormLabel>Organization code</FormLabel>
-                      <Input value={newOrgCode} onChange={(event) => setNewOrgCode(event.target.value)} />
+                      <Input
+                        value={newOrgCode}
+                        onChange={(event) => {
+                          setCodeTouched(true)
+                          setNewOrgCode(event.target.value.toUpperCase().slice(0, 6))
+                        }}
+                        maxLength={6}
+                      />
                     </FormControl>
                     <FormControl isRequired>
                       <FormLabel>Program duration (weeks)</FormLabel>
