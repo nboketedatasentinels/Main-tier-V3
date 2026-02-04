@@ -40,6 +40,7 @@ import {
 } from 'lucide-react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { useAuth } from '@/hooks/useAuth'
+import { useUserWeeklyProgressSnapshot } from '@/hooks/useUserWeeklyProgressSnapshot'
 import { UnauthorizedPage } from '@/pages/errors/UnauthorizedPage'
 import { NotFoundPage } from '@/pages/errors/NotFoundPage'
 import {
@@ -110,6 +111,12 @@ export const UserProfileManagementPage: React.FC<{ viewContext?: ViewContext }> 
   const [selectedOrganizationId, setSelectedOrganizationId] = useState<string>('')
 
   const isMentorView = viewContext === 'mentor' || isMentor
+
+  const currentWeekNumber = profileData?.currentWeek || 1
+  const { weeklyProgress, pendingApprovals } = useUserWeeklyProgressSnapshot(userId, currentWeekNumber)
+
+  const displayedWeeklyActivityValue =
+    isEditing ? editedProfile?.weeklyActivity ?? 0 : weeklyProgress?.engagementCount ?? profileData?.weeklyActivity ?? 0
 
   const editableFields = useMemo(() => {
     if (isMentorView) {
@@ -946,7 +953,7 @@ export const UserProfileManagementPage: React.FC<{ viewContext?: ViewContext }> 
                     <FormLabel>Weekly activity</FormLabel>
                     <Input
                       type="number"
-                      value={editedProfile?.weeklyActivity ?? 0}
+                      value={displayedWeeklyActivityValue}
                       onChange={(event) =>
                         setEditedProfile((prev) =>
                           prev ? { ...prev, weeklyActivity: Number(event.target.value) } : prev,
@@ -984,6 +991,25 @@ export const UserProfileManagementPage: React.FC<{ viewContext?: ViewContext }> 
                     <Text fontSize="2xl" fontWeight="bold">
                       {profileData.totalPoints || 0}
                     </Text>
+                  </Box>
+                  <Box>
+                    <Text fontSize="sm" color="gray.500">
+                      This week (week {currentWeekNumber})
+                    </Text>
+                    <Text fontSize="lg" fontWeight="semibold">
+                      {weeklyProgress ? `${weeklyProgress.pointsEarned} points · ${weeklyProgress.engagementCount} activities` : 'Not available'}
+                    </Text>
+                    {(pendingApprovals?.count ?? 0) > 0 && (
+                      <Text fontSize="sm" color="gray.500">
+                        {pendingApprovals?.count} pending approval{pendingApprovals?.count === 1 ? '' : 's'} · {pendingApprovals?.points ?? 0}{' '}
+                        pts
+                      </Text>
+                    )}
+                    {weeklyProgress?.status && (
+                      <Text fontSize="sm" color="gray.500">
+                        Status: {weeklyProgress.status}
+                      </Text>
+                    )}
                   </Box>
                   <Box>
                     <Text fontSize="sm" color="gray.500">
