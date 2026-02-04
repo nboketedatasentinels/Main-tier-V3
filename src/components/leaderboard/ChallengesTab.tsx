@@ -103,7 +103,7 @@ export const ChallengesTab: React.FC<ChallengesTabProps> = ({
   const EmptyState = ({ message }: { message: string }) => (
     <Center py={8} flexDirection="column" color="gray.500">
       <Icon as={Swords} boxSize={8} mb={2} />
-      <Text>{message}</Text>
+      <Text color="white">{message}</Text>
     </Center>
   );
 
