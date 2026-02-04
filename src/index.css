@@ -5,6 +5,7 @@
 /* Base Layer Typography and Styles */
 @layer base {
   :root {
+    color-scheme: light;
     --surface-default: #ffffff;
     --surface-subtle: #f8fafc;
     --border-subtle: #e2e8f0;

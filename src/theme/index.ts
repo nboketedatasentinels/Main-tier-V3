@@ -83,7 +83,8 @@ const colors = {
     purpleBorder: '#c4b5fd', // border tint for purple callouts
   },
   focusRing: {
-    default: 'rgba(53, 14, 111, 0.35)',
+    default: 'rgba(53, 14, 111, 0.45)',
+    error: 'rgba(220, 38, 38, 0.4)',
   },
   // Danger/Destructive Actions
   danger: {
@@ -178,7 +179,7 @@ const colors = {
 }
 
 const config: ThemeConfig = {
-  initialColorMode: 'dark',
+  initialColorMode: 'light',
   useSystemColorMode: false,
 }
 
@@ -189,6 +190,9 @@ const components = {
       fontWeight: '600',
       borderRadius: 'lg',
       transition: 'all 0.2s ease-in-out',
+      _focusVisible: {
+        boxShadow: 'focus',
+      },
     },
     variants: {
       primary: {
@@ -324,8 +328,8 @@ const components = {
         color: 'brand.primary',
       },
       success: {
-        bg: 'success.500',
-        color: 'text.primary',
+        bg: 'success.600',
+        color: 'text.inverse',
       },
       warning: {
         bg: 'tint.accentWarning',
@@ -412,11 +416,11 @@ const components = {
           },
           _focus: {
             borderColor: 'brand.primary',
-            boxShadow: '0 0 0 1px var(--chakra-colors-focusRing-default)',
+            boxShadow: 'focus',
           },
           _invalid: {
             borderColor: 'danger.DEFAULT',
-            boxShadow: '0 0 0 1px var(--chakra-colors-danger-DEFAULT)',
+            boxShadow: 'focusError',
           },
         },
       },
@@ -435,7 +439,11 @@ const components = {
           bg: 'surface.default',
           _focus: {
             borderColor: 'brand.primary',
-            boxShadow: '0 0 0 1px var(--chakra-colors-focusRing-default)',
+            boxShadow: 'focus',
+          },
+          _invalid: {
+            borderColor: 'danger.DEFAULT',
+            boxShadow: 'focusError',
           },
         },
       },
@@ -453,7 +461,11 @@ const components = {
         bg: 'surface.default',
         _focus: {
           borderColor: 'brand.primary',
-          boxShadow: '0 0 0 1px var(--chakra-colors-focusRing-default)',
+          boxShadow: 'focus',
+        },
+        _invalid: {
+          borderColor: 'danger.DEFAULT',
+          boxShadow: 'focusError',
         },
       },
     },
@@ -576,6 +588,7 @@ const shadows = {
   card: '0 10px 30px rgba(15, 23, 42, 0.08)',
   'card-elevated': '0 20px 45px rgba(15, 23, 42, 0.12)',
   focus: '0 0 0 4px var(--chakra-colors-focusRing-default)',
+  focusError: '0 0 0 4px var(--chakra-colors-focusRing-error)',
   inner: 'inset 0 2px 4px 0 rgba(0, 0, 0, 0.05)',
 }
 
