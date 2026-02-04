@@ -39,6 +39,7 @@ export interface ManagedUserRecord {
   ambassadorId?: string | null
   isActiveAmbassador?: boolean
   notes?: string | null
+  assignedOrganizations?: string[]
 }
 
 export type RiskLevel = 'critical' | 'high' | 'moderate' | 'low' | 'emerging' | 'recovering' | 'unknown'
@@ -142,6 +143,9 @@ const mapUser = (docSnap: { id: string; data: () => unknown }): ManagedUserRecor
     mentorId: data.mentorId,
     ambassadorId: data.ambassadorId,
     isActiveAmbassador: data.isActiveAmbassador,
+    assignedOrganizations: Array.isArray(data.assignedOrganizations)
+      ? data.assignedOrganizations.filter((assignment): assignment is string => Boolean(assignment))
+      : undefined,
     notes: data.notes,
   }
 }

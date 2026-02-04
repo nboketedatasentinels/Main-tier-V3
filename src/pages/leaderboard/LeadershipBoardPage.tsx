@@ -159,9 +159,9 @@ export const LeadershipBoardPage: React.FC = () => {
   const pointsColors = useToken('colors', [
     'brand.primary',
     'brand.dark',
-    'accent.warning',
+    'danger.DEFAULT',
     'success.500',
-    'warning.500',
+    'purple.400',
     'tint.brandPrimary',
   ])
   const [timeframe, setTimeframe] = useState<LeaderboardTimeframe>(LeaderboardTimeframe.LAST_7_DAYS)
@@ -648,7 +648,22 @@ export const LeadershipBoardPage: React.FC = () => {
   }, [userBreakdown.length, breakdownPage])
 
   const getRankIcon = (rank: number) => {
-    if (rank === 1) return <Icon as={Crown} color="accent.warning" />
+    if (rank === 1) {
+      return (
+        <Flex
+          w={10}
+          h={10}
+          align="center"
+          justify="center"
+          borderRadius="full"
+          bg="tint.accentWarning"
+          border="2px solid"
+          borderColor="brand.primary"
+        >
+          <Icon as={Crown} boxSize={5} color="brand.primary" />
+        </Flex>
+      )
+    }
     if (rank === 2) return <Icon as={Medal} color="text.muted" />
     if (rank === 3) return <Icon as={Medal} color="brand.primary" />
     return (
@@ -1249,9 +1264,9 @@ export const LeadershipBoardPage: React.FC = () => {
                                   borderLeftWidth={row.rank <= 3 ? '4px' : '0px'}
                                   borderLeftColor={
                                     row.rank === 1
-                                      ? 'accent.warning'
+                                      ? 'brand.primary'
                                       : row.rank === 2
-                                        ? 'brand.primary'
+                                        ? 'brand.dark'
                                         : row.rank === 3
                                           ? 'success.500'
                                           : 'transparent'
@@ -1283,7 +1298,7 @@ export const LeadershipBoardPage: React.FC = () => {
                                   <Td>
                                     <HStack spacing={1}>
                                       {Array.from({ length: Math.min(row.badgeCount, 4) }).map((_, idx) => (
-                                        <Icon key={idx} as={Star} color="accent.warning" boxSize={4} />
+                                        <Icon key={idx} as={Star} color="brand.primary" boxSize={4} />
                                       ))}
                                     </HStack>
                                   </Td>

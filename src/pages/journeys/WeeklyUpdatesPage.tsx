@@ -981,13 +981,13 @@ const WeeklyChecklistPage: React.FC = () => {
               bg="tint.accentWarning"
               color="text.primary"
               border="1px solid"
-              borderColor="accent.warning"
+              borderColor="brand.primary"
             >
               +{activity.points} pts
             </Tag>
             {activity.status === 'pending' && (
               <Tooltip label="Pending partner verification. Points will post after approval.">
-                <Icon as={AlertTriangle} color="yellow.300" />
+                <Icon as={AlertTriangle} color="danger.DEFAULT" />
               </Tooltip>
             )}
           </Stack>
@@ -1151,7 +1151,7 @@ const WeeklyChecklistPage: React.FC = () => {
             <StatCard
               label="Weekly points"
               value={`${weeklyPointsEarned} / ${weeklyTarget}`}
-              icon={<Icon as={Plus} color="accent.warning" />}
+              icon={<Icon as={Plus} color="brand.primary" />}
             />
             <StatCard
               label={`Window ${windowProgress.windowNumber} points`}
