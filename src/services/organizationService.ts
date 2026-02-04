@@ -40,6 +40,7 @@ import {
   syncOrganizationPartnerChange,
   syncRemovePartnerFromOrganization,
 } from './partnerAssignmentSyncService'
+import { normalizeRole } from '@/utils/role'
 export { checkOrganizationAccess, fetchOrganizationEngagementStats, fetchOrganizationUsers } from './organizationUserService'
 
 const safeCodeChars = '23456789ABCDEFGHJKLMNPQRSTUVWXYZ'
@@ -50,6 +51,19 @@ const usersCollection = collection(db, 'users')
 const adminActivityCollection = collection(db, 'admin_activity_log')
 
 export type LeadershipRole = 'mentor' | 'ambassador' | 'partner'
+
+const partnerRoleAliases = [
+  'partner',
+  'Partner',
+  'admin',
+  'Admin',
+  'administrator',
+  'Administrator',
+  'company_admin',
+  'company-admin',
+  'company admin',
+  'Company Admin',
+] as const
 
 const leadershipRoleConfig: Record<
   LeadershipRole,
@@ -335,7 +349,7 @@ export const fetchAmbassadors = async (): Promise<OrganizationLead[]> => {
 }
 
 export const fetchPartners = async (): Promise<OrganizationLead[]> => {
-  const snapshot = await getDocs(query(usersCollection, where('role', '==', 'partner')))
+  const snapshot = await getDocs(query(usersCollection, where('role', 'in', Array.from(partnerRoleAliases))))
   return snapshot.docs.map(buildLead)
 }
 
@@ -388,7 +402,7 @@ const assignLeadershipRole = async (organizationId: string, userId: string, role
     }
 
     const userData = userSnap.data() as { role?: string }
-    if (userData.role !== roleConfig.requiredRole) {
+    if (normalizeRole(userData.role) !== normalizeRole(roleConfig.requiredRole)) {
       throw new Error(`User role must be ${roleConfig.requiredRole}.`)
     }
 
@@ -809,7 +823,7 @@ export const listenToPartners = (
   onChange: (partners: OrganizationLead[]) => void,
   onError?: (error: FirestoreError) => void,
 ) => {
-  const partnerQuery = query(usersCollection, where('role', '==', 'partner'))
+  const partnerQuery = query(usersCollection, where('role', 'in', Array.from(partnerRoleAliases)))
   return onSnapshot(
     partnerQuery,
     (snapshot) => {
