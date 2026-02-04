@@ -196,7 +196,7 @@ export const guardByRole = (
 ): boolean => {
   if (!profile) return false
   const normalized = normalizeRole(profile.role)
-  return allowedRoles.map(normalizeRole).includes(normalized)
+  return allowedRoles.map((role) => normalizeRole(role)).includes(normalized)
 }
 
 export const getRoleLabel = (profile: UserProfile | null | undefined): string => {

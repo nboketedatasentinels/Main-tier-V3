@@ -93,20 +93,38 @@ const resolveOrganizationId = async (organizationCode?: string) => {
  * This reduces typical queries from 15 to 1-3.
  */
 const fetchOrganizationUserDocs = async (organizationKey: OrganizationKey) => {
-  const normalizedCode = organizationKey.organizationCode?.trim().toLowerCase()
-  const normalizedId = organizationKey.organizationId?.trim().toLowerCase()
+  const trimmedCode = organizationKey.organizationCode?.trim()
+  const trimmedId = organizationKey.organizationId?.trim()
 
-  if (!normalizedCode && !normalizedId) return []
+  if (!trimmedCode && !trimmedId) return []
+
+  const buildVariants = (value: string | undefined) => {
+    const trimmed = value?.trim()
+    if (!trimmed) return []
+    const variants = [trimmed, trimmed.toLowerCase(), trimmed.toUpperCase()]
+    return Array.from(new Set(variants.filter(Boolean)))
+  }
+
+  const codeVariants = buildVariants(trimmedCode)
+  const idVariants = buildVariants(trimmedId)
+
+  const buildQueryForVariants = (field: string, variants: string[]) => {
+    if (variants.length <= 0) return null
+    if (variants.length === 1) {
+      return query(usersCollection, where(field, '==', variants[0]))
+    }
+    return query(usersCollection, where(field, 'in', variants.slice(0, 10)))
+  }
 
   const userMap = new Map<string, { data: () => unknown }>()
 
   // Phase 1: Query on primary canonical field (companyCode) with lowercase value
   // This is the expected field per firestore-schema.md
-  if (normalizedCode) {
-    const primaryQuery = query(usersCollection, where(PRIMARY_COMPANY_CODE_FIELD, '==', normalizedCode))
-    const primarySnapshot = await getDocs(primaryQuery)
+  if (codeVariants.length) {
+    const primaryQuery = buildQueryForVariants(PRIMARY_COMPANY_CODE_FIELD, codeVariants)
+    const primarySnapshot = primaryQuery ? await getDocs(primaryQuery) : null
 
-    primarySnapshot.docs.forEach((docSnap) => {
+    primarySnapshot?.docs.forEach((docSnap) => {
       userMap.set(docSnap.id, docSnap)
     })
 
@@ -120,17 +138,19 @@ const fetchOrganizationUserDocs = async (organizationKey: OrganizationKey) => {
   // This handles data that hasn't been migrated yet
   const legacyQueries: ReturnType<typeof query>[] = []
 
-  if (normalizedCode) {
+  if (codeVariants.length) {
     // Try legacy code fields
     LEGACY_COMPANY_CODE_FIELDS.forEach((field) => {
-      legacyQueries.push(query(usersCollection, where(field, '==', normalizedCode)))
+      const q = buildQueryForVariants(field, codeVariants)
+      if (q) legacyQueries.push(q)
     })
   }
 
-  if (normalizedId) {
+  if (idVariants.length) {
     // Try ID fields
     LEGACY_COMPANY_ID_FIELDS.forEach((field) => {
-      legacyQueries.push(query(usersCollection, where(field, '==', normalizedId)))
+      const q = buildQueryForVariants(field, idVariants)
+      if (q) legacyQueries.push(q)
     })
   }
 
@@ -329,14 +349,27 @@ export const listenToOrganizationStatsUpdates = (
   }
 
   // OPTIMIZED: Single listener on canonical field instead of multiple listeners
-  const normalizedCode = organization.code?.trim().toLowerCase()
+  const trimmedCode = organization.code?.trim()
   const subscriptions: (() => void)[] = []
 
-  if (normalizedCode) {
+  const buildVariants = (value: string | undefined) => {
+    const trimmed = value?.trim()
+    if (!trimmed) return []
+    const variants = [trimmed, trimmed.toLowerCase(), trimmed.toUpperCase()]
+    return Array.from(new Set(variants.filter(Boolean)))
+  }
+
+  const codeVariants = buildVariants(trimmedCode)
+
+  if (codeVariants.length) {
     // Primary listener on canonical companyCode field
+    const primaryQuery =
+      codeVariants.length === 1
+        ? query(usersCollection, where(PRIMARY_COMPANY_CODE_FIELD, '==', codeVariants[0]))
+        : query(usersCollection, where(PRIMARY_COMPANY_CODE_FIELD, 'in', codeVariants.slice(0, 10)))
     subscriptions.push(
       onSnapshot(
-        query(usersCollection, where(PRIMARY_COMPANY_CODE_FIELD, '==', normalizedCode)),
+        primaryQuery,
         handleSnapshot,
         options?.onError
       )
@@ -344,12 +377,16 @@ export const listenToOrganizationStatsUpdates = (
   }
 
   // Optionally add a single fallback listener for organizationId if code is not available
-  if (!normalizedCode && organization.id) {
-    const normalizedId = organization.id.trim().toLowerCase()
-    if (normalizedId) {
+  if (!codeVariants.length && organization.id) {
+    const idVariants = buildVariants(organization.id)
+    if (idVariants.length) {
+      const idQuery =
+        idVariants.length === 1
+          ? query(usersCollection, where('organizationId', '==', idVariants[0]))
+          : query(usersCollection, where('organizationId', 'in', idVariants.slice(0, 10)))
       subscriptions.push(
         onSnapshot(
-          query(usersCollection, where('organizationId', '==', normalizedId)),
+          idQuery,
           handleSnapshot,
           options?.onError
         )

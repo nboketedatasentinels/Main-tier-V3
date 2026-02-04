@@ -12,6 +12,7 @@ import {
   orderBy,
   query,
   serverTimestamp,
+  setDoc,
   updateDoc,
   where,
 } from 'firebase/firestore'
@@ -49,6 +50,14 @@ const adminRoles: AdminRole[] = ['super_admin', 'partner', 'mentor', 'ambassador
 
 const getActorId = () => auth.currentUser?.uid
 const getActorName = () => auth.currentUser?.displayName || undefined
+
+const upsertUserMirrors = async (userId: string, payload: Record<string, unknown>) => {
+  const cleaned = removeUndefinedFields(payload)
+  await Promise.all([
+    setDoc(doc(db, 'profiles', userId), cleaned, { merge: true }),
+    setDoc(doc(db, 'users', userId), cleaned, { merge: true }),
+  ])
+}
 
 const mapOrganizationStatusToPartnerAssignment = (
   status?: OrganizationRecord['status'],
@@ -469,7 +478,7 @@ export const listenToAdminUsers = (
 export const createAdminUser = async (
   adminData: AdminFormData & Partial<AdminUserRecord> & { createdBy?: string; createdByName?: string },
 ) => {
-  const { createdBy, createdByName, ...rest } = adminData
+  const { createdBy, createdByName, assignedOrganizations, ...rest } = adminData
 
   // Check if user with this email already exists
   const existingUserQuery = query(usersCollection, where('email', '==', adminData.email), limit(1))
@@ -485,13 +494,13 @@ export const createAdminUser = async (
       accountStatus: adminData.accountStatus || 'active',
       updatedAt: serverTimestamp(),
     }
-    await updateDoc(doc(db, 'profiles', existingId), updatePayload)
+    await upsertUserMirrors(existingId, updatePayload)
     await logAdminAction({
       action: 'admin_role_assigned',
       adminId: createdBy,
       adminName: createdByName,
       userId: existingId,
-      metadata: { role: adminData.role, organizations: adminData.assignedOrganizations, wasExistingUser: true },
+      metadata: { role: adminData.role, organizations: assignedOrganizations, wasExistingUser: true },
     })
     return existingId
   }
@@ -504,20 +513,20 @@ export const createAdminUser = async (
     createdAt: serverTimestamp(),
     updatedAt: serverTimestamp(),
   }
-  const docRef = await addDoc(usersCollection, payload)
+  const docRef = doc(usersCollection)
+  await upsertUserMirrors(docRef.id, payload)
   await logAdminAction({
     action: 'admin_created',
     adminId: createdBy,
     adminName: createdByName,
     userId: docRef.id,
-    metadata: { role: adminData.role, organizations: adminData.assignedOrganizations },
+    metadata: { role: adminData.role, organizations: assignedOrganizations },
   })
   return docRef.id
 }
 
 export const updateAdminUser = async (adminId: string, updates: Partial<AdminUserRecord>) => {
-  const adminRef = doc(db, 'profiles', adminId)
-  await updateDoc(adminRef, { ...updates, updatedAt: serverTimestamp() })
+  await upsertUserMirrors(adminId, { ...updates, updatedAt: serverTimestamp() })
   await logAdminAction({
     action: 'admin_updated',
     userId: adminId,
@@ -526,8 +535,10 @@ export const updateAdminUser = async (adminId: string, updates: Partial<AdminUse
 }
 
 export const deleteAdminUser = async (adminId: string) => {
-  const adminRef = doc(db, 'profiles', adminId)
-  await deleteDoc(adminRef)
+  await Promise.all([
+    deleteDoc(doc(db, 'profiles', adminId)),
+    deleteDoc(doc(db, 'users', adminId)),
+  ])
   await logAdminAction({
     action: 'admin_deleted',
     userId: adminId,
@@ -599,8 +610,7 @@ export const assignOrganizations = async (adminId: string, orgIds: string[]) => 
 }
 
 export const updateAdminRole = async (adminId: string, newRole: AdminRole) => {
-  const adminRef = doc(db, 'profiles', adminId)
-  await updateDoc(adminRef, { role: newRole, updatedAt: serverTimestamp() })
+  await upsertUserMirrors(adminId, { role: newRole, updatedAt: serverTimestamp() })
   await logAdminAction({
     action: 'admin_role_updated',
     userId: adminId,
@@ -609,8 +619,7 @@ export const updateAdminRole = async (adminId: string, newRole: AdminRole) => {
 }
 
 export const toggleAdminStatus = async (adminId: string, status: 'active' | 'suspended') => {
-  const adminRef = doc(db, 'profiles', adminId)
-  await updateDoc(adminRef, { accountStatus: status, updatedAt: serverTimestamp() })
+  await upsertUserMirrors(adminId, { accountStatus: status, updatedAt: serverTimestamp() })
   await logAdminAction({
     action: 'admin_status_updated',
     userId: adminId,
@@ -635,7 +644,9 @@ export const listenToVerificationRequests = (onChange: (requests: VerificationRe
 }
 
 export const listenToRegistrations = (onChange: (registrations: RegistrationRecord[]) => void) => {
-  const registrationQuery = query(collection(db, 'users'), orderBy('createdAt', 'desc'), limit(8))
+  // Use the same canonical collection (`profiles`) as other super-admin user streams,
+  // so role/membership/org fields are consistent across dashboards.
+  const registrationQuery = query(usersCollection, orderBy('createdAt', 'desc'), limit(8))
   return onSnapshot(registrationQuery, (snapshot) => {
     onChange(
       snapshot.docs.map((docSnap) => {

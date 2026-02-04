@@ -38,6 +38,7 @@ import {
 import { canAccessOrganization } from '@/services/organizationAccessService'
 import { createReferral, generateReferralCode, validateReferralCode } from '@/services/referralService'
 import { JOURNEY_META, type JourneyType } from '@/config/pointsConfig'
+import { resolveEffectiveOrganization, resolveEffectiveRole } from '@/utils/authz'
 
 interface AuthProviderProps {
   children: React.ReactNode
@@ -189,6 +190,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       previous.accountStatus === next.accountStatus &&
       previous.transformationTier === next.transformationTier &&
       previous.companyId === next.companyId &&
+      previous.organizationId === next.organizationId &&
       previous.companyCode === next.companyCode &&
       previous.companyName === next.companyName &&
       previous.villageId === next.villageId &&
@@ -465,9 +467,39 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
             mergedUser = {
               ...baseUser,
               ...extras,
-              role: baseUser.role,
               id: firebaseUser.uid,
               journeyType: extras.journeyType || baseUser.journeyType || '4W',
+            }
+
+            // Keep users/{uid} aligned with admin-facing canonical fields (stored in profiles/{uid})
+            // so role/membership/org info stays consistent across dashboards.
+            try {
+              const canonicalKeys = [
+                'role',
+                'membershipStatus',
+                'transformationTier',
+                'companyId',
+                'companyCode',
+                'companyName',
+                'organizationId',
+                'assignedOrganizations',
+                'accountStatus',
+              ] as const satisfies ReadonlyArray<keyof UserProfile>
+
+              type CanonicalKey = typeof canonicalKeys[number]
+              const payload: Partial<Record<CanonicalKey, UserProfile[CanonicalKey]>> = {}
+              canonicalKeys.forEach((key) => {
+                const nextValue = mergedUser[key]
+                if (typeof nextValue !== 'undefined' && nextValue !== baseUser[key]) {
+                  payload[key] = nextValue as UserProfile[CanonicalKey]
+                }
+              })
+
+              if (Object.keys(payload).length) {
+                await updateDoc(userDocRef, { ...payload, updatedAt: serverTimestamp() })
+              }
+            } catch (syncError) {
+              console.warn('[Auth] Unable to sync canonical profile fields from profiles → users', syncError)
             }
             console.log('🟣 [Auth] Merged learner profile extras (user doc remains source of truth)')
           }
@@ -723,6 +755,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     console.log('🟠 [Auth] Setting up onAuthStateChanged')
 
     let unsubscribeProfile: (() => void) | null = null
+    let unsubscribeProfileExtras: (() => void) | null = null
     let isActive = true
 
     const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
@@ -731,6 +764,10 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       if (unsubscribeProfile) {
         unsubscribeProfile()
         unsubscribeProfile = null
+      }
+      if (unsubscribeProfileExtras) {
+        unsubscribeProfileExtras()
+        unsubscribeProfileExtras = null
       }
 
       setLoading(true)
@@ -782,9 +819,9 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       }
 
       /* -------- realtime updates (optional) -------- */
-      const profileRef = doc(db, 'users', currentUser.uid)
+      const userProfileDocRef = doc(db, 'users', currentUser.uid)
       unsubscribeProfile = onSnapshot(
-        profileRef,
+        userProfileDocRef,
         (snap) => {
           if (!snap.exists()) return
           const { id: _ignoredId, ...updatedData } = snap.data() as UserProfile
@@ -809,6 +846,38 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         }
       )
 
+      // Also listen to profiles/{uid} so role/membership/org changes written there are reflected
+      // immediately in the signed-in user experience (users/{uid} is still used elsewhere).
+      const profileExtrasDocRef = doc(db, 'profiles', currentUser.uid)
+      unsubscribeProfileExtras = onSnapshot(
+        profileExtrasDocRef,
+        (snap) => {
+          if (!snap.exists()) return
+          const { id: _ignoredId, ...updatedData } = snap.data() as UserProfile
+
+          const base = profileRef.current
+          const merged: UserProfile = {
+            ...(base || {}),
+            ...updatedData,
+            id: snap.id,
+            journeyType: updatedData.journeyType || base?.journeyType || '4W',
+            assignedOrganizations: updatedData.assignedOrganizations ?? base?.assignedOrganizations ?? [],
+          }
+
+          const rawRole = merged.role ?? UserRole.USER
+          merged.role = normalizeRole(rawRole) as StandardRole
+
+          updateProfileState(merged, 'realtime-snapshot:profiles')
+          recordProfileLoad(merged)
+          void maybeNormalizeStoredRole(merged, currentUser.uid)
+          void attemptComplementaryCourseAssignment(currentUser.uid)
+          setProfileStatus('ready')
+        },
+        (error) => {
+          console.error('[Auth] Realtime profiles listener error', error)
+        },
+      )
+
       return unsubscribeProfile
     })
 
@@ -816,6 +885,9 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       isActive = false
       if (unsubscribeProfile) {
         unsubscribeProfile()
+      }
+      if (unsubscribeProfileExtras) {
+        unsubscribeProfileExtras()
       }
       unsubscribe()
     }
@@ -1447,18 +1519,23 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   /* ------------------------------------------------------------------ */
   /* 🔹 Role Flags (LOGGED)                                              */
   /* ------------------------------------------------------------------ */
-  const normalizedRole = normalizeRole(profile?.role)
+  const { role: effectiveRole, source: effectiveRoleSource } = resolveEffectiveRole({
+    claimsRole,
+    profileRole: profile?.role,
+    fallback: 'user',
+  })
+  const { organizationId: effectiveOrganizationId } = resolveEffectiveOrganization(profile)
 
-  const isAdmin = normalizedRole === 'partner' || normalizedRole === 'super_admin'
-  const isSuperAdmin = normalizedRole === 'super_admin'
-  const isMentor = normalizedRole === 'mentor'
-  const isAmbassador = normalizedRole === 'ambassador'
+  const isAdmin = effectiveRole === 'partner' || effectiveRole === 'super_admin'
+  const isSuperAdmin = effectiveRole === 'super_admin'
+  const isMentor = effectiveRole === 'mentor'
+  const isAmbassador = effectiveRole === 'ambassador'
   const isPaid =
     ['partner', 'mentor', 'ambassador', 'super_admin'].includes(
-      normalizedRole ?? ''
+      effectiveRole ?? ''
     ) ||
-    normalizedRole === 'paid_member' ||
-    (normalizedRole === 'user' && profile?.membershipStatus === 'paid')
+    effectiveRole === 'paid_member' ||
+    (effectiveRole === 'user' && profile?.membershipStatus === 'paid')
 
   /* ------------------------------------------------------------------ */
   const value: AuthContextType = {
@@ -1478,8 +1555,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     signInWithGoogle,
     resetPassword,
     updateProfile,
-    hasRole: (r: StandardRole) => normalizedRole === r,
-    hasAnyRole: (roles: StandardRole[]) => (normalizedRole ? roles.includes(normalizedRole as StandardRole) : false),
+    hasRole: (r: StandardRole) => effectiveRole === r,
+    hasAnyRole: (roles: StandardRole[]) => roles.includes(effectiveRole),
     isAdmin,
     isSuperAdmin,
     isMentor,
@@ -1488,17 +1565,20 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     isCorporateMember:
       profile?.transformationTier?.toLowerCase().includes('corporate') ?? false,
     assignedOrganizations: profile?.assignedOrganizations ?? [],
-    hasFullOrganizationAccess: normalizedRole === 'super_admin',
+    hasFullOrganizationAccess: effectiveRole === 'super_admin',
     canAccessOrganization: async (organizationId: string) => {
-      if (!organizationId || !user?.uid || !profile?.role) return false
+      if (!organizationId || !user?.uid) return false
       return canAccessOrganization({
-        role: profile.role,
+        role: effectiveRole,
         userId: user.uid,
         organizationId,
       })
     },
     updateDashboardPreferences: async () => ({ error: null }),
     claimsRole,
+    effectiveRole,
+    effectiveRoleSource,
+    effectiveOrganizationId,
     refreshAdminSession,
     refreshProfile,
     // Account Linking

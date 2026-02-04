@@ -8,7 +8,7 @@ import { getLandingPathForRole } from '@/utils/roleRouting'
  * based on their role and profile settings
  */
 export default function RoleRedirect() {
-  const { loading, profileLoading, user, profile } = useAuth()
+  const { loading, profileLoading, user, profile, effectiveRole, effectiveRoleSource } = useAuth()
   const [searchParams] = useSearchParams()
 
   // Show nothing while loading
@@ -26,8 +26,12 @@ export default function RoleRedirect() {
     return <Navigate to="/auth/profile-missing" replace />
   }
 
+  if (effectiveRoleSource === 'fallback') {
+    return <Navigate to="/auth/profile-missing" replace />
+  }
+
   // Compute landing path using centralized logic
-  const landingPath = getLandingPathForRole(profile, searchParams)
+  const landingPath = getLandingPathForRole({ ...profile, role: effectiveRole }, searchParams)
 
   // Redirect to the computed landing path
   return <Navigate to={landingPath} replace />

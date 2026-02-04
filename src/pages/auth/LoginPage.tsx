@@ -34,6 +34,8 @@ export const LoginPage: React.FC = () => {
     user,
     profile,
     profileLoading,
+    effectiveRole,
+    effectiveRoleSource,
     refreshProfile,
     pendingLinkEmail,
     showAccountLinkingModal,
@@ -86,7 +88,12 @@ export const LoginPage: React.FC = () => {
     if (!user || !profile) return
 
     // ✅ Correct call signature: (profile, searchParams)
-    const landingPath = getLandingPathForRole(profile, searchParams)
+    if (effectiveRoleSource === 'fallback') {
+      navigate('/auth/profile-missing', { replace: true })
+      return
+    }
+
+    const landingPath = getLandingPathForRole({ ...profile, role: effectiveRole }, searchParams)
 
     console.log('🎯 LoginPage: Calculated landing path:', landingPath)
 
@@ -99,7 +106,7 @@ export const LoginPage: React.FC = () => {
 
     console.log('🎯 LoginPage: Navigating to:', landingPath)
     navigate(landingPath, { replace: true })
-  }, [user, profile, profileLoading, navigate, searchParams])
+  }, [user, profile, profileLoading, effectiveRole, effectiveRoleSource, navigate, searchParams])
 
   useEffect(() => {
     if (!user || profile) {

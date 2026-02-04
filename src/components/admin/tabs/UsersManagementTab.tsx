@@ -52,8 +52,10 @@ import {
   updateUser,
 } from '@/services/userManagementService'
 import { CreateOrganizationModal } from '@/components/super-admin/CreateOrganizationModal'
+import { OrganizationAssignmentsPicker } from '@/components/super-admin/OrganizationAssignmentsPicker'
 import { fetchAdminOrganizationsList } from '@/services/admin/adminUsersService'
 import { formatAdminFirestoreError } from '@/services/admin/adminErrors'
+import { assignOrganizations as assignAdminOrganizations } from '@/services/superAdminService'
 import { OrganizationRecord } from '@/types/admin'
 
 const roleOptions: ManagedUserRole[] = ['user', 'partner', 'super_admin', 'mentor', 'ambassador']
@@ -253,11 +255,21 @@ export const UsersManagementTab = ({ users: propUsers, loading: propLoading }: U
         membershipStatus: membershipValue,
       }
 
+      const wasPartner = promotionTarget.role === 'partner' || promotionTarget.role === 'admin'
+      const isPartner = roleValue === 'partner' || roleValue === 'admin'
+      let partnerOrgIds: string[] | null = null
+
       if (isLeadershipRole) {
         updates.companyId = null
         updates.companyName = null
         updates.companyCode = null
-        updates.assignedOrganizations = selectedOrgIds
+        if (isPartner) {
+          // Keep partner assignment logic consistent with Organization Management:
+          // use the super-admin assignment service so org docs stay in sync.
+          partnerOrgIds = selectedOrgIds
+        } else {
+          updates.assignedOrganizations = selectedOrgIds
+        }
       } else if (isPaidUserRole) {
         const orgId = selectedOrgIds[0] || null
         const organization = organizations.find((org) => org.id === orgId)
@@ -272,7 +284,16 @@ export const UsersManagementTab = ({ users: propUsers, loading: propLoading }: U
         updates.assignedOrganizations = []
       }
 
+      // If we're removing partner role, clear partner assignments first so org links are cleaned up.
+      if (wasPartner && !isPartner) {
+        await assignAdminOrganizations(promotionTarget.id, [])
+      }
+
       await updateUser(promotionTarget.id, updates)
+
+      if (partnerOrgIds) {
+        await assignAdminOrganizations(promotionTarget.id, partnerOrgIds)
+      }
       toast({ title: 'User updated', description: 'Role and membership status synchronized', status: 'success' })
       closePromotionModal()
     } catch (err) {
@@ -281,12 +302,6 @@ export const UsersManagementTab = ({ users: propUsers, loading: propLoading }: U
     } finally {
       setPromotionLoading(false)
     }
-  }
-
-  const togglePromotionOrganization = (orgId: string) => {
-    setPromotionOrgIds((prev) =>
-      prev.includes(orgId) ? prev.filter((id) => id !== orgId) : [...prev, orgId],
-    )
   }
 
   const handleOrganizationCreated = async (organization: OrganizationRecord) => {
@@ -721,30 +736,18 @@ export const UsersManagementTab = ({ users: propUsers, loading: propLoading }: U
                   <FormControl isRequired>
                     <FormLabel>{isLeadershipRole ? 'Assign organizations' : 'Assign organization'}</FormLabel>
                     {isLeadershipRole ? (
-                      <Stack spacing={2} maxH="200px" overflowY="auto">
-                        {organizations.length ? (
-                          organizations.map((org) => (
-                            <Checkbox
-                              key={org.id}
-                              isChecked={promotionOrgIds.includes(org.id)}
-                              onChange={() => togglePromotionOrganization(org.id)}
-                            >
-                              <HStack spacing={1}>
-                                <Text fontWeight="semibold">{org.name || org.code || org.id}</Text>
-                                {org.code ? (
-                                  <Text fontSize="xs" color="gray.500">
-                                    ({org.code})
-                                  </Text>
-                                ) : null}
-                              </HStack>
-                            </Checkbox>
-                          ))
-                        ) : (
-                          <Text color="gray.500" fontSize="sm">
-                            No organizations available yet.
-                          </Text>
-                        )}
-                      </Stack>
+                      organizations.length ? (
+                        <OrganizationAssignmentsPicker
+                          organizations={organizations}
+                          value={promotionOrgIds}
+                          onChange={setPromotionOrgIds}
+                          helperText="Search and add one or more organizations."
+                        />
+                      ) : (
+                        <Text color="gray.500" fontSize="sm">
+                          No organizations available yet.
+                        </Text>
+                      )
                     ) : (
                       <Select
                         placeholder="Select existing organization"

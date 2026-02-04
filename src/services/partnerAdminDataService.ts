@@ -2,6 +2,7 @@ import { collection, getDocs, query, where } from 'firebase/firestore'
 import { db } from '@/services/firebase'
 import { fetchOrganizationsByIds } from '@/services/organizationService'
 import { normalizeTimestamp } from '@/utils/partnerDashboardUtils'
+import { normalizeRole } from '@/utils/role'
 import type {
   PartnerAdminDataSnapshot,
   PartnerAdminPointsOverview,
@@ -10,7 +11,7 @@ import type {
 } from '@/types/admin'
 
 // ============================================================================
-// CRITICAL FIX: Query users collection by companyCode (matching Company Admin)
+// CRITICAL FIX: Query profiles collection by organization key (matching Company Admin)
 // 
 // ROOT CAUSE: Partners are assigned organization document IDs (e.g., "3fA9xKlmPq")
 // but users have companyCode values (e.g., "T4L-ACME"). The old code was trying
@@ -18,11 +19,11 @@ import type {
 //
 // THE FIX: 
 // 1. Resolve org IDs → org documents → org.code values
-// 2. Query users WHERE companyCode IN [org codes]
-// 3. This matches exactly how Company Admin queries users
+// 2. Query profiles WHERE companyCode/companyId/legacy aliases match
+// 3. This keeps Partner + Admin views consistent
 // ============================================================================
 
-const usersCollection = collection(db, 'users')
+const profilesCollection = collection(db, 'profiles')
 
 const normalizeAssignments = (assignments: PartnerAssignment[] = []): PartnerAssignment[] => {
   const normalized: PartnerAssignment[] = []
@@ -68,13 +69,19 @@ const fetchUsersByCompanyCodes = async (
     if (!code) continue
     
     try {
-      const snapshot = await getDocs(
-        query(usersCollection, where('companyCode', '==', code))
-      )
+      const snapshots = await Promise.all([
+        getDocs(query(profilesCollection, where('companyCode', '==', code))),
+        getDocs(query(profilesCollection, where('company_code', '==', code))),
+        getDocs(query(profilesCollection, where('organization_code', '==', code))),
+        getDocs(query(profilesCollection, where('companyId', '==', code))),
+        getDocs(query(profilesCollection, where('organizationId', '==', code))),
+      ])
 
-      console.log(`[fetchUsersByCompanyCodes] Found ${snapshot.docs.length} users for companyCode="${code}"`)
+      const docs = snapshots.flatMap((snapshot) => snapshot.docs)
 
-      snapshot.docs.forEach((docSnap) => {
+      console.log(`[fetchUsersByCompanyCodes] Found ${docs.length} profiles for org key="${code}"`)
+
+      docs.forEach((docSnap) => {
         if (usersMap.has(docSnap.id)) return // Skip duplicates
         
         const data = docSnap.data() as {
@@ -95,6 +102,9 @@ const fetchUsersByCompanyCodes = async (
           photoURL?: string
           organizationId?: string
           companyCode?: string
+          organization_id?: string
+          company_code?: string
+          companyId?: string
           progressPercent?: number
           currentWeek?: number
           weeklyEarned?: number
@@ -113,27 +123,15 @@ const fetchUsersByCompanyCodes = async (
           data.email ||
           'Unknown user'
 
-        // Normalize role to lowercase and map legacy roles to standard roles
-        const rawRole = (data.role || 'learner').toLowerCase()
-        // Map legacy/variant roles to standard roles
-        // "paid_member" and similar are organization-backed learners
-        const roleMapping: Record<string, string> = {
-          'paid_member': 'learner',
-          'paid_user': 'learner',
-          'member': 'learner',
-          'user': 'learner',
-          'student': 'learner',
-        }
-        const role = roleMapping[rawRole] || rawRole
+        const rawRole = (data.role || '').toString().trim().toLowerCase()
+        const standardRole = normalizeRole(data.role)
 
         const normalizedRole: 'learner' | 'mentor' | 'user' | 'team_leader' =
-          role === 'mentor'
-            ? 'mentor'
-            : role === 'team_leader'
-              ? 'team_leader'
-              : role === 'user'
-                ? 'user'
-                : 'learner'
+          rawRole === 'team_leader'
+            ? 'team_leader'
+            : standardRole === 'mentor'
+              ? 'mentor'
+              : 'learner'
 
         // Normalize status
         const accountStatus = data.accountStatus || data.status || 'active'
@@ -151,6 +149,17 @@ const fetchUsersByCompanyCodes = async (
 
         const normalizedCreatedAt = normalizeTimestamp(data.createdAt) || undefined
 
+        const organizationId =
+          data.organizationId?.trim() ||
+          data.organization_id?.trim() ||
+          data.companyId?.trim() ||
+          undefined
+
+        const companyCode =
+          data.companyCode?.trim() ||
+          data.company_code?.trim() ||
+          undefined
+
         usersMap.set(docSnap.id, {
           id: docSnap.id,
           name: fullName,
@@ -162,8 +171,8 @@ const fetchUsersByCompanyCodes = async (
           lastActive: normalizedLastActive,
           createdAt: normalizedCreatedAt,
           avatarUrl: data.avatarUrl ?? data.photoURL ?? null,
-          organizationId: data.organizationId?.trim() || undefined,
-          companyCode: data.companyCode?.trim() || code, // Use the code we queried with as fallback
+          organizationId,
+          companyCode: companyCode || code, // Use the query key as fallback
           
           // Progress fields with defaults
           progressPercent: data.progressPercent ?? 0,

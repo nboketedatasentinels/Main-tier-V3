@@ -1,7 +1,9 @@
 import {
+  arrayUnion,
   collection,
   doc,
   getDoc,
+  increment,
   runTransaction,
   serverTimestamp,
   setDoc,
@@ -64,7 +66,7 @@ export const approveUpgradeRequestWithOrganizationAssignment = async (
     if (!orgSnap.exists()) {
       throw new Error('Organization not found.')
     }
-    const orgData = orgSnap.data() as { name?: string; status?: string }
+    const orgData = orgSnap.data() as { name?: string; code?: string; status?: string }
     if (orgData.status && orgData.status !== 'active') {
       throw new Error('Organization is not active.')
     }
@@ -77,6 +79,7 @@ export const approveUpgradeRequestWithOrganizationAssignment = async (
       organizationId?: string | null
       companyId?: string | null
       villageId?: string | null
+      dashboardPreferences?: Record<string, unknown>
     } | undefined
 
     if (!userData) {
@@ -89,11 +92,20 @@ export const approveUpgradeRequestWithOrganizationAssignment = async (
       throw new Error('User is not eligible for upgrade.')
     }
 
+    const existingDashboardPreferences = userData.dashboardPreferences ?? {}
     const updates = {
       role: 'paid_member',
       membershipStatus: 'paid',
+      transformationTier: 'corporate_member',
       organizationId,
       companyId: organizationId,
+      companyCode: orgData.code ?? null,
+      companyName: orgData.name ?? null,
+      assignedOrganizations: arrayUnion(organizationId),
+      dashboardPreferences: {
+        ...existingDashboardPreferences,
+        lockedToFreeExperience: false,
+      },
       updatedAt: serverTimestamp(),
       lastModifiedBy: adminId ?? null,
       lastModifiedAt: serverTimestamp(),
@@ -101,6 +113,7 @@ export const approveUpgradeRequestWithOrganizationAssignment = async (
 
     transaction.set(usersRef, updates, { merge: true })
     transaction.set(profilesRef, updates, { merge: true })
+    transaction.update(orgRef, { memberCount: increment(1), updatedAt: serverTimestamp() })
     transaction.update(requestRef, {
       status: 'approved',
       reviewed_by: adminId ?? null,

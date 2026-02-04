@@ -59,7 +59,7 @@ import { UnauthorizedPage } from '@/pages/errors/UnauthorizedPage'
 import { SuspendedPage } from '@/pages/errors/SuspendedPage'
 
 const DashboardRouter = () => {
-  const { loading, profileLoading, user, profile } = useAuth()
+  const { loading, profileLoading, user, profile, effectiveRole, effectiveRoleSource } = useAuth()
   const [searchParams] = useSearchParams()
 
   if (loading || profileLoading) {
@@ -74,7 +74,11 @@ const DashboardRouter = () => {
     return <Navigate to="/auth/profile-missing" replace />
   }
 
-  const landing = getLandingPathForRole(profile, searchParams)
+  if (effectiveRoleSource === 'fallback') {
+    return <Navigate to="/auth/profile-missing" replace />
+  }
+
+  const landing = getLandingPathForRole({ ...profile, role: effectiveRole }, searchParams)
 
   if (!landing.startsWith('/app/dashboard/')) {
     return <Navigate to={landing} replace />

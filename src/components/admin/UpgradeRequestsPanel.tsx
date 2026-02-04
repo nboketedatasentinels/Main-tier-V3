@@ -28,6 +28,8 @@ import {
 } from '@/hooks/admin/useAdminUpgradeRequests'
 import { UpgradeRequest, UpgradeRequestStatus } from '@/types/upgrade'
 import { useAuth } from '@/hooks/useAuth'
+import { useUserDirectory } from '@/hooks/useUserDirectory'
+import { getDisplayName } from '@/utils/displayName'
 
 const statusColors: Record<UpgradeRequestStatus, string> = {
   pending: 'yellow',
@@ -68,6 +70,8 @@ export const UpgradeRequestsPanel: React.FC<UpgradeRequestsPanelProps> = ({
     if (filter === 'all') return resolvedRequests
     return resolvedRequests.filter((request) => request.status === filter)
   }, [filter, resolvedRequests])
+
+  const { directory: userDirectory } = useUserDirectory(visibleRequests.map((request) => request.user_id))
 
   useEffect(() => {
     if (!resolvedLoading && !resolvedError) {
@@ -149,9 +153,29 @@ export const UpgradeRequestsPanel: React.FC<UpgradeRequestsPanelProps> = ({
                 </Tr>
               </Thead>
               <Tbody>
-                {visibleRequests.map((request) => (
-                  <Tr key={request.id}>
-                    <Td>{request.user_id}</Td>
+                {visibleRequests.map((request) => {
+                  const directoryEntry = userDirectory.get(request.user_id)
+                  const email = request.userDetails?.email ?? directoryEntry?.email ?? null
+                  const name = getDisplayName(
+                    {
+                      ...request.userDetails,
+                      email: email ?? undefined,
+                    },
+                    directoryEntry?.name ?? 'Unknown user',
+                  )
+
+                  return (
+                    <Tr key={request.id}>
+                    <Td>
+                      <Stack spacing={0}>
+                        <Text fontWeight="semibold" color="gray.800">
+                          {name}
+                        </Text>
+                        <Text fontSize="sm" color="gray.500">
+                          {email || 'Email unavailable'}
+                        </Text>
+                      </Stack>
+                    </Td>
                     <Td>{request.current_tier ?? 'N/A'}</Td>
                     <Td>{request.requested_tier ?? 'N/A'}</Td>
                     <Td>{formatDistanceToNow(new Date(request.requested_at))} ago</Td>
@@ -183,7 +207,8 @@ export const UpgradeRequestsPanel: React.FC<UpgradeRequestsPanelProps> = ({
                       </HStack>
                     </Td>
                   </Tr>
-                ))}
+                  )
+                })}
               </Tbody>
             </Table>
           </Box>

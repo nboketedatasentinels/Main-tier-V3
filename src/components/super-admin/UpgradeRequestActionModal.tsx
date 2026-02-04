@@ -1,5 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react'
 import {
+  Alert,
+  AlertIcon,
   Badge,
   Box,
   Button,
@@ -26,92 +28,92 @@ import {
   Tabs,
   Text,
   Textarea,
+  useToast,
 } from '@chakra-ui/react'
-import { fetchOrganizations } from '@/services/superAdminService'
-import type { OrganizationRecord } from '@/types/admin'
+import { CreateOrganizationModal } from '@/components/super-admin/CreateOrganizationModal'
+import { fetchAdminOrganizationsList } from '@/services/admin/adminUsersService'
 import type { UpgradeRequest } from '@/types/upgrade'
+import { getDisplayName } from '@/utils/displayName'
 
 type ActionMode = 'existing' | 'new'
+
+type OrganizationOption = { id: string; name: string; code?: string }
 
 interface UpgradeRequestActionModalProps {
   isOpen: boolean
   onClose: () => void
   request: UpgradeRequest
   isSubmitting?: boolean
+  adminId?: string
+  adminName?: string
   onAssignExisting: (payload: {
     organizationId: string
     sendWelcomeEmail: boolean
     notes?: string
   }) => Promise<void>
-  onCreateNew: (payload: {
-    organizationData: OrganizationRecord
-    sendWelcomeEmail: boolean
-    notes?: string
-  }) => Promise<void>
 }
-
-const generateCode = (name: string) =>
-  name
-    .trim()
-    .toUpperCase()
-    .replace(/[^A-Z0-9]+/g, '')
-    .slice(0, 8) || 'ORG'
 
 export const UpgradeRequestActionModal: React.FC<UpgradeRequestActionModalProps> = ({
   isOpen,
   onClose,
   request,
   isSubmitting = false,
+  adminId,
+  adminName,
   onAssignExisting,
-  onCreateNew,
 }) => {
+  const toast = useToast()
+  const requesterEmail = request.userDetails?.email?.trim() || ''
+  const requesterName = useMemo(
+    () =>
+      getDisplayName(
+        {
+          fullName: request.userDetails?.fullName ?? undefined,
+          firstName: request.userDetails?.firstName ?? undefined,
+          lastName: request.userDetails?.lastName ?? undefined,
+          email: requesterEmail || undefined,
+        },
+        'Unknown user',
+      ),
+    [request.userDetails?.firstName, request.userDetails?.fullName, request.userDetails?.lastName, requesterEmail],
+  )
   const [mode, setMode] = useState<ActionMode>('existing')
-  const [organizations, setOrganizations] = useState<OrganizationRecord[]>([])
+  const [organizations, setOrganizations] = useState<OrganizationOption[]>([])
   const [search, setSearch] = useState('')
   const [selectedOrgId, setSelectedOrgId] = useState('')
   const [orgLoading, setOrgLoading] = useState(false)
   const [sendWelcomeEmail, setSendWelcomeEmail] = useState(true)
   const [notes, setNotes] = useState('')
-  const [newOrgName, setNewOrgName] = useState(request.villageName || '')
-  const [newOrgCode, setNewOrgCode] = useState(generateCode(request.villageName || ''))
-  const [programDuration, setProgramDuration] = useState('')
-  const [teamSize, setTeamSize] = useState('1')
-  const [cohortStartDate, setCohortStartDate] = useState('')
-  const [courseAssignments, setCourseAssignments] = useState('')
-  const [useVillageDetails, setUseVillageDetails] = useState(Boolean(request.villageName))
+  const [createOrgOpen, setCreateOrgOpen] = useState(false)
+  const [formError, setFormError] = useState<string | null>(null)
 
   useEffect(() => {
     if (!isOpen) return
     setMode('existing')
     setNotes('')
     setSendWelcomeEmail(true)
-    setNewOrgName(request.villageName || '')
-    setNewOrgCode(generateCode(request.villageName || ''))
-    setProgramDuration('')
-    setTeamSize('1')
-    setCohortStartDate('')
-    setCourseAssignments('')
-    setUseVillageDetails(Boolean(request.villageName))
-  }, [isOpen, request.villageName])
+    setSelectedOrgId('')
+    setSearch('')
+    setCreateOrgOpen(false)
+    setFormError(null)
+  }, [isOpen])
 
   useEffect(() => {
     if (!isOpen) return
     const loadOrganizations = async () => {
       setOrgLoading(true)
       try {
-        const items = await fetchOrganizations()
+        const items = await fetchAdminOrganizationsList()
         setOrganizations(items)
+      } catch (error) {
+        console.error(error)
+        setFormError('Unable to load organisations. Please try again.')
       } finally {
         setOrgLoading(false)
       }
     }
     void loadOrganizations()
   }, [isOpen])
-
-  useEffect(() => {
-    if (!newOrgName.trim()) return
-    setNewOrgCode(generateCode(newOrgName))
-  }, [newOrgName])
 
   const filteredOrganizations = useMemo(() => {
     const term = search.trim().toLowerCase()
@@ -123,44 +125,50 @@ export const UpgradeRequestActionModal: React.FC<UpgradeRequestActionModalProps>
   const selectedOrg = organizations.find((org) => org.id === selectedOrgId)
 
   const handleAssign = async () => {
-    if (!selectedOrgId) return
+    if (!selectedOrgId) {
+      toast({ title: 'Select an organization before approving', status: 'warning' })
+      return
+    }
+    setFormError(null)
     await onAssignExisting({ organizationId: selectedOrgId, sendWelcomeEmail, notes: notes.trim() || undefined })
   }
 
-  const handleCreate = async () => {
-    if (!newOrgName.trim() || !programDuration.trim()) return
-    const assignments = courseAssignments
-      .split(',')
-      .map((entry) => entry.trim())
-      .filter(Boolean)
-    const organizationData: OrganizationRecord = {
-      name: newOrgName.trim(),
-      code: newOrgCode.trim() || generateCode(newOrgName),
-      status: 'active',
-      teamSize: Number(teamSize) || 1,
-      programDuration: Number(programDuration) || undefined,
-      cohortStartDate: cohortStartDate || undefined,
-      courseAssignments: assignments.length ? assignments : undefined,
-      description: useVillageDetails ? request.villageDescription || undefined : undefined,
-      village: useVillageDetails ? request.villageName || undefined : undefined,
+  const handleOrganizationCreated = (organization: { id?: string; name?: string; code?: string }) => {
+    const organizationId = organization.id
+    if (!organizationId) {
+      setFormError('Organization created but missing an ID. Please refresh and try again.')
+      return
     }
-    await onCreateNew({ organizationData, sendWelcomeEmail, notes: notes.trim() || undefined })
+
+    setOrganizations((prev) => {
+      const nextEntry: OrganizationOption = {
+        id: organizationId,
+        name: organization.name || 'Untitled organization',
+        code: organization.code,
+      }
+      return [nextEntry, ...prev.filter((org) => org.id !== organizationId)]
+    })
+    setSelectedOrgId(organizationId)
+    setMode('existing')
+    toast({ title: 'Organization created', description: 'Selected for this upgrade approval.', status: 'success' })
   }
 
   return (
-    <Modal isOpen={isOpen} onClose={onClose} size="xl">
-      <ModalOverlay />
-      <ModalContent>
-        <ModalHeader>Approve upgrade request</ModalHeader>
-        <ModalCloseButton />
-        <ModalBody>
-          <Stack spacing={5}>
+    <>
+      <Modal isOpen={isOpen} onClose={onClose} size="xl">
+        <ModalOverlay />
+        <ModalContent>
+          <ModalHeader>Approve upgrade request</ModalHeader>
+          <ModalCloseButton />
+          <ModalBody>
+            <Stack spacing={5}>
             <Box>
               <Heading size="sm" mb={2}>
                 Request summary
               </Heading>
               <Text fontSize="sm">
-                {request.userDetails?.fullName || request.user_id} requested {request.requested_tier || 'an upgrade'}.
+                {requesterName}
+                {requesterEmail ? ` (${requesterEmail})` : ''} requested {request.requested_tier || 'an upgrade'}.
               </Text>
               {request.villageName && (
                 <Badge mt={2} colorScheme="purple" variant="subtle">
@@ -169,6 +177,13 @@ export const UpgradeRequestActionModal: React.FC<UpgradeRequestActionModalProps>
               )}
             </Box>
 
+            {formError ? (
+              <Alert status="error">
+                <AlertIcon />
+                {formError}
+              </Alert>
+            ) : null}
+
             <Tabs
               index={mode === 'existing' ? 0 : 1}
               onChange={(index) => setMode(index === 0 ? 'existing' : 'new')}
@@ -176,22 +191,22 @@ export const UpgradeRequestActionModal: React.FC<UpgradeRequestActionModalProps>
               variant="enclosed"
             >
               <TabList>
-                <Tab>Add to existing organization</Tab>
-                <Tab>Create new organization</Tab>
+                <Tab>Add to organisation</Tab>
+                <Tab>Create organisation</Tab>
               </TabList>
               <TabPanels>
                 <TabPanel px={0}>
                   <Stack spacing={3}>
                     <FormControl>
-                      <FormLabel>Search organizations</FormLabel>
+                      <FormLabel>Search organisations</FormLabel>
                       <Input value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Search by name or code" />
                     </FormControl>
                     <FormControl isRequired>
-                      <FormLabel>Select organization</FormLabel>
+                      <FormLabel>Select organisation</FormLabel>
                       <Select
                         value={selectedOrgId}
                         onChange={(event) => setSelectedOrgId(event.target.value)}
-                        placeholder={orgLoading ? 'Loading...' : 'Select organization'}
+                        placeholder={orgLoading ? 'Loading...' : 'Select organisation'}
                       >
                         {filteredOrganizations.map((org) => (
                           <option key={org.id} value={org.id}>
@@ -205,11 +220,7 @@ export const UpgradeRequestActionModal: React.FC<UpgradeRequestActionModalProps>
                       <Box borderWidth="1px" borderRadius="md" p={3} bg="gray.50">
                         <Text fontWeight="semibold">{selectedOrg.name}</Text>
                         <Text fontSize="sm" color="gray.600">
-                          Code: {selectedOrg.code || '—'} · Status: {selectedOrg.status}
-                        </Text>
-                        <Text fontSize="sm" color="gray.600">
-                          Members: {selectedOrg.assignmentCount || selectedOrg.teamSize || '—'} · Partner:{' '}
-                          {selectedOrg.assignedPartnerName || '—'}
+                          Code: {selectedOrg.code || '—'}
                         </Text>
                       </Box>
                     )}
@@ -226,52 +237,29 @@ export const UpgradeRequestActionModal: React.FC<UpgradeRequestActionModalProps>
                 </TabPanel>
                 <TabPanel px={0}>
                   <Stack spacing={3}>
-                    <FormControl isRequired>
-                      <FormLabel>Organization name</FormLabel>
-                      <Input value={newOrgName} onChange={(event) => setNewOrgName(event.target.value)} />
-                    </FormControl>
-                    <FormControl isRequired>
-                      <FormLabel>Organization code</FormLabel>
-                      <Input value={newOrgCode} onChange={(event) => setNewOrgCode(event.target.value)} />
-                    </FormControl>
-                    <FormControl isRequired>
-                      <FormLabel>Program duration (weeks)</FormLabel>
-                      <Input
-                        type="number"
-                        value={programDuration}
-                        onChange={(event) => setProgramDuration(event.target.value)}
-                        min={1}
-                      />
-                    </FormControl>
-                    <FormControl>
-                      <FormLabel>Team size</FormLabel>
-                      <Input type="number" value={teamSize} onChange={(event) => setTeamSize(event.target.value)} min={1} />
-                    </FormControl>
-                    <FormControl>
-                      <FormLabel>Cohort start date</FormLabel>
-                      <Input type="date" value={cohortStartDate} onChange={(event) => setCohortStartDate(event.target.value)} />
-                    </FormControl>
-                    <FormControl>
-                      <FormLabel>Course assignments (comma separated)</FormLabel>
-                      <Input
-                        value={courseAssignments}
-                        onChange={(event) => setCourseAssignments(event.target.value)}
-                        placeholder="Leadership 101, Coaching Basics"
-                      />
-                    </FormControl>
-                    <Checkbox
-                      isChecked={useVillageDetails}
-                      onChange={(event) => setUseVillageDetails(event.target.checked)}
+                    <Text fontSize="sm" color="gray.600">
+                      Create the organisation using the standard Organisation Management form. Once created, it will be
+                      selected automatically for this upgrade approval.
+                    </Text>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      colorScheme="purple"
+                      onClick={() => {
+                        setFormError(null)
+                        setCreateOrgOpen(true)
+                      }}
+                      isDisabled={isSubmitting}
+                      alignSelf="flex-start"
                     >
-                      Use village details for organization profile
-                    </Checkbox>
+                      Create new organisation
+                    </Button>
                     <Box borderWidth="1px" borderRadius="md" p={3}>
                       <Text fontSize="sm" fontWeight="semibold" mb={1}>
                         Preview
                       </Text>
                       <Text fontSize="sm" color="gray.600">
-                        A new organization will be created with this learner as the first paid member. You can refine
-                        the full organization setup later.
+                        After creating the organisation, it will be selected automatically—then click “Assign & Approve”.
                       </Text>
                     </Box>
                   </Stack>
@@ -293,24 +281,33 @@ export const UpgradeRequestActionModal: React.FC<UpgradeRequestActionModalProps>
                 <Textarea value={notes} onChange={(event) => setNotes(event.target.value)} placeholder="Optional notes for internal records" />
               </FormControl>
             </Box>
-          </Stack>
-        </ModalBody>
-        <ModalFooter>
-          <HStack spacing={3}>
-            <Button variant="ghost" onClick={onClose} isDisabled={isSubmitting}>
-              Cancel
-            </Button>
-            <Button
-              colorScheme="purple"
-              onClick={mode === 'existing' ? handleAssign : handleCreate}
-              isLoading={isSubmitting}
-              isDisabled={mode === 'existing' ? !selectedOrgId : !newOrgName.trim() || !programDuration.trim()}
-            >
-              Assign &amp; Approve
-            </Button>
-          </HStack>
-        </ModalFooter>
-      </ModalContent>
-    </Modal>
+            </Stack>
+          </ModalBody>
+          <ModalFooter>
+            <HStack spacing={3}>
+              <Button variant="ghost" onClick={onClose} isDisabled={isSubmitting}>
+                Cancel
+              </Button>
+              <Button
+                colorScheme="purple"
+                onClick={handleAssign}
+                isLoading={isSubmitting}
+                isDisabled={!selectedOrgId}
+              >
+                Assign &amp; Approve
+              </Button>
+            </HStack>
+          </ModalFooter>
+        </ModalContent>
+      </Modal>
+
+      <CreateOrganizationModal
+        isOpen={createOrgOpen}
+        onClose={() => setCreateOrgOpen(false)}
+        onCreated={handleOrganizationCreated}
+        adminId={adminId}
+        adminName={adminName}
+      />
+    </>
   )
 }
