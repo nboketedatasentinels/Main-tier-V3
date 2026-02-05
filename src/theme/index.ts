@@ -73,6 +73,9 @@ const colors = {
   border: {
     subtle: '#E2E8F0',
     strong: '#CBD5E1',
+    // WCAG 2.1 1.4.11 (Non-text Contrast): ensure component boundaries (inputs/outline buttons) are visible
+    // against white/light surfaces (>= 3:1 vs #FFFFFF).
+    control: '#8896AA',
     card: '#D6DEE8',
   },
   // Accent Colors - For highlights and status
@@ -224,6 +227,18 @@ const components = {
         _hover: {
           bg: 'surface.subtle',
           color: 'text.primary',
+        },
+      },
+      outline: {
+        bg: 'surface.default',
+        color: 'text.primary',
+        border: '1px solid',
+        borderColor: 'border.control',
+        _hover: {
+          bg: 'surface.subtle',
+        },
+        _active: {
+          bg: 'surface.muted',
         },
       },
       accent: {
@@ -408,11 +423,14 @@ const components = {
     variants: {
       outline: {
         field: {
-          borderColor: 'border.subtle',
+          borderColor: 'border.control',
           borderRadius: 'lg',
           bg: 'surface.default',
           _placeholder: {
             color: 'text.subtle',
+          },
+          _hover: {
+            borderColor: 'border.control',
           },
           _focus: {
             borderColor: 'brand.primary',
@@ -434,9 +452,12 @@ const components = {
     variants: {
       outline: {
         field: {
-          borderColor: 'border.subtle',
+          borderColor: 'border.control',
           borderRadius: 'lg',
           bg: 'surface.default',
+          _hover: {
+            borderColor: 'border.control',
+          },
           _focus: {
             borderColor: 'brand.primary',
             boxShadow: 'focus',
@@ -456,9 +477,12 @@ const components = {
     },
     variants: {
       outline: {
-        borderColor: 'border.subtle',
+        borderColor: 'border.control',
         borderRadius: 'lg',
         bg: 'surface.default',
+        _hover: {
+          borderColor: 'border.control',
+        },
         _focus: {
           borderColor: 'brand.primary',
           boxShadow: 'focus',
@@ -473,7 +497,7 @@ const components = {
   Checkbox: {
     baseStyle: {
       control: {
-        borderColor: 'border.strong',
+        borderColor: 'border.control',
         _checked: {
           bg: 'brand.primary',
           borderColor: 'brand.primary',
@@ -484,7 +508,7 @@ const components = {
   Radio: {
     baseStyle: {
       control: {
-        borderColor: 'border.strong',
+        borderColor: 'border.control',
         _checked: {
           bg: 'brand.primary',
           borderColor: 'brand.primary',

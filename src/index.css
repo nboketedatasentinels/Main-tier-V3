@@ -9,6 +9,7 @@
     --surface-default: #ffffff;
     --surface-subtle: #f8fafc;
     --border-subtle: #e2e8f0;
+    --border-control: #8896aa; /* >= 3:1 vs #fff for visible component boundaries */
     --text-primary: #0f172a;
     --text-secondary: #1e293b; /* WCAG AAA compliant (was #334155) */
     --text-muted: #475569; /* WCAG AA compliant (was #64748b - failed AA) */
@@ -110,6 +111,13 @@
   /* Paragraph and Link Base Styles */
   body {
     @apply bg-[var(--surface-subtle)] text-[var(--text-primary)] font-sans;
+  }
+
+  /* Ensure native form controls have visible boundaries on light surfaces */
+  input:not([type='checkbox']):not([type='radio']):not([type='range']),
+  textarea,
+  select {
+    border-color: var(--border-control);
   }
 
   p {
