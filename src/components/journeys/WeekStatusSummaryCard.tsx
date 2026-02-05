@@ -160,7 +160,7 @@ export const WeekStatusSummaryCard: React.FC<WeekStatusSummaryCardProps> = ({
                   color="text.primary"
                   cursor="help"
                   borderBottom="1px dotted"
-                  borderColor="gray.300"
+                  borderColor="border.control"
                 >
                   Week Status
                 </Text>

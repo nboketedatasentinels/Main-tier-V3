@@ -619,16 +619,16 @@ export const CompanyDashboard: React.FC = () => {
               </HStack>
               {showLeadershipDebug && (
                 <VStack align="start" spacing={1} mb={2}>
-                  <Text fontSize="xs" color="gray.400">
+                  <Text fontSize="xs" color="text.muted">
                     Org ID: {leadershipOrganization.id ?? 'None'}
                   </Text>
-                  <Text fontSize="xs" color="gray.400">
+                  <Text fontSize="xs" color="text.muted">
                     Support assignments: {supportAssignmentStatus.loaded ? (supportAssignmentStatus.exists ? 'Loaded' : 'None') : 'Not checked'}
                   </Text>
-                  <Text fontSize="xs" color="gray.400">
+                  <Text fontSize="xs" color="text.muted">
                     Mentor source: {leadershipSources.mentor ?? 'None'}
                   </Text>
-                  <Text fontSize="xs" color="gray.400">
+                  <Text fontSize="xs" color="text.muted">
                     Ambassador source: {leadershipSources.ambassador ?? 'None'}
                   </Text>
                 </VStack>

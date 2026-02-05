@@ -302,7 +302,7 @@ const FreeTierCoursesPage: React.FC<{ userId?: string | null; profile: UserProfi
             bg="white"
             gap={3}
           >
-            <Icon as={BookOpen} boxSize={10} color="gray.300" />
+            <Icon as={BookOpen} boxSize={10} color="text.muted" />
             <Heading size="sm" color="gray.800">
               Course unavailable
             </Heading>

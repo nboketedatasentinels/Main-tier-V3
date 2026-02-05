@@ -610,10 +610,10 @@ export const PartnerDashboard: React.FC = () => {
                 key={card.key}
                 bg={isMuted ? 'gray.50' : `${accentColor}.50`}
                 border="1px solid"
-                borderColor={isMuted ? 'gray.200' : `${accentColor}.200`}
+                borderColor={isMuted ? 'border.control' : `${accentColor}.200`}
                 cursor="pointer"
                 transition="all 0.2s"
-                _hover={{ shadow: 'sm', borderColor: isMuted ? 'gray.300' : `${accentColor}.300` }}
+                _hover={{ shadow: 'sm', borderColor: isMuted ? 'border.control' : `${accentColor}.300` }}
                 onClick={card.onClick}
                 minH="150px"
                 h="100%"
@@ -1116,7 +1116,7 @@ export const PartnerDashboard: React.FC = () => {
 
     return (
       <Accordion allowToggle mt={4}>
-        <AccordionItem border="1px dashed" borderColor="gray.300" borderRadius="md" bg="gray.50">
+        <AccordionItem border="1px dashed" borderColor="border.control" borderRadius="md" bg="gray.50">
           <h2>
             <AccordionButton>
               <Box flex="1" textAlign="left" fontWeight="bold" fontSize="sm">

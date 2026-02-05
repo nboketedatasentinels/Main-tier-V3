@@ -105,7 +105,7 @@ export const NotificationDropdown = () => {
             <Box maxH="400px" overflowY="auto" px={3} py={2}>
               {loading && (
                 <HStack justify="center" py={8}>
-                  <Spinner color="gray.400" size="sm" />
+                  <Spinner color="text.muted" size="sm" />
                   <Text color="gray.500" fontSize="sm">Loading...</Text>
                 </HStack>
               )}

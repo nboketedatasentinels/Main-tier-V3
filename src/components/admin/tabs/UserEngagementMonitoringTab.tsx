@@ -71,7 +71,7 @@ const riskColors: Record<RiskLevel, { badge: string; border: string }> = {
   low: { badge: 'green', border: 'green.500' },
   emerging: { badge: 'purple', border: 'purple.500' },
   recovering: { badge: 'teal', border: 'teal.500' },
-  unknown: { badge: 'gray', border: 'gray.400' },
+  unknown: { badge: 'gray', border: 'border.control' },
 }
 
 const formatDate = (date?: Date | null) => {
@@ -198,7 +198,7 @@ export const UserEngagementMonitoringTab = ({ users: propUsers, organizations: p
       const avgScore = entries.length ? scoreSum / entries.length : 0
       const change = entries.reduce((sum, entry) => sum + (entry.trend30d || 0), 0) / (entries.length || 1)
       const trend: 'up' | 'down' | 'flat' = change > 0 ? 'up' : change < 0 ? 'down' : 'flat'
-      const color = riskColors[level as RiskLevel]?.border || 'gray.400'
+      const color = riskColors[level as RiskLevel]?.border || 'border.control'
       return { label: riskLabel(level as RiskLevel), userCount: entries.length, avgScore, change, trend, color }
     })
   }, [filteredRoster])
@@ -290,7 +290,7 @@ export const UserEngagementMonitoringTab = ({ users: propUsers, organizations: p
             : 'Adjust filters to expand your view of monitored learners.'
       return (
         <Flex py={10} direction="column" align="center" gap={3}>
-          <Icon as={BarChart2} boxSize={10} color="gray.300" />
+          <Icon as={BarChart2} boxSize={10} color="text.muted" />
           <Text fontWeight="medium" color="gray.700">
             {emptyMessage}
           </Text>

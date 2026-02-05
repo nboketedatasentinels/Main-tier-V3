@@ -442,7 +442,7 @@ export const PaidMemberDashboard: React.FC = () => {
             <Stack spacing={2}>
               {completionSteps.map(step => (
                 <HStack key={step.label} spacing={3}>
-                  <Icon as={step.complete ? CheckCircle : Circle} color={step.complete ? 'green.400' : 'gray.400'} />
+                  <Icon as={step.complete ? CheckCircle : Circle} color={step.complete ? 'green.400' : 'text.muted'} />
                   <Text color="brand.text" fontWeight="semibold">
                     {step.label}
                   </Text>

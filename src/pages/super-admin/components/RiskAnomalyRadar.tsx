@@ -60,7 +60,7 @@ const RadarSection = ({ title, subtitle, signals, icon, color }: { title: string
         <Heading size="xs" color="gray.500" textTransform="uppercase" letterSpacing="wider">
           {title}
         </Heading>
-        <Text fontSize="sm" color="gray.400">
+        <Text fontSize="sm" color="text.muted">
           {subtitle}
         </Text>
       </Stack>
@@ -90,7 +90,7 @@ const RadarSection = ({ title, subtitle, signals, icon, color }: { title: string
               <Text as="span" fontWeight="semibold">Why it matters:</Text> {signal.reason}
             </Text>
             <Flex justify="space-between" align="center" mt={2}>
-              <Text fontSize="xs" color="gray.400">
+              <Text fontSize="xs" color="text.muted">
                 {signal.impact}
               </Text>
               <Button

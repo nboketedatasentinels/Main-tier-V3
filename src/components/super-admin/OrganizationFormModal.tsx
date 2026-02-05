@@ -157,7 +157,7 @@ export const OrganizationFormModal: React.FC<Props> = ({
                 <FormLabel display="flex" alignItems="center" gap={2}>
                   Organization code
                   <Tooltip label="6-character code: 2-letter prefix + 4 random characters." placement="top">
-                    <InfoIcon color="gray.400" />
+                    <InfoIcon color="text.muted" />
                   </Tooltip>
                 </FormLabel>
                 <Input

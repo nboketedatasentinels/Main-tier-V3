@@ -571,7 +571,7 @@ export const AtRiskInterventionFlow: React.FC<AtRiskInterventionFlowProps> = ({
         </HStack>
       </Box>
 
-      <Card bg="gray.50" border="1px solid" borderColor="gray.300" mb={6}>
+      <Card bg="gray.50" border="1px solid" borderColor="border.control" mb={6}>
         <CardBody>
           <VStack align="flex-start" spacing={4}>
             <HStack>

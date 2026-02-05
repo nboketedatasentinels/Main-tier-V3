@@ -2218,10 +2218,10 @@ export const ProfilePage: React.FC = () => {
                       <Grid templateColumns={{ base: '2fr 1fr 1fr' }} gap={3} alignItems="center" py={2} key={row.label} borderBottom="1px solid" borderColor="brand.border">
                         <Text fontWeight="medium">{row.label}</Text>
                         <Center>
-                          <Icon as={Check} color={row.free ? 'green.500' : 'gray.300'} />
+                          <Icon as={Check} color={row.free ? 'green.500' : 'text.muted'} />
                         </Center>
                         <Center bg="purple.50" rounded="md" py={2}>
-                          <Icon as={Check} color={row.paid ? 'green.500' : 'gray.300'} />
+                          <Icon as={Check} color={row.paid ? 'green.500' : 'text.muted'} />
                         </Center>
                       </Grid>
                     ))}

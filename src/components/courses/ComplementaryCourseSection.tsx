@@ -191,7 +191,7 @@ export const ComplementaryCourseSection: React.FC<ComplementaryCourseSectionProp
           p={6}
           textAlign="center"
         >
-          <Icon as={BookOpen} boxSize={10} color="gray.300" mb={3} />
+          <Icon as={BookOpen} boxSize={10} color="text.muted" mb={3} />
           <Heading size="sm" color="gray.800" mb={2}>
             Complementary course unavailable
           </Heading>

@@ -326,16 +326,16 @@ export const SignUpPage: React.FC = () => {
           type="button"
           onClick={handleGoogleSignUp}
           disabled={googleLoading}
-          className="inline-flex h-10 w-full items-center justify-center gap-2 rounded-md border border-gray-200 bg-white text-sm font-medium text-gray-800 shadow-sm hover:bg-gray-50 disabled:opacity-60"
+          className="inline-flex h-10 w-full items-center justify-center gap-2 rounded-md border border-border-control bg-white text-sm font-medium text-gray-800 shadow-sm hover:bg-gray-50 disabled:opacity-60"
         >
           <GoogleIcon />
           {googleLoading ? "Connecting Google..." : "Continue with Google"}
         </button>
 
         <div className="flex items-center gap-3 text-xs text-gray-500">
-          <span className="h-px flex-1 bg-gray-200" />
+          <span className="h-px flex-1 bg-border-control" />
           <span>or sign up with email</span>
-          <span className="h-px flex-1 bg-gray-200" />
+          <span className="h-px flex-1 bg-border-control" />
         </div>
 
         <div>
@@ -347,7 +347,7 @@ export const SignUpPage: React.FC = () => {
               onChange={e => handleChange("fullName", e.target.value)}
               placeholder="John Doe"
               autoComplete="name"
-              className="h-10 w-full rounded-md border bg-gray-50 pl-9 pr-3 text-sm text-gray-900 placeholder:text-gray-500 focus:outline-none focus:ring-2 focus:ring-[#350e6f]"
+              className="h-10 w-full rounded-md border border-border-control bg-gray-50 pl-9 pr-3 text-sm text-gray-900 placeholder:text-gray-500 focus:outline-none focus:ring-2 focus:ring-[#350e6f]"
               required
             />
           </div>
@@ -358,7 +358,7 @@ export const SignUpPage: React.FC = () => {
           <select
             value={formData.gender}
             onChange={e => handleChange("gender", e.target.value as GenderOption)}
-            className="h-10 w-full rounded-md border bg-gray-50 px-3 text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-[#350e6f]"
+            className="h-10 w-full rounded-md border border-border-control bg-gray-50 px-3 text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-[#350e6f]"
           >
             <option value="prefer_not_to_say">Prefer not to say</option>
             <option value="male">Male</option>
@@ -378,7 +378,7 @@ export const SignUpPage: React.FC = () => {
               onChange={e => handleChange("email", e.target.value.toLowerCase())}
               placeholder="your@email.com"
               autoComplete="email"
-              className="h-10 w-full rounded-md border bg-gray-50 pl-9 pr-3 text-sm text-gray-900 placeholder:text-gray-500 focus:outline-none focus:ring-2 focus:ring-[#350e6f]"
+              className="h-10 w-full rounded-md border border-border-control bg-gray-50 pl-9 pr-3 text-sm text-gray-900 placeholder:text-gray-500 focus:outline-none focus:ring-2 focus:ring-[#350e6f]"
               required
             />
           </div>
@@ -393,7 +393,7 @@ export const SignUpPage: React.FC = () => {
               onChange={e => handleChange("companyCode", e.target.value.slice(0, 6))}
               placeholder="6-digit code"
               maxLength={6}
-              className="h-10 w-full rounded-md border bg-gray-50 pl-9 pr-3 text-sm uppercase tracking-widest text-gray-900 placeholder:text-gray-500 focus:outline-none focus:ring-2 focus:ring-[#350e6f]"
+              className="h-10 w-full rounded-md border border-border-control bg-gray-50 pl-9 pr-3 text-sm uppercase tracking-widest text-gray-900 placeholder:text-gray-500 focus:outline-none focus:ring-2 focus:ring-[#350e6f]"
             />
           </div>
           {isCheckingCode && (
@@ -427,7 +427,7 @@ export const SignUpPage: React.FC = () => {
               placeholder="••••••••"
               autoComplete="new-password"
               minLength={8}
-              className="h-10 w-full rounded-md border bg-gray-50 pl-9 pr-10 text-sm text-gray-900 placeholder:text-gray-500 focus:outline-none focus:ring-2 focus:ring-[#350e6f]"
+              className="h-10 w-full rounded-md border border-border-control bg-gray-50 pl-9 pr-10 text-sm text-gray-900 placeholder:text-gray-500 focus:outline-none focus:ring-2 focus:ring-[#350e6f]"
               required
             />
             <button
@@ -452,7 +452,7 @@ export const SignUpPage: React.FC = () => {
               onChange={e => handleChange("confirmPassword", e.target.value)}
               placeholder="••••••••"
               autoComplete="new-password"
-              className="h-10 w-full rounded-md border bg-gray-50 pl-9 pr-3 text-sm text-gray-900 placeholder:text-gray-500 focus:outline-none focus:ring-2 focus:ring-[#350e6f]"
+              className="h-10 w-full rounded-md border border-border-control bg-gray-50 pl-9 pr-3 text-sm text-gray-900 placeholder:text-gray-500 focus:outline-none focus:ring-2 focus:ring-[#350e6f]"
               required
             />
           </div>
@@ -464,7 +464,7 @@ export const SignUpPage: React.FC = () => {
             type="checkbox"
             checked={formData.acceptTerms}
             onChange={e => handleChange("acceptTerms", e.target.checked)}
-            className="mt-1 h-4 w-4 rounded border-gray-300 text-[#350e6f] focus:ring-[#350e6f]"
+            className="mt-1 h-4 w-4 rounded border-border-control text-[#350e6f] focus:ring-[#350e6f]"
             required
           />
           <label htmlFor="acceptTerms" className="text-sm text-gray-700">

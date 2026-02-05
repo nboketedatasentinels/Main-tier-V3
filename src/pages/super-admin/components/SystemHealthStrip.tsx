@@ -89,7 +89,7 @@ const HealthCard = ({ label, value, status, trend, trendValue, onClick }: Health
           )}
         </Flex>
 
-        <Text fontSize="xs" color="gray.400">
+        <Text fontSize="xs" color="text.muted">
           {status === 'stable' ? 'Within normal range' : 'Requires attention'}
         </Text>
       </Stack>

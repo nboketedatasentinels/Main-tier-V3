@@ -87,14 +87,14 @@ const NotificationCard = ({
   return (
     <Box
       borderWidth="1px"
-      borderColor="gray.200"
+      borderColor="border.control"
       borderRadius="lg"
       bg="white"
       p={4}
       transition="all 0.15s ease"
       _hover={{
         shadow: 'sm',
-        borderColor: 'gray.300',
+        borderColor: 'border.control',
       }}
     >
       <HStack align="start" spacing={4}>
@@ -139,7 +139,7 @@ const NotificationCard = ({
           </Text>
 
           {timestamp && (
-            <Text color="gray.400" fontSize="xs" mt={1}>
+            <Text color="text.muted" fontSize="xs" mt={1}>
               {timestamp}
             </Text>
           )}
@@ -151,7 +151,7 @@ const NotificationCard = ({
           icon={isRead ? <X size={16} /> : <CheckCheck size={16} />}
           variant="ghost"
           size="sm"
-          color="gray.400"
+          color="text.muted"
           _hover={{
             color: 'gray.600',
             bg: 'gray.100',
@@ -228,7 +228,7 @@ export const NotificationsList = () => {
       {loading ? (
         <Flex justify="center" py={8}>
           <HStack spacing={2}>
-            <Spinner color="gray.400" size="sm" />
+            <Spinner color="text.muted" size="sm" />
             <Text color="gray.500" fontSize="sm">Loading...</Text>
           </HStack>
         </Flex>

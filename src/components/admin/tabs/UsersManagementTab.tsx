@@ -425,7 +425,7 @@ export const UsersManagementTab = ({ users: propUsers, loading: propLoading }: U
             <Flex direction={{ base: 'column', lg: 'row' }} gap={4} align={{ base: 'stretch', lg: 'center' }} justify="space-between">
               <InputGroup maxW={{ base: '100%', lg: '320px' }}>
                 <InputLeftElement pointerEvents="none">
-                  <Icon as={Search} color="gray.400" />
+                  <Icon as={Search} color="text.muted" />
                 </InputLeftElement>
                 <Input
                   placeholder="Search by name, email, or code"

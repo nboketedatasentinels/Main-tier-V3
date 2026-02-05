@@ -161,7 +161,7 @@ export function T4LAuthShell({ children }: { children: React.ReactNode }) {
         transition={{ duration: 0.45 }}
         className="w-full max-w-5xl overflow-hidden rounded-2xl flex bg-white shadow-2xl"
       >
-        <div className="hidden md:block w-1/2 relative overflow-hidden border-r border-gray-100">
+        <div className="hidden md:block w-1/2 relative overflow-hidden border-r border-border-control">
           <div className="absolute inset-0 bg-gradient-to-br from-white to-[#eef0fb]">
             <DotMap />
 

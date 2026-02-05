@@ -409,7 +409,7 @@ export const EditOrganizationModal: React.FC<EditOrganizationModalProps> = ({
                     <FormLabel display="flex" alignItems="center" gap={2}>
                       Organization code
                       <Tooltip label="6-character code: 2-letter prefix + 4 random characters." placement="top">
-                        <InfoIcon color="gray.400" />
+                        <InfoIcon color="text.muted" />
                       </Tooltip>
                     </FormLabel>
                     <InputGroup>
@@ -458,7 +458,7 @@ export const EditOrganizationModal: React.FC<EditOrganizationModalProps> = ({
                     <FormLabel display="flex" alignItems="center" gap={2}>
                       Cluster
                       <Tooltip label={clusterTooltipContent} placement="top" maxW="360px">
-                        <InfoIcon color="gray.400" />
+                        <InfoIcon color="text.muted" />
                       </Tooltip>
                     </FormLabel>
                     <InputGroup>

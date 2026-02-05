@@ -629,7 +629,7 @@ export const CreateOrganizationModal: React.FC<CreateOrganizationModalProps> = (
                     <FormLabel display="flex" alignItems="center" gap={2}>
                       Organization code
                       <Tooltip label="6-character code: 2-letter prefix + 4 random characters." placement="top">
-                        <InfoIcon color="gray.400" />
+                        <InfoIcon color="text.muted" />
                       </Tooltip>
                     </FormLabel>
                     <InputGroup>
@@ -693,7 +693,7 @@ export const CreateOrganizationModal: React.FC<CreateOrganizationModalProps> = (
                     <FormLabel display="flex" alignItems="center" gap={2}>
                       Cluster
                       <Tooltip label={clusterTooltipContent} placement="top" maxW="360px">
-                        <InfoIcon color="gray.400" />
+                        <InfoIcon color="text.muted" />
                       </Tooltip>
                     </FormLabel>
                     <InputGroup>
@@ -1044,7 +1044,7 @@ export const CreateOrganizationModal: React.FC<CreateOrganizationModalProps> = (
                         <FormLabel display="flex" alignItems="center" gap={2}>
                           Name
                           <Tooltip label="Minimum 2 characters. Letters, spaces, hyphens, and apostrophes only.">
-                            <InfoIcon color="gray.400" />
+                            <InfoIcon color="text.muted" />
                           </Tooltip>
                         </FormLabel>
                         <Input
@@ -1075,7 +1075,7 @@ export const CreateOrganizationModal: React.FC<CreateOrganizationModalProps> = (
                         <FormLabel display="flex" alignItems="center" gap={2}>
                           Email
                           <Tooltip label="Optional unless using email invitations.">
-                            <InfoIcon color="gray.400" />
+                            <InfoIcon color="text.muted" />
                           </Tooltip>
                         </FormLabel>
                         <Input
@@ -1109,7 +1109,7 @@ export const CreateOrganizationModal: React.FC<CreateOrganizationModalProps> = (
                         <FormLabel display="flex" alignItems="center" gap={2}>
                           Role
                           <Tooltip label="Assign the user role for the invitation.">
-                            <InfoIcon color="gray.400" />
+                            <InfoIcon color="text.muted" />
                           </Tooltip>
                         </FormLabel>
                         <Select

@@ -28,7 +28,7 @@ const BadgeDisplay = () => {
       <VStack spacing={2} py={2} align="start">
         <HStack spacing={2}>
           <Center w="32px" h="32px" bg="gray.100" rounded="lg">
-            <Icon as={Award} size={16} color="gray.400" />
+            <Icon as={Award} size={16} color="text.muted" />
           </Center>
           <Box>
             <Text fontSize="sm" color="brand.subtleText">

@@ -38,7 +38,7 @@ export const CollapsibleMetrics: React.FC<CollapsibleMetricsProps> = ({ children
             <Heading size="xs" color="gray.600" textTransform="uppercase" letterSpacing="wider">
               System Metrics & Analytics
             </Heading>
-            <Text fontSize="xs" color="gray.400" fontWeight="normal">
+            <Text fontSize="xs" color="text.muted" fontWeight="normal">
               Engagement trends, growth curves, and usage insights
             </Text>
           </Stack>
