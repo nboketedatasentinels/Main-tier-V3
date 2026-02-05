@@ -8,58 +8,78 @@ const patterns = [
   {
     id: 'chakra-gray-300-400-color-prop',
     description: 'Chakra `color` set to gray.300/gray.400 (often fails contrast on light surfaces)',
-    regex: /\bcolor\s*=\s*["']gray\.(300|400)["']/,
+    regex: /\bcolor\s*=\s*["']gray\.(300|400)["']/g,
   },
   {
     id: 'chakra-gray-300-400-color-style',
     description: "Style object `color: 'gray.300'|'gray.400'`",
-    regex: /\bcolor\s*:\s*["']gray\.(300|400)["']/,
+    regex: /\bcolor\s*:\s*["']gray\.(300|400)["']/g,
   },
   {
     id: 'chakra-gray-100-200-borderColor-prop',
     description:
       'Chakra `borderColor` set to gray.100/gray.200 (too light for visible boundaries on white surfaces)',
-    regex: /\bborderColor\s*=\s*["']gray\.(100|200)["']/,
+    regex: /\bborderColor\s*=\s*["']gray\.(100|200)["']/g,
   },
   {
     id: 'chakra-gray-100-200-borderColor-style',
     description: "Style object `borderColor: 'gray.100'|'gray.200'`",
-    regex: /\bborderColor\s*:\s*["']gray\.(100|200)["']/,
+    regex: /\bborderColor\s*:\s*["']gray\.(100|200)["']/g,
   },
   {
     id: 'chakra-gray-300-400-borderColor-prop',
     description: 'Chakra `borderColor` set to gray.300/gray.400 (often too low-contrast for control boundaries)',
-    regex: /\bborderColor\s*=\s*["']gray\.(300|400)["']/,
+    regex: /\bborderColor\s*=\s*["']gray\.(300|400)["']/g,
   },
   {
     id: 'chakra-gray-300-400-borderColor-style',
     description: "Style object `borderColor: 'gray.300'|'gray.400'`",
-    regex: /\bborderColor\s*:\s*["']gray\.(300|400)["']/,
+    regex: /\bborderColor\s*:\s*["']gray\.(300|400)["']/g,
   },
   {
     id: 'chakra-useColorModeValue-gray-200',
     description: "useColorModeValue('gray.200', ...) is usually too light for borders on light surfaces",
-    regex: /\buseColorModeValue\(\s*["']gray\.200["']\s*,/,
+    regex: /\buseColorModeValue\(\s*["']gray\.200["']\s*,/g,
   },
   {
     id: 'tailwind-low-contrast-border-gray',
     description: 'Tailwind borders using gray-100/200/300 (often too light on white)',
-    regex: /\bborder-gray-(100|200|300)\b/,
+    regex: /\bborder-gray-(100|200|300)\b/g,
   },
   {
     id: 'tailwind-low-contrast-divider-bg-gray',
     description: 'Tailwind divider backgrounds using gray-200 (often invisible on white)',
-    regex: /\bbg-gray-200\b/,
+    regex: /\bbg-gray-200\b/g,
   },
   {
     id: 'tailwind-low-contrast-text-gray',
     description: 'Tailwind text using gray-300/400 (often fails contrast on light surfaces)',
-    regex: /\btext-gray-(300|400)\b/,
+    regex: /\btext-gray-(300|400)\b/g,
   },
   {
     id: 'tailwind-low-contrast-placeholder-gray',
     description: 'Tailwind placeholder text using gray-400 (often too light)',
-    regex: /\bplaceholder:text-gray-400\b/,
+    regex: /\bplaceholder:text-gray-400\b/g,
+  },
+  {
+    id: 'tailwind-low-contrast-hover-text-gray',
+    description: 'Tailwind hover text using gray-300/400 (often fails contrast on light surfaces)',
+    regex: /\bhover:text-gray-(300|400)\b/g,
+  },
+  {
+    id: 'tailwind-low-contrast-active-text-gray',
+    description: 'Tailwind active text using gray-300/400 (often fails contrast on light surfaces)',
+    regex: /\bactive:text-gray-(300|400)\b/g,
+  },
+  {
+    id: 'tailwind-low-contrast-hover-border-gray',
+    description: 'Tailwind hover borders using gray-100/200/300 (often too light on white)',
+    regex: /\bhover:border-gray-(100|200|300)\b/g,
+  },
+  {
+    id: 'tailwind-low-contrast-focus-border-gray',
+    description: 'Tailwind focus borders using gray-100/200/300 (often too light on white)',
+    regex: /\bfocus:border-gray-(100|200|300)\b/g,
   },
 ]
 
@@ -86,23 +106,37 @@ function relative(filePath) {
 
 const violations = []
 
+function findLineNumber(content, index) {
+  // 1-based line numbers
+  let line = 1
+  for (let i = 0; i < index; i++) {
+    if (content.charCodeAt(i) === 10) line++
+  }
+  return line
+}
+
+function getLineText(content, lineNumber) {
+  const lines = content.split(/\r?\n/)
+  return (lines[lineNumber - 1] || '').trim()
+}
+
 for await (const filePath of walk(srcRoot)) {
   if (!isSourceFile(filePath)) continue
 
   const content = await readFile(filePath, 'utf8')
-  const lines = content.split(/\r?\n/)
 
-  for (let lineIndex = 0; lineIndex < lines.length; lineIndex++) {
-    const line = lines[lineIndex]
-    for (const pattern of patterns) {
-      if (!pattern.regex.test(line)) continue
-
+  for (const pattern of patterns) {
+    pattern.regex.lastIndex = 0
+    let match
+    // eslint-disable-next-line no-cond-assign
+    while ((match = pattern.regex.exec(content)) !== null) {
+      const lineNumber = findLineNumber(content, match.index)
       violations.push({
         file: relative(filePath),
-        line: lineIndex + 1,
+        line: lineNumber,
         pattern: pattern.id,
         description: pattern.description,
-        text: line.trim(),
+        text: getLineText(content, lineNumber),
       })
     }
   }

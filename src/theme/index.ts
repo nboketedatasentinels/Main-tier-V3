@@ -37,7 +37,7 @@ const brandColors = {
   sidebar: '#f1f5f9',
   text: '#0F172A',
   subtleText: '#1e293b', // WCAG AAA compliant (was #334155)
-  border: '#E2E8F0',
+  border: '#8896AA', // >= 3:1 vs white for visible boundaries (used widely in dashboards)
   warning: '#f4540c',
   textLight: '#ffffff',
   textOnDark: '#f3f4f6',
@@ -71,7 +71,7 @@ const colors = {
   },
   // Border Colors
   border: {
-    subtle: '#E2E8F0',
+    subtle: '#8896AA',
     strong: '#CBD5E1',
     // WCAG 2.1 1.4.11 (Non-text Contrast): ensure component boundaries (inputs/outline buttons) are visible
     // against white/light surfaces (>= 3:1 vs #FFFFFF).
