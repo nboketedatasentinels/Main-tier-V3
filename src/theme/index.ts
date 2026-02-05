@@ -36,7 +36,7 @@ const brandColors = {
   accent: '#f8fafc',
   sidebar: '#f1f5f9',
   text: '#0F172A',
-  subtleText: '#334155',
+  subtleText: '#1e293b', // WCAG AAA compliant (was #334155)
   border: '#E2E8F0',
   warning: '#f4540c',
   textLight: '#ffffff',
@@ -60,12 +60,12 @@ const colors = {
     muted: '#F1F5F9',
     elevated: '#FFFFFF',
   },
-  // Text Colors - For readability
+  // Text Colors - For readability (WCAG AA/AAA compliant)
   text: {
     primary: '#0F172A',
-    secondary: '#334155',
-    muted: '#64748B',
-    subtle: '#64748B',
+    secondary: '#1e293b', // WCAG AAA compliant (was #334155)
+    muted: '#475569', // WCAG AA compliant (was #64748B - failed AA)
+    subtle: '#475569', // WCAG AA compliant (was #64748B - failed AA)
     inverse: '#FFFFFF',
     accentGold: '#FFEAC2',
   },

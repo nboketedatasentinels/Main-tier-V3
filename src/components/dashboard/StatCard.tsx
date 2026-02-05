@@ -40,14 +40,14 @@ export const StatCard = ({
             </Box>
           )}
           <VStack align="flex-start" spacing={1} flex={1}>
-            <Text fontSize="sm" color={helperColor} opacity={0.9}>
+            <Text fontSize="sm" color={helperColor}>
               {label}
             </Text>
             <Text fontSize={{ base: '2xl', md: '3xl' }} fontWeight="bold" color={textColor}>
               {value}
             </Text>
             {helper && (
-              <Text fontSize="sm" color={helperColor} opacity={0.9}>
+              <Text fontSize="sm" color={helperColor}>
                 {helper}
               </Text>
             )}

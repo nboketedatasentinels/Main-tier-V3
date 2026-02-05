@@ -10,8 +10,8 @@
     --surface-subtle: #f8fafc;
     --border-subtle: #e2e8f0;
     --text-primary: #0f172a;
-    --text-secondary: #334155;
-    --text-muted: #64748b;
+    --text-secondary: #1e293b; /* WCAG AAA compliant (was #334155) */
+    --text-muted: #475569; /* WCAG AA compliant (was #64748b - failed AA) */
     --text-inverse: #ffffff;
   }
 
@@ -223,7 +223,7 @@
 
   /* Eyebrow Text */
   .eyebrow {
-    @apply text-xs font-semibold uppercase tracking-[0.18em] text-neutral-500;
+    @apply text-xs font-semibold uppercase tracking-[0.18em] text-neutral-600; /* WCAG AA compliant (was neutral-500) */
   }
 
   /* Surface Utilities */

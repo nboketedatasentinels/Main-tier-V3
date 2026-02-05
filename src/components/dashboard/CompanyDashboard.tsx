@@ -521,7 +521,7 @@ export const CompanyDashboard: React.FC = () => {
         >
           <Box>
             <Heading size="md" color="white">Upgrade for the full experience</Heading>
-            <Text opacity={0.9} color="white">Unlock vlogs, premium courses, and community challenges</Text>
+            <Text color="white">Unlock vlogs, premium courses, and community challenges</Text>
           </Box>
           <HStack spacing={3}>
             <Button as={RouterLink} to="/upgrade" colorScheme="yellow" rightIcon={<ArrowUpRight size={16} />}>
