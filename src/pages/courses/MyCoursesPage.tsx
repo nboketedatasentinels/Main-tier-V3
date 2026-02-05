@@ -297,7 +297,7 @@ const FreeTierCoursesPage: React.FC<{ userId?: string | null; profile: UserProfi
             justify="center"
             py={12}
             border="1px solid"
-            borderColor="gray.100"
+            borderColor="border.control"
             borderRadius="2xl"
             bg="white"
             gap={3}
@@ -319,7 +319,7 @@ const FreeTierCoursesPage: React.FC<{ userId?: string | null; profile: UserProfi
               borderRadius="3xl"
               overflow="hidden"
               border="1px solid"
-              borderColor="gray.100"
+              borderColor="border.control"
               boxShadow="md"
             >
               <Box

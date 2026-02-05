@@ -141,7 +141,7 @@ export const UpgradePage: React.FC = () => {
                     borderWidth="1px"
                     borderRadius="lg"
                     bg="white"
-                    borderColor="gray.200"
+                    borderColor="border.control"
                     _hover={{ shadow: 'md', borderColor: 'indigo.300' }}
                     transition="all 0.2s"
                   >

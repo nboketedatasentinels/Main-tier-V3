@@ -185,7 +185,7 @@ export const ComplementaryCourseSection: React.FC<ComplementaryCourseSectionProp
       {!loading && !progressLoading && error && (
         <Box
           border="1px solid"
-          borderColor="gray.100"
+          borderColor="border.control"
           borderRadius="2xl"
           bg="white"
           p={6}
@@ -210,7 +210,7 @@ export const ComplementaryCourseSection: React.FC<ComplementaryCourseSectionProp
                 borderRadius="3xl"
                 overflow="hidden"
                 border="1px solid"
-                borderColor="gray.100"
+                borderColor="border.control"
                 boxShadow="md"
               >
                 <Box bgGradient="linear(to-r, teal.50, teal.100)" p={4}>

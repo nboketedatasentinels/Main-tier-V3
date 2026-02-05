@@ -936,7 +936,7 @@ export const PartnerDashboard: React.FC = () => {
                   </Stack>
                 </Box>
               ) : notifications.length === 0 ? (
-                <Box p={3} borderRadius="md" border="1px dashed" borderColor="gray.200" bg="gray.50">
+                <Box p={3} borderRadius="md" border="1px dashed" borderColor="border.control" bg="gray.50">
                   <Text fontSize="sm" color="gray.600">
                     You are all caught up. New partner alerts will appear here.
                   </Text>
@@ -1210,7 +1210,7 @@ export const PartnerDashboard: React.FC = () => {
                   <Text fontSize="xs" fontWeight="bold" color="gray.600" mb={2}>Samples of Mismatched Users:</Text>
                   <VStack align="flex-start" spacing={2} w="full">
                     {debugInfo.mismatchSamples.map((sample: MismatchSample, idx: number) => (
-                      <Box key={idx} p={2} bg="white" border="1px solid" borderColor="gray.200" borderRadius="md" w="full" fontSize="xs">
+                      <Box key={idx} p={2} bg="white" border="1px solid" borderColor="border.control" borderRadius="md" w="full" fontSize="xs">
                         <HStack justify="space-between">
                           <Text fontWeight="bold">{sample.id}</Text>
                           <Badge size="xs" colorScheme="red">{sample.reason}</Badge>

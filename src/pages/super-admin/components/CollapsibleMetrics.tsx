@@ -28,7 +28,7 @@ export const CollapsibleMetrics: React.FC<CollapsibleMetricsProps> = ({ children
         py={6}
         borderTop="1px solid"
         borderBottom={isOpen ? 'none' : '1px solid'}
-        borderColor="gray.100"
+        borderColor="border.control"
         borderRadius="none"
         _hover={{ bg: 'gray.50' }}
       >

@@ -830,7 +830,7 @@ export const CompanyDashboard: React.FC = () => {
                   p={3}
                   borderRadius="md"
                   border="1px solid"
-                  borderColor="gray.100"
+                  borderColor="border.control"
                   bg="gray.50"
                 >
                   <Box>
@@ -962,7 +962,7 @@ export const CompanyDashboard: React.FC = () => {
               </Box>
 
               <SimpleGrid columns={{ base: 1, md: 2 }} spacing={3}>
-                <Box p={3} borderRadius="md" border="1px solid" borderColor="gray.100" bg="gray.50">
+                <Box p={3} borderRadius="md" border="1px solid" borderColor="border.control" bg="gray.50">
                   <Text fontWeight="bold">Ranking</Text>
                   {isFreeTierUser ? (
                     <VStack align="flex-start" spacing={2} mt={1}>
@@ -979,7 +979,7 @@ export const CompanyDashboard: React.FC = () => {
                     </Text>
                   )}
                 </Box>
-                <Box p={3} borderRadius="md" border="1px solid" borderColor="gray.100" bg="gray.50">
+                <Box p={3} borderRadius="md" border="1px solid" borderColor="border.control" bg="gray.50">
                   <Text fontWeight="bold">Upcoming Challenges</Text>
                   {isFreeTierUser ? (
                     <VStack align="flex-start" spacing={2} mt={1}>
@@ -1019,7 +1019,7 @@ export const CompanyDashboard: React.FC = () => {
                       const transactionDate = normalizeTransactionDate(tx.createdAt)
 
                       return (
-                        <Flex key={tx.id} justify="space-between" align="center" borderBottom="1px solid" borderColor="gray.100" pb={2}>
+                        <Flex key={tx.id} justify="space-between" align="center" borderBottom="1px solid" borderColor="border.control" pb={2}>
                           <Box>
                             <Text fontWeight="semibold">{tx.reason}</Text>
                             <Text fontSize="sm" color="gray.500">
@@ -1031,7 +1031,7 @@ export const CompanyDashboard: React.FC = () => {
                       )
                     })}
                     {profile?.companyCode && (
-                      <Flex justify="space-between" align="center" borderBottom="1px solid" borderColor="gray.100" pb={2}>
+                      <Flex justify="space-between" align="center" borderBottom="1px solid" borderColor="border.control" pb={2}>
                         <Box>
                           <Text fontWeight="semibold">Welcome to your corporate village</Text>
                           <Text fontSize="sm" color="gray.500">
@@ -1073,7 +1073,7 @@ export const CompanyDashboard: React.FC = () => {
                       borderRadius="md"
                       bg={idx === 0 ? 'purple.50' : 'gray.50'}
                       border="1px solid"
-                      borderColor="gray.100"
+                      borderColor="border.control"
                     >
                       <HStack spacing={3}>
                         <Badge colorScheme={idx === 0 ? 'purple' : 'gray'}>{idx + 1}</Badge>

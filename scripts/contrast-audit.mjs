@@ -16,6 +16,17 @@ const patterns = [
     regex: /\bcolor\s*:\s*["']gray\.(300|400)["']/,
   },
   {
+    id: 'chakra-gray-100-200-borderColor-prop',
+    description:
+      'Chakra `borderColor` set to gray.100/gray.200 (too light for visible boundaries on white surfaces)',
+    regex: /\bborderColor\s*=\s*["']gray\.(100|200)["']/,
+  },
+  {
+    id: 'chakra-gray-100-200-borderColor-style',
+    description: "Style object `borderColor: 'gray.100'|'gray.200'`",
+    regex: /\bborderColor\s*:\s*["']gray\.(100|200)["']/,
+  },
+  {
     id: 'chakra-gray-300-400-borderColor-prop',
     description: 'Chakra `borderColor` set to gray.300/gray.400 (often too low-contrast for control boundaries)',
     regex: /\bborderColor\s*=\s*["']gray\.(300|400)["']/,
@@ -24,6 +35,11 @@ const patterns = [
     id: 'chakra-gray-300-400-borderColor-style',
     description: "Style object `borderColor: 'gray.300'|'gray.400'`",
     regex: /\bborderColor\s*:\s*["']gray\.(300|400)["']/,
+  },
+  {
+    id: 'chakra-useColorModeValue-gray-200',
+    description: "useColorModeValue('gray.200', ...) is usually too light for borders on light surfaces",
+    regex: /\buseColorModeValue\(\s*["']gray\.200["']\s*,/,
   },
   {
     id: 'tailwind-low-contrast-border-gray',
@@ -115,4 +131,3 @@ for (const v of violations.slice(0, 50)) {
 }
 
 process.exit(1)
-

@@ -174,7 +174,7 @@
   .card {
     @apply rounded-2xl border p-6 shadow-lg;
     background-color: var(--surface-default);
-    border-color: var(--border-subtle);
+    border-color: var(--border-control);
   }
 
   .card-sm {

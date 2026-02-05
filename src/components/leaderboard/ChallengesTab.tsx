@@ -172,8 +172,8 @@ export const ChallengesTab: React.FC<ChallengesTabProps> = ({
       </Box>
 
       {/* Challenge Lists */}
-      <Box bg="white" borderRadius="lg" border="1px solid" borderColor="gray.200">
-        <Flex justify="space-between" align="center" p={4} borderBottom="1px solid" borderColor="gray.100">
+      <Box bg="white" borderRadius="lg" border="1px solid" borderColor="border.control">
+        <Flex justify="space-between" align="center" p={4} borderBottom="1px solid" borderColor="border.control">
           <Text fontWeight="semibold">Your Challenges</Text>
           <Select
             size="sm"

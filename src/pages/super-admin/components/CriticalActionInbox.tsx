@@ -103,7 +103,7 @@ export const CriticalActionInbox: React.FC<CriticalActionInboxProps> = ({ items 
           </Box>
         ))}
         {items.length === 0 && (
-          <Box p={8} textAlign="center" borderRadius="lg" border="2px dashed" borderColor="gray.200" bg="gray.50">
+          <Box p={8} textAlign="center" borderRadius="lg" border="2px dashed" borderColor="border.control" bg="gray.50">
             <Text color="gray.500">No critical items requiring immediate action.</Text>
           </Box>
         )}

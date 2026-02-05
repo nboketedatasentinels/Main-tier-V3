@@ -669,7 +669,7 @@ const ReferralRewardsPage: React.FC = () => {
               <Box
                 bg="gray.50"
                 border="1px solid"
-                borderColor="gray.200"
+                borderColor="border.control"
                 borderRadius="md"
                 px={4}
                 py={3}

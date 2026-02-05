@@ -217,7 +217,7 @@ export const LeadershipCouncil = ({ users: propUsers, organizations: propOrganiz
   }
 
   const renderAccessDenied = () => (
-    <Card border="1px solid" borderColor="gray.200" bg="white" borderRadius="2xl">
+    <Card border="1px solid" borderColor="border.control" bg="white" borderRadius="2xl">
       <CardBody>
         <Flex direction="column" align="center" gap={3}>
           <Icon as={UserSquare2} boxSize={10} color="text.muted" />
@@ -235,7 +235,7 @@ export const LeadershipCouncil = ({ users: propUsers, organizations: propOrganiz
       <Box
         bgGradient="linear(to-br, purple.50, white)"
         border="1px solid"
-        borderColor="gray.200"
+        borderColor="border.control"
         borderRadius="3xl"
         p={8}
         shadow="sm"
@@ -256,7 +256,7 @@ export const LeadershipCouncil = ({ users: propUsers, organizations: propOrganiz
           </GridItem>
           <GridItem>
             <SimpleGrid columns={{ base: 1, sm: 2 }} spacing={4}>
-              <Card border="1px solid" borderColor="gray.200" bg="white" borderRadius="xl">
+              <Card border="1px solid" borderColor="border.control" bg="white" borderRadius="xl">
                 <CardBody>
                   <Text fontSize="xs" color="gray.500" textTransform="uppercase" letterSpacing="widest">
                     Active Mentors
@@ -264,7 +264,7 @@ export const LeadershipCouncil = ({ users: propUsers, organizations: propOrganiz
                   <Text fontSize="2xl" fontWeight="bold">{leaders.mentors.length}</Text>
                 </CardBody>
               </Card>
-              <Card border="1px solid" borderColor="gray.200" bg="white" borderRadius="xl">
+              <Card border="1px solid" borderColor="border.control" bg="white" borderRadius="xl">
                 <CardBody>
                   <Text fontSize="xs" color="gray.500" textTransform="uppercase" letterSpacing="widest">
                     Active Ambassadors
@@ -280,7 +280,7 @@ export const LeadershipCouncil = ({ users: propUsers, organizations: propOrganiz
       {!canViewLeadership ? (
         renderAccessDenied()
       ) : (
-        <Card border="1px solid" borderColor="gray.200" bg="white" borderRadius="2xl">
+        <Card border="1px solid" borderColor="border.control" bg="white" borderRadius="2xl">
           <CardBody>
             <Stack spacing={6}>
               <Flex
@@ -338,7 +338,7 @@ export const LeadershipCouncil = ({ users: propUsers, organizations: propOrganiz
                 </HStack>
               </Flex>
 
-              <Box border="1px solid" borderColor="gray.200" borderRadius="2xl" overflow="hidden">
+              <Box border="1px solid" borderColor="border.control" borderRadius="2xl" overflow="hidden">
                 <Box bg="gray.50" px={4} py={3}>
                   <HStack spacing={4} fontSize="xs" color="gray.500" textTransform="uppercase" letterSpacing="widest">
                     <Text flex="1">Name</Text>

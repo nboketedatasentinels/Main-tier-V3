@@ -419,7 +419,7 @@ export const UsersManagementTab = ({ users: propUsers, loading: propLoading }: U
         <Text color="gray.600">Search, filter, and manage user access across the platform.</Text>
       </Stack>
 
-      <Card border="1px solid" borderColor="gray.200" borderRadius="2xl" bg="white">
+      <Card border="1px solid" borderColor="border.control" borderRadius="2xl" bg="white">
         <CardBody>
           <Stack spacing={4}>
             <Flex direction={{ base: 'column', lg: 'row' }} gap={4} align={{ base: 'stretch', lg: 'center' }} justify="space-between">
@@ -554,7 +554,7 @@ export const UsersManagementTab = ({ users: propUsers, loading: propLoading }: U
               </Flex>
             )}
 
-            <Box border="1px solid" borderColor="gray.200" borderRadius="xl" overflowX="auto">
+            <Box border="1px solid" borderColor="border.control" borderRadius="xl" overflowX="auto">
               {propLoading ? (
                 <Flex py={10} justify="center" align="center" gap={3}>
                   <Spinner color="purple.500" />

@@ -11,7 +11,7 @@
     "lint": "eslint . --ext ts,tsx --report-unused-disable-directives --max-warnings 0",
     "format": "prettier --write \"src/**/*.{ts,tsx,js,jsx,json,css,md}\"",
     "typecheck": "tsc --noEmit",
-    "qa": "npm run lint && npm run typecheck && npm run build",
+    "qa": "npm run a11y:contrast && npm run lint && npm run typecheck && npm run build",
     "test": "npm run qa",
     "a11y:contrast": "node scripts/contrast-audit.mjs",
     "seed-courses": "node scripts/seed-courses.mjs",

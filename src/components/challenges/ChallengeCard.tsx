@@ -55,7 +55,7 @@ const statusConfig = {
     label: 'Completed',
     colorScheme: 'gray',
     bg: 'gray.50',
-    border: 'gray.200',
+    border: 'border.control',
   },
 };
 

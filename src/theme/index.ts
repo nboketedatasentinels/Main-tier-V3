@@ -297,7 +297,7 @@ const components = {
         borderRadius: 'xl',
         boxShadow: 'card',
         border: '1px solid',
-        borderColor: 'border.subtle',
+        borderColor: 'border.control',
       },
     },
     variants: {
