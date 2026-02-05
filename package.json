@@ -14,6 +14,7 @@
     "qa": "npm run a11y:contrast && npm run lint && npm run typecheck && npm run build",
     "test": "npm run qa",
     "a11y:contrast": "node scripts/contrast-audit.mjs",
+    "ensure:collections": "node scripts/ensure-firestore-collections.mjs",
     "seed-courses": "node scripts/seed-courses.mjs",
     "diagnose:partner-orgs": "node scripts/diagnose-partner-org-mismatch.mjs",
     "fix:partner-orgs": "node scripts/fix-user-organization-assignments.mjs",
