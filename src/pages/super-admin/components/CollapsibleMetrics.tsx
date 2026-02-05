@@ -46,7 +46,7 @@ export const CollapsibleMetrics: React.FC<CollapsibleMetricsProps> = ({ children
         {isOpen ? <ChevronUp size={20} /> : <ChevronDown size={20} />}
       </Button>
 
-      <Collapse in={isOpen} animateOpacity>
+      <Collapse in={isOpen} animateOpacity unmountOnExit>
         <Box py={6}>
           {children}
         </Box>
