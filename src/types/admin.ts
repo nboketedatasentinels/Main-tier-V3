@@ -30,6 +30,16 @@ export interface OrganizationRecord {
   name: string
   code: string
   /**
+   * Aggregated organization statistics written by `organizationStatsService`.
+   * These fields may be absent until stats have been computed at least once.
+   */
+  memberCount?: number
+  activeUsers?: number
+  newThisWeek?: number
+  averageEngagementRate?: number
+  lastActive?: Timestamp | string | Date | null
+  statsUpdatedAt?: Timestamp | string | Date | null
+  /**
    * Cohort size and total paid license count (includes users, mentors, ambassadors, and team leaders).
    */
   teamSize?: number
