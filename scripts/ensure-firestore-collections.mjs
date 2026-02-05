@@ -79,7 +79,7 @@ const COLLECTIONS = [
   'workshop_suggestion_votes',
 ]
 
-const PLACEHOLDER_DOC_ID = '__collection_init__'
+const PLACEHOLDER_DOC_ID = '_collection_init'
 
 const parseArgs = () => {
   const args = new Set(process.argv.slice(2))
@@ -167,4 +167,3 @@ ensureCollections(parseArgs()).catch((error) => {
   console.error('Failed to ensure Firestore collections:', error)
   process.exit(1)
 })
-
