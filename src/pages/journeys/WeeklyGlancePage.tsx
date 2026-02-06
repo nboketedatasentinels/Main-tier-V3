@@ -62,7 +62,11 @@ function isPaidUser(profile: UserProfile | null | undefined) {
 function canCreateVillage(profile: UserProfile | null | undefined) {
   // If they already belong to ANY village/company context, or are paid/corporate, do not show CTA
   const hasVillageContext =
-    !!profile?.villageId || !!profile?.companyId || !!profile?.corporateVillageId
+    !!profile?.villageId ||
+    !!profile?.corporateVillageId ||
+    !!profile?.companyId ||
+    !!profile?.companyCode ||
+    !!profile?.organizationId
   if (hasVillageContext) return false
   if (isPaidUser(profile)) return false
   if (isCorporateUser(profile)) return false

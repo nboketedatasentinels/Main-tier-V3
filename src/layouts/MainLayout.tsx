@@ -101,11 +101,19 @@ export const MainLayout: React.FC = () => {
   useEffect(() => {
     if (!profile) return
 
-    if (isFreeUser && buildVillageKey) {
+    if (buildVillageKey) {
+      const hasVillageContext = Boolean(
+        profile.villageId ||
+          profile.corporateVillageId ||
+          profile.companyId ||
+          profile.companyCode ||
+          profile.organizationId,
+      )
+      const shouldPromptVillage =
+        isFreeUser && !hasVillageContext && location.pathname.startsWith('/app/')
+
       const stored = localStorage.getItem(buildVillageKey)
-      if (!stored) {
-        setShowVillagePrompt(true)
-      }
+      setShowVillagePrompt(Boolean(shouldPromptVillage && !stored))
     }
 
     // Support all dashboard routes, not just weekly-glance
