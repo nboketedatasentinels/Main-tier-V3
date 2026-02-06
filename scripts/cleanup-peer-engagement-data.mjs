@@ -29,18 +29,38 @@ import admin from 'firebase-admin'
 const normalizeEmail = (email) => (email || '').toString().trim().toLowerCase()
 const normalizeAccountStatus = (status) => (typeof status === 'string' ? status.trim().toLowerCase() : '')
 
+const sanitizeProxyEnv = ({ keepProxy }) => {
+  if (keepProxy) return
+
+  const blockedProxy = 'http://127.0.0.1:9'
+  const envKeys = ['HTTP_PROXY', 'HTTPS_PROXY', 'ALL_PROXY', 'http_proxy', 'https_proxy', 'all_proxy']
+  const hasBlockedProxy = envKeys.some((key) => (process.env[key] || '').trim() === blockedProxy)
+
+  if (!hasBlockedProxy) return
+
+  envKeys.forEach((key) => {
+    if (process.env[key]) process.env[key] = ''
+  })
+
+  // Prefer bypassing all proxy routing for Firestore/gRPC calls in sandboxed envs.
+  process.env.NO_PROXY = '*'
+  process.env.no_proxy = '*'
+}
+
 const parseArgs = () => {
   const out = {
     orgId: null,
     orgCode: null,
     apply: false,
     cleanMatches: false,
+    keepProxy: false,
     limit: null,
   }
 
   for (const raw of process.argv.slice(2)) {
     if (raw === '--apply') out.apply = true
     else if (raw === '--cleanMatches') out.cleanMatches = true
+    else if (raw === '--keepProxy') out.keepProxy = true
     else if (raw.startsWith('--orgId=')) out.orgId = raw.slice('--orgId='.length).trim() || null
     else if (raw.startsWith('--orgCode=')) out.orgCode = raw.slice('--orgCode='.length).trim() || null
     else if (raw.startsWith('--limit=')) {
@@ -208,6 +228,7 @@ const expireMatchesForUserIds = async (db, userIds) => {
 
 const main = async () => {
   const args = parseArgs()
+  sanitizeProxyEnv({ keepProxy: args.keepProxy })
   initAdmin()
   const db = admin.firestore()
 
@@ -339,4 +360,3 @@ main().catch((err) => {
   console.error('\nCleanup script failed:', err)
   process.exitCode = 1
 })
-
