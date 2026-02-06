@@ -29,6 +29,7 @@ import {
   ConfigurationChangeRecord,
   PassMarkAdjustmentReason,
 } from '../types/organization'
+import { normalizeRole } from '@/utils/role'
 
 /**
  * Get organization configuration
@@ -133,6 +134,11 @@ export async function updateOrgLeadership(
   try {
     const configRef = doc(db, 'organization_configuration', orgId)
 
+    const existingConfigSnap = await getDoc(configRef)
+    if (!existingConfigSnap.exists()) {
+      await setDoc(configRef, getDefaultOrgConfiguration(orgId), { merge: true })
+    }
+
     // Record the change
     await recordConfigurationChange(orgId, 'leadership_assigned', {}, leadership, userId)
 
@@ -164,12 +170,47 @@ export async function updateOrgLeadership(
       'leadership.assignedMentorId': leadership.assignedMentorId ?? null,
       'leadership.assignedAmbassadorId': leadership.assignedAmbassadorId ?? null,
       'leadership.transformationPartnerId': leadership.transformationPartnerId ?? null,
+      // Back-compat for dashboards/services that read top-level leadership assignment fields.
+      assignedMentorId: leadership.assignedMentorId ?? null,
+      assignedAmbassadorId: leadership.assignedAmbassadorId ?? null,
+      transformationPartnerId: leadership.transformationPartnerId ?? null,
+      leadershipUpdatedAt: serverTimestamp(),
+      leadershipUpdatedBy: userId,
       updatedAt: serverTimestamp(),
     })
   } catch (error) {
     console.error('Error updating org leadership:', error)
     throw error
   }
+}
+
+const maybePromoteUserToLeadershipRole = async (
+  targetUserId: string,
+  role: 'mentor' | 'ambassador' | 'partner',
+  actorUserId: string,
+) => {
+  if (role === 'partner') return
+
+  const userRef = doc(db, 'users', targetUserId)
+  const userSnap = await getDoc(userRef)
+  const currentRole = normalizeRole(userSnap.exists() ? (userSnap.data() as { role?: unknown }).role : null)
+
+  if (currentRole === role) return
+  if (currentRole === 'super_admin' || currentRole === 'partner') return
+
+  const payload: Record<string, unknown> = {
+    role,
+    updatedAt: serverTimestamp(),
+    roleChangedBy: actorUserId,
+    roleChangedAt: serverTimestamp(),
+    lastModifiedBy: actorUserId,
+    lastModifiedAt: serverTimestamp(),
+  }
+
+  await Promise.all([
+    setDoc(doc(db, 'users', targetUserId), payload, { merge: true }),
+    setDoc(doc(db, 'profiles', targetUserId), payload, { merge: true }),
+  ])
 }
 
 /**
@@ -187,6 +228,18 @@ export async function assignLeadershipToOrg(
     if (!config) throw new Error('Organization configuration not found')
 
     const newLeadership = { ...config.leadership }
+
+    try {
+      await maybePromoteUserToLeadershipRole(userId, role, adminUserId)
+    } catch (error) {
+      console.warn('[OrgConfiguration] Unable to promote user for leadership role assignment', {
+        orgId,
+        role,
+        userId,
+        adminUserId,
+        message: (error as Error)?.message,
+      })
+    }
 
     // Assign based on role
     if (role === 'mentor') {
@@ -228,6 +281,44 @@ export async function assignLeadershipToOrg(
 
     // Update configuration
     await updateOrgLeadership(orgId, newLeadership, adminUserId)
+
+    // Mirror key fields for dashboards that rely on top-level organization fields.
+    const orgRef = doc(db, 'organizations', orgId)
+    const cleanString = (value: unknown) => (typeof value === 'string' && value.trim() ? value.trim() : null)
+    const baseOrgUpdate: Record<string, unknown> = {
+      updatedAt: serverTimestamp(),
+      leadershipUpdatedAt: serverTimestamp(),
+      leadershipUpdatedBy: adminUserId,
+    }
+
+    if (role === 'mentor') {
+      await updateDoc(orgRef, {
+        ...baseOrgUpdate,
+        assignedMentorId: userId,
+        assignedMentorAt: serverTimestamp(),
+        assignedMentorBy: adminUserId,
+        assignedMentorName: cleanString(leadershipData.name),
+        assignedMentorEmail: cleanString(leadershipData.email),
+      })
+    } else if (role === 'ambassador') {
+      await updateDoc(orgRef, {
+        ...baseOrgUpdate,
+        assignedAmbassadorId: userId,
+        assignedAmbassadorAt: serverTimestamp(),
+        assignedAmbassadorBy: adminUserId,
+        assignedAmbassadorName: cleanString(leadershipData.name),
+        assignedAmbassadorEmail: cleanString(leadershipData.email),
+      })
+    } else if (role === 'partner') {
+      await updateDoc(orgRef, {
+        ...baseOrgUpdate,
+        transformationPartnerId: userId,
+        assignedPartnerAt: serverTimestamp(),
+        assignedPartnerBy: adminUserId,
+        assignedPartnerName: cleanString(leadershipData.name),
+        assignedPartnerEmail: cleanString(leadershipData.email),
+      })
+    }
   } catch (error) {
     console.error('Error assigning leadership:', error)
     throw error
@@ -247,6 +338,11 @@ export async function removeLeadershipFromOrg(
     if (!config) throw new Error('Organization configuration not found')
 
     const newLeadership = { ...config.leadership }
+    const orgFieldUpdates: Record<string, unknown> = {
+      updatedAt: serverTimestamp(),
+      leadershipUpdatedAt: serverTimestamp(),
+      leadershipUpdatedBy: adminUserId,
+    }
 
     // Find and remove
     if (newLeadership.assignedMentorId === userId) {
@@ -255,15 +351,30 @@ export async function removeLeadershipFromOrg(
       newLeadership.mentorCapacity = 0
       newLeadership.mentorUtilization = 0
       newLeadership.mentorSkills = []
+      orgFieldUpdates.assignedMentorId = null
+      orgFieldUpdates.assignedMentorAt = null
+      orgFieldUpdates.assignedMentorBy = adminUserId
+      orgFieldUpdates.assignedMentorName = null
+      orgFieldUpdates.assignedMentorEmail = null
     } else if (newLeadership.assignedAmbassadorId === userId) {
       newLeadership.assignedAmbassadorId = null
       newLeadership.hasAmbassador = false
       newLeadership.ambassadorCapacity = 0
       newLeadership.ambassadorUtilization = 0
       newLeadership.ambassadorFocusAreas = []
+      orgFieldUpdates.assignedAmbassadorId = null
+      orgFieldUpdates.assignedAmbassadorAt = null
+      orgFieldUpdates.assignedAmbassadorBy = adminUserId
+      orgFieldUpdates.assignedAmbassadorName = null
+      orgFieldUpdates.assignedAmbassadorEmail = null
     } else if (newLeadership.transformationPartnerId === userId) {
       newLeadership.transformationPartnerId = null
       newLeadership.hasPartner = false
+      orgFieldUpdates.transformationPartnerId = null
+      orgFieldUpdates.assignedPartnerAt = null
+      orgFieldUpdates.assignedPartnerBy = adminUserId
+      orgFieldUpdates.assignedPartnerName = null
+      orgFieldUpdates.assignedPartnerEmail = null
     }
 
     // Remove from roster
@@ -286,6 +397,11 @@ export async function removeLeadershipFromOrg(
 
     // Update
     await updateOrgLeadership(orgId, newLeadership, adminUserId)
+
+    // Keep organization top-level fields aligned (for legacy dashboards).
+    if (Object.keys(orgFieldUpdates).length > 3) {
+      await updateDoc(doc(db, 'organizations', orgId), orgFieldUpdates)
+    }
   } catch (error) {
     console.error('Error removing leadership:', error)
     throw error
