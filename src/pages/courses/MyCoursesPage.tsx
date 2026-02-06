@@ -157,14 +157,18 @@ const buildCourseFromDoc = (courseId: string, data: Record<string, unknown>): No
 }
 
 const buildCourseFromMapping = (courseId: string): NormalizedCourse | null => {
-  const entry = Object.entries(COURSE_DETAILS_MAPPING).find(([, details]) => details.slug === courseId)
+  const normalized = courseId.trim().toLowerCase()
+  const entries = Object.entries(COURSE_DETAILS_MAPPING)
+  const entry =
+    entries.find(([, details]) => details.slug.trim().toLowerCase() === normalized) ||
+    entries.find(([title]) => title.trim().toLowerCase() === normalized)
   if (!entry) return null
 
   const [title, details] = entry
   const metadata = COURSE_METADATA_MAPPING[title]
 
   return {
-    id: courseId,
+    id: details.slug,
     title,
     description: details.description,
     link: details.link,
@@ -459,16 +463,21 @@ const OrganizationCoursesPage: React.FC<{ userId?: string | null; profile: UserP
         const orderedCourseIds = program.orderedCourseIds
         const snapshots = await getCourseDocuments(orderedCourseIds)
 
-        const nextCourses: NormalizedCourse[] = []
         const nextCourseMap: Record<string, NormalizedCourse> = {}
-        snapshots.forEach(snap => {
-          if (!snap.exists()) {
+        snapshots.forEach((snap, index) => {
+          const requestedCourseId = orderedCourseIds[index] ?? snap.id
+          if (snap.exists()) {
+            const baseCourse = buildCourseFromDoc(snap.id, snap.data())
+            nextCourseMap[requestedCourseId] = baseCourse
+            nextCourseMap[baseCourse.id] = baseCourse
             return
           }
 
-          const baseCourse = buildCourseFromDoc(snap.id, snap.data())
-          nextCourses.push(baseCourse)
-          nextCourseMap[baseCourse.id] = baseCourse
+          const fallbackCourse = buildCourseFromMapping(requestedCourseId)
+          if (fallbackCourse) {
+            nextCourseMap[requestedCourseId] = fallbackCourse
+            nextCourseMap[fallbackCourse.id] = fallbackCourse
+          }
         })
 
         if (isActive) {
