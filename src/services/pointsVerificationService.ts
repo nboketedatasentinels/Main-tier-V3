@@ -17,6 +17,7 @@ import { getActivitiesForJourney } from '@/config/pointsConfig'
 import { createInAppNotification } from './notificationService'
 import { resolveJourneyType } from '@/utils/journeyType'
 import { logAdminAction } from './superAdminService'
+import { upsertChecklistActivity } from './checklistService'
 
 export type PointsVerificationRequestStatus = 'pending' | 'approved' | 'rejected'
 
@@ -211,6 +212,23 @@ export const approvePointsVerificationRequest = async (params: {
     throw error
   }
 
+  try {
+    await upsertChecklistActivity({
+      userId: params.request.user_id,
+      weekNumber: params.request.week,
+      activityId: params.request.activity_id,
+      patch: {
+        status: 'completed',
+        hasInteracted: true,
+        proofUrl: params.request.proof_url ?? null,
+        notes: params.request.notes ?? null,
+        rejectionReason: null,
+      },
+    })
+  } catch (error) {
+    console.error('[pointsVerificationService] Failed to update checklist after approval:', error)
+  }
+
   // Log admin action (after points cleared)
   try {
     await logAdminAction({
@@ -249,6 +267,24 @@ export const rejectPointsVerificationRequest = async (params: {
     rejection_reason: params.reason ?? null,
   })
 
+  try {
+    await upsertChecklistActivity({
+      userId: params.request.user_id,
+      weekNumber: params.request.week,
+      activityId: params.request.activity_id,
+      patch: {
+        status: 'rejected',
+        // Unlock so the learner can resubmit after rejection.
+        hasInteracted: false,
+        proofUrl: params.request.proof_url ?? null,
+        notes: params.request.notes ?? null,
+        rejectionReason: params.reason ?? null,
+      },
+    })
+  } catch (error) {
+    console.error('[pointsVerificationService] Failed to update checklist after rejection:', error)
+  }
+
   // Log admin action
   try {
     await logAdminAction({
@@ -272,6 +308,13 @@ export const rejectPointsVerificationRequest = async (params: {
     title: 'Activity Submission Rejected',
     message: `Your submission for "${params.request.activity_title || params.request.activity_id}" was rejected.${params.reason ? ` Reason: ${params.reason}` : ''}`,
     type: 'approval',
+    relatedId: params.request.id,
+    metadata: {
+      actionUrl: `/app/weekly-checklist?week=${encodeURIComponent(String(params.request.week))}&activityId=${encodeURIComponent(params.request.activity_id)}&openProof=1`,
+      week: params.request.week,
+      activityId: params.request.activity_id,
+      requestId: params.request.id,
+    },
   })
 
   return { data: { success: true } }

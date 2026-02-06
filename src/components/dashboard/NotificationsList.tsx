@@ -1,6 +1,7 @@
 import {
   Badge,
   Box,
+  Button,
   Flex,
   HStack,
   Icon,
@@ -31,6 +32,7 @@ import {
 } from '@/services/notificationService'
 import { NotificationRecord } from '@/types/notifications'
 import { formatDistanceToNow } from 'date-fns'
+import { useNavigate } from 'react-router-dom'
 
 const notificationIcon = (type: NotificationRecord['type']) => {
   switch (type) {
@@ -77,12 +79,15 @@ const formatTimestamp = (value?: unknown): string => {
 const NotificationCard = ({
   notification,
   onMarkRead,
+  onOpenLink,
 }: {
   notification: NotificationRecord
   onMarkRead: () => void
+  onOpenLink?: (actionUrl: string) => void
 }) => {
   const isRead = notification.is_read || notification.read
   const timestamp = formatTimestamp(notification.created_at)
+  const actionUrl = typeof notification.metadata?.actionUrl === 'string' ? notification.metadata.actionUrl : null
 
   return (
     <Box
@@ -138,6 +143,19 @@ const NotificationCard = ({
             {notification.message}
           </Text>
 
+          {actionUrl && onOpenLink && (
+            <HStack pt={1}>
+              <Button
+                size="xs"
+                variant="link"
+                color="brand.primary"
+                onClick={() => onOpenLink(actionUrl)}
+              >
+                View details
+              </Button>
+            </HStack>
+          )}
+
           {timestamp && (
             <Text color="text.muted" fontSize="xs" mt={1}>
               {timestamp}
@@ -166,6 +184,7 @@ const NotificationCard = ({
 
 export const NotificationsList = () => {
   const { user } = useAuth()
+  const navigate = useNavigate()
   const [notifications, setNotifications] = useState<NotificationRecord[]>([])
   const [loading, setLoading] = useState(true)
 
@@ -185,6 +204,21 @@ export const NotificationsList = () => {
 
   const handleMarkRead = async (id: string) => {
     await markNotificationRead(id)
+  }
+
+  const handleOpenLink = async (notification: NotificationRecord, actionUrl: string) => {
+    try {
+      await markNotificationRead(notification.id)
+    } catch (error) {
+      console.error('[NotificationsList] Failed to mark notification read before navigation', error)
+    }
+
+    if (actionUrl.startsWith('/')) {
+      navigate(actionUrl)
+      return
+    }
+
+    window.open(actionUrl, '_blank', 'noopener,noreferrer')
   }
 
   const handleMarkAll = async () => {
@@ -247,6 +281,7 @@ export const NotificationsList = () => {
               key={notification.id}
               notification={notification}
               onMarkRead={() => handleMarkRead(notification.id)}
+              onOpenLink={(actionUrl) => handleOpenLink(notification, actionUrl)}
             />
           ))}
         </Stack>

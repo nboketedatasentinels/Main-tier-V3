@@ -6,6 +6,7 @@ import { getNextWindowAvailabilityMessage } from '@/utils/activityStateManager'
 const statusLabel: Record<ActivityState['status'], string> = {
   not_started: 'Not started',
   pending: 'Pending',
+  rejected: 'Rejected',
   completed: 'Completed',
 }
 
@@ -31,8 +32,8 @@ export const WeeklyActivityCard = ({
   const isPartnerIssued = activity.approvalType === 'partner_issued'
 
   const lockedByWeek = isWeekLocked && !isAdmin
-  const lockedByAvailability = activity.availability.state !== 'available' && !isAdmin
-  const lockedByInteraction = Boolean(activity.hasInteracted) && !isAdmin
+  const lockedByAvailability = activity.availability.state !== 'available' && !isAdmin && activity.status === 'not_started'
+  const lockedByInteraction = Boolean(activity.hasInteracted) && activity.status !== 'rejected' && !isAdmin
 
   const disabled = lockedByWeek || lockedByAvailability || lockedByInteraction
 
@@ -90,7 +91,19 @@ export const WeeklyActivityCard = ({
       <HStack justify="space-between" align="flex-start">
         <Stack spacing={1} flex={1}>
           <HStack spacing={2} wrap="wrap">
-            <Badge colorScheme={activity.status === 'completed' ? 'green' : 'gray'}>{statusLabel[activity.status]}</Badge>
+            <Badge
+              colorScheme={
+                activity.status === 'completed'
+                  ? 'green'
+                  : activity.status === 'pending'
+                    ? 'blue'
+                    : activity.status === 'rejected'
+                      ? 'red'
+                      : 'gray'
+              }
+            >
+              {statusLabel[activity.status]}
+            </Badge>
 
             {requiresPartnerApproval ? (
               <Tooltip label="Partner approval required. Submit proof for verification.">
@@ -153,6 +166,15 @@ export const WeeklyActivityCard = ({
               </Text>
             </HStack>
           ) : null}
+
+          {activity.status === 'rejected' ? (
+            <HStack spacing={2} color="red.600" align="start">
+              <Icon as={AlertTriangle} size={14} mt={0.5} />
+              <Text fontSize="sm">
+                Submission rejected{activity.rejectionReason ? `: ${activity.rejectionReason}` : '.'} You can resubmit proof.
+              </Text>
+            </HStack>
+          ) : null}
         </Stack>
 
         {isAdmin ? <Badge colorScheme="red" alignSelf="flex-start">Admin override</Badge> : null}
@@ -167,7 +189,7 @@ export const WeeklyActivityCard = ({
             isDisabled={disabled || activity.status === 'completed'}
             onClick={() => onOpenProof(activity)}
           >
-            Submit proof
+            {activity.status === 'rejected' ? 'Resubmit proof' : 'Submit proof'}
           </Button>
         ) : isPartnerIssued ? (
           <Button
@@ -193,7 +215,7 @@ export const WeeklyActivityCard = ({
         <Button
           size="sm"
           variant="outline"
-          isDisabled={(!isAdmin && activity.hasInteracted) || lockedByWeek}
+          isDisabled={(!isAdmin && activity.hasInteracted && activity.status !== 'rejected') || lockedByWeek}
           onClick={() => onMarkNotStarted(activity)}
         >
           No / Reset

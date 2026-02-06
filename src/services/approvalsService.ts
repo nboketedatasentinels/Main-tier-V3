@@ -8,6 +8,7 @@ import { PointsVerificationRequest } from './pointsVerificationService';
 import { getActivitiesForJourney } from '@/config/pointsConfig';
 import { createInAppNotification } from './notificationService';
 import { logAdminAction } from './superAdminService';
+import { upsertChecklistActivity } from './checklistService';
 
 /**
  * Creates a new approval request in the `approvals` collection.
@@ -132,6 +133,36 @@ export async function approveRequest(approvalId: string, reviewedBy: string): Pr
       throw error;
     }
 
+    // Mirror status into points_verification_requests/checklists (if this approval was created from that flow).
+    if (request?.id) {
+      try {
+        await updateDoc(doc(db, 'points_verification_requests', request.id), {
+          status: 'approved',
+          approved_by: reviewedBy,
+          approved_at: serverTimestamp(),
+        });
+      } catch (error) {
+        console.error('[approvalsService] Failed to update points_verification_requests after approval:', error);
+      }
+    }
+
+    try {
+      await upsertChecklistActivity({
+        userId: approvalRecord.userId,
+        weekNumber: request.week,
+        activityId: request.activity_id,
+        patch: {
+          status: 'completed',
+          hasInteracted: true,
+          proofUrl: request.proof_url ?? null,
+          notes: request.notes ?? null,
+          rejectionReason: null,
+        },
+      });
+    } catch (error) {
+      console.error('[approvalsService] Failed to update checklist after approval:', error);
+    }
+
     // Log admin action (after points are awarded)
     try {
       await logAdminAction({
@@ -172,6 +203,7 @@ export async function rejectRequest(
     throw new Error('Approval request not found');
   }
   const approvalRecord = approvalSnap.data() as ApprovalRecord;
+  const request = approvalRecord.source as Partial<PointsVerificationRequest> | undefined;
 
   try {
     await updateDoc(approvalRef, {
@@ -180,6 +212,37 @@ export async function rejectRequest(
       rejectionReason,
       reviewedAt: serverTimestamp(),
     });
+
+    // Mirror status into points_verification_requests/checklists (if this approval was created from that flow).
+    if (request?.id && request?.activity_id && typeof request?.week === 'number') {
+      try {
+        await updateDoc(doc(db, 'points_verification_requests', request.id), {
+          status: 'rejected',
+          rejected_by: reviewedBy,
+          rejected_at: serverTimestamp(),
+          rejection_reason: rejectionReason,
+        });
+      } catch (error) {
+        console.error('[approvalsService] Failed to update points_verification_requests after rejection:', error);
+      }
+
+      try {
+        await upsertChecklistActivity({
+          userId: approvalRecord.userId,
+          weekNumber: request.week,
+          activityId: request.activity_id,
+          patch: {
+            status: 'rejected',
+            hasInteracted: false,
+            proofUrl: (request as PointsVerificationRequest).proof_url ?? null,
+            notes: (request as PointsVerificationRequest).notes ?? null,
+            rejectionReason: rejectionReason,
+          },
+        });
+      } catch (error) {
+        console.error('[approvalsService] Failed to update checklist after rejection:', error);
+      }
+    }
 
     // Log admin action
     try {
@@ -203,6 +266,15 @@ export async function rejectRequest(
       title: 'Activity Submission Rejected',
       message: `Your submission for "${approvalRecord.title}" was rejected. Reason: ${rejectionReason}`,
       type: 'approval',
+      relatedId: request?.id,
+      metadata: request?.activity_id && typeof request?.week === 'number'
+        ? {
+            actionUrl: `/app/weekly-checklist?week=${encodeURIComponent(String(request.week))}&activityId=${encodeURIComponent(String(request.activity_id))}&openProof=1`,
+            week: request.week,
+            activityId: request.activity_id,
+            requestId: request.id,
+          }
+        : {},
     });
   } catch (error) {
     console.error('Error rejecting request:', error);
