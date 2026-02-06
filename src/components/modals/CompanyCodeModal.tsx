@@ -116,6 +116,14 @@ export const CompanyCodeModal: React.FC<CompanyCodeModalProps> = ({
 
     setIsSubmitting(true)
     const shouldIncrementMemberCount = !!companyId && companyId !== profile?.companyId
+    const nextAssignedOrganizations = companyId
+      ? Array.from(
+          new Set([
+            ...((profile?.assignedOrganizations || []).filter((id): id is string => typeof id === 'string' && id.trim().length > 0)),
+            companyId,
+          ]),
+        )
+      : profile?.assignedOrganizations
     const updatedPreferences = {
       ...(profile?.dashboardPreferences ?? {}),
       lockedToFreeExperience: false,
@@ -125,6 +133,7 @@ export const CompanyCodeModal: React.FC<CompanyCodeModalProps> = ({
       companyCode: trimmedCode,
       companyId: companyId ?? undefined,
       companyName: companyName ?? undefined,
+      ...(companyId ? { assignedOrganizations: nextAssignedOrganizations } : {}),
       role: UserRole.PAID_MEMBER,
       membershipStatus: 'paid',
       transformationTier: companyId ? TransformationTier.CORPORATE_MEMBER : TransformationTier.INDIVIDUAL_PAID,

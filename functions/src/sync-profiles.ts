@@ -79,6 +79,7 @@ export const syncAuthUserToProfile = functions
   .onCreate(async (user) => {
     const uid = user.uid;
     const email = user.email || "";
+    const normalizedEmail = email.trim().toLowerCase();
 
     console.log(`New auth user created: ${uid} (${email})`);
 
@@ -86,16 +87,101 @@ export const syncAuthUserToProfile = functions
       const timestamp = admin.firestore.FieldValue.serverTimestamp();
 
       // Check if user document already exists
-      const userDoc = await db.collection("users").doc(uid).get();
+      const userRef = db.collection("users").doc(uid);
+      const userDoc = await userRef.get();
+      let userDocExists = userDoc.exists;
 
-      if (!userDoc.exists) {
+      const normalizeStringArray = (value: unknown): string[] => {
+        if (!Array.isArray(value)) return [];
+        return value
+          .filter((entry): entry is string => typeof entry === "string")
+          .map((entry) => entry.trim())
+          .filter(Boolean);
+      };
+
+      const scoreDuplicate = (doc: any) => {
+        const data = (doc?.data?.() as any) || {};
+        let score = 0;
+        if (data?.id && data.id === doc.id) score += 100;
+        if (data?.membershipStatus === "paid") score += 25;
+        if (data?.companyId) score += 15;
+        if (data?.companyCode) score += 5;
+        if (Array.isArray(data?.assignedOrganizations) && data.assignedOrganizations.length > 0) score += 5;
+        if (data?.role && data.role !== "free_user") score += 2;
+        return score;
+      };
+
+      // Reconcile placeholder/duplicate user docs created before auth signup (usually from invitations).
+      // This prevents duplicate "free" users showing up next to the real uid-based record.
+      if (normalizedEmail) {
+        const duplicatesSnap = await db.collection("users").where("email", "==", normalizedEmail).get();
+        const duplicates = duplicatesSnap.docs.filter((doc: any) => doc.id !== uid);
+
+        if (duplicates.length > 0) {
+          const baseData = (userDoc.exists ? (userDoc.data() as any) : {}) || {};
+          const best = duplicates
+            .slice()
+            .sort((a: any, b: any) => scoreDuplicate(b) - scoreDuplicate(a))[0];
+          const bestData = (best?.data?.() as any) || {};
+
+          const mergedAssignedOrganizations = Array.from(
+            new Set([
+              ...normalizeStringArray(baseData.assignedOrganizations),
+              ...duplicates.flatMap((doc: any) => normalizeStringArray((doc.data() as any)?.assignedOrganizations)),
+            ])
+          );
+
+          const baseRole = (baseData.role || "free_user").toString();
+          const candidateRole = (bestData.role || "").toString();
+          const shouldUpgradeRole =
+            (baseRole === "free_user" || baseRole === "user") &&
+            candidateRole &&
+            candidateRole !== "free_user" &&
+            candidateRole !== baseRole;
+
+          const mergedMembershipStatus =
+            baseData.membershipStatus === "paid" ||
+            bestData.membershipStatus === "paid" ||
+            Boolean(bestData.companyId) ||
+            mergedAssignedOrganizations.length > 0
+              ? "paid"
+              : baseData.membershipStatus || "free";
+
+          const mergePayload: any = {
+            id: uid,
+            email: normalizedEmail,
+            assignedOrganizations: mergedAssignedOrganizations,
+            membershipStatus: mergedMembershipStatus,
+            companyId: baseData.companyId || bestData.companyId || null,
+            companyCode: baseData.companyCode || bestData.companyCode || null,
+            companyName: baseData.companyName || bestData.companyName || null,
+            transformationTier:
+              mergedMembershipStatus === "paid"
+                ? baseData.transformationTier || bestData.transformationTier || "corporate_member"
+                : baseData.transformationTier,
+            updatedAt: timestamp,
+          };
+
+          if (shouldUpgradeRole) {
+            mergePayload.role = candidateRole;
+          }
+
+          await userRef.set(mergePayload, { merge: true });
+          userDocExists = true;
+
+          await Promise.all(duplicates.map((doc: any) => doc.ref.delete()));
+          console.log(`✓ Reconciled and removed ${duplicates.length} duplicate user doc(s) for ${normalizedEmail}`);
+        }
+      }
+
+      if (!userDocExists) {
         // Create a minimal user profile for newly authenticated users
         const userData = {
           id: uid,
-          email: email,
+          email: normalizedEmail || email,
           firstName: user.displayName?.split(" ")[0] || "User",
           lastName: user.displayName?.split(" ").slice(1).join(" ") || "",
-          fullName: user.displayName || email,
+          fullName: user.displayName || normalizedEmail || email,
           role: "free_user",
           membershipStatus: "free",
           totalPoints: 0,
@@ -108,14 +194,14 @@ export const syncAuthUserToProfile = functions
 
         // Write to both collections
         await Promise.all([
-          db.collection("users").doc(uid).set(userData),
+          userRef.set(userData, { merge: true }),
           db.collection("profiles").doc(uid).set(userData),
         ]);
 
         console.log(`✓ Created user and profile for ${uid}`);
       } else {
         // User already exists in users collection, sync to profiles
-        const userData = userDoc.data();
+        const userData = (await userRef.get()).data();
         await db.collection("profiles").doc(uid).set(
           {
             ...userData,

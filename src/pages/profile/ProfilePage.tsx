@@ -861,12 +861,24 @@ export const ProfilePage: React.FC = () => {
 
     setCompanyCodeSaving(true)
     setOrganizationMessage(null)
+    const existingAssignments = Array.isArray(profile?.assignedOrganizations) ? profile.assignedOrganizations : []
+    const nextAssignedOrganizations = companyOrganization?.id
+      ? Array.from(
+          new Set([
+            ...existingAssignments.filter(
+              (assignment): assignment is string => typeof assignment === 'string' && assignment.trim().length > 0,
+            ),
+            companyOrganization.id,
+          ]),
+        )
+      : existingAssignments
     const membershipUpdates = {
       membershipStatus: 'paid' as const,
       role: UserRole.PAID_MEMBER,
       transformationTier: companyOrganization
         ? TransformationTier.CORPORATE_MEMBER
         : TransformationTier.INDIVIDUAL_PAID,
+      ...(companyOrganization?.id ? { assignedOrganizations: nextAssignedOrganizations } : {}),
       dashboardPreferences: {
         ...(profileData.dashboardPreferences ?? {}),
         lockedToFreeExperience: false,
