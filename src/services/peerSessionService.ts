@@ -5,6 +5,7 @@ import {
   getDocs,
   onSnapshot,
   query,
+  runTransaction,
   serverTimestamp,
   Timestamp,
   updateDoc,
@@ -408,34 +409,56 @@ export async function confirmSession(sessionId: string, userId: string): Promise
     throw new Error('Session not found')
   }
 
-  const sessionData = sessionSnap.data()
-  const participants = sessionData.participants as string[]
-  const currentConfirmations = (sessionData.confirmations || {}) as Record<string, boolean>
-  const alreadyAwarded = sessionData.pointsAwarded === true
+  // Use transaction to prevent race condition with duplicate point awards
+  let shouldAwardPoints = false
+  let participantsToAward: string[] = []
 
-  // Update user's confirmation
-  await updateDoc(sessionRef, {
-    [`confirmations.${userId}`]: true,
-    updatedAt: serverTimestamp(),
-  })
+  const result = await runTransaction(db, async (transaction) => {
+    const sessionDoc = await transaction.get(sessionRef)
 
-  // Check if all participants have now confirmed
-  const updatedConfirmations = { ...currentConfirmations, [userId]: true }
-  const allConfirmed = participants.every(pid => updatedConfirmations[pid] === true)
+    if (!sessionDoc.exists()) {
+      throw new Error('Session not found in transaction')
+    }
 
-  let pointsAwarded = false
+    const sessionData = sessionDoc.data()
 
-  if (allConfirmed && !alreadyAwarded) {
-    // Mark session as confirmed and flag points as awarded
-    await updateDoc(sessionRef, {
-      status: 'confirmed',
-      pointsAwarded: true,
-      confirmedAt: serverTimestamp(),
+    // Validate participants array
+    const participants = Array.isArray(sessionData.participants) ? sessionData.participants : []
+    if (participants.length < 2) {
+      throw new Error('Invalid session: must have at least 2 participants')
+    }
+
+    const currentConfirmations = (sessionData.confirmations || {}) as Record<string, boolean>
+    const alreadyAwarded = sessionData.pointsAwarded === true
+
+    // Update user's confirmation
+    const updatedConfirmations = { ...currentConfirmations, [userId]: true }
+    transaction.update(sessionRef, {
+      [`confirmations.${userId}`]: true,
       updatedAt: serverTimestamp(),
     })
 
-    // Award points to ALL participants
-    for (const participantId of participants) {
+    // Check if all participants have now confirmed
+    const allConfirmed = participants.every(pid => updatedConfirmations[pid] === true)
+
+    // If all confirmed and not already awarded, mark as awarded atomically
+    if (allConfirmed && !alreadyAwarded) {
+      transaction.update(sessionRef, {
+        status: 'confirmed',
+        pointsAwarded: true,
+        confirmedAt: serverTimestamp(),
+        updatedAt: serverTimestamp(),
+      })
+      shouldAwardPoints = true
+      participantsToAward = participants
+    }
+
+    return { allConfirmed, pointsAwarded: shouldAwardPoints }
+  })
+
+  // Award points OUTSIDE the transaction to avoid long-running transactions
+  if (shouldAwardPoints && participantsToAward.length > 0) {
+    for (const participantId of participantsToAward) {
       try {
         const journeyInfo = await getUserJourneyInfo(participantId)
         if (journeyInfo) {
@@ -452,11 +475,9 @@ export async function confirmSession(sessionId: string, userId: string): Promise
         // Continue awarding to other participants even if one fails
       }
     }
-
-    pointsAwarded = true
   }
 
-  return { allConfirmed, pointsAwarded }
+  return result
 }
 
 /**

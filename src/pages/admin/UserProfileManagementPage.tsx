@@ -578,6 +578,33 @@ export const UserProfileManagementPage: React.FC<{ viewContext?: ViewContext }> 
   const displayedMembershipLabel = displayProfile.membershipStatus ? toTitleCase(displayProfile.membershipStatus) : 'Free'
   const displayedAccountStatusLabel = displayProfile.accountStatus ? toTitleCase(displayProfile.accountStatus) : 'Active'
 
+  const currentRoleLabel = profileData.role ? toTitleCase(profileData.role) : 'User'
+
+  const currentOrganizationAccessLabel = (() => {
+    if (profileData.role === 'super_admin') return 'All organizations'
+
+    const assignedOrganizations = Array.isArray(profileData.assignedOrganizations)
+      ? profileData.assignedOrganizations.filter((value): value is string => typeof value === 'string' && value.trim().length > 0)
+      : []
+
+    if (organization?.name) {
+      return `${organization.name}${organization.code ? ` (${organization.code})` : ''}`
+    }
+
+    if (profileData.companyName) return profileData.companyName
+    if (profileData.companyCode) return profileData.companyCode
+
+    if (assignedOrganizations.length > 0) {
+      const summary =
+        assignedOrganizations.length <= 2
+          ? assignedOrganizations.join(', ')
+          : `${assignedOrganizations.slice(0, 2).join(', ')} +${assignedOrganizations.length - 2} more`
+      return `Assigned (${assignedOrganizations.length}): ${summary}`
+    }
+
+    return 'Restricted'
+  })()
+
   const goalsCompletedLive = checklistProgress?.completedActivities ?? safeNumber(profileData.goalsCompleted)
   const goalsTotalLive = checklistProgress?.totalActivities ?? safeNumber(profileData.goalsTotal)
   const milestonesProgressLive =
@@ -1148,14 +1175,12 @@ export const UserProfileManagementPage: React.FC<{ viewContext?: ViewContext }> 
               <CardBody>
                 <Stack spacing={3}>
                   <HStack justify="space-between">
-                    <Text color="text.muted">Viewer role</Text>
-                    <Badge colorScheme="purple">{viewerProfile.role}</Badge>
+                    <Text color="text.muted">User role</Text>
+                    <Badge colorScheme="purple">{currentRoleLabel}</Badge>
                   </HStack>
                   <HStack justify="space-between">
                     <Text color="text.muted">Organization access</Text>
-                    <Text fontWeight="semibold">
-                      {isSuperAdmin ? 'All organizations' : profileData.companyCode || 'Restricted'}
-                    </Text>
+                    <Text fontWeight="semibold">{currentOrganizationAccessLabel}</Text>
                   </HStack>
                 </Stack>
               </CardBody>
