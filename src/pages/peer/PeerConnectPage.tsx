@@ -76,6 +76,7 @@ import { useAuth } from '@/hooks/useAuth'
 import { StartChallengeModal } from '@/components/modals/StartChallengeModal'
 import { fetchOrgMembers, getOrgScope, buildScopeQueries } from '@/utils/organizationScope'
 import { getDisplayName } from '@/utils/displayName'
+import { normalizeEmail } from '@/utils/email'
 import {
   createPeerSession,
   confirmSession,
@@ -94,6 +95,7 @@ type PeerProfile = {
   id: string
   name: string
   email: string
+  allowPeerMatching?: boolean
   timezone?: string
   interests?: string
   goals?: string
@@ -105,9 +107,35 @@ type PeerProfile = {
   avatarUrl?: string
 }
 
+const normalizeAccountStatus = (status: unknown) => (typeof status === 'string' ? status.trim().toLowerCase() : '')
+
+const hasSignedInMarkers = (record: Record<string, unknown>) => {
+  if (typeof record.totalPoints === 'number') return true
+  if (typeof record.level === 'number') return true
+  if (typeof record.journeyType === 'string' && record.journeyType.trim().length > 0) return true
+  if (typeof record.onboardingComplete === 'boolean') return true
+  return false
+}
+
+const isEligiblePeerRecord = (record: Record<string, unknown>) => {
+  if (record.mergedInto) return false
+
+  const status = normalizeAccountStatus(record.accountStatus ?? record.status)
+  if (status && status !== 'active') return false
+
+  const privacy = record.privacySettings as { allowPeerMatching?: boolean } | undefined
+  if (privacy?.allowPeerMatching === false) return false
+
+  const email = typeof record.email === 'string' ? record.email : ''
+  if (!normalizeEmail(email)) return false
+
+  return hasSignedInMarkers(record)
+}
+
 const mapRecordToPeerProfile = (record: Record<string, unknown>): PeerProfile => {
   const id = String(record.id)
   const email = typeof record.email === 'string' ? record.email : ''
+  const privacy = record.privacySettings as { allowPeerMatching?: boolean } | undefined
   const displayInput = {
     ...record,
     email,
@@ -117,6 +145,7 @@ const mapRecordToPeerProfile = (record: Record<string, unknown>): PeerProfile =>
     id,
     name: getDisplayName(displayInput, 'Member'),
     email,
+    allowPeerMatching: privacy?.allowPeerMatching,
     timezone: record.timezone as PeerProfile['timezone'],
     interests: record.interests as PeerProfile['interests'],
     goals: record.goals as PeerProfile['goals'],
@@ -134,7 +163,9 @@ const fetchPeerProfileById = async (peerId: string): Promise<PeerProfile | null>
   try {
     const peerDoc = await getDoc(doc(db, 'profiles', peerId))
     if (!peerDoc.exists()) return null
-    return mapRecordToPeerProfile({ id: peerDoc.id, ...(peerDoc.data() as Record<string, unknown>) })
+    const record = { id: peerDoc.id, ...(peerDoc.data() as Record<string, unknown>) }
+    if (!isEligiblePeerRecord(record)) return null
+    return mapRecordToPeerProfile(record)
   } catch (error) {
     console.error('[PeerMatch] Failed to fetch peer profile', peerId, error)
     return null
@@ -473,7 +504,7 @@ export const PeerConnectPage: React.FC = () => {
             console.error('[PeerMatch] Failed to fetch peer profile:', storedPeerId)
             // Match document exists but peer profile is unavailable
             setWeeklyMatch(null)
-            return
+            // Fall through so we can generate a fresh match from available peers.
           }
         }
       }
@@ -485,7 +516,14 @@ export const PeerConnectPage: React.FC = () => {
         return
       }
 
-      const deterministicPeer = availablePeers[Math.abs(Number.parseInt(user.uid.slice(-3), 10)) % availablePeers.length]
+      const matchingPeers = availablePeers.filter((peer) => peer.allowPeerMatching !== false)
+      if (!matchingPeers.length) {
+        console.log('[PeerMatch] No peers available with peer matching enabled')
+        setWeeklyMatch(null)
+        return
+      }
+
+      const deterministicPeer = matchingPeers[Math.abs(Number.parseInt(user.uid.slice(-3), 10)) % matchingPeers.length]
       if (deterministicPeer) {
         console.log('[PeerMatch] Creating new match with peer:', deterministicPeer.id)
         const matchPayload = {
@@ -526,14 +564,15 @@ export const PeerConnectPage: React.FC = () => {
 
   const selectNextPeer = useCallback(
     (currentPeerId?: string | null, refreshCount = 0) => {
-      if (!availablePeers.length) return null
-      if (availablePeers.length === 1) return availablePeers[0]
+      const matchingPeers = availablePeers.filter((peer) => peer.allowPeerMatching !== false)
+      if (!matchingPeers.length) return null
+      if (matchingPeers.length === 1) return matchingPeers[0]
       const seed = Math.abs(Number.parseInt(user?.uid.slice(-3) || '0', 10)) + refreshCount
-      for (let offset = 0; offset < availablePeers.length; offset += 1) {
-        const candidate = availablePeers[(seed + offset) % availablePeers.length]
+      for (let offset = 0; offset < matchingPeers.length; offset += 1) {
+        const candidate = matchingPeers[(seed + offset) % matchingPeers.length]
         if (candidate.id !== currentPeerId) return candidate
       }
-      return availablePeers[0]
+      return matchingPeers[0]
     },
     [availablePeers, user?.uid]
   )

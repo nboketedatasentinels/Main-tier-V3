@@ -19,6 +19,16 @@ interface UserProfile {
   fullName?: string;
   firstName?: string;
   lastName?: string;
+  accountStatus?: string;
+  status?: string;
+  mergedInto?: string | null;
+  membershipStatus?: string;
+  role?: string;
+  totalPoints?: number;
+  level?: number;
+  journeyType?: string;
+  onboardingComplete?: boolean;
+  privacySettings?: { allowPeerMatching?: boolean };
   companyId?: string;
   companyCode?: string;
   organizationId?: string;
@@ -44,6 +54,32 @@ interface PeerMatch {
   lastRefreshAt: FirebaseFirestore.FieldValue;
   automatedMatch: boolean;
 }
+
+const normalizeAccountStatus = (status: unknown) =>
+  typeof status === "string" ? status.trim().toLowerCase() : "";
+
+const hasSignedInMarkers = (profile: UserProfile) => {
+  if (typeof profile.totalPoints === "number") return true;
+  if (typeof profile.level === "number") return true;
+  if (typeof profile.journeyType === "string" && profile.journeyType.trim().length > 0)
+    return true;
+  if (typeof profile.onboardingComplete === "boolean") return true;
+  return false;
+};
+
+const isEligibleForPeerMatching = (profile: UserProfile) => {
+  if (profile.mergedInto) return false;
+
+  const status = normalizeAccountStatus(profile.accountStatus ?? profile.status);
+  if (status && status !== "active") return false;
+
+  if (profile.privacySettings?.allowPeerMatching === false) return false;
+
+  // Exclude stub/pending invitation profiles that haven't completed a real sign-in bootstrap yet.
+  if (!hasSignedInMarkers(profile)) return false;
+
+  return true;
+};
 
 // Get the current match window key based on date
 const getMatchWindowKey = (
@@ -157,12 +193,14 @@ const createMatchesForGroup = async (
   }
 
   // Filter to only users who have weekly or biweekly matching enabled
-  const eligibleUsers = users.filter(
-    (u) =>
+  const eligibleUsers = users.filter((u) => {
+    if (!isEligibleForPeerMatching(u)) return false;
+    return (
       !u.matchRefreshPreference ||
       u.matchRefreshPreference === "weekly" ||
       u.matchRefreshPreference === "biweekly"
-  );
+    );
+  });
 
   if (eligibleUsers.length < 2) {
     console.log(
@@ -311,14 +349,15 @@ export const automatedWeeklyPeerMatching = functions
         }))
         .filter(
           (u: UserProfile) =>
+            isEligibleForPeerMatching(u) &&
             // Only include users with some organization/village association
-            u.companyId ||
-            u.companyCode ||
-            u.organizationId ||
-            u.organizationCode ||
-            u.corporateVillageId ||
-            u.villageId ||
-            u.cohortIdentifier
+            (u.companyId ||
+              u.companyCode ||
+              u.organizationId ||
+              u.organizationCode ||
+              u.corporateVillageId ||
+              u.villageId ||
+              u.cohortIdentifier)
         );
 
       totalUsers = users.length;
@@ -446,13 +485,14 @@ export const triggerPeerMatching = functions
         }))
         .filter(
           (u: UserProfile) =>
-            u.companyId ||
-            u.companyCode ||
-            u.organizationId ||
-            u.organizationCode ||
-            u.corporateVillageId ||
-            u.villageId ||
-            u.cohortIdentifier
+            isEligibleForPeerMatching(u) &&
+            (u.companyId ||
+              u.companyCode ||
+              u.organizationId ||
+              u.organizationCode ||
+              u.corporateVillageId ||
+              u.villageId ||
+              u.cohortIdentifier)
         );
 
       totalUsers = users.length;
