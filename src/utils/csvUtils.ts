@@ -1,15 +1,15 @@
 import { InviteDraft } from '@/types/admin'
 import { normalizeEmail } from '@/utils/email'
 
-const headers = ['name', 'email', 'role', 'invitation method']
+const requiredHeaders = ['name', 'email', 'role']
 
 const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
 
 export const generateCSVTemplate = () => {
   const exampleRows = [
-    'Name,Email,Role,Invitation Method',
-    'Jane Doe,jane@example.com,user,email',
-    'John Learner,,user,one_time_code',
+    'Name,Email,Role',
+    'Jane Doe,jane@example.com,user',
+    'John Learner,,user',
   ]
   return exampleRows.join('\n')
 }
@@ -29,13 +29,22 @@ export const downloadCSVTemplate = () => {
 
 const normalizeHeader = (value: string) => value.trim().toLowerCase()
 
-const parseRow = (row: string[]) => {
-  const [name, email, role, method] = row
+const buildHeaderIndex = (fileHeaders: string[]) =>
+  fileHeaders.reduce<Record<string, number>>((map, header, index) => {
+    map[header] = index
+    return map
+  }, {})
+
+const parseRow = (row: string[], headerIndex: Record<string, number>) => {
+  const name = row[headerIndex['name']]
+  const email = row[headerIndex['email']]
+  const role = row[headerIndex['role']]
+  const normalizedEmail = normalizeEmail(email || '')
   return {
     name: name?.trim() || '',
-    email: normalizeEmail(email || ''),
+    email: normalizedEmail,
     role: (role?.trim() || 'user') as InviteDraft['role'],
-    method: (method?.trim() || (email ? 'email' : 'one_time_code')) as InviteDraft['method'],
+    method: (normalizedEmail ? 'email' : 'one_time_code') as InviteDraft['method'],
   }
 }
 
@@ -51,23 +60,25 @@ export const parseInvitationCSV = async (file: File): Promise<InviteDraft[]> => 
   }
 
   const fileHeaders = lines[0].split(',').map(normalizeHeader)
-  const missing = headers.filter((header) => !fileHeaders.includes(header))
+  const missing = requiredHeaders.filter((header) => !fileHeaders.includes(header))
   if (missing.length) {
     throw new Error(`Invalid CSV format. Missing columns: ${missing.join(', ')}`)
   }
+
+  const headerIndex = buildHeaderIndex(fileHeaders)
 
   const dataLines = lines.slice(1)
   const emailRows = new Map<string, number[]>()
   const drafts: InviteDraft[] = dataLines.map((line, index) => {
     const columns = line.split(',')
-    const parsed = parseRow(columns)
+    const parsed = parseRow(columns, headerIndex)
     const rowNumber = index + 2
 
     if (!parsed.name) throw new Error(`Row ${index + 2}: Name is required`)
-    if (parsed.method === 'email' && parsed.email && !emailRegex.test(parsed.email)) {
+    if (parsed.email && !emailRegex.test(parsed.email)) {
       throw new Error(`Row ${index + 2}: Invalid email format`)
     }
-    if (parsed.method === 'email' && parsed.email) {
+    if (parsed.email) {
       const rows = emailRows.get(parsed.email) || []
       rows.push(rowNumber)
       emailRows.set(parsed.email, rows)
