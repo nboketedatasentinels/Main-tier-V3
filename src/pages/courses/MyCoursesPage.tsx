@@ -57,6 +57,17 @@ interface NormalizedCourse {
 
 const COMPLEMENTARY_COURSE_ID = 'transformational-leadership'
 
+const resolveOrganizationId = (profile: UserProfile | null): string | null => {
+  if (!profile) return null
+  const orgId = (profile as { organizationId?: string | null }).organizationId
+  if (orgId) return orgId
+  if (profile.companyId) return profile.companyId
+  if (profile.assignedOrganizations?.length === 1) {
+    return profile.assignedOrganizations[0]
+  }
+  return null
+}
+
 const COURSE_IMAGE_FILENAMES: Record<string, string> = {
   'AI Stacking 101': 'course-ai-stacking-101.avif',
   'The Art of Connection': 'course-art-of-connection.avif',
@@ -423,16 +434,7 @@ const OrganizationCoursesPage: React.FC<{ userId?: string | null; profile: UserP
   userId,
   profile,
 }) => {
-  const organizationId = useMemo(() => {
-    if (!profile) return null
-    const orgId = (profile as { organizationId?: string | null }).organizationId
-    if (orgId) return orgId
-    if (profile.companyId) return profile.companyId
-    if (profile.assignedOrganizations?.length === 1) {
-      return profile.assignedOrganizations[0]
-    }
-    return null
-  }, [profile])
+  const organizationId = useMemo(() => resolveOrganizationId(profile), [profile])
 
   const { program, loading: programLoading } = useOrganizationProgramCourses(organizationId)
   const { loading: progressLoading } = useUserCourseProgress(userId)
@@ -886,13 +888,243 @@ const OrganizationCoursesPage: React.FC<{ userId?: string | null; profile: UserP
   )
 }
 
+const PaidLibraryCoursesPage: React.FC<{ userId?: string | null; profile: UserProfile | null }> = ({
+  userId,
+  profile,
+}) => {
+  const { progressMap, loading: progressLoading } = useUserCourseProgress(userId)
+  const [courses, setCourses] = useState<NormalizedCourse[]>([])
+  const [loadingCourses, setLoadingCourses] = useState(true)
+  const [error, setError] = useState<string | null>(null)
+
+  const courseIds = useMemo(() => {
+    const ids = Object.values(COURSE_DETAILS_MAPPING).map(details => details.slug)
+    return Array.from(new Set(ids))
+  }, [])
+
+  useEffect(() => {
+    let isActive = true
+
+    const loadLibrary = async () => {
+      try {
+        setLoadingCourses(true)
+        setError(null)
+
+        const snapshots = await getCourseDocuments(courseIds)
+        const nextCourses: NormalizedCourse[] = []
+
+        snapshots.forEach((snap, index) => {
+          const courseId = courseIds[index]
+          if (snap.exists()) {
+            nextCourses.push(buildCourseFromDoc(snap.id, snap.data()))
+            return
+          }
+          const fallback = buildCourseFromMapping(courseId)
+          if (fallback) {
+            nextCourses.push(fallback)
+          }
+        })
+
+        if (isActive) {
+          nextCourses.sort((a, b) => a.title.localeCompare(b.title))
+          setCourses(nextCourses)
+        }
+      } catch (loadError) {
+        console.error('Error loading paid course library', loadError)
+        if (isActive) {
+          setCourses([])
+          setError('Unable to load the course library right now.')
+        }
+      } finally {
+        if (isActive) {
+          setLoadingCourses(false)
+        }
+      }
+    }
+
+    loadLibrary()
+
+    return () => {
+      isActive = false
+    }
+  }, [courseIds])
+
+  const coursesWithProgress = useMemo(() => {
+    return courses.map(course => ({
+      ...course,
+      progress: progressMap.get(course.id) ?? progressMap.get(course.title.trim().toLowerCase()),
+    }))
+  }, [courses, progressMap])
+
+  const overallLoading = loadingCourses || progressLoading
+
+  return (
+    <Stack spacing={8} py={2} as="section">
+      <Box
+        bgGradient="linear(to-r, purple.50, purple.100)"
+        borderRadius="3xl"
+        border="1px solid"
+        borderColor="purple.100"
+        p={{ base: 5, md: 8 }}
+        boxShadow="md"
+      >
+        <Flex direction={{ base: 'column', md: 'row' }} align={{ base: 'flex-start', md: 'center' }} gap={4}>
+          <Flex
+            bg="white"
+            borderRadius="full"
+            p={3}
+            border="1px solid"
+            borderColor="purple.100"
+            boxShadow="sm"
+          >
+            <Icon as={Sparkles} boxSize={7} color="purple.600" />
+          </Flex>
+          <Stack spacing={1} flex={1}>
+            <Heading size="lg" color="purple.900">
+              Explore the full course library
+            </Heading>
+            <Text color="purple.700" fontSize="md">
+              Browse all courses available with your membership.
+            </Text>
+            <HStack spacing={3} flexWrap="wrap">
+              <Badge colorScheme="purple" variant="subtle" borderRadius="full">
+                Premium access
+              </Badge>
+              <Text color="purple.700" fontSize="sm">
+                All courses are unlocked for your account.
+              </Text>
+            </HStack>
+          </Stack>
+        </Flex>
+      </Box>
+
+      {error && (
+        <Box borderWidth="1px" borderRadius="2xl" p={5} bg="white" boxShadow="sm">
+          <Heading size="sm" color="gray.800" mb={2}>
+            Unable to load courses
+          </Heading>
+          <Text color="gray.600" fontSize="sm">
+            {error}
+          </Text>
+        </Box>
+      )}
+
+      {overallLoading ? (
+        <Box bg="white" borderRadius="2xl" borderWidth="1px" p={6} boxShadow="sm">
+          <HStack spacing={3}>
+            <Spinner />
+            <Text color="gray.600">Loading your course library…</Text>
+          </HStack>
+        </Box>
+      ) : (
+        <Box bg="white" borderRadius="2xl" borderWidth="1px" p={{ base: 4, md: 6 }} boxShadow="sm">
+          <SimpleGrid columns={{ base: 1, md: 2, xl: 3 }} spacing={5}>
+            {coursesWithProgress.map(course => {
+              const hasLink = Boolean(course.link)
+              const hasAccess = canAccessCourse(profile, course.title, course.id)
+              const canOpen = hasAccess && hasLink
+              return (
+                <Box
+                  key={course.id}
+                  borderWidth="1px"
+                  borderRadius="2xl"
+                  p={5}
+                  bg="gray.50"
+                  borderColor="gray.200"
+                  _hover={{ borderColor: 'purple.200', boxShadow: 'md' }}
+                  transition="all 0.15s ease"
+                >
+                  <Stack spacing={3}>
+                    <Stack spacing={1}>
+                      <HStack justify="space-between" align="flex-start" spacing={3}>
+                        <Heading size="sm" color="gray.800">
+                          {course.title}
+                        </Heading>
+                        {course.difficulty && (
+                          <Badge colorScheme={badgeColor(course.difficulty)} borderRadius="full">
+                            {course.difficulty}
+                          </Badge>
+                        )}
+                      </HStack>
+                      <Text fontSize="sm" color="gray.600">
+                        {course.description}
+                      </Text>
+                    </Stack>
+
+                    <HStack spacing={4} flexWrap="wrap">
+                      {course.estimatedMinutes ? (
+                        <HStack spacing={1} color="gray.600">
+                          <Icon as={Clock} boxSize={4} />
+                          <Text fontSize="xs">{formatDuration(course.estimatedMinutes)}</Text>
+                        </HStack>
+                      ) : null}
+                    </HStack>
+
+                    {typeof course.progress === 'number' && (
+                      <Box>
+                        <Progress
+                          value={course.progress}
+                          colorScheme="purple"
+                          size="sm"
+                          borderRadius="full"
+                          aria-label={`${course.title} progress`}
+                        />
+                        <Text fontSize="xs" color="gray.500" mt={1}>
+                          {course.progress.toFixed(0)}% complete
+                        </Text>
+                      </Box>
+                    )}
+
+                    <Button
+                      as={canOpen ? 'a' : (RouterLink as React.ElementType)}
+                      href={canOpen ? course.link : undefined}
+                      to={canOpen ? undefined : '/upgrade'}
+                      target={canOpen ? '_blank' : undefined}
+                      rel={canOpen ? 'noopener noreferrer' : undefined}
+                      size="sm"
+                      colorScheme="purple"
+                      variant="solid"
+                      borderRadius="full"
+                      minW="140px"
+                      isDisabled={!hasLink}
+                      rightIcon={<ExternalLink size={16} />}
+                    >
+                      {hasLink ? (hasAccess ? 'Open course' : 'Upgrade to unlock') : 'Link unavailable'}
+                    </Button>
+                  </Stack>
+                </Box>
+              )
+            })}
+          </SimpleGrid>
+        </Box>
+      )}
+    </Stack>
+  )
+}
+
 export const MyCoursesPage: React.FC = () => {
-  const { user, profile } = useAuth()
+  const { user, profile, profileLoading, profileStatus } = useAuth()
+  const organizationId = useMemo(() => resolveOrganizationId(profile), [profile])
   const isFreeTierUser = useMemo(() => isFreeUser(profile), [profile])
 
-  if (isFreeTierUser) {
+  if (user && (profileLoading || profileStatus === 'loading')) {
+    return (
+      <Box bg="white" borderRadius="2xl" borderWidth="1px" p={6} boxShadow="sm">
+        <HStack spacing={3}>
+          <Spinner />
+          <Text color="gray.600">Loading your courses…</Text>
+        </HStack>
+      </Box>
+    )
+  }
+
+  if (!profile || isFreeTierUser) {
     return <FreeTierCoursesPage userId={user?.uid} profile={profile} />
   }
 
-  return <OrganizationCoursesPage userId={user?.uid} profile={profile} />
+  if (organizationId) {
+    return <OrganizationCoursesPage userId={user?.uid} profile={profile} />
+  }
+
+  return <PaidLibraryCoursesPage userId={user?.uid} profile={profile} />
 }
