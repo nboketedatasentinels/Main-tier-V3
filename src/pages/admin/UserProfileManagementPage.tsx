@@ -563,6 +563,20 @@ export const UserProfileManagementPage: React.FC<{ viewContext?: ViewContext }> 
   const accountBadge = profileData.accountStatus === 'suspended' ? 'red' : 'blue'
   const mentorNotesEditable = editableFields.has('notes')
   const canEdit = editableFields.size > 0
+  const displayProfile = (isEditing ? editedProfile : profileData) ?? profileData
+  const displayedCoreValues = isEditing ? coreValuesInput : (profileData.coreValues || []).join(', ')
+  const displayedNotes = isEditing ? notesInput : profileData.notes || ''
+
+  const toTitleCase = (value: string) =>
+    value
+      .split('_')
+      .filter(Boolean)
+      .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+      .join(' ')
+
+  const displayedRoleLabel = displayProfile.role ? toTitleCase(displayProfile.role) : 'User'
+  const displayedMembershipLabel = displayProfile.membershipStatus ? toTitleCase(displayProfile.membershipStatus) : 'Free'
+  const displayedAccountStatusLabel = displayProfile.accountStatus ? toTitleCase(displayProfile.accountStatus) : 'Active'
 
   const goalsCompletedLive = checklistProgress?.completedActivities ?? safeNumber(profileData.goalsCompleted)
   const goalsTotalLive = checklistProgress?.totalActivities ?? safeNumber(profileData.goalsTotal)
@@ -675,7 +689,7 @@ export const UserProfileManagementPage: React.FC<{ viewContext?: ViewContext }> 
       <Grid templateColumns={{ base: '1fr', lg: '2fr 1fr' }} gap={6}>
         <GridItem>
           <Stack spacing={6}>
-            <Card>
+            <Card bg="surface.default" color="text.primary" borderWidth="1px" borderColor="border.subtle">
               <CardHeader>
                 <Text fontWeight="bold">Personal information</Text>
               </CardHeader>
@@ -684,60 +698,60 @@ export const UserProfileManagementPage: React.FC<{ viewContext?: ViewContext }> 
                   <FormControl>
                     <FormLabel>Name</FormLabel>
                     <Input
-                      value={editedProfile?.fullName || ''}
+                      value={displayProfile.fullName || ''}
                       onChange={(event) =>
                         setEditedProfile((prev) => (prev ? { ...prev, fullName: event.target.value } : prev))
                       }
-                      isDisabled={!isEditing || !editableFields.has('fullName')}
+                      isReadOnly={!isEditing || !editableFields.has('fullName')}
                     />
                   </FormControl>
                   <FormControl>
                     <FormLabel>Email</FormLabel>
                     <Input
-                      value={editedProfile?.email || ''}
+                      value={displayProfile.email || ''}
                       onChange={(event) =>
                         setEditedProfile((prev) => (prev ? { ...prev, email: event.target.value } : prev))
                       }
-                      isDisabled={!isEditing || !editableFields.has('email')}
+                      isReadOnly={!isEditing || !editableFields.has('email')}
                     />
                   </FormControl>
                   <FormControl>
                     <FormLabel>Personality type</FormLabel>
                     <Input
-                      value={editedProfile?.personalityType || ''}
+                      value={displayProfile.personalityType || ''}
                       onChange={(event) =>
                         setEditedProfile((prev) => (prev ? { ...prev, personalityType: event.target.value } : prev))
                       }
-                      isDisabled={!isEditing || !editableFields.has('personalityType')}
+                      isReadOnly={!isEditing || !editableFields.has('personalityType')}
                     />
                   </FormControl>
                   <FormControl>
                     <FormLabel>Core values</FormLabel>
                     <Input
-                      value={coreValuesInput}
+                      value={displayedCoreValues}
                       onChange={(event) => setCoreValuesInput(event.target.value)}
-                      isDisabled={!isEditing || !editableFields.has('coreValues')}
+                      isReadOnly={!isEditing || !editableFields.has('coreValues')}
                       placeholder="Comma separated values"
                     />
                   </FormControl>
                   <FormControl>
                     <FormLabel>LinkedIn</FormLabel>
                     <Input
-                      value={editedProfile?.linkedinUrl || ''}
+                      value={displayProfile.linkedinUrl || ''}
                       onChange={(event) =>
                         setEditedProfile((prev) => (prev ? { ...prev, linkedinUrl: event.target.value } : prev))
                       }
-                      isDisabled={!isEditing || !editableFields.has('linkedinUrl')}
+                      isReadOnly={!isEditing || !editableFields.has('linkedinUrl')}
                     />
                   </FormControl>
                   <FormControl gridColumn={{ base: '1 / -1' }}>
                     <FormLabel>Bio</FormLabel>
                     <Textarea
-                      value={editedProfile?.bio || ''}
+                      value={displayProfile.bio || ''}
                       onChange={(event) =>
                         setEditedProfile((prev) => (prev ? { ...prev, bio: event.target.value } : prev))
                       }
-                      isDisabled={!isEditing || !editableFields.has('bio')}
+                      isReadOnly={!isEditing || !editableFields.has('bio')}
                     />
                   </FormControl>
                 </SimpleGrid>
@@ -745,7 +759,7 @@ export const UserProfileManagementPage: React.FC<{ viewContext?: ViewContext }> 
             </Card>
 
             {!isMentorView && (
-              <Card>
+              <Card bg="surface.default" color="text.primary" borderWidth="1px" borderColor="border.subtle">
                 <CardHeader>
                   <Text fontWeight="bold">Role & permissions</Text>
                 </CardHeader>
@@ -753,21 +767,26 @@ export const UserProfileManagementPage: React.FC<{ viewContext?: ViewContext }> 
                   <SimpleGrid columns={{ base: 1, md: 3 }} spacing={4}>
                     <FormControl>
                       <FormLabel>Role</FormLabel>
-                      <Select
-                        value={editedProfile?.role || 'user'}
-                        onChange={(event) =>
-                          setEditedProfile((prev) => (prev ? { ...prev, role: event.target.value as UserProfileExtended['role'] } : prev))
-                        }
-                        isDisabled={!isEditing || !editableFields.has('role')}
-                      >
-                        <option value="user">User</option>
-                        <option value="paid_member">Paid Member</option>
-                        <option value="free_user">Free User</option>
-                        <option value="mentor">Mentor</option>
-                        <option value="ambassador">Ambassador</option>
-                        <option value="partner">Partner</option>
-                        <option value="super_admin">Super Admin</option>
-                      </Select>
+                      {isEditing && editableFields.has('role') ? (
+                        <Select
+                          value={displayProfile.role || 'user'}
+                          onChange={(event) =>
+                            setEditedProfile((prev) =>
+                              prev ? { ...prev, role: event.target.value as UserProfileExtended['role'] } : prev,
+                            )
+                          }
+                        >
+                          <option value="user">User</option>
+                          <option value="paid_member">Paid Member</option>
+                          <option value="free_user">Free User</option>
+                          <option value="mentor">Mentor</option>
+                          <option value="ambassador">Ambassador</option>
+                          <option value="partner">Partner</option>
+                          <option value="super_admin">Super Admin</option>
+                        </Select>
+                      ) : (
+                        <Input value={displayedRoleLabel} isReadOnly />
+                      )}
                     </FormControl>
                     {requiresOrganizationSelection && (
                       <FormControl isRequired>
@@ -791,50 +810,63 @@ export const UserProfileManagementPage: React.FC<{ viewContext?: ViewContext }> 
                     )}
                     <FormControl>
                       <FormLabel>Membership status</FormLabel>
-                      <Select
-                        value={editedProfile?.membershipStatus || 'free'}
-                        onChange={(event) =>
-                          setEditedProfile((prev) => (prev ? { ...prev, membershipStatus: event.target.value as UserProfileExtended['membershipStatus'] } : prev))
-                        }
-                        isDisabled={!isEditing || !editableFields.has('membershipStatus')}
-                      >
-                        <option value="free">Free</option>
-                        <option value="paid">Paid</option>
-                      </Select>
+                      {isEditing && editableFields.has('membershipStatus') ? (
+                        <Select
+                          value={displayProfile.membershipStatus || 'free'}
+                          onChange={(event) =>
+                            setEditedProfile((prev) =>
+                              prev
+                                ? {
+                                    ...prev,
+                                    membershipStatus: event.target.value as UserProfileExtended['membershipStatus'],
+                                  }
+                                : prev,
+                            )
+                          }
+                        >
+                          <option value="free">Free</option>
+                          <option value="paid">Paid</option>
+                        </Select>
+                      ) : (
+                        <Input value={displayedMembershipLabel} isReadOnly />
+                      )}
                     </FormControl>
                     <FormControl>
                       <FormLabel>Account status</FormLabel>
-                      <Select
-                        value={editedProfile?.accountStatus?.toString() || 'active'}
-                        onChange={(event) =>
-                          setEditedProfile((prev) => (prev ? { ...prev, accountStatus: event.target.value } : prev))
-                        }
-                        isDisabled={!isEditing || !editableFields.has('accountStatus')}
-                      >
-                        <option value="active">Active</option>
-                        <option value="inactive">Inactive</option>
-                        <option value="pending">Pending</option>
-                        <option value="suspended">Suspended</option>
-                      </Select>
+                      {isEditing && editableFields.has('accountStatus') ? (
+                        <Select
+                          value={displayProfile.accountStatus?.toString() || 'active'}
+                          onChange={(event) =>
+                            setEditedProfile((prev) => (prev ? { ...prev, accountStatus: event.target.value } : prev))
+                          }
+                        >
+                          <option value="active">Active</option>
+                          <option value="inactive">Inactive</option>
+                          <option value="pending">Pending</option>
+                          <option value="suspended">Suspended</option>
+                        </Select>
+                      ) : (
+                        <Input value={displayedAccountStatusLabel} isReadOnly />
+                      )}
                     </FormControl>
                     <FormControl>
                       <FormLabel>Mentor ID</FormLabel>
                       <Input
-                        value={editedProfile?.mentorId || ''}
+                        value={displayProfile.mentorId || ''}
                         onChange={(event) =>
                           setEditedProfile((prev) => (prev ? { ...prev, mentorId: event.target.value } : prev))
                         }
-                        isDisabled={!isEditing || !editableFields.has('mentorId')}
+                        isReadOnly={!isEditing || !editableFields.has('mentorId')}
                       />
                     </FormControl>
                     <FormControl>
                       <FormLabel>Ambassador ID</FormLabel>
                       <Input
-                        value={editedProfile?.ambassadorId || ''}
+                        value={displayProfile.ambassadorId || ''}
                         onChange={(event) =>
                           setEditedProfile((prev) => (prev ? { ...prev, ambassadorId: event.target.value } : prev))
                         }
-                        isDisabled={!isEditing || !editableFields.has('ambassadorId')}
+                        isReadOnly={!isEditing || !editableFields.has('ambassadorId')}
                       />
                     </FormControl>
                   </SimpleGrid>
@@ -842,7 +874,7 @@ export const UserProfileManagementPage: React.FC<{ viewContext?: ViewContext }> 
               </Card>
             )}
 
-            <Card>
+            <Card bg="surface.default" color="text.primary" borderWidth="1px" borderColor="border.subtle">
               <CardHeader>
                 <Text fontWeight="bold">Organization details</Text>
               </CardHeader>
@@ -851,41 +883,41 @@ export const UserProfileManagementPage: React.FC<{ viewContext?: ViewContext }> 
                   <FormControl>
                     <FormLabel>Company name</FormLabel>
                     <Input
-                      value={editedProfile?.companyName || ''}
+                      value={displayProfile.companyName || ''}
                       onChange={(event) =>
                         setEditedProfile((prev) => (prev ? { ...prev, companyName: event.target.value } : prev))
                       }
-                      isDisabled={!isEditing || !editableFields.has('companyName')}
+                      isReadOnly={!isEditing || !editableFields.has('companyName')}
                     />
                   </FormControl>
                   <FormControl>
                     <FormLabel>Company code</FormLabel>
                     <Input
-                      value={editedProfile?.companyCode || ''}
+                      value={displayProfile.companyCode || ''}
                       onChange={(event) =>
                         setEditedProfile((prev) => (prev ? { ...prev, companyCode: event.target.value } : prev))
                       }
-                      isDisabled={!isEditing || !editableFields.has('companyCode')}
+                      isReadOnly={!isEditing || !editableFields.has('companyCode')}
                     />
                   </FormControl>
                   <FormControl>
                     <FormLabel>Village</FormLabel>
                     <Input
-                      value={editedProfile?.villageId || ''}
+                      value={displayProfile.villageId || ''}
                       onChange={(event) =>
                         setEditedProfile((prev) => (prev ? { ...prev, villageId: event.target.value } : prev))
                       }
-                      isDisabled={!isEditing || !editableFields.has('villageId')}
+                      isReadOnly={!isEditing || !editableFields.has('villageId')}
                     />
                   </FormControl>
                   <FormControl>
                     <FormLabel>Cluster</FormLabel>
                     <Input
-                      value={editedProfile?.clusterId || ''}
+                      value={displayProfile.clusterId || ''}
                       onChange={(event) =>
                         setEditedProfile((prev) => (prev ? { ...prev, clusterId: event.target.value } : prev))
                       }
-                      isDisabled={!isEditing || !editableFields.has('clusterId')}
+                      isReadOnly={!isEditing || !editableFields.has('clusterId')}
                     />
                   </FormControl>
                 </SimpleGrid>
@@ -907,7 +939,7 @@ export const UserProfileManagementPage: React.FC<{ viewContext?: ViewContext }> 
               </CardBody>
             </Card>
 
-            <Card>
+            <Card bg="surface.default" color="text.primary" borderWidth="1px" borderColor="border.subtle">
               <CardHeader>
                 <Text fontWeight="bold">Progress tracking</Text>
               </CardHeader>
@@ -923,7 +955,7 @@ export const UserProfileManagementPage: React.FC<{ viewContext?: ViewContext }> 
                           prev ? { ...prev, goalsCompleted: Number(event.target.value) } : prev,
                         )
                       }
-                      isDisabled={!isEditing || !editableFields.has('goalsCompleted')}
+                      isReadOnly={!isEditing || !editableFields.has('goalsCompleted')}
                     />
                   </FormControl>
                   <FormControl>
@@ -934,7 +966,7 @@ export const UserProfileManagementPage: React.FC<{ viewContext?: ViewContext }> 
                       onChange={(event) =>
                         setEditedProfile((prev) => (prev ? { ...prev, goalsTotal: Number(event.target.value) } : prev))
                       }
-                      isDisabled={!isEditing || !editableFields.has('goalsTotal')}
+                      isReadOnly={!isEditing || !editableFields.has('goalsTotal')}
                     />
                   </FormControl>
                   <FormControl>
@@ -947,7 +979,7 @@ export const UserProfileManagementPage: React.FC<{ viewContext?: ViewContext }> 
                           prev ? { ...prev, milestonesProgress: Number(event.target.value) } : prev,
                         )
                       }
-                      isDisabled={!isEditing || !editableFields.has('milestonesProgress')}
+                      isReadOnly={!isEditing || !editableFields.has('milestonesProgress')}
                     />
                   </FormControl>
                 </SimpleGrid>
@@ -963,15 +995,15 @@ export const UserProfileManagementPage: React.FC<{ viewContext?: ViewContext }> 
                           prev ? { ...prev, weeklyActivity: Number(event.target.value) } : prev,
                         )
                       }
-                      isDisabled={!isEditing || !editableFields.has('weeklyActivity')}
+                      isReadOnly={!isEditing || !editableFields.has('weeklyActivity')}
                     />
                   </FormControl>
                   <FormControl>
                     <FormLabel>Notes</FormLabel>
                     <Textarea
-                      value={notesInput}
+                      value={displayedNotes}
                       onChange={(event) => setNotesInput(event.target.value)}
-                      isDisabled={!isEditing || !mentorNotesEditable}
+                      isReadOnly={!isEditing || !mentorNotesEditable}
                     />
                   </FormControl>
                 </SimpleGrid>
