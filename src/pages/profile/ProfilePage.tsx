@@ -872,9 +872,14 @@ export const ProfilePage: React.FC = () => {
           ]),
         )
       : existingAssignments
+    const normalizedCurrentRole = normalizeRole(profileData.role)
+    const roleUpdates =
+      normalizedCurrentRole === 'free_user' || normalizedCurrentRole === 'paid_member'
+        ? { role: UserRole.USER }
+        : {}
     const membershipUpdates = {
       membershipStatus: 'paid' as const,
-      role: UserRole.PAID_MEMBER,
+      ...roleUpdates,
       transformationTier: companyOrganization
         ? TransformationTier.CORPORATE_MEMBER
         : TransformationTier.INDIVIDUAL_PAID,

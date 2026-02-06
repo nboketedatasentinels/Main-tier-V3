@@ -10,7 +10,8 @@ import {
 } from 'firebase/firestore'
 import { db } from '@/services/firebase'
 import { ORG_COLLECTION } from '@/constants/organizations'
-import { UserProfile, UserRole } from '@/types'
+import { UserProfile } from '@/types'
+import { isFreeUser } from '@/utils/membership'
 
 export interface CompanyProgramInfo {
   id: string
@@ -275,7 +276,7 @@ export const listenToCompanyProgram = (
   onData: (company: CompanyProgramInfo | null) => void,
   onError: (error: Error) => void,
 ): Unsubscribe | null => {
-  if (!profile || profile.role !== UserRole.PAID_MEMBER) return null
+  if (!profile || isFreeUser(profile)) return null
 
   if (profile.companyId) {
     const companyRef = doc(db, ORG_COLLECTION, profile.companyId)

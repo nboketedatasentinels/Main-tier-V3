@@ -21,6 +21,7 @@ import { CheckCircle, XCircle } from 'lucide-react'
 import { incrementOrganizationMemberCount, validateCompanyCode } from '@/services/organizationService'
 import { useAuth } from '@/hooks/useAuth'
 import { TransformationTier, UserRole } from '@/types'
+import { normalizeRole } from '@/utils/role'
 
 interface CompanyCodeModalProps {
   isOpen: boolean
@@ -129,12 +130,18 @@ export const CompanyCodeModal: React.FC<CompanyCodeModalProps> = ({
       lockedToFreeExperience: false,
     }
 
+    const normalizedCurrentRole = normalizeRole(profile?.role)
+    const roleUpdates =
+      normalizedCurrentRole === 'free_user' || normalizedCurrentRole === 'paid_member'
+        ? { role: UserRole.USER }
+        : {}
+
     const { error } = await updateProfile({
       companyCode: trimmedCode,
       companyId: companyId ?? undefined,
       companyName: companyName ?? undefined,
       ...(companyId ? { assignedOrganizations: nextAssignedOrganizations } : {}),
-      role: UserRole.PAID_MEMBER,
+      ...roleUpdates,
       membershipStatus: 'paid',
       transformationTier: companyId ? TransformationTier.CORPORATE_MEMBER : TransformationTier.INDIVIDUAL_PAID,
       dashboardPreferences: updatedPreferences,

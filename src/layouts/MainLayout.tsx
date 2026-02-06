@@ -511,6 +511,7 @@ export const MainLayout: React.FC = () => {
         onAcknowledge={handleWelcomeAcknowledged}
         firstName={profile?.firstName}
         role={profile?.role}
+        membershipStatus={profile?.membershipStatus}
         windowContext={windowContext}
         onStartTour={() => setShowTour(true)}
       />

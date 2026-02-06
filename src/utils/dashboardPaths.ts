@@ -1,12 +1,15 @@
 import { toUserRole } from './role'
 
-export const getDashboardPathForRole = (role?: string | null) => {
+export const getDashboardPathForRole = (
+  role?: string | null,
+  membershipStatus?: 'free' | 'paid' | null,
+) => {
   const normalizedRole = toUserRole(role)
 
   switch (normalizedRole) {
     case 'user':
     case 'free_user':
-      return '/app/dashboard/free'
+      return membershipStatus === 'paid' ? '/app/dashboard/member' : '/app/dashboard/free'
     case 'paid_member':
       return '/app/dashboard/member'
 

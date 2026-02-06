@@ -30,11 +30,14 @@ const organizationsCollection = collection(db, ORG_COLLECTION)
 
 const codeChars = '23456789ABCDEFGHJKLMNPQRSTUVWXYZ'
 
-const LICENSE_CONSUMING_ROLES = new Set(['user', 'mentor', 'ambassador'])
+// License/seat usage should include all learner + leadership roles that occupy a paid slot.
+// Partner/super admin roles are intentionally excluded (0 weight).
+const LICENSE_CONSUMING_ROLES = new Set(['user', 'free_user', 'paid_member', 'mentor', 'ambassador', 'team_leader'])
 
 const isLicenseConsumingRole = (role?: string | null) => {
   if (!role) return false
-  return LICENSE_CONSUMING_ROLES.has(role)
+  const normalized = role.toString().trim().toLowerCase().replace(/[-\s]+/g, '_')
+  return LICENSE_CONSUMING_ROLES.has(normalized)
 }
 
 const isActiveAccountStatus = (status?: string | null) => {
@@ -57,11 +60,23 @@ const getOrganizationLicenseSnapshot = async (organizationId: string) => {
 }
 
 const getActiveLicenseMemberCount = async (organizationId: string) => {
-  const snapshot = await getDocs(query(usersCollection, where('assignedOrganizations', 'array-contains', organizationId)))
-  return snapshot.docs.filter((docSnap) => {
-    const data = docSnap.data() as { role?: string; accountStatus?: string | null }
-    return isLicenseConsumingRole(data.role) && isActiveAccountStatus(data.accountStatus)
-  }).length
+  const [assignedSnapshot, companySnapshot] = await Promise.all([
+    getDocs(query(usersCollection, where('assignedOrganizations', 'array-contains', organizationId))),
+    getDocs(query(usersCollection, where('companyId', '==', organizationId))),
+  ])
+
+  const uniqueDocs = new Map<string, { role?: string; accountStatus?: string | null }>()
+  assignedSnapshot.docs.forEach((docSnap) => uniqueDocs.set(docSnap.id, docSnap.data() as { role?: string; accountStatus?: string | null }))
+  companySnapshot.docs.forEach((docSnap) => uniqueDocs.set(docSnap.id, docSnap.data() as { role?: string; accountStatus?: string | null }))
+
+  let count = 0
+  for (const data of uniqueDocs.values()) {
+    if (!isActiveAccountStatus(data.accountStatus)) continue
+    if (!isLicenseConsumingRole(data.role)) continue
+    count += 1
+  }
+
+  return count
 }
 
 const getExistingSeatMemberEmails = async (organizationId: string) => {

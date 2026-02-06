@@ -118,8 +118,13 @@ const emptyOrganization: OrganizationRecord = {
   cluster: '',
 }
 
-const inviteRoleOptions: InviteDraft['role'][] = ['user', 'mentor', 'ambassador']
+const inviteRoleOptions: InviteDraft['role'][] = ['user', 'partner', 'mentor', 'ambassador']
 const inviteMethodOptions: InviteDraft['method'][] = ['email', 'one_time_code']
+
+const formatInviteRoleLabel = (role: InviteDraft['role']) => {
+  if (role === 'user') return 'User'
+  return role.replace(/_/g, ' ').replace(/\b\w/g, (char) => char.toUpperCase())
+}
 const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
 const nameRegex = /^[A-Za-z][A-Za-z\s'-]*$/
 const commonEmailDomains = ['gmail.com', 'outlook.com', 'hotmail.com', 'yahoo.com', 'icloud.com']
@@ -1122,7 +1127,7 @@ export const CreateOrganizationModal: React.FC<CreateOrganizationModalProps> = (
                         >
                           {inviteRoleOptions.map((role) => (
                             <option key={role} value={role}>
-                              {role}
+                              {formatInviteRoleLabel(role)}
                             </option>
                           ))}
                         </Select>
@@ -1304,7 +1309,7 @@ export const CreateOrganizationModal: React.FC<CreateOrganizationModalProps> = (
                                       >
                                         {inviteRoleOptions.map((role) => (
                                           <option key={role} value={role}>
-                                            {role}
+                                            {formatInviteRoleLabel(role)}
                                           </option>
                                         ))}
                                       </Select>

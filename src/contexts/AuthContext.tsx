@@ -544,7 +544,10 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
             if (validationResult.valid && validationResult.organization) {
               const organization = validationResult.organization
               const normalizedCurrentRole = normalizeRole(mergedUser.role)
-              const shouldUpgradeRole = normalizedCurrentRole === 'free_user' || normalizedCurrentRole === 'user'
+              const roleUpdates =
+                normalizedCurrentRole === 'free_user' || normalizedCurrentRole === 'paid_member'
+                  ? { role: 'user' as const }
+                  : {}
 
               const nextAssignedOrganizations = Array.isArray(mergedUser.assignedOrganizations)
                 ? Array.from(
@@ -572,7 +575,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
                 transformationTier: TransformationTier.CORPORATE_MEMBER,
                 assignedOrganizations: nextAssignedOrganizations,
                 dashboardPreferences: nextDashboardPreferences,
-                ...(shouldUpgradeRole ? { role: 'paid_member' } : {}),
+                ...roleUpdates,
               }
 
               await updateDoc(userDocRef, {
@@ -661,12 +664,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         }
       }
 
-      const role = isBootstrapAdmin(firebaseUser.email)
-        ? UserRole.SUPER_ADMIN
-        : validatedOrganization
-          ? UserRole.PAID_MEMBER
-          : UserRole.FREE_USER
-      const normalizedRole = normalizeRole(role || UserRole.PAID_MEMBER)
+      const role = isBootstrapAdmin(firebaseUser.email) ? UserRole.SUPER_ADMIN : UserRole.USER
+      const normalizedRole = normalizeRole(role || UserRole.USER)
       const { firstName, lastName, fullName } = getNameParts(
         firebaseUser.displayName,
         firebaseUser.email
@@ -679,7 +678,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       }
 
       const resolvedJourneyType = resolveInitialJourneyType({
-        isFreeTierUser: role === UserRole.FREE_USER,
+        isFreeTierUser: !validatedOrganization,
         organizationJourneyType: validatedOrganization?.journeyType ?? null,
       })
       const programDurationWeeks = JOURNEY_META[resolvedJourneyType].weeks
@@ -721,9 +720,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         hasSeenDashboardTour: false,
         dashboardPreferences: {
           defaultRoute: '/app/weekly-glance',
-          lockedToFreeExperience: validatedOrganization
-            ? false
-            : ['user', 'free_user'].includes(normalizedRole),
+          lockedToFreeExperience: !validatedOrganization,
         },
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
@@ -1159,12 +1156,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       const firebaseUser = credential.user
       const uid = firebaseUser.uid
 
-      const role = isBootstrapAdmin(firebaseUser.email)
-        ? UserRole.SUPER_ADMIN
-        : validatedOrganization
-          ? UserRole.PAID_MEMBER
-          : UserRole.FREE_USER
-      const normalizedRole = normalizeRole(role || UserRole.PAID_MEMBER)
+      const role = isBootstrapAdmin(firebaseUser.email) ? UserRole.SUPER_ADMIN : UserRole.USER
+      const normalizedRole = normalizeRole(role || UserRole.USER)
       let generatedReferralCode: string | null = null
       try {
         generatedReferralCode = await generateReferralCode(uid)
@@ -1173,7 +1166,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       }
 
       const resolvedJourneyType = resolveInitialJourneyType({
-        isFreeTierUser: role === UserRole.FREE_USER,
+        isFreeTierUser: !validatedOrganization,
         organizationJourneyType: validatedOrganization?.journeyType ?? null,
       })
       const programDurationWeeks = JOURNEY_META[resolvedJourneyType].weeks
@@ -1215,7 +1208,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
           defaultRoute: '/app/weekly-glance',
           lockedToFreeExperience: validatedOrganization
             ? false
-            : ['user', 'free_user'].includes(normalizedRole),
+            : true,
         },
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
