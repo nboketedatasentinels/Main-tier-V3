@@ -120,7 +120,7 @@ export const AdminFormModal: React.FC<AdminFormModalProps> = ({
     <Modal isOpen={isOpen} onClose={onClose} size="xl" isCentered>
       <ModalOverlay />
       <ModalContent>
-        <ModalHeader>{isEdit ? 'Edit Admin' : 'Add Admin'}</ModalHeader>
+        <ModalHeader>{isEdit ? 'Edit Admin Access' : 'Add Admin Access'}</ModalHeader>
         <ModalCloseButton />
         <ModalBody>
           <Stack spacing={4}>
@@ -161,7 +161,7 @@ export const AdminFormModal: React.FC<AdminFormModalProps> = ({
             <FormControl isInvalid={!!errors.assignedOrganizations}>
               <FormLabel>Assigned Organizations</FormLabel>
               <Text fontSize="sm" color="gray.500" mb={2}>
-                Selected organizations will be accessible by this admin.
+                For Partner role users, selected organizations drive dashboard visibility and data access.
               </Text>
               {organizations.length ? (
                 <OrganizationAssignmentsPicker
@@ -212,7 +212,7 @@ export const AdminFormModal: React.FC<AdminFormModalProps> = ({
             Cancel
           </Button>
           <Button colorScheme="blue" onClick={handleSubmit} isLoading={submitting}>
-            {isEdit ? 'Save Changes' : 'Create Admin'}
+            {isEdit ? 'Save Changes' : 'Grant Admin Access'}
           </Button>
         </ModalFooter>
       </ModalContent>
