@@ -76,7 +76,7 @@ export const SocialShareModal: React.FC<SocialShareModalProps> = ({ isOpen, onCl
                   <VStack align="start" spacing={0}>
                     <Text fontWeight="semibold">{action.label}</Text>
                     {action.description && (
-                      <Text fontSize="xs" opacity={0.85}>
+                      <Text fontSize="xs" color="text.secondary">
                         {action.description}
                       </Text>
                     )}

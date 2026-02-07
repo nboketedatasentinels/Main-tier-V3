@@ -9,6 +9,7 @@ node_modules
 # Production
 /dist
 /build
+/dist-scripts
 
 # Misc
 .DS_Store
@@ -43,3 +44,7 @@ lerna-debug.log*
 .env*.local
 *.log
 nul
+
+# Firebase Admin credentials
+service-account-key.json
+*-service-account*.json

@@ -162,7 +162,7 @@ export const PersonalityTypeModal: React.FC<PersonalityTypeModalProps> = ({
         }
       }, 100);
     } else {
-      setTimeout(resetForm, 300); // Delay for closing animation
+      setTimeout(() => resetForm(), 300); // Delay for closing animation
     }
   }, [isOpen, fetchExistingData]);
 

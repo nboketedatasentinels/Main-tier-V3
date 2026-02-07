@@ -13,12 +13,12 @@ export const WeeklyInspirationCard = ({ data, loading }: WeeklyInspirationCardPr
       <CardBody>
         <Stack direction={{ base: 'column', md: 'row' }} spacing={4} align="flex-start" justify="space-between">
           <HStack spacing={2}>
-            <Icon as={Quote} color="#273240" />
-            <Text fontWeight="bold" color="#273240">Weekly Inspiration</Text>
+            <Icon as={Quote} color="text.primary" />
+            <Text fontWeight="bold" color="text.primary">Weekly Inspiration</Text>
           </HStack>
           <Stack spacing={2} flex="1">
             <Skeleton isLoaded={!loading} rounded="md">
-              <Text fontSize="lg" fontWeight="semibold" color="#273240">
+              <Text fontSize="lg" fontWeight="semibold" color="text.primary">
                 {data?.quote_text || 'Join the movement. Take one small step today toward your goal.'}
               </Text>
             </Skeleton>

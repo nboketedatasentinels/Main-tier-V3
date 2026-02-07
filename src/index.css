@@ -5,12 +5,14 @@
 /* Base Layer Typography and Styles */
 @layer base {
   :root {
+    color-scheme: light;
     --surface-default: #ffffff;
     --surface-subtle: #f8fafc;
-    --border-subtle: #e2e8f0;
+    --border-subtle: #7a879b; /* comfortably >= 3:1 vs #fff for visible boundaries */
+    --border-control: #7a879b; /* comfortably >= 3:1 vs #fff for visible component boundaries */
     --text-primary: #0f172a;
-    --text-secondary: #334155;
-    --text-muted: #64748b;
+    --text-secondary: #1e293b; /* WCAG AAA compliant (was #334155) */
+    --text-muted: #475569; /* WCAG AA compliant (was #64748b - failed AA) */
     --text-inverse: #ffffff;
   }
 
@@ -111,6 +113,13 @@
     @apply bg-[var(--surface-subtle)] text-[var(--text-primary)] font-sans;
   }
 
+  /* Ensure native form controls have visible boundaries on light surfaces */
+  input:not([type='checkbox']):not([type='radio']):not([type='range']),
+  textarea,
+  select {
+    border-color: var(--border-control);
+  }
+
   p {
     font-family: 'Inter', system-ui, -apple-system, sans-serif;
     font-weight: 400;
@@ -165,7 +174,7 @@
   .card {
     @apply rounded-2xl border p-6 shadow-lg;
     background-color: var(--surface-default);
-    border-color: var(--border-subtle);
+    border-color: var(--border-control);
   }
 
   .card-sm {
@@ -222,7 +231,7 @@
 
   /* Eyebrow Text */
   .eyebrow {
-    @apply text-xs font-semibold uppercase tracking-[0.18em] text-neutral-500;
+    @apply text-xs font-semibold uppercase tracking-[0.18em] text-neutral-600; /* WCAG AA compliant (was neutral-500) */
   }
 
   /* Surface Utilities */

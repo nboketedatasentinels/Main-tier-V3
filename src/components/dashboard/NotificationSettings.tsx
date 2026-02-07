@@ -30,6 +30,7 @@ const defaultPreferences: NotificationSettingsPreferences = {
     important_updates: true,
     mentions: true,
     system_alerts: true,
+    upgrade_request: true,
     other: true,
   },
   inAppNotificationPreferences: {
@@ -37,11 +38,19 @@ const defaultPreferences: NotificationSettingsPreferences = {
     important_updates: true,
     mentions: true,
     system_alerts: true,
+    upgrade_request: true,
     other: true,
   },
   emailNotificationFrequency: 'instant',
   inAppNotificationFrequency: 'instant',
   notificationDigestMode: 'instant',
+  statusNudgesEnabled: true,
+  statusNudgePreferences: {
+    warning: true,
+    alert: true,
+    recovery: true,
+    on_track: true,
+  },
 }
 
 export const NotificationSettings = () => {

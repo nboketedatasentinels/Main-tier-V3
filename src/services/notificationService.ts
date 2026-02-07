@@ -69,6 +69,37 @@ export const updateNotificationAction = async (
   await updateDoc(notificationRef, { action_response, is_read: true, read: true })
 }
 
+export const respondToChallenge = async (challengeId: string, action: 'accepted' | 'declined') => {
+  const challengeRef = doc(db, 'challenges', challengeId)
+  const challengeSnap = await getDoc(challengeRef)
+  if (!challengeSnap.exists()) return
+
+  const challengeData = challengeSnap.data() as Record<string, unknown>
+  const responderName = (challengeData.challenged_name as string) || 'Your peer'
+  const challengerId = challengeData.challenger_id as string | undefined
+  const status = action === 'accepted' ? 'active' : 'declined'
+
+  await updateDoc(challengeRef, {
+    status,
+    responded_at: serverTimestamp(),
+    accepted_at: action === 'accepted' ? serverTimestamp() : null,
+    declined_at: action === 'declined' ? serverTimestamp() : null,
+  })
+
+  if (challengerId) {
+    await addDoc(notificationsCollection, {
+      user_id: challengerId,
+      type: 'challenge_response',
+      title: 'Challenge response',
+      message: `${responderName} ${action === 'accepted' ? 'accepted' : 'declined'} your challenge.`,
+      related_id: challengeId,
+      is_read: false,
+      read: false,
+      created_at: serverTimestamp(),
+    })
+  }
+}
+
 export const handleNotificationAction = async (
   notification: NotificationRecord,
   action_response: NotificationRecord['action_response'],
@@ -77,38 +108,11 @@ export const handleNotificationAction = async (
   await updateDoc(notificationRef, { action_response, is_read: true, read: true })
 
   if (
-    notification.type === 'challenge_request'
-    && notification.related_id
-    && (action_response === 'accepted' || action_response === 'declined')
+    notification.type === 'challenge_request' &&
+    notification.related_id &&
+    (action_response === 'accepted' || action_response === 'declined')
   ) {
-    const challengeRef = doc(db, 'challenges', notification.related_id)
-    const challengeSnap = await getDoc(challengeRef)
-    if (!challengeSnap.exists()) return
-
-    const challengeData = challengeSnap.data() as Record<string, unknown>
-    const responderName = (challengeData.challenged_name as string) || 'Your peer'
-    const challengerId = challengeData.challenger_id as string | undefined
-    const status = action_response === 'accepted' ? 'active' : 'declined'
-
-    await updateDoc(challengeRef, {
-      status,
-      responded_at: serverTimestamp(),
-      accepted_at: action_response === 'accepted' ? serverTimestamp() : null,
-      declined_at: action_response === 'declined' ? serverTimestamp() : null,
-    })
-
-    if (challengerId) {
-      await addDoc(notificationsCollection, {
-        user_id: challengerId,
-        type: 'challenge_response',
-        title: 'Challenge response',
-        message: `${responderName} ${action_response === 'accepted' ? 'accepted' : 'declined'} your challenge.`,
-        related_id: notification.related_id,
-        is_read: false,
-        read: false,
-        created_at: serverTimestamp(),
-      })
-    }
+    await respondToChallenge(notification.related_id, action_response)
   }
 }
 
@@ -118,8 +122,9 @@ export const createInAppNotification = async (params: {
   title?: string
   message: string
   metadata?: Record<string, unknown>
+  relatedId?: string
 }) => {
-  await addDoc(notificationsCollection, {
+  const payload: Record<string, unknown> = {
     user_id: params.userId,
     type: params.type,
     notification_type: params.type,
@@ -129,7 +134,13 @@ export const createInAppNotification = async (params: {
     is_read: false,
     read: false,
     created_at: serverTimestamp(),
-  })
+  }
+
+  if (params.relatedId) {
+    payload.related_id = params.relatedId
+  }
+
+  await addDoc(notificationsCollection, payload)
 }
 
 export const sendBelowTargetAlert = async (notification: {
@@ -187,6 +198,55 @@ export const sendBelowTargetAlert = async (notification: {
   }
 }
 
+export const notifyMentorOfLearnerAlert = async (params: {
+  mentorId: string
+  learnerId: string
+  learnerName: string
+  status: string
+  pointsEarned: number
+  windowTarget: number
+}) => {
+  const message = `${params.learnerName} has fallen into "${params.status}" status (${params.pointsEarned} / ${params.windowTarget} pts). Consider reaching out to provide support.`
+
+  await createInAppNotification({
+    userId: params.mentorId,
+    type: 'engagement_alert',
+    title: `Learner Status Alert: ${params.learnerName}`,
+    message,
+    metadata: {
+      learnerId: params.learnerId,
+      learnerName: params.learnerName,
+      status: params.status,
+      pointsEarned: params.pointsEarned,
+      windowTarget: params.windowTarget
+    }
+  })
+}
+
+export const notifyPartnerOfLearnerAlert = async (params: {
+  organizationId: string
+  learnerId: string
+  learnerName: string
+  status: string
+}) => {
+  const message = `Learner ${params.learnerName} from your organization is currently in "${params.status}" status.`
+
+  await addDoc(adminNotificationsCollection, {
+    type: 'engagement_alert',
+    title: `Organization Learner Alert`,
+    message,
+    severity: 'warning',
+    target_roles: ['partner'],
+    related_id: params.organizationId,
+    metadata: {
+      learnerId: params.learnerId,
+      learnerName: params.learnerName,
+      status: params.status
+    },
+    created_at: serverTimestamp(),
+  })
+}
+
 export const sendRecoveryNotification = async (notification: {
   userId: string
   relatedId?: string
@@ -238,6 +298,92 @@ export const acknowledgeAlert = async (alertId: string, acknowledgedBy: string) 
 export const resolveAlert = async (alertId: string) => {
   const alertRef = doc(db, 'weekly_target_alerts', alertId)
   await updateDoc(alertRef, { resolved_at: serverTimestamp() })
+}
+
+type WeeklyStatus = 'on_track' | 'warning' | 'at_risk'
+
+const statusCopy: Record<WeeklyStatus, { title: string; message: string; severity: AdminNotification['severity'] }> = {
+  on_track: {
+    title: '🎉 Back on track',
+    message: 'Momentum restored. Weekly progress is back on target.',
+    severity: 'success',
+  },
+  warning: {
+    title: '⚠️ Weekly progress reminder',
+    message: 'You are close to the weekly target. Log another activity to stay on track.',
+    severity: 'warning',
+  },
+  at_risk: {
+    title: '🔴 Weekly progress alert',
+    message: 'Weekly progress is at risk. Consider outreach and support resources.',
+    severity: 'critical',
+  },
+}
+
+export const createStatusChangeNotification = async (params: {
+  userId: string
+  weekNumber: number
+  weekYear: number
+  previousStatus: WeeklyStatus
+  newStatus: WeeklyStatus
+  pointsEarned: number
+  targetPoints: number
+}) => {
+  const copy = statusCopy[params.newStatus]
+  const message = `${copy.message} (${params.pointsEarned.toLocaleString()} / ${params.targetPoints.toLocaleString()} pts).`
+
+  await createInAppNotification({
+    userId: params.userId,
+    type: 'progress_report',
+    title: copy.title,
+    message,
+    metadata: {
+      weekNumber: params.weekNumber,
+      weekYear: params.weekYear,
+      previousStatus: params.previousStatus,
+      newStatus: params.newStatus,
+      pointsEarned: params.pointsEarned,
+      targetPoints: params.targetPoints,
+    },
+  })
+
+  await addDoc(adminNotificationsCollection, {
+    type: 'progress_report',
+    title: `Status shift: ${params.newStatus.replace('_', ' ')}`,
+    message,
+    severity: copy.severity,
+    target_roles: ['partner', 'super_admin'],
+    related_id: params.userId,
+    metadata: {
+      weekNumber: params.weekNumber,
+      weekYear: params.weekYear,
+      previousStatus: params.previousStatus,
+      newStatus: params.newStatus,
+      pointsEarned: params.pointsEarned,
+      targetPoints: params.targetPoints,
+    },
+    created_at: serverTimestamp(),
+  })
+}
+
+export const createPartnerDigestNotification = async (params: {
+  title: string
+  message: string
+  summary: Record<string, number>
+  generatedFor: string
+}) => {
+  await addDoc(adminNotificationsCollection, {
+    type: 'progress_report',
+    title: params.title,
+    message: params.message,
+    severity: 'info',
+    target_roles: ['partner', 'super_admin'],
+    metadata: {
+      summary: params.summary,
+      generatedFor: params.generatedFor,
+    },
+    created_at: serverTimestamp(),
+  })
 }
 
 export const listenToWeeklyAlerts = (

@@ -19,9 +19,9 @@ import {
   Text,
   Wrap,
   WrapItem,
-  Checkbox,
 } from '@chakra-ui/react'
 import { AdminFormData, AdminRole, OrganizationRecord } from '@/types/admin'
+import { OrganizationAssignmentsPicker } from '@/components/super-admin/OrganizationAssignmentsPicker'
 
 interface AdminFormModalProps {
   isOpen: boolean
@@ -33,11 +33,9 @@ interface AdminFormModalProps {
 }
 
 const roleOptions: { value: AdminRole; label: string }[] = [
-  { value: 'partner', label: 'Partner (Company Admin)' },
-  { value: 'admin', label: 'Admin' },
+  { value: 'partner', label: 'Partner' },
   { value: 'mentor', label: 'Mentor' },
   { value: 'ambassador', label: 'Ambassador' },
-  { value: 'team_leader', label: 'Team Leader' },
 ]
 
 const defaultState: AdminFormData = {
@@ -93,8 +91,8 @@ export const AdminFormModal: React.FC<AdminFormModalProps> = ({
     if (!formData.email) nextErrors.email = 'Email is required'
     else if (!emailValid) nextErrors.email = 'Invalid email format'
     if (!formData.role) nextErrors.role = 'Role is required'
-    if ((formData.role === 'partner' || formData.role === 'admin') && !formData.assignedOrganizations.length)
-      nextErrors.assignedOrganizations = 'Admin users must be assigned to at least one organization'
+    if (formData.role === 'partner' && !formData.assignedOrganizations.length)
+      nextErrors.assignedOrganizations = 'Partner users must be assigned to at least one organization'
     const missingOrganizations = formData.assignedOrganizations.filter((orgId) => !organizationLookup.has(orgId))
     const inactiveOrganizations = selectedOrganizations.filter((org) => org?.status && org.status !== 'active')
     if (missingOrganizations.length) {
@@ -110,16 +108,6 @@ export const AdminFormModal: React.FC<AdminFormModalProps> = ({
     setFormData((prev) => ({ ...prev, [key]: value }))
   }
 
-  const handleOrganizationsChange = (orgId: string) => {
-    setFormData((prev) => {
-      const exists = prev.assignedOrganizations.includes(orgId)
-      const nextOrgs = exists
-        ? prev.assignedOrganizations.filter((id) => id !== orgId)
-        : [...prev.assignedOrganizations, orgId]
-      return { ...prev, assignedOrganizations: nextOrgs }
-    })
-  }
-
   const handleSubmit = async () => {
     if (!validate()) return
     setSubmitting(true)
@@ -132,7 +120,7 @@ export const AdminFormModal: React.FC<AdminFormModalProps> = ({
     <Modal isOpen={isOpen} onClose={onClose} size="xl" isCentered>
       <ModalOverlay />
       <ModalContent>
-        <ModalHeader>{isEdit ? 'Edit Admin' : 'Add Admin'}</ModalHeader>
+        <ModalHeader>{isEdit ? 'Edit Admin Access' : 'Add Admin Access'}</ModalHeader>
         <ModalCloseButton />
         <ModalBody>
           <Stack spacing={4}>
@@ -173,23 +161,16 @@ export const AdminFormModal: React.FC<AdminFormModalProps> = ({
             <FormControl isInvalid={!!errors.assignedOrganizations}>
               <FormLabel>Assigned Organizations</FormLabel>
               <Text fontSize="sm" color="gray.500" mb={2}>
-                Selected organizations will be accessible by this admin.
+                For Partner role users, selected organizations drive dashboard visibility and data access.
               </Text>
               {organizations.length ? (
-                <Box borderWidth="1px" borderRadius="md" p={3}>
-                  <Wrap spacing={3}>
-                    {organizations.map((org) => (
-                      <WrapItem key={org.id}>
-                        <Checkbox
-                          isChecked={formData.assignedOrganizations.includes(org.id || '')}
-                          onChange={() => handleOrganizationsChange(org.id || '')}
-                        >
-                          {org.name} {org.code ? `(${org.code})` : `(ID: ${org.id})`}
-                        </Checkbox>
-                      </WrapItem>
-                    ))}
-                  </Wrap>
-                </Box>
+                <OrganizationAssignmentsPicker
+                  organizations={organizations}
+                  value={formData.assignedOrganizations}
+                  onChange={(nextIds) => handleChange('assignedOrganizations', nextIds)}
+                  helperText="Search and add one or more organizations."
+                  allowInactive={false}
+                />
               ) : (
                 <Text color="gray.500">No organizations available.</Text>
               )}
@@ -231,7 +212,7 @@ export const AdminFormModal: React.FC<AdminFormModalProps> = ({
             Cancel
           </Button>
           <Button colorScheme="blue" onClick={handleSubmit} isLoading={submitting}>
-            {isEdit ? 'Save Changes' : 'Create Admin'}
+            {isEdit ? 'Save Changes' : 'Grant Admin Access'}
           </Button>
         </ModalFooter>
       </ModalContent>

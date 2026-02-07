@@ -8,13 +8,22 @@ import {
   Card,
   CardBody,
   CardHeader,
+  Collapse,
   Flex,
   Grid,
   HStack,
   Icon,
   IconButton,
+  Modal,
+  ModalBody,
+  ModalCloseButton,
+  ModalContent,
+  ModalFooter,
+  ModalHeader,
+  ModalOverlay,
   Skeleton,
   SkeletonCircle,
+  Spinner,
   Progress,
   Select,
   SimpleGrid,
@@ -45,16 +54,20 @@ import {
   AlertCircle,
   ArrowDownAZ,
   ArrowUpAZ,
-  ArrowUpRight,
   Award,
-  Clock,
+  CheckCircle,
+  ChevronDown,
+  ChevronUp,
+  ChevronRight,
   Crown,
-  Info,
+  Lock,
   Medal,
   RefreshCw,
   Sparkles,
   Star,
   Target,
+  TrendingDown,
+  TrendingUp,
   Trophy,
   Users,
 } from 'lucide-react'
@@ -67,16 +80,31 @@ import {
   onSnapshot,
   orderBy,
   query,
+  serverTimestamp,
+  updateDoc,
   where,
 } from 'firebase/firestore'
 import { ResponsiveContainer, PieChart, Pie, Cell } from 'recharts'
-import { Badge as BadgeDefinition, LeaderboardTimeframe, UserProfile } from '@/types'
+import { Badge as BadgeDefinition, LeaderboardTimeframe, UserProfile, UserRole } from '@/types'
+import { OrganizationRecord } from '@/types/admin'
 import { db } from '@/services/firebase'
+import { fetchOrganizationsByIds } from '@/services/organizationService'
+import {
+  fetchVillageById,
+  fetchVillagesByIds,
+  removeMemberFromVillage,
+  VillageSummary,
+} from '@/services/villageService'
 import { useAuth } from '@/hooks/useAuth'
 import { useLeaderboardContext, getLeaderboardContextLabels } from '@/hooks/leaderboard/useLeaderboardContext'
 import { useLeaderboardData } from '@/hooks/leaderboard/useLeaderboardData'
 import { useLeaderboardMetrics } from '@/hooks/leaderboard/useLeaderboardMetrics'
+import { useUserActivityHistory } from '@/hooks/leaderboard/useUserActivityHistory'
+import { getDisplayName } from '@/utils/displayName'
 import { StartChallengeModal } from '@/components/modals/StartChallengeModal'
+import { ChallengesTab } from '@/components/leaderboard/ChallengesTab'
+import { cancelChallenge } from '@/services/challengeService'
+import { format } from 'date-fns'
 
 interface FeaturedBadge {
   id: string
@@ -97,7 +125,6 @@ const timeframeOptions = [
 
 const sortOptions = [
   { label: 'Sort by Points', value: 'points' },
-  { label: 'Sort by Level', value: 'level' },
   { label: 'Sort by Name', value: 'name' },
 ]
 
@@ -126,17 +153,19 @@ export const LeadershipBoardPage: React.FC = () => {
   const { profile: authProfile, refreshProfile } = useAuth()
   const toast = useToast()
   const { isOpen, onOpen, onClose } = useDisclosure()
-  const supportEmail = 'support@transformation4leaders.com'
+  const { isOpen: isFiltersOpen, onToggle: onToggleFilters } = useDisclosure({ defaultIsOpen: false })
+  const { isOpen: isLeaveOpen, onOpen: onLeaveOpen, onClose: onLeaveClose } = useDisclosure()
+  const supportEmail = 'transform@t4leader.com'
   const pointsColors = useToken('colors', [
     'brand.primary',
     'brand.dark',
-    'accent.warning',
+    'danger.DEFAULT',
     'success.500',
-    'warning.500',
+    'purple.400',
     'tint.brandPrimary',
   ])
-  const [timeframe, setTimeframe] = useState<LeaderboardTimeframe>(LeaderboardTimeframe.ALL_TIME)
-  const [sortField, setSortField] = useState<'points' | 'level' | 'name'>('points')
+  const [timeframe, setTimeframe] = useState<LeaderboardTimeframe>(LeaderboardTimeframe.LAST_7_DAYS)
+  const [sortField, setSortField] = useState<'points' | 'name'>('points')
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('desc')
   const [currentProfile, setCurrentProfile] = useState<UserProfile | null>(null)
   const [virtualOffset, setVirtualOffset] = useState(0)
@@ -147,12 +176,20 @@ export const LeadershipBoardPage: React.FC = () => {
   const [badgesError, setBadgesError] = useState<string | null>(null)
   const [pointsPulse, setPointsPulse] = useState(false)
   const [isRefreshingProfile, setIsRefreshingProfile] = useState(false)
+  const [villageDetails, setVillageDetails] = useState<VillageSummary | null>(null)
+  const [isVillageLoading, setIsVillageLoading] = useState(false)
+  const [villageError, setVillageError] = useState<string | null>(null)
+  const [isVillageCreator, setIsVillageCreator] = useState(false)
+  const [isLeavingVillage, setIsLeavingVillage] = useState(false)
   const [showFilterTip, setShowFilterTip] = useState(() => {
     const stored = localStorage.getItem('leaderboard-filter-tip')
     return stored !== 'dismissed'
   })
+  const [expandedCategories, setExpandedCategories] = useState<Set<string>>(new Set())
+  const [organizationsMap, setOrganizationsMap] = useState<Record<string, OrganizationRecord>>({})
+  const [villageNames, setVillageNames] = useState<Record<string, string>>({})
+  const villageNamesRef = useRef<Record<string, string>>({})
   const previousTotalPoints = useRef<number | null>(null)
-  const previousLevel = useRef<number | null>(null)
   const timeframeStart = useMemo(() => toDateFromTimeframe(timeframe), [timeframe])
   const enableProfileRealtime = import.meta.env.VITE_ENABLE_PROFILE_REALTIME === 'true'
 
@@ -198,6 +235,7 @@ export const LeadershipBoardPage: React.FC = () => {
     challenges,
     profilesLoaded,
     transactionsLoaded,
+    challengesLoaded,
     errorMessage,
   } = useLeaderboardData({
     context,
@@ -214,6 +252,45 @@ export const LeadershipBoardPage: React.FC = () => {
       isClosable: true,
     })
   }, [errorMessage, toast])
+
+  const { activityHistoryByCategory, isLoading: activityHistoryLoading } = useUserActivityHistory(profile?.id)
+
+  const userBreakdown = useMemo(() => {
+    const categoryTotals: Record<string, number> = {}
+    let totalPoints = 0
+
+    Object.entries(activityHistoryByCategory).forEach(([category, entries]) => {
+      const filteredEntries = timeframeStart
+        ? entries.filter((e) => e.createdAt >= timeframeStart)
+        : entries
+
+      const catTotal = filteredEntries.reduce((sum, e) => sum + e.points, 0)
+      if (catTotal > 0) {
+        categoryTotals[category] = catTotal
+        totalPoints += catTotal
+      }
+    })
+
+    return Object.entries(categoryTotals)
+      .map(([name, value]) => ({
+        name,
+        value,
+        percent: totalPoints > 0 ? Math.round((value / totalPoints) * 100) : 0,
+      }))
+      .sort((a, b) => b.value - a.value)
+  }, [activityHistoryByCategory, timeframeStart])
+
+  const toggleCategory = useCallback((categoryName: string) => {
+    setExpandedCategories((prev) => {
+      const newSet = new Set(prev)
+      if (newSet.has(categoryName)) {
+        newSet.delete(categoryName)
+      } else {
+        newSet.add(categoryName)
+      }
+      return newSet
+    })
+  }, [])
 
   const pointsPulseStyle = pointsPulse ? 'pointsPulse 1.2s ease-in-out' : 'none'
 
@@ -313,6 +390,64 @@ export const LeadershipBoardPage: React.FC = () => {
     void fetchFeaturedBadges()
   }, [fetchFeaturedBadges])
 
+  useEffect(() => {
+    if (profiles.length > 0) {
+      const orgIds = Array.from(
+        new Set(
+          profiles
+            .map((p) => p.companyId || p.organizationId)
+            .filter((id): id is string => Boolean(id))
+        )
+      )
+
+      if (orgIds.length > 0) {
+        fetchOrganizationsByIds(orgIds)
+          .then((orgs) => {
+            const newMap: Record<string, OrganizationRecord> = {}
+            orgs.forEach((org) => {
+              if (org.id) newMap[org.id] = org
+            })
+            setOrganizationsMap((prev) => ({ ...prev, ...newMap }))
+          })
+          .catch((err) => {
+            console.error('🔴 [Leaderboard] Failed to fetch organizations', err)
+          })
+      }
+    }
+  }, [profiles])
+
+
+  useEffect(() => {
+    if (!profiles.length) return
+
+    const villageIds = Array.from(
+      new Set(
+        profiles
+          .map((p) => p.villageId)
+          .filter((id): id is string => Boolean(id)),
+      ),
+    )
+
+    const missingVillageIds = villageIds.filter((id) => !villageNamesRef.current[id])
+    if (!missingVillageIds.length) return
+
+    fetchVillagesByIds(missingVillageIds)
+      .then((villages) => {
+        if (!villages.length) return
+        setVillageNames((prev) => {
+          const merged = { ...prev }
+          villages.forEach((village) => {
+            merged[village.id] = village.name
+          })
+          villageNamesRef.current = merged
+          return merged
+        })
+      })
+      .catch((err) => {
+        console.error('🔍 [Leaderboard] Failed to fetch villages', err)
+      })
+  }, [profiles])
+
 
   useEffect(() => {
     if (!profile?.id) return undefined
@@ -368,7 +503,7 @@ export const LeadershipBoardPage: React.FC = () => {
 
   const handleManualRefresh = async () => {
     setIsRefreshingProfile(true)
-    const result = await refreshProfile({ reason: 'leaderboard-manual' })
+    const result = await refreshProfile({ reason: 'leaderboard-manual', isManual: true })
     setIsRefreshingProfile(false)
 
     if (result.error) {
@@ -396,15 +531,39 @@ export const LeadershipBoardPage: React.FC = () => {
     localStorage.setItem('leaderboard-filter-tip', 'dismissed')
   }
 
+  const handleCancelChallenge = async (challengeId: string) => {
+    if (!profile?.id) return
+
+    const confirmed = window.confirm(
+      'Are you sure you want to cancel this challenge? This cannot be undone.'
+    )
+    if (!confirmed) return
+
+    const result = await cancelChallenge(challengeId, profile.id)
+
+    if (result.success) {
+      toast({
+        title: 'Challenge cancelled',
+        status: 'success',
+        duration: 3000,
+      })
+    } else {
+      toast({
+        title: 'Failed to cancel',
+        description: result.error,
+        status: 'error',
+        duration: 5000,
+      })
+    }
+  }
+
   const {
     leaderboardRows,
     userRow,
     percentile,
     segmentSize,
-    segmentChallenges,
     peerRows,
     cohortStats,
-    breakdownByCategory,
     segmentStats,
   } = useLeaderboardMetrics({
     context,
@@ -420,14 +579,25 @@ export const LeadershipBoardPage: React.FC = () => {
 
   const isPointsReady = Boolean(profile) && profilesLoaded && transactionsLoaded
   const displayTotalPoints = userRow?.totalPoints ?? profile?.totalPoints ?? 0
-  const displayLevel = userRow?.level ?? profile?.level ?? 1
+  const weeklyTarget = 200
+  const weeklyProgress = Math.min(100, (segmentStats.weeklyPoints / weeklyTarget) * 100)
+  const percentileValue = leaderboardRows.length
+    ? Math.round(((userRow?.rank ?? leaderboardRows.length) / leaderboardRows.length) * 100)
+    : 100
+  const aheadPercent = Math.max(0, 100 - percentileValue)
+  const profileRouteBase = profile?.role === UserRole.SUPER_ADMIN
+    ? '/admin/user'
+    : profile?.role === UserRole.PARTNER
+      ? '/partner/user'
+      : profile?.role === UserRole.MENTOR
+        ? '/mentor/user'
+        : null
 
   useEffect(() => {
     if (!profile) return
 
-    if (previousTotalPoints.current === null || previousLevel.current === null) {
+    if (previousTotalPoints.current === null) {
       previousTotalPoints.current = displayTotalPoints
-      previousLevel.current = displayLevel
       return
     }
 
@@ -443,19 +613,8 @@ export const LeadershipBoardPage: React.FC = () => {
       })
     }
 
-    if (displayLevel > (previousLevel.current ?? 0)) {
-      toast({
-        title: 'Level up!',
-        description: `You reached level ${displayLevel}.`,
-        status: 'success',
-        duration: 2500,
-        isClosable: true,
-      })
-    }
-
     previousTotalPoints.current = displayTotalPoints
-    previousLevel.current = displayLevel
-  }, [displayLevel, displayTotalPoints, profile, toast])
+  }, [displayTotalPoints, profile, toast])
 
   useEffect(() => {
     if (!pointsPulse) return undefined
@@ -482,14 +641,29 @@ export const LeadershipBoardPage: React.FC = () => {
   }, [leaderboardRows, paginatedRows, virtualOffset])
 
   useEffect(() => {
-    const maxPage = Math.max(1, Math.ceil(breakdownByCategory.length / 4))
+    const maxPage = Math.max(1, Math.ceil(userBreakdown.length / 4))
     if (breakdownPage > maxPage) {
       setBreakdownPage(maxPage)
     }
-  }, [breakdownByCategory.length, breakdownPage])
+  }, [userBreakdown.length, breakdownPage])
 
   const getRankIcon = (rank: number) => {
-    if (rank === 1) return <Icon as={Crown} color="accent.warning" />
+    if (rank === 1) {
+      return (
+        <Flex
+          w={10}
+          h={10}
+          align="center"
+          justify="center"
+          borderRadius="full"
+          bg="tint.accentWarning"
+          border="2px solid"
+          borderColor="brand.primary"
+        >
+          <Icon as={Crown} boxSize={5} color="brand.primary" />
+        </Flex>
+      )
+    }
     if (rank === 2) return <Icon as={Medal} color="text.muted" />
     if (rank === 3) return <Icon as={Medal} color="brand.primary" />
     return (
@@ -499,22 +673,10 @@ export const LeadershipBoardPage: React.FC = () => {
     )
   }
 
-  const handleApplyFilters = () => {
-    setVirtualOffset(0)
-    setLeaderboardPage(1)
-    toast({
-      title: 'Filters applied',
-      description: 'Leaderboard recalculated with your selected filters.',
-      status: 'success',
-      duration: 2500,
-      isClosable: true,
-    })
-  }
-
   const handleResetFilters = () => {
     setSortField('points')
     setSortDirection('desc')
-    setTimeframe(LeaderboardTimeframe.ALL_TIME)
+    setTimeframe(LeaderboardTimeframe.LAST_7_DAYS)
     setVirtualOffset(0)
     setLeaderboardPage(1)
   }
@@ -524,8 +686,89 @@ export const LeadershipBoardPage: React.FC = () => {
     setVirtualOffset(offset)
   }
 
-  const emptyChallenges = segmentChallenges.filter((challenge) => challenge.status === 'active').length === 0
   const isFreeContext = context?.type === 'free'
+  const isVillageContext = context?.type === 'village'
+  const shouldShowVillageSection = isFreeContext || isVillageContext
+  const villageId = profile?.villageId ?? null
+
+  useEffect(() => {
+    let isActive = true
+
+    if (!shouldShowVillageSection || !villageId) {
+      setVillageDetails(null)
+      setVillageError(null)
+      setIsVillageCreator(false)
+      setIsVillageLoading(false)
+      return () => {
+        isActive = false
+      }
+    }
+
+    const loadVillage = async () => {
+      setIsVillageLoading(true)
+      setVillageError(null)
+      try {
+        const village = await fetchVillageById(villageId)
+        if (!isActive) return
+        if (!village) {
+          setVillageDetails(null)
+          setIsVillageCreator(false)
+          setVillageError('Village not found')
+          toast({ title: 'Village not found', status: 'error' })
+          return
+        }
+        setVillageDetails(village)
+        setIsVillageCreator(Boolean(profile?.id && village.creatorId === profile.id))
+      } catch (error) {
+        if (!isActive) return
+        console.error('Failed to fetch village details', error)
+        setVillageDetails(null)
+        setIsVillageCreator(false)
+        setVillageError('Unable to load village details')
+        toast({ title: 'Unable to load village details', status: 'error' })
+      } finally {
+        if (isActive) {
+          setIsVillageLoading(false)
+        }
+      }
+    }
+
+    void loadVillage()
+
+    return () => {
+      isActive = false
+    }
+  }, [shouldShowVillageSection, profile?.id, toast, villageId])
+
+  const handleLeaveVillage = useCallback(async () => {
+    if (!profile?.id || !villageId) return
+    setIsLeavingVillage(true)
+    try {
+      await removeMemberFromVillage({ villageId, userId: profile.id })
+      await Promise.all([
+        updateDoc(doc(db, 'users', profile.id), { villageId: null, updatedAt: serverTimestamp() }),
+        updateDoc(doc(db, 'profiles', profile.id), { villageId: null, updatedAt: serverTimestamp() }),
+      ])
+      toast({ title: 'You have left the village', status: 'success' })
+      onLeaveClose()
+      setVillageDetails(null)
+      setIsVillageCreator(false)
+      await refreshProfile({ reason: 'leave-village', isManual: true })
+    } catch (error) {
+      console.error('Failed to leave village', error)
+      toast({
+        title: 'Unable to leave village',
+        description: error instanceof Error ? error.message : undefined,
+        status: 'error',
+      })
+    } finally {
+      setIsLeavingVillage(false)
+    }
+  }, [onLeaveClose, profile?.id, refreshProfile, toast, villageId])
+
+  const villageRouteId = villageDetails?.id ?? villageId
+  const villageActionDisabled = isVillageLoading || isLeavingVillage
+  const shouldShowVillageCard = Boolean(villageDetails && villageId && !villageError)
 
   return (
     <Stack spacing={6}>
@@ -564,26 +807,32 @@ export const LeadershipBoardPage: React.FC = () => {
           >
             Refresh
           </Button>
-          <Button
-            bg="surface.default"
-            color="brand.primary"
-            border="1px solid"
-            borderColor="brand.primary"
-            _hover={{ bg: 'tint.brandPrimary' }}
-            leftIcon={<Icon as={Info} />}
-            onClick={onOpen}
-          >
-            Start a Challenge
-          </Button>
-          <Button
-            onClick={() => navigate('/app/peer-connect')}
-            variant="primary"
-            rightIcon={<Icon as={ArrowUpRight} />}
-          >
-            Open Peer Connect
-          </Button>
         </HStack>
       </Flex>
+
+      <Card bg="surface.default" border="1px solid" borderColor="border.subtle">
+        <CardBody>
+          <Grid templateColumns={{ base: '1fr', lg: '1.2fr 1fr' }} gap={6} alignItems="center">
+            <Box>
+              <Text fontSize="lg" fontWeight="bold">Choose your next move</Text>
+              <Text color="text.secondary">
+                Earn points, climb the ranks, and unlock rewards with a focused action today.
+              </Text>
+            </Box>
+            <HStack spacing={3} flexWrap="wrap" justify={{ base: 'flex-start', lg: 'flex-end' }}>
+              <Button variant="primary" leftIcon={<Icon as={Target} />} onClick={() => navigate('/app/impact')}>
+                Earn points now
+              </Button>
+              <Button variant="secondary" leftIcon={<Icon as={Trophy} />} onClick={onOpen}>
+                Join a challenge
+              </Button>
+              <Button variant="outline" leftIcon={<Icon as={Users} />} onClick={() => navigate('/app/peer-connect')}>
+                Improve rank
+              </Button>
+            </HStack>
+          </Grid>
+        </CardBody>
+      </Card>
 
       <Tabs variant="unstyled" colorScheme="primary">
         <TabList
@@ -618,25 +867,81 @@ export const LeadershipBoardPage: React.FC = () => {
         <TabPanels>
           <TabPanel px={0}>
             <Stack spacing={6}>
-              {isFreeContext && (
+              {shouldShowVillageSection && (
                 <Card bg="surface.default" border="1px solid" borderColor="border.subtle">
                   <CardBody>
-                    <VStack spacing={3} py={4} textAlign="center">
-                      <Icon as={Sparkles} color="brand.primary" boxSize={7} />
-                      <Text fontSize="xl" fontWeight="bold" color="text.primary">
-                        Personal leaderboard view
-                      </Text>
-                      <Text color="text.secondary">
-                        Join a village or organization to see peer rankings and community benchmarks.
-                      </Text>
-                      <Button
-                        variant="primary"
-                        as="a"
-                        href={`mailto:${supportEmail}`}
-                      >
-                        Contact support to join a village
-                      </Button>
-                    </VStack>
+                    {isVillageLoading && villageId ? (
+                      <VStack spacing={3} py={6} textAlign="center">
+                        <Spinner color="brand.primary" />
+                        <Text fontSize="sm" color="text.secondary">
+                          Loading your village details...
+                        </Text>
+                      </VStack>
+                    ) : shouldShowVillageCard && villageRouteId ? (
+                      <VStack spacing={4} py={4} textAlign="center">
+                        <Icon as={isVillageCreator ? Crown : Users} color="brand.primary" boxSize={7} />
+                        <Text fontSize="xl" fontWeight="bold" color="text.primary">
+                          {isVillageCreator ? 'Village Creator' : 'Village Member'}
+                        </Text>
+                        <Text color="text.secondary">
+                          {isVillageCreator
+                            ? 'Manage your village community and invite new members.'
+                            : 'View your village community or leave anytime.'}
+                        </Text>
+                        <Stack
+                          direction={{ base: 'column', sm: 'row' }}
+                          spacing={3}
+                          w="full"
+                          justify="center"
+                        >
+                          <Button
+                            variant="primary"
+                            leftIcon={<Icon as={Users} />}
+                            onClick={() => navigate(`/app/villages/${villageRouteId}/manage`)}
+                            isDisabled={villageActionDisabled}
+                          >
+                            {isVillageCreator ? 'Manage Village' : 'View Village'}
+                          </Button>
+                          {isVillageCreator ? (
+                            <Button
+                              variant="secondary"
+                              leftIcon={<Icon as={Sparkles} />}
+                              onClick={() => navigate(`/app/villages/${villageRouteId}/invite`)}
+                              isDisabled={villageActionDisabled}
+                            >
+                              Invite Members
+                            </Button>
+                          ) : (
+                            <Button
+                              variant="ghost"
+                              colorScheme="red"
+                              onClick={onLeaveOpen}
+                              isLoading={isLeavingVillage}
+                              isDisabled={villageActionDisabled}
+                            >
+                              Leave Village
+                            </Button>
+                          )}
+                        </Stack>
+                      </VStack>
+                    ) : (
+                      <VStack spacing={3} py={4} textAlign="center">
+                        <Icon as={Sparkles} color="brand.primary" boxSize={7} />
+                        <Text fontSize="xl" fontWeight="bold" color="text.primary">
+                          Personal leaderboard view
+                        </Text>
+                        <Text color="text.secondary">
+                          Join a village or organization to see peer rankings and community benchmarks.
+                        </Text>
+                        <Button
+                          variant="primary"
+                          as="a"
+                          href={`mailto:${supportEmail}`}
+                        >
+                          Contact support to join a village
+                        </Button>
+                      </VStack>
+                    )}
                   </CardBody>
                 </Card>
               )}
@@ -654,63 +959,88 @@ export const LeadershipBoardPage: React.FC = () => {
                     </HStack>
                   </CardHeader>
                   <CardBody>
-                    <SimpleGrid columns={{ base: 2, md: 4 }} spacing={3}>
-                      <Stat>
-                        <StatLabel color="text.muted">Your Current Rank</StatLabel>
-                        <StatNumber color="text.primary" display="flex" alignItems="center" gap={2}>
-                          {getRankIcon(userRow?.rank || leaderboardRows.length || 1)}
-                          {userRow?.rank || '—'}
-                        </StatNumber>
-                        <StatHelpText color="text.secondary">{segmentScopeText}</StatHelpText>
-                      </Stat>
-                      <Stat>
-                        <StatLabel color="text.muted">Total Points</StatLabel>
-                        <Skeleton isLoaded={isPointsReady} height="32px">
-                          <StatNumber color="text.primary" animation={pointsPulseStyle}>
-                            {formatNumber(displayTotalPoints)}
-                          </StatNumber>
-                        </Skeleton>
-                        <StatHelpText color="text.secondary">Lifetime XP</StatHelpText>
-                      </Stat>
-                      <Stat>
-                        <StatLabel color="text.muted">Current Level</StatLabel>
-                        <Skeleton isLoaded={isPointsReady} height="32px">
-                          <StatNumber color="text.primary" animation={pointsPulseStyle}>
-                            {displayLevel}
-                          </StatNumber>
-                        </Skeleton>
-                        <StatHelpText color="text.secondary">Keep climbing</StatHelpText>
-                      </Stat>
-                      <Stat>
-                        <StatLabel color="text.muted">Weekly Points</StatLabel>
-                        <Skeleton isLoaded={isPointsReady} height="32px">
-                          <StatNumber color="text.primary">{formatNumber(segmentStats.weeklyPoints)}</StatNumber>
-                        </Skeleton>
-                        <StatHelpText color="text.secondary">Last 7 days</StatHelpText>
-                      </Stat>
-                      <Stat>
-                        <StatLabel color="text.muted">Monthly Points</StatLabel>
-                        <Skeleton isLoaded={isPointsReady} height="32px">
-                          <StatNumber color="text.primary">{formatNumber(segmentStats.monthlyPoints)}</StatNumber>
-                        </Skeleton>
-                        <StatHelpText color="text.secondary">Last 30 days</StatHelpText>
-                      </Stat>
-                      <Stat>
-                        <StatLabel color="text.muted">Active Challenges</StatLabel>
-                        <StatNumber color="text.primary">{segmentStats.activeChallenges}</StatNumber>
-                        <StatHelpText color="text.secondary">Live battles</StatHelpText>
-                      </Stat>
-                      <Stat>
-                        <StatLabel color="text.muted">Badges Earned</StatLabel>
-                        <StatNumber color="text.primary">{segmentStats.badgesEarned}</StatNumber>
-                        <StatHelpText color="text.secondary">Achievement count</StatHelpText>
-                      </Stat>
-                      <Stat>
-                        <StatLabel color="text.muted">{segmentMemberLabel}</StatLabel>
-                        <StatNumber color="text.primary">{segmentSize || 1}</StatNumber>
-                        <StatHelpText color="text.secondary">{segmentLabel} size</StatHelpText>
-                      </Stat>
-                    </SimpleGrid>
+                    <Stack spacing={6}>
+                      <Grid templateColumns={{ base: '1fr', md: '1.4fr 1fr' }} gap={4}>
+                        <Box
+                          p={4}
+                          borderRadius="xl"
+                          bg="tint.brandPrimary"
+                          border="1px solid"
+                          borderColor="brand.primary"
+                        >
+                          <Text fontSize="sm" color="brand.primary" textTransform="uppercase" letterSpacing="wide">
+                            Primary Focus
+                          </Text>
+                          <Text fontSize="lg" fontWeight="bold" color="text.primary">
+                            Your Rank Right Now
+                          </Text>
+                          <HStack spacing={3} mt={2}>
+                            <Box fontSize="2xl">{getRankIcon(userRow?.rank || leaderboardRows.length || 1)}</Box>
+                            <Text fontSize="4xl" fontWeight="bold" color="text.primary">
+                              {userRow?.rank || '—'}
+                            </Text>
+                          </HStack>
+                          <Text color="text.secondary">
+                            You’re ahead of {aheadPercent}% of {(segmentLabel ?? 'segment').toLowerCase()} members.
+                          </Text>
+                          <HStack spacing={2} mt={3} flexWrap="wrap">
+                            <Badge colorScheme="primary">{percentile}</Badge>
+                            <Badge colorScheme="green">{segmentScopeText}</Badge>
+                          </HStack>
+                        </Box>
+                        <Stack spacing={4}>
+                          <Box>
+                            <HStack justify="space-between">
+                              <Text fontWeight="semibold">Weekly momentum</Text>
+                              <Text fontSize="sm" color="text.secondary">
+                                Goal {formatNumber(weeklyTarget)}
+                              </Text>
+                            </HStack>
+                            <Progress value={weeklyProgress} colorScheme="green" borderRadius="full" mt={2} />
+                            <Text fontSize="xs" color="text.secondary" mt={1}>
+                              {segmentStats.weeklyPoints > 0
+                                ? `${formatNumber(segmentStats.weeklyPoints)} points earned this week.`
+                                : 'Start an activity to earn your first points this week.'}
+                            </Text>
+                          </Box>
+                        </Stack>
+                      </Grid>
+                      <SimpleGrid columns={{ base: 2, md: 3 }} spacing={3}>
+                        <Stat>
+                          <StatLabel color="text.muted">Total Points</StatLabel>
+                          <Skeleton isLoaded={isPointsReady} height="28px">
+                            <StatNumber color="text.primary" fontSize="lg" animation={pointsPulseStyle}>
+                              {formatNumber(displayTotalPoints)}
+                            </StatNumber>
+                          </Skeleton>
+                          <StatHelpText color="text.secondary">Lifetime XP earned</StatHelpText>
+                        </Stat>
+                        <Stat>
+                          <StatLabel color="text.muted">Monthly Points</StatLabel>
+                          <Skeleton isLoaded={isPointsReady} height="28px">
+                            <StatNumber color="text.primary" fontSize="lg">
+                              {formatNumber(segmentStats.monthlyPoints)}
+                            </StatNumber>
+                          </Skeleton>
+                          <StatHelpText color="text.secondary">Last 30 days</StatHelpText>
+                        </Stat>
+                        <Stat>
+                          <StatLabel color="text.muted">Active & Pending</StatLabel>
+                          <StatNumber color="text.primary" fontSize="lg">{segmentStats.activeChallenges}</StatNumber>
+                          <StatHelpText color="text.secondary">Live matchups</StatHelpText>
+                        </Stat>
+                        <Stat>
+                          <StatLabel color="text.muted">Badges Earned</StatLabel>
+                          <StatNumber color="text.primary" fontSize="lg">{segmentStats.badgesEarned}</StatNumber>
+                          <StatHelpText color="text.secondary">Celebrated wins</StatHelpText>
+                        </Stat>
+                        <Stat>
+                          <StatLabel color="text.muted">{segmentMemberLabel}</StatLabel>
+                          <StatNumber color="text.primary" fontSize="lg">{segmentSize || 1}</StatNumber>
+                          <StatHelpText color="text.secondary">{segmentLabel} size</StatHelpText>
+                        </Stat>
+                      </SimpleGrid>
+                    </Stack>
                   </CardBody>
                 </Card>
 
@@ -723,20 +1053,16 @@ export const LeadershipBoardPage: React.FC = () => {
                   </CardHeader>
                   <CardBody>
                     <VStack align="stretch" spacing={4}>
-                      <HStack spacing={4}>
+                      <Stack direction={{ base: 'column', sm: 'row' }} spacing={4} align={{ base: 'flex-start', sm: 'center' }}>
                         <Avatar size="lg" name={profile?.fullName} src={profile?.avatarUrl} />
                         <Box>
                           <Text fontWeight="bold">{profile?.fullName || 'You'}</Text>
                           <Text color="text.secondary">
-                            Level {displayLevel} · {formatNumber(displayTotalPoints)} pts
+                            {formatNumber(displayTotalPoints)} pts
                           </Text>
                         </Box>
-                      </HStack>
-                      <SimpleGrid columns={3} spacing={3}>
-                        <Box p={3} border="1px solid" borderColor="border.subtle" borderRadius="lg">
-                          <Text fontSize="xs" color="text.secondary">Active Points</Text>
-                          <Text fontWeight="bold">{formatNumber(userRow?.activePoints || 0)}</Text>
-                        </Box>
+                      </Stack>
+                      <SimpleGrid columns={{ base: 1, sm: 2 }} spacing={3}>
                         <Box p={3} border="1px solid" borderColor="border.subtle" borderRadius="lg">
                           <Text fontSize="xs" color="text.secondary">Total Points</Text>
                           <Text fontWeight="bold" animation={pointsPulseStyle}>
@@ -782,13 +1108,32 @@ export const LeadershipBoardPage: React.FC = () => {
                               })}
                             </HStack>
                           ) : (
-                            <HStack spacing={2} mt={2} color="text.secondary">
-                              <Icon as={Award} boxSize={4} />
-                              <Text fontSize="xs">No badges earned yet.</Text>
-                            </HStack>
+                            <VStack align="start" spacing={2} mt={2}>
+                              <HStack spacing={2}>
+                                {Array.from({ length: 3 }).map((_, index) => (
+                                  <Avatar
+                                    key={index}
+                                    size="xs"
+                                    bg="surface.subtle"
+                                    icon={<Icon as={Lock} />}
+                                    color="text.muted"
+                                    border="1px dashed"
+                                    borderColor="border.subtle"
+                                  />
+                                ))}
+                              </HStack>
+                            </VStack>
                           )}
                         </Box>
                       </SimpleGrid>
+                      <HStack spacing={3} flexWrap="wrap">
+                        <Button variant="primary" leftIcon={<Icon as={Sparkles} />} onClick={() => navigate('/app/impact')}>
+                          Earn your next badge
+                        </Button>
+                        <Button variant="secondary" leftIcon={<Icon as={Trophy} />} onClick={() => navigate('/app/badge-gallery')}>
+                          View badge roadmap
+                        </Button>
+                      </HStack>
                     </VStack>
                   </CardBody>
                 </Card>
@@ -800,47 +1145,60 @@ export const LeadershipBoardPage: React.FC = () => {
                     <Flex justify="space-between" align="center">
                       <Box>
                         <Text fontWeight="bold">Filters & Sorting</Text>
-                        <Text color="text.secondary">Timeframes, sorting, and tutorials</Text>
+                        <Text color="text.secondary">Smart defaults for this week</Text>
                       </Box>
                       <HStack spacing={2}>
-                        <Button size="sm" onClick={handleApplyFilters}>Apply</Button>
-                        <Button size="sm" variant="secondary" onClick={handleResetFilters}>Reset</Button>
+                        <Button size="sm" variant="ghost" onClick={handleResetFilters}>
+                          Reset defaults
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="secondary"
+                          rightIcon={<Icon as={isFiltersOpen ? ChevronUp : ChevronDown} />}
+                          onClick={onToggleFilters}
+                        >
+                          {isFiltersOpen ? 'Hide filters' : 'Show filters'}
+                        </Button>
                       </HStack>
                     </Flex>
-                    {showFilterTip && (
-                      <Flex mt={3} p={3} borderRadius="md" bg="tint.brandPrimary" align="center" gap={3}>
-                        <Icon as={AlertCircle} color="brand.primary" />
-                        <Text fontSize="sm" flex="1">First time? Adjust your timeframe and sort order here.</Text>
-                        <Button size="xs" onClick={dismissFilterTip}>Got it</Button>
-                      </Flex>
-                    )}
                   </CardHeader>
                   <CardBody>
-                    <SimpleGrid columns={{ base: 1, md: 3 }} spacing={4}>
-                      <Box>
-                        <Text fontSize="sm" mb={1}>Timeframe</Text>
-                        <Select value={timeframe} onChange={(e) => setTimeframe(e.target.value as LeaderboardTimeframe)}>
-                          {timeframeOptions.map((option) => (
-                            <option key={option.value} value={option.value}>{option.label}</option>
-                          ))}
-                        </Select>
-                      </Box>
-                      <Box>
-                        <Text fontSize="sm" mb={1}>Sort Field</Text>
-                        <Select value={sortField} onChange={(e) => setSortField(e.target.value as typeof sortField)}>
-                          {sortOptions.map((option) => (
-                            <option key={option.value} value={option.value}>{option.label}</option>
-                          ))}
-                        </Select>
-                      </Box>
-                      <Box>
-                        <Text fontSize="sm" mb={1}>Direction</Text>
-                        <Select value={sortDirection} onChange={(e) => setSortDirection(e.target.value as typeof sortDirection)}>
-                          <option value="desc">Descending</option>
-                          <option value="asc">Ascending</option>
-                        </Select>
-                      </Box>
-                    </SimpleGrid>
+                    <Collapse in={isFiltersOpen} animateOpacity>
+                      <Stack spacing={4}>
+                        {showFilterTip && (
+                          <Flex p={3} borderRadius="md" bg="tint.brandPrimary" align="center" gap={3}>
+                            <Icon as={AlertCircle} color="brand.primary" />
+                            <Text fontSize="sm" flex="1">Tip: adjust timeframe and sorting to change your ranking view.</Text>
+                            <Button size="xs" onClick={dismissFilterTip}>Got it</Button>
+                          </Flex>
+                        )}
+                        <SimpleGrid columns={{ base: 1, md: 3 }} spacing={4}>
+                          <Box>
+                            <Text fontSize="sm" mb={1}>Timeframe</Text>
+                            <Select value={timeframe} onChange={(e) => setTimeframe(e.target.value as LeaderboardTimeframe)}>
+                              {timeframeOptions.map((option) => (
+                                <option key={option.value} value={option.value}>{option.label}</option>
+                              ))}
+                            </Select>
+                          </Box>
+                          <Box>
+                            <Text fontSize="sm" mb={1}>Sort Field</Text>
+                            <Select value={sortField} onChange={(e) => setSortField(e.target.value as typeof sortField)}>
+                              {sortOptions.map((option) => (
+                                <option key={option.value} value={option.value}>{option.label}</option>
+                              ))}
+                            </Select>
+                          </Box>
+                          <Box>
+                            <Text fontSize="sm" mb={1}>Direction</Text>
+                            <Select value={sortDirection} onChange={(e) => setSortDirection(e.target.value as typeof sortDirection)}>
+                              <option value="desc">Descending</option>
+                              <option value="asc">Ascending</option>
+                            </Select>
+                          </Box>
+                        </SimpleGrid>
+                      </Stack>
+                    </Collapse>
                   </CardBody>
                 </Card>
               )}
@@ -871,8 +1229,8 @@ export const LeadershipBoardPage: React.FC = () => {
                             <Tr>
                               <Th color="text.muted">Rank</Th>
                               <Th color="text.muted">Member</Th>
-                              <Th color="text.muted">Level</Th>
                               <Th color="text.muted">Badges</Th>
+                              <Th color="text.muted">Trend</Th>
                               <Th color="text.muted" isNumeric>Points</Th>
                             </Tr>
                           </Thead>
@@ -882,51 +1240,94 @@ export const LeadershipBoardPage: React.FC = () => {
                                 <Td colSpan={5} p={0} borderBottom="none" />
                               </Tr>
                             )}
-                            {virtualized.rows.map((row) => (
-                              <Tr
-                                key={row.user.id}
-                                bg={row.user.id === profile?.id ? 'tint.brandPrimary' : 'transparent'}
-                                _hover={{ bg: row.user.id === profile?.id ? 'tint.brandPrimary' : 'surface.subtle' }}
-                                height={`${rowHeight}px`}
-                              >
-                                <Td>{getRankIcon(row.rank)}</Td>
-                                <Td>
-                                  <HStack spacing={3}>
-                                    <Avatar size="sm" name={row.user.fullName} src={row.user.avatarUrl} />
-                                    <Box>
-                                      <Text fontWeight="bold" color="text.primary">{row.user.fullName}</Text>
+                            {virtualized.rows.map((row) => {
+                              const rowRoute = profileRouteBase
+                                ? `${profileRouteBase}/${row.user.id}`
+                                : row.user.id === profile?.id
+                                  ? '/app/profile'
+                                  : null
+                              const organizationKey = row.user.companyId || row.user.organizationId || ''
+                              const organizationRecord = organizationsMap[organizationKey]
+                              const organizationLabel =
+                                organizationRecord?.name || row.user.companyName || row.user.companyId || 'Independent'
+                              const villageLabel =
+                                villageNames[row.user.villageId ?? ''] ||
+                                organizationRecord?.village ||
+                                row.user.villageId ||
+                                'Village TBD'
+                              const clusterLabel =
+                                organizationRecord?.cluster || row.user.clusterId || 'Cluster TBD'
+                              return (
+                                <Tr
+                                  key={row.user.id}
+                                  bg={row.user.id === profile?.id ? 'tint.brandPrimary' : 'transparent'}
+                                  borderLeftWidth={row.rank <= 3 ? '4px' : '0px'}
+                                  borderLeftColor={
+                                    row.rank === 1
+                                      ? 'brand.primary'
+                                      : row.rank === 2
+                                        ? 'brand.dark'
+                                        : row.rank === 3
+                                          ? 'success.500'
+                                          : 'transparent'
+                                  }
+                                  cursor={rowRoute ? 'pointer' : 'default'}
+                                  onClick={() => {
+                                    if (!rowRoute) return
+                                    navigate(rowRoute)
+                                  }}
+                                  _hover={{ bg: row.user.id === profile?.id ? 'tint.brandPrimary' : 'surface.subtle' }}
+                                  height={`${rowHeight}px`}
+                                >
+                                  <Td>{getRankIcon(row.rank)}</Td>
+                                  <Td>
+                                    <HStack spacing={3}>
+                                      <Avatar size="sm" name={getDisplayName(row.user)} src={row.user.avatarUrl} />
+                                      <Box>
+                                        <Text fontWeight="bold" color="text.primary">{getDisplayName(row.user)}</Text>
+                                        <Text fontSize="xs" color="text.secondary">
+                                          {organizationLabel} · {villageLabel} · {clusterLabel}
+                                        </Text>
+                                        <HStack spacing={2} mt={1}>
+                                          <Badge colorScheme="success">Active</Badge>
+                                          <Badge colorScheme="primary">{row.badgeCount} badges</Badge>
+                                        </HStack>
+                                      </Box>
+                                    </HStack>
+                                  </Td>
+                                  <Td>
+                                    <HStack spacing={1}>
+                                      {Array.from({ length: Math.min(row.badgeCount, 4) }).map((_, idx) => (
+                                        <Icon key={idx} as={Star} color="brand.primary" boxSize={4} />
+                                      ))}
+                                    </HStack>
+                                  </Td>
+                                  <Td>
+                                    <HStack spacing={2}>
+                                      {row.activePoints >= cohortStats.avgActive ? (
+                                        <Icon as={TrendingUp} color="success.500" boxSize={4} />
+                                      ) : (
+                                        <Icon as={TrendingDown} color="danger.DEFAULT" boxSize={4} />
+                                      )}
                                       <Text fontSize="xs" color="text.secondary">
-                                        {row.user.companyId || 'Independent'} · {row.user.villageId || 'Village TBD'} · {row.user.clusterId || 'Cluster TBD'}
+                                        {row.activePoints >= cohortStats.avgActive ? 'Above avg' : 'Below avg'}
                                       </Text>
-                                      <HStack spacing={2} mt={1}>
-                                        <Badge colorScheme="success">Active</Badge>
-                                        <Badge colorScheme="primary">{row.badgeCount} badges</Badge>
-                                        <Badge
-                                          bg="tint.accentWarning"
-                                          color="text.primary"
-                                          border="1px solid"
-                                          borderColor="accent.warning"
-                                        >
-                                          Level {row.level}
-                                        </Badge>
-                                      </HStack>
-                                    </Box>
-                                  </HStack>
-                                </Td>
-                                <Td color="text.primary">Lvl {row.level}</Td>
-                                <Td>
-                                  <HStack spacing={1}>
-                                    {Array.from({ length: Math.min(row.badgeCount, 4) }).map((_, idx) => (
-                                      <Icon key={idx} as={Star} color="accent.warning" boxSize={4} />
-                                    ))}
-                                  </HStack>
-                                </Td>
-                                <Td isNumeric>
-                                  <Text fontWeight="bold" color="text.primary">{formatNumber(row.activePoints)}</Text>
-                                  <Text fontSize="xs" color="text.secondary">Total {formatNumber(row.totalPoints)}</Text>
-                                </Td>
-                              </Tr>
-                            ))}
+                                    </HStack>
+                                  </Td>
+                                  <Td isNumeric>
+                                    <Text fontWeight="bold" color="text.primary">{formatNumber(row.activePoints)}</Text>
+                                    <Progress
+                                      value={(row.activePoints / Math.max(cohortStats.maxActive, 1)) * 100}
+                                      size="xs"
+                                      colorScheme="purple"
+                                      borderRadius="full"
+                                      mt={1}
+                                    />
+                                    <Text fontSize="xs" color="text.secondary">Total {formatNumber(row.totalPoints)}</Text>
+                                  </Td>
+                                </Tr>
+                              )
+                            })}
                             {virtualized.paddingBottom > 0 && (
                               <Tr height={`${virtualized.paddingBottom}px`}>
                                 <Td colSpan={5} p={0} borderBottom="none" />
@@ -955,7 +1356,7 @@ export const LeadershipBoardPage: React.FC = () => {
                   <Card bg="surface.default" border="1px solid" borderColor="border.subtle">
                     <CardHeader>
                       <Text fontWeight="bold">Peer Progress</Text>
-                      <Text color="text.secondary">Compare with nearby ranks</Text>
+                      <Text color="text.secondary">You’re highlighted for quick comparison</Text>
                     </CardHeader>
                     <CardBody>
                       <Table size="sm" color="text.primary">
@@ -965,8 +1366,7 @@ export const LeadershipBoardPage: React.FC = () => {
                             <Th color="text.muted">Member</Th>
                             <Th color="text.muted">Active Points</Th>
                             <Th color="text.muted">Total</Th>
-                            <Th color="text.muted">Level</Th>
-                            <Th color="text.muted">Δ vs You</Th>
+                            <Th color="text.muted">Gap vs You</Th>
                           </Tr>
                         </Thead>
                         <Tbody>
@@ -979,13 +1379,12 @@ export const LeadershipBoardPage: React.FC = () => {
                               <Td>{row.rank}</Td>
                               <Td>
                                 <HStack spacing={2}>
-                                  <Avatar size="xs" name={row.user.fullName} src={row.user.avatarUrl} />
-                                  <Text>{row.user.fullName}</Text>
+                                  <Avatar size="xs" name={getDisplayName(row.user)} src={row.user.avatarUrl} />
+                                  <Text>{getDisplayName(row.user)}</Text>
                                 </HStack>
                               </Td>
                               <Td>{formatNumber(row.activePoints)}</Td>
                               <Td>{formatNumber(row.totalPoints)}</Td>
-                              <Td>{row.level}</Td>
                               <Td color={row.delta >= 0 ? 'success.500' : 'danger.DEFAULT'}>
                                 {row.delta >= 0 ? '+' : ''}
                                 {formatNumber(row.delta)}
@@ -1000,30 +1399,43 @@ export const LeadershipBoardPage: React.FC = () => {
                   <Card bg="surface.default" border="1px solid" borderColor="border.subtle">
                     <CardHeader>
                       <Text fontWeight="bold">Cohort Comparison</Text>
-                      <Text color="text.secondary">Benchmarks vs cohort max & averages</Text>
+                      <Text color="text.secondary">You’re ahead of {aheadPercent}% of your cohort</Text>
                     </CardHeader>
                     <CardBody>
                       <Stack spacing={4}>
                         <Box>
-                          <HStack justify="space-between">
+                          <HStack justify="space-between" mb={1}>
                             <Text>Total Points</Text>
-                            <Text color="text.secondary">Avg {formatNumber(cohortStats.avgTotal)}</Text>
+                            <HStack spacing={2}>
+                              <Text fontWeight="semibold">{formatNumber(cohortStats.total)}</Text>
+                              <Text color="text.secondary" fontSize="sm">
+                                of {formatNumber(cohortStats.maxTotal)} top score
+                              </Text>
+                            </HStack>
                           </HStack>
-                          <Progress value={(cohortStats.total / cohortStats.maxTotal) * 100} colorScheme="primary" borderRadius="full" />
+                          <Progress
+                            value={(cohortStats.total / Math.max(cohortStats.maxTotal, 1)) * 100}
+                            colorScheme="primary"
+                            borderRadius="full"
+                          />
+                          <Text color="text.secondary" fontSize="xs" mt={1}>Cohort avg: {formatNumber(cohortStats.avgTotal)}</Text>
                         </Box>
                         <Box>
-                          <HStack justify="space-between">
+                          <HStack justify="space-between" mb={1}>
                             <Text>Active Points</Text>
-                            <Text color="text.secondary">Avg {formatNumber(cohortStats.avgActive)}</Text>
+                            <HStack spacing={2}>
+                              <Text fontWeight="semibold">{formatNumber(cohortStats.active)}</Text>
+                              <Text color="text.secondary" fontSize="sm">
+                                of {formatNumber(cohortStats.maxActive)} top score
+                              </Text>
+                            </HStack>
                           </HStack>
-                          <Progress value={(cohortStats.active / cohortStats.maxActive) * 100} colorScheme="secondary" borderRadius="full" />
-                        </Box>
-                        <Box>
-                          <HStack justify="space-between">
-                            <Text>Level</Text>
-                            <Text color="text.secondary">Avg {cohortStats.avgLevel}</Text>
-                          </HStack>
-                          <Progress value={(cohortStats.level / cohortStats.maxLevel) * 100} colorScheme="primary" borderRadius="full" />
+                          <Progress
+                            value={(cohortStats.active / Math.max(cohortStats.maxActive, 1)) * 100}
+                            colorScheme="secondary"
+                            borderRadius="full"
+                          />
+                          <Text color="text.secondary" fontSize="xs" mt={1}>Cohort avg: {formatNumber(cohortStats.avgActive)}</Text>
                         </Box>
                       </Stack>
                     </CardBody>
@@ -1036,8 +1448,8 @@ export const LeadershipBoardPage: React.FC = () => {
                   <CardHeader>
                     <Flex justify="space-between" align="center">
                       <Box>
-                        <Text fontWeight="bold">Points Breakdown</Text>
-                        <Text color="text.secondary">{segmentLabel} member insights</Text>
+                        <Text fontWeight="bold">Your Points Breakdown</Text>
+                        <Text color="text.secondary">Personal insights across categories</Text>
                       </Box>
                       <HStack spacing={3}>
                         <IconButton
@@ -1062,8 +1474,8 @@ export const LeadershipBoardPage: React.FC = () => {
                       <Box h="260px">
                         <ResponsiveContainer width="100%" height="100%">
                           <PieChart>
-                            <Pie dataKey="value" data={breakdownByCategory} innerRadius={60} outerRadius={90} label>
-                              {breakdownByCategory.map((entry, index) => (
+                            <Pie dataKey="value" data={userBreakdown} innerRadius={60} outerRadius={90} label>
+                              {userBreakdown.map((entry, index) => (
                                 <Cell key={`cell-${entry.name}`} fill={pointsColors[index % pointsColors.length]} />
                               ))}
                             </Pie>
@@ -1071,20 +1483,62 @@ export const LeadershipBoardPage: React.FC = () => {
                         </ResponsiveContainer>
                       </Box>
                       <Stack spacing={3}>
-                        {breakdownByCategory.slice((breakdownPage - 1) * 4, (breakdownPage - 1) * 4 + 4).map((category, idx) => (
-                          <Flex key={category.name} align="center" gap={3}>
-                            <Box w={2} h={12} borderRadius="full" bg={pointsColors[idx % pointsColors.length]} />
-                            <Box flex="1">
-                              <Flex justify="space-between">
-                                <Text fontWeight="bold">{category.name}</Text>
-                                <Text>{formatNumber(category.value)} pts</Text>
-                              </Flex>
-                              <Progress value={category.percent} colorScheme="primary" borderRadius="full" />
-                              <Text fontSize="xs" color="text.secondary">{category.percent}% of active points</Text>
-                            </Box>
-                          </Flex>
+                        {userBreakdown.slice((breakdownPage - 1) * 4, (breakdownPage - 1) * 4 + 4).map((category, idx) => (
+                          <Box key={category.name}>
+                            <Flex
+                              align="center"
+                              gap={3}
+                              cursor="pointer"
+                              onClick={() => toggleCategory(category.name)}
+                              _hover={{ bg: 'surface.subtle' }}
+                              borderRadius="md"
+                              p={1}
+                              mx={-1}
+                            >
+                              <Box w={2} h={12} borderRadius="full" bg={pointsColors[idx % pointsColors.length]} />
+                              <Box flex="1">
+                                <Flex justify="space-between" align="center">
+                                  <HStack>
+                                    <Text fontWeight="bold">{category.name}</Text>
+                                    <Icon
+                                      as={expandedCategories.has(category.name) ? ChevronDown : ChevronRight}
+                                      boxSize={4}
+                                      color="text.secondary"
+                                    />
+                                  </HStack>
+                                  <Text>{formatNumber(category.value)} pts</Text>
+                                </Flex>
+                                <Progress value={category.percent} colorScheme="primary" borderRadius="full" />
+                                <Text fontSize="xs" color="text.secondary">{category.percent}% of active points</Text>
+                              </Box>
+                            </Flex>
+                            <Collapse in={expandedCategories.has(category.name)} animateOpacity>
+                              <Stack pl={6} spacing={2} mt={2} mb={2}>
+                                {activityHistoryLoading ? (
+                                  <Skeleton height="20px" />
+                                ) : activityHistoryByCategory[category.name]?.length ? (
+                                  activityHistoryByCategory[category.name].map((activity) => (
+                                    <Flex key={activity.id} justify="space-between" align="center" fontSize="sm">
+                                      <HStack spacing={2}>
+                                        <Icon as={CheckCircle} color="success.500" boxSize={3} />
+                                        <Text>{activity.activityTitle}</Text>
+                                      </HStack>
+                                      <HStack spacing={4}>
+                                        <Text color="text.secondary" fontSize="xs">
+                                          {format(activity.createdAt, 'MMM d')}
+                                        </Text>
+                                        <Text fontWeight="medium" color="success.600">+{formatNumber(activity.points)}</Text>
+                                      </HStack>
+                                    </Flex>
+                                  ))
+                                ) : (
+                                  <Text fontSize="sm" color="text.secondary">No activities in this category yet</Text>
+                                )}
+                              </Stack>
+                            </Collapse>
+                          </Box>
                         ))}
-                        <Text fontSize="sm" color="text.secondary">Page {breakdownPage} of {Math.max(1, Math.ceil(breakdownByCategory.length / 4))}</Text>
+                        <Text fontSize="sm" color="text.secondary">Page {breakdownPage} of {Math.max(1, Math.ceil(userBreakdown.length / 4))}</Text>
                       </Stack>
                     </Grid>
                   </CardBody>
@@ -1095,132 +1549,42 @@ export const LeadershipBoardPage: React.FC = () => {
           </TabPanel>
 
           <TabPanel px={0}>
-            <Stack spacing={5}>
-              <Card bgGradient="linear(to-r, brand.primary, brand.dark)" color="text.inverse">
-                <CardBody>
-                  <Stack color="text.inverse">
-                    <Flex align="center" justify="space-between">
-                      <Box>
-                        <Text fontSize="sm" opacity={0.9} color="white">Challenge Weeks are Live</Text>
-                        <Text fontSize="2xl" fontWeight="bold" color="white">Friendly competitions to spark growth</Text>
-                        <HStack spacing={3} mt={2}>
-                          <Icon as={Clock} color="white" />
-                          <Text color="white">Join or launch a challenge today</Text>
-                        </HStack>
-                      </Box>
-                      <Button
-                        bg="surface.default"
-                        color="brand.primary"
-                        _hover={{ bg: 'surface.subtle' }}
-                        onClick={onOpen}
-                        rightIcon={<Icon as={Target} />}
-                      >
-                        Start a Challenge
-                      </Button>
-                    </Flex>
-                  </Stack>
-                </CardBody>
-              </Card>
-
-              <SimpleGrid columns={{ base: 2, md: 4 }} spacing={4}>
-                <Card bg="surface.default" border="1px solid" borderColor="border.subtle">
-                  <CardBody>
-                    <Stat>
-                      <StatLabel color="text.muted">Active Challenges</StatLabel>
-                      <StatNumber color="text.primary">{segmentChallenges.filter((c) => c.status === 'active').length}</StatNumber>
-                    </Stat>
-                  </CardBody>
-                </Card>
-                <Card bg="surface.default" border="1px solid" borderColor="border.subtle">
-                  <CardBody>
-                    <Stat>
-                      <StatLabel color="text.muted">Victories</StatLabel>
-                      <StatNumber color="text.primary">{segmentChallenges.filter((c) => c.result === 'win').length}</StatNumber>
-                    </Stat>
-                  </CardBody>
-                </Card>
-                <Card bg="surface.default" border="1px solid" borderColor="border.subtle">
-                  <CardBody>
-                    <Stat>
-                      <StatLabel color="text.muted">Points Earned</StatLabel>
-                      <StatNumber color="text.primary">{formatNumber(segmentChallenges.reduce((sum, c) => sum + c.yourPoints, 0))}</StatNumber>
-                    </Stat>
-                  </CardBody>
-                </Card>
-                <Card bg="surface.default" border="1px solid" borderColor="border.subtle">
-                  <CardBody>
-                    <Stat>
-                      <StatLabel color="text.muted">Leaderboard Rank</StatLabel>
-                      <StatNumber color="text.primary">{userRow?.rank || '—'}</StatNumber>
-                    </Stat>
-                  </CardBody>
-                </Card>
-              </SimpleGrid>
-
-              <Card bg="surface.default" border="1px solid" borderColor="border.subtle">
-                <CardHeader>
-                  <Flex justify="space-between" align="center">
-                    <Text fontWeight="bold">Your Challenges</Text>
-                    <Button size="sm" onClick={onOpen}>New Challenge</Button>
-                  </Flex>
-                </CardHeader>
-                <CardBody>
-                  {emptyChallenges ? (
-                    <VStack spacing={3} py={8} color="text.secondary">
-                      <Icon as={Users} boxSize={12} />
-                      <Text fontWeight="bold">No Active Challenges</Text>
-                      <Text>Start your first head-to-head battle to climb faster.</Text>
-                    </VStack>
-                  ) : (
-                    <Stack spacing={3}>
-                      {segmentChallenges
-                        .filter((c) => c.status === 'active')
-                        .map((challenge) => (
-                          <Flex key={challenge.id} p={4} border="1px solid" borderColor="border.subtle" borderRadius="lg" align="center" gap={4}>
-                            <Avatar name={challenge.opponentName} src={challenge.opponentAvatar} />
-                            <Box flex="1">
-                              <Text fontWeight="bold">vs {challenge.opponentName}</Text>
-                              <Text fontSize="sm" color="text.secondary">{challenge.startDate} → {challenge.endDate}</Text>
-                              <Progress mt={2} value={(challenge.yourPoints / Math.max(challenge.yourPoints, challenge.opponentPoints || 1)) * 100} colorScheme="primary" borderRadius="full" />
-                            </Box>
-                            <VStack spacing={1} align="flex-end">
-                              <Text fontWeight="bold">You {formatNumber(challenge.yourPoints)}</Text>
-                              <Text color="text.secondary">Opponent {formatNumber(challenge.opponentPoints)}</Text>
-                              <Badge colorScheme={challenge.yourPoints >= challenge.opponentPoints ? 'success' : 'error'}>{challenge.status}</Badge>
-                            </VStack>
-                          </Flex>
-                        ))}
-                    </Stack>
-                  )}
-                </CardBody>
-              </Card>
-
-              <Card bg="surface.default" border="1px solid" borderColor="border.subtle">
-                <CardHeader>
-                  <Text fontWeight="bold">Challenge History</Text>
-                  <Text color="text.secondary">Wins, losses, and stats</Text>
-                </CardHeader>
-                <CardBody>
-                  <Stack spacing={3}>
-                    {segmentChallenges
-                      .filter((c) => c.status === 'completed')
-                      .map((challenge) => (
-                        <Flex key={challenge.id} p={3} border="1px solid" borderColor="border.subtle" borderRadius="lg" align="center" gap={3}>
-                          <Icon as={Award} color={challenge.result === 'win' ? 'success.400' : 'danger.DEFAULT'} />
-                          <Box flex="1">
-                            <Text fontWeight="bold">{challenge.opponentName}</Text>
-                            <Text fontSize="sm" color="text.secondary">{challenge.startDate} → {challenge.endDate}</Text>
-                          </Box>
-                          <Text fontWeight="bold">{challenge.result?.toUpperCase() || 'DRAW'}</Text>
-                        </Flex>
-                      ))}
-                  </Stack>
-                </CardBody>
-              </Card>
-            </Stack>
+            <ChallengesTab
+              challenges={challenges}
+              challengesLoaded={challengesLoaded}
+              onStartChallenge={onOpen}
+              onCancelChallenge={handleCancelChallenge}
+              leaderboardRank={userRow?.rank}
+            />
           </TabPanel>
         </TabPanels>
       </Tabs>
+
+      {shouldShowVillageSection && (
+        <Modal isOpen={isLeaveOpen} onClose={onLeaveClose} isCentered>
+          <ModalOverlay />
+          <ModalContent>
+            <ModalHeader>Leave village</ModalHeader>
+            <ModalCloseButton />
+            <ModalBody>
+              <Text fontWeight="semibold" mb={2}>
+                Are you sure you want to leave this village?
+              </Text>
+              <Text color="text.secondary">
+                You will need an invitation to rejoin.
+              </Text>
+            </ModalBody>
+            <ModalFooter>
+              <Button variant="ghost" mr={3} onClick={onLeaveClose} isDisabled={isLeavingVillage}>
+                Cancel
+              </Button>
+              <Button colorScheme="red" onClick={handleLeaveVillage} isLoading={isLeavingVillage}>
+                Leave Village
+              </Button>
+            </ModalFooter>
+          </ModalContent>
+        </Modal>
+      )}
 
       <StartChallengeModal
         isOpen={isOpen}

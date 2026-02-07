@@ -1,16 +1,125 @@
-import { useEffect, useState } from 'react'
-import { Box, Tab, TabList, TabPanel, TabPanels, Tabs } from '@chakra-ui/react'
+import { useEffect, useMemo, useState } from 'react'
+import { Box, Tab, TabList, TabPanel, TabPanels, Tabs, Alert, AlertIcon, Badge } from '@chakra-ui/react'
 import { UsersManagementTab } from './tabs/UsersManagementTab'
 import { UserEngagementMonitoringTab } from './tabs/UserEngagementMonitoringTab'
 import { LeadershipCouncil } from './LeadershipCouncil'
+import { listenToUsers, listenToOrganizations } from '@/services/superAdminService'
+import { OrganizationOption, ManagedUserRecord } from '@/services/userManagementService'
+import { getDisplayName } from '@/utils/displayName'
 
 const TAB_STORAGE_KEY = 'user-management-active-tab'
+
+/**
+ * ✅ Single source of truth for users data.
+ * - One listener for the whole page
+ * - All tabs share the same dataset
+ * - Prevents lazy-tab lifecycle issues + duplicate subscriptions
+ */
+
+function useManagedUsers() {
+  const [users, setUsers] = useState<ManagedUserRecord[]>([])
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
+
+  useEffect(() => {
+    setLoading(true)
+    setError(null)
+
+    // 🔁 Subscribe once
+    const unsubscribe = listenToUsers(
+      (items) => {
+        const mapped = items.map((user) => {
+          // Type assertion to access fields not in AdminUserRecord but present in Firestore
+          const userData = user as typeof user & {
+            companyId?: string
+            companyCode?: string
+            companyName?: string
+            membershipStatus?: string
+            full_name?: string
+            name?: string
+            displayName?: string
+          }
+          return {
+            id: user.id,
+            name: getDisplayName(userData, 'Member'),
+            email: user.email,
+            role: user.role as any,
+            membershipStatus: (userData.membershipStatus as 'free' | 'paid' | 'inactive') || 'free',
+            // Check companyId first (set at signup), then fall back to assignedOrganizations (for admins)
+            companyId: userData.companyId || user.assignedOrganizations?.[0] || null,
+            companyName: userData.companyName || null,
+            companyCode: userData.companyCode || null,
+            lastActive: user.lastActive instanceof Date ? user.lastActive : null,
+            createdAt: user.createdAt instanceof Date ? user.createdAt : null,
+            accountStatus: user.accountStatus,
+            notes: '',
+          }
+        }) as ManagedUserRecord[]
+        setUsers(mapped)
+        setLoading(false)
+      },
+      (err: unknown) => {
+        console.error('[UserManagementWithTabs] listenToUsers failed:', err)
+        setError('Failed to load users. Check Firestore permissions and the users query.')
+        setLoading(false)
+      },
+    )
+
+    return () => {
+      try {
+        unsubscribe?.()
+      } catch (e) {
+        console.warn('[UserManagementWithTabs] unsubscribe failed:', e)
+      }
+    }
+  }, [])
+
+  return { users, loading, error }
+}
+
+function useManagedOrganizations() {
+  const [organizations, setOrganizations] = useState<OrganizationOption[]>([])
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    setLoading(true)
+
+    const unsubscribe = listenToOrganizations(
+      (items) => {
+        const mapped = items
+          .filter((org) => org.id)
+          .map((org) => ({
+            id: org.id!,
+            name: org.name,
+            code: org.code,
+          }))
+        setOrganizations(mapped)
+        setLoading(false)
+      },
+      (err: unknown) => {
+        console.error('[UserManagementWithTabs] listenToOrganizations failed:', err)
+        setLoading(false)
+      },
+    )
+
+    return () => {
+      try {
+        unsubscribe?.()
+      } catch (e) {
+        console.warn('[UserManagementWithTabs] org unsubscribe failed:', e)
+      }
+    }
+  }, [])
+
+  return { organizations, loading }
+}
 
 export const UserManagementWithTabs = () => {
   const [tabIndex, setTabIndex] = useState(() => {
     if (typeof window === 'undefined') return 0
     const stored = sessionStorage.getItem(TAB_STORAGE_KEY)
-    return stored ? Number.parseInt(stored, 10) : 0
+    const parsed = stored ? Number.parseInt(stored, 10) : 0
+    return Number.isFinite(parsed) ? parsed : 0
   })
 
   useEffect(() => {
@@ -19,8 +128,31 @@ export const UserManagementWithTabs = () => {
     }
   }, [tabIndex])
 
+  const { users, loading, error } = useManagedUsers()
+  const { organizations, loading: loadingOrgs } = useManagedOrganizations()
+
+  // Computed counts for tab badges
+  const userCount = users.length
+  const mentorCount = users.filter(u => u.role === 'mentor').length
+  const ambassadorCount = users.filter(u => u.role === 'ambassador').length
+
+  // Optional: derived subsets per tab (keeps tab components simpler)
+  const memo = useMemo(() => {
+    return {
+      users,
+      organizations,
+    }
+  }, [users, organizations])
+
   return (
     <Box bg="gray.50" minH="calc(100vh - 120px)" p={{ base: 4, md: 6 }} borderRadius="3xl">
+      {error && (
+        <Alert status="warning" borderRadius="xl" mb={4}>
+          <AlertIcon />
+          {error}
+        </Alert>
+      )}
+
       <Tabs
         index={tabIndex}
         onChange={setTabIndex}
@@ -30,20 +162,31 @@ export const UserManagementWithTabs = () => {
         lazyBehavior="keepMounted"
       >
         <TabList overflowX="auto" pb={2}>
-          <Tab whiteSpace="nowrap">Users Management</Tab>
-          <Tab whiteSpace="nowrap">User Engagement</Tab>
-          <Tab whiteSpace="nowrap">Leadership Council</Tab>
+          <Tab whiteSpace="nowrap">
+            Users Management
+            <Badge ml={2} colorScheme="gray" fontSize="xs">{userCount}</Badge>
+          </Tab>
+          <Tab whiteSpace="nowrap">
+            User Engagement
+          </Tab>
+          <Tab whiteSpace="nowrap">
+            Leadership Council
+            <Badge ml={2} colorScheme="gray" fontSize="xs">{mentorCount + ambassadorCount}</Badge>
+          </Tab>
         </TabList>
 
         <TabPanels>
           <TabPanel px={0}>
-            <UsersManagementTab />
+            {/* ✅ Pass shared data down so tabs don't fight over fetching/listeners */}
+            <UsersManagementTab users={memo.users} loading={loading} />
           </TabPanel>
+
           <TabPanel px={0}>
-            <UserEngagementMonitoringTab />
+            <UserEngagementMonitoringTab users={memo.users} organizations={memo.organizations} />
           </TabPanel>
+
           <TabPanel px={0}>
-            <LeadershipCouncil />
+            <LeadershipCouncil users={memo.users} organizations={memo.organizations} loadingUsers={loading || loadingOrgs} />
           </TabPanel>
         </TabPanels>
       </Tabs>

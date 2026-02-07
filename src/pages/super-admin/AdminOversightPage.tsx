@@ -5,6 +5,7 @@ import {
   Badge,
   Box,
   Button,
+  Divider,
   Flex,
   Heading,
   IconButton,
@@ -45,6 +46,7 @@ import {
 } from '@/services/superAdminService'
 import { fetchAssignedOrganizations } from '@/services/organizationService'
 import { AdminFormData, AdminMetrics, AdminUserRecord, OrganizationRecord } from '@/types/admin'
+import { getDisplayName } from '@/utils/displayName'
 
 interface AdminOversightPageProps {
   adminName?: string
@@ -55,10 +57,8 @@ type SortKey = 'name' | 'email' | 'role' | 'status' | 'lastActive'
 
 const roleColorMap: Record<string, string> = {
   partner: 'purple',
-  admin: 'purple',
   mentor: 'blue',
   ambassador: 'teal',
-  team_leader: 'orange',
   super_admin: 'gray',
 }
 
@@ -90,17 +90,29 @@ export const AdminOversightPage: React.FC<AdminOversightPageProps> = ({ adminNam
     partners: 0,
     mentors: 0,
     ambassadors: 0,
-    teamLeaders: 0,
   })
+
+  const partnerAssignmentSummary = useMemo(() => {
+    const partnerAdmins = admins.filter((admin) => admin.role === 'partner')
+    const unassignedPartners = partnerAdmins.filter((admin) => !(admin.assignedOrganizations || []).length)
+    const totalAssignments = partnerAdmins.reduce(
+      (total, admin) => total + (admin.assignedOrganizations || []).length,
+      0,
+    )
+    return {
+      partnerCount: partnerAdmins.length,
+      unassignedCount: unassignedPartners.length,
+      totalAssignments,
+    }
+  }, [admins])
 
   const updateMetrics = useCallback((adminList: AdminUserRecord[]) => {
     const total = adminList.length
     const active = adminList.filter((admin) => admin.accountStatus !== 'suspended').length
-    const partners = adminList.filter((admin) => admin.role === 'partner' || admin.role === 'admin').length
+    const partners = adminList.filter((admin) => admin.role === 'partner').length
     const mentors = adminList.filter((admin) => admin.role === 'mentor').length
     const ambassadors = adminList.filter((admin) => admin.role === 'ambassador').length
-    const teamLeaders = adminList.filter((admin) => admin.role === 'team_leader').length
-    setMetrics({ total, active, partners, mentors, ambassadors, teamLeaders })
+    setMetrics({ total, active, partners, mentors, ambassadors })
   }, [])
 
   const adminUpdateTimeout = useRef<ReturnType<typeof setTimeout> | null>(null)
@@ -209,27 +221,39 @@ export const AdminOversightPage: React.FC<AdminOversightPageProps> = ({ adminNam
 
   const handleCreateAdmin = async (formData: AdminFormData) => {
     try {
-      await createAdminUser({ ...formData, createdBy: adminId, createdByName: adminName })
-      toast({ title: 'Admin created', status: 'success' })
+      const { assignedOrganizations } = formData
+      const createdId = await createAdminUser({ ...formData, createdBy: adminId, createdByName: adminName })
+      await assignOrganizations(createdId, assignedOrganizations || [])
+      toast({ title: 'Admin access granted', status: 'success' })
     } catch (error) {
       console.error(error)
-      toast({ title: 'Failed to create admin', status: 'error' })
+      toast({ title: 'Failed to grant admin access', status: 'error' })
     }
   }
 
   const handleUpdateAdmin = async (formData: AdminFormData) => {
     if (!selectedAdmin) return
     try {
+      const { assignedOrganizations, ...rest } = formData
+      const nextOrgIds = assignedOrganizations || []
+
       console.debug('[SuperAdmin] Updating admin assignments', {
         adminId: selectedAdmin.id,
         before: selectedAdmin.assignedOrganizations,
-        after: formData.assignedOrganizations,
+        after: nextOrgIds,
       })
-      await updateAdminUser(selectedAdmin.id, formData)
-      await assignOrganizations(selectedAdmin.id, formData.assignedOrganizations || [])
+
+      // If we are removing partner access, clear assignments while the user still has the partner role
+      // so org-level `transformationPartnerId` links are cleaned up consistently.
+      if (selectedAdmin.role === 'partner' && formData.role !== 'partner') {
+        await assignOrganizations(selectedAdmin.id, [])
+      }
+
+      await updateAdminUser(selectedAdmin.id, rest)
+      await assignOrganizations(selectedAdmin.id, nextOrgIds)
       const verifiedOrganizations = await fetchAssignedOrganizations(selectedAdmin.id)
       const verifiedIds = verifiedOrganizations.map((org) => org.id).filter((id): id is string => !!id)
-      const requestedIds = formData.assignedOrganizations || []
+      const requestedIds = nextOrgIds
       const missingIds = requestedIds.filter((orgId) => !verifiedIds.includes(orgId))
       const assignedNames = verifiedOrganizations.map((org) =>
         org.id ? organizationName(org.id) : 'Unknown',
@@ -251,25 +275,25 @@ export const AdminOversightPage: React.FC<AdminOversightPageProps> = ({ adminNam
       }
       toast({
         title: `Assigned ${assignedNames.length} organization${assignedNames.length === 1 ? '' : 's'} to ${
-          selectedAdmin.fullName || 'admin'
+          getDisplayName(selectedAdmin, 'partner')
         }`,
         description: assignedNames.length
-          ? `Assigned organizations: ${assignedNames.join(', ')}. The admin will see these organizations immediately if they're logged in.`
-          : 'Organization assignments cleared. The admin will see changes immediately if they are logged in.',
+          ? `Assigned organizations: ${assignedNames.join(', ')}. The user will see these organizations immediately if they're logged in.`
+          : 'Organization assignments cleared. The user will see changes immediately if they are logged in.',
         status: 'success',
         duration: 5000,
       })
       if (!enableProfileRealtime) {
         toast({
           title: 'Real-time updates are disabled',
-          description: 'Admins will need to refresh their dashboard to see assignment changes.',
+          description: 'Users will need to refresh their dashboard to see assignment changes.',
           status: 'warning',
           duration: 5000,
         })
       }
     } catch (error) {
       console.error(error)
-      toast({ title: 'Failed to update admin', status: 'error' })
+      toast({ title: 'Failed to update admin access', status: 'error' })
     }
   }
 
@@ -281,7 +305,7 @@ export const AdminOversightPage: React.FC<AdminOversightPageProps> = ({ adminNam
     const nextStatus = admin.accountStatus === 'suspended' ? 'active' : 'suspended'
     try {
       await toggleAdminStatus(admin.id, nextStatus)
-      toast({ title: `Admin ${nextStatus === 'active' ? 'activated' : 'suspended'}`, status: 'success' })
+      toast({ title: `Admin access ${nextStatus === 'active' ? 'activated' : 'suspended'}`, status: 'success' })
     } catch (error) {
       console.error(error)
       toast({ title: 'Failed to update status', status: 'error' })
@@ -294,17 +318,17 @@ export const AdminOversightPage: React.FC<AdminOversightPageProps> = ({ adminNam
     if (!adminToDelete) return
     try {
       await deleteAdminUser(adminToDelete.id)
-      toast({ title: 'Admin deleted', status: 'success' })
+      toast({ title: 'Admin access removed', status: 'success' })
       setAdminToDelete(null)
     } catch (error) {
       console.error(error)
-      toast({ title: 'Failed to delete admin', status: 'error' })
+      toast({ title: 'Failed to remove admin access', status: 'error' })
     }
   }
 
   const filteredAdmins = useMemo(() => {
     const base = admins.filter((admin) => {
-      const name = (admin.fullName || `${admin.firstName || ''} ${admin.lastName || ''}`.trim()).toLowerCase()
+      const name = getDisplayName(admin, 'User').toLowerCase()
       const email = (admin.email || '').toLowerCase()
       const matchesSearch =
         !debouncedSearch || name.includes(debouncedSearch) || email.includes(debouncedSearch)
@@ -331,7 +355,7 @@ export const AdminOversightPage: React.FC<AdminOversightPageProps> = ({ adminNam
         }
         case 'name':
         default:
-          return ((a.fullName || '').localeCompare(b.fullName || '')) * direction
+          return (getDisplayName(a, '').localeCompare(getDisplayName(b, ''))) * direction
       }
     })
 
@@ -341,10 +365,8 @@ export const AdminOversightPage: React.FC<AdminOversightPageProps> = ({ adminNam
   const roleLabel = (role: string) =>
     ({
       partner: 'Partner',
-      admin: 'Admin',
       mentor: 'Mentor',
       ambassador: 'Ambassador',
-      team_leader: 'Team Leader',
       super_admin: 'Super Admin',
     }[role] || role)
 
@@ -371,7 +393,7 @@ export const AdminOversightPage: React.FC<AdminOversightPageProps> = ({ adminNam
       return (
         <Tr>
           <Td colSpan={7}>
-            <Text color="gray.500">No admin users found.</Text>
+            <Text color="gray.500">No users with admin access found.</Text>
           </Td>
         </Tr>
       )
@@ -380,7 +402,7 @@ export const AdminOversightPage: React.FC<AdminOversightPageProps> = ({ adminNam
     return filteredAdmins.map((admin) => (
       <Tr key={admin.id}>
         <Td>
-          <Text fontWeight="semibold">{admin.fullName || `${admin.firstName || ''} ${admin.lastName || ''}`.trim()}</Text>
+          <Text fontWeight="semibold">{getDisplayName(admin, 'User')}</Text>
         </Td>
         <Td>
           <Text color="gray.600" fontSize="sm">{admin.email || '—'}</Text>
@@ -464,7 +486,10 @@ export const AdminOversightPage: React.FC<AdminOversightPageProps> = ({ adminNam
       <Flex align="center" mb={6}>
         <Box>
           <Heading size="lg">Admin Oversight</Heading>
-          <Text color="gray.600">Create, manage, and audit admin users across the platform.</Text>
+          <Text color="gray.600">Create, manage, and audit users with elevated access across the platform.</Text>
+          <Text fontSize="sm" color="gray.500">
+            Counts include all roles with admin privileges (Super Admin, Partner, Mentor, Ambassador).
+          </Text>
         </Box>
         <Spacer />
         <Button
@@ -475,18 +500,50 @@ export const AdminOversightPage: React.FC<AdminOversightPageProps> = ({ adminNam
             formModal.onOpen()
           }}
         >
-          Add Admin
+          Add Admin Access
         </Button>
       </Flex>
 
-      <SimpleGrid columns={[1, 2, 3]} spacing={4} mb={6}>
-        <MetricCard label="Total Admins" value={metrics.total} icon={ShieldCheck} helper="All admin roles" />
-        <MetricCard label="Active Admins" value={metrics.active} icon={ShieldCheck} helper="Currently active" />
-        <MetricCard label="Partners" value={metrics.partners} icon={ShieldCheck} helper="Company administrators" />
-        <MetricCard label="Mentors" value={metrics.mentors} icon={ShieldCheck} helper="Active mentors" />
-        <MetricCard label="Ambassadors" value={metrics.ambassadors} icon={ShieldCheck} helper="Community ambassadors" />
-        <MetricCard label="Team Leaders" value={metrics.teamLeaders} icon={ShieldCheck} helper="Team leadership" />
+      <SimpleGrid columns={[1, 2, 3, 5]} spacing={4} mb={6}>
+        <MetricCard
+          label="Users With Admin Access"
+          value={metrics.total}
+          icon={ShieldCheck}
+          helper="Includes Super Admin, Partner, Mentor, and Ambassador roles."
+        />
+        <MetricCard label="Active (Admin Access)" value={metrics.active} icon={ShieldCheck} helper="Not suspended." />
+        <MetricCard label="Partners" value={metrics.partners} icon={ShieldCheck} helper="Organization-scoped access." />
+        <MetricCard label="Mentors" value={metrics.mentors} icon={ShieldCheck} helper="Mentor role access." />
+        <MetricCard label="Ambassadors" value={metrics.ambassadors} icon={ShieldCheck} helper="Ambassador role access." />
       </SimpleGrid>
+
+      <Box borderWidth="1px" borderRadius="lg" p={4} mb={6} bg="gray.50">
+        <Flex align="center" flexWrap="wrap" gap={4}>
+          <Box>
+            <Text fontWeight="semibold">Partner assignment health</Text>
+              <Text fontSize="sm" color="gray.600">
+                {partnerAssignmentSummary.partnerCount
+                  ? `${partnerAssignmentSummary.partnerCount} partner user${partnerAssignmentSummary.partnerCount === 1 ? '' : 's'} with ${
+                    partnerAssignmentSummary.totalAssignments
+                  } active assignment${partnerAssignmentSummary.totalAssignments === 1 ? '' : 's'}.`
+                  : 'No partner users found yet.'}
+              </Text>
+              <Text fontSize="sm" color={partnerAssignmentSummary.unassignedCount ? 'orange.600' : 'green.600'}>
+                {partnerAssignmentSummary.unassignedCount
+                  ? `${partnerAssignmentSummary.unassignedCount} partner user${partnerAssignmentSummary.unassignedCount === 1 ? '' : 's'} still need assignments.`
+                  : 'All partner users have assignments.'}
+              </Text>
+            </Box>
+          <Spacer />
+          <Button
+            variant="solid"
+            colorScheme="purple"
+            onClick={() => setFilters({ role: 'partner', status: 'all', organization: 'all' })}
+          >
+            Review Partner Assignments
+          </Button>
+        </Flex>
+      </Box>
 
       <Box borderWidth="1px" borderRadius="lg" p={4} mb={4}>
         <Flex gap={3} flexWrap="wrap">
@@ -504,10 +561,8 @@ export const AdminOversightPage: React.FC<AdminOversightPageProps> = ({ adminNam
           >
             <option value="all">All Roles</option>
             <option value="partner">Partner</option>
-            <option value="admin">Admin</option>
             <option value="mentor">Mentor</option>
             <option value="ambassador">Ambassador</option>
-            <option value="team_leader">Team Leader</option>
           </Select>
           <Select
             placeholder="All Statuses"
@@ -536,6 +591,11 @@ export const AdminOversightPage: React.FC<AdminOversightPageProps> = ({ adminNam
             Clear Filters
           </Button>
         </Flex>
+        <Divider mt={4} />
+        <Text mt={3} fontSize="sm" color="gray.500">
+          Partner assignments drive the organizations visible in partner dashboards. Use the admin form to add or remove
+          organization access.
+        </Text>
       </Box>
 
       <Box borderWidth="1px" borderRadius="lg" overflow="hidden">
@@ -567,10 +627,10 @@ export const AdminOversightPage: React.FC<AdminOversightPageProps> = ({ adminNam
       <ConfirmationDialog
         isOpen={deleteDialog.isOpen}
         onClose={deleteDialog.onClose}
-        title="Delete Admin"
-        description={`Are you sure you want to delete ${adminToDelete?.fullName || 'this admin'}? This action cannot be undone.`}
+        title="Remove Admin Access"
+        description={`Are you sure you want to remove admin access for ${getDisplayName(adminToDelete, 'this user')}? This action cannot be undone.`}
         onConfirm={confirmDelete}
-        confirmLabel="Delete"
+        confirmLabel="Remove"
       />
     </Box>
   )

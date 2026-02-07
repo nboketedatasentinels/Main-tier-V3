@@ -9,8 +9,8 @@ import {
   getDoc,
   getDocs,
   increment,
+  limit,
   onSnapshot,
-  orderBy,
   QuerySnapshot,
   query,
   runTransaction,
@@ -33,7 +33,14 @@ import {
   resolveDurationWeeksFromProgramDuration,
   resolveJourneyType,
 } from '@/utils/journeyType'
+import { removeUndefinedFields } from '@/utils/firestore'
+import { COURSE_DETAILS_MAPPING } from '@/utils/courseMappings'
 import { inviteUsersBulk } from './invitationService'
+import {
+  syncOrganizationPartnerChange,
+  syncRemovePartnerFromOrganization,
+} from './partnerAssignmentSyncService'
+import { normalizeRole } from '@/utils/role'
 export { checkOrganizationAccess, fetchOrganizationEngagementStats, fetchOrganizationUsers } from './organizationUserService'
 
 const safeCodeChars = '23456789ABCDEFGHJKLMNPQRSTUVWXYZ'
@@ -44,6 +51,19 @@ const usersCollection = collection(db, 'users')
 const adminActivityCollection = collection(db, 'admin_activity_log')
 
 export type LeadershipRole = 'mentor' | 'ambassador' | 'partner'
+
+const partnerRoleAliases = [
+  'partner',
+  'Partner',
+  'admin',
+  'Admin',
+  'administrator',
+  'Administrator',
+  'company_admin',
+  'company-admin',
+  'company admin',
+  'Company Admin',
+] as const
 
 const leadershipRoleConfig: Record<
   LeadershipRole,
@@ -94,6 +114,88 @@ export type OrganizationPartnerValidationResult = {
   message?: string
 }
 
+export const fetchOrganizationsByIds = async (
+  organizationIds: string[],
+): Promise<OrganizationRecord[]> => {
+  if (!organizationIds.length) return []
+
+  const chunks: string[][] = []
+  for (let i = 0; i < organizationIds.length; i += 10) {
+    chunks.push(organizationIds.slice(i, i + 10))
+  }
+
+  const results: OrganizationRecord[] = []
+
+  for (const chunk of chunks) {
+    const snap = await getDocs(
+      query(collection(db, 'organizations'), where(documentId(), 'in', chunk)),
+    )
+
+    snap.docs.forEach((docSnap) => {
+      const data = docSnap.data()
+      results.push({
+        id: docSnap.id,
+        ...data,
+        code: data.code ?? docSnap.id,
+        name: data.name ?? data.companyName ?? docSnap.id ?? 'Unnamed organization',
+        cluster: data.cluster ?? null,
+        status: (data.status ?? 'active') as OrganizationRecord['status'],
+      } as OrganizationRecord)
+    })
+  }
+
+  return results
+}
+
+export const listenToOrganizationsByIds = (
+  organizationIds: string[],
+  onUpdate: (organizations: OrganizationRecord[]) => void,
+  onError?: (error: FirestoreError) => void,
+): (() => void) => {
+  if (!organizationIds.length) {
+    onUpdate([])
+    return () => {}
+  }
+
+  const chunks: string[][] = []
+  for (let i = 0; i < organizationIds.length; i += 10) {
+    chunks.push(organizationIds.slice(i, i + 10))
+  }
+
+  const chunkData = new Map<number, OrganizationRecord[]>()
+
+  const emit = () => {
+    const combined: OrganizationRecord[] = []
+    chunkData.forEach((records) => {
+      combined.push(...records)
+    })
+    onUpdate(combined)
+  }
+
+  const unsubscribes = chunks.map((chunk, index) =>
+    onSnapshot(
+      query(collection(db, 'organizations'), where(documentId(), 'in', chunk)),
+      (snapshot: QuerySnapshot) => {
+        const records = snapshot.docs.map((docSnap) => ({
+          id: docSnap.id,
+          ...(docSnap.data() as OrganizationRecord),
+        }))
+        chunkData.set(index, records)
+        emit()
+      },
+      (error) => {
+        if (onError) {
+          onError(error)
+        }
+      },
+    ),
+  )
+
+  return () => {
+    unsubscribes.forEach((unsubscribe) => unsubscribe())
+  }
+}
+
 
 export const generateOrganizationCode = (name: string) => {
   const validChars = name.toUpperCase().match(/[A-Z0-9]/g) ?? []
@@ -136,11 +238,49 @@ export const determineClusterFromTeamSize = (teamSize?: number) => {
 }
 
 export const fetchAvailableCourses = async (): Promise<CourseOption[]> => {
-  const snapshot = await getDocs(query(coursesCollection, orderBy('title')))
-  return snapshot.docs.map((docSnap) => {
-    const data = docSnap.data() as { title?: string; description?: string }
-    return { id: docSnap.id, title: data.title || 'Untitled course', description: data.description }
-  })
+  const mappingEntries = Object.entries(COURSE_DETAILS_MAPPING).filter(([, details]) => Boolean(details?.slug))
+  const mappingBySlug = new Map<string, { title: string; description?: string }>(
+    mappingEntries.map(([title, details]) => [details.slug, { title, description: details.description }]),
+  )
+  const mappedFallback: CourseOption[] = mappingEntries
+    .map(([title, details]) => ({ id: details.slug, title, description: details.description }))
+    .sort((a, b) => a.title.localeCompare(b.title))
+
+  try {
+    const snapshot = await getDocs(coursesCollection)
+
+    const courseMap = new Map<string, CourseOption>()
+
+    snapshot.docs.forEach((docSnap) => {
+      const data = docSnap.data() as { title?: string; name?: string; description?: string }
+      const mappingMatch = mappingBySlug.get(docSnap.id)
+      const title = (data.title || data.name || mappingMatch?.title || 'Untitled course').trim()
+      const description = data.description || mappingMatch?.description
+      courseMap.set(docSnap.id, { id: docSnap.id, title, description })
+    })
+
+    mappedFallback.forEach((course) => {
+      const existing = courseMap.get(course.id)
+      if (!existing) {
+        courseMap.set(course.id, course)
+        return
+      }
+
+      courseMap.set(course.id, {
+        ...existing,
+        title: existing.title && existing.title !== 'Untitled course' ? existing.title : course.title,
+        description: existing.description || course.description,
+      })
+    })
+
+    const merged = Array.from(courseMap.values()).sort((a, b) => a.title.localeCompare(b.title))
+    return merged.length ? merged : mappedFallback
+  } catch (error) {
+    console.warn('[OrganizationService] Failed to fetch Firestore courses; using local course mappings', {
+      message: (error as Error)?.message,
+    })
+    return mappedFallback
+  }
 }
 
 const normalizeTimestamp = (value?: Timestamp | string | Date): string => {
@@ -184,7 +324,7 @@ export const validateCompanyCode = async (
     return { valid: false, error: 'Company code is required.' }
   }
 
-  const snapshot = await getDocs(query(orgCollection, where('code', '==', trimmed)))
+  const snapshot = await getDocs(query(orgCollection, where('code', '==', trimmed), limit(1)))
   if (snapshot.empty) {
     return { valid: false, error: 'Company code not found.' }
   }
@@ -247,7 +387,7 @@ export const fetchAmbassadors = async (): Promise<OrganizationLead[]> => {
 }
 
 export const fetchPartners = async (): Promise<OrganizationLead[]> => {
-  const snapshot = await getDocs(query(usersCollection, where('role', '==', 'partner')))
+  const snapshot = await getDocs(query(usersCollection, where('role', 'in', Array.from(partnerRoleAliases))))
   return snapshot.docs.map(buildLead)
 }
 
@@ -285,6 +425,8 @@ const assignLeadershipRole = async (organizationId: string, userId: string, role
   const userRef = doc(usersCollection, userId)
   const auditRef = doc(adminActivityCollection)
 
+  let previousUserId: string | null = null
+
   await runTransaction(db, async (transaction) => {
     const [organizationSnap, userSnap] = await Promise.all([
       transaction.get(organizationRef),
@@ -298,9 +440,11 @@ const assignLeadershipRole = async (organizationId: string, userId: string, role
     }
 
     const userData = userSnap.data() as { role?: string }
-    if (userData.role !== roleConfig.requiredRole) {
+    if (normalizeRole(userData.role) !== normalizeRole(roleConfig.requiredRole)) {
       throw new Error(`User role must be ${roleConfig.requiredRole}.`)
     }
+
+    previousUserId = (organizationSnap.data() as OrganizationRecord)[roleConfig.field] as string | null
 
     transaction.update(organizationRef, {
       [roleConfig.field]: userId,
@@ -317,10 +461,15 @@ const assignLeadershipRole = async (organizationId: string, userId: string, role
         userId,
         role,
         actorId,
-        previousUserId: (organizationSnap.data() as OrganizationRecord)[roleConfig.field] as string | null,
+        previousUserId,
       }),
     )
   })
+
+  // Sync partner's assignedOrganizations if this is a partner assignment
+  if (role === 'partner') {
+    await syncOrganizationPartnerChange(organizationId, userId, previousUserId)
+  }
 }
 
 export const assignMentorToOrganization = async (organizationId: string, mentorId: string) =>
@@ -340,12 +489,14 @@ export const unassignLeadershipRole = async (organizationId: string, role: strin
   const organizationRef = doc(db, ORG_COLLECTION, organizationId)
   const auditRef = doc(adminActivityCollection)
 
+  let previousUserId: string | null = null
+
   await runTransaction(db, async (transaction) => {
     const organizationSnap = await transaction.get(organizationRef)
     if (!organizationSnap.exists()) {
       throw new Error('Organization record not found.')
     }
-    const previousUserId = (organizationSnap.data() as OrganizationRecord)[roleConfig.field] as string | null
+    previousUserId = (organizationSnap.data() as OrganizationRecord)[roleConfig.field] as string | null
 
     transaction.update(organizationRef, {
       [roleConfig.field]: null,
@@ -366,6 +517,11 @@ export const unassignLeadershipRole = async (organizationId: string, role: strin
       }),
     )
   })
+
+  // Sync partner's assignedOrganizations if this was a partner unassignment
+  if (role === 'partner' && previousUserId) {
+    await syncRemovePartnerFromOrganization(previousUserId, organizationId)
+  }
 }
 
 export const fetchOrganizationDetails = async (organizationId: string): Promise<OrganizationRecord | null> => {
@@ -420,28 +576,46 @@ export const logOrganizationAccessAttempt = async ({
   metadata,
 }: OrganizationAccessAttemptPayload) => {
   if (!userId) return
-  await addDoc(adminActivityCollection, {
+  const sanitizedMetadata = removeUndefinedFields({
+    organizationId,
+    reason,
+    ...metadata,
+  }) as Record<string, unknown> | undefined
+
+  const auditEntry = removeUndefinedFields({
     action: 'organization_access_attempt',
     adminId: userId,
     userId,
     organizationCode,
     severity: 'watch',
-    metadata: {
-      organizationId,
-      reason,
-      ...metadata,
-    },
+    metadata: sanitizedMetadata,
     createdAt: serverTimestamp(),
-  })
+  }) as Record<string, unknown>
+
+  await addDoc(adminActivityCollection, auditEntry)
 }
 
 export const fetchOrganizationByCode = async (organizationCode: string): Promise<OrganizationRecord | null> => {
   if (!organizationCode) return null
+
+  // First try by code (existing behavior)
   const trimmed = organizationCode.trim().toUpperCase()
   const snapshot = await getDocs(query(orgCollection, where('code', '==', trimmed)))
-  if (snapshot.empty) return null
-  const docSnap = snapshot.docs[0]
-  return { id: docSnap.id, ...(docSnap.data() as Omit<OrganizationRecord, 'id'>) }
+
+  if (!snapshot.empty) {
+    const docSnap = snapshot.docs[0]
+    return { id: docSnap.id, ...(docSnap.data() as Omit<OrganizationRecord, 'id'>) }
+  }
+
+  // Fallback: try by document ID (for cases where ID is passed instead of code)
+  const docRef = doc(db, ORG_COLLECTION, organizationCode.trim())
+  const docSnap = await getDoc(docRef)
+
+  if (docSnap.exists()) {
+    return { id: docSnap.id, ...(docSnap.data() as Omit<OrganizationRecord, 'id'>) }
+  }
+
+  return null
 }
 
 
@@ -677,4 +851,58 @@ export const listenToAssignedOrganizations = (
       unsubscribeOrganizations()
     }
   }
+}
+
+/**
+ * Real-time listener for partners.
+ * Updates automatically when users gain/lose the partner role.
+ */
+export const listenToPartners = (
+  onChange: (partners: OrganizationLead[]) => void,
+  onError?: (error: FirestoreError) => void,
+) => {
+  const partnerQuery = query(usersCollection, where('role', 'in', Array.from(partnerRoleAliases)))
+  return onSnapshot(
+    partnerQuery,
+    (snapshot) => {
+      onChange(snapshot.docs.map(buildLead))
+    },
+    onError,
+  )
+}
+
+/**
+ * Real-time listener for mentors.
+ * Updates automatically when users gain/lose the mentor role.
+ */
+export const listenToMentors = (
+  onChange: (mentors: OrganizationLead[]) => void,
+  onError?: (error: FirestoreError) => void,
+) => {
+  const mentorQuery = query(usersCollection, where('role', '==', 'mentor'))
+  return onSnapshot(
+    mentorQuery,
+    (snapshot) => {
+      onChange(snapshot.docs.map(buildLead))
+    },
+    onError,
+  )
+}
+
+/**
+ * Real-time listener for ambassadors.
+ * Updates automatically when users gain/lose the ambassador role.
+ */
+export const listenToAmbassadors = (
+  onChange: (ambassadors: OrganizationLead[]) => void,
+  onError?: (error: FirestoreError) => void,
+) => {
+  const ambassadorQuery = query(usersCollection, where('role', '==', 'ambassador'))
+  return onSnapshot(
+    ambassadorQuery,
+    (snapshot) => {
+      onChange(snapshot.docs.map(buildLead))
+    },
+    onError,
+  )
 }

@@ -2,12 +2,18 @@ import {
   collection,
   doc,
   getDoc,
+  getDocs,
+  onSnapshot,
+  query,
   runTransaction,
   serverTimestamp,
+  where,
+  orderBy,
+  limit,
 } from 'firebase/firestore'
-import { db } from '@/services/firebase'
-import { calculateLevel } from '@/utils/points'
-import { REFERRAL_MAX_PER_USER, REFERRAL_POINTS } from '@/config/pointsConfig'
+import { httpsCallable } from 'firebase/functions'
+import { db, functions } from '@/services/firebase'
+import { REFERRAL_POINTS } from '@/config/pointsConfig'
 
 type ReferralStatus = 'pending' | 'credited' | 'rejected'
 
@@ -18,6 +24,14 @@ type ReferralRecord = {
   status: ReferralStatus
   createdAt?: unknown
   creditedAt?: unknown
+  firstActivityId?: string
+  firstActivityAt?: unknown
+}
+
+export interface ReferralWithDetails extends ReferralRecord {
+  id: string
+  referredEmail?: string
+  referredName?: string
 }
 
 const referralCodesCollection = collection(db, 'referralCodes')
@@ -145,118 +159,236 @@ export async function createReferral(
   }
 }
 
+/**
+ * @deprecated Use Cloud Function trigger instead. Points are now awarded automatically
+ * when the referred user completes their first platform activity.
+ *
+ * This function is kept for backwards compatibility but should not be called directly.
+ * The Cloud Function `onReferredUserFirstActivity` handles referral point awards.
+ *
+ * For manual credit (admin/partner use), use `manualCreditReferralPoints` instead.
+ */
 export async function creditReferralPoints(
   referredUid: string
 ): Promise<{ success: boolean; error?: Error }> {
+  console.warn(
+    '[Referral] creditReferralPoints is deprecated. Points are now awarded via Cloud Function when referred user completes first activity.'
+  )
+
   try {
-    await runTransaction(db, async (tx) => {
-      const referralRef = doc(referralsCollection, referredUid)
-      const referralSnap = await tx.get(referralRef)
+    // Check if referral is still pending
+    const referralDoc = await getDoc(doc(referralsCollection, referredUid))
+    if (!referralDoc.exists()) {
+      return { success: false, error: new Error('Referral record not found.') }
+    }
 
-      if (!referralSnap.exists()) {
-        throw new Error('Referral record not found.')
-      }
+    const referralData = referralDoc.data() as ReferralRecord
+    if (referralData.status === 'credited') {
+      // Already credited, consider this success
+      return { success: true }
+    }
 
-      const referralData = referralSnap.data() as ReferralRecord
-      if (referralData.status !== 'pending') {
-        return
-      }
+    if (referralData.status === 'rejected') {
+      return { success: false, error: new Error('Referral was rejected.') }
+    }
 
-      const referrerUid = referralData.referrerUid
-      if (!referrerUid) {
-        throw new Error('Referral record is missing referrer information.')
-      }
-
-      const referrerUserRef = doc(usersCollection, referrerUid)
-      const referrerProfileRef = doc(profilesCollection, referrerUid)
-      const referrerUserSnap = await tx.get(referrerUserRef)
-
-      if (!referrerUserSnap.exists()) {
-        throw new Error('Referrer profile not found.')
-      }
-
-      const referrerData = referrerUserSnap.data() as { totalPoints?: number; referralCount?: number }
-      const currentTotalPoints = referrerData.totalPoints ?? 0
-      const currentReferralCount = referrerData.referralCount ?? 0
-
-      if (REFERRAL_MAX_PER_USER && currentReferralCount >= REFERRAL_MAX_PER_USER) {
-        tx.set(
-          referralRef,
-          {
-            status: 'rejected',
-            creditedAt: serverTimestamp(),
-            updatedAt: serverTimestamp(),
-          },
-          { merge: true }
-        )
-        tx.set(
-          doc(usersCollection, referredUid),
-          { referralStatus: 'rejected', updatedAt: serverTimestamp() },
-          { merge: true }
-        )
-        tx.set(
-          doc(profilesCollection, referredUid),
-          { referralStatus: 'rejected', updatedAt: serverTimestamp() },
-          { merge: true }
-        )
-        return
-      }
-
-      const updatedTotalPoints = currentTotalPoints + REFERRAL_POINTS
-      const updatedReferralCount = currentReferralCount + 1
-      const updatedLevel = calculateLevel(updatedTotalPoints)
-
-      tx.set(
-        referralRef,
-        {
-          status: 'credited',
-          creditedAt: serverTimestamp(),
-          updatedAt: serverTimestamp(),
-        },
-        { merge: true }
-      )
-      tx.set(
-        referrerUserRef,
-        {
-          totalPoints: updatedTotalPoints,
-          level: updatedLevel,
-          referralCount: updatedReferralCount,
-          updatedAt: serverTimestamp(),
-        },
-        { merge: true }
-      )
-      tx.set(
-        referrerProfileRef,
-        {
-          totalPoints: updatedTotalPoints,
-          level: updatedLevel,
-          referralCount: updatedReferralCount,
-          updatedAt: serverTimestamp(),
-        },
-        { merge: true }
-      )
-      tx.set(
-        doc(usersCollection, referredUid),
-        {
-          referralStatus: 'credited',
-          updatedAt: serverTimestamp(),
-        },
-        { merge: true }
-      )
-      tx.set(
-        doc(profilesCollection, referredUid),
-        {
-          referralStatus: 'credited',
-          updatedAt: serverTimestamp(),
-        },
-        { merge: true }
-      )
-    })
-
+    // For pending referrals, the Cloud Function will handle it when the user
+    // completes their first activity. Return success to not block onboarding.
+    console.log(
+      `[Referral] Referral for ${referredUid} is pending. Points will be awarded when user completes first activity.`
+    )
     return { success: true }
   } catch (error) {
-    console.error('🔴 [Referral] Failed to credit referral points', error)
-    const normalizedError = error instanceof Error ? error : new Error('Unable to credit referral points.')
+    console.error('🔴 [Referral] Error checking referral status', error)
+    const normalizedError =
+      error instanceof Error ? error : new Error('Unable to check referral status.')
     return { success: false, error: normalizedError }
+  }
+}
+
+/**
+ * Manually credit referral points via Cloud Function.
+ * Only super_admin and partner roles can use this function.
+ *
+ * Use this when automatic detection failed or for edge cases.
+ */
+export async function manualCreditReferralPoints(
+  referredUid: string
+): Promise<{ success: boolean; message: string }> {
+  try {
+    const creditReferralPointsCallable = httpsCallable<
+      { referredUid: string },
+      { success: boolean; message: string }
+    >(functions, 'creditReferralPointsCallable')
+
+    const result = await creditReferralPointsCallable({ referredUid })
+    return result.data
+  } catch (error) {
+    console.error('🔴 [Referral] Failed to manually credit referral points', error)
+    return {
+      success: false,
+      message: error instanceof Error ? error.message : 'Failed to credit referral points',
+    }
+  }
+}
+
+/**
+ * Subscribe to real-time updates for a user's referrals.
+ * Returns an unsubscribe function.
+ *
+ * @param referrerUid - The UID of the referrer to watch
+ * @param callback - Called with updated referral list whenever changes occur
+ * @returns Unsubscribe function to stop listening
+ */
+export function subscribeToReferrals(
+  referrerUid: string,
+  callback: (referrals: ReferralWithDetails[]) => void
+): () => void {
+  const q = query(
+    referralsCollection,
+    where('referrerUid', '==', referrerUid),
+    orderBy('createdAt', 'desc'),
+    limit(50)
+  )
+
+  const unsubscribe = onSnapshot(
+    q,
+    async (snapshot) => {
+      const referrals: ReferralWithDetails[] = []
+
+      for (const docSnap of snapshot.docs) {
+        const data = docSnap.data() as ReferralRecord
+        let referredEmail: string | undefined
+        let referredName: string | undefined
+
+        // Fetch referred user details
+        try {
+          const referredProfile = await getDoc(doc(profilesCollection, data.referredUid))
+          if (referredProfile.exists()) {
+            const profileData = referredProfile.data()
+            referredEmail = profileData.email
+            referredName = profileData.fullName || profileData.firstName
+          }
+        } catch {
+          // Ignore errors fetching profile details
+        }
+
+        referrals.push({
+          id: docSnap.id,
+          ...data,
+          referredEmail,
+          referredName,
+        })
+      }
+
+      callback(referrals)
+    },
+    (error) => {
+      console.error('🔴 [Referral] Error subscribing to referrals', error)
+    }
+  )
+
+  return unsubscribe
+}
+
+/**
+ * Subscribe to real-time updates for a referred user's referral status.
+ * Useful for showing the referred user when their referral is credited.
+ *
+ * @param referredUid - The UID of the referred user
+ * @param callback - Called with updated referral record whenever status changes
+ * @returns Unsubscribe function to stop listening
+ */
+export function subscribeToReferralStatus(
+  referredUid: string,
+  callback: (referral: ReferralRecord | null) => void
+): () => void {
+  const referralRef = doc(referralsCollection, referredUid)
+
+  const unsubscribe = onSnapshot(
+    referralRef,
+    (snapshot) => {
+      if (snapshot.exists()) {
+        callback(snapshot.data() as ReferralRecord)
+      } else {
+        callback(null)
+      }
+    },
+    (error) => {
+      console.error('🔴 [Referral] Error subscribing to referral status', error)
+    }
+  )
+
+  return unsubscribe
+}
+
+/**
+ * Get referral statistics for a user.
+ */
+export async function getReferralStats(referrerUid: string): Promise<{
+  totalReferrals: number
+  pendingReferrals: number
+  creditedReferrals: number
+  rejectedReferrals: number
+  totalPointsEarned: number
+}> {
+  try {
+    const q = query(referralsCollection, where('referrerUid', '==', referrerUid))
+    const snapshot = await getDocs(q)
+
+    let pendingReferrals = 0
+    let creditedReferrals = 0
+    let rejectedReferrals = 0
+
+    snapshot.docs.forEach((doc) => {
+      const data = doc.data() as ReferralRecord
+      switch (data.status) {
+        case 'pending':
+          pendingReferrals++
+          break
+        case 'credited':
+          creditedReferrals++
+          break
+        case 'rejected':
+          rejectedReferrals++
+          break
+      }
+    })
+
+    return {
+      totalReferrals: snapshot.size,
+      pendingReferrals,
+      creditedReferrals,
+      rejectedReferrals,
+      totalPointsEarned: creditedReferrals * REFERRAL_POINTS,
+    }
+  } catch (error) {
+    console.error('🔴 [Referral] Error getting referral stats', error)
+    return {
+      totalReferrals: 0,
+      pendingReferrals: 0,
+      creditedReferrals: 0,
+      rejectedReferrals: 0,
+      totalPointsEarned: 0,
+    }
+  }
+}
+
+/**
+ * Check if a user has completed their first activity (has at least one ledger entry).
+ * This can be used to show referred users their progress toward earning the referrer points.
+ */
+export async function hasCompletedFirstActivity(uid: string): Promise<boolean> {
+  try {
+    const q = query(
+      collection(db, 'pointsLedger'),
+      where('uid', '==', uid),
+      limit(1)
+    )
+    const snapshot = await getDocs(q)
+    return snapshot.size > 0
+  } catch (error) {
+    console.error('🔴 [Referral] Error checking first activity', error)
+    return false
   }
 }

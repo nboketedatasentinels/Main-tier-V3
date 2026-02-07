@@ -40,6 +40,8 @@ import {
 } from 'lucide-react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { useAuth } from '@/hooks/useAuth'
+import { useUserChecklistProgressSnapshot } from '@/hooks/useUserChecklistProgressSnapshot'
+import { useUserWeeklyProgressSnapshot } from '@/hooks/useUserWeeklyProgressSnapshot'
 import { UnauthorizedPage } from '@/pages/errors/UnauthorizedPage'
 import { NotFoundPage } from '@/pages/errors/NotFoundPage'
 import {
@@ -53,9 +55,9 @@ import {
   type ImpactLogSummary,
   type UserProfileExtended,
 } from '@/services/userProfileService'
-import { deleteUserAccount } from '@/services/userManagementService'
+import { deleteUserAccount, fetchOrganizationsList, type OrganizationOption } from '@/services/userManagementService'
 
-type ViewContext = 'admin' | 'mentor'
+type ViewContext = 'partner' | 'mentor'
 
 const formatDateTime = (value?: string) => {
   if (!value) return 'Not available'
@@ -104,8 +106,19 @@ export const UserProfileManagementPage: React.FC<{ viewContext?: ViewContext }> 
   const [coreValuesInput, setCoreValuesInput] = useState('')
   const [notesInput, setNotesInput] = useState('')
   const accessLoggedRef = useRef(false)
+  const [canAccessProfile, setCanAccessProfile] = useState<boolean | null>(null)
+  const [organizationsList, setOrganizationsList] = useState<OrganizationOption[]>([])
+  const [organizationsLoading, setOrganizationsLoading] = useState(false)
+  const [selectedOrganizationId, setSelectedOrganizationId] = useState<string>('')
 
   const isMentorView = viewContext === 'mentor' || isMentor
+
+  const currentWeekNumber = profileData?.currentWeek || 1
+  const { weeklyProgress, pendingApprovals } = useUserWeeklyProgressSnapshot(userId, currentWeekNumber)
+  const { checklistProgress } = useUserChecklistProgressSnapshot(userId, currentWeekNumber)
+
+  const displayedWeeklyActivityValue =
+    isEditing ? editedProfile?.weeklyActivity ?? 0 : weeklyProgress?.engagementCount ?? profileData?.weeklyActivity ?? 0
 
   const editableFields = useMemo(() => {
     if (isMentorView) {
@@ -160,17 +173,38 @@ export const UserProfileManagementPage: React.FC<{ viewContext?: ViewContext }> 
     ])
   }, [isMentorView, isSuperAdmin])
 
-  const canAccessProfile = useMemo(() => {
-    if (!profileData || !viewerProfile) return false
-    if (isSuperAdmin) return true
+  useEffect(() => {
+    if (!profileData || !viewerProfile) {
+      setCanAccessProfile(false)
+      return
+    }
+    if (isSuperAdmin) {
+      setCanAccessProfile(true)
+      return
+    }
     if (isMentorView) {
-      return profileData.mentorId === viewerProfile.id
+      setCanAccessProfile(profileData.mentorId === viewerProfile.id)
+      return
     }
     if (isAdmin) {
-      if (!profileData.companyId) return false
-      return canAccessOrganization(profileData.companyId)
+      if (!profileData.companyId) {
+        setCanAccessProfile(false)
+        return
+      }
+      let isMounted = true
+      setCanAccessProfile(null)
+      void canAccessOrganization(profileData.companyId)
+        .then((allowed) => {
+          if (isMounted) setCanAccessProfile(allowed)
+        })
+        .catch(() => {
+          if (isMounted) setCanAccessProfile(false)
+        })
+      return () => {
+        isMounted = false
+      }
     }
-    return false
+    setCanAccessProfile(false)
   }, [canAccessOrganization, isAdmin, isMentorView, isSuperAdmin, profileData, viewerProfile])
 
   useEffect(() => {
@@ -214,7 +248,7 @@ export const UserProfileManagementPage: React.FC<{ viewContext?: ViewContext }> 
   }, [userId])
 
   useEffect(() => {
-    if (!profileData || !viewerProfile || accessLoggedRef.current) return
+    if (!profileData || !viewerProfile || accessLoggedRef.current || canAccessProfile === null) return
     const allowed = canAccessProfile
     const reason = allowed ? 'allowed' : 'denied'
     logUserProfileAccess({
@@ -228,12 +262,33 @@ export const UserProfileManagementPage: React.FC<{ viewContext?: ViewContext }> 
     accessLoggedRef.current = true
   }, [canAccessProfile, profileData, viewerProfile])
 
+  // Fetch organizations list when entering edit mode (for role promotion)
+  useEffect(() => {
+    if (!isEditing || !isSuperAdmin) return
+    if (organizationsList.length > 0) return
+
+    const loadOrganizations = async () => {
+      setOrganizationsLoading(true)
+      try {
+        const orgs = await fetchOrganizationsList()
+        setOrganizationsList(orgs)
+      } catch (err) {
+        console.error('Failed to fetch organizations', err)
+      } finally {
+        setOrganizationsLoading(false)
+      }
+    }
+
+    loadOrganizations()
+  }, [isEditing, isSuperAdmin, organizationsList.length])
+
   const handleEditToggle = () => {
     if (!profileData) return
     setIsEditing(true)
     setEditedProfile(profileData)
     setCoreValuesInput((profileData.coreValues || []).join(', '))
     setNotesInput(profileData.notes || '')
+    setSelectedOrganizationId(profileData.companyId || '')
   }
 
   const handleCancel = () => {
@@ -242,7 +297,21 @@ export const UserProfileManagementPage: React.FC<{ viewContext?: ViewContext }> 
     setEditedProfile(profileData)
     setCoreValuesInput((profileData.coreValues || []).join(', '))
     setNotesInput(profileData.notes || '')
+    setSelectedOrganizationId(profileData.companyId || '')
   }
+
+  // Determine if organization selection is required for role promotion
+  const requiresOrganizationSelection = useMemo(() => {
+    if (!editedProfile || !profileData) return false
+    const originalRole = profileData.role
+    const newRole = editedProfile.role
+    // Only require org selection when promoting from free_user to paid_member
+    // and user doesn't already have an organization
+    if (originalRole === 'free_user' && newRole === 'paid_member' && !profileData.companyId) {
+      return true
+    }
+    return false
+  }, [editedProfile, profileData])
 
   const handleSave = async () => {
     if (!profileData || !editedProfile || !userId) return
@@ -305,6 +374,24 @@ export const UserProfileManagementPage: React.FC<{ viewContext?: ViewContext }> 
     }
     if (editableFields.has('role') && editedProfile.role !== profileData.role) {
       updates.role = editedProfile.role
+      // When promoting from free_user to paid_member, also update membership status
+      if (profileData.role === 'free_user' && editedProfile.role === 'paid_member') {
+        updates.membershipStatus = 'paid'
+      }
+    }
+
+    // Handle organization assignment during free user promotion
+    if (requiresOrganizationSelection) {
+      if (!selectedOrganizationId) {
+        toast({ title: 'Please select an organization for the promoted user', status: 'warning' })
+        return
+      }
+      const selectedOrg = organizationsList.find((org) => org.id === selectedOrganizationId)
+      if (selectedOrg) {
+        updates.companyId = selectedOrg.id
+        updates.companyCode = selectedOrg.code || ''
+        updates.companyName = selectedOrg.name
+      }
     }
     if (editableFields.has('notes') && notesInput !== (profileData.notes || '')) {
       updates.notes = notesInput
@@ -341,16 +428,26 @@ export const UserProfileManagementPage: React.FC<{ viewContext?: ViewContext }> 
 
     setIsSaving(true)
     const previous = profileData
-    const optimistic = {
-      ...profileData,
+    const optimisticUpdates = {
       ...updates,
       coreValues,
       notes: notesInput,
       lastModifiedByName: viewerProfile?.fullName || viewerProfile?.email || 'Unknown admin',
       lastModifiedAt: new Date().toISOString(),
+    }
+    const optimistic = {
+      ...profileData,
+      ...optimisticUpdates,
     } as UserProfileExtended
     setProfileData(optimistic)
     setEditedProfile(optimistic)
+    // Update organization state if organization was assigned
+    if (organization && updates.companyId && updates.companyId !== organization.id) {
+      const selectedOrg = organizationsList.find((org) => org.id === updates.companyId)
+      if (selectedOrg) {
+        setOrganization({ id: selectedOrg.id, name: selectedOrg.name, code: selectedOrg.code })
+      }
+    }
 
     try {
       const allowedFieldsList = Array.from(editableFields)
@@ -360,13 +457,33 @@ export const UserProfileManagementPage: React.FC<{ viewContext?: ViewContext }> 
         allowedFieldsList,
         viewerProfile ? { id: viewerProfile.id, name: viewerProfile.fullName || viewerProfile.email } : null,
       )
-      toast({ title: 'Profile updated', status: 'success' })
+      // Provide specific feedback for role changes
+      const roleChanged = updates.role && updates.role !== profileData.role
+      if (roleChanged && requiresOrganizationSelection) {
+        const selectedOrg = organizationsList.find((org) => org.id === selectedOrganizationId)
+        toast({
+          title: 'User promoted successfully',
+          description: `Role changed to ${updates.role}${selectedOrg ? ` and assigned to ${selectedOrg.name}` : ''}`,
+          status: 'success',
+          duration: 5000,
+        })
+      } else if (roleChanged) {
+        toast({
+          title: 'Role updated',
+          description: `Role changed from ${profileData.role} to ${updates.role}`,
+          status: 'success',
+          duration: 4000,
+        })
+      } else {
+        toast({ title: 'Profile updated', status: 'success' })
+      }
       setIsEditing(false)
+      setSelectedOrganizationId('')
     } catch (err) {
       console.error(err)
       setProfileData(previous)
       setEditedProfile(previous)
-      toast({ title: 'Unable to save changes', status: 'error' })
+      toast({ title: 'Unable to save changes', status: 'error', description: 'Please try again.' })
     } finally {
       setIsSaving(false)
     }
@@ -429,6 +546,14 @@ export const UserProfileManagementPage: React.FC<{ viewContext?: ViewContext }> 
     )
   }
 
+  if (canAccessProfile === null) {
+    return (
+      <Flex minH="60vh" align="center" justify="center">
+        <Spinner size="xl" />
+      </Flex>
+    )
+  }
+
   if (!canAccessProfile) {
     return <UnauthorizedPage />
   }
@@ -438,10 +563,53 @@ export const UserProfileManagementPage: React.FC<{ viewContext?: ViewContext }> 
   const accountBadge = profileData.accountStatus === 'suspended' ? 'red' : 'blue'
   const mentorNotesEditable = editableFields.has('notes')
   const canEdit = editableFields.size > 0
-  const progressPercent =
-    safeNumber(profileData.goalsTotal) > 0
-      ? Math.round((safeNumber(profileData.goalsCompleted) / safeNumber(profileData.goalsTotal)) * 100)
-      : safeNumber(profileData.milestonesProgress)
+  const displayProfile = (isEditing ? editedProfile : profileData) ?? profileData
+  const displayedCoreValues = isEditing ? coreValuesInput : (profileData.coreValues || []).join(', ')
+  const displayedNotes = isEditing ? notesInput : profileData.notes || ''
+
+  const toTitleCase = (value: string) =>
+    value
+      .split('_')
+      .filter(Boolean)
+      .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+      .join(' ')
+
+  const displayedRoleLabel = displayProfile.role ? toTitleCase(displayProfile.role) : 'User'
+  const displayedMembershipLabel = displayProfile.membershipStatus ? toTitleCase(displayProfile.membershipStatus) : 'Free'
+  const displayedAccountStatusLabel = displayProfile.accountStatus ? toTitleCase(displayProfile.accountStatus) : 'Active'
+
+  const currentRoleLabel = profileData.role ? toTitleCase(profileData.role) : 'User'
+
+  const currentOrganizationAccessLabel = (() => {
+    if (profileData.role === 'super_admin') return 'All organizations'
+
+    const assignedOrganizations = Array.isArray(profileData.assignedOrganizations)
+      ? profileData.assignedOrganizations.filter((value): value is string => typeof value === 'string' && value.trim().length > 0)
+      : []
+
+    if (organization?.name) {
+      return `${organization.name}${organization.code ? ` (${organization.code})` : ''}`
+    }
+
+    if (profileData.companyName) return profileData.companyName
+    if (profileData.companyCode) return profileData.companyCode
+
+    if (assignedOrganizations.length > 0) {
+      const summary =
+        assignedOrganizations.length <= 2
+          ? assignedOrganizations.join(', ')
+          : `${assignedOrganizations.slice(0, 2).join(', ')} +${assignedOrganizations.length - 2} more`
+      return `Assigned (${assignedOrganizations.length}): ${summary}`
+    }
+
+    return 'Restricted'
+  })()
+
+  const goalsCompletedLive = checklistProgress?.completedActivities ?? safeNumber(profileData.goalsCompleted)
+  const goalsTotalLive = checklistProgress?.totalActivities ?? safeNumber(profileData.goalsTotal)
+  const milestonesProgressLive =
+    goalsTotalLive > 0 ? Math.round((goalsCompletedLive / goalsTotalLive) * 100) : safeNumber(profileData.milestonesProgress)
+  const progressPercent = milestonesProgressLive
 
   return (
     <Stack spacing={6} px={{ base: 4, md: 6, lg: 8 }} py={{ base: 6, md: 8 }}>
@@ -513,7 +681,7 @@ export const UserProfileManagementPage: React.FC<{ viewContext?: ViewContext }> 
               <Text fontSize="xl" fontWeight="bold">
                 {profileData.fullName || profileData.email}
               </Text>
-              <Text color="gray.500">{profileData.email}</Text>
+              <Text color="text.muted">{profileData.email}</Text>
               <HStack spacing={2} flexWrap="wrap">
                 <Badge colorScheme="purple" textTransform="capitalize">
                   {profileData.role?.replace('_', ' ') || 'user'}
@@ -532,11 +700,11 @@ export const UserProfileManagementPage: React.FC<{ viewContext?: ViewContext }> 
               </HStack>
             </Stack>
             <Stack spacing={1} minW="200px">
-              <Text fontSize="sm" color="gray.500">
+              <Text fontSize="sm" color="text.muted">
                 Registered
               </Text>
               <Text fontWeight="semibold">{formatDate(profileData.registrationDate || profileData.createdAt)}</Text>
-              <Text fontSize="sm" color="gray.500">
+              <Text fontSize="sm" color="text.muted">
                 Last active
               </Text>
               <Text fontWeight="semibold">{formatDateTime(profileData.lastActive || profileData.lastActiveAt)}</Text>
@@ -548,7 +716,7 @@ export const UserProfileManagementPage: React.FC<{ viewContext?: ViewContext }> 
       <Grid templateColumns={{ base: '1fr', lg: '2fr 1fr' }} gap={6}>
         <GridItem>
           <Stack spacing={6}>
-            <Card>
+            <Card bg="surface.default" color="text.primary" borderWidth="1px" borderColor="border.subtle">
               <CardHeader>
                 <Text fontWeight="bold">Personal information</Text>
               </CardHeader>
@@ -557,60 +725,60 @@ export const UserProfileManagementPage: React.FC<{ viewContext?: ViewContext }> 
                   <FormControl>
                     <FormLabel>Name</FormLabel>
                     <Input
-                      value={editedProfile?.fullName || ''}
+                      value={displayProfile.fullName || ''}
                       onChange={(event) =>
                         setEditedProfile((prev) => (prev ? { ...prev, fullName: event.target.value } : prev))
                       }
-                      isDisabled={!isEditing || !editableFields.has('fullName')}
+                      isReadOnly={!isEditing || !editableFields.has('fullName')}
                     />
                   </FormControl>
                   <FormControl>
                     <FormLabel>Email</FormLabel>
                     <Input
-                      value={editedProfile?.email || ''}
+                      value={displayProfile.email || ''}
                       onChange={(event) =>
                         setEditedProfile((prev) => (prev ? { ...prev, email: event.target.value } : prev))
                       }
-                      isDisabled={!isEditing || !editableFields.has('email')}
+                      isReadOnly={!isEditing || !editableFields.has('email')}
                     />
                   </FormControl>
                   <FormControl>
                     <FormLabel>Personality type</FormLabel>
                     <Input
-                      value={editedProfile?.personalityType || ''}
+                      value={displayProfile.personalityType || ''}
                       onChange={(event) =>
                         setEditedProfile((prev) => (prev ? { ...prev, personalityType: event.target.value } : prev))
                       }
-                      isDisabled={!isEditing || !editableFields.has('personalityType')}
+                      isReadOnly={!isEditing || !editableFields.has('personalityType')}
                     />
                   </FormControl>
                   <FormControl>
                     <FormLabel>Core values</FormLabel>
                     <Input
-                      value={coreValuesInput}
+                      value={displayedCoreValues}
                       onChange={(event) => setCoreValuesInput(event.target.value)}
-                      isDisabled={!isEditing || !editableFields.has('coreValues')}
+                      isReadOnly={!isEditing || !editableFields.has('coreValues')}
                       placeholder="Comma separated values"
                     />
                   </FormControl>
                   <FormControl>
                     <FormLabel>LinkedIn</FormLabel>
                     <Input
-                      value={editedProfile?.linkedinUrl || ''}
+                      value={displayProfile.linkedinUrl || ''}
                       onChange={(event) =>
                         setEditedProfile((prev) => (prev ? { ...prev, linkedinUrl: event.target.value } : prev))
                       }
-                      isDisabled={!isEditing || !editableFields.has('linkedinUrl')}
+                      isReadOnly={!isEditing || !editableFields.has('linkedinUrl')}
                     />
                   </FormControl>
                   <FormControl gridColumn={{ base: '1 / -1' }}>
                     <FormLabel>Bio</FormLabel>
                     <Textarea
-                      value={editedProfile?.bio || ''}
+                      value={displayProfile.bio || ''}
                       onChange={(event) =>
                         setEditedProfile((prev) => (prev ? { ...prev, bio: event.target.value } : prev))
                       }
-                      isDisabled={!isEditing || !editableFields.has('bio')}
+                      isReadOnly={!isEditing || !editableFields.has('bio')}
                     />
                   </FormControl>
                 </SimpleGrid>
@@ -618,7 +786,7 @@ export const UserProfileManagementPage: React.FC<{ viewContext?: ViewContext }> 
             </Card>
 
             {!isMentorView && (
-              <Card>
+              <Card bg="surface.default" color="text.primary" borderWidth="1px" borderColor="border.subtle">
                 <CardHeader>
                   <Text fontWeight="bold">Role & permissions</Text>
                 </CardHeader>
@@ -626,70 +794,106 @@ export const UserProfileManagementPage: React.FC<{ viewContext?: ViewContext }> 
                   <SimpleGrid columns={{ base: 1, md: 3 }} spacing={4}>
                     <FormControl>
                       <FormLabel>Role</FormLabel>
-                      <Select
-                        value={editedProfile?.role || 'user'}
-                        onChange={(event) =>
-                          setEditedProfile((prev) => (prev ? { ...prev, role: event.target.value as UserProfileExtended['role'] } : prev))
-                        }
-                        isDisabled={!isEditing || !editableFields.has('role')}
-                      >
-                        <option value="user">User</option>
-                        <option value="paid_member">Paid Member</option>
-                        <option value="free_user">Free User</option>
-                        <option value="team_leader">Team Leader</option>
-                        <option value="mentor">Mentor</option>
-                        <option value="ambassador">Ambassador</option>
-                        <option value="partner">Partner Admin</option>
-                        <option value="admin">Admin</option>
-                        <option value="super_admin">Super Admin</option>
-                      </Select>
+                      {isEditing && editableFields.has('role') ? (
+                        <Select
+                          value={displayProfile.role || 'user'}
+                          onChange={(event) =>
+                            setEditedProfile((prev) =>
+                              prev ? { ...prev, role: event.target.value as UserProfileExtended['role'] } : prev,
+                            )
+                          }
+                        >
+                          <option value="user">User</option>
+                          <option value="paid_member">Paid Member</option>
+                          <option value="free_user">Free User</option>
+                          <option value="mentor">Mentor</option>
+                          <option value="ambassador">Ambassador</option>
+                          <option value="partner">Partner</option>
+                          <option value="super_admin">Super Admin</option>
+                        </Select>
+                      ) : (
+                        <Input value={displayedRoleLabel} isReadOnly />
+                      )}
                     </FormControl>
+                    {requiresOrganizationSelection && (
+                      <FormControl isRequired>
+                        <FormLabel>Assign to Organization</FormLabel>
+                        <Select
+                          placeholder={organizationsLoading ? 'Loading organizations...' : 'Select organization'}
+                          value={selectedOrganizationId}
+                          onChange={(event) => setSelectedOrganizationId(event.target.value)}
+                          isDisabled={!isEditing || organizationsLoading}
+                        >
+                          {organizationsList.map((org) => (
+                            <option key={org.id} value={org.id}>
+                              {org.name} {org.code ? `(${org.code})` : ''}
+                            </option>
+                          ))}
+                        </Select>
+                        <Text fontSize="xs" color="orange.500" mt={1}>
+                          Required when promoting from free user to paid member
+                        </Text>
+                      </FormControl>
+                    )}
                     <FormControl>
                       <FormLabel>Membership status</FormLabel>
-                      <Select
-                        value={editedProfile?.membershipStatus || 'free'}
-                        onChange={(event) =>
-                          setEditedProfile((prev) => (prev ? { ...prev, membershipStatus: event.target.value as UserProfileExtended['membershipStatus'] } : prev))
-                        }
-                        isDisabled={!isEditing || !editableFields.has('membershipStatus')}
-                      >
-                        <option value="free">Free</option>
-                        <option value="paid">Paid</option>
-                      </Select>
+                      {isEditing && editableFields.has('membershipStatus') ? (
+                        <Select
+                          value={displayProfile.membershipStatus || 'free'}
+                          onChange={(event) =>
+                            setEditedProfile((prev) =>
+                              prev
+                                ? {
+                                    ...prev,
+                                    membershipStatus: event.target.value as UserProfileExtended['membershipStatus'],
+                                  }
+                                : prev,
+                            )
+                          }
+                        >
+                          <option value="free">Free</option>
+                          <option value="paid">Paid</option>
+                        </Select>
+                      ) : (
+                        <Input value={displayedMembershipLabel} isReadOnly />
+                      )}
                     </FormControl>
                     <FormControl>
                       <FormLabel>Account status</FormLabel>
-                      <Select
-                        value={editedProfile?.accountStatus?.toString() || 'active'}
-                        onChange={(event) =>
-                          setEditedProfile((prev) => (prev ? { ...prev, accountStatus: event.target.value } : prev))
-                        }
-                        isDisabled={!isEditing || !editableFields.has('accountStatus')}
-                      >
-                        <option value="active">Active</option>
-                        <option value="inactive">Inactive</option>
-                        <option value="pending">Pending</option>
-                        <option value="suspended">Suspended</option>
-                      </Select>
+                      {isEditing && editableFields.has('accountStatus') ? (
+                        <Select
+                          value={displayProfile.accountStatus?.toString() || 'active'}
+                          onChange={(event) =>
+                            setEditedProfile((prev) => (prev ? { ...prev, accountStatus: event.target.value } : prev))
+                          }
+                        >
+                          <option value="active">Active</option>
+                          <option value="inactive">Inactive</option>
+                          <option value="pending">Pending</option>
+                          <option value="suspended">Suspended</option>
+                        </Select>
+                      ) : (
+                        <Input value={displayedAccountStatusLabel} isReadOnly />
+                      )}
                     </FormControl>
                     <FormControl>
                       <FormLabel>Mentor ID</FormLabel>
                       <Input
-                        value={editedProfile?.mentorId || ''}
+                        value={displayProfile.mentorId || ''}
                         onChange={(event) =>
                           setEditedProfile((prev) => (prev ? { ...prev, mentorId: event.target.value } : prev))
                         }
-                        isDisabled={!isEditing || !editableFields.has('mentorId')}
+                        isReadOnly={!isEditing || !editableFields.has('mentorId')}
                       />
                     </FormControl>
                     <FormControl>
                       <FormLabel>Ambassador ID</FormLabel>
                       <Input
-                        value={editedProfile?.ambassadorId || ''}
+                        value={displayProfile.ambassadorId || ''}
                         onChange={(event) =>
                           setEditedProfile((prev) => (prev ? { ...prev, ambassadorId: event.target.value } : prev))
                         }
-                        isDisabled={!isEditing || !editableFields.has('ambassadorId')}
+                        isReadOnly={!isEditing || !editableFields.has('ambassadorId')}
                       />
                     </FormControl>
                   </SimpleGrid>
@@ -697,7 +901,7 @@ export const UserProfileManagementPage: React.FC<{ viewContext?: ViewContext }> 
               </Card>
             )}
 
-            <Card>
+            <Card bg="surface.default" color="text.primary" borderWidth="1px" borderColor="border.subtle">
               <CardHeader>
                 <Text fontWeight="bold">Organization details</Text>
               </CardHeader>
@@ -706,50 +910,50 @@ export const UserProfileManagementPage: React.FC<{ viewContext?: ViewContext }> 
                   <FormControl>
                     <FormLabel>Company name</FormLabel>
                     <Input
-                      value={editedProfile?.companyName || ''}
+                      value={displayProfile.companyName || ''}
                       onChange={(event) =>
                         setEditedProfile((prev) => (prev ? { ...prev, companyName: event.target.value } : prev))
                       }
-                      isDisabled={!isEditing || !editableFields.has('companyName')}
+                      isReadOnly={!isEditing || !editableFields.has('companyName')}
                     />
                   </FormControl>
                   <FormControl>
                     <FormLabel>Company code</FormLabel>
                     <Input
-                      value={editedProfile?.companyCode || ''}
+                      value={displayProfile.companyCode || ''}
                       onChange={(event) =>
                         setEditedProfile((prev) => (prev ? { ...prev, companyCode: event.target.value } : prev))
                       }
-                      isDisabled={!isEditing || !editableFields.has('companyCode')}
+                      isReadOnly={!isEditing || !editableFields.has('companyCode')}
                     />
                   </FormControl>
                   <FormControl>
                     <FormLabel>Village</FormLabel>
                     <Input
-                      value={editedProfile?.villageId || ''}
+                      value={displayProfile.villageId || ''}
                       onChange={(event) =>
                         setEditedProfile((prev) => (prev ? { ...prev, villageId: event.target.value } : prev))
                       }
-                      isDisabled={!isEditing || !editableFields.has('villageId')}
+                      isReadOnly={!isEditing || !editableFields.has('villageId')}
                     />
                   </FormControl>
                   <FormControl>
                     <FormLabel>Cluster</FormLabel>
                     <Input
-                      value={editedProfile?.clusterId || ''}
+                      value={displayProfile.clusterId || ''}
                       onChange={(event) =>
                         setEditedProfile((prev) => (prev ? { ...prev, clusterId: event.target.value } : prev))
                       }
-                      isDisabled={!isEditing || !editableFields.has('clusterId')}
+                      isReadOnly={!isEditing || !editableFields.has('clusterId')}
                     />
                   </FormControl>
                 </SimpleGrid>
                 {organization && (
-                  <Box mt={4} p={4} borderRadius="md" bg="gray.50">
+                  <Box mt={4} p={4} borderRadius="md" bg="surface.subtle" borderWidth="1px" borderColor="border.subtle">
                     <HStack justify="space-between">
                       <Box>
                         <Text fontWeight="semibold">{organization.name}</Text>
-                        <Text fontSize="sm" color="gray.500">
+                        <Text fontSize="sm" color="text.muted">
                           {organization.code || 'No code'} • {organization.status || 'Unknown status'}
                         </Text>
                       </Box>
@@ -762,7 +966,7 @@ export const UserProfileManagementPage: React.FC<{ viewContext?: ViewContext }> 
               </CardBody>
             </Card>
 
-            <Card>
+            <Card bg="surface.default" color="text.primary" borderWidth="1px" borderColor="border.subtle">
               <CardHeader>
                 <Text fontWeight="bold">Progress tracking</Text>
               </CardHeader>
@@ -772,37 +976,37 @@ export const UserProfileManagementPage: React.FC<{ viewContext?: ViewContext }> 
                     <FormLabel>Goals completed</FormLabel>
                     <Input
                       type="number"
-                      value={editedProfile?.goalsCompleted ?? 0}
+                      value={isEditing ? editedProfile?.goalsCompleted ?? 0 : goalsCompletedLive}
                       onChange={(event) =>
                         setEditedProfile((prev) =>
                           prev ? { ...prev, goalsCompleted: Number(event.target.value) } : prev,
                         )
                       }
-                      isDisabled={!isEditing || !editableFields.has('goalsCompleted')}
+                      isReadOnly={!isEditing || !editableFields.has('goalsCompleted')}
                     />
                   </FormControl>
                   <FormControl>
                     <FormLabel>Goals total</FormLabel>
                     <Input
                       type="number"
-                      value={editedProfile?.goalsTotal ?? 0}
+                      value={isEditing ? editedProfile?.goalsTotal ?? 0 : goalsTotalLive}
                       onChange={(event) =>
                         setEditedProfile((prev) => (prev ? { ...prev, goalsTotal: Number(event.target.value) } : prev))
                       }
-                      isDisabled={!isEditing || !editableFields.has('goalsTotal')}
+                      isReadOnly={!isEditing || !editableFields.has('goalsTotal')}
                     />
                   </FormControl>
                   <FormControl>
                     <FormLabel>Milestones progress (%)</FormLabel>
                     <Input
                       type="number"
-                      value={editedProfile?.milestonesProgress ?? 0}
+                      value={isEditing ? editedProfile?.milestonesProgress ?? 0 : milestonesProgressLive}
                       onChange={(event) =>
                         setEditedProfile((prev) =>
                           prev ? { ...prev, milestonesProgress: Number(event.target.value) } : prev,
                         )
                       }
-                      isDisabled={!isEditing || !editableFields.has('milestonesProgress')}
+                      isReadOnly={!isEditing || !editableFields.has('milestonesProgress')}
                     />
                   </FormControl>
                 </SimpleGrid>
@@ -812,21 +1016,21 @@ export const UserProfileManagementPage: React.FC<{ viewContext?: ViewContext }> 
                     <FormLabel>Weekly activity</FormLabel>
                     <Input
                       type="number"
-                      value={editedProfile?.weeklyActivity ?? 0}
+                      value={displayedWeeklyActivityValue}
                       onChange={(event) =>
                         setEditedProfile((prev) =>
                           prev ? { ...prev, weeklyActivity: Number(event.target.value) } : prev,
                         )
                       }
-                      isDisabled={!isEditing || !editableFields.has('weeklyActivity')}
+                      isReadOnly={!isEditing || !editableFields.has('weeklyActivity')}
                     />
                   </FormControl>
                   <FormControl>
                     <FormLabel>Notes</FormLabel>
                     <Textarea
-                      value={notesInput}
+                      value={displayedNotes}
                       onChange={(event) => setNotesInput(event.target.value)}
-                      isDisabled={!isEditing || !mentorNotesEditable}
+                      isReadOnly={!isEditing || !mentorNotesEditable}
                     />
                   </FormControl>
                 </SimpleGrid>
@@ -844,7 +1048,7 @@ export const UserProfileManagementPage: React.FC<{ viewContext?: ViewContext }> 
               <CardBody>
                 <Stack spacing={4}>
                   <Box>
-                    <Text fontSize="sm" color="gray.500">
+                    <Text fontSize="sm" color="text.muted">
                       Total points
                     </Text>
                     <Text fontSize="2xl" fontWeight="bold">
@@ -852,7 +1056,26 @@ export const UserProfileManagementPage: React.FC<{ viewContext?: ViewContext }> 
                     </Text>
                   </Box>
                   <Box>
-                    <Text fontSize="sm" color="gray.500">
+                    <Text fontSize="sm" color="text.muted">
+                      This week (week {currentWeekNumber})
+                    </Text>
+                    <Text fontSize="lg" fontWeight="semibold">
+                      {weeklyProgress ? `${weeklyProgress.pointsEarned} points · ${weeklyProgress.engagementCount} activities` : 'Not available'}
+                    </Text>
+                    {(pendingApprovals?.count ?? 0) > 0 && (
+                      <Text fontSize="sm" color="text.muted">
+                        {pendingApprovals?.count} pending approval{pendingApprovals?.count === 1 ? '' : 's'} · {pendingApprovals?.points ?? 0}{' '}
+                        pts
+                      </Text>
+                    )}
+                    {weeklyProgress?.status && (
+                      <Text fontSize="sm" color="text.muted">
+                        Status: {weeklyProgress.status}
+                      </Text>
+                    )}
+                  </Box>
+                  <Box>
+                    <Text fontSize="sm" color="text.muted">
                       Current level
                     </Text>
                     <Text fontSize="2xl" fontWeight="bold">
@@ -860,18 +1083,18 @@ export const UserProfileManagementPage: React.FC<{ viewContext?: ViewContext }> 
                     </Text>
                   </Box>
                   <Box>
-                    <Text fontSize="sm" color="gray.500">
+                    <Text fontSize="sm" color="text.muted">
                       Impact logs
                     </Text>
                     <Text fontSize="lg" fontWeight="semibold">
                       {impactSummary?.totalEntries ?? 0} entries
                     </Text>
-                    <Text fontSize="sm" color="gray.500">
+                    <Text fontSize="sm" color="text.muted">
                       Last entry: {formatDateTime(impactSummary?.lastActivityAt)}
                     </Text>
                   </Box>
                   <Box>
-                    <Text fontSize="sm" color="gray.500">
+                    <Text fontSize="sm" color="text.muted">
                       Progress completion
                     </Text>
                     <HStack>
@@ -892,13 +1115,13 @@ export const UserProfileManagementPage: React.FC<{ viewContext?: ViewContext }> 
               </CardHeader>
               <CardBody>
                 <Stack spacing={3}>
-                  {badges.length === 0 && <Text color="gray.500">No badges found.</Text>}
+                  {badges.length === 0 && <Text color="text.muted">No badges found.</Text>}
                   {badges.map((badge) => (
-                    <Box key={badge.id} p={3} borderRadius="md" borderWidth="1px" borderColor="gray.200">
+                    <Box key={badge.id} p={3} borderRadius="md" borderWidth="1px" borderColor="border.subtle" bg="surface.elevated">
                       <HStack justify="space-between" align="flex-start">
                         <Box>
                           <Text fontWeight="semibold">{badge.title}</Text>
-                          <Text fontSize="sm" color="gray.500">
+                          <Text fontSize="sm" color="text.muted">
                             {badge.description || badge.criteria || 'No description available.'}
                           </Text>
                         </Box>
@@ -907,12 +1130,12 @@ export const UserProfileManagementPage: React.FC<{ viewContext?: ViewContext }> 
                         </Badge>
                       </HStack>
                       {badge.progressPercentage !== undefined && (
-                        <Text fontSize="xs" color="gray.500" mt={2}>
+                        <Text fontSize="xs" color="text.muted" mt={2}>
                           {badge.progressPercentage}% complete
                         </Text>
                       )}
                       {badge.earnedAt && (
-                        <Text fontSize="xs" color="gray.500">
+                        <Text fontSize="xs" color="text.muted">
                           Earned on {formatDate(badge.earnedAt)}
                         </Text>
                       )}
@@ -928,11 +1151,11 @@ export const UserProfileManagementPage: React.FC<{ viewContext?: ViewContext }> 
               </CardHeader>
               <CardBody>
                 <Stack spacing={2}>
-                  <Text fontSize="sm" color="gray.500">
+                  <Text fontSize="sm" color="text.muted">
                     Last modified by
                   </Text>
                   <Text fontWeight="semibold">{profileData.lastModifiedByName || 'Not recorded'}</Text>
-                  <Text fontSize="sm" color="gray.500">
+                  <Text fontSize="sm" color="text.muted">
                     Last modified at
                   </Text>
                   <Text fontWeight="semibold">{formatDateTime(profileData.lastModifiedAt || profileData.updatedAt)}</Text>
@@ -952,14 +1175,12 @@ export const UserProfileManagementPage: React.FC<{ viewContext?: ViewContext }> 
               <CardBody>
                 <Stack spacing={3}>
                   <HStack justify="space-between">
-                    <Text color="gray.500">Viewer role</Text>
-                    <Badge colorScheme="purple">{viewerProfile.role}</Badge>
+                    <Text color="text.muted">User role</Text>
+                    <Badge colorScheme="purple">{currentRoleLabel}</Badge>
                   </HStack>
                   <HStack justify="space-between">
-                    <Text color="gray.500">Organization access</Text>
-                    <Text fontWeight="semibold">
-                      {isSuperAdmin ? 'All organizations' : profileData.companyCode || 'Restricted'}
-                    </Text>
+                    <Text color="text.muted">Organization access</Text>
+                    <Text fontWeight="semibold">{currentOrganizationAccessLabel}</Text>
                   </HStack>
                 </Stack>
               </CardBody>

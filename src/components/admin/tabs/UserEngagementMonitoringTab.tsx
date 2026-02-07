@@ -5,10 +5,13 @@ import {
   Button,
   Card,
   CardBody,
+  Center,
   Divider,
   Flex,
   HStack,
+  Heading,
   Icon,
+  ListItem,
   Modal,
   ModalBody,
   ModalCloseButton,
@@ -18,6 +21,7 @@ import {
   ModalOverlay,
   Select,
   SimpleGrid,
+  Spinner,
   Stack,
   Table,
   Tbody,
@@ -26,18 +30,21 @@ import {
   Th,
   Thead,
   Tr,
+  UnorderedList,
+  VStack,
   useDisclosure,
   useToast,
 } from '@chakra-ui/react'
 import { formatDistanceToNow } from 'date-fns'
-import { AlertTriangle, BarChart2, Clock4, Minus, Search, Target, TrendingDown, TrendingUp, UsersRound } from 'lucide-react'
+import { Activity, AlertTriangle, BarChart2, Clock4, Minus, Search, Target, TrendingDown, TrendingUp, UsersRound } from 'lucide-react'
 import {
   EngagementRosterEntry,
   EngagementTotals,
   EngagementTrendPoint,
   RiskLevel,
+  ManagedUserRecord,
+  OrganizationOption,
 } from '@/services/userManagementService'
-import { fetchAdminOrganizationsList, listenToAdminUsers } from '@/services/admin/adminUsersService'
 import {
   EngagementAvailability,
   fetchAdminEngagementHistory,
@@ -47,6 +54,7 @@ import {
 import { formatAdminFirestoreError } from '@/services/admin/adminErrors'
 import { ResponsiveContainer, LineChart, Line, XAxis, YAxis, Tooltip, Legend, CartesianGrid } from 'recharts'
 import { useAuth } from '@/hooks/useAuth'
+import { useEngagementConfig } from '@/hooks/useEngagementConfig'
 
 type RosterFilters = {
   organization: string
@@ -63,7 +71,7 @@ const riskColors: Record<RiskLevel, { badge: string; border: string }> = {
   low: { badge: 'green', border: 'green.500' },
   emerging: { badge: 'purple', border: 'purple.500' },
   recovering: { badge: 'teal', border: 'teal.500' },
-  unknown: { badge: 'gray', border: 'gray.400' },
+  unknown: { badge: 'gray', border: 'border.control' },
 }
 
 const formatDate = (date?: Date | null) => {
@@ -79,14 +87,20 @@ const trendIcon = (trend: 'up' | 'down' | 'flat') => {
 
 const riskLabel = (level: RiskLevel) => level.charAt(0).toUpperCase() + level.slice(1)
 
-export const UserEngagementMonitoringTab = () => {
+interface UserEngagementMonitoringTabProps {
+  users: ManagedUserRecord[]
+  organizations: OrganizationOption[]
+}
+
+export const UserEngagementMonitoringTab = ({ users: propUsers, organizations: propOrganizations }: UserEngagementMonitoringTabProps) => {
   const toast = useToast()
   const { isOpen, onOpen, onClose } = useDisclosure()
   const { isAdmin } = useAuth()
+  const { engagementEnabled, isLoading: configLoading, enableEngagement } = useEngagementConfig()
+  const [enabling, setEnabling] = useState(false)
 
   const [roster, setRoster] = useState<EngagementRosterEntry[]>([])
   const [trendData, setTrendData] = useState<EngagementTrendPoint[]>([])
-  const [organizations, setOrganizations] = useState<Array<{ id: string; name: string; code?: string }>>([])
   const [mentors, setMentors] = useState<Array<{ id: string; name: string }>>([])
   const [selectedEntry, setSelectedEntry] = useState<EngagementRosterEntry | null>(null)
   const [history, setHistory] = useState<Array<{ label: string; engagementScore: number; impactPoints?: number }>>([])
@@ -117,15 +131,11 @@ export const UserEngagementMonitoringTab = () => {
     try {
       setLoading(true)
       setLoadError(null)
-      const [{ roster: rosterData, trends, availability: engagementState }, orgs] = await Promise.all([
-        fetchAdminEngagementSnapshot(isAdmin),
-        fetchAdminOrganizationsList(isAdmin),
-      ])
+      const { roster: rosterData, trends, availability: engagementState } = await fetchAdminEngagementSnapshot()
 
       setRoster(rosterData)
       setTrendData(trends)
       setAvailability(engagementState)
-      setOrganizations(orgs)
     } catch (err) {
       console.error(err)
       const message = resolveLoadError(err)
@@ -138,20 +148,11 @@ export const UserEngagementMonitoringTab = () => {
 
   useEffect(() => {
     loadEngagementData()
-  }, [])
+  }, [isAdmin, toast])
 
   useEffect(() => {
-    const unsub = listenToAdminUsers({
-      isAdmin,
-      onData: (records) => {
-        setMentors(records.filter((u) => u.role === 'mentor').map((u) => ({ id: u.id, name: u.name })))
-      },
-      onError: (err) => {
-        console.error(err)
-      },
-    })
-    return () => unsub()
-  }, [])
+    setMentors(propUsers.filter((u) => u.role === 'mentor').map((u) => ({ id: u.id, name: u.name })))
+  }, [propUsers])
 
   const filteredRoster = useMemo(() => {
     const now = new Date()
@@ -197,7 +198,7 @@ export const UserEngagementMonitoringTab = () => {
       const avgScore = entries.length ? scoreSum / entries.length : 0
       const change = entries.reduce((sum, entry) => sum + (entry.trend30d || 0), 0) / (entries.length || 1)
       const trend: 'up' | 'down' | 'flat' = change > 0 ? 'up' : change < 0 ? 'down' : 'flat'
-      const color = riskColors[level as RiskLevel]?.border || 'gray.400'
+      const color = riskColors[level as RiskLevel]?.border || 'border.control'
       return { label: riskLabel(level as RiskLevel), userCount: entries.length, avgScore, change, trend, color }
     })
   }, [filteredRoster])
@@ -208,8 +209,8 @@ export const UserEngagementMonitoringTab = () => {
     onOpen()
     try {
       const [historyData, activities] = await Promise.all([
-        fetchAdminEngagementHistory(isAdmin, entry.userId),
-        fetchAdminRecentActivities(isAdmin, entry.userId),
+        fetchAdminEngagementHistory(entry.userId),
+        fetchAdminRecentActivities(entry.userId),
       ])
       setHistory(historyData)
       setRecentActivity(activities)
@@ -289,7 +290,7 @@ export const UserEngagementMonitoringTab = () => {
             : 'Adjust filters to expand your view of monitored learners.'
       return (
         <Flex py={10} direction="column" align="center" gap={3}>
-          <Icon as={BarChart2} boxSize={10} color="gray.300" />
+          <Icon as={BarChart2} boxSize={10} color="text.muted" />
           <Text fontWeight="medium" color="gray.700">
             {emptyMessage}
           </Text>
@@ -377,6 +378,61 @@ export const UserEngagementMonitoringTab = () => {
     </HStack>
   ) : null
 
+  // Loading state for config check
+  if (configLoading) {
+    return (
+      <Center py={20}>
+        <Spinner size="lg" color="purple.500" />
+      </Center>
+    )
+  }
+
+  // Feature not enabled — show activation card
+  if (!engagementEnabled) {
+    return (
+      <Box maxW="600px" mx="auto" py={12}>
+        <Card>
+          <CardBody textAlign="center" py={10}>
+            <Icon as={Activity} boxSize={12} color="purple.400" mb={4} />
+            <Heading size="md" mb={2}>Enable Engagement Monitoring</Heading>
+            <Text color="gray.600" mb={6}>
+              Track at-risk learners, create interventions, and monitor recovery trends across your organizations.
+            </Text>
+            <VStack spacing={4}>
+              <Box textAlign="left" w="full" px={6}>
+                <Text fontSize="sm" fontWeight="medium" mb={2}>This will:</Text>
+                <UnorderedList fontSize="sm" color="gray.600" spacing={1}>
+                  <ListItem>Initialize engagement tracking collections</ListItem>
+                  <ListItem>Enable risk scoring for all learners</ListItem>
+                  <ListItem>Allow mentors to create intervention plans</ListItem>
+                </UnorderedList>
+              </Box>
+              <Button
+                colorScheme="purple"
+                size="lg"
+                isLoading={enabling}
+                onClick={async () => {
+                  setEnabling(true)
+                  try {
+                    await enableEngagement()
+                    toast({ title: 'Engagement monitoring enabled', status: 'success' })
+                  } catch (error) {
+                    toast({ title: 'Failed to enable engagement monitoring', status: 'error' })
+                  } finally {
+                    setEnabling(false)
+                  }
+                }}
+              >
+                Enable Engagement Monitoring
+              </Button>
+            </VStack>
+          </CardBody>
+        </Card>
+      </Box>
+    )
+  }
+
+  // Feature enabled — render full dashboard
   return (
     <Stack spacing={6}>
       <Stack spacing={1}>
@@ -386,7 +442,7 @@ export const UserEngagementMonitoringTab = () => {
         <Text color="gray.600">Track at-risk learners, interventions, and engagement recovery trends across organizations.</Text>
       </Stack>
 
-      <Card border="1px solid" borderColor="gray.200" borderRadius="2xl" bg="white">
+      <Card border="1px solid" borderColor="border.control" borderRadius="2xl" bg="white">
         <CardBody>
           <Stack spacing={4}>
             <Text fontWeight="semibold" color="gray.800">
@@ -395,7 +451,7 @@ export const UserEngagementMonitoringTab = () => {
             <SimpleGrid columns={{ base: 1, md: 2, lg: 3 }} spacing={3}>
               <Select value={filters.organization} onChange={(e) => setFilters((prev) => ({ ...prev, organization: e.target.value }))}>
                 <option value="all">All organizations</option>
-                {organizations.map((org) => (
+                {propOrganizations.map((org) => (
                   <option key={org.id} value={org.code || org.id}>
                     {org.name}
                   </option>
@@ -439,7 +495,7 @@ export const UserEngagementMonitoringTab = () => {
       </Card>
 
       <SimpleGrid columns={{ base: 1, md: 2, lg: 4 }} spacing={4}>
-        <Card border="1px solid" borderColor="gray.200" bg="white" borderRadius="xl">
+        <Card border="1px solid" borderColor="border.control" bg="white" borderRadius="xl">
           <CardBody>
             <HStack justify="space-between">
               <Icon as={UsersRound} color="purple.500" />
@@ -455,7 +511,7 @@ export const UserEngagementMonitoringTab = () => {
           </CardBody>
         </Card>
 
-        <Card border="1px solid" borderColor="gray.200" bg="white" borderRadius="xl">
+        <Card border="1px solid" borderColor="border.control" bg="white" borderRadius="xl">
           <CardBody>
             <Icon as={AlertTriangle} color="orange.400" />
             <Text fontSize="sm" color="gray.500" mt={2}>
@@ -468,7 +524,7 @@ export const UserEngagementMonitoringTab = () => {
           </CardBody>
         </Card>
 
-        <Card border="1px solid" borderColor="gray.200" bg="white" borderRadius="xl">
+        <Card border="1px solid" borderColor="border.control" bg="white" borderRadius="xl">
           <CardBody>
             <Icon as={Target} color="teal.500" />
             <Text fontSize="sm" color="gray.500" mt={2}>
@@ -481,7 +537,7 @@ export const UserEngagementMonitoringTab = () => {
           </CardBody>
         </Card>
 
-        <Card border="1px solid" borderColor="gray.200" bg="white" borderRadius="xl">
+        <Card border="1px solid" borderColor="border.control" bg="white" borderRadius="xl">
           <CardBody>
             <Icon as={Clock4} color="purple.500" />
             <Text fontSize="sm" color="gray.500" mt={2}>
@@ -500,7 +556,7 @@ export const UserEngagementMonitoringTab = () => {
           <Box
             key={summary.label}
             border="1px solid"
-            borderColor="gray.200"
+            borderColor="border.control"
             borderRadius="lg"
             bg="white"
             overflow="hidden"
@@ -527,7 +583,7 @@ export const UserEngagementMonitoringTab = () => {
         ))}
       </SimpleGrid>
 
-      <Card border="1px solid" borderColor="gray.200" bg="white" borderRadius="2xl">
+      <Card border="1px solid" borderColor="border.control" bg="white" borderRadius="2xl">
         <CardBody>
           <Stack spacing={4}>
             <HStack justify="space-between">
@@ -545,7 +601,7 @@ export const UserEngagementMonitoringTab = () => {
         </CardBody>
       </Card>
 
-      <Card border="1px solid" borderColor="gray.200" bg="white" borderRadius="2xl">
+      <Card border="1px solid" borderColor="border.control" bg="white" borderRadius="2xl">
         <CardBody>
           <Stack spacing={4}>
             <Text fontWeight="semibold" color="gray.800">
@@ -573,7 +629,7 @@ export const UserEngagementMonitoringTab = () => {
                 </Stack>
 
                 <SimpleGrid columns={{ base: 1, md: 3 }} spacing={3}>
-                  <Box border="1px solid" borderColor="gray.200" p={4} borderRadius="md" bg="gray.50">
+                  <Box border="1px solid" borderColor="border.control" p={4} borderRadius="md" bg="gray.50">
                     <Text fontSize="sm" color="gray.500">
                       Engagement score
                     </Text>
@@ -581,7 +637,7 @@ export const UserEngagementMonitoringTab = () => {
                       {selectedEntry.engagementScore.toFixed(1)}
                     </Text>
                   </Box>
-                  <Box border="1px solid" borderColor="gray.200" p={4} borderRadius="md" bg="gray.50">
+                  <Box border="1px solid" borderColor="border.control" p={4} borderRadius="md" bg="gray.50">
                     <Text fontSize="sm" color="gray.500">
                       Last active
                     </Text>
@@ -589,7 +645,7 @@ export const UserEngagementMonitoringTab = () => {
                       {selectedEntry.lastActive ? formatDistanceToNow(selectedEntry.lastActive, { addSuffix: true }) : 'Unknown'}
                     </Text>
                   </Box>
-                  <Box border="1px solid" borderColor="gray.200" p={4} borderRadius="md" bg="gray.50">
+                  <Box border="1px solid" borderColor="border.control" p={4} borderRadius="md" bg="gray.50">
                     <Text fontSize="sm" color="gray.500">
                       Time in risk level
                     </Text>
@@ -599,7 +655,7 @@ export const UserEngagementMonitoringTab = () => {
                   </Box>
                 </SimpleGrid>
 
-                <Box border="1px solid" borderColor="gray.200" borderRadius="lg" p={4}>
+                <Box border="1px solid" borderColor="border.control" borderRadius="lg" p={4}>
                   <Text fontWeight="semibold" mb={2}>
                     Engagement &amp; intervention history
                   </Text>
@@ -626,7 +682,7 @@ export const UserEngagementMonitoringTab = () => {
                   )}
                 </Box>
 
-                <Box border="1px solid" borderColor="gray.200" borderRadius="lg" p={4}>
+                <Box border="1px solid" borderColor="border.control" borderRadius="lg" p={4}>
                   <Text fontWeight="semibold" mb={3}>
                     Recent activity
                   </Text>

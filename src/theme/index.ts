@@ -33,11 +33,13 @@ const brandColors = {
   indigo: '#350e6f',
   // Legacy/compatibility aliases mapped to new semantic neutrals
   primaryMuted: '#ede9fe',
+  canvas: '#f8fafc',
   accent: '#f8fafc',
   sidebar: '#f1f5f9',
   text: '#0F172A',
-  subtleText: '#334155',
-  border: '#E2E8F0',
+  subtleText: '#1e293b', // WCAG AAA compliant (was #334155)
+  // Used widely across dashboards; keep comfortably above 3:1 vs white for visible boundaries.
+  border: '#7A879B',
   warning: '#f4540c',
   textLight: '#ffffff',
   textOnDark: '#f3f4f6',
@@ -60,19 +62,22 @@ const colors = {
     muted: '#F1F5F9',
     elevated: '#FFFFFF',
   },
-  // Text Colors - For readability
+  // Text Colors - For readability (WCAG AA/AAA compliant)
   text: {
     primary: '#0F172A',
-    secondary: '#334155',
-    muted: '#64748B',
-    subtle: '#64748B',
+    secondary: '#1e293b', // WCAG AAA compliant (was #334155)
+    muted: '#475569', // WCAG AA compliant (was #64748B - failed AA)
+    subtle: '#475569', // WCAG AA compliant (was #64748B - failed AA)
     inverse: '#FFFFFF',
     accentGold: '#FFEAC2',
   },
   // Border Colors
   border: {
-    subtle: '#E2E8F0',
+    subtle: '#7A879B',
     strong: '#CBD5E1',
+    // WCAG 2.1 1.4.11 (Non-text Contrast): ensure component boundaries (inputs/outline buttons) are visible
+    // against white/light surfaces (>= 3:1 vs #FFFFFF).
+    control: '#7A879B',
     card: '#D6DEE8',
   },
   // Accent Colors - For highlights and status
@@ -83,7 +88,8 @@ const colors = {
     purpleBorder: '#c4b5fd', // border tint for purple callouts
   },
   focusRing: {
-    default: 'rgba(53, 14, 111, 0.35)',
+    default: 'rgba(53, 14, 111, 0.45)',
+    error: 'rgba(220, 38, 38, 0.4)',
   },
   // Danger/Destructive Actions
   danger: {
@@ -178,7 +184,7 @@ const colors = {
 }
 
 const config: ThemeConfig = {
-  initialColorMode: 'dark',
+  initialColorMode: 'light',
   useSystemColorMode: false,
 }
 
@@ -189,6 +195,9 @@ const components = {
       fontWeight: '600',
       borderRadius: 'lg',
       transition: 'all 0.2s ease-in-out',
+      _focusVisible: {
+        boxShadow: 'focus',
+      },
     },
     variants: {
       primary: {
@@ -220,6 +229,18 @@ const components = {
         _hover: {
           bg: 'surface.subtle',
           color: 'text.primary',
+        },
+      },
+      outline: {
+        bg: 'surface.default',
+        color: 'text.primary',
+        border: '1px solid',
+        borderColor: 'border.control',
+        _hover: {
+          bg: 'surface.subtle',
+        },
+        _active: {
+          bg: 'surface.muted',
         },
       },
       accent: {
@@ -278,7 +299,7 @@ const components = {
         borderRadius: 'xl',
         boxShadow: 'card',
         border: '1px solid',
-        borderColor: 'border.subtle',
+        borderColor: 'border.control',
       },
     },
     variants: {
@@ -324,8 +345,8 @@ const components = {
         color: 'brand.primary',
       },
       success: {
-        bg: 'success.500',
-        color: 'text.primary',
+        bg: 'success.600',
+        color: 'text.inverse',
       },
       warning: {
         bg: 'tint.accentWarning',
@@ -404,19 +425,22 @@ const components = {
     variants: {
       outline: {
         field: {
-          borderColor: 'border.subtle',
+          borderColor: 'border.control',
           borderRadius: 'lg',
           bg: 'surface.default',
           _placeholder: {
             color: 'text.subtle',
           },
+          _hover: {
+            borderColor: 'border.control',
+          },
           _focus: {
             borderColor: 'brand.primary',
-            boxShadow: '0 0 0 1px var(--chakra-colors-focusRing-default)',
+            boxShadow: 'focus',
           },
           _invalid: {
             borderColor: 'danger.DEFAULT',
-            boxShadow: '0 0 0 1px var(--chakra-colors-danger-DEFAULT)',
+            boxShadow: 'focusError',
           },
         },
       },
@@ -430,12 +454,19 @@ const components = {
     variants: {
       outline: {
         field: {
-          borderColor: 'border.subtle',
+          borderColor: 'border.control',
           borderRadius: 'lg',
           bg: 'surface.default',
+          _hover: {
+            borderColor: 'border.control',
+          },
           _focus: {
             borderColor: 'brand.primary',
-            boxShadow: '0 0 0 1px var(--chakra-colors-focusRing-default)',
+            boxShadow: 'focus',
+          },
+          _invalid: {
+            borderColor: 'danger.DEFAULT',
+            boxShadow: 'focusError',
           },
         },
       },
@@ -448,12 +479,19 @@ const components = {
     },
     variants: {
       outline: {
-        borderColor: 'border.subtle',
+        borderColor: 'border.control',
         borderRadius: 'lg',
         bg: 'surface.default',
+        _hover: {
+          borderColor: 'border.control',
+        },
         _focus: {
           borderColor: 'brand.primary',
-          boxShadow: '0 0 0 1px var(--chakra-colors-focusRing-default)',
+          boxShadow: 'focus',
+        },
+        _invalid: {
+          borderColor: 'danger.DEFAULT',
+          boxShadow: 'focusError',
         },
       },
     },
@@ -461,7 +499,7 @@ const components = {
   Checkbox: {
     baseStyle: {
       control: {
-        borderColor: 'border.strong',
+        borderColor: 'border.control',
         _checked: {
           bg: 'brand.primary',
           borderColor: 'brand.primary',
@@ -472,11 +510,40 @@ const components = {
   Radio: {
     baseStyle: {
       control: {
-        borderColor: 'border.strong',
+        borderColor: 'border.control',
         _checked: {
           bg: 'brand.primary',
           borderColor: 'brand.primary',
         },
+      },
+    },
+  },
+  Divider: {
+    baseStyle: {
+      borderColor: 'border.control',
+    },
+  },
+  Menu: {
+    baseStyle: {
+      list: {
+        bg: 'surface.default',
+        borderColor: 'border.control',
+        boxShadow: 'md',
+      },
+      item: {
+        color: 'text.primary',
+        _hover: {
+          bg: 'surface.subtle',
+        },
+        _focus: {
+          bg: 'surface.subtle',
+        },
+      },
+      divider: {
+        borderColor: 'border.control',
+      },
+      groupTitle: {
+        color: 'text.muted',
       },
     },
   },
@@ -576,6 +643,7 @@ const shadows = {
   card: '0 10px 30px rgba(15, 23, 42, 0.08)',
   'card-elevated': '0 20px 45px rgba(15, 23, 42, 0.12)',
   focus: '0 0 0 4px var(--chakra-colors-focusRing-default)',
+  focusError: '0 0 0 4px var(--chakra-colors-focusRing-error)',
   inner: 'inset 0 2px 4px 0 rgba(0, 0, 0, 0.05)',
 }
 

@@ -5,12 +5,12 @@ import {
   PointsTransaction,
 } from './useLeaderboardData'
 import { LeaderboardContext, normalizeLeaderboardTier } from './useLeaderboardContext'
+import { getDisplayName } from '@/utils/displayName'
 
 export interface LeaderboardRow {
   user: UserProfile
   activePoints: number
   totalPoints: number
-  level: number
   badgeCount: number
   rank: number
 }
@@ -22,7 +22,7 @@ interface LeaderboardMetricsInput {
   challenges: ChallengeRecord[]
   profile: UserProfile | null
   timeframe: LeaderboardTimeframe
-  sortField: 'points' | 'level' | 'name'
+  sortField: 'points' | 'name'
   sortDirection: 'asc' | 'desc'
   timeframeStart: Date | null
 }
@@ -143,7 +143,6 @@ export const useLeaderboardMetrics = ({
           user,
           activePoints,
           totalPoints: user.totalPoints || 0,
-          level: user.level || 1,
           badgeCount,
           rank: 0,
         }
@@ -151,13 +150,9 @@ export const useLeaderboardMetrics = ({
 
     const sorted = rows.sort((a, b) => {
       if (sortField === 'name') {
-        const aName = a.user.fullName || a.user.firstName
-        const bName = b.user.fullName || b.user.firstName
+        const aName = getDisplayName(a.user, '')
+        const bName = getDisplayName(b.user, '')
         return sortDirection === 'asc' ? aName.localeCompare(bName) : bName.localeCompare(aName)
-      }
-
-      if (sortField === 'level') {
-        return sortDirection === 'asc' ? a.level - b.level : b.level - a.level
       }
 
       return sortDirection === 'asc' ? a.activePoints - b.activePoints : b.activePoints - a.activePoints
@@ -187,10 +182,8 @@ export const useLeaderboardMetrics = ({
   const cohortStats = useMemo(() => {
     const active = userRow?.activePoints || 0
     const total = userRow?.totalPoints || 0
-    const level = userRow?.level || profile?.level || 1
     const maxActive = Math.max(...leaderboardRows.map((row) => row.activePoints), active)
     const maxTotal = Math.max(...leaderboardRows.map((row) => row.totalPoints), total)
-    const maxLevel = Math.max(...leaderboardRows.map((row) => row.level), level)
 
     const avgActive = leaderboardRows.length
       ? Math.round(leaderboardRows.reduce((sum, row) => sum + row.activePoints, 0) / leaderboardRows.length)
@@ -198,20 +191,14 @@ export const useLeaderboardMetrics = ({
     const avgTotal = leaderboardRows.length
       ? Math.round(leaderboardRows.reduce((sum, row) => sum + row.totalPoints, 0) / leaderboardRows.length)
       : 0
-    const avgLevel = leaderboardRows.length
-      ? Math.round(leaderboardRows.reduce((sum, row) => sum + row.level, 0) / leaderboardRows.length)
-      : 1
 
     return {
       active,
       total,
-      level,
       maxActive: maxActive || active,
       maxTotal: maxTotal || total,
-      maxLevel: maxLevel || level,
       avgActive,
       avgTotal,
-      avgLevel,
     }
   }, [leaderboardRows, userRow])
 
@@ -233,7 +220,7 @@ export const useLeaderboardMetrics = ({
   const segmentStats = {
     weeklyPoints,
     monthlyPoints,
-    activeChallenges: segmentChallenges.filter((c) => c.status === 'active').length,
+    activeChallenges: segmentChallenges.filter((c) => c.status === 'active' || c.status === 'pending').length,
     badgesEarned: userRow?.badgeCount || 0,
   }
 

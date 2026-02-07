@@ -94,7 +94,7 @@ export const ResetPasswordPage: React.FC = () => {
   if (isResetFlow) {
     if (resetLoading && !resetComplete && !resetError && !resetEmail) {
       return (
-        <div className="rounded-lg border border-gray-200 bg-white px-4 py-6 text-center text-sm text-gray-700">
+        <div className="rounded-lg border border-border-control bg-white px-4 py-6 text-center text-sm text-gray-700">
           Verifying your reset link...
         </div>
       )
@@ -138,7 +138,7 @@ export const ResetPasswordPage: React.FC = () => {
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">New password</label>
             <input
-              className="h-10 w-full rounded-md border bg-gray-50 px-3 text-sm text-gray-900 placeholder:text-gray-500 focus:outline-none focus:ring-2 focus:ring-[#350e6f]"
+              className="h-10 w-full rounded-md border border-border-control bg-gray-50 px-3 text-sm text-gray-900 placeholder:text-gray-500 focus:outline-none focus:ring-2 focus:ring-[#350e6f]"
               type="password"
               value={resetForm.password}
               onChange={(e) => setResetForm((prev) => ({ ...prev, password: e.target.value }))}
@@ -149,7 +149,7 @@ export const ResetPasswordPage: React.FC = () => {
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">Confirm password</label>
             <input
-              className="h-10 w-full rounded-md border bg-gray-50 px-3 text-sm text-gray-900 placeholder:text-gray-500 focus:outline-none focus:ring-2 focus:ring-[#350e6f]"
+              className="h-10 w-full rounded-md border border-border-control bg-gray-50 px-3 text-sm text-gray-900 placeholder:text-gray-500 focus:outline-none focus:ring-2 focus:ring-[#350e6f]"
               type="password"
               value={resetForm.confirmPassword}
               onChange={(e) =>
@@ -224,7 +224,7 @@ export const ResetPasswordPage: React.FC = () => {
           <div className="relative">
             <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-500" />
             <input
-              className="h-10 w-full rounded-md border bg-gray-50 pl-9 pr-3 text-sm text-gray-900 placeholder:text-gray-500 focus:outline-none focus:ring-2 focus:ring-[#350e6f]"
+              className="h-10 w-full rounded-md border border-border-control bg-gray-50 pl-9 pr-3 text-sm text-gray-900 placeholder:text-gray-500 focus:outline-none focus:ring-2 focus:ring-[#350e6f]"
               type="email"
               value={email}
               onChange={e => setEmail(e.target.value)}

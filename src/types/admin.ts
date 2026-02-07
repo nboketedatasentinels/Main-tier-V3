@@ -1,4 +1,4 @@
-import type { Timestamp } from 'firebase/firestore'
+import type { FieldValue, Timestamp } from 'firebase/firestore'
 import type { JourneyType } from '@/config/pointsConfig'
 
 export interface AdminActivityLogEntry {
@@ -23,12 +23,22 @@ export interface SuperAdminDashboardMetrics {
   newRegistrations: number
 }
 
-export type OrganizationStatus = 'active' | 'inactive' | 'pending' | 'suspended' | 'watch'
+export type OrganizationStatus = 'active' | 'inactive' | 'pending' | 'suspended' | 'watch' | 'paused'
 
 export interface OrganizationRecord {
   id?: string
   name: string
   code: string
+  /**
+   * Aggregated organization statistics written by `organizationStatsService`.
+   * These fields may be absent until stats have been computed at least once.
+   */
+  memberCount?: number
+  activeUsers?: number
+  newThisWeek?: number
+  averageEngagementRate?: number
+  lastActive?: Timestamp | string | Date | null
+  statsUpdatedAt?: Timestamp | string | Date | null
   /**
    * Cohort size and total paid license count (includes users, mentors, ambassadors, and team leaders).
    */
@@ -84,11 +94,14 @@ export interface OrganizationRecord {
   assignedAmbassadorBy?: string | null
   assignedAmbassadorName?: string | null
   assignedAmbassadorEmail?: string | null
+  partnerId?: string | null
   transformationPartnerId?: string | null
   assignedPartnerAt?: Timestamp | string | Date
   assignedPartnerBy?: string | null
   assignedPartnerName?: string | null
   assignedPartnerEmail?: string | null
+  hasMentor?: boolean
+  hasAmbassador?: boolean
   capacityLastAlertThreshold?: 75 | 90 | 95 | 100 | null
 }
 
@@ -136,7 +149,70 @@ export interface TaskNotificationRecord {
   severity?: string
 }
 
-export type AdminRole = 'super_admin' | 'partner' | 'admin' | 'mentor' | 'ambassador' | 'team_leader'
+export type AdminRole = 'super_admin' | 'partner' | 'mentor' | 'ambassador'
+
+export type PartnerAssignmentStatus = 'active' | 'watch' | 'paused' | 'inactive'
+
+export interface PartnerAssignment {
+  organizationId?: string | null
+  companyCode?: string
+  status?: PartnerAssignmentStatus
+}
+
+export interface PartnerAdminSnapshot {
+  partnerId: string
+  role: 'partner'
+  assignedOrganizations: PartnerAssignment[]
+  createdAt?: Timestamp | string | Date | FieldValue
+  updatedAt?: Timestamp | string | Date | FieldValue
+}
+
+export interface PartnerAdminUser {
+  id: string
+  name: string
+  fullName?: string
+  createdAt?: string
+  lastActiveAt?: string
+  programStartDate?: string
+  email: string
+  companyCode: string
+  organizationId?: string
+  progressPercent: number
+  currentWeek: number
+  status: 'Active' | 'Paused' | 'Onboarding'
+  lastActive: string
+  riskStatus: 'engaged' | 'watch' | 'concern' | 'critical' | 'at_risk'
+  weeklyEarned: number
+  weeklyRequired: number
+  role?: 'learner' | 'mentor' | 'user' | 'team_leader'
+  riskReasons?: string[]
+  registrationDate?: string
+  interventions?: number
+  nudgeEnabled?: boolean
+  adminNotes?: string
+  membershipStatus?: 'active' | 'inactive' | 'paid' | 'trial'
+  accountStatus?: 'active' | 'inactive' | 'suspended'
+  avatarUrl?: string | null
+}
+
+export interface PartnerAdminPointsOverview {
+  totalPoints: number
+  weeklyPoints: number
+  pendingPoints: number
+  approvedPoints: number
+  rejectedPoints: number
+}
+
+export interface PartnerAdminDataSnapshot {
+  partnerId: string
+  assignedOrganizations: PartnerAssignment[]
+  organizations: OrganizationRecord[]
+  users: PartnerAdminUser[]
+  pointsOverview: PartnerAdminPointsOverview
+  usersFetchedAt?: Date
+  createdAt?: Timestamp | string | Date
+  updatedAt?: Timestamp | string | Date
+}
 
 export interface AdminUserRecord {
   id: string
@@ -169,7 +245,6 @@ export interface AdminMetrics {
   partners: number
   mentors: number
   ambassadors: number
-  teamLeaders: number
 }
 
 export type InvitationMethod = 'email' | 'one_time_code'
@@ -279,6 +354,8 @@ export interface OrganizationUserProfile {
   lastActive?: Date | null
   createdAt?: Date | null
   avatarUrl?: string | null
+  organizationId?: string | null
+  companyCode?: string | null
 }
 
 export interface OrganizationStatistics {
@@ -293,7 +370,6 @@ export type OrganizationUserRoleFilter =
   | 'all'
   | 'user'
   | 'mentor'
-  | 'team_leader'
   | 'ambassador'
   | 'partner'
 

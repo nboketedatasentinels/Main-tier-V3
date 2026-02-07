@@ -1,12 +1,15 @@
 import { toUserRole } from './role'
 
-export const getDashboardPathForRole = (role?: string | null) => {
+export const getDashboardPathForRole = (
+  role?: string | null,
+  membershipStatus?: 'free' | 'paid' | null,
+) => {
   const normalizedRole = toUserRole(role)
 
   switch (normalizedRole) {
     case 'user':
     case 'free_user':
-      return '/app/dashboard/free'
+      return membershipStatus === 'paid' ? '/app/dashboard/member' : '/app/dashboard/free'
     case 'paid_member':
       return '/app/dashboard/member'
 
@@ -16,12 +19,11 @@ export const getDashboardPathForRole = (role?: string | null) => {
     case 'ambassador':
       return '/ambassador/dashboard'
 
-    case 'admin':
     case 'partner':
-      return '/admin/dashboard'
+      return '/partner/dashboard'
 
     case 'super_admin':
-      return '/super-admin/dashboard'
+      return '/admin/dashboard'
 
     default:
       return '/app/weekly-glance'

@@ -13,6 +13,9 @@ import {
   HStack,
   Icon,
   Box,
+  Alert,
+  AlertDescription,
+  AlertIcon,
   FormControl,
   FormLabel,
   Input,
@@ -28,6 +31,8 @@ interface BuildVillageModalProps {
   villagePurpose?: string
   onVillageNameChange?: (value: string) => void
   onVillagePurposeChange?: (value: string) => void
+  isLoading?: boolean
+  error?: string
 }
 
 export const BuildVillageModal: React.FC<BuildVillageModalProps> = ({
@@ -38,15 +43,24 @@ export const BuildVillageModal: React.FC<BuildVillageModalProps> = ({
   villagePurpose,
   onVillageNameChange,
   onVillagePurposeChange,
+  isLoading = false,
+  error,
 }) => {
   const showForm = Boolean(onVillageNameChange && onVillagePurposeChange)
 
   return (
-    <Modal isOpen={isOpen} onClose={onSkip} isCentered size="lg">
+    <Modal
+      isOpen={isOpen}
+      onClose={onSkip}
+      isCentered
+      size="lg"
+      closeOnOverlayClick={!isLoading}
+      closeOnEsc={!isLoading}
+    >
       <ModalOverlay bg="blackAlpha.600" />
       <ModalContent>
         <ModalHeader>Create your village</ModalHeader>
-        <ModalCloseButton />
+        <ModalCloseButton isDisabled={isLoading} />
         <ModalBody>
           <VStack align="stretch" spacing={4}>
             <Text color="brand.subtleText">
@@ -73,6 +87,13 @@ export const BuildVillageModal: React.FC<BuildVillageModalProps> = ({
               Free users get one village to start experimenting. You can skip for now, but we will remember when you are ready.
             </Text>
 
+            {error && (
+              <Alert status="error" borderRadius="md" alignItems="flex-start">
+                <AlertIcon />
+                <AlertDescription>{error}</AlertDescription>
+              </Alert>
+            )}
+
             {showForm && (
               <VStack align="stretch" spacing={3} pt={2}>
                 <FormControl>
@@ -83,6 +104,7 @@ export const BuildVillageModal: React.FC<BuildVillageModalProps> = ({
                     placeholder="e.g. Impact Innovators"
                     bg="white"
                     borderColor="brand.border"
+                    isDisabled={isLoading}
                   />
                 </FormControl>
 
@@ -94,6 +116,7 @@ export const BuildVillageModal: React.FC<BuildVillageModalProps> = ({
                     placeholder="Describe what your village will focus on"
                     bg="white"
                     borderColor="brand.border"
+                    isDisabled={isLoading}
                   />
                 </FormControl>
               </VStack>
@@ -101,10 +124,16 @@ export const BuildVillageModal: React.FC<BuildVillageModalProps> = ({
           </VStack>
         </ModalBody>
         <ModalFooter gap={3}>
-          <Button variant="outline" onClick={onSkip}>
+          <Button variant="outline" onClick={onSkip} isDisabled={isLoading}>
             Skip for now
           </Button>
-          <Button colorScheme="purple" onClick={onCreate} isDisabled={showForm ? !villageName?.trim() : false}>
+          <Button
+            colorScheme="purple"
+            onClick={onCreate}
+            isDisabled={isLoading || (showForm ? !villageName?.trim() : false)}
+            isLoading={isLoading}
+            loadingText="Creating village..."
+          >
             Build my village
           </Button>
         </ModalFooter>

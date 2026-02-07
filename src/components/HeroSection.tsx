@@ -9,16 +9,16 @@ export const HeroSection: React.FC = () => {
     <section className="relative w-full min-h-screen flex items-center justify-center overflow-hidden text-white">
       <div
         aria-hidden="true"
-        className="pointer-events-none hidden sm:block absolute right-[-60px] top-[-60px] h-48 w-48 md:h-64 md:w-64 rounded-full bg-[#E3D2FF] opacity-30 blur-[60px] -z-10"
+        className="pointer-events-none hidden sm:block absolute right-[-60px] top-[-60px] h-48 w-48 md:h-64 md:w-64 rounded-full bg-brand-indigo-100 opacity-30 blur-[60px] -z-10"
       />
       <div
         aria-hidden="true"
-        className="pointer-events-none hidden sm:block absolute left-[-80px] bottom-[-80px] h-64 w-64 md:h-96 md:w-96 rounded-full bg-[#FFEAC2] opacity-20 blur-[60px] -z-10"
+        className="pointer-events-none hidden sm:block absolute left-[-80px] bottom-[-80px] h-64 w-64 md:h-96 md:w-96 rounded-full bg-accent-gold-100 opacity-20 blur-[60px] -z-10"
       />
 
       <div className="relative z-10 mx-auto w-full max-w-6xl px-4 sm:px-6 lg:px-8 py-16 sm:py-20 text-center">
         <div className="mb-6 flex justify-center">
-          <div className="inline-flex items-center gap-2 rounded-full bg-[#E3D2FF] px-4 py-2 text-sm font-medium text-[#270540] shadow-sm">
+          <div className="inline-flex items-center gap-2 rounded-full bg-brand-indigo-100 px-4 py-2 text-sm font-medium text-brand-indigo-800 shadow-sm">
             <Award className="h-4 w-4" aria-hidden="true" />
             CPD-Accredited Training
           </div>
@@ -31,7 +31,7 @@ export const HeroSection: React.FC = () => {
           style={{ fontFamily: 'Poppins, Inter, system-ui, sans-serif' }}
         >
           Digital Transformation Doesn&apos;t Happen Alone.{' '}
-          <span className="text-[#FFEAC2]">Even Beyoncé Has a Team.</span>
+          <span className="text-accent-gold-100">Even Beyoncé Has a Team.</span>
         </h1>
 
         <p
@@ -49,9 +49,9 @@ export const HeroSection: React.FC = () => {
           <button
             type="button"
             onClick={() => navigate('/signup')}
-            className="h-12 sm:h-14 px-6 sm:px-8 rounded-full bg-[#5A0DA0] text-white font-semibold shadow-lg hover:opacity-95
+            className="h-12 sm:h-14 px-6 sm:px-8 rounded-full bg-brand-indigo-500 text-white font-semibold shadow-lg hover:opacity-95
               w-full sm:w-auto max-w-md
-              focus:outline-none focus:ring-2 focus:ring-[#5A0DA0]"
+              focus:outline-none focus:ring-2 focus:ring-brand-indigo-500"
           >
             Get Started (+50 XP)
           </button>

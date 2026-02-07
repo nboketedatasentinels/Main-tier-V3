@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import {
+  Avatar,
   Badge,
   Box,
   Button,
@@ -26,6 +27,7 @@ import {
   SimpleGrid,
   Text,
   Textarea,
+  Tooltip,
   useDisclosure,
   useToast,
 } from '@chakra-ui/react'
@@ -36,10 +38,9 @@ import {
   ManagedUserRecord,
   OrganizationOption,
   assignRoleToUser,
-  fetchOrganizationsList,
-  listenToUsers,
   updateUser,
 } from '@/services/userManagementService'
+import { getDisplayName } from '@/utils/displayName'
 
 type LeadershipRole = 'mentor' | 'ambassador'
 
@@ -54,7 +55,13 @@ const statusBadge = (status?: string) => {
   return { bg: 'gray.100', color: 'gray.600', label: 'Unknown' }
 }
 
-export const LeadershipCouncil = () => {
+interface LeadershipCouncilProps {
+  users: ManagedUserRecord[]
+  organizations: OrganizationOption[]
+  loadingUsers: boolean
+}
+
+export const LeadershipCouncil = ({ users: propUsers, organizations: propOrganizations, loadingUsers }: LeadershipCouncilProps) => {
   const toast = useToast()
   const { isAdmin, isSuperAdmin } = useAuth()
   const canViewLeadership = isAdmin || isSuperAdmin
@@ -62,10 +69,7 @@ export const LeadershipCouncil = () => {
 
   const [activeRole, setActiveRole] = useState<LeadershipRole>('mentor')
   const [leaders, setLeaders] = useState<{ mentors: ManagedUserRecord[]; ambassadors: ManagedUserRecord[] }>({ mentors: [], ambassadors: [] })
-  const [allUsers, setAllUsers] = useState<ManagedUserRecord[]>([])
-  const [companies, setCompanies] = useState<OrganizationOption[]>([])
   const [search, setSearch] = useState('')
-  const [loading, setLoading] = useState(true)
   const [isAssigning, setIsAssigning] = useState(false)
   const [isUpdating, setIsUpdating] = useState(false)
   const [removingId, setRemovingId] = useState<string | null>(null)
@@ -84,31 +88,11 @@ export const LeadershipCouncil = () => {
   const editModal = useDisclosure()
 
   useEffect(() => {
-    const unsub = listenToUsers({
-      onData: (records) => {
-        setAllUsers(records)
-        setLeaders({
-          mentors: records.filter((user) => user.role === 'mentor'),
-          ambassadors: records.filter((user) => user.role === 'ambassador'),
-        })
-        setLoading(false)
-      },
-      onError: (err) => {
-        console.error(err)
-        setLoading(false)
-        toast({ title: 'Unable to load leadership roster', status: 'error' })
-      },
+    setLeaders({
+      mentors: propUsers.filter((user) => user.role === 'mentor'),
+      ambassadors: propUsers.filter((user) => user.role === 'ambassador'),
     })
-
-    fetchOrganizationsList()
-      .then(setCompanies)
-      .catch((err) => {
-        console.error(err)
-        toast({ title: 'Unable to load organizations', status: 'error' })
-      })
-
-    return () => unsub()
-  }, [toast])
+  }, [propUsers])
 
   const activeLabel = roleLabels[activeRole]
 
@@ -120,14 +104,31 @@ export const LeadershipCouncil = () => {
     )
   }, [activeRole, leaders.ambassadors, leaders.mentors, search])
 
+  const uniqueOrgCount = useMemo(() => {
+    const allLeaders = [...leaders.mentors, ...leaders.ambassadors]
+    const orgs = new Set(allLeaders.map(m => m.companyId).filter(Boolean))
+    return orgs.size
+  }, [leaders.mentors, leaders.ambassadors])
+
+  // Check if we should show "Last Active" and "Joined" columns
+  const showLastActiveColumn = useMemo(() => {
+    const knownCount = filteredLeaders.filter(m => m.lastActive).length
+    return knownCount / (filteredLeaders.length || 1) > 0.5
+  }, [filteredLeaders])
+
+  const showJoinedColumn = useMemo(() => {
+    const knownCount = filteredLeaders.filter(m => m.createdAt).length
+    return knownCount / (filteredLeaders.length || 1) > 0.5
+  }, [filteredLeaders])
+
   const availableMembers = useMemo(
-    () => allUsers.filter((user) => !['mentor', 'ambassador'].includes(user.role)),
-    [allUsers],
+    () => propUsers.filter((user) => !['mentor', 'ambassador'].includes(user.role)),
+    [propUsers],
   )
 
   const organizationOptions = useMemo(
-    () => companies.map((company) => ({ value: company.id, label: `${company.name}${company.code ? ` (${company.code})` : ''}` })),
-    [companies],
+    () => propOrganizations.map((company) => ({ value: company.id, label: `${company.name}${company.code ? ` (${company.code})` : ''}` })),
+    [propOrganizations],
   )
 
   const clearPromotionForm = () => {
@@ -144,7 +145,7 @@ export const LeadershipCouncil = () => {
 
     try {
       setIsAssigning(true)
-      const company = companies.find((org) => org.id === selectedCompanyId)
+      const company = propOrganizations.find((org) => org.id === selectedCompanyId)
       await assignRoleToUser(selectedUserId, assignRole, company || null, assignmentNotes)
       toast({ title: `${activeLabel} assigned successfully.`, status: 'success' })
       assignModal.onClose()
@@ -169,7 +170,7 @@ export const LeadershipCouncil = () => {
     if (!editingMember) return
     try {
       setIsUpdating(true)
-      const company = companies.find((org) => org.id === editingCompanyId)
+      const company = propOrganizations.find((org) => org.id === editingCompanyId)
       const updates: Partial<ManagedUserRecord> = {
         companyId: company?.id || null,
         companyCode: company?.code || null,
@@ -216,10 +217,10 @@ export const LeadershipCouncil = () => {
   }
 
   const renderAccessDenied = () => (
-    <Card border="1px solid" borderColor="gray.200" bg="white" borderRadius="2xl">
+    <Card border="1px solid" borderColor="border.control" bg="white" borderRadius="2xl">
       <CardBody>
         <Flex direction="column" align="center" gap={3}>
-          <Icon as={UserSquare2} boxSize={10} color="gray.300" />
+          <Icon as={UserSquare2} boxSize={10} color="text.muted" />
           <Text fontWeight="semibold">Admin access required</Text>
           <Text color="gray.600" textAlign="center">
             Leadership Council tools are restricted to administrators. Please contact support if you need assistance.
@@ -234,7 +235,7 @@ export const LeadershipCouncil = () => {
       <Box
         bgGradient="linear(to-br, purple.50, white)"
         border="1px solid"
-        borderColor="gray.200"
+        borderColor="border.control"
         borderRadius="3xl"
         p={8}
         shadow="sm"
@@ -250,12 +251,12 @@ export const LeadershipCouncil = () => {
               Mentor &amp; Ambassador oversight
             </Text>
             <Text color="gray.600" mt={2}>
-              Promote trusted members, track their organisation alignment, and ensure our leadership network has the right support.
+              {leaders.mentors.length} active mentor{leaders.mentors.length !== 1 ? 's' : ''} and {leaders.ambassadors.length} ambassador{leaders.ambassadors.length !== 1 ? 's' : ''} across {uniqueOrgCount} organization{uniqueOrgCount !== 1 ? 's' : ''}
             </Text>
           </GridItem>
           <GridItem>
             <SimpleGrid columns={{ base: 1, sm: 2 }} spacing={4}>
-              <Card border="1px solid" borderColor="gray.200" bg="white" borderRadius="xl">
+              <Card border="1px solid" borderColor="border.control" bg="white" borderRadius="xl">
                 <CardBody>
                   <Text fontSize="xs" color="gray.500" textTransform="uppercase" letterSpacing="widest">
                     Active Mentors
@@ -263,7 +264,7 @@ export const LeadershipCouncil = () => {
                   <Text fontSize="2xl" fontWeight="bold">{leaders.mentors.length}</Text>
                 </CardBody>
               </Card>
-              <Card border="1px solid" borderColor="gray.200" bg="white" borderRadius="xl">
+              <Card border="1px solid" borderColor="border.control" bg="white" borderRadius="xl">
                 <CardBody>
                   <Text fontSize="xs" color="gray.500" textTransform="uppercase" letterSpacing="widest">
                     Active Ambassadors
@@ -279,7 +280,7 @@ export const LeadershipCouncil = () => {
       {!canViewLeadership ? (
         renderAccessDenied()
       ) : (
-        <Card border="1px solid" borderColor="gray.200" bg="white" borderRadius="2xl">
+        <Card border="1px solid" borderColor="border.control" bg="white" borderRadius="2xl">
           <CardBody>
             <Stack spacing={6}>
               <Flex
@@ -314,7 +315,7 @@ export const LeadershipCouncil = () => {
                 <HStack spacing={3} w={{ base: 'full', md: 'auto' }}>
                   <InputGroup maxW={{ base: '100%', md: '260px' }}>
                     <InputLeftElement pointerEvents="none">
-                      <Icon as={Search} color="gray.400" />
+                      <Icon as={Search} color="text.muted" />
                     </InputLeftElement>
                     <Input
                       placeholder={`Search ${activeLabel.toLowerCase()}s`}
@@ -337,29 +338,29 @@ export const LeadershipCouncil = () => {
                 </HStack>
               </Flex>
 
-              <Box border="1px solid" borderColor="gray.200" borderRadius="2xl" overflow="hidden">
+              <Box border="1px solid" borderColor="border.control" borderRadius="2xl" overflow="hidden">
                 <Box bg="gray.50" px={4} py={3}>
                   <HStack spacing={4} fontSize="xs" color="gray.500" textTransform="uppercase" letterSpacing="widest">
                     <Text flex="1">Name</Text>
                     <Text flex="1">Email</Text>
                     <Text flex="1">Company</Text>
                     <Text w="120px">Status</Text>
-                    <Text w="120px">Last Active</Text>
-                    <Text w="120px">Joined</Text>
+                    {showLastActiveColumn && <Text w="120px">Last Active</Text>}
+                    {showJoinedColumn && <Text w="120px">Joined</Text>}
                     <Text w="140px" textAlign="right">
                       Actions
                     </Text>
                   </HStack>
                 </Box>
 
-                {loading ? (
+                {loadingUsers ? (
                   <Flex py={8} justify="center" align="center" gap={2}>
                     <Icon as={UsersIcon} color="purple.500" />
                     <Text color="gray.600">Loading leadership records…</Text>
                   </Flex>
                 ) : filteredLeaders.length === 0 ? (
                   <Flex py={10} direction="column" align="center" gap={2}>
-                    <Icon as={UsersIcon} boxSize={10} color="gray.300" />
+                    <Icon as={UsersIcon} boxSize={10} color="text.muted" />
                     <Text fontWeight="medium" color="gray.700">
                       No {activeLabel.toLowerCase()}s found. Use 'Add {activeLabel}' to promote a member.
                     </Text>
@@ -368,6 +369,7 @@ export const LeadershipCouncil = () => {
                   <Stack divider={<Divider />} spacing={0}>
                     {filteredLeaders.map((member) => {
                       const status = statusBadge(member.accountStatus)
+                      const displayName = getDisplayName(member)
                       return (
                         <Flex
                           key={member.id}
@@ -378,36 +380,40 @@ export const LeadershipCouncil = () => {
                           _hover={{ bg: 'gray.50' }}
                           transition="background-color 0.2s ease"
                         >
-                          <Box flex="1">
-                            <Text fontWeight="semibold" color="gray.900">
-                              {member.name}
-                            </Text>
-                            <Text fontSize="xs" color="gray.500">
-                              ID: {member.id}
-                            </Text>
-                          </Box>
+                          <HStack flex="1" spacing={3}>
+                            <Avatar size="sm" name={displayName} />
+                            <Box>
+                              <Text fontWeight="semibold" color="gray.900">
+                                {displayName}
+                              </Text>
+                              <Text fontSize="xs" color="gray.500">
+                                {member.email}
+                              </Text>
+                            </Box>
+                          </HStack>
                           <Text flex="1" color="gray.700">
                             {member.email || '—'}
                           </Text>
-                          <Box flex="1">
-                            <Text fontWeight="medium" color="gray.800">
+                          <Tooltip label={member.companyCode ? `Code: ${member.companyCode}` : ''} placement="top">
+                            <Text flex="1" fontWeight="medium" color="gray.800">
                               {member.companyName || '—'}
                             </Text>
-                            <Text fontSize="xs" color="gray.500" textTransform="uppercase" letterSpacing="widest">
-                              {member.companyCode || ''}
-                            </Text>
-                          </Box>
+                          </Tooltip>
                           <Box w="120px">
                             <Badge bg={status.bg} color={status.color} px={3} py={1} borderRadius="full">
                               {status.label}
                             </Badge>
                           </Box>
-                          <Text w="120px" color="gray.500">
-                            {member.lastActive ? formatDistanceToNow(member.lastActive, { addSuffix: true }) : '—'}
-                          </Text>
-                          <Text w="120px" color="gray.500">
-                            {member.createdAt ? formatDistanceToNow(member.createdAt, { addSuffix: true }) : '—'}
-                          </Text>
+                          {showLastActiveColumn && (
+                            <Text w="120px" color="gray.500">
+                              {member.lastActive ? formatDistanceToNow(member.lastActive, { addSuffix: true }) : '—'}
+                            </Text>
+                          )}
+                          {showJoinedColumn && (
+                            <Text w="120px" color="gray.500">
+                              {member.createdAt ? formatDistanceToNow(member.createdAt, { addSuffix: true }) : '—'}
+                            </Text>
+                          )}
                           <Box w="140px" textAlign="right">
                             {canManageLeadership ? (
                               <HStack spacing={2} justify="flex-end">
@@ -431,7 +437,7 @@ export const LeadershipCouncil = () => {
                                 </Button>
                               </HStack>
                             ) : (
-                              <Text fontSize="xs" color="gray.400" textTransform="uppercase">
+                              <Text fontSize="xs" color="text.muted" textTransform="uppercase">
                                 Super admin only
                               </Text>
                             )}

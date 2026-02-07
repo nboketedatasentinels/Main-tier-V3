@@ -31,23 +31,28 @@ export const isComplementaryCourse = (courseTitle?: string | null, courseId?: st
 }
 
 export const isFreeUser = (profile?: MembershipProfile): boolean => {
+  if (!profile) return false
+
   const roleValue = profile?.role?.toString().toLowerCase()
   const membershipStatus = profile?.membershipStatus?.toString().toLowerCase()
   const transformationTier = profile?.transformationTier?.toString().toLowerCase()
 
-  if (roleValue === UserRole.PAID_MEMBER) return false
-  if (membershipStatus === 'paid') return false
-  if (
+  const isExplicitPaid =
+    roleValue === UserRole.PAID_MEMBER ||
+    membershipStatus === 'paid' ||
+    transformationTier === TransformationTier.INDIVIDUAL_PAID ||
     transformationTier === TransformationTier.CORPORATE_MEMBER ||
     transformationTier === TransformationTier.CORPORATE_LEADER
-  ) {
-    return false
-  }
+  if (isExplicitPaid) return false
+
+  if (roleValue && ![UserRole.USER, UserRole.FREE_USER].includes(roleValue as UserRole)) return false
 
   return (
+    roleValue === UserRole.USER ||
     roleValue === UserRole.FREE_USER ||
     membershipStatus === 'free' ||
-    transformationTier === TransformationTier.INDIVIDUAL_FREE
+    transformationTier === TransformationTier.INDIVIDUAL_FREE ||
+    !roleValue
   )
 }
 
@@ -58,6 +63,7 @@ export const canAccessCourse = (
 ): boolean => {
   if (!courseTitle && !courseId) return false
   if (isComplementaryCourse(courseTitle, courseId)) return true
+  if (!profile) return false
   if (!isFreeUser(profile)) return true
   return false
 }

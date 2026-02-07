@@ -29,6 +29,7 @@ export default {
         // Border Colors
         border: {
           subtle: 'var(--border-subtle)',
+          control: 'var(--border-control)',
           strong: '#CBD5E1',
         },
         // Accent Colors - For highlights and status

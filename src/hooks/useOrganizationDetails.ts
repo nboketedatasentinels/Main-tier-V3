@@ -1,13 +1,13 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useAuth } from '@/hooks/useAuth'
 import {
-  checkOrganizationAccess,
   fetchAvailableCourses,
   fetchOrganizationByCode,
   fetchOrganizationEngagementStats,
   fetchOrganizationUsers,
   logOrganizationAccessAttempt,
 } from '@/services/organizationService'
+import { canAccessOrganization } from '@/services/organizationAccessService'
 import { fetchUserProfileById } from '@/services/userProfileService'
 import type {
   OrganizationAccountStatusFilter,
@@ -91,7 +91,7 @@ const buildDetailView = (organization: {
 const pageSize = 50
 
 export const useOrganizationDetails = (organizationId?: string) => {
-  const { user, isAdmin, isSuperAdmin, assignedOrganizations } = useAuth()
+  const { user, isAdmin, isSuperAdmin, profile } = useAuth()
   const [organization, setOrganization] = useState<OrganizationDetailView | null>(null)
   const [users, setUsers] = useState<OrganizationUserProfile[]>([])
   const [statistics, setStatistics] = useState<OrganizationStatistics | null>(null)
@@ -135,13 +135,13 @@ export const useOrganizationDetails = (organizationId?: string) => {
         return
       }
 
-      const accessResult = await checkOrganizationAccess(user.uid, organizationId, orgRecord.code)
-      const matchesAssignedOrg =
-        assignedOrganizations.includes(organizationId) ||
-        (orgRecord.id ? assignedOrganizations.includes(orgRecord.id) : false) ||
-        (orgRecord.code ? assignedOrganizations.includes(orgRecord.code) : false)
+      const accessAllowed = await canAccessOrganization({
+        role: profile?.role || '',
+        userId: user.uid,
+        organizationId: orgRecord.id || organizationId,
+      })
 
-      if (!isSuperAdmin && !accessResult.authorized && !matchesAssignedOrg) {
+      if (!isSuperAdmin && !accessAllowed) {
         if (user?.uid) {
           void logOrganizationAccessAttempt({
             userId: user.uid,
@@ -156,12 +156,34 @@ export const useOrganizationDetails = (organizationId?: string) => {
       }
 
       const orgKey = orgRecord.id || organizationId
+      const orgLeadership = (orgRecord as unknown as { leadership?: Record<string, unknown> }).leadership
+      const resolvedMentorId =
+        orgRecord.assignedMentorId ??
+        (typeof orgLeadership === 'object' && orgLeadership
+          ? ((orgLeadership as { assignedMentorId?: unknown }).assignedMentorId as string | null | undefined)
+          : null) ??
+        null
+      const resolvedAmbassadorId =
+        orgRecord.assignedAmbassadorId ??
+        (typeof orgLeadership === 'object' && orgLeadership
+          ? ((orgLeadership as { assignedAmbassadorId?: unknown }).assignedAmbassadorId as string | null | undefined)
+          : null) ??
+        null
+      const resolvedPartnerId =
+        orgRecord.transformationPartnerId ??
+        (typeof orgLeadership === 'object' && orgLeadership
+          ? ((orgLeadership as { transformationPartnerId?: unknown }).transformationPartnerId as
+              | string
+              | null
+              | undefined)
+          : null) ??
+        null
       const [userList, stats, mentorProfile, ambassadorProfile, partnerProfile] = await Promise.all([
         fetchOrganizationUsers(orgKey),
         fetchOrganizationEngagementStats(orgKey),
-        orgRecord.assignedMentorId ? fetchUserProfileById(orgRecord.assignedMentorId) : Promise.resolve(null),
-        orgRecord.assignedAmbassadorId ? fetchUserProfileById(orgRecord.assignedAmbassadorId) : Promise.resolve(null),
-        orgRecord.transformationPartnerId ? fetchUserProfileById(orgRecord.transformationPartnerId) : Promise.resolve(null),
+        resolvedMentorId ? fetchUserProfileById(resolvedMentorId) : Promise.resolve(null),
+        resolvedAmbassadorId ? fetchUserProfileById(resolvedAmbassadorId) : Promise.resolve(null),
+        resolvedPartnerId ? fetchUserProfileById(resolvedPartnerId) : Promise.resolve(null),
       ])
 
       const getDisplayName = (profile: typeof mentorProfile) => {
@@ -180,6 +202,9 @@ export const useOrganizationDetails = (organizationId?: string) => {
       setOrganization(
         buildDetailView({
           ...orgRecord,
+          assignedMentorId: resolvedMentorId,
+          assignedAmbassadorId: resolvedAmbassadorId,
+          transformationPartnerId: resolvedPartnerId,
           assignedMentorName: getDisplayName(mentorProfile),
           assignedMentorEmail: mentorProfile?.email ?? null,
           assignedAmbassadorName: getDisplayName(ambassadorProfile),
@@ -197,7 +222,13 @@ export const useOrganizationDetails = (organizationId?: string) => {
     } finally {
       setLoading(false)
     }
-  }, [assignedOrganizations, isAdmin, isSuperAdmin, organizationId, user?.uid])
+  }, [
+    profile?.role,
+    isAdmin,
+    isSuperAdmin,
+    organizationId,
+    user?.uid,
+  ])
 
   useEffect(() => {
     loadDetails()

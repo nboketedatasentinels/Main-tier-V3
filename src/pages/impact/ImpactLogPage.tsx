@@ -88,10 +88,11 @@ import {
   type BusinessSecondaryWaste,
 } from '@/config/impactLogMappings'
 import { isFreeUser } from '@/utils/membership'
-import { removeUndefinedFields } from '@/utils/firestore'
-import { JOURNEY_META, getActivitiesForJourney, getMonthNumber, type ActivityDef, type JourneyType } from '@/config/pointsConfig'
-import { awardChecklistPoints, revokeChecklistPoints } from '@/services/pointsService'
-import { isValidUrl } from '@/utils/validation'
+import { removeUndefinedFields } from '@/utils/firestore';
+import { JOURNEY_META, getActivitiesForJourney, getMonthNumber, type ActivityDef, type JourneyType } from '@/config/pointsConfig';
+import { awardChecklistPoints, revokeChecklistPoints } from '@/services/pointsService';
+import { isValidUrl } from '@/utils/validation';
+import { awardBadge } from '@/services/badgeService';
 import { validateOrganizationPartner } from '@/services/organizationService'
 /**
  * Represents a single impact log entry.
@@ -203,6 +204,7 @@ const buildCsv = (entries: ImpactLogEntry[]) => {
     'Points',
     'Impact Value',
     'SCP',
+    'Outcome Label',
     'Evidence',
   ]
 
@@ -219,6 +221,7 @@ const buildCsv = (entries: ImpactLogEntry[]) => {
     entry.points,
     entry.impactValue,
     entry.scp,
+    entry.outcomeLabel || '',
     entry.evidenceLink || '',
   ])
 
@@ -662,9 +665,15 @@ export const ImpactLogPage: React.FC = () => {
         createdAt: new Date().toISOString(),
       })
 
-      await addDoc(collection(db, 'impact_logs'), payload)
+      await addDoc(collection(db, 'impact_logs'), payload);
 
-      const journeyType = resolveJourneyType()
+      const impactLogsQuery = query(collection(db, 'impact_logs'), where('userId', '==', user.uid));
+      const impactLogsSnapshot = await getDocs(impactLogsQuery);
+      if (impactLogsSnapshot.size >= 10) {
+        await awardBadge(user.uid, 'impact-master');
+      }
+
+      const journeyType = resolveJourneyType();
       const activity = resolveImpactActivity(journeyType)
       const weekNumber = resolveWeekNumberForDate(payload.date, journeyType)
       const monthNumber = getMonthNumber(weekNumber)
@@ -701,11 +710,11 @@ export const ImpactLogPage: React.FC = () => {
                 uid: user.uid,
                 journeyType,
                 weekNumber,
-                activity,
+                activity: { ...activity, points: payload.points },
                 source: 'impact_log_submission',
               })
               toastTitle = 'Impact logged and points awarded!'
-              toastDescription = `You earned ${activity.points} points.${weekSuffix}`
+              toastDescription = `You earned ${payload.points} points.${weekSuffix}`
             } catch (awardError) {
               if (import.meta.env.DEV) {
                 console.error('Impact log points award failed', awardError)
@@ -1028,6 +1037,11 @@ export const ImpactLogPage: React.FC = () => {
                         <Text color="text.muted" fontSize="sm" noOfLines={1}>
                           {entry.description}
                         </Text>
+                        {entry.outcomeLabel && (
+                          <Text color="purple.600" fontSize="xs" fontWeight="medium" mt={1}>
+                            Outcome: {entry.outcomeLabel}
+                          </Text>
+                        )}
                       </Td>
                       <Td>
                         <Badge colorScheme={entry.categoryGroup === 'esg' ? 'green' : 'blue'}>
@@ -1337,7 +1351,7 @@ export const ImpactLogPage: React.FC = () => {
                   </InputGroup>
                 </FormControl>
                 <FormControl>
-                  <FormLabel htmlFor="impact-financial">Financial Impact</FormLabel>
+                  <FormLabel htmlFor="impact-financial">Financial Impact ($)</FormLabel>
                   <InputGroup>
                     <InputLeftElement pointerEvents="none">
                       <Icon as={ShieldCheck} color="text.muted" />
@@ -1485,15 +1499,17 @@ export const ImpactLogPage: React.FC = () => {
                     />
                   </InputGroup>
                 </Box>
-                <Box>
-                  <Text fontWeight="medium">Outcome Metric Label</Text>
+                <FormControl>
+                  <FormLabel fontWeight="medium">Outcome Metric Label</FormLabel>
                   <Input
-                    mt={1}
-                    placeholder="USD saved, Hours reduced"
+                    placeholder="e.g., USD saved, Hours reduced, Trees planted"
                     value={formValues.outcomeLabel}
                     onChange={(e) => setFormValues((prev) => ({ ...prev, outcomeLabel: e.target.value }))}
                   />
-                </Box>
+                  <FormHelperText>
+                    Specify the label for your primary metric. You can describe your outcomes freely here.
+                  </FormHelperText>
+                </FormControl>
               </SimpleGrid>
 
               <Box p={4} bgGradient="linear(to-r, blue.50, purple.50)" border="1px solid" borderColor="purple.100" rounded="lg">

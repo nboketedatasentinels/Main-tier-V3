@@ -7,6 +7,7 @@ import {
   getDocs,
   orderBy,
   query,
+  runTransaction,
   serverTimestamp,
   setDoc,
   updateDoc,
@@ -79,24 +80,55 @@ const normalizeDateString = (value?: unknown): string | undefined => {
 }
 
 export const fetchUserProfileById = async (userId: string): Promise<UserProfileExtended | null> => {
-  const userRef = doc(db, 'users', userId)
-  const snapshot = await getDoc(userRef)
+  const [profileSnap, userSnap] = await Promise.all([
+    getDoc(doc(db, 'profiles', userId)),
+    getDoc(doc(db, 'users', userId)),
+  ])
 
-  if (!snapshot.exists()) return null
+  if (!profileSnap.exists() && !userSnap.exists()) return null
 
-  const data = snapshot.data() as UserProfileExtended
+  const profileData = (profileSnap.exists() ? profileSnap.data() : {}) as Partial<UserProfileExtended>
+  const userData = (userSnap.exists() ? userSnap.data() : {}) as Partial<UserProfileExtended>
+
+  // Prefer canonical `profiles/{userId}` fields, but fall back to `users/{userId}` for legacy/mirrored fields.
+  const merged: Partial<UserProfileExtended> = {
+    ...userData,
+    ...profileData,
+  }
+
+  const preferUserWhenNullish = <K extends keyof UserProfileExtended>(key: K) => {
+    if (merged[key] == null && userData[key] != null) {
+      merged[key] = userData[key] as UserProfileExtended[K]
+    }
+  }
+
+  preferUserWhenNullish('companyId')
+  preferUserWhenNullish('companyCode')
+  preferUserWhenNullish('companyName')
+  preferUserWhenNullish('mentorId')
+  preferUserWhenNullish('ambassadorId')
+  preferUserWhenNullish('villageId')
+  preferUserWhenNullish('clusterId')
+  preferUserWhenNullish('journeyType')
+  preferUserWhenNullish('currentWeek')
+  preferUserWhenNullish('programDurationWeeks')
+  preferUserWhenNullish('totalPoints')
+  preferUserWhenNullish('level')
+
+  const createdAt = normalizeDateString(merged.createdAt) || new Date().toISOString()
+  const updatedAt = normalizeDateString(merged.updatedAt) || new Date().toISOString()
 
   return {
-    ...data,
-    id: snapshot.id,
-    createdAt: normalizeDateString(data.createdAt) || new Date().toISOString(),
-    updatedAt: normalizeDateString(data.updatedAt) || new Date().toISOString(),
-    lastActive: normalizeDateString(data.lastActive),
-    lastActiveAt: normalizeDateString(data.lastActiveAt),
-    registrationDate: normalizeDateString(data.registrationDate),
-    lastModifiedAt: normalizeDateString(data.lastModifiedAt),
-    socialLinks: data.socialLinks || {
-      linkedin: data.linkedinUrl,
+    ...(merged as UserProfileExtended),
+    id: profileSnap.exists() ? profileSnap.id : userSnap.id,
+    createdAt,
+    updatedAt,
+    lastActive: normalizeDateString(merged.lastActive),
+    lastActiveAt: normalizeDateString(merged.lastActiveAt),
+    registrationDate: normalizeDateString(merged.registrationDate),
+    lastModifiedAt: normalizeDateString(merged.lastModifiedAt),
+    socialLinks: merged.socialLinks || {
+      linkedin: merged.linkedinUrl,
     },
   }
 }
@@ -194,7 +226,17 @@ export const updateUserProfile = async (
     payload.lastModifiedAt = serverTimestamp()
   }
 
-  await updateDoc(doc(db, 'users', userId), payload)
+  // Add role change audit trail if role is being updated
+  const hasRoleUpdate = Object.prototype.hasOwnProperty.call(sanitized, 'role')
+  if (hasRoleUpdate && actor) {
+    payload.roleChangedBy = actor.id
+    payload.roleChangedAt = serverTimestamp()
+  }
+
+  await Promise.all([
+    setDoc(doc(db, 'profiles', userId), payload, { merge: true }),
+    setDoc(doc(db, 'users', userId), payload, { merge: true }),
+  ])
 
   const hasMentorUpdate = Object.prototype.hasOwnProperty.call(sanitized, 'mentorId')
   const hasAmbassadorUpdate = Object.prototype.hasOwnProperty.call(sanitized, 'ambassadorId')
@@ -225,9 +267,92 @@ export const updateUserProfile = async (
   return { updates: sanitized, error: null }
 }
 
+export const updateUserVillageId = async (userId: string, villageId: string): Promise<void> => {
+  if (!userId.trim()) {
+    throw new Error('User id is required.')
+  }
+  if (!villageId.trim()) {
+    throw new Error('Village id is required.')
+  }
+
+  const userRef = doc(db, 'users', userId)
+  const profileRef = doc(db, 'profiles', userId)
+
+  await runTransaction(db, async (transaction) => {
+    const [userSnapshot, profileSnapshot] = await Promise.all([
+      transaction.get(userRef),
+      transaction.get(profileRef),
+    ])
+
+    if (!userSnapshot.exists() || !profileSnapshot.exists()) {
+      throw new Error('User profile not found.')
+    }
+
+    const payload = {
+      villageId,
+      updatedAt: serverTimestamp(),
+    }
+
+    await Promise.all([
+      Promise.resolve(transaction.update(userRef, payload)),
+      Promise.resolve(transaction.update(profileRef, payload)),
+    ])
+  })
+}
+
 export const logUserProfileAccess = async (log: ProfileAccessLog) => {
   await addDoc(collection(db, 'profile_access_logs'), {
     ...log,
     createdAt: serverTimestamp(),
   })
+}
+
+export const upgradeUserToOrganization = async (params: {
+  userId: string
+  organizationId: string
+  newRole?: 'paid_member'
+  adminId?: string | null
+}) => {
+  const { userId, organizationId, newRole = 'paid_member', adminId } = params
+  if (!userId || !organizationId) {
+    throw new Error('Missing user or organization for upgrade.')
+  }
+
+  const orgSnap = await getDoc(doc(db, ORG_COLLECTION, organizationId))
+  if (!orgSnap.exists()) {
+    throw new Error('Organization not found.')
+  }
+  const orgData = orgSnap.data() as { status?: string }
+  if (orgData.status && orgData.status !== 'active') {
+    throw new Error('Organization is not active.')
+  }
+
+  const usersSnap = await getDoc(doc(db, 'users', userId))
+  const profileSnap = await getDoc(doc(db, 'profiles', userId))
+  const sourceData = (usersSnap.exists() ? usersSnap.data() : profileSnap.data()) as UserProfile | undefined
+  if (!sourceData) {
+    throw new Error('User profile not found.')
+  }
+  if (sourceData.role !== 'free_user') {
+    throw new Error('User is not eligible for upgrade.')
+  }
+
+  const updates: Record<string, unknown> = {
+    role: newRole,
+    membershipStatus: 'paid',
+    organizationId,
+    companyId: organizationId,
+    updatedAt: serverTimestamp(),
+  }
+
+  if (adminId) {
+    updates.lastModifiedBy = adminId
+    updates.lastModifiedAt = serverTimestamp()
+  }
+
+  const userRef = doc(db, 'users', userId)
+  const profileRef = doc(db, 'profiles', userId)
+  await Promise.all([updateDoc(userRef, updates), updateDoc(profileRef, updates)])
+
+  return { ...sourceData, ...updates, id: userId }
 }

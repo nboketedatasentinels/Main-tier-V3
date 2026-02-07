@@ -1,8 +1,6 @@
 import {
   Badge,
   Box,
-  Button,
-  Divider,
   HStack,
   IconButton,
   Popover,
@@ -11,26 +9,13 @@ import {
   PopoverContent,
   PopoverTrigger,
   Spinner,
-  Tab,
-  TabList,
-  Tabs,
   Text,
   VStack,
 } from '@chakra-ui/react'
 import { Bell, Sparkles } from 'lucide-react'
-import { useEffect, useMemo } from 'react'
+import { useMemo } from 'react'
 import { NotificationItem } from './NotificationItem'
 import { useNotifications } from '@/hooks/useNotifications'
-import { NotificationCategory } from '@/types/notifications'
-
-const categoryLabels: Record<NotificationCategory | 'all', string> = {
-  all: 'All',
-  action_required: 'Action required',
-  mentions: 'Mentions',
-  important_updates: 'Updates',
-  system_alerts: 'System',
-  other: 'Other',
-}
 
 export const NotificationDropdown = () => {
   const {
@@ -39,8 +24,6 @@ export const NotificationDropdown = () => {
     loading,
     markNotificationAsRead,
     markAllAsRead,
-    category,
-    setCategory,
     updateNotificationAction,
   } = useNotifications({ limit: 50 })
 
@@ -66,12 +49,6 @@ export const NotificationDropdown = () => {
     [notifications],
   )
 
-  useEffect(() => {
-    if (!category) {
-      setCategory('all')
-    }
-  }, [category, setCategory])
-
   return (
     <Popover placement="bottom-end" closeOnBlur>
       <PopoverTrigger>
@@ -92,61 +69,58 @@ export const NotificationDropdown = () => {
           )}
         </Box>
       </PopoverTrigger>
-      <PopoverContent w={{ base: '320px', md: '440px' }} shadow="xl">
+      <PopoverContent w={{ base: '320px', md: '400px' }} shadow="lg" borderColor="border.control">
         <PopoverArrow />
         <PopoverBody p={0}>
           <VStack align="stretch" spacing={0}>
-            <HStack justify="space-between" px={4} py={3} borderBottomWidth="1px" borderColor="gray.100">
+            {/* Simplified Header */}
+            <HStack justify="space-between" px={4} py={3} borderBottomWidth="1px" borderColor="border.control">
               <HStack spacing={2}>
-                <Text fontWeight="bold">Notifications</Text>
-                {hasUnread && <Badge colorScheme="purple">{unreadCount} new</Badge>}
+                <Text fontWeight="semibold" color="gray.900">Notifications</Text>
+                {hasUnread && (
+                  <Badge
+                    bg="brand.primary"
+                    color="white"
+                    borderRadius="full"
+                    fontSize="xs"
+                    px={2}
+                  >
+                    {unreadCount}
+                  </Badge>
+                )}
               </HStack>
-              <Button size="xs" variant="ghost" onClick={markAllAsRead}>
+              <Text
+                as="button"
+                fontSize="sm"
+                color="gray.500"
+                cursor="pointer"
+                _hover={{ color: 'brand.primary', textDecoration: 'underline' }}
+                onClick={markAllAsRead}
+              >
                 Mark all as read
-              </Button>
+              </Text>
             </HStack>
 
-            <Tabs
-              variant="soft-rounded"
-              colorScheme="purple"
-              px={3}
-              pt={2}
-              onChange={(index) => {
-                const keys = Object.keys(categoryLabels) as (keyof typeof categoryLabels)[]
-                setCategory(keys[index])
-              }}
-              index={Math.max(0, Object.keys(categoryLabels).indexOf(category || 'all'))}
-            >
-              <TabList overflowX="auto" pb={2}>
-                {(Object.entries(categoryLabels) as [NotificationCategory | 'all', string][]).map(([value, label]) => (
-                  <Tab key={value} whiteSpace="nowrap">
-                    {label}
-                  </Tab>
-                ))}
-              </TabList>
-            </Tabs>
-
-            <Divider />
-
-            <Box maxH="440px" overflowY="auto" px={4} py={3}>
+            {/* Notification List */}
+            <Box maxH="400px" overflowY="auto" px={3} py={2}>
               {loading && (
                 <HStack justify="center" py={8}>
-                  <Spinner color="purple.500" />
-                  <Text color="gray.600">Loading notifications...</Text>
+                  <Spinner color="text.muted" size="sm" />
+                  <Text color="gray.500" fontSize="sm">Loading...</Text>
                 </HStack>
               )}
 
               {!loading && !sortedNotifications.length && (
-                <VStack py={10} spacing={3} color="gray.600">
-                  <Sparkles size={20} />
-                  <Text fontWeight="bold">You're all caught up</Text>
-                  <Text fontSize="sm" textAlign="center">
-                    No notifications to show. We'll let you know when something new arrives.
+                <VStack py={8} spacing={2} color="gray.500">
+                  <Sparkles size={18} />
+                  <Text fontWeight="medium" fontSize="sm">You're all caught up</Text>
+                  <Text fontSize="xs" textAlign="center">
+                    No notifications to show.
                   </Text>
                 </VStack>
               )}
 
-              <VStack spacing={3} align="stretch">
+              <VStack spacing={2} align="stretch">
                 {sortedNotifications.map((notification) => (
                   <NotificationItem
                     key={notification.id}

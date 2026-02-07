@@ -15,7 +15,6 @@ import {
   HStack,
   Heading,
   Icon,
-  IconButton,
   Modal,
   ModalBody,
   ModalCloseButton,
@@ -26,7 +25,6 @@ import {
   Progress,
   SimpleGrid,
   Skeleton,
-  Spinner,
   Stack,
   Tag,
   Text,
@@ -35,20 +33,19 @@ import {
   useDisclosure,
   useToast,
 } from '@chakra-ui/react'
-import { AlertTriangle, CheckCircle, Lock, Plus, ShieldCheck } from 'lucide-react'
-import { addDoc, collection, doc, getDoc, getDocs, onSnapshot, query, serverTimestamp, setDoc, where } from 'firebase/firestore'
+import { AlertTriangle, CalendarRange, CheckCircle, Lock, Plus, ShieldCheck } from 'lucide-react'
+import { collection, doc, getDoc, getDocs, onSnapshot, query, serverTimestamp, setDoc, where } from 'firebase/firestore'
 import { addDays, format } from 'date-fns'
 import { removeUndefinedFields } from '@/utils/firestore'
-import { getIsoWeekNumber } from '@/utils/date'
 import { db } from '@/services/firebase'
 import { useAuth } from '@/hooks/useAuth'
-import { CALENDAR_SYNC_TUTORIAL, WeeklyProgress } from '@/types'
+import { createApprovalRequest } from '@/services/approvalsService'
+import { PointsVerificationRequest } from '@/services/pointsVerificationService'
+import { WeeklyProgress } from '@/types'
 import { isFreeUser } from '@/utils/membership'
 import { JOURNEY_META, getMonthNumber, getActivitiesForJourney, type ActivityDef, type JourneyType } from '@/config/pointsConfig'
 import { awardChecklistPoints, revokeChecklistPoints } from '@/services/pointsService'
 import { SurfaceCard } from '@/components/primitives/SurfacePrimitives'
-import { IoradTutorialModal } from '@/components/modals/IoradTutorialModal'
-import { checkTutorialCompletion, markTutorialComplete } from '@/services/tutorialService'
 import { ORG_COLLECTION } from '@/constants/organizations'
 import {
   JOURNEY_LABELS,
@@ -56,6 +53,13 @@ import {
   MONTH_BASED_JOURNEYS,
   resolveJourneyType,
 } from '@/utils/journeyType'
+import { getWindowNumber, getWindowRange, getWindowWeekNumber } from '@/utils/windowCalculations'
+import {
+  calculateActivityAvailability,
+  getVisibleActivities,
+  type ActivityAvailabilityReason,
+  type ActivityAvailabilityResult,
+} from '@/utils/activityStateManager'
 
 const DEFAULT_WEEKLY_TARGET = JOURNEY_META['6W'].weeklyTarget
 
@@ -66,6 +70,7 @@ type ActivityState = ActivityDef & {
   proofUrl?: string
   notes?: string
   hasInteracted?: boolean
+  availability: ActivityAvailabilityResult
 }
 
 interface JourneyConfig {
@@ -93,15 +98,12 @@ interface WeekMilestone {
   status: 'completed' | 'current' | 'locked' | 'incomplete';
 }
 
-const rhythmItems = [
-  'Sync T4L Calendar to Google/Outlook',
-  'Add weekly time block for watching videos',
-  'Add weekly time block for completing missions',
-  'Add weekly time block for point tracking',
-  'Accept first live session invite',
-]
+interface WindowProgressData {
+  pointsEarned: number;
+  windowTarget: number;
+  status: 'on_track' | 'warning' | 'alert';
+}
 
-const CALENDAR_SYNC_ITEM = 'Sync T4L Calendar to Google/Outlook'
 
 const weeklyGuidance: Record<number, string[]> = {
   1: [
@@ -123,44 +125,22 @@ const weeklyGuidance: Record<number, string[]> = {
   6: ['Record your transformation recap', 'Request endorsements from peers', 'Lock in final points to hit 100%'],
 }
 
-const useRhythmState = () => {
-  const today = new Date()
-  const calendarWeek = getIsoWeekNumber(today)
-  const storageKey = `rhythm-${today.getFullYear()}-W${calendarWeek}`
-  const [completed, setCompleted] = useState<Record<string, boolean>>({})
-
-  useEffect(() => {
-    const stored = localStorage.getItem(storageKey)
-    if (stored) {
-      setCompleted(JSON.parse(stored))
-    }
-  }, [storageKey])
-
-  const toggleItem = (item: string) => {
-    setCompleted(prev => {
-      const next = { ...prev, [item]: !prev[item] }
-      localStorage.setItem(storageKey, JSON.stringify(next))
-      return next
-    })
-  }
-
-  const setItemCompletion = (item: string, value: boolean) => {
-    setCompleted(prev => {
-      const next = { ...prev, [item]: value }
-      localStorage.setItem(storageKey, JSON.stringify(next))
-      return next
-    })
-  }
-
-  const totalPoints = useMemo(() => Object.values(completed).filter(Boolean).length * 50, [completed])
-
-  return { completed, toggleItem, setItemCompletion, totalPoints, calendarWeek }
-}
 
 const statusLabelMap: Record<ActivityStatus, string> = {
   not_started: 'Not started',
   pending: 'Pending',
   completed: 'Completed',
+}
+
+const availabilityReasonLabels: Record<ActivityAvailabilityReason, string> = {
+  scheduled: 'Scheduled later this window',
+  cooldown: 'Cooldown in effect',
+  max_per_week: 'Weekly limit reached',
+  max_per_window: 'Window limit reached',
+  missing_mentor: 'Mentor required',
+  missing_ambassador: 'Ambassador required',
+  one_time_used: 'Activity already completed',
+  window_cap_reached: 'Window limit reached',
 }
 
 const WeeklyChecklistPage: React.FC = () => {
@@ -182,24 +162,8 @@ const WeeklyChecklistPage: React.FC = () => {
   const toast = useToast()
   const activityRefs = useRef<Record<string, HTMLDivElement | null>>({})
   const [weeklyProgress, setWeeklyProgress] = useState<WeeklyProgress | null>(null)
+  const [windowProgressData, setWindowProgressData] = useState<WindowProgressData | null>(null);
   const [allWeeksProgress, setAllWeeksProgress] = useState<WeeklyProgress[]>([])
-  const {
-    completed: rhythmCompleted,
-    toggleItem,
-    setItemCompletion,
-    totalPoints: rhythmPoints,
-    calendarWeek,
-  } = useRhythmState()
-  const {
-    isOpen: isTutorialModalOpen,
-    onOpen: openTutorialModal,
-    onClose: closeTutorialModal,
-  } = useDisclosure()
-  const [tutorialCompleted, setTutorialCompleted] = useState(false)
-  const [tutorialLoading, setTutorialLoading] = useState(false)
-  const [tutorialError, setTutorialError] = useState<string | null>(null)
-  const [tutorialSaving, setTutorialSaving] = useState(false)
-  const [tutorialSaveError, setTutorialSaveError] = useState<string | null>(null)
 
   const persistChecklist = async (updatedActivities: ActivityState[]) => {
     if (!user) return
@@ -241,6 +205,39 @@ const WeeklyChecklistPage: React.FC = () => {
     allWeeksProgress.forEach(week => map.set(week.weekNumber, week));
     return map;
   }, [allWeeksProgress]);
+
+  const windowMeta = useMemo(() => {
+    if (!journey) {
+      return {
+        windowNumber: 1,
+        startWeek: selectedWeek,
+        endWeek: selectedWeek,
+        windowWeeks: 1,
+      };
+    }
+    return getWindowRange(selectedWeek, journey.programDurationWeeks);
+  }, [journey, selectedWeek]);
+
+  const windowProgress = useMemo(() => {
+    if (!journey) {
+      return {
+        windowNumber: 1,
+        target: 0,
+        earned: 0,
+        pct: 0,
+        startWeek: selectedWeek,
+        endWeek: selectedWeek,
+      };
+    }
+    const { windowNumber, startWeek, endWeek, windowWeeks } = windowMeta;
+    const target = weeklyTarget * windowWeeks;
+    const earned = allWeeksProgress.reduce((sum, week) => {
+      if (week.weekNumber < startWeek || week.weekNumber > endWeek) return sum;
+      return sum + (week.pointsEarned ?? 0);
+    }, 0);
+    const pct = target > 0 ? Math.min(100, Math.round((earned / target) * 100)) : 0;
+    return { windowNumber, target, earned, pct, startWeek, endWeek };
+  }, [allWeeksProgress, journey, selectedWeek, weeklyTarget, windowMeta]);
 
   const tierLabel = useMemo(() => {
     if (!profile) return 'Member';
@@ -362,6 +359,10 @@ const WeeklyChecklistPage: React.FC = () => {
     setError('');
     try {
       const activityDefs = getActivitiesForJourney(journey.journeyType);
+      const windowNumber = getWindowNumber(selectedWeek);
+      const windowWeek = getWindowWeekNumber(selectedWeek);
+      const hasMentor = Boolean(profile?.mentorId || profile?.mentorOverrideId);
+      const hasAmbassador = Boolean(profile?.ambassadorId || profile?.ambassadorOverrideId);
 
       const ledgerQuery = query(
         collection(db, 'pointsLedger'),
@@ -369,13 +370,68 @@ const WeeklyChecklistPage: React.FC = () => {
         where('weekNumber', '==', selectedWeek)
       );
 
-      const ledgerSnapshot = await getDocs(ledgerQuery);
-      const completedActivities = new Set(ledgerSnapshot.docs.map(d => d.data().activityId));
+      const windowLedgerQuery = query(
+        collection(db, 'pointsLedger'),
+        where('uid', '==', user.uid),
+        where('monthNumber', '==', windowNumber),
+      );
 
-      const activityStates: ActivityState[] = activityDefs.map(def => ({
-        ...def,
-        status: completedActivities.has(def.id) ? 'completed' : 'not_started',
-      }));
+      const globalLedgerQuery = query(
+        collection(db, 'pointsLedger'),
+        where('uid', '==', user.uid)
+      );
+
+      const [ledgerSnapshot, windowLedgerSnapshot, globalLedgerSnapshot] = await Promise.all([
+        getDocs(ledgerQuery),
+        getDocs(windowLedgerQuery),
+        getDocs(globalLedgerQuery)
+      ]);
+
+      const completedActivities = new Set(ledgerSnapshot.docs.map(d => d.data().activityId));
+      const weekActivityCounts = ledgerSnapshot.docs.reduce<Record<string, number>>((acc, docItem) => {
+        const activityId = docItem.data().activityId as string | undefined;
+        if (!activityId) return acc;
+        acc[activityId] = (acc[activityId] ?? 0) + 1;
+        return acc;
+      }, {});
+
+      const windowActivityCounts = windowLedgerSnapshot.docs.reduce<Record<string, number>>((acc, docItem) => {
+        const activityId = docItem.data().activityId as string | undefined;
+        if (!activityId) return acc;
+        acc[activityId] = (acc[activityId] ?? 0) + 1;
+        return acc;
+      }, {});
+
+      const totalCompletedAllTime = globalLedgerSnapshot.docs.reduce<Record<string, number>>((acc, docItem) => {
+        const activityId = docItem.data().activityId as string | undefined;
+        if (!activityId) return acc;
+        acc[activityId] = (acc[activityId] ?? 0) + 1;
+        return acc;
+      }, {});
+
+      const lastCompletionWeekByActivity = windowLedgerSnapshot.docs.reduce<Record<string, number>>((acc, docItem) => {
+        const activityId = docItem.data().activityId as string | undefined;
+        const weekNumber = docItem.data().weekNumber as number | undefined;
+        if (!activityId || !weekNumber) return acc;
+        const current = acc[activityId] ?? 0;
+        acc[activityId] = Math.max(current, weekNumber);
+        return acc;
+      }, {});
+
+      const activityStates: ActivityState[] = activityDefs
+        .map(def => ({
+          ...def,
+          status: completedActivities.has(def.id) ? 'completed' : 'not_started',
+          availability: calculateActivityAvailability(def, {
+            windowWeek,
+            weekCount: weekActivityCounts[def.id] ?? 0,
+            windowCount: windowActivityCounts[def.id] ?? 0,
+            totalCompletedAllTime: totalCompletedAllTime[def.id] ?? 0,
+            lastCompletedWeek: lastCompletionWeekByActivity[def.id],
+            hasMentor,
+            hasAmbassador,
+          }),
+        }));
 
       setActivities(activityStates);
     } catch (err) {
@@ -384,34 +440,35 @@ const WeeklyChecklistPage: React.FC = () => {
     } finally {
       setActivityLoading(false);
     }
-  }, [journey, selectedWeek, user]);
-
-  const checkCalendarSyncTutorial = useCallback(async () => {
-    if (!user) return
-    setTutorialLoading(true)
-    setTutorialError(null)
-    try {
-      const completion = await checkTutorialCompletion(user.uid, CALENDAR_SYNC_TUTORIAL.id)
-      setTutorialCompleted(Boolean(completion))
-    } catch (err) {
-      console.error(err)
-      setTutorialError('Unable to load tutorial status. Please retry.')
-    } finally {
-      setTutorialLoading(false)
-    }
-  }, [user])
+  }, [journey, profile?.ambassadorId, profile?.ambassadorOverrideId, profile?.mentorId, profile?.mentorOverrideId, selectedWeek, user]);
 
   useEffect(() => {
     if (!user) return;
-    const progressRef = doc(db, "weeklyProgress", `${user.uid}__${selectedWeek}`);
-    const unsubscribe = onSnapshot(progressRef, (doc) => {
-      if (doc.exists()) {
-        setWeeklyProgress(normalizeWeeklyProgress(doc.data() as WeeklyProgress & { points_earned?: number; weekly_target?: number }));
-      } else {
-        setWeeklyProgress(null);
-      }
-    });
-    return () => unsubscribe();
+
+    const useWindowProgress = import.meta.env.VITE_FEATURE_FLAG_PARALLEL_WINDOW_TRACKING === 'true';
+
+    if (useWindowProgress) {
+      const windowNumber = getWindowNumber(selectedWeek);
+      const progressRef = doc(db, "windowProgress", `${user.uid}__${windowNumber}`);
+      const unsubscribe = onSnapshot(progressRef, (doc) => {
+        if (doc.exists()) {
+          setWindowProgressData(doc.data() as WindowProgressData);
+        } else {
+          setWindowProgressData(null);
+        }
+      });
+      return () => unsubscribe();
+    } else {
+      const progressRef = doc(db, "weeklyProgress", `${user.uid}__${selectedWeek}`);
+      const unsubscribe = onSnapshot(progressRef, (doc) => {
+        if (doc.exists()) {
+          setWeeklyProgress(normalizeWeeklyProgress(doc.data() as WeeklyProgress & { points_earned?: number; weekly_target?: number }));
+        } else {
+          setWeeklyProgress(null);
+        }
+      });
+      return () => unsubscribe();
+    }
   }, [normalizeWeeklyProgress, selectedWeek, user]);
 
   useEffect(() => {
@@ -475,10 +532,10 @@ const WeeklyChecklistPage: React.FC = () => {
   const calculateProgress = useCallback(() => {
     const completedActivities = activities.filter(a => a.status === 'completed')
     const pendingActivities = activities.filter(a => a.status === 'pending')
-    const earnedPoints = completedActivities.reduce((sum, activity) => sum + activity.points, 0) + rhythmPoints
+    const earnedPoints = completedActivities.reduce((sum, activity) => sum + activity.points, 0)
     setPendingCounts({ completed: completedActivities.length, total: activities.length, points: earnedPoints })
     return { completedActivities, pendingActivities, earnedPoints }
-  }, [activities, rhythmPoints])
+  }, [activities])
 
   useEffect(() => {
     fetchJourney()
@@ -489,10 +546,6 @@ const WeeklyChecklistPage: React.FC = () => {
   }, [fetchWeeklyData])
 
   useEffect(() => {
-    checkCalendarSyncTutorial()
-  }, [checkCalendarSyncTutorial])
-
-  useEffect(() => {
     setProgressLoading(true)
     calculateProgress()
     setProgressLoading(false)
@@ -500,6 +553,14 @@ const WeeklyChecklistPage: React.FC = () => {
 
   const handleActivityUpdate = async (activity: ActivityState, nextStatus: ActivityStatus) => {
     if (!user || !journey) return;
+    if (activity.availability.state !== 'available') {
+      toast({
+        title: 'Activity unavailable',
+        description: availabilityReasonLabels[activity.availability.reason ?? 'scheduled'],
+        status: 'warning',
+      });
+      return;
+    }
 
     try {
       if (nextStatus === 'completed') {
@@ -543,54 +604,45 @@ const WeeklyChecklistPage: React.FC = () => {
     onOpen()
   }
 
-  const handleTutorialComplete = async () => {
-    if (!user) return
-    setTutorialSaving(true)
-    setTutorialSaveError(null)
-    try {
-      await markTutorialComplete(user.uid, CALENDAR_SYNC_TUTORIAL.id)
-      setTutorialCompleted(true)
-      setItemCompletion(CALENDAR_SYNC_ITEM, true)
-      toast({
-        title: 'Tutorial complete',
-        description: 'You can now mark the calendar sync item as done.',
-        status: 'success',
-      })
-      closeTutorialModal()
-    } catch (err) {
-      console.error(err)
-      setTutorialSaveError('Unable to save tutorial completion. Please retry.')
-    } finally {
-      setTutorialSaving(false)
-    }
-  }
-
-  const handleOpenTutorialModal = () => {
-    setTutorialSaveError(null)
-    openTutorialModal()
-  }
-
-  const handleCloseTutorialModal = () => {
-    setTutorialSaveError(null)
-    closeTutorialModal()
-  }
-
   const submitProof = async () => {
     if (!proofModal.activity || !user) return
+    if (proofModal.activity.availability.state !== 'available') {
+      toast({
+        title: 'Activity unavailable',
+        description: availabilityReasonLabels[proofModal.activity.availability.reason ?? 'scheduled'],
+        status: 'warning',
+      })
+      return
+    }
     try {
-      const payload = removeUndefinedFields({
+      const { activity } = proofModal
+
+      // Get user's organizationId from profile for approval filtering
+      const userOrganizationId = profile?.organizationId || profile?.companyId || null
+
+      const sourcePayload: Omit<PointsVerificationRequest, 'id'> = {
         user_id: user.uid,
+        organizationId: userOrganizationId,
         week: selectedWeek,
-        activity_id: proofModal.activity.id,
-        activity_title: proofModal.activity.title,
-        points: proofModal.activity.points,
-        proof_url: proofModal.activity.proofUrl,
-        notes: proofModal.activity.notes,
+        activity_id: activity.id,
+        activity_title: activity.title,
+        points: activity.points,
+        proof_url: activity.proofUrl,
+        notes: activity.notes,
         status: 'pending',
         created_at: serverTimestamp(),
-      })
+      }
 
-      await addDoc(collection(db, 'points_verification_requests'), payload)
+      await createApprovalRequest({
+        userId: user.uid,
+        organizationId: userOrganizationId,
+        type: 'points_verification',
+        approvalType: activity.approvalType,
+        title: activity.title,
+        source: sourcePayload,
+        summary: activity.notes,
+        points: activity.points,
+      })
 
       await persistChecklist(
         activities.map(activity =>
@@ -653,19 +705,33 @@ const WeeklyChecklistPage: React.FC = () => {
   }, [journey, selectedWeek]);
 
   const progressStatus = useMemo(() => {
-    if (!weeklyProgress) return { color: 'gray', label: 'Loading...', pct: 0 };
-    const { pointsEarned, weeklyTarget } = weeklyProgress;
-    const pct = weeklyTarget > 0 ? Math.min(100, Math.round((pointsEarned / weeklyTarget) * 100)) : 0;
+    const useWindowProgress = import.meta.env.VITE_FEATURE_FLAG_PARALLEL_WINDOW_TRACKING === 'true';
 
-    if (pct >= 100) return { color: 'green', label: 'On Track', pct };
-    if (pct >= 75) return { color: 'yellow', label: 'Warning', pct };
-    return { color: 'red', label: 'Alert', pct };
-  }, [weeklyProgress]);
+    if (useWindowProgress) {
+      if (!windowProgressData) return { color: 'gray', label: 'Loading...', pct: 0 };
+      const { pointsEarned, windowTarget } = windowProgressData;
+      const pct = windowTarget > 0 ? Math.min(100, Math.round((pointsEarned / windowTarget) * 100)) : 0;
+      if (pct >= 100) return { color: 'green', label: 'On Track', pct };
+      if (pct >= 75) return { color: 'yellow', label: 'Warning', pct };
+      return { color: 'red', label: 'Alert', pct };
+    } else {
+      if (!weeklyProgress) return { color: 'gray', label: 'Loading...', pct: 0 };
+      const { pointsEarned, weeklyTarget } = weeklyProgress;
+      const pct = weeklyTarget > 0 ? Math.min(100, Math.round((pointsEarned / weeklyTarget) * 100)) : 0;
+      if (pct >= 100) return { color: 'green', label: 'On Track', pct };
+      if (pct >= 75) return { color: 'yellow', label: 'Warning', pct };
+      return { color: 'red', label: 'Alert', pct };
+    }
+  }, [weeklyProgress, windowProgressData]);
 
   const weeklyPointsEarned = useMemo(() => {
+    const useWindowProgress = import.meta.env.VITE_FEATURE_FLAG_PARALLEL_WINDOW_TRACKING === 'true';
+    if (useWindowProgress) {
+        return windowProgressData?.pointsEarned ?? pendingCounts.points;
+    }
     if (weeklyProgress) return weeklyProgress.pointsEarned;
     return pendingCounts.points;
-  }, [pendingCounts.points, weeklyProgress]);
+  }, [pendingCounts.points, weeklyProgress, windowProgressData]);
 
   const journeyProgress = useMemo(() => {
     if (!journey) {
@@ -819,8 +885,22 @@ const WeeklyChecklistPage: React.FC = () => {
     }
   }
 
+  const getAvailabilityMessage = (activity: ActivityState) => {
+    if (activity.availability.state === 'available') return null
+    if (activity.availability.reason === 'scheduled') {
+      return `Available in week ${activity.week} of this window.`
+    }
+    if (activity.availability.reason === 'cooldown' && activity.availability.cooldownRemainingWeeks) {
+      return `Available in ${activity.availability.cooldownRemainingWeeks} week(s).`
+    }
+    if (activity.availability.reason) {
+      return availabilityReasonLabels[activity.availability.reason]
+    }
+    return 'Locked'
+  }
+
   const renderActivityCard = (activity: ActivityState) => {
-    const disabled = isWeekLocked
+    const disabled = isWeekLocked || activity.availability.state !== 'available'
     const requiresPartnerApproval = journey?.isPaid && activity.requiresApproval
     const isHonorBased = !activity.requiresApproval
     const yesDisabled = disabled || activity.status === 'completed'
@@ -828,6 +908,7 @@ const WeeklyChecklistPage: React.FC = () => {
 
     const showProofBadge = requiresPartnerApproval
     const showFreeBadge = activity.isFreeTier && !journey?.isPaid
+    const availabilityMessage = getAvailabilityMessage(activity)
 
     return (
       <Box
@@ -864,6 +945,12 @@ const WeeklyChecklistPage: React.FC = () => {
                 </Tooltip>
               )}
               {showFreeBadge && <Badge colorScheme="secondary">Free tier</Badge>}
+              {activity.availability.state === 'locked' && (
+                <Badge colorScheme="gray">Locked</Badge>
+              )}
+              {activity.availability.state === 'exhausted' && (
+                <Badge colorScheme="orange">Exhausted</Badge>
+              )}
               <Tag colorScheme="primary">{activity.category}</Tag>
             </HStack>
             <HStack spacing={2}>
@@ -883,19 +970,24 @@ const WeeklyChecklistPage: React.FC = () => {
             <Text color="text.secondary" fontSize="sm">
               {activity.description}
             </Text>
+            {availabilityMessage && (
+              <Text color="text.muted" fontSize="sm">
+                {availabilityMessage}
+              </Text>
+            )}
           </Stack>
           <Stack align="flex-end" spacing={2}>
             <Tag
               bg="tint.accentWarning"
               color="text.primary"
               border="1px solid"
-              borderColor="accent.warning"
+              borderColor="brand.primary"
             >
               +{activity.points} pts
             </Tag>
             {activity.status === 'pending' && (
               <Tooltip label="Pending partner verification. Points will post after approval.">
-                <Icon as={AlertTriangle} color="yellow.300" />
+                <Icon as={AlertTriangle} color="danger.DEFAULT" />
               </Tooltip>
             )}
           </Stack>
@@ -942,83 +1034,6 @@ const WeeklyChecklistPage: React.FC = () => {
     )
   }
 
-  const renderParticipationRhythm = () => (
-    <Box borderWidth="1px" borderColor="border.card" p={4} borderRadius="lg" bg="surface.default">
-      <HStack justify="space-between" mb={2}>
-        <Heading size="sm" color="text.primary">
-          Participation Rhythm
-        </Heading>
-        <Tag colorScheme="primary">+{rhythmPoints} pts</Tag>
-      </HStack>
-      {tutorialError && (
-        <Alert status="warning" borderRadius="md" mb={3}>
-          <AlertIcon />
-          <AlertDescription>{tutorialError}</AlertDescription>
-          <IconButton
-            aria-label="Retry tutorial status"
-            size="sm"
-            ml="auto"
-            onClick={checkCalendarSyncTutorial}
-            icon={tutorialLoading ? <Spinner size="xs" /> : <Icon as={Plus} />}
-            isDisabled={tutorialLoading}
-            variant="outline"
-          />
-        </Alert>
-      )}
-      <Stack spacing={2}>
-        {rhythmItems.map(item => (
-          <Flex key={item} align="center" justify="space-between" p={2} borderRadius="md" bg="surface.subtle">
-            <HStack spacing={2}>
-              <Text color="text.secondary">{item}</Text>
-              {item === CALENDAR_SYNC_ITEM && (
-                <Badge colorScheme="orange" variant="subtle">
-                  Tutorial Required
-                </Badge>
-              )}
-            </HStack>
-            <Tooltip
-              label={
-                item === CALENDAR_SYNC_ITEM
-                  ? 'Complete the calendar sync tutorial before marking this as done.'
-                  : ''
-              }
-              isDisabled={item !== CALENDAR_SYNC_ITEM}
-            >
-              <Button
-                size="sm"
-                leftIcon={
-                  rhythmCompleted[item] ? (
-                    <Icon as={CheckCircle} />
-                  ) : tutorialLoading && item === CALENDAR_SYNC_ITEM ? (
-                    <Spinner size="xs" />
-                  ) : (
-                    <Icon as={Plus} />
-                  )
-                }
-                colorScheme={rhythmCompleted[item] ? 'primary' : undefined}
-                borderColor={rhythmCompleted[item] ? undefined : 'border.strong'}
-                color={rhythmCompleted[item] ? undefined : 'text.primary'}
-                variant={rhythmCompleted[item] ? 'solid' : 'outline'}
-                onClick={() => {
-                  if (item === CALENDAR_SYNC_ITEM && !tutorialCompleted) {
-                    handleOpenTutorialModal()
-                    return
-                  }
-                  toggleItem(item)
-                }}
-                isDisabled={tutorialLoading && item === CALENDAR_SYNC_ITEM}
-              >
-                {rhythmCompleted[item] ? 'Completed' : 'Mark done'}
-              </Button>
-            </Tooltip>
-          </Flex>
-        ))}
-      </Stack>
-      <Text color="text.muted" fontSize="sm" mt={2}>
-        Saved locally for calendar week {calendarWeek}. Perfect for building your weekly habits.
-      </Text>
-    </Box>
-  )
 
   const renderGuidanceCard = () => {
     if (normalizedJourneyType !== '6W') return null
@@ -1119,15 +1134,15 @@ const WeeklyChecklistPage: React.FC = () => {
       <Box p={4} borderWidth="1px" borderColor="gray.700" bg="white" borderRadius="lg">
         <Stack spacing={3}>
           <HStack justify="space-between">
-            <Heading size="sm" color="#273240">
-              Week {selectedWeek} summary
+            <Heading size="sm" color="text.primary">
+              Week {selectedWeek} summary · Window {windowProgress.windowNumber}
             </Heading>
             <Tag colorScheme={progressStatus.color}>
               {progressStatus.label} • {progressStatus.pct}%
             </Tag>
           </HStack>
           <Progress value={progressStatus.pct} colorScheme={progressStatus.color} borderRadius="full" />
-          <SimpleGrid columns={{ base: 1, md: 3 }} spacing={4}>
+          <SimpleGrid columns={{ base: 1, md: 4 }} spacing={4}>
             <StatCard
               label="Activities completed"
               value={`${pendingCounts.completed} of ${pendingCounts.total}`}
@@ -1136,7 +1151,12 @@ const WeeklyChecklistPage: React.FC = () => {
             <StatCard
               label="Weekly points"
               value={`${weeklyPointsEarned} / ${weeklyTarget}`}
-              icon={<Icon as={Plus} color="accent.warning" />}
+              icon={<Icon as={Plus} color="brand.primary" />}
+            />
+            <StatCard
+              label={`Window ${windowProgress.windowNumber} points`}
+              value={`${windowProgress.earned} / ${windowProgress.target}`}
+              icon={<Icon as={CalendarRange} color="purple.400" />}
             />
             <StatCard
               label="Status"
@@ -1172,6 +1192,19 @@ const WeeklyChecklistPage: React.FC = () => {
         </Alert>
       )}
 
+      {isWeekLocked && (
+        <Alert status="info" borderRadius="md">
+          <AlertIcon />
+          <Stack spacing={1}>
+            <AlertTitle>Week {selectedWeek} is Locked</AlertTitle>
+            <AlertDescription>
+              Complete Week {journey?.currentWeek ?? 1} milestones to unlock this week.
+              Week advancement is based on earning target points and completing pending approvals, not calendar time.
+            </AlertDescription>
+          </Stack>
+        </Alert>
+      )}
+
       <Grid templateColumns={{ base: '1fr', xl: '2fr 1fr' }} gap={6} alignItems="start">
         <GridItem>
           <Stack spacing={4}>
@@ -1187,7 +1220,7 @@ const WeeklyChecklistPage: React.FC = () => {
                 </Stack>
               ) : (
                 <Stack spacing={3}>
-                  {activities.length ? activities.map(renderActivityCard) : (
+                  {activities.length ? getVisibleActivities(activities).map(renderActivityCard) : (
                     <Center py={8}>
                       <Stack spacing={2} align="center">
                         <Text color="text.secondary">No activities found for this week.</Text>
@@ -1201,7 +1234,6 @@ const WeeklyChecklistPage: React.FC = () => {
               )}
             </SurfaceCard>
             {renderGuidanceCard()}
-            {renderParticipationRhythm()}
           </Stack>
         </GridItem>
 
@@ -1235,15 +1267,6 @@ const WeeklyChecklistPage: React.FC = () => {
       </Grid>
 
       {renderProofModal()}
-      <IoradTutorialModal
-        isOpen={isTutorialModalOpen}
-        onClose={handleCloseTutorialModal}
-        onComplete={handleTutorialComplete}
-        tutorialUrl={CALENDAR_SYNC_TUTORIAL.url}
-        isSubmitting={tutorialSaving}
-        error={tutorialSaveError}
-        onRetry={tutorialSaveError ? handleTutorialComplete : undefined}
-      />
     </Stack>
   )
 }
@@ -1251,12 +1274,12 @@ const WeeklyChecklistPage: React.FC = () => {
 const StatCard: React.FC<{ label: string; value: string; icon: React.ReactNode }> = ({ label, value, icon }) => (
   <SurfaceCard borderColor="gray.700" borderRadius="lg" bg="white">
     <HStack justify="space-between" mb={1}>
-      <Text color="#273240" fontSize="sm">
+      <Text color="text.primary" fontSize="sm">
         {label}
       </Text>
       {icon}
     </HStack>
-    <Heading size="md" color="#273240">
+    <Heading size="md" color="text.primary">
       {value}
     </Heading>
   </SurfaceCard>

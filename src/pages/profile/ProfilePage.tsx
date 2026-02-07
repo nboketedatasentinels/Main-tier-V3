@@ -1,5 +1,11 @@
-import React, { useCallback, useEffect, useMemo, useState } from 'react'
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import {
+  AlertDialog,
+  AlertDialogBody,
+  AlertDialogContent,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogOverlay,
   Avatar,
   Badge,
   Box,
@@ -8,7 +14,7 @@ import {
   CardBody,
   CardHeader,
   Center,
-  chakra,
+  Collapse,
   Alert,
   AlertIcon,
   Checkbox,
@@ -21,12 +27,10 @@ import {
   GridItem,
   HStack,
   Icon,
-  Image,
   Input,
   InputGroup,
   InputLeftElement,
   Link,
-  Progress,
   Radio,
   RadioGroup,
   Select,
@@ -46,7 +50,6 @@ import {
 } from '@chakra-ui/react'
 import {
   AlertCircle,
-  Award,
   Brain,
   Building,
   Calendar,
@@ -57,21 +60,19 @@ import {
   Edit,
   ExternalLink,
   Github,
-  Heart,
   Key,
   Linkedin,
   Loader2,
   Lock,
-  LogOut,
   Mail as MailIcon,
+  LogOut,
   Save,
   Settings,
   Shield,
-  RefreshCcw,
   TrendingUp,
   Twitter,
   Upload,
-  User,
+  UserPlus,
   Users,
   X,
   XCircle,
@@ -83,26 +84,25 @@ import {
   reauthenticateWithCredential,
   updateEmail,
   updatePassword,
-  signOut as firebaseSignOut,
 } from 'firebase/auth'
 import {
-  collection,
   doc,
   getDoc,
-  getDocs,
-  query,
   serverTimestamp,
   updateDoc,
-  where,
 } from 'firebase/firestore'
 import { getDownloadURL, ref, uploadBytes } from 'firebase/storage'
 import { auth, db, storage } from '@/services/firebase'
 import { useAuth } from '@/hooks/useAuth'
-import type { StandardRole, Organization } from '@/types'
-import { TransformationTier } from '@/types'
+import type { StandardRole, Organization, DashboardPreferences } from '@/types'
+import { TransformationTier, UserRole } from '@/types'
 import { normalizeRole } from '@/utils/role'
-import { validateCompanyCode } from '@/services/organizationService'
+import { incrementOrganizationMemberCount, validateCompanyCode } from '@/services/organizationService'
+import { fetchVillageById, VillageSummary } from '@/services/villageService'
+import { listVillageInvitations } from '@/services/villageInvitationService'
+import { formatVillageInviteLink } from '@/config/app'
 import { CORE_VALUES } from '@/config/personality-data'
+import BadgeDisplay from '@/components/profile/BadgeDisplay'
 
 interface ProfileData {
   id: string
@@ -121,6 +121,7 @@ interface ProfileData {
   matchRefreshPreference?: 'weekly' | 'biweekly' | 'on-demand' | 'disabled'
   preferredMatchDay?: number
   matchNotificationPreference?: 'email' | 'in_app' | 'both'
+  dashboardPreferences?: DashboardPreferences
   socialLinks: {
     linkedin?: string
     twitter?: string
@@ -130,19 +131,10 @@ interface ProfileData {
   registrationDate?: string
   companyName?: string
   companyCode?: string
+  companyId?: string | null
+  villageId?: string | null
   villageName?: string
   clusterName?: string
-}
-
-interface BadgeRecord {
-  id: string
-  title: string
-  description?: string
-  criteria?: string
-  type?: string
-  earned: boolean
-  earnedAt?: string
-  progressPercentage?: number
 }
 
 const personalityTypes = [
@@ -167,27 +159,13 @@ const personalityTypes = [
 const coreValueOptions = CORE_VALUES
 
 const roleDisplayMap: Record<StandardRole, string> = {
-  user: 'Member',
-  free_user: 'Free Member',
-  paid_member: 'Paid Member',
-  team_leader: 'Team Leader',
+  user: 'Learner',
+  free_user: 'Learner',
+  paid_member: 'Learner',
   mentor: 'Mentor',
   ambassador: 'Ambassador',
-  admin: 'Administrator',
-  partner: 'Administrator',
-  super_admin: 'Super Administrator',
-}
-
-const roleColorMap: Record<StandardRole, string> = {
-  user: 'gray',
-  free_user: 'gray',
-  paid_member: 'green',
-  team_leader: 'blue',
-  mentor: 'purple',
-  ambassador: 'blue',
-  admin: 'red',
-  partner: 'red',
-  super_admin: 'red',
+  partner: 'Partner',
+  super_admin: 'Super Admin',
 }
 
 const statusColorMap: Record<ProfileData['accountStatus'], string> = {
@@ -196,17 +174,24 @@ const statusColorMap: Record<ProfileData['accountStatus'], string> = {
   pending: 'yellow',
 }
 
-const membershipCopy: Record<ProfileData['membershipStatus'], { title: string; description: string; badge: string }> = {
+const membershipCopy: Record<ProfileData['membershipStatus'], { title: string; description: string; badge: string; statusMessage: string }> = {
   paid: {
     title: 'Paid Membership',
     description: 'Full access to all features and content',
     badge: 'Active',
+    statusMessage: 'You have a paid membership with access to every benefit on the platform.',
   },
   free: {
     title: 'Free Account',
     description: 'Limited access to basic features',
     badge: 'Limited',
+    statusMessage: 'You are on the free tier; upgrade to unlock everything shown in the comparison below.',
   },
+}
+
+const membershipTagColor: Record<ProfileData['membershipStatus'], string> = {
+  paid: 'green',
+  free: 'purple',
 }
 
 const matchRefreshOptions: Array<{ label: string; value: NonNullable<ProfileData['matchRefreshPreference']> }> = [
@@ -244,33 +229,17 @@ const timezoneOptions = [
   'Australia/Sydney',
 ]
 
-const formatDate = (value?: string) => {
-  if (!value) return 'Not available'
-  const date = new Date(value)
-  if (Number.isNaN(date.getTime())) return 'Not available'
-  return date.toLocaleDateString(undefined, { month: 'long', day: 'numeric', year: 'numeric' })
-}
+const PaymentHistory: React.FC<{ hasRecords: boolean }> = ({ hasRecords }) => {
+  if (!hasRecords) {
+    return (
+      <Text fontSize="sm" color="brand.subtleText">
+        No payment history — upgrade to start your subscription.
+      </Text>
+    )
+  }
 
-const AvatarInitials: React.FC<{ name: string }> = ({ name }) => {
-  const initials = useMemo(() => name.slice(0, 2).toUpperCase(), [name])
   return (
-    <Center
-      w="64px"
-      h="64px"
-      rounded="full"
-      bg="brand.primary"
-      color="white"
-      fontWeight="bold"
-      fontSize="xl"
-    >
-      {initials}
-    </Center>
-  )
-}
-
-const PaymentHistory: React.FC = () => {
-  return (
-    <Card mt={6} borderColor="brand.border">
+    <Card mt={6} borderColor="brand.border" boxShadow="card">
       <CardHeader>
         <Flex justify="space-between" align="center">
           <Box>
@@ -298,7 +267,7 @@ const PaymentHistory: React.FC = () => {
 
 export const ProfilePage: React.FC = () => {
   const navigate = useNavigate()
-  const { user, profile } = useAuth()
+  const { user, profile, refreshProfile } = useAuth()
   const toast = useToast()
 
   const [loading, setLoading] = useState(true)
@@ -308,10 +277,6 @@ export const ProfilePage: React.FC = () => {
   const [isEditing, setIsEditing] = useState(false)
   const [isSaving, setIsSaving] = useState(false)
   const [profilePictureFile, setProfilePictureFile] = useState<File | null>(null)
-  const [previewUrl, setPreviewUrl] = useState<string | null>(null)
-  const [badges, setBadges] = useState<BadgeRecord[]>([])
-  const [badgesLoading, setBadgesLoading] = useState(true)
-  const [badgesError, setBadgesError] = useState<string | null>(null)
   const [emailFormOpen, setEmailFormOpen] = useState(false)
   const [passwordFormOpen, setPasswordFormOpen] = useState(false)
   const [emailForm, setEmailForm] = useState({ newEmail: '', password: '' })
@@ -331,6 +296,30 @@ export const ProfilePage: React.FC = () => {
   const [personalityFormError, setPersonalityFormError] = useState<string | null>(null)
   const [matchPreferencesSaving, setMatchPreferencesSaving] = useState(false)
   const [matchPreferencesMessage, setMatchPreferencesMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null)
+  const [showAdvancedMatching, setShowAdvancedMatching] = useState(false)
+  const [accountSettingsSaving, setAccountSettingsSaving] = useState(false)
+  const [organizationMessage, setOrganizationMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null)
+  const [villageDetails, setVillageDetails] = useState<VillageSummary | null>(null)
+  const [villageLoading, setVillageLoading] = useState(false)
+  const [villageError, setVillageError] = useState<string | null>(null)
+  const [pendingVillageInvites, setPendingVillageInvites] = useState(0)
+  const [shareableInviteCode, setShareableInviteCode] = useState<string | null>(null)
+  const shareableInviteLink = useMemo(() => {
+    return shareableInviteCode ? formatVillageInviteLink(shareableInviteCode) : ''
+  }, [shareableInviteCode])
+  const [isLeaveVillageOpen, setIsLeaveVillageOpen] = useState(false)
+  const [isLeavingVillage, setIsLeavingVillage] = useState(false)
+  const cancelLeaveRef = useRef<HTMLButtonElement | null>(null)
+
+  const hasAccountSettingsChanges = useMemo(() => {
+    if (!editedData || !profileData) return false
+    const hasMatchChanges = editedData.matchRefreshPreference !== profileData.matchRefreshPreference
+      || editedData.preferredMatchDay !== profileData.preferredMatchDay
+      || editedData.matchNotificationPreference !== profileData.matchNotificationPreference
+      || editedData.timezone !== profileData.timezone
+    const hasVisibilityChange = editedData.leaderboardVisibility !== profileData.leaderboardVisibility
+    return hasMatchChanges || hasVisibilityChange
+  }, [editedData, profileData])
 
   const buildProfileFromDoc = useCallback(
     (docData: Record<string, unknown>): ProfileData => ({
@@ -376,6 +365,7 @@ export const ProfilePage: React.FC = () => {
       registrationDate: (docData.registrationDate as string) || (docData.createdAt as string),
       companyName: docData.companyName as string,
       companyCode: docData.companyCode as string,
+      villageId: (docData.villageId as string) || null,
       villageName: docData.villageName as string,
       clusterName: docData.clusterName as string,
     }),
@@ -409,80 +399,89 @@ export const ProfilePage: React.FC = () => {
     }
   }, [buildProfileFromDoc, navigate, user])
 
-  const loadUserBadges = useCallback(async () => {
-    if (!user) {
-      setBadgesLoading(false)
-      return
-    }
-    setBadgesLoading(true)
-    setBadgesError(null)
-    try {
-      const badgeDefsSnap = await getDocs(collection(db, 'badges'))
-      type BadgeDefinition = {
-        id: string
-        title?: string
-        name?: string
-        description?: string
-        criteria?: string
-        type?: string
-      }
-
-      const badgeDefs: BadgeDefinition[] = badgeDefsSnap.docs.map((docItem) => ({
-        id: docItem.id,
-        ...(docItem.data() as Record<string, unknown>),
-      }))
-
-      const userBadgesSnap = await getDocs(query(collection(db, 'user_badges'), where('userId', '==', user.uid)))
-      type UserBadgePayload = { badgeId?: string; earnedAt?: string; progressPercentage?: number }
-
-      const userBadgeMap = new Map(
-        userBadgesSnap.docs.map((docItem) => {
-          const payload = docItem.data() as UserBadgePayload
-          return [payload.badgeId, { ...payload, id: docItem.id }]
-        }),
-      )
-
-      const combined: BadgeRecord[] = badgeDefs.map((def) => {
-        const userBadge = userBadgeMap.get(def.id)
-        const earned = Boolean(userBadge?.earnedAt)
-        return {
-          id: def.id,
-          title: def.title || def.name || 'Achievement',
-          description: def.description,
-          criteria: def.criteria,
-          type: def.type,
-          earned,
-          earnedAt: userBadge?.earnedAt,
-          progressPercentage: userBadge?.progressPercentage || 0,
-        }
-      })
-
-      combined.sort((a, b) => {
-        if (a.earned && !b.earned) return -1
-        if (!a.earned && b.earned) return 1
-        return (b.earnedAt || '').localeCompare(a.earnedAt || '')
-      })
-
-      setBadges(combined)
-    } catch (err) {
-      console.error(err)
-      setBadgesError('Unable to load badges right now.')
-    } finally {
-      setBadgesLoading(false)
-    }
-  }, [user])
-
   useEffect(() => {
     fetchUserProfile()
   }, [fetchUserProfile])
 
   useEffect(() => {
-    loadUserBadges()
-  }, [loadUserBadges])
-
-  useEffect(() => {
     setCompanyCode(profileData?.companyCode || '')
   }, [profileData?.companyCode])
+
+  const villageId = useMemo(
+    () => profile?.villageId || profileData?.villageId || null,
+    [profile?.villageId, profileData?.villageId],
+  )
+  const isPaidMember = profileData?.membershipStatus === 'paid'
+  const shouldShowVillageCard = !isPaidMember && Boolean(villageId)
+  const villageMemberLimit = 10
+  const isVillageNearCapacity = (villageDetails?.memberCount ?? 0) >= villageMemberLimit - 2
+  const isVillageAtCapacity = (villageDetails?.memberCount ?? 0) >= villageMemberLimit
+
+  useEffect(() => {
+    let isMounted = true
+
+    const loadVillageDetails = async () => {
+      if (!villageId || isPaidMember) {
+        if (isMounted) {
+          setVillageDetails(null)
+          setVillageLoading(false)
+          setVillageError(null)
+        }
+        return
+      }
+
+      if (isMounted) {
+        setVillageLoading(true)
+        setVillageError(null)
+      }
+
+      const details = await fetchVillageById(villageId)
+
+      if (!isMounted) return
+
+      if (!details) {
+        setVillageDetails(null)
+        setVillageError('We could not load your village details. Please try again later.')
+      } else {
+        setVillageDetails(details)
+        setVillageError(null)
+      }
+      setVillageLoading(false)
+    }
+
+    loadVillageDetails()
+
+    return () => {
+      isMounted = false
+    }
+  }, [isPaidMember, villageId])
+
+  useEffect(() => {
+    if (!villageId || isPaidMember) {
+      setPendingVillageInvites(0)
+      setShareableInviteCode(null)
+      return
+    }
+
+    let isMounted = true
+    const loadInvites = async () => {
+      try {
+        const invites = await listVillageInvitations({ villageId, status: 'pending' })
+        if (!isMounted) return
+        setPendingVillageInvites(invites.length)
+        const shareableInvite = invites.find((invite) => !invite.email)
+        setShareableInviteCode(shareableInvite?.invitationCode ?? null)
+      } catch (error) {
+        console.error('Failed to load village invites', error)
+      }
+    }
+
+    void loadInvites()
+
+    return () => {
+      isMounted = false
+    }
+  }, [isPaidMember, villageId])
 
   useEffect(() => {
     const trimmedCode = companyCode.trim().toUpperCase()
@@ -519,6 +518,12 @@ export const ProfilePage: React.FC = () => {
     }
   }, [companyCode])
 
+  useEffect(() => {
+    if (organizationMessage?.type !== 'success') return
+    const timer = window.setTimeout(() => setOrganizationMessage(null), 6000)
+    return () => window.clearTimeout(timer)
+  }, [organizationMessage])
+
   const handleInputChange = <K extends keyof ProfileData>(field: K, value: ProfileData[K]) => {
     if (!editedData) return
     setEditedData({ ...editedData, [field]: value })
@@ -527,6 +532,66 @@ export const ProfilePage: React.FC = () => {
   const handleSocialLinkChange = (platform: keyof ProfileData['socialLinks'], value: string) => {
     if (!editedData) return
     setEditedData({ ...editedData, socialLinks: { ...editedData.socialLinks, [platform]: value } })
+  }
+
+  const formatVillageDate = (value?: string) => {
+    if (!value) return 'Unknown'
+    const parsed = new Date(value)
+    if (Number.isNaN(parsed.getTime())) return 'Unknown'
+    return new Intl.DateTimeFormat('en-US', { month: 'short', day: 'numeric', year: 'numeric' }).format(parsed)
+  }
+
+  const handleManageVillage = () => {
+    if (!villageId) return
+    navigate(`/app/villages/${villageId}/manage`)
+  }
+
+  const handleInviteVillage = () => {
+    if (!villageId) return
+    navigate(`/app/villages/${villageId}/invite`)
+  }
+
+  const handleCopyVillageInviteLink = async () => {
+    if (!shareableInviteLink) return
+    if (navigator.clipboard) {
+      await navigator.clipboard.writeText(shareableInviteLink)
+      toast({
+        title: 'Invite link copied',
+        status: 'success',
+        duration: 2000,
+      })
+    }
+  }
+
+  const handleLeaveVillage = async () => {
+    if (!user) return
+    setIsLeavingVillage(true)
+    try {
+      await Promise.all([
+        updateDoc(doc(db, 'users', user.uid), { villageId: null, updatedAt: serverTimestamp() }),
+        updateDoc(doc(db, 'profiles', user.uid), { villageId: null, updatedAt: serverTimestamp() }),
+      ])
+      await refreshProfile({ reason: 'village-left' })
+      setVillageDetails(null)
+      setVillageError(null)
+      toast({
+        title: 'You left the village',
+        description: 'Your village affiliation has been removed.',
+        status: 'success',
+        duration: 4000,
+      })
+    } catch (leaveError) {
+      console.error('Failed to leave village', leaveError)
+      toast({
+        title: 'Unable to leave village',
+        description: 'Please try again or contact support if the issue persists.',
+        status: 'error',
+        duration: 5000,
+      })
+    } finally {
+      setIsLeavingVillage(false)
+      setIsLeaveVillageOpen(false)
+    }
   }
 
   const handleCoreValueToggle = (value: string) => {
@@ -542,9 +607,11 @@ export const ProfilePage: React.FC = () => {
 
   const handleProfilePictureChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
-    if (!file) return
+    if (!file || !editedData) return
     setProfilePictureFile(file)
-    setPreviewUrl(URL.createObjectURL(file))
+    // Update editedData with preview URL for immediate display in the banner avatar
+    const previewUrl = URL.createObjectURL(file)
+    setEditedData({ ...editedData, profilePictureUrl: previewUrl })
   }
 
   const uploadProfilePicture = async (): Promise<string | undefined> => {
@@ -634,7 +701,6 @@ export const ProfilePage: React.FC = () => {
     setIsEditing(false)
     setEditedData(profileData)
     setProfilePictureFile(null)
-    setPreviewUrl(null)
     setPersonalityTestError(null)
     setValuesTestError(null)
     setPersonalityFormError(null)
@@ -753,6 +819,15 @@ export const ProfilePage: React.FC = () => {
   const handleCompanyCodeSave = async () => {
     if (!user || !profileData) return
     const trimmedCode = companyCode.trim().toUpperCase()
+    const currentCompanyCode = (profileData.companyCode || '').trim().toUpperCase()
+
+    if (trimmedCode === currentCompanyCode && profileData.companyId) {
+      setOrganizationMessage({
+        type: 'error',
+        text: `You're already connected to ${profileData.companyName || 'this organization'}.`,
+      })
+      return
+    }
 
     if (!trimmedCode) {
       toast({
@@ -785,6 +860,35 @@ export const ProfilePage: React.FC = () => {
     }
 
     setCompanyCodeSaving(true)
+    setOrganizationMessage(null)
+    const existingAssignments = Array.isArray(profile?.assignedOrganizations) ? profile.assignedOrganizations : []
+    const nextAssignedOrganizations = companyOrganization?.id
+      ? Array.from(
+          new Set([
+            ...existingAssignments.filter(
+              (assignment): assignment is string => typeof assignment === 'string' && assignment.trim().length > 0,
+            ),
+            companyOrganization.id,
+          ]),
+        )
+      : existingAssignments
+    const normalizedCurrentRole = normalizeRole(profileData.role)
+    const roleUpdates =
+      normalizedCurrentRole === 'free_user' || normalizedCurrentRole === 'paid_member'
+        ? { role: UserRole.USER }
+        : {}
+    const membershipUpdates = {
+      membershipStatus: 'paid' as const,
+      ...roleUpdates,
+      transformationTier: companyOrganization
+        ? TransformationTier.CORPORATE_MEMBER
+        : TransformationTier.INDIVIDUAL_PAID,
+      ...(companyOrganization?.id ? { assignedOrganizations: nextAssignedOrganizations } : {}),
+      dashboardPreferences: {
+        ...(profileData.dashboardPreferences ?? {}),
+        lockedToFreeExperience: false,
+      },
+    }
     const updates = {
       companyCode: trimmedCode,
       companyId: companyOrganization?.id ?? null,
@@ -792,35 +896,61 @@ export const ProfilePage: React.FC = () => {
       updatedAt: serverTimestamp(),
     }
 
+    const shouldIncrementMemberCount =
+      !!companyOrganization?.id && companyOrganization.id !== profile?.companyId
+
     try {
       await Promise.all([
-        updateDoc(doc(db, 'profiles', user.uid), updates),
+        updateDoc(doc(db, 'profiles', user.uid), {
+          ...updates,
+          ...membershipUpdates,
+        }),
         updateDoc(doc(db, 'users', user.uid), {
           ...updates,
-          transformationTier: companyOrganization
-            ? TransformationTier.CORPORATE_MEMBER
-            : TransformationTier.INDIVIDUAL_FREE,
+          ...membershipUpdates,
         }),
       ])
+
+      if (companyOrganization?.id && shouldIncrementMemberCount) {
+        try {
+          await incrementOrganizationMemberCount(companyOrganization.id)
+        } catch (incrementError) {
+          console.warn('Unable to increment organization member count', incrementError)
+        }
+      }
+
+      await refreshProfile({ reason: 'company-code-upgrade' })
 
       const updatedProfile = {
         ...profileData,
         companyCode: trimmedCode,
         companyName: companyOrganization?.name ?? profileData.companyName,
+        ...membershipUpdates,
       }
       setProfileData(updatedProfile)
       setEditedData(updatedProfile)
 
+      setOrganizationMessage({
+        type: 'success',
+        text: companyOrganization?.name
+          ? `Connected to ${companyOrganization.name}. Your membership is now paid—check your dashboard for new features.`
+          : 'Company code saved successfully. Your membership is now paid—check your dashboard for new features.',
+      })
+
       toast({
-        title: 'Company code updated',
+        title: 'You are now a paid member',
         description: companyOrganization?.name
-          ? `Connected to ${companyOrganization.name}.`
-          : 'Company code saved successfully.',
+          ? `Connected to ${companyOrganization.name}. Your membership has been upgraded.`
+          : 'Company code saved successfully. Your membership has been upgraded.',
         status: 'success',
         duration: 4000,
       })
     } catch (err) {
       console.error(err)
+      setOrganizationMessage({
+        type: 'error',
+        text: 'We could not connect this organization. Please try again or contact support.',
+      })
       toast({
         title: 'Unable to update company code',
         description: 'Please try again or contact support.',
@@ -832,18 +962,63 @@ export const ProfilePage: React.FC = () => {
     }
   }
 
-  const handleSignOut = async () => {
-    await firebaseSignOut(auth)
-    navigate('/login')
+  const handleSaveAccountSettings = async () => {
+    if (!editedData || !profileData) return
+    setAccountSettingsSaving(true)
+
+    try {
+      await Promise.all([handleSaveMatchPreferences(), handleSaveVisibilityPreference()])
+    } finally {
+      setAccountSettingsSaving(false)
+    }
+  }
+
+  const handleCopyAccountId = async () => {
+    if (!profileData?.id) return
+    try {
+      await navigator.clipboard.writeText(profileData.id)
+      toast({
+        title: 'Account ID copied',
+        description: 'Share this with support if they ask for it.',
+        status: 'success',
+        duration: 3000,
+      })
+    } catch (err) {
+      console.error(err)
+      toast({
+        title: 'Unable to copy ID',
+        description: 'Please try again.',
+        status: 'error',
+        duration: 3000,
+      })
+    }
   }
 
   const handleUpgrade = () => {
     navigate('/upgrade')
   }
 
-  const badgeBackground = (earned: boolean) => (earned ? 'green.50' : 'gray.50')
+  // Build subtitle for profile banner
+  const buildSubtitle = () => {
+    const parts: string[] = []
+    parts.push(roleDisplayMap[profileData?.role || 'user'])
+    if (profileData?.personalityType) {
+      parts.push(profileData.personalityType)
+    }
+    if (profileData?.registrationDate) {
+      const date = new Date(profileData.registrationDate)
+      if (!Number.isNaN(date.getTime())) {
+        parts.push(`Member since ${date.toLocaleDateString(undefined, { month: 'short', year: 'numeric' })}`)
+      }
+    }
+    return parts.join(' · ')
+  }
 
-  const headerActions = profileData?.membershipStatus === 'free'
+  const normalizedCompanyCode = companyCode.trim().toUpperCase()
+  const currentCompanyCode = (profileData?.companyCode || '').trim().toUpperCase()
+  const isAlreadyConnected = Boolean(normalizedCompanyCode)
+    && normalizedCompanyCode === currentCompanyCode
+    && Boolean(profileData?.companyId)
 
   if (loading) {
     return (
@@ -871,62 +1046,68 @@ export const ProfilePage: React.FC = () => {
   }
 
   return (
-    <Box>
-      <Box position="sticky" top={0} zIndex={50} bg="white" boxShadow="sm" px={6} py={4} mb={6} borderBottom="1px solid" borderColor="brand.border">
-        <Flex justify="space-between" align="center">
-          <HStack spacing={3}>
-            <Center w="40px" h="40px" bg="brand.primaryMuted" rounded="lg" fontWeight="bold" color="brand.primary">
-              MP
-            </Center>
-            <Text fontWeight="bold" fontSize="lg">
-              Member Portal
-            </Text>
-          </HStack>
-          <HStack spacing={3}>
-            {headerActions && (
-              <Button leftIcon={<Lock size={18} />} variant="secondary" onClick={handleUpgrade}>
-                Upgrade
-              </Button>
-            )}
-            <Button variant="ghost" leftIcon={<LogOut size={18} />} onClick={handleSignOut}>
-              Sign Out
-            </Button>
-          </HStack>
-        </Flex>
-      </Box>
-
-      <Card mb={8} borderColor="brand.border" bg="linear-gradient(135deg, #eef0fb, #ffffff)">
-        <CardBody>
-          <Flex justify="space-between" align={{ base: 'flex-start', md: 'center' }} direction={{ base: 'column', md: 'row' }} gap={4}>
+    <Box px={{ base: 4, md: 6 }} py={6}>
+      {/* Simplified Profile Banner */}
+      <Card mb={8} borderColor="brand.border" boxShadow="card">
+        <CardBody py={6}>
+          <Flex justify="space-between" align="center">
             <HStack spacing={4} align="center">
-              {editedData.profilePictureUrl ? (
-                <Avatar src={editedData.profilePictureUrl} name={editedData.fullName} size="lg" />
-              ) : (
-                <AvatarInitials name={editedData.fullName} />
-              )}
+              <Box position="relative" cursor="pointer" as="label">
+                {editedData.profilePictureUrl ? (
+                  <Avatar src={editedData.profilePictureUrl} name={editedData.fullName} size="xl" />
+                ) : (
+                  <Center
+                    w="96px"
+                    h="96px"
+                    rounded="full"
+                    bg="brand.primary"
+                    color="white"
+                    fontWeight="bold"
+                    fontSize="2xl"
+                  >
+                    {editedData.fullName.slice(0, 2).toUpperCase()}
+                  </Center>
+                )}
+                <Center
+                  position="absolute"
+                  bottom={0}
+                  right={0}
+                  w="28px"
+                  h="28px"
+                  bg="white"
+                  rounded="full"
+                  border="2px solid"
+                  borderColor="brand.border"
+                  boxShadow="sm"
+                >
+                  <Icon as={Upload} size={14} color="brand.subtleText" />
+                </Center>
+                <Input
+                  type="file"
+                  accept="image/*"
+                  display="none"
+                  onChange={handleProfilePictureChange}
+                />
+              </Box>
               <Box>
-                <Text fontWeight="bold" fontSize="2xl">
+                <Text fontWeight="bold" fontSize="2xl" color="brand.text">
                   {profileData.fullName}
                 </Text>
-                <HStack spacing={3} mt={2} flexWrap="wrap">
-                  <Badge colorScheme={roleColorMap[profileData.role] || 'gray'}>{roleDisplayMap[profileData.role]}</Badge>
-                  <Badge colorScheme={statusColorMap[profileData.accountStatus] || 'gray'}>{profileData.accountStatus === 'active' ? 'Active' : profileData.accountStatus === 'inactive' ? 'Inactive' : 'Pending'}</Badge>
-                  <Badge colorScheme={profileData.membershipStatus === 'paid' ? 'yellow' : 'gray'}>
-                    {profileData.membershipStatus === 'paid' ? 'Paid Member' : 'Free Account'}
-                  </Badge>
-                </HStack>
+                <Text fontSize="sm" color="brand.subtleText" mt={1}>
+                  {buildSubtitle()}
+                </Text>
               </Box>
             </HStack>
-            <HStack spacing={3}>
-              {headerActions && (
-                <Button leftIcon={<Lock size={18} />} onClick={handleUpgrade}>
-                  Upgrade
-                </Button>
-              )}
-              <Button variant="secondary" leftIcon={<LogOut size={18} />} onClick={handleSignOut}>
-                Sign Out
+            <Tooltip label="Edit profile" hasArrow>
+              <Button
+                size="sm"
+                variant="ghost"
+                onClick={() => setIsEditing(true)}
+                aria-label="Edit profile"
+              >
+                <Icon as={Edit} size={18} />
               </Button>
-            </HStack>
+            </Tooltip>
           </Flex>
         </CardBody>
       </Card>
@@ -948,19 +1129,16 @@ export const ProfilePage: React.FC = () => {
 
         <TabPanels>
           <TabPanel px={0}>
-            <Grid templateColumns={{ base: '1fr', lg: '2fr 1fr' }} gap={6}>
+            <Grid templateColumns={{ base: '1fr', lg: '7fr 5fr' }} gap={8}>
+              {/* Left Column - About Me */}
               <GridItem>
-                <Card borderColor="brand.border">
-                  <CardHeader>
+                <Card borderColor="brand.border" boxShadow="card">
+                  <CardHeader pb={2}>
                     <Flex justify="space-between" align="center">
                       <Text fontWeight="semibold" fontSize="lg">
-                        Personal Information
+                        About Me
                       </Text>
-                      {!isEditing ? (
-                        <Button size="sm" leftIcon={<Edit size={16} />} variant="secondary" onClick={() => setIsEditing(true)}>
-                          Edit
-                        </Button>
-                      ) : (
+                      {isEditing && (
                         <HStack spacing={2}>
                           <Button size="sm" variant="ghost" leftIcon={<X size={16} />} onClick={handleCancelEdit}>
                             Cancel
@@ -972,306 +1150,172 @@ export const ProfilePage: React.FC = () => {
                       )}
                     </Flex>
                   </CardHeader>
-                  <CardBody>
+                  <CardBody pt={4}>
                     <VStack align="stretch" spacing={6}>
-                      <FormControl>
-                        <FormLabel>Full Name</FormLabel>
-                        {!isEditing ? (
-                          <HStack spacing={2} color="brand.text">
-                            <Icon as={User} />
-                            <Text>{profileData.fullName}</Text>
-                          </HStack>
-                        ) : (
-                          <Input value={editedData.fullName} onChange={(e) => handleInputChange('fullName', e.target.value)} />
-                        )}
-                      </FormControl>
+                      {/* Name & Email Section */}
+                      <Box>
+                        <FormControl mb={4}>
+                          <FormLabel fontSize="sm" color="brand.subtleText" mb={1}>Full Name</FormLabel>
+                          {!isEditing ? (
+                            <Text fontSize="lg" fontWeight="medium" color="brand.text">{profileData.fullName}</Text>
+                          ) : (
+                            <Input value={editedData.fullName} onChange={(e) => handleInputChange('fullName', e.target.value)} />
+                          )}
+                        </FormControl>
 
-                      <FormControl>
-                        <FormLabel>Profile Picture</FormLabel>
-                        {!isEditing ? (
-                          <HStack spacing={3}>
-                            {profileData.profilePictureUrl ? (
-                              <Avatar src={profileData.profilePictureUrl} size="sm" />
-                            ) : (
-                              <AvatarInitials name={profileData.fullName} />
-                            )}
-                            <Text color="brand.subtleText">Used across your profile</Text>
-                          </HStack>
-                        ) : (
-                          <HStack spacing={3} align="center">
-                            {previewUrl || editedData.profilePictureUrl ? (
-                              <Image
-                                src={previewUrl || editedData.profilePictureUrl}
-                                alt="Profile preview"
-                                boxSize="96px"
-                                objectFit="cover"
-                                rounded="full"
-                                border="1px solid"
-                                borderColor="brand.border"
-                              />
-                            ) : (
-                              <AvatarInitials name={profileData.fullName} />
-                            )}
-                            <Button as="label" leftIcon={<Upload size={16} />} variant="secondary">
-                              Upload
-                              <Input type="file" accept="image/*" display="none" onChange={handleProfilePictureChange} />
-                            </Button>
-                          </HStack>
-                        )}
-                      </FormControl>
-
-                      <FormControl>
-                        <FormLabel>Email Address</FormLabel>
-                        {!isEditing ? (
-                          <HStack spacing={2} color="brand.text">
-                            <Icon as={MailIcon} />
-                            <Text>{profileData.email}</Text>
-                          </HStack>
-                        ) : (
-                          <Input type="email" value={editedData.email} onChange={(e) => handleInputChange('email', e.target.value)} />
-                        )}
-                      </FormControl>
-
-                      <FormControl>
-                        <FormLabel>Personality Type</FormLabel>
-                        {isEditing && (
-                          <Alert status="info" borderRadius="lg" mb={3} bg="blue.50" border="1px solid" borderColor="blue.200">
-                            <HStack align="start" spacing={3}>
-                              <AlertIcon color="blue.500" mt={1} />
-                              <VStack align="start" spacing={2}>
-                                <Text fontWeight="semibold" color="blue.800">
-                                  Required: Take the test first
-                                </Text>
-                                <Button
-                                  as={Link}
-                                  href="https://www.16personalities.com/free-personality-test"
-                                  isExternal
-                                  variant="outline"
-                                  colorScheme="blue"
-                                  rightIcon={<Icon as={ExternalLink} />}
-                                  size="sm"
-                                >
-                                  Take the 16 Personalities test
-                                </Button>
-                                <Checkbox
-                                  isChecked={Boolean(editedData.hasCompletedPersonalityTest)}
-                                  onChange={(e) => {
-                                    handleInputChange('hasCompletedPersonalityTest', e.target.checked)
-                                    setPersonalityTestError(null)
-                                  }}
-                                >
-                                  I have completed the 16 Personalities test
-                                </Checkbox>
-                                {personalityTestError && (
-                                  <Text fontSize="sm" color="red.500">
-                                    {personalityTestError}
-                                  </Text>
-                                )}
-                              </VStack>
+                        <FormControl>
+                          <FormLabel fontSize="sm" color="brand.subtleText" mb={1}>Email Address</FormLabel>
+                          {!isEditing ? (
+                            <HStack spacing={2} color="brand.text">
+                              <Icon as={MailIcon} size={16} color="brand.subtleText" />
+                              <Text>{profileData.email}</Text>
                             </HStack>
-                          </Alert>
-                        )}
+                          ) : (
+                            <Input type="email" value={editedData.email} onChange={(e) => handleInputChange('email', e.target.value)} />
+                          )}
+                        </FormControl>
+                      </Box>
+
+                      <Divider borderColor="brand.border" />
+
+                      {/* Bio Section */}
+                      <FormControl>
+                        <FormLabel fontSize="sm" color="brand.subtleText" mb={1}>Bio</FormLabel>
                         {!isEditing ? (
-                          <HStack spacing={2} color="brand.text">
-                            <Icon as={Brain} />
-                            <Text>{profileData.personalityType || 'Not set'}</Text>
-                          </HStack>
-                        ) : (
-                          <Tooltip
-                            label="Complete the 16 Personalities test to unlock this field."
-                            isDisabled={Boolean(editedData.hasCompletedPersonalityTest)}
-                            hasArrow
-                          >
-                            <Box opacity={editedData.hasCompletedPersonalityTest ? 1 : 0.6}>
-                              <chakra.select
-                                value={editedData.personalityType || ''}
-                                onChange={(e) => {
-                                  handleInputChange('personalityType', e.target.value)
-                                  setPersonalityFormError(null)
-                                }}
-                                className="chakra-select"
-                                style={{ padding: '12px', borderRadius: '12px', border: '1px solid #e6e8f3' }}
-                                disabled={!editedData.hasCompletedPersonalityTest}
+                          profileData.bio ? (
+                            <Text whiteSpace="pre-wrap" color="brand.text" lineHeight="tall">
+                              {profileData.bio}
+                            </Text>
+                          ) : (
+                            <Box py={2}>
+                              <Text color="brand.subtleText" mb={2}>Add a bio to help others get to know you</Text>
+                              <Button
+                                size="sm"
+                                variant="ghost"
+                                color="brand.primary"
+                                leftIcon={<Edit size={14} />}
+                                onClick={() => setIsEditing(true)}
+                                p={0}
+                                h="auto"
+                                _hover={{ bg: 'transparent', textDecoration: 'underline' }}
                               >
-                                <option value="">Select personality type</option>
-                                {personalityTypes.map((type) => (
-                                  <option key={type} value={type}>
-                                    {type}
-                                  </option>
-                                ))}
-                              </chakra.select>
+                                Add a bio
+                              </Button>
                             </Box>
-                          </Tooltip>
+                          )
+                        ) : (
+                          <Textarea
+                            value={editedData.bio}
+                            rows={4}
+                            onChange={(e) => handleInputChange('bio', e.target.value)}
+                            placeholder="Tell others about yourself..."
+                          />
                         )}
                       </FormControl>
 
+                      <Divider borderColor="brand.border" />
+
+                      {/* Social Links Section */}
                       <FormControl>
-                        <FormLabel>Core Values (select exactly 5)</FormLabel>
-                        {isEditing && (
-                          <Alert status="info" borderRadius="lg" mb={3} bg="blue.50" border="1px solid" borderColor="blue.200">
-                            <HStack align="start" spacing={3}>
-                              <AlertIcon color="blue.500" mt={1} />
-                              <VStack align="start" spacing={2}>
-                                <Text fontWeight="semibold" color="blue.800">
-                                  Required: Take the test first
-                                </Text>
-                                <Button
-                                  as={Link}
-                                  href="https://personalvalu.es/"
-                                  isExternal
-                                  variant="outline"
-                                  colorScheme="blue"
-                                  rightIcon={<Icon as={ExternalLink} />}
-                                  size="sm"
-                                >
-                                  Take the Personal Values test
-                                </Button>
-                                <Checkbox
-                                  isChecked={Boolean(editedData.hasCompletedValuesTest)}
-                                  onChange={(e) => {
-                                    handleInputChange('hasCompletedValuesTest', e.target.checked)
-                                    setValuesTestError(null)
-                                  }}
-                                >
-                                  I have completed the Personal Values test
-                                </Checkbox>
-                                {valuesTestError && (
-                                  <Text fontSize="sm" color="red.500">
-                                    {valuesTestError}
-                                  </Text>
-                                )}
-                              </VStack>
-                            </HStack>
-                          </Alert>
-                        )}
+                        <FormLabel fontSize="sm" color="brand.subtleText" mb={2}>Social Links</FormLabel>
                         {!isEditing ? (
-                          <HStack spacing={2} flexWrap="wrap">
-                            {profileData.coreValues.length === 0 ? (
-                              <Text color="brand.subtleText">No core values selected</Text>
-                            ) : (
-                              profileData.coreValues.map((value) => (
-                                <Tag key={value} colorScheme="yellow" borderRadius="full" px={3} py={1}>
-                                  <HStack spacing={1}>
-                                    <Icon as={Award} size={14} />
-                                    <Text>{value}</Text>
+                          editedData.socialLinks.linkedin || editedData.socialLinks.twitter || editedData.socialLinks.github ? (
+                            <HStack spacing={3} flexWrap="wrap">
+                              {editedData.socialLinks.linkedin && (
+                                <Link href={editedData.socialLinks.linkedin} isExternal>
+                                  <HStack spacing={1} color="brand.primary" _hover={{ textDecoration: 'underline' }}>
+                                    <Icon as={Linkedin} size={16} />
+                                    <Text fontSize="sm">LinkedIn</Text>
                                   </HStack>
-                                </Tag>
-                              ))
-                            )}
-                          </HStack>
-                        ) : (
-                          <Tooltip
-                            label="Complete the Personal Values test to unlock this section."
-                            isDisabled={Boolean(editedData.hasCompletedValuesTest)}
-                            hasArrow
-                          >
-                            <Box opacity={editedData.hasCompletedValuesTest ? 1 : 0.6}>
-                              <Grid templateColumns={{ base: 'repeat(2, 1fr)', md: 'repeat(4, 1fr)' }} gap={3}>
-                                {coreValueOptions.map((value) => {
-                                  const selected = editedData.coreValues.includes(value)
-                                  const disabled =
-                                    !editedData.hasCompletedValuesTest ||
-                                    (!selected && editedData.coreValues.length >= 5)
-                                  return (
-                                    <Box
-                                      key={value}
-                                      border="1px solid"
-                                      borderColor={selected ? 'yellow.400' : 'brand.border'}
-                                      bg={selected ? 'yellow.50' : 'white'}
-                                      rounded="lg"
-                                      p={3}
-                                      cursor={disabled ? 'not-allowed' : 'pointer'}
-                                      opacity={disabled ? 0.5 : 1}
-                                      onClick={() => !disabled && handleCoreValueToggle(value)}
-                                    >
-                                      <HStack spacing={2}>
-                                        <Icon as={Heart} color={selected ? 'yellow.500' : 'brand.subtleText'} />
-                                        <Text fontWeight="medium">{value}</Text>
-                                      </HStack>
-                                    </Box>
-                                  )
-                                })}
-                              </Grid>
-                              <Text fontSize="xs" color="brand.subtleText" textAlign="right" mt={2}>
-                                {editedData.coreValues.length}/5 values selected
-                              </Text>
+                                </Link>
+                              )}
+                              {editedData.socialLinks.twitter && (
+                                <Link href={editedData.socialLinks.twitter} isExternal>
+                                  <HStack spacing={1} color="brand.primary" _hover={{ textDecoration: 'underline' }}>
+                                    <Icon as={Twitter} size={16} />
+                                    <Text fontSize="sm">Twitter</Text>
+                                  </HStack>
+                                </Link>
+                              )}
+                              {editedData.socialLinks.github && (
+                                <Link href={editedData.socialLinks.github} isExternal>
+                                  <HStack spacing={1} color="brand.primary" _hover={{ textDecoration: 'underline' }}>
+                                    <Icon as={Github} size={16} />
+                                    <Text fontSize="sm">GitHub</Text>
+                                  </HStack>
+                                </Link>
+                              )}
+                            </HStack>
+                          ) : (
+                            <Box py={2}>
+                              <Text color="brand.subtleText" mb={2}>Connect your accounts</Text>
+                              <HStack spacing={2}>
+                                <Tooltip label="Add LinkedIn" hasArrow>
+                                  <Button
+                                    size="sm"
+                                    variant="outline"
+                                    onClick={() => setIsEditing(true)}
+                                    borderColor="brand.border"
+                                    _hover={{ borderColor: 'brand.primary' }}
+                                  >
+                                    <Icon as={Linkedin} size={16} />
+                                  </Button>
+                                </Tooltip>
+                                <Tooltip label="Add Twitter" hasArrow>
+                                  <Button
+                                    size="sm"
+                                    variant="outline"
+                                    onClick={() => setIsEditing(true)}
+                                    borderColor="brand.border"
+                                    _hover={{ borderColor: 'brand.primary' }}
+                                  >
+                                    <Icon as={Twitter} size={16} />
+                                  </Button>
+                                </Tooltip>
+                                <Tooltip label="Add GitHub" hasArrow>
+                                  <Button
+                                    size="sm"
+                                    variant="outline"
+                                    onClick={() => setIsEditing(true)}
+                                    borderColor="brand.border"
+                                    _hover={{ borderColor: 'brand.primary' }}
+                                  >
+                                    <Icon as={Github} size={16} />
+                                  </Button>
+                                </Tooltip>
+                              </HStack>
                             </Box>
-                          </Tooltip>
-                        )}
-                        {personalityFormError && (
-                          <Text fontSize="sm" color="red.500" mt={2}>
-                            {personalityFormError}
-                          </Text>
-                        )}
-                      </FormControl>
-
-                      <FormControl>
-                        <FormLabel>Bio</FormLabel>
-                        {!isEditing ? (
-                          <Text whiteSpace="pre-wrap" color="brand.text">
-                            {profileData.bio || 'No bio provided'}
-                          </Text>
-                        ) : (
-                          <Textarea value={editedData.bio} rows={3} onChange={(e) => handleInputChange('bio', e.target.value)} placeholder="No bio provided" />
-                        )}
-                      </FormControl>
-
-                      <FormControl>
-                        <FormLabel>Social Links</FormLabel>
-                        {!isEditing ? (
-                          <VStack align="flex-start" spacing={2}>
-                            {editedData.socialLinks.linkedin || editedData.socialLinks.twitter || editedData.socialLinks.github ? (
-                              <>
-                                {editedData.socialLinks.linkedin && (
-                                  <Link href={editedData.socialLinks.linkedin} isExternal color="brand.primary">
-                                    LinkedIn
-                                  </Link>
-                                )}
-                                {editedData.socialLinks.twitter && (
-                                  <Link href={editedData.socialLinks.twitter} isExternal color="brand.primary">
-                                    Twitter
-                                  </Link>
-                                )}
-                                {editedData.socialLinks.github && (
-                                  <Link href={editedData.socialLinks.github} isExternal color="brand.primary">
-                                    GitHub
-                                  </Link>
-                                )}
-                              </>
-                            ) : (
-                              <Text color="brand.subtleText">No social links</Text>
-                            )}
-                          </VStack>
+                          )
                         ) : (
                           <VStack spacing={3} align="stretch">
-                            <InputGroup>
+                            <InputGroup size="sm">
                               <InputLeftElement pointerEvents="none">
-                                <Icon as={Linkedin} color="brand.subtleText" />
+                                <Icon as={Linkedin} color="brand.subtleText" size={16} />
                               </InputLeftElement>
                               <Input
-                                placeholder="LinkedIn"
+                                placeholder="LinkedIn profile URL"
                                 value={editedData.socialLinks.linkedin || ''}
                                 onChange={(e) => handleSocialLinkChange('linkedin', e.target.value)}
                                 type="url"
                               />
                             </InputGroup>
-                            <InputGroup>
+                            <InputGroup size="sm">
                               <InputLeftElement pointerEvents="none">
-                                <Icon as={Twitter} color="brand.subtleText" />
+                                <Icon as={Twitter} color="brand.subtleText" size={16} />
                               </InputLeftElement>
                               <Input
-                                placeholder="Twitter"
+                                placeholder="Twitter profile URL"
                                 value={editedData.socialLinks.twitter || ''}
                                 onChange={(e) => handleSocialLinkChange('twitter', e.target.value)}
                                 type="url"
                               />
                             </InputGroup>
-                            <InputGroup>
+                            <InputGroup size="sm">
                               <InputLeftElement pointerEvents="none">
-                                <Icon as={Github} color="brand.subtleText" />
+                                <Icon as={Github} color="brand.subtleText" size={16} />
                               </InputLeftElement>
                               <Input
-                                placeholder="GitHub"
+                                placeholder="GitHub profile URL"
                                 value={editedData.socialLinks.github || ''}
                                 onChange={(e) => handleSocialLinkChange('github', e.target.value)}
                                 type="url"
@@ -1280,147 +1324,337 @@ export const ProfilePage: React.FC = () => {
                           </VStack>
                         )}
                       </FormControl>
-
-                      <FormControl>
-                        <FormLabel>Member Since</FormLabel>
-                        <HStack spacing={2} color="brand.text">
-                          <Icon as={Calendar} />
-                          <Text>{formatDate(profileData.registrationDate)}</Text>
-                        </HStack>
-                      </FormControl>
                     </VStack>
                   </CardBody>
                 </Card>
               </GridItem>
 
+              {/* Right Column */}
               <GridItem>
                 <VStack spacing={6}>
-                  <Card borderColor="brand.border">
-                    <CardHeader>
-                      <Flex justify="space-between" align="center">
-                        <Text fontWeight="semibold">Badges & Achievements</Text>
-                        {badges.length > 0 && (
-                          <Tooltip label="Refresh badges">
-                            <Button variant="ghost" size="sm" onClick={loadUserBadges} leftIcon={<RefreshCcw size={14} />}>
-                              Refresh
-                            </Button>
-                          </Tooltip>
-                        )}
-                      </Flex>
+                  {/* Personality & Values Card */}
+                  <Card borderColor="brand.border" boxShadow="card" w="full">
+                    <CardHeader pb={2}>
+                      <Text fontWeight="semibold" fontSize="sm">Personality & Values</Text>
                     </CardHeader>
-                    <CardBody>
-                      {badgesLoading ? (
-                        <Center py={6} color="brand.subtleText">
-                          <Spinner size="sm" mr={2} />
-                          <Text>Loading badges...</Text>
-                        </Center>
-                      ) : badgesError ? (
-                        <VStack spacing={3} align="stretch" bg="red.50" border="1px solid" borderColor="red.100" p={4} rounded="lg">
-                          <HStack spacing={2} color="red.600">
-                            <Icon as={AlertCircle} />
-                            <Text>{badgesError}</Text>
-                          </HStack>
-                          <Button size="sm" onClick={loadUserBadges} leftIcon={<RefreshCcw size={14} />}>
-                            Try again
-                          </Button>
-                        </VStack>
-                      ) : badges.length === 0 ? (
-                        <VStack spacing={3} py={6} color="brand.subtleText">
-                          <Icon as={Award} />
-                          <Text textAlign="center">No badges yet. Keep engaging to earn your first badge!</Text>
-                        </VStack>
-                      ) : (
-                        <Grid templateColumns={{ base: '1fr', md: 'repeat(2, 1fr)' }} gap={4}>
-                          {badges.map((badge) => (
-                            <Box key={badge.id} border="1px solid" borderColor="brand.border" rounded="lg" bg={badgeBackground(Boolean(badge.earned))} p={4}>
-                              <Flex justify="space-between" align="center" mb={2}>
-                                <HStack spacing={2}>
-                                  <Center bg={badge.earned ? 'green.100' : 'gray.100'} rounded="full" p={2}>
-                                    <Icon as={Award} color={badge.earned ? 'green.500' : 'gray.500'} />
-                                  </Center>
-                                  <Box>
-                                    <Text fontWeight="semibold">{badge.title}</Text>
-                                    <Text fontSize="xs" textTransform="uppercase" color="brand.subtleText">
-                                      {badge.type || 'Achievement'}
-                                    </Text>
-                                  </Box>
-                                </HStack>
-                                {badge.earned && <Tag colorScheme="green">Earned</Tag>}
-                              </Flex>
-                              <Text fontSize="sm" color="brand.text" mb={2}>
-                                {badge.earned ? badge.description || 'Badge earned' : badge.criteria || 'Complete the requirement to earn this badge.'}
-                              </Text>
-                              {!badge.earned && (
-                                <>
-                                  <Progress value={badge.progressPercentage || 0} borderRadius="full" mb={2} />
-                                  <Text fontSize="xs" color="brand.subtleText">
-                                    {badge.progressPercentage || 0}% complete
-                                  </Text>
-                                </>
+                    <CardBody pt={2}>
+                      <VStack align="stretch" spacing={4}>
+                        {/* Personality Type */}
+                        <Box>
+                          <Text fontSize="xs" color="brand.subtleText" mb={1}>Personality Type</Text>
+                          {profileData.personalityType ? (
+                            <HStack spacing={2}>
+                              <Icon as={Brain} size={16} color="brand.primary" />
+                              <Text fontWeight="medium">{profileData.personalityType}</Text>
+                            </HStack>
+                          ) : (
+                            <Box>
+                              <Text fontSize="sm" color="brand.subtleText" mb={1}>Find your type</Text>
+                              <Button
+                                as={Link}
+                                href="https://www.16personalities.com/free-personality-test"
+                                isExternal
+                                size="xs"
+                                variant="ghost"
+                                color="brand.primary"
+                                rightIcon={<ExternalLink size={12} />}
+                                p={0}
+                                h="auto"
+                                _hover={{ textDecoration: 'underline' }}
+                              >
+                                Take the test
+                              </Button>
+                            </Box>
+                          )}
+                        </Box>
+
+                        <Divider borderColor="brand.border" />
+
+                        {/* Core Values */}
+                        <Box>
+                          <Text fontSize="xs" color="brand.subtleText" mb={2}>Core Values</Text>
+                          {profileData.coreValues.length > 0 ? (
+                            <HStack spacing={2} flexWrap="wrap">
+                              {profileData.coreValues.map((value) => (
+                                <Tag key={value} size="sm" colorScheme="yellow" borderRadius="full">
+                                  {value}
+                                </Tag>
+                              ))}
+                            </HStack>
+                          ) : (
+                            <Box>
+                              <Text fontSize="sm" color="brand.subtleText" mb={1}>Discover your values</Text>
+                              <Button
+                                as={Link}
+                                href="https://personalvalu.es/"
+                                isExternal
+                                size="xs"
+                                variant="ghost"
+                                color="brand.primary"
+                                rightIcon={<ExternalLink size={12} />}
+                                p={0}
+                                h="auto"
+                                _hover={{ textDecoration: 'underline' }}
+                              >
+                                Take the test
+                              </Button>
+                            </Box>
+                          )}
+                        </Box>
+
+                        {/* Edit personality button when in edit mode */}
+                        {isEditing && (
+                          <>
+                            <Divider borderColor="brand.border" />
+                            <Box>
+                              <Alert status="info" borderRadius="md" size="sm" bg="blue.50" border="1px solid" borderColor="blue.200">
+                                <AlertIcon color="blue.500" />
+                                <VStack align="start" spacing={1} flex={1}>
+                                  <Text fontSize="xs" fontWeight="medium">Update your personality profile</Text>
+                                  <HStack spacing={2}>
+                                    <Checkbox
+                                      size="sm"
+                                      isChecked={Boolean(editedData.hasCompletedPersonalityTest)}
+                                      onChange={(e) => {
+                                        handleInputChange('hasCompletedPersonalityTest', e.target.checked)
+                                        setPersonalityTestError(null)
+                                      }}
+                                    >
+                                      <Text fontSize="xs">I completed the personality test</Text>
+                                    </Checkbox>
+                                  </HStack>
+                                  <HStack spacing={2}>
+                                    <Checkbox
+                                      size="sm"
+                                      isChecked={Boolean(editedData.hasCompletedValuesTest)}
+                                      onChange={(e) => {
+                                        handleInputChange('hasCompletedValuesTest', e.target.checked)
+                                        setValuesTestError(null)
+                                      }}
+                                    >
+                                      <Text fontSize="xs">I completed the values test</Text>
+                                    </Checkbox>
+                                  </HStack>
+                                </VStack>
+                              </Alert>
+                              {editedData.hasCompletedPersonalityTest && (
+                                <FormControl mt={3}>
+                                  <FormLabel fontSize="xs">Select Type</FormLabel>
+                                  <Select
+                                    size="sm"
+                                    value={editedData.personalityType || ''}
+                                    onChange={(e) => handleInputChange('personalityType', e.target.value)}
+                                  >
+                                    <option value="">Select...</option>
+                                    {personalityTypes.map((type) => (
+                                      <option key={type} value={type}>{type}</option>
+                                    ))}
+                                  </Select>
+                                </FormControl>
                               )}
-                              {badge.earnedAt && (
-                                <Text fontSize="xs" color="brand.subtleText" mt={1}>
-                                  Earned on {formatDate(badge.earnedAt)}
+                              {editedData.hasCompletedValuesTest && (
+                                <FormControl mt={3}>
+                                  <FormLabel fontSize="xs">Select 5 Values</FormLabel>
+                                  <Grid templateColumns="repeat(2, 1fr)" gap={2}>
+                                    {coreValueOptions.map((value) => {
+                                      const selected = editedData.coreValues.includes(value)
+                                      const disabled = !selected && editedData.coreValues.length >= 5
+                                      return (
+                                        <Box
+                                          key={value}
+                                          border="1px solid"
+                                          borderColor={selected ? 'yellow.400' : 'brand.border'}
+                                          bg={selected ? 'yellow.50' : 'white'}
+                                          rounded="md"
+                                          p={2}
+                                          cursor={disabled ? 'not-allowed' : 'pointer'}
+                                          opacity={disabled ? 0.5 : 1}
+                                          onClick={() => !disabled && handleCoreValueToggle(value)}
+                                          fontSize="xs"
+                                        >
+                                          {value}
+                                        </Box>
+                                      )
+                                    })}
+                                  </Grid>
+                                  <Text fontSize="xs" color="brand.subtleText" mt={1}>
+                                    {editedData.coreValues.length}/5 selected
+                                  </Text>
+                                </FormControl>
+                              )}
+                              {(personalityTestError || valuesTestError || personalityFormError) && (
+                                <Text fontSize="xs" color="red.500" mt={2}>
+                                  {personalityTestError || valuesTestError || personalityFormError}
                                 </Text>
                               )}
                             </Box>
-                          ))}
-                        </Grid>
-                      )}
-                    </CardBody>
-                  </Card>
-
-                  <Card borderColor="brand.border">
-                    <CardHeader>
-                      <Text fontWeight="semibold">Organization Information</Text>
-                    </CardHeader>
-                    <CardBody>
-                      <VStack align="stretch" spacing={4}>
-                        <HStack spacing={3} align="center">
-                          <Icon as={profileData.membershipStatus === 'paid' ? Check : Lock} color={profileData.membershipStatus === 'paid' ? 'green.500' : 'gray.500'} />
-                          <Box>
-                            <Text fontWeight="bold">{profileData.membershipStatus === 'paid' ? 'Paid Member' : 'Free Account'}</Text>
-                            {profileData.membershipStatus === 'free' && (
-                              <Button mt={2} size="sm" variant="secondary" onClick={handleUpgrade}>
-                                Upgrade
-                              </Button>
-                            )}
-                          </Box>
-                        </HStack>
-
-                        {profileData.membershipStatus === 'paid' && (
-                          <VStack align="stretch" spacing={3}>
-                            <HStack spacing={2}>
-                              <Icon as={Building} />
-                              <Text fontWeight="medium">Company</Text>
-                            </HStack>
-                            <Text color="brand.text">{profileData.companyName || 'Not assigned'}</Text>
-                            <HStack spacing={2}>
-                              <Icon as={Key} />
-                              <Text fontWeight="medium">Company Code</Text>
-                            </HStack>
-                            <Tag bg="gray.100" color="brand.text" fontFamily="mono">
-                              {profileData.companyCode || 'N/A'}
-                            </Tag>
-                            <HStack spacing={2}>
-                              <Icon as={Users} />
-                              <Text fontWeight="medium">Village</Text>
-                            </HStack>
-                            <Text color="brand.text">{profileData.villageName || 'Not assigned'}</Text>
-                            {profileData.clusterName && (
-                              <>
-                                <HStack spacing={2}>
-                                  <Icon as={Users} />
-                                  <Text fontWeight="medium">Cluster</Text>
-                                </HStack>
-                                <Text color="brand.text">{profileData.clusterName}</Text>
-                              </>
-                            )}
-                          </VStack>
+                          </>
                         )}
                       </VStack>
                     </CardBody>
                   </Card>
+
+                  {/* Badges & Achievements Card */}
+                  <Card borderColor="brand.border" boxShadow="card" w="full">
+                    <CardHeader pb={2}>
+                      <Text fontWeight="semibold" fontSize="sm">Badges & Achievements</Text>
+                    </CardHeader>
+                    <CardBody pt={2}>
+                      <BadgeDisplay />
+                    </CardBody>
+                  </Card>
+
+                  {/* Organization Info Card (paid members only) */}
+                  {isPaidMember && (
+                    <Card borderColor="brand.border" boxShadow="card" w="full">
+                      <CardHeader pb={2}>
+                        <Text fontWeight="semibold" fontSize="sm">Organization</Text>
+                      </CardHeader>
+                      <CardBody pt={2}>
+                        <VStack align="stretch" spacing={3}>
+                          <Box>
+                            <Text fontSize="xs" color="brand.subtleText">Company</Text>
+                            <HStack spacing={2}>
+                              <Icon as={Building} size={14} color="brand.subtleText" />
+                              <Text fontSize="sm" fontWeight="medium">{profileData.companyName || 'Not assigned'}</Text>
+                            </HStack>
+                          </Box>
+                          <Box>
+                            <Text fontSize="xs" color="brand.subtleText">Company Code</Text>
+                            <Tag size="sm" bg="gray.100" fontFamily="mono">{profileData.companyCode || 'N/A'}</Tag>
+                          </Box>
+                          <Box>
+                            <Text fontSize="xs" color="brand.subtleText">Village</Text>
+                            <HStack spacing={2}>
+                              <Icon as={Users} size={14} color="brand.subtleText" />
+                              <Text fontSize="sm">{profileData.villageName || 'Not assigned'}</Text>
+                            </HStack>
+                          </Box>
+                          {profileData.clusterName && (
+                            <Box>
+                              <Text fontSize="xs" color="brand.subtleText">Cluster</Text>
+                              <Text fontSize="sm">{profileData.clusterName}</Text>
+                            </Box>
+                          )}
+                        </VStack>
+                      </CardBody>
+                    </Card>
+                  )}
+
+                  {/* Village Info Card (free members with a village) */}
+                  {shouldShowVillageCard && (
+                    <Card borderColor="brand.border" boxShadow="card" w="full">
+                      <CardHeader pb={2}>
+                        <Text fontWeight="semibold" fontSize="sm">Village Information</Text>
+                      </CardHeader>
+                      <CardBody pt={2}>
+                        {villageLoading ? (
+                          <HStack spacing={3}>
+                            <Spinner size="sm" />
+                            <Text fontSize="sm" color="brand.subtleText">Loading village details...</Text>
+                          </HStack>
+                        ) : villageError ? (
+                          <Alert status="error" borderRadius="md">
+                            <AlertIcon />
+                            <Text fontSize="sm">{villageError}</Text>
+                          </Alert>
+                        ) : (
+                          <VStack align="stretch" spacing={4}>
+                            <Box>
+                              <Text fontSize="xs" color="brand.subtleText">Village</Text>
+                              <HStack spacing={2}>
+                                <Icon as={Users} size={14} color="brand.subtleText" />
+                                <Text fontSize="sm" fontWeight="medium">{villageDetails?.name || 'Your village'}</Text>
+                              </HStack>
+                            </Box>
+                            <Box>
+                              <Text fontSize="xs" color="brand.subtleText">Members</Text>
+                              <HStack spacing={2}>
+                                <Text fontSize="sm">
+                                  {villageDetails?.memberCount ?? 0}/{villageMemberLimit}
+                                </Text>
+                                {isVillageAtCapacity && (
+                                  <Badge colorScheme="red" fontSize="xs">At capacity</Badge>
+                                )}
+                                {!isVillageAtCapacity && isVillageNearCapacity && (
+                                  <Badge colorScheme="orange" fontSize="xs">Near capacity</Badge>
+                                )}
+                              </HStack>
+                            </Box>
+                            <Box>
+                              <Text fontSize="xs" color="brand.subtleText">Pending invites</Text>
+                              <HStack spacing={2}>
+                                <Text fontSize="sm">{pendingVillageInvites}</Text>
+                                {pendingVillageInvites > 0 && (
+                                  <Badge colorScheme="purple" fontSize="xs">{pendingVillageInvites} pending</Badge>
+                                )}
+                              </HStack>
+                            </Box>
+                            <Box>
+                              <Text fontSize="xs" color="brand.subtleText">Shareable invite link</Text>
+                              {shareableInviteCode ? (
+                                <HStack spacing={2}>
+                                  <Text fontSize="xs" color="brand.subtleText" noOfLines={1}>
+                                    {shareableInviteLink}
+                                  </Text>
+                                  <Button size="xs" variant="outline" onClick={handleCopyVillageInviteLink}>
+                                    Copy link
+                                  </Button>
+                                </HStack>
+                              ) : (
+                                <Text fontSize="sm" color="brand.subtleText">
+                                  Generate a shareable code from the invite page.
+                                </Text>
+                              )}
+                            </Box>
+                            <Box>
+                              <Text fontSize="xs" color="brand.subtleText">Role</Text>
+                              <Text fontSize="sm">
+                                {villageDetails?.creatorId && profile?.id === villageDetails.creatorId ? 'Founder' : 'Member'}
+                              </Text>
+                            </Box>
+                            <Box>
+                              <Text fontSize="xs" color="brand.subtleText">Joined</Text>
+                              <HStack spacing={2}>
+                                <Icon as={Calendar} size={14} color="brand.subtleText" />
+                                <Text fontSize="sm">{formatVillageDate(villageDetails?.createdAt)}</Text>
+                              </HStack>
+                            </Box>
+                            <HStack spacing={3} flexWrap="wrap">
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                leftIcon={<Icon as={Settings} />}
+                                onClick={handleManageVillage}
+                                isDisabled={!villageId}
+                              >
+                                Manage Village
+                              </Button>
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                leftIcon={<Icon as={UserPlus} />}
+                                onClick={handleInviteVillage}
+                                isDisabled={!villageId || isVillageAtCapacity}
+                              >
+                                Invite Members
+                              </Button>
+                              <Button
+                                size="sm"
+                                colorScheme="red"
+                                variant="outline"
+                                leftIcon={<Icon as={LogOut} />}
+                                onClick={() => setIsLeaveVillageOpen(true)}
+                                isLoading={isLeavingVillage}
+                              >
+                                Leave Village
+                              </Button>
+                            </HStack>
+                          </VStack>
+                        )}
+                      </CardBody>
+                    </Card>
+                  )}
                 </VStack>
               </GridItem>
             </Grid>
@@ -1430,220 +1664,198 @@ export const ProfilePage: React.FC = () => {
             <Grid templateColumns={{ base: '1fr', lg: '2fr 1fr' }} gap={6}>
               <GridItem>
                 <VStack spacing={6}>
-                  <Card borderColor="brand.border">
+                  <Card borderColor="brand.border" boxShadow="card">
                     <CardHeader>
-                      <Flex justify="space-between" align="center">
-                        <Box>
-                          <Text fontWeight="semibold">Email Settings</Text>
-                          <Text fontSize="sm" color="brand.subtleText">
-                            Keep your contact email up to date
-                          </Text>
-                        </Box>
-                        <Button size="sm" variant="secondary" onClick={() => setEmailFormOpen((prev) => !prev)}>
-                          {emailFormOpen ? 'Close' : 'Change Email'}
-                        </Button>
-                      </Flex>
+                      <Box>
+                        <Text fontWeight="semibold" fontSize="lg">Account &amp; Security</Text>
+                        <Text fontSize="sm" color="brand.subtleText">
+                          Manage your login details and account status in one place.
+                        </Text>
+                      </Box>
                     </CardHeader>
                     <CardBody>
-                      {!emailFormOpen ? (
-                        <HStack spacing={2} color="brand.text">
-                          <Icon as={MailIcon} />
-                          <Text>{profileData.email}</Text>
-                        </HStack>
-                      ) : (
-                        <VStack align="stretch" spacing={4} as="form" onSubmit={handleChangeEmail}>
-                          <FormControl>
-                            <FormLabel>Current Email</FormLabel>
-                            <Box bg="brand.primaryMuted" p={3} rounded="lg" display="flex" alignItems="center" gap={2}>
-                              <Icon as={MailIcon} color="brand.primary" />
+                      <VStack align="stretch" spacing={6}>
+                        <Box>
+                          <Flex justify="space-between" align={{ base: 'flex-start', md: 'center' }} gap={4}>
+                            <Box>
+                              <Text fontWeight="semibold">Email</Text>
+                              <Text fontSize="sm" color="brand.subtleText">
+                                Keep your contact email up to date.
+                              </Text>
+                            </Box>
+                            <Button size="sm" variant="secondary" onClick={() => setEmailFormOpen((prev) => !prev)}>
+                              {emailFormOpen ? 'Close' : 'Change Email'}
+                            </Button>
+                          </Flex>
+                          {!emailFormOpen ? (
+                            <HStack spacing={2} color="brand.text" mt={3}>
+                              <Icon as={MailIcon} />
                               <Text>{profileData.email}</Text>
-                            </Box>
-                          </FormControl>
-                          <FormControl isRequired>
-                            <FormLabel>New Email Address</FormLabel>
-                            <Input
-                              type="email"
-                              value={emailForm.newEmail}
-                              onChange={(e) => setEmailForm({ ...emailForm, newEmail: e.target.value })}
-                            />
-                          </FormControl>
-                          <FormControl isRequired>
-                            <FormLabel>Current Password</FormLabel>
-                            <Input
-                              type="password"
-                              value={emailForm.password}
-                              onChange={(e) => setEmailForm({ ...emailForm, password: e.target.value })}
-                            />
-                          </FormControl>
-                          {emailMessage && (
-                            <Box
-                              bg={emailMessage.type === 'success' ? 'green.50' : 'red.50'}
-                              border="1px solid"
-                              borderColor={emailMessage.type === 'success' ? 'green.100' : 'red.100'}
-                              p={3}
-                              rounded="md"
-                            >
-                              <HStack spacing={2} color={emailMessage.type === 'success' ? 'green.600' : 'red.600'}>
-                                <Icon as={emailMessage.type === 'success' ? Check : AlertCircle} />
-                                <Text>{emailMessage.text}</Text>
-                              </HStack>
-                            </Box>
-                          )}
-                          <HStack spacing={2}>
-                            <Button variant="ghost" onClick={() => setEmailFormOpen(false)}>
-                              Cancel
-                            </Button>
-                            <Button type="submit">Update Email</Button>
-                          </HStack>
-                        </VStack>
-                      )}
-                    </CardBody>
-                  </Card>
-
-                  <Card borderColor="brand.border">
-                    <CardHeader>
-                      <Flex justify="space-between" align="center">
-                        <Box>
-                          <Text fontWeight="semibold">Password Settings</Text>
-                          <Text fontSize="sm" color="brand.subtleText">
-                            Keep your account secure
-                          </Text>
-                        </Box>
-                        <Button size="sm" variant="secondary" onClick={() => setPasswordFormOpen((prev) => !prev)}>
-                          {passwordFormOpen ? 'Close' : 'Change Password'}
-                        </Button>
-                      </Flex>
-                    </CardHeader>
-                    <CardBody>
-                      {!passwordFormOpen ? (
-                        <HStack spacing={2} color="brand.text">
-                          <Icon as={Key} />
-                          <Text>••••••••</Text>
-                        </HStack>
-                      ) : (
-                        <VStack align="stretch" spacing={4} as="form" onSubmit={handleChangePassword}>
-                          <FormControl isRequired>
-                            <FormLabel>Current Password</FormLabel>
-                            <Input
-                              type="password"
-                              value={passwordForm.currentPassword}
-                              onChange={(e) => setPasswordForm({ ...passwordForm, currentPassword: e.target.value })}
-                            />
-                          </FormControl>
-                          <FormControl isRequired>
-                            <FormLabel>New Password</FormLabel>
-                            <Input
-                              type="password"
-                              value={passwordForm.newPassword}
-                              onChange={(e) => setPasswordForm({ ...passwordForm, newPassword: e.target.value })}
-                            />
-                            <FormHelperText>Password must be at least 8 characters</FormHelperText>
-                          </FormControl>
-                          <FormControl isRequired>
-                            <FormLabel>Confirm New Password</FormLabel>
-                            <Input
-                              type="password"
-                              value={passwordForm.confirmPassword}
-                              onChange={(e) => setPasswordForm({ ...passwordForm, confirmPassword: e.target.value })}
-                            />
-                          </FormControl>
-                          {passwordMessage && (
-                            <Box
-                              bg={passwordMessage.type === 'success' ? 'green.50' : 'red.50'}
-                              border="1px solid"
-                              borderColor={passwordMessage.type === 'success' ? 'green.100' : 'red.100'}
-                              p={3}
-                              rounded="md"
-                            >
-                              <HStack spacing={2} color={passwordMessage.type === 'success' ? 'green.600' : 'red.600'}>
-                                <Icon as={passwordMessage.type === 'success' ? Check : AlertCircle} />
-                                <Text>{passwordMessage.text}</Text>
-                              </HStack>
-                            </Box>
-                          )}
-                          <HStack spacing={2}>
-                            <Button variant="ghost" onClick={() => setPasswordFormOpen(false)}>
-                              Cancel
-                            </Button>
-                            <Button type="submit">Update Password</Button>
-                          </HStack>
-                        </VStack>
-                      )}
-                    </CardBody>
-                  </Card>
-
-                  <Card borderColor="brand.border">
-                    <CardHeader>
-                      <Flex justify="space-between" align="center">
-                        <Box>
-                          <Text fontWeight="semibold">Company Code</Text>
-                          <Text fontSize="sm" color="brand.subtleText">
-                            Add or update your company code to unlock corporate perks.
-                          </Text>
-                        </Box>
-                      </Flex>
-                    </CardHeader>
-                    <CardBody>
-                      <VStack align="stretch" spacing={4}>
-                        <Box>
-                          <Text fontSize="sm" color="brand.subtleText">
-                            Current affiliation
-                          </Text>
-                          <Text fontWeight="semibold">{profileData.companyName || 'Not assigned'}</Text>
-                          <Text fontSize="sm" color="brand.subtleText">
-                            Code: {profileData.companyCode || 'N/A'}
-                          </Text>
-                        </Box>
-                        <FormControl>
-                          <FormLabel>Company Code</FormLabel>
-                          <Input
-                            value={companyCode}
-                            onChange={(event) => setCompanyCode(event.target.value.toUpperCase().slice(0, 6))}
-                            placeholder="Enter 6-character code"
-                          />
-                        </FormControl>
-                        {companyCodeValid && companyOrganization && !companyCodeChecking && (
-                          <Box bg="green.50" border="1px solid" borderColor="green.100" p={3} rounded="md">
-                            <HStack spacing={2} color="green.600">
-                              <Icon as={CheckCircle} />
-                              <Text fontSize="sm">Valid company code ({companyOrganization.name})</Text>
                             </HStack>
-                          </Box>
-                        )}
-                        {companyCodeValid === false && !companyCodeChecking && (
-                          <Box bg="red.50" border="1px solid" borderColor="red.100" p={3} rounded="md">
-                            <HStack spacing={2} color="red.600">
-                              <Icon as={XCircle} />
-                              <Text fontSize="sm">{companyCodeError || 'Invalid or inactive company code'}</Text>
+                          ) : (
+                            <VStack align="stretch" spacing={4} as="form" onSubmit={handleChangeEmail} mt={4}>
+                              <FormControl>
+                                <FormLabel>Current Email</FormLabel>
+                                <Box bg="brand.primaryMuted" p={3} rounded="lg" display="flex" alignItems="center" gap={2}>
+                                  <Icon as={MailIcon} color="brand.primary" />
+                                  <Text>{profileData.email}</Text>
+                                </Box>
+                              </FormControl>
+                              <FormControl isRequired>
+                                <FormLabel>New Email Address</FormLabel>
+                                <Input
+                                  type="email"
+                                  value={emailForm.newEmail}
+                                  onChange={(e) => setEmailForm({ ...emailForm, newEmail: e.target.value })}
+                                />
+                              </FormControl>
+                              <FormControl isRequired>
+                                <FormLabel>Current Password</FormLabel>
+                                <Input
+                                  type="password"
+                                  value={emailForm.password}
+                                  onChange={(e) => setEmailForm({ ...emailForm, password: e.target.value })}
+                                />
+                              </FormControl>
+                              {emailMessage && (
+                                <Box
+                                  bg={emailMessage.type === 'success' ? 'green.50' : 'red.50'}
+                                  border="1px solid"
+                                  borderColor={emailMessage.type === 'success' ? 'green.100' : 'red.100'}
+                                  p={3}
+                                  rounded="md"
+                                >
+                                  <HStack spacing={2} color={emailMessage.type === 'success' ? 'green.600' : 'red.600'}>
+                                    <Icon as={emailMessage.type === 'success' ? Check : AlertCircle} />
+                                    <Text>{emailMessage.text}</Text>
+                                  </HStack>
+                                </Box>
+                              )}
+                              <HStack spacing={2}>
+                                <Button variant="ghost" onClick={() => setEmailFormOpen(false)}>
+                                  Cancel
+                                </Button>
+                                <Button type="submit">Update Email</Button>
+                              </HStack>
+                            </VStack>
+                          )}
+                        </Box>
+
+                        <Divider borderColor="brand.border" />
+
+                        <Box>
+                          <Flex justify="space-between" align={{ base: 'flex-start', md: 'center' }} gap={4}>
+                            <Box>
+                              <Text fontWeight="semibold">Password</Text>
+                              <Text fontSize="sm" color="brand.subtleText">
+                                Update your password regularly for better security.
+                              </Text>
+                            </Box>
+                            <Button size="sm" variant="secondary" onClick={() => setPasswordFormOpen((prev) => !prev)}>
+                              {passwordFormOpen ? 'Close' : 'Change Password'}
+                            </Button>
+                          </Flex>
+                          {!passwordFormOpen ? (
+                            <HStack spacing={2} color="brand.text" mt={3}>
+                              <Icon as={Key} />
+                              <Text>••••••••</Text>
                             </HStack>
-                          </Box>
-                        )}
-                        {companyCodeChecking && (
-                          <Text fontSize="sm" color="brand.subtleText">
-                            Checking company code...
+                          ) : (
+                            <VStack align="stretch" spacing={4} as="form" onSubmit={handleChangePassword} mt={4}>
+                              <FormControl isRequired>
+                                <FormLabel>Current Password</FormLabel>
+                                <Input
+                                  type="password"
+                                  value={passwordForm.currentPassword}
+                                  onChange={(e) => setPasswordForm({ ...passwordForm, currentPassword: e.target.value })}
+                                />
+                              </FormControl>
+                              <FormControl isRequired>
+                                <FormLabel>New Password</FormLabel>
+                                <Input
+                                  type="password"
+                                  value={passwordForm.newPassword}
+                                  onChange={(e) => setPasswordForm({ ...passwordForm, newPassword: e.target.value })}
+                                />
+                                <FormHelperText>Password must be at least 8 characters</FormHelperText>
+                              </FormControl>
+                              <FormControl isRequired>
+                                <FormLabel>Confirm New Password</FormLabel>
+                                <Input
+                                  type="password"
+                                  value={passwordForm.confirmPassword}
+                                  onChange={(e) => setPasswordForm({ ...passwordForm, confirmPassword: e.target.value })}
+                                />
+                              </FormControl>
+                              {passwordMessage && (
+                                <Box
+                                  bg={passwordMessage.type === 'success' ? 'green.50' : 'red.50'}
+                                  border="1px solid"
+                                  borderColor={passwordMessage.type === 'success' ? 'green.100' : 'red.100'}
+                                  p={3}
+                                  rounded="md"
+                                >
+                                  <HStack spacing={2} color={passwordMessage.type === 'success' ? 'green.600' : 'red.600'}>
+                                    <Icon as={passwordMessage.type === 'success' ? Check : AlertCircle} />
+                                    <Text>{passwordMessage.text}</Text>
+                                  </HStack>
+                                </Box>
+                              )}
+                              <HStack spacing={2}>
+                                <Button variant="ghost" onClick={() => setPasswordFormOpen(false)}>
+                                  Cancel
+                                </Button>
+                                <Button type="submit">Update Password</Button>
+                              </HStack>
+                            </VStack>
+                          )}
+                        </Box>
+
+                        <Divider borderColor="brand.border" />
+
+                        <Box>
+                          <Text fontWeight="semibold">Account Security</Text>
+                          <Text fontSize="sm" color="brand.subtleText" mt={1}>
+                            For support, you can share your account ID if requested.
                           </Text>
-                        )}
-                        <Button
-                          onClick={handleCompanyCodeSave}
-                          isLoading={companyCodeSaving}
-                          loadingText="Saving..."
-                          isDisabled={!companyCode.trim()}
-                        >
-                          Save Company Code
-                        </Button>
+                          <HStack spacing={3} mt={3} align="center">
+                            <Icon as={Shield} color="brand.subtleText" />
+                            <Box>
+                              <Text fontWeight="medium">Account Status</Text>
+                              <Badge colorScheme={statusColorMap[profileData.accountStatus] || 'gray'}>
+                                {profileData.accountStatus === 'active' ? 'Active' : profileData.accountStatus === 'inactive' ? 'Inactive' : 'Pending'}
+                              </Badge>
+                            </Box>
+                          </HStack>
+                          <HStack spacing={3} mt={4} align="center">
+                            <Text fontSize="sm" color="brand.subtleText">
+                              Account ID (support only)
+                            </Text>
+                            <Button variant="link" size="sm" color="brand.primary" onClick={handleCopyAccountId}>
+                              Copy ID
+                            </Button>
+                          </HStack>
+                        </Box>
                       </VStack>
                     </CardBody>
                   </Card>
 
-                  <Card borderColor="brand.border">
+                  <Card borderColor="brand.border" boxShadow="card">
                     <CardHeader>
-                      <Text fontWeight="semibold">Peer Matching Preferences</Text>
+                      <Text fontWeight="semibold" fontSize="lg">Preferences</Text>
                       <Text fontSize="sm" color="brand.subtleText" mt={1}>
-                        Control how often you receive a new peer match and how we notify you.
+                        Manage peer matching and leaderboard visibility in one place.
                       </Text>
                     </CardHeader>
                     <CardBody>
-                      <VStack align="stretch" spacing={4}>
+                      <VStack align="stretch" spacing={6}>
+                        <Box>
+                          <Text fontWeight="semibold">Peer Matching</Text>
+                          <Text fontSize="sm" color="brand.subtleText" mt={1}>
+                            Control how often you receive a new peer match and how we notify you.
+                          </Text>
+                        </Box>
+
                         <FormControl display="flex" alignItems="center" justifyContent="space-between">
                           <Box>
                             <FormLabel mb={1}>Automatic matching</FormLabel>
@@ -1662,72 +1874,95 @@ export const ProfilePage: React.FC = () => {
                           />
                         </FormControl>
 
-                        <FormControl>
-                          <FormLabel>Refresh frequency</FormLabel>
-                          <Select
-                            value={editedData.matchRefreshPreference || 'weekly'}
-                            onChange={(event) =>
-                              handleInputChange('matchRefreshPreference', event.target.value as ProfileData['matchRefreshPreference'])
-                            }
-                          >
-                            {matchRefreshOptions.map((option) => (
-                              <option key={option.value} value={option.value}>
-                                {option.label}
-                              </option>
-                            ))}
-                          </Select>
-                        </FormControl>
+                        <Grid templateColumns={{ base: '1fr', md: '1fr 1fr' }} gap={4}>
+                          <FormControl>
+                            <HStack justify="space-between" align="center">
+                              <FormLabel mb={0}>Refresh frequency</FormLabel>
+                              <Select
+                                maxW="200px"
+                                value={editedData.matchRefreshPreference || 'weekly'}
+                                onChange={(event) =>
+                                  handleInputChange('matchRefreshPreference', event.target.value as ProfileData['matchRefreshPreference'])
+                                }
+                              >
+                                {matchRefreshOptions.map((option) => (
+                                  <option key={option.value} value={option.value}>
+                                    {option.label}
+                                  </option>
+                                ))}
+                              </Select>
+                            </HStack>
+                          </FormControl>
 
-                        <FormControl isDisabled={!['weekly', 'biweekly'].includes(editedData.matchRefreshPreference || '')}>
-                          <FormLabel>Preferred match day</FormLabel>
-                          <Select
-                            value={editedData.preferredMatchDay ?? 1}
-                            onChange={(event) => handleInputChange('preferredMatchDay', Number(event.target.value))}
-                          >
-                            {weekdayOptions.map((option) => (
-                              <option key={option.value} value={option.value}>
-                                {option.label}
-                              </option>
-                            ))}
-                          </Select>
-                        </FormControl>
+                          <FormControl isDisabled={!['weekly', 'biweekly'].includes(editedData.matchRefreshPreference || '')}>
+                            <HStack justify="space-between" align="center">
+                              <FormLabel mb={0}>Preferred match day</FormLabel>
+                              <Select
+                                maxW="200px"
+                                value={editedData.preferredMatchDay ?? 1}
+                                onChange={(event) => handleInputChange('preferredMatchDay', Number(event.target.value))}
+                              >
+                                {weekdayOptions.map((option) => (
+                                  <option key={option.value} value={option.value}>
+                                    {option.label}
+                                  </option>
+                                ))}
+                              </Select>
+                            </HStack>
+                          </FormControl>
+                        </Grid>
 
-                        <FormControl>
-                          <FormLabel>Notification preference</FormLabel>
-                          <Select
-                            value={editedData.matchNotificationPreference || 'both'}
-                            onChange={(event) =>
-                              handleInputChange('matchNotificationPreference', event.target.value as ProfileData['matchNotificationPreference'])
-                            }
-                          >
-                            {matchNotificationOptions.map((option) => (
-                              <option key={option.value} value={option.value}>
-                                {option.label}
-                              </option>
-                            ))}
-                          </Select>
-                        </FormControl>
-
-                        <FormControl>
-                          <FormLabel>Match timezone</FormLabel>
-                          <Select
-                            value={editedData.timezone || ''}
-                            onChange={(event) => handleInputChange('timezone', event.target.value)}
-                          >
-                            {timezoneOptions.map((zone) => (
-                              <option key={zone} value={zone}>
-                                {zone}
-                              </option>
-                            ))}
-                          </Select>
-                          <FormHelperText>
-                            Match timing is calculated using this timezone.
-                          </FormHelperText>
-                        </FormControl>
-
-                        <Button onClick={handleSaveMatchPreferences} isLoading={matchPreferencesSaving} loadingText="Saving...">
-                          Save Peer Matching Preferences
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          alignSelf="flex-start"
+                          onClick={() => setShowAdvancedMatching((prev) => !prev)}
+                        >
+                          {showAdvancedMatching ? 'Hide advanced settings' : 'Advanced settings'}
                         </Button>
+
+                        <Collapse in={showAdvancedMatching} animateOpacity>
+                          <VStack align="stretch" spacing={4}>
+                            <FormControl>
+                              <HStack justify="space-between" align="center">
+                                <FormLabel mb={0}>Notification preference</FormLabel>
+                                <Select
+                                  maxW="220px"
+                                  value={editedData.matchNotificationPreference || 'both'}
+                                  onChange={(event) =>
+                                    handleInputChange('matchNotificationPreference', event.target.value as ProfileData['matchNotificationPreference'])
+                                  }
+                                >
+                                  {matchNotificationOptions.map((option) => (
+                                    <option key={option.value} value={option.value}>
+                                      {option.label}
+                                    </option>
+                                  ))}
+                                </Select>
+                              </HStack>
+                            </FormControl>
+
+                            <FormControl>
+                              <HStack justify="space-between" align="center">
+                                <FormLabel mb={0}>Match timezone</FormLabel>
+                                <Select
+                                  maxW="220px"
+                                  value={editedData.timezone || ''}
+                                  onChange={(event) => handleInputChange('timezone', event.target.value)}
+                                >
+                                  {timezoneOptions.map((zone) => (
+                                    <option key={zone} value={zone}>
+                                      {zone}
+                                    </option>
+                                  ))}
+                                </Select>
+                              </HStack>
+                              <FormHelperText>
+                                Match timing is calculated using this timezone.
+                              </FormHelperText>
+                            </FormControl>
+                          </VStack>
+                        </Collapse>
 
                         {matchPreferencesMessage && (
                           <Box
@@ -1743,278 +1978,306 @@ export const ProfilePage: React.FC = () => {
                             </HStack>
                           </Box>
                         )}
+
+                        <Divider borderColor="brand.border" />
+
+                        <Box>
+                          <Text fontWeight="semibold">Leaderboard Privacy</Text>
+                          <Text fontSize="sm" color="brand.subtleText" mt={1}>
+                            Decide who can view your ranking and recent activity on leaderboards.
+                          </Text>
+                        </Box>
+
+                        <RadioGroup
+                          value={editedData.leaderboardVisibility}
+                          onChange={(value) => handleInputChange('leaderboardVisibility', value as ProfileData['leaderboardVisibility'])}
+                        >
+                          <VStack align="stretch" spacing={4}>
+                            {[
+                              {
+                                value: 'public',
+                                title: 'Public',
+                                description: 'Visible on company and village leaderboards across the community.',
+                              },
+                              {
+                                value: 'company',
+                                title: 'Company Only',
+                                description: 'Only teammates and cohort members can see your ranking and activity.',
+                              },
+                              {
+                                value: 'private',
+                                title: 'Hidden',
+                                description: 'Keep your ranking private while you continue to earn points.',
+                              },
+                            ].map((option) => (
+                              <Box
+                                key={option.value}
+                                border="1px solid"
+                                borderColor={editedData.leaderboardVisibility === option.value ? 'brand.primary' : 'brand.border'}
+                                bg={editedData.leaderboardVisibility === option.value ? 'purple.50' : 'white'}
+                                rounded="lg"
+                                p={5}
+                              >
+                                <Radio value={option.value} colorScheme="purple">
+                                  <Text fontWeight="semibold">{option.title}</Text>
+                                  <Text fontSize="sm" color="brand.subtleText" mt={1}>
+                                    {option.description}
+                                  </Text>
+                                </Radio>
+                              </Box>
+                            ))}
+                          </VStack>
+                        </RadioGroup>
+
+                        {visibilityMessage && (
+                          <Box
+                            bg={visibilityMessage.type === 'success' ? 'green.50' : 'red.50'}
+                            border="1px solid"
+                            borderColor={visibilityMessage.type === 'success' ? 'green.100' : 'red.100'}
+                            p={3}
+                            rounded="md"
+                          >
+                            <HStack spacing={2} color={visibilityMessage.type === 'success' ? 'green.600' : 'red.600'}>
+                              <Icon as={visibilityMessage.type === 'success' ? Check : AlertCircle} />
+                              <Text>{visibilityMessage.text}</Text>
+                            </HStack>
+                          </Box>
+                        )}
                       </VStack>
                     </CardBody>
                   </Card>
+                </VStack>
+              </GridItem>
 
-                  <Card borderColor="brand.border">
+              <GridItem>
+                <VStack spacing={6}>
+                  <Card borderColor="brand.border" boxShadow="card">
                     <CardHeader>
-                      <Text fontWeight="semibold">Leaderboard Privacy</Text>
+                      <Text fontWeight="semibold" fontSize="lg">Organization</Text>
                       <Text fontSize="sm" color="brand.subtleText" mt={1}>
-                        Decide who can view your ranking and recent activity on public leaderboards.
+                        Company code and affiliation status.
                       </Text>
                     </CardHeader>
                     <CardBody>
-                      <RadioGroup
-                        value={editedData.leaderboardVisibility}
-                        onChange={(value) => handleInputChange('leaderboardVisibility', value as ProfileData['leaderboardVisibility'])}
-                      >
-                        <VStack align="stretch" spacing={3}>
-                          <Box
-                            border="2px solid"
-                            borderColor={editedData.leaderboardVisibility === 'public' ? 'brand.primary' : 'brand.border'}
-                            rounded="lg"
-                            p={4}
-                          >
-                            <Radio value="public" colorScheme="purple">
-                              <Text fontWeight="medium">Public</Text>
-                              <Text fontSize="sm" color="brand.subtleText">
-                                Visible on company and village leaderboards across the community.
-                              </Text>
-                            </Radio>
-                          </Box>
-                          <Box
-                            border="2px solid"
-                            borderColor={editedData.leaderboardVisibility === 'company' ? 'brand.primary' : 'brand.border'}
-                            rounded="lg"
-                            p={4}
-                          >
-                            <Radio value="company" colorScheme="purple">
-                              <Text fontWeight="medium">Company Only</Text>
-                              <Text fontSize="sm" color="brand.subtleText">
-                                Only teammates and cohort members can see your ranking and activity.
-                              </Text>
-                            </Radio>
-                          </Box>
-                          <Box
-                            border="2px solid"
-                            borderColor={editedData.leaderboardVisibility === 'private' ? 'brand.primary' : 'brand.border'}
-                            rounded="lg"
-                            p={4}
-                          >
-                            <Radio value="private" colorScheme="purple">
-                              <Text fontWeight="medium">Hidden</Text>
-                              <Text fontSize="sm" color="brand.subtleText">
-                                Keep your ranking private while you continue to earn points.
-                              </Text>
-                            </Radio>
-                          </Box>
-                        </VStack>
-                      </RadioGroup>
-                      <Button mt={4} onClick={handleSaveVisibilityPreference} isLoading={visibilitySaving} loadingText="Saving...">
-                        Save Visibility Preference
-                      </Button>
-                      {visibilityMessage && (
-                        <Box
-                          mt={3}
-                          bg={visibilityMessage.type === 'success' ? 'green.50' : 'red.50'}
-                          border="1px solid"
-                          borderColor={visibilityMessage.type === 'success' ? 'green.100' : 'red.100'}
-                          p={3}
-                          rounded="md"
-                        >
-                          <HStack spacing={2} color={visibilityMessage.type === 'success' ? 'green.600' : 'red.600'}>
-                            <Icon as={visibilityMessage.type === 'success' ? Check : AlertCircle} />
-                            <Text>{visibilityMessage.text}</Text>
-                          </HStack>
-                        </Box>
-                      )}
-                    </CardBody>
-                  </Card>
-                </VStack>
-              </GridItem>
-
-              <GridItem>
-                <VStack spacing={6}>
-                  <Card borderColor="brand.border">
-                    <CardHeader>
-                      <Text fontWeight="semibold">Account Security</Text>
-                    </CardHeader>
-                    <CardBody>
                       <VStack align="stretch" spacing={4}>
-                        <HStack spacing={3}>
-                          <Icon as={Settings} />
-                          <Box>
-                            <Text fontWeight="medium">Last Login</Text>
-                            <Text color="brand.subtleText" fontSize="sm">
-                              {profile?.lastActiveAt ? new Date(profile.lastActiveAt).toLocaleString() : 'Not available'}
+                        <Box>
+                          <Text fontSize="sm" color="brand.subtleText">
+                            Current affiliation
+                          </Text>
+                          <Text fontWeight="semibold">{profileData.companyName || 'Not assigned'}</Text>
+                          <Text fontSize="sm" color="brand.subtleText">
+                            Code: {profileData.companyCode || 'N/A'}
+                          </Text>
+                        </Box>
+                        <FormControl>
+                          <FormLabel>Company Code</FormLabel>
+                          <HStack align="center">
+                            <Input
+                              maxW="200px"
+                              value={companyCode}
+                              onChange={(event) => {
+                                setCompanyCode(event.target.value.toUpperCase().slice(0, 6))
+                                setOrganizationMessage(null)
+                              }}
+                              placeholder="6-character code"
+                            />
+                            <Button
+                              colorScheme="purple"
+                              onClick={handleCompanyCodeSave}
+                              isLoading={companyCodeSaving}
+                              loadingText="Connecting"
+                              isDisabled={
+                                companyCodeChecking
+                                || companyCodeSaving
+                                || companyCodeValid === false
+                                || isAlreadyConnected
+                                || normalizedCompanyCode.length !== 6
+                              }
+                            >
+                              Connect to Organization
+                            </Button>
+                          </HStack>
+                          <FormHelperText>
+                            Enter your organization code to unlock paid member features.
+                          </FormHelperText>
+                        </FormControl>
+                        {isAlreadyConnected && (
+                          <Box bg="blue.50" border="1px solid" borderColor="blue.100" p={3} rounded="md">
+                            <HStack spacing={2} color="blue.700">
+                              <Icon as={CheckCircle} />
+                              <Text fontSize="sm">
+                                You're already connected to {profileData.companyName || 'this organization'}.
+                              </Text>
+                            </HStack>
+                          </Box>
+                        )}
+                        {profileData.membershipStatus === 'free' && (
+                          <Box bg="purple.50" border="1px solid" borderColor="purple.100" p={3} rounded="md">
+                            <Text fontSize="sm" fontWeight="semibold" color="purple.700">
+                              Connecting this code upgrades you to paid.
+                            </Text>
+                            <Text fontSize="sm" color="brand.subtleText" mt={1}>
+                              Unlock organization dashboards, peer matching enhancements, and full course access.
                             </Text>
                           </Box>
-                        </HStack>
-                        <Divider />
-                        <HStack spacing={3}>
-                          <Icon as={Shield} />
-                          <Box>
-                            <Text fontWeight="medium">Account Status</Text>
-                            <Badge colorScheme={statusColorMap[profileData.accountStatus] || 'gray'}>
-                              {profileData.accountStatus === 'active' ? 'Active' : profileData.accountStatus === 'inactive' ? 'Inactive' : 'Pending'}
-                            </Badge>
+                        )}
+                        {companyCodeValid && companyOrganization && !companyCodeChecking && (
+                          <VStack align="stretch" spacing={2} bg="green.50" border="1px solid" borderColor="green.100" p={3} rounded="md">
+                            <HStack spacing={2} color="green.600">
+                              <Icon as={CheckCircle} />
+                              <Text fontSize="sm">Valid company code ({companyOrganization.name})</Text>
+                            </HStack>
+                            <HStack spacing={3} fontSize="sm" color="green.700">
+                              <Text>Members: {companyOrganization.memberCount ?? 0}</Text>
+                              <Text>Upgrade path: Free → Paid</Text>
+                            </HStack>
+                          </VStack>
+                        )}
+                        {companyCodeValid === false && !companyCodeChecking && (
+                          <Box bg="red.50" border="1px solid" borderColor="red.100" p={3} rounded="md">
+                            <HStack spacing={2} color="red.600">
+                              <Icon as={XCircle} />
+                              <Text fontSize="sm">{companyCodeError || 'Invalid or inactive company code'}</Text>
+                            </HStack>
                           </Box>
-                        </HStack>
-                        <Divider />
-                        <HStack spacing={3}>
-                          <Icon as={Settings} />
-                          <Box>
-                            <Text fontWeight="medium">Account ID</Text>
-                            <Text fontSize="sm" fontFamily="mono" bg="brand.primaryMuted" p={2} rounded="md">
-                              {profileData.id}
-                            </Text>
+                        )}
+                        {companyCodeChecking && (
+                          <Text fontSize="sm" color="brand.subtleText">
+                            Checking company code...
+                          </Text>
+                        )}
+                        {companyCodeSaving && (
+                          <Text fontSize="sm" color="brand.subtleText">
+                            Connecting to organization...
+                          </Text>
+                        )}
+                        {organizationMessage && (
+                          <Box
+                            bg={organizationMessage.type === 'success' ? 'green.50' : 'red.50'}
+                            border="1px solid"
+                            borderColor={organizationMessage.type === 'success' ? 'green.100' : 'red.100'}
+                            p={3}
+                            rounded="md"
+                          >
+                            <HStack spacing={2} color={organizationMessage.type === 'success' ? 'green.600' : 'red.600'}>
+                              <Icon as={organizationMessage.type === 'success' ? CheckCircle : AlertCircle} />
+                              <Text fontSize="sm">{organizationMessage.text}</Text>
+                            </HStack>
                           </Box>
-                        </HStack>
+                        )}
                       </VStack>
                     </CardBody>
                   </Card>
-
-                  <Card borderColor="brand.border">
-                    <CardBody>
-                      <Button variant="ghost" leftIcon={<LogOut size={16} />} width="full" onClick={handleSignOut}>
-                        Sign Out
-                      </Button>
-                    </CardBody>
-                  </Card>
                 </VStack>
               </GridItem>
             </Grid>
+
+            {hasAccountSettingsChanges && (
+              <Box position="sticky" bottom={0} bg="white" pt={4} pb={2} borderTop="1px solid" borderColor="brand.border" mt={6} zIndex={1}>
+                <Flex justify="flex-end">
+                  <Button
+                    onClick={handleSaveAccountSettings}
+                    isLoading={accountSettingsSaving || matchPreferencesSaving || visibilitySaving}
+                    loadingText="Saving..."
+                  >
+                    Save Changes
+                  </Button>
+                </Flex>
+              </Box>
+            )}
           </TabPanel>
 
           <TabPanel px={0}>
-            <Grid templateColumns={{ base: '1fr', lg: '2fr 1fr' }} gap={6}>
-              <GridItem>
-                <VStack spacing={6}>
-                  <Card borderColor="brand.border">
-                    <CardBody>
-                      <Box
-                        border="1px solid"
-                        borderColor={profileData.membershipStatus === 'paid' ? 'green.300' : 'orange.200'}
-                        bg={profileData.membershipStatus === 'paid' ? 'green.50' : 'orange.50'}
-                        p={5}
-                        rounded="lg"
-                      >
-                        <Flex justify="space-between" align="center" mb={3}>
-                          <Box>
-                            <Text fontWeight="bold">{membershipCopy[profileData.membershipStatus].title}</Text>
-                            <Text color="brand.subtleText">
-                              {membershipCopy[profileData.membershipStatus].description}
-                            </Text>
-                          </Box>
-                          <Tag colorScheme={profileData.membershipStatus === 'paid' ? 'green' : 'orange'}>
-                            {membershipCopy[profileData.membershipStatus].badge}
-                          </Tag>
-                        </Flex>
+            <VStack spacing={6} align="stretch" maxW="700px" mx="auto">
+              <Card borderColor="brand.border" boxShadow="card">
+                <CardBody>
+                  <Flex justify="space-between" align={{ base: 'flex-start', md: 'center' }} gap={4}>
+                    <Box>
+                      <Text fontWeight="bold" fontSize="lg">{membershipCopy[profileData.membershipStatus].title}</Text>
+                      <Text color="brand.subtleText" fontSize="sm">
+                        {membershipCopy[profileData.membershipStatus].description}
+                      </Text>
+                    </Box>
+                    <Tag size="sm" colorScheme={membershipTagColor[profileData.membershipStatus]}>
+                      {membershipCopy[profileData.membershipStatus].badge}
+                    </Tag>
+                  </Flex>
+                  <Text mt={3} fontSize="sm" color="brand.text">
+                    {membershipCopy[profileData.membershipStatus].statusMessage}
+                  </Text>
+                </CardBody>
+              </Card>
 
-                        {profileData.membershipStatus === 'paid' ? (
-                          <VStack align="stretch" spacing={2}>
-                            <Box>
-                              <Text fontWeight="semibold">Company Code</Text>
-                              <Text fontFamily="mono" bg="white" border="1px solid" borderColor="brand.border" p={2} rounded="md">
-                                {profileData.companyCode || 'N/A'}
-                              </Text>
-                            </Box>
-                            <Text>Organization: {profileData.companyName || 'Not assigned'}</Text>
-                            <Text>Village: {profileData.villageName || 'Not assigned'}</Text>
-                            {profileData.clusterName && <Text>Cluster: {profileData.clusterName}</Text>}
-                          </VStack>
-                        ) : (
-                          <Button mt={4} leftIcon={<Lock size={16} />} onClick={handleUpgrade}>
-                            Upgrade to Full Access
-                          </Button>
-                        )}
-                      </Box>
-                    </CardBody>
-                  </Card>
-
-                  <Card borderColor="brand.border">
-                    <CardHeader>
-                      <Text fontWeight="semibold">Feature Comparison</Text>
-                    </CardHeader>
-                    <CardBody>
-                      <Grid templateColumns={{ base: 'repeat(3, 1fr)' }} gap={3} fontWeight="semibold" mb={2}>
-                        <Text>Feature</Text>
-                        <Text textAlign="center">Free</Text>
-                        <Text textAlign="center" bg="brand.primary" color="white" rounded="md" py={1}>
-                          Paid
-                        </Text>
-                      </Grid>
-                      {[{
-                        label: 'Orientation Content',
-                        free: true,
-                        paid: true,
-                      },
-                      { label: 'Points Tracking', free: true, paid: true },
-                      { label: 'Weekly Activities', free: false, paid: true },
-                      { label: 'Learning Clusters', free: false, paid: true },
-                      { label: 'Transformation Partner', free: false, paid: true },
-                      { label: 'Live Sessions', free: false, paid: true },
-                      { label: 'Certification', free: false, paid: true }].map((row) => (
-                        <Grid templateColumns={{ base: 'repeat(3, 1fr)' }} gap={3} alignItems="center" py={2} key={row.label} borderBottom="1px solid" borderColor="brand.border">
-                          <Text fontWeight="medium">{row.label}</Text>
-                          <Center>
-                            {row.free ? <Icon as={Check} color="green.500" /> : <Text color="brand.subtleText">—</Text>}
-                          </Center>
-                          <Center>
-                            {row.paid ? <Icon as={Check} color="green.500" /> : <Text color="brand.subtleText">—</Text>}
-                          </Center>
-                        </Grid>
-                      ))}
-                      {profileData.membershipStatus === 'free' && (
-                        <Center mt={4}>
-                          <Button leftIcon={<Lock size={16} />} onClick={handleUpgrade}>
-                            Upgrade to Full Access
-                          </Button>
+              {profileData.membershipStatus === 'free' && (
+                <Card borderColor="brand.border" boxShadow="card">
+                  <CardHeader>
+                    <Text fontWeight="semibold" fontSize="lg">Feature Comparison</Text>
+                  </CardHeader>
+                  <CardBody>
+                    <Grid templateColumns={{ base: '2fr 1fr 1fr' }} gap={3} fontWeight="semibold" mb={2}>
+                      <Text>Feature</Text>
+                      <Text textAlign="center">Free</Text>
+                      <Text textAlign="center" bg="purple.50" color="brand.text" rounded="md" py={1}>
+                        Paid
+                      </Text>
+                    </Grid>
+                    {[{
+                      label: 'Orientation Content',
+                      free: true,
+                      paid: true,
+                    },
+                    { label: 'Points Tracking', free: true, paid: true },
+                    { label: 'Weekly Activities', free: false, paid: true },
+                    { label: 'Learning Clusters', free: false, paid: true },
+                    { label: 'Transformation Partner', free: false, paid: true },
+                    { label: 'Live Sessions', free: false, paid: true },
+                    { label: 'Certification', free: false, paid: true }].map((row) => (
+                      <Grid templateColumns={{ base: '2fr 1fr 1fr' }} gap={3} alignItems="center" py={2} key={row.label} borderBottom="1px solid" borderColor="brand.border">
+                        <Text fontWeight="medium">{row.label}</Text>
+                        <Center>
+                          <Icon as={Check} color={row.free ? 'green.500' : 'text.muted'} />
                         </Center>
-                      )}
-                    </CardBody>
-                  </Card>
+                        <Center bg="purple.50" rounded="md" py={2}>
+                          <Icon as={Check} color={row.paid ? 'green.500' : 'text.muted'} />
+                        </Center>
+                      </Grid>
+                    ))}
+                    <Center mt={4}>
+                      <Button leftIcon={<Lock size={16} />} onClick={handleUpgrade}>
+                        Upgrade to Full Access
+                      </Button>
+                    </Center>
+                  </CardBody>
+                </Card>
+              )}
 
-                  <PaymentHistory />
-
-                  {profileData.membershipStatus === 'free' && (
-                    <Card borderColor="brand.border" bg="yellow.50">
-                      <CardHeader>
-                        <Text fontWeight="semibold">How to Upgrade</Text>
-                      </CardHeader>
-                      <CardBody>
-                        <VStack align="stretch" spacing={4}>
-                          {[1, 2, 3].map((step) => (
-                            <HStack align="flex-start" spacing={3} key={step}>
-                              <Center bg="yellow.200" color="yellow.700" rounded="full" w="32px" h="32px" fontWeight="bold">
-                                {step}
-                              </Center>
-                              <Box>
-                                <Text fontWeight="semibold">
-                                  {step === 1 && 'Get a Company Code'}
-                                  {step === 2 && 'Enter Your Code'}
-                                  {step === 3 && 'Enjoy Full Access'}
-                                </Text>
-                                <Text color="brand.subtleText">
-                                  {step === 1 && 'Contact your organization administrator or our sales team to get a valid company code'}
-                                  {step === 2 && 'Go to the upgrade page and enter your company code'}
-                                  {step === 3 && 'Immediately gain access to all premium features and content'}
-                                </Text>
-                              </Box>
-                            </HStack>
-                          ))}
-                          <Button variant="secondary" leftIcon={<CreditCard size={16} />} onClick={handleUpgrade}>
-                            Go to Upgrade Page
-                          </Button>
-                        </VStack>
-                      </CardBody>
-                    </Card>
-                  )}
-                </VStack>
-              </GridItem>
-
-              <GridItem>
-                <VStack spacing={6}>
-                  <Button variant="ghost" rightIcon={<ChevronRight />} onClick={() => navigate('/app/leaderboard')}>
-                    Back to Dashboard
-                  </Button>
-                </VStack>
-              </GridItem>
-            </Grid>
+              <PaymentHistory hasRecords={profileData.membershipStatus === 'paid'} />
+            </VStack>
           </TabPanel>
         </TabPanels>
       </Tabs>
+
+      <AlertDialog
+        isOpen={isLeaveVillageOpen}
+        leastDestructiveRef={cancelLeaveRef}
+        onClose={() => setIsLeaveVillageOpen(false)}
+      >
+        <AlertDialogOverlay />
+        <AlertDialogContent>
+          <AlertDialogHeader>Leave your village?</AlertDialogHeader>
+          <AlertDialogBody>
+            Leaving the village will remove your affiliation and related access. You can join another village later.
+          </AlertDialogBody>
+          <AlertDialogFooter>
+            <Button ref={cancelLeaveRef} onClick={() => setIsLeaveVillageOpen(false)} variant="ghost">
+              Cancel
+            </Button>
+            <Button colorScheme="red" onClick={handleLeaveVillage} ml={3} isLoading={isLeavingVillage}>
+              Leave Village
+            </Button>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </Box>
   )
 }

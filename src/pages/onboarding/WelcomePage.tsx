@@ -10,7 +10,7 @@ import {
   useToast,
 } from '@chakra-ui/react'
 import { useAuth } from '@/hooks/useAuth'
-import { doc, updateDoc, serverTimestamp } from 'firebase/firestore'
+import { doc, setDoc, serverTimestamp } from 'firebase/firestore'
 import { db } from '@/services/firebase'
 import { getLandingPathForRole } from '@/utils/roleRouting'
 
@@ -33,32 +33,22 @@ export const WelcomePage: React.FC = () => {
         onboardingSkipped: false,
       }
 
-      try {
-        await Promise.all([
-          updateDoc(userRef, {
-            onboardingComplete: true,
-            updatedAt: serverTimestamp(),
-          }),
-          updateDoc(profileRef, {
-            onboardingComplete: true,
-            onboardingSkipped: false,
-            updatedAt: serverTimestamp(),
-          }),
-        ])
-      } catch (updateError) {
-        await Promise.allSettled([
-          updateDoc(userRef, {
-            onboardingComplete: true,
-            updatedAt: serverTimestamp(),
-          }),
-          updateDoc(profileRef, {
-            onboardingComplete: true,
-            onboardingSkipped: false,
-            updatedAt: serverTimestamp(),
-          }),
-        ])
-        throw updateError
-      }
+      // Use setDoc with merge: true to create or update documents
+      await Promise.all([
+        setDoc(userRef, {
+          onboardingComplete: true,
+          updatedAt: serverTimestamp(),
+        }, { merge: true }),
+        setDoc(profileRef, {
+          onboardingComplete: true,
+          onboardingSkipped: false,
+          updatedAt: serverTimestamp(),
+        }, { merge: true }),
+      ])
+
+      // Note: Referral points are now awarded automatically via Cloud Function
+      // when the referred user completes their first platform activity (writes to pointsLedger).
+      // This ensures genuine engagement before rewarding the referrer.
 
       toast({
         title: 'Welcome!',
@@ -98,32 +88,18 @@ export const WelcomePage: React.FC = () => {
         onboardingSkipped: true,
       }
 
-      try {
-        await Promise.all([
-          updateDoc(userRef, {
-            onboardingSkipped: true,
-            updatedAt: serverTimestamp(),
-          }),
-          updateDoc(profileRef, {
-            onboardingComplete: false,
-            onboardingSkipped: true,
-            updatedAt: serverTimestamp(),
-          }),
-        ])
-      } catch (updateError) {
-        await Promise.allSettled([
-          updateDoc(userRef, {
-            onboardingSkipped: true,
-            updatedAt: serverTimestamp(),
-          }),
-          updateDoc(profileRef, {
-            onboardingComplete: false,
-            onboardingSkipped: true,
-            updatedAt: serverTimestamp(),
-          }),
-        ])
-        throw updateError
-      }
+      // Use setDoc with merge: true to create or update documents
+      await Promise.all([
+        setDoc(userRef, {
+          onboardingSkipped: true,
+          updatedAt: serverTimestamp(),
+        }, { merge: true }),
+        setDoc(profileRef, {
+          onboardingComplete: false,
+          onboardingSkipped: true,
+          updatedAt: serverTimestamp(),
+        }, { merge: true }),
+      ])
 
       // Navigate to role-based landing page
       const landingPath = getLandingPathForRole(updatedProfile)

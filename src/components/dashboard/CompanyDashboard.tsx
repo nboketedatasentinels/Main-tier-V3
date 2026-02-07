@@ -63,6 +63,7 @@ import { db } from '@/services/firebase'
 import { useAuth } from '@/hooks/useAuth'
 import { useOrganizationLeadership } from '@/hooks/useOrganizationLeadership'
 import { isFreeUser } from '@/utils/membership'
+import { getDisplayName } from '@/utils/displayName'
 
 interface WeeklyAggregation {
   id: string
@@ -156,7 +157,7 @@ const buildSupportLead = (
   } | null,
 ): SupportLeadSummary | null => {
   if (!profile) return null
-  const name = profile.fullName || `${profile.firstName ?? ''} ${profile.lastName ?? ''}`.trim() || profile.email || 'Unknown'
+  const name = getDisplayName(profile, 'Support lead')
   return {
     name,
     email: profile.email,
@@ -228,7 +229,7 @@ export const CompanyDashboard: React.FC = () => {
     organization: leadershipOrganization,
     supportAssignment: supportAssignmentStatus,
     refresh: refreshLeadership,
-  } = useOrganizationLeadership(profile?.companyId, profile?.id)
+  } = useOrganizationLeadership(profile?.companyId, profile?.id, profile)
   const assignment = useMemo(
     () => ({
       ambassador: buildSupportLead(leadershipProfiles.ambassador),
@@ -236,10 +237,23 @@ export const CompanyDashboard: React.FC = () => {
     }),
     [leadershipProfiles.ambassador, leadershipProfiles.mentor],
   )
+  const isSamePerson = useMemo(() => {
+    return (
+      leadershipProfiles.mentor &&
+      leadershipProfiles.ambassador &&
+      leadershipProfiles.mentor.id === leadershipProfiles.ambassador.id
+    )
+  }, [leadershipProfiles.mentor, leadershipProfiles.ambassador])
   const supportErrorMessage = leadershipErrors.organization || leadershipErrors.supportAssignments
   const showLeadershipDebug = import.meta.env.DEV && (leadershipOrganization.id || supportAssignmentStatus.id)
   const mentorSourceLabel =
-    leadershipSources.mentor === 'user' ? 'User-specific mentor' : leadershipSources.mentor === 'organization' ? 'Organization mentor' : null
+    leadershipSources.mentor === 'user'
+      ? 'User-specific mentor'
+      : leadershipSources.mentor === 'organization'
+        ? 'Organization mentor'
+        : leadershipSources.mentor === 'profile'
+          ? 'Profile mentor'
+          : null
 
   const { data: checklistItems, loading: checklistLoading } = useRealtimeCollection<ChecklistItem>(
     'weekly_checklist',
@@ -276,7 +290,11 @@ export const CompanyDashboard: React.FC = () => {
     profile?.companyCode
       ? [where('company_code', '==', profile.companyCode), orderBy('total_points', 'desc'), limit(10)]
       : [],
-    (id, data) => ({ id, name: data.name || 'Teammate', totalPoints: data.total_points || 0 }),
+    (id, data) => ({
+      id,
+      name: getDisplayName(data, 'Teammate'),
+      totalPoints: data.total_points || 0,
+    }),
   )
 
   const { data: faqEntries } = useRealtimeCollection<FAQEntry>(
@@ -394,6 +412,88 @@ export const CompanyDashboard: React.FC = () => {
     </Stat>
   )
 
+  const renderSupportLead = (
+    label: string,
+    lead: SupportLeadSummary | null,
+    role: 'mentor' | 'ambassador' | 'both',
+  ) => {
+    const name = lead?.name
+    const isAvailable = isLeadAvailable(lead?.availabilityStatus)
+
+    return (
+      <Box>
+        <HStack justify="space-between" mb={1}>
+          <Text fontSize="sm" color="gray.500" fontWeight="bold">
+            {label}
+          </Text>
+          {isAvailable && <Badge colorScheme="green">Available</Badge>}
+        </HStack>
+        <Text fontWeight="semibold">
+          {name || `No ${role === 'both' ? 'mentor or ambassador' : role} assigned`}
+        </Text>
+
+        {(role === 'mentor' || role === 'both') && mentorSourceLabel && (
+          <Badge mt={2} colorScheme="purple" variant="subtle" alignSelf="flex-start">
+            {mentorSourceLabel}
+          </Badge>
+        )}
+
+        {!name && !leadershipLoading && leadershipOrganization.loaded && (
+          <Box mt={1}>
+            {leadershipOrganization.exists ? (
+              <Text fontSize="xs" color="gray.500">
+                {role === 'mentor'
+                  ? supportAssignmentStatus.loaded
+                    ? 'No mentor is assigned to you or your organization yet.'
+                    : 'No mentor is assigned to your organization yet.'
+                  : role === 'ambassador'
+                    ? 'No ambassador is assigned to your organization yet.'
+                    : 'No support team assigned.'}
+              </Text>
+            ) : (
+              role === 'mentor' && (
+                <Text fontSize="xs" color="gray.500">
+                  Organization record not found. Please verify your company ID.
+                </Text>
+              )
+            )}
+            {role === 'mentor' && leadershipOrganization.exists && supportAssignmentStatus.loaded && (
+              <Text fontSize="xs" color="gray.500" mt={1}>
+                If you were recently assigned a mentor, ask your administrator to confirm your user
+                assignment and organization support roles.
+              </Text>
+            )}
+          </Box>
+        )}
+
+        <HStack spacing={2} mt={2}>
+          {(role === 'mentor' || role === 'both') && lead?.email && (
+            <Button
+              as={Link}
+              href="/app/leadership-council"
+              leftIcon={<CalendarClock size={16} />}
+              size="sm"
+              variant="outline"
+            >
+              Schedule
+            </Button>
+          )}
+          {(role === 'ambassador' || role === 'both') && lead?.email && (
+            <Button
+              as={Link}
+              href={`mailto:${lead.email}`}
+              leftIcon={<Mail size={16} />}
+              size="sm"
+              variant="outline"
+            >
+              Message
+            </Button>
+          )}
+        </HStack>
+      </Box>
+    )
+  }
+
   const topTasks = useMemo(() => checklistItems.filter((item) => !item.completed).slice(0, 5), [checklistItems])
 
   const taskStatusLabel = useMemo(() => {
@@ -421,7 +521,7 @@ export const CompanyDashboard: React.FC = () => {
         >
           <Box>
             <Heading size="md" color="white">Upgrade for the full experience</Heading>
-            <Text opacity={0.9} color="white">Unlock vlogs, premium courses, and community challenges</Text>
+            <Text color="white">Unlock vlogs, premium courses, and community challenges</Text>
           </Box>
           <HStack spacing={3}>
             <Button as={RouterLink} to="/upgrade" colorScheme="yellow" rightIcon={<ArrowUpRight size={16} />}>
@@ -519,16 +619,16 @@ export const CompanyDashboard: React.FC = () => {
               </HStack>
               {showLeadershipDebug && (
                 <VStack align="start" spacing={1} mb={2}>
-                  <Text fontSize="xs" color="gray.400">
+                  <Text fontSize="xs" color="text.muted">
                     Org ID: {leadershipOrganization.id ?? 'None'}
                   </Text>
-                  <Text fontSize="xs" color="gray.400">
+                  <Text fontSize="xs" color="text.muted">
                     Support assignments: {supportAssignmentStatus.loaded ? (supportAssignmentStatus.exists ? 'Loaded' : 'None') : 'Not checked'}
                   </Text>
-                  <Text fontSize="xs" color="gray.400">
+                  <Text fontSize="xs" color="text.muted">
                     Mentor source: {leadershipSources.mentor ?? 'None'}
                   </Text>
-                  <Text fontSize="xs" color="gray.400">
+                  <Text fontSize="xs" color="text.muted">
                     Ambassador source: {leadershipSources.ambassador ?? 'None'}
                   </Text>
                 </VStack>
@@ -544,95 +644,16 @@ export const CompanyDashboard: React.FC = () => {
                     {supportErrorMessage}
                   </Text>
                 )}
-                <Box>
-                  <HStack justify="space-between" mb={1}>
-                    <Text fontSize="sm" color="gray.500" fontWeight="bold">
-                      Ambassador Status
-                    </Text>
-                    {isLeadAvailable(assignment.ambassador?.availabilityStatus) && (
-                      <Badge colorScheme="green">Available</Badge>
-                    )}
-                  </HStack>
-                  <Text fontWeight="semibold">
-                    {assignment?.ambassador?.name || 'No ambassador assigned'}
-                  </Text>
-                  {!assignment?.ambassador?.name &&
-                    !leadershipLoading &&
-                    leadershipOrganization.loaded &&
-                    leadershipOrganization.exists && (
-                      <Text fontSize="xs" color="gray.500">
-                        No ambassador is assigned to your organization yet.
-                      </Text>
-                    )}
-                  {assignment?.ambassador?.email && (
-                    <Button
-                      as={Link}
-                      href={`mailto:${assignment.ambassador.email}`}
-                      leftIcon={<Mail size={16} />}
-                      size="sm"
-                      variant="outline"
-                      mt={2}
-                    >
-                      Message
-                    </Button>
-                  )}
-                </Box>
-                <Divider />
-                <Box>
-                  <HStack justify="space-between" mb={1}>
-                    <Text fontSize="sm" color="gray.500" fontWeight="bold">
-                      Mentor
-                    </Text>
-                    {isLeadAvailable(assignment.mentor?.availabilityStatus) && (
-                      <Badge colorScheme="green">Available</Badge>
-                    )}
-                  </HStack>
-                  <Text fontWeight="semibold">{assignment?.mentor?.name || 'No mentor assigned'}</Text>
-                  {mentorSourceLabel && (
-                    <Badge mt={2} colorScheme="purple" variant="subtle" alignSelf="flex-start">
-                      {mentorSourceLabel}
-                    </Badge>
-                  )}
-                  {!assignment?.mentor?.name &&
-                    !leadershipLoading &&
-                    leadershipOrganization.loaded &&
-                    leadershipOrganization.exists && (
-                      <Text fontSize="xs" color="gray.500">
-                        {supportAssignmentStatus.loaded
-                          ? 'No mentor is assigned to you or your organization yet.'
-                          : 'No mentor is assigned to your organization yet.'}
-                      </Text>
-                    )}
-                  {!assignment?.mentor?.name &&
-                    !leadershipLoading &&
-                    leadershipOrganization.loaded &&
-                    !leadershipOrganization.exists && (
-                      <Text fontSize="xs" color="gray.500">
-                        Organization record not found. Please verify your company ID.
-                      </Text>
-                    )}
-                  {!assignment?.mentor?.name &&
-                    !leadershipLoading &&
-                    leadershipOrganization.loaded &&
-                    leadershipOrganization.exists &&
-                    supportAssignmentStatus.loaded && (
-                      <Text fontSize="xs" color="gray.500">
-                        If you were recently assigned a mentor, ask your administrator to confirm your user assignment and organization support roles.
-                      </Text>
-                    )}
-                  {assignment?.mentor?.email && (
-                    <Button
-                      as={Link}
-                      href="/app/leadership-council"
-                      leftIcon={<CalendarClock size={16} />}
-                      size="sm"
-                      variant="outline"
-                      mt={2}
-                    >
-                      Schedule
-                    </Button>
-                  )}
-                </Box>
+
+                {isSamePerson ? (
+                  renderSupportLead('Mentor & Ambassador', assignment.mentor, 'both')
+                ) : (
+                  <>
+                    {renderSupportLead('Ambassador Status', assignment.ambassador, 'ambassador')}
+                    <Divider />
+                    {renderSupportLead('Mentor', assignment.mentor, 'mentor')}
+                  </>
+                )}
               </VStack>
             </CardBody>
           </Card>
@@ -809,7 +830,7 @@ export const CompanyDashboard: React.FC = () => {
                   p={3}
                   borderRadius="md"
                   border="1px solid"
-                  borderColor="gray.100"
+                  borderColor="border.control"
                   bg="gray.50"
                 >
                   <Box>
@@ -941,7 +962,7 @@ export const CompanyDashboard: React.FC = () => {
               </Box>
 
               <SimpleGrid columns={{ base: 1, md: 2 }} spacing={3}>
-                <Box p={3} borderRadius="md" border="1px solid" borderColor="gray.100" bg="gray.50">
+                <Box p={3} borderRadius="md" border="1px solid" borderColor="border.control" bg="gray.50">
                   <Text fontWeight="bold">Ranking</Text>
                   {isFreeTierUser ? (
                     <VStack align="flex-start" spacing={2} mt={1}>
@@ -958,7 +979,7 @@ export const CompanyDashboard: React.FC = () => {
                     </Text>
                   )}
                 </Box>
-                <Box p={3} borderRadius="md" border="1px solid" borderColor="gray.100" bg="gray.50">
+                <Box p={3} borderRadius="md" border="1px solid" borderColor="border.control" bg="gray.50">
                   <Text fontWeight="bold">Upcoming Challenges</Text>
                   {isFreeTierUser ? (
                     <VStack align="flex-start" spacing={2} mt={1}>
@@ -998,7 +1019,7 @@ export const CompanyDashboard: React.FC = () => {
                       const transactionDate = normalizeTransactionDate(tx.createdAt)
 
                       return (
-                        <Flex key={tx.id} justify="space-between" align="center" borderBottom="1px solid" borderColor="gray.100" pb={2}>
+                        <Flex key={tx.id} justify="space-between" align="center" borderBottom="1px solid" borderColor="border.control" pb={2}>
                           <Box>
                             <Text fontWeight="semibold">{tx.reason}</Text>
                             <Text fontSize="sm" color="gray.500">
@@ -1010,7 +1031,7 @@ export const CompanyDashboard: React.FC = () => {
                       )
                     })}
                     {profile?.companyCode && (
-                      <Flex justify="space-between" align="center" borderBottom="1px solid" borderColor="gray.100" pb={2}>
+                      <Flex justify="space-between" align="center" borderBottom="1px solid" borderColor="border.control" pb={2}>
                         <Box>
                           <Text fontWeight="semibold">Welcome to your corporate village</Text>
                           <Text fontSize="sm" color="gray.500">
@@ -1052,7 +1073,7 @@ export const CompanyDashboard: React.FC = () => {
                       borderRadius="md"
                       bg={idx === 0 ? 'purple.50' : 'gray.50'}
                       border="1px solid"
-                      borderColor="gray.100"
+                      borderColor="border.control"
                     >
                       <HStack spacing={3}>
                         <Badge colorScheme={idx === 0 ? 'purple' : 'gray'}>{idx + 1}</Badge>

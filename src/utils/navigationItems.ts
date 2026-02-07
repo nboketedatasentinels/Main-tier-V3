@@ -3,15 +3,14 @@ import {
   BookOpen,
   Building2,
   CalendarClock,
+  ClipboardCheck,
   Gift,
   Headphones,
   LayoutDashboard,
   LockKeyhole,
   ShieldCheck,
-  ShieldAlert,
   Settings,
   Sparkles,
-  Target,
   TrendingUp,
   Users,
   UserSquare2,
@@ -23,6 +22,7 @@ export type NavigationItem = {
   label: string
   icon?: React.ElementType
   description?: string
+  badgeCount?: number
 }
 
 export type NavigationSection = {
@@ -43,11 +43,9 @@ export const buildSuperAdminNavItems = (): NavigationSection[] => [
       { key: 'overview', label: 'Dashboard Overview', icon: LayoutDashboard },
       { key: 'organizations', label: 'Organization Management', icon: Workflow },
       { key: 'users', label: 'User Management', icon: Users },
+      { key: 'approvals', label: 'Approval Center', icon: ClipboardCheck },
       { key: 'admin-oversight', label: 'Admin Oversight', icon: ShieldCheck },
-      { key: 'settings', label: 'System Settings', icon: Settings },
-      { key: 'security', label: 'Security & Audit', icon: ShieldAlert },
       { key: 'reports', label: 'Reports & Analytics', icon: BarChart3 },
-      { key: 'configuration', label: 'Platform Configuration', icon: Target },
     ],
   },
 ]
@@ -66,13 +64,14 @@ export const buildAmbassadorNavItems = (): NavigationSection[] => [
   },
 ]
 
-export const buildCompanyAdminNavItems = (): NavigationSection[] => [
+export const buildPartnerNavItems = (): NavigationSection[] => [
   {
     title: 'Administration',
     items: [
       { key: 'overview', label: 'Overview', icon: LayoutDashboard },
+      { key: 'at-risk', label: 'At-Risk Command Panel', icon: TrendingUp },
       { key: 'users', label: 'User Management', icon: Users },
-      { key: 'organizations', label: 'Organizations', icon: Building2 },
+      { key: 'organization-management', label: 'Organizations', icon: Building2 },
       { key: 'reports', label: 'Reports', icon: BarChart3 },
       { key: 'settings', label: 'Settings', icon: Settings },
       { key: 'support', label: 'Support', icon: Headphones },

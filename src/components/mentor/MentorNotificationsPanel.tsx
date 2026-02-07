@@ -54,14 +54,14 @@ export const MentorNotificationsPanel = ({
               p={3}
               borderWidth="1px"
               rounded="md"
-              borderColor={isRead ? 'gray.200' : 'purple.400'}
+              borderColor={isRead ? 'border.control' : 'purple.400'}
               bg={isRead ? 'white' : 'purple.50'}
               gap={3}
               align="start"
             >
               <Icon
                 as={isRead ? CheckCircle2 : Bell}
-                color={isRead ? 'gray.400' : 'purple.600'}
+                color={isRead ? 'text.muted' : 'purple.600'}
                 boxSize={5}
               />
               <VStack align="start" spacing={1} flex={1}>

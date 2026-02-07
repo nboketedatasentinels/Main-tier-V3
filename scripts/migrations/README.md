@@ -152,6 +152,24 @@ node scripts/migrations/backfill-email-verified.mjs
 - Ensure the Firebase Admin SDK is configured as described above before running this script.
 - The migration logs progress as it scans and updates user profiles.
 
+## Migration: Create Transformational Leadership Course Document
+
+### File: `create-transformational-leadership-course.mjs`
+
+This migration creates the complementary `transformational-leadership` course document in the `courses` collection.
+It is safe to run multiple times and will skip creation if the document already exists.
+
+### Running the Migration
+
+```bash
+node scripts/migrations/create-transformational-leadership-course.mjs
+```
+
+### Notes
+
+- The script sets the course title, description, link, and active status to match the complementary course UI.
+- Update the service account and `FIREBASE_PROJECT_ID` environment variable as described above before running.
+
 ## Migration: Copy Organization Fields to Profiles
 
 ### File: `migrate-org-fields-to-profiles.mjs`
@@ -180,3 +198,48 @@ node scripts/migrations/migrate-org-fields-to-profiles.mjs
 
 - The script writes progress to the `migration_runs` collection and logs a summary report.
 - Profiles that do not exist are skipped and reported.
+
+## Migration: Standardize Partner Assignments
+
+### File: `standardize-partner-assignments.mjs`
+
+This migration ensures all partner assignment entries in `partners/{partnerId}` contain both `organizationId` and
+`companyCode` fields so partner dashboards can query consistently.
+
+### Running the Migration
+
+```bash
+node scripts/migrations/standardize-partner-assignments.mjs --dry-run
+```
+
+Optional flags:
+
+- `--partner-id=abc123` to target a single partner document for validation.
+- `--verbose` to log detailed assignment changes.
+
+### Notes
+
+- This script reads organizations to resolve missing identifiers.
+- Ensure `service-account-key.json` is available in the project root or set `FIREBASE_SERVICE_ACCOUNT_PATH`.
+
+## Reconciliation: Validate Organization Field Migration
+
+### File: `reconcile-org-fields.mjs`
+
+This reconciliation script compares organization fields between the `users` and `profiles` collections to confirm the migration completed successfully. It reports:
+
+- Missing profiles for users
+- Missing users for profiles
+- Field-level mismatches across organization fields
+- Sample mismatches for quick review
+
+### Running the Reconciliation
+
+```bash
+node scripts/migrations/reconcile-org-fields.mjs --output reports/migration-reconciliation-report.json
+```
+
+### Report Output
+
+- The report is saved as JSON (default: `reports/migration-reconciliation-report.json`).
+- Use the report to document reconciliation results and identify follow-up fixes.

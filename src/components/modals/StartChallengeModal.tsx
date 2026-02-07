@@ -25,11 +25,11 @@ import {
   Divider,
   Badge,
 } from '@chakra-ui/react';
-import { Swords, Users, Trophy, Filter, User, Lock } from 'lucide-react';
+import { Swords, Users, Trophy, User, Lock } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { db } from '@/services/firebase';
 import { ORG_COLLECTION } from '@/constants/organizations';
-import { fetchOrgMembers, getOrgScope, isProfileInOrg } from '@/utils/organizationScope';
+import { fetchOrgMembers, getOrgScope } from '@/utils/organizationScope';
 import {
   collection,
   query,
@@ -41,6 +41,8 @@ import {
   getDoc,
 } from 'firebase/firestore';
 import { UserProfile, Organization } from '@/types';
+import { getDisplayName } from '@/utils/displayName';
+import { getVillageMembers } from '@/services/villageService';
 
 
 // --- INTERFACES ---
@@ -61,14 +63,112 @@ interface UserOption {
   id: string;
   name: string;
   email: string;
-  level: number;
   points: number;
   recommended: boolean;
 }
 
 type ChallengeType = 'competitive' | 'collaborative';
-type OpponentFilter = 'suggested' | 'similar-level' | 'all';
+type OpponentFilter = 'suggested' | 'all';
 type DurationPreset = 'weekly' | 'monthly';
+
+// --- HELPER: Check if two profiles are in the same organization ---
+// This handles the ID/code mismatch by checking ALL possible identifier combinations
+const getProfileOrganizationCode = (profile: UserProfile): string | null => {
+  const record = profile as unknown as Record<string, unknown>;
+  if (typeof record.organizationCode === 'string' && record.organizationCode.trim()) {
+    return record.organizationCode;
+  }
+  if (typeof record.organization_code === 'string' && record.organization_code.trim()) {
+    return record.organization_code;
+  }
+  return null;
+};
+
+const areProfilesInSameOrg = (profile1: UserProfile | null, profile2: UserProfile | null): boolean => {
+  if (!profile1 || !profile2) return false;
+
+  if (profile1.villageId && profile2.villageId && profile1.villageId === profile2.villageId) {
+    console.log('[Challenge] ✔️ Match via village:', profile1.villageId);
+    return true;
+  }
+
+  // Collect all organization identifiers for each profile
+  const getOrgIdentifiers = (profile: UserProfile): Set<string> => {
+    const identifiers = new Set<string>();
+    
+    if (profile.companyId) identifiers.add(profile.companyId);
+    if (profile.companyCode) identifiers.add(profile.companyCode);
+    if (profile.organizationId) identifiers.add(profile.organizationId);
+    const organizationCode = getProfileOrganizationCode(profile);
+    if (organizationCode) identifiers.add(organizationCode);
+    // Handle snake_case variants if they exist
+    const p = profile as unknown as Record<string, unknown>;
+    if (p.company_id && typeof p.company_id === 'string') identifiers.add(p.company_id);
+    if (p.company_code && typeof p.company_code === 'string') identifiers.add(p.company_code);
+    if (p.organization_id && typeof p.organization_id === 'string') identifiers.add(p.organization_id);
+    if (p.organization_code && typeof p.organization_code === 'string') identifiers.add(p.organization_code);
+    
+    return identifiers;
+  };
+
+  const ids1 = getOrgIdentifiers(profile1);
+  const ids2 = getOrgIdentifiers(profile2);
+
+  // Check if there's ANY overlap between the two sets
+  for (const id of ids1) {
+    if (ids2.has(id)) {
+      console.log('[Challenge] ✅ Organization match found:', id);
+      return true;
+    }
+  }
+
+  console.log('[Challenge] ❌ No organization match:', { 
+    challenger: Array.from(ids1), 
+    challenged: Array.from(ids2) 
+  });
+  return false;
+};
+
+// --- HELPER: Resolve organization details from profile ---
+// Fetches the organization document to get both ID and code
+const resolveOrganization = async (profile: UserProfile): Promise<Organization | null> => {
+  const organizationCode = getProfileOrganizationCode(profile);
+  // Try to find organization by companyId first
+  if (profile.companyId) {
+    const orgDoc = await getDoc(doc(db, ORG_COLLECTION, profile.companyId));
+    if (orgDoc.exists()) {
+      return { ...orgDoc.data(), id: orgDoc.id } as Organization;
+    }
+  }
+
+  // Try by organizationId
+  if (profile.organizationId && profile.organizationId !== profile.companyId) {
+    const orgDoc = await getDoc(doc(db, ORG_COLLECTION, profile.organizationId));
+    if (orgDoc.exists()) {
+      return { ...orgDoc.data(), id: orgDoc.id } as Organization;
+    }
+  }
+
+  // Try to find by companyCode
+  if (profile.companyCode) {
+    const codeQuery = query(collection(db, ORG_COLLECTION), where('code', '==', profile.companyCode));
+    const snapshot = await getDocs(codeQuery);
+    if (!snapshot.empty) {
+      return { ...snapshot.docs[0].data(), id: snapshot.docs[0].id } as Organization;
+    }
+  }
+
+  // Try by organizationCode
+  if (organizationCode && organizationCode !== profile.companyCode) {
+    const codeQuery = query(collection(db, ORG_COLLECTION), where('code', '==', organizationCode));
+    const snapshot = await getDocs(codeQuery);
+    if (!snapshot.empty) {
+      return { ...snapshot.docs[0].data(), id: snapshot.docs[0].id } as Organization;
+    }
+  }
+
+  return null;
+};
 
 // --- COMPONENT ---
 export const StartChallengeModal: React.FC<StartChallengeModalProps> = ({
@@ -92,35 +192,42 @@ export const StartChallengeModal: React.FC<StartChallengeModalProps> = ({
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
 
-  const [userLevel, setUserLevel] = useState(1);
-
   const { user, profile } = useAuth();
 
   // --- DATA FETCHING ---
+  const buildUserOptions = (members: Record<string, unknown>[]) => {
+    return members.map((member) => {
+      const p = member as unknown as UserProfile;
+      return {
+        id: p.id,
+        name: getDisplayName(p, 'Member'),
+        email: p.email,
+        points: p.totalPoints || 0,
+        recommended: false,
+      };
+    });
+  };
+
   const fetchPotentialOpponents = useCallback(async () => {
     if (!user) return;
     setLoading(true);
     setError(null);
     try {
       const orgScope = getOrgScope(profile);
-      if (!orgScope.isValid) {
+      let userOptions: UserOption[] = [];
+
+      if (orgScope.isValid) {
+        const members = await fetchOrgMembers(db, orgScope, user.uid);
+        userOptions = buildUserOptions(members);
+      } else if (profile?.villageId) {
+        const villageMembers = await getVillageMembers(profile.villageId);
+        const villageOptions = buildUserOptions(villageMembers.filter((member) => member.id !== user.uid));
+        userOptions = villageOptions;
+      } else {
         setUsers([]);
-        setError('Organization details are missing. Please refresh your profile.');
+        setError('You have to be a part of an organisation to start a challenge');
         return;
       }
-
-      const members = await fetchOrgMembers(db, orgScope, user.uid);
-      const userOptions: UserOption[] = members.map((member) => {
-        const p = member as unknown as UserProfile;
-        return ({
-        id: p.id,
-        name: p.fullName || `${p.firstName || ''} ${p.lastName || ''}`.trim(),
-        email: p.email,
-        level: p.level || 1,
-        points: p.totalPoints || 0,
-        recommended: false,
-        });
-      });
 
       if (userOptions.length === 0) {
         setError('No users available to challenge right now.');
@@ -137,20 +244,13 @@ export const StartChallengeModal: React.FC<StartChallengeModalProps> = ({
   const applyOpponentFilter = useCallback(() => {
     let sortedUsers = [...users];
     if (opponentFilter === 'suggested') {
-      sortedUsers.sort((a, b) => {
-        const levelDiffA = Math.abs(a.level - userLevel);
-        const levelDiffB = Math.abs(b.level - userLevel);
-        if (levelDiffA !== levelDiffB) return levelDiffA - levelDiffB;
-        return b.points - a.points;
-      });
+      sortedUsers.sort((a, b) => b.points - a.points);
       sortedUsers = sortedUsers.map((u, i) => ({ ...u, recommended: i < 3 }));
-    } else if (opponentFilter === 'similar-level') {
-      sortedUsers = sortedUsers.filter(u => Math.abs(u.level - userLevel) <= 2);
     } else { // 'all'
       sortedUsers.sort((a, b) => a.name.localeCompare(b.name));
     }
     setFilteredUsers(sortedUsers);
-  }, [users, opponentFilter, userLevel]);
+  }, [users, opponentFilter]);
 
   // --- FORM LOGIC & VALIDATION ---
   const validateForm = () => {
@@ -191,8 +291,21 @@ export const StartChallengeModal: React.FC<StartChallengeModalProps> = ({
 
       const fetchProfile = async (userId: string) => {
         if (profile?.id === userId) return profile;
-        const profileDoc = await getDoc(doc(db, 'profiles', userId));
-        return profileDoc.exists() ? ({ ...profileDoc.data(), id: profileDoc.id } as UserProfile) : null;
+
+        const [profileDoc, userDoc] = await Promise.all([
+          getDoc(doc(db, 'profiles', userId)),
+          getDoc(doc(db, 'users', userId)),
+        ]);
+
+        if (!profileDoc.exists() && !userDoc.exists()) {
+          return null;
+        }
+
+        return ({
+          ...(userDoc.exists() ? userDoc.data() : {}),
+          ...(profileDoc.exists() ? profileDoc.data() : {}),
+          id: userId,
+        } as UserProfile);
       };
 
       const challenger = await fetchProfile(user.uid);
@@ -205,32 +318,39 @@ export const StartChallengeModal: React.FC<StartChallengeModalProps> = ({
         throw new Error('Opponent profile could not be loaded.');
       }
 
-      const orgScope = getOrgScope(challenger);
-      if (!orgScope.isValid) {
-        throw new Error('Organization details are missing. Please refresh your profile.');
-      }
-
-      if (!isProfileInOrg(challenged, orgScope)) {
+      // FIX: Use the new organization matching function that handles ID/code mismatches
+      if (!areProfilesInSameOrg(challenger, challenged)) {
+        const challengerOrganizationCode = getProfileOrganizationCode(challenger);
+        const challengedOrganizationCode = getProfileOrganizationCode(challenged);
+        console.error('[Challenge] Organization mismatch:', {
+          challenger: {
+            id: challenger.id,
+            companyId: challenger.companyId,
+            companyCode: challenger.companyCode,
+            organizationId: challenger.organizationId,
+            organizationCode: challengerOrganizationCode,
+          },
+          challenged: {
+            id: challenged.id,
+            companyId: challenged.companyId,
+            companyCode: challenged.companyCode,
+            organizationId: challenged.organizationId,
+            organizationCode: challengedOrganizationCode,
+          },
+        });
         throw new Error('You can only challenge members of your organization.');
       }
 
-      let company: Organization | null = null;
-      if (orgScope.type === 'company') {
-        const companyDoc = await getDoc(doc(db, ORG_COLLECTION, orgScope.companyId));
-        if (companyDoc.exists()) {
-          company = { ...companyDoc.data(), id: companyDoc.id } as Organization;
-        }
-      } else if (orgScope.type === 'company_code') {
-        const companyQuery = query(collection(db, ORG_COLLECTION), where('code', '==', orgScope.companyCode));
-        const companySnapshot = await getDocs(companyQuery);
-        if (!companySnapshot.empty) {
-          company = { ...companySnapshot.docs[0].data(), id: companySnapshot.docs[0].id } as Organization;
-        }
+      // FIX: Resolve the organization to get BOTH the ID and code
+      // This ensures challenges are stored with complete org info for querying
+      const company = await resolveOrganization(challenger);
+      
+      if (!company) {
+        console.warn('[Challenge] Could not resolve organization, using profile values');
       }
 
       // Calculate dates
       const startDate = new Date();
-      startDate.setDate(startDate.getDate() + 1);
       startDate.setHours(0, 0, 0, 0);
 
       const endDate = new Date(startDate);
@@ -239,20 +359,34 @@ export const StartChallengeModal: React.FC<StartChallengeModalProps> = ({
       } else {
         endDate.setDate(endDate.getDate() + 30);
       }
+      endDate.setHours(23, 59, 59, 999);
 
       // Auto-generated description
       const finalDescription = description ||
         `${durationPreset.charAt(0).toUpperCase() + durationPreset.slice(1)} ${challengeType} challenge`;
 
-      // Build challenge object
+      // FIX: Build challenge object with BOTH company_id AND company_code
+      // This ensures challenges can be queried by either identifier
+      const challengerOrganizationCode = getProfileOrganizationCode(challenger);
       const challengeData = {
         challenger_id: challenger.id,
-        challenger_name: challenger.fullName,
+        challenger_name: getDisplayName(challenger, 'Member'),
+        challenger_first_name: challenger.firstName || null,
+        challenger_last_name: challenger.lastName || null,
+        challenger_email: challenger.email || null,
+
         challenged_id: challenged.id,
-        challenged_name: challenged.fullName,
-        company_id: orgScope.type === 'company' ? orgScope.companyId || company?.id || null : company?.id || null,
+        challenged_name: getDisplayName(challenged, 'Member'),
+        challenged_first_name: challenged.firstName || null,
+        challenged_last_name: challenged.lastName || null,
+        challenged_email: challenged.email || null,
+
+        // Store BOTH identifiers to support queries by either
+        company_id: company?.id || challenger.companyId || challenger.organizationId || null,
+        company_code: company?.code || challenger.companyCode || challengerOrganizationCode || null,
         company_name: company?.name || null,
-        company_code: orgScope.type === 'company_code' ? orgScope.companyCode : null,
+        // Also store as participants array for easier querying
+        participants: [challenger.id, challenged.id],
         status: 'pending',
         type: challengeType,
         custom_goal: challengeType === 'collaborative' ? customGoal : '',
@@ -272,6 +406,14 @@ export const StartChallengeModal: React.FC<StartChallengeModalProps> = ({
         result: { challengerScore: 0, challengedScore: 0 },
       };
 
+      console.log('[Challenge] Creating challenge with data:', {
+        challenger_id: challengeData.challenger_id,
+        challenged_id: challengeData.challenged_id,
+        company_id: challengeData.company_id,
+        company_code: challengeData.company_code,
+        participants: challengeData.participants,
+      });
+
       // Insert into challenges table
       const challengeDocRef = await addDoc(collection(db, 'challenges'), challengeData);
 
@@ -285,6 +427,8 @@ export const StartChallengeModal: React.FC<StartChallengeModalProps> = ({
         created_at: Timestamp.now(),
       });
 
+      console.log('[Challenge] ✅ Challenge created successfully:', challengeDocRef.id);
+
       setSuccess(true);
       setTimeout(() => {
         onChallengeCreated();
@@ -293,6 +437,7 @@ export const StartChallengeModal: React.FC<StartChallengeModalProps> = ({
       }, 2000);
 
     } catch (err) {
+      console.error('[Challenge] ❌ Error creating challenge:', err);
       setError(err instanceof Error ? err.message : 'Failed to create challenge.');
     } finally {
       setLoading(false);
@@ -300,12 +445,6 @@ export const StartChallengeModal: React.FC<StartChallengeModalProps> = ({
   };
 
   // --- EFFECTS ---
-  useEffect(() => {
-    if (profile?.level) {
-      setUserLevel(profile.level);
-    }
-  }, [profile]);
-
   useEffect(() => {
     if (isOpen) {
       if (preselectedUser) {
@@ -315,7 +454,7 @@ export const StartChallengeModal: React.FC<StartChallengeModalProps> = ({
       }
     } else {
       // Reset form when modal closes
-      setTimeout(resetForm, 300); // Delay to allow animation
+      setTimeout(() => resetForm(), 300); // Delay to allow animation
     }
   }, [isOpen, preselectedUser, fetchPotentialOpponents]);
 
@@ -326,7 +465,7 @@ export const StartChallengeModal: React.FC<StartChallengeModalProps> = ({
 
   // --- DERIVED STATE & CONSTANTS ---
   const startDate = new Date();
-  startDate.setDate(startDate.getDate() + 1);
+  startDate.setHours(0, 0, 0, 0);
 
   const getEndDate = () => {
     const end = new Date(startDate);
@@ -335,6 +474,7 @@ export const StartChallengeModal: React.FC<StartChallengeModalProps> = ({
     } else {
       end.setDate(end.getDate() + 30);
     }
+    end.setHours(23, 59, 59, 999);
     return end;
   };
   const endDate = getEndDate();
@@ -440,15 +580,6 @@ export const StartChallengeModal: React.FC<StartChallengeModalProps> = ({
                       Suggested
                     </Button>
                     <Button
-                      leftIcon={<Filter size={16} />}
-                      size="sm"
-                      variant={opponentFilter === 'similar-level' ? 'solid' : 'outline'}
-                      colorScheme={opponentFilter === 'similar-level' ? 'brand' : 'neutral'}
-                      onClick={() => setOpponentFilter('similar-level')}
-                    >
-                      Similar Level
-                    </Button>
-                    <Button
                       leftIcon={<Users size={16} />}
                       size="sm"
                       variant={opponentFilter === 'all' ? 'solid' : 'outline'}
@@ -500,7 +631,6 @@ export const StartChallengeModal: React.FC<StartChallengeModalProps> = ({
                             </VStack>
                           </HStack>
                           <VStack align="flex-end" spacing={0}>
-                            <Text fontSize="sm" color="neutral.700">Level {u.level}</Text>
                             <Text fontSize="xs" color="neutral.500">{u.points.toLocaleString()} XP</Text>
                           </VStack>
                         </HStack>
@@ -556,7 +686,8 @@ export const StartChallengeModal: React.FC<StartChallengeModalProps> = ({
                       <Text>• Both participants earn bonus XP if the goal is reached.</Text>
                     </>
                   )}
-                   <Text>• The challenged person must accept to start.</Text>
+                  <Text>• Earn points by completing your Weekly Checklist.</Text>
+                  <Text>• The challenged person must accept to start.</Text>
                 </VStack>
               </Box>
 

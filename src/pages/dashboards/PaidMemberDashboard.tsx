@@ -1,6 +1,7 @@
 import React, { useMemo, useState } from 'react'
 import {
   Avatar,
+  Badge,
   Box,
   Button,
   Card,
@@ -23,12 +24,29 @@ import {
   Text,
   VStack,
 } from '@chakra-ui/react'
-import { CalendarClock, Compass, Flame, Rocket, Star, TrendingUp } from 'lucide-react'
+import {
+  Award,
+  CalendarClock,
+  CheckCircle,
+  Circle,
+  Compass,
+  Flame,
+  Rocket,
+  Star,
+  Swords,
+  TrendingUp,
+  Trophy,
+} from 'lucide-react'
+import { useNavigate } from 'react-router-dom'
 import { useAuth } from '@/hooks/useAuth'
 import { ActivityCard } from '@/components/dashboard/ActivityCard'
 import { BadgeCard } from '@/components/dashboard/BadgeCard'
 import { useWeeklyGlanceData } from '@/hooks/useWeeklyGlanceData'
+import { useLeaderboardData } from '@/hooks/leaderboard/useLeaderboardData'
+import { useLeaderboardContext } from '@/hooks/leaderboard/useLeaderboardContext'
 import { WeeklyInspirationCard } from './components/WeeklyInspirationCard'
+import { JourneyCompletionBanner } from '@/components/journeys/JourneyCompletionBanner'
+import pointsConfig from '@/config/pointsConfig'
 
 interface ActivityItem {
   title: string
@@ -77,10 +95,28 @@ const milestones = [
 ]
 
 export const PaidMemberDashboard: React.FC = () => {
+  const navigate = useNavigate()
   const { profile } = useAuth()
   const { inspirationQuote } = useWeeklyGlanceData()
+
+  const leaderboardContext = useLeaderboardContext(profile)
+  const { challenges } = useLeaderboardData({
+    context: leaderboardContext,
+    profileId: profile?.id,
+  })
+
+  const activeChallenges = useMemo(() => {
+    return challenges.filter((c) => c.status === 'active' || c.status === 'pending')
+  }, [challenges])
+
   const [activities, setActivities] = useState<ActivityItem[]>(initialActivities)
   const [activeBadgeIndex, setActiveBadgeIndex] = useState(0)
+  const journeyWeeks = useMemo(() => {
+    if (profile?.programDurationWeeks) return profile.programDurationWeeks
+    if (profile?.journeyType) return pointsConfig.JOURNEY_META[profile.journeyType].weeks
+    return 6
+  }, [profile?.journeyType, profile?.programDurationWeeks])
+  const currentWeek = profile?.currentWeek || 1
 
   const completedActivities = useMemo(
     () => activities.filter(activity => activity.completed).length,
@@ -91,6 +127,19 @@ export const PaidMemberDashboard: React.FC = () => {
     if (!activities.length) return 0
     return Math.round((completedActivities / activities.length) * 100)
   }, [activities.length, completedActivities])
+
+  const journeyCompletionPct = useMemo(() => {
+    if (!journeyWeeks) return 0
+    return Math.min(100, Math.round((currentWeek / journeyWeeks) * 100))
+  }, [currentWeek, journeyWeeks])
+
+  const isJourneyComplete = journeyCompletionPct >= 100
+
+  const completionSteps = [
+    { label: 'Finish final week activities', complete: currentWeek >= journeyWeeks },
+    { label: 'Submit final impact log', complete: completionRate >= 80 },
+    { label: 'Confirm mentor sign-off', complete: isJourneyComplete },
+  ]
 
   const toggleActivity = (title: string) => {
     setActivities(prev =>
@@ -110,6 +159,7 @@ export const PaidMemberDashboard: React.FC = () => {
 
   return (
     <Stack spacing={8}>
+      <JourneyCompletionBanner />
       <Flex
         aria-label="Dashboard welcome panel"
         align={{ base: 'flex-start', md: 'center' }}
@@ -190,7 +240,8 @@ export const PaidMemberDashboard: React.FC = () => {
 
       <Grid templateColumns={{ base: '1fr', xl: '2fr 1fr' }} gap={6}>
         <GridItem>
-          <Card aria-label="Weekly progress overview">
+          <Stack spacing={6}>
+            <Card aria-label="Weekly progress overview">
             <CardBody>
               <HStack justify="space-between" align="flex-start" mb={4}>
                 <Box>
@@ -229,6 +280,55 @@ export const PaidMemberDashboard: React.FC = () => {
               </SimpleGrid>
             </CardBody>
           </Card>
+
+          {activeChallenges.length > 0 && (
+            <Card border="1px solid" borderColor="brand.border">
+              <CardBody>
+                <HStack justify="space-between" mb={4}>
+                  <HStack spacing={2}>
+                    <Icon as={Swords} color="brand.primary" />
+                    <Text fontWeight="bold" color="brand.text">
+                      Active Challenges
+                    </Text>
+                  </HStack>
+                  <Button
+                    size="xs"
+                    variant="ghost"
+                    rightIcon={<Icon as={Trophy} size={14} />}
+                    onClick={() => navigate('/app/leadership-board')}
+                  >
+                    View All
+                  </Button>
+                </HStack>
+                <Stack spacing={3}>
+                  {activeChallenges.slice(0, 2).map((challenge) => (
+                    <Flex
+                      key={challenge.id}
+                      p={3}
+                      borderRadius="lg"
+                      bg="brand.primaryMuted"
+                      align="center"
+                      justify="space-between"
+                    >
+                      <HStack spacing={3}>
+                        <Avatar size="sm" name={challenge.opponentName} src={challenge.opponentAvatar} />
+                        <Box>
+                          <Text fontSize="sm" fontWeight="bold">vs {challenge.opponentName}</Text>
+                          <Text fontSize="xs" color="brand.subtleText">
+                            {challenge.status === 'pending' ? 'Waiting to start' : `${challenge.yourPoints} vs ${challenge.opponentPoints} XP`}
+                          </Text>
+                        </Box>
+                      </HStack>
+                      <Badge colorScheme={challenge.status === 'pending' ? 'orange' : 'purple'}>
+                        {challenge.status.toUpperCase()}
+                      </Badge>
+                    </Flex>
+                  ))}
+                </Stack>
+              </CardBody>
+            </Card>
+          )}
+          </Stack>
         </GridItem>
 
         <GridItem>
@@ -312,6 +412,49 @@ export const PaidMemberDashboard: React.FC = () => {
           </Card>
         </GridItem>
       </Grid>
+
+      <Card>
+        <CardBody>
+          <Stack spacing={4}>
+            <HStack justify="space-between" align="center">
+              <HStack spacing={2}>
+                <Icon as={Award} color="brand.gold" />
+                <Text fontWeight="bold" color="brand.text">
+                  Journey completion badge
+                </Text>
+              </HStack>
+              <Tag colorScheme={isJourneyComplete ? 'green' : 'purple'}>
+                {isJourneyComplete ? 'Ready to claim' : 'In progress'}
+              </Tag>
+            </HStack>
+            <Text fontSize="sm" color="brand.subtleText">
+              Complete the steps below to unlock your final journey badge and celebrate your growth.
+            </Text>
+            <Progress value={journeyCompletionPct} borderRadius="full" />
+            <HStack justify="space-between">
+              <Text fontSize="sm" color="brand.subtleText">
+                {journeyCompletionPct}% complete
+              </Text>
+              <Text fontSize="sm" color="brand.subtleText">
+                Week {currentWeek} of {journeyWeeks}
+              </Text>
+            </HStack>
+            <Stack spacing={2}>
+              {completionSteps.map(step => (
+                <HStack key={step.label} spacing={3}>
+                  <Icon as={step.complete ? CheckCircle : Circle} color={step.complete ? 'green.400' : 'text.muted'} />
+                  <Text color="brand.text" fontWeight="semibold">
+                    {step.label}
+                  </Text>
+                </HStack>
+              ))}
+            </Stack>
+            <Button colorScheme="purple" isDisabled={!isJourneyComplete}>
+              Claim completion badge
+            </Button>
+          </Stack>
+        </CardBody>
+      </Card>
 
       <Grid templateColumns={{ base: '1fr', xl: '3fr 2fr' }} gap={6}>
         <GridItem>

@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react'
+import React, { useCallback, useEffect, useMemo, useState } from 'react'
 import {
   Badge,
   Box,
@@ -16,7 +16,6 @@ import {
 } from '@chakra-ui/react'
 import { motion } from 'framer-motion'
 import {
-  Award,
   BadgeCheck,
   Check,
   CheckCircle2,
@@ -25,41 +24,27 @@ import {
   Facebook,
   Gift,
   Instagram,
-  Layers,
   Link2,
   Linkedin,
   Lock,
   Mail,
   MessageCircle,
-  Medal,
   Rocket,
   Share2,
   Sparkles,
   Twitter,
   UserPlus,
   Users,
-  type LucideIcon,
 } from 'lucide-react'
-import { collection, onSnapshot, orderBy, query, where } from 'firebase/firestore'
+import { arrayUnion, collection, doc, onSnapshot, orderBy, query, updateDoc, where } from 'firebase/firestore'
 import { useAuth } from '@/hooks/useAuth'
 import { APP_BASE_URL } from '@/config/app'
 import { db } from '@/services/firebase'
 import { InstagramShareModal, SocialShareModal } from '@/components/modals/SocialShareModal'
+import { REWARD_TIERS, type RewardTier } from '@/config/referralRewards'
 
 const MotionBox = motion(Box)
 const MotionFlex = motion(Flex)
-
-interface RewardTier {
-  id: number
-  title: string
-  required: number
-  reward: string
-  description: string
-  emoji: string
-  icon: LucideIcon
-  gradient: string
-  accent: string
-}
 
 interface ReferralRecord {
   referredUid: string
@@ -69,56 +54,8 @@ interface ReferralRecord {
   createdAt?: { toDate?: () => Date } | string | null
 }
 
-const rewardTiers: RewardTier[] = [
-  {
-    id: 1,
-    title: 'First Referral',
-    required: 1,
-    reward: '100 Points',
-    description: 'Small dopamine hit. Points can be used for leaderboard bragging rights.',
-    emoji: '💯',
-    icon: Gift,
-    gradient: 'linear-gradient(135deg, #ffe2f5, #ffd9e8)',
-    accent: '#ec4899',
-  },
-  {
-    id: 2,
-    title: 'Community Builder Badge',
-    required: 5,
-    reward: 'Community Builder Badge',
-    description:
-      'Visible on their profile + bragging rights in the leaderboard. Unlocks access to a bonus micro-learning.',
-    emoji: '🏅',
-    icon: Medal,
-    gradient: 'linear-gradient(135deg, #fef3c7, #fde68a)',
-    accent: '#f59e0b',
-  },
-  {
-    id: 3,
-    title: "25% Off 'AI Stacking 101' Course",
-    required: 15,
-    reward: "25% Off 'AI Stacking 101'",
-    description: 'Enjoy an exclusive 25% discount on the flagship AI Stacking 101 mastery course.',
-    emoji: '🧠',
-    icon: Layers,
-    gradient: 'linear-gradient(135deg, #dbeafe, #e0e7ff)',
-    accent: '#2563eb',
-  },
-  {
-    id: 4,
-    title: 'Featured Recognition',
-    required: 20,
-    reward: "Featured in 'Referrer of the Month'",
-    description: "Featured in a community newsletter section ('Referrer of the Month').",
-    emoji: '🌟',
-    icon: Award,
-    gradient: 'linear-gradient(135deg, #dcfce7, #bbf7d0)',
-    accent: '#16a34a',
-  },
-]
-
 const ReferralRewardsPage: React.FC = () => {
-  const { user, profile } = useAuth()
+  const { user, profile, updateProfile } = useAuth()
   const toast = useToast()
   const shareModal = useDisclosure()
   const instagramModal = useDisclosure()
@@ -161,19 +98,21 @@ const ReferralRewardsPage: React.FC = () => {
     [referrals]
   )
 
-  const referralCount = creditedCount > 0 ? creditedCount : profile?.referralCount ?? 0
+  const creditedReferralCount = Math.max(creditedCount, profile?.referralCount ?? 0)
+  const totalReferralCount = pendingCount + creditedReferralCount
   const referralCode = profile?.referralCode ?? user?.uid
+  const claimedRewards = profile?.claimedRewards ?? []
 
   const referralLink = useMemo(() => {
     const sanitizedBase = baseAppUrl.endsWith('/') ? baseAppUrl.slice(0, -1) : baseAppUrl
     return referralCode ? `${sanitizedBase}/join?ref=${referralCode}` : `${sanitizedBase}/join`
   }, [baseAppUrl, referralCode])
 
-  const nextTier = rewardTiers.find(tier => referralCount < tier.required)
-  const progressToNext = nextTier ? Math.min((referralCount / nextTier.required) * 100, 100) : 100
-  const referralsNeeded = nextTier ? nextTier.required - referralCount : 0
+  const nextTier = REWARD_TIERS.find((tier) => totalReferralCount < tier.required)
+  const progressToNext = nextTier ? Math.min((totalReferralCount / nextTier.required) * 100, 100) : 100
+  const referralsNeeded = nextTier ? nextTier.required - totalReferralCount : 0
 
-  const handleCopy = async () => {
+  const handleCopy = useCallback(async () => {
     try {
       await navigator.clipboard.writeText(referralLink)
       setCopied(true)
@@ -193,9 +132,9 @@ const ReferralRewardsPage: React.FC = () => {
         isClosable: true,
       })
     }
-  }
+  }, [referralLink, toast])
 
-  const handleShare = async () => {
+  const handleShare = useCallback(async () => {
     const shareData = {
       title: 'Join me on Transformation Tier!',
       text: "I'm building my transformation journey and would love for you to join me!",
@@ -213,40 +152,87 @@ const ReferralRewardsPage: React.FC = () => {
     }
 
     await handleCopy()
-  }
+  }, [handleCopy, referralLink])
 
   const shareMessage = 'Join me on Transformation Tier and start your growth journey!'
   const messageWithLink = `${shareMessage} ${referralLink}`
 
-  const openShareUrl = (url: string) => {
+  const openShareUrl = useCallback((url: string) => {
     window.open(url, '_blank', 'noopener,noreferrer')
-  }
+  }, [])
 
-  const handleWhatsAppShare = () => {
+  const handleWhatsAppShare = useCallback(() => {
     openShareUrl(`https://wa.me/?text=${encodeURIComponent(messageWithLink)}`)
-  }
+  }, [messageWithLink, openShareUrl])
 
-  const handleFacebookShare = () => {
+  const handleFacebookShare = useCallback(() => {
     openShareUrl(`https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(referralLink)}`)
-  }
+  }, [referralLink, openShareUrl])
 
-  const handleTwitterShare = () => {
+  const handleTwitterShare = useCallback(() => {
     openShareUrl(`https://twitter.com/intent/tweet?text=${encodeURIComponent(messageWithLink)}`)
-  }
+  }, [messageWithLink, openShareUrl])
 
-  const handleLinkedInShare = () => {
+  const handleLinkedInShare = useCallback(() => {
     openShareUrl(`https://www.linkedin.com/sharing/share-offsite/?url=${encodeURIComponent(referralLink)}`)
-  }
+  }, [referralLink, openShareUrl])
 
-  const handleEmailShare = () => {
+  const handleEmailShare = useCallback(() => {
     const subject = 'Join me on Transformation Tier'
     openShareUrl(`mailto:?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(messageWithLink)}`)
-  }
+  }, [messageWithLink, openShareUrl])
 
-  const handleInstagramShare = async () => {
+  const handleInstagramShare = useCallback(async () => {
     await handleCopy()
     shareModal.onClose()
     instagramModal.onOpen()
+  }, [handleCopy, instagramModal, shareModal])
+
+  const [claiming, setClaiming] = useState<number | null>(null)
+
+  const handleClaimReward = async (tier: RewardTier) => {
+    if (!user?.uid) return
+    if (claiming) return
+
+    setClaiming(tier.id)
+    try {
+      const userRef = doc(db, 'users', user.uid)
+      const profileRef = doc(db, 'profiles', user.uid)
+
+      await Promise.all([
+        updateDoc(userRef, {
+          claimedRewards: arrayUnion(tier.id),
+        }),
+        updateDoc(profileRef, {
+          claimedRewards: arrayUnion(tier.id),
+        }),
+      ])
+
+      toast({
+        title: 'Reward claimed! 🎉',
+        description: `You have successfully claimed: ${tier.reward}`,
+        status: 'success',
+        duration: 5000,
+        isClosable: true,
+      })
+
+      if (updateProfile) {
+        await updateProfile({
+          claimedRewards: [...claimedRewards, tier.id],
+        })
+      }
+    } catch (error) {
+      console.error('🔴 [Referral] Failed to claim reward', error)
+      toast({
+        title: 'Claim failed',
+        description: 'Unable to claim reward at this time. Please try again later.',
+        status: 'error',
+        duration: 5000,
+        isClosable: true,
+      })
+    } finally {
+      setClaiming(null)
+    }
   }
 
   const shareActions = useMemo(
@@ -395,10 +381,10 @@ const ReferralRewardsPage: React.FC = () => {
           <HStack spacing={4} align="center">
             <Stack spacing={0} textAlign={{ base: 'left', md: 'right' }}>
               <Text fontSize="xs" color="brand.subtleText">
-                Current referrals
+                Total signups
               </Text>
               <Heading size="lg" color="brand.text">
-                {referralCount}
+                {totalReferralCount}
               </Heading>
             </Stack>
             <Box h="50px" w="1px" bg="brand.border" display={{ base: 'none', md: 'block' }} />
@@ -425,11 +411,13 @@ const ReferralRewardsPage: React.FC = () => {
           />
           <Flex justify="space-between" align="center">
             <Text color="brand.subtleText" fontWeight="medium">
-              {nextTier ? `${referralCount} / ${nextTier.required} referrals` : `${referralCount} referrals`}
+              {nextTier
+                ? `${totalReferralCount} / ${nextTier.required} total signups`
+                : `${totalReferralCount} total signups`}
             </Text>
             <Text color="brand.subtleText">
               {nextTier
-                ? `You have ${referralCount} referrals — ${referralsNeeded} more to unlock your next reward!`
+                ? `You have ${totalReferralCount} signups — ${referralsNeeded} more to unlock your next reward!`
                 : 'Amazing! You have unlocked every reward tier.'}
             </Text>
           </Flex>
@@ -443,16 +431,26 @@ const ReferralRewardsPage: React.FC = () => {
             <Heading size="md" color="brand.text">
               {pendingCount}
             </Heading>
+            <Text fontSize="xs" color="brand.subtleText" mt={1}>
+              Awaiting first activity.
+            </Text>
           </Box>
           <Box border="1px solid" borderColor="brand.border" borderRadius="xl" p={4} bg="gray.50">
             <Text fontSize="xs" color="brand.subtleText" textTransform="uppercase" letterSpacing="wide">
-              Credited referrals
+              Activated referrals
             </Text>
             <Heading size="md" color="brand.text">
-              {creditedCount}
+              {creditedReferralCount}
             </Heading>
+            <Text fontSize="xs" color="brand.subtleText" mt={1}>
+              Completed first activity.
+            </Text>
           </Box>
         </SimpleGrid>
+        <Text fontSize="sm" color="brand.subtleText" mt={4}>
+          Total signups include pending and activated referrals. Activated referrals unlock once a new member completes their
+          first activity.
+        </Text>
       </MotionBox>
 
       <Stack spacing={4}>
@@ -467,8 +465,9 @@ const ReferralRewardsPage: React.FC = () => {
         </Flex>
 
         <SimpleGrid columns={{ base: 1, md: 2 }} spacing={4}>
-          {rewardTiers.map((tier, index) => {
-            const isAchieved = referralCount >= tier.required
+          {REWARD_TIERS.map((tier, index) => {
+            const isAchieved = totalReferralCount >= tier.required
+            const isClaimed = claimedRewards.includes(tier.id)
 
             return (
               <MotionBox
@@ -556,12 +555,15 @@ const ReferralRewardsPage: React.FC = () => {
                   {isAchieved && (
                     <Button
                       mt={4}
-                      colorScheme="purple"
-                      variant="solid"
+                      colorScheme={isClaimed ? 'gray' : 'purple'}
+                      variant={isClaimed ? 'outline' : 'solid'}
                       size="sm"
-                      leftIcon={<Icon as={Gift} />}
+                      leftIcon={<Icon as={isClaimed ? Check : Gift} />}
+                      onClick={() => !isClaimed && handleClaimReward(tier)}
+                      isLoading={claiming === tier.id}
+                      isDisabled={isClaimed}
                     >
-                      Claim Reward
+                      {isClaimed ? 'Reward Claimed' : 'Claim Reward'}
                     </Button>
                   )}
                 </Box>
@@ -667,7 +669,7 @@ const ReferralRewardsPage: React.FC = () => {
               <Box
                 bg="gray.50"
                 border="1px solid"
-                borderColor="gray.200"
+                borderColor="border.control"
                 borderRadius="md"
                 px={4}
                 py={3}

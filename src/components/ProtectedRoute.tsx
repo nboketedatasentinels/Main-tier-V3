@@ -1,4 +1,4 @@
-import React from 'react'
+import React, { useEffect, useState } from 'react'
 import { Navigate, useLocation } from 'react-router-dom'
 import { useAuth } from '@/hooks/useAuth'
 import type { UserRole } from '@/types'
@@ -39,18 +39,45 @@ export const ProtectedRoute: React.FC<Props> = ({
     loading,
     profileLoading,
     profileError,
+    effectiveRole,
     isMentor,
     isAmbassador,
     isPaid,
     canAccessOrganization,
   } = useAuth()
   const location = useLocation()
+  const [partnerHasOrgAccess, setPartnerHasOrgAccess] = useState<boolean | null>(null)
+
+  useEffect(() => {
+    if (!requireOrganization || !user || !profile) {
+      setPartnerHasOrgAccess(null)
+      return
+    }
+
+    let isMounted = true
+    setPartnerHasOrgAccess(null)
+    void canAccessOrganization(requireOrganization)
+      .then((allowed) => {
+        if (isMounted) setPartnerHasOrgAccess(allowed)
+      })
+      .catch(() => {
+        if (isMounted) setPartnerHasOrgAccess(false)
+      })
+
+    return () => {
+      isMounted = false
+    }
+  }, [canAccessOrganization, profile, requireOrganization, user])
 
   // Block render until auth + profile are known
   if (loading || profileLoading) return <AppLoader />
 
   if (!user) {
-    return <Navigate to="/login" replace state={{ from: location }} />
+    const redirectPath = `${location.pathname}${location.search}`
+    const loginPath = redirectPath
+      ? `/login?redirect=${encodeURIComponent(redirectPath)}`
+      : '/login'
+    return <Navigate to={loginPath} replace />
   }
 
   if (!profile) {
@@ -65,9 +92,8 @@ export const ProtectedRoute: React.FC<Props> = ({
     )
   }
 
-  // Get normalized role for admin/super_admin comparisons
-  // (these require normalization due to partner/company_admin/admin variations)
-  const userRole = normalizeRole(profile?.role)
+  // Effective role prefers custom claims, then profile.role
+  const userRole = effectiveRole
 
   // Check account status
   const accountStatus = profile.accountStatus?.toString().toLowerCase()
@@ -89,8 +115,8 @@ export const ProtectedRoute: React.FC<Props> = ({
     return <Navigate to="/unauthorized" replace />
   }
 
-  // Admin requirement - allow admin, partner, and super_admin
-  if (requireAdmin && userRole !== 'partner' && userRole !== 'admin' && userRole !== 'super_admin') {
+  // Admin requirement - allow partner and super_admin
+  if (requireAdmin && userRole !== 'partner' && userRole !== 'super_admin') {
     return <Navigate to="/unauthorized" replace />
   }
 
@@ -110,13 +136,18 @@ export const ProtectedRoute: React.FC<Props> = ({
   }
 
   // Check for organization access requirement
-  if (requireOrganization && !canAccessOrganization(requireOrganization)) {
-    return <Navigate to="/unauthorized" replace />
+  if (requireOrganization && userRole === 'partner') {
+    if (partnerHasOrgAccess === null) {
+      return <AppLoader />
+    }
+    if (!partnerHasOrgAccess) {
+      return <Navigate to="/unauthorized" replace />
+    }
   }
 
   // Check for specific role requirements
   if (requiredRoles && requiredRoles.length > 0) {
-    const allowedRoles = requiredRoles.map(normalizeRole)
+    const allowedRoles = requiredRoles.map((role) => normalizeRole(role))
 
     if (!allowedRoles.includes(userRole)) {
       return <Navigate to="/unauthorized" replace />

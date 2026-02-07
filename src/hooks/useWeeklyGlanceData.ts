@@ -5,7 +5,9 @@ import {
   doc,
   getDoc,
   getDocs,
+  limit,
   onSnapshot,
+  orderBy,
   query,
   serverTimestamp,
   setDoc,
@@ -15,8 +17,8 @@ import {
 import { db } from '@/services/firebase'
 import { useAuth } from '@/hooks/useAuth'
 import { useOrganizationLeadership } from '@/hooks/useOrganizationLeadership'
-import { getCurrentWeekNumber, getWeekKey } from '@/utils/weekCalculations'
-import { JOURNEY_META, getMonthNumber } from '@/config/pointsConfig'
+import { getWeekKey, getCurrentWeekNumber } from '@/utils/weekCalculations'
+import { JOURNEY_META, getMonthNumber, FULL_ACTIVITIES } from '@/config/pointsConfig'
 import { InspirationQuote } from '@/types'
 import { leadershipQuotes } from '@/services/quotes'
 import { UserProfileExtended } from '@/services/userProfileService'
@@ -50,11 +52,21 @@ export interface PersonalityProfile {
   coreValues?: string[]
 }
 
+export type PeerMatchStatus = 'new' | 'viewed' | 'contacted' | 'completed' | 'expired'
+
 export interface PeerMatch {
   id: string
-  matched_user_id: string
-  status: string
-  created_at?: Timestamp
+  peerId?: string
+  matchReason?: string
+  matchStatus: PeerMatchStatus
+  matchKey?: string
+  matchRefreshPreference?: string
+  preferredMatchDay?: number
+  refreshCount?: number
+  automatedMatch?: boolean
+  createdAt?: Date
+  lastRefreshAt?: Date
+  lastManualRefreshAt?: Date
 }
 
 export interface WeeklyHabit {
@@ -65,6 +77,45 @@ export interface WeeklyHabit {
   completed_at?: Timestamp | null
 }
 
+export interface FocusArea {
+  id: string;
+  title: string;
+}
+
+export interface LedgerEntry {
+  id: string
+  activityId: string
+  activityTitle: string
+  points: number
+  createdAt: Date
+  weekNumber: number
+}
+
+const toDateValue = (value: unknown): Date | undefined => {
+  if (!value) return undefined
+  if (value instanceof Date) return value
+  if (typeof value === 'object' && value !== null) {
+    const candidate = value as { toDate?: () => Date }
+    if (typeof candidate.toDate === 'function') {
+      return candidate.toDate()
+    }
+  }
+  return undefined
+}
+
+const PEER_MATCH_STATUS_VALUES: PeerMatchStatus[] = ['new', 'viewed', 'contacted', 'completed', 'expired']
+
+const normalizePeerMatchStatus = (status?: string | null): PeerMatchStatus => {
+  if (!status) return 'new'
+  const normalized = status.toLowerCase()
+  if (PEER_MATCH_STATUS_VALUES.includes(normalized as PeerMatchStatus)) {
+    return normalized as PeerMatchStatus
+  }
+  if (normalized === 'matched') return 'completed'
+  if (normalized === 'pending') return 'new'
+  return 'new'
+}
+
 interface WeeklyGlanceLoadingState {
   points: boolean
   support: boolean
@@ -73,6 +124,8 @@ interface WeeklyGlanceLoadingState {
   habits: boolean
   inspiration: boolean
   impact: boolean
+  focus: boolean
+  ledger: boolean
 }
 
 interface WeeklyGlanceErrorState {
@@ -83,6 +136,8 @@ interface WeeklyGlanceErrorState {
   habits?: Error
   inspiration?: Error
   impact?: Error
+  focus?: Error
+  ledger?: Error
 }
 
 export const useWeeklyGlanceData = () => {
@@ -94,6 +149,8 @@ export const useWeeklyGlanceData = () => {
   const [weeklyHabits, setWeeklyHabits] = useState<WeeklyHabit[]>([])
   const [inspirationQuote, setInspirationQuote] = useState<InspirationQuote | null>(null)
   const [impactCount, setImpactCount] = useState<number>(0)
+  const [focusAreas, setFocusAreas] = useState<FocusArea[]>([]);
+  const [ledgerEntries, setLedgerEntries] = useState<LedgerEntry[]>([])
   const [loading, setLoading] = useState<WeeklyGlanceLoadingState>({
     points: true,
     support: true,
@@ -102,6 +159,8 @@ export const useWeeklyGlanceData = () => {
     habits: true,
     inspiration: true,
     impact: true,
+    focus: true,
+    ledger: true,
   })
   const [errors, setErrors] = useState<WeeklyGlanceErrorState>({})
   const {
@@ -109,14 +168,14 @@ export const useWeeklyGlanceData = () => {
     profiles: leadershipProfiles,
     errors: leadershipErrors,
     loading: leadershipLoading,
-  } = useOrganizationLeadership(profile?.companyId, profile?.id)
+  } = useOrganizationLeadership(profile?.companyId, profile?.id, profile)
 
-  const calendarWeekNumber = useMemo(() => getCurrentWeekNumber(), [])
   const weekNumber = useMemo(
-    () => (profile?.currentWeek && profile.currentWeek > 0 ? profile.currentWeek : calendarWeekNumber),
-    [calendarWeekNumber, profile?.currentWeek],
+    () => profile?.currentWeek || 1,
+    [profile?.currentWeek],
   )
   const weekKey = useMemo(() => getWeekKey(), [])
+  const calendarWeekNumber = useMemo(() => getCurrentWeekNumber(), [])
 
   useEffect(() => {
     if (!profile?.id) return
@@ -308,12 +367,49 @@ export const useWeeklyGlanceData = () => {
       if (!profile?.id) return
       setLoading(prev => ({ ...prev, matches: true }))
       try {
-        const matchesQuery = query(collection(db, 'peer_matches'), where('user_id', '==', profile.id))
-        const snapshot = await getDocs(matchesQuery)
-        const matchesData: PeerMatch[] = snapshot.docs.map(item => ({
-          ...(item.data() as PeerMatch),
-          id: item.id,
-        }))
+        const matchesCollection = collection(db, 'peer_weekly_matches')
+        const primarySnapshot = await getDocs(
+          query(matchesCollection, where('user_id', '==', profile.id)),
+        )
+        let matchDocs = primarySnapshot.docs
+
+        if (!matchDocs.length) {
+          const fallbackSnapshot = await getDocs(
+            query(matchesCollection, where('userId', '==', profile.id)),
+          )
+          matchDocs = fallbackSnapshot.docs
+        }
+
+        const matchesData: PeerMatch[] = matchDocs
+          .map(docItem => {
+            const record = docItem.data() as Record<string, unknown>
+            const rawStatus =
+              (record.matchStatus as string | undefined) || (record.status as string | undefined)
+            return {
+              id: docItem.id,
+              peerId:
+                (record.peerId as string | undefined) ||
+                (record.peer_id as string | undefined),
+              matchReason: typeof record.matchReason === 'string' ? record.matchReason : undefined,
+              matchStatus: normalizePeerMatchStatus(rawStatus),
+              matchKey: typeof record.matchKey === 'string' ? record.matchKey : undefined,
+              matchRefreshPreference:
+                typeof record.matchRefreshPreference === 'string'
+                  ? record.matchRefreshPreference
+                  : undefined,
+              preferredMatchDay:
+                typeof record.preferredMatchDay === 'number' ? record.preferredMatchDay : undefined,
+              refreshCount:
+                typeof record.refreshCount === 'number' ? record.refreshCount : undefined,
+              automatedMatch:
+                typeof record.automatedMatch === 'boolean' ? record.automatedMatch : undefined,
+              createdAt: toDateValue(record.createdAt),
+              lastRefreshAt: toDateValue(record.lastRefreshAt),
+              lastManualRefreshAt: toDateValue(record.lastManualRefreshAt),
+            }
+          })
+          .filter(match => match.matchStatus !== 'expired')
+          .sort((a, b) => (b.createdAt?.getTime() ?? 0) - (a.createdAt?.getTime() ?? 0))
         setPeerMatches(matchesData)
       } catch (error) {
         setErrors(prev => ({ ...prev, matches: error as Error }))
@@ -359,27 +455,27 @@ export const useWeeklyGlanceData = () => {
       try {
         const quoteQuery = query(
           collection(db, 'inspiration_quotes'),
-          where('week_number', '==', weekNumber),
+          where('week_number', '==', calendarWeekNumber),
         )
         const snapshot = await getDocs(quoteQuery)
         const docData = snapshot.docs[0]
         if (docData) {
           setInspirationQuote({ ...(docData.data() as InspirationQuote), id: docData.id })
         } else {
-          const fallbackQuote = leadershipQuotes[weekNumber % leadershipQuotes.length]
-          setInspirationQuote({ ...fallbackQuote, id: `fallback-${weekNumber}` })
+          const fallbackQuote = leadershipQuotes[calendarWeekNumber % leadershipQuotes.length]
+          setInspirationQuote({ ...fallbackQuote, id: `fallback-${calendarWeekNumber}` })
         }
       } catch (error) {
         setErrors(prev => ({ ...prev, inspiration: error as Error }))
-        const fallbackQuote = leadershipQuotes[weekNumber % leadershipQuotes.length]
-        setInspirationQuote({ ...fallbackQuote, id: `fallback-${weekNumber}` })
+        const fallbackQuote = leadershipQuotes[calendarWeekNumber % leadershipQuotes.length]
+        setInspirationQuote({ ...fallbackQuote, id: `fallback-${calendarWeekNumber}` })
       } finally {
         setLoading(prev => ({ ...prev, inspiration: false }))
       }
     }
 
     fetchQuote()
-  }, [weekNumber])
+  }, [calendarWeekNumber])
 
   useEffect(() => {
     if (!profile?.id) {
@@ -389,7 +485,7 @@ export const useWeeklyGlanceData = () => {
     }
 
     setLoading(prev => ({ ...prev, impact: true }));
-    const impactQuery = query(collection(db, 'impact_logs'), where('user_id', '==', profile.id));
+    const impactQuery = query(collection(db, 'impact_logs'), where('userId', '==', profile.id));
 
     const unsubscribe = onSnapshot(
       impactQuery,
@@ -426,6 +522,69 @@ export const useWeeklyGlanceData = () => {
     }
   }
 
+  useEffect(() => {
+    if (!profile?.id) {
+      setLoading(prev => ({ ...prev, ledger: false }))
+      return
+    }
+
+    const ledgerQuery = query(
+      collection(db, 'pointsLedger'),
+      where('uid', '==', profile.id),
+      orderBy('createdAt', 'desc'),
+      limit(10)
+    )
+
+    const unsubscribe = onSnapshot(
+      ledgerQuery,
+      snapshot => {
+        const entries = snapshot.docs.map(docSnapshot => {
+          const data = docSnapshot.data()
+          const activityDef = FULL_ACTIVITIES.find(a => a.id === data.activityId)
+          return {
+            id: docSnapshot.id,
+            activityId: data.activityId,
+            activityTitle: activityDef?.title || data.activityId,
+            points: data.points,
+            createdAt: data.createdAt?.toDate() || new Date(),
+            weekNumber: data.weekNumber,
+          }
+        })
+        setLedgerEntries(entries)
+        setLoading(prev => ({ ...prev, ledger: false }))
+      },
+      error => {
+        console.error('Error fetching ledger entries:', error)
+        setErrors(prev => ({ ...prev, ledger: error as Error }))
+        setLoading(prev => ({ ...prev, ledger: false }))
+      }
+    )
+
+    return () => unsubscribe()
+  }, [profile?.id])
+
+  useEffect(() => {
+    const fetchFocusAreas = async () => {
+      if (!profile?.id) return;
+      setLoading(prev => ({ ...prev, focus: true }));
+      try {
+        // Mocking the focus areas for now
+        const mockFocusAreas: FocusArea[] = [
+          { id: '1', title: 'Leadership Reflection' },
+          { id: '2', title: 'Mentor Session' },
+          { id: '3', title: 'Impact Action' },
+        ];
+        setFocusAreas(mockFocusAreas);
+      } catch (error) {
+        setErrors(prev => ({ ...prev, focus: error as Error }));
+      } finally {
+        setLoading(prev => ({ ...prev, focus: false }));
+      }
+    };
+
+    fetchFocusAreas();
+  }, [profile?.id]);
+
   return {
     weeklyPoints,
     supportAssignment,
@@ -434,6 +593,8 @@ export const useWeeklyGlanceData = () => {
     weeklyHabits,
     inspirationQuote,
     impactCount,
+    focusAreas,
+    ledgerEntries,
     weekNumber,
     loading,
     errors,

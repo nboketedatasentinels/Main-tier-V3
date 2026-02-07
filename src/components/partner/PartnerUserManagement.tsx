@@ -25,6 +25,7 @@ import {
   ModalHeader,
   ModalOverlay,
   Select,
+  SimpleGrid,
   Spinner,
   Stack,
   Table,
@@ -40,19 +41,16 @@ import {
   Switch,
   VStack,
 } from '@chakra-ui/react'
-import { CheckCircle2, Clock, ShieldAlert } from 'lucide-react'
+import { CheckCircle2, ChevronDown, ChevronUp, Clock, ShieldAlert } from 'lucide-react'
 import { formatDistanceToNow } from 'date-fns'
 import { addDoc, collection, serverTimestamp } from 'firebase/firestore'
 import { PartnerUser, PartnerOrganization, PartnerRiskLevel } from '@/hooks/usePartnerDashboardData'
 import { useAuth } from '@/hooks/useAuth'
+import { usePointsApprovalQueue } from '@/hooks/partner/usePointsApprovalQueue'
 import { db } from '@/services/firebase'
 import UserNudgeHistoryPanel from '@/components/partner/nudges/UserNudgeHistoryPanel'
-import {
-  approvePointsVerificationRequest,
-  listenToPointsVerificationRequests,
-  rejectPointsVerificationRequest,
-  type PointsVerificationRequest,
-} from '@/services/pointsVerificationService'
+import { type PointsVerificationRequest } from '@/services/pointsVerificationService'
+import { getDisplayName } from '@/utils/displayName'
 
 interface PartnerUserManagementProps {
   users: PartnerUser[]
@@ -75,10 +73,32 @@ const riskColor: Record<PartnerRiskLevel | 'at_risk', string> = {
   at_risk: 'red',
 }
 
+const normalizeDateValue = (value?: unknown) => {
+  if (!value) return null
+  if (value instanceof Date) return value
+  if (typeof value === 'number') return new Date(value)
+  if (typeof (value as { toDate?: () => Date }).toDate === 'function') {
+    return (value as { toDate: () => Date }).toDate()
+  }
+  if (typeof value === 'string') {
+    const dateValue = new Date(value)
+    if (!Number.isNaN(dateValue.getTime())) return dateValue
+  }
+  return null
+}
+
+const formatLastActiveLabel = (value?: unknown) => {
+  const parsed = normalizeDateValue(value)
+  if (!parsed) return 'Unknown'
+  return formatDistanceToNow(parsed, { addSuffix: true })
+}
+
 const getSortableValue = (user: PartnerUser, key: string) => {
   switch (key) {
+    case 'risk':
+      return user.riskStatus
     case 'name':
-      return user.name
+      return getDisplayName(user, 'Member')
     case 'company':
       return user.companyCode
     case 'progress':
@@ -88,8 +108,8 @@ const getSortableValue = (user: PartnerUser, key: string) => {
     case 'status':
       return user.status
     case 'lastActive': {
-      const lastActiveTime = new Date(user.lastActive).getTime()
-      return Number.isNaN(lastActiveTime) ? -Infinity : lastActiveTime
+      const lastActiveDate = normalizeDateValue(user.lastActive)
+      return lastActiveDate ? lastActiveDate.getTime() : -Infinity
     }
     default:
       return ''
@@ -97,19 +117,9 @@ const getSortableValue = (user: PartnerUser, key: string) => {
 }
 
 const formatRequestTimestamp = (value?: unknown) => {
-  if (!value) return 'Recently submitted'
-  if (value instanceof Date) return formatDistanceToNow(value, { addSuffix: true })
-  if (typeof value === 'number') return formatDistanceToNow(new Date(value), { addSuffix: true })
-  if (typeof (value as { toDate?: () => Date }).toDate === 'function') {
-    return formatDistanceToNow((value as { toDate: () => Date }).toDate(), { addSuffix: true })
-  }
-  if (typeof value === 'string') {
-    const dateValue = new Date(value)
-    if (!Number.isNaN(dateValue.getTime())) {
-      return formatDistanceToNow(dateValue, { addSuffix: true })
-    }
-  }
-  return 'Recently submitted'
+  const parsed = normalizeDateValue(value)
+  if (!parsed) return 'Recently submitted'
+  return formatDistanceToNow(parsed, { addSuffix: true })
 }
 
 export const PartnerUserManagement: React.FC<PartnerUserManagementProps> = ({
@@ -126,6 +136,7 @@ export const PartnerUserManagement: React.FC<PartnerUserManagementProps> = ({
   const [sortKey, setSortKey] = useState('lastActive')
   const [sortDir, setSortDir] = useState<'asc' | 'desc'>('desc')
   const [page, setPage] = useState(1)
+  const [expandedRows, setExpandedRows] = useState<Set<string>>(new Set())
   const [selectedUser, setSelectedUser] = useState<PartnerUser | null>(null)
   const [adjustmentReason, setAdjustmentReason] = useState('')
   const [adjustmentValue, setAdjustmentValue] = useState(0)
@@ -133,9 +144,6 @@ export const PartnerUserManagement: React.FC<PartnerUserManagementProps> = ({
   const [selection, setSelection] = useState<string[]>([])
   const [processingBulk, setProcessingBulk] = useState(false)
   const [bulkAction, setBulkAction] = useState('')
-  const [verificationRequests, setVerificationRequests] = useState<PointsVerificationRequest[]>([])
-  const [approvalsLoading, setApprovalsLoading] = useState(true)
-  const [approvalActionId, setApprovalActionId] = useState<string | null>(null)
   const [selectedRequest, setSelectedRequest] = useState<PointsVerificationRequest | null>(null)
   const [rejectReason, setRejectReason] = useState('')
   const drawer = useDisclosure()
@@ -143,6 +151,23 @@ export const PartnerUserManagement: React.FC<PartnerUserManagementProps> = ({
   const rejectionModal = useDisclosure()
   const toast = useToast()
   const { profile } = useAuth()
+
+  // Extract organization IDs for server-side approval filtering
+  const partnerOrganizationIds = useMemo(
+    () => organizations.map((org) => org.id).filter(Boolean) as string[],
+    [organizations],
+  )
+
+  const {
+    approvalQueue,
+    loading: approvalsLoading,
+    actionId: approvalActionId,
+    handleApprove: handleApproveRequest,
+    handleReject: handleRejectRequestBase,
+  } = usePointsApprovalQueue(users, activeTab === 'approvals', {
+    organizationIds: partnerOrganizationIds,
+    enabled: true,
+  })
 
   const organizationOptions = useMemo(
     () => [
@@ -156,11 +181,21 @@ export const PartnerUserManagement: React.FC<PartnerUserManagementProps> = ({
     [organizations],
   )
 
+  const organizationCodeLookup = useMemo(() => {
+    const lookup = new Map<string, string>()
+    organizations.forEach((org) => {
+      if (org.code) lookup.set(org.code.toLowerCase(), org.code.toLowerCase())
+      if (org.id) lookup.set(org.id.toLowerCase(), org.code?.toLowerCase() ?? org.id.toLowerCase())
+    })
+    return lookup
+  }, [organizations])
+
   const filtered = useMemo(() => {
     if (selectedOrg === 'all') return users
     const normalized = selectedOrg.toLowerCase()
-    return users.filter((user) => user.companyCode?.toLowerCase() === normalized)
-  }, [users, selectedOrg])
+    const companyCode = organizationCodeLookup.get(normalized) ?? normalized
+    return users.filter((user) => user.companyCode?.toLowerCase() === companyCode)
+  }, [organizationCodeLookup, users, selectedOrg])
 
   const sorted = useMemo(() => {
     return [...filtered].sort((a, b) => {
@@ -184,23 +219,13 @@ export const PartnerUserManagement: React.FC<PartnerUserManagementProps> = ({
 
   const leaders = useMemo(() => filtered.filter(user => user.role === 'mentor' || user.role === 'team_leader'), [filtered])
 
-  const approvalUsers = useMemo(() => (selectedOrg === 'all' ? users : filtered), [filtered, selectedOrg, users])
-
-  const approvalQueue = useMemo(() => {
-    if (!verificationRequests.length) return []
-    const lookup = new Map(approvalUsers.map((user) => [user.id, user]))
-    return verificationRequests
-      .filter((request) => lookup.has(request.user_id))
-      .map((request) => ({ request, user: lookup.get(request.user_id)! }))
-  }, [approvalUsers, verificationRequests])
+  useEffect(() => {
+    setPage(1)
+  }, [selectedOrg])
 
   useEffect(() => {
-    const unsubscribe = listenToPointsVerificationRequests((items) => {
-      setVerificationRequests(items)
-      setApprovalsLoading(false)
-    })
-    return () => unsubscribe()
-  }, [])
+    setSelection([])
+  }, [activeTab])
 
   const openUser = (user: PartnerUser) => {
     setSelectedUser(user)
@@ -245,37 +270,6 @@ export const PartnerUserManagement: React.FC<PartnerUserManagementProps> = ({
     }
   }
 
-  const handleApproveRequest = async (request: PointsVerificationRequest) => {
-    setApprovalActionId(request.id)
-    try {
-      await approvePointsVerificationRequest({
-        request,
-        approver: {
-          id: profile?.id ?? null,
-          name: profile?.fullName ?? null,
-        },
-      })
-      toast({
-        title: 'Points approved',
-        description: 'Points have been awarded and the request is now approved.',
-        status: 'success',
-        duration: 4000,
-        isClosable: true,
-      })
-    } catch (error) {
-      console.error('Failed to approve points verification request', error)
-      toast({
-        title: 'Approval failed',
-        description: 'We could not approve this request. Please retry.',
-        status: 'error',
-        duration: 4000,
-        isClosable: true,
-      })
-    } finally {
-      setApprovalActionId(null)
-    }
-  }
-
   const openRejectModal = (request: PointsVerificationRequest) => {
     setSelectedRequest(request)
     setRejectReason('')
@@ -284,42 +278,27 @@ export const PartnerUserManagement: React.FC<PartnerUserManagementProps> = ({
 
   const handleRejectRequest = async () => {
     if (!selectedRequest) return
-    setApprovalActionId(selectedRequest.id)
-    try {
-      await rejectPointsVerificationRequest({
-        request: selectedRequest,
-        approver: {
-          id: profile?.id ?? null,
-          name: profile?.fullName ?? null,
-        },
-        reason: rejectReason || undefined,
-      })
-      toast({
-        title: 'Request rejected',
-        description: 'The submission has been rejected and points were not awarded.',
-        status: 'info',
-        duration: 4000,
-        isClosable: true,
-      })
-      rejectionModal.onClose()
-      setSelectedRequest(null)
-      setRejectReason('')
-    } catch (error) {
-      console.error('Failed to reject points verification request', error)
-      toast({
-        title: 'Rejection failed',
-        description: 'We could not reject this request. Please retry.',
-        status: 'error',
-        duration: 4000,
-        isClosable: true,
-      })
-    } finally {
-      setApprovalActionId(null)
-    }
+    await handleRejectRequestBase(selectedRequest, rejectReason)
+    rejectionModal.onClose()
+    setSelectedRequest(null)
+    setRejectReason('')
   }
 
   const toggleSelection = (id: string) => {
     setSelection(prev => (prev.includes(id) ? prev.filter(item => item !== id) : [...prev, id]))
+  }
+
+  const toggleRowExpansion = (userId: string, e: React.MouseEvent) => {
+    e.stopPropagation()
+    setExpandedRows((prev) => {
+      const next = new Set(prev)
+      if (next.has(userId)) {
+        next.delete(userId)
+      } else {
+        next.add(userId)
+      }
+      return next
+    })
   }
 
   const bulkApply = async (actionLabel: string) => {
@@ -392,8 +371,9 @@ export const PartnerUserManagement: React.FC<PartnerUserManagementProps> = ({
   const renderTableHeader = () => (
     <Thead>
       <Tr>
-        {['Name/Email', 'Company', 'Progress %', 'Current Week', 'Status', 'Last Active', 'Risk'].map((header, idx) => {
-          const sortMapping = ['name', 'company', 'progress', 'week', 'status', 'lastActive', 'risk']
+        <Th width="40px"></Th>
+        {['Risk', 'Name/Email', 'Company', 'Progress %', 'Current Week', 'Status', 'Last Active', 'Primary Action'].map((header, idx) => {
+          const sortMapping = ['risk', 'name', 'company', 'progress', 'week', 'status', 'lastActive', 'action']
           const key = sortMapping[idx] || 'name'
           return (
             <Th
@@ -414,53 +394,101 @@ export const PartnerUserManagement: React.FC<PartnerUserManagementProps> = ({
   )
 
   const renderUserRow = (user: PartnerUser) => {
-    const lastActiveDate = new Date(user.lastActive)
-    const lastActiveLabel = isNaN(lastActiveDate.getTime())
-      ? 'Unknown'
-      : formatDistanceToNow(lastActiveDate, { addSuffix: true })
+    const lastActiveLabel = formatLastActiveLabel(user.lastActive)
+    const isExpanded = expandedRows.has(user.id)
+    const displayName = getDisplayName(user, 'Member')
 
     return (
-      <Tr key={user.id} _hover={{ bg: 'brand.accent' }} cursor="pointer" onClick={() => openUser(user)}>
-        <Td>
-          <VStack align="flex-start" spacing={0}>
-            <Text fontWeight="semibold" color="brand.text">
-              {user.name}
-            </Text>
-            <Text fontSize="sm" color="brand.subtleText">
-              {user.email}
-            </Text>
-          </VStack>
-        </Td>
-        <Td textTransform="capitalize">{user.companyCode || 'Unassigned'}</Td>
-        <Td>
-          <HStack spacing={2}>
-            <Box bg="brand.accent" borderRadius="full" h="8px" w="80px" position="relative">
-              <Box
-                position="absolute"
-                left={0}
-                top={0}
-                bottom={0}
-                borderRadius="full"
-                bg="indigo.500"
-                width={`${user.progressPercent}%`}
-              />
-            </Box>
-            <Text fontSize="sm">{user.progressPercent}%</Text>
-          </HStack>
-        </Td>
-        <Td>{user.currentWeek}</Td>
-        <Td>
-          <Badge colorScheme={user.status === 'Active' ? 'green' : 'yellow'}>{user.status}</Badge>
-        </Td>
-        <Td>
-          <Text fontSize="sm">{lastActiveLabel}</Text>
-        </Td>
-        <Td>
-          <Badge colorScheme={riskColor[user.riskStatus]} textTransform="capitalize">
-            {user.riskStatus === 'at_risk' ? 'At Risk' : user.riskStatus}
-          </Badge>
-        </Td>
-      </Tr>
+      <React.Fragment key={user.id}>
+        <Tr _hover={{ bg: 'brand.accent' }} cursor="pointer" onClick={() => openUser(user)}>
+          <Td onClick={(e) => toggleRowExpansion(user.id, e)}>
+            {isExpanded ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
+          </Td>
+          <Td>
+            <Badge colorScheme={riskColor[user.riskStatus]} textTransform="capitalize">
+              {user.riskStatus === 'at_risk' ? 'At Risk' : user.riskStatus}
+            </Badge>
+          </Td>
+          <Td>
+            <VStack align="flex-start" spacing={0}>
+              <Text fontWeight="semibold" color="brand.text">
+                {displayName}
+              </Text>
+              <Text fontSize="sm" color="brand.subtleText">
+                {user.email}
+              </Text>
+            </VStack>
+          </Td>
+          <Td textTransform="capitalize">{user.companyCode || 'Unassigned'}</Td>
+          <Td>
+            <HStack spacing={2}>
+              <Box bg="brand.accent" borderRadius="full" h="8px" w="80px" position="relative">
+                <Box
+                  position="absolute"
+                  left={0}
+                  top={0}
+                  bottom={0}
+                  borderRadius="full"
+                  bg="indigo.500"
+                  width={`${user.progressPercent}%`}
+                />
+              </Box>
+              <Text fontSize="sm">{user.progressPercent}%</Text>
+            </HStack>
+          </Td>
+          <Td>{user.currentWeek}</Td>
+          <Td>
+            <Badge colorScheme={user.status === 'Active' ? 'green' : 'yellow'}>{user.status}</Badge>
+          </Td>
+          <Td>
+            <Text fontSize="sm">{lastActiveLabel}</Text>
+          </Td>
+          <Td onClick={(e) => e.stopPropagation()}>
+            <HStack spacing={2}>
+              {user.riskStatus !== 'engaged' ? (
+                <Button size="xs" colorScheme="purple" onClick={() => openUser(user)}>Start intervention</Button>
+              ) : (
+                <Button size="xs" variant="outline" onClick={() => openUser(user)}>Schedule check-in</Button>
+              )}
+            </HStack>
+          </Td>
+        </Tr>
+        {isExpanded && (
+          <Tr bg="gray.50">
+            <Td colSpan={9}>
+              <Box p={4}>
+                <Stack spacing={4}>
+                  <SimpleGrid columns={{ base: 1, md: 3 }} spacing={4}>
+                    <Box>
+                      <Text fontWeight="bold" fontSize="xs" color="gray.500" textTransform="uppercase" mb={2}>Risk Reasons</Text>
+                      <VStack align="flex-start" spacing={1}>
+                        {(user.riskReasons ?? ['Behind on weekly points target']).map((reason, idx) => (
+                          <Badge key={idx} colorScheme="orange" variant="subtle">{reason}</Badge>
+                        ))}
+                      </VStack>
+                    </Box>
+                    <Box>
+                      <Text fontWeight="bold" fontSize="xs" color="gray.500" textTransform="uppercase" mb={2}>Weekly Progress</Text>
+                      <VStack align="flex-start" spacing={1}>
+                        <Text fontSize="sm">Earned: {user.weeklyEarned} pts</Text>
+                        <Text fontSize="sm">Required: {user.weeklyRequired} pts</Text>
+                        <Badge colorScheme={user.weeklyEarned >= user.weeklyRequired ? 'green' : 'orange'}>
+                          {user.weeklyEarned >= user.weeklyRequired ? 'Target Met' : 'Below Target'}
+                        </Badge>
+                      </VStack>
+                    </Box>
+                    <Box>
+                      <Text fontWeight="bold" fontSize="xs" color="gray.500" textTransform="uppercase" mb={2}>Partner Notes</Text>
+                      <Text fontSize="sm" color="gray.600">No notes available for this learner.</Text>
+                      <Button size="xs" variant="link" colorScheme="purple" mt={2} onClick={() => openUser(user)}>Add note</Button>
+                    </Box>
+                  </SimpleGrid>
+                </Stack>
+              </Box>
+            </Td>
+          </Tr>
+        )}
+      </React.Fragment>
     )
   }
 
@@ -666,7 +694,7 @@ export const PartnerUserManagement: React.FC<PartnerUserManagementProps> = ({
                   </Td>
                   <Td>
                     <VStack align="flex-start" spacing={0}>
-                      <Text fontWeight="semibold" color="brand.text">{user.name}</Text>
+                      <Text fontWeight="semibold" color="brand.text">{getDisplayName(user, 'Member')}</Text>
                       <Text fontSize="sm" color="brand.subtleText">{user.email}</Text>
                     </VStack>
                   </Td>
@@ -697,7 +725,7 @@ export const PartnerUserManagement: React.FC<PartnerUserManagementProps> = ({
                     </Text>
                   </Td>
                   <Td>
-                    <Text fontSize="sm">{formatDistanceToNow(new Date(user.lastActive), { addSuffix: true })}</Text>
+                    <Text fontSize="sm">{formatLastActiveLabel(user.lastActive)}</Text>
                   </Td>
                   <Td>
                     <Badge colorScheme="green">Ready</Badge>
@@ -756,7 +784,7 @@ export const PartnerUserManagement: React.FC<PartnerUserManagementProps> = ({
                 <Tr key={leader.id}>
                   <Td>
                     <VStack align="flex-start" spacing={0}>
-                      <Text fontWeight="semibold" color="brand.text">{leader.name}</Text>
+                      <Text fontWeight="semibold" color="brand.text">{getDisplayName(leader, 'Member')}</Text>
                       <Text fontSize="sm" color="brand.subtleText">{leader.email}</Text>
                     </VStack>
                   </Td>
@@ -764,7 +792,7 @@ export const PartnerUserManagement: React.FC<PartnerUserManagementProps> = ({
                   <Td>
                     <Badge colorScheme="purple" textTransform="capitalize">{leader.role}</Badge>
                   </Td>
-                  <Td>{formatDistanceToNow(new Date(leader.lastActive), { addSuffix: true })}</Td>
+                  <Td>{formatLastActiveLabel(leader.lastActive)}</Td>
                   <Td>
                     <HStack spacing={2}>
                       <Button size="xs" variant="outline">View Details</Button>
@@ -810,7 +838,7 @@ export const PartnerUserManagement: React.FC<PartnerUserManagementProps> = ({
                   <Box key={request.id} p={3} borderRadius="md" border="1px solid" borderColor="brand.border" bg="brand.accent">
                     <HStack justify="space-between" align="flex-start" wrap="wrap" gap={3}>
                       <Stack spacing={1}>
-                        <Text fontWeight="semibold" color="brand.text">{user.name}</Text>
+                        <Text fontWeight="semibold" color="brand.text">{getDisplayName(user, 'Member')}</Text>
                         <Text fontSize="sm" color="brand.subtleText">{user.companyCode}</Text>
                         <Text fontSize="sm" color="brand.subtleText">
                           {request.activity_title || 'Activity submission'} • Week {request.week} • {request.points ?? 0} pts
@@ -873,8 +901,8 @@ export const PartnerUserManagement: React.FC<PartnerUserManagementProps> = ({
       >
         <DrawerOverlay />
         <DrawerContent>
-          <DrawerHeader borderBottomWidth="1px">User details</DrawerHeader>
-          <DrawerBody>
+        <DrawerHeader borderBottomWidth="1px">User details</DrawerHeader>
+        <DrawerBody>
             {!selectedUser && (
               <Flex align="center" justify="center" h="100%">
                 <Spinner />
@@ -883,7 +911,7 @@ export const PartnerUserManagement: React.FC<PartnerUserManagementProps> = ({
             {selectedUser && (
               <Stack spacing={4}>
                 <VStack align="flex-start" spacing={1}>
-                  <Text fontSize="xl" fontWeight="bold">{selectedUser.name}</Text>
+                  <Text fontSize="xl" fontWeight="bold">{getDisplayName(selectedUser, 'Member')}</Text>
                   <Text color="brand.subtleText">{selectedUser.email}</Text>
                 </VStack>
                 <HStack spacing={3}>
@@ -990,7 +1018,7 @@ export const PartnerUserManagement: React.FC<PartnerUserManagementProps> = ({
             <Button
               colorScheme="red"
               onClick={handleRejectRequest}
-              isLoading={approvalActionId === selectedRequest?.id}
+              isLoading={selectedRequest ? approvalActionId === selectedRequest.id : false}
             >
               Reject request
             </Button>

@@ -20,8 +20,9 @@ import {
   Text,
   VStack,
 } from '@chakra-ui/react'
-import { ArrowRight, BookOpenCheck, Compass, Sparkles, Target, Users } from 'lucide-react'
+import { ArrowRight, BookOpenCheck, Calendar, Compass, Sparkles, Target, Users } from 'lucide-react'
 import type { StandardRole } from '@/types'
+import type { WindowContext } from '@/hooks/useCurrentWindow'
 import { getDashboardPathForRole } from '@/utils/dashboardPaths'
 
 interface ConfirmationWelcomeModalProps {
@@ -29,6 +30,9 @@ interface ConfirmationWelcomeModalProps {
   onAcknowledge: () => void
   firstName?: string
   role?: StandardRole
+  membershipStatus?: 'free' | 'paid' | null
+  windowContext?: WindowContext | null
+  onStartTour?: () => void
 }
 
 export const ConfirmationWelcomeModal: React.FC<ConfirmationWelcomeModalProps> = ({
@@ -36,19 +40,27 @@ export const ConfirmationWelcomeModal: React.FC<ConfirmationWelcomeModalProps> =
   onAcknowledge,
   firstName,
   role,
+  membershipStatus,
+  windowContext,
+  onStartTour,
 }) => {
   const roleMessage = useMemo(() => {
+    const isPaidMember = role === 'paid_member' || (role === 'user' && membershipStatus === 'paid')
+
     switch (role) {
       case 'paid_member':
-        return 'Dive into your journey dashboard to keep weekly momentum strong.'
+        return 'Start earning points in your current window and track your progress weekly.'
       case 'mentor':
         return 'Share your expertise, review mentee updates, and celebrate their wins.'
       case 'ambassador':
         return 'Rally the community by sharing opportunities and spotlighting great work.'
       default:
+        if (isPaidMember) {
+          return 'Start earning points in your current window and track your progress weekly.'
+        }
         return 'Explore the platform, find your community, and start logging your impact.'
     }
-  }, [role])
+  }, [membershipStatus, role])
 
   const featureHighlights = [
     {
@@ -68,7 +80,7 @@ export const ConfirmationWelcomeModal: React.FC<ConfirmationWelcomeModalProps> =
     },
   ]
 
-  const dashboardPath = getDashboardPathForRole(role)
+  const dashboardPath = getDashboardPathForRole(role ?? null, membershipStatus ?? null)
 
   const quickActions = useMemo(
     () => [
@@ -100,7 +112,7 @@ export const ConfirmationWelcomeModal: React.FC<ConfirmationWelcomeModalProps> =
                 Welcome, {firstName || 'leader'}!
               </Text>
               <Text fontSize="sm" color="brand.subtleText">
-                We set up your workspace so you can start strong.
+                We set up your workspace so you can hit the ground running.
               </Text>
             </VStack>
           </HStack>
@@ -108,6 +120,32 @@ export const ConfirmationWelcomeModal: React.FC<ConfirmationWelcomeModalProps> =
         <ModalCloseButton />
         <ModalBody>
           <Stack spacing={6}>
+            {windowContext && (
+              <Box
+                bg="brand.primaryMuted"
+                borderRadius="lg"
+                p={4}
+                border="1px solid"
+                borderColor="brand.border"
+              >
+                <HStack spacing={3} align="flex-start">
+                  <Icon as={Calendar} color="brand.gold" boxSize={5} />
+                  <VStack align="flex-start" spacing={1}>
+                    <Text fontWeight="semibold" color="brand.text">
+                      Your Current Window
+                    </Text>
+                    <Text fontSize="sm" color="brand.subtleText">
+                      Window {windowContext.windowNumber} • Weeks {windowContext.startWeek}-
+                      {windowContext.endWeek}
+                    </Text>
+                    <Text fontSize="sm" color="brand.subtleText">
+                      Target: {windowContext.windowTarget.toLocaleString()} points this fortnight
+                    </Text>
+                  </VStack>
+                </HStack>
+              </Box>
+            )}
+
             <Box bg="brand.primaryMuted" borderRadius="lg" p={4} border="1px solid" borderColor="brand.border">
               <HStack spacing={3} align="flex-start">
                 <Icon as={Compass} color="brand.gold" />
@@ -165,12 +203,15 @@ export const ConfirmationWelcomeModal: React.FC<ConfirmationWelcomeModalProps> =
                     to={action.href}
                     onClick={onAcknowledge}
                     justifyContent="space-between"
-                    rightIcon={<Icon as={ArrowRight} />}
-                    leftIcon={<Icon as={action.icon} />}
+                    rightIcon={<Icon as={ArrowRight} color="brand.gold" />}
+                    leftIcon={<Icon as={action.icon} color="brand.gold" />}
                     variant="outline"
                     colorScheme="yellow"
                     borderColor="brand.border"
                     bg="brand.primaryMuted"
+                    color="brand.text"
+                    _hover={{ bg: 'brand.primaryMuted', borderColor: 'brand.gold', color: 'brand.text' }}
+                    _active={{ bg: 'brand.primaryMuted', borderColor: 'brand.gold', color: 'brand.text' }}
                   >
                     {action.label}
                   </Button>
@@ -191,9 +232,24 @@ export const ConfirmationWelcomeModal: React.FC<ConfirmationWelcomeModalProps> =
             >
               See how others are progressing
             </Link>
-            <Button colorScheme="yellow" onClick={onAcknowledge} rightIcon={<Icon as={ArrowRight} />}>
-              Start exploring
-            </Button>
+            <HStack spacing={2}>
+              {onStartTour && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => {
+                    onAcknowledge()
+                    onStartTour()
+                  }}
+                  leftIcon={<Icon as={Compass} />}
+                >
+                  Take a quick tour
+                </Button>
+              )}
+              <Button colorScheme="yellow" onClick={onAcknowledge} rightIcon={<Icon as={ArrowRight} />}>
+                Start exploring
+              </Button>
+            </HStack>
           </HStack>
         </ModalFooter>
       </ModalContent>

@@ -25,7 +25,7 @@ export const BadgeCard = ({ name, description, earnedOn, imageUrl, isNew }: Badg
             <Text fontWeight="bold" color="brand.text">
               {name}
             </Text>
-            <Text fontSize="sm" color="brand.subtleText" opacity={0.85}>
+            <Text fontSize="sm" color="brand.subtleText">
               {description}
             </Text>
             {earnedOn && (

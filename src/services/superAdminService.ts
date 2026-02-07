@@ -5,22 +5,30 @@ import {
   deleteDoc,
   doc,
   FirestoreError,
+  getDoc,
   getDocs,
   limit,
   onSnapshot,
   orderBy,
   query,
   serverTimestamp,
+  setDoc,
   updateDoc,
   where,
 } from 'firebase/firestore'
 import { auth, db } from './firebase'
 import { ORG_COLLECTION } from '@/constants/organizations'
+import { fetchOrganizationsByIds } from '@/services/organizationService'
+import { upsertPartnerAssignments } from '@/services/partnerAdminService'
+import { bulkSyncPartnerOrganizations } from '@/services/partnerAssignmentSyncService'
+import { removeUndefinedFields } from '@/utils/firestore'
 import {
   AdminActivityLogEntry,
   AdminFormData,
   AdminRole,
   AdminUserRecord,
+  PartnerAssignment,
+  PartnerAssignmentStatus,
   EngagementRiskAggregate,
   OrganizationMemberStats,
   OrganizationRecord,
@@ -30,6 +38,7 @@ import {
   TaskNotificationRecord,
   VerificationRequest,
 } from '@/types/admin'
+import { normalizeRole } from '@/utils/role'
 
 type TrendPoint = { label: string; value: number }
 
@@ -37,10 +46,38 @@ const orgCollection = collection(db, ORG_COLLECTION)
 const usersCollection = collection(db, 'profiles')
 const auditCollection = collection(db, 'admin_activity_log')
 const engagementCollection = collection(db, 'user_engagement_scores')
-const adminRoles: AdminRole[] = ['super_admin', 'partner', 'admin', 'mentor', 'ambassador', 'team_leader']
+const adminRoles: AdminRole[] = ['super_admin', 'partner', 'mentor', 'ambassador']
 
 const getActorId = () => auth.currentUser?.uid
 const getActorName = () => auth.currentUser?.displayName || undefined
+
+const upsertUserMirrors = async (userId: string, payload: Record<string, unknown>) => {
+  const cleaned = removeUndefinedFields(payload)
+  await Promise.all([
+    setDoc(doc(db, 'profiles', userId), cleaned, { merge: true }),
+    setDoc(doc(db, 'users', userId), cleaned, { merge: true }),
+  ])
+}
+
+const mapOrganizationStatusToPartnerAssignment = (
+  status?: OrganizationRecord['status'],
+): PartnerAssignmentStatus => {
+  switch (status) {
+    case 'watch':
+      return 'watch'
+    case 'paused':
+      return 'paused'
+    case 'inactive':
+      return 'inactive'
+    case 'suspended':
+      return 'paused'
+    case 'pending':
+      return 'inactive'
+    case 'active':
+    default:
+      return 'active'
+  }
+}
 
 export const fetchDashboardMetrics = async (
   filters?: Partial<{ organizationCodes: string[]; organizationIds: string[]; trendDays: number }>,
@@ -172,9 +209,19 @@ const buildDateBuckets = (days: number) => {
 const timestampToMillis = (value?: unknown) => {
   if (!value) return 0
   if (value instanceof Timestamp) return value.toMillis()
+  if (value instanceof Date) return value.getTime()
   if (typeof value === 'number') return value
+  if (typeof value === 'string') {
+    const parsed = Date.parse(value)
+    return Number.isNaN(parsed) ? 0 : parsed
+  }
   const asDate = (value as { toDate?: () => Date })?.toDate?.()
-  return asDate?.getTime() || 0
+  if (asDate) return asDate.getTime()
+
+  const asSeconds = (value as { seconds?: unknown })?.seconds
+  if (typeof asSeconds === 'number' && Number.isFinite(asSeconds)) return asSeconds * 1000
+
+  return 0
 }
 
 const mapAdminDoc = (docSnap: { id: string; data: () => unknown }): AdminUserRecord => {
@@ -190,19 +237,32 @@ const mapAdminDoc = (docSnap: { id: string; data: () => unknown }): AdminUserRec
 
 export const fetchRegistrationTrend = async (days = 14): Promise<TrendPoint[]> => {
   const sinceDate = new Date()
+  sinceDate.setHours(0, 0, 0, 0)
   sinceDate.setDate(sinceDate.getDate() - (days - 1))
+  const sinceIso = sinceDate.toISOString()
 
-  const registrationQuery = query(
-    usersCollection,
-    where('registrationDate', '>=', sinceDate),
-    orderBy('registrationDate', 'asc'),
-  )
+  const snapshots = await Promise.allSettled([
+    getDocs(query(usersCollection, where('createdAt', '>=', sinceDate), orderBy('createdAt', 'asc'))),
+    getDocs(query(usersCollection, where('createdAt', '>=', sinceIso), orderBy('createdAt', 'asc'))),
+    getDocs(query(usersCollection, where('registrationDate', '>=', sinceDate), orderBy('registrationDate', 'asc'))),
+    getDocs(query(usersCollection, where('registrationDate', '>=', sinceIso), orderBy('registrationDate', 'asc'))),
+  ])
 
-  const snapshot = await getDocs(registrationQuery)
   const buckets = buildDateBuckets(days)
+  const windowStart = sinceDate.getTime()
 
-  snapshot.docs.forEach((docSnap) => {
-    const millis = timestampToMillis((docSnap.data() as { registrationDate?: unknown }).registrationDate)
+  const docMillisById = new Map<string, number>()
+
+  snapshots.forEach((result) => {
+    if (result.status !== 'fulfilled') return
+    result.value.docs.forEach((docSnap) => {
+      const data = docSnap.data() as { createdAt?: unknown; registrationDate?: unknown }
+      const millis = timestampToMillis(data.registrationDate) || timestampToMillis(data.createdAt)
+      if (millis && millis >= windowStart) docMillisById.set(docSnap.id, millis)
+    })
+  })
+
+  docMillisById.forEach((millis) => {
     Object.values(buckets).forEach((bucket) => {
       if (millis >= bucket.start && millis <= bucket.end) {
         buckets[bucket.label].value = (buckets[bucket.label].value || 0) + 1
@@ -219,49 +279,94 @@ export const listenToRegistrationTrend = (
   onError?: (error: FirestoreError) => void,
 ) => {
   const sinceDate = new Date()
+  sinceDate.setHours(0, 0, 0, 0)
   sinceDate.setDate(sinceDate.getDate() - (days - 1))
+  const sinceIso = sinceDate.toISOString()
+  const windowStart = sinceDate.getTime()
 
-  const registrationQuery = query(
-    usersCollection,
-    where('registrationDate', '>=', sinceDate),
-    orderBy('registrationDate', 'asc'),
-  )
+  const queries = [
+    query(usersCollection, where('createdAt', '>=', sinceDate), orderBy('createdAt', 'asc')),
+    query(usersCollection, where('createdAt', '>=', sinceIso), orderBy('createdAt', 'asc')),
+    query(usersCollection, where('registrationDate', '>=', sinceDate), orderBy('registrationDate', 'asc')),
+    query(usersCollection, where('registrationDate', '>=', sinceIso), orderBy('registrationDate', 'asc')),
+  ]
 
-  return onSnapshot(
-    registrationQuery,
-    (snapshot) => {
-      const buckets = buildDateBuckets(days)
+  const sourceDocs = new Map<number, Map<string, number>>()
 
-      snapshot.docs.forEach((docSnap) => {
-        const millis = timestampToMillis((docSnap.data() as { registrationDate?: unknown }).registrationDate)
-        Object.values(buckets).forEach((bucket) => {
-          if (millis >= bucket.start && millis <= bucket.end) {
-            buckets[bucket.label].value = (buckets[bucket.label].value || 0) + 1
-          }
-        })
+  const emit = () => {
+    const merged = new Map<string, number>()
+    sourceDocs.forEach((docs) => {
+      docs.forEach((millis, id) => {
+        if (!merged.has(id)) merged.set(id, millis)
       })
+    })
 
-      onChange(Object.values(buckets).map((bucket) => ({ label: bucket.label, value: bucket.value || 0 })))
-    },
-    onError,
+    const buckets = buildDateBuckets(days)
+    merged.forEach((millis) => {
+      if (!millis || millis < windowStart) return
+      Object.values(buckets).forEach((bucket) => {
+        if (millis >= bucket.start && millis <= bucket.end) {
+          buckets[bucket.label].value = (buckets[bucket.label].value || 0) + 1
+        }
+      })
+    })
+
+    onChange(Object.values(buckets).map((bucket) => ({ label: bucket.label, value: bucket.value || 0 })))
+  }
+
+  const unsubs = queries.map((q, index) =>
+    onSnapshot(
+      q,
+      (snapshot) => {
+        const docs = new Map<string, number>()
+        snapshot.docs.forEach((docSnap) => {
+          const data = docSnap.data() as { createdAt?: unknown; registrationDate?: unknown }
+          const millis = timestampToMillis(data.registrationDate) || timestampToMillis(data.createdAt)
+          if (millis && millis >= windowStart) docs.set(docSnap.id, millis)
+        })
+        sourceDocs.set(index, docs)
+        emit()
+      },
+      (err) => {
+        onError?.(err)
+      },
+    ),
   )
+
+  return () => unsubs.forEach((unsub) => unsub())
 }
 
 export const fetchUserGrowthTrend = async (days = 30): Promise<TrendPoint[]> => {
   const sinceDate = new Date()
+  sinceDate.setHours(0, 0, 0, 0)
   sinceDate.setDate(sinceDate.getDate() - (days - 1))
+  const sinceIso = sinceDate.toISOString()
 
-  const userQuery = query(usersCollection, where('registrationDate', '>=', sinceDate), orderBy('registrationDate', 'asc'))
-  const snapshot = await getDocs(userQuery)
+  const snapshots = await Promise.allSettled([
+    getDocs(query(usersCollection, where('createdAt', '>=', sinceDate), orderBy('createdAt', 'asc'))),
+    getDocs(query(usersCollection, where('createdAt', '>=', sinceIso), orderBy('createdAt', 'asc'))),
+    getDocs(query(usersCollection, where('registrationDate', '>=', sinceDate), orderBy('registrationDate', 'asc'))),
+    getDocs(query(usersCollection, where('registrationDate', '>=', sinceIso), orderBy('registrationDate', 'asc'))),
+  ])
+
   const buckets = buildDateBuckets(days)
+  const windowStart = sinceDate.getTime()
 
   const byDay: Record<string, number> = {}
-  snapshot.docs.forEach((docSnap) => {
-    const millis = timestampToMillis((docSnap.data() as { registrationDate?: unknown }).registrationDate)
+  const docMillisById = new Map<string, number>()
+
+  snapshots.forEach((result) => {
+    if (result.status !== 'fulfilled') return
+    result.value.docs.forEach((docSnap) => {
+      const data = docSnap.data() as { createdAt?: unknown; registrationDate?: unknown }
+      const millis = timestampToMillis(data.registrationDate) || timestampToMillis(data.createdAt)
+      if (millis && millis >= windowStart) docMillisById.set(docSnap.id, millis)
+    })
+  })
+
+  docMillisById.forEach((millis) => {
     const bucket = Object.values(buckets).find((range) => millis >= range.start && millis <= range.end)
-    if (bucket) {
-      byDay[bucket.label] = (byDay[bucket.label] || 0) + 1
-    }
+    if (bucket) byDay[bucket.label] = (byDay[bucket.label] || 0) + 1
   })
 
   let runningTotal = 0
@@ -277,34 +382,64 @@ export const listenToUserGrowthTrend = (
   onError?: (error: FirestoreError) => void,
 ) => {
   const sinceDate = new Date()
+  sinceDate.setHours(0, 0, 0, 0)
   sinceDate.setDate(sinceDate.getDate() - (days - 1))
+  const sinceIso = sinceDate.toISOString()
+  const windowStart = sinceDate.getTime()
 
-  const userQuery = query(usersCollection, where('registrationDate', '>=', sinceDate), orderBy('registrationDate', 'asc'))
+  const queries = [
+    query(usersCollection, where('createdAt', '>=', sinceDate), orderBy('createdAt', 'asc')),
+    query(usersCollection, where('createdAt', '>=', sinceIso), orderBy('createdAt', 'asc')),
+    query(usersCollection, where('registrationDate', '>=', sinceDate), orderBy('registrationDate', 'asc')),
+    query(usersCollection, where('registrationDate', '>=', sinceIso), orderBy('registrationDate', 'asc')),
+  ]
 
-  return onSnapshot(
-    userQuery,
-    (snapshot) => {
-      const buckets = buildDateBuckets(days)
-      const byDay: Record<string, number> = {}
+  const sourceDocs = new Map<number, Map<string, number>>()
 
-      snapshot.docs.forEach((docSnap) => {
-        const millis = timestampToMillis((docSnap.data() as { registrationDate?: unknown }).registrationDate)
-        const bucket = Object.values(buckets).find((range) => millis >= range.start && millis <= range.end)
-        if (bucket) {
-          byDay[bucket.label] = (byDay[bucket.label] || 0) + 1
-        }
+  const emit = () => {
+    const merged = new Map<string, number>()
+    sourceDocs.forEach((docs) => {
+      docs.forEach((millis, id) => {
+        if (!merged.has(id)) merged.set(id, millis)
       })
+    })
 
-      let runningTotal = 0
-      onChange(
-        Object.values(buckets).map((bucket) => {
-          runningTotal += byDay[bucket.label] || 0
-          return { label: bucket.label, value: runningTotal }
-        }),
-      )
-    },
-    onError,
+    const buckets = buildDateBuckets(days)
+    const byDay: Record<string, number> = {}
+
+    merged.forEach((millis) => {
+      if (!millis || millis < windowStart) return
+      const bucket = Object.values(buckets).find((range) => millis >= range.start && millis <= range.end)
+      if (bucket) byDay[bucket.label] = (byDay[bucket.label] || 0) + 1
+    })
+
+    let runningTotal = 0
+    onChange(
+      Object.values(buckets).map((bucket) => {
+        runningTotal += byDay[bucket.label] || 0
+        return { label: bucket.label, value: runningTotal }
+      }),
+    )
+  }
+
+  const unsubs = queries.map((q, index) =>
+    onSnapshot(
+      q,
+      (snapshot) => {
+        const docs = new Map<string, number>()
+        snapshot.docs.forEach((docSnap) => {
+          const data = docSnap.data() as { createdAt?: unknown; registrationDate?: unknown }
+          const millis = timestampToMillis(data.registrationDate) || timestampToMillis(data.createdAt)
+          if (millis && millis >= windowStart) docs.set(docSnap.id, millis)
+        })
+        sourceDocs.set(index, docs)
+        emit()
+      },
+      (err) => onError?.(err),
+    ),
   )
+
+  return () => unsubs.forEach((unsub) => unsub())
 }
 
 export const fetchOrganizations = async (): Promise<OrganizationRecord[]> => {
@@ -411,10 +546,11 @@ export const listenToAdminActivityLog = (
 }
 
 export const logAdminAction = async (entry: Omit<AdminActivityLogEntry, 'id' | 'createdAt'>) => {
-  await addDoc(auditCollection, {
+  const sanitizedEntry = removeUndefinedFields({
     ...entry,
     createdAt: serverTimestamp(),
   })
+  await addDoc(auditCollection, sanitizedEntry)
 }
 
 export const fetchAdminUsers = async (): Promise<AdminUserRecord[]> => {
@@ -440,7 +576,34 @@ export const listenToAdminUsers = (
 export const createAdminUser = async (
   adminData: AdminFormData & Partial<AdminUserRecord> & { createdBy?: string; createdByName?: string },
 ) => {
-  const { createdBy, createdByName, ...rest } = adminData
+  const { createdBy, createdByName, assignedOrganizations, ...rest } = adminData
+
+  // Check if user with this email already exists
+  const existingUserQuery = query(usersCollection, where('email', '==', adminData.email), limit(1))
+  const existingUserSnapshot = await getDocs(existingUserQuery)
+
+  if (!existingUserSnapshot.empty) {
+    // User exists - update their existing profile instead of creating a duplicate
+    const existingDoc = existingUserSnapshot.docs[0]
+    const existingId = existingDoc.id
+    const updatePayload = {
+      ...rest,
+      fullName: adminData.fullName || `${adminData.firstName} ${adminData.lastName}`.trim(),
+      accountStatus: adminData.accountStatus || 'active',
+      updatedAt: serverTimestamp(),
+    }
+    await upsertUserMirrors(existingId, updatePayload)
+    await logAdminAction({
+      action: 'admin_role_assigned',
+      adminId: createdBy,
+      adminName: createdByName,
+      userId: existingId,
+      metadata: { role: adminData.role, organizations: assignedOrganizations, wasExistingUser: true },
+    })
+    return existingId
+  }
+
+  // User doesn't exist - create new document (for inviting new admins)
   const payload = {
     ...rest,
     fullName: adminData.fullName || `${adminData.firstName} ${adminData.lastName}`.trim(),
@@ -448,20 +611,20 @@ export const createAdminUser = async (
     createdAt: serverTimestamp(),
     updatedAt: serverTimestamp(),
   }
-  const docRef = await addDoc(usersCollection, payload)
+  const docRef = doc(usersCollection)
+  await upsertUserMirrors(docRef.id, payload)
   await logAdminAction({
     action: 'admin_created',
     adminId: createdBy,
     adminName: createdByName,
     userId: docRef.id,
-    metadata: { role: adminData.role, organizations: adminData.assignedOrganizations },
+    metadata: { role: adminData.role, organizations: assignedOrganizations },
   })
   return docRef.id
 }
 
 export const updateAdminUser = async (adminId: string, updates: Partial<AdminUserRecord>) => {
-  const adminRef = doc(db, 'users', adminId)
-  await updateDoc(adminRef, { ...updates, updatedAt: serverTimestamp() })
+  await upsertUserMirrors(adminId, { ...updates, updatedAt: serverTimestamp() })
   await logAdminAction({
     action: 'admin_updated',
     userId: adminId,
@@ -470,8 +633,10 @@ export const updateAdminUser = async (adminId: string, updates: Partial<AdminUse
 }
 
 export const deleteAdminUser = async (adminId: string) => {
-  const adminRef = doc(db, 'users', adminId)
-  await deleteDoc(adminRef)
+  await Promise.all([
+    deleteDoc(doc(db, 'profiles', adminId)),
+    deleteDoc(doc(db, 'users', adminId)),
+  ])
   await logAdminAction({
     action: 'admin_deleted',
     userId: adminId,
@@ -480,6 +645,7 @@ export const deleteAdminUser = async (adminId: string) => {
 
 export const assignOrganizations = async (adminId: string, orgIds: string[]) => {
   const adminRef = doc(db, 'users', adminId)
+  const profileRef = doc(db, 'profiles', adminId)
   const actorId = getActorId()
   const actorName = getActorName()
   // assignedOrganizations MUST contain organization document IDs only, never codes.
@@ -491,12 +657,47 @@ export const assignOrganizations = async (adminId: string, orgIds: string[]) => 
         .filter(Boolean),
     ),
   )
-  await updateDoc(adminRef, {
+  const updatePayload = {
     assignedOrganizations: sanitizedOrgIds,
     assignedOrganizationsUpdatedAt: serverTimestamp(),
     assignedOrganizationsUpdatedBy: actorId || null,
     updatedAt: serverTimestamp(),
-  })
+  }
+
+  const adminSnapshot = await getDoc(adminRef)
+  const adminData = adminSnapshot.data() as { role?: string; assignedOrganizations?: string[] } | undefined
+  const adminRole = normalizeRole(adminData?.role)
+  const previousOrgIds = (adminData?.assignedOrganizations || []) as string[]
+
+  const partnerAssignments: PartnerAssignment[] =
+    adminRole === 'partner'
+      ? await (async () => {
+        const orgRecords = await fetchOrganizationsByIds(sanitizedOrgIds)
+        const orgById = new Map(orgRecords.map((org) => [org.id, org]))
+        return sanitizedOrgIds.map((organizationId) => {
+          const orgRecord = orgById.get(organizationId)
+          return {
+            organizationId,
+            companyCode: orgRecord?.code,
+            status: mapOrganizationStatusToPartnerAssignment(orgRecord?.status),
+          }
+        })
+      })()
+      : []
+
+  await Promise.all([
+    updateDoc(adminRef, updatePayload),
+    updateDoc(profileRef, updatePayload),
+    adminRole === 'partner'
+      ? upsertPartnerAssignments(adminId, partnerAssignments)
+      : Promise.resolve(),
+  ])
+
+  // Sync organization documents if this is a partner assignment
+  if (adminRole === 'partner') {
+    await bulkSyncPartnerOrganizations(adminId, sanitizedOrgIds, previousOrgIds)
+  }
+
   await logAdminAction({
     action: 'admin_orgs_updated',
     adminId: actorId,
@@ -507,8 +708,7 @@ export const assignOrganizations = async (adminId: string, orgIds: string[]) => 
 }
 
 export const updateAdminRole = async (adminId: string, newRole: AdminRole) => {
-  const adminRef = doc(db, 'users', adminId)
-  await updateDoc(adminRef, { role: newRole, updatedAt: serverTimestamp() })
+  await upsertUserMirrors(adminId, { role: newRole, updatedAt: serverTimestamp() })
   await logAdminAction({
     action: 'admin_role_updated',
     userId: adminId,
@@ -517,8 +717,7 @@ export const updateAdminRole = async (adminId: string, newRole: AdminRole) => {
 }
 
 export const toggleAdminStatus = async (adminId: string, status: 'active' | 'suspended') => {
-  const adminRef = doc(db, 'users', adminId)
-  await updateDoc(adminRef, { accountStatus: status, updatedAt: serverTimestamp() })
+  await upsertUserMirrors(adminId, { accountStatus: status, updatedAt: serverTimestamp() })
   await logAdminAction({
     action: 'admin_status_updated',
     userId: adminId,
@@ -543,7 +742,9 @@ export const listenToVerificationRequests = (onChange: (requests: VerificationRe
 }
 
 export const listenToRegistrations = (onChange: (registrations: RegistrationRecord[]) => void) => {
-  const registrationQuery = query(collection(db, 'users'), orderBy('createdAt', 'desc'), limit(8))
+  // Use the same canonical collection (`profiles`) as other super-admin user streams,
+  // so role/membership/org fields are consistent across dashboards.
+  const registrationQuery = query(usersCollection, orderBy('createdAt', 'desc'), limit(8))
   return onSnapshot(registrationQuery, (snapshot) => {
     onChange(
       snapshot.docs.map((docSnap) => {
@@ -576,4 +777,18 @@ export const listenToTaskNotifications = (onChange: (tasks: TaskNotificationReco
       }),
     )
   })
+}
+
+export const listenToUsers = (
+  onChange: (users: AdminUserRecord[]) => void,
+  onError?: (error: FirestoreError) => void,
+) => {
+  const usersQuery = query(usersCollection, orderBy('createdAt', 'desc'))
+  return onSnapshot(
+    usersQuery,
+    (snapshot) => {
+      onChange(snapshot.docs.map(mapAdminDoc))
+    },
+    onError,
+  )
 }

@@ -22,6 +22,11 @@ export const calculateLevel = (totalPoints: number, maxLevel?: number): number =
   return boundedLevel
 }
 
+/**
+ * Calculates total points by querying the entire pointsLedger.
+ * IMPORTANT: This is expensive and should only be used for admin backfill or audit jobs.
+ * For runtime awarding, use the totalPoints field on the user document instead.
+ */
 export const calculateUserTotalPoints = async (
   uid: string,
   options?: { transaction?: Transaction },

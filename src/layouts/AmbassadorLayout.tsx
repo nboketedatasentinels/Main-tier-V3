@@ -22,11 +22,14 @@ import {
   VStack,
   useBreakpointValue,
   useDisclosure,
+  useToast,
 } from '@chakra-ui/react'
 import { Menu as MenuIcon, Medal, TrendingUp, X } from 'lucide-react'
 import { NotificationDropdown } from '@/components/notifications/NotificationDropdown'
 import { buildAmbassadorNavItems, buildCommonAccountItems, NavigationItem, NavigationSection } from '@/utils/navigationItems'
 import { useAuth } from '@/hooks/useAuth'
+
+const APP_VIEWPORT_HEIGHT = { base: '100dvh', md: '100vh' } as const
 
 interface AmbassadorLayoutProps {
   children: React.ReactNode
@@ -110,15 +113,29 @@ export const AmbassadorLayout: React.FC<AmbassadorLayoutProps> = ({
   navSections,
   subtitle = 'Grow the community and track your impact',
 }) => {
-  const { signOut } = useAuth()
+  const { signOut, signingOut } = useAuth()
+  const toast = useToast()
   const sections = useMemo(() => navSections || buildAmbassadorNavItems(), [navSections])
   const accountItems = useMemo(() => buildCommonAccountItems(), [])
   const drawer = useDisclosure()
   const isMobile = useBreakpointValue({ base: true, lg: false })
 
+  const handleLogout = async () => {
+    const result = await signOut()
+    if (result.error) {
+      toast({
+        title: 'Logout failed',
+        description: result.error.message,
+        status: 'error',
+        duration: 5000,
+        isClosable: true,
+      })
+    }
+  }
+
   const handleAccountNavigate = (key: string) => {
     if (key === 'logout') {
-      signOut()
+      handleLogout()
       return
     }
 
@@ -148,7 +165,7 @@ export const AmbassadorLayout: React.FC<AmbassadorLayoutProps> = ({
   )
 
   return (
-    <Flex minH="100vh" h="100vh" bg="brand.accent" overflow="hidden">
+    <Flex minH={APP_VIEWPORT_HEIGHT} h={APP_VIEWPORT_HEIGHT} bg="brand.accent" overflow="hidden">
       <Box
         as="nav"
         w={{ base: '0', lg: '260px' }}
@@ -157,7 +174,7 @@ export const AmbassadorLayout: React.FC<AmbassadorLayoutProps> = ({
         borderColor="brand.border"
         display={{ base: 'none', lg: 'flex' }}
         flexDirection="column"
-        h="100vh"
+        h={APP_VIEWPORT_HEIGHT}
         overflowY="auto"
         p={5}
         gap={6}
@@ -204,7 +221,7 @@ export const AmbassadorLayout: React.FC<AmbassadorLayoutProps> = ({
         </DrawerContent>
       </Drawer>
 
-      <Flex flex="1" direction="column" minW={0} h="100vh" overflow="hidden">
+      <Flex flex="1" direction="column" minW={0} h={APP_VIEWPORT_HEIGHT} overflow="hidden" minH={0}>
         <Flex
           px={{ base: 4, md: 6, lg: 10 }}
           py={4}
@@ -242,8 +259,16 @@ export const AmbassadorLayout: React.FC<AmbassadorLayoutProps> = ({
           <HStack spacing={3} align="center">
             <NotificationDropdown />
             <Menu>
-              <MenuButton as={Button} leftIcon={<Avatar size="sm" name={ambassadorName} src={avatarUrl} />} variant="outline">
-                <Text>{ambassadorName}</Text>
+              <MenuButton
+                as={Button}
+                leftIcon={<Avatar size="sm" name={ambassadorName} src={avatarUrl} />}
+                variant="outline"
+                size="sm"
+                px={{ base: 2, md: 3 }}
+              >
+                <Text display={{ base: 'none', md: 'block' }} noOfLines={1} maxW="180px">
+                  {ambassadorName}
+                </Text>
               </MenuButton>
               <MenuList>
                 {accountItems.map((item) => (
@@ -251,7 +276,7 @@ export const AmbassadorLayout: React.FC<AmbassadorLayoutProps> = ({
                     {item.label}
                   </MenuItem>
                 ))}
-                <MenuItem onClick={() => signOut()}>Logout</MenuItem>
+                <MenuItem onClick={handleLogout} isDisabled={signingOut}>Logout</MenuItem>
               </MenuList>
             </Menu>
           </HStack>

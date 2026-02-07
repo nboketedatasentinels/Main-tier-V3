@@ -9,10 +9,12 @@ import {
   orderBy,
   query,
   serverTimestamp,
-  updateDoc,
+  setDoc,
 } from 'firebase/firestore'
 import { db } from './firebase'
 import { ORG_COLLECTION } from '@/constants/organizations'
+import { removeUndefinedFields } from '@/utils/firestore'
+import { normalizeEmail } from '@/utils/email'
 
 export type ManagedUserRole = 'user' | 'partner' | 'admin' | 'super_admin' | 'team_leader' | 'mentor' | 'ambassador'
 export type MembershipStatus = 'free' | 'paid' | 'inactive'
@@ -39,6 +41,7 @@ export interface ManagedUserRecord {
   ambassadorId?: string | null
   isActiveAmbassador?: boolean
   notes?: string | null
+  assignedOrganizations?: string[]
 }
 
 export type RiskLevel = 'critical' | 'high' | 'moderate' | 'low' | 'emerging' | 'recovering' | 'unknown'
@@ -88,10 +91,18 @@ export interface EngagementTrendPoint {
   interventions: number
 }
 
-const usersCollection = collection(db, 'profiles')
+const usersCollection = collection(db, 'users')
 const organizationsCollection = collection(db, ORG_COLLECTION)
 const engagementCollection = collection(db, 'user_engagement_scores')
 const notificationsCollection = collection(db, 'notifications')
+
+const upsertUserMirrors = async (userId: string, payload: Record<string, unknown>) => {
+  const cleaned = removeUndefinedFields(payload)
+  await Promise.all([
+    setDoc(doc(db, 'profiles', userId), cleaned, { merge: true }),
+    setDoc(doc(db, 'users', userId), cleaned, { merge: true }),
+  ])
+}
 
 const parseDateValue = (value?: unknown): Date | null => {
   if (!value) return null
@@ -142,11 +153,61 @@ const mapUser = (docSnap: { id: string; data: () => unknown }): ManagedUserRecor
     mentorId: data.mentorId,
     ambassadorId: data.ambassadorId,
     isActiveAmbassador: data.isActiveAmbassador,
+    assignedOrganizations: Array.isArray(data.assignedOrganizations)
+      ? data.assignedOrganizations.filter((assignment): assignment is string => Boolean(assignment))
+      : undefined,
     notes: data.notes,
   }
 }
 
 const buildUsersQuery = () => query(usersCollection, orderBy('createdAt', 'desc'))
+
+const scoreUserDocForEmailCanonical = (docSnap: { id: string; data: () => unknown }, index: number) => {
+  const data = docSnap.data() as {
+    id?: string
+    membershipStatus?: MembershipStatus
+    companyId?: string | null
+    companyCode?: string | null
+    assignedOrganizations?: unknown
+    role?: string | null
+    mergedInto?: string | null
+  }
+
+  if (data.mergedInto) return { score: -1000, index }
+
+  let score = 0
+  if (data.id && data.id === docSnap.id) score += 100
+  if (data.membershipStatus === 'paid') score += 25
+  if (data.companyId) score += 15
+  if (data.companyCode) score += 5
+  if (Array.isArray(data.assignedOrganizations) && data.assignedOrganizations.length > 0) score += 5
+  if (data.role && data.role !== 'free_user') score += 2
+
+  return { score, index }
+}
+
+const dedupeUserDocsByEmail = <T extends { id: string; data: () => unknown }>(docs: T[]): T[] => {
+  const bestByEmail = new Map<string, { id: string; score: number; index: number }>()
+
+  docs.forEach((docSnap, index) => {
+    const data = docSnap.data() as { email?: string | null }
+    const emailKey = normalizeEmail(data.email || '')
+    if (!emailKey) return
+
+    const { score } = scoreUserDocForEmailCanonical(docSnap, index)
+    const current = bestByEmail.get(emailKey)
+    if (!current || score > current.score || (score === current.score && index < current.index)) {
+      bestByEmail.set(emailKey, { id: docSnap.id, score, index })
+    }
+  })
+
+  return docs.filter((docSnap) => {
+    const data = docSnap.data() as { email?: string | null }
+    const emailKey = normalizeEmail(data.email || '')
+    if (!emailKey) return true
+    return bestByEmail.get(emailKey)?.id === docSnap.id
+  })
+}
 
 export const listenToUsers = ({
   onData,
@@ -171,7 +232,8 @@ export const listenToUsers = ({
       (snapshot) => {
         attempt = 0
         onStatusChange?.('connected')
-        onData(snapshot.docs.map(mapUser))
+        const deduped = dedupeUserDocsByEmail(snapshot.docs)
+        onData(deduped.map(mapUser))
       },
       (err) => {
         console.error('🔴 [Admin] profiles listener failed', err)
@@ -207,7 +269,6 @@ export const fetchOrganizationsList = async (): Promise<OrganizationOption[]> =>
 }
 
 export const updateUserRole = async (userId: string, role: ManagedUserRole, companyId?: string | null) => {
-  const userRef = doc(db, 'profiles', userId)
   const updates: Record<string, unknown> = {
     role,
     updatedAt: serverTimestamp(),
@@ -215,20 +276,21 @@ export const updateUserRole = async (userId: string, role: ManagedUserRole, comp
   if (typeof companyId !== 'undefined') {
     updates.companyId = companyId
   }
-  await updateDoc(userRef, updates)
+  await upsertUserMirrors(userId, updates)
 }
 
 export const updateMembershipStatus = async (userId: string, membershipStatus: MembershipStatus) => {
-  const userRef = doc(db, 'profiles', userId)
-  await updateDoc(userRef, {
+  await upsertUserMirrors(userId, {
     membershipStatus,
     updatedAt: serverTimestamp(),
   })
 }
 
 export const deleteUserAccount = async (userId: string) => {
-  const userRef = doc(db, 'profiles', userId)
-  await deleteDoc(userRef)
+  await Promise.all([
+    deleteDoc(doc(db, 'profiles', userId)),
+    deleteDoc(doc(db, 'users', userId)),
+  ])
 }
 
 export const bulkUpdateRole = async (userIds: string[], role: ManagedUserRole) => {
@@ -279,7 +341,7 @@ export const assignRoleToUser = async (
     payload.notes = notes
   }
 
-  await updateDoc(doc(db, 'profiles', userId), payload)
+  await upsertUserMirrors(userId, payload)
 
   await addDoc(notificationsCollection, {
     user_id: userId,
@@ -296,7 +358,7 @@ export const assignRoleToUser = async (
 export const updateUser = async (userId: string, updates: Partial<ManagedUserRecord>) => {
   const payload = { ...updates }
   delete (payload as { id?: string }).id
-  await updateDoc(doc(db, 'profiles', userId), {
+  await upsertUserMirrors(userId, {
     ...payload,
     updatedAt: serverTimestamp(),
   })

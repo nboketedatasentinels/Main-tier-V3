@@ -4,18 +4,11 @@ import {
   fetchEngagementTrendSeries,
   fetchRecentActivities,
 } from '@/services/userManagementService'
-import { AdminDataError, toAdminDataError } from './adminErrors'
-
-const assertAdminAccess = (isAdmin?: boolean) => {
-  if (!isAdmin) {
-    throw new AdminDataError('Admin access required.', 'permission-denied')
-  }
-}
+import { toAdminDataError } from './adminErrors'
 
 export type EngagementAvailability = 'ready' | 'no_activity' | 'not_enabled'
 
-export const fetchAdminEngagementSnapshot = async (isAdmin?: boolean) => {
-  assertAdminAccess(isAdmin)
+export const fetchAdminEngagementSnapshot = async () => {
   try {
     const [roster, trends] = await Promise.all([
       fetchEngagementRoster(),
@@ -38,8 +31,7 @@ export const fetchAdminEngagementSnapshot = async (isAdmin?: boolean) => {
   }
 }
 
-export const fetchAdminEngagementHistory = async (isAdmin: boolean | undefined, userId: string) => {
-  assertAdminAccess(isAdmin)
+export const fetchAdminEngagementHistory = async (userId: string) => {
   try {
     return await fetchEngagementHistory(userId)
   } catch (error) {
@@ -47,8 +39,7 @@ export const fetchAdminEngagementHistory = async (isAdmin: boolean | undefined, 
   }
 }
 
-export const fetchAdminRecentActivities = async (isAdmin: boolean | undefined, userId: string) => {
-  assertAdminAccess(isAdmin)
+export const fetchAdminRecentActivities = async (userId: string) => {
   try {
     return await fetchRecentActivities(userId)
   } catch (error) {

@@ -2,144 +2,181 @@ import {
   Badge,
   Box,
   Button,
-  ButtonGroup,
   Flex,
   HStack,
   Icon,
+  IconButton,
   Spinner,
   Stack,
   Text,
   VStack,
 } from '@chakra-ui/react'
-import { AlertCircle, Bell, CheckCircle2, Mail, MessageCircle } from 'lucide-react'
-import { useEffect, useMemo, useState } from 'react'
+import {
+  BellRing,
+  CheckCheck,
+  MessageCircle,
+  MessageSquare,
+  ShieldAlert,
+  Sparkles,
+  Star,
+  Trophy,
+  UserCheck,
+  X,
+} from 'lucide-react'
+import { useEffect, useState } from 'react'
 import { useAuth } from '@/hooks/useAuth'
 import {
-  handleNotificationAction,
   listenToUserNotifications,
   markAllNotificationsRead,
   markNotificationRead,
 } from '@/services/notificationService'
-import { NotificationRecord, NotificationType } from '@/types/notifications'
+import { NotificationRecord } from '@/types/notifications'
+import { formatDistanceToNow } from 'date-fns'
+import { useNavigate } from 'react-router-dom'
 
-const categoryLabels: Record<string, string> = {
-  all: 'All',
-  action_required: 'Action Required',
-  important_updates: 'Important Updates',
-  mentions: 'Mentions',
-  system_alerts: 'System Alerts',
-  other: 'Other',
+const notificationIcon = (type: NotificationRecord['type']) => {
+  switch (type) {
+    case 'challenge_request':
+    case 'challenge_invite':
+    case 'challenge_response':
+      return Trophy
+    case 'session_request':
+    case 'mentee_checkin':
+      return UserCheck
+    case 'direct_message':
+    case 'mention':
+      return MessageCircle
+    case 'important_update':
+    case 'product_update':
+    case 'progress_report':
+    case 'engagement_alert':
+    case 'intervention_reminder':
+    case 'escalation_notice':
+      return BellRing
+    case 'system_alert':
+    case 'maintenance':
+    case 'downtime':
+      return ShieldAlert
+    case 'milestone':
+    case 'achievement':
+    case 'badge_awarded':
+      return Star
+    default:
+      return MessageSquare
+  }
 }
 
-const notificationCategoryMap: Record<NotificationType, string> = {
-  challenge_request: 'action_required',
-  challenge_invite: 'action_required',
-  challenge_response: 'action_required',
-  session_request: 'action_required',
-  task_due: 'action_required',
-  direct_message: 'mentions',
-  mention: 'mentions',
-  system_alert: 'system_alerts',
-  maintenance: 'system_alerts',
-  downtime: 'system_alerts',
-  milestone: 'important_updates',
-  achievement: 'important_updates',
-  important_update: 'important_updates',
-  product_update: 'important_updates',
-  engagement_alert: 'system_alerts',
-  intervention_reminder: 'system_alerts',
-  escalation_notice: 'system_alerts',
-  system_event: 'system_alerts',
-  progress_report: 'important_updates',
-  mentee_checkin: 'important_updates',
-  unknown: 'other',
-}
-
-const typeLabels: Partial<Record<NotificationType, string>> = {
-  challenge_request: 'Challenge request',
-  session_request: 'Session request',
-  direct_message: 'Direct message',
-  mention: 'Mention',
-  system_alert: 'System alert',
-}
-
-const statusBadge = (notification: NotificationRecord) => {
-  if (notification.action_response === 'accepted') {
-    return (
-      <Badge colorScheme="green" variant="subtle">
-        Accepted
-      </Badge>
-    )
-  }
-  if (notification.action_response === 'declined') {
-    return (
-      <Badge colorScheme="red" variant="subtle">
-        Declined
-      </Badge>
-    )
-  }
-  if (notification.action_response === 'acknowledged') {
-    return (
-      <Badge colorScheme="blue" variant="subtle">
-        Acknowledged
-      </Badge>
-    )
-  }
-  return null
+const formatTimestamp = (value?: unknown): string => {
+  if (!value) return ''
+  const date =
+    typeof value === 'object' && value && 'toDate' in (value as Record<string, unknown>)
+      ? (value as { toDate: () => Date }).toDate()
+      : new Date(String(value))
+  if (Number.isNaN(date.getTime())) return ''
+  return formatDistanceToNow(date, { addSuffix: true })
 }
 
 const NotificationCard = ({
   notification,
   onMarkRead,
-  onAction,
+  onOpenLink,
 }: {
   notification: NotificationRecord
   onMarkRead: () => void
-  onAction: (action: NotificationRecord['action_response']) => void
+  onOpenLink?: (actionUrl: string) => void
 }) => {
-  const category = notificationCategoryMap[notification.type] || 'other'
   const isRead = notification.is_read || notification.read
+  const timestamp = formatTimestamp(notification.created_at)
+  const actionUrl = typeof notification.metadata?.actionUrl === 'string' ? notification.metadata.actionUrl : null
+
   return (
     <Box
       borderWidth="1px"
-      borderColor={isRead ? 'border.subtle' : 'accent.purpleBorder'}
-      bg={isRead ? 'surface.default' : 'accent.purpleSubtle'}
+      borderColor="border.control"
+      borderRadius="lg"
+      bg="white"
       p={4}
-      rounded="lg"
-      _hover={{ shadow: 'sm' }}
+      transition="all 0.15s ease"
+      _hover={{
+        shadow: 'sm',
+        borderColor: 'border.control',
+      }}
     >
       <HStack align="start" spacing={4}>
-        <Icon as={isRead ? CheckCircle2 : Bell} color={isRead ? 'text.muted' : 'brand.primary'} boxSize={5} />
-        <VStack align="start" spacing={2} flex={1}>
-          <HStack spacing={3} align="center">
-            <Badge colorScheme={isRead ? 'gray' : 'purple'}>{categoryLabels[category]}</Badge>
-            {!isRead && <Badge colorScheme="purple">New</Badge>}
-            {notification.type === 'direct_message' && <Icon as={MessageCircle} boxSize={4} />}
-            {notification.type === 'system_alert' && <Icon as={AlertCircle} boxSize={4} />}
-            {notification.type === 'important_update' && <Icon as={Mail} boxSize={4} />}
+        {/* Left: Contextual Icon */}
+        <Box
+          bg="gray.100"
+          color="gray.500"
+          borderRadius="full"
+          p={2.5}
+          display="flex"
+          alignItems="center"
+          justifyContent="center"
+          flexShrink={0}
+        >
+          <Icon as={notificationIcon(notification.type)} boxSize={5} />
+        </Box>
+
+        {/* Center: Title + Description + Timestamp */}
+        <Stack spacing={1} flex={1} minW={0}>
+          <HStack spacing={2} align="center">
+            {!isRead && (
+              <Box
+                w={2}
+                h={2}
+                borderRadius="full"
+                bg="brand.primary"
+                flexShrink={0}
+              />
+            )}
+            <Text
+              fontWeight={isRead ? 'medium' : 'semibold'}
+              fontSize="sm"
+              color="gray.900"
+              noOfLines={1}
+            >
+              {notification.title || 'Notification'}
+            </Text>
           </HStack>
-          <Text fontWeight="bold" color="text.primary">
-            {notification.title || typeLabels[notification.type] || 'Notification'}
+
+          <Text color="gray.600" fontSize="sm" noOfLines={2}>
+            {notification.message}
           </Text>
-          <Text color="text.secondary">{notification.message}</Text>
-          <HStack spacing={2}>{statusBadge(notification)}</HStack>
-          <HStack spacing={2}>
-            <Button size="sm" variant="ghost" colorScheme="purple" onClick={onMarkRead}>
-              Mark as read
-            </Button>
-            {['challenge_request', 'session_request'].includes(notification.type) && (
-              <ButtonGroup size="sm" variant="solid" colorScheme="purple">
-                <Button onClick={() => onAction('accepted')}>Accept</Button>
-                <Button onClick={() => onAction('declined')}>Decline</Button>
-              </ButtonGroup>
-            )}
-            {notification.type === 'system_alert' && (
-              <Button size="sm" onClick={() => onAction('acknowledged')} colorScheme="blue" variant="outline">
-                Acknowledge
+
+          {actionUrl && onOpenLink && (
+            <HStack pt={1}>
+              <Button
+                size="xs"
+                variant="link"
+                color="brand.primary"
+                onClick={() => onOpenLink(actionUrl)}
+              >
+                View details
               </Button>
-            )}
-          </HStack>
-        </VStack>
+            </HStack>
+          )}
+
+          {timestamp && (
+            <Text color="text.muted" fontSize="xs" mt={1}>
+              {timestamp}
+            </Text>
+          )}
+        </Stack>
+
+        {/* Right: Dismiss/Mark-as-read action */}
+        <IconButton
+          aria-label={isRead ? 'Dismiss' : 'Mark as read'}
+          icon={isRead ? <X size={16} /> : <CheckCheck size={16} />}
+          variant="ghost"
+          size="sm"
+          color="text.muted"
+          _hover={{
+            color: 'gray.600',
+            bg: 'gray.100',
+          }}
+          onClick={onMarkRead}
+          flexShrink={0}
+        />
       </HStack>
     </Box>
   )
@@ -147,9 +184,9 @@ const NotificationCard = ({
 
 export const NotificationsList = () => {
   const { user } = useAuth()
+  const navigate = useNavigate()
   const [notifications, setNotifications] = useState<NotificationRecord[]>([])
   const [loading, setLoading] = useState(true)
-  const [category, setCategory] = useState<string>('all')
 
   useEffect(() => {
     if (!user) return
@@ -163,23 +200,25 @@ export const NotificationsList = () => {
     return () => unsubscribe()
   }, [user])
 
-  const filtered = useMemo(() => {
-    if (category === 'all') return notifications
-    return notifications.filter((notification) => {
-      const bucket = notificationCategoryMap[notification.type] || 'other'
-      return bucket === category
-    })
-  }, [category, notifications])
+  const unreadCount = notifications.filter((n) => !n.is_read && !n.read).length
 
   const handleMarkRead = async (id: string) => {
     await markNotificationRead(id)
   }
 
-  const handleAction = async (
-    notification: NotificationRecord,
-    action: NotificationRecord['action_response'],
-  ) => {
-    await handleNotificationAction(notification, action)
+  const handleOpenLink = async (notification: NotificationRecord, actionUrl: string) => {
+    try {
+      await markNotificationRead(notification.id)
+    } catch (error) {
+      console.error('[NotificationsList] Failed to mark notification read before navigation', error)
+    }
+
+    if (actionUrl.startsWith('/')) {
+      navigate(actionUrl)
+      return
+    }
+
+    window.open(actionUrl, '_blank', 'noopener,noreferrer')
   }
 
   const handleMarkAll = async () => {
@@ -189,44 +228,60 @@ export const NotificationsList = () => {
 
   return (
     <Stack spacing={4}>
+      {/* Simplified Header */}
       <Flex justify="space-between" align="center">
-        <Text fontSize="lg" fontWeight="bold">
-          Notifications
-        </Text>
-        <HStack>
-          {Object.entries(categoryLabels).map(([key, label]) => (
-            <Button
-              key={key}
-              size="sm"
-              variant={category === key ? 'solid' : 'outline'}
-              colorScheme="purple"
-              onClick={() => setCategory(key)}
+        <HStack spacing={2}>
+          <Text fontSize="lg" fontWeight="semibold" color="gray.900">
+            Notifications
+          </Text>
+          {unreadCount > 0 && (
+            <Badge
+              bg="brand.primary"
+              color="white"
+              borderRadius="full"
+              fontSize="xs"
+              px={2}
             >
-              {label}
-            </Button>
-          ))}
-          <Button size="sm" colorScheme="purple" variant="outline" onClick={handleMarkAll}>
-            Mark all as read
-          </Button>
+              {unreadCount}
+            </Badge>
+          )}
         </HStack>
+        <Text
+          as="button"
+          fontSize="sm"
+          color="gray.500"
+          cursor="pointer"
+          _hover={{ color: 'brand.primary', textDecoration: 'underline' }}
+          onClick={handleMarkAll}
+        >
+          Mark all as read
+        </Text>
       </Flex>
 
+      {/* Notification List */}
       {loading ? (
         <Flex justify="center" py={8}>
-          <Spinner color="purple.500" />
+          <HStack spacing={2}>
+            <Spinner color="text.muted" size="sm" />
+            <Text color="gray.500" fontSize="sm">Loading...</Text>
+          </HStack>
         </Flex>
-      ) : filtered.length === 0 ? (
-        <Box p={6} textAlign="center" borderWidth="1px" rounded="md" borderColor="gray.100">
-          <Text color="gray.600">No notifications yet.</Text>
-        </Box>
+      ) : notifications.length === 0 ? (
+        <VStack py={8} spacing={2} color="gray.500">
+          <Sparkles size={18} />
+          <Text fontWeight="medium" fontSize="sm">You're all caught up</Text>
+          <Text fontSize="xs" textAlign="center">
+            No notifications to show.
+          </Text>
+        </VStack>
       ) : (
-        <Stack spacing={3}>
-          {filtered.map((notification) => (
+        <Stack spacing={2}>
+          {notifications.map((notification) => (
             <NotificationCard
               key={notification.id}
               notification={notification}
               onMarkRead={() => handleMarkRead(notification.id)}
-              onAction={(action) => handleAction(notification, action)}
+              onOpenLink={(actionUrl) => handleOpenLink(notification, actionUrl)}
             />
           ))}
         </Stack>

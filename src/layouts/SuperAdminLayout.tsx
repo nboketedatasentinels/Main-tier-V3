@@ -22,11 +22,14 @@ import {
   VStack,
   useBreakpointValue,
   useDisclosure,
+  useToast,
 } from '@chakra-ui/react'
 import { LogOut, Menu as MenuIcon, Shield, Sparkles, X } from 'lucide-react'
 import { NotificationDropdown } from '@/components/notifications/NotificationDropdown'
 import { useAuth } from '@/hooks/useAuth'
 import { buildCommonAccountItems, buildSuperAdminNavItems, NavigationItem, NavigationSection } from '@/utils/navigationItems'
+
+const APP_VIEWPORT_HEIGHT = { base: '100dvh', md: '100vh' } as const
 
 interface SuperAdminLayoutProps {
   children: React.ReactNode
@@ -70,7 +73,14 @@ const SidebarNav = ({
                 _hover={{ bg: isActive ? '#3D0C69' : 'brand.primaryMuted' }}
                 onClick={() => onNavigate?.(item.key)}
               >
-                {item.label}
+                <HStack justify="space-between" flex="1">
+                  <Text>{item.label}</Text>
+                  {typeof item.badgeCount === 'number' && item.badgeCount > 0 && (
+                    <Badge colorScheme="red" borderRadius="full">
+                      {item.badgeCount}
+                    </Badge>
+                  )}
+                </HStack>
               </Button>
             )
           })}
@@ -110,15 +120,29 @@ export const SuperAdminLayout: React.FC<SuperAdminLayoutProps> = ({
   navSections,
   subtitle = 'Platform Control Center',
 }) => {
-  const { signOut } = useAuth()
+  const { signOut, signingOut } = useAuth()
+  const toast = useToast()
   const sections = useMemo(() => navSections || buildSuperAdminNavItems(), [navSections])
   const accountItems = useMemo(() => buildCommonAccountItems(), [])
   const drawer = useDisclosure()
   const isMobile = useBreakpointValue({ base: true, lg: false })
 
+  const handleLogout = async () => {
+    const result = await signOut()
+    if (result.error) {
+      toast({
+        title: 'Logout failed',
+        description: result.error.message,
+        status: 'error',
+        duration: 5000,
+        isClosable: true,
+      })
+    }
+  }
+
   const handleAccountNavigate = (key: string) => {
     if (key === 'logout') {
-      signOut()
+      handleLogout()
       return
     }
 
@@ -153,7 +177,7 @@ export const SuperAdminLayout: React.FC<SuperAdminLayoutProps> = ({
   )
 
   return (
-    <Flex minH="100vh" h="100vh" bg="brand.accent" overflow="hidden">
+    <Flex minH={APP_VIEWPORT_HEIGHT} h={APP_VIEWPORT_HEIGHT} bg="brand.accent" overflow="hidden">
       <Box
         as="nav"
         w={{ base: '0', lg: '280px' }}
@@ -162,7 +186,7 @@ export const SuperAdminLayout: React.FC<SuperAdminLayoutProps> = ({
         borderColor="brand.border"
         display={{ base: 'none', lg: 'flex' }}
         flexDirection="column"
-        h="100vh"
+        h={APP_VIEWPORT_HEIGHT}
         overflowY="auto"
         p={5}
         gap={6}
@@ -173,7 +197,9 @@ export const SuperAdminLayout: React.FC<SuperAdminLayoutProps> = ({
           variant="ghost"
           justifyContent="flex-start"
           color="brand.text"
-          onClick={() => signOut()}
+          onClick={handleLogout}
+          isLoading={signingOut}
+          isDisabled={signingOut}
           mt="auto"
         >
           Logout
@@ -209,7 +235,7 @@ export const SuperAdminLayout: React.FC<SuperAdminLayoutProps> = ({
         </DrawerContent>
       </Drawer>
 
-      <Flex flex="1" direction="column" minW={0} h="100vh" overflow="hidden">
+      <Flex flex="1" direction="column" minW={0} h={APP_VIEWPORT_HEIGHT} overflow="hidden" minH={0}>
         <Flex
           px={{ base: 4, md: 6, lg: 10 }}
           py={4}
@@ -247,8 +273,16 @@ export const SuperAdminLayout: React.FC<SuperAdminLayoutProps> = ({
           <HStack spacing={3} align="center">
             <NotificationDropdown />
             <Menu>
-              <MenuButton as={Button} leftIcon={<Avatar size="sm" name={adminName} src={avatarUrl} />} variant="outline">
-                <Text>{adminName}</Text>
+              <MenuButton
+                as={Button}
+                leftIcon={<Avatar size="sm" name={adminName} src={avatarUrl} />}
+                variant="outline"
+                size="sm"
+                px={{ base: 2, md: 3 }}
+              >
+                <Text display={{ base: 'none', md: 'block' }} noOfLines={1} maxW="180px">
+                  {adminName}
+                </Text>
               </MenuButton>
               <MenuList>
                 {accountItems.map((item) => (
@@ -256,7 +290,7 @@ export const SuperAdminLayout: React.FC<SuperAdminLayoutProps> = ({
                     {item.label}
                   </MenuItem>
                 ))}
-                <MenuItem icon={<Icon as={LogOut} />} onClick={() => signOut()}>
+                <MenuItem icon={<Icon as={LogOut} />} onClick={handleLogout} isDisabled={signingOut}>
                   Logout
                 </MenuItem>
               </MenuList>

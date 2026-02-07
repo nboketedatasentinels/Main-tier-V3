@@ -1,17 +1,14 @@
-import React, { useEffect, useMemo, useState } from 'react'
+import React, { useEffect, useMemo, useRef, useState } from 'react'
 import { useToast } from '@chakra-ui/react'
 import { useAuth } from '@/hooks/useAuth'
 import { SuperAdminLayout } from '@/layouts/SuperAdminLayout'
 import { OverviewPage } from '@/pages/super-admin/OverviewPage'
 import { OrganizationManagementPage } from '@/pages/super-admin/OrganizationManagementPage'
-import { PlatformConfigurationPage } from '@/pages/super-admin/PlatformConfigurationPage'
 import { ReportsAnalyticsPage } from '@/pages/super-admin/ReportsAnalyticsPage'
-import { SecurityAuditPage } from '@/pages/super-admin/SecurityAuditPage'
-import { SystemSettingsPage } from '@/pages/super-admin/SystemSettingsPage'
 import { UserManagementPage } from '@/pages/super-admin/UserManagementPage'
 import { AdminOversightPage } from '@/pages/super-admin/AdminOversightPage'
+import { ApprovalCenterPage } from '@/pages/super-admin/ApprovalCenterPage'
 import {
-  listenToAdminActivityLog,
   listenToDashboardMetrics,
   listenToEngagementRiskAggregates,
   listenToRegistrationTrend,
@@ -22,7 +19,6 @@ import {
   listenToVerificationRequests,
 } from '@/services/superAdminService'
 import {
-  AdminActivityLogEntry,
   EngagementRiskAggregate,
   RegistrationRecord,
   SuperAdminDashboardMetrics,
@@ -33,6 +29,8 @@ import {
 import { RiskLevel, RiskReason } from '@/components/admin/RiskAnalysisCard'
 import { useAllUpgradeRequests } from '@/hooks/admin/useAdminUpgradeRequests'
 import type { AdminHealthItem } from '@/components/admin/AdminDataHealthPanel'
+import { useAdminNotifications } from '@/hooks/useAdminNotifications'
+import { buildSuperAdminNavItems } from '@/utils/navigationItems'
 
 type TrendPoint = { label: string; value: number }
 
@@ -52,7 +50,6 @@ export const SuperAdminDashboard: React.FC = () => {
 
   const [activePage, setActivePage] = useState<string>('overview')
   const [metrics, setMetrics] = useState<SuperAdminDashboardMetrics>(defaultMetrics)
-  const [activityLog, setActivityLog] = useState<AdminActivityLogEntry[]>([])
   const [riskAggregate, setRiskAggregate] = useState<EngagementRiskAggregate>({ total: 0, riskBuckets: {} })
   const [registrations, setRegistrations] = useState<RegistrationRecord[]>([])
   const [verificationRequests, setVerificationRequests] = useState<VerificationRequest[]>([])
@@ -64,6 +61,7 @@ export const SuperAdminDashboard: React.FC = () => {
   const [refreshIndex, setRefreshIndex] = useState(0)
   const [lastEngagementSuccessAt, setLastEngagementSuccessAt] = useState<Date | null>(null)
   const [lastUpgradeSuccessAt, setLastUpgradeSuccessAt] = useState<Date | null>(null)
+  const [lastUpgradeNotificationId, setLastUpgradeNotificationId] = useState<string | null>(null)
 
   const [registrationTrend, setRegistrationTrend] = useState<TrendPoint[]>([])
   const [userGrowthTrend, setUserGrowthTrend] = useState<TrendPoint[]>([])
@@ -73,12 +71,43 @@ export const SuperAdminDashboard: React.FC = () => {
     error: upgradeRequestsError,
     refetch: refetchUpgradeRequests,
   } = useAllUpgradeRequests()
+  const { notifications: upgradeNotifications, unreadCount: unreadUpgradeCount } = useAdminNotifications({
+    role: 'super_admin',
+    filters: ['upgrade_request'],
+  })
+
+  const coreStreamsLoadedRef = useRef({
+    metrics: false,
+    risk: false,
+    registrationTrend: false,
+    userGrowthTrend: false,
+  })
+
+  const sideStreamsLoadedRef = useRef({
+    verificationRequests: false,
+    registrations: false,
+    systemAlerts: false,
+    taskNotifications: false,
+  })
 
   useEffect(() => {
     setLoading(true)
     setError(null)
+    coreStreamsLoadedRef.current = {
+      metrics: false,
+      risk: false,
+      registrationTrend: false,
+      userGrowthTrend: false,
+    }
 
     const unsubscribers: Array<() => void> = []
+    const markCoreStreamLoaded = (key: keyof typeof coreStreamsLoadedRef.current) => {
+      if (coreStreamsLoadedRef.current[key]) return
+      coreStreamsLoadedRef.current[key] = true
+      if (Object.values(coreStreamsLoadedRef.current).every(Boolean)) {
+        setLoading(false)
+      }
+    }
     const handleError = (message: string, err: unknown) => {
       console.error(err)
       setError(message)
@@ -90,7 +119,7 @@ export const SuperAdminDashboard: React.FC = () => {
       listenToDashboardMetrics(
         (liveMetrics) => {
           setMetrics(liveMetrics)
-          setLoading(false)
+          markCoreStreamLoaded('metrics')
         },
         undefined,
         (err) => handleError('Unable to load super admin data from Firebase', err),
@@ -101,20 +130,9 @@ export const SuperAdminDashboard: React.FC = () => {
       listenToEngagementRiskAggregates(
         (aggregate) => {
           setRiskAggregate(aggregate)
-          setLoading(false)
+          markCoreStreamLoaded('risk')
         },
         (err) => handleError('Unable to load engagement risk data from Firebase', err),
-      ),
-    )
-
-    unsubscribers.push(
-      listenToAdminActivityLog(
-        (entries) => {
-          setActivityLog(entries)
-          setLoading(false)
-        },
-        10,
-        (err) => handleError('Unable to load admin activity from Firebase', err),
       ),
     )
 
@@ -122,7 +140,7 @@ export const SuperAdminDashboard: React.FC = () => {
       listenToRegistrationTrend(
         (trend) => {
           setRegistrationTrend(trend)
-          setLoading(false)
+          markCoreStreamLoaded('registrationTrend')
         },
         14,
         (err) => handleError('Unable to load registration trend from Firebase', err),
@@ -133,7 +151,7 @@ export const SuperAdminDashboard: React.FC = () => {
       listenToUserGrowthTrend(
         (trend) => {
           setUserGrowthTrend(trend)
-          setLoading(false)
+          markCoreStreamLoaded('userGrowthTrend')
         },
         30,
         (err) => handleError('Unable to load user growth trend from Firebase', err),
@@ -144,33 +162,48 @@ export const SuperAdminDashboard: React.FC = () => {
   }, [refreshIndex, toast])
 
   useEffect(() => {
+    setStreamsLoading(true)
+    sideStreamsLoadedRef.current = {
+      verificationRequests: false,
+      registrations: false,
+      systemAlerts: false,
+      taskNotifications: false,
+    }
+
     const unsubscribers: Array<() => void> = []
+    const markSideStreamLoaded = (key: keyof typeof sideStreamsLoadedRef.current) => {
+      if (sideStreamsLoadedRef.current[key]) return
+      sideStreamsLoadedRef.current[key] = true
+      if (Object.values(sideStreamsLoadedRef.current).every(Boolean)) {
+        setStreamsLoading(false)
+      }
+    }
 
     unsubscribers.push(
       listenToVerificationRequests((items) => {
         setVerificationRequests(items)
-        setStreamsLoading(false)
+        markSideStreamLoaded('verificationRequests')
       }),
     )
 
     unsubscribers.push(
       listenToRegistrations((items) => {
         setRegistrations(items)
-        setStreamsLoading(false)
+        markSideStreamLoaded('registrations')
       }),
     )
 
     unsubscribers.push(
       listenToSystemAlerts((items) => {
         setSystemAlerts(items)
-        setStreamsLoading(false)
+        markSideStreamLoaded('systemAlerts')
       }),
     )
 
     unsubscribers.push(
       listenToTaskNotifications((items) => {
         setTaskNotifications(items)
-        setStreamsLoading(false)
+        markSideStreamLoaded('taskNotifications')
       }),
     )
 
@@ -181,13 +214,40 @@ export const SuperAdminDashboard: React.FC = () => {
     if (!loading && !error) {
       setLastEngagementSuccessAt(new Date())
     }
-  }, [activityLog, error, loading, metrics, registrationTrend, riskAggregate, userGrowthTrend])
+  }, [error, loading, metrics, registrationTrend, riskAggregate, userGrowthTrend])
 
   useEffect(() => {
     if (!upgradeRequestsLoading && !upgradeRequestsError) {
       setLastUpgradeSuccessAt(new Date())
     }
   }, [upgradeRequestsError, upgradeRequestsLoading, upgradeRequests.length])
+
+  useEffect(() => {
+    if (!upgradeNotifications.length) return
+    const latest = upgradeNotifications[0]
+    if (latest.id === lastUpgradeNotificationId) return
+    if (!latest.is_read) {
+      toast({
+        title: 'New upgrade request',
+        description: latest.message,
+        status: 'info',
+        duration: 5000,
+        isClosable: true,
+      })
+    }
+    setLastUpgradeNotificationId(latest.id)
+  }, [lastUpgradeNotificationId, toast, upgradeNotifications])
+
+  const navSections = useMemo(() => {
+    const sections = buildSuperAdminNavItems()
+    return sections.map((section) => ({
+      ...section,
+      items: section.items.map((item) => ({
+        ...item,
+        badgeCount: item.key === 'approvals' ? unreadUpgradeCount : item.badgeCount,
+      })),
+    }))
+  }, [unreadUpgradeCount])
 
   const riskLevels: RiskLevel[] = useMemo(() => {
     return [
@@ -259,16 +319,12 @@ export const SuperAdminDashboard: React.FC = () => {
         return <OrganizationManagementPage adminName={adminName} adminId={profile?.id} />
       case 'users':
         return <UserManagementPage />
+      case 'approvals':
+        return <ApprovalCenterPage />
       case 'admin-oversight':
         return <AdminOversightPage adminName={adminName} adminId={profile?.id} />
-      case 'settings':
-        return <SystemSettingsPage />
-      case 'security':
-        return <SecurityAuditPage />
       case 'reports':
         return <ReportsAnalyticsPage metrics={metrics} registrationTrend={registrationTrend} userGrowthTrend={userGrowthTrend} />
-      case 'configuration':
-        return <PlatformConfigurationPage />
       case 'overview':
       default:
         return (
@@ -283,7 +339,6 @@ export const SuperAdminDashboard: React.FC = () => {
             registrations={registrations}
             verificationRequests={verificationRequests}
             taskNotifications={taskNotifications}
-            activityLog={activityLog}
             loading={loading}
             error={error}
             streamsLoading={streamsLoading}
@@ -300,6 +355,7 @@ export const SuperAdminDashboard: React.FC = () => {
       avatarUrl={profile?.avatarUrl}
       activeItem={activePage}
       onNavigate={handleNavigate}
+      navSections={navSections}
     >
       {renderPage()}
     </SuperAdminLayout>

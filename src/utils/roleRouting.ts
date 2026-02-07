@@ -1,5 +1,5 @@
 import { UserProfile, UserRole } from '@/types'
-import { normalizeRole } from './role'
+import { resolveRole } from './role'
 
 export { normalizeRole } from './role'
 
@@ -79,19 +79,19 @@ export const getLandingPathForRole = (
     return redirectUrl
   }
 
-  const normalizedRole = normalizeRole(role) ?? (profile?.mentorId ? 'mentor' : null)
+  const normalizedRole = resolveRole(role) ?? (profile?.mentorId ? 'mentor' : null)
   console.log('🔷 Normalized role:', normalizedRole, 'mentorIdHint:', profile?.mentorId)
 
   // Priority 2: Super Admin
   if (normalizedRole === 'super_admin') {
-    console.log('🔷 Super admin detected → /super-admin/dashboard')
-    return '/super-admin/dashboard'
+    console.log('🔷 Super admin detected → /admin/dashboard')
+    return '/admin/dashboard'
   }
 
-  // Priority 3: Partner/Admin (company admin)
-  if (normalizedRole === 'partner' || normalizedRole === 'admin') {
-    console.log('🔷 Admin detected → /admin/dashboard')
-    return '/admin/dashboard'
+  // Priority 3: Partner
+  if (normalizedRole === 'partner') {
+    console.log('🔷 Partner detected → /partner/dashboard')
+    return '/partner/dashboard'
   }
 
   // Priority 4: Mentor (conditional corporate)
@@ -122,7 +122,7 @@ export const getLandingPathForRole = (
     return '/ambassador/dashboard'
   }
 
-  // Priority 6: Learners (user / team_leader / free_user / paid_member)
+  // Priority 6: Learners (user / free_user / paid_member)
   if (profile) {
     const needsOnboarding =
       !profile.onboardingComplete && !profile.onboardingSkipped

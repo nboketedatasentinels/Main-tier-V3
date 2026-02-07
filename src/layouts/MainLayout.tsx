@@ -1,7 +1,9 @@
 import React, { useEffect, useMemo, useState } from 'react'
 import { Outlet, useLocation, useNavigate } from 'react-router-dom'
+import { RouteTransition } from '@/components/RouteTransition'
 import {
   Box,
+  Badge,
   Flex,
   VStack,
   HStack,
@@ -20,12 +22,14 @@ import {
   DrawerContent,
   DrawerCloseButton,
   DrawerBody,
+  Divider,
   InputGroup,
   InputLeftElement,
   Input,
   useToast,
 } from '@chakra-ui/react'
 import {
+  LucideIcon,
   Menu as MenuIcon,
   Target,
   Users,
@@ -42,12 +46,31 @@ import {
   CalendarDays,
 } from 'lucide-react'
 import { useAuth } from '@/hooks/useAuth'
+import { useCurrentWindow } from '@/hooks/useCurrentWindow'
 import { BuildVillageModal } from '@/components/modals/BuildVillageModal'
 import { ConfirmationWelcomeModal } from '@/components/modals/ConfirmationWelcomeModal'
+import { PlatformTour } from '@/components/tour/PlatformTour'
 import { NotificationDropdown } from '@/components/notifications/NotificationDropdown'
 import { isFreeUser as isFreeTierUser } from '@/utils/membership'
+import PointsNotificationListener from '@/components/PointsNotificationListener'
+
+interface NavItem {
+  label: string
+  path: string
+  icon: LucideIcon
+  isPrimary?: boolean
+  badge?: {
+    label: string
+  }
+}
+
+interface NavSection {
+  label: string
+  items: NavItem[]
+}
 
 const HEADER_HEIGHT = '72px'
+const APP_VIEWPORT_HEIGHT = { base: '100dvh', md: '100vh' } as const
 const sectionLabelStyles = {
   fontSize: 'xs',
   fontWeight: 'semibold',
@@ -56,13 +79,15 @@ const sectionLabelStyles = {
 } as const
 
 export const MainLayout: React.FC = () => {
-  const { profile, signOut } = useAuth()
+  const { profile, signOut, signingOut } = useAuth()
+  const windowContext = useCurrentWindow()
   const location = useLocation()
   const navigate = useNavigate()
   const { isOpen, onOpen, onClose } = useDisclosure()
   const toast = useToast()
   const [showVillagePrompt, setShowVillagePrompt] = useState(false)
   const [showWelcomeModal, setShowWelcomeModal] = useState(false)
+  const [showTour, setShowTour] = useState(false)
 
   const buildVillageKey = useMemo(() => (profile ? `t4l.buildVillage.${profile.id}` : null), [profile])
   const welcomeKey = useMemo(() => (profile ? `t4l.newUserWelcome.${profile.id}` : null), [profile])
@@ -77,20 +102,34 @@ export const MainLayout: React.FC = () => {
   useEffect(() => {
     if (!profile) return
 
-    if (isFreeUser && buildVillageKey) {
+    if (buildVillageKey) {
+      const hasVillageContext = Boolean(
+        profile.villageId ||
+          profile.corporateVillageId ||
+          profile.companyId ||
+          profile.companyCode ||
+          profile.organizationId,
+      )
+      const shouldPromptVillage =
+        isFreeUser && !hasVillageContext && location.pathname.startsWith('/app/')
+
       const stored = localStorage.getItem(buildVillageKey)
-      if (!stored) {
-        setShowVillagePrompt(true)
-      }
+      setShowVillagePrompt(Boolean(shouldPromptVillage && !stored))
     }
 
-    if (welcomeKey && location.pathname.startsWith('/app/weekly-glance')) {
+    // Support all dashboard routes, not just weekly-glance
+    if (
+      welcomeKey &&
+      (location.pathname.startsWith('/app/') ||
+        location.pathname.startsWith('/mentor/') ||
+        location.pathname.startsWith('/ambassador/'))
+    ) {
       const shouldWelcome = localStorage.getItem(welcomeKey)
       if (shouldWelcome === 'pending') {
         setShowWelcomeModal(true)
       }
     }
-  }, [buildVillageKey, location.pathname, profile, welcomeKey])
+  }, [buildVillageKey, isFreeUser, location.pathname, profile, welcomeKey])
 
   useEffect(() => {
     if (!welcomeKey) return
@@ -107,8 +146,16 @@ export const MainLayout: React.FC = () => {
   }, [welcomeKey])
 
   const handleSignOut = async () => {
-    await signOut()
-    navigate('/login')
+    const result = await signOut()
+    if (result.error) {
+      toast({
+        title: 'Logout failed',
+        description: result.error.message,
+        status: 'error',
+        duration: 5000,
+        isClosable: true,
+      })
+    }
   }
 
   const handleVillageCreated = () => {
@@ -131,15 +178,15 @@ export const MainLayout: React.FC = () => {
     setShowWelcomeModal(false)
   }
 
-  const navigationSections = useMemo(
+  const navigationSections = useMemo<NavSection[]>(
     () => [
       {
         label: 'MY JOURNEY',
         items: [
-          { label: 'Dashboard', path: '/app/weekly-glance', icon: CalendarDays },
-          { label: 'Weekly Checklist', path: '/app/weekly-checklist', icon: ClipboardList },
+          { label: 'Dashboard', path: '/app/weekly-glance', icon: CalendarDays, isPrimary: true },
+          { label: 'Weekly Checklist', path: '/app/weekly-checklist', icon: ClipboardList, isPrimary: true },
           { label: 'Leadership Board', path: '/app/leadership-board', icon: Trophy },
-          { label: 'My Courses', path: '/app/courses', icon: BookOpen },
+          { label: 'My Courses', path: '/app/courses', icon: BookOpen, badge: { label: '1 new' }, isPrimary: true },
           { label: 'Peer Connect', path: '/app/peer-connect', icon: Users },
           { label: 'Impact Log', path: '/app/impact', icon: Target },
           { label: 'Leadership Council', path: '/app/leadership-council', icon: Gavel },
@@ -148,7 +195,7 @@ export const MainLayout: React.FC = () => {
       {
         label: 'COMMUNITY',
         items: [
-          { label: 'Events', path: '/app/announcements', icon: Megaphone },
+          { label: 'Events', path: '/app/announcements', icon: Megaphone, badge: { label: '2' } },
           { label: 'Referral Rewards', path: '/app/referral-rewards', icon: Gift },
           { label: 'Global Book Club', path: '/app/book-club', icon: BookMarked },
           { label: 'Shameless Circle', path: '/app/shameless-circle', icon: Sparkles },
@@ -190,43 +237,94 @@ export const MainLayout: React.FC = () => {
     onClose()
   }
 
-  const NavContent = () => (
-    <VStack align="stretch" spacing={5} pt={4}>
-      {filteredNavigation.map(section => (
-        <Box key={section.label}>
-          <Text mb={2} {...sectionLabelStyles}>
-            {section.label}
-          </Text>
-          <VStack align="stretch" spacing={1}>
-            {section.items.map(item => {
-              const isActive = location.pathname.startsWith(item.path)
+  const NavContent = ({ variant }: { variant: 'sidebar' | 'drawer' }) => {
+    const isDark = variant === 'drawer'
+    const sectionTextColor = isDark ? 'whiteAlpha.700' : sectionLabelStyles.color
+    const activeBorder = isDark ? 'whiteAlpha.900' : 'brand.primary'
+    const activeText = isDark ? 'white' : 'brand.text'
+    const inactiveText = isDark ? 'whiteAlpha.900' : 'brand.subtleText'
+    const hoverBg = isDark ? 'whiteAlpha.100' : 'brand.primaryMuted'
+    const activeBg = isDark ? 'whiteAlpha.100' : 'brand.primaryMuted'
+    const dividerColor = isDark ? 'whiteAlpha.200' : 'brand.border'
+    const badgeStyles = isDark
+      ? { bg: 'whiteAlpha.200', color: 'whiteAlpha.900' }
+      : { bg: 'brand.primaryMuted', color: 'brand.text' }
 
-              return (
-                <Button
-                  key={item.path}
-                  leftIcon={<item.icon size={18} />}
-                  variant="ghost"
-                  justifyContent="flex-start"
-                  onClick={() => handleNavigation(item.path)}
-                  bg={isActive ? 'brand.primaryMuted' : 'transparent'}
-                  color={isActive ? 'brand.text' : 'brand.subtleText'}
-                  _hover={{ bg: 'brand.primaryMuted', color: 'brand.text' }}
-                  height="42px"
-                  fontWeight={isActive ? 'semibold' : 'medium'}
-                  fontSize="13px"
-                >
-                  {item.label}
-                </Button>
-              )
-            })}
-          </VStack>
-        </Box>
-      ))}
-    </VStack>
-  )
+    return (
+      <VStack align="stretch" spacing={6} pt={4}>
+        {filteredNavigation.map((section, sectionIndex) => (
+          <Box key={section.label}>
+            <Text
+              mb={3}
+              fontSize="xs"
+              fontWeight="semibold"
+              letterSpacing="0.12em"
+              textTransform="uppercase"
+              color={sectionTextColor}
+            >
+              {section.label}
+            </Text>
+            <VStack align="stretch" spacing={2}>
+              {section.items.map(item => {
+                const isActive = location.pathname.startsWith(item.path)
+                const fontWeight = isActive || item.isPrimary ? 'semibold' : 'medium'
+
+                // Add data-tour attributes for tour targets
+                const getTourAttribute = (path: string) => {
+                  if (path === '/app/weekly-glance') return 'dashboard'
+                  if (path === '/app/weekly-checklist') return 'weekly-checklist'
+                  if (path === '/app/impact') return 'impact-log'
+                  if (path === '/app/announcements') return 'community'
+                  return undefined
+                }
+
+                return (
+                  <Button
+                    key={item.path}
+                    variant="ghost"
+                    justifyContent="flex-start"
+                    onClick={() => handleNavigation(item.path)}
+                    bg={isActive ? activeBg : 'transparent'}
+                    color={isActive ? activeText : inactiveText}
+                    _hover={{ bg: hoverBg, color: activeText }}
+                    minH="48px"
+                    px={4}
+                    borderLeftWidth="4px"
+                    borderLeftColor={isActive ? activeBorder : 'transparent'}
+                    borderRadius="md"
+                    fontWeight={fontWeight}
+                    fontSize="sm"
+                    aria-current={isActive ? 'page' : undefined}
+                    data-tour={getTourAttribute(item.path)}
+                  >
+                    <HStack spacing={3} w="full" justify="space-between">
+                      <HStack spacing={3}>
+                        <Box color={isActive ? activeText : inactiveText}>
+                          <item.icon size={20} />
+                        </Box>
+                        <Text>{item.label}</Text>
+                      </HStack>
+                      {item.badge && (
+                        <Badge px={2} borderRadius="full" fontSize="xs" {...badgeStyles}>
+                          {item.badge.label}
+                        </Badge>
+                      )}
+                    </HStack>
+                  </Button>
+                )
+              })}
+            </VStack>
+            {sectionIndex < filteredNavigation.length - 1 && (
+              <Divider mt={6} borderColor={dividerColor} />
+            )}
+          </Box>
+        ))}
+      </VStack>
+    )
+  }
 
   return (
-    <Flex minH="100vh" h="100vh" bg="brand.accent" color="brand.text" overflow="hidden">
+    <Flex minH={APP_VIEWPORT_HEIGHT} h={APP_VIEWPORT_HEIGHT} bg="brand.accent" color="brand.text" overflow="hidden">
       {/* Desktop Sidebar */}
       <Box
         w={{ base: '0', md: '260px' }}
@@ -255,7 +353,7 @@ export const MainLayout: React.FC = () => {
 
           {/* Navigation */}
           <Box flex="1">
-            <NavContent />
+            <NavContent variant="sidebar" />
           </Box>
 
           {/* User Info */}
@@ -277,6 +375,8 @@ export const MainLayout: React.FC = () => {
               size="sm"
               onClick={handleSignOut}
               colorScheme="red"
+              isLoading={signingOut}
+              isDisabled={signingOut}
             >
               Sign Out
             </Button>
@@ -285,18 +385,21 @@ export const MainLayout: React.FC = () => {
       </Box>
 
       {/* Main Content */}
-      <Flex flex="1" direction="column" h="100vh" maxH="100vh" overflow="hidden">
+      <Flex flex="1" direction="column" h={APP_VIEWPORT_HEIGHT} maxH={APP_VIEWPORT_HEIGHT} overflow="hidden" minW={0} minH={0}>
         {/* Header */}
         <Flex
-          align="center"
+          align={{ base: 'flex-start', md: 'center' }}
           justify="space-between"
           px={{ base: 4, md: 8 }}
-          h={HEADER_HEIGHT}
+          minH={HEADER_HEIGHT}
           flexShrink={0}
           bg="white"
           borderBottom="1px solid"
           borderColor="brand.border"
           gap={3}
+          flexWrap={{ base: 'wrap', md: 'nowrap' }}
+          rowGap={{ base: 3, md: 0 }}
+          py={{ base: 3, md: 0 }}
         >
           <HStack spacing={3} display={{ base: 'flex', md: 'none' }}>
             <IconButton
@@ -308,7 +411,12 @@ export const MainLayout: React.FC = () => {
             <Text fontWeight="bold">T4</Text>
           </HStack>
 
-          <InputGroup maxW={{ base: '100%', md: '420px' }} flex={1}>
+          <InputGroup
+            maxW={{ base: '100%', md: '420px' }}
+            flex={1}
+            flexBasis={{ base: '100%', md: 'auto' }}
+            order={{ base: 3, md: 0 }}
+          >
             <InputLeftElement pointerEvents="none">
               <Search size={18} color="#6b7392" />
             </InputLeftElement>
@@ -320,7 +428,14 @@ export const MainLayout: React.FC = () => {
             />
           </InputGroup>
 
-          <HStack spacing={3} ml={{ base: 0, md: 4 }} align="center">
+          <HStack
+            spacing={3}
+            ml={{ base: 0, md: 4 }}
+            align="center"
+            order={{ base: 2, md: 0 }}
+            flex="1 1 auto"
+            justify={{ base: 'flex-end', md: 'flex-start' }}
+          >
             <NotificationDropdown />
             <Menu>
               <MenuButton as={Button} variant="ghost" px={0} _hover={{ bg: 'transparent' }}>
@@ -334,7 +449,7 @@ export const MainLayout: React.FC = () => {
               <MenuList bg="white" borderColor="brand.border">
                 <MenuItem onClick={() => navigate('/app/profile')}>Profile</MenuItem>
                 <MenuDivider />
-                <MenuItem onClick={handleSignOut}>Sign Out</MenuItem>
+                <MenuItem onClick={handleSignOut} isDisabled={signingOut}>Sign Out</MenuItem>
               </MenuList>
             </Menu>
           </HStack>
@@ -343,25 +458,68 @@ export const MainLayout: React.FC = () => {
         {/* Content */}
         <Box
           flex="1"
-          height={`calc(100vh - ${HEADER_HEIGHT})`}
           overflowY="auto"
           p={{ base: 4, md: 8 }}
+          minW={0}
+          minH={0}
         >
-          <Outlet />
+          <RouteTransition>
+            <Outlet />
+          </RouteTransition>
         </Box>
       </Flex>
 
       {/* Mobile Drawer */}
       <Drawer isOpen={isOpen} placement="left" onClose={onClose}>
-        <DrawerOverlay />
-        <DrawerContent bg="brand.deepPlum">
-          <DrawerCloseButton color="brand.textLight" />
-          <DrawerBody pt={12}>
-            <VStack align="stretch" spacing={4}>
-              <Text fontSize="2xl" fontWeight="bold" color="brand.gold" mb={4}>
-                T4L Menu
-              </Text>
-              <NavContent />
+        <DrawerOverlay bg="rgba(0, 0, 0, 0.65)" />
+        <DrawerContent bg="brand.deepPlum" color="white">
+          <DrawerCloseButton color="whiteAlpha.900" />
+          <DrawerBody pt={10} pb={6} display="flex" flexDirection="column">
+            <VStack align="stretch" spacing={6} flex="1">
+              <HStack spacing={3} align="center">
+                <Avatar size="sm" name={profile?.fullName} src={profile?.avatarUrl} bg="whiteAlpha.200" />
+                <Box>
+                  <Text fontWeight="semibold" color="white">
+                    {profile?.fullName || "User's name"}
+                  </Text>
+                  <Button
+                    variant="link"
+                    color="whiteAlpha.700"
+                    fontSize="sm"
+                    onClick={() => handleNavigation('/app/profile')}
+                  >
+                    View Profile
+                  </Button>
+                </Box>
+              </HStack>
+
+              <NavContent variant="drawer" />
+            </VStack>
+
+            <Divider borderColor="whiteAlpha.200" mt={6} />
+            <VStack align="stretch" spacing={2} pt={4}>
+              <Button
+                variant="ghost"
+                justifyContent="flex-start"
+                color="whiteAlpha.800"
+                fontSize="sm"
+                onClick={() => handleNavigation('/app/profile')}
+                minH="44px"
+              >
+                Settings
+              </Button>
+              <Button
+                variant="ghost"
+                justifyContent="flex-start"
+                color="whiteAlpha.700"
+                fontSize="sm"
+                onClick={handleSignOut}
+                isLoading={signingOut}
+                isDisabled={signingOut}
+                minH="44px"
+              >
+                Sign Out
+              </Button>
             </VStack>
           </DrawerBody>
         </DrawerContent>
@@ -378,7 +536,14 @@ export const MainLayout: React.FC = () => {
         onAcknowledge={handleWelcomeAcknowledged}
         firstName={profile?.firstName}
         role={profile?.role}
+        membershipStatus={profile?.membershipStatus}
+        windowContext={windowContext}
+        onStartTour={() => setShowTour(true)}
       />
+
+      <PlatformTour isOpen={showTour} onClose={() => setShowTour(false)} />
+
+      <PointsNotificationListener />
     </Flex>
   )
 }

@@ -1,5 +1,5 @@
 import { addDoc, collection, getDocs, query, serverTimestamp, where } from 'firebase/firestore'
-import { db } from '@/services/firebase'
+import { auth, db } from '@/services/firebase'
 import {
   COMPLEMENTARY_COURSES,
   COMPLEMENTARY_COURSE_IDS,
@@ -63,10 +63,23 @@ const buildComplementaryAssignmentLookup = async (userId: string) => {
   return lookup
 }
 
+const hasMatchingAuthUser = (userId: string) => {
+  const currentUserId = auth.currentUser?.uid
+  if (!currentUserId || currentUserId !== userId) {
+    console.warn('🟠 [CourseAssignment] Skipping complementary course assignment due to auth mismatch', {
+      userId,
+      currentUserId,
+    })
+    return false
+  }
+  return true
+}
+
 /**
  * Check whether any complementary course is already assigned to a user.
  */
 export const hasComplementaryCourseAssigned = async (userId: string): Promise<boolean> => {
+  if (!hasMatchingAuthUser(userId)) return false
   try {
     const lookup = await buildComplementaryAssignmentLookup(userId)
     return lookup.size > 0
@@ -85,6 +98,7 @@ export const hasComplementaryCourseAssigned = async (userId: string): Promise<bo
  * Assign complementary courses to a user if they are not already assigned.
  */
 export const assignComplementaryCoursesToUser = async (userId: string): Promise<boolean> => {
+  if (!hasMatchingAuthUser(userId)) return false
   try {
     const assignmentLookup = await buildComplementaryAssignmentLookup(userId)
     let assigned = false

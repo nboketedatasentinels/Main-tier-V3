@@ -17,13 +17,12 @@ import {
   Tooltip,
 } from '@chakra-ui/react'
 import { BookOpen, Clock, ExternalLink, Sparkles, ArrowUpRight, CheckCircle2, CalendarDays, Lock } from 'lucide-react'
-import { doc, getDoc } from 'firebase/firestore'
 import { Link as RouterLink } from 'react-router-dom'
 import { addDays } from 'date-fns'
 import { useAuth } from '@/hooks/useAuth'
 import { useOrganizationProgramCourses } from '@/hooks/useOrganizationProgramCourses'
 import { useUserCourseProgress } from '@/hooks/useUserCourseProgress'
-import { db } from '@/services/firebase'
+import { getCourseDocument, getCourseDocuments } from '@/services/courseService'
 import { canAccessCourse, isFreeUser } from '@/utils/membership'
 import {
   COURSE_DETAILS_MAPPING,
@@ -58,6 +57,17 @@ interface NormalizedCourse {
 
 const COMPLEMENTARY_COURSE_ID = 'transformational-leadership'
 
+const resolveOrganizationId = (profile: UserProfile | null): string | null => {
+  if (!profile) return null
+  const orgId = (profile as { organizationId?: string | null }).organizationId
+  if (orgId) return orgId
+  if (profile.companyId) return profile.companyId
+  if (profile.assignedOrganizations?.length === 1) {
+    return profile.assignedOrganizations[0]
+  }
+  return null
+}
+
 const COURSE_IMAGE_FILENAMES: Record<string, string> = {
   'AI Stacking 101': 'course-ai-stacking-101.avif',
   'The Art of Connection': 'course-art-of-connection.avif',
@@ -86,9 +96,9 @@ const formatStatus = (status?: string) => {
     .join(' ')
 }
 
-const getWeekDateRange = (cohortStartDate: Date, weekIndex: number) => {
+const getWeekDateRange = (cohortStartDate: Date, weekIndex: number, weeksPerBlock: number = 1) => {
   const startDate = addDays(cohortStartDate, weekIndex * 7)
-  const endDate = addDays(startDate, 7)
+  const endDate = addDays(startDate, weeksPerBlock * 7)
   return { startDate, endDate }
 }
 
@@ -103,13 +113,14 @@ const getWeekAvailabilityStatus = (params: {
   cohortStartDate: Date | null
   currentDate: Date
   weekIndex: number
+  weeksPerBlock?: number
 }) => {
-  const { cohortStartDate, currentDate, weekIndex } = params
+  const { cohortStartDate, currentDate, weekIndex, weeksPerBlock = 1 } = params
   if (!cohortStartDate) {
     return weekIndex === 0 ? 'current' : 'locked'
   }
 
-  const { startDate, endDate } = getWeekDateRange(cohortStartDate, weekIndex)
+  const { startDate, endDate } = getWeekDateRange(cohortStartDate, weekIndex, weeksPerBlock)
   if (currentDate < startDate) return 'locked'
   if (currentDate >= endDate) return 'completed'
   return 'current'
@@ -145,6 +156,28 @@ const buildCourseFromDoc = (courseId: string, data: Record<string, unknown>): No
   }
 }
 
+const buildCourseFromMapping = (courseId: string): NormalizedCourse | null => {
+  const normalized = courseId.trim().toLowerCase()
+  const entries = Object.entries(COURSE_DETAILS_MAPPING)
+  const entry =
+    entries.find(([, details]) => details.slug.trim().toLowerCase() === normalized) ||
+    entries.find(([title]) => title.trim().toLowerCase() === normalized)
+  if (!entry) return null
+
+  const [title, details] = entry
+  const metadata = COURSE_METADATA_MAPPING[title]
+
+  return {
+    id: details.slug,
+    title,
+    description: details.description,
+    link: details.link,
+    estimatedMinutes: metadata?.estimatedMinutes,
+    difficulty: metadata?.difficulty,
+    image: COURSE_IMAGE_FILENAMES[title],
+  }
+}
+
 const FreeTierCoursesPage: React.FC<{ userId?: string | null; profile: UserProfile | null }> = ({
   userId,
   profile,
@@ -161,12 +194,12 @@ const FreeTierCoursesPage: React.FC<{ userId?: string | null; profile: UserProfi
       try {
         setLoading(true)
         setError(null)
-        const courseRef = doc(db, 'courses', COMPLEMENTARY_COURSE_ID)
-        const courseSnap = await getDoc(courseRef)
+        const courseSnap = await getCourseDocument(COMPLEMENTARY_COURSE_ID)
         if (!courseSnap.exists()) {
+          const fallbackCourse = buildCourseFromMapping(COMPLEMENTARY_COURSE_ID)
           if (isActive) {
-            setCourse(null)
-            setError('The complementary course could not be found.')
+            setCourse(fallbackCourse)
+            setError(fallbackCourse ? null : 'The complementary course could not be found.')
           }
           return
         }
@@ -175,9 +208,10 @@ const FreeTierCoursesPage: React.FC<{ userId?: string | null; profile: UserProfi
         }
       } catch (fetchError) {
         console.error('Error loading free tier course', fetchError)
+        const fallbackCourse = buildCourseFromMapping(COMPLEMENTARY_COURSE_ID)
         if (isActive) {
-          setCourse(null)
-          setError('Unable to load the complementary course right now.')
+          setCourse(fallbackCourse)
+          setError(fallbackCourse ? null : 'Unable to load the complementary course right now.')
         }
       } finally {
         if (isActive) {
@@ -278,12 +312,12 @@ const FreeTierCoursesPage: React.FC<{ userId?: string | null; profile: UserProfi
             justify="center"
             py={12}
             border="1px solid"
-            borderColor="gray.100"
+            borderColor="border.control"
             borderRadius="2xl"
             bg="white"
             gap={3}
           >
-            <Icon as={BookOpen} boxSize={10} color="gray.300" />
+            <Icon as={BookOpen} boxSize={10} color="text.muted" />
             <Heading size="sm" color="gray.800">
               Course unavailable
             </Heading>
@@ -300,7 +334,7 @@ const FreeTierCoursesPage: React.FC<{ userId?: string | null; profile: UserProfi
               borderRadius="3xl"
               overflow="hidden"
               border="1px solid"
-              borderColor="gray.100"
+              borderColor="border.control"
               boxShadow="md"
             >
               <Box
@@ -404,16 +438,7 @@ const OrganizationCoursesPage: React.FC<{ userId?: string | null; profile: UserP
   userId,
   profile,
 }) => {
-  const organizationId = useMemo(() => {
-    if (!profile) return null
-    const orgId = (profile as { organizationId?: string | null }).organizationId
-    if (orgId) return orgId
-    if (profile.companyId) return profile.companyId
-    if (profile.assignedOrganizations?.length === 1) {
-      return profile.assignedOrganizations[0]
-    }
-    return null
-  }, [profile])
+  const organizationId = useMemo(() => resolveOrganizationId(profile), [profile])
 
   const { program, loading: programLoading } = useOrganizationProgramCourses(organizationId)
   const { loading: progressLoading } = useUserCourseProgress(userId)
@@ -436,20 +461,23 @@ const OrganizationCoursesPage: React.FC<{ userId?: string | null; profile: UserP
       try {
         setLoadingCourses(true)
         const orderedCourseIds = program.orderedCourseIds
-        const snapshots = await Promise.all(
-          orderedCourseIds.map(courseId => getDoc(doc(db, 'courses', courseId)))
-        )
+        const snapshots = await getCourseDocuments(orderedCourseIds)
 
-        const nextCourses: NormalizedCourse[] = []
         const nextCourseMap: Record<string, NormalizedCourse> = {}
-        snapshots.forEach(snap => {
-          if (!snap.exists()) {
+        snapshots.forEach((snap, index) => {
+          const requestedCourseId = orderedCourseIds[index] ?? snap.id
+          if (snap.exists()) {
+            const baseCourse = buildCourseFromDoc(snap.id, snap.data())
+            nextCourseMap[requestedCourseId] = baseCourse
+            nextCourseMap[baseCourse.id] = baseCourse
             return
           }
 
-          const baseCourse = buildCourseFromDoc(snap.id, snap.data())
-          nextCourses.push(baseCourse)
-          nextCourseMap[baseCourse.id] = baseCourse
+          const fallbackCourse = buildCourseFromMapping(requestedCourseId)
+          if (fallbackCourse) {
+            nextCourseMap[requestedCourseId] = fallbackCourse
+            nextCourseMap[fallbackCourse.id] = fallbackCourse
+          }
         })
 
         if (isActive) {
@@ -523,19 +551,36 @@ const OrganizationCoursesPage: React.FC<{ userId?: string | null; profile: UserP
       journeyTimelineDisplay === 'course-count'
         ? assignedCourseIds
         : Array.from({ length: durationWeeks }, (_, index) => assignmentList[index] || '')
+
     if (!displayAssignments.length) return []
+
+    const is6W = journeyType === '6W'
+    const weeksPerBlock = is6W ? 2 : 1
+
     return displayAssignments.map((courseId, index) => {
       const course = courseId ? courseMap[courseId] : undefined
+      const startWeekIndex = index * weeksPerBlock
+
       const availability = getWeekAvailabilityStatus({
         cohortStartDate: program.cohortStartDate,
         currentDate: now,
-        weekIndex: index,
+        weekIndex: startWeekIndex,
+        weeksPerBlock,
       })
-      const weekRange = program.cohortStartDate ? getWeekDateRange(program.cohortStartDate, index) : null
+
+      const weekRange = program.cohortStartDate
+        ? getWeekDateRange(program.cohortStartDate, startWeekIndex, weeksPerBlock)
+        : null
       const dateRange = weekRange ? formatWeekRange(weekRange.startDate, weekRange.endDate) : undefined
       const unlockDate = weekRange ? weekRange.startDate : null
+
+      const displayLabel = is6W
+        ? `Weeks ${startWeekIndex + 1}–${startWeekIndex + weeksPerBlock}`
+        : undefined
+
       return {
         weekNumber: index + 1,
+        displayLabel,
         courseId,
         course,
         availability,
@@ -543,7 +588,15 @@ const OrganizationCoursesPage: React.FC<{ userId?: string | null; profile: UserP
         unlockDate,
       }
     })
-  }, [program, totalWeeks, assignmentList, assignedCourseIds, courseMap, journeyTimelineDisplay])
+  }, [
+    program,
+    totalWeeks,
+    assignmentList,
+    assignedCourseIds,
+    courseMap,
+    journeyTimelineDisplay,
+    journeyType,
+  ])
 
   const timelineEntries = useMemo(() => {
     if (isWeeklyTimeline) {
@@ -557,6 +610,7 @@ const OrganizationCoursesPage: React.FC<{ userId?: string | null; profile: UserP
       ...entry,
       periodNumber: entry.monthNumber,
       periodLabel: 'month' as const,
+      displayLabel: undefined as string | undefined,
     }))
   }, [isWeeklyTimeline, monthlyProgramTimeline, weeklyProgramTimeline])
 
@@ -718,9 +772,10 @@ const OrganizationCoursesPage: React.FC<{ userId?: string | null; profile: UserP
                   >
                     <HStack justify="space-between" mb={2}>
                       <Badge colorScheme={statusColor} borderRadius="full">
-                        {entry.periodLabel === 'week'
-                          ? `Week ${entry.periodNumber}`
-                          : `Month ${entry.periodNumber}`}
+                        {entry.displayLabel ||
+                          (entry.periodLabel === 'week'
+                            ? `Week ${entry.periodNumber}`
+                            : `Month ${entry.periodNumber}`)}
                       </Badge>
                       <HStack spacing={1} color="gray.600">
                         <Icon
@@ -842,13 +897,243 @@ const OrganizationCoursesPage: React.FC<{ userId?: string | null; profile: UserP
   )
 }
 
+const PaidLibraryCoursesPage: React.FC<{ userId?: string | null; profile: UserProfile | null }> = ({
+  userId,
+  profile,
+}) => {
+  const { progressMap, loading: progressLoading } = useUserCourseProgress(userId)
+  const [courses, setCourses] = useState<NormalizedCourse[]>([])
+  const [loadingCourses, setLoadingCourses] = useState(true)
+  const [error, setError] = useState<string | null>(null)
+
+  const courseIds = useMemo(() => {
+    const ids = Object.values(COURSE_DETAILS_MAPPING).map(details => details.slug)
+    return Array.from(new Set(ids))
+  }, [])
+
+  useEffect(() => {
+    let isActive = true
+
+    const loadLibrary = async () => {
+      try {
+        setLoadingCourses(true)
+        setError(null)
+
+        const snapshots = await getCourseDocuments(courseIds)
+        const nextCourses: NormalizedCourse[] = []
+
+        snapshots.forEach((snap, index) => {
+          const courseId = courseIds[index]
+          if (snap.exists()) {
+            nextCourses.push(buildCourseFromDoc(snap.id, snap.data()))
+            return
+          }
+          const fallback = buildCourseFromMapping(courseId)
+          if (fallback) {
+            nextCourses.push(fallback)
+          }
+        })
+
+        if (isActive) {
+          nextCourses.sort((a, b) => a.title.localeCompare(b.title))
+          setCourses(nextCourses)
+        }
+      } catch (loadError) {
+        console.error('Error loading paid course library', loadError)
+        if (isActive) {
+          setCourses([])
+          setError('Unable to load the course library right now.')
+        }
+      } finally {
+        if (isActive) {
+          setLoadingCourses(false)
+        }
+      }
+    }
+
+    loadLibrary()
+
+    return () => {
+      isActive = false
+    }
+  }, [courseIds])
+
+  const coursesWithProgress = useMemo(() => {
+    return courses.map(course => ({
+      ...course,
+      progress: progressMap.get(course.id) ?? progressMap.get(course.title.trim().toLowerCase()),
+    }))
+  }, [courses, progressMap])
+
+  const overallLoading = loadingCourses || progressLoading
+
+  return (
+    <Stack spacing={8} py={2} as="section">
+      <Box
+        bgGradient="linear(to-r, purple.50, purple.100)"
+        borderRadius="3xl"
+        border="1px solid"
+        borderColor="purple.100"
+        p={{ base: 5, md: 8 }}
+        boxShadow="md"
+      >
+        <Flex direction={{ base: 'column', md: 'row' }} align={{ base: 'flex-start', md: 'center' }} gap={4}>
+          <Flex
+            bg="white"
+            borderRadius="full"
+            p={3}
+            border="1px solid"
+            borderColor="purple.100"
+            boxShadow="sm"
+          >
+            <Icon as={Sparkles} boxSize={7} color="purple.600" />
+          </Flex>
+          <Stack spacing={1} flex={1}>
+            <Heading size="lg" color="purple.900">
+              Explore the full course library
+            </Heading>
+            <Text color="purple.700" fontSize="md">
+              Browse all courses available with your membership.
+            </Text>
+            <HStack spacing={3} flexWrap="wrap">
+              <Badge colorScheme="purple" variant="subtle" borderRadius="full">
+                Premium access
+              </Badge>
+              <Text color="purple.700" fontSize="sm">
+                All courses are unlocked for your account.
+              </Text>
+            </HStack>
+          </Stack>
+        </Flex>
+      </Box>
+
+      {error && (
+        <Box borderWidth="1px" borderRadius="2xl" p={5} bg="white" boxShadow="sm">
+          <Heading size="sm" color="gray.800" mb={2}>
+            Unable to load courses
+          </Heading>
+          <Text color="gray.600" fontSize="sm">
+            {error}
+          </Text>
+        </Box>
+      )}
+
+      {overallLoading ? (
+        <Box bg="white" borderRadius="2xl" borderWidth="1px" p={6} boxShadow="sm">
+          <HStack spacing={3}>
+            <Spinner />
+            <Text color="gray.600">Loading your course library…</Text>
+          </HStack>
+        </Box>
+      ) : (
+        <Box bg="white" borderRadius="2xl" borderWidth="1px" p={{ base: 4, md: 6 }} boxShadow="sm">
+          <SimpleGrid columns={{ base: 1, md: 2, xl: 3 }} spacing={5}>
+            {coursesWithProgress.map(course => {
+              const hasLink = Boolean(course.link)
+              const hasAccess = canAccessCourse(profile, course.title, course.id)
+              const canOpen = hasAccess && hasLink
+              return (
+                <Box
+                  key={course.id}
+                  borderWidth="1px"
+                  borderRadius="2xl"
+                  p={5}
+                  bg="gray.50"
+                  borderColor="gray.200"
+                  _hover={{ borderColor: 'purple.200', boxShadow: 'md' }}
+                  transition="all 0.15s ease"
+                >
+                  <Stack spacing={3}>
+                    <Stack spacing={1}>
+                      <HStack justify="space-between" align="flex-start" spacing={3}>
+                        <Heading size="sm" color="gray.800">
+                          {course.title}
+                        </Heading>
+                        {course.difficulty && (
+                          <Badge colorScheme={badgeColor(course.difficulty)} borderRadius="full">
+                            {course.difficulty}
+                          </Badge>
+                        )}
+                      </HStack>
+                      <Text fontSize="sm" color="gray.600">
+                        {course.description}
+                      </Text>
+                    </Stack>
+
+                    <HStack spacing={4} flexWrap="wrap">
+                      {course.estimatedMinutes ? (
+                        <HStack spacing={1} color="gray.600">
+                          <Icon as={Clock} boxSize={4} />
+                          <Text fontSize="xs">{formatDuration(course.estimatedMinutes)}</Text>
+                        </HStack>
+                      ) : null}
+                    </HStack>
+
+                    {typeof course.progress === 'number' && (
+                      <Box>
+                        <Progress
+                          value={course.progress}
+                          colorScheme="purple"
+                          size="sm"
+                          borderRadius="full"
+                          aria-label={`${course.title} progress`}
+                        />
+                        <Text fontSize="xs" color="gray.500" mt={1}>
+                          {course.progress.toFixed(0)}% complete
+                        </Text>
+                      </Box>
+                    )}
+
+                    <Button
+                      as={canOpen ? 'a' : (RouterLink as React.ElementType)}
+                      href={canOpen ? course.link : undefined}
+                      to={canOpen ? undefined : '/upgrade'}
+                      target={canOpen ? '_blank' : undefined}
+                      rel={canOpen ? 'noopener noreferrer' : undefined}
+                      size="sm"
+                      colorScheme="purple"
+                      variant="solid"
+                      borderRadius="full"
+                      minW="140px"
+                      isDisabled={!hasLink}
+                      rightIcon={<ExternalLink size={16} />}
+                    >
+                      {hasLink ? (hasAccess ? 'Open course' : 'Upgrade to unlock') : 'Link unavailable'}
+                    </Button>
+                  </Stack>
+                </Box>
+              )
+            })}
+          </SimpleGrid>
+        </Box>
+      )}
+    </Stack>
+  )
+}
+
 export const MyCoursesPage: React.FC = () => {
-  const { user, profile } = useAuth()
+  const { user, profile, profileLoading, profileStatus } = useAuth()
+  const organizationId = useMemo(() => resolveOrganizationId(profile), [profile])
   const isFreeTierUser = useMemo(() => isFreeUser(profile), [profile])
 
-  if (isFreeTierUser) {
+  if (user && (profileLoading || profileStatus === 'loading')) {
+    return (
+      <Box bg="white" borderRadius="2xl" borderWidth="1px" p={6} boxShadow="sm">
+        <HStack spacing={3}>
+          <Spinner />
+          <Text color="gray.600">Loading your courses…</Text>
+        </HStack>
+      </Box>
+    )
+  }
+
+  if (!profile || isFreeTierUser) {
     return <FreeTierCoursesPage userId={user?.uid} profile={profile} />
   }
 
-  return <OrganizationCoursesPage userId={user?.uid} profile={profile} />
+  if (organizationId) {
+    return <OrganizationCoursesPage userId={user?.uid} profile={profile} />
+  }
+
+  return <PaidLibraryCoursesPage userId={user?.uid} profile={profile} />
 }
