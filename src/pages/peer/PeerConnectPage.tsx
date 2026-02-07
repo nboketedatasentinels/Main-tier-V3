@@ -1230,11 +1230,22 @@ export const PeerConnectPage: React.FC = () => {
                           </Text>
                           <Text fontSize="sm">
                             {matchPreferences.refreshPreference === 'disabled'
-                              ? 'Enable peer matching in your Privacy Settings to receive automatic weekly matches.'
+                              ? 'Peer matching is currently disabled.'
                               : matchPreferences.refreshPreference === 'on-demand'
                                 ? 'You have on-demand matching enabled. Matches are created when you request them.'
                                 : `Your next peer match will arrive automatically on ${WEEKDAY_LABELS[matchPreferences.preferredMatchDay]} ${matchWindow.nextRefreshAt ? `(${nextRefreshLabel})` : ''}.`}
                           </Text>
+                          {matchPreferences.refreshPreference === 'disabled' && (
+                            <Button
+                              as="a"
+                              href="/app/profile?tab=account"
+                              size="sm"
+                              colorScheme="purple"
+                              leftIcon={<Icon as={Users} w={4} h={4} />}
+                            >
+                              Enable in Account Settings
+                            </Button>
+                          )}
                           {matchPreferences.refreshPreference !== 'disabled' && matchPreferences.refreshPreference !== 'on-demand' && matchWindow.nextRefreshAt && (
                             <Box
                               border="1px solid"
