@@ -156,12 +156,34 @@ export const useOrganizationDetails = (organizationId?: string) => {
       }
 
       const orgKey = orgRecord.id || organizationId
+      const orgLeadership = (orgRecord as unknown as { leadership?: Record<string, unknown> }).leadership
+      const resolvedMentorId =
+        orgRecord.assignedMentorId ??
+        (typeof orgLeadership === 'object' && orgLeadership
+          ? ((orgLeadership as { assignedMentorId?: unknown }).assignedMentorId as string | null | undefined)
+          : null) ??
+        null
+      const resolvedAmbassadorId =
+        orgRecord.assignedAmbassadorId ??
+        (typeof orgLeadership === 'object' && orgLeadership
+          ? ((orgLeadership as { assignedAmbassadorId?: unknown }).assignedAmbassadorId as string | null | undefined)
+          : null) ??
+        null
+      const resolvedPartnerId =
+        orgRecord.transformationPartnerId ??
+        (typeof orgLeadership === 'object' && orgLeadership
+          ? ((orgLeadership as { transformationPartnerId?: unknown }).transformationPartnerId as
+              | string
+              | null
+              | undefined)
+          : null) ??
+        null
       const [userList, stats, mentorProfile, ambassadorProfile, partnerProfile] = await Promise.all([
         fetchOrganizationUsers(orgKey),
         fetchOrganizationEngagementStats(orgKey),
-        orgRecord.assignedMentorId ? fetchUserProfileById(orgRecord.assignedMentorId) : Promise.resolve(null),
-        orgRecord.assignedAmbassadorId ? fetchUserProfileById(orgRecord.assignedAmbassadorId) : Promise.resolve(null),
-        orgRecord.transformationPartnerId ? fetchUserProfileById(orgRecord.transformationPartnerId) : Promise.resolve(null),
+        resolvedMentorId ? fetchUserProfileById(resolvedMentorId) : Promise.resolve(null),
+        resolvedAmbassadorId ? fetchUserProfileById(resolvedAmbassadorId) : Promise.resolve(null),
+        resolvedPartnerId ? fetchUserProfileById(resolvedPartnerId) : Promise.resolve(null),
       ])
 
       const getDisplayName = (profile: typeof mentorProfile) => {
@@ -180,6 +202,9 @@ export const useOrganizationDetails = (organizationId?: string) => {
       setOrganization(
         buildDetailView({
           ...orgRecord,
+          assignedMentorId: resolvedMentorId,
+          assignedAmbassadorId: resolvedAmbassadorId,
+          transformationPartnerId: resolvedPartnerId,
           assignedMentorName: getDisplayName(mentorProfile),
           assignedMentorEmail: mentorProfile?.email ?? null,
           assignedAmbassadorName: getDisplayName(ambassadorProfile),

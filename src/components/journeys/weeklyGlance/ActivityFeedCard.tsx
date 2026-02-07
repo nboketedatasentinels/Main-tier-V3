@@ -18,7 +18,7 @@ interface ActivityFeedCardProps {
 const statusColorMap: Record<ActivityFeedStatus, string> = {
   complete: 'green.500',
   pending: 'yellow.500',
-  attention: 'gray.400',
+  attention: 'danger.DEFAULT',
 }
 
 const statusIconMap: Record<ActivityFeedStatus, typeof CheckCircle2> = {

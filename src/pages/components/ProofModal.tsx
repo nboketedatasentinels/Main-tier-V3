@@ -24,13 +24,19 @@ export const ProofModal = ({
   onChange: (patch: Partial<ProofModalState>) => void
   onSubmit: () => Promise<void>
 }) => {
+  const isResubmission = Boolean(state.rejectionReason)
   return (
     <Modal isOpen={state.isOpen} onClose={onClose} isCentered>
       <ModalOverlay />
       <ModalContent>
-        <ModalHeader>Submit proof for verification</ModalHeader>
+        <ModalHeader>{isResubmission ? 'Resubmit proof for verification' : 'Submit proof for verification'}</ModalHeader>
         <ModalCloseButton />
         <ModalBody>
+          {state.rejectionReason ? (
+            <Text mb={3} color="red.600" fontSize="sm">
+              Rejected: {state.rejectionReason}
+            </Text>
+          ) : null}
           <Text mb={3} color="gray.600">
             Add a link (Drive, Dropbox, Notion, screenshot URL) and optional notes. Admins will verify and award points.
           </Text>

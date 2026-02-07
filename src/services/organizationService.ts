@@ -11,7 +11,6 @@ import {
   increment,
   limit,
   onSnapshot,
-  orderBy,
   QuerySnapshot,
   query,
   runTransaction,
@@ -35,6 +34,7 @@ import {
   resolveJourneyType,
 } from '@/utils/journeyType'
 import { removeUndefinedFields } from '@/utils/firestore'
+import { COURSE_DETAILS_MAPPING } from '@/utils/courseMappings'
 import { inviteUsersBulk } from './invitationService'
 import {
   syncOrganizationPartnerChange,
@@ -238,11 +238,49 @@ export const determineClusterFromTeamSize = (teamSize?: number) => {
 }
 
 export const fetchAvailableCourses = async (): Promise<CourseOption[]> => {
-  const snapshot = await getDocs(query(coursesCollection, orderBy('title')))
-  return snapshot.docs.map((docSnap) => {
-    const data = docSnap.data() as { title?: string; description?: string }
-    return { id: docSnap.id, title: data.title || 'Untitled course', description: data.description }
-  })
+  const mappingEntries = Object.entries(COURSE_DETAILS_MAPPING).filter(([, details]) => Boolean(details?.slug))
+  const mappingBySlug = new Map<string, { title: string; description?: string }>(
+    mappingEntries.map(([title, details]) => [details.slug, { title, description: details.description }]),
+  )
+  const mappedFallback: CourseOption[] = mappingEntries
+    .map(([title, details]) => ({ id: details.slug, title, description: details.description }))
+    .sort((a, b) => a.title.localeCompare(b.title))
+
+  try {
+    const snapshot = await getDocs(coursesCollection)
+
+    const courseMap = new Map<string, CourseOption>()
+
+    snapshot.docs.forEach((docSnap) => {
+      const data = docSnap.data() as { title?: string; name?: string; description?: string }
+      const mappingMatch = mappingBySlug.get(docSnap.id)
+      const title = (data.title || data.name || mappingMatch?.title || 'Untitled course').trim()
+      const description = data.description || mappingMatch?.description
+      courseMap.set(docSnap.id, { id: docSnap.id, title, description })
+    })
+
+    mappedFallback.forEach((course) => {
+      const existing = courseMap.get(course.id)
+      if (!existing) {
+        courseMap.set(course.id, course)
+        return
+      }
+
+      courseMap.set(course.id, {
+        ...existing,
+        title: existing.title && existing.title !== 'Untitled course' ? existing.title : course.title,
+        description: existing.description || course.description,
+      })
+    })
+
+    const merged = Array.from(courseMap.values()).sort((a, b) => a.title.localeCompare(b.title))
+    return merged.length ? merged : mappedFallback
+  } catch (error) {
+    console.warn('[OrganizationService] Failed to fetch Firestore courses; using local course mappings', {
+      message: (error as Error)?.message,
+    })
+    return mappedFallback
+  }
 }
 
 const normalizeTimestamp = (value?: Timestamp | string | Date): string => {

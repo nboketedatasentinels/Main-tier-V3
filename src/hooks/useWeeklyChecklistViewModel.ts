@@ -1,7 +1,8 @@
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useToast } from '@chakra-ui/react'
 import { useAuth } from '@/hooks/useAuth'
 import { isFreeUser } from '@/utils/membership'
+import { useSearchParams } from 'react-router-dom'
 import {
   JOURNEY_META,
   getActivitiesForJourney,
@@ -32,13 +33,14 @@ import { createApprovalRequest } from '@/services/approvalsService'
 import { handleActivityCompletion } from '@/utils/activityRouter'
 import type { PointsVerificationRequest } from '@/services/pointsVerificationService'
 
-export type ActivityStatus = 'not_started' | 'pending' | 'completed'
+export type ActivityStatus = 'not_started' | 'pending' | 'rejected' | 'completed'
 
 export interface ActivityState extends ActivityDef {
   status: ActivityStatus
   availability: ReturnType<typeof calculateActivityAvailability>
   proofUrl?: string
   notes?: string
+  rejectionReason?: string | null
   hasInteracted?: boolean
 }
 
@@ -54,6 +56,7 @@ export interface ProofModalState {
   activityId?: string
   proofUrl: string
   notes: string
+  rejectionReason?: string | null
 }
 
 type LedgerRow = {
@@ -70,6 +73,7 @@ function isAdminProfile(profile: any): boolean {
 export function useWeeklyChecklistViewModel() {
   const { user, profile } = useAuth()
   const toast = useToast()
+  const [searchParams, setSearchParams] = useSearchParams()
 
   const [journey, setJourney] = useState<JourneyConfig | null>(null)
   const [selectedWeek, setSelectedWeek] = useState<number>(1)
@@ -85,7 +89,19 @@ export function useWeeklyChecklistViewModel() {
     isOpen: false,
     proofUrl: '',
     notes: '',
+    rejectionReason: null,
   })
+
+  const deepLink = useMemo(() => {
+    const weekRaw = searchParams.get('week')
+    const weekNum = weekRaw ? Number.parseInt(weekRaw, 10) : NaN
+    const week = Number.isFinite(weekNum) && weekNum > 0 ? weekNum : null
+    const activityId = searchParams.get('activityId') || searchParams.get('activity') || null
+    const openProof = ['1', 'true', 'yes'].includes((searchParams.get('openProof') || '').toLowerCase())
+    return { week, activityId, openProof }
+  }, [searchParams])
+
+  const handledDeepLinkRef = useRef<string | null>(null)
 
   /* ------------------------------------------------------------------ */
   /* Derived guards                                                      */
@@ -114,6 +130,7 @@ export function useWeeklyChecklistViewModel() {
             status: a.status,
             proofUrl: a.proofUrl,
             notes: a.notes,
+            rejectionReason: a.rejectionReason,
             hasInteracted: a.hasInteracted,
           }),
         ),
@@ -164,7 +181,10 @@ export function useWeeklyChecklistViewModel() {
           isPaid: !isFreeUser(profile),
         })
 
-        setSelectedWeek(profile.currentWeek || 1)
+        const desiredWeek = deepLink.week
+          ? Math.min(Math.max(1, deepLink.week), meta.weeks)
+          : (profile.currentWeek || 1)
+        setSelectedWeek(desiredWeek)
       } catch (e) {
         console.error(e)
         setError('Unable to load journey configuration.')
@@ -172,7 +192,14 @@ export function useWeeklyChecklistViewModel() {
     }
 
     resolve()
-  }, [user, profile])
+  }, [user, profile, deepLink.week])
+
+  useEffect(() => {
+    if (!journey) return
+    if (!deepLink.week) return
+    const desiredWeek = Math.min(Math.max(1, deepLink.week), journey.programDurationWeeks)
+    if (desiredWeek !== selectedWeek) setSelectedWeek(desiredWeek)
+  }, [deepLink.week, journey, selectedWeek])
 
   /* ------------------------------------------------------------------ */
   /* Ledger snapshot (availability caching source-of-truth)               */
@@ -318,6 +345,124 @@ export function useWeeklyChecklistViewModel() {
   }, [user, selectedWeek])
 
   /* ------------------------------------------------------------------ */
+  /* Sync approval requests -> checklist (fallback for legacy records)    */
+  /* ------------------------------------------------------------------ */
+  useEffect(() => {
+    if (!user) return
+
+    const toMillis = (value: any): number => {
+      if (!value) return 0
+      if (typeof value?.toMillis === 'function') return value.toMillis()
+      if (typeof value?.toDate === 'function') return value.toDate().getTime()
+      const parsed = new Date(String(value)).getTime()
+      return Number.isFinite(parsed) ? parsed : 0
+    }
+
+    const sync = async () => {
+      try {
+        const snap = await getDocs(
+          query(
+            collection(db, 'points_verification_requests'),
+            where('user_id', '==', user.uid),
+            where('week', '==', selectedWeek),
+          ),
+        )
+
+        const latestByActivity = new Map<string, PointsVerificationRequest>()
+        snap.docs.forEach((docSnap) => {
+          const data = docSnap.data() as PointsVerificationRequest
+          if (!data?.activity_id) return
+          const row: PointsVerificationRequest = { ...data, id: docSnap.id }
+          const prev = latestByActivity.get(row.activity_id)
+          if (!prev) {
+            latestByActivity.set(row.activity_id, row)
+            return
+          }
+          if (toMillis(row.created_at) >= toMillis(prev.created_at)) {
+            latestByActivity.set(row.activity_id, row)
+          }
+        })
+
+        setActivities((prev) => {
+          let changed = false
+          const next = prev.map((activity) => {
+            if (activity.status === 'completed') return activity
+
+            const req = latestByActivity.get(activity.id)
+            if (!req) return activity
+
+            if (req.status === 'pending') {
+              const patch: Partial<ActivityState> = {
+                status: 'pending',
+                hasInteracted: true,
+                proofUrl: req.proof_url,
+                notes: req.notes,
+                rejectionReason: null,
+              }
+              const differs =
+                patch.status !== activity.status ||
+                patch.hasInteracted !== activity.hasInteracted ||
+                patch.proofUrl !== activity.proofUrl ||
+                patch.notes !== activity.notes ||
+                patch.rejectionReason !== activity.rejectionReason
+              if (!differs) return activity
+              changed = true
+              return { ...activity, ...patch }
+            }
+
+            if (req.status === 'rejected') {
+              const patch: Partial<ActivityState> = {
+                status: 'rejected',
+                hasInteracted: false,
+                proofUrl: req.proof_url,
+                notes: req.notes,
+                rejectionReason: req.rejection_reason ?? null,
+              }
+              const differs =
+                patch.status !== activity.status ||
+                patch.hasInteracted !== activity.hasInteracted ||
+                patch.proofUrl !== activity.proofUrl ||
+                patch.notes !== activity.notes ||
+                patch.rejectionReason !== activity.rejectionReason
+              if (!differs) return activity
+              changed = true
+              return { ...activity, ...patch }
+            }
+
+            if (req.status === 'approved') {
+              const patch: Partial<ActivityState> = {
+                status: 'completed',
+                hasInteracted: true,
+                proofUrl: req.proof_url,
+                notes: req.notes,
+                rejectionReason: null,
+              }
+              const differs =
+                patch.status !== activity.status ||
+                patch.hasInteracted !== activity.hasInteracted ||
+                patch.proofUrl !== activity.proofUrl ||
+                patch.notes !== activity.notes ||
+                patch.rejectionReason !== activity.rejectionReason
+              if (!differs) return activity
+              changed = true
+              return { ...activity, ...patch }
+            }
+
+            return activity
+          })
+
+          if (changed) void persistChecklist(next)
+          return next
+        })
+      } catch (error) {
+        console.warn('[WeeklyChecklist] Request sync failed; continuing without it', error)
+      }
+    }
+
+    sync()
+  }, [persistChecklist, selectedWeek, user])
+
+  /* ------------------------------------------------------------------ */
   /* Real-time Checklist Status Update                                   */
   /* ------------------------------------------------------------------ */
   useEffect(() => {
@@ -330,13 +475,27 @@ export function useWeeklyChecklistViewModel() {
           setActivities(prev => {
             return prev.map(activity => {
               const remote = data.activities.find((a: any) => a.id === activity.id);
-              if (remote && remote.status !== activity.status) {
+              if (!remote) return activity
+
+              const next = {
+                status: remote.status ?? activity.status,
+                hasInteracted: remote.hasInteracted ?? activity.hasInteracted,
+                proofUrl: remote.proofUrl ?? activity.proofUrl,
+                notes: remote.notes ?? activity.notes,
+                rejectionReason: remote.rejectionReason ?? activity.rejectionReason,
+              }
+
+              const changed =
+                next.status !== activity.status ||
+                next.hasInteracted !== activity.hasInteracted ||
+                next.proofUrl !== activity.proofUrl ||
+                next.notes !== activity.notes ||
+                next.rejectionReason !== activity.rejectionReason
+
+              if (changed) {
                 return {
                   ...activity,
-                  status: remote.status,
-                  hasInteracted: remote.hasInteracted ?? activity.hasInteracted,
-                  proofUrl: remote.proofUrl ?? activity.proofUrl,
-                  notes: remote.notes ?? activity.notes
+                  ...next,
                 };
               }
               return activity;
@@ -383,7 +542,7 @@ export function useWeeklyChecklistViewModel() {
       if (isAdmin) return true
       if (!journey) return false
       if (isWeekLocked) return false
-      if (activity.hasInteracted) return false // your original “selection locked” rule
+      if (activity.hasInteracted && activity.status !== 'rejected') return false
       if (activity.availability.state !== 'available') return false
       return true
     },
@@ -413,8 +572,42 @@ export function useWeeklyChecklistViewModel() {
       activityId: activity.id,
       proofUrl: activity.proofUrl ?? '',
       notes: activity.notes ?? '',
+      rejectionReason: activity.rejectionReason ?? null,
     })
   }, [])
+
+  useEffect(() => {
+    if (!journey) return
+    if (!deepLink.openProof || !deepLink.activityId) return
+
+    const key = `${deepLink.week ?? selectedWeek}:${deepLink.activityId}`
+    if (handledDeepLinkRef.current === key) return
+
+    if (deepLink.week && deepLink.week !== selectedWeek) return
+
+    const activity = activities.find((a) => a.id === deepLink.activityId)
+    if (!activity) return
+
+    const anchor = document.getElementById(`activity-${activity.id}`)
+    anchor?.scrollIntoView({ behavior: 'smooth', block: 'center' })
+
+    openProofModal(activity)
+    handledDeepLinkRef.current = key
+
+    const next = new URLSearchParams(searchParams)
+    next.delete('openProof')
+    setSearchParams(next, { replace: true })
+  }, [
+    activities,
+    deepLink.activityId,
+    deepLink.openProof,
+    deepLink.week,
+    journey,
+    openProofModal,
+    searchParams,
+    selectedWeek,
+    setSearchParams,
+  ])
 
   const markCompleted = useCallback(
     async (activity: ActivityState | undefined) => {
@@ -448,7 +641,7 @@ export function useWeeklyChecklistViewModel() {
         activity,
         onProofRequired: (act) => openProofModal(act),
         onSuccess: async (status) => {
-          await setActivityStatusLocal(activity.id, { status, hasInteracted: true })
+          await setActivityStatusLocal(activity.id, { status, hasInteracted: true, rejectionReason: null })
         },
         onError: (e) => {
           console.error(e)
@@ -500,6 +693,7 @@ export function useWeeklyChecklistViewModel() {
           hasInteracted: true,
           proofUrl: undefined,
           notes: undefined,
+          rejectionReason: null,
         })
       } catch (e) {
         console.error(e)
@@ -514,7 +708,7 @@ export function useWeeklyChecklistViewModel() {
   )
 
   const closeProofModal = useCallback(() => {
-    setProofModal({ isOpen: false, proofUrl: '', notes: '' })
+    setProofModal({ isOpen: false, proofUrl: '', notes: '', rejectionReason: null })
   }, [])
 
   const updateProofModal = useCallback((patch: Partial<ProofModalState>) => {
@@ -532,11 +726,11 @@ export function useWeeklyChecklistViewModel() {
         toast({ title: 'Week locked', description: 'You can’t submit proof for a future week.', status: 'warning' })
         return
       }
-      if (activity.availability.state !== 'available') {
+      if (activity.availability.state !== 'available' && activity.status !== 'rejected') {
         toast({ title: 'Activity unavailable', description: 'This activity is locked right now.', status: 'warning' })
         return
       }
-      if (activity.hasInteracted) {
+      if (activity.hasInteracted && activity.status !== 'rejected') {
         toast({ title: 'Selection locked', description: 'Contact support to make changes.', status: 'warning' })
         return
       }
@@ -550,6 +744,37 @@ export function useWeeklyChecklistViewModel() {
     try {
       // Get user's organization ID from profile
       const userOrganizationId = profile?.organizationId || profile?.companyId || null
+
+      // Prevent duplicate pending requests for the same activity/week (can happen if local checklist state got out of sync).
+      try {
+        const existingWeekRequests = await getDocs(
+          query(
+            collection(db, 'points_verification_requests'),
+            where('user_id', '==', user.uid),
+            where('week', '==', selectedWeek),
+          ),
+        )
+        const hasPending = existingWeekRequests.docs.some((docSnap) => {
+          const data = docSnap.data() as PointsVerificationRequest
+          return data.activity_id === activity.id && (data.status ?? 'pending') === 'pending'
+        })
+        if (hasPending) {
+          toast({
+            title: 'Already submitted',
+            description: 'This activity is already pending verification for this week.',
+            status: 'info',
+            duration: 5000,
+          })
+          await setActivityStatusLocal(activity.id, {
+            status: 'pending',
+            hasInteracted: true,
+          })
+          closeProofModal()
+          return
+        }
+      } catch (error) {
+        console.warn('[WeeklyChecklist] Duplicate-check query failed; continuing submission', error)
+      }
 
         const sourcePayload: PointsVerificationRequest = {
           id: '', // ID will be assigned by the server or is not used for creation
@@ -598,6 +823,7 @@ export function useWeeklyChecklistViewModel() {
         status: 'pending',
         proofUrl: proofModal.proofUrl.trim(),
         notes: proofModal.notes?.trim(),
+        rejectionReason: null,
         hasInteracted: true,
       })
 

@@ -63,6 +63,7 @@ export const canAccessCourse = (
 ): boolean => {
   if (!courseTitle && !courseId) return false
   if (isComplementaryCourse(courseTitle, courseId)) return true
+  if (!profile) return false
   if (!isFreeUser(profile)) return true
   return false
 }

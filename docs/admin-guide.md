@@ -22,7 +22,7 @@ This guide covers administrative workflows for managing users, cohorts, and plat
 
 ## Partner Assignment Management
 
-- Use **Admin Oversight** to update partner admin assignments (assigned organizations drive dashboard visibility).
+- Use **Admin Oversight** to update partner access assignments (assigned organizations drive dashboard visibility).
 - Use **Organization Management** to set the primary transformation partner on each organization.
 - After changes, verify partner dashboards load the correct organizations and users.
 

@@ -610,10 +610,10 @@ export const PartnerDashboard: React.FC = () => {
                 key={card.key}
                 bg={isMuted ? 'gray.50' : `${accentColor}.50`}
                 border="1px solid"
-                borderColor={isMuted ? 'gray.200' : `${accentColor}.200`}
+                borderColor={isMuted ? 'border.control' : `${accentColor}.200`}
                 cursor="pointer"
                 transition="all 0.2s"
-                _hover={{ shadow: 'sm', borderColor: isMuted ? 'gray.300' : `${accentColor}.300` }}
+                _hover={{ shadow: 'sm', borderColor: isMuted ? 'border.control' : `${accentColor}.300` }}
                 onClick={card.onClick}
                 minH="150px"
                 h="100%"
@@ -936,7 +936,7 @@ export const PartnerDashboard: React.FC = () => {
                   </Stack>
                 </Box>
               ) : notifications.length === 0 ? (
-                <Box p={3} borderRadius="md" border="1px dashed" borderColor="gray.200" bg="gray.50">
+                <Box p={3} borderRadius="md" border="1px dashed" borderColor="border.control" bg="gray.50">
                   <Text fontSize="sm" color="gray.600">
                     You are all caught up. New partner alerts will appear here.
                   </Text>
@@ -1116,7 +1116,7 @@ export const PartnerDashboard: React.FC = () => {
 
     return (
       <Accordion allowToggle mt={4}>
-        <AccordionItem border="1px dashed" borderColor="gray.300" borderRadius="md" bg="gray.50">
+        <AccordionItem border="1px dashed" borderColor="border.control" borderRadius="md" bg="gray.50">
           <h2>
             <AccordionButton>
               <Box flex="1" textAlign="left" fontWeight="bold" fontSize="sm">
@@ -1210,7 +1210,7 @@ export const PartnerDashboard: React.FC = () => {
                   <Text fontSize="xs" fontWeight="bold" color="gray.600" mb={2}>Samples of Mismatched Users:</Text>
                   <VStack align="flex-start" spacing={2} w="full">
                     {debugInfo.mismatchSamples.map((sample: MismatchSample, idx: number) => (
-                      <Box key={idx} p={2} bg="white" border="1px solid" borderColor="gray.200" borderRadius="md" w="full" fontSize="xs">
+                      <Box key={idx} p={2} bg="white" border="1px solid" borderColor="border.control" borderRadius="md" w="full" fontSize="xs">
                         <HStack justify="space-between">
                           <Text fontWeight="bold">{sample.id}</Text>
                           <Badge size="xs" colorScheme="red">{sample.reason}</Badge>

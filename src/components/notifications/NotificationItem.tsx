@@ -93,14 +93,14 @@ export const NotificationItem = ({
   return (
     <Box
       borderWidth="1px"
-      borderColor="gray.200"
+      borderColor="border.control"
       borderRadius="lg"
       bg="white"
       p={4}
       transition="all 0.15s ease"
       _hover={{
         shadow: 'sm',
-        borderColor: 'gray.300',
+        borderColor: 'border.control',
       }}
     >
       <HStack align="start" spacing={4}>
@@ -145,7 +145,7 @@ export const NotificationItem = ({
           </Text>
 
           {timestamp && (
-            <Text color="gray.400" fontSize="xs" mt={1}>
+            <Text color="text.muted" fontSize="xs" mt={1}>
               {timestamp}
             </Text>
           )}
@@ -193,7 +193,7 @@ export const NotificationItem = ({
           icon={isRead ? <X size={16} /> : <CheckCheck size={16} />}
           variant="ghost"
           size="sm"
-          color="gray.400"
+          color="text.muted"
           _hover={{
             color: 'gray.600',
             bg: 'gray.100',

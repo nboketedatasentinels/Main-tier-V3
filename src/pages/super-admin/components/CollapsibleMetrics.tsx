@@ -28,7 +28,7 @@ export const CollapsibleMetrics: React.FC<CollapsibleMetricsProps> = ({ children
         py={6}
         borderTop="1px solid"
         borderBottom={isOpen ? 'none' : '1px solid'}
-        borderColor="gray.100"
+        borderColor="border.control"
         borderRadius="none"
         _hover={{ bg: 'gray.50' }}
       >
@@ -38,7 +38,7 @@ export const CollapsibleMetrics: React.FC<CollapsibleMetricsProps> = ({ children
             <Heading size="xs" color="gray.600" textTransform="uppercase" letterSpacing="wider">
               System Metrics & Analytics
             </Heading>
-            <Text fontSize="xs" color="gray.400" fontWeight="normal">
+            <Text fontSize="xs" color="text.muted" fontWeight="normal">
               Engagement trends, growth curves, and usage insights
             </Text>
           </Stack>
@@ -46,7 +46,7 @@ export const CollapsibleMetrics: React.FC<CollapsibleMetricsProps> = ({ children
         {isOpen ? <ChevronUp size={20} /> : <ChevronDown size={20} />}
       </Button>
 
-      <Collapse in={isOpen} animateOpacity>
+      <Collapse in={isOpen} animateOpacity unmountOnExit>
         <Box py={6}>
           {children}
         </Box>

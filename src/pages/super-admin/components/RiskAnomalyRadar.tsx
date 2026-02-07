@@ -60,7 +60,7 @@ const RadarSection = ({ title, subtitle, signals, icon, color }: { title: string
         <Heading size="xs" color="gray.500" textTransform="uppercase" letterSpacing="wider">
           {title}
         </Heading>
-        <Text fontSize="sm" color="gray.400">
+        <Text fontSize="sm" color="text.muted">
           {subtitle}
         </Text>
       </Stack>
@@ -74,7 +74,7 @@ const RadarSection = ({ title, subtitle, signals, icon, color }: { title: string
           bg="white"
           borderRadius="xl"
           border="1px solid"
-          borderColor="gray.100"
+          borderColor="border.control"
           shadow="sm"
         >
           <Stack spacing={2}>
@@ -90,7 +90,7 @@ const RadarSection = ({ title, subtitle, signals, icon, color }: { title: string
               <Text as="span" fontWeight="semibold">Why it matters:</Text> {signal.reason}
             </Text>
             <Flex justify="space-between" align="center" mt={2}>
-              <Text fontSize="xs" color="gray.400">
+              <Text fontSize="xs" color="text.muted">
                 {signal.impact}
               </Text>
               <Button
@@ -107,7 +107,7 @@ const RadarSection = ({ title, subtitle, signals, icon, color }: { title: string
         </Box>
       ))}
       {signals.length === 0 && (
-        <Box p={6} textAlign="center" bg="gray.50" borderRadius="xl" border="1px dashed" borderColor="gray.200">
+        <Box p={6} textAlign="center" bg="gray.50" borderRadius="xl" border="1px dashed" borderColor="border.control">
           <Text fontSize="sm" color="gray.500">No active anomalies detected.</Text>
         </Box>
       )}

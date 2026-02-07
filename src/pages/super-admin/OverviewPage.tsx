@@ -201,12 +201,12 @@ export const OverviewPage: React.FC<OverviewPageProps> = ({
           {/* ZONE 6 — SYSTEM METRICS (Collapsible) */}
           <CollapsibleMetrics>
             <SimpleGrid columns={{ base: 1, lg: 2 }} spacing={6}>
-              <Card bg="white" border="1px solid" borderColor="gray.200" borderRadius="2xl" shadow="sm">
+              <Card bg="white" border="1px solid" borderColor="border.control" borderRadius="2xl" shadow="sm">
                 <CardBody>
                   <EngagementChart data={registrationTrend} title="Registration Trends" subtitle="Last 14 days" valueLabel="Registrations" />
                 </CardBody>
               </Card>
-              <Card bg="white" border="1px solid" borderColor="gray.200" borderRadius="2xl" shadow="sm">
+              <Card bg="white" border="1px solid" borderColor="border.control" borderRadius="2xl" shadow="sm">
                 <CardBody>
                   <EngagementChart
                     data={userGrowthTrend}

@@ -130,7 +130,7 @@ export const UpgradeRequestsPanel: React.FC<UpgradeRequestsPanelProps> = ({
             </HStack>
             <Stack spacing={2}>
               {[1, 2, 3].map((item) => (
-                <Box key={item} borderRadius="md" border="1px solid" borderColor="gray.200" p={3}>
+                <Box key={item} borderRadius="md" border="1px solid" borderColor="border.control" p={3}>
                   <Skeleton height="14px" width="40%" />
                   <SkeletonText mt="2" noOfLines={2} spacing="2" />
                 </Box>

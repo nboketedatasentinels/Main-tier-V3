@@ -13,6 +13,8 @@ export interface CourseMetadata {
   difficulty: CourseDifficulty
 }
 
+const normalizeCourseMappingKey = (value: string) => value.trim().toLowerCase()
+
 export const COURSE_DETAILS_MAPPING: Record<string, CourseDetail> = {
   'The Courage to Heal': {
     slug: 'courage-to-heal',
@@ -217,4 +219,27 @@ export const COURSE_METADATA_MAPPING: Record<string, CourseMetadata> = {
   'Inner Shift': { estimatedMinutes: 360, difficulty: 'Intermediate' },
   'Digital Rebel': { estimatedMinutes: 360, difficulty: 'Advanced' },
   'Architect': { estimatedMinutes: 480, difficulty: 'Advanced' },
+}
+
+const COURSE_TITLE_TO_SLUG = new Map<string, string>(
+  Object.entries(COURSE_DETAILS_MAPPING).map(([title, details]) => [normalizeCourseMappingKey(title), details.slug])
+)
+
+const COURSE_SLUG_NORMALIZED_TO_SLUG = new Map<string, string>(
+  Object.values(COURSE_DETAILS_MAPPING).map(details => [normalizeCourseMappingKey(details.slug), details.slug])
+)
+
+export const resolveCourseIdFromMapping = (value?: string | null): string => {
+  if (!value) return ''
+  const trimmed = value.trim()
+  if (!trimmed) return ''
+
+  const normalized = normalizeCourseMappingKey(trimmed)
+  const slugMatch = COURSE_SLUG_NORMALIZED_TO_SLUG.get(normalized)
+  if (slugMatch) return slugMatch
+
+  const titleMatch = COURSE_TITLE_TO_SLUG.get(normalized)
+  if (titleMatch) return titleMatch
+
+  return trimmed
 }

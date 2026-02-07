@@ -30,7 +30,7 @@ import {
  */
 export function ThemeShowcase() {
   return (
-    <Box bg="brand.accent" minH="100vh" py={8}>
+    <Box bg="brand.accent" minH={{ base: '100dvh', md: '100vh' }} py={8}>
       <Container maxW="container.xl">
         <VStack spacing={8} align="stretch">
           {/* Header */}

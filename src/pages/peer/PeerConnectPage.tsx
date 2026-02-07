@@ -36,11 +36,10 @@ import {
   Tag,
   Text,
   Textarea,
-  Tooltip,
   useDisclosure,
   useToast,
 } from '@chakra-ui/react'
-import { addHours, format, formatDistanceToNowStrict } from 'date-fns'
+import { format, formatDistanceToNowStrict } from 'date-fns'
 import {
   AlarmClockCheck,
   AlarmClockOff,
@@ -50,7 +49,6 @@ import {
   Clock3,
   Mail,
   MessageSquare,
-  RefreshCcw,
   Search,
   Sword,
   Target,
@@ -68,7 +66,6 @@ import {
   onSnapshot,
   query,
   serverTimestamp,
-  setDoc,
   updateDoc,
 } from 'firebase/firestore'
 import { auth, db } from '@/services/firebase'
@@ -76,6 +73,7 @@ import { useAuth } from '@/hooks/useAuth'
 import { StartChallengeModal } from '@/components/modals/StartChallengeModal'
 import { fetchOrgMembers, getOrgScope, buildScopeQueries } from '@/utils/organizationScope'
 import { getDisplayName } from '@/utils/displayName'
+import { normalizeEmail } from '@/utils/email'
 import {
   createPeerSession,
   confirmSession,
@@ -94,6 +92,7 @@ type PeerProfile = {
   id: string
   name: string
   email: string
+  allowPeerMatching?: boolean
   timezone?: string
   interests?: string
   goals?: string
@@ -105,9 +104,35 @@ type PeerProfile = {
   avatarUrl?: string
 }
 
+const normalizeAccountStatus = (status: unknown) => (typeof status === 'string' ? status.trim().toLowerCase() : '')
+
+const hasSignedInMarkers = (record: Record<string, unknown>) => {
+  if (typeof record.totalPoints === 'number') return true
+  if (typeof record.level === 'number') return true
+  if (typeof record.journeyType === 'string' && record.journeyType.trim().length > 0) return true
+  if (typeof record.onboardingComplete === 'boolean') return true
+  return false
+}
+
+const isEligiblePeerRecord = (record: Record<string, unknown>) => {
+  if (record.mergedInto) return false
+
+  const status = normalizeAccountStatus(record.accountStatus ?? record.status)
+  if (status && status !== 'active') return false
+
+  const privacy = record.privacySettings as { allowPeerMatching?: boolean } | undefined
+  if (privacy?.allowPeerMatching === false) return false
+
+  const email = typeof record.email === 'string' ? record.email : ''
+  if (!normalizeEmail(email)) return false
+
+  return hasSignedInMarkers(record)
+}
+
 const mapRecordToPeerProfile = (record: Record<string, unknown>): PeerProfile => {
   const id = String(record.id)
   const email = typeof record.email === 'string' ? record.email : ''
+  const privacy = record.privacySettings as { allowPeerMatching?: boolean } | undefined
   const displayInput = {
     ...record,
     email,
@@ -117,6 +142,7 @@ const mapRecordToPeerProfile = (record: Record<string, unknown>): PeerProfile =>
     id,
     name: getDisplayName(displayInput, 'Member'),
     email,
+    allowPeerMatching: privacy?.allowPeerMatching,
     timezone: record.timezone as PeerProfile['timezone'],
     interests: record.interests as PeerProfile['interests'],
     goals: record.goals as PeerProfile['goals'],
@@ -134,7 +160,9 @@ const fetchPeerProfileById = async (peerId: string): Promise<PeerProfile | null>
   try {
     const peerDoc = await getDoc(doc(db, 'profiles', peerId))
     if (!peerDoc.exists()) return null
-    return mapRecordToPeerProfile({ id: peerDoc.id, ...(peerDoc.data() as Record<string, unknown>) })
+    const record = { id: peerDoc.id, ...(peerDoc.data() as Record<string, unknown>) }
+    if (!isEligiblePeerRecord(record)) return null
+    return mapRecordToPeerProfile(record)
   } catch (error) {
     console.error('[PeerMatch] Failed to fetch peer profile', peerId, error)
     return null
@@ -154,7 +182,6 @@ type WeeklyMatch = {
   matchStatus: MatchStatus
   createdAt?: Date
   lastRefreshAt?: Date
-  lastManualRefreshAt?: Date
   refreshCount?: number
 }
 
@@ -235,7 +262,6 @@ type DebugOrgProfile = {
   fullName?: string
 }
 
-const MANUAL_REFRESH_COOLDOWN_HOURS = 24
 const WEEKDAY_LABELS = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday']
 
 const defaultSessionDescription =
@@ -378,7 +404,6 @@ const buildWeeklyMatchFromDoc = (matchId: string, data: WeeklyMatchDocument, pee
   matchStatus: (data.matchStatus as MatchStatus) || 'new',
   createdAt: toDateValue(data.createdAt),
   lastRefreshAt: toDateValue(data.lastRefreshAt),
-  lastManualRefreshAt: toDateValue(data.lastManualRefreshAt),
   refreshCount: typeof data.refreshCount === 'number' ? data.refreshCount : undefined,
 })
 
@@ -470,73 +495,22 @@ export const PeerConnectPage: React.FC = () => {
             setWeeklyMatch(buildWeeklyMatchFromDoc(matchRef.id, data, fallbackPeer))
             return
           } else {
-            console.error('[PeerMatch] Failed to fetch peer profile:', storedPeerId)
-            // Match document exists but peer profile is unavailable
+            console.error('[PeerMatch] Peer profile unavailable or ineligible:', storedPeerId)
+            // Peer may have been deactivated, opted out, or merged - clear invalid match
             setWeeklyMatch(null)
             return
           }
         }
       }
 
-      // PRIORITY 2: No existing match found - create a new one (requires availablePeers)
-      if (!availablePeers.length) {
-        console.log('[PeerMatch] No existing match and no available peers to create new match')
-        setWeeklyMatch(null)
-        return
-      }
-
-      const deterministicPeer = availablePeers[Math.abs(Number.parseInt(user.uid.slice(-3), 10)) % availablePeers.length]
-      if (deterministicPeer) {
-        console.log('[PeerMatch] Creating new match with peer:', deterministicPeer.id)
-        const matchPayload = {
-          peer_id: deterministicPeer.id,
-          user_id: user.uid,
-          matchKey: matchWindow.key,
-          matchRefreshPreference: matchPreferences.refreshPreference,
-          preferredMatchDay: matchPreferences.preferredMatchDay,
-          matchReason: deterministicPeer.cohortIdentifier
-            ? 'Shared cohort'
-            : deterministicPeer.corporateVillageId
-              ? 'Same corporate village'
-              : 'Same company code',
-          matchStatus: 'new',
-          refreshCount: 1,
-          createdAt: serverTimestamp(),
-          lastRefreshAt: serverTimestamp(),
-        }
-        await Promise.all([
-          setDoc(matchRef, matchPayload),
-          updateDoc(doc(db, 'profiles', user.uid), { lastMatchRefreshDate: serverTimestamp(), updatedAt: serverTimestamp() }),
-          updateDoc(doc(db, 'users', user.uid), { lastMatchRefreshDate: serverTimestamp(), updatedAt: serverTimestamp() }),
-        ])
-        setWeeklyMatch({
-          matchId: matchRef.id,
-          peer: deterministicPeer,
-          matchReason: matchPayload.matchReason,
-          matchStatus: 'new',
-          refreshCount: matchPayload.refreshCount,
-          createdAt: new Date(),
-          lastRefreshAt: new Date(),
-        })
-      }
+      // No existing match found - matches are now created only by Cloud Function
+      console.log('[PeerMatch] No match document exists for this window. Matches are created automatically.')
+      setWeeklyMatch(null)
     } catch (error) {
       console.error('[PeerMatch] Error in fetchWeeklyMatch:', error)
     }
-  }, [availablePeers, matchDocId, matchPreferences.preferredMatchDay, matchPreferences.refreshPreference, matchWindow.key, profile, user])
+  }, [matchDocId, matchPreferences.preferredMatchDay, matchPreferences.refreshPreference, matchWindow.key, profile, user])
 
-  const selectNextPeer = useCallback(
-    (currentPeerId?: string | null, refreshCount = 0) => {
-      if (!availablePeers.length) return null
-      if (availablePeers.length === 1) return availablePeers[0]
-      const seed = Math.abs(Number.parseInt(user?.uid.slice(-3) || '0', 10)) + refreshCount
-      for (let offset = 0; offset < availablePeers.length; offset += 1) {
-        const candidate = availablePeers[(seed + offset) % availablePeers.length]
-        if (candidate.id !== currentPeerId) return candidate
-      }
-      return availablePeers[0]
-    },
-    [availablePeers, user?.uid]
-  )
 
   const updateMatchStatus = useCallback(
     async (nextStatus: MatchStatus) => {
@@ -554,74 +528,6 @@ export const PeerConnectPage: React.FC = () => {
     [matchDocId, weeklyMatch]
   )
 
-  const handleManualRefresh = useCallback(async () => {
-    if (!user || !profile || !matchDocId) return
-    if (!availablePeers.length) return
-    try {
-      const currentPeerId = weeklyMatch?.peer.id
-      const refreshCount = (weeklyMatch?.refreshCount ?? 0) + 1
-      const nextPeer = selectNextPeer(currentPeerId, refreshCount)
-      if (!nextPeer) return
-      const matchPayload = {
-        peer_id: nextPeer.id,
-        user_id: user.uid,
-        matchKey: matchWindow.key,
-        matchRefreshPreference: matchPreferences.refreshPreference,
-        preferredMatchDay: matchPreferences.preferredMatchDay,
-        matchReason: nextPeer.cohortIdentifier
-          ? 'Shared cohort'
-          : nextPeer.corporateVillageId
-            ? 'Same corporate village'
-            : 'Same company code',
-        matchStatus: 'new',
-        refreshCount,
-        createdAt: serverTimestamp(),
-        lastManualRefreshAt: serverTimestamp(),
-        lastRefreshAt: serverTimestamp(),
-      }
-      await Promise.all([
-        setDoc(doc(db, 'peer_weekly_matches', matchDocId), matchPayload, { merge: true }),
-        updateDoc(doc(db, 'profiles', user.uid), { lastMatchRefreshDate: serverTimestamp(), updatedAt: serverTimestamp() }),
-        updateDoc(doc(db, 'users', user.uid), { lastMatchRefreshDate: serverTimestamp(), updatedAt: serverTimestamp() }),
-      ])
-      setWeeklyMatch({
-        matchId: matchDocId,
-        peer: nextPeer,
-        matchReason: matchPayload.matchReason,
-        matchStatus: 'new',
-        refreshCount,
-        createdAt: new Date(),
-        lastRefreshAt: new Date(),
-        lastManualRefreshAt: new Date(),
-      })
-      toast({
-        title: 'New match requested',
-        description: 'Your peer match has been refreshed.',
-        status: 'success',
-        position: 'top',
-      })
-    } catch (error) {
-      console.error('Manual refresh failed', error)
-      toast({
-        title: 'Unable to refresh match',
-        description: 'Please try again later.',
-        status: 'error',
-        position: 'top',
-      })
-    }
-  }, [
-    availablePeers.length,
-    matchDocId,
-    matchPreferences.preferredMatchDay,
-    matchPreferences.refreshPreference,
-    matchWindow.key,
-    profile,
-    selectNextPeer,
-    toast,
-    user,
-    weeklyMatch?.peer.id,
-    weeklyMatch?.refreshCount,
-  ])
 
   const loadSessionsAndInvites = useCallback(async () => {
     if (!user) return
@@ -780,7 +686,14 @@ export const PeerConnectPage: React.FC = () => {
     const matchRef = doc(db, 'peer_weekly_matches', matchDocId)
     const unsubscribe = onSnapshot(matchRef, async (snapshot) => {
       if (!snapshot.exists()) {
-        console.log('[PeerMatch] Real-time: Match document does not exist')
+        // Document doesn't exist - user has no match this week
+        // Note: We don't attempt to create matches here (fully automatic via Cloud Function)
+        console.warn('[PeerMatch] Real-time: Match document does not exist', {
+          userId: auth.currentUser?.uid,
+          matchDocId,
+          message: 'User has no automatic match for this period',
+        })
+        setWeeklyMatch(null)
         return
       }
 
@@ -820,7 +733,7 @@ export const PeerConnectPage: React.FC = () => {
     return () => {
       unsubscribe()
     }
-  }, [availablePeers, matchDocId, matchPreferences.refreshPreference])
+  }, [matchDocId, matchPreferences.refreshPreference])
 
   useEffect(() => {
     if (!weeklyMatch || weeklyMatch.matchStatus !== 'new') return
@@ -891,25 +804,6 @@ export const PeerConnectPage: React.FC = () => {
     return formatDistanceToNowStrict(matchWindow.nextRefreshAt, { addSuffix: true })
   }, [matchPreferences.refreshPreference, matchWindow.nextRefreshAt])
 
-  const cooldownEndsAt = useMemo(() => {
-    if (!weeklyMatch?.lastManualRefreshAt) return null
-    return addHours(weeklyMatch.lastManualRefreshAt, MANUAL_REFRESH_COOLDOWN_HOURS)
-  }, [weeklyMatch?.lastManualRefreshAt])
-
-  const cooldownLabel = useMemo(() => {
-    if (!cooldownEndsAt) return null
-    if (weeklyMatch?.matchStatus === 'completed') return null
-    if (cooldownEndsAt <= new Date()) return null
-    return formatDistanceToNowStrict(cooldownEndsAt, { addSuffix: true })
-  }, [cooldownEndsAt, weeklyMatch?.matchStatus])
-
-  const canManualRefresh = useMemo(() => {
-    if (matchPreferences.refreshPreference === 'disabled') return false
-    if (cooldownEndsAt && weeklyMatch?.matchStatus !== 'completed') {
-      return cooldownEndsAt <= new Date()
-    }
-    return true
-  }, [cooldownEndsAt, matchPreferences.refreshPreference, weeklyMatch?.matchStatus])
 
   const matchTimelineProgress = useMemo(() => {
     if (!matchWindow.startDate || !matchWindow.endDate) return null
@@ -1303,20 +1197,7 @@ export const PeerConnectPage: React.FC = () => {
                           >
                             Email your peer
                           </Button>
-                          <Tooltip
-                            label={cooldownLabel ? `Manual refresh available ${cooldownLabel}` : undefined}
-                            isDisabled={canManualRefresh}
-                          >
                             <Button
-                              leftIcon={<RefreshCcw size={16} />}
-                              variant="outline"
-                              onClick={handleManualRefresh}
-                              isDisabled={!canManualRefresh}
-                            >
-                              Request new match
-                            </Button>
-                          </Tooltip>
-                          <Button
                             leftIcon={<Check size={16} />}
                             variant="ghost"
                             onClick={() => updateMatchStatus('completed')}
@@ -1339,13 +1220,66 @@ export const PeerConnectPage: React.FC = () => {
                         </Stack>
                       </Flex>
                     ) : (
-                      <Center py={10} flexDirection="column" gap={3} color="brand.subtleText">
+                      <Center py={10} flexDirection="column" gap={4} color="brand.subtleText">
                         <Icon as={AlertCircle} w={5} h={5} color="orange.400" />
-                        <Text>
-                          {matchPreferences.refreshPreference === 'disabled'
-                            ? 'Peer matching is disabled. Update your preferences to receive matches.'
-                            : 'No peer match yet. We will generate a match once someone else joins your organisation.'}
-                        </Text>
+                        <Stack spacing={3} align="center" textAlign="center" maxW="md">
+                          <Text fontWeight="medium" color="brand.text" fontSize="lg">
+                            {matchPreferences.refreshPreference === 'disabled'
+                              ? 'Peer Matching Disabled'
+                              : 'No Match This Week'}
+                          </Text>
+                          <Text fontSize="sm">
+                            {matchPreferences.refreshPreference === 'disabled'
+                              ? 'Peer matching is currently disabled.'
+                              : matchPreferences.refreshPreference === 'on-demand'
+                                ? 'You have on-demand matching enabled. Matches are created when you request them.'
+                                : `Your next peer match will arrive automatically on ${WEEKDAY_LABELS[matchPreferences.preferredMatchDay]} ${matchWindow.nextRefreshAt ? `(${nextRefreshLabel})` : ''}.`}
+                          </Text>
+                          {matchPreferences.refreshPreference === 'disabled' && (
+                            <Button
+                              as="a"
+                              href="/app/profile?tab=account"
+                              size="sm"
+                              colorScheme="purple"
+                              leftIcon={<Icon as={Users} w={4} h={4} />}
+                            >
+                              Enable in Account Settings
+                            </Button>
+                          )}
+                          {matchPreferences.refreshPreference !== 'disabled' && matchPreferences.refreshPreference !== 'on-demand' && matchWindow.nextRefreshAt && (
+                            <Box
+                              border="1px solid"
+                              borderColor="brand.border"
+                              rounded="lg"
+                              p={4}
+                              bg="brand.surface"
+                              w="full"
+                            >
+                              <HStack justify="center" spacing={3}>
+                                <Icon as={Calendar} w={5} h={5} color="brand.primary" />
+                                <Stack spacing={1} align="flex-start">
+                                  <HStack spacing={2}>
+                                    <Text fontSize="sm" fontWeight="semibold" color="brand.text">
+                                      Next Match:
+                                    </Text>
+                                    <Badge colorScheme="purple" fontSize="xs">
+                                      {nextRefreshLabel}
+                                    </Badge>
+                                  </HStack>
+                                  <Text fontSize="xs" color="brand.subtleText">
+                                    {format(matchWindow.nextRefreshAt, 'EEEE, MMM d, yyyy')} • {matchPreferences.refreshPreference === 'biweekly' ? 'Biweekly' : 'Weekly'} schedule
+                                  </Text>
+                                </Stack>
+                              </HStack>
+                            </Box>
+                          )}
+                          {matchPreferences.refreshPreference !== 'disabled' && matchPreferences.refreshPreference !== 'on-demand' && (
+                            <Text fontSize="xs" color="brand.subtleText" fontStyle="italic">
+                              Matches are created automatically by our matching system.
+                              {availablePeers.length < 2 && ' Invite teammates to expand your peer pool.'}
+                            </Text>
+                          )}
+                        </Stack>
                       </Center>
                     )}
 
@@ -1368,11 +1302,6 @@ export const PeerConnectPage: React.FC = () => {
                         <Text fontWeight="semibold" color="brand.text">
                           {nextRefreshLabel}
                         </Text>
-                        {cooldownLabel && (
-                          <Text fontSize="xs" color="brand.subtleText">
-                            Manual refresh available {cooldownLabel}
-                          </Text>
-                        )}
                       </Box>
                       <Box border="1px solid" borderColor="border.subtle" rounded="lg" p={3}>
                         <Text fontSize="xs" textTransform="uppercase" color="brand.subtleText" mb={1}>

@@ -57,6 +57,8 @@ export const LearnerDashboardPage = () => {
   const shouldShowBuildVillageCard =
     !profile?.villageId &&
     !profile?.companyId &&
+    !profile?.companyCode &&
+    !profile?.organizationId &&
     !profile?.corporateVillageId &&
     !isPaidMember &&
     !isCorporateTier

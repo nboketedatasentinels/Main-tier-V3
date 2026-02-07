@@ -29,7 +29,7 @@ export const ActivityList = ({
 
       {!visibleActivities?.length ? (
         <Center py={8}>
-          <Text color="gray.400">No activities available for this week.</Text>
+          <Text color="text.muted">No activities available for this week.</Text>
         </Center>
       ) : (
         <Stack spacing={3}>

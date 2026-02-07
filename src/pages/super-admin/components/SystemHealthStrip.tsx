@@ -56,7 +56,7 @@ const HealthCard = ({ label, value, status, trend, trendValue, onClick }: Health
       bg="white"
       borderRadius="xl"
       border="1px solid"
-      borderColor="gray.200"
+      borderColor="border.control"
       cursor={onClick ? 'pointer' : 'default'}
       onClick={onClick}
       transition="all 0.2s"
@@ -89,7 +89,7 @@ const HealthCard = ({ label, value, status, trend, trendValue, onClick }: Health
           )}
         </Flex>
 
-        <Text fontSize="xs" color="gray.400">
+        <Text fontSize="xs" color="text.muted">
           {status === 'stable' ? 'Within normal range' : 'Requires attention'}
         </Text>
       </Stack>

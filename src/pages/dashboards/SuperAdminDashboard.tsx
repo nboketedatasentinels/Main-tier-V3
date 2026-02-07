@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react'
+import React, { useEffect, useMemo, useRef, useState } from 'react'
 import { useToast } from '@chakra-ui/react'
 import { useAuth } from '@/hooks/useAuth'
 import { SuperAdminLayout } from '@/layouts/SuperAdminLayout'
@@ -76,11 +76,38 @@ export const SuperAdminDashboard: React.FC = () => {
     filters: ['upgrade_request'],
   })
 
+  const coreStreamsLoadedRef = useRef({
+    metrics: false,
+    risk: false,
+    registrationTrend: false,
+    userGrowthTrend: false,
+  })
+
+  const sideStreamsLoadedRef = useRef({
+    verificationRequests: false,
+    registrations: false,
+    systemAlerts: false,
+    taskNotifications: false,
+  })
+
   useEffect(() => {
     setLoading(true)
     setError(null)
+    coreStreamsLoadedRef.current = {
+      metrics: false,
+      risk: false,
+      registrationTrend: false,
+      userGrowthTrend: false,
+    }
 
     const unsubscribers: Array<() => void> = []
+    const markCoreStreamLoaded = (key: keyof typeof coreStreamsLoadedRef.current) => {
+      if (coreStreamsLoadedRef.current[key]) return
+      coreStreamsLoadedRef.current[key] = true
+      if (Object.values(coreStreamsLoadedRef.current).every(Boolean)) {
+        setLoading(false)
+      }
+    }
     const handleError = (message: string, err: unknown) => {
       console.error(err)
       setError(message)
@@ -92,7 +119,7 @@ export const SuperAdminDashboard: React.FC = () => {
       listenToDashboardMetrics(
         (liveMetrics) => {
           setMetrics(liveMetrics)
-          setLoading(false)
+          markCoreStreamLoaded('metrics')
         },
         undefined,
         (err) => handleError('Unable to load super admin data from Firebase', err),
@@ -103,7 +130,7 @@ export const SuperAdminDashboard: React.FC = () => {
       listenToEngagementRiskAggregates(
         (aggregate) => {
           setRiskAggregate(aggregate)
-          setLoading(false)
+          markCoreStreamLoaded('risk')
         },
         (err) => handleError('Unable to load engagement risk data from Firebase', err),
       ),
@@ -113,7 +140,7 @@ export const SuperAdminDashboard: React.FC = () => {
       listenToRegistrationTrend(
         (trend) => {
           setRegistrationTrend(trend)
-          setLoading(false)
+          markCoreStreamLoaded('registrationTrend')
         },
         14,
         (err) => handleError('Unable to load registration trend from Firebase', err),
@@ -124,7 +151,7 @@ export const SuperAdminDashboard: React.FC = () => {
       listenToUserGrowthTrend(
         (trend) => {
           setUserGrowthTrend(trend)
-          setLoading(false)
+          markCoreStreamLoaded('userGrowthTrend')
         },
         30,
         (err) => handleError('Unable to load user growth trend from Firebase', err),
@@ -135,33 +162,48 @@ export const SuperAdminDashboard: React.FC = () => {
   }, [refreshIndex, toast])
 
   useEffect(() => {
+    setStreamsLoading(true)
+    sideStreamsLoadedRef.current = {
+      verificationRequests: false,
+      registrations: false,
+      systemAlerts: false,
+      taskNotifications: false,
+    }
+
     const unsubscribers: Array<() => void> = []
+    const markSideStreamLoaded = (key: keyof typeof sideStreamsLoadedRef.current) => {
+      if (sideStreamsLoadedRef.current[key]) return
+      sideStreamsLoadedRef.current[key] = true
+      if (Object.values(sideStreamsLoadedRef.current).every(Boolean)) {
+        setStreamsLoading(false)
+      }
+    }
 
     unsubscribers.push(
       listenToVerificationRequests((items) => {
         setVerificationRequests(items)
-        setStreamsLoading(false)
+        markSideStreamLoaded('verificationRequests')
       }),
     )
 
     unsubscribers.push(
       listenToRegistrations((items) => {
         setRegistrations(items)
-        setStreamsLoading(false)
+        markSideStreamLoaded('registrations')
       }),
     )
 
     unsubscribers.push(
       listenToSystemAlerts((items) => {
         setSystemAlerts(items)
-        setStreamsLoading(false)
+        markSideStreamLoaded('systemAlerts')
       }),
     )
 
     unsubscribers.push(
       listenToTaskNotifications((items) => {
         setTaskNotifications(items)
-        setStreamsLoading(false)
+        markSideStreamLoaded('taskNotifications')
       }),
     )
 

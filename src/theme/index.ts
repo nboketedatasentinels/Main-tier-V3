@@ -33,11 +33,13 @@ const brandColors = {
   indigo: '#350e6f',
   // Legacy/compatibility aliases mapped to new semantic neutrals
   primaryMuted: '#ede9fe',
+  canvas: '#f8fafc',
   accent: '#f8fafc',
   sidebar: '#f1f5f9',
   text: '#0F172A',
-  subtleText: '#334155',
-  border: '#E2E8F0',
+  subtleText: '#1e293b', // WCAG AAA compliant (was #334155)
+  // Used widely across dashboards; keep comfortably above 3:1 vs white for visible boundaries.
+  border: '#7A879B',
   warning: '#f4540c',
   textLight: '#ffffff',
   textOnDark: '#f3f4f6',
@@ -60,19 +62,22 @@ const colors = {
     muted: '#F1F5F9',
     elevated: '#FFFFFF',
   },
-  // Text Colors - For readability
+  // Text Colors - For readability (WCAG AA/AAA compliant)
   text: {
     primary: '#0F172A',
-    secondary: '#334155',
-    muted: '#64748B',
-    subtle: '#64748B',
+    secondary: '#1e293b', // WCAG AAA compliant (was #334155)
+    muted: '#475569', // WCAG AA compliant (was #64748B - failed AA)
+    subtle: '#475569', // WCAG AA compliant (was #64748B - failed AA)
     inverse: '#FFFFFF',
     accentGold: '#FFEAC2',
   },
   // Border Colors
   border: {
-    subtle: '#E2E8F0',
+    subtle: '#7A879B',
     strong: '#CBD5E1',
+    // WCAG 2.1 1.4.11 (Non-text Contrast): ensure component boundaries (inputs/outline buttons) are visible
+    // against white/light surfaces (>= 3:1 vs #FFFFFF).
+    control: '#7A879B',
     card: '#D6DEE8',
   },
   // Accent Colors - For highlights and status
@@ -226,6 +231,18 @@ const components = {
           color: 'text.primary',
         },
       },
+      outline: {
+        bg: 'surface.default',
+        color: 'text.primary',
+        border: '1px solid',
+        borderColor: 'border.control',
+        _hover: {
+          bg: 'surface.subtle',
+        },
+        _active: {
+          bg: 'surface.muted',
+        },
+      },
       accent: {
         bg: 'accent.warning',
         color: 'text.primary',
@@ -282,7 +299,7 @@ const components = {
         borderRadius: 'xl',
         boxShadow: 'card',
         border: '1px solid',
-        borderColor: 'border.subtle',
+        borderColor: 'border.control',
       },
     },
     variants: {
@@ -408,11 +425,14 @@ const components = {
     variants: {
       outline: {
         field: {
-          borderColor: 'border.subtle',
+          borderColor: 'border.control',
           borderRadius: 'lg',
           bg: 'surface.default',
           _placeholder: {
             color: 'text.subtle',
+          },
+          _hover: {
+            borderColor: 'border.control',
           },
           _focus: {
             borderColor: 'brand.primary',
@@ -434,9 +454,12 @@ const components = {
     variants: {
       outline: {
         field: {
-          borderColor: 'border.subtle',
+          borderColor: 'border.control',
           borderRadius: 'lg',
           bg: 'surface.default',
+          _hover: {
+            borderColor: 'border.control',
+          },
           _focus: {
             borderColor: 'brand.primary',
             boxShadow: 'focus',
@@ -456,9 +479,12 @@ const components = {
     },
     variants: {
       outline: {
-        borderColor: 'border.subtle',
+        borderColor: 'border.control',
         borderRadius: 'lg',
         bg: 'surface.default',
+        _hover: {
+          borderColor: 'border.control',
+        },
         _focus: {
           borderColor: 'brand.primary',
           boxShadow: 'focus',
@@ -473,7 +499,7 @@ const components = {
   Checkbox: {
     baseStyle: {
       control: {
-        borderColor: 'border.strong',
+        borderColor: 'border.control',
         _checked: {
           bg: 'brand.primary',
           borderColor: 'brand.primary',
@@ -484,11 +510,40 @@ const components = {
   Radio: {
     baseStyle: {
       control: {
-        borderColor: 'border.strong',
+        borderColor: 'border.control',
         _checked: {
           bg: 'brand.primary',
           borderColor: 'brand.primary',
         },
+      },
+    },
+  },
+  Divider: {
+    baseStyle: {
+      borderColor: 'border.control',
+    },
+  },
+  Menu: {
+    baseStyle: {
+      list: {
+        bg: 'surface.default',
+        borderColor: 'border.control',
+        boxShadow: 'md',
+      },
+      item: {
+        color: 'text.primary',
+        _hover: {
+          bg: 'surface.subtle',
+        },
+        _focus: {
+          bg: 'surface.subtle',
+        },
+      },
+      divider: {
+        borderColor: 'border.control',
+      },
+      groupTitle: {
+        color: 'text.muted',
       },
     },
   },

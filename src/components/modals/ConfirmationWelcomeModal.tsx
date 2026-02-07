@@ -30,6 +30,7 @@ interface ConfirmationWelcomeModalProps {
   onAcknowledge: () => void
   firstName?: string
   role?: StandardRole
+  membershipStatus?: 'free' | 'paid' | null
   windowContext?: WindowContext | null
   onStartTour?: () => void
 }
@@ -39,10 +40,13 @@ export const ConfirmationWelcomeModal: React.FC<ConfirmationWelcomeModalProps> =
   onAcknowledge,
   firstName,
   role,
+  membershipStatus,
   windowContext,
   onStartTour,
 }) => {
   const roleMessage = useMemo(() => {
+    const isPaidMember = role === 'paid_member' || (role === 'user' && membershipStatus === 'paid')
+
     switch (role) {
       case 'paid_member':
         return 'Start earning points in your current window and track your progress weekly.'
@@ -51,9 +55,12 @@ export const ConfirmationWelcomeModal: React.FC<ConfirmationWelcomeModalProps> =
       case 'ambassador':
         return 'Rally the community by sharing opportunities and spotlighting great work.'
       default:
+        if (isPaidMember) {
+          return 'Start earning points in your current window and track your progress weekly.'
+        }
         return 'Explore the platform, find your community, and start logging your impact.'
     }
-  }, [role])
+  }, [membershipStatus, role])
 
   const featureHighlights = [
     {
@@ -73,7 +80,7 @@ export const ConfirmationWelcomeModal: React.FC<ConfirmationWelcomeModalProps> =
     },
   ]
 
-  const dashboardPath = getDashboardPathForRole(role)
+  const dashboardPath = getDashboardPathForRole(role ?? null, membershipStatus ?? null)
 
   const quickActions = useMemo(
     () => [

@@ -108,7 +108,7 @@ export const WindowWeekRelationshipCard: React.FC<WindowWeekRelationshipCardProp
                           ? 'purple.300'
                           : win.isPast
                           ? 'green.200'
-                          : 'gray.200'
+                          : 'border.control'
                       }
                       borderRadius="md"
                       display="flex"

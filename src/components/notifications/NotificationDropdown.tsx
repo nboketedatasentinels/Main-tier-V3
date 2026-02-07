@@ -69,12 +69,12 @@ export const NotificationDropdown = () => {
           )}
         </Box>
       </PopoverTrigger>
-      <PopoverContent w={{ base: '320px', md: '400px' }} shadow="lg" borderColor="gray.200">
+      <PopoverContent w={{ base: '320px', md: '400px' }} shadow="lg" borderColor="border.control">
         <PopoverArrow />
         <PopoverBody p={0}>
           <VStack align="stretch" spacing={0}>
             {/* Simplified Header */}
-            <HStack justify="space-between" px={4} py={3} borderBottomWidth="1px" borderColor="gray.100">
+            <HStack justify="space-between" px={4} py={3} borderBottomWidth="1px" borderColor="border.control">
               <HStack spacing={2}>
                 <Text fontWeight="semibold" color="gray.900">Notifications</Text>
                 {hasUnread && (
@@ -105,7 +105,7 @@ export const NotificationDropdown = () => {
             <Box maxH="400px" overflowY="auto" px={3} py={2}>
               {loading && (
                 <HStack justify="center" py={8}>
-                  <Spinner color="gray.400" size="sm" />
+                  <Spinner color="text.muted" size="sm" />
                   <Text color="gray.500" fontSize="sm">Loading...</Text>
                 </HStack>
               )}

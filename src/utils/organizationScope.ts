@@ -9,16 +9,19 @@ import {
   type Firestore,
 } from 'firebase/firestore'
 import { OrgProfileLike } from './organizationTypes'
+import { normalizeEmail } from '@/utils/email'
 
 export type OrgScope =
   | { isValid: true; type: 'company'; companyId: string }
   | { isValid: true; type: 'company_code'; companyCode: string }
   | { isValid: true; type: 'village'; villageId: string }
   | { isValid: true; type: 'cohort'; cohortIdentifier: string }
-  | { isValid: false }
+  | { isValid: false; error: string }
 
 export const getOrgScope = (profile?: OrgProfileLike | null): OrgScope => {
-  if (!profile) return { isValid: false }
+  if (!profile) {
+    return { isValid: false, error: 'No profile provided' }
+  }
   if (profile.cohortIdentifier) {
     return { isValid: true, type: 'cohort', cohortIdentifier: profile.cohortIdentifier }
   }
@@ -40,7 +43,10 @@ export const getOrgScope = (profile?: OrgProfileLike | null): OrgScope => {
   if (profile.organizationCode) {
     return { isValid: true, type: 'company_code', companyCode: profile.organizationCode }
   }
-  return { isValid: false }
+  return {
+    isValid: false,
+    error: 'No organization assigned to your profile. Please contact your administrator.',
+  }
 }
 
 export const buildScopeQueries = (peersRef: CollectionReference, scope: OrgScope): Query[] => {
@@ -120,6 +126,71 @@ export const fetchOrgMembers = async (
 ): Promise<Record<string, unknown>[]> => {
   if (!orgScope.isValid) return []
 
+  const normalizeAccountStatus = (status: unknown) => (typeof status === 'string' ? status.trim().toLowerCase() : '')
+
+  const hasSignedInMarkers = (member: Record<string, unknown>) => {
+    if (typeof member.totalPoints === 'number') return true
+    if (typeof member.level === 'number') return true
+    if (typeof member.journeyType === 'string' && member.journeyType.trim().length > 0) return true
+    if (typeof member.onboardingComplete === 'boolean') return true
+    return false
+  }
+
+  const isEligibleMember = (member: Record<string, unknown>) => {
+    if (member.mergedInto) return false
+
+    const status = normalizeAccountStatus(member.accountStatus ?? member.status)
+    if (status && status !== 'active') return false
+
+    const email = typeof member.email === 'string' ? member.email : ''
+    if (!normalizeEmail(email)) return false
+
+    // Exclude stub/pending invitation profiles that haven't completed a real sign-in bootstrap yet.
+    if (!hasSignedInMarkers(member)) return false
+
+    return true
+  }
+
+  const scoreMemberForCanonical = (member: Record<string, unknown>, index: number) => {
+    let score = 0
+
+    const status = normalizeAccountStatus(member.accountStatus ?? member.status)
+    if (status === 'active') score += 50
+
+    if (typeof member.totalPoints === 'number') score += 20
+    if (typeof member.level === 'number') score += 10
+    if (typeof member.journeyType === 'string' && member.journeyType.trim().length > 0) score += 10
+
+    if ((member.membershipStatus as string | undefined)?.toString() === 'paid') score += 10
+
+    const role = typeof member.role === 'string' ? member.role.trim().toLowerCase() : ''
+    if (role && role !== 'free_user') score += 5
+
+    if (member.companyId || member.organizationId) score += 4
+    if (member.companyCode || member.organizationCode) score += 2
+
+    if (Array.isArray(member.assignedOrganizations) && member.assignedOrganizations.length > 0) score += 2
+
+    // Stable tie-breaker: prefer earlier (first) document in traversal.
+    return { score, index }
+  }
+
+  const dedupeByEmail = (members: Record<string, unknown>[]) => {
+    const bestByEmail = new Map<string, { member: Record<string, unknown>; score: number; index: number }>()
+
+    members.forEach((member, index) => {
+      const emailKey = normalizeEmail(typeof member.email === 'string' ? member.email : '')
+      if (!emailKey) return
+      const { score } = scoreMemberForCanonical(member, index)
+      const existing = bestByEmail.get(emailKey)
+      if (!existing || score > existing.score || (score === existing.score && index < existing.index)) {
+        bestByEmail.set(emailKey, { member, score, index })
+      }
+    })
+
+    return Array.from(bestByEmail.values()).map((entry) => entry.member)
+  }
+
   // CRITICAL FIX: Changed from 'users' to 'profiles' - user data is stored in profiles collection
   const peersRef = collection(db, 'profiles')
 
@@ -151,10 +222,17 @@ export const fetchOrgMembers = async (
     ),
   )
 
-  console.log('[OrgMembers] Fetched profiles', members)
-  console.log('[OrgMembers] Fetched profiles count', members.length)
+  const eligible = members.filter(isEligibleMember)
+  const deduped = dedupeByEmail(eligible).sort((a, b) =>
+    String((a as Record<string, unknown>).fullName || '').localeCompare(
+      String((b as Record<string, unknown>).fullName || ''),
+    ),
+  )
 
-  return members
+  console.log('[OrgMembers] Fetched profiles count', members.length)
+  console.log('[OrgMembers] Eligible profiles count', deduped.length)
+
+  return deduped
 }
 
 export type OrgMembersCallback = (members: Record<string, unknown>[]) => void
@@ -187,15 +265,78 @@ export const listenToOrgMembers = (
   let hasReceivedInitialData = false
   const unsubscribers: (() => void)[] = []
 
+  const normalizeAccountStatus = (status: unknown) => (typeof status === 'string' ? status.trim().toLowerCase() : '')
+
+  const hasSignedInMarkers = (member: Record<string, unknown>) => {
+    if (typeof member.totalPoints === 'number') return true
+    if (typeof member.level === 'number') return true
+    if (typeof member.journeyType === 'string' && member.journeyType.trim().length > 0) return true
+    if (typeof member.onboardingComplete === 'boolean') return true
+    return false
+  }
+
+  const isEligibleMember = (member: Record<string, unknown>) => {
+    if (member.mergedInto) return false
+
+    const status = normalizeAccountStatus(member.accountStatus ?? member.status)
+    if (status && status !== 'active') return false
+
+    const email = typeof member.email === 'string' ? member.email : ''
+    if (!normalizeEmail(email)) return false
+
+    if (!hasSignedInMarkers(member)) return false
+
+    return true
+  }
+
+  const scoreMemberForCanonical = (member: Record<string, unknown>, index: number) => {
+    let score = 0
+
+    const status = normalizeAccountStatus(member.accountStatus ?? member.status)
+    if (status === 'active') score += 50
+
+    if (typeof member.totalPoints === 'number') score += 20
+    if (typeof member.level === 'number') score += 10
+    if (typeof member.journeyType === 'string' && member.journeyType.trim().length > 0) score += 10
+
+    if ((member.membershipStatus as string | undefined)?.toString() === 'paid') score += 10
+
+    const role = typeof member.role === 'string' ? member.role.trim().toLowerCase() : ''
+    if (role && role !== 'free_user') score += 5
+
+    if (member.companyId || member.organizationId) score += 4
+    if (member.companyCode || member.organizationCode) score += 2
+
+    if (Array.isArray(member.assignedOrganizations) && member.assignedOrganizations.length > 0) score += 2
+
+    return { score, index }
+  }
+
+  const dedupeByEmail = (members: Record<string, unknown>[]) => {
+    const bestByEmail = new Map<string, { member: Record<string, unknown>; score: number; index: number }>()
+
+    members.forEach((member, index) => {
+      const emailKey = normalizeEmail(typeof member.email === 'string' ? member.email : '')
+      if (!emailKey) return
+      const { score } = scoreMemberForCanonical(member, index)
+      const existing = bestByEmail.get(emailKey)
+      if (!existing || score > existing.score || (score === existing.score && index < existing.index)) {
+        bestByEmail.set(emailKey, { member, score, index })
+      }
+    })
+
+    return Array.from(bestByEmail.values()).map((entry) => entry.member)
+  }
+
   const emitMembers = () => {
-    const members = Array.from(membersMap.values())
-      .filter((m) => !(excludeId && m.id === excludeId))
-      .sort((a, b) =>
-        String((a as Record<string, unknown>).fullName || '').localeCompare(
-          String((b as Record<string, unknown>).fullName || ''),
-        ),
-      )
-    onMembers(members)
+    const members = Array.from(membersMap.values()).filter((m) => !(excludeId && m.id === excludeId))
+    const eligible = members.filter(isEligibleMember)
+    const deduped = dedupeByEmail(eligible).sort((a, b) =>
+      String((a as Record<string, unknown>).fullName || '').localeCompare(
+        String((b as Record<string, unknown>).fullName || ''),
+      ),
+    )
+    onMembers(deduped)
   }
 
   queries.forEach((q, queryIndex) => {

@@ -24,6 +24,8 @@ import { useAuth } from '@/hooks/useAuth'
 import { NotificationDropdown } from '@/components/notifications/NotificationDropdown'
 import { buildMentorNavItems, NavigationSection } from '@/utils/navigationItems'
 
+const APP_VIEWPORT_HEIGHT = { base: '100dvh', md: '100vh' } as const
+
 interface MentorDashboardLayoutProps {
   children: React.ReactNode
   activeItem?: string
@@ -107,7 +109,7 @@ export const MentorDashboardLayout: React.FC<MentorDashboardLayoutProps> = ({
   const shortName = useMemo(() => mentorName?.split(' ')[0] || 'Mentor', [mentorName])
 
   return (
-    <Flex minH="100vh" h="100vh" bg="brand.accent" overflow="hidden">
+    <Flex minH={APP_VIEWPORT_HEIGHT} h={APP_VIEWPORT_HEIGHT} bg="brand.accent" overflow="hidden">
       <Box
         as="nav"
         w={sidebarWidth}
@@ -116,7 +118,7 @@ export const MentorDashboardLayout: React.FC<MentorDashboardLayoutProps> = ({
         borderColor="brand.border"
         display={{ base: 'none', lg: 'flex' }}
         flexDirection="column"
-        h="100vh"
+        h={APP_VIEWPORT_HEIGHT}
         overflowY="auto"
       >
         <Flex direction="column" h="full" p={4} gap={4}>
@@ -192,7 +194,7 @@ export const MentorDashboardLayout: React.FC<MentorDashboardLayoutProps> = ({
         </DrawerContent>
       </Drawer>
 
-      <Flex flex="1" direction="column" minW={0} h="100vh" overflow="hidden">
+      <Flex flex="1" direction="column" minW={0} h={APP_VIEWPORT_HEIGHT} overflow="hidden" minH={0}>
         {isMobile && (
           <Flex
             px={4}

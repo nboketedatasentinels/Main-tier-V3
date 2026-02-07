@@ -7,6 +7,7 @@ import {
   getMonthlyAssignmentsArray,
   normalizeMonthlyAssignments,
 } from '@/utils/monthlyCourseAssignments'
+import { resolveCourseIdFromMapping } from '@/utils/courseMappings'
 import { normalizeDurationWeeks, resolveDurationWeeksFromProgramDuration, resolveJourneyType } from '@/utils/journeyType'
 import { JOURNEY_META, type JourneyType } from '@/config/pointsConfig'
 
@@ -37,18 +38,21 @@ const normalizeDate = (value: unknown): Date | null => {
   return null
 }
 
-const normalizeCourseIds = (input?: unknown): string[] => {
+const normalizeCourseAssignmentArray = (input?: unknown): string[] => {
   if (!Array.isArray(input)) return []
-  const uniqueIds = new Set<string>()
-  input.forEach(value => {
-    if (typeof value === 'string') {
-      const trimmed = value.trim()
-      if (trimmed) {
-        uniqueIds.add(trimmed)
-      }
-    }
-  })
-  return Array.from(uniqueIds)
+  return input.map(value => (typeof value === 'string' ? resolveCourseIdFromMapping(value) : ''))
+}
+
+const normalizeMonthlyAssignmentsFromMapping = (
+  monthlyAssignments: MonthlyCourseAssignments,
+  totalMonths: number,
+): MonthlyCourseAssignments => {
+  const mapped: MonthlyCourseAssignments = {}
+  for (let index = 0; index < totalMonths; index += 1) {
+    const key = String(index + 1)
+    mapped[key] = resolveCourseIdFromMapping(monthlyAssignments[key])
+  }
+  return mapped
 }
 
 const isMonthlyCourseAssignments = (value: unknown): value is MonthlyCourseAssignments => {
@@ -93,7 +97,7 @@ export const useOrganizationProgramCourses = (organizationId: string | null) => 
         const monthlyCourseAssignments = isMonthlyCourseAssignments(rawMonthlyAssignments)
           ? rawMonthlyAssignments
           : null
-        const courseAssignments = normalizeCourseIds(
+        const courseAssignments = normalizeCourseAssignmentArray(
           data.courseAssignments || data.assignedCourses || data.defaultCourses
         )
         const programDurationWeeks =
@@ -108,11 +112,12 @@ export const useOrganizationProgramCourses = (organizationId: string | null) => 
           courseAssignments,
           programDuration,
         })
-        const monthlyAssignmentArray = getMonthlyAssignmentsArray(monthlyAssignments, totalMonths)
-        const orderedCourseIds = Array.from(new Set(monthlyAssignmentArray))
+        const mappedMonthlyAssignments = normalizeMonthlyAssignmentsFromMapping(monthlyAssignments, totalMonths)
+        const monthlyAssignmentArray = getMonthlyAssignmentsArray(mappedMonthlyAssignments, totalMonths)
+        const orderedCourseIds = Array.from(new Set(monthlyAssignmentArray.filter(Boolean)))
 
         setProgram({
-          monthlyAssignments,
+          monthlyAssignments: mappedMonthlyAssignments,
           totalMonths,
           cohortStartDate: normalizeDate(data.cohortStartDate),
           orderedCourseIds,

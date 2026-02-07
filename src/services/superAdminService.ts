@@ -209,9 +209,19 @@ const buildDateBuckets = (days: number) => {
 const timestampToMillis = (value?: unknown) => {
   if (!value) return 0
   if (value instanceof Timestamp) return value.toMillis()
+  if (value instanceof Date) return value.getTime()
   if (typeof value === 'number') return value
+  if (typeof value === 'string') {
+    const parsed = Date.parse(value)
+    return Number.isNaN(parsed) ? 0 : parsed
+  }
   const asDate = (value as { toDate?: () => Date })?.toDate?.()
-  return asDate?.getTime() || 0
+  if (asDate) return asDate.getTime()
+
+  const asSeconds = (value as { seconds?: unknown })?.seconds
+  if (typeof asSeconds === 'number' && Number.isFinite(asSeconds)) return asSeconds * 1000
+
+  return 0
 }
 
 const mapAdminDoc = (docSnap: { id: string; data: () => unknown }): AdminUserRecord => {
@@ -227,19 +237,32 @@ const mapAdminDoc = (docSnap: { id: string; data: () => unknown }): AdminUserRec
 
 export const fetchRegistrationTrend = async (days = 14): Promise<TrendPoint[]> => {
   const sinceDate = new Date()
+  sinceDate.setHours(0, 0, 0, 0)
   sinceDate.setDate(sinceDate.getDate() - (days - 1))
+  const sinceIso = sinceDate.toISOString()
 
-  const registrationQuery = query(
-    usersCollection,
-    where('registrationDate', '>=', sinceDate),
-    orderBy('registrationDate', 'asc'),
-  )
+  const snapshots = await Promise.allSettled([
+    getDocs(query(usersCollection, where('createdAt', '>=', sinceDate), orderBy('createdAt', 'asc'))),
+    getDocs(query(usersCollection, where('createdAt', '>=', sinceIso), orderBy('createdAt', 'asc'))),
+    getDocs(query(usersCollection, where('registrationDate', '>=', sinceDate), orderBy('registrationDate', 'asc'))),
+    getDocs(query(usersCollection, where('registrationDate', '>=', sinceIso), orderBy('registrationDate', 'asc'))),
+  ])
 
-  const snapshot = await getDocs(registrationQuery)
   const buckets = buildDateBuckets(days)
+  const windowStart = sinceDate.getTime()
 
-  snapshot.docs.forEach((docSnap) => {
-    const millis = timestampToMillis((docSnap.data() as { registrationDate?: unknown }).registrationDate)
+  const docMillisById = new Map<string, number>()
+
+  snapshots.forEach((result) => {
+    if (result.status !== 'fulfilled') return
+    result.value.docs.forEach((docSnap) => {
+      const data = docSnap.data() as { createdAt?: unknown; registrationDate?: unknown }
+      const millis = timestampToMillis(data.registrationDate) || timestampToMillis(data.createdAt)
+      if (millis && millis >= windowStart) docMillisById.set(docSnap.id, millis)
+    })
+  })
+
+  docMillisById.forEach((millis) => {
     Object.values(buckets).forEach((bucket) => {
       if (millis >= bucket.start && millis <= bucket.end) {
         buckets[bucket.label].value = (buckets[bucket.label].value || 0) + 1
@@ -256,49 +279,94 @@ export const listenToRegistrationTrend = (
   onError?: (error: FirestoreError) => void,
 ) => {
   const sinceDate = new Date()
+  sinceDate.setHours(0, 0, 0, 0)
   sinceDate.setDate(sinceDate.getDate() - (days - 1))
+  const sinceIso = sinceDate.toISOString()
+  const windowStart = sinceDate.getTime()
 
-  const registrationQuery = query(
-    usersCollection,
-    where('registrationDate', '>=', sinceDate),
-    orderBy('registrationDate', 'asc'),
-  )
+  const queries = [
+    query(usersCollection, where('createdAt', '>=', sinceDate), orderBy('createdAt', 'asc')),
+    query(usersCollection, where('createdAt', '>=', sinceIso), orderBy('createdAt', 'asc')),
+    query(usersCollection, where('registrationDate', '>=', sinceDate), orderBy('registrationDate', 'asc')),
+    query(usersCollection, where('registrationDate', '>=', sinceIso), orderBy('registrationDate', 'asc')),
+  ]
 
-  return onSnapshot(
-    registrationQuery,
-    (snapshot) => {
-      const buckets = buildDateBuckets(days)
+  const sourceDocs = new Map<number, Map<string, number>>()
 
-      snapshot.docs.forEach((docSnap) => {
-        const millis = timestampToMillis((docSnap.data() as { registrationDate?: unknown }).registrationDate)
-        Object.values(buckets).forEach((bucket) => {
-          if (millis >= bucket.start && millis <= bucket.end) {
-            buckets[bucket.label].value = (buckets[bucket.label].value || 0) + 1
-          }
-        })
+  const emit = () => {
+    const merged = new Map<string, number>()
+    sourceDocs.forEach((docs) => {
+      docs.forEach((millis, id) => {
+        if (!merged.has(id)) merged.set(id, millis)
       })
+    })
 
-      onChange(Object.values(buckets).map((bucket) => ({ label: bucket.label, value: bucket.value || 0 })))
-    },
-    onError,
+    const buckets = buildDateBuckets(days)
+    merged.forEach((millis) => {
+      if (!millis || millis < windowStart) return
+      Object.values(buckets).forEach((bucket) => {
+        if (millis >= bucket.start && millis <= bucket.end) {
+          buckets[bucket.label].value = (buckets[bucket.label].value || 0) + 1
+        }
+      })
+    })
+
+    onChange(Object.values(buckets).map((bucket) => ({ label: bucket.label, value: bucket.value || 0 })))
+  }
+
+  const unsubs = queries.map((q, index) =>
+    onSnapshot(
+      q,
+      (snapshot) => {
+        const docs = new Map<string, number>()
+        snapshot.docs.forEach((docSnap) => {
+          const data = docSnap.data() as { createdAt?: unknown; registrationDate?: unknown }
+          const millis = timestampToMillis(data.registrationDate) || timestampToMillis(data.createdAt)
+          if (millis && millis >= windowStart) docs.set(docSnap.id, millis)
+        })
+        sourceDocs.set(index, docs)
+        emit()
+      },
+      (err) => {
+        onError?.(err)
+      },
+    ),
   )
+
+  return () => unsubs.forEach((unsub) => unsub())
 }
 
 export const fetchUserGrowthTrend = async (days = 30): Promise<TrendPoint[]> => {
   const sinceDate = new Date()
+  sinceDate.setHours(0, 0, 0, 0)
   sinceDate.setDate(sinceDate.getDate() - (days - 1))
+  const sinceIso = sinceDate.toISOString()
 
-  const userQuery = query(usersCollection, where('registrationDate', '>=', sinceDate), orderBy('registrationDate', 'asc'))
-  const snapshot = await getDocs(userQuery)
+  const snapshots = await Promise.allSettled([
+    getDocs(query(usersCollection, where('createdAt', '>=', sinceDate), orderBy('createdAt', 'asc'))),
+    getDocs(query(usersCollection, where('createdAt', '>=', sinceIso), orderBy('createdAt', 'asc'))),
+    getDocs(query(usersCollection, where('registrationDate', '>=', sinceDate), orderBy('registrationDate', 'asc'))),
+    getDocs(query(usersCollection, where('registrationDate', '>=', sinceIso), orderBy('registrationDate', 'asc'))),
+  ])
+
   const buckets = buildDateBuckets(days)
+  const windowStart = sinceDate.getTime()
 
   const byDay: Record<string, number> = {}
-  snapshot.docs.forEach((docSnap) => {
-    const millis = timestampToMillis((docSnap.data() as { registrationDate?: unknown }).registrationDate)
+  const docMillisById = new Map<string, number>()
+
+  snapshots.forEach((result) => {
+    if (result.status !== 'fulfilled') return
+    result.value.docs.forEach((docSnap) => {
+      const data = docSnap.data() as { createdAt?: unknown; registrationDate?: unknown }
+      const millis = timestampToMillis(data.registrationDate) || timestampToMillis(data.createdAt)
+      if (millis && millis >= windowStart) docMillisById.set(docSnap.id, millis)
+    })
+  })
+
+  docMillisById.forEach((millis) => {
     const bucket = Object.values(buckets).find((range) => millis >= range.start && millis <= range.end)
-    if (bucket) {
-      byDay[bucket.label] = (byDay[bucket.label] || 0) + 1
-    }
+    if (bucket) byDay[bucket.label] = (byDay[bucket.label] || 0) + 1
   })
 
   let runningTotal = 0
@@ -314,34 +382,64 @@ export const listenToUserGrowthTrend = (
   onError?: (error: FirestoreError) => void,
 ) => {
   const sinceDate = new Date()
+  sinceDate.setHours(0, 0, 0, 0)
   sinceDate.setDate(sinceDate.getDate() - (days - 1))
+  const sinceIso = sinceDate.toISOString()
+  const windowStart = sinceDate.getTime()
 
-  const userQuery = query(usersCollection, where('registrationDate', '>=', sinceDate), orderBy('registrationDate', 'asc'))
+  const queries = [
+    query(usersCollection, where('createdAt', '>=', sinceDate), orderBy('createdAt', 'asc')),
+    query(usersCollection, where('createdAt', '>=', sinceIso), orderBy('createdAt', 'asc')),
+    query(usersCollection, where('registrationDate', '>=', sinceDate), orderBy('registrationDate', 'asc')),
+    query(usersCollection, where('registrationDate', '>=', sinceIso), orderBy('registrationDate', 'asc')),
+  ]
 
-  return onSnapshot(
-    userQuery,
-    (snapshot) => {
-      const buckets = buildDateBuckets(days)
-      const byDay: Record<string, number> = {}
+  const sourceDocs = new Map<number, Map<string, number>>()
 
-      snapshot.docs.forEach((docSnap) => {
-        const millis = timestampToMillis((docSnap.data() as { registrationDate?: unknown }).registrationDate)
-        const bucket = Object.values(buckets).find((range) => millis >= range.start && millis <= range.end)
-        if (bucket) {
-          byDay[bucket.label] = (byDay[bucket.label] || 0) + 1
-        }
+  const emit = () => {
+    const merged = new Map<string, number>()
+    sourceDocs.forEach((docs) => {
+      docs.forEach((millis, id) => {
+        if (!merged.has(id)) merged.set(id, millis)
       })
+    })
 
-      let runningTotal = 0
-      onChange(
-        Object.values(buckets).map((bucket) => {
-          runningTotal += byDay[bucket.label] || 0
-          return { label: bucket.label, value: runningTotal }
-        }),
-      )
-    },
-    onError,
+    const buckets = buildDateBuckets(days)
+    const byDay: Record<string, number> = {}
+
+    merged.forEach((millis) => {
+      if (!millis || millis < windowStart) return
+      const bucket = Object.values(buckets).find((range) => millis >= range.start && millis <= range.end)
+      if (bucket) byDay[bucket.label] = (byDay[bucket.label] || 0) + 1
+    })
+
+    let runningTotal = 0
+    onChange(
+      Object.values(buckets).map((bucket) => {
+        runningTotal += byDay[bucket.label] || 0
+        return { label: bucket.label, value: runningTotal }
+      }),
+    )
+  }
+
+  const unsubs = queries.map((q, index) =>
+    onSnapshot(
+      q,
+      (snapshot) => {
+        const docs = new Map<string, number>()
+        snapshot.docs.forEach((docSnap) => {
+          const data = docSnap.data() as { createdAt?: unknown; registrationDate?: unknown }
+          const millis = timestampToMillis(data.registrationDate) || timestampToMillis(data.createdAt)
+          if (millis && millis >= windowStart) docs.set(docSnap.id, millis)
+        })
+        sourceDocs.set(index, docs)
+        emit()
+      },
+      (err) => onError?.(err),
+    ),
   )
+
+  return () => unsubs.forEach((unsub) => unsub())
 }
 
 export const fetchOrganizations = async (): Promise<OrganizationRecord[]> => {

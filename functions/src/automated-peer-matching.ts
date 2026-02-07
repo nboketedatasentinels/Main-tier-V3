@@ -19,6 +19,16 @@ interface UserProfile {
   fullName?: string;
   firstName?: string;
   lastName?: string;
+  accountStatus?: string;
+  status?: string;
+  mergedInto?: string | null;
+  membershipStatus?: string;
+  role?: string;
+  totalPoints?: number;
+  level?: number;
+  journeyType?: string;
+  onboardingComplete?: boolean;
+  privacySettings?: { allowPeerMatching?: boolean };
   companyId?: string;
   companyCode?: string;
   organizationId?: string;
@@ -44,6 +54,32 @@ interface PeerMatch {
   lastRefreshAt: FirebaseFirestore.FieldValue;
   automatedMatch: boolean;
 }
+
+const normalizeAccountStatus = (status: unknown) =>
+  typeof status === "string" ? status.trim().toLowerCase() : "";
+
+const hasSignedInMarkers = (profile: UserProfile) => {
+  if (typeof profile.totalPoints === "number") return true;
+  if (typeof profile.level === "number") return true;
+  if (typeof profile.journeyType === "string" && profile.journeyType.trim().length > 0)
+    return true;
+  if (typeof profile.onboardingComplete === "boolean") return true;
+  return false;
+};
+
+const isEligibleForPeerMatching = (profile: UserProfile) => {
+  if (profile.mergedInto) return false;
+
+  const status = normalizeAccountStatus(profile.accountStatus ?? profile.status);
+  if (status && status !== "active") return false;
+
+  if (profile.privacySettings?.allowPeerMatching === false) return false;
+
+  // Exclude stub/pending invitation profiles that haven't completed a real sign-in bootstrap yet.
+  if (!hasSignedInMarkers(profile)) return false;
+
+  return true;
+};
 
 // Get the current match window key based on date
 const getMatchWindowKey = (
@@ -142,6 +178,60 @@ const getMatchReason = (orgKey: string): string => {
 
 const MAX_BATCH_WRITE_OPERATIONS = 450;
 const WRITES_PER_MATCH = 3;
+const MAX_RETRY_ATTEMPTS = 3;
+const INITIAL_RETRY_DELAY_MS = 1000;
+
+// Retry helper with exponential backoff
+async function retryWithBackoff<T>(
+  operation: () => Promise<T>,
+  context: string,
+  maxAttempts = MAX_RETRY_ATTEMPTS
+): Promise<T> {
+  let lastError: Error | undefined;
+
+  for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+    try {
+      return await operation();
+    } catch (error) {
+      lastError = error as Error;
+      console.warn(
+        `${context} failed (attempt ${attempt}/${maxAttempts}):`,
+        error
+      );
+
+      if (attempt < maxAttempts) {
+        const delay = INITIAL_RETRY_DELAY_MS * Math.pow(2, attempt - 1);
+        console.log(`Retrying after ${delay}ms...`);
+        await new Promise((resolve) => setTimeout(resolve, delay));
+      }
+    }
+  }
+
+  throw new Error(
+    `${context} failed after ${maxAttempts} attempts: ${lastError?.message}`
+  );
+}
+
+// Log matching run statistics to Firestore for monitoring
+async function logMatchingRunStats(stats: {
+  timestamp: FirebaseFirestore.FieldValue;
+  status: "success" | "error";
+  totalUsers: number;
+  totalCreated: number;
+  totalSkipped: number;
+  groupsProcessed: number;
+  groupsWithErrors: number;
+  emptyGroups: number;
+  duration: number;
+  errorMessage?: string;
+}) {
+  try {
+    await db.collection("peer_matching_runs").add(stats);
+  } catch (error) {
+    console.error("Failed to log matching run statistics:", error);
+    // Don't throw - logging failure shouldn't break the matching run
+  }
+}
 
 // Create peer matches for a group of users
 const createMatchesForGroup = async (
@@ -150,23 +240,25 @@ const createMatchesForGroup = async (
   matchReason: string
 ): Promise<{ created: number; skipped: number }> => {
   if (users.length < 2) {
-    console.log(
-      `Skipping group ${orgKey}: only ${users.length} user(s), need at least 2`
+    console.warn(
+      `⚠️  EMPTY POOL: Group ${orgKey} has ${users.length} user(s) - need at least 2 for matching`
     );
     return { created: 0, skipped: users.length };
   }
 
   // Filter to only users who have weekly or biweekly matching enabled
-  const eligibleUsers = users.filter(
-    (u) =>
+  const eligibleUsers = users.filter((u) => {
+    if (!isEligibleForPeerMatching(u)) return false;
+    return (
       !u.matchRefreshPreference ||
       u.matchRefreshPreference === "weekly" ||
       u.matchRefreshPreference === "biweekly"
-  );
+    );
+  });
 
   if (eligibleUsers.length < 2) {
-    console.log(
-      `Skipping group ${orgKey}: only ${eligibleUsers.length} eligible user(s)`
+    console.warn(
+      `⚠️  INSUFFICIENT ELIGIBLE USERS: Group ${orgKey} has ${eligibleUsers.length}/${users.length} eligible user(s) - need at least 2 with weekly/biweekly preference`
     );
     return { created: 0, skipped: users.length };
   }
@@ -181,7 +273,10 @@ const createMatchesForGroup = async (
 
   const flushBatch = async () => {
     if (pendingWrites === 0) return;
-    await batch.commit();
+    await retryWithBackoff(
+      () => batch.commit(),
+      `Batch commit for group ${orgKey}`
+    );
     batch = db.batch();
     pendingWrites = 0;
   };
@@ -299,6 +394,8 @@ export const automatedWeeklyPeerMatching = functions
     let totalSkipped = 0;
     let totalUsers = 0;
     let groupsProcessed = 0;
+    let groupsWithErrors = 0;
+    let emptyGroups = 0;
 
     try {
       // Fetch all profiles with organization associations
@@ -311,14 +408,15 @@ export const automatedWeeklyPeerMatching = functions
         }))
         .filter(
           (u: UserProfile) =>
+            isEligibleForPeerMatching(u) &&
             // Only include users with some organization/village association
-            u.companyId ||
-            u.companyCode ||
-            u.organizationId ||
-            u.organizationCode ||
-            u.corporateVillageId ||
-            u.villageId ||
-            u.cohortIdentifier
+            (u.companyId ||
+              u.companyCode ||
+              u.organizationId ||
+              u.organizationCode ||
+              u.corporateVillageId ||
+              u.villageId ||
+              u.cohortIdentifier)
         );
 
       totalUsers = users.length;
@@ -356,30 +454,75 @@ export const automatedWeeklyPeerMatching = functions
           );
           totalCreated += result.created;
           totalSkipped += result.skipped;
+
+          // Track empty groups for monitoring
+          if (result.created === 0 && orgUsers.length >= 2) {
+            emptyGroups++;
+          }
+
           groupsProcessed++;
         } catch (groupError) {
-          console.error(`Error processing group ${orgKey}:`, groupError);
+          groupsWithErrors++;
+          console.error(
+            `❌ Error processing group ${orgKey} (${orgUsers.length} users):`,
+            groupError
+          );
+          // Continue processing other groups despite error
         }
       }
 
       const duration = Date.now() - startTime;
       const summary = {
-        status: "success",
+        status: "success" as const,
         message: `Automated peer matching complete`,
         totalUsers,
         totalCreated,
         totalSkipped,
         groupsProcessed,
+        groupsWithErrors,
+        emptyGroups,
         duration,
       };
 
       console.log(
-        `Automated peer matching complete: ${totalCreated} matches created, ${totalSkipped} skipped, ${groupsProcessed} groups processed in ${duration}ms`
+        `✅ Automated peer matching complete: ${totalCreated} matches created, ${totalSkipped} skipped, ${groupsProcessed} groups processed, ${groupsWithErrors} errors, ${emptyGroups} empty groups, ${duration}ms`
       );
+
+      // Log statistics to Firestore for monitoring
+      await logMatchingRunStats({
+        timestamp: admin.firestore.FieldValue.serverTimestamp(),
+        status: "success",
+        totalUsers,
+        totalCreated,
+        totalSkipped,
+        groupsProcessed,
+        groupsWithErrors,
+        emptyGroups,
+        duration,
+      });
 
       return summary;
     } catch (error) {
-      console.error("Automated peer matching failed:", error);
+      const duration = Date.now() - startTime;
+      const errorMessage =
+        error instanceof Error ? error.message : String(error);
+
+      console.error("❌ Automated peer matching failed:", error);
+
+      // Log failure to Firestore
+      await logMatchingRunStats({
+        timestamp: admin.firestore.FieldValue.serverTimestamp(),
+        status: "error",
+        totalUsers,
+        totalCreated,
+        totalSkipped,
+        groupsProcessed,
+        groupsWithErrors,
+        emptyGroups,
+        duration,
+        errorMessage,
+      });
+
       throw error;
     }
   });
@@ -446,13 +589,14 @@ export const triggerPeerMatching = functions
         }))
         .filter(
           (u: UserProfile) =>
-            u.companyId ||
-            u.companyCode ||
-            u.organizationId ||
-            u.organizationCode ||
-            u.corporateVillageId ||
-            u.villageId ||
-            u.cohortIdentifier
+            isEligibleForPeerMatching(u) &&
+            (u.companyId ||
+              u.companyCode ||
+              u.organizationId ||
+              u.organizationCode ||
+              u.corporateVillageId ||
+              u.villageId ||
+              u.cohortIdentifier)
         );
 
       totalUsers = users.length;

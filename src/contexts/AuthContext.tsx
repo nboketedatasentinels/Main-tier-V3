@@ -533,6 +533,82 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
           }
         }
 
+        const pendingCompanyCode =
+          typeof window !== 'undefined' ? localStorage.getItem(pendingCompanyCodeKey)?.trim() : null
+        const normalizedPendingCompanyCode = pendingCompanyCode?.toUpperCase() || null
+
+        if (normalizedPendingCompanyCode) {
+          const previousCompanyId = mergedUser.companyId ?? null
+          try {
+            const validationResult = await validateCompanyCode(normalizedPendingCompanyCode)
+            if (validationResult.valid && validationResult.organization) {
+              const organization = validationResult.organization
+              const normalizedCurrentRole = normalizeRole(mergedUser.role)
+              const roleUpdates =
+                normalizedCurrentRole === 'free_user' || normalizedCurrentRole === 'paid_member'
+                  ? { role: 'user' as const }
+                  : {}
+
+              const nextAssignedOrganizations = Array.isArray(mergedUser.assignedOrganizations)
+                ? Array.from(
+                    new Set([
+                      ...mergedUser.assignedOrganizations.filter(
+                        (id): id is string => typeof id === 'string' && id.trim().length > 0,
+                      ),
+                      organization.id,
+                    ]),
+                  )
+                : [organization.id]
+
+              const nextDashboardPreferences = {
+                ...(mergedUser.dashboardPreferences && typeof mergedUser.dashboardPreferences === 'object'
+                  ? mergedUser.dashboardPreferences
+                  : {}),
+                lockedToFreeExperience: false,
+              }
+
+              const upgradeUpdates: Partial<UserProfile> = {
+                membershipStatus: 'paid',
+                companyId: organization.id,
+                companyCode: organization.code,
+                companyName: organization.name,
+                transformationTier: TransformationTier.CORPORATE_MEMBER,
+                assignedOrganizations: nextAssignedOrganizations,
+                dashboardPreferences: nextDashboardPreferences,
+                ...roleUpdates,
+              }
+
+              await updateDoc(userDocRef, {
+                ...upgradeUpdates,
+                updatedAt: serverTimestamp(),
+              })
+
+              mergedUser = {
+                ...mergedUser,
+                ...upgradeUpdates,
+                updatedAt: new Date().toISOString(),
+              }
+
+              if (organization.id && organization.id !== previousCompanyId) {
+                try {
+                  await incrementOrganizationMemberCount(organization.id)
+                } catch (incrementError) {
+                  console.warn(
+                    'ðŸŸ  [Auth] Unable to increment organization member count after company code apply',
+                    incrementError,
+                  )
+                }
+              }
+            }
+          } catch (validationError) {
+            console.warn('ðŸŸ  [Auth] Unable to validate pending company code (existing profile)', validationError)
+          } finally {
+            if (typeof window !== 'undefined') {
+              localStorage.removeItem(pendingCompanyCodeKey)
+            }
+          }
+        }
+
         return mergedUser
       }
 
@@ -588,12 +664,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         }
       }
 
-      const role = isBootstrapAdmin(firebaseUser.email)
-        ? UserRole.SUPER_ADMIN
-        : validatedOrganization
-          ? UserRole.PAID_MEMBER
-          : UserRole.FREE_USER
-      const normalizedRole = normalizeRole(role || UserRole.PAID_MEMBER)
+      const role = isBootstrapAdmin(firebaseUser.email) ? UserRole.SUPER_ADMIN : UserRole.USER
+      const normalizedRole = normalizeRole(role || UserRole.USER)
       const { firstName, lastName, fullName } = getNameParts(
         firebaseUser.displayName,
         firebaseUser.email
@@ -606,7 +678,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       }
 
       const resolvedJourneyType = resolveInitialJourneyType({
-        isFreeTierUser: role === UserRole.FREE_USER,
+        isFreeTierUser: !validatedOrganization,
         organizationJourneyType: validatedOrganization?.journeyType ?? null,
       })
       const programDurationWeeks = JOURNEY_META[resolvedJourneyType].weeks
@@ -638,7 +710,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         transformationTier: validatedOrganization
           ? TransformationTier.CORPORATE_MEMBER
           : TransformationTier.INDIVIDUAL_FREE,
-        assignedOrganizations: [],
+        assignedOrganizations: validatedOrganization?.id ? [validatedOrganization.id] : [],
         companyCode: validatedOrganization?.code ?? null,
         companyId: validatedOrganization?.id ?? null,
         companyName: validatedOrganization?.name ?? null,
@@ -648,9 +720,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         hasSeenDashboardTour: false,
         dashboardPreferences: {
           defaultRoute: '/app/weekly-glance',
-          lockedToFreeExperience: validatedOrganization
-            ? false
-            : ['user', 'free_user'].includes(normalizedRole),
+          lockedToFreeExperience: !validatedOrganization,
         },
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
@@ -1086,12 +1156,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       const firebaseUser = credential.user
       const uid = firebaseUser.uid
 
-      const role = isBootstrapAdmin(firebaseUser.email)
-        ? UserRole.SUPER_ADMIN
-        : validatedOrganization
-          ? UserRole.PAID_MEMBER
-          : UserRole.FREE_USER
-      const normalizedRole = normalizeRole(role || UserRole.PAID_MEMBER)
+      const role = isBootstrapAdmin(firebaseUser.email) ? UserRole.SUPER_ADMIN : UserRole.USER
+      const normalizedRole = normalizeRole(role || UserRole.USER)
       let generatedReferralCode: string | null = null
       try {
         generatedReferralCode = await generateReferralCode(uid)
@@ -1100,7 +1166,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       }
 
       const resolvedJourneyType = resolveInitialJourneyType({
-        isFreeTierUser: role === UserRole.FREE_USER,
+        isFreeTierUser: !validatedOrganization,
         organizationJourneyType: validatedOrganization?.journeyType ?? null,
       })
       const programDurationWeeks = JOURNEY_META[resolvedJourneyType].weeks
@@ -1133,7 +1199,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         transformationTier: validatedOrganization
           ? TransformationTier.CORPORATE_MEMBER
           : TransformationTier.INDIVIDUAL_FREE,
-        assignedOrganizations: [],
+        assignedOrganizations: validatedOrganization?.id ? [validatedOrganization.id] : [],
         onboardingComplete: false,
         onboardingSkipped: false,
         mustChangePassword: false,
@@ -1142,7 +1208,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
           defaultRoute: '/app/weekly-glance',
           lockedToFreeExperience: validatedOrganization
             ? false
-            : ['user', 'free_user'].includes(normalizedRole),
+            : true,
         },
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),

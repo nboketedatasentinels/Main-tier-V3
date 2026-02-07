@@ -14,6 +14,7 @@ import { ORG_COLLECTION } from '@/constants/organizations'
 import { createOrganizationWithInvitations } from '@/services/organizationService'
 import { createInAppNotification } from '@/services/notificationService'
 import type { OrganizationRecord } from '@/types/admin'
+import { normalizeRole } from '@/utils/role'
 
 const REQUEST_COLLECTION = 'upgrade_requests'
 const USERS_COLLECTION = 'users'
@@ -76,6 +77,8 @@ export const approveUpgradeRequestWithOrganizationAssignment = async (
     const profileSnap = await transaction.get(profilesRef)
     const userData = (userSnap.exists() ? userSnap.data() : profileSnap.data()) as {
       role?: string
+      membershipStatus?: string | null
+      transformationTier?: string | null
       organizationId?: string | null
       companyId?: string | null
       villageId?: string | null
@@ -88,13 +91,29 @@ export const approveUpgradeRequestWithOrganizationAssignment = async (
     if (userData.organizationId || userData.companyId) {
       throw new Error('User is already assigned to an organization.')
     }
-    if (userData.role && userData.role !== 'free_user') {
+
+    const normalizedRole = normalizeRole(userData.role)
+    const normalizedMembershipStatus = (userData.membershipStatus ?? '').toString().trim().toLowerCase()
+    const normalizedTier = (userData.transformationTier ?? '').toString().trim().toLowerCase()
+
+    const isAlreadyPaid =
+      normalizedMembershipStatus === 'paid' ||
+      normalizedTier === 'individual_paid' ||
+      normalizedTier === 'corporate_member' ||
+      normalizedTier === 'corporate_leader'
+
+    if (isAlreadyPaid) {
+      throw new Error('User is already paid.')
+    }
+
+    const isEligibleRole = normalizedRole === 'free_user' || normalizedRole === 'user' || normalizedRole === 'paid_member'
+    if (!isEligibleRole) {
       throw new Error('User is not eligible for upgrade.')
     }
 
     const existingDashboardPreferences = userData.dashboardPreferences ?? {}
     const updates = {
-      role: 'paid_member',
+      role: 'user',
       membershipStatus: 'paid',
       transformationTier: 'corporate_member',
       organizationId,
@@ -130,7 +149,7 @@ export const approveUpgradeRequestWithOrganizationAssignment = async (
       organization_id: organizationId,
       organization_name: orgData.name ?? 'Organization',
       previous_role: userData.role ?? 'unknown',
-      new_role: 'paid_member',
+      new_role: 'user',
       village_id: userData.villageId ?? requestData.villageId ?? null,
       notes: notes ?? null,
       createdAt: serverTimestamp(),
@@ -138,6 +157,7 @@ export const approveUpgradeRequestWithOrganizationAssignment = async (
         requestId,
         sendWelcomeEmail: Boolean(sendWelcomeEmail),
         approvalType: 'existing_organization',
+        membershipStatus: 'paid',
       },
     })
 

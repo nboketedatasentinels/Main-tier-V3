@@ -56,6 +56,7 @@ vi.mock('@/hooks/useUserChecklistProgressSnapshot', () => ({
 import { useAuth } from '@/hooks/useAuth'
 import {
   fetchImpactLogSummary,
+  fetchOrganizationDetails,
   fetchUserBadges,
   fetchUserProfileById,
   logUserProfileAccess,
@@ -67,6 +68,7 @@ const mockUseAuth = vi.mocked(useAuth)
 const mockFetchUserProfileById = vi.mocked(fetchUserProfileById)
 const mockFetchUserBadges = vi.mocked(fetchUserBadges)
 const mockFetchImpactLogSummary = vi.mocked(fetchImpactLogSummary)
+const mockFetchOrganizationDetails = vi.mocked(fetchOrganizationDetails)
 const mockLogUserProfileAccess = vi.mocked(logUserProfileAccess)
 const mockUseUserWeeklyProgressSnapshot = vi.mocked(useUserWeeklyProgressSnapshot)
 const mockUseUserChecklistProgressSnapshot = vi.mocked(useUserChecklistProgressSnapshot)
@@ -88,6 +90,8 @@ describe('UserProfileManagementPage', () => {
       role: 'paid_member',
       membershipStatus: 'paid',
       accountStatus: 'active',
+      companyId: 'org_1',
+      companyCode: 'ACME',
       totalPoints: 999,
       level: 3,
       currentWeek: 2,
@@ -99,6 +103,7 @@ describe('UserProfileManagementPage', () => {
       updatedAt: new Date().toISOString(),
     })
 
+    mockFetchOrganizationDetails.mockResolvedValue({ id: 'org_1', name: 'Acme Inc', code: 'ACME', status: 'active' })
     mockFetchUserBadges.mockResolvedValue([])
     mockFetchImpactLogSummary.mockResolvedValue({ totalEntries: 0, lastActivityAt: null })
     mockLogUserProfileAccess.mockResolvedValue(undefined)
@@ -143,5 +148,31 @@ describe('UserProfileManagementPage', () => {
 
     expect(screen.getByText(/this week \(week 2\)/i)).toBeInTheDocument()
     expect(screen.getByText('120 points · 3 activities')).toBeInTheDocument()
+  })
+
+  it('shows the viewed user role and organization access (not the viewer)', async () => {
+    mockUseAuth.mockReturnValue({
+      profile: { id: 'viewer_1', role: 'super_admin' },
+      isMentor: false,
+      isAdmin: true,
+      isSuperAdmin: true,
+      canAccessOrganization: vi.fn().mockResolvedValue(true),
+    })
+
+    render(
+      <ChakraProvider>
+        <UserProfileManagementPage viewContext="partner" />
+      </ChakraProvider>,
+    )
+
+    await waitFor(() => {
+      expect(screen.getByText('Access & status')).toBeInTheDocument()
+    })
+
+    expect(screen.getByText('User role')).toBeInTheDocument()
+    expect(screen.getByText('Paid Member')).toBeInTheDocument()
+    expect(screen.queryByText(/viewer role/i)).not.toBeInTheDocument()
+    expect(screen.queryByText('All organizations')).not.toBeInTheDocument()
+    expect(screen.getByText('Acme Inc (ACME)')).toBeInTheDocument()
   })
 })

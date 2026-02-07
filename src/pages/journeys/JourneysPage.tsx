@@ -29,7 +29,7 @@ export const JourneysPage: React.FC = () => {
           <Text color="brand.subtleText">Explore and select your transformation journey.</Text>
         </Stack>
 
-        <Box bg="white" borderRadius="lg" borderWidth="1px" borderColor="gray.200" p={{ base: 6, md: 8 }} shadow="sm">
+        <Box bg="white" borderRadius="lg" borderWidth="1px" borderColor="border.control" p={{ base: 6, md: 8 }} shadow="sm">
           <Stack spacing={4}>
             <Heading size="md" color="brand.text">Journey Flexibility Offered</Heading>
             <Text color="brand.subtleText">
@@ -61,7 +61,7 @@ export const JourneysPage: React.FC = () => {
               key={journey.title}
               bg="white"
               borderWidth="1px"
-              borderColor="gray.200"
+              borderColor="border.control"
               borderRadius="lg"
               p={5}
               shadow="xs"

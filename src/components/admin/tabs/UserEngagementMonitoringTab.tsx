@@ -71,7 +71,7 @@ const riskColors: Record<RiskLevel, { badge: string; border: string }> = {
   low: { badge: 'green', border: 'green.500' },
   emerging: { badge: 'purple', border: 'purple.500' },
   recovering: { badge: 'teal', border: 'teal.500' },
-  unknown: { badge: 'gray', border: 'gray.400' },
+  unknown: { badge: 'gray', border: 'border.control' },
 }
 
 const formatDate = (date?: Date | null) => {
@@ -198,7 +198,7 @@ export const UserEngagementMonitoringTab = ({ users: propUsers, organizations: p
       const avgScore = entries.length ? scoreSum / entries.length : 0
       const change = entries.reduce((sum, entry) => sum + (entry.trend30d || 0), 0) / (entries.length || 1)
       const trend: 'up' | 'down' | 'flat' = change > 0 ? 'up' : change < 0 ? 'down' : 'flat'
-      const color = riskColors[level as RiskLevel]?.border || 'gray.400'
+      const color = riskColors[level as RiskLevel]?.border || 'border.control'
       return { label: riskLabel(level as RiskLevel), userCount: entries.length, avgScore, change, trend, color }
     })
   }, [filteredRoster])
@@ -290,7 +290,7 @@ export const UserEngagementMonitoringTab = ({ users: propUsers, organizations: p
             : 'Adjust filters to expand your view of monitored learners.'
       return (
         <Flex py={10} direction="column" align="center" gap={3}>
-          <Icon as={BarChart2} boxSize={10} color="gray.300" />
+          <Icon as={BarChart2} boxSize={10} color="text.muted" />
           <Text fontWeight="medium" color="gray.700">
             {emptyMessage}
           </Text>
@@ -442,7 +442,7 @@ export const UserEngagementMonitoringTab = ({ users: propUsers, organizations: p
         <Text color="gray.600">Track at-risk learners, interventions, and engagement recovery trends across organizations.</Text>
       </Stack>
 
-      <Card border="1px solid" borderColor="gray.200" borderRadius="2xl" bg="white">
+      <Card border="1px solid" borderColor="border.control" borderRadius="2xl" bg="white">
         <CardBody>
           <Stack spacing={4}>
             <Text fontWeight="semibold" color="gray.800">
@@ -495,7 +495,7 @@ export const UserEngagementMonitoringTab = ({ users: propUsers, organizations: p
       </Card>
 
       <SimpleGrid columns={{ base: 1, md: 2, lg: 4 }} spacing={4}>
-        <Card border="1px solid" borderColor="gray.200" bg="white" borderRadius="xl">
+        <Card border="1px solid" borderColor="border.control" bg="white" borderRadius="xl">
           <CardBody>
             <HStack justify="space-between">
               <Icon as={UsersRound} color="purple.500" />
@@ -511,7 +511,7 @@ export const UserEngagementMonitoringTab = ({ users: propUsers, organizations: p
           </CardBody>
         </Card>
 
-        <Card border="1px solid" borderColor="gray.200" bg="white" borderRadius="xl">
+        <Card border="1px solid" borderColor="border.control" bg="white" borderRadius="xl">
           <CardBody>
             <Icon as={AlertTriangle} color="orange.400" />
             <Text fontSize="sm" color="gray.500" mt={2}>
@@ -524,7 +524,7 @@ export const UserEngagementMonitoringTab = ({ users: propUsers, organizations: p
           </CardBody>
         </Card>
 
-        <Card border="1px solid" borderColor="gray.200" bg="white" borderRadius="xl">
+        <Card border="1px solid" borderColor="border.control" bg="white" borderRadius="xl">
           <CardBody>
             <Icon as={Target} color="teal.500" />
             <Text fontSize="sm" color="gray.500" mt={2}>
@@ -537,7 +537,7 @@ export const UserEngagementMonitoringTab = ({ users: propUsers, organizations: p
           </CardBody>
         </Card>
 
-        <Card border="1px solid" borderColor="gray.200" bg="white" borderRadius="xl">
+        <Card border="1px solid" borderColor="border.control" bg="white" borderRadius="xl">
           <CardBody>
             <Icon as={Clock4} color="purple.500" />
             <Text fontSize="sm" color="gray.500" mt={2}>
@@ -556,7 +556,7 @@ export const UserEngagementMonitoringTab = ({ users: propUsers, organizations: p
           <Box
             key={summary.label}
             border="1px solid"
-            borderColor="gray.200"
+            borderColor="border.control"
             borderRadius="lg"
             bg="white"
             overflow="hidden"
@@ -583,7 +583,7 @@ export const UserEngagementMonitoringTab = ({ users: propUsers, organizations: p
         ))}
       </SimpleGrid>
 
-      <Card border="1px solid" borderColor="gray.200" bg="white" borderRadius="2xl">
+      <Card border="1px solid" borderColor="border.control" bg="white" borderRadius="2xl">
         <CardBody>
           <Stack spacing={4}>
             <HStack justify="space-between">
@@ -601,7 +601,7 @@ export const UserEngagementMonitoringTab = ({ users: propUsers, organizations: p
         </CardBody>
       </Card>
 
-      <Card border="1px solid" borderColor="gray.200" bg="white" borderRadius="2xl">
+      <Card border="1px solid" borderColor="border.control" bg="white" borderRadius="2xl">
         <CardBody>
           <Stack spacing={4}>
             <Text fontWeight="semibold" color="gray.800">
@@ -629,7 +629,7 @@ export const UserEngagementMonitoringTab = ({ users: propUsers, organizations: p
                 </Stack>
 
                 <SimpleGrid columns={{ base: 1, md: 3 }} spacing={3}>
-                  <Box border="1px solid" borderColor="gray.200" p={4} borderRadius="md" bg="gray.50">
+                  <Box border="1px solid" borderColor="border.control" p={4} borderRadius="md" bg="gray.50">
                     <Text fontSize="sm" color="gray.500">
                       Engagement score
                     </Text>
@@ -637,7 +637,7 @@ export const UserEngagementMonitoringTab = ({ users: propUsers, organizations: p
                       {selectedEntry.engagementScore.toFixed(1)}
                     </Text>
                   </Box>
-                  <Box border="1px solid" borderColor="gray.200" p={4} borderRadius="md" bg="gray.50">
+                  <Box border="1px solid" borderColor="border.control" p={4} borderRadius="md" bg="gray.50">
                     <Text fontSize="sm" color="gray.500">
                       Last active
                     </Text>
@@ -645,7 +645,7 @@ export const UserEngagementMonitoringTab = ({ users: propUsers, organizations: p
                       {selectedEntry.lastActive ? formatDistanceToNow(selectedEntry.lastActive, { addSuffix: true }) : 'Unknown'}
                     </Text>
                   </Box>
-                  <Box border="1px solid" borderColor="gray.200" p={4} borderRadius="md" bg="gray.50">
+                  <Box border="1px solid" borderColor="border.control" p={4} borderRadius="md" bg="gray.50">
                     <Text fontSize="sm" color="gray.500">
                       Time in risk level
                     </Text>
@@ -655,7 +655,7 @@ export const UserEngagementMonitoringTab = ({ users: propUsers, organizations: p
                   </Box>
                 </SimpleGrid>
 
-                <Box border="1px solid" borderColor="gray.200" borderRadius="lg" p={4}>
+                <Box border="1px solid" borderColor="border.control" borderRadius="lg" p={4}>
                   <Text fontWeight="semibold" mb={2}>
                     Engagement &amp; intervention history
                   </Text>
@@ -682,7 +682,7 @@ export const UserEngagementMonitoringTab = ({ users: propUsers, organizations: p
                   )}
                 </Box>
 
-                <Box border="1px solid" borderColor="gray.200" borderRadius="lg" p={4}>
+                <Box border="1px solid" borderColor="border.control" borderRadius="lg" p={4}>
                   <Text fontWeight="semibold" mb={3}>
                     Recent activity
                   </Text>

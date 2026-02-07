@@ -118,8 +118,12 @@ const emptyOrganization: OrganizationRecord = {
   cluster: '',
 }
 
-const inviteRoleOptions: InviteDraft['role'][] = ['user', 'mentor', 'ambassador']
-const inviteMethodOptions: InviteDraft['method'][] = ['email', 'one_time_code']
+const inviteRoleOptions: InviteDraft['role'][] = ['user', 'partner', 'mentor', 'ambassador']
+
+const formatInviteRoleLabel = (role: InviteDraft['role']) => {
+  if (role === 'user') return 'User'
+  return role.replace(/_/g, ' ').replace(/\b\w/g, (char) => char.toUpperCase())
+}
 const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
 const nameRegex = /^[A-Za-z][A-Za-z\s'-]*$/
 const commonEmailDomains = ['gmail.com', 'outlook.com', 'hotmail.com', 'yahoo.com', 'icloud.com']
@@ -353,15 +357,21 @@ export const CreateOrganizationModal: React.FC<CreateOrganizationModalProps> = (
     setForm((prev) => ({ ...prev, teamSize: parsed, cluster }))
   }
 
-  const buildInviteDraftEntry = (draft: InviteDraft, source?: InviteDraftEntry['source'], rowNumber?: number): InviteDraftEntry => ({
-    ...draft,
-    isValid: true,
-    errors: {},
-    source,
-    rowNumber,
-    addedAt: Date.now(),
-    isNew: source === 'csv',
-  })
+  const buildInviteDraftEntry = (draft: InviteDraft, source?: InviteDraftEntry['source'], rowNumber?: number): InviteDraftEntry => {
+    const normalizedEmail = normalizeEmail(draft.email || '')
+    const method: InviteDraft['method'] = normalizedEmail ? 'email' : 'one_time_code'
+    return {
+      ...draft,
+      email: normalizedEmail,
+      method,
+      isValid: true,
+      errors: {},
+      source,
+      rowNumber,
+      addedAt: Date.now(),
+      isNew: source === 'csv',
+    }
+  }
 
   const validateInviteDraft = (
     draft: InviteDraftEntry,
@@ -378,9 +388,6 @@ export const CreateOrganizationModal: React.FC<CreateOrganizationModalProps> = (
     }
 
     const normalizedEmail = normalizeEmail(draft.email || '')
-    if (draft.method === 'email' && !normalizedEmail) {
-      errors.email = 'Email is required for email invitations.'
-    }
     if (normalizedEmail && !emailRegex.test(normalizedEmail)) {
       errors.email = 'Enter a valid email address.'
     }
@@ -390,12 +397,6 @@ export const CreateOrganizationModal: React.FC<CreateOrganizationModalProps> = (
 
     if (!inviteRoleOptions.includes(draft.role)) {
       errors.role = 'Select a valid role.'
-    }
-    if (!inviteMethodOptions.includes(draft.method)) {
-      errors.method = 'Select a valid invitation method.'
-    }
-    if (draft.method === 'email' && !normalizedEmail) {
-      errors.method = 'Email is required when using email invitations.'
     }
 
     return errors
@@ -411,10 +412,13 @@ export const CreateOrganizationModal: React.FC<CreateOrganizationModalProps> = (
     }, new Map<string, number>())
 
     return drafts.map((draft) => {
+      const normalizedEmail = normalizeEmail(draft.email || '')
+      const method: InviteDraft['method'] = normalizedEmail ? 'email' : 'one_time_code'
       const errors = validateInviteDraft(draft, emailCounts)
       return {
         ...draft,
-        email: normalizeEmail(draft.email || ''),
+        email: normalizedEmail,
+        method,
         errors,
         isValid: Object.keys(errors).length === 0,
       }
@@ -429,17 +433,18 @@ export const CreateOrganizationModal: React.FC<CreateOrganizationModalProps> = (
     setInviteDrafts((prev) => {
       const nextValue =
         field === 'role' ? (value as InviteDraft['role']) : field === 'method' ? (value as InviteDraft['method']) : value
-      const next = prev.map((draft) =>
-        draft.id === draftId
-          ? {
-              ...draft,
-              [field]: nextValue,
-              method:
-                field === 'email' ? normalizeMethodForEmail(normalizeEmail(value), draft.method) : draft.method,
-              isNew: draft.isNew && draft.source !== 'csv' ? draft.isNew : false,
-            }
-          : draft,
-      )
+      const next = prev.map((draft) => {
+        if (draft.id !== draftId) return draft
+        const nextDraft = { ...draft, [field]: nextValue }
+        const normalizedEmail = normalizeEmail(nextDraft.email || '')
+        const method: InviteDraft['method'] = normalizedEmail ? 'email' : 'one_time_code'
+        return {
+          ...nextDraft,
+          email: normalizedEmail,
+          method,
+          isNew: draft.isNew && draft.source !== 'csv' ? draft.isNew : false,
+        }
+      })
       return recomputeInviteDrafts(next)
     })
   }
@@ -502,7 +507,7 @@ export const CreateOrganizationModal: React.FC<CreateOrganizationModalProps> = (
       name: formatName(manualEntry.name),
       email: normalizeEmail(manualEntry.email || ''),
       role: manualEntry.role,
-      method: manualEntry.method,
+      method: normalizeEmail(manualEntry.email || '') ? 'email' : 'one_time_code',
     }
     addInviteDrafts([buildInviteDraftEntry(draft, 'manual')])
     resetManualEntry()
@@ -629,7 +634,7 @@ export const CreateOrganizationModal: React.FC<CreateOrganizationModalProps> = (
                     <FormLabel display="flex" alignItems="center" gap={2}>
                       Organization code
                       <Tooltip label="6-character code: 2-letter prefix + 4 random characters." placement="top">
-                        <InfoIcon color="gray.400" />
+                        <InfoIcon color="text.muted" />
                       </Tooltip>
                     </FormLabel>
                     <InputGroup>
@@ -693,7 +698,7 @@ export const CreateOrganizationModal: React.FC<CreateOrganizationModalProps> = (
                     <FormLabel display="flex" alignItems="center" gap={2}>
                       Cluster
                       <Tooltip label={clusterTooltipContent} placement="top" maxW="360px">
-                        <InfoIcon color="gray.400" />
+                        <InfoIcon color="text.muted" />
                       </Tooltip>
                     </FormLabel>
                     <InputGroup>
@@ -1019,7 +1024,7 @@ export const CreateOrganizationModal: React.FC<CreateOrganizationModalProps> = (
                       }}
                     />
                     <FormHelperText>
-                      Use columns: Name, Email, Role, Invitation Method.
+                      Use columns: Name, Email, Role.
                       <Button variant="link" size="sm" ml={2} onClick={downloadCSVTemplate}>
                         Download template
                       </Button>
@@ -1044,7 +1049,7 @@ export const CreateOrganizationModal: React.FC<CreateOrganizationModalProps> = (
                         <FormLabel display="flex" alignItems="center" gap={2}>
                           Name
                           <Tooltip label="Minimum 2 characters. Letters, spaces, hyphens, and apostrophes only.">
-                            <InfoIcon color="gray.400" />
+                            <InfoIcon color="text.muted" />
                           </Tooltip>
                         </FormLabel>
                         <Input
@@ -1075,7 +1080,7 @@ export const CreateOrganizationModal: React.FC<CreateOrganizationModalProps> = (
                         <FormLabel display="flex" alignItems="center" gap={2}>
                           Email
                           <Tooltip label="Optional unless using email invitations.">
-                            <InfoIcon color="gray.400" />
+                            <InfoIcon color="text.muted" />
                           </Tooltip>
                         </FormLabel>
                         <Input
@@ -1109,7 +1114,7 @@ export const CreateOrganizationModal: React.FC<CreateOrganizationModalProps> = (
                         <FormLabel display="flex" alignItems="center" gap={2}>
                           Role
                           <Tooltip label="Assign the user role for the invitation.">
-                            <InfoIcon color="gray.400" />
+                            <InfoIcon color="text.muted" />
                           </Tooltip>
                         </FormLabel>
                         <Select
@@ -1122,7 +1127,7 @@ export const CreateOrganizationModal: React.FC<CreateOrganizationModalProps> = (
                         >
                           {inviteRoleOptions.map((role) => (
                             <option key={role} value={role}>
-                              {role}
+                              {formatInviteRoleLabel(role)}
                             </option>
                           ))}
                         </Select>
@@ -1199,28 +1204,6 @@ export const CreateOrganizationModal: React.FC<CreateOrganizationModalProps> = (
                               </option>
                             ))}
                           </Select>
-                          <Select
-                            size="sm"
-                            maxW="200px"
-                            placeholder="Change method"
-                            onChange={(e) => {
-                              const method = e.target.value as InviteDraft['method']
-                              if (!method || !selectedDraftIds.length) return
-                              setInviteDrafts((prev) =>
-                                recomputeInviteDrafts(
-                                  prev.map((draft) =>
-                                    selectedDraftIds.includes(draft.id) ? { ...draft, method } : draft,
-                                  ),
-                                ),
-                              )
-                            }}
-                          >
-                            {inviteMethodOptions.map((method) => (
-                              <option key={method} value={method}>
-                                {method}
-                              </option>
-                            ))}
-                          </Select>
                           <Button
                             size="sm"
                             variant="ghost"
@@ -1241,7 +1224,6 @@ export const CreateOrganizationModal: React.FC<CreateOrganizationModalProps> = (
                                 <Th>Name</Th>
                                 <Th>Email</Th>
                                 <Th>Role</Th>
-                                <Th>Method</Th>
                                 <Th>Status</Th>
                                 <Th>Actions</Th>
                               </Tr>
@@ -1304,31 +1286,13 @@ export const CreateOrganizationModal: React.FC<CreateOrganizationModalProps> = (
                                       >
                                         {inviteRoleOptions.map((role) => (
                                           <option key={role} value={role}>
-                                            {role}
+                                            {formatInviteRoleLabel(role)}
                                           </option>
                                         ))}
                                       </Select>
                                       {draft.errors.role ? (
                                         <Text fontSize="xs" color="red.500">
                                           {draft.errors.role}
-                                        </Text>
-                                      ) : null}
-                                    </Td>
-                                    <Td>
-                                      <Select
-                                        size="sm"
-                                        value={draft.method}
-                                        onChange={(e) => updateDraftField(draft.id, 'method', e.target.value)}
-                                      >
-                                        {inviteMethodOptions.map((method) => (
-                                          <option key={method} value={method}>
-                                            {method}
-                                          </option>
-                                        ))}
-                                      </Select>
-                                      {draft.errors.method ? (
-                                        <Text fontSize="xs" color="red.500">
-                                          {draft.errors.method}
                                         </Text>
                                       ) : null}
                                     </Td>

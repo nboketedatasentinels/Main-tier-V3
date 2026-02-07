@@ -133,7 +133,7 @@ export const AdvancementProgressIndicator: React.FC<AdvancementProgressIndicator
                       color="text.primary"
                       cursor="help"
                       borderBottom="1px dotted"
-                      borderColor="gray.300"
+                      borderColor="border.control"
                     >
                       {criterion.label}
                     </Text>

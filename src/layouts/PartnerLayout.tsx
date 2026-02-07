@@ -37,6 +37,8 @@ import { useAuth } from '@/hooks/useAuth'
 import { usePartnerAdminSnapshot } from '@/hooks/partner/usePartnerAdminSnapshot'
 import { type NavigationSection, buildPartnerNavItems } from '@/utils/navigationItems'
 
+const APP_VIEWPORT_HEIGHT = { base: '100dvh', md: '100vh' } as const
+
 interface PartnerLayoutProps {
   children: React.ReactNode
   organizations: { id?: string; code: string; name: string }[]
@@ -248,9 +250,11 @@ export const PartnerLayout: React.FC<PartnerLayoutProps> = ({
   )
 
   const HeaderControls = () => (
-    <HStack spacing={3} align="center">
+    <HStack spacing={3} align="center" wrap="wrap" justify={{ base: 'flex-start', md: 'flex-end' }} w={{ base: 'full', md: 'auto' }}>
       <Select
-        maxW={{ base: '220px', md: '280px' }}
+        flex={{ base: '1 1 220px', md: '0 1 auto' }}
+        minW={{ base: 'full', sm: '220px' }}
+        maxW={{ base: 'full', md: '280px' }}
         value={selectedOrg}
         onChange={e => onSelectOrg(e.target.value)}
         bg="white"
@@ -298,7 +302,7 @@ export const PartnerLayout: React.FC<PartnerLayoutProps> = ({
   )
 
   return (
-    <Flex minH="100vh" h="100vh" bg="brand.canvas" overflow="hidden">
+    <Flex minH={APP_VIEWPORT_HEIGHT} h={APP_VIEWPORT_HEIGHT} bg="brand.canvas" overflow="hidden">
       <Box
         display={{ base: 'none', md: 'block' }}
         w={sidebarWidth}
@@ -306,7 +310,7 @@ export const PartnerLayout: React.FC<PartnerLayoutProps> = ({
         borderColor="brand.border"
         bg="white"
         p={4}
-        h="100vh"
+        h={APP_VIEWPORT_HEIGHT}
         overflowY="auto"
       >
         <VStack align="stretch" spacing={4} h="full">
@@ -357,7 +361,7 @@ export const PartnerLayout: React.FC<PartnerLayoutProps> = ({
         </DrawerContent>
       </Drawer>
 
-      <Flex flex={1} direction="column" h="100vh" overflow="hidden" p={{ base: 4, md: 8 }}>
+      <Flex flex={1} direction="column" h={APP_VIEWPORT_HEIGHT} overflow="hidden" p={{ base: 4, md: 8 }} minW={0} minH={0}>
         <Box flex={1} overflowY="auto">
           <Flex justify="space-between" align={{ base: 'flex-start', md: 'center' }} mb={6} gap={4} wrap="wrap">
             <VStack align="flex-start" spacing={1}>

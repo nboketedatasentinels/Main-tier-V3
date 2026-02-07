@@ -37,7 +37,7 @@ export const MiniJourneyTimeline: React.FC = () => {
                     ? 'green.500'
                     : item.status === 'current'
                     ? 'blue.500'
-                    : 'gray.300'
+                    : 'gray.600'
                 }
                 color="white"
               >

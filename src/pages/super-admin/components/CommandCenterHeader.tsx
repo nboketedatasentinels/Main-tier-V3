@@ -30,7 +30,7 @@ export const CommandCenterHeader: React.FC<CommandCenterHeaderProps> = ({
       p={6}
       borderRadius="xl"
       border="1px solid"
-      borderColor={useColorModeValue('gray.200', 'gray.700')}
+      borderColor={useColorModeValue('border.control', 'gray.700')}
       shadow="sm"
     >
       <Flex
@@ -80,7 +80,7 @@ export const CommandCenterHeader: React.FC<CommandCenterHeaderProps> = ({
             )}
           </Button>
 
-          <HStack spacing={2} px={3} py={1} borderRadius="md" bg="gray.50" border="1px solid" borderColor="gray.100">
+          <HStack spacing={2} px={3} py={1} borderRadius="md" bg="gray.50" border="1px solid" borderColor="border.control">
             <Clock size={14} color="gray" />
             <Text fontSize="xs" color="gray.600" fontWeight="medium">
               Last check: {lastSystemCheck.toLocaleTimeString()}

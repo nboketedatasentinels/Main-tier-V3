@@ -81,7 +81,7 @@ const BadgeGalleryPage = () => {
                   <Icon
                     as={isEarned ? Award : Lock}
                     size={40}
-                    color={isEarned ? 'brand.gold' : 'gray.400'}
+                    color={isEarned ? 'brand.gold' : 'text.muted'}
                   />
                 </Center>
               }
@@ -155,7 +155,7 @@ const BadgeGalleryPage = () => {
 
         <Box>
           <Heading size="md" mb={6} display="flex" alignItems="center" gap={2}>
-            <Icon as={Lock} color="gray.400" />
+            <Icon as={Lock} color="text.muted" />
             Available to Earn
           </Heading>
           {availableBadges.length > 0 ? (
