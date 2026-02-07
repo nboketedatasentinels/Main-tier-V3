@@ -16,10 +16,12 @@ export type OrgScope =
   | { isValid: true; type: 'company_code'; companyCode: string }
   | { isValid: true; type: 'village'; villageId: string }
   | { isValid: true; type: 'cohort'; cohortIdentifier: string }
-  | { isValid: false }
+  | { isValid: false; error: string }
 
 export const getOrgScope = (profile?: OrgProfileLike | null): OrgScope => {
-  if (!profile) return { isValid: false }
+  if (!profile) {
+    return { isValid: false, error: 'No profile provided' }
+  }
   if (profile.cohortIdentifier) {
     return { isValid: true, type: 'cohort', cohortIdentifier: profile.cohortIdentifier }
   }
@@ -41,7 +43,10 @@ export const getOrgScope = (profile?: OrgProfileLike | null): OrgScope => {
   if (profile.organizationCode) {
     return { isValid: true, type: 'company_code', companyCode: profile.organizationCode }
   }
-  return { isValid: false }
+  return {
+    isValid: false,
+    error: 'No organization assigned to your profile. Please contact your administrator.',
+  }
 }
 
 export const buildScopeQueries = (peersRef: CollectionReference, scope: OrgScope): Query[] => {

@@ -448,17 +448,17 @@ export const AtRiskInterventionFlow: React.FC<AtRiskInterventionFlowProps> = ({
     <Card bg="purple.50" border="2px solid" borderColor="brand.primary" mb={6} boxShadow="xl">
       <CardBody>
         <Stack spacing={6}>
-          <Flex justify="space-between" align="center">
+          <Flex justify="space-between" align={{ base: 'flex-start', md: 'center' }} wrap="wrap" gap={3}>
             <VStack align="flex-start" spacing={0}>
               <Text fontWeight="black" fontSize="xl" color="brand.text">ACTIVE INTERVENTION MODE</Text>
-              <HStack>
+              <HStack wrap="wrap">
                 <Badge colorScheme="purple" variant="solid">In Progress</Badge>
                 <Text fontSize="sm" color="brand.subtleText">SLA expires in {nextEscalation.label}</Text>
               </HStack>
             </VStack>
-            <Box textAlign="right">
+            <Box textAlign={{ base: 'left', md: 'right' }} w={{ base: 'full', md: 'auto' }}>
               <Text fontSize="2xs" fontWeight="bold" color="brand.subtleText" textTransform="uppercase">Progress</Text>
-              <Progress value={40} colorScheme="purple" w="150px" borderRadius="full" size="sm" mt={1} />
+              <Progress value={40} colorScheme="purple" w={{ base: 'full', md: '150px' }} borderRadius="full" size="sm" mt={1} />
             </Box>
           </Flex>
 

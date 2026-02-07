@@ -151,7 +151,7 @@ export function T4LAuthShell({ children }: { children: React.ReactNode }) {
   return (
     <div
       className={cn(
-        "min-h-screen w-full flex items-center justify-center p-4",
+        "min-h-screen min-h-[100dvh] w-full flex items-center justify-center p-4",
         "bg-gradient-to-br from-[#27062e] via-[#350e6f] to-[#4540c0]"
       )}
     >

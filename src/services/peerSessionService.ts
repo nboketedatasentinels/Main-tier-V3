@@ -26,7 +26,7 @@ import {
 } from '@/config/pointsConfig'
 import { removeUndefinedFields } from '@/utils/firestore'
 import { getDisplayName, type DisplayNameInput } from '@/utils/displayName'
-import { addDays } from 'date-fns'
+import { addHours } from 'date-fns'
 import { getCurrentWeekNumber } from '@/utils/weekCalculations'
 
 // Types
@@ -157,7 +157,7 @@ const parseSessionDoc = (docSnap: QueryDocumentSnapshot<DocumentData>): PeerSess
   }
 
   const confirmationDeadline =
-    coerceDate(data.confirmationDeadline ?? data.confirmation_deadline) ?? addDays(scheduledAt, -1)
+    coerceDate(data.confirmationDeadline ?? data.confirmation_deadline) ?? addHours(scheduledAt, -2)
   const createdAt = coerceDate(data.createdAt ?? data.created_at) ?? new Date()
   const updatedAt = coerceDate(data.updatedAt ?? data.updated_at) ?? undefined
 
@@ -265,6 +265,12 @@ const assertValidCreateParams = (params: CreateSessionParams): string[] => {
     throw new Error('Session scheduledAt must be a valid date')
   }
 
+  // Ensure session is scheduled at least 2 hours in advance (minimum confirmation window)
+  const twoHoursFromNow = addHours(new Date(), 2)
+  if (params.scheduledAt < twoHoursFromNow) {
+    throw new Error('Session must be scheduled at least 2 hours in advance to allow confirmation time')
+  }
+
   const normalizedParticipants = normalizeParticipants(params.participants, params.createdBy)
   if (normalizedParticipants.length === 0) {
     throw new Error('At least one participant is required')
@@ -329,10 +335,10 @@ export async function createPeerSession(params: CreateSessionParams): Promise<st
     platform: params.platform,
     meetingLink: params.meetingLink,
     timezone: params.timezone,
-    participants: [params.createdBy, ...normalizedParticipants],
+    participants: [params.createdBy, ...normalizedParticipants.filter(p => p !== params.createdBy)],
     status: 'scheduled',
     scheduledAt: scheduledAtTimestamp,
-    confirmationDeadline: Timestamp.fromDate(addDays(params.scheduledAt, -1)),
+    confirmationDeadline: Timestamp.fromDate(addHours(params.scheduledAt, -2)),
     createdBy: params.createdBy,
     createdAt: serverTimestamp(),
     updatedAt: serverTimestamp(),
@@ -480,10 +486,16 @@ export async function confirmSession(sessionId: string, userId: string): Promise
   return result
 }
 
+export type NoShowResult =
+  | { success: true; pointsAwarded: true }
+  | { success: true; pointsAwarded: false; reason: 'no_journey' | 'already_reported' }
+  | { success: false; reason: 'error'; error: string }
+
 /**
  * Reports a no-show for a session. Awards accountability points to the reporter.
+ * Returns structured result indicating success and whether points were awarded.
  */
-export async function reportNoShow(sessionId: string, userId: string): Promise<boolean> {
+export async function reportNoShow(sessionId: string, userId: string): Promise<NoShowResult> {
   const sessionRef = doc(db, 'peer_sessions', sessionId)
   const sessionSnap = await getDoc(sessionRef)
 
@@ -496,7 +508,7 @@ export async function reportNoShow(sessionId: string, userId: string): Promise<b
 
   // Check if user already reported
   if (existingNoShows[userId]) {
-    return false // Already reported
+    return { success: true, pointsAwarded: false, reason: 'already_reported' }
   }
 
   // Update session with no-show report
@@ -517,13 +529,15 @@ export async function reportNoShow(sessionId: string, userId: string): Promise<b
         activity: PEER_SESSION_NO_SHOW_ACTIVITY,
         source: 'peer_session',
       })
-      return true
+      return { success: true, pointsAwarded: true }
     }
+    // User has no active journey
+    return { success: true, pointsAwarded: false, reason: 'no_journey' }
   } catch (error) {
+    const errorMessage = error instanceof Error ? error.message : String(error)
     console.error('[PeerSessionService] Failed to award no-show points:', error)
+    return { success: false, reason: 'error', error: errorMessage }
   }
-
-  return false
 }
 
 /**

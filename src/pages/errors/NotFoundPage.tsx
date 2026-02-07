@@ -6,7 +6,7 @@ export const NotFoundPage: React.FC = () => {
   const navigate = useNavigate()
 
   return (
-    <Box minH="100vh" bg="brand.accent" display="flex" alignItems="center" justifyContent="center" p={4}>
+    <Box minH={{ base: '100dvh', md: '100vh' }} bg="brand.accent" display="flex" alignItems="center" justifyContent="center" p={4}>
       <Box textAlign="center">
         <Heading size="4xl" color="brand.primary" mb={4}>404</Heading>
         <Heading size="xl" color="brand.text" mb={6}>Page Not Found</Heading>

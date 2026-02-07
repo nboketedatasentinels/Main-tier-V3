@@ -164,7 +164,7 @@ export const OrganizationDetailPage: React.FC = () => {
           : 'There was a problem loading the organization details. Please try again.'
 
     return (
-      <Box bg="brand.canvas" minH="100vh" px={{ base: 4, md: 8 }} py={8}>
+      <Box bg="brand.canvas" minH={{ base: '100dvh', md: '100vh' }} px={{ base: 4, md: 8 }} py={8}>
         <Card bg="white" border="1px solid" borderColor="brand.border">
           <CardBody>
             <Alert status="error" borderRadius="md" bg="red.50">
@@ -184,7 +184,7 @@ export const OrganizationDetailPage: React.FC = () => {
   }
 
   return (
-    <Box bg="brand.canvas" minH="100vh" px={{ base: 4, md: 8 }} py={8}>
+    <Box bg="brand.canvas" minH={{ base: '100dvh', md: '100vh' }} px={{ base: 4, md: 8 }} py={8}>
       <Stack spacing={6}>
         <Breadcrumb fontSize="sm" color="brand.subtleText">
           <BreadcrumbItem>

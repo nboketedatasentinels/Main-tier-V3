@@ -1053,7 +1053,7 @@ export const LeadershipBoardPage: React.FC = () => {
                   </CardHeader>
                   <CardBody>
                     <VStack align="stretch" spacing={4}>
-                      <HStack spacing={4}>
+                      <Stack direction={{ base: 'column', sm: 'row' }} spacing={4} align={{ base: 'flex-start', sm: 'center' }}>
                         <Avatar size="lg" name={profile?.fullName} src={profile?.avatarUrl} />
                         <Box>
                           <Text fontWeight="bold">{profile?.fullName || 'You'}</Text>
@@ -1061,8 +1061,8 @@ export const LeadershipBoardPage: React.FC = () => {
                             {formatNumber(displayTotalPoints)} pts
                           </Text>
                         </Box>
-                      </HStack>
-                      <SimpleGrid columns={2} spacing={3}>
+                      </Stack>
+                      <SimpleGrid columns={{ base: 1, sm: 2 }} spacing={3}>
                         <Box p={3} border="1px solid" borderColor="border.subtle" borderRadius="lg">
                           <Text fontSize="xs" color="text.secondary">Total Points</Text>
                           <Text fontWeight="bold" animation={pointsPulseStyle}>

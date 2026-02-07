@@ -178,6 +178,60 @@ const getMatchReason = (orgKey: string): string => {
 
 const MAX_BATCH_WRITE_OPERATIONS = 450;
 const WRITES_PER_MATCH = 3;
+const MAX_RETRY_ATTEMPTS = 3;
+const INITIAL_RETRY_DELAY_MS = 1000;
+
+// Retry helper with exponential backoff
+async function retryWithBackoff<T>(
+  operation: () => Promise<T>,
+  context: string,
+  maxAttempts = MAX_RETRY_ATTEMPTS
+): Promise<T> {
+  let lastError: Error | undefined;
+
+  for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+    try {
+      return await operation();
+    } catch (error) {
+      lastError = error as Error;
+      console.warn(
+        `${context} failed (attempt ${attempt}/${maxAttempts}):`,
+        error
+      );
+
+      if (attempt < maxAttempts) {
+        const delay = INITIAL_RETRY_DELAY_MS * Math.pow(2, attempt - 1);
+        console.log(`Retrying after ${delay}ms...`);
+        await new Promise((resolve) => setTimeout(resolve, delay));
+      }
+    }
+  }
+
+  throw new Error(
+    `${context} failed after ${maxAttempts} attempts: ${lastError?.message}`
+  );
+}
+
+// Log matching run statistics to Firestore for monitoring
+async function logMatchingRunStats(stats: {
+  timestamp: FirebaseFirestore.FieldValue;
+  status: "success" | "error";
+  totalUsers: number;
+  totalCreated: number;
+  totalSkipped: number;
+  groupsProcessed: number;
+  groupsWithErrors: number;
+  emptyGroups: number;
+  duration: number;
+  errorMessage?: string;
+}) {
+  try {
+    await db.collection("peer_matching_runs").add(stats);
+  } catch (error) {
+    console.error("Failed to log matching run statistics:", error);
+    // Don't throw - logging failure shouldn't break the matching run
+  }
+}
 
 // Create peer matches for a group of users
 const createMatchesForGroup = async (
@@ -186,8 +240,8 @@ const createMatchesForGroup = async (
   matchReason: string
 ): Promise<{ created: number; skipped: number }> => {
   if (users.length < 2) {
-    console.log(
-      `Skipping group ${orgKey}: only ${users.length} user(s), need at least 2`
+    console.warn(
+      `⚠️  EMPTY POOL: Group ${orgKey} has ${users.length} user(s) - need at least 2 for matching`
     );
     return { created: 0, skipped: users.length };
   }
@@ -203,8 +257,8 @@ const createMatchesForGroup = async (
   });
 
   if (eligibleUsers.length < 2) {
-    console.log(
-      `Skipping group ${orgKey}: only ${eligibleUsers.length} eligible user(s)`
+    console.warn(
+      `⚠️  INSUFFICIENT ELIGIBLE USERS: Group ${orgKey} has ${eligibleUsers.length}/${users.length} eligible user(s) - need at least 2 with weekly/biweekly preference`
     );
     return { created: 0, skipped: users.length };
   }
@@ -219,7 +273,10 @@ const createMatchesForGroup = async (
 
   const flushBatch = async () => {
     if (pendingWrites === 0) return;
-    await batch.commit();
+    await retryWithBackoff(
+      () => batch.commit(),
+      `Batch commit for group ${orgKey}`
+    );
     batch = db.batch();
     pendingWrites = 0;
   };
@@ -337,6 +394,8 @@ export const automatedWeeklyPeerMatching = functions
     let totalSkipped = 0;
     let totalUsers = 0;
     let groupsProcessed = 0;
+    let groupsWithErrors = 0;
+    let emptyGroups = 0;
 
     try {
       // Fetch all profiles with organization associations
@@ -395,30 +454,75 @@ export const automatedWeeklyPeerMatching = functions
           );
           totalCreated += result.created;
           totalSkipped += result.skipped;
+
+          // Track empty groups for monitoring
+          if (result.created === 0 && orgUsers.length >= 2) {
+            emptyGroups++;
+          }
+
           groupsProcessed++;
         } catch (groupError) {
-          console.error(`Error processing group ${orgKey}:`, groupError);
+          groupsWithErrors++;
+          console.error(
+            `❌ Error processing group ${orgKey} (${orgUsers.length} users):`,
+            groupError
+          );
+          // Continue processing other groups despite error
         }
       }
 
       const duration = Date.now() - startTime;
       const summary = {
-        status: "success",
+        status: "success" as const,
         message: `Automated peer matching complete`,
         totalUsers,
         totalCreated,
         totalSkipped,
         groupsProcessed,
+        groupsWithErrors,
+        emptyGroups,
         duration,
       };
 
       console.log(
-        `Automated peer matching complete: ${totalCreated} matches created, ${totalSkipped} skipped, ${groupsProcessed} groups processed in ${duration}ms`
+        `✅ Automated peer matching complete: ${totalCreated} matches created, ${totalSkipped} skipped, ${groupsProcessed} groups processed, ${groupsWithErrors} errors, ${emptyGroups} empty groups, ${duration}ms`
       );
+
+      // Log statistics to Firestore for monitoring
+      await logMatchingRunStats({
+        timestamp: admin.firestore.FieldValue.serverTimestamp(),
+        status: "success",
+        totalUsers,
+        totalCreated,
+        totalSkipped,
+        groupsProcessed,
+        groupsWithErrors,
+        emptyGroups,
+        duration,
+      });
 
       return summary;
     } catch (error) {
-      console.error("Automated peer matching failed:", error);
+      const duration = Date.now() - startTime;
+      const errorMessage =
+        error instanceof Error ? error.message : String(error);
+
+      console.error("❌ Automated peer matching failed:", error);
+
+      // Log failure to Firestore
+      await logMatchingRunStats({
+        timestamp: admin.firestore.FieldValue.serverTimestamp(),
+        status: "error",
+        totalUsers,
+        totalCreated,
+        totalSkipped,
+        groupsProcessed,
+        groupsWithErrors,
+        emptyGroups,
+        duration,
+        errorMessage,
+      });
+
       throw error;
     }
   });

@@ -45,7 +45,7 @@ export const UpgradePage: React.FC = () => {
   const source = searchParams.get('source')
 
   return (
-    <Box bg="gray.50" minH="100vh" py={12}>
+    <Box bg="gray.50" minH={{ base: '100dvh', md: '100vh' }} py={12}>
       <Container maxW="6xl">
         <Stack spacing={8}>
           {isPaid && (

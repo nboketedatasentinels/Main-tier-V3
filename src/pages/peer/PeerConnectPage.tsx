@@ -686,7 +686,14 @@ export const PeerConnectPage: React.FC = () => {
     const matchRef = doc(db, 'peer_weekly_matches', matchDocId)
     const unsubscribe = onSnapshot(matchRef, async (snapshot) => {
       if (!snapshot.exists()) {
-        console.log('[PeerMatch] Real-time: Match document does not exist')
+        // Document doesn't exist - user has no match this week
+        // Note: We don't attempt to create matches here (fully automatic via Cloud Function)
+        console.warn('[PeerMatch] Real-time: Match document does not exist', {
+          userId: auth.currentUser?.uid,
+          matchDocId,
+          message: 'User has no automatic match for this period',
+        })
+        setWeeklyMatch(null)
         return
       }
 
@@ -1213,10 +1220,10 @@ export const PeerConnectPage: React.FC = () => {
                         </Stack>
                       </Flex>
                     ) : (
-                      <Center py={10} flexDirection="column" gap={3} color="brand.subtleText">
+                      <Center py={10} flexDirection="column" gap={4} color="brand.subtleText">
                         <Icon as={AlertCircle} w={5} h={5} color="orange.400" />
-                        <Stack spacing={2} align="center" textAlign="center">
-                          <Text fontWeight="medium" color="brand.text">
+                        <Stack spacing={3} align="center" textAlign="center" maxW="md">
+                          <Text fontWeight="medium" color="brand.text" fontSize="lg">
                             {matchPreferences.refreshPreference === 'disabled'
                               ? 'Peer Matching Disabled'
                               : 'No Match This Week'}
@@ -1228,9 +1235,36 @@ export const PeerConnectPage: React.FC = () => {
                                 ? 'You have on-demand matching enabled. Matches are created when you request them.'
                                 : `Your next peer match will arrive automatically on ${WEEKDAY_LABELS[matchPreferences.preferredMatchDay]} ${matchWindow.nextRefreshAt ? `(${nextRefreshLabel})` : ''}.`}
                           </Text>
+                          {matchPreferences.refreshPreference !== 'disabled' && matchPreferences.refreshPreference !== 'on-demand' && matchWindow.nextRefreshAt && (
+                            <Box
+                              border="1px solid"
+                              borderColor="brand.border"
+                              rounded="lg"
+                              p={4}
+                              bg="brand.surface"
+                              w="full"
+                            >
+                              <HStack justify="center" spacing={3}>
+                                <Icon as={Calendar} w={5} h={5} color="brand.primary" />
+                                <Stack spacing={1} align="flex-start">
+                                  <HStack spacing={2}>
+                                    <Text fontSize="sm" fontWeight="semibold" color="brand.text">
+                                      Next Match:
+                                    </Text>
+                                    <Badge colorScheme="purple" fontSize="xs">
+                                      {nextRefreshLabel}
+                                    </Badge>
+                                  </HStack>
+                                  <Text fontSize="xs" color="brand.subtleText">
+                                    {format(matchWindow.nextRefreshAt, 'EEEE, MMM d, yyyy')} • {matchPreferences.refreshPreference === 'biweekly' ? 'Biweekly' : 'Weekly'} schedule
+                                  </Text>
+                                </Stack>
+                              </HStack>
+                            </Box>
+                          )}
                           {matchPreferences.refreshPreference !== 'disabled' && matchPreferences.refreshPreference !== 'on-demand' && (
                             <Text fontSize="xs" color="brand.subtleText" fontStyle="italic">
-                              Matches are created automatically every {matchPreferences.refreshPreference === 'biweekly' ? '2 weeks' : 'week'} by our matching system.
+                              Matches are created automatically by our matching system.
                               {availablePeers.length < 2 && ' Invite teammates to expand your peer pool.'}
                             </Text>
                           )}

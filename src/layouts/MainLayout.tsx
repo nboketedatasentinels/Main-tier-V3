@@ -70,6 +70,7 @@ interface NavSection {
 }
 
 const HEADER_HEIGHT = '72px'
+const APP_VIEWPORT_HEIGHT = { base: '100dvh', md: '100vh' } as const
 const sectionLabelStyles = {
   fontSize: 'xs',
   fontWeight: 'semibold',
@@ -323,7 +324,7 @@ export const MainLayout: React.FC = () => {
   }
 
   return (
-    <Flex minH="100vh" h="100vh" bg="brand.accent" color="brand.text" overflow="hidden">
+    <Flex minH={APP_VIEWPORT_HEIGHT} h={APP_VIEWPORT_HEIGHT} bg="brand.accent" color="brand.text" overflow="hidden">
       {/* Desktop Sidebar */}
       <Box
         w={{ base: '0', md: '260px' }}
@@ -384,18 +385,21 @@ export const MainLayout: React.FC = () => {
       </Box>
 
       {/* Main Content */}
-      <Flex flex="1" direction="column" h="100vh" maxH="100vh" overflow="hidden">
+      <Flex flex="1" direction="column" h={APP_VIEWPORT_HEIGHT} maxH={APP_VIEWPORT_HEIGHT} overflow="hidden" minW={0} minH={0}>
         {/* Header */}
         <Flex
-          align="center"
+          align={{ base: 'flex-start', md: 'center' }}
           justify="space-between"
           px={{ base: 4, md: 8 }}
-          h={HEADER_HEIGHT}
+          minH={HEADER_HEIGHT}
           flexShrink={0}
           bg="white"
           borderBottom="1px solid"
           borderColor="brand.border"
           gap={3}
+          flexWrap={{ base: 'wrap', md: 'nowrap' }}
+          rowGap={{ base: 3, md: 0 }}
+          py={{ base: 3, md: 0 }}
         >
           <HStack spacing={3} display={{ base: 'flex', md: 'none' }}>
             <IconButton
@@ -407,7 +411,12 @@ export const MainLayout: React.FC = () => {
             <Text fontWeight="bold">T4</Text>
           </HStack>
 
-          <InputGroup maxW={{ base: '100%', md: '420px' }} flex={1}>
+          <InputGroup
+            maxW={{ base: '100%', md: '420px' }}
+            flex={1}
+            flexBasis={{ base: '100%', md: 'auto' }}
+            order={{ base: 3, md: 0 }}
+          >
             <InputLeftElement pointerEvents="none">
               <Search size={18} color="#6b7392" />
             </InputLeftElement>
@@ -419,7 +428,14 @@ export const MainLayout: React.FC = () => {
             />
           </InputGroup>
 
-          <HStack spacing={3} ml={{ base: 0, md: 4 }} align="center">
+          <HStack
+            spacing={3}
+            ml={{ base: 0, md: 4 }}
+            align="center"
+            order={{ base: 2, md: 0 }}
+            flex="1 1 auto"
+            justify={{ base: 'flex-end', md: 'flex-start' }}
+          >
             <NotificationDropdown />
             <Menu>
               <MenuButton as={Button} variant="ghost" px={0} _hover={{ bg: 'transparent' }}>
@@ -442,9 +458,10 @@ export const MainLayout: React.FC = () => {
         {/* Content */}
         <Box
           flex="1"
-          height={`calc(100vh - ${HEADER_HEIGHT})`}
           overflowY="auto"
           p={{ base: 4, md: 8 }}
+          minW={0}
+          minH={0}
         >
           <RouteTransition>
             <Outlet />

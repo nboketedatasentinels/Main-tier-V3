@@ -80,10 +80,11 @@ export const PartnerInterventionPanel: React.FC<PartnerInterventionPanelProps> =
           const icon = deadlineIn >= 0 ? <Clock size={18} /> : <AlertTriangle size={18} color="#f59e0b" />
 
           return (
-            <HStack
+            <Stack
               key={item.id}
+              direction={{ base: 'column', md: 'row' }}
               justify="space-between"
-              align="center"
+              align={{ base: 'stretch', md: 'center' }}
               p={3}
               borderRadius="md"
               border="1px solid"
@@ -91,32 +92,37 @@ export const PartnerInterventionPanel: React.FC<PartnerInterventionPanelProps> =
               bg="brand.accent"
             >
               <VStack align="flex-start" spacing={1} flex={1}>
-                <HStack spacing={2}>
+                <HStack spacing={2} wrap="wrap">
                   <Badge colorScheme={statusColor[item.status]}>{item.status}</Badge>
                   <Text fontWeight="semibold" color="brand.text">{item.name}</Text>
                 </HStack>
                 <Text fontSize="sm" color="brand.subtleText">{item.target} • {item.reason}</Text>
               </VStack>
-              <VStack align="flex-end" spacing={1} minW="180px">
+              <VStack
+                align={{ base: 'flex-start', md: 'flex-end' }}
+                spacing={1}
+                minW={{ base: 'auto', md: '180px' }}
+                w={{ base: 'full', md: 'auto' }}
+              >
                 <HStack spacing={2}>
                   {deadlineIn < 0 ? <ShieldAlert color="#ef4444" /> : icon}
                   <Text fontSize="sm" color={deadlineIn < 0 ? 'red.500' : 'brand.subtleText'}>{deadlineLabel}</Text>
                 </HStack>
                 <Progress
-                  w="180px"
+                  w={{ base: 'full', md: '180px' }}
                   value={Math.min(100, Math.max(5, 100 - Math.abs(deadlineIn) * 10))}
                   colorScheme={deadlineIn < 0 ? 'red' : 'purple'}
                   size="sm"
                   borderRadius="full"
                 />
               </VStack>
-            </HStack>
+            </Stack>
           )
         })}
       </Stack>
 
       <Box p={3} borderRadius="md" border="1px dashed" borderColor="brand.border" bg="white">
-        <HStack spacing={3}>
+        <HStack spacing={3} align="flex-start">
           <CheckCircle color="#22c55e" />
           <Text fontSize="sm" color="brand.subtleText">
             Automated reminders are generated 48 hours before deadlines. Overdue items escalate after 7 days with admin alerts. Suggested nudges appear once cooldown windows expire.
