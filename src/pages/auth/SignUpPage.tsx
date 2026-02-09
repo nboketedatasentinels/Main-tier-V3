@@ -207,7 +207,7 @@ export const SignUpPage: React.FC = () => {
 
       toast({
         title: "Account created!",
-        description: "Welcome to Man-Tier. Redirecting you to your dashboard now.",
+        description: "Welcome to Transformational Leader. Redirecting you to your dashboard now.",
         status: "success",
         duration: 5000,
       })
