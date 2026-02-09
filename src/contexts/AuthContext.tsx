@@ -570,6 +570,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
               const upgradeUpdates: Partial<UserProfile> = {
                 membershipStatus: 'paid',
                 companyId: organization.id,
+                organizationId: organization.id,
                 companyCode: organization.code,
                 companyName: organization.name,
                 transformationTier: TransformationTier.CORPORATE_MEMBER,
@@ -578,10 +579,21 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
                 ...roleUpdates,
               }
 
-              await updateDoc(userDocRef, {
-                ...upgradeUpdates,
-                updatedAt: serverTimestamp(),
-              })
+              const profileDocRef = doc(db, 'profiles', firebaseUser.uid)
+              await Promise.all([
+                updateDoc(userDocRef, {
+                  ...upgradeUpdates,
+                  updatedAt: serverTimestamp(),
+                }),
+                setDoc(
+                  profileDocRef,
+                  {
+                    ...upgradeUpdates,
+                    updatedAt: serverTimestamp(),
+                  },
+                  { merge: true },
+                ),
+              ])
 
               mergedUser = {
                 ...mergedUser,
@@ -711,6 +723,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
           ? TransformationTier.CORPORATE_MEMBER
           : TransformationTier.INDIVIDUAL_FREE,
         assignedOrganizations: validatedOrganization?.id ? [validatedOrganization.id] : [],
+        organizationId: validatedOrganization?.id ?? null,
         companyCode: validatedOrganization?.code ?? null,
         companyId: validatedOrganization?.id ?? null,
         companyName: validatedOrganization?.name ?? null,
@@ -1123,6 +1136,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
     const normalizedEmail = email.trim().toLowerCase()
     const normalizedCompanyCode = userData.companyCode?.trim().toUpperCase()
+    const shouldTrackPendingCompanyCode = Boolean(normalizedCompanyCode)
 
     let validatedOrganization:
       | Awaited<ReturnType<typeof validateCompanyCode>>['organization']
@@ -1152,6 +1166,9 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     }
 
     try {
+      if (shouldTrackPendingCompanyCode && typeof window !== 'undefined') {
+        localStorage.setItem(pendingCompanyCodeKey, normalizedCompanyCode as string)
+      }
       const credential = await createUserWithEmailAndPassword(auth, normalizedEmail, password)
       const firebaseUser = credential.user
       const uid = firebaseUser.uid
@@ -1200,6 +1217,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
           ? TransformationTier.CORPORATE_MEMBER
           : TransformationTier.INDIVIDUAL_FREE,
         assignedOrganizations: validatedOrganization?.id ? [validatedOrganization.id] : [],
+        organizationId: validatedOrganization?.id ?? null,
         onboardingComplete: false,
         onboardingSkipped: false,
         mustChangePassword: false,
@@ -1217,11 +1235,13 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       const profilePayload: UserProfile & {
         gender?: string
         companyId?: string | null
+        organizationId?: string | null
         companyCode?: string | null
         companyName?: string | null
       } = {
         ...profileData,
         ...(validatedOrganization?.id ? { companyId: validatedOrganization.id } : {}),
+        ...(validatedOrganization?.id ? { organizationId: validatedOrganization.id } : {}),
         ...(validatedOrganization?.code ? { companyCode: validatedOrganization.code } : {}),
         ...(validatedOrganization?.name ? { companyName: validatedOrganization.name } : {}),
         ...(userData.gender ? { gender: userData.gender } : {}),
@@ -1296,6 +1316,9 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       console.log('🟢 [Auth] signUp success', { uid })
       setLoading(false)
       setProfileLoading(false)
+      if (shouldTrackPendingCompanyCode && typeof window !== 'undefined') {
+        localStorage.removeItem(pendingCompanyCodeKey)
+      }
       return { error: null, userId: uid }
     } catch (error) {
       console.error('🔴 [Auth] signUp failed', error)
@@ -1306,6 +1329,9 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
           : new Error(friendlyMessage)
       setLoading(false)
       setProfileLoading(false)
+      if (shouldTrackPendingCompanyCode && typeof window !== 'undefined') {
+        localStorage.removeItem(pendingCompanyCodeKey)
+      }
       return { error: normalizedError, userId: undefined }
     }
   }
@@ -1398,13 +1424,26 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     }
 
     try {
-      await updateDoc(doc(db, 'users', user.uid), {
-        ...updates,
-        updatedAt: serverTimestamp(),
-      })
+      const sanitizedUpdates = Object.entries(updates).reduce((acc, [key, value]) => {
+        if (typeof value !== 'undefined') {
+          ;(acc as Record<string, unknown>)[key] = value
+        }
+        return acc
+      }, {} as Partial<UserProfile>)
+
+      await Promise.all([
+        setDoc(doc(db, 'users', user.uid), {
+          ...sanitizedUpdates,
+          updatedAt: serverTimestamp(),
+        }, { merge: true }),
+        setDoc(doc(db, 'profiles', user.uid), {
+          ...sanitizedUpdates,
+          updatedAt: serverTimestamp(),
+        }, { merge: true }),
+      ])
       setProfile((prev) => {
         if (!prev) return prev
-        const merged = { ...prev, ...updates }
+        const merged = { ...prev, ...sanitizedUpdates }
         return areProfilesEquivalent(prev, merged) ? prev : merged
       })
       return { error: null }
@@ -1414,7 +1453,6 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       return { error: new Error(friendlyMessage) }
     }
   }
-
   const refreshProfile = useCallback(async (options?: { reason?: string; isManual?: boolean }) => {
     const currentUser = auth.currentUser
     const reason = options?.reason || 'manual'
