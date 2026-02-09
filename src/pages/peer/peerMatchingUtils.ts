@@ -89,3 +89,23 @@ export const getStoredPeerId = (data: Record<string, unknown>): string | null =>
   const normalized = rawId.trim()
   return normalized.length > 0 ? normalized : null
 }
+
+const hashSeed = (seed: string) => {
+  let hash = 0
+  for (let i = 0; i < seed.length; i += 1) {
+    hash = (hash * 31 + seed.charCodeAt(i)) >>> 0
+  }
+  return hash
+}
+
+export const selectReplacementPeer = <T extends { id: string }>(
+  candidates: T[],
+  seed: string,
+  excludeIds: string[] = [],
+): T | null => {
+  const excluded = new Set(excludeIds.filter(Boolean))
+  const pool = candidates.filter((candidate) => !excluded.has(candidate.id))
+  if (!pool.length) return null
+  const index = hashSeed(seed) % pool.length
+  return pool[index]
+}

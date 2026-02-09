@@ -88,6 +88,7 @@ import type { PeerSession as ServicePeerSession } from '@/services/peerSessionSe
 import { DateTimePicker } from '@/components/scheduling/DateTimePicker'
 import {
   buildMatchWindow,
+  selectReplacementPeer,
   getStoredPeerId,
   type MatchPreferencesForWindow,
   type MatchRefreshPreference,
@@ -392,6 +393,7 @@ export const PeerConnectPage: React.FC = () => {
   const [preselectedUser, setPreselectedUser] = useState<PreselectedUser | null>(null)
   const [matchAvailabilityMessage, setMatchAvailabilityMessage] = useState<string | null>(null)
   const unavailablePeerLogRef = useRef<string | null>(null)
+  const rematchAttemptRef = useRef<Set<string>>(new Set())
 
   const matchPreferences = useMemo<MatchPreferences>(() => ({
     refreshPreference: (profile?.matchRefreshPreference as MatchRefreshPreference) || 'weekly',
@@ -402,6 +404,78 @@ export const PeerConnectPage: React.FC = () => {
 
   const matchWindow = useMemo(() => buildMatchWindow(matchPreferences), [matchPreferences])
   const matchDocId = useMemo(() => (user ? `${user.uid}-${matchWindow.key}` : null), [matchWindow.key, user])
+
+  useEffect(() => {
+    rematchAttemptRef.current.clear()
+  }, [matchDocId])
+
+  const attemptAutomaticRematch = useCallback(
+    async (params: {
+      matchId: string
+      matchData: WeeklyMatchDocument
+      unavailablePeerId: string
+      reason: Exclude<PeerProfileLookupResult['status'], 'ok'>
+    }) => {
+      if (!user?.uid) return false
+
+      const replacementPeer = selectReplacementPeer(
+        availablePeers,
+        `${user.uid}:${matchWindow.key}:${params.matchId}`,
+        [user.uid, params.unavailablePeerId],
+      )
+      if (!replacementPeer) return false
+
+      const attemptKey = `${params.matchId}:${params.unavailablePeerId}:${params.reason}`
+      if (rematchAttemptRef.current.has(attemptKey)) return false
+      rematchAttemptRef.current.add(attemptKey)
+
+      const nextRefreshCount =
+        typeof params.matchData.refreshCount === 'number' ? params.matchData.refreshCount + 1 : 1
+      const nextReason = 'Automatic replacement (peer unavailable)'
+      const nextStatus: MatchStatus = 'new'
+
+      try {
+        await updateDoc(doc(db, 'peer_weekly_matches', params.matchId), {
+          peer_id: replacementPeer.id,
+          matchReason: nextReason,
+          matchStatus: nextStatus,
+          refreshCount: nextRefreshCount,
+          lastRefreshAt: serverTimestamp(),
+          autoRepairedAt: serverTimestamp(),
+          autoRepairReason: params.reason,
+          autoRepairedBy: user.uid,
+        })
+
+        const nextMatchData: WeeklyMatchDocument = {
+          ...params.matchData,
+          peer_id: replacementPeer.id,
+          matchReason: nextReason,
+          matchStatus: nextStatus,
+          refreshCount: nextRefreshCount,
+        }
+        setWeeklyMatch(buildWeeklyMatchFromDoc(params.matchId, nextMatchData, replacementPeer))
+        setMatchAvailabilityMessage(null)
+        unavailablePeerLogRef.current = null
+        console.log('[PeerMatch] Automatic replacement peer assigned:', {
+          matchId: params.matchId,
+          oldPeerId: params.unavailablePeerId,
+          newPeerId: replacementPeer.id,
+          reason: params.reason,
+        })
+        return true
+      } catch (error) {
+        rematchAttemptRef.current.delete(attemptKey)
+        console.warn('[PeerMatch] Automatic replacement failed:', {
+          matchId: params.matchId,
+          oldPeerId: params.unavailablePeerId,
+          reason: params.reason,
+          error,
+        })
+        return false
+      }
+    },
+    [availablePeers, matchWindow.key, user?.uid],
+  )
 
   const fetchWeeklyMatch = useCallback(async () => {
     if (!user || !profile || !matchDocId) return
@@ -451,6 +525,14 @@ export const PeerConnectPage: React.FC = () => {
             unavailablePeerLogRef.current = null
             return
           } else {
+            const rematched = await attemptAutomaticRematch({
+              matchId: matchRef.id,
+              matchData: data,
+              unavailablePeerId: storedPeerId,
+              reason: fallbackPeer.status,
+            })
+            if (rematched) return
+
             const logKey = `${storedPeerId}:${fallbackPeer.status}`
             if (unavailablePeerLogRef.current !== logKey) {
               console.warn('[PeerMatch] Peer profile unavailable:', { peerId: storedPeerId, reason: fallbackPeer.status })
@@ -471,7 +553,7 @@ export const PeerConnectPage: React.FC = () => {
     } catch (error) {
       console.error('[PeerMatch] Error in fetchWeeklyMatch:', error)
     }
-  }, [availablePeers, matchDocId, matchPreferences.refreshPreference, matchWindow.key, profile, user])
+  }, [attemptAutomaticRematch, availablePeers, matchDocId, matchPreferences.refreshPreference, matchWindow.key, profile, user])
 
 
   const updateMatchStatus = useCallback(
@@ -683,6 +765,14 @@ export const PeerConnectPage: React.FC = () => {
           setMatchAvailabilityMessage(null)
           unavailablePeerLogRef.current = null
         } else {
+          const rematched = await attemptAutomaticRematch({
+            matchId: matchRef.id,
+            matchData: data,
+            unavailablePeerId: storedPeerId,
+            reason: fallbackPeer.status,
+          })
+          if (rematched) return
+
           const logKey = `${storedPeerId}:${fallbackPeer.status}`
           if (unavailablePeerLogRef.current !== logKey) {
             console.warn('[PeerMatch] Real-time: Matched peer unavailable:', { peerId: storedPeerId, reason: fallbackPeer.status })
@@ -701,7 +791,7 @@ export const PeerConnectPage: React.FC = () => {
     return () => {
       unsubscribe()
     }
-  }, [availablePeers, matchDocId, matchPreferences.refreshPreference])
+  }, [attemptAutomaticRematch, availablePeers, matchDocId, matchPreferences.refreshPreference])
 
   useEffect(() => {
     if (!weeklyMatch || weeklyMatch.matchStatus !== 'new') return

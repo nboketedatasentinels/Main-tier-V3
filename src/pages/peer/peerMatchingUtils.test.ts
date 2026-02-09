@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { buildMatchWindow, getStoredPeerId } from './peerMatchingUtils'
+import { buildMatchWindow, getStoredPeerId, selectReplacementPeer } from './peerMatchingUtils'
 
 describe('peerMatchingUtils', () => {
   it('builds the correct weekly window key and dates for Monday preference', () => {
@@ -86,5 +86,24 @@ describe('peerMatchingUtils', () => {
     expect(getStoredPeerId({})).toBeNull()
     expect(getStoredPeerId({ peer_id: '   ' })).toBeNull()
     expect(getStoredPeerId({ peerId: 123 })).toBeNull()
+  })
+
+  it('selects a deterministic replacement peer for a given seed', () => {
+    const candidates = [{ id: 'a' }, { id: 'b' }, { id: 'c' }, { id: 'd' }]
+    const first = selectReplacementPeer(candidates, 'seed-1')
+    const second = selectReplacementPeer(candidates, 'seed-1')
+    expect(first?.id).toBe(second?.id)
+  })
+
+  it('honors excluded peer ids when selecting a replacement', () => {
+    const candidates = [{ id: 'a' }, { id: 'b' }, { id: 'c' }]
+    const selected = selectReplacementPeer(candidates, 'seed-2', ['a', 'c'])
+    expect(selected?.id).toBe('b')
+  })
+
+  it('returns null when no eligible replacement candidates remain', () => {
+    const candidates = [{ id: 'a' }]
+    const selected = selectReplacementPeer(candidates, 'seed-3', ['a'])
+    expect(selected).toBeNull()
   })
 })
