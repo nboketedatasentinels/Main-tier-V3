@@ -9,32 +9,6 @@ import { getDisplayName } from '@/utils/displayName'
 
 const TAB_STORAGE_KEY = 'user-management-active-tab'
 
-const normalizeText = (value: unknown) => {
-  if (typeof value !== 'string') return null
-  const trimmed = value.trim()
-  return trimmed || null
-}
-
-const resolveInvitedName = (
-  userData: {
-    invitedName?: string
-    invitedNameByOrganization?: unknown
-  },
-  companyId?: string | null,
-) => {
-  const byOrganization =
-    userData.invitedNameByOrganization && typeof userData.invitedNameByOrganization === 'object' && !Array.isArray(userData.invitedNameByOrganization)
-      ? (userData.invitedNameByOrganization as Record<string, unknown>)
-      : null
-
-  if (companyId && byOrganization?.[companyId]) {
-    const nameForOrganization = normalizeText(byOrganization[companyId])
-    if (nameForOrganization) return nameForOrganization
-  }
-
-  return normalizeText(userData.invitedName)
-}
-
 /**
  * ✅ Single source of truth for users data.
  * - One listener for the whole page
@@ -64,20 +38,15 @@ function useManagedUsers() {
             full_name?: string
             name?: string
             displayName?: string
-            invitedName?: string
-            invitedNameByOrganization?: unknown
           }
-          const companyId = userData.companyId || user.assignedOrganizations?.[0] || null
-          const invitedName = resolveInvitedName(userData, companyId)
           return {
             id: user.id,
             name: getDisplayName(userData, 'Member'),
-            invitedName,
             email: user.email,
             role: user.role as any,
             membershipStatus: (userData.membershipStatus as 'free' | 'paid' | 'inactive') || 'free',
             // Check companyId first (set at signup), then fall back to assignedOrganizations (for admins)
-            companyId,
+            companyId: userData.companyId || user.assignedOrganizations?.[0] || null,
             companyName: userData.companyName || null,
             companyCode: userData.companyCode || null,
             lastActive: user.lastActive instanceof Date ? user.lastActive : null,

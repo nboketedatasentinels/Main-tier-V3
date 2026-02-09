@@ -113,21 +113,6 @@ const getPendingInvitationSeatCount = async (organizationId: string, existingSea
   }).length
 }
 
-const sanitizeInvitedNameByOrganization = (value: unknown): Record<string, string> => {
-  if (!value || typeof value !== 'object' || Array.isArray(value)) return {}
-
-  const sanitized: Record<string, string> = {}
-  Object.entries(value as Record<string, unknown>).forEach(([organizationId, invitedName]) => {
-    if (typeof organizationId !== 'string' || !organizationId.trim()) return
-    if (typeof invitedName !== 'string') return
-    const trimmed = invitedName.trim()
-    if (!trimmed) return
-    sanitized[organizationId] = trimmed
-  })
-
-  return sanitized
-}
-
 export const generateOneTimeCode = () => {
   return Array.from({ length: 8 })
     .map(() => codeChars[Math.floor(Math.random() * codeChars.length)])
@@ -207,28 +192,9 @@ const createOrUpdateUser = async (
 
   if (existing?.id) {
     const userId = existing.id
-    const invitedName = payload.name.trim()
     const userRef = doc(db, 'users', userId)
     const profileRef = doc(db, 'profiles', userId)
     const [userSnap, profileSnap] = await Promise.all([getDoc(userRef), getDoc(profileRef)])
-    const inviteNameMapSource =
-      (userSnap.exists()
-        ? (userSnap.data() as { invitedNameByOrganization?: unknown }).invitedNameByOrganization
-        : undefined) ??
-      (profileSnap.exists()
-        ? (profileSnap.data() as { invitedNameByOrganization?: unknown }).invitedNameByOrganization
-        : undefined)
-    const existingInvitedNameByOrganization = sanitizeInvitedNameByOrganization(inviteNameMapSource)
-    const invitedNameByOrganization = invitedName
-      ? {
-          ...existingInvitedNameByOrganization,
-          [payload.organizationId]: invitedName,
-        }
-      : existingInvitedNameByOrganization
-    const inviteNamePayload = {
-      invitedName: invitedName || null,
-      invitedNameByOrganization,
-    }
 
     // Keep the profile role in sync so Super Admin user management reflects assigned roles.
     if (existing.source === 'profiles') {
@@ -238,7 +204,6 @@ const createOrUpdateUser = async (
         companyId: payload.organizationId,
         companyCode: payload.organizationCode ?? null,
         companyName: payload.organizationName ?? null,
-        ...inviteNamePayload,
         transformationTier: TransformationTier.CORPORATE_MEMBER,
         updatedAt: serverTimestamp(),
         'dashboardPreferences.lockedToFreeExperience': false,
@@ -251,7 +216,6 @@ const createOrUpdateUser = async (
           companyId: payload.organizationId,
           companyCode: payload.organizationCode ?? null,
           companyName: payload.organizationName ?? null,
-          ...inviteNamePayload,
           transformationTier: TransformationTier.CORPORATE_MEMBER,
           updatedAt: serverTimestamp(),
           'dashboardPreferences.lockedToFreeExperience': false,
@@ -280,7 +244,6 @@ const createOrUpdateUser = async (
         companyId: payload.organizationId,
         companyCode: payload.organizationCode ?? null,
         companyName: payload.organizationName ?? null,
-        ...inviteNamePayload,
         transformationTier: TransformationTier.CORPORATE_MEMBER,
         assignedOrganizations,
         updatedAt: serverTimestamp(),
@@ -297,7 +260,6 @@ const createOrUpdateUser = async (
           companyId: payload.organizationId,
           companyCode: payload.organizationCode ?? null,
           companyName: payload.organizationName ?? null,
-          ...inviteNamePayload,
           transformationTier: TransformationTier.CORPORATE_MEMBER,
           dashboardPreferences: {
             lockedToFreeExperience: false,

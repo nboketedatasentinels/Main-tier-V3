@@ -144,7 +144,6 @@ export const UsersManagementTab = ({ users: propUsers, loading: propLoading }: U
       const searchText = filters.search.toLowerCase()
       const matchesSearch =
         user.name.toLowerCase().includes(searchText) ||
-        (user.invitedName || '').toLowerCase().includes(searchText) ||
         (user.email || '').toLowerCase().includes(searchText) ||
         (user.companyCode || '').toLowerCase().includes(searchText)
 
@@ -601,11 +600,6 @@ export const UsersManagementTab = ({ users: propUsers, loading: propLoading }: U
                             <Text fontWeight="semibold" color="gray.800">
                               {user.name}
                             </Text>
-                            {user.invitedName && user.invitedName.trim().toLowerCase() !== user.name.trim().toLowerCase() ? (
-                              <Text fontSize="xs" color="gray.500">
-                                Added as: {user.invitedName}
-                              </Text>
-                            ) : null}
                             <Text fontSize="sm" color="gray.500">
                               {user.email || 'No email on file'}
                             </Text>

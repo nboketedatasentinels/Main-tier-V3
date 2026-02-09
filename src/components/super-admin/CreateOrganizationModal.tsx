@@ -125,10 +125,9 @@ const formatInviteRoleLabel = (role: InviteDraft['role']) => {
   return role.replace(/_/g, ' ').replace(/\b\w/g, (char) => char.toUpperCase())
 }
 const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
-const nameRegex = /^[A-Za-z][A-Za-z\s'-]*$/
 const commonEmailDomains = ['gmail.com', 'outlook.com', 'hotmail.com', 'yahoo.com', 'icloud.com']
 
-type InviteDraftField = 'name' | 'email' | 'role' | 'method'
+type InviteDraftField = 'email' | 'role'
 type InviteDraftErrors = Partial<Record<InviteDraftField, string>>
 type InviteDraftEntry = InviteDraft & {
   isValid: boolean
@@ -139,17 +138,11 @@ type InviteDraftEntry = InviteDraft & {
   isNew?: boolean
 }
 
-const formatName = (value: string) =>
-  value
-    .trim()
-    .split(/\s+/)
-    .map((segment) => segment.charAt(0).toUpperCase() + segment.slice(1))
-    .join(' ')
-
-const normalizeMethodForEmail = (email: string, current: InviteDraft['method']): InviteDraft['method'] => {
-  if (!email) return 'one_time_code'
-  if (current === 'one_time_code') return 'email'
-  return current
+const deriveInviteNameFromEmail = (email: string) => {
+  const localPart = email.split('@')[0] || ''
+  const normalized = localPart.replace(/[._-]+/g, ' ').trim()
+  if (!normalized) return 'Invited user'
+  return normalized.replace(/\b\w/g, (char) => char.toUpperCase())
 }
 
 export const CreateOrganizationModal: React.FC<CreateOrganizationModalProps> = ({
@@ -168,10 +161,8 @@ export const CreateOrganizationModal: React.FC<CreateOrganizationModalProps> = (
   const [inviteDrafts, setInviteDrafts] = useState<InviteDraftEntry[]>([])
   const [inviteError, setInviteError] = useState<string | null>(null)
   const [manualEntry, setManualEntry] = useState({
-    name: '',
     email: '',
     role: 'user' as InviteDraft['role'],
-    method: 'one_time_code' as InviteDraft['method'],
   })
   const [manualErrors, setManualErrors] = useState<InviteDraftErrors>({})
   const [selectedDraftIds, setSelectedDraftIds] = useState<string[]>([])
@@ -307,7 +298,7 @@ export const CreateOrganizationModal: React.FC<CreateOrganizationModalProps> = (
       setMonthlyAssignments({})
       setInviteDrafts([])
       setInviteError(null)
-      setManualEntry({ name: '', email: '', role: 'user', method: 'one_time_code' })
+      setManualEntry({ email: '', role: 'user' })
       setManualErrors({})
       setSelectedDraftIds([])
       setRecentImportIds([])
@@ -359,9 +350,10 @@ export const CreateOrganizationModal: React.FC<CreateOrganizationModalProps> = (
 
   const buildInviteDraftEntry = (draft: InviteDraft, source?: InviteDraftEntry['source'], rowNumber?: number): InviteDraftEntry => {
     const normalizedEmail = normalizeEmail(draft.email || '')
-    const method: InviteDraft['method'] = normalizedEmail ? 'email' : 'one_time_code'
+    const method: InviteDraft['method'] = 'email'
     return {
       ...draft,
+      name: deriveInviteNameFromEmail(normalizedEmail),
       email: normalizedEmail,
       method,
       isValid: true,
@@ -378,18 +370,9 @@ export const CreateOrganizationModal: React.FC<CreateOrganizationModalProps> = (
     emailCounts: Map<string, number>,
   ): InviteDraftErrors => {
     const errors: InviteDraftErrors = {}
-    const name = draft.name.trim()
-    if (!name) {
-      errors.name = 'Name is required.'
-    } else if (name.length < 2) {
-      errors.name = 'Name must be at least 2 characters.'
-    } else if (!nameRegex.test(name)) {
-      errors.name = 'Name should not include special characters.'
-    }
-
     const normalizedEmail = normalizeEmail(draft.email || '')
-    if (normalizedEmail && !emailRegex.test(normalizedEmail)) {
-      errors.email = 'Enter a valid email address.'
+    if (!normalizedEmail || !emailRegex.test(normalizedEmail)) {
+      errors.email = 'A valid email address is required.'
     }
     if (normalizedEmail && (emailCounts.get(normalizedEmail) || 0) > 1) {
       errors.email = 'Duplicate email detected.'
@@ -413,10 +396,11 @@ export const CreateOrganizationModal: React.FC<CreateOrganizationModalProps> = (
 
     return drafts.map((draft) => {
       const normalizedEmail = normalizeEmail(draft.email || '')
-      const method: InviteDraft['method'] = normalizedEmail ? 'email' : 'one_time_code'
+      const method: InviteDraft['method'] = 'email'
       const errors = validateInviteDraft(draft, emailCounts)
       return {
         ...draft,
+        name: deriveInviteNameFromEmail(normalizedEmail),
         email: normalizedEmail,
         method,
         errors,
@@ -431,15 +415,15 @@ export const CreateOrganizationModal: React.FC<CreateOrganizationModalProps> = (
 
   const updateDraftField = (draftId: string, field: InviteDraftField, value: string) => {
     setInviteDrafts((prev) => {
-      const nextValue =
-        field === 'role' ? (value as InviteDraft['role']) : field === 'method' ? (value as InviteDraft['method']) : value
+      const nextValue = field === 'role' ? (value as InviteDraft['role']) : value
       const next = prev.map((draft) => {
         if (draft.id !== draftId) return draft
         const nextDraft = { ...draft, [field]: nextValue }
         const normalizedEmail = normalizeEmail(nextDraft.email || '')
-        const method: InviteDraft['method'] = normalizedEmail ? 'email' : 'one_time_code'
+        const method: InviteDraft['method'] = 'email'
         return {
           ...nextDraft,
+          name: deriveInviteNameFromEmail(normalizedEmail),
           email: normalizedEmail,
           method,
           isNew: draft.isNew && draft.source !== 'csv' ? draft.isNew : false,
@@ -455,7 +439,7 @@ export const CreateOrganizationModal: React.FC<CreateOrganizationModalProps> = (
   }
 
   const resetManualEntry = () => {
-    setManualEntry({ name: '', email: '', role: 'user', method: 'one_time_code' })
+    setManualEntry({ email: '', role: 'user' })
     setManualErrors({})
   }
 
@@ -478,10 +462,10 @@ export const CreateOrganizationModal: React.FC<CreateOrganizationModalProps> = (
     const draft = buildInviteDraftEntry(
       {
         id: 'manual-preview',
-        name: entry.name,
+        name: deriveInviteNameFromEmail(normalizeEmail(entry.email || '')),
         email: normalizeEmail(entry.email || ''),
         role: entry.role,
-        method: entry.method,
+        method: 'email',
       },
       'manual',
     )
@@ -504,10 +488,10 @@ export const CreateOrganizationModal: React.FC<CreateOrganizationModalProps> = (
     setInviteError(null)
     const draft: InviteDraft = {
       id: `${Date.now()}-${Math.round(Math.random() * 1000)}`,
-      name: formatName(manualEntry.name),
+      name: deriveInviteNameFromEmail(normalizeEmail(manualEntry.email || '')),
       email: normalizeEmail(manualEntry.email || ''),
       role: manualEntry.role,
-      method: normalizeEmail(manualEntry.email || '') ? 'email' : 'one_time_code',
+      method: 'email',
     }
     addInviteDrafts([buildInviteDraftEntry(draft, 'manual')])
     resetManualEntry()
@@ -1024,7 +1008,7 @@ export const CreateOrganizationModal: React.FC<CreateOrganizationModalProps> = (
                       }}
                     />
                     <FormHelperText>
-                      Use columns: Name, Email, Role.
+                      Use columns: Email, Role.
                       <Button variant="link" size="sm" ml={2} onClick={downloadCSVTemplate}>
                         Download template
                       </Button>
@@ -1041,45 +1025,14 @@ export const CreateOrganizationModal: React.FC<CreateOrganizationModalProps> = (
                        Add user manually
                      </Text>
                      <Grid
-                      templateColumns={{ base: '1fr', lg: '2fr 2fr 1.3fr auto' }}
+                      templateColumns={{ base: '1fr', lg: '2fr 1.3fr auto' }}
                       gap={3}
                       alignItems="flex-end"
                     >
-                      <FormControl isRequired isInvalid={Boolean(manualErrors.name)}>
-                        <FormLabel display="flex" alignItems="center" gap={2}>
-                          Name
-                          <Tooltip label="Minimum 2 characters. Letters, spaces, hyphens, and apostrophes only.">
-                            <InfoIcon color="text.muted" />
-                          </Tooltip>
-                        </FormLabel>
-                        <Input
-                          value={manualEntry.name}
-                          onChange={(e) => {
-                            const value = e.target.value
-                            setManualEntry((prev) => ({ ...prev, name: value }))
-                            validateManualEntry({ ...manualEntry, name: value })
-                          }}
-                          onBlur={(e) => {
-                            const formatted = formatName(e.target.value)
-                            setManualEntry((prev) => ({ ...prev, name: formatted }))
-                            validateManualEntry({ ...manualEntry, name: formatted })
-                          }}
-                          placeholder="Jane Doe"
-                          maxLength={60}
-                          onKeyDown={(e) => {
-                            if (e.key === 'Enter') {
-                              e.preventDefault()
-                              handleAddManualEntry()
-                            }
-                          }}
-                        />
-                        <FormHelperText>{manualEntry.name.length}/60 characters</FormHelperText>
-                        <FormErrorMessage>{manualErrors.name}</FormErrorMessage>
-                      </FormControl>
-                      <FormControl isInvalid={Boolean(manualErrors.email)}>
+                      <FormControl isRequired isInvalid={Boolean(manualErrors.email)}>
                         <FormLabel display="flex" alignItems="center" gap={2}>
                           Email
-                          <Tooltip label="Optional unless using email invitations.">
+                          <Tooltip label="A valid email is required. Users set their own profile name during signup.">
                             <InfoIcon color="text.muted" />
                           </Tooltip>
                         </FormLabel>
@@ -1087,9 +1040,7 @@ export const CreateOrganizationModal: React.FC<CreateOrganizationModalProps> = (
                           value={manualEntry.email}
                           onChange={(e) => {
                             const rawEmail = e.target.value
-                            const normalized = normalizeEmail(rawEmail)
-                            const nextMethod = normalizeMethodForEmail(normalized, manualEntry.method)
-                            const nextEntry = { ...manualEntry, email: rawEmail, method: nextMethod }
+                            const nextEntry = { ...manualEntry, email: rawEmail }
                             setManualEntry(nextEntry)
                             validateManualEntry(nextEntry)
                           }}
@@ -1107,7 +1058,7 @@ export const CreateOrganizationModal: React.FC<CreateOrganizationModalProps> = (
                             <option key={domain} value={`@${domain}`} />
                           ))}
                         </datalist>
-                        <FormHelperText>Auto-selects email invitations when a valid email is entered.</FormHelperText>
+                        <FormHelperText>Email invitations only.</FormHelperText>
                         <FormErrorMessage>{manualErrors.email}</FormErrorMessage>
                       </FormControl>
                       <FormControl isInvalid={Boolean(manualErrors.role)}>
@@ -1221,7 +1172,6 @@ export const CreateOrganizationModal: React.FC<CreateOrganizationModalProps> = (
                               <Tr>
                                 <Th>#</Th>
                                 <Th>Select</Th>
-                                <Th>Name</Th>
                                 <Th>Email</Th>
                                 <Th>Role</Th>
                                 <Th>Status</Th>
@@ -1249,20 +1199,6 @@ export const CreateOrganizationModal: React.FC<CreateOrganizationModalProps> = (
                                           )
                                         }}
                                       />
-                                    </Td>
-                                    <Td>
-                                      <Editable
-                                        value={draft.name}
-                                        onChange={(value) => updateDraftField(draft.id, 'name', value)}
-                                      >
-                                        <EditablePreview />
-                                        <EditableInput />
-                                      </Editable>
-                                      {draft.errors.name ? (
-                                        <Text fontSize="xs" color="red.500">
-                                          {draft.errors.name}
-                                        </Text>
-                                      ) : null}
                                     </Td>
                                     <Td>
                                       <Editable

@@ -18,7 +18,9 @@
     "seed-courses": "node scripts/seed-courses.mjs",
     "diagnose:partner-orgs": "node scripts/diagnose-partner-org-mismatch.mjs",
     "fix:partner-orgs": "node scripts/fix-user-organization-assignments.mjs",
-    "fix:partner-orgs:dry-run": "node scripts/fix-user-organization-assignments.mjs --dry-run"
+    "fix:partner-orgs:dry-run": "node scripts/fix-user-organization-assignments.mjs --dry-run",
+    "cleanup:invited-name:dry-run": "node scripts/cleanup-invited-name-fields.mjs",
+    "cleanup:invited-name": "node scripts/cleanup-invited-name-fields.mjs --apply"
   },
   "dependencies": {
     "@chakra-ui/icons": "^2.2.4",
