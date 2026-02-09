@@ -16,6 +16,7 @@ export type ActionItem = {
   id: string
   severity: 'critical' | 'high' | 'medium'
   title: string
+  description?: string
   timestamp: string
   actionLabel: string
   onAction: () => void
@@ -32,17 +33,22 @@ export const CriticalActionInbox: React.FC<CriticalActionInboxProps> = ({ items 
 
   return (
     <Box>
-      <HStack mb={4} justify="space-between">
-        <HStack spacing={2}>
-          <Box color="red.500">
+      <HStack mb={2} justify="space-between" align="flex-start">
+        <HStack spacing={2} align="center">
+          <Box color="red.500" pt={0.5}>
             <ShieldX size={20} />
           </Box>
-          <Heading size="md" color="red.700">
-            REQUIRES IMMEDIATE ACTION
-          </Heading>
+          <Stack spacing={1}>
+            <Heading size="md" color="red.700">
+              Requires Immediate Action
+            </Heading>
+            <Text fontSize="sm" color="gray.600">
+              Live queue of unresolved incidents, pending approvals, and urgent tasks from Firestore.
+            </Text>
+          </Stack>
         </HStack>
         <Badge colorScheme="red" variant="solid" borderRadius="full" px={3}>
-          {items.length} Pending
+          {items.length} Live
         </Badge>
       </HStack>
 
@@ -88,6 +94,11 @@ export const CriticalActionInbox: React.FC<CriticalActionInboxProps> = ({ items 
                   <Text fontWeight="bold" color="gray.800" fontSize="md">
                     {item.title}
                   </Text>
+                  {item.description && (
+                    <Text color="gray.600" fontSize="sm">
+                      {item.description}
+                    </Text>
+                  )}
                 </Stack>
               </HStack>
               <Button
@@ -104,7 +115,7 @@ export const CriticalActionInbox: React.FC<CriticalActionInboxProps> = ({ items 
         ))}
         {items.length === 0 && (
           <Box p={8} textAlign="center" borderRadius="lg" border="2px dashed" borderColor="border.control" bg="gray.50">
-            <Text color="gray.500">No critical items requiring immediate action.</Text>
+            <Text color="gray.500">No unresolved critical or high-priority items in the live queue.</Text>
           </Box>
         )}
       </Stack>
