@@ -161,17 +161,37 @@ const mapRecordToPeerProfile = (record: Record<string, unknown>): PeerProfile =>
   }
 }
 
-const fetchPeerProfileById = async (peerId: string): Promise<PeerProfile | null> => {
-  if (!peerId) return null
+type PeerProfileLookupResult =
+  | { status: 'ok'; profile: PeerProfile }
+  | { status: 'not_found' | 'ineligible' | 'permission_denied' | 'error'; code?: string }
+
+const getUnavailableMatchMessage = (status: PeerProfileLookupResult['status']) => {
+  if (status === 'permission_denied') {
+    return 'Your match exists, but the peer profile is not visible with your current access. A new match will appear in the next cycle.'
+  }
+  if (status === 'not_found' || status === 'ineligible') {
+    return 'Your previous match is no longer available. A new match will appear automatically in the next cycle.'
+  }
+  return 'We could not load your matched peer right now. Please refresh or try again shortly.'
+}
+
+const fetchPeerProfileById = async (peerId: string): Promise<PeerProfileLookupResult> => {
+  if (!peerId) return { status: 'not_found' }
   try {
     const peerDoc = await getDoc(doc(db, 'profiles', peerId))
-    if (!peerDoc.exists()) return null
+    if (!peerDoc.exists()) return { status: 'not_found' }
     const record = { id: peerDoc.id, ...(peerDoc.data() as Record<string, unknown>) }
-    if (!isEligiblePeerRecord(record)) return null
-    return mapRecordToPeerProfile(record)
+    if (!isEligiblePeerRecord(record)) return { status: 'ineligible' }
+    return { status: 'ok', profile: mapRecordToPeerProfile(record) }
   } catch (error) {
-    console.error('[PeerMatch] Failed to fetch peer profile', peerId, error)
-    return null
+    const code = typeof error === 'object' && error !== null && 'code' in error
+      ? String((error as { code?: unknown }).code ?? '')
+      : undefined
+    if (code === 'permission-denied') {
+      return { status: 'permission_denied', code }
+    }
+    console.warn('[PeerMatch] Failed to fetch peer profile', peerId, code ?? error)
+    return { status: 'error', code }
   }
 }
 
@@ -370,6 +390,8 @@ export const PeerConnectPage: React.FC = () => {
   const [loadingPeers, setLoadingPeers] = useState(false)
   const [loadingSessions, setLoadingSessions] = useState(false)
   const [preselectedUser, setPreselectedUser] = useState<PreselectedUser | null>(null)
+  const [matchAvailabilityMessage, setMatchAvailabilityMessage] = useState<string | null>(null)
+  const unavailablePeerLogRef = useRef<string | null>(null)
 
   const matchPreferences = useMemo<MatchPreferences>(() => ({
     refreshPreference: (profile?.matchRefreshPreference as MatchRefreshPreference) || 'weekly',
@@ -385,6 +407,7 @@ export const PeerConnectPage: React.FC = () => {
     if (!user || !profile || !matchDocId) return
     if (matchPreferences.refreshPreference === 'disabled') {
       setWeeklyMatch(null)
+      setMatchAvailabilityMessage(null)
       return
     }
 
@@ -405,6 +428,7 @@ export const PeerConnectPage: React.FC = () => {
         if (!storedPeerId) {
           console.warn('[PeerMatch] Match document exists but has no peerId field')
           setWeeklyMatch(null)
+          setMatchAvailabilityMessage('Your current match record is incomplete. A new match will appear in the next cycle.')
           return
         } else {
           // Try to find peer in availablePeers first (faster)
@@ -412,20 +436,29 @@ export const PeerConnectPage: React.FC = () => {
           if (matchedPeer) {
             console.log('[PeerMatch] Found matched peer in availablePeers:', storedPeerId)
             setWeeklyMatch(buildWeeklyMatchFromDoc(matchRef.id, data, matchedPeer))
+            setMatchAvailabilityMessage(null)
+            unavailablePeerLogRef.current = null
             return
           }
 
           // Fallback: Fetch peer profile directly from Firestore
           console.log('[PeerMatch] Peer not in availablePeers, fetching profile directly:', storedPeerId)
           const fallbackPeer = await fetchPeerProfileById(storedPeerId)
-          if (fallbackPeer) {
+          if (fallbackPeer.status === 'ok') {
             console.log('[PeerMatch] Successfully fetched peer profile:', storedPeerId)
-            setWeeklyMatch(buildWeeklyMatchFromDoc(matchRef.id, data, fallbackPeer))
+            setWeeklyMatch(buildWeeklyMatchFromDoc(matchRef.id, data, fallbackPeer.profile))
+            setMatchAvailabilityMessage(null)
+            unavailablePeerLogRef.current = null
             return
           } else {
-            console.error('[PeerMatch] Peer profile unavailable or ineligible:', storedPeerId)
+            const logKey = `${storedPeerId}:${fallbackPeer.status}`
+            if (unavailablePeerLogRef.current !== logKey) {
+              console.warn('[PeerMatch] Peer profile unavailable:', { peerId: storedPeerId, reason: fallbackPeer.status })
+              unavailablePeerLogRef.current = logKey
+            }
             // Peer may have been deactivated, opted out, or merged - clear invalid match
             setWeeklyMatch(null)
+            setMatchAvailabilityMessage(getUnavailableMatchMessage(fallbackPeer.status))
             return
           }
         }
@@ -434,6 +467,7 @@ export const PeerConnectPage: React.FC = () => {
       // No existing match found - matches are now created only by Cloud Function
       console.log('[PeerMatch] No match document exists for this window. Matches are created automatically.')
       setWeeklyMatch(null)
+      setMatchAvailabilityMessage(null)
     } catch (error) {
       console.error('[PeerMatch] Error in fetchWeeklyMatch:', error)
     }
@@ -615,6 +649,7 @@ export const PeerConnectPage: React.FC = () => {
           message: 'User has no automatic match for this period',
         })
         setWeeklyMatch(null)
+        setMatchAvailabilityMessage(null)
         return
       }
 
@@ -624,6 +659,7 @@ export const PeerConnectPage: React.FC = () => {
       if (!storedPeerId) {
         console.warn('[PeerMatch] Real-time: Match document exists but has no peerId')
         setWeeklyMatch(null)
+        setMatchAvailabilityMessage('Your current match record is incomplete. A new match will appear in the next cycle.')
         return
       }
 
@@ -632,6 +668,8 @@ export const PeerConnectPage: React.FC = () => {
       if (matchedPeer) {
         console.log('[PeerMatch] Real-time: Found peer in availablePeers:', storedPeerId)
         setWeeklyMatch(buildWeeklyMatchFromDoc(matchRef.id, data, matchedPeer))
+        setMatchAvailabilityMessage(null)
+        unavailablePeerLogRef.current = null
         return
       }
 
@@ -639,16 +677,24 @@ export const PeerConnectPage: React.FC = () => {
       console.log('[PeerMatch] Real-time: Peer not in availablePeers, fetching directly:', storedPeerId)
       try {
         const fallbackPeer = await fetchPeerProfileById(storedPeerId)
-        if (fallbackPeer) {
+        if (fallbackPeer.status === 'ok') {
           console.log('[PeerMatch] Real-time: Successfully fetched peer profile:', storedPeerId)
-          setWeeklyMatch(buildWeeklyMatchFromDoc(matchRef.id, data, fallbackPeer))
+          setWeeklyMatch(buildWeeklyMatchFromDoc(matchRef.id, data, fallbackPeer.profile))
+          setMatchAvailabilityMessage(null)
+          unavailablePeerLogRef.current = null
         } else {
-          console.error('[PeerMatch] Real-time: Failed to fetch peer profile:', storedPeerId)
+          const logKey = `${storedPeerId}:${fallbackPeer.status}`
+          if (unavailablePeerLogRef.current !== logKey) {
+            console.warn('[PeerMatch] Real-time: Matched peer unavailable:', { peerId: storedPeerId, reason: fallbackPeer.status })
+            unavailablePeerLogRef.current = logKey
+          }
           setWeeklyMatch(null)
+          setMatchAvailabilityMessage(getUnavailableMatchMessage(fallbackPeer.status))
         }
       } catch (error) {
         console.error('[PeerMatch] Real-time: Error fetching peer profile:', storedPeerId, error)
         setWeeklyMatch(null)
+        setMatchAvailabilityMessage(getUnavailableMatchMessage('error'))
       }
     })
 
@@ -1151,7 +1197,9 @@ export const PeerConnectPage: React.FC = () => {
                               : 'No Match This Week'}
                           </Text>
                           <Text fontSize="sm">
-                            {matchPreferences.refreshPreference === 'disabled'
+                            {matchAvailabilityMessage
+                              ? matchAvailabilityMessage
+                              : matchPreferences.refreshPreference === 'disabled'
                               ? 'Peer matching is currently disabled.'
                               : matchPreferences.refreshPreference === 'on-demand'
                                 ? 'You have on-demand matching enabled. Matches are created when you request them.'
