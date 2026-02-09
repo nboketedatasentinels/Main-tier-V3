@@ -28,6 +28,7 @@ export interface OrganizationOption {
 export interface ManagedUserRecord {
   id: string
   name: string
+  invitedName?: string | null
   email?: string
   role: ManagedUserRole
   membershipStatus: MembershipStatus
@@ -141,6 +142,7 @@ const mapUser = (docSnap: { id: string; data: () => unknown }): ManagedUserRecor
   return {
     id: docSnap.id,
     name,
+    invitedName: typeof data.invitedName === 'string' ? data.invitedName : null,
     email: data.email,
     role: (data.role as ManagedUserRole) || 'user',
     membershipStatus: data.membershipStatus || 'free',

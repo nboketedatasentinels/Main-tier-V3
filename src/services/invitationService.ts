@@ -113,6 +113,21 @@ const getPendingInvitationSeatCount = async (organizationId: string, existingSea
   }).length
 }
 
+const sanitizeInvitedNameByOrganization = (value: unknown): Record<string, string> => {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) return {}
+
+  const sanitized: Record<string, string> = {}
+  Object.entries(value as Record<string, unknown>).forEach(([organizationId, invitedName]) => {
+    if (typeof organizationId !== 'string' || !organizationId.trim()) return
+    if (typeof invitedName !== 'string') return
+    const trimmed = invitedName.trim()
+    if (!trimmed) return
+    sanitized[organizationId] = trimmed
+  })
+
+  return sanitized
+}
+
 export const generateOneTimeCode = () => {
   return Array.from({ length: 8 })
     .map(() => codeChars[Math.floor(Math.random() * codeChars.length)])
@@ -192,22 +207,43 @@ const createOrUpdateUser = async (
 
   if (existing?.id) {
     const userId = existing.id
+    const invitedName = payload.name.trim()
+    const userRef = doc(db, 'users', userId)
+    const profileRef = doc(db, 'profiles', userId)
+    const [userSnap, profileSnap] = await Promise.all([getDoc(userRef), getDoc(profileRef)])
+    const inviteNameMapSource =
+      (userSnap.exists()
+        ? (userSnap.data() as { invitedNameByOrganization?: unknown }).invitedNameByOrganization
+        : undefined) ??
+      (profileSnap.exists()
+        ? (profileSnap.data() as { invitedNameByOrganization?: unknown }).invitedNameByOrganization
+        : undefined)
+    const existingInvitedNameByOrganization = sanitizeInvitedNameByOrganization(inviteNameMapSource)
+    const invitedNameByOrganization = invitedName
+      ? {
+          ...existingInvitedNameByOrganization,
+          [payload.organizationId]: invitedName,
+        }
+      : existingInvitedNameByOrganization
+    const inviteNamePayload = {
+      invitedName: invitedName || null,
+      invitedNameByOrganization,
+    }
 
     // Keep the profile role in sync so Super Admin user management reflects assigned roles.
     if (existing.source === 'profiles') {
-      await updateDoc(doc(db, 'profiles', userId), {
+      await updateDoc(profileRef, {
         role: payload.role,
         membershipStatus: 'paid',
         companyId: payload.organizationId,
         companyCode: payload.organizationCode ?? null,
         companyName: payload.organizationName ?? null,
+        ...inviteNamePayload,
         transformationTier: TransformationTier.CORPORATE_MEMBER,
         updatedAt: serverTimestamp(),
         'dashboardPreferences.lockedToFreeExperience': false,
       })
     } else {
-      const profileRef = doc(db, 'profiles', userId)
-      const profileSnap = await getDoc(profileRef)
       if (profileSnap.exists()) {
         await updateDoc(profileRef, {
           role: payload.role,
@@ -215,6 +251,7 @@ const createOrUpdateUser = async (
           companyId: payload.organizationId,
           companyCode: payload.organizationCode ?? null,
           companyName: payload.organizationName ?? null,
+          ...inviteNamePayload,
           transformationTier: TransformationTier.CORPORATE_MEMBER,
           updatedAt: serverTimestamp(),
           'dashboardPreferences.lockedToFreeExperience': false,
@@ -223,8 +260,6 @@ const createOrUpdateUser = async (
     }
 
     // Ensure `users/{userId}` holds org assignments for access checks + license accounting.
-    const userRef = doc(db, 'users', userId)
-    const userSnap = await getDoc(userRef)
     const existingAssignments = userSnap.exists()
       ? ((userSnap.data() as { assignedOrganizations?: unknown })?.assignedOrganizations as unknown)
       : undefined
@@ -245,6 +280,7 @@ const createOrUpdateUser = async (
         companyId: payload.organizationId,
         companyCode: payload.organizationCode ?? null,
         companyName: payload.organizationName ?? null,
+        ...inviteNamePayload,
         transformationTier: TransformationTier.CORPORATE_MEMBER,
         assignedOrganizations,
         updatedAt: serverTimestamp(),
@@ -261,6 +297,7 @@ const createOrUpdateUser = async (
           companyId: payload.organizationId,
           companyCode: payload.organizationCode ?? null,
           companyName: payload.organizationName ?? null,
+          ...inviteNamePayload,
           transformationTier: TransformationTier.CORPORATE_MEMBER,
           dashboardPreferences: {
             lockedToFreeExperience: false,
