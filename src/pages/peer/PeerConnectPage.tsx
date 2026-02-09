@@ -337,9 +337,13 @@ type WeeklyMatchDocument = Record<string, unknown>
 const toDateValue = (value: unknown): Date | undefined => {
   if (!value) return undefined
   if (value instanceof Date) return value
-  if (typeof value === 'object' && value !== null && 'toDate' in value) {
-    const toDateFn = (value as { toDate?: () => Date }).toDate
-    if (typeof toDateFn === 'function') return toDateFn()
+  if (typeof value === 'object' && value !== null) {
+    const candidate = value as { toDate?: () => Date; seconds?: number; nanoseconds?: number }
+    if (typeof candidate.toDate === 'function') return candidate.toDate()
+    if (typeof candidate.seconds === 'number') {
+      const nanos = typeof candidate.nanoseconds === 'number' ? candidate.nanoseconds : 0
+      return new Date(candidate.seconds * 1000 + Math.floor(nanos / 1_000_000))
+    }
   }
   return undefined
 }
