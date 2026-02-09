@@ -66,7 +66,7 @@ export const ConfirmationWelcomeModal: React.FC<ConfirmationWelcomeModalProps> =
     {
       icon: Compass,
       title: 'Platform tour in one view',
-      description: 'Dashboards, impact logs, courses, and events — all organized in your left nav.',
+      description: 'Dashboards, impact logs, courses, and events - all organized in your left nav.',
     },
     {
       icon: Users,
@@ -105,7 +105,7 @@ export const ConfirmationWelcomeModal: React.FC<ConfirmationWelcomeModalProps> =
               display="grid"
               placeItems="center"
             >
-              <Icon as={Sparkles} color="brand.gold" />
+              <Icon as={Sparkles} color="brand.deepPlum" />
             </Box>
             <VStack align="flex-start" spacing={0}>
               <Text fontSize="lg" color="brand.text">
@@ -117,7 +117,7 @@ export const ConfirmationWelcomeModal: React.FC<ConfirmationWelcomeModalProps> =
             </VStack>
           </HStack>
         </ModalHeader>
-        <ModalCloseButton />
+        <ModalCloseButton color="brand.text" />
         <ModalBody>
           <Stack spacing={6}>
             {windowContext && (
@@ -129,13 +129,13 @@ export const ConfirmationWelcomeModal: React.FC<ConfirmationWelcomeModalProps> =
                 borderColor="brand.border"
               >
                 <HStack spacing={3} align="flex-start">
-                  <Icon as={Calendar} color="brand.gold" boxSize={5} />
+                  <Icon as={Calendar} color="brand.primary" boxSize={5} />
                   <VStack align="flex-start" spacing={1}>
                     <Text fontWeight="semibold" color="brand.text">
                       Your Current Window
                     </Text>
                     <Text fontSize="sm" color="brand.subtleText">
-                      Window {windowContext.windowNumber} • Weeks {windowContext.startWeek}-
+                      Window {windowContext.windowNumber} - Weeks {windowContext.startWeek}-
                       {windowContext.endWeek}
                     </Text>
                     <Text fontSize="sm" color="brand.subtleText">
@@ -148,7 +148,7 @@ export const ConfirmationWelcomeModal: React.FC<ConfirmationWelcomeModalProps> =
 
             <Box bg="brand.primaryMuted" borderRadius="lg" p={4} border="1px solid" borderColor="brand.border">
               <HStack spacing={3} align="flex-start">
-                <Icon as={Compass} color="brand.gold" />
+                <Icon as={Compass} color="brand.primary" />
                 <VStack align="flex-start" spacing={1}>
                   <Text fontWeight="semibold" color="brand.text">
                     You are in the right place
@@ -170,13 +170,13 @@ export const ConfirmationWelcomeModal: React.FC<ConfirmationWelcomeModalProps> =
                 >
                   <HStack spacing={3} mb={2}>
                     <Box bg="rgba(234, 177, 48, 0.12)" borderRadius="full" p={2}>
-                      <Icon as={feature.icon} color="brand.gold" />
+                      <Icon as={feature.icon} color="brand.primary" />
                     </Box>
                     <Text fontWeight="semibold" color="brand.text">
                       {feature.title}
                     </Text>
                   </HStack>
-                  <Text fontSize="sm" color="brand.subtleText">
+                  <Text fontSize="sm" color="brand.text">
                     {feature.description}
                   </Text>
                 </Box>
@@ -191,7 +191,7 @@ export const ConfirmationWelcomeModal: React.FC<ConfirmationWelcomeModalProps> =
                   </Text>
                   <Text color="brand.subtleText">Jump to the actions new members love most.</Text>
                 </VStack>
-                <Tag colorScheme="yellow" bg="rgba(234, 177, 48, 0.16)" color="brand.gold">
+                <Tag bg="rgba(234, 177, 48, 0.16)" color="brand.deepPlum" border="1px solid" borderColor="brand.border">
                   Recommended
                 </Tag>
               </HStack>
@@ -203,15 +203,15 @@ export const ConfirmationWelcomeModal: React.FC<ConfirmationWelcomeModalProps> =
                     to={action.href}
                     onClick={onAcknowledge}
                     justifyContent="space-between"
-                    rightIcon={<Icon as={ArrowRight} color="brand.gold" />}
-                    leftIcon={<Icon as={action.icon} color="brand.gold" />}
+                    rightIcon={<Icon as={ArrowRight} color="brand.primary" />}
+                    leftIcon={<Icon as={action.icon} color="brand.primary" />}
                     variant="outline"
                     colorScheme="yellow"
                     borderColor="brand.border"
                     bg="brand.primaryMuted"
                     color="brand.text"
-                    _hover={{ bg: 'brand.primaryMuted', borderColor: 'brand.gold', color: 'brand.text' }}
-                    _active={{ bg: 'brand.primaryMuted', borderColor: 'brand.gold', color: 'brand.text' }}
+                    _hover={{ bg: 'brand.primaryMuted', borderColor: 'brand.primary', color: 'brand.text' }}
+                    _active={{ bg: 'brand.primaryMuted', borderColor: 'brand.primary', color: 'brand.text' }}
                   >
                     {action.label}
                   </Button>
@@ -246,7 +246,7 @@ export const ConfirmationWelcomeModal: React.FC<ConfirmationWelcomeModalProps> =
                   Take a quick tour
                 </Button>
               )}
-              <Button colorScheme="yellow" onClick={onAcknowledge} rightIcon={<Icon as={ArrowRight} />}>
+              <Button variant="accent" onClick={onAcknowledge} rightIcon={<Icon as={ArrowRight} />}>
                 Start exploring
               </Button>
             </HStack>
