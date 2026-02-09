@@ -1,5 +1,6 @@
 import { UserProfile, UserRole } from '@/types'
 import { resolveRole } from './role'
+import { isFreeUser } from './membership'
 
 export { normalizeRole } from './role'
 
@@ -125,7 +126,7 @@ export const getLandingPathForRole = (
   // Priority 6: Learners (user / free_user / paid_member)
   if (profile) {
     const needsOnboarding =
-      !profile.onboardingComplete && !profile.onboardingSkipped
+      !profile.onboardingComplete && !profile.onboardingSkipped && isFreeUser(profile)
 
     console.log('🔷 Learner onboarding check:', {
       onboardingComplete: profile.onboardingComplete,
@@ -144,7 +145,7 @@ export const getLandingPathForRole = (
       return preferred
     }
 
-    const membershipStatus = profile.membershipStatus
+    const membershipStatus = profile.membershipStatus ?? (isFreeUser(profile) ? 'free' : 'paid')
 
     const fallback = getDefaultDashboardRouteByMembership(membershipStatus)
     console.log('🔷 Learner fallback route:', fallback)

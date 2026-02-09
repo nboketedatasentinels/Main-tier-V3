@@ -16,7 +16,7 @@ const normalize = (value?: string | null) => {
 
 /**
  * Resolves a human-readable display name with graceful fallback chain.
- * Priority: displayName → fullName → firstName+lastName → email prefix → truncated UID
+ * Priority: fullName → displayName → firstName+lastName → email prefix → truncated UID
  */
 export const getDisplayName = (
   profile?: DisplayNameInput | null,
@@ -24,11 +24,7 @@ export const getDisplayName = (
 ): string => {
   if (!profile) return fallback
 
-  // 1. Explicit display name (filter out "Unknown")
-  const displayName = normalize(profile.displayName)
-  if (displayName && displayName.toLowerCase() !== 'unknown') return displayName
-
-  // 2. Full name variants
+  // 1. Full name variants from profile docs (preferred for app-managed names)
   const fullName = normalize(profile.fullName)
   if (fullName && fullName.toLowerCase() !== 'unknown') return fullName
 
@@ -37,6 +33,10 @@ export const getDisplayName = (
 
   const name = normalize(profile.name)
   if (name && name.toLowerCase() !== 'unknown') return name
+
+  // 2. Explicit provider display name (for providers like Google)
+  const displayName = normalize(profile.displayName)
+  if (displayName && displayName.toLowerCase() !== 'unknown') return displayName
 
   // 3. Constructed from first/last
   const combined = normalize(`${profile.firstName ?? ''} ${profile.lastName ?? ''}`)

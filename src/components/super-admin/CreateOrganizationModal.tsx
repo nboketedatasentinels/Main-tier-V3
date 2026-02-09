@@ -109,6 +109,7 @@ const programDurations: ProgramDurationOption[] = [
 const emptyOrganization: OrganizationRecord = {
   name: '',
   code: '',
+  village: '',
   status: 'pending',
   courseAssignments: [],
   programDuration: undefined,
@@ -635,6 +636,16 @@ export const CreateOrganizationModal: React.FC<CreateOrganizationModalProps> = (
                       {codeLength}/6 characters
                     </FormHelperText>
                     <FormErrorMessage>Organization code must be exactly 6 characters.</FormErrorMessage>
+                  </FormControl>
+                </GridItem>
+                <GridItem>
+                  <FormControl>
+                    <FormLabel>Village name</FormLabel>
+                    <Input
+                      value={form.village || ''}
+                      onChange={(e) => updateField('village', e.target.value)}
+                      placeholder="e.g. North Star Village"
+                    />
                   </FormControl>
                 </GridItem>
                 <GridItem>

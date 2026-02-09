@@ -14,6 +14,7 @@ import {
   getAdditionalUserInfo,
   linkWithCredential,
   OAuthCredential,
+  updateProfile as updateFirebaseProfile,
 } from 'firebase/auth'
 import { doc, getDoc, setDoc, serverTimestamp, onSnapshot, updateDoc } from 'firebase/firestore'
 
@@ -1136,7 +1137,17 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
     const normalizedEmail = email.trim().toLowerCase()
     const normalizedCompanyCode = userData.companyCode?.trim().toUpperCase()
+    const normalizedFullName = userData.fullName?.trim() || ''
     const shouldTrackPendingCompanyCode = Boolean(normalizedCompanyCode)
+
+    if (!normalizedFullName) {
+      setLoading(false)
+      setProfileLoading(false)
+      return {
+        error: new Error('Full name is required.'),
+        userId: undefined,
+      }
+    }
 
     let validatedOrganization:
       | Awaited<ReturnType<typeof validateCompanyCode>>['organization']
@@ -1172,6 +1183,13 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       const credential = await createUserWithEmailAndPassword(auth, normalizedEmail, password)
       const firebaseUser = credential.user
       const uid = firebaseUser.uid
+      const { firstName, lastName } = getNameParts(normalizedFullName, normalizedEmail)
+
+      try {
+        await updateFirebaseProfile(firebaseUser, { displayName: normalizedFullName })
+      } catch (displayNameError) {
+        console.warn('🟠 [Auth] Unable to set auth displayName during signup', displayNameError)
+      }
 
       const role = isBootstrapAdmin(firebaseUser.email) ? UserRole.SUPER_ADMIN : UserRole.USER
       const normalizedRole = normalizeRole(role || UserRole.USER)
@@ -1192,13 +1210,9 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       const profileData: UserProfile = {
         id: uid,
         email: normalizedEmail,
-        firstName: userData.firstName?.trim() || firebaseUser.displayName?.split(' ')?.[0] || 'User',
-        lastName: userData.lastName?.trim() || firebaseUser.displayName?.split(' ')?.slice(1).join(' ') || '',
-        fullName:
-          userData.fullName?.trim() ||
-          firebaseUser.displayName ||
-          userData.firstName?.trim() ||
-          'User',
+        firstName,
+        lastName,
+        fullName: normalizedFullName,
         role: normalizedRole,
         membershipStatus: validatedOrganization ? 'paid' : 'free',
         totalPoints: 0,
