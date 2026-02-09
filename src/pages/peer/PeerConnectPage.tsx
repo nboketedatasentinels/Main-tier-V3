@@ -86,6 +86,12 @@ import {
 } from '@/services/peerSessionService'
 import type { PeerSession as ServicePeerSession } from '@/services/peerSessionService'
 import { DateTimePicker } from '@/components/scheduling/DateTimePicker'
+import {
+  buildMatchWindow,
+  getStoredPeerId,
+  type MatchPreferencesForWindow,
+  type MatchRefreshPreference,
+} from './peerMatchingUtils'
 
 // Types
 type PeerProfile = {
@@ -231,25 +237,11 @@ type Invitation = {
   fromEmail: string
 }
 
-type MatchRefreshPreference = 'weekly' | 'biweekly' | 'on-demand' | 'disabled'
 type MatchNotificationPreference = 'email' | 'in_app' | 'both'
 type MatchStatus = 'new' | 'viewed' | 'contacted' | 'completed' | 'expired'
 
-type MatchPreferences = {
-  refreshPreference: MatchRefreshPreference
-  preferredMatchDay: number
+type MatchPreferences = MatchPreferencesForWindow & {
   notificationPreference: MatchNotificationPreference
-  timezone: string
-}
-
-type MatchWindow = {
-  key: string
-  label: string
-  startDate?: Date
-  endDate?: Date
-  nextRefreshAt?: Date | null
-  frequencyLabel: string
-  durationDays?: number
 }
 
 type DebugOrgProfile = {
@@ -317,72 +309,6 @@ const debugOrgFetch = async (dbInstance: typeof db, profile: DebugOrgProfile | n
   }
 
   console.groupEnd()
-}
-
-const formatMatchDate = (date: Date, timeZone: string) =>
-  new Intl.DateTimeFormat('en-US', { timeZone, month: 'short', day: 'numeric' }).format(date)
-
-const buildMatchWindow = (preferences: MatchPreferences): MatchWindow => {
-  if (preferences.refreshPreference === 'disabled') {
-    return {
-      key: 'disabled',
-      label: 'Matching disabled',
-      nextRefreshAt: null,
-      frequencyLabel: 'Disabled',
-    }
-  }
-
-  if (preferences.refreshPreference === 'on-demand') {
-    return {
-      key: 'on-demand',
-      label: 'On-demand match',
-      nextRefreshAt: null,
-      frequencyLabel: 'On-demand',
-    }
-  }
-
-  // FIX: Use UTC for window calculation to match Cloud Function
-  const now = new Date()
-  const dayOfWeek = now.getUTCDay()
-  const diff = (dayOfWeek - preferences.preferredMatchDay + 7) % 7
-  const windowStart = new Date(now)
-  windowStart.setUTCDate(now.getUTCDate() - diff)
-  windowStart.setUTCHours(0, 0, 0, 0)
-
-  const cycleLength = preferences.refreshPreference === 'biweekly' ? 14 : 7
-  let startDate = windowStart
-
-  if (preferences.refreshPreference === 'biweekly') {
-    // Match Cloud Function's biweekly logic exactly
-    const referenceAnchor = new Date(Date.UTC(2024, 0, 1))
-    const referenceDay = referenceAnchor.getUTCDay()
-    const refDiff = (referenceDay - preferences.preferredMatchDay + 7) % 7
-    referenceAnchor.setUTCDate(referenceAnchor.getUTCDate() - refDiff)
-
-    const weeksSinceReference = Math.floor(
-      (windowStart.getTime() - referenceAnchor.getTime()) / (7 * 24 * 60 * 60 * 1000)
-    )
-    const cycleIndex = Math.floor(weeksSinceReference / 2)
-    startDate = new Date(referenceAnchor)
-    startDate.setUTCDate(referenceAnchor.getUTCDate() + cycleIndex * 14)
-  }
-
-  const endDate = new Date(startDate)
-  endDate.setUTCDate(startDate.getUTCDate() + cycleLength - 1)
-
-  const nextRefreshAt = new Date(startDate)
-  nextRefreshAt.setUTCDate(startDate.getUTCDate() + cycleLength)
-  const label = `${formatMatchDate(startDate, preferences.timezone)} - ${formatMatchDate(endDate, preferences.timezone)}`
-
-  return {
-    key: `${preferences.refreshPreference}-${startDate.toISOString().slice(0, 10)}`,
-    label,
-    startDate,
-    endDate,
-    nextRefreshAt,
-    frequencyLabel: preferences.refreshPreference === 'biweekly' ? 'Every 2 weeks' : 'Weekly',
-    durationDays: cycleLength,
-  }
 }
 
 type WeeklyMatchDocument = Record<string, unknown>
@@ -474,10 +400,12 @@ export const PeerConnectPage: React.FC = () => {
 
       if (matchDoc.exists()) {
         const data = matchDoc.data()
-        const storedPeerId = data.peer_id ?? data.peerId
+        const storedPeerId = getStoredPeerId(data)
 
         if (!storedPeerId) {
           console.warn('[PeerMatch] Match document exists but has no peerId field')
+          setWeeklyMatch(null)
+          return
         } else {
           // Try to find peer in availablePeers first (faster)
           const matchedPeer = availablePeers.find((peer) => peer.id === storedPeerId)
@@ -509,7 +437,7 @@ export const PeerConnectPage: React.FC = () => {
     } catch (error) {
       console.error('[PeerMatch] Error in fetchWeeklyMatch:', error)
     }
-  }, [matchDocId, matchPreferences.preferredMatchDay, matchPreferences.refreshPreference, matchWindow.key, profile, user])
+  }, [availablePeers, matchDocId, matchPreferences.refreshPreference, matchWindow.key, profile, user])
 
 
   const updateMatchStatus = useCallback(
@@ -667,14 +595,7 @@ export const PeerConnectPage: React.FC = () => {
       }
     }
     fetchPeers()
-  }, [
-    profile?.id,
-    profile?.companyId,
-    profile?.companyCode,
-    profile?.assignedOrganizations,
-    user?.uid,
-    toast,
-  ])
+  }, [profile, user?.uid, toast])
 
   useEffect(() => {
     fetchWeeklyMatch()
@@ -698,10 +619,11 @@ export const PeerConnectPage: React.FC = () => {
       }
 
       const data = snapshot.data()
-      const storedPeerId = data.peer_id ?? data.peerId
+      const storedPeerId = getStoredPeerId(data)
 
       if (!storedPeerId) {
         console.warn('[PeerMatch] Real-time: Match document exists but has no peerId')
+        setWeeklyMatch(null)
         return
       }
 
@@ -733,7 +655,7 @@ export const PeerConnectPage: React.FC = () => {
     return () => {
       unsubscribe()
     }
-  }, [matchDocId, matchPreferences.refreshPreference])
+  }, [availablePeers, matchDocId, matchPreferences.refreshPreference])
 
   useEffect(() => {
     if (!weeklyMatch || weeklyMatch.matchStatus !== 'new') return
