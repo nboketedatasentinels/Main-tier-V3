@@ -70,6 +70,9 @@ export interface AtRiskNudgePayload {
   scheduleAt?: string
 }
 
+type CampaignSegment = 'all' | 'new_joiners' | 'returning' | 'critical'
+type CampaignScheduleMode = 'send-now' | 'tomorrow' | 'custom' | 'drip'
+
 interface AtRiskCommandPanelProps {
   engagementTrend: { label: string; value: number }[]
   riskLevelList: RiskLevel[]
@@ -175,6 +178,14 @@ export const AtRiskCommandPanel: React.FC<AtRiskCommandPanelProps> = ({
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('desc')
   const [campaignStep, setCampaignStep] = useState(1)
   const [selectedTemplateId, setSelectedTemplateId] = useState<string | null>(null)
+  const [campaignSegment, setCampaignSegment] = useState<CampaignSegment>('all')
+  const [campaignRecipientIds, setCampaignRecipientIds] = useState<string[]>([])
+  const [campaignSubject, setCampaignSubject] = useState('')
+  const [campaignMessage, setCampaignMessage] = useState('')
+  const [campaignChannel, setCampaignChannel] = useState<NudgeChannel>('both')
+  const [campaignScheduleMode, setCampaignScheduleMode] = useState<CampaignScheduleMode>('send-now')
+  const [campaignScheduleAt, setCampaignScheduleAt] = useState('')
+  const [campaignSending, setCampaignSending] = useState(false)
   const [tipExpanded, setTipExpanded] = useState(true)
   const { isOpen: isAnalysisOpen, onOpen, onClose } = useDisclosure()
   const {
@@ -431,6 +442,228 @@ export const AtRiskCommandPanel: React.FC<AtRiskCommandPanelProps> = ({
 
   const campaignSteps = ['Recipients', 'Template', 'Preview', 'Schedule']
   const activeTemplate = activeTemplates.find(template => template.id === selectedTemplateId)
+
+  const campaignAudience = useMemo(() => {
+    if (campaignSegment === 'critical') {
+      return atRiskUsers.filter((user) => user.riskStatus === 'critical' || user.riskStatus === 'at_risk')
+    }
+
+    if (campaignSegment === 'new_joiners') {
+      return atRiskUsers.filter((user) => {
+        const startedAt = parseDate(user.programStartDate || user.createdAt || user.registrationDate)
+        if (!startedAt) return false
+        const diffDays = Math.round((Date.now() - startedAt.getTime()) / (1000 * 60 * 60 * 24))
+        return diffDays >= 0 && diffDays <= 14
+      })
+    }
+
+    if (campaignSegment === 'returning') {
+      return atRiskUsers.filter((user) => {
+        const inactiveDays = daysSince(user.lastActiveAt || user.lastActive) ?? 999
+        return inactiveDays <= 7 && user.progressPercent >= 30
+      })
+    }
+
+    return atRiskUsers
+  }, [atRiskUsers, campaignSegment])
+
+  useEffect(() => {
+    setCampaignRecipientIds((prev) => prev.filter((id) => campaignAudience.some((user) => user.id === id)))
+  }, [campaignAudience])
+
+  useEffect(() => {
+    if (!activeTemplate) return
+    setCampaignSubject(activeTemplate.subject || '')
+    setCampaignMessage(activeTemplate.message_body || '')
+  }, [activeTemplate?.id])
+
+  const selectedCampaignRecipients = useMemo(
+    () =>
+      campaignRecipientIds
+        .map((id) => atRiskUserLookup.get(id))
+        .filter((user): user is PartnerUser => Boolean(user)),
+    [atRiskUserLookup, campaignRecipientIds],
+  )
+
+  const campaignPreviewRecipient = selectedCampaignRecipients[0] || campaignAudience[0] || null
+
+  const previewCampaignText = useCallback(
+    (value: string) => {
+      if (!value) return value
+      if (!campaignPreviewRecipient) return value
+
+      const recipientName = getDisplayName(campaignPreviewRecipient, 'Member')
+      const inactiveDays = daysSince(campaignPreviewRecipient.lastActiveAt || campaignPreviewRecipient.lastActive) ?? 0
+      const engagementScore = buildRiskScore(campaignPreviewRecipient)
+      const weeklyPoints = `${campaignPreviewRecipient.weeklyEarned}/${campaignPreviewRecipient.weeklyRequired || 0}`
+
+      return value
+        .replace(/{{\s*userName\s*}}/g, recipientName)
+        .replace(/{{\s*organizationName\s*}}/g, campaignPreviewRecipient.companyCode || 'Your organization')
+        .replace(/{{\s*daysInactive\s*}}/g, `${inactiveDays}`)
+        .replace(/{{\s*engagementScore\s*}}/g, `${engagementScore}`)
+        .replace(/{{\s*weeklyPoints\s*}}/g, weeklyPoints)
+    },
+    [campaignPreviewRecipient],
+  )
+
+  const effectiveCampaignTemplate = useMemo(() => {
+    if (!activeTemplate) return null
+    return {
+      ...activeTemplate,
+      subject: campaignSubject.trim() || activeTemplate.subject,
+      message_body: campaignMessage.trim() || activeTemplate.message_body,
+    }
+  }, [activeTemplate, campaignMessage, campaignSubject])
+
+  const handleToggleCampaignRecipient = (id: string) => {
+    setCampaignRecipientIds((prev) => (
+      prev.includes(id) ? prev.filter((item) => item !== id) : [...prev, id]
+    ))
+  }
+
+  const handleToggleAllCampaignRecipients = () => {
+    if (campaignRecipientIds.length === campaignAudience.length) {
+      setCampaignRecipientIds([])
+      return
+    }
+    setCampaignRecipientIds(campaignAudience.map((user) => user.id))
+  }
+
+  const handleInsertToken = (token: 'userName' | 'organizationName' | 'daysInactive' | 'engagementScore' | 'weeklyPoints') => {
+    setCampaignMessage((prev) => `${prev}${prev && !prev.endsWith(' ') ? ' ' : ''}{{${token}}}`)
+  }
+
+  const handleCampaignNext = () => {
+    if (campaignStep === 1 && campaignRecipientIds.length === 0) {
+      toast({
+        title: 'Select recipients',
+        description: 'Choose at least one recipient before continuing.',
+        status: 'warning',
+      })
+      return
+    }
+
+    if (campaignStep === 2) {
+      if (!selectedTemplateId) {
+        toast({
+          title: 'Select a template',
+          description: 'Choose a template before continuing.',
+          status: 'warning',
+        })
+        return
+      }
+      if (!campaignSubject.trim() || !campaignMessage.trim()) {
+        toast({
+          title: 'Complete your message',
+          description: 'Subject and message body are both required.',
+          status: 'warning',
+        })
+        return
+      }
+    }
+
+    setCampaignStep((prev) => Math.min(4, prev + 1))
+  }
+
+  const handleSendCampaignTest = async () => {
+    if (!onSendNudges) {
+      toast({
+        title: 'Nudges unavailable',
+        description: 'Nudge delivery is not configured right now.',
+        status: 'warning',
+      })
+      return
+    }
+
+    if (!effectiveCampaignTemplate || !campaignPreviewRecipient) {
+      toast({
+        title: 'Missing test data',
+        description: 'Select a template and at least one recipient to send a test.',
+        status: 'warning',
+      })
+      return
+    }
+
+    setCampaignSending(true)
+    try {
+      const summary = await onSendNudges({
+        users: [campaignPreviewRecipient],
+        template: effectiveCampaignTemplate,
+        channel: campaignChannel,
+        message: campaignMessage,
+      })
+
+      toast({
+        title: summary.failed > 0 ? 'Test nudge failed' : 'Test nudge sent',
+        description: `Success: ${summary.success}. Failed: ${summary.failed}.`,
+        status: summary.failed > 0 ? 'warning' : 'success',
+      })
+    } finally {
+      setCampaignSending(false)
+    }
+  }
+
+  const handleSendCampaign = async () => {
+    if (!onSendNudges) {
+      toast({
+        title: 'Nudges unavailable',
+        description: 'Nudge delivery is not configured right now.',
+        status: 'warning',
+      })
+      return
+    }
+
+    if (!effectiveCampaignTemplate) {
+      toast({
+        title: 'Template required',
+        description: 'Select and configure a template before sending.',
+        status: 'warning',
+      })
+      return
+    }
+
+    if (selectedCampaignRecipients.length === 0) {
+      toast({
+        title: 'No recipients selected',
+        description: 'Choose at least one recipient before sending.',
+        status: 'warning',
+      })
+      return
+    }
+
+    if (campaignScheduleMode !== 'send-now') {
+      toast({
+        title: 'Scheduled sends unavailable',
+        description: 'Only "Send immediately" is currently supported for campaign delivery.',
+        status: 'info',
+      })
+      return
+    }
+
+    setCampaignSending(true)
+    try {
+      const summary = await onSendNudges({
+        users: selectedCampaignRecipients,
+        template: effectiveCampaignTemplate,
+        channel: campaignChannel,
+        message: campaignMessage,
+        scheduleAt: campaignScheduleAt || undefined,
+      })
+
+      toast({
+        title: summary.failed > 0 ? 'Campaign partially sent' : 'Campaign sent',
+        description: `Success: ${summary.success}. Failed: ${summary.failed}.`,
+        status: summary.failed > 0 ? 'warning' : 'success',
+      })
+
+      if (summary.failed === 0) {
+        setCampaignStep(1)
+      }
+    } finally {
+      setCampaignSending(false)
+    }
+  }
 
   const renderOverview = () => (
     <Stack spacing={6}>
@@ -804,13 +1037,29 @@ export const AtRiskCommandPanel: React.FC<AtRiskCommandPanelProps> = ({
               <Stack spacing={4}>
                 <HStack justify="space-between">
                   <Text fontWeight="semibold" color="brand.text">Select recipients</Text>
-                  <Select maxW="240px" placeholder="Saved segments">
-                    <option>New joiners</option>
-                    <option>Returning learners</option>
-                    <option>Critical risk</option>
+                  <Select
+                    maxW="260px"
+                    value={campaignSegment}
+                    onChange={(event) => setCampaignSegment(event.target.value as CampaignSegment)}
+                  >
+                    <option value="all">All at-risk learners</option>
+                    <option value="new_joiners">New joiners (14 days)</option>
+                    <option value="returning">Returning learners</option>
+                    <option value="critical">Critical risk</option>
                   </Select>
                 </HStack>
-                <Box maxH="240px" overflowY="auto" border="1px solid" borderColor="brand.border" borderRadius="md">
+                <HStack justify="space-between">
+                  <Text fontSize="sm" color="brand.subtleText">Showing {campaignAudience.length} learners</Text>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={handleToggleAllCampaignRecipients}
+                    isDisabled={campaignAudience.length === 0}
+                  >
+                    {campaignRecipientIds.length === campaignAudience.length ? 'Clear all' : 'Select all'}
+                  </Button>
+                </HStack>
+                <Box maxH="260px" overflowY="auto" border="1px solid" borderColor="brand.border" borderRadius="md">
                   <Table size="sm">
                     <Thead>
                       <Tr>
@@ -821,7 +1070,7 @@ export const AtRiskCommandPanel: React.FC<AtRiskCommandPanelProps> = ({
                       </Tr>
                     </Thead>
                     <Tbody>
-                      {atRiskUsers.slice(0, 6).map(user => (
+                      {campaignAudience.map(user => (
                         <Tr key={user.id}>
                           <Td>{getDisplayName(user, 'Member')}</Td>
                           <Td>
@@ -829,13 +1078,26 @@ export const AtRiskCommandPanel: React.FC<AtRiskCommandPanelProps> = ({
                           </Td>
                           <Td>{daysSince(user.lastActiveAt || user.lastActive) ?? '—'}</Td>
                           <Td>
-                            <Checkbox />
+                            <Checkbox
+                              isChecked={campaignRecipientIds.includes(user.id)}
+                              onChange={() => handleToggleCampaignRecipient(user.id)}
+                            />
                           </Td>
                         </Tr>
                       ))}
+                      {campaignAudience.length === 0 && (
+                        <Tr>
+                          <Td colSpan={4}>
+                            <Text fontSize="sm" color="brand.subtleText">No learners match this segment.</Text>
+                          </Td>
+                        </Tr>
+                      )}
                     </Tbody>
                   </Table>
                 </Box>
+                <Text fontSize="sm" color="brand.subtleText">
+                  Selected recipients: {campaignRecipientIds.length}
+                </Text>
               </Stack>
             )}
             {campaignStep === 2 && (
@@ -899,33 +1161,54 @@ export const AtRiskCommandPanel: React.FC<AtRiskCommandPanelProps> = ({
                         Insert Variable
                       </MenuButton>
                       <MenuList>
-                        <MenuItem>Learner Name</MenuItem>
-                        <MenuItem>Weekly Points</MenuItem>
-                        <MenuItem>Engagement Rate</MenuItem>
-                        <MenuItem>Days Since Last Activity</MenuItem>
+                        <MenuItem onClick={() => handleInsertToken('userName')}>Learner Name</MenuItem>
+                        <MenuItem onClick={() => handleInsertToken('weeklyPoints')}>Weekly Points</MenuItem>
+                        <MenuItem onClick={() => handleInsertToken('engagementScore')}>Engagement Rate</MenuItem>
+                        <MenuItem onClick={() => handleInsertToken('daysInactive')}>Days Since Last Activity</MenuItem>
                       </MenuList>
                     </Menu>
                   </HStack>
                   <FormControl>
                     <FormLabel>Subject line</FormLabel>
-                    <Input placeholder="Subject line" />
-                    <Text fontSize="xs" color="brand.subtleText">0 / 80 characters</Text>
+                    <Input
+                      placeholder="Subject line"
+                      value={campaignSubject}
+                      onChange={(event) => setCampaignSubject(event.target.value)}
+                    />
+                    <Text fontSize="xs" color="brand.subtleText">{campaignSubject.length} / 80 characters</Text>
                   </FormControl>
                   <FormControl>
                     <FormLabel>Message body</FormLabel>
-                    <Textarea rows={6} placeholder="Write your nudge message here..." />
+                    <Textarea
+                      rows={6}
+                      placeholder="Write your nudge message here..."
+                      value={campaignMessage}
+                      onChange={(event) => setCampaignMessage(event.target.value)}
+                    />
                   </FormControl>
                   <HStack spacing={3}>
-                    <Button colorScheme="purple" size="sm">Save as Template</Button>
-                    <Button size="sm" variant="outline">Use Once</Button>
+                    <Button
+                      colorScheme="purple"
+                      size="sm"
+                      onClick={() => toast({
+                        title: 'Draft saved',
+                        description: 'Your campaign draft is saved for this session.',
+                        status: 'success',
+                      })}
+                    >
+                      Save as Template
+                    </Button>
+                    <Button size="sm" variant="outline" onClick={() => setCampaignStep(3)}>Use Once</Button>
                   </HStack>
                   <Box p={4} borderRadius="md" bg="brand.accent" border="1px dashed" borderColor="brand.border">
                     <Text fontWeight="semibold">Preview</Text>
                     <Text fontSize="sm" color="brand.subtleText">
-                      {activeTemplate?.subject ?? 'Subject line preview'}
+                      {previewCampaignText(campaignSubject || activeTemplate?.subject || 'Subject line preview')}
                     </Text>
                     <Text fontSize="sm" mt={2}>
-                      {activeTemplate?.message_body ?? 'Message preview with sample data for the selected learner.'}
+                      {previewCampaignText(
+                        campaignMessage || activeTemplate?.message_body || 'Message preview with sample data for the selected learner.',
+                      )}
                     </Text>
                   </Box>
                 </Stack>
@@ -935,18 +1218,35 @@ export const AtRiskCommandPanel: React.FC<AtRiskCommandPanelProps> = ({
               <Stack spacing={3}>
                 <Text fontWeight="semibold">Preview message</Text>
                 <Box p={4} borderRadius="md" bg="brand.accent" border="1px solid" borderColor="brand.border">
-                  <Text fontWeight="semibold">Subject: {activeTemplate?.subject ?? 'We are here to help'}</Text>
+                  <Text fontWeight="semibold">
+                    Subject: {previewCampaignText(campaignSubject || activeTemplate?.subject || 'We are here to help')}
+                  </Text>
                   <Text mt={2}>
-                    {activeTemplate?.message_body ?? 'Hi Jordan, we noticed your weekly points dipped. Let us know how we can help.'}
+                    {previewCampaignText(
+                      campaignMessage || activeTemplate?.message_body || 'Hi there, we noticed your weekly points dipped. Let us know how we can help.',
+                    )}
                   </Text>
                 </Box>
-                <Button size="sm" variant="outline">Send test message</Button>
+                <Text fontSize="sm" color="brand.subtleText">
+                  Test recipient: {campaignPreviewRecipient ? getDisplayName(campaignPreviewRecipient, 'Member') : 'No recipient selected'}
+                </Text>
+                <Button size="sm" variant="outline" onClick={() => void handleSendCampaignTest()} isLoading={campaignSending}>
+                  Send test message
+                </Button>
               </Stack>
             )}
             {campaignStep === 4 && (
               <Stack spacing={3}>
+                <FormControl maxW="280px">
+                  <FormLabel>Delivery channel</FormLabel>
+                  <Select value={campaignChannel} onChange={(event) => setCampaignChannel(event.target.value as NudgeChannel)}>
+                    <option value="email">Email</option>
+                    <option value="in_app">In-app notification</option>
+                    <option value="both">Email + in-app</option>
+                  </Select>
+                </FormControl>
                 <Text fontWeight="semibold">Schedule delivery for:</Text>
-                <RadioGroup defaultValue="send-now">
+                <RadioGroup value={campaignScheduleMode} onChange={(value) => setCampaignScheduleMode(value as CampaignScheduleMode)}>
                   <Stack spacing={3}>
                     <Radio value="send-now">Send immediately</Radio>
                     <Radio value="tomorrow">Tomorrow morning</Radio>
@@ -954,7 +1254,19 @@ export const AtRiskCommandPanel: React.FC<AtRiskCommandPanelProps> = ({
                     <Radio value="drip">Add to drip campaign</Radio>
                   </Stack>
                 </RadioGroup>
-                <Input type="datetime-local" maxW="260px" />
+                {campaignScheduleMode === 'custom' && (
+                  <Input
+                    type="datetime-local"
+                    maxW="260px"
+                    value={campaignScheduleAt}
+                    onChange={(event) => setCampaignScheduleAt(event.target.value)}
+                  />
+                )}
+                {campaignScheduleMode !== 'send-now' && (
+                  <Text fontSize="sm" color="brand.subtleText">
+                    Scheduled delivery options are visible for planning, but only immediate send is currently enabled.
+                  </Text>
+                )}
               </Stack>
             )}
             <Divider />
@@ -970,7 +1282,14 @@ export const AtRiskCommandPanel: React.FC<AtRiskCommandPanelProps> = ({
               <Button
                 colorScheme="purple"
                 size="sm"
-                onClick={() => setCampaignStep(prev => Math.min(4, prev + 1))}
+                onClick={() => {
+                  if (campaignStep === 4) {
+                    void handleSendCampaign()
+                    return
+                  }
+                  handleCampaignNext()
+                }}
+                isLoading={campaignStep === 4 && campaignSending}
               >
                 {campaignStep === 4 ? 'Send Campaign' : 'Next'}
               </Button>
