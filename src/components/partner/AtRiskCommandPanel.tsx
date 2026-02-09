@@ -48,17 +48,27 @@ import {
   Tr,
   VStack,
   useDisclosure,
+  useToast,
 } from '@chakra-ui/react'
 import { EngagementChart } from '@/components/admin/EngagementChart'
 import { AtRiskInterventionFlow } from '@/components/partner/AtRiskInterventionFlow'
+import SendNudgeModal from '@/components/partner/nudges/SendNudgeModal'
 import { getActiveNudgeTemplates } from '@/services/nudgeService'
 import { useAuth } from '@/hooks/useAuth'
 import type { PartnerUser } from '@/hooks/usePartnerDashboardData'
 import type { PartnerInterventionSummary } from '@/hooks/partner/usePartnerInterventions'
-import type { NudgeTemplateRecord } from '@/types/nudges'
+import type { NudgeChannel, NudgeTemplateRecord } from '@/types/nudges'
 import type { DataWarning, RiskLevel, RiskReason } from '@/components/admin/RiskAnalysisCard'
 import { Check, Filter, HelpCircle, Info, Plus } from 'lucide-react'
 import { getDisplayName } from '@/utils/displayName'
+
+export interface AtRiskNudgePayload {
+  users: PartnerUser[]
+  template: NudgeTemplateRecord
+  channel: NudgeChannel
+  message: string
+  scheduleAt?: string
+}
 
 interface AtRiskCommandPanelProps {
   engagementTrend: { label: string; value: number }[]
@@ -68,6 +78,7 @@ interface AtRiskCommandPanelProps {
   interventions: PartnerInterventionSummary[]
   atRiskUsers: PartnerUser[]
   onAction?: (action: string, caseId: string, additionalData?: Record<string, unknown>) => Promise<void>
+  onSendNudges?: (payload: AtRiskNudgePayload) => Promise<{ success: number; failed: number }>
 }
 
 const cardStyle = {
@@ -145,23 +156,32 @@ export const AtRiskCommandPanel: React.FC<AtRiskCommandPanelProps> = ({
   interventions,
   atRiskUsers,
   onAction,
+  onSendNudges,
 }) => {
   const { isSuperAdmin } = useAuth()
+  const toast = useToast()
   const [activeTemplates, setActiveTemplates] = useState<NudgeTemplateRecord[]>([])
   const [templateLoadError, setTemplateLoadError] = useState<string | null>(null)
   const [templateLoading, setTemplateLoading] = useState(false)
   const [selectedCaseId, setSelectedCaseId] = useState<string | null>(null)
+  const [queueLoading, setQueueLoading] = useState(false)
   const [filters, setFilters] = useState(defaultFilters)
   const [draftFilters, setDraftFilters] = useState(defaultFilters)
   const [showMoreFilters, setShowMoreFilters] = useState(false)
   const [activeReason, setActiveReason] = useState<string | null>(null)
   const [selectedLearners, setSelectedLearners] = useState<string[]>([])
+  const [nudgeRecipientIds, setNudgeRecipientIds] = useState<string[]>([])
   const [sortKey, setSortKey] = useState<'name' | 'risk' | 'inactive' | 'lastActivity' | 'status'>('risk')
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('desc')
   const [campaignStep, setCampaignStep] = useState(1)
   const [selectedTemplateId, setSelectedTemplateId] = useState<string | null>(null)
   const [tipExpanded, setTipExpanded] = useState(true)
   const { isOpen: isAnalysisOpen, onOpen, onClose } = useDisclosure()
+  const {
+    isOpen: isNudgeModalOpen,
+    onOpen: openNudgeModal,
+    onClose: closeNudgeModal,
+  } = useDisclosure()
   const supportEmail = 'support@transformation4leaders.com'
 
   const loadTemplates = useCallback(async () => {
@@ -269,6 +289,144 @@ export const AtRiskCommandPanel: React.FC<AtRiskCommandPanelProps> = ({
       return
     }
     setSelectedLearners(filteredLearners.map(user => user.id))
+  }
+
+  const atRiskUserLookup = useMemo(
+    () => new Map(atRiskUsers.map((user) => [user.id, user])),
+    [atRiskUsers],
+  )
+
+  const nudgeRecipients = useMemo(
+    () => nudgeRecipientIds
+      .map((id) => atRiskUserLookup.get(id))
+      .filter((user): user is PartnerUser => Boolean(user)),
+    [atRiskUserLookup, nudgeRecipientIds],
+  )
+
+  const handleStartBulkQueue = async () => {
+    if (!onAction || selectedLearners.length === 0) return
+    const selectedUsers = selectedLearners
+      .map((id) => atRiskUserLookup.get(id))
+      .filter((user): user is PartnerUser => Boolean(user))
+
+    if (!selectedUsers.length) return
+
+    setQueueLoading(true)
+    try {
+      const results = await Promise.allSettled(
+        selectedUsers.map((user) =>
+          onAction('add_to_intervention_queue', user.id, {
+            target: getDisplayName(user, 'Member'),
+            name: 'At-risk intervention',
+            reason: user.riskReasons?.[0] || 'Flagged from At-Risk command panel',
+            riskStatus: user.riskStatus,
+            riskReasons: user.riskReasons || [],
+            organizationCode: user.companyCode || '',
+            userId: user.id,
+            silent: true,
+          }),
+        ),
+      )
+
+      const successCount = results.filter((result) => result.status === 'fulfilled').length
+      const failedCount = results.length - successCount
+
+      if (successCount > 0) {
+        setSelectedLearners((prev) => prev.filter((id) => !selectedUsers.some((user) => user.id === id)))
+      }
+
+      toast({
+        title: successCount > 0 ? 'Queue updated' : 'Queue update failed',
+        description:
+          failedCount > 0
+            ? `${successCount} queued, ${failedCount} failed.`
+            : `${successCount} learner${successCount === 1 ? '' : 's'} added to the intervention queue.`,
+        status: failedCount > 0 ? 'warning' : 'success',
+        duration: 4000,
+      })
+    } finally {
+      setQueueLoading(false)
+    }
+  }
+
+  const handleOpenNudgeComposer = (userIds: string[]) => {
+    if (!userIds.length) return
+
+    if (!onSendNudges) {
+      toast({
+        title: 'Nudges unavailable',
+        description: 'Nudge delivery is not configured right now.',
+        status: 'warning',
+      })
+      return
+    }
+
+    if (templateLoading) {
+      toast({
+        title: 'Templates still loading',
+        description: 'Please wait for nudge templates to load.',
+        status: 'info',
+      })
+      return
+    }
+
+    if (templateLoadError || activeTemplates.length === 0) {
+      toast({
+        title: 'Templates unavailable',
+        description: 'Nudges require at least one active template.',
+        status: 'warning',
+      })
+      return
+    }
+
+    const deduped = Array.from(new Set(userIds)).filter((id) => atRiskUserLookup.has(id))
+    if (!deduped.length) return
+
+    setNudgeRecipientIds(deduped)
+    openNudgeModal()
+  }
+
+  const handleSendNudges = async (payload: {
+    templateId: string
+    channel: NudgeChannel
+    message: string
+    scheduleAt?: string
+  }) => {
+    if (!onSendNudges) {
+      throw new Error('Nudge sending is not configured for this dashboard.')
+    }
+
+    const template = activeTemplates.find((item) => item.id === payload.templateId)
+    if (!template) {
+      throw new Error('Selected template no longer exists.')
+    }
+
+    const effectiveTemplate =
+      payload.message && payload.message.trim() && payload.message.trim() !== template.message_body
+        ? { ...template, message_body: payload.message.trim() }
+        : template
+
+    const summary = await onSendNudges({
+      users: nudgeRecipients,
+      template: effectiveTemplate,
+      channel: payload.channel,
+      message: payload.message,
+      scheduleAt: payload.scheduleAt,
+    })
+
+    toast({
+      title: summary.failed > 0 ? 'Nudges partially sent' : 'Nudges sent',
+      description: `Success: ${summary.success}. Failed: ${summary.failed}.`,
+      status: summary.failed > 0 ? 'warning' : 'success',
+      duration: 4000,
+    })
+
+    if (summary.failed === 0) {
+      closeNudgeModal()
+      setNudgeRecipientIds([])
+    }
+
+    return summary
   }
 
   const campaignSteps = ['Recipients', 'Template', 'Preview', 'Schedule']
@@ -418,10 +576,21 @@ export const AtRiskCommandPanel: React.FC<AtRiskCommandPanelProps> = ({
             <HStack justify="space-between" align="center">
               <Text fontWeight="semibold" color="brand.text">At-risk learners</Text>
               <HStack spacing={2}>
-                <Button size="sm" variant="outline" isDisabled={selectedLearners.length === 0}>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  isDisabled={selectedLearners.length === 0 || queueLoading}
+                  isLoading={queueLoading}
+                  onClick={() => void handleStartBulkQueue()}
+                >
                   Add to Queue
                 </Button>
-                <Button size="sm" colorScheme="purple" isDisabled={selectedLearners.length === 0}>
+                <Button
+                  size="sm"
+                  colorScheme="purple"
+                  isDisabled={selectedLearners.length === 0}
+                  onClick={() => handleOpenNudgeComposer(selectedLearners)}
+                >
                   Send Nudge
                 </Button>
               </HStack>
@@ -483,7 +652,13 @@ export const AtRiskCommandPanel: React.FC<AtRiskCommandPanelProps> = ({
                         <Td>
                           <HStack spacing={2}>
                             <Button size="xs" variant="outline">View Profile</Button>
-                            <Button size="xs" colorScheme="purple">Send Nudge</Button>
+                            <Button
+                              size="xs"
+                              colorScheme="purple"
+                              onClick={() => handleOpenNudgeComposer([user.id])}
+                            >
+                              Send Nudge
+                            </Button>
                           </HStack>
                         </Td>
                       </Tr>
@@ -1057,6 +1232,24 @@ export const AtRiskCommandPanel: React.FC<AtRiskCommandPanelProps> = ({
           </TabPanel>
         </TabPanels>
       </Tabs>
+
+      <SendNudgeModal
+        isOpen={isNudgeModalOpen}
+        onClose={() => {
+          closeNudgeModal()
+          setNudgeRecipientIds([])
+        }}
+        users={nudgeRecipients.map((user) => ({
+          id: user.id,
+          name: getDisplayName(user, 'Member'),
+          email: user.email,
+          riskLevel: user.riskStatus,
+          lastActive: user.lastActiveAt || user.lastActive,
+          engagementScore: buildRiskScore(user),
+        }))}
+        templates={activeTemplates}
+        onConfirm={handleSendNudges}
+      />
 
       <Modal isOpen={isAnalysisOpen} onClose={onClose} size="lg">
         <ModalOverlay />
