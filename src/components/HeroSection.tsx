@@ -9,7 +9,7 @@ export const HeroSection: React.FC = () => {
     <section className="relative w-full min-h-screen flex items-center justify-center overflow-hidden text-white">
       <div
         aria-hidden="true"
-        className="pointer-events-none hidden sm:block absolute right-[-60px] top-[-60px] h-48 w-48 md:h-64 md:w-64 rounded-full bg-brand-indigo-100 opacity-30 blur-[60px] -z-10"
+        className="pointer-events-none hidden sm:block absolute right-[-60px] top-[-60px] h-48 w-48 md:h-64 md:w-64 rounded-full bg-slate-200 opacity-20 blur-[60px] -z-10"
       />
       <div
         aria-hidden="true"
