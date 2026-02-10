@@ -97,16 +97,46 @@ export const sendBulkNudges = async (params: {
     success: [],
     failed: [],
   }
-  const shouldSchedule = Boolean(params.scheduleAt && params.scheduleAt.trim())
+  const scheduleAtInput = params.scheduleAt?.trim() || ''
+  const hasScheduleRequest = Boolean(scheduleAtInput)
+  let normalizedScheduleAt: string | null = null
+  let scheduleValidationError: string | null = null
+
+  if (hasScheduleRequest) {
+    const parsedScheduleAt = new Date(scheduleAtInput)
+    if (Number.isNaN(parsedScheduleAt.getTime())) {
+      scheduleValidationError = 'Invalid scheduleAt: value must be a valid date/time string.'
+    } else if (parsedScheduleAt.getTime() <= Date.now()) {
+      scheduleValidationError = 'Invalid scheduleAt: value must be in the future.'
+    } else {
+      normalizedScheduleAt = parsedScheduleAt.toISOString()
+    }
+  }
+
+  const shouldSchedule = Boolean(normalizedScheduleAt)
   const requiresEmail = params.channel === 'email' || params.channel === 'both'
 
   for (const user of params.users) {
     try {
+      if (hasScheduleRequest && !shouldSchedule) {
+        results.failed.push({
+          userId: user.id,
+          error: scheduleValidationError || 'Invalid scheduleAt value.',
+        })
+        continue
+      }
+
       if (requiresEmail && !user.email) {
         throw new Error('Email address is required for email delivery.')
       }
 
       if (shouldSchedule) {
+        const personalization = {
+          userName: user.name,
+          organizationName: user.organizationName,
+          daysInactive: user.daysInactive,
+          engagementScore: user.engagementScore,
+        }
         const record = await logNudgeSent({
           user_id: user.id,
           template_id: params.template.id,
@@ -115,7 +145,18 @@ export const sendBulkNudges = async (params: {
           channel: params.channel,
           metadata: {
             bulk: true,
-            scheduleAt: params.scheduleAt,
+            scheduleAt: normalizedScheduleAt,
+            userEmail: user.email || null,
+            personalization,
+            delivery: {
+              channel: params.channel,
+              requiresEmail,
+              isBulk: true,
+              attachments: [],
+              flags: {
+                scheduled: true,
+              },
+            },
           },
         })
         results.success.push(record)

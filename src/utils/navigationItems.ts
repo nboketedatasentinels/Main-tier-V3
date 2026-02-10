@@ -5,7 +5,6 @@ import {
   CalendarClock,
   ClipboardCheck,
   Gift,
-  Headphones,
   LayoutDashboard,
   LockKeyhole,
   ShieldCheck,
@@ -74,7 +73,6 @@ export const buildPartnerNavItems = (): NavigationSection[] => [
       { key: 'organization-management', label: 'Organizations', icon: Building2 },
       { key: 'reports', label: 'Reports', icon: BarChart3 },
       { key: 'settings', label: 'Settings', icon: Settings },
-      { key: 'support', label: 'Support', icon: Headphones },
     ],
   },
 ]

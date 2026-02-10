@@ -17,13 +17,6 @@ import {
   MenuButton,
   MenuItem,
   MenuList,
-  Modal,
-  ModalBody,
-  ModalContent,
-  ModalFooter,
-  ModalHeader,
-  ModalOverlay,
-  Progress,
   Radio,
   RadioGroup,
   Select,
@@ -188,7 +181,6 @@ export const AtRiskCommandPanel: React.FC<AtRiskCommandPanelProps> = ({
   const [campaignSending, setCampaignSending] = useState(false)
   const [campaignTemplateSaving, setCampaignTemplateSaving] = useState(false)
   const [tipExpanded, setTipExpanded] = useState(true)
-  const { isOpen: isAnalysisOpen, onOpen, onClose } = useDisclosure()
   const {
     isOpen: isNudgeModalOpen,
     onOpen: openNudgeModal,
@@ -637,10 +629,10 @@ export const AtRiskCommandPanel: React.FC<AtRiskCommandPanelProps> = ({
         status: 'success',
       })
     } catch (error) {
-      const message = error instanceof Error ? error.message : 'Unable to save template.'
+      const errorMessage = error instanceof Error ? error.message : 'Unable to save template.'
       toast({
         title: 'Template save failed',
-        description: message,
+        description: errorMessage,
         status: 'error',
       })
     } finally {
@@ -1527,87 +1519,6 @@ export const AtRiskCommandPanel: React.FC<AtRiskCommandPanelProps> = ({
     </Stack>
   )
 
-  const renderSettings = () => (
-    <Stack spacing={6}>
-      <Card {...cardStyle}>
-        <CardBody>
-          <Stack spacing={4}>
-            <HStack justify="space-between">
-              <Stack spacing={1}>
-                <Text fontWeight="semibold">AI risk analysis</Text>
-                <Text fontSize="sm" color="brand.subtleText">
-                  Analyze your learner population to identify at-risk patterns and predict future engagement issues.
-                </Text>
-              </Stack>
-              <Button colorScheme="purple" size="sm" onClick={onOpen}>
-                Run AI Analysis
-              </Button>
-            </HStack>
-            <Box p={3} borderRadius="md" border="1px solid" borderColor="brand.border" bg="brand.accent">
-              <Text fontWeight="semibold">Pending analysis</Text>
-              <HStack justify="space-between" mt={2}>
-                <Text fontSize="sm">Engagement pattern scan</Text>
-                <Text fontSize="sm" color="brand.subtleText">Started 5 min ago</Text>
-              </HStack>
-              <Progress value={45} size="sm" mt={2} colorScheme="purple" />
-              <Text fontSize="xs" color="brand.subtleText" mt={1}>Estimated completion: 2 min</Text>
-            </Box>
-          </Stack>
-        </CardBody>
-      </Card>
-
-      <Card {...cardStyle}>
-        <CardBody>
-          <Stack spacing={4}>
-            <HStack justify="space-between">
-              <Text fontWeight="semibold">Automated nudge rules</Text>
-              <Button size="sm" variant="outline">Create New Rule</Button>
-            </HStack>
-            <Stack spacing={3}>
-              {[
-                {
-                  label: 'When learner is inactive for 7 days → Send “We miss you” nudge → 12 learners eligible',
-                  performance: 'Triggered 24 times this month, 18 learners re-engaged',
-                },
-                {
-                  label: 'When risk level moves to critical → Send “Support check-in” nudge → 5 learners eligible',
-                  performance: 'Triggered 6 times this month, 3 learners re-engaged',
-                },
-              ].map(rule => (
-                <Box key={rule.label} p={3} borderRadius="md" border="1px solid" borderColor="brand.border">
-                  <HStack justify="space-between" align="start">
-                    <Stack spacing={1}>
-                      <Text fontWeight="semibold">{rule.label}</Text>
-                      <Text fontSize="sm" color="brand.subtleText">{rule.performance}</Text>
-                    </Stack>
-                    <Checkbox defaultChecked>Enabled</Checkbox>
-                  </HStack>
-                </Box>
-              ))}
-            </Stack>
-            <Divider />
-            <Stack spacing={3}>
-              <Text fontWeight="semibold">Create rule</Text>
-              <SimpleGrid columns={{ base: 1, md: 2 }} spacing={3}>
-                <Select placeholder="IF condition">
-                  <option>Inactive for 7 days</option>
-                  <option>Risk level is critical</option>
-                  <option>Weekly points below target</option>
-                </Select>
-                <Select placeholder="THEN action">
-                  <option>Send encouragement nudge</option>
-                  <option>Add to intervention queue</option>
-                  <option>Notify partner lead</option>
-                </Select>
-              </SimpleGrid>
-              <Button size="sm" colorScheme="purple" alignSelf="flex-start">Save rule</Button>
-            </Stack>
-          </Stack>
-        </CardBody>
-      </Card>
-    </Stack>
-  )
-
   const renderCaseView = () => {
     if (!selectedCase) return null
 
@@ -1650,7 +1561,6 @@ export const AtRiskCommandPanel: React.FC<AtRiskCommandPanelProps> = ({
           <Tab>Overview</Tab>
           <Tab>Campaigns</Tab>
           <Tab>Analytics</Tab>
-          <Tab>Settings</Tab>
         </TabList>
         <TabPanels>
           <TabPanel px={0}>
@@ -1661,9 +1571,6 @@ export const AtRiskCommandPanel: React.FC<AtRiskCommandPanelProps> = ({
           </TabPanel>
           <TabPanel px={0}>
             {renderAnalytics()}
-          </TabPanel>
-          <TabPanel px={0}>
-            {renderSettings()}
           </TabPanel>
         </TabPanels>
       </Tabs>
@@ -1686,26 +1593,6 @@ export const AtRiskCommandPanel: React.FC<AtRiskCommandPanelProps> = ({
         onConfirm={handleSendNudges}
       />
 
-      <Modal isOpen={isAnalysisOpen} onClose={onClose} size="lg">
-        <ModalOverlay />
-        <ModalContent>
-          <ModalHeader>AI risk analysis</ModalHeader>
-          <ModalBody>
-            <Stack spacing={3}>
-              <Text>
-                Analysis in progress... (estimated 2 min remaining)
-              </Text>
-              <Progress value={40} colorScheme="purple" />
-              <Text fontSize="sm" color="brand.subtleText">
-                Analysis ID: 1234
-              </Text>
-            </Stack>
-          </ModalBody>
-          <ModalFooter>
-            <Button onClick={onClose} variant="outline">Close</Button>
-          </ModalFooter>
-        </ModalContent>
-      </Modal>
     </Stack>
   )
 }
