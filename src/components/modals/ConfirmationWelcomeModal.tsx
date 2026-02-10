@@ -163,14 +163,14 @@ export const ConfirmationWelcomeModal: React.FC<ConfirmationWelcomeModalProps> =
                 <Box
                   key={feature.title}
                   border="1px solid"
-                  borderColor="brand.border"
+                  borderColor="brand.deepPlum"
                   borderRadius="lg"
                   p={4}
                   bg="rgba(53, 14, 111, 0.5)"
                 >
                   <HStack spacing={3} mb={2}>
-                    <Box bg="rgba(234, 177, 48, 0.12)" borderRadius="full" p={2}>
-                      <Icon as={feature.icon} color="brand.primary" />
+                    <Box bg="transparent" border="1px solid" borderColor="brand.deepPlum" borderRadius="full" p={2}>
+                      <Icon as={feature.icon} color="brand.deepPlum" />
                     </Box>
                     <Text fontWeight="semibold" color="brand.text">
                       {feature.title}
