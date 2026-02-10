@@ -607,14 +607,14 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
                   await incrementOrganizationMemberCount(organization.id)
                 } catch (incrementError) {
                   console.warn(
-                    'ðŸŸ  [Auth] Unable to increment organization member count after company code apply',
+                    '[WARN] [Auth] Unable to increment organization member count after company code apply',
                     incrementError,
                   )
                 }
               }
             }
           } catch (validationError) {
-            console.warn('ðŸŸ  [Auth] Unable to validate pending company code (existing profile)', validationError)
+            console.warn('[WARN] [Auth] Unable to validate pending company code (existing profile)', validationError)
           } finally {
             if (typeof window !== 'undefined') {
               localStorage.removeItem(pendingCompanyCodeKey)
@@ -1708,3 +1708,4 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>
 }
+

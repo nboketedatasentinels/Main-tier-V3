@@ -1,4 +1,4 @@
-﻿import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import {
   Avatar,
   Badge,
@@ -283,7 +283,7 @@ const defaultSessionDescription =
 const debugOrgFetch = async (dbInstance: typeof db, profile: DebugOrgProfile | null, userId: string) => {
   const scope = getOrgScope(profile)
 
-  console.group('ðŸ§ª ORG FETCH DEBUG')
+  console.group('[DEBUG] ORG FETCH')
   console.log('userId', userId)
   console.log('profile.id', profile?.id)
   console.log('profile.companyId', profile?.companyId)
@@ -293,12 +293,12 @@ const debugOrgFetch = async (dbInstance: typeof db, profile: DebugOrgProfile | n
   try {
     const sanitySnap = await getDocs(query(collection(dbInstance, 'profiles'), limit(3)))
     console.log(
-      'profiles collection readable âœ… sample:',
+      'profiles collection readable ✅ sample:',
       sanitySnap.docs.map((docSnap) => docSnap.id),
     )
   } catch (error: unknown) {
     const errorInfo = error && typeof error === 'object' ? (error as { code?: string; message?: string }) : undefined
-    console.error('profiles collection NOT readable âŒ', errorInfo?.code, errorInfo?.message)
+    console.error('profiles collection NOT readable ❌', errorInfo?.code, errorInfo?.message)
   }
 
   if (!scope.isValid) {
@@ -1150,7 +1150,7 @@ export const PeerConnectPage: React.FC = () => {
             Peer Connect
           </Heading>
           <Text color="brand.subtleText">
-            Automated weekly matching pairs you one-on-one, while peer-to-peer sessions are partner-supervised group experiencesâ€”all anchored in Firebase so
+            Automated weekly matching pairs you one-on-one, while peer-to-peer sessions are partner-supervised group experiences, all anchored in Firebase so
             your connections stay in sync.
           </Text>
           <SimpleGrid columns={{ base: 1, md: 2 }} spacing={3} pt={1}>
@@ -1331,7 +1331,7 @@ export const PeerConnectPage: React.FC = () => {
                                     </Badge>
                                   </HStack>
                                   <Text fontSize="xs" color="brand.subtleText">
-                                    {format(matchWindow.nextRefreshAt, 'EEEE, MMM d, yyyy')} • {matchPreferences.refreshPreference === 'biweekly' ? 'Biweekly' : 'Weekly'} schedule
+                                    {format(matchWindow.nextRefreshAt, 'EEEE, MMM d, yyyy')} - {matchPreferences.refreshPreference === 'biweekly' ? 'Biweekly' : 'Weekly'} schedule
                                   </Text>
                                 </Stack>
                               </HStack>
@@ -1429,7 +1429,7 @@ export const PeerConnectPage: React.FC = () => {
                                   {session.title}
                                 </Text>
                                 <Text fontSize="sm" color="brand.subtleText">
-                                  {format(session.scheduledAt, 'EEE, MMM d')} â€¢ {format(session.scheduledAt, 'p')} {session.timezone}
+                                  {format(session.scheduledAt, 'EEE, MMM d')} - {format(session.scheduledAt, 'p')} {session.timezone}
                                 </Text>
                               </Stack>
                               {renderStatusBadge(session.status)}
@@ -1517,7 +1517,7 @@ export const PeerConnectPage: React.FC = () => {
                                 {renderStatusBadge(session.status)}
                               </HStack>
                               <Text fontSize="sm" color="brand.subtleText">
-                                {format(session.scheduledAt, 'EEE, MMM d â€¢ p')} {session.timezone}
+                                {format(session.scheduledAt, 'EEE, MMM d - p')} {session.timezone}
                               </Text>
                               <Text fontSize="xs" color="brand.subtleText">
                                 Confirmation deadline: {format(session.confirmationDeadline, 'MMM d, p')}
@@ -1883,4 +1883,5 @@ export const PeerConnectPage: React.FC = () => {
     </Stack>
   )
 }
+
 

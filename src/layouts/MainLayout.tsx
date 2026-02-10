@@ -379,7 +379,7 @@ export const MainLayout: React.FC = () => {
         w={{ base: '0', md: '260px' }}
         bg="brand.sidebar"
         borderRight="1px solid"
-        borderColor="rgba(234, 177, 48, 0.2)"
+        borderColor="brand.border"
         p={4}
         display={{ base: 'none', md: 'block' }}
       >
@@ -467,13 +467,15 @@ export const MainLayout: React.FC = () => {
             order={{ base: 3, md: 0 }}
           >
             <InputLeftElement pointerEvents="none">
-              <Search size={18} color="#6b7392" />
+              <Box color="text.muted">
+                <Search size={18} />
+              </Box>
             </InputLeftElement>
             <Input
               placeholder="Search"
               bg="brand.accent"
               borderColor="brand.border"
-              _focus={{ borderColor: 'brand.primary', boxShadow: '0 0 0 1px #5d6bff' }}
+              _focus={{ borderColor: 'brand.primary', boxShadow: 'focus' }}
               value={globalSearchQuery}
               onChange={(e) => setGlobalSearchQuery(e.target.value)}
               onKeyDown={(e) => {

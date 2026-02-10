@@ -289,7 +289,7 @@ export const OverviewPage: React.FC<OverviewPageProps> = ({
                     data={userGrowthTrend}
                     title="User Growth"
                     subtitle="Rolling 30-day view"
-                    strokeColor="#6366f1"
+                    strokeColor="var(--chakra-colors-brand-primary)"
                     valueLabel="Users"
                   />
                 </CardBody>

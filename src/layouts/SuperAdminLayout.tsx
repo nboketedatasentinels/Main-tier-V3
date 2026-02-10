@@ -68,9 +68,9 @@ const SidebarNav = ({
                 leftIcon={item.icon ? <Icon as={item.icon} /> : undefined}
                 fontSize="sm"
                 variant={isActive ? 'primary' : 'ghost'}
-                bg={isActive ? '#3D0C69' : 'transparent'}
+                bg={isActive ? 'brand.primary' : 'transparent'}
                 color={isActive ? 'white' : 'brand.text'}
-                _hover={{ bg: isActive ? '#3D0C69' : 'brand.primaryMuted' }}
+                _hover={{ bg: isActive ? 'brand.primary' : 'brand.primaryMuted' }}
                 onClick={() => onNavigate?.(item.key)}
               >
                 <HStack justify="space-between" flex="1">

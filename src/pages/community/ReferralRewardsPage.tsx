@@ -192,7 +192,7 @@ const ReferralRewardsPage: React.FC = () => {
 
   const handleClaimReward = async (tier: RewardTier) => {
     if (!user?.uid) return
-    if (claiming) return
+    if (claiming !== null) return
 
     setClaiming(tier.id)
     try {
@@ -536,7 +536,7 @@ const ReferralRewardsPage: React.FC = () => {
                       </Text>
                       <HStack spacing={2}>
                         <Text fontWeight="bold" color="brand.text">
-                          {tier.emoji} {tier.title}
+                          {tier.label} {tier.title}
                         </Text>
                       </HStack>
                     </Stack>

@@ -1581,7 +1581,7 @@ export const AtRiskCommandPanel: React.FC<AtRiskCommandPanelProps> = ({
               </Text>
               <Progress value={40} colorScheme="purple" />
               <Text fontSize="sm" color="brand.subtleText">
-                Analysis ID: #1234
+                Analysis ID: 1234
               </Text>
             </Stack>
           </ModalBody>

@@ -64,9 +64,9 @@ const SidebarNav = ({
                 leftIcon={item.icon ? <Icon as={item.icon} /> : undefined}
                 fontSize="sm"
                 onClick={() => onNavigate?.(item.key)}
-                bg={isActive ? '#3D0C69' : 'transparent'}
+                bg={isActive ? 'brand.primary' : 'transparent'}
                 color={isActive ? 'white' : 'brand.text'}
-                _hover={{ bg: isActive ? '#3D0C69' : 'brand.primaryMuted' }}
+                _hover={{ bg: isActive ? 'brand.primary' : 'brand.primaryMuted' }}
               >
                 {item.label}
               </Button>

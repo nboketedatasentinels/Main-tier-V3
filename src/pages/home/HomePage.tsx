@@ -8,7 +8,7 @@ export const HomePage: React.FC = () => {
     <>
       <Header />
 
-      <main className="relative min-h-screen w-full overflow-hidden bg-gradient-to-b from-[#060910] via-[#0b1224] to-[#0f172a] text-white">
+      <main className="relative min-h-screen w-full overflow-hidden bg-gradient-to-b from-brand-dark via-brand-primary to-brand-dark text-white">
         <ShapeLandingBackground className="opacity-80" />
         <div
           aria-hidden="true"

@@ -25,23 +25,17 @@ export const HeroSection: React.FC = () => {
         </div>
 
         <h1
-          className="mx-auto font-bold tracking-tight text-white leading-tight
-          text-3xl sm:text-4xl md:text-5xl lg:text-6xl xl:text-7xl
-          max-w-2xl sm:max-w-3xl lg:max-w-4xl"
-          style={{ fontFamily: 'Poppins, Inter, system-ui, sans-serif' }}
+          className="mx-auto max-w-2xl font-heading font-bold leading-tight tracking-tight text-3xl text-white sm:max-w-3xl sm:text-4xl md:text-5xl lg:max-w-4xl lg:text-6xl xl:text-7xl"
         >
           Digital Transformation Doesn&apos;t Happen Alone.{' '}
           <span className="text-accent-gold-100">Even Beyoncé Has a Team.</span>
         </h1>
 
         <p
-          className="mx-auto mt-6 text-slate-200 leading-relaxed
-          text-sm sm:text-base md:text-lg lg:text-xl
-          max-w-xl sm:max-w-2xl lg:max-w-3xl px-4"
-          style={{ fontFamily: 'Inter, system-ui, sans-serif' }}
+          className="mx-auto mt-6 max-w-xl px-4 font-body text-sm leading-relaxed text-white/85 sm:max-w-2xl sm:text-base md:text-lg lg:max-w-3xl lg:text-xl"
         >
-          Our gamified, CPD-accredited platform gives your team the skills, coaching, and (loving-but-firm) accountability to
-          lead real change—without burning out or boring everyone to death. Perfect for managers, team leads, and brave souls
+          Our gamified, CPD-accredited platform gives your team the skills, coaching, and loving-but-firm accountability to
+          lead real change without burning out or boring everyone to death. Perfect for managers, team leads, and brave souls
           wearing too many hats.
         </p>
 
@@ -56,7 +50,7 @@ export const HeroSection: React.FC = () => {
             Get Started (+50 XP)
           </button>
 
-          <p className="text-xs sm:text-sm text-slate-200/90 max-w-sm text-center px-2">
+          <p className="max-w-sm px-2 text-center text-xs text-white/80 sm:text-sm">
             For go-getters who want to dive in and earn XP like a boss.
           </p>
         </div>

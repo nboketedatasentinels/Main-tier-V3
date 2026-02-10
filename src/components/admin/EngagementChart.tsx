@@ -16,7 +16,7 @@ interface EngagementChartProps {
 // As a presentational component, it will only re-render when its props change,
 // improving performance by avoiding costly chart redraws.
 export const EngagementChart: React.FC<EngagementChartProps> = memo(
-  ({ data, title, subtitle, strokeColor = '#5d6bff', valueLabel }) => {
+  ({ data, title, subtitle, strokeColor = 'var(--chakra-colors-brand-primary)', valueLabel }) => {
     const hasChartData = data.length > 0 && data.some((point) => point.value !== 0)
 
     return (
@@ -38,12 +38,12 @@ export const EngagementChart: React.FC<EngagementChartProps> = memo(
           {hasChartData ? (
             <ResponsiveContainer width="100%" height="100%">
               <LineChart data={data} margin={{ top: 4, right: 8, bottom: 0, left: 0 }}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#f1f2f6" />
-                <XAxis dataKey="label" stroke="#8b94b8" tickLine={false} />
-                <YAxis stroke="#8b94b8" tickLine={false} allowDecimals={false} width={32} />
+                <CartesianGrid strokeDasharray="3 3" stroke="var(--chakra-colors-border-card)" />
+                <XAxis dataKey="label" stroke="var(--chakra-colors-text-muted)" tickLine={false} />
+                <YAxis stroke="var(--chakra-colors-text-muted)" tickLine={false} allowDecimals={false} width={32} />
                 <Tooltip
                   content={<TrendTooltip valueLabel={valueLabel} />}
-                  cursor={{ stroke: '#e0e3ef', strokeWidth: 2 }}
+                  cursor={{ stroke: 'var(--chakra-colors-border-subtle)', strokeWidth: 2 }}
                 />
                 <Line type="monotone" dataKey="value" stroke={strokeColor} strokeWidth={3} dot={{ r: 4 }} />
               </LineChart>
@@ -53,7 +53,7 @@ export const EngagementChart: React.FC<EngagementChartProps> = memo(
               <Text fontSize="sm" color="text.muted">
                 No data yet
               </Text>
-              <Text fontSize="xs" color="gray.500">
+              <Text fontSize="xs" color="text.muted">
                 This chart will populate as activity is recorded.
               </Text>
             </Flex>
