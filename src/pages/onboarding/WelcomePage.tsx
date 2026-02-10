@@ -13,12 +13,19 @@ import { useAuth } from '@/hooks/useAuth'
 import { doc, setDoc, serverTimestamp } from 'firebase/firestore'
 import { db } from '@/services/firebase'
 import { getLandingPathForRole } from '@/utils/roleRouting'
+import { isFreeUser } from '@/utils/membership'
 
 export const WelcomePage: React.FC = () => {
   const { profile, user } = useAuth()
   const navigate = useNavigate()
   const toast = useToast()
   const [loading, setLoading] = React.useState(false)
+  const isNonFreeUser = React.useMemo(() => (profile ? !isFreeUser(profile) : false), [profile])
+
+  React.useEffect(() => {
+    if (!profile || !isNonFreeUser) return
+    navigate(getLandingPathForRole(profile), { replace: true })
+  }, [isNonFreeUser, navigate, profile])
 
   const handleCompleteOnboarding = async () => {
     if (!user || !profile) return
@@ -116,6 +123,10 @@ export const WelcomePage: React.FC = () => {
     } finally {
       setLoading(false)
     }
+  }
+
+  if (isNonFreeUser) {
+    return null
   }
 
   return (

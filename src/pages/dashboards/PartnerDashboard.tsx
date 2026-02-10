@@ -31,11 +31,12 @@ import { formatDistanceToNow, isValid } from 'date-fns'
 import { AlertTriangle, Bell, Building2, ClipboardCheck, Eye, EyeOff, Gauge, Key, Mail, Save, Sparkles, User, Users } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
 import { EmailAuthProvider, reauthenticateWithCredential, updatePassword } from 'firebase/auth'
-import { auth } from '@/services/firebase'
+import { addDoc, collection, doc, updateDoc } from 'firebase/firestore'
+import { auth, db } from '@/services/firebase'
 import { OrganizationCard } from '@/components/admin/OrganizationCard'
 import PartnerLayout from '@/layouts/PartnerLayout'
 import { DashboardErrorBoundary } from '@/components/ui/DashboardErrorBoundary'
-import { AtRiskCommandPanel } from '@/components/partner/AtRiskCommandPanel'
+import { AtRiskCommandPanel, type AtRiskNudgePayload } from '@/components/partner/AtRiskCommandPanel'
 import { PartnerUserManagement } from '@/components/partner/PartnerUserManagement'
 import { usePointsApprovalQueue } from '@/hooks/partner/usePointsApprovalQueue'
 import { usePartnerMetrics } from '@/hooks/partner/usePartnerMetrics'
@@ -43,6 +44,7 @@ import { usePartnerDashboardData } from '@/hooks/usePartnerDashboardData'
 import { useAuth } from '@/hooks/useAuth'
 import { logOrganizationAccessAttempt } from '@/services/organizationService'
 import { recordEngagementAction } from '@/services/engagementService'
+import { sendBulkNudges } from '@/services/nudgeService'
 import { generatePartnerDigest, sendPartnerDigestEmail } from '@/services/partnerDigestService'
 import { buildPartnerNavItems } from '@/utils/navigationItems'
 import { logger, type MismatchSample } from '@/utils/partnerDashboardUtils'
@@ -1071,33 +1073,214 @@ export const PartnerDashboard: React.FC = () => {
   const handleAtRiskAction = useCallback(async (action: string, caseId: string, additionalData?: Record<string, unknown>) => {
     logger.debug('[PartnerDashboard] At-Risk Action', { action, caseId, additionalData })
 
+    const nowIso = new Date().toISOString()
+    const actorId = profile?.id ?? user?.uid ?? null
+    const actorName = profile?.fullName ?? null
+    const selectedCase = interventions.find((item) => item.id === caseId)
+    const isSilent = Boolean(additionalData?.silent)
+
+    let engagementUserId = selectedCase?.userId || ''
+    let actionLabel = 'Updated intervention'
+    let recordedInterventionId = caseId
+
     try {
-      if (action === 'start_intervention') {
+      if (action === 'add_to_intervention_queue') {
+        const userId =
+          (typeof additionalData?.userId === 'string' && additionalData.userId) ||
+          caseId
+        const target =
+          (typeof additionalData?.target === 'string' && additionalData.target) ||
+          'Assigned learner'
+        const name =
+          (typeof additionalData?.name === 'string' && additionalData.name) ||
+          'At-risk intervention'
+        const reason =
+          (typeof additionalData?.reason === 'string' && additionalData.reason) ||
+          'Flagged from At-Risk command panel'
+        const riskStatus =
+          typeof additionalData?.riskStatus === 'string' ? additionalData.riskStatus : ''
+        const organizationCodeRaw =
+          typeof additionalData?.organizationCode === 'string' ? additionalData.organizationCode : ''
+        const organizationCode = organizationCodeRaw.toLowerCase()
+
+        if (!userId) {
+          throw new Error('Missing learner identifier for intervention queue action.')
+        }
+
+        const existingCase = interventions.find((item) => item.userId === userId && item.status !== 'escalated')
+        if (existingCase) {
+          throw new Error('This learner already has an open intervention case.')
+        }
+
+        const riskVerdicts = Array.isArray(additionalData?.riskReasons)
+          ? (additionalData.riskReasons as string[])
+          : reason
+            ? [reason]
+            : []
+
+        const status = riskStatus === 'critical' || riskStatus === 'at_risk' ? 'critical' : 'active'
+        const deadline = new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString()
+
+        const docRef = await addDoc(collection(db, 'interventions'), {
+          name,
+          target,
+          reason,
+          status,
+          deadline,
+          organization_code: organizationCode,
+          userId,
+          partner_id: user?.uid || null,
+          opened_at: nowIso,
+          status_changed_at: nowIso,
+          risk_verdicts: riskVerdicts,
+        })
+
+        recordedInterventionId = docRef.id
+        engagementUserId = userId
+        actionLabel = 'Added intervention case'
+      } else {
+        const interventionRef = doc(db, 'interventions', caseId)
+
+        if (action === 'start_intervention') {
+          await updateDoc(interventionRef, {
+            status: 'active',
+            status_changed_at: nowIso,
+            started_at: nowIso,
+            updated_at: nowIso,
+          })
+          actionLabel = 'Started intervention'
+        } else if (action === 'escalate_now') {
+          const reason =
+            (typeof additionalData?.reason === 'string' && additionalData.reason.trim()) ||
+            'Escalated by partner'
+
+          await updateDoc(interventionRef, {
+            status: 'escalated',
+            escalation_reason: reason,
+            assigned_admin_name: selectedCase?.assignedAdminName || 'Governance Team',
+            status_changed_at: nowIso,
+            escalated_at: nowIso,
+            updated_at: nowIso,
+          })
+          actionLabel = 'Escalated intervention'
+        } else if (action === 'request_extension') {
+          const baseDate = selectedCase?.deadline ? new Date(selectedCase.deadline) : new Date()
+          const parsedBase = Number.isNaN(baseDate.getTime()) ? new Date() : baseDate
+          parsedBase.setHours(parsedBase.getHours() + 24)
+          const extensionReason =
+            (typeof additionalData?.reason === 'string' && additionalData.reason.trim()) ||
+            'Extension requested by partner'
+
+          await updateDoc(interventionRef, {
+            deadline: parsedBase.toISOString(),
+            extension_reason: extensionReason,
+            extension_requested_at: nowIso,
+            status_changed_at: nowIso,
+            updated_at: nowIso,
+          })
+          actionLabel = 'Requested intervention extension'
+        } else if (action === 'complete_intervention') {
+          const outcome =
+            typeof additionalData?.outcome === 'string' ? additionalData.outcome : 'no_change'
+          const nextStatus =
+            outcome === 'improved' ? 'watch' : outcome === 'worsened' ? 'escalated' : 'active'
+
+          await updateDoc(interventionRef, {
+            status: nextStatus,
+            intervention_outcome: outcome,
+            status_changed_at: nowIso,
+            completed_at: nowIso,
+            escalation_reason:
+              nextStatus === 'escalated'
+                ? selectedCase?.escalationReason || 'Escalated after intervention outcome: worsened'
+                : null,
+            assigned_admin_name:
+              nextStatus === 'escalated'
+                ? selectedCase?.assignedAdminName || 'Governance Team'
+                : null,
+            updated_at: nowIso,
+          })
+          actionLabel = 'Completed intervention'
+        }
+      }
+
+      if (engagementUserId) {
         await recordEngagementAction({
-          userId: interventions.find(i => i.id === caseId)?.userId || '',
-          actionLabel: 'Started Intervention',
-          actorId: profile?.id ?? null,
-          actorName: profile?.fullName ?? null,
-          additionalData: { intervention_id: caseId, action_type: 'intervention_start' }
+          userId: engagementUserId,
+          actionLabel,
+          actorId,
+          actorName,
+          additionalData: {
+            intervention_id: recordedInterventionId,
+            action_type: action,
+            ...(additionalData || {}),
+          },
+        }).catch((error) => {
+          logger.warn('[PartnerDashboard] Failed to log engagement action', error)
         })
       }
 
-      toast({
-        title: 'Action recorded',
-        description: `Action "${action}" has been logged for this case.`,
-        status: 'success',
-        duration: 3000,
-        isClosable: true,
-      })
+      if (!isSilent) {
+        toast({
+          title: 'Action completed',
+          description: `Action "${action}" was applied successfully.`,
+          status: 'success',
+          duration: 3000,
+          isClosable: true,
+        })
+      }
     } catch (error) {
-      logger.error('Failed to record at-risk action', error)
-      toast({
-        title: 'Action failed',
-        description: 'We could not record your action. Please try again.',
-        status: 'error',
-      })
+      logger.error('Failed to process at-risk action', error)
+      if (!isSilent) {
+        toast({
+          title: 'Action failed',
+          description: error instanceof Error ? error.message : 'We could not apply this action. Please try again.',
+          status: 'error',
+        })
+      }
+      throw error
     }
-  }, [interventions, profile?.fullName, profile?.id, toast])
+  }, [interventions, profile?.fullName, profile?.id, toast, user?.uid])
+
+  const handleSendNudges = useCallback(async (payload: AtRiskNudgePayload) => {
+    const adminId = profile?.id ?? user?.uid
+    if (!adminId) {
+      throw new Error('Missing partner account context for nudge delivery.')
+    }
+
+    if (payload.users.length === 0) {
+      return { success: 0, failed: 0 }
+    }
+
+    const users = payload.users
+      .filter((item) => item.email)
+      .map((item) => {
+        const lastActiveValue = item.lastActiveAt || item.lastActive
+        const parsedLastActive = lastActiveValue ? new Date(lastActiveValue) : null
+        const daysInactive =
+          parsedLastActive && !Number.isNaN(parsedLastActive.getTime())
+            ? Math.max(0, Math.round((Date.now() - parsedLastActive.getTime()) / (1000 * 60 * 60 * 24)))
+            : 0
+
+        return {
+          id: item.id,
+          email: item.email,
+          name: getDisplayName(item, 'Member'),
+          organizationName: item.companyCode || 'Your organization',
+          daysInactive,
+          engagementScore: item.progressPercent,
+        }
+      })
+
+    const result = await sendBulkNudges({
+      users,
+      adminId,
+      template: payload.template,
+      channel: payload.channel,
+    })
+
+    return { success: result.success.length, failed: result.failed.length }
+  }, [profile?.id, user?.uid])
 
   const renderAtRiskPage = () => (
     <AtRiskCommandPanel
@@ -1108,6 +1291,7 @@ export const PartnerDashboard: React.FC = () => {
       interventions={interventions}
       atRiskUsers={atRiskUsers}
       onAction={handleAtRiskAction}
+      onSendNudges={handleSendNudges}
     />
   )
 

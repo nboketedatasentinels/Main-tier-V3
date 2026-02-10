@@ -70,14 +70,14 @@ function ElegantShape({
 export function ShapeLandingBackground({ className }: { className?: string }) {
   return (
     <div aria-hidden className={cn('absolute inset-0 overflow-hidden', className)}>
-      <div className="absolute inset-0 bg-gradient-to-br from-indigo-500/[0.05] via-transparent to-rose-500/[0.05] blur-3xl" />
+      <div className="absolute inset-0 bg-gradient-to-br from-sky-200/[0.08] via-transparent to-amber-200/[0.08] blur-3xl" />
 
       <ElegantShape
         delay={0.3}
         width={600}
         height={140}
         rotate={12}
-        gradient="from-indigo-500/[0.15]"
+        gradient="from-slate-100/[0.14]"
         className="left-[-10%] top-[20%]"
       />
 
@@ -86,7 +86,7 @@ export function ShapeLandingBackground({ className }: { className?: string }) {
         width={500}
         height={120}
         rotate={-15}
-        gradient="from-rose-500/[0.15]"
+        gradient="from-amber-200/[0.16]"
         className="right-[-5%] top-[75%]"
       />
 
@@ -95,7 +95,7 @@ export function ShapeLandingBackground({ className }: { className?: string }) {
         width={300}
         height={80}
         rotate={-8}
-        gradient="from-violet-500/[0.15]"
+        gradient="from-sky-200/[0.12]"
         className="left-[10%] bottom-[10%]"
       />
 
@@ -104,7 +104,7 @@ export function ShapeLandingBackground({ className }: { className?: string }) {
         width={200}
         height={60}
         rotate={20}
-        gradient="from-amber-500/[0.15]"
+        gradient="from-amber-100/[0.14]"
         className="right-[20%] top-[15%]"
       />
 
@@ -113,11 +113,11 @@ export function ShapeLandingBackground({ className }: { className?: string }) {
         width={150}
         height={40}
         rotate={-25}
-        gradient="from-cyan-500/[0.15]"
+        gradient="from-white/[0.08]"
         className="left-[25%] top-[10%]"
       />
 
-      <div className="absolute inset-0 bg-gradient-to-t from-black via-transparent to-black/80 pointer-events-none" />
+      <div className="absolute inset-0 bg-gradient-to-t from-[#020611] via-transparent to-[#020611]/90 pointer-events-none" />
     </div>
   )
 }

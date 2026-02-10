@@ -121,6 +121,7 @@ export interface VerificationRequest {
   userName?: string
   activityTitle?: string
   points?: number
+  status?: 'pending' | 'approved' | 'rejected' | string
   created_at?: Timestamp | string | Date
 }
 

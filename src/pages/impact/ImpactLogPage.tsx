@@ -947,8 +947,8 @@ export const ImpactLogPage: React.FC = () => {
                     <YAxis yAxisId="right" orientation="right" />
                     <RechartsTooltip />
                     <Legend />
-                    <Bar yAxisId="left" dataKey="Hours" fill="#4c6fff" radius={4} />
-                    <Bar yAxisId="right" dataKey="USD" fill="#22c55e" radius={4} />
+                    <Bar yAxisId="left" dataKey="Hours" fill="var(--chakra-colors-brand-primary)" radius={4} />
+                    <Bar yAxisId="right" dataKey="USD" fill="var(--chakra-colors-success-500)" radius={4} />
                   </BarChart>
                 </ResponsiveContainer>
               </Box>
@@ -967,9 +967,9 @@ export const ImpactLogPage: React.FC = () => {
                     <YAxis />
                     <RechartsTooltip />
                     <Legend />
-                    <Line type="monotone" dataKey="Entries" stroke="#a855f7" strokeWidth={3} dot={false} />
-                    <Line type="monotone" dataKey="Hours" stroke="#3b82f6" strokeWidth={3} dot={false} />
-                    <Line type="monotone" dataKey="USD" stroke="#22c55e" strokeWidth={3} dot={false} />
+                    <Line type="monotone" dataKey="Entries" stroke="var(--chakra-colors-brand-dark)" strokeWidth={3} dot={false} />
+                    <Line type="monotone" dataKey="Hours" stroke="var(--chakra-colors-brand-primary)" strokeWidth={3} dot={false} />
+                    <Line type="monotone" dataKey="USD" stroke="var(--chakra-colors-success-500)" strokeWidth={3} dot={false} />
                   </LineChart>
                 </ResponsiveContainer>
               </Box>

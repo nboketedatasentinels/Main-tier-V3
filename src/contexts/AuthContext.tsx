@@ -14,6 +14,7 @@ import {
   getAdditionalUserInfo,
   linkWithCredential,
   OAuthCredential,
+  updateProfile as updateFirebaseProfile,
 } from 'firebase/auth'
 import { doc, getDoc, setDoc, serverTimestamp, onSnapshot, updateDoc } from 'firebase/firestore'
 
@@ -570,6 +571,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
               const upgradeUpdates: Partial<UserProfile> = {
                 membershipStatus: 'paid',
                 companyId: organization.id,
+                organizationId: organization.id,
                 companyCode: organization.code,
                 companyName: organization.name,
                 transformationTier: TransformationTier.CORPORATE_MEMBER,
@@ -578,10 +580,21 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
                 ...roleUpdates,
               }
 
-              await updateDoc(userDocRef, {
-                ...upgradeUpdates,
-                updatedAt: serverTimestamp(),
-              })
+              const profileDocRef = doc(db, 'profiles', firebaseUser.uid)
+              await Promise.all([
+                updateDoc(userDocRef, {
+                  ...upgradeUpdates,
+                  updatedAt: serverTimestamp(),
+                }),
+                setDoc(
+                  profileDocRef,
+                  {
+                    ...upgradeUpdates,
+                    updatedAt: serverTimestamp(),
+                  },
+                  { merge: true },
+                ),
+              ])
 
               mergedUser = {
                 ...mergedUser,
@@ -594,14 +607,14 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
                   await incrementOrganizationMemberCount(organization.id)
                 } catch (incrementError) {
                   console.warn(
-                    'ðŸŸ  [Auth] Unable to increment organization member count after company code apply',
+                    '[WARN] [Auth] Unable to increment organization member count after company code apply',
                     incrementError,
                   )
                 }
               }
             }
           } catch (validationError) {
-            console.warn('ðŸŸ  [Auth] Unable to validate pending company code (existing profile)', validationError)
+            console.warn('[WARN] [Auth] Unable to validate pending company code (existing profile)', validationError)
           } finally {
             if (typeof window !== 'undefined') {
               localStorage.removeItem(pendingCompanyCodeKey)
@@ -711,6 +724,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
           ? TransformationTier.CORPORATE_MEMBER
           : TransformationTier.INDIVIDUAL_FREE,
         assignedOrganizations: validatedOrganization?.id ? [validatedOrganization.id] : [],
+        organizationId: validatedOrganization?.id ?? null,
         companyCode: validatedOrganization?.code ?? null,
         companyId: validatedOrganization?.id ?? null,
         companyName: validatedOrganization?.name ?? null,
@@ -1123,6 +1137,17 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
     const normalizedEmail = email.trim().toLowerCase()
     const normalizedCompanyCode = userData.companyCode?.trim().toUpperCase()
+    const normalizedFullName = userData.fullName?.trim() || ''
+    const shouldTrackPendingCompanyCode = Boolean(normalizedCompanyCode)
+
+    if (!normalizedFullName) {
+      setLoading(false)
+      setProfileLoading(false)
+      return {
+        error: new Error('Full name is required.'),
+        userId: undefined,
+      }
+    }
 
     let validatedOrganization:
       | Awaited<ReturnType<typeof validateCompanyCode>>['organization']
@@ -1152,9 +1177,19 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     }
 
     try {
+      if (shouldTrackPendingCompanyCode && typeof window !== 'undefined') {
+        localStorage.setItem(pendingCompanyCodeKey, normalizedCompanyCode as string)
+      }
       const credential = await createUserWithEmailAndPassword(auth, normalizedEmail, password)
       const firebaseUser = credential.user
       const uid = firebaseUser.uid
+      const { firstName, lastName } = getNameParts(normalizedFullName, normalizedEmail)
+
+      try {
+        await updateFirebaseProfile(firebaseUser, { displayName: normalizedFullName })
+      } catch (displayNameError) {
+        console.warn('🟠 [Auth] Unable to set auth displayName during signup', displayNameError)
+      }
 
       const role = isBootstrapAdmin(firebaseUser.email) ? UserRole.SUPER_ADMIN : UserRole.USER
       const normalizedRole = normalizeRole(role || UserRole.USER)
@@ -1175,13 +1210,9 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       const profileData: UserProfile = {
         id: uid,
         email: normalizedEmail,
-        firstName: userData.firstName?.trim() || firebaseUser.displayName?.split(' ')?.[0] || 'User',
-        lastName: userData.lastName?.trim() || firebaseUser.displayName?.split(' ')?.slice(1).join(' ') || '',
-        fullName:
-          userData.fullName?.trim() ||
-          firebaseUser.displayName ||
-          userData.firstName?.trim() ||
-          'User',
+        firstName,
+        lastName,
+        fullName: normalizedFullName,
         role: normalizedRole,
         membershipStatus: validatedOrganization ? 'paid' : 'free',
         totalPoints: 0,
@@ -1200,6 +1231,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
           ? TransformationTier.CORPORATE_MEMBER
           : TransformationTier.INDIVIDUAL_FREE,
         assignedOrganizations: validatedOrganization?.id ? [validatedOrganization.id] : [],
+        organizationId: validatedOrganization?.id ?? null,
         onboardingComplete: false,
         onboardingSkipped: false,
         mustChangePassword: false,
@@ -1217,11 +1249,13 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       const profilePayload: UserProfile & {
         gender?: string
         companyId?: string | null
+        organizationId?: string | null
         companyCode?: string | null
         companyName?: string | null
       } = {
         ...profileData,
         ...(validatedOrganization?.id ? { companyId: validatedOrganization.id } : {}),
+        ...(validatedOrganization?.id ? { organizationId: validatedOrganization.id } : {}),
         ...(validatedOrganization?.code ? { companyCode: validatedOrganization.code } : {}),
         ...(validatedOrganization?.name ? { companyName: validatedOrganization.name } : {}),
         ...(userData.gender ? { gender: userData.gender } : {}),
@@ -1296,6 +1330,9 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       console.log('🟢 [Auth] signUp success', { uid })
       setLoading(false)
       setProfileLoading(false)
+      if (shouldTrackPendingCompanyCode && typeof window !== 'undefined') {
+        localStorage.removeItem(pendingCompanyCodeKey)
+      }
       return { error: null, userId: uid }
     } catch (error) {
       console.error('🔴 [Auth] signUp failed', error)
@@ -1306,6 +1343,9 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
           : new Error(friendlyMessage)
       setLoading(false)
       setProfileLoading(false)
+      if (shouldTrackPendingCompanyCode && typeof window !== 'undefined') {
+        localStorage.removeItem(pendingCompanyCodeKey)
+      }
       return { error: normalizedError, userId: undefined }
     }
   }
@@ -1398,13 +1438,26 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     }
 
     try {
-      await updateDoc(doc(db, 'users', user.uid), {
-        ...updates,
-        updatedAt: serverTimestamp(),
-      })
+      const sanitizedUpdates = Object.entries(updates).reduce((acc, [key, value]) => {
+        if (typeof value !== 'undefined') {
+          ;(acc as Record<string, unknown>)[key] = value
+        }
+        return acc
+      }, {} as Partial<UserProfile>)
+
+      await Promise.all([
+        setDoc(doc(db, 'users', user.uid), {
+          ...sanitizedUpdates,
+          updatedAt: serverTimestamp(),
+        }, { merge: true }),
+        setDoc(doc(db, 'profiles', user.uid), {
+          ...sanitizedUpdates,
+          updatedAt: serverTimestamp(),
+        }, { merge: true }),
+      ])
       setProfile((prev) => {
         if (!prev) return prev
-        const merged = { ...prev, ...updates }
+        const merged = { ...prev, ...sanitizedUpdates }
         return areProfilesEquivalent(prev, merged) ? prev : merged
       })
       return { error: null }
@@ -1414,7 +1467,6 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       return { error: new Error(friendlyMessage) }
     }
   }
-
   const refreshProfile = useCallback(async (options?: { reason?: string; isManual?: boolean }) => {
     const currentUser = auth.currentUser
     const reason = options?.reason || 'manual'
@@ -1656,3 +1708,4 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>
 }
+

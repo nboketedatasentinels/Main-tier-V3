@@ -192,10 +192,13 @@ const createOrUpdateUser = async (
 
   if (existing?.id) {
     const userId = existing.id
+    const userRef = doc(db, 'users', userId)
+    const profileRef = doc(db, 'profiles', userId)
+    const [userSnap, profileSnap] = await Promise.all([getDoc(userRef), getDoc(profileRef)])
 
     // Keep the profile role in sync so Super Admin user management reflects assigned roles.
     if (existing.source === 'profiles') {
-      await updateDoc(doc(db, 'profiles', userId), {
+      await updateDoc(profileRef, {
         role: payload.role,
         membershipStatus: 'paid',
         companyId: payload.organizationId,
@@ -206,8 +209,6 @@ const createOrUpdateUser = async (
         'dashboardPreferences.lockedToFreeExperience': false,
       })
     } else {
-      const profileRef = doc(db, 'profiles', userId)
-      const profileSnap = await getDoc(profileRef)
       if (profileSnap.exists()) {
         await updateDoc(profileRef, {
           role: payload.role,
@@ -223,8 +224,6 @@ const createOrUpdateUser = async (
     }
 
     // Ensure `users/{userId}` holds org assignments for access checks + license accounting.
-    const userRef = doc(db, 'users', userId)
-    const userSnap = await getDoc(userRef)
     const existingAssignments = userSnap.exists()
       ? ((userSnap.data() as { assignedOrganizations?: unknown })?.assignedOrganizations as unknown)
       : undefined

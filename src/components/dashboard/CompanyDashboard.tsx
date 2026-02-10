@@ -954,7 +954,7 @@ export const CompanyDashboard: React.FC = () => {
                   Total Points
                 </Text>
                 <HStack spacing={3} align="center">
-                  <Star size={18} color="#d69e2e" />
+                  <Star size={18} color="var(--chakra-colors-accent-warning)" />
                   <Heading size="lg" color="yellow.600">
                     {(profile?.totalPoints || weekly?.totalPoints || 0).toLocaleString()} XP
                   </Heading>

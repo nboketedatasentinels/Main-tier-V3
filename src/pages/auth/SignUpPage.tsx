@@ -207,7 +207,7 @@ export const SignUpPage: React.FC = () => {
 
       toast({
         title: "Account created!",
-        description: "Welcome to Man-Tier. Redirecting you to your dashboard now.",
+        description: "Welcome to Transformational Leader. Redirecting you to your dashboard now.",
         status: "success",
         duration: 5000,
       })
@@ -287,7 +287,7 @@ export const SignUpPage: React.FC = () => {
   return (
     <div className="w-full">
       {error && (
-        <div className="mb-5 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+        <div className="mb-5 rounded-lg border border-danger bg-tint-danger px-4 py-3 text-sm text-text-primary">
           {error}
         </div>
       )}
@@ -295,12 +295,12 @@ export const SignUpPage: React.FC = () => {
 
       <form onSubmit={handleSignUp} className="space-y-5">
         <div className="text-center">
-          <h1 className="text-2xl md:text-3xl font-bold text-gray-900">Create account</h1>
-          <p className="mt-1 text-sm text-gray-600">Start your transformation journey.</p>
+          <h1 className="text-2xl md:text-3xl font-bold text-text-primary">Create account</h1>
+          <p className="mt-1 text-sm text-text-secondary">Start your transformation journey.</p>
         </div>
 
         {referralCode && (
-          <div className="rounded-lg border border-purple-100 bg-purple-50 px-4 py-3 text-sm text-purple-700">
+          <div className="rounded-lg border border-brand-primary bg-tint-brandPrimary px-4 py-3 text-sm text-brand-primary">
             {referralStatus === "checking" && (
               <div className="inline-flex items-center gap-2">
                 <Spinner size="xs" />
@@ -309,12 +309,12 @@ export const SignUpPage: React.FC = () => {
             )}
             {referralStatus === "valid" && (
               <div className="inline-flex items-center gap-2">
-                <CheckCircle className="h-4 w-4 text-green-600" />
+                <CheckCircle className="h-4 w-4 text-success-600" />
                 <span>Referral code applied!</span>
               </div>
             )}
             {referralStatus === "invalid" && (
-              <div className="inline-flex items-center gap-2 text-red-700">
+              <div className="inline-flex items-center gap-2 text-danger">
                 <XCircle className="h-4 w-4" />
                 <span>Referral code is invalid or inactive.</span>
               </div>
@@ -326,39 +326,39 @@ export const SignUpPage: React.FC = () => {
           type="button"
           onClick={handleGoogleSignUp}
           disabled={googleLoading}
-          className="inline-flex h-10 w-full items-center justify-center gap-2 rounded-md border border-border-control bg-white text-sm font-medium text-gray-800 shadow-sm hover:bg-gray-50 disabled:opacity-60"
+          className="inline-flex h-10 w-full items-center justify-center gap-2 rounded-md border border-border-control bg-surface-default text-sm font-medium text-text-primary shadow-sm hover:bg-surface-subtle disabled:opacity-60"
         >
           <GoogleIcon />
           {googleLoading ? "Connecting Google..." : "Continue with Google"}
         </button>
 
-        <div className="flex items-center gap-3 text-xs text-gray-500">
+        <div className="flex items-center gap-3 text-xs text-text-muted">
           <span className="h-px flex-1 bg-border-control" />
           <span>or sign up with email</span>
           <span className="h-px flex-1 bg-border-control" />
         </div>
 
         <div>
-          <label className="mb-1 block text-sm font-medium text-gray-700">Full Name</label>
+          <label className="mb-1 block text-sm font-medium text-text-secondary">Full Name</label>
           <div className="relative">
-            <User className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-500" />
+            <User className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-text-muted" />
             <input
               value={formData.fullName}
               onChange={e => handleChange("fullName", e.target.value)}
               placeholder="John Doe"
               autoComplete="name"
-              className="h-10 w-full rounded-md border border-border-control bg-gray-50 pl-9 pr-3 text-sm text-gray-900 placeholder:text-gray-500 focus:outline-none focus:ring-2 focus:ring-[#350e6f]"
+              className="h-10 w-full rounded-md border border-border-control bg-surface-subtle pl-9 pr-3 text-sm text-text-primary placeholder:text-text-muted focus:outline-none focus:ring-2 focus:ring-brand-primary"
               required
             />
           </div>
         </div>
 
         <div>
-          <label className="mb-1 block text-sm font-medium text-gray-700">Gender (optional)</label>
+          <label className="mb-1 block text-sm font-medium text-text-secondary">Gender (optional)</label>
           <select
             value={formData.gender}
             onChange={e => handleChange("gender", e.target.value as GenderOption)}
-            className="h-10 w-full rounded-md border border-border-control bg-gray-50 px-3 text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-[#350e6f]"
+            className="h-10 w-full rounded-md border border-border-control bg-surface-subtle px-3 text-sm text-text-primary focus:outline-none focus:ring-2 focus:ring-brand-primary"
           >
             <option value="prefer_not_to_say">Prefer not to say</option>
             <option value="male">Male</option>
@@ -369,47 +369,47 @@ export const SignUpPage: React.FC = () => {
         </div>
 
         <div>
-          <label className="mb-1 block text-sm font-medium text-gray-700">Email</label>
+          <label className="mb-1 block text-sm font-medium text-text-secondary">Email</label>
           <div className="relative">
-            <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-500" />
+            <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-text-muted" />
             <input
               type="email"
               value={formData.email}
               onChange={e => handleChange("email", e.target.value.toLowerCase())}
               placeholder="your@email.com"
               autoComplete="email"
-              className="h-10 w-full rounded-md border border-border-control bg-gray-50 pl-9 pr-3 text-sm text-gray-900 placeholder:text-gray-500 focus:outline-none focus:ring-2 focus:ring-[#350e6f]"
+              className="h-10 w-full rounded-md border border-border-control bg-surface-subtle pl-9 pr-3 text-sm text-text-primary placeholder:text-text-muted focus:outline-none focus:ring-2 focus:ring-brand-primary"
               required
             />
           </div>
         </div>
 
         <div>
-          <label className="mb-1 block text-sm font-medium text-gray-700">Company Code (optional)</label>
+          <label className="mb-1 block text-sm font-medium text-text-secondary">Company Code (optional)</label>
           <div className="relative">
-            <Building2 className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-500" />
+            <Building2 className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-text-muted" />
             <input
               value={formData.companyCode}
               onChange={e => handleChange("companyCode", e.target.value.slice(0, 6))}
               placeholder="6-digit code"
               maxLength={6}
-              className="h-10 w-full rounded-md border border-border-control bg-gray-50 pl-9 pr-3 text-sm uppercase tracking-widest text-gray-900 placeholder:text-gray-500 focus:outline-none focus:ring-2 focus:ring-[#350e6f]"
+              className="h-10 w-full rounded-md border border-border-control bg-surface-subtle pl-9 pr-3 text-sm uppercase tracking-widest text-text-primary placeholder:text-text-muted focus:outline-none focus:ring-2 focus:ring-brand-primary"
             />
           </div>
           {isCheckingCode && (
-            <div className="mt-2 inline-flex items-center gap-2 text-sm text-gray-600 transition-all">
+            <div className="mt-2 inline-flex items-center gap-2 text-sm text-text-secondary transition-all">
               <Spinner size="xs" />
               <span>Verifying code...</span>
             </div>
           )}
           {companyCodeValid && validatedOrganization && !isCheckingCode && (
-            <div className="mt-2 inline-flex items-center gap-2 text-sm text-green-700">
+            <div className="mt-2 inline-flex items-center gap-2 text-sm text-success-700">
               <CheckCircle className="h-4 w-4" />
               <span>Valid company code ({validatedOrganization.name})</span>
             </div>
           )}
           {companyCodeValid === false && !isCheckingCode && (
-            <div className="mt-2 inline-flex items-center gap-2 text-sm text-red-700">
+            <div className="mt-2 inline-flex items-center gap-2 text-sm text-danger">
               <XCircle className="h-4 w-4" />
               <span>{companyCodeError || "Invalid or inactive company code"}</span>
             </div>
@@ -417,42 +417,42 @@ export const SignUpPage: React.FC = () => {
         </div>
 
         <div>
-          <label className="mb-1 block text-sm font-medium text-gray-700">Password</label>
+          <label className="mb-1 block text-sm font-medium text-text-secondary">Password</label>
           <div className="relative">
-            <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-500" />
+            <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-text-muted" />
             <input
               type={showPassword ? "text" : "password"}
               value={formData.password}
               onChange={e => handleChange("password", e.target.value)}
-              placeholder="••••••••"
+              placeholder="********"
               autoComplete="new-password"
               minLength={8}
-              className="h-10 w-full rounded-md border border-border-control bg-gray-50 pl-9 pr-10 text-sm text-gray-900 placeholder:text-gray-500 focus:outline-none focus:ring-2 focus:ring-[#350e6f]"
+              className="h-10 w-full rounded-md border border-border-control bg-surface-subtle pl-9 pr-10 text-sm text-text-primary placeholder:text-text-muted focus:outline-none focus:ring-2 focus:ring-brand-primary"
               required
             />
             <button
               type="button"
               onClick={() => setShowPassword(v => !v)}
-              className="absolute inset-y-0 right-0 flex items-center pr-3 text-gray-500 hover:text-gray-700"
+              className="absolute inset-y-0 right-0 flex items-center pr-3 text-text-muted hover:text-text-secondary"
               aria-label="Toggle password visibility"
             >
               {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
             </button>
           </div>
-          <p className="mt-1 text-xs text-gray-500">Minimum 8 characters.</p>
+          <p className="mt-1 text-xs text-text-muted">Minimum 8 characters.</p>
         </div>
 
         <div>
-          <label className="mb-1 block text-sm font-medium text-gray-700">Confirm password</label>
+          <label className="mb-1 block text-sm font-medium text-text-secondary">Confirm password</label>
           <div className="relative">
-            <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-500" />
+            <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-text-muted" />
             <input
               type={showPassword ? "text" : "password"}
               value={formData.confirmPassword}
               onChange={e => handleChange("confirmPassword", e.target.value)}
-              placeholder="••••••••"
+              placeholder="********"
               autoComplete="new-password"
-              className="h-10 w-full rounded-md border border-border-control bg-gray-50 pl-9 pr-3 text-sm text-gray-900 placeholder:text-gray-500 focus:outline-none focus:ring-2 focus:ring-[#350e6f]"
+              className="h-10 w-full rounded-md border border-border-control bg-surface-subtle pl-9 pr-3 text-sm text-text-primary placeholder:text-text-muted focus:outline-none focus:ring-2 focus:ring-brand-primary"
               required
             />
           </div>
@@ -464,15 +464,15 @@ export const SignUpPage: React.FC = () => {
             type="checkbox"
             checked={formData.acceptTerms}
             onChange={e => handleChange("acceptTerms", e.target.checked)}
-            className="mt-1 h-4 w-4 rounded border-border-control text-[#350e6f] focus:ring-[#350e6f]"
+            className="mt-1 h-4 w-4 rounded border-border-control text-brand-primary focus:ring-brand-primary"
             required
           />
-          <label htmlFor="acceptTerms" className="text-sm text-gray-700">
+          <label htmlFor="acceptTerms" className="text-sm text-text-secondary">
             I accept the{" "}
             <button
               type="button"
               onClick={() => setShowTermsModal(true)}
-              className="font-semibold text-[#350e6f] hover:underline"
+              className="font-semibold text-brand-primary hover:underline"
             >
               Terms of Use
             </button>{" "}
@@ -480,7 +480,7 @@ export const SignUpPage: React.FC = () => {
             <button
               type="button"
               onClick={() => setShowPrivacyModal(true)}
-              className="font-semibold text-[#350e6f] hover:underline"
+              className="font-semibold text-brand-primary hover:underline"
             >
               Privacy Policy
             </button>
@@ -492,15 +492,15 @@ export const SignUpPage: React.FC = () => {
           whileTap={{ scale: 0.98 }}
           disabled={loading}
           type="submit"
-          className="inline-flex h-10 w-full items-center justify-center gap-2 rounded-md bg-gradient-to-r from-[#350e6f] to-[#27062e] text-white text-sm font-medium shadow-sm hover:opacity-95 disabled:opacity-60"
+          className="inline-flex h-10 w-full items-center justify-center gap-2 rounded-md bg-gradient-to-r from-brand-primary to-brand-dark text-white text-sm font-medium shadow-sm hover:opacity-95 disabled:opacity-60"
         >
           {loading ? "Creating account..." : "Sign Up"}
           <ArrowRight className="h-4 w-4" />
         </motion.button>
 
-        <p className="text-center text-sm text-gray-600">
+        <p className="text-center text-sm text-text-secondary">
           Already have an account?{" "}
-          <RouterLink to="/login" className="font-semibold text-[#350e6f] hover:underline">
+          <RouterLink to="/login" className="font-semibold text-brand-primary hover:underline">
             Sign In
           </RouterLink>
         </p>
@@ -534,3 +534,5 @@ export const SignUpPage: React.FC = () => {
     </div>
   )
 }
+
+

@@ -543,7 +543,7 @@ export const MentorDashboard: React.FC = () => {
             </CardBody>
           </Card>
 
-          <Alert status="info" bg="#3D0C69" color="white" borderRadius="xl" alignItems="center" mt={4}>
+          <Alert status="info" bg="brand.primary" color="text.inverse" borderRadius="xl" alignItems="center" mt={4}>
             <AlertIcon />
             Mentor accounts are focused on mentee support. Community competitions and paid member upgrades are hidden to reduce distractions and protect mentee privacy.
           </Alert>
@@ -627,7 +627,7 @@ export const MentorDashboard: React.FC = () => {
             </Card>
           </GridItem>
           <GridItem>
-            <Card shadow="lg" bg="linear-gradient(135deg, rgba(61, 12, 105, 0.08), white)">
+            <Card shadow="lg" bg="surface.default">
               <CardBody>
                 <HStack justify="space-between" align="flex-start" mb={3}>
                   <Box>
@@ -711,12 +711,18 @@ export const MentorDashboard: React.FC = () => {
                     )
                   })}
                 </SimpleGrid>
-                <Box mt={4} p={4} borderRadius="lg" bg="linear-gradient(135deg, #3D0C69, #6A0DAD)" color="white">
+                <Box
+                  mt={4}
+                  p={4}
+                  borderRadius="lg"
+                  bg="linear-gradient(135deg, var(--chakra-colors-brand-primary), var(--chakra-colors-brand-dark))"
+                  color="text.inverse"
+                >
                   <HStack spacing={3} align="flex-start">
-                    <Icon as={Lightbulb} color="white" />
+                    <Icon as={Lightbulb} color="text.inverse" />
                     <Box>
-                      <Text fontWeight="semibold" color="white">Motivational insight</Text>
-                      <Text color="white">{motivationalMessage}</Text>
+                      <Text fontWeight="semibold" color="text.inverse">Motivational insight</Text>
+                      <Text color="text.inverse">{motivationalMessage}</Text>
                     </Box>
                   </HStack>
                 </Box>
@@ -886,7 +892,7 @@ export const MentorDashboard: React.FC = () => {
                       <Button
                         size="sm"
                         variant={isActive ? 'primary' : 'secondary'}
-                        bg={isActive ? '#3D0C69' : palette.bg}
+                        bg={isActive ? 'brand.primary' : palette.bg}
                         color={isActive ? 'white' : palette.color}
                         onClick={() => setRiskFilter(risk as RiskLevel | 'all')}
                         leftIcon={risk === 'all' ? <Icon as={Filter} /> : <Icon as={AlertCircle} />}
@@ -910,7 +916,7 @@ export const MentorDashboard: React.FC = () => {
                       <Button
                         size="sm"
                         variant={isActive ? 'primary' : 'secondary'}
-                        bg={isActive ? '#3D0C69' : 'gray.50'}
+                        bg={isActive ? 'brand.primary' : 'surface.subtle'}
                         color={isActive ? 'white' : 'brand.text'}
                         leftIcon={<Icon as={Activity} />}
                         onClick={() => setEngagementFilter(key as EngagementStatus | 'all')}

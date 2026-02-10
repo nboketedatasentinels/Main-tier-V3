@@ -25,6 +25,7 @@ import {
   Divider,
   InputGroup,
   InputLeftElement,
+  InputRightElement,
   Input,
   useToast,
 } from '@chakra-ui/react'
@@ -88,6 +89,7 @@ export const MainLayout: React.FC = () => {
   const [showVillagePrompt, setShowVillagePrompt] = useState(false)
   const [showWelcomeModal, setShowWelcomeModal] = useState(false)
   const [showTour, setShowTour] = useState(false)
+  const [globalSearchQuery, setGlobalSearchQuery] = useState('')
 
   const buildVillageKey = useMemo(() => (profile ? `t4l.buildVillage.${profile.id}` : null), [profile])
   const welcomeKey = useMemo(() => (profile ? `t4l.newUserWelcome.${profile.id}` : null), [profile])
@@ -217,6 +219,25 @@ export const MainLayout: React.FC = () => {
     }))
   }, [isMentor, navigationSections])
 
+  const searchableNavigation = useMemo(
+    () =>
+      filteredNavigation.flatMap(section =>
+        section.items.map(item => ({
+          ...item,
+          sectionLabel: section.label,
+          searchText: `${section.label} ${item.label} ${item.path}`.toLowerCase(),
+        })),
+      ),
+    [filteredNavigation],
+  )
+
+  const searchResults = useMemo(() => {
+    const query = globalSearchQuery.trim().toLowerCase()
+    if (!query) return []
+
+    return searchableNavigation.filter(item => item.searchText.includes(query)).slice(0, 6)
+  }, [globalSearchQuery, searchableNavigation])
+
   const handleNavigation = (path: string) => {
     const restrictedPaths = ['/app/peer-connect', '/app/leadership-council']
 
@@ -236,6 +257,34 @@ export const MainLayout: React.FC = () => {
     navigate(path)
     onClose()
   }
+
+  const handleSearchNavigation = (path: string) => {
+    handleNavigation(path)
+    setGlobalSearchQuery('')
+  }
+
+  const handleSearchSubmit = () => {
+    const query = globalSearchQuery.trim()
+    if (!query) return
+
+    const firstMatch = searchResults[0]
+    if (!firstMatch) {
+      toast({
+        title: 'No matching page found',
+        description: 'Try page names like Weekly Checklist, Impact Log, or Events.',
+        status: 'info',
+        duration: 3200,
+        isClosable: true,
+      })
+      return
+    }
+
+    handleSearchNavigation(firstMatch.path)
+  }
+
+  useEffect(() => {
+    setGlobalSearchQuery('')
+  }, [location.pathname])
 
   const NavContent = ({ variant }: { variant: 'sidebar' | 'drawer' }) => {
     const isDark = variant === 'drawer'
@@ -302,7 +351,7 @@ export const MainLayout: React.FC = () => {
                         <Box color={isActive ? activeText : inactiveText}>
                           <item.icon size={20} />
                         </Box>
-                        <Text>{item.label}</Text>
+                        <Text color="inherit">{item.label}</Text>
                       </HStack>
                       {item.badge && (
                         <Badge px={2} borderRadius="full" fontSize="xs" {...badgeStyles}>
@@ -330,7 +379,7 @@ export const MainLayout: React.FC = () => {
         w={{ base: '0', md: '260px' }}
         bg="brand.sidebar"
         borderRight="1px solid"
-        borderColor="rgba(234, 177, 48, 0.2)"
+        borderColor="brand.border"
         p={4}
         display={{ base: 'none', md: 'block' }}
       >
@@ -418,14 +467,79 @@ export const MainLayout: React.FC = () => {
             order={{ base: 3, md: 0 }}
           >
             <InputLeftElement pointerEvents="none">
-              <Search size={18} color="#6b7392" />
+              <Box color="text.muted">
+                <Search size={18} />
+              </Box>
             </InputLeftElement>
             <Input
               placeholder="Search"
               bg="brand.accent"
               borderColor="brand.border"
-              _focus={{ borderColor: 'brand.primary', boxShadow: '0 0 0 1px #5d6bff' }}
+              _focus={{ borderColor: 'brand.primary', boxShadow: 'focus' }}
+              value={globalSearchQuery}
+              onChange={(e) => setGlobalSearchQuery(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') {
+                  e.preventDefault()
+                  handleSearchSubmit()
+                }
+                if (e.key === 'Escape') {
+                  setGlobalSearchQuery('')
+                }
+              }}
+              aria-label="Search dashboard pages"
             />
+            {globalSearchQuery.trim() && (
+              <InputRightElement width="auto" pr={2}>
+                <Button size="xs" variant="ghost" onClick={handleSearchSubmit}>
+                  Go
+                </Button>
+              </InputRightElement>
+            )}
+            {globalSearchQuery.trim() && (
+              <Box
+                position="absolute"
+                top="calc(100% + 8px)"
+                left={0}
+                right={0}
+                bg="white"
+                border="1px solid"
+                borderColor="brand.border"
+                borderRadius="md"
+                boxShadow="md"
+                overflow="hidden"
+                zIndex={20}
+              >
+                {searchResults.length > 0 ? (
+                  <VStack spacing={0} align="stretch">
+                    {searchResults.map(result => (
+                      <Button
+                        key={result.path}
+                        variant="ghost"
+                        justifyContent="space-between"
+                        borderRadius="0"
+                        h="auto"
+                        py={2.5}
+                        px={3}
+                        onClick={() => handleSearchNavigation(result.path)}
+                        _hover={{ bg: 'brand.primaryMuted' }}
+                      >
+                        <Text fontSize="sm" color="brand.text">
+                          {result.label}
+                        </Text>
+                        <Text fontSize="xs" color="brand.subtleText">
+                          {result.sectionLabel}
+                        </Text>
+                      </Button>
+                    ))}
+                  </VStack>
+                ) : (
+                  <Text px={3} py={2.5} fontSize="sm" color="brand.subtleText">
+                    No pages found
+                  </Text>
+                )}
+              </Box>
+            )}
           </InputGroup>
 
           <HStack

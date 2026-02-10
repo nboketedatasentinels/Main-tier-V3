@@ -118,7 +118,7 @@ export const ChallengesTab: React.FC<ChallengesTabProps> = ({
   if (!challengesLoaded) {
     return (
       <Center py={12}>
-        <Spinner size="lg" color="purple.500" />
+        <Spinner size="lg" color="brand.primary" />
       </Center>
     );
   }
@@ -127,7 +127,7 @@ export const ChallengesTab: React.FC<ChallengesTabProps> = ({
     <VStack spacing={6} align="stretch">
       {/* Header Stats */}
       <Box
-        bg="linear-gradient(135deg, #350e6f 0%, #27062e 100%)"
+        bg="linear-gradient(135deg, var(--chakra-colors-brand-primary), var(--chakra-colors-brand-dark))"
         borderRadius="xl"
         p={6}
         color="white"
@@ -166,7 +166,7 @@ export const ChallengesTab: React.FC<ChallengesTabProps> = ({
           </Stat>
           <Stat>
             <StatLabel color="whiteAlpha.800" fontSize="xs">Leaderboard Rank</StatLabel>
-            <StatNumber fontSize="2xl">#{leaderboardRank ?? '—'}</StatNumber>
+            <StatNumber fontSize="2xl">#{leaderboardRank ?? '-'}</StatNumber>
           </Stat>
         </SimpleGrid>
       </Box>

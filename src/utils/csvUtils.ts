@@ -1,15 +1,15 @@
 import { InviteDraft } from '@/types/admin'
 import { normalizeEmail } from '@/utils/email'
 
-const requiredHeaders = ['name', 'email', 'role']
+const requiredHeaders = ['email']
 
 const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
 
 export const generateCSVTemplate = () => {
   const exampleRows = [
-    'Name,Email,Role',
-    'Jane Doe,jane@example.com,user',
-    'John Learner,,user',
+    'Email,Role',
+    'jane@example.com,user',
+    'john@example.com,mentor',
   ]
   return exampleRows.join('\n')
 }
@@ -29,6 +29,17 @@ export const downloadCSVTemplate = () => {
 
 const normalizeHeader = (value: string) => value.trim().toLowerCase()
 
+const deriveInviteNameFromEmail = (email: string) => {
+  const localPart = email.split('@')[0] || ''
+  const normalized = localPart
+    .replace(/[._-]+/g, ' ')
+    .trim()
+
+  if (!normalized) return 'Invited user'
+
+  return normalized.replace(/\b\w/g, (char) => char.toUpperCase())
+}
+
 const buildHeaderIndex = (fileHeaders: string[]) =>
   fileHeaders.reduce<Record<string, number>>((map, header, index) => {
     map[header] = index
@@ -36,15 +47,14 @@ const buildHeaderIndex = (fileHeaders: string[]) =>
   }, {})
 
 const parseRow = (row: string[], headerIndex: Record<string, number>) => {
-  const name = row[headerIndex['name']]
   const email = row[headerIndex['email']]
-  const role = row[headerIndex['role']]
+  const role = headerIndex['role'] >= 0 ? row[headerIndex['role']] : undefined
   const normalizedEmail = normalizeEmail(email || '')
   return {
-    name: name?.trim() || '',
+    name: deriveInviteNameFromEmail(normalizedEmail),
     email: normalizedEmail,
     role: (role?.trim() || 'user') as InviteDraft['role'],
-    method: (normalizedEmail ? 'email' : 'one_time_code') as InviteDraft['method'],
+    method: 'email' as InviteDraft['method'],
   }
 }
 
@@ -74,11 +84,10 @@ export const parseInvitationCSV = async (file: File): Promise<InviteDraft[]> => 
     const parsed = parseRow(columns, headerIndex)
     const rowNumber = index + 2
 
-    if (!parsed.name) throw new Error(`Row ${index + 2}: Name is required`)
-    if (parsed.email && !emailRegex.test(parsed.email)) {
-      throw new Error(`Row ${index + 2}: Invalid email format`)
+    if (!parsed.email || !emailRegex.test(parsed.email)) {
+      throw new Error(`Row ${index + 2}: A valid email is required`)
     }
-    if (parsed.email) {
+    {
       const rows = emailRows.get(parsed.email) || []
       rows.push(rowNumber)
       emailRows.set(parsed.email, rows)

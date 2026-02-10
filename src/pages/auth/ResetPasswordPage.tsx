@@ -94,7 +94,7 @@ export const ResetPasswordPage: React.FC = () => {
   if (isResetFlow) {
     if (resetLoading && !resetComplete && !resetError && !resetEmail) {
       return (
-        <div className="rounded-lg border border-border-control bg-white px-4 py-6 text-center text-sm text-gray-700">
+        <div className="rounded-lg border border-border-control bg-surface-default px-4 py-6 text-center text-sm text-text-secondary">
           Verifying your reset link...
         </div>
       )
@@ -103,11 +103,11 @@ export const ResetPasswordPage: React.FC = () => {
     if (resetComplete) {
       return (
         <div className="space-y-4 text-center">
-          <h2 className="text-xl font-semibold text-gray-900">Password updated</h2>
-          <p className="text-sm text-gray-600">
+          <h2 className="text-xl font-semibold text-text-primary">Password updated</h2>
+          <p className="text-sm text-text-secondary">
             Your password has been updated. You can now sign in with your new credentials.
           </p>
-          <RouterLink to="/login" className="text-sm text-[#4540c0] hover:underline">
+          <RouterLink to="/login" className="text-sm text-brand-primary hover:underline">
             Back to Sign In
           </RouterLink>
         </div>
@@ -117,9 +117,9 @@ export const ResetPasswordPage: React.FC = () => {
     if (resetError) {
       return (
         <div className="space-y-4 text-center">
-          <h2 className="text-xl font-semibold text-gray-900">Reset link issue</h2>
-          <p className="text-sm text-red-600">{resetError}</p>
-          <RouterLink to="/reset-password" className="text-sm text-[#4540c0] hover:underline">
+          <h2 className="text-xl font-semibold text-text-primary">Reset link issue</h2>
+          <p className="text-sm text-danger">{resetError}</p>
+          <RouterLink to="/reset-password" className="text-sm text-brand-primary hover:underline">
             Request a new reset link
           </RouterLink>
         </div>
@@ -128,7 +128,7 @@ export const ResetPasswordPage: React.FC = () => {
 
     return (
       <div>
-        <p className="text-sm text-gray-600 mb-5">
+        <p className="text-sm text-text-secondary mb-5">
           {resetEmail
             ? `Enter a new password for ${resetEmail}.`
             : "Enter a new password to finish resetting your account."}
@@ -136,9 +136,9 @@ export const ResetPasswordPage: React.FC = () => {
 
         <form onSubmit={handleResetSubmit} className="space-y-5">
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">New password</label>
+            <label className="block text-sm font-medium text-text-secondary mb-1">New password</label>
             <input
-              className="h-10 w-full rounded-md border border-border-control bg-gray-50 px-3 text-sm text-gray-900 placeholder:text-gray-500 focus:outline-none focus:ring-2 focus:ring-[#350e6f]"
+              className="h-10 w-full rounded-md border border-border-control bg-surface-subtle px-3 text-sm text-text-primary placeholder:text-text-muted focus:outline-none focus:ring-2 focus:ring-brand-primary"
               type="password"
               value={resetForm.password}
               onChange={(e) => setResetForm((prev) => ({ ...prev, password: e.target.value }))}
@@ -147,9 +147,9 @@ export const ResetPasswordPage: React.FC = () => {
             />
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Confirm password</label>
+            <label className="block text-sm font-medium text-text-secondary mb-1">Confirm password</label>
             <input
-              className="h-10 w-full rounded-md border border-border-control bg-gray-50 px-3 text-sm text-gray-900 placeholder:text-gray-500 focus:outline-none focus:ring-2 focus:ring-[#350e6f]"
+              className="h-10 w-full rounded-md border border-border-control bg-surface-subtle px-3 text-sm text-text-primary placeholder:text-text-muted focus:outline-none focus:ring-2 focus:ring-brand-primary"
               type="password"
               value={resetForm.confirmPassword}
               onChange={(e) =>
@@ -161,7 +161,7 @@ export const ResetPasswordPage: React.FC = () => {
           </div>
 
           {resetError && (
-            <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+            <div className="rounded-lg border border-danger bg-tint-danger px-4 py-3 text-sm text-text-primary">
               {resetError}
             </div>
           )}
@@ -171,14 +171,14 @@ export const ResetPasswordPage: React.FC = () => {
             whileTap={{ scale: 0.98 }}
             disabled={resetLoading}
             type="submit"
-            className="inline-flex h-10 w-full items-center justify-center gap-2 rounded-md bg-gradient-to-r from-[#350e6f] to-[#27062e] text-white text-sm font-medium shadow-sm hover:opacity-95 disabled:opacity-60"
+            className="inline-flex h-10 w-full items-center justify-center gap-2 rounded-md bg-gradient-to-r from-brand-primary to-brand-dark text-white text-sm font-medium shadow-sm hover:opacity-95 disabled:opacity-60"
           >
             {resetLoading ? "Updating..." : "Update password"}
             <ArrowRight className="h-4 w-4" />
           </motion.button>
 
           <div className="text-center">
-            <RouterLink to="/login" className="text-sm text-[#4540c0] hover:underline">
+            <RouterLink to="/login" className="text-sm text-brand-primary hover:underline">
               Back to Sign In
             </RouterLink>
           </div>
@@ -197,7 +197,7 @@ export const ResetPasswordPage: React.FC = () => {
           <button
             type="button"
             onClick={() => setSent(false)}
-            className="inline-flex h-10 w-full items-center justify-center rounded-md bg-gradient-to-r from-[#350e6f] to-[#27062e] text-white text-sm font-medium shadow-sm hover:opacity-95"
+            className="inline-flex h-10 w-full items-center justify-center rounded-md bg-gradient-to-r from-brand-primary to-brand-dark text-white text-sm font-medium shadow-sm hover:opacity-95"
           >
             Send again
           </button>
@@ -208,23 +208,23 @@ export const ResetPasswordPage: React.FC = () => {
 
   return (
     <div>
-      <p className="text-sm text-gray-600 mb-5">
+      <p className="text-sm text-text-secondary mb-5">
         Enter the email address linked to your account and we’ll send a reset link.
       </p>
 
       {error && (
-        <div className="mb-5 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+        <div className="mb-5 rounded-lg border border-danger bg-tint-danger px-4 py-3 text-sm text-text-primary">
           {error}
         </div>
       )}
 
       <form onSubmit={handleSubmit} className="space-y-5">
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">Email</label>
+          <label className="block text-sm font-medium text-text-secondary mb-1">Email</label>
           <div className="relative">
-            <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-500" />
+            <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-text-muted" />
             <input
-              className="h-10 w-full rounded-md border border-border-control bg-gray-50 pl-9 pr-3 text-sm text-gray-900 placeholder:text-gray-500 focus:outline-none focus:ring-2 focus:ring-[#350e6f]"
+              className="h-10 w-full rounded-md border border-border-control bg-surface-subtle pl-9 pr-3 text-sm text-text-primary placeholder:text-text-muted focus:outline-none focus:ring-2 focus:ring-brand-primary"
               type="email"
               value={email}
               onChange={e => setEmail(e.target.value)}
@@ -239,14 +239,14 @@ export const ResetPasswordPage: React.FC = () => {
           whileTap={{ scale: 0.98 }}
           disabled={loading}
           type="submit"
-          className="inline-flex h-10 w-full items-center justify-center gap-2 rounded-md bg-gradient-to-r from-[#350e6f] to-[#27062e] text-white text-sm font-medium shadow-sm hover:opacity-95 disabled:opacity-60"
+          className="inline-flex h-10 w-full items-center justify-center gap-2 rounded-md bg-gradient-to-r from-brand-primary to-brand-dark text-white text-sm font-medium shadow-sm hover:opacity-95 disabled:opacity-60"
         >
           {loading ? "Sending..." : "Send reset link"}
           <ArrowRight className="h-4 w-4" />
         </motion.button>
 
         <div className="text-center">
-          <RouterLink to="/login" className="text-sm text-[#4540c0] hover:underline">
+          <RouterLink to="/login" className="text-sm text-brand-primary hover:underline">
             Back to Sign In
           </RouterLink>
         </div>
@@ -254,3 +254,5 @@ export const ResetPasswordPage: React.FC = () => {
     </div>
   )
 }
+
+

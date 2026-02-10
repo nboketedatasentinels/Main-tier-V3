@@ -178,7 +178,14 @@ export const AtRiskInterventionFlow: React.FC<AtRiskInterventionFlowProps> = ({
           <VStack align="center" spacing={0}>
             <Text fontSize="2xs" color="brand.subtleText" textTransform="uppercase" fontWeight="bold">Escalates in</Text>
             <HStack spacing={1}>
-              <Clock size={14} color={nextEscalation.isOverdue ? '#E53E3E' : '#F56565'} />
+              <Clock
+                size={14}
+                color={
+                  nextEscalation.isOverdue
+                    ? 'var(--chakra-colors-danger-DEFAULT)'
+                    : 'var(--chakra-colors-accent-warning)'
+                }
+              />
               <Text color={nextEscalation.isOverdue ? 'red.600' : 'red.500'} fontWeight="bold" fontSize="md">
                 {nextEscalation.label}
               </Text>
@@ -202,7 +209,7 @@ export const AtRiskInterventionFlow: React.FC<AtRiskInterventionFlowProps> = ({
       <CardBody>
         <Stack spacing={4}>
           <HStack>
-            <AlertCircle size={20} color="#E53E3E" />
+            <AlertCircle size={20} color="var(--chakra-colors-danger-DEFAULT)" />
             <Text fontWeight="bold" fontSize="md">WHY THIS LEARNER IS AT RISK</Text>
             <Badge colorScheme="green" variant="subtle" ml="auto">
               ✔ System-validated risk assessment
@@ -550,7 +557,7 @@ export const AtRiskInterventionFlow: React.FC<AtRiskInterventionFlowProps> = ({
     <Box>
       <Box p={6} bg="black" borderRadius="xl" color="white" boxShadow="2xl" border="2px solid" borderColor="gray.700" mb={6}>
         <HStack spacing={6} align="flex-start">
-          <ShieldAlert size={40} color="#F56565" />
+          <ShieldAlert size={40} color="var(--chakra-colors-accent-warning)" />
           <VStack align="flex-start" spacing={1} flex={1}>
             <Text fontWeight="black" fontSize="2xl" letterSpacing="tight">⚫ ESCALATED TO SUPER ADMIN</Text>
             <SimpleGrid columns={{ base: 1, md: 3 }} spacing={6} w="full" mt={4}>

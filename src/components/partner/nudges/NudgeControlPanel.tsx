@@ -188,6 +188,7 @@ export const NudgeControlPanel: React.FC<NudgeControlPanelProps> = ({ users, tem
         onConfirm={async () => {
           toast({ title: 'Nudges queued', status: 'success', duration: 3000 })
           modal.onClose()
+          return { success: selectedList.length, failed: 0 }
         }}
       />
     </Stack>

@@ -728,6 +728,7 @@ export const toggleAdminStatus = async (adminId: string, status: 'active' | 'sus
 export const listenToVerificationRequests = (onChange: (requests: VerificationRequest[]) => void) => {
   const verificationQuery = query(
     collection(db, 'points_verification_requests'),
+    where('status', '==', 'pending'),
     orderBy('created_at', 'desc'),
     limit(10),
   )

@@ -34,7 +34,9 @@ interface SendNudgeModalProps {
   onClose: () => void
   users: SelectedUser[]
   templates: NudgeTemplateRecord[]
-  onConfirm: (payload: { templateId: string; channel: NudgeChannel; message: string; scheduleAt?: string }) => Promise<void>
+  onConfirm: (
+    payload: { templateId: string; channel: NudgeChannel; message: string; scheduleAt?: string }
+  ) => Promise<{ success: number; failed: number } | void>
 }
 
 const steps = ['Review users', 'Select template', 'Delivery', 'Schedule']
@@ -74,13 +76,13 @@ export const SendNudgeModal: React.FC<SendNudgeModalProps> = ({ isOpen, onClose,
     setError(null)
     setLoading(true)
     try {
-      await onConfirm({
+      const summary = await onConfirm({
         templateId,
         channel,
         message: customMessage || activeTemplate?.message_body || '',
         scheduleAt: scheduleAt || undefined,
       })
-      setResult({ success: users.length, failed: 0 })
+      setResult(summary ?? { success: users.length, failed: 0 })
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Failed to send nudges'
       setResult({ success: 0, failed: users.length })

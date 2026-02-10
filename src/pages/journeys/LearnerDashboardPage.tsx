@@ -27,9 +27,6 @@ import { ActivityFeedCard } from '@/components/journeys/weeklyGlance/ActivityFee
 import { LearnerWindowCard } from '@/components/journeys/weeklyGlance/LearnerWindowCard'
 import { NextMilestoneCard } from '@/components/journeys/weeklyGlance/NextMilestoneCard'
 import { WindowSummaryCard } from '@/components/journeys/weeklyGlance/WindowSummaryCard'
-import { ActivityHistoryTable } from '@/components/journeys/dashboard/ActivityHistoryTable'
-import { MiniJourneyTimeline } from '@/components/journeys/dashboard/MiniJourneyTimeline'
-import { JourneyCompletionOverview } from '@/components/journeys/dashboard/JourneyCompletionOverview'
 import { useWeeklyGlanceData } from '@/hooks/useWeeklyGlanceData'
 import { BuildVillageModal } from '@/components/modals/BuildVillageModal'
 import { useAuth } from '@/hooks/useAuth'
@@ -311,9 +308,6 @@ export const LearnerDashboardPage = () => {
             {showMore ? 'Show less' : 'View more'}
           </Button>
         )}
-        <JourneyCompletionOverview />
-        <MiniJourneyTimeline />
-        <ActivityHistoryTable />
       </Stack>
 
       <BuildVillageModal

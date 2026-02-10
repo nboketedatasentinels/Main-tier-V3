@@ -12,7 +12,7 @@ export interface RewardTier {
   required: number
   reward: string
   description: string
-  emoji: string
+  label: string
   icon: LucideIcon
   gradient: string
   accent: string
@@ -25,10 +25,10 @@ export const REWARD_TIERS: RewardTier[] = [
     required: 1,
     reward: '100 Points',
     description: 'Small dopamine hit. Points can be used for leaderboard bragging rights.',
-    emoji: '💯',
+    label: '100',
     icon: Gift,
-    gradient: 'linear-gradient(135deg, #ffe2f5, #ffd9e8)',
-    accent: '#ec4899',
+    gradient: 'linear-gradient(135deg, var(--chakra-colors-tint-brandPrimary), var(--chakra-colors-surface-default))',
+    accent: 'var(--chakra-colors-brand-primary)',
   },
   {
     id: 2,
@@ -37,10 +37,10 @@ export const REWARD_TIERS: RewardTier[] = [
     reward: 'Community Builder Badge',
     description:
       'Visible on their profile + bragging rights in the leaderboard. Unlocks access to a bonus micro-learning.',
-    emoji: '🏅',
+    label: 'Badge',
     icon: Medal,
-    gradient: 'linear-gradient(135deg, #fef3c7, #fde68a)',
-    accent: '#f59e0b',
+    gradient: 'linear-gradient(135deg, var(--chakra-colors-tint-accentWarning), var(--chakra-colors-tint-accentHighlight))',
+    accent: 'var(--chakra-colors-brand-gold)',
   },
   {
     id: 3,
@@ -48,10 +48,10 @@ export const REWARD_TIERS: RewardTier[] = [
     required: 15,
     reward: "25% Off 'AI Stacking 101'",
     description: 'Enjoy an exclusive 25% discount on the flagship AI Stacking 101 mastery course.',
-    emoji: '🧠',
+    label: 'Course',
     icon: Layers,
-    gradient: 'linear-gradient(135deg, #dbeafe, #e0e7ff)',
-    accent: '#2563eb',
+    gradient: 'linear-gradient(135deg, var(--chakra-colors-tint-brandPrimary), var(--chakra-colors-tint-accentWarning))',
+    accent: 'var(--chakra-colors-brand-warning)',
   },
   {
     id: 4,
@@ -59,9 +59,9 @@ export const REWARD_TIERS: RewardTier[] = [
     required: 20,
     reward: "Featured in 'Referrer of the Month'",
     description: "Featured in a community newsletter section ('Referrer of the Month').",
-    emoji: '🌟',
+    label: 'Featured',
     icon: Award,
-    gradient: 'linear-gradient(135deg, #dcfce7, #bbf7d0)',
-    accent: '#16a34a',
+    gradient: 'linear-gradient(135deg, var(--chakra-colors-surface-subtle), var(--chakra-colors-tint-brandPrimary))',
+    accent: 'var(--chakra-colors-brand-dark)',
   },
 ]
