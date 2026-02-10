@@ -37,11 +37,11 @@ import { OrganizationCard } from '@/components/admin/OrganizationCard'
 import PartnerLayout from '@/layouts/PartnerLayout'
 import { DashboardErrorBoundary } from '@/components/ui/DashboardErrorBoundary'
 import { AtRiskCommandPanel, type AtRiskNudgePayload } from '@/components/partner/AtRiskCommandPanel'
-import { PartnerUserManagement } from '@/components/partner/PartnerUserManagement'
+import { PartnerUserManagement, type PartnerUserManagementTab } from '@/components/partner/PartnerUserManagement'
 import NudgeAutomationRules from '@/components/partner/nudges/NudgeAutomationRules'
 import { usePointsApprovalQueue } from '@/hooks/partner/usePointsApprovalQueue'
 import { usePartnerMetrics } from '@/hooks/partner/usePartnerMetrics'
-import { usePartnerDashboardData } from '@/hooks/usePartnerDashboardData'
+import { usePartnerDashboardData, type PartnerUser } from '@/hooks/usePartnerDashboardData'
 import { useAuth } from '@/hooks/useAuth'
 import { logOrganizationAccessAttempt } from '@/services/organizationService'
 import { recordEngagementAction } from '@/services/engagementService'
@@ -107,6 +107,7 @@ export const PartnerDashboard: React.FC = () => {
 
   type PartnerPageKey = 'overview' | 'users' | 'organization-management' | 'at-risk' | 'reports' | 'settings' | 'profile'
   const [activePage, setActivePage] = useState<PartnerPageKey>('overview')
+  const [userManagementTab, setUserManagementTab] = useState<PartnerUserManagementTab>('users')
   const [showAllNotifications, setShowAllNotifications] = useState(false)
 
   // Profile page state
@@ -476,7 +477,10 @@ export const PartnerDashboard: React.FC = () => {
         label: pendingApprovalsCount === 1 ? 'Approval pending' : 'Approvals pending',
         color: 'green',
         icon: ClipboardCheck,
-        onClick: () => setActivePage('users'),
+        onClick: () => {
+          setUserManagementTab('approvals')
+          setActivePage('users')
+        },
       },
     ]
 
@@ -1125,6 +1129,23 @@ export const PartnerDashboard: React.FC = () => {
     return { success: result.success.length, failed: result.failed.length + skippedCount }
   }, [profile?.id, user?.uid])
 
+  const handleStartInterventionFromUserManagement = useCallback(async (targetUser: PartnerUser) => {
+    try {
+      await handleAtRiskAction('add_to_intervention_queue', targetUser.id, {
+        target: getDisplayName(targetUser, 'Member'),
+        name: 'Partner dashboard intervention',
+        reason: targetUser.riskReasons?.[0] || 'Started from user management',
+        riskStatus: targetUser.riskStatus,
+        riskReasons: targetUser.riskReasons || [],
+        organizationCode: targetUser.companyCode || '',
+        userId: targetUser.id,
+      })
+      setActivePage('at-risk')
+    } catch (error) {
+      throw error
+    }
+  }, [handleAtRiskAction])
+
   const renderAtRiskPage = () => (
     <AtRiskCommandPanel
       engagementTrend={engagementTrend}
@@ -1330,6 +1351,8 @@ export const PartnerDashboard: React.FC = () => {
               selectedOrg={selectedOrg}
               onSelectOrg={setSelectedOrg}
               updateUserPoints={updateUserPoints}
+              initialTab={userManagementTab}
+              onStartIntervention={handleStartInterventionFromUserManagement}
             />
 
             {renderDebugInfo()}
@@ -2070,6 +2093,9 @@ export const PartnerDashboard: React.FC = () => {
   const handleNavigate = (key: string) => {
     const normalized = key as PartnerPageKey
     if (['overview', 'users', 'organization-management', 'at-risk', 'reports', 'settings', 'profile'].includes(normalized)) {
+      if (normalized === 'users') {
+        setUserManagementTab('users')
+      }
       setActivePage(normalized)
     } else {
       setActivePage('overview')
