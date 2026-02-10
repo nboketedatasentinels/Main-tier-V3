@@ -351,7 +351,7 @@ export const MainLayout: React.FC = () => {
                         <Box color={isActive ? activeText : inactiveText}>
                           <item.icon size={20} />
                         </Box>
-                        <Text>{item.label}</Text>
+                        <Text color="inherit">{item.label}</Text>
                       </HStack>
                       {item.badge && (
                         <Badge px={2} borderRadius="full" fontSize="xs" {...badgeStyles}>
