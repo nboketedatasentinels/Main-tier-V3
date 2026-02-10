@@ -115,24 +115,6 @@ const relativeTime = (date: Date) => {
   }
 }
 
-const initialsFromName = (name: string) => {
-  if (!name || typeof name !== 'string') return ''
-  const trimmed = name.trim()
-  if (!trimmed) return ''
-
-  // For emails, return the first letter
-  if (trimmed.includes('@')) {
-    return trimmed.charAt(0).toUpperCase()
-  }
-
-  const parts = trimmed.split(/\s+/)
-  if (parts.length === 1) return parts[0].charAt(0).toUpperCase()
-
-  const first = parts[0] || ''
-  const last = parts[parts.length - 1] || ''
-  return `${first.charAt(0)}${last.charAt(0)}`.toUpperCase()
-}
-
 const displayNameForProfile = (profile?: UserProfileExtended | null) =>
   getDisplayName(profile, 'Member')
 
@@ -597,11 +579,7 @@ export const LeadershipCouncilPage: React.FC = () => {
                       name={mentorProfile ? displayNameForProfile(mentorProfile) : undefined}
                       src={mentorProfile?.avatarUrl}
                       bg="brand.primary"
-                    >
-                      {!mentorProfile?.avatarUrl && mentorProfile && (
-                        initialsFromName(displayNameForProfile(mentorProfile))
-                      )}
-                    </Avatar>
+                    />
                     {mentorProfile?.availabilityStatus && (
                       <Badge colorScheme={badgeColor(mentorProfile.availabilityStatus)} variant="subtle">
                         {mentorProfile.availabilityStatus}
@@ -819,11 +797,7 @@ export const LeadershipCouncilPage: React.FC = () => {
                           name={displayNameForProfile(ambassadorProfile)}
                           src={ambassadorProfile.avatarUrl}
                           bg="brand.primary"
-                        >
-                          {!ambassadorProfile.avatarUrl && (
-                            initialsFromName(displayNameForProfile(ambassadorProfile))
-                          )}
-                        </Avatar>
+                        />
                         {ambassadorProfile.availabilityStatus && (
                           <Badge colorScheme={badgeColor(ambassadorProfile.availabilityStatus)} variant="subtle">
                             {ambassadorProfile.availabilityStatus}
@@ -864,9 +838,7 @@ export const LeadershipCouncilPage: React.FC = () => {
                           name={displayNameForProfile(partnerProfile)}
                           src={partnerProfile.avatarUrl}
                           bg="brand.primary"
-                        >
-                          {!partnerProfile.avatarUrl && initialsFromName(displayNameForProfile(partnerProfile))}
-                        </Avatar>
+                        />
                         <Box>
                           <Heading size="sm">{displayNameForProfile(partnerProfile)}</Heading>
                           <Text color="text.secondary">{partnerProfile.title || 'Transformation Partner'}</Text>

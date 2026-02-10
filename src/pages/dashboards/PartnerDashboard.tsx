@@ -1252,8 +1252,15 @@ export const PartnerDashboard: React.FC = () => {
       return { success: 0, failed: 0 }
     }
 
-    const users = payload.users
-      .filter((item) => item.email)
+    const requiresEmail = payload.channel === 'email' || payload.channel === 'both'
+    const eligibleUsers = payload.users.filter((item) => !requiresEmail || Boolean(item.email))
+    const skippedCount = payload.users.length - eligibleUsers.length
+
+    if (eligibleUsers.length === 0) {
+      return { success: 0, failed: skippedCount }
+    }
+
+    const users = eligibleUsers
       .map((item) => {
         const lastActiveValue = item.lastActiveAt || item.lastActive
         const parsedLastActive = lastActiveValue ? new Date(lastActiveValue) : null
@@ -1264,7 +1271,7 @@ export const PartnerDashboard: React.FC = () => {
 
         return {
           id: item.id,
-          email: item.email,
+          email: item.email || undefined,
           name: getDisplayName(item, 'Member'),
           organizationName: item.companyCode || 'Your organization',
           daysInactive,
@@ -1277,9 +1284,10 @@ export const PartnerDashboard: React.FC = () => {
       adminId,
       template: payload.template,
       channel: payload.channel,
+      scheduleAt: payload.scheduleAt,
     })
 
-    return { success: result.success.length, failed: result.failed.length }
+    return { success: result.success.length, failed: result.failed.length + skippedCount }
   }, [profile?.id, user?.uid])
 
   const renderAtRiskPage = () => (

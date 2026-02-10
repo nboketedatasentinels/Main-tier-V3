@@ -53,7 +53,7 @@ import {
 import { EngagementChart } from '@/components/admin/EngagementChart'
 import { AtRiskInterventionFlow } from '@/components/partner/AtRiskInterventionFlow'
 import SendNudgeModal from '@/components/partner/nudges/SendNudgeModal'
-import { getActiveNudgeTemplates } from '@/services/nudgeService'
+import { createNudgeTemplateRecord, getActiveNudgeTemplates } from '@/services/nudgeService'
 import { useAuth } from '@/hooks/useAuth'
 import type { PartnerUser } from '@/hooks/usePartnerDashboardData'
 import type { PartnerInterventionSummary } from '@/hooks/partner/usePartnerInterventions'
@@ -186,6 +186,7 @@ export const AtRiskCommandPanel: React.FC<AtRiskCommandPanelProps> = ({
   const [campaignScheduleMode, setCampaignScheduleMode] = useState<CampaignScheduleMode>('send-now')
   const [campaignScheduleAt, setCampaignScheduleAt] = useState('')
   const [campaignSending, setCampaignSending] = useState(false)
+  const [campaignTemplateSaving, setCampaignTemplateSaving] = useState(false)
   const [tipExpanded, setTipExpanded] = useState(true)
   const { isOpen: isAnalysisOpen, onOpen, onClose } = useDisclosure()
   const {
@@ -507,14 +508,46 @@ export const AtRiskCommandPanel: React.FC<AtRiskCommandPanelProps> = ({
     [campaignPreviewRecipient],
   )
 
-  const effectiveCampaignTemplate = useMemo(() => {
-    if (!activeTemplate) return null
+  const resetCampaignComposer = useCallback(() => {
+    setCampaignStep(1)
+    setSelectedTemplateId(null)
+    setCampaignRecipientIds([])
+    setCampaignSegment('all')
+    setCampaignSubject('')
+    setCampaignMessage('')
+    setCampaignChannel('both')
+    setCampaignScheduleMode('send-now')
+    setCampaignScheduleAt('')
+  }, [])
+
+  const effectiveCampaignTemplate = useMemo<NudgeTemplateRecord | null>(() => {
+    const subject = campaignSubject.trim()
+    const message = campaignMessage.trim()
+
+    if (activeTemplate) {
+      return {
+        ...activeTemplate,
+        subject: subject || activeTemplate.subject,
+        message_body: message || activeTemplate.message_body,
+      }
+    }
+
+    if (!subject || !message) return null
+
     return {
-      ...activeTemplate,
-      subject: campaignSubject.trim() || activeTemplate.subject,
-      message_body: campaignMessage.trim() || activeTemplate.message_body,
+      id: 'custom-campaign-template',
+      name: 'Custom campaign message',
+      subject,
+      message_body: message,
+      template_type: 'Encouragement' as const,
+      target_audience: 'At-risk learners',
+      is_active: false,
+      created_at: null,
+      updated_at: null,
     }
   }, [activeTemplate, campaignMessage, campaignSubject])
+
+  const allCampaignRecipientsSelected = campaignAudience.length > 0 && campaignRecipientIds.length === campaignAudience.length
 
   const handleToggleCampaignRecipient = (id: string) => {
     setCampaignRecipientIds((prev) => (
@@ -523,7 +556,7 @@ export const AtRiskCommandPanel: React.FC<AtRiskCommandPanelProps> = ({
   }
 
   const handleToggleAllCampaignRecipients = () => {
-    if (campaignRecipientIds.length === campaignAudience.length) {
+    if (allCampaignRecipientsSelected) {
       setCampaignRecipientIds([])
       return
     }
@@ -545,10 +578,10 @@ export const AtRiskCommandPanel: React.FC<AtRiskCommandPanelProps> = ({
     }
 
     if (campaignStep === 2) {
-      if (!selectedTemplateId) {
+      if (!campaignSubject.trim() && !campaignMessage.trim()) {
         toast({
-          title: 'Select a template',
-          description: 'Choose a template before continuing.',
+          title: 'Add campaign content',
+          description: 'Choose a template or compose a custom subject and message.',
           status: 'warning',
         })
         return
@@ -564,6 +597,55 @@ export const AtRiskCommandPanel: React.FC<AtRiskCommandPanelProps> = ({
     }
 
     setCampaignStep((prev) => Math.min(4, prev + 1))
+  }
+
+  const handleStartCampaignFromScratch = () => {
+    setSelectedTemplateId(null)
+    setCampaignSubject('')
+    setCampaignMessage('')
+  }
+
+  const handleSaveCampaignTemplate = async () => {
+    const subject = campaignSubject.trim()
+    const message = campaignMessage.trim()
+    if (!subject || !message) {
+      toast({
+        title: 'Complete your message',
+        description: 'Subject and message body are both required before saving.',
+        status: 'warning',
+      })
+      return
+    }
+
+    setCampaignTemplateSaving(true)
+    try {
+      const baseName = subject.length > 42 ? `${subject.slice(0, 42).trimEnd()}...` : subject
+      const created = await createNudgeTemplateRecord({
+        name: baseName || 'Campaign template',
+        subject,
+        message_body: message,
+        template_type: campaignSegment === 'critical' ? 'Critical Alert' : 'Encouragement',
+        target_audience: 'At-risk learners',
+        is_active: true,
+      })
+
+      setActiveTemplates((prev) => [created, ...prev])
+      setSelectedTemplateId(created.id)
+      toast({
+        title: 'Template saved',
+        description: 'The campaign template is now available for reuse.',
+        status: 'success',
+      })
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Unable to save template.'
+      toast({
+        title: 'Template save failed',
+        description: message,
+        status: 'error',
+      })
+    } finally {
+      setCampaignTemplateSaving(false)
+    }
   }
 
   const handleSendCampaignTest = async () => {
@@ -632,13 +714,44 @@ export const AtRiskCommandPanel: React.FC<AtRiskCommandPanelProps> = ({
       return
     }
 
-    if (campaignScheduleMode !== 'send-now') {
+    if (campaignScheduleMode === 'drip') {
       toast({
-        title: 'Scheduled sends unavailable',
-        description: 'Only "Send immediately" is currently supported for campaign delivery.',
+        title: 'Drip campaigns unavailable',
+        description: 'Drip campaign enrollment is not enabled yet.',
         status: 'info',
       })
       return
+    }
+
+    let scheduleAt: string | undefined
+    if (campaignScheduleMode === 'tomorrow') {
+      const tomorrow = new Date()
+      tomorrow.setDate(tomorrow.getDate() + 1)
+      tomorrow.setHours(9, 0, 0, 0)
+      scheduleAt = tomorrow.toISOString()
+    }
+
+    if (campaignScheduleMode === 'custom') {
+      const customSchedule = parseDate(campaignScheduleAt)
+      if (!customSchedule) {
+        toast({
+          title: 'Invalid schedule time',
+          description: 'Select a valid date and time for scheduled delivery.',
+          status: 'warning',
+        })
+        return
+      }
+
+      if (customSchedule.getTime() <= Date.now()) {
+        toast({
+          title: 'Schedule must be in the future',
+          description: 'Choose a future date and time for the campaign.',
+          status: 'warning',
+        })
+        return
+      }
+
+      scheduleAt = customSchedule.toISOString()
     }
 
     setCampaignSending(true)
@@ -648,17 +761,18 @@ export const AtRiskCommandPanel: React.FC<AtRiskCommandPanelProps> = ({
         template: effectiveCampaignTemplate,
         channel: campaignChannel,
         message: campaignMessage,
-        scheduleAt: campaignScheduleAt || undefined,
+        scheduleAt,
       })
 
+      const scheduleLabel = scheduleAt ? new Date(scheduleAt).toLocaleString() : null
       toast({
-        title: summary.failed > 0 ? 'Campaign partially sent' : 'Campaign sent',
-        description: `Success: ${summary.success}. Failed: ${summary.failed}.`,
+        title: summary.failed > 0 ? 'Campaign partially processed' : scheduleAt ? 'Campaign scheduled' : 'Campaign sent',
+        description: `${scheduleLabel ? `Scheduled for ${scheduleLabel}. ` : ''}Success: ${summary.success}. Failed: ${summary.failed}.`,
         status: summary.failed > 0 ? 'warning' : 'success',
       })
 
       if (summary.failed === 0) {
-        setCampaignStep(1)
+        resetCampaignComposer()
       }
     } finally {
       setCampaignSending(false)
@@ -1056,7 +1170,7 @@ export const AtRiskCommandPanel: React.FC<AtRiskCommandPanelProps> = ({
                     onClick={handleToggleAllCampaignRecipients}
                     isDisabled={campaignAudience.length === 0}
                   >
-                    {campaignRecipientIds.length === campaignAudience.length ? 'Clear all' : 'Select all'}
+                    {allCampaignRecipientsSelected ? 'Clear all' : 'Select all'}
                   </Button>
                 </HStack>
                 <Box maxH="260px" overflowY="auto" border="1px solid" borderColor="brand.border" borderRadius="md">
@@ -1133,6 +1247,7 @@ export const AtRiskCommandPanel: React.FC<AtRiskCommandPanelProps> = ({
                               colorScheme="purple"
                               variant={selectedTemplateId === template.id ? 'solid' : 'outline'}
                               onClick={() => setSelectedTemplateId(template.id)}
+                              isDisabled={templateLoading}
                             >
                               Use template
                             </Button>
@@ -1146,7 +1261,9 @@ export const AtRiskCommandPanel: React.FC<AtRiskCommandPanelProps> = ({
                           <Plus size={24} />
                           <Text fontWeight="semibold">Create New Template</Text>
                           <Text fontSize="sm" color="brand.subtleText">Build a custom message for this audience.</Text>
-                          <Button size="sm" variant="outline">Start from scratch</Button>
+                          <Button size="sm" variant="outline" onClick={handleStartCampaignFromScratch}>
+                            Start from scratch
+                          </Button>
                         </Stack>
                       </CardBody>
                     </Card>
@@ -1190,15 +1307,14 @@ export const AtRiskCommandPanel: React.FC<AtRiskCommandPanelProps> = ({
                     <Button
                       colorScheme="purple"
                       size="sm"
-                      onClick={() => toast({
-                        title: 'Draft saved',
-                        description: 'Your campaign draft is saved for this session.',
-                        status: 'success',
-                      })}
+                      onClick={() => void handleSaveCampaignTemplate()}
+                      isLoading={campaignTemplateSaving}
                     >
                       Save as Template
                     </Button>
-                    <Button size="sm" variant="outline" onClick={() => setCampaignStep(3)}>Use Once</Button>
+                    <Button size="sm" variant="outline" onClick={handleCampaignNext}>
+                      Use Once
+                    </Button>
                   </HStack>
                   <Box p={4} borderRadius="md" bg="brand.accent" border="1px dashed" borderColor="brand.border">
                     <Text fontWeight="semibold">Preview</Text>
@@ -1264,7 +1380,7 @@ export const AtRiskCommandPanel: React.FC<AtRiskCommandPanelProps> = ({
                 )}
                 {campaignScheduleMode !== 'send-now' && (
                   <Text fontSize="sm" color="brand.subtleText">
-                    Scheduled delivery options are visible for planning, but only immediate send is currently enabled.
+                    Scheduled sends are queued for later delivery. Drip mode is still in progress.
                   </Text>
                 )}
               </Stack>
