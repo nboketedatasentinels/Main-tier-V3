@@ -1,12 +1,12 @@
 import { useMemo } from 'react'
 import { Center, Heading, Stack, Text } from '@chakra-ui/react'
-import type { ActivityState, JourneyConfig } from '@/hooks/useWeeklyChecklistViewModel'
+import type { ActivityState } from '@/hooks/useWeeklyChecklistViewModel'
 import { getVisibleActivities } from '@/utils/activityStateManager'
 import { WeeklyActivityCard } from './WeeklyActivityCard'
 
 export const ActivityList = ({
   activities,
-  journey,
+  selectedWeek,
   isWeekLocked,
   isAdmin,
   onMarkCompleted,
@@ -14,7 +14,7 @@ export const ActivityList = ({
   onOpenProof,
 }: {
   activities: ActivityState[]
-  journey: JourneyConfig | null
+  selectedWeek: number
   isWeekLocked: boolean
   isAdmin: boolean
   onMarkCompleted: (activity: ActivityState) => Promise<void>
@@ -37,7 +37,7 @@ export const ActivityList = ({
             <WeeklyActivityCard
               key={activity.id}
               activity={activity}
-              journey={journey}
+              selectedWeek={selectedWeek}
               isWeekLocked={isWeekLocked}
               isAdmin={isAdmin}
               onMarkCompleted={onMarkCompleted}

@@ -322,10 +322,8 @@ export function useWeeklyChecklistViewModel() {
 
     const windowWeek = selectedWeek // your availability util expects windowWeek; adapt if you use getWindowWeekNumber
 
-    const next: ActivityState[] = defs.map((def: ActivityDef) => ({
-      ...def,
-      status: ledgerCache.weekCompleted.has(def.id) ? 'completed' : 'not_started',
-      availability: calculateActivityAvailability(def, {
+    const next: ActivityState[] = defs.map((def: ActivityDef) => {
+      const availability = calculateActivityAvailability(def, {
         windowWeek,
         weekCount: ledgerCache.weekCounts[def.id] ?? 0,
         windowCount: ledgerCache.windowCounts[def.id] ?? 0,
@@ -333,8 +331,20 @@ export function useWeeklyChecklistViewModel() {
         lastCompletedWeek: ledgerCache.lastCompletedWeekByActivity[def.id],
         hasMentor,
         hasAmbassador,
-      }),
-    }))
+      })
+
+      // One-time activities exhausted in prior windows should present as completed.
+      const status: ActivityStatus =
+        ledgerCache.weekCompleted.has(def.id) || availability.state === 'permanently_exhausted'
+          ? 'completed'
+          : 'not_started'
+
+      return {
+        ...def,
+        status,
+        availability,
+      }
+    })
 
     setActivities(next)
     setLoading(false)
@@ -500,7 +510,10 @@ export function useWeeklyChecklistViewModel() {
               if (!remote) return activity
 
               const next = {
-                status: remote.status ?? activity.status,
+                status:
+                  activity.availability.state === 'permanently_exhausted'
+                    ? 'completed'
+                    : (remote.status ?? activity.status),
                 hasInteracted: remote.hasInteracted ?? activity.hasInteracted,
                 proofUrl: remote.proofUrl ?? activity.proofUrl,
                 notes: remote.notes ?? activity.notes,

@@ -24,7 +24,7 @@ export const WeeklyChecklistLayout = ({ vm }: { vm: VM }) => {
         <GridItem>
           <ActivityList
             activities={vm.activities}
-            journey={vm.journey}
+            selectedWeek={vm.selectedWeek}
             isWeekLocked={vm.isWeekLocked}
             isAdmin={vm.isAdmin}
             onMarkCompleted={vm.markCompleted}

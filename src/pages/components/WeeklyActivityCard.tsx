@@ -1,7 +1,8 @@
 import { Badge, Box, Button, HStack, Heading, Icon, Stack, Tag, Text, Tooltip } from '@chakra-ui/react'
 import { AlertTriangle, CalendarClock, CheckCircle, Circle, Infinity, Lock, RotateCcw, ShieldCheck, Zap } from 'lucide-react'
-import type { ActivityState, JourneyConfig } from '@/hooks/useWeeklyChecklistViewModel'
+import type { ActivityState } from '@/hooks/useWeeklyChecklistViewModel'
 import { getNextWindowAvailabilityMessage } from '@/utils/activityStateManager'
+import { getWindowNumber, PARALLEL_WINDOW_SIZE_WEEKS } from '@/utils/windowCalculations'
 
 const statusLabel: Record<ActivityState['status'], string> = {
   not_started: 'Not started',
@@ -35,7 +36,7 @@ const visibilityBadgeConfig: Record<VisibilityState, { label: string; colorSchem
 
 export const WeeklyActivityCard = ({
   activity,
-  journey,
+  selectedWeek,
   isWeekLocked,
   isAdmin,
   onMarkCompleted,
@@ -43,7 +44,7 @@ export const WeeklyActivityCard = ({
   onOpenProof,
 }: {
   activity: ActivityState
-  journey: JourneyConfig | null
+  selectedWeek: number
   isWeekLocked: boolean
   isAdmin: boolean
   onMarkCompleted: (activity: ActivityState) => Promise<void>
@@ -67,7 +68,8 @@ export const WeeklyActivityCard = ({
     if (lockedByInteraction) return 'Selection locked. Contact support to change.'
 
     if (activity.availability.state === 'next_window') {
-      return getNextWindowAvailabilityMessage(activity, journey?.currentWeek ? Math.ceil(journey.currentWeek / 4) : 1)
+      const currentWindow = getWindowNumber(selectedWeek, PARALLEL_WINDOW_SIZE_WEEKS)
+      return getNextWindowAvailabilityMessage(activity, currentWindow)
     }
 
     if (activity.availability.state === 'exhausted') {

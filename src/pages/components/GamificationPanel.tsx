@@ -16,6 +16,16 @@ export const GamificationPanel = ({
 }: {
   activities: ActivityState[]
 }) => {
+  const firstActionableActivity = useMemo(
+    () =>
+      activities.find(
+        (activity) =>
+          activity.availability.state === 'available' &&
+          (activity.status === 'not_started' || activity.status === 'rejected'),
+      ),
+    [activities],
+  )
+
   const firstIncompleteActivity = useMemo(
     () => activities.find((activity) => activity.status !== 'completed'),
     [activities],
@@ -34,8 +44,9 @@ export const GamificationPanel = ({
   }, [progressPct])
 
   const scrollToActivity = () => {
-    if (firstIncompleteActivity?.id) {
-      const el = document.getElementById(`activity-${firstIncompleteActivity.id}`)
+    const target = firstActionableActivity ?? firstIncompleteActivity
+    if (target?.id) {
+      const el = document.getElementById(`activity-${target.id}`)
       if (el) {
         el.scrollIntoView({ behavior: 'smooth', block: 'center' })
       }
@@ -51,14 +62,24 @@ export const GamificationPanel = ({
         <Alert status="info" variant="subtle" borderRadius="md">
           <AlertIcon />
           <Stack spacing={1}>
-            <Text color="text.secondary">Focus on your next incomplete activity.</Text>
+            <Text color="text.secondary">
+              {firstActionableActivity
+                ? 'Focus on your next available activity.'
+                : 'No activities are claimable right now. Review lock reasons and next-window timing.'}
+            </Text>
             <Text color="text.secondary" fontSize="sm">
-              Keep your streak alive by acting in the next 24 hours.
+              {firstActionableActivity
+                ? 'Keep your streak alive by acting in the next 24 hours.'
+                : 'Use this time to prepare proof and queue your next action.'}
             </Text>
           </Stack>
         </Alert>
-        <Button colorScheme="primary" onClick={scrollToActivity} isDisabled={!firstIncompleteActivity}>
-          {firstIncompleteActivity ? `Complete ${firstIncompleteActivity.title}` : 'All activities done'}
+        <Button colorScheme="primary" onClick={scrollToActivity} isDisabled={!firstActionableActivity && !firstIncompleteActivity}>
+          {firstActionableActivity
+            ? `Complete ${firstActionableActivity.title}`
+            : firstIncompleteActivity
+              ? `Review ${firstIncompleteActivity.title}`
+              : 'All activities done'}
         </Button>
         <Stack spacing={1} color="text.secondary">
           <Text fontWeight="bold">Streak tracker</Text>
