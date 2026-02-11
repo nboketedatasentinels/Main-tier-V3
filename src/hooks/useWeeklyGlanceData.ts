@@ -17,6 +17,7 @@ import {
 import { db } from '@/services/firebase'
 import { useAuth } from '@/hooks/useAuth'
 import { useOrganizationLeadership } from '@/hooks/useOrganizationLeadership'
+import { ORG_COLLECTION } from '@/constants/organizations'
 import { getWeekKey, getCurrentWeekNumber } from '@/utils/weekCalculations'
 import { JOURNEY_META, getMonthNumber, FULL_ACTIVITIES } from '@/config/pointsConfig'
 import { InspirationQuote } from '@/types'
@@ -116,6 +117,13 @@ const normalizePeerMatchStatus = (status?: string | null): PeerMatchStatus => {
   return 'new'
 }
 
+const toStringArray = (value: unknown): string[] => {
+  if (!Array.isArray(value)) return []
+  return value
+    .map((item) => (typeof item === 'string' ? item.trim() : ''))
+    .filter((item) => item.length > 0)
+}
+
 interface WeeklyGlanceLoadingState {
   points: boolean
   support: boolean
@@ -149,7 +157,7 @@ export const useWeeklyGlanceData = () => {
   const [weeklyHabits, setWeeklyHabits] = useState<WeeklyHabit[]>([])
   const [inspirationQuote, setInspirationQuote] = useState<InspirationQuote | null>(null)
   const [impactCount, setImpactCount] = useState<number>(0)
-  const [focusAreas, setFocusAreas] = useState<FocusArea[]>([]);
+  const [focusAreas, setFocusAreas] = useState<FocusArea[]>([])
   const [ledgerEntries, setLedgerEntries] = useState<LedgerEntry[]>([])
   const [loading, setLoading] = useState<WeeklyGlanceLoadingState>({
     points: true,
@@ -565,25 +573,53 @@ export const useWeeklyGlanceData = () => {
 
   useEffect(() => {
     const fetchFocusAreas = async () => {
-      if (!profile?.id) return;
-      setLoading(prev => ({ ...prev, focus: true }));
-      try {
-        // Mocking the focus areas for now
-        const mockFocusAreas: FocusArea[] = [
-          { id: '1', title: 'Leadership Reflection' },
-          { id: '2', title: 'Mentor Session' },
-          { id: '3', title: 'Impact Action' },
-        ];
-        setFocusAreas(mockFocusAreas);
-      } catch (error) {
-        setErrors(prev => ({ ...prev, focus: error as Error }));
-      } finally {
-        setLoading(prev => ({ ...prev, focus: false }));
+      if (!profile?.id) {
+        setFocusAreas([])
+        setLoading(prev => ({ ...prev, focus: false }))
+        return
       }
-    };
+      setLoading(prev => ({ ...prev, focus: true }))
+      try {
+        const resolvedFocusAreas = new Set<string>()
 
-    fetchFocusAreas();
-  }, [profile?.id]);
+        if (profile.companyId) {
+          const organizationSnapshot = await getDoc(doc(db, ORG_COLLECTION, profile.companyId))
+          if (organizationSnapshot.exists()) {
+            const organizationData = organizationSnapshot.data() as Record<string, unknown>
+            const leadership =
+              organizationData.leadership && typeof organizationData.leadership === 'object'
+                ? (organizationData.leadership as Record<string, unknown>)
+                : null
+
+            const focusCandidates = [
+              ...toStringArray(organizationData.focusAreas),
+              ...toStringArray(organizationData.ambassadorFocusAreas),
+              ...toStringArray(organizationData.partnerProgramFocus),
+              ...toStringArray(leadership?.ambassadorFocusAreas),
+              ...toStringArray(leadership?.partnerProgramFocus),
+            ]
+
+            for (const focusArea of focusCandidates) {
+              resolvedFocusAreas.add(focusArea)
+            }
+          }
+        }
+
+        setFocusAreas(
+          Array.from(resolvedFocusAreas).map((title, index) => ({
+            id: `focus-${index + 1}`,
+            title,
+          })),
+        )
+      } catch (error) {
+        setErrors(prev => ({ ...prev, focus: error as Error }))
+      } finally {
+        setLoading(prev => ({ ...prev, focus: false }))
+      }
+    }
+
+    void fetchFocusAreas()
+  }, [profile?.companyId, profile?.id])
 
   return {
     weeklyPoints,

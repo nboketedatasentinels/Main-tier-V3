@@ -1,6 +1,9 @@
 import React from 'react';
 import {
+  Alert,
+  AlertIcon,
   Box,
+  Button,
   Card,
   CardBody,
   Divider,
@@ -16,16 +19,75 @@ import { CalendarClock, Target, Flag } from 'lucide-react';
 import { useWindowProgress } from '@/hooks/useWindowProgress';
 import { WindowStatusBadge } from './WindowStatusBadge';
 import { getWindowRange, PARALLEL_WINDOW_SIZE_WEEKS } from '@/utils/windowCalculations';
+import { getDaysRemainingInWeek } from '@/utils/weekCalculations';
 
-const statusMessages = {
-  on_track: "You're pacing well",
-  warning: "Slightly behind — still recoverable",
-  alert: "Risk of falling behind",
-  recovery: "Great job — you're back on track",
+type BackendWindowStatus = 'on_track' | 'warning' | 'alert' | 'recovery';
+type DisplayWindowStatus = 'ahead' | 'on_track' | 'catching_up' | 'behind';
+
+const progressColorByStatus: Record<DisplayWindowStatus, string> = {
+  ahead: 'green',
+  on_track: 'teal',
+  catching_up: 'yellow',
+  behind: 'red',
 };
 
-export const WindowSummaryCard: React.FC = () => {
-  const { data, loading, error, windowNumber, totalWindows } = useWindowProgress();
+const getDisplayStatus = (
+  status: BackendWindowStatus,
+  ratio: number,
+  isFreshStartWeek: boolean,
+  pointsEarned: number
+): DisplayWindowStatus => {
+  if (ratio > 1) {
+    return 'ahead';
+  }
+
+  if (isFreshStartWeek && pointsEarned === 0) {
+    return 'on_track';
+  }
+
+  if (status === 'alert' || ratio < 0.75) {
+    return 'behind';
+  }
+
+  if (status === 'warning' || status === 'recovery') {
+    return 'catching_up';
+  }
+
+  return 'on_track';
+};
+
+const getPeakEndMessage = (
+  status: DisplayWindowStatus,
+  remainingPoints: number,
+  daysRemainingInWindow: number
+): string => {
+  if (status === 'ahead') {
+    return 'Peak reached. End this window with one more contribution to lock in momentum.';
+  }
+
+  if (status === 'on_track') {
+    return 'Steady pace. Finish strong with one more activity before the window closes.';
+  }
+
+  if (status === 'catching_up') {
+    return 'Momentum is improving. Keep pressing now so the window ends on target.';
+  }
+
+  const dayText = daysRemainingInWindow === 1 ? 'day' : 'days';
+  return `Risk state: ${remainingPoints.toLocaleString()} points left with ${daysRemainingInWindow} ${dayText} remaining.`;
+};
+
+interface WindowSummaryCardProps {
+  onNavigate?: () => void;
+}
+
+export const WindowSummaryCard: React.FC<WindowSummaryCardProps> = ({ onNavigate }) => {
+  const { data, loading, error, windowWeek, windowNumber, totalWindows } = useWindowProgress();
+  const daysRemainingThisWeek = getDaysRemainingInWeek();
+  const daysRemainingInWindow = Math.max(
+    0,
+    (windowWeek === 1 ? 7 : 0) + daysRemainingThisWeek
+  );
 
   if (loading) {
     return (
@@ -44,10 +106,42 @@ export const WindowSummaryCard: React.FC = () => {
   }
 
   if (error || !data) {
-    return null; // Or show error state
+    return (
+      <Card h="100%" variant="outline" borderColor="border.subtle">
+        <CardBody>
+          <Stack spacing={3}>
+            <HStack spacing={2}>
+              <Icon as={CalendarClock} color="brand.primary" />
+              <Text fontWeight="bold">Learner Window</Text>
+            </HStack>
+            <Alert status="warning" borderRadius="md">
+              <AlertIcon />
+              <Text fontSize="sm">
+                Window progress is temporarily unavailable. You can still continue earning points.
+              </Text>
+            </Alert>
+            {onNavigate && (
+              <Button size="sm" colorScheme="purple" alignSelf="flex-start" onClick={onNavigate}>
+                Review weekly checklist
+              </Button>
+            )}
+          </Stack>
+        </CardBody>
+      </Card>
+    );
   }
 
-  const progressValue = Math.min(100, (data.pointsEarned / data.windowTarget) * 100);
+  const progressRatio = data.windowTarget > 0 ? data.pointsEarned / data.windowTarget : 0;
+  const progressValue = Math.min(100, Math.max(0, progressRatio * 100));
+  const remainingPoints = Math.max(0, data.windowTarget - data.pointsEarned);
+  const isFreshStartWeek = windowWeek === 1;
+  const isFinalWindow = windowNumber >= totalWindows;
+  const displayStatus = getDisplayStatus(data.status, progressRatio, isFreshStartWeek, data.pointsEarned);
+  const pointsNeededPerDay =
+    remainingPoints > 0 && daysRemainingInWindow > 0
+      ? Math.ceil(remainingPoints / daysRemainingInWindow)
+      : 0;
+
   const { startWeek, endWeek } = getWindowRange(
     (windowNumber - 1) * PARALLEL_WINDOW_SIZE_WEEKS + 1,
     undefined,
@@ -63,7 +157,7 @@ export const WindowSummaryCard: React.FC = () => {
               <Icon as={CalendarClock} color="brand.primary" />
               <Text fontWeight="bold">Window {windowNumber} of {totalWindows}</Text>
             </HStack>
-            <WindowStatusBadge status={data.status} />
+            <WindowStatusBadge status={displayStatus} />
           </HStack>
 
           <Box>
@@ -72,19 +166,42 @@ export const WindowSummaryCard: React.FC = () => {
             </Text>
             <Progress
               value={progressValue}
-              colorScheme={data.status === 'alert' ? 'red' : data.status === 'warning' ? 'yellow' : 'purple'}
+              colorScheme={progressColorByStatus[displayStatus]}
               rounded="full"
               h={2}
             />
             <HStack justify="space-between" mt={2} fontSize="sm">
               <Text fontWeight="medium">{data.pointsEarned.toLocaleString()} pts earned</Text>
-              <Text color="text.secondary">{data.windowTarget.toLocaleString()} target</Text>
+              <Text color="text.secondary">
+                {remainingPoints > 0
+                  ? `${remainingPoints.toLocaleString()} pts to window target`
+                  : displayStatus === 'ahead'
+                    ? `${(data.pointsEarned - data.windowTarget).toLocaleString()} pts above target`
+                    : 'Target reached - finish strong'}
+              </Text>
             </HStack>
+            <HStack justify="space-between" mt={1} fontSize="xs" color="text.muted">
+              <Text>{data.windowTarget.toLocaleString()} pts target</Text>
+              <Text>{daysRemainingInWindow} day{daysRemainingInWindow === 1 ? '' : 's'} left in this window</Text>
+            </HStack>
+            {remainingPoints > 0 ? (
+              <Text mt={1} fontSize="xs" color={displayStatus === 'behind' ? 'red.600' : 'text.muted'}>
+                {daysRemainingInWindow > 0
+                  ? `${pointsNeededPerDay.toLocaleString()} pts/day needed to close the gap.`
+                  : `Window closes now with a ${remainingPoints.toLocaleString()} pt gap if no action is taken.`}
+              </Text>
+            ) : (
+              <Text mt={1} fontSize="xs" color="green.600">
+                {displayStatus === 'ahead'
+                  ? 'You are above target. Protect this lead through the window close.'
+                  : 'Target secured. Add one more activity for a strong finish.'}
+              </Text>
+            )}
           </Box>
 
           <Box>
-            <Text fontSize="xs" color="text.muted" fontStyle="italic">
-              {statusMessages[data.status]}
+            <Text fontSize="sm" fontWeight="medium" color={displayStatus === 'behind' ? 'red.700' : 'text.secondary'}>
+              {getPeakEndMessage(displayStatus, remainingPoints, daysRemainingInWindow)}
             </Text>
           </Box>
 
@@ -98,7 +215,15 @@ export const WindowSummaryCard: React.FC = () => {
               </Text>
             </HStack>
             <Text fontSize="sm" color="text.secondary">
-              Maintain consistency across both weeks to stay {data.status === 'on_track' ? 'on track' : 'aligned'} with your journey goals.
+              {isFreshStartWeek && data.pointsEarned === 0
+                ? 'Fresh start week. Complete one activity now to build momentum early.'
+                : displayStatus === 'ahead'
+                  ? 'You are ahead. Keep a steady cadence to preserve your lead at the end of this window.'
+                  : displayStatus === 'on_track'
+                    ? 'You are on track. Stay consistent to close this window with confidence.'
+                    : displayStatus === 'catching_up'
+                      ? 'You are catching up. Prioritize high-value activities to close the gap quickly.'
+                      : 'You are behind. Take immediate action on your next activity to avoid missing this window target.'}
             </Text>
           </VStack>
 
@@ -111,10 +236,16 @@ export const WindowSummaryCard: React.FC = () => {
                 Next Window
               </Text>
               <Text fontSize="sm" fontWeight="semibold">
-                Window {windowNumber + 1 > totalWindows ? totalWindows : windowNumber + 1}
+                {isFinalWindow ? 'Final window in journey' : `Window ${windowNumber + 1}`}
               </Text>
             </Box>
           </HStack>
+
+          {onNavigate && (
+            <Button size="sm" colorScheme="purple" alignSelf="flex-start" onClick={onNavigate}>
+              Review weekly checklist
+            </Button>
+          )}
         </Stack>
       </CardBody>
     </Card>

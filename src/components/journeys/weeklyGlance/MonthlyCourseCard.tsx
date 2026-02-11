@@ -50,7 +50,7 @@ const ExternalLinkButton = ({ href, isDisabled }: { href?: string; isDisabled?: 
 export const MonthlyCourseCard = ({ role, membershipStatus, transformationTier, data, loading, error }: MonthlyCourseCardProps) => {
   const resolvedRole = role ?? UserRole.USER
   const isFreeTierUser = isFreeUser({ role: resolvedRole, membershipStatus, transformationTier })
-  const courseTitle = data?.course?.title || (isFreeTierUser ? FREE_COURSE.title : 'Course details coming soon')
+  const courseTitle = data?.course?.title || (isFreeTierUser ? FREE_COURSE.title : 'Course assignment pending')
   const courseUrl = data?.course?.externalUrl || (isFreeTierUser ? FREE_COURSE.externalUrl : undefined)
   const enrollmentCode = isFreeTierUser ? FREE_COURSE.enrollmentCode : data?.enrollmentCode
   const monthLabel = formatMonthLabel(data?.monthNumber, data?.totalMonths)

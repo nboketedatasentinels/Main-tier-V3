@@ -131,7 +131,7 @@ export const JourneyHeader = ({
 
   const label = JOURNEY_LABELS[journey.journeyType]
   const startLabel = journeyStartDate ? format(journeyStartDate, 'MMM d, yyyy') : 'Not set'
-  const endLabel = journeyEndDate ? format(journeyEndDate, 'MMM d, yyyy') : 'TBD'
+  const endLabel = journeyEndDate ? format(journeyEndDate, 'MMM d, yyyy') : 'Not set'
   const overviewLabel = isMonthBasedJourney
     ? `Month ${currentMonthNumber} of ${totalMonths} · Week ${journey.currentWeek} of ${journey.programDurationWeeks}`
     : `Week ${journey.currentWeek} of ${journey.programDurationWeeks}`

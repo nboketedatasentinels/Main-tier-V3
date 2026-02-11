@@ -1315,7 +1315,7 @@ export const AtRiskCommandPanel: React.FC<AtRiskCommandPanelProps> = ({
                     </Text>
                     <Text fontSize="sm" mt={2}>
                       {previewCampaignText(
-                        campaignMessage || activeTemplate?.message_body || 'Message preview with sample data for the selected learner.',
+                        campaignMessage || activeTemplate?.message_body || 'Choose a template or write a message to preview.',
                       )}
                     </Text>
                   </Box>

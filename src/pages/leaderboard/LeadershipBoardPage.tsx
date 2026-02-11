@@ -1254,9 +1254,9 @@ export const LeadershipBoardPage: React.FC = () => {
                                 villageNames[row.user.villageId ?? ''] ||
                                 organizationRecord?.village ||
                                 row.user.villageId ||
-                                'Village TBD'
+                                'Village not assigned'
                               const clusterLabel =
-                                organizationRecord?.cluster || row.user.clusterId || 'Cluster TBD'
+                                organizationRecord?.cluster || row.user.clusterId || 'Cluster not assigned'
                               return (
                                 <Tr
                                   key={row.user.id}

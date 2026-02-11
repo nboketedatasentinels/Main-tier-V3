@@ -975,9 +975,14 @@ export const CompanyDashboard: React.FC = () => {
                       </Button>
                     </VStack>
                   ) : (
-                    <Text color="gray.600" fontSize="sm" mt={1}>
-                      Coming soon
-                    </Text>
+                    <VStack align="flex-start" spacing={2} mt={1}>
+                      <Text color="gray.600" fontSize="sm">
+                        Track your standing in the Leadership Board.
+                      </Text>
+                      <Button size="sm" variant="outline" as={RouterLink} to="/app/leadership-board">
+                        Open leaderboard
+                      </Button>
+                    </VStack>
                   )}
                 </Box>
                 <Box p={3} borderRadius="md" border="1px solid" borderColor="border.control" bg="gray.50">

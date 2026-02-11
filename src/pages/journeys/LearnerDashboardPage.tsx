@@ -253,7 +253,7 @@ export const LearnerDashboardPage = () => {
         <Grid templateColumns={{ base: '1fr', md: 'repeat(12, 1fr)' }} gap={6} alignItems="stretch">
           <GridItem colSpan={{ base: 1, md: 6 }} order={{ base: 1, md: 1 }}>
             {isParallelTrackingEnabled ? (
-              <WindowSummaryCard />
+              <WindowSummaryCard onNavigate={() => navigate('/app/weekly-checklist')} />
             ) : (
               <LearnerWindowCard
                 weekLabel={`Week ${data.weekNumber} • ${weekRange.label}`}

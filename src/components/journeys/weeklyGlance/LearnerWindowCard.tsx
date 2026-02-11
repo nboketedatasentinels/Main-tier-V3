@@ -85,13 +85,19 @@ export const LearnerWindowCard = ({
             <Text fontSize="xs" color="text.muted">
               Informational only
             </Text>
-            <HStack spacing={2} flexWrap="wrap">
-              {focusAreas.map((area) => (
-                <Badge key={area} variant="subtle" colorScheme="purple">
-                  {area}
-                </Badge>
-              ))}
-            </HStack>
+            {focusAreas.length > 0 ? (
+              <HStack spacing={2} flexWrap="wrap">
+                {focusAreas.map((area) => (
+                  <Badge key={area} variant="subtle" colorScheme="purple">
+                    {area}
+                  </Badge>
+                ))}
+              </HStack>
+            ) : (
+              <Text fontSize="sm" color="text.secondary">
+                No focus areas set for your organization.
+              </Text>
+            )}
           </VStack>
         </Stack>
       </CardBody>

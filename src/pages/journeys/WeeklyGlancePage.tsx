@@ -168,7 +168,13 @@ function buildWeeklyActivityFeed(params: {
     },
   ]
 
-  return [...activityEntries, ...statusItems]
+  const statusPriority: Record<ActivityFeedStatus, number> = {
+    attention: 0,
+    pending: 1,
+    complete: 2,
+  }
+
+  return [...statusItems, ...activityEntries].sort((a, b) => statusPriority[a.status] - statusPriority[b.status])
 }
 
 /**
@@ -415,6 +421,10 @@ export const WeeklyGlancePage = () => {
     navigate('/app/weekly-checklist')
   }, [navigate])
 
+  const handleViewPendingApprovals = useCallback(() => {
+    navigate('/app/weekly-checklist?focus=pending-approvals')
+  }, [navigate])
+
   return (
     <Box p={{ base: 4, md: 6 }}>
       <Stack spacing={6}>
@@ -475,7 +485,7 @@ export const WeeklyGlancePage = () => {
         >
           <GridItem colSpan={{ base: 1, md: 6 }} order={{ base: 1, md: 1 }}>
             {isParallelTrackingEnabled ? (
-              <WindowSummaryCard />
+              <WindowSummaryCard onNavigate={handleNavigateChecklist} />
             ) : (
               <LearnerWindowCard
                 weekLabel={`Week ${data.weekNumber} • ${weekRange.label}`}
@@ -483,7 +493,7 @@ export const WeeklyGlancePage = () => {
                 progressValue={weekProgress}
                 targetPoints={targetPoints}
                 earnedPoints={earnedPoints}
-                focusAreas={['Leadership reflection', 'Mentor session', 'Impact action']}
+                focusAreas={(data.focusAreas ?? []).map((focusArea) => focusArea.title)}
                 nextMilestone={`Week ${data.weekNumber + 1} readiness review`}
               />
             )}
@@ -503,6 +513,7 @@ export const WeeklyGlancePage = () => {
               eligibility={eligibility}
               loading={eligibilityLoading}
               error={eligibilityError}
+              onViewApprovals={handleViewPendingApprovals}
             />
           </GridItem>
 

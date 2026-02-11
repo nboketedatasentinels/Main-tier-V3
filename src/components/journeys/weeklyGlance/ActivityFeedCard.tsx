@@ -1,5 +1,6 @@
 import { Box, Button, Card, CardBody, HStack, Icon, Stack, Text, VStack } from '@chakra-ui/react'
 import { AlertTriangle, CheckCircle2, Clock3 } from 'lucide-react'
+import { useMemo, useState } from 'react'
 
 export type ActivityFeedStatus = 'complete' | 'pending' | 'attention'
 
@@ -28,7 +29,9 @@ const statusIconMap: Record<ActivityFeedStatus, typeof CheckCircle2> = {
 }
 
 export const ActivityFeedCard = ({ items }: ActivityFeedCardProps) => {
-  const visibleItems = items.slice(0, 5)
+  const [showAll, setShowAll] = useState(false)
+  const openLoops = useMemo(() => items.filter(item => item.status !== 'complete').length, [items])
+  const visibleItems = showAll ? items : items.slice(0, 5)
 
   return (
     <Card h="100%" variant="outline" borderColor="border.subtle">
@@ -36,6 +39,9 @@ export const ActivityFeedCard = ({ items }: ActivityFeedCardProps) => {
         <Stack spacing={4}>
           <HStack justify="space-between">
             <Text fontWeight="bold" fontSize="md">Activity feed</Text>
+            <Text fontSize="xs" color="text.muted">
+              {openLoops} open loop{openLoops === 1 ? '' : 's'}
+            </Text>
           </HStack>
 
           <VStack align="stretch" spacing={3}>
@@ -71,8 +77,14 @@ export const ActivityFeedCard = ({ items }: ActivityFeedCardProps) => {
           </VStack>
 
           {items.length > 5 && (
-            <Button variant="link" size="sm" alignSelf="flex-start" color="brand.primary">
-              View all activity
+            <Button
+              variant="link"
+              size="sm"
+              alignSelf="flex-start"
+              color="brand.primary"
+              onClick={() => setShowAll(prev => !prev)}
+            >
+              {showAll ? 'Show fewer updates' : `View all activity (${items.length})`}
             </Button>
           )}
         </Stack>

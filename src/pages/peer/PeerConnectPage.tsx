@@ -1233,7 +1233,7 @@ export const PeerConnectPage: React.FC = () => {
                             <HStack spacing={2} pt={1}>
                               <Badge colorScheme="primary" variant="subtle" display="flex" alignItems="center" gap={1}>
                                 <Icon as={Clock3} w={3} h={3} />
-                                {weeklyMatch.peer.timezone || 'Timezone TBD'}
+                                {weeklyMatch.peer.timezone || 'Timezone not set'}
                               </Badge>
                               <Badge colorScheme="primary" variant="solid">
                                 {weeklyMatch.matchReason}

@@ -36,6 +36,7 @@ import {
 import { AlertTriangle, CalendarRange, CheckCircle, Lock, Plus, ShieldCheck } from 'lucide-react'
 import { collection, doc, getDoc, getDocs, onSnapshot, query, serverTimestamp, setDoc, where } from 'firebase/firestore'
 import { addDays, format } from 'date-fns'
+import { useLocation } from 'react-router-dom'
 import { removeUndefinedFields } from '@/utils/firestore'
 import { db } from '@/services/firebase'
 import { useAuth } from '@/hooks/useAuth'
@@ -53,7 +54,7 @@ import {
   MONTH_BASED_JOURNEYS,
   resolveJourneyType,
 } from '@/utils/journeyType'
-import { getWindowNumber, getWindowRange, getWindowWeekNumber } from '@/utils/windowCalculations'
+import { getWindowNumber, getWindowRange, getWindowWeekNumber, PARALLEL_WINDOW_SIZE_WEEKS } from '@/utils/windowCalculations'
 import {
   calculateActivityAvailability,
   getVisibleActivities,
@@ -101,7 +102,7 @@ interface WeekMilestone {
 interface WindowProgressData {
   pointsEarned: number;
   windowTarget: number;
-  status: 'on_track' | 'warning' | 'alert';
+  status: 'on_track' | 'warning' | 'alert' | 'recovery';
 }
 
 
@@ -145,6 +146,7 @@ const availabilityReasonLabels: Record<ActivityAvailabilityReason, string> = {
 
 const WeeklyChecklistPage: React.FC = () => {
   const { user, profile } = useAuth()
+  const location = useLocation()
   const [journey, setJourney] = useState<JourneyConfig | null>(null)
   const [activities, setActivities] = useState<ActivityState[]>([])
   const [selectedWeek, setSelectedWeek] = useState<number>(1)
@@ -164,6 +166,11 @@ const WeeklyChecklistPage: React.FC = () => {
   const [weeklyProgress, setWeeklyProgress] = useState<WeeklyProgress | null>(null)
   const [windowProgressData, setWindowProgressData] = useState<WindowProgressData | null>(null);
   const [allWeeksProgress, setAllWeeksProgress] = useState<WeeklyProgress[]>([])
+
+  const focusTarget = useMemo(() => {
+    const params = new URLSearchParams(location.search)
+    return params.get('focus')
+  }, [location.search])
 
   const persistChecklist = async (updatedActivities: ActivityState[]) => {
     if (!user) return
@@ -195,6 +202,9 @@ const WeeklyChecklistPage: React.FC = () => {
     return journey?.journeyType || '4W';
   }, [journey?.journeyType]);
 
+  const isParallelWindowTrackingEnabled = import.meta.env.VITE_FEATURE_FLAG_PARALLEL_WINDOW_TRACKING === 'true';
+  const windowSizeWeeks = isParallelWindowTrackingEnabled ? PARALLEL_WINDOW_SIZE_WEEKS : 4;
+
   const weeklyTarget = useMemo(() => {
     if (!journey) return DEFAULT_WEEKLY_TARGET;
     return JOURNEY_META[journey.journeyType].weeklyTarget;
@@ -215,8 +225,8 @@ const WeeklyChecklistPage: React.FC = () => {
         windowWeeks: 1,
       };
     }
-    return getWindowRange(selectedWeek, journey.programDurationWeeks);
-  }, [journey, selectedWeek]);
+    return getWindowRange(selectedWeek, journey.programDurationWeeks, windowSizeWeeks);
+  }, [journey, selectedWeek, windowSizeWeeks]);
 
   const windowProgress = useMemo(() => {
     if (!journey) {
@@ -359,8 +369,8 @@ const WeeklyChecklistPage: React.FC = () => {
     setError('');
     try {
       const activityDefs = getActivitiesForJourney(journey.journeyType);
-      const windowNumber = getWindowNumber(selectedWeek);
-      const windowWeek = getWindowWeekNumber(selectedWeek);
+      const windowNumber = getWindowNumber(selectedWeek, windowSizeWeeks);
+      const windowWeek = getWindowWeekNumber(selectedWeek, windowSizeWeeks);
       const hasMentor = Boolean(profile?.mentorId || profile?.mentorOverrideId);
       const hasAmbassador = Boolean(profile?.ambassadorId || profile?.ambassadorOverrideId);
 
@@ -440,19 +450,17 @@ const WeeklyChecklistPage: React.FC = () => {
     } finally {
       setActivityLoading(false);
     }
-  }, [journey, profile?.ambassadorId, profile?.ambassadorOverrideId, profile?.mentorId, profile?.mentorOverrideId, selectedWeek, user]);
+  }, [journey, profile?.ambassadorId, profile?.ambassadorOverrideId, profile?.mentorId, profile?.mentorOverrideId, selectedWeek, user, windowSizeWeeks]);
 
   useEffect(() => {
     if (!user) return;
 
-    const useWindowProgress = import.meta.env.VITE_FEATURE_FLAG_PARALLEL_WINDOW_TRACKING === 'true';
-
-    if (useWindowProgress) {
-      const windowNumber = getWindowNumber(selectedWeek);
-      const progressRef = doc(db, "windowProgress", `${user.uid}__${windowNumber}`);
-      const unsubscribe = onSnapshot(progressRef, (doc) => {
-        if (doc.exists()) {
-          setWindowProgressData(doc.data() as WindowProgressData);
+    if (isParallelWindowTrackingEnabled) {
+      const windowNumber = getWindowNumber(selectedWeek, windowSizeWeeks);
+      const progressRef = doc(db, "windowProgress", `${user.uid}__${normalizedJourneyType}__${windowNumber}`);
+      const unsubscribe = onSnapshot(progressRef, (snapshot) => {
+        if (snapshot.exists()) {
+          setWindowProgressData(snapshot.data() as WindowProgressData);
         } else {
           setWindowProgressData(null);
         }
@@ -469,7 +477,7 @@ const WeeklyChecklistPage: React.FC = () => {
       });
       return () => unsubscribe();
     }
-  }, [normalizeWeeklyProgress, selectedWeek, user]);
+  }, [isParallelWindowTrackingEnabled, normalizeWeeklyProgress, normalizedJourneyType, selectedWeek, user, windowSizeWeeks]);
 
   useEffect(() => {
     if (!user || !journey) {
@@ -705,12 +713,23 @@ const WeeklyChecklistPage: React.FC = () => {
   }, [journey, selectedWeek]);
 
   const progressStatus = useMemo(() => {
-    const useWindowProgress = import.meta.env.VITE_FEATURE_FLAG_PARALLEL_WINDOW_TRACKING === 'true';
-
-    if (useWindowProgress) {
+    if (isParallelWindowTrackingEnabled) {
       if (!windowProgressData) return { color: 'gray', label: 'Loading...', pct: 0 };
       const { pointsEarned, windowTarget } = windowProgressData;
       const pct = windowTarget > 0 ? Math.min(100, Math.round((pointsEarned / windowTarget) * 100)) : 0;
+
+      const statusConfig: Record<WindowProgressData['status'], { color: 'green' | 'yellow' | 'red' | 'blue'; label: string }> = {
+        on_track: { color: 'green', label: 'On Track' },
+        warning: { color: 'yellow', label: 'Warning' },
+        alert: { color: 'red', label: 'Alert' },
+        recovery: { color: 'blue', label: 'Recovery' },
+      };
+
+      const statusFromData = statusConfig[windowProgressData.status];
+      if (statusFromData) {
+        return { color: statusFromData.color, label: statusFromData.label, pct };
+      }
+
       if (pct >= 100) return { color: 'green', label: 'On Track', pct };
       if (pct >= 75) return { color: 'yellow', label: 'Warning', pct };
       return { color: 'red', label: 'Alert', pct };
@@ -722,16 +741,15 @@ const WeeklyChecklistPage: React.FC = () => {
       if (pct >= 75) return { color: 'yellow', label: 'Warning', pct };
       return { color: 'red', label: 'Alert', pct };
     }
-  }, [weeklyProgress, windowProgressData]);
+  }, [isParallelWindowTrackingEnabled, weeklyProgress, windowProgressData]);
 
   const weeklyPointsEarned = useMemo(() => {
-    const useWindowProgress = import.meta.env.VITE_FEATURE_FLAG_PARALLEL_WINDOW_TRACKING === 'true';
-    if (useWindowProgress) {
+    if (isParallelWindowTrackingEnabled) {
         return windowProgressData?.pointsEarned ?? pendingCounts.points;
     }
     if (weeklyProgress) return weeklyProgress.pointsEarned;
     return pendingCounts.points;
-  }, [pendingCounts.points, weeklyProgress, windowProgressData]);
+  }, [isParallelWindowTrackingEnabled, pendingCounts.points, weeklyProgress, windowProgressData]);
 
   const journeyProgress = useMemo(() => {
     if (!journey) {
@@ -777,7 +795,7 @@ const WeeklyChecklistPage: React.FC = () => {
     if (!journey) return null;
     const label = JOURNEY_LABELS[journey.journeyType];
     const startLabel = journeyStartDate ? format(journeyStartDate, 'MMM d, yyyy') : 'Not set';
-    const endLabel = journeyEndDate ? format(journeyEndDate, 'MMM d, yyyy') : 'TBD';
+    const endLabel = journeyEndDate ? format(journeyEndDate, 'MMM d, yyyy') : 'Not set';
     const overviewLabel = isMonthBasedJourney
       ? `Month ${currentMonthNumber} of ${totalMonths} · Week ${journey.currentWeek} of ${journey.programDurationWeeks}`
       : `Week ${journey.currentWeek} of ${journey.programDurationWeeks}`;
@@ -884,6 +902,27 @@ const WeeklyChecklistPage: React.FC = () => {
       setTimeout(() => activityRefs.current[firstIncompleteActivity.id]?.classList.remove('focus-ring'), 2000)
     }
   }
+
+  useEffect(() => {
+    if (focusTarget !== 'pending-approvals' || activityLoading) return
+    const firstPendingApproval = activities.find(
+      activity => activity.status === 'pending' || (activity.requiresApproval && activity.status !== 'completed')
+    )
+    const targetId = firstPendingApproval?.id
+    const targetEl = targetId ? activityRefs.current[targetId] : null
+    if (!targetId || !targetEl) return
+
+    targetEl.scrollIntoView({ behavior: 'smooth', block: 'center' })
+    targetEl.classList.add('focus-ring')
+    const timeoutId = window.setTimeout(() => {
+      activityRefs.current[targetId]?.classList.remove('focus-ring')
+    }, 2000)
+
+    return () => {
+      window.clearTimeout(timeoutId)
+      activityRefs.current[targetId]?.classList.remove('focus-ring')
+    }
+  }, [activities, activityLoading, focusTarget])
 
   const getAvailabilityMessage = (activity: ActivityState) => {
     if (activity.availability.state === 'available') return null

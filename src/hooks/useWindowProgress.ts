@@ -2,7 +2,12 @@ import { useEffect, useState, useMemo } from 'react'
 import { doc, onSnapshot } from 'firebase/firestore'
 import { db } from '@/services/firebase'
 import { useAuth } from '@/hooks/useAuth'
-import { getWindowNumber, PARALLEL_WINDOW_SIZE_WEEKS, getWindowTargetByJourney } from '@/utils/windowCalculations'
+import {
+  getWindowNumber,
+  getWindowWeekNumber,
+  PARALLEL_WINDOW_SIZE_WEEKS,
+  getWindowTargetByJourney
+} from '@/utils/windowCalculations'
 import { getCurrentWeekNumber } from '@/utils/weekCalculations'
 import { JOURNEY_META } from '@/config/pointsConfig'
 import type { WindowProgress } from '@/types'
@@ -25,6 +30,10 @@ export const useWindowProgress = () => {
     return getWindowNumber(currentWeek, PARALLEL_WINDOW_SIZE_WEEKS)
   }, [currentWeek])
 
+  const windowWeek = useMemo(() => {
+    return getWindowWeekNumber(currentWeek, PARALLEL_WINDOW_SIZE_WEEKS)
+  }, [currentWeek])
+
   useEffect(() => {
     if (!profileId || !journeyType) {
       setData(null)
@@ -32,6 +41,9 @@ export const useWindowProgress = () => {
       setLoading(false)
       return
     }
+
+    setLoading(true)
+    setError(null)
 
     const docId = `${profileId}__${journeyType}__${windowNumber}`
     const docRef = doc(db, 'windowProgress', docId)
@@ -79,6 +91,8 @@ export const useWindowProgress = () => {
     data,
     loading,
     error,
+    currentWeek,
+    windowWeek,
     windowNumber,
     totalWindows
   }
