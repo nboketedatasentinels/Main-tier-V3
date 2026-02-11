@@ -7,21 +7,41 @@ import { WeeklyActivityCard } from './WeeklyActivityCard'
 export const ActivityList = ({
   activities,
   selectedWeek,
+  currentWeek,
   isWeekLocked,
   isAdmin,
+  onOpenCurrentWeek,
   onMarkCompleted,
   onMarkNotStarted,
   onOpenProof,
 }: {
   activities: ActivityState[]
   selectedWeek: number
+  currentWeek: number
   isWeekLocked: boolean
   isAdmin: boolean
+  onOpenCurrentWeek: () => void
   onMarkCompleted: (activity: ActivityState) => Promise<void>
   onMarkNotStarted: (activity: ActivityState) => Promise<void>
   onOpenProof: (activity: ActivityState) => void
 }) => {
   const visibleActivities = useMemo(() => getVisibleActivities(activities), [activities])
+  const firstActionableActivityId = useMemo(
+    () =>
+      visibleActivities.find(
+        (activity) =>
+          activity.availability.state === 'available' &&
+          (activity.status === 'not_started' || activity.status === 'rejected'),
+      )?.id ?? null,
+    [visibleActivities],
+  )
+
+  const focusFirstActionableActivity = () => {
+    if (!firstActionableActivityId) return
+    const target = document.getElementById(`activity-${firstActionableActivityId}`)
+    if (!target) return
+    target.scrollIntoView({ behavior: 'smooth', block: 'center' })
+  }
 
   return (
     <Stack spacing={4}>
@@ -38,8 +58,12 @@ export const ActivityList = ({
               key={activity.id}
               activity={activity}
               selectedWeek={selectedWeek}
+              currentWeek={currentWeek}
               isWeekLocked={isWeekLocked}
               isAdmin={isAdmin}
+              onOpenCurrentWeek={onOpenCurrentWeek}
+              onFocusAvailableActivity={focusFirstActionableActivity}
+              hasAvailableAlternative={Boolean(firstActionableActivityId && firstActionableActivityId !== activity.id)}
               onMarkCompleted={onMarkCompleted}
               onMarkNotStarted={onMarkNotStarted}
               onOpenProof={onOpenProof}

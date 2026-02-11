@@ -3,6 +3,7 @@ import { AlertTriangle, CalendarClock, CheckCircle, Circle, Infinity, Lock, Rota
 import type { ActivityState } from '@/hooks/useWeeklyChecklistViewModel'
 import { getNextWindowAvailabilityMessage } from '@/utils/activityStateManager'
 import { getWindowNumber, PARALLEL_WINDOW_SIZE_WEEKS } from '@/utils/windowCalculations'
+import { Link as RouterLink } from 'react-router-dom'
 
 const statusLabel: Record<ActivityState['status'], string> = {
   not_started: 'Not started',
@@ -37,16 +38,24 @@ const visibilityBadgeConfig: Record<VisibilityState, { label: string; colorSchem
 export const WeeklyActivityCard = ({
   activity,
   selectedWeek,
+  currentWeek,
   isWeekLocked,
   isAdmin,
+  onOpenCurrentWeek,
+  onFocusAvailableActivity,
+  hasAvailableAlternative,
   onMarkCompleted,
   onMarkNotStarted,
   onOpenProof,
 }: {
   activity: ActivityState
   selectedWeek: number
+  currentWeek: number
   isWeekLocked: boolean
   isAdmin: boolean
+  onOpenCurrentWeek: () => void
+  onFocusAvailableActivity: () => void
+  hasAvailableAlternative: boolean
   onMarkCompleted: (activity: ActivityState) => Promise<void>
   onMarkNotStarted: (activity: ActivityState) => Promise<void>
   onOpenProof: (activity: ActivityState) => void
@@ -89,6 +98,46 @@ export const WeeklyActivityCard = ({
   }
 
   const lockReason = showLockReason()
+
+  const renderExitAction = () => {
+    if (isAdmin || !lockReason) return null
+
+    if (lockedByWeek && selectedWeek > currentWeek) {
+      return (
+        <Button size="xs" variant="outline" onClick={onOpenCurrentWeek}>
+          Go to Week {currentWeek}
+        </Button>
+      )
+    }
+
+    if (lockedByInteraction && activity.status === 'pending') {
+      return (
+        <Button as={RouterLink} size="xs" variant="outline" to="/app/weekly-checklist?focus=pending-approvals">
+          Review pending approval
+        </Button>
+      )
+    }
+
+    if (activity.availability.reason === 'missing_mentor' || activity.availability.reason === 'missing_ambassador') {
+      return (
+        <Button as={RouterLink} size="xs" variant="outline" to="/app/weekly-glance">
+          View support options
+        </Button>
+      )
+    }
+
+    if (hasAvailableAlternative && activity.availability.state !== 'available') {
+      return (
+        <Button size="xs" variant="outline" onClick={onFocusAvailableActivity}>
+          Open an available activity
+        </Button>
+      )
+    }
+
+    return null
+  }
+
+  const exitAction = renderExitAction()
 
   const policyBadge = () => {
     const policy = activity.activityPolicy
@@ -177,12 +226,15 @@ export const WeeklyActivityCard = ({
           </Text>
 
           {lockReason ? (
-            <HStack spacing={2} color="orange.600">
-              <Icon as={Lock} size={14} />
-              <Text fontSize="sm" fontWeight="medium">
-                {lockReason}
-              </Text>
-            </HStack>
+            <Stack spacing={2} align="flex-start">
+              <HStack spacing={2} color="orange.600">
+                <Icon as={Lock} size={14} />
+                <Text fontSize="sm" fontWeight="medium">
+                  {lockReason}
+                </Text>
+              </HStack>
+              {exitAction}
+            </Stack>
           ) : null}
 
           {activity.status === 'pending' ? (

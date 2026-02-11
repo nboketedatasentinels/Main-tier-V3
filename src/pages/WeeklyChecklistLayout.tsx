@@ -25,8 +25,10 @@ export const WeeklyChecklistLayout = ({ vm }: { vm: VM }) => {
           <ActivityList
             activities={vm.activities}
             selectedWeek={vm.selectedWeek}
+            currentWeek={vm.journey?.currentWeek ?? vm.selectedWeek}
             isWeekLocked={vm.isWeekLocked}
             isAdmin={vm.isAdmin}
+            onOpenCurrentWeek={() => vm.setSelectedWeek(vm.journey?.currentWeek ?? vm.selectedWeek)}
             onMarkCompleted={vm.markCompleted}
             onMarkNotStarted={vm.markNotStarted}
             onOpenProof={vm.openProofModal}
