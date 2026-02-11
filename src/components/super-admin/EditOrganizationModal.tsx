@@ -346,7 +346,8 @@ export const EditOrganizationModal: React.FC<EditOrganizationModalProps> = ({
 
       setIsSubmitting(true)
       const assignmentArray = getAssignedCourseIdsFromMonthlyAssignments(monthlyAssignments, courseLimit)
-      const { id: _id, ...payload } = form
+      const payload: OrganizationRecord = { ...form }
+      delete payload.id
       await updateOrganization(organization.id, {
         ...payload,
         code: form.code.toUpperCase(),

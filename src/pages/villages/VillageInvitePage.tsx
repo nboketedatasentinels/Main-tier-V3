@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import {
   Badge,
   Box,
@@ -51,7 +51,7 @@ export const VillageInvitePage = () => {
 
   const villageDisplayName = villageName || 'Your village'
 
-  const loadData = async () => {
+  const loadData = useCallback(async () => {
     if (!villageId) return
     setLoading(true)
     try {
@@ -71,11 +71,11 @@ export const VillageInvitePage = () => {
     } finally {
       setLoading(false)
     }
-  }
+  }, [navigate, toast, villageId])
 
   useEffect(() => {
     void loadData()
-  }, [villageId])
+  }, [loadData])
 
   const handleInviteEmail = async (email: string) => {
     if (!villageId || !user || !profile) return

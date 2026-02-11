@@ -277,7 +277,20 @@ export const fetchOrganizationUsersForPartner = async (
   const docs = await fetchOrganizationUserDocs(organizationKeys)
 
   return docs.map((docSnap) => {
-    const data = docSnap.data() as any
+    const data = docSnap.data() as {
+      organizationId?: string
+      organization_id?: string
+      companyId?: string
+      companyCode?: string
+      email?: string
+      role?: string
+      accountStatus?: OrganizationUserProfile['accountStatus']
+      membershipStatus?: OrganizationUserProfile['membershipStatus']
+      lastActiveAt?: Timestamp | string | Date | number
+      lastActive?: Timestamp | string | Date | number
+      createdAt?: Timestamp | string | Date | number
+      [key: string]: unknown
+    }
 
     const organizationId =
       data.organizationId ||
@@ -290,7 +303,7 @@ export const fetchOrganizationUsersForPartner = async (
       id: docSnap.id,
       name: getDisplayName(data as DisplayNameInput, 'Member'),
       email: data.email ?? '',
-      role: (data.role ?? 'learner').toLowerCase(),
+      role: ((data.role ?? 'learner').toLowerCase() as OrganizationUserProfile['role']),
       accountStatus: data.accountStatus ?? 'active',
       membershipStatus: data.membershipStatus ?? 'inactive',
       organizationId: organizationId?.toLowerCase() ?? null,

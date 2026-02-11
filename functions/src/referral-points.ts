@@ -90,7 +90,7 @@ function getWindowNumber(weekNumber: number): number {
 export const onReferredUserFirstActivity = functions
   .region("us-central1")
   .firestore.document("pointsLedger/{ledgerId}")
-  .onCreate(async (snapshot, context) => {
+  .onCreate(async (snapshot, _context) => {
     const ledgerData = snapshot.data() as PointsLedgerEntry;
     const referredUid = ledgerData.uid;
 
@@ -339,7 +339,6 @@ async function creditReferralPointsInternal(
     const updatedLevel = calculateLevel(updatedTotalPoints);
 
     // Determine referrer's current week for ledger entry
-    const referrerJourneyType = referrerData.journeyType || "6W";
     const referrerWeek = referrerData.currentWeek || 1;
     const monthNumber = getWindowNumber(referrerWeek);
 

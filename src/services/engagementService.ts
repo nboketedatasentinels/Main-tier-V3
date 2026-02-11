@@ -6,7 +6,7 @@ export interface EngagementActionParams {
   actionLabel: string
   actorId: string | null
   actorName: string | null
-  additionalData?: Record<string, any>
+  additionalData?: Record<string, unknown>
 }
 
 /**
@@ -31,7 +31,7 @@ export const bulkRecordEngagementActions = async (
 ) => {
   const bulkAction = httpsCallable<
     { userIds: string[]; actionLabel: string; actorId: string | null; actorName: string | null },
-    { success: boolean; results: any[] }
+    { success: boolean; results: unknown[] }
   >(functions, 'bulkRecordEngagementActions')
 
   return bulkAction({ userIds, actionLabel, actorId, actorName })

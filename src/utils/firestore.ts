@@ -9,12 +9,13 @@ export const removeUndefinedFields = <T>(value: T): T => {
 
   // Don't process special types - return them as-is
   // This includes: Date, Firestore Timestamp, Firestore FieldValue, etc.
+  const maybeSpecial = value as { toDate?: unknown; isEqual?: unknown }
   if (
     value instanceof Date ||
     value.constructor?.name === 'Timestamp' ||
     value.constructor?.name === 'FieldValue' ||
-    typeof (value as any).toDate === 'function' ||
-    typeof (value as any).isEqual === 'function'
+    typeof maybeSpecial.toDate === 'function' ||
+    typeof maybeSpecial.isEqual === 'function'
   ) {
     return value
   }

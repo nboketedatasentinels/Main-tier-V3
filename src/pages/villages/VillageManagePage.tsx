@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import {
   Box,
   Button,
@@ -53,7 +53,7 @@ export const VillageManagePage = () => {
 
   const isVillageCreator = Boolean(creatorId && profile?.id === creatorId)
 
-  const loadMembers = async () => {
+  const loadMembers = useCallback(async () => {
     if (!villageId) return
     setLoading(true)
     try {
@@ -74,11 +74,11 @@ export const VillageManagePage = () => {
     } finally {
       setLoading(false)
     }
-  }
+  }, [navigate, toast, villageId])
 
   useEffect(() => {
     void loadMembers()
-  }, [villageId])
+  }, [loadMembers])
 
   const handleRemoveMember = async (reason: string) => {
     if (!villageId || !selectedMember) return

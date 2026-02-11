@@ -49,6 +49,7 @@ import {
 import { format, formatDistanceToNow, startOfWeek } from 'date-fns'
 import { Link as RouterLink, useNavigate } from 'react-router-dom'
 import {
+  DocumentData,
   Timestamp,
   collection,
   doc,
@@ -173,7 +174,7 @@ const couponLink =
 const useRealtimeCollection = <T,>(
   path: string,
   constraints: QueryConstraint[],
-  mapper: (docId: string, data: Record<string, any>) => T,
+  mapper: (docId: string, data: DocumentData) => T,
 ) => {
   const [data, setData] = useState<T[]>([])
   const [loading, setLoading] = useState(true)

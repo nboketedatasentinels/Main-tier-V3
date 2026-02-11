@@ -12,7 +12,8 @@ try {
         databaseURL: `https://${process.env.VITE_FIREBASE_PROJECT_ID}.firebaseio.com`
     });
 } catch (error) {
-    if ((error as any).code !== 'app/duplicate-app') {
+    const errorCode = (error as { code?: string })?.code
+    if (errorCode !== 'app/duplicate-app') {
         console.error("Firebase Admin initialization failed. Ensure FIREBASE_SERVICE_ACCOUNT_KEY is set in your .env file.");
         process.exit(1);
     }

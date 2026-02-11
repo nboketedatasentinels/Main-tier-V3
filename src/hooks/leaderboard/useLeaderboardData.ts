@@ -1,4 +1,4 @@
-import { Dispatch, MutableRefObject, SetStateAction, useEffect, useRef, useState } from 'react'
+import { Dispatch, MutableRefObject, SetStateAction, useCallback, useEffect, useRef, useState } from 'react'
 import {
   collection,
   DocumentData,
@@ -219,7 +219,7 @@ export const useLeaderboardData = ({
   const [profilesRetry, setProfilesRetry] = useState(0)
   const [transactionsRetry, setTransactionsRetry] = useState(0)
 
-  const scheduleRetry = (
+  const scheduleRetry = useCallback((
     label: string,
     retryCount: number,
     setRetry: Dispatch<SetStateAction<number>>,
@@ -236,12 +236,12 @@ export const useLeaderboardData = ({
     timeoutRef.current = setTimeout(() => {
       setRetry((prev) => prev + 1)
     }, delay)
-  }
+  }, [])
 
   const profilesRetryTimeout = useRef<ReturnType<typeof setTimeout> | null>(null)
   const transactionsRetryTimeout = useRef<ReturnType<typeof setTimeout> | null>(null)
 
-  const handleSnapshotError = (
+  const handleSnapshotError = useCallback((
     label: string,
     error: unknown,
     setLoaded: Dispatch<SetStateAction<boolean>>,
@@ -253,7 +253,13 @@ export const useLeaderboardData = ({
     setLoaded(true)
     setErrorMessage('Unable to load leaderboard data. Please refresh the page.')
     scheduleRetry(label, retryCount, setRetry, timeoutRef)
-  }
+  }, [scheduleRetry])
+
+  const clearRetryTimeout = useCallback((timeoutRef: MutableRefObject<ReturnType<typeof setTimeout> | null>) => {
+    if (!timeoutRef.current) return
+    clearTimeout(timeoutRef.current)
+    timeoutRef.current = null
+  }, [])
 
   useEffect(() => {
     if (context?.type === 'organization') {
@@ -298,9 +304,7 @@ export const useLeaderboardData = ({
 
       return () => {
         unsubscribe()
-        if (profilesRetryTimeout.current) {
-          clearTimeout(profilesRetryTimeout.current)
-        }
+        clearRetryTimeout(profilesRetryTimeout)
       }
     }
 
@@ -344,11 +348,9 @@ export const useLeaderboardData = ({
 
     return () => {
       unsubscribe()
-      if (profilesRetryTimeout.current) {
-        clearTimeout(profilesRetryTimeout.current)
-      }
+      clearRetryTimeout(profilesRetryTimeout)
     }
-  }, [context, profilesRetry])
+  }, [clearRetryTimeout, context, handleSnapshotError, profilesRetry])
 
   useEffect(() => {
     if (context?.type === 'organization' && !context.organizationId && !context.organizationCode) {
@@ -411,11 +413,9 @@ export const useLeaderboardData = ({
 
     return () => {
       unsubscribe()
-      if (transactionsRetryTimeout.current) {
-        clearTimeout(transactionsRetryTimeout.current)
-      }
+      clearRetryTimeout(transactionsRetryTimeout)
     }
-  }, [context, transactionsRetry])
+  }, [clearRetryTimeout, context, handleSnapshotError, transactionsRetry])
 
   // Deduplication function to remove duplicate challenges
   const deduplicateChallenges = (challenges: ChallengeRecord[]): ChallengeRecord[] => {

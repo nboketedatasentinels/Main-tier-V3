@@ -134,10 +134,10 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     console.log('🟣 [Auth] Recorded profile load timestamp', { id: loadedProfile.id, timestamp })
   }, [])
 
-  const serializeAssignments = (assignments?: string[]) => {
+  const serializeAssignments = useCallback((assignments?: string[]) => {
     if (!assignments?.length) return ''
     return [...assignments].sort().join('|')
-  }
+  }, [])
 
   const maybeNormalizeStoredRole = useCallback(
     async (profileToNormalize: UserProfile, userId: string) => {
@@ -180,7 +180,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     []
   )
 
-  const areProfilesEquivalent = (previous: UserProfile | null, next: UserProfile | null) => {
+  const areProfilesEquivalent = useCallback((previous: UserProfile | null, next: UserProfile | null) => {
     if (previous === next) return true
     if (!previous || !next) return false
     return (
@@ -211,7 +211,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       previous.onboardingSkipped === next.onboardingSkipped &&
       serializeAssignments(previous.assignedOrganizations) === serializeAssignments(next.assignedOrganizations)
     )
-  }
+  }, [serializeAssignments])
 
   const updateProfileState = useCallback((nextProfile: UserProfile | null, reason: string) => {
     setProfile((prev) => {
@@ -235,7 +235,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       console.log('🟢 [Auth] Profile updated', { reason, role: nextProfile?.role })
       return nextProfile
     })
-  }, [])
+  }, [areProfilesEquivalent])
 
   useEffect(() => {
     if (enableProfileRealtime) return
@@ -283,7 +283,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         assignmentState.inFlight = false
       }
     },
-    [assignComplementaryCoursesToUser, hasComplementaryCourseAssigned]
+    []
   )
 
   const extractCustomClaims = useCallback(async (firebaseUser: User) => {
@@ -324,7 +324,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       const usersRef = doc(db, 'users', uid)
       const usersSnap = await getDoc(usersRef)
       if (usersSnap.exists()) {
-        const { id: _ignoredId, ...profileData } = usersSnap.data() as UserProfile
+        const profileData = usersSnap.data() as UserProfile
         const rawProfile = {
           ...profileData,
           id: uid,
@@ -346,7 +346,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       const profilesRef = doc(db, 'profiles', uid)
       const profilesSnap = await getDoc(profilesRef)
       if (profilesSnap.exists()) {
-        const { id: _ignoredId, ...profileData } = profilesSnap.data() as UserProfile
+        const profileData = profilesSnap.data() as UserProfile
         const rawProfile = {
           ...profileData,
           id: uid,
@@ -386,7 +386,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     }
   }, [buildOfflineError, isOfflineError])
 
-  const fetchProfileWithRetry = async (firebaseUser: User, attempts = 3): Promise<UserProfile | null> => {
+  const fetchProfileWithRetry = useCallback(async (firebaseUser: User, attempts = 3): Promise<UserProfile | null> => {
     if (typeof navigator !== 'undefined' && navigator.onLine === false) {
       const offlineError = buildOfflineError()
       setProfileError(offlineError)
@@ -426,7 +426,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     }
 
     return null
-  }
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- fetchOrCreateUserDoc is declared below and resolved at call-time.
+  }, [buildOfflineError, fetchProfileOnce, isOfflineError])
 
   /* ------------------------------------------------------------------ */
   /* 🔹 Fetch or Create User Doc                                         */
@@ -446,7 +447,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       console.log('🟣 [Auth] Firestore profile exists in users collection?', userDocSnap.exists())
 
       if (userDocSnap.exists()) {
-        const { id: _ignoredId, ...storedUser } = userDocSnap.data() as UserProfile
+        const storedUser = userDocSnap.data() as UserProfile
         const baseUser: UserProfile = {
           ...storedUser,
           id: firebaseUser.uid,
@@ -633,7 +634,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         
         if (profileDocSnap.exists()) {
           console.log('🟡 [Auth] Profile found in profiles collection (fallback), syncing to users collection...')
-          const { id: _ignoredId, ...storedProfile } = profileDocSnap.data() as UserProfile
+          const storedProfile = profileDocSnap.data() as UserProfile
           const baseProfile: UserProfile = {
             ...storedProfile,
             id: firebaseUser.uid,
@@ -908,7 +909,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         userProfileDocRef,
         (snap) => {
           if (!snap.exists()) return
-          const { id: _ignoredId, ...updatedData } = snap.data() as UserProfile
+          const updatedData = snap.data() as UserProfile
           const rawRole = updatedData.role ?? UserRole.USER
           const normalizedRole = normalizeRole(rawRole)
           const updatedProfile: UserProfile = {
@@ -937,7 +938,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         profileExtrasDocRef,
         (snap) => {
           if (!snap.exists()) return
-          const { id: _ignoredId, ...updatedData } = snap.data() as UserProfile
+          const updatedData = snap.data() as UserProfile
 
           const base = profileRef.current
           const merged: UserProfile = {
@@ -979,6 +980,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     attemptComplementaryCourseAssignment,
     enableProfileRealtime,
     extractCustomClaims,
+    fetchProfileWithRetry,
     maybeNormalizeStoredRole,
     recordProfileLoad,
     updateProfileState,
@@ -1440,7 +1442,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     try {
       const sanitizedUpdates = Object.entries(updates).reduce((acc, [key, value]) => {
         if (typeof value !== 'undefined') {
-          ;(acc as Record<string, unknown>)[key] = value
+          const sanitizedRecord = acc as Record<string, unknown>
+          sanitizedRecord[key] = value
         }
         return acc
       }, {} as Partial<UserProfile>)

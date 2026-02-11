@@ -628,8 +628,8 @@ export function useLeadershipRoster(orgId?: string) {
   )
 
   useEffect(() => {
-    getRoster()
-  }, [currentOrgId])
+    void getRoster()
+  }, [getRoster])
 
   return {
     roster,

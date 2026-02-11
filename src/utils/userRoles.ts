@@ -19,7 +19,7 @@ export const isAtRisk = (user: PartnerUser): boolean => {
 /**
  * Checks if a profile can approve points (placeholder for more complex permission logic).
  */
-export const canApprove = (profile: any): boolean => {
+export const canApprove = (profile: { role?: string } | null | undefined): boolean => {
   if (!profile) return false
   return profile.role === 'partner' || profile.role === 'admin' || profile.role === 'super_admin'
 }

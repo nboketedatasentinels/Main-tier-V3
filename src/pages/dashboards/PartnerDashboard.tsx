@@ -88,7 +88,7 @@ export const PartnerDashboard: React.FC = () => {
   const { organizations, users, analytics } = snapshot
   const engagementTrend = analytics?.engagementTrend ?? []
   const riskLevels = analytics?.riskLevels ?? { engaged: 0, watch: 0, concern: 0, critical: 0 }
-  const atRiskUsers = analytics?.atRiskUsers ?? []
+  const atRiskUsers = useMemo(() => analytics?.atRiskUsers ?? [], [analytics?.atRiskUsers])
   const partnerId = user?.uid ?? null
   const accountDisplayName = useMemo(
     () =>
@@ -103,7 +103,7 @@ export const PartnerDashboard: React.FC = () => {
       ),
     [profile, user?.email],
   )
-  const snapshotUsers = snapshot?.users ?? []
+  const snapshotUsers = useMemo(() => snapshot?.users ?? [], [snapshot?.users])
 
   type PartnerPageKey = 'overview' | 'users' | 'organization-management' | 'at-risk' | 'reports' | 'settings' | 'profile'
   const [activePage, setActivePage] = useState<PartnerPageKey>('overview')
@@ -1130,20 +1130,16 @@ export const PartnerDashboard: React.FC = () => {
   }, [profile?.id, user?.uid])
 
   const handleStartInterventionFromUserManagement = useCallback(async (targetUser: PartnerUser) => {
-    try {
-      await handleAtRiskAction('add_to_intervention_queue', targetUser.id, {
-        target: getDisplayName(targetUser, 'Member'),
-        name: 'Partner dashboard intervention',
-        reason: targetUser.riskReasons?.[0] || 'Started from user management',
-        riskStatus: targetUser.riskStatus,
-        riskReasons: targetUser.riskReasons || [],
-        organizationCode: targetUser.companyCode || '',
-        userId: targetUser.id,
-      })
-      setActivePage('at-risk')
-    } catch (error) {
-      throw error
-    }
+    await handleAtRiskAction('add_to_intervention_queue', targetUser.id, {
+      target: getDisplayName(targetUser, 'Member'),
+      name: 'Partner dashboard intervention',
+      reason: targetUser.riskReasons?.[0] || 'Started from user management',
+      riskStatus: targetUser.riskStatus,
+      riskReasons: targetUser.riskReasons || [],
+      organizationCode: targetUser.companyCode || '',
+      userId: targetUser.id,
+    })
+    setActivePage('at-risk')
   }, [handleAtRiskAction])
 
   const renderAtRiskPage = () => (

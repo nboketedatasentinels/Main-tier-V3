@@ -15,7 +15,7 @@ export const updateJourneyStatus = async (
   completionDetails?: CompletionResult
 ) => {
   const userRef = doc(db, 'users', userId);
-  const updates: any = {
+  const updates: Record<string, unknown> = {
     journeyStatus: status,
     updatedAt: serverTimestamp(),
   };

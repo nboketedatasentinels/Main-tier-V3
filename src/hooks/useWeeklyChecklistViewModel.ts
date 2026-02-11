@@ -65,7 +65,7 @@ type LedgerRow = {
   monthNumber?: number
 }
 
-function isAdminProfile(profile: any): boolean {
+function isAdminProfile(profile: { role?: string; userRole?: string } | null | undefined): boolean {
   const normalized = normalizeRole(profile?.role || profile?.userRole)
   return normalized === 'super_admin' || normalized === 'partner'
 }
@@ -350,10 +350,24 @@ export function useWeeklyChecklistViewModel() {
   useEffect(() => {
     if (!user) return
 
-    const toMillis = (value: any): number => {
+    const toMillis = (value: unknown): number => {
       if (!value) return 0
-      if (typeof value?.toMillis === 'function') return value.toMillis()
-      if (typeof value?.toDate === 'function') return value.toDate().getTime()
+      if (
+        typeof value === 'object' &&
+        value !== null &&
+        'toMillis' in value &&
+        typeof (value as { toMillis?: () => number }).toMillis === 'function'
+      ) {
+        return (value as { toMillis: () => number }).toMillis()
+      }
+      if (
+        typeof value === 'object' &&
+        value !== null &&
+        'toDate' in value &&
+        typeof (value as { toDate?: () => Date }).toDate === 'function'
+      ) {
+        return (value as { toDate: () => Date }).toDate().getTime()
+      }
       const parsed = new Date(String(value)).getTime()
       return Number.isFinite(parsed) ? parsed : 0
     }
@@ -470,11 +484,11 @@ export function useWeeklyChecklistViewModel() {
     const ref = doc(db, 'checklists', `${user.uid}_${selectedWeek}`);
     return onSnapshot(ref, snap => {
       if (snap.exists()) {
-        const data = snap.data();
-        if (data.activities) {
+        const data = snap.data() as { activities?: Array<Partial<ActivityState> & { id: string }> };
+        if (Array.isArray(data.activities)) {
           setActivities(prev => {
             return prev.map(activity => {
-              const remote = data.activities.find((a: any) => a.id === activity.id);
+              const remote = data.activities?.find((a) => a.id === activity.id);
               if (!remote) return activity
 
               const next = {
@@ -715,6 +729,11 @@ export function useWeeklyChecklistViewModel() {
     setProofModal(prev => ({ ...prev, ...patch }))
   }, [])
 
+  const userOrganizationId = useMemo(
+    () => profile?.organizationId || profile?.companyId || null,
+    [profile?.companyId, profile?.organizationId],
+  )
+
   const submitProofForApproval = useCallback(async () => {
     if (!user || !journey) return
     const activity = activities.find(a => a.id === proofModal.activityId)
@@ -742,9 +761,6 @@ export function useWeeklyChecklistViewModel() {
     }
 
     try {
-      // Get user's organization ID from profile
-      const userOrganizationId = profile?.organizationId || profile?.companyId || null
-
       // Prevent duplicate pending requests for the same activity/week (can happen if local checklist state got out of sync).
       try {
         const existingWeekRequests = await getDocs(
@@ -776,8 +792,8 @@ export function useWeeklyChecklistViewModel() {
         console.warn('[WeeklyChecklist] Duplicate-check query failed; continuing submission', error)
       }
 
-        const sourcePayload: PointsVerificationRequest = {
-          id: '', // ID will be assigned by the server or is not used for creation
+      const sourcePayload: PointsVerificationRequest = {
+        id: '', // ID will be assigned by the server or is not used for creation
         user_id: user.uid,
         organizationId: userOrganizationId,
         week: selectedWeek,
@@ -787,7 +803,7 @@ export function useWeeklyChecklistViewModel() {
         proof_url: proofModal.proofUrl.trim(),
         notes: proofModal.notes?.trim(),
         status: 'pending',
-          created_at: serverTimestamp() as any,
+        created_at: serverTimestamp(),
       }
 
       // Write to points_verification_requests collection (primary collection for dashboards)
@@ -855,6 +871,7 @@ export function useWeeklyChecklistViewModel() {
     selectedWeek,
     setActivityStatusLocal,
     toast,
+    userOrganizationId,
     user,
   ])
 

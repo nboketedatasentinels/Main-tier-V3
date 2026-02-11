@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import {
   Badge,
   Box,
@@ -127,7 +127,7 @@ export const UserEngagementMonitoringTab = ({ users: propUsers, organizations: p
     })
   }
 
-  const loadEngagementData = async () => {
+  const loadEngagementData = useCallback(async () => {
     try {
       setLoading(true)
       setLoadError(null)
@@ -144,11 +144,12 @@ export const UserEngagementMonitoringTab = ({ users: propUsers, organizations: p
     } finally {
       setLoading(false)
     }
-  }
+  }, [toast])
 
   useEffect(() => {
-    loadEngagementData()
-  }, [isAdmin, toast])
+    if (!isAdmin) return
+    void loadEngagementData()
+  }, [isAdmin, loadEngagementData])
 
   useEffect(() => {
     setMentors(propUsers.filter((u) => u.role === 'mentor').map((u) => ({ id: u.id, name: u.name })))

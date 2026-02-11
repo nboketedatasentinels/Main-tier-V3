@@ -43,7 +43,7 @@ function useManagedUsers() {
             id: user.id,
             name: getDisplayName(userData, 'Member'),
             email: user.email,
-            role: user.role as any,
+            role: user.role as ManagedUserRecord['role'],
             membershipStatus: (userData.membershipStatus as 'free' | 'paid' | 'inactive') || 'free',
             // Check companyId first (set at signup), then fall back to assignedOrganizations (for admins)
             companyId: userData.companyId || user.assignedOrganizations?.[0] || null,

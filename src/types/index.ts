@@ -403,7 +403,7 @@ export interface WindowProgress {
   windowTarget: number;
   status: 'on_track' | 'warning' | 'alert' | 'recovery';
   previousStatus?: 'on_track' | 'warning' | 'alert' | 'recovery';
-  updatedAt?: any;
+  updatedAt?: unknown;
 }
 
 export enum ActivityStatus {

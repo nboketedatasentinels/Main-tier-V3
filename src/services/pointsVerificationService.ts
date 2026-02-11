@@ -1,5 +1,7 @@
 import {
+  FieldValue,
   QueryConstraint,
+  Timestamp,
   collection,
   doc,
   getDoc,
@@ -32,11 +34,11 @@ export interface PointsVerificationRequest {
   proof_url?: string
   notes?: string
   status?: PointsVerificationRequestStatus
-  created_at?: any
-  approved_at?: any
+  created_at?: Timestamp | FieldValue | Date | string | number | { toDate?: () => Date } | null
+  approved_at?: Timestamp | FieldValue | Date | string | number | { toDate?: () => Date } | null
   approved_by?: string | null
   approved_by_name?: string | null
-  rejected_at?: any
+  rejected_at?: Timestamp | FieldValue | Date | string | number | { toDate?: () => Date } | null
   rejected_by?: string | null
   rejected_by_name?: string | null
   rejection_reason?: string | null

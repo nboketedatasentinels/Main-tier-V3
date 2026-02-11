@@ -723,20 +723,34 @@ const ApprovalCenterPage: React.FC = () => {
       }
       if (event.key.toLowerCase() === 'a' && selectedIds.size > 0) {
         event.preventDefault()
-        openBulkModal('approve')
+        setBulkAction('approve')
+        setBulkRejectReason('')
+        setBulkRejectCategory('')
+        bulkModal.onOpen()
       }
       if (event.key.toLowerCase() === 'r' && selectedIds.size > 0) {
         event.preventDefault()
-        openBulkModal('reject')
+        setBulkAction('reject')
+        setBulkRejectReason('')
+        setBulkRejectCategory('')
+        bulkModal.onOpen()
       }
       if (event.code === 'Space') {
         event.preventDefault()
-        selectAllVisible()
+        const next = new Set(selectedIds)
+        const visibleIds = paginatedRecords.map((record) => record.id)
+        const allSelected = visibleIds.every((id) => next.has(id))
+        if (allSelected) {
+          visibleIds.forEach((id) => next.delete(id))
+        } else {
+          visibleIds.forEach((id) => next.add(id))
+        }
+        setSelectedIds(next)
       }
     }
     window.addEventListener('keydown', handler)
     return () => window.removeEventListener('keydown', handler)
-  }, [selectedIds.size, paginatedRecords])
+  }, [bulkModal, paginatedRecords, selectedIds])
 
   const pendingBadgeColor = pendingCount === 0 ? 'green' : pendingCount > 20 ? 'red' : 'orange'
 

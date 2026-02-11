@@ -468,7 +468,7 @@ export const AtRiskCommandPanel: React.FC<AtRiskCommandPanelProps> = ({
     if (!activeTemplate) return
     setCampaignSubject(activeTemplate.subject || '')
     setCampaignMessage(activeTemplate.message_body || '')
-  }, [activeTemplate?.id])
+  }, [activeTemplate])
 
   const selectedCampaignRecipients = useMemo(
     () =>

@@ -147,9 +147,9 @@ export const calculateActivityAvailability = (
 /**
  * Filter activities based on policy type and availability state.
  */
-export const getVisibleActivities = (
-  activities: any[], // ActivityState[]
-): any[] => {
+export const getVisibleActivities = <T extends { availability: { state: ActivityAvailabilityState } }>(
+  activities: T[],
+): T[] => {
   const stateOrder: Record<ActivityAvailabilityState, number> = {
     available: 0,
     next_window: 1,

@@ -99,8 +99,19 @@ export const syncAuthUserToProfile = functions
           .filter(Boolean);
       };
 
-      const scoreDuplicate = (doc: any) => {
-        const data = (doc?.data?.() as any) || {};
+      type UserDocShape = {
+        id?: string;
+        membershipStatus?: string;
+        companyId?: string | null;
+        companyCode?: string | null;
+        companyName?: string | null;
+        assignedOrganizations?: unknown;
+        role?: string;
+        transformationTier?: string;
+      };
+
+      const scoreDuplicate = (doc: FirebaseFirestore.QueryDocumentSnapshot) => {
+        const data = (doc.data() as UserDocShape) || {};
         let score = 0;
         if (data?.id && data.id === doc.id) score += 100;
         if (data?.membershipStatus === "paid") score += 25;
@@ -115,19 +126,21 @@ export const syncAuthUserToProfile = functions
       // This prevents duplicate "free" users showing up next to the real uid-based record.
       if (normalizedEmail) {
         const duplicatesSnap = await db.collection("users").where("email", "==", normalizedEmail).get();
-        const duplicates = duplicatesSnap.docs.filter((doc: any) => doc.id !== uid);
+        const duplicates = duplicatesSnap.docs.filter((doc) => doc.id !== uid);
 
         if (duplicates.length > 0) {
-          const baseData = (userDoc.exists ? (userDoc.data() as any) : {}) || {};
+          const baseData = (userDoc.exists ? (userDoc.data() as UserDocShape) : {}) || {};
           const best = duplicates
             .slice()
-            .sort((a: any, b: any) => scoreDuplicate(b) - scoreDuplicate(a))[0];
-          const bestData = (best?.data?.() as any) || {};
+            .sort((a, b) => scoreDuplicate(b) - scoreDuplicate(a))[0];
+          const bestData = (best?.data() as UserDocShape | undefined) || {};
 
           const mergedAssignedOrganizations = Array.from(
             new Set([
               ...normalizeStringArray(baseData.assignedOrganizations),
-              ...duplicates.flatMap((doc: any) => normalizeStringArray((doc.data() as any)?.assignedOrganizations)),
+              ...duplicates.flatMap((doc) =>
+                normalizeStringArray((doc.data() as UserDocShape | undefined)?.assignedOrganizations)
+              ),
             ])
           );
 
@@ -147,7 +160,7 @@ export const syncAuthUserToProfile = functions
               ? "paid"
               : baseData.membershipStatus || "free";
 
-          const mergePayload: any = {
+          const mergePayload: Record<string, unknown> = {
             id: uid,
             email: normalizedEmail,
             assignedOrganizations: mergedAssignedOrganizations,
@@ -169,7 +182,7 @@ export const syncAuthUserToProfile = functions
           await userRef.set(mergePayload, { merge: true });
           userDocExists = true;
 
-          await Promise.all(duplicates.map((doc: any) => doc.ref.delete()));
+          await Promise.all(duplicates.map((doc) => doc.ref.delete()));
           console.log(`✓ Reconciled and removed ${duplicates.length} duplicate user doc(s) for ${normalizedEmail}`);
         }
       }

@@ -14,6 +14,7 @@ test.describe('Partner Dashboard', () => {
     await page.fill('input[type="password"]', 'testpass123');
     await page.click('button[type="submit"]');
     await page.waitForURL(/\/partner/, { timeout: 15000 });
+    await expect(page).toHaveURL(/\/partner/);
   });
 
   test('should display partner dashboard', async ({ page }) => {
@@ -33,6 +34,7 @@ test.describe('Partner Dashboard', () => {
     });
 
     console.log('Partner dashboard info:', dashboardInfo);
+    expect(dashboardInfo.hasUserList || dashboardInfo.hasOrgInfo || dashboardInfo.hasMetrics).toBeTruthy();
   });
 
   test('should display organization information', async ({ page }) => {
@@ -48,6 +50,7 @@ test.describe('Partner Dashboard', () => {
     });
 
     console.log('Organization info:', orgInfo);
+    expect(orgInfo.hasOrgElement).toBeTruthy();
 
     await page.screenshot({ path: 'test-screenshots/21-organization-info.png' });
   });
@@ -68,6 +71,7 @@ test.describe('Partner Dashboard', () => {
     });
 
     console.log('Learner list info:', userListInfo);
+    expect(userListInfo.hasTable || userListInfo.rowCount > 0).toBeTruthy();
 
     await page.screenshot({ path: 'test-screenshots/22-learner-list.png', fullPage: true });
   });
@@ -117,6 +121,7 @@ test.describe('Partner Dashboard', () => {
     });
 
     console.log('Dashboard controls:', controls);
+    expect(controls.hasButtons).toBeGreaterThan(0);
   });
 
   test('should check for metrics and analytics', async ({ page }) => {
@@ -135,6 +140,7 @@ test.describe('Partner Dashboard', () => {
     });
 
     console.log('Metrics info:', metrics);
+    expect(metrics.metricCount > 0 || metrics.hasCharts).toBeTruthy();
 
     await page.screenshot({ path: 'test-screenshots/24-partner-metrics.png', fullPage: true });
   });
