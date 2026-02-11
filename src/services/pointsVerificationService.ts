@@ -10,6 +10,7 @@ import {
   orderBy,
   query,
   serverTimestamp,
+  setDoc,
   updateDoc,
   where,
 } from 'firebase/firestore'
@@ -211,6 +212,29 @@ export const approvePointsVerificationRequest = async (params: {
         approved_by_name: null,
         approved_at: null,
       })
+      await setDoc(
+        doc(db, 'approvals', params.request.id),
+        {
+          userId: params.request.user_id,
+          organizationId: params.request.organizationId ?? null,
+          type: 'points_verification',
+          approvalType: 'partner_approved',
+          title: params.request.activity_title || params.request.activity_id,
+          source: {
+            ...params.request,
+            id: params.request.id,
+          },
+          summary: params.request.notes ?? null,
+          points: params.request.points ?? null,
+          status: 'pending',
+          reviewedBy: null,
+          reviewedAt: null,
+          rejectionReason: null,
+          updatedAt: serverTimestamp(),
+          searchText: `${(params.request.activity_title || params.request.activity_id || '').toLowerCase()} ${params.request.user_id.toLowerCase()} partner_approved`,
+        },
+        { merge: true },
+      )
     } catch (revertError) {
       console.error('[pointsVerificationService] Failed to revert approval status after award failure:', revertError)
     }
@@ -251,6 +275,53 @@ export const approvePointsVerificationRequest = async (params: {
     console.error('[pointsVerificationService] Failed to log admin action:', error)
   }
 
+  try {
+    await setDoc(
+      doc(db, 'approvals', params.request.id),
+      {
+        userId: params.request.user_id,
+        organizationId: params.request.organizationId ?? null,
+        type: 'points_verification',
+        approvalType: 'partner_approved',
+        title: params.request.activity_title || params.request.activity_id,
+        source: {
+          ...params.request,
+          id: params.request.id,
+        },
+        summary: params.request.notes ?? null,
+        points: activity.points,
+        status: 'approved',
+        reviewedBy: params.approver?.id ?? null,
+        reviewedAt: serverTimestamp(),
+        rejectionReason: null,
+        updatedAt: serverTimestamp(),
+        searchText: `${(params.request.activity_title || params.request.activity_id || '').toLowerCase()} ${params.request.user_id.toLowerCase()} partner_approved`,
+      },
+      { merge: true },
+    )
+  } catch (error) {
+    console.error('[pointsVerificationService] Failed to mirror approved status to approvals:', error)
+  }
+
+  try {
+    await createInAppNotification({
+      userId: params.request.user_id,
+      title: 'Activity Submission Approved',
+      message: `Your submission for "${params.request.activity_title || params.request.activity_id}" was approved and ${activity.points.toLocaleString()} points were added.`,
+      type: 'approval',
+      relatedId: params.request.id,
+      metadata: {
+        week: params.request.week,
+        activityId: canonicalActivityId,
+        requestId: params.request.id,
+        points: activity.points,
+        actionUrl: '/app/weekly-checklist',
+      },
+    })
+  } catch (error) {
+    console.error('[pointsVerificationService] Failed to notify user after approval:', error)
+  }
+
   return { data: { success: true } }
 }
 
@@ -271,6 +342,34 @@ export const rejectPointsVerificationRequest = async (params: {
     rejected_at: serverTimestamp(),
     rejection_reason: params.reason ?? null,
   })
+
+  try {
+    await setDoc(
+      doc(db, 'approvals', params.request.id),
+      {
+        userId: params.request.user_id,
+        organizationId: params.request.organizationId ?? null,
+        type: 'points_verification',
+        approvalType: 'partner_approved',
+        title: params.request.activity_title || params.request.activity_id,
+        source: {
+          ...params.request,
+          id: params.request.id,
+        },
+        summary: params.request.notes ?? null,
+        points: params.request.points ?? null,
+        status: 'rejected',
+        reviewedBy: params.approver?.id ?? null,
+        reviewedAt: serverTimestamp(),
+        rejectionReason: params.reason ?? null,
+        updatedAt: serverTimestamp(),
+        searchText: `${(params.request.activity_title || params.request.activity_id || '').toLowerCase()} ${params.request.user_id.toLowerCase()} partner_approved`,
+      },
+      { merge: true },
+    )
+  } catch (error) {
+    console.error('[pointsVerificationService] Failed to mirror rejected status to approvals:', error)
+  }
 
   try {
     await upsertChecklistActivity({

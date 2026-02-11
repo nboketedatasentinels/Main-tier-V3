@@ -166,6 +166,27 @@ export async function approveRequest(approvalId: string, reviewedBy: string): Pr
       console.error('[approvalsService] Failed to update checklist after approval:', error);
     }
 
+    try {
+      await createInAppNotification({
+        userId: approvalRecord.userId,
+        title: 'Activity Submission Approved',
+        message: `Your submission for "${approvalRecord.title}" was approved and ${activity.points.toLocaleString()} points were added.`,
+        type: 'approval',
+        relatedId: request?.id || approvalId,
+        metadata: request?.activity_id && typeof request?.week === 'number'
+          ? {
+              actionUrl: `/app/weekly-checklist?week=${encodeURIComponent(String(request.week))}`,
+              week: request.week,
+              activityId: canonicalActivityId,
+              requestId: request.id,
+              points: activity.points,
+            }
+          : { points: activity.points },
+      });
+    } catch (error) {
+      console.error('[approvalsService] Failed to notify user after approval:', error);
+    }
+
     // Log admin action (after points are awarded)
     try {
       await logAdminAction({

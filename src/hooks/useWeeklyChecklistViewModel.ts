@@ -14,7 +14,6 @@ import { resolveJourneyType } from '@/utils/journeyType'
 import { calculateActivityAvailability } from '@/utils/activityStateManager'
 import { db } from '@/services/firebase'
 import {
-  addDoc,
   collection,
   doc,
   getDoc,
@@ -28,11 +27,14 @@ import {
 import type { WeeklyProgress } from '@/types'
 import { removeUndefinedFields } from '@/utils/firestore'
 import { normalizeRole } from '@/utils/role'
-import { getWindowNumber } from '@/utils/windowCalculations'
+import { getWindowNumber, PARALLEL_WINDOW_SIZE_WEEKS } from '@/utils/windowCalculations'
 import { revokeChecklistPoints } from '@/services/pointsService'
-import { createApprovalRequest } from '@/services/approvalsService'
 import { handleActivityCompletion } from '@/utils/activityRouter'
 import type { PointsVerificationRequest } from '@/services/pointsVerificationService'
+import {
+  PendingRequestExistsError,
+  submitPointsVerificationRequestAtomic,
+} from '@/services/pointsRequestSubmissionService'
 
 export type ActivityStatus = 'not_started' | 'pending' | 'rejected' | 'completed'
 
@@ -223,7 +225,7 @@ export function useWeeklyChecklistViewModel() {
   useEffect(() => {
     if (!user) return
 
-    const windowNumber = getWindowNumber(selectedWeek)
+    const windowNumber = getWindowNumber(selectedWeek, PARALLEL_WINDOW_SIZE_WEEKS)
 
     const weekQ = query(
       collection(db, 'pointsLedger'),
@@ -710,7 +712,7 @@ export function useWeeklyChecklistViewModel() {
 
         await setActivityStatusLocal(activity.id, {
           status: 'not_started',
-          hasInteracted: true,
+          hasInteracted: false,
           proofUrl: undefined,
           notes: undefined,
           rejectionReason: null,
@@ -767,79 +769,16 @@ export function useWeeklyChecklistViewModel() {
     }
 
     try {
-      // Prevent duplicate pending requests for the same activity/week (can happen if local checklist state got out of sync).
-      try {
-        const existingWeekRequests = await getDocs(
-          query(
-            collection(db, 'points_verification_requests'),
-            where('user_id', '==', user.uid),
-            where('week', '==', selectedWeek),
-          ),
-        )
-        const hasPending = existingWeekRequests.docs.some((docSnap) => {
-          const data = docSnap.data() as PointsVerificationRequest
-          const requestActivityId = resolveCanonicalActivityId(data.activity_id) ?? data.activity_id
-          return requestActivityId === activity.id && (data.status ?? 'pending') === 'pending'
-        })
-        if (hasPending) {
-          toast({
-            title: 'Already submitted',
-            description: 'This activity is already pending verification for this week.',
-            status: 'info',
-            duration: 5000,
-          })
-          await setActivityStatusLocal(activity.id, {
-            status: 'pending',
-            hasInteracted: true,
-          })
-          closeProofModal()
-          return
-        }
-      } catch (error) {
-        console.warn('[WeeklyChecklist] Duplicate-check query failed; continuing submission', error)
-      }
-
-      const sourcePayload: PointsVerificationRequest = {
-        id: '', // ID will be assigned by the server or is not used for creation
-        user_id: user.uid,
-        organizationId: userOrganizationId,
-        week: selectedWeek,
-        activity_id: activity.id,
-        activity_title: activity.title,
-        points: activity.points,
-        proof_url: proofModal.proofUrl.trim(),
-        notes: proofModal.notes?.trim(),
-        status: 'pending',
-        created_at: serverTimestamp(),
-      }
-
-      // Write to points_verification_requests collection (primary collection for dashboards)
-      const verificationRequestRef = await addDoc(
-        collection(db, 'points_verification_requests'),
-        removeUndefinedFields({
-          user_id: user.uid,
-          organizationId: userOrganizationId,
-          week: selectedWeek,
-          activity_id: activity.id,
-          activity_title: activity.title,
-          points: activity.points,
-          proof_url: proofModal.proofUrl.trim(),
-          notes: proofModal.notes?.trim(),
-          status: 'pending',
-          created_at: serverTimestamp(),
-        })
-      )
-
-      // Also write to approvals collection for backward compatibility
-      await createApprovalRequest({
+      await submitPointsVerificationRequestAtomic({
         userId: user.uid,
         organizationId: userOrganizationId,
-        type: 'points_verification',
+        week: selectedWeek,
+        activityId: activity.id,
+        activityTitle: activity.title,
+        activityPoints: activity.points,
+        proofUrl: proofModal.proofUrl.trim(),
+        notes: proofModal.notes?.trim(),
         approvalType: activity.approvalType,
-        title: activity.title,
-        source: { ...sourcePayload, id: verificationRequestRef.id },
-        summary: proofModal.notes?.trim(),
-        points: activity.points,
       })
 
       await setActivityStatusLocal(activity.id, {
@@ -859,6 +798,23 @@ export function useWeeklyChecklistViewModel() {
 
       closeProofModal()
     } catch (e) {
+      if (e instanceof PendingRequestExistsError || (e instanceof Error && e.message === 'pending_request_exists')) {
+        toast({
+          title: 'Already submitted',
+          description: 'This activity is already pending verification for this week.',
+          status: 'info',
+          duration: 5000,
+        })
+        await setActivityStatusLocal(activity.id, {
+          status: 'pending',
+          proofUrl: proofModal.proofUrl.trim(),
+          notes: proofModal.notes?.trim(),
+          rejectionReason: null,
+          hasInteracted: true,
+        })
+        closeProofModal()
+        return
+      }
       console.error(e)
       toast({
         title: 'Submission failed',

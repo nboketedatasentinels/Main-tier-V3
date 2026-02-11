@@ -1,4 +1,4 @@
-import { getWindowNumber } from "@/utils/windowCalculations";
+import { getWindowNumber, PARALLEL_WINDOW_SIZE_WEEKS } from "@/utils/windowCalculations";
 
 export type JourneyType = "4W" | "6W" | "3M" | "6M" | "9M" | "12M";
 export type JourneyTimelineDisplayMode = "duration" | "course-count";
@@ -11,6 +11,7 @@ export type ActivityId =
   | "peer_matching"
   | "book_club"
   | "peer_to_peer"
+  | "partner_spotlight"
   | "linkedin"
   | "recognition_over_recall"
   | "von_restorff_effect"
@@ -262,6 +263,23 @@ export const FULL_ACTIVITIES: ActivityDef[] = [
     flexibleWeeks: true,
   },
   {
+    id: "partner_spotlight",
+    baseId: "partner_spotlight",
+    title: "Partner Spotlight Recognition",
+    description: "Partner-issued recognition points for standout contribution, leadership, or measurable impact.",
+    points: 1000,
+    maxPerMonth: 2,
+    activityPolicy: {
+      type: "window_limited",
+      maxPerWindow: 2,
+    },
+    week: 1,
+    category: "Recognition",
+    approvalType: "partner_issued",
+    flexibleWeeks: true,
+    frequencyNote: "Assigned directly by your partner when impact is demonstrated.",
+  },
+  {
     id: "linkedin",
     baseId: "linkedin",
     title: "LinkedIn engagement (post/comment)",
@@ -442,7 +460,7 @@ export function getActivityDefinitionById(params: {
 
 // For 3M+ show month indicator: Month = ceil(week/4)
 export function getMonthNumber(weekNumber: number): number {
-  return getWindowNumber(weekNumber);
+  return getWindowNumber(weekNumber, PARALLEL_WINDOW_SIZE_WEEKS);
 }
 
 // Default export for consumers that prefer object access

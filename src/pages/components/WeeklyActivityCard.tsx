@@ -50,8 +50,7 @@ export const WeeklyActivityCard = ({
   onMarkNotStarted: (activity: ActivityState) => Promise<void>
   onOpenProof: (activity: ActivityState) => void
 }) => {
-  const isPaid = Boolean(journey?.isPaid)
-  const requiresPartnerApproval = Boolean(isPaid && (activity.approvalType === 'partner_approved' || activity.requiresApproval))
+  const requiresPartnerApproval = Boolean(activity.approvalType === 'partner_approved' || activity.requiresApproval)
   const isPartnerIssued = activity.approvalType === 'partner_issued'
 
   const lockedByWeek = isWeekLocked && !isAdmin

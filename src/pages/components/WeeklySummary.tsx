@@ -12,7 +12,7 @@ import {
 import { CheckCircle, CalendarRange, Plus } from 'lucide-react'
 import { StatCard } from './StatCard'
 import { InfoPill } from './InfoPill'
-import { getWindowNumber } from '@/utils/windowCalculations'
+import { getWindowNumber, PARALLEL_WINDOW_SIZE_WEEKS } from '@/utils/windowCalculations'
 
 export const WeeklySummary = ({
   week,
@@ -25,7 +25,7 @@ export const WeeklySummary = ({
   earned: number
   target: number
 }) => {
-  const windowNumber = useMemo(() => getWindowNumber(week), [week])
+  const windowNumber = useMemo(() => getWindowNumber(week, PARALLEL_WINDOW_SIZE_WEEKS), [week])
 
   const progressStatus = useMemo(() => {
     const pct = target > 0 ? Math.min(100, Math.round((earned / target) * 100)) : 0

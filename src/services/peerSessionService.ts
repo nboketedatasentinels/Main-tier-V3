@@ -474,6 +474,7 @@ export async function confirmSession(sessionId: string, userId: string): Promise
             weekNumber: journeyInfo.weekNumber,
             activity: PEER_SESSION_CONFIRMATION_ACTIVITY,
             source: 'peer_session',
+            claimRef: `peer_session_confirmation:${sessionId}`,
           })
         }
       } catch (error) {
@@ -528,6 +529,7 @@ export async function reportNoShow(sessionId: string, userId: string): Promise<N
         weekNumber: journeyInfo.weekNumber,
         activity: PEER_SESSION_NO_SHOW_ACTIVITY,
         source: 'peer_session',
+        claimRef: `peer_session_no_show:${sessionId}`,
       })
       return { success: true, pointsAwarded: true }
     }
