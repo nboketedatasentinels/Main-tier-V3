@@ -44,6 +44,7 @@ export const WeeklyChecklistLayout = ({ vm }: { vm: VM }) => {
 
       <ProofModal
         state={vm.proofModal}
+        isSubmitting={vm.isSubmittingProof}
         onClose={vm.closeProofModal}
         onChange={vm.updateProofModal}
         onSubmit={vm.submitProofForApproval}

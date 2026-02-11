@@ -94,6 +94,7 @@ export function useWeeklyChecklistViewModel() {
     notes: '',
     rejectionReason: null,
   })
+  const [isSubmittingProof, setIsSubmittingProof] = useState(false)
 
   const deepLink = useMemo(() => {
     const weekRaw = searchParams.get('week')
@@ -102,10 +103,12 @@ export function useWeeklyChecklistViewModel() {
     const rawActivityId = searchParams.get('activityId') || searchParams.get('activity') || null
     const activityId = resolveCanonicalActivityId(rawActivityId) ?? rawActivityId
     const openProof = ['1', 'true', 'yes'].includes((searchParams.get('openProof') || '').toLowerCase())
-    return { week, activityId, openProof }
+    const focusPendingApprovals = (searchParams.get('focus') || '').toLowerCase() === 'pending-approvals'
+    return { week, activityId, openProof, focusPendingApprovals }
   }, [searchParams])
 
   const handledDeepLinkRef = useRef<string | null>(null)
+  const handledFocusRef = useRef<string | null>(null)
 
   /* ------------------------------------------------------------------ */
   /* Derived guards                                                      */
@@ -644,6 +647,39 @@ export function useWeeklyChecklistViewModel() {
     setSearchParams,
   ])
 
+  useEffect(() => {
+    if (!deepLink.focusPendingApprovals) return
+    if (deepLink.week && deepLink.week !== selectedWeek) return
+    if (!activities.length) return
+
+    const key = `${deepLink.week ?? selectedWeek}:pending-approvals`
+    if (handledFocusRef.current === key) return
+
+    const firstPendingApproval = activities.find(
+      (activity) =>
+        activity.status === 'pending' ||
+        ((activity.approvalType === 'partner_approved' || activity.requiresApproval) && activity.status !== 'completed'),
+    )
+    if (!firstPendingApproval) return
+
+    const anchor = document.getElementById(`activity-${firstPendingApproval.id}`)
+    if (!anchor) return
+
+    anchor.scrollIntoView({ behavior: 'smooth', block: 'center' })
+    handledFocusRef.current = key
+
+    const next = new URLSearchParams(searchParams)
+    next.delete('focus')
+    setSearchParams(next, { replace: true })
+  }, [
+    activities,
+    deepLink.focusPendingApprovals,
+    deepLink.week,
+    searchParams,
+    selectedWeek,
+    setSearchParams,
+  ])
+
   const markCompleted = useCallback(
     async (activity: ActivityState | undefined) => {
       if (!user || !journey) return
@@ -757,6 +793,7 @@ export function useWeeklyChecklistViewModel() {
 
   const submitProofForApproval = useCallback(async () => {
     if (!user || !journey) return
+    if (isSubmittingProof) return
     const activity = activities.find(a => a.id === proofModal.activityId)
     if (!activity) return
 
@@ -781,6 +818,7 @@ export function useWeeklyChecklistViewModel() {
       return
     }
 
+    setIsSubmittingProof(true)
     try {
       await submitPointsVerificationRequestAtomic({
         userId: user.uid,
@@ -820,8 +858,6 @@ export function useWeeklyChecklistViewModel() {
         })
         await setActivityStatusLocal(activity.id, {
           status: 'pending',
-          proofUrl: proofModal.proofUrl.trim(),
-          notes: proofModal.notes?.trim(),
           rejectionReason: null,
           hasInteracted: true,
         })
@@ -834,11 +870,14 @@ export function useWeeklyChecklistViewModel() {
         description: 'Could not submit proof. Please try again.',
         status: 'error',
       })
+    } finally {
+      setIsSubmittingProof(false)
     }
   }, [
     activities,
     closeProofModal,
     isAdmin,
+    isSubmittingProof,
     isWeekLocked,
     journey,
     proofModal.activityId,
@@ -868,6 +907,7 @@ export function useWeeklyChecklistViewModel() {
     error,
     isAdmin,
     isWeekLocked,
+    isSubmittingProof,
 
     // actions
     markCompleted,

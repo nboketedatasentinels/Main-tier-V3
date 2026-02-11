@@ -15,11 +15,13 @@ import type { ProofModalState } from '@/hooks/useWeeklyChecklistViewModel'
 
 export const ProofModal = ({
   state,
+  isSubmitting,
   onClose,
   onChange,
   onSubmit,
 }: {
   state: ProofModalState
+  isSubmitting: boolean
   onClose: () => void
   onChange: (patch: Partial<ProofModalState>) => void
   onSubmit: () => Promise<void>
@@ -56,13 +58,15 @@ export const ProofModal = ({
         </ModalBody>
 
         <ModalFooter>
-          <Button variant="ghost" mr={3} onClick={onClose}>
+          <Button variant="ghost" mr={3} onClick={onClose} isDisabled={isSubmitting}>
             Cancel
           </Button>
           <Button
             colorScheme="purple"
             onClick={onSubmit}
-            isDisabled={!state.proofUrl?.trim()}
+            isDisabled={!state.proofUrl?.trim() || isSubmitting}
+            isLoading={isSubmitting}
+            loadingText="Submitting"
           >
             Submit
           </Button>
