@@ -1,5 +1,5 @@
 import { Badge, Box, Button, HStack, Heading, Icon, Stack, Tag, Text, Tooltip } from '@chakra-ui/react'
-import { AlertTriangle, Lock, ShieldCheck, CheckCircle, RotateCcw, Zap, Infinity } from 'lucide-react'
+import { AlertTriangle, CalendarClock, CheckCircle, Circle, Infinity, Lock, RotateCcw, ShieldCheck, Zap } from 'lucide-react'
 import type { ActivityState, JourneyConfig } from '@/hooks/useWeeklyChecklistViewModel'
 import { getNextWindowAvailabilityMessage } from '@/utils/activityStateManager'
 
@@ -8,6 +8,29 @@ const statusLabel: Record<ActivityState['status'], string> = {
   pending: 'Pending',
   rejected: 'Rejected',
   completed: 'Completed',
+}
+
+type VisibilityState = 'available' | 'next_window' | 'completed' | 'locked' | 'exhausted'
+
+const getVisibilityState = (activity: ActivityState): VisibilityState => {
+  if (activity.status === 'completed') return 'completed'
+
+  if (activity.availability.state === 'available') return 'available'
+  if (activity.availability.state === 'next_window') return 'next_window'
+  if (activity.availability.state === 'locked') return 'locked'
+
+  // One-time activities that were already used in a prior window.
+  if (activity.availability.state === 'permanently_exhausted') return 'completed'
+
+  return 'exhausted'
+}
+
+const visibilityBadgeConfig: Record<VisibilityState, { label: string; colorScheme: string; icon: React.ElementType }> = {
+  available: { label: 'Available', colorScheme: 'green', icon: Circle },
+  next_window: { label: 'Next Window', colorScheme: 'yellow', icon: CalendarClock },
+  completed: { label: 'Completed', colorScheme: 'green', icon: CheckCircle },
+  locked: { label: 'Locked', colorScheme: 'gray', icon: Lock },
+  exhausted: { label: 'Exhausted', colorScheme: 'orange', icon: AlertTriangle },
 }
 
 export const WeeklyActivityCard = ({
@@ -36,6 +59,8 @@ export const WeeklyActivityCard = ({
   const lockedByInteraction = Boolean(activity.hasInteracted) && activity.status !== 'rejected' && !isAdmin
 
   const disabled = lockedByWeek || lockedByAvailability || lockedByInteraction
+  const visibilityState = getVisibilityState(activity)
+  const visibilityBadge = visibilityBadgeConfig[visibilityState]
 
   const showLockReason = () => {
     if (isAdmin) return null
@@ -48,6 +73,10 @@ export const WeeklyActivityCard = ({
 
     if (activity.availability.state === 'exhausted') {
       return 'Cap reached for this window.'
+    }
+
+    if (activity.availability.state === 'permanently_exhausted') {
+      return 'This one-time activity has already been completed.'
     }
 
     if (isPartnerIssued && activity.status === 'not_started') {
@@ -87,7 +116,7 @@ export const WeeklyActivityCard = ({
   }
 
   return (
-    <Box borderWidth="1px" borderRadius="lg" p={4} id={`activity-${activity.id}`} bg={activity.availability.state === 'next_window' || activity.availability.state === 'exhausted' ? 'gray.50' : 'white'}>
+    <Box borderWidth="1px" borderRadius="lg" p={4} id={`activity-${activity.id}`} bg={activity.availability.state === 'next_window' || activity.availability.state === 'exhausted' || activity.availability.state === 'permanently_exhausted' ? 'gray.50' : 'white'}>
       <HStack justify="space-between" align="flex-start">
         <Stack spacing={1} flex={1}>
           <HStack spacing={2} wrap="wrap">
@@ -103,6 +132,11 @@ export const WeeklyActivityCard = ({
               }
             >
               {statusLabel[activity.status]}
+            </Badge>
+
+            <Badge colorScheme={visibilityBadge.colorScheme} variant="subtle" display="flex" alignItems="center">
+              <Icon as={visibilityBadge.icon} size={12} mr={1} />
+              {visibilityBadge.label}
             </Badge>
 
             {requiresPartnerApproval ? (
@@ -124,14 +158,6 @@ export const WeeklyActivityCard = ({
             )}
 
             {policyBadge()}
-
-            {activity.availability.state === 'next_window' ? (
-              <Badge colorScheme="yellow">Next Window</Badge>
-            ) : activity.availability.state === 'exhausted' ? (
-              <Badge colorScheme="orange">Cap Reached</Badge>
-            ) : activity.availability.state === 'locked' ? (
-              <Badge colorScheme="gray">Locked</Badge>
-            ) : null}
 
             <Tag variant="subtle" colorScheme="orange">+{activity.points} pts</Tag>
           </HStack>

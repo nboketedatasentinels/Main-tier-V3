@@ -975,7 +975,7 @@ const WeeklyChecklistPage: React.FC = () => {
               {showProofBadge && (
                 <Tooltip
                   label={
-                    activity.id === 'lift_module'
+                    ['recognition_over_recall', 'von_restorff_effect'].includes(activity.id)
                       ? 'Complete the module, then upload proof for verification.'
                       : 'Partner approval required. Upload proof so the partner team can verify.'
                   }

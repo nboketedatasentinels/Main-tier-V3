@@ -6,6 +6,7 @@ import { useSearchParams } from 'react-router-dom'
 import {
   JOURNEY_META,
   getActivitiesForJourney,
+  resolveCanonicalActivityId,
   type ActivityDef,
   type JourneyType,
 } from '@/config/pointsConfig'
@@ -96,7 +97,8 @@ export function useWeeklyChecklistViewModel() {
     const weekRaw = searchParams.get('week')
     const weekNum = weekRaw ? Number.parseInt(weekRaw, 10) : NaN
     const week = Number.isFinite(weekNum) && weekNum > 0 ? weekNum : null
-    const activityId = searchParams.get('activityId') || searchParams.get('activity') || null
+    const rawActivityId = searchParams.get('activityId') || searchParams.get('activity') || null
+    const activityId = resolveCanonicalActivityId(rawActivityId) ?? rawActivityId
     const openProof = ['1', 'true', 'yes'].includes((searchParams.get('openProof') || '').toLowerCase())
     return { week, activityId, openProof }
   }, [searchParams])
@@ -251,11 +253,12 @@ export function useWeeklyChecklistViewModel() {
         windowSnap.docs.forEach(d => {
           const row = d.data() as LedgerRow
           if (!row.activityId) return
-          windowCounts[row.activityId] = (windowCounts[row.activityId] ?? 0) + 1
+          const activityId = resolveCanonicalActivityId(row.activityId) ?? row.activityId
+          windowCounts[activityId] = (windowCounts[activityId] ?? 0) + 1
           const wk = Number(row.weekNumber ?? 0)
           if (wk > 0) {
-            lastCompletedWeekByActivity[row.activityId] = Math.max(
-              lastCompletedWeekByActivity[row.activityId] ?? 0,
+            lastCompletedWeekByActivity[activityId] = Math.max(
+              lastCompletedWeekByActivity[activityId] ?? 0,
               wk,
             )
           }
@@ -265,7 +268,8 @@ export function useWeeklyChecklistViewModel() {
         globalSnap.docs.forEach(d => {
           const row = d.data() as LedgerRow
           if (!row.activityId) return
-          totalCompletedAllTime[row.activityId] = (totalCompletedAllTime[row.activityId] ?? 0) + 1
+          const activityId = resolveCanonicalActivityId(row.activityId) ?? row.activityId
+          totalCompletedAllTime[activityId] = (totalCompletedAllTime[activityId] ?? 0) + 1
         })
 
         setLedgerCache(prev => ({
@@ -285,8 +289,9 @@ export function useWeeklyChecklistViewModel() {
       snap.docs.forEach(d => {
         const row = d.data() as LedgerRow
         if (!row.activityId) return
-        weekCompleted.add(row.activityId)
-        weekCounts[row.activityId] = (weekCounts[row.activityId] ?? 0) + 1
+        const activityId = resolveCanonicalActivityId(row.activityId) ?? row.activityId
+        weekCompleted.add(activityId)
+        weekCounts[activityId] = (weekCounts[activityId] ?? 0) + 1
       })
       setLedgerCache(prev => ({
         ...prev,
@@ -387,13 +392,14 @@ export function useWeeklyChecklistViewModel() {
           const data = docSnap.data() as PointsVerificationRequest
           if (!data?.activity_id) return
           const row: PointsVerificationRequest = { ...data, id: docSnap.id }
-          const prev = latestByActivity.get(row.activity_id)
+          const activityId = resolveCanonicalActivityId(row.activity_id) ?? row.activity_id
+          const prev = latestByActivity.get(activityId)
           if (!prev) {
-            latestByActivity.set(row.activity_id, row)
+            latestByActivity.set(activityId, row)
             return
           }
           if (toMillis(row.created_at) >= toMillis(prev.created_at)) {
-            latestByActivity.set(row.activity_id, row)
+            latestByActivity.set(activityId, row)
           }
         })
 
@@ -772,7 +778,8 @@ export function useWeeklyChecklistViewModel() {
         )
         const hasPending = existingWeekRequests.docs.some((docSnap) => {
           const data = docSnap.data() as PointsVerificationRequest
-          return data.activity_id === activity.id && (data.status ?? 'pending') === 'pending'
+          const requestActivityId = resolveCanonicalActivityId(data.activity_id) ?? data.activity_id
+          return requestActivityId === activity.id && (data.status ?? 'pending') === 'pending'
         })
         if (hasPending) {
           toast({

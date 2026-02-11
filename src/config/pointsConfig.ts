@@ -12,7 +12,8 @@ export type ActivityId =
   | "book_club"
   | "peer_to_peer"
   | "linkedin"
-  | "lift_module"
+  | "recognition_over_recall"
+  | "von_restorff_effect"
   | "impact_log"
   | "referral_bonus"
   | "peer_session_confirmation"
@@ -280,10 +281,10 @@ export const FULL_ACTIVITIES: ActivityDef[] = [
     frequencyNote: "Up to twice per month; complete in any week.",
   },
   {
-    id: "lift_module",
-    baseId: "lift_module",
-    title: "LIFT Course Module Completed",
-    description: "Complete a LIFT course module and submit proof. Points awarded after partner approval.",
+    id: "recognition_over_recall",
+    baseId: "recognition_over_recall",
+    title: "Recognition Over Recall",
+    description: "Complete the Recognition Over Recall module and submit proof. Points post after partner approval.",
     points: 3000,
     maxPerMonth: 1,
     activityPolicy: {
@@ -296,6 +297,26 @@ export const FULL_ACTIVITIES: ActivityDef[] = [
     requiresApproval: true,
     verification: "partner_approval",
     flexibleWeeks: true,
+    frequencyNote: "One module submission per window.",
+  },
+  {
+    id: "von_restorff_effect",
+    baseId: "von_restorff_effect",
+    title: "Von Restorff Effect",
+    description: "Complete the Von Restorff Effect module and submit proof. Points post after partner approval.",
+    points: 3000,
+    maxPerMonth: 1,
+    activityPolicy: {
+      type: "window_limited",
+      maxPerWindow: 1,
+    },
+    week: 3,
+    category: "Learning",
+    approvalType: "partner_approved",
+    requiresApproval: true,
+    verification: "partner_approval",
+    flexibleWeeks: true,
+    frequencyNote: "One module submission per window.",
   },
   {
     id: "impact_log",
@@ -383,6 +404,40 @@ export function getActivitiesForJourney(journeyType?: JourneyType | null): Activ
   const meta = journeyType ? JOURNEY_META[journeyType] : undefined;
   if (!meta) return FULL_ACTIVITIES;
   return meta.mode === "intro" ? INTRO_ACTIVITIES : FULL_ACTIVITIES;
+}
+
+const ACTIVITY_ID_ALIASES: Record<string, ActivityId> = {
+  lift_module: "recognition_over_recall",
+};
+
+const SPECIAL_ACTIVITIES: ActivityDef[] = [
+  REFERRAL_ACTIVITY,
+  PEER_SESSION_CONFIRMATION_ACTIVITY,
+  PEER_SESSION_NO_SHOW_ACTIVITY,
+];
+
+const ALL_ACTIVITIES: ActivityDef[] = [...FULL_ACTIVITIES, ...SPECIAL_ACTIVITIES];
+const ALL_ACTIVITY_IDS = new Set<ActivityId>(ALL_ACTIVITIES.map((activity) => activity.id));
+
+export function resolveCanonicalActivityId(activityId?: string | null): ActivityId | null {
+  if (!activityId) return null;
+  const resolved = ACTIVITY_ID_ALIASES[activityId] ?? activityId;
+  return ALL_ACTIVITY_IDS.has(resolved as ActivityId) ? (resolved as ActivityId) : null;
+}
+
+export function getActivityDefinitionById(params: {
+  activityId?: string | null;
+  journeyType?: JourneyType | null;
+}): ActivityDef | null {
+  const canonicalId = resolveCanonicalActivityId(params.activityId);
+  if (!canonicalId) return null;
+
+  const visible = getActivitiesForJourney(params.journeyType);
+  return (
+    visible.find((activity) => activity.id === canonicalId) ??
+    ALL_ACTIVITIES.find((activity) => activity.id === canonicalId) ??
+    null
+  );
 }
 
 // For 3M+ show month indicator: Month = ceil(week/4)

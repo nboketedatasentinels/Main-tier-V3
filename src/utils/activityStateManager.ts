@@ -153,21 +153,15 @@ export const getVisibleActivities = <T extends { availability: { state: Activity
   const stateOrder: Record<ActivityAvailabilityState, number> = {
     available: 0,
     next_window: 1,
-    exhausted: 2,
+    permanently_exhausted: 2,
     locked: 3,
-    permanently_exhausted: 4,
+    exhausted: 4,
   }
 
-  return activities
-    .filter(a => {
-      // Hide permanently exhausted one-time activities
-      if (a.availability.state === 'permanently_exhausted') return false
-      return true
-    })
-    .sort((a, b) => {
-      // Sort by availability state
-      return stateOrder[a.availability.state as ActivityAvailabilityState] - stateOrder[b.availability.state as ActivityAvailabilityState]
-    })
+  return [...activities].sort((a, b) => {
+    // Sort by availability state
+    return stateOrder[a.availability.state as ActivityAvailabilityState] - stateOrder[b.availability.state as ActivityAvailabilityState]
+  })
 }
 
 /**

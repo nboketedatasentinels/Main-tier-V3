@@ -15,7 +15,7 @@ import {
 } from 'firebase/firestore'
 import { db } from '@/services/firebase'
 import { awardChecklistPoints } from './pointsService'
-import { getActivitiesForJourney } from '@/config/pointsConfig'
+import { getActivityDefinitionById, resolveCanonicalActivityId } from '@/config/pointsConfig'
 import { createInAppNotification } from './notificationService'
 import { resolveJourneyType } from '@/utils/journeyType'
 import { logAdminAction } from './superAdminService'
@@ -174,8 +174,11 @@ export const approvePointsVerificationRequest = async (params: {
       programDurationWeeks: profileData.programDurationWeeks,
       programDuration: profileData.programDuration,
     }) ?? '6W'
-  const activities = getActivitiesForJourney(journeyType)
-  const activity = activities.find((a) => a.id === params.request.activity_id)
+  const activity = getActivityDefinitionById({
+    journeyType,
+    activityId: params.request.activity_id,
+  })
+  const canonicalActivityId = resolveCanonicalActivityId(params.request.activity_id) ?? params.request.activity_id
 
   if (!activity) {
     throw new Error('Activity not found')
@@ -218,7 +221,7 @@ export const approvePointsVerificationRequest = async (params: {
     await upsertChecklistActivity({
       userId: params.request.user_id,
       weekNumber: params.request.week,
-      activityId: params.request.activity_id,
+      activityId: canonicalActivityId,
       patch: {
         status: 'completed',
         hasInteracted: true,
@@ -240,7 +243,7 @@ export const approvePointsVerificationRequest = async (params: {
       userId: params.request.user_id,
       metadata: {
         requestId: params.request.id,
-        activityId: params.request.activity_id,
+        activityId: canonicalActivityId,
         points: activity.points,
       },
     })
@@ -273,7 +276,7 @@ export const rejectPointsVerificationRequest = async (params: {
     await upsertChecklistActivity({
       userId: params.request.user_id,
       weekNumber: params.request.week,
-      activityId: params.request.activity_id,
+      activityId: resolveCanonicalActivityId(params.request.activity_id) ?? params.request.activity_id,
       patch: {
         status: 'rejected',
         // Unlock so the learner can resubmit after rejection.
@@ -312,9 +315,9 @@ export const rejectPointsVerificationRequest = async (params: {
     type: 'approval',
     relatedId: params.request.id,
     metadata: {
-      actionUrl: `/app/weekly-checklist?week=${encodeURIComponent(String(params.request.week))}&activityId=${encodeURIComponent(params.request.activity_id)}&openProof=1`,
+      actionUrl: `/app/weekly-checklist?week=${encodeURIComponent(String(params.request.week))}&activityId=${encodeURIComponent(resolveCanonicalActivityId(params.request.activity_id) ?? params.request.activity_id)}&openProof=1`,
       week: params.request.week,
-      activityId: params.request.activity_id,
+      activityId: resolveCanonicalActivityId(params.request.activity_id) ?? params.request.activity_id,
       requestId: params.request.id,
     },
   })

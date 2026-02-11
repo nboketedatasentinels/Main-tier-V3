@@ -10,7 +10,7 @@ import {
   serverTimestamp
 } from "firebase/firestore";
 import { awardChecklistPoints } from "./pointsService";
-import { FULL_ACTIVITIES, JourneyType } from "@/config/pointsConfig";
+import { getActivityDefinitionById, JourneyType } from "@/config/pointsConfig";
 import { UserProfile } from "@/types";
 import { createApprovalRequest } from "./approvalsService";
 
@@ -77,7 +77,7 @@ export async function assignActivityToLearner(params: {
     const journeyType = profile.journeyType || "6W";
 
     // 2. Find activity definition
-    const activity = FULL_ACTIVITIES.find(a => a.id === activityId);
+    const activity = getActivityDefinitionById({ activityId, journeyType: journeyType as JourneyType });
     if (!activity) {
       throw new Error("Activity definition not found");
     }

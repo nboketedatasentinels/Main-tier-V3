@@ -19,7 +19,7 @@ import { useAuth } from '@/hooks/useAuth'
 import { useOrganizationLeadership } from '@/hooks/useOrganizationLeadership'
 import { ORG_COLLECTION } from '@/constants/organizations'
 import { getWeekKey, getCurrentWeekNumber } from '@/utils/weekCalculations'
-import { JOURNEY_META, getMonthNumber, FULL_ACTIVITIES } from '@/config/pointsConfig'
+import { JOURNEY_META, getMonthNumber, getActivityDefinitionById } from '@/config/pointsConfig'
 import { InspirationQuote } from '@/types'
 import { leadershipQuotes } from '@/services/quotes'
 import { UserProfileExtended } from '@/services/userProfileService'
@@ -548,7 +548,7 @@ export const useWeeklyGlanceData = () => {
       snapshot => {
         const entries = snapshot.docs.map(docSnapshot => {
           const data = docSnapshot.data()
-          const activityDef = FULL_ACTIVITIES.find(a => a.id === data.activityId)
+          const activityDef = getActivityDefinitionById({ activityId: data.activityId, journeyType: profile.journeyType })
           return {
             id: docSnapshot.id,
             activityId: data.activityId,
