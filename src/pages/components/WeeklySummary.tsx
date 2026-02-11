@@ -29,9 +29,9 @@ export const WeeklySummary = ({
 
   const progressStatus = useMemo(() => {
     const pct = target > 0 ? Math.min(100, Math.round((earned / target) * 100)) : 0
-    if (pct >= 100) return { color: 'green', label: 'On Track', pct }
-    if (pct >= 75) return { color: 'yellow', label: 'Warning', pct }
-    return { color: 'red', label: 'Alert', pct }
+    if (pct >= 100) return { color: 'green', label: 'At target', pct }
+    if (pct >= 75) return { color: 'blue', label: 'Building momentum', pct }
+    return { color: 'teal', label: 'In motion', pct }
   }, [earned, target])
 
   return (
@@ -39,10 +39,10 @@ export const WeeklySummary = ({
       <Stack spacing={3}>
         <HStack justify="space-between">
           <Heading size="sm" color="text.primary">
-            Week {week} summary · Window {windowNumber}
+            Week {week} summary - Window {windowNumber}
           </Heading>
           <Tag colorScheme={progressStatus.color}>
-            {progressStatus.label} • {progressStatus.pct}%
+            {progressStatus.label} | {progressStatus.pct}%
           </Tag>
         </HStack>
         <Progress value={progressStatus.pct} colorScheme={progressStatus.color} borderRadius="full" />
@@ -59,7 +59,7 @@ export const WeeklySummary = ({
           />
           <StatCard
             label={`Window ${windowNumber} context`}
-            value="View Details"
+            value={`Window ${windowNumber}`}
             icon={<Icon as={CalendarRange} color="purple.400" />}
           />
           <StatCard

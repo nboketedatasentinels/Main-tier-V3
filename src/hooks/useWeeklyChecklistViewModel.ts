@@ -95,6 +95,7 @@ export function useWeeklyChecklistViewModel() {
     rejectionReason: null,
   })
   const [isSubmittingProof, setIsSubmittingProof] = useState(false)
+  const isSubmittingProofRef = useRef(false)
 
   const deepLink = useMemo(() => {
     const weekRaw = searchParams.get('week')
@@ -696,10 +697,10 @@ export function useWeeklyChecklistViewModel() {
 
       if (!canMutateActivity(activity)) {
         toast({
-          title: 'Action not allowed',
+          title: 'Not available yet',
           description: isAdmin
-            ? 'Override is enabled but this item is currently blocked by policy.'
-            : 'This activity is locked or unavailable.',
+            ? 'Admin override is enabled, but this action is currently blocked by policy.'
+            : 'This activity is not open right now. Try another available activity.',
           status: 'warning',
         })
         return
@@ -713,6 +714,14 @@ export function useWeeklyChecklistViewModel() {
         onProofRequired: (act) => openProofModal(act),
         onSuccess: async (status) => {
           await setActivityStatusLocal(activity.id, { status, hasInteracted: true, rejectionReason: null })
+          if (status === 'completed') {
+            toast({
+              title: 'Activity completed',
+              description: `Great work. ${activity.points} points were added.`,
+              status: 'success',
+              duration: 3500,
+            })
+          }
         },
         onError: (e) => {
           console.error(e)
@@ -744,8 +753,8 @@ export function useWeeklyChecklistViewModel() {
       // Admin can revoke; non-admin must satisfy normal restrictions too (esp. lock/hasInteracted)
       if (!isAdmin && (!journey || isWeekLocked || activity.hasInteracted)) {
         toast({
-          title: 'Selection locked',
-          description: 'Contact support to make changes.',
+          title: 'Selection saved',
+          description: 'This selection is already saved for this week. Support can help if you need a change.',
           status: 'warning',
         })
         return
@@ -793,33 +802,35 @@ export function useWeeklyChecklistViewModel() {
 
   const submitProofForApproval = useCallback(async () => {
     if (!user || !journey) return
-    if (isSubmittingProof) return
-    const activity = activities.find(a => a.id === proofModal.activityId)
-    if (!activity) return
-
-    // Non-admin must respect availability/lock rules; admin can override submission (but still needs proofUrl).
-    if (!isAdmin) {
-      if (isWeekLocked) {
-        toast({ title: 'Week locked', description: 'You can’t submit proof for a future week.', status: 'warning' })
-        return
-      }
-      if (activity.availability.state !== 'available' && activity.status !== 'rejected') {
-        toast({ title: 'Activity unavailable', description: 'This activity is locked right now.', status: 'warning' })
-        return
-      }
-      if (activity.hasInteracted && activity.status !== 'rejected') {
-        toast({ title: 'Selection locked', description: 'Contact support to make changes.', status: 'warning' })
-        return
-      }
-    }
-
-    if (!proofModal.proofUrl?.trim()) {
-      toast({ title: 'Proof required', description: 'Please provide a link before submitting.', status: 'warning' })
-      return
-    }
-
+    if (isSubmittingProofRef.current) return
+    isSubmittingProofRef.current = true
     setIsSubmittingProof(true)
+    let activity: ActivityState | undefined
     try {
+      activity = activities.find(a => a.id === proofModal.activityId)
+      if (!activity) return
+
+      // Non-admin must respect availability/lock rules; admin can override submission (but still needs proofUrl).
+      if (!isAdmin) {
+        if (isWeekLocked) {
+          toast({ title: 'Future week', description: 'Proof submission opens when this week becomes active.', status: 'warning' })
+          return
+        }
+        if (activity.availability.state !== 'available' && activity.status !== 'rejected') {
+          toast({ title: 'Opens soon', description: 'This activity is not open for proof submission yet.', status: 'warning' })
+          return
+        }
+        if (activity.hasInteracted && activity.status !== 'rejected') {
+          toast({ title: 'Selection saved', description: 'This submission is already in progress for this week.', status: 'warning' })
+          return
+        }
+      }
+
+      if (!proofModal.proofUrl?.trim()) {
+        toast({ title: 'Proof required', description: 'Please provide a link before submitting.', status: 'warning' })
+        return
+      }
+
       await submitPointsVerificationRequestAtomic({
         userId: user.uid,
         organizationId: userOrganizationId,
@@ -842,7 +853,7 @@ export function useWeeklyChecklistViewModel() {
 
       toast({
         title: 'Proof submitted',
-        description: 'Your proof was sent for verification. Points post after approval.',
+        description: 'Nice work. Your proof is now in review and points will post after approval.',
         status: 'success',
         duration: 4000,
       })
@@ -851,16 +862,18 @@ export function useWeeklyChecklistViewModel() {
     } catch (e) {
       if (e instanceof PendingRequestExistsError || (e instanceof Error && e.message === 'pending_request_exists')) {
         toast({
-          title: 'Already submitted',
+          title: 'Already in review',
           description: 'This activity is already pending verification for this week.',
           status: 'info',
           duration: 5000,
         })
-        await setActivityStatusLocal(activity.id, {
-          status: 'pending',
-          rejectionReason: null,
-          hasInteracted: true,
-        })
+        if (activity) {
+          await setActivityStatusLocal(activity.id, {
+            status: 'pending',
+            rejectionReason: null,
+            hasInteracted: true,
+          })
+        }
         closeProofModal()
         return
       }
@@ -871,13 +884,13 @@ export function useWeeklyChecklistViewModel() {
         status: 'error',
       })
     } finally {
+      isSubmittingProofRef.current = false
       setIsSubmittingProof(false)
     }
   }, [
     activities,
     closeProofModal,
     isAdmin,
-    isSubmittingProof,
     isWeekLocked,
     journey,
     proofModal.activityId,
@@ -921,3 +934,4 @@ export function useWeeklyChecklistViewModel() {
     submitProofForApproval,
   }
 }
+

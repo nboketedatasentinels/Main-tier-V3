@@ -563,7 +563,7 @@ const WeeklyChecklistPage: React.FC = () => {
     if (!user || !journey) return;
     if (activity.availability.state !== 'available') {
       toast({
-        title: 'Activity unavailable',
+        title: 'Opens soon',
         description: availabilityReasonLabels[activity.availability.reason ?? 'scheduled'],
         status: 'warning',
       });
@@ -616,7 +616,7 @@ const WeeklyChecklistPage: React.FC = () => {
     if (!proofModal.activity || !user) return
     if (proofModal.activity.availability.state !== 'available') {
       toast({
-        title: 'Activity unavailable',
+        title: 'Opens soon',
         description: availabilityReasonLabels[proofModal.activity.availability.reason ?? 'scheduled'],
         status: 'warning',
       })
@@ -718,10 +718,10 @@ const WeeklyChecklistPage: React.FC = () => {
       const { pointsEarned, windowTarget } = windowProgressData;
       const pct = windowTarget > 0 ? Math.min(100, Math.round((pointsEarned / windowTarget) * 100)) : 0;
 
-      const statusConfig: Record<WindowProgressData['status'], { color: 'green' | 'yellow' | 'red' | 'blue'; label: string }> = {
+      const statusConfig: Record<WindowProgressData['status'], { color: 'green' | 'yellow' | 'red' | 'blue' | 'teal'; label: string }> = {
         on_track: { color: 'green', label: 'On Track' },
-        warning: { color: 'yellow', label: 'Warning' },
-        alert: { color: 'red', label: 'Alert' },
+        warning: { color: 'blue', label: 'Building momentum' },
+        alert: { color: 'teal', label: 'In motion' },
         recovery: { color: 'blue', label: 'Recovery' },
       };
 
@@ -731,15 +731,15 @@ const WeeklyChecklistPage: React.FC = () => {
       }
 
       if (pct >= 100) return { color: 'green', label: 'On Track', pct };
-      if (pct >= 75) return { color: 'yellow', label: 'Warning', pct };
-      return { color: 'red', label: 'Alert', pct };
+      if (pct >= 75) return { color: 'blue', label: 'Building momentum', pct };
+      return { color: 'teal', label: 'In motion', pct };
     } else {
       if (!weeklyProgress) return { color: 'gray', label: 'Loading...', pct: 0 };
       const { pointsEarned, weeklyTarget } = weeklyProgress;
       const pct = weeklyTarget > 0 ? Math.min(100, Math.round((pointsEarned / weeklyTarget) * 100)) : 0;
       if (pct >= 100) return { color: 'green', label: 'On Track', pct };
-      if (pct >= 75) return { color: 'yellow', label: 'Warning', pct };
-      return { color: 'red', label: 'Alert', pct };
+      if (pct >= 75) return { color: 'blue', label: 'Building momentum', pct };
+      return { color: 'teal', label: 'In motion', pct };
     }
   }, [isParallelWindowTrackingEnabled, weeklyProgress, windowProgressData]);
 
@@ -797,7 +797,7 @@ const WeeklyChecklistPage: React.FC = () => {
     const startLabel = journeyStartDate ? format(journeyStartDate, 'MMM d, yyyy') : 'Not set';
     const endLabel = journeyEndDate ? format(journeyEndDate, 'MMM d, yyyy') : 'Not set';
     const overviewLabel = isMonthBasedJourney
-      ? `Month ${currentMonthNumber} of ${totalMonths} · Week ${journey.currentWeek} of ${journey.programDurationWeeks}`
+      ? `Month ${currentMonthNumber} of ${totalMonths} - Week ${journey.currentWeek} of ${journey.programDurationWeeks}`
       : `Week ${journey.currentWeek} of ${journey.programDurationWeeks}`;
     const monthMilestones: MonthMilestone[] = isMonthBasedJourney
       ? Array.from({ length: totalMonths }, (_, idx) => monthMeta(idx + 1))
@@ -832,7 +832,7 @@ const WeeklyChecklistPage: React.FC = () => {
               </Heading>
               <Text color="text.secondary">{overviewLabel}</Text>
               <Text color="text.secondary" fontSize="sm">
-                {journey.programDurationWeeks} total weeks · {journeyProgress.weeksAtTarget} weeks at target
+                {journey.programDurationWeeks} total weeks - {journeyProgress.weeksAtTarget} weeks at target
               </Text>
               <Text color="text.secondary" fontSize="sm">
                 {journeyProgress.totalEarned.toLocaleString()} of {journeyProgress.totalTarget.toLocaleString()} points earned
@@ -988,7 +988,7 @@ const WeeklyChecklistPage: React.FC = () => {
                 <Badge colorScheme="gray">Locked</Badge>
               )}
               {activity.availability.state === 'exhausted' && (
-                <Badge colorScheme="orange">Exhausted</Badge>
+                <Badge colorScheme="teal">Window limit reached</Badge>
               )}
               <Tag colorScheme="primary">{activity.category}</Tag>
             </HStack>
@@ -1064,7 +1064,7 @@ const WeeklyChecklistPage: React.FC = () => {
             </HStack>
             {activity.hasInteracted && (
               <Text fontSize="sm" color="text.muted">
-                Selection locked. Contact support to make changes.
+                Selection saved for this week. Support can help if you need a change.
               </Text>
             )}
           </Stack>
@@ -1082,7 +1082,7 @@ const WeeklyChecklistPage: React.FC = () => {
     return (
       <Box borderWidth="1px" borderColor="accent.purpleBorder" p={4} borderRadius="lg" bg="accent.purpleSubtle">
         <Heading size="sm" color="text.primary" mb={2}>
-          Week {selectedWeek} – Focus Guidance
+          Week {selectedWeek} - Focus Guidance
         </Heading>
         <Stack spacing={2} color="text.secondary">
           {bullets.map(item => (
@@ -1112,7 +1112,7 @@ const WeeklyChecklistPage: React.FC = () => {
           </Stack>
         </Alert>
         <Button colorScheme="primary" onClick={scrollToActivity} isDisabled={!firstIncompleteActivity}>
-          {firstIncompleteActivity ? `Complete ${firstIncompleteActivity.title}` : 'All activities done'}
+          {firstIncompleteActivity ? `Complete ${firstIncompleteActivity.title}` : 'Week complete. Nice work'}
         </Button>
         <Stack spacing={1} color="text.secondary">
           <Text fontWeight="bold">Streak tracker</Text>
@@ -1174,10 +1174,10 @@ const WeeklyChecklistPage: React.FC = () => {
         <Stack spacing={3}>
           <HStack justify="space-between">
             <Heading size="sm" color="text.primary">
-              Week {selectedWeek} summary · Window {windowProgress.windowNumber}
+              Week {selectedWeek} summary - Window {windowProgress.windowNumber}
             </Heading>
             <Tag colorScheme={progressStatus.color}>
-              {progressStatus.label} • {progressStatus.pct}%
+              {progressStatus.label} | {progressStatus.pct}%
             </Tag>
           </HStack>
           <Progress value={progressStatus.pct} colorScheme={progressStatus.color} borderRadius="full" />
@@ -1262,7 +1262,7 @@ const WeeklyChecklistPage: React.FC = () => {
                   {activities.length ? getVisibleActivities(activities).map(renderActivityCard) : (
                     <Center py={8}>
                       <Stack spacing={2} align="center">
-                        <Text color="text.secondary">No activities found for this week.</Text>
+                        <Text color="text.secondary">You are caught up for this week. New activities appear as windows open.</Text>
                         <Text color="text.secondary" fontSize="sm">
                           Templates will automatically sync from Firebase when available.
                         </Text>
@@ -1295,7 +1295,7 @@ const WeeklyChecklistPage: React.FC = () => {
                       ? 'Amazing! You are ahead of your target.'
                       : progressStatus.pct >= 75
                         ? 'You are close. Aim to close remaining activities.'
-                        : 'Critical: earn points to avoid falling behind.'}
+                        : 'Keep going. Your next activity will move you closer to target.'}
                   </Text>
                 </Stack>
               )}
@@ -1330,3 +1330,4 @@ const InfoPill: React.FC<{ color: string }> = ({ color }) => (
 
 export const WeeklyUpdatesPage = WeeklyChecklistPage
 export { WeeklyChecklistPage }
+

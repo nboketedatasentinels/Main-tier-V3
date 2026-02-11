@@ -49,7 +49,7 @@ export const ActivityList = ({
 
       {!visibleActivities?.length ? (
         <Center py={8}>
-          <Text color="text.muted">No activities available for this week.</Text>
+          <Text color="text.muted">You are caught up for this week. New activities appear as windows open.</Text>
         </Center>
       ) : (
         <Stack spacing={3}>

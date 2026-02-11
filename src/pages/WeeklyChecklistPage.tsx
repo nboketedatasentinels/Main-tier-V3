@@ -10,7 +10,7 @@ export const WeeklyChecklistPage = () => {
       <Center py={16}>
         <Stack spacing={3} align="center">
           <CircularProgress isIndeterminate />
-          <Text>Loading weekly checklist…</Text>
+          <Text>Loading weekly checklist...</Text>
         </Stack>
       </Center>
     )
@@ -24,3 +24,4 @@ export const WeeklyChecklistPage = () => {
 }
 
 export const WeeklyUpdatesPage = WeeklyChecklistPage
+

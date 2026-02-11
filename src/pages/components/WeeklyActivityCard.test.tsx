@@ -106,7 +106,7 @@ describe('WeeklyActivityCard exit actions', () => {
     expect(action).toHaveAttribute('href', '/app/weekly-glance')
   })
 
-  it('shows "Open an available activity" and triggers focus callback when alternatives exist', () => {
+  it('shows "Jump to available activity" and triggers focus callback when alternatives exist', () => {
     const props = renderCard({
       hasAvailableAlternative: true,
       activity: makeActivity({
@@ -114,7 +114,7 @@ describe('WeeklyActivityCard exit actions', () => {
       }),
     })
 
-    const action = screen.getByRole('button', { name: 'Open an available activity' })
+    const action = screen.getByRole('button', { name: 'Jump to available activity' })
     expect(action).toBeInTheDocument()
 
     fireEvent.click(action)
@@ -135,7 +135,7 @@ describe('WeeklyActivityCard exit actions', () => {
     })
 
     expect(screen.queryByRole('button', { name: /go to week/i })).not.toBeInTheDocument()
-    expect(screen.queryByRole('button', { name: /open an available activity/i })).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: /jump to available activity/i })).not.toBeInTheDocument()
     expect(screen.queryByRole('link', { name: /review pending approval/i })).not.toBeInTheDocument()
     expect(screen.queryByRole('link', { name: /view support options/i })).not.toBeInTheDocument()
   })

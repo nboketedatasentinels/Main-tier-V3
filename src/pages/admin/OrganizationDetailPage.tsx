@@ -37,6 +37,7 @@ import { StatusBadge } from '@/components/admin/StatusBadge'
 import { useAuth } from '@/hooks/useAuth'
 import { useOrganizationDetails } from '@/hooks/useOrganizationDetails'
 import { logAdminAction } from '@/services/superAdminService'
+import { getProgramDurationLabel } from '@/utils/monthlyCourseAssignments'
 
 const formatDate = (value?: string) => {
   if (!value) return 'Not available'
@@ -147,7 +148,7 @@ export const OrganizationDetailPage: React.FC = () => {
   }
 
   const startIndex = Math.min((page - 1) * pageSize + 1, filteredCount || 0)
-  const endIndex = Math.min(page * pageSize, filteredCount)
+  const endIndex = Math.min(page * pageSize, filteredCount || 0)
 
   if (error && error !== 'unauthorized') {
     const title =
@@ -287,7 +288,7 @@ export const OrganizationDetailPage: React.FC = () => {
                     <Stack spacing={1}>
                       <Text fontSize="xs" color="brand.subtleText">Program duration</Text>
                       <Text fontWeight="semibold" color="brand.text">
-                        {organization?.programDuration ? `${organization.programDuration} months` : 'Not set'}
+                        {getProgramDurationLabel(organization?.programDuration) || 'Not set'}
                       </Text>
                     </Stack>
                     <Stack spacing={1}>
@@ -612,7 +613,7 @@ export const OrganizationDetailPage: React.FC = () => {
                             </Box>
                             <Stack spacing={0}>
                               <Text fontWeight="semibold" color="brand.text">
-                                {highlightMatch(userRow.name)}
+                                {highlightMatch(userRow.name || 'No name')}
                               </Text>
                               <Text fontSize="xs" color="brand.subtleText">{userRow.role}</Text>
                             </Stack>

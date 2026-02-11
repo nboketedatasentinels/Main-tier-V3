@@ -172,10 +172,10 @@ export const getNextWindowAvailabilityMessage = (
   currentWindow: number,
 ): string => {
   if (activity.activityPolicy?.type === 'window_limited') {
-    return `Available again in Window ${currentWindow + 1}`
+    return `Nice work this window. Available again in Window ${currentWindow + 1}.`
   }
   if (activity.activityPolicy?.type === 'ongoing') {
-    return 'Resets next window'
+    return 'Available again next window.'
   }
-  return 'Locked until next window'
+  return 'This activity unlocks next window.'
 }

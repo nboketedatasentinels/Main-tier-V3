@@ -29,10 +29,10 @@ const getVisibilityState = (activity: ActivityState): VisibilityState => {
 
 const visibilityBadgeConfig: Record<VisibilityState, { label: string; colorScheme: string; icon: React.ElementType }> = {
   available: { label: 'Available', colorScheme: 'green', icon: Circle },
-  next_window: { label: 'Next Window', colorScheme: 'yellow', icon: CalendarClock },
+  next_window: { label: 'Opens Next Window', colorScheme: 'blue', icon: CalendarClock },
   completed: { label: 'Completed', colorScheme: 'green', icon: CheckCircle },
-  locked: { label: 'Locked', colorScheme: 'gray', icon: Lock },
-  exhausted: { label: 'Exhausted', colorScheme: 'orange', icon: AlertTriangle },
+  locked: { label: 'Unlocks Soon', colorScheme: 'gray', icon: Lock },
+  exhausted: { label: 'Window Cap Reached', colorScheme: 'teal', icon: RotateCcw },
 }
 
 export const WeeklyActivityCard = ({
@@ -73,8 +73,8 @@ export const WeeklyActivityCard = ({
 
   const showLockReason = () => {
     if (isAdmin) return null
-    if (lockedByWeek) return 'This week is locked (future week).'
-    if (lockedByInteraction) return 'Selection locked. Contact support to change.'
+    if (lockedByWeek) return `Week ${selectedWeek} opens after Week ${currentWeek}.`
+    if (lockedByInteraction) return 'Selection saved for this week. Need a change? Support can help.'
 
     if (activity.availability.state === 'next_window') {
       const currentWindow = getWindowNumber(selectedWeek, PARALLEL_WINDOW_SIZE_WEEKS)
@@ -82,18 +82,18 @@ export const WeeklyActivityCard = ({
     }
 
     if (activity.availability.state === 'exhausted') {
-      return 'Cap reached for this window.'
+      return 'Nice work. You reached this activity cap for the current window.'
     }
 
     if (activity.availability.state === 'permanently_exhausted') {
-      return 'This one-time activity has already been completed.'
+      return 'Nice work. This one-time activity is already completed.'
     }
 
     if (isPartnerIssued && activity.status === 'not_started') {
       return 'Your partner will assign this activity to you.'
     }
 
-    if (lockedByAvailability) return 'This activity is locked or exhausted right now.'
+    if (lockedByAvailability) return 'This activity opens when schedule and support conditions are met.'
     return null
   }
 
@@ -129,7 +129,7 @@ export const WeeklyActivityCard = ({
     if (hasAvailableAlternative && activity.availability.state !== 'available') {
       return (
         <Button size="xs" variant="outline" onClick={onFocusAvailableActivity}>
-          Open an available activity
+          Jump to available activity
         </Button>
       )
     }
@@ -165,8 +165,15 @@ export const WeeklyActivityCard = ({
     return null
   }
 
+  const cardBg =
+    activity.status === 'completed' || activity.availability.state === 'permanently_exhausted'
+      ? 'green.50'
+      : activity.availability.state === 'next_window' || activity.availability.state === 'exhausted'
+        ? 'blue.50'
+        : 'white'
+
   return (
-    <Box borderWidth="1px" borderRadius="lg" p={4} id={`activity-${activity.id}`} bg={activity.availability.state === 'next_window' || activity.availability.state === 'exhausted' || activity.availability.state === 'permanently_exhausted' ? 'gray.50' : 'white'}>
+    <Box borderWidth="1px" borderRadius="lg" p={4} id={`activity-${activity.id}`} bg={cardBg}>
       <HStack justify="space-between" align="flex-start">
         <Stack spacing={1} flex={1}>
           <HStack spacing={2} wrap="wrap">
@@ -227,7 +234,7 @@ export const WeeklyActivityCard = ({
 
           {lockReason ? (
             <Stack spacing={2} align="flex-start">
-              <HStack spacing={2} color="orange.600">
+              <HStack spacing={2} color="blue.700">
                 <Icon as={Lock} size={14} />
                 <Text fontSize="sm" fontWeight="medium">
                   {lockReason}
@@ -242,6 +249,15 @@ export const WeeklyActivityCard = ({
               <Icon as={AlertTriangle} size={14} />
               <Text fontSize="sm">
                 Pending verification. Points post after approval.
+              </Text>
+            </HStack>
+          ) : null}
+
+          {activity.status === 'completed' ? (
+            <HStack spacing={2} color="green.700">
+              <Icon as={CheckCircle} size={14} />
+              <Text fontSize="sm">
+                Great work. This activity is complete.
               </Text>
             </HStack>
           ) : null}
@@ -297,7 +313,7 @@ export const WeeklyActivityCard = ({
           isDisabled={(!isAdmin && activity.hasInteracted && activity.status !== 'rejected') || lockedByWeek}
           onClick={() => onMarkNotStarted(activity)}
         >
-          No / Reset
+          Reset status
         </Button>
       </Stack>
     </Box>
