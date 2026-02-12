@@ -52,6 +52,7 @@ const renderCard = (overrides: Partial<ComponentProps<typeof WeeklyActivityCard>
     onMarkCompleted: vi.fn(async () => undefined),
     onMarkNotStarted: vi.fn(async () => undefined),
     onOpenProof: vi.fn(),
+    isActionInFlight: false,
     ...overrides,
   }
 
@@ -80,6 +81,20 @@ describe('WeeklyActivityCard exit actions', () => {
 
     fireEvent.click(action)
     expect(props.onOpenCurrentWeek).toHaveBeenCalledTimes(1)
+  })
+
+  it('shows lock reason outside collapsed details on mobile', () => {
+    renderCard({
+      selectedWeek: 5,
+      currentWeek: 3,
+      isWeekLocked: true,
+      activity: makeActivity(),
+    })
+
+    expect(screen.getByRole('button', { name: 'Details' })).toBeInTheDocument()
+    const lockReasons = screen.getAllByText('Week 5 opens after Week 3.')
+    const outsideCollapsedDetails = lockReasons.find((node) => !node.closest('#activity-details-podcast'))
+    expect(outsideCollapsedDetails).toBeInTheDocument()
   })
 
   it('shows pending approval exit link when selection is interaction-locked', () => {
@@ -153,5 +168,21 @@ describe('WeeklyActivityCard exit actions', () => {
     expect(screen.queryByRole('button', { name: /jump to available activity/i })).not.toBeInTheDocument()
     expect(screen.queryByRole('link', { name: /review pending approval/i })).not.toBeInTheDocument()
     expect(screen.queryByRole('link', { name: /view support options/i })).not.toBeInTheDocument()
+  })
+
+  it('disables claim action while an activity mutation is in flight', () => {
+    const props = renderCard({
+      isActionInFlight: true,
+      activity: makeActivity({
+        status: 'not_started',
+        availability: { state: 'available', isScheduledForWeek: true },
+      }),
+    })
+
+    const claimButton = screen.getByRole('button', { name: /Confirm \(Honor System\)/i })
+    expect(claimButton).toBeDisabled()
+
+    fireEvent.click(claimButton)
+    expect(props.onMarkCompleted).not.toHaveBeenCalled()
   })
 })

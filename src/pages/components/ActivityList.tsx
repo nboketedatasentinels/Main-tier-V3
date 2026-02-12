@@ -14,6 +14,7 @@ export const ActivityList = ({
   onMarkCompleted,
   onMarkNotStarted,
   onOpenProof,
+  isActivityBusy,
 }: {
   activities: ActivityState[]
   selectedWeek: number
@@ -24,6 +25,7 @@ export const ActivityList = ({
   onMarkCompleted: (activity: ActivityState) => Promise<void>
   onMarkNotStarted: (activity: ActivityState) => Promise<void>
   onOpenProof: (activity: ActivityState) => void
+  isActivityBusy?: (activityId: string) => boolean
 }) => {
   const visibleActivities = useMemo(() => getVisibleActivities(activities), [activities])
   const firstActionableActivityId = useMemo(
@@ -67,6 +69,7 @@ export const ActivityList = ({
               onMarkCompleted={onMarkCompleted}
               onMarkNotStarted={onMarkNotStarted}
               onOpenProof={onOpenProof}
+              isActionInFlight={Boolean(isActivityBusy?.(activity.id))}
             />
           ))}
         </Stack>

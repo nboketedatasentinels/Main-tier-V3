@@ -48,6 +48,7 @@ export const WeeklyActivityCard = ({
   onMarkCompleted,
   onMarkNotStarted,
   onOpenProof,
+  isActionInFlight,
 }: {
   activity: ActivityState
   selectedWeek: number
@@ -60,6 +61,7 @@ export const WeeklyActivityCard = ({
   onMarkCompleted: (activity: ActivityState) => Promise<void>
   onMarkNotStarted: (activity: ActivityState) => Promise<void>
   onOpenProof: (activity: ActivityState) => void
+  isActionInFlight: boolean
 }) => {
   const requiresPartnerApproval = Boolean(activity.approvalType === 'partner_approved' || activity.requiresApproval)
   const isPartnerIssued = activity.approvalType === 'partner_issued'
@@ -75,7 +77,7 @@ export const WeeklyActivityCard = ({
   const lockedByInteraction = Boolean(activity.hasInteracted) && activity.status !== 'rejected' && !isAdmin
 
   const disabled = lockedByWeek || lockedByAvailability || lockedByInteraction
-  const primaryActionDisabled = isPartnerIssued ? true : disabled || activity.status === 'completed'
+  const primaryActionDisabled = isPartnerIssued ? true : disabled || activity.status === 'completed' || isActionInFlight
   const visibilityState = getVisibilityState(activity)
   const visibilityBadge = (() => {
     if (lockedByWeek) {
@@ -172,6 +174,7 @@ export const WeeklyActivityCard = ({
   const showPolicyBadge = !isMobile || detailsOpen
   const showSecondaryActions = !isMobile || detailsOpen
   const showExitActionOutsideDetails = Boolean(exitAction && !showDetails && primaryActionDisabled)
+  const showCollapsedAssist = Boolean(!showDetails && primaryActionDisabled && (lockReason || exitAction))
 
   const policyBadge = () => {
     const policy = activity.activityPolicy
@@ -282,9 +285,17 @@ export const WeeklyActivityCard = ({
         </Button>
       ) : null}
 
-      {showExitActionOutsideDetails ? (
+      {showCollapsedAssist ? (
         <Stack spacing={2} align="flex-start" mt={2}>
-          {exitAction}
+          {lockReason ? (
+            <HStack spacing={2} color="blue.700">
+              <Icon as={Lock} size={14} />
+              <Text fontSize="xs" fontWeight="medium">
+                {lockReason}
+              </Text>
+            </HStack>
+          ) : null}
+          {showExitActionOutsideDetails ? exitAction : null}
         </Stack>
       ) : null}
 
@@ -371,6 +382,7 @@ export const WeeklyActivityCard = ({
             colorScheme="green"
             variant={activity.status === 'completed' ? 'solid' : 'outline'}
             isDisabled={primaryActionDisabled}
+            isLoading={isActionInFlight}
             onClick={() => onMarkCompleted(activity)}
           >
             {activity.approvalType === 'self' ? 'Confirm (Honor System)' : 'Mark Complete'}
@@ -381,7 +393,7 @@ export const WeeklyActivityCard = ({
           <Button
             size="sm"
             variant="outline"
-            isDisabled={(!isAdmin && activity.hasInteracted && activity.status !== 'rejected') || lockedByWeek}
+            isDisabled={isActionInFlight || (!isAdmin && activity.hasInteracted && activity.status !== 'rejected') || lockedByWeek}
             onClick={() => onMarkNotStarted(activity)}
           >
             Reset status

@@ -30,6 +30,7 @@ import { normalizeRole } from '@/utils/role'
 import { getWindowNumber, PARALLEL_WINDOW_SIZE_WEEKS } from '@/utils/windowCalculations'
 import { revokeChecklistPoints } from '@/services/pointsService'
 import { handleActivityCompletion } from '@/utils/activityRouter'
+import { triggerHaptic } from '@/utils/haptics'
 import type { PointsVerificationRequest } from '@/services/pointsVerificationService'
 import {
   PendingRequestExistsError,
@@ -97,6 +98,23 @@ export function useWeeklyChecklistViewModel() {
   })
   const [isSubmittingProof, setIsSubmittingProof] = useState(false)
   const isSubmittingProofRef = useRef(false)
+  const activityMutationsRef = useRef(new Set<string>())
+  const [activityMutations, setActivityMutations] = useState<Record<string, boolean>>({})
+
+  const setActivityMutationInFlight = useCallback((activityId: string, inFlight: boolean) => {
+    setActivityMutations((prev) => {
+      if (inFlight) {
+        if (prev[activityId]) return prev
+        return { ...prev, [activityId]: true }
+      }
+      if (!prev[activityId]) return prev
+      const next = { ...prev }
+      delete next[activityId]
+      return next
+    })
+  }, [])
+
+  const isActivityBusy = useCallback((activityId: string) => Boolean(activityMutations[activityId]), [activityMutations])
 
   useEffect(() => {
     activitiesRef.current = activities
@@ -691,6 +709,7 @@ export function useWeeklyChecklistViewModel() {
 
       if (!activity?.id) {
         console.error('[WeeklyChecklist] markCompleted called with invalid activity', activity)
+        triggerHaptic('error')
         toast({
           title: 'Internal error',
           description: 'Invalid activity selected.',
@@ -700,6 +719,7 @@ export function useWeeklyChecklistViewModel() {
       }
 
       if (!canMutateActivity(activity)) {
+        triggerHaptic('warning')
         toast({
           title: 'Not available yet',
           description: isAdmin
@@ -710,34 +730,56 @@ export function useWeeklyChecklistViewModel() {
         return
       }
 
-      await handleActivityCompletion({
-        uid: user.uid,
-        journeyType: journey.journeyType,
-        weekNumber: selectedWeek,
-        activity,
-        onProofRequired: (act) => openProofModal(act),
-        onSuccess: async (status) => {
-          await setActivityStatusLocal(activity.id, { status, hasInteracted: true, rejectionReason: null })
-          if (status === 'completed') {
+      if (activityMutationsRef.current.has(activity.id)) return
+      activityMutationsRef.current.add(activity.id)
+      setActivityMutationInFlight(activity.id, true)
+
+      try {
+        await handleActivityCompletion({
+          uid: user.uid,
+          journeyType: journey.journeyType,
+          weekNumber: selectedWeek,
+          activity,
+          onProofRequired: (act) => openProofModal(act),
+          onSuccess: async (status) => {
+            await setActivityStatusLocal(activity.id, { status, hasInteracted: true, rejectionReason: null })
+            if (status === 'completed') {
+              triggerHaptic('success')
+              toast({
+                title: 'Activity completed',
+                description: `Great work. ${activity.points} points were added.`,
+                status: 'success',
+                duration: 3500,
+              })
+            }
+          },
+          onError: (e) => {
+            console.error(e)
+            triggerHaptic('error')
             toast({
-              title: 'Activity completed',
-              description: `Great work. ${activity.points} points were added.`,
-              status: 'success',
-              duration: 3500,
+              title: 'Update Failed',
+              description: 'Could not award points. Please try again.',
+              status: 'error',
             })
           }
-        },
-        onError: (e) => {
-          console.error(e)
-          toast({
-            title: 'Update Failed',
-            description: 'Could not award points. Please try again.',
-            status: 'error',
-          })
-        }
-      })
+        })
+      } finally {
+        activityMutationsRef.current.delete(activity.id)
+        setActivityMutationInFlight(activity.id, false)
+      }
     },
-    [canMutateActivity, isAdmin, journey, selectedWeek, setActivityStatusLocal, toast, user, openProofModal],
+    [
+      activityMutationsRef,
+      canMutateActivity,
+      isAdmin,
+      journey,
+      openProofModal,
+      selectedWeek,
+      setActivityMutationInFlight,
+      setActivityStatusLocal,
+      toast,
+      user,
+    ],
   )
 
   const markNotStarted = useCallback(
@@ -746,6 +788,7 @@ export function useWeeklyChecklistViewModel() {
 
       if (!activity?.id) {
         console.error('[WeeklyChecklist] markNotStarted called with invalid activity', activity)
+        triggerHaptic('error')
         toast({
           title: 'Internal error',
           description: 'Invalid activity selected.',
@@ -756,6 +799,7 @@ export function useWeeklyChecklistViewModel() {
 
       // Admin can revoke; non-admin must satisfy normal restrictions too (esp. lock/hasInteracted)
       if (!isAdmin && (!journey || isWeekLocked || activity.hasInteracted)) {
+        triggerHaptic('warning')
         toast({
           title: 'Selection saved',
           description: 'This selection is already saved for this week. Support can help if you need a change.',
@@ -763,6 +807,10 @@ export function useWeeklyChecklistViewModel() {
         })
         return
       }
+
+      if (activityMutationsRef.current.has(activity.id)) return
+      activityMutationsRef.current.add(activity.id)
+      setActivityMutationInFlight(activity.id, true)
 
       try {
         await revokeChecklistPoints({
@@ -779,16 +827,21 @@ export function useWeeklyChecklistViewModel() {
           notes: undefined,
           rejectionReason: null,
         })
+        triggerHaptic('success')
       } catch (e) {
         console.error(e)
+        triggerHaptic('error')
         toast({
           title: 'Update Failed',
           description: 'Could not revoke points. Please try again.',
           status: 'error',
         })
+      } finally {
+        activityMutationsRef.current.delete(activity.id)
+        setActivityMutationInFlight(activity.id, false)
       }
     },
-    [isAdmin, isWeekLocked, journey, selectedWeek, setActivityStatusLocal, toast, user],
+    [isAdmin, isWeekLocked, journey, selectedWeek, setActivityMutationInFlight, setActivityStatusLocal, toast, user],
   )
 
   const closeProofModal = useCallback(() => {
@@ -815,6 +868,7 @@ export function useWeeklyChecklistViewModel() {
       if (!activity) {
         const invalidActivityId = proofModal.activityId || 'unknown'
         console.error('[WeeklyChecklist] submitProofForApproval called with invalid activity', invalidActivityId)
+        triggerHaptic('error')
         toast({
           title: 'Internal error',
           description: `Invalid activity selected for proof submission (${invalidActivityId}).`,
@@ -826,23 +880,59 @@ export function useWeeklyChecklistViewModel() {
       // Non-admin must respect availability/lock rules; admin can override submission (but still needs proofUrl).
       if (!isAdmin) {
         if (isWeekLocked) {
+          triggerHaptic('warning')
           toast({ title: 'Future week', description: 'Proof submission opens when this week becomes active.', status: 'warning' })
           return
         }
         if (activity.availability.state !== 'available' && activity.status !== 'rejected') {
+          triggerHaptic('warning')
           toast({ title: 'Opens soon', description: 'This activity is not open for proof submission yet.', status: 'warning' })
           return
         }
         if (activity.hasInteracted && activity.status !== 'rejected') {
+          triggerHaptic('warning')
           toast({ title: 'Selection saved', description: 'This submission is already in progress for this week.', status: 'warning' })
           return
         }
       }
 
-      if (!proofModal.proofUrl?.trim()) {
+      const rawProofUrl = proofModal.proofUrl?.trim()
+      if (!rawProofUrl) {
+        triggerHaptic('warning')
         toast({ title: 'Proof required', description: 'Please provide a link before submitting.', status: 'warning' })
         return
       }
+
+      const rawProofUrlLower = rawProofUrl.toLowerCase()
+      const normalizedProofUrl =
+        rawProofUrlLower.startsWith('http://') || rawProofUrlLower.startsWith('https://')
+          ? rawProofUrl
+          : `https://${rawProofUrl}`
+
+      let parsedProofUrl: URL
+      try {
+        parsedProofUrl = new URL(normalizedProofUrl)
+      } catch {
+        triggerHaptic('warning')
+        toast({
+          title: 'Invalid link',
+          description: 'Please enter a valid URL, like https://example.com/proof.',
+          status: 'warning',
+        })
+        return
+      }
+
+      if (parsedProofUrl.protocol !== 'http:' && parsedProofUrl.protocol !== 'https:') {
+        triggerHaptic('warning')
+        toast({
+          title: 'Invalid link',
+          description: 'Only http:// or https:// links are supported.',
+          status: 'warning',
+        })
+        return
+      }
+
+      const proofUrl = parsedProofUrl.toString()
 
       await submitPointsVerificationRequestAtomic({
         userId: user.uid,
@@ -851,19 +941,20 @@ export function useWeeklyChecklistViewModel() {
         activityId: activity.id,
         activityTitle: activity.title,
         activityPoints: activity.points,
-        proofUrl: proofModal.proofUrl.trim(),
+        proofUrl,
         notes: proofModal.notes?.trim(),
         approvalType: activity.approvalType,
       })
 
       await setActivityStatusLocal(activity.id, {
         status: 'pending',
-        proofUrl: proofModal.proofUrl.trim(),
+        proofUrl,
         notes: proofModal.notes?.trim(),
         rejectionReason: null,
         hasInteracted: true,
       })
 
+      triggerHaptic('success')
       toast({
         title: 'Proof submitted',
         description: 'Nice work. Your proof is now in review and points will post after approval.',
@@ -874,6 +965,7 @@ export function useWeeklyChecklistViewModel() {
       closeProofModal()
     } catch (e) {
       if (e instanceof PendingRequestExistsError || (e instanceof Error && e.message === 'pending_request_exists')) {
+        triggerHaptic('warning')
         toast({
           title: 'Already in review',
           description: 'This activity is already pending verification for this week.',
@@ -891,6 +983,7 @@ export function useWeeklyChecklistViewModel() {
         return
       }
       console.error(e)
+      triggerHaptic('error')
       toast({
         title: 'Submission failed',
         description: 'Could not submit proof. Please try again.',
@@ -934,6 +1027,7 @@ export function useWeeklyChecklistViewModel() {
     isAdmin,
     isWeekLocked,
     isSubmittingProof,
+    isActivityBusy,
 
     // actions
     markCompleted,

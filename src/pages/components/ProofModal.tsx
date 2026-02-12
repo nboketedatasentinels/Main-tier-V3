@@ -7,6 +7,7 @@ import {
   ModalFooter,
   ModalHeader,
   ModalOverlay,
+  Input,
   Stack,
   Text,
   Textarea,
@@ -44,8 +45,11 @@ export const ProofModal = ({
           </Text>
 
           <Stack spacing={3}>
-            <Textarea
-              placeholder="Proof link (required)"
+            <Input
+              type="url"
+              inputMode="url"
+              autoComplete="url"
+              placeholder="https://example.com/proof (required)"
               value={state.proofUrl}
               onChange={e => onChange({ proofUrl: e.target.value })}
             />
