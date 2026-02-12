@@ -43,10 +43,11 @@ import { ActivityCard } from '@/components/dashboard/ActivityCard'
 import { BadgeCard } from '@/components/dashboard/BadgeCard'
 import { useWeeklyGlanceData } from '@/hooks/useWeeklyGlanceData'
 import { useLeaderboardData } from '@/hooks/leaderboard/useLeaderboardData'
-import { useLeaderboardContext } from '@/hooks/leaderboard/useLeaderboardContext'
+import { getLeaderboardContextLabels, useLeaderboardContext } from '@/hooks/leaderboard/useLeaderboardContext'
 import { WeeklyInspirationCard } from './components/WeeklyInspirationCard'
 import { JourneyCompletionBanner } from '@/components/journeys/JourneyCompletionBanner'
 import pointsConfig from '@/config/pointsConfig'
+import { useUserBadges } from '@/hooks/useUserBadges'
 
 interface ActivityItem {
   title: string
@@ -94,13 +95,20 @@ const milestones = [
   { label: 'Amplify', status: 'pending' },
 ]
 
+const LEVEL_STEP_POINTS = 500
+const MENTOR_BENCHMARK_COMPLETION = 80
+
 export const PaidMemberDashboard: React.FC = () => {
   const navigate = useNavigate()
   const { profile } = useAuth()
   const { inspirationQuote } = useWeeklyGlanceData()
+  const badgesState = useUserBadges()
+  const userBadges = badgesState?.userBadges ?? []
+  const badgeCount = userBadges.length
 
   const leaderboardContext = useLeaderboardContext(profile)
-  const { challenges } = useLeaderboardData({
+  const leaderboardLabels = useMemo(() => getLeaderboardContextLabels(leaderboardContext), [leaderboardContext])
+  const { profiles, challenges } = useLeaderboardData({
     context: leaderboardContext,
     profileId: profile?.id,
   })
@@ -111,6 +119,33 @@ export const PaidMemberDashboard: React.FC = () => {
 
   const [activities, setActivities] = useState<ActivityItem[]>(initialActivities)
   const [activeBadgeIndex, setActiveBadgeIndex] = useState(0)
+
+  const totalPoints = Math.max(0, profile?.totalPoints || 0)
+  const currentLevel = Math.max(1, profile?.level || 1)
+  const pointsIntoCurrentLevel = totalPoints % LEVEL_STEP_POINTS
+  const pointsToNextLevel = LEVEL_STEP_POINTS - pointsIntoCurrentLevel
+  const nextLevel = currentLevel + 1
+  const nextLevelProgress = Math.round((pointsIntoCurrentLevel / LEVEL_STEP_POINTS) * 100)
+
+  const rankingProfiles = useMemo(
+    () =>
+      profiles.filter(
+        (candidate) => candidate.id !== profile?.id && typeof candidate.totalPoints === 'number',
+      ),
+    [profile?.id, profiles],
+  )
+  const segmentRank = rankingProfiles.length
+    ? rankingProfiles.filter((candidate) => (candidate.totalPoints || 0) > totalPoints).length + 1
+    : null
+  const segmentSize = segmentRank ? rankingProfiles.length + 1 : null
+  const topPercent = segmentRank && segmentSize
+    ? Math.max(1, Math.round((segmentRank / segmentSize) * 100))
+    : null
+  const peersAtOrAboveLevel = useMemo(
+    () => rankingProfiles.filter((candidate) => candidate.level >= currentLevel).length,
+    [currentLevel, rankingProfiles],
+  )
+
   const journeyWeeks = useMemo(() => {
     if (profile?.programDurationWeeks) return profile.programDurationWeeks
     if (profile?.journeyType) return pointsConfig.JOURNEY_META[profile.journeyType].weeks
@@ -137,7 +172,7 @@ export const PaidMemberDashboard: React.FC = () => {
 
   const completionSteps = [
     { label: 'Finish final week activities', complete: currentWeek >= journeyWeeks },
-    { label: 'Submit final impact log', complete: completionRate >= 80 },
+    { label: 'Submit final impact log', complete: completionRate >= MENTOR_BENCHMARK_COMPLETION },
     { label: 'Confirm mentor sign-off', complete: isJourneyComplete },
   ]
 
@@ -183,7 +218,7 @@ export const PaidMemberDashboard: React.FC = () => {
               Current level
             </Text>
             <Text fontSize="xl" fontWeight="bold" color="brand.text">
-              {profile?.level || 4}
+              {currentLevel}
             </Text>
           </VStack>
           <Avatar
@@ -201,8 +236,12 @@ export const PaidMemberDashboard: React.FC = () => {
           <CardBody>
             <Stat>
               <StatLabel color="brand.goldLight">Total Points</StatLabel>
-              <StatNumber color="brand.gold">{profile?.totalPoints || 0}</StatNumber>
-              <StatHelpText color="brand.goldLight">This journey</StatHelpText>
+              <StatNumber color="brand.gold">{totalPoints}</StatNumber>
+              <StatHelpText color="brand.goldLight">
+                {segmentRank && segmentSize
+                  ? `Rank #${segmentRank} of ${segmentSize} in ${leaderboardLabels.label}`
+                  : `Build momentum in ${leaderboardLabels.label}`}
+              </StatHelpText>
             </Stat>
           </CardBody>
         </Card>
@@ -211,9 +250,10 @@ export const PaidMemberDashboard: React.FC = () => {
           <CardBody>
             <Stat>
               <StatLabel color="brand.goldLight">Level</StatLabel>
-              <StatNumber color="brand.gold">{profile?.level || 1}</StatNumber>
-              <StatHelpText color="brand.goldLight">Current level</StatHelpText>
+              <StatNumber color="brand.gold">{currentLevel}</StatNumber>
+              <StatHelpText color="brand.goldLight">{pointsToNextLevel} pts to level {nextLevel}</StatHelpText>
             </Stat>
+            <Progress value={nextLevelProgress} colorScheme="yellow" size="sm" borderRadius="full" />
           </CardBody>
         </Card>
 
@@ -231,12 +271,37 @@ export const PaidMemberDashboard: React.FC = () => {
           <CardBody>
             <Stat>
               <StatLabel color="brand.goldLight">Badges</StatLabel>
-              <StatNumber color="brand.gold">0</StatNumber>
-              <StatHelpText color="brand.goldLight">Earned</StatHelpText>
+              <StatNumber color="brand.gold">{badgeCount}</StatNumber>
+              <StatHelpText color="brand.goldLight">
+                {topPercent
+                  ? `Top ${topPercent}% in ${leaderboardLabels.label}`
+                  : 'Earned so far'}
+              </StatHelpText>
             </Stat>
           </CardBody>
         </Card>
       </SimpleGrid>
+
+      <Card border="1px solid" borderColor="brand.border">
+        <CardBody py={4}>
+          <Stack spacing={2}>
+            <HStack justify="space-between" flexWrap="wrap" gap={2}>
+              <Text fontWeight="bold" color="brand.text">Momentum benchmark</Text>
+              <Badge colorScheme={completionRate >= MENTOR_BENCHMARK_COMPLETION ? 'green' : 'blue'}>
+                Mentor benchmark
+              </Badge>
+            </HStack>
+            <Text fontSize="sm" color="brand.subtleText">
+              {peersAtOrAboveLevel > 0
+                ? `${peersAtOrAboveLevel} peers in your segment are already at level ${currentLevel} or above.`
+                : 'You are setting the pace in your segment right now.'}
+            </Text>
+            <Text fontSize="sm" color="brand.subtleText">
+              Mentor guidance: keep weekly completion at {MENTOR_BENCHMARK_COMPLETION}%+ and close your last {pointsToNextLevel} points to reach level {nextLevel}.
+            </Text>
+          </Stack>
+        </CardBody>
+      </Card>
 
       <Grid templateColumns={{ base: '1fr', xl: '2fr 1fr' }} gap={6}>
         <GridItem>
