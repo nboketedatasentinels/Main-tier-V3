@@ -6,6 +6,21 @@ import { describe, expect, it, vi } from 'vitest'
 import type { ActivityState } from '@/hooks/useWeeklyChecklistViewModel'
 import { WeeklyActivityCard } from './WeeklyActivityCard'
 
+// Mock matchMedia (Chakra + responsive hooks)
+Object.defineProperty(window, 'matchMedia', {
+  writable: true,
+  value: vi.fn().mockImplementation((query) => ({
+    matches: false,
+    media: query,
+    onchange: null,
+    addListener: vi.fn(),
+    removeListener: vi.fn(),
+    addEventListener: vi.fn(),
+    removeEventListener: vi.fn(),
+    dispatchEvent: vi.fn(),
+  })),
+})
+
 const makeActivity = (overrides: Partial<ActivityState> = {}): ActivityState => ({
   id: 'podcast',
   baseId: 'podcast',

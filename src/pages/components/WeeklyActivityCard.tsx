@@ -1,5 +1,6 @@
-import { Badge, Box, Button, HStack, Heading, Icon, Stack, Tag, Text, Tooltip } from '@chakra-ui/react'
-import { AlertTriangle, CalendarClock, CheckCircle, Circle, Infinity, Lock, RotateCcw, ShieldCheck, Zap } from 'lucide-react'
+import { useEffect, useState } from 'react'
+import { Badge, Box, Button, Collapse, HStack, Heading, Icon, Stack, Tag, Text, Tooltip, useBreakpointValue } from '@chakra-ui/react'
+import { AlertTriangle, CalendarClock, CheckCircle, ChevronDown, ChevronUp, Circle, Infinity, Lock, RotateCcw, ShieldCheck, Zap } from 'lucide-react'
 import type { ActivityState } from '@/hooks/useWeeklyChecklistViewModel'
 import { getNextWindowAvailabilityMessage } from '@/utils/activityStateManager'
 import { getWindowNumber, PARALLEL_WINDOW_SIZE_WEEKS } from '@/utils/windowCalculations'
@@ -62,12 +63,19 @@ export const WeeklyActivityCard = ({
 }) => {
   const requiresPartnerApproval = Boolean(activity.approvalType === 'partner_approved' || activity.requiresApproval)
   const isPartnerIssued = activity.approvalType === 'partner_issued'
+  const isMobile = useBreakpointValue({ base: true, md: false }) ?? false
+  const [detailsOpen, setDetailsOpen] = useState(!isMobile)
+
+  useEffect(() => {
+    setDetailsOpen(!isMobile)
+  }, [isMobile])
 
   const lockedByWeek = isWeekLocked && !isAdmin
   const lockedByAvailability = activity.availability.state !== 'available' && !isAdmin && activity.status === 'not_started'
   const lockedByInteraction = Boolean(activity.hasInteracted) && activity.status !== 'rejected' && !isAdmin
 
   const disabled = lockedByWeek || lockedByAvailability || lockedByInteraction
+  const primaryActionDisabled = isPartnerIssued ? true : disabled || activity.status === 'completed'
   const visibilityState = getVisibilityState(activity)
   const visibilityBadge = (() => {
     if (lockedByWeek) {
@@ -159,6 +167,11 @@ export const WeeklyActivityCard = ({
   }
 
   const exitAction = renderExitAction()
+  const showDetails = !isMobile || detailsOpen
+  const showApprovalBadge = !isMobile || detailsOpen || requiresPartnerApproval || isPartnerIssued
+  const showPolicyBadge = !isMobile || detailsOpen
+  const showSecondaryActions = !isMobile || detailsOpen
+  const showExitActionOutsideDetails = Boolean(exitAction && !showDetails && primaryActionDisabled)
 
   const policyBadge = () => {
     const policy = activity.activityPolicy
@@ -217,25 +230,27 @@ export const WeeklyActivityCard = ({
               {visibilityBadge.label}
             </Badge>
 
-            {requiresPartnerApproval ? (
-              <Tooltip label="Partner approval required. Submit proof for verification.">
-                <Badge colorScheme="purple">Partner approval</Badge>
-              </Tooltip>
-            ) : isPartnerIssued ? (
-              <Tooltip label="Assigned directly by your partner.">
-                <Badge colorScheme="blue">Partner issued</Badge>
-              </Tooltip>
-            ) : activity.approvalType === 'auto' ? (
-              <Tooltip label="Automatically verified by the system.">
-                <Badge colorScheme="teal">Auto verified</Badge>
-              </Tooltip>
-            ) : (
-              <Tooltip label="Self-verified (honor based)">
-                <Badge colorScheme="green">Self-verified</Badge>
-              </Tooltip>
-            )}
+            {showApprovalBadge
+              ? requiresPartnerApproval ? (
+                <Tooltip label="Partner approval required. Submit proof for verification.">
+                  <Badge colorScheme="purple">Partner approval</Badge>
+                </Tooltip>
+              ) : isPartnerIssued ? (
+                <Tooltip label="Assigned directly by your partner.">
+                  <Badge colorScheme="blue">Partner issued</Badge>
+                </Tooltip>
+              ) : activity.approvalType === 'auto' ? (
+                <Tooltip label="Automatically verified by the system.">
+                  <Badge colorScheme="teal">Auto verified</Badge>
+                </Tooltip>
+              ) : (
+                <Tooltip label="Self-verified (honor based)">
+                  <Badge colorScheme="green">Self-verified</Badge>
+                </Tooltip>
+              )
+              : null}
 
-            {policyBadge()}
+            {showPolicyBadge ? policyBadge() : null}
 
             <Tag variant="subtle" colorScheme="orange">+{activity.points} pts</Tag>
           </HStack>
@@ -248,7 +263,33 @@ export const WeeklyActivityCard = ({
               <Icon as={CheckCircle} color="green.500" />
             )}
           </HStack>
+        </Stack>
 
+        {isAdmin ? <Badge colorScheme="red" alignSelf="flex-start">Admin override</Badge> : null}
+      </HStack>
+
+      {isMobile ? (
+        <Button
+          size="sm"
+          variant="ghost"
+          onClick={() => setDetailsOpen(prev => !prev)}
+          aria-expanded={detailsOpen}
+          aria-controls={`activity-details-${activity.id}`}
+          rightIcon={<Icon as={detailsOpen ? ChevronUp : ChevronDown} />}
+          mt={3}
+        >
+          {detailsOpen ? 'Hide details' : 'Details'}
+        </Button>
+      ) : null}
+
+      {showExitActionOutsideDetails ? (
+        <Stack spacing={2} align="flex-start" mt={2}>
+          {exitAction}
+        </Stack>
+      ) : null}
+
+      <Collapse id={`activity-details-${activity.id}`} in={showDetails} animateOpacity>
+        <Stack spacing={2} mt={3}>
           <Text fontSize="sm" color="gray.600">
             {activity.description}
           </Text>
@@ -291,28 +332,26 @@ export const WeeklyActivityCard = ({
               </Text>
             </HStack>
           ) : null}
+
+          {!isAdmin && !activity.hasInteracted && activity.status !== 'completed' ? (
+            <Text fontSize="xs" color="gray.600">
+              Once submitted, this selection is locked for the current week. If plans change, support can help.
+            </Text>
+          ) : null}
         </Stack>
-
-        {isAdmin ? <Badge colorScheme="red" alignSelf="flex-start">Admin override</Badge> : null}
-      </HStack>
-
-      {!isAdmin && !activity.hasInteracted && activity.status !== 'completed' ? (
-        <Text fontSize="xs" color="gray.600" mt={4}>
-          Once submitted, this selection is locked for the current week. If plans change, support can help.
-        </Text>
-      ) : null}
+      </Collapse>
 
       <Stack
-        direction="row"
+        direction={{ base: 'column', md: 'row' }}
         spacing={3}
-        mt={!isAdmin && !activity.hasInteracted && activity.status !== 'completed' ? 2 : 4}
+        mt={showDetails && !isAdmin && !activity.hasInteracted && activity.status !== 'completed' ? 2 : 4}
       >
         {requiresPartnerApproval ? (
           <Button
             size="sm"
             colorScheme="purple"
             variant={activity.status === 'pending' || activity.status === 'completed' ? 'solid' : 'outline'}
-            isDisabled={disabled || activity.status === 'completed'}
+            isDisabled={primaryActionDisabled}
             onClick={() => onOpenProof(activity)}
           >
             {activity.status === 'rejected' ? 'Resubmit proof' : 'Submit proof'}
@@ -331,21 +370,23 @@ export const WeeklyActivityCard = ({
             size="sm"
             colorScheme="green"
             variant={activity.status === 'completed' ? 'solid' : 'outline'}
-            isDisabled={disabled || activity.status === 'completed'}
+            isDisabled={primaryActionDisabled}
             onClick={() => onMarkCompleted(activity)}
           >
             {activity.approvalType === 'self' ? 'Confirm (Honor System)' : 'Mark Complete'}
           </Button>
         )}
 
-        <Button
-          size="sm"
-          variant="outline"
-          isDisabled={(!isAdmin && activity.hasInteracted && activity.status !== 'rejected') || lockedByWeek}
-          onClick={() => onMarkNotStarted(activity)}
-        >
-          Reset status
-        </Button>
+        {showSecondaryActions ? (
+          <Button
+            size="sm"
+            variant="outline"
+            isDisabled={(!isAdmin && activity.hasInteracted && activity.status !== 'rejected') || lockedByWeek}
+            onClick={() => onMarkNotStarted(activity)}
+          >
+            Reset status
+          </Button>
+        ) : null}
       </Stack>
     </Box>
   )
