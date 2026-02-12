@@ -199,6 +199,7 @@ export const Header: React.FC<HeaderProps> = ({ topOffset = '0' }) => {
         >
           <div className="mx-auto max-w-6xl px-4 py-6 space-y-4">
             <div className="space-y-3">
+              <p className="text-xs font-semibold uppercase tracking-[0.2em] text-neutral-500">Account</p>
               {showUpgrade && (
                 <button
                   type="button"
@@ -219,7 +220,10 @@ export const Header: React.FC<HeaderProps> = ({ topOffset = '0' }) => {
               >
                 {isAuthed ? 'Dashboard' : 'Sign In'}
               </button>
+            </div>
 
+            <div className="space-y-3 pt-4 border-t border-neutral-200">
+              <p className="text-xs font-semibold uppercase tracking-[0.2em] text-neutral-500">Explore</p>
               <RouterLink
                 to="/"
                 className="block w-full h-12 rounded-xl border bg-white text-neutral-900 font-semibold text-lg shadow-sm hover:bg-neutral-50
@@ -239,7 +243,9 @@ export const Header: React.FC<HeaderProps> = ({ topOffset = '0' }) => {
               >
                 Transformation Teens
               </a>
+            </div>
 
+            <div className="pt-4 border-t border-neutral-200">
               <button
                 type="button"
                 onClick={closeMenu}

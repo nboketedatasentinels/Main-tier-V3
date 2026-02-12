@@ -72,6 +72,9 @@ interface NavSection {
 
 const HEADER_HEIGHT = '72px'
 const APP_VIEWPORT_HEIGHT = { base: '100dvh', md: '100vh' } as const
+const MOBILE_NAV_HEIGHT = 68
+const MOBILE_NAV_HEIGHT_WITH_SAFE_AREA = `calc(${MOBILE_NAV_HEIGHT}px + env(safe-area-inset-bottom))`
+const MOBILE_NAV_BUTTON_HEIGHT = MOBILE_NAV_HEIGHT - 12
 const sectionLabelStyles = {
   fontSize: 'xs',
   fontWeight: 'semibold',
@@ -218,6 +221,14 @@ export const MainLayout: React.FC = () => {
       }),
     }))
   }, [isMentor, navigationSections])
+
+  const primaryNavItems = useMemo(
+    () =>
+      filteredNavigation
+        .flatMap(section => section.items.filter(item => item.isPrimary))
+        .slice(0, 4),
+    [filteredNavigation],
+  )
 
   const searchableNavigation = useMemo(
     () =>
@@ -573,7 +584,9 @@ export const MainLayout: React.FC = () => {
         <Box
           flex="1"
           overflowY="auto"
-          p={{ base: 4, md: 8 }}
+          px={{ base: 4, md: 8 }}
+          pt={{ base: 4, md: 8 }}
+          pb={{ base: MOBILE_NAV_HEIGHT_WITH_SAFE_AREA, md: 8 }}
           minW={0}
           minH={0}
         >
@@ -582,6 +595,74 @@ export const MainLayout: React.FC = () => {
           </RouteTransition>
         </Box>
       </Flex>
+
+      {primaryNavItems.length > 0 && (
+        <Box
+          display={{ base: 'block', md: 'none' }}
+          position="fixed"
+          left={0}
+          right={0}
+          bottom={0}
+          bg="white"
+          borderTop="1px solid"
+          borderColor="brand.border"
+          zIndex={20}
+          minH={MOBILE_NAV_HEIGHT_WITH_SAFE_AREA}
+          pt={1}
+          pb="calc(8px + env(safe-area-inset-bottom))"
+          px={2}
+        >
+          <HStack spacing={1}>
+            {primaryNavItems.map(item => {
+              const isActive = location.pathname.startsWith(item.path)
+              return (
+                <Button
+                  key={item.path}
+                  variant="ghost"
+                  flex="1"
+                  h={`${MOBILE_NAV_BUTTON_HEIGHT}px`}
+                  borderRadius="md"
+                  onClick={() => handleNavigation(item.path)}
+                  bg={isActive ? 'brand.primaryMuted' : 'transparent'}
+                  color={isActive ? 'brand.primary' : 'brand.subtleText'}
+                  _hover={{ bg: 'brand.primaryMuted', color: 'brand.primary' }}
+                  aria-current={isActive ? 'page' : undefined}
+                >
+                  <VStack spacing={1}>
+                    <Box color="inherit">
+                      <item.icon size={18} />
+                    </Box>
+                    <Text fontSize="2xs" noOfLines={1}>
+                      {item.label}
+                    </Text>
+                  </VStack>
+                </Button>
+              )
+            })}
+            <Button
+              variant="ghost"
+              flex="1"
+              h={`${MOBILE_NAV_BUTTON_HEIGHT}px`}
+              borderRadius="md"
+              onClick={onOpen}
+              bg={isOpen ? 'brand.primaryMuted' : 'transparent'}
+              color={isOpen ? 'brand.primary' : 'brand.subtleText'}
+              _hover={{ bg: 'brand.primaryMuted', color: 'brand.primary' }}
+              aria-label="Open navigation menu"
+              aria-expanded={isOpen}
+            >
+              <VStack spacing={1}>
+                <Box color="inherit">
+                  <MenuIcon size={18} />
+                </Box>
+                <Text fontSize="2xs" noOfLines={1}>
+                  Menu
+                </Text>
+              </VStack>
+            </Button>
+          </HStack>
+        </Box>
+      )}
 
       {/* Mobile Drawer */}
       <Drawer isOpen={isOpen} placement="left" onClose={onClose}>

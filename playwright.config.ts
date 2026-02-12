@@ -19,9 +19,11 @@ export default defineConfig({
   // Reporter configuration
   reporter: [
     ['html', { outputFolder: 'playwright-report' }],
-    ['json', { outputFile: 'playwright-report/results.json' }],
-    ['list']
+    ['json', { outputFile: 'playwright-report/results.raw.json' }],
+    ['list'],
   ],
+
+  globalTeardown: './scripts/playwright-teardown.mjs',
 
   // Shared settings for all projects
   use: {
@@ -41,13 +43,12 @@ export default defineConfig({
     actionTimeout: 10 * 1000,
   },
 
-  // Web server configuration - disabled since server runs externally
-  // webServer: {
-  //   command: 'npm run dev',
-  //   url: 'http://localhost:3001',
-  //   reuseExistingServer: true,
-  //   timeout: 120 * 1000,
-  // },
+  webServer: {
+    command: 'npm run dev -- --port 3000',
+    url: 'http://localhost:3000',
+    reuseExistingServer: !process.env.CI,
+    timeout: 120 * 1000,
+  },
 
   // Test projects for different browsers and viewports
   projects: [
