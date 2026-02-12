@@ -26,30 +26,27 @@ export const JourneysPage: React.FC = () => {
       <Stack spacing={8}>
         <Stack spacing={2}>
           <Heading color="brand.text">Journeys</Heading>
-          <Text color="brand.subtleText">Explore and select your transformation journey.</Text>
+          <Text color="brand.subtleText">Explore how transformation journeys are structured.</Text>
         </Stack>
 
         <Box bg="white" borderRadius="lg" borderWidth="1px" borderColor="border.control" p={{ base: 6, md: 8 }} shadow="sm">
           <Stack spacing={4}>
             <Heading size="md" color="brand.text">Journey Flexibility Offered</Heading>
             <Text color="brand.subtleText">
-              Supports multiple journey lengths, allowing personalized pacing while ensuring timely course completion.
+              Organizations can run multiple journey lengths to match different program pacing needs.
             </Text>
             <List spacing={3} color="brand.subtleText">
               <ListItem display="flex" alignItems="flex-start" gap={2}>
                 <ListIcon as={CheckCircle2} color="green.500" mt={1} />
-                Supports various journey lengths, including four-week, six-week, and three-month options, catering to
-                different participant needs.
+                Includes four-week, six-week, and three-month options to support different implementation timelines.
               </ListItem>
               <ListItem display="flex" alignItems="flex-start" gap={2}>
                 <ListIcon as={CheckCircle2} color="green.500" mt={1} />
-                Allows participants to choose their preferred pace, enabling them to balance course commitments with
-                personal and professional responsibilities.
+                Program pacing is set at the organization level so members move through a shared cadence.
               </ListItem>
               <ListItem display="flex" alignItems="flex-start" gap={2}>
                 <ListIcon as={CheckCircle2} color="green.500" mt={1} />
-                Ensures that all participants can complete their courses within a designated timeframe while still having
-                the flexibility to manage their learning experience.
+                Shared timelines help teams complete courses within a defined timeframe while keeping expectations clear.
               </ListItem>
             </List>
           </Stack>

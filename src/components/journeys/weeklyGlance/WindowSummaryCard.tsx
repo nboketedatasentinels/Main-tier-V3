@@ -74,7 +74,7 @@ const getPeakEndMessage = (
   }
 
   const dayText = daysRemainingInWindow === 1 ? 'day' : 'days';
-  return `Risk state: ${remainingPoints.toLocaleString()} points left with ${daysRemainingInWindow} ${dayText} remaining.`;
+  return `Current gap: ${remainingPoints.toLocaleString()} points with ${daysRemainingInWindow} ${dayText} remaining.`;
 };
 
 interface WindowSummaryCardProps {
@@ -188,7 +188,7 @@ export const WindowSummaryCard: React.FC<WindowSummaryCardProps> = ({ onNavigate
               <Text mt={1} fontSize="xs" color={displayStatus === 'behind' ? 'red.600' : 'text.muted'}>
                 {daysRemainingInWindow > 0
                   ? `${pointsNeededPerDay.toLocaleString()} pts/day needed to close the gap.`
-                  : `Window closes now with a ${remainingPoints.toLocaleString()} pt gap if no action is taken.`}
+                  : `Window closed with a ${remainingPoints.toLocaleString()} pt gap. Reset and plan your next window.`}
               </Text>
             ) : (
               <Text mt={1} fontSize="xs" color="green.600">
@@ -219,11 +219,11 @@ export const WindowSummaryCard: React.FC<WindowSummaryCardProps> = ({ onNavigate
                 ? 'Fresh start week. Complete one activity now to build momentum early.'
                 : displayStatus === 'ahead'
                   ? 'You are ahead. Keep a steady cadence to preserve your lead at the end of this window.'
-                  : displayStatus === 'on_track'
+                : displayStatus === 'on_track'
                     ? 'You are on track. Stay consistent to close this window with confidence.'
                     : displayStatus === 'catching_up'
                       ? 'You are catching up. Prioritize high-value activities to close the gap quickly.'
-                      : 'You are behind. Take immediate action on your next activity to avoid missing this window target.'}
+                      : 'You are behind target right now. Focus on your next available activity to reduce the gap.'}
             </Text>
           </VStack>
 

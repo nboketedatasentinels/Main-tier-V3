@@ -31,7 +31,7 @@ const visibilityBadgeConfig: Record<VisibilityState, { label: string; colorSchem
   available: { label: 'Available', colorScheme: 'green', icon: Circle },
   next_window: { label: 'Opens Next Window', colorScheme: 'blue', icon: CalendarClock },
   completed: { label: 'Completed', colorScheme: 'green', icon: CheckCircle },
-  locked: { label: 'Unlocks Soon', colorScheme: 'gray', icon: Lock },
+  locked: { label: 'Locked', colorScheme: 'gray', icon: Lock },
   exhausted: { label: 'Window Cap Reached', colorScheme: 'teal', icon: RotateCcw },
 }
 
@@ -69,7 +69,28 @@ export const WeeklyActivityCard = ({
 
   const disabled = lockedByWeek || lockedByAvailability || lockedByInteraction
   const visibilityState = getVisibilityState(activity)
-  const visibilityBadge = visibilityBadgeConfig[visibilityState]
+  const visibilityBadge = (() => {
+    if (lockedByWeek) {
+      return {
+        ...visibilityBadgeConfig.locked,
+        label: 'Unlocks Soon',
+      }
+    }
+
+    // Interaction/support constraints should be explicit neutral locks.
+    if (lockedByInteraction) {
+      return visibilityBadgeConfig.locked
+    }
+
+    if (
+      lockedByAvailability &&
+      (activity.availability.reason === 'missing_mentor' || activity.availability.reason === 'missing_ambassador')
+    ) {
+      return visibilityBadgeConfig.locked
+    }
+
+    return visibilityBadgeConfig[visibilityState]
+  })()
 
   const showLockReason = () => {
     if (isAdmin) return null
@@ -275,7 +296,17 @@ export const WeeklyActivityCard = ({
         {isAdmin ? <Badge colorScheme="red" alignSelf="flex-start">Admin override</Badge> : null}
       </HStack>
 
-      <Stack direction="row" spacing={3} mt={4}>
+      {!isAdmin && !activity.hasInteracted && activity.status !== 'completed' ? (
+        <Text fontSize="xs" color="gray.600" mt={4}>
+          Once submitted, this selection is locked for the current week. If plans change, support can help.
+        </Text>
+      ) : null}
+
+      <Stack
+        direction="row"
+        spacing={3}
+        mt={!isAdmin && !activity.hasInteracted && activity.status !== 'completed' ? 2 : 4}
+      >
         {requiresPartnerApproval ? (
           <Button
             size="sm"

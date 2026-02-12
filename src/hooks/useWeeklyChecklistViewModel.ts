@@ -82,6 +82,7 @@ export function useWeeklyChecklistViewModel() {
   const [selectedWeek, setSelectedWeek] = useState<number>(1)
 
   const [activities, setActivities] = useState<ActivityState[]>([])
+  const activitiesRef = useRef<ActivityState[]>([])
   const [weeklyProgress, setWeeklyProgress] = useState<WeeklyProgress | null>(null)
   const [allWeeksProgress, setAllWeeksProgress] = useState<WeeklyProgress[]>([])
 
@@ -96,6 +97,10 @@ export function useWeeklyChecklistViewModel() {
   })
   const [isSubmittingProof, setIsSubmittingProof] = useState(false)
   const isSubmittingProofRef = useRef(false)
+
+  useEffect(() => {
+    activitiesRef.current = activities
+  }, [activities])
 
   const deepLink = useMemo(() => {
     const weekRaw = searchParams.get('week')
@@ -419,77 +424,77 @@ export function useWeeklyChecklistViewModel() {
           }
         })
 
-        setActivities((prev) => {
-          let changed = false
-          const next = prev.map((activity) => {
-            if (activity.status === 'completed') return activity
+        const prev = activitiesRef.current
+        let changed = false
+        const next = prev.map((activity) => {
+          if (activity.status === 'completed') return activity
 
-            const req = latestByActivity.get(activity.id)
-            if (!req) return activity
+          const req = latestByActivity.get(activity.id)
+          if (!req) return activity
 
-            if (req.status === 'pending') {
-              const patch: Partial<ActivityState> = {
-                status: 'pending',
-                hasInteracted: true,
-                proofUrl: req.proof_url,
-                notes: req.notes,
-                rejectionReason: null,
-              }
-              const differs =
-                patch.status !== activity.status ||
-                patch.hasInteracted !== activity.hasInteracted ||
-                patch.proofUrl !== activity.proofUrl ||
-                patch.notes !== activity.notes ||
-                patch.rejectionReason !== activity.rejectionReason
-              if (!differs) return activity
-              changed = true
-              return { ...activity, ...patch }
+          if (req.status === 'pending') {
+            const patch: Partial<ActivityState> = {
+              status: 'pending',
+              hasInteracted: true,
+              proofUrl: req.proof_url,
+              notes: req.notes,
+              rejectionReason: null,
             }
+            const differs =
+              patch.status !== activity.status ||
+              patch.hasInteracted !== activity.hasInteracted ||
+              patch.proofUrl !== activity.proofUrl ||
+              patch.notes !== activity.notes ||
+              patch.rejectionReason !== activity.rejectionReason
+            if (!differs) return activity
+            changed = true
+            return { ...activity, ...patch }
+          }
 
-            if (req.status === 'rejected') {
-              const patch: Partial<ActivityState> = {
-                status: 'rejected',
-                hasInteracted: false,
-                proofUrl: req.proof_url,
-                notes: req.notes,
-                rejectionReason: req.rejection_reason ?? null,
-              }
-              const differs =
-                patch.status !== activity.status ||
-                patch.hasInteracted !== activity.hasInteracted ||
-                patch.proofUrl !== activity.proofUrl ||
-                patch.notes !== activity.notes ||
-                patch.rejectionReason !== activity.rejectionReason
-              if (!differs) return activity
-              changed = true
-              return { ...activity, ...patch }
+          if (req.status === 'rejected') {
+            const patch: Partial<ActivityState> = {
+              status: 'rejected',
+              hasInteracted: false,
+              proofUrl: req.proof_url,
+              notes: req.notes,
+              rejectionReason: req.rejection_reason ?? null,
             }
+            const differs =
+              patch.status !== activity.status ||
+              patch.hasInteracted !== activity.hasInteracted ||
+              patch.proofUrl !== activity.proofUrl ||
+              patch.notes !== activity.notes ||
+              patch.rejectionReason !== activity.rejectionReason
+            if (!differs) return activity
+            changed = true
+            return { ...activity, ...patch }
+          }
 
-            if (req.status === 'approved') {
-              const patch: Partial<ActivityState> = {
-                status: 'completed',
-                hasInteracted: true,
-                proofUrl: req.proof_url,
-                notes: req.notes,
-                rejectionReason: null,
-              }
-              const differs =
-                patch.status !== activity.status ||
-                patch.hasInteracted !== activity.hasInteracted ||
-                patch.proofUrl !== activity.proofUrl ||
-                patch.notes !== activity.notes ||
-                patch.rejectionReason !== activity.rejectionReason
-              if (!differs) return activity
-              changed = true
-              return { ...activity, ...patch }
+          if (req.status === 'approved') {
+            const patch: Partial<ActivityState> = {
+              status: 'completed',
+              hasInteracted: true,
+              proofUrl: req.proof_url,
+              notes: req.notes,
+              rejectionReason: null,
             }
+            const differs =
+              patch.status !== activity.status ||
+              patch.hasInteracted !== activity.hasInteracted ||
+              patch.proofUrl !== activity.proofUrl ||
+              patch.notes !== activity.notes ||
+              patch.rejectionReason !== activity.rejectionReason
+            if (!differs) return activity
+            changed = true
+            return { ...activity, ...patch }
+          }
 
-            return activity
-          })
-
-          if (changed) void persistChecklist(next)
-          return next
+          return activity
         })
+
+        activitiesRef.current = next
+        setActivities(next)
+        if (changed) void persistChecklist(next)
       } catch (error) {
         console.warn('[WeeklyChecklist] Request sync failed; continuing without it', error)
       }
@@ -593,11 +598,10 @@ export function useWeeklyChecklistViewModel() {
   /* ------------------------------------------------------------------ */
   const setActivityStatusLocal = useCallback(
     async (activityId: string, patch: Partial<ActivityState>) => {
-      setActivities(prev => {
-        const next = prev.map(a => (a.id === activityId ? { ...a, ...patch } : a))
-        void persistChecklist(next)
-        return next
-      })
+      const next = activitiesRef.current.map(a => (a.id === activityId ? { ...a, ...patch } : a))
+      activitiesRef.current = next
+      setActivities(next)
+      await persistChecklist(next)
     },
     [persistChecklist],
   )
@@ -808,7 +812,16 @@ export function useWeeklyChecklistViewModel() {
     let activity: ActivityState | undefined
     try {
       activity = activities.find(a => a.id === proofModal.activityId)
-      if (!activity) return
+      if (!activity) {
+        const invalidActivityId = proofModal.activityId || 'unknown'
+        console.error('[WeeklyChecklist] submitProofForApproval called with invalid activity', invalidActivityId)
+        toast({
+          title: 'Internal error',
+          description: `Invalid activity selected for proof submission (${invalidActivityId}).`,
+          status: 'error',
+        })
+        return
+      }
 
       // Non-admin must respect availability/lock rules; admin can override submission (but still needs proofUrl).
       if (!isAdmin) {

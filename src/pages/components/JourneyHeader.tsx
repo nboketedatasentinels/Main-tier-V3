@@ -1,5 +1,7 @@
 import { useMemo, useCallback } from 'react'
 import {
+  Alert,
+  AlertIcon,
   Badge,
   Flex,
   HStack,
@@ -52,6 +54,8 @@ export const JourneyHeader = ({
     if (tier.includes('corporate')) return 'Corporate'
     return isFreeUser(profile) ? 'Free Tier' : 'Premium'
   }, [profile])
+
+  const isOrgManagedJourney = useMemo(() => Boolean(profile?.companyId), [profile?.companyId])
 
   const journeyStartDate = useMemo(() => {
     if (!journey || !profile) return null
@@ -195,6 +199,14 @@ export const JourneyHeader = ({
           </Stack>
         </Flex>
         <Progress value={journeyProgress.pct} colorScheme="teal" borderRadius="full" />
+        {isOrgManagedJourney ? (
+          <Alert status="info" borderRadius="md">
+            <AlertIcon />
+            <Text fontSize="sm" color="text.secondary">
+              Journey duration is managed by your organization for this cohort. If the schedule changes, your completed activity history remains recorded.
+            </Text>
+          </Alert>
+        ) : null}
         <HStack spacing={2} wrap="wrap">
           {isMonthBasedJourney
             ? monthMilestones.map((monthItem) => (
