@@ -184,18 +184,24 @@ const parseSessionDoc = (docSnap: QueryDocumentSnapshot<DocumentData>): PeerSess
 type QueryWithKey = {
   key: string
   query: Query<DocumentData>
+  optional?: boolean
 }
 
 const buildSessionQueries = (userId: string): QueryWithKey[] => {
   const sessionsRef = collection(db, 'peer_sessions')
   return [
     { key: 'participants', query: query(sessionsRef, where('participants', 'array-contains', userId)) },
-    { key: 'participantIds', query: query(sessionsRef, where('participantIds', 'array-contains', userId)) },
-    { key: 'participant_ids', query: query(sessionsRef, where('participant_ids', 'array-contains', userId)) },
     { key: 'createdBy', query: query(sessionsRef, where('createdBy', '==', userId)) },
-    { key: 'creatorId', query: query(sessionsRef, where('creatorId', '==', userId)) },
-    { key: 'created_by', query: query(sessionsRef, where('created_by', '==', userId)) },
+    // Legacy field fallbacks for environments that still store older schemas.
+    { key: 'participantIds', query: query(sessionsRef, where('participantIds', 'array-contains', userId)), optional: true },
+    { key: 'participant_ids', query: query(sessionsRef, where('participant_ids', 'array-contains', userId)), optional: true },
+    { key: 'creatorId', query: query(sessionsRef, where('creatorId', '==', userId)), optional: true },
+    { key: 'created_by', query: query(sessionsRef, where('created_by', '==', userId)), optional: true },
   ]
+}
+
+const isPermissionDeniedError = (error: unknown): boolean => {
+  return (error as { code?: string } | undefined)?.code === 'permission-denied'
 }
 
 const resolveInvitationRecipient = (data: DocumentData): string => {
@@ -653,7 +659,7 @@ export function subscribeToUserSessions(
     callback(sessions)
   }
 
-  const unsubscribers = queries.map(({ key, query: sessionsQuery }) =>
+  const unsubscribers = queries.map(({ key, query: sessionsQuery, optional }) =>
     onSnapshot(
       sessionsQuery,
       (snapshot) => {
@@ -661,6 +667,12 @@ export function subscribeToUserSessions(
         emitSessions()
       },
       (error) => {
+        if (optional && isPermissionDeniedError(error)) {
+          docsByKey.set(key, [])
+          emitSessions()
+          return
+        }
+
         const projectId = db.app.options.projectId ?? 'unknown'
         console.error('[PeerSessionService] Sessions subscription error:', {
           userId,
@@ -761,7 +773,7 @@ export async function fetchUserSessions(userId: string): Promise<PeerSession[]> 
   const sessionsMap = new Map<string, PeerSession>()
 
   await Promise.all(
-    queries.map(async ({ query: sessionsQuery }) => {
+    queries.map(async ({ query: sessionsQuery, optional }) => {
       try {
         const snapshot = await getDocs(sessionsQuery)
         snapshot.docs.forEach((docSnap) => {
@@ -771,6 +783,10 @@ export async function fetchUserSessions(userId: string): Promise<PeerSession[]> 
           }
         })
       } catch (error) {
+        if (optional && isPermissionDeniedError(error)) {
+          return
+        }
+
         console.error('[PeerSessionService] Failed to fetch sessions:', {
           userId,
           error,
