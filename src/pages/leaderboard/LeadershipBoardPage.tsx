@@ -120,7 +120,6 @@ const timeframeOptions = [
   { label: 'All Time', value: LeaderboardTimeframe.ALL_TIME },
   { label: 'Last 7 Days', value: LeaderboardTimeframe.LAST_7_DAYS },
   { label: 'Last 30 Days', value: LeaderboardTimeframe.LAST_30_DAYS },
-  { label: 'My Journey', value: LeaderboardTimeframe.CURRENT_JOURNEY },
 ]
 
 const sortOptions = [
@@ -205,6 +204,14 @@ export const LeadershipBoardPage: React.FC = () => {
   const context = useLeaderboardContext(profile)
   const contextLabels = useMemo(() => getLeaderboardContextLabels(context), [context])
   const isAdminAll = context?.type === 'admin_all'
+  const supportsSegmentTimeframes = !context
+    || context.type === 'organization'
+    || context.type === 'village'
+    || context.type === 'cluster'
+    || context.type === 'admin_all'
+  const availableTimeframes = supportsSegmentTimeframes
+    ? timeframeOptions
+    : timeframeOptions.filter((option) => option.value === LeaderboardTimeframe.ALL_TIME)
   const {
     label: segmentLabel,
     memberLabel: segmentMemberLabel,
@@ -241,6 +248,13 @@ export const LeadershipBoardPage: React.FC = () => {
     context,
     profileId: profile?.id,
   })
+
+  useEffect(() => {
+    if (supportsSegmentTimeframes) return
+    if (timeframe !== LeaderboardTimeframe.ALL_TIME) {
+      setTimeframe(LeaderboardTimeframe.ALL_TIME)
+    }
+  }, [supportsSegmentTimeframes, timeframe])
 
   useEffect(() => {
     if (!errorMessage) return
@@ -474,7 +488,7 @@ export const LeadershipBoardPage: React.FC = () => {
   }, [profile?.id, profile?.journeyType, profile?.role])
 
   useEffect(() => {
-    if (profile && profile.privacySettings?.showOnLeaderboard === false) {
+    if (profile && (profile.privacySettings?.showOnLeaderboard === false || profile.leaderboardVisibility === 'private')) {
       toast({
         title: 'Privacy enabled',
         description: 'Your leaderboard visibility is limited by your privacy settings.',
@@ -1176,7 +1190,7 @@ export const LeadershipBoardPage: React.FC = () => {
                           <Box>
                             <Text fontSize="sm" mb={1}>Timeframe</Text>
                             <Select value={timeframe} onChange={(e) => setTimeframe(e.target.value as LeaderboardTimeframe)}>
-                              {timeframeOptions.map((option) => (
+                              {availableTimeframes.map((option) => (
                                 <option key={option.value} value={option.value}>{option.label}</option>
                               ))}
                             </Select>

@@ -123,6 +123,7 @@ export interface UserProfile {
   hasCompletedPersonalityTest?: boolean
   hasCompletedValuesTest?: boolean
   privacySettings?: PrivacySettings
+  leaderboardVisibility?: 'public' | 'company' | 'private'
 
   // Timestamps
   createdAt: string

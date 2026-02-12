@@ -45,6 +45,9 @@ interface UserProfile {
   journeyType?: string;
   currentWeek?: number;
   companyId?: string | null;
+  companyCode?: string | null;
+  villageId?: string | null;
+  clusterId?: string | null;
 }
 
 interface PointsLedgerEntry {
@@ -433,6 +436,9 @@ async function creditReferralPointsInternal(
       referredUserId: referredUid,
       createdAt: timestamp,
       companyId: referrerData.companyId || null,
+      companyCode: referrerData.companyCode || null,
+      villageId: referrerData.villageId || null,
+      clusterId: referrerData.clusterId || null,
     });
 
     console.log(

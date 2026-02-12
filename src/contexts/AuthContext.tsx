@@ -207,6 +207,10 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       previous.emailVerified === next.emailVerified &&
       previous.totalPoints === next.totalPoints &&
       previous.level === next.level &&
+      previous.leaderboardVisibility === next.leaderboardVisibility &&
+      previous.privacySettings?.showOnLeaderboard === next.privacySettings?.showOnLeaderboard &&
+      previous.privacySettings?.allowPeerMatching === next.privacySettings?.allowPeerMatching &&
+      previous.privacySettings?.shareImpactPublicly === next.privacySettings?.shareImpactPublicly &&
       previous.onboardingComplete === next.onboardingComplete &&
       previous.onboardingSkipped === next.onboardingSkipped &&
       serializeAssignments(previous.assignedOrganizations) === serializeAssignments(next.assignedOrganizations)
@@ -486,6 +490,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
                 'organizationId',
                 'assignedOrganizations',
                 'accountStatus',
+                'leaderboardVisibility',
+                'privacySettings',
               ] as const satisfies ReadonlyArray<keyof UserProfile>
 
               type CanonicalKey = typeof canonicalKeys[number]

@@ -128,6 +128,11 @@ interface ProfileData {
     github?: string
   }
   leaderboardVisibility: 'public' | 'company' | 'private'
+  privacySettings?: {
+    showOnLeaderboard?: boolean
+    allowPeerMatching?: boolean
+    shareImpactPublicly?: boolean
+  }
   registrationDate?: string
   companyName?: string
   companyCode?: string
@@ -322,7 +327,12 @@ export const ProfilePage: React.FC = () => {
   }, [editedData, profileData])
 
   const buildProfileFromDoc = useCallback(
-    (docData: Record<string, unknown>): ProfileData => ({
+    (docData: Record<string, unknown>): ProfileData => {
+      const privacySettings = docData.privacySettings as ProfileData['privacySettings'] | undefined
+      const rawLeaderboardVisibility = (docData.leaderboardVisibility as ProfileData['leaderboardVisibility']) ||
+        (docData.leaderboard_visibility as ProfileData['leaderboardVisibility'])
+
+      return ({
       id: String(docData.id),
       fullName:
         (typeof docData.fullName === 'string' && docData.fullName) ||
@@ -359,16 +369,18 @@ export const ProfilePage: React.FC = () => {
       socialLinks: (docData.socialLinks as Record<string, string>) ||
         (docData.social_media_links as Record<string, string>) ||
         {},
-      leaderboardVisibility: (docData.leaderboardVisibility as ProfileData['leaderboardVisibility']) ||
-        (docData.leaderboard_visibility as ProfileData['leaderboardVisibility']) ||
-        'public',
+      leaderboardVisibility: rawLeaderboardVisibility ||
+        (privacySettings?.showOnLeaderboard === false ? 'private' : 'public'),
+      privacySettings,
       registrationDate: (docData.registrationDate as string) || (docData.createdAt as string),
       companyName: docData.companyName as string,
       companyCode: docData.companyCode as string,
+      companyId: (docData.companyId as string) || (docData.organizationId as string) || null,
       villageId: (docData.villageId as string) || null,
       villageName: docData.villageName as string,
       clusterName: docData.clusterName as string,
-    }),
+      })
+    },
     [
       profile?.role,
       profile?.membershipStatus,
@@ -672,6 +684,7 @@ export const ProfilePage: React.FC = () => {
         bio: editedData.bio || '',
         socialLinks: editedData.socialLinks,
         leaderboardVisibility: editedData.leaderboardVisibility,
+        'privacySettings.showOnLeaderboard': editedData.leaderboardVisibility !== 'private',
         updatedAt: serverTimestamp(),
       }
       await Promise.all([
@@ -681,6 +694,8 @@ export const ProfilePage: React.FC = () => {
           coreValues: payload.coreValues,
           hasCompletedPersonalityTest: payload.hasCompletedPersonalityTest,
           hasCompletedValuesTest: payload.hasCompletedValuesTest,
+          leaderboardVisibility: payload.leaderboardVisibility,
+          'privacySettings.showOnLeaderboard': payload['privacySettings.showOnLeaderboard'],
           updatedAt: serverTimestamp(),
         }),
       ])
@@ -782,10 +797,15 @@ export const ProfilePage: React.FC = () => {
     if (!auth.currentUser || !editedData) return
     setVisibilitySaving(true)
     try {
-      await updateDoc(doc(db, 'profiles', auth.currentUser.uid), {
+      const visibilityUpdates = {
         leaderboardVisibility: editedData.leaderboardVisibility,
+        'privacySettings.showOnLeaderboard': editedData.leaderboardVisibility !== 'private',
         updatedAt: serverTimestamp(),
-      })
+      }
+      await Promise.all([
+        updateDoc(doc(db, 'profiles', auth.currentUser.uid), visibilityUpdates),
+        updateDoc(doc(db, 'users', auth.currentUser.uid), visibilityUpdates),
+      ])
       setProfileData({ ...editedData })
       setVisibilityMessage({ type: 'success', text: 'Leaderboard visibility updated successfully.' })
     } catch (err) {

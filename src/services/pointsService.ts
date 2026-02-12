@@ -231,7 +231,11 @@ export async function awardChecklistPoints(params: {
       getDoc(doc(db, "profiles", uid)),
     ]);
 
-    const companyId = profileSnap.exists() ? profileSnap.data()?.companyId : null;
+    const profileData = profileSnap.exists() ? profileSnap.data() : null;
+    const companyId = profileData?.companyId || null;
+    const companyCode = profileData?.companyCode || null;
+    const villageId = profileData?.villageId || null;
+    const clusterId = profileData?.clusterId || null;
 
     await runTransactionWithRetry(async (tx) => {
       const [ledgerDoc, progressDoc, userDoc] = await Promise.all([
@@ -343,6 +347,9 @@ export async function awardChecklistPoints(params: {
         reason: activity.title,
         createdAt: serverTimestamp(),
         companyId: companyId || null,
+        companyCode: companyCode || null,
+        villageId: villageId || null,
+        clusterId: clusterId || null,
       });
 
       // Update active/pending challenges metrics
@@ -437,7 +444,11 @@ export async function revokeChecklistPoints(params: {
       getDoc(doc(db, "profiles", uid)),
     ]);
 
-    const companyId = profileSnap.exists() ? profileSnap.data()?.companyId : null;
+    const profileData = profileSnap.exists() ? profileSnap.data() : null;
+    const companyId = profileData?.companyId || null;
+    const companyCode = profileData?.companyCode || null;
+    const villageId = profileData?.villageId || null;
+    const clusterId = profileData?.clusterId || null;
 
     await runTransactionWithRetry(async (tx) => {
       const [ledgerDoc, progressDoc, userDoc] = await Promise.all([
@@ -516,6 +527,9 @@ export async function revokeChecklistPoints(params: {
         reason: activity.title,
         createdAt: serverTimestamp(),
         companyId: companyId || null,
+        companyCode: companyCode || null,
+        villageId: villageId || null,
+        clusterId: clusterId || null,
       });
 
       // Update active/pending challenges metrics

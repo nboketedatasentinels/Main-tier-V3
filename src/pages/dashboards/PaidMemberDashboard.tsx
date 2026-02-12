@@ -44,6 +44,7 @@ import { BadgeCard } from '@/components/dashboard/BadgeCard'
 import { useWeeklyGlanceData } from '@/hooks/useWeeklyGlanceData'
 import { useLeaderboardData } from '@/hooks/leaderboard/useLeaderboardData'
 import { getLeaderboardContextLabels, useLeaderboardContext } from '@/hooks/leaderboard/useLeaderboardContext'
+import { canViewerSeeCandidateOnLeaderboard } from '@/utils/leaderboardPrivacy'
 import { WeeklyInspirationCard } from './components/WeeklyInspirationCard'
 import { JourneyCompletionBanner } from '@/components/journeys/JourneyCompletionBanner'
 import pointsConfig from '@/config/pointsConfig'
@@ -130,9 +131,16 @@ export const PaidMemberDashboard: React.FC = () => {
   const rankingProfiles = useMemo(
     () =>
       profiles.filter(
-        (candidate) => candidate.id !== profile?.id && typeof candidate.totalPoints === 'number',
+        (candidate) =>
+          candidate.id !== profile?.id
+          && typeof candidate.totalPoints === 'number'
+          && canViewerSeeCandidateOnLeaderboard({
+            viewer: profile,
+            candidate,
+            context: leaderboardContext,
+          }),
       ),
-    [profile?.id, profiles],
+    [leaderboardContext, profile, profiles],
   )
   const segmentRank = rankingProfiles.length
     ? rankingProfiles.filter((candidate) => (candidate.totalPoints || 0) > totalPoints).length + 1

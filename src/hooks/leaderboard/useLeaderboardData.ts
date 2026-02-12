@@ -11,7 +11,7 @@ import {
   where,
 } from 'firebase/firestore'
 import { db } from '@/services/firebase'
-import { TransformationTier, UserProfile } from '@/types'
+import { UserProfile } from '@/types'
 import { LeaderboardContext } from './useLeaderboardContext'
 import { getOrgScope, listenToOrgMembers } from '@/utils/organizationScope'
 import { getDisplayName } from '@/utils/displayName'
@@ -23,6 +23,9 @@ export interface PointsTransaction {
   category?: string
   createdAt: string
   companyId?: string
+  companyCode?: string
+  villageId?: string
+  clusterId?: string
 }
 
 export interface ChallengeRecord {
@@ -50,7 +53,6 @@ interface LeaderboardDataState {
   errorMessage: string | null
 }
 
-const ENABLE_ORG_TRANSACTION_QUERIES = false
 const MAX_RETRY_ATTEMPTS = 3
 const BASE_RETRY_DELAY_MS = 500
 
@@ -67,7 +69,7 @@ const buildProfilesConstraints = (context: LeaderboardContext | null): QueryCons
     case 'cluster':
       return context.clusterId ? [where('clusterId', '==', context.clusterId)] : null
     case 'community':
-      return [where('transformationTier', '==', TransformationTier.INDIVIDUAL_PAID)]
+      return [where('membershipStatus', '==', 'paid')]
     case 'free':
     default:
       return null
@@ -78,18 +80,40 @@ const buildTransactionConstraints = (context: LeaderboardContext | null): QueryC
   if (!context) return null
 
   const constraints: QueryConstraint[] = []
-  if (context.type === 'organization') {
-    if (context.organizationId) {
-      constraints.push(where('companyId', '==', context.organizationId))
-    } else if (context.organizationCode) {
-      constraints.push(where('companyCode', '==', context.organizationCode))
-    } else {
+  switch (context.type) {
+    case 'admin_all':
+      break
+    case 'organization':
+      if (context.organizationId) {
+        constraints.push(where('companyId', '==', context.organizationId))
+      } else if (context.organizationCode) {
+        constraints.push(where('companyCode', '==', context.organizationCode))
+      } else {
+        return null
+      }
+      break
+    case 'village':
+      if (!context.villageId) return null
+      constraints.push(where('villageId', '==', context.villageId))
+      constraints.push(orderBy('createdAt', 'desc'))
+      constraints.push(limit(1000))
+      break
+    case 'cluster':
+      if (!context.clusterId) return null
+      constraints.push(where('clusterId', '==', context.clusterId))
+      constraints.push(orderBy('createdAt', 'desc'))
+      constraints.push(limit(1000))
+      break
+    case 'community':
+    case 'free':
+    default:
       return null
-    }
   }
 
-  constraints.push(orderBy('createdAt', 'desc'))
-  constraints.push(limit(500))
+  if (context.type === 'admin_all' || context.type === 'organization') {
+    constraints.push(orderBy('createdAt', 'desc'))
+    constraints.push(limit(500))
+  }
   return constraints
 }
 
@@ -321,7 +345,7 @@ export const useLeaderboardData = ({
 
     setProfilesLoaded(false)
     console.log('[Leaderboard] Profiles query constraints', { contextType: context?.type, constraints })
-    const profilesQuery = query(collection(db, 'users'), ...constraints)
+    const profilesQuery = query(collection(db, 'profiles'), ...constraints)
     const unsubscribe = onSnapshot(
       profilesQuery,
       (snapshot) => {
@@ -360,13 +384,6 @@ export const useLeaderboardData = ({
       return undefined
     }
 
-    if (context?.type === 'organization' && !ENABLE_ORG_TRANSACTION_QUERIES) {
-      console.warn('[Leaderboard] Organization transaction queries disabled; using profile totals.')
-      setTransactions([])
-      setTransactionsLoaded(true)
-      return undefined
-    }
-
     const constraints = buildTransactionConstraints(context)
     if (!constraints || context?.type === 'free') {
       setTransactions([])
@@ -392,6 +409,9 @@ export const useLeaderboardData = ({
             points: data.points || 0,
             category: data.category,
             companyId: data.companyId,
+            companyCode: data.companyCode,
+            villageId: data.villageId,
+            clusterId: data.clusterId,
             createdAt: data.createdAt?.toDate ? data.createdAt.toDate().toISOString() : data.createdAt,
           }
         })
