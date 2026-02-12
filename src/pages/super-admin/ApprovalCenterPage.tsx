@@ -1157,10 +1157,10 @@ const ApprovalCenterPage: React.FC = () => {
                                       </Text>
                                     </Box>
                                     <HStack spacing={3} mt={2} gridColumn={{ base: 'auto', md: '1 / -1' }}>
-                                      <Link color="purple.600" href="/super-admin?tab=organizations">
+                                      <Link color="purple.600" href="/admin/dashboard?tab=organizations">
                                         View organizations
                                       </Link>
-                                      <Link color="purple.600" href="/super-admin?tab=organizations&create=true">
+                                      <Link color="purple.600" href="/admin/dashboard?tab=organizations&create=true">
                                         Create organization
                                       </Link>
                                     </HStack>

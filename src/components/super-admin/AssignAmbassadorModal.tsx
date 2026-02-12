@@ -43,10 +43,17 @@ export const AssignAmbassadorModal: React.FC<Props> = ({
   const [ambassador, setAmbassador] = useState('')
   const [ambassadorSearch, setAmbassadorSearch] = useState('')
   const [loading, setLoading] = useState(false)
+  const [submitError, setSubmitError] = useState<string | null>(null)
 
   useEffect(() => {
     setAmbassador(organization?.assignedAmbassadorId || '')
+    setSubmitError(null)
   }, [organization])
+
+  useEffect(() => {
+    if (isOpen) return
+    setSubmitError(null)
+  }, [isOpen])
 
   const sortedAmbassadors = useMemo(
     () => [...ambassadors].sort((a, b) => a.name.localeCompare(b.name)),
@@ -69,9 +76,16 @@ export const AssignAmbassadorModal: React.FC<Props> = ({
 
   const handleSubmit = async () => {
     setLoading(true)
-    await onSubmit(ambassador ? ambassador : null)
-    setLoading(false)
-    onClose()
+    setSubmitError(null)
+    try {
+      await onSubmit(ambassador ? ambassador : null)
+      onClose()
+    } catch (error) {
+      console.error(error)
+      setSubmitError(error instanceof Error ? error.message : 'Unable to save ambassador assignment.')
+    } finally {
+      setLoading(false)
+    }
   }
 
   return (
@@ -138,6 +152,7 @@ export const AssignAmbassadorModal: React.FC<Props> = ({
                 </Badge>
               </Stack>
             )}
+            {submitError ? <FormHelperText color="red.500">{submitError}</FormHelperText> : null}
           </Stack>
         </ModalBody>
         <ModalFooter>

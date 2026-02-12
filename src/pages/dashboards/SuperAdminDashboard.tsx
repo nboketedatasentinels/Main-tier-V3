@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react'
 import { useToast } from '@chakra-ui/react'
+import { useLocation, useNavigate } from 'react-router-dom'
 import { useAuth } from '@/hooks/useAuth'
 import { SuperAdminLayout } from '@/layouts/SuperAdminLayout'
 import { OverviewPage } from '@/pages/super-admin/OverviewPage'
@@ -31,6 +32,12 @@ import { useAllUpgradeRequests } from '@/hooks/admin/useAdminUpgradeRequests'
 import type { AdminHealthItem } from '@/components/admin/AdminDataHealthPanel'
 import { useAdminNotifications } from '@/hooks/useAdminNotifications'
 import { buildSuperAdminNavItems } from '@/utils/navigationItems'
+import {
+  DASHBOARD_TABS,
+  buildDashboardSearchForNavigation,
+  consumeCreateIntentFromSearch,
+  resolveDashboardTabFromSearch,
+} from './superAdminDashboardRouting'
 
 type TrendPoint = { label: string; value: number }
 
@@ -45,6 +52,8 @@ const defaultMetrics: SuperAdminDashboardMetrics = {
 
 export const SuperAdminDashboard: React.FC = () => {
   const { profile, profileStatus, lastProfileLoadAt, refreshProfile } = useAuth()
+  const location = useLocation()
+  const navigate = useNavigate()
   const adminName = profile?.fullName || profile?.firstName || 'Admin'
   const toast = useToast()
 
@@ -89,6 +98,11 @@ export const SuperAdminDashboard: React.FC = () => {
     systemAlerts: false,
     taskNotifications: false,
   })
+
+  useEffect(() => {
+    const nextTab = resolveDashboardTabFromSearch(location.search)
+    setActivePage(nextTab)
+  }, [location.search])
 
   useEffect(() => {
     setLoading(true)
@@ -267,7 +281,28 @@ export const SuperAdminDashboard: React.FC = () => {
   }, [riskAggregate])
 
   const handleNavigate = (key: string) => {
-    setActivePage(key)
+    const nextPage = DASHBOARD_TABS.has(key) ? key : 'overview'
+    setActivePage(nextPage)
+
+    navigate(
+      {
+        pathname: location.pathname,
+        search: buildDashboardSearchForNavigation(location.search, nextPage),
+      },
+      { replace: false },
+    )
+  }
+
+  const handleCreateIntentConsumed = () => {
+    const params = new URLSearchParams(location.search)
+    if (params.get('create') !== 'true') return
+    navigate(
+      {
+        pathname: location.pathname,
+        search: consumeCreateIntentFromSearch(location.search),
+      },
+      { replace: true },
+    )
   }
 
   const retryEngagement = () => setRefreshIndex((prev) => prev + 1)
@@ -314,9 +349,16 @@ export const SuperAdminDashboard: React.FC = () => {
   ]
 
   const renderPage = () => {
-    switch (activePage) {
+      switch (activePage) {
       case 'organizations':
-        return <OrganizationManagementPage adminName={adminName} adminId={profile?.id} />
+        return (
+          <OrganizationManagementPage
+            adminName={adminName}
+            adminId={profile?.id}
+            openCreateOnMount={new URLSearchParams(location.search).get('create') === 'true'}
+            onCreateIntentConsumed={handleCreateIntentConsumed}
+          />
+        )
       case 'users':
         return <UserManagementPage />
       case 'approvals':

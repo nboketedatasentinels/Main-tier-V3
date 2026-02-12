@@ -96,6 +96,32 @@ export const bulkSyncPartnerOrganizations = async (
 
   // Set transformationPartnerId on newly added organizations
   for (const orgId of addedOrgs) {
+    let previousPartnerId: string | null = null
+    try {
+      const orgRef = doc(db, ORG_COLLECTION, orgId)
+      const orgSnap = await getDoc(orgRef)
+      if (orgSnap.exists()) {
+        const orgData = orgSnap.data() as { transformationPartnerId?: string | null }
+        const existingPartnerId = typeof orgData.transformationPartnerId === 'string'
+          ? orgData.transformationPartnerId
+          : null
+        if (existingPartnerId && existingPartnerId !== partnerId) {
+          previousPartnerId = existingPartnerId
+        }
+      }
+    } catch (error) {
+      console.debug(`[PartnerSync] Could not inspect org ${orgId} before reassignment:`, error)
+    }
+
+    if (previousPartnerId) {
+      const removeData = {
+        assignedOrganizations: arrayRemove(orgId),
+        assignedOrganizationsUpdatedAt: serverTimestamp(),
+      }
+      updates.push(safeUpdate('profiles', previousPartnerId, removeData))
+      updates.push(safeUpdate('users', previousPartnerId, removeData))
+    }
+
     updates.push(
       safeUpdate(ORG_COLLECTION, orgId, {
         transformationPartnerId: partnerId,

@@ -45,10 +45,17 @@ export const AssignPartnerModal: React.FC<Props> = ({
   const [partner, setPartner] = useState('')
   const [partnerSearch, setPartnerSearch] = useState('')
   const [loading, setLoading] = useState(false)
+  const [submitError, setSubmitError] = useState<string | null>(null)
 
   useEffect(() => {
     setPartner(organization?.partnerId || organization?.transformationPartnerId || '')
+    setSubmitError(null)
   }, [organization])
+
+  useEffect(() => {
+    if (isOpen) return
+    setSubmitError(null)
+  }, [isOpen])
 
   const sortedPartners = useMemo(
     () => [...partners].sort((a, b) => a.name.localeCompare(b.name)),
@@ -78,9 +85,16 @@ export const AssignPartnerModal: React.FC<Props> = ({
 
   const handleSubmit = async () => {
     setLoading(true)
-    await onSubmit(partner ? partner : null)
-    setLoading(false)
-    onClose()
+    setSubmitError(null)
+    try {
+      await onSubmit(partner ? partner : null)
+      onClose()
+    } catch (error) {
+      console.error(error)
+      setSubmitError(error instanceof Error ? error.message : 'Unable to save partner assignment.')
+    } finally {
+      setLoading(false)
+    }
   }
 
   return (
@@ -148,6 +162,7 @@ export const AssignPartnerModal: React.FC<Props> = ({
                 </Badge>
               </Stack>
             )}
+            {submitError ? <FormHelperText color="red.500">{submitError}</FormHelperText> : null}
           </Stack>
         </ModalBody>
         <ModalFooter>

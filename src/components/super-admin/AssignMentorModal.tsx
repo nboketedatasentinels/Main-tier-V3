@@ -43,10 +43,17 @@ export const AssignMentorModal: React.FC<Props> = ({
   const [mentor, setMentor] = useState('')
   const [mentorSearch, setMentorSearch] = useState('')
   const [loading, setLoading] = useState(false)
+  const [submitError, setSubmitError] = useState<string | null>(null)
 
   useEffect(() => {
     setMentor(organization?.assignedMentorId || '')
+    setSubmitError(null)
   }, [organization])
+
+  useEffect(() => {
+    if (isOpen) return
+    setSubmitError(null)
+  }, [isOpen])
 
   const sortedMentors = useMemo(
     () => [...mentors].sort((a, b) => a.name.localeCompare(b.name)),
@@ -69,9 +76,16 @@ export const AssignMentorModal: React.FC<Props> = ({
 
   const handleSubmit = async () => {
     setLoading(true)
-    await onSubmit(mentor ? mentor : null)
-    setLoading(false)
-    onClose()
+    setSubmitError(null)
+    try {
+      await onSubmit(mentor ? mentor : null)
+      onClose()
+    } catch (error) {
+      console.error(error)
+      setSubmitError(error instanceof Error ? error.message : 'Unable to save mentor assignment.')
+    } finally {
+      setLoading(false)
+    }
   }
 
   return (
@@ -138,6 +152,7 @@ export const AssignMentorModal: React.FC<Props> = ({
                 </Badge>
               </Stack>
             )}
+            {submitError ? <FormHelperText color="red.500">{submitError}</FormHelperText> : null}
           </Stack>
         </ModalBody>
         <ModalFooter>
