@@ -687,7 +687,10 @@ service cloud.firestore {
     // Admin activity log
     match /admin_activity_log/{entryId} {
       allow read: if isPartnerOrAdmin();
-      allow create: if false; // Only Admin SDK (Cloud Functions)
+      // Allow Partner/Super Admin clients to write audit logs with verified attribution.
+      allow create: if isPartnerOrAdmin()
+        && request.resource.data.createdBy == request.auth.uid
+        && (!('createdAt' in request.resource.data) || request.resource.data.createdAt == request.time);
       allow update, delete: if isSuperAdmin();
     }
 
