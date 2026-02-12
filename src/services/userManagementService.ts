@@ -37,11 +37,16 @@ export interface ManagedUserRecord {
   lastActive?: Date | null
   createdAt?: Date | null
   accountStatus?: string
+  transformationTier?: string | null
   mentorId?: string | null
   ambassadorId?: string | null
   isActiveAmbassador?: boolean
   notes?: string | null
   assignedOrganizations?: string[]
+  accessLastUpdatedAt?: Date | null
+  accessLastUpdatedBy?: string | null
+  accessLastUpdatedByName?: string | null
+  accessLastReason?: string | null
 }
 
 export type RiskLevel = 'critical' | 'high' | 'moderate' | 'low' | 'emerging' | 'recovering' | 'unknown'
@@ -95,6 +100,7 @@ const usersCollection = collection(db, 'users')
 const organizationsCollection = collection(db, ORG_COLLECTION)
 const engagementCollection = collection(db, 'user_engagement_scores')
 const notificationsCollection = collection(db, 'notifications')
+const adminActivityCollection = collection(db, 'admin_activity_log')
 
 const upsertUserMirrors = async (userId: string, payload: Record<string, unknown>) => {
   const cleaned = removeUndefinedFields(payload)
@@ -126,9 +132,14 @@ const mapUser = (docSnap: { id: string; data: () => unknown }): ManagedUserRecor
     companyCode?: string
     companyName?: string
     accountStatus?: string
+    transformationTier?: string
     lastActive?: Timestamp | string | number
     lastActiveAt?: Timestamp | string | number
     createdAt?: Timestamp | string | number
+    accessLastUpdatedAt?: Timestamp | string | number
+    accessLastUpdatedBy?: string
+    accessLastUpdatedByName?: string
+    accessLastReason?: string
   }
 
   const name =
@@ -149,7 +160,8 @@ const mapUser = (docSnap: { id: string; data: () => unknown }): ManagedUserRecor
     companyName: data.companyName || null,
     lastActive: parseDateValue(data.lastActive || data.lastActiveAt),
     createdAt: parseDateValue(data.createdAt),
-    accountStatus: data.accountStatus,
+    accountStatus: data.accountStatus || 'active',
+    transformationTier: data.transformationTier || null,
     mentorId: data.mentorId,
     ambassadorId: data.ambassadorId,
     isActiveAmbassador: data.isActiveAmbassador,
@@ -157,6 +169,10 @@ const mapUser = (docSnap: { id: string; data: () => unknown }): ManagedUserRecor
       ? data.assignedOrganizations.filter((assignment): assignment is string => Boolean(assignment))
       : undefined,
     notes: data.notes,
+    accessLastUpdatedAt: parseDateValue(data.accessLastUpdatedAt),
+    accessLastUpdatedBy: data.accessLastUpdatedBy || null,
+    accessLastUpdatedByName: data.accessLastUpdatedByName || null,
+    accessLastReason: data.accessLastReason || null,
   }
 }
 
@@ -362,6 +378,113 @@ export const updateUser = async (userId: string, updates: Partial<ManagedUserRec
     ...payload,
     updatedAt: serverTimestamp(),
   })
+}
+
+type AccessAuditField =
+  | 'role'
+  | 'membershipStatus'
+  | 'accountStatus'
+  | 'transformationTier'
+  | 'companyId'
+  | 'companyName'
+  | 'companyCode'
+  | 'assignedOrganizations'
+
+const accessAuditFields: AccessAuditField[] = [
+  'role',
+  'membershipStatus',
+  'accountStatus',
+  'transformationTier',
+  'companyId',
+  'companyName',
+  'companyCode',
+  'assignedOrganizations',
+]
+
+const normalizeStringArray = (value: unknown) => {
+  if (!Array.isArray(value)) return []
+  return value
+    .map((item) => (typeof item === 'string' ? item.trim() : ''))
+    .filter((item) => item.length > 0)
+    .sort()
+}
+
+const isAuditValueEqual = (left: unknown, right: unknown) => {
+  if (Array.isArray(left) || Array.isArray(right)) {
+    const leftArray = normalizeStringArray(left)
+    const rightArray = normalizeStringArray(right)
+    if (leftArray.length !== rightArray.length) return false
+    return leftArray.every((value, index) => value === rightArray[index])
+  }
+  return (left ?? null) === (right ?? null)
+}
+
+const pickAccessAuditSnapshot = (record: Partial<ManagedUserRecord>) => {
+  const snapshot = {
+    role: record.role ?? null,
+    membershipStatus: record.membershipStatus ?? null,
+    accountStatus: record.accountStatus ?? null,
+    transformationTier: record.transformationTier ?? null,
+    companyId: record.companyId ?? null,
+    companyName: record.companyName ?? null,
+    companyCode: record.companyCode ?? null,
+    assignedOrganizations: normalizeStringArray(record.assignedOrganizations),
+  }
+  return removeUndefinedFields(snapshot)
+}
+
+export const updateUserAccessWithAudit = async (params: {
+  userId: string
+  updates: Partial<ManagedUserRecord>
+  before: Partial<ManagedUserRecord>
+  after: Partial<ManagedUserRecord>
+  actorId?: string | null
+  actorName?: string | null
+  reason?: string | null
+  source?: string
+}) => {
+  const {
+    userId,
+    updates,
+    before,
+    after,
+    actorId,
+    actorName,
+    reason,
+    source = 'users_management_panel',
+  } = params
+
+  const payload = { ...updates }
+  delete (payload as { id?: string }).id
+
+  const changedFields = accessAuditFields.filter((field) => !isAuditValueEqual(before[field], after[field]))
+  if (!changedFields.length) return
+
+  await upsertUserMirrors(userId, {
+    ...payload,
+    accessLastUpdatedAt: serverTimestamp(),
+    accessLastUpdatedBy: actorId || null,
+    accessLastUpdatedByName: actorName || null,
+    accessLastReason: reason || null,
+    updatedAt: serverTimestamp(),
+  })
+
+  const auditEntry = removeUndefinedFields({
+    action: 'user_access_updated',
+    userId,
+    adminId: actorId || undefined,
+    adminName: actorName || undefined,
+    createdAt: serverTimestamp(),
+    metadata: {
+      reason: reason || null,
+      source,
+      changedFields,
+      before: pickAccessAuditSnapshot(before),
+      after: pickAccessAuditSnapshot(after),
+    },
+  })
+
+  await addDoc(adminActivityCollection, auditEntry)
 }
 
 export const fetchEngagementRoster = async (): Promise<EngagementRosterEntry[]> => {

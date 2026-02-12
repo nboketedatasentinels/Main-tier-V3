@@ -29,30 +29,47 @@ function useManagedUsers() {
     const unsubscribe = listenToUsers(
       (items) => {
         const mapped = items.map((user) => {
-          // Type assertion to access fields not in AdminUserRecord but present in Firestore
-          const userData = user as typeof user & {
+          const userData = user as ManagedUserRecord & {
             companyId?: string
             companyCode?: string
             companyName?: string
             membershipStatus?: string
+            accountStatus?: string
+            transformationTier?: string
             full_name?: string
             name?: string
             displayName?: string
+            assignedOrganizations?: string[]
+            accessLastUpdatedAt?: Date | null
+            accessLastUpdatedBy?: string | null
+            accessLastUpdatedByName?: string | null
+            accessLastReason?: string | null
           }
           return {
-            id: user.id,
+            id: userData.id,
             name: getDisplayName(userData, 'Member'),
-            email: user.email,
-            role: user.role as ManagedUserRecord['role'],
+            email: userData.email,
+            role: userData.role as ManagedUserRecord['role'],
             membershipStatus: (userData.membershipStatus as 'free' | 'paid' | 'inactive') || 'free',
             // Check companyId first (set at signup), then fall back to assignedOrganizations (for admins)
-            companyId: userData.companyId || user.assignedOrganizations?.[0] || null,
+            companyId: userData.companyId || userData.assignedOrganizations?.[0] || null,
             companyName: userData.companyName || null,
             companyCode: userData.companyCode || null,
-            lastActive: user.lastActive instanceof Date ? user.lastActive : null,
-            createdAt: user.createdAt instanceof Date ? user.createdAt : null,
-            accountStatus: user.accountStatus,
-            notes: '',
+            lastActive: userData.lastActive instanceof Date ? userData.lastActive : null,
+            createdAt: userData.createdAt instanceof Date ? userData.createdAt : null,
+            accountStatus: userData.accountStatus || 'active',
+            transformationTier: userData.transformationTier || null,
+            assignedOrganizations: Array.isArray(userData.assignedOrganizations)
+              ? userData.assignedOrganizations
+              : undefined,
+            accessLastUpdatedAt:
+              userData.accessLastUpdatedAt instanceof Date
+                ? userData.accessLastUpdatedAt
+                : null,
+            accessLastUpdatedBy: userData.accessLastUpdatedBy || null,
+            accessLastUpdatedByName: userData.accessLastUpdatedByName || null,
+            accessLastReason: userData.accessLastReason || null,
+            notes: userData.notes || '',
           }
         }) as ManagedUserRecord[]
         setUsers(mapped)
