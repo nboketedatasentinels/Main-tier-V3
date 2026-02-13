@@ -162,6 +162,60 @@ describe("Firestore Security Rules", () => {
     });
   });
 
+  describe("Interventions", () => {
+    it("allows a partner to create an intervention for themselves", async () => {
+      await testEnv.withSecurityRulesDisabled(async (context) => {
+        const adminDb = context.firestore();
+        await setDoc(doc(adminDb, "users/partner-user"), { role: "partner" });
+      });
+
+      const db = getAuthenticatedContext("partner-user").firestore();
+      const interventionDoc = doc(db, "interventions/case1");
+      await assertSucceeds(setDoc(interventionDoc, {
+        partner_id: "partner-user",
+        organization_code: "acme",
+        status: "active",
+        opened_at: "2026-02-13T00:00:00.000Z",
+      }));
+    });
+
+    it("fails when a partner creates an intervention for another partner id", async () => {
+      await testEnv.withSecurityRulesDisabled(async (context) => {
+        const adminDb = context.firestore();
+        await setDoc(doc(adminDb, "users/partner-user"), { role: "partner" });
+      });
+
+      const db = getAuthenticatedContext("partner-user").firestore();
+      const interventionDoc = doc(db, "interventions/case1");
+      await assertFails(setDoc(interventionDoc, {
+        partner_id: "someone-else",
+        organization_code: "acme",
+        status: "active",
+        opened_at: "2026-02-13T00:00:00.000Z",
+      }));
+    });
+
+    it("allows a partner to update their own intervention", async () => {
+      await testEnv.withSecurityRulesDisabled(async (context) => {
+        const adminDb = context.firestore();
+        await setDoc(doc(adminDb, "users/partner-user"), { role: "partner" });
+        await setDoc(doc(adminDb, "interventions/case1"), {
+          partner_id: "partner-user",
+          organization_code: "acme",
+          status: "active",
+          opened_at: "2026-02-13T00:00:00.000Z",
+        });
+      });
+
+      const db = getAuthenticatedContext("partner-user").firestore();
+      const interventionDoc = doc(db, "interventions/case1");
+      await assertSucceeds(updateDoc(interventionDoc, {
+        status: "watch",
+        status_changed_at: "2026-02-13T01:00:00.000Z",
+      }));
+    });
+  });
+
   describe("Approvals & Points Verification", () => {
     it("prevents self-approval in approvals collection", async () => {
       await testEnv.withSecurityRulesDisabled(async (context) => {

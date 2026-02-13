@@ -475,6 +475,20 @@ service cloud.firestore {
       allow update, delete: if false; // Immutable log
     }
 
+    // Interventions collection
+    match /interventions/{interventionId} {
+      allow read: if isPartnerOrAdmin();
+      allow create: if isPartnerOrAdmin() && (
+        isSuperAdmin() ||
+        (request.resource.data.partner_id is string && request.resource.data.partner_id == request.auth.uid)
+      );
+      allow update: if isPartnerOrAdmin() && (
+        isSuperAdmin() ||
+        (resource.data.partner_id is string && resource.data.partner_id == request.auth.uid)
+      );
+      allow delete: if isSuperAdmin();
+    }
+
     // Villages collection
     match /villages/{villageId} {
       allow read: if isAuthenticated();
