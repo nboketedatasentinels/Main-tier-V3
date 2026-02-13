@@ -15,12 +15,32 @@ service cloud.firestore {
       return !(rawRole is string)
         ? ''
         : (
-          rawRole.lower().matches('super[\\s_-]?admin') || rawRole.lower() == 'super'
+          rawRole.lower().matches('^\\s*super[\\s_-]*admin\\s*$') || rawRole.lower().matches('^\\s*super\\s*$')
             ? 'super_admin'
             : (
-              rawRole.lower() in ['partner', 'admin', 'administrator', 'company_admin', 'company-admin', 'company admin']
+              rawRole.lower().matches('^\\s*(partner|admin|administrator|company[\\s_-]*admin)\\s*$')
                 ? 'partner'
-                : rawRole.lower()
+                : (
+                  rawRole.lower().matches('^\\s*mentor\\s*$')
+                    ? 'mentor'
+                    : (
+                      rawRole.lower().matches('^\\s*ambassador\\s*$')
+                        ? 'ambassador'
+                        : (
+                          rawRole.lower().matches('^\\s*paid[\\s_-]*member\\s*$')
+                            ? 'paid_member'
+                            : (
+                              rawRole.lower().matches('^\\s*free[\\s_-]*user\\s*$')
+                                ? 'free_user'
+                                : (
+                                  rawRole.lower().matches('^\\s*user\\s*$')
+                                    ? 'user'
+                                    : ''
+                                )
+                            )
+                        )
+                    )
+                )
             )
         );
     }
@@ -28,25 +48,59 @@ service cloud.firestore {
     function getRoleFromToken() {
       return !isAuthenticated()
         ? ''
-        : (request.auth.token.role is string
-          ? normalizeRoleValue(request.auth.token.role)
-          : (request.auth.token.claimsRole is string
-            ? normalizeRoleValue(request.auth.token.claimsRole)
-            : (request.auth.token.customRole is string
-              ? normalizeRoleValue(request.auth.token.customRole)
-              : '')));
+        : (
+          request.auth.token.admin == true || request.auth.token.super_admin == true || request.auth.token.superAdmin == true
+            ? 'super_admin'
+            : (
+              request.auth.token.partner == true || request.auth.token.company_admin == true
+                ? 'partner'
+                : (
+                  request.auth.token.role is string
+                    ? normalizeRoleValue(request.auth.token.role)
+                    : (
+                      request.auth.token.claimsRole is string
+                        ? normalizeRoleValue(request.auth.token.claimsRole)
+                        : (
+                          request.auth.token.customRole is string
+                            ? normalizeRoleValue(request.auth.token.customRole)
+                            : ''
+                        )
+                    )
+                )
+            )
+        );
     }
 
     function getRoleFromUsersDoc() {
-      return isAuthenticated() && exists(/databases/$(database)/documents/users/$(request.auth.uid))
-        ? normalizeRoleValue(get(/databases/$(database)/documents/users/$(request.auth.uid)).data.get('role', ''))
-        : '';
+      let userPath = /databases/$(database)/documents/users/$(request.auth.uid);
+      let userData = isAuthenticated() && exists(userPath) ? get(userPath).data : null;
+      return userData == null
+        ? ''
+        : normalizeRoleValue(
+          userData.get(
+            'role',
+            userData.get(
+              'userRole',
+              userData.get('claimsRole', userData.get('customRole', userData.get('accountType', '')))
+            )
+          )
+        );
     }
 
     function getRoleFromProfilesDoc() {
-      return isAuthenticated() && exists(/databases/$(database)/documents/profiles/$(request.auth.uid))
-        ? normalizeRoleValue(get(/databases/$(database)/documents/profiles/$(request.auth.uid)).data.get('role', ''))
-        : '';
+      let profilePath = /databases/$(database)/documents/profiles/$(request.auth.uid);
+      let profileData = isAuthenticated() && exists(profilePath) ? get(profilePath).data : null;
+      return profileData == null
+        ? ''
+        : normalizeRoleValue(
+          profileData.get(
+            'role',
+            profileData.get(
+              'userRole',
+              profileData.get('claimsRole', profileData.get('customRole', profileData.get('accountType', '')))
+            )
+          )
+        );
     }
 
     function getUserRole() {

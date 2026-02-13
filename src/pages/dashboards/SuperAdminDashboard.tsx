@@ -101,11 +101,27 @@ export const SuperAdminDashboard: React.FC = () => {
     taskNotifications: false,
   })
   const adminSessionRetriedRef = useRef(false)
+  const adminSessionBootstrappedRef = useRef(false)
 
   useEffect(() => {
     const nextTab = resolveDashboardTabFromSearch(location.search)
     setActivePage(nextTab)
   }, [location.search])
+
+  useEffect(() => {
+    if (!isSuperAdminView) {
+      adminSessionBootstrappedRef.current = false
+      return
+    }
+    if (adminSessionBootstrappedRef.current) return
+    adminSessionBootstrappedRef.current = true
+
+    void refreshAdminSession()
+      .then(() => setRefreshIndex((prev) => prev + 1))
+      .catch((error) => {
+        console.error(error)
+      })
+  }, [isSuperAdminView, refreshAdminSession])
 
   useEffect(() => {
     if (!isSuperAdminView) {

@@ -35,8 +35,12 @@ describe("Firestore Security Rules", () => {
     await testEnv.clearFirestore();
   });
 
-  function getAuthenticatedContext(uid: string, email: string = "user@example.com") {
-    return testEnv.authenticatedContext(uid, { email });
+  function getAuthenticatedContext(
+    uid: string,
+    email: string = "user@example.com",
+    claims: Record<string, unknown> = {},
+  ) {
+    return testEnv.authenticatedContext(uid, { email, ...claims });
   }
 
   function getUnauthenticatedContext() {
@@ -253,6 +257,47 @@ describe("Firestore Security Rules", () => {
       });
 
       const db = getAuthenticatedContext("admin-user").firestore();
+      await assertSucceeds(getDocs(collection(db, "upgrade_requests")));
+    });
+
+    it("accepts super-admin role values with whitespace and separators", async () => {
+      await testEnv.withSecurityRulesDisabled(async (context) => {
+        const adminDb = context.firestore();
+        await setDoc(doc(adminDb, "users/admin-user"), { role: "  SUPER - ADMIN  " });
+        await setDoc(doc(adminDb, "upgrade_requests/request1"), {
+          user_id: "alice",
+          status: "pending",
+        });
+      });
+
+      const db = getAuthenticatedContext("admin-user").firestore();
+      await assertSucceeds(getDocs(collection(db, "upgrade_requests")));
+    });
+
+    it("falls back to userRole field when role is missing", async () => {
+      await testEnv.withSecurityRulesDisabled(async (context) => {
+        const adminDb = context.firestore();
+        await setDoc(doc(adminDb, "users/admin-user"), { userRole: "super_admin" });
+        await setDoc(doc(adminDb, "upgrade_requests/request1"), {
+          user_id: "alice",
+          status: "pending",
+        });
+      });
+
+      const db = getAuthenticatedContext("admin-user").firestore();
+      await assertSucceeds(getDocs(collection(db, "upgrade_requests")));
+    });
+
+    it("accepts boolean admin custom claim for admin reads", async () => {
+      await testEnv.withSecurityRulesDisabled(async (context) => {
+        const adminDb = context.firestore();
+        await setDoc(doc(adminDb, "upgrade_requests/request1"), {
+          user_id: "alice",
+          status: "pending",
+        });
+      });
+
+      const db = getAuthenticatedContext("admin-user", "admin@example.com", { admin: true }).firestore();
       await assertSucceeds(getDocs(collection(db, "upgrade_requests")));
     });
   });
