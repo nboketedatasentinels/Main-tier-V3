@@ -8,7 +8,6 @@ import {
   FirestoreError,
   getDoc,
   getDocs,
-  getDocsFromServer,
   limit,
   onSnapshot,
   orderBy,
@@ -447,7 +446,7 @@ export const listenToUserGrowthTrend = (
 }
 
 export const fetchOrganizations = async (): Promise<OrganizationRecord[]> => {
-  const snapshot = await getDocsFromServer(query(orgCollection, orderBy('createdAt', 'desc')))
+  const snapshot = await getDocs(query(orgCollection, orderBy('createdAt', 'desc')))
   return snapshot.docs.map((docSnap) => ({ id: docSnap.id, ...(docSnap.data() as Omit<OrganizationRecord, 'id'>) }))
 }
 

@@ -5,7 +5,6 @@ import {
   doc,
   getDoc,
   getDocs,
-  getDocsFromServer,
   onSnapshot,
   orderBy,
   arrayUnion,
@@ -446,7 +445,7 @@ export const listenToAdminNotifications = (
 
 export const fetchAdminNotifications = async (): Promise<AdminNotification[]> => {
   const adminQuery = query(adminNotificationsCollection, orderBy('created_at', 'desc'))
-  const snapshot = await getDocsFromServer(adminQuery)
+  const snapshot = await getDocs(adminQuery)
   return snapshot.docs.map((docSnap) => ({
     ...(docSnap.data() as AdminNotification),
     id: docSnap.id,
