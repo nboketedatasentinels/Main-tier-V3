@@ -651,18 +651,29 @@ export const createOrganizationWithInvitations = async (
   }
 
   const orgRef = await addDoc(orgCollection, { ...payload, updatedAt: serverTimestamp() })
+  const requestActorId = auth.currentUser?.uid || null
   const actorId = adminContext?.adminId || getActorId()
 
-  await addDoc(adminActivityCollection, {
-    action: 'Organization created',
-    organizationName: organization.name,
-    organizationCode: organization.code,
-    adminId: actorId,
-    adminName: adminContext?.adminName,
-    createdBy: actorId,
-    createdAt: serverTimestamp(),
-    metadata: { via: 'CreateOrganizationModal' },
-  })
+  try {
+    await addDoc(adminActivityCollection, {
+      action: 'Organization created',
+      organizationName: organization.name,
+      organizationCode: organization.code,
+      adminId: actorId,
+      adminName: adminContext?.adminName,
+      // Must match request.auth.uid to satisfy Firestore rules.
+      createdBy: requestActorId || actorId,
+      createdAt: serverTimestamp(),
+      metadata: { via: 'CreateOrganizationModal' },
+    })
+  } catch (auditError) {
+    console.warn('[OrganizationService] Organization created, but audit log write failed.', {
+      organizationId: orgRef.id,
+      actorId,
+      requestActorId,
+      error: (auditError as Error)?.message || auditError,
+    })
+  }
 
   if (!invitations.length) {
     return { organizationId: orgRef.id, invitationResult: null }
