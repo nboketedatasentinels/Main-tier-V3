@@ -125,17 +125,35 @@ export const SignUpPage: React.FC = () => {
       return
     }
 
+    // Email sign-up validates organization code in AuthContext after auth is established.
+    // Skip unauthenticated pre-checks here to avoid blocking on Firestore public-read restrictions.
+    if (!auth.currentUser) {
+      setCompanyCodeValid(null)
+      setCompanyCodeError("Code will be verified after sign-up")
+      setValidatedOrganization(null)
+      setIsCheckingCode(false)
+      return
+    }
+
     let cancelled = false
     setIsCheckingCode(true)
 
-    validateCompanyCode(code).then(result => {
-      if (cancelled) return
+    void validateCompanyCode(code)
+      .then(result => {
+        if (cancelled) return
 
-      setCompanyCodeValid(result.valid)
-      setCompanyCodeError(result.error ?? null)
-      setValidatedOrganization(result.valid && result.organization ? result.organization : null)
-      setIsCheckingCode(false)
-    })
+        setCompanyCodeValid(result.valid)
+        setCompanyCodeError(result.error ?? null)
+        setValidatedOrganization(result.valid && result.organization ? result.organization : null)
+        setIsCheckingCode(false)
+      })
+      .catch(validationError => {
+        if (cancelled) return
+        setCompanyCodeValid(false)
+        setValidatedOrganization(null)
+        setCompanyCodeError(getFriendlyErrorMessage(validationError))
+        setIsCheckingCode(false)
+      })
 
     return () => {
       cancelled = true
@@ -156,7 +174,6 @@ export const SignUpPage: React.FC = () => {
     if (formData.companyCode.trim()) {
       if (formData.companyCode.trim().length !== 6) return "Company code must be 6 characters."
       if (companyCodeValid === false) return "Company code is invalid or inactive."
-      if (companyCodeValid === null || isCheckingCode) return "Please wait while we verify the company code."
     }
 
     if (!formData.acceptTerms) return "You must accept the Terms of Use and Privacy Policy."
@@ -189,7 +206,7 @@ export const SignUpPage: React.FC = () => {
           fullName: formData.fullName.trim(),
           gender: formData.gender !== "prefer_not_to_say" ? formData.gender : undefined,
           companyCode:
-            formData.companyCode.trim() && companyCodeValid ? formData.companyCode.trim() : undefined,
+            formData.companyCode.trim() ? formData.companyCode.trim() : undefined,
           companyId: validatedOrganization?.id,
           companyName: validatedOrganization?.name,
         },
@@ -197,7 +214,13 @@ export const SignUpPage: React.FC = () => {
       )
 
       if (signUpError) {
-        setError(getFriendlyErrorMessage(signUpError))
+        const signUpMessage = getFriendlyErrorMessage(signUpError)
+        if (formData.companyCode.trim() && /company code/i.test(signUpMessage)) {
+          setCompanyCodeValid(false)
+          setCompanyCodeError(signUpMessage)
+          setValidatedOrganization(null)
+        }
+        setError(signUpMessage)
         return
       }
 
@@ -240,7 +263,7 @@ export const SignUpPage: React.FC = () => {
     }
 
     const pendingCode = formData.companyCode.trim().toUpperCase()
-    if (pendingCode && companyCodeValid) {
+    if (pendingCode && companyCodeValid !== false) {
       localStorage.setItem('t4l.pendingCompanyCode', pendingCode)
     } else {
       localStorage.removeItem('t4l.pendingCompanyCode')
@@ -412,6 +435,11 @@ export const SignUpPage: React.FC = () => {
             <div className="mt-2 inline-flex items-center gap-2 text-sm text-danger">
               <XCircle className="h-4 w-4" />
               <span>{companyCodeError || "Invalid or inactive company code"}</span>
+            </div>
+          )}
+          {companyCodeValid === null && companyCodeError && !isCheckingCode && (
+            <div className="mt-2 inline-flex items-center gap-2 text-sm text-text-secondary">
+              <span>{companyCodeError}</span>
             </div>
           )}
         </div>

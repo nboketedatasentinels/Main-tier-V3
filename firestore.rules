@@ -11,12 +11,26 @@ service cloud.firestore {
       return isAuthenticated() && request.auth.uid == userId;
     }
 
+    function getRoleFromToken() {
+      return !isAuthenticated()
+        ? ''
+        : (request.auth.token.role is string
+          ? request.auth.token.role
+          : (request.auth.token.claimsRole is string
+            ? request.auth.token.claimsRole
+            : (request.auth.token.customRole is string
+              ? request.auth.token.customRole
+              : '')));
+    }
+
     function getUserRole() {
-      return isAuthenticated() && exists(/databases/$(database)/documents/users/$(request.auth.uid))
-        ? get(/databases/$(database)/documents/users/$(request.auth.uid)).data.get('role', '')
-        : (isAuthenticated() && exists(/databases/$(database)/documents/profiles/$(request.auth.uid))
-          ? get(/databases/$(database)/documents/profiles/$(request.auth.uid)).data.get('role', '')
-          : '');
+      return getRoleFromToken() != ''
+        ? getRoleFromToken()
+        : (isAuthenticated() && exists(/databases/$(database)/documents/users/$(request.auth.uid))
+          ? get(/databases/$(database)/documents/users/$(request.auth.uid)).data.get('role', '')
+          : (isAuthenticated() && exists(/databases/$(database)/documents/profiles/$(request.auth.uid))
+            ? get(/databases/$(database)/documents/profiles/$(request.auth.uid)).data.get('role', '')
+            : ''));
     }
 
     function isSuperAdmin() {

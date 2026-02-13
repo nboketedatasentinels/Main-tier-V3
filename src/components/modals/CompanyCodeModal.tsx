@@ -70,14 +70,23 @@ export const CompanyCodeModal: React.FC<CompanyCodeModalProps> = ({
     let cancelled = false
     setIsCheckingCode(true)
 
-    validateCompanyCode(trimmedCode).then((result) => {
-      if (cancelled) return
-      setCompanyCodeValid(result.valid)
-      setCompanyCodeError(result.error ?? null)
-      setCompanyName(result.valid && result.organization ? result.organization.name : null)
-      setCompanyId(result.valid && result.organization ? result.organization.id : null)
-      setIsCheckingCode(false)
-    })
+    void validateCompanyCode(trimmedCode)
+      .then((result) => {
+        if (cancelled) return
+        setCompanyCodeValid(result.valid)
+        setCompanyCodeError(result.error ?? null)
+        setCompanyName(result.valid && result.organization ? result.organization.name : null)
+        setCompanyId(result.valid && result.organization ? result.organization.id : null)
+        setIsCheckingCode(false)
+      })
+      .catch((validationError) => {
+        if (cancelled) return
+        setCompanyCodeValid(false)
+        setCompanyName(null)
+        setCompanyId(null)
+        setCompanyCodeError(validationError instanceof Error ? validationError.message : 'Unable to verify company code.')
+        setIsCheckingCode(false)
+      })
 
     return () => {
       cancelled = true

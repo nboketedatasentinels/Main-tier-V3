@@ -1157,33 +1157,6 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       }
     }
 
-    let validatedOrganization:
-      | Awaited<ReturnType<typeof validateCompanyCode>>['organization']
-      | null = null
-
-    if (normalizedCompanyCode) {
-      try {
-        const validationResult = await validateCompanyCode(normalizedCompanyCode)
-        if (!validationResult.valid || !validationResult.organization) {
-          setLoading(false)
-          setProfileLoading(false)
-          return {
-            error: new Error(validationResult.error || 'Company code is invalid or inactive.'),
-            userId: undefined,
-          }
-        }
-        validatedOrganization = validationResult.organization
-      } catch (validationError) {
-        const friendlyMessage = getFriendlyErrorMessage(validationError)
-        setLoading(false)
-        setProfileLoading(false)
-        return {
-          error: new Error(friendlyMessage),
-          userId: undefined,
-        }
-      }
-    }
-
     try {
       if (shouldTrackPendingCompanyCode && typeof window !== 'undefined') {
         localStorage.setItem(pendingCompanyCodeKey, normalizedCompanyCode as string)
@@ -1191,6 +1164,45 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       const credential = await createUserWithEmailAndPassword(auth, normalizedEmail, password)
       const firebaseUser = credential.user
       const uid = firebaseUser.uid
+      let validatedOrganization:
+        | Awaited<ReturnType<typeof validateCompanyCode>>['organization']
+        | null = null
+
+      if (normalizedCompanyCode) {
+        try {
+          const validationResult = await validateCompanyCode(normalizedCompanyCode)
+          if (!validationResult.valid || !validationResult.organization) {
+            await deleteUser(firebaseUser).catch((cleanupError) => {
+              console.error('[Auth] Failed to cleanup auth user after invalid company code', cleanupError)
+            })
+            setLoading(false)
+            setProfileLoading(false)
+            if (shouldTrackPendingCompanyCode && typeof window !== 'undefined') {
+              localStorage.removeItem(pendingCompanyCodeKey)
+            }
+            return {
+              error: new Error(validationResult.error || 'Company code is invalid or inactive.'),
+              userId: undefined,
+            }
+          }
+          validatedOrganization = validationResult.organization
+        } catch (validationError) {
+          await deleteUser(firebaseUser).catch((cleanupError) => {
+            console.error('[Auth] Failed to cleanup auth user after company code validation failure', cleanupError)
+          })
+          const friendlyMessage = getFriendlyErrorMessage(validationError)
+          setLoading(false)
+          setProfileLoading(false)
+          if (shouldTrackPendingCompanyCode && typeof window !== 'undefined') {
+            localStorage.removeItem(pendingCompanyCodeKey)
+          }
+          return {
+            error: new Error(friendlyMessage),
+            userId: undefined,
+          }
+        }
+      }
+
       const { firstName, lastName } = getNameParts(normalizedFullName, normalizedEmail)
 
       try {
@@ -1717,4 +1729,6 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>
 }
+
+
 

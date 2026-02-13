@@ -651,13 +651,15 @@ export const createOrganizationWithInvitations = async (
   }
 
   const orgRef = await addDoc(orgCollection, { ...payload, updatedAt: serverTimestamp() })
+  const actorId = adminContext?.adminId || getActorId()
 
   await addDoc(adminActivityCollection, {
     action: 'Organization created',
     organizationName: organization.name,
     organizationCode: organization.code,
-    adminId: adminContext?.adminId,
+    adminId: actorId,
     adminName: adminContext?.adminName,
+    createdBy: actorId,
     createdAt: serverTimestamp(),
     metadata: { via: 'CreateOrganizationModal' },
   })

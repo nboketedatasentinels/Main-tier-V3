@@ -171,6 +171,14 @@ export const PaidMemberDashboard: React.FC = () => {
     return Math.round((completedActivities / activities.length) * 100)
   }, [activities.length, completedActivities])
 
+  const estimatedCompletedPoints = useMemo(
+    () => activities.reduce((total, act) => total + (act.completed ? act.points : 0), 0),
+    [activities],
+  )
+
+  const remainingActivities = Math.max(0, activities.length - completedActivities)
+  const completionToBenchmark = Math.max(0, MENTOR_BENCHMARK_COMPLETION - completionRate)
+
   const journeyCompletionPct = useMemo(() => {
     if (!journeyWeeks) return 0
     return Math.min(100, Math.round((currentWeek / journeyWeeks) * 100))
@@ -217,7 +225,7 @@ export const PaidMemberDashboard: React.FC = () => {
             Welcome back, {profile?.firstName || 'Leader'}
           </Text>
           <Text color="brand.subtleText" opacity={0.9}>
-            You are on track for week {profile?.currentWeek || 3}. Keep the momentum going today.
+            You are on track for week {currentWeek}. Keep the momentum going today.
           </Text>
         </Box>
         <HStack spacing={4}>
@@ -269,7 +277,7 @@ export const PaidMemberDashboard: React.FC = () => {
           <CardBody>
             <Stat>
               <StatLabel color="brand.goldLight">Current Week</StatLabel>
-              <StatNumber color="brand.gold">{profile?.currentWeek || 1}</StatNumber>
+              <StatNumber color="brand.gold">{currentWeek}</StatNumber>
               <StatHelpText color="brand.goldLight">of your journey</StatHelpText>
             </Stat>
           </CardBody>
@@ -315,44 +323,92 @@ export const PaidMemberDashboard: React.FC = () => {
         <GridItem>
           <Stack spacing={6}>
             <Card aria-label="Weekly progress overview">
-            <CardBody>
-              <HStack justify="space-between" align="flex-start" mb={4}>
-                <Box>
-                  <Text fontWeight="bold" color="brand.text">
-                    Weekly progress
-                  </Text>
-                  <Text fontSize="sm" color="brand.subtleText" opacity={0.8}>
-                    Week {profile?.currentWeek ?? 3} completion status
-                  </Text>
-                </Box>
-                <HStack spacing={2}>
-                  <Icon as={TrendingUp} color="brand.gold" />
-                  <Text color="brand.text" fontWeight="bold">
-                    {completionRate}%
-                  </Text>
-                </HStack>
-              </HStack>
-              <Progress value={completionRate} borderRadius="full" mb={4} />
-              <SimpleGrid columns={{ base: 1, md: 2 }} spacing={3}>
-                <Box>
-                  <Text fontSize="sm" color="brand.subtleText" opacity={0.85}>
-                    Activities completed
-                  </Text>
-                  <Text fontSize="lg" fontWeight="bold" color="brand.text">
-                    {completedActivities} / {activities.length}
-                  </Text>
-                </Box>
-                <Box>
-                  <Text fontSize="sm" color="brand.subtleText" opacity={0.85}>
-                    Estimated points
-                  </Text>
-                  <Text fontSize="lg" fontWeight="bold" color="brand.text">
-                    {activities.reduce((total, act) => total + (act.completed ? act.points : 0), 0)} pts
-                  </Text>
-                </Box>
-              </SimpleGrid>
-            </CardBody>
-          </Card>
+              <CardBody py={{ base: 5, md: 6 }}>
+                <Stack spacing={4}>
+                  <Stack
+                    direction={{ base: 'column', sm: 'row' }}
+                    justify="space-between"
+                    align={{ base: 'flex-start', sm: 'center' }}
+                    spacing={{ base: 2, sm: 3 }}
+                  >
+                    <Box>
+                      <Text
+                        fontSize="xs"
+                        textTransform="uppercase"
+                        letterSpacing="0.08em"
+                        fontWeight="semibold"
+                        color="brand.subtleText"
+                      >
+                        Weekly progress
+                      </Text>
+                      <Text fontSize="sm" color="brand.subtleText" opacity={0.85}>
+                        Week {currentWeek} completion status
+                      </Text>
+                    </Box>
+                    <HStack spacing={2} px={3} py={1.5} borderRadius="full" bg="brand.primaryMuted">
+                      <Icon as={TrendingUp} color="brand.gold" boxSize={4} />
+                      <Text color="brand.text" fontWeight="bold" fontSize={{ base: 'xl', md: 'lg' }}>
+                        {completionRate}%
+                      </Text>
+                    </HStack>
+                  </Stack>
+
+                  <Box>
+                    <Progress
+                      value={completionRate}
+                      height={{ base: '14px', md: '11px' }}
+                      borderRadius="full"
+                      bg="rgba(17, 25, 40, 0.12)"
+                      sx={{
+                        '& > div': {
+                          backgroundImage: 'linear-gradient(90deg, #4A90E2 0%, #9A6BFF 48%, #EAB130 100%)',
+                        },
+                      }}
+                    />
+                    <HStack justify="space-between" mt={2}>
+                      <Text fontSize="xs" color="brand.subtleText">
+                        Goal target: {MENTOR_BENCHMARK_COMPLETION}%
+                      </Text>
+                      <Text fontSize="xs" color="brand.subtleText">
+                        {completionRate >= MENTOR_BENCHMARK_COMPLETION
+                          ? 'At or above benchmark'
+                          : `${completionToBenchmark}% to benchmark`}
+                      </Text>
+                    </HStack>
+                  </Box>
+
+                  <SimpleGrid columns={{ base: 1, sm: 2 }} spacing={3}>
+                    <Box p={3} borderRadius="lg" bg="brand.primaryMuted">
+                      <Text fontSize="xs" textTransform="uppercase" letterSpacing="0.06em" color="brand.subtleText">
+                        Completed
+                      </Text>
+                      <Text fontSize={{ base: '2xl', md: 'xl' }} fontWeight="bold" color="brand.text">
+                        {completedActivities} / {activities.length}
+                      </Text>
+                    </Box>
+                    <Box p={3} borderRadius="lg" bg="brand.primaryMuted">
+                      <Text fontSize="xs" textTransform="uppercase" letterSpacing="0.06em" color="brand.subtleText">
+                        Earned points
+                      </Text>
+                      <Text fontSize={{ base: '2xl', md: 'xl' }} fontWeight="bold" color="brand.text">
+                        {estimatedCompletedPoints} pts
+                      </Text>
+                    </Box>
+                  </SimpleGrid>
+
+                  <Box p={3} borderRadius="lg" border="1px solid" borderColor="brand.border" bg="whiteAlpha.50">
+                    <Text fontSize="sm" fontWeight="semibold" color="brand.text">
+                      Next focus
+                    </Text>
+                    <Text fontSize="sm" color="brand.subtleText" mt={1}>
+                      {remainingActivities > 0
+                        ? `${remainingActivities} activities left this week. Prioritize high-value actions to close your gap.`
+                        : 'All activities complete this week. Use bonus actions to stretch your lead.'}
+                    </Text>
+                  </Box>
+                </Stack>
+              </CardBody>
+            </Card>
 
           {activeChallenges.length > 0 && (
             <Card border="1px solid" borderColor="brand.border">
@@ -503,7 +559,17 @@ export const PaidMemberDashboard: React.FC = () => {
             <Text fontSize="sm" color="brand.subtleText">
               Complete the steps below to unlock your final journey badge and celebrate your growth.
             </Text>
-            <Progress value={journeyCompletionPct} borderRadius="full" />
+            <Progress
+              value={journeyCompletionPct}
+              height={{ base: '14px', md: '11px' }}
+              borderRadius="full"
+              bg="rgba(17, 25, 40, 0.12)"
+              sx={{
+                '& > div': {
+                  backgroundImage: 'linear-gradient(90deg, #4A90E2 0%, #9A6BFF 48%, #EAB130 100%)',
+                },
+              }}
+            />
             <HStack justify="space-between">
               <Text fontSize="sm" color="brand.subtleText">
                 {journeyCompletionPct}% complete
