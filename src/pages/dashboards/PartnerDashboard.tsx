@@ -19,12 +19,6 @@ import {
   VStack,
   Skeleton,
   SkeletonText,
-  Accordion,
-  AccordionItem,
-  AccordionButton,
-  AccordionPanel,
-  AccordionIcon,
-  Code,
   useToast,
 } from '@chakra-ui/react'
 import { formatDistanceToNow, isValid } from 'date-fns'
@@ -47,7 +41,7 @@ import { logOrganizationAccessAttempt } from '@/services/organizationService'
 import { recordEngagementAction } from '@/services/engagementService'
 import { sendBulkNudges } from '@/services/nudgeService'
 import { buildPartnerNavItems } from '@/utils/navigationItems'
-import { logger, type MismatchSample } from '@/utils/partnerDashboardUtils'
+import { logger } from '@/utils/partnerDashboardUtils'
 import { getDisplayName } from '@/utils/displayName'
 
 export const PartnerDashboard: React.FC = () => {
@@ -62,7 +56,6 @@ export const PartnerDashboard: React.FC = () => {
     profileStatus,
   } = useAuth()
   const toast = useToast()
-  const [debugMode, setDebugMode] = useState(false)
   const [partnerOrgAccess, setPartnerOrgAccess] = useState<boolean | null>(null)
   const {
     assignedOrgCount,
@@ -84,12 +77,11 @@ export const PartnerDashboard: React.FC = () => {
     debugInfo,
     snapshot,
     adminDataLoading,
-  } = usePartnerDashboardData({ debugMode })
+  } = usePartnerDashboardData({ debugMode: false })
   const { organizations, users, analytics } = snapshot
   const engagementTrend = analytics?.engagementTrend ?? []
   const riskLevels = analytics?.riskLevels ?? { engaged: 0, watch: 0, concern: 0, critical: 0 }
   const atRiskUsers = useMemo(() => analytics?.atRiskUsers ?? [], [analytics?.atRiskUsers])
-  const partnerId = user?.uid ?? null
   const accountDisplayName = useMemo(
     () =>
       getDisplayName(
@@ -1155,142 +1147,6 @@ export const PartnerDashboard: React.FC = () => {
     />
   )
 
-  const renderDebugInfo = () => {
-    if (!debugInfo) return null
-
-    return (
-      <Accordion allowToggle mt={4}>
-        <AccordionItem border="1px dashed" borderColor="border.control" borderRadius="md" bg="gray.50">
-          <h2>
-            <AccordionButton>
-              <Box flex="1" textAlign="left" fontWeight="bold" fontSize="sm">
-                <HStack>
-                  <Gauge size={14} />
-                  <Text>Dashboard Debug Info</Text>
-                  {debugInfo.rejectedNoMatch > 0 && (
-                    <Badge colorScheme="orange" ml={2}>
-                      {debugInfo.rejectedNoMatch} Mismatched
-                    </Badge>
-                  )}
-                </HStack>
-              </Box>
-              <AccordionIcon />
-            </AccordionButton>
-          </h2>
-          <AccordionPanel pb={4}>
-            <VStack align="flex-start" spacing={4}>
-              {import.meta.env.DEV && (
-                <Box w="full">
-                  <Text fontSize="xs" fontWeight="bold" color="gray.600" mb={2}>
-                    Partner Debug Panel (DEV ONLY)
-                  </Text>
-                  <SimpleGrid columns={{ base: 1, md: 2 }} spacing={3}>
-                    <Box>
-                      <Text fontSize="xs" color="gray.500">Role</Text>
-                      <Text fontWeight="bold">{profile?.role || 'unknown'}</Text>
-                    </Box>
-                    <Box>
-                      <Text fontSize="xs" color="gray.500">Partner ID</Text>
-                      <Text fontWeight="bold">{partnerId || 'n/a'}</Text>
-                    </Box>
-                    <Box>
-                      <Text fontSize="xs" color="gray.500">Assigned Org IDs</Text>
-                      <Text fontWeight="bold">
-                        {assignedOrganizations.length ? assignedOrganizations.join(', ') : 'none'}
-                      </Text>
-                    </Box>
-                    <Box>
-                      <Text fontSize="xs" color="gray.500">Selected Org ID</Text>
-                      <Text fontWeight="bold">{selectedOrgId || 'all'}</Text>
-                    </Box>
-                    <Box>
-                      <Text fontSize="xs" color="gray.500">Partner Org Access</Text>
-                      <Text fontWeight="bold">
-                        {partnerOrgAccess === null ? 'checking' : partnerOrgAccess ? 'true' : 'false'}
-                      </Text>
-                    </Box>
-                  </SimpleGrid>
-                  <Divider mt={3} />
-                </Box>
-              )}
-              <SimpleGrid columns={{ base: 2, md: 4 }} spacing={4} w="full">
-                <Box>
-                  <Text fontSize="xs" color="gray.500">Snapshot Total</Text>
-                  <Text fontWeight="bold">{debugInfo.totalInSnapshot}</Text>
-                </Box>
-                <Box>
-                  <Text fontSize="xs" color="gray.500">Kept</Text>
-                  <Text fontWeight="bold" color="green.600">{debugInfo.keptCount}</Text>
-                </Box>
-                <Box>
-                  <Text fontSize="xs" color="gray.500">Rejected (Org Mismatch)</Text>
-                  <Text fontWeight="bold" color={debugInfo.rejectedNoMatch > 0 ? "orange.600" : "inherit"}>
-                    {debugInfo.rejectedNoMatch}
-                  </Text>
-                </Box>
-                <Box>
-                  <Text fontSize="xs" color="gray.500">Rejected (Filter)</Text>
-                  <Text fontWeight="bold">{debugInfo.rejectedSelectedOrg}</Text>
-                </Box>
-              </SimpleGrid>
-
-              <Divider />
-
-              <Box w="full">
-                <Text fontSize="xs" fontWeight="bold" color="gray.600" mb={2}>Assigned Organization Keys:</Text>
-                <HStack wrap="wrap" spacing={2}>
-                  {debugInfo.assignedOrgKeys.length > 0 ? (
-                    debugInfo.assignedOrgKeys.map((key: string) => (
-                      <Code key={key} fontSize="xs" colorScheme="purple">{key}</Code>
-                    ))
-                  ) : (
-                    <Text fontSize="xs" fontStyle="italic">No keys assigned in profile</Text>
-                  )}
-                </HStack>
-              </Box>
-
-              {debugInfo.mismatchSamples.length > 0 && (
-                <Box w="full">
-                  <Text fontSize="xs" fontWeight="bold" color="gray.600" mb={2}>Samples of Mismatched Users:</Text>
-                  <VStack align="flex-start" spacing={2} w="full">
-                    {debugInfo.mismatchSamples.map((sample: MismatchSample, idx: number) => (
-                      <Box key={idx} p={2} bg="white" border="1px solid" borderColor="border.control" borderRadius="md" w="full" fontSize="xs">
-                        <HStack justify="space-between">
-                          <Text fontWeight="bold">{sample.id}</Text>
-                          <Badge size="xs" colorScheme="red">{sample.reason}</Badge>
-                        </HStack>
-                        <Text mt={1} color="gray.600">User Org Fields: {sample.userOrgKeys.length > 0 ? sample.userOrgKeys.join(', ') : '(Empty)'}</Text>
-                      </Box>
-                    ))}
-                    {debugInfo.rejectedNoMatch > 5 && (
-                      <Text fontSize="xs" color="gray.500" fontStyle="italic">...and {debugInfo.rejectedNoMatch - 5} more</Text>
-                    )}
-                  </VStack>
-                </Box>
-              )}
-
-              <HStack spacing={3}>
-                <Button size="xs" variant="outline" onClick={() => console.log('Full Dashboard Debug:', debugInfo)}>
-                  Log Full Debug Data to Console
-                </Button>
-                {isSuperAdmin && (
-                  <Button
-                    size="xs"
-                    colorScheme={debugMode ? "red" : "gray"}
-                    variant={debugMode ? "solid" : "outline"}
-                    onClick={() => setDebugMode(!debugMode)}
-                  >
-                    {debugMode ? "Disable Debug Mode (Filtering Off)" : "Enable Debug Mode (Bypass Filtering)"}
-                  </Button>
-                )}
-              </HStack>
-            </VStack>
-          </AccordionPanel>
-        </AccordionItem>
-      </Accordion>
-    )
-  }
-
   const renderUsersPage = () => (
     <Stack spacing={6}>
       {users.length === 0 && !usersLoading && debugInfo && debugInfo.rejectedNoMatch > 0 && (
@@ -1350,8 +1206,6 @@ export const PartnerDashboard: React.FC = () => {
               initialTab={userManagementTab}
               onStartIntervention={handleStartInterventionFromUserManagement}
             />
-
-            {renderDebugInfo()}
           </Stack>
         </CardBody>
       </Card>

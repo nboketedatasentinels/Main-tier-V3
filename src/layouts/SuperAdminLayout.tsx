@@ -30,6 +30,9 @@ import { useAuth } from '@/hooks/useAuth'
 import { buildCommonAccountItems, buildSuperAdminNavItems, NavigationItem, NavigationSection } from '@/utils/navigationItems'
 
 const APP_VIEWPORT_HEIGHT = { base: '100dvh', md: '100vh' } as const
+const MOBILE_NAV_HEIGHT = 68
+const MOBILE_NAV_HEIGHT_WITH_SAFE_AREA = `calc(${MOBILE_NAV_HEIGHT}px + env(safe-area-inset-bottom))`
+const MOBILE_NAV_BUTTON_HEIGHT = MOBILE_NAV_HEIGHT - 12
 
 interface SuperAdminLayoutProps {
   children: React.ReactNode
@@ -126,6 +129,17 @@ export const SuperAdminLayout: React.FC<SuperAdminLayoutProps> = ({
   const toast = useToast()
   const sections = useMemo(() => navSections || buildSuperAdminNavItems(), [navSections])
   const primaryNavItems = useMemo(() => sections.flatMap(section => section.items).slice(0, 4), [sections])
+  const mobileLabelByKey = useMemo<Record<string, string>>(
+    () => ({
+      overview: 'Overview',
+      organizations: 'Orgs',
+      users: 'Users',
+      approvals: 'Approvals',
+      'admin-oversight': 'Oversight',
+      reports: 'Reports',
+    }),
+    [],
+  )
   const accountItems = useMemo(() => buildCommonAccountItems(), [])
   const drawer = useDisclosure()
   const isMobile = useBreakpointValue({ base: true, lg: false })
@@ -241,8 +255,8 @@ export const SuperAdminLayout: React.FC<SuperAdminLayoutProps> = ({
       <Flex flex="1" direction="column" minW={0} h={APP_VIEWPORT_HEIGHT} overflow="hidden" minH={0}>
         <Flex
           px={{ base: 4, md: 6, lg: 10 }}
-          py={4}
-          align="center"
+          py={{ base: 3, md: 4 }}
+          align={{ base: 'flex-start', md: 'center' }}
           justify="space-between"
           borderBottom="1px solid"
           borderColor="brand.border"
@@ -250,8 +264,11 @@ export const SuperAdminLayout: React.FC<SuperAdminLayoutProps> = ({
           position="sticky"
           top={0}
           zIndex={10}
+          gap={3}
+          flexWrap={{ base: 'wrap', md: 'nowrap' }}
+          rowGap={{ base: 3, md: 0 }}
         >
-          <HStack spacing={3} align="center">
+          <HStack spacing={3} align="center" flex="1 1 auto" minW={0}>
             {isMobile && (
               <IconButton
                 aria-label="Open navigation"
@@ -260,20 +277,20 @@ export const SuperAdminLayout: React.FC<SuperAdminLayoutProps> = ({
                 onClick={drawer.onOpen}
               />
             )}
-            <VStack align="flex-start" spacing={0}>
+            <VStack align="flex-start" spacing={0} minW={0}>
               <HStack spacing={2}>
                 <Shield size={18} />
-                <Text fontWeight="bold" color="brand.text">
+                <Text fontWeight="bold" color="brand.text" noOfLines={1} fontSize={{ base: 'sm', sm: 'md' }}>
                   Super Admin Console
                 </Text>
               </HStack>
-              <Text fontSize="sm" color="brand.subtleText">
+              <Text fontSize="xs" color="brand.subtleText" display={{ base: 'none', sm: 'block' }} noOfLines={1}>
                 {subtitle}
               </Text>
             </VStack>
           </HStack>
 
-          <HStack spacing={3} align="center">
+          <HStack spacing={3} align="center" w={{ base: 'full', sm: 'auto' }} justify={{ base: 'space-between', sm: 'flex-end' }}>
             <NotificationDropdown />
             <Menu>
               <MenuButton
@@ -282,6 +299,7 @@ export const SuperAdminLayout: React.FC<SuperAdminLayoutProps> = ({
                 variant="outline"
                 size="sm"
                 px={{ base: 2, md: 3 }}
+                flexShrink={0}
               >
                 <Text display={{ base: 'none', md: 'block' }} noOfLines={1} maxW="180px">
                   {adminName}
@@ -304,10 +322,7 @@ export const SuperAdminLayout: React.FC<SuperAdminLayoutProps> = ({
         <Box
           px={{ base: 4, md: 6, lg: 10 }}
           pt={{ base: 5, md: 8 }}
-          pb={{
-            base: 'calc(64px + env(safe-area-inset-bottom))',
-            md: 'calc(64px + env(safe-area-inset-bottom))',
-          }}
+          pb={{ base: MOBILE_NAV_HEIGHT_WITH_SAFE_AREA, lg: 8 }}
           flex="1"
           overflowY="auto"
         >
@@ -328,6 +343,7 @@ export const SuperAdminLayout: React.FC<SuperAdminLayoutProps> = ({
           borderTop="1px solid"
           borderColor="brand.border"
           zIndex={20}
+          minH={MOBILE_NAV_HEIGHT_WITH_SAFE_AREA}
           pt={1}
           pb="calc(8px + env(safe-area-inset-bottom))"
           px={2}
@@ -340,7 +356,8 @@ export const SuperAdminLayout: React.FC<SuperAdminLayoutProps> = ({
                   key={item.key}
                   variant="ghost"
                   flex="1"
-                  h="56px"
+                  minW={0}
+                  h={`${MOBILE_NAV_BUTTON_HEIGHT}px`}
                   borderRadius="md"
                   onClick={() => onNavigate?.(item.key)}
                   bg={isActive ? 'brand.primaryMuted' : 'transparent'}
@@ -348,7 +365,7 @@ export const SuperAdminLayout: React.FC<SuperAdminLayoutProps> = ({
                   _hover={{ bg: 'brand.primaryMuted', color: 'brand.primary' }}
                   aria-current={isActive ? 'page' : undefined}
                 >
-                  <VStack spacing={1}>
+                  <VStack spacing={1} w="full" minW={0}>
                     {item.icon && (
                       <Box position="relative" lineHeight={0}>
                         <Icon as={item.icon} boxSize={4} />
@@ -368,8 +385,8 @@ export const SuperAdminLayout: React.FC<SuperAdminLayoutProps> = ({
                         )}
                       </Box>
                     )}
-                    <Text fontSize="2xs" noOfLines={1}>
-                      {item.label}
+                    <Text fontSize="2xs" noOfLines={1} w="full" textAlign="center">
+                      {mobileLabelByKey[item.key] ?? item.label}
                     </Text>
                   </VStack>
                 </Button>
@@ -378,7 +395,8 @@ export const SuperAdminLayout: React.FC<SuperAdminLayoutProps> = ({
             <Button
               variant="ghost"
               flex="1"
-              h="56px"
+              minW={0}
+              h={`${MOBILE_NAV_BUTTON_HEIGHT}px`}
               borderRadius="md"
               onClick={drawer.onOpen}
               bg={drawer.isOpen ? 'brand.primaryMuted' : 'transparent'}
@@ -387,9 +405,9 @@ export const SuperAdminLayout: React.FC<SuperAdminLayoutProps> = ({
               aria-label="Open navigation menu"
               aria-expanded={drawer.isOpen}
             >
-              <VStack spacing={1}>
+              <VStack spacing={1} w="full" minW={0}>
                 <Icon as={MenuIcon} boxSize={4} />
-                <Text fontSize="2xs" noOfLines={1}>
+                <Text fontSize="2xs" noOfLines={1} w="full" textAlign="center">
                   Menu
                 </Text>
               </VStack>

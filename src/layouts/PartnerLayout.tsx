@@ -38,6 +38,9 @@ import { usePartnerAdminSnapshot } from '@/hooks/partner/usePartnerAdminSnapshot
 import { type NavigationSection, buildPartnerNavItems } from '@/utils/navigationItems'
 
 const APP_VIEWPORT_HEIGHT = { base: '100dvh', md: '100vh' } as const
+const MOBILE_NAV_HEIGHT = 68
+const MOBILE_NAV_HEIGHT_WITH_SAFE_AREA = `calc(${MOBILE_NAV_HEIGHT}px + env(safe-area-inset-bottom))`
+const MOBILE_NAV_BUTTON_HEIGHT = MOBILE_NAV_HEIGHT - 12
 
 interface PartnerLayoutProps {
   children: React.ReactNode
@@ -68,6 +71,17 @@ export const PartnerLayout: React.FC<PartnerLayoutProps> = ({
   const assignedCount = organizations.length || assignedOrganizationIds.length || 0
   const sections = navSections?.length ? navSections : buildPartnerNavItems()
   const primaryNavItems = React.useMemo(() => sections.flatMap(section => section.items).slice(0, 4), [sections])
+  const mobileLabelByKey = React.useMemo<Record<string, string>>(
+    () => ({
+      overview: 'Overview',
+      'at-risk': 'At-Risk',
+      users: 'Users',
+      'organization-management': 'Orgs',
+      reports: 'Reports',
+      settings: 'Settings',
+    }),
+    [],
+  )
 
   const orgOptions = organizations.length ? organizations : []
 
@@ -370,7 +384,7 @@ export const PartnerLayout: React.FC<PartnerLayoutProps> = ({
         overflow="hidden"
         px={{ base: 4, md: 8 }}
         pt={{ base: 4, md: 8 }}
-        pb={{ base: 16, md: 8 }}
+        pb={{ base: MOBILE_NAV_HEIGHT_WITH_SAFE_AREA, md: 8 }}
         minW={0}
         minH={0}
       >
@@ -380,7 +394,7 @@ export const PartnerLayout: React.FC<PartnerLayoutProps> = ({
               <Text fontSize="sm" color="brand.subtleText">
                 Partner Dashboard
               </Text>
-              <Text fontSize="3xl" fontWeight="bold" color="brand.text">
+              <Text fontSize={{ base: '2xl', md: '3xl' }} lineHeight="shorter" fontWeight="bold" color="brand.text" wordBreak="break-word">
                 Welcome back, {profile?.fullName || 'Partner'}
               </Text>
               <Text color="brand.subtleText" maxW="760px">
@@ -418,6 +432,7 @@ export const PartnerLayout: React.FC<PartnerLayoutProps> = ({
           borderTop="1px solid"
           borderColor="brand.border"
           zIndex={20}
+          minH={MOBILE_NAV_HEIGHT_WITH_SAFE_AREA}
           pt={1}
           pb="calc(8px + env(safe-area-inset-bottom))"
           px={2}
@@ -430,7 +445,8 @@ export const PartnerLayout: React.FC<PartnerLayoutProps> = ({
                   key={item.key}
                   variant="ghost"
                   flex="1"
-                  h="56px"
+                  minW={0}
+                  h={`${MOBILE_NAV_BUTTON_HEIGHT}px`}
                   borderRadius="md"
                   onClick={() => onNavigate?.(item.key)}
                   bg={isActive ? 'brand.primaryMuted' : 'transparent'}
@@ -438,10 +454,10 @@ export const PartnerLayout: React.FC<PartnerLayoutProps> = ({
                   _hover={{ bg: 'brand.primaryMuted', color: 'brand.primary' }}
                   aria-current={isActive ? 'page' : undefined}
                 >
-                  <VStack spacing={1}>
+                  <VStack spacing={1} w="full" minW={0}>
                     {item.icon && <Icon as={item.icon} boxSize={4} />}
-                    <Text fontSize="2xs" noOfLines={1}>
-                      {item.label}
+                    <Text fontSize="2xs" noOfLines={1} w="full" textAlign="center">
+                      {mobileLabelByKey[item.key] ?? item.label}
                     </Text>
                   </VStack>
                 </Button>
@@ -450,7 +466,8 @@ export const PartnerLayout: React.FC<PartnerLayoutProps> = ({
             <Button
               variant="ghost"
               flex="1"
-              h="56px"
+              minW={0}
+              h={`${MOBILE_NAV_BUTTON_HEIGHT}px`}
               borderRadius="md"
               onClick={disclosure.onOpen}
               bg={disclosure.isOpen ? 'brand.primaryMuted' : 'transparent'}
@@ -459,9 +476,9 @@ export const PartnerLayout: React.FC<PartnerLayoutProps> = ({
               aria-label="Open navigation menu"
               aria-expanded={disclosure.isOpen}
             >
-              <VStack spacing={1}>
+              <VStack spacing={1} w="full" minW={0}>
                 <Icon as={Menu} boxSize={4} />
-                <Text fontSize="2xs" noOfLines={1}>
+                <Text fontSize="2xs" noOfLines={1} w="full" textAlign="center">
                   Menu
                 </Text>
               </VStack>
