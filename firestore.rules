@@ -11,15 +11,29 @@ service cloud.firestore {
       return isAuthenticated() && request.auth.uid == userId;
     }
 
+    function normalizeRoleValue(rawRole) {
+      return !(rawRole is string)
+        ? ''
+        : (
+          rawRole.lower().matches('super[\\s_-]?admin') || rawRole.lower() == 'super'
+            ? 'super_admin'
+            : (
+              rawRole.lower() in ['partner', 'admin', 'administrator', 'company_admin', 'company-admin', 'company admin']
+                ? 'partner'
+                : rawRole.lower()
+            )
+        );
+    }
+
     function getRoleFromToken() {
       return !isAuthenticated()
         ? ''
         : (request.auth.token.role is string
-          ? request.auth.token.role
+          ? normalizeRoleValue(request.auth.token.role)
           : (request.auth.token.claimsRole is string
-            ? request.auth.token.claimsRole
+            ? normalizeRoleValue(request.auth.token.claimsRole)
             : (request.auth.token.customRole is string
-              ? request.auth.token.customRole
+              ? normalizeRoleValue(request.auth.token.customRole)
               : '')));
     }
 
@@ -27,9 +41,9 @@ service cloud.firestore {
       return getRoleFromToken() != ''
         ? getRoleFromToken()
         : (isAuthenticated() && exists(/databases/$(database)/documents/users/$(request.auth.uid))
-          ? get(/databases/$(database)/documents/users/$(request.auth.uid)).data.get('role', '')
+          ? normalizeRoleValue(get(/databases/$(database)/documents/users/$(request.auth.uid)).data.get('role', ''))
           : (isAuthenticated() && exists(/databases/$(database)/documents/profiles/$(request.auth.uid))
-            ? get(/databases/$(database)/documents/profiles/$(request.auth.uid)).data.get('role', '')
+            ? normalizeRoleValue(get(/databases/$(database)/documents/profiles/$(request.auth.uid)).data.get('role', ''))
             : ''));
     }
 
@@ -802,6 +816,26 @@ service cloud.firestore {
       allow create, update: if isAuthenticated() && (
         request.resource.data.user_id == request.auth.uid ||
         isPartnerOrAdmin()
+      );
+      allow delete: if isSuperAdmin();
+    }
+
+    // Weekly points subcollection (canonical under profile docs)
+    match /profiles/{userId}/weekly_points/{docId} {
+      allow get: if isAuthenticated() && (
+        userId == request.auth.uid ||
+        isPartnerOrAdmin()
+      );
+      allow list: if isAuthenticated() && (
+        isPartnerOrAdmin() ||
+        userId == request.auth.uid
+      );
+      allow create, update: if isAuthenticated() && (
+        isPartnerOrAdmin() ||
+        (
+          userId == request.auth.uid &&
+          request.resource.data.user_id == request.auth.uid
+        )
       );
       allow delete: if isSuperAdmin();
     }

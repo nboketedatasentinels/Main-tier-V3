@@ -4,7 +4,7 @@ import {
   initializeTestEnvironment,
   RulesTestEnvironment,
 } from "@firebase/rules-unit-testing";
-import { doc, getDoc, setDoc, updateDoc, collection, query, where, getDocs, limit } from "firebase/firestore";
+import { doc, getDoc, setDoc, updateDoc, collection, collectionGroup, query, where, getDocs, limit } from "firebase/firestore";
 import { readFileSync } from "fs";
 import { resolve, dirname } from "path";
 import { fileURLToPath } from "url";
@@ -209,6 +209,54 @@ describe("Firestore Security Rules", () => {
       const orgs = collection(db, "organizations");
       const orgQuery = query(orgs, where("code", "==", "AB1234"), limit(1));
       await assertSucceeds(getDocs(orgQuery));
+    });
+  });
+
+  describe("Role Normalization", () => {
+    it("allows super-admin role variants to access admin collections", async () => {
+      await testEnv.withSecurityRulesDisabled(async (context) => {
+        const adminDb = context.firestore();
+        await setDoc(doc(adminDb, "users/admin-user"), { role: "super-admin" });
+        await setDoc(doc(adminDb, "upgrade_requests/request1"), {
+          user_id: "alice",
+          status: "pending",
+        });
+      });
+
+      const db = getAuthenticatedContext("admin-user").firestore();
+      await assertSucceeds(getDocs(collection(db, "upgrade_requests")));
+    });
+
+    it("allows admin synonym to access partner-or-admin collections", async () => {
+      await testEnv.withSecurityRulesDisabled(async (context) => {
+        const adminDb = context.firestore();
+        await setDoc(doc(adminDb, "users/admin-user"), { role: "admin" });
+        await setDoc(doc(adminDb, "admin_notifications/n1"), {
+          type: "upgrade_request",
+          message: "Test",
+        });
+      });
+
+      const db = getAuthenticatedContext("admin-user").firestore();
+      await assertSucceeds(getDocs(collection(db, "admin_notifications")));
+    });
+  });
+
+  describe("Weekly Points Subcollection", () => {
+    it("allows partner to query weekly_points collection group", async () => {
+      await testEnv.withSecurityRulesDisabled(async (context) => {
+        const adminDb = context.firestore();
+        await setDoc(doc(adminDb, "users/partner-user"), { role: "partner" });
+        await setDoc(doc(adminDb, "profiles/alice/weekly_points/week1"), {
+          user_id: "alice",
+          week: 1,
+          points: 1200,
+        });
+      });
+
+      const db = getAuthenticatedContext("partner-user").firestore();
+      const weeklyGroupQuery = query(collectionGroup(db, "weekly_points"), where("user_id", "==", "alice"));
+      await assertSucceeds(getDocs(weeklyGroupQuery));
     });
   });
 });
