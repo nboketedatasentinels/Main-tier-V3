@@ -300,6 +300,20 @@ describe("Firestore Security Rules", () => {
       const db = getAuthenticatedContext("admin-user", "admin@example.com", { admin: true }).firestore();
       await assertSucceeds(getDocs(collection(db, "upgrade_requests")));
     });
+
+    it("prefers users/profile role over stale token role", async () => {
+      await testEnv.withSecurityRulesDisabled(async (context) => {
+        const adminDb = context.firestore();
+        await setDoc(doc(adminDb, "users/admin-user"), { role: "super_admin" });
+        await setDoc(doc(adminDb, "upgrade_requests/request1"), {
+          user_id: "alice",
+          status: "pending",
+        });
+      });
+
+      const db = getAuthenticatedContext("admin-user", "admin@example.com", { role: "user" }).firestore();
+      await assertSucceeds(getDocs(collection(db, "upgrade_requests")));
+    });
   });
 
   describe("Weekly Points Subcollection", () => {

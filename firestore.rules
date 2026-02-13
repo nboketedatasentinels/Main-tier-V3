@@ -73,7 +73,7 @@ service cloud.firestore {
 
     function getRoleFromUsersDoc() {
       let userPath = /databases/$(database)/documents/users/$(request.auth.uid);
-      let userData = isAuthenticated() && exists(userPath) ? get(userPath).data : null;
+      let userData = isAuthenticated() ? get(userPath).data : null;
       return userData == null
         ? ''
         : normalizeRoleValue(
@@ -89,7 +89,7 @@ service cloud.firestore {
 
     function getRoleFromProfilesDoc() {
       let profilePath = /databases/$(database)/documents/profiles/$(request.auth.uid);
-      let profileData = isAuthenticated() && exists(profilePath) ? get(profilePath).data : null;
+      let profileData = isAuthenticated() ? get(profilePath).data : null;
       return profileData == null
         ? ''
         : normalizeRoleValue(
@@ -104,11 +104,14 @@ service cloud.firestore {
     }
 
     function getUserRole() {
-      return getRoleFromToken() != ''
-        ? getRoleFromToken()
-        : (getRoleFromUsersDoc() != ''
-          ? getRoleFromUsersDoc()
-          : getRoleFromProfilesDoc());
+      let tokenRole = getRoleFromToken();
+      let usersRole = getRoleFromUsersDoc();
+      let profilesRole = getRoleFromProfilesDoc();
+      return usersRole != ''
+        ? usersRole
+        : (profilesRole != ''
+          ? profilesRole
+          : tokenRole);
     }
 
     function isSuperAdmin() {

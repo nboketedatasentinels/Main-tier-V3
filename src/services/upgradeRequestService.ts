@@ -195,7 +195,52 @@ export const getAllUpgradeRequests = async (): Promise<UpgradeRequest[]> => {
     }
 
     const message = (effectiveError as { message?: string })?.message
-    console.error('🔴 [Admin] upgrade_requests failed', { code, message, err: effectiveError })
+    const debugContext: Record<string, unknown> = {
+      uid: auth.currentUser?.uid ?? null,
+      hasCurrentUser: Boolean(auth.currentUser),
+    }
+
+    if (auth.currentUser) {
+      try {
+        const tokenResult = await auth.currentUser.getIdTokenResult()
+        debugContext.tokenClaims = {
+          role: tokenResult.claims?.role ?? null,
+          claimsRole: tokenResult.claims?.claimsRole ?? null,
+          customRole: tokenResult.claims?.customRole ?? null,
+          admin: tokenResult.claims?.admin ?? null,
+          super_admin: tokenResult.claims?.super_admin ?? null,
+          superAdmin: tokenResult.claims?.superAdmin ?? null,
+          partner: tokenResult.claims?.partner ?? null,
+        }
+      } catch (tokenError) {
+        debugContext.tokenClaimsError = (tokenError as { message?: string })?.message ?? String(tokenError)
+      }
+
+      try {
+        const [usersSnap, profilesSnap] = await Promise.all([
+          getDoc(doc(db, USERS_COLLECTION, auth.currentUser.uid)),
+          getDoc(doc(db, PROFILES_COLLECTION, auth.currentUser.uid)),
+        ])
+        debugContext.roleDocs = {
+          usersExists: usersSnap.exists(),
+          usersRole: usersSnap.exists() ? (usersSnap.data() as { role?: string; userRole?: string }).role ?? null : null,
+          usersUserRole: usersSnap.exists()
+            ? (usersSnap.data() as { role?: string; userRole?: string }).userRole ?? null
+            : null,
+          profilesExists: profilesSnap.exists(),
+          profilesRole: profilesSnap.exists()
+            ? (profilesSnap.data() as { role?: string; userRole?: string }).role ?? null
+            : null,
+          profilesUserRole: profilesSnap.exists()
+            ? (profilesSnap.data() as { role?: string; userRole?: string }).userRole ?? null
+            : null,
+        }
+      } catch (roleDocError) {
+        debugContext.roleDocError = (roleDocError as { message?: string })?.message ?? String(roleDocError)
+      }
+    }
+
+    console.error('🔴 [Admin] upgrade_requests failed', { code, message, err: effectiveError, debugContext })
 
     if (code === 'failed-precondition') {
       throw new AdminDataError(
