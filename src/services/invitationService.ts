@@ -4,6 +4,7 @@ import {
   doc,
   getDoc,
   getDocs,
+  limit,
   query,
   serverTimestamp,
   setDoc,
@@ -22,6 +23,12 @@ import {
 import { normalizeEmail } from '@/utils/email'
 import { checkCapacityThresholds } from './capacityService'
 import { TransformationTier } from '@/types'
+import {
+  normalizeDurationWeeks,
+  resolveDurationWeeksFromProgramDuration,
+  resolveJourneyType,
+} from '@/utils/journeyType'
+import type { JourneyType } from '@/config/pointsConfig'
 
 const invitationsCollection = collection(db, 'invitations')
 const usersCollection = collection(db, 'users')
@@ -44,6 +51,126 @@ const isActiveAccountStatus = (status?: string | null) => {
   if (!status) return true
   const normalized = status.toLowerCase()
   return normalized !== 'suspended' && normalized !== 'inactive'
+}
+
+export interface PendingInvitationOrganizationMatch {
+  organizationId: string
+  organizationCode: string | null
+  organizationName: string
+  journeyType?: JourneyType
+  programDurationWeeks?: number
+  cohortStartDate?: string | null
+}
+
+const timestampToIsoString = (value: unknown): string | null => {
+  if (!value) return null
+  if (typeof value === 'string') return value
+  if (value instanceof Date) return value.toISOString()
+
+  if (typeof value === 'object' && value !== null) {
+    const candidate = value as { toDate?: () => Date }
+    if (typeof candidate.toDate === 'function') {
+      return candidate.toDate().toISOString()
+    }
+  }
+
+  return null
+}
+
+const timestampToMillis = (value: unknown): number => {
+  if (!value) return 0
+  if (typeof value === 'number' && Number.isFinite(value)) return value
+  if (value instanceof Date) return value.getTime()
+  if (typeof value === 'string') {
+    const parsed = Date.parse(value)
+    return Number.isNaN(parsed) ? 0 : parsed
+  }
+
+  if (typeof value === 'object' && value !== null) {
+    const candidate = value as {
+      toMillis?: () => number
+      toDate?: () => Date
+      seconds?: number
+    }
+    if (typeof candidate.toMillis === 'function') {
+      const millis = candidate.toMillis()
+      return Number.isFinite(millis) ? millis : 0
+    }
+    if (typeof candidate.toDate === 'function') {
+      return candidate.toDate().getTime()
+    }
+    if (typeof candidate.seconds === 'number') {
+      return candidate.seconds * 1000
+    }
+  }
+
+  return 0
+}
+
+export const resolvePendingInvitationOrganization = async (
+  email: string,
+): Promise<PendingInvitationOrganizationMatch | null> => {
+  const normalizedEmail = normalizeEmail(email || '')
+  if (!normalizedEmail) return null
+
+  const snapshot = await getDocs(
+    query(
+      invitationsCollection,
+      where('email', '==', normalizedEmail),
+      where('status', '==', 'pending'),
+      where('method', '==', 'email'),
+      limit(25),
+    ),
+  )
+  if (snapshot.empty) return null
+
+  const pendingCandidates = snapshot.docs
+    .map((docSnap) => ({
+      id: docSnap.id,
+      ...(docSnap.data() as {
+        organizationId?: string
+        createdAt?: unknown
+      }),
+    }))
+    .filter((entry) => typeof entry.organizationId === 'string' && entry.organizationId.trim().length > 0)
+    .sort((left, right) => timestampToMillis(right.createdAt) - timestampToMillis(left.createdAt))
+
+  if (!pendingCandidates.length) return null
+
+  const checkedOrganizations = new Set<string>()
+  for (const invitation of pendingCandidates) {
+    const organizationId = invitation.organizationId!.trim()
+    if (checkedOrganizations.has(organizationId)) continue
+    checkedOrganizations.add(organizationId)
+
+    const orgSnap = await getDoc(doc(organizationsCollection, organizationId))
+    if (!orgSnap.exists()) continue
+
+    const orgData = orgSnap.data() as Partial<OrganizationRecord> & {
+      programDuration?: number | string | null
+    }
+    if ((orgData.status || '').toLowerCase() !== 'active') continue
+
+    const rawProgramDuration = orgData.programDuration ?? (orgData as { program_duration?: number | string | null }).program_duration
+    const programDurationWeeks =
+      normalizeDurationWeeks(orgData.programDurationWeeks) ?? resolveDurationWeeksFromProgramDuration(rawProgramDuration)
+    const journeyType = resolveJourneyType({
+      journeyType: orgData.journeyType,
+      programDurationWeeks,
+      programDuration: rawProgramDuration,
+    })
+
+    return {
+      organizationId,
+      organizationCode: orgData.code || null,
+      organizationName: orgData.name || 'Unknown organization',
+      journeyType: journeyType ?? undefined,
+      programDurationWeeks: programDurationWeeks ?? undefined,
+      cohortStartDate: timestampToIsoString(orgData.cohortStartDate),
+    }
+  }
+
+  return null
 }
 
 const getOrganizationLicenseSnapshot = async (organizationId: string) => {

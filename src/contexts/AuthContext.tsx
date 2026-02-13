@@ -31,6 +31,7 @@ import { auth, db, firebaseConfigStatus } from '@/services/firebase'
 import { AuthContext, AuthContextType } from './AuthContextType'
 import { getFriendlyErrorMessage } from '@/utils/authErrors'
 import { incrementOrganizationMemberCount, validateCompanyCode } from '@/services/organizationService'
+import { resolvePendingInvitationOrganization } from '@/services/invitationService'
 import { buildActionCodeSettings } from '@/utils/authActionCodeSettings'
 import {
   assignComplementaryCoursesToUser,
@@ -629,6 +630,86 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
           }
         }
 
+        const hasOrganizationAssignment = Boolean(mergedUser.companyId || mergedUser.organizationId)
+        if (!normalizedPendingCompanyCode && !hasOrganizationAssignment && firebaseUser.email) {
+          try {
+            const invitationOrganization = await resolvePendingInvitationOrganization(firebaseUser.email)
+            if (invitationOrganization) {
+              const previousCompanyId = mergedUser.companyId ?? null
+              const nextAssignedOrganizations = Array.isArray(mergedUser.assignedOrganizations)
+                ? Array.from(
+                    new Set([
+                      ...mergedUser.assignedOrganizations.filter(
+                        (id): id is string => typeof id === 'string' && id.trim().length > 0,
+                      ),
+                      invitationOrganization.organizationId,
+                    ]),
+                  )
+                : [invitationOrganization.organizationId]
+
+              const invitationUpgradeUpdates: Partial<UserProfile> = {
+                membershipStatus: 'paid',
+                companyId: invitationOrganization.organizationId,
+                organizationId: invitationOrganization.organizationId,
+                ...(invitationOrganization.organizationCode ? { companyCode: invitationOrganization.organizationCode } : {}),
+                ...(invitationOrganization.organizationName ? { companyName: invitationOrganization.organizationName } : {}),
+                transformationTier: TransformationTier.CORPORATE_MEMBER,
+                assignedOrganizations: nextAssignedOrganizations,
+                ...(invitationOrganization.journeyType ? { journeyType: invitationOrganization.journeyType } : {}),
+                ...(invitationOrganization.programDurationWeeks
+                  ? { programDurationWeeks: invitationOrganization.programDurationWeeks }
+                  : {}),
+                ...(invitationOrganization.cohortStartDate
+                  ? { journeyStartDate: invitationOrganization.cohortStartDate }
+                  : {}),
+                dashboardPreferences: {
+                  ...(mergedUser.dashboardPreferences && typeof mergedUser.dashboardPreferences === 'object'
+                    ? mergedUser.dashboardPreferences
+                    : {}),
+                  lockedToFreeExperience: false,
+                },
+              }
+
+              await Promise.all([
+                updateDoc(userDocRef, {
+                  ...invitationUpgradeUpdates,
+                  updatedAt: serverTimestamp(),
+                }),
+                setDoc(
+                  doc(db, 'profiles', firebaseUser.uid),
+                  {
+                    ...invitationUpgradeUpdates,
+                    updatedAt: serverTimestamp(),
+                  },
+                  { merge: true },
+                ),
+              ])
+
+              mergedUser = {
+                ...mergedUser,
+                ...invitationUpgradeUpdates,
+                updatedAt: new Date().toISOString(),
+              }
+
+              if (
+                invitationOrganization.organizationId &&
+                invitationOrganization.organizationId !== previousCompanyId
+              ) {
+                try {
+                  await incrementOrganizationMemberCount(invitationOrganization.organizationId)
+                } catch (incrementError) {
+                  console.warn(
+                    '[WARN] [Auth] Unable to increment organization member count after invitation-based upgrade',
+                    incrementError,
+                  )
+                }
+              }
+            }
+          } catch (invitationError) {
+            console.warn('[WARN] [Auth] Unable to resolve pending invitation organization', invitationError)
+          }
+        }
+
         return mergedUser
       }
 
@@ -684,6 +765,28 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         }
       }
 
+      if (!validatedOrganization && firebaseUser.email) {
+        try {
+          const invitationOrganization = await resolvePendingInvitationOrganization(firebaseUser.email)
+          if (invitationOrganization) {
+            validatedOrganization = {
+              id: invitationOrganization.organizationId,
+              code: invitationOrganization.organizationCode || '',
+              name: invitationOrganization.organizationName || 'Unknown organization',
+              status: 'active',
+              createdAt: '',
+              updatedAt: '',
+              memberCount: 0,
+              journeyType: invitationOrganization.journeyType,
+              programDurationWeeks: invitationOrganization.programDurationWeeks,
+              cohortStartDate: invitationOrganization.cohortStartDate || undefined,
+            }
+          }
+        } catch (invitationError) {
+          console.warn('🟠 [Auth] Unable to resolve pending invitation during profile creation', invitationError)
+        }
+      }
+
       const role = isBootstrapAdmin(firebaseUser.email) ? UserRole.SUPER_ADMIN : UserRole.USER
       const normalizedRole = normalizeRole(role || UserRole.USER)
       const { firstName, lastName, fullName } = getNameParts(
@@ -732,7 +835,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
           : TransformationTier.INDIVIDUAL_FREE,
         assignedOrganizations: validatedOrganization?.id ? [validatedOrganization.id] : [],
         organizationId: validatedOrganization?.id ?? null,
-        companyCode: validatedOrganization?.code ?? null,
+        companyCode: validatedOrganization?.code || null,
         companyId: validatedOrganization?.id ?? null,
         companyName: validatedOrganization?.name ?? null,
         onboardingComplete: false,
@@ -1200,6 +1303,28 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
             error: new Error(friendlyMessage),
             userId: undefined,
           }
+        }
+      }
+
+      if (!validatedOrganization) {
+        try {
+          const invitationOrganization = await resolvePendingInvitationOrganization(normalizedEmail)
+          if (invitationOrganization) {
+            validatedOrganization = {
+              id: invitationOrganization.organizationId,
+              code: invitationOrganization.organizationCode || '',
+              name: invitationOrganization.organizationName || 'Unknown organization',
+              status: 'active',
+              createdAt: '',
+              updatedAt: '',
+              memberCount: 0,
+              journeyType: invitationOrganization.journeyType,
+              programDurationWeeks: invitationOrganization.programDurationWeeks,
+              cohortStartDate: invitationOrganization.cohortStartDate || undefined,
+            }
+          }
+        } catch (invitationError) {
+          console.warn('🟠 [Auth] Unable to resolve pending invitation during signup', invitationError)
         }
       }
 
