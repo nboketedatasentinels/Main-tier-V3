@@ -293,6 +293,12 @@ service cloud.firestore {
       allow write: if isSuperAdmin();
     }
 
+    // Platform-wide configuration
+    match /platform_config/{configId} {
+      allow read: if isPartnerOrAdmin();
+      allow create, update, delete: if isSuperAdmin();
+    }
+
     // Referral codes collection
     match /referralCodes/{codeId} {
       // Anyone can read to validate codes during signup

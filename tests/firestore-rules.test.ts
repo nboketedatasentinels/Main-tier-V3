@@ -216,6 +216,39 @@ describe("Firestore Security Rules", () => {
     });
   });
 
+  describe("Platform Config", () => {
+    it("allows partner/admin roles to read platform config", async () => {
+      await testEnv.withSecurityRulesDisabled(async (context) => {
+        const adminDb = context.firestore();
+        await setDoc(doc(adminDb, "users/partner-user"), { role: "partner" });
+        await setDoc(doc(adminDb, "platform_config/engagement"), { enabled: false });
+      });
+
+      const db = getAuthenticatedContext("partner-user").firestore();
+      await assertSucceeds(getDoc(doc(db, "platform_config/engagement")));
+    });
+
+    it("prevents partner/admin roles from writing platform config", async () => {
+      await testEnv.withSecurityRulesDisabled(async (context) => {
+        const adminDb = context.firestore();
+        await setDoc(doc(adminDb, "users/partner-user"), { role: "partner" });
+      });
+
+      const db = getAuthenticatedContext("partner-user").firestore();
+      await assertFails(setDoc(doc(db, "platform_config/engagement"), { enabled: true }));
+    });
+
+    it("allows super_admin to write platform config", async () => {
+      await testEnv.withSecurityRulesDisabled(async (context) => {
+        const adminDb = context.firestore();
+        await setDoc(doc(adminDb, "users/admin-user"), { role: "super_admin" });
+      });
+
+      const db = getAuthenticatedContext("admin-user").firestore();
+      await assertSucceeds(setDoc(doc(db, "platform_config/engagement"), { enabled: true }));
+    });
+  });
+
   describe("Approvals & Points Verification", () => {
     it("prevents self-approval in approvals collection", async () => {
       await testEnv.withSecurityRulesDisabled(async (context) => {

@@ -95,7 +95,7 @@ interface UserEngagementMonitoringTabProps {
 export const UserEngagementMonitoringTab = ({ users: propUsers, organizations: propOrganizations }: UserEngagementMonitoringTabProps) => {
   const toast = useToast()
   const { isOpen, onOpen, onClose } = useDisclosure()
-  const { isAdmin } = useAuth()
+  const { isAdmin, isSuperAdmin } = useAuth()
   const { engagementEnabled, isLoading: configLoading, enableEngagement } = useEngagementConfig()
   const [enabling, setEnabling] = useState(false)
 
@@ -408,24 +408,30 @@ export const UserEngagementMonitoringTab = ({ users: propUsers, organizations: p
                   <ListItem>Allow mentors to create intervention plans</ListItem>
                 </UnorderedList>
               </Box>
-              <Button
-                colorScheme="purple"
-                size="lg"
-                isLoading={enabling}
-                onClick={async () => {
-                  setEnabling(true)
-                  try {
-                    await enableEngagement()
-                    toast({ title: 'Engagement monitoring enabled', status: 'success' })
-                  } catch (error) {
-                    toast({ title: 'Failed to enable engagement monitoring', status: 'error' })
-                  } finally {
-                    setEnabling(false)
-                  }
-                }}
-              >
-                Enable Engagement Monitoring
-              </Button>
+              {isSuperAdmin ? (
+                <Button
+                  colorScheme="purple"
+                  size="lg"
+                  isLoading={enabling}
+                  onClick={async () => {
+                    setEnabling(true)
+                    try {
+                      await enableEngagement()
+                      toast({ title: 'Engagement monitoring enabled', status: 'success' })
+                    } catch (error) {
+                      toast({ title: 'Failed to enable engagement monitoring', status: 'error' })
+                    } finally {
+                      setEnabling(false)
+                    }
+                  }}
+                >
+                  Enable Engagement Monitoring
+                </Button>
+              ) : (
+                <Text fontSize="sm" color="gray.600">
+                  Only super admins can enable engagement monitoring.
+                </Text>
+              )}
             </VStack>
           </CardBody>
         </Card>
