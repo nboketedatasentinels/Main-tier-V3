@@ -4,6 +4,7 @@ import {
   doc,
   getDoc,
   getDocs,
+  getDocsFromServer,
   limit,
   orderBy,
   query,
@@ -156,7 +157,7 @@ export const getAllUpgradeRequests = async (): Promise<UpgradeRequest[]> => {
   const constraints = [orderBy('requested_at', 'desc')]
   const runQuery = async () => {
     const q = query(collection(db, REQUEST_COLLECTION), ...constraints)
-    return getDocs(q)
+    return getDocsFromServer(q)
   }
 
   try {

@@ -5,6 +5,7 @@ import {
   doc,
   getDoc,
   getDocs,
+  getDocsFromServer,
   onSnapshot,
   orderBy,
   arrayUnion,
@@ -28,6 +29,7 @@ const weeklyAlertsCollection = collection(db, 'weekly_target_alerts')
 export const listenToUserNotifications = (
   userId: string,
   onChange: (notifications: NotificationRecord[]) => void,
+  onError?: (error: FirestoreError) => void,
 ) => {
   const notificationsQuery = query(
     notificationsCollection,
@@ -35,13 +37,17 @@ export const listenToUserNotifications = (
     orderBy('created_at', 'desc'),
   )
 
-  return onSnapshot(notificationsQuery, (snapshot) => {
-    const items: NotificationRecord[] = snapshot.docs.map((docSnap) => ({
-      ...(docSnap.data() as NotificationRecord),
-      id: docSnap.id,
-    }))
-    onChange(items)
-  })
+  return onSnapshot(
+    notificationsQuery,
+    (snapshot) => {
+      const items: NotificationRecord[] = snapshot.docs.map((docSnap) => ({
+        ...(docSnap.data() as NotificationRecord),
+        id: docSnap.id,
+      }))
+      onChange(items)
+    },
+    onError,
+  )
 }
 
 export const markNotificationRead = async (notificationId: string) => {
@@ -436,6 +442,15 @@ export const listenToAdminNotifications = (
     },
     onError,
   )
+}
+
+export const fetchAdminNotifications = async (): Promise<AdminNotification[]> => {
+  const adminQuery = query(adminNotificationsCollection, orderBy('created_at', 'desc'))
+  const snapshot = await getDocsFromServer(adminQuery)
+  return snapshot.docs.map((docSnap) => ({
+    ...(docSnap.data() as AdminNotification),
+    id: docSnap.id,
+  }))
 }
 
 export const markAdminNotificationRead = async (notificationId: string) => {
