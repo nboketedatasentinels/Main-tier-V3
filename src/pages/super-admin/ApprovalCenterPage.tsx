@@ -158,8 +158,13 @@ const rejectionReasonOptions: Record<ApprovalWorkflowType, string[]> = {
 
 const ApprovalCenterPage: React.FC = () => {
   const toast = useToast()
-  const { profile } = useAuth()
-  const { requests: upgradeRequests, loading: upgradeLoading, error: upgradeError, refetch } = useAllUpgradeRequests()
+  const { profile, effectiveRole } = useAuth()
+  const {
+    requests: upgradeRequests,
+    loading: upgradeLoading,
+    error: upgradeError,
+    refetch,
+  } = useAllUpgradeRequests({ enabled: effectiveRole === 'super_admin' })
   const {
     requests: verificationRequests,
     loading: verificationLoading,

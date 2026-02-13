@@ -27,6 +27,7 @@ export const useAdminNotifications = ({
     if (!enabled) return
 
     setLoading(true)
+    setError(null)
     const unsubscribe = listenToAdminNotifications((items) => {
       const filtered = items
         .filter((item) => {
@@ -35,6 +36,10 @@ export const useAdminNotifications = ({
         })
         .slice(0, limit)
       setNotifications(filtered)
+      setLoading(false)
+    }, (err) => {
+      console.error('[useAdminNotifications] listener error', err)
+      setError('Unable to load admin notifications')
       setLoading(false)
     })
 

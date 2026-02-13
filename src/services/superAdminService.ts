@@ -887,59 +887,87 @@ export const toggleAdminStatus = async (adminId: string, status: 'active' | 'sus
   })
 }
 
-export const listenToVerificationRequests = (onChange: (requests: VerificationRequest[]) => void) => {
+export const listenToVerificationRequests = (
+  onChange: (requests: VerificationRequest[]) => void,
+  onError?: (error: FirestoreError) => void,
+) => {
   const verificationQuery = query(
     collection(db, 'points_verification_requests'),
     where('status', '==', 'pending'),
     orderBy('created_at', 'desc'),
     limit(10),
   )
-  return onSnapshot(verificationQuery, (snapshot) => {
-    onChange(
-      snapshot.docs.map((docSnap) => {
-        const data = docSnap.data() as VerificationRequest
-        return { ...data, id: docSnap.id }
-      }),
-    )
-  })
+  return onSnapshot(
+    verificationQuery,
+    (snapshot) => {
+      onChange(
+        snapshot.docs.map((docSnap) => {
+          const data = docSnap.data() as VerificationRequest
+          return { ...data, id: docSnap.id }
+        }),
+      )
+    },
+    onError,
+  )
 }
 
-export const listenToRegistrations = (onChange: (registrations: RegistrationRecord[]) => void) => {
+export const listenToRegistrations = (
+  onChange: (registrations: RegistrationRecord[]) => void,
+  onError?: (error: FirestoreError) => void,
+) => {
   // Use the same canonical collection (`profiles`) as other super-admin user streams,
   // so role/membership/org fields are consistent across dashboards.
   const registrationQuery = query(usersCollection, orderBy('createdAt', 'desc'), limit(8))
-  return onSnapshot(registrationQuery, (snapshot) => {
-    onChange(
-      snapshot.docs.map((docSnap) => {
-        const data = docSnap.data() as RegistrationRecord
-        return { ...data, id: docSnap.id }
-      }),
-    )
-  })
+  return onSnapshot(
+    registrationQuery,
+    (snapshot) => {
+      onChange(
+        snapshot.docs.map((docSnap) => {
+          const data = docSnap.data() as RegistrationRecord
+          return { ...data, id: docSnap.id }
+        }),
+      )
+    },
+    onError,
+  )
 }
 
-export const listenToSystemAlerts = (onChange: (alerts: SystemAlertRecord[]) => void) => {
+export const listenToSystemAlerts = (
+  onChange: (alerts: SystemAlertRecord[]) => void,
+  onError?: (error: FirestoreError) => void,
+) => {
   const alertsQuery = query(collection(db, 'system_health_alerts'), orderBy('created_at', 'desc'), limit(8))
-  return onSnapshot(alertsQuery, (snapshot) => {
-    onChange(
-      snapshot.docs.map((docSnap) => {
-        const data = docSnap.data() as SystemAlertRecord
-        return { ...data, id: docSnap.id }
-      }),
-    )
-  })
+  return onSnapshot(
+    alertsQuery,
+    (snapshot) => {
+      onChange(
+        snapshot.docs.map((docSnap) => {
+          const data = docSnap.data() as SystemAlertRecord
+          return { ...data, id: docSnap.id }
+        }),
+      )
+    },
+    onError,
+  )
 }
 
-export const listenToTaskNotifications = (onChange: (tasks: TaskNotificationRecord[]) => void) => {
+export const listenToTaskNotifications = (
+  onChange: (tasks: TaskNotificationRecord[]) => void,
+  onError?: (error: FirestoreError) => void,
+) => {
   const taskQuery = query(collection(db, 'task_notifications'), orderBy('created_at', 'desc'), limit(8))
-  return onSnapshot(taskQuery, (snapshot) => {
-    onChange(
-      snapshot.docs.map((docSnap) => {
-        const data = docSnap.data() as TaskNotificationRecord
-        return { ...data, id: docSnap.id }
-      }),
-    )
-  })
+  return onSnapshot(
+    taskQuery,
+    (snapshot) => {
+      onChange(
+        snapshot.docs.map((docSnap) => {
+          const data = docSnap.data() as TaskNotificationRecord
+          return { ...data, id: docSnap.id }
+        }),
+      )
+    },
+    onError,
+  )
 }
 
 export const listenToUsers = (

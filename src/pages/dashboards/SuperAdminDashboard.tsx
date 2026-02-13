@@ -51,7 +51,7 @@ const defaultMetrics: SuperAdminDashboardMetrics = {
 }
 
 export const SuperAdminDashboard: React.FC = () => {
-  const { profile, profileStatus, lastProfileLoadAt, refreshProfile } = useAuth()
+  const { profile, profileStatus, lastProfileLoadAt, refreshProfile, effectiveRole } = useAuth()
   const location = useLocation()
   const navigate = useNavigate()
   const adminName = profile?.fullName || profile?.firstName || 'Admin'
@@ -74,14 +74,16 @@ export const SuperAdminDashboard: React.FC = () => {
 
   const [registrationTrend, setRegistrationTrend] = useState<TrendPoint[]>([])
   const [userGrowthTrend, setUserGrowthTrend] = useState<TrendPoint[]>([])
+  const isSuperAdminView = effectiveRole === 'super_admin'
   const {
     requests: upgradeRequests,
     loading: upgradeRequestsLoading,
     error: upgradeRequestsError,
     refetch: refetchUpgradeRequests,
-  } = useAllUpgradeRequests()
+  } = useAllUpgradeRequests({ enabled: isSuperAdminView })
   const { notifications: upgradeNotifications, unreadCount: unreadUpgradeCount } = useAdminNotifications({
     role: 'super_admin',
+    enabled: isSuperAdminView,
     filters: ['upgrade_request'],
   })
 
@@ -105,6 +107,11 @@ export const SuperAdminDashboard: React.FC = () => {
   }, [location.search])
 
   useEffect(() => {
+    if (!isSuperAdminView) {
+      setLoading(false)
+      setStreamsLoading(false)
+      return
+    }
     setLoading(true)
     setError(null)
     coreStreamsLoadedRef.current = {
@@ -173,9 +180,13 @@ export const SuperAdminDashboard: React.FC = () => {
     )
 
     return () => unsubscribers.forEach((unsub) => unsub())
-  }, [refreshIndex, toast])
+  }, [isSuperAdminView, refreshIndex, toast])
 
   useEffect(() => {
+    if (!isSuperAdminView) {
+      setStreamsLoading(false)
+      return
+    }
     setStreamsLoading(true)
     sideStreamsLoadedRef.current = {
       verificationRequests: false,
@@ -192,37 +203,74 @@ export const SuperAdminDashboard: React.FC = () => {
         setStreamsLoading(false)
       }
     }
+    const handleSideStreamError = (
+      streamKey: keyof typeof sideStreamsLoadedRef.current,
+      message: string,
+      err: unknown,
+    ) => {
+      console.error(err)
+      markSideStreamLoaded(streamKey)
+      setError(message)
+      toast({ title: 'Failed to load dashboard', status: 'error' })
+    }
 
     unsubscribers.push(
-      listenToVerificationRequests((items) => {
-        setVerificationRequests(items)
-        markSideStreamLoaded('verificationRequests')
-      }),
+      listenToVerificationRequests(
+        (items) => {
+          setVerificationRequests(items)
+          markSideStreamLoaded('verificationRequests')
+        },
+        (err) =>
+          handleSideStreamError(
+            'verificationRequests',
+            'Unable to load verification requests from Firebase.',
+            err,
+          ),
+      ),
     )
 
     unsubscribers.push(
-      listenToRegistrations((items) => {
-        setRegistrations(items)
-        markSideStreamLoaded('registrations')
-      }),
+      listenToRegistrations(
+        (items) => {
+          setRegistrations(items)
+          markSideStreamLoaded('registrations')
+        },
+        (err) =>
+          handleSideStreamError(
+            'registrations',
+            'Unable to load registration stream from Firebase.',
+            err,
+          ),
+      ),
     )
 
     unsubscribers.push(
-      listenToSystemAlerts((items) => {
-        setSystemAlerts(items)
-        markSideStreamLoaded('systemAlerts')
-      }),
+      listenToSystemAlerts(
+        (items) => {
+          setSystemAlerts(items)
+          markSideStreamLoaded('systemAlerts')
+        },
+        (err) => handleSideStreamError('systemAlerts', 'Unable to load system alerts from Firebase.', err),
+      ),
     )
 
     unsubscribers.push(
-      listenToTaskNotifications((items) => {
-        setTaskNotifications(items)
-        markSideStreamLoaded('taskNotifications')
-      }),
+      listenToTaskNotifications(
+        (items) => {
+          setTaskNotifications(items)
+          markSideStreamLoaded('taskNotifications')
+        },
+        (err) =>
+          handleSideStreamError(
+            'taskNotifications',
+            'Unable to load task notifications from Firebase.',
+            err,
+          ),
+      ),
     )
 
     return () => unsubscribers.forEach((unsub) => unsub())
-  }, [])
+  }, [isSuperAdminView, toast])
 
   useEffect(() => {
     if (!loading && !error) {

@@ -1,5 +1,6 @@
 import {
   addDoc,
+  type FirestoreError,
   collection,
   doc,
   getDoc,
@@ -421,15 +422,20 @@ export const getUnresolvedAlerts = async (learnerId: string) => {
 
 export const listenToAdminNotifications = (
   onChange: (notifications: AdminNotification[]) => void,
+  onError?: (error: FirestoreError) => void,
 ) => {
   const adminQuery = query(adminNotificationsCollection, orderBy('created_at', 'desc'))
-  return onSnapshot(adminQuery, (snapshot) => {
-    const items: AdminNotification[] = snapshot.docs.map((docSnap) => ({
-      ...(docSnap.data() as AdminNotification),
-      id: docSnap.id,
-    }))
-    onChange(items)
-  })
+  return onSnapshot(
+    adminQuery,
+    (snapshot) => {
+      const items: AdminNotification[] = snapshot.docs.map((docSnap) => ({
+        ...(docSnap.data() as AdminNotification),
+        id: docSnap.id,
+      }))
+      onChange(items)
+    },
+    onError,
+  )
 }
 
 export const markAdminNotificationRead = async (notificationId: string) => {
