@@ -1053,7 +1053,7 @@ export const UsersManagementTab = ({ users: propUsers, loading: propLoading }: U
           <ModalCloseButton isDisabled={promotionLoading} />
           <ModalBody>
             <Stack spacing={4}>
-              <Box border="1px solid" borderColor="gray.100" borderRadius="lg" p={4}>
+              <Box border="1px solid" borderColor="border.control" borderRadius="lg" p={4}>
                 <Text fontWeight="semibold" color="gray.800">
                   Access Controls
                 </Text>
@@ -1112,7 +1112,7 @@ export const UsersManagementTab = ({ users: propUsers, loading: propLoading }: U
               </Box>
 
               {promotionRequiresOrganization && (
-                <Box border="1px solid" borderColor="gray.100" borderRadius="lg" p={4}>
+                <Box border="1px solid" borderColor="border.control" borderRadius="lg" p={4}>
                   <Text fontWeight="semibold" color="gray.800" mb={3}>
                     Organization Scope
                   </Text>
@@ -1161,7 +1161,7 @@ export const UsersManagementTab = ({ users: propUsers, loading: propLoading }: U
                 </Box>
               )}
 
-              <Box border="1px solid" borderColor="gray.100" borderRadius="lg" p={4}>
+              <Box border="1px solid" borderColor="border.control" borderRadius="lg" p={4}>
                 <FormControl isRequired>
                   <FormLabel>Audit reason</FormLabel>
                   <Textarea

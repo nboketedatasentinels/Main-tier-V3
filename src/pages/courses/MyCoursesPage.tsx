@@ -1039,7 +1039,7 @@ const PaidLibraryCoursesPage: React.FC<{ userId?: string | null; profile: UserPr
                   borderRadius="2xl"
                   p={5}
                   bg="gray.50"
-                  borderColor="gray.200"
+                  borderColor="border.control"
                   _hover={{ borderColor: 'purple.200', boxShadow: 'md' }}
                   transition="all 0.15s ease"
                 >

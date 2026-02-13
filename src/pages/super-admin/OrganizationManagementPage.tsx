@@ -507,8 +507,20 @@ export const OrganizationManagementPage: React.FC<OrganizationManagementPageProp
                 </SimpleGrid>
 
                 <Box border="1px solid" borderColor="brand.border" borderRadius="md" overflowX="auto">
-                  <Table size="sm">
-                    <Thead bg="gray.50">
+                  <Table
+                    size="sm"
+                    sx={{
+                      th: {
+                        color: 'brand.subtleText',
+                        borderColor: 'brand.border',
+                      },
+                      td: {
+                        color: 'brand.text',
+                        borderColor: 'brand.border',
+                      },
+                    }}
+                  >
+                    <Thead bg="brand.accent">
                       <Tr>
                         <Th>Actions</Th>
                         <Th cursor="pointer" onClick={() => handleSort('name')}>
@@ -526,7 +538,11 @@ export const OrganizationManagementPage: React.FC<OrganizationManagementPageProp
                       </Tr>
                     </Thead>
                     <Tbody>
-                      {paginatedOrganizations.map((org) => {
+                      {paginatedOrganizations.map((org, index) => {
+                        const safeName = (org.name || '').trim() || 'Unnamed organization'
+                        const safeCode = (org.code || '').trim() || 'No code'
+                        const safeTeamSize = Number.isFinite(org.teamSize) ? Number(org.teamSize) : 0
+                        const safePartner = partnerLookup.get(org.transformationPartnerId || '') || 'Unassigned'
                         const createdAt =
                           typeof org.createdAt === 'string'
                             ? org.createdAt
@@ -534,13 +550,20 @@ export const OrganizationManagementPage: React.FC<OrganizationManagementPageProp
                               ? org.createdAt.toLocaleDateString()
                               : org.createdAt?.toDate?.()
                                 ? org.createdAt.toDate().toLocaleDateString()
-                                : '—'
+                                : 'Not set'
 
                         return (
-                          <Tr key={org.id || org.code} _hover={{ bg: 'gray.50' }}>
+                          <Tr key={org.id || org.code || `fallback-${index}`} _hover={{ bg: 'brand.accent' }}>
                             <Td>
                               <Menu>
-                                <MenuButton as={IconButton} icon={<MoreHorizontal size={16} />} aria-label="Actions" size="sm" variant="ghost" />
+                                <MenuButton
+                                  as={IconButton}
+                                  icon={<MoreHorizontal size={16} />}
+                                  aria-label="Actions"
+                                  size="sm"
+                                  variant="ghost"
+                                  color="brand.text"
+                                />
                                 <MenuList>
                                   <MenuItem onClick={() => handleViewOrganization(org)}>View Organisation</MenuItem>
                                   <MenuItem onClick={() => handleEditOrganization(org)}>Edit organization</MenuItem>
@@ -553,11 +576,11 @@ export const OrganizationManagementPage: React.FC<OrganizationManagementPageProp
                                 </MenuList>
                               </Menu>
                             </Td>
-                            <Td fontWeight="semibold">{org.name}</Td>
-                            <Td>{org.code}</Td>
-                            <Td>{org.teamSize || 0}</Td>
+                            <Td fontWeight="semibold">{safeName}</Td>
+                            <Td>{safeCode}</Td>
+                            <Td>{safeTeamSize}</Td>
                             <Td>{renderStatusBadge(org.status)}</Td>
-                            <Td>{partnerLookup.get(org.transformationPartnerId || '') || 'Unassigned'}</Td>
+                            <Td>{safePartner}</Td>
                             <Td>{createdAt}</Td>
                           </Tr>
                         )
