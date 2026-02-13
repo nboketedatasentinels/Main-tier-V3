@@ -581,9 +581,27 @@ export const CreateOrganizationModal: React.FC<CreateOrganizationModalProps> = (
         { adminId, adminName },
       )
 
-      const organizationWithId = { ...organizationPayload, id: organizationId }
+      const now = new Date()
+      const organizationWithId: OrganizationRecord = {
+        ...organizationPayload,
+        id: organizationId,
+        createdAt: organizationPayload.createdAt ?? now,
+        updatedAt: organizationPayload.updatedAt ?? now,
+      }
       if (onCreated) {
-        await onCreated(organizationWithId)
+        try {
+          await onCreated(organizationWithId)
+        } catch (onCreatedError) {
+          console.error('[CreateOrganizationModal] Organization was created but post-create callback failed.', {
+            organizationId,
+            error: onCreatedError,
+          })
+          toast({
+            title: 'Organization created',
+            description: 'Post-create updates failed. Refresh to sync the latest data.',
+            status: 'warning',
+          })
+        }
       }
       if (invitationResult) {
         setResults(invitationResult)

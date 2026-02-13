@@ -9,6 +9,7 @@ export interface AdminActivityLogEntry {
   userId?: string
   adminId?: string
   adminName?: string
+  createdBy?: string
   createdAt?: Timestamp | string | Date
   metadata?: Record<string, unknown>
   severity?: 'info' | 'watch' | 'active' | 'critical'

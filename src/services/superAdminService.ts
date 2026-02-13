@@ -708,8 +708,10 @@ export const listenToAdminActivityLog = (
 }
 
 export const logAdminAction = async (entry: Omit<AdminActivityLogEntry, 'id' | 'createdAt'>) => {
+  const actorId = getActorId() || entry.adminId
   const sanitizedEntry = removeUndefinedFields({
     ...entry,
+    createdBy: actorId,
     createdAt: serverTimestamp(),
   })
   await addDoc(auditCollection, sanitizedEntry)
