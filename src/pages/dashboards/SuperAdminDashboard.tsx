@@ -51,7 +51,7 @@ const defaultMetrics: SuperAdminDashboardMetrics = {
 }
 
 export const SuperAdminDashboard: React.FC = () => {
-  const { profile, profileStatus, lastProfileLoadAt, refreshProfile, effectiveRole } = useAuth()
+  const { profile, profileStatus, lastProfileLoadAt, refreshProfile, refreshAdminSession, effectiveRole } = useAuth()
   const location = useLocation()
   const navigate = useNavigate()
   const adminName = profile?.fullName || profile?.firstName || 'Admin'
@@ -100,6 +100,7 @@ export const SuperAdminDashboard: React.FC = () => {
     systemAlerts: false,
     taskNotifications: false,
   })
+  const adminSessionRetriedRef = useRef(false)
 
   useEffect(() => {
     const nextTab = resolveDashboardTabFromSearch(location.search)
@@ -185,8 +186,10 @@ export const SuperAdminDashboard: React.FC = () => {
   useEffect(() => {
     if (!isSuperAdminView) {
       setStreamsLoading(false)
+      adminSessionRetriedRef.current = false
       return
     }
+    adminSessionRetriedRef.current = false
     setStreamsLoading(true)
     sideStreamsLoadedRef.current = {
       verificationRequests: false,
@@ -203,13 +206,34 @@ export const SuperAdminDashboard: React.FC = () => {
         setStreamsLoading(false)
       }
     }
+    const handleSideStreamSuccess = (key: keyof typeof sideStreamsLoadedRef.current) => {
+      adminSessionRetriedRef.current = false
+      markSideStreamLoaded(key)
+    }
     const handleSideStreamError = (
       streamKey: keyof typeof sideStreamsLoadedRef.current,
       message: string,
       err: unknown,
     ) => {
-      console.error(err)
       markSideStreamLoaded(streamKey)
+      const code = (err as { code?: string })?.code
+      if (code === 'permission-denied') {
+        if (!adminSessionRetriedRef.current) {
+          adminSessionRetriedRef.current = true
+          void refreshAdminSession()
+            .then(() => setRefreshIndex((prev) => prev + 1))
+            .catch((refreshError) => {
+              console.error(refreshError)
+              setError(message)
+              toast({ title: 'Failed to refresh admin session', status: 'error' })
+            })
+          return
+        }
+        setError('Permission denied while loading admin data. Please sign out and sign in again.')
+        toast({ title: 'Admin permissions required', status: 'error' })
+        return
+      }
+      console.error(err)
       setError(message)
       toast({ title: 'Failed to load dashboard', status: 'error' })
     }
@@ -218,7 +242,7 @@ export const SuperAdminDashboard: React.FC = () => {
       listenToVerificationRequests(
         (items) => {
           setVerificationRequests(items)
-          markSideStreamLoaded('verificationRequests')
+          handleSideStreamSuccess('verificationRequests')
         },
         (err) =>
           handleSideStreamError(
@@ -233,7 +257,7 @@ export const SuperAdminDashboard: React.FC = () => {
       listenToRegistrations(
         (items) => {
           setRegistrations(items)
-          markSideStreamLoaded('registrations')
+          handleSideStreamSuccess('registrations')
         },
         (err) =>
           handleSideStreamError(
@@ -248,7 +272,7 @@ export const SuperAdminDashboard: React.FC = () => {
       listenToSystemAlerts(
         (items) => {
           setSystemAlerts(items)
-          markSideStreamLoaded('systemAlerts')
+          handleSideStreamSuccess('systemAlerts')
         },
         (err) => handleSideStreamError('systemAlerts', 'Unable to load system alerts from Firebase.', err),
       ),
@@ -258,7 +282,7 @@ export const SuperAdminDashboard: React.FC = () => {
       listenToTaskNotifications(
         (items) => {
           setTaskNotifications(items)
-          markSideStreamLoaded('taskNotifications')
+          handleSideStreamSuccess('taskNotifications')
         },
         (err) =>
           handleSideStreamError(
@@ -269,8 +293,11 @@ export const SuperAdminDashboard: React.FC = () => {
       ),
     )
 
-    return () => unsubscribers.forEach((unsub) => unsub())
-  }, [isSuperAdminView, toast])
+    return () => {
+      adminSessionRetriedRef.current = false
+      unsubscribers.forEach((unsub) => unsub())
+    }
+  }, [isSuperAdminView, refreshAdminSession, refreshIndex, toast])
 
   useEffect(() => {
     if (!loading && !error) {
