@@ -789,6 +789,20 @@ service cloud.firestore {
       allow update, delete: if isSuperAdmin();
     }
 
+    // User profile access audit logs
+    match /profile_access_logs/{entryId} {
+      allow read: if isPartnerOrAdmin();
+      allow create: if isAuthenticated()
+        && request.resource.data.viewerId == request.auth.uid
+        && request.resource.data.targetUserId is string
+        && request.resource.data.allowed is bool
+        && (!('viewerRole' in request.resource.data) || request.resource.data.viewerRole is string)
+        && (!('reason' in request.resource.data) || request.resource.data.reason is string)
+        && (!('route' in request.resource.data) || request.resource.data.route is string)
+        && (!('createdAt' in request.resource.data) || request.resource.data.createdAt == request.time);
+      allow update, delete: if false;
+    }
+
     // Points verifications collection
     match /points_verifications/{verificationId} {
       allow read: if isAuthenticated() && (

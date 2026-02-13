@@ -202,6 +202,46 @@ describe("Firestore Security Rules", () => {
     });
   });
 
+  describe("Profile Access Logs", () => {
+    it("allows authenticated users to create their own profile access logs", async () => {
+      const db = getAuthenticatedContext("alice").firestore();
+      const logDoc = doc(db, "profile_access_logs/log1");
+      await assertSucceeds(setDoc(logDoc, {
+        viewerId: "alice",
+        targetUserId: "bob",
+        allowed: true,
+        reason: "allowed",
+      }));
+    });
+
+    it("fails when viewerId does not match auth uid", async () => {
+      const db = getAuthenticatedContext("alice").firestore();
+      const logDoc = doc(db, "profile_access_logs/log1");
+      await assertFails(setDoc(logDoc, {
+        viewerId: "mallory",
+        targetUserId: "bob",
+        allowed: false,
+        reason: "denied",
+      }));
+    });
+
+    it("allows partner/admin roles to read profile access logs", async () => {
+      await testEnv.withSecurityRulesDisabled(async (context) => {
+        const adminDb = context.firestore();
+        await setDoc(doc(adminDb, "users/partner-user"), { role: "partner" });
+        await setDoc(doc(adminDb, "profile_access_logs/log1"), {
+          viewerId: "alice",
+          targetUserId: "bob",
+          allowed: true,
+          reason: "allowed",
+        });
+      });
+
+      const db = getAuthenticatedContext("partner-user").firestore();
+      await assertSucceeds(getDoc(doc(db, "profile_access_logs/log1")));
+    });
+  });
+
   describe("Organizations", () => {
     it("allows unauthenticated lookup by company code with limit 1", async () => {
       await testEnv.withSecurityRulesDisabled(async (context) => {
