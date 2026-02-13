@@ -360,6 +360,18 @@ export interface OrganizationUserProfile {
   companyCode?: string | null
 }
 
+export interface OrganizationInvitationProfile {
+  id: string
+  name: string
+  email?: string
+  role: string
+  method: InvitationMethod
+  status: string
+  createdAt?: Date | null
+  expiresAt?: Date | null
+  code?: string
+}
+
 export interface OrganizationStatistics {
   totalMembers: number
   activeMembers: number

@@ -42,6 +42,7 @@ import {
 } from './partnerAssignmentSyncService'
 import { normalizeRole } from '@/utils/role'
 export { checkOrganizationAccess, fetchOrganizationEngagementStats, fetchOrganizationUsers } from './organizationUserService'
+export { fetchOrganizationInvitations } from './invitationService'
 
 const safeCodeChars = '23456789ABCDEFGHJKLMNPQRSTUVWXYZ'
 

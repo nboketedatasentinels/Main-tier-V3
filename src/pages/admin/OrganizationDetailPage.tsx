@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import {
   Alert,
   AlertDescription,
@@ -55,6 +55,16 @@ const formatDateTime = (value?: Date | null) => {
   }).format(value)
 }
 
+const getInvitationStatusColor = (status?: string) => {
+  const normalized = (status || '').toLowerCase()
+  if (normalized === 'pending') return 'yellow'
+  if (normalized === 'accepted' || normalized === 'completed') return 'green'
+  if (normalized === 'declined' || normalized === 'revoked') return 'red'
+  return 'gray'
+}
+
+const invitationPageSize = 10
+
 const escapeRegExp = (value: string) => value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
 
 export const OrganizationDetailPage: React.FC = () => {
@@ -88,11 +98,16 @@ export const OrganizationDetailPage: React.FC = () => {
     pageCount,
     pageSize,
     paginatedUsers,
+    invitations,
     totalCount,
     filteredCount,
     activeFilters,
     clearFilters,
   } = useOrganizationDetails(organizationId)
+  const [invitationSearchQuery, setInvitationSearchQuery] = useState('')
+  const [invitationStatusFilter, setInvitationStatusFilter] = useState('all')
+  const [invitationMethodFilter, setInvitationMethodFilter] = useState<'all' | 'email' | 'one_time_code'>('all')
+  const [invitationPage, setInvitationPage] = useState(1)
 
   useEffect(() => {
     if (error !== 'unauthorized' || unauthorizedLogged.current) return
@@ -128,6 +143,12 @@ export const OrganizationDetailPage: React.FC = () => {
     navigate(`${base}/user/${userId}`)
   }
 
+  const clearInvitationFilters = () => {
+    setInvitationSearchQuery('')
+    setInvitationStatusFilter('all')
+    setInvitationMethodFilter('all')
+  }
+
   const matchRegex = useMemo(() => {
     if (!debouncedSearch) return null
     return new RegExp(`(${escapeRegExp(debouncedSearch)})`, 'ig')
@@ -149,6 +170,37 @@ export const OrganizationDetailPage: React.FC = () => {
 
   const startIndex = Math.min((page - 1) * pageSize + 1, filteredCount || 0)
   const endIndex = Math.min(page * pageSize, filteredCount || 0)
+  const pendingInvitationCount = useMemo(
+    () => invitations.filter((invite) => (invite.status || '').toLowerCase() === 'pending').length,
+    [invitations],
+  )
+  const filteredInvitations = useMemo(() => {
+    const search = invitationSearchQuery.trim().toLowerCase()
+    return invitations.filter((invite) => {
+      const matchesSearch =
+        !search ||
+        (invite.name || '').toLowerCase().includes(search) ||
+        (invite.email || '').toLowerCase().includes(search) ||
+        (invite.code || '').toLowerCase().includes(search)
+      const matchesStatus = invitationStatusFilter === 'all' || (invite.status || '').toLowerCase() === invitationStatusFilter
+      const matchesMethod = invitationMethodFilter === 'all' || invite.method === invitationMethodFilter
+      return matchesSearch && matchesStatus && matchesMethod
+    })
+  }, [invitationMethodFilter, invitationSearchQuery, invitationStatusFilter, invitations])
+  const invitationPageCount = Math.max(1, Math.ceil(filteredInvitations.length / invitationPageSize))
+  const currentInvitationPage = Math.min(invitationPage, invitationPageCount)
+  const paginatedInvitations = useMemo(() => {
+    const start = (currentInvitationPage - 1) * invitationPageSize
+    return filteredInvitations.slice(start, start + invitationPageSize)
+  }, [currentInvitationPage, filteredInvitations])
+  const invitationStartIndex = Math.min((currentInvitationPage - 1) * invitationPageSize + 1, filteredInvitations.length || 0)
+  const invitationEndIndex = Math.min(currentInvitationPage * invitationPageSize, filteredInvitations.length || 0)
+  const invitationFiltersActive =
+    invitationSearchQuery.trim().length > 0 || invitationStatusFilter !== 'all' || invitationMethodFilter !== 'all'
+
+  useEffect(() => {
+    setInvitationPage(1)
+  }, [invitationMethodFilter, invitationSearchQuery, invitationStatusFilter])
 
   if (error && error !== 'unauthorized') {
     const title =
@@ -442,6 +494,180 @@ export const OrganizationDetailPage: React.FC = () => {
                   ))}
                 </SimpleGrid>
               )}
+            </Stack>
+          </CardBody>
+        </Card>
+
+        <Card bg="white" border="1px solid" borderColor="brand.border">
+          <CardBody>
+            <Stack spacing={4}>
+              <HStack justify="space-between" align={{ base: 'flex-start', md: 'center' }} wrap="wrap" spacing={3}>
+                <Stack spacing={1}>
+                  <Text fontWeight="bold" color="brand.text">
+                    Invitations ({filteredInvitations.length} of {invitations.length})
+                  </Text>
+                  <Text fontSize="sm" color="brand.subtleText">
+                    Showing {invitationStartIndex}-{invitationEndIndex} of {filteredInvitations.length} invites.{' '}
+                    {pendingInvitationCount} pending overall.
+                  </Text>
+                </Stack>
+                <HStack spacing={2}>
+                  <Badge colorScheme={pendingInvitationCount > 0 ? 'yellow' : 'gray'}>
+                    {pendingInvitationCount > 0 ? `${pendingInvitationCount} action needed` : 'No pending invites'}
+                  </Badge>
+                  <Button
+                    variant="outline"
+                    onClick={clearInvitationFilters}
+                    isDisabled={!invitationFiltersActive}
+                  >
+                    Clear filters
+                  </Button>
+                </HStack>
+              </HStack>
+
+              <Grid templateColumns={{ base: '1fr', md: '2fr 1fr 1fr' }} gap={3}>
+                <GridItem colSpan={{ base: 1, md: 1 }}>
+                  <InputGroup>
+                    <InputLeftElement pointerEvents="none">
+                      <Search size={16} />
+                    </InputLeftElement>
+                    <Input
+                      placeholder="Search by invitee, email, or code"
+                      value={invitationSearchQuery}
+                      onChange={(event) => setInvitationSearchQuery(event.target.value)}
+                      bg="white"
+                    />
+                  </InputGroup>
+                </GridItem>
+                <Select
+                  value={invitationStatusFilter}
+                  onChange={(event) => setInvitationStatusFilter(event.target.value)}
+                >
+                  <option value="all">All statuses</option>
+                  <option value="pending">Pending</option>
+                  <option value="accepted">Accepted</option>
+                  <option value="completed">Completed</option>
+                  <option value="declined">Declined</option>
+                  <option value="revoked">Revoked</option>
+                  <option value="failed">Failed</option>
+                </Select>
+                <Select
+                  value={invitationMethodFilter}
+                  onChange={(event) => setInvitationMethodFilter(event.target.value as typeof invitationMethodFilter)}
+                >
+                  <option value="all">All methods</option>
+                  <option value="email">Email</option>
+                  <option value="one_time_code">One-time code</option>
+                </Select>
+              </Grid>
+
+              <Divider />
+
+              {loading ? (
+                <Stack spacing={3}>
+                  {Array.from({ length: 3 }).map((_, index) => (
+                    <Skeleton key={index} height="52px" borderRadius="md" />
+                  ))}
+                </Stack>
+              ) : paginatedInvitations.length ? (
+                <Box overflowX="auto">
+                  <Box minW="820px">
+                    <Grid templateColumns="2fr 2fr 1fr 1fr 1fr 1fr" gap={2} pb={2}>
+                      <Text fontSize="sm" color="brand.subtleText" fontWeight="semibold" px={2} py={1}>Invitee</Text>
+                      <Text fontSize="sm" color="brand.subtleText" fontWeight="semibold" px={2} py={1}>Email / Code</Text>
+                      <Text fontSize="sm" color="brand.subtleText" fontWeight="semibold" px={2} py={1}>Role</Text>
+                      <Text fontSize="sm" color="brand.subtleText" fontWeight="semibold" px={2} py={1}>Method</Text>
+                      <Text fontSize="sm" color="brand.subtleText" fontWeight="semibold" px={2} py={1}>Status</Text>
+                      <Text fontSize="sm" color="brand.subtleText" fontWeight="semibold" px={2} py={1}>Sent</Text>
+                    </Grid>
+
+                    <Stack spacing={2}>
+                      {paginatedInvitations.map((invite) => (
+                        <Grid
+                          key={invite.id}
+                          templateColumns="2fr 2fr 1fr 1fr 1fr 1fr"
+                          gap={2}
+                          p={3}
+                          borderRadius="md"
+                          border="1px solid"
+                          borderColor="brand.border"
+                          bg="brand.accent"
+                          alignItems="center"
+                        >
+                          <Text fontWeight="semibold" color="brand.text">{invite.name || 'Invited user'}</Text>
+                          <Stack spacing={0}>
+                            <Text color="brand.text">{invite.email || 'No email provided'}</Text>
+                            {invite.method === 'one_time_code' && invite.code ? (
+                              <Text fontSize="xs" color="brand.subtleText">Code: {invite.code}</Text>
+                            ) : null}
+                          </Stack>
+                          <Badge colorScheme="blue" variant="subtle" textTransform="capitalize">
+                            {(invite.role || 'user').replace('_', ' ')}
+                          </Badge>
+                          <Badge colorScheme={invite.method === 'email' ? 'purple' : 'orange'} variant="subtle">
+                            {invite.method === 'email' ? 'Email' : 'One-time code'}
+                          </Badge>
+                          <Badge colorScheme={getInvitationStatusColor(invite.status)} variant="subtle" textTransform="capitalize">
+                            {invite.status || 'pending'}
+                          </Badge>
+                          <Stack spacing={0}>
+                            <Text fontSize="sm" color="brand.subtleText">{formatDateTime(invite.createdAt || null)}</Text>
+                            {invite.expiresAt ? (
+                              <Text fontSize="xs" color="brand.subtleText">
+                                Expires {formatDateTime(invite.expiresAt)}
+                              </Text>
+                            ) : null}
+                          </Stack>
+                        </Grid>
+                      ))}
+                    </Stack>
+                  </Box>
+                </Box>
+              ) : (
+                <Box p={4} borderRadius="md" border="1px dashed" borderColor="brand.border">
+                  <Text color="brand.subtleText">
+                    {invitations.length === 0
+                      ? 'No invitations have been sent for this organization.'
+                      : 'No invitations match the current search or filters.'}
+                  </Text>
+                </Box>
+              )}
+
+              <Flex justify="space-between" align="center" wrap="wrap" gap={3}>
+                <Text fontSize="sm" color="brand.subtleText">
+                  Showing {invitationStartIndex}-{invitationEndIndex} of {filteredInvitations.length} invites
+                </Text>
+                <HStack spacing={2}>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() => setInvitationPage(currentInvitationPage - 1)}
+                    isDisabled={currentInvitationPage <= 1}
+                  >
+                    Previous
+                  </Button>
+                  <Select
+                    size="sm"
+                    value={currentInvitationPage}
+                    onChange={(event) => setInvitationPage(Number(event.target.value))}
+                    width="auto"
+                  >
+                    {Array.from({ length: invitationPageCount }).map((_, index) => (
+                      <option key={index} value={index + 1}>
+                        Page {index + 1}
+                      </option>
+                    ))}
+                  </Select>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() => setInvitationPage(currentInvitationPage + 1)}
+                    isDisabled={currentInvitationPage >= invitationPageCount}
+                  >
+                    Next
+                  </Button>
+                </HStack>
+              </Flex>
             </Stack>
           </CardBody>
         </Card>

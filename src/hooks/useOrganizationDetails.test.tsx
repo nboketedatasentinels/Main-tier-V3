@@ -7,6 +7,7 @@ import {
   fetchAvailableCourses,
   fetchOrganizationByCode,
   fetchOrganizationEngagementStats,
+  fetchOrganizationInvitations,
   fetchOrganizationUsers,
   logOrganizationAccessAttempt,
 } from '@/services/organizationService'
@@ -21,6 +22,7 @@ vi.mock('@/services/organizationService', () => ({
   fetchAvailableCourses: vi.fn(),
   fetchOrganizationByCode: vi.fn(),
   fetchOrganizationEngagementStats: vi.fn(),
+  fetchOrganizationInvitations: vi.fn(),
   fetchOrganizationUsers: vi.fn(),
   logOrganizationAccessAttempt: vi.fn(),
 }))
@@ -71,6 +73,7 @@ describe('useOrganizationDetails partner access', () => {
     })
     ;(canAccessOrganization as unknown as { mockResolvedValue: (value: unknown) => void }).mockResolvedValue(true)
     ;(fetchOrganizationUsers as unknown as { mockResolvedValue: (value: unknown) => void }).mockResolvedValue([])
+    ;(fetchOrganizationInvitations as unknown as { mockResolvedValue: (value: unknown) => void }).mockResolvedValue([])
     ;(
       fetchOrganizationEngagementStats as unknown as { mockResolvedValue: (value: unknown) => void }
     ).mockResolvedValue({

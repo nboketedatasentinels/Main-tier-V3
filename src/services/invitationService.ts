@@ -18,6 +18,7 @@ import {
   InvitationMethod,
   InvitationPayload,
   InvitationResultEntry,
+  OrganizationInvitationProfile,
   OrganizationRecord,
 } from '@/types/admin'
 import { normalizeEmail } from '@/utils/email'
@@ -107,6 +108,36 @@ const timestampToMillis = (value: unknown): number => {
   return 0
 }
 
+const timestampToDate = (value: unknown): Date | null => {
+  if (!value) return null
+  if (value instanceof Date) return value
+  if (typeof value === 'number' && Number.isFinite(value)) return new Date(value)
+  if (typeof value === 'string') {
+    const parsed = new Date(value)
+    return Number.isNaN(parsed.getTime()) ? null : parsed
+  }
+
+  if (typeof value === 'object' && value !== null) {
+    const candidate = value as {
+      toDate?: () => Date
+      toMillis?: () => number
+      seconds?: number
+    }
+    if (typeof candidate.toDate === 'function') {
+      return candidate.toDate()
+    }
+    if (typeof candidate.toMillis === 'function') {
+      const millis = candidate.toMillis()
+      return Number.isFinite(millis) ? new Date(millis) : null
+    }
+    if (typeof candidate.seconds === 'number') {
+      return new Date(candidate.seconds * 1000)
+    }
+  }
+
+  return null
+}
+
 export const resolvePendingInvitationOrganization = async (
   email: string,
 ): Promise<PendingInvitationOrganizationMatch | null> => {
@@ -171,6 +202,56 @@ export const resolvePendingInvitationOrganization = async (
   }
 
   return null
+}
+
+export const fetchOrganizationInvitations = async (
+  organizationId: string,
+): Promise<OrganizationInvitationProfile[]> => {
+  const trimmedOrganizationId = organizationId?.trim()
+  if (!trimmedOrganizationId) return []
+
+  const snapshot = await getDocs(
+    query(
+      invitationsCollection,
+      where('organizationId', '==', trimmedOrganizationId),
+      limit(200),
+    ),
+  )
+
+  const invitations = snapshot.docs.map((docSnap) => {
+    const data = docSnap.data() as {
+      name?: string
+      email?: string
+      role?: string
+      method?: InvitationMethod
+      status?: string
+      createdAt?: unknown
+      expiresAt?: unknown
+      code?: string
+    }
+
+    const normalizedMethod: InvitationMethod = data.method === 'one_time_code' ? 'one_time_code' : 'email'
+
+    return {
+      id: docSnap.id,
+      name: data.name?.trim() || 'Invited user',
+      email: data.email || '',
+      role: data.role || 'user',
+      method: normalizedMethod,
+      status: data.status || 'pending',
+      createdAt: timestampToDate(data.createdAt),
+      expiresAt: timestampToDate(data.expiresAt),
+      code: data.code || '',
+    }
+  })
+
+  invitations.sort((left, right) => {
+    const leftCreatedAt = left.createdAt ? left.createdAt.getTime() : 0
+    const rightCreatedAt = right.createdAt ? right.createdAt.getTime() : 0
+    return rightCreatedAt - leftCreatedAt
+  })
+
+  return invitations
 }
 
 const getOrganizationLicenseSnapshot = async (organizationId: string) => {
