@@ -37,14 +37,24 @@ service cloud.firestore {
               : '')));
     }
 
+    function getRoleFromUsersDoc() {
+      return isAuthenticated() && exists(/databases/$(database)/documents/users/$(request.auth.uid))
+        ? normalizeRoleValue(get(/databases/$(database)/documents/users/$(request.auth.uid)).data.get('role', ''))
+        : '';
+    }
+
+    function getRoleFromProfilesDoc() {
+      return isAuthenticated() && exists(/databases/$(database)/documents/profiles/$(request.auth.uid))
+        ? normalizeRoleValue(get(/databases/$(database)/documents/profiles/$(request.auth.uid)).data.get('role', ''))
+        : '';
+    }
+
     function getUserRole() {
       return getRoleFromToken() != ''
         ? getRoleFromToken()
-        : (isAuthenticated() && exists(/databases/$(database)/documents/users/$(request.auth.uid))
-          ? normalizeRoleValue(get(/databases/$(database)/documents/users/$(request.auth.uid)).data.get('role', ''))
-          : (isAuthenticated() && exists(/databases/$(database)/documents/profiles/$(request.auth.uid))
-            ? normalizeRoleValue(get(/databases/$(database)/documents/profiles/$(request.auth.uid)).data.get('role', ''))
-            : ''));
+        : (getRoleFromUsersDoc() != ''
+          ? getRoleFromUsersDoc()
+          : getRoleFromProfilesDoc());
     }
 
     function isSuperAdmin() {
@@ -56,43 +66,43 @@ service cloud.firestore {
     }
 
     function isPartnerOrAdmin() {
-      return isAuthenticated() && (getUserRole() == 'partner' || getUserRole() == 'super_admin');
+      return isAuthenticated() && getUserRole() in ['partner', 'super_admin'];
     }
 
     function isNonEmptyString(value) {
       return value is string && value.size() > 0;
     }
 
+    function getUserStringField(fieldName) {
+      let usersDoc = isAuthenticated()
+        ? get(/databases/$(database)/documents/users/$(request.auth.uid))
+        : null;
+      let profilesDoc = isAuthenticated()
+        ? get(/databases/$(database)/documents/profiles/$(request.auth.uid))
+        : null;
+      return usersDoc != null && usersDoc.data != null
+        ? usersDoc.data.get(fieldName, '')
+        : (
+          profilesDoc != null && profilesDoc.data != null
+            ? profilesDoc.data.get(fieldName, '')
+            : ''
+        );
+    }
+
     function getUserCompanyId() {
-      return isAuthenticated() && exists(/databases/$(database)/documents/users/$(request.auth.uid))
-        ? get(/databases/$(database)/documents/users/$(request.auth.uid)).data.get('companyId', '')
-        : (isAuthenticated() && exists(/databases/$(database)/documents/profiles/$(request.auth.uid))
-          ? get(/databases/$(database)/documents/profiles/$(request.auth.uid)).data.get('companyId', '')
-          : '');
+      return getUserStringField('companyId');
     }
 
     function getUserCompanyCode() {
-      return isAuthenticated() && exists(/databases/$(database)/documents/users/$(request.auth.uid))
-        ? get(/databases/$(database)/documents/users/$(request.auth.uid)).data.get('companyCode', '')
-        : (isAuthenticated() && exists(/databases/$(database)/documents/profiles/$(request.auth.uid))
-          ? get(/databases/$(database)/documents/profiles/$(request.auth.uid)).data.get('companyCode', '')
-          : '');
+      return getUserStringField('companyCode');
     }
 
     function getUserVillageId() {
-      return isAuthenticated() && exists(/databases/$(database)/documents/users/$(request.auth.uid))
-        ? get(/databases/$(database)/documents/users/$(request.auth.uid)).data.get('villageId', '')
-        : (isAuthenticated() && exists(/databases/$(database)/documents/profiles/$(request.auth.uid))
-          ? get(/databases/$(database)/documents/profiles/$(request.auth.uid)).data.get('villageId', '')
-          : '');
+      return getUserStringField('villageId');
     }
 
     function getUserClusterId() {
-      return isAuthenticated() && exists(/databases/$(database)/documents/users/$(request.auth.uid))
-        ? get(/databases/$(database)/documents/users/$(request.auth.uid)).data.get('clusterId', '')
-        : (isAuthenticated() && exists(/databases/$(database)/documents/profiles/$(request.auth.uid))
-          ? get(/databases/$(database)/documents/profiles/$(request.auth.uid)).data.get('clusterId', '')
-          : '');
+      return getUserStringField('clusterId');
     }
 
     function isValidPartnerAssignment(assignment) {

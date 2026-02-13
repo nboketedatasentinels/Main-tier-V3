@@ -240,6 +240,21 @@ describe("Firestore Security Rules", () => {
       const db = getAuthenticatedContext("admin-user").firestore();
       await assertSucceeds(getDocs(collection(db, "admin_notifications")));
     });
+
+    it("falls back to profiles role when users role is missing", async () => {
+      await testEnv.withSecurityRulesDisabled(async (context) => {
+        const adminDb = context.firestore();
+        await setDoc(doc(adminDb, "users/admin-user"), { firstName: "Admin" });
+        await setDoc(doc(adminDb, "profiles/admin-user"), { role: "super_admin" });
+        await setDoc(doc(adminDb, "upgrade_requests/request1"), {
+          user_id: "alice",
+          status: "pending",
+        });
+      });
+
+      const db = getAuthenticatedContext("admin-user").firestore();
+      await assertSucceeds(getDocs(collection(db, "upgrade_requests")));
+    });
   });
 
   describe("Weekly Points Subcollection", () => {
