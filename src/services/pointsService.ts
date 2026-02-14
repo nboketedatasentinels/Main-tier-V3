@@ -399,6 +399,60 @@ export async function awardChecklistPoints(params: {
   }
 }
 
+export async function reconcileUserPointsFromLedger(uid: string): Promise<{
+  totalPoints: number;
+  level: number;
+}> {
+  if (!uid) throw new Error("[PointsService] uid is required");
+
+  const ledgerSnapshot = await getDocs(
+    query(collection(db, "pointsLedger"), where("uid", "==", uid))
+  );
+
+  const totalPoints = ledgerSnapshot.docs.reduce((sum, docSnap) => {
+    const rawPoints = docSnap.data()?.points;
+    return sum + (typeof rawPoints === "number" ? rawPoints : 0);
+  }, 0);
+
+  const level = calculateLevel(totalPoints);
+
+  await runTransactionWithRetry(async (tx) => {
+    const userRef = doc(db, "users", uid);
+    const profileRef = doc(db, "profiles", uid);
+    const [userDoc, profileDoc] = await Promise.all([tx.get(userRef), tx.get(profileRef)]);
+
+    const basePayload = {
+      totalPoints,
+      level,
+      updatedAt: serverTimestamp(),
+    };
+
+    if (userDoc.exists()) {
+      tx.set(
+        userRef,
+        {
+          ...basePayload,
+          pointsVersion: increment(1),
+        },
+        { merge: true }
+      );
+    }
+
+    if (profileDoc.exists()) {
+      tx.set(
+        profileRef,
+        {
+          ...basePayload,
+          pointsVersion: increment(1),
+        },
+        { merge: true }
+      );
+    }
+  });
+
+  return { totalPoints, level };
+}
+
 export async function revokeChecklistPoints(params: {
   uid: string;
   journeyType: JourneyType;

@@ -23,6 +23,7 @@ vi.mock('firebase/firestore', () => ({
 
 vi.mock('./pointsService', () => ({
   awardChecklistPoints: vi.fn().mockResolvedValue(undefined),
+  reconcileUserPointsFromLedger: vi.fn().mockResolvedValue({ totalPoints: 0, level: 1 }),
 }))
 
 vi.mock('@/config/pointsConfig', () => ({
@@ -67,6 +68,28 @@ describe('pointsVerificationService', () => {
   })
 
   it('mirrors approved status into approvals and sends approval notification', async () => {
+    vi.mocked(getDoc)
+      .mockResolvedValueOnce({
+        exists: () => true,
+        data: () => ({
+          journeyType: '6W',
+          programDurationWeeks: 6,
+        }),
+      } as never)
+      .mockResolvedValueOnce({
+        exists: () => false,
+        data: () => ({}),
+      } as never)
+      .mockResolvedValueOnce({
+        exists: () => true,
+        data: () => ({
+          uid: 'user-1',
+          weekNumber: 2,
+          activityId: 'impact_log',
+          points: 500,
+        }),
+      } as never)
+
     await approvePointsVerificationRequest({
       request: {
         id: 'req-1',
