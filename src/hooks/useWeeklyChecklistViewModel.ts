@@ -76,10 +76,21 @@ function isAdminProfile(profile: { role?: string; userRole?: string } | null | u
 }
 
 const FREE_TIER_HONOR_NOTICE = 'Free tier uses self-reported honor completion (no proof upload required).'
+const FREE_TIER_SUPER_ADMIN_REVIEW_NOTICE =
+  'Free tier AI tool submissions are reviewed by super admin.'
+
+function shouldRequireSuperAdminReviewForFreeUser(activity: ActivityDef, isFreeTierMember: boolean): boolean {
+  return isFreeTierMember && activity.id === 'ai_tool_review'
+}
 
 function shouldUseHonorSystemForFreeUser(activity: ActivityDef, isFreeTierMember: boolean): boolean {
   if (!isFreeTierMember) return false
-  return activity.approvalType === 'partner_approved' || Boolean(activity.requiresApproval)
+  if (shouldRequireSuperAdminReviewForFreeUser(activity, isFreeTierMember)) return false
+  return (
+    activity.approvalType === 'partner_approved' ||
+    activity.approvalType === 'partner_issued' ||
+    Boolean(activity.requiresApproval)
+  )
 }
 
 export function useWeeklyChecklistViewModel() {
@@ -389,7 +400,11 @@ export function useWeeklyChecklistViewModel() {
         ...effectiveDef,
         status,
         availability,
-        freeTierNotice: honorSystemForFreeUser ? FREE_TIER_HONOR_NOTICE : undefined,
+        freeTierNotice: shouldRequireSuperAdminReviewForFreeUser(def, isFreeTierMember)
+          ? FREE_TIER_SUPER_ADMIN_REVIEW_NOTICE
+          : honorSystemForFreeUser
+            ? FREE_TIER_HONOR_NOTICE
+            : undefined,
       }
     })
 
@@ -960,10 +975,13 @@ export function useWeeklyChecklistViewModel() {
       }
 
       const proofUrl = parsedProofUrl.toString()
+      const submissionOrganizationId = shouldRequireSuperAdminReviewForFreeUser(activity, isFreeTierMember)
+        ? null
+        : userOrganizationId
 
       await submitPointsVerificationRequestAtomic({
         userId: user.uid,
-        organizationId: userOrganizationId,
+        organizationId: submissionOrganizationId,
         week: selectedWeek,
         activityId: activity.id,
         activityTitle: activity.title,
@@ -1025,6 +1043,7 @@ export function useWeeklyChecklistViewModel() {
     closeProofModal,
     isAdmin,
     isWeekLocked,
+    isFreeTierMember,
     journey,
     proofModal.activityId,
     proofModal.notes,

@@ -65,6 +65,35 @@ vi.mock('@/config/pointsConfig', () => ({
       category: 'Learning',
       flexibleWeeks: true,
     },
+    {
+      id: 'partner-issued-activity',
+      baseId: 'partner-issued-activity',
+      title: 'Partner Issued Activity',
+      description: 'Normally issued by partner',
+      points: 500,
+      maxPerMonth: 1,
+      activityPolicy: { type: 'window_limited', maxPerWindow: 1 },
+      approvalType: 'partner_issued',
+      requiresApproval: false,
+      week: 1,
+      category: 'Learning',
+      flexibleWeeks: true,
+    },
+    {
+      id: 'ai_tool_review',
+      baseId: 'ai_tool_review',
+      title: 'Submit an AI Tool for Review',
+      description: 'Submit an AI tool for super admin review.',
+      points: 1000,
+      maxPerMonth: 1,
+      activityPolicy: { type: 'one_time', maxTotal: 1 },
+      approvalType: 'partner_approved',
+      requiresApproval: true,
+      verification: 'partner_approval',
+      week: 1,
+      category: 'Innovation',
+      flexibleWeeks: true,
+    },
   ],
   resolveCanonicalActivityId: (id: string | null) => id,
 }))
@@ -164,10 +193,11 @@ describe('useWeeklyChecklistViewModel proof submission', () => {
 
   it('rejects invalid proof URL and triggers warning haptic', async () => {
     const hook = await mountViewModel()
-    const activity = hook.result.current.activities[0]
+    const activity = hook.result.current.activities.find((candidate) => candidate.id === 'proof-activity')
+    expect(activity).toBeTruthy()
 
     act(() => {
-      hook.result.current.openProofModal(activity)
+      hook.result.current.openProofModal(activity!)
       hook.result.current.updateProofModal({ proofUrl: 'http://' })
     })
 
@@ -187,10 +217,11 @@ describe('useWeeklyChecklistViewModel proof submission', () => {
 
   it('normalizes valid URL submissions and triggers success haptic', async () => {
     const hook = await mountViewModel()
-    const activity = hook.result.current.activities[0]
+    const activity = hook.result.current.activities.find((candidate) => candidate.id === 'proof-activity')
+    expect(activity).toBeTruthy()
 
     act(() => {
-      hook.result.current.openProofModal(activity)
+      hook.result.current.openProofModal(activity!)
       hook.result.current.updateProofModal({ proofUrl: 'example.com/proof', notes: 'done' })
     })
 
@@ -218,10 +249,11 @@ describe('useWeeklyChecklistViewModel proof submission', () => {
   it('triggers error haptic when submission fails', async () => {
     submitProofSpy.mockRejectedValueOnce(new Error('network'))
     const hook = await mountViewModel()
-    const activity = hook.result.current.activities[0]
+    const activity = hook.result.current.activities.find((candidate) => candidate.id === 'proof-activity')
+    expect(activity).toBeTruthy()
 
     act(() => {
-      hook.result.current.openProofModal(activity)
+      hook.result.current.openProofModal(activity!)
       hook.result.current.updateProofModal({ proofUrl: 'https://example.com/proof' })
     })
 
@@ -238,15 +270,56 @@ describe('useWeeklyChecklistViewModel proof submission', () => {
     )
   })
 
-  it('uses honor-system completion shape for free users on partner-approved activities', async () => {
+  it('uses honor-system completion shape for free users on non-AI partner-gated activities', async () => {
     isFreeUserMock.mockReturnValue(true)
     const hook = await mountViewModel()
-    const activity = hook.result.current.activities[0]
+    const proofActivity = hook.result.current.activities.find((candidate) => candidate.id === 'proof-activity')
+    const partnerIssuedActivity = hook.result.current.activities.find(
+      (candidate) => candidate.id === 'partner-issued-activity',
+    )
 
-    expect(activity.approvalType).toBe('self')
-    expect(activity.requiresApproval).toBe(false)
-    expect(activity.verification).toBe('honor')
-    expect(activity.description).toBe('Requires proof')
-    expect(activity.freeTierNotice).toBe('Free tier uses self-reported honor completion (no proof upload required).')
+    expect(proofActivity).toBeTruthy()
+    expect(partnerIssuedActivity).toBeTruthy()
+
+    expect(proofActivity?.approvalType).toBe('self')
+    expect(proofActivity?.requiresApproval).toBe(false)
+    expect(proofActivity?.verification).toBe('honor')
+    expect(proofActivity?.description).toBe('Requires proof')
+    expect(proofActivity?.freeTierNotice).toBe('Free tier uses self-reported honor completion (no proof upload required).')
+
+    expect(partnerIssuedActivity?.approvalType).toBe('self')
+    expect(partnerIssuedActivity?.requiresApproval).toBe(false)
+    expect(partnerIssuedActivity?.verification).toBe('honor')
+    expect(partnerIssuedActivity?.freeTierNotice).toBe(
+      'Free tier uses self-reported honor completion (no proof upload required).',
+    )
+  })
+
+  it('keeps ai_tool_review proof-based for free users and routes it to super-admin scope', async () => {
+    isFreeUserMock.mockReturnValue(true)
+    const hook = await mountViewModel()
+    const activity = hook.result.current.activities.find((candidate) => candidate.id === 'ai_tool_review')
+
+    expect(activity).toBeTruthy()
+    expect(activity?.approvalType).toBe('partner_approved')
+    expect(activity?.requiresApproval).toBe(true)
+    expect(activity?.freeTierNotice).toBe('Free tier AI tool submissions are reviewed by super admin.')
+
+    act(() => {
+      hook.result.current.openProofModal(activity!)
+      hook.result.current.updateProofModal({ proofUrl: 'example.com/ai-tool' })
+    })
+
+    await act(async () => {
+      await hook.result.current.submitProofForApproval()
+    })
+
+    expect(submitProofSpy).toHaveBeenCalledWith(
+      expect.objectContaining({
+        activityId: 'ai_tool_review',
+        organizationId: null,
+        proofUrl: 'https://example.com/ai-tool',
+      }),
+    )
   })
 })
