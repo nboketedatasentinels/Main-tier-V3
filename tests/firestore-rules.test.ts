@@ -133,6 +133,61 @@ describe("Firestore Security Rules", () => {
     });
   });
 
+  describe("Challenges Collection", () => {
+    it("allows participant updates when challenge uses participants array", async () => {
+      await testEnv.withSecurityRulesDisabled(async (context) => {
+        const adminDb = context.firestore();
+        await setDoc(doc(adminDb, "challenges/challenge1"), {
+          participants: ["alice", "bob"],
+          challenger_id: "alice",
+          challenged_id: "bob",
+          status: "pending",
+        });
+      });
+
+      const db = getAuthenticatedContext("alice").firestore();
+      await assertSucceeds(updateDoc(doc(db, "challenges/challenge1"), {
+        status: "completed",
+        cancelled_by: "alice",
+      }));
+    });
+
+    it("allows participant updates for legacy challenges without participants array", async () => {
+      await testEnv.withSecurityRulesDisabled(async (context) => {
+        const adminDb = context.firestore();
+        await setDoc(doc(adminDb, "challenges/challenge2"), {
+          challenger_id: "alice",
+          challenged_id: "bob",
+          status: "active",
+        });
+      });
+
+      const db = getAuthenticatedContext("bob").firestore();
+      await assertSucceeds(updateDoc(doc(db, "challenges/challenge2"), {
+        status: "completed",
+        cancelled_by: "bob",
+      }));
+    });
+
+    it("blocks non-participants from updating a challenge", async () => {
+      await testEnv.withSecurityRulesDisabled(async (context) => {
+        const adminDb = context.firestore();
+        await setDoc(doc(adminDb, "challenges/challenge3"), {
+          participants: ["alice", "bob"],
+          challenger_id: "alice",
+          challenged_id: "bob",
+          status: "pending",
+        });
+      });
+
+      const db = getAuthenticatedContext("charlie").firestore();
+      await assertFails(updateDoc(doc(db, "challenges/challenge3"), {
+        status: "completed",
+        cancelled_by: "charlie",
+      }));
+    });
+  });
+
   describe("Admin Actions", () => {
     it("allows Partner to create an admin action", async () => {
       await testEnv.withSecurityRulesDisabled(async (context) => {

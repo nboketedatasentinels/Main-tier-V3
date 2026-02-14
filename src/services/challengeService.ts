@@ -1,4 +1,4 @@
-import { doc, updateDoc, deleteDoc, getDoc, serverTimestamp } from 'firebase/firestore';
+import { doc, updateDoc, getDoc, serverTimestamp } from 'firebase/firestore';
 import { db } from '@/services/firebase';
 
 export const cancelChallenge = async (
@@ -35,18 +35,24 @@ export const cancelChallenge = async (
     const startDate = data.start_date?.toDate?.() || new Date(data.start_date);
     const hasStarted = now >= startDate;
 
-    if (hasStarted && data.status === 'active') {
-      // For active challenges, mark as cancelled with forfeit
-      await updateDoc(challengeRef, {
-        status: 'cancelled',
-        cancelled_by: userId,
-        cancelled_at: serverTimestamp(),
-        result: userId === data.challenger_id ? 'challenged_forfeit_win' : 'challenger_forfeit_win',
-      });
-    } else {
-      // For pending challenges, just delete
-      await deleteDoc(challengeRef);
-    }
+    const isActiveChallenge = hasStarted && data.status === 'active';
+
+    // Firestore rules allow participants/admins to update challenges, not delete them.
+    // Mark cancelled challenges as completed so they move to history and cannot be cancelled again.
+    await updateDoc(challengeRef, {
+      status: 'completed',
+      cancelled_by: userId,
+      cancelled_at: serverTimestamp(),
+      ...(isActiveChallenge
+        ? {
+            result: userId === data.challenger_id
+              ? 'challenged_forfeit_win'
+              : 'challenger_forfeit_win',
+          }
+        : {
+            result: 'cancelled',
+          }),
+    });
 
     return { success: true };
   } catch (error) {

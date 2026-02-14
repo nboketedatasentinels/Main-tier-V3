@@ -594,7 +594,9 @@ service cloud.firestore {
       allow read: if isAuthenticated();
       allow create: if isAuthenticated();
       allow update: if isAuthenticated() && (
-        request.auth.uid in resource.data.participants ||
+        listHasUid(resource.data.participants, request.auth.uid) ||
+        request.auth.uid == resource.data.challenger_id ||
+        request.auth.uid == resource.data.challenged_id ||
         isPartnerOrAdmin()
       );
       allow delete: if isSuperAdmin();
