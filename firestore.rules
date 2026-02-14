@@ -162,6 +162,38 @@ service cloud.firestore {
       return getUserStringField('clusterId');
     }
 
+    function orgMatchesCurrentUser(orgValue) {
+      return isNonEmptyString(orgValue) && (
+        (isNonEmptyString(getUserCompanyId()) && orgValue == getUserCompanyId()) ||
+        (isNonEmptyString(getUserCompanyCode()) && orgValue == getUserCompanyCode())
+      );
+    }
+
+    function isOrgMember(orgId) {
+      return isAuthenticated() && orgMatchesCurrentUser(orgId);
+    }
+
+    function isOrgScopedData(data) {
+      return data is map && (
+        orgMatchesCurrentUser(data.orgId) ||
+        orgMatchesCurrentUser(data.organizationId) ||
+        orgMatchesCurrentUser(data.companyId) ||
+        orgMatchesCurrentUser(data.companyCode)
+      );
+    }
+
+    function isUserReferenced(data) {
+      return isAuthenticated() && data is map && (
+        data.userId == request.auth.uid ||
+        data.user_id == request.auth.uid ||
+        data.uid == request.auth.uid ||
+        data.mentorId == request.auth.uid ||
+        data.mentor_id == request.auth.uid ||
+        data.partnerId == request.auth.uid ||
+        data.partner_id == request.auth.uid
+      );
+    }
+
     function isValidPartnerAssignment(assignment) {
       return assignment is map
         && assignment.keys().hasOnly(['organizationId', 'companyCode', 'status'])
@@ -1014,6 +1046,376 @@ service cloud.firestore {
         resource.data.userId != request.auth.uid || isSuperAdmin()
       );
       allow delete: if isSuperAdmin();
+    }
+
+    // Announcements
+    match /announcements/{announcementId} {
+      allow read: if isAuthenticated();
+      allow create, update: if isPartnerOrAdmin();
+      allow delete: if isSuperAdmin();
+    }
+
+    // Per-user announcement state
+    match /announcementStates/{userId}/states/{stateId} {
+      allow read, create, update, delete: if isAuthenticated() && (
+        request.auth.uid == userId ||
+        isPartnerOrAdmin()
+      );
+    }
+
+    // Automation rules
+    match /automation_rules/{ruleId} {
+      allow read, create, update, delete: if isPartnerOrAdmin();
+    }
+
+    // Book club visit analytics
+    match /bookClubVisits/{visitId} {
+      allow read: if isPartnerOrAdmin();
+      allow create: if isAuthenticated() && (
+        !('userId' in request.resource.data) ||
+        request.resource.data.userId == null ||
+        request.resource.data.userId == request.auth.uid
+      );
+      allow update, delete: if isSuperAdmin();
+    }
+
+    // Notification preferences
+    match /notification_preferences/{userId} {
+      allow read, create, update, delete: if isAuthenticated() && (
+        request.auth.uid == userId ||
+        isPartnerOrAdmin()
+      );
+    }
+
+    // Notification settings
+    match /notification_settings/{userId} {
+      allow read, create, update, delete: if isAuthenticated() && (
+        request.auth.uid == userId ||
+        isPartnerOrAdmin()
+      );
+    }
+
+    // Learner status records
+    match /learner_status/{userId} {
+      allow read: if isAuthenticated() && (
+        request.auth.uid == userId ||
+        isPartnerOrAdmin()
+      );
+      allow create, update: if isAuthenticated() && (
+        isPartnerOrAdmin() ||
+        (
+          request.auth.uid == userId &&
+          (
+            !('userId' in request.resource.data) ||
+            request.resource.data.userId == request.auth.uid
+          )
+        )
+      );
+      allow delete: if isSuperAdmin();
+    }
+
+    // Learner status history
+    match /learner_status_history/{entryId} {
+      allow read: if isAuthenticated() && (
+        isPartnerOrAdmin() ||
+        isUserReferenced(resource.data)
+      );
+      allow create: if isAuthenticated() && (
+        isPartnerOrAdmin() ||
+        isUserReferenced(request.resource.data)
+      );
+      allow update, delete: if isSuperAdmin();
+    }
+
+    // Status alerts
+    match /status_alerts/{alertId} {
+      allow read: if isAuthenticated() && (
+        isPartnerOrAdmin() ||
+        isUserReferenced(resource.data)
+      );
+      allow create: if isAuthenticated() && (
+        isPartnerOrAdmin() ||
+        isUserReferenced(request.resource.data)
+      );
+      allow update: if isAuthenticated() && (
+        isPartnerOrAdmin() ||
+        isUserReferenced(resource.data)
+      );
+      allow delete: if isSuperAdmin();
+    }
+
+    // Engagement metrics
+    match /engagement_metrics/{metricId} {
+      allow read: if isAuthenticated() && (
+        isPartnerOrAdmin() ||
+        isUserReferenced(resource.data)
+      );
+      allow create: if isAuthenticated() && (
+        isPartnerOrAdmin() ||
+        isUserReferenced(request.resource.data)
+      );
+      allow update: if isAuthenticated() && (
+        isPartnerOrAdmin() ||
+        isUserReferenced(resource.data)
+      );
+      allow delete: if isSuperAdmin();
+    }
+
+    // Mentor notifications
+    match /mentor_notifications/{notificationId} {
+      allow read: if isAuthenticated() && (
+        isPartnerOrAdmin() ||
+        resource.data.mentor_id == request.auth.uid ||
+        resource.data.mentorId == request.auth.uid
+      );
+      allow create: if isAuthenticated() && (
+        isPartnerOrAdmin() ||
+        request.resource.data.mentor_id == request.auth.uid ||
+        request.resource.data.mentorId == request.auth.uid
+      );
+      allow update: if isAuthenticated() && (
+        isPartnerOrAdmin() ||
+        resource.data.mentor_id == request.auth.uid ||
+        resource.data.mentorId == request.auth.uid
+      );
+      allow delete: if isSuperAdmin();
+    }
+
+    // Mentor escalations
+    match /mentor_escalations/{escalationId} {
+      allow read: if isAuthenticated() && (
+        isPartnerOrAdmin() ||
+        isUserReferenced(resource.data) ||
+        isOrgScopedData(resource.data)
+      );
+      allow create, update: if isPartnerOrAdmin();
+      allow delete: if isSuperAdmin();
+    }
+
+    // Nudge assignments
+    match /nudge_assignments/{assignmentId} {
+      allow read: if isAuthenticated() && (
+        isPartnerOrAdmin() ||
+        isUserReferenced(resource.data)
+      );
+      allow create: if isAuthenticated() && (
+        isPartnerOrAdmin() ||
+        isUserReferenced(request.resource.data)
+      );
+      allow update: if isAuthenticated() && (
+        isPartnerOrAdmin() ||
+        isUserReferenced(resource.data)
+      );
+      allow delete: if isSuperAdmin();
+    }
+
+    // Nudge campaigns
+    match /nudge_campaigns/{campaignId} {
+      allow read, create, update, delete: if isPartnerOrAdmin();
+    }
+
+    // Nudge effectiveness records
+    match /nudge_effectiveness/{recordId} {
+      allow read: if isAuthenticated() && (
+        isPartnerOrAdmin() ||
+        isUserReferenced(resource.data)
+      );
+      allow create: if isAuthenticated() && (
+        isPartnerOrAdmin() ||
+        isUserReferenced(request.resource.data)
+      );
+      allow update, delete: if isPartnerOrAdmin();
+    }
+
+    // Nudge cooldown tracker
+    match /nudge_cooldowns/{cooldownId} {
+      allow read: if isAuthenticated() && (
+        isPartnerOrAdmin() ||
+        cooldownId.matches(request.auth.uid + '__.*') ||
+        isUserReferenced(resource.data)
+      );
+      allow create, update: if isAuthenticated() && (
+        isPartnerOrAdmin() ||
+        cooldownId.matches(request.auth.uid + '__.*') ||
+        isUserReferenced(request.resource.data)
+      );
+      allow delete: if isSuperAdmin();
+    }
+
+    // Nudge status transition audit
+    match /nudge_status_transitions/{transitionId} {
+      allow read: if isAuthenticated() && (
+        isPartnerOrAdmin() ||
+        isUserReferenced(resource.data)
+      );
+      allow create: if isAuthenticated() && (
+        isPartnerOrAdmin() ||
+        isUserReferenced(request.resource.data)
+      );
+      allow update, delete: if isSuperAdmin();
+    }
+
+    // Organization activity visibility cache
+    match /organization_activity_visibility/{visibilityId} {
+      allow read: if isAuthenticated() && (
+        isPartnerOrAdmin() ||
+        isOrgScopedData(resource.data)
+      );
+      allow create, update: if isPartnerOrAdmin();
+      allow delete: if isSuperAdmin();
+    }
+
+    // Organization configuration
+    match /organization_configuration/{orgId} {
+      allow read: if isAuthenticated() && (
+        isPartnerOrAdmin() ||
+        isOrgMember(orgId)
+      );
+      allow create, update, delete: if isPartnerOrAdmin();
+    }
+
+    // Organization configuration change log
+    match /organization_configuration/{orgId}/changes/{changeId} {
+      allow read: if isAuthenticated() && (
+        isPartnerOrAdmin() ||
+        isOrgMember(orgId)
+      );
+      allow create, update, delete: if isPartnerOrAdmin();
+    }
+
+    // Organization leadership activity log
+    match /organizations/{orgId}/leadership_activity/{activityId} {
+      allow read: if isAuthenticated() && (
+        isPartnerOrAdmin() ||
+        isOrgMember(orgId)
+      );
+      allow create, update: if isPartnerOrAdmin();
+      allow delete: if isSuperAdmin();
+    }
+
+    // Organization learner pass mark adjustments
+    match /organizations/{orgId}/learner_pass_marks/{adjustmentId} {
+      allow read: if isAuthenticated() && (
+        isPartnerOrAdmin() ||
+        isUserReferenced(resource.data)
+      );
+      allow create: if isAuthenticated() && (
+        isPartnerOrAdmin() ||
+        isUserReferenced(request.resource.data)
+      );
+      allow update: if isAuthenticated() && (
+        isPartnerOrAdmin() ||
+        isUserReferenced(resource.data)
+      );
+      allow delete: if isSuperAdmin();
+    }
+
+    // Partner digest queue
+    match /partner_daily_digest_queue/{digestId} {
+      allow read: if isAuthenticated() && (
+        isPartnerOrAdmin() ||
+        resource.data.partnerId == request.auth.uid
+      );
+      allow create: if isAuthenticated() && (
+        isPartnerOrAdmin() ||
+        request.resource.data.partnerId == request.auth.uid
+      );
+      allow update: if isAuthenticated() && (
+        request.resource.data.partnerId == resource.data.partnerId &&
+        (
+          isPartnerOrAdmin() ||
+          request.auth.uid == resource.data.partnerId
+        )
+      );
+      allow delete: if isSuperAdmin();
+    }
+
+    // Partner digest schedules
+    match /digest_schedules/{scheduleId} {
+      allow read: if isAuthenticated() && (
+        isPartnerOrAdmin() ||
+        resource.data.partnerId == request.auth.uid
+      );
+      allow create: if isAuthenticated() && (
+        isPartnerOrAdmin() ||
+        request.resource.data.partnerId == request.auth.uid
+      );
+      allow update: if isAuthenticated() && (
+        isPartnerOrAdmin() ||
+        resource.data.partnerId == request.auth.uid
+      );
+      allow delete: if isSuperAdmin();
+    }
+
+    // Pending organization deletions (recovery markers)
+    match /pending_org_deletions/{markerId} {
+      allow read, create, update, delete: if isSuperAdmin();
+    }
+
+    // Transformation partners lookup
+    match /transformation_partners/{partnerId} {
+      allow read: if isAuthenticated();
+      allow create, update: if isPartnerOrAdmin();
+      allow delete: if isSuperAdmin();
+    }
+
+    // Lift progress
+    match /lift_progress/{userId} {
+      allow read: if isAuthenticated() && (
+        request.auth.uid == userId ||
+        isPartnerOrAdmin()
+      );
+      allow create, update: if isAuthenticated() && (
+        request.auth.uid == userId ||
+        isPartnerOrAdmin()
+      );
+      allow delete: if isSuperAdmin();
+    }
+
+    // Weekly aggregation (dashboard)
+    match /weekly_aggregation/{docId} {
+      allow read: if isAuthenticated() && (
+        isPartnerOrAdmin() ||
+        isUserReferenced(resource.data)
+      );
+      allow create: if isAuthenticated() && (
+        isPartnerOrAdmin() ||
+        isUserReferenced(request.resource.data)
+      );
+      allow update: if isAuthenticated() && (
+        isPartnerOrAdmin() ||
+        isUserReferenced(resource.data)
+      );
+      allow delete: if isSuperAdmin();
+    }
+
+    // Weekly checklist (dashboard)
+    match /weekly_checklist/{docId} {
+      allow read: if isAuthenticated() && (
+        isPartnerOrAdmin() ||
+        isUserReferenced(resource.data)
+      );
+      allow create: if isAuthenticated() && (
+        isPartnerOrAdmin() ||
+        isUserReferenced(request.resource.data)
+      );
+      allow update: if isAuthenticated() && (
+        isPartnerOrAdmin() ||
+        isUserReferenced(resource.data)
+      );
+      allow delete: if isSuperAdmin();
+    }
+
+    // Leaderboard summary
+    match /leaderboard_summary/{entryId} {
+      allow read: if isAuthenticated();
+      allow create, update, delete: if isSuperAdmin();
+    }
+
+    // FAQs
+    match /faqs/{faqId} {
+      allow read: if isAuthenticated();
+      allow create, update, delete: if isSuperAdmin();
     }
 
     // Default: deny all other access
