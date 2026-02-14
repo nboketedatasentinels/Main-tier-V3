@@ -44,7 +44,14 @@ import { createApprovalRequest } from '@/services/approvalsService'
 import { PointsVerificationRequest } from '@/services/pointsVerificationService'
 import { WeeklyProgress } from '@/types'
 import { isFreeUser } from '@/utils/membership'
-import { JOURNEY_META, getMonthNumber, getActivitiesForJourney, type ActivityDef, type JourneyType } from '@/config/pointsConfig'
+import {
+  JOURNEY_META,
+  getMonthNumber,
+  getActivitiesForJourney,
+  resolveCanonicalActivityId,
+  type ActivityDef,
+  type JourneyType,
+} from '@/config/pointsConfig'
 import { awardChecklistPoints, revokeChecklistPoints } from '@/services/pointsService'
 import { SurfaceCard } from '@/components/primitives/SurfacePrimitives'
 import { ORG_COLLECTION } from '@/constants/organizations'
@@ -397,30 +404,39 @@ const WeeklyChecklistPage: React.FC = () => {
         getDocs(globalLedgerQuery)
       ]);
 
-      const completedActivities = new Set(ledgerSnapshot.docs.map(d => d.data().activityId));
+      const completedActivities = new Set(
+        ledgerSnapshot.docs
+          .map((d) => d.data().activityId as string | undefined)
+          .map((activityId) => (activityId ? resolveCanonicalActivityId(activityId) ?? activityId : null))
+          .filter((activityId): activityId is string => Boolean(activityId)),
+      );
       const weekActivityCounts = ledgerSnapshot.docs.reduce<Record<string, number>>((acc, docItem) => {
-        const activityId = docItem.data().activityId as string | undefined;
+        const rawActivityId = docItem.data().activityId as string | undefined;
+        const activityId = rawActivityId ? (resolveCanonicalActivityId(rawActivityId) ?? rawActivityId) : undefined;
         if (!activityId) return acc;
         acc[activityId] = (acc[activityId] ?? 0) + 1;
         return acc;
       }, {});
 
       const windowActivityCounts = windowLedgerSnapshot.docs.reduce<Record<string, number>>((acc, docItem) => {
-        const activityId = docItem.data().activityId as string | undefined;
+        const rawActivityId = docItem.data().activityId as string | undefined;
+        const activityId = rawActivityId ? (resolveCanonicalActivityId(rawActivityId) ?? rawActivityId) : undefined;
         if (!activityId) return acc;
         acc[activityId] = (acc[activityId] ?? 0) + 1;
         return acc;
       }, {});
 
       const totalCompletedAllTime = globalLedgerSnapshot.docs.reduce<Record<string, number>>((acc, docItem) => {
-        const activityId = docItem.data().activityId as string | undefined;
+        const rawActivityId = docItem.data().activityId as string | undefined;
+        const activityId = rawActivityId ? (resolveCanonicalActivityId(rawActivityId) ?? rawActivityId) : undefined;
         if (!activityId) return acc;
         acc[activityId] = (acc[activityId] ?? 0) + 1;
         return acc;
       }, {});
 
       const lastCompletionWeekByActivity = windowLedgerSnapshot.docs.reduce<Record<string, number>>((acc, docItem) => {
-        const activityId = docItem.data().activityId as string | undefined;
+        const rawActivityId = docItem.data().activityId as string | undefined;
+        const activityId = rawActivityId ? (resolveCanonicalActivityId(rawActivityId) ?? rawActivityId) : undefined;
         const weekNumber = docItem.data().weekNumber as number | undefined;
         if (!activityId || !weekNumber) return acc;
         const current = acc[activityId] ?? 0;
@@ -975,7 +991,7 @@ const WeeklyChecklistPage: React.FC = () => {
               {showProofBadge && (
                 <Tooltip
                   label={
-                    ['recognition_over_recall', 'von_restorff_effect'].includes(activity.id)
+                    activity.id === 'lift_module'
                       ? 'Complete the module, then upload proof for verification.'
                       : 'Partner approval required. Upload proof so the partner team can verify.'
                   }

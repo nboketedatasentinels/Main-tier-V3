@@ -21,7 +21,7 @@ This creates one mental model across the entire ecosystem.
 
 | Journey | Duration | Windows | Pass Mark | Max Points | Per Window Target | Completion Badge |
 |---------|----------|---------|-----------|------------|-------------------|------------------|
-| 4-Week Intro | 4 weeks | 2 | 9,000 | 15,000 | 4,500 | Starter |
+| 4-Week Intro | 4 weeks | 2 | 9,000 | 15,000 | 7,500 | Starter |
 | 6-Week Power | 6 weeks | 3 | 40,000 | 60,000 | 13,500 | Powerful |
 | 3-Month | 12 weeks | 6 | 75,000 | 113,000 | 12,500 | Innovator |
 | 6-Month | 24 weeks | 12 | 150,000 | 226,000 | 12,500 | Pioneer |
@@ -49,9 +49,9 @@ This creates one mental model across the entire ecosystem.
 
 | Activity | Frequency | Approval Type | Points Each | 4-Week Max |
 |----------|-----------|---------------|-------------|------------|
-| Watch Podcast | 2 | Auto Marks | 1,000 | 2,000 |
+| Watch Podcast | 3 | Auto Marks | 1,000 | 3,000 |
 | Attend webinar + workbook | 1 | Partner Approved | 3,000 | 3,000 |
-| Impact Log Entry | 1 | Auto Marks | 1,000 | 1,000 |
+| Impact Log Entry | 2 | Auto Marks | 1,000 | 2,000 |
 | LIFT Course Module Completed | 1 | Partner Issued | 3,000 | 3,000 |
 | Attend book club session | 1 | Partner Issued | 2,500 | 2,500 |
 | Attend shameless circle session | 1 | Partner Issued | 2,500 | 2,500 |
@@ -281,7 +281,7 @@ Using 12,500 as the baseline for 3-month and beyond (parameterized per journey):
 
 | Journey | Duration | Windows | Pass Mark | Target per 2-Week Window |
 |---------|----------|---------|-----------|--------------------------|
-| 4-Week Intro | 4 weeks | 2 | 9,000 | 4,500 |
+| 4-Week Intro | 4 weeks | 2 | 9,000 | 7,500 |
 | 6-Week Power | 6 weeks | 3 | 40,000 | 13,500 |
 | 3-Month | 12 weeks | 6 | 75,000 | 12,500 |
 | 6-Month | 24 weeks | 12 | 150,000 | 12,500 |
@@ -482,7 +482,7 @@ interface ActivityClaim {
 ### Learner Messaging
 
 **4-Week Intro Journey:**
-> "To stay on track, aim for at least 4,500 points every two weeks."
+> "To stay on track, aim for at least 7,500 points every two weeks."
 
 **6-Week Power Journey:**
 > "To stay on track, aim for at least 13,500 points every two weeks."
