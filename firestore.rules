@@ -208,6 +208,15 @@ service cloud.firestore {
           && data.assignedOrganizations.all(assignment, isValidPartnerAssignment(assignment)));
     }
 
+    function isPointsMirrorUpdate() {
+      return request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+        'totalPoints',
+        'level',
+        'pointsVersion',
+        'updatedAt',
+      ]);
+    }
+
     function hasParticipantsList(data) {
       return data.keys().hasAll(['participants']) && data.participants is list;
     }
@@ -285,7 +294,8 @@ service cloud.firestore {
       );
       allow update: if isAuthenticated() && (
         isSuperAdmin() ||
-        (isOwner(userId) && (!request.resource.data.diff(resource.data).affectedKeys().hasAny(['role'])))
+        (isOwner(userId) && (!request.resource.data.diff(resource.data).affectedKeys().hasAny(['role']))) ||
+        (isPartnerOrAdmin() && isPointsMirrorUpdate())
       );
       allow delete: if isSuperAdmin();
     }
@@ -299,7 +309,8 @@ service cloud.firestore {
       );
       allow update: if isAuthenticated() && (
         isSuperAdmin() ||
-        (isOwner(userId) && (!request.resource.data.diff(resource.data).affectedKeys().hasAny(['role'])))
+        (isOwner(userId) && (!request.resource.data.diff(resource.data).affectedKeys().hasAny(['role']))) ||
+        (isPartnerOrAdmin() && isPointsMirrorUpdate())
       );
       allow delete: if isSuperAdmin();
     }

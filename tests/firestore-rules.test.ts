@@ -94,6 +94,36 @@ describe("Firestore Security Rules", () => {
       const aliceDoc = doc(db, "users/alice");
       await assertSucceeds(updateDoc(aliceDoc, { role: "partner" }));
     });
+
+    it("allows a partner to mirror points fields on users and profiles", async () => {
+      await testEnv.withSecurityRulesDisabled(async (context) => {
+        const adminDb = context.firestore();
+        await setDoc(doc(adminDb, "users/partner-user"), { role: "partner" });
+        await setDoc(doc(adminDb, "users/alice"), { role: "user", totalPoints: 100, level: 1 });
+        await setDoc(doc(adminDb, "profiles/alice"), { role: "user", totalPoints: 100, level: 1 });
+      });
+
+      const db = getAuthenticatedContext("partner-user").firestore();
+      await assertSucceeds(
+        updateDoc(doc(db, "users/alice"), {
+          totalPoints: 200,
+          level: 2,
+          pointsVersion: 2,
+        }),
+      );
+      await assertSucceeds(
+        updateDoc(doc(db, "profiles/alice"), {
+          totalPoints: 200,
+          level: 2,
+          pointsVersion: 2,
+        }),
+      );
+      await assertFails(
+        updateDoc(doc(db, "users/alice"), {
+          firstName: "Tampered",
+        }),
+      );
+    });
   });
 
   describe("Points Ledger", () => {
