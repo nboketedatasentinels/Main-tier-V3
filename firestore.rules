@@ -477,13 +477,26 @@ service cloud.firestore {
 
     // Points verification requests
     match /points_verification_requests/{requestId} {
-      allow read: if isAuthenticated() && (
+      // Allow owner doc-id lookups so transaction.get works for first-time submissions.
+      allow get: if isAuthenticated() && (
+        requestId.matches(request.auth.uid + '__.*') ||
+        request.auth.uid == resource.data.user_id ||
+        isPartnerOrAdmin()
+      );
+      allow list: if isAuthenticated() && (
         request.auth.uid == resource.data.user_id ||
         isPartnerOrAdmin()
       );
       allow create: if isAuthenticated() && request.auth.uid == request.resource.data.user_id;
-      allow update: if isPartnerOrAdmin() && (
-        resource.data.user_id != request.auth.uid || isSuperAdmin()
+      allow update: if (
+        isPartnerOrAdmin() && (
+          resource.data.user_id != request.auth.uid || isSuperAdmin()
+        )
+      ) || (
+        isAuthenticated() &&
+        request.auth.uid == resource.data.user_id &&
+        request.resource.data.user_id == resource.data.user_id &&
+        request.resource.data.status == 'pending'
       );
       allow delete: if isSuperAdmin();
     }
@@ -1037,13 +1050,29 @@ service cloud.firestore {
 
     // Approvals collection
     match /approvals/{approvalId} {
-      allow read: if isAuthenticated() && (
+      // Allow owner doc-id lookups for transaction-based request submission flows.
+      allow get: if isAuthenticated() && (
+        approvalId.matches(request.auth.uid + '__.*') ||
+        resource.data.userId == request.auth.uid ||
+        isPartnerOrAdmin()
+      );
+      allow list: if isAuthenticated() && (
         resource.data.userId == request.auth.uid ||
         isPartnerOrAdmin()
       );
       allow create: if isAuthenticated() && request.resource.data.userId == request.auth.uid;
-      allow update: if isPartnerOrAdmin() && (
-        resource.data.userId != request.auth.uid || isSuperAdmin()
+      allow update: if (
+        isPartnerOrAdmin() && (
+          resource.data.userId != request.auth.uid || isSuperAdmin()
+        )
+      ) || (
+        isAuthenticated() &&
+        approvalId.matches(request.auth.uid + '__w.*') &&
+        resource.data.type == 'points_verification' &&
+        request.resource.data.type == 'points_verification' &&
+        request.auth.uid == resource.data.userId &&
+        request.resource.data.userId == resource.data.userId &&
+        request.resource.data.status == 'pending'
       );
       allow delete: if isSuperAdmin();
     }
