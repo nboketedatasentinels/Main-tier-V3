@@ -410,6 +410,7 @@ const buildLeadershipAuditEntry = (params: {
   organizationId: params.organizationId,
   userId: params.userId ?? null,
   adminId: params.actorId,
+  createdBy: params.actorId,
   createdAt: serverTimestamp(),
   metadata: {
     role: params.role,

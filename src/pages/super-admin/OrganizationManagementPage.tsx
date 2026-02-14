@@ -245,8 +245,13 @@ export const OrganizationManagementPage: React.FC<OrganizationManagementPageProp
       assignPartnerModal.onClose()
     } catch (error) {
       console.error(error)
-      toast({ title: 'Unable to update partner assignment', status: 'error' })
-      return
+      const message = error instanceof Error ? error.message : 'Unexpected error'
+      toast({
+        title: 'Unable to update partner assignment',
+        description: message,
+        status: 'error',
+      })
+      throw error instanceof Error ? error : new Error(message)
     }
   }
 
