@@ -42,6 +42,7 @@ export type ActivityStatus = 'not_started' | 'pending' | 'rejected' | 'completed
 export interface ActivityState extends ActivityDef {
   status: ActivityStatus
   availability: ReturnType<typeof calculateActivityAvailability>
+  freeTierNotice?: string
   proofUrl?: string
   notes?: string
   rejectionReason?: string | null
@@ -72,6 +73,13 @@ type LedgerRow = {
 function isAdminProfile(profile: { role?: string; userRole?: string } | null | undefined): boolean {
   const normalized = normalizeRole(profile?.role || profile?.userRole)
   return normalized === 'super_admin' || normalized === 'partner'
+}
+
+const FREE_TIER_HONOR_NOTICE = 'Free tier uses self-reported honor completion (no proof upload required).'
+
+function shouldUseHonorSystemForFreeUser(activity: ActivityDef, isFreeTierMember: boolean): boolean {
+  if (!isFreeTierMember) return false
+  return activity.approvalType === 'partner_approved' || Boolean(activity.requiresApproval)
 }
 
 export function useWeeklyChecklistViewModel() {
@@ -138,6 +146,7 @@ export function useWeeklyChecklistViewModel() {
   /* Derived guards                                                      */
   /* ------------------------------------------------------------------ */
   const isAdmin = useMemo(() => isAdminProfile(profile), [profile])
+  const isFreeTierMember = useMemo(() => isFreeUser(profile), [profile])
 
   const isWeekLocked = useMemo(() => {
     if (!journey) return false
@@ -350,7 +359,17 @@ export function useWeeklyChecklistViewModel() {
     const windowWeek = selectedWeek // your availability util expects windowWeek; adapt if you use getWindowWeekNumber
 
     const next: ActivityState[] = defs.map((def: ActivityDef) => {
-      const availability = calculateActivityAvailability(def, {
+      const honorSystemForFreeUser = shouldUseHonorSystemForFreeUser(def, isFreeTierMember)
+      const effectiveDef: ActivityDef = honorSystemForFreeUser
+        ? {
+            ...def,
+            approvalType: 'self',
+            requiresApproval: false,
+            verification: 'honor',
+          }
+        : def
+
+      const availability = calculateActivityAvailability(effectiveDef, {
         windowWeek,
         weekCount: ledgerCache.weekCounts[def.id] ?? 0,
         windowCount: ledgerCache.windowCounts[def.id] ?? 0,
@@ -367,15 +386,16 @@ export function useWeeklyChecklistViewModel() {
           : 'not_started'
 
       return {
-        ...def,
+        ...effectiveDef,
         status,
         availability,
+        freeTierNotice: honorSystemForFreeUser ? FREE_TIER_HONOR_NOTICE : undefined,
       }
     })
 
     setActivities(next)
     setLoading(false)
-  }, [journey, ledgerCache, profile, selectedWeek, user])
+  }, [isFreeTierMember, journey, ledgerCache, profile, selectedWeek, user])
 
   /* ------------------------------------------------------------------ */
   /* Weekly progress (realtime)                                           */
@@ -446,6 +466,9 @@ export function useWeeklyChecklistViewModel() {
         let changed = false
         const next = prev.map((activity) => {
           if (activity.status === 'completed') return activity
+          const requiresPartnerApprovalNow =
+            activity.approvalType === 'partner_approved' || Boolean(activity.requiresApproval)
+          if (!requiresPartnerApprovalNow) return activity
 
           const req = latestByActivity.get(activity.id)
           if (!req) return activity
@@ -648,11 +671,15 @@ export function useWeeklyChecklistViewModel() {
 
     const activity = activities.find((a) => a.id === deepLink.activityId)
     if (!activity) return
+    const requiresPartnerApproval =
+      activity.approvalType === 'partner_approved' || Boolean(activity.requiresApproval)
 
     const anchor = document.getElementById(`activity-${activity.id}`)
     anchor?.scrollIntoView({ behavior: 'smooth', block: 'center' })
 
-    openProofModal(activity)
+    if (requiresPartnerApproval) {
+      openProofModal(activity)
+    }
     handledDeepLinkRef.current = key
 
     const next = new URLSearchParams(searchParams)

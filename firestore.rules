@@ -609,6 +609,32 @@ service cloud.firestore {
       allow delete: if isPartnerOrAdmin();
     }
 
+    // Mentorship sessions
+    match /mentorship_sessions/{sessionId} {
+      allow read: if isAuthenticated() && (
+        request.auth.uid == resource.data.learner_id ||
+        request.auth.uid == resource.data.learnerId ||
+        request.auth.uid == resource.data.mentor_id ||
+        request.auth.uid == resource.data.mentorId ||
+        isPartnerOrAdmin()
+      );
+      allow create: if isAuthenticated() && (
+        request.auth.uid == request.resource.data.learner_id ||
+        request.auth.uid == request.resource.data.learnerId ||
+        request.auth.uid == request.resource.data.mentor_id ||
+        request.auth.uid == request.resource.data.mentorId ||
+        isPartnerOrAdmin()
+      );
+      allow update: if isAuthenticated() && (
+        request.auth.uid == resource.data.learner_id ||
+        request.auth.uid == resource.data.learnerId ||
+        request.auth.uid == resource.data.mentor_id ||
+        request.auth.uid == resource.data.mentorId ||
+        isPartnerOrAdmin()
+      );
+      allow delete: if isPartnerOrAdmin();
+    }
+
     // Peer session requests/invitations
     match /peer_session_requests/{requestId} {
       allow read: if isAuthenticated() && (

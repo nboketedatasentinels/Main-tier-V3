@@ -42,6 +42,8 @@ export const getWindowTarget = (params: {
 
 export const getWindowTargetByJourney = (journeyType: string, weeklyTarget: number): number => {
   switch (journeyType) {
+    case '4W':
+      return 7500
     case '6W':
       return 13500
     case '3M':
@@ -49,10 +51,8 @@ export const getWindowTargetByJourney = (journeyType: string, weeklyTarget: numb
       return 12500
     case '9M':
       return 12600
-    case '4W':
-      return 5000 // 2500 * 2
     case '12M':
-      return 8000 // 4000 * 2
+      return 12600
     default:
       return weeklyTarget * PARALLEL_WINDOW_SIZE_WEEKS
   }

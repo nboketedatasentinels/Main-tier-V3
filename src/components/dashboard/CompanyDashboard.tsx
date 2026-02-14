@@ -28,6 +28,8 @@ import {
   StatNumber,
   Tag,
   Text,
+  Tooltip,
+  useDisclosure,
   VStack,
 } from '@chakra-ui/react'
 import {
@@ -65,6 +67,7 @@ import { useAuth } from '@/hooks/useAuth'
 import { useOrganizationLeadership } from '@/hooks/useOrganizationLeadership'
 import { isFreeUser } from '@/utils/membership'
 import { getDisplayName } from '@/utils/displayName'
+import { UpgradePromptModal } from '@/components/UpgradePromptModal'
 
 interface WeeklyAggregation {
   id: string
@@ -197,8 +200,11 @@ const useRealtimeCollection = <T,>(
 export const CompanyDashboard: React.FC = () => {
   const { profile } = useAuth()
   const navigate = useNavigate()
+  const { isOpen: isUpgradeOpen, onOpen: onUpgradeOpen, onClose: onUpgradeClose } = useDisclosure()
 
   const [upgradeDismissed, setUpgradeDismissed] = useState(false)
+  const [upgradeFeatureName, setUpgradeFeatureName] = useState('Premium Feature')
+  const [upgradeBenefits, setUpgradeBenefits] = useState<string[]>([])
   const [faq, setFaq] = useState(faqFallback)
   const [liftProgress, setLiftProgress] = useState<LiftProgress | null>(null)
 
@@ -390,6 +396,17 @@ export const CompanyDashboard: React.FC = () => {
     setUpgradeDismissed(true)
   }, [])
 
+  const promptLeadershipUpgrade = useCallback(() => {
+    setUpgradeFeatureName('Leadership Council')
+    setUpgradeBenefits([
+      'Schedule leadership council sessions',
+      'Get premium mentor collaboration tools',
+      'Access advanced leadership tracks',
+      'Build consistent accountability routines',
+    ])
+    onUpgradeOpen()
+  }, [onUpgradeOpen])
+
   const peerWeekRange = useMemo(() => {
     const start = weekStart
     const end = new Date(start)
@@ -469,15 +486,32 @@ export const CompanyDashboard: React.FC = () => {
 
         <HStack spacing={2} mt={2}>
           {(role === 'mentor' || role === 'both') && lead?.email && (
-            <Button
-              as={Link}
-              href="/app/leadership-council"
-              leftIcon={<CalendarClock size={16} />}
-              size="sm"
-              variant="outline"
-            >
-              Schedule
-            </Button>
+            isFreeTierUser ? (
+              <Tooltip label="Upgrade to schedule leadership council sessions." hasArrow openDelay={200}>
+                <Box>
+                  <Button
+                    leftIcon={<CalendarClock size={16} />}
+                    size="sm"
+                    variant="outline"
+                    onClick={promptLeadershipUpgrade}
+                    opacity={0.55}
+                    filter="grayscale(1)"
+                  >
+                    Schedule
+                  </Button>
+                </Box>
+              </Tooltip>
+            ) : (
+              <Button
+                as={RouterLink}
+                to="/app/leadership-council"
+                leftIcon={<CalendarClock size={16} />}
+                size="sm"
+                variant="outline"
+              >
+                Schedule
+              </Button>
+            )
           )}
           {(role === 'ambassador' || role === 'both') && lead?.email && (
             <Button
@@ -1095,6 +1129,13 @@ export const CompanyDashboard: React.FC = () => {
           </Card>
         )}
       </Grid>
+
+      <UpgradePromptModal
+        featureName={upgradeFeatureName}
+        benefits={upgradeBenefits.length ? upgradeBenefits : ['Unlock premium collaboration features']}
+        isOpen={isUpgradeOpen}
+        onClose={onUpgradeClose}
+      />
     </Stack>
   )
 }

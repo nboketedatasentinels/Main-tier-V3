@@ -104,6 +104,8 @@ import { getDisplayName } from '@/utils/displayName'
 import { StartChallengeModal } from '@/components/modals/StartChallengeModal'
 import { ChallengesTab } from '@/components/leaderboard/ChallengesTab'
 import { cancelChallenge } from '@/services/challengeService'
+import { isFreeUser } from '@/utils/membership'
+import { UpgradePromptModal } from '@/components/UpgradePromptModal'
 import { format } from 'date-fns'
 
 interface FeaturedBadge {
@@ -152,6 +154,11 @@ export const LeadershipBoardPage: React.FC = () => {
   const { profile: authProfile, refreshProfile } = useAuth()
   const toast = useToast()
   const { isOpen, onOpen, onClose } = useDisclosure()
+  const {
+    isOpen: isUpgradeOpen,
+    onOpen: onUpgradeOpen,
+    onClose: onUpgradeClose,
+  } = useDisclosure()
   const { isOpen: isFiltersOpen, onToggle: onToggleFilters } = useDisclosure({ defaultIsOpen: false })
   const { isOpen: isLeaveOpen, onOpen: onLeaveOpen, onClose: onLeaveClose } = useDisclosure()
   const supportEmail = 'transform@t4leader.com'
@@ -167,6 +174,8 @@ export const LeadershipBoardPage: React.FC = () => {
   const [sortField, setSortField] = useState<'points' | 'name'>('points')
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('desc')
   const [currentProfile, setCurrentProfile] = useState<UserProfile | null>(null)
+  const [upgradeFeatureName, setUpgradeFeatureName] = useState('Premium Feature')
+  const [upgradeBenefits, setUpgradeBenefits] = useState<string[]>([])
   const [virtualOffset, setVirtualOffset] = useState(0)
   const [leaderboardPage, setLeaderboardPage] = useState(1)
   const [breakdownPage, setBreakdownPage] = useState(1)
@@ -200,6 +209,18 @@ export const LeadershipBoardPage: React.FC = () => {
       id: currentProfile?.id ?? authProfile?.id,
     } as UserProfile
   }, [authProfile, currentProfile])
+  const isFreeTierUser = useMemo(() => (profile ? isFreeUser(profile) : false), [profile])
+
+  const promptPeerConnectUpgrade = useCallback(() => {
+    setUpgradeFeatureName('Peer Connect')
+    setUpgradeBenefits([
+      'Access one-on-one peer matching',
+      'Join guided peer accountability sessions',
+      'Track weekly collaboration momentum',
+      'Unlock premium networking workflows',
+    ])
+    onUpgradeOpen()
+  }, [onUpgradeOpen])
 
   const context = useLeaderboardContext(profile)
   const contextLabels = useMemo(() => getLeaderboardContextLabels(context), [context])
@@ -840,9 +861,24 @@ export const LeadershipBoardPage: React.FC = () => {
               <Button variant="secondary" leftIcon={<Icon as={Trophy} />} onClick={onOpen}>
                 Join a challenge
               </Button>
-              <Button variant="outline" leftIcon={<Icon as={Users} />} onClick={() => navigate('/app/peer-connect')}>
-                Improve rank
-              </Button>
+              <Tooltip
+                label="Upgrade to unlock peer matching and collaboration sessions."
+                hasArrow
+                openDelay={200}
+                isDisabled={!isFreeTierUser}
+              >
+                <Box>
+                  <Button
+                    variant="outline"
+                    leftIcon={<Icon as={Users} />}
+                    onClick={isFreeTierUser ? promptPeerConnectUpgrade : () => navigate('/app/peer-connect')}
+                    opacity={isFreeTierUser ? 0.55 : 1}
+                    filter={isFreeTierUser ? 'grayscale(1)' : undefined}
+                  >
+                    Improve rank
+                  </Button>
+                </Box>
+              </Tooltip>
             </HStack>
           </Grid>
         </CardBody>
@@ -1599,6 +1635,13 @@ export const LeadershipBoardPage: React.FC = () => {
           </ModalContent>
         </Modal>
       )}
+
+      <UpgradePromptModal
+        featureName={upgradeFeatureName}
+        benefits={upgradeBenefits.length ? upgradeBenefits : ['Unlock premium collaboration features']}
+        isOpen={isUpgradeOpen}
+        onClose={onUpgradeClose}
+      />
 
       <StartChallengeModal
         isOpen={isOpen}

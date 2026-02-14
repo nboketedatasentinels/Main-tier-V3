@@ -343,6 +343,66 @@ describe("Firestore Security Rules", () => {
     });
   });
 
+  describe("Mentorship Sessions", () => {
+    it("allows a learner to query their own mentorship sessions", async () => {
+      await testEnv.withSecurityRulesDisabled(async (context) => {
+        const adminDb = context.firestore();
+        await setDoc(doc(adminDb, "mentorship_sessions/session1"), {
+          learner_id: "alice",
+          mentor_id: "mentor-1",
+          status: "scheduled",
+          topic: "Weekly check-in",
+        });
+      });
+
+      const db = getAuthenticatedContext("alice").firestore();
+      const sessionsQuery = query(
+        collection(db, "mentorship_sessions"),
+        where("learner_id", "==", "alice"),
+        where("status", "==", "scheduled"),
+      );
+      await assertSucceeds(getDocs(sessionsQuery));
+    });
+
+    it("allows a mentor to query their assigned mentorship sessions", async () => {
+      await testEnv.withSecurityRulesDisabled(async (context) => {
+        const adminDb = context.firestore();
+        await setDoc(doc(adminDb, "mentorship_sessions/session1"), {
+          learner_id: "alice",
+          mentor_id: "mentor-1",
+          status: "scheduled",
+          topic: "Goal planning",
+        });
+      });
+
+      const db = getAuthenticatedContext("mentor-1").firestore();
+      const sessionsQuery = query(
+        collection(db, "mentorship_sessions"),
+        where("mentor_id", "==", "mentor-1"),
+      );
+      await assertSucceeds(getDocs(sessionsQuery));
+    });
+
+    it("denies a user from querying another learner's mentorship sessions", async () => {
+      await testEnv.withSecurityRulesDisabled(async (context) => {
+        const adminDb = context.firestore();
+        await setDoc(doc(adminDb, "mentorship_sessions/session1"), {
+          learner_id: "alice",
+          mentor_id: "mentor-1",
+          status: "scheduled",
+          topic: "Private mentoring",
+        });
+      });
+
+      const db = getAuthenticatedContext("mallory").firestore();
+      const sessionsQuery = query(
+        collection(db, "mentorship_sessions"),
+        where("learner_id", "==", "alice"),
+      );
+      await assertFails(getDocs(sessionsQuery));
+    });
+  });
+
   describe("Role Normalization", () => {
     it("allows super-admin role variants to access admin collections", async () => {
       await testEnv.withSecurityRulesDisabled(async (context) => {

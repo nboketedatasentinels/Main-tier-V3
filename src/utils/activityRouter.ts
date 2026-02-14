@@ -46,7 +46,9 @@ export async function handleActivityCompletion<TActivity extends ActivityDef>(
         break;
 
       case 'partner_issued':
-        // These are locked until a partner assigns them.
+      case 'mentor_issued':
+      case 'ambassador_issued':
+        // These are locked until a partner/mentor/ambassador assigns them.
         // No action from learner side here.
         break;
 

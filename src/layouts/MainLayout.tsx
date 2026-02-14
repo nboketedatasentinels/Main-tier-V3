@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react'
+import React, { useCallback, useEffect, useMemo, useState } from 'react'
 import { Outlet, useLocation, useNavigate } from 'react-router-dom'
 import { RouteTransition } from '@/components/RouteTransition'
 import {
@@ -27,6 +27,7 @@ import {
   InputLeftElement,
   InputRightElement,
   Input,
+  Tooltip,
   useToast,
 } from '@chakra-ui/react'
 import {
@@ -53,6 +54,7 @@ import { ConfirmationWelcomeModal } from '@/components/modals/ConfirmationWelcom
 import { PlatformTour } from '@/components/tour/PlatformTour'
 import { NotificationDropdown } from '@/components/notifications/NotificationDropdown'
 import { isFreeUser as isFreeTierUser } from '@/utils/membership'
+import { UpgradePromptModal } from '@/components/UpgradePromptModal'
 import PointsNotificationListener from '@/components/PointsNotificationListener'
 
 interface NavItem {
@@ -82,17 +84,58 @@ const sectionLabelStyles = {
   color: 'brand.subtleText',
 } as const
 
+type RestrictedFeatureConfig = {
+  pathPrefix: string
+  featureName: string
+  tooltip: string
+  benefits: string[]
+}
+
+const RESTRICTED_FREE_FEATURES: RestrictedFeatureConfig[] = [
+  {
+    pathPrefix: '/app/peer-connect',
+    featureName: 'Peer Connect',
+    tooltip: 'Upgrade required to access peer matching and session scheduling.',
+    benefits: [
+      'One-on-one peer matching',
+      'Session scheduling and confirmations',
+      'Progress accountability workflows',
+      'Access to premium networking tools',
+    ],
+  },
+  {
+    pathPrefix: '/app/leadership-council',
+    featureName: 'Leadership Council',
+    tooltip: 'Upgrade required to join premium leadership council sessions.',
+    benefits: [
+      'Leadership council live sessions',
+      'Advanced facilitation playbooks',
+      'Premium discussion circles',
+      'Leadership growth tracking',
+    ],
+  },
+]
+
+const getRestrictedFeatureForPath = (path: string): RestrictedFeatureConfig | null =>
+  RESTRICTED_FREE_FEATURES.find((feature) => path.startsWith(feature.pathPrefix)) ?? null
+
 export const MainLayout: React.FC = () => {
   const { profile, signOut, signingOut } = useAuth()
   const windowContext = useCurrentWindow()
   const location = useLocation()
   const navigate = useNavigate()
   const { isOpen, onOpen, onClose } = useDisclosure()
+  const {
+    isOpen: isUpgradeModalOpen,
+    onOpen: onUpgradeModalOpen,
+    onClose: onUpgradeModalClose,
+  } = useDisclosure()
   const toast = useToast()
   const [showVillagePrompt, setShowVillagePrompt] = useState(false)
   const [showWelcomeModal, setShowWelcomeModal] = useState(false)
   const [showTour, setShowTour] = useState(false)
   const [globalSearchQuery, setGlobalSearchQuery] = useState('')
+  const [selectedRestrictedFeature, setSelectedRestrictedFeature] = useState<RestrictedFeatureConfig | null>(null)
 
   const buildVillageKey = useMemo(() => (profile ? `t4l.buildVillage.${profile.id}` : null), [profile])
   const welcomeKey = useMemo(() => (profile ? `t4l.newUserWelcome.${profile.id}` : null), [profile])
@@ -230,6 +273,26 @@ export const MainLayout: React.FC = () => {
     [filteredNavigation],
   )
 
+  const openUpgradePrompt = useCallback(
+    (feature: RestrictedFeatureConfig) => {
+      setSelectedRestrictedFeature(feature)
+      onUpgradeModalOpen()
+      toast({
+        title: 'Upgrade required',
+        description: `${feature.featureName} is available on paid plans.`,
+        status: 'info',
+        duration: 3500,
+        isClosable: true,
+      })
+    },
+    [onUpgradeModalOpen, toast],
+  )
+
+  const closeUpgradePrompt = useCallback(() => {
+    onUpgradeModalClose()
+    setSelectedRestrictedFeature(null)
+  }, [onUpgradeModalClose])
+
   const searchableNavigation = useMemo(
     () =>
       filteredNavigation.flatMap(section =>
@@ -250,17 +313,9 @@ export const MainLayout: React.FC = () => {
   }, [globalSearchQuery, searchableNavigation])
 
   const handleNavigation = (path: string) => {
-    const restrictedPaths = ['/app/peer-connect', '/app/leadership-council']
-
-    if (isFreeUser && restrictedPaths.some(restricted => path.startsWith(restricted))) {
-      toast({
-        title: 'Upgrade required',
-        description: 'This feature is available to paid members. Upgrade to continue.',
-        status: 'info',
-        duration: 3500,
-        isClosable: true,
-      })
-      navigate('/app/weekly-glance', { replace: true })
+    const restrictedFeature = isFreeUser ? getRestrictedFeatureForPath(path) : null
+    if (restrictedFeature) {
+      openUpgradePrompt(restrictedFeature)
       onClose()
       return
     }
@@ -328,6 +383,8 @@ export const MainLayout: React.FC = () => {
               {section.items.map(item => {
                 const isActive = location.pathname.startsWith(item.path)
                 const fontWeight = isActive || item.isPrimary ? 'semibold' : 'medium'
+                const restrictedFeature = isFreeUser ? getRestrictedFeatureForPath(item.path) : null
+                const isRestrictedForFreeUser = Boolean(restrictedFeature)
 
                 // Add data-tour attributes for tour targets
                 const getTourAttribute = (path: string) => {
@@ -338,7 +395,7 @@ export const MainLayout: React.FC = () => {
                   return undefined
                 }
 
-                return (
+                const navButton = (
                   <Button
                     key={item.path}
                     variant="ghost"
@@ -356,6 +413,7 @@ export const MainLayout: React.FC = () => {
                     fontSize="sm"
                     aria-current={isActive ? 'page' : undefined}
                     data-tour={getTourAttribute(item.path)}
+                    sx={isRestrictedForFreeUser ? { opacity: 0.55, filter: 'grayscale(1)', cursor: 'not-allowed' } : undefined}
                   >
                     <HStack spacing={3} w="full" justify="space-between">
                       <HStack spacing={3}>
@@ -363,6 +421,11 @@ export const MainLayout: React.FC = () => {
                           <item.icon size={20} />
                         </Box>
                         <Text color="inherit">{item.label}</Text>
+                        {isRestrictedForFreeUser ? (
+                          <Badge colorScheme="yellow" variant="subtle">
+                            Upgrade
+                          </Badge>
+                        ) : null}
                       </HStack>
                       {item.badge && (
                         <Badge px={2} borderRadius="full" fontSize="xs" {...badgeStyles}>
@@ -371,6 +434,14 @@ export const MainLayout: React.FC = () => {
                       )}
                     </HStack>
                   </Button>
+                )
+
+                if (!isRestrictedForFreeUser || !restrictedFeature) return navButton
+
+                return (
+                  <Tooltip key={item.path} label={restrictedFeature.tooltip} hasArrow openDelay={200}>
+                    <Box>{navButton}</Box>
+                  </Tooltip>
                 )
               })}
             </VStack>
@@ -523,26 +594,46 @@ export const MainLayout: React.FC = () => {
               >
                 {searchResults.length > 0 ? (
                   <VStack spacing={0} align="stretch">
-                    {searchResults.map(result => (
-                      <Button
-                        key={result.path}
-                        variant="ghost"
-                        justifyContent="space-between"
-                        borderRadius="0"
-                        h="auto"
-                        py={2.5}
-                        px={3}
-                        onClick={() => handleSearchNavigation(result.path)}
-                        _hover={{ bg: 'brand.primaryMuted' }}
-                      >
-                        <Text fontSize="sm" color="brand.text">
-                          {result.label}
-                        </Text>
-                        <Text fontSize="xs" color="brand.subtleText">
-                          {result.sectionLabel}
-                        </Text>
-                      </Button>
-                    ))}
+                    {searchResults.map(result => {
+                      const restrictedFeature = isFreeUser ? getRestrictedFeatureForPath(result.path) : null
+                      const isRestrictedForFreeUser = Boolean(restrictedFeature)
+                      const searchButton = (
+                        <Button
+                          key={result.path}
+                          variant="ghost"
+                          justifyContent="space-between"
+                          borderRadius="0"
+                          h="auto"
+                          py={2.5}
+                          px={3}
+                          onClick={() => handleSearchNavigation(result.path)}
+                          _hover={{ bg: 'brand.primaryMuted' }}
+                          sx={isRestrictedForFreeUser ? { opacity: 0.55, filter: 'grayscale(1)' } : undefined}
+                        >
+                          <HStack spacing={2}>
+                            <Text fontSize="sm" color="brand.text">
+                              {result.label}
+                            </Text>
+                            {isRestrictedForFreeUser ? (
+                              <Badge colorScheme="yellow" variant="subtle">
+                                Upgrade
+                              </Badge>
+                            ) : null}
+                          </HStack>
+                          <Text fontSize="xs" color="brand.subtleText">
+                            {result.sectionLabel}
+                          </Text>
+                        </Button>
+                      )
+
+                      if (!isRestrictedForFreeUser || !restrictedFeature) return searchButton
+
+                      return (
+                        <Tooltip key={result.path} label={restrictedFeature.tooltip} hasArrow openDelay={200}>
+                          <Box>{searchButton}</Box>
+                        </Tooltip>
+                      )
+                    })}
                   </VStack>
                 ) : (
                   <Text px={3} py={2.5} fontSize="sm" color="brand.subtleText">
@@ -615,28 +706,40 @@ export const MainLayout: React.FC = () => {
           <HStack spacing={1}>
             {primaryNavItems.map(item => {
               const isActive = location.pathname.startsWith(item.path)
+              const restrictedFeature = isFreeUser ? getRestrictedFeatureForPath(item.path) : null
+              const isRestrictedForFreeUser = Boolean(restrictedFeature)
               return (
-                <Button
+                <Tooltip
                   key={item.path}
-                  variant="ghost"
-                  flex="1"
-                  h={`${MOBILE_NAV_BUTTON_HEIGHT}px`}
-                  borderRadius="md"
-                  onClick={() => handleNavigation(item.path)}
-                  bg={isActive ? 'brand.primaryMuted' : 'transparent'}
-                  color={isActive ? 'brand.primary' : 'brand.subtleText'}
-                  _hover={{ bg: 'brand.primaryMuted', color: 'brand.primary' }}
-                  aria-current={isActive ? 'page' : undefined}
+                  label={restrictedFeature?.tooltip}
+                  hasArrow
+                  openDelay={200}
+                  isDisabled={!isRestrictedForFreeUser}
                 >
-                  <VStack spacing={1}>
-                    <Box color="inherit">
-                      <item.icon size={18} />
-                    </Box>
-                    <Text fontSize="2xs" noOfLines={1}>
-                      {item.label}
-                    </Text>
-                  </VStack>
-                </Button>
+                  <Box flex="1">
+                    <Button
+                      variant="ghost"
+                      w="full"
+                      h={`${MOBILE_NAV_BUTTON_HEIGHT}px`}
+                      borderRadius="md"
+                      onClick={() => handleNavigation(item.path)}
+                      bg={isActive ? 'brand.primaryMuted' : 'transparent'}
+                      color={isActive ? 'brand.primary' : 'brand.subtleText'}
+                      _hover={{ bg: 'brand.primaryMuted', color: 'brand.primary' }}
+                      aria-current={isActive ? 'page' : undefined}
+                      sx={isRestrictedForFreeUser ? { opacity: 0.55, filter: 'grayscale(1)' } : undefined}
+                    >
+                      <VStack spacing={1}>
+                        <Box color="inherit">
+                          <item.icon size={18} />
+                        </Box>
+                        <Text fontSize="2xs" noOfLines={1}>
+                          {item.label}
+                        </Text>
+                      </VStack>
+                    </Button>
+                  </Box>
+                </Tooltip>
               )
             })}
             <Button
@@ -737,6 +840,19 @@ export const MainLayout: React.FC = () => {
       />
 
       <PlatformTour isOpen={showTour} onClose={() => setShowTour(false)} />
+
+      <UpgradePromptModal
+        featureName={selectedRestrictedFeature?.featureName ?? 'Premium Feature'}
+        benefits={
+          selectedRestrictedFeature?.benefits ?? [
+            'Unlock paid-only collaboration features',
+            'Access advanced leadership tools',
+            'Use the full journey and community toolkit',
+          ]
+        }
+        isOpen={isUpgradeModalOpen}
+        onClose={closeUpgradePrompt}
+      />
 
       <PointsNotificationListener />
     </Flex>

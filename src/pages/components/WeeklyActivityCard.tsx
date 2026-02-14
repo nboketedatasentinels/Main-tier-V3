@@ -304,6 +304,14 @@ export const WeeklyActivityCard = ({
           <Text fontSize="sm" color="gray.600">
             {activity.description}
           </Text>
+          {activity.freeTierNotice ? (
+            <HStack spacing={2} color="green.700">
+              <Icon as={CheckCircle} size={14} />
+              <Text fontSize="sm" fontWeight="medium">
+                {activity.freeTierNotice}
+              </Text>
+            </HStack>
+          ) : null}
 
           {lockReason ? (
             <Stack spacing={2} align="flex-start">

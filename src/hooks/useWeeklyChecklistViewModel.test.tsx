@@ -7,6 +7,7 @@ import { submitPointsVerificationRequestAtomic } from '@/services/pointsRequestS
 const toastSpy = vi.fn()
 const setSearchParamsSpy = vi.fn()
 const stableSearchParams = new URLSearchParams()
+const isFreeUserMock = vi.fn(() => false)
 const stableAuthState = {
   user: { uid: 'user-1' },
   profile: {
@@ -30,7 +31,7 @@ vi.mock('@/hooks/useAuth', () => ({
 }))
 
 vi.mock('@/utils/membership', () => ({
-  isFreeUser: () => false,
+  isFreeUser: (...args: unknown[]) => isFreeUserMock(...args),
 }))
 
 vi.mock('@/utils/journeyType', () => ({
@@ -152,6 +153,7 @@ describe('useWeeklyChecklistViewModel proof submission', () => {
 
   beforeEach(() => {
     vi.clearAllMocks()
+    isFreeUserMock.mockReturnValue(false)
     consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => undefined)
     submitProofSpy.mockResolvedValue({ requestId: 'req-1' })
   })
@@ -234,5 +236,17 @@ describe('useWeeklyChecklistViewModel proof submission', () => {
         status: 'error',
       }),
     )
+  })
+
+  it('uses honor-system completion shape for free users on partner-approved activities', async () => {
+    isFreeUserMock.mockReturnValue(true)
+    const hook = await mountViewModel()
+    const activity = hook.result.current.activities[0]
+
+    expect(activity.approvalType).toBe('self')
+    expect(activity.requiresApproval).toBe(false)
+    expect(activity.verification).toBe('honor')
+    expect(activity.description).toBe('Requires proof')
+    expect(activity.freeTierNotice).toBe('Free tier uses self-reported honor completion (no proof upload required).')
   })
 })
