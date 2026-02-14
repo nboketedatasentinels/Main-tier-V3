@@ -46,9 +46,21 @@ export async function handleActivityCompletion<TActivity extends ActivityDef>(
         break;
 
       case 'partner_issued':
+        if ((activity as TActivity & { issuedByPartner?: boolean }).issuedByPartner) {
+          await awardChecklistPoints({
+            uid,
+            journeyType,
+            weekNumber,
+            activity,
+            source: 'instant:partner-issued-claim',
+          });
+          await onSuccess('completed');
+        }
+        break;
+
       case 'mentor_issued':
       case 'ambassador_issued':
-        // These are locked until a partner/mentor/ambassador assigns them.
+        // These remain locked until assignment logic is implemented.
         // No action from learner side here.
         break;
 

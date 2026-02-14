@@ -33,7 +33,8 @@ export const ActivityList = ({
       visibleActivities.find(
         (activity) =>
           activity.availability.state === 'available' &&
-          (activity.status === 'not_started' || activity.status === 'rejected'),
+          (activity.status === 'not_started' || activity.status === 'rejected') &&
+          !(activity.approvalType === 'partner_issued' && !activity.issuedByPartner),
       )?.id ?? null,
     [visibleActivities],
   )

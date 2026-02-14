@@ -5,6 +5,9 @@ type ChecklistActivityEntry = {
   id: string
   status?: string
   hasInteracted?: boolean
+  issuedByPartner?: boolean
+  issuedBy?: string | null
+  issuedAt?: string | null
   proofUrl?: string | null
   notes?: string | null
   rejectionReason?: string | null
@@ -17,6 +20,9 @@ type ChecklistDoc = {
 type ChecklistActivityPatch = {
   status?: string
   hasInteracted?: boolean
+  issuedByPartner?: boolean
+  issuedBy?: string | null
+  issuedAt?: string | null
   proofUrl?: string | null
   notes?: string | null
   rejectionReason?: string | null

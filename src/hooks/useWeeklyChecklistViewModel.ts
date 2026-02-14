@@ -43,6 +43,9 @@ export interface ActivityState extends ActivityDef {
   status: ActivityStatus
   availability: ReturnType<typeof calculateActivityAvailability>
   freeTierNotice?: string
+  issuedByPartner?: boolean
+  issuedBy?: string | null
+  issuedAt?: string | null
   proofUrl?: string
   notes?: string
   rejectionReason?: string | null
@@ -183,6 +186,9 @@ export function useWeeklyChecklistViewModel() {
             notes: a.notes,
             rejectionReason: a.rejectionReason,
             hasInteracted: a.hasInteracted,
+            issuedByPartner: a.issuedByPartner,
+            issuedBy: a.issuedBy,
+            issuedAt: a.issuedAt,
           }),
         ),
         updatedAt: serverTimestamp(),
@@ -366,10 +372,12 @@ export function useWeeklyChecklistViewModel() {
 
     const hasMentor = Boolean(profile?.mentorId || profile?.mentorOverrideId)
     const hasAmbassador = Boolean(profile?.ambassadorId || profile?.ambassadorOverrideId)
+    const previousById = new Map(activitiesRef.current.map((activity) => [activity.id, activity]))
 
     const windowWeek = selectedWeek // your availability util expects windowWeek; adapt if you use getWindowWeekNumber
 
     const next: ActivityState[] = defs.map((def: ActivityDef) => {
+      const previous = previousById.get(def.id)
       const honorSystemForFreeUser = shouldUseHonorSystemForFreeUser(def, isFreeTierMember)
       const effectiveDef: ActivityDef = honorSystemForFreeUser
         ? {
@@ -400,6 +408,11 @@ export function useWeeklyChecklistViewModel() {
         ...effectiveDef,
         status,
         availability,
+        issuedByPartner:
+          previous?.issuedByPartner ??
+          (effectiveDef.approvalType === 'partner_issued' ? false : undefined),
+        issuedBy: previous?.issuedBy ?? undefined,
+        issuedAt: previous?.issuedAt ?? undefined,
         freeTierNotice: shouldRequireSuperAdminReviewForFreeUser(def, isFreeTierMember)
           ? FREE_TIER_SUPER_ADMIN_REVIEW_NOTICE
           : honorSystemForFreeUser
@@ -580,6 +593,9 @@ export function useWeeklyChecklistViewModel() {
                     ? 'completed'
                     : (remote.status ?? activity.status),
                 hasInteracted: remote.hasInteracted ?? activity.hasInteracted,
+                issuedByPartner: remote.issuedByPartner ?? activity.issuedByPartner,
+                issuedBy: remote.issuedBy ?? activity.issuedBy,
+                issuedAt: remote.issuedAt ?? activity.issuedAt,
                 proofUrl: remote.proofUrl ?? activity.proofUrl,
                 notes: remote.notes ?? activity.notes,
                 rejectionReason: remote.rejectionReason ?? activity.rejectionReason,
@@ -588,6 +604,9 @@ export function useWeeklyChecklistViewModel() {
               const changed =
                 next.status !== activity.status ||
                 next.hasInteracted !== activity.hasInteracted ||
+                next.issuedByPartner !== activity.issuedByPartner ||
+                next.issuedBy !== activity.issuedBy ||
+                next.issuedAt !== activity.issuedAt ||
                 next.proofUrl !== activity.proofUrl ||
                 next.notes !== activity.notes ||
                 next.rejectionReason !== activity.rejectionReason
@@ -643,6 +662,7 @@ export function useWeeklyChecklistViewModel() {
       if (!journey) return false
       if (isWeekLocked) return false
       if (activity.hasInteracted && activity.status !== 'rejected') return false
+      if (activity.approvalType === 'partner_issued' && !activity.issuedByPartner) return false
       if (activity.availability.state !== 'available') return false
       return true
     },

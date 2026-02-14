@@ -65,6 +65,7 @@ export const WeeklyActivityCard = ({
 }) => {
   const requiresPartnerApproval = Boolean(activity.approvalType === 'partner_approved' || activity.requiresApproval)
   const isPartnerIssued = activity.approvalType === 'partner_issued'
+  const lockedByPartnerIssue = isPartnerIssued && !activity.issuedByPartner && !isAdmin && activity.status !== 'completed'
   const isMobile = useBreakpointValue({ base: true, md: false }) ?? false
   const [detailsOpen, setDetailsOpen] = useState(!isMobile)
 
@@ -76,8 +77,8 @@ export const WeeklyActivityCard = ({
   const lockedByAvailability = activity.availability.state !== 'available' && !isAdmin && activity.status === 'not_started'
   const lockedByInteraction = Boolean(activity.hasInteracted) && activity.status !== 'rejected' && !isAdmin
 
-  const disabled = lockedByWeek || lockedByAvailability || lockedByInteraction
-  const primaryActionDisabled = isPartnerIssued ? true : disabled || activity.status === 'completed' || isActionInFlight
+  const disabled = lockedByWeek || lockedByAvailability || lockedByInteraction || lockedByPartnerIssue
+  const primaryActionDisabled = disabled || activity.status === 'completed' || isActionInFlight
   const visibilityState = getVisibilityState(activity)
   const visibilityBadge = (() => {
     if (lockedByWeek) {
@@ -106,6 +107,7 @@ export const WeeklyActivityCard = ({
     if (isAdmin) return null
     if (lockedByWeek) return `Week ${selectedWeek} opens after Week ${currentWeek}.`
     if (lockedByInteraction) return 'Selection saved for this week. Need a change? Support can help.'
+    if (lockedByPartnerIssue) return 'Your partner needs to issue this activity before you can complete it.'
 
     if (activity.availability.state === 'next_window') {
       const currentWindow = getWindowNumber(selectedWeek, PARALLEL_WINDOW_SIZE_WEEKS)
@@ -118,10 +120,6 @@ export const WeeklyActivityCard = ({
 
     if (activity.availability.state === 'permanently_exhausted') {
       return 'Nice work. This one-time activity is already completed.'
-    }
-
-    if (isPartnerIssued && activity.status === 'not_started') {
-      return 'Your partner will assign this activity to you.'
     }
 
     if (lockedByAvailability) return 'This activity opens when schedule and support conditions are met.'
@@ -239,7 +237,7 @@ export const WeeklyActivityCard = ({
                   <Badge colorScheme="purple">Partner approval</Badge>
                 </Tooltip>
               ) : isPartnerIssued ? (
-                <Tooltip label="Assigned directly by your partner.">
+                <Tooltip label={activity.issuedByPartner ? 'Issued by your partner and ready for completion.' : 'Waiting for partner issuance.'}>
                   <Badge colorScheme="blue">Partner issued</Badge>
                 </Tooltip>
               ) : activity.approvalType === 'auto' ? (
@@ -379,10 +377,16 @@ export const WeeklyActivityCard = ({
           <Button
             size="sm"
             colorScheme="blue"
-            variant="outline"
-            isDisabled={true}
+            variant={activity.status === 'completed' ? 'solid' : 'outline'}
+            isDisabled={primaryActionDisabled}
+            isLoading={isActionInFlight}
+            onClick={() => onMarkCompleted(activity)}
           >
-            {activity.status === 'completed' ? 'Assigned' : 'Awaiting Assignment'}
+            {activity.status === 'completed'
+              ? 'Completed'
+              : activity.issuedByPartner
+                ? 'Mark Complete'
+                : 'Awaiting Assignment'}
           </Button>
         ) : (
           <Button

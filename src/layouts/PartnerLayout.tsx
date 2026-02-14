@@ -76,6 +76,7 @@ export const PartnerLayout: React.FC<PartnerLayoutProps> = ({
       overview: 'Overview',
       'at-risk': 'At-Risk',
       users: 'Users',
+      'partner-assignment': 'Issue',
       'organization-management': 'Orgs',
       reports: 'Reports',
       settings: 'Settings',

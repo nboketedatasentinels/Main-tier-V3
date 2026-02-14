@@ -185,4 +185,33 @@ describe('WeeklyActivityCard exit actions', () => {
     fireEvent.click(claimButton)
     expect(props.onMarkCompleted).not.toHaveBeenCalled()
   })
+
+  it('keeps partner-issued activity locked before issuance', () => {
+    renderCard({
+      activity: makeActivity({
+        approvalType: 'partner_issued',
+        issuedByPartner: false,
+        status: 'not_started',
+      }),
+    })
+
+    const action = screen.getByRole('button', { name: 'Awaiting Assignment' })
+    expect(action).toBeDisabled()
+    expect(screen.getAllByText('Your partner needs to issue this activity before you can complete it.').length).toBeGreaterThan(0)
+  })
+
+  it('allows completion for partner-issued activity after issuance', () => {
+    const props = renderCard({
+      activity: makeActivity({
+        approvalType: 'partner_issued',
+        issuedByPartner: true,
+        status: 'not_started',
+      }),
+    })
+
+    const action = screen.getByRole('button', { name: 'Mark Complete' })
+    expect(action).not.toBeDisabled()
+    fireEvent.click(action)
+    expect(props.onMarkCompleted).toHaveBeenCalledTimes(1)
+  })
 })

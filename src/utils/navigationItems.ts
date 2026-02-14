@@ -70,6 +70,7 @@ export const buildPartnerNavItems = (): NavigationSection[] => [
       { key: 'overview', label: 'Overview', icon: LayoutDashboard },
       { key: 'at-risk', label: 'At-Risk Command Panel', icon: TrendingUp },
       { key: 'users', label: 'User Management', icon: Users },
+      { key: 'partner-assignment', label: 'Issue Activities', icon: ClipboardCheck },
       { key: 'organization-management', label: 'Organizations', icon: Building2 },
       { key: 'reports', label: 'Reports', icon: BarChart3 },
       { key: 'settings', label: 'Settings', icon: Settings },

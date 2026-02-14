@@ -6,13 +6,11 @@ import {
   where,
   doc,
   getDoc,
-  updateDoc,
-  serverTimestamp
 } from "firebase/firestore";
-import { awardChecklistPoints } from "./pointsService";
 import { getActivityDefinitionById, JourneyType } from "@/config/pointsConfig";
 import { UserProfile } from "@/types";
 import { createApprovalRequest } from "./approvalsService";
+import { upsertChecklistActivity } from "./checklistService";
 
 const chunkList = <T,>(items: T[], size: number): T[][] => {
   const chunks: T[][] = []
@@ -82,37 +80,20 @@ export async function assignActivityToLearner(params: {
       throw new Error("Activity definition not found");
     }
 
-    // 3. Award points with partner_issued source
-    await awardChecklistPoints({
-      uid: learnerId,
-      journeyType: journeyType as JourneyType,
+    // 3. Mark activity as partner-issued in checklist.
+    // Learner still completes the activity to claim points.
+    await upsertChecklistActivity({
+      userId: learnerId,
       weekNumber,
-      activity,
-      source: `partner_issued:${partnerId}`
+      activityId,
+      patch: {
+        issuedByPartner: true,
+        issuedBy: partnerId,
+        issuedAt: new Date().toISOString(),
+      },
     });
 
-    // 4. Update checklist status to 'completed'
-    const checklistRef = doc(db, 'checklists', `${learnerId}_${weekNumber}`);
-    const checklistSnap = await getDoc(checklistRef);
-    if (checklistSnap.exists()) {
-      const data = checklistSnap.data() as { activities?: { id: string; status?: string }[] };
-      const activities = data.activities ?? [];
-      const nextActivities = activities.map((a) =>
-        a.id === activityId ? { ...a, status: 'completed', hasInteracted: true } : a
-      );
-
-      // If activity not in list, add it (though it should be there if UI shows it)
-      if (!nextActivities.find(a => a.id === activityId)) {
-        nextActivities.push({ id: activityId, status: 'completed', hasInteracted: true });
-      }
-
-      await updateDoc(checklistRef, {
-        activities: nextActivities,
-        updatedAt: serverTimestamp(),
-      });
-    }
-
-    // 5. Create an approval record for history (auto-approved)
+    // 4. Create an approval record for history (issued event).
     await createApprovalRequest({
       userId: learnerId,
       type: 'partner_issued',
