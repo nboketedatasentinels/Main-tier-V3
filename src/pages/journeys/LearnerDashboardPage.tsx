@@ -183,7 +183,7 @@ export const LearnerDashboardPage = () => {
     {
       id: 'weekly-points',
       title: 'Points progress update',
-      description: `${earnedPoints} points accumulated toward your ${targetPoints || 0} point cycle goal.`,
+      description: `${earnedPoints} points accumulated toward your ${targetPoints || 0} point weekly goal.`,
       timestamp: `Week ${data.weekNumber} • ${daysRemaining} days left`,
       status: earnedPoints >= targetPoints && targetPoints > 0 ? 'complete' : earnedPoints > 0 ? 'pending' : 'attention',
     },

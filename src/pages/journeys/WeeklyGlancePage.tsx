@@ -44,6 +44,9 @@ import {
   getWeekDateRange,
 } from '@/utils/weekCalculations'
 
+// NOTE: This page is intentionally a partial migration: UI phrasing may be broader,
+// while data contracts remain weekly (`weeklyPoints`, `weekNumber`, week-based helpers).
+
 /**
  * Domain helpers (keeps business rules out of JSX as much as possible)
  */
@@ -86,6 +89,7 @@ type ActivityFeedItem = {
 }
 
 function buildWeeklyActivityFeed(params: {
+  // Weekly parameter names are retained intentionally while data contracts are week-based.
   earnedPoints: number
   targetPoints: number
   weekNumber: number
@@ -136,7 +140,7 @@ function buildWeeklyActivityFeed(params: {
     {
       id: 'weekly-points',
       title: 'Points progress update',
-      description: `${earnedPoints} points accumulated toward your ${targetPoints || 0} point cycle goal.`,
+      description: `${earnedPoints} points accumulated toward your ${targetPoints || 0} point weekly goal.`,
       timestamp: `Week ${weekNumber} • ${daysRemaining} days left`,
       status: pointsStatus,
     },
@@ -192,6 +196,7 @@ function useWeeklyGlanceViewModel() {
     [peerMatches],
   )
 
+  // Weekly variable names are deliberate until backend period support is generalized.
   const weekRange = useMemo(() => getWeekDateRange(), [])
   const daysRemaining = useMemo(() => getDaysRemainingInWeek(), [])
 
@@ -458,6 +463,7 @@ export const WeeklyGlancePage = () => {
         )}
 
         <Stack spacing={1}>
+          {/* Partial migration strategy: keep user copy general while weekly data contracts remain in place. */}
           <Heading size="lg" color="text.primary">
             Current Progress at a Glance
           </Heading>

@@ -8,6 +8,7 @@ interface WeeklyInspirationCardProps {
 }
 
 export const WeeklyInspirationCard = ({ data, loading }: WeeklyInspirationCardProps) => {
+  // Kept as weekly inspiration to align with week-number keyed quote selection in useWeeklyGlanceData.
   return (
     <Card bg="brand.primaryMuted" border="1px" borderColor="brand.border">
       <CardBody>

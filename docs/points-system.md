@@ -8,7 +8,7 @@
 
 The T4L platform uses a **cycle-based points system** where:
 
-- All journeys are divided into **2-week windows**
+- All journeys are divided into **2-week cycles**
 - Learners think in "this fortnight" - never months
 - Activities unlock, lock, rotate, and disappear temporarily
 - Points alone determine progress and passing
@@ -372,7 +372,7 @@ Status: On Track
 const getCurrentWindow = (startDate: Date, now: Date = new Date()): number => {
   const msPerWeek = 7 * 24 * 60 * 60 * 1000
   const weeksSinceStart = Math.floor((now.getTime() - startDate.getTime()) / msPerWeek)
-  return Math.floor(weeksSinceStart / 2) // 2-week windows
+  return Math.floor(weeksSinceStart / 2) // 2-week cycles
 }
 
 // Check if activity is available this cycle
@@ -517,7 +517,7 @@ interface ActivityClaim {
 1. **Cycle-based thinking** - Everything revolves around 2-week cycles
 2. **Points are king** - Only points determine progress, not activity count
 3. **Anti-overwhelm** - Never show the full universe of activities/points
-4. **Consistent rhythm** - Same ~12,500 points/window across journeys (after intro/power)
+4. **Consistent rhythm** - Same ~12,500 points/cycle across journeys (after intro/power)
 5. **Recovery-friendly** - Pacing allows for low-energy periods
 6. **Six claiming methods** - Auto, self-report, partner-approved, partner-issued, mentor-issued, ambassador-issued
 7. **Status-driven engagement** - Automated nudges proportional to learner status

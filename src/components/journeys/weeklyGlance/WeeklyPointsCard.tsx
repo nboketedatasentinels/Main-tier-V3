@@ -30,6 +30,7 @@ const statusColorMap: Record<string, string> = {
 }
 
 export const WeeklyPointsCard = ({ data, loading, error, onNavigate }: WeeklyPointsCardProps) => {
+  // Weekly cadence is intentional here because this card reads weeklyProgress fields from useWeeklyGlanceData.
   const progress = calculateWeekProgress(data?.points_earned || 0, data?.target_points || 0)
   const daysRemaining = getDaysRemainingInWeek()
   const statusColor = data?.status ? statusColorMap[data.status] || 'gray' : 'gray'
@@ -69,7 +70,7 @@ export const WeeklyPointsCard = ({ data, loading, error, onNavigate }: WeeklyPoi
             <VStack align="stretch" spacing={2}>
               <HStack justify="space-between">
                 <Text fontSize="xs" color="text.secondary">
-                  2-week cycle target
+                  Week target
                 </Text>
                 <Text fontWeight="bold" color="text.primary">{data ? `${targetPoints} pts` : '--'}</Text>
               </HStack>

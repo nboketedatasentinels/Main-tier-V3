@@ -148,6 +148,9 @@ interface WeeklyGlanceErrorState {
   ledger?: Error
 }
 
+// NOTE: Weekly naming is intentional for now because Firestore collections/doc ids are week-based.
+// TODO(periods): add a period abstraction before renaming `weekly*` fields to generic period terms.
+
 export const useWeeklyGlanceData = () => {
   const { profile } = useAuth()
   const [weeklyPoints, setWeeklyPoints] = useState<WeeklyPoints | null>(null)
@@ -178,6 +181,7 @@ export const useWeeklyGlanceData = () => {
     loading: leadershipLoading,
   } = useOrganizationLeadership(profile?.companyId, profile?.id, profile)
 
+  // Week-level keys remain the source of truth until non-weekly periods are supported.
   const weekNumber = useMemo(
     () => profile?.currentWeek || 1,
     [profile?.currentWeek],

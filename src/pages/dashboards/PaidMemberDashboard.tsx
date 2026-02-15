@@ -402,8 +402,8 @@ export const PaidMemberDashboard: React.FC = () => {
                     </Text>
                     <Text fontSize="sm" color="brand.subtleText" mt={1}>
                       {remainingActivities > 0
-                        ? `${remainingActivities} activities left in this cycle. Prioritize high-value actions to close your gap.`
-                        : 'All activities complete in this cycle. Use bonus actions to stretch your lead.'}
+                        ? `${remainingActivities} activities left this week. Prioritize high-value actions to close your gap.`
+                        : 'All activities complete this week. Use bonus actions to stretch your lead.'}
                     </Text>
                   </Box>
                 </Stack>
