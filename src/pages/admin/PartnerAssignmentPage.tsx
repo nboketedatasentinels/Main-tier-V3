@@ -85,12 +85,21 @@ export const PartnerAssignmentPage: React.FC = () => {
       return;
     }
 
+    if (!user?.uid) {
+      toast({
+        title: 'Sign-in required',
+        description: 'Your session is missing identity context. Please sign out and sign back in.',
+        status: 'error',
+      });
+      return;
+    }
+
     setLoading(true);
     try {
       await Promise.all(
         selectedLearners.map(learnerId =>
           assignActivityToLearner({
-            partnerId: user?.uid || '',
+            partnerId: user.uid,
             learnerId,
             activityId: selectedActivity,
             weekNumber
@@ -213,7 +222,7 @@ export const PartnerAssignmentPage: React.FC = () => {
               colorScheme="blue"
               onClick={handleAssign}
               isLoading={loading}
-              isDisabled={selectedLearners.length === 0 || !selectedActivity}
+              isDisabled={selectedLearners.length === 0 || !selectedActivity || !user?.uid}
             >
               Issue Activity to {selectedLearners.length} Learners
             </Button>

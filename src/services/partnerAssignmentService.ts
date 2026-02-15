@@ -61,8 +61,13 @@ export async function assignActivityToLearner(params: {
   weekNumber: number;
 }) {
   const { partnerId, learnerId, activityId, weekNumber } = params;
+  const normalizedPartnerId = partnerId.trim();
 
   try {
+    if (!normalizedPartnerId) {
+      throw new Error("Partner identity is missing");
+    }
+
     // 1. Fetch learner profile to get journeyType
     const profileRef = doc(db, "profiles", learnerId);
     const profileSnap = await getDoc(profileRef);
@@ -88,7 +93,7 @@ export async function assignActivityToLearner(params: {
       activityId,
       patch: {
         issuedByPartner: true,
-        issuedBy: partnerId,
+        issuedBy: normalizedPartnerId,
         issuedAt: new Date().toISOString(),
       },
     });
@@ -100,7 +105,7 @@ export async function assignActivityToLearner(params: {
       approvalType: 'partner_issued',
       title: activity.title,
       source: {
-        partnerId,
+        partnerId: normalizedPartnerId,
         weekNumber,
         activityId,
         assignedAt: new Date().toISOString()
