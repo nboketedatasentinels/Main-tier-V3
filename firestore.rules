@@ -1073,7 +1073,16 @@ service cloud.firestore {
         resource.data.userId == request.auth.uid ||
         isPartnerOrAdmin()
       );
-      allow create: if isAuthenticated() && request.resource.data.userId == request.auth.uid;
+      allow create: if isAuthenticated() && (
+        request.resource.data.userId == request.auth.uid ||
+        (
+          isPartnerOrAdmin() &&
+          request.resource.data.type == 'partner_issued' &&
+          request.resource.data.status == 'approved' &&
+          request.resource.data.source is map &&
+          request.resource.data.source.partnerId == request.auth.uid
+        )
+      );
       allow update: if (
         isPartnerOrAdmin() && (
           resource.data.userId != request.auth.uid || isSuperAdmin()

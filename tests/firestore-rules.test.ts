@@ -335,6 +335,52 @@ describe("Firestore Security Rules", () => {
   });
 
   describe("Approvals & Points Verification", () => {
+    it("allows partner to create partner-issued approvals for learners", async () => {
+      await testEnv.withSecurityRulesDisabled(async (context) => {
+        const adminDb = context.firestore();
+        await setDoc(doc(adminDb, "users/partner-user"), { role: "partner" });
+      });
+
+      const db = getAuthenticatedContext("partner-user").firestore();
+      const requestDoc = doc(db, "approvals/request-partner-issued");
+      await assertSucceeds(
+        setDoc(requestDoc, {
+          userId: "learner-1",
+          type: "partner_issued",
+          status: "approved",
+          source: {
+            partnerId: "partner-user",
+            weekNumber: 2,
+            activityId: "weekly_reflection",
+          },
+          title: "Weekly Reflection",
+        }),
+      );
+    });
+
+    it("prevents partner from creating partner-issued approval for another partner id", async () => {
+      await testEnv.withSecurityRulesDisabled(async (context) => {
+        const adminDb = context.firestore();
+        await setDoc(doc(adminDb, "users/partner-user"), { role: "partner" });
+      });
+
+      const db = getAuthenticatedContext("partner-user").firestore();
+      const requestDoc = doc(db, "approvals/request-partner-issued-invalid");
+      await assertFails(
+        setDoc(requestDoc, {
+          userId: "learner-1",
+          type: "partner_issued",
+          status: "approved",
+          source: {
+            partnerId: "other-partner",
+            weekNumber: 2,
+            activityId: "weekly_reflection",
+          },
+          title: "Weekly Reflection",
+        }),
+      );
+    });
+
     it("prevents self-approval in approvals collection", async () => {
       await testEnv.withSecurityRulesDisabled(async (context) => {
         const adminDb = context.firestore();
