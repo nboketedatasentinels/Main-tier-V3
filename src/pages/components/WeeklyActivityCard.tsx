@@ -8,7 +8,7 @@ import { Link as RouterLink } from 'react-router-dom'
 
 const statusLabel: Record<ActivityState['status'], string> = {
   not_started: 'Not started',
-  pending: 'Pending',
+  pending: 'Awaiting Partner Confirmation',
   rejected: 'Rejected',
   completed: 'Completed',
 }
@@ -142,7 +142,7 @@ export const WeeklyActivityCard = ({
     if (lockedByInteraction && activity.status === 'pending') {
       return (
         <Button as={RouterLink} size="xs" variant="outline" to="/app/weekly-checklist?focus=pending-approvals">
-          Review pending approval
+          Review pending confirmation
         </Button>
       )
     }
@@ -355,7 +355,7 @@ export const WeeklyActivityCard = ({
             <HStack spacing={2} color="blue.600">
               <Icon as={AlertTriangle} size={14} />
               <Text fontSize="sm">
-                Pending verification. Points post after approval.
+                Awaiting partner confirmation. Points post after approval.
               </Text>
             </HStack>
           ) : null}

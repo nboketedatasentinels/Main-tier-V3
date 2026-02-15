@@ -147,7 +147,7 @@ export const calculateActivityAvailability = (
 /**
  * Filter activities based on policy type and availability state.
  */
-export const getVisibleActivities = <T extends { availability: { state: ActivityAvailabilityState } }>(
+export const getVisibleActivities = <T extends { availability: { state: ActivityAvailabilityState; reason?: ActivityAvailabilityReason } }>(
   activities: T[],
 ): T[] => {
   const stateOrder: Record<ActivityAvailabilityState, number> = {
@@ -158,7 +158,12 @@ export const getVisibleActivities = <T extends { availability: { state: Activity
     exhausted: 4,
   }
 
-  return [...activities].sort((a, b) => {
+  const filtered = activities.filter((activity) => {
+    const reason = activity.availability.reason
+    return reason !== 'missing_mentor' && reason !== 'missing_ambassador'
+  })
+
+  return [...filtered].sort((a, b) => {
     // Sort by availability state
     return stateOrder[a.availability.state as ActivityAvailabilityState] - stateOrder[b.availability.state as ActivityAvailabilityState]
   })

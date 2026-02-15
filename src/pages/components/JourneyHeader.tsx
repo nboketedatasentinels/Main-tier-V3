@@ -23,8 +23,10 @@ import {
 } from '@/utils/journeyType'
 import { JOURNEY_META, getMonthNumber } from '@/config/pointsConfig'
 import { isFreeUser } from '@/utils/membership'
+import { calculatePassMark } from '@/utils/completion'
 import type { WeeklyProgress } from '@/types'
 import type { JourneyConfig } from '@/hooks/useWeeklyChecklistViewModel'
+import type { LeadershipAvailability } from '@/utils/leadershipAvailability'
 
 interface MonthMilestone {
   month: number
@@ -42,9 +44,11 @@ interface WeekMilestone {
 export const JourneyHeader = ({
   journey,
   progress,
+  leadershipAvailability,
 }: {
   journey: JourneyConfig | null
   progress: WeeklyProgress[]
+  leadershipAvailability?: LeadershipAvailability
 }) => {
   const { profile } = useAuth()
 
@@ -91,17 +95,26 @@ export const JourneyHeader = ({
     return JOURNEY_META[journey.journeyType]
   }, [journey])
 
+  const passMarkResult = useMemo(() => {
+    if (!journey) return null
+    return calculatePassMark(
+      journey.journeyType,
+      leadershipAvailability?.hasMentor ?? true,
+      leadershipAvailability?.hasAmbassador ?? true,
+    )
+  }, [journey, leadershipAvailability?.hasAmbassador, leadershipAvailability?.hasMentor])
+
   const journeyProgress = useMemo(() => {
     if (!journey || !journeyMeta) {
       return { activeWeeks: 0, passPct: 0, totalEarned: 0, passMarkPoints: 0, maxPossiblePoints: 0 }
     }
     const totalEarned = progress.reduce((sum, week) => sum + (week.pointsEarned ?? 0), 0)
     const activeWeeks = progress.filter((week) => (week.pointsEarned ?? 0) > 0).length
-    const passMarkPoints = journeyMeta.passMarkPoints
-    const maxPossiblePoints = journeyMeta.maxPossiblePoints
+    const passMarkPoints = passMarkResult?.adjustedThreshold ?? journeyMeta.passMarkPoints
+    const maxPossiblePoints = passMarkResult?.totalTarget ?? journeyMeta.maxPossiblePoints
     const passPct = passMarkPoints > 0 ? Math.min(100, Math.round((totalEarned / passMarkPoints) * 100)) : 0
     return { activeWeeks, passPct, totalEarned, passMarkPoints, maxPossiblePoints }
-  }, [journeyMeta, progress, journey])
+  }, [journeyMeta, passMarkResult?.adjustedThreshold, passMarkResult?.totalTarget, progress, journey])
 
   const monthMeta = useCallback(
     (month: number): MonthMilestone => {

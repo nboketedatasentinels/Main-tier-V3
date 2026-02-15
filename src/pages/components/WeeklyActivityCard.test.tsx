@@ -106,7 +106,7 @@ describe('WeeklyActivityCard exit actions', () => {
       }),
     })
 
-    const action = screen.getByRole('link', { name: 'Review pending approval' })
+    const action = screen.getByRole('link', { name: 'Review pending confirmation' })
     expect(action).toBeInTheDocument()
     expect(action).toHaveAttribute('href', '/app/weekly-checklist?focus=pending-approvals')
   })
@@ -120,7 +120,7 @@ describe('WeeklyActivityCard exit actions', () => {
       }),
     })
 
-    expect(screen.queryByRole('link', { name: 'Review pending approval' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('link', { name: 'Review pending confirmation' })).not.toBeInTheDocument()
   })
 
   it('shows support options link when missing mentor/ambassador blocks activity', () => {
@@ -166,7 +166,7 @@ describe('WeeklyActivityCard exit actions', () => {
 
     expect(screen.queryByRole('button', { name: /go to week/i })).not.toBeInTheDocument()
     expect(screen.queryByRole('button', { name: /jump to available activity/i })).not.toBeInTheDocument()
-    expect(screen.queryByRole('link', { name: /review pending approval/i })).not.toBeInTheDocument()
+    expect(screen.queryByRole('link', { name: /review pending confirmation/i })).not.toBeInTheDocument()
     expect(screen.queryByRole('link', { name: /view support options/i })).not.toBeInTheDocument()
   })
 

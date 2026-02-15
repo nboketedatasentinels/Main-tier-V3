@@ -14,6 +14,7 @@ import {
 import { resolveJourneyType } from '@/utils/journeyType'
 import { calculateActivityAvailability } from '@/utils/activityStateManager'
 import { db } from '@/services/firebase'
+import { ORG_COLLECTION } from '@/constants/organizations'
 import {
   collection,
   doc,
@@ -37,6 +38,7 @@ import {
   PendingRequestExistsError,
   submitPointsVerificationRequestAtomic,
 } from '@/services/pointsRequestSubmissionService'
+import { resolveLeadershipAvailability, type LeadershipAvailability } from '@/utils/leadershipAvailability'
 
 export type ActivityStatus = 'not_started' | 'pending' | 'rejected' | 'completed'
 
@@ -130,6 +132,10 @@ export function useWeeklyChecklistViewModel() {
   const activitiesRef = useRef<ActivityState[]>([])
   const [weeklyProgress, setWeeklyProgress] = useState<WeeklyProgress | null>(null)
   const [allWeeksProgress, setAllWeeksProgress] = useState<WeeklyProgress[]>([])
+  const [leadershipAvailability, setLeadershipAvailability] = useState<LeadershipAvailability>({
+    hasMentor: false,
+    hasAmbassador: false,
+  })
 
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -189,6 +195,36 @@ export function useWeeklyChecklistViewModel() {
     return selectedWeek > (journey.currentWeek ?? 1)
   }, [journey, selectedWeek])
 
+  useEffect(() => {
+    if (!profile?.companyId) {
+      setLeadershipAvailability(resolveLeadershipAvailability({ profile }))
+      return
+    }
+
+    const orgRef = doc(db, ORG_COLLECTION, profile.companyId)
+    return onSnapshot(
+      orgRef,
+      (snapshot) => {
+        const organizationData = snapshot.exists() ? (snapshot.data() as Record<string, unknown>) : null
+        setLeadershipAvailability(
+          resolveLeadershipAvailability({
+            organizationData,
+            profile,
+          }),
+        )
+      },
+      () => {
+        setLeadershipAvailability(resolveLeadershipAvailability({ profile }))
+      },
+    )
+  }, [
+    profile?.companyId,
+    profile?.mentorId,
+    profile?.mentorOverrideId,
+    profile?.ambassadorId,
+    profile?.ambassadorOverrideId,
+  ])
+
   /* ------------------------------------------------------------------ */
   /* Persist checklist state                                              */
   /* ------------------------------------------------------------------ */
@@ -239,7 +275,7 @@ export function useWeeklyChecklistViewModel() {
         if (isFreeUser(profile) && !profile.companyId) {
           journeyType = '4W'
         } else if (profile.companyId) {
-          const orgSnap = await getDoc(doc(db, 'organizations', profile.companyId))
+          const orgSnap = await getDoc(doc(db, ORG_COLLECTION, profile.companyId))
           if (orgSnap.exists()) {
             journeyType = (resolveJourneyType(orgSnap.data()) as JourneyType) || '6W'
           }
@@ -388,8 +424,7 @@ export function useWeeklyChecklistViewModel() {
 
     const defs = getActivitiesForJourney(journey.journeyType)
 
-    const hasMentor = Boolean(profile?.mentorId || profile?.mentorOverrideId)
-    const hasAmbassador = Boolean(profile?.ambassadorId || profile?.ambassadorOverrideId)
+    const { hasMentor, hasAmbassador } = leadershipAvailability
     const previousById = new Map(activitiesRef.current.map((activity) => [activity.id, activity]))
 
     const windowWeek = selectedWeek // your availability util expects windowWeek; adapt if you use getWindowWeekNumber
@@ -443,7 +478,7 @@ export function useWeeklyChecklistViewModel() {
 
     setActivities(next)
     setLoading(false)
-  }, [isFreeTierMember, journey, ledgerCache, profile, selectedWeek, user])
+  }, [isFreeTierMember, journey, ledgerCache, leadershipAvailability, selectedWeek, user])
 
   /* ------------------------------------------------------------------ */
   /* Weekly progress (realtime)                                           */
@@ -1064,7 +1099,7 @@ export function useWeeklyChecklistViewModel() {
       triggerHaptic('success')
       toast({
         title: 'Proof submitted',
-        description: 'Nice work. Your proof is now in review and points will post after approval.',
+        description: 'Nice work. Your proof is awaiting partner confirmation and points will post after approval.',
         status: 'success',
         duration: 4000,
       })
@@ -1074,8 +1109,8 @@ export function useWeeklyChecklistViewModel() {
       if (e instanceof PendingRequestExistsError || (e instanceof Error && e.message === 'pending_request_exists')) {
         triggerHaptic('warning')
         toast({
-          title: 'Already in review',
-          description: 'This activity is already pending verification for this week.',
+          title: 'Awaiting partner confirmation',
+          description: 'This activity already has a pending partner confirmation for this week.',
           status: 'info',
           duration: 5000,
         })
@@ -1125,6 +1160,7 @@ export function useWeeklyChecklistViewModel() {
     activities,
     weeklyProgress,
     allWeeksProgress,
+    leadershipAvailability,
 
     // derived
     completedCount,

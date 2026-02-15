@@ -11,7 +11,11 @@ type VM = ReturnType<typeof useWeeklyChecklistViewModel>
 export const WeeklyChecklistLayout = ({ vm }: { vm: VM }) => {
   return (
     <Stack spacing={6}>
-      <JourneyHeader journey={vm.journey} progress={vm.allWeeksProgress} />
+      <JourneyHeader
+        journey={vm.journey}
+        progress={vm.allWeeksProgress}
+        leadershipAvailability={vm.leadershipAvailability}
+      />
 
       <WeeklySummary
         week={vm.selectedWeek}
