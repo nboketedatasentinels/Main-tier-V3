@@ -1,17 +1,19 @@
 # T4L Points System Reference
 
-> **Core Principle**: Learners are guided by minimum POINTS per 2-week window, not activities. Points are the only thing that determines progress and passing.
+> **Core Principle**: Learners are guided by minimum points per 2-week cycle, not activity count. Points are what determine progress and passing.
 
 ---
 
 ## System Overview
 
-The T4L platform uses a **window-based points system** where:
+The T4L platform uses a **cycle-based points system** where:
 
 - All journeys are divided into **2-week windows**
 - Learners think in "this fortnight" - never months
 - Activities unlock, lock, rotate, and disappear temporarily
 - Points alone determine progress and passing
+
+Note: Legacy code and older docs may still use the word `window`; in learner-facing language this is now always a **cycle**.
 
 This creates one mental model across the entire ecosystem.
 
@@ -19,9 +21,9 @@ This creates one mental model across the entire ecosystem.
 
 ## Journey Structures & Completion Badges
 
-| Journey | Duration | Windows | Pass Mark | Max Points | Per Window Target | Completion Badge |
+| Journey | Duration | Cycles | Pass Mark | Max Points | Per 2-Week Cycle Target | Completion Badge |
 |---------|----------|---------|-----------|------------|-------------------|------------------|
-| 4-Week Intro | 4 weeks | 2 | 9,000 | 15,000 | 7,500 | Starter |
+| 4-Week Intro | 4 weeks | 2 | 9,000 | 17,000 | 7,500 | Starter |
 | 6-Week Power | 6 weeks | 3 | 40,000 | 60,000 | 13,500 | Powerful |
 | 3-Month | 12 weeks | 6 | 75,000 | 113,000 | 12,500 | Innovator |
 | 6-Month | 24 weeks | 12 | 150,000 | 226,000 | 12,500 | Pioneer |
@@ -57,8 +59,13 @@ This creates one mental model across the entire ecosystem.
 | Attend shameless circle session | 1 | Partner Issued | 2,500 | 2,500 |
 | Submit an AI tool for review | 1 | Partner Approved | 1,000 | 1,000 |
 
-**MAXIMUM POSSIBLE**: 15,000 points
+**MAXIMUM POSSIBLE**: 17,000 points
 **PASS MARK**: 9,000 points
+
+**Quick Links (4-Week Intro Checklist):**
+- [Book Club](/app/book-club)
+- [Shameless Circle](/app/shameless-circle)
+- [AI Tool Submission](/app/weekly-checklist?activityId=ai_tool_review&openProof=1)
 
 ---
 
@@ -172,14 +179,14 @@ This creates one mental model across the entire ecosystem.
 
 ---
 
-### 2. Window-Limited Activities (Rotating)
+### 2. Cycle-Limited Activities (Rotating)
 
-**Rule:** Max 1 claim per activity per 2-week window. Reappears next window if total frequency not exhausted.
+**Rule:** Max 1 claim per activity per 2-week cycle. Reappears next cycle if total frequency not exhausted.
 
 **Behavior:**
-- Available once per window
+- Available once per cycle
 - Disappears temporarily after claim
-- Reappears next window (if frequency remains)
+- Reappears next cycle (if frequency remains)
 - Permanently disabled when total frequency exhausted
 
 **This ensures:**
@@ -277,9 +284,9 @@ Using 12,500 as the baseline for 3-month and beyond (parameterized per journey):
 
 ---
 
-## Window Targets by Journey
+## Cycle Targets by Journey
 
-| Journey | Duration | Windows | Pass Mark | Target per 2-Week Window |
+| Journey | Duration | Cycles | Pass Mark | Target per 2-Week Cycle |
 |---------|----------|---------|-----------|--------------------------|
 | 4-Week Intro | 4 weeks | 2 | 9,000 | 7,500 |
 | 6-Week Power | 6 weeks | 3 | 40,000 | 13,500 |
@@ -304,14 +311,14 @@ Using 12,500 as the baseline for 3-month and beyond (parameterized per journey):
 
 ## Learner Dashboard View
 
-In any given 2-week window, learners see:
+In any given 2-week cycle, learners see:
 
 ### Activity States
 
 | Icon | State | Description |
 |------|-------|-------------|
-| Available | Can be claimed this window |
-| Next Window | Cooldown - available next window |
+| Available | Can be claimed this cycle |
+| Next Cycle | Cooldown - available next cycle |
 | Completed | Already claimed (one-time) or maxed |
 | Locked | Not yet available or prerequisites not met |
 | Exhausted | Total frequency reached |
@@ -319,7 +326,7 @@ In any given 2-week window, learners see:
 ### Progress Tracker
 
 ```
-Points This Window: 8,500 / 13,500
+Points This Cycle: 8,500 / 13,500
 Progress: 61%
 
 Total Points: 32,500 / 40,000
@@ -350,7 +357,7 @@ Status: On Track
 
 ### What Learners DO See:
 - Short, manageable list of available activities
-- Clear "this window" focus
+- Clear "this cycle" focus
 - Simple progress indicators
 - Encouraging status messages
 
@@ -358,7 +365,7 @@ Status: On Track
 
 ## Implementation Notes
 
-### Window Calculation
+### Cycle Calculation
 
 ```typescript
 // Calculate current window (0-indexed)
@@ -368,7 +375,7 @@ const getCurrentWindow = (startDate: Date, now: Date = new Date()): number => {
   return Math.floor(weeksSinceStart / 2) // 2-week windows
 }
 
-// Check if activity is available this window
+// Check if activity is available this cycle
 const isActivityAvailable = (
   activity: Activity,
   currentWindow: number,
@@ -417,12 +424,12 @@ const getProgressStatus = (
 
 ```typescript
 // Core Variables
-window_target_points: number     // Target points for current window
-window_points_earned: number     // Points earned in current window
+window_target_points: number     // Target points for current cycle
+window_points_earned: number     // Points earned in current cycle
 learner_status: string           // Current status flag
 previous_status: string          // Previous window status
 
-// Window Progress Calculation
+// Cycle Progress Calculation
 window_points_earned = SUM(points_awarded WHERE window_id = current_window)
 progress_ratio = window_points_earned / window_target_points
 
@@ -507,7 +514,7 @@ interface ActivityClaim {
 
 ## Key Takeaways
 
-1. **Window-based thinking** - Everything revolves around 2-week windows
+1. **Cycle-based thinking** - Everything revolves around 2-week cycles
 2. **Points are king** - Only points determine progress, not activity count
 3. **Anti-overwhelm** - Never show the full universe of activities/points
 4. **Consistent rhythm** - Same ~12,500 points/window across journeys (after intro/power)

@@ -56,6 +56,33 @@ interface LeaderboardDataState {
 const MAX_RETRY_ATTEMPTS = 3
 const BASE_RETRY_DELAY_MS = 500
 
+type FirestoreErrorLike = {
+  code?: string
+  message?: string
+}
+
+const getErrorCode = (error: unknown): string | undefined => {
+  if (!error || typeof error !== 'object') return undefined
+  return (error as FirestoreErrorLike).code
+}
+
+const getErrorMessage = (error: unknown): string => {
+  if (!error || typeof error !== 'object') return ''
+  return (error as FirestoreErrorLike).message || ''
+}
+
+const isMissingIndexError = (error: unknown): boolean => {
+  const code = getErrorCode(error)
+  const message = getErrorMessage(error)
+  return code === 'failed-precondition' && /requires an index/i.test(message)
+}
+
+const isRetryableSnapshotError = (error: unknown): boolean => {
+  const code = getErrorCode(error)
+  if (!code) return true
+  return !['failed-precondition', 'permission-denied', 'invalid-argument', 'unauthenticated'].includes(code)
+}
+
 const buildProfilesConstraints = (context: LeaderboardContext | null): QueryConstraint[] | null => {
   if (!context) return null
 
@@ -275,8 +302,14 @@ export const useLeaderboardData = ({
   ) => {
     console.error(`[Leaderboard] ${label} snapshot error`, error)
     setLoaded(true)
+    if (isMissingIndexError(error)) {
+      setErrorMessage('Leaderboard data is temporarily unavailable while a required index is being created.')
+      return
+    }
     setErrorMessage('Unable to load leaderboard data. Please refresh the page.')
-    scheduleRetry(label, retryCount, setRetry, timeoutRef)
+    if (isRetryableSnapshotError(error)) {
+      scheduleRetry(label, retryCount, setRetry, timeoutRef)
+    }
   }, [scheduleRetry])
 
   const clearRetryTimeout = useCallback((timeoutRef: MutableRefObject<ReturnType<typeof setTimeout> | null>) => {

@@ -355,7 +355,7 @@ export const PartnerDashboard: React.FC = () => {
   const riskReasons = useMemo(() => {
     const counts: Record<string, number> = {}
     atRiskUsers.forEach(user => {
-      const reasons = user.riskReasons?.length ? user.riskReasons : ['Behind on weekly points target']
+      const reasons = user.riskReasons?.length ? user.riskReasons : ['Below current 2-week cycle points target']
       reasons.forEach(reason => {
         counts[reason] = (counts[reason] || 0) + 1
       })

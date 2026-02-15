@@ -144,11 +144,11 @@ const availabilityReasonLabels: Record<ActivityAvailabilityReason, string> = {
   scheduled: 'Scheduled later this window',
   cooldown: 'Cooldown in effect',
   max_per_week: 'Weekly limit reached',
-  max_per_window: 'Window limit reached',
+  max_per_window: 'Cycle limit reached',
   missing_mentor: 'Mentor required',
   missing_ambassador: 'Ambassador required',
   one_time_used: 'Activity already completed',
-  window_cap_reached: 'Window limit reached',
+  window_cap_reached: 'Cycle limit reached',
 }
 
 const WeeklyChecklistPage: React.FC = () => {
@@ -1004,7 +1004,7 @@ const WeeklyChecklistPage: React.FC = () => {
                 <Badge colorScheme="gray">Locked</Badge>
               )}
               {activity.availability.state === 'exhausted' && (
-                <Badge colorScheme="teal">Window limit reached</Badge>
+                <Badge colorScheme="teal">Cycle limit reached</Badge>
               )}
               <Tag colorScheme="primary">{activity.category}</Tag>
             </HStack>
@@ -1183,14 +1183,14 @@ const WeeklyChecklistPage: React.FC = () => {
           Weekly Checklist
         </Heading>
         <Text color="text.secondary">
-          Track your weekly activities and see how they roll up into your overall journey.
+          Track your current activities and see how they roll up into your overall journey.
         </Text>
       </Stack>
       <Box p={4} borderWidth="1px" borderColor="gray.700" bg="white" borderRadius="lg">
         <Stack spacing={3}>
           <HStack justify="space-between">
             <Heading size="sm" color="text.primary">
-              Week {selectedWeek} summary - Window {windowProgress.windowNumber}
+              Week {selectedWeek} summary - Cycle {windowProgress.windowNumber}
             </Heading>
             <Tag colorScheme={progressStatus.color}>
               {progressStatus.label} | {progressStatus.pct}%
@@ -1204,12 +1204,12 @@ const WeeklyChecklistPage: React.FC = () => {
               icon={<Icon as={CheckCircle} color="success.400" />}
             />
             <StatCard
-              label="Weekly points"
-              value={`${weeklyPointsEarned} / ${weeklyTarget}`}
+              label="Points accumulated"
+              value={`${weeklyPointsEarned}`}
               icon={<Icon as={Plus} color="brand.primary" />}
             />
             <StatCard
-              label={`Window ${windowProgress.windowNumber} points`}
+              label={`Cycle ${windowProgress.windowNumber} points`}
               value={`${windowProgress.earned} / ${windowProgress.target}`}
               icon={<Icon as={CalendarRange} color="purple.400" />}
             />
@@ -1229,7 +1229,7 @@ const WeeklyChecklistPage: React.FC = () => {
       <Center py={16}>
         <Stack spacing={3} align="center">
           <CircularProgress isIndeterminate color="brand.primary" />
-          <Text color="text.secondary">Loading weekly activities...</Text>
+          <Text color="text.secondary">Loading checklist activities...</Text>
         </Stack>
       </Center>
     )
@@ -1265,7 +1265,7 @@ const WeeklyChecklistPage: React.FC = () => {
           <Stack spacing={4}>
             <SurfaceCard borderColor="border.card">
               <Heading size="sm" color="text.primary" mb={3}>
-                Weekly activities
+                Current activities
               </Heading>
               {activityLoading ? (
                 <Stack spacing={3}>
@@ -1278,7 +1278,7 @@ const WeeklyChecklistPage: React.FC = () => {
                   {activities.length ? getVisibleActivities(activities).map(renderActivityCard) : (
                     <Center py={8}>
                       <Stack spacing={2} align="center">
-                        <Text color="text.secondary">You are caught up for this week. New activities appear as windows open.</Text>
+                        <Text color="text.secondary">You are caught up for now. New activities appear as each cycle opens.</Text>
                         <Text color="text.secondary" fontSize="sm">
                           Templates will automatically sync from Firebase when available.
                         </Text>
@@ -1296,7 +1296,7 @@ const WeeklyChecklistPage: React.FC = () => {
           <Stack spacing={4}>
             <SurfaceCard borderColor="border.card">
               <Heading size="sm" color="text.primary" mb={3}>
-                Weekly progress
+                Cycle progress
               </Heading>
               {progressLoading ? (
                 <Skeleton height="180px" />
@@ -1304,7 +1304,7 @@ const WeeklyChecklistPage: React.FC = () => {
                 <Stack spacing={3}>
                   <Progress value={progressStatus.pct} colorScheme={progressStatus.color} borderRadius="full" />
                   <Text color="text.primary" fontWeight="bold">
-                    {weeklyPointsEarned} / {weeklyTarget} points earned
+                    {windowProgress.earned} / {windowProgress.target} points in this cycle
                   </Text>
                   <Text color="text.secondary" fontSize="sm">
                     {progressStatus.pct >= 100

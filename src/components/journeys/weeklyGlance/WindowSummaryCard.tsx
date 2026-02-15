@@ -62,15 +62,15 @@ const getPeakEndMessage = (
   daysRemainingInWindow: number
 ): string => {
   if (status === 'ahead') {
-    return 'Peak reached. End this window with one more contribution to lock in momentum.';
+    return 'Peak reached. End this cycle with one more contribution to lock in momentum.';
   }
 
   if (status === 'on_track') {
-    return 'Steady pace. Finish strong with one more activity before the window closes.';
+    return 'Steady pace. Finish strong with one more activity before the cycle closes.';
   }
 
   if (status === 'catching_up') {
-    return 'Momentum is improving. Keep pressing now so the window ends on target.';
+    return 'Momentum is improving. Keep pressing now so the cycle ends on target.';
   }
 
   const dayText = daysRemainingInWindow === 1 ? 'day' : 'days';
@@ -112,17 +112,17 @@ export const WindowSummaryCard: React.FC<WindowSummaryCardProps> = ({ onNavigate
           <Stack spacing={3}>
             <HStack spacing={2}>
               <Icon as={CalendarClock} color="brand.primary" />
-              <Text fontWeight="bold">Learner Window</Text>
+              <Text fontWeight="bold">2-Week Cycle</Text>
             </HStack>
             <Alert status="warning" borderRadius="md">
               <AlertIcon />
               <Text fontSize="sm">
-                Window progress is temporarily unavailable. You can still continue earning points.
+                Cycle progress is temporarily unavailable. You can still continue earning points.
               </Text>
             </Alert>
             {onNavigate && (
               <Button size="sm" colorScheme="purple" alignSelf="flex-start" onClick={onNavigate}>
-                Review weekly checklist
+                Review checklist
               </Button>
             )}
           </Stack>
@@ -155,14 +155,14 @@ export const WindowSummaryCard: React.FC<WindowSummaryCardProps> = ({ onNavigate
           <HStack justify="space-between">
             <HStack spacing={2}>
               <Icon as={CalendarClock} color="brand.primary" />
-              <Text fontWeight="bold">Window {windowNumber} of {totalWindows}</Text>
+              <Text fontWeight="bold">Cycle {windowNumber} of {totalWindows}</Text>
             </HStack>
             <WindowStatusBadge status={displayStatus} />
           </HStack>
 
           <Box>
             <Text fontSize="sm" color="text.secondary" mb={1}>
-              Weeks {startWeek} - {endWeek} Progress
+              Weeks {startWeek} - {endWeek} cycle progress
             </Text>
             <Progress
               value={progressValue}
@@ -174,7 +174,7 @@ export const WindowSummaryCard: React.FC<WindowSummaryCardProps> = ({ onNavigate
               <Text fontWeight="medium">{data.pointsEarned.toLocaleString()} pts earned</Text>
               <Text color="text.secondary">
                 {remainingPoints > 0
-                  ? `${remainingPoints.toLocaleString()} pts to window target`
+                  ? `${remainingPoints.toLocaleString()} pts to cycle target`
                   : displayStatus === 'ahead'
                     ? `${(data.pointsEarned - data.windowTarget).toLocaleString()} pts above target`
                     : 'Target reached - finish strong'}
@@ -182,18 +182,18 @@ export const WindowSummaryCard: React.FC<WindowSummaryCardProps> = ({ onNavigate
             </HStack>
             <HStack justify="space-between" mt={1} fontSize="xs" color="text.muted">
               <Text>{data.windowTarget.toLocaleString()} pts target</Text>
-              <Text>{daysRemainingInWindow} day{daysRemainingInWindow === 1 ? '' : 's'} left in this window</Text>
+              <Text>{daysRemainingInWindow} day{daysRemainingInWindow === 1 ? '' : 's'} left in this cycle</Text>
             </HStack>
             {remainingPoints > 0 ? (
               <Text mt={1} fontSize="xs" color={displayStatus === 'behind' ? 'red.600' : 'text.muted'}>
                 {daysRemainingInWindow > 0
                   ? `${pointsNeededPerDay.toLocaleString()} pts/day needed to close the gap.`
-                  : `Window closed with a ${remainingPoints.toLocaleString()} pt gap. Reset and plan your next window.`}
+                  : `Cycle closed with a ${remainingPoints.toLocaleString()} pt gap. Reset and plan your next cycle.`}
               </Text>
             ) : (
               <Text mt={1} fontSize="xs" color="green.600">
                 {displayStatus === 'ahead'
-                  ? 'You are above target. Protect this lead through the window close.'
+                  ? 'You are above target. Protect this lead through the cycle close.'
                   : 'Target secured. Add one more activity for a strong finish.'}
               </Text>
             )}
@@ -211,16 +211,16 @@ export const WindowSummaryCard: React.FC<WindowSummaryCardProps> = ({ onNavigate
             <HStack spacing={2}>
               <Icon as={Target} color="text.muted" boxSize={4} />
               <Text fontSize="sm" fontWeight="semibold">
-                Window Focus
+                Cycle Focus
               </Text>
             </HStack>
             <Text fontSize="sm" color="text.secondary">
               {isFreshStartWeek && data.pointsEarned === 0
                 ? 'Fresh start week. Complete one activity now to build momentum early.'
                 : displayStatus === 'ahead'
-                  ? 'You are ahead. Keep a steady cadence to preserve your lead at the end of this window.'
+                  ? 'You are ahead. Keep a steady cadence to preserve your lead at the end of this cycle.'
                 : displayStatus === 'on_track'
-                    ? 'You are on track. Stay consistent to close this window with confidence.'
+                    ? 'You are on track. Stay consistent to close this cycle with confidence.'
                     : displayStatus === 'catching_up'
                       ? 'You are catching up. Prioritize high-value activities to close the gap quickly.'
                       : 'You are behind target right now. Focus on your next available activity to reduce the gap.'}
@@ -233,17 +233,17 @@ export const WindowSummaryCard: React.FC<WindowSummaryCardProps> = ({ onNavigate
             <Icon as={Flag} color="text.muted" boxSize={4} />
             <Box>
               <Text fontSize="xs" color="text.secondary">
-                Next Window
+                Next Cycle
               </Text>
               <Text fontSize="sm" fontWeight="semibold">
-                {isFinalWindow ? 'Final window in journey' : `Window ${windowNumber + 1}`}
+                {isFinalWindow ? 'Final cycle in journey' : `Cycle ${windowNumber + 1}`}
               </Text>
             </Box>
           </HStack>
 
           {onNavigate && (
             <Button size="sm" colorScheme="purple" alignSelf="flex-start" onClick={onNavigate}>
-              Review weekly checklist
+              Review checklist
             </Button>
           )}
         </Stack>

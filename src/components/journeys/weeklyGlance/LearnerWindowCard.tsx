@@ -30,7 +30,7 @@ export const LearnerWindowCard = ({
           <HStack justify="space-between">
             <HStack spacing={2}>
               <Icon as={CalendarClock} color="brand.primary" />
-              <Text fontWeight="bold" fontSize="md">Learner Window</Text>
+              <Text fontWeight="bold" fontSize="md">Learner Cycle</Text>
             </HStack>
             <Badge colorScheme={daysRemaining <= 2 ? 'red' : 'green'}>
               {daysRemaining} day{daysRemaining === 1 ? '' : 's'} left
@@ -79,7 +79,7 @@ export const LearnerWindowCard = ({
             <HStack spacing={2}>
               <Icon as={Target} color="text.muted" />
               <Text fontSize="sm" color="text.secondary">
-                This week's focus
+                Current cycle focus
               </Text>
             </HStack>
             <Text fontSize="xs" color="text.muted">

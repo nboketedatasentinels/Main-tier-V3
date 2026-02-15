@@ -51,7 +51,7 @@ export const WindowWeekRelationshipCard: React.FC<WindowWeekRelationshipCardProp
           <HStack spacing={2}>
             <Icon as={Calendar} color="brand.primary" />
             <Text fontWeight="bold" fontSize="md" color="text.primary">
-              Window & Week System
+              Cycle & Week System
             </Text>
           </HStack>
 
@@ -64,17 +64,17 @@ export const WindowWeekRelationshipCard: React.FC<WindowWeekRelationshipCardProp
             p={3}
           >
             <Text fontSize="sm" fontWeight="semibold" color="text.primary" mb={1}>
-              You are in Week {currentWeek} of Window {windowNumber}
+              You are in Week {currentWeek} of Cycle {windowNumber}
             </Text>
             <Text fontSize="xs" color="text.secondary">
-              Window {windowNumber} covers Weeks {windowStartWeek}-{windowEndWeek}
+              Cycle {windowNumber} covers Weeks {windowStartWeek}-{windowEndWeek}
             </Text>
           </Box>
 
           {/* Visual Timeline */}
           <Stack spacing={2}>
             <Text fontSize="xs" fontWeight="medium" color="text.secondary">
-              Window Timeline
+              Cycle Timeline
             </Text>
 
             <Stack spacing={2}>
@@ -88,7 +88,7 @@ export const WindowWeekRelationshipCard: React.FC<WindowWeekRelationshipCardProp
                     textAlign="center"
                     fontSize="xs"
                   >
-                    Window {win.windowNumber}
+                    Cycle {win.windowNumber}
                   </Badge>
 
                   {/* Week Range */}
@@ -138,7 +138,7 @@ export const WindowWeekRelationshipCard: React.FC<WindowWeekRelationshipCardProp
 
               {showMoreWindows && (
                 <Text fontSize="xs" color="text.secondary" textAlign="center">
-                  ... {totalWindows - 6} more windows
+                  ... {totalWindows - 6} more cycles
                 </Text>
               )}
             </Stack>
@@ -153,8 +153,8 @@ export const WindowWeekRelationshipCard: React.FC<WindowWeekRelationshipCardProp
             p={3}
           >
             <Text fontSize="xs" color="text.secondary">
-              <strong>What are Windows?</strong> Windows are 2-week periods used to track your progress consistently.
-              Your advancement is measured across windows to ensure balanced engagement.
+              <strong>What are Cycles?</strong> Cycles are 2-week periods used to track your progress consistently.
+              Your advancement is measured across cycles to ensure balanced engagement.
             </Text>
           </Box>
         </Stack>

@@ -86,23 +86,22 @@ export const JourneyHeader = ({
     return JOURNEY_MONTH_COUNTS[journey.journeyType]
   }, [journey, isMonthBasedJourney])
 
-  const weeklyTarget = useMemo(() => {
-    if (!journey) return 0
-    return JOURNEY_META[journey.journeyType].weeklyTarget
+  const journeyMeta = useMemo(() => {
+    if (!journey) return null
+    return JOURNEY_META[journey.journeyType]
   }, [journey])
 
   const journeyProgress = useMemo(() => {
-    if (!journey) {
-      return { weeksAtTarget: 0, pct: 0, totalEarned: 0, totalTarget: 0 }
+    if (!journey || !journeyMeta) {
+      return { activeWeeks: 0, passPct: 0, totalEarned: 0, passMarkPoints: 0, maxPossiblePoints: 0 }
     }
-    const totalTarget = weeklyTarget * journey.programDurationWeeks
     const totalEarned = progress.reduce((sum, week) => sum + (week.pointsEarned ?? 0), 0)
-    const pct = totalTarget > 0 ? Math.min(100, Math.round((totalEarned / totalTarget) * 100)) : 0
-    const weeksAtTarget = progress.filter(
-      (week) => (week.pointsEarned ?? 0) >= (week.weeklyTarget ?? weeklyTarget),
-    ).length
-    return { weeksAtTarget, pct, totalEarned, totalTarget }
-  }, [progress, journey, weeklyTarget])
+    const activeWeeks = progress.filter((week) => (week.pointsEarned ?? 0) > 0).length
+    const passMarkPoints = journeyMeta.passMarkPoints
+    const maxPossiblePoints = journeyMeta.maxPossiblePoints
+    const passPct = passMarkPoints > 0 ? Math.min(100, Math.round((totalEarned / passMarkPoints) * 100)) : 0
+    return { activeWeeks, passPct, totalEarned, passMarkPoints, maxPossiblePoints }
+  }, [journeyMeta, progress, journey])
 
   const monthMeta = useCallback(
     (month: number): MonthMilestone => {
@@ -137,7 +136,7 @@ export const JourneyHeader = ({
   const startLabel = journeyStartDate ? format(journeyStartDate, 'MMM d, yyyy') : 'Not set'
   const endLabel = journeyEndDate ? format(journeyEndDate, 'MMM d, yyyy') : 'Not set'
   const overviewLabel = isMonthBasedJourney
-    ? `Month ${currentMonthNumber} of ${totalMonths} · Week ${journey.currentWeek} of ${journey.programDurationWeeks}`
+    ? `Month ${currentMonthNumber} of ${totalMonths} - Week ${journey.currentWeek} of ${journey.programDurationWeeks}`
     : `Week ${journey.currentWeek} of ${journey.programDurationWeeks}`
 
   const monthMilestones: MonthMilestone[] = isMonthBasedJourney
@@ -148,11 +147,10 @@ export const JourneyHeader = ({
     ? Array.from({ length: journey.programDurationWeeks }, (_, idx) => {
         const weekNumber = idx + 1
         const weekProgress = progress.find((p) => p.weekNumber === weekNumber)
-        const target = weekProgress?.weeklyTarget ?? weeklyTarget
-        const isAtTarget = weekProgress ? (weekProgress.pointsEarned ?? 0) >= target : false
+        const hasPoints = (weekProgress?.pointsEarned ?? 0) > 0
 
         let status: WeekMilestone['status'] = 'locked'
-        if (isAtTarget) {
+        if (hasPoints) {
           status = 'completed'
         } else if (weekNumber === journey.currentWeek) {
           status = 'current'
@@ -180,10 +178,13 @@ export const JourneyHeader = ({
             </Heading>
             <Text color="text.secondary">{overviewLabel}</Text>
             <Text color="text.secondary" fontSize="sm">
-              {journey.programDurationWeeks} total weeks · {journeyProgress.weeksAtTarget} weeks at target
+              {journey.programDurationWeeks} total weeks · {journeyProgress.activeWeeks} weeks with points
             </Text>
             <Text color="text.secondary" fontSize="sm">
-              {journeyProgress.totalEarned.toLocaleString()} of {journeyProgress.totalTarget.toLocaleString()} points earned
+              {journeyProgress.totalEarned.toLocaleString()} points accumulated · Pass mark {journeyProgress.passMarkPoints.toLocaleString()}
+            </Text>
+            <Text color="text.secondary" fontSize="sm">
+              Max possible {journeyProgress.maxPossiblePoints.toLocaleString()} points
             </Text>
           </Stack>
           <Stack spacing={1} align="flex-end">
@@ -194,11 +195,11 @@ export const JourneyHeader = ({
               Expected completion: {endLabel}
             </Text>
             <Text color="text.muted" fontSize="sm">
-              Completion {journeyProgress.pct}%
+              Pass progress {journeyProgress.passPct}%
             </Text>
           </Stack>
         </Flex>
-        <Progress value={journeyProgress.pct} colorScheme="teal" borderRadius="full" />
+        <Progress value={journeyProgress.passPct} colorScheme="teal" borderRadius="full" />
         {isOrgManagedJourney ? (
           <Alert status="info" borderRadius="md">
             <AlertIcon />

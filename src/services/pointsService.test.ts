@@ -123,4 +123,60 @@ describe('pointsService', () => {
     expect(ledgerSetCall).toBeTruthy()
     expect(ledgerSetCall?.[1]?.claimRef).toBe('session:1')
   })
+
+  it('enforces one-time total frequency limits (e.g. book club once in 6W)', async () => {
+    mockGetDocs
+      .mockResolvedValueOnce(emptySnapshot) // ledgerSnapshot
+      .mockResolvedValueOnce(emptySnapshot) // weeklyActivitySnapshot
+      .mockResolvedValueOnce(emptySnapshot) // windowActivitySnapshot
+      .mockResolvedValueOnce(emptySnapshot) // lastActivitySnapshot
+      .mockResolvedValueOnce({ ...emptySnapshot, size: 1 }) // totalActivitySnapshot (already claimed once)
+      .mockResolvedValueOnce(emptySnapshot) // activeChallengesSnapshot
+
+    mockGetDoc.mockResolvedValue({
+      exists: () => true,
+      data: () => ({ companyId: null }),
+    })
+
+    const tx = {
+      get: vi.fn(async (ref: { path: string }) => {
+        if (ref.path.startsWith('pointsLedger/')) {
+          return { exists: () => false, data: () => ({}) }
+        }
+        if (ref.path.startsWith('weeklyProgress/')) {
+          return { exists: () => false, data: () => ({ pointsEarned: 0, status: 'alert' }) }
+        }
+        if (ref.path.startsWith('users/')) {
+          return { exists: () => true, data: () => ({ totalPoints: 0 }) }
+        }
+        return { exists: () => false, data: () => ({}) }
+      }),
+      set: vi.fn(),
+      update: vi.fn(),
+      delete: vi.fn(),
+    }
+
+    mockRunTransaction.mockImplementation(async (_db: unknown, callback: (txArg: unknown) => unknown) => callback(tx))
+
+    await expect(
+      awardChecklistPoints({
+        uid: 'user-1',
+        journeyType: '6W',
+        weekNumber: 3,
+        activity: {
+          id: 'book_club',
+          baseId: 'book_club',
+          title: 'Attend Book Club Session',
+          description: 'desc',
+          points: 2500,
+          maxPerMonth: 1,
+          activityPolicy: { type: 'one_time', maxTotal: 1, maxPerWindow: 1 },
+          approvalType: 'partner_issued',
+          week: 1,
+          category: 'Community',
+          flexibleWeeks: true,
+        },
+      }),
+    ).rejects.toThrow('Total activity limit reached')
+  })
 })

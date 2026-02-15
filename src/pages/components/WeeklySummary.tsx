@@ -17,29 +17,31 @@ import { getWindowNumber, PARALLEL_WINDOW_SIZE_WEEKS } from '@/utils/windowCalcu
 export const WeeklySummary = ({
   week,
   completed,
-  earned,
-  target,
+  cyclePoints,
+  cycleTarget,
+  accumulatedPoints,
 }: {
   week: number
   completed: number
-  earned: number
-  target: number
+  cyclePoints: number
+  cycleTarget: number
+  accumulatedPoints: number
 }) => {
   const windowNumber = useMemo(() => getWindowNumber(week, PARALLEL_WINDOW_SIZE_WEEKS), [week])
 
   const progressStatus = useMemo(() => {
-    const pct = target > 0 ? Math.min(100, Math.round((earned / target) * 100)) : 0
-    if (pct >= 100) return { color: 'green', label: 'At target', pct }
-    if (pct >= 75) return { color: 'blue', label: 'Building momentum', pct }
-    return { color: 'teal', label: 'In motion', pct }
-  }, [earned, target])
+    const pct = cycleTarget > 0 ? Math.min(100, Math.round((cyclePoints / cycleTarget) * 100)) : 0
+    if (pct >= 100) return { color: 'green', label: 'On track', pct }
+    if (pct >= 75) return { color: 'blue', label: 'Almost there', pct }
+    return { color: 'orange', label: 'Needs attention', pct }
+  }, [cyclePoints, cycleTarget])
 
   return (
     <Box p={4} borderWidth="1px" borderColor="gray.700" bg="white" borderRadius="lg">
       <Stack spacing={3}>
         <HStack justify="space-between">
           <Heading size="sm" color="text.primary">
-            Week {week} summary - Window {windowNumber}
+            Week {week} summary - 2-week cycle {windowNumber}
           </Heading>
           <Tag colorScheme={progressStatus.color}>
             {progressStatus.label} | {progressStatus.pct}%
@@ -53,13 +55,13 @@ export const WeeklySummary = ({
             icon={<Icon as={CheckCircle} color="success.400" />}
           />
           <StatCard
-            label="Weekly points"
-            value={`${earned} / ${target}`}
+            label="Points accumulated"
+            value={accumulatedPoints.toLocaleString()}
             icon={<Icon as={Plus} color="orange.400" />}
           />
           <StatCard
-            label={`Window ${windowNumber} context`}
-            value={`Window ${windowNumber}`}
+            label={`Current cycle (${windowNumber})`}
+            value={`${cyclePoints.toLocaleString()} / ${cycleTarget.toLocaleString()}`}
             icon={<Icon as={CalendarRange} color="purple.400" />}
           />
           <StatCard

@@ -679,8 +679,8 @@ export const MentorDashboard: React.FC = () => {
               <CardBody>
                 <Flex justify="space-between" align={{ base: 'flex-start', md: 'center' }} mb={4} direction={{ base: 'column', md: 'row' }} gap={3}>
                   <Box>
-                    <Text fontWeight="bold">Weekly progress snapshot</Text>
-                    <Text color="brand.subtleText">Compare this week to last week.</Text>
+                    <Text fontWeight="bold">Cycle progress snapshot</Text>
+                    <Text color="brand.subtleText">Compare this cycle to the previous one.</Text>
                   </Box>
                   <HStack spacing={2} color="brand.subtleText">
                     <Icon as={Sparkles} />

@@ -8,6 +8,7 @@ import {
   getActivitiesForJourney,
   resolveCanonicalActivityId,
   type ActivityDef,
+  type ActivityId,
   type JourneyType,
 } from '@/config/pointsConfig'
 import { resolveJourneyType } from '@/utils/journeyType'
@@ -39,6 +40,12 @@ import {
 
 export type ActivityStatus = 'not_started' | 'pending' | 'rejected' | 'completed'
 
+export interface ActivityQuickActionLink {
+  label: string
+  href: string
+  external?: boolean
+}
+
 export interface ActivityState extends ActivityDef {
   status: ActivityStatus
   availability: ReturnType<typeof calculateActivityAvailability>
@@ -50,6 +57,7 @@ export interface ActivityState extends ActivityDef {
   notes?: string
   rejectionReason?: string | null
   hasInteracted?: boolean
+  quickActionLink?: ActivityQuickActionLink
 }
 
 export interface JourneyConfig {
@@ -81,6 +89,20 @@ function isAdminProfile(profile: { role?: string; userRole?: string } | null | u
 const FREE_TIER_HONOR_NOTICE = 'Free tier uses self-reported honor completion (no proof upload required).'
 const FREE_TIER_SUPER_ADMIN_REVIEW_NOTICE =
   'Free tier AI tool submissions are reviewed by super admin.'
+const INTRO_ACTIVITY_QUICK_LINKS: Partial<Record<ActivityId, ActivityQuickActionLink>> = {
+  shameless_circle: {
+    label: 'Join Shameless Circle',
+    href: '/app/shameless-circle',
+  },
+  book_club: {
+    label: 'Join Book Club',
+    href: '/app/book-club',
+  },
+  ai_tool_review: {
+    label: 'Submit AI Tool',
+    href: '/app/weekly-checklist?activityId=ai_tool_review&openProof=1',
+  },
+}
 
 function shouldRequireSuperAdminReviewForFreeUser(activity: ActivityDef, isFreeTierMember: boolean): boolean {
   return isFreeTierMember && activity.id === 'ai_tool_review'
@@ -166,10 +188,6 @@ export function useWeeklyChecklistViewModel() {
     if (!journey) return false
     return selectedWeek > (journey.currentWeek ?? 1)
   }, [journey, selectedWeek])
-
-  const weeklyTarget = useMemo(() => {
-    return journey ? JOURNEY_META[journey.journeyType].weeklyTarget : 0
-  }, [journey])
 
   /* ------------------------------------------------------------------ */
   /* Persist checklist state                                              */
@@ -408,6 +426,8 @@ export function useWeeklyChecklistViewModel() {
         ...effectiveDef,
         status,
         availability,
+        quickActionLink:
+          journey.journeyType === '4W' ? INTRO_ACTIVITY_QUICK_LINKS[def.id as ActivityId] : undefined,
         issuedByPartner:
           previous?.issuedByPartner ??
           (effectiveDef.approvalType === 'partner_issued' ? false : undefined),
@@ -651,6 +671,28 @@ export function useWeeklyChecklistViewModel() {
   const earnedPoints = useMemo(
     () => weeklyProgress?.pointsEarned ?? 0,
     [weeklyProgress],
+  )
+
+  const currentCycleNumber = useMemo(
+    () => getWindowNumber(selectedWeek, PARALLEL_WINDOW_SIZE_WEEKS),
+    [selectedWeek],
+  )
+
+  const cyclePoints = useMemo(
+    () =>
+      allWeeksProgress
+        .filter((week) => (week.monthNumber ?? getWindowNumber(week.weekNumber, PARALLEL_WINDOW_SIZE_WEEKS)) === currentCycleNumber)
+        .reduce((sum, week) => sum + (week.pointsEarned ?? 0), 0),
+    [allWeeksProgress, currentCycleNumber],
+  )
+
+  const cycleTarget = useMemo(() => {
+    return journey ? JOURNEY_META[journey.journeyType].windowTarget : 0
+  }, [journey])
+
+  const accumulatedPoints = useMemo(
+    () => allWeeksProgress.reduce((sum, week) => sum + (week.pointsEarned ?? 0), 0),
+    [allWeeksProgress],
   )
 
   /* ------------------------------------------------------------------ */
@@ -1085,9 +1127,11 @@ export function useWeeklyChecklistViewModel() {
     allWeeksProgress,
 
     // derived
-    weeklyTarget,
     completedCount,
     earnedPoints,
+    cycleTarget,
+    cyclePoints,
+    accumulatedPoints,
     loading,
     error,
     isAdmin,

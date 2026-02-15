@@ -48,11 +48,11 @@ export const ActivityList = ({
 
   return (
     <Stack spacing={4}>
-      <Heading size="sm">Weekly activities</Heading>
+      <Heading size="sm">Current activities</Heading>
 
       {!visibleActivities?.length ? (
         <Center py={8}>
-          <Text color="text.muted">You are caught up for this week. New activities appear as windows open.</Text>
+          <Text color="text.muted">You are caught up for now. New activities appear as each 2-week cycle opens.</Text>
         </Center>
       ) : (
         <Stack spacing={3}>

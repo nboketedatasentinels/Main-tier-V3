@@ -30,10 +30,10 @@ const getVisibilityState = (activity: ActivityState): VisibilityState => {
 
 const visibilityBadgeConfig: Record<VisibilityState, { label: string; colorScheme: string; icon: React.ElementType }> = {
   available: { label: 'Available', colorScheme: 'green', icon: Circle },
-  next_window: { label: 'Opens Next Window', colorScheme: 'blue', icon: CalendarClock },
+  next_window: { label: 'Opens Next Cycle', colorScheme: 'blue', icon: CalendarClock },
   completed: { label: 'Completed', colorScheme: 'green', icon: CheckCircle },
   locked: { label: 'Locked', colorScheme: 'gray', icon: Lock },
-  exhausted: { label: 'Window Cap Reached', colorScheme: 'teal', icon: RotateCcw },
+  exhausted: { label: 'Cycle Cap Reached', colorScheme: 'teal', icon: RotateCcw },
 }
 
 export const WeeklyActivityCard = ({
@@ -115,7 +115,7 @@ export const WeeklyActivityCard = ({
     }
 
     if (activity.availability.state === 'exhausted') {
-      return 'Nice work. You reached this activity cap for the current window.'
+      return 'Nice work. You reached this activity cap for the current cycle.'
     }
 
     if (activity.availability.state === 'permanently_exhausted') {
@@ -186,7 +186,7 @@ export const WeeklyActivityCard = ({
     if (policy?.type === 'window_limited') {
       return (
         <Badge colorScheme="blue" variant="subtle" display="flex" alignItems="center">
-          <Icon as={RotateCcw} size={12} mr={1} /> Resets each window
+          <Icon as={RotateCcw} size={12} mr={1} /> Resets each cycle
         </Badge>
       )
     }
@@ -309,6 +309,34 @@ export const WeeklyActivityCard = ({
                 {activity.freeTierNotice}
               </Text>
             </HStack>
+          ) : null}
+
+          {activity.quickActionLink ? (
+            activity.quickActionLink.external ? (
+              <Button
+                as="a"
+                href={activity.quickActionLink.href}
+                target="_blank"
+                rel="noopener noreferrer"
+                size="xs"
+                variant="link"
+                colorScheme="blue"
+                alignSelf="flex-start"
+              >
+                {activity.quickActionLink.label}
+              </Button>
+            ) : (
+              <Button
+                as={RouterLink}
+                to={activity.quickActionLink.href}
+                size="xs"
+                variant="link"
+                colorScheme="blue"
+                alignSelf="flex-start"
+              >
+                {activity.quickActionLink.label}
+              </Button>
+            )
           ) : null}
 
           {lockReason ? (

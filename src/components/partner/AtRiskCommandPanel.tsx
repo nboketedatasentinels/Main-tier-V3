@@ -265,7 +265,7 @@ export const AtRiskCommandPanel: React.FC<AtRiskCommandPanelProps> = ({
     if (filters.cohort !== defaultFilters.cohort) tags.push({ label: `Cohort: ${filters.cohort}`, key: 'cohort' })
     if (filters.status !== defaultFilters.status) tags.push({ label: `Status: ${filters.status}`, key: 'status' })
     if (filters.risk !== defaultFilters.risk) tags.push({ label: `Risk: ${filters.risk}`, key: 'risk' })
-    if (filters.belowWeeklyTarget) tags.push({ label: 'Below weekly points target', key: 'belowWeeklyTarget' })
+    if (filters.belowWeeklyTarget) tags.push({ label: 'Below cycle points target', key: 'belowWeeklyTarget' })
     if (filters.currentWeekOnly) tags.push({ label: 'Current week only', key: 'currentWeekOnly' })
     if (filters.compareHealthy) tags.push({ label: 'Compare to healthy learners', key: 'compareHealthy' })
     return tags
@@ -862,7 +862,7 @@ export const AtRiskCommandPanel: React.FC<AtRiskCommandPanelProps> = ({
                   isChecked={draftFilters.belowWeeklyTarget}
                   onChange={(event) => setDraftFilters(prev => ({ ...prev, belowWeeklyTarget: event.target.checked }))}
                 >
-                  Below weekly points target
+                  Below cycle points target
                 </Checkbox>
                 <Checkbox
                   isChecked={draftFilters.currentWeekOnly}
@@ -1271,7 +1271,7 @@ export const AtRiskCommandPanel: React.FC<AtRiskCommandPanelProps> = ({
                       </MenuButton>
                       <MenuList>
                         <MenuItem onClick={() => handleInsertToken('userName')}>Learner Name</MenuItem>
-                        <MenuItem onClick={() => handleInsertToken('weeklyPoints')}>Weekly Points</MenuItem>
+                        <MenuItem onClick={() => handleInsertToken('weeklyPoints')}>Points Accumulated</MenuItem>
                         <MenuItem onClick={() => handleInsertToken('engagementScore')}>Engagement Rate</MenuItem>
                         <MenuItem onClick={() => handleInsertToken('daysInactive')}>Days Since Last Activity</MenuItem>
                       </MenuList>
@@ -1331,7 +1331,7 @@ export const AtRiskCommandPanel: React.FC<AtRiskCommandPanelProps> = ({
                   </Text>
                   <Text mt={2}>
                     {previewCampaignText(
-                      campaignMessage || activeTemplate?.message_body || 'Hi there, we noticed your weekly points dipped. Let us know how we can help.',
+                      campaignMessage || activeTemplate?.message_body || 'Hi there, we noticed your points pace dipped this cycle. Let us know how we can help.',
                     )}
                   </Text>
                 </Box>

@@ -16,25 +16,25 @@ const statusConfig = {
     color: 'green',
     label: 'Ahead',
     icon: StarIcon,
-    tooltip: 'Peak state reached. Finish this window strong with one more contribution.'
+    tooltip: 'Peak state reached. Finish this cycle strong with one more contribution.'
   },
   on_track: {
     color: 'teal',
     label: 'On Track',
     icon: CheckCircleIcon,
-    tooltip: 'Steady pace. End this window with a positive close.'
+    tooltip: 'Steady pace. End this cycle with a positive close.'
   },
   catching_up: {
     color: 'yellow',
     label: 'Catching Up',
     icon: WarningIcon,
-    tooltip: 'Momentum is improving. Keep pushing to end on target.'
+    tooltip: 'Momentum is improving. Keep pushing to end this cycle on target.'
   },
   behind: {
     color: 'red',
     label: 'Behind',
     icon: InfoIcon,
-    tooltip: 'Risk state. Act now to avoid closing this window below target.'
+    tooltip: 'Risk state. Act now to avoid closing this cycle below target.'
   }
 };
 

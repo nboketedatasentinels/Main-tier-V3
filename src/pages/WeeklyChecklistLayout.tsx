@@ -16,8 +16,9 @@ export const WeeklyChecklistLayout = ({ vm }: { vm: VM }) => {
       <WeeklySummary
         week={vm.selectedWeek}
         completed={vm.completedCount}
-        earned={vm.earnedPoints}
-        target={vm.weeklyTarget}
+        cyclePoints={vm.cyclePoints}
+        cycleTarget={vm.cycleTarget}
+        accumulatedPoints={vm.accumulatedPoints}
       />
 
       <Grid templateColumns={{ base: '1fr', xl: '2fr 1fr' }} gap={6} alignItems="start">

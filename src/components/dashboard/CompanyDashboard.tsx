@@ -569,7 +569,7 @@ export const CompanyDashboard: React.FC = () => {
 
       <Box>
           <HStack spacing={3} align={{ base: 'flex-start', md: 'center' }} flexWrap="wrap" mb={2}>
-            <Heading size="lg">This Week at a Glance</Heading>
+            <Heading size="lg">Progress at a Glance</Heading>
             {villageDisplayName && (
               <Badge colorScheme="purple" borderRadius="full">
                 for {villageDisplayName}
@@ -591,7 +591,7 @@ export const CompanyDashboard: React.FC = () => {
                 <Flex justify="space-between" align="flex-start" mb={4}>
                   <Box>
                     <Text fontWeight="bold" color="gray.500" textTransform="uppercase" fontSize="sm">
-                      Weekly Points
+                      Points Accumulated
                     </Text>
                     <Heading size="lg">
                       {weeklyLoading ? <Skeleton height="28px" width="120px" /> : weekly?.totalPoints || 0}
@@ -604,7 +604,7 @@ export const CompanyDashboard: React.FC = () => {
                     </HStack>
                   </Box>
                   <Tag colorScheme="yellow" size="lg">
-                    Target: {weekly?.targetPoints || 12000} pts
+                    Cycle target: {weekly?.targetPoints || 12000} pts
                   </Tag>
                 </Flex>
 
@@ -619,7 +619,7 @@ export const CompanyDashboard: React.FC = () => {
                         : `${Math.abs(weeklyTargetStatus.difference).toLocaleString()} pts to reach baseline`}
                     </Text>
                   </VStack>
-                  <Badge colorScheme="yellow">Weekly target status</Badge>
+                  <Badge colorScheme="yellow">Cycle target status</Badge>
                 </Flex>
 
                 <SimpleGrid columns={{ base: 1, md: 2 }} spacing={3}>

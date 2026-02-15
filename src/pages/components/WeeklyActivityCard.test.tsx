@@ -214,4 +214,20 @@ describe('WeeklyActivityCard exit actions', () => {
     fireEvent.click(action)
     expect(props.onMarkCompleted).toHaveBeenCalledTimes(1)
   })
+
+  it('renders quick action links for linked activities', () => {
+    renderCard({
+      activity: makeActivity({
+        quickActionLink: {
+          label: 'Join Book Club',
+          href: '/app/book-club',
+        },
+      }),
+    })
+
+    fireEvent.click(screen.getByRole('button', { name: 'Details' }))
+    const action = screen.getByRole('link', { name: 'Join Book Club' })
+    expect(action).toBeInTheDocument()
+    expect(action).toHaveAttribute('href', '/app/book-club')
+  })
 })

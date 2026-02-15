@@ -4,6 +4,17 @@ import { getWindowNumber, PARALLEL_WINDOW_SIZE_WEEKS } from "@/utils/windowCalcu
 
 export type JourneyType = "4W" | "6W" | "3M" | "6M" | "9M" | "12M";
 export type JourneyTimelineDisplayMode = "duration" | "course-count";
+export type JourneyPointsVariantKey =
+  | "default"
+  | "without_mentor_and_ambassador"
+  | "without_mentor_or_ambassador";
+
+export interface JourneyPointsVariant {
+  key: JourneyPointsVariantKey;
+  label: string;
+  maxPossiblePoints: number;
+  passMarkPoints: number;
+}
 
 export type ActivityId =
   // Core activities
@@ -76,6 +87,36 @@ export type ActivityDef = {
     requiresAmbassador?: boolean;
   };
 };
+
+export interface JourneyMetaEntry {
+  weeks: number;
+  weeklyTarget: number;
+  windowTarget: number;
+  passMarkPoints: number;
+  maxPossiblePoints: number;
+  mode: "intro" | "full";
+  timelineDisplay: JourneyTimelineDisplayMode;
+  completionThresholdPct?: number;
+  pointVariants?: JourneyPointsVariant[];
+}
+
+export interface JourneyPointsActivityReference {
+  activityId: ActivityId;
+  title: string;
+  frequency: number;
+  approvalType: ApprovalType;
+  pointsEach: number;
+  maxPoints: number;
+}
+
+export interface JourneyPointsCrossReference {
+  journeyType: JourneyType;
+  passMarkPoints: number;
+  maxPossiblePoints: number;
+  computedMaxPoints: number;
+  activityBreakdown: JourneyPointsActivityReference[];
+  pointVariants: JourneyPointsVariant[];
+}
 
 // ─── Constants ──────────────────────────────────────────────────────────────
 
@@ -472,25 +513,13 @@ const JOURNEY_ACTIVITY_CONFIG: Partial<Record<JourneyType, JourneyActivityEntry[
 
 // ─── Journey Metadata ───────────────────────────────────────────────────────
 
-export const JOURNEY_META: Record<
-  JourneyType,
-  {
-    weeks: number;
-    weeklyTarget: number;
-    windowTarget: number;
-    passMarkPoints: number;
-    maxPossiblePoints: number;
-    mode: "intro" | "full";
-    timelineDisplay: JourneyTimelineDisplayMode;
-    completionThresholdPct?: number;
-  }
-> = {
+export const JOURNEY_META: Record<JourneyType, JourneyMetaEntry> = {
   "4W": {
     weeks: 4,
     weeklyTarget: 3750,
     windowTarget: 7500,
     passMarkPoints: 9000,
-    maxPossiblePoints: 15000,
+    maxPossiblePoints: 17000,
     mode: "intro",
     timelineDisplay: "duration",
     completionThresholdPct: 60,
@@ -514,6 +543,20 @@ export const JOURNEY_META: Record<
     mode: "full",
     timelineDisplay: "duration",
     completionThresholdPct: 66,
+    pointVariants: [
+      {
+        key: "without_mentor_and_ambassador",
+        label: "No mentor + ambassador assigned",
+        maxPossiblePoints: 101000,
+        passMarkPoints: 67000,
+      },
+      {
+        key: "without_mentor_or_ambassador",
+        label: "No mentor or ambassador assigned",
+        maxPossiblePoints: 107000,
+        passMarkPoints: 71000,
+      },
+    ],
   },
   "6M": {
     weeks: 24,
@@ -524,6 +567,20 @@ export const JOURNEY_META: Record<
     mode: "full",
     timelineDisplay: "duration",
     completionThresholdPct: 66,
+    pointVariants: [
+      {
+        key: "without_mentor_and_ambassador",
+        label: "No mentor + ambassador assigned",
+        maxPossiblePoints: 202000,
+        passMarkPoints: 135000,
+      },
+      {
+        key: "without_mentor_or_ambassador",
+        label: "No mentor or ambassador assigned",
+        maxPossiblePoints: 214000,
+        passMarkPoints: 143000,
+      },
+    ],
   },
   "9M": {
     weeks: 36,
@@ -534,6 +591,20 @@ export const JOURNEY_META: Record<
     mode: "full",
     timelineDisplay: "duration",
     completionThresholdPct: 67,
+    pointVariants: [
+      {
+        key: "without_mentor_and_ambassador",
+        label: "No mentor + ambassador assigned",
+        maxPossiblePoints: 303000,
+        passMarkPoints: 203000,
+      },
+      {
+        key: "without_mentor_or_ambassador",
+        label: "No mentor or ambassador assigned",
+        maxPossiblePoints: 321000,
+        passMarkPoints: 215000,
+      },
+    ],
   },
   "12M": {
     weeks: 48,
@@ -614,6 +685,78 @@ function buildJourneyActivities(journeyType: JourneyType): ActivityDef[] {
     })
     .filter((a): a is ActivityDef => a !== null);
 }
+
+const buildJourneyPointsBreakdown = (journeyType: JourneyType): JourneyPointsActivityReference[] => {
+  const config = JOURNEY_ACTIVITY_CONFIG[journeyType] ?? [];
+
+  return config.map((entry) => {
+    const base = BASE_ACTIVITY_MAP.get(entry.activityId);
+    if (!base) {
+      throw new Error(`[pointsConfig] Missing base activity definition for ${entry.activityId}`);
+    }
+
+    const pointsEach = entry.pointsOverride ?? base.points;
+    return {
+      activityId: entry.activityId,
+      title: base.title,
+      frequency: entry.totalFrequency,
+      approvalType: base.approvalType,
+      pointsEach,
+      maxPoints: pointsEach * entry.totalFrequency,
+    };
+  });
+};
+
+const getJourneyPointsVariants = (journeyType: JourneyType): JourneyPointsVariant[] => {
+  const meta = JOURNEY_META[journeyType];
+  return [
+    {
+      key: "default",
+      label: "Standard (with mentor + ambassador if assigned)",
+      maxPossiblePoints: meta.maxPossiblePoints,
+      passMarkPoints: meta.passMarkPoints,
+    },
+    ...(meta.pointVariants ?? []),
+  ];
+};
+
+export function getJourneyPointsCrossReference(journeyType: JourneyType): JourneyPointsCrossReference {
+  const meta = JOURNEY_META[journeyType];
+  const activityBreakdown = buildJourneyPointsBreakdown(journeyType);
+  const computedMaxPoints = activityBreakdown.reduce((sum, row) => sum + row.maxPoints, 0);
+
+  return {
+    journeyType,
+    passMarkPoints: meta.passMarkPoints,
+    maxPossiblePoints: meta.maxPossiblePoints,
+    computedMaxPoints,
+    activityBreakdown,
+    pointVariants: getJourneyPointsVariants(journeyType),
+  };
+}
+
+function validateJourneyPointsConsistency(): void {
+  const journeyTypes = Object.keys(JOURNEY_ACTIVITY_CONFIG) as JourneyType[];
+
+  journeyTypes.forEach((journeyType) => {
+    const crossRef = getJourneyPointsCrossReference(journeyType);
+    if (crossRef.computedMaxPoints !== crossRef.maxPossiblePoints) {
+      throw new Error(
+        `[pointsConfig] ${journeyType} max points mismatch: computed ${crossRef.computedMaxPoints}, configured ${crossRef.maxPossiblePoints}`,
+      );
+    }
+
+    crossRef.pointVariants.forEach((variant) => {
+      if (variant.passMarkPoints > variant.maxPossiblePoints) {
+        throw new Error(
+          `[pointsConfig] ${journeyType} variant "${variant.key}" has pass mark above max (${variant.passMarkPoints} > ${variant.maxPossiblePoints})`,
+        );
+      }
+    });
+  });
+}
+
+validateJourneyPointsConsistency();
 
 // Static arrays for backward compat
 export const INTRO_ACTIVITIES: ActivityDef[] = buildJourneyActivities("4W");
@@ -696,6 +839,7 @@ const pointsConfig = {
   INTRO_ACTIVITIES,
   JOURNEY_META,
   getActivitiesForJourney,
+  getJourneyPointsCrossReference,
   getMonthNumber,
   REFERRAL_POINTS,
   REFERRAL_MAX_PER_USER,

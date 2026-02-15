@@ -135,8 +135,8 @@ function buildWeeklyActivityFeed(params: {
   const statusItems: ActivityFeedItem[] = [
     {
       id: 'weekly-points',
-      title: 'Weekly points summary',
-      description: `${earnedPoints} points logged toward your ${targetPoints || 0} point goal.`,
+      title: 'Points progress update',
+      description: `${earnedPoints} points accumulated toward your ${targetPoints || 0} point cycle goal.`,
       timestamp: `Week ${weekNumber} • ${daysRemaining} days left`,
       status: pointsStatus,
     },
@@ -459,10 +459,10 @@ export const WeeklyGlancePage = () => {
 
         <Stack spacing={1}>
           <Heading size="lg" color="text.primary">
-            This Week at a Glance
+            Current Progress at a Glance
           </Heading>
           <Text color="text.primary">
-            Your personalized dashboard for weekly progress, habits, and support.
+            Your personalized dashboard for points accumulated, habits, and support.
           </Text>
         </Stack>
 

@@ -26,7 +26,7 @@ export const NextMilestoneCard = ({ milestone, daysRemaining, onNavigate }: Next
             </Text>
           </Stack>
           <Button size="sm" colorScheme="purple" alignSelf="flex-start" onClick={onNavigate}>
-            Review weekly checklist
+            Review checklist
           </Button>
         </Stack>
       </CardBody>

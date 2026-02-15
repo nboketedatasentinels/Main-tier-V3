@@ -49,14 +49,14 @@ export const ConfirmationWelcomeModal: React.FC<ConfirmationWelcomeModalProps> =
 
     switch (role) {
       case 'paid_member':
-        return 'Start earning points in your current window and track your progress weekly.'
+        return 'Start earning points in your current cycle and track your progress clearly.'
       case 'mentor':
         return 'Share your expertise, review mentee updates, and celebrate their wins.'
       case 'ambassador':
         return 'Rally the community by sharing opportunities and spotlighting great work.'
       default:
         if (isPaidMember) {
-          return 'Start earning points in your current window and track your progress weekly.'
+          return 'Start earning points in your current cycle and track your progress clearly.'
         }
         return 'Explore the platform, find your community, and start logging your impact.'
     }
@@ -132,10 +132,10 @@ export const ConfirmationWelcomeModal: React.FC<ConfirmationWelcomeModalProps> =
                   <Icon as={Calendar} color="brand.primary" boxSize={5} />
                   <VStack align="flex-start" spacing={1}>
                     <Text fontWeight="semibold" color="brand.text">
-                      Your Current Window
+                      Your Current Cycle
                     </Text>
                     <Text fontSize="sm" color="brand.subtleText">
-                      Window {windowContext.windowNumber} - Weeks {windowContext.startWeek}-
+                      Cycle {windowContext.windowNumber} - Weeks {windowContext.startWeek}-
                       {windowContext.endWeek}
                     </Text>
                     <Text fontSize="sm" color="brand.subtleText">

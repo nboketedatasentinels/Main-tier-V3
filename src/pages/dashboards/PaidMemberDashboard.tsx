@@ -322,7 +322,7 @@ export const PaidMemberDashboard: React.FC = () => {
       <Grid templateColumns={{ base: '1fr', xl: '2fr 1fr' }} gap={6}>
         <GridItem>
           <Stack spacing={6}>
-            <Card aria-label="Weekly progress overview">
+            <Card aria-label="Current progress overview">
               <CardBody py={{ base: 5, md: 6 }}>
                 <Stack spacing={4}>
                   <Stack
@@ -339,10 +339,10 @@ export const PaidMemberDashboard: React.FC = () => {
                         fontWeight="semibold"
                         color="brand.subtleText"
                       >
-                        Weekly progress
+                        Current progress
                       </Text>
                       <Text fontSize="sm" color="brand.subtleText" opacity={0.85}>
-                        Week {currentWeek} completion status
+                        Week {currentWeek} completion snapshot
                       </Text>
                     </Box>
                     <HStack spacing={2} px={3} py={1.5} borderRadius="full" bg="brand.primaryMuted">
@@ -402,8 +402,8 @@ export const PaidMemberDashboard: React.FC = () => {
                     </Text>
                     <Text fontSize="sm" color="brand.subtleText" mt={1}>
                       {remainingActivities > 0
-                        ? `${remainingActivities} activities left this week. Prioritize high-value actions to close your gap.`
-                        : 'All activities complete this week. Use bonus actions to stretch your lead.'}
+                        ? `${remainingActivities} activities left in this cycle. Prioritize high-value actions to close your gap.`
+                        : 'All activities complete in this cycle. Use bonus actions to stretch your lead.'}
                     </Text>
                   </Box>
                 </Stack>

@@ -4,6 +4,7 @@ import {
   JOURNEY_META,
   getActivitiesForJourney,
   getActivityDefinitionById,
+  getJourneyPointsCrossReference,
   resolveCanonicalActivityId,
 } from './pointsConfig'
 
@@ -33,7 +34,7 @@ describe('pointsConfig module activities', () => {
 
     expect(JOURNEY_META['4W'].windowTarget).toBe(7500)
     expect(JOURNEY_META['4W'].passMarkPoints).toBe(9000)
-    expect(JOURNEY_META['4W'].maxPossiblePoints).toBe(15000)
+    expect(JOURNEY_META['4W'].maxPossiblePoints).toBe(17000)
 
     expect(byId.get('watch_podcast')?.points).toBe(1000)
     expect(byId.get('watch_podcast')?.activityPolicy?.maxTotal).toBe(3)
@@ -45,6 +46,75 @@ describe('pointsConfig module activities', () => {
     expect(byId.get('webinar_workbook')?.activityPolicy?.maxTotal).toBe(1)
     expect(byId.get('ai_tool_review')?.activityPolicy?.maxTotal).toBe(1)
     expect(byId.get('shameless_circle')?.activityPolicy?.maxTotal).toBe(1)
+  })
+
+  it('cross-references each journey activity table with configured maximum points', () => {
+    ;(['4W', '6W', '3M', '6M', '9M'] as const).forEach((journeyType) => {
+      const crossRef = getJourneyPointsCrossReference(journeyType)
+      expect(crossRef.computedMaxPoints).toBe(JOURNEY_META[journeyType].maxPossiblePoints)
+      expect(crossRef.maxPossiblePoints).toBe(JOURNEY_META[journeyType].maxPossiblePoints)
+    })
+  })
+
+  it('keeps alternate pass marks/max points for journeys with optional mentor and ambassador support', () => {
+    const threeMonth = getJourneyPointsCrossReference('3M')
+    const sixMonth = getJourneyPointsCrossReference('6M')
+    const nineMonth = getJourneyPointsCrossReference('9M')
+
+    expect(threeMonth.pointVariants).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          key: 'without_mentor_and_ambassador',
+          maxPossiblePoints: 101000,
+          passMarkPoints: 67000,
+        }),
+        expect.objectContaining({
+          key: 'without_mentor_or_ambassador',
+          maxPossiblePoints: 107000,
+          passMarkPoints: 71000,
+        }),
+      ]),
+    )
+
+    expect(sixMonth.pointVariants).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          key: 'without_mentor_and_ambassador',
+          maxPossiblePoints: 202000,
+          passMarkPoints: 135000,
+        }),
+        expect.objectContaining({
+          key: 'without_mentor_or_ambassador',
+          maxPossiblePoints: 214000,
+          passMarkPoints: 143000,
+        }),
+      ]),
+    )
+
+    expect(nineMonth.pointVariants).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          key: 'without_mentor_and_ambassador',
+          maxPossiblePoints: 303000,
+          passMarkPoints: 203000,
+        }),
+        expect.objectContaining({
+          key: 'without_mentor_or_ambassador',
+          maxPossiblePoints: 321000,
+          passMarkPoints: 215000,
+        }),
+      ]),
+    )
+  })
+
+  it('enforces single-claim book club rules for 6-week journey config', () => {
+    const activities = getActivitiesForJourney('6W')
+    const bookClub = activities.find((activity) => activity.id === 'book_club')
+
+    expect(bookClub).toBeTruthy()
+    expect(bookClub?.activityPolicy?.type).toBe('one_time')
+    expect(bookClub?.activityPolicy?.maxTotal).toBe(1)
+    expect(bookClub?.activityPolicy?.maxPerWindow).toBe(1)
   })
 
   it('resolves special activity ids as canonical ids', () => {

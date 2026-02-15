@@ -577,18 +577,18 @@ export const PartnerUserManagement: React.FC<PartnerUserManagementProps> = ({
                     <Box>
                       <Text fontWeight="bold" fontSize="xs" color="gray.500" textTransform="uppercase" mb={2}>Risk Reasons</Text>
                       <VStack align="flex-start" spacing={1}>
-                        {(user.riskReasons ?? ['Behind on weekly points target']).map((reason, idx) => (
+                        {(user.riskReasons ?? ['Below current 2-week cycle points target']).map((reason, idx) => (
                           <Badge key={idx} colorScheme="orange" variant="subtle">{reason}</Badge>
                         ))}
                       </VStack>
                     </Box>
                     <Box>
-                      <Text fontWeight="bold" fontSize="xs" color="gray.500" textTransform="uppercase" mb={2}>Weekly Progress</Text>
+                      <Text fontWeight="bold" fontSize="xs" color="gray.500" textTransform="uppercase" mb={2}>Cycle Progress</Text>
                       <VStack align="flex-start" spacing={1}>
-                        <Text fontSize="sm">Earned: {user.weeklyEarned} pts</Text>
-                        <Text fontSize="sm">Required: {user.weeklyRequired} pts</Text>
+                        <Text fontSize="sm">Points accumulated: {user.weeklyEarned} pts</Text>
+                        <Text fontSize="sm">Cycle target: {user.weeklyRequired} pts</Text>
                         <Badge colorScheme={user.weeklyEarned >= user.weeklyRequired ? 'green' : 'orange'}>
-                          {user.weeklyEarned >= user.weeklyRequired ? 'Target Met' : 'Below Target'}
+                          {user.weeklyEarned >= user.weeklyRequired ? 'Target met' : 'Below target'}
                         </Badge>
                       </VStack>
                     </Box>
@@ -1035,9 +1035,9 @@ export const PartnerUserManagement: React.FC<PartnerUserManagementProps> = ({
                 </HStack>
                 <Divider />
                 <Stack spacing={2}>
-                  <Text fontWeight="semibold">Weekly progress</Text>
+                  <Text fontWeight="semibold">Cycle progress</Text>
                   <Text fontSize="sm" color="brand.subtleText">
-                    Earned {selectedUser.weeklyEarned} / {selectedUser.weeklyRequired} points this week.
+                    Points accumulated: {selectedUser.weeklyEarned} / {selectedUser.weeklyRequired} in the current 2-week cycle.
                   </Text>
                   <HStack spacing={2}>
                     <Box bg="brand.accent" borderRadius="full" h="10px" flex={1} position="relative">

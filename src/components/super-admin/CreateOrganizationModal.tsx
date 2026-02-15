@@ -185,7 +185,7 @@ export const CreateOrganizationModal: React.FC<CreateOrganizationModalProps> = (
   const assignmentUnit = programCadence === 'biweekly' ? 'window' : 'month'
   const assignmentUnitPlural = programCadence === 'biweekly' ? 'windows' : 'months'
   const assignmentSectionLabel = programCadence === 'biweekly' ? '2-week window course assignments' : 'Monthly course assignments'
-  const assignmentBreakdownLabel = programCadence === 'biweekly' ? 'Window breakdown summary' : 'Monthly breakdown summary'
+  const assignmentBreakdownLabel = programCadence === 'biweekly' ? 'Cycle breakdown summary' : 'Monthly breakdown summary'
 
   const remainingCourses = courseLimit - getAssignedCourseIdsFromMonthlyAssignments(monthlyAssignments, courseLimit).length
   const codeLength = form.code.trim().length
