@@ -189,7 +189,7 @@ export const COURSE_DETAILS_MAPPING: Record<string, CourseDetail> = {
     link: 'https://t4leader.com/program/architect',
     points: 100,
     price: 130,
-    description: '12-month leadership transformation program.',
+    description: 'Long-form leadership transformation program.',
   },
 }
 

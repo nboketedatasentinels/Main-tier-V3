@@ -94,6 +94,20 @@ vi.mock('@/config/pointsConfig', () => ({
       category: 'Innovation',
       flexibleWeeks: true,
     },
+    {
+      id: 'book_club',
+      baseId: 'book_club',
+      title: 'Attend Book Club Session',
+      description: 'Participate in a book club discussion session.',
+      points: 750,
+      maxPerMonth: 1,
+      activityPolicy: { type: 'one_time', maxTotal: 1 },
+      approvalType: 'partner_issued',
+      requiresApproval: false,
+      week: 1,
+      category: 'Community',
+      flexibleWeeks: true,
+    },
   ],
   resolveCanonicalActivityId: (id: string | null) => id,
 }))
@@ -321,5 +335,20 @@ describe('useWeeklyChecklistViewModel proof submission', () => {
         proofUrl: 'https://example.com/ai-tool',
       }),
     )
+  })
+
+  it('exposes quick action links for mapped activities in non-4W journeys', async () => {
+    const hook = await mountViewModel()
+    const aiTool = hook.result.current.activities.find((candidate) => candidate.id === 'ai_tool_review')
+    const bookClub = hook.result.current.activities.find((candidate) => candidate.id === 'book_club')
+
+    expect(aiTool?.quickActionLink).toEqual({
+      label: 'Submit AI Tool',
+      href: '/app/weekly-checklist?activityId=ai_tool_review&openProof=1',
+    })
+    expect(bookClub?.quickActionLink).toEqual({
+      label: 'Join Book Club',
+      href: '/app/book-club',
+    })
   })
 })

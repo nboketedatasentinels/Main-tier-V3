@@ -105,7 +105,6 @@ const programDurations: ProgramDurationOption[] = [
   { value: 3, label: '3 months', courseCount: 3 },
   { value: 6, label: '6 months', courseCount: 6 },
   { value: 9, label: '9 months', courseCount: 9 },
-  { value: 12, label: '12 months', courseCount: 12 },
 ]
 
 const emptyOrganization: OrganizationRecord = {

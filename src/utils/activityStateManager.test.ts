@@ -82,6 +82,44 @@ describe('calculateActivityAvailability', () => {
     })
   })
 
+  it('keeps flexible activities locked until their configured unlock week', () => {
+    const activity = makeActivity({ week: 3, flexibleWeeks: true })
+
+    const beforeUnlock = calculateActivityAvailability(activity, {
+      windowWeek: 2,
+      weekCount: 0,
+      windowCount: 0,
+      totalCompletedAllTime: 0,
+    })
+    expect(beforeUnlock).toMatchObject({
+      state: 'locked',
+      reason: 'scheduled',
+      isScheduledForWeek: false,
+    })
+
+    const atUnlock = calculateActivityAvailability(activity, {
+      windowWeek: 3,
+      weekCount: 0,
+      windowCount: 0,
+      totalCompletedAllTime: 0,
+    })
+    expect(atUnlock).toMatchObject({
+      state: 'available',
+      isScheduledForWeek: true,
+    })
+
+    const afterUnlock = calculateActivityAvailability(activity, {
+      windowWeek: 5,
+      weekCount: 0,
+      windowCount: 0,
+      totalCompletedAllTime: 0,
+    })
+    expect(afterUnlock).toMatchObject({
+      state: 'available',
+      isScheduledForWeek: true,
+    })
+  })
+
   it('returns locked with cooldown reason when cooldown is active', () => {
     const activity = makeActivity({
       flexibleWeeks: true,

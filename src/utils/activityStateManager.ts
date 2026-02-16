@@ -123,7 +123,11 @@ export const calculateActivityAvailability = (
   }
 
   // 4. Scheduling Checks
-  const isScheduledForWeek = behavior.schedule === 'flexible' || activity.week === windowWeek
+  // Flexible activities unlock on their configured week and stay available afterward.
+  const isScheduledForWeek =
+    behavior.schedule === 'flexible'
+      ? windowWeek >= activity.week
+      : activity.week === windowWeek
   if (!isScheduledForWeek) {
     return { state: 'locked', reason: 'scheduled', isScheduledForWeek }
   }

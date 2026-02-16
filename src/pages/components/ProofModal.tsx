@@ -41,7 +41,7 @@ export const ProofModal = ({
             </Text>
           ) : null}
           <Text mb={3} color="gray.600">
-            Add a link (Drive, Dropbox, Notion, screenshot URL) and optional notes. Admins will verify and award points.
+            Add a link (Drive, Dropbox, Notion, screenshot URL) and optional notes. Your partner team will verify and award points.
           </Text>
 
           <Stack spacing={3}>

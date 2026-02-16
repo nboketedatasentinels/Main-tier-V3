@@ -91,7 +91,7 @@ function isAdminProfile(profile: { role?: string; userRole?: string } | null | u
 const FREE_TIER_HONOR_NOTICE = 'Free tier uses self-reported honor completion (no proof upload required).'
 const FREE_TIER_SUPER_ADMIN_REVIEW_NOTICE =
   'Free tier AI tool submissions are reviewed by super admin.'
-const INTRO_ACTIVITY_QUICK_LINKS: Partial<Record<ActivityId, ActivityQuickActionLink>> = {
+const ACTIVITY_QUICK_LINKS: Partial<Record<ActivityId, ActivityQuickActionLink>> = {
   shameless_circle: {
     label: 'Join Shameless Circle',
     href: '/app/shameless-circle',
@@ -427,7 +427,7 @@ export function useWeeklyChecklistViewModel() {
     const { hasMentor, hasAmbassador } = leadershipAvailability
     const previousById = new Map(activitiesRef.current.map((activity) => [activity.id, activity]))
 
-    const windowWeek = selectedWeek // your availability util expects windowWeek; adapt if you use getWindowWeekNumber
+    const windowWeek = selectedWeek // Availability currently uses the selected journey week.
 
     const next: ActivityState[] = defs.map((def: ActivityDef) => {
       const previous = previousById.get(def.id)
@@ -461,8 +461,7 @@ export function useWeeklyChecklistViewModel() {
         ...effectiveDef,
         status,
         availability,
-        quickActionLink:
-          journey.journeyType === '4W' ? INTRO_ACTIVITY_QUICK_LINKS[def.id as ActivityId] : undefined,
+        quickActionLink: ACTIVITY_QUICK_LINKS[def.id as ActivityId],
         issuedByPartner:
           previous?.issuedByPartner ??
           (effectiveDef.approvalType === 'partner_issued' ? false : undefined),

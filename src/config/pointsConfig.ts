@@ -2,7 +2,7 @@ import { getWindowNumber, PARALLEL_WINDOW_SIZE_WEEKS } from "@/utils/windowCalcu
 
 // ─── Types ──────────────────────────────────────────────────────────────────
 
-export type JourneyType = "4W" | "6W" | "3M" | "6M" | "9M" | "12M";
+export type JourneyType = "4W" | "6W" | "3M" | "6M" | "9M";
 export type JourneyTimelineDisplayMode = "duration" | "course-count";
 export type JourneyPointsVariantKey =
   | "default"
@@ -270,11 +270,13 @@ const BASE_ACTIVITY_DEFINITIONS: BaseActivityEntry[] = [
     points: 1500,
     behaviorType: "ongoing",
     defaultMaxPerWindow: 2,
-    approvalType: "partner_issued",
+    approvalType: "partner_approved",
+    requiresApproval: true,
+    verification: "partner_approval",
     week: 1,
     category: "Community",
     flexibleWeeks: true,
-    frequencyNote: "One session per week, awarded by your partner.",
+    frequencyNote: "Submit attendance proof each week. Points are awarded after partner confirmation.",
   },
   {
     id: "webinar_workbook",
@@ -499,20 +501,6 @@ const JOURNEY_ACTIVITY_CONFIG: Partial<Record<JourneyType, JourneyActivityEntry[
     { activityId: "mentor_meetup", totalFrequency: 9 },
     { activityId: "ambassador_session", totalFrequency: 9 },
   ],
-  "12M": [
-    { activityId: "podcast_workbook", totalFrequency: 36 },
-    { activityId: "weekly_session", totalFrequency: 48 },
-    { activityId: "webinar_workbook", totalFrequency: 12 },
-    { activityId: "peer_to_peer", totalFrequency: 36 },
-    { activityId: "impact_log", totalFrequency: 24 },
-    { activityId: "lift_module", totalFrequency: 12 },
-    { activityId: "linkedin", totalFrequency: 28 },
-    { activityId: "book_club", totalFrequency: 12 },
-    { activityId: "peer_matching", totalFrequency: 48 },
-    { activityId: "challenger", totalFrequency: 24 },
-    { activityId: "mentor_meetup", totalFrequency: 12 },
-    { activityId: "ambassador_session", totalFrequency: 12 },
-  ],
 };
 
 // ─── Journey Metadata ───────────────────────────────────────────────────────
@@ -609,16 +597,6 @@ export const JOURNEY_META: Record<JourneyType, JourneyMetaEntry> = {
         passMarkPoints: 215000,
       },
     ],
-  },
-  "12M": {
-    weeks: 48,
-    weeklyTarget: 6300,
-    windowTarget: 12600,
-    passMarkPoints: 302000,
-    maxPossiblePoints: 452000,
-    mode: "full",
-    timelineDisplay: "duration",
-    completionThresholdPct: 67,
   },
 };
 
@@ -795,7 +773,7 @@ const SPECIAL_ACTIVITIES: ActivityDef[] = [
 
 // Build ALL_ACTIVITIES from all journey types (deduplicated) + special activities
 const allActivitiesMap = new Map<string, ActivityDef>();
-(["4W", "6W", "3M", "6M", "9M", "12M"] as JourneyType[]).forEach((jt) => {
+(["4W", "6W", "3M", "6M", "9M"] as JourneyType[]).forEach((jt) => {
   buildJourneyActivities(jt).forEach((a) => {
     if (!allActivitiesMap.has(a.id)) allActivitiesMap.set(a.id, a);
   });

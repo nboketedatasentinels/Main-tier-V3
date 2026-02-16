@@ -116,7 +116,6 @@ erDiagram
 | 3M | 12 | 4,000 | 3 | 1–4, 5–8, 9–12 | 16,000 each |
 | 6M | 24 | 4,000 | 6 | 1–4, 5–8, 9–12, 13–16, 17–20, 21–24 | 16,000 each |
 | 9M | 36 | 4,000 | 9 | 1–4, 5–8, 9–12, 13–16, 17–20, 21–24, 25–28, 29–32, 33–36 | 16,000 each |
-| 12M | 48 | 4,000 | 12 | 1–4, 5–8, 9–12, 13–16, 17–20, 21–24, 25–28, 29–32, 33–36, 37–40, 41–44, 45–48 | 16,000 each |
 
 ## Approval Workflow Matrix
 | Activity Type | Verification Mode | Who Submits | Who Approves | Collection Written | Ledger Write Trigger |

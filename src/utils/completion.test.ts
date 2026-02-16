@@ -31,12 +31,11 @@ describe('calculatePassMark', () => {
     expect(missingAmbassador.adjustments.variantKey).toBe('without_mentor_or_ambassador')
   })
 
-  it('falls back to dynamic locked-point reduction when no explicit variant exists', () => {
-    const result = calculatePassMark('12M', false, false)
+  it('keeps default thresholds for journeys without mentor/ambassador variants', () => {
+    const result = calculatePassMark('6W', false, false)
 
-    expect(result.adjustedThreshold).toBe(254000)
-    expect(result.totalTarget).toBe(404000)
-    expect(result.adjustments.variantKey).toBe('dynamic')
+    expect(result.adjustedThreshold).toBe(40000)
+    expect(result.totalTarget).toBe(60000)
+    expect(result.adjustments.variantKey).toBeUndefined()
   })
 })
-

@@ -108,6 +108,9 @@ export const WeeklyActivityCard = ({
     if (lockedByWeek) return `Week ${selectedWeek} opens after Week ${currentWeek}.`
     if (lockedByInteraction) return 'Selection saved for this week. Need a change? Support can help.'
     if (lockedByPartnerIssue) return 'Your partner needs to issue this activity before you can complete it.'
+    if (activity.availability.reason === 'scheduled' && selectedWeek < activity.week) {
+      return `This activity unlocks in Week ${activity.week}.`
+    }
 
     if (activity.availability.state === 'next_window') {
       const currentWindow = getWindowNumber(selectedWeek, PARALLEL_WINDOW_SIZE_WEEKS)
@@ -164,6 +167,38 @@ export const WeeklyActivityCard = ({
     }
 
     return null
+  }
+
+  const renderQuickActionButton = () => {
+    if (!activity.quickActionLink) return null
+
+    if (activity.quickActionLink.external) {
+      return (
+        <Button
+          as="a"
+          href={activity.quickActionLink.href}
+          target="_blank"
+          rel="noopener noreferrer"
+          size="sm"
+          colorScheme="blue"
+          variant="outline"
+        >
+          {activity.quickActionLink.label}
+        </Button>
+      )
+    }
+
+    return (
+      <Button
+        as={RouterLink}
+        to={activity.quickActionLink.href}
+        size="sm"
+        colorScheme="blue"
+        variant="outline"
+      >
+        {activity.quickActionLink.label}
+      </Button>
+    )
   }
 
   const exitAction = renderExitAction()
@@ -311,34 +346,6 @@ export const WeeklyActivityCard = ({
             </HStack>
           ) : null}
 
-          {activity.quickActionLink ? (
-            activity.quickActionLink.external ? (
-              <Button
-                as="a"
-                href={activity.quickActionLink.href}
-                target="_blank"
-                rel="noopener noreferrer"
-                size="xs"
-                variant="link"
-                colorScheme="blue"
-                alignSelf="flex-start"
-              >
-                {activity.quickActionLink.label}
-              </Button>
-            ) : (
-              <Button
-                as={RouterLink}
-                to={activity.quickActionLink.href}
-                size="xs"
-                variant="link"
-                colorScheme="blue"
-                alignSelf="flex-start"
-              >
-                {activity.quickActionLink.label}
-              </Button>
-            )
-          ) : null}
-
           {lockReason ? (
             <Stack spacing={2} align="flex-start">
               <HStack spacing={2} color="blue.700">
@@ -391,6 +398,8 @@ export const WeeklyActivityCard = ({
         spacing={3}
         mt={showDetails && !isAdmin && !activity.hasInteracted && activity.status !== 'completed' ? 2 : 4}
       >
+        {renderQuickActionButton()}
+
         {requiresPartnerApproval ? (
           <Button
             size="sm"

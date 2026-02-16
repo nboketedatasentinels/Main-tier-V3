@@ -52,7 +52,7 @@ export interface UserProfile {
   grandfatheredAt?: string
   
   // Journey & Progress
-  journeyType: "4W" | "6W" | "3M" | "6M" | "9M" | "12M";
+  journeyType: JourneyType;
   programDurationWeeks?: number;
   journeyStartDate?: string | null;
   currentJourneyId?: string

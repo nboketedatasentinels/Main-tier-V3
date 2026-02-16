@@ -10,12 +10,14 @@ const cleanCourseId = (value?: string | null): string => {
 }
 
 const BIWEEKLY_PROGRAM_DURATION = 1.5
+const MAX_SUPPORTED_PROGRAM_MONTHS = 9
 
 const normalizeProgramDuration = (programDuration?: number | string | null): number | null => {
   if (programDuration === undefined || programDuration === null) return null
   const parsed = typeof programDuration === 'string' ? Number(programDuration) : programDuration
   if (!Number.isFinite(parsed) || parsed <= 0) return null
-  return parsed
+  if (Math.abs(parsed - BIWEEKLY_PROGRAM_DURATION) < 0.0001) return BIWEEKLY_PROGRAM_DURATION
+  return Math.min(parsed, MAX_SUPPORTED_PROGRAM_MONTHS)
 }
 
 const isBiweeklyProgramDuration = (programDuration?: number | string | null): boolean => {

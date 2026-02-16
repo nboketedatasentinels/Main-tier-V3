@@ -37,13 +37,6 @@ export const badges: Badge[] = [
     journeyType: '9M',
   },
   {
-    id: '12m-ultimate',
-    name: '12M Ultimate',
-    description: 'The Ultimate Transformation! You have completed the full 12-month journey, achieving the highest level of leadership mastery.',
-    image: '/badges/12m-ultimate.png',
-    journeyType: '12M',
-  },
-  {
     id: 'journey-completion',
     name: 'Journey Completion',
     description: 'Awarded for completing your leadership journey.',

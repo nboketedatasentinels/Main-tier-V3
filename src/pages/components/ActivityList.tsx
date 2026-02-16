@@ -52,7 +52,7 @@ export const ActivityList = ({
 
       {!visibleActivities?.length ? (
         <Center py={8}>
-          <Text color="text.muted">You are caught up for now. New activities appear as each 2-week cycle opens.</Text>
+          <Text color="text.muted">You are caught up for now. New activities unlock as each journey week opens.</Text>
         </Center>
       ) : (
         <Stack spacing={3}>

@@ -136,6 +136,19 @@ describe('WeeklyActivityCard exit actions', () => {
     expect(action).toHaveAttribute('href', '/app/weekly-glance')
   })
 
+  it('shows unlock week guidance for schedule-locked activities', () => {
+    renderCard({
+      selectedWeek: 2,
+      currentWeek: 2,
+      activity: makeActivity({
+        week: 4,
+        availability: { state: 'locked', reason: 'scheduled', isScheduledForWeek: false },
+      }),
+    })
+
+    expect(screen.getAllByText('This activity unlocks in Week 4.').length).toBeGreaterThan(0)
+  })
+
   it('shows "Jump to available activity" and triggers focus callback when alternatives exist', () => {
     const props = renderCard({
       hasAvailableAlternative: true,
@@ -225,7 +238,6 @@ describe('WeeklyActivityCard exit actions', () => {
       }),
     })
 
-    fireEvent.click(screen.getByRole('button', { name: 'Details' }))
     const action = screen.getByRole('link', { name: 'Join Book Club' })
     expect(action).toBeInTheDocument()
     expect(action).toHaveAttribute('href', '/app/book-club')

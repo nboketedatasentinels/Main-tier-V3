@@ -51,8 +51,6 @@ export const getWindowTargetByJourney = (journeyType: string, weeklyTarget: numb
       return 12500
     case '9M':
       return 12600
-    case '12M':
-      return 12600
     default:
       return weeklyTarget * PARALLEL_WINDOW_SIZE_WEEKS
   }
