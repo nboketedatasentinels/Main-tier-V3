@@ -450,6 +450,7 @@ async function creditReferralPointsInternal(
   try {
     await db.collection("notifications").add({
       userId: referrerUid,
+      user_id: referrerUid,
       type: "referral_success",
       title: "Referral Successful!",
       message: `Your referral was successful! You've earned ${REFERRAL_POINTS} points.`,
@@ -464,7 +465,7 @@ async function creditReferralPointsInternal(
 
     // Reward tier milestones: 1, 5, 15, 20
     const tierMilestones: Record<number, { title: string; reward: string }> = {
-      1: { title: "First Referral", reward: "100 Points" },
+      1: { title: "Referral Bonus", reward: "100 Points" },
       5: { title: "Community Builder", reward: "Community Builder Badge" },
       15: { title: "Network Champion", reward: "25% off AI Stacking 101 Course" },
       20: { title: "Referrer of the Month", reward: "Featured in Newsletter" },
@@ -474,6 +475,7 @@ async function creditReferralPointsInternal(
     if (tier) {
       await db.collection("notifications").add({
         userId: referrerUid,
+        user_id: referrerUid,
         type: "referral_reward",
         title: `New Reward Unlocked: ${tier.title}!`,
         message: `Congratulations! You've reached ${newReferralCount} referrals and unlocked: ${tier.reward}.`,
@@ -525,6 +527,7 @@ export const checkStalePendingReferrals = functions
         // Send reminder notification to referrer
         await db.collection("notifications").add({
           userId: referralData.referrerUid,
+          user_id: referralData.referrerUid,
           type: "referral_reminder",
           title: "Referral Pending",
           message:

@@ -102,7 +102,8 @@ const ACTIVITY_QUICK_LINKS: Partial<Record<ActivityId, ActivityQuickActionLink>>
   },
   ai_tool_review: {
     label: 'Submit AI Tool',
-    href: '/app/weekly-checklist?activityId=ai_tool_review&openProof=1',
+    href: 'https://www.t4leader.com/tools',
+    external: true,
   },
 }
 
@@ -788,7 +789,7 @@ export function useWeeklyChecklistViewModel() {
     const anchor = document.getElementById(`activity-${activity.id}`)
     anchor?.scrollIntoView({ behavior: 'smooth', block: 'center' })
 
-    if (requiresPartnerApproval) {
+    if (requiresPartnerApproval && activity.id !== 'ai_tool_review') {
       openProofModal(activity)
     }
     handledDeepLinkRef.current = key

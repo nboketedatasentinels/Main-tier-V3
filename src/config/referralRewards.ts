@@ -21,7 +21,7 @@ export interface RewardTier {
 export const REWARD_TIERS: RewardTier[] = [
   {
     id: 1,
-    title: 'First Referral',
+    title: 'Referral Bonus',
     required: 1,
     reward: '100 Points',
     description: 'Small dopamine hit. Points can be used for leaderboard bragging rights.',

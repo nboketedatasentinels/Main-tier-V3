@@ -242,4 +242,25 @@ describe('WeeklyActivityCard exit actions', () => {
     expect(action).toBeInTheDocument()
     expect(action).toHaveAttribute('href', '/app/book-club')
   })
+
+  it('uses external tools link and hides proof modal action for ai_tool_review', () => {
+    renderCard({
+      activity: makeActivity({
+        id: 'ai_tool_review',
+        baseId: 'ai_tool_review',
+        approvalType: 'partner_approved',
+        requiresApproval: true,
+        quickActionLink: {
+          label: 'Submit AI Tool',
+          href: 'https://www.t4leader.com/tools',
+          external: true,
+        },
+      }),
+    })
+
+    const action = screen.getByRole('link', { name: 'Submit AI Tool' })
+    expect(action).toBeInTheDocument()
+    expect(action).toHaveAttribute('href', 'https://www.t4leader.com/tools')
+    expect(screen.queryByRole('button', { name: /submit proof/i })).not.toBeInTheDocument()
+  })
 })

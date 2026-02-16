@@ -100,6 +100,7 @@ const ReferralRewardsPage: React.FC = () => {
 
   const creditedReferralCount = Math.max(creditedCount, profile?.referralCount ?? 0)
   const totalReferralCount = pendingCount + creditedReferralCount
+  const milestoneReferralCount = creditedReferralCount
   const referralCode = profile?.referralCode ?? user?.uid
   const claimedRewards = profile?.claimedRewards ?? []
 
@@ -108,9 +109,9 @@ const ReferralRewardsPage: React.FC = () => {
     return referralCode ? `${sanitizedBase}/join?ref=${referralCode}` : `${sanitizedBase}/join`
   }, [baseAppUrl, referralCode])
 
-  const nextTier = REWARD_TIERS.find((tier) => totalReferralCount < tier.required)
-  const progressToNext = nextTier ? Math.min((totalReferralCount / nextTier.required) * 100, 100) : 100
-  const referralsNeeded = nextTier ? nextTier.required - totalReferralCount : 0
+  const nextTier = REWARD_TIERS.find((tier) => milestoneReferralCount < tier.required)
+  const progressToNext = nextTier ? Math.min((milestoneReferralCount / nextTier.required) * 100, 100) : 100
+  const referralsNeeded = nextTier ? nextTier.required - milestoneReferralCount : 0
 
   const handleCopy = useCallback(async () => {
     try {
@@ -218,7 +219,7 @@ const ReferralRewardsPage: React.FC = () => {
 
       if (updateProfile) {
         await updateProfile({
-          claimedRewards: [...claimedRewards, tier.id],
+          claimedRewards: Array.from(new Set([...claimedRewards, tier.id])),
         })
       }
     } catch (error) {
@@ -393,7 +394,7 @@ const ReferralRewardsPage: React.FC = () => {
                 Next milestone
               </Text>
               <Text fontWeight="semibold" color="brand.text">
-                {nextTier ? `${nextTier.required} referrals` : 'All tiers unlocked'}
+                {nextTier ? `${nextTier.required} activated referrals` : 'All tiers unlocked'}
               </Text>
             </Stack>
           </HStack>
@@ -412,12 +413,12 @@ const ReferralRewardsPage: React.FC = () => {
           <Flex justify="space-between" align="center">
             <Text color="brand.subtleText" fontWeight="medium">
               {nextTier
-                ? `${totalReferralCount} / ${nextTier.required} total signups`
-                : `${totalReferralCount} total signups`}
+                ? `${milestoneReferralCount} / ${nextTier.required} activated referrals`
+                : `${milestoneReferralCount} activated referrals`}
             </Text>
             <Text color="brand.subtleText">
               {nextTier
-                ? `You have ${totalReferralCount} signups — ${referralsNeeded} more to unlock your next reward!`
+                ? `You have ${milestoneReferralCount} activated referrals — ${referralsNeeded} more to unlock your next reward!`
                 : 'Amazing! You have unlocked every reward tier.'}
             </Text>
           </Flex>
@@ -466,7 +467,7 @@ const ReferralRewardsPage: React.FC = () => {
 
         <SimpleGrid columns={{ base: 1, md: 2 }} spacing={4}>
           {REWARD_TIERS.map((tier, index) => {
-            const isAchieved = totalReferralCount >= tier.required
+            const isAchieved = milestoneReferralCount >= tier.required
             const isClaimed = claimedRewards.includes(tier.id)
 
             return (
@@ -536,7 +537,7 @@ const ReferralRewardsPage: React.FC = () => {
                       </Text>
                       <HStack spacing={2}>
                         <Text fontWeight="bold" color="brand.text">
-                          {tier.label} {tier.title}
+                          {tier.title}
                         </Text>
                       </HStack>
                     </Stack>

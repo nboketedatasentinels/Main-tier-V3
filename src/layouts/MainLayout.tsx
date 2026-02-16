@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useMemo, useState } from 'react'
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Outlet, useLocation, useNavigate } from 'react-router-dom'
 import { RouteTransition } from '@/components/RouteTransition'
 import {
@@ -48,9 +48,8 @@ import {
   CalendarDays,
 } from 'lucide-react'
 import { useAuth } from '@/hooks/useAuth'
-import { useCurrentWindow } from '@/hooks/useCurrentWindow'
 import { BuildVillageModal } from '@/components/modals/BuildVillageModal'
-import { ConfirmationWelcomeModal } from '@/components/modals/ConfirmationWelcomeModal'
+import { PersonalityTypeModal } from '@/components/modals/PersonalityTypeModal'
 import { PlatformTour } from '@/components/tour/PlatformTour'
 import { NotificationDropdown } from '@/components/notifications/NotificationDropdown'
 import { isFreeUser as isFreeTierUser } from '@/utils/membership'
@@ -120,8 +119,7 @@ const getRestrictedFeatureForPath = (path: string): RestrictedFeatureConfig | nu
   RESTRICTED_FREE_FEATURES.find((feature) => path.startsWith(feature.pathPrefix)) ?? null
 
 export const MainLayout: React.FC = () => {
-  const { profile, signOut, signingOut } = useAuth()
-  const windowContext = useCurrentWindow()
+  const { profile, refreshProfile, signOut, signingOut } = useAuth()
   const location = useLocation()
   const navigate = useNavigate()
   const { isOpen, onOpen, onClose } = useDisclosure()
@@ -132,13 +130,32 @@ export const MainLayout: React.FC = () => {
   } = useDisclosure()
   const toast = useToast()
   const [showVillagePrompt, setShowVillagePrompt] = useState(false)
-  const [showWelcomeModal, setShowWelcomeModal] = useState(false)
+  const [showPersonalityModal, setShowPersonalityModal] = useState(false)
   const [showTour, setShowTour] = useState(false)
   const [globalSearchQuery, setGlobalSearchQuery] = useState('')
   const [selectedRestrictedFeature, setSelectedRestrictedFeature] = useState<RestrictedFeatureConfig | null>(null)
+  const onboardingSessionRef = useRef<string | null>(null)
 
   const buildVillageKey = useMemo(() => (profile ? `t4l.buildVillage.${profile.id}` : null), [profile])
-  const welcomeKey = useMemo(() => (profile ? `t4l.newUserWelcome.${profile.id}` : null), [profile])
+  const isAppShellRoute = useMemo(
+    () =>
+      location.pathname.startsWith('/app/') ||
+      location.pathname.startsWith('/mentor/') ||
+      location.pathname.startsWith('/ambassador/'),
+    [location.pathname],
+  )
+  const hasCompletedPersonalityAndValues = useMemo(() => {
+    if (!profile) return false
+    return (
+      Boolean(profile.hasCompletedPersonalityTest) &&
+      Boolean(profile.hasCompletedValuesTest) &&
+      Boolean(profile.personalityType) &&
+      Array.isArray(profile.coreValues) &&
+      profile.coreValues.length === 5
+    )
+  }, [profile])
+  const shouldAutoOpenTour = Boolean(profile && isAppShellRoute && !profile.hasSeenDashboardTour)
+  const shouldPromptPersonalityModal = Boolean(profile && isAppShellRoute && !hasCompletedPersonalityAndValues)
 
   useEffect(() => {
     localStorage.removeItem('t4l.dashboard_tour_progress')
@@ -165,33 +182,24 @@ export const MainLayout: React.FC = () => {
       setShowVillagePrompt(Boolean(shouldPromptVillage && !stored))
     }
 
-    // Support all dashboard routes, not just weekly-glance
-    if (
-      welcomeKey &&
-      (location.pathname.startsWith('/app/') ||
-        location.pathname.startsWith('/mentor/') ||
-        location.pathname.startsWith('/ambassador/'))
-    ) {
-      const shouldWelcome = localStorage.getItem(welcomeKey)
-      if (shouldWelcome === 'pending') {
-        setShowWelcomeModal(true)
-      }
-    }
-  }, [buildVillageKey, isFreeUser, location.pathname, profile, welcomeKey])
+  }, [buildVillageKey, isFreeUser, location.pathname, profile])
 
   useEffect(() => {
-    if (!welcomeKey) return
-
-    const handleStorage = (event: StorageEvent) => {
-      if (event.key === welcomeKey && event.newValue !== 'pending') {
-        setShowWelcomeModal(false)
-      }
+    if (!profile?.id || !isAppShellRoute) {
+      onboardingSessionRef.current = null
+      return
     }
+    if (onboardingSessionRef.current === profile.id) return
 
-    window.addEventListener('storage', handleStorage)
-
-    return () => window.removeEventListener('storage', handleStorage)
-  }, [welcomeKey])
+    onboardingSessionRef.current = profile.id
+    if (shouldAutoOpenTour) {
+      setShowTour(true)
+      return
+    }
+    if (shouldPromptPersonalityModal) {
+      setShowPersonalityModal(true)
+    }
+  }, [isAppShellRoute, profile?.id, shouldAutoOpenTour, shouldPromptPersonalityModal])
 
   const handleSignOut = async () => {
     const result = await signOut()
@@ -219,12 +227,29 @@ export const MainLayout: React.FC = () => {
     setShowVillagePrompt(false)
   }
 
-  const handleWelcomeAcknowledged = () => {
-    if (welcomeKey) {
-      localStorage.removeItem(welcomeKey)
+  const handleTourClosed = useCallback(() => {
+    setShowTour(false)
+    if (shouldPromptPersonalityModal) {
+      setShowPersonalityModal(true)
     }
-    setShowWelcomeModal(false)
-  }
+  }, [shouldPromptPersonalityModal])
+
+  const handlePersonalityModalComplete = useCallback(async () => {
+    setShowPersonalityModal(false)
+    try {
+      await refreshProfile({ reason: 'personality-modal-complete' })
+    } catch (error) {
+      console.error('[MainLayout] Failed to refresh profile after personality modal completion', error)
+      const description = error instanceof Error ? error.message : 'Unable to refresh your profile right now.'
+      toast({
+        title: 'Profile refresh failed',
+        description,
+        status: 'error',
+        duration: 5000,
+        isClosable: true,
+      })
+    }
+  }, [refreshProfile, toast])
 
   const navigationSections = useMemo<NavSection[]>(
     () => [
@@ -829,17 +854,13 @@ export const MainLayout: React.FC = () => {
         onSkip={handleVillageSkipped}
       />
 
-      <ConfirmationWelcomeModal
-        isOpen={showWelcomeModal}
-        onAcknowledge={handleWelcomeAcknowledged}
-        firstName={profile?.firstName}
-        role={profile?.role}
-        membershipStatus={profile?.membershipStatus}
-        windowContext={windowContext}
-        onStartTour={() => setShowTour(true)}
+      <PersonalityTypeModal
+        isOpen={showPersonalityModal}
+        onClose={() => setShowPersonalityModal(false)}
+        onComplete={handlePersonalityModalComplete}
       />
 
-      <PlatformTour isOpen={showTour} onClose={() => setShowTour(false)} />
+      <PlatformTour isOpen={showTour} onClose={handleTourClosed} />
 
       <UpgradePromptModal
         featureName={selectedRestrictedFeature?.featureName ?? 'Premium Feature'}

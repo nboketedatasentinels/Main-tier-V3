@@ -120,6 +120,7 @@ export interface UserProfile {
   isOnboarded: boolean
   fcmTokens?: string[]
   personalityType?: string
+  coreValues?: string[]
   hasCompletedPersonalityTest?: boolean
   hasCompletedValuesTest?: boolean
   privacySettings?: PrivacySettings

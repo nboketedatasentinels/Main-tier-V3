@@ -344,7 +344,8 @@ describe('useWeeklyChecklistViewModel proof submission', () => {
 
     expect(aiTool?.quickActionLink).toEqual({
       label: 'Submit AI Tool',
-      href: '/app/weekly-checklist?activityId=ai_tool_review&openProof=1',
+      href: 'https://www.t4leader.com/tools',
+      external: true,
     })
     expect(bookClub?.quickActionLink).toEqual({
       label: 'Join Book Club',

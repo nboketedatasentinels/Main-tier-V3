@@ -64,6 +64,7 @@ export const WeeklyActivityCard = ({
   isActionInFlight: boolean
 }) => {
   const requiresPartnerApproval = Boolean(activity.approvalType === 'partner_approved' || activity.requiresApproval)
+  const isExternalAiToolSubmission = activity.id === 'ai_tool_review' && Boolean(activity.quickActionLink?.external)
   const isPartnerIssued = activity.approvalType === 'partner_issued'
   const lockedByPartnerIssue = isPartnerIssued && !activity.issuedByPartner && !isAdmin && activity.status !== 'completed'
   const isMobile = useBreakpointValue({ base: true, md: false }) ?? false
@@ -268,7 +269,13 @@ export const WeeklyActivityCard = ({
 
             {showApprovalBadge
               ? requiresPartnerApproval ? (
-                <Tooltip label="Partner approval required. Submit proof for verification.">
+                <Tooltip
+                  label={
+                    isExternalAiToolSubmission
+                      ? 'Submit this activity through the external tools portal.'
+                      : 'Partner approval required. Submit proof for verification.'
+                  }
+                >
                   <Badge colorScheme="purple">Partner approval</Badge>
                 </Tooltip>
               ) : isPartnerIssued ? (
@@ -400,7 +407,7 @@ export const WeeklyActivityCard = ({
       >
         {renderQuickActionButton()}
 
-        {requiresPartnerApproval ? (
+        {isExternalAiToolSubmission ? null : requiresPartnerApproval ? (
           <Button
             size="sm"
             colorScheme="purple"
