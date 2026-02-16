@@ -23,7 +23,7 @@ This creates one mental model across the entire ecosystem.
 
 | Journey | Duration | Cycles | Pass Mark | Max Points | Per 2-Week Cycle Target | Completion Badge |
 |---------|----------|---------|-----------|------------|-------------------|------------------|
-| 4-Week Intro | 4 weeks | 2 | 9,000 | 17,000 | 7,500 | Starter |
+| 4-Week Intro | 4 weeks | 2 | 9,000 | 15,000 | 7,500 | Starter |
 | 6-Week Power | 6 weeks | 3 | 40,000 | 60,000 | 13,500 | Powerful |
 | 3-Month | 12 weeks | 6 | 75,000 | 113,000 | 12,500 | Innovator |
 | 6-Month | 24 weeks | 12 | 150,000 | 226,000 | 12,500 | Pioneer |
@@ -55,11 +55,11 @@ This creates one mental model across the entire ecosystem.
 | Attend webinar + workbook | 1 | Partner Approved | 3,000 | 3,000 |
 | Impact Log Entry | 2 | Auto Marks | 1,000 | 2,000 |
 | LIFT Course Module Completed | 1 | Partner Issued | 3,000 | 3,000 |
-| Attend book club session | 1 | Partner Issued | 2,500 | 2,500 |
-| Attend shameless circle session | 1 | Partner Issued | 2,500 | 2,500 |
+| Attend book club session | 1 | Partner Issued | 1,500 | 1,500 |
+| Attend shameless circle session | 1 | Partner Issued | 1,500 | 1,500 |
 | Submit an AI tool for review | 1 | Partner Approved | 1,000 | 1,000 |
 
-**MAXIMUM POSSIBLE**: 17,000 points
+**MAXIMUM POSSIBLE**: 15,000 points
 **PASS MARK**: 9,000 points
 
 **Quick Links (4-Week Intro Checklist):**

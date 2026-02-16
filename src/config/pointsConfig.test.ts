@@ -34,7 +34,7 @@ describe('pointsConfig module activities', () => {
 
     expect(JOURNEY_META['4W'].windowTarget).toBe(7500)
     expect(JOURNEY_META['4W'].passMarkPoints).toBe(9000)
-    expect(JOURNEY_META['4W'].maxPossiblePoints).toBe(17000)
+    expect(JOURNEY_META['4W'].maxPossiblePoints).toBe(15000)
 
     expect(byId.get('watch_podcast')?.points).toBe(1000)
     expect(byId.get('watch_podcast')?.activityPolicy?.maxTotal).toBe(3)
@@ -44,8 +44,15 @@ describe('pointsConfig module activities', () => {
 
     expect(byId.get('webinar_workbook')?.points).toBe(3000)
     expect(byId.get('webinar_workbook')?.activityPolicy?.maxTotal).toBe(1)
+    expect(byId.get('book_club')?.points).toBe(1500)
+    expect(byId.get('shameless_circle')?.points).toBe(1500)
     expect(byId.get('ai_tool_review')?.activityPolicy?.maxTotal).toBe(1)
     expect(byId.get('shameless_circle')?.activityPolicy?.maxTotal).toBe(1)
+  })
+
+  it('uses a 14,000 point two-week target for the 6-week journey', () => {
+    expect(JOURNEY_META['6W'].weeklyTarget).toBe(7000)
+    expect(JOURNEY_META['6W'].windowTarget).toBe(14000)
   })
 
   it('cross-references each journey activity table with configured maximum points', () => {

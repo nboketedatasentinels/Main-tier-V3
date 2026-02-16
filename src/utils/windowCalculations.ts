@@ -45,7 +45,7 @@ export const getWindowTargetByJourney = (journeyType: string, weeklyTarget: numb
     case '4W':
       return 7500
     case '6W':
-      return 13500
+      return 14000
     case '3M':
     case '6M':
       return 12500
