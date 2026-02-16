@@ -84,6 +84,7 @@ import {
 } from '@/utils/monthlyCourseAssignments'
 import { downloadCSVTemplate, parseInvitationCSV } from '@/utils/csvUtils'
 import { normalizeEmail } from '@/utils/email'
+import { resolveCourseIdFromMapping } from '@/utils/courseMappings'
 import {
   clusterBoundaries,
   clusterTiers,
@@ -555,12 +556,16 @@ export const CreateOrganizationModal: React.FC<CreateOrganizationModalProps> = (
       }
 
       setIsSubmitting(true)
-      const assignmentArray = getAssignedCourseIdsFromMonthlyAssignments(monthlyAssignments, courseLimit)
+      const normalizedMonthlyAssignments: MonthlyCourseAssignments = {}
+      Object.entries(monthlyAssignments).forEach(([monthKey, courseId]) => {
+        normalizedMonthlyAssignments[monthKey] = resolveCourseIdFromMapping(courseId)
+      })
+      const assignmentArray = getAssignedCourseIdsFromMonthlyAssignments(normalizedMonthlyAssignments, courseLimit)
       const organizationPayload: OrganizationRecord = {
         ...form,
         code: form.code.toUpperCase(),
         courseAssignments: assignmentArray,
-        monthlyCourseAssignments: monthlyAssignments,
+        monthlyCourseAssignments: normalizedMonthlyAssignments,
         courseAssignmentStructure: 'monthly',
         cohortStartDate: form.cohortStartDate,
         programDuration: form.programDuration,

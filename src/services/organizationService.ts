@@ -34,7 +34,7 @@ import {
   resolveJourneyType,
 } from '@/utils/journeyType'
 import { removeUndefinedFields } from '@/utils/firestore'
-import { COURSE_DETAILS_MAPPING } from '@/utils/courseMappings'
+import { COURSE_DETAILS_MAPPING, resolveCourseIdFromMapping } from '@/utils/courseMappings'
 import { inviteUsersBulk } from './invitationService'
 import {
   syncOrganizationPartnerChange,
@@ -240,9 +240,6 @@ export const determineClusterFromTeamSize = (teamSize?: number) => {
 
 export const fetchAvailableCourses = async (): Promise<CourseOption[]> => {
   const mappingEntries = Object.entries(COURSE_DETAILS_MAPPING).filter(([, details]) => Boolean(details?.slug))
-  const mappingBySlug = new Map<string, { title: string; description?: string }>(
-    mappingEntries.map(([title, details]) => [details.slug, { title, description: details.description }]),
-  )
   const mappedFallback: CourseOption[] = mappingEntries
     .map(([title, details]) => ({ id: details.slug, title, description: details.description }))
     .sort((a, b) => a.title.localeCompare(b.title))
@@ -250,27 +247,34 @@ export const fetchAvailableCourses = async (): Promise<CourseOption[]> => {
   try {
     const snapshot = await getDocs(coursesCollection)
 
-    const courseMap = new Map<string, CourseOption>()
+    // Keep mapping as the canonical source of available courses and IDs.
+    const courseMap = new Map<string, CourseOption>(mappedFallback.map((course) => [course.id, course]))
 
     snapshot.docs.forEach((docSnap) => {
-      const data = docSnap.data() as { title?: string; name?: string; description?: string }
-      const mappingMatch = mappingBySlug.get(docSnap.id)
-      const title = (data.title || data.name || mappingMatch?.title || 'Untitled course').trim()
-      const description = data.description || mappingMatch?.description
-      courseMap.set(docSnap.id, { id: docSnap.id, title, description })
-    })
-
-    mappedFallback.forEach((course) => {
-      const existing = courseMap.get(course.id)
-      if (!existing) {
-        courseMap.set(course.id, course)
-        return
+      const data = docSnap.data() as {
+        title?: string
+        name?: string
+        description?: string
+        slug?: string
+        courseId?: string
       }
 
-      courseMap.set(course.id, {
+      const candidateIds = [docSnap.id, data.slug, data.courseId, data.title, data.name].filter(
+        (value): value is string => typeof value === 'string' && value.trim().length > 0,
+      )
+      const mappedId = candidateIds
+        .map((value) => resolveCourseIdFromMapping(value))
+        .find((value) => courseMap.has(value))
+
+      // Ignore stale/unmapped Firestore docs for admin course assignment options.
+      if (!mappedId) return
+
+      const existing = courseMap.get(mappedId)
+      if (!existing) return
+
+      courseMap.set(mappedId, {
         ...existing,
-        title: existing.title && existing.title !== 'Untitled course' ? existing.title : course.title,
-        description: existing.description || course.description,
+        description: existing.description || data.description,
       })
     })
 

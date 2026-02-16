@@ -73,6 +73,7 @@ import {
   getClusterShortName,
   getClusterTierByName,
 } from '@/utils/clusterTiers'
+import { resolveCourseIdFromMapping } from '@/utils/courseMappings'
 
 interface EditOrganizationModalProps {
   isOpen: boolean
@@ -351,14 +352,18 @@ export const EditOrganizationModal: React.FC<EditOrganizationModalProps> = ({
       }
 
       setIsSubmitting(true)
-      const assignmentArray = getAssignedCourseIdsFromMonthlyAssignments(monthlyAssignments, courseLimit)
+      const normalizedMonthlyAssignments: MonthlyCourseAssignments = {}
+      Object.entries(monthlyAssignments).forEach(([monthKey, courseId]) => {
+        normalizedMonthlyAssignments[monthKey] = resolveCourseIdFromMapping(courseId)
+      })
+      const assignmentArray = getAssignedCourseIdsFromMonthlyAssignments(normalizedMonthlyAssignments, courseLimit)
       const payload: OrganizationRecord = { ...form }
       delete payload.id
       await updateOrganization(organization.id, {
         ...payload,
         code: form.code.toUpperCase(),
         courseAssignments: assignmentArray,
-        monthlyCourseAssignments: monthlyAssignments,
+        monthlyCourseAssignments: normalizedMonthlyAssignments,
         courseAssignmentStructure: 'monthly',
       })
       toast({
