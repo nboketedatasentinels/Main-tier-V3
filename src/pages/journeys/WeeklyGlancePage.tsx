@@ -299,6 +299,7 @@ export const WeeklyGlancePage = () => {
 
   // Week advancement eligibility tracking
   const { eligibility, loading: eligibilityLoading, error: eligibilityError } = useWeekAdvancementCriteria(profile)
+  const shouldRenderWeekStatusCard = eligibilityLoading || Boolean(eligibilityError) || Boolean(eligibility)
 
   const [isBuildVillageOpen, setIsBuildVillageOpen] = useState(false)
   const [villageName, setVillageName] = useState('')
@@ -489,7 +490,7 @@ export const WeeklyGlancePage = () => {
           gap={6}
           alignItems="stretch"
         >
-          <GridItem colSpan={{ base: 1, md: 6 }} order={{ base: 1, md: 1 }}>
+          <GridItem colSpan={{ base: 1, md: 4 }} order={{ base: 1, md: 1 }}>
             {isParallelTrackingEnabled ? (
               <WindowSummaryCard onNavigate={handleNavigateChecklist} />
             ) : (
@@ -505,7 +506,7 @@ export const WeeklyGlancePage = () => {
             )}
           </GridItem>
 
-          <GridItem colSpan={{ base: 1, md: 6 }} order={{ base: 2, md: 2 }}>
+          <GridItem colSpan={{ base: 1, md: 4 }} order={{ base: 2, md: 2 }}>
             <WeeklyPointsCard
               data={data.weeklyPoints}
               loading={data.loading.points}
@@ -514,18 +515,20 @@ export const WeeklyGlancePage = () => {
             />
           </GridItem>
 
-          <GridItem colSpan={{ base: 1, md: 6 }} order={{ base: 3, md: 3 }}>
-            <WeekStatusSummaryCard
-              eligibility={eligibility}
-              loading={eligibilityLoading}
-              error={eligibilityError}
-              onViewApprovals={handleViewPendingApprovals}
-            />
-          </GridItem>
-
           {(!isMobile || showMore) && (
-            <GridItem colSpan={{ base: 1, md: 6 }} order={{ base: 8, md: 4 }}>
+            <GridItem colSpan={{ base: 1, md: 4 }} order={{ base: 8, md: 3 }}>
               <PersonalityProfileCard data={data.personality} loading={data.loading.profile} />
+            </GridItem>
+          )}
+
+          {shouldRenderWeekStatusCard && (
+            <GridItem colSpan={{ base: 1, md: 6 }} order={{ base: 3, md: 4 }}>
+              <WeekStatusSummaryCard
+                eligibility={eligibility}
+                loading={eligibilityLoading}
+                error={eligibilityError}
+                onViewApprovals={handleViewPendingApprovals}
+              />
             </GridItem>
           )}
 
