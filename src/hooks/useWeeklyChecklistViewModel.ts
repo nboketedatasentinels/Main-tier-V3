@@ -67,6 +67,7 @@ export interface JourneyConfig {
   currentWeek: number
   programDurationWeeks: number
   isPaid: boolean
+  journeyStartDate?: string | null
 }
 
 export interface ProofModalState {
@@ -272,25 +273,37 @@ export function useWeeklyChecklistViewModel() {
     const resolve = async () => {
       try {
         let journeyType: JourneyType = '6W'
+        let orgCohortStartDate: string | null = null
 
         if (isFreeUser(profile) && !profile.companyId) {
           journeyType = '4W'
         } else if (profile.companyId) {
           const orgSnap = await getDoc(doc(db, ORG_COLLECTION, profile.companyId))
           if (orgSnap.exists()) {
-            journeyType = (resolveJourneyType(orgSnap.data()) as JourneyType) || '6W'
+            const orgData = orgSnap.data()
+            journeyType = (resolveJourneyType(orgData) as JourneyType) || '6W'
+            const rawStartDate = orgData.cohortStartDate
+            if (rawStartDate) {
+              if (typeof rawStartDate === 'string') {
+                orgCohortStartDate = rawStartDate
+              } else if (rawStartDate.toDate) {
+                orgCohortStartDate = rawStartDate.toDate().toISOString()
+              }
+            }
           }
         } else if (profile.journeyType) {
           journeyType = profile.journeyType as JourneyType
         }
 
         const meta = JOURNEY_META[journeyType]
+        const journeyStartDate = orgCohortStartDate || profile.journeyStartDate || null
 
         setJourney({
           journeyType,
           currentWeek: profile.currentWeek || 1,
           programDurationWeeks: meta.weeks,
           isPaid: !isFreeUser(profile),
+          journeyStartDate,
         })
 
         const desiredWeek = deepLink.week

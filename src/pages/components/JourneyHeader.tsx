@@ -62,10 +62,15 @@ export const JourneyHeader = ({
   const isOrgManagedJourney = useMemo(() => Boolean(profile?.companyId), [profile?.companyId])
 
   const journeyStartDate = useMemo(() => {
-    if (!journey || !profile) return null
-    if (profile.journeyStartDate) {
+    if (!journey) return null
+    // Priority: org cohortStartDate (via JourneyConfig) > profile.journeyStartDate > fallback
+    if (journey.journeyStartDate) {
+      return new Date(journey.journeyStartDate)
+    }
+    if (profile?.journeyStartDate) {
       return new Date(profile.journeyStartDate)
     }
+    // Fallback: estimate from currentWeek (inaccurate, kept for edge cases)
     const offsetWeeks = (journey.currentWeek || 1) - 1
     return addDays(new Date(), -(offsetWeeks * 7))
   }, [journey, profile])
