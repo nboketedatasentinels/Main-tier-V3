@@ -21,7 +21,12 @@ import { doc, getDoc } from 'firebase/firestore'
 import { Link as RouterLink } from 'react-router-dom'
 import type { UserProfile } from '@/types'
 import { db } from '@/services/firebase'
-import { COURSE_DETAILS_MAPPING, COURSE_METADATA_MAPPING, type CourseDifficulty } from '@/utils/courseMappings'
+import {
+  getCourseDetailsFromMapping,
+  getCourseMetadataFromMapping,
+  resolveCourseTitleFromMapping,
+  type CourseDifficulty,
+} from '@/utils/courseMappings'
 import { canAccessCourse, COMPLEMENTARY_COURSE_IDS } from '@/utils/membership'
 
 interface NormalizedCourse {
@@ -56,9 +61,10 @@ const badgeColor = (difficulty?: CourseDifficulty) => {
 }
 
 const buildCourseFromDoc = (courseId: string, data: Record<string, unknown>): NormalizedCourse => {
-  const title = (data.title || data.name || data.courseTitle || 'Untitled Course') as string
-  const details = COURSE_DETAILS_MAPPING[title]
-  const metadata = COURSE_METADATA_MAPPING[title]
+  const rawTitle = (data.title || data.name || data.courseTitle || 'Untitled Course') as string
+  const title = resolveCourseTitleFromMapping(rawTitle) || rawTitle
+  const details = getCourseDetailsFromMapping(title)
+  const metadata = getCourseMetadataFromMapping(title)
 
   return {
     id: courseId,

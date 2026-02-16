@@ -72,7 +72,7 @@ export const COURSE_DETAILS_MAPPING: Record<string, CourseDetail> = {
     price: 79,
     description: 'Map the exact steps to accelerate your advancement.',
   },
-  'Understanding Digital Bias and its Impacts': {
+  "Understanding Digital Bias and it's Impacts": {
     slug: 'understanding-digital-bias',
     link: 'https://www.t4leader.com/challenge-page/the-bias-blueprint?programId=7afdc77b-e8ad-467f-b0b8-f3e9814f59a0',
     points: 100,
@@ -142,33 +142,40 @@ export const COURSE_DETAILS_MAPPING: Record<string, CourseDetail> = {
     price: 110,
     description: 'Guide teams through change with vision and trust.',
   },
-  'Digital Transformation with Data Sentinels CPD: 16 Hours': {
+  'Digital Transformation with Data Sentinels': {
     slug: 'digital-transformation-data',
     link: 'https://www.t4leader.com/challenge-page/digital-transformation-and-data-with-data-sentinels?programId=5e00df69-7bfb-4b86-ac91-b4d1a6381289',
     points: 100,
     price: 115,
     description: 'Lead digital-first initiatives with data fluency.',
   },
-  'Leading Through Change and Continuous Improvement CPD: 16 Hours': {
+  'Leading Through Change and Continuous Improvement': {
     slug: 'leading-through-change',
     link: 'https://www.t4leader.com/challenge-page/leading-through-change-and-continuous-improvement?programId=34091627-1526-45e0-b4d0-e33f322ac71f',
     points: 100,
     price: 105,
     description: 'Embed continuous improvement within your team.',
   },
-  'Project Management for Leaders CPD: 16 Hours': {
+  'Project Management for Leaders': {
     slug: 'project-management-for-leaders',
     link: 'https://www.t4leader.com/challenge-page/project-management-for-leaders?programId=3731b2b1-7b15-44f0-ae55-b10f94f575f9',
     points: 100,
     price: 120,
     description: 'Deliver complex initiatives with confidence.',
   },
-  'Foundations of Leadership and Team Dynamics CPD: 10 Hours': {
+  'Foundations of Leadership and Team Dynamics': {
     slug: 'foundations-of-leadership',
     link: 'https://www.t4leader.com/challenge-page/foundations-of-leadership-and-team-dynamics?programId=76de65e3-b744-4c05-832f-0e9a60b2c7d2',
     points: 100,
     price: 96,
     description: 'Lead cohesive teams with clarity and trust.',
+  },
+  'Data Fluency & Reporting': {
+    slug: 'data-fluency-reporting',
+    link: 'https://www.t4leader.com/challenge-page/b41deb08-0468-42e4-9a55-f2bf41ad5643?programId=b41deb08-0468-42e4-9a55-f2bf41ad5643',
+    points: 100,
+    price: 99,
+    description: 'Build confidence turning data into clear, actionable insights.',
   },
   'Inner Shift': {
     slug: 'inner-shift',
@@ -202,7 +209,7 @@ export const COURSE_METADATA_MAPPING: Record<string, CourseMetadata> = {
   'The Heart of Leadership: Developing Emotional Intelligence for Impact': { estimatedMinutes: 110, difficulty: 'Intermediate' },
   'LinkedIn Warrior: Set Up Your Profile for Success': { estimatedMinutes: 85, difficulty: 'Intermediate' },
   'Path to Promotion: Strategies for Climbing the Career Jungle Gym': { estimatedMinutes: 95, difficulty: 'Advanced' },
-  'Understanding Digital Bias and its Impacts': { estimatedMinutes: 100, difficulty: 'Intermediate' },
+  "Understanding Digital Bias and it's Impacts": { estimatedMinutes: 100, difficulty: 'Intermediate' },
   'Cultural Intelligence': { estimatedMinutes: 120, difficulty: 'Intermediate' },
   'The Confidence Code: Unlocking Self-Esteem and Life Balance': { estimatedMinutes: 60, difficulty: 'Beginner' },
   'Think like an Owner': { estimatedMinutes: 105, difficulty: 'Advanced' },
@@ -212,22 +219,76 @@ export const COURSE_METADATA_MAPPING: Record<string, CourseMetadata> = {
   'How to Thrive in a Toxic Workplace': { estimatedMinutes: 70, difficulty: 'Intermediate' },
   'The Science of You: Understanding Personality Strengths for Growth': { estimatedMinutes: 115, difficulty: 'Advanced' },
   'Transformational Leadership': { estimatedMinutes: 140, difficulty: 'Advanced' },
-  'Digital Transformation with Data Sentinels CPD: 16 Hours': { estimatedMinutes: 960, difficulty: 'Advanced' },
-  'Leading Through Change and Continuous Improvement CPD: 16 Hours': { estimatedMinutes: 960, difficulty: 'Advanced' },
-  'Project Management for Leaders CPD: 16 Hours': { estimatedMinutes: 960, difficulty: 'Advanced' },
-  'Foundations of Leadership and Team Dynamics CPD: 10 Hours': { estimatedMinutes: 600, difficulty: 'Intermediate' },
+  'Digital Transformation with Data Sentinels': { estimatedMinutes: 960, difficulty: 'Advanced' },
+  'Leading Through Change and Continuous Improvement': { estimatedMinutes: 960, difficulty: 'Advanced' },
+  'Project Management for Leaders': { estimatedMinutes: 960, difficulty: 'Advanced' },
+  'Foundations of Leadership and Team Dynamics': { estimatedMinutes: 600, difficulty: 'Intermediate' },
+  'Data Fluency & Reporting': { estimatedMinutes: 600, difficulty: 'Intermediate' },
   'Inner Shift': { estimatedMinutes: 360, difficulty: 'Intermediate' },
   'Digital Rebel': { estimatedMinutes: 360, difficulty: 'Advanced' },
   'Architect': { estimatedMinutes: 480, difficulty: 'Advanced' },
 }
 
-const COURSE_TITLE_TO_SLUG = new Map<string, string>(
-  Object.entries(COURSE_DETAILS_MAPPING).map(([title, details]) => [normalizeCourseMappingKey(title), details.slug])
-)
+const COURSE_TITLE_ALIASES: Record<string, string> = {
+  'Understanding Digital Bias and its Impacts': "Understanding Digital Bias and it's Impacts",
+  'Digital Transformation with Data Sentinels CPD: 16 Hours': 'Digital Transformation with Data Sentinels',
+  'Leading Through Change and Continuous Improvement CPD: 16 Hours': 'Leading Through Change and Continuous Improvement',
+  'Leading Through Change and Continuous Improvement ': 'Leading Through Change and Continuous Improvement',
+  'Project Management for Leaders CPD: 16 Hours': 'Project Management for Leaders',
+  'Project Management for Leaders ': 'Project Management for Leaders',
+  'Foundations of Leadership and Team Dynamics CPD: 10 Hours': 'Foundations of Leadership and Team Dynamics',
+}
 
-const COURSE_SLUG_NORMALIZED_TO_SLUG = new Map<string, string>(
-  Object.values(COURSE_DETAILS_MAPPING).map(details => [normalizeCourseMappingKey(details.slug), details.slug])
-)
+const COURSE_TITLE_TO_SLUG = new Map<string, string>()
+const COURSE_TITLE_NORMALIZED_TO_TITLE = new Map<string, string>()
+const COURSE_SLUG_NORMALIZED_TO_SLUG = new Map<string, string>()
+const COURSE_SLUG_NORMALIZED_TO_TITLE = new Map<string, string>()
+
+Object.entries(COURSE_DETAILS_MAPPING).forEach(([title, details]) => {
+  const normalizedTitle = normalizeCourseMappingKey(title)
+  const normalizedSlug = normalizeCourseMappingKey(details.slug)
+
+  COURSE_TITLE_TO_SLUG.set(normalizedTitle, details.slug)
+  COURSE_TITLE_NORMALIZED_TO_TITLE.set(normalizedTitle, title)
+  COURSE_SLUG_NORMALIZED_TO_SLUG.set(normalizedSlug, details.slug)
+  COURSE_SLUG_NORMALIZED_TO_TITLE.set(normalizedSlug, title)
+})
+
+Object.entries(COURSE_TITLE_ALIASES).forEach(([alias, canonicalTitle]) => {
+  const details = COURSE_DETAILS_MAPPING[canonicalTitle]
+  if (!details) return
+
+  const normalizedAlias = normalizeCourseMappingKey(alias)
+  COURSE_TITLE_TO_SLUG.set(normalizedAlias, details.slug)
+  COURSE_TITLE_NORMALIZED_TO_TITLE.set(normalizedAlias, canonicalTitle)
+})
+
+export const resolveCourseTitleFromMapping = (value?: string | null): string => {
+  if (!value) return ''
+  const trimmed = value.trim()
+  if (!trimmed) return ''
+
+  const normalized = normalizeCourseMappingKey(trimmed)
+  const slugTitleMatch = COURSE_SLUG_NORMALIZED_TO_TITLE.get(normalized)
+  if (slugTitleMatch) return slugTitleMatch
+
+  const titleMatch = COURSE_TITLE_NORMALIZED_TO_TITLE.get(normalized)
+  if (titleMatch) return titleMatch
+
+  return trimmed
+}
+
+export const getCourseDetailsFromMapping = (value?: string | null): CourseDetail | undefined => {
+  const title = resolveCourseTitleFromMapping(value)
+  if (!title) return undefined
+  return COURSE_DETAILS_MAPPING[title]
+}
+
+export const getCourseMetadataFromMapping = (value?: string | null): CourseMetadata | undefined => {
+  const title = resolveCourseTitleFromMapping(value)
+  if (!title) return undefined
+  return COURSE_METADATA_MAPPING[title]
+}
 
 export const resolveCourseIdFromMapping = (value?: string | null): string => {
   if (!value) return ''

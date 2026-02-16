@@ -26,7 +26,9 @@ import { getCourseDocument, getCourseDocuments } from '@/services/courseService'
 import { canAccessCourse, isFreeUser } from '@/utils/membership'
 import {
   COURSE_DETAILS_MAPPING,
-  COURSE_METADATA_MAPPING,
+  getCourseDetailsFromMapping,
+  getCourseMetadataFromMapping,
+  resolveCourseTitleFromMapping,
   type CourseDifficulty,
 } from '@/utils/courseMappings'
 import {
@@ -56,6 +58,7 @@ interface NormalizedCourse {
 }
 
 const COMPLEMENTARY_COURSE_ID = 'transformational-leadership'
+const FREE_TIER_DISCOUNT_COUPON = 'T4LIFT'
 
 const resolveOrganizationId = (profile: UserProfile | null): string | null => {
   if (!profile) return null
@@ -74,7 +77,7 @@ const COURSE_IMAGE_FILENAMES: Record<string, string> = {
   'Mindset Reset: Shift Your Thinking, Transform Your Life': 'course-mindset-reset.avif',
   'Goal Setting Mastery: Turn Your Vision into Action': 'course-goal-setting-mastery.avif',
   'The Heart of Leadership: Developing Emotional Intelligence for Impact': 'course-heart-of-leadership.avif',
-  'Digital Transformation with Data Sentinels CPD: 16 Hours': 'course-digital-transformation.avif',
+  'Digital Transformation with Data Sentinels': 'course-digital-transformation.avif',
   'LinkedIn Warrior: Set Up Your Profile for Success': 'course-linkedin-warrior.avif',
   'Transformational Leadership': 'course-transformational-leadership.avif',
 }
@@ -140,9 +143,10 @@ const badgeColor = (difficulty?: CourseDifficulty) => {
 }
 
 const buildCourseFromDoc = (courseId: string, data: Record<string, unknown>): NormalizedCourse => {
-  const title = (data.title || data.name || data.courseTitle || 'Untitled Course') as string
-  const details = COURSE_DETAILS_MAPPING[title]
-  const metadata = COURSE_METADATA_MAPPING[title]
+  const rawTitle = (data.title || data.name || data.courseTitle || 'Untitled Course') as string
+  const title = resolveCourseTitleFromMapping(rawTitle) || rawTitle
+  const details = getCourseDetailsFromMapping(title)
+  const metadata = getCourseMetadataFromMapping(title)
 
   return {
     id: courseId,
@@ -157,15 +161,10 @@ const buildCourseFromDoc = (courseId: string, data: Record<string, unknown>): No
 }
 
 const buildCourseFromMapping = (courseId: string): NormalizedCourse | null => {
-  const normalized = courseId.trim().toLowerCase()
-  const entries = Object.entries(COURSE_DETAILS_MAPPING)
-  const entry =
-    entries.find(([, details]) => details.slug.trim().toLowerCase() === normalized) ||
-    entries.find(([title]) => title.trim().toLowerCase() === normalized)
-  if (!entry) return null
-
-  const [title, details] = entry
-  const metadata = COURSE_METADATA_MAPPING[title]
+  const title = resolveCourseTitleFromMapping(courseId)
+  const details = getCourseDetailsFromMapping(title)
+  if (!details) return null
+  const metadata = getCourseMetadataFromMapping(title)
 
   return {
     id: details.slug,
@@ -368,6 +367,20 @@ const FreeTierCoursesPage: React.FC<{ userId?: string | null; profile: UserProfi
                       <Text color="gray.600" fontSize="sm">
                         {courseWithProgress.description}
                       </Text>
+                      <Box
+                        mt={1}
+                        px={3}
+                        py={2}
+                        bg="orange.50"
+                        border="1px solid"
+                        borderColor="orange.200"
+                        borderRadius="lg"
+                      >
+                        <Text fontSize="xs" color="orange.800">
+                          Discount Coupon: <Text as="span" fontFamily="mono" fontWeight="bold">{FREE_TIER_DISCOUNT_COUPON}</Text>{' '}
+                          for a one-time discount on Transformational Leadership.
+                        </Text>
+                      </Box>
                       <HStack spacing={3} flexWrap="wrap">
                         {courseWithProgress.difficulty && (
                           <Badge

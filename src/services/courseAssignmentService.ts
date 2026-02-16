@@ -5,7 +5,7 @@ import {
   COMPLEMENTARY_COURSE_IDS,
   COMPLEMENTARY_COURSE_TITLES,
 } from '@/utils/membership'
-import { COURSE_DETAILS_MAPPING, COURSE_METADATA_MAPPING } from '@/utils/courseMappings'
+import { getCourseDetailsFromMapping, getCourseMetadataFromMapping } from '@/utils/courseMappings'
 
 /**
  * user_courses collection schema
@@ -110,8 +110,8 @@ export const assignComplementaryCoursesToUser = async (userId: string): Promise<
         continue
       }
 
-      const courseDetails = COURSE_DETAILS_MAPPING[course.title]
-      const courseMetadata = COURSE_METADATA_MAPPING[course.title]
+      const courseDetails = getCourseDetailsFromMapping(course.title)
+      const courseMetadata = getCourseMetadataFromMapping(course.title)
 
       if (!courseDetails || !courseMetadata) {
         console.warn('🟠 [CourseAssignment] Missing course mapping data', {
