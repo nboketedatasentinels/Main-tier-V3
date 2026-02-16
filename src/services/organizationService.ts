@@ -239,7 +239,11 @@ export const determineClusterFromTeamSize = (teamSize?: number) => {
 }
 
 export const fetchAvailableCourses = async (): Promise<CourseOption[]> => {
-  const mappingEntries = Object.entries(COURSE_DETAILS_MAPPING).filter(([, details]) => Boolean(details?.slug))
+  const mappingEntries = Object.entries(COURSE_DETAILS_MAPPING).filter(([, details]) => {
+    if (!details?.slug) return false
+    // Super admin assignment should only offer the current challenge-page catalog.
+    return typeof details.link === 'string' && details.link.includes('/challenge-page/')
+  })
   const mappedFallback: CourseOption[] = mappingEntries
     .map(([title, details]) => ({ id: details.slug, title, description: details.description }))
     .sort((a, b) => a.title.localeCompare(b.title))
