@@ -7,10 +7,12 @@ import {
   Heading,
   HStack,
   Icon,
+  IconButton,
   Progress,
   SimpleGrid,
   Stack,
   Text,
+  Tooltip,
   useDisclosure,
   useToast,
 } from '@chakra-ui/react'
@@ -29,6 +31,7 @@ import {
   Lock,
   Mail,
   MessageCircle,
+  RefreshCw,
   Rocket,
   Share2,
   Sparkles,
@@ -67,6 +70,8 @@ const ReferralRewardsPage: React.FC = () => {
   const [referrals, setReferrals] = useState<ReferralRecord[]>([])
   const [referralsLoading, setReferralsLoading] = useState(false)
   const [resolvedReferralCode, setResolvedReferralCode] = useState<string | null>(profile?.referralCode ?? user?.uid ?? null)
+  const [refreshKey, setRefreshKey] = useState(0)
+  const [isRefreshing, setIsRefreshing] = useState(false)
 
   const baseAppUrl = APP_BASE_URL
 
@@ -84,15 +89,22 @@ const ReferralRewardsPage: React.FC = () => {
         const items = snapshot.docs.map((doc) => doc.data() as ReferralRecord)
         setReferrals(items)
         setReferralsLoading(false)
+        setIsRefreshing(false)
       },
       (error) => {
         console.error('🔴 [Referral] Unable to load referrals', error)
         setReferralsLoading(false)
+        setIsRefreshing(false)
       }
     )
 
     return () => unsubscribe()
-  }, [user?.uid])
+  }, [user?.uid, refreshKey])
+
+  const handleRefresh = useCallback(() => {
+    setIsRefreshing(true)
+    setRefreshKey((k) => k + 1)
+  }, [])
 
   useEffect(() => {
     setResolvedReferralCode(profile?.referralCode ?? user?.uid ?? null)
@@ -450,9 +462,22 @@ const ReferralRewardsPage: React.FC = () => {
               <Icon as={Users} boxSize={6} />
             </Flex>
             <Stack spacing={1}>
-              <Text fontWeight="semibold" color="brand.text">
-                Your Progress
-              </Text>
+              <HStack spacing={2}>
+                <Text fontWeight="semibold" color="brand.text">
+                  Your Progress
+                </Text>
+                <Tooltip label="Refresh referral data" placement="top">
+                  <IconButton
+                    aria-label="Refresh"
+                    icon={<Icon as={RefreshCw} boxSize={4} className={isRefreshing ? 'animate-spin' : ''} />}
+                    size="xs"
+                    variant="ghost"
+                    colorScheme="purple"
+                    onClick={handleRefresh}
+                    isLoading={isRefreshing}
+                  />
+                </Tooltip>
+              </HStack>
               <Text color="brand.subtleText">Track your referrals and unlock rewards.</Text>
             </Stack>
           </HStack>

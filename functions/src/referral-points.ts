@@ -101,24 +101,36 @@ export const onReferredUserFirstActivity = functions
       `[Referral] New ledger entry for user ${referredUid}, activity: ${ledgerData.activityId}`
     );
 
-    // Skip if this is a referral bonus entry (prevent infinite loop)
+    if (!referredUid) {
+      console.log("[Referral] Ledger entry missing uid, skipping");
+      return null;
+    }
+
     if (ledgerData.activityId === "referral_bonus") {
       console.log("[Referral] Skipping referral_bonus activity to prevent loop");
       return null;
     }
 
     try {
-      // Check if user was referred
-      const userDoc = await db.collection("profiles").doc(referredUid).get();
+      const [userDoc, referralDoc] = await Promise.all([
+        db.collection("profiles").doc(referredUid).get(),
+        db.collection("referrals").doc(referredUid).get(),
+      ]);
+
       if (!userDoc.exists) {
         console.log(`[Referral] User ${referredUid} profile not found`);
         return null;
       }
 
       const userData = userDoc.data() as UserProfile;
-      const referrerUid = userData.referredBy;
+      let referrerUid = userData.referredBy;
 
-      // Skip if user wasn't referred or already credited
+      if (!referrerUid && referralDoc.exists) {
+        const referralData = referralDoc.data() as ReferralRecord;
+        referrerUid = referralData.referrerUid;
+        console.log(`[Referral] Found referrerUid from referral record: ${referrerUid}`);
+      }
+
       if (!referrerUid) {
         console.log(`[Referral] User ${referredUid} was not referred`);
         return null;
@@ -134,14 +146,21 @@ export const onReferredUserFirstActivity = functions
         return null;
       }
 
-      // Check referral record exists
-      const referralDoc = await db.collection("referrals").doc(referredUid).get();
       if (!referralDoc.exists) {
-        console.log(`[Referral] No referral record found for ${referredUid}`);
-        return null;
+        console.log(`[Referral] No referral record found for ${referredUid}, creating one`);
+        await db.collection("referrals").doc(referredUid).set({
+          referredUid,
+          referrerUid,
+          refCode: referrerUid,
+          status: "pending",
+          createdAt: admin.firestore.FieldValue.serverTimestamp(),
+        });
       }
 
-      const referralData = referralDoc.data() as ReferralRecord;
+      const referralData = referralDoc.exists
+        ? (referralDoc.data() as ReferralRecord)
+        : { status: "pending" as const };
+
       if (referralData.status !== "pending") {
         console.log(
           `[Referral] Referral status is ${referralData.status}, not pending`
@@ -149,14 +168,10 @@ export const onReferredUserFirstActivity = functions
         return null;
       }
 
-      // We rely on referral status to keep this idempotent instead of checking ledger count.
-      // That way we credit the referrer as soon as the referred user completes any activity, even if other points were recorded earlier.
-
       console.log(
         `[Referral] First activity detected for referred user ${referredUid}, crediting referrer ${referrerUid}`
       );
 
-      // Award points to referrer
       return await creditReferralPointsInternal(
         referredUid,
         referrerUid,
