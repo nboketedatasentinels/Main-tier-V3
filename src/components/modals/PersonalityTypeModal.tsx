@@ -246,6 +246,7 @@ export const PersonalityTypeModal: React.FC<PersonalityTypeModalProps> = ({
 
     try {
       const userDocRef = doc(db, 'users', user.uid);
+      const profileDocRef = doc(db, 'profiles', user.uid);
       const dataToSave = {
         personalityType,
         coreValues,
@@ -255,7 +256,10 @@ export const PersonalityTypeModal: React.FC<PersonalityTypeModalProps> = ({
         hasCompletedValuesTest,
         updatedAt: Timestamp.now(),
       };
-      await setDoc(userDocRef, dataToSave, { merge: true });
+      await Promise.all([
+        setDoc(userDocRef, dataToSave, { merge: true }),
+        setDoc(profileDocRef, dataToSave, { merge: true }),
+      ]);
 
       setSuccess(true);
       toast({

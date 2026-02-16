@@ -105,7 +105,7 @@ export const OrganizationDetailPage: React.FC = () => {
     clearFilters,
   } = useOrganizationDetails(organizationId)
   const [invitationSearchQuery, setInvitationSearchQuery] = useState('')
-  const [invitationStatusFilter, setInvitationStatusFilter] = useState('all')
+  const [invitationStatusFilter, setInvitationStatusFilter] = useState('pending')
   const [invitationMethodFilter, setInvitationMethodFilter] = useState<'all' | 'email' | 'one_time_code'>('all')
   const [invitationPage, setInvitationPage] = useState(1)
 
@@ -145,7 +145,7 @@ export const OrganizationDetailPage: React.FC = () => {
 
   const clearInvitationFilters = () => {
     setInvitationSearchQuery('')
-    setInvitationStatusFilter('all')
+    setInvitationStatusFilter('pending')
     setInvitationMethodFilter('all')
   }
 
@@ -196,7 +196,7 @@ export const OrganizationDetailPage: React.FC = () => {
   const invitationStartIndex = Math.min((currentInvitationPage - 1) * invitationPageSize + 1, filteredInvitations.length || 0)
   const invitationEndIndex = Math.min(currentInvitationPage * invitationPageSize, filteredInvitations.length || 0)
   const invitationFiltersActive =
-    invitationSearchQuery.trim().length > 0 || invitationStatusFilter !== 'all' || invitationMethodFilter !== 'all'
+    invitationSearchQuery.trim().length > 0 || invitationStatusFilter !== 'pending' || invitationMethodFilter !== 'all'
 
   useEffect(() => {
     setInvitationPage(1)
@@ -504,11 +504,10 @@ export const OrganizationDetailPage: React.FC = () => {
               <HStack justify="space-between" align={{ base: 'flex-start', md: 'center' }} wrap="wrap" spacing={3}>
                 <Stack spacing={1}>
                   <Text fontWeight="bold" color="brand.text">
-                    Invitations ({filteredInvitations.length} of {invitations.length})
+                    Pending invitations ({filteredInvitations.length})
                   </Text>
                   <Text fontSize="sm" color="brand.subtleText">
-                    Showing {invitationStartIndex}-{invitationEndIndex} of {filteredInvitations.length} invites.{' '}
-                    {pendingInvitationCount} pending overall.
+                    Showing {invitationStartIndex}-{invitationEndIndex} of {filteredInvitations.length} invites.
                   </Text>
                 </Stack>
                 <HStack spacing={2}>
@@ -543,13 +542,7 @@ export const OrganizationDetailPage: React.FC = () => {
                   value={invitationStatusFilter}
                   onChange={(event) => setInvitationStatusFilter(event.target.value)}
                 >
-                  <option value="all">All statuses</option>
                   <option value="pending">Pending</option>
-                  <option value="accepted">Accepted</option>
-                  <option value="completed">Completed</option>
-                  <option value="declined">Declined</option>
-                  <option value="revoked">Revoked</option>
-                  <option value="failed">Failed</option>
                 </Select>
                 <Select
                   value={invitationMethodFilter}
@@ -626,9 +619,9 @@ export const OrganizationDetailPage: React.FC = () => {
               ) : (
                 <Box p={4} borderRadius="md" border="1px dashed" borderColor="brand.border">
                   <Text color="brand.subtleText">
-                    {invitations.length === 0
-                      ? 'No invitations have been sent for this organization.'
-                      : 'No invitations match the current search or filters.'}
+                    {pendingInvitationCount === 0
+                      ? 'No pending invitations for this organization.'
+                      : 'No pending invitations match the current search or filters.'}
                   </Text>
                 </Box>
               )}

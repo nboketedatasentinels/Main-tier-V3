@@ -66,7 +66,18 @@ export async function validateReferralCode(code: string): Promise<string | null>
   if (!trimmed) return null
 
   const codeSnap = await getDoc(doc(referralCodesCollection, trimmed))
-  if (!codeSnap.exists()) return null
+  if (!codeSnap.exists()) {
+    // Legacy fallback: older accounts may not have referralCodes documents yet.
+    // In this system referral codes are deterministic (uid), so accept if user/profile exists.
+    const [userSnap, profileSnap] = await Promise.all([
+      getDoc(doc(usersCollection, trimmed)),
+      getDoc(doc(profilesCollection, trimmed)),
+    ])
+    if (userSnap.exists() || profileSnap.exists()) {
+      return trimmed
+    }
+    return null
+  }
 
   const data = codeSnap.data() as { uid?: string; active?: boolean }
   if (!data.uid || data.active === false) return null
@@ -92,6 +103,8 @@ export async function createReferral(
     await runTransaction(db, async (tx) => {
       const referralRef = doc(referralsCollection, referredUid)
       const referralCodeRef = doc(referralCodesCollection, trimmedCode)
+      const referrerUserRef = doc(usersCollection, referrerUid)
+      const referrerProfileRef = doc(profilesCollection, referrerUid)
       const referredUserRef = doc(usersCollection, referredUid)
       const referredProfileRef = doc(profilesCollection, referredUid)
 
@@ -102,16 +115,26 @@ export async function createReferral(
 
       const referralCodeSnap = await tx.get(referralCodeRef)
       if (!referralCodeSnap.exists()) {
-        throw new Error('Referral code is invalid.')
-      }
+        // Legacy fallback for deterministic uid-based codes.
+        if (trimmedCode !== referrerUid) {
+          throw new Error('Referral code is invalid.')
+        }
+        const [referrerUserSnap, referrerProfileSnap] = await Promise.all([
+          tx.get(referrerUserRef),
+          tx.get(referrerProfileRef),
+        ])
+        if (!referrerUserSnap.exists() && !referrerProfileSnap.exists()) {
+          throw new Error('Referral code is invalid.')
+        }
+      } else {
+        const referralCodeData = referralCodeSnap.data() as { uid?: string; active?: boolean }
+        if (!referralCodeData.uid || referralCodeData.active === false) {
+          throw new Error('Referral code is inactive.')
+        }
 
-      const referralCodeData = referralCodeSnap.data() as { uid?: string; active?: boolean }
-      if (!referralCodeData.uid || referralCodeData.active === false) {
-        throw new Error('Referral code is inactive.')
-      }
-
-      if (referralCodeData.uid !== referrerUid) {
-        throw new Error('Referral code does not match referrer.')
+        if (referralCodeData.uid !== referrerUid) {
+          throw new Error('Referral code does not match referrer.')
+        }
       }
 
       const referredUserSnap = await tx.get(referredUserRef)

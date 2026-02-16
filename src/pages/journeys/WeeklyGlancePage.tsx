@@ -523,6 +523,12 @@ export const WeeklyGlancePage = () => {
             />
           </GridItem>
 
+          {(!isMobile || showMore) && (
+            <GridItem colSpan={{ base: 1, md: 6 }} order={{ base: 8, md: 4 }}>
+              <PersonalityProfileCard data={data.personality} loading={data.loading.profile} />
+            </GridItem>
+          )}
+
           <GridItem colSpan={{ base: 1, md: 8 }} order={{ base: 5, md: 5 }}>
             <ActivityFeedCard items={[...activityFeedItems]} />
           </GridItem>
@@ -545,13 +551,7 @@ export const WeeklyGlancePage = () => {
           </GridItem>
 
           {(!isMobile || showMore) && (
-            <GridItem colSpan={{ base: 1, md: 4 }} order={{ base: 8, md: 8 }}>
-              <PersonalityProfileCard data={data.personality} loading={data.loading.profile} />
-            </GridItem>
-          )}
-
-          {(!isMobile || showMore) && (
-            <GridItem colSpan={{ base: 1, md: 4 }} order={{ base: 9, md: 9 }}>
+            <GridItem colSpan={{ base: 1, md: 4 }} order={{ base: 9, md: 8 }}>
               <PeopleImpactedCard count={data.impactCount} loading={data.loading.impact} />
             </GridItem>
           )}

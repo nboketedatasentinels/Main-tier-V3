@@ -285,9 +285,10 @@ async function creditReferralPointsInternal(
     const referredUserRef = db.collection("users").doc(referredUid);
     const referredProfileRef = db.collection("profiles").doc(referredUid);
 
-    const [referralSnap, referrerSnap] = await Promise.all([
+    const [referralSnap, referrerUserSnap, referrerProfileSnap] = await Promise.all([
       tx.get(referralRef),
       tx.get(referrerUserRef),
+      tx.get(referrerProfileRef),
     ]);
 
     // Idempotency check - if already credited, return early
@@ -304,7 +305,7 @@ async function creditReferralPointsInternal(
       return;
     }
 
-    if (!referrerSnap.exists) {
+    if (!referrerUserSnap.exists && !referrerProfileSnap.exists) {
       console.log(`[Referral] Referrer ${referrerUid} not found`);
       // Mark referral as rejected since referrer doesn't exist
       tx.update(referralRef, {
@@ -316,9 +317,22 @@ async function creditReferralPointsInternal(
       return;
     }
 
-    const referrerData = referrerSnap.data() as UserProfile;
-    const currentTotalPoints = referrerData.totalPoints ?? 0;
-    const currentReferralCount = referrerData.referralCount ?? 0;
+    const referrerUserData = referrerUserSnap.exists
+      ? (referrerUserSnap.data() as UserProfile)
+      : {};
+    const referrerProfileData = referrerProfileSnap.exists
+      ? (referrerProfileSnap.data() as UserProfile)
+      : {};
+
+    // Use the greater values to avoid regressing counters when one mirror is stale.
+    const currentTotalPoints = Math.max(
+      referrerUserData.totalPoints ?? 0,
+      referrerProfileData.totalPoints ?? 0
+    );
+    const currentReferralCount = Math.max(
+      referrerUserData.referralCount ?? 0,
+      referrerProfileData.referralCount ?? 0
+    );
 
     // Check if referrer has reached max referrals
     if (currentReferralCount >= REFERRAL_MAX_PER_USER) {
@@ -342,7 +356,10 @@ async function creditReferralPointsInternal(
     const updatedLevel = calculateLevel(updatedTotalPoints);
 
     // Determine referrer's current week for ledger entry
-    const referrerWeek = referrerData.currentWeek || 1;
+    const referrerWeek =
+      referrerUserData.currentWeek ??
+      referrerProfileData.currentWeek ??
+      1;
     const monthNumber = getWindowNumber(referrerWeek);
 
     // Create referral bonus ledger entry for referrer
@@ -435,10 +452,10 @@ async function creditReferralPointsInternal(
       reason: "Referral Bonus",
       referredUserId: referredUid,
       createdAt: timestamp,
-      companyId: referrerData.companyId || null,
-      companyCode: referrerData.companyCode || null,
-      villageId: referrerData.villageId || null,
-      clusterId: referrerData.clusterId || null,
+      companyId: referrerUserData.companyId || referrerProfileData.companyId || null,
+      companyCode: referrerUserData.companyCode || referrerProfileData.companyCode || null,
+      villageId: referrerUserData.villageId || referrerProfileData.villageId || null,
+      clusterId: referrerUserData.clusterId || referrerProfileData.clusterId || null,
     });
 
     console.log(

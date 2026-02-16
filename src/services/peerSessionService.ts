@@ -187,6 +187,14 @@ type QueryWithKey = {
   optional?: boolean
 }
 
+export type PeerSessionLifecycleInput = {
+  id: string
+  title: string
+  timezone: string
+  scheduledAt: Date
+  status: PeerSession['status']
+}
+
 const buildSessionQueries = (userId: string): QueryWithKey[] => {
   const sessionsRef = collection(db, 'peer_sessions')
   return [
@@ -303,6 +311,245 @@ const formatSessionDateLabel = (date: Date, timeZone: string) => {
     console.warn('[PeerSessionService] Failed to format session date', error)
     return date.toLocaleString('en-US')
   }
+}
+
+const SESSION_MISSED_GRACE_MS = 90 * 60 * 1000
+
+const SESSION_REMINDER_CONFIG = [
+  {
+    key: 'day_before',
+    offsetMs: 24 * 60 * 60 * 1000,
+    title: 'Peer session tomorrow',
+    actionLabel: 'Review session',
+    message: (sessionTitle: string, whenLabel: string) =>
+      `"${sessionTitle}" is coming up in about 24 hours (${whenLabel}).`,
+  },
+  {
+    key: 'two_hours',
+    offsetMs: 2 * 60 * 60 * 1000,
+    title: 'Peer session in 2 hours',
+    actionLabel: 'Open session',
+    message: (sessionTitle: string, whenLabel: string) =>
+      `"${sessionTitle}" starts in about 2 hours (${whenLabel}).`,
+  },
+  {
+    key: 'start_time',
+    offsetMs: 0,
+    title: 'Peer session starting now',
+    actionLabel: 'Join now',
+    message: (sessionTitle: string, whenLabel: string) =>
+      `"${sessionTitle}" is starting now (${whenLabel}).`,
+  },
+] as const
+
+type SessionReminderConfig = (typeof SESSION_REMINDER_CONFIG)[number]
+type SessionReminderKey = SessionReminderConfig['key']
+
+const isSessionFinalStatus = (status: unknown): boolean => status === 'completed' || status === 'no_show'
+
+const hasReminderBeenSent = (data: DocumentData, userId: string, reminderKey: SessionReminderKey): boolean => {
+  const reminderRoot = data.reminderNotifications
+  if (!reminderRoot || typeof reminderRoot !== 'object') return false
+
+  const userReminderRecord = (reminderRoot as Record<string, unknown>)[userId]
+  if (!userReminderRecord || typeof userReminderRecord !== 'object') return false
+
+  return Boolean((userReminderRecord as Record<string, unknown>)[reminderKey])
+}
+
+const reminderWindowHasStarted = (
+  scheduledAt: Date,
+  reminder: SessionReminderConfig,
+  nowMs: number,
+): boolean => nowMs >= scheduledAt.getTime() - reminder.offsetMs
+
+const reminderWindowExpired = (
+  scheduledAt: Date,
+  reminder: SessionReminderConfig,
+  nowMs: number,
+): boolean => {
+  if (reminder.key === 'start_time') {
+    return nowMs > scheduledAt.getTime() + 60 * 60 * 1000
+  }
+  return nowMs > scheduledAt.getTime()
+}
+
+const maybeSendSessionReminder = async (
+  session: PeerSessionLifecycleInput,
+  userId: string,
+  reminder: SessionReminderConfig,
+): Promise<boolean> => {
+  if (!session.id || !userId) return false
+  if (!isValidDate(session.scheduledAt)) return false
+  if (isSessionFinalStatus(session.status)) return false
+
+  const nowMs = Date.now()
+  if (!reminderWindowHasStarted(session.scheduledAt, reminder, nowMs)) return false
+  if (reminderWindowExpired(session.scheduledAt, reminder, nowMs)) return false
+
+  const sessionRef = doc(db, 'peer_sessions', session.id)
+  let shouldNotify = false
+
+  await runTransaction(db, async (transaction) => {
+    const sessionDoc = await transaction.get(sessionRef)
+    if (!sessionDoc.exists()) return
+
+    const sessionData = sessionDoc.data()
+    if (isSessionFinalStatus(sessionData.status)) return
+
+    const participants = resolveParticipants(sessionData)
+    const createdBy = resolveCreatedBy(sessionData)
+    if (participants.length === 0 || (!participants.includes(userId) && createdBy !== userId)) return
+
+    const scheduledAt = coerceDate(sessionData.scheduledAt ?? sessionData.scheduled_at)
+    if (!scheduledAt) return
+
+    const currentMs = Date.now()
+    if (!reminderWindowHasStarted(scheduledAt, reminder, currentMs)) return
+    if (reminderWindowExpired(scheduledAt, reminder, currentMs)) return
+    if (hasReminderBeenSent(sessionData, userId, reminder.key)) return
+
+    transaction.update(sessionRef, {
+      [`reminderNotifications.${userId}.${reminder.key}`]: serverTimestamp(),
+      updatedAt: serverTimestamp(),
+    })
+    shouldNotify = true
+  })
+
+  if (!shouldNotify) return false
+
+  const actionUrl = buildPeerConnectUrl(session.id)
+  const whenLabel = formatSessionDateLabel(session.scheduledAt, session.timezone || 'UTC')
+
+  try {
+    await createInAppNotification({
+      userId,
+      type: 'session_request',
+      title: reminder.title,
+      message: reminder.message(session.title || 'Peer session', whenLabel),
+      relatedId: session.id,
+      metadata: {
+        sessionId: session.id,
+        actionUrl,
+        actionLabel: reminder.actionLabel,
+        reminderKey: reminder.key,
+        scheduledAt: session.scheduledAt.toISOString(),
+        timezone: session.timezone,
+      },
+    })
+  } catch (error) {
+    console.error('[PeerSessionService] Failed to create reminder notification', {
+      sessionId: session.id,
+      userId,
+      reminderKey: reminder.key,
+      error,
+    })
+  }
+
+  return true
+}
+
+export async function markPeerSessionMissedIfElapsed(
+  sessionId: string,
+  userId: string,
+  options?: { graceMs?: number },
+): Promise<boolean> {
+  if (!sessionId || !userId) return false
+
+  const graceMs = options?.graceMs ?? SESSION_MISSED_GRACE_MS
+  const sessionRef = doc(db, 'peer_sessions', sessionId)
+  let shouldNotifyParticipants = false
+  let participantIds: string[] = []
+  let title = 'Peer session'
+  let timezone = 'UTC'
+  let scheduledAt = new Date()
+
+  await runTransaction(db, async (transaction) => {
+    const sessionDoc = await transaction.get(sessionRef)
+    if (!sessionDoc.exists()) return
+
+    const sessionData = sessionDoc.data()
+    if (isSessionFinalStatus(sessionData.status)) return
+
+    const scheduledAtDate = coerceDate(sessionData.scheduledAt ?? sessionData.scheduled_at)
+    if (!scheduledAtDate) return
+    if (Date.now() < scheduledAtDate.getTime() + graceMs) return
+
+    const participants = resolveParticipants(sessionData)
+    const createdBy = resolveCreatedBy(sessionData)
+    const userInSession = participants.includes(userId) || (createdBy && createdBy === userId)
+    if (!userInSession) return
+
+    title = isNonEmptyString(sessionData.title) ? sessionData.title : title
+    timezone = isNonEmptyString(sessionData.timezone) ? sessionData.timezone : timezone
+    scheduledAt = scheduledAtDate
+    participantIds = participants.length > 0 ? participants : createdBy ? [createdBy] : [userId]
+
+    transaction.update(sessionRef, {
+      status: 'no_show',
+      missedAt: serverTimestamp(),
+      missedBy: 'system',
+      missedReason: 'auto_time_elapsed',
+      updatedAt: serverTimestamp(),
+    })
+    shouldNotifyParticipants = true
+  })
+
+  if (!shouldNotifyParticipants) return false
+
+  const actionUrl = buildPeerConnectUrl(sessionId)
+  const whenLabel = formatSessionDateLabel(scheduledAt, timezone)
+  const message = `"${title}" scheduled for ${whenLabel} was marked as missed. Reschedule to keep momentum.`
+
+  await Promise.all(
+    participantIds.map(async (participantId) => {
+      try {
+        await createInAppNotification({
+          userId: participantId,
+          type: 'session_request',
+          title: 'Session marked as missed',
+          message,
+          relatedId: sessionId,
+          metadata: {
+            sessionId,
+            actionUrl,
+            actionLabel: 'Reschedule session',
+            status: 'no_show',
+            autoMarked: true,
+            timezone,
+            scheduledAt: scheduledAt.toISOString(),
+          },
+        })
+      } catch (error) {
+        console.error('[PeerSessionService] Failed to create missed-session notification', {
+          sessionId,
+          participantId,
+          error,
+        })
+      }
+    }),
+  )
+
+  return true
+}
+
+export async function processPeerSessionLifecycleForUser(
+  session: PeerSessionLifecycleInput,
+  userId: string,
+): Promise<{ remindersSent: SessionReminderKey[]; markedMissed: boolean }> {
+  const remindersSent: SessionReminderKey[] = []
+
+  if (isValidDate(session.scheduledAt) && !isSessionFinalStatus(session.status)) {
+    for (const reminder of SESSION_REMINDER_CONFIG) {
+      const sent = await maybeSendSessionReminder(session, userId, reminder)
+      if (sent) {
+        remindersSent.push(reminder.key)
+      }
+    }
+  }
+
+  const markedMissed = await markPeerSessionMissedIfElapsed(session.id, userId)
+  return { remindersSent, markedMissed }
 }
 
 // Helper to get user's journey info for points

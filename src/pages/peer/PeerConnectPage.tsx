@@ -16,6 +16,7 @@ import {
   Input,
   InputGroup,
   InputLeftElement,
+  Link,
   Modal,
   ModalBody,
   ModalCloseButton,
@@ -79,6 +80,7 @@ import {
   confirmSession,
   fetchUserInvitations,
   fetchUserSessions,
+  processPeerSessionLifecycleForUser,
   reportNoShow as reportNoShowService,
   respondToInvitation,
   subscribeToUserSessions,
@@ -215,11 +217,13 @@ type WeeklyMatch = {
 type PeerSession = {
   id: string
   title: string
+  description?: string
   scheduledAt: Date
   timezone: string
   platform: 'Zoom' | 'Google Meet' | 'Zoho Meet'
+  participants: string[]
   link?: string
-  status: 'pending' | 'confirmed' | 'scheduled' | 'in_progress' | 'no_show'
+  status: 'pending' | 'confirmed' | 'scheduled' | 'in_progress' | 'completed' | 'no_show'
   confirmationDeadline: Date
   youConfirmed: boolean
   peerConfirmed: boolean
@@ -241,9 +245,11 @@ const mapServiceSessionToPeerSession = (
   return {
     id: session.id,
     title: session.title || 'Weekly Peer Date',
+    description: session.description,
     scheduledAt: session.scheduledAt,
     timezone,
     platform: session.platform,
+    participants: session.participants || [],
     link: session.meetingLink,
     status: session.status as PeerSession['status'],
     confirmationDeadline: session.confirmationDeadline,
@@ -279,6 +285,7 @@ const WEEKDAY_LABELS = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 
 
 const defaultSessionDescription =
   'Bring together at least two peers for a transformation dialogue that sparks shared insight and collaborative momentum.'
+const ACTIVE_SESSION_WINDOW_MS = 2 * 60 * 60 * 1000
 
 const debugOrgFetch = async (dbInstance: typeof db, profile: DebugOrgProfile | null, userId: string) => {
   const scope = getOrgScope(profile)
@@ -815,7 +822,8 @@ export const PeerConnectPage: React.FC = () => {
     const nowMs = Date.now()
     return sessions.filter(
       (session) =>
-        !['completed', 'no_show'].includes(session.status) && session.scheduledAt.getTime() >= nowMs,
+        !['completed', 'no_show'].includes(session.status) &&
+        session.scheduledAt.getTime() >= nowMs - ACTIVE_SESSION_WINDOW_MS,
     )
   }, [sessions])
 
@@ -823,9 +831,59 @@ export const PeerConnectPage: React.FC = () => {
     const nowMs = Date.now()
     return sessions.filter(
       (session) =>
-        ['completed', 'no_show'].includes(session.status) || session.scheduledAt.getTime() < nowMs,
+        ['completed', 'no_show'].includes(session.status) ||
+        session.scheduledAt.getTime() < nowMs - ACTIVE_SESSION_WINDOW_MS,
     )
   }, [sessions])
+
+  useEffect(() => {
+    if (!user?.uid || sessions.length === 0) return undefined
+
+    let cancelled = false
+    let isRunning = false
+
+    const runLifecycleCheck = async () => {
+      if (cancelled || isRunning) return
+      isRunning = true
+
+      try {
+        const openSessions = sessions.filter((session) => !['completed', 'no_show'].includes(session.status))
+        if (!openSessions.length) return
+
+        const results = await Promise.allSettled(
+          openSessions.map((session) => processPeerSessionLifecycleForUser(session, user.uid)),
+        )
+
+        const markedMissedCount = results.reduce((count, result) => {
+          if (result.status === 'fulfilled' && result.value.markedMissed) {
+            return count + 1
+          }
+          return count
+        }, 0)
+
+        if (!cancelled && markedMissedCount > 0) {
+          toast({
+            title: markedMissedCount === 1 ? 'Session marked as missed' : 'Sessions marked as missed',
+            description: 'You can reschedule from your session history.',
+            status: 'info',
+            position: 'top',
+          })
+        }
+      } finally {
+        isRunning = false
+      }
+    }
+
+    void runLifecycleCheck()
+    const timer = window.setInterval(() => {
+      void runLifecycleCheck()
+    }, 60_000)
+
+    return () => {
+      cancelled = true
+      window.clearInterval(timer)
+    }
+  }, [sessions, toast, user?.uid])
 
   const matchStatusLabel = useMemo(() => {
     if (!weeklyMatch) return 'Pending'
@@ -949,6 +1007,70 @@ export const PeerConnectPage: React.FC = () => {
       toast({
         title: 'Could not report',
         description: 'Please try again later.',
+        status: 'error',
+        position: 'top',
+      })
+    }
+  }
+
+  const rescheduleSession = async (session: PeerSession) => {
+    if (!user || !profile) return
+
+    const participantIds = session.participants.filter((participantId) => participantId !== user.uid)
+    if (!participantIds.length) {
+      toast({
+        title: 'Unable to reschedule',
+        description: 'This session has no participants to invite.',
+        status: 'error',
+        position: 'top',
+      })
+      return
+    }
+
+    const now = Date.now()
+    const minimumLeadMs = 3 * 60 * 60 * 1000
+    let nextScheduledAt = new Date(session.scheduledAt.getTime() + 7 * 24 * 60 * 60 * 1000)
+    while (nextScheduledAt.getTime() <= now + minimumLeadMs) {
+      nextScheduledAt = new Date(nextScheduledAt.getTime() + 7 * 24 * 60 * 60 * 1000)
+    }
+
+    const creatorName = getDisplayName(profile, 'Peer')
+    const creatorEmail = profile.email || user.email || ''
+    if (!creatorEmail) {
+      toast({
+        title: 'Unable to reschedule',
+        description: 'Add an email address to your profile before rescheduling.',
+        status: 'error',
+        position: 'top',
+      })
+      return
+    }
+
+    try {
+      await createPeerSession({
+        title: `${session.title} (Rescheduled)`,
+        description: session.description || defaultSessionDescription,
+        platform: session.platform,
+        meetingLink: session.link,
+        timezone: session.timezone,
+        participants: participantIds,
+        scheduledAt: nextScheduledAt,
+        createdBy: user.uid,
+        creatorName,
+        creatorEmail,
+      })
+
+      toast({
+        title: 'Session rescheduled',
+        description: `New invite sent for ${format(nextScheduledAt, 'EEE, MMM d, p')} (${session.timezone}).`,
+        status: 'success',
+        position: 'top',
+      })
+    } catch (error) {
+      console.error('Reschedule failed:', error)
+      toast({
+        title: 'Could not reschedule',
+        description: 'Please try again.',
         status: 'error',
         position: 'top',
       })
@@ -1125,6 +1247,7 @@ export const PeerConnectPage: React.FC = () => {
       confirmed: 'success',
       scheduled: 'primary',
       in_progress: 'primary',
+      completed: 'green',
       no_show: 'warning',
     }
     const labelMap: Record<PeerSession['status'], string> = {
@@ -1132,14 +1255,15 @@ export const PeerConnectPage: React.FC = () => {
       confirmed: 'Confirmed',
       scheduled: 'Scheduled',
       in_progress: 'In Progress',
-      no_show: 'No-Show',
+      completed: 'Completed',
+      no_show: 'Missed',
     }
     return <Badge colorScheme={colorMap[status]}>{labelMap[status]}</Badge>
   }
 
   const disableNoShow = (session: PeerSession) => {
     const now = new Date()
-    return session.status === 'no_show' || !session.youConfirmed || session.peerConfirmed || now < session.confirmationDeadline
+    return ['no_show', 'completed'].includes(session.status) || !session.youConfirmed || session.peerConfirmed || now < session.confirmationDeadline
   }
 
   return (
@@ -1434,15 +1558,26 @@ export const PeerConnectPage: React.FC = () => {
                               </Stack>
                               {renderStatusBadge(session.status)}
                             </HStack>
-                            <HStack spacing={3} color="brand.subtleText" fontSize="sm" mb={3}>
-                              <Icon as={Video} w={4} h={4} />
-                              <Text>{session.platform}</Text>
-                              {session.link && (
-                                <Button as="a" href={session.link} target="_blank" rel="noreferrer" size="xs" colorScheme="primary" variant="ghost">
-                                  Join session
-                                </Button>
+                            <Stack spacing={2} mb={3}>
+                              <HStack spacing={3} color="brand.subtleText" fontSize="sm">
+                                <Icon as={Video} w={4} h={4} />
+                                <Text>{session.platform}</Text>
+                              </HStack>
+                              {session.link ? (
+                                <Box p={2} borderRadius="md" bg="surface.subtle" border="1px solid" borderColor="border.subtle">
+                                  <Text fontSize="xs" fontWeight="semibold" color="brand.subtleText" mb={1}>
+                                    Meeting link
+                                  </Text>
+                                  <Link href={session.link} isExternal color="brand.primary" fontSize="sm" wordBreak="break-all">
+                                    {session.link}
+                                  </Link>
+                                </Box>
+                              ) : (
+                                <Text fontSize="xs" color="brand.subtleText">
+                                  Meeting link not added yet.
+                                </Text>
                               )}
-                            </HStack>
+                            </Stack>
                             <HStack spacing={2} mb={3}>
                               <Badge colorScheme={session.youConfirmed ? 'green' : 'yellow'} variant="subtle">
                                 {session.youConfirmed ? 'You confirmed' : 'Awaiting your confirmation'}
@@ -1452,6 +1587,19 @@ export const PeerConnectPage: React.FC = () => {
                               </Badge>
                             </HStack>
                             <Flex gap={2} wrap="wrap">
+                              {session.link && (
+                                <Button
+                                  leftIcon={<Video size={14} />}
+                                  as="a"
+                                  href={session.link}
+                                  target="_blank"
+                                  rel="noreferrer"
+                                  size="sm"
+                                  colorScheme="primary"
+                                >
+                                  Join Session
+                                </Button>
+                              )}
                               <Button
                                 leftIcon={<Check size={14} />}
                                 size="sm"
@@ -1522,6 +1670,23 @@ export const PeerConnectPage: React.FC = () => {
                               <Text fontSize="xs" color="brand.subtleText">
                                 Confirmation deadline: {format(session.confirmationDeadline, 'MMM d, p')}
                               </Text>
+                              {session.status === 'no_show' && (
+                                <>
+                                  <Text fontSize="xs" color="orange.500">
+                                    This session was missed. Reschedule to keep your peer momentum.
+                                  </Text>
+                                  <Button
+                                    size="xs"
+                                    variant="outline"
+                                    colorScheme="primary"
+                                    leftIcon={<Calendar size={14} />}
+                                    alignSelf="flex-start"
+                                    onClick={() => rescheduleSession(session)}
+                                  >
+                                    Reschedule Session
+                                  </Button>
+                                </>
+                              )}
                             </Stack>
                           </Box>
                         ))}

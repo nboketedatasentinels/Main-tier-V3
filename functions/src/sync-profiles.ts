@@ -13,6 +13,140 @@ import * as admin from "firebase-admin";
 
 const db = admin.firestore();
 
+type InvitationResolutionUserDoc = {
+  email?: unknown;
+  companyId?: unknown;
+  organizationId?: unknown;
+  assignedOrganizations?: unknown;
+};
+
+const normalizeEmail = (value: unknown): string => {
+  if (typeof value !== "string") return "";
+  return value.trim().toLowerCase();
+};
+
+const normalizeOrganizationAssignments = (
+  data?: InvitationResolutionUserDoc | null
+): Set<string> => {
+  const assignments = new Set<string>();
+
+  const pushIfValid = (value: unknown) => {
+    if (typeof value !== "string") return;
+    const normalized = value.trim();
+    if (!normalized) return;
+    assignments.add(normalized);
+  };
+
+  pushIfValid(data?.companyId);
+  pushIfValid(data?.organizationId);
+
+  if (Array.isArray(data?.assignedOrganizations)) {
+    data?.assignedOrganizations.forEach((entry) => pushIfValid(entry));
+  }
+
+  return assignments;
+};
+
+const serializeSet = (value: Set<string>) => Array.from(value).sort().join("|");
+
+const shouldResolvePendingInvitations = (
+  beforeData: InvitationResolutionUserDoc | null | undefined,
+  afterData: InvitationResolutionUserDoc
+): {
+  shouldResolve: boolean;
+  normalizedEmail: string;
+  organizationAssignments: Set<string>;
+} => {
+  const normalizedAfterEmail = normalizeEmail(afterData.email);
+  const afterAssignments = normalizeOrganizationAssignments(afterData);
+
+  if (!normalizedAfterEmail || !afterAssignments.size) {
+    return {
+      shouldResolve: false,
+      normalizedEmail: normalizedAfterEmail,
+      organizationAssignments: afterAssignments,
+    };
+  }
+
+  const normalizedBeforeEmail = normalizeEmail(beforeData?.email);
+  const beforeAssignments = normalizeOrganizationAssignments(beforeData);
+  const hadResolvableState = Boolean(normalizedBeforeEmail) && beforeAssignments.size > 0;
+
+  if (!hadResolvableState) {
+    return {
+      shouldResolve: true,
+      normalizedEmail: normalizedAfterEmail,
+      organizationAssignments: afterAssignments,
+    };
+  }
+
+  if (
+    normalizedBeforeEmail !== normalizedAfterEmail ||
+    serializeSet(beforeAssignments) !== serializeSet(afterAssignments)
+  ) {
+    return {
+      shouldResolve: true,
+      normalizedEmail: normalizedAfterEmail,
+      organizationAssignments: afterAssignments,
+    };
+  }
+
+  return {
+    shouldResolve: false,
+    normalizedEmail: normalizedAfterEmail,
+    organizationAssignments: afterAssignments,
+  };
+};
+
+const resolvePendingInvitationsForUser = async (params: {
+  userId: string;
+  beforeData?: InvitationResolutionUserDoc | null;
+  afterData: InvitationResolutionUserDoc;
+}) => {
+  const { shouldResolve, normalizedEmail, organizationAssignments } =
+    shouldResolvePendingInvitations(params.beforeData, params.afterData);
+  if (!shouldResolve) return 0;
+
+  const pendingInvitesSnapshot = await db
+    .collection("invitations")
+    .where("email", "==", normalizedEmail)
+    .where("status", "==", "pending")
+    .get();
+
+  if (pendingInvitesSnapshot.empty) return 0;
+
+  const timestamp = admin.firestore.FieldValue.serverTimestamp();
+  const batch = db.batch();
+  let updates = 0;
+
+  pendingInvitesSnapshot.docs.forEach((inviteDoc) => {
+    const invitationData = inviteDoc.data() as { organizationId?: unknown };
+    const organizationId =
+      typeof invitationData.organizationId === "string"
+        ? invitationData.organizationId.trim()
+        : "";
+
+    if (!organizationId || !organizationAssignments.has(organizationId)) {
+      return;
+    }
+
+    batch.update(inviteDoc.ref, {
+      status: "accepted",
+      acceptedAt: timestamp,
+      acceptedByUserId: params.userId,
+      acceptedByEmail: normalizedEmail,
+      updatedAt: timestamp,
+      expiresAt: admin.firestore.FieldValue.delete(),
+    });
+    updates += 1;
+  });
+
+  if (!updates) return 0;
+
+  await batch.commit();
+  return updates;
+};
+
 export const syncUserToProfile = functions
   .region("us-central1")
   .firestore.document("users/{userId}")
@@ -55,6 +189,24 @@ export const syncUserToProfile = functions
         },
         { merge: true }
       );
+
+      try {
+        const acceptedInvitations = await resolvePendingInvitationsForUser({
+          userId,
+          beforeData: (change.before.data() as InvitationResolutionUserDoc | undefined) ?? null,
+          afterData: userData as InvitationResolutionUserDoc,
+        });
+        if (acceptedInvitations > 0) {
+          console.log(
+            `Marked ${acceptedInvitations} invitation(s) as accepted for ${userId}`
+          );
+        }
+      } catch (invitationResolutionError) {
+        console.error(
+          `Error resolving pending invitations for user ${userId}:`,
+          invitationResolutionError
+        );
+      }
 
       console.log(`✓ Successfully synced user ${userId} to profiles`);
     } catch (error) {

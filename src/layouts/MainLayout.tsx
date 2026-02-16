@@ -119,7 +119,7 @@ const getRestrictedFeatureForPath = (path: string): RestrictedFeatureConfig | nu
   RESTRICTED_FREE_FEATURES.find((feature) => path.startsWith(feature.pathPrefix)) ?? null
 
 export const MainLayout: React.FC = () => {
-  const { profile, refreshProfile, signOut, signingOut } = useAuth()
+  const { profile, signOut, signingOut } = useAuth()
   const location = useLocation()
   const navigate = useNavigate()
   const { isOpen, onOpen, onClose } = useDisclosure()
@@ -134,9 +134,11 @@ export const MainLayout: React.FC = () => {
   const [showTour, setShowTour] = useState(false)
   const [globalSearchQuery, setGlobalSearchQuery] = useState('')
   const [selectedRestrictedFeature, setSelectedRestrictedFeature] = useState<RestrictedFeatureConfig | null>(null)
+  const [suppressSessionOnboarding, setSuppressSessionOnboarding] = useState(false)
   const onboardingSessionRef = useRef<string | null>(null)
 
   const buildVillageKey = useMemo(() => (profile ? `t4l.buildVillage.${profile.id}` : null), [profile])
+  const welcomeKey = useMemo(() => (profile ? `t4l.newUserWelcome.${profile.id}` : null), [profile])
   const isAppShellRoute = useMemo(
     () =>
       location.pathname.startsWith('/app/') ||
@@ -154,12 +156,26 @@ export const MainLayout: React.FC = () => {
       profile.coreValues.length === 5
     )
   }, [profile])
-  const shouldAutoOpenTour = Boolean(profile && isAppShellRoute && !profile.hasSeenDashboardTour)
+  const shouldAutoOpenTour = Boolean(
+    welcomeKey && isAppShellRoute && localStorage.getItem(welcomeKey) === 'pending',
+  )
   const shouldPromptPersonalityModal = Boolean(profile && isAppShellRoute && !hasCompletedPersonalityAndValues)
+  const onboardingSessionSuppressionKey = useMemo(
+    () => (profile?.id ? `t4l.onboardingSessionSuppressed.${profile.id}` : null),
+    [profile?.id],
+  )
 
   useEffect(() => {
     localStorage.removeItem('t4l.dashboard_tour_progress')
   }, [])
+
+  useEffect(() => {
+    if (!onboardingSessionSuppressionKey) {
+      setSuppressSessionOnboarding(false)
+      return
+    }
+    setSuppressSessionOnboarding(sessionStorage.getItem(onboardingSessionSuppressionKey) === 'true')
+  }, [onboardingSessionSuppressionKey])
 
   const isFreeUser = isFreeTierUser(profile)
   const isMentor = profile?.role === 'mentor'
@@ -190,16 +206,27 @@ export const MainLayout: React.FC = () => {
       return
     }
     if (onboardingSessionRef.current === profile.id) return
+    if (suppressSessionOnboarding) return
 
     onboardingSessionRef.current = profile.id
     if (shouldAutoOpenTour) {
+      if (welcomeKey) {
+        localStorage.removeItem(welcomeKey)
+      }
       setShowTour(true)
       return
     }
     if (shouldPromptPersonalityModal) {
       setShowPersonalityModal(true)
     }
-  }, [isAppShellRoute, profile?.id, shouldAutoOpenTour, shouldPromptPersonalityModal])
+  }, [
+    isAppShellRoute,
+    profile?.id,
+    shouldAutoOpenTour,
+    shouldPromptPersonalityModal,
+    suppressSessionOnboarding,
+    welcomeKey,
+  ])
 
   const handleSignOut = async () => {
     const result = await signOut()
@@ -229,27 +256,19 @@ export const MainLayout: React.FC = () => {
 
   const handleTourClosed = useCallback(() => {
     setShowTour(false)
-    if (shouldPromptPersonalityModal) {
+    if (!suppressSessionOnboarding && shouldPromptPersonalityModal) {
       setShowPersonalityModal(true)
     }
-  }, [shouldPromptPersonalityModal])
+  }, [shouldPromptPersonalityModal, suppressSessionOnboarding])
 
-  const handlePersonalityModalComplete = useCallback(async () => {
-    setShowPersonalityModal(false)
-    try {
-      await refreshProfile({ reason: 'personality-modal-complete' })
-    } catch (error) {
-      console.error('[MainLayout] Failed to refresh profile after personality modal completion', error)
-      const description = error instanceof Error ? error.message : 'Unable to refresh your profile right now.'
-      toast({
-        title: 'Profile refresh failed',
-        description,
-        status: 'error',
-        duration: 5000,
-        isClosable: true,
-      })
+  const handlePersonalityModalComplete = useCallback(() => {
+    if (onboardingSessionSuppressionKey) {
+      sessionStorage.setItem(onboardingSessionSuppressionKey, 'true')
     }
-  }, [refreshProfile, toast])
+    setSuppressSessionOnboarding(true)
+    setShowTour(false)
+    setShowPersonalityModal(false)
+  }, [onboardingSessionSuppressionKey])
 
   const navigationSections = useMemo<NavSection[]>(
     () => [

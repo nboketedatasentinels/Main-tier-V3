@@ -42,9 +42,13 @@ import { APP_BASE_URL } from '@/config/app'
 import { db } from '@/services/firebase'
 import { InstagramShareModal, SocialShareModal } from '@/components/modals/SocialShareModal'
 import { REWARD_TIERS, type RewardTier } from '@/config/referralRewards'
+import { generateReferralCode } from '@/services/referralService'
+import { getCourseDetailsFromMapping } from '@/utils/courseMappings'
 
 const MotionBox = motion(Box)
 const MotionFlex = motion(Flex)
+const AI_STACKING_TITLE = 'AI Stacking 101: Boost Your Productivity (No Tech Skills Needed)'
+const AI_STACKING_COUPON_CODE = 'Ai101'
 
 interface ReferralRecord {
   referredUid: string
@@ -62,6 +66,7 @@ const ReferralRewardsPage: React.FC = () => {
   const [copied, setCopied] = useState(false)
   const [referrals, setReferrals] = useState<ReferralRecord[]>([])
   const [referralsLoading, setReferralsLoading] = useState(false)
+  const [resolvedReferralCode, setResolvedReferralCode] = useState<string | null>(profile?.referralCode ?? user?.uid ?? null)
 
   const baseAppUrl = APP_BASE_URL
 
@@ -89,6 +94,55 @@ const ReferralRewardsPage: React.FC = () => {
     return () => unsubscribe()
   }, [user?.uid])
 
+  useEffect(() => {
+    setResolvedReferralCode(profile?.referralCode ?? user?.uid ?? null)
+  }, [profile?.referralCode, user?.uid])
+
+  useEffect(() => {
+    if (!user?.uid || profile?.referralCode) return
+
+    let isCancelled = false
+    let retryTimeout: ReturnType<typeof setTimeout> | null = null
+    const maxAttempts = 3
+
+    const persistGeneratedReferralCode = async (attempt = 1): Promise<void> => {
+      try {
+        const generatedCode = await generateReferralCode(user.uid)
+        if (isCancelled) return
+
+        if (updateProfile) {
+          await updateProfile({ referralCode: generatedCode })
+        }
+
+        if (!isCancelled) {
+          setResolvedReferralCode(generatedCode)
+        }
+      } catch (error) {
+        if (isCancelled) return
+
+        if (attempt < maxAttempts) {
+          const retryDelayMs = 500 * 2 ** (attempt - 1)
+          retryTimeout = setTimeout(() => {
+            void persistGeneratedReferralCode(attempt + 1)
+          }, retryDelayMs)
+          return
+        }
+
+        setResolvedReferralCode(null)
+        console.error('🔴 [Referral] Unable to auto-generate and persist referral code', error)
+      }
+    }
+
+    void persistGeneratedReferralCode()
+
+    return () => {
+      isCancelled = true
+      if (retryTimeout) {
+        clearTimeout(retryTimeout)
+      }
+    }
+  }, [profile?.referralCode, updateProfile, user?.uid])
+
   const creditedCount = useMemo(
     () => referrals.filter((referral) => referral.status === 'credited').length,
     [referrals]
@@ -101,7 +155,7 @@ const ReferralRewardsPage: React.FC = () => {
   const creditedReferralCount = Math.max(creditedCount, profile?.referralCount ?? 0)
   const totalReferralCount = pendingCount + creditedReferralCount
   const milestoneReferralCount = creditedReferralCount
-  const referralCode = profile?.referralCode ?? user?.uid
+  const referralCode = resolvedReferralCode
   const claimedRewards = profile?.claimedRewards ?? []
 
   const referralLink = useMemo(() => {
@@ -157,6 +211,8 @@ const ReferralRewardsPage: React.FC = () => {
 
   const shareMessage = 'Join me on Transformation Tier and start your growth journey!'
   const messageWithLink = `${shareMessage} ${referralLink}`
+  const aiStackingCourseLink =
+    getCourseDetailsFromMapping(AI_STACKING_TITLE)?.link ?? `${baseAppUrl.replace(/\/$/, '')}/app/courses`
 
   const openShareUrl = useCallback((url: string) => {
     window.open(url, '_blank', 'noopener,noreferrer')
@@ -182,6 +238,27 @@ const ReferralRewardsPage: React.FC = () => {
     const subject = 'Join me on Transformation Tier'
     openShareUrl(`mailto:?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(messageWithLink)}`)
   }, [messageWithLink, openShareUrl])
+
+  const handleCouponCopy = useCallback(async () => {
+    try {
+      await navigator.clipboard.writeText(AI_STACKING_COUPON_CODE)
+      toast({
+        title: 'Coupon code copied',
+        description: `Use code ${AI_STACKING_COUPON_CODE} at checkout.`,
+        status: 'success',
+        duration: 2500,
+        isClosable: true,
+      })
+    } catch (error) {
+      toast({
+        title: 'Unable to copy coupon code',
+        description: `Please copy it manually: ${AI_STACKING_COUPON_CODE}`,
+        status: 'error',
+        duration: 3000,
+        isClosable: true,
+      })
+    }
+  }, [toast])
 
   const handleInstagramShare = useCallback(async () => {
     await handleCopy()
@@ -469,6 +546,14 @@ const ReferralRewardsPage: React.FC = () => {
           {REWARD_TIERS.map((tier, index) => {
             const isAchieved = milestoneReferralCount >= tier.required
             const isClaimed = claimedRewards.includes(tier.id)
+            const isAiStackingTier = tier.id === 3
+            const claimLabel = isClaimed
+              ? isAiStackingTier
+                ? 'Coupon Used'
+                : 'Reward Claimed'
+              : isAiStackingTier
+                ? 'Mark Coupon as Used'
+                : 'Claim Reward'
 
             return (
               <MotionBox
@@ -553,6 +638,39 @@ const ReferralRewardsPage: React.FC = () => {
                     <Text color="brand.subtleText">{tier.description}</Text>
                   </Stack>
 
+                  {isAiStackingTier && isAchieved && (
+                    <Box mt={4} p={3} borderRadius="lg" bg="white" border="1px solid" borderColor="purple.200">
+                      <Stack spacing={2}>
+                        <Text fontSize="xs" color="brand.subtleText" textTransform="uppercase" letterSpacing="wide">
+                          25% Discount Coupon
+                        </Text>
+                        <HStack justify="space-between">
+                          <Text fontFamily="mono" fontWeight="bold" color="brand.text">
+                            {AI_STACKING_COUPON_CODE}
+                          </Text>
+                          <Button size="xs" variant="outline" colorScheme="purple" onClick={handleCouponCopy}>
+                            Copy code
+                          </Button>
+                        </HStack>
+                        <Button
+                          as="a"
+                          href={aiStackingCourseLink}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          size="sm"
+                          rightIcon={<Icon as={ExternalLink} />}
+                          colorScheme="purple"
+                          variant="ghost"
+                        >
+                          Open AI Stacking 101 Course
+                        </Button>
+                        <Text fontSize="xs" color="brand.subtleText">
+                          One-time reward for your account. Use this coupon once, then mark it as used.
+                        </Text>
+                      </Stack>
+                    </Box>
+                  )}
+
                   {isAchieved && (
                     <Button
                       mt={4}
@@ -564,7 +682,7 @@ const ReferralRewardsPage: React.FC = () => {
                       isLoading={claiming === tier.id}
                       isDisabled={isClaimed}
                     >
-                      {isClaimed ? 'Reward Claimed' : 'Claim Reward'}
+                      {claimLabel}
                     </Button>
                   )}
                 </Box>

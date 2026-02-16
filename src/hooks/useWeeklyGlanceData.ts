@@ -355,14 +355,39 @@ export const useWeeklyGlanceData = () => {
         const profileDoc = await getDoc(doc(db, 'profiles', profile.id))
         if (profileDoc.exists()) {
           const data = profileDoc.data()
+          const personalityStrengths = toStringArray(data.personalityStrengths)
+          const legacyPersonalityStrengths = toStringArray(data.personality_strengths)
+          const coreValues = toStringArray(data.coreValues)
+          const legacyCoreValues = toStringArray(data.core_values)
+          const resolvedPersonalityType =
+            (typeof data.personalityType === 'string' ? data.personalityType.trim() : '') ||
+            (typeof data.personality_type === 'string' ? data.personality_type.trim() : '') ||
+            (typeof profile.personalityType === 'string' ? profile.personalityType.trim() : '')
+          const resolvedStrengths =
+            personalityStrengths.length > 0 ? personalityStrengths : legacyPersonalityStrengths
+          const resolvedCoreValues =
+            coreValues.length > 0 ? coreValues : legacyCoreValues
+          const resolvedDescription =
+            (typeof data.personalityDescription === 'string' ? data.personalityDescription : undefined) ||
+            (typeof data.personality_description === 'string' ? data.personality_description : undefined)
+
           setPersonality({
-            personalityType: data.personalityType,
-            personalityStrengths: data.personalityStrengths || [],
-            personalityDescription: data.personalityDescription,
-            coreValues: data.coreValues || [],
+            personalityType: resolvedPersonalityType || undefined,
+            personalityStrengths: resolvedStrengths,
+            personalityDescription: resolvedDescription,
+            coreValues: resolvedCoreValues.length > 0 ? resolvedCoreValues : (profile.coreValues ?? []),
           })
         } else {
-          setPersonality(null)
+          setPersonality(
+            profile.personalityType || (profile.coreValues && profile.coreValues.length > 0)
+              ? {
+                  personalityType: profile.personalityType,
+                  personalityStrengths: [],
+                  personalityDescription: undefined,
+                  coreValues: profile.coreValues ?? [],
+                }
+              : null,
+          )
         }
       } catch (error) {
         setErrors(prev => ({ ...prev, profile: error as Error }))
@@ -462,28 +487,20 @@ export const useWeeklyGlanceData = () => {
   }, [profile?.id, weekKey])
 
   useEffect(() => {
-    const fetchQuote = async () => {
+    const fetchQuote = () => {
       setLoading(prev => ({ ...prev, inspiration: true }))
-      try {
-        const quoteQuery = query(
-          collection(db, 'inspiration_quotes'),
-          where('week_number', '==', calendarWeekNumber),
-        )
-        const snapshot = await getDocs(quoteQuery)
-        const docData = snapshot.docs[0]
-        if (docData) {
-          setInspirationQuote({ ...(docData.data() as InspirationQuote), id: docData.id })
-        } else {
-          const fallbackQuote = leadershipQuotes[calendarWeekNumber % leadershipQuotes.length]
-          setInspirationQuote({ ...fallbackQuote, id: `fallback-${calendarWeekNumber}` })
+      const quoteCount = leadershipQuotes.length
+      const quoteIndex = quoteCount > 0 ? (calendarWeekNumber - 1) % quoteCount : 0
+      const fallbackQuote =
+        leadershipQuotes[quoteIndex] ?? {
+          week_number: calendarWeekNumber,
+          quote_text: 'Join the movement. Take one small step today toward your goal.',
+          author: 'T4L Community',
+          category: 'Inspiration',
         }
-      } catch (error) {
-        setErrors(prev => ({ ...prev, inspiration: error as Error }))
-        const fallbackQuote = leadershipQuotes[calendarWeekNumber % leadershipQuotes.length]
-        setInspirationQuote({ ...fallbackQuote, id: `fallback-${calendarWeekNumber}` })
-      } finally {
-        setLoading(prev => ({ ...prev, inspiration: false }))
-      }
+
+      setInspirationQuote({ ...fallbackQuote, id: `fallback-${calendarWeekNumber}` })
+      setLoading(prev => ({ ...prev, inspiration: false }))
     }
 
     fetchQuote()

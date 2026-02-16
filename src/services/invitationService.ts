@@ -214,6 +214,7 @@ export const fetchOrganizationInvitations = async (
     query(
       invitationsCollection,
       where('organizationId', '==', trimmedOrganizationId),
+      where('status', '==', 'pending'),
       limit(200),
     ),
   )
@@ -333,14 +334,16 @@ export const createInvitation = async (data: {
   role: string
   organizationId: string
   method: InvitationMethod
-  expiresAt?: Date
   code?: string
 }) => {
-  return addDoc(invitationsCollection, {
+  const invitationPayload = {
     ...data,
     status: 'pending',
     createdAt: serverTimestamp(),
-    expiresAt: data.expiresAt || new Date(Date.now() + 24 * 60 * 60 * 1000),
+  }
+
+  return addDoc(invitationsCollection, {
+    ...invitationPayload,
   })
 }
 

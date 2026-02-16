@@ -68,6 +68,7 @@ import { useOrganizationLeadership } from '@/hooks/useOrganizationLeadership'
 import { isFreeUser } from '@/utils/membership'
 import { getDisplayName } from '@/utils/displayName'
 import { UpgradePromptModal } from '@/components/UpgradePromptModal'
+import { leadershipQuotes } from '@/services/quotes'
 
 interface WeeklyAggregation {
   id: string
@@ -120,16 +121,6 @@ interface FAQEntry {
   question: string
   answer: string
 }
-
-const inspirationQuotes = [
-  'You are never too small to make a difference. — Greta Thunberg',
-  'Leadership is a choice, not a rank. — Simon Sinek',
-  'Be the change you wish to see in the world. — Mahatma Gandhi',
-  'Act as if what you do makes a difference. It does. — William James',
-  'Small deeds done are better than great deeds planned. — Peter Marshall',
-  'The future depends on what you do today. — Mahatma Gandhi',
-  'Courage starts with showing up. — Brené Brown',
-]
 
 const faqFallback = {
   question: 'How do I keep momentum each week?',
@@ -367,8 +358,17 @@ export const CompanyDashboard: React.FC = () => {
     : 'Take the 16Personalities assessment to unlock insights.'
 
   const weeklyQuote = useMemo(() => {
+    if (leadershipQuotes.length === 0) {
+      return {
+        week_number: 1,
+        quote_text: 'Join the movement. Take one small step today toward your goal.',
+        author: 'T4L Community',
+        category: 'Inspiration',
+      }
+    }
     const weekNumber = Number(format(weekStart, 'I'))
-    return inspirationQuotes[weekNumber % inspirationQuotes.length]
+    const quoteIndex = (weekNumber - 1) % leadershipQuotes.length
+    return leadershipQuotes[quoteIndex]
   }, [weekStart])
 
   const weeklyTargetStatus = useMemo(() => {
@@ -775,9 +775,9 @@ export const CompanyDashboard: React.FC = () => {
                 <Icon as={Sparkles} color="orange.400" />
               </HStack>
               <Text fontStyle="italic" mb={1}>
-                "{weeklyQuote.split('—')[0].trim()}"
+                "{weeklyQuote.quote_text}"
               </Text>
-              <Text color="gray.600">— {weeklyQuote.split('—')[1]?.trim()}</Text>
+              <Text color="gray.600">- {weeklyQuote.author}</Text>
               <Text mt={2} color="gray.500" fontSize="sm">
                 Fresh perspective to share with your team
               </Text>
@@ -1141,3 +1141,4 @@ export const CompanyDashboard: React.FC = () => {
 }
 
 export default CompanyDashboard
+
