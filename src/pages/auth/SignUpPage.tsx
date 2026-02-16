@@ -287,6 +287,7 @@ export const SignUpPage: React.FC = () => {
       }
 
       if (isNewUser) {
+        localStorage.removeItem("pending_ref")
         setShowCompanyCodeModal(true)
         setPendingGoogleNavigation(true)
       } else {
