@@ -14,6 +14,7 @@ export interface ActivityFeedItem {
 
 interface ActivityFeedCardProps {
   items: ActivityFeedItem[]
+  onSeeMore?: () => void
 }
 
 const statusColorMap: Record<ActivityFeedStatus, string> = {
@@ -28,10 +29,10 @@ const statusIconMap: Record<ActivityFeedStatus, typeof CheckCircle2> = {
   attention: AlertTriangle,
 }
 
-export const ActivityFeedCard = ({ items }: ActivityFeedCardProps) => {
+export const ActivityFeedCard = ({ items, onSeeMore }: ActivityFeedCardProps) => {
   const [showAll, setShowAll] = useState(false)
   const openLoops = useMemo(() => items.filter(item => item.status !== 'complete').length, [items])
-  const visibleItems = showAll ? items : items.slice(0, 5)
+  const visibleItems = onSeeMore ? items.slice(0, 5) : showAll ? items : items.slice(0, 5)
 
   return (
     <Card h="100%" variant="outline" borderColor="border.subtle">
@@ -76,7 +77,19 @@ export const ActivityFeedCard = ({ items }: ActivityFeedCardProps) => {
             ))}
           </VStack>
 
-          {items.length > 5 && (
+          {onSeeMore && items.length > 0 && (
+            <Button
+              variant="link"
+              size="sm"
+              alignSelf="flex-start"
+              color="brand.primary"
+              onClick={onSeeMore}
+            >
+              See more
+            </Button>
+          )}
+
+          {!onSeeMore && items.length > 5 && (
             <Button
               variant="link"
               size="sm"

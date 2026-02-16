@@ -561,7 +561,7 @@ export const useWeeklyGlanceData = () => {
       collection(db, 'pointsLedger'),
       where('uid', '==', profile.id),
       orderBy('createdAt', 'desc'),
-      limit(10)
+      limit(100)
     )
 
     const unsubscribe = onSnapshot(

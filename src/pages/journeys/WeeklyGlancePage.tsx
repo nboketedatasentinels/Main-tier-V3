@@ -88,99 +88,25 @@ type ActivityFeedItem = {
   status: ActivityFeedStatus
 }
 
+const WEEKLY_ACTIVITY_WINDOW_MS = 7 * 24 * 60 * 60 * 1000
+
 function buildWeeklyActivityFeed(params: {
-  // Weekly parameter names are retained intentionally while data contracts are week-based.
-  earnedPoints: number
-  targetPoints: number
-  weekNumber: number
-  daysRemaining: number
-  completedHabits: number
-  totalHabits: number
-  mentorFirstName?: string | null
-  hasMentor: boolean
-  peerMatchCount: number
   ledgerEntries: LedgerEntry[]
 }): readonly ActivityFeedItem[] {
-  const {
-    earnedPoints,
-    targetPoints,
-    weekNumber,
-    daysRemaining,
-    completedHabits,
-    totalHabits,
-    mentorFirstName,
-    hasMentor,
-    peerMatchCount,
-    ledgerEntries,
-  } = params
+  const { ledgerEntries } = params
+  const cutoffTime = Date.now() - WEEKLY_ACTIVITY_WINDOW_MS
 
-  const pointsStatus: ActivityFeedStatus =
-    targetPoints > 0 && earnedPoints >= targetPoints
-      ? 'complete'
-      : earnedPoints > 0
-        ? 'pending'
-        : 'attention'
-
-  const habitsStatus: ActivityFeedStatus =
-    totalHabits > 0 && completedHabits === totalHabits ? 'complete' : 'pending'
-
-  const mentorStatus: ActivityFeedStatus = hasMentor ? 'complete' : 'pending'
-
-  const peerStatus: ActivityFeedStatus = peerMatchCount > 0 ? 'complete' : 'pending'
-
-  const activityEntries: ActivityFeedItem[] = ledgerEntries.map(entry => ({
-    id: entry.id,
-    title: entry.activityTitle,
-    description: `${entry.points} points earned towards your goal.`,
-    timestamp: formatDistanceToNow(entry.createdAt, { addSuffix: true }),
-    status: 'complete',
-  }))
-
-  const statusItems: ActivityFeedItem[] = [
-    {
-      id: 'weekly-points',
-      title: 'Points progress update',
-      description: `${earnedPoints} points accumulated toward your ${targetPoints || 0} point weekly goal.`,
-      timestamp: `Week ${weekNumber} • ${daysRemaining} days left`,
-      status: pointsStatus,
-    },
-    {
-      id: 'weekly-habits',
-      title: 'Habits check-in',
-      description: `${completedHabits} of ${totalHabits} habits completed this week.`,
-      timestamp: 'Updated this week',
-      status: habitsStatus,
-    },
-    {
-      id: 'mentor-assignment',
-      title: hasMentor ? 'Mentor confirmed' : 'Mentor assignment pending',
-      description: hasMentor
-        ? `Your mentor ${mentorFirstName || 'coach'} is ready for your next check-in.`
-        : 'We are confirming your mentor assignment. Expect an update soon.',
-      timestamp: 'Support team update',
-      status: mentorStatus,
-    },
-    {
-      id: 'peer-matching',
-      title: peerMatchCount > 0 ? 'Peer match ready' : 'Peer matching in progress',
-      description:
-        peerMatchCount > 0
-          ? 'Review your latest peer connection in Peer Connect.'
-          : 'We are still pairing you with a peer ally.',
-      timestamp: peerMatchCount > 0 ? 'New match available' : 'Matching in progress',
-      status: peerStatus,
-    },
-  ]
-
-  const statusPriority: Record<ActivityFeedStatus, number> = {
-    attention: 0,
-    pending: 1,
-    complete: 2,
-  }
-
-  return [...statusItems, ...activityEntries].sort((a, b) => statusPriority[a.status] - statusPriority[b.status])
+  return ledgerEntries
+    .filter((entry) => entry.createdAt.getTime() >= cutoffTime)
+    .sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime())
+    .map((entry) => ({
+      id: entry.id,
+      title: entry.activityTitle,
+      description: `${entry.points} points earned.`,
+      timestamp: formatDistanceToNow(entry.createdAt, { addSuffix: true }),
+      status: entry.points > 0 ? 'complete' : 'attention',
+    }))
 }
-
 /**
  * View-model hook: normalizes data + centralizes derived values
  */
@@ -191,10 +117,6 @@ function useWeeklyGlanceViewModel() {
   // Normalize collection shapes so UI never has to guard against undefined
   const weeklyHabits = useMemo(() => data.weeklyHabits ?? [], [data.weeklyHabits])
   const peerMatches = useMemo(() => data.peerMatches ?? [], [data.peerMatches])
-  const activePeerMatches = useMemo(
-    () => peerMatches.filter(match => match.matchStatus !== 'expired'),
-    [peerMatches],
-  )
 
   // Weekly variable names are deliberate until backend period support is generalized.
   const weekRange = useMemo(() => getWeekDateRange(), [])
@@ -229,33 +151,13 @@ function useWeeklyGlanceViewModel() {
     console.log('[WeeklyGlance] Parallel window tracking enabled')
   }
 
-  const mentorProfile = data.supportAssignment?.mentorProfile
   const ledgerEntries = useMemo(() => data.ledgerEntries ?? [], [data.ledgerEntries])
   const activityFeedItems = useMemo(
     () =>
       buildWeeklyActivityFeed({
-        earnedPoints,
-        targetPoints,
-        weekNumber: data.weekNumber,
-        daysRemaining,
-        completedHabits,
-        totalHabits: weeklyHabits.length,
-        hasMentor: !!mentorProfile,
-        mentorFirstName: mentorProfile?.firstName ?? null,
-        peerMatchCount: activePeerMatches.length,
         ledgerEntries,
       }),
-      [
-        earnedPoints,
-        targetPoints,
-        data.weekNumber,
-        daysRemaining,
-        completedHabits,
-        weeklyHabits.length,
-        mentorProfile,
-        activePeerMatches.length,
-        ledgerEntries,
-      ]
+      [ledgerEntries]
     )
 
   return {
@@ -431,6 +333,10 @@ export const WeeklyGlancePage = () => {
     navigate('/app/weekly-checklist?focus=pending-approvals')
   }, [navigate])
 
+  const handleSeeMoreActivity = useCallback(() => {
+    navigate('/app/leadership-board#points-breakdown')
+  }, [navigate])
+
   return (
     <Box p={{ base: 4, md: 6 }}>
       <Stack spacing={6}>
@@ -533,7 +439,10 @@ export const WeeklyGlancePage = () => {
           )}
 
           <GridItem colSpan={{ base: 1, md: 8 }} order={{ base: 5, md: 5 }}>
-            <ActivityFeedCard items={[...activityFeedItems]} />
+            <ActivityFeedCard
+              items={[...activityFeedItems]}
+              onSeeMore={handleSeeMoreActivity}
+            />
           </GridItem>
 
           <GridItem colSpan={{ base: 1, md: 4 }} order={{ base: 6, md: 6 }}>
@@ -581,3 +490,4 @@ export const WeeklyGlancePage = () => {
     </Box>
   )
 }
+

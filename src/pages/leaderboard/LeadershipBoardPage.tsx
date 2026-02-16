@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useLocation, useNavigate } from 'react-router-dom'
 import {
   Avatar,
   Badge,
@@ -151,6 +151,7 @@ const formatNumber = (value?: number | null) => {
 
 export const LeadershipBoardPage: React.FC = () => {
   const navigate = useNavigate()
+  const location = useLocation()
   const { profile: authProfile, refreshProfile } = useAuth()
   const toast = useToast()
   const { isOpen, onOpen, onClose } = useDisclosure()
@@ -681,6 +682,19 @@ export const LeadershipBoardPage: React.FC = () => {
       setBreakdownPage(maxPage)
     }
   }, [userBreakdown.length, breakdownPage])
+
+  useEffect(() => {
+    if (location.hash !== '#points-breakdown') return
+
+    const scrollToBreakdown = () => {
+      const target = document.getElementById('points-breakdown')
+      if (!target) return
+      target.scrollIntoView({ behavior: 'smooth', block: 'start' })
+    }
+
+    const timeoutId = window.setTimeout(scrollToBreakdown, 0)
+    return () => window.clearTimeout(timeoutId)
+  }, [location.hash, userBreakdown.length])
 
   const getRankIcon = (rank: number) => {
     if (rank === 1) {
@@ -1493,8 +1507,13 @@ export const LeadershipBoardPage: React.FC = () => {
                 </Grid>
               )}
 
-              {!isFreeContext && (
-                <Card bg="surface.default" border="1px solid" borderColor="border.subtle">
+              <Card
+                id="points-breakdown"
+                bg="surface.default"
+                border="1px solid"
+                borderColor="border.subtle"
+                scrollMarginTop="120px"
+              >
                   <CardHeader>
                     <Flex justify="space-between" align="center">
                       <Box>
@@ -1593,7 +1612,6 @@ export const LeadershipBoardPage: React.FC = () => {
                     </Grid>
                   </CardBody>
                 </Card>
-              )}
 
             </Stack>
           </TabPanel>
