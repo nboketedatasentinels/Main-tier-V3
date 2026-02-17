@@ -3,40 +3,72 @@
     "id": "4w-window-1",
     "journeyType": "4W",
     "windowNumber": 1,
-    "targetPoints": 5000,
-    "minPoints": 4000,
-    "maxPoints": 7000
+    "targetPoints": 7500,
+    "minPoints": 5625,
+    "maxPoints": 15000
   },
   {
     "id": "4w-window-2",
     "journeyType": "4W",
     "windowNumber": 2,
-    "targetPoints": 5000,
-    "minPoints": 4000,
-    "maxPoints": 7000
+    "targetPoints": 7500,
+    "minPoints": 5625,
+    "maxPoints": 15000
   },
   {
     "id": "6w-window-1",
     "journeyType": "6W",
     "windowNumber": 1,
-    "targetPoints": 8000,
-    "minPoints": 6000,
-    "maxPoints": 10000
+    "targetPoints": 13500,
+    "minPoints": 10125,
+    "maxPoints": 20000
   },
   {
     "id": "6w-window-2",
     "journeyType": "6W",
     "windowNumber": 2,
-    "targetPoints": 8000,
-    "minPoints": 6000,
-    "maxPoints": 10000
+    "targetPoints": 13500,
+    "minPoints": 10125,
+    "maxPoints": 20000
   },
   {
     "id": "6w-window-3",
     "journeyType": "6W",
     "windowNumber": 3,
-    "targetPoints": 8000,
-    "minPoints": 6000,
-    "maxPoints": 10000
+    "targetPoints": 13500,
+    "minPoints": 10125,
+    "maxPoints": 20000
+  },
+  {
+    "id": "3m-window-default",
+    "journeyType": "3M",
+    "windowNumber": 0,
+    "targetPoints": 12500,
+    "minPoints": 9375,
+    "maxPoints": 18833
+  },
+  {
+    "id": "6m-window-default",
+    "journeyType": "6M",
+    "windowNumber": 0,
+    "targetPoints": 12500,
+    "minPoints": 9375,
+    "maxPoints": 18833
+  },
+  {
+    "id": "9m-window-default",
+    "journeyType": "9M",
+    "windowNumber": 0,
+    "targetPoints": 12600,
+    "minPoints": 9450,
+    "maxPoints": 18833
+  },
+  {
+    "id": "12m-window-default",
+    "journeyType": "12M",
+    "windowNumber": 0,
+    "targetPoints": 12600,
+    "minPoints": 9450,
+    "maxPoints": 18833
   }
 ]

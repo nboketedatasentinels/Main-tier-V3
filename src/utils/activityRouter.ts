@@ -1,17 +1,19 @@
 import { awardChecklistPoints } from '@/services/pointsService';
 import { ActivityDef, JourneyType } from '@/config/pointsConfig';
 
-interface CompletionParams {
+interface CompletionParams<TActivity extends ActivityDef> {
   uid: string;
   journeyType: JourneyType;
   weekNumber: number;
-  activity: ActivityDef;
-  onProofRequired: (activity: any) => void;
+  activity: TActivity;
+  onProofRequired: (activity: TActivity) => void;
   onSuccess: (status: 'completed' | 'pending' | 'not_started') => Promise<void>;
-  onError: (error: any) => void;
+  onError: (error: unknown) => void;
 }
 
-export async function handleActivityCompletion(params: CompletionParams) {
+export async function handleActivityCompletion<TActivity extends ActivityDef>(
+  params: CompletionParams<TActivity>,
+) {
   const { uid, journeyType, weekNumber, activity, onProofRequired, onSuccess, onError } = params;
 
   try {
@@ -44,7 +46,21 @@ export async function handleActivityCompletion(params: CompletionParams) {
         break;
 
       case 'partner_issued':
-        // These are locked until a partner assigns them.
+        if ((activity as TActivity & { issuedByPartner?: boolean }).issuedByPartner) {
+          await awardChecklistPoints({
+            uid,
+            journeyType,
+            weekNumber,
+            activity,
+            source: 'instant:partner-issued-claim',
+          });
+          await onSuccess('completed');
+        }
+        break;
+
+      case 'mentor_issued':
+      case 'ambassador_issued':
+        // These remain locked until assignment logic is implemented.
         // No action from learner side here.
         break;
 

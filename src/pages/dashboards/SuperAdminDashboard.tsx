@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react'
 import { useToast } from '@chakra-ui/react'
+import { useLocation, useNavigate } from 'react-router-dom'
 import { useAuth } from '@/hooks/useAuth'
 import { SuperAdminLayout } from '@/layouts/SuperAdminLayout'
 import { OverviewPage } from '@/pages/super-admin/OverviewPage'
@@ -31,6 +32,12 @@ import { useAllUpgradeRequests } from '@/hooks/admin/useAdminUpgradeRequests'
 import type { AdminHealthItem } from '@/components/admin/AdminDataHealthPanel'
 import { useAdminNotifications } from '@/hooks/useAdminNotifications'
 import { buildSuperAdminNavItems } from '@/utils/navigationItems'
+import {
+  DASHBOARD_TABS,
+  buildDashboardSearchForNavigation,
+  consumeCreateIntentFromSearch,
+  resolveDashboardTabFromSearch,
+} from './superAdminDashboardRouting'
 
 type TrendPoint = { label: string; value: number }
 
@@ -44,7 +51,9 @@ const defaultMetrics: SuperAdminDashboardMetrics = {
 }
 
 export const SuperAdminDashboard: React.FC = () => {
-  const { profile, profileStatus, lastProfileLoadAt, refreshProfile } = useAuth()
+  const { profile, profileStatus, lastProfileLoadAt, refreshProfile, refreshAdminSession, effectiveRole } = useAuth()
+  const location = useLocation()
+  const navigate = useNavigate()
   const adminName = profile?.fullName || profile?.firstName || 'Admin'
   const toast = useToast()
 
@@ -65,14 +74,16 @@ export const SuperAdminDashboard: React.FC = () => {
 
   const [registrationTrend, setRegistrationTrend] = useState<TrendPoint[]>([])
   const [userGrowthTrend, setUserGrowthTrend] = useState<TrendPoint[]>([])
+  const isSuperAdminView = effectiveRole === 'super_admin'
   const {
     requests: upgradeRequests,
     loading: upgradeRequestsLoading,
     error: upgradeRequestsError,
     refetch: refetchUpgradeRequests,
-  } = useAllUpgradeRequests()
+  } = useAllUpgradeRequests({ enabled: isSuperAdminView })
   const { notifications: upgradeNotifications, unreadCount: unreadUpgradeCount } = useAdminNotifications({
     role: 'super_admin',
+    enabled: isSuperAdminView,
     filters: ['upgrade_request'],
   })
 
@@ -89,8 +100,35 @@ export const SuperAdminDashboard: React.FC = () => {
     systemAlerts: false,
     taskNotifications: false,
   })
+  const adminSessionRetriedRef = useRef(false)
+  const adminSessionBootstrappedRef = useRef(false)
 
   useEffect(() => {
+    const nextTab = resolveDashboardTabFromSearch(location.search)
+    setActivePage(nextTab)
+  }, [location.search])
+
+  useEffect(() => {
+    if (!isSuperAdminView) {
+      adminSessionBootstrappedRef.current = false
+      return
+    }
+    if (adminSessionBootstrappedRef.current) return
+    adminSessionBootstrappedRef.current = true
+
+    void refreshAdminSession()
+      .then(() => setRefreshIndex((prev) => prev + 1))
+      .catch((error) => {
+        console.error(error)
+      })
+  }, [isSuperAdminView, refreshAdminSession])
+
+  useEffect(() => {
+    if (!isSuperAdminView) {
+      setLoading(false)
+      setStreamsLoading(false)
+      return
+    }
     setLoading(true)
     setError(null)
     coreStreamsLoadedRef.current = {
@@ -159,9 +197,15 @@ export const SuperAdminDashboard: React.FC = () => {
     )
 
     return () => unsubscribers.forEach((unsub) => unsub())
-  }, [refreshIndex, toast])
+  }, [isSuperAdminView, refreshIndex, toast])
 
   useEffect(() => {
+    if (!isSuperAdminView) {
+      setStreamsLoading(false)
+      adminSessionRetriedRef.current = false
+      return
+    }
+    adminSessionRetriedRef.current = false
     setStreamsLoading(true)
     sideStreamsLoadedRef.current = {
       verificationRequests: false,
@@ -178,37 +222,98 @@ export const SuperAdminDashboard: React.FC = () => {
         setStreamsLoading(false)
       }
     }
+    const handleSideStreamSuccess = (key: keyof typeof sideStreamsLoadedRef.current) => {
+      adminSessionRetriedRef.current = false
+      markSideStreamLoaded(key)
+    }
+    const handleSideStreamError = (
+      streamKey: keyof typeof sideStreamsLoadedRef.current,
+      message: string,
+      err: unknown,
+    ) => {
+      markSideStreamLoaded(streamKey)
+      const code = (err as { code?: string })?.code
+      if (code === 'permission-denied') {
+        if (!adminSessionRetriedRef.current) {
+          adminSessionRetriedRef.current = true
+          void refreshAdminSession()
+            .then(() => setRefreshIndex((prev) => prev + 1))
+            .catch((refreshError) => {
+              console.error(refreshError)
+              setError(message)
+              toast({ title: 'Failed to refresh admin session', status: 'error' })
+            })
+          return
+        }
+        setError('Permission denied while loading admin data. Please sign out and sign in again.')
+        toast({ title: 'Admin permissions required', status: 'error' })
+        return
+      }
+      console.error(err)
+      setError(message)
+      toast({ title: 'Failed to load dashboard', status: 'error' })
+    }
 
     unsubscribers.push(
-      listenToVerificationRequests((items) => {
-        setVerificationRequests(items)
-        markSideStreamLoaded('verificationRequests')
-      }),
+      listenToVerificationRequests(
+        (items) => {
+          setVerificationRequests(items)
+          handleSideStreamSuccess('verificationRequests')
+        },
+        (err) =>
+          handleSideStreamError(
+            'verificationRequests',
+            'Unable to load verification requests from Firebase.',
+            err,
+          ),
+      ),
     )
 
     unsubscribers.push(
-      listenToRegistrations((items) => {
-        setRegistrations(items)
-        markSideStreamLoaded('registrations')
-      }),
+      listenToRegistrations(
+        (items) => {
+          setRegistrations(items)
+          handleSideStreamSuccess('registrations')
+        },
+        (err) =>
+          handleSideStreamError(
+            'registrations',
+            'Unable to load registration stream from Firebase.',
+            err,
+          ),
+      ),
     )
 
     unsubscribers.push(
-      listenToSystemAlerts((items) => {
-        setSystemAlerts(items)
-        markSideStreamLoaded('systemAlerts')
-      }),
+      listenToSystemAlerts(
+        (items) => {
+          setSystemAlerts(items)
+          handleSideStreamSuccess('systemAlerts')
+        },
+        (err) => handleSideStreamError('systemAlerts', 'Unable to load system alerts from Firebase.', err),
+      ),
     )
 
     unsubscribers.push(
-      listenToTaskNotifications((items) => {
-        setTaskNotifications(items)
-        markSideStreamLoaded('taskNotifications')
-      }),
+      listenToTaskNotifications(
+        (items) => {
+          setTaskNotifications(items)
+          handleSideStreamSuccess('taskNotifications')
+        },
+        (err) =>
+          handleSideStreamError(
+            'taskNotifications',
+            'Unable to load task notifications from Firebase.',
+            err,
+          ),
+      ),
     )
 
-    return () => unsubscribers.forEach((unsub) => unsub())
-  }, [])
+    return () => {
+      adminSessionRetriedRef.current = false
+      unsubscribers.forEach((unsub) => unsub())
+    }
+  }, [isSuperAdminView, refreshAdminSession, refreshIndex, toast])
 
   useEffect(() => {
     if (!loading && !error) {
@@ -267,7 +372,28 @@ export const SuperAdminDashboard: React.FC = () => {
   }, [riskAggregate])
 
   const handleNavigate = (key: string) => {
-    setActivePage(key)
+    const nextPage = DASHBOARD_TABS.has(key) ? key : 'overview'
+    setActivePage(nextPage)
+
+    navigate(
+      {
+        pathname: location.pathname,
+        search: buildDashboardSearchForNavigation(location.search, nextPage),
+      },
+      { replace: false },
+    )
+  }
+
+  const handleCreateIntentConsumed = () => {
+    const params = new URLSearchParams(location.search)
+    if (params.get('create') !== 'true') return
+    navigate(
+      {
+        pathname: location.pathname,
+        search: consumeCreateIntentFromSearch(location.search),
+      },
+      { replace: true },
+    )
   }
 
   const retryEngagement = () => setRefreshIndex((prev) => prev + 1)
@@ -314,9 +440,16 @@ export const SuperAdminDashboard: React.FC = () => {
   ]
 
   const renderPage = () => {
-    switch (activePage) {
+      switch (activePage) {
       case 'organizations':
-        return <OrganizationManagementPage adminName={adminName} adminId={profile?.id} />
+        return (
+          <OrganizationManagementPage
+            adminName={adminName}
+            adminId={profile?.id}
+            openCreateOnMount={new URLSearchParams(location.search).get('create') === 'true'}
+            onCreateIntentConsumed={handleCreateIntentConsumed}
+          />
+        )
       case 'users':
         return <UserManagementPage />
       case 'approvals':

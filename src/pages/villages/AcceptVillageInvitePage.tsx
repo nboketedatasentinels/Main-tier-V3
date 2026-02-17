@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import {
   Box,
   Button,
@@ -43,7 +43,7 @@ export const AcceptVillageInvitePage = () => {
 
   const availableSlots = useMemo(() => Math.max(0, MEMBER_LIMIT - memberCount), [memberCount])
 
-  const loadInvitation = async () => {
+  const loadInvitation = useCallback(async () => {
     if (!invitationCode) return
     setLoading(true)
     try {
@@ -71,11 +71,11 @@ export const AcceptVillageInvitePage = () => {
     } finally {
       setLoading(false)
     }
-  }
+  }, [invitationCode])
 
   useEffect(() => {
     void loadInvitation()
-  }, [invitationCode])
+  }, [loadInvitation])
 
   const handleAccept = async () => {
     if (!invitationId || !villageId || !user) return

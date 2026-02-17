@@ -1,5 +1,7 @@
+import { useCallback, useState } from 'react'
 import {
   Avatar,
+  Box,
   Button,
   Card,
   CardBody,
@@ -9,12 +11,17 @@ import {
   Skeleton,
   Stack,
   Text,
+  Tooltip,
+  useDisclosure,
   VStack,
 } from '@chakra-ui/react'
 import { CalendarClock, Mail, MessageCircle, Users } from 'lucide-react'
 import { Link } from 'react-router-dom'
 import { PeerMatch, SupportAssignment } from '@/hooks/useWeeklyGlanceData'
+import { useAuth } from '@/hooks/useAuth'
+import { UpgradePromptModal } from '@/components/UpgradePromptModal'
 import { getDisplayName } from '@/utils/displayName'
+import { isFreeUser } from '@/utils/membership'
 
 interface SupportTeamCardProps {
   data: SupportAssignment | null
@@ -24,6 +31,11 @@ interface SupportTeamCardProps {
 }
 
 export const SupportTeamCard = ({ data, loading, peerMatches, peerMatchesLoading }: SupportTeamCardProps) => {
+  const { profile } = useAuth()
+  const isFreeTierUser = isFreeUser(profile)
+  const { isOpen: isUpgradeOpen, onOpen: onUpgradeOpen, onClose: onUpgradeClose } = useDisclosure()
+  const [upgradeFeatureName, setUpgradeFeatureName] = useState('Premium Feature')
+  const [upgradeBenefits, setUpgradeBenefits] = useState<string[]>([])
   const mentorProfile = data?.mentorProfile ?? null
   const ambassadorProfile = data?.ambassadorProfile ?? null
   const hasAssignedIds = Boolean(data?.mentor_id || data?.ambassador_id)
@@ -40,6 +52,28 @@ export const SupportTeamCard = ({ data, loading, peerMatches, peerMatchesLoading
   const getAvatarSrc = (profile: NonNullable<typeof mentorProfile>) => {
     return profile.avatarUrl || profile.photoURL || undefined
   }
+
+  const promptLeadershipUpgrade = useCallback(() => {
+    setUpgradeFeatureName('Leadership Council')
+    setUpgradeBenefits([
+      'Join leadership council sessions',
+      'Book structured mentor conversations',
+      'Access premium leadership frameworks',
+      'Get deeper accountability support',
+    ])
+    onUpgradeOpen()
+  }, [onUpgradeOpen])
+
+  const promptPeerUpgrade = useCallback(() => {
+    setUpgradeFeatureName('Peer Connect')
+    setUpgradeBenefits([
+      'Access peer matching',
+      'Schedule accountability sessions',
+      'Track peer session outcomes',
+      'Build momentum with premium networking tools',
+    ])
+    onUpgradeOpen()
+  }, [onUpgradeOpen])
 
   return (
     <Card h="100%" variant="outline" borderColor="border.subtle">
@@ -61,15 +95,32 @@ export const SupportTeamCard = ({ data, loading, peerMatches, peerMatchesLoading
                       </VStack>
                     </HStack>
                     {mentorProfile.email && (
-                      <Button
-                        as={Link}
-                        to="/app/leadership-council"
-                        size="sm"
-                        variant="ghost"
-                        leftIcon={<Icon as={CalendarClock} />}
-                      >
-                        Schedule
-                      </Button>
+                      isFreeTierUser ? (
+                        <Tooltip label="Upgrade to schedule leadership council sessions." hasArrow openDelay={200}>
+                          <Box>
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              leftIcon={<Icon as={CalendarClock} />}
+                              onClick={promptLeadershipUpgrade}
+                              opacity={0.55}
+                              filter="grayscale(1)"
+                            >
+                              Schedule
+                            </Button>
+                          </Box>
+                        </Tooltip>
+                      ) : (
+                        <Button
+                          as={Link}
+                          to="/app/leadership-council"
+                          size="sm"
+                          variant="ghost"
+                          leftIcon={<Icon as={CalendarClock} />}
+                        >
+                          Schedule
+                        </Button>
+                      )
                     )}
                   </HStack>
                 </VStack>
@@ -116,15 +167,32 @@ export const SupportTeamCard = ({ data, loading, peerMatches, peerMatchesLoading
                     </HStack>
                     {mentorProfile.email && (
                       <HStack spacing={2}>
-                        <Button
-                          as={Link}
-                          to="/app/leadership-council"
-                          size="sm"
-                          variant="ghost"
-                          leftIcon={<Icon as={CalendarClock} />}
-                        >
-                          Schedule
-                        </Button>
+                        {isFreeTierUser ? (
+                          <Tooltip label="Upgrade to schedule leadership council sessions." hasArrow openDelay={200}>
+                            <Box>
+                              <Button
+                                size="sm"
+                                variant="ghost"
+                                leftIcon={<Icon as={CalendarClock} />}
+                                onClick={promptLeadershipUpgrade}
+                                opacity={0.55}
+                                filter="grayscale(1)"
+                              >
+                                Schedule
+                              </Button>
+                            </Box>
+                          </Tooltip>
+                        ) : (
+                          <Button
+                            as={Link}
+                            to="/app/leadership-council"
+                            size="sm"
+                            variant="ghost"
+                            leftIcon={<Icon as={CalendarClock} />}
+                          >
+                            Schedule
+                          </Button>
+                        )}
                         <Button
                           as="a"
                           href={`mailto:${mentorProfile.email}`}
@@ -184,21 +252,46 @@ export const SupportTeamCard = ({ data, loading, peerMatches, peerMatchesLoading
                     Find your peer ally to stay accountable this week.
                   </Text>
                 )}
-                <Button
-                  as={Link}
-                  to="/app/peer-connect"
-                  size="sm"
-                  variant={hasPeerMatch ? 'link' : 'solid'}
-                  colorScheme="purple"
-                  alignSelf="flex-start"
-                >
-                  {hasPeerMatch ? 'View peer matches' : 'Find your peer ally'}
-                </Button>
+                {isFreeTierUser ? (
+                  <Tooltip label="Upgrade to unlock peer matching and sessions." hasArrow openDelay={200}>
+                    <Box>
+                      <Button
+                        size="sm"
+                        variant={hasPeerMatch ? 'link' : 'solid'}
+                        colorScheme="purple"
+                        alignSelf="flex-start"
+                        onClick={promptPeerUpgrade}
+                        opacity={0.55}
+                        filter="grayscale(1)"
+                      >
+                        {hasPeerMatch ? 'View peer matches' : 'Find your peer ally'}
+                      </Button>
+                    </Box>
+                  </Tooltip>
+                ) : (
+                  <Button
+                    as={Link}
+                    to="/app/peer-connect"
+                    size="sm"
+                    variant={hasPeerMatch ? 'link' : 'solid'}
+                    colorScheme="purple"
+                    alignSelf="flex-start"
+                  >
+                    {hasPeerMatch ? 'View peer matches' : 'Find your peer ally'}
+                  </Button>
+                )}
               </Stack>
             </Skeleton>
           </Stack>
         </Stack>
       </CardBody>
+
+      <UpgradePromptModal
+        featureName={upgradeFeatureName}
+        benefits={upgradeBenefits.length ? upgradeBenefits : ['Unlock premium collaboration features']}
+        isOpen={isUpgradeOpen}
+        onClose={onUpgradeClose}
+      />
     </Card>
   )
 }

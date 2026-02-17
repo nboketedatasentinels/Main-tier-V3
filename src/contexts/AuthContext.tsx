@@ -31,6 +31,7 @@ import { auth, db, firebaseConfigStatus } from '@/services/firebase'
 import { AuthContext, AuthContextType } from './AuthContextType'
 import { getFriendlyErrorMessage } from '@/utils/authErrors'
 import { incrementOrganizationMemberCount, validateCompanyCode } from '@/services/organizationService'
+import { resolvePendingInvitationOrganization } from '@/services/invitationService'
 import { buildActionCodeSettings } from '@/utils/authActionCodeSettings'
 import {
   assignComplementaryCoursesToUser,
@@ -134,10 +135,10 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     console.log('🟣 [Auth] Recorded profile load timestamp', { id: loadedProfile.id, timestamp })
   }, [])
 
-  const serializeAssignments = (assignments?: string[]) => {
+  const serializeAssignments = useCallback((assignments?: string[]) => {
     if (!assignments?.length) return ''
     return [...assignments].sort().join('|')
-  }
+  }, [])
 
   const maybeNormalizeStoredRole = useCallback(
     async (profileToNormalize: UserProfile, userId: string) => {
@@ -180,7 +181,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     []
   )
 
-  const areProfilesEquivalent = (previous: UserProfile | null, next: UserProfile | null) => {
+  const areProfilesEquivalent = useCallback((previous: UserProfile | null, next: UserProfile | null) => {
     if (previous === next) return true
     if (!previous || !next) return false
     return (
@@ -207,11 +208,15 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       previous.emailVerified === next.emailVerified &&
       previous.totalPoints === next.totalPoints &&
       previous.level === next.level &&
+      previous.leaderboardVisibility === next.leaderboardVisibility &&
+      previous.privacySettings?.showOnLeaderboard === next.privacySettings?.showOnLeaderboard &&
+      previous.privacySettings?.allowPeerMatching === next.privacySettings?.allowPeerMatching &&
+      previous.privacySettings?.shareImpactPublicly === next.privacySettings?.shareImpactPublicly &&
       previous.onboardingComplete === next.onboardingComplete &&
       previous.onboardingSkipped === next.onboardingSkipped &&
       serializeAssignments(previous.assignedOrganizations) === serializeAssignments(next.assignedOrganizations)
     )
-  }
+  }, [serializeAssignments])
 
   const updateProfileState = useCallback((nextProfile: UserProfile | null, reason: string) => {
     setProfile((prev) => {
@@ -235,7 +240,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       console.log('🟢 [Auth] Profile updated', { reason, role: nextProfile?.role })
       return nextProfile
     })
-  }, [])
+  }, [areProfilesEquivalent])
 
   useEffect(() => {
     if (enableProfileRealtime) return
@@ -283,7 +288,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         assignmentState.inFlight = false
       }
     },
-    [assignComplementaryCoursesToUser, hasComplementaryCourseAssigned]
+    []
   )
 
   const extractCustomClaims = useCallback(async (firebaseUser: User) => {
@@ -324,7 +329,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       const usersRef = doc(db, 'users', uid)
       const usersSnap = await getDoc(usersRef)
       if (usersSnap.exists()) {
-        const { id: _ignoredId, ...profileData } = usersSnap.data() as UserProfile
+        const profileData = usersSnap.data() as UserProfile
         const rawProfile = {
           ...profileData,
           id: uid,
@@ -346,7 +351,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       const profilesRef = doc(db, 'profiles', uid)
       const profilesSnap = await getDoc(profilesRef)
       if (profilesSnap.exists()) {
-        const { id: _ignoredId, ...profileData } = profilesSnap.data() as UserProfile
+        const profileData = profilesSnap.data() as UserProfile
         const rawProfile = {
           ...profileData,
           id: uid,
@@ -386,7 +391,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     }
   }, [buildOfflineError, isOfflineError])
 
-  const fetchProfileWithRetry = async (firebaseUser: User, attempts = 3): Promise<UserProfile | null> => {
+  const fetchProfileWithRetry = useCallback(async (firebaseUser: User, attempts = 3): Promise<UserProfile | null> => {
     if (typeof navigator !== 'undefined' && navigator.onLine === false) {
       const offlineError = buildOfflineError()
       setProfileError(offlineError)
@@ -426,7 +431,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     }
 
     return null
-  }
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- fetchOrCreateUserDoc is declared below and resolved at call-time.
+  }, [buildOfflineError, fetchProfileOnce, isOfflineError])
 
   /* ------------------------------------------------------------------ */
   /* 🔹 Fetch or Create User Doc                                         */
@@ -446,7 +452,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       console.log('🟣 [Auth] Firestore profile exists in users collection?', userDocSnap.exists())
 
       if (userDocSnap.exists()) {
-        const { id: _ignoredId, ...storedUser } = userDocSnap.data() as UserProfile
+        const storedUser = userDocSnap.data() as UserProfile
         const baseUser: UserProfile = {
           ...storedUser,
           id: firebaseUser.uid,
@@ -485,6 +491,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
                 'organizationId',
                 'assignedOrganizations',
                 'accountStatus',
+                'leaderboardVisibility',
+                'privacySettings',
               ] as const satisfies ReadonlyArray<keyof UserProfile>
 
               type CanonicalKey = typeof canonicalKeys[number]
@@ -622,6 +630,86 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
           }
         }
 
+        const hasOrganizationAssignment = Boolean(mergedUser.companyId || mergedUser.organizationId)
+        if (!normalizedPendingCompanyCode && !hasOrganizationAssignment && firebaseUser.email) {
+          try {
+            const invitationOrganization = await resolvePendingInvitationOrganization(firebaseUser.email)
+            if (invitationOrganization) {
+              const previousCompanyId = mergedUser.companyId ?? null
+              const nextAssignedOrganizations = Array.isArray(mergedUser.assignedOrganizations)
+                ? Array.from(
+                    new Set([
+                      ...mergedUser.assignedOrganizations.filter(
+                        (id): id is string => typeof id === 'string' && id.trim().length > 0,
+                      ),
+                      invitationOrganization.organizationId,
+                    ]),
+                  )
+                : [invitationOrganization.organizationId]
+
+              const invitationUpgradeUpdates: Partial<UserProfile> = {
+                membershipStatus: 'paid',
+                companyId: invitationOrganization.organizationId,
+                organizationId: invitationOrganization.organizationId,
+                ...(invitationOrganization.organizationCode ? { companyCode: invitationOrganization.organizationCode } : {}),
+                ...(invitationOrganization.organizationName ? { companyName: invitationOrganization.organizationName } : {}),
+                transformationTier: TransformationTier.CORPORATE_MEMBER,
+                assignedOrganizations: nextAssignedOrganizations,
+                ...(invitationOrganization.journeyType ? { journeyType: invitationOrganization.journeyType } : {}),
+                ...(invitationOrganization.programDurationWeeks
+                  ? { programDurationWeeks: invitationOrganization.programDurationWeeks }
+                  : {}),
+                ...(invitationOrganization.cohortStartDate
+                  ? { journeyStartDate: invitationOrganization.cohortStartDate }
+                  : {}),
+                dashboardPreferences: {
+                  ...(mergedUser.dashboardPreferences && typeof mergedUser.dashboardPreferences === 'object'
+                    ? mergedUser.dashboardPreferences
+                    : {}),
+                  lockedToFreeExperience: false,
+                },
+              }
+
+              await Promise.all([
+                updateDoc(userDocRef, {
+                  ...invitationUpgradeUpdates,
+                  updatedAt: serverTimestamp(),
+                }),
+                setDoc(
+                  doc(db, 'profiles', firebaseUser.uid),
+                  {
+                    ...invitationUpgradeUpdates,
+                    updatedAt: serverTimestamp(),
+                  },
+                  { merge: true },
+                ),
+              ])
+
+              mergedUser = {
+                ...mergedUser,
+                ...invitationUpgradeUpdates,
+                updatedAt: new Date().toISOString(),
+              }
+
+              if (
+                invitationOrganization.organizationId &&
+                invitationOrganization.organizationId !== previousCompanyId
+              ) {
+                try {
+                  await incrementOrganizationMemberCount(invitationOrganization.organizationId)
+                } catch (incrementError) {
+                  console.warn(
+                    '[WARN] [Auth] Unable to increment organization member count after invitation-based upgrade',
+                    incrementError,
+                  )
+                }
+              }
+            }
+          } catch (invitationError) {
+            console.warn('[WARN] [Auth] Unable to resolve pending invitation organization', invitationError)
+          }
+        }
+
         return mergedUser
       }
 
@@ -633,7 +721,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         
         if (profileDocSnap.exists()) {
           console.log('🟡 [Auth] Profile found in profiles collection (fallback), syncing to users collection...')
-          const { id: _ignoredId, ...storedProfile } = profileDocSnap.data() as UserProfile
+          const storedProfile = profileDocSnap.data() as UserProfile
           const baseProfile: UserProfile = {
             ...storedProfile,
             id: firebaseUser.uid,
@@ -674,6 +762,28 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
           if (typeof window !== 'undefined') {
             localStorage.removeItem(pendingCompanyCodeKey)
           }
+        }
+      }
+
+      if (!validatedOrganization && firebaseUser.email) {
+        try {
+          const invitationOrganization = await resolvePendingInvitationOrganization(firebaseUser.email)
+          if (invitationOrganization) {
+            validatedOrganization = {
+              id: invitationOrganization.organizationId,
+              code: invitationOrganization.organizationCode || '',
+              name: invitationOrganization.organizationName || 'Unknown organization',
+              status: 'active',
+              createdAt: '',
+              updatedAt: '',
+              memberCount: 0,
+              journeyType: invitationOrganization.journeyType,
+              programDurationWeeks: invitationOrganization.programDurationWeeks,
+              cohortStartDate: invitationOrganization.cohortStartDate || undefined,
+            }
+          }
+        } catch (invitationError) {
+          console.warn('🟠 [Auth] Unable to resolve pending invitation during profile creation', invitationError)
         }
       }
 
@@ -725,7 +835,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
           : TransformationTier.INDIVIDUAL_FREE,
         assignedOrganizations: validatedOrganization?.id ? [validatedOrganization.id] : [],
         organizationId: validatedOrganization?.id ?? null,
-        companyCode: validatedOrganization?.code ?? null,
+        companyCode: validatedOrganization?.code || null,
         companyId: validatedOrganization?.id ?? null,
         companyName: validatedOrganization?.name ?? null,
         onboardingComplete: false,
@@ -908,7 +1018,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         userProfileDocRef,
         (snap) => {
           if (!snap.exists()) return
-          const { id: _ignoredId, ...updatedData } = snap.data() as UserProfile
+          const updatedData = snap.data() as UserProfile
           const rawRole = updatedData.role ?? UserRole.USER
           const normalizedRole = normalizeRole(rawRole)
           const updatedProfile: UserProfile = {
@@ -937,7 +1047,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         profileExtrasDocRef,
         (snap) => {
           if (!snap.exists()) return
-          const { id: _ignoredId, ...updatedData } = snap.data() as UserProfile
+          const updatedData = snap.data() as UserProfile
 
           const base = profileRef.current
           const merged: UserProfile = {
@@ -979,6 +1089,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     attemptComplementaryCourseAssignment,
     enableProfileRealtime,
     extractCustomClaims,
+    fetchProfileWithRetry,
     maybeNormalizeStoredRole,
     recordProfileLoad,
     updateProfileState,
@@ -1149,33 +1260,6 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       }
     }
 
-    let validatedOrganization:
-      | Awaited<ReturnType<typeof validateCompanyCode>>['organization']
-      | null = null
-
-    if (normalizedCompanyCode) {
-      try {
-        const validationResult = await validateCompanyCode(normalizedCompanyCode)
-        if (!validationResult.valid || !validationResult.organization) {
-          setLoading(false)
-          setProfileLoading(false)
-          return {
-            error: new Error(validationResult.error || 'Company code is invalid or inactive.'),
-            userId: undefined,
-          }
-        }
-        validatedOrganization = validationResult.organization
-      } catch (validationError) {
-        const friendlyMessage = getFriendlyErrorMessage(validationError)
-        setLoading(false)
-        setProfileLoading(false)
-        return {
-          error: new Error(friendlyMessage),
-          userId: undefined,
-        }
-      }
-    }
-
     try {
       if (shouldTrackPendingCompanyCode && typeof window !== 'undefined') {
         localStorage.setItem(pendingCompanyCodeKey, normalizedCompanyCode as string)
@@ -1183,6 +1267,67 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       const credential = await createUserWithEmailAndPassword(auth, normalizedEmail, password)
       const firebaseUser = credential.user
       const uid = firebaseUser.uid
+      let validatedOrganization:
+        | Awaited<ReturnType<typeof validateCompanyCode>>['organization']
+        | null = null
+
+      if (normalizedCompanyCode) {
+        try {
+          const validationResult = await validateCompanyCode(normalizedCompanyCode)
+          if (!validationResult.valid || !validationResult.organization) {
+            await deleteUser(firebaseUser).catch((cleanupError) => {
+              console.error('[Auth] Failed to cleanup auth user after invalid company code', cleanupError)
+            })
+            setLoading(false)
+            setProfileLoading(false)
+            if (shouldTrackPendingCompanyCode && typeof window !== 'undefined') {
+              localStorage.removeItem(pendingCompanyCodeKey)
+            }
+            return {
+              error: new Error(validationResult.error || 'Company code is invalid or inactive.'),
+              userId: undefined,
+            }
+          }
+          validatedOrganization = validationResult.organization
+        } catch (validationError) {
+          await deleteUser(firebaseUser).catch((cleanupError) => {
+            console.error('[Auth] Failed to cleanup auth user after company code validation failure', cleanupError)
+          })
+          const friendlyMessage = getFriendlyErrorMessage(validationError)
+          setLoading(false)
+          setProfileLoading(false)
+          if (shouldTrackPendingCompanyCode && typeof window !== 'undefined') {
+            localStorage.removeItem(pendingCompanyCodeKey)
+          }
+          return {
+            error: new Error(friendlyMessage),
+            userId: undefined,
+          }
+        }
+      }
+
+      if (!validatedOrganization) {
+        try {
+          const invitationOrganization = await resolvePendingInvitationOrganization(normalizedEmail)
+          if (invitationOrganization) {
+            validatedOrganization = {
+              id: invitationOrganization.organizationId,
+              code: invitationOrganization.organizationCode || '',
+              name: invitationOrganization.organizationName || 'Unknown organization',
+              status: 'active',
+              createdAt: '',
+              updatedAt: '',
+              memberCount: 0,
+              journeyType: invitationOrganization.journeyType,
+              programDurationWeeks: invitationOrganization.programDurationWeeks,
+              cohortStartDate: invitationOrganization.cohortStartDate || undefined,
+            }
+          }
+        } catch (invitationError) {
+          console.warn('🟠 [Auth] Unable to resolve pending invitation during signup', invitationError)
+        }
+      }
+
       const { firstName, lastName } = getNameParts(normalizedFullName, normalizedEmail)
 
       try {
@@ -1440,7 +1585,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     try {
       const sanitizedUpdates = Object.entries(updates).reduce((acc, [key, value]) => {
         if (typeof value !== 'undefined') {
-          ;(acc as Record<string, unknown>)[key] = value
+          const sanitizedRecord = acc as Record<string, unknown>
+          sanitizedRecord[key] = value
         }
         return acc
       }, {} as Partial<UserProfile>)
@@ -1708,4 +1854,6 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>
 }
+
+
 

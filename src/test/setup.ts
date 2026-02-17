@@ -40,8 +40,16 @@ vi.mock('firebase/firestore', () => ({
   getFirestore: vi.fn(() => ({})),
   collection: vi.fn(() => ({})),
   doc: vi.fn(() => ({})),
+  arrayRemove: vi.fn((value) => ({ __op: 'arrayRemove', value })),
+  arrayUnion: vi.fn((value) => ({ __op: 'arrayUnion', value })),
+  writeBatch: vi.fn(() => ({
+    update: vi.fn(),
+    delete: vi.fn(),
+    commit: vi.fn(() => Promise.resolve()),
+  })),
   getDoc: vi.fn(() => Promise.resolve({ exists: () => false, data: () => ({}) })),
   getDocs: vi.fn(() => Promise.resolve({ docs: [], empty: true })),
+  addDoc: vi.fn(() => Promise.resolve({ id: 'mock_doc_id' })),
   setDoc: vi.fn(() => Promise.resolve()),
   updateDoc: vi.fn(() => Promise.resolve()),
   deleteDoc: vi.fn(() => Promise.resolve()),
@@ -58,4 +66,9 @@ vi.mock('firebase/storage', () => ({
   ref: vi.fn(() => ({})),
   uploadBytes: vi.fn(() => Promise.resolve()),
   getDownloadURL: vi.fn(() => Promise.resolve('https://example.com/file.jpg')),
+}));
+
+vi.mock('firebase/functions', () => ({
+  getFunctions: vi.fn(() => ({})),
+  httpsCallable: vi.fn(() => vi.fn(() => Promise.resolve({ data: {} }))),
 }));

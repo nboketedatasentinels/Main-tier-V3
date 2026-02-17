@@ -6,14 +6,16 @@ import { useSearchParams } from 'react-router-dom'
 import {
   JOURNEY_META,
   getActivitiesForJourney,
+  resolveCanonicalActivityId,
   type ActivityDef,
+  type ActivityId,
   type JourneyType,
 } from '@/config/pointsConfig'
 import { resolveJourneyType } from '@/utils/journeyType'
 import { calculateActivityAvailability } from '@/utils/activityStateManager'
 import { db } from '@/services/firebase'
+import { ORG_COLLECTION } from '@/constants/organizations'
 import {
-  addDoc,
   collection,
   doc,
   getDoc,
@@ -27,21 +29,37 @@ import {
 import type { WeeklyProgress } from '@/types'
 import { removeUndefinedFields } from '@/utils/firestore'
 import { normalizeRole } from '@/utils/role'
-import { getWindowNumber } from '@/utils/windowCalculations'
+import { getWindowNumber, PARALLEL_WINDOW_SIZE_WEEKS } from '@/utils/windowCalculations'
 import { revokeChecklistPoints } from '@/services/pointsService'
-import { createApprovalRequest } from '@/services/approvalsService'
 import { handleActivityCompletion } from '@/utils/activityRouter'
+import { triggerHaptic } from '@/utils/haptics'
 import type { PointsVerificationRequest } from '@/services/pointsVerificationService'
+import {
+  PendingRequestExistsError,
+  submitPointsVerificationRequestAtomic,
+} from '@/services/pointsRequestSubmissionService'
+import { resolveLeadershipAvailability, type LeadershipAvailability } from '@/utils/leadershipAvailability'
 
 export type ActivityStatus = 'not_started' | 'pending' | 'rejected' | 'completed'
+
+export interface ActivityQuickActionLink {
+  label: string
+  href: string
+  external?: boolean
+}
 
 export interface ActivityState extends ActivityDef {
   status: ActivityStatus
   availability: ReturnType<typeof calculateActivityAvailability>
+  freeTierNotice?: string
+  issuedByPartner?: boolean
+  issuedBy?: string | null
+  issuedAt?: string | null
   proofUrl?: string
   notes?: string
   rejectionReason?: string | null
   hasInteracted?: boolean
+  quickActionLink?: ActivityQuickActionLink
 }
 
 export interface JourneyConfig {
@@ -49,6 +67,7 @@ export interface JourneyConfig {
   currentWeek: number
   programDurationWeeks: number
   isPaid: boolean
+  journeyStartDate?: string | null
 }
 
 export interface ProofModalState {
@@ -65,9 +84,42 @@ type LedgerRow = {
   monthNumber?: number
 }
 
-function isAdminProfile(profile: any): boolean {
+function isAdminProfile(profile: { role?: string; userRole?: string } | null | undefined): boolean {
   const normalized = normalizeRole(profile?.role || profile?.userRole)
   return normalized === 'super_admin' || normalized === 'partner'
+}
+
+const FREE_TIER_HONOR_NOTICE = 'Free tier uses self-reported honor completion (no proof upload required).'
+const FREE_TIER_SUPER_ADMIN_REVIEW_NOTICE =
+  'Free tier AI tool submissions are reviewed by super admin.'
+const ACTIVITY_QUICK_LINKS: Partial<Record<ActivityId, ActivityQuickActionLink>> = {
+  shameless_circle: {
+    label: 'Join Shameless Circle',
+    href: '/app/shameless-circle',
+  },
+  book_club: {
+    label: 'Join Book Club',
+    href: '/app/book-club',
+  },
+  ai_tool_review: {
+    label: 'Submit AI Tool',
+    href: 'https://www.t4leader.com/tools',
+    external: true,
+  },
+}
+
+function shouldRequireSuperAdminReviewForFreeUser(activity: ActivityDef, isFreeTierMember: boolean): boolean {
+  return isFreeTierMember && activity.id === 'ai_tool_review'
+}
+
+function shouldUseHonorSystemForFreeUser(activity: ActivityDef, isFreeTierMember: boolean): boolean {
+  if (!isFreeTierMember) return false
+  if (shouldRequireSuperAdminReviewForFreeUser(activity, isFreeTierMember)) return false
+  return (
+    activity.approvalType === 'partner_approved' ||
+    activity.approvalType === 'partner_issued' ||
+    Boolean(activity.requiresApproval)
+  )
 }
 
 export function useWeeklyChecklistViewModel() {
@@ -79,8 +131,13 @@ export function useWeeklyChecklistViewModel() {
   const [selectedWeek, setSelectedWeek] = useState<number>(1)
 
   const [activities, setActivities] = useState<ActivityState[]>([])
+  const activitiesRef = useRef<ActivityState[]>([])
   const [weeklyProgress, setWeeklyProgress] = useState<WeeklyProgress | null>(null)
   const [allWeeksProgress, setAllWeeksProgress] = useState<WeeklyProgress[]>([])
+  const [leadershipAvailability, setLeadershipAvailability] = useState<LeadershipAvailability>({
+    hasMentor: false,
+    hasAmbassador: false,
+  })
 
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -91,31 +148,84 @@ export function useWeeklyChecklistViewModel() {
     notes: '',
     rejectionReason: null,
   })
+  const [isSubmittingProof, setIsSubmittingProof] = useState(false)
+  const isSubmittingProofRef = useRef(false)
+  const activityMutationsRef = useRef(new Set<string>())
+  const [activityMutations, setActivityMutations] = useState<Record<string, boolean>>({})
+
+  const setActivityMutationInFlight = useCallback((activityId: string, inFlight: boolean) => {
+    setActivityMutations((prev) => {
+      if (inFlight) {
+        if (prev[activityId]) return prev
+        return { ...prev, [activityId]: true }
+      }
+      if (!prev[activityId]) return prev
+      const next = { ...prev }
+      delete next[activityId]
+      return next
+    })
+  }, [])
+
+  const isActivityBusy = useCallback((activityId: string) => Boolean(activityMutations[activityId]), [activityMutations])
+
+  useEffect(() => {
+    activitiesRef.current = activities
+  }, [activities])
 
   const deepLink = useMemo(() => {
     const weekRaw = searchParams.get('week')
     const weekNum = weekRaw ? Number.parseInt(weekRaw, 10) : NaN
     const week = Number.isFinite(weekNum) && weekNum > 0 ? weekNum : null
-    const activityId = searchParams.get('activityId') || searchParams.get('activity') || null
+    const rawActivityId = searchParams.get('activityId') || searchParams.get('activity') || null
+    const activityId = resolveCanonicalActivityId(rawActivityId) ?? rawActivityId
     const openProof = ['1', 'true', 'yes'].includes((searchParams.get('openProof') || '').toLowerCase())
-    return { week, activityId, openProof }
+    const focusPendingApprovals = (searchParams.get('focus') || '').toLowerCase() === 'pending-approvals'
+    return { week, activityId, openProof, focusPendingApprovals }
   }, [searchParams])
 
   const handledDeepLinkRef = useRef<string | null>(null)
+  const handledFocusRef = useRef<string | null>(null)
 
   /* ------------------------------------------------------------------ */
   /* Derived guards                                                      */
   /* ------------------------------------------------------------------ */
   const isAdmin = useMemo(() => isAdminProfile(profile), [profile])
+  const isFreeTierMember = useMemo(() => isFreeUser(profile), [profile])
 
   const isWeekLocked = useMemo(() => {
     if (!journey) return false
     return selectedWeek > (journey.currentWeek ?? 1)
   }, [journey, selectedWeek])
 
-  const weeklyTarget = useMemo(() => {
-    return journey ? JOURNEY_META[journey.journeyType].weeklyTarget : 0
-  }, [journey])
+  useEffect(() => {
+    if (!profile?.companyId) {
+      setLeadershipAvailability(resolveLeadershipAvailability({ profile }))
+      return
+    }
+
+    const orgRef = doc(db, ORG_COLLECTION, profile.companyId)
+    return onSnapshot(
+      orgRef,
+      (snapshot) => {
+        const organizationData = snapshot.exists() ? (snapshot.data() as Record<string, unknown>) : null
+        setLeadershipAvailability(
+          resolveLeadershipAvailability({
+            organizationData,
+            profile,
+          }),
+        )
+      },
+      () => {
+        setLeadershipAvailability(resolveLeadershipAvailability({ profile }))
+      },
+    )
+  }, [
+    profile?.companyId,
+    profile?.mentorId,
+    profile?.mentorOverrideId,
+    profile?.ambassadorId,
+    profile?.ambassadorOverrideId,
+  ])
 
   /* ------------------------------------------------------------------ */
   /* Persist checklist state                                              */
@@ -132,6 +242,9 @@ export function useWeeklyChecklistViewModel() {
             notes: a.notes,
             rejectionReason: a.rejectionReason,
             hasInteracted: a.hasInteracted,
+            issuedByPartner: a.issuedByPartner,
+            issuedBy: a.issuedBy,
+            issuedAt: a.issuedAt,
           }),
         ),
         updatedAt: serverTimestamp(),
@@ -160,25 +273,37 @@ export function useWeeklyChecklistViewModel() {
     const resolve = async () => {
       try {
         let journeyType: JourneyType = '6W'
+        let orgCohortStartDate: string | null = null
 
         if (isFreeUser(profile) && !profile.companyId) {
           journeyType = '4W'
         } else if (profile.companyId) {
-          const orgSnap = await getDoc(doc(db, 'organizations', profile.companyId))
+          const orgSnap = await getDoc(doc(db, ORG_COLLECTION, profile.companyId))
           if (orgSnap.exists()) {
-            journeyType = (resolveJourneyType(orgSnap.data()) as JourneyType) || '6W'
+            const orgData = orgSnap.data()
+            journeyType = (resolveJourneyType(orgData) as JourneyType) || '6W'
+            const rawStartDate = orgData.cohortStartDate
+            if (rawStartDate) {
+              if (typeof rawStartDate === 'string') {
+                orgCohortStartDate = rawStartDate
+              } else if (rawStartDate.toDate) {
+                orgCohortStartDate = rawStartDate.toDate().toISOString()
+              }
+            }
           }
         } else if (profile.journeyType) {
           journeyType = profile.journeyType as JourneyType
         }
 
         const meta = JOURNEY_META[journeyType]
+        const journeyStartDate = orgCohortStartDate || profile.journeyStartDate || null
 
         setJourney({
           journeyType,
           currentWeek: profile.currentWeek || 1,
           programDurationWeeks: meta.weeks,
           isPaid: !isFreeUser(profile),
+          journeyStartDate,
         })
 
         const desiredWeek = deepLink.week
@@ -221,7 +346,7 @@ export function useWeeklyChecklistViewModel() {
   useEffect(() => {
     if (!user) return
 
-    const windowNumber = getWindowNumber(selectedWeek)
+    const windowNumber = getWindowNumber(selectedWeek, PARALLEL_WINDOW_SIZE_WEEKS)
 
     const weekQ = query(
       collection(db, 'pointsLedger'),
@@ -251,11 +376,12 @@ export function useWeeklyChecklistViewModel() {
         windowSnap.docs.forEach(d => {
           const row = d.data() as LedgerRow
           if (!row.activityId) return
-          windowCounts[row.activityId] = (windowCounts[row.activityId] ?? 0) + 1
+          const activityId = resolveCanonicalActivityId(row.activityId) ?? row.activityId
+          windowCounts[activityId] = (windowCounts[activityId] ?? 0) + 1
           const wk = Number(row.weekNumber ?? 0)
           if (wk > 0) {
-            lastCompletedWeekByActivity[row.activityId] = Math.max(
-              lastCompletedWeekByActivity[row.activityId] ?? 0,
+            lastCompletedWeekByActivity[activityId] = Math.max(
+              lastCompletedWeekByActivity[activityId] ?? 0,
               wk,
             )
           }
@@ -265,7 +391,8 @@ export function useWeeklyChecklistViewModel() {
         globalSnap.docs.forEach(d => {
           const row = d.data() as LedgerRow
           if (!row.activityId) return
-          totalCompletedAllTime[row.activityId] = (totalCompletedAllTime[row.activityId] ?? 0) + 1
+          const activityId = resolveCanonicalActivityId(row.activityId) ?? row.activityId
+          totalCompletedAllTime[activityId] = (totalCompletedAllTime[activityId] ?? 0) + 1
         })
 
         setLedgerCache(prev => ({
@@ -285,8 +412,9 @@ export function useWeeklyChecklistViewModel() {
       snap.docs.forEach(d => {
         const row = d.data() as LedgerRow
         if (!row.activityId) return
-        weekCompleted.add(row.activityId)
-        weekCounts[row.activityId] = (weekCounts[row.activityId] ?? 0) + 1
+        const activityId = resolveCanonicalActivityId(row.activityId) ?? row.activityId
+        weekCompleted.add(activityId)
+        weekCounts[activityId] = (weekCounts[activityId] ?? 0) + 1
       })
       setLedgerCache(prev => ({
         ...prev,
@@ -310,15 +438,24 @@ export function useWeeklyChecklistViewModel() {
 
     const defs = getActivitiesForJourney(journey.journeyType)
 
-    const hasMentor = Boolean(profile?.mentorId || profile?.mentorOverrideId)
-    const hasAmbassador = Boolean(profile?.ambassadorId || profile?.ambassadorOverrideId)
+    const { hasMentor, hasAmbassador } = leadershipAvailability
+    const previousById = new Map(activitiesRef.current.map((activity) => [activity.id, activity]))
 
-    const windowWeek = selectedWeek // your availability util expects windowWeek; adapt if you use getWindowWeekNumber
+    const windowWeek = selectedWeek // Availability currently uses the selected journey week.
 
-    const next: ActivityState[] = defs.map((def: ActivityDef) => ({
-      ...def,
-      status: ledgerCache.weekCompleted.has(def.id) ? 'completed' : 'not_started',
-      availability: calculateActivityAvailability(def, {
+    const next: ActivityState[] = defs.map((def: ActivityDef) => {
+      const previous = previousById.get(def.id)
+      const honorSystemForFreeUser = shouldUseHonorSystemForFreeUser(def, isFreeTierMember)
+      const effectiveDef: ActivityDef = honorSystemForFreeUser
+        ? {
+            ...def,
+            approvalType: 'self',
+            requiresApproval: false,
+            verification: 'honor',
+          }
+        : def
+
+      const availability = calculateActivityAvailability(effectiveDef, {
         windowWeek,
         weekCount: ledgerCache.weekCounts[def.id] ?? 0,
         windowCount: ledgerCache.windowCounts[def.id] ?? 0,
@@ -326,12 +463,35 @@ export function useWeeklyChecklistViewModel() {
         lastCompletedWeek: ledgerCache.lastCompletedWeekByActivity[def.id],
         hasMentor,
         hasAmbassador,
-      }),
-    }))
+      })
+
+      // One-time activities exhausted in prior windows should present as completed.
+      const status: ActivityStatus =
+        ledgerCache.weekCompleted.has(def.id) || availability.state === 'permanently_exhausted'
+          ? 'completed'
+          : 'not_started'
+
+      return {
+        ...effectiveDef,
+        status,
+        availability,
+        quickActionLink: ACTIVITY_QUICK_LINKS[def.id as ActivityId],
+        issuedByPartner:
+          previous?.issuedByPartner ??
+          (effectiveDef.approvalType === 'partner_issued' ? false : undefined),
+        issuedBy: previous?.issuedBy ?? undefined,
+        issuedAt: previous?.issuedAt ?? undefined,
+        freeTierNotice: shouldRequireSuperAdminReviewForFreeUser(def, isFreeTierMember)
+          ? FREE_TIER_SUPER_ADMIN_REVIEW_NOTICE
+          : honorSystemForFreeUser
+            ? FREE_TIER_HONOR_NOTICE
+            : undefined,
+      }
+    })
 
     setActivities(next)
     setLoading(false)
-  }, [journey, ledgerCache, profile, selectedWeek, user])
+  }, [isFreeTierMember, journey, ledgerCache, leadershipAvailability, selectedWeek, user])
 
   /* ------------------------------------------------------------------ */
   /* Weekly progress (realtime)                                           */
@@ -350,10 +510,24 @@ export function useWeeklyChecklistViewModel() {
   useEffect(() => {
     if (!user) return
 
-    const toMillis = (value: any): number => {
+    const toMillis = (value: unknown): number => {
       if (!value) return 0
-      if (typeof value?.toMillis === 'function') return value.toMillis()
-      if (typeof value?.toDate === 'function') return value.toDate().getTime()
+      if (
+        typeof value === 'object' &&
+        value !== null &&
+        'toMillis' in value &&
+        typeof (value as { toMillis?: () => number }).toMillis === 'function'
+      ) {
+        return (value as { toMillis: () => number }).toMillis()
+      }
+      if (
+        typeof value === 'object' &&
+        value !== null &&
+        'toDate' in value &&
+        typeof (value as { toDate?: () => Date }).toDate === 'function'
+      ) {
+        return (value as { toDate: () => Date }).toDate().getTime()
+      }
       const parsed = new Date(String(value)).getTime()
       return Number.isFinite(parsed) ? parsed : 0
     }
@@ -373,87 +547,91 @@ export function useWeeklyChecklistViewModel() {
           const data = docSnap.data() as PointsVerificationRequest
           if (!data?.activity_id) return
           const row: PointsVerificationRequest = { ...data, id: docSnap.id }
-          const prev = latestByActivity.get(row.activity_id)
+          const activityId = resolveCanonicalActivityId(row.activity_id) ?? row.activity_id
+          const prev = latestByActivity.get(activityId)
           if (!prev) {
-            latestByActivity.set(row.activity_id, row)
+            latestByActivity.set(activityId, row)
             return
           }
           if (toMillis(row.created_at) >= toMillis(prev.created_at)) {
-            latestByActivity.set(row.activity_id, row)
+            latestByActivity.set(activityId, row)
           }
         })
 
-        setActivities((prev) => {
-          let changed = false
-          const next = prev.map((activity) => {
-            if (activity.status === 'completed') return activity
+        const prev = activitiesRef.current
+        let changed = false
+        const next = prev.map((activity) => {
+          if (activity.status === 'completed') return activity
+          const requiresPartnerApprovalNow =
+            activity.approvalType === 'partner_approved' || Boolean(activity.requiresApproval)
+          if (!requiresPartnerApprovalNow) return activity
 
-            const req = latestByActivity.get(activity.id)
-            if (!req) return activity
+          const req = latestByActivity.get(activity.id)
+          if (!req) return activity
 
-            if (req.status === 'pending') {
-              const patch: Partial<ActivityState> = {
-                status: 'pending',
-                hasInteracted: true,
-                proofUrl: req.proof_url,
-                notes: req.notes,
-                rejectionReason: null,
-              }
-              const differs =
-                patch.status !== activity.status ||
-                patch.hasInteracted !== activity.hasInteracted ||
-                patch.proofUrl !== activity.proofUrl ||
-                patch.notes !== activity.notes ||
-                patch.rejectionReason !== activity.rejectionReason
-              if (!differs) return activity
-              changed = true
-              return { ...activity, ...patch }
+          if (req.status === 'pending') {
+            const patch: Partial<ActivityState> = {
+              status: 'pending',
+              hasInteracted: true,
+              proofUrl: req.proof_url,
+              notes: req.notes,
+              rejectionReason: null,
             }
+            const differs =
+              patch.status !== activity.status ||
+              patch.hasInteracted !== activity.hasInteracted ||
+              patch.proofUrl !== activity.proofUrl ||
+              patch.notes !== activity.notes ||
+              patch.rejectionReason !== activity.rejectionReason
+            if (!differs) return activity
+            changed = true
+            return { ...activity, ...patch }
+          }
 
-            if (req.status === 'rejected') {
-              const patch: Partial<ActivityState> = {
-                status: 'rejected',
-                hasInteracted: false,
-                proofUrl: req.proof_url,
-                notes: req.notes,
-                rejectionReason: req.rejection_reason ?? null,
-              }
-              const differs =
-                patch.status !== activity.status ||
-                patch.hasInteracted !== activity.hasInteracted ||
-                patch.proofUrl !== activity.proofUrl ||
-                patch.notes !== activity.notes ||
-                patch.rejectionReason !== activity.rejectionReason
-              if (!differs) return activity
-              changed = true
-              return { ...activity, ...patch }
+          if (req.status === 'rejected') {
+            const patch: Partial<ActivityState> = {
+              status: 'rejected',
+              hasInteracted: false,
+              proofUrl: req.proof_url,
+              notes: req.notes,
+              rejectionReason: req.rejection_reason ?? null,
             }
+            const differs =
+              patch.status !== activity.status ||
+              patch.hasInteracted !== activity.hasInteracted ||
+              patch.proofUrl !== activity.proofUrl ||
+              patch.notes !== activity.notes ||
+              patch.rejectionReason !== activity.rejectionReason
+            if (!differs) return activity
+            changed = true
+            return { ...activity, ...patch }
+          }
 
-            if (req.status === 'approved') {
-              const patch: Partial<ActivityState> = {
-                status: 'completed',
-                hasInteracted: true,
-                proofUrl: req.proof_url,
-                notes: req.notes,
-                rejectionReason: null,
-              }
-              const differs =
-                patch.status !== activity.status ||
-                patch.hasInteracted !== activity.hasInteracted ||
-                patch.proofUrl !== activity.proofUrl ||
-                patch.notes !== activity.notes ||
-                patch.rejectionReason !== activity.rejectionReason
-              if (!differs) return activity
-              changed = true
-              return { ...activity, ...patch }
+          if (req.status === 'approved') {
+            const patch: Partial<ActivityState> = {
+              status: 'completed',
+              hasInteracted: true,
+              proofUrl: req.proof_url,
+              notes: req.notes,
+              rejectionReason: null,
             }
+            const differs =
+              patch.status !== activity.status ||
+              patch.hasInteracted !== activity.hasInteracted ||
+              patch.proofUrl !== activity.proofUrl ||
+              patch.notes !== activity.notes ||
+              patch.rejectionReason !== activity.rejectionReason
+            if (!differs) return activity
+            changed = true
+            return { ...activity, ...patch }
+          }
 
-            return activity
-          })
-
-          if (changed) void persistChecklist(next)
-          return next
+          return activity
         })
+
+        activitiesRef.current = next
+        setActivities(next)
+        if (changed) void persistChecklist(next)
       } catch (error) {
         console.warn('[WeeklyChecklist] Request sync failed; continuing without it', error)
       }
@@ -470,16 +648,22 @@ export function useWeeklyChecklistViewModel() {
     const ref = doc(db, 'checklists', `${user.uid}_${selectedWeek}`);
     return onSnapshot(ref, snap => {
       if (snap.exists()) {
-        const data = snap.data();
-        if (data.activities) {
+        const data = snap.data() as { activities?: Array<Partial<ActivityState> & { id: string }> };
+        if (Array.isArray(data.activities)) {
           setActivities(prev => {
             return prev.map(activity => {
-              const remote = data.activities.find((a: any) => a.id === activity.id);
+              const remote = data.activities?.find((a) => a.id === activity.id);
               if (!remote) return activity
 
               const next = {
-                status: remote.status ?? activity.status,
+                status:
+                  activity.availability.state === 'permanently_exhausted'
+                    ? 'completed'
+                    : (remote.status ?? activity.status),
                 hasInteracted: remote.hasInteracted ?? activity.hasInteracted,
+                issuedByPartner: remote.issuedByPartner ?? activity.issuedByPartner,
+                issuedBy: remote.issuedBy ?? activity.issuedBy,
+                issuedAt: remote.issuedAt ?? activity.issuedAt,
                 proofUrl: remote.proofUrl ?? activity.proofUrl,
                 notes: remote.notes ?? activity.notes,
                 rejectionReason: remote.rejectionReason ?? activity.rejectionReason,
@@ -488,6 +672,9 @@ export function useWeeklyChecklistViewModel() {
               const changed =
                 next.status !== activity.status ||
                 next.hasInteracted !== activity.hasInteracted ||
+                next.issuedByPartner !== activity.issuedByPartner ||
+                next.issuedBy !== activity.issuedBy ||
+                next.issuedAt !== activity.issuedAt ||
                 next.proofUrl !== activity.proofUrl ||
                 next.notes !== activity.notes ||
                 next.rejectionReason !== activity.rejectionReason
@@ -534,6 +721,28 @@ export function useWeeklyChecklistViewModel() {
     [weeklyProgress],
   )
 
+  const currentCycleNumber = useMemo(
+    () => getWindowNumber(selectedWeek, PARALLEL_WINDOW_SIZE_WEEKS),
+    [selectedWeek],
+  )
+
+  const cyclePoints = useMemo(
+    () =>
+      allWeeksProgress
+        .filter((week) => (week.monthNumber ?? getWindowNumber(week.weekNumber, PARALLEL_WINDOW_SIZE_WEEKS)) === currentCycleNumber)
+        .reduce((sum, week) => sum + (week.pointsEarned ?? 0), 0),
+    [allWeeksProgress, currentCycleNumber],
+  )
+
+  const cycleTarget = useMemo(() => {
+    return journey ? JOURNEY_META[journey.journeyType].windowTarget : 0
+  }, [journey])
+
+  const accumulatedPoints = useMemo(
+    () => allWeeksProgress.reduce((sum, week) => sum + (week.pointsEarned ?? 0), 0),
+    [allWeeksProgress],
+  )
+
   /* ------------------------------------------------------------------ */
   /* Admin-safe override policy                                           */
   /* ------------------------------------------------------------------ */
@@ -543,6 +752,7 @@ export function useWeeklyChecklistViewModel() {
       if (!journey) return false
       if (isWeekLocked) return false
       if (activity.hasInteracted && activity.status !== 'rejected') return false
+      if (activity.approvalType === 'partner_issued' && !activity.issuedByPartner) return false
       if (activity.availability.state !== 'available') return false
       return true
     },
@@ -554,11 +764,10 @@ export function useWeeklyChecklistViewModel() {
   /* ------------------------------------------------------------------ */
   const setActivityStatusLocal = useCallback(
     async (activityId: string, patch: Partial<ActivityState>) => {
-      setActivities(prev => {
-        const next = prev.map(a => (a.id === activityId ? { ...a, ...patch } : a))
-        void persistChecklist(next)
-        return next
-      })
+      const next = activitiesRef.current.map(a => (a.id === activityId ? { ...a, ...patch } : a))
+      activitiesRef.current = next
+      setActivities(next)
+      await persistChecklist(next)
     },
     [persistChecklist],
   )
@@ -587,11 +796,15 @@ export function useWeeklyChecklistViewModel() {
 
     const activity = activities.find((a) => a.id === deepLink.activityId)
     if (!activity) return
+    const requiresPartnerApproval =
+      activity.approvalType === 'partner_approved' || Boolean(activity.requiresApproval)
 
     const anchor = document.getElementById(`activity-${activity.id}`)
     anchor?.scrollIntoView({ behavior: 'smooth', block: 'center' })
 
-    openProofModal(activity)
+    if (requiresPartnerApproval && activity.id !== 'ai_tool_review') {
+      openProofModal(activity)
+    }
     handledDeepLinkRef.current = key
 
     const next = new URLSearchParams(searchParams)
@@ -609,12 +822,46 @@ export function useWeeklyChecklistViewModel() {
     setSearchParams,
   ])
 
+  useEffect(() => {
+    if (!deepLink.focusPendingApprovals) return
+    if (deepLink.week && deepLink.week !== selectedWeek) return
+    if (!activities.length) return
+
+    const key = `${deepLink.week ?? selectedWeek}:pending-approvals`
+    if (handledFocusRef.current === key) return
+
+    const firstPendingApproval = activities.find(
+      (activity) =>
+        activity.status === 'pending' ||
+        ((activity.approvalType === 'partner_approved' || activity.requiresApproval) && activity.status !== 'completed'),
+    )
+    if (!firstPendingApproval) return
+
+    const anchor = document.getElementById(`activity-${firstPendingApproval.id}`)
+    if (!anchor) return
+
+    anchor.scrollIntoView({ behavior: 'smooth', block: 'center' })
+    handledFocusRef.current = key
+
+    const next = new URLSearchParams(searchParams)
+    next.delete('focus')
+    setSearchParams(next, { replace: true })
+  }, [
+    activities,
+    deepLink.focusPendingApprovals,
+    deepLink.week,
+    searchParams,
+    selectedWeek,
+    setSearchParams,
+  ])
+
   const markCompleted = useCallback(
     async (activity: ActivityState | undefined) => {
       if (!user || !journey) return
 
       if (!activity?.id) {
         console.error('[WeeklyChecklist] markCompleted called with invalid activity', activity)
+        triggerHaptic('error')
         toast({
           title: 'Internal error',
           description: 'Invalid activity selected.',
@@ -624,36 +871,67 @@ export function useWeeklyChecklistViewModel() {
       }
 
       if (!canMutateActivity(activity)) {
+        triggerHaptic('warning')
         toast({
-          title: 'Action not allowed',
+          title: 'Not available yet',
           description: isAdmin
-            ? 'Override is enabled but this item is currently blocked by policy.'
-            : 'This activity is locked or unavailable.',
+            ? 'Admin override is enabled, but this action is currently blocked by policy.'
+            : 'This activity is not open right now. Try another available activity.',
           status: 'warning',
         })
         return
       }
 
-      await handleActivityCompletion({
-        uid: user.uid,
-        journeyType: journey.journeyType,
-        weekNumber: selectedWeek,
-        activity,
-        onProofRequired: (act) => openProofModal(act),
-        onSuccess: async (status) => {
-          await setActivityStatusLocal(activity.id, { status, hasInteracted: true, rejectionReason: null })
-        },
-        onError: (e) => {
-          console.error(e)
-          toast({
-            title: 'Update Failed',
-            description: 'Could not award points. Please try again.',
-            status: 'error',
-          })
-        }
-      })
+      if (activityMutationsRef.current.has(activity.id)) return
+      activityMutationsRef.current.add(activity.id)
+      setActivityMutationInFlight(activity.id, true)
+
+      try {
+        await handleActivityCompletion({
+          uid: user.uid,
+          journeyType: journey.journeyType,
+          weekNumber: selectedWeek,
+          activity,
+          onProofRequired: (act) => openProofModal(act),
+          onSuccess: async (status) => {
+            await setActivityStatusLocal(activity.id, { status, hasInteracted: true, rejectionReason: null })
+            if (status === 'completed') {
+              triggerHaptic('success')
+              toast({
+                title: 'Activity completed',
+                description: `Great work. ${activity.points} points were added.`,
+                status: 'success',
+                duration: 3500,
+              })
+            }
+          },
+          onError: (e) => {
+            console.error(e)
+            triggerHaptic('error')
+            toast({
+              title: 'Update Failed',
+              description: 'Could not award points. Please try again.',
+              status: 'error',
+            })
+          }
+        })
+      } finally {
+        activityMutationsRef.current.delete(activity.id)
+        setActivityMutationInFlight(activity.id, false)
+      }
     },
-    [canMutateActivity, isAdmin, journey, selectedWeek, setActivityStatusLocal, toast, user, openProofModal],
+    [
+      activityMutationsRef,
+      canMutateActivity,
+      isAdmin,
+      journey,
+      openProofModal,
+      selectedWeek,
+      setActivityMutationInFlight,
+      setActivityStatusLocal,
+      toast,
+      user,
+    ],
   )
 
   const markNotStarted = useCallback(
@@ -662,6 +940,7 @@ export function useWeeklyChecklistViewModel() {
 
       if (!activity?.id) {
         console.error('[WeeklyChecklist] markNotStarted called with invalid activity', activity)
+        triggerHaptic('error')
         toast({
           title: 'Internal error',
           description: 'Invalid activity selected.',
@@ -672,13 +951,18 @@ export function useWeeklyChecklistViewModel() {
 
       // Admin can revoke; non-admin must satisfy normal restrictions too (esp. lock/hasInteracted)
       if (!isAdmin && (!journey || isWeekLocked || activity.hasInteracted)) {
+        triggerHaptic('warning')
         toast({
-          title: 'Selection locked',
-          description: 'Contact support to make changes.',
+          title: 'Selection saved',
+          description: 'This selection is already saved for this week. Support can help if you need a change.',
           status: 'warning',
         })
         return
       }
+
+      if (activityMutationsRef.current.has(activity.id)) return
+      activityMutationsRef.current.add(activity.id)
+      setActivityMutationInFlight(activity.id, true)
 
       try {
         await revokeChecklistPoints({
@@ -690,21 +974,26 @@ export function useWeeklyChecklistViewModel() {
 
         await setActivityStatusLocal(activity.id, {
           status: 'not_started',
-          hasInteracted: true,
+          hasInteracted: false,
           proofUrl: undefined,
           notes: undefined,
           rejectionReason: null,
         })
+        triggerHaptic('success')
       } catch (e) {
         console.error(e)
+        triggerHaptic('error')
         toast({
           title: 'Update Failed',
           description: 'Could not revoke points. Please try again.',
           status: 'error',
         })
+      } finally {
+        activityMutationsRef.current.delete(activity.id)
+        setActivityMutationInFlight(activity.id, false)
       }
     },
-    [isAdmin, isWeekLocked, journey, selectedWeek, setActivityStatusLocal, toast, user],
+    [isAdmin, isWeekLocked, journey, selectedWeek, setActivityMutationInFlight, setActivityStatusLocal, toast, user],
   )
 
   const closeProofModal = useCallback(() => {
@@ -715,139 +1004,156 @@ export function useWeeklyChecklistViewModel() {
     setProofModal(prev => ({ ...prev, ...patch }))
   }, [])
 
+  const userOrganizationId = useMemo(
+    () => profile?.organizationId || profile?.companyId || null,
+    [profile?.companyId, profile?.organizationId],
+  )
+
   const submitProofForApproval = useCallback(async () => {
     if (!user || !journey) return
-    const activity = activities.find(a => a.id === proofModal.activityId)
-    if (!activity) return
-
-    // Non-admin must respect availability/lock rules; admin can override submission (but still needs proofUrl).
-    if (!isAdmin) {
-      if (isWeekLocked) {
-        toast({ title: 'Week locked', description: 'You can’t submit proof for a future week.', status: 'warning' })
-        return
-      }
-      if (activity.availability.state !== 'available' && activity.status !== 'rejected') {
-        toast({ title: 'Activity unavailable', description: 'This activity is locked right now.', status: 'warning' })
-        return
-      }
-      if (activity.hasInteracted && activity.status !== 'rejected') {
-        toast({ title: 'Selection locked', description: 'Contact support to make changes.', status: 'warning' })
-        return
-      }
-    }
-
-    if (!proofModal.proofUrl?.trim()) {
-      toast({ title: 'Proof required', description: 'Please provide a link before submitting.', status: 'warning' })
-      return
-    }
-
+    if (isSubmittingProofRef.current) return
+    isSubmittingProofRef.current = true
+    setIsSubmittingProof(true)
+    let activity: ActivityState | undefined
     try {
-      // Get user's organization ID from profile
-      const userOrganizationId = profile?.organizationId || profile?.companyId || null
-
-      // Prevent duplicate pending requests for the same activity/week (can happen if local checklist state got out of sync).
-      try {
-        const existingWeekRequests = await getDocs(
-          query(
-            collection(db, 'points_verification_requests'),
-            where('user_id', '==', user.uid),
-            where('week', '==', selectedWeek),
-          ),
-        )
-        const hasPending = existingWeekRequests.docs.some((docSnap) => {
-          const data = docSnap.data() as PointsVerificationRequest
-          return data.activity_id === activity.id && (data.status ?? 'pending') === 'pending'
+      activity = activities.find(a => a.id === proofModal.activityId)
+      if (!activity) {
+        const invalidActivityId = proofModal.activityId || 'unknown'
+        console.error('[WeeklyChecklist] submitProofForApproval called with invalid activity', invalidActivityId)
+        triggerHaptic('error')
+        toast({
+          title: 'Internal error',
+          description: `Invalid activity selected for proof submission (${invalidActivityId}).`,
+          status: 'error',
         })
-        if (hasPending) {
-          toast({
-            title: 'Already submitted',
-            description: 'This activity is already pending verification for this week.',
-            status: 'info',
-            duration: 5000,
-          })
-          await setActivityStatusLocal(activity.id, {
-            status: 'pending',
-            hasInteracted: true,
-          })
-          closeProofModal()
+        return
+      }
+
+      // Non-admin must respect availability/lock rules; admin can override submission (but still needs proofUrl).
+      if (!isAdmin) {
+        if (isWeekLocked) {
+          triggerHaptic('warning')
+          toast({ title: 'Future week', description: 'Proof submission opens when this week becomes active.', status: 'warning' })
           return
         }
-      } catch (error) {
-        console.warn('[WeeklyChecklist] Duplicate-check query failed; continuing submission', error)
+        if (activity.availability.state !== 'available' && activity.status !== 'rejected') {
+          triggerHaptic('warning')
+          toast({ title: 'Opens soon', description: 'This activity is not open for proof submission yet.', status: 'warning' })
+          return
+        }
+        if (activity.hasInteracted && activity.status !== 'rejected') {
+          triggerHaptic('warning')
+          toast({ title: 'Selection saved', description: 'This submission is already in progress for this week.', status: 'warning' })
+          return
+        }
       }
 
-        const sourcePayload: PointsVerificationRequest = {
-          id: '', // ID will be assigned by the server or is not used for creation
-        user_id: user.uid,
-        organizationId: userOrganizationId,
-        week: selectedWeek,
-        activity_id: activity.id,
-        activity_title: activity.title,
-        points: activity.points,
-        proof_url: proofModal.proofUrl.trim(),
-        notes: proofModal.notes?.trim(),
-        status: 'pending',
-          created_at: serverTimestamp() as any,
+      const rawProofUrl = proofModal.proofUrl?.trim()
+      if (!rawProofUrl) {
+        triggerHaptic('warning')
+        toast({ title: 'Proof required', description: 'Please provide a link before submitting.', status: 'warning' })
+        return
       }
 
-      // Write to points_verification_requests collection (primary collection for dashboards)
-      const verificationRequestRef = await addDoc(
-        collection(db, 'points_verification_requests'),
-        removeUndefinedFields({
-          user_id: user.uid,
-          organizationId: userOrganizationId,
-          week: selectedWeek,
-          activity_id: activity.id,
-          activity_title: activity.title,
-          points: activity.points,
-          proof_url: proofModal.proofUrl.trim(),
-          notes: proofModal.notes?.trim(),
-          status: 'pending',
-          created_at: serverTimestamp(),
+      const rawProofUrlLower = rawProofUrl.toLowerCase()
+      const normalizedProofUrl =
+        rawProofUrlLower.startsWith('http://') || rawProofUrlLower.startsWith('https://')
+          ? rawProofUrl
+          : `https://${rawProofUrl}`
+
+      let parsedProofUrl: URL
+      try {
+        parsedProofUrl = new URL(normalizedProofUrl)
+      } catch {
+        triggerHaptic('warning')
+        toast({
+          title: 'Invalid link',
+          description: 'Please enter a valid URL, like https://example.com/proof.',
+          status: 'warning',
         })
-      )
+        return
+      }
 
-      // Also write to approvals collection for backward compatibility
-      await createApprovalRequest({
+      if (parsedProofUrl.protocol !== 'http:' && parsedProofUrl.protocol !== 'https:') {
+        triggerHaptic('warning')
+        toast({
+          title: 'Invalid link',
+          description: 'Only http:// or https:// links are supported.',
+          status: 'warning',
+        })
+        return
+      }
+
+      const proofUrl = parsedProofUrl.toString()
+      const submissionOrganizationId = shouldRequireSuperAdminReviewForFreeUser(activity, isFreeTierMember)
+        ? null
+        : userOrganizationId
+
+      await submitPointsVerificationRequestAtomic({
         userId: user.uid,
-        organizationId: userOrganizationId,
-        type: 'points_verification',
+        organizationId: submissionOrganizationId,
+        week: selectedWeek,
+        activityId: activity.id,
+        activityTitle: activity.title,
+        activityPoints: activity.points,
+        proofUrl,
+        notes: proofModal.notes?.trim(),
         approvalType: activity.approvalType,
-        title: activity.title,
-        source: { ...sourcePayload, id: verificationRequestRef.id },
-        summary: proofModal.notes?.trim(),
-        points: activity.points,
       })
 
       await setActivityStatusLocal(activity.id, {
         status: 'pending',
-        proofUrl: proofModal.proofUrl.trim(),
+        proofUrl,
         notes: proofModal.notes?.trim(),
         rejectionReason: null,
         hasInteracted: true,
       })
 
+      triggerHaptic('success')
       toast({
         title: 'Proof submitted',
-        description: 'Your proof was sent for verification. Points post after approval.',
+        description: 'Nice work. Your proof is awaiting partner confirmation and points will post after approval.',
         status: 'success',
         duration: 4000,
       })
 
       closeProofModal()
     } catch (e) {
+      if (e instanceof PendingRequestExistsError || (e instanceof Error && e.message === 'pending_request_exists')) {
+        triggerHaptic('warning')
+        toast({
+          title: 'Awaiting partner confirmation',
+          description: 'This activity already has a pending partner confirmation for this week.',
+          status: 'info',
+          duration: 5000,
+        })
+        if (activity) {
+          await setActivityStatusLocal(activity.id, {
+            status: 'pending',
+            rejectionReason: null,
+            hasInteracted: true,
+          })
+        }
+        closeProofModal()
+        return
+      }
       console.error(e)
+      triggerHaptic('error')
       toast({
         title: 'Submission failed',
         description: 'Could not submit proof. Please try again.',
         status: 'error',
       })
+    } finally {
+      isSubmittingProofRef.current = false
+      setIsSubmittingProof(false)
     }
   }, [
     activities,
     closeProofModal,
     isAdmin,
     isWeekLocked,
+    isFreeTierMember,
     journey,
     proofModal.activityId,
     proofModal.notes,
@@ -855,6 +1161,7 @@ export function useWeeklyChecklistViewModel() {
     selectedWeek,
     setActivityStatusLocal,
     toast,
+    userOrganizationId,
     user,
   ])
 
@@ -866,15 +1173,20 @@ export function useWeeklyChecklistViewModel() {
     activities,
     weeklyProgress,
     allWeeksProgress,
+    leadershipAvailability,
 
     // derived
-    weeklyTarget,
     completedCount,
     earnedPoints,
+    cycleTarget,
+    cyclePoints,
+    accumulatedPoints,
     loading,
     error,
     isAdmin,
     isWeekLocked,
+    isSubmittingProof,
+    isActivityBusy,
 
     // actions
     markCompleted,
@@ -888,3 +1200,4 @@ export function useWeeklyChecklistViewModel() {
     submitProofForApproval,
   }
 }
+

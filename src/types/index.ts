@@ -52,7 +52,7 @@ export interface UserProfile {
   grandfatheredAt?: string
   
   // Journey & Progress
-  journeyType: "4W" | "6W" | "3M" | "6M" | "9M" | "12M";
+  journeyType: JourneyType;
   programDurationWeeks?: number;
   journeyStartDate?: string | null;
   currentJourneyId?: string
@@ -120,9 +120,11 @@ export interface UserProfile {
   isOnboarded: boolean
   fcmTokens?: string[]
   personalityType?: string
+  coreValues?: string[]
   hasCompletedPersonalityTest?: boolean
   hasCompletedValuesTest?: boolean
   privacySettings?: PrivacySettings
+  leaderboardVisibility?: 'public' | 'company' | 'private'
 
   // Timestamps
   createdAt: string
@@ -403,7 +405,7 @@ export interface WindowProgress {
   windowTarget: number;
   status: 'on_track' | 'warning' | 'alert' | 'recovery';
   previousStatus?: 'on_track' | 'warning' | 'alert' | 'recovery';
-  updatedAt?: any;
+  updatedAt?: unknown;
 }
 
 export enum ActivityStatus {

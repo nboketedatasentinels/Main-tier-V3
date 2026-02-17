@@ -17,13 +17,6 @@ import {
   MenuButton,
   MenuItem,
   MenuList,
-  Modal,
-  ModalBody,
-  ModalContent,
-  ModalFooter,
-  ModalHeader,
-  ModalOverlay,
-  Progress,
   Radio,
   RadioGroup,
   Select,
@@ -53,7 +46,7 @@ import {
 import { EngagementChart } from '@/components/admin/EngagementChart'
 import { AtRiskInterventionFlow } from '@/components/partner/AtRiskInterventionFlow'
 import SendNudgeModal from '@/components/partner/nudges/SendNudgeModal'
-import { getActiveNudgeTemplates } from '@/services/nudgeService'
+import { createNudgeTemplateRecord, getActiveNudgeTemplates } from '@/services/nudgeService'
 import { useAuth } from '@/hooks/useAuth'
 import type { PartnerUser } from '@/hooks/usePartnerDashboardData'
 import type { PartnerInterventionSummary } from '@/hooks/partner/usePartnerInterventions'
@@ -186,8 +179,8 @@ export const AtRiskCommandPanel: React.FC<AtRiskCommandPanelProps> = ({
   const [campaignScheduleMode, setCampaignScheduleMode] = useState<CampaignScheduleMode>('send-now')
   const [campaignScheduleAt, setCampaignScheduleAt] = useState('')
   const [campaignSending, setCampaignSending] = useState(false)
+  const [campaignTemplateSaving, setCampaignTemplateSaving] = useState(false)
   const [tipExpanded, setTipExpanded] = useState(true)
-  const { isOpen: isAnalysisOpen, onOpen, onClose } = useDisclosure()
   const {
     isOpen: isNudgeModalOpen,
     onOpen: openNudgeModal,
@@ -272,7 +265,7 @@ export const AtRiskCommandPanel: React.FC<AtRiskCommandPanelProps> = ({
     if (filters.cohort !== defaultFilters.cohort) tags.push({ label: `Cohort: ${filters.cohort}`, key: 'cohort' })
     if (filters.status !== defaultFilters.status) tags.push({ label: `Status: ${filters.status}`, key: 'status' })
     if (filters.risk !== defaultFilters.risk) tags.push({ label: `Risk: ${filters.risk}`, key: 'risk' })
-    if (filters.belowWeeklyTarget) tags.push({ label: 'Below weekly points target', key: 'belowWeeklyTarget' })
+    if (filters.belowWeeklyTarget) tags.push({ label: 'Below cycle points target', key: 'belowWeeklyTarget' })
     if (filters.currentWeekOnly) tags.push({ label: 'Current week only', key: 'currentWeekOnly' })
     if (filters.compareHealthy) tags.push({ label: 'Compare to healthy learners', key: 'compareHealthy' })
     return tags
@@ -475,7 +468,7 @@ export const AtRiskCommandPanel: React.FC<AtRiskCommandPanelProps> = ({
     if (!activeTemplate) return
     setCampaignSubject(activeTemplate.subject || '')
     setCampaignMessage(activeTemplate.message_body || '')
-  }, [activeTemplate?.id])
+  }, [activeTemplate])
 
   const selectedCampaignRecipients = useMemo(
     () =>
@@ -507,14 +500,46 @@ export const AtRiskCommandPanel: React.FC<AtRiskCommandPanelProps> = ({
     [campaignPreviewRecipient],
   )
 
-  const effectiveCampaignTemplate = useMemo(() => {
-    if (!activeTemplate) return null
+  const resetCampaignComposer = useCallback(() => {
+    setCampaignStep(1)
+    setSelectedTemplateId(null)
+    setCampaignRecipientIds([])
+    setCampaignSegment('all')
+    setCampaignSubject('')
+    setCampaignMessage('')
+    setCampaignChannel('both')
+    setCampaignScheduleMode('send-now')
+    setCampaignScheduleAt('')
+  }, [])
+
+  const effectiveCampaignTemplate = useMemo<NudgeTemplateRecord | null>(() => {
+    const subject = campaignSubject.trim()
+    const message = campaignMessage.trim()
+
+    if (activeTemplate) {
+      return {
+        ...activeTemplate,
+        subject: subject || activeTemplate.subject,
+        message_body: message || activeTemplate.message_body,
+      }
+    }
+
+    if (!subject || !message) return null
+
     return {
-      ...activeTemplate,
-      subject: campaignSubject.trim() || activeTemplate.subject,
-      message_body: campaignMessage.trim() || activeTemplate.message_body,
+      id: 'custom-campaign-template',
+      name: 'Custom campaign message',
+      subject,
+      message_body: message,
+      template_type: 'Encouragement' as const,
+      target_audience: 'At-risk learners',
+      is_active: false,
+      created_at: null,
+      updated_at: null,
     }
   }, [activeTemplate, campaignMessage, campaignSubject])
+
+  const allCampaignRecipientsSelected = campaignAudience.length > 0 && campaignRecipientIds.length === campaignAudience.length
 
   const handleToggleCampaignRecipient = (id: string) => {
     setCampaignRecipientIds((prev) => (
@@ -523,7 +548,7 @@ export const AtRiskCommandPanel: React.FC<AtRiskCommandPanelProps> = ({
   }
 
   const handleToggleAllCampaignRecipients = () => {
-    if (campaignRecipientIds.length === campaignAudience.length) {
+    if (allCampaignRecipientsSelected) {
       setCampaignRecipientIds([])
       return
     }
@@ -545,10 +570,10 @@ export const AtRiskCommandPanel: React.FC<AtRiskCommandPanelProps> = ({
     }
 
     if (campaignStep === 2) {
-      if (!selectedTemplateId) {
+      if (!campaignSubject.trim() && !campaignMessage.trim()) {
         toast({
-          title: 'Select a template',
-          description: 'Choose a template before continuing.',
+          title: 'Add campaign content',
+          description: 'Choose a template or compose a custom subject and message.',
           status: 'warning',
         })
         return
@@ -564,6 +589,55 @@ export const AtRiskCommandPanel: React.FC<AtRiskCommandPanelProps> = ({
     }
 
     setCampaignStep((prev) => Math.min(4, prev + 1))
+  }
+
+  const handleStartCampaignFromScratch = () => {
+    setSelectedTemplateId(null)
+    setCampaignSubject('')
+    setCampaignMessage('')
+  }
+
+  const handleSaveCampaignTemplate = async () => {
+    const subject = campaignSubject.trim()
+    const message = campaignMessage.trim()
+    if (!subject || !message) {
+      toast({
+        title: 'Complete your message',
+        description: 'Subject and message body are both required before saving.',
+        status: 'warning',
+      })
+      return
+    }
+
+    setCampaignTemplateSaving(true)
+    try {
+      const baseName = subject.length > 42 ? `${subject.slice(0, 42).trimEnd()}...` : subject
+      const created = await createNudgeTemplateRecord({
+        name: baseName || 'Campaign template',
+        subject,
+        message_body: message,
+        template_type: campaignSegment === 'critical' ? 'Critical Alert' : 'Encouragement',
+        target_audience: 'At-risk learners',
+        is_active: true,
+      })
+
+      setActiveTemplates((prev) => [created, ...prev])
+      setSelectedTemplateId(created.id)
+      toast({
+        title: 'Template saved',
+        description: 'The campaign template is now available for reuse.',
+        status: 'success',
+      })
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'Unable to save template.'
+      toast({
+        title: 'Template save failed',
+        description: errorMessage,
+        status: 'error',
+      })
+    } finally {
+      setCampaignTemplateSaving(false)
+    }
   }
 
   const handleSendCampaignTest = async () => {
@@ -632,13 +706,44 @@ export const AtRiskCommandPanel: React.FC<AtRiskCommandPanelProps> = ({
       return
     }
 
-    if (campaignScheduleMode !== 'send-now') {
+    if (campaignScheduleMode === 'drip') {
       toast({
-        title: 'Scheduled sends unavailable',
-        description: 'Only "Send immediately" is currently supported for campaign delivery.',
+        title: 'Drip campaigns unavailable',
+        description: 'Drip campaign enrollment is not enabled yet.',
         status: 'info',
       })
       return
+    }
+
+    let scheduleAt: string | undefined
+    if (campaignScheduleMode === 'tomorrow') {
+      const tomorrow = new Date()
+      tomorrow.setDate(tomorrow.getDate() + 1)
+      tomorrow.setHours(9, 0, 0, 0)
+      scheduleAt = tomorrow.toISOString()
+    }
+
+    if (campaignScheduleMode === 'custom') {
+      const customSchedule = parseDate(campaignScheduleAt)
+      if (!customSchedule) {
+        toast({
+          title: 'Invalid schedule time',
+          description: 'Select a valid date and time for scheduled delivery.',
+          status: 'warning',
+        })
+        return
+      }
+
+      if (customSchedule.getTime() <= Date.now()) {
+        toast({
+          title: 'Schedule must be in the future',
+          description: 'Choose a future date and time for the campaign.',
+          status: 'warning',
+        })
+        return
+      }
+
+      scheduleAt = customSchedule.toISOString()
     }
 
     setCampaignSending(true)
@@ -648,17 +753,18 @@ export const AtRiskCommandPanel: React.FC<AtRiskCommandPanelProps> = ({
         template: effectiveCampaignTemplate,
         channel: campaignChannel,
         message: campaignMessage,
-        scheduleAt: campaignScheduleAt || undefined,
+        scheduleAt,
       })
 
+      const scheduleLabel = scheduleAt ? new Date(scheduleAt).toLocaleString() : null
       toast({
-        title: summary.failed > 0 ? 'Campaign partially sent' : 'Campaign sent',
-        description: `Success: ${summary.success}. Failed: ${summary.failed}.`,
+        title: summary.failed > 0 ? 'Campaign partially processed' : scheduleAt ? 'Campaign scheduled' : 'Campaign sent',
+        description: `${scheduleLabel ? `Scheduled for ${scheduleLabel}. ` : ''}Success: ${summary.success}. Failed: ${summary.failed}.`,
         status: summary.failed > 0 ? 'warning' : 'success',
       })
 
       if (summary.failed === 0) {
-        setCampaignStep(1)
+        resetCampaignComposer()
       }
     } finally {
       setCampaignSending(false)
@@ -756,7 +862,7 @@ export const AtRiskCommandPanel: React.FC<AtRiskCommandPanelProps> = ({
                   isChecked={draftFilters.belowWeeklyTarget}
                   onChange={(event) => setDraftFilters(prev => ({ ...prev, belowWeeklyTarget: event.target.checked }))}
                 >
-                  Below weekly points target
+                  Below cycle points target
                 </Checkbox>
                 <Checkbox
                   isChecked={draftFilters.currentWeekOnly}
@@ -1056,7 +1162,7 @@ export const AtRiskCommandPanel: React.FC<AtRiskCommandPanelProps> = ({
                     onClick={handleToggleAllCampaignRecipients}
                     isDisabled={campaignAudience.length === 0}
                   >
-                    {campaignRecipientIds.length === campaignAudience.length ? 'Clear all' : 'Select all'}
+                    {allCampaignRecipientsSelected ? 'Clear all' : 'Select all'}
                   </Button>
                 </HStack>
                 <Box maxH="260px" overflowY="auto" border="1px solid" borderColor="brand.border" borderRadius="md">
@@ -1133,6 +1239,7 @@ export const AtRiskCommandPanel: React.FC<AtRiskCommandPanelProps> = ({
                               colorScheme="purple"
                               variant={selectedTemplateId === template.id ? 'solid' : 'outline'}
                               onClick={() => setSelectedTemplateId(template.id)}
+                              isDisabled={templateLoading}
                             >
                               Use template
                             </Button>
@@ -1146,7 +1253,9 @@ export const AtRiskCommandPanel: React.FC<AtRiskCommandPanelProps> = ({
                           <Plus size={24} />
                           <Text fontWeight="semibold">Create New Template</Text>
                           <Text fontSize="sm" color="brand.subtleText">Build a custom message for this audience.</Text>
-                          <Button size="sm" variant="outline">Start from scratch</Button>
+                          <Button size="sm" variant="outline" onClick={handleStartCampaignFromScratch}>
+                            Start from scratch
+                          </Button>
                         </Stack>
                       </CardBody>
                     </Card>
@@ -1162,7 +1271,7 @@ export const AtRiskCommandPanel: React.FC<AtRiskCommandPanelProps> = ({
                       </MenuButton>
                       <MenuList>
                         <MenuItem onClick={() => handleInsertToken('userName')}>Learner Name</MenuItem>
-                        <MenuItem onClick={() => handleInsertToken('weeklyPoints')}>Weekly Points</MenuItem>
+                        <MenuItem onClick={() => handleInsertToken('weeklyPoints')}>Points Accumulated</MenuItem>
                         <MenuItem onClick={() => handleInsertToken('engagementScore')}>Engagement Rate</MenuItem>
                         <MenuItem onClick={() => handleInsertToken('daysInactive')}>Days Since Last Activity</MenuItem>
                       </MenuList>
@@ -1190,15 +1299,14 @@ export const AtRiskCommandPanel: React.FC<AtRiskCommandPanelProps> = ({
                     <Button
                       colorScheme="purple"
                       size="sm"
-                      onClick={() => toast({
-                        title: 'Draft saved',
-                        description: 'Your campaign draft is saved for this session.',
-                        status: 'success',
-                      })}
+                      onClick={() => void handleSaveCampaignTemplate()}
+                      isLoading={campaignTemplateSaving}
                     >
                       Save as Template
                     </Button>
-                    <Button size="sm" variant="outline" onClick={() => setCampaignStep(3)}>Use Once</Button>
+                    <Button size="sm" variant="outline" onClick={handleCampaignNext}>
+                      Use Once
+                    </Button>
                   </HStack>
                   <Box p={4} borderRadius="md" bg="brand.accent" border="1px dashed" borderColor="brand.border">
                     <Text fontWeight="semibold">Preview</Text>
@@ -1207,7 +1315,7 @@ export const AtRiskCommandPanel: React.FC<AtRiskCommandPanelProps> = ({
                     </Text>
                     <Text fontSize="sm" mt={2}>
                       {previewCampaignText(
-                        campaignMessage || activeTemplate?.message_body || 'Message preview with sample data for the selected learner.',
+                        campaignMessage || activeTemplate?.message_body || 'Choose a template or write a message to preview.',
                       )}
                     </Text>
                   </Box>
@@ -1223,7 +1331,7 @@ export const AtRiskCommandPanel: React.FC<AtRiskCommandPanelProps> = ({
                   </Text>
                   <Text mt={2}>
                     {previewCampaignText(
-                      campaignMessage || activeTemplate?.message_body || 'Hi there, we noticed your weekly points dipped. Let us know how we can help.',
+                      campaignMessage || activeTemplate?.message_body || 'Hi there, we noticed your points pace dipped this cycle. Let us know how we can help.',
                     )}
                   </Text>
                 </Box>
@@ -1264,7 +1372,7 @@ export const AtRiskCommandPanel: React.FC<AtRiskCommandPanelProps> = ({
                 )}
                 {campaignScheduleMode !== 'send-now' && (
                   <Text fontSize="sm" color="brand.subtleText">
-                    Scheduled delivery options are visible for planning, but only immediate send is currently enabled.
+                    Scheduled sends are queued for later delivery. Drip mode is still in progress.
                   </Text>
                 )}
               </Stack>
@@ -1411,87 +1519,6 @@ export const AtRiskCommandPanel: React.FC<AtRiskCommandPanelProps> = ({
     </Stack>
   )
 
-  const renderSettings = () => (
-    <Stack spacing={6}>
-      <Card {...cardStyle}>
-        <CardBody>
-          <Stack spacing={4}>
-            <HStack justify="space-between">
-              <Stack spacing={1}>
-                <Text fontWeight="semibold">AI risk analysis</Text>
-                <Text fontSize="sm" color="brand.subtleText">
-                  Analyze your learner population to identify at-risk patterns and predict future engagement issues.
-                </Text>
-              </Stack>
-              <Button colorScheme="purple" size="sm" onClick={onOpen}>
-                Run AI Analysis
-              </Button>
-            </HStack>
-            <Box p={3} borderRadius="md" border="1px solid" borderColor="brand.border" bg="brand.accent">
-              <Text fontWeight="semibold">Pending analysis</Text>
-              <HStack justify="space-between" mt={2}>
-                <Text fontSize="sm">Engagement pattern scan</Text>
-                <Text fontSize="sm" color="brand.subtleText">Started 5 min ago</Text>
-              </HStack>
-              <Progress value={45} size="sm" mt={2} colorScheme="purple" />
-              <Text fontSize="xs" color="brand.subtleText" mt={1}>Estimated completion: 2 min</Text>
-            </Box>
-          </Stack>
-        </CardBody>
-      </Card>
-
-      <Card {...cardStyle}>
-        <CardBody>
-          <Stack spacing={4}>
-            <HStack justify="space-between">
-              <Text fontWeight="semibold">Automated nudge rules</Text>
-              <Button size="sm" variant="outline">Create New Rule</Button>
-            </HStack>
-            <Stack spacing={3}>
-              {[
-                {
-                  label: 'When learner is inactive for 7 days → Send “We miss you” nudge → 12 learners eligible',
-                  performance: 'Triggered 24 times this month, 18 learners re-engaged',
-                },
-                {
-                  label: 'When risk level moves to critical → Send “Support check-in” nudge → 5 learners eligible',
-                  performance: 'Triggered 6 times this month, 3 learners re-engaged',
-                },
-              ].map(rule => (
-                <Box key={rule.label} p={3} borderRadius="md" border="1px solid" borderColor="brand.border">
-                  <HStack justify="space-between" align="start">
-                    <Stack spacing={1}>
-                      <Text fontWeight="semibold">{rule.label}</Text>
-                      <Text fontSize="sm" color="brand.subtleText">{rule.performance}</Text>
-                    </Stack>
-                    <Checkbox defaultChecked>Enabled</Checkbox>
-                  </HStack>
-                </Box>
-              ))}
-            </Stack>
-            <Divider />
-            <Stack spacing={3}>
-              <Text fontWeight="semibold">Create rule</Text>
-              <SimpleGrid columns={{ base: 1, md: 2 }} spacing={3}>
-                <Select placeholder="IF condition">
-                  <option>Inactive for 7 days</option>
-                  <option>Risk level is critical</option>
-                  <option>Weekly points below target</option>
-                </Select>
-                <Select placeholder="THEN action">
-                  <option>Send encouragement nudge</option>
-                  <option>Add to intervention queue</option>
-                  <option>Notify partner lead</option>
-                </Select>
-              </SimpleGrid>
-              <Button size="sm" colorScheme="purple" alignSelf="flex-start">Save rule</Button>
-            </Stack>
-          </Stack>
-        </CardBody>
-      </Card>
-    </Stack>
-  )
-
   const renderCaseView = () => {
     if (!selectedCase) return null
 
@@ -1534,7 +1561,6 @@ export const AtRiskCommandPanel: React.FC<AtRiskCommandPanelProps> = ({
           <Tab>Overview</Tab>
           <Tab>Campaigns</Tab>
           <Tab>Analytics</Tab>
-          <Tab>Settings</Tab>
         </TabList>
         <TabPanels>
           <TabPanel px={0}>
@@ -1545,9 +1571,6 @@ export const AtRiskCommandPanel: React.FC<AtRiskCommandPanelProps> = ({
           </TabPanel>
           <TabPanel px={0}>
             {renderAnalytics()}
-          </TabPanel>
-          <TabPanel px={0}>
-            {renderSettings()}
           </TabPanel>
         </TabPanels>
       </Tabs>
@@ -1570,26 +1593,6 @@ export const AtRiskCommandPanel: React.FC<AtRiskCommandPanelProps> = ({
         onConfirm={handleSendNudges}
       />
 
-      <Modal isOpen={isAnalysisOpen} onClose={onClose} size="lg">
-        <ModalOverlay />
-        <ModalContent>
-          <ModalHeader>AI risk analysis</ModalHeader>
-          <ModalBody>
-            <Stack spacing={3}>
-              <Text>
-                Analysis in progress... (estimated 2 min remaining)
-              </Text>
-              <Progress value={40} colorScheme="purple" />
-              <Text fontSize="sm" color="brand.subtleText">
-                Analysis ID: 1234
-              </Text>
-            </Stack>
-          </ModalBody>
-          <ModalFooter>
-            <Button onClick={onClose} variant="outline">Close</Button>
-          </ModalFooter>
-        </ModalContent>
-      </Modal>
     </Stack>
   )
 }

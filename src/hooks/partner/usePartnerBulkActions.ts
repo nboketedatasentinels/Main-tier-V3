@@ -32,7 +32,7 @@ export const usePartnerBulkActions = (selection: string[], onClearSelection: () 
         profile?.fullName ?? null
       )
 
-      const { success, results = [] } = result.data as { success: boolean, results?: any[] }
+      const { success, results = [] } = result.data as { success: boolean; results?: Array<{ status?: string }> }
 
       if (success) {
         toast({

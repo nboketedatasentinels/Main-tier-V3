@@ -60,8 +60,10 @@ import {
   buildMonthlyAssignmentsSummary,
   formatMonthRange,
   getAssignedCourseIdsFromMonthlyAssignments,
-  getMonthAvailabilityStatus,
-  getMonthDateRange,
+  getProgramSegmentAvailabilityStatus,
+  getProgramSegmentDateRange,
+  getProgramSegmentLabel,
+  resolveProgramCadence,
   resolveProgramMonthCount,
 } from '@/utils/monthlyCourseAssignments'
 import {
@@ -71,6 +73,7 @@ import {
   getClusterShortName,
   getClusterTierByName,
 } from '@/utils/clusterTiers'
+import { resolveCourseIdFromMapping } from '@/utils/courseMappings'
 
 interface EditOrganizationModalProps {
   isOpen: boolean
@@ -80,11 +83,10 @@ interface EditOrganizationModalProps {
 }
 
 const programDurations: ProgramDurationOption[] = [
-  { value: 1.5, label: '1.5 months (6 weeks)', courseCount: 3 },
+  { value: 1.5, label: '6 weeks (3 x 2-week windows)', courseCount: 3 },
   { value: 3, label: '3 months', courseCount: 3 },
   { value: 6, label: '6 months', courseCount: 6 },
   { value: 9, label: '9 months', courseCount: 9 },
-  { value: 12, label: '12 months', courseCount: 12 },
 ]
 
 const emptyOrganization: OrganizationRecord = {
@@ -118,6 +120,11 @@ export const EditOrganizationModal: React.FC<EditOrganizationModalProps> = ({
     const option = programDurations.find((duration) => duration.value === form.programDuration)
     return option?.courseCount ?? 0
   }, [form.programDuration])
+  const programCadence = useMemo(() => resolveProgramCadence(form.programDuration), [form.programDuration])
+  const assignmentUnit = programCadence === 'biweekly' ? 'window' : 'month'
+  const assignmentUnitPlural = programCadence === 'biweekly' ? 'windows' : 'months'
+  const assignmentSectionLabel = programCadence === 'biweekly' ? '2-week window course assignments' : 'Monthly course assignments'
+  const assignmentBreakdownLabel = programCadence === 'biweekly' ? 'Cycle breakdown summary' : 'Monthly breakdown summary'
 
   const remainingCourses = courseLimit - getAssignedCourseIdsFromMonthlyAssignments(monthlyAssignments, courseLimit).length
   const codeLength = form.code.trim().length
@@ -341,17 +348,22 @@ export const EditOrganizationModal: React.FC<EditOrganizationModalProps> = ({
         throw new Error('Cohort size must be greater than 0 to assign a cluster')
       }
       if (courseLimit && emptyMonths.length) {
-        throw new Error(`Please assign a course for each of the ${courseLimit} month(s)`)
+        throw new Error(`Please assign a course for each of the ${courseLimit} ${assignmentUnit}${courseLimit > 1 ? 's' : ''}`)
       }
 
       setIsSubmitting(true)
-      const assignmentArray = getAssignedCourseIdsFromMonthlyAssignments(monthlyAssignments, courseLimit)
-      const { id: _id, ...payload } = form
+      const normalizedMonthlyAssignments: MonthlyCourseAssignments = {}
+      Object.entries(monthlyAssignments).forEach(([monthKey, courseId]) => {
+        normalizedMonthlyAssignments[monthKey] = resolveCourseIdFromMapping(courseId)
+      })
+      const assignmentArray = getAssignedCourseIdsFromMonthlyAssignments(normalizedMonthlyAssignments, courseLimit)
+      const payload: OrganizationRecord = { ...form }
+      delete payload.id
       await updateOrganization(organization.id, {
         ...payload,
         code: form.code.toUpperCase(),
         courseAssignments: assignmentArray,
-        monthlyCourseAssignments: monthlyAssignments,
+        monthlyCourseAssignments: normalizedMonthlyAssignments,
         courseAssignmentStructure: 'monthly',
       })
       toast({
@@ -499,7 +511,7 @@ export const EditOrganizationModal: React.FC<EditOrganizationModalProps> = ({
                     </Select>
                     <FormErrorMessage>
                       {courseLimit > 0
-                        ? `Assign ${courseLimit} course${courseLimit > 1 ? 's' : ''}`
+                        ? `Assign ${courseLimit} course${courseLimit > 1 ? 's' : ''} across ${courseLimit} ${assignmentUnit}${courseLimit > 1 ? 's' : ''}`
                         : 'Select a duration to enable course assignments'}
                     </FormErrorMessage>
                   </FormControl>
@@ -648,11 +660,11 @@ export const EditOrganizationModal: React.FC<EditOrganizationModalProps> = ({
 
               <Box>
                 <Text fontWeight="medium" mb={2}>
-                  Monthly course assignments
+                  {assignmentSectionLabel}
                 </Text>
                 {courseLimit === 0 ? (
                   <Text fontSize="sm" color="gray.600">
-                    Select a program duration to enable course assignments.
+                    Select a program duration to enable {assignmentUnit} assignments.
                   </Text>
                 ) : null}
                 <Stack spacing={3}>
@@ -662,7 +674,11 @@ export const EditOrganizationModal: React.FC<EditOrganizationModalProps> = ({
                     const assignedCourse = monthlyAssignments[monthKey] || ''
                     const dateRange = cohortStartDate
                       ? (() => {
-                          const { startDate, endDate } = getMonthDateRange(cohortStartDate, index)
+                          const { startDate, endDate } = getProgramSegmentDateRange({
+                            cohortStartDate,
+                            segmentIndex: index,
+                            cadence: programCadence,
+                          })
                           return formatMonthRange(startDate, endDate)
                         })()
                       : undefined
@@ -672,7 +688,7 @@ export const EditOrganizationModal: React.FC<EditOrganizationModalProps> = ({
                         <Flex justify="space-between" align="center" mb={2}>
                           <HStack spacing={2}>
                             <Badge colorScheme={isEmpty ? 'red' : 'green'} borderRadius="full">
-                              Month {monthNumber}
+                              {getProgramSegmentLabel(monthNumber, programCadence)}
                             </Badge>
                             {dateRange && (
                               <Text fontSize="sm" color="gray.600">
@@ -713,7 +729,7 @@ export const EditOrganizationModal: React.FC<EditOrganizationModalProps> = ({
                         </Select>
                         {isEmpty && (
                           <Text fontSize="xs" color="red.500" mt={2}>
-                            Course assignment required for this month.
+                            Course assignment required for this {assignmentUnit}.
                           </Text>
                         )}
                       </Box>
@@ -727,25 +743,25 @@ export const EditOrganizationModal: React.FC<EditOrganizationModalProps> = ({
                 </Stack>
                 <Text mt={2} fontSize="sm" color={remainingCourses > 0 ? 'gray.600' : 'green.500'}>
                   {courseLimit === 0
-                    ? 'Select a program duration to assign courses'
+                    ? `Select a program duration to assign courses to ${assignmentUnitPlural}`
                     : `${Math.max(remainingCourses, 0)} course(s) remaining to assign`}
                 </Text>
                 {duplicateCourses.length > 0 && (
                   <Alert status="warning" mt={3} borderRadius="md">
                     <AlertIcon />
-                    Duplicate courses assigned for multiple months: {duplicateCourses.join(', ')}.
+                    Duplicate courses assigned for multiple {assignmentUnitPlural}: {duplicateCourses.join(', ')}.
                   </Alert>
                 )}
                 {emptyMonths.length > 0 && courseLimit > 0 && (
                   <Alert status="error" mt={3} borderRadius="md">
                     <AlertIcon />
-                    {emptyMonths.length} month(s) still need course assignments.
+                    {emptyMonths.length} {assignmentUnit}(s) still need course assignments.
                   </Alert>
                 )}
                 {courseLimit > 0 && (
                   <Box mt={4} borderWidth="1px" borderRadius="lg" p={3} bg="white">
                     <HStack justify="space-between" mb={2}>
-                      <Text fontWeight="semibold">Monthly breakdown summary</Text>
+                      <Text fontWeight="semibold">{assignmentBreakdownLabel}</Text>
                       <HStack spacing={2} color="purple.600">
                         <Eye size={16} />
                         <Text fontSize="sm">Admin preview</Text>
@@ -757,7 +773,7 @@ export const EditOrganizationModal: React.FC<EditOrganizationModalProps> = ({
                     <Stack spacing={2}>
                       {monthlySummary.map((entry) => (
                         <Flex key={entry.month} justify="space-between" align="center">
-                          <Text fontWeight="medium">Month {entry.month}</Text>
+                          <Text fontWeight="medium">{getProgramSegmentLabel(entry.month, programCadence)}</Text>
                           <Text color={entry.courseId ? 'gray.700' : 'red.500'}>{entry.title}</Text>
                         </Flex>
                       ))}
@@ -773,20 +789,21 @@ export const EditOrganizationModal: React.FC<EditOrganizationModalProps> = ({
                       {Array.from({ length: courseLimit }, (_, index) => {
                         const monthNumber = index + 1
                         const courseId = monthlyAssignments[String(monthNumber)] || ''
-                        const availability = getMonthAvailabilityStatus({
+                        const availability = getProgramSegmentAvailabilityStatus({
                           cohortStartDate,
                           currentDate: new Date(),
-                          monthIndex: index,
+                          segmentIndex: index,
+                          cadence: programCadence,
                         })
                         const label =
                           availability === 'current'
-                            ? 'Current month'
+                            ? (programCadence === 'biweekly' ? 'Current window' : 'Current month')
                             : availability === 'completed'
                               ? 'Completed'
                               : 'Locked'
                         return (
                           <Flex key={monthNumber} justify="space-between" align="center" p={2} bg="white" borderRadius="md">
-                            <Text fontWeight="medium">Month {monthNumber}</Text>
+                            <Text fontWeight="medium">{getProgramSegmentLabel(monthNumber, programCadence)}</Text>
                             <HStack spacing={2}>
                               <Badge colorScheme={availability === 'current' ? 'green' : availability === 'completed' ? 'purple' : 'gray'}>
                                 {label}

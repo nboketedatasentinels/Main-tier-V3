@@ -1,5 +1,6 @@
 import { Box, Button, Card, CardBody, HStack, Icon, Stack, Text, VStack } from '@chakra-ui/react'
 import { AlertTriangle, CheckCircle2, Clock3 } from 'lucide-react'
+import { useMemo, useState } from 'react'
 
 export type ActivityFeedStatus = 'complete' | 'pending' | 'attention'
 
@@ -13,6 +14,7 @@ export interface ActivityFeedItem {
 
 interface ActivityFeedCardProps {
   items: ActivityFeedItem[]
+  onSeeMore?: () => void
 }
 
 const statusColorMap: Record<ActivityFeedStatus, string> = {
@@ -27,8 +29,10 @@ const statusIconMap: Record<ActivityFeedStatus, typeof CheckCircle2> = {
   attention: AlertTriangle,
 }
 
-export const ActivityFeedCard = ({ items }: ActivityFeedCardProps) => {
-  const visibleItems = items.slice(0, 5)
+export const ActivityFeedCard = ({ items, onSeeMore }: ActivityFeedCardProps) => {
+  const [showAll, setShowAll] = useState(false)
+  const openLoops = useMemo(() => items.filter(item => item.status !== 'complete').length, [items])
+  const visibleItems = onSeeMore ? items.slice(0, 5) : showAll ? items : items.slice(0, 5)
 
   return (
     <Card h="100%" variant="outline" borderColor="border.subtle">
@@ -36,6 +40,9 @@ export const ActivityFeedCard = ({ items }: ActivityFeedCardProps) => {
         <Stack spacing={4}>
           <HStack justify="space-between">
             <Text fontWeight="bold" fontSize="md">Activity feed</Text>
+            <Text fontSize="xs" color="text.muted">
+              {openLoops} open loop{openLoops === 1 ? '' : 's'}
+            </Text>
           </HStack>
 
           <VStack align="stretch" spacing={3}>
@@ -70,9 +77,27 @@ export const ActivityFeedCard = ({ items }: ActivityFeedCardProps) => {
             ))}
           </VStack>
 
-          {items.length > 5 && (
-            <Button variant="link" size="sm" alignSelf="flex-start" color="brand.primary">
-              View all activity
+          {onSeeMore && items.length > 0 && (
+            <Button
+              variant="link"
+              size="sm"
+              alignSelf="flex-start"
+              color="brand.primary"
+              onClick={onSeeMore}
+            >
+              See more
+            </Button>
+          )}
+
+          {!onSeeMore && items.length > 5 && (
+            <Button
+              variant="link"
+              size="sm"
+              alignSelf="flex-start"
+              color="brand.primary"
+              onClick={() => setShowAll(prev => !prev)}
+            >
+              {showAll ? 'Show fewer updates' : `View all activity (${items.length})`}
             </Button>
           )}
         </Stack>

@@ -1,6 +1,5 @@
 import { useMemo } from 'react'
 import { TransformationTier, UserProfile } from '@/types'
-import { isAdminRole } from '@/utils/role'
 
 export type LeaderboardContext =
   | { type: 'free' }
@@ -41,8 +40,8 @@ export const useLeaderboardContext = (profile: UserProfile | null): LeaderboardC
   useMemo(() => {
     if (!profile) return null
 
-    if (isAdminRole(profile.role)) {
-      console.log('[Leaderboard] Context selected', { type: 'admin_all', reason: 'admin role detected' })
+    if (profile.role === 'super_admin') {
+      console.log('[Leaderboard] Context selected', { type: 'admin_all', reason: 'super admin role detected' })
       return { type: 'admin_all' }
     }
 

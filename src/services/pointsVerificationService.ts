@@ -1,5 +1,7 @@
 import {
+  FieldValue,
   QueryConstraint,
+  Timestamp,
   collection,
   doc,
   getDoc,
@@ -8,12 +10,13 @@ import {
   orderBy,
   query,
   serverTimestamp,
+  setDoc,
   updateDoc,
   where,
 } from 'firebase/firestore'
 import { db } from '@/services/firebase'
-import { awardChecklistPoints } from './pointsService'
-import { getActivitiesForJourney } from '@/config/pointsConfig'
+import { awardChecklistPoints, reconcileUserPointsFromLedger } from './pointsService'
+import { getActivityDefinitionById, resolveCanonicalActivityId } from '@/config/pointsConfig'
 import { createInAppNotification } from './notificationService'
 import { resolveJourneyType } from '@/utils/journeyType'
 import { logAdminAction } from './superAdminService'
@@ -32,11 +35,11 @@ export interface PointsVerificationRequest {
   proof_url?: string
   notes?: string
   status?: PointsVerificationRequestStatus
-  created_at?: any
-  approved_at?: any
+  created_at?: Timestamp | FieldValue | Date | string | number | { toDate?: () => Date } | null
+  approved_at?: Timestamp | FieldValue | Date | string | number | { toDate?: () => Date } | null
   approved_by?: string | null
   approved_by_name?: string | null
-  rejected_at?: any
+  rejected_at?: Timestamp | FieldValue | Date | string | number | { toDate?: () => Date } | null
   rejected_by?: string | null
   rejected_by_name?: string | null
   rejection_reason?: string | null
@@ -172,12 +175,22 @@ export const approvePointsVerificationRequest = async (params: {
       programDurationWeeks: profileData.programDurationWeeks,
       programDuration: profileData.programDuration,
     }) ?? '6W'
-  const activities = getActivitiesForJourney(journeyType)
-  const activity = activities.find((a) => a.id === params.request.activity_id)
+  const activity = getActivityDefinitionById({
+    journeyType,
+    activityId: params.request.activity_id,
+  })
+  const canonicalActivityId = resolveCanonicalActivityId(params.request.activity_id) ?? params.request.activity_id
+  const ledgerRef = doc(
+    db,
+    'pointsLedger',
+    `${params.request.user_id}__w${params.request.week}__${activity?.id ?? params.request.activity_id}`,
+  )
 
   if (!activity) {
     throw new Error('Activity not found')
   }
+
+  const ledgerBeforeApproval = await getDoc(ledgerRef)
 
   const approverPayload = {
     status: 'approved',
@@ -197,6 +210,17 @@ export const approvePointsVerificationRequest = async (params: {
       activity,
       source: 'approval',
     })
+
+    const ledgerAfterApproval = await getDoc(ledgerRef)
+    if (!ledgerAfterApproval.exists()) {
+      throw new Error('Points ledger entry missing after approval')
+    }
+
+    // If ledger already existed, totals can drift over time due legacy/manual edits.
+    // Reconcile mirrors so approved requests always reflect in learner totals.
+    if (ledgerBeforeApproval.exists()) {
+      await reconcileUserPointsFromLedger(params.request.user_id)
+    }
   } catch (error) {
     console.error('[pointsVerificationService] Failed to award checklist points after approval:', error)
     try {
@@ -206,6 +230,29 @@ export const approvePointsVerificationRequest = async (params: {
         approved_by_name: null,
         approved_at: null,
       })
+      await setDoc(
+        doc(db, 'approvals', params.request.id),
+        {
+          userId: params.request.user_id,
+          organizationId: params.request.organizationId ?? null,
+          type: 'points_verification',
+          approvalType: 'partner_approved',
+          title: params.request.activity_title || params.request.activity_id,
+          source: {
+            ...params.request,
+            id: params.request.id,
+          },
+          summary: params.request.notes ?? null,
+          points: params.request.points ?? null,
+          status: 'pending',
+          reviewedBy: null,
+          reviewedAt: null,
+          rejectionReason: null,
+          updatedAt: serverTimestamp(),
+          searchText: `${(params.request.activity_title || params.request.activity_id || '').toLowerCase()} ${params.request.user_id.toLowerCase()} partner_approved`,
+        },
+        { merge: true },
+      )
     } catch (revertError) {
       console.error('[pointsVerificationService] Failed to revert approval status after award failure:', revertError)
     }
@@ -216,7 +263,7 @@ export const approvePointsVerificationRequest = async (params: {
     await upsertChecklistActivity({
       userId: params.request.user_id,
       weekNumber: params.request.week,
-      activityId: params.request.activity_id,
+      activityId: canonicalActivityId,
       patch: {
         status: 'completed',
         hasInteracted: true,
@@ -238,12 +285,59 @@ export const approvePointsVerificationRequest = async (params: {
       userId: params.request.user_id,
       metadata: {
         requestId: params.request.id,
-        activityId: params.request.activity_id,
+        activityId: canonicalActivityId,
         points: activity.points,
       },
     })
   } catch (error) {
     console.error('[pointsVerificationService] Failed to log admin action:', error)
+  }
+
+  try {
+    await setDoc(
+      doc(db, 'approvals', params.request.id),
+      {
+        userId: params.request.user_id,
+        organizationId: params.request.organizationId ?? null,
+        type: 'points_verification',
+        approvalType: 'partner_approved',
+        title: params.request.activity_title || params.request.activity_id,
+        source: {
+          ...params.request,
+          id: params.request.id,
+        },
+        summary: params.request.notes ?? null,
+        points: activity.points,
+        status: 'approved',
+        reviewedBy: params.approver?.id ?? null,
+        reviewedAt: serverTimestamp(),
+        rejectionReason: null,
+        updatedAt: serverTimestamp(),
+        searchText: `${(params.request.activity_title || params.request.activity_id || '').toLowerCase()} ${params.request.user_id.toLowerCase()} partner_approved`,
+      },
+      { merge: true },
+    )
+  } catch (error) {
+    console.error('[pointsVerificationService] Failed to mirror approved status to approvals:', error)
+  }
+
+  try {
+    await createInAppNotification({
+      userId: params.request.user_id,
+      title: 'Activity Submission Approved',
+      message: `Your submission for "${params.request.activity_title || params.request.activity_id}" was approved and ${activity.points.toLocaleString()} points were added.`,
+      type: 'approval',
+      relatedId: params.request.id,
+      metadata: {
+        week: params.request.week,
+        activityId: canonicalActivityId,
+        requestId: params.request.id,
+        points: activity.points,
+        actionUrl: '/app/weekly-checklist',
+      },
+    })
+  } catch (error) {
+    console.error('[pointsVerificationService] Failed to notify user after approval:', error)
   }
 
   return { data: { success: true } }
@@ -268,10 +362,38 @@ export const rejectPointsVerificationRequest = async (params: {
   })
 
   try {
+    await setDoc(
+      doc(db, 'approvals', params.request.id),
+      {
+        userId: params.request.user_id,
+        organizationId: params.request.organizationId ?? null,
+        type: 'points_verification',
+        approvalType: 'partner_approved',
+        title: params.request.activity_title || params.request.activity_id,
+        source: {
+          ...params.request,
+          id: params.request.id,
+        },
+        summary: params.request.notes ?? null,
+        points: params.request.points ?? null,
+        status: 'rejected',
+        reviewedBy: params.approver?.id ?? null,
+        reviewedAt: serverTimestamp(),
+        rejectionReason: params.reason ?? null,
+        updatedAt: serverTimestamp(),
+        searchText: `${(params.request.activity_title || params.request.activity_id || '').toLowerCase()} ${params.request.user_id.toLowerCase()} partner_approved`,
+      },
+      { merge: true },
+    )
+  } catch (error) {
+    console.error('[pointsVerificationService] Failed to mirror rejected status to approvals:', error)
+  }
+
+  try {
     await upsertChecklistActivity({
       userId: params.request.user_id,
       weekNumber: params.request.week,
-      activityId: params.request.activity_id,
+      activityId: resolveCanonicalActivityId(params.request.activity_id) ?? params.request.activity_id,
       patch: {
         status: 'rejected',
         // Unlock so the learner can resubmit after rejection.
@@ -310,9 +432,9 @@ export const rejectPointsVerificationRequest = async (params: {
     type: 'approval',
     relatedId: params.request.id,
     metadata: {
-      actionUrl: `/app/weekly-checklist?week=${encodeURIComponent(String(params.request.week))}&activityId=${encodeURIComponent(params.request.activity_id)}&openProof=1`,
+      actionUrl: `/app/weekly-checklist?week=${encodeURIComponent(String(params.request.week))}&activityId=${encodeURIComponent(resolveCanonicalActivityId(params.request.activity_id) ?? params.request.activity_id)}&openProof=1`,
       week: params.request.week,
-      activityId: params.request.activity_id,
+      activityId: resolveCanonicalActivityId(params.request.activity_id) ?? params.request.activity_id,
       requestId: params.request.id,
     },
   })

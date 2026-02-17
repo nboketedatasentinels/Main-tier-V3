@@ -81,6 +81,7 @@ export const PersonalityProfileCard = ({ data, loading }: PersonalityProfileCard
 
   const strengths = localProfile?.personalityStrengths || []
   const selectedCoreValues = localProfile?.coreValues || []
+  const selectedPersonalityType = localProfile?.personalityType?.trim() || ''
   const strengthPreviewCount = strengths.length
 
   const personalityOptions = useMemo(
@@ -192,6 +193,18 @@ export const PersonalityProfileCard = ({ data, loading }: PersonalityProfileCard
           <Skeleton isLoaded={!loading} rounded="md">
             <Stack spacing={2} color="brand.subtleText" fontSize="sm">
               <Text>{data?.personalityDescription || 'Share your personality insights to receive tailored guidance.'}</Text>
+              <HStack spacing={2} align="center">
+                <Text fontWeight="semibold" color="brand.text">
+                  Personality Type
+                </Text>
+                {selectedPersonalityType ? (
+                  <Tag colorScheme="purple" borderRadius="full" px={3} py={1}>
+                    {selectedPersonalityType}
+                  </Tag>
+                ) : (
+                  <Text color="brand.subtleText">Not set yet</Text>
+                )}
+              </HStack>
               {strengths.length > 0 && (
                 <>
                   <Text fontWeight="semibold" color="brand.text">

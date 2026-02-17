@@ -7,10 +7,12 @@ import {
   Heading,
   HStack,
   Icon,
+  IconButton,
   Progress,
   SimpleGrid,
   Stack,
   Text,
+  Tooltip,
   useDisclosure,
   useToast,
 } from '@chakra-ui/react'
@@ -29,6 +31,7 @@ import {
   Lock,
   Mail,
   MessageCircle,
+  RefreshCw,
   Rocket,
   Share2,
   Sparkles,
@@ -42,9 +45,13 @@ import { APP_BASE_URL } from '@/config/app'
 import { db } from '@/services/firebase'
 import { InstagramShareModal, SocialShareModal } from '@/components/modals/SocialShareModal'
 import { REWARD_TIERS, type RewardTier } from '@/config/referralRewards'
+import { generateReferralCode } from '@/services/referralService'
+import { getCourseDetailsFromMapping } from '@/utils/courseMappings'
 
 const MotionBox = motion(Box)
 const MotionFlex = motion(Flex)
+const AI_STACKING_TITLE = 'AI Stacking 101: Boost Your Productivity (No Tech Skills Needed)'
+const AI_STACKING_COUPON_CODE = 'Ai101'
 
 interface ReferralRecord {
   referredUid: string
@@ -62,6 +69,9 @@ const ReferralRewardsPage: React.FC = () => {
   const [copied, setCopied] = useState(false)
   const [referrals, setReferrals] = useState<ReferralRecord[]>([])
   const [referralsLoading, setReferralsLoading] = useState(false)
+  const [resolvedReferralCode, setResolvedReferralCode] = useState<string | null>(profile?.referralCode ?? user?.uid ?? null)
+  const [refreshKey, setRefreshKey] = useState(0)
+  const [isRefreshing, setIsRefreshing] = useState(false)
 
   const baseAppUrl = APP_BASE_URL
 
@@ -79,15 +89,71 @@ const ReferralRewardsPage: React.FC = () => {
         const items = snapshot.docs.map((doc) => doc.data() as ReferralRecord)
         setReferrals(items)
         setReferralsLoading(false)
+        setIsRefreshing(false)
       },
       (error) => {
         console.error('🔴 [Referral] Unable to load referrals', error)
         setReferralsLoading(false)
+        setIsRefreshing(false)
       }
     )
 
     return () => unsubscribe()
-  }, [user?.uid])
+  }, [user?.uid, refreshKey])
+
+  const handleRefresh = useCallback(() => {
+    setIsRefreshing(true)
+    setRefreshKey((k) => k + 1)
+  }, [])
+
+  useEffect(() => {
+    setResolvedReferralCode(profile?.referralCode ?? user?.uid ?? null)
+  }, [profile?.referralCode, user?.uid])
+
+  useEffect(() => {
+    if (!user?.uid || profile?.referralCode) return
+
+    let isCancelled = false
+    let retryTimeout: ReturnType<typeof setTimeout> | null = null
+    const maxAttempts = 3
+
+    const persistGeneratedReferralCode = async (attempt = 1): Promise<void> => {
+      try {
+        const generatedCode = await generateReferralCode(user.uid)
+        if (isCancelled) return
+
+        if (updateProfile) {
+          await updateProfile({ referralCode: generatedCode })
+        }
+
+        if (!isCancelled) {
+          setResolvedReferralCode(generatedCode)
+        }
+      } catch (error) {
+        if (isCancelled) return
+
+        if (attempt < maxAttempts) {
+          const retryDelayMs = 500 * 2 ** (attempt - 1)
+          retryTimeout = setTimeout(() => {
+            void persistGeneratedReferralCode(attempt + 1)
+          }, retryDelayMs)
+          return
+        }
+
+        setResolvedReferralCode(null)
+        console.error('🔴 [Referral] Unable to auto-generate and persist referral code', error)
+      }
+    }
+
+    void persistGeneratedReferralCode()
+
+    return () => {
+      isCancelled = true
+      if (retryTimeout) {
+        clearTimeout(retryTimeout)
+      }
+    }
+  }, [profile?.referralCode, updateProfile, user?.uid])
 
   const creditedCount = useMemo(
     () => referrals.filter((referral) => referral.status === 'credited').length,
@@ -100,7 +166,8 @@ const ReferralRewardsPage: React.FC = () => {
 
   const creditedReferralCount = Math.max(creditedCount, profile?.referralCount ?? 0)
   const totalReferralCount = pendingCount + creditedReferralCount
-  const referralCode = profile?.referralCode ?? user?.uid
+  const milestoneReferralCount = creditedReferralCount
+  const referralCode = resolvedReferralCode
   const claimedRewards = profile?.claimedRewards ?? []
 
   const referralLink = useMemo(() => {
@@ -108,9 +175,9 @@ const ReferralRewardsPage: React.FC = () => {
     return referralCode ? `${sanitizedBase}/join?ref=${referralCode}` : `${sanitizedBase}/join`
   }, [baseAppUrl, referralCode])
 
-  const nextTier = REWARD_TIERS.find((tier) => totalReferralCount < tier.required)
-  const progressToNext = nextTier ? Math.min((totalReferralCount / nextTier.required) * 100, 100) : 100
-  const referralsNeeded = nextTier ? nextTier.required - totalReferralCount : 0
+  const nextTier = REWARD_TIERS.find((tier) => milestoneReferralCount < tier.required)
+  const progressToNext = nextTier ? Math.min((milestoneReferralCount / nextTier.required) * 100, 100) : 100
+  const referralsNeeded = nextTier ? nextTier.required - milestoneReferralCount : 0
 
   const handleCopy = useCallback(async () => {
     try {
@@ -156,6 +223,8 @@ const ReferralRewardsPage: React.FC = () => {
 
   const shareMessage = 'Join me on Transformation Tier and start your growth journey!'
   const messageWithLink = `${shareMessage} ${referralLink}`
+  const aiStackingCourseLink =
+    getCourseDetailsFromMapping(AI_STACKING_TITLE)?.link ?? `${baseAppUrl.replace(/\/$/, '')}/app/courses`
 
   const openShareUrl = useCallback((url: string) => {
     window.open(url, '_blank', 'noopener,noreferrer')
@@ -181,6 +250,27 @@ const ReferralRewardsPage: React.FC = () => {
     const subject = 'Join me on Transformation Tier'
     openShareUrl(`mailto:?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(messageWithLink)}`)
   }, [messageWithLink, openShareUrl])
+
+  const handleCouponCopy = useCallback(async () => {
+    try {
+      await navigator.clipboard.writeText(AI_STACKING_COUPON_CODE)
+      toast({
+        title: 'Coupon code copied',
+        description: `Use code ${AI_STACKING_COUPON_CODE} at checkout.`,
+        status: 'success',
+        duration: 2500,
+        isClosable: true,
+      })
+    } catch (error) {
+      toast({
+        title: 'Unable to copy coupon code',
+        description: `Please copy it manually: ${AI_STACKING_COUPON_CODE}`,
+        status: 'error',
+        duration: 3000,
+        isClosable: true,
+      })
+    }
+  }, [toast])
 
   const handleInstagramShare = useCallback(async () => {
     await handleCopy()
@@ -218,7 +308,7 @@ const ReferralRewardsPage: React.FC = () => {
 
       if (updateProfile) {
         await updateProfile({
-          claimedRewards: [...claimedRewards, tier.id],
+          claimedRewards: Array.from(new Set([...claimedRewards, tier.id])),
         })
       }
     } catch (error) {
@@ -372,9 +462,22 @@ const ReferralRewardsPage: React.FC = () => {
               <Icon as={Users} boxSize={6} />
             </Flex>
             <Stack spacing={1}>
-              <Text fontWeight="semibold" color="brand.text">
-                Your Progress
-              </Text>
+              <HStack spacing={2}>
+                <Text fontWeight="semibold" color="brand.text">
+                  Your Progress
+                </Text>
+                <Tooltip label="Refresh referral data" placement="top">
+                  <IconButton
+                    aria-label="Refresh"
+                    icon={<Icon as={RefreshCw} boxSize={4} className={isRefreshing ? 'animate-spin' : ''} />}
+                    size="xs"
+                    variant="ghost"
+                    colorScheme="purple"
+                    onClick={handleRefresh}
+                    isLoading={isRefreshing}
+                  />
+                </Tooltip>
+              </HStack>
               <Text color="brand.subtleText">Track your referrals and unlock rewards.</Text>
             </Stack>
           </HStack>
@@ -393,7 +496,7 @@ const ReferralRewardsPage: React.FC = () => {
                 Next milestone
               </Text>
               <Text fontWeight="semibold" color="brand.text">
-                {nextTier ? `${nextTier.required} referrals` : 'All tiers unlocked'}
+                {nextTier ? `${nextTier.required} activated referrals` : 'All tiers unlocked'}
               </Text>
             </Stack>
           </HStack>
@@ -412,12 +515,12 @@ const ReferralRewardsPage: React.FC = () => {
           <Flex justify="space-between" align="center">
             <Text color="brand.subtleText" fontWeight="medium">
               {nextTier
-                ? `${totalReferralCount} / ${nextTier.required} total signups`
-                : `${totalReferralCount} total signups`}
+                ? `${milestoneReferralCount} / ${nextTier.required} activated referrals`
+                : `${milestoneReferralCount} activated referrals`}
             </Text>
             <Text color="brand.subtleText">
               {nextTier
-                ? `You have ${totalReferralCount} signups — ${referralsNeeded} more to unlock your next reward!`
+                ? `You have ${milestoneReferralCount} activated referrals — ${referralsNeeded} more to unlock your next reward!`
                 : 'Amazing! You have unlocked every reward tier.'}
             </Text>
           </Flex>
@@ -466,8 +569,16 @@ const ReferralRewardsPage: React.FC = () => {
 
         <SimpleGrid columns={{ base: 1, md: 2 }} spacing={4}>
           {REWARD_TIERS.map((tier, index) => {
-            const isAchieved = totalReferralCount >= tier.required
+            const isAchieved = milestoneReferralCount >= tier.required
             const isClaimed = claimedRewards.includes(tier.id)
+            const isAiStackingTier = tier.id === 3
+            const claimLabel = isClaimed
+              ? isAiStackingTier
+                ? 'Coupon Used'
+                : 'Reward Claimed'
+              : isAiStackingTier
+                ? 'Mark Coupon as Used'
+                : 'Claim Reward'
 
             return (
               <MotionBox
@@ -536,7 +647,7 @@ const ReferralRewardsPage: React.FC = () => {
                       </Text>
                       <HStack spacing={2}>
                         <Text fontWeight="bold" color="brand.text">
-                          {tier.label} {tier.title}
+                          {tier.title}
                         </Text>
                       </HStack>
                     </Stack>
@@ -552,6 +663,39 @@ const ReferralRewardsPage: React.FC = () => {
                     <Text color="brand.subtleText">{tier.description}</Text>
                   </Stack>
 
+                  {isAiStackingTier && isAchieved && (
+                    <Box mt={4} p={3} borderRadius="lg" bg="white" border="1px solid" borderColor="purple.200">
+                      <Stack spacing={2}>
+                        <Text fontSize="xs" color="brand.subtleText" textTransform="uppercase" letterSpacing="wide">
+                          25% Discount Coupon
+                        </Text>
+                        <HStack justify="space-between">
+                          <Text fontFamily="mono" fontWeight="bold" color="brand.text">
+                            {AI_STACKING_COUPON_CODE}
+                          </Text>
+                          <Button size="xs" variant="outline" colorScheme="purple" onClick={handleCouponCopy}>
+                            Copy code
+                          </Button>
+                        </HStack>
+                        <Button
+                          as="a"
+                          href={aiStackingCourseLink}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          size="sm"
+                          rightIcon={<Icon as={ExternalLink} />}
+                          colorScheme="purple"
+                          variant="ghost"
+                        >
+                          Open AI Stacking 101 Course
+                        </Button>
+                        <Text fontSize="xs" color="brand.subtleText">
+                          One-time reward for your account. Use this coupon once, then mark it as used.
+                        </Text>
+                      </Stack>
+                    </Box>
+                  )}
+
                   {isAchieved && (
                     <Button
                       mt={4}
@@ -563,7 +707,7 @@ const ReferralRewardsPage: React.FC = () => {
                       isLoading={claiming === tier.id}
                       isDisabled={isClaimed}
                     >
-                      {isClaimed ? 'Reward Claimed' : 'Claim Reward'}
+                      {claimLabel}
                     </Button>
                   )}
                 </Box>

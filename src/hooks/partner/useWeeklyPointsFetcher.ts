@@ -14,6 +14,10 @@ interface BatchResult {
   hasPartialFailure: boolean
 }
 
+const getErrorCode = (error: unknown): string => {
+  return (error as { code?: string })?.code ?? ''
+}
+
 export const useWeeklyPointsFetcher = () => {
   // Track in-flight requests to prevent duplicate fetches
   const inFlightRef = useRef<Map<string, Promise<BatchResult>>>(new Map())
@@ -37,6 +41,7 @@ export const useWeeklyPointsFetcher = () => {
         const pointsByUser: Record<string, WeeklyPointsRecord[]> = {}
         const errors: Array<{ batch: string[]; error: unknown }> = []
         const batches: string[][] = []
+        let collectionGroupPermissionDenied = false
 
         // Firestore 'in' queries support max 30 values
         for (let i = 0; i < userIds.length; i += 10) {
@@ -57,13 +62,26 @@ export const useWeeklyPointsFetcher = () => {
               pointsByUser[data.user_id] = [...(pointsByUser[data.user_id] || []), data]
             })
           } catch (error) {
-            logger.error(`Failed to fetch weekly points for batch`, error)
-            errors.push({ batch, error })
+            if (getErrorCode(error) === 'permission-denied') {
+              collectionGroupPermissionDenied = true
+              logger.warn('Collection group weekly_points query denied; falling back to legacy collection.', {
+                batchSize: batch.length,
+              })
+            } else {
+              logger.error(`Failed to fetch weekly points for batch`, error)
+              errors.push({ batch, error })
+            }
           }
         }
 
-        // Fallback to top-level collection if no data found and no errors
-        if (!Object.keys(pointsByUser).length && !errors.length && userIds.length) {
+        // Fallback to top-level collection if no data was found and either:
+        // 1) no collection-group errors occurred, or
+        // 2) collection-group reads are denied by rules in this environment.
+        if (
+          !Object.keys(pointsByUser).length &&
+          userIds.length &&
+          (!errors.length || collectionGroupPermissionDenied)
+        ) {
           for (const batch of batches) {
             try {
               const legacyQuery = query(

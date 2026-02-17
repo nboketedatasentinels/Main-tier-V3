@@ -63,6 +63,8 @@ const SidebarNav = ({
                 justifyContent="flex-start"
                 leftIcon={item.icon ? <Icon as={item.icon} /> : undefined}
                 fontSize="sm"
+                minH="44px"
+                px={3}
                 onClick={() => onNavigate?.(item.key)}
                 bg={isActive ? 'brand.primary' : 'transparent'}
                 color={isActive ? 'white' : 'brand.text'}
@@ -90,6 +92,7 @@ export const MentorDashboardLayout: React.FC<MentorDashboardLayoutProps> = ({
   const { signOut, signingOut } = useAuth()
   const toast = useToast()
   const sections = useMemo(() => navSections || buildMentorNavItems(), [navSections])
+  const primaryNavItems = useMemo(() => sections.flatMap(section => section.items).slice(0, 4), [sections])
   const handleLogout = async () => {
     const result = await signOut()
     if (result.error) {
@@ -221,7 +224,13 @@ export const MentorDashboardLayout: React.FC<MentorDashboardLayoutProps> = ({
           </Flex>
         )}
 
-        <Box px={{ base: 4, md: 6, lg: 10 }} py={{ base: 5, md: 8 }} flex="1" overflowY="auto">
+        <Box
+          px={{ base: 4, md: 6, lg: 10 }}
+          pt={{ base: 5, md: 8 }}
+          pb={{ base: 20, md: 8 }}
+          flex="1"
+          overflowY="auto"
+        >
           <Stack spacing={6} maxW="1600px" mx="auto">
             <Flex justify="space-between" align="center">
               <Box>
@@ -242,6 +251,71 @@ export const MentorDashboardLayout: React.FC<MentorDashboardLayoutProps> = ({
           </Stack>
         </Box>
       </Flex>
+
+      {primaryNavItems.length > 0 && (
+        <Box
+          as="nav"
+          aria-label="Primary bottom navigation"
+          display={{ base: 'block', lg: 'none' }}
+          position="fixed"
+          left={0}
+          right={0}
+          bottom={0}
+          bg="white"
+          borderTop="1px solid"
+          borderColor="brand.border"
+          zIndex={20}
+          pt={1}
+          pb="calc(8px + env(safe-area-inset-bottom))"
+          px={2}
+        >
+          <HStack spacing={1}>
+            {primaryNavItems.map(item => {
+              const isActive = activeItem === item.key
+              return (
+                <Button
+                  key={item.key}
+                  variant="ghost"
+                  flex="1"
+                  h="56px"
+                  borderRadius="md"
+                  onClick={() => onNavigate?.(item.key)}
+                  bg={isActive ? 'brand.primaryMuted' : 'transparent'}
+                  color={isActive ? 'brand.primary' : 'brand.subtleText'}
+                  _hover={{ bg: 'brand.primaryMuted', color: 'brand.primary' }}
+                  aria-current={isActive ? 'page' : undefined}
+                >
+                  <VStack spacing={1}>
+                    {item.icon && <Icon as={item.icon} boxSize={4} />}
+                    <Text fontSize="2xs" noOfLines={1}>
+                      {item.label}
+                    </Text>
+                  </VStack>
+                </Button>
+              )
+            })}
+            <Button
+              variant="ghost"
+              flex="1"
+              h="56px"
+              borderRadius="md"
+              onClick={drawer.onOpen}
+              bg={drawer.isOpen ? 'brand.primaryMuted' : 'transparent'}
+              color={drawer.isOpen ? 'brand.primary' : 'brand.subtleText'}
+              _hover={{ bg: 'brand.primaryMuted', color: 'brand.primary' }}
+              aria-label="Open navigation menu"
+              aria-expanded={drawer.isOpen}
+            >
+              <VStack spacing={1}>
+                <Icon as={Menu} boxSize={4} />
+                <Text fontSize="2xs" noOfLines={1}>
+                  Menu
+                </Text>
+              </VStack>
+            </Button>
+          </HStack>
+        </Box>
+      )}
     </Flex>
   )
 }

@@ -85,12 +85,21 @@ export const PartnerAssignmentPage: React.FC = () => {
       return;
     }
 
+    if (!user?.uid) {
+      toast({
+        title: 'Sign-in required',
+        description: 'Your session is missing identity context. Please sign out and sign back in.',
+        status: 'error',
+      });
+      return;
+    }
+
     setLoading(true);
     try {
       await Promise.all(
         selectedLearners.map(learnerId =>
           assignActivityToLearner({
-            partnerId: user?.uid || '',
+            partnerId: user.uid,
             learnerId,
             activityId: selectedActivity,
             weekNumber
@@ -99,16 +108,16 @@ export const PartnerAssignmentPage: React.FC = () => {
       );
 
       toast({
-        title: 'Assignment successful',
-        description: `Activity assigned to ${selectedLearners.length} learners.`,
+        title: 'Issue successful',
+        description: `Activity issued to ${selectedLearners.length} learners.`,
         status: 'success'
       });
       setSelectedLearners([]);
     } catch (error) {
       console.error(error);
       toast({
-        title: 'Assignment failed',
-        description: 'Something went wrong during assignment.',
+        title: 'Issue failed',
+        description: 'Something went wrong while issuing the activity.',
         status: 'error'
       });
     } finally {
@@ -138,8 +147,8 @@ export const PartnerAssignmentPage: React.FC = () => {
     <Container maxW="container.xl" py={8}>
       <VStack spacing={8} align="stretch">
         <Box>
-          <Heading size="lg">Partner Activity Assignment</Heading>
-          <Text color="gray.500">Proactively assign activities to learners in your organizations.</Text>
+          <Heading size="lg">Partner Activity Issuing</Heading>
+          <Text color="gray.500">Issue partner-issued activities so learners can complete them in their weekly checklist.</Text>
         </Box>
 
         <Box p={6} bg={bgColor} borderRadius="lg" border="1px" borderColor={borderColor}>
@@ -213,9 +222,9 @@ export const PartnerAssignmentPage: React.FC = () => {
               colorScheme="blue"
               onClick={handleAssign}
               isLoading={loading}
-              isDisabled={selectedLearners.length === 0 || !selectedActivity}
+              isDisabled={selectedLearners.length === 0 || !selectedActivity || !user?.uid}
             >
-              Assign Activity to {selectedLearners.length} Learners
+              Issue Activity to {selectedLearners.length} Learners
             </Button>
           </VStack>
         </Box>

@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { collection, getDocs, orderBy, query, where, limit } from 'firebase/firestore'
 import { db } from '@/services/firebase'
-import { FULL_ACTIVITIES, type ActivityDef } from '@/config/pointsConfig'
+import { FULL_ACTIVITIES, resolveCanonicalActivityId, type ActivityDef } from '@/config/pointsConfig'
 
 export interface ActivityHistoryEntry {
   id: string
@@ -69,13 +69,14 @@ export const useUserActivityHistory = (
           const data = doc.data() as LedgerRow
           if (!data.activityId) return
 
-          const activityDef = activityMap.get(data.activityId)
+          const canonicalActivityId = resolveCanonicalActivityId(data.activityId) ?? data.activityId
+          const activityDef = activityMap.get(canonicalActivityId)
           const category = activityDef?.category || 'Other'
-          const title = activityDef?.title || data.activityId
+          const title = activityDef?.title || canonicalActivityId
 
           const entry: ActivityHistoryEntry = {
             id: doc.id,
-            activityId: data.activityId,
+            activityId: canonicalActivityId,
             activityTitle: title,
             points: data.points || 0,
             category,

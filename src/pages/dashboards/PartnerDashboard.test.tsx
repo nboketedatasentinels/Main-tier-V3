@@ -1,6 +1,6 @@
 import React from 'react'
 import { render, screen, fireEvent, waitFor } from '@testing-library/react'
-import { vi, describe, it, expect, beforeEach } from 'vitest'
+import { vi, describe, it, expect, beforeEach, type Mock } from 'vitest'
 import { PartnerDashboard } from './PartnerDashboard'
 import { BrowserRouter } from 'react-router-dom'
 import { ChakraProvider } from '@chakra-ui/react'
@@ -97,8 +97,8 @@ vi.mock('@/components/partner/AtRiskCommandPanel', () => ({
 import { usePartnerDashboardData } from '@/hooks/usePartnerDashboardData'
 import { useAuth } from '@/hooks/useAuth'
 
-const mockUsePartnerDashboardData = usePartnerDashboardData as any
-const mockUseAuth = useAuth as any
+const mockUsePartnerDashboardData = usePartnerDashboardData as unknown as Mock
+const mockUseAuth = useAuth as unknown as Mock
 
 const defaultAuthReturn = {
     assignedOrganizations: [],

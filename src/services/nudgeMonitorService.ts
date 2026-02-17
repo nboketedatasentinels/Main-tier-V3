@@ -28,8 +28,8 @@ export async function detectStatusChangeAndNudge(params: {
   await triggerNudgeByStatus({
     uid,
     journeyType,
-    status: currentStatus as any,
-    previousStatus: previousStatus as any,
+    status: currentStatus as Parameters<typeof triggerNudgeByStatus>[0]['status'],
+    previousStatus,
     pointsEarned,
     windowTarget,
   })

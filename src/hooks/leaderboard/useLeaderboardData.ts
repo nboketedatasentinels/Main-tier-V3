@@ -1,4 +1,4 @@
-import { Dispatch, MutableRefObject, SetStateAction, useEffect, useRef, useState } from 'react'
+import { Dispatch, MutableRefObject, SetStateAction, useCallback, useEffect, useRef, useState } from 'react'
 import {
   collection,
   DocumentData,
@@ -11,7 +11,7 @@ import {
   where,
 } from 'firebase/firestore'
 import { db } from '@/services/firebase'
-import { TransformationTier, UserProfile } from '@/types'
+import { UserProfile } from '@/types'
 import { LeaderboardContext } from './useLeaderboardContext'
 import { getOrgScope, listenToOrgMembers } from '@/utils/organizationScope'
 import { getDisplayName } from '@/utils/displayName'
@@ -23,6 +23,9 @@ export interface PointsTransaction {
   category?: string
   createdAt: string
   companyId?: string
+  companyCode?: string
+  villageId?: string
+  clusterId?: string
 }
 
 export interface ChallengeRecord {
@@ -50,9 +53,35 @@ interface LeaderboardDataState {
   errorMessage: string | null
 }
 
-const ENABLE_ORG_TRANSACTION_QUERIES = false
 const MAX_RETRY_ATTEMPTS = 3
 const BASE_RETRY_DELAY_MS = 500
+
+type FirestoreErrorLike = {
+  code?: string
+  message?: string
+}
+
+const getErrorCode = (error: unknown): string | undefined => {
+  if (!error || typeof error !== 'object') return undefined
+  return (error as FirestoreErrorLike).code
+}
+
+const getErrorMessage = (error: unknown): string => {
+  if (!error || typeof error !== 'object') return ''
+  return (error as FirestoreErrorLike).message || ''
+}
+
+const isMissingIndexError = (error: unknown): boolean => {
+  const code = getErrorCode(error)
+  const message = getErrorMessage(error)
+  return code === 'failed-precondition' && /requires an index/i.test(message)
+}
+
+const isRetryableSnapshotError = (error: unknown): boolean => {
+  const code = getErrorCode(error)
+  if (!code) return true
+  return !['failed-precondition', 'permission-denied', 'invalid-argument', 'unauthenticated'].includes(code)
+}
 
 const buildProfilesConstraints = (context: LeaderboardContext | null): QueryConstraint[] | null => {
   if (!context) return null
@@ -67,7 +96,7 @@ const buildProfilesConstraints = (context: LeaderboardContext | null): QueryCons
     case 'cluster':
       return context.clusterId ? [where('clusterId', '==', context.clusterId)] : null
     case 'community':
-      return [where('transformationTier', '==', TransformationTier.INDIVIDUAL_PAID)]
+      return [where('membershipStatus', '==', 'paid')]
     case 'free':
     default:
       return null
@@ -78,18 +107,40 @@ const buildTransactionConstraints = (context: LeaderboardContext | null): QueryC
   if (!context) return null
 
   const constraints: QueryConstraint[] = []
-  if (context.type === 'organization') {
-    if (context.organizationId) {
-      constraints.push(where('companyId', '==', context.organizationId))
-    } else if (context.organizationCode) {
-      constraints.push(where('companyCode', '==', context.organizationCode))
-    } else {
+  switch (context.type) {
+    case 'admin_all':
+      break
+    case 'organization':
+      if (context.organizationId) {
+        constraints.push(where('companyId', '==', context.organizationId))
+      } else if (context.organizationCode) {
+        constraints.push(where('companyCode', '==', context.organizationCode))
+      } else {
+        return null
+      }
+      break
+    case 'village':
+      if (!context.villageId) return null
+      constraints.push(where('villageId', '==', context.villageId))
+      constraints.push(orderBy('createdAt', 'desc'))
+      constraints.push(limit(1000))
+      break
+    case 'cluster':
+      if (!context.clusterId) return null
+      constraints.push(where('clusterId', '==', context.clusterId))
+      constraints.push(orderBy('createdAt', 'desc'))
+      constraints.push(limit(1000))
+      break
+    case 'community':
+    case 'free':
+    default:
       return null
-    }
   }
 
-  constraints.push(orderBy('createdAt', 'desc'))
-  constraints.push(limit(500))
+  if (context.type === 'admin_all' || context.type === 'organization') {
+    constraints.push(orderBy('createdAt', 'desc'))
+    constraints.push(limit(500))
+  }
   return constraints
 }
 
@@ -219,7 +270,7 @@ export const useLeaderboardData = ({
   const [profilesRetry, setProfilesRetry] = useState(0)
   const [transactionsRetry, setTransactionsRetry] = useState(0)
 
-  const scheduleRetry = (
+  const scheduleRetry = useCallback((
     label: string,
     retryCount: number,
     setRetry: Dispatch<SetStateAction<number>>,
@@ -236,12 +287,12 @@ export const useLeaderboardData = ({
     timeoutRef.current = setTimeout(() => {
       setRetry((prev) => prev + 1)
     }, delay)
-  }
+  }, [])
 
   const profilesRetryTimeout = useRef<ReturnType<typeof setTimeout> | null>(null)
   const transactionsRetryTimeout = useRef<ReturnType<typeof setTimeout> | null>(null)
 
-  const handleSnapshotError = (
+  const handleSnapshotError = useCallback((
     label: string,
     error: unknown,
     setLoaded: Dispatch<SetStateAction<boolean>>,
@@ -251,9 +302,21 @@ export const useLeaderboardData = ({
   ) => {
     console.error(`[Leaderboard] ${label} snapshot error`, error)
     setLoaded(true)
+    if (isMissingIndexError(error)) {
+      setErrorMessage('Leaderboard data is temporarily unavailable while a required index is being created.')
+      return
+    }
     setErrorMessage('Unable to load leaderboard data. Please refresh the page.')
-    scheduleRetry(label, retryCount, setRetry, timeoutRef)
-  }
+    if (isRetryableSnapshotError(error)) {
+      scheduleRetry(label, retryCount, setRetry, timeoutRef)
+    }
+  }, [scheduleRetry])
+
+  const clearRetryTimeout = useCallback((timeoutRef: MutableRefObject<ReturnType<typeof setTimeout> | null>) => {
+    if (!timeoutRef.current) return
+    clearTimeout(timeoutRef.current)
+    timeoutRef.current = null
+  }, [])
 
   useEffect(() => {
     if (context?.type === 'organization') {
@@ -298,9 +361,7 @@ export const useLeaderboardData = ({
 
       return () => {
         unsubscribe()
-        if (profilesRetryTimeout.current) {
-          clearTimeout(profilesRetryTimeout.current)
-        }
+        clearRetryTimeout(profilesRetryTimeout)
       }
     }
 
@@ -317,7 +378,7 @@ export const useLeaderboardData = ({
 
     setProfilesLoaded(false)
     console.log('[Leaderboard] Profiles query constraints', { contextType: context?.type, constraints })
-    const profilesQuery = query(collection(db, 'users'), ...constraints)
+    const profilesQuery = query(collection(db, 'profiles'), ...constraints)
     const unsubscribe = onSnapshot(
       profilesQuery,
       (snapshot) => {
@@ -344,22 +405,13 @@ export const useLeaderboardData = ({
 
     return () => {
       unsubscribe()
-      if (profilesRetryTimeout.current) {
-        clearTimeout(profilesRetryTimeout.current)
-      }
+      clearRetryTimeout(profilesRetryTimeout)
     }
-  }, [context, profilesRetry])
+  }, [clearRetryTimeout, context, handleSnapshotError, profilesRetry])
 
   useEffect(() => {
     if (context?.type === 'organization' && !context.organizationId && !context.organizationCode) {
       console.warn('[Leaderboard] Missing organization identifier for transaction query.')
-      setTransactions([])
-      setTransactionsLoaded(true)
-      return undefined
-    }
-
-    if (context?.type === 'organization' && !ENABLE_ORG_TRANSACTION_QUERIES) {
-      console.warn('[Leaderboard] Organization transaction queries disabled; using profile totals.')
       setTransactions([])
       setTransactionsLoaded(true)
       return undefined
@@ -390,6 +442,9 @@ export const useLeaderboardData = ({
             points: data.points || 0,
             category: data.category,
             companyId: data.companyId,
+            companyCode: data.companyCode,
+            villageId: data.villageId,
+            clusterId: data.clusterId,
             createdAt: data.createdAt?.toDate ? data.createdAt.toDate().toISOString() : data.createdAt,
           }
         })
@@ -411,11 +466,9 @@ export const useLeaderboardData = ({
 
     return () => {
       unsubscribe()
-      if (transactionsRetryTimeout.current) {
-        clearTimeout(transactionsRetryTimeout.current)
-      }
+      clearRetryTimeout(transactionsRetryTimeout)
     }
-  }, [context, transactionsRetry])
+  }, [clearRetryTimeout, context, handleSnapshotError, transactionsRetry])
 
   // Deduplication function to remove duplicate challenges
   const deduplicateChallenges = (challenges: ChallengeRecord[]): ChallengeRecord[] => {

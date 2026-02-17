@@ -123,7 +123,11 @@ export const calculateActivityAvailability = (
   }
 
   // 4. Scheduling Checks
-  const isScheduledForWeek = behavior.schedule === 'flexible' || activity.week === windowWeek
+  // Flexible activities unlock on their configured week and stay available afterward.
+  const isScheduledForWeek =
+    behavior.schedule === 'flexible'
+      ? windowWeek >= activity.week
+      : activity.week === windowWeek
   if (!isScheduledForWeek) {
     return { state: 'locked', reason: 'scheduled', isScheduledForWeek }
   }
@@ -147,27 +151,26 @@ export const calculateActivityAvailability = (
 /**
  * Filter activities based on policy type and availability state.
  */
-export const getVisibleActivities = (
-  activities: any[], // ActivityState[]
-): any[] => {
+export const getVisibleActivities = <T extends { availability: { state: ActivityAvailabilityState; reason?: ActivityAvailabilityReason } }>(
+  activities: T[],
+): T[] => {
   const stateOrder: Record<ActivityAvailabilityState, number> = {
     available: 0,
     next_window: 1,
-    exhausted: 2,
+    permanently_exhausted: 2,
     locked: 3,
-    permanently_exhausted: 4,
+    exhausted: 4,
   }
 
-  return activities
-    .filter(a => {
-      // Hide permanently exhausted one-time activities
-      if (a.availability.state === 'permanently_exhausted') return false
-      return true
-    })
-    .sort((a, b) => {
-      // Sort by availability state
-      return stateOrder[a.availability.state as ActivityAvailabilityState] - stateOrder[b.availability.state as ActivityAvailabilityState]
-    })
+  const filtered = activities.filter((activity) => {
+    const reason = activity.availability.reason
+    return reason !== 'missing_mentor' && reason !== 'missing_ambassador'
+  })
+
+  return [...filtered].sort((a, b) => {
+    // Sort by availability state
+    return stateOrder[a.availability.state as ActivityAvailabilityState] - stateOrder[b.availability.state as ActivityAvailabilityState]
+  })
 }
 
 /**
@@ -178,10 +181,10 @@ export const getNextWindowAvailabilityMessage = (
   currentWindow: number,
 ): string => {
   if (activity.activityPolicy?.type === 'window_limited') {
-    return `Available again in Window ${currentWindow + 1}`
+    return `Nice work this window. Available again in Window ${currentWindow + 1}.`
   }
   if (activity.activityPolicy?.type === 'ongoing') {
-    return 'Resets next window'
+    return 'Available again next window.'
   }
-  return 'Locked until next window'
+  return 'This activity unlocks next window.'
 }

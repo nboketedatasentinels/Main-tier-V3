@@ -20,7 +20,9 @@
     "fix:partner-orgs": "node scripts/fix-user-organization-assignments.mjs",
     "fix:partner-orgs:dry-run": "node scripts/fix-user-organization-assignments.mjs --dry-run",
     "cleanup:invited-name:dry-run": "node scripts/cleanup-invited-name-fields.mjs",
-    "cleanup:invited-name": "node scripts/cleanup-invited-name-fields.mjs --apply"
+    "cleanup:invited-name": "node scripts/cleanup-invited-name-fields.mjs --apply",
+    "backfill:points-context:dry-run": "node scripts/migrations/backfill-points-transaction-context.mjs",
+    "backfill:points-context": "node scripts/migrations/backfill-points-transaction-context.mjs --apply"
   },
   "dependencies": {
     "@chakra-ui/icons": "^2.2.4",

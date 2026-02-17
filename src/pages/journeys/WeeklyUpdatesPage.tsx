@@ -36,6 +36,7 @@ import {
 import { AlertTriangle, CalendarRange, CheckCircle, Lock, Plus, ShieldCheck } from 'lucide-react'
 import { collection, doc, getDoc, getDocs, onSnapshot, query, serverTimestamp, setDoc, where } from 'firebase/firestore'
 import { addDays, format } from 'date-fns'
+import { useLocation } from 'react-router-dom'
 import { removeUndefinedFields } from '@/utils/firestore'
 import { db } from '@/services/firebase'
 import { useAuth } from '@/hooks/useAuth'
@@ -43,7 +44,14 @@ import { createApprovalRequest } from '@/services/approvalsService'
 import { PointsVerificationRequest } from '@/services/pointsVerificationService'
 import { WeeklyProgress } from '@/types'
 import { isFreeUser } from '@/utils/membership'
-import { JOURNEY_META, getMonthNumber, getActivitiesForJourney, type ActivityDef, type JourneyType } from '@/config/pointsConfig'
+import {
+  JOURNEY_META,
+  getMonthNumber,
+  getActivitiesForJourney,
+  resolveCanonicalActivityId,
+  type ActivityDef,
+  type JourneyType,
+} from '@/config/pointsConfig'
 import { awardChecklistPoints, revokeChecklistPoints } from '@/services/pointsService'
 import { SurfaceCard } from '@/components/primitives/SurfacePrimitives'
 import { ORG_COLLECTION } from '@/constants/organizations'
@@ -53,7 +61,7 @@ import {
   MONTH_BASED_JOURNEYS,
   resolveJourneyType,
 } from '@/utils/journeyType'
-import { getWindowNumber, getWindowRange, getWindowWeekNumber } from '@/utils/windowCalculations'
+import { getWindowNumber, getWindowRange, getWindowWeekNumber, PARALLEL_WINDOW_SIZE_WEEKS } from '@/utils/windowCalculations'
 import {
   calculateActivityAvailability,
   getVisibleActivities,
@@ -101,7 +109,7 @@ interface WeekMilestone {
 interface WindowProgressData {
   pointsEarned: number;
   windowTarget: number;
-  status: 'on_track' | 'warning' | 'alert';
+  status: 'on_track' | 'warning' | 'alert' | 'recovery';
 }
 
 
@@ -136,15 +144,16 @@ const availabilityReasonLabels: Record<ActivityAvailabilityReason, string> = {
   scheduled: 'Scheduled later this window',
   cooldown: 'Cooldown in effect',
   max_per_week: 'Weekly limit reached',
-  max_per_window: 'Window limit reached',
+  max_per_window: 'Cycle limit reached',
   missing_mentor: 'Mentor required',
   missing_ambassador: 'Ambassador required',
   one_time_used: 'Activity already completed',
-  window_cap_reached: 'Window limit reached',
+  window_cap_reached: 'Cycle limit reached',
 }
 
 const WeeklyChecklistPage: React.FC = () => {
   const { user, profile } = useAuth()
+  const location = useLocation()
   const [journey, setJourney] = useState<JourneyConfig | null>(null)
   const [activities, setActivities] = useState<ActivityState[]>([])
   const [selectedWeek, setSelectedWeek] = useState<number>(1)
@@ -164,6 +173,11 @@ const WeeklyChecklistPage: React.FC = () => {
   const [weeklyProgress, setWeeklyProgress] = useState<WeeklyProgress | null>(null)
   const [windowProgressData, setWindowProgressData] = useState<WindowProgressData | null>(null);
   const [allWeeksProgress, setAllWeeksProgress] = useState<WeeklyProgress[]>([])
+
+  const focusTarget = useMemo(() => {
+    const params = new URLSearchParams(location.search)
+    return params.get('focus')
+  }, [location.search])
 
   const persistChecklist = async (updatedActivities: ActivityState[]) => {
     if (!user) return
@@ -195,6 +209,9 @@ const WeeklyChecklistPage: React.FC = () => {
     return journey?.journeyType || '4W';
   }, [journey?.journeyType]);
 
+  const isParallelWindowTrackingEnabled = import.meta.env.VITE_FEATURE_FLAG_PARALLEL_WINDOW_TRACKING === 'true';
+  const windowSizeWeeks = isParallelWindowTrackingEnabled ? PARALLEL_WINDOW_SIZE_WEEKS : 4;
+
   const weeklyTarget = useMemo(() => {
     if (!journey) return DEFAULT_WEEKLY_TARGET;
     return JOURNEY_META[journey.journeyType].weeklyTarget;
@@ -215,8 +232,8 @@ const WeeklyChecklistPage: React.FC = () => {
         windowWeeks: 1,
       };
     }
-    return getWindowRange(selectedWeek, journey.programDurationWeeks);
-  }, [journey, selectedWeek]);
+    return getWindowRange(selectedWeek, journey.programDurationWeeks, windowSizeWeeks);
+  }, [journey, selectedWeek, windowSizeWeeks]);
 
   const windowProgress = useMemo(() => {
     if (!journey) {
@@ -359,8 +376,8 @@ const WeeklyChecklistPage: React.FC = () => {
     setError('');
     try {
       const activityDefs = getActivitiesForJourney(journey.journeyType);
-      const windowNumber = getWindowNumber(selectedWeek);
-      const windowWeek = getWindowWeekNumber(selectedWeek);
+      const windowNumber = getWindowNumber(selectedWeek, windowSizeWeeks);
+      const windowWeek = getWindowWeekNumber(selectedWeek, windowSizeWeeks);
       const hasMentor = Boolean(profile?.mentorId || profile?.mentorOverrideId);
       const hasAmbassador = Boolean(profile?.ambassadorId || profile?.ambassadorOverrideId);
 
@@ -387,30 +404,39 @@ const WeeklyChecklistPage: React.FC = () => {
         getDocs(globalLedgerQuery)
       ]);
 
-      const completedActivities = new Set(ledgerSnapshot.docs.map(d => d.data().activityId));
+      const completedActivities = new Set(
+        ledgerSnapshot.docs
+          .map((d) => d.data().activityId as string | undefined)
+          .map((activityId) => (activityId ? resolveCanonicalActivityId(activityId) ?? activityId : null))
+          .filter((activityId): activityId is string => Boolean(activityId)),
+      );
       const weekActivityCounts = ledgerSnapshot.docs.reduce<Record<string, number>>((acc, docItem) => {
-        const activityId = docItem.data().activityId as string | undefined;
+        const rawActivityId = docItem.data().activityId as string | undefined;
+        const activityId = rawActivityId ? (resolveCanonicalActivityId(rawActivityId) ?? rawActivityId) : undefined;
         if (!activityId) return acc;
         acc[activityId] = (acc[activityId] ?? 0) + 1;
         return acc;
       }, {});
 
       const windowActivityCounts = windowLedgerSnapshot.docs.reduce<Record<string, number>>((acc, docItem) => {
-        const activityId = docItem.data().activityId as string | undefined;
+        const rawActivityId = docItem.data().activityId as string | undefined;
+        const activityId = rawActivityId ? (resolveCanonicalActivityId(rawActivityId) ?? rawActivityId) : undefined;
         if (!activityId) return acc;
         acc[activityId] = (acc[activityId] ?? 0) + 1;
         return acc;
       }, {});
 
       const totalCompletedAllTime = globalLedgerSnapshot.docs.reduce<Record<string, number>>((acc, docItem) => {
-        const activityId = docItem.data().activityId as string | undefined;
+        const rawActivityId = docItem.data().activityId as string | undefined;
+        const activityId = rawActivityId ? (resolveCanonicalActivityId(rawActivityId) ?? rawActivityId) : undefined;
         if (!activityId) return acc;
         acc[activityId] = (acc[activityId] ?? 0) + 1;
         return acc;
       }, {});
 
       const lastCompletionWeekByActivity = windowLedgerSnapshot.docs.reduce<Record<string, number>>((acc, docItem) => {
-        const activityId = docItem.data().activityId as string | undefined;
+        const rawActivityId = docItem.data().activityId as string | undefined;
+        const activityId = rawActivityId ? (resolveCanonicalActivityId(rawActivityId) ?? rawActivityId) : undefined;
         const weekNumber = docItem.data().weekNumber as number | undefined;
         if (!activityId || !weekNumber) return acc;
         const current = acc[activityId] ?? 0;
@@ -440,19 +466,17 @@ const WeeklyChecklistPage: React.FC = () => {
     } finally {
       setActivityLoading(false);
     }
-  }, [journey, profile?.ambassadorId, profile?.ambassadorOverrideId, profile?.mentorId, profile?.mentorOverrideId, selectedWeek, user]);
+  }, [journey, profile?.ambassadorId, profile?.ambassadorOverrideId, profile?.mentorId, profile?.mentorOverrideId, selectedWeek, user, windowSizeWeeks]);
 
   useEffect(() => {
     if (!user) return;
 
-    const useWindowProgress = import.meta.env.VITE_FEATURE_FLAG_PARALLEL_WINDOW_TRACKING === 'true';
-
-    if (useWindowProgress) {
-      const windowNumber = getWindowNumber(selectedWeek);
-      const progressRef = doc(db, "windowProgress", `${user.uid}__${windowNumber}`);
-      const unsubscribe = onSnapshot(progressRef, (doc) => {
-        if (doc.exists()) {
-          setWindowProgressData(doc.data() as WindowProgressData);
+    if (isParallelWindowTrackingEnabled) {
+      const windowNumber = getWindowNumber(selectedWeek, windowSizeWeeks);
+      const progressRef = doc(db, "windowProgress", `${user.uid}__${normalizedJourneyType}__${windowNumber}`);
+      const unsubscribe = onSnapshot(progressRef, (snapshot) => {
+        if (snapshot.exists()) {
+          setWindowProgressData(snapshot.data() as WindowProgressData);
         } else {
           setWindowProgressData(null);
         }
@@ -469,7 +493,7 @@ const WeeklyChecklistPage: React.FC = () => {
       });
       return () => unsubscribe();
     }
-  }, [normalizeWeeklyProgress, selectedWeek, user]);
+  }, [isParallelWindowTrackingEnabled, normalizeWeeklyProgress, normalizedJourneyType, selectedWeek, user, windowSizeWeeks]);
 
   useEffect(() => {
     if (!user || !journey) {
@@ -555,7 +579,7 @@ const WeeklyChecklistPage: React.FC = () => {
     if (!user || !journey) return;
     if (activity.availability.state !== 'available') {
       toast({
-        title: 'Activity unavailable',
+        title: 'Opens soon',
         description: availabilityReasonLabels[activity.availability.reason ?? 'scheduled'],
         status: 'warning',
       });
@@ -608,7 +632,7 @@ const WeeklyChecklistPage: React.FC = () => {
     if (!proofModal.activity || !user) return
     if (proofModal.activity.availability.state !== 'available') {
       toast({
-        title: 'Activity unavailable',
+        title: 'Opens soon',
         description: availabilityReasonLabels[proofModal.activity.availability.reason ?? 'scheduled'],
         status: 'warning',
       })
@@ -705,33 +729,43 @@ const WeeklyChecklistPage: React.FC = () => {
   }, [journey, selectedWeek]);
 
   const progressStatus = useMemo(() => {
-    const useWindowProgress = import.meta.env.VITE_FEATURE_FLAG_PARALLEL_WINDOW_TRACKING === 'true';
-
-    if (useWindowProgress) {
+    if (isParallelWindowTrackingEnabled) {
       if (!windowProgressData) return { color: 'gray', label: 'Loading...', pct: 0 };
       const { pointsEarned, windowTarget } = windowProgressData;
       const pct = windowTarget > 0 ? Math.min(100, Math.round((pointsEarned / windowTarget) * 100)) : 0;
+
+      const statusConfig: Record<WindowProgressData['status'], { color: 'green' | 'yellow' | 'red' | 'blue' | 'teal'; label: string }> = {
+        on_track: { color: 'green', label: 'On Track' },
+        warning: { color: 'blue', label: 'Building momentum' },
+        alert: { color: 'teal', label: 'In motion' },
+        recovery: { color: 'blue', label: 'Recovery' },
+      };
+
+      const statusFromData = statusConfig[windowProgressData.status];
+      if (statusFromData) {
+        return { color: statusFromData.color, label: statusFromData.label, pct };
+      }
+
       if (pct >= 100) return { color: 'green', label: 'On Track', pct };
-      if (pct >= 75) return { color: 'yellow', label: 'Warning', pct };
-      return { color: 'red', label: 'Alert', pct };
+      if (pct >= 75) return { color: 'blue', label: 'Building momentum', pct };
+      return { color: 'teal', label: 'In motion', pct };
     } else {
       if (!weeklyProgress) return { color: 'gray', label: 'Loading...', pct: 0 };
       const { pointsEarned, weeklyTarget } = weeklyProgress;
       const pct = weeklyTarget > 0 ? Math.min(100, Math.round((pointsEarned / weeklyTarget) * 100)) : 0;
       if (pct >= 100) return { color: 'green', label: 'On Track', pct };
-      if (pct >= 75) return { color: 'yellow', label: 'Warning', pct };
-      return { color: 'red', label: 'Alert', pct };
+      if (pct >= 75) return { color: 'blue', label: 'Building momentum', pct };
+      return { color: 'teal', label: 'In motion', pct };
     }
-  }, [weeklyProgress, windowProgressData]);
+  }, [isParallelWindowTrackingEnabled, weeklyProgress, windowProgressData]);
 
   const weeklyPointsEarned = useMemo(() => {
-    const useWindowProgress = import.meta.env.VITE_FEATURE_FLAG_PARALLEL_WINDOW_TRACKING === 'true';
-    if (useWindowProgress) {
+    if (isParallelWindowTrackingEnabled) {
         return windowProgressData?.pointsEarned ?? pendingCounts.points;
     }
     if (weeklyProgress) return weeklyProgress.pointsEarned;
     return pendingCounts.points;
-  }, [pendingCounts.points, weeklyProgress, windowProgressData]);
+  }, [isParallelWindowTrackingEnabled, pendingCounts.points, weeklyProgress, windowProgressData]);
 
   const journeyProgress = useMemo(() => {
     if (!journey) {
@@ -777,9 +811,9 @@ const WeeklyChecklistPage: React.FC = () => {
     if (!journey) return null;
     const label = JOURNEY_LABELS[journey.journeyType];
     const startLabel = journeyStartDate ? format(journeyStartDate, 'MMM d, yyyy') : 'Not set';
-    const endLabel = journeyEndDate ? format(journeyEndDate, 'MMM d, yyyy') : 'TBD';
+    const endLabel = journeyEndDate ? format(journeyEndDate, 'MMM d, yyyy') : 'Not set';
     const overviewLabel = isMonthBasedJourney
-      ? `Month ${currentMonthNumber} of ${totalMonths} · Week ${journey.currentWeek} of ${journey.programDurationWeeks}`
+      ? `Month ${currentMonthNumber} of ${totalMonths} - Week ${journey.currentWeek} of ${journey.programDurationWeeks}`
       : `Week ${journey.currentWeek} of ${journey.programDurationWeeks}`;
     const monthMilestones: MonthMilestone[] = isMonthBasedJourney
       ? Array.from({ length: totalMonths }, (_, idx) => monthMeta(idx + 1))
@@ -814,7 +848,7 @@ const WeeklyChecklistPage: React.FC = () => {
               </Heading>
               <Text color="text.secondary">{overviewLabel}</Text>
               <Text color="text.secondary" fontSize="sm">
-                {journey.programDurationWeeks} total weeks · {journeyProgress.weeksAtTarget} weeks at target
+                {journey.programDurationWeeks} total weeks - {journeyProgress.weeksAtTarget} weeks at target
               </Text>
               <Text color="text.secondary" fontSize="sm">
                 {journeyProgress.totalEarned.toLocaleString()} of {journeyProgress.totalTarget.toLocaleString()} points earned
@@ -885,6 +919,27 @@ const WeeklyChecklistPage: React.FC = () => {
     }
   }
 
+  useEffect(() => {
+    if (focusTarget !== 'pending-approvals' || activityLoading) return
+    const firstPendingApproval = activities.find(
+      activity => activity.status === 'pending' || (activity.requiresApproval && activity.status !== 'completed')
+    )
+    const targetId = firstPendingApproval?.id
+    const targetEl = targetId ? activityRefs.current[targetId] : null
+    if (!targetId || !targetEl) return
+
+    targetEl.scrollIntoView({ behavior: 'smooth', block: 'center' })
+    targetEl.classList.add('focus-ring')
+    const timeoutId = window.setTimeout(() => {
+      activityRefs.current[targetId]?.classList.remove('focus-ring')
+    }, 2000)
+
+    return () => {
+      window.clearTimeout(timeoutId)
+      activityRefs.current[targetId]?.classList.remove('focus-ring')
+    }
+  }, [activities, activityLoading, focusTarget])
+
   const getAvailabilityMessage = (activity: ActivityState) => {
     if (activity.availability.state === 'available') return null
     if (activity.availability.reason === 'scheduled') {
@@ -949,7 +1004,7 @@ const WeeklyChecklistPage: React.FC = () => {
                 <Badge colorScheme="gray">Locked</Badge>
               )}
               {activity.availability.state === 'exhausted' && (
-                <Badge colorScheme="orange">Exhausted</Badge>
+                <Badge colorScheme="teal">Cycle limit reached</Badge>
               )}
               <Tag colorScheme="primary">{activity.category}</Tag>
             </HStack>
@@ -1025,7 +1080,7 @@ const WeeklyChecklistPage: React.FC = () => {
             </HStack>
             {activity.hasInteracted && (
               <Text fontSize="sm" color="text.muted">
-                Selection locked. Contact support to make changes.
+                Selection saved for this week. Support can help if you need a change.
               </Text>
             )}
           </Stack>
@@ -1043,7 +1098,7 @@ const WeeklyChecklistPage: React.FC = () => {
     return (
       <Box borderWidth="1px" borderColor="accent.purpleBorder" p={4} borderRadius="lg" bg="accent.purpleSubtle">
         <Heading size="sm" color="text.primary" mb={2}>
-          Week {selectedWeek} – Focus Guidance
+          Week {selectedWeek} - Focus Guidance
         </Heading>
         <Stack spacing={2} color="text.secondary">
           {bullets.map(item => (
@@ -1073,7 +1128,7 @@ const WeeklyChecklistPage: React.FC = () => {
           </Stack>
         </Alert>
         <Button colorScheme="primary" onClick={scrollToActivity} isDisabled={!firstIncompleteActivity}>
-          {firstIncompleteActivity ? `Complete ${firstIncompleteActivity.title}` : 'All activities done'}
+          {firstIncompleteActivity ? `Complete ${firstIncompleteActivity.title}` : 'Week complete. Nice work'}
         </Button>
         <Stack spacing={1} color="text.secondary">
           <Text fontWeight="bold">Streak tracker</Text>
@@ -1128,17 +1183,17 @@ const WeeklyChecklistPage: React.FC = () => {
           Weekly Checklist
         </Heading>
         <Text color="text.secondary">
-          Track your weekly activities and see how they roll up into your overall journey.
+          Track your current activities and see how they roll up into your overall journey.
         </Text>
       </Stack>
       <Box p={4} borderWidth="1px" borderColor="gray.700" bg="white" borderRadius="lg">
         <Stack spacing={3}>
           <HStack justify="space-between">
             <Heading size="sm" color="text.primary">
-              Week {selectedWeek} summary · Window {windowProgress.windowNumber}
+              Week {selectedWeek} summary - Cycle {windowProgress.windowNumber}
             </Heading>
             <Tag colorScheme={progressStatus.color}>
-              {progressStatus.label} • {progressStatus.pct}%
+              {progressStatus.label} | {progressStatus.pct}%
             </Tag>
           </HStack>
           <Progress value={progressStatus.pct} colorScheme={progressStatus.color} borderRadius="full" />
@@ -1149,12 +1204,12 @@ const WeeklyChecklistPage: React.FC = () => {
               icon={<Icon as={CheckCircle} color="success.400" />}
             />
             <StatCard
-              label="Weekly points"
-              value={`${weeklyPointsEarned} / ${weeklyTarget}`}
+              label="Points accumulated"
+              value={`${weeklyPointsEarned}`}
               icon={<Icon as={Plus} color="brand.primary" />}
             />
             <StatCard
-              label={`Window ${windowProgress.windowNumber} points`}
+              label={`Cycle ${windowProgress.windowNumber} points`}
               value={`${windowProgress.earned} / ${windowProgress.target}`}
               icon={<Icon as={CalendarRange} color="purple.400" />}
             />
@@ -1174,7 +1229,7 @@ const WeeklyChecklistPage: React.FC = () => {
       <Center py={16}>
         <Stack spacing={3} align="center">
           <CircularProgress isIndeterminate color="brand.primary" />
-          <Text color="text.secondary">Loading weekly activities...</Text>
+          <Text color="text.secondary">Loading checklist activities...</Text>
         </Stack>
       </Center>
     )
@@ -1210,7 +1265,7 @@ const WeeklyChecklistPage: React.FC = () => {
           <Stack spacing={4}>
             <SurfaceCard borderColor="border.card">
               <Heading size="sm" color="text.primary" mb={3}>
-                Weekly activities
+                Current activities
               </Heading>
               {activityLoading ? (
                 <Stack spacing={3}>
@@ -1223,7 +1278,7 @@ const WeeklyChecklistPage: React.FC = () => {
                   {activities.length ? getVisibleActivities(activities).map(renderActivityCard) : (
                     <Center py={8}>
                       <Stack spacing={2} align="center">
-                        <Text color="text.secondary">No activities found for this week.</Text>
+                        <Text color="text.secondary">You are caught up for now. New activities appear as each cycle opens.</Text>
                         <Text color="text.secondary" fontSize="sm">
                           Templates will automatically sync from Firebase when available.
                         </Text>
@@ -1241,7 +1296,7 @@ const WeeklyChecklistPage: React.FC = () => {
           <Stack spacing={4}>
             <SurfaceCard borderColor="border.card">
               <Heading size="sm" color="text.primary" mb={3}>
-                Weekly progress
+                Cycle progress
               </Heading>
               {progressLoading ? (
                 <Skeleton height="180px" />
@@ -1249,14 +1304,14 @@ const WeeklyChecklistPage: React.FC = () => {
                 <Stack spacing={3}>
                   <Progress value={progressStatus.pct} colorScheme={progressStatus.color} borderRadius="full" />
                   <Text color="text.primary" fontWeight="bold">
-                    {weeklyPointsEarned} / {weeklyTarget} points earned
+                    {windowProgress.earned} / {windowProgress.target} points in this cycle
                   </Text>
                   <Text color="text.secondary" fontSize="sm">
                     {progressStatus.pct >= 100
                       ? 'Amazing! You are ahead of your target.'
                       : progressStatus.pct >= 75
                         ? 'You are close. Aim to close remaining activities.'
-                        : 'Critical: earn points to avoid falling behind.'}
+                        : 'Keep going. Your next activity will move you closer to target.'}
                   </Text>
                 </Stack>
               )}
@@ -1291,3 +1346,4 @@ const InfoPill: React.FC<{ color: string }> = ({ color }) => (
 
 export const WeeklyUpdatesPage = WeeklyChecklistPage
 export { WeeklyChecklistPage }
+

@@ -37,6 +37,7 @@ const statusColors: Record<UpgradeRequestStatus, string> = {
   rejected: 'red',
   completed: 'blue',
 }
+const EMPTY_UPGRADE_REQUESTS: UpgradeRequest[] = []
 
 type UpgradeRequestsPanelProps = {
   requests?: UpgradeRequest[]
@@ -53,14 +54,15 @@ export const UpgradeRequestsPanel: React.FC<UpgradeRequestsPanelProps> = ({
   onRetry,
   lastSuccessAt: lastSuccessAtProp,
 }) => {
-  const { profile } = useAuth()
+  const { profile, effectiveRole } = useAuth()
   const [filter, setFilter] = useState<UpgradeRequestStatus | 'all'>('all')
-  const { requests, loading, error, refetch } = useAllUpgradeRequests()
+  const { requests, loading, error, refetch } = useAllUpgradeRequests({ enabled: effectiveRole === 'super_admin' })
   const { mutate, loading: updating } = useUpdateRequestStatus()
   const [lastSuccessAt, setLastSuccessAt] = useState<Date | null>(null)
   const toast = useToast()
 
-  const resolvedRequests = requestsProp ?? requests
+  const hookRequests = requests ?? EMPTY_UPGRADE_REQUESTS
+  const resolvedRequests = requestsProp ?? hookRequests
   const resolvedLoading = loadingProp ?? loading
   const resolvedError = errorProp ?? error
   const retryHandler = onRetry ?? refetch

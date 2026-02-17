@@ -6,13 +6,11 @@ import {
   where,
   doc,
   getDoc,
-  updateDoc,
-  serverTimestamp
 } from "firebase/firestore";
-import { awardChecklistPoints } from "./pointsService";
-import { FULL_ACTIVITIES, JourneyType } from "@/config/pointsConfig";
+import { getActivityDefinitionById, JourneyType } from "@/config/pointsConfig";
 import { UserProfile } from "@/types";
 import { createApprovalRequest } from "./approvalsService";
+import { upsertChecklistActivity } from "./checklistService";
 
 const chunkList = <T,>(items: T[], size: number): T[][] => {
   const chunks: T[][] = []
@@ -63,8 +61,13 @@ export async function assignActivityToLearner(params: {
   weekNumber: number;
 }) {
   const { partnerId, learnerId, activityId, weekNumber } = params;
+  const normalizedPartnerId = partnerId.trim();
 
   try {
+    if (!normalizedPartnerId) {
+      throw new Error("Partner identity is missing");
+    }
+
     // 1. Fetch learner profile to get journeyType
     const profileRef = doc(db, "profiles", learnerId);
     const profileSnap = await getDoc(profileRef);
@@ -77,49 +80,32 @@ export async function assignActivityToLearner(params: {
     const journeyType = profile.journeyType || "6W";
 
     // 2. Find activity definition
-    const activity = FULL_ACTIVITIES.find(a => a.id === activityId);
+    const activity = getActivityDefinitionById({ activityId, journeyType: journeyType as JourneyType });
     if (!activity) {
       throw new Error("Activity definition not found");
     }
 
-    // 3. Award points with partner_issued source
-    await awardChecklistPoints({
-      uid: learnerId,
-      journeyType: journeyType as JourneyType,
+    // 3. Mark activity as partner-issued in checklist.
+    // Learner still completes the activity to claim points.
+    await upsertChecklistActivity({
+      userId: learnerId,
       weekNumber,
-      activity,
-      source: `partner_issued:${partnerId}`
+      activityId,
+      patch: {
+        issuedByPartner: true,
+        issuedBy: normalizedPartnerId,
+        issuedAt: new Date().toISOString(),
+      },
     });
 
-    // 4. Update checklist status to 'completed'
-    const checklistRef = doc(db, 'checklists', `${learnerId}_${weekNumber}`);
-    const checklistSnap = await getDoc(checklistRef);
-    if (checklistSnap.exists()) {
-      const data = checklistSnap.data() as { activities?: { id: string; status?: string }[] };
-      const activities = data.activities ?? [];
-      const nextActivities = activities.map((a) =>
-        a.id === activityId ? { ...a, status: 'completed', hasInteracted: true } : a
-      );
-
-      // If activity not in list, add it (though it should be there if UI shows it)
-      if (!nextActivities.find(a => a.id === activityId)) {
-        nextActivities.push({ id: activityId, status: 'completed', hasInteracted: true });
-      }
-
-      await updateDoc(checklistRef, {
-        activities: nextActivities,
-        updatedAt: serverTimestamp(),
-      });
-    }
-
-    // 5. Create an approval record for history (auto-approved)
+    // 4. Create an approval record for history (issued event).
     await createApprovalRequest({
       userId: learnerId,
       type: 'partner_issued',
       approvalType: 'partner_issued',
       title: activity.title,
       source: {
-        partnerId,
+        partnerId: normalizedPartnerId,
         weekNumber,
         activityId,
         assignedAt: new Date().toISOString()

@@ -2,13 +2,20 @@ import { useEffect, useState, useMemo } from 'react'
 import { doc, onSnapshot } from 'firebase/firestore'
 import { db } from '@/services/firebase'
 import { useAuth } from '@/hooks/useAuth'
-import { getWindowNumber, PARALLEL_WINDOW_SIZE_WEEKS, getWindowTargetByJourney } from '@/utils/windowCalculations'
+import {
+  getWindowNumber,
+  getWindowWeekNumber,
+  PARALLEL_WINDOW_SIZE_WEEKS,
+  getWindowTargetByJourney
+} from '@/utils/windowCalculations'
 import { getCurrentWeekNumber } from '@/utils/weekCalculations'
 import { JOURNEY_META } from '@/config/pointsConfig'
 import type { WindowProgress } from '@/types'
 
 export const useWindowProgress = () => {
   const { profile } = useAuth()
+  const profileId = profile?.id
+  const journeyType = profile?.journeyType
   const [data, setData] = useState<WindowProgress | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<Error | null>(null)
@@ -23,15 +30,22 @@ export const useWindowProgress = () => {
     return getWindowNumber(currentWeek, PARALLEL_WINDOW_SIZE_WEEKS)
   }, [currentWeek])
 
+  const windowWeek = useMemo(() => {
+    return getWindowWeekNumber(currentWeek, PARALLEL_WINDOW_SIZE_WEEKS)
+  }, [currentWeek])
+
   useEffect(() => {
-    if (!profile?.id || !profile?.journeyType) {
-      if (profile && !profile.id) {
-         setLoading(false)
-      }
+    if (!profileId || !journeyType) {
+      setData(null)
+      setError(null)
+      setLoading(false)
       return
     }
 
-    const docId = `${profile.id}__${profile.journeyType}__${windowNumber}`
+    setLoading(true)
+    setError(null)
+
+    const docId = `${profileId}__${journeyType}__${windowNumber}`
     const docRef = doc(db, 'windowProgress', docId)
 
     const unsubscribe = onSnapshot(
@@ -41,13 +55,13 @@ export const useWindowProgress = () => {
           setData(snapshot.data() as WindowProgress)
         } else {
           // Fallback if doc doesn't exist yet
-          const journeyMeta = JOURNEY_META[profile.journeyType as keyof typeof JOURNEY_META]
+          const journeyMeta = JOURNEY_META[journeyType as keyof typeof JOURNEY_META]
           const weeklyTarget = journeyMeta?.weeklyTarget || 0
-          const windowTarget = getWindowTargetByJourney(profile.journeyType, weeklyTarget)
+          const windowTarget = getWindowTargetByJourney(journeyType, weeklyTarget)
 
           setData({
-            uid: profile.id,
-            journeyType: profile.journeyType,
+            uid: profileId,
+            journeyType,
             windowNumber,
             pointsEarned: 0,
             windowTarget,
@@ -64,7 +78,7 @@ export const useWindowProgress = () => {
     )
 
     return () => unsubscribe()
-  }, [profile?.id, profile?.journeyType, windowNumber])
+  }, [profileId, journeyType, windowNumber])
 
   const totalWindows = useMemo(() => {
     if (!profile?.journeyType) return 0
@@ -77,6 +91,8 @@ export const useWindowProgress = () => {
     data,
     loading,
     error,
+    currentWeek,
+    windowWeek,
     windowNumber,
     totalWindows
   }

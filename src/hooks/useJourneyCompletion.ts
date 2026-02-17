@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '@/hooks/useAuth';
 import { evaluateJourneyCompletion, CompletionResult } from '@/utils/completion';
+import type { JourneyType } from '@/config/pointsConfig';
 
 export const useJourneyCompletion = () => {
   const { user, profile } = useAuth();
@@ -9,7 +10,7 @@ export const useJourneyCompletion = () => {
 
   useEffect(() => {
     if (user?.uid && profile?.journeyType) {
-      evaluateJourneyCompletion(user.uid, profile.journeyType as any)
+      evaluateJourneyCompletion(user.uid, profile.journeyType as JourneyType)
         .then(setCompletion)
         .catch(err => console.error('Error fetching journey completion:', err))
         .finally(() => setLoading(false));

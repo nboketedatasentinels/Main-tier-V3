@@ -53,11 +53,17 @@ export const PendingApprovalsSection: React.FC<PendingApprovalsSectionProps> = (
     ? pendingRequests.filter(req => req.week === currentWeek)
     : pendingRequests
 
-  const formatTimestamp = (timestamp: any) => {
+  const formatTimestamp = (timestamp: unknown) => {
     if (!timestamp) return 'Recently'
 
     try {
-      const date = timestamp.toDate ? timestamp.toDate() : new Date(timestamp)
+      const date =
+        typeof timestamp === 'object' &&
+        timestamp !== null &&
+        'toDate' in timestamp &&
+        typeof timestamp.toDate === 'function'
+          ? timestamp.toDate()
+          : new Date(timestamp as string | number | Date)
       return formatDistanceToNow(date, { addSuffix: true })
     } catch (err) {
       return 'Recently'

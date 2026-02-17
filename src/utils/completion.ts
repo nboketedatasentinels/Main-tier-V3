@@ -1,7 +1,11 @@
-import { JOURNEY_META, JourneyType, getActivitiesForJourney } from '@/config/pointsConfig';
+import { doc, getDoc } from 'firebase/firestore';
+import { JOURNEY_META, JourneyType, type JourneyPointsVariantKey, getActivitiesForJourney } from '@/config/pointsConfig';
 import { getActivityFrequencyLimits } from '@/utils/activityStateManager';
 import { WINDOW_SIZE_WEEKS } from '@/utils/windowCalculations';
 import { fetchUserProfileById } from '@/services/userProfileService';
+import { db } from '@/services/firebase';
+import { ORG_COLLECTION } from '@/constants/organizations';
+import { resolveLeadershipAvailability } from '@/utils/leadershipAvailability';
 
 export interface PassMarkResult {
   baseThreshold: number;
@@ -10,6 +14,9 @@ export interface PassMarkResult {
   adjustments: {
     mentorPoints: number;
     ambassadorPoints: number;
+    mentorPassMarkReduction: number;
+    ambassadorPassMarkReduction: number;
+    variantKey?: JourneyPointsVariantKey | 'dynamic';
   };
 }
 
@@ -49,8 +56,11 @@ export const getMentorAmbassadorAdjustment = (
     let activityTotalPossiblePoints = 0;
     if (activity.activityPolicy?.type === 'one_time') {
       activityTotalPossiblePoints = (maxTotal ?? 1) * activity.points;
+    } else if (maxTotal) {
+      // Use journey-specific total frequency when available
+      activityTotalPossiblePoints = maxTotal * activity.points;
     } else {
-      // Use maxPerWindow if available, otherwise fallback to maxPerMonth (legacy)
+      // Fallback: estimate from per-window limits
       const perWindow = maxPerWindow ?? activity.maxPerMonth ?? 1;
       activityTotalPossiblePoints = perWindow * numWindows * activity.points;
     }
@@ -71,8 +81,18 @@ export const getMentorAmbassadorAdjustment = (
   };
 };
 
+const selectJourneyVariantKey = (
+  hasMentor: boolean,
+  hasAmbassador: boolean,
+): JourneyPointsVariantKey | null => {
+  if (!hasMentor && !hasAmbassador) return 'without_mentor_and_ambassador';
+  if (!hasMentor || !hasAmbassador) return 'without_mentor_or_ambassador';
+  return null;
+};
+
 /**
  * Calculates the pass mark for a journey, adjusting for missing mentor/ambassador if necessary.
+ * Uses explicit passMarkPoints from JOURNEY_META when available.
  */
 export const calculatePassMark = (
   journeyType: JourneyType,
@@ -83,16 +103,51 @@ export const calculatePassMark = (
   if (!journey) {
     throw new Error(`Invalid journey type: ${journeyType}`);
   }
-  const totalTarget = journey.weeks * journey.weeklyTarget;
-  const thresholdPct = journey.completionThresholdPct ?? 100;
 
-  const baseThreshold = Math.floor((totalTarget * thresholdPct) / 100);
+  const baseTotalTarget = journey.maxPossiblePoints ?? journey.weeks * journey.weeklyTarget;
+
+  // Use explicit pass mark if available, otherwise calculate from threshold
+  const baseThreshold = journey.passMarkPoints
+    ?? Math.floor((baseTotalTarget * (journey.completionThresholdPct ?? 100)) / 100);
 
   const { mentorAdjustment, ambassadorAdjustment, lockedMentorPoints, lockedAmbassadorPoints } =
     getMentorAmbassadorAdjustment(journeyType, hasMentor, hasAmbassador);
 
-  // Reduce pass mark by locked points
+  const selectedVariantKey = selectJourneyVariantKey(hasMentor, hasAmbassador);
+  const selectedVariant = selectedVariantKey
+    ? (journey.pointVariants ?? []).find((variant) => variant.key === selectedVariantKey) ?? null
+    : null;
+
+  if (selectedVariant) {
+    const passmarkReduction = Math.max(0, baseThreshold - selectedVariant.passMarkPoints);
+    const mentorPassMarkReduction = !hasMentor && hasAmbassador
+      ? passmarkReduction
+      : !hasMentor && !hasAmbassador
+        ? Math.floor(passmarkReduction / 2)
+        : 0;
+    const ambassadorPassMarkReduction = !hasAmbassador && hasMentor
+      ? passmarkReduction
+      : !hasMentor && !hasAmbassador
+        ? passmarkReduction - mentorPassMarkReduction
+        : 0;
+
+    return {
+      baseThreshold,
+      adjustedThreshold: selectedVariant.passMarkPoints,
+      totalTarget: selectedVariant.maxPossiblePoints,
+      adjustments: {
+        mentorPoints: lockedMentorPoints,
+        ambassadorPoints: lockedAmbassadorPoints,
+        mentorPassMarkReduction,
+        ambassadorPassMarkReduction,
+        variantKey: selectedVariant.key,
+      }
+    };
+  }
+
+  // Fallback path for journeys without explicit variants.
   const adjustedThreshold = Math.max(0, baseThreshold - mentorAdjustment - ambassadorAdjustment);
+  const totalTarget = Math.max(0, baseTotalTarget - mentorAdjustment - ambassadorAdjustment);
 
   return {
     baseThreshold,
@@ -101,6 +156,9 @@ export const calculatePassMark = (
     adjustments: {
       mentorPoints: lockedMentorPoints,
       ambassadorPoints: lockedAmbassadorPoints,
+      mentorPassMarkReduction: mentorAdjustment,
+      ambassadorPassMarkReduction: ambassadorAdjustment,
+      variantKey: mentorAdjustment > 0 || ambassadorAdjustment > 0 ? 'dynamic' : undefined,
     }
   };
 };
@@ -118,13 +176,22 @@ export const evaluateJourneyCompletion = async (
   }
 
   const totalPoints = profile.totalPoints || 0;
-  const hasMentor = !!profile.mentorId;
-  const hasAmbassador = !!profile.ambassadorId;
+  const organizationId = profile.companyId || profile.organizationId || null;
+  let organizationData: Record<string, unknown> | null = null;
+  if (organizationId) {
+    const organizationSnapshot = await getDoc(doc(db, ORG_COLLECTION, organizationId));
+    if (organizationSnapshot.exists()) {
+      organizationData = organizationSnapshot.data() as Record<string, unknown>;
+    }
+  }
+
+  const { hasMentor, hasAmbassador } = resolveLeadershipAvailability({
+    organizationData,
+    profile,
+  });
 
   const passMarkResult = calculatePassMark(journeyType, hasMentor, hasAmbassador);
   const isCompleted = totalPoints >= passMarkResult.adjustedThreshold;
-
-  const { mentorAdjustment, ambassadorAdjustment } = getMentorAmbassadorAdjustment(journeyType, hasMentor, hasAmbassador);
 
   return {
     isCompleted,
@@ -135,8 +202,8 @@ export const evaluateJourneyCompletion = async (
     status: isCompleted ? 'completed' : 'active',
     completedAt: isCompleted ? new Date() : undefined,
     adjustmentDetails: {
-      mentorAdjustment,
-      ambassadorAdjustment,
+      mentorAdjustment: passMarkResult.adjustments.mentorPassMarkReduction,
+      ambassadorAdjustment: passMarkResult.adjustments.ambassadorPassMarkReduction,
     }
   };
 };
@@ -154,6 +221,7 @@ export const hasCompletedJourney = (totalPoints: number, journeyType: JourneyTyp
     return false;
   }
 
-  const requiredPoints = journey.weeks * journey.weeklyTarget;
+  // Use explicit pass mark if available
+  const requiredPoints = journey.passMarkPoints ?? journey.weeks * journey.weeklyTarget;
   return totalPoints >= requiredPoints;
 };

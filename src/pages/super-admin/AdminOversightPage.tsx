@@ -370,6 +370,11 @@ export const AdminOversightPage: React.FC<AdminOversightPageProps> = ({ adminNam
       super_admin: 'Super Admin',
     }[role] || role)
 
+  const resetFilters = () => {
+    setFilters({ role: 'all', status: 'all', organization: 'all' })
+    setSearchTerm('')
+  }
+
   const organizationName = (orgId: string) => {
     const org = organizations.find((entry) => entry.id === orgId)
     if (!org) return orgId
@@ -411,15 +416,19 @@ export const AdminOversightPage: React.FC<AdminOversightPageProps> = ({ adminNam
           <Badge colorScheme={roleColorMap[admin.role] || 'gray'}>{roleLabel(admin.role)}</Badge>
         </Td>
         <Td>
-          <Wrap>
-            {(admin.assignedOrganizations || []).map((orgId) => (
-              <WrapItem key={orgId}>
-                <Badge colorScheme="gray" variant="subtle">
-                  {organizationName(orgId)}
-                </Badge>
-              </WrapItem>
-            ))}
-          </Wrap>
+          {(admin.assignedOrganizations || []).length ? (
+            <Wrap>
+              {(admin.assignedOrganizations || []).map((orgId) => (
+                <WrapItem key={orgId}>
+                  <Badge colorScheme="gray" variant="subtle">
+                    {organizationName(orgId)}
+                  </Badge>
+                </WrapItem>
+              ))}
+            </Wrap>
+          ) : (
+            <Text fontSize="sm" color="gray.500">Unassigned</Text>
+          )}
         </Td>
         <Td>
           <Badge colorScheme={statusColorMap[admin.accountStatus || 'active'] || 'green'}>
@@ -441,15 +450,7 @@ export const AdminOversightPage: React.FC<AdminOversightPageProps> = ({ adminNam
                   formModal.onOpen()
                 }}
               >
-                Edit
-              </MenuItem>
-              <MenuItem
-                onClick={() => {
-                  setSelectedAdmin(admin)
-                  formModal.onOpen()
-                }}
-              >
-                Change Role
+                Edit access
               </MenuItem>
               <MenuItem onClick={() => handleToggleStatus(admin)}>
                 {admin.accountStatus === 'suspended' ? 'Activate' : 'Suspend'}
@@ -563,6 +564,7 @@ export const AdminOversightPage: React.FC<AdminOversightPageProps> = ({ adminNam
             <option value="partner">Partner</option>
             <option value="mentor">Mentor</option>
             <option value="ambassador">Ambassador</option>
+            <option value="super_admin">Super Admin</option>
           </Select>
           <Select
             placeholder="All Statuses"
@@ -587,7 +589,7 @@ export const AdminOversightPage: React.FC<AdminOversightPageProps> = ({ adminNam
               </option>
             ))}
           </Select>
-          <Button variant="ghost" onClick={() => setFilters({ role: 'all', status: 'all', organization: 'all' })}>
+          <Button variant="ghost" onClick={resetFilters}>
             Clear Filters
           </Button>
         </Flex>

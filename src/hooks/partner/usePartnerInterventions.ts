@@ -84,6 +84,10 @@ export const usePartnerInterventions = (options: UsePartnerInterventionsOptions)
             partner_id?: string
             organization_code?: string
             opened_at?: string
+            status_changed_at?: string
+            risk_verdicts?: string[]
+            assigned_admin_name?: string
+            escalation_reason?: string
           }
 
           return {
@@ -97,10 +101,10 @@ export const usePartnerInterventions = (options: UsePartnerInterventionsOptions)
             userId: data.userId,
             partnerId: data.partner_id,
             openedAt: data.openedAt || data.opened_at,
-            statusChangedAt: (data as any).status_changed_at || data.opened_at,
-            riskVerdicts: (data as any).risk_verdicts || ['Behind on engagement targets'],
-            assignedAdminName: (data as any).assigned_admin_name || 'Governance Team',
-            escalationReason: (data as any).escalation_reason || 'SLA Breach',
+            statusChangedAt: data.status_changed_at || data.opened_at,
+            riskVerdicts: data.risk_verdicts || ['Behind on engagement targets'],
+            assignedAdminName: data.assigned_admin_name || 'Governance Team',
+            escalationReason: data.escalation_reason || 'SLA Breach',
           }
         })
         .filter((item) => {

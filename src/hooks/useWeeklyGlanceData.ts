@@ -17,8 +17,9 @@ import {
 import { db } from '@/services/firebase'
 import { useAuth } from '@/hooks/useAuth'
 import { useOrganizationLeadership } from '@/hooks/useOrganizationLeadership'
+import { ORG_COLLECTION } from '@/constants/organizations'
 import { getWeekKey, getCurrentWeekNumber } from '@/utils/weekCalculations'
-import { JOURNEY_META, getMonthNumber, FULL_ACTIVITIES } from '@/config/pointsConfig'
+import { JOURNEY_META, getMonthNumber, getActivityDefinitionById } from '@/config/pointsConfig'
 import { InspirationQuote } from '@/types'
 import { leadershipQuotes } from '@/services/quotes'
 import { UserProfileExtended } from '@/services/userProfileService'
@@ -116,6 +117,13 @@ const normalizePeerMatchStatus = (status?: string | null): PeerMatchStatus => {
   return 'new'
 }
 
+const toStringArray = (value: unknown): string[] => {
+  if (!Array.isArray(value)) return []
+  return value
+    .map((item) => (typeof item === 'string' ? item.trim() : ''))
+    .filter((item) => item.length > 0)
+}
+
 interface WeeklyGlanceLoadingState {
   points: boolean
   support: boolean
@@ -140,6 +148,9 @@ interface WeeklyGlanceErrorState {
   ledger?: Error
 }
 
+// NOTE: Weekly naming is intentional for now because Firestore collections/doc ids are week-based.
+// TODO(periods): add a period abstraction before renaming `weekly*` fields to generic period terms.
+
 export const useWeeklyGlanceData = () => {
   const { profile } = useAuth()
   const [weeklyPoints, setWeeklyPoints] = useState<WeeklyPoints | null>(null)
@@ -149,7 +160,7 @@ export const useWeeklyGlanceData = () => {
   const [weeklyHabits, setWeeklyHabits] = useState<WeeklyHabit[]>([])
   const [inspirationQuote, setInspirationQuote] = useState<InspirationQuote | null>(null)
   const [impactCount, setImpactCount] = useState<number>(0)
-  const [focusAreas, setFocusAreas] = useState<FocusArea[]>([]);
+  const [focusAreas, setFocusAreas] = useState<FocusArea[]>([])
   const [ledgerEntries, setLedgerEntries] = useState<LedgerEntry[]>([])
   const [loading, setLoading] = useState<WeeklyGlanceLoadingState>({
     points: true,
@@ -170,6 +181,7 @@ export const useWeeklyGlanceData = () => {
     loading: leadershipLoading,
   } = useOrganizationLeadership(profile?.companyId, profile?.id, profile)
 
+  // Week-level keys remain the source of truth until non-weekly periods are supported.
   const weekNumber = useMemo(
     () => profile?.currentWeek || 1,
     [profile?.currentWeek],
@@ -343,14 +355,39 @@ export const useWeeklyGlanceData = () => {
         const profileDoc = await getDoc(doc(db, 'profiles', profile.id))
         if (profileDoc.exists()) {
           const data = profileDoc.data()
+          const personalityStrengths = toStringArray(data.personalityStrengths)
+          const legacyPersonalityStrengths = toStringArray(data.personality_strengths)
+          const coreValues = toStringArray(data.coreValues)
+          const legacyCoreValues = toStringArray(data.core_values)
+          const resolvedPersonalityType =
+            (typeof data.personalityType === 'string' ? data.personalityType.trim() : '') ||
+            (typeof data.personality_type === 'string' ? data.personality_type.trim() : '') ||
+            (typeof profile.personalityType === 'string' ? profile.personalityType.trim() : '')
+          const resolvedStrengths =
+            personalityStrengths.length > 0 ? personalityStrengths : legacyPersonalityStrengths
+          const resolvedCoreValues =
+            coreValues.length > 0 ? coreValues : legacyCoreValues
+          const resolvedDescription =
+            (typeof data.personalityDescription === 'string' ? data.personalityDescription : undefined) ||
+            (typeof data.personality_description === 'string' ? data.personality_description : undefined)
+
           setPersonality({
-            personalityType: data.personalityType,
-            personalityStrengths: data.personalityStrengths || [],
-            personalityDescription: data.personalityDescription,
-            coreValues: data.coreValues || [],
+            personalityType: resolvedPersonalityType || undefined,
+            personalityStrengths: resolvedStrengths,
+            personalityDescription: resolvedDescription,
+            coreValues: resolvedCoreValues.length > 0 ? resolvedCoreValues : (profile.coreValues ?? []),
           })
         } else {
-          setPersonality(null)
+          setPersonality(
+            profile.personalityType || (profile.coreValues && profile.coreValues.length > 0)
+              ? {
+                  personalityType: profile.personalityType,
+                  personalityStrengths: [],
+                  personalityDescription: undefined,
+                  coreValues: profile.coreValues ?? [],
+                }
+              : null,
+          )
         }
       } catch (error) {
         setErrors(prev => ({ ...prev, profile: error as Error }))
@@ -450,28 +487,20 @@ export const useWeeklyGlanceData = () => {
   }, [profile?.id, weekKey])
 
   useEffect(() => {
-    const fetchQuote = async () => {
+    const fetchQuote = () => {
       setLoading(prev => ({ ...prev, inspiration: true }))
-      try {
-        const quoteQuery = query(
-          collection(db, 'inspiration_quotes'),
-          where('week_number', '==', calendarWeekNumber),
-        )
-        const snapshot = await getDocs(quoteQuery)
-        const docData = snapshot.docs[0]
-        if (docData) {
-          setInspirationQuote({ ...(docData.data() as InspirationQuote), id: docData.id })
-        } else {
-          const fallbackQuote = leadershipQuotes[calendarWeekNumber % leadershipQuotes.length]
-          setInspirationQuote({ ...fallbackQuote, id: `fallback-${calendarWeekNumber}` })
+      const quoteCount = leadershipQuotes.length
+      const quoteIndex = quoteCount > 0 ? (calendarWeekNumber - 1) % quoteCount : 0
+      const fallbackQuote =
+        leadershipQuotes[quoteIndex] ?? {
+          week_number: calendarWeekNumber,
+          quote_text: 'Join the movement. Take one small step today toward your goal.',
+          author: 'T4L Community',
+          category: 'Inspiration',
         }
-      } catch (error) {
-        setErrors(prev => ({ ...prev, inspiration: error as Error }))
-        const fallbackQuote = leadershipQuotes[calendarWeekNumber % leadershipQuotes.length]
-        setInspirationQuote({ ...fallbackQuote, id: `fallback-${calendarWeekNumber}` })
-      } finally {
-        setLoading(prev => ({ ...prev, inspiration: false }))
-      }
+
+      setInspirationQuote({ ...fallbackQuote, id: `fallback-${calendarWeekNumber}` })
+      setLoading(prev => ({ ...prev, inspiration: false }))
     }
 
     fetchQuote()
@@ -532,7 +561,7 @@ export const useWeeklyGlanceData = () => {
       collection(db, 'pointsLedger'),
       where('uid', '==', profile.id),
       orderBy('createdAt', 'desc'),
-      limit(10)
+      limit(100)
     )
 
     const unsubscribe = onSnapshot(
@@ -540,7 +569,7 @@ export const useWeeklyGlanceData = () => {
       snapshot => {
         const entries = snapshot.docs.map(docSnapshot => {
           const data = docSnapshot.data()
-          const activityDef = FULL_ACTIVITIES.find(a => a.id === data.activityId)
+          const activityDef = getActivityDefinitionById({ activityId: data.activityId, journeyType: profile.journeyType })
           return {
             id: docSnapshot.id,
             activityId: data.activityId,
@@ -565,25 +594,53 @@ export const useWeeklyGlanceData = () => {
 
   useEffect(() => {
     const fetchFocusAreas = async () => {
-      if (!profile?.id) return;
-      setLoading(prev => ({ ...prev, focus: true }));
-      try {
-        // Mocking the focus areas for now
-        const mockFocusAreas: FocusArea[] = [
-          { id: '1', title: 'Leadership Reflection' },
-          { id: '2', title: 'Mentor Session' },
-          { id: '3', title: 'Impact Action' },
-        ];
-        setFocusAreas(mockFocusAreas);
-      } catch (error) {
-        setErrors(prev => ({ ...prev, focus: error as Error }));
-      } finally {
-        setLoading(prev => ({ ...prev, focus: false }));
+      if (!profile?.id) {
+        setFocusAreas([])
+        setLoading(prev => ({ ...prev, focus: false }))
+        return
       }
-    };
+      setLoading(prev => ({ ...prev, focus: true }))
+      try {
+        const resolvedFocusAreas = new Set<string>()
 
-    fetchFocusAreas();
-  }, [profile?.id]);
+        if (profile.companyId) {
+          const organizationSnapshot = await getDoc(doc(db, ORG_COLLECTION, profile.companyId))
+          if (organizationSnapshot.exists()) {
+            const organizationData = organizationSnapshot.data() as Record<string, unknown>
+            const leadership =
+              organizationData.leadership && typeof organizationData.leadership === 'object'
+                ? (organizationData.leadership as Record<string, unknown>)
+                : null
+
+            const focusCandidates = [
+              ...toStringArray(organizationData.focusAreas),
+              ...toStringArray(organizationData.ambassadorFocusAreas),
+              ...toStringArray(organizationData.partnerProgramFocus),
+              ...toStringArray(leadership?.ambassadorFocusAreas),
+              ...toStringArray(leadership?.partnerProgramFocus),
+            ]
+
+            for (const focusArea of focusCandidates) {
+              resolvedFocusAreas.add(focusArea)
+            }
+          }
+        }
+
+        setFocusAreas(
+          Array.from(resolvedFocusAreas).map((title, index) => ({
+            id: `focus-${index + 1}`,
+            title,
+          })),
+        )
+      } catch (error) {
+        setErrors(prev => ({ ...prev, focus: error as Error }))
+      } finally {
+        setLoading(prev => ({ ...prev, focus: false }))
+      }
+    }
+
+    void fetchFocusAreas()
+  }, [profile?.companyId, profile?.id])
 
   return {
     weeklyPoints,

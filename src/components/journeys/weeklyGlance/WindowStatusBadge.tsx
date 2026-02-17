@@ -8,38 +8,38 @@ import {
 } from '@chakra-ui/icons';
 
 interface WindowStatusBadgeProps {
-  status: 'on_track' | 'warning' | 'alert' | 'recovery';
+  status: 'ahead' | 'on_track' | 'catching_up' | 'behind';
 }
 
 const statusConfig = {
-  on_track: {
+  ahead: {
     color: 'green',
+    label: 'Ahead',
+    icon: StarIcon,
+    tooltip: 'Peak state reached. Finish this cycle strong with one more contribution.'
+  },
+  on_track: {
+    color: 'teal',
     label: 'On Track',
     icon: CheckCircleIcon,
-    tooltip: "You're pacing well to hit your window target."
+    tooltip: 'Steady pace. End this cycle with a positive close.'
   },
-  warning: {
+  catching_up: {
     color: 'yellow',
-    label: 'Warning',
+    label: 'Catching Up',
     icon: WarningIcon,
-    tooltip: "Slightly behind — still recoverable with some extra focus."
+    tooltip: 'Momentum is improving. Keep pushing to end this cycle on target.'
   },
-  alert: {
+  behind: {
     color: 'red',
-    label: 'Alert',
+    label: 'Behind',
     icon: InfoIcon,
-    tooltip: "Risk of falling behind. Consider increasing your activity level."
-  },
-  recovery: {
-    color: 'blue',
-    label: 'Recovery',
-    icon: StarIcon,
-    tooltip: "Great job — you're back on track after a period of lower activity!"
+    tooltip: 'Risk state. Act now to avoid closing this cycle below target.'
   }
 };
 
 export const WindowStatusBadge: React.FC<WindowStatusBadgeProps> = ({ status }) => {
-  const config = statusConfig[status] || statusConfig.alert;
+  const config = statusConfig[status] || statusConfig.behind;
 
   return (
     <Tooltip label={config.tooltip} hasArrow placement="top">

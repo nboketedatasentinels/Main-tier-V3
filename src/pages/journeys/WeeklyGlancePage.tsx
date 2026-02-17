@@ -44,6 +44,9 @@ import {
   getWeekDateRange,
 } from '@/utils/weekCalculations'
 
+// NOTE: This page is intentionally a partial migration: UI phrasing may be broader,
+// while data contracts remain weekly (`weeklyPoints`, `weekNumber`, week-based helpers).
+
 /**
  * Domain helpers (keeps business rules out of JSX as much as possible)
  */
@@ -85,92 +88,25 @@ type ActivityFeedItem = {
   status: ActivityFeedStatus
 }
 
+const WEEKLY_ACTIVITY_WINDOW_MS = 7 * 24 * 60 * 60 * 1000
+
 function buildWeeklyActivityFeed(params: {
-  earnedPoints: number
-  targetPoints: number
-  weekNumber: number
-  daysRemaining: number
-  completedHabits: number
-  totalHabits: number
-  mentorFirstName?: string | null
-  hasMentor: boolean
-  peerMatchCount: number
   ledgerEntries: LedgerEntry[]
 }): readonly ActivityFeedItem[] {
-  const {
-    earnedPoints,
-    targetPoints,
-    weekNumber,
-    daysRemaining,
-    completedHabits,
-    totalHabits,
-    mentorFirstName,
-    hasMentor,
-    peerMatchCount,
-    ledgerEntries,
-  } = params
+  const { ledgerEntries } = params
+  const cutoffTime = Date.now() - WEEKLY_ACTIVITY_WINDOW_MS
 
-  const pointsStatus: ActivityFeedStatus =
-    targetPoints > 0 && earnedPoints >= targetPoints
-      ? 'complete'
-      : earnedPoints > 0
-        ? 'pending'
-        : 'attention'
-
-  const habitsStatus: ActivityFeedStatus =
-    totalHabits > 0 && completedHabits === totalHabits ? 'complete' : 'pending'
-
-  const mentorStatus: ActivityFeedStatus = hasMentor ? 'complete' : 'pending'
-
-  const peerStatus: ActivityFeedStatus = peerMatchCount > 0 ? 'complete' : 'pending'
-
-  const activityEntries: ActivityFeedItem[] = ledgerEntries.map(entry => ({
-    id: entry.id,
-    title: entry.activityTitle,
-    description: `${entry.points} points earned towards your goal.`,
-    timestamp: formatDistanceToNow(entry.createdAt, { addSuffix: true }),
-    status: 'complete',
-  }))
-
-  const statusItems: ActivityFeedItem[] = [
-    {
-      id: 'weekly-points',
-      title: 'Weekly points summary',
-      description: `${earnedPoints} points logged toward your ${targetPoints || 0} point goal.`,
-      timestamp: `Week ${weekNumber} • ${daysRemaining} days left`,
-      status: pointsStatus,
-    },
-    {
-      id: 'weekly-habits',
-      title: 'Habits check-in',
-      description: `${completedHabits} of ${totalHabits} habits completed this week.`,
-      timestamp: 'Updated this week',
-      status: habitsStatus,
-    },
-    {
-      id: 'mentor-assignment',
-      title: hasMentor ? 'Mentor confirmed' : 'Mentor assignment pending',
-      description: hasMentor
-        ? `Your mentor ${mentorFirstName || 'coach'} is ready for your next check-in.`
-        : 'We are confirming your mentor assignment. Expect an update soon.',
-      timestamp: 'Support team update',
-      status: mentorStatus,
-    },
-    {
-      id: 'peer-matching',
-      title: peerMatchCount > 0 ? 'Peer match ready' : 'Peer matching in progress',
-      description:
-        peerMatchCount > 0
-          ? 'Review your latest peer connection in Peer Connect.'
-          : 'We are still pairing you with a peer ally.',
-      timestamp: peerMatchCount > 0 ? 'New match available' : 'Matching in progress',
-      status: peerStatus,
-    },
-  ]
-
-  return [...activityEntries, ...statusItems]
+  return ledgerEntries
+    .filter((entry) => entry.createdAt.getTime() >= cutoffTime)
+    .sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime())
+    .map((entry) => ({
+      id: entry.id,
+      title: entry.activityTitle,
+      description: `${entry.points} points earned.`,
+      timestamp: formatDistanceToNow(entry.createdAt, { addSuffix: true }),
+      status: entry.points > 0 ? 'complete' : 'attention',
+    }))
 }
-
 /**
  * View-model hook: normalizes data + centralizes derived values
  */
@@ -181,11 +117,8 @@ function useWeeklyGlanceViewModel() {
   // Normalize collection shapes so UI never has to guard against undefined
   const weeklyHabits = useMemo(() => data.weeklyHabits ?? [], [data.weeklyHabits])
   const peerMatches = useMemo(() => data.peerMatches ?? [], [data.peerMatches])
-  const activePeerMatches = useMemo(
-    () => peerMatches.filter(match => match.matchStatus !== 'expired'),
-    [peerMatches],
-  )
 
+  // Weekly variable names are deliberate until backend period support is generalized.
   const weekRange = useMemo(() => getWeekDateRange(), [])
   const daysRemaining = useMemo(() => getDaysRemainingInWeek(), [])
 
@@ -218,33 +151,13 @@ function useWeeklyGlanceViewModel() {
     console.log('[WeeklyGlance] Parallel window tracking enabled')
   }
 
-  const mentorProfile = data.supportAssignment?.mentorProfile
   const ledgerEntries = useMemo(() => data.ledgerEntries ?? [], [data.ledgerEntries])
   const activityFeedItems = useMemo(
     () =>
       buildWeeklyActivityFeed({
-        earnedPoints,
-        targetPoints,
-        weekNumber: data.weekNumber,
-        daysRemaining,
-        completedHabits,
-        totalHabits: weeklyHabits.length,
-        hasMentor: !!mentorProfile,
-        mentorFirstName: mentorProfile?.firstName ?? null,
-        peerMatchCount: activePeerMatches.length,
         ledgerEntries,
       }),
-      [
-        earnedPoints,
-        targetPoints,
-        data.weekNumber,
-        daysRemaining,
-        completedHabits,
-        weeklyHabits.length,
-        mentorProfile,
-        activePeerMatches.length,
-        ledgerEntries,
-      ]
+      [ledgerEntries]
     )
 
   return {
@@ -288,6 +201,7 @@ export const WeeklyGlancePage = () => {
 
   // Week advancement eligibility tracking
   const { eligibility, loading: eligibilityLoading, error: eligibilityError } = useWeekAdvancementCriteria(profile)
+  const shouldRenderWeekStatusCard = eligibilityLoading || Boolean(eligibilityError) || Boolean(eligibility)
 
   const [isBuildVillageOpen, setIsBuildVillageOpen] = useState(false)
   const [villageName, setVillageName] = useState('')
@@ -415,6 +329,14 @@ export const WeeklyGlancePage = () => {
     navigate('/app/weekly-checklist')
   }, [navigate])
 
+  const handleViewPendingApprovals = useCallback(() => {
+    navigate('/app/weekly-checklist?focus=pending-approvals')
+  }, [navigate])
+
+  const handleSeeMoreActivity = useCallback(() => {
+    navigate('/app/leadership-board#points-breakdown')
+  }, [navigate])
+
   return (
     <Box p={{ base: 4, md: 6 }}>
       <Stack spacing={6}>
@@ -448,11 +370,12 @@ export const WeeklyGlancePage = () => {
         )}
 
         <Stack spacing={1}>
+          {/* Partial migration strategy: keep user copy general while weekly data contracts remain in place. */}
           <Heading size="lg" color="text.primary">
-            This Week at a Glance
+            Current Progress at a Glance
           </Heading>
           <Text color="text.primary">
-            Your personalized dashboard for weekly progress, habits, and support.
+            Your personalized dashboard for points accumulated, habits, and support.
           </Text>
         </Stack>
 
@@ -473,9 +396,9 @@ export const WeeklyGlancePage = () => {
           gap={6}
           alignItems="stretch"
         >
-          <GridItem colSpan={{ base: 1, md: 6 }} order={{ base: 1, md: 1 }}>
+          <GridItem colSpan={{ base: 1, md: 4 }} order={{ base: 1, md: 1 }}>
             {isParallelTrackingEnabled ? (
-              <WindowSummaryCard />
+              <WindowSummaryCard onNavigate={handleNavigateChecklist} />
             ) : (
               <LearnerWindowCard
                 weekLabel={`Week ${data.weekNumber} • ${weekRange.label}`}
@@ -483,13 +406,13 @@ export const WeeklyGlancePage = () => {
                 progressValue={weekProgress}
                 targetPoints={targetPoints}
                 earnedPoints={earnedPoints}
-                focusAreas={['Leadership reflection', 'Mentor session', 'Impact action']}
+                focusAreas={(data.focusAreas ?? []).map((focusArea) => focusArea.title)}
                 nextMilestone={`Week ${data.weekNumber + 1} readiness review`}
               />
             )}
           </GridItem>
 
-          <GridItem colSpan={{ base: 1, md: 6 }} order={{ base: 2, md: 2 }}>
+          <GridItem colSpan={{ base: 1, md: 4 }} order={{ base: 2, md: 2 }}>
             <WeeklyPointsCard
               data={data.weeklyPoints}
               loading={data.loading.points}
@@ -498,16 +421,28 @@ export const WeeklyGlancePage = () => {
             />
           </GridItem>
 
-          <GridItem colSpan={{ base: 1, md: 6 }} order={{ base: 3, md: 3 }}>
-            <WeekStatusSummaryCard
-              eligibility={eligibility}
-              loading={eligibilityLoading}
-              error={eligibilityError}
-            />
-          </GridItem>
+          {(!isMobile || showMore) && (
+            <GridItem colSpan={{ base: 1, md: 4 }} order={{ base: 8, md: 3 }}>
+              <PersonalityProfileCard data={data.personality} loading={data.loading.profile} />
+            </GridItem>
+          )}
+
+          {shouldRenderWeekStatusCard && (
+            <GridItem colSpan={{ base: 1, md: 6 }} order={{ base: 3, md: 4 }}>
+              <WeekStatusSummaryCard
+                eligibility={eligibility}
+                loading={eligibilityLoading}
+                error={eligibilityError}
+                onViewApprovals={handleViewPendingApprovals}
+              />
+            </GridItem>
+          )}
 
           <GridItem colSpan={{ base: 1, md: 8 }} order={{ base: 5, md: 5 }}>
-            <ActivityFeedCard items={[...activityFeedItems]} />
+            <ActivityFeedCard
+              items={[...activityFeedItems]}
+              onSeeMore={handleSeeMoreActivity}
+            />
           </GridItem>
 
           <GridItem colSpan={{ base: 1, md: 4 }} order={{ base: 6, md: 6 }}>
@@ -528,13 +463,7 @@ export const WeeklyGlancePage = () => {
           </GridItem>
 
           {(!isMobile || showMore) && (
-            <GridItem colSpan={{ base: 1, md: 4 }} order={{ base: 8, md: 8 }}>
-              <PersonalityProfileCard data={data.personality} loading={data.loading.profile} />
-            </GridItem>
-          )}
-
-          {(!isMobile || showMore) && (
-            <GridItem colSpan={{ base: 1, md: 4 }} order={{ base: 9, md: 9 }}>
+            <GridItem colSpan={{ base: 1, md: 4 }} order={{ base: 9, md: 8 }}>
               <PeopleImpactedCard count={data.impactCount} loading={data.loading.impact} />
             </GridItem>
           )}
@@ -561,3 +490,4 @@ export const WeeklyGlancePage = () => {
     </Box>
   )
 }
+

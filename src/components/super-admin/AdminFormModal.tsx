@@ -1,5 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react'
 import {
+  Alert,
+  AlertIcon,
   Box,
   Button,
   FormControl,
@@ -58,6 +60,7 @@ export const AdminFormModal: React.FC<AdminFormModalProps> = ({
   const [formData, setFormData] = useState<AdminFormData>(defaultState)
   const [errors, setErrors] = useState<Record<string, string>>({})
   const [submitting, setSubmitting] = useState(false)
+  const [submitError, setSubmitError] = useState<string | null>(null)
 
   useEffect(() => {
     if (initialData) {
@@ -72,6 +75,11 @@ export const AdminFormModal: React.FC<AdminFormModalProps> = ({
     }
   }, [initialData])
 
+  useEffect(() => {
+    if (isOpen) return
+    setSubmitError(null)
+  }, [isOpen])
+
   const isEdit = mode === 'edit'
 
   const emailValid = useMemo(() => /\S+@\S+\.\S+/.test(formData.email || ''), [formData.email])
@@ -83,6 +91,11 @@ export const AdminFormModal: React.FC<AdminFormModalProps> = ({
     () => formData.assignedOrganizations.map((orgId) => organizationLookup.get(orgId)).filter(Boolean),
     [formData.assignedOrganizations, organizationLookup],
   )
+  const willClearPartnerAssignments =
+    isEdit &&
+    initialData?.role === 'partner' &&
+    formData.role !== 'partner' &&
+    (initialData?.assignedOrganizations?.length || 0) > 0
 
   const validate = () => {
     const nextErrors: Record<string, string> = {}
@@ -111,9 +124,16 @@ export const AdminFormModal: React.FC<AdminFormModalProps> = ({
   const handleSubmit = async () => {
     if (!validate()) return
     setSubmitting(true)
-    await onSubmit(formData)
-    setSubmitting(false)
-    onClose()
+    setSubmitError(null)
+    try {
+      await onSubmit(formData)
+      onClose()
+    } catch (error) {
+      console.error(error)
+      setSubmitError(error instanceof Error ? error.message : 'Unable to save admin access changes.')
+    } finally {
+      setSubmitting(false)
+    }
   }
 
   return (
@@ -163,6 +183,12 @@ export const AdminFormModal: React.FC<AdminFormModalProps> = ({
               <Text fontSize="sm" color="gray.500" mb={2}>
                 For Partner role users, selected organizations drive dashboard visibility and data access.
               </Text>
+              {willClearPartnerAssignments ? (
+                <Alert status="warning" borderRadius="md" mb={3}>
+                  <AlertIcon />
+                  Changing this user away from Partner will clear their existing organization assignments on save.
+                </Alert>
+              ) : null}
               {organizations.length ? (
                 <OrganizationAssignmentsPicker
                   organizations={organizations}
@@ -205,6 +231,12 @@ export const AdminFormModal: React.FC<AdminFormModalProps> = ({
                 {formData.accountStatus === 'active' ? 'Active' : 'Suspended'}
               </Text>
             </FormControl>
+            {submitError ? (
+              <Alert status="error" borderRadius="md">
+                <AlertIcon />
+                {submitError}
+              </Alert>
+            ) : null}
           </Stack>
         </ModalBody>
         <ModalFooter>

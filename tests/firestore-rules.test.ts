@@ -4,7 +4,7 @@ import {
   initializeTestEnvironment,
   RulesTestEnvironment,
 } from "@firebase/rules-unit-testing";
-import { doc, getDoc, setDoc, updateDoc, collection, query, where, getDocs, limit } from "firebase/firestore";
+import { doc, getDoc, setDoc, updateDoc, collection, collectionGroup, query, where, getDocs, limit } from "firebase/firestore";
 import { readFileSync } from "fs";
 import { resolve, dirname } from "path";
 import { fileURLToPath } from "url";
@@ -35,8 +35,12 @@ describe("Firestore Security Rules", () => {
     await testEnv.clearFirestore();
   });
 
-  function getAuthenticatedContext(uid: string, email: string = "user@example.com") {
-    return testEnv.authenticatedContext(uid, { email });
+  function getAuthenticatedContext(
+    uid: string,
+    email: string = "user@example.com",
+    claims: Record<string, unknown> = {},
+  ) {
+    return testEnv.authenticatedContext(uid, { email, ...claims });
   }
 
   function getUnauthenticatedContext() {
@@ -90,6 +94,36 @@ describe("Firestore Security Rules", () => {
       const aliceDoc = doc(db, "users/alice");
       await assertSucceeds(updateDoc(aliceDoc, { role: "partner" }));
     });
+
+    it("allows a partner to mirror points fields on users and profiles", async () => {
+      await testEnv.withSecurityRulesDisabled(async (context) => {
+        const adminDb = context.firestore();
+        await setDoc(doc(adminDb, "users/partner-user"), { role: "partner" });
+        await setDoc(doc(adminDb, "users/alice"), { role: "user", totalPoints: 100, level: 1 });
+        await setDoc(doc(adminDb, "profiles/alice"), { role: "user", totalPoints: 100, level: 1 });
+      });
+
+      const db = getAuthenticatedContext("partner-user").firestore();
+      await assertSucceeds(
+        updateDoc(doc(db, "users/alice"), {
+          totalPoints: 200,
+          level: 2,
+          pointsVersion: 2,
+        }),
+      );
+      await assertSucceeds(
+        updateDoc(doc(db, "profiles/alice"), {
+          totalPoints: 200,
+          level: 2,
+          pointsVersion: 2,
+        }),
+      );
+      await assertFails(
+        updateDoc(doc(db, "users/alice"), {
+          firstName: "Tampered",
+        }),
+      );
+    });
   });
 
   describe("Points Ledger", () => {
@@ -129,6 +163,61 @@ describe("Firestore Security Rules", () => {
     });
   });
 
+  describe("Challenges Collection", () => {
+    it("allows participant updates when challenge uses participants array", async () => {
+      await testEnv.withSecurityRulesDisabled(async (context) => {
+        const adminDb = context.firestore();
+        await setDoc(doc(adminDb, "challenges/challenge1"), {
+          participants: ["alice", "bob"],
+          challenger_id: "alice",
+          challenged_id: "bob",
+          status: "pending",
+        });
+      });
+
+      const db = getAuthenticatedContext("alice").firestore();
+      await assertSucceeds(updateDoc(doc(db, "challenges/challenge1"), {
+        status: "completed",
+        cancelled_by: "alice",
+      }));
+    });
+
+    it("allows participant updates for legacy challenges without participants array", async () => {
+      await testEnv.withSecurityRulesDisabled(async (context) => {
+        const adminDb = context.firestore();
+        await setDoc(doc(adminDb, "challenges/challenge2"), {
+          challenger_id: "alice",
+          challenged_id: "bob",
+          status: "active",
+        });
+      });
+
+      const db = getAuthenticatedContext("bob").firestore();
+      await assertSucceeds(updateDoc(doc(db, "challenges/challenge2"), {
+        status: "completed",
+        cancelled_by: "bob",
+      }));
+    });
+
+    it("blocks non-participants from updating a challenge", async () => {
+      await testEnv.withSecurityRulesDisabled(async (context) => {
+        const adminDb = context.firestore();
+        await setDoc(doc(adminDb, "challenges/challenge3"), {
+          participants: ["alice", "bob"],
+          challenger_id: "alice",
+          challenged_id: "bob",
+          status: "pending",
+        });
+      });
+
+      const db = getAuthenticatedContext("charlie").firestore();
+      await assertFails(updateDoc(doc(db, "challenges/challenge3"), {
+        status: "completed",
+        cancelled_by: "charlie",
+      }));
+    });
+  });
+
   describe("Admin Actions", () => {
     it("allows Partner to create an admin action", async () => {
       await testEnv.withSecurityRulesDisabled(async (context) => {
@@ -158,7 +247,140 @@ describe("Firestore Security Rules", () => {
     });
   });
 
+  describe("Interventions", () => {
+    it("allows a partner to create an intervention for themselves", async () => {
+      await testEnv.withSecurityRulesDisabled(async (context) => {
+        const adminDb = context.firestore();
+        await setDoc(doc(adminDb, "users/partner-user"), { role: "partner" });
+      });
+
+      const db = getAuthenticatedContext("partner-user").firestore();
+      const interventionDoc = doc(db, "interventions/case1");
+      await assertSucceeds(setDoc(interventionDoc, {
+        partner_id: "partner-user",
+        organization_code: "acme",
+        status: "active",
+        opened_at: "2026-02-13T00:00:00.000Z",
+      }));
+    });
+
+    it("fails when a partner creates an intervention for another partner id", async () => {
+      await testEnv.withSecurityRulesDisabled(async (context) => {
+        const adminDb = context.firestore();
+        await setDoc(doc(adminDb, "users/partner-user"), { role: "partner" });
+      });
+
+      const db = getAuthenticatedContext("partner-user").firestore();
+      const interventionDoc = doc(db, "interventions/case1");
+      await assertFails(setDoc(interventionDoc, {
+        partner_id: "someone-else",
+        organization_code: "acme",
+        status: "active",
+        opened_at: "2026-02-13T00:00:00.000Z",
+      }));
+    });
+
+    it("allows a partner to update their own intervention", async () => {
+      await testEnv.withSecurityRulesDisabled(async (context) => {
+        const adminDb = context.firestore();
+        await setDoc(doc(adminDb, "users/partner-user"), { role: "partner" });
+        await setDoc(doc(adminDb, "interventions/case1"), {
+          partner_id: "partner-user",
+          organization_code: "acme",
+          status: "active",
+          opened_at: "2026-02-13T00:00:00.000Z",
+        });
+      });
+
+      const db = getAuthenticatedContext("partner-user").firestore();
+      const interventionDoc = doc(db, "interventions/case1");
+      await assertSucceeds(updateDoc(interventionDoc, {
+        status: "watch",
+        status_changed_at: "2026-02-13T01:00:00.000Z",
+      }));
+    });
+  });
+
+  describe("Platform Config", () => {
+    it("allows partner/admin roles to read platform config", async () => {
+      await testEnv.withSecurityRulesDisabled(async (context) => {
+        const adminDb = context.firestore();
+        await setDoc(doc(adminDb, "users/partner-user"), { role: "partner" });
+        await setDoc(doc(adminDb, "platform_config/engagement"), { enabled: false });
+      });
+
+      const db = getAuthenticatedContext("partner-user").firestore();
+      await assertSucceeds(getDoc(doc(db, "platform_config/engagement")));
+    });
+
+    it("prevents partner/admin roles from writing platform config", async () => {
+      await testEnv.withSecurityRulesDisabled(async (context) => {
+        const adminDb = context.firestore();
+        await setDoc(doc(adminDb, "users/partner-user"), { role: "partner" });
+      });
+
+      const db = getAuthenticatedContext("partner-user").firestore();
+      await assertFails(setDoc(doc(db, "platform_config/engagement"), { enabled: true }));
+    });
+
+    it("allows super_admin to write platform config", async () => {
+      await testEnv.withSecurityRulesDisabled(async (context) => {
+        const adminDb = context.firestore();
+        await setDoc(doc(adminDb, "users/admin-user"), { role: "super_admin" });
+      });
+
+      const db = getAuthenticatedContext("admin-user").firestore();
+      await assertSucceeds(setDoc(doc(db, "platform_config/engagement"), { enabled: true }));
+    });
+  });
+
   describe("Approvals & Points Verification", () => {
+    it("allows partner to create partner-issued approvals for learners", async () => {
+      await testEnv.withSecurityRulesDisabled(async (context) => {
+        const adminDb = context.firestore();
+        await setDoc(doc(adminDb, "users/partner-user"), { role: "partner" });
+      });
+
+      const db = getAuthenticatedContext("partner-user").firestore();
+      const requestDoc = doc(db, "approvals/request-partner-issued");
+      await assertSucceeds(
+        setDoc(requestDoc, {
+          userId: "learner-1",
+          type: "partner_issued",
+          status: "approved",
+          source: {
+            partnerId: "partner-user",
+            weekNumber: 2,
+            activityId: "weekly_reflection",
+          },
+          title: "Weekly Reflection",
+        }),
+      );
+    });
+
+    it("prevents partner from creating partner-issued approval for another partner id", async () => {
+      await testEnv.withSecurityRulesDisabled(async (context) => {
+        const adminDb = context.firestore();
+        await setDoc(doc(adminDb, "users/partner-user"), { role: "partner" });
+      });
+
+      const db = getAuthenticatedContext("partner-user").firestore();
+      const requestDoc = doc(db, "approvals/request-partner-issued-invalid");
+      await assertFails(
+        setDoc(requestDoc, {
+          userId: "learner-1",
+          type: "partner_issued",
+          status: "approved",
+          source: {
+            partnerId: "other-partner",
+            weekNumber: 2,
+            activityId: "weekly_reflection",
+          },
+          title: "Weekly Reflection",
+        }),
+      );
+    });
+
     it("prevents self-approval in approvals collection", async () => {
       await testEnv.withSecurityRulesDisabled(async (context) => {
         const adminDb = context.firestore();
@@ -198,6 +420,46 @@ describe("Firestore Security Rules", () => {
     });
   });
 
+  describe("Profile Access Logs", () => {
+    it("allows authenticated users to create their own profile access logs", async () => {
+      const db = getAuthenticatedContext("alice").firestore();
+      const logDoc = doc(db, "profile_access_logs/log1");
+      await assertSucceeds(setDoc(logDoc, {
+        viewerId: "alice",
+        targetUserId: "bob",
+        allowed: true,
+        reason: "allowed",
+      }));
+    });
+
+    it("fails when viewerId does not match auth uid", async () => {
+      const db = getAuthenticatedContext("alice").firestore();
+      const logDoc = doc(db, "profile_access_logs/log1");
+      await assertFails(setDoc(logDoc, {
+        viewerId: "mallory",
+        targetUserId: "bob",
+        allowed: false,
+        reason: "denied",
+      }));
+    });
+
+    it("allows partner/admin roles to read profile access logs", async () => {
+      await testEnv.withSecurityRulesDisabled(async (context) => {
+        const adminDb = context.firestore();
+        await setDoc(doc(adminDb, "users/partner-user"), { role: "partner" });
+        await setDoc(doc(adminDb, "profile_access_logs/log1"), {
+          viewerId: "alice",
+          targetUserId: "bob",
+          allowed: true,
+          reason: "allowed",
+        });
+      });
+
+      const db = getAuthenticatedContext("partner-user").firestore();
+      await assertSucceeds(getDoc(doc(db, "profile_access_logs/log1")));
+    });
+  });
+
   describe("Organizations", () => {
     it("allows unauthenticated lookup by company code with limit 1", async () => {
       await testEnv.withSecurityRulesDisabled(async (context) => {
@@ -209,6 +471,184 @@ describe("Firestore Security Rules", () => {
       const orgs = collection(db, "organizations");
       const orgQuery = query(orgs, where("code", "==", "AB1234"), limit(1));
       await assertSucceeds(getDocs(orgQuery));
+    });
+  });
+
+  describe("Mentorship Sessions", () => {
+    it("allows a learner to query their own mentorship sessions", async () => {
+      await testEnv.withSecurityRulesDisabled(async (context) => {
+        const adminDb = context.firestore();
+        await setDoc(doc(adminDb, "mentorship_sessions/session1"), {
+          learner_id: "alice",
+          mentor_id: "mentor-1",
+          status: "scheduled",
+          topic: "Weekly check-in",
+        });
+      });
+
+      const db = getAuthenticatedContext("alice").firestore();
+      const sessionsQuery = query(
+        collection(db, "mentorship_sessions"),
+        where("learner_id", "==", "alice"),
+        where("status", "==", "scheduled"),
+      );
+      await assertSucceeds(getDocs(sessionsQuery));
+    });
+
+    it("allows a mentor to query their assigned mentorship sessions", async () => {
+      await testEnv.withSecurityRulesDisabled(async (context) => {
+        const adminDb = context.firestore();
+        await setDoc(doc(adminDb, "mentorship_sessions/session1"), {
+          learner_id: "alice",
+          mentor_id: "mentor-1",
+          status: "scheduled",
+          topic: "Goal planning",
+        });
+      });
+
+      const db = getAuthenticatedContext("mentor-1").firestore();
+      const sessionsQuery = query(
+        collection(db, "mentorship_sessions"),
+        where("mentor_id", "==", "mentor-1"),
+      );
+      await assertSucceeds(getDocs(sessionsQuery));
+    });
+
+    it("denies a user from querying another learner's mentorship sessions", async () => {
+      await testEnv.withSecurityRulesDisabled(async (context) => {
+        const adminDb = context.firestore();
+        await setDoc(doc(adminDb, "mentorship_sessions/session1"), {
+          learner_id: "alice",
+          mentor_id: "mentor-1",
+          status: "scheduled",
+          topic: "Private mentoring",
+        });
+      });
+
+      const db = getAuthenticatedContext("mallory").firestore();
+      const sessionsQuery = query(
+        collection(db, "mentorship_sessions"),
+        where("learner_id", "==", "alice"),
+      );
+      await assertFails(getDocs(sessionsQuery));
+    });
+  });
+
+  describe("Role Normalization", () => {
+    it("allows super-admin role variants to access admin collections", async () => {
+      await testEnv.withSecurityRulesDisabled(async (context) => {
+        const adminDb = context.firestore();
+        await setDoc(doc(adminDb, "users/admin-user"), { role: "super-admin" });
+        await setDoc(doc(adminDb, "upgrade_requests/request1"), {
+          user_id: "alice",
+          status: "pending",
+        });
+      });
+
+      const db = getAuthenticatedContext("admin-user").firestore();
+      await assertSucceeds(getDocs(collection(db, "upgrade_requests")));
+    });
+
+    it("allows admin synonym to access partner-or-admin collections", async () => {
+      await testEnv.withSecurityRulesDisabled(async (context) => {
+        const adminDb = context.firestore();
+        await setDoc(doc(adminDb, "users/admin-user"), { role: "admin" });
+        await setDoc(doc(adminDb, "admin_notifications/n1"), {
+          type: "upgrade_request",
+          message: "Test",
+        });
+      });
+
+      const db = getAuthenticatedContext("admin-user").firestore();
+      await assertSucceeds(getDocs(collection(db, "admin_notifications")));
+    });
+
+    it("falls back to profiles role when users role is missing", async () => {
+      await testEnv.withSecurityRulesDisabled(async (context) => {
+        const adminDb = context.firestore();
+        await setDoc(doc(adminDb, "users/admin-user"), { firstName: "Admin" });
+        await setDoc(doc(adminDb, "profiles/admin-user"), { role: "super_admin" });
+        await setDoc(doc(adminDb, "upgrade_requests/request1"), {
+          user_id: "alice",
+          status: "pending",
+        });
+      });
+
+      const db = getAuthenticatedContext("admin-user").firestore();
+      await assertSucceeds(getDocs(collection(db, "upgrade_requests")));
+    });
+
+    it("accepts super-admin role values with whitespace and separators", async () => {
+      await testEnv.withSecurityRulesDisabled(async (context) => {
+        const adminDb = context.firestore();
+        await setDoc(doc(adminDb, "users/admin-user"), { role: "  SUPER - ADMIN  " });
+        await setDoc(doc(adminDb, "upgrade_requests/request1"), {
+          user_id: "alice",
+          status: "pending",
+        });
+      });
+
+      const db = getAuthenticatedContext("admin-user").firestore();
+      await assertSucceeds(getDocs(collection(db, "upgrade_requests")));
+    });
+
+    it("falls back to userRole field when role is missing", async () => {
+      await testEnv.withSecurityRulesDisabled(async (context) => {
+        const adminDb = context.firestore();
+        await setDoc(doc(adminDb, "users/admin-user"), { userRole: "super_admin" });
+        await setDoc(doc(adminDb, "upgrade_requests/request1"), {
+          user_id: "alice",
+          status: "pending",
+        });
+      });
+
+      const db = getAuthenticatedContext("admin-user").firestore();
+      await assertSucceeds(getDocs(collection(db, "upgrade_requests")));
+    });
+
+    it("accepts boolean admin custom claim for admin reads", async () => {
+      await testEnv.withSecurityRulesDisabled(async (context) => {
+        const adminDb = context.firestore();
+        await setDoc(doc(adminDb, "upgrade_requests/request1"), {
+          user_id: "alice",
+          status: "pending",
+        });
+      });
+
+      const db = getAuthenticatedContext("admin-user", "admin@example.com", { admin: true }).firestore();
+      await assertSucceeds(getDocs(collection(db, "upgrade_requests")));
+    });
+
+    it("prefers users/profile role over stale token role", async () => {
+      await testEnv.withSecurityRulesDisabled(async (context) => {
+        const adminDb = context.firestore();
+        await setDoc(doc(adminDb, "users/admin-user"), { role: "super_admin" });
+        await setDoc(doc(adminDb, "upgrade_requests/request1"), {
+          user_id: "alice",
+          status: "pending",
+        });
+      });
+
+      const db = getAuthenticatedContext("admin-user", "admin@example.com", { role: "user" }).firestore();
+      await assertSucceeds(getDocs(collection(db, "upgrade_requests")));
+    });
+  });
+
+  describe("Weekly Points Subcollection", () => {
+    it("allows partner to query weekly_points collection group", async () => {
+      await testEnv.withSecurityRulesDisabled(async (context) => {
+        const adminDb = context.firestore();
+        await setDoc(doc(adminDb, "users/partner-user"), { role: "partner" });
+        await setDoc(doc(adminDb, "profiles/alice/weekly_points/week1"), {
+          user_id: "alice",
+          week: 1,
+          points: 1200,
+        });
+      });
+
+      const db = getAuthenticatedContext("partner-user").firestore();
+      const weeklyGroupQuery = query(collectionGroup(db, "weekly_points"), where("user_id", "==", "alice"));
+      await assertSucceeds(getDocs(weeklyGroupQuery));
     });
   });
 });

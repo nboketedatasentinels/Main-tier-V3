@@ -6,6 +6,7 @@ import {
 } from './useLeaderboardData'
 import { LeaderboardContext, normalizeLeaderboardTier } from './useLeaderboardContext'
 import { getDisplayName } from '@/utils/displayName'
+import { canViewerSeeCandidateOnLeaderboard } from '@/utils/leaderboardPrivacy'
 
 export interface LeaderboardRow {
   user: UserProfile
@@ -46,7 +47,10 @@ const isProfileInContext = (candidate: UserProfile, context: LeaderboardContext 
       return Boolean(context.clusterId && candidate.clusterId === context.clusterId)
     case 'community': {
       const tier = normalizeLeaderboardTier(candidate.transformationTier)
-      return tier === TransformationTier.INDIVIDUAL_PAID || candidate.membershipStatus === 'paid'
+      if (tier === TransformationTier.CORPORATE_MEMBER || tier === TransformationTier.CORPORATE_LEADER) {
+        return false
+      }
+      return tier === TransformationTier.INDIVIDUAL_PAID || (!tier && candidate.membershipStatus === 'paid')
     }
     case 'free':
     default:
@@ -94,12 +98,11 @@ export const useLeaderboardMetrics = ({
     const totals: Record<string, number> = {}
     segmentTransactions.forEach((tx) => {
       const createdAt = tx.createdAt ? new Date(tx.createdAt) : null
-      if (timeframe === LeaderboardTimeframe.CURRENT_JOURNEY && tx.userId !== profile?.id) return
       if (timeframeStart && createdAt && createdAt < timeframeStart) return
       totals[tx.userId] = (totals[tx.userId] || 0) + tx.points
     })
     return totals
-  }, [profile?.id, segmentTransactions, timeframe, timeframeStart])
+  }, [segmentTransactions, timeframeStart])
 
   const weeklyPoints = useMemo(() => {
     if (!profile) return 0
@@ -129,7 +132,11 @@ export const useLeaderboardMetrics = ({
 
   const leaderboardRows: LeaderboardRow[] = useMemo(() => {
     const rows = segmentProfiles
-      .filter((candidate) => candidate.privacySettings?.showOnLeaderboard !== false)
+      .filter((candidate) => canViewerSeeCandidateOnLeaderboard({
+        viewer: profile,
+        candidate,
+        context,
+      }))
       .map((user) => {
         const activePoints = timeframe === LeaderboardTimeframe.ALL_TIME
           ? user.totalPoints
@@ -148,18 +155,29 @@ export const useLeaderboardMetrics = ({
         }
       })
 
-    const sorted = rows.sort((a, b) => {
-      if (sortField === 'name') {
+    const rankedRows = [...rows]
+      .sort((a, b) => {
+        const pointDelta = b.activePoints - a.activePoints
+        if (pointDelta !== 0) return pointDelta
+
+        const aName = getDisplayName(a.user, '')
+        const bName = getDisplayName(b.user, '')
+        return aName.localeCompare(bName)
+      })
+      .map((row, index) => ({ ...row, rank: index + 1 }))
+
+    if (sortField === 'name') {
+      return [...rankedRows].sort((a, b) => {
         const aName = getDisplayName(a.user, '')
         const bName = getDisplayName(b.user, '')
         return sortDirection === 'asc' ? aName.localeCompare(bName) : bName.localeCompare(aName)
-      }
+      })
+    }
 
-      return sortDirection === 'asc' ? a.activePoints - b.activePoints : b.activePoints - a.activePoints
-    })
-
-    return sorted.map((row, index) => ({ ...row, rank: index + 1 }))
-  }, [aggregatedPoints, segmentProfiles, sortDirection, sortField, timeframe])
+    return [...rankedRows].sort((a, b) =>
+      sortDirection === 'asc' ? a.activePoints - b.activePoints : b.activePoints - a.activePoints
+    )
+  }, [aggregatedPoints, context, profile, segmentProfiles, sortDirection, sortField, timeframe])
 
   const percentile = useMemo(() => {
     if (!profile) return 'Top 100%'
@@ -173,7 +191,24 @@ export const useLeaderboardMetrics = ({
 
   const peerRows = useMemo(() => {
     const currentPoints = userRow?.activePoints || 0
-    return leaderboardRows.slice(0, 12).map((row) => ({
+    const sortedRows = [...leaderboardRows].sort((a, b) => a.rank - b.rank)
+
+    let comparisonWindow = sortedRows.slice(0, 12)
+    if (userRow) {
+      const currentIndex = sortedRows.findIndex((row) => row.user.id === userRow.user.id)
+      if (currentIndex >= 0) {
+        const windowSize = 12
+        let start = Math.max(0, currentIndex - 5)
+        let end = Math.min(sortedRows.length, start + windowSize)
+        if (end - start < windowSize) {
+          start = Math.max(0, end - windowSize)
+        }
+        comparisonWindow = sortedRows.slice(start, end)
+      }
+    }
+
+    return comparisonWindow
+      .map((row) => ({
       ...row,
       delta: row.activePoints - currentPoints,
     }))

@@ -7,6 +7,7 @@ import {
   fetchAvailableCourses,
   fetchOrganizationByCode,
   fetchOrganizationEngagementStats,
+  fetchOrganizationInvitations,
   fetchOrganizationUsers,
   logOrganizationAccessAttempt,
 } from '@/services/organizationService'
@@ -21,6 +22,7 @@ vi.mock('@/services/organizationService', () => ({
   fetchAvailableCourses: vi.fn(),
   fetchOrganizationByCode: vi.fn(),
   fetchOrganizationEngagementStats: vi.fn(),
+  fetchOrganizationInvitations: vi.fn(),
   fetchOrganizationUsers: vi.fn(),
   logOrganizationAccessAttempt: vi.fn(),
 }))
@@ -53,6 +55,14 @@ const TestComponent = () => {
   return <div data-testid="status">{organization?.code}</div>
 }
 
+const InvitationListTestComponent = () => {
+  const { loading, invitations } = useOrganizationDetails('acme')
+  if (loading) {
+    return <div data-testid="invites">loading</div>
+  }
+  return <div data-testid="invites">{invitations.map((invite) => invite.id).join(',')}</div>
+}
+
 describe('useOrganizationDetails partner access', () => {
   beforeEach(() => {
     vi.clearAllMocks()
@@ -71,6 +81,7 @@ describe('useOrganizationDetails partner access', () => {
     })
     ;(canAccessOrganization as unknown as { mockResolvedValue: (value: unknown) => void }).mockResolvedValue(true)
     ;(fetchOrganizationUsers as unknown as { mockResolvedValue: (value: unknown) => void }).mockResolvedValue([])
+    ;(fetchOrganizationInvitations as unknown as { mockResolvedValue: (value: unknown) => void }).mockResolvedValue([])
     ;(
       fetchOrganizationEngagementStats as unknown as { mockResolvedValue: (value: unknown) => void }
     ).mockResolvedValue({
@@ -92,5 +103,50 @@ describe('useOrganizationDetails partner access', () => {
     })
 
     expect(logOrganizationAccessAttempt).not.toHaveBeenCalled()
+  })
+
+  it('excludes pending email invitations when the user already exists in the organization', async () => {
+    ;(fetchOrganizationUsers as unknown as { mockResolvedValue: (value: unknown) => void }).mockResolvedValue([
+      {
+        id: 'user-1',
+        name: 'Existing Member',
+        email: 'existing.member@example.com',
+        role: 'user',
+        membershipStatus: 'paid',
+        accountStatus: 'active',
+      },
+    ])
+    ;(fetchOrganizationInvitations as unknown as { mockResolvedValue: (value: unknown) => void }).mockResolvedValue([
+      {
+        id: 'inv-existing',
+        name: 'Existing Member',
+        email: 'Existing.Member@Example.com',
+        role: 'user',
+        method: 'email',
+        status: 'pending',
+      },
+      {
+        id: 'inv-new',
+        name: 'New Invitee',
+        email: 'new.user@example.com',
+        role: 'user',
+        method: 'email',
+        status: 'pending',
+      },
+      {
+        id: 'inv-code',
+        name: 'Code Invitee',
+        role: 'user',
+        method: 'one_time_code',
+        status: 'pending',
+        code: 'ABCD1234',
+      },
+    ])
+
+    render(<InvitationListTestComponent />)
+
+    await waitFor(() => {
+      expect(screen.getByTestId('invites').textContent).toBe('inv-new,inv-code')
+    })
   })
 })

@@ -34,7 +34,7 @@ import {
   resolveJourneyType,
 } from '@/utils/journeyType'
 import { removeUndefinedFields } from '@/utils/firestore'
-import { COURSE_DETAILS_MAPPING } from '@/utils/courseMappings'
+import { COURSE_DETAILS_MAPPING, resolveCourseIdFromMapping } from '@/utils/courseMappings'
 import { inviteUsersBulk } from './invitationService'
 import {
   syncOrganizationPartnerChange,
@@ -42,6 +42,7 @@ import {
 } from './partnerAssignmentSyncService'
 import { normalizeRole } from '@/utils/role'
 export { checkOrganizationAccess, fetchOrganizationEngagementStats, fetchOrganizationUsers } from './organizationUserService'
+export { fetchOrganizationInvitations } from './invitationService'
 
 const safeCodeChars = '23456789ABCDEFGHJKLMNPQRSTUVWXYZ'
 
@@ -238,10 +239,11 @@ export const determineClusterFromTeamSize = (teamSize?: number) => {
 }
 
 export const fetchAvailableCourses = async (): Promise<CourseOption[]> => {
-  const mappingEntries = Object.entries(COURSE_DETAILS_MAPPING).filter(([, details]) => Boolean(details?.slug))
-  const mappingBySlug = new Map<string, { title: string; description?: string }>(
-    mappingEntries.map(([title, details]) => [details.slug, { title, description: details.description }]),
-  )
+  const mappingEntries = Object.entries(COURSE_DETAILS_MAPPING).filter(([, details]) => {
+    if (!details?.slug) return false
+    // Super admin assignment should only offer the current challenge-page catalog.
+    return typeof details.link === 'string' && details.link.includes('/challenge-page/')
+  })
   const mappedFallback: CourseOption[] = mappingEntries
     .map(([title, details]) => ({ id: details.slug, title, description: details.description }))
     .sort((a, b) => a.title.localeCompare(b.title))
@@ -249,27 +251,34 @@ export const fetchAvailableCourses = async (): Promise<CourseOption[]> => {
   try {
     const snapshot = await getDocs(coursesCollection)
 
-    const courseMap = new Map<string, CourseOption>()
+    // Keep mapping as the canonical source of available courses and IDs.
+    const courseMap = new Map<string, CourseOption>(mappedFallback.map((course) => [course.id, course]))
 
     snapshot.docs.forEach((docSnap) => {
-      const data = docSnap.data() as { title?: string; name?: string; description?: string }
-      const mappingMatch = mappingBySlug.get(docSnap.id)
-      const title = (data.title || data.name || mappingMatch?.title || 'Untitled course').trim()
-      const description = data.description || mappingMatch?.description
-      courseMap.set(docSnap.id, { id: docSnap.id, title, description })
-    })
-
-    mappedFallback.forEach((course) => {
-      const existing = courseMap.get(course.id)
-      if (!existing) {
-        courseMap.set(course.id, course)
-        return
+      const data = docSnap.data() as {
+        title?: string
+        name?: string
+        description?: string
+        slug?: string
+        courseId?: string
       }
 
-      courseMap.set(course.id, {
+      const candidateIds = [docSnap.id, data.slug, data.courseId, data.title, data.name].filter(
+        (value): value is string => typeof value === 'string' && value.trim().length > 0,
+      )
+      const mappedId = candidateIds
+        .map((value) => resolveCourseIdFromMapping(value))
+        .find((value) => courseMap.has(value))
+
+      // Ignore stale/unmapped Firestore docs for admin course assignment options.
+      if (!mappedId) return
+
+      const existing = courseMap.get(mappedId)
+      if (!existing) return
+
+      courseMap.set(mappedId, {
         ...existing,
-        title: existing.title && existing.title !== 'Untitled course' ? existing.title : course.title,
-        description: existing.description || course.description,
+        description: existing.description || data.description,
       })
     })
 
@@ -409,6 +418,7 @@ const buildLeadershipAuditEntry = (params: {
   organizationId: params.organizationId,
   userId: params.userId ?? null,
   adminId: params.actorId,
+  createdBy: params.actorId,
   createdAt: serverTimestamp(),
   metadata: {
     role: params.role,
@@ -640,26 +650,40 @@ export const createOrganizationWithInvitations = async (
   invitations: InvitationPayload[],
   adminContext?: { adminId?: string; adminName?: string },
 ): Promise<{ organizationId: string; invitationResult: BulkInvitationResult | null }> => {
-  const { createdAt: _createdAt, updatedAt: _updatedAt, ...organizationData } = organization
+  const { createdAt, updatedAt, ...organizationData } = organization
+  void updatedAt
   const payload: Omit<OrganizationRecord, 'createdAt' | 'updatedAt'> & {
     createdAt: Timestamp | ReturnType<typeof serverTimestamp>
     updatedAt?: Timestamp | ReturnType<typeof serverTimestamp>
   } = {
     ...organizationData,
-    createdAt: coerceCreatedAt(organization.createdAt),
+    createdAt: coerceCreatedAt(createdAt),
   }
 
   const orgRef = await addDoc(orgCollection, { ...payload, updatedAt: serverTimestamp() })
+  const requestActorId = auth.currentUser?.uid || null
+  const actorId = adminContext?.adminId || getActorId()
 
-  await addDoc(adminActivityCollection, {
-    action: 'Organization created',
-    organizationName: organization.name,
-    organizationCode: organization.code,
-    adminId: adminContext?.adminId,
-    adminName: adminContext?.adminName,
-    createdAt: serverTimestamp(),
-    metadata: { via: 'CreateOrganizationModal' },
-  })
+  try {
+    await addDoc(adminActivityCollection, {
+      action: 'Organization created',
+      organizationName: organization.name,
+      organizationCode: organization.code,
+      adminId: actorId,
+      adminName: adminContext?.adminName,
+      // Must match request.auth.uid to satisfy Firestore rules.
+      createdBy: requestActorId || actorId,
+      createdAt: serverTimestamp(),
+      metadata: { via: 'CreateOrganizationModal' },
+    })
+  } catch (auditError) {
+    console.warn('[OrganizationService] Organization created, but audit log write failed.', {
+      organizationId: orgRef.id,
+      actorId,
+      requestActorId,
+      error: (auditError as Error)?.message || auditError,
+    })
+  }
 
   if (!invitations.length) {
     return { organizationId: orgRef.id, invitationResult: null }

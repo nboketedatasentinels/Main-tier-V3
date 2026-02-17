@@ -28,6 +28,8 @@ import {
   StatNumber,
   Tag,
   Text,
+  Tooltip,
+  useDisclosure,
   VStack,
 } from '@chakra-ui/react'
 import {
@@ -49,6 +51,7 @@ import {
 import { format, formatDistanceToNow, startOfWeek } from 'date-fns'
 import { Link as RouterLink, useNavigate } from 'react-router-dom'
 import {
+  DocumentData,
   Timestamp,
   collection,
   doc,
@@ -64,6 +67,8 @@ import { useAuth } from '@/hooks/useAuth'
 import { useOrganizationLeadership } from '@/hooks/useOrganizationLeadership'
 import { isFreeUser } from '@/utils/membership'
 import { getDisplayName } from '@/utils/displayName'
+import { UpgradePromptModal } from '@/components/UpgradePromptModal'
+import { leadershipQuotes } from '@/services/quotes'
 
 interface WeeklyAggregation {
   id: string
@@ -117,16 +122,6 @@ interface FAQEntry {
   answer: string
 }
 
-const inspirationQuotes = [
-  'You are never too small to make a difference. — Greta Thunberg',
-  'Leadership is a choice, not a rank. — Simon Sinek',
-  'Be the change you wish to see in the world. — Mahatma Gandhi',
-  'Act as if what you do makes a difference. It does. — William James',
-  'Small deeds done are better than great deeds planned. — Peter Marshall',
-  'The future depends on what you do today. — Mahatma Gandhi',
-  'Courage starts with showing up. — Brené Brown',
-]
-
 const faqFallback = {
   question: 'How do I keep momentum each week?',
   answer: 'Finish your checklist early, schedule your mentor session, and log small wins daily.',
@@ -173,7 +168,7 @@ const couponLink =
 const useRealtimeCollection = <T,>(
   path: string,
   constraints: QueryConstraint[],
-  mapper: (docId: string, data: Record<string, any>) => T,
+  mapper: (docId: string, data: DocumentData) => T,
 ) => {
   const [data, setData] = useState<T[]>([])
   const [loading, setLoading] = useState(true)
@@ -196,8 +191,11 @@ const useRealtimeCollection = <T,>(
 export const CompanyDashboard: React.FC = () => {
   const { profile } = useAuth()
   const navigate = useNavigate()
+  const { isOpen: isUpgradeOpen, onOpen: onUpgradeOpen, onClose: onUpgradeClose } = useDisclosure()
 
   const [upgradeDismissed, setUpgradeDismissed] = useState(false)
+  const [upgradeFeatureName, setUpgradeFeatureName] = useState('Premium Feature')
+  const [upgradeBenefits, setUpgradeBenefits] = useState<string[]>([])
   const [faq, setFaq] = useState(faqFallback)
   const [liftProgress, setLiftProgress] = useState<LiftProgress | null>(null)
 
@@ -360,8 +358,17 @@ export const CompanyDashboard: React.FC = () => {
     : 'Take the 16Personalities assessment to unlock insights.'
 
   const weeklyQuote = useMemo(() => {
+    if (leadershipQuotes.length === 0) {
+      return {
+        week_number: 1,
+        quote_text: 'Join the movement. Take one small step today toward your goal.',
+        author: 'T4L Community',
+        category: 'Inspiration',
+      }
+    }
     const weekNumber = Number(format(weekStart, 'I'))
-    return inspirationQuotes[weekNumber % inspirationQuotes.length]
+    const quoteIndex = (weekNumber - 1) % leadershipQuotes.length
+    return leadershipQuotes[quoteIndex]
   }, [weekStart])
 
   const weeklyTargetStatus = useMemo(() => {
@@ -388,6 +395,17 @@ export const CompanyDashboard: React.FC = () => {
     localStorage.setItem('company-dashboard-upgrade-dismissed', 'true')
     setUpgradeDismissed(true)
   }, [])
+
+  const promptLeadershipUpgrade = useCallback(() => {
+    setUpgradeFeatureName('Leadership Council')
+    setUpgradeBenefits([
+      'Schedule leadership council sessions',
+      'Get premium mentor collaboration tools',
+      'Access advanced leadership tracks',
+      'Build consistent accountability routines',
+    ])
+    onUpgradeOpen()
+  }, [onUpgradeOpen])
 
   const peerWeekRange = useMemo(() => {
     const start = weekStart
@@ -468,15 +486,32 @@ export const CompanyDashboard: React.FC = () => {
 
         <HStack spacing={2} mt={2}>
           {(role === 'mentor' || role === 'both') && lead?.email && (
-            <Button
-              as={Link}
-              href="/app/leadership-council"
-              leftIcon={<CalendarClock size={16} />}
-              size="sm"
-              variant="outline"
-            >
-              Schedule
-            </Button>
+            isFreeTierUser ? (
+              <Tooltip label="Upgrade to schedule leadership council sessions." hasArrow openDelay={200}>
+                <Box>
+                  <Button
+                    leftIcon={<CalendarClock size={16} />}
+                    size="sm"
+                    variant="outline"
+                    onClick={promptLeadershipUpgrade}
+                    opacity={0.55}
+                    filter="grayscale(1)"
+                  >
+                    Schedule
+                  </Button>
+                </Box>
+              </Tooltip>
+            ) : (
+              <Button
+                as={RouterLink}
+                to="/app/leadership-council"
+                leftIcon={<CalendarClock size={16} />}
+                size="sm"
+                variant="outline"
+              >
+                Schedule
+              </Button>
+            )
           )}
           {(role === 'ambassador' || role === 'both') && lead?.email && (
             <Button
@@ -534,7 +569,7 @@ export const CompanyDashboard: React.FC = () => {
 
       <Box>
           <HStack spacing={3} align={{ base: 'flex-start', md: 'center' }} flexWrap="wrap" mb={2}>
-            <Heading size="lg">This Week at a Glance</Heading>
+            <Heading size="lg">Progress at a Glance</Heading>
             {villageDisplayName && (
               <Badge colorScheme="purple" borderRadius="full">
                 for {villageDisplayName}
@@ -556,7 +591,7 @@ export const CompanyDashboard: React.FC = () => {
                 <Flex justify="space-between" align="flex-start" mb={4}>
                   <Box>
                     <Text fontWeight="bold" color="gray.500" textTransform="uppercase" fontSize="sm">
-                      Weekly Points
+                      Points Accumulated
                     </Text>
                     <Heading size="lg">
                       {weeklyLoading ? <Skeleton height="28px" width="120px" /> : weekly?.totalPoints || 0}
@@ -569,7 +604,7 @@ export const CompanyDashboard: React.FC = () => {
                     </HStack>
                   </Box>
                   <Tag colorScheme="yellow" size="lg">
-                    Target: {weekly?.targetPoints || 12000} pts
+                    Cycle target: {weekly?.targetPoints || 12000} pts
                   </Tag>
                 </Flex>
 
@@ -584,7 +619,7 @@ export const CompanyDashboard: React.FC = () => {
                         : `${Math.abs(weeklyTargetStatus.difference).toLocaleString()} pts to reach baseline`}
                     </Text>
                   </VStack>
-                  <Badge colorScheme="yellow">Weekly target status</Badge>
+                  <Badge colorScheme="yellow">Cycle target status</Badge>
                 </Flex>
 
                 <SimpleGrid columns={{ base: 1, md: 2 }} spacing={3}>
@@ -740,9 +775,9 @@ export const CompanyDashboard: React.FC = () => {
                 <Icon as={Sparkles} color="orange.400" />
               </HStack>
               <Text fontStyle="italic" mb={1}>
-                "{weeklyQuote.split('—')[0].trim()}"
+                "{weeklyQuote.quote_text}"
               </Text>
-              <Text color="gray.600">— {weeklyQuote.split('—')[1]?.trim()}</Text>
+              <Text color="gray.600">- {weeklyQuote.author}</Text>
               <Text mt={2} color="gray.500" fontSize="sm">
                 Fresh perspective to share with your team
               </Text>
@@ -974,9 +1009,14 @@ export const CompanyDashboard: React.FC = () => {
                       </Button>
                     </VStack>
                   ) : (
-                    <Text color="gray.600" fontSize="sm" mt={1}>
-                      Coming soon
-                    </Text>
+                    <VStack align="flex-start" spacing={2} mt={1}>
+                      <Text color="gray.600" fontSize="sm">
+                        Track your standing in the Leadership Board.
+                      </Text>
+                      <Button size="sm" variant="outline" as={RouterLink} to="/app/leadership-board">
+                        Open leaderboard
+                      </Button>
+                    </VStack>
                   )}
                 </Box>
                 <Box p={3} borderRadius="md" border="1px solid" borderColor="border.control" bg="gray.50">
@@ -1089,8 +1129,16 @@ export const CompanyDashboard: React.FC = () => {
           </Card>
         )}
       </Grid>
+
+      <UpgradePromptModal
+        featureName={upgradeFeatureName}
+        benefits={upgradeBenefits.length ? upgradeBenefits : ['Unlock premium collaboration features']}
+        isOpen={isUpgradeOpen}
+        onClose={onUpgradeClose}
+      />
     </Stack>
   )
 }
 
 export default CompanyDashboard
+

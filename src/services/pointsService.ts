@@ -38,6 +38,92 @@ const parseDate = (val: unknown): Date | null => {
 };
 
 const RETRYABLE_TRANSACTION_CODES = new Set(["aborted", "failed-precondition", "unavailable"]);
+const FIRESTORE_DOCUMENT_ID_MAX_BYTES = 1500;
+const textEncoder = new TextEncoder();
+
+const getActivityLimits = (activity: ActivityDef) => ({
+  maxPerWeek: activity.activityPolicy?.maxPerWeek ?? activity.maxPerWeek ?? null,
+  maxPerWindow: activity.activityPolicy?.maxPerWindow ?? activity.maxPerMonth ?? null,
+  maxTotal: activity.activityPolicy?.maxTotal ?? null,
+});
+
+const getUtf8ByteLength = (value: string) => textEncoder.encode(value).length;
+
+const shortDeterministicHash = (input: string) => {
+  // FNV-1a 32-bit hash; deterministic and compact for document-id suffixes.
+  let hash = 0x811c9dc5;
+  for (let i = 0; i < input.length; i += 1) {
+    hash ^= input.charCodeAt(i);
+    hash = Math.imul(hash, 0x01000193);
+  }
+  return (hash >>> 0).toString(16).padStart(8, "0").slice(0, 8);
+};
+
+const truncateToUtf8ByteBudget = (value: string, budget: number) => {
+  if (budget <= 0) return "";
+  let result = "";
+  for (const char of value) {
+    const candidate = result + char;
+    if (getUtf8ByteLength(candidate) > budget) break;
+    result = candidate;
+  }
+  return result;
+};
+
+const normalizeClaimRef = (params: {
+  claimRef: string;
+  byteBudget: number;
+}) => {
+  const { claimRef, byteBudget } = params;
+  if (byteBudget <= 0) return "";
+
+  const sanitizedClaimRef = claimRef.replace(/[^a-zA-Z0-9_.-]/g, "_");
+  if (getUtf8ByteLength(sanitizedClaimRef) <= byteBudget) {
+    return sanitizedClaimRef;
+  }
+
+  const hash = shortDeterministicHash(claimRef);
+  const suffix = `_${hash}`;
+  const suffixBytes = getUtf8ByteLength(suffix);
+  if (suffixBytes > byteBudget) {
+    return truncateToUtf8ByteBudget(hash, byteBudget);
+  }
+
+  const prefixBudget = byteBudget - suffixBytes;
+  const truncatedPrefix = truncateToUtf8ByteBudget(sanitizedClaimRef, prefixBudget);
+  return `${truncatedPrefix}${suffix}`;
+};
+
+const buildLedgerDocumentId = (params: {
+  uid: string;
+  weekNumber: number;
+  activityId: string;
+  claimRef?: string;
+}) => {
+  const { uid, weekNumber, activityId, claimRef } = params;
+  const baseId = `${uid}__w${weekNumber}__${activityId}`;
+
+  if (!claimRef) {
+    if (getUtf8ByteLength(baseId) > FIRESTORE_DOCUMENT_ID_MAX_BYTES) {
+      throw new Error("Ledger document ID exceeds Firestore 1500-byte limit");
+    }
+    return baseId;
+  }
+
+  const baseWithClaimSeparator = `${baseId}__`;
+  const remainingByteBudget =
+    FIRESTORE_DOCUMENT_ID_MAX_BYTES - getUtf8ByteLength(baseWithClaimSeparator);
+  const normalizedClaimRef = normalizeClaimRef({
+    claimRef,
+    byteBudget: remainingByteBudget,
+  });
+
+  const finalId = `${baseWithClaimSeparator}${normalizedClaimRef}`;
+  if (getUtf8ByteLength(finalId) > FIRESTORE_DOCUMENT_ID_MAX_BYTES) {
+    throw new Error("Ledger document ID exceeds Firestore 1500-byte limit after claimRef normalization");
+  }
+  return finalId;
+};
 
 const runTransactionWithRetry = async <T>(
   operation: (transaction: Transaction) => Promise<T>,
@@ -68,8 +154,9 @@ export async function awardChecklistPoints(params: {
   weekNumber: number;
   activity: ActivityDef;
   source?: string;
+  claimRef?: string;
 }) {
-  const { uid, journeyType, weekNumber, activity, source = "weekly_checklist" } = params;
+  const { uid, journeyType, weekNumber, activity, source = "weekly_checklist", claimRef } = params;
 
   if (!uid) throw new Error('[PointsService] uid is required')
   if (!journeyType) throw new Error('[PointsService] journeyType is required')
@@ -82,8 +169,13 @@ export async function awardChecklistPoints(params: {
 
   const monthNumber = getMonthNumber(weekNumber);
   const weeklyTarget = JOURNEY_META[journeyType].weeklyTarget;
+  const limits = getActivityLimits(activity);
 
-  const ledgerRef = doc(db, "pointsLedger", `${uid}__w${weekNumber}__${activity.id}`);
+  const ledgerRef = doc(
+    db,
+    "pointsLedger",
+    buildLedgerDocumentId({ uid, weekNumber, activityId: activity.id, claimRef })
+  );
   const progressRef = doc(db, "weeklyProgress", `${uid}__${weekNumber}`);
   const ledgerQuery = query(
     collection(db, "pointsLedger"),
@@ -109,6 +201,11 @@ export async function awardChecklistPoints(params: {
     orderBy("weekNumber", "desc"),
     limit(1)
   );
+  const totalActivityQuery = query(
+    collection(db, "pointsLedger"),
+    where("uid", "==", uid),
+    where("activityId", "==", activity.id)
+  );
 
   const activeChallengesQuery = query(
     collection(db, "challenges"),
@@ -121,6 +218,7 @@ export async function awardChecklistPoints(params: {
       weeklyActivitySnapshot,
       windowActivitySnapshot,
       lastActivitySnapshot,
+      totalActivitySnapshot,
       activeChallengesSnapshot,
       profileSnap,
     ] = await Promise.all([
@@ -128,11 +226,16 @@ export async function awardChecklistPoints(params: {
       getDocs(weeklyActivityQuery),
       getDocs(windowActivityQuery),
       getDocs(lastActivityQuery),
+      getDocs(totalActivityQuery),
       getDocs(activeChallengesQuery),
       getDoc(doc(db, "profiles", uid)),
     ]);
 
-    const companyId = profileSnap.exists() ? profileSnap.data()?.companyId : null;
+    const profileData = profileSnap.exists() ? profileSnap.data() : null;
+    const companyId = profileData?.companyId || null;
+    const companyCode = profileData?.companyCode || null;
+    const villageId = profileData?.villageId || null;
+    const clusterId = profileData?.clusterId || null;
 
     await runTransactionWithRetry(async (tx) => {
       const [ledgerDoc, progressDoc, userDoc] = await Promise.all([
@@ -143,13 +246,16 @@ export async function awardChecklistPoints(params: {
 
       if (ledgerDoc.exists()) return;
 
-      const maxPerWeek = activity.maxPerWeek ?? 1;
-      if (maxPerWeek && weeklyActivitySnapshot.size >= maxPerWeek) {
+      if (limits.maxPerWeek && weeklyActivitySnapshot.size >= limits.maxPerWeek) {
         throw new Error("Weekly activity limit reached");
       }
 
-      if (activity.maxPerMonth && windowActivitySnapshot.size >= activity.maxPerMonth) {
+      if (limits.maxPerWindow && windowActivitySnapshot.size >= limits.maxPerWindow) {
         throw new Error("Window activity limit reached");
+      }
+
+      if (limits.maxTotal && totalActivitySnapshot.size >= limits.maxTotal) {
+        throw new Error("Total activity limit reached");
       }
 
       if (activity.cooldownWeeks && lastActivitySnapshot.size > 0) {
@@ -191,6 +297,7 @@ export async function awardChecklistPoints(params: {
         points: activity.points,
         createdAt: serverTimestamp(),
         source,
+        claimRef: claimRef ?? null,
         approvalType: activity.approvalType,
       });
 
@@ -240,6 +347,9 @@ export async function awardChecklistPoints(params: {
         reason: activity.title,
         createdAt: serverTimestamp(),
         companyId: companyId || null,
+        companyCode: companyCode || null,
+        villageId: villageId || null,
+        clusterId: clusterId || null,
       });
 
       // Update active/pending challenges metrics
@@ -289,13 +399,68 @@ export async function awardChecklistPoints(params: {
   }
 }
 
+export async function reconcileUserPointsFromLedger(uid: string): Promise<{
+  totalPoints: number;
+  level: number;
+}> {
+  if (!uid) throw new Error("[PointsService] uid is required");
+
+  const ledgerSnapshot = await getDocs(
+    query(collection(db, "pointsLedger"), where("uid", "==", uid))
+  );
+
+  const totalPoints = ledgerSnapshot.docs.reduce((sum, docSnap) => {
+    const rawPoints = docSnap.data()?.points;
+    return sum + (typeof rawPoints === "number" ? rawPoints : 0);
+  }, 0);
+
+  const level = calculateLevel(totalPoints);
+
+  await runTransactionWithRetry(async (tx) => {
+    const userRef = doc(db, "users", uid);
+    const profileRef = doc(db, "profiles", uid);
+    const [userDoc, profileDoc] = await Promise.all([tx.get(userRef), tx.get(profileRef)]);
+
+    const basePayload = {
+      totalPoints,
+      level,
+      updatedAt: serverTimestamp(),
+    };
+
+    if (userDoc.exists()) {
+      tx.set(
+        userRef,
+        {
+          ...basePayload,
+          pointsVersion: increment(1),
+        },
+        { merge: true }
+      );
+    }
+
+    if (profileDoc.exists()) {
+      tx.set(
+        profileRef,
+        {
+          ...basePayload,
+          pointsVersion: increment(1),
+        },
+        { merge: true }
+      );
+    }
+  });
+
+  return { totalPoints, level };
+}
+
 export async function revokeChecklistPoints(params: {
   uid: string;
   journeyType: JourneyType;
   weekNumber: number;
   activity: ActivityDef;
+  claimRef?: string;
 }) {
-  const { uid, journeyType, weekNumber, activity } = params;
+  const { uid, journeyType, weekNumber, activity, claimRef } = params;
 
   if (!uid) throw new Error('[PointsService] uid is required')
   if (!journeyType) throw new Error('[PointsService] journeyType is required')
@@ -309,7 +474,11 @@ export async function revokeChecklistPoints(params: {
   const monthNumber = getMonthNumber(weekNumber);
   const weeklyTarget = JOURNEY_META[journeyType].weeklyTarget;
 
-  const ledgerRef = doc(db, "pointsLedger", `${uid}__w${weekNumber}__${activity.id}`);
+  const ledgerRef = doc(
+    db,
+    "pointsLedger",
+    buildLedgerDocumentId({ uid, weekNumber, activityId: activity.id, claimRef })
+  );
   const progressRef = doc(db, "weeklyProgress", `${uid}__${weekNumber}`);
   const ledgerQuery = query(
     collection(db, "pointsLedger"),
@@ -329,7 +498,11 @@ export async function revokeChecklistPoints(params: {
       getDoc(doc(db, "profiles", uid)),
     ]);
 
-    const companyId = profileSnap.exists() ? profileSnap.data()?.companyId : null;
+    const profileData = profileSnap.exists() ? profileSnap.data() : null;
+    const companyId = profileData?.companyId || null;
+    const companyCode = profileData?.companyCode || null;
+    const villageId = profileData?.villageId || null;
+    const clusterId = profileData?.clusterId || null;
 
     await runTransactionWithRetry(async (tx) => {
       const [ledgerDoc, progressDoc, userDoc] = await Promise.all([
@@ -408,6 +581,9 @@ export async function revokeChecklistPoints(params: {
         reason: activity.title,
         createdAt: serverTimestamp(),
         companyId: companyId || null,
+        companyCode: companyCode || null,
+        villageId: villageId || null,
+        clusterId: clusterId || null,
       });
 
       // Update active/pending challenges metrics

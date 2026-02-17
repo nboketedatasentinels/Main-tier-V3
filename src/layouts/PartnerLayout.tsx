@@ -38,6 +38,9 @@ import { usePartnerAdminSnapshot } from '@/hooks/partner/usePartnerAdminSnapshot
 import { type NavigationSection, buildPartnerNavItems } from '@/utils/navigationItems'
 
 const APP_VIEWPORT_HEIGHT = { base: '100dvh', md: '100vh' } as const
+const MOBILE_NAV_HEIGHT = 68
+const MOBILE_NAV_HEIGHT_WITH_SAFE_AREA = `calc(${MOBILE_NAV_HEIGHT}px + env(safe-area-inset-bottom))`
+const MOBILE_NAV_BUTTON_HEIGHT = MOBILE_NAV_HEIGHT - 12
 
 interface PartnerLayoutProps {
   children: React.ReactNode
@@ -67,6 +70,19 @@ export const PartnerLayout: React.FC<PartnerLayoutProps> = ({
   const [lastUpdatedLabel, setLastUpdatedLabel] = React.useState('Not yet loaded')
   const assignedCount = organizations.length || assignedOrganizationIds.length || 0
   const sections = navSections?.length ? navSections : buildPartnerNavItems()
+  const primaryNavItems = React.useMemo(() => sections.flatMap(section => section.items).slice(0, 4), [sections])
+  const mobileLabelByKey = React.useMemo<Record<string, string>>(
+    () => ({
+      overview: 'Overview',
+      'at-risk': 'At-Risk',
+      users: 'Users',
+      'partner-assignment': 'Issue',
+      'organization-management': 'Orgs',
+      reports: 'Reports',
+      settings: 'Settings',
+    }),
+    [],
+  )
 
   const orgOptions = organizations.length ? organizations : []
 
@@ -176,6 +192,7 @@ export const PartnerLayout: React.FC<PartnerLayoutProps> = ({
                 gap={3}
                 px={3}
                 py={2}
+                minH="44px"
                 borderRadius="md"
                 cursor="pointer"
                 _hover={{ bg: 'brand.accent' }}
@@ -361,14 +378,24 @@ export const PartnerLayout: React.FC<PartnerLayoutProps> = ({
         </DrawerContent>
       </Drawer>
 
-      <Flex flex={1} direction="column" h={APP_VIEWPORT_HEIGHT} overflow="hidden" p={{ base: 4, md: 8 }} minW={0} minH={0}>
+      <Flex
+        flex={1}
+        direction="column"
+        h={APP_VIEWPORT_HEIGHT}
+        overflow="hidden"
+        px={{ base: 4, md: 8 }}
+        pt={{ base: 4, md: 8 }}
+        pb={{ base: MOBILE_NAV_HEIGHT_WITH_SAFE_AREA, md: 8 }}
+        minW={0}
+        minH={0}
+      >
         <Box flex={1} overflowY="auto">
           <Flex justify="space-between" align={{ base: 'flex-start', md: 'center' }} mb={6} gap={4} wrap="wrap">
             <VStack align="flex-start" spacing={1}>
               <Text fontSize="sm" color="brand.subtleText">
                 Partner Dashboard
               </Text>
-              <Text fontSize="3xl" fontWeight="bold" color="brand.text">
+              <Text fontSize={{ base: '2xl', md: '3xl' }} lineHeight="shorter" fontWeight="bold" color="brand.text" wordBreak="break-word">
                 Welcome back, {profile?.fullName || 'Partner'}
               </Text>
               <Text color="brand.subtleText" maxW="760px">
@@ -394,6 +421,72 @@ export const PartnerLayout: React.FC<PartnerLayoutProps> = ({
           {children}
         </Box>
       </Flex>
+
+      {primaryNavItems.length > 0 && (
+        <Box
+          display={{ base: 'block', md: 'none' }}
+          position="fixed"
+          left={0}
+          right={0}
+          bottom={0}
+          bg="white"
+          borderTop="1px solid"
+          borderColor="brand.border"
+          zIndex={20}
+          minH={MOBILE_NAV_HEIGHT_WITH_SAFE_AREA}
+          pt={1}
+          pb="calc(8px + env(safe-area-inset-bottom))"
+          px={2}
+        >
+          <HStack spacing={1}>
+            {primaryNavItems.map(item => {
+              const isActive = activeItem === item.key
+              return (
+                <Button
+                  key={item.key}
+                  variant="ghost"
+                  flex="1"
+                  minW={0}
+                  h={`${MOBILE_NAV_BUTTON_HEIGHT}px`}
+                  borderRadius="md"
+                  onClick={() => onNavigate?.(item.key)}
+                  bg={isActive ? 'brand.primaryMuted' : 'transparent'}
+                  color={isActive ? 'brand.primary' : 'brand.subtleText'}
+                  _hover={{ bg: 'brand.primaryMuted', color: 'brand.primary' }}
+                  aria-current={isActive ? 'page' : undefined}
+                >
+                  <VStack spacing={1} w="full" minW={0}>
+                    {item.icon && <Icon as={item.icon} boxSize={4} />}
+                    <Text fontSize="2xs" noOfLines={1} w="full" textAlign="center">
+                      {mobileLabelByKey[item.key] ?? item.label}
+                    </Text>
+                  </VStack>
+                </Button>
+              )
+            })}
+            <Button
+              variant="ghost"
+              flex="1"
+              minW={0}
+              h={`${MOBILE_NAV_BUTTON_HEIGHT}px`}
+              borderRadius="md"
+              onClick={disclosure.onOpen}
+              bg={disclosure.isOpen ? 'brand.primaryMuted' : 'transparent'}
+              color={disclosure.isOpen ? 'brand.primary' : 'brand.subtleText'}
+              _hover={{ bg: 'brand.primaryMuted', color: 'brand.primary' }}
+              aria-label="Open navigation menu"
+              aria-expanded={disclosure.isOpen}
+            >
+              <VStack spacing={1} w="full" minW={0}>
+                <Icon as={Menu} boxSize={4} />
+                <Text fontSize="2xs" noOfLines={1} w="full" textAlign="center">
+                  Menu
+                </Text>
+              </VStack>
+            </Button>
+          </HStack>
+        </Box>
+      )}
     </Flex>
   )
 }

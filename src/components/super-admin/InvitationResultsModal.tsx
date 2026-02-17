@@ -48,7 +48,7 @@ export const InvitationResultsModal: React.FC<InvitationResultsModalProps> = ({ 
                 {result.success} of {result.total} invitations completed successfully
               </Text>
               <Text color="gray.600" fontSize="sm">
-                One-time codes expire after 24 hours.
+                Invitations remain active until they are accepted or removed by a super admin.
               </Text>
             </Box>
 

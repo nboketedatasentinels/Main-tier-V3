@@ -6,7 +6,7 @@ export type ApprovalWorkflowType = 'points_verification' | 'upgrade_request' | '
 
 export type ApprovalStatus = 'pending' | 'approved' | 'rejected' | 'completed'
 
-export type ApprovalSource = PointsVerificationRequest | UpgradeRequest | Record<string, any>
+export type ApprovalSource = PointsVerificationRequest | UpgradeRequest | Record<string, unknown>
 
 export interface ApprovalRecord {
   id: string

@@ -13,6 +13,140 @@ import * as admin from "firebase-admin";
 
 const db = admin.firestore();
 
+type InvitationResolutionUserDoc = {
+  email?: unknown;
+  companyId?: unknown;
+  organizationId?: unknown;
+  assignedOrganizations?: unknown;
+};
+
+const normalizeEmail = (value: unknown): string => {
+  if (typeof value !== "string") return "";
+  return value.trim().toLowerCase();
+};
+
+const normalizeOrganizationAssignments = (
+  data?: InvitationResolutionUserDoc | null
+): Set<string> => {
+  const assignments = new Set<string>();
+
+  const pushIfValid = (value: unknown) => {
+    if (typeof value !== "string") return;
+    const normalized = value.trim();
+    if (!normalized) return;
+    assignments.add(normalized);
+  };
+
+  pushIfValid(data?.companyId);
+  pushIfValid(data?.organizationId);
+
+  if (Array.isArray(data?.assignedOrganizations)) {
+    data?.assignedOrganizations.forEach((entry) => pushIfValid(entry));
+  }
+
+  return assignments;
+};
+
+const serializeSet = (value: Set<string>) => Array.from(value).sort().join("|");
+
+const shouldResolvePendingInvitations = (
+  beforeData: InvitationResolutionUserDoc | null | undefined,
+  afterData: InvitationResolutionUserDoc
+): {
+  shouldResolve: boolean;
+  normalizedEmail: string;
+  organizationAssignments: Set<string>;
+} => {
+  const normalizedAfterEmail = normalizeEmail(afterData.email);
+  const afterAssignments = normalizeOrganizationAssignments(afterData);
+
+  if (!normalizedAfterEmail || !afterAssignments.size) {
+    return {
+      shouldResolve: false,
+      normalizedEmail: normalizedAfterEmail,
+      organizationAssignments: afterAssignments,
+    };
+  }
+
+  const normalizedBeforeEmail = normalizeEmail(beforeData?.email);
+  const beforeAssignments = normalizeOrganizationAssignments(beforeData);
+  const hadResolvableState = Boolean(normalizedBeforeEmail) && beforeAssignments.size > 0;
+
+  if (!hadResolvableState) {
+    return {
+      shouldResolve: true,
+      normalizedEmail: normalizedAfterEmail,
+      organizationAssignments: afterAssignments,
+    };
+  }
+
+  if (
+    normalizedBeforeEmail !== normalizedAfterEmail ||
+    serializeSet(beforeAssignments) !== serializeSet(afterAssignments)
+  ) {
+    return {
+      shouldResolve: true,
+      normalizedEmail: normalizedAfterEmail,
+      organizationAssignments: afterAssignments,
+    };
+  }
+
+  return {
+    shouldResolve: false,
+    normalizedEmail: normalizedAfterEmail,
+    organizationAssignments: afterAssignments,
+  };
+};
+
+const resolvePendingInvitationsForUser = async (params: {
+  userId: string;
+  beforeData?: InvitationResolutionUserDoc | null;
+  afterData: InvitationResolutionUserDoc;
+}) => {
+  const { shouldResolve, normalizedEmail, organizationAssignments } =
+    shouldResolvePendingInvitations(params.beforeData, params.afterData);
+  if (!shouldResolve) return 0;
+
+  const pendingInvitesSnapshot = await db
+    .collection("invitations")
+    .where("email", "==", normalizedEmail)
+    .where("status", "==", "pending")
+    .get();
+
+  if (pendingInvitesSnapshot.empty) return 0;
+
+  const timestamp = admin.firestore.FieldValue.serverTimestamp();
+  const batch = db.batch();
+  let updates = 0;
+
+  pendingInvitesSnapshot.docs.forEach((inviteDoc) => {
+    const invitationData = inviteDoc.data() as { organizationId?: unknown };
+    const organizationId =
+      typeof invitationData.organizationId === "string"
+        ? invitationData.organizationId.trim()
+        : "";
+
+    if (!organizationId || !organizationAssignments.has(organizationId)) {
+      return;
+    }
+
+    batch.update(inviteDoc.ref, {
+      status: "accepted",
+      acceptedAt: timestamp,
+      acceptedByUserId: params.userId,
+      acceptedByEmail: normalizedEmail,
+      updatedAt: timestamp,
+      expiresAt: admin.firestore.FieldValue.delete(),
+    });
+    updates += 1;
+  });
+
+  if (!updates) return 0;
+
+  await batch.commit();
+  return updates;
+};
+
 export const syncUserToProfile = functions
   .region("us-central1")
   .firestore.document("users/{userId}")
@@ -55,6 +189,24 @@ export const syncUserToProfile = functions
         },
         { merge: true }
       );
+
+      try {
+        const acceptedInvitations = await resolvePendingInvitationsForUser({
+          userId,
+          beforeData: (change.before.data() as InvitationResolutionUserDoc | undefined) ?? null,
+          afterData: userData as InvitationResolutionUserDoc,
+        });
+        if (acceptedInvitations > 0) {
+          console.log(
+            `Marked ${acceptedInvitations} invitation(s) as accepted for ${userId}`
+          );
+        }
+      } catch (invitationResolutionError) {
+        console.error(
+          `Error resolving pending invitations for user ${userId}:`,
+          invitationResolutionError
+        );
+      }
 
       console.log(`✓ Successfully synced user ${userId} to profiles`);
     } catch (error) {
@@ -99,8 +251,19 @@ export const syncAuthUserToProfile = functions
           .filter(Boolean);
       };
 
-      const scoreDuplicate = (doc: any) => {
-        const data = (doc?.data?.() as any) || {};
+      type UserDocShape = {
+        id?: string;
+        membershipStatus?: string;
+        companyId?: string | null;
+        companyCode?: string | null;
+        companyName?: string | null;
+        assignedOrganizations?: unknown;
+        role?: string;
+        transformationTier?: string;
+      };
+
+      const scoreDuplicate = (doc: FirebaseFirestore.QueryDocumentSnapshot) => {
+        const data = (doc.data() as UserDocShape) || {};
         let score = 0;
         if (data?.id && data.id === doc.id) score += 100;
         if (data?.membershipStatus === "paid") score += 25;
@@ -115,19 +278,21 @@ export const syncAuthUserToProfile = functions
       // This prevents duplicate "free" users showing up next to the real uid-based record.
       if (normalizedEmail) {
         const duplicatesSnap = await db.collection("users").where("email", "==", normalizedEmail).get();
-        const duplicates = duplicatesSnap.docs.filter((doc: any) => doc.id !== uid);
+        const duplicates = duplicatesSnap.docs.filter((doc) => doc.id !== uid);
 
         if (duplicates.length > 0) {
-          const baseData = (userDoc.exists ? (userDoc.data() as any) : {}) || {};
+          const baseData = (userDoc.exists ? (userDoc.data() as UserDocShape) : {}) || {};
           const best = duplicates
             .slice()
-            .sort((a: any, b: any) => scoreDuplicate(b) - scoreDuplicate(a))[0];
-          const bestData = (best?.data?.() as any) || {};
+            .sort((a, b) => scoreDuplicate(b) - scoreDuplicate(a))[0];
+          const bestData = (best?.data() as UserDocShape | undefined) || {};
 
           const mergedAssignedOrganizations = Array.from(
             new Set([
               ...normalizeStringArray(baseData.assignedOrganizations),
-              ...duplicates.flatMap((doc: any) => normalizeStringArray((doc.data() as any)?.assignedOrganizations)),
+              ...duplicates.flatMap((doc) =>
+                normalizeStringArray((doc.data() as UserDocShape | undefined)?.assignedOrganizations)
+              ),
             ])
           );
 
@@ -147,7 +312,7 @@ export const syncAuthUserToProfile = functions
               ? "paid"
               : baseData.membershipStatus || "free";
 
-          const mergePayload: any = {
+          const mergePayload: Record<string, unknown> = {
             id: uid,
             email: normalizedEmail,
             assignedOrganizations: mergedAssignedOrganizations,
@@ -169,7 +334,7 @@ export const syncAuthUserToProfile = functions
           await userRef.set(mergePayload, { merge: true });
           userDocExists = true;
 
-          await Promise.all(duplicates.map((doc: any) => doc.ref.delete()));
+          await Promise.all(duplicates.map((doc) => doc.ref.delete()));
           console.log(`✓ Reconciled and removed ${duplicates.length} duplicate user doc(s) for ${normalizedEmail}`);
         }
       }

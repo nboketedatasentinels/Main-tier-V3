@@ -3,6 +3,8 @@
  * Defines all types for learner status tracking, engagement metrics, and notification system
  */
 
+import type { Timestamp as FirestoreTimestamp } from 'firebase/firestore'
+
 // ============================================================================
 // STATUS TYPES
 // ============================================================================
@@ -411,7 +413,7 @@ export interface WeeklyActivityReport {
 // UTILITY TYPES
 // ============================================================================
 
-export type Timestamp = any // Firebase Timestamp
+export type Timestamp = FirestoreTimestamp
 
 export interface StatusDashboardData {
   currentStatus: LearnerStatus

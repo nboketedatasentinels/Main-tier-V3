@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useMemo, useState } from 'react'
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import type { BadgeProps } from '@chakra-ui/react'
 import {
   Badge,
@@ -59,9 +59,16 @@ type SortKey = 'name' | 'code' | 'teamSize' | 'status' | 'partnerName'
 type OrganizationManagementPageProps = {
   adminName: string
   adminId?: string
+  openCreateOnMount?: boolean
+  onCreateIntentConsumed?: () => void
 }
 
-export const OrganizationManagementPage: React.FC<OrganizationManagementPageProps> = ({ adminName, adminId }) => {
+export const OrganizationManagementPage: React.FC<OrganizationManagementPageProps> = ({
+  adminName,
+  adminId,
+  openCreateOnMount = false,
+  onCreateIntentConsumed,
+}) => {
   const navigate = useNavigate()
   const toast = useToast()
   const [organizations, setOrganizations] = useState<OrganizationRecord[]>([])
@@ -71,6 +78,7 @@ export const OrganizationManagementPage: React.FC<OrganizationManagementPageProp
   const [sortDir, setSortDir] = useState<'asc' | 'desc'>('asc')
   const [pageSize, setPageSize] = useState(10)
   const [page, setPage] = useState(1)
+  const hasHandledCreateIntent = useRef(false)
 
   const [selectedOrg, setSelectedOrg] = useState<OrganizationRecord | null>(null)
   const [pendingDelete, setPendingDelete] = useState<OrganizationRecord | null>(null)
@@ -107,6 +115,13 @@ export const OrganizationManagementPage: React.FC<OrganizationManagementPageProp
   useEffect(() => {
     loadOrganizations()
   }, [loadOrganizations])
+
+  useEffect(() => {
+    if (!openCreateOnMount || hasHandledCreateIntent.current) return
+    hasHandledCreateIntent.current = true
+    createModal.onOpen()
+    onCreateIntentConsumed?.()
+  }, [createModal, onCreateIntentConsumed, openCreateOnMount])
 
   useEffect(() => {
     setIsLoadingPartners(true)
@@ -178,89 +193,126 @@ export const OrganizationManagementPage: React.FC<OrganizationManagementPageProp
 
   const handleDeleteOrg = async () => {
     if (!pendingDelete?.id) return
-    await deleteOrganization(pendingDelete.id)
-    setOrganizations((prev) => prev.filter((org) => org.id !== pendingDelete.id))
-    await logAdminAction({
-      action: 'Organization deleted',
-      organizationName: pendingDelete.name,
-      organizationCode: pendingDelete.code,
-      adminId,
-      adminName,
-    })
-    toast({ title: 'Organization deleted', status: 'info' })
-    confirmDialog.onClose()
+    try {
+      await deleteOrganization(pendingDelete.id)
+      setOrganizations((prev) => prev.filter((org) => org.id !== pendingDelete.id))
+      await logAdminAction({
+        action: 'Organization deleted',
+        organizationName: pendingDelete.name,
+        organizationCode: pendingDelete.code,
+        adminId,
+        adminName,
+      })
+      toast({
+        title: 'Organization deleted',
+        description: 'Partner access assignments linked by organization ID were removed.',
+        status: 'info',
+      })
+      confirmDialog.onClose()
+    } catch (error) {
+      console.error(error)
+      toast({ title: 'Unable to delete organization', status: 'error' })
+      return
+    }
   }
 
   const handleAssignPartner = async (partnerId: string | null) => {
     if (!selectedOrg?.id) return
-    if (partnerId) {
-      await assignPartnerToOrganization(selectedOrg.id, partnerId)
-    } else {
-      await unassignLeadershipRole(selectedOrg.id, 'partner')
+    try {
+      if (partnerId) {
+        await assignPartnerToOrganization(selectedOrg.id, partnerId)
+      } else {
+        await unassignLeadershipRole(selectedOrg.id, 'partner')
+      }
+      setOrganizations((prev) =>
+        prev.map((org) =>
+          org.id === selectedOrg.id ? { ...org, partnerId, transformationPartnerId: partnerId } : org,
+        ),
+      )
+      await logAdminAction({
+        action: 'Partner assignment updated',
+        organizationName: selectedOrg.name,
+        organizationCode: selectedOrg.code,
+        adminId,
+        adminName,
+        metadata: { partnerId },
+      })
+      toast({
+        title: 'Partner updated',
+        description: 'Previous partner access was synchronized for this organization.',
+        status: 'success',
+      })
+      assignPartnerModal.onClose()
+    } catch (error) {
+      console.error(error)
+      const message = error instanceof Error ? error.message : 'Unexpected error'
+      toast({
+        title: 'Unable to update partner assignment',
+        description: message,
+        status: 'error',
+      })
+      throw error instanceof Error ? error : new Error(message)
     }
-    setOrganizations((prev) =>
-      prev.map((org) =>
-        org.id === selectedOrg.id ? { ...org, partnerId, transformationPartnerId: partnerId } : org,
-      ),
-    )
-    await logAdminAction({
-      action: 'Partner assignment updated',
-      organizationName: selectedOrg.name,
-      organizationCode: selectedOrg.code,
-      adminId,
-      adminName,
-      metadata: { partnerId },
-    })
-    toast({ title: 'Partner updated', status: 'success' })
-    assignPartnerModal.onClose()
   }
 
   const handleAssignMentor = async (mentorId: string | null) => {
     if (!selectedOrg?.id) return
-    if (mentorId) {
-      await assignMentorToOrganization(selectedOrg.id, mentorId)
-    } else {
-      await unassignLeadershipRole(selectedOrg.id, 'mentor')
+    try {
+      if (mentorId) {
+        await assignMentorToOrganization(selectedOrg.id, mentorId)
+      } else {
+        await unassignLeadershipRole(selectedOrg.id, 'mentor')
+      }
+      setOrganizations((prev) =>
+        prev.map((org) =>
+          org.id === selectedOrg.id ? { ...org, assignedMentorId: mentorId } : org,
+        ),
+      )
+      await logAdminAction({
+        action: 'Mentor assignment updated',
+        organizationName: selectedOrg.name,
+        organizationCode: selectedOrg.code,
+        adminId,
+        adminName,
+        metadata: { mentorId },
+      })
+      toast({ title: 'Mentor updated', status: 'success' })
+      assignMentorModal.onClose()
+    } catch (error) {
+      console.error(error)
+      toast({ title: 'Unable to update mentor assignment', status: 'error' })
+      return
     }
-    setOrganizations((prev) =>
-      prev.map((org) =>
-        org.id === selectedOrg.id ? { ...org, assignedMentorId: mentorId } : org,
-      ),
-    )
-    await logAdminAction({
-      action: 'Mentor assignment updated',
-      organizationName: selectedOrg.name,
-      organizationCode: selectedOrg.code,
-      adminId,
-      adminName,
-      metadata: { mentorId },
-    })
-    toast({ title: 'Mentor updated', status: 'success' })
-    assignMentorModal.onClose()
   }
 
   const handleAssignAmbassador = async (ambassadorId: string | null) => {
     if (!selectedOrg?.id) return
-    if (ambassadorId) {
-      await assignAmbassadorToOrganization(selectedOrg.id, ambassadorId)
-    } else {
-      await unassignLeadershipRole(selectedOrg.id, 'ambassador')
+    try {
+      if (ambassadorId) {
+        await assignAmbassadorToOrganization(selectedOrg.id, ambassadorId)
+      } else {
+        await unassignLeadershipRole(selectedOrg.id, 'ambassador')
+      }
+      setOrganizations((prev) =>
+        prev.map((org) =>
+          org.id === selectedOrg.id ? { ...org, assignedAmbassadorId: ambassadorId } : org,
+        ),
+      )
+      await logAdminAction({
+        action: 'Ambassador assignment updated',
+        organizationName: selectedOrg.name,
+        organizationCode: selectedOrg.code,
+        adminId,
+        adminName,
+        metadata: { ambassadorId },
+      })
+      toast({ title: 'Ambassador updated', status: 'success' })
+      assignAmbassadorModal.onClose()
+    } catch (error) {
+      console.error(error)
+      toast({ title: 'Unable to update ambassador assignment', status: 'error' })
+      return
     }
-    setOrganizations((prev) =>
-      prev.map((org) =>
-        org.id === selectedOrg.id ? { ...org, assignedAmbassadorId: ambassadorId } : org,
-      ),
-    )
-    await logAdminAction({
-      action: 'Ambassador assignment updated',
-      organizationName: selectedOrg.name,
-      organizationCode: selectedOrg.code,
-      adminId,
-      adminName,
-      metadata: { ambassadorId },
-    })
-    toast({ title: 'Ambassador updated', status: 'success' })
-    assignAmbassadorModal.onClose()
   }
 
   const statusCounts = useMemo(() => {
@@ -315,10 +367,33 @@ export const OrganizationManagementPage: React.FC<OrganizationManagementPageProp
     }, {} as Record<string, number>)
   }, [organizations])
 
+  const villageOptions = useMemo(
+    () =>
+      Array.from(new Set(organizations.map((org) => (org.village || '').trim()).filter(Boolean)))
+        .sort((a, b) => a.localeCompare(b)),
+    [organizations],
+  )
+
+  const clusterOptions = useMemo(
+    () =>
+      Array.from(new Set(organizations.map((org) => (org.cluster || '').trim()).filter(Boolean)))
+        .sort((a, b) => a.localeCompare(b)),
+    [organizations],
+  )
+
   const paginatedOrganizations = useMemo(() => {
     const start = (page - 1) * pageSize
     return sortedOrganizations.slice(start, start + pageSize)
   }, [page, pageSize, sortedOrganizations])
+
+  useEffect(() => {
+    setPage(1)
+  }, [filters.cluster, filters.search, filters.status, filters.village, pageSize])
+
+  useEffect(() => {
+    const maxPage = Math.max(1, Math.ceil(sortedOrganizations.length / pageSize))
+    setPage((currentPage) => (currentPage > maxPage ? maxPage : currentPage))
+  }, [pageSize, sortedOrganizations.length])
 
   const statusOptions = ['all', 'active', 'inactive', 'pending', 'suspended', 'watch']
 
@@ -377,10 +452,10 @@ export const OrganizationManagementPage: React.FC<OrganizationManagementPageProp
                   Organization management
                 </Text>
                 <Text fontSize="sm" color="brand.subtleText">
-                  Filter by status, village, or cluster. Client-side filtering and sorting keep the experience fast.
+                  Filter by status, village, and cluster. Client-side filtering and sorting keep the experience fast.
                 </Text>
               </Stack>
-              <HStack spacing={3}>
+              <HStack spacing={3} flexWrap="wrap">
                 <InputGroup maxW="260px">
                   <InputLeftElement pointerEvents="none">
                     <Search size={16} />
@@ -395,6 +470,22 @@ export const OrganizationManagementPage: React.FC<OrganizationManagementPageProp
                   {statusOptions.map((status) => (
                     <option key={status} value={status}>
                       {status === 'all' ? 'All statuses' : status}
+                    </option>
+                  ))}
+                </Select>
+                <Select w="180px" value={filters.village} onChange={(e) => setFilters((prev) => ({ ...prev, village: e.target.value }))}>
+                  <option value="all">All villages</option>
+                  {villageOptions.map((village) => (
+                    <option key={village} value={village}>
+                      {village}
+                    </option>
+                  ))}
+                </Select>
+                <Select w="180px" value={filters.cluster} onChange={(e) => setFilters((prev) => ({ ...prev, cluster: e.target.value }))}>
+                  <option value="all">All clusters</option>
+                  {clusterOptions.map((cluster) => (
+                    <option key={cluster} value={cluster}>
+                      {cluster}
                     </option>
                   ))}
                 </Select>
@@ -421,8 +512,20 @@ export const OrganizationManagementPage: React.FC<OrganizationManagementPageProp
                 </SimpleGrid>
 
                 <Box border="1px solid" borderColor="brand.border" borderRadius="md" overflowX="auto">
-                  <Table size="sm">
-                    <Thead bg="gray.50">
+                  <Table
+                    size="sm"
+                    sx={{
+                      th: {
+                        color: 'brand.subtleText',
+                        borderColor: 'brand.border',
+                      },
+                      td: {
+                        color: 'brand.text',
+                        borderColor: 'brand.border',
+                      },
+                    }}
+                  >
+                    <Thead bg="brand.accent">
                       <Tr>
                         <Th>Actions</Th>
                         <Th cursor="pointer" onClick={() => handleSort('name')}>
@@ -440,7 +543,11 @@ export const OrganizationManagementPage: React.FC<OrganizationManagementPageProp
                       </Tr>
                     </Thead>
                     <Tbody>
-                      {paginatedOrganizations.map((org) => {
+                      {paginatedOrganizations.map((org, index) => {
+                        const safeName = (org.name || '').trim() || 'Unnamed organization'
+                        const safeCode = (org.code || '').trim() || 'No code'
+                        const safeTeamSize = Number.isFinite(org.teamSize) ? Number(org.teamSize) : 0
+                        const safePartner = partnerLookup.get(org.transformationPartnerId || '') || 'Unassigned'
                         const createdAt =
                           typeof org.createdAt === 'string'
                             ? org.createdAt
@@ -448,13 +555,20 @@ export const OrganizationManagementPage: React.FC<OrganizationManagementPageProp
                               ? org.createdAt.toLocaleDateString()
                               : org.createdAt?.toDate?.()
                                 ? org.createdAt.toDate().toLocaleDateString()
-                                : '—'
+                                : 'Not set'
 
                         return (
-                          <Tr key={org.id || org.code} _hover={{ bg: 'gray.50' }}>
+                          <Tr key={org.id || org.code || `fallback-${index}`} _hover={{ bg: 'brand.accent' }}>
                             <Td>
                               <Menu>
-                                <MenuButton as={IconButton} icon={<MoreHorizontal size={16} />} aria-label="Actions" size="sm" variant="ghost" />
+                                <MenuButton
+                                  as={IconButton}
+                                  icon={<MoreHorizontal size={16} />}
+                                  aria-label="Actions"
+                                  size="sm"
+                                  variant="ghost"
+                                  color="brand.text"
+                                />
                                 <MenuList>
                                   <MenuItem onClick={() => handleViewOrganization(org)}>View Organisation</MenuItem>
                                   <MenuItem onClick={() => handleEditOrganization(org)}>Edit organization</MenuItem>
@@ -467,11 +581,11 @@ export const OrganizationManagementPage: React.FC<OrganizationManagementPageProp
                                 </MenuList>
                               </Menu>
                             </Td>
-                            <Td fontWeight="semibold">{org.name}</Td>
-                            <Td>{org.code}</Td>
-                            <Td>{org.teamSize || 0}</Td>
+                            <Td fontWeight="semibold">{safeName}</Td>
+                            <Td>{safeCode}</Td>
+                            <Td>{safeTeamSize}</Td>
                             <Td>{renderStatusBadge(org.status)}</Td>
-                            <Td>{partnerLookup.get(org.transformationPartnerId || '') || 'Unassigned'}</Td>
+                            <Td>{safePartner}</Td>
                             <Td>{createdAt}</Td>
                           </Tr>
                         )
@@ -581,7 +695,7 @@ export const OrganizationManagementPage: React.FC<OrganizationManagementPageProp
           confirmDialog.onClose()
         }}
         title="Delete organization"
-        description="This action removes the organization and related assignments."
+        description="This action removes the organization and detaches partner access assignments that reference this organization ID."
         onConfirm={handleDeleteOrg}
         confirmLabel="Delete"
       />

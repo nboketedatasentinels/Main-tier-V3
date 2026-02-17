@@ -121,7 +121,7 @@ test.describe('Performance', () => {
 
     const lcpMetric = await page.evaluate(() => {
       const lcpEntries = performance.getEntriesByType('largest-contentful-paint');
-      const lcp = lcpEntries[lcpEntries.length - 1] as any;
+      const lcp = lcpEntries[lcpEntries.length - 1] as (PerformanceEntry & { element?: Element }) | undefined;
 
       return {
         hasLCP: !!lcp,
@@ -193,7 +193,13 @@ test.describe('Performance', () => {
     await page.goto('/');
 
     const memoryInfo = await page.evaluate(() => {
-      const perf = performance as any;
+      const perf = performance as Performance & {
+        memory?: {
+          usedJSHeapSize: number
+          totalJSHeapSize: number
+          jsHeapSizeLimit: number
+        }
+      };
 
       if (perf.memory) {
         return {
@@ -227,7 +233,7 @@ test.describe('Performance', () => {
           domContentLoaded: Math.round(perf.domContentLoadedEventEnd - perf.startTime),
           firstPaint: paint.find(p => p.name === 'first-paint')?.startTime,
           firstContentfulPaint: paint.find(p => p.name === 'first-contentful-paint')?.startTime,
-          largestContentfulPaint: (lcp[lcp.length - 1] as any)?.startTime
+          largestContentfulPaint: (lcp[lcp.length - 1] as PerformanceEntry | undefined)?.startTime
         },
         resources: {
           count: resources.length,

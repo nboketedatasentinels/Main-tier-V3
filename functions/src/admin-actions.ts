@@ -31,7 +31,7 @@ export const processAdminAction = functions
       }
 
       // 2. Perform the action
-      let updateData: any = {};
+      let updateData: Record<string, unknown> = {};
       let logSummary = "";
 
       switch (type) {
@@ -99,10 +99,11 @@ export const processAdminAction = functions
         summary: logSummary
       });
 
-    } catch (error: any) {
+    } catch (error: unknown) {
+      const errorMessage = error instanceof Error ? error.message : String(error);
       functions.logger.error(`✗ Error processing admin action ${context.params.actionId}`, {
         actionId: context.params.actionId,
-        error: error.message,
+        error: errorMessage,
         type,
         targetUserId
       });
@@ -116,7 +117,7 @@ export const processAdminAction = functions
           targetUserId: targetUserId || "unknown",
           timestamp: admin.firestore.FieldValue.serverTimestamp(),
           status: "failure",
-          error: error.message,
+          error: errorMessage,
           actionId: context.params.actionId
         });
       } catch (logError) {

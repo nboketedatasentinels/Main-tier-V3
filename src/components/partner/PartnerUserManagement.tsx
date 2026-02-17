@@ -43,7 +43,7 @@ import {
 } from '@chakra-ui/react'
 import { CheckCircle2, ChevronDown, ChevronUp, Clock, ShieldAlert } from 'lucide-react'
 import { formatDistanceToNow } from 'date-fns'
-import { addDoc, collection, serverTimestamp } from 'firebase/firestore'
+import { addDoc, collection, doc, serverTimestamp, updateDoc } from 'firebase/firestore'
 import { PartnerUser, PartnerOrganization, PartnerRiskLevel } from '@/hooks/usePartnerDashboardData'
 import { useAuth } from '@/hooks/useAuth'
 import { usePointsApprovalQueue } from '@/hooks/partner/usePointsApprovalQueue'
@@ -51,6 +51,8 @@ import { db } from '@/services/firebase'
 import UserNudgeHistoryPanel from '@/components/partner/nudges/UserNudgeHistoryPanel'
 import { type PointsVerificationRequest } from '@/services/pointsVerificationService'
 import { getDisplayName } from '@/utils/displayName'
+
+export type PartnerUserManagementTab = 'users' | 'risk' | 'leaders' | 'approvals'
 
 interface PartnerUserManagementProps {
   users: PartnerUser[]
@@ -61,6 +63,8 @@ interface PartnerUserManagementProps {
   selectedOrg: string
   onSelectOrg: (org: string) => void
   updateUserPoints: (userId: string, delta: number, reason: string) => Promise<void>
+  initialTab?: PartnerUserManagementTab
+  onStartIntervention?: (user: PartnerUser) => Promise<void> | void
 }
 
 const PAGE_SIZE = 20
@@ -131,13 +135,19 @@ export const PartnerUserManagement: React.FC<PartnerUserManagementProps> = ({
   selectedOrg,
   onSelectOrg,
   updateUserPoints,
+  initialTab = 'users',
+  onStartIntervention,
 }) => {
-  const [activeTab, setActiveTab] = useState<'users' | 'risk' | 'leaders' | 'approvals'>('users')
+  const [activeTab, setActiveTab] = useState<PartnerUserManagementTab>(initialTab)
   const [sortKey, setSortKey] = useState('lastActive')
   const [sortDir, setSortDir] = useState<'asc' | 'desc'>('desc')
   const [page, setPage] = useState(1)
   const [expandedRows, setExpandedRows] = useState<Set<string>>(new Set())
   const [selectedUser, setSelectedUser] = useState<PartnerUser | null>(null)
+  const [nudgeEnabledDraft, setNudgeEnabledDraft] = useState(true)
+  const [followUpNoteDraft, setFollowUpNoteDraft] = useState('')
+  const [savingNudgePreference, setSavingNudgePreference] = useState(false)
+  const [savingFollowUpNote, setSavingFollowUpNote] = useState(false)
   const [adjustmentReason, setAdjustmentReason] = useState('')
   const [adjustmentValue, setAdjustmentValue] = useState(0)
   const [loadingAdjustment, setLoadingAdjustment] = useState(false)
@@ -227,9 +237,114 @@ export const PartnerUserManagement: React.FC<PartnerUserManagementProps> = ({
     setSelection([])
   }, [activeTab])
 
+  useEffect(() => {
+    setActiveTab(initialTab)
+  }, [initialTab])
+
+  useEffect(() => {
+    if (!selectedUser) {
+      setNudgeEnabledDraft(true)
+      setFollowUpNoteDraft('')
+      return
+    }
+
+    setNudgeEnabledDraft(selectedUser.nudgeEnabled ?? true)
+    setFollowUpNoteDraft(selectedUser.adminNotes ?? '')
+  }, [selectedUser])
+
   const openUser = (user: PartnerUser) => {
     setSelectedUser(user)
     drawer.onOpen()
+  }
+
+  const persistProfileMetadata = async (userId: string, updates: Record<string, unknown>) => {
+    const timestamp = serverTimestamp()
+    await updateDoc(doc(db, 'profiles', userId), {
+      ...updates,
+      updatedAt: timestamp,
+      updated_at: timestamp,
+    })
+  }
+
+  const handleNudgePreferenceToggle = async (enabled: boolean) => {
+    if (!selectedUser) return
+    const previousValue = selectedUser.nudgeEnabled ?? true
+    const userId = selectedUser.id
+
+    setNudgeEnabledDraft(enabled)
+    setSavingNudgePreference(true)
+
+    try {
+      await persistProfileMetadata(userId, {
+        nudgeEnabled: enabled,
+        nudge_enabled: enabled,
+      })
+      setSelectedUser((prev) => (prev && prev.id === userId ? { ...prev, nudgeEnabled: enabled } : prev))
+      toast({
+        title: 'Nudge preference saved',
+        status: 'success',
+        duration: 2000,
+        isClosable: true,
+      })
+    } catch (error) {
+      console.error('[PartnerUserManagement] Failed to save nudge preference', error)
+      setNudgeEnabledDraft(previousValue)
+      toast({
+        title: 'Failed to save nudge preference',
+        description: 'Please retry in a moment.',
+        status: 'error',
+      })
+    } finally {
+      setSavingNudgePreference(false)
+    }
+  }
+
+  const handleSaveFollowUpNote = async () => {
+    if (!selectedUser) return
+    const userId = selectedUser.id
+    const noteValue = followUpNoteDraft.trim()
+
+    setSavingFollowUpNote(true)
+    try {
+      await persistProfileMetadata(userId, {
+        adminNotes: noteValue,
+        admin_notes: noteValue,
+      })
+      setSelectedUser((prev) => (prev && prev.id === userId ? { ...prev, adminNotes: noteValue } : prev))
+      toast({
+        title: 'Follow-up note saved',
+        status: 'success',
+        duration: 2000,
+        isClosable: true,
+      })
+    } catch (error) {
+      console.error('[PartnerUserManagement] Failed to save follow-up note', error)
+      toast({
+        title: 'Failed to save follow-up note',
+        description: 'Please retry in a moment.',
+        status: 'error',
+      })
+    } finally {
+      setSavingFollowUpNote(false)
+    }
+  }
+
+  const handleStartIntervention = async (user: PartnerUser) => {
+    if (!onStartIntervention) {
+      openUser(user)
+      return
+    }
+
+    try {
+      await onStartIntervention(user)
+    } catch (error) {
+      console.error('[PartnerUserManagement] Failed to start intervention', error)
+      toast({
+        title: 'Failed to start intervention',
+        description: 'We could not create an intervention for this learner. Please try again.',
+        status: 'error',
+      })
+    }
   }
 
   const toggleSort = (key: string) => {
@@ -446,7 +561,7 @@ export const PartnerUserManagement: React.FC<PartnerUserManagementProps> = ({
           <Td onClick={(e) => e.stopPropagation()}>
             <HStack spacing={2}>
               {user.riskStatus !== 'engaged' ? (
-                <Button size="xs" colorScheme="purple" onClick={() => openUser(user)}>Start intervention</Button>
+                <Button size="xs" colorScheme="purple" onClick={() => void handleStartIntervention(user)}>Start intervention</Button>
               ) : (
                 <Button size="xs" variant="outline" onClick={() => openUser(user)}>Schedule check-in</Button>
               )}
@@ -462,24 +577,24 @@ export const PartnerUserManagement: React.FC<PartnerUserManagementProps> = ({
                     <Box>
                       <Text fontWeight="bold" fontSize="xs" color="gray.500" textTransform="uppercase" mb={2}>Risk Reasons</Text>
                       <VStack align="flex-start" spacing={1}>
-                        {(user.riskReasons ?? ['Behind on weekly points target']).map((reason, idx) => (
+                        {(user.riskReasons ?? ['Below current 2-week cycle points target']).map((reason, idx) => (
                           <Badge key={idx} colorScheme="orange" variant="subtle">{reason}</Badge>
                         ))}
                       </VStack>
                     </Box>
                     <Box>
-                      <Text fontWeight="bold" fontSize="xs" color="gray.500" textTransform="uppercase" mb={2}>Weekly Progress</Text>
+                      <Text fontWeight="bold" fontSize="xs" color="gray.500" textTransform="uppercase" mb={2}>Cycle Progress</Text>
                       <VStack align="flex-start" spacing={1}>
-                        <Text fontSize="sm">Earned: {user.weeklyEarned} pts</Text>
-                        <Text fontSize="sm">Required: {user.weeklyRequired} pts</Text>
+                        <Text fontSize="sm">Points accumulated: {user.weeklyEarned} pts</Text>
+                        <Text fontSize="sm">Cycle target: {user.weeklyRequired} pts</Text>
                         <Badge colorScheme={user.weeklyEarned >= user.weeklyRequired ? 'green' : 'orange'}>
-                          {user.weeklyEarned >= user.weeklyRequired ? 'Target Met' : 'Below Target'}
+                          {user.weeklyEarned >= user.weeklyRequired ? 'Target met' : 'Below target'}
                         </Badge>
                       </VStack>
                     </Box>
                     <Box>
                       <Text fontWeight="bold" fontSize="xs" color="gray.500" textTransform="uppercase" mb={2}>Partner Notes</Text>
-                      <Text fontSize="sm" color="gray.600">No notes available for this learner.</Text>
+                      <Text fontSize="sm" color="gray.600">{user.adminNotes?.trim() || 'No notes available for this learner.'}</Text>
                       <Button size="xs" variant="link" colorScheme="purple" mt={2} onClick={() => openUser(user)}>Add note</Button>
                     </Box>
                   </SimpleGrid>
@@ -920,9 +1035,9 @@ export const PartnerUserManagement: React.FC<PartnerUserManagementProps> = ({
                 </HStack>
                 <Divider />
                 <Stack spacing={2}>
-                  <Text fontWeight="semibold">Weekly progress</Text>
+                  <Text fontWeight="semibold">Cycle progress</Text>
                   <Text fontSize="sm" color="brand.subtleText">
-                    Earned {selectedUser.weeklyEarned} / {selectedUser.weeklyRequired} points this week.
+                    Points accumulated: {selectedUser.weeklyEarned} / {selectedUser.weeklyRequired} in the current 2-week cycle.
                   </Text>
                   <HStack spacing={2}>
                     <Box bg="brand.accent" borderRadius="full" h="10px" flex={1} position="relative">
@@ -962,7 +1077,12 @@ export const PartnerUserManagement: React.FC<PartnerUserManagementProps> = ({
                   <Text fontWeight="semibold">Nudge preferences</Text>
                   <HStack justify="space-between">
                     <Text fontSize="sm" color="brand.subtleText">Allow nudge notifications</Text>
-                    <Switch colorScheme="purple" defaultChecked />
+                    <Switch
+                      colorScheme="purple"
+                      isChecked={nudgeEnabledDraft}
+                      isDisabled={savingNudgePreference}
+                      onChange={(event) => void handleNudgePreferenceToggle(event.target.checked)}
+                    />
                   </HStack>
                   <Text fontSize="xs" color="brand.subtleText">
                     Preferences are honored across email and in-app channels.
@@ -970,7 +1090,22 @@ export const PartnerUserManagement: React.FC<PartnerUserManagementProps> = ({
                 </Stack>
                 <Stack spacing={2}>
                   <Text fontWeight="semibold">Admin follow-up notes</Text>
-                  <Input placeholder="Add a quick note about manual outreach" />
+                  <Textarea
+                    placeholder="Add a quick note about manual outreach"
+                    value={followUpNoteDraft}
+                    onChange={(event) => setFollowUpNoteDraft(event.target.value)}
+                    minH="96px"
+                  />
+                  <Button
+                    size="sm"
+                    alignSelf="flex-start"
+                    colorScheme="purple"
+                    variant="outline"
+                    isLoading={savingFollowUpNote}
+                    onClick={() => void handleSaveFollowUpNote()}
+                  >
+                    Save note
+                  </Button>
                   <Text fontSize="xs" color="brand.subtleText">
                     Recommended next action: schedule a follow-up in 5 days if no response.
                   </Text>
@@ -982,7 +1117,14 @@ export const PartnerUserManagement: React.FC<PartnerUserManagementProps> = ({
             <Button variant="outline" mr={3} onClick={drawer.onClose}>
               Close
             </Button>
-            <Button colorScheme="purple" onClick={adjustmentModal.onOpen} isDisabled={!selectedUser}>
+            <Button
+              colorScheme="purple"
+              onClick={() => {
+                if (!selectedUser) return
+                void handleStartIntervention(selectedUser)
+              }}
+              isDisabled={!selectedUser}
+            >
               Add intervention
             </Button>
           </DrawerFooter>

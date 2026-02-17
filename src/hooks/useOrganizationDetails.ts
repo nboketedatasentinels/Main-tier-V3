@@ -4,14 +4,17 @@ import {
   fetchAvailableCourses,
   fetchOrganizationByCode,
   fetchOrganizationEngagementStats,
+  fetchOrganizationInvitations,
   fetchOrganizationUsers,
   logOrganizationAccessAttempt,
 } from '@/services/organizationService'
 import { canAccessOrganization } from '@/services/organizationAccessService'
 import { fetchUserProfileById } from '@/services/userProfileService'
+import { normalizeEmail } from '@/utils/email'
 import type {
   OrganizationAccountStatusFilter,
   OrganizationDetailView,
+  OrganizationInvitationProfile,
   OrganizationMembershipFilter,
   OrganizationStatistics,
   OrganizationUserProfile,
@@ -94,6 +97,7 @@ export const useOrganizationDetails = (organizationId?: string) => {
   const { user, isAdmin, isSuperAdmin, profile } = useAuth()
   const [organization, setOrganization] = useState<OrganizationDetailView | null>(null)
   const [users, setUsers] = useState<OrganizationUserProfile[]>([])
+  const [invitationRecords, setInvitationRecords] = useState<OrganizationInvitationProfile[]>([])
   const [statistics, setStatistics] = useState<OrganizationStatistics | null>(null)
   const [courseTitles, setCourseTitles] = useState<string[]>([])
   const [loading, setLoading] = useState(true)
@@ -178,8 +182,9 @@ export const useOrganizationDetails = (organizationId?: string) => {
               | undefined)
           : null) ??
         null
-      const [userList, stats, mentorProfile, ambassadorProfile, partnerProfile] = await Promise.all([
+      const [userList, invitationList, stats, mentorProfile, ambassadorProfile, partnerProfile] = await Promise.all([
         fetchOrganizationUsers(orgKey),
+        fetchOrganizationInvitations(orgKey),
         fetchOrganizationEngagementStats(orgKey),
         resolvedMentorId ? fetchUserProfileById(resolvedMentorId) : Promise.resolve(null),
         resolvedAmbassadorId ? fetchUserProfileById(resolvedAmbassadorId) : Promise.resolve(null),
@@ -214,6 +219,7 @@ export const useOrganizationDetails = (organizationId?: string) => {
         }),
       )
       setUsers(userList)
+      setInvitationRecords(invitationList)
       setStatistics(stats)
       setCourseTitles(titleList)
     } catch (err) {
@@ -251,6 +257,24 @@ export const useOrganizationDetails = (organizationId?: string) => {
       return matchesSearch && matchesRole && matchesMembership && matchesAccount
     })
   }, [accountStatusFilter, debouncedSearch, membershipFilter, roleFilter, users])
+
+  const invitations = useMemo(() => {
+    if (!invitationRecords.length) return []
+
+    const existingMemberEmails = new Set(
+      users
+        .map((member) => normalizeEmail(member.email || ''))
+        .filter((email) => email.length > 0),
+    )
+    if (!existingMemberEmails.size) return invitationRecords
+
+    return invitationRecords.filter((invite) => {
+      if (invite.method !== 'email') return true
+      const email = normalizeEmail(invite.email || '')
+      if (!email) return true
+      return !existingMemberEmails.has(email)
+    })
+  }, [invitationRecords, users])
 
   const sortedUsers = useMemo(() => {
     const sorted = [...filteredUsers]
@@ -308,6 +332,7 @@ export const useOrganizationDetails = (organizationId?: string) => {
   return {
     organization,
     users,
+    invitations,
     statistics,
     courseTitles,
     loading,

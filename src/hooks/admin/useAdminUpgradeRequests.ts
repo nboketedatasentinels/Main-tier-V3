@@ -7,12 +7,21 @@ import {
 } from '@/services/admin/adminUpgradeService'
 import { UpgradeRequest, UpgradeRequestStatus } from '@/types/upgrade'
 
-export const useAllUpgradeRequests = () => {
+type UseAllUpgradeRequestsOptions = {
+  enabled?: boolean
+}
+
+export const useAllUpgradeRequests = ({ enabled = true }: UseAllUpgradeRequestsOptions = {}) => {
   const [requests, setRequests] = useState<UpgradeRequest[]>([])
-  const [loading, setLoading] = useState(false)
+  const [loading, setLoading] = useState(enabled)
   const [error, setError] = useState<Error | null>(null)
 
   const fetchRequests = useCallback(async () => {
+    if (!enabled) {
+      setLoading(false)
+      setError(null)
+      return
+    }
     setLoading(true)
     setError(null)
     try {
@@ -23,11 +32,17 @@ export const useAllUpgradeRequests = () => {
     } finally {
       setLoading(false)
     }
-  }, [])
+  }, [enabled])
 
   useEffect(() => {
+    if (!enabled) {
+      setRequests([])
+      setError(null)
+      setLoading(false)
+      return
+    }
     fetchRequests()
-  }, [fetchRequests])
+  }, [enabled, fetchRequests])
 
   return { requests, loading, error, refetch: fetchRequests }
 }

@@ -7,6 +7,7 @@ import {
   ModalFooter,
   ModalHeader,
   ModalOverlay,
+  Input,
   Stack,
   Text,
   Textarea,
@@ -15,11 +16,13 @@ import type { ProofModalState } from '@/hooks/useWeeklyChecklistViewModel'
 
 export const ProofModal = ({
   state,
+  isSubmitting,
   onClose,
   onChange,
   onSubmit,
 }: {
   state: ProofModalState
+  isSubmitting: boolean
   onClose: () => void
   onChange: (patch: Partial<ProofModalState>) => void
   onSubmit: () => Promise<void>
@@ -38,12 +41,15 @@ export const ProofModal = ({
             </Text>
           ) : null}
           <Text mb={3} color="gray.600">
-            Add a link (Drive, Dropbox, Notion, screenshot URL) and optional notes. Admins will verify and award points.
+            Add a link (Drive, Dropbox, Notion, screenshot URL) and optional notes. Your partner team will verify and award points.
           </Text>
 
           <Stack spacing={3}>
-            <Textarea
-              placeholder="Proof link (required)"
+            <Input
+              type="url"
+              inputMode="url"
+              autoComplete="url"
+              placeholder="https://example.com/proof (required)"
               value={state.proofUrl}
               onChange={e => onChange({ proofUrl: e.target.value })}
             />
@@ -56,13 +62,15 @@ export const ProofModal = ({
         </ModalBody>
 
         <ModalFooter>
-          <Button variant="ghost" mr={3} onClick={onClose}>
+          <Button variant="ghost" mr={3} onClick={onClose} isDisabled={isSubmitting}>
             Cancel
           </Button>
           <Button
             colorScheme="purple"
             onClick={onSubmit}
-            isDisabled={!state.proofUrl?.trim()}
+            isDisabled={!state.proofUrl?.trim() || isSubmitting}
+            isLoading={isSubmitting}
+            loadingText="Submitting"
           >
             Submit
           </Button>

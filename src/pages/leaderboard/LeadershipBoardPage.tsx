@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useLocation, useNavigate } from 'react-router-dom'
 import {
   Avatar,
   Badge,
@@ -104,6 +104,8 @@ import { getDisplayName } from '@/utils/displayName'
 import { StartChallengeModal } from '@/components/modals/StartChallengeModal'
 import { ChallengesTab } from '@/components/leaderboard/ChallengesTab'
 import { cancelChallenge } from '@/services/challengeService'
+import { isFreeUser } from '@/utils/membership'
+import { UpgradePromptModal } from '@/components/UpgradePromptModal'
 import { format } from 'date-fns'
 
 interface FeaturedBadge {
@@ -120,7 +122,6 @@ const timeframeOptions = [
   { label: 'All Time', value: LeaderboardTimeframe.ALL_TIME },
   { label: 'Last 7 Days', value: LeaderboardTimeframe.LAST_7_DAYS },
   { label: 'Last 30 Days', value: LeaderboardTimeframe.LAST_30_DAYS },
-  { label: 'My Journey', value: LeaderboardTimeframe.CURRENT_JOURNEY },
 ]
 
 const sortOptions = [
@@ -150,9 +151,15 @@ const formatNumber = (value?: number | null) => {
 
 export const LeadershipBoardPage: React.FC = () => {
   const navigate = useNavigate()
+  const location = useLocation()
   const { profile: authProfile, refreshProfile } = useAuth()
   const toast = useToast()
   const { isOpen, onOpen, onClose } = useDisclosure()
+  const {
+    isOpen: isUpgradeOpen,
+    onOpen: onUpgradeOpen,
+    onClose: onUpgradeClose,
+  } = useDisclosure()
   const { isOpen: isFiltersOpen, onToggle: onToggleFilters } = useDisclosure({ defaultIsOpen: false })
   const { isOpen: isLeaveOpen, onOpen: onLeaveOpen, onClose: onLeaveClose } = useDisclosure()
   const supportEmail = 'transform@t4leader.com'
@@ -168,6 +175,8 @@ export const LeadershipBoardPage: React.FC = () => {
   const [sortField, setSortField] = useState<'points' | 'name'>('points')
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('desc')
   const [currentProfile, setCurrentProfile] = useState<UserProfile | null>(null)
+  const [upgradeFeatureName, setUpgradeFeatureName] = useState('Premium Feature')
+  const [upgradeBenefits, setUpgradeBenefits] = useState<string[]>([])
   const [virtualOffset, setVirtualOffset] = useState(0)
   const [leaderboardPage, setLeaderboardPage] = useState(1)
   const [breakdownPage, setBreakdownPage] = useState(1)
@@ -201,10 +210,30 @@ export const LeadershipBoardPage: React.FC = () => {
       id: currentProfile?.id ?? authProfile?.id,
     } as UserProfile
   }, [authProfile, currentProfile])
+  const isFreeTierUser = useMemo(() => (profile ? isFreeUser(profile) : false), [profile])
+
+  const promptPeerConnectUpgrade = useCallback(() => {
+    setUpgradeFeatureName('Peer Connect')
+    setUpgradeBenefits([
+      'Access one-on-one peer matching',
+      'Join guided peer accountability sessions',
+      'Track weekly collaboration momentum',
+      'Unlock premium networking workflows',
+    ])
+    onUpgradeOpen()
+  }, [onUpgradeOpen])
 
   const context = useLeaderboardContext(profile)
   const contextLabels = useMemo(() => getLeaderboardContextLabels(context), [context])
   const isAdminAll = context?.type === 'admin_all'
+  const supportsSegmentTimeframes = !context
+    || context.type === 'organization'
+    || context.type === 'village'
+    || context.type === 'cluster'
+    || context.type === 'admin_all'
+  const availableTimeframes = supportsSegmentTimeframes
+    ? timeframeOptions
+    : timeframeOptions.filter((option) => option.value === LeaderboardTimeframe.ALL_TIME)
   const {
     label: segmentLabel,
     memberLabel: segmentMemberLabel,
@@ -241,6 +270,13 @@ export const LeadershipBoardPage: React.FC = () => {
     context,
     profileId: profile?.id,
   })
+
+  useEffect(() => {
+    if (supportsSegmentTimeframes) return
+    if (timeframe !== LeaderboardTimeframe.ALL_TIME) {
+      setTimeframe(LeaderboardTimeframe.ALL_TIME)
+    }
+  }, [supportsSegmentTimeframes, timeframe])
 
   useEffect(() => {
     if (!errorMessage) return
@@ -474,7 +510,7 @@ export const LeadershipBoardPage: React.FC = () => {
   }, [profile?.id, profile?.journeyType, profile?.role])
 
   useEffect(() => {
-    if (profile && profile.privacySettings?.showOnLeaderboard === false) {
+    if (profile && (profile.privacySettings?.showOnLeaderboard === false || profile.leaderboardVisibility === 'private')) {
       toast({
         title: 'Privacy enabled',
         description: 'Your leaderboard visibility is limited by your privacy settings.',
@@ -646,6 +682,19 @@ export const LeadershipBoardPage: React.FC = () => {
       setBreakdownPage(maxPage)
     }
   }, [userBreakdown.length, breakdownPage])
+
+  useEffect(() => {
+    if (location.hash !== '#points-breakdown') return
+
+    const scrollToBreakdown = () => {
+      const target = document.getElementById('points-breakdown')
+      if (!target) return
+      target.scrollIntoView({ behavior: 'smooth', block: 'start' })
+    }
+
+    const timeoutId = window.setTimeout(scrollToBreakdown, 0)
+    return () => window.clearTimeout(timeoutId)
+  }, [location.hash, userBreakdown.length])
 
   const getRankIcon = (rank: number) => {
     if (rank === 1) {
@@ -826,9 +875,24 @@ export const LeadershipBoardPage: React.FC = () => {
               <Button variant="secondary" leftIcon={<Icon as={Trophy} />} onClick={onOpen}>
                 Join a challenge
               </Button>
-              <Button variant="outline" leftIcon={<Icon as={Users} />} onClick={() => navigate('/app/peer-connect')}>
-                Improve rank
-              </Button>
+              <Tooltip
+                label="Upgrade to unlock peer matching and collaboration sessions."
+                hasArrow
+                openDelay={200}
+                isDisabled={!isFreeTierUser}
+              >
+                <Box>
+                  <Button
+                    variant="outline"
+                    leftIcon={<Icon as={Users} />}
+                    onClick={isFreeTierUser ? promptPeerConnectUpgrade : () => navigate('/app/peer-connect')}
+                    opacity={isFreeTierUser ? 0.55 : 1}
+                    filter={isFreeTierUser ? 'grayscale(1)' : undefined}
+                  >
+                    Improve rank
+                  </Button>
+                </Box>
+              </Tooltip>
             </HStack>
           </Grid>
         </CardBody>
@@ -1176,7 +1240,7 @@ export const LeadershipBoardPage: React.FC = () => {
                           <Box>
                             <Text fontSize="sm" mb={1}>Timeframe</Text>
                             <Select value={timeframe} onChange={(e) => setTimeframe(e.target.value as LeaderboardTimeframe)}>
-                              {timeframeOptions.map((option) => (
+                              {availableTimeframes.map((option) => (
                                 <option key={option.value} value={option.value}>{option.label}</option>
                               ))}
                             </Select>
@@ -1254,9 +1318,9 @@ export const LeadershipBoardPage: React.FC = () => {
                                 villageNames[row.user.villageId ?? ''] ||
                                 organizationRecord?.village ||
                                 row.user.villageId ||
-                                'Village TBD'
+                                'Village not assigned'
                               const clusterLabel =
-                                organizationRecord?.cluster || row.user.clusterId || 'Cluster TBD'
+                                organizationRecord?.cluster || row.user.clusterId || 'Cluster not assigned'
                               return (
                                 <Tr
                                   key={row.user.id}
@@ -1443,8 +1507,13 @@ export const LeadershipBoardPage: React.FC = () => {
                 </Grid>
               )}
 
-              {!isFreeContext && (
-                <Card bg="surface.default" border="1px solid" borderColor="border.subtle">
+              <Card
+                id="points-breakdown"
+                bg="surface.default"
+                border="1px solid"
+                borderColor="border.subtle"
+                scrollMarginTop="120px"
+              >
                   <CardHeader>
                     <Flex justify="space-between" align="center">
                       <Box>
@@ -1543,7 +1612,6 @@ export const LeadershipBoardPage: React.FC = () => {
                     </Grid>
                   </CardBody>
                 </Card>
-              )}
 
             </Stack>
           </TabPanel>
@@ -1585,6 +1653,13 @@ export const LeadershipBoardPage: React.FC = () => {
           </ModalContent>
         </Modal>
       )}
+
+      <UpgradePromptModal
+        featureName={upgradeFeatureName}
+        benefits={upgradeBenefits.length ? upgradeBenefits : ['Unlock premium collaboration features']}
+        isOpen={isUpgradeOpen}
+        onClose={onUpgradeClose}
+      />
 
       <StartChallengeModal
         isOpen={isOpen}

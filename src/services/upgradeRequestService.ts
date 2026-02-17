@@ -11,7 +11,7 @@ import {
   updateDoc,
   where,
 } from 'firebase/firestore'
-import { db } from './firebase'
+import { auth, db } from './firebase'
 import { RawUpgradeRequest, UpgradeRequest, UpgradeRequestForm, UpgradeRequestStatus } from '@/types/upgrade'
 import { AdminDataError } from '@/services/admin/adminErrors'
 
@@ -153,12 +153,15 @@ export const checkPendingRequest = async (userId: string): Promise<UpgradeReques
 
 export const getAllUpgradeRequests = async (): Promise<UpgradeRequest[]> => {
   const startedAt = performance.now()
-  try {
-    const constraints = [orderBy('requested_at', 'desc')]
-    console.log('🟣 [Admin] upgrade_requests query constraints:', constraints.map((constraint) => String(constraint)))
-
+  const constraints = [orderBy('requested_at', 'desc')]
+  const runQuery = async () => {
     const q = query(collection(db, REQUEST_COLLECTION), ...constraints)
-    const snapshot = await getDocs(q)
+    return getDocs(q)
+  }
+
+  try {
+    console.log('🟣 [Admin] upgrade_requests query constraints:', constraints.map((constraint) => String(constraint)))
+    const snapshot = await runQuery()
     console.log(
       '🟢 [Admin] upgrade_requests loaded:',
       snapshot.size,
@@ -168,9 +171,76 @@ export const getAllUpgradeRequests = async (): Promise<UpgradeRequest[]> => {
     )
     return snapshot.docs.map((docSnap) => toUpgradeRequest(docSnap.id, docSnap.data() as RawUpgradeRequest))
   } catch (err) {
-    const code = (err as { code?: string })?.code ?? 'unknown'
-    const message = (err as { message?: string })?.message
-    console.error('🔴 [Admin] upgrade_requests failed', { code, message, err })
+    let effectiveError: unknown = err
+    let code = (effectiveError as { code?: string })?.code ?? 'unknown'
+
+    if (code === 'permission-denied' && auth.currentUser) {
+      try {
+        await auth.currentUser.getIdToken(true)
+        const retrySnapshot = await runQuery()
+        console.log(
+          '🟢 [Admin] upgrade_requests loaded after token refresh:',
+          retrySnapshot.size,
+          'docs in',
+          Math.round(performance.now() - startedAt),
+          'ms'
+        )
+        return retrySnapshot.docs.map((docSnap) =>
+          toUpgradeRequest(docSnap.id, docSnap.data() as RawUpgradeRequest),
+        )
+      } catch (retryError) {
+        effectiveError = retryError
+        code = (effectiveError as { code?: string })?.code ?? code
+      }
+    }
+
+    const message = (effectiveError as { message?: string })?.message
+    const debugContext: Record<string, unknown> = {
+      uid: auth.currentUser?.uid ?? null,
+      hasCurrentUser: Boolean(auth.currentUser),
+    }
+
+    if (auth.currentUser) {
+      try {
+        const tokenResult = await auth.currentUser.getIdTokenResult()
+        debugContext.tokenClaims = {
+          role: tokenResult.claims?.role ?? null,
+          claimsRole: tokenResult.claims?.claimsRole ?? null,
+          customRole: tokenResult.claims?.customRole ?? null,
+          admin: tokenResult.claims?.admin ?? null,
+          super_admin: tokenResult.claims?.super_admin ?? null,
+          superAdmin: tokenResult.claims?.superAdmin ?? null,
+          partner: tokenResult.claims?.partner ?? null,
+        }
+      } catch (tokenError) {
+        debugContext.tokenClaimsError = (tokenError as { message?: string })?.message ?? String(tokenError)
+      }
+
+      try {
+        const [usersSnap, profilesSnap] = await Promise.all([
+          getDoc(doc(db, USERS_COLLECTION, auth.currentUser.uid)),
+          getDoc(doc(db, PROFILES_COLLECTION, auth.currentUser.uid)),
+        ])
+        debugContext.roleDocs = {
+          usersExists: usersSnap.exists(),
+          usersRole: usersSnap.exists() ? (usersSnap.data() as { role?: string; userRole?: string }).role ?? null : null,
+          usersUserRole: usersSnap.exists()
+            ? (usersSnap.data() as { role?: string; userRole?: string }).userRole ?? null
+            : null,
+          profilesExists: profilesSnap.exists(),
+          profilesRole: profilesSnap.exists()
+            ? (profilesSnap.data() as { role?: string; userRole?: string }).role ?? null
+            : null,
+          profilesUserRole: profilesSnap.exists()
+            ? (profilesSnap.data() as { role?: string; userRole?: string }).userRole ?? null
+            : null,
+        }
+      } catch (roleDocError) {
+        debugContext.roleDocError = (roleDocError as { message?: string })?.message ?? String(roleDocError)
+      }
+    }
+
+    console.error('🔴 [Admin] upgrade_requests failed', { code, message, err: effectiveError, debugContext })
 
     if (code === 'failed-precondition') {
       throw new AdminDataError(
@@ -187,7 +257,6 @@ export const getAllUpgradeRequests = async (): Promise<UpgradeRequest[]> => {
     throw new AdminDataError('Failed to load upgrade requests.', code)
   }
 }
-
 export const getPendingUpgradeRequests = async (): Promise<UpgradeRequest[]> => {
   const q = query(
     collection(db, REQUEST_COLLECTION),
@@ -226,3 +295,4 @@ export const getUserRequestsForAdmin = async (userId: string): Promise<UpgradeRe
   const snapshot = await getDocs(q)
   return snapshot.docs.map((docSnap) => toUpgradeRequest(docSnap.id, docSnap.data() as RawUpgradeRequest))
 }
+

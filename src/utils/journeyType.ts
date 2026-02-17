@@ -6,10 +6,9 @@ export const JOURNEY_LABELS: Record<JourneyType, string> = {
   '3M': '3-Month Program',
   '6M': '6-Month Program',
   '9M': '9-Month Program',
-  '12M': '12-Month Program',
 }
 
-export const MONTH_BASED_JOURNEYS: JourneyType[] = ['3M', '6M', '9M', '12M']
+export const MONTH_BASED_JOURNEYS: JourneyType[] = ['3M', '6M', '9M']
 
 export const JOURNEY_MONTH_COUNTS: Record<JourneyType, number> = {
   '4W': 1,
@@ -17,7 +16,6 @@ export const JOURNEY_MONTH_COUNTS: Record<JourneyType, number> = {
   '3M': 3,
   '6M': 6,
   '9M': 9,
-  '12M': 12,
 }
 
 const JOURNEY_WEEKS_MAP: Record<number, JourneyType> = {
@@ -26,11 +24,10 @@ const JOURNEY_WEEKS_MAP: Record<number, JourneyType> = {
   12: '3M',
   24: '6M',
   36: '9M',
-  48: '12M',
 }
 
 export const isJourneyType = (value: unknown): value is JourneyType =>
-  value === '4W' || value === '6W' || value === '3M' || value === '6M' || value === '9M' || value === '12M'
+  value === '4W' || value === '6W' || value === '3M' || value === '6M' || value === '9M'
 
 export const getJourneyLabel = (journeyType: JourneyType): string => JOURNEY_LABELS[journeyType]
 
@@ -47,7 +44,8 @@ export const journeyTypeFromDurationWeeks = (weeks?: number | null): JourneyType
   if (normalized <= 12) return '3M'
   if (normalized <= 24) return '6M'
   if (normalized <= 36) return '9M'
-  return '12M'
+  // Product only supports up to 9-month programs.
+  return '9M'
 }
 
 export const resolveDurationWeeksFromProgramDuration = (value?: number | string | null): number | null => {
@@ -55,7 +53,7 @@ export const resolveDurationWeeksFromProgramDuration = (value?: number | string 
   const parsed = typeof value === 'string' ? Number(value) : value
   if (!Number.isFinite(parsed) || parsed <= 0) return null
   if (parsed === 1.5) return 6
-  if (parsed <= 12) return Math.round(parsed * 4)
+  if (parsed <= 12) return Math.round(Math.min(parsed, 9) * 4)
   return Math.round(parsed)
 }
 

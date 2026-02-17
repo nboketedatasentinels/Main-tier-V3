@@ -43,10 +43,12 @@ import { ActivityCard } from '@/components/dashboard/ActivityCard'
 import { BadgeCard } from '@/components/dashboard/BadgeCard'
 import { useWeeklyGlanceData } from '@/hooks/useWeeklyGlanceData'
 import { useLeaderboardData } from '@/hooks/leaderboard/useLeaderboardData'
-import { useLeaderboardContext } from '@/hooks/leaderboard/useLeaderboardContext'
+import { getLeaderboardContextLabels, useLeaderboardContext } from '@/hooks/leaderboard/useLeaderboardContext'
+import { canViewerSeeCandidateOnLeaderboard } from '@/utils/leaderboardPrivacy'
 import { WeeklyInspirationCard } from './components/WeeklyInspirationCard'
 import { JourneyCompletionBanner } from '@/components/journeys/JourneyCompletionBanner'
 import pointsConfig from '@/config/pointsConfig'
+import { useUserBadges } from '@/hooks/useUserBadges'
 
 interface ActivityItem {
   title: string
@@ -94,13 +96,20 @@ const milestones = [
   { label: 'Amplify', status: 'pending' },
 ]
 
+const LEVEL_STEP_POINTS = 500
+const MENTOR_BENCHMARK_COMPLETION = 80
+
 export const PaidMemberDashboard: React.FC = () => {
   const navigate = useNavigate()
   const { profile } = useAuth()
   const { inspirationQuote } = useWeeklyGlanceData()
+  const badgesState = useUserBadges()
+  const userBadges = badgesState?.userBadges ?? []
+  const badgeCount = userBadges.length
 
   const leaderboardContext = useLeaderboardContext(profile)
-  const { challenges } = useLeaderboardData({
+  const leaderboardLabels = useMemo(() => getLeaderboardContextLabels(leaderboardContext), [leaderboardContext])
+  const { profiles, challenges } = useLeaderboardData({
     context: leaderboardContext,
     profileId: profile?.id,
   })
@@ -111,6 +120,40 @@ export const PaidMemberDashboard: React.FC = () => {
 
   const [activities, setActivities] = useState<ActivityItem[]>(initialActivities)
   const [activeBadgeIndex, setActiveBadgeIndex] = useState(0)
+
+  const totalPoints = Math.max(0, profile?.totalPoints || 0)
+  const currentLevel = Math.max(1, profile?.level || 1)
+  const pointsIntoCurrentLevel = totalPoints % LEVEL_STEP_POINTS
+  const pointsToNextLevel = LEVEL_STEP_POINTS - pointsIntoCurrentLevel
+  const nextLevel = currentLevel + 1
+  const nextLevelProgress = Math.round((pointsIntoCurrentLevel / LEVEL_STEP_POINTS) * 100)
+
+  const rankingProfiles = useMemo(
+    () =>
+      profiles.filter(
+        (candidate) =>
+          candidate.id !== profile?.id
+          && typeof candidate.totalPoints === 'number'
+          && canViewerSeeCandidateOnLeaderboard({
+            viewer: profile,
+            candidate,
+            context: leaderboardContext,
+          }),
+      ),
+    [leaderboardContext, profile, profiles],
+  )
+  const segmentRank = rankingProfiles.length
+    ? rankingProfiles.filter((candidate) => (candidate.totalPoints || 0) > totalPoints).length + 1
+    : null
+  const segmentSize = segmentRank ? rankingProfiles.length + 1 : null
+  const topPercent = segmentRank && segmentSize
+    ? Math.max(1, Math.round((segmentRank / segmentSize) * 100))
+    : null
+  const peersAtOrAboveLevel = useMemo(
+    () => rankingProfiles.filter((candidate) => candidate.level >= currentLevel).length,
+    [currentLevel, rankingProfiles],
+  )
+
   const journeyWeeks = useMemo(() => {
     if (profile?.programDurationWeeks) return profile.programDurationWeeks
     if (profile?.journeyType) return pointsConfig.JOURNEY_META[profile.journeyType].weeks
@@ -128,6 +171,14 @@ export const PaidMemberDashboard: React.FC = () => {
     return Math.round((completedActivities / activities.length) * 100)
   }, [activities.length, completedActivities])
 
+  const estimatedCompletedPoints = useMemo(
+    () => activities.reduce((total, act) => total + (act.completed ? act.points : 0), 0),
+    [activities],
+  )
+
+  const remainingActivities = Math.max(0, activities.length - completedActivities)
+  const completionToBenchmark = Math.max(0, MENTOR_BENCHMARK_COMPLETION - completionRate)
+
   const journeyCompletionPct = useMemo(() => {
     if (!journeyWeeks) return 0
     return Math.min(100, Math.round((currentWeek / journeyWeeks) * 100))
@@ -137,7 +188,7 @@ export const PaidMemberDashboard: React.FC = () => {
 
   const completionSteps = [
     { label: 'Finish final week activities', complete: currentWeek >= journeyWeeks },
-    { label: 'Submit final impact log', complete: completionRate >= 80 },
+    { label: 'Submit final impact log', complete: completionRate >= MENTOR_BENCHMARK_COMPLETION },
     { label: 'Confirm mentor sign-off', complete: isJourneyComplete },
   ]
 
@@ -174,7 +225,7 @@ export const PaidMemberDashboard: React.FC = () => {
             Welcome back, {profile?.firstName || 'Leader'}
           </Text>
           <Text color="brand.subtleText" opacity={0.9}>
-            You are on track for week {profile?.currentWeek || 3}. Keep the momentum going today.
+            You are on track for week {currentWeek}. Keep the momentum going today.
           </Text>
         </Box>
         <HStack spacing={4}>
@@ -183,7 +234,7 @@ export const PaidMemberDashboard: React.FC = () => {
               Current level
             </Text>
             <Text fontSize="xl" fontWeight="bold" color="brand.text">
-              {profile?.level || 4}
+              {currentLevel}
             </Text>
           </VStack>
           <Avatar
@@ -201,8 +252,12 @@ export const PaidMemberDashboard: React.FC = () => {
           <CardBody>
             <Stat>
               <StatLabel color="brand.goldLight">Total Points</StatLabel>
-              <StatNumber color="brand.gold">{profile?.totalPoints || 0}</StatNumber>
-              <StatHelpText color="brand.goldLight">This journey</StatHelpText>
+              <StatNumber color="brand.gold">{totalPoints}</StatNumber>
+              <StatHelpText color="brand.goldLight">
+                {segmentRank && segmentSize
+                  ? `Rank #${segmentRank} of ${segmentSize} in ${leaderboardLabels.label}`
+                  : `Build momentum in ${leaderboardLabels.label}`}
+              </StatHelpText>
             </Stat>
           </CardBody>
         </Card>
@@ -211,9 +266,10 @@ export const PaidMemberDashboard: React.FC = () => {
           <CardBody>
             <Stat>
               <StatLabel color="brand.goldLight">Level</StatLabel>
-              <StatNumber color="brand.gold">{profile?.level || 1}</StatNumber>
-              <StatHelpText color="brand.goldLight">Current level</StatHelpText>
+              <StatNumber color="brand.gold">{currentLevel}</StatNumber>
+              <StatHelpText color="brand.goldLight">{pointsToNextLevel} pts to level {nextLevel}</StatHelpText>
             </Stat>
+            <Progress value={nextLevelProgress} colorScheme="yellow" size="sm" borderRadius="full" />
           </CardBody>
         </Card>
 
@@ -221,7 +277,7 @@ export const PaidMemberDashboard: React.FC = () => {
           <CardBody>
             <Stat>
               <StatLabel color="brand.goldLight">Current Week</StatLabel>
-              <StatNumber color="brand.gold">{profile?.currentWeek || 1}</StatNumber>
+              <StatNumber color="brand.gold">{currentWeek}</StatNumber>
               <StatHelpText color="brand.goldLight">of your journey</StatHelpText>
             </Stat>
           </CardBody>
@@ -231,55 +287,128 @@ export const PaidMemberDashboard: React.FC = () => {
           <CardBody>
             <Stat>
               <StatLabel color="brand.goldLight">Badges</StatLabel>
-              <StatNumber color="brand.gold">0</StatNumber>
-              <StatHelpText color="brand.goldLight">Earned</StatHelpText>
+              <StatNumber color="brand.gold">{badgeCount}</StatNumber>
+              <StatHelpText color="brand.goldLight">
+                {topPercent
+                  ? `Top ${topPercent}% in ${leaderboardLabels.label}`
+                  : 'Earned so far'}
+              </StatHelpText>
             </Stat>
           </CardBody>
         </Card>
       </SimpleGrid>
 
+      <Card border="1px solid" borderColor="brand.border">
+        <CardBody py={4}>
+          <Stack spacing={2}>
+            <HStack justify="space-between" flexWrap="wrap" gap={2}>
+              <Text fontWeight="bold" color="brand.text">Momentum benchmark</Text>
+              <Badge colorScheme={completionRate >= MENTOR_BENCHMARK_COMPLETION ? 'green' : 'blue'}>
+                Mentor benchmark
+              </Badge>
+            </HStack>
+            <Text fontSize="sm" color="brand.subtleText">
+              {peersAtOrAboveLevel > 0
+                ? `${peersAtOrAboveLevel} peers in your segment are already at level ${currentLevel} or above.`
+                : 'You are setting the pace in your segment right now.'}
+            </Text>
+            <Text fontSize="sm" color="brand.subtleText">
+              Mentor guidance: keep weekly completion at {MENTOR_BENCHMARK_COMPLETION}%+ and close your last {pointsToNextLevel} points to reach level {nextLevel}.
+            </Text>
+          </Stack>
+        </CardBody>
+      </Card>
+
       <Grid templateColumns={{ base: '1fr', xl: '2fr 1fr' }} gap={6}>
         <GridItem>
           <Stack spacing={6}>
-            <Card aria-label="Weekly progress overview">
-            <CardBody>
-              <HStack justify="space-between" align="flex-start" mb={4}>
-                <Box>
-                  <Text fontWeight="bold" color="brand.text">
-                    Weekly progress
-                  </Text>
-                  <Text fontSize="sm" color="brand.subtleText" opacity={0.8}>
-                    Week {profile?.currentWeek ?? 3} completion status
-                  </Text>
-                </Box>
-                <HStack spacing={2}>
-                  <Icon as={TrendingUp} color="brand.gold" />
-                  <Text color="brand.text" fontWeight="bold">
-                    {completionRate}%
-                  </Text>
-                </HStack>
-              </HStack>
-              <Progress value={completionRate} borderRadius="full" mb={4} />
-              <SimpleGrid columns={{ base: 1, md: 2 }} spacing={3}>
-                <Box>
-                  <Text fontSize="sm" color="brand.subtleText" opacity={0.85}>
-                    Activities completed
-                  </Text>
-                  <Text fontSize="lg" fontWeight="bold" color="brand.text">
-                    {completedActivities} / {activities.length}
-                  </Text>
-                </Box>
-                <Box>
-                  <Text fontSize="sm" color="brand.subtleText" opacity={0.85}>
-                    Estimated points
-                  </Text>
-                  <Text fontSize="lg" fontWeight="bold" color="brand.text">
-                    {activities.reduce((total, act) => total + (act.completed ? act.points : 0), 0)} pts
-                  </Text>
-                </Box>
-              </SimpleGrid>
-            </CardBody>
-          </Card>
+            <Card aria-label="Current progress overview">
+              <CardBody py={{ base: 5, md: 6 }}>
+                <Stack spacing={4}>
+                  <Stack
+                    direction={{ base: 'column', sm: 'row' }}
+                    justify="space-between"
+                    align={{ base: 'flex-start', sm: 'center' }}
+                    spacing={{ base: 2, sm: 3 }}
+                  >
+                    <Box>
+                      <Text
+                        fontSize="xs"
+                        textTransform="uppercase"
+                        letterSpacing="0.08em"
+                        fontWeight="semibold"
+                        color="brand.subtleText"
+                      >
+                        Current progress
+                      </Text>
+                      <Text fontSize="sm" color="brand.subtleText" opacity={0.85}>
+                        Week {currentWeek} completion snapshot
+                      </Text>
+                    </Box>
+                    <HStack spacing={2} px={3} py={1.5} borderRadius="full" bg="brand.primaryMuted">
+                      <Icon as={TrendingUp} color="brand.gold" boxSize={4} />
+                      <Text color="brand.text" fontWeight="bold" fontSize={{ base: 'xl', md: 'lg' }}>
+                        {completionRate}%
+                      </Text>
+                    </HStack>
+                  </Stack>
+
+                  <Box>
+                    <Progress
+                      value={completionRate}
+                      height={{ base: '14px', md: '11px' }}
+                      borderRadius="full"
+                      bg="rgba(17, 25, 40, 0.12)"
+                      sx={{
+                        '& > div': {
+                          backgroundImage: 'linear-gradient(90deg, #4A90E2 0%, #9A6BFF 48%, #EAB130 100%)',
+                        },
+                      }}
+                    />
+                    <HStack justify="space-between" mt={2}>
+                      <Text fontSize="xs" color="brand.subtleText">
+                        Goal target: {MENTOR_BENCHMARK_COMPLETION}%
+                      </Text>
+                      <Text fontSize="xs" color="brand.subtleText">
+                        {completionRate >= MENTOR_BENCHMARK_COMPLETION
+                          ? 'At or above benchmark'
+                          : `${completionToBenchmark}% to benchmark`}
+                      </Text>
+                    </HStack>
+                  </Box>
+
+                  <SimpleGrid columns={{ base: 1, sm: 2 }} spacing={3}>
+                    <Box p={3} borderRadius="lg" bg="brand.primaryMuted">
+                      <Text fontSize="xs" textTransform="uppercase" letterSpacing="0.06em" color="brand.subtleText">
+                        Completed
+                      </Text>
+                      <Text fontSize={{ base: '2xl', md: 'xl' }} fontWeight="bold" color="brand.text">
+                        {completedActivities} / {activities.length}
+                      </Text>
+                    </Box>
+                    <Box p={3} borderRadius="lg" bg="brand.primaryMuted">
+                      <Text fontSize="xs" textTransform="uppercase" letterSpacing="0.06em" color="brand.subtleText">
+                        Earned points
+                      </Text>
+                      <Text fontSize={{ base: '2xl', md: 'xl' }} fontWeight="bold" color="brand.text">
+                        {estimatedCompletedPoints} pts
+                      </Text>
+                    </Box>
+                  </SimpleGrid>
+
+                  <Box p={3} borderRadius="lg" border="1px solid" borderColor="brand.border" bg="whiteAlpha.50">
+                    <Text fontSize="sm" fontWeight="semibold" color="brand.text">
+                      Next focus
+                    </Text>
+                    <Text fontSize="sm" color="brand.subtleText" mt={1}>
+                      {remainingActivities > 0
+                        ? `${remainingActivities} activities left this week. Prioritize high-value actions to close your gap.`
+                        : 'All activities complete this week. Use bonus actions to stretch your lead.'}
+                    </Text>
+                  </Box>
+                </Stack>
+              </CardBody>
+            </Card>
 
           {activeChallenges.length > 0 && (
             <Card border="1px solid" borderColor="brand.border">
@@ -430,7 +559,17 @@ export const PaidMemberDashboard: React.FC = () => {
             <Text fontSize="sm" color="brand.subtleText">
               Complete the steps below to unlock your final journey badge and celebrate your growth.
             </Text>
-            <Progress value={journeyCompletionPct} borderRadius="full" />
+            <Progress
+              value={journeyCompletionPct}
+              height={{ base: '14px', md: '11px' }}
+              borderRadius="full"
+              bg="rgba(17, 25, 40, 0.12)"
+              sx={{
+                '& > div': {
+                  backgroundImage: 'linear-gradient(90deg, #4A90E2 0%, #9A6BFF 48%, #EAB130 100%)',
+                },
+              }}
+            />
             <HStack justify="space-between">
               <Text fontSize="sm" color="brand.subtleText">
                 {journeyCompletionPct}% complete

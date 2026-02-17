@@ -1,5 +1,6 @@
 import { createInAppNotification, sendEmailNotification } from '@/services/notificationService'
 import {
+  createNudgeTemplate,
   createNudgeCampaign,
   fetchNudgeCampaigns,
   fetchNudgeTemplates,
@@ -40,7 +41,7 @@ const buildPersonalizedMessage = (message: string, tokens: NudgePersonalizationT
 
 export const sendNudgeToUser = async (params: {
   userId: string
-  userEmail: string
+  userEmail?: string
   adminId: string
   template: NudgeTemplateRecord
   channel: NudgeChannel
@@ -50,9 +51,13 @@ export const sendNudgeToUser = async (params: {
   const message = buildPersonalizedMessage(params.template.message_body, params.personalization)
   const subject = buildPersonalizedMessage(params.template.subject, params.personalization)
 
+  if ((params.channel === 'email' || params.channel === 'both') && !params.userEmail) {
+    throw new Error('Email address is required for email delivery.')
+  }
+
   if (params.channel === 'email' || params.channel === 'both') {
     await sendEmailNotification({
-      to: params.userEmail,
+      to: params.userEmail as string,
       subject,
       template: 'nudge-template',
       data: { message, subject },
@@ -82,18 +87,82 @@ export const sendNudgeToUser = async (params: {
 }
 
 export const sendBulkNudges = async (params: {
-  users: Array<{ id: string; email: string; name: string; organizationName: string; daysInactive: number; engagementScore: number }>
+  users: Array<{ id: string; email?: string; name: string; organizationName: string; daysInactive: number; engagementScore: number }>
   adminId: string
   template: NudgeTemplateRecord
   channel: NudgeChannel
+  scheduleAt?: string
 }) => {
   const results: { success: NudgeSentRecord[]; failed: Array<{ userId: string; error: string }> } = {
     success: [],
     failed: [],
   }
+  const scheduleAtInput = params.scheduleAt?.trim() || ''
+  const hasScheduleRequest = Boolean(scheduleAtInput)
+  let normalizedScheduleAt: string | null = null
+  let scheduleValidationError: string | null = null
+
+  if (hasScheduleRequest) {
+    const parsedScheduleAt = new Date(scheduleAtInput)
+    if (Number.isNaN(parsedScheduleAt.getTime())) {
+      scheduleValidationError = 'Invalid scheduleAt: value must be a valid date/time string.'
+    } else if (parsedScheduleAt.getTime() <= Date.now()) {
+      scheduleValidationError = 'Invalid scheduleAt: value must be in the future.'
+    } else {
+      normalizedScheduleAt = parsedScheduleAt.toISOString()
+    }
+  }
+
+  const shouldSchedule = Boolean(normalizedScheduleAt)
+  const requiresEmail = params.channel === 'email' || params.channel === 'both'
 
   for (const user of params.users) {
     try {
+      if (hasScheduleRequest && !shouldSchedule) {
+        results.failed.push({
+          userId: user.id,
+          error: scheduleValidationError || 'Invalid scheduleAt value.',
+        })
+        continue
+      }
+
+      if (requiresEmail && !user.email) {
+        throw new Error('Email address is required for email delivery.')
+      }
+
+      if (shouldSchedule) {
+        const personalization = {
+          userName: user.name,
+          organizationName: user.organizationName,
+          daysInactive: user.daysInactive,
+          engagementScore: user.engagementScore,
+        }
+        const record = await logNudgeSent({
+          user_id: user.id,
+          template_id: params.template.id,
+          sent_by_admin_id: params.adminId,
+          delivery_status: 'scheduled',
+          channel: params.channel,
+          metadata: {
+            bulk: true,
+            scheduleAt: normalizedScheduleAt,
+            userEmail: user.email || null,
+            personalization,
+            delivery: {
+              channel: params.channel,
+              requiresEmail,
+              isBulk: true,
+              attachments: [],
+              flags: {
+                scheduled: true,
+              },
+            },
+          },
+        })
+        results.success.push(record)
+        continue
+      }
+
       const record = await sendNudgeToUser({
         userId: user.id,
         userEmail: user.email,
@@ -166,6 +235,12 @@ export const scheduleAutomatedNudges = async (params: {
 
 export const createNudgeCampaignPlan = async (payload: Omit<NudgeCampaignRecord, 'id'>) => {
   return createNudgeCampaign(payload)
+}
+
+export const createNudgeTemplateRecord = async (
+  payload: Omit<NudgeTemplateRecord, 'id' | 'created_at' | 'updated_at'>,
+) => {
+  return createNudgeTemplate(payload)
 }
 
 export const listNudgeCampaigns = async () => {

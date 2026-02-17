@@ -33,6 +33,11 @@ import {
   SimpleGrid,
   Spinner,
   Stack,
+  Tab,
+  TabList,
+  TabPanel,
+  TabPanels,
+  Tabs,
   Text,
   Textarea,
   Tooltip,
@@ -107,30 +112,19 @@ interface PartnerProfile extends UserProfileExtended {
 }
 
 const formatDisplayDate = (date: Date) => format(date, 'EEE, MMM d')
+const formatOptionalIsoDate = (value?: string | null): string | null => {
+  if (typeof value !== 'string' || value.trim().length === 0) return null
+  const parsed = parseISO(value)
+  if (!isValid(parsed)) return null
+  return format(parsed, 'PPP')
+}
+
 const relativeTime = (date: Date) => {
   try {
     return formatDistanceToNow(date, { addSuffix: true })
   } catch (err) {
     return ''
   }
-}
-
-const initialsFromName = (name: string) => {
-  if (!name || typeof name !== 'string') return ''
-  const trimmed = name.trim()
-  if (!trimmed) return ''
-
-  // For emails, return the first letter
-  if (trimmed.includes('@')) {
-    return trimmed.charAt(0).toUpperCase()
-  }
-
-  const parts = trimmed.split(/\s+/)
-  if (parts.length === 1) return parts[0].charAt(0).toUpperCase()
-
-  const first = parts[0] || ''
-  const last = parts[parts.length - 1] || ''
-  return `${first.charAt(0)}${last.charAt(0)}`.toUpperCase()
 }
 
 const displayNameForProfile = (profile?: UserProfileExtended | null) =>
@@ -453,6 +447,10 @@ export const LeadershipCouncilPage: React.FC = () => {
     const mentorName = mentorProfile ? displayNameForProfile(mentorProfile) : 'your mentor'
     return `Your next ${sessions.length} session(s) with ${mentorName} at a glance`
   }, [sessions.length, sessionsLoading, mentorProfile])
+  const mentorLastInteraction = useMemo(
+    () => formatOptionalIsoDate(mentorProfile?.lastInteraction),
+    [mentorProfile?.lastInteraction],
+  )
 
   if (!user) {
     return (
@@ -564,377 +562,410 @@ export const LeadershipCouncilPage: React.FC = () => {
 
       <Grid templateColumns="1fr" gap={6} alignItems="start">
         <GridItem>
-          <Stack spacing={6}>
-            <Card borderColor="border.subtle" borderWidth="1px" bg="surface.default">
-              <CardHeader pb={0}>
-                <HStack justify="space-between" align="start">
-                  <Box>
-                    <Text fontSize="xs" textTransform="uppercase" color="text.muted" fontWeight="semibold">
-                      {isSamePerson ? 'Mentor & Ambassador Assignment' : 'Mentor Assignment'}
-                    </Text>
-                    <Heading size="md" color="text.primary">
-                      {mentorProfile ? displayNameForProfile(mentorProfile) : 'No mentor assigned'}
-                    </Heading>
-                    <HStack spacing={2} color="text.muted" mt={2}>
-                      <Icon as={Building2} />
-                      <Text>Supporting your organization</Text>
-                    </HStack>
-                    {isSamePerson && (
-                      <HStack spacing={2} color="text.muted" mt={1}>
-                        <Icon as={Users} />
-                        <Text>Supporting your organization</Text>
-                      </HStack>
-                    )}
-                    {mentorSourceLabel && (
-                      <Badge mt={3} width="fit-content" colorScheme="purple" variant="subtle">
-                        {mentorSourceLabel}
-                      </Badge>
-                    )}
-                  </Box>
-                  <VStack spacing={3} align="end">
-                    <Avatar
-                      size="lg"
-                      name={mentorProfile ? displayNameForProfile(mentorProfile) : undefined}
-                      src={mentorProfile?.avatarUrl}
-                      bg="brand.primary"
-                    >
-                      {!mentorProfile?.avatarUrl && mentorProfile && (
-                        initialsFromName(displayNameForProfile(mentorProfile))
-                      )}
-                    </Avatar>
-                    {mentorProfile?.availabilityStatus && (
-                      <Badge colorScheme={badgeColor(mentorProfile.availabilityStatus)} variant="subtle">
-                        {mentorProfile.availabilityStatus}
-                      </Badge>
-                    )}
-                    <Button
-                      size="xs"
-                      variant="outline"
-                      leftIcon={<RefreshCcw size={14} />}
-                      onClick={retryAssignments}
-                      isLoading={assignmentsLoading}
-                    >
-                      Refresh
-                    </Button>
-                  </VStack>
-                </HStack>
-              </CardHeader>
-              <CardBody pt={4}>
-                {assignmentsLoading && (
-                  <Flex direction="column" gap={3} p={4} border="1px dashed" borderColor="border.subtle" rounded="xl">
-                    <Spinner />
-                    <Text color="text.secondary">Loading your mentor assignment...</Text>
-                  </Flex>
-                )}
+          <Tabs variant="unstyled" colorScheme="primary" isLazy>
+            <TabList
+              border="1px solid"
+              borderColor="border.subtle"
+              rounded="lg"
+              p={1}
+              bg="surface.default"
+              gap={1}
+              overflowX="auto"
+            >
+              <Tab
+                whiteSpace="nowrap"
+                fontWeight="semibold"
+                rounded="md"
+                _selected={{ bg: 'brand.primary', color: 'text.inverse' }}
+              >
+                Mentor
+              </Tab>
+              <Tab
+                whiteSpace="nowrap"
+                fontWeight="semibold"
+                rounded="md"
+                _selected={{ bg: 'brand.primary', color: 'text.inverse' }}
+              >
+                Ambassador
+              </Tab>
+              <Tab
+                whiteSpace="nowrap"
+                fontWeight="semibold"
+                rounded="md"
+                _selected={{ bg: 'brand.primary', color: 'text.inverse' }}
+              >
+                Transformation Partner
+              </Tab>
+            </TabList>
 
-                {mentorError && (
-                  <Alert status="error" rounded="lg" mb={4}>
-                    <AlertIcon />
-                    <Box>
-                      <AlertTitle>We couldn't load your mentor right now.</AlertTitle>
-                      <AlertDescription>{mentorError}</AlertDescription>
-                    </Box>
-                    <Button size="sm" leftIcon={<RefreshCcw size={16} />} ml={4} onClick={retryAssignments}>
-                      Try again
-                    </Button>
-                  </Alert>
-                )}
-
-                {!assignmentsLoading && !mentorProfile && !mentorError && (
-                  <Flex direction="column" align="center" textAlign="center" p={6} gap={3}>
-                    <Icon as={User} boxSize={10} color="text.muted" />
-                    <Heading size="sm">No mentor assigned yet</Heading>
-                    <Text color="text.secondary">
-                      {hasOrganization
-                        ? supportAssignmentStatus.loaded
-                          ? 'We checked your user assignment and your organization. No mentor is assigned yet.'
-                          : 'Please contact your administrator for support.'
-                        : 'Your account is not linked to an organization yet. Please contact your administrator.'}
-                    </Text>
-                    {hasOrganization && supportAssignmentStatus.loaded && (
-                      <Text color="text.secondary" fontSize="sm">
-                        If you recently received a mentor, ask your administrator to confirm both your user-specific assignment and the organization-wide mentor.
-                      </Text>
-                    )}
-                  </Flex>
-                )}
-
-                {mentorProfile && (
-                  <Stack spacing={4}>
-                    <HStack spacing={3} flexWrap="wrap">
-                      <Tooltip
-                        label={scheduleDisabledReason || 'Schedule with your assigned mentor'}
-                        placement="top"
-                      >
-                        <Button
-                          leftIcon={<Calendar size={18} />}
-                          variant="outline"
-                          isDisabled={!canScheduleSession || scheduleSubmitting}
-                          onClick={scheduleModal.onOpen}
-                        >
-                          Schedule a session
-                        </Button>
-                      </Tooltip>
-                      <Button
-                        leftIcon={<Eye size={18} />}
-                        variant="outline"
-                        onClick={sessionsModal.onOpen}
-                        isDisabled={sessionsLoading}
-                      >
-                        {sessionsLoading ? 'Loading...' : 'View calendar'}
-                      </Button>
-                    </HStack>
-
-                    <Box p={4} border="1px solid" borderColor="border.subtle" rounded="lg" bg="surface.subtle">
-                      <HStack justify="space-between" align="start" mb={3}>
-                        <Text fontWeight="bold" color="text.primary">
-                          Your mentor sessions
-                        </Text>
-                        {sessions.length > 3 && (
-                          <Link color="brand.primary" fontWeight="semibold" onClick={sessionsModal.onOpen}>
-                            View all upcoming sessions
-                          </Link>
-                        )}
-                      </HStack>
-
-                      <Text color="text.secondary" mb={3}>
-                        {mentorSessionsSummary}
-                      </Text>
-
-                      {sessionsLoading && (
-                        <Flex
-                          align="center"
-                          gap={3}
-                          p={4}
-                          border="1px dashed"
-                          borderColor="border.subtle"
-                          rounded="lg"
-                          bg="surface.default"
-                        >
-                          <Spinner />
-                          <Text>Checking for upcoming sessions...</Text>
-                        </Flex>
-                      )}
-
-                      {sessionsError && (
-                        <Alert status="error" colorScheme="warning" rounded="lg">
-                          <AlertIcon />
-                          <Box>
-                            <AlertTitle>We couldn't load your upcoming sessions.</AlertTitle>
-                            <AlertDescription>{sessionsError}</AlertDescription>
-                          </Box>
-                        </Alert>
-                      )}
-
-                      {!sessionsLoading && !sessionsError && sessions.length === 0 && (
-                        <Flex
-                          direction="column"
-                          align="center"
-                          textAlign="center"
-                          p={5}
-                          gap={2}
-                          border="1px dashed"
-                          borderColor="border.subtle"
-                          rounded="lg"
-                          bg="surface.default"
-                        >
-                          <Icon as={Calendar} color="text.muted" />
-                          <Text>No sessions scheduled yet.</Text>
-                          <Text fontSize="sm" color="text.secondary">
-                            Use the schedule button to plan your next conversation.
-                          </Text>
-                        </Flex>
-                      )}
-
-                      {!sessionsLoading && !sessionsError && sessions.length > 0 && renderSessionCards(3)}
-
-                      {mentorProfile?.lastInteraction && (
-                        <Text mt={3} fontSize="sm" color="text.muted">
-                          Last interaction: {format(parseISO(mentorProfile.lastInteraction), 'PPP')}
-                        </Text>
-                      )}
-                    </Box>
-                  </Stack>
-                )}
-              </CardBody>
-            </Card>
-
-            {!isSamePerson && (
-              <Card borderColor="border.subtle" borderWidth="1px" bg="surface.default">
-                <CardHeader pb={0}>
-                  <Text fontSize="xs" textTransform="uppercase" color="text.muted" fontWeight="semibold">
-                    Ambassador Assignment
-                  </Text>
-                  <Heading size="md" color="text.primary" mt={1}>
-                    {ambassadorProfile ? displayNameForProfile(ambassadorProfile) : 'Your ambassador is here to champion your progress'}
-                  </Heading>
-                </CardHeader>
-                <CardBody>
-                  {assignmentsLoading && (
-                    <Flex align="center" gap={3} p={4} border="1px dashed" borderColor="border.subtle" rounded="xl">
-                      <Spinner />
-                      <Text color="text.secondary">Loading your ambassador assignment...</Text>
-                    </Flex>
-                  )}
-
-                  {ambassadorError && (
-                    <Alert status="warning" rounded="lg" mb={4}>
-                      <AlertIcon />
+            <TabPanels>
+              <TabPanel px={0} pt={4}>
+                <Card borderColor="border.subtle" borderWidth="1px" bg="surface.default">
+                  <CardHeader pb={0}>
+                    <HStack justify="space-between" align="start">
                       <Box>
-                        <AlertTitle>We couldn't load your ambassador right now.</AlertTitle>
-                        <AlertDescription>{ambassadorError}</AlertDescription>
-                      </Box>
-                      <Button size="sm" leftIcon={<RefreshCcw size={16} />} ml={4} onClick={retryAssignments}>
-                        Try again
-                      </Button>
-                    </Alert>
-                  )}
-
-                  {!assignmentsLoading && !ambassadorProfile && !ambassadorError && (
-                    <Flex direction="column" align="center" textAlign="center" p={6} gap={3}>
-                      <Icon as={User} boxSize={10} color="text.muted" />
-                      <Heading size="sm">No ambassador assigned yet</Heading>
-                      <Text color="text.secondary">
-                        {hasOrganization
-                          ? "Your community hasn't been paired with an ambassador. Please contact your administrator for support."
-                          : 'Your account is not linked to an organization yet. Please contact your administrator.'}
-                      </Text>
-                    </Flex>
-                  )}
-
-                  {ambassadorProfile && (
-                    <Flex direction={{ base: 'column', md: 'row' }} justify="space-between" gap={4} align="center">
-                      <Box>
-                        <Text color="text.primary">
-                          Your ambassador is here to champion your progress and connect you with new opportunities.
+                        <Text fontSize="xs" textTransform="uppercase" color="text.muted" fontWeight="semibold">
+                          {isSamePerson ? 'Mentor & Ambassador Assignment' : 'Mentor Assignment'}
                         </Text>
-                        <HStack spacing={3} mt={3} color="text.secondary">
-                          <Icon as={Users} />
+                        <Heading size="md" color="text.primary">
+                          {mentorProfile ? displayNameForProfile(mentorProfile) : 'No mentor assigned'}
+                        </Heading>
+                        <HStack spacing={2} color="text.muted" mt={2}>
+                          <Icon as={Building2} />
                           <Text>Supporting your organization</Text>
                         </HStack>
-                      </Box>
-                      <VStack spacing={3} align="center">
-                        <Avatar
-                          size="lg"
-                          name={displayNameForProfile(ambassadorProfile)}
-                          src={ambassadorProfile.avatarUrl}
-                          bg="brand.primary"
-                        >
-                          {!ambassadorProfile.avatarUrl && (
-                            initialsFromName(displayNameForProfile(ambassadorProfile))
-                          )}
-                        </Avatar>
-                        {ambassadorProfile.availabilityStatus && (
-                          <Badge colorScheme={badgeColor(ambassadorProfile.availabilityStatus)} variant="subtle">
-                            {ambassadorProfile.availabilityStatus}
-                          </Badge>
-                        )}
-                      </VStack>
-                    </Flex>
-                  )}
-                </CardBody>
-              </Card>
-            )}
-
-            <Card borderColor="border.subtle" borderWidth="1px" bg="surface.default">
-              <CardHeader pb={2}>
-                <HStack spacing={3} align="center">
-                  <Icon as={Shield} color="brand.primary" />
-                  <Box>
-                    <Text fontSize="xs" textTransform="uppercase" color="text.muted" fontWeight="semibold">
-                      Transformation Partner
-                    </Text>
-                    <Heading size="md">Program support & resources</Heading>
-                  </Box>
-                </HStack>
-              </CardHeader>
-              <CardBody>
-                {partnerLoading && (
-                  <Flex direction="column" align="center" gap={3} p={6}>
-                    <Spinner />
-                    <Text color="text.secondary">Loading transformation partner...</Text>
-                  </Flex>
-                )}
-                {!partnerLoading && partnerProfile && (
-                  <Stack spacing={4}>
-                    <HStack justify="space-between" align="start" spacing={4} flexWrap="wrap">
-                      <HStack spacing={3} align="start">
-                        <Avatar
-                          size="lg"
-                          name={displayNameForProfile(partnerProfile)}
-                          src={partnerProfile.avatarUrl}
-                          bg="brand.primary"
-                        >
-                          {!partnerProfile.avatarUrl && initialsFromName(displayNameForProfile(partnerProfile))}
-                        </Avatar>
-                        <Box>
-                          <Heading size="sm">{displayNameForProfile(partnerProfile)}</Heading>
-                          <Text color="text.secondary">{partnerProfile.title || 'Transformation Partner'}</Text>
-                          <Text color="text.muted" fontSize="sm">
-                            {partnerProfile.officeLocation || partnerProfile.timezone || 'Global support'}
-                          </Text>
-                        </Box>
-                      </HStack>
-                      <HStack spacing={3}>
-                        {partnerProfile.rating && (
-                          <Badge colorScheme="secondary" variant="subtle">
-                            ⭐ {partnerProfile.rating.toFixed(1)} / 5 ({partnerProfile.ratingCount || 0} reviews)
-                          </Badge>
-                        )}
-                        {partnerProfile.xp && (
-                          <Badge colorScheme="primary" variant="subtle">
-                            XP {partnerProfile.xp.toLocaleString()}
-                          </Badge>
-                        )}
-                      </HStack>
-                    </HStack>
-
-                    <Text color="text.primary">{partnerProfile.bio || 'Dedicated program partner supporting your transformation journey.'}</Text>
-
-                    <Divider />
-
-                    <SimpleGrid columns={{ base: 1, md: 2 }} spacing={4}>
-                      <Box>
-                        <HStack spacing={2}>
-                          <Icon as={Timer} color="text.muted" />
-                          <Text color="text.secondary">Local time: {partnerProfile.timezone || 'Not provided'}</Text>
-                        </HStack>
-                        {partnerProfile.email && (
-                          <HStack spacing={2} mt={2}>
-                            <Icon as={ExternalLink} color="text.muted" />
-                            <Link href={`mailto:${partnerProfile.email}`} color="brand.primary">
-                              {displayNameForProfile(partnerProfile) === partnerProfile.email ? 'Send email' : partnerProfile.email}
-                            </Link>
+                        {isSamePerson && (
+                          <HStack spacing={2} color="text.muted" mt={1}>
+                            <Icon as={Users} />
+                            <Text>Supporting your organization</Text>
                           </HStack>
                         )}
+                        {mentorSourceLabel && (
+                          <Badge mt={3} width="fit-content" colorScheme="purple" variant="subtle">
+                            {mentorSourceLabel}
+                          </Badge>
+                        )}
                       </Box>
-                      <Stack spacing={2}>
-                        {partnerProfile.hobbies && partnerProfile.hobbies.length > 0 && (
-                          <Text color="text.secondary">Hobbies: {partnerProfile.hobbies.join(', ')}</Text>
+                      <VStack spacing={3} align="end">
+                        <Avatar
+                          size="lg"
+                          name={mentorProfile ? displayNameForProfile(mentorProfile) : undefined}
+                          src={mentorProfile?.avatarUrl}
+                          bg="brand.primary"
+                        />
+                        {mentorProfile?.availabilityStatus && (
+                          <Badge colorScheme={badgeColor(mentorProfile.availabilityStatus)} variant="subtle">
+                            {mentorProfile.availabilityStatus}
+                          </Badge>
                         )}
-                        {partnerProfile.funFact && <Text color="text.secondary">Fun fact: {partnerProfile.funFact}</Text>}
-                        {partnerProfile.favoritePillar && (
-                          <Text color="text.secondary">Favorite LIFT pillar: {partnerProfile.favoritePillar}</Text>
+                        <Button
+                          size="xs"
+                          variant="outline"
+                          leftIcon={<RefreshCcw size={14} />}
+                          onClick={retryAssignments}
+                          isLoading={assignmentsLoading}
+                        >
+                          Refresh
+                        </Button>
+                      </VStack>
+                    </HStack>
+                  </CardHeader>
+                  <CardBody pt={4}>
+                    {assignmentsLoading && (
+                      <Flex direction="column" gap={3} p={4} border="1px dashed" borderColor="border.subtle" rounded="xl">
+                        <Spinner />
+                        <Text color="text.secondary">Loading your mentor assignment...</Text>
+                      </Flex>
+                    )}
+
+                    {mentorError && (
+                      <Alert status="error" rounded="lg" mb={4}>
+                        <AlertIcon />
+                        <Box>
+                          <AlertTitle>We couldn't load your mentor right now.</AlertTitle>
+                          <AlertDescription>{mentorError}</AlertDescription>
+                        </Box>
+                        <Button size="sm" leftIcon={<RefreshCcw size={16} />} ml={4} onClick={retryAssignments}>
+                          Try again
+                        </Button>
+                      </Alert>
+                    )}
+
+                    {!assignmentsLoading && !mentorProfile && !mentorError && (
+                      <Flex direction="column" align="center" textAlign="center" p={6} gap={3}>
+                        <Icon as={User} boxSize={10} color="text.muted" />
+                        <Heading size="sm">No mentor assigned yet</Heading>
+                        <Text color="text.secondary">
+                          {hasOrganization
+                            ? supportAssignmentStatus.loaded
+                              ? 'We checked your user assignment and your organization. No mentor is assigned yet.'
+                              : 'Please contact your administrator for support.'
+                            : 'Your account is not linked to an organization yet. Please contact your administrator.'}
+                        </Text>
+                        {hasOrganization && supportAssignmentStatus.loaded && (
+                          <Text color="text.secondary" fontSize="sm">
+                            If you recently received a mentor, ask your administrator to confirm both your user-specific assignment and the organization-wide mentor.
+                          </Text>
                         )}
+                      </Flex>
+                    )}
+
+                    {mentorProfile && (
+                      <Stack spacing={4}>
+                        <HStack spacing={3} flexWrap="wrap">
+                          <Tooltip
+                            label={scheduleDisabledReason || 'Schedule with your assigned mentor'}
+                            placement="top"
+                          >
+                            <Button
+                              leftIcon={<Calendar size={18} />}
+                              variant="outline"
+                              isDisabled={!canScheduleSession || scheduleSubmitting}
+                              onClick={scheduleModal.onOpen}
+                            >
+                              Schedule a session
+                            </Button>
+                          </Tooltip>
+                          <Button
+                            leftIcon={<Eye size={18} />}
+                            variant="outline"
+                            onClick={sessionsModal.onOpen}
+                            isDisabled={sessionsLoading}
+                          >
+                            {sessionsLoading ? 'Loading...' : 'View calendar'}
+                          </Button>
+                        </HStack>
+
+                        <Box p={4} border="1px solid" borderColor="border.subtle" rounded="lg" bg="surface.subtle">
+                          <HStack justify="space-between" align="start" mb={3}>
+                            <Text fontWeight="bold" color="text.primary">
+                              Your mentor sessions
+                            </Text>
+                            {sessions.length > 3 && (
+                              <Link color="brand.primary" fontWeight="semibold" onClick={sessionsModal.onOpen}>
+                                View all upcoming sessions
+                              </Link>
+                            )}
+                          </HStack>
+
+                          <Text color="text.secondary" mb={3}>
+                            {mentorSessionsSummary}
+                          </Text>
+
+                          {sessionsLoading && (
+                            <Flex
+                              align="center"
+                              gap={3}
+                              p={4}
+                              border="1px dashed"
+                              borderColor="border.subtle"
+                              rounded="lg"
+                              bg="surface.default"
+                            >
+                              <Spinner />
+                              <Text>Checking for upcoming sessions...</Text>
+                            </Flex>
+                          )}
+
+                          {sessionsError && (
+                            <Alert status="warning" colorScheme="warning" rounded="lg">
+                              <AlertIcon />
+                              <Box>
+                                <AlertTitle>We couldn't load your upcoming sessions.</AlertTitle>
+                                <AlertDescription>{sessionsError}</AlertDescription>
+                              </Box>
+                            </Alert>
+                          )}
+
+                          {!sessionsLoading && !sessionsError && sessions.length === 0 && (
+                            <Flex
+                              direction="column"
+                              align="center"
+                              textAlign="center"
+                              p={5}
+                              gap={2}
+                              border="1px dashed"
+                              borderColor="border.subtle"
+                              rounded="lg"
+                              bg="surface.default"
+                            >
+                              <Icon as={Calendar} color="text.muted" />
+                              <Text>No sessions scheduled yet.</Text>
+                              <Text fontSize="sm" color="text.secondary">
+                                Use the schedule button to plan your next conversation.
+                              </Text>
+                            </Flex>
+                          )}
+
+                          {!sessionsLoading && !sessionsError && sessions.length > 0 && renderSessionCards(3)}
+
+                          {mentorLastInteraction && (
+                            <Text mt={3} fontSize="sm" color="text.muted">
+                              Last interaction: {mentorLastInteraction}
+                            </Text>
+                          )}
+                        </Box>
                       </Stack>
-                    </SimpleGrid>
-                  </Stack>
-                )}
-                {!partnerLoading && !partnerProfile && (
-                  <Flex direction="column" align="center" gap={3} p={6} textAlign="center">
-                    <Icon as={Shield} boxSize={8} color="text.muted" />
-                    <Heading size="sm">Transformation partner unavailable</Heading>
-                    <Text color="text.secondary">
-                      {partnerError || 'Your transformation partner profile is not set up yet. Please contact your administrator for support.'}
+                    )}
+                  </CardBody>
+                </Card>
+              </TabPanel>
+
+              <TabPanel px={0} pt={4}>
+                <Card borderColor="border.subtle" borderWidth="1px" bg="surface.default">
+                  <CardHeader pb={0}>
+                    <Text fontSize="xs" textTransform="uppercase" color="text.muted" fontWeight="semibold">
+                      Ambassador Assignment
                     </Text>
-                    <Button size="sm" leftIcon={<RefreshCcw size={16} />} onClick={retryAssignments}>
-                      Try again
-                    </Button>
-                  </Flex>
-                )}
-              </CardBody>
-            </Card>
-          </Stack>
+                    <Heading size="md" color="text.primary" mt={1}>
+                      {ambassadorProfile ? displayNameForProfile(ambassadorProfile) : 'No ambassador assigned yet'}
+                    </Heading>
+                  </CardHeader>
+                  <CardBody>
+                    {assignmentsLoading && (
+                      <Flex align="center" gap={3} p={4} border="1px dashed" borderColor="border.subtle" rounded="xl">
+                        <Spinner />
+                        <Text color="text.secondary">Loading your ambassador assignment...</Text>
+                      </Flex>
+                    )}
+
+                    {ambassadorError && (
+                      <Alert status="warning" rounded="lg" mb={4}>
+                        <AlertIcon />
+                        <Box>
+                          <AlertTitle>We couldn't load your ambassador right now.</AlertTitle>
+                          <AlertDescription>{ambassadorError}</AlertDescription>
+                        </Box>
+                        <Button size="sm" leftIcon={<RefreshCcw size={16} />} ml={4} onClick={retryAssignments}>
+                          Try again
+                        </Button>
+                      </Alert>
+                    )}
+
+                    {!assignmentsLoading && !ambassadorProfile && !ambassadorError && (
+                      <Flex direction="column" align="center" textAlign="center" p={6} gap={3}>
+                        <Icon as={User} boxSize={10} color="text.muted" />
+                        <Heading size="sm">No ambassador assigned yet</Heading>
+                        <Text color="text.secondary">
+                          {hasOrganization
+                            ? "Your community hasn't been paired with an ambassador. Please contact your administrator for support."
+                            : 'Your account is not linked to an organization yet. Please contact your administrator.'}
+                        </Text>
+                      </Flex>
+                    )}
+
+                    {ambassadorProfile && (
+                      <Flex direction={{ base: 'column', md: 'row' }} justify="space-between" gap={4} align="center">
+                        <Box>
+                          <Text color="text.primary">
+                            {isSamePerson
+                              ? 'Your mentor is also serving as your ambassador for this program.'
+                              : 'Your ambassador is here to champion your progress and connect you with new opportunities.'}
+                          </Text>
+                          <HStack spacing={3} mt={3} color="text.secondary">
+                            <Icon as={Users} />
+                            <Text>Supporting your organization</Text>
+                          </HStack>
+                        </Box>
+                        <VStack spacing={3} align="center">
+                          <Avatar
+                            size="lg"
+                            name={displayNameForProfile(ambassadorProfile)}
+                            src={ambassadorProfile.avatarUrl}
+                            bg="brand.primary"
+                          />
+                          {ambassadorProfile.availabilityStatus && (
+                            <Badge colorScheme={badgeColor(ambassadorProfile.availabilityStatus)} variant="subtle">
+                              {ambassadorProfile.availabilityStatus}
+                            </Badge>
+                          )}
+                        </VStack>
+                      </Flex>
+                    )}
+                  </CardBody>
+                </Card>
+              </TabPanel>
+
+              <TabPanel px={0} pt={4}>
+                <Card borderColor="border.subtle" borderWidth="1px" bg="surface.default">
+                  <CardHeader pb={2}>
+                    <HStack spacing={3} align="center">
+                      <Icon as={Shield} color="brand.primary" />
+                      <Box>
+                        <Text fontSize="xs" textTransform="uppercase" color="text.muted" fontWeight="semibold">
+                          Transformation Partner
+                        </Text>
+                        <Heading size="md">Program support & resources</Heading>
+                      </Box>
+                    </HStack>
+                  </CardHeader>
+                  <CardBody>
+                    {partnerLoading && (
+                      <Flex direction="column" align="center" gap={3} p={6}>
+                        <Spinner />
+                        <Text color="text.secondary">Loading transformation partner...</Text>
+                      </Flex>
+                    )}
+                    {!partnerLoading && partnerProfile && (
+                      <Stack spacing={4}>
+                        <HStack justify="space-between" align="start" spacing={4} flexWrap="wrap">
+                          <HStack spacing={3} align="start">
+                            <Avatar
+                              size="lg"
+                              name={displayNameForProfile(partnerProfile)}
+                              src={partnerProfile.avatarUrl}
+                              bg="brand.primary"
+                            />
+                            <Box>
+                              <Heading size="sm">{displayNameForProfile(partnerProfile)}</Heading>
+                              <Text color="text.secondary">{partnerProfile.title || 'Transformation Partner'}</Text>
+                              <Text color="text.muted" fontSize="sm">
+                                {partnerProfile.officeLocation || partnerProfile.timezone || 'Global support'}
+                              </Text>
+                            </Box>
+                          </HStack>
+                          <HStack spacing={3}>
+                            {partnerProfile.rating && (
+                              <Badge colorScheme="secondary" variant="subtle">
+                                Rating {partnerProfile.rating.toFixed(1)} / 5 ({partnerProfile.ratingCount || 0} reviews)
+                              </Badge>
+                            )}
+                            {partnerProfile.xp && (
+                              <Badge colorScheme="primary" variant="subtle">
+                                XP {partnerProfile.xp.toLocaleString()}
+                              </Badge>
+                            )}
+                          </HStack>
+                        </HStack>
+
+                        <Text color="text.primary">{partnerProfile.bio || 'Dedicated program partner supporting your transformation journey.'}</Text>
+
+                        <Divider />
+
+                        <SimpleGrid columns={{ base: 1, md: 2 }} spacing={4}>
+                          <Box>
+                            <HStack spacing={2}>
+                              <Icon as={Timer} color="text.muted" />
+                              <Text color="text.secondary">Local time: {partnerProfile.timezone || 'Not provided'}</Text>
+                            </HStack>
+                            {partnerProfile.email && (
+                              <HStack spacing={2} mt={2}>
+                                <Icon as={ExternalLink} color="text.muted" />
+                                <Link href={`mailto:${partnerProfile.email}`} color="brand.primary">
+                                  {displayNameForProfile(partnerProfile) === partnerProfile.email ? 'Send email' : partnerProfile.email}
+                                </Link>
+                              </HStack>
+                            )}
+                          </Box>
+                          <Stack spacing={2}>
+                            {partnerProfile.hobbies && partnerProfile.hobbies.length > 0 && (
+                              <Text color="text.secondary">Hobbies: {partnerProfile.hobbies.join(', ')}</Text>
+                            )}
+                            {partnerProfile.funFact && <Text color="text.secondary">Fun fact: {partnerProfile.funFact}</Text>}
+                            {partnerProfile.favoritePillar && (
+                              <Text color="text.secondary">Favorite LIFT pillar: {partnerProfile.favoritePillar}</Text>
+                            )}
+                          </Stack>
+                        </SimpleGrid>
+                      </Stack>
+                    )}
+                    {!partnerLoading && !partnerProfile && (
+                      <Flex direction="column" align="center" gap={3} p={6} textAlign="center">
+                        <Icon as={Shield} boxSize={8} color="text.muted" />
+                        <Heading size="sm">Transformation partner unavailable</Heading>
+                        <Text color="text.secondary">
+                          {partnerError || 'Your transformation partner profile is not set up yet. Please contact your administrator for support.'}
+                        </Text>
+                        <Button size="sm" leftIcon={<RefreshCcw size={16} />} onClick={retryAssignments}>
+                          Try again
+                        </Button>
+                      </Flex>
+                    )}
+                  </CardBody>
+                </Card>
+              </TabPanel>
+            </TabPanels>
+          </Tabs>
         </GridItem>
       </Grid>
 
@@ -1079,3 +1110,4 @@ export const LeadershipCouncilPage: React.FC = () => {
     </Stack>
   )
 }
+

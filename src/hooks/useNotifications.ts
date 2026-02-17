@@ -66,14 +66,26 @@ export const useNotifications = ({
     if (!profile?.id || !enabled) {
       setNotifications([])
       setLoading(false)
+      setError(null)
       return
     }
 
     setLoading(true)
+    setError(null)
     const unsubscribe = listenToUserNotifications(profile.id, (items) => {
       const limited = items.slice(0, limit)
       setNotifications(limited)
       setLoading(false)
+    }, (err) => {
+      const code = (err as { code?: string })?.code
+      console.error('[useNotifications] listener error', err)
+      setNotifications([])
+      setLoading(false)
+      if (code === 'permission-denied') {
+        setError('You do not have permission to view notifications.')
+        return
+      }
+      setError('Unable to load notifications')
     })
 
     return () => unsubscribe()

@@ -182,8 +182,8 @@ export const LearnerDashboardPage = () => {
   const activityFeedItems = [
     {
       id: 'weekly-points',
-      title: 'Weekly points updated',
-      description: `${earnedPoints} points logged toward your ${targetPoints || 0} point goal.`,
+      title: 'Points progress update',
+      description: `${earnedPoints} points accumulated toward your ${targetPoints || 0} point weekly goal.`,
       timestamp: `Week ${data.weekNumber} • ${daysRemaining} days left`,
       status: earnedPoints >= targetPoints && targetPoints > 0 ? 'complete' : earnedPoints > 0 ? 'pending' : 'attention',
     },
@@ -234,8 +234,8 @@ export const LearnerDashboardPage = () => {
         )}
 
         <Stack spacing={1}>
-          <Heading size="lg" color="text.primary">This Week at a Glance</Heading>
-          <Text color="text.primary">Your personalized dashboard for weekly progress, habits, and support.</Text>
+          <Heading size="lg" color="text.primary">Current Progress at a Glance</Heading>
+          <Text color="text.primary">Your personalized dashboard for points accumulated, habits, and support.</Text>
         </Stack>
 
         {hasError && (
@@ -253,7 +253,7 @@ export const LearnerDashboardPage = () => {
         <Grid templateColumns={{ base: '1fr', md: 'repeat(12, 1fr)' }} gap={6} alignItems="stretch">
           <GridItem colSpan={{ base: 1, md: 6 }} order={{ base: 1, md: 1 }}>
             {isParallelTrackingEnabled ? (
-              <WindowSummaryCard />
+              <WindowSummaryCard onNavigate={() => navigate('/app/weekly-checklist')} />
             ) : (
               <LearnerWindowCard
                 weekLabel={`Week ${data.weekNumber} • ${weekRange.label}`}

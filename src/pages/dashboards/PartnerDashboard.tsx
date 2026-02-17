@@ -19,12 +19,6 @@ import {
   VStack,
   Skeleton,
   SkeletonText,
-  Accordion,
-  AccordionItem,
-  AccordionButton,
-  AccordionPanel,
-  AccordionIcon,
-  Code,
   useToast,
 } from '@chakra-ui/react'
 import { formatDistanceToNow, isValid } from 'date-fns'
@@ -37,17 +31,17 @@ import { OrganizationCard } from '@/components/admin/OrganizationCard'
 import PartnerLayout from '@/layouts/PartnerLayout'
 import { DashboardErrorBoundary } from '@/components/ui/DashboardErrorBoundary'
 import { AtRiskCommandPanel, type AtRiskNudgePayload } from '@/components/partner/AtRiskCommandPanel'
-import { PartnerUserManagement } from '@/components/partner/PartnerUserManagement'
+import { PartnerUserManagement, type PartnerUserManagementTab } from '@/components/partner/PartnerUserManagement'
+import NudgeAutomationRules from '@/components/partner/nudges/NudgeAutomationRules'
 import { usePointsApprovalQueue } from '@/hooks/partner/usePointsApprovalQueue'
 import { usePartnerMetrics } from '@/hooks/partner/usePartnerMetrics'
-import { usePartnerDashboardData } from '@/hooks/usePartnerDashboardData'
+import { usePartnerDashboardData, type PartnerUser } from '@/hooks/usePartnerDashboardData'
 import { useAuth } from '@/hooks/useAuth'
 import { logOrganizationAccessAttempt } from '@/services/organizationService'
 import { recordEngagementAction } from '@/services/engagementService'
 import { sendBulkNudges } from '@/services/nudgeService'
-import { generatePartnerDigest, sendPartnerDigestEmail } from '@/services/partnerDigestService'
 import { buildPartnerNavItems } from '@/utils/navigationItems'
-import { logger, type MismatchSample } from '@/utils/partnerDashboardUtils'
+import { logger } from '@/utils/partnerDashboardUtils'
 import { getDisplayName } from '@/utils/displayName'
 
 export const PartnerDashboard: React.FC = () => {
@@ -62,7 +56,6 @@ export const PartnerDashboard: React.FC = () => {
     profileStatus,
   } = useAuth()
   const toast = useToast()
-  const [debugMode, setDebugMode] = useState(false)
   const [partnerOrgAccess, setPartnerOrgAccess] = useState<boolean | null>(null)
   const {
     assignedOrgCount,
@@ -84,10 +77,11 @@ export const PartnerDashboard: React.FC = () => {
     debugInfo,
     snapshot,
     adminDataLoading,
-  } = usePartnerDashboardData({ debugMode })
+  } = usePartnerDashboardData({ debugMode: false })
   const { organizations, users, analytics } = snapshot
-  const { engagementTrend, riskLevels, atRiskUsers } = analytics || {}
-  const partnerId = user?.uid ?? null
+  const engagementTrend = analytics?.engagementTrend ?? []
+  const riskLevels = analytics?.riskLevels ?? { engaged: 0, watch: 0, concern: 0, critical: 0 }
+  const atRiskUsers = useMemo(() => analytics?.atRiskUsers ?? [], [analytics?.atRiskUsers])
   const accountDisplayName = useMemo(
     () =>
       getDisplayName(
@@ -101,10 +95,11 @@ export const PartnerDashboard: React.FC = () => {
       ),
     [profile, user?.email],
   )
-  const snapshotUsers = snapshot?.users ?? []
+  const snapshotUsers = useMemo(() => snapshot?.users ?? [], [snapshot?.users])
 
-  type PartnerPageKey = 'overview' | 'users' | 'organization-management' | 'at-risk' | 'reports' | 'settings' | 'support' | 'profile'
+  type PartnerPageKey = 'overview' | 'users' | 'organization-management' | 'at-risk' | 'reports' | 'settings' | 'profile'
   const [activePage, setActivePage] = useState<PartnerPageKey>('overview')
+  const [userManagementTab, setUserManagementTab] = useState<PartnerUserManagementTab>('users')
   const [showAllNotifications, setShowAllNotifications] = useState(false)
 
   // Profile page state
@@ -234,8 +229,6 @@ export const PartnerDashboard: React.FC = () => {
   }
 
   const [refreshingOrganizations, setRefreshingOrganizations] = useState(false)
-  const [digestSending, setDigestSending] = useState(false)
-  const [digestStatusMessage, setDigestStatusMessage] = useState<string | null>(null)
   const initialRefreshRef = useRef(false)
   const selectedOrgId = useMemo(() => {
     if (!selectedOrg || selectedOrg === 'all') return null
@@ -359,17 +352,10 @@ export const PartnerDashboard: React.FC = () => {
 
     return Array.from(groups.values()).sort((a, b) => b.latestTimestamp - a.latestTimestamp)
   }, [notifications])
-  const scopedDigestOrgIds = useMemo(() => {
-    const scoped = assignedOrganizations.length
-      ? assignedOrganizations
-      : organizations.map(org => org.id || org.code || '').filter(Boolean)
-    return Array.from(new Set(scoped))
-  }, [assignedOrganizations, organizations])
-
   const riskReasons = useMemo(() => {
     const counts: Record<string, number> = {}
     atRiskUsers.forEach(user => {
-      const reasons = user.riskReasons?.length ? user.riskReasons : ['Behind on weekly points target']
+      const reasons = user.riskReasons?.length ? user.riskReasons : ['Below current 2-week cycle points target']
       reasons.forEach(reason => {
         counts[reason] = (counts[reason] || 0) + 1
       })
@@ -394,6 +380,7 @@ export const PartnerDashboard: React.FC = () => {
     () =>
       overviewOrganizations.map((org) => ({
         name: org.name || org.code || org.id || 'Unknown organization',
+        organizationKey: org.code || org.id || '',
         status: org.status,
         activeUsers: org.activeUsers,
         newThisWeek: org.newThisWeek,
@@ -443,86 +430,6 @@ export const PartnerDashboard: React.FC = () => {
     navigate(`/partner/organization/${orgCode}`)
   }
 
-  const handleSendDigest = useCallback(async () => {
-    if (digestSending) return
-
-    if (!user?.uid) {
-      toast({
-        title: 'Unable to send digest',
-        description: 'Please sign in again before sending a partner digest.',
-        status: 'error',
-        duration: 6000,
-        isClosable: true,
-      })
-      return
-    }
-
-    if (scopedDigestOrgIds.length === 0) {
-      toast({
-        title: 'No organisations assigned yet',
-        description: 'Assign at least one organization before sending a digest.',
-        status: 'error',
-        duration: 6000,
-        isClosable: true,
-      })
-      return
-    }
-
-    setDigestSending(true)
-    setDigestStatusMessage(null)
-
-    try {
-      const results = await Promise.all(
-        scopedDigestOrgIds.map(async (orgId) => {
-          const digest = await generatePartnerDigest(user.uid, user.email ?? '', orgId)
-          if (!digest) {
-            return { orgId, status: 'failed' as const }
-          }
-          const sent = await sendPartnerDigestEmail(digest)
-          return { orgId, status: sent ? 'sent' as const : 'failed' as const }
-        }),
-      )
-
-      const sentCount = results.filter(result => result.status === 'sent').length
-      const failedCount = results.length - sentCount
-
-      if (sentCount > 0) {
-        setDigestStatusMessage(
-          `Digest sent to ${sentCount} organization${sentCount === 1 ? '' : 's'} just now.`,
-        )
-      }
-
-      if (failedCount > 0) {
-        toast({
-          title: 'Some digests failed',
-          description: `We couldn't send ${failedCount} digest${failedCount === 1 ? '' : 's'}. Try again or contact support.`,
-          status: 'error',
-          duration: 7000,
-          isClosable: true,
-        })
-      } else {
-        toast({
-          title: 'Digest sent',
-          description: 'Partner digest email sent successfully.',
-          status: 'success',
-          duration: 4000,
-          isClosable: true,
-        })
-      }
-    } catch (error) {
-      console.error('Failed to send partner digest', error)
-      toast({
-        title: 'Digest send failed',
-        description: error instanceof Error ? error.message : 'Unexpected error while sending the digest.',
-        status: 'error',
-        duration: 7000,
-        isClosable: true,
-      })
-    } finally {
-      setDigestSending(false)
-    }
-  }, [digestSending, scopedDigestOrgIds, toast, user?.email, user?.uid])
-
   const renderOverview = () => {
     const learnersAtRiskCount = overviewRiskLevels.critical + overviewRiskLevels.concern
     const overdueCheckinsCount = interventions.length
@@ -539,11 +446,6 @@ export const PartnerDashboard: React.FC = () => {
       && overviewMetrics.newRegistrations === 0
       && overviewMetrics.managedCompanies === 0
     const managedCompanyLabel = overviewMetrics.managedCompanies === 1 ? 'company' : 'companies'
-    const organizationScopeLabel =
-      selectedOrg === 'all'
-        ? `${assignedOrgCount} organization${assignedOrgCount === 1 ? '' : 's'} assigned to you.`
-        : `${overviewOrgCount} organization${overviewOrgCount === 1 ? '' : 's'} in scope.`
-
     const alertCards = [
       {
         key: 'risk',
@@ -567,7 +469,10 @@ export const PartnerDashboard: React.FC = () => {
         label: pendingApprovalsCount === 1 ? 'Approval pending' : 'Approvals pending',
         color: 'green',
         icon: ClipboardCheck,
-        onClick: () => setActivePage('users'),
+        onClick: () => {
+          setUserManagementTab('approvals')
+          setActivePage('users')
+        },
       },
     ]
 
@@ -800,7 +705,12 @@ export const PartnerDashboard: React.FC = () => {
                                   {isHealthy ? 'All learners on track' : 'Learners need follow-up'}
                                 </Text>
                               </HStack>
-                              <Button size="xs" variant="outline" onClick={() => handleViewOrganization(company.name)}>
+                              <Button
+                                size="xs"
+                                variant="outline"
+                                isDisabled={!company.organizationKey}
+                                onClick={() => handleViewOrganization(company.organizationKey)}
+                              >
                                 Manage Organization
                               </Button>
                             </Stack>
@@ -809,85 +719,6 @@ export const PartnerDashboard: React.FC = () => {
                       })
                     )}
                   </SimpleGrid>
-                </Stack>
-              </CardBody>
-            </Card>
-          </SimpleGrid>
-        </Stack>
-
-        <Stack spacing={4}>
-          <Text fontWeight="bold" color="brand.text">Quick Actions</Text>
-          <SimpleGrid columns={{ base: 1, md: 3 }} spacing={4}>
-            <Card bg="white" border="1px solid" borderColor="brand.border">
-              <CardBody>
-                <Stack spacing={3}>
-                  <HStack spacing={2}>
-                    <Mail size={18} />
-                    <Text fontWeight="bold" color="brand.text">Digest & Alerts</Text>
-                  </HStack>
-                  <Text fontSize="sm" color="brand.subtleText">
-                    {overdueCheckinsCount} overdue alert{overdueCheckinsCount === 1 ? '' : 's'} · {notificationCount} unread notification{notificationCount === 1 ? '' : 's'}
-                  </Text>
-                  <Button
-                    variant="solid"
-                    colorScheme="purple"
-                    leftIcon={<Mail size={16} />}
-                    onClick={handleSendDigest}
-                    isLoading={digestSending}
-                    isDisabled={digestSending || scopedDigestOrgIds.length === 0}
-                    loadingText="Sending"
-                  >
-                    Send digest now
-                  </Button>
-                  <HStack spacing={2}>
-                    <Text fontSize="xs" color="brand.subtleText">
-                      Digest sent to: {user?.email ?? 'your email'}
-                    </Text>
-                    <Button size="xs" variant="link" colorScheme="purple" onClick={() => setActivePage('settings')}>
-                      Edit
-                    </Button>
-                  </HStack>
-                  {digestStatusMessage ? (
-                    <Text fontSize="xs" color="green.600">
-                      {digestStatusMessage}
-                    </Text>
-                  ) : null}
-                </Stack>
-              </CardBody>
-            </Card>
-
-            <Card bg="white" border="1px solid" borderColor="brand.border">
-              <CardBody>
-                <Stack spacing={3}>
-                  <HStack spacing={2}>
-                    <Users size={18} />
-                    <Text fontWeight="bold" color="brand.text">Invite Learners</Text>
-                  </HStack>
-                  <Text fontSize="sm" color="brand.subtleText">
-                    {overviewMetrics.activeMembers === 0
-                      ? 'Kickstart engagement by inviting your first learner.'
-                      : 'Bring new learners into your programs.'}
-                  </Text>
-                  <Button colorScheme="purple" onClick={() => setActivePage('users')}>
-                    {overviewMetrics.activeMembers === 0 ? 'Invite your first learner →' : 'Invite learners →'}
-                  </Button>
-                </Stack>
-              </CardBody>
-            </Card>
-
-            <Card bg="white" border="1px solid" borderColor="brand.border">
-              <CardBody>
-                <Stack spacing={3}>
-                  <HStack spacing={2}>
-                    <Building2 size={18} />
-                    <Text fontWeight="bold" color="brand.text">Manage Organizations</Text>
-                  </HStack>
-                  <Text fontSize="sm" color="brand.subtleText">
-                    {organizationScopeLabel}
-                  </Text>
-                  <Button variant="outline" colorScheme="purple" onClick={() => setActivePage('organization-management')}>
-                    Manage Organization
-                  </Button>
                 </Stack>
               </CardBody>
             </Card>
@@ -1252,8 +1083,15 @@ export const PartnerDashboard: React.FC = () => {
       return { success: 0, failed: 0 }
     }
 
-    const users = payload.users
-      .filter((item) => item.email)
+    const requiresEmail = payload.channel === 'email' || payload.channel === 'both'
+    const eligibleUsers = payload.users.filter((item) => !requiresEmail || Boolean(item.email))
+    const skippedCount = payload.users.length - eligibleUsers.length
+
+    if (eligibleUsers.length === 0) {
+      return { success: 0, failed: skippedCount }
+    }
+
+    const users = eligibleUsers
       .map((item) => {
         const lastActiveValue = item.lastActiveAt || item.lastActive
         const parsedLastActive = lastActiveValue ? new Date(lastActiveValue) : null
@@ -1264,7 +1102,7 @@ export const PartnerDashboard: React.FC = () => {
 
         return {
           id: item.id,
-          email: item.email,
+          email: item.email || undefined,
           name: getDisplayName(item, 'Member'),
           organizationName: item.companyCode || 'Your organization',
           daysInactive,
@@ -1277,10 +1115,24 @@ export const PartnerDashboard: React.FC = () => {
       adminId,
       template: payload.template,
       channel: payload.channel,
+      scheduleAt: payload.scheduleAt,
     })
 
-    return { success: result.success.length, failed: result.failed.length }
+    return { success: result.success.length, failed: result.failed.length + skippedCount }
   }, [profile?.id, user?.uid])
+
+  const handleStartInterventionFromUserManagement = useCallback(async (targetUser: PartnerUser) => {
+    await handleAtRiskAction('add_to_intervention_queue', targetUser.id, {
+      target: getDisplayName(targetUser, 'Member'),
+      name: 'Partner dashboard intervention',
+      reason: targetUser.riskReasons?.[0] || 'Started from user management',
+      riskStatus: targetUser.riskStatus,
+      riskReasons: targetUser.riskReasons || [],
+      organizationCode: targetUser.companyCode || '',
+      userId: targetUser.id,
+    })
+    setActivePage('at-risk')
+  }, [handleAtRiskAction])
 
   const renderAtRiskPage = () => (
     <AtRiskCommandPanel
@@ -1294,142 +1146,6 @@ export const PartnerDashboard: React.FC = () => {
       onSendNudges={handleSendNudges}
     />
   )
-
-  const renderDebugInfo = () => {
-    if (!debugInfo) return null
-
-    return (
-      <Accordion allowToggle mt={4}>
-        <AccordionItem border="1px dashed" borderColor="border.control" borderRadius="md" bg="gray.50">
-          <h2>
-            <AccordionButton>
-              <Box flex="1" textAlign="left" fontWeight="bold" fontSize="sm">
-                <HStack>
-                  <Gauge size={14} />
-                  <Text>Dashboard Debug Info</Text>
-                  {debugInfo.rejectedNoMatch > 0 && (
-                    <Badge colorScheme="orange" ml={2}>
-                      {debugInfo.rejectedNoMatch} Mismatched
-                    </Badge>
-                  )}
-                </HStack>
-              </Box>
-              <AccordionIcon />
-            </AccordionButton>
-          </h2>
-          <AccordionPanel pb={4}>
-            <VStack align="flex-start" spacing={4}>
-              {import.meta.env.DEV && (
-                <Box w="full">
-                  <Text fontSize="xs" fontWeight="bold" color="gray.600" mb={2}>
-                    Partner Debug Panel (DEV ONLY)
-                  </Text>
-                  <SimpleGrid columns={{ base: 1, md: 2 }} spacing={3}>
-                    <Box>
-                      <Text fontSize="xs" color="gray.500">Role</Text>
-                      <Text fontWeight="bold">{profile?.role || 'unknown'}</Text>
-                    </Box>
-                    <Box>
-                      <Text fontSize="xs" color="gray.500">Partner ID</Text>
-                      <Text fontWeight="bold">{partnerId || 'n/a'}</Text>
-                    </Box>
-                    <Box>
-                      <Text fontSize="xs" color="gray.500">Assigned Org IDs</Text>
-                      <Text fontWeight="bold">
-                        {assignedOrganizations.length ? assignedOrganizations.join(', ') : 'none'}
-                      </Text>
-                    </Box>
-                    <Box>
-                      <Text fontSize="xs" color="gray.500">Selected Org ID</Text>
-                      <Text fontWeight="bold">{selectedOrgId || 'all'}</Text>
-                    </Box>
-                    <Box>
-                      <Text fontSize="xs" color="gray.500">Partner Org Access</Text>
-                      <Text fontWeight="bold">
-                        {partnerOrgAccess === null ? 'checking' : partnerOrgAccess ? 'true' : 'false'}
-                      </Text>
-                    </Box>
-                  </SimpleGrid>
-                  <Divider mt={3} />
-                </Box>
-              )}
-              <SimpleGrid columns={{ base: 2, md: 4 }} spacing={4} w="full">
-                <Box>
-                  <Text fontSize="xs" color="gray.500">Snapshot Total</Text>
-                  <Text fontWeight="bold">{debugInfo.totalInSnapshot}</Text>
-                </Box>
-                <Box>
-                  <Text fontSize="xs" color="gray.500">Kept</Text>
-                  <Text fontWeight="bold" color="green.600">{debugInfo.keptCount}</Text>
-                </Box>
-                <Box>
-                  <Text fontSize="xs" color="gray.500">Rejected (Org Mismatch)</Text>
-                  <Text fontWeight="bold" color={debugInfo.rejectedNoMatch > 0 ? "orange.600" : "inherit"}>
-                    {debugInfo.rejectedNoMatch}
-                  </Text>
-                </Box>
-                <Box>
-                  <Text fontSize="xs" color="gray.500">Rejected (Filter)</Text>
-                  <Text fontWeight="bold">{debugInfo.rejectedSelectedOrg}</Text>
-                </Box>
-              </SimpleGrid>
-
-              <Divider />
-
-              <Box w="full">
-                <Text fontSize="xs" fontWeight="bold" color="gray.600" mb={2}>Assigned Organization Keys:</Text>
-                <HStack wrap="wrap" spacing={2}>
-                  {debugInfo.assignedOrgKeys.length > 0 ? (
-                    debugInfo.assignedOrgKeys.map((key: string) => (
-                      <Code key={key} fontSize="xs" colorScheme="purple">{key}</Code>
-                    ))
-                  ) : (
-                    <Text fontSize="xs" fontStyle="italic">No keys assigned in profile</Text>
-                  )}
-                </HStack>
-              </Box>
-
-              {debugInfo.mismatchSamples.length > 0 && (
-                <Box w="full">
-                  <Text fontSize="xs" fontWeight="bold" color="gray.600" mb={2}>Samples of Mismatched Users:</Text>
-                  <VStack align="flex-start" spacing={2} w="full">
-                    {debugInfo.mismatchSamples.map((sample: MismatchSample, idx: number) => (
-                      <Box key={idx} p={2} bg="white" border="1px solid" borderColor="border.control" borderRadius="md" w="full" fontSize="xs">
-                        <HStack justify="space-between">
-                          <Text fontWeight="bold">{sample.id}</Text>
-                          <Badge size="xs" colorScheme="red">{sample.reason}</Badge>
-                        </HStack>
-                        <Text mt={1} color="gray.600">User Org Fields: {sample.userOrgKeys.length > 0 ? sample.userOrgKeys.join(', ') : '(Empty)'}</Text>
-                      </Box>
-                    ))}
-                    {debugInfo.rejectedNoMatch > 5 && (
-                      <Text fontSize="xs" color="gray.500" fontStyle="italic">...and {debugInfo.rejectedNoMatch - 5} more</Text>
-                    )}
-                  </VStack>
-                </Box>
-              )}
-
-              <HStack spacing={3}>
-                <Button size="xs" variant="outline" onClick={() => console.log('Full Dashboard Debug:', debugInfo)}>
-                  Log Full Debug Data to Console
-                </Button>
-                {isSuperAdmin && (
-                  <Button
-                    size="xs"
-                    colorScheme={debugMode ? "red" : "gray"}
-                    variant={debugMode ? "solid" : "outline"}
-                    onClick={() => setDebugMode(!debugMode)}
-                  >
-                    {debugMode ? "Disable Debug Mode (Filtering Off)" : "Enable Debug Mode (Bypass Filtering)"}
-                  </Button>
-                )}
-              </HStack>
-            </VStack>
-          </AccordionPanel>
-        </AccordionItem>
-      </Accordion>
-    )
-  }
 
   const renderUsersPage = () => (
     <Stack spacing={6}>
@@ -1487,9 +1203,9 @@ export const PartnerDashboard: React.FC = () => {
               selectedOrg={selectedOrg}
               onSelectOrg={setSelectedOrg}
               updateUserPoints={updateUserPoints}
+              initialTab={userManagementTab}
+              onStartIntervention={handleStartInterventionFromUserManagement}
             />
-
-            {renderDebugInfo()}
           </Stack>
         </CardBody>
       </Card>
@@ -1686,35 +1402,238 @@ export const PartnerDashboard: React.FC = () => {
     </Stack>
   )
 
-  const renderReports = () => (
-    <Stack spacing={6}>
-      <Card bg="white" border="1px solid" borderColor="brand.border">
-        <CardBody>
-          <Stack spacing={3}>
-            <Text fontWeight="bold" color="brand.text">Reports</Text>
-            <Text fontSize="sm" color="brand.subtleText">
-              Analytics and engagement reports will appear here. Customize filters by organization to export scoped summaries.
-            </Text>
-            <SimpleGrid columns={{ base: 1, md: 3 }} spacing={3}>
-              {['Engagement by org', 'At-risk trends', 'Data quality'].map(report => (
-                <Box
-                  key={report}
-                  p={3}
-                  borderRadius="md"
-                  border="1px solid"
-                  borderColor="brand.border"
-                  bg="brand.accent"
-                >
-                  <Text fontWeight="semibold" color="brand.text">{report}</Text>
-                  <Text fontSize="sm" color="brand.subtleText">Coming soon</Text>
+  const renderReports = () => {
+    const inScopeUsers = overviewUsers
+    const inScopeOrganizations = overviewOrganizations
+    const nowMs = Date.now()
+    const atRiskCount = inScopeUsers.filter(
+      (user) => user.riskStatus === 'critical' || user.riskStatus === 'concern' || user.riskStatus === 'at_risk',
+    ).length
+    const interventionCounts = interventions.reduce(
+      (acc, item) => {
+        if (item.status === 'critical') acc.critical += 1
+        if (item.status === 'active') acc.active += 1
+        if (item.status === 'watch') acc.watch += 1
+        if (item.status === 'escalated') acc.escalated += 1
+        return acc
+      },
+      { active: 0, watch: 0, critical: 0, escalated: 0 },
+    )
+    const recentNotifications = notifications.filter((notification) => {
+      if (!notification.created_at) return false
+      const createdMs = new Date(notification.created_at).getTime()
+      return Number.isFinite(createdMs) && createdMs >= nowMs - (24 * 60 * 60 * 1000)
+    }).length
+    const criticalWarningCount = dataQualityWarnings.filter((warning) => warning.severity === 'critical').length
+
+    const organizationNameLookup = new Map<string, string>()
+    inScopeOrganizations.forEach((org) => {
+      if (org.code) organizationNameLookup.set(org.code.toLowerCase(), org.name || org.code)
+      if (org.id) organizationNameLookup.set(org.id.toLowerCase(), org.name || org.code || org.id)
+    })
+
+    const organizationRows = Array.from(
+      inScopeUsers.reduce<Map<string, {
+        key: string
+        name: string
+        learners: number
+        atRisk: number
+        progressTotal: number
+        weeklyGapTotal: number
+      }>>((acc, user) => {
+        const rawKey = (user.companyCode || user.organizationId || 'unassigned').toLowerCase()
+        const existing = acc.get(rawKey) || {
+          key: rawKey,
+          name: organizationNameLookup.get(rawKey) || user.companyCode || user.organizationId || 'Unassigned',
+          learners: 0,
+          atRisk: 0,
+          progressTotal: 0,
+          weeklyGapTotal: 0,
+        }
+        const progressPercent = Number(user.progressPercent) || 0
+        const weeklyRequired = Number(user.weeklyRequired) || 0
+        const weeklyEarned = Number(user.weeklyEarned) || 0
+
+        existing.learners += 1
+        existing.progressTotal += progressPercent
+        existing.weeklyGapTotal += Math.max(0, weeklyRequired - weeklyEarned)
+        if (user.riskStatus === 'critical' || user.riskStatus === 'concern' || user.riskStatus === 'at_risk') {
+          existing.atRisk += 1
+        }
+
+        acc.set(rawKey, existing)
+        return acc
+      }, new Map()),
+    )
+      .map(([, row]) => ({
+        ...row,
+        avgProgress: row.learners > 0 ? Math.round(row.progressTotal / row.learners) : 0,
+        avgWeeklyGap: row.learners > 0 ? Math.round(row.weeklyGapTotal / row.learners) : 0,
+      }))
+      .sort((a, b) => b.atRisk - a.atRisk || b.learners - a.learners || a.name.localeCompare(b.name))
+
+    const latestEventCandidates = [
+      ...notifications.map((item) => item.created_at),
+      ...interventions.map((item) => item.statusChangedAt || item.openedAt || item.deadline),
+      ...inScopeUsers.map((item) => item.lastActiveAt || item.lastActive),
+    ].filter((value): value is string => Boolean(value))
+
+    const latestEventMs = latestEventCandidates.reduce((latest, value) => {
+      const ts = new Date(value).getTime()
+      if (!Number.isFinite(ts)) return latest
+      return ts > latest ? ts : latest
+    }, 0)
+
+    const freshnessLabel = latestEventMs
+      ? formatDistanceToNowSafe(new Date(latestEventMs), 'not available', { addSuffix: true })
+      : 'not available'
+
+    return (
+      <Stack spacing={6}>
+        <Card bg="white" border="1px solid" borderColor="brand.border">
+          <CardBody>
+            <Stack spacing={3}>
+              <HStack justify="space-between" align="center" wrap="wrap" spacing={3}>
+                <VStack align="flex-start" spacing={1}>
+                  <Text fontWeight="bold" color="brand.text">Reports</Text>
+                  <Text fontSize="sm" color="brand.subtleText">
+                    Live reporting from scoped Firestore snapshots for users, organizations, interventions, and notifications.
+                  </Text>
+                </VStack>
+                <Badge colorScheme={snapshotLoading || notificationsLoading ? 'yellow' : 'green'}>
+                  {snapshotLoading || notificationsLoading ? 'Refreshing live data' : `Live data (${freshnessLabel})`}
+                </Badge>
+              </HStack>
+              <SimpleGrid columns={{ base: 2, md: 5 }} spacing={3}>
+                <Box p={3} borderRadius="md" border="1px solid" borderColor="brand.border" bg="brand.accent">
+                  <Text fontSize="xs" color="brand.subtleText">Learners in scope</Text>
+                  <Text fontSize="2xl" fontWeight="bold" color="brand.text">{inScopeUsers.length}</Text>
                 </Box>
-              ))}
-            </SimpleGrid>
-          </Stack>
-        </CardBody>
-      </Card>
-    </Stack>
-  )
+                <Box p={3} borderRadius="md" border="1px solid" borderColor="brand.border" bg="brand.accent">
+                  <Text fontSize="xs" color="brand.subtleText">Organizations in scope</Text>
+                  <Text fontSize="2xl" fontWeight="bold" color="brand.text">{inScopeOrganizations.length}</Text>
+                </Box>
+                <Box p={3} borderRadius="md" border="1px solid" borderColor="brand.border" bg="brand.accent">
+                  <Text fontSize="xs" color="brand.subtleText">At-risk learners</Text>
+                  <Text fontSize="2xl" fontWeight="bold" color="red.500">{atRiskCount}</Text>
+                </Box>
+                <Box p={3} borderRadius="md" border="1px solid" borderColor="brand.border" bg="brand.accent">
+                  <Text fontSize="xs" color="brand.subtleText">Open interventions</Text>
+                  <Text fontSize="2xl" fontWeight="bold" color="brand.text">
+                    {interventionCounts.active + interventionCounts.watch + interventionCounts.critical}
+                  </Text>
+                </Box>
+                <Box p={3} borderRadius="md" border="1px solid" borderColor="brand.border" bg="brand.accent">
+                  <Text fontSize="xs" color="brand.subtleText">Notifications (24h)</Text>
+                  <Text fontSize="2xl" fontWeight="bold" color="brand.text">{recentNotifications}</Text>
+                </Box>
+              </SimpleGrid>
+            </Stack>
+          </CardBody>
+        </Card>
+
+        <Card bg="white" border="1px solid" borderColor="brand.border">
+          <CardBody>
+            <Stack spacing={3}>
+              <Text fontWeight="bold" color="brand.text">Engagement by organization</Text>
+              {organizationRows.length === 0 ? (
+                <Text fontSize="sm" color="brand.subtleText">No learner records are available for the selected scope yet.</Text>
+              ) : (
+                <Stack spacing={2}>
+                  {organizationRows.map((row) => (
+                    <Box key={row.key} p={3} borderRadius="md" border="1px solid" borderColor="brand.border" bg="brand.accent">
+                      <HStack justify="space-between" align="flex-start" wrap="wrap" spacing={2}>
+                        <VStack align="flex-start" spacing={0}>
+                          <Text fontWeight="semibold" color="brand.text">{row.name}</Text>
+                          <Text fontSize="sm" color="brand.subtleText">{row.learners} learner{row.learners === 1 ? '' : 's'}</Text>
+                        </VStack>
+                        <HStack spacing={2} wrap="wrap">
+                          <Badge colorScheme="purple">Avg progress: {row.avgProgress}%</Badge>
+                          <Badge colorScheme={row.atRisk > 0 ? 'red' : 'green'}>
+                            At-risk: {row.atRisk} / {row.learners}
+                          </Badge>
+                          <Badge colorScheme={row.avgWeeklyGap > 0 ? 'orange' : 'green'}>
+                            Avg weekly gap: {row.avgWeeklyGap}
+                          </Badge>
+                        </HStack>
+                      </HStack>
+                    </Box>
+                  ))}
+                </Stack>
+              )}
+            </Stack>
+          </CardBody>
+        </Card>
+
+        <SimpleGrid columns={{ base: 1, lg: 2 }} spacing={4}>
+          <Card bg="white" border="1px solid" borderColor="brand.border">
+            <CardBody>
+              <Stack spacing={3}>
+                <Text fontWeight="bold" color="brand.text">Risk distribution</Text>
+                <SimpleGrid columns={2} spacing={3}>
+                  <Box p={3} borderRadius="md" border="1px solid" borderColor="brand.border" bg="brand.accent">
+                    <Text fontSize="xs" color="brand.subtleText">Engaged</Text>
+                    <Text fontWeight="bold" color="green.600">{overviewRiskLevels.engaged}</Text>
+                  </Box>
+                  <Box p={3} borderRadius="md" border="1px solid" borderColor="brand.border" bg="brand.accent">
+                    <Text fontSize="xs" color="brand.subtleText">Watch</Text>
+                    <Text fontWeight="bold" color="yellow.600">{overviewRiskLevels.watch}</Text>
+                  </Box>
+                  <Box p={3} borderRadius="md" border="1px solid" borderColor="brand.border" bg="brand.accent">
+                    <Text fontSize="xs" color="brand.subtleText">Concern</Text>
+                    <Text fontWeight="bold" color="orange.600">{overviewRiskLevels.concern}</Text>
+                  </Box>
+                  <Box p={3} borderRadius="md" border="1px solid" borderColor="brand.border" bg="brand.accent">
+                    <Text fontSize="xs" color="brand.subtleText">Critical</Text>
+                    <Text fontWeight="bold" color="red.600">{overviewRiskLevels.critical}</Text>
+                  </Box>
+                </SimpleGrid>
+              </Stack>
+            </CardBody>
+          </Card>
+
+          <Card bg="white" border="1px solid" borderColor="brand.border">
+            <CardBody>
+              <Stack spacing={3}>
+                <Text fontWeight="bold" color="brand.text">Data quality & interventions</Text>
+                <HStack spacing={3} wrap="wrap">
+                  <Badge colorScheme={criticalWarningCount > 0 ? 'red' : 'green'}>
+                    Critical warnings: {criticalWarningCount}
+                  </Badge>
+                  <Badge colorScheme={dataQualityWarnings.length > criticalWarningCount ? 'orange' : 'gray'}>
+                    Warnings: {dataQualityWarnings.length - criticalWarningCount}
+                  </Badge>
+                  <Badge colorScheme={interventionCounts.escalated > 0 ? 'red' : 'gray'}>
+                    Escalated interventions: {interventionCounts.escalated}
+                  </Badge>
+                </HStack>
+                {dataQualityWarnings.length ? (
+                  <Stack spacing={2}>
+                    {dataQualityWarnings.slice(0, 5).map((warning) => (
+                      <Box
+                        key={warning.message}
+                        p={2}
+                        borderRadius="md"
+                        border="1px solid"
+                        borderColor={warning.severity === 'critical' ? 'red.200' : 'orange.200'}
+                        bg={warning.severity === 'critical' ? 'red.50' : 'orange.50'}
+                      >
+                        <Text fontSize="sm" color={warning.severity === 'critical' ? 'red.700' : 'orange.700'}>
+                          {warning.message}
+                        </Text>
+                      </Box>
+                    ))}
+                  </Stack>
+                ) : (
+                  <Text fontSize="sm" color="brand.subtleText">No data quality warnings in the current scope.</Text>
+                )}
+              </Stack>
+            </CardBody>
+          </Card>
+        </SimpleGrid>
+      </Stack>
+    )
+  }
 
   const handlePasswordChange = async () => {
     if (!auth.currentUser) {
@@ -1927,46 +1846,79 @@ export const PartnerDashboard: React.FC = () => {
     </Stack>
   )
 
-  const renderSettings = () => (
-    <Stack spacing={6}>
-      <Card bg="white" border="1px solid" borderColor="brand.border">
-        <CardBody>
-          <Stack spacing={3}>
-            <Text fontWeight="bold" color="brand.text">Settings</Text>
-            <Text fontSize="sm" color="brand.subtleText">
-              Manage dashboard preferences, notification thresholds, and organization defaults.
-            </Text>
-            <SimpleGrid columns={{ base: 1, md: 3 }} spacing={3}>
-              {['Notification rules', 'Organization defaults', 'Access control'].map(setting => (
-                <Box key={setting} p={3} borderRadius="md" border="1px solid" borderColor="brand.border" bg="brand.accent">
-                  <Text fontWeight="semibold" color="brand.text">{setting}</Text>
-                  <Text fontSize="sm" color="brand.subtleText">Configuration coming soon</Text>
-                </Box>
-              ))}
-            </SimpleGrid>
-          </Stack>
-        </CardBody>
-      </Card>
-    </Stack>
-  )
+  const renderSettings = () => {
+    const scopedOrganizationCount = overviewOrganizations.length
+    const scopedUserCount = overviewUsers.length
+    const criticalWarnings = dataQualityWarnings.filter((warning) => warning.severity === 'critical').length
+    const activeInterventions = interventions.filter((item) => item.status === 'active' || item.status === 'critical').length
+    const syncStateLabel =
+      snapshotLoading || notificationsLoading
+        ? 'Refreshing from database...'
+        : `Live data updated ${formatDistanceToNowSafe(new Date(), 'just now', { addSuffix: true })}`
 
-  const renderSupport = () => (
-    <Stack spacing={6}>
-      <Card bg="white" border="1px solid" borderColor="brand.border">
-        <CardBody>
-          <Stack spacing={3}>
-            <Text fontWeight="bold" color="brand.text">Support</Text>
-            <Text fontSize="sm" color="brand.subtleText">
-              Need help? Reach out to support or review the upcoming knowledge base articles for partner admins.
-            </Text>
-            <Badge colorScheme="blue" w="fit-content">
-              Live chat coming soon
-            </Badge>
-          </Stack>
-        </CardBody>
-      </Card>
-    </Stack>
-  )
+    return (
+      <Stack spacing={6}>
+        <Card bg="white" border="1px solid" borderColor="brand.border">
+          <CardBody>
+            <Stack spacing={3}>
+              <HStack justify="space-between" align="center" wrap="wrap" spacing={3}>
+                <VStack align="flex-start" spacing={1}>
+                  <Text fontWeight="bold" color="brand.text">Settings</Text>
+                  <Text fontSize="sm" color="brand.subtleText">
+                    Live configuration context from current dashboard scope and Firestore snapshots.
+                  </Text>
+                </VStack>
+                <Badge colorScheme={snapshotLoading || notificationsLoading ? 'yellow' : 'green'}>
+                  {syncStateLabel}
+                </Badge>
+              </HStack>
+              <SimpleGrid columns={{ base: 1, md: 4 }} spacing={3}>
+                <Box p={3} borderRadius="md" border="1px solid" borderColor="brand.border" bg="brand.accent">
+                  <Text fontSize="xs" color="brand.subtleText">Scope</Text>
+                  <Text fontWeight="semibold" color="brand.text">
+                    {selectedOrg === 'all' ? 'All assigned organizations' : selectedOrg}
+                  </Text>
+                </Box>
+                <Box p={3} borderRadius="md" border="1px solid" borderColor="brand.border" bg="brand.accent">
+                  <Text fontSize="xs" color="brand.subtleText">Organizations in scope</Text>
+                  <Text fontWeight="bold" color="brand.text">{scopedOrganizationCount}</Text>
+                </Box>
+                <Box p={3} borderRadius="md" border="1px solid" borderColor="brand.border" bg="brand.accent">
+                  <Text fontSize="xs" color="brand.subtleText">Learners in scope</Text>
+                  <Text fontWeight="bold" color="brand.text">{scopedUserCount}</Text>
+                </Box>
+                <Box p={3} borderRadius="md" border="1px solid" borderColor="brand.border" bg="brand.accent">
+                  <Text fontSize="xs" color="brand.subtleText">Unread notifications</Text>
+                  <Text fontWeight="bold" color="brand.text">{notificationCount}</Text>
+                </Box>
+              </SimpleGrid>
+              <HStack spacing={3} wrap="wrap">
+                <Badge colorScheme={criticalWarnings > 0 ? 'red' : 'green'}>
+                  Critical data warnings: {criticalWarnings}
+                </Badge>
+                <Badge colorScheme={activeInterventions > 0 ? 'orange' : 'gray'}>
+                  Active interventions: {activeInterventions}
+                </Badge>
+                <Badge colorScheme="purple">At-risk learners: {atRiskUsers.length}</Badge>
+              </HStack>
+            </Stack>
+          </CardBody>
+        </Card>
+
+        <Card bg="white" border="1px solid" borderColor="brand.border">
+          <CardBody>
+            <Stack spacing={3}>
+              <Text fontWeight="bold" color="brand.text">Automated Nudge Rules</Text>
+              <Text fontSize="sm" color="brand.subtleText">
+                Live automation rules from Firestore. Toggling a rule updates `automation_rules` immediately.
+              </Text>
+              <NudgeAutomationRules />
+            </Stack>
+          </CardBody>
+        </Card>
+      </Stack>
+    )
+  }
 
   const renderPage = () => {
     switch (activePage) {
@@ -1980,8 +1932,6 @@ export const PartnerDashboard: React.FC = () => {
         return renderReports()
       case 'settings':
         return renderSettings()
-      case 'support':
-        return renderSupport()
       case 'profile':
         return renderProfile()
       case 'overview':
@@ -1991,8 +1941,16 @@ export const PartnerDashboard: React.FC = () => {
   }
 
   const handleNavigate = (key: string) => {
+    if (key === 'partner-assignment') {
+      navigate('/partner/partner-assignment')
+      return
+    }
+
     const normalized = key as PartnerPageKey
-    if (['overview', 'users', 'organization-management', 'at-risk', 'reports', 'settings', 'support', 'profile'].includes(normalized)) {
+    if (['overview', 'users', 'organization-management', 'at-risk', 'reports', 'settings', 'profile'].includes(normalized)) {
+      if (normalized === 'users') {
+        setUserManagementTab('users')
+      }
       setActivePage(normalized)
     } else {
       setActivePage('overview')

@@ -11,25 +11,33 @@ type VM = ReturnType<typeof useWeeklyChecklistViewModel>
 export const WeeklyChecklistLayout = ({ vm }: { vm: VM }) => {
   return (
     <Stack spacing={6}>
-      <JourneyHeader journey={vm.journey} progress={vm.allWeeksProgress} />
+      <JourneyHeader
+        journey={vm.journey}
+        progress={vm.allWeeksProgress}
+        leadershipAvailability={vm.leadershipAvailability}
+      />
 
       <WeeklySummary
         week={vm.selectedWeek}
         completed={vm.completedCount}
-        earned={vm.earnedPoints}
-        target={vm.weeklyTarget}
+        cyclePoints={vm.cyclePoints}
+        cycleTarget={vm.cycleTarget}
+        accumulatedPoints={vm.accumulatedPoints}
       />
 
       <Grid templateColumns={{ base: '1fr', xl: '2fr 1fr' }} gap={6} alignItems="start">
         <GridItem>
           <ActivityList
             activities={vm.activities}
-            journey={vm.journey}
+            selectedWeek={vm.selectedWeek}
+            currentWeek={vm.journey?.currentWeek ?? vm.selectedWeek}
             isWeekLocked={vm.isWeekLocked}
             isAdmin={vm.isAdmin}
+            onOpenCurrentWeek={() => vm.setSelectedWeek(vm.journey?.currentWeek ?? vm.selectedWeek)}
             onMarkCompleted={vm.markCompleted}
             onMarkNotStarted={vm.markNotStarted}
             onOpenProof={vm.openProofModal}
+            isActivityBusy={vm.isActivityBusy}
           />
         </GridItem>
 
@@ -42,6 +50,7 @@ export const WeeklyChecklistLayout = ({ vm }: { vm: VM }) => {
 
       <ProofModal
         state={vm.proofModal}
+        isSubmitting={vm.isSubmittingProof}
         onClose={vm.closeProofModal}
         onChange={vm.updateProofModal}
         onSubmit={vm.submitProofForApproval}

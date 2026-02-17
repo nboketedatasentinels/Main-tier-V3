@@ -45,6 +45,9 @@ interface UserProfile {
   journeyType?: string;
   currentWeek?: number;
   companyId?: string | null;
+  companyCode?: string | null;
+  villageId?: string | null;
+  clusterId?: string | null;
 }
 
 interface PointsLedgerEntry {
@@ -90,7 +93,7 @@ function getWindowNumber(weekNumber: number): number {
 export const onReferredUserFirstActivity = functions
   .region("us-central1")
   .firestore.document("pointsLedger/{ledgerId}")
-  .onCreate(async (snapshot, context) => {
+  .onCreate(async (snapshot, _context) => {
     const ledgerData = snapshot.data() as PointsLedgerEntry;
     const referredUid = ledgerData.uid;
 
@@ -98,24 +101,36 @@ export const onReferredUserFirstActivity = functions
       `[Referral] New ledger entry for user ${referredUid}, activity: ${ledgerData.activityId}`
     );
 
-    // Skip if this is a referral bonus entry (prevent infinite loop)
+    if (!referredUid) {
+      console.log("[Referral] Ledger entry missing uid, skipping");
+      return null;
+    }
+
     if (ledgerData.activityId === "referral_bonus") {
       console.log("[Referral] Skipping referral_bonus activity to prevent loop");
       return null;
     }
 
     try {
-      // Check if user was referred
-      const userDoc = await db.collection("profiles").doc(referredUid).get();
+      const [userDoc, referralDoc] = await Promise.all([
+        db.collection("profiles").doc(referredUid).get(),
+        db.collection("referrals").doc(referredUid).get(),
+      ]);
+
       if (!userDoc.exists) {
         console.log(`[Referral] User ${referredUid} profile not found`);
         return null;
       }
 
       const userData = userDoc.data() as UserProfile;
-      const referrerUid = userData.referredBy;
+      let referrerUid = userData.referredBy;
 
-      // Skip if user wasn't referred or already credited
+      if (!referrerUid && referralDoc.exists) {
+        const referralData = referralDoc.data() as ReferralRecord;
+        referrerUid = referralData.referrerUid;
+        console.log(`[Referral] Found referrerUid from referral record: ${referrerUid}`);
+      }
+
       if (!referrerUid) {
         console.log(`[Referral] User ${referredUid} was not referred`);
         return null;
@@ -131,14 +146,21 @@ export const onReferredUserFirstActivity = functions
         return null;
       }
 
-      // Check referral record exists
-      const referralDoc = await db.collection("referrals").doc(referredUid).get();
       if (!referralDoc.exists) {
-        console.log(`[Referral] No referral record found for ${referredUid}`);
-        return null;
+        console.log(`[Referral] No referral record found for ${referredUid}, creating one`);
+        await db.collection("referrals").doc(referredUid).set({
+          referredUid,
+          referrerUid,
+          refCode: referrerUid,
+          status: "pending",
+          createdAt: admin.firestore.FieldValue.serverTimestamp(),
+        });
       }
 
-      const referralData = referralDoc.data() as ReferralRecord;
+      const referralData = referralDoc.exists
+        ? (referralDoc.data() as ReferralRecord)
+        : { status: "pending" as const };
+
       if (referralData.status !== "pending") {
         console.log(
           `[Referral] Referral status is ${referralData.status}, not pending`
@@ -146,14 +168,10 @@ export const onReferredUserFirstActivity = functions
         return null;
       }
 
-      // We rely on referral status to keep this idempotent instead of checking ledger count.
-      // That way we credit the referrer as soon as the referred user completes any activity, even if other points were recorded earlier.
-
       console.log(
         `[Referral] First activity detected for referred user ${referredUid}, crediting referrer ${referrerUid}`
       );
 
-      // Award points to referrer
       return await creditReferralPointsInternal(
         referredUid,
         referrerUid,
@@ -282,9 +300,10 @@ async function creditReferralPointsInternal(
     const referredUserRef = db.collection("users").doc(referredUid);
     const referredProfileRef = db.collection("profiles").doc(referredUid);
 
-    const [referralSnap, referrerSnap] = await Promise.all([
+    const [referralSnap, referrerUserSnap, referrerProfileSnap] = await Promise.all([
       tx.get(referralRef),
       tx.get(referrerUserRef),
+      tx.get(referrerProfileRef),
     ]);
 
     // Idempotency check - if already credited, return early
@@ -301,7 +320,7 @@ async function creditReferralPointsInternal(
       return;
     }
 
-    if (!referrerSnap.exists) {
+    if (!referrerUserSnap.exists && !referrerProfileSnap.exists) {
       console.log(`[Referral] Referrer ${referrerUid} not found`);
       // Mark referral as rejected since referrer doesn't exist
       tx.update(referralRef, {
@@ -313,9 +332,22 @@ async function creditReferralPointsInternal(
       return;
     }
 
-    const referrerData = referrerSnap.data() as UserProfile;
-    const currentTotalPoints = referrerData.totalPoints ?? 0;
-    const currentReferralCount = referrerData.referralCount ?? 0;
+    const referrerUserData = referrerUserSnap.exists
+      ? (referrerUserSnap.data() as UserProfile)
+      : {};
+    const referrerProfileData = referrerProfileSnap.exists
+      ? (referrerProfileSnap.data() as UserProfile)
+      : {};
+
+    // Use the greater values to avoid regressing counters when one mirror is stale.
+    const currentTotalPoints = Math.max(
+      referrerUserData.totalPoints ?? 0,
+      referrerProfileData.totalPoints ?? 0
+    );
+    const currentReferralCount = Math.max(
+      referrerUserData.referralCount ?? 0,
+      referrerProfileData.referralCount ?? 0
+    );
 
     // Check if referrer has reached max referrals
     if (currentReferralCount >= REFERRAL_MAX_PER_USER) {
@@ -339,8 +371,10 @@ async function creditReferralPointsInternal(
     const updatedLevel = calculateLevel(updatedTotalPoints);
 
     // Determine referrer's current week for ledger entry
-    const referrerJourneyType = referrerData.journeyType || "6W";
-    const referrerWeek = referrerData.currentWeek || 1;
+    const referrerWeek =
+      referrerUserData.currentWeek ??
+      referrerProfileData.currentWeek ??
+      1;
     const monthNumber = getWindowNumber(referrerWeek);
 
     // Create referral bonus ledger entry for referrer
@@ -433,7 +467,10 @@ async function creditReferralPointsInternal(
       reason: "Referral Bonus",
       referredUserId: referredUid,
       createdAt: timestamp,
-      companyId: referrerData.companyId || null,
+      companyId: referrerUserData.companyId || referrerProfileData.companyId || null,
+      companyCode: referrerUserData.companyCode || referrerProfileData.companyCode || null,
+      villageId: referrerUserData.villageId || referrerProfileData.villageId || null,
+      clusterId: referrerUserData.clusterId || referrerProfileData.clusterId || null,
     });
 
     console.log(
@@ -445,6 +482,7 @@ async function creditReferralPointsInternal(
   try {
     await db.collection("notifications").add({
       userId: referrerUid,
+      user_id: referrerUid,
       type: "referral_success",
       title: "Referral Successful!",
       message: `Your referral was successful! You've earned ${REFERRAL_POINTS} points.`,
@@ -459,7 +497,7 @@ async function creditReferralPointsInternal(
 
     // Reward tier milestones: 1, 5, 15, 20
     const tierMilestones: Record<number, { title: string; reward: string }> = {
-      1: { title: "First Referral", reward: "100 Points" },
+      1: { title: "Referral Bonus", reward: "100 Points" },
       5: { title: "Community Builder", reward: "Community Builder Badge" },
       15: { title: "Network Champion", reward: "25% off AI Stacking 101 Course" },
       20: { title: "Referrer of the Month", reward: "Featured in Newsletter" },
@@ -469,6 +507,7 @@ async function creditReferralPointsInternal(
     if (tier) {
       await db.collection("notifications").add({
         userId: referrerUid,
+        user_id: referrerUid,
         type: "referral_reward",
         title: `New Reward Unlocked: ${tier.title}!`,
         message: `Congratulations! You've reached ${newReferralCount} referrals and unlocked: ${tier.reward}.`,
@@ -520,6 +559,7 @@ export const checkStalePendingReferrals = functions
         // Send reminder notification to referrer
         await db.collection("notifications").add({
           userId: referralData.referrerUid,
+          user_id: referralData.referrerUid,
           type: "referral_reminder",
           title: "Referral Pending",
           message:

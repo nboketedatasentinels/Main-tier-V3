@@ -1,6 +1,7 @@
 export type MonthlyCourseAssignments = Record<string, string>
 
 export type MonthlyAssignmentMode = 'monthly' | 'array'
+export type ProgramSegmentCadence = 'monthly' | 'biweekly'
 
 const cleanCourseId = (value?: string | null): string => {
   if (!value) return ''
@@ -8,11 +9,39 @@ const cleanCourseId = (value?: string | null): string => {
   return trimmed
 }
 
-export const resolveProgramMonthCount = (programDuration?: number | string | null): number => {
-  if (programDuration === undefined || programDuration === null) return 0
+const BIWEEKLY_PROGRAM_DURATION = 1.5
+const MAX_SUPPORTED_PROGRAM_MONTHS = 9
+
+const normalizeProgramDuration = (programDuration?: number | string | null): number | null => {
+  if (programDuration === undefined || programDuration === null) return null
   const parsed = typeof programDuration === 'string' ? Number(programDuration) : programDuration
-  if (!Number.isFinite(parsed) || parsed <= 0) return 0
-  if (parsed === 1.5) return 3
+  if (!Number.isFinite(parsed) || parsed <= 0) return null
+  if (Math.abs(parsed - BIWEEKLY_PROGRAM_DURATION) < 0.0001) return BIWEEKLY_PROGRAM_DURATION
+  return Math.min(parsed, MAX_SUPPORTED_PROGRAM_MONTHS)
+}
+
+const isBiweeklyProgramDuration = (programDuration?: number | string | null): boolean => {
+  const parsed = normalizeProgramDuration(programDuration)
+  if (parsed === null) return false
+  return Math.abs(parsed - BIWEEKLY_PROGRAM_DURATION) < 0.0001
+}
+
+export const resolveProgramCadence = (programDuration?: number | string | null): ProgramSegmentCadence => (
+  isBiweeklyProgramDuration(programDuration) ? 'biweekly' : 'monthly'
+)
+
+export const getProgramDurationLabel = (programDuration?: number | string | null): string | null => {
+  const parsed = normalizeProgramDuration(programDuration)
+  if (parsed === null) return null
+  if (isBiweeklyProgramDuration(parsed)) return '6 weeks (3 x 2-week windows)'
+  const display = Number.isInteger(parsed) ? parsed.toString() : parsed.toFixed(1)
+  return `${display} months`
+}
+
+export const resolveProgramMonthCount = (programDuration?: number | string | null): number => {
+  const parsed = normalizeProgramDuration(programDuration)
+  if (parsed === null) return 0
+  if (isBiweeklyProgramDuration(parsed)) return 3
   return Math.ceil(parsed)
 }
 
@@ -101,13 +130,58 @@ export const addMonths = (date: Date, months: number): Date => {
   return result
 }
 
-export const getMonthDateRange = (cohortStartDate: Date, monthIndex: number) => {
-  const startDate = addMonths(cohortStartDate, monthIndex)
-  const endDate = addMonths(cohortStartDate, monthIndex + 1)
+export const addDays = (date: Date, days: number): Date => {
+  const result = new Date(date)
+  result.setDate(result.getDate() + days)
+  return result
+}
+
+export const getProgramSegmentDateRange = (params: {
+  cohortStartDate: Date
+  segmentIndex: number
+  cadence: ProgramSegmentCadence
+}) => {
+  const { cohortStartDate, segmentIndex, cadence } = params
+  if (cadence === 'biweekly') {
+    const startDate = addDays(cohortStartDate, segmentIndex * 14)
+    const endDate = addDays(cohortStartDate, (segmentIndex + 1) * 14)
+    return { startDate, endDate }
+  }
+  const startDate = addMonths(cohortStartDate, segmentIndex)
+  const endDate = addMonths(cohortStartDate, segmentIndex + 1)
   return { startDate, endDate }
 }
 
+export const getMonthDateRange = (cohortStartDate: Date, monthIndex: number) => {
+  return getProgramSegmentDateRange({
+    cohortStartDate,
+    segmentIndex: monthIndex,
+    cadence: 'monthly',
+  })
+}
+
 export type MonthlyCourseAvailability = 'locked' | 'current' | 'completed'
+
+export const getProgramSegmentAvailabilityStatus = (params: {
+  cohortStartDate: Date | null
+  currentDate: Date
+  segmentIndex: number
+  cadence: ProgramSegmentCadence
+}): MonthlyCourseAvailability => {
+  const { cohortStartDate, currentDate, segmentIndex, cadence } = params
+  if (!cohortStartDate) {
+    return segmentIndex === 0 ? 'current' : 'locked'
+  }
+
+  const { startDate, endDate } = getProgramSegmentDateRange({
+    cohortStartDate,
+    segmentIndex,
+    cadence,
+  })
+  if (currentDate < startDate) return 'locked'
+  if (currentDate >= endDate) return 'completed'
+  return 'current'
+}
 
 export const getMonthAvailabilityStatus = (params: {
   cohortStartDate: Date | null
@@ -115,14 +189,12 @@ export const getMonthAvailabilityStatus = (params: {
   monthIndex: number
 }): MonthlyCourseAvailability => {
   const { cohortStartDate, currentDate, monthIndex } = params
-  if (!cohortStartDate) {
-    return monthIndex === 0 ? 'current' : 'locked'
-  }
-
-  const { startDate, endDate } = getMonthDateRange(cohortStartDate, monthIndex)
-  if (currentDate < startDate) return 'locked'
-  if (currentDate >= endDate) return 'completed'
-  return 'current'
+  return getProgramSegmentAvailabilityStatus({
+    cohortStartDate,
+    currentDate,
+    segmentIndex: monthIndex,
+    cadence: 'monthly',
+  })
 }
 
 export const formatMonthRange = (startDate: Date, endDate: Date) => {
@@ -146,6 +218,11 @@ export const buildMonthlyAssignmentsSummary = (params: {
       title: courseId ? courseTitleLookup?.(courseId) ?? courseId : 'Unassigned',
     }
   })
+}
+
+export const getProgramSegmentLabel = (segmentNumber: number, cadence: ProgramSegmentCadence): string => {
+  if (cadence === 'biweekly') return `Window ${segmentNumber}`
+  return `Month ${segmentNumber}`
 }
 
 export const migrateAssignmentsToMonthlyStructure = (params: {

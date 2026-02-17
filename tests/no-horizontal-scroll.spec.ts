@@ -91,7 +91,7 @@ async function expectNoHorizontalScroll(page: Page, tolerancePx = 2) {
 
 test.describe('Responsive smoke: no horizontal scroll', () => {
   // This check is intended to catch regressions quickly, without multiplying runtime across all projects.
-  test.beforeEach(async ({}, testInfo) => {
+  test.beforeEach(async ({ page: _page }, testInfo) => {
     test.skip(testInfo.project.name !== 'chromium-desktop', 'Run once (chromium-desktop)')
   })
 

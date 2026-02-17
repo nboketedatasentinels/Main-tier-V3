@@ -9,6 +9,7 @@ export interface AdminActivityLogEntry {
   userId?: string
   adminId?: string
   adminName?: string
+  createdBy?: string
   createdAt?: Timestamp | string | Date
   metadata?: Record<string, unknown>
   severity?: 'info' | 'watch' | 'active' | 'critical'
@@ -357,6 +358,18 @@ export interface OrganizationUserProfile {
   avatarUrl?: string | null
   organizationId?: string | null
   companyCode?: string | null
+}
+
+export interface OrganizationInvitationProfile {
+  id: string
+  name: string
+  email?: string
+  role: string
+  method: InvitationMethod
+  status: string
+  createdAt?: Date | null
+  expiresAt?: Date | null
+  code?: string
 }
 
 export interface OrganizationStatistics {

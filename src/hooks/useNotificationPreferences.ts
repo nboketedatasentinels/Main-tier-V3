@@ -3,7 +3,7 @@
  * Manages notification preference settings for users
  */
 
-import { useState, useEffect } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import {
   collection,
   doc,
@@ -56,17 +56,7 @@ export function useNotificationPreferences(userId: string): UseNotificationPrefe
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<Error | null>(null)
 
-  // Fetch preferences on mount
-  useEffect(() => {
-    if (!userId) {
-      setLoading(false)
-      return
-    }
-
-    fetchPreferences()
-  }, [userId])
-
-  const fetchPreferences = async () => {
+  const fetchPreferences = useCallback(async () => {
     try {
       setLoading(true)
       const prefsRef = doc(db, 'notification_preferences', userId)
@@ -92,7 +82,19 @@ export function useNotificationPreferences(userId: string): UseNotificationPrefe
     } finally {
       setLoading(false)
     }
-  }
+  }, [userId])
+
+  // Fetch preferences on mount
+  useEffect(() => {
+    if (!userId) {
+      setPreferences(null)
+      setError(null)
+      setLoading(false)
+      return
+    }
+
+    void fetchPreferences()
+  }, [fetchPreferences, userId])
 
   const updatePreferences = async (updates: Partial<NotificationPreferences>) => {
     if (!preferences) return
@@ -201,20 +203,11 @@ export function useNotificationPreferences(userId: string): UseNotificationPrefe
  * Custom hook to get learner status dashboard data
  */
 export function useLearnerStatusDashboard(userId: string) {
-  const [statusData, setStatusData] = useState<any>(null)
+  const [statusData, setStatusData] = useState<Record<string, unknown> | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<Error | null>(null)
 
-  useEffect(() => {
-    if (!userId) {
-      setLoading(false)
-      return
-    }
-
-    fetchStatusData()
-  }, [userId])
-
-  const fetchStatusData = async () => {
+  const fetchStatusData = useCallback(async () => {
     try {
       setLoading(true)
       const statusRef = doc(db, 'learner_status', userId)
@@ -232,7 +225,18 @@ export function useLearnerStatusDashboard(userId: string) {
     } finally {
       setLoading(false)
     }
-  }
+  }, [userId])
+
+  useEffect(() => {
+    if (!userId) {
+      setStatusData(null)
+      setError(null)
+      setLoading(false)
+      return
+    }
+
+    void fetchStatusData()
+  }, [fetchStatusData, userId])
 
   const refreshStatusData = async () => {
     await fetchStatusData()
@@ -245,20 +249,20 @@ export function useLearnerStatusDashboard(userId: string) {
  * Custom hook to get partner dashboard data
  */
 export function usePartnerDashboard(partnerId: string, orgId: string) {
-  const [dashboardData, setDashboardData] = useState<any>(null)
+  const [dashboardData, setDashboardData] = useState<{
+    learners: Array<Record<string, unknown>>
+    alerts: Array<Record<string, unknown>>
+    stats: {
+      total: number
+      active: number
+      atRisk: number
+      inactive: number
+    }
+  } | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<Error | null>(null)
 
-  useEffect(() => {
-    if (!partnerId || !orgId) {
-      setLoading(false)
-      return
-    }
-
-    fetchDashboardData()
-  }, [partnerId, orgId])
-
-  const fetchDashboardData = async () => {
+  const fetchDashboardData = useCallback(async () => {
     try {
       setLoading(true)
 
@@ -271,7 +275,7 @@ export function usePartnerDashboard(partnerId: string, orgId: string) {
       )
 
       const statusSnapshot = await getDocs(statusQuery)
-      const statuses = statusSnapshot.docs.map((doc) => doc.data())
+      const statuses = statusSnapshot.docs.map((doc) => doc.data() as Record<string, unknown>)
 
       // Get alerts
       const alertsQuery = query(
@@ -280,16 +284,16 @@ export function usePartnerDashboard(partnerId: string, orgId: string) {
       )
 
       const alertsSnapshot = await getDocs(alertsQuery)
-      const alerts = alertsSnapshot.docs.map((doc) => doc.data())
+      const alerts = alertsSnapshot.docs.map((doc) => doc.data() as Record<string, unknown>)
 
       const dashData = {
         learners: statuses,
         alerts,
         stats: {
           total: statuses.length,
-          active: statuses.filter((s: any) => s.currentStatus === 'active').length,
-          atRisk: statuses.filter((s: any) => s.currentStatus === 'at_risk').length,
-          inactive: statuses.filter((s: any) => s.currentStatus === 'inactive').length,
+          active: statuses.filter((s) => s.currentStatus === 'active').length,
+          atRisk: statuses.filter((s) => s.currentStatus === 'at_risk').length,
+          inactive: statuses.filter((s) => s.currentStatus === 'inactive').length,
         },
       }
 
@@ -301,7 +305,18 @@ export function usePartnerDashboard(partnerId: string, orgId: string) {
     } finally {
       setLoading(false)
     }
-  }
+  }, [orgId])
+
+  useEffect(() => {
+    if (!partnerId || !orgId) {
+      setDashboardData(null)
+      setError(null)
+      setLoading(false)
+      return
+    }
+
+    void fetchDashboardData()
+  }, [fetchDashboardData, orgId, partnerId])
 
   const refreshDashboardData = async () => {
     await fetchDashboardData()

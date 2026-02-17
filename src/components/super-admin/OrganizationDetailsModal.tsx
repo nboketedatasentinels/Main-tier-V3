@@ -21,6 +21,7 @@ import {
   WrapItem,
 } from '@chakra-ui/react'
 import type { OrganizationMemberStats, OrganizationRecord } from '@/types/admin'
+import { getProgramDurationLabel, getProgramSegmentLabel, resolveProgramCadence } from '@/utils/monthlyCourseAssignments'
 
 type Props = {
   isOpen: boolean
@@ -83,6 +84,8 @@ export const OrganizationDetailsModal: React.FC<Props> = ({
   const courseAssignments = organization.courseAssignments || []
   const monthlyAssignments = organization.monthlyCourseAssignments || {}
   const programStartDate = organization.cohortStartDate || organization.programStart
+  const programCadence = resolveProgramCadence(organization.programDuration)
+  const programDurationLabel = getProgramDurationLabel(organization.programDuration) || '—'
 
   return (
     <Modal isOpen={isOpen} onClose={onClose} size="3xl">
@@ -133,7 +136,7 @@ export const OrganizationDetailsModal: React.FC<Props> = ({
                     <InfoItem label="Cohort size" value={organization.teamSize ?? '—'} />
                     <InfoItem
                       label="Program duration"
-                      value={organization.programDuration ? `${organization.programDuration} months` : '—'}
+                      value={programDurationLabel}
                     />
                     <InfoItem label="Program start" value={formatDate(programStartDate)} />
                     <InfoItem
@@ -154,15 +157,15 @@ export const OrganizationDetailsModal: React.FC<Props> = ({
                         {Object.entries(monthlyAssignments).map(([month, courseId]) => (
                           <WrapItem key={`${month}-${courseId}`}>
                             <Badge variant="subtle">
-                              Month {month}: {courseId || 'Unassigned'}
+                              {getProgramSegmentLabel(Number(month), programCadence)}: {courseId || 'Unassigned'}
                             </Badge>
                           </WrapItem>
                         ))}
                       </Wrap>
                     ) : courseAssignments.length ? (
                       <Wrap>
-                        {courseAssignments.map((courseId) => (
-                          <WrapItem key={courseId}>
+                        {courseAssignments.map((courseId, idx) => (
+                          <WrapItem key={`${courseId}-${idx}`}>
                             <Badge variant="subtle">{courseId}</Badge>
                           </WrapItem>
                         ))}

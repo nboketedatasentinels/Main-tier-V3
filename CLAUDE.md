@@ -382,10 +382,13 @@ Points alone determine progress and passing
 Journey Types:
 | Journey | Windows | Pass Mark | Max Points | Per Window Target |
 |---------|---------|-----------|------------|-------------------|
-| 6-Week | 3 | 40,000 | 60,000 | ~14,000 |
-| 3-Month | 6 | 75,000 | 113,000 | 12,000-13,000 |
-| 6-Month | 12 | 150,000 | 226,000 | 12,000-13,500 |
-| 9-Month | 18 | 227,000 | 339,000 | 12,500-13,000 |
+| 4-Week Intro | 2 | 9,000 | 15,000 | 4,500 |
+| 6-Week Power | 3 | 40,000 | 60,000 | 13,500 |
+| 3-Month | 6 | 75,000 | 113,000 | 12,500 |
+| 6-Month | 12 | 150,000 | 226,000 | 12,500 |
+| 9-Month | 18 | 227,000 | 339,000 | 12,600 |
+
+Per Window Target formula: `Pass Mark / Windows` (rounded for display where needed).
 
 Activity Types:
 - One-Time: Claim once → permanently disabled
@@ -397,6 +400,8 @@ Points Claiming Methods:
 - Self-Reporting: User marks complete
 - Partner Approved: User submits evidence, partner reviews
 - Partner-Issued: Partner awards directly from Admin portal
+- Mentor-Issued: Mentor awards directly from Mentor portal
+- Ambassador-Issued: Ambassador awards directly from Ambassador portal
 
 See docs/points-system.md for complete reference including implementation code.
 

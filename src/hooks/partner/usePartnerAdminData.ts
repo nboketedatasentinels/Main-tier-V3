@@ -93,6 +93,8 @@ type FirestorePartnerUser = Partial<PartnerUser> & {
   totalPoints?: number
   nudgeResponseScore?: number
   status?: string
+  nudge_enabled?: boolean
+  admin_notes?: string
 }
 
 export interface PartnerAdminAnalytics {
@@ -969,6 +971,8 @@ export const usePartnerAdminData = (
                 riskReasons,
                 registrationDate: normalizedRegistrationDate || undefined,
                 interventions: data.interventions || 0,
+                nudgeEnabled: data.nudgeEnabled ?? data.nudge_enabled ?? true,
+                adminNotes: data.adminNotes ?? data.admin_notes ?? '',
               })
             } catch (err) {
               logger.error('[PartnerAdminData] Failed to transform user record', {

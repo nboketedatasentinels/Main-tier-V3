@@ -16,9 +16,29 @@ export const GamificationPanel = ({
 }: {
   activities: ActivityState[]
 }) => {
+  const firstCompletedActivity = useMemo(
+    () => activities.find((activity) => activity.status === 'completed'),
+    [activities],
+  )
+
+  const firstActionableActivity = useMemo(
+    () =>
+      activities.find(
+        (activity) =>
+          activity.availability.state === 'available' &&
+          (activity.status === 'not_started' || activity.status === 'rejected'),
+      ),
+    [activities],
+  )
+
   const firstIncompleteActivity = useMemo(
     () => activities.find((activity) => activity.status !== 'completed'),
     [activities],
+  )
+
+  const hasCompletedAll = useMemo(
+    () => activities.length > 0 && firstIncompleteActivity == null,
+    [activities.length, firstIncompleteActivity],
   )
 
   const progressPct = useMemo(() => {
@@ -28,14 +48,15 @@ export const GamificationPanel = ({
   }, [activities])
 
   const progressStatus = useMemo(() => {
-    if (progressPct >= 100) return { color: 'green', label: 'On Track' }
-    if (progressPct >= 75) return { color: 'yellow', label: 'Warning' }
-    return { color: 'red', label: 'Alert' }
+    if (progressPct >= 100) return { color: 'green', label: 'Completed' }
+    if (progressPct >= 75) return { color: 'blue', label: 'Strong momentum' }
+    return { color: 'teal', label: 'In progress' }
   }, [progressPct])
 
   const scrollToActivity = () => {
-    if (firstIncompleteActivity?.id) {
-      const el = document.getElementById(`activity-${firstIncompleteActivity.id}`)
+    const target = firstActionableActivity ?? firstIncompleteActivity ?? firstCompletedActivity
+    if (target?.id) {
+      const el = document.getElementById(`activity-${target.id}`)
       if (el) {
         el.scrollIntoView({ behavior: 'smooth', block: 'center' })
       }
@@ -51,14 +72,34 @@ export const GamificationPanel = ({
         <Alert status="info" variant="subtle" borderRadius="md">
           <AlertIcon />
           <Stack spacing={1}>
-            <Text color="text.secondary">Focus on your next incomplete activity.</Text>
+            <Text color="text.secondary">
+              {hasCompletedAll
+                ? 'Week complete. Nice execution.'
+                : firstActionableActivity
+                  ? 'Nice momentum. Your next available activity is ready.'
+                  : firstIncompleteActivity
+                    ? 'You are between unlock windows right now.'
+                    : 'Your next activities will appear as this journey updates.'}
+            </Text>
             <Text color="text.secondary" fontSize="sm">
-              Keep your streak alive by acting in the next 24 hours.
+              {hasCompletedAll
+                ? 'Take a breath and celebrate this checkpoint.'
+                : firstActionableActivity
+                  ? 'Finish it now to keep momentum rolling.'
+                  : firstIncompleteActivity
+                    ? 'Use this time to prepare proof and queue your next move.'
+                    : 'Check back soon for new options.'}
             </Text>
           </Stack>
         </Alert>
-        <Button colorScheme="primary" onClick={scrollToActivity} isDisabled={!firstIncompleteActivity}>
-          {firstIncompleteActivity ? `Complete ${firstIncompleteActivity.title}` : 'All activities done'}
+        <Button colorScheme="primary" onClick={scrollToActivity} isDisabled={!firstActionableActivity && !firstIncompleteActivity && !firstCompletedActivity}>
+          {firstActionableActivity
+            ? `Continue with ${firstActionableActivity.title}`
+            : firstIncompleteActivity
+              ? `Preview ${firstIncompleteActivity.title}`
+              : hasCompletedAll
+                ? 'Celebrate this win'
+                : 'No activities yet'}
         </Button>
         <Stack spacing={1} color="text.secondary">
           <Text fontWeight="bold">Streak tracker</Text>

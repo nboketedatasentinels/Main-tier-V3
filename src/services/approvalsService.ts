@@ -5,7 +5,7 @@ import { ApprovalRecord, ApprovalSource, ApprovalWorkflowType } from '@/types/ap
 import { ApprovalType } from '@/config/pointsConfig';
 import { awardChecklistPoints } from './pointsService';
 import { PointsVerificationRequest } from './pointsVerificationService';
-import { getActivitiesForJourney } from '@/config/pointsConfig';
+import { getActivityDefinitionById, resolveCanonicalActivityId } from '@/config/pointsConfig';
 import { createInAppNotification } from './notificationService';
 import { logAdminAction } from './superAdminService';
 import { upsertChecklistActivity } from './checklistService';
@@ -92,8 +92,11 @@ export async function approveRequest(approvalId: string, reviewedBy: string): Pr
     throw new Error('User profile not found');
   }
   const journeyType = userProfileSnap.data().journeyType;
-  const activities = getActivitiesForJourney(journeyType);
-  const activity = activities.find((a) => a.id === request.activity_id);
+  const activity = getActivityDefinitionById({
+    journeyType,
+    activityId: request.activity_id,
+  });
+  const canonicalActivityId = resolveCanonicalActivityId(request.activity_id) ?? request.activity_id;
 
   if (!activity) {
     throw new Error('Activity not found');
@@ -150,7 +153,7 @@ export async function approveRequest(approvalId: string, reviewedBy: string): Pr
       await upsertChecklistActivity({
         userId: approvalRecord.userId,
         weekNumber: request.week,
-        activityId: request.activity_id,
+        activityId: canonicalActivityId,
         patch: {
           status: 'completed',
           hasInteracted: true,
@@ -161,6 +164,27 @@ export async function approveRequest(approvalId: string, reviewedBy: string): Pr
       });
     } catch (error) {
       console.error('[approvalsService] Failed to update checklist after approval:', error);
+    }
+
+    try {
+      await createInAppNotification({
+        userId: approvalRecord.userId,
+        title: 'Activity Submission Approved',
+        message: `Your submission for "${approvalRecord.title}" was approved and ${activity.points.toLocaleString()} points were added.`,
+        type: 'approval',
+        relatedId: request?.id || approvalId,
+        metadata: request?.activity_id && typeof request?.week === 'number'
+          ? {
+              actionUrl: `/app/weekly-checklist?week=${encodeURIComponent(String(request.week))}`,
+              week: request.week,
+              activityId: canonicalActivityId,
+              requestId: request.id,
+              points: activity.points,
+            }
+          : { points: activity.points },
+      });
+    } catch (error) {
+      console.error('[approvalsService] Failed to notify user after approval:', error);
     }
 
     // Log admin action (after points are awarded)
@@ -215,6 +239,7 @@ export async function rejectRequest(
 
     // Mirror status into points_verification_requests/checklists (if this approval was created from that flow).
     if (request?.id && request?.activity_id && typeof request?.week === 'number') {
+      const canonicalActivityId = resolveCanonicalActivityId(request.activity_id) ?? request.activity_id;
       try {
         await updateDoc(doc(db, 'points_verification_requests', request.id), {
           status: 'rejected',
@@ -230,7 +255,7 @@ export async function rejectRequest(
         await upsertChecklistActivity({
           userId: approvalRecord.userId,
           weekNumber: request.week,
-          activityId: request.activity_id,
+          activityId: canonicalActivityId,
           patch: {
             status: 'rejected',
             hasInteracted: false,
@@ -269,9 +294,9 @@ export async function rejectRequest(
       relatedId: request?.id,
       metadata: request?.activity_id && typeof request?.week === 'number'
         ? {
-            actionUrl: `/app/weekly-checklist?week=${encodeURIComponent(String(request.week))}&activityId=${encodeURIComponent(String(request.activity_id))}&openProof=1`,
+            actionUrl: `/app/weekly-checklist?week=${encodeURIComponent(String(request.week))}&activityId=${encodeURIComponent(String(resolveCanonicalActivityId(request.activity_id) ?? request.activity_id))}&openProof=1`,
             week: request.week,
-            activityId: request.activity_id,
+            activityId: resolveCanonicalActivityId(request.activity_id) ?? request.activity_id,
             requestId: request.id,
           }
         : {},

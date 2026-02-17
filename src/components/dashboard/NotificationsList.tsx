@@ -195,6 +195,10 @@ export const NotificationsList = () => {
     const unsubscribe = listenToUserNotifications(user.uid, (items) => {
       setNotifications(items)
       setLoading(false)
+    }, (error) => {
+      console.error('[NotificationsList] listener error', error)
+      setNotifications([])
+      setLoading(false)
     })
 
     return () => unsubscribe()

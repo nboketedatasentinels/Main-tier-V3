@@ -1,4 +1,4 @@
-import { collection, getDocs, query, where } from 'firebase/firestore';
+import { collection, getDocs } from 'firebase/firestore';
 import { db } from '../src/services/firebase';
 import { checkAndHandleJourneyCompletion } from '../src/services/journeyCompletionService';
 import { JourneyType } from '../src/config/pointsConfig';
@@ -11,7 +11,6 @@ async function checkRetroactiveCompletions() {
     console.log(`Found ${usersSnap.size} users to check.`);
 
     let processedCount = 0;
-    const completionCount = 0;
 
     for (const userDoc of usersSnap.docs) {
       const userData = userDoc.data();

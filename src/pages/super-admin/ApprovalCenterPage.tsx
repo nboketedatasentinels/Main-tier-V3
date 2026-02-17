@@ -158,8 +158,13 @@ const rejectionReasonOptions: Record<ApprovalWorkflowType, string[]> = {
 
 const ApprovalCenterPage: React.FC = () => {
   const toast = useToast()
-  const { profile } = useAuth()
-  const { requests: upgradeRequests, loading: upgradeLoading, error: upgradeError, refetch } = useAllUpgradeRequests()
+  const { profile, effectiveRole } = useAuth()
+  const {
+    requests: upgradeRequests,
+    loading: upgradeLoading,
+    error: upgradeError,
+    refetch,
+  } = useAllUpgradeRequests({ enabled: effectiveRole === 'super_admin' })
   const {
     requests: verificationRequests,
     loading: verificationLoading,
@@ -723,20 +728,34 @@ const ApprovalCenterPage: React.FC = () => {
       }
       if (event.key.toLowerCase() === 'a' && selectedIds.size > 0) {
         event.preventDefault()
-        openBulkModal('approve')
+        setBulkAction('approve')
+        setBulkRejectReason('')
+        setBulkRejectCategory('')
+        bulkModal.onOpen()
       }
       if (event.key.toLowerCase() === 'r' && selectedIds.size > 0) {
         event.preventDefault()
-        openBulkModal('reject')
+        setBulkAction('reject')
+        setBulkRejectReason('')
+        setBulkRejectCategory('')
+        bulkModal.onOpen()
       }
       if (event.code === 'Space') {
         event.preventDefault()
-        selectAllVisible()
+        const next = new Set(selectedIds)
+        const visibleIds = paginatedRecords.map((record) => record.id)
+        const allSelected = visibleIds.every((id) => next.has(id))
+        if (allSelected) {
+          visibleIds.forEach((id) => next.delete(id))
+        } else {
+          visibleIds.forEach((id) => next.add(id))
+        }
+        setSelectedIds(next)
       }
     }
     window.addEventListener('keydown', handler)
     return () => window.removeEventListener('keydown', handler)
-  }, [selectedIds.size, paginatedRecords])
+  }, [bulkModal, paginatedRecords, selectedIds])
 
   const pendingBadgeColor = pendingCount === 0 ? 'green' : pendingCount > 20 ? 'red' : 'orange'
 
@@ -1143,10 +1162,10 @@ const ApprovalCenterPage: React.FC = () => {
                                       </Text>
                                     </Box>
                                     <HStack spacing={3} mt={2} gridColumn={{ base: 'auto', md: '1 / -1' }}>
-                                      <Link color="purple.600" href="/super-admin?tab=organizations">
+                                      <Link color="purple.600" href="/admin/dashboard?tab=organizations">
                                         View organizations
                                       </Link>
-                                      <Link color="purple.600" href="/super-admin?tab=organizations&create=true">
+                                      <Link color="purple.600" href="/admin/dashboard?tab=organizations&create=true">
                                         Create organization
                                       </Link>
                                     </HStack>

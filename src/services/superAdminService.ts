@@ -1,5 +1,6 @@
 import {
   Timestamp,
+  arrayRemove,
   addDoc,
   collection,
   deleteDoc,
@@ -14,6 +15,7 @@ import {
   serverTimestamp,
   setDoc,
   updateDoc,
+  writeBatch,
   where,
 } from 'firebase/firestore'
 import { auth, db } from './firebase'
@@ -46,6 +48,7 @@ const orgCollection = collection(db, ORG_COLLECTION)
 const usersCollection = collection(db, 'profiles')
 const auditCollection = collection(db, 'admin_activity_log')
 const engagementCollection = collection(db, 'user_engagement_scores')
+const orgDeletionRecoveryCollection = collection(db, 'pending_org_deletions')
 const adminRoles: AdminRole[] = ['super_admin', 'partner', 'mentor', 'ambassador']
 
 const getActorId = () => auth.currentUser?.uid
@@ -478,8 +481,167 @@ export const updateOrganization = async (id: string, updates: Partial<Organizati
 }
 
 export const deleteOrganization = async (id: string) => {
-  const orgRef = doc(db, ORG_COLLECTION, id)
-  await deleteDoc(orgRef)
+  if (!id?.trim()) return
+  const orgId = id.trim()
+  const orgRef = doc(db, ORG_COLLECTION, orgId)
+  const usersMirrorCollection = collection(db, 'users')
+
+  const [profileAssignments, userAssignments] = await Promise.all([
+    getDocs(query(usersCollection, where('assignedOrganizations', 'array-contains', orgId))),
+    getDocs(query(usersMirrorCollection, where('assignedOrganizations', 'array-contains', orgId))),
+  ])
+
+  const detachPayload = {
+    assignedOrganizations: arrayRemove(orgId),
+    assignedOrganizationsUpdatedAt: serverTimestamp(),
+    updatedAt: serverTimestamp(),
+  }
+  const assignmentRefs = [
+    ...profileAssignments.docs.map((docSnap) => docSnap.ref),
+    ...userAssignments.docs.map((docSnap) => docSnap.ref),
+  ]
+  const getRefPath = (ref: unknown): string => {
+    const asRef = ref as { path?: unknown }
+    return typeof asRef.path === 'string' ? asRef.path : ''
+  }
+  const getRefUserId = (ref: unknown): string => {
+    const asRef = ref as { id?: unknown; path?: unknown }
+    if (typeof asRef.id === 'string' && asRef.id.trim()) return asRef.id
+    if (typeof asRef.path === 'string') {
+      const parts = asRef.path.split('/').filter(Boolean)
+      const tail = parts[parts.length - 1]
+      return tail || 'unknown'
+    }
+    return 'unknown'
+  }
+  const affectedUserIds = Array.from(new Set(assignmentRefs.map((ref) => getRefUserId(ref))))
+  const persistDeletionFailure = async (params: {
+    processed: number
+    attemptedChunkRefs: unknown[]
+    remainingCount: number
+    includesOrgDelete: boolean
+    commitError: unknown
+  }): Promise<string | null> => {
+    const attemptedUserIds = Array.from(new Set(params.attemptedChunkRefs.map((ref) => getRefUserId(ref))))
+    const recoveryPayload = {
+      type: 'pendingOrgDeletion',
+      status: 'pending_recovery',
+      organizationId: orgId,
+      organizationRefPath: getRefPath(orgRef) || `${ORG_COLLECTION}/${orgId}`,
+      processedCount: params.processed,
+      totalAssignmentRefs: assignmentRefs.length,
+      remainingCount: params.remainingCount,
+      includesOrgDelete: params.includesOrgDelete,
+      attemptedChunkRefPaths: params.attemptedChunkRefs.map((ref) => getRefPath(ref)),
+      attemptedUserIds,
+      affectedUserIds,
+      errorMessage:
+        params.commitError instanceof Error
+          ? params.commitError.message
+          : typeof params.commitError === 'string'
+            ? params.commitError
+            : 'Unknown commit failure',
+      createdAt: serverTimestamp(),
+      updatedAt: serverTimestamp(),
+      metadata: {
+        operation: 'deleteOrganization',
+      },
+    }
+    try {
+      const markerDoc = await addDoc(orgDeletionRecoveryCollection, recoveryPayload)
+      return markerDoc.id
+    } catch (markerError) {
+      console.error('[SuperAdmin] Failed to persist org deletion recovery marker', {
+        organizationId: orgId,
+        markerError,
+      })
+      return null
+    }
+  }
+  const throwWithRecoveryContext = async (params: {
+    processed: number
+    attemptedChunkRefs: unknown[]
+    remainingCount: number
+    includesOrgDelete: boolean
+    commitError: unknown
+  }): Promise<never> => {
+    const attemptedUserIds = Array.from(new Set(params.attemptedChunkRefs.map((ref) => getRefUserId(ref))))
+    const context = {
+      organizationId: orgId,
+      organizationRefPath: getRefPath(orgRef) || `${ORG_COLLECTION}/${orgId}`,
+      processedCount: params.processed,
+      totalAssignmentRefs: assignmentRefs.length,
+      remainingCount: params.remainingCount,
+      attemptedChunkRefPaths: params.attemptedChunkRefs.map((ref) => getRefPath(ref)),
+      attemptedUserIds,
+      affectedUserIds,
+      includesOrgDelete: params.includesOrgDelete,
+    }
+
+    console.error('[SuperAdmin] Organization deletion batch commit failed', {
+      ...context,
+      commitError: params.commitError,
+    })
+    const recoveryMarkerId = await persistDeletionFailure(params)
+    const errorMessage = recoveryMarkerId
+      ? `Failed to delete organization ${orgId}. Recovery marker ${recoveryMarkerId} was recorded in pending_org_deletions.`
+      : `Failed to delete organization ${orgId}. Recovery marker could not be recorded; use logged context for manual recovery.`
+    const recoveryError = Object.assign(new Error(errorMessage), {
+      cause: params.commitError,
+      recoveryContext: context,
+      recoveryMarkerId: recoveryMarkerId ?? undefined,
+    })
+    throw recoveryError
+  }
+  const maxBatchWrites = 500
+  let processed = 0
+
+  if (!assignmentRefs.length) {
+    const batch = writeBatch(db)
+    batch.delete(orgRef)
+    try {
+      await batch.commit()
+    } catch (commitError) {
+      await throwWithRecoveryContext({
+        processed: 0,
+        attemptedChunkRefs: [],
+        remainingCount: 0,
+        includesOrgDelete: true,
+        commitError,
+      })
+    }
+    return
+  }
+
+  while (processed < assignmentRefs.length) {
+    const remaining = assignmentRefs.length - processed
+    const reserveDeleteOperation = remaining <= maxBatchWrites
+    const chunkSize = reserveDeleteOperation ? maxBatchWrites - 1 : maxBatchWrites
+    const chunkRefs = assignmentRefs.slice(processed, processed + chunkSize)
+    const batch = writeBatch(db)
+
+    chunkRefs.forEach((ref) => {
+      batch.update(ref, detachPayload)
+    })
+
+    const processedAfterCommit = processed + chunkRefs.length
+    if (processedAfterCommit === assignmentRefs.length) {
+      batch.delete(orgRef)
+    }
+
+    try {
+      await batch.commit()
+      processed = processedAfterCommit
+    } catch (commitError) {
+      await throwWithRecoveryContext({
+        processed,
+        attemptedChunkRefs: chunkRefs,
+        remainingCount: assignmentRefs.length - processed,
+        includesOrgDelete: processedAfterCommit === assignmentRefs.length,
+        commitError,
+      })
+    }
+  }
 }
 
 export const fetchEngagementRiskAggregates = async (): Promise<EngagementRiskAggregate> => {
@@ -546,8 +708,10 @@ export const listenToAdminActivityLog = (
 }
 
 export const logAdminAction = async (entry: Omit<AdminActivityLogEntry, 'id' | 'createdAt'>) => {
+  const actorId = getActorId() || entry.adminId
   const sanitizedEntry = removeUndefinedFields({
     ...entry,
+    createdBy: actorId,
     createdAt: serverTimestamp(),
   })
   await addDoc(auditCollection, sanitizedEntry)
@@ -725,59 +889,87 @@ export const toggleAdminStatus = async (adminId: string, status: 'active' | 'sus
   })
 }
 
-export const listenToVerificationRequests = (onChange: (requests: VerificationRequest[]) => void) => {
+export const listenToVerificationRequests = (
+  onChange: (requests: VerificationRequest[]) => void,
+  onError?: (error: FirestoreError) => void,
+) => {
   const verificationQuery = query(
     collection(db, 'points_verification_requests'),
     where('status', '==', 'pending'),
     orderBy('created_at', 'desc'),
     limit(10),
   )
-  return onSnapshot(verificationQuery, (snapshot) => {
-    onChange(
-      snapshot.docs.map((docSnap) => {
-        const data = docSnap.data() as VerificationRequest
-        return { ...data, id: docSnap.id }
-      }),
-    )
-  })
+  return onSnapshot(
+    verificationQuery,
+    (snapshot) => {
+      onChange(
+        snapshot.docs.map((docSnap) => {
+          const data = docSnap.data() as VerificationRequest
+          return { ...data, id: docSnap.id }
+        }),
+      )
+    },
+    onError,
+  )
 }
 
-export const listenToRegistrations = (onChange: (registrations: RegistrationRecord[]) => void) => {
+export const listenToRegistrations = (
+  onChange: (registrations: RegistrationRecord[]) => void,
+  onError?: (error: FirestoreError) => void,
+) => {
   // Use the same canonical collection (`profiles`) as other super-admin user streams,
   // so role/membership/org fields are consistent across dashboards.
   const registrationQuery = query(usersCollection, orderBy('createdAt', 'desc'), limit(8))
-  return onSnapshot(registrationQuery, (snapshot) => {
-    onChange(
-      snapshot.docs.map((docSnap) => {
-        const data = docSnap.data() as RegistrationRecord
-        return { ...data, id: docSnap.id }
-      }),
-    )
-  })
+  return onSnapshot(
+    registrationQuery,
+    (snapshot) => {
+      onChange(
+        snapshot.docs.map((docSnap) => {
+          const data = docSnap.data() as RegistrationRecord
+          return { ...data, id: docSnap.id }
+        }),
+      )
+    },
+    onError,
+  )
 }
 
-export const listenToSystemAlerts = (onChange: (alerts: SystemAlertRecord[]) => void) => {
+export const listenToSystemAlerts = (
+  onChange: (alerts: SystemAlertRecord[]) => void,
+  onError?: (error: FirestoreError) => void,
+) => {
   const alertsQuery = query(collection(db, 'system_health_alerts'), orderBy('created_at', 'desc'), limit(8))
-  return onSnapshot(alertsQuery, (snapshot) => {
-    onChange(
-      snapshot.docs.map((docSnap) => {
-        const data = docSnap.data() as SystemAlertRecord
-        return { ...data, id: docSnap.id }
-      }),
-    )
-  })
+  return onSnapshot(
+    alertsQuery,
+    (snapshot) => {
+      onChange(
+        snapshot.docs.map((docSnap) => {
+          const data = docSnap.data() as SystemAlertRecord
+          return { ...data, id: docSnap.id }
+        }),
+      )
+    },
+    onError,
+  )
 }
 
-export const listenToTaskNotifications = (onChange: (tasks: TaskNotificationRecord[]) => void) => {
+export const listenToTaskNotifications = (
+  onChange: (tasks: TaskNotificationRecord[]) => void,
+  onError?: (error: FirestoreError) => void,
+) => {
   const taskQuery = query(collection(db, 'task_notifications'), orderBy('created_at', 'desc'), limit(8))
-  return onSnapshot(taskQuery, (snapshot) => {
-    onChange(
-      snapshot.docs.map((docSnap) => {
-        const data = docSnap.data() as TaskNotificationRecord
-        return { ...data, id: docSnap.id }
-      }),
-    )
-  })
+  return onSnapshot(
+    taskQuery,
+    (snapshot) => {
+      onChange(
+        snapshot.docs.map((docSnap) => {
+          const data = docSnap.data() as TaskNotificationRecord
+          return { ...data, id: docSnap.id }
+        }),
+      )
+    },
+    onError,
+  )
 }
 
 export const listenToUsers = (
