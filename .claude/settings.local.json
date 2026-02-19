@@ -41,7 +41,8 @@
       "Bash(then grep \"VITE_ENABLE_PROFILE_REALTIME\" \"c:\\\\Users\\\\Kekab\\\\Man-tier-v2\\\\.env\")",
       "Bash(else echo \"No .env file found\")",
       "Bash(fi)",
-      "Bash(set FUNCTIONS_DISCOVERY_TIMEOUT=120000)"
+      "Bash(set FUNCTIONS_DISCOVERY_TIMEOUT=120000)",
+      "Bash(npx vite build)"
     ]
   }
 }

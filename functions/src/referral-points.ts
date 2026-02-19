@@ -636,6 +636,89 @@ async function creditReferralPointsInternal(
 }
 
 /**
+ * HTTPS Callable: Verify and credit pending referrals for the calling user
+ *
+ * Any authenticated user can call this to re-check their own pending referrals.
+ * For each pending referral, checks if the referred user has completed an activity.
+ * If so, credits the referral. This acts as a fallback when the automatic
+ * Firestore trigger (onReferredUserFirstActivity) fails or wasn't deployed.
+ */
+export const verifyMyPendingReferrals = functions
+  .region("us-central1")
+  .https.onCall(
+    async (
+      _data: unknown,
+      context
+    ): Promise<{ verified: number; credited: number; message: string }> => {
+      if (!context.auth) {
+        throw new functions.https.HttpsError(
+          "unauthenticated",
+          "User must be authenticated"
+        );
+      }
+
+      const callerUid = context.auth.uid;
+
+      try {
+        const pendingReferrals = await db
+          .collection("referrals")
+          .where("referrerUid", "==", callerUid)
+          .where("status", "==", "pending")
+          .get();
+
+        if (pendingReferrals.empty) {
+          return {
+            verified: 0,
+            credited: 0,
+            message: "No pending referrals found.",
+          };
+        }
+
+        let credited = 0;
+
+        for (const referralDoc of pendingReferrals.docs) {
+          const referralData = referralDoc.data() as ReferralRecord;
+          const referredUid = referralData.referredUid;
+
+          if (!referredUid) continue;
+
+          const activityId = await findAnyEligibleActivityId(referredUid);
+          if (activityId) {
+            try {
+              await creditReferralPointsInternal(
+                referredUid,
+                callerUid,
+                activityId
+              );
+              credited++;
+            } catch (creditError) {
+              console.error(
+                `[Referral] Verify: failed to credit referral for ${referredUid}:`,
+                creditError
+              );
+            }
+          }
+        }
+
+        return {
+          verified: pendingReferrals.size,
+          credited,
+          message:
+            credited > 0
+              ? `${credited} referral(s) verified and credited!`
+              : `${pendingReferrals.size} pending referral(s) checked. Referred users haven't completed their first activity yet.`,
+        };
+      } catch (error) {
+        console.error(`[Referral] Verify pending referrals failed:`, error);
+        throw new functions.https.HttpsError(
+          "internal",
+          `Failed to verify referrals: ${error}`
+        );
+      }
+    }
+  );
+
+/**
  * Scheduled Function: Check for stale pending referrals
  *
  * Runs daily to check for referrals that have been pending for too long.

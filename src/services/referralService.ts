@@ -282,7 +282,8 @@ export async function manualCreditReferralPoints(
  */
 export function subscribeToReferrals(
   referrerUid: string,
-  callback: (referrals: ReferralWithDetails[]) => void
+  callback: (referrals: ReferralWithDetails[]) => void,
+  onError?: (error: Error) => void
 ): () => void {
   const q = query(
     referralsCollection,
@@ -328,6 +329,7 @@ export function subscribeToReferrals(
     },
     (error) => {
       console.error('🔴 [Referral] Error subscribing to referrals', error)
+      onError?.(error instanceof Error ? error : new Error(String(error)))
     }
   )
 
@@ -433,5 +435,38 @@ export async function hasCompletedFirstActivity(uid: string): Promise<boolean> {
   } catch (error) {
     console.error('🔴 [Referral] Error checking first activity', error)
     return false
+  }
+}
+
+/**
+ * Verify and credit any pending referrals for the current user.
+ *
+ * Calls the `verifyMyPendingReferrals` Cloud Function which:
+ * - Finds all pending referrals where the caller is the referrer
+ * - Checks if each referred user has completed an activity
+ * - Credits the referral if eligible
+ *
+ * Safe for any authenticated user to call (only processes their own referrals).
+ */
+export async function verifyMyPendingReferrals(): Promise<{
+  verified: number
+  credited: number
+  message: string
+}> {
+  try {
+    const callable = httpsCallable<
+      void,
+      { verified: number; credited: number; message: string }
+    >(functions, 'verifyMyPendingReferrals')
+
+    const result = await callable()
+    return result.data
+  } catch (error) {
+    console.error('🔴 [Referral] Failed to verify pending referrals', error)
+    return {
+      verified: 0,
+      credited: 0,
+      message: error instanceof Error ? error.message : 'Failed to verify referrals',
+    }
   }
 }

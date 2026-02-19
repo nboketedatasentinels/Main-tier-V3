@@ -103,6 +103,20 @@
       ]
     },
     {
+      "collectionGroup": "referrals",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "referrerUid",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "status",
+          "order": "ASCENDING"
+        }
+      ]
+    },
+    {
       "collectionGroup": "pointsLedger",
       "queryScope": "COLLECTION",
       "fields": [
@@ -264,16 +278,6 @@
         },
         {
           "fieldPath": "status",
-          "order": "ASCENDING"
-        }
-      ]
-    },
-    {
-      "collectionGroup": "village_invitations",
-      "queryScope": "COLLECTION",
-      "fields": [
-        {
-          "fieldPath": "invitationCode",
           "order": "ASCENDING"
         }
       ]
