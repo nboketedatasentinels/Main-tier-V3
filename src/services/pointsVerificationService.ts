@@ -5,9 +5,7 @@ import {
   collection,
   doc,
   getDoc,
-  limit,
   onSnapshot,
-  orderBy,
   query,
   serverTimestamp,
   setDoc,
@@ -45,6 +43,31 @@ export interface PointsVerificationRequest {
   rejection_reason?: string | null
 }
 
+const timestampToMillis = (value: unknown): number => {
+  if (!value) return 0
+  if (value instanceof Timestamp) return value.toMillis()
+  if (value instanceof Date) return value.getTime()
+  if (typeof value === 'number') return value
+  if (typeof value === 'string') {
+    const parsed = Date.parse(value)
+    return Number.isNaN(parsed) ? 0 : parsed
+  }
+  if (typeof value === 'object' && 'toDate' in value) {
+    const maybeDate = (value as { toDate?: () => Date }).toDate?.()
+    return maybeDate instanceof Date ? maybeDate.getTime() : 0
+  }
+  return 0
+}
+
+const mapAndSortRequests = (snapshot: { docs: Array<{ id: string; data: () => unknown }> }): PointsVerificationRequest[] => {
+  return snapshot.docs
+    .map((docSnap) => {
+      const data = docSnap.data() as PointsVerificationRequest
+      return { ...data, id: docSnap.id }
+    })
+    .sort((left, right) => timestampToMillis(right.created_at) - timestampToMillis(left.created_at))
+}
+
 interface ApproverInfo {
   id?: string | null
   name?: string | null
@@ -56,20 +79,16 @@ interface ApproverInfo {
 export const listenToPointsVerificationRequests = (
   onChange: (requests: PointsVerificationRequest[]) => void,
 ) => {
-  const verificationQuery = query(
-    collection(db, 'points_verification_requests'),
-    where('status', '==', 'pending'),
-    orderBy('created_at', 'desc'),
+  const baseQuery = query(collection(db, 'points_verification_requests'), where('status', '==', 'pending'))
+  return onSnapshot(
+    baseQuery,
+    (snapshot) => {
+      onChange(mapAndSortRequests(snapshot as { docs: Array<{ id: string; data: () => unknown }> }))
+    },
+    (error) => {
+      console.error('[pointsVerificationService] Failed to subscribe to pending requests:', error)
+    },
   )
-
-  return onSnapshot(verificationQuery, (snapshot) => {
-    onChange(
-      snapshot.docs.map((docSnap) => {
-        const data = docSnap.data() as PointsVerificationRequest
-        return { ...data, id: docSnap.id }
-      }),
-    )
-  })
 }
 
 /**
@@ -80,25 +99,17 @@ export const listenToAllPointsVerificationRequests = (
   options?: { status?: PointsVerificationRequestStatus | 'all'; limit?: number },
   onError?: (error: unknown) => void,
 ) => {
-  const constraints: QueryConstraint[] = [orderBy('created_at', 'desc')]
+  const filters: QueryConstraint[] = []
   if (options?.status && options.status !== 'all') {
-    constraints.push(where('status', '==', options.status))
-  }
-  if (options?.limit) {
-    constraints.push(limit(options.limit))
+    filters.push(where('status', '==', options.status))
   }
 
-  const verificationQuery = query(collection(db, 'points_verification_requests'), ...constraints)
-
+  const unorderedQuery = query(collection(db, 'points_verification_requests'), ...filters)
   return onSnapshot(
-    verificationQuery,
+    unorderedQuery,
     (snapshot) => {
-      onChange(
-        snapshot.docs.map((docSnap) => {
-          const data = docSnap.data() as PointsVerificationRequest
-          return { ...data, id: docSnap.id }
-        }),
-      )
+      const mapped = mapAndSortRequests(snapshot as { docs: Array<{ id: string; data: () => unknown }> })
+      onChange(options?.limit ? mapped.slice(0, options.limit) : mapped)
     },
     (error) => {
       onError?.(error)
@@ -116,10 +127,7 @@ export const listenToPointsVerificationRequestsByOrganizations = (
   organizationIds?: string[],
   onError?: (error: unknown) => void,
 ) => {
-  const constraints: QueryConstraint[] = [
-    where('status', '==', 'pending'),
-    orderBy('created_at', 'desc'),
-  ]
+  const filters: QueryConstraint[] = [where('status', '==', 'pending')]
 
   // If organizationIds provided and not empty, add organization filter
   // Note: Firestore 'in' queries are limited to 30 items
@@ -131,20 +139,14 @@ export const listenToPointsVerificationRequestsByOrganizations = (
       )
     }
     const queryOrgIds = organizationIds.slice(0, 30)
-    constraints.push(where('organizationId', 'in', queryOrgIds))
+    filters.push(where('organizationId', 'in', queryOrgIds))
   }
 
-  const verificationQuery = query(collection(db, 'points_verification_requests'), ...constraints)
-
+  const scopedQuery = query(collection(db, 'points_verification_requests'), ...filters)
   return onSnapshot(
-    verificationQuery,
+    scopedQuery,
     (snapshot) => {
-      onChange(
-        snapshot.docs.map((docSnap) => {
-          const data = docSnap.data() as PointsVerificationRequest
-          return { ...data, id: docSnap.id }
-        }),
-      )
+      onChange(mapAndSortRequests(snapshot as { docs: Array<{ id: string; data: () => unknown }> }))
     },
     (error) => {
       onError?.(error)

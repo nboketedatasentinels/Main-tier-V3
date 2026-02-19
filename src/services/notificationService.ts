@@ -1,6 +1,8 @@
 import {
   addDoc,
+  type DocumentData,
   type FirestoreError,
+  type QuerySnapshot,
   collection,
   doc,
   getDoc,
@@ -25,25 +27,40 @@ const notificationsCollection = collection(db, 'notifications')
 const adminNotificationsCollection = collection(db, 'admin_notifications')
 const weeklyAlertsCollection = collection(db, 'weekly_target_alerts')
 
+const toMillis = (value: unknown): number => {
+  if (!value) return 0
+  if (value instanceof Date) return value.getTime()
+  if (typeof value === 'number') return value
+  if (typeof value === 'string') {
+    const parsed = Date.parse(value)
+    return Number.isNaN(parsed) ? 0 : parsed
+  }
+  if (typeof value === 'object' && 'toDate' in value) {
+    const maybeDate = (value as { toDate?: () => Date }).toDate?.()
+    return maybeDate instanceof Date ? maybeDate.getTime() : 0
+  }
+  return 0
+}
+
+const mapNotifications = (snapshot: QuerySnapshot<DocumentData>) => {
+  return snapshot.docs
+    .map((docSnap) => ({
+      ...(docSnap.data() as NotificationRecord),
+      id: docSnap.id,
+    }))
+    .sort((left, right) => toMillis(right.created_at) - toMillis(left.created_at))
+}
+
 export const listenToUserNotifications = (
   userId: string,
   onChange: (notifications: NotificationRecord[]) => void,
   onError?: (error: FirestoreError) => void,
 ) => {
-  const notificationsQuery = query(
-    notificationsCollection,
-    where('user_id', '==', userId),
-    orderBy('created_at', 'desc'),
-  )
-
+  const notificationsQuery = query(notificationsCollection, where('user_id', '==', userId))
   return onSnapshot(
     notificationsQuery,
     (snapshot) => {
-      const items: NotificationRecord[] = snapshot.docs.map((docSnap) => ({
-        ...(docSnap.data() as NotificationRecord),
-        id: docSnap.id,
-      }))
-      onChange(items)
+      onChange(mapNotifications(snapshot))
     },
     onError,
   )

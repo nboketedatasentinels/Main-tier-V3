@@ -893,21 +893,21 @@ export const listenToVerificationRequests = (
   onChange: (requests: VerificationRequest[]) => void,
   onError?: (error: FirestoreError) => void,
 ) => {
-  const verificationQuery = query(
-    collection(db, 'points_verification_requests'),
-    where('status', '==', 'pending'),
-    orderBy('created_at', 'desc'),
-    limit(10),
-  )
+  const verificationQuery = query(collection(db, 'points_verification_requests'), where('status', '==', 'pending'))
+
+  const mapRequests = (snapshot: { docs: Array<{ id: string; data: () => unknown }> }) =>
+    snapshot.docs
+      .map((docSnap) => {
+        const data = docSnap.data() as VerificationRequest
+        return { ...data, id: docSnap.id }
+      })
+      .sort((left, right) => timestampToMillis(right.created_at) - timestampToMillis(left.created_at))
+      .slice(0, 10)
+
   return onSnapshot(
     verificationQuery,
     (snapshot) => {
-      onChange(
-        snapshot.docs.map((docSnap) => {
-          const data = docSnap.data() as VerificationRequest
-          return { ...data, id: docSnap.id }
-        }),
-      )
+      onChange(mapRequests(snapshot as { docs: Array<{ id: string; data: () => unknown }> }))
     },
     onError,
   )
