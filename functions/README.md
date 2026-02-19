@@ -53,6 +53,24 @@ Batch sync function that ensures the `profiles` collection stays in sync with th
 - Every day at 2 AM UTC
 - Can be adjusted by modifying the schedule string
 
+### 4. `syncPartnerImpactLogs`
+**Type:** HTTPS callable  
+**Trigger:** Client callable from authenticated user session
+
+Pulls impact-log records from the T4L Partner platform API and mirrors them into the `impact_logs` collection for the signed-in Transformation Tier user.
+
+**Security and linking rules:**
+- Requires authenticated Firebase user
+- Requires verified email
+- Requires linked `google.com` provider (Google Sign-In verification)
+- Links records by normalized email address
+
+**Storage behavior:**
+- Upserts logs with `sourcePlatform: "t4l_partner"` and deterministic IDs
+- Preserves source trace fields (`sourceRecordId`, `sourceEmail`, `sourceSyncedAt`)
+- Marks entries as read-only (`readOnly: true`) for UI handling
+- Tracks sync state in `external_impact_sync_state/{uid}`
+
 ## Setup & Deployment
 
 ### Prerequisites
@@ -157,6 +175,20 @@ node scripts/migrations/sync-users-to-profiles.mjs
 | Permission denied errors | Verify service account has Firestore write permissions |
 
 ## Configuration
+
+### Partner Impact API
+
+Configure the partner API endpoint and token before deploying:
+
+```bash
+firebase functions:config:set partnerimpact.api_url="https://<partner-api-endpoint>" partnerimpact.api_token="<token>"
+```
+
+Optional timeout override (milliseconds):
+
+```bash
+firebase functions:config:set partnerimpact.timeout_ms="20000"
+```
 
 ### Modify Sync Schedule
 
