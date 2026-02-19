@@ -14,7 +14,8 @@ export const ReferralLanding: React.FC = () => {
       }
     }
 
-    navigate('/signup', { replace: true })
+    // Forward the ref param so SignUpPage can read it from the URL too
+    navigate(ref ? `/signup?ref=${encodeURIComponent(ref)}` : '/signup', { replace: true })
   }, [navigate, searchParams])
 
   return null
