@@ -32,7 +32,7 @@ export const ProofModal = ({
     <Modal isOpen={state.isOpen} onClose={onClose} isCentered>
       <ModalOverlay />
       <ModalContent>
-        <ModalHeader>{isResubmission ? 'Resubmit proof for verification' : 'Submit proof for verification'}</ModalHeader>
+        <ModalHeader>{isResubmission ? 'Resubmit proof for partner review' : 'Submit proof for partner review'}</ModalHeader>
         <ModalCloseButton />
         <ModalBody>
           {state.rejectionReason ? (
@@ -41,7 +41,7 @@ export const ProofModal = ({
             </Text>
           ) : null}
           <Text mb={3} color="gray.600">
-            Add a link (Drive, Dropbox, Notion, screenshot URL) and optional notes. Your partner team will verify and award points.
+            Add a link (Drive, Dropbox, Notion, screenshot URL) and optional notes. Submitting proof marks this activity as submitted; it becomes completed after approval.
           </Text>
 
           <Stack spacing={3}>
@@ -72,7 +72,7 @@ export const ProofModal = ({
             isLoading={isSubmitting}
             loadingText="Submitting"
           >
-            Submit
+            Submit proof
           </Button>
         </ModalFooter>
       </ModalContent>
