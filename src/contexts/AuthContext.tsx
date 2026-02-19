@@ -1445,20 +1445,22 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         !explicitReferralCode && typeof window !== 'undefined'
           ? localStorage.getItem('pending_ref')?.trim() ?? ''
           : ''
+      const usedPending = !explicitReferralCode && !!pendingReferralCode
       const resolvedReferralCode = explicitReferralCode || pendingReferralCode
 
       if (resolvedReferralCode) {
         const referrerUid = await validateReferralCode(resolvedReferralCode)
         if (!referrerUid) {
           console.warn('🟠 [Auth] Referral code invalid or inactive during signup', resolvedReferralCode)
-          if (typeof window !== 'undefined') {
+          if (usedPending && typeof window !== 'undefined') {
             localStorage.removeItem('pending_ref')
           }
         } else {
           const { success, error } = await createReferral(uid, referrerUid, resolvedReferralCode)
           if (!success && error) {
             console.warn('🟠 [Auth] Unable to create referral during signup', error)
-          } else if (success && typeof window !== 'undefined') {
+          }
+          if (usedPending && (success || error === undefined) && typeof window !== 'undefined') {
             localStorage.removeItem('pending_ref')
           }
         }
