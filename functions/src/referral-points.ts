@@ -12,7 +12,7 @@
  * - Sends notifications to referrer
  *
  * Deploy with:
- * firebase deploy --only functions:onReferredUserFirstActivity,functions:creditReferralPointsCallable
+ * firebase deploy --only functions:onReferredUserFirstActivity,functions:onReferralCreatedBackfill,functions:creditReferralPointsCallable
  */
 
 import * as functions from "firebase-functions";
@@ -59,6 +59,70 @@ interface PointsLedgerEntry {
   source: string;
   approvalType: string;
   createdAt: admin.firestore.Timestamp;
+}
+
+function normalizeString(value: unknown): string | null {
+  if (typeof value !== "string") return null;
+  const trimmed = value.trim();
+  return trimmed.length > 0 ? trimmed : null;
+}
+
+async function resolveReferralContext(params: {
+  referredUid: string;
+  existingReferralDoc?: admin.firestore.DocumentSnapshot;
+}): Promise<{
+  referrerUid: string | null;
+  referralStatus: "pending" | "credited" | "rejected" | null;
+  referralRecord: ReferralRecord | null;
+  hasUserRecord: boolean;
+}> {
+  const { referredUid, existingReferralDoc } = params;
+
+  const [profileDoc, userDoc, referralDoc] = await Promise.all([
+    db.collection("profiles").doc(referredUid).get(),
+    db.collection("users").doc(referredUid).get(),
+    existingReferralDoc ?? db.collection("referrals").doc(referredUid).get(),
+  ]);
+
+  const profileData = profileDoc.exists ? (profileDoc.data() as UserProfile) : null;
+  const userData = userDoc.exists ? (userDoc.data() as UserProfile) : null;
+  const referralRecord = referralDoc.exists ? (referralDoc.data() as ReferralRecord) : null;
+
+  const referrerUid =
+    normalizeString(profileData?.referredBy) ??
+    normalizeString(userData?.referredBy) ??
+    normalizeString(referralRecord?.referrerUid);
+
+  const referralStatus =
+    profileData?.referralStatus ??
+    userData?.referralStatus ??
+    referralRecord?.status ??
+    null;
+
+  return {
+    referrerUid,
+    referralStatus,
+    referralRecord,
+    hasUserRecord: profileDoc.exists || userDoc.exists,
+  };
+}
+
+async function findAnyEligibleActivityId(referredUid: string): Promise<string | null> {
+  const activitySnapshot = await db
+    .collection("pointsLedger")
+    .where("uid", "==", referredUid)
+    .limit(50)
+    .get();
+
+  for (const docSnap of activitySnapshot.docs) {
+    const data = docSnap.data() as Partial<PointsLedgerEntry>;
+    const activityId = normalizeString(data.activityId);
+    if (activityId && activityId !== "referral_bonus") {
+      return activityId;
+    }
+  }
+
+  return null;
 }
 
 /**
@@ -112,36 +176,30 @@ export const onReferredUserFirstActivity = functions
     }
 
     try {
-      const [userDoc, referralDoc] = await Promise.all([
-        db.collection("profiles").doc(referredUid).get(),
-        db.collection("referrals").doc(referredUid).get(),
-      ]);
+      const referralDoc = await db.collection("referrals").doc(referredUid).get();
+      const referralContext = await resolveReferralContext({
+        referredUid,
+        existingReferralDoc: referralDoc,
+      });
 
-      if (!userDoc.exists) {
-        console.log(`[Referral] User ${referredUid} profile not found`);
+      if (!referralContext.hasUserRecord) {
+        console.log(`[Referral] User ${referredUid} profile/user record not found`);
         return null;
       }
 
-      const userData = userDoc.data() as UserProfile;
-      let referrerUid = userData.referredBy;
-
-      if (!referrerUid && referralDoc.exists) {
-        const referralData = referralDoc.data() as ReferralRecord;
-        referrerUid = referralData.referrerUid;
-        console.log(`[Referral] Found referrerUid from referral record: ${referrerUid}`);
-      }
+      const referrerUid = referralContext.referrerUid;
 
       if (!referrerUid) {
         console.log(`[Referral] User ${referredUid} was not referred`);
         return null;
       }
 
-      if (userData.referralStatus === "credited") {
+      if (referralContext.referralStatus === "credited") {
         console.log(`[Referral] Referral already credited for user ${referredUid}`);
         return null;
       }
 
-      if (userData.referralStatus === "rejected") {
+      if (referralContext.referralStatus === "rejected") {
         console.log(`[Referral] Referral was rejected for user ${referredUid}`);
         return null;
       }
@@ -157,9 +215,7 @@ export const onReferredUserFirstActivity = functions
         });
       }
 
-      const referralData = referralDoc.exists
-        ? (referralDoc.data() as ReferralRecord)
-        : { status: "pending" as const };
+      const referralData = referralContext.referralRecord ?? { status: "pending" as const };
 
       if (referralData.status !== "pending") {
         console.log(
@@ -181,6 +237,60 @@ export const onReferredUserFirstActivity = functions
       console.error(`[Referral] Error processing referral for ${referredUid}:`, error);
       throw error;
     }
+  });
+
+/**
+ * Firestore Trigger: Backfill referral credit when a referral record is created
+ * after the referred user has already earned activity points.
+ */
+export const onReferralCreatedBackfill = functions
+  .region("us-central1")
+  .firestore.document("referrals/{referredUid}")
+  .onCreate(async (snapshot, context) => {
+    const referralData = snapshot.data() as ReferralRecord;
+    const referredUid =
+      normalizeString(referralData?.referredUid) ??
+      normalizeString(context.params.referredUid);
+    const referrerUid = normalizeString(referralData?.referrerUid);
+
+    if (!referredUid || !referrerUid) {
+      console.log("[Referral] Backfill skipped: missing referred/referrer uid");
+      return null;
+    }
+
+    if (referralData.status !== "pending") {
+      console.log(
+        `[Referral] Backfill skipped for ${referredUid}: status is ${referralData.status}`
+      );
+      return null;
+    }
+
+    const referralContext = await resolveReferralContext({
+      referredUid,
+      existingReferralDoc: snapshot,
+    });
+
+    if (referralContext.referralStatus === "credited") {
+      console.log(`[Referral] Backfill skipped for ${referredUid}: already credited`);
+      return null;
+    }
+
+    if (referralContext.referralStatus === "rejected") {
+      console.log(`[Referral] Backfill skipped for ${referredUid}: referral rejected`);
+      return null;
+    }
+
+    const triggerActivityId = await findAnyEligibleActivityId(referredUid);
+    if (!triggerActivityId) {
+      console.log(`[Referral] Backfill: no eligible activity yet for ${referredUid}`);
+      return null;
+    }
+
+    console.log(
+      `[Referral] Backfill credit for ${referredUid} based on prior activity ${triggerActivityId}`
+    );
+    await creditReferralPointsInternal(referredUid, referrerUid, triggerActivityId);
+    return null;
   });
 
 /**

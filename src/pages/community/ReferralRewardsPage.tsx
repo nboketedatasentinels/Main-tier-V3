@@ -39,7 +39,7 @@ import {
   UserPlus,
   Users,
 } from 'lucide-react'
-import { arrayUnion, collection, doc, onSnapshot, orderBy, query, updateDoc, where } from 'firebase/firestore'
+import { arrayUnion, collection, doc, onSnapshot, query, updateDoc, where } from 'firebase/firestore'
 import { useAuth } from '@/hooks/useAuth'
 import { APP_BASE_URL } from '@/config/app'
 import { db } from '@/services/firebase'
@@ -61,6 +61,19 @@ interface ReferralRecord {
   createdAt?: { toDate?: () => Date } | string | null
 }
 
+const getCreatedAtMillis = (value?: { toDate?: () => Date } | string | null): number => {
+  if (!value) return 0
+  if (typeof value === 'string') {
+    const date = new Date(value)
+    return Number.isNaN(date.getTime()) ? 0 : date.getTime()
+  }
+  if (typeof value?.toDate === 'function') {
+    const date = value.toDate()
+    return Number.isNaN(date.getTime()) ? 0 : date.getTime()
+  }
+  return 0
+}
+
 const ReferralRewardsPage: React.FC = () => {
   const { user, profile, updateProfile } = useAuth()
   const toast = useToast()
@@ -80,13 +93,14 @@ const ReferralRewardsPage: React.FC = () => {
     setReferralsLoading(true)
     const referralQuery = query(
       collection(db, 'referrals'),
-      where('referrerUid', '==', user.uid),
-      orderBy('createdAt', 'desc')
+      where('referrerUid', '==', user.uid)
     )
     const unsubscribe = onSnapshot(
       referralQuery,
       (snapshot) => {
-        const items = snapshot.docs.map((doc) => doc.data() as ReferralRecord)
+        const items = snapshot.docs
+          .map((doc) => doc.data() as ReferralRecord)
+          .sort((a, b) => getCreatedAtMillis(b.createdAt) - getCreatedAtMillis(a.createdAt))
         setReferrals(items)
         setReferralsLoading(false)
         setIsRefreshing(false)

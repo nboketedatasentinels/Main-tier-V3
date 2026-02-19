@@ -1,99 +1,52 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { creditReferralPoints } from './referralService'
-import { runTransaction, doc } from 'firebase/firestore'
-import { createInAppNotification } from './notificationService'
+import { doc, getDoc } from 'firebase/firestore'
 
-// Mock Firebase
 vi.mock('firebase/firestore', () => ({
   collection: vi.fn(),
   doc: vi.fn(),
   getDoc: vi.fn(),
+  getDocs: vi.fn(),
+  onSnapshot: vi.fn(),
+  query: vi.fn(),
   runTransaction: vi.fn(),
   serverTimestamp: vi.fn(() => 'mock-timestamp'),
+  where: vi.fn(),
+  limit: vi.fn(),
 }))
 
 vi.mock('@/services/firebase', () => ({
   db: {},
+  functions: {},
 }))
 
-vi.mock('./notificationService', () => ({
-  createInAppNotification: vi.fn(),
-}))
-
-vi.mock('@/utils/points', () => ({
-  calculateLevel: vi.fn(() => 2),
-}))
-
-vi.mock('@/config/pointsConfig', () => ({
-  REFERRAL_POINTS: 100,
-  REFERRAL_MAX_PER_USER: 100,
-}))
-
-describe('referralService', () => {
+describe('referralService.creditReferralPoints', () => {
   beforeEach(() => {
     vi.clearAllMocks()
   })
 
-  describe('creditReferralPoints', () => {
-    it('should credit points and send notifications', async () => {
-      const referredUid = 'referred-user'
-      const referrerUid = 'referrer-user'
+  it('returns success when referral remains pending (handled by Cloud Function trigger)', async () => {
+    vi.mocked(doc).mockReturnValue('referral-ref' as unknown as ReturnType<typeof doc>)
+    vi.mocked(getDoc).mockResolvedValue({
+      exists: () => true,
+      data: () => ({ status: 'pending' }),
+    } as never)
 
-      // Mock transaction
-      const mockTx = {
-        get: vi.fn(),
-        set: vi.fn(),
-      }
-      vi.mocked(runTransaction).mockImplementation(async (_db, callback) => {
-        return callback(mockTx)
-      })
+    const result = await creditReferralPoints('referred-user')
 
-      // Mock referral data
-      mockTx.get.mockImplementation(async (ref) => {
-        if (ref === 'referral-ref') {
-          return {
-            exists: () => true,
-            data: () => ({
-              referrerUid,
-              status: 'pending',
-            }),
-          }
-        }
-        if (ref === 'referrer-user-ref') {
-          return {
-            exists: () => true,
-            data: () => ({
-              totalPoints: 500,
-              referralCount: 0,
-            }),
-          }
-        }
-        return { exists: () => false }
-      })
+    expect(result.success).toBe(true)
+    expect(result.error).toBeUndefined()
+  })
 
-      // Mock doc creation to return identifiable strings for matching
-      vi.mocked(doc).mockImplementation((_coll, id) => {
-        if (id === referredUid) return 'referral-ref' as unknown as ReturnType<typeof doc>
-        if (id === referrerUid) return 'referrer-user-ref' as unknown as ReturnType<typeof doc>
-        return 'other-ref' as unknown as ReturnType<typeof doc>
-      })
+  it('returns an error when referral record is missing', async () => {
+    vi.mocked(doc).mockReturnValue('referral-ref' as unknown as ReturnType<typeof doc>)
+    vi.mocked(getDoc).mockResolvedValue({
+      exists: () => false,
+    } as never)
 
-      const result = await creditReferralPoints(referredUid)
+    const result = await creditReferralPoints('referred-user')
 
-      expect(result.success).toBe(true)
-      expect(mockTx.set).toHaveBeenCalled()
-
-      // Verify notification was sent
-      expect(createInAppNotification).toHaveBeenCalledWith(expect.objectContaining({
-        userId: referrerUid,
-        type: 'referral_success',
-      }))
-
-      // Verify tier reward notification (1st referral reached)
-      expect(createInAppNotification).toHaveBeenCalledWith(expect.objectContaining({
-        type: 'referral_reward',
-        title: expect.stringContaining('First Referral'),
-      }))
-    })
+    expect(result.success).toBe(false)
+    expect(result.error?.message).toContain('Referral record not found')
   })
 })

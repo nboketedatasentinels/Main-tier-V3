@@ -41,7 +41,7 @@ export const WeeklySummary = ({
       <Stack spacing={3}>
         <HStack justify="space-between">
           <Heading size="sm" color="text.primary">
-            2-week cycle {windowNumber} progress (Week {week})
+            Cycle {windowNumber} summary
           </Heading>
           <Tag colorScheme={progressStatus.color}>
             {progressStatus.label} | {progressStatus.pct}%
@@ -60,7 +60,7 @@ export const WeeklySummary = ({
             icon={<Icon as={Plus} color="orange.400" />}
           />
           <StatCard
-            label={`Current cycle (${windowNumber})`}
+            label={`Cycle ${windowNumber}`}
             value={`${cyclePoints.toLocaleString()} / ${cycleTarget.toLocaleString()}`}
             icon={<Icon as={CalendarRange} color="purple.400" />}
           />

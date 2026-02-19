@@ -79,15 +79,21 @@ export const SignUpPage: React.FC = () => {
     let active = true
     setReferralStatus("checking")
 
-    validateReferralCode(referralCode).then(referrerUid => {
-      if (!active) return
-      if (referrerUid) {
-        setReferralStatus("valid")
-      } else {
-        setReferralStatus("invalid")
-        localStorage.removeItem("pending_ref")
-      }
-    })
+    validateReferralCode(referralCode)
+      .then(referrerUid => {
+        if (!active) return
+        if (referrerUid) {
+          setReferralStatus("valid")
+        } else {
+          setReferralStatus("invalid")
+          localStorage.removeItem("pending_ref")
+        }
+      })
+      .catch(validationError => {
+        if (!active) return
+        console.error("🔴 [Referral] Failed to validate referral code", validationError)
+        setReferralStatus("idle")
+      })
 
     return () => {
       active = false
@@ -181,6 +187,34 @@ export const SignUpPage: React.FC = () => {
     return null
   }
 
+  const resolveReferralCodeForSubmission = async (): Promise<string | undefined> => {
+    const trimmedReferralCode = referralCode?.trim()
+    if (!trimmedReferralCode) {
+      return undefined
+    }
+
+    if (referralStatus === 'valid') {
+      return trimmedReferralCode
+    }
+
+    setReferralStatus('checking')
+    try {
+      const referrerUid = await validateReferralCode(trimmedReferralCode)
+      if (!referrerUid) {
+        setReferralStatus('invalid')
+        localStorage.removeItem('pending_ref')
+        return undefined
+      }
+
+      setReferralStatus('valid')
+      return trimmedReferralCode
+    } catch (validationError) {
+      console.error('🔴 [Referral] Unable to validate referral code during signup', validationError)
+      setReferralStatus('idle')
+      throw new Error('Unable to verify referral code right now. Please try again.')
+    }
+  }
+
   const handleSignUp = async (e: React.FormEvent) => {
     e.preventDefault()
     setError(null)
@@ -191,12 +225,16 @@ export const SignUpPage: React.FC = () => {
       return
     }
 
-    setLoading(true)
     try {
+      const referralCodeToUse = await resolveReferralCodeForSubmission()
+      if (referralCode?.trim() && !referralCodeToUse) {
+        setError('Referral code is invalid or inactive.')
+        return
+      }
+
+      setLoading(true)
       const { firstName, lastName } = nameParts
       const email = formData.email.trim().toLowerCase()
-
-      const referralCodeToUse = referralStatus === "valid" ? referralCode ?? undefined : undefined
       const { error: signUpError, userId } = await signUp(
         email,
         formData.password,
@@ -519,7 +557,7 @@ export const SignUpPage: React.FC = () => {
         <motion.button
           whileHover={{ scale: 1.01 }}
           whileTap={{ scale: 0.98 }}
-          disabled={loading}
+          disabled={loading || referralStatus === "checking"}
           type="submit"
           className="inline-flex h-10 w-full items-center justify-center gap-2 rounded-md bg-gradient-to-r from-brand-primary to-brand-dark text-white text-sm font-medium shadow-sm hover:opacity-95 disabled:opacity-60"
         >
