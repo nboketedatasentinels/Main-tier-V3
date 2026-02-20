@@ -1189,14 +1189,27 @@ export const ImpactLogPage: React.FC = () => {
                         </Box>
                       </Td>
                       <Td>
-                        <Badge colorScheme={isPartnerSyncedEntry(entry) ? 'blue' : 'purple'}>
-                          {isPartnerSyncedEntry(entry) ? 'T4L Partner' : 'Transformation Tier'}
-                        </Badge>
+                        <Tooltip
+                          label={isPartnerSyncedEntry(entry) ? 'T4L Partner' : 'Transformation Tier'}
+                          hasArrow
+                          placement="top-start"
+                        >
+                          <Badge colorScheme={isPartnerSyncedEntry(entry) ? 'blue' : 'purple'}>
+                            {isPartnerSyncedEntry(entry) ? 'T4L' : 'TT'}
+                          </Badge>
+                        </Tooltip>
                       </Td>
                       <Td>
-                        <Badge colorScheme={entry.categoryGroup === 'esg' ? 'green' : 'blue'}>
-                          {entry.categoryGroup === 'esg' ? entry.esgCategory : entry.businessCategory}
-                        </Badge>
+                        <Tooltip
+                          label={entry.categoryGroup === 'esg' ? entry.esgCategory : entry.businessCategory}
+                          hasArrow
+                          placement="top-start"
+                          maxW="240px"
+                        >
+                          <Badge colorScheme={entry.categoryGroup === 'esg' ? 'green' : 'blue'}>
+                            {entry.categoryGroup === 'esg' ? 'ESG' : 'BUS'}
+                          </Badge>
+                        </Tooltip>
                       </Td>
                       <Td isNumeric>{entry.hours}</Td>
                       <Td isNumeric>{entry.usdValue?.toLocaleString() || '0'}</Td>
