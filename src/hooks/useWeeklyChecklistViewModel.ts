@@ -1112,7 +1112,7 @@ export function useWeeklyChecklistViewModel() {
       triggerHaptic('success')
       toast({
         title: 'Proof submitted',
-        description: 'Nice work. Your proof is awaiting partner confirmation and points will post after approval.',
+        description: 'Nice work. Your proof is submitted for partner review and points will post after approval.',
         status: 'success',
         duration: 4000,
       })
@@ -1122,8 +1122,8 @@ export function useWeeklyChecklistViewModel() {
       if (e instanceof PendingRequestExistsError || (e instanceof Error && e.message === 'pending_request_exists')) {
         triggerHaptic('warning')
         toast({
-          title: 'Awaiting partner confirmation',
-          description: 'This activity already has a pending partner confirmation for this week.',
+          title: 'Submitted for partner review',
+          description: 'This activity already has a submitted proof awaiting partner review this week.',
           status: 'info',
           duration: 5000,
         })

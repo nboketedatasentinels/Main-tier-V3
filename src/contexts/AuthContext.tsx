@@ -1440,17 +1440,28 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         }
       }
 
-      if (referralCode) {
-        const trimmedReferralCode = referralCode.trim()
-        if (trimmedReferralCode) {
-          const referrerUid = await validateReferralCode(trimmedReferralCode)
-          if (!referrerUid) {
-            console.warn('🟠 [Auth] Referral code invalid or inactive during signup', trimmedReferralCode)
-          } else {
-            const { success, error } = await createReferral(uid, referrerUid, trimmedReferralCode)
-            if (!success && error) {
-              console.warn('🟠 [Auth] Unable to create referral during signup', error)
-            }
+      const explicitReferralCode = referralCode?.trim() ?? ''
+      const pendingReferralCode =
+        !explicitReferralCode && typeof window !== 'undefined'
+          ? localStorage.getItem('pending_ref')?.trim() ?? ''
+          : ''
+      const usedPending = !explicitReferralCode && !!pendingReferralCode
+      const resolvedReferralCode = explicitReferralCode || pendingReferralCode
+
+      if (resolvedReferralCode) {
+        const referrerUid = await validateReferralCode(resolvedReferralCode)
+        if (!referrerUid) {
+          console.warn('🟠 [Auth] Referral code invalid or inactive during signup', resolvedReferralCode)
+          if (usedPending && typeof window !== 'undefined') {
+            localStorage.removeItem('pending_ref')
+          }
+        } else {
+          const { success, error } = await createReferral(uid, referrerUid, resolvedReferralCode)
+          if (!success && error) {
+            console.warn('🟠 [Auth] Unable to create referral during signup', error)
+          }
+          if (usedPending && (success || error === undefined) && typeof window !== 'undefined') {
+            localStorage.removeItem('pending_ref')
           }
         }
       }

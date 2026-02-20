@@ -1,5 +1,8 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react'
 import {
+  Alert,
+  AlertDescription,
+  AlertIcon,
   Badge,
   Box,
   Button,
@@ -18,6 +21,7 @@ import {
 } from '@chakra-ui/react'
 import { motion } from 'framer-motion'
 import {
+  AlertTriangle,
   BadgeCheck,
   Check,
   CheckCircle2,
@@ -33,19 +37,25 @@ import {
   MessageCircle,
   RefreshCw,
   Rocket,
+  ShieldCheck,
   Share2,
   Sparkles,
   Twitter,
   UserPlus,
   Users,
 } from 'lucide-react'
-import { arrayUnion, collection, doc, onSnapshot, orderBy, query, updateDoc, where } from 'firebase/firestore'
+import { arrayUnion, doc, updateDoc } from 'firebase/firestore'
 import { useAuth } from '@/hooks/useAuth'
 import { APP_BASE_URL } from '@/config/app'
 import { db } from '@/services/firebase'
 import { InstagramShareModal, SocialShareModal } from '@/components/modals/SocialShareModal'
 import { REWARD_TIERS, type RewardTier } from '@/config/referralRewards'
-import { generateReferralCode } from '@/services/referralService'
+import {
+  generateReferralCode,
+  subscribeToReferrals,
+  verifyMyPendingReferrals,
+  type ReferralWithDetails,
+} from '@/services/referralService'
 import { getCourseDetailsFromMapping } from '@/utils/courseMappings'
 
 const MotionBox = motion(Box)
@@ -53,46 +63,42 @@ const MotionFlex = motion(Flex)
 const AI_STACKING_TITLE = 'AI Stacking 101: Boost Your Productivity (No Tech Skills Needed)'
 const AI_STACKING_COUPON_CODE = 'Ai101'
 
-interface ReferralRecord {
-  referredUid: string
-  referrerUid: string
-  refCode: string
-  status: 'pending' | 'credited' | 'rejected'
-  createdAt?: { toDate?: () => Date } | string | null
-}
-
 const ReferralRewardsPage: React.FC = () => {
   const { user, profile, updateProfile } = useAuth()
   const toast = useToast()
   const shareModal = useDisclosure()
   const instagramModal = useDisclosure()
   const [copied, setCopied] = useState(false)
-  const [referrals, setReferrals] = useState<ReferralRecord[]>([])
+  const [referrals, setReferrals] = useState<ReferralWithDetails[]>([])
   const [referralsLoading, setReferralsLoading] = useState(false)
+  const [referralsError, setReferralsError] = useState<string | null>(null)
   const [resolvedReferralCode, setResolvedReferralCode] = useState<string | null>(profile?.referralCode ?? user?.uid ?? null)
   const [refreshKey, setRefreshKey] = useState(0)
   const [isRefreshing, setIsRefreshing] = useState(false)
+  const [isVerifying, setIsVerifying] = useState(false)
 
   const baseAppUrl = APP_BASE_URL
 
   useEffect(() => {
     if (!user?.uid) return
     setReferralsLoading(true)
-    const referralQuery = query(
-      collection(db, 'referrals'),
-      where('referrerUid', '==', user.uid),
-      orderBy('createdAt', 'desc')
-    )
-    const unsubscribe = onSnapshot(
-      referralQuery,
-      (snapshot) => {
-        const items = snapshot.docs.map((doc) => doc.data() as ReferralRecord)
-        setReferrals(items)
+    setReferralsError(null)
+
+    const unsubscribe = subscribeToReferrals(
+      user.uid,
+      (updatedReferrals) => {
+        setReferrals(updatedReferrals)
         setReferralsLoading(false)
         setIsRefreshing(false)
+        setReferralsError(null)
       },
       (error) => {
         console.error('🔴 [Referral] Unable to load referrals', error)
+        setReferralsError(
+          error.message?.includes('permission')
+            ? 'Unable to load referrals. You may not have permission to view this data.'
+            : 'Unable to load referrals. Please try refreshing the page.'
+        )
         setReferralsLoading(false)
         setIsRefreshing(false)
       }
@@ -103,8 +109,36 @@ const ReferralRewardsPage: React.FC = () => {
 
   const handleRefresh = useCallback(() => {
     setIsRefreshing(true)
+    setReferralsError(null)
     setRefreshKey((k) => k + 1)
   }, [])
+
+  const handleVerifyPending = useCallback(async () => {
+    setIsVerifying(true)
+    try {
+      const result = await verifyMyPendingReferrals()
+      toast({
+        title: result.credited > 0 ? 'Referrals verified!' : 'Verification complete',
+        description: result.message,
+        status: result.credited > 0 ? 'success' : 'info',
+        duration: 5000,
+        isClosable: true,
+      })
+      if (result.credited > 0) {
+        handleRefresh()
+      }
+    } catch {
+      toast({
+        title: 'Verification failed',
+        description: 'Unable to verify referrals right now. Please try again later.',
+        status: 'error',
+        duration: 5000,
+        isClosable: true,
+      })
+    } finally {
+      setIsVerifying(false)
+    }
+  }, [handleRefresh, toast])
 
   useEffect(() => {
     setResolvedReferralCode(profile?.referralCode ?? user?.uid ?? null)
@@ -550,6 +584,49 @@ const ReferralRewardsPage: React.FC = () => {
             </Text>
           </Box>
         </SimpleGrid>
+        {referralsError && (
+          <Alert status="warning" borderRadius="lg" mt={4}>
+            <AlertIcon />
+            <AlertDescription>
+              <HStack spacing={2} align="center" flexWrap="wrap">
+                <Icon as={AlertTriangle} boxSize={4} />
+                <Text>{referralsError}</Text>
+                <Button size="xs" variant="outline" colorScheme="orange" onClick={handleRefresh}>
+                  Retry
+                </Button>
+              </HStack>
+            </AlertDescription>
+          </Alert>
+        )}
+
+        {pendingCount > 0 && (
+          <Box mt={4} p={4} border="1px solid" borderColor="purple.200" borderRadius="xl" bg="purple.50">
+            <HStack justify="space-between" align="center" flexWrap="wrap" gap={3}>
+              <Stack spacing={1}>
+                <HStack spacing={2}>
+                  <Icon as={ShieldCheck} color="purple.600" boxSize={5} />
+                  <Text fontWeight="semibold" color="brand.text">
+                    {pendingCount} pending referral{pendingCount !== 1 ? 's' : ''} awaiting verification
+                  </Text>
+                </HStack>
+                <Text fontSize="sm" color="brand.subtleText">
+                  If your referred users have completed their first activity, click verify to check and credit your referrals.
+                </Text>
+              </Stack>
+              <Button
+                size="sm"
+                colorScheme="purple"
+                leftIcon={<Icon as={ShieldCheck} boxSize={4} />}
+                onClick={handleVerifyPending}
+                isLoading={isVerifying}
+                loadingText="Verifying..."
+              >
+                Verify Pending
+              </Button>
+            </HStack>
+          </Box>
+        )}
+
         <Text fontSize="sm" color="brand.subtleText" mt={4}>
           Total signups include pending and activated referrals. Activated referrals unlock once a new member completes their
           first activity.
@@ -740,8 +817,13 @@ const ReferralRewardsPage: React.FC = () => {
             )}
           </HStack>
 
-          {referrals.length === 0 && !referralsLoading ? (
+          {referrals.length === 0 && !referralsLoading && !referralsError ? (
             <Text color="brand.subtleText">No referrals yet. Share your link to get started!</Text>
+          ) : referrals.length === 0 && referralsError ? (
+            <Alert status="warning" borderRadius="lg">
+              <AlertIcon />
+              <AlertDescription>{referralsError}</AlertDescription>
+            </Alert>
           ) : (
             <Stack spacing={3}>
               {referrals.slice(0, 5).map((referral, index) => (
@@ -757,10 +839,12 @@ const ReferralRewardsPage: React.FC = () => {
                 >
                   <Stack spacing={1}>
                     <Text fontWeight="semibold" color="brand.text">
-                      Referral #{referrals.length - index}
+                      {referral.referredName || `Referral #${referrals.length - index}`}
                     </Text>
                     <Text fontSize="sm" color="brand.subtleText">
-                      Code: {referral.refCode}
+                      {referral.referredEmail
+                        ? referral.referredEmail
+                        : `Code: ${referral.refCode}`}
                     </Text>
                   </Stack>
                   <Badge
@@ -774,7 +858,11 @@ const ReferralRewardsPage: React.FC = () => {
                     borderRadius="full"
                     px={3}
                   >
-                    {referral.status}
+                    {referral.status === 'credited'
+                      ? 'Activated'
+                      : referral.status === 'pending'
+                        ? 'Pending'
+                        : 'Rejected'}
                   </Badge>
                 </Flex>
               ))}

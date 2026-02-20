@@ -8,7 +8,7 @@ import { Link as RouterLink } from 'react-router-dom'
 
 const statusLabel: Record<ActivityState['status'], string> = {
   not_started: 'Not started',
-  pending: 'Awaiting Partner Confirmation',
+  pending: 'Submitted - Awaiting Review',
   rejected: 'Rejected',
   completed: 'Completed',
 }
@@ -107,7 +107,7 @@ export const WeeklyActivityCard = ({
   const showLockReason = () => {
     if (isAdmin) return null
     if (lockedByWeek) return `Week ${selectedWeek} opens after Week ${currentWeek}.`
-    if (lockedByInteraction) return 'Selection saved for this week. Need a change? Support can help.'
+    if (lockedByInteraction) return 'Submission saved for this week. Need a change? Support can help.'
     if (lockedByPartnerIssue) return 'Your partner needs to issue this activity before you can complete it.'
     if (activity.availability.reason === 'scheduled' && selectedWeek < activity.week) {
       return `This activity unlocks in Week ${activity.week}.`
@@ -146,7 +146,7 @@ export const WeeklyActivityCard = ({
     if (lockedByInteraction && activity.status === 'pending') {
       return (
         <Button as={RouterLink} size="xs" variant="outline" to="/app/weekly-checklist?focus=pending-approvals">
-          Review pending confirmation
+          Review submitted proofs
         </Button>
       )
     }
@@ -273,7 +273,7 @@ export const WeeklyActivityCard = ({
                   label={
                     isExternalAiToolSubmission
                       ? 'Submit this activity through the external tools portal.'
-                      : 'Partner approval required. Submit proof for verification.'
+                      : 'Partner approval required. Submit proof for partner review.'
                   }
                 >
                   <Badge colorScheme="purple">Partner approval</Badge>
@@ -369,7 +369,7 @@ export const WeeklyActivityCard = ({
             <HStack spacing={2} color="blue.600">
               <Icon as={AlertTriangle} size={14} />
               <Text fontSize="sm">
-                Awaiting partner confirmation. Points post after approval.
+                Proof submitted and awaiting partner review. Points post after approval.
               </Text>
             </HStack>
           ) : null}
@@ -394,7 +394,7 @@ export const WeeklyActivityCard = ({
 
           {!isAdmin && !activity.hasInteracted && activity.status !== 'completed' ? (
             <Text fontSize="xs" color="gray.600">
-              Once submitted, this selection is locked for the current week. If plans change, support can help.
+              Once submitted for review or marked complete, this selection is locked for the current week. If plans change, support can help.
             </Text>
           ) : null}
         </Stack>
@@ -415,7 +415,11 @@ export const WeeklyActivityCard = ({
             isDisabled={primaryActionDisabled}
             onClick={() => onOpenProof(activity)}
           >
-            {activity.status === 'rejected' ? 'Resubmit proof' : 'Submit proof'}
+            {activity.status === 'rejected'
+              ? 'Resubmit proof'
+              : activity.status === 'pending'
+                ? 'Submitted'
+                : 'Submit proof'}
           </Button>
         ) : isPartnerIssued ? (
           <Button

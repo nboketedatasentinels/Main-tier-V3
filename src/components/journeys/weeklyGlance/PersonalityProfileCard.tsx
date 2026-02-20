@@ -59,6 +59,22 @@ export const PersonalityProfileCard = ({ data, loading }: PersonalityProfileCard
   const [personalityTestError, setPersonalityTestError] = useState<string | null>(null)
   const [valuesTestError, setValuesTestError] = useState<string | null>(null)
   const [formError, setFormError] = useState<string | null>(null)
+  const persistedHasCompletedPersonalityTest = Boolean(profile?.hasCompletedPersonalityTest)
+  const persistedHasCompletedValuesTest = Boolean(profile?.hasCompletedValuesTest)
+  const confirmedTestsCount = Number(hasCompletedPersonalityTest) + Number(hasCompletedValuesTest)
+
+  const resolveTestStatus = (isChecked: boolean, isPersisted: boolean) => {
+    if (!isChecked) {
+      return { label: 'Not completed', colorScheme: 'gray' }
+    }
+    if (isPersisted) {
+      return { label: 'Submitted', colorScheme: 'green' }
+    }
+    return { label: 'Completed - save to submit', colorScheme: 'blue' }
+  }
+
+  const personalityTestStatus = resolveTestStatus(hasCompletedPersonalityTest, persistedHasCompletedPersonalityTest)
+  const valuesTestStatus = resolveTestStatus(hasCompletedValuesTest, persistedHasCompletedValuesTest)
 
   useEffect(() => {
     setLocalProfile(data)
@@ -270,13 +286,24 @@ export const PersonalityProfileCard = ({ data, loading }: PersonalityProfileCard
             <Stack spacing={6}>
               <Box bg="blue.50" p={5} borderRadius="lg" borderWidth="2px" borderColor="blue.200">
                 <VStack align="stretch" spacing={4}>
-                  <Text fontWeight="semibold" color="blue.800">
-                    Required Tests
+                  <HStack justify="space-between" align="center">
+                    <Text fontWeight="semibold" color="blue.800">
+                      Required Tests
+                    </Text>
+                    <Tag colorScheme={confirmedTestsCount === 2 ? 'green' : 'blue'}>
+                      {confirmedTestsCount}/2 confirmed
+                    </Tag>
+                  </HStack>
+                  <Text fontSize="sm" color="blue.700">
+                    Complete each test externally, then submit your confirmation by checking the box and saving this profile.
                   </Text>
                   <Grid templateColumns={{ base: '1fr', md: '1fr 1fr' }} gap={4}>
                     <Box bg="white" p={4} borderRadius="lg" borderWidth="1px" borderColor="blue.200">
                       <VStack align="stretch" spacing={3}>
-                        <Text fontWeight="semibold">16 Personalities Test</Text>
+                        <HStack justify="space-between" align="center">
+                          <Text fontWeight="semibold">16 Personalities Test</Text>
+                          <Tag colorScheme={personalityTestStatus.colorScheme}>{personalityTestStatus.label}</Tag>
+                        </HStack>
                         <Text fontSize="sm" color="brand.subtleText">
                           Take the assessment to unlock your personality type field.
                         </Text>
@@ -298,7 +325,7 @@ export const PersonalityProfileCard = ({ data, loading }: PersonalityProfileCard
                             setPersonalityTestError(null)
                           }}
                         >
-                          I have completed the 16 Personalities test
+                          I completed this test and I am ready to submit confirmation
                         </Checkbox>
                         {personalityTestError && (
                           <Text fontSize="sm" color="red.500">
@@ -309,7 +336,10 @@ export const PersonalityProfileCard = ({ data, loading }: PersonalityProfileCard
                     </Box>
                     <Box bg="white" p={4} borderRadius="lg" borderWidth="1px" borderColor="blue.200">
                       <VStack align="stretch" spacing={3}>
-                        <Text fontWeight="semibold">Personal Values Test</Text>
+                        <HStack justify="space-between" align="center">
+                          <Text fontWeight="semibold">Personal Values Test</Text>
+                          <Tag colorScheme={valuesTestStatus.colorScheme}>{valuesTestStatus.label}</Tag>
+                        </HStack>
                         <Text fontSize="sm" color="brand.subtleText">
                           Take the assessment to unlock your core values selection.
                         </Text>
@@ -331,7 +361,7 @@ export const PersonalityProfileCard = ({ data, loading }: PersonalityProfileCard
                             setValuesTestError(null)
                           }}
                         >
-                          I have completed the Personal Values test
+                          I completed this test and I am ready to submit confirmation
                         </Checkbox>
                         {valuesTestError && (
                           <Text fontSize="sm" color="red.500">
@@ -431,7 +461,7 @@ export const PersonalityProfileCard = ({ data, loading }: PersonalityProfileCard
               isLoading={saving}
               isDisabled={!hasCompletedPersonalityTest || !hasCompletedValuesTest || saving}
             >
-              Save profile
+              Submit confirmations & save profile
             </Button>
           </ModalFooter>
         </ModalContent>

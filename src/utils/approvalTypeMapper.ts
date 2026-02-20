@@ -9,7 +9,7 @@ export type ApprovalTypeMeta = {
 const approvalTypeMap: Record<ApprovalWorkflowType, ApprovalTypeMeta> = {
   points_verification: {
     label: 'Points Verification',
-    description: 'Partner-submitted proof awaiting partner confirmation.',
+    description: 'Partner-submitted proof awaiting partner review.',
     badgeColor: 'purple',
   },
   upgrade_request: {

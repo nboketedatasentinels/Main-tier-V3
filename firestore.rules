@@ -355,8 +355,15 @@ service cloud.firestore {
 
     // Referrals collection
     match /referrals/{referralId} {
-      // Referrer can read their own referrals, referred user can read their own record
-      allow read: if isAuthenticated() && (
+      // get: allow the referred user to check their own doc (even if it doesn't exist yet)
+      // referralId == referredUid, so request.auth.uid == referralId works for non-existent docs
+      allow get: if isAuthenticated() && (
+        request.auth.uid == referralId ||
+        (resource != null && request.auth.uid == resource.data.referrerUid) ||
+        isPartnerOrAdmin()
+      );
+      // list: referrer querying their referrals, or admin
+      allow list: if isAuthenticated() && (
         request.auth.uid == resource.data.referrerUid ||
         request.auth.uid == resource.data.referredUid ||
         isPartnerOrAdmin()

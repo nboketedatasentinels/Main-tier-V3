@@ -8,7 +8,6 @@ import {
   runTransaction,
   serverTimestamp,
   where,
-  orderBy,
   limit,
 } from 'firebase/firestore'
 import { httpsCallable } from 'firebase/functions'
@@ -38,6 +37,24 @@ const referralCodesCollection = collection(db, 'referralCodes')
 const referralsCollection = collection(db, 'referrals')
 const usersCollection = collection(db, 'users')
 const profilesCollection = collection(db, 'profiles')
+
+const getTimestampMillis = (value: unknown): number => {
+  if (!value) return 0
+  if (typeof value === 'string') {
+    const date = new Date(value)
+    return Number.isNaN(date.getTime()) ? 0 : date.getTime()
+  }
+  if (
+    typeof value === 'object' &&
+    value !== null &&
+    'toDate' in value &&
+    typeof (value as { toDate?: unknown }).toDate === 'function'
+  ) {
+    const date = (value as { toDate: () => Date }).toDate()
+    return Number.isNaN(date.getTime()) ? 0 : date.getTime()
+  }
+  return 0
+}
 
 export async function generateReferralCode(uid: string): Promise<string> {
   const code = uid.trim()
@@ -265,12 +282,12 @@ export async function manualCreditReferralPoints(
  */
 export function subscribeToReferrals(
   referrerUid: string,
-  callback: (referrals: ReferralWithDetails[]) => void
+  callback: (referrals: ReferralWithDetails[]) => void,
+  onError?: (error: Error) => void
 ): () => void {
   const q = query(
     referralsCollection,
     where('referrerUid', '==', referrerUid),
-    orderBy('createdAt', 'desc'),
     limit(50)
   )
 
@@ -304,10 +321,15 @@ export function subscribeToReferrals(
         })
       }
 
-      callback(referrals)
+      callback(
+        referrals.sort(
+          (a, b) => getTimestampMillis(b.createdAt) - getTimestampMillis(a.createdAt)
+        )
+      )
     },
     (error) => {
       console.error('🔴 [Referral] Error subscribing to referrals', error)
+      onError?.(error instanceof Error ? error : new Error(String(error)))
     }
   )
 
@@ -413,5 +435,38 @@ export async function hasCompletedFirstActivity(uid: string): Promise<boolean> {
   } catch (error) {
     console.error('🔴 [Referral] Error checking first activity', error)
     return false
+  }
+}
+
+/**
+ * Verify and credit any pending referrals for the current user.
+ *
+ * Calls the `verifyMyPendingReferrals` Cloud Function which:
+ * - Finds all pending referrals where the caller is the referrer
+ * - Checks if each referred user has completed an activity
+ * - Credits the referral if eligible
+ *
+ * Safe for any authenticated user to call (only processes their own referrals).
+ */
+export async function verifyMyPendingReferrals(): Promise<{
+  verified: number
+  credited: number
+  message: string
+}> {
+  try {
+    const callable = httpsCallable<
+      void,
+      { verified: number; credited: number; message: string }
+    >(functions, 'verifyMyPendingReferrals')
+
+    const result = await callable()
+    return result.data
+  } catch (error) {
+    console.error('🔴 [Referral] Failed to verify pending referrals', error)
+    return {
+      verified: 0,
+      credited: 0,
+      message: error instanceof Error ? error.message : 'Failed to verify referrals',
+    }
   }
 }

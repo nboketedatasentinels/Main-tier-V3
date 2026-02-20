@@ -56,6 +56,7 @@ import {
   Download,
   Link as LinkIcon,
   Plus,
+  RefreshCw,
   ShieldCheck,
   Target,
   TrendingUp,
@@ -94,6 +95,7 @@ import { awardChecklistPoints, revokeChecklistPoints } from '@/services/pointsSe
 import { isValidUrl } from '@/utils/validation';
 import { awardBadge } from '@/services/badgeService';
 import { validateOrganizationPartner } from '@/services/organizationService'
+import { syncPartnerImpactLogs } from '@/services/partnerImpactService'
 /**
  * Represents a single impact log entry.
  * The requirements for `verifierEmail` and `evidenceLink` are conditional based on the `verificationLevel`.
@@ -101,6 +103,10 @@ import { validateOrganizationPartner } from '@/services/organizationService'
 interface ImpactLogEntry {
   id: string
   userId: string
+  sourcePlatform?: 'transformation_tier' | 't4l_partner'
+  sourceRecordId?: string
+  sourceSyncedAt?: string
+  readOnly?: boolean
   companyId?: string
   title: string
   description: string
@@ -192,6 +198,8 @@ const formatCategoryLabel = (value?: string) => {
 
 const buildCsv = (entries: ImpactLogEntry[]) => {
   const headers = [
+    'Source',
+    'Source Record ID',
     'Date',
     'Title',
     'Description',
@@ -209,6 +217,8 @@ const buildCsv = (entries: ImpactLogEntry[]) => {
   ]
 
   const rows = entries.map((entry) => [
+    entry.sourcePlatform || 'transformation_tier',
+    entry.sourceRecordId || '',
     entry.date,
     entry.title,
     entry.description,
@@ -266,6 +276,13 @@ export const ImpactLogPage: React.FC = () => {
   const [loading, setLoading] = useState(true)
   const [monthCursor, setMonthCursor] = useState<Date>(new Date())
   const [isExporting, setIsExporting] = useState(false)
+  const [partnerSync, setPartnerSync] = useState<{
+    status: 'idle' | 'syncing' | 'success' | 'skipped' | 'error'
+    message?: string
+    importedCount?: number
+    updatedCount?: number
+    lastSyncedAt?: string
+  }>({ status: 'idle' })
   const [partnerValidation, setPartnerValidation] = useState<{
     status: 'idle' | 'loading' | 'valid' | 'invalid' | 'error'
     partnerId?: string
@@ -403,6 +420,30 @@ export const ImpactLogPage: React.FC = () => {
     return Math.min(Math.max(1, weekNumber), meta.weeks)
   }
 
+  const isPartnerSyncedEntry = (entry: ImpactLogEntry) => entry.sourcePlatform === 't4l_partner'
+
+  const runPartnerSync = async (forceFullRefresh = false) => {
+    if (!user?.uid) return
+    setPartnerSync({ status: 'syncing' })
+
+    try {
+      const result = await syncPartnerImpactLogs({ forceFullRefresh })
+      setPartnerSync({
+        status: result.status,
+        message: result.message,
+        importedCount: result.importedCount,
+        updatedCount: result.updatedCount,
+        lastSyncedAt: result.lastSyncedAt,
+      })
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Partner impact sync failed.'
+      setPartnerSync({
+        status: 'error',
+        message,
+      })
+    }
+  }
+
   useEffect(() => {
     let isMounted = true
 
@@ -454,6 +495,12 @@ export const ImpactLogPage: React.FC = () => {
       }))
     }
   }, [formValues.verificationLevel, isTier2Eligible])
+
+  useEffect(() => {
+    if (!user?.uid) return
+    void runPartnerSync(false)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user?.uid])
 
   useEffect(() => {
     if (!user?.uid) return
@@ -629,6 +676,7 @@ export const ImpactLogPage: React.FC = () => {
     try {
       const payload = removeUndefinedFields<Omit<ImpactLogEntry, 'id'>>({
         userId: user.uid,
+        sourcePlatform: 'transformation_tier',
         ...(profile?.companyId ? { companyId: profile.companyId } : {}),
         title: formValues.title || 'Impact Activity',
         description: formValues.description || '',
@@ -749,6 +797,14 @@ export const ImpactLogPage: React.FC = () => {
 
   const handleDeleteEntry = async (entry: ImpactLogEntry) => {
     if (!user?.uid) return
+    if (isPartnerSyncedEntry(entry)) {
+      toast({
+        title: 'Partner-synced entry',
+        description: 'This entry came from T4L Partner and cannot be deleted here.',
+        status: 'info',
+      })
+      return
+    }
 
     try {
       await deleteDoc(doc(db, 'impact_logs', entry.id))
@@ -864,6 +920,9 @@ export const ImpactLogPage: React.FC = () => {
         <Spacer />
         {!isMobile && (
           <HStack spacing={3}>
+            <Button variant="outline" leftIcon={<RefreshCw size={16} />} onClick={() => runPartnerSync(true)} isLoading={partnerSync.status === 'syncing'}>
+              Sync Partner Logs
+            </Button>
             <Button variant="outline" leftIcon={<Download size={18} />} onClick={handleExport} isLoading={isExporting}>
               {activeTab === 'personal' ? 'Export Personal Data' : 'Export Company Data'}
             </Button>
@@ -887,6 +946,25 @@ export const ImpactLogPage: React.FC = () => {
         <Spacer />
         <Button colorScheme="purple" variant="solid" onClick={onOpen}>
           Let&apos;s do it
+        </Button>
+      </Flex>
+
+      <Flex mb={4} p={3} rounded="lg" bg="blue.50" border="1px solid" borderColor="blue.100" align="center" gap={3} wrap="wrap">
+        <Badge colorScheme="blue">Partner Sync</Badge>
+        <Text color="blue.800" fontSize="sm">
+          {partnerSync.status === 'syncing'
+            ? 'Syncing partner impact entries...'
+            : partnerSync.message ||
+              'Partner logs are linked by verified Google Sign-In email and shown in your personal impact history.'}
+        </Text>
+        {partnerSync.lastSyncedAt && (
+          <Text color="blue.700" fontSize="xs">
+            Last sync: {format(new Date(partnerSync.lastSyncedAt), 'dd MMM yyyy HH:mm')}
+          </Text>
+        )}
+        <Spacer />
+        <Button size="sm" variant="outline" leftIcon={<RefreshCw size={14} />} onClick={() => runPartnerSync(true)} isLoading={partnerSync.status === 'syncing'}>
+          Refresh
         </Button>
       </Flex>
 
@@ -1006,6 +1084,7 @@ export const ImpactLogPage: React.FC = () => {
                 <Tr>
                   <Th>Date</Th>
                   <Th>Title</Th>
+                  <Th>Source</Th>
                   <Th>Category</Th>
                   <Th isNumeric>Hours</Th>
                   <Th isNumeric>USD</Th>
@@ -1018,13 +1097,13 @@ export const ImpactLogPage: React.FC = () => {
               <Tbody>
                 {loading ? (
                   <Tr>
-                    <Td colSpan={activeTab === 'personal' ? 9 : 8}>
+                    <Td colSpan={activeTab === 'personal' ? 10 : 9}>
                       <Skeleton height="18px" />
                     </Td>
                   </Tr>
                 ) : filteredEntries.length === 0 ? (
                   <Tr>
-                    <Td colSpan={activeTab === 'personal' ? 9 : 8}>
+                    <Td colSpan={activeTab === 'personal' ? 10 : 9}>
                       <Text color="text.muted">No entries found for this period.</Text>
                     </Td>
                   </Tr>
@@ -1044,6 +1123,11 @@ export const ImpactLogPage: React.FC = () => {
                         )}
                       </Td>
                       <Td>
+                        <Badge colorScheme={isPartnerSyncedEntry(entry) ? 'blue' : 'purple'}>
+                          {isPartnerSyncedEntry(entry) ? 'T4L Partner' : 'Transformation Tier'}
+                        </Badge>
+                      </Td>
+                      <Td>
                         <Badge colorScheme={entry.categoryGroup === 'esg' ? 'green' : 'blue'}>
                           {entry.categoryGroup === 'esg' ? entry.esgCategory : entry.businessCategory}
                         </Badge>
@@ -1057,18 +1141,24 @@ export const ImpactLogPage: React.FC = () => {
                           {entry.verificationLevel}
                         </Badge>
                       </Td>
-                      {activeTab === 'personal' && entry.userId === user?.uid && (
+                      {activeTab === 'personal' && (
                         <Td>
-                          <Tooltip label="Delete entry">
-                            <IconButton
-                              aria-label="Delete impact entry"
-                              icon={<Trash2 size={16} />}
-                              size="sm"
-                              variant="ghost"
-                              colorScheme="red"
-                              onClick={() => handleDeleteEntry(entry)}
-                            />
-                          </Tooltip>
+                          {entry.userId === user?.uid && !isPartnerSyncedEntry(entry) ? (
+                            <Tooltip label="Delete entry">
+                              <IconButton
+                                aria-label="Delete impact entry"
+                                icon={<Trash2 size={16} />}
+                                size="sm"
+                                variant="ghost"
+                                colorScheme="red"
+                                onClick={() => handleDeleteEntry(entry)}
+                              />
+                            </Tooltip>
+                          ) : (
+                            <Text color="text.muted" fontSize="xs">
+                              Read only
+                            </Text>
+                          )}
                         </Td>
                       )}
                     </Tr>
