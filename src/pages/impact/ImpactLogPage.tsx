@@ -211,7 +211,6 @@ const buildCsv = (entries: ImpactLogEntry[]) => {
     'Verification',
     'Points',
     'Impact Value',
-    'SCP',
     'Outcome Label',
     'Evidence',
   ]
@@ -230,7 +229,6 @@ const buildCsv = (entries: ImpactLogEntry[]) => {
     entry.verificationLevel,
     entry.points,
     entry.impactValue,
-    entry.scp,
     entry.outcomeLabel || '',
     entry.evidenceLink || '',
   ])
@@ -600,7 +598,6 @@ export const ImpactLogPage: React.FC = () => {
       hours: filteredEntries.reduce((sum, e) => sum + (e.hours || 0), 0),
       usd: filteredEntries.reduce((sum, e) => sum + (e.usdValue || 0), 0),
       points: filteredEntries.reduce((sum, e) => sum + (e.points || 0), 0),
-      scp: filteredEntries.reduce((sum, e) => sum + (e.scp || 0), 0),
     }
   }, [filteredEntries])
 
@@ -897,9 +894,9 @@ export const ImpactLogPage: React.FC = () => {
       color: 'green.500',
     },
     {
-      label: 'Social Capital Points',
-      value: stats.scp,
-      help: 'Social capital earned from verified impact activities',
+      label: 'Points Earned',
+      value: stats.points,
+      help: 'Points earned from logged impact activities',
       icon: TrendingUp,
       color: 'orange.500',
     },
@@ -1078,18 +1075,51 @@ export const ImpactLogPage: React.FC = () => {
             </HStack>
           </Flex>
 
-          <TableContainer bg="surface.default" border="1px solid" borderColor="border.subtle" rounded="lg" shadow="xs">
-            <Table size="sm">
+          <TableContainer
+            bg="surface.default"
+            border="1px solid"
+            borderColor="border.subtle"
+            rounded="lg"
+            shadow="xs"
+            overflowX="auto"
+            overflowY="visible"
+          >
+            <Table size="sm" sx={{ tableLayout: 'fixed', width: '100%' }}>
+              <colgroup>
+                {activeTab === 'personal' ? (
+                  <>
+                    <col style={{ width: '11%' }} />
+                    <col style={{ width: '34%' }} />
+                    <col style={{ width: '12%' }} />
+                    <col style={{ width: '10%' }} />
+                    <col style={{ width: '6%' }} />
+                    <col style={{ width: '6%' }} />
+                    <col style={{ width: '7%' }} />
+                    <col style={{ width: '10%' }} />
+                    <col style={{ width: '4%' }} />
+                  </>
+                ) : (
+                  <>
+                    <col style={{ width: '12%' }} />
+                    <col style={{ width: '36%' }} />
+                    <col style={{ width: '13%' }} />
+                    <col style={{ width: '11%' }} />
+                    <col style={{ width: '7%' }} />
+                    <col style={{ width: '7%' }} />
+                    <col style={{ width: '7%' }} />
+                    <col style={{ width: '7%' }} />
+                  </>
+                )}
+              </colgroup>
               <Thead bg="surface.subtle">
                 <Tr>
-                  <Th>Date</Th>
+                  <Th whiteSpace="nowrap">Date</Th>
                   <Th>Title</Th>
                   <Th>Source</Th>
                   <Th>Category</Th>
                   <Th isNumeric>Hours</Th>
                   <Th isNumeric>USD</Th>
                   <Th isNumeric>People</Th>
-                  <Th isNumeric>SCP</Th>
                   <Th>Verification</Th>
                   {activeTab === 'personal' && <Th />}
                 </Tr>
@@ -1097,13 +1127,13 @@ export const ImpactLogPage: React.FC = () => {
               <Tbody>
                 {loading ? (
                   <Tr>
-                    <Td colSpan={activeTab === 'personal' ? 10 : 9}>
+                    <Td colSpan={activeTab === 'personal' ? 9 : 8}>
                       <Skeleton height="18px" />
                     </Td>
                   </Tr>
                 ) : filteredEntries.length === 0 ? (
                   <Tr>
-                    <Td colSpan={activeTab === 'personal' ? 10 : 9}>
+                    <Td colSpan={activeTab === 'personal' ? 9 : 8}>
                       <Text color="text.muted">No entries found for this period.</Text>
                     </Td>
                   </Tr>
@@ -1112,30 +1142,98 @@ export const ImpactLogPage: React.FC = () => {
                     <Tr key={entry.id} _hover={{ bg: 'surface.subtle' }}>
                       <Td>{format(new Date(entry.date), 'dd MMM yyyy')}</Td>
                       <Td>
-                        <Text fontWeight="semibold">{entry.title}</Text>
-                        <Text color="text.muted" fontSize="sm" noOfLines={1}>
-                          {entry.description}
-                        </Text>
-                        {entry.outcomeLabel && (
-                          <Text color="purple.600" fontSize="xs" fontWeight="medium" mt={1}>
-                            Outcome: {entry.outcomeLabel}
-                          </Text>
-                        )}
+                        <Box maxW="100%" minW={0}>
+                          <Tooltip
+                            label={
+                              <Text color="white" whiteSpace="normal" wordBreak="break-word" overflowWrap="anywhere">
+                                {entry.title}
+                              </Text>
+                            }
+                            hasArrow
+                            placement="top-start"
+                            maxW="360px"
+                            bg="gray.800"
+                            color="white"
+                            portalProps={{ appendToParentPortal: false }}
+                            zIndex="tooltip"
+                          >
+                            <Text
+                              fontWeight="semibold"
+                              display="block"
+                              noOfLines={1}
+                              wordBreak="break-word"
+                              overflowWrap="anywhere"
+                              lineHeight="1.4"
+                            >
+                              {entry.title}
+                            </Text>
+                          </Tooltip>
+                          {entry.description && (
+                            <Tooltip
+                              label={
+                                <Text color="white" whiteSpace="normal" wordBreak="break-word" overflowWrap="anywhere">
+                                  {entry.description}
+                                </Text>
+                              }
+                              hasArrow
+                              placement="top-start"
+                              maxW="360px"
+                              bg="gray.800"
+                              color="white"
+                              portalProps={{ appendToParentPortal: false }}
+                              zIndex="tooltip"
+                            >
+                              <Text
+                                color="text.muted"
+                                fontSize="sm"
+                                display="block"
+                                noOfLines={2}
+                                wordBreak="break-word"
+                                overflowWrap="anywhere"
+                                lineHeight="1.4"
+                                mt={1}
+                              >
+                                {entry.description}
+                              </Text>
+                            </Tooltip>
+                          )}
+                          {entry.outcomeLabel && (
+                            <Text color="purple.600" fontSize="xs" fontWeight="medium" mt={1}>
+                              Outcome: {entry.outcomeLabel}
+                            </Text>
+                          )}
+                        </Box>
                       </Td>
                       <Td>
-                        <Badge colorScheme={isPartnerSyncedEntry(entry) ? 'blue' : 'purple'}>
-                          {isPartnerSyncedEntry(entry) ? 'T4L Partner' : 'Transformation Tier'}
-                        </Badge>
+                        <Tooltip
+                          label={isPartnerSyncedEntry(entry) ? 'T4L Partner' : 'Transformation Tier'}
+                          hasArrow
+                          placement="top-start"
+                          bg="gray.800"
+                          color="white"
+                        >
+                          <Badge colorScheme={isPartnerSyncedEntry(entry) ? 'blue' : 'purple'}>
+                            {isPartnerSyncedEntry(entry) ? 'T4L' : 'TT'}
+                          </Badge>
+                        </Tooltip>
                       </Td>
                       <Td>
-                        <Badge colorScheme={entry.categoryGroup === 'esg' ? 'green' : 'blue'}>
-                          {entry.categoryGroup === 'esg' ? entry.esgCategory : entry.businessCategory}
-                        </Badge>
+                        <Tooltip
+                          label={entry.categoryGroup === 'esg' ? entry.esgCategory : entry.businessCategory}
+                          hasArrow
+                          placement="top-start"
+                          maxW="240px"
+                          bg="gray.800"
+                          color="white"
+                        >
+                          <Badge colorScheme={entry.categoryGroup === 'esg' ? 'green' : 'blue'}>
+                            {entry.categoryGroup === 'esg' ? 'ESG' : 'BUS'}
+                          </Badge>
+                        </Tooltip>
                       </Td>
                       <Td isNumeric>{entry.hours}</Td>
                       <Td isNumeric>{entry.usdValue?.toLocaleString() || '0'}</Td>
                       <Td isNumeric>{entry.peopleImpacted}</Td>
-                      <Td isNumeric>{entry.scp?.toLocaleString() || '0'}</Td>
                       <Td>
                         <Badge colorScheme={entry.verificationMultiplier > 1 ? 'purple' : 'gray'}>
                           {entry.verificationLevel}
@@ -1184,8 +1282,8 @@ export const ImpactLogPage: React.FC = () => {
               </HStack>
               <Stack spacing={2}>
                 <Flex align="center" justify="space-between">
-                  <Text color="text.secondary">Social Capital Points</Text>
-                  <Badge colorScheme="purple">{stats.scp.toLocaleString()}</Badge>
+                  <Text color="text.secondary">Total Points</Text>
+                  <Badge colorScheme="purple">{stats.points.toLocaleString()}</Badge>
                 </Flex>
                 <Flex align="center" justify="space-between">
                   <Text color="text.secondary">Hours this month</Text>
@@ -1193,7 +1291,7 @@ export const ImpactLogPage: React.FC = () => {
                 </Flex>
                 <Divider />
                 <Text color="text.secondary" fontWeight="medium">
-                  Daily momentum based on social capital growth
+                  Daily momentum based on impact activity volume
                 </Text>
                 <Button w="full" colorScheme="purple" onClick={onOpen}>
                   Log Impact Now
@@ -1613,8 +1711,8 @@ export const ImpactLogPage: React.FC = () => {
                     <Text fontSize="2xl" fontWeight="bold">{formatCurrency(preview.impactValue)}</Text>
                   </Box>
                   <Box>
-                    <Text color="text.secondary">Social Capital Points</Text>
-                    <Text fontSize="2xl" fontWeight="bold">{preview.scp}</Text>
+                    <Text color="text.secondary">Total Points</Text>
+                    <Text fontSize="2xl" fontWeight="bold">{preview.points}</Text>
                   </Box>
                   <Box>
                     <Text color="text.secondary">Verification</Text>
