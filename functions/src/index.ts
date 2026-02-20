@@ -20,3 +20,4 @@ export * from "./automated-peer-matching";
 export * from "./referral-points";
 export * from "./admin-actions";
 export * from "./partner-impact-sync";
+export * from "./impact-api";

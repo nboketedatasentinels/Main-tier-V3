@@ -71,6 +71,33 @@ Pulls impact-log records from the T4L Partner platform API and mirrors them into
 - Marks entries as read-only (`readOnly: true`) for UI handling
 - Tracks sync state in `external_impact_sync_state/{uid}`
 
+### 5. `partnerImpactBridgeApi`
+**Type:** HTTPS request function (POST)  
+**Trigger:** Server-to-server / web clients from allowed origins
+
+CORS-enabled API bridge for cross-platform communication between Transformation Tier and ambassadors platform.
+
+**Allowed origins (default):**
+- `https://ambassadors.t4leader.com`
+- `https://t4l-ambassador-platform.vercel.app`
+
+**Supported actions (POST body `action`):**
+- `sync_user` (sync by Firebase `uid`)
+- `sync_by_email` (sync by email)
+- `export_user_logs` (export user impact logs by `uid`)
+- `export_by_email` (export user impact logs by email)
+- `sync_candidates` (run batch sync for queued users)
+- `health` (status check)
+
+**Auth:**
+- Requires `Authorization: Bearer <impactbridge.shared_token>`
+
+### 6. `syncPartnerImpactLogsCron`
+**Type:** Scheduled function  
+**Schedule:** every 30 minutes (UTC)
+
+Runs background sync for users in `external_impact_sync_state`.
+
 ## Setup & Deployment
 
 ### Prerequisites
@@ -188,6 +215,27 @@ Optional timeout override (milliseconds):
 
 ```bash
 firebase functions:config:set partnerimpact.timeout_ms="20000"
+```
+
+Optional cron batch size:
+
+```bash
+firebase functions:config:set partnerimpact.cron_batch_size="40"
+```
+
+### Impact Bridge API
+
+Configure the shared token and optional CORS origins for cross-platform API access:
+
+```bash
+firebase functions:config:set impactbridge.shared_token="<strong-shared-token>"
+```
+
+Optional overrides:
+
+```bash
+firebase functions:config:set impactbridge.origins="https://ambassadors.t4leader.com,https://t4l-ambassador-platform.vercel.app"
+firebase functions:config:set impactbridge.max_export_rows="1000"
 ```
 
 ### Modify Sync Schedule

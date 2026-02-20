@@ -1,15 +1,16 @@
 import { createHash } from "crypto";
 import * as admin from "firebase-admin";
 import * as functions from "firebase-functions";
+import { ALLOWED_ORIGINS, applyCors } from "./cors";
 
 const db = admin.firestore();
+const IMPACT_LOG_COLLECTION = "impact_logs";
+const SYNC_STATE_COLLECTION = "external_impact_sync_state";
 
 type JsonRecord = Record<string, unknown>;
+type SyncActor = "callable" | "http" | "cron";
 
-interface SyncPartnerImpactLogsRequest {
-  forceFullRefresh?: boolean;
-}
-
+interface SyncPartnerImpactLogsRequest { forceFullRefresh?: boolean }
 interface SyncPartnerImpactLogsResponse {
   status: "success" | "skipped";
   message: string;
@@ -20,572 +21,309 @@ interface SyncPartnerImpactLogsResponse {
   lastSyncedAt: string;
 }
 
-interface PartnerApiConfig {
-  apiUrl: string;
-  apiToken: string | null;
-  timeoutMs: number;
-}
-
-interface NormalizedPartnerImpactEntry {
-  sourceRecordId: string;
-  title: string;
-  description: string;
-  categoryGroup: "esg" | "business";
-  esgCategory?: "environmental" | "social" | "governance";
-  activityType?: string;
-  businessCategory?: string;
-  businessActivity?: string;
-  liftPillars?: string[];
-  date: string;
-  createdAt: string;
-  hours: number;
-  peopleImpacted: number;
-  usdValue: number;
-  verificationLevel: string;
-  verifierEmail?: string;
-  evidenceLink?: string;
-  impactValue: number;
-  scp: number;
-}
-
-const DEFAULT_SYNC_TIMEOUT_MS = 20000;
-const MAX_SYNC_TIMEOUT_MS = 60000;
-const SYNC_STATE_COLLECTION = "external_impact_sync_state";
-const IMPACT_LOG_COLLECTION = "impact_logs";
-
-function toRecord(value: unknown): JsonRecord | null {
-  if (typeof value !== "object" || value === null || Array.isArray(value)) return null;
-  return value as JsonRecord;
-}
-
-function normalizeEmail(value: unknown): string | null {
-  if (typeof value !== "string") return null;
-  const trimmed = value.trim().toLowerCase();
-  return trimmed.length > 0 ? trimmed : null;
-}
-
-function getString(record: JsonRecord, keys: string[]): string | null {
-  for (const key of keys) {
-    const value = record[key];
-    if (typeof value === "string" && value.trim().length > 0) {
-      return value.trim();
-    }
+const toRecord = (value: unknown): JsonRecord | null =>
+  typeof value === "object" && value !== null && !Array.isArray(value) ? (value as JsonRecord) : null;
+const normalizeEmail = (v: unknown): string | null =>
+  typeof v === "string" && v.trim() ? v.trim().toLowerCase() : null;
+const getString = (r: JsonRecord, keys: string[]): string | null => {
+  for (const k of keys) {
+    const v = r[k];
+    if (typeof v === "string" && v.trim()) return v.trim();
   }
   return null;
-}
-
-function getNumber(record: JsonRecord, keys: string[]): number | null {
-  for (const key of keys) {
-    const value = record[key];
-    if (typeof value === "number" && Number.isFinite(value)) {
-      return value;
+};
+const getNumber = (r: JsonRecord, keys: string[], fallback = 0): number => {
+  for (const k of keys) {
+    const v = r[k];
+    if (typeof v === "number" && Number.isFinite(v)) return v;
+    if (typeof v === "string" && v.trim()) {
+      const n = Number(v);
+      if (Number.isFinite(n)) return n;
     }
-    if (typeof value === "string") {
-      const parsed = Number(value.replace(/[^0-9.-]/g, ""));
-      if (Number.isFinite(parsed)) return parsed;
-    }
+  }
+  return fallback;
+};
+const getBool = (r: JsonRecord, key: string, fallback = false): boolean =>
+  typeof r[key] === "boolean" ? (r[key] as boolean) : fallback;
+const parseDate = (v: unknown): Date | null => {
+  if (typeof v === "string" || typeof v === "number") {
+    const d = new Date(v);
+    return Number.isNaN(d.getTime()) ? null : d;
   }
   return null;
-}
+};
 
-function getStringArray(record: JsonRecord, keys: string[]): string[] | undefined {
-  for (const key of keys) {
-    const value = record[key];
-    if (!Array.isArray(value)) continue;
-    const next = value
-      .map((item) => (typeof item === "string" ? item.trim() : ""))
-      .filter((item) => item.length > 0);
-    if (next.length > 0) return next;
-  }
-  return undefined;
-}
-
-function normalizeDateCandidate(value: unknown): Date | null {
-  if (typeof value === "string") {
-    const parsed = new Date(value);
-    return Number.isNaN(parsed.getTime()) ? null : parsed;
-  }
-
-  if (typeof value === "number" && Number.isFinite(value)) {
-    // Handle both seconds and milliseconds epoch input.
-    const epochMs = value > 9999999999 ? value : value * 1000;
-    const parsed = new Date(epochMs);
-    return Number.isNaN(parsed.getTime()) ? null : parsed;
-  }
-
-  const record = toRecord(value);
-  if (!record) return null;
-
-  const seconds = record.seconds;
-  if (typeof seconds === "number" && Number.isFinite(seconds)) {
-    const nanos = typeof record.nanoseconds === "number" ? record.nanoseconds : 0;
-    const parsed = new Date(seconds * 1000 + Math.floor(nanos / 1000000));
-    return Number.isNaN(parsed.getTime()) ? null : parsed;
-  }
-
-  return null;
-}
-
-function toIsoDate(value: Date): string {
-  return value.toISOString().slice(0, 10);
-}
-
-function normalizeEsgCategory(value: string | null): "environmental" | "social" | "governance" | undefined {
-  if (!value) return undefined;
-  const normalized = value.trim().toLowerCase();
-  if (normalized.startsWith("env")) return "environmental";
-  if (normalized.startsWith("soc")) return "social";
-  if (normalized.startsWith("gov")) return "governance";
-  return undefined;
-}
-
-function resolveCategoryGroup(record: JsonRecord): "esg" | "business" {
-  const direct = getString(record, ["categoryGroup", "category_group", "categoryType", "category_type"]);
-  if (direct) {
-    const normalized = direct.toLowerCase();
-    if (normalized.includes("business")) return "business";
-    if (normalized.includes("esg")) return "esg";
-  }
-
-  const businessCategory = getString(record, ["businessCategory", "business_category", "businessType", "business_type"]);
-  if (businessCategory) return "business";
-  return "esg";
-}
-
-function computeImpactValue(hours: number, peopleImpacted: number, esgCategory?: "environmental" | "social" | "governance"): number {
-  const baseImpactRate = esgCategory === "governance" ? 1.1 : esgCategory === "social" ? 0.9 : 1;
-  return Math.round(hours * 75 * baseImpactRate + peopleImpacted * 10);
-}
-
-function computeScp(hours: number, peopleImpacted: number): number {
-  return Math.round(hours * 5 + peopleImpacted * 2.5);
-}
-
-function sanitizeSourceRecordId(input: string): string {
-  const cleaned = input.replace(/[^a-zA-Z0-9_-]/g, "_").slice(0, 120);
-  if (cleaned.length > 0) return cleaned;
-  return createHash("sha256").update(input).digest("hex").slice(0, 48);
-}
-
-function resolveSourceRecordId(record: JsonRecord, normalizedEmail: string): string {
-  const explicitId = getString(record, ["id", "logId", "log_id", "entryId", "entry_id", "uuid", "eventId", "event_id"]);
-  if (explicitId) return sanitizeSourceRecordId(explicitId);
-
-  const fingerprint = [
-    normalizedEmail,
-    getString(record, ["title", "name", "activity", "activityType", "activity_type"]) ?? "",
-    getString(record, ["date", "activityDate", "activity_date", "createdAt", "created_at", "timestamp"]) ?? "",
-    String(getNumber(record, ["hours", "hoursSpent", "hours_spent", "duration", "durationHours", "duration_hours"]) ?? 0),
-    String(getNumber(record, ["peopleImpacted", "people_impacted", "participants", "beneficiaries", "treesPlanted"]) ?? 0),
-    String(getNumber(record, ["usdValue", "usd_value", "value", "financialImpact", "financial_impact"]) ?? 0),
-  ].join("|");
-
-  return createHash("sha256").update(fingerprint).digest("hex").slice(0, 48);
-}
-
-function normalizePartnerEntry(rawEntry: unknown, normalizedEmail: string): NormalizedPartnerImpactEntry | null {
-  const record = toRecord(rawEntry);
-  if (!record) return null;
-
-  const dateCandidate =
-    normalizeDateCandidate(record.date) ??
-    normalizeDateCandidate(record.activityDate) ??
-    normalizeDateCandidate(record.activity_date) ??
-    normalizeDateCandidate(record.createdAt) ??
-    normalizeDateCandidate(record.created_at) ??
-    normalizeDateCandidate(record.timestamp);
-
-  if (!dateCandidate) return null;
-
-  const categoryGroup = resolveCategoryGroup(record);
-  const esgCategory = normalizeEsgCategory(getString(record, ["esgCategory", "esg_category", "esgType", "esg_type", "category"]));
-
-  const hours = Math.max(
-    0,
-    getNumber(record, ["hours", "hoursSpent", "hours_spent", "duration", "durationHours", "duration_hours"]) ?? 0
-  );
-  const peopleImpacted = Math.max(
-    0,
-    getNumber(record, ["peopleImpacted", "people_impacted", "participants", "beneficiaries", "treesPlanted", "trees_planted"]) ?? 0
-  );
-  const usdValue = Math.max(
-    0,
-    getNumber(record, ["usdValue", "usd_value", "value", "financialImpact", "financial_impact"]) ?? 0
-  );
-
-  const computedImpactValue = computeImpactValue(hours, peopleImpacted, esgCategory);
-  const computedScp = computeScp(hours, peopleImpacted);
-
-  const impactValue = Math.max(0, getNumber(record, ["impactValue", "impact_value"]) ?? computedImpactValue);
-  const scp = Math.max(0, getNumber(record, ["scp", "socialCapitalPoints", "social_capital_points"]) ?? computedScp);
-
-  return {
-    sourceRecordId: resolveSourceRecordId(record, normalizedEmail),
-    title: getString(record, ["title", "name", "activityTitle", "activity_title"]) ?? "Partner Impact Activity",
-    description: getString(record, ["description", "details", "notes", "summary"]) ?? "",
-    categoryGroup,
-    esgCategory,
-    activityType: getString(record, ["activityType", "activity_type", "activity"]) ?? undefined,
-    businessCategory: getString(record, ["businessCategory", "business_category"]) ?? undefined,
-    businessActivity: getString(record, ["businessActivity", "business_activity"]) ?? undefined,
-    liftPillars: getStringArray(record, ["liftPillars", "lift_pillars"]),
-    date: toIsoDate(dateCandidate),
-    createdAt: dateCandidate.toISOString(),
-    hours,
-    peopleImpacted,
-    usdValue,
-    verificationLevel: getString(record, ["verificationLevel", "verification_level", "verificationTier", "verification_tier"]) ??
-      "Tier 1: Self-Reported",
-    verifierEmail: getString(record, ["verifierEmail", "verifier_email"]) ?? undefined,
-    evidenceLink: getString(record, ["evidenceLink", "evidence_link", "proofUrl", "proof_url"]) ?? undefined,
-    impactValue,
-    scp,
+function resolvePartnerConfig() {
+  const cfg = functions.config() as {
+    partnerimpact?: { api_url?: string; api_token?: string; timeout_ms?: string | number; cron_batch_size?: string | number };
+    partner_impact?: { api_url?: string; api_token?: string; timeout_ms?: string | number; cron_batch_size?: string | number };
   };
+  const block = cfg.partnerimpact ?? cfg.partner_impact ?? {};
+  const apiUrl = (process.env.T4L_PARTNER_IMPACT_API_URL ?? block.api_url ?? "").trim();
+  const apiToken = (process.env.T4L_PARTNER_IMPACT_API_TOKEN ?? block.api_token ?? "").trim();
+  const timeoutRaw = process.env.T4L_PARTNER_IMPACT_TIMEOUT_MS ?? block.timeout_ms ?? 20000;
+  const timeoutMs = Math.min(Math.max(Number(timeoutRaw) || 20000, 1000), 60000);
+  const cronBatchRaw = process.env.T4L_PARTNER_IMPACT_CRON_BATCH_SIZE ?? block.cron_batch_size ?? 40;
+  const cronBatchSize = Math.min(Math.max(Math.floor(Number(cronBatchRaw) || 40), 1), 200);
+  if (!apiUrl) throw new functions.https.HttpsError("failed-precondition", "Partner impact API URL is not configured.");
+  return { apiUrl, apiToken, timeoutMs, cronBatchSize };
 }
 
-function extractPartnerEntries(payload: unknown): unknown[] {
-  if (Array.isArray(payload)) return payload;
-  const record = toRecord(payload);
-  if (!record) return [];
-
-  const directKeys = ["logs", "entries", "items", "results", "data"];
-  for (const key of directKeys) {
-    const value = record[key];
-    if (Array.isArray(value)) return value;
-  }
-
-  const nestedData = toRecord(record.data);
-  if (nestedData) {
-    for (const key of directKeys) {
-      const value = nestedData[key];
-      if (Array.isArray(value)) return value;
-    }
-  }
-
-  return [];
-}
-
-function resolvePartnerApiConfig(): PartnerApiConfig {
-  const runtimeConfig = functions.config() as {
-    partnerimpact?: { api_url?: string; api_token?: string; timeout_ms?: string | number };
-    partner_impact?: { api_url?: string; api_token?: string; timeout_ms?: string | number };
+function resolveBridgeConfig() {
+  const cfg = functions.config() as {
+    impactbridge?: { shared_token?: string; max_export_rows?: string | number };
+    impact_bridge?: { shared_token?: string; max_export_rows?: string | number };
+    partnerimpact?: { api_token?: string };
+    partner_impact?: { api_token?: string };
   };
-
-  const configBlock = runtimeConfig.partnerimpact ?? runtimeConfig.partner_impact ?? {};
-  const apiUrl = (process.env.T4L_PARTNER_IMPACT_API_URL ?? configBlock.api_url ?? "").trim();
-  const apiToken = (process.env.T4L_PARTNER_IMPACT_API_TOKEN ?? configBlock.api_token ?? "").trim() || null;
-  const timeoutRaw = process.env.T4L_PARTNER_IMPACT_TIMEOUT_MS ?? configBlock.timeout_ms ?? DEFAULT_SYNC_TIMEOUT_MS;
-  const timeoutParsed = Number(timeoutRaw);
-  const timeoutMs = Number.isFinite(timeoutParsed)
-    ? Math.min(Math.max(timeoutParsed, 1000), MAX_SYNC_TIMEOUT_MS)
-    : DEFAULT_SYNC_TIMEOUT_MS;
-
-  if (!apiUrl) {
-    throw new functions.https.HttpsError(
-      "failed-precondition",
-      "Partner impact API URL is not configured."
-    );
+  const block = cfg.impactbridge ?? cfg.impact_bridge ?? {};
+  const sharedToken = (
+    process.env.T4L_IMPACT_BRIDGE_SHARED_TOKEN ??
+    block.shared_token ??
+    cfg.partnerimpact?.api_token ??
+    cfg.partner_impact?.api_token ??
+    ""
+  ).trim();
+  if (!sharedToken) {
+    throw new functions.https.HttpsError("failed-precondition", "Impact bridge token is not configured (impactbridge.shared_token).");
   }
-
-  return {
-    apiUrl,
-    apiToken,
-    timeoutMs,
-  };
+  const maxExportRaw = process.env.T4L_IMPACT_BRIDGE_MAX_EXPORT_ROWS ?? block.max_export_rows ?? 1000;
+  const maxExportRows = Math.min(Math.max(Math.floor(Number(maxExportRaw) || 1000), 1), 5000);
+  return { sharedToken, maxExportRows };
 }
 
-async function fetchPartnerEntries(config: PartnerApiConfig, payload: JsonRecord): Promise<unknown[]> {
+const buildSkipped = (msg: string, nowIso: string): SyncPartnerImpactLogsResponse => ({
+  status: "skipped",
+  message: msg,
+  fetchedCount: 0,
+  importedCount: 0,
+  updatedCount: 0,
+  skippedCount: 0,
+  lastSyncedAt: nowIso,
+});
+
+async function fetchPartnerRows(payload: JsonRecord) {
+  const { apiUrl, apiToken, timeoutMs } = resolvePartnerConfig();
   const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), config.timeoutMs);
-
-  const headers: Record<string, string> = {
-    "Content-Type": "application/json",
-  };
-
-  if (config.apiToken) {
-    headers.Authorization = config.apiToken.toLowerCase().startsWith("bearer ")
-      ? config.apiToken
-      : `Bearer ${config.apiToken}`;
-  }
-
+  const timeout = setTimeout(() => controller.abort(), timeoutMs);
   try {
-    const response = await fetch(config.apiUrl, {
-      method: "POST",
-      headers,
-      body: JSON.stringify(payload),
-      signal: controller.signal,
-    });
-
-    const rawBody = await response.text();
-    let parsedBody: unknown = null;
-    if (rawBody.trim().length > 0) {
-      try {
-        parsedBody = JSON.parse(rawBody);
-      } catch (_error) {
-        parsedBody = null;
-      }
-    }
-
-    if (!response.ok) {
-      throw new functions.https.HttpsError(
-        "unavailable",
-        `Partner impact API request failed with status ${response.status}.`,
-        {
-          status: response.status,
-          responsePreview: rawBody.slice(0, 500),
-        }
-      );
-    }
-
-    return extractPartnerEntries(parsedBody);
-  } catch (error) {
-    if (error instanceof functions.https.HttpsError) {
-      throw error;
-    }
-
-    const isAbortError = error instanceof Error && error.name === "AbortError";
-    throw new functions.https.HttpsError(
-      "deadline-exceeded",
-      isAbortError
-        ? `Partner impact API request exceeded ${config.timeoutMs}ms timeout.`
-        : "Unable to fetch partner impact entries."
-    );
+    const headers: Record<string, string> = { "Content-Type": "application/json" };
+    if (apiToken) headers.Authorization = apiToken.toLowerCase().startsWith("bearer ") ? apiToken : `Bearer ${apiToken}`;
+    const res = await fetch(apiUrl, { method: "POST", headers, body: JSON.stringify(payload), signal: controller.signal });
+    const text = await res.text();
+    const body = text.trim() ? (JSON.parse(text) as unknown) : null;
+    if (!res.ok) throw new functions.https.HttpsError("unavailable", `Partner API returned ${res.status}`);
+    if (Array.isArray(body)) return body;
+    const rec = toRecord(body);
+    if (!rec) return [];
+    const candidate = rec.logs ?? rec.entries ?? rec.items ?? rec.data;
+    return Array.isArray(candidate) ? candidate : [];
+  } catch (err) {
+    if (err instanceof functions.https.HttpsError) throw err;
+    throw new functions.https.HttpsError("deadline-exceeded", "Unable to fetch partner impact entries.");
   } finally {
     clearTimeout(timeout);
   }
 }
 
-export const syncPartnerImpactLogs = functions
-  .region("us-central1")
-  .https.onCall(
-    async (
-      data: SyncPartnerImpactLogsRequest | undefined,
-      context
-    ): Promise<SyncPartnerImpactLogsResponse> => {
-      if (!context.auth?.uid) {
-        throw new functions.https.HttpsError("unauthenticated", "User must be authenticated.");
-      }
+function normalizePartnerRow(raw: unknown, email: string) {
+  const r = toRecord(raw);
+  if (!r) return null;
+  const date = parseDate(r.date ?? r.activityDate ?? r.createdAt ?? r.timestamp);
+  if (!date) return null;
+  const title = getString(r, ["title", "name", "activityTitle"]) ?? "Partner Impact Activity";
+  const description = getString(r, ["description", "details", "summary"]) ?? "";
+  const categoryGroup = (getString(r, ["categoryGroup", "category_group"]) ?? "esg").toLowerCase().includes("business")
+    ? "business"
+    : "esg";
+  const sourceRecordId =
+    getString(r, ["id", "logId", "entryId", "uuid"]) ??
+    createHash("sha256")
+      .update(`${email}|${title}|${date.toISOString()}|${getNumber(r, ["hours", "hoursSpent"])}|${getNumber(r, ["peopleImpacted"])}`)
+      .digest("hex")
+      .slice(0, 48);
 
-      const uid = context.auth.uid;
-      const nowIso = new Date().toISOString();
-      const syncStateRef = db.collection(SYNC_STATE_COLLECTION).doc(uid);
-      const forceFullRefresh = Boolean(data?.forceFullRefresh);
+  const hours = Math.max(0, getNumber(r, ["hours", "hoursSpent", "durationHours"], 0));
+  const people = Math.max(0, getNumber(r, ["peopleImpacted", "participants", "beneficiaries"], 0));
+  const usd = Math.max(0, getNumber(r, ["usdValue", "value", "financialImpact"], 0));
+  return {
+    sourceRecordId,
+    title,
+    description,
+    categoryGroup,
+    date: date.toISOString().slice(0, 10),
+    createdAt: date.toISOString(),
+    hours,
+    peopleImpacted: people,
+    usdValue: usd,
+    verificationLevel: getString(r, ["verificationLevel", "verificationTier"]) ?? "Tier 1: Self-Reported",
+    verifierEmail: getString(r, ["verifierEmail"]) ?? undefined,
+    evidenceLink: getString(r, ["evidenceLink", "proofUrl"]) ?? undefined,
+    activityType: getString(r, ["activityType", "activity"]) ?? undefined,
+    businessCategory: getString(r, ["businessCategory"]) ?? undefined,
+    businessActivity: getString(r, ["businessActivity"]) ?? undefined,
+    esgCategory: getString(r, ["esgCategory"]) ?? undefined,
+    impactValue: Math.round(hours * 75 + people * 10),
+    scp: Math.round(hours * 5 + people * 2.5),
+  };
+}
 
-      try {
-        const [authUser, syncStateSnap] = await Promise.all([
-          admin.auth().getUser(uid),
-          syncStateRef.get(),
-        ]);
-
-        const normalizedEmail = normalizeEmail(authUser.email);
-        if (!normalizedEmail) {
-          await syncStateRef.set(
-            {
-              uid,
-              status: "skipped",
-              reason: "missing_email",
-              message: "No verified email is available for partner-impact linking.",
-              lastAttemptAt: nowIso,
-              updatedAt: admin.firestore.FieldValue.serverTimestamp(),
-            },
-            { merge: true }
-          );
-
-          return {
-            status: "skipped",
-            message: "No verified email is available for partner-impact linking.",
-            fetchedCount: 0,
-            importedCount: 0,
-            updatedCount: 0,
-            skippedCount: 0,
-            lastSyncedAt: nowIso,
-          };
-        }
-
-        if (authUser.emailVerified !== true) {
-          await syncStateRef.set(
-            {
-              uid,
-              email: normalizedEmail,
-              status: "skipped",
-              reason: "email_not_verified",
-              message: "Verify your Google account email before syncing partner impact logs.",
-              lastAttemptAt: nowIso,
-              updatedAt: admin.firestore.FieldValue.serverTimestamp(),
-            },
-            { merge: true }
-          );
-
-          return {
-            status: "skipped",
-            message: "Verify your Google account email before syncing partner impact logs.",
-            fetchedCount: 0,
-            importedCount: 0,
-            updatedCount: 0,
-            skippedCount: 0,
-            lastSyncedAt: nowIso,
-          };
-        }
-
-        const hasGoogleProvider = authUser.providerData.some((provider) => provider.providerId === "google.com");
-        if (!hasGoogleProvider) {
-          await syncStateRef.set(
-            {
-              uid,
-              email: normalizedEmail,
-              status: "skipped",
-              reason: "google_provider_required",
-              message: "Link a Google account to enable secure email-based partner-impact sync.",
-              lastAttemptAt: nowIso,
-              updatedAt: admin.firestore.FieldValue.serverTimestamp(),
-            },
-            { merge: true }
-          );
-
-          return {
-            status: "skipped",
-            message: "Link a Google account to enable secure email-based partner-impact sync.",
-            fetchedCount: 0,
-            importedCount: 0,
-            updatedCount: 0,
-            skippedCount: 0,
-            lastSyncedAt: nowIso,
-          };
-        }
-
-        const stateData = syncStateSnap.exists ? toRecord(syncStateSnap.data()) : null;
-        const since = !forceFullRefresh
-          ? getString(stateData ?? {}, ["lastSuccessfulPullAt"])
-          : null;
-
-        const [firstName = "", ...restNameParts] = (authUser.displayName ?? "").trim().split(/\s+/);
-        const lastName = restNameParts.join(" ").trim();
-
-        const requestPayload: JsonRecord = {
-          email: normalizedEmail,
-          firstName,
-          lastName,
-          firebaseUid: uid,
-          includeHistorical: true,
-          ...(since ? { since } : {}),
-        };
-
-        const config = resolvePartnerApiConfig();
-        const partnerEntries = await fetchPartnerEntries(config, requestPayload);
-
-        const normalizedEntries = partnerEntries
-          .map((entry) => normalizePartnerEntry(entry, normalizedEmail))
-          .filter((entry): entry is NormalizedPartnerImpactEntry => Boolean(entry));
-
-        const dedupedEntries = new Map<string, NormalizedPartnerImpactEntry>();
-        for (const entry of normalizedEntries) {
-          dedupedEntries.set(entry.sourceRecordId, entry);
-        }
-
-        const docsToWrite = Array.from(dedupedEntries.values()).map((entry) => {
-          const docId = `t4l_partner_${uid}_${entry.sourceRecordId}`;
-          return {
-            docId,
-            payload: {
-              userId: uid,
-              title: entry.title,
-              description: entry.description,
-              categoryGroup: entry.categoryGroup,
-              ...(entry.esgCategory ? { esgCategory: entry.esgCategory } : {}),
-              ...(entry.activityType ? { activityType: entry.activityType } : {}),
-              ...(entry.businessCategory ? { businessCategory: entry.businessCategory } : {}),
-              ...(entry.businessActivity ? { businessActivity: entry.businessActivity } : {}),
-              ...(entry.liftPillars ? { liftPillars: entry.liftPillars } : {}),
-              date: entry.date,
-              hours: entry.hours,
-              peopleImpacted: entry.peopleImpacted,
-              usdValue: entry.usdValue,
-              verificationLevel: entry.verificationLevel,
-              ...(entry.verifierEmail ? { verifierEmail: entry.verifierEmail } : {}),
-              ...(entry.evidenceLink ? { evidenceLink: entry.evidenceLink } : {}),
-              points: 0,
-              impactValue: entry.impactValue,
-              scp: entry.scp,
-              verificationMultiplier: 1,
-              createdAt: entry.createdAt,
-              sourcePlatform: "t4l_partner",
-              sourceRecordId: entry.sourceRecordId,
-              sourceEmail: normalizedEmail,
-              sourceSyncedAt: nowIso,
-              readOnly: true,
-            },
-          };
-        });
-
-        let insertedCount = 0;
-        let updatedCount = 0;
-
-        for (let i = 0; i < docsToWrite.length; i += 200) {
-          const chunk = docsToWrite.slice(i, i + 200);
-          const refs = chunk.map((entry) => db.collection(IMPACT_LOG_COLLECTION).doc(entry.docId));
-          const snapshots = await db.getAll(...refs);
-          for (let index = 0; index < snapshots.length; index++) {
-            if (snapshots[index].exists) updatedCount += 1;
-            else insertedCount += 1;
-          }
-        }
-
-        for (let i = 0; i < docsToWrite.length; i += 400) {
-          const chunk = docsToWrite.slice(i, i + 400);
-          const batch = db.batch();
-          for (const entry of chunk) {
-            const ref = db.collection(IMPACT_LOG_COLLECTION).doc(entry.docId);
-            batch.set(ref, entry.payload, { merge: true });
-          }
-          await batch.commit();
-        }
-
-        const skippedCount = Math.max(0, partnerEntries.length - normalizedEntries.length);
-
-        await syncStateRef.set(
-          {
-            uid,
-            email: normalizedEmail,
-            status: "success",
-            message: `Synced ${docsToWrite.length} partner impact entr${docsToWrite.length === 1 ? "y" : "ies"}.`,
-            fetchedCount: partnerEntries.length,
-            importedCount: insertedCount,
-            updatedCount,
-            skippedCount,
-            lastAttemptAt: nowIso,
-            lastSuccessfulPullAt: nowIso,
-            updatedAt: admin.firestore.FieldValue.serverTimestamp(),
-          },
-          { merge: true }
-        );
-
-        return {
-          status: "success",
-          message: `Synced ${docsToWrite.length} partner impact entr${docsToWrite.length === 1 ? "y" : "ies"}.`,
-          fetchedCount: partnerEntries.length,
-          importedCount: insertedCount,
-          updatedCount,
-          skippedCount,
-          lastSyncedAt: nowIso,
-        };
-      } catch (error) {
-        const message = error instanceof Error ? error.message : "Partner impact sync failed.";
-        await syncStateRef.set(
-          {
-            uid,
-            status: "error",
-            message,
-            lastAttemptAt: nowIso,
-            updatedAt: admin.firestore.FieldValue.serverTimestamp(),
-          },
-          { merge: true }
-        );
-
-        if (error instanceof functions.https.HttpsError) {
-          throw error;
-        }
-
-        throw new functions.https.HttpsError("internal", "Partner impact sync failed.");
-      }
+async function syncPartnerImpactLogsForUid(uid: string, forceFullRefresh: boolean, actor: SyncActor): Promise<SyncPartnerImpactLogsResponse> {
+  const nowIso = new Date().toISOString();
+  const stateRef = db.collection(SYNC_STATE_COLLECTION).doc(uid);
+  try {
+    const [authUser, stateSnap] = await Promise.all([admin.auth().getUser(uid), stateRef.get()]);
+    const email = normalizeEmail(authUser.email);
+    if (!email) return buildSkipped("No verified email is available for partner-impact linking.", nowIso);
+    if (!authUser.emailVerified) return buildSkipped("Verify your Google account email before syncing partner impact logs.", nowIso);
+    if (!authUser.providerData.some((p) => p.providerId === "google.com")) {
+      return buildSkipped("Link a Google account to enable secure email-based partner-impact sync.", nowIso);
     }
-  );
+
+    const state = stateSnap.exists ? (toRecord(stateSnap.data()) ?? {}) : {};
+    const since = !forceFullRefresh ? getString(state, ["lastSuccessfulPullAt"]) : null;
+    const rows = await fetchPartnerRows({ email, firebaseUid: uid, includeHistorical: true, ...(since ? { since } : {}) });
+    const normalized = rows.map((r) => normalizePartnerRow(r, email)).filter((r): r is NonNullable<typeof r> => Boolean(r));
+    const deduped = new Map(normalized.map((r) => [r.sourceRecordId, r]));
+
+    let inserted = 0;
+    let updated = 0;
+    const docs = Array.from(deduped.values());
+    for (const entry of docs) {
+      const docId = `t4l_partner_${uid}_${entry.sourceRecordId}`;
+      const ref = db.collection(IMPACT_LOG_COLLECTION).doc(docId);
+      const existing = await ref.get();
+      if (existing.exists) updated += 1;
+      else inserted += 1;
+      await ref.set(
+        {
+          userId: uid,
+          ...entry,
+          points: 0,
+          verificationMultiplier: 1,
+          sourcePlatform: "t4l_partner",
+          sourceEmail: email,
+          sourceSyncedAt: nowIso,
+          readOnly: true,
+        },
+        { merge: true }
+      );
+    }
+
+    const response: SyncPartnerImpactLogsResponse = {
+      status: "success",
+      message: `Synced ${docs.length} partner impact entr${docs.length === 1 ? "y" : "ies"}.`,
+      fetchedCount: rows.length,
+      importedCount: inserted,
+      updatedCount: updated,
+      skippedCount: Math.max(0, rows.length - normalized.length),
+      lastSyncedAt: nowIso,
+    };
+    await stateRef.set(
+      { uid, email, actor, ...response, lastAttemptAt: nowIso, lastSuccessfulPullAt: nowIso, updatedAt: admin.firestore.FieldValue.serverTimestamp() },
+      { merge: true }
+    );
+    return response;
+  } catch (err) {
+    const message = err instanceof Error ? err.message : "Partner impact sync failed.";
+    await stateRef.set({ uid, actor, status: "error", message, lastAttemptAt: nowIso, updatedAt: admin.firestore.FieldValue.serverTimestamp() }, { merge: true });
+    if (err instanceof functions.https.HttpsError) throw err;
+    throw new functions.https.HttpsError("internal", "Partner impact sync failed.");
+  }
+}
+
+async function runCronSync(batchSize: number) {
+  const startedAt = new Date().toISOString();
+  const snap = await db.collection(SYNC_STATE_COLLECTION).orderBy("lastAttemptAt", "asc").limit(batchSize).get();
+  let successfulUsers = 0;
+  let skippedUsers = 0;
+  let failedUsers = 0;
+  for (const doc of snap.docs) {
+    try {
+      const result = await syncPartnerImpactLogsForUid(doc.id, false, "cron");
+      if (result.status === "success") successfulUsers += 1;
+      else skippedUsers += 1;
+    } catch {
+      failedUsers += 1;
+    }
+  }
+  return { status: "success", message: `Processed ${snap.size} candidates.`, processedUsers: snap.size, successfulUsers, skippedUsers, failedUsers, startedAt, completedAt: new Date().toISOString() };
+}
+
+export const syncPartnerImpactLogs = functions.region("us-central1").https.onCall(async (data: SyncPartnerImpactLogsRequest | undefined, context) => {
+  if (!context.auth?.uid) throw new functions.https.HttpsError("unauthenticated", "User must be authenticated.");
+  return syncPartnerImpactLogsForUid(context.auth.uid, Boolean(data?.forceFullRefresh), "callable");
+});
+
+export const partnerImpactBridgeApi = functions.region("us-central1").https.onRequest(async (req, res) => {
+  let bridge;
+  try {
+    bridge = resolveBridgeConfig();
+  } catch (err) {
+    res.status(500).json({ ok: false, error: err instanceof Error ? err.message : "Bridge config missing." });
+    return;
+  }
+  const cors = applyCors(req, res);
+  if (cors.done) return;
+  if (req.method !== "POST") { res.status(405).json({ ok: false, error: "Method not allowed." }); return; }
+  const auth = (req.get("authorization") ?? "").trim().replace(/^Bearer\s+/i, "");
+  if (!auth || auth !== bridge.sharedToken) { res.status(401).json({ ok: false, error: "Unauthorized." }); return; }
+
+  const payload = toRecord(req.body);
+  if (!payload) { res.status(400).json({ ok: false, error: "Invalid request body." }); return; }
+  const action = getString(payload, ["action"]);
+  try {
+    if (action === "sync_user") {
+      const uid = getString(payload, ["uid", "userId"]);
+      if (!uid) { res.status(400).json({ ok: false, error: "sync_user requires uid." }); return; }
+      const result = await syncPartnerImpactLogsForUid(uid, getBool(payload, "forceFullRefresh", false), "http");
+      res.status(200).json({ ok: true, action, result }); return;
+    }
+    if (action === "sync_by_email") {
+      const email = normalizeEmail(payload.email);
+      if (!email) { res.status(400).json({ ok: false, error: "sync_by_email requires email." }); return; }
+      const user = await admin.auth().getUserByEmail(email);
+      const result = await syncPartnerImpactLogsForUid(user.uid, getBool(payload, "forceFullRefresh", false), "http");
+      res.status(200).json({ ok: true, action, uid: user.uid, result }); return;
+    }
+    if (action === "export_user_logs" || action === "export_by_email") {
+      const uid =
+        action === "export_user_logs"
+          ? getString(payload, ["uid", "userId"])
+          : (await admin.auth().getUserByEmail(normalizeEmail(payload.email) ?? "")).uid;
+      if (!uid) { res.status(400).json({ ok: false, error: "Missing uid/email." }); return; }
+      const limit = Math.min(Math.max(Math.floor(getNumber(payload, ["limit"], bridge.maxExportRows)), 1), bridge.maxExportRows);
+      const since = parseDate(payload.since);
+      const snap = await db.collection(IMPACT_LOG_COLLECTION).where("userId", "==", uid).orderBy("createdAt", "desc").limit(limit).get();
+      const logs = snap.docs
+        .map((d) => ({ id: d.id, ...(d.data() as JsonRecord) }))
+        .filter((log: { id: string; [key: string]: unknown }) => {
+          if (!since) return true;
+          const createdAt = parseDate(log.createdAt);
+          const entryDate = parseDate(log.date);
+          return (createdAt ?? entryDate)?.getTime() ?? 0 >= since.getTime();
+        });
+      res.status(200).json({ ok: true, action, result: { uid, count: logs.length, logs } }); return;
+    }
+    if (action === "sync_candidates") {
+      const batchSize = Math.min(Math.max(Math.floor(getNumber(payload, ["batchSize"], resolvePartnerConfig().cronBatchSize)), 1), 200);
+      const summary = await runCronSync(batchSize);
+      res.status(200).json({ ok: true, action, summary }); return;
+    }
+    if (action === "health") { res.status(200).json({ ok: true, status: "ready", origins: Array.from(ALLOWED_ORIGINS) }); return; }
+    res.status(400).json({ ok: false, error: "Unsupported action." });
+  } catch (err) {
+    if (err instanceof functions.https.HttpsError) { res.status(500).json({ ok: false, error: err.message, code: err.code }); return; }
+    res.status(500).json({ ok: false, error: err instanceof Error ? err.message : "Bridge request failed." });
+  }
+});
+
+export const syncPartnerImpactLogsCron = functions
+  .region("us-central1")
+  .pubsub.schedule("every 30 minutes")
+  .timeZone("UTC")
+  .onRun(async () => {
+    const summary = await runCronSync(resolvePartnerConfig().cronBatchSize);
+    functions.logger.info("[partner-impact] cron summary", summary);
+    return summary;
+  });
