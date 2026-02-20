@@ -1075,7 +1075,15 @@ export const ImpactLogPage: React.FC = () => {
             </HStack>
           </Flex>
 
-          <TableContainer bg="surface.default" border="1px solid" borderColor="border.subtle" rounded="lg" shadow="xs">
+          <TableContainer
+            bg="surface.default"
+            border="1px solid"
+            borderColor="border.subtle"
+            rounded="lg"
+            shadow="xs"
+            overflowX="auto"
+            overflowY="visible"
+          >
             <Table size="sm" sx={{ tableLayout: 'fixed', width: '100%' }}>
               <colgroup>
                 {activeTab === 'personal' ? (
@@ -1144,6 +1152,8 @@ export const ImpactLogPage: React.FC = () => {
                             hasArrow
                             placement="top-start"
                             maxW="360px"
+                            portalProps={{ appendToParentPortal: false }}
+                            zIndex="tooltip"
                           >
                             <Text
                               fontWeight="semibold"
@@ -1166,6 +1176,8 @@ export const ImpactLogPage: React.FC = () => {
                               hasArrow
                               placement="top-start"
                               maxW="360px"
+                              portalProps={{ appendToParentPortal: false }}
+                              zIndex="tooltip"
                             >
                               <Text
                                 color="text.muted"
