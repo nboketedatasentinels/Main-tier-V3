@@ -1145,13 +1145,15 @@ export const ImpactLogPage: React.FC = () => {
                         <Box maxW="100%" minW={0}>
                           <Tooltip
                             label={
-                              <Text whiteSpace="normal" wordBreak="break-word" overflowWrap="anywhere">
+                              <Text color="white" whiteSpace="normal" wordBreak="break-word" overflowWrap="anywhere">
                                 {entry.title}
                               </Text>
                             }
                             hasArrow
                             placement="top-start"
                             maxW="360px"
+                            bg="gray.800"
+                            color="white"
                             portalProps={{ appendToParentPortal: false }}
                             zIndex="tooltip"
                           >
@@ -1169,13 +1171,15 @@ export const ImpactLogPage: React.FC = () => {
                           {entry.description && (
                             <Tooltip
                               label={
-                                <Text whiteSpace="normal" wordBreak="break-word" overflowWrap="anywhere">
+                                <Text color="white" whiteSpace="normal" wordBreak="break-word" overflowWrap="anywhere">
                                   {entry.description}
                                 </Text>
                               }
                               hasArrow
                               placement="top-start"
                               maxW="360px"
+                              bg="gray.800"
+                              color="white"
                               portalProps={{ appendToParentPortal: false }}
                               zIndex="tooltip"
                             >
@@ -1205,6 +1209,8 @@ export const ImpactLogPage: React.FC = () => {
                           label={isPartnerSyncedEntry(entry) ? 'T4L Partner' : 'Transformation Tier'}
                           hasArrow
                           placement="top-start"
+                          bg="gray.800"
+                          color="white"
                         >
                           <Badge colorScheme={isPartnerSyncedEntry(entry) ? 'blue' : 'purple'}>
                             {isPartnerSyncedEntry(entry) ? 'T4L' : 'TT'}
@@ -1217,6 +1223,8 @@ export const ImpactLogPage: React.FC = () => {
                           hasArrow
                           placement="top-start"
                           maxW="240px"
+                          bg="gray.800"
+                          color="white"
                         >
                           <Badge colorScheme={entry.categoryGroup === 'esg' ? 'green' : 'blue'}>
                             {entry.categoryGroup === 'esg' ? 'ESG' : 'BUS'}
