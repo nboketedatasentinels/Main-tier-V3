@@ -1112,15 +1112,24 @@ export const ImpactLogPage: React.FC = () => {
                     <Tr key={entry.id} _hover={{ bg: 'surface.subtle' }}>
                       <Td>{format(new Date(entry.date), 'dd MMM yyyy')}</Td>
                       <Td>
-                        <Text fontWeight="semibold">{entry.title}</Text>
-                        <Text color="text.muted" fontSize="sm" noOfLines={1}>
-                          {entry.description}
-                        </Text>
-                        {entry.outcomeLabel && (
-                          <Text color="purple.600" fontSize="xs" fontWeight="medium" mt={1}>
-                            Outcome: {entry.outcomeLabel}
+                        <Box
+                          maxW={{ base: '220px', md: '360px', lg: '520px' }}
+                          whiteSpace="normal"
+                          wordBreak="break-word"
+                          overflowWrap="anywhere"
+                        >
+                          <Text fontWeight="semibold" whiteSpace="normal" wordBreak="break-word" overflowWrap="anywhere">
+                            {entry.title}
                           </Text>
-                        )}
+                          <Text color="text.muted" fontSize="sm" whiteSpace="normal" wordBreak="break-word" overflowWrap="anywhere">
+                            {entry.description}
+                          </Text>
+                          {entry.outcomeLabel && (
+                            <Text color="purple.600" fontSize="xs" fontWeight="medium" mt={1}>
+                              Outcome: {entry.outcomeLabel}
+                            </Text>
+                          )}
+                        </Box>
                       </Td>
                       <Td>
                         <Badge colorScheme={isPartnerSyncedEntry(entry) ? 'blue' : 'purple'}>
