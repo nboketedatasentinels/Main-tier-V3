@@ -1079,10 +1079,38 @@ export const ImpactLogPage: React.FC = () => {
           </Flex>
 
           <TableContainer bg="surface.default" border="1px solid" borderColor="border.subtle" rounded="lg" shadow="xs">
-            <Table size="sm">
+            <Table size="sm" sx={{ tableLayout: 'fixed', width: '100%' }}>
+              <colgroup>
+                {activeTab === 'personal' ? (
+                  <>
+                    <col style={{ width: '11%' }} />
+                    <col style={{ width: '32%' }} />
+                    <col style={{ width: '12%' }} />
+                    <col style={{ width: '10%' }} />
+                    <col style={{ width: '6%' }} />
+                    <col style={{ width: '6%' }} />
+                    <col style={{ width: '7%' }} />
+                    <col style={{ width: '6%' }} />
+                    <col style={{ width: '8%' }} />
+                    <col style={{ width: '2%' }} />
+                  </>
+                ) : (
+                  <>
+                    <col style={{ width: '11%' }} />
+                    <col style={{ width: '34%' }} />
+                    <col style={{ width: '13%' }} />
+                    <col style={{ width: '11%' }} />
+                    <col style={{ width: '7%' }} />
+                    <col style={{ width: '7%' }} />
+                    <col style={{ width: '7%' }} />
+                    <col style={{ width: '6%' }} />
+                    <col style={{ width: '4%' }} />
+                  </>
+                )}
+              </colgroup>
               <Thead bg="surface.subtle">
                 <Tr>
-                  <Th>Date</Th>
+                  <Th whiteSpace="nowrap">Date</Th>
                   <Th>Title</Th>
                   <Th>Source</Th>
                   <Th>Category</Th>
@@ -1112,18 +1140,45 @@ export const ImpactLogPage: React.FC = () => {
                     <Tr key={entry.id} _hover={{ bg: 'surface.subtle' }}>
                       <Td>{format(new Date(entry.date), 'dd MMM yyyy')}</Td>
                       <Td>
-                        <Box
-                          maxW={{ base: '220px', md: '360px', lg: '520px' }}
-                          whiteSpace="normal"
-                          wordBreak="break-word"
-                          overflowWrap="anywhere"
-                        >
-                          <Text fontWeight="semibold" whiteSpace="normal" wordBreak="break-word" overflowWrap="anywhere">
-                            {entry.title}
-                          </Text>
-                          <Text color="text.muted" fontSize="sm" whiteSpace="normal" wordBreak="break-word" overflowWrap="anywhere">
-                            {entry.description}
-                          </Text>
+                        <Box maxW="100%" minW={0}>
+                          <Tooltip
+                            label={
+                              <Text whiteSpace="normal" wordBreak="break-word" overflowWrap="anywhere">
+                                {entry.title}
+                              </Text>
+                            }
+                            hasArrow
+                            placement="top-start"
+                            maxW="360px"
+                            shouldWrapChildren
+                          >
+                            <Text fontWeight="semibold" noOfLines={1} wordBreak="break-word" overflowWrap="anywhere">
+                              {entry.title}
+                            </Text>
+                          </Tooltip>
+                          {entry.description && (
+                            <Tooltip
+                              label={
+                                <Text whiteSpace="normal" wordBreak="break-word" overflowWrap="anywhere">
+                                  {entry.description}
+                                </Text>
+                              }
+                              hasArrow
+                              placement="top-start"
+                              maxW="360px"
+                              shouldWrapChildren
+                            >
+                              <Text
+                                color="text.muted"
+                                fontSize="sm"
+                                noOfLines={2}
+                                wordBreak="break-word"
+                                overflowWrap="anywhere"
+                              >
+                                {entry.description}
+                              </Text>
+                            </Tooltip>
+                          )}
                           {entry.outcomeLabel && (
                             <Text color="purple.600" fontSize="xs" fontWeight="medium" mt={1}>
                               Outcome: {entry.outcomeLabel}
