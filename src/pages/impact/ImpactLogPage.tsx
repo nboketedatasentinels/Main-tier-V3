@@ -1150,9 +1150,15 @@ export const ImpactLogPage: React.FC = () => {
                             hasArrow
                             placement="top-start"
                             maxW="360px"
-                            shouldWrapChildren
                           >
-                            <Text fontWeight="semibold" noOfLines={1} wordBreak="break-word" overflowWrap="anywhere">
+                            <Text
+                              fontWeight="semibold"
+                              display="block"
+                              noOfLines={1}
+                              wordBreak="break-word"
+                              overflowWrap="anywhere"
+                              lineHeight="1.4"
+                            >
                               {entry.title}
                             </Text>
                           </Tooltip>
@@ -1166,14 +1172,16 @@ export const ImpactLogPage: React.FC = () => {
                               hasArrow
                               placement="top-start"
                               maxW="360px"
-                              shouldWrapChildren
                             >
                               <Text
                                 color="text.muted"
                                 fontSize="sm"
+                                display="block"
                                 noOfLines={2}
                                 wordBreak="break-word"
                                 overflowWrap="anywhere"
+                                lineHeight="1.4"
+                                mt={1}
                               >
                                 {entry.description}
                               </Text>
