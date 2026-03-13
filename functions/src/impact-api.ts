@@ -6,6 +6,36 @@ import { applyCors } from "./cors";
 const db = admin.firestore();
 const LOGS = "impact_logs";
 const EVENTS = "impact_events";
+
+const AMBASSADORS_API_URL = (process.env.T4L_AMBASSADORS_API_URL || "").trim();
+const CROSS_PLATFORM_API_KEY = (process.env.T4L_CROSS_PLATFORM_API_KEY || "").trim();
+
+async function notifyAmbassadorsPlatform(firebaseUid: string, action: string): Promise<void> {
+  if (!AMBASSADORS_API_URL || !CROSS_PLATFORM_API_KEY) return;
+  try {
+    const email = (await admin.auth().getUser(firebaseUid)).email || "";
+    const profileSnap = await db.collection("profiles").doc(firebaseUid).get();
+    const phone = profileSnap.data()?.phoneNumber || "";
+
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 8000);
+    await fetch(`${AMBASSADORS_API_URL}/api/sync/webhook/tier-update`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        api_key: CROSS_PLATFORM_API_KEY,
+        firebase_uid: firebaseUid,
+        email,
+        phone_number: phone,
+        action,
+      }),
+      signal: controller.signal,
+    });
+    clearTimeout(timeout);
+  } catch (err) {
+    console.warn("⚠️ Ambassadors sync webhook failed (non-blocking):", err instanceof Error ? err.message : err);
+  }
+}
 const ADMIN_ROLES = new Set(["super_admin", "admin", "partner"]);
 const EVENT_CREATOR_ROLES = new Set(["ambassador", "partner", "admin", "super_admin"]);
 const MULTIPLIERS: Record<string, number> = {
@@ -170,6 +200,10 @@ async function createEvent(ctx: { uid: string; role: string }, body: Obj): Promi
   });
   batch.set(eventRef.collection("participants").doc(`uid_${ctx.uid}`), { uid: ctx.uid, isAnonymous: false, source: "creator", createdAt: now }, { merge: true });
   await batch.commit();
+
+  // Notify Ambassadors platform (non-blocking)
+  notifyAmbassadorsPlatform(ctx.uid, "event_created").catch(() => {});
+
   return { eventId: eventRef.id, masterEntryId: masterRef.id };
 }
 
@@ -274,6 +308,12 @@ async function closeEvent(ctx: { uid: string; role: string }, id: string): Promi
   }
   batch.set(eventRef, { status: "closed", closedAt: now, closedBy: ctx.uid, participantCount: uidSet.size, updatedAt: now }, { merge: true });
   await batch.commit();
+
+  // Notify Ambassadors for each participant (non-blocking)
+  for (const uid of uidSet) {
+    notifyAmbassadorsPlatform(uid, "event_closed").catch(() => {});
+  }
+
   return { ok: true, eventId: id, participantCount: uidSet.size };
 }
 
@@ -412,6 +452,10 @@ async function createEntry(ctx: { uid: string; role: string }, body: Obj): Promi
     readOnly: false,
   };
   const ref = await db.collection(LOGS).add(payload);
+
+  // Notify Ambassadors platform (non-blocking)
+  notifyAmbassadorsPlatform(ctx.uid, "entry_created").catch(() => {});
+
   return { entry: { id: ref.id, ...payload } };
 }
 

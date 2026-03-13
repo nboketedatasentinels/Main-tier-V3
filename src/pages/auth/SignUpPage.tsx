@@ -1,10 +1,11 @@
 import React, { useEffect, useMemo, useState } from "react"
 import { Link as RouterLink, useNavigate, useSearchParams } from "react-router-dom"
 import { motion } from "framer-motion"
-import { Eye, EyeOff, ArrowRight, User, Mail, Lock, Building2, CheckCircle, XCircle } from "lucide-react"
+import { Eye, EyeOff, ArrowRight, User, Mail, Lock, Building2, CheckCircle, XCircle, Phone } from "lucide-react"
 import { Spinner, useToast } from "@chakra-ui/react"
 import { useAuth } from "@/hooks/useAuth"
 import { getFriendlyErrorMessage } from "@/utils/authErrors"
+import { normalizePhoneNumber, isValidPhoneNumber } from "@/utils/phoneNumber"
 import { validateCompanyCode } from "@/services/organizationService"
 import { auth } from "@/services/firebase"
 import { validateReferralCode } from "@/services/referralService"
@@ -19,6 +20,7 @@ interface FormData {
   fullName: string
   gender: GenderOption
   email: string
+  phoneNumber: string
   password: string
   confirmPassword: string
   companyCode: string
@@ -35,6 +37,7 @@ export const SignUpPage: React.FC = () => {
     fullName: "",
     gender: "prefer_not_to_say",
     email: "",
+    phoneNumber: "",
     password: "",
     confirmPassword: "",
     companyCode: "",
@@ -174,6 +177,11 @@ export const SignUpPage: React.FC = () => {
 
     if (!email) return "Email is required."
     if (!emailRegex.test(email)) return "Please enter a valid email address."
+
+    const normalizedPhone = normalizePhoneNumber(formData.phoneNumber)
+    if (!normalizedPhone) return "Phone number is required."
+    if (!isValidPhoneNumber(normalizedPhone)) return "Please enter a valid phone number (e.g. +27 81 234 5678)."
+
     if (formData.password.length < 8) return "Password must be at least 8 characters."
     if (formData.password !== formData.confirmPassword) return "Passwords do not match."
 
@@ -242,6 +250,7 @@ export const SignUpPage: React.FC = () => {
           firstName: firstName || "User",
           lastName,
           fullName: formData.fullName.trim(),
+          phoneNumber: formData.phoneNumber.trim(),
           gender: formData.gender !== "prefer_not_to_say" ? formData.gender : undefined,
           companyCode:
             formData.companyCode.trim() ? formData.companyCode.trim() : undefined,
@@ -441,6 +450,22 @@ export const SignUpPage: React.FC = () => {
               onChange={e => handleChange("email", e.target.value.toLowerCase())}
               placeholder="your@email.com"
               autoComplete="email"
+              className="h-10 w-full rounded-md border border-border-control bg-surface-subtle pl-9 pr-3 text-sm text-text-primary placeholder:text-text-muted focus:outline-none focus:ring-2 focus:ring-brand-primary"
+              required
+            />
+          </div>
+        </div>
+
+        <div>
+          <label className="mb-1 block text-sm font-medium text-text-secondary">Phone Number</label>
+          <div className="relative">
+            <Phone className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-text-muted" />
+            <input
+              type="tel"
+              value={formData.phoneNumber}
+              onChange={e => handleChange("phoneNumber", e.target.value)}
+              placeholder="+27 81 234 5678"
+              autoComplete="tel"
               className="h-10 w-full rounded-md border border-border-control bg-surface-subtle pl-9 pr-3 text-sm text-text-primary placeholder:text-text-muted focus:outline-none focus:ring-2 focus:ring-brand-primary"
               required
             />

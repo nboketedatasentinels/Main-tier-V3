@@ -25,6 +25,7 @@ import { AccountLinkingModal } from '@/components/auth/AccountLinkingModal'
 import { getLandingPathForRole } from '@/utils/roleRouting'
 import { getFriendlyErrorMessage } from '@/utils/authErrors'
 import { GoogleIcon } from '@/components/icons/GoogleIcon'
+import { PhoneNumberPromptModal } from '@/components/modals/PhoneNumberPromptModal'
 
 export const LoginPage: React.FC = () => {
   const {
@@ -58,6 +59,7 @@ export const LoginPage: React.FC = () => {
   const [showPasswordChangeModal, setShowPasswordChangeModal] = useState(false)
   const [profileTimeoutReached, setProfileTimeoutReached] = useState(false)
   const [refreshingProfile, setRefreshingProfile] = useState(false)
+  const [showPhonePrompt, setShowPhonePrompt] = useState(false)
 
   useEffect(() => {
     const refCode = searchParams.get('ref')?.trim()
@@ -87,7 +89,11 @@ export const LoginPage: React.FC = () => {
     if (profileLoading) return
     if (!user || !profile) return
 
-    // ✅ Correct call signature: (profile, searchParams)
+    if (!profile.phoneNumber) {
+      setShowPhonePrompt(true)
+      return
+    }
+
     if (effectiveRoleSource === 'fallback') {
       navigate('/auth/profile-missing', { replace: true })
       return
@@ -465,6 +471,15 @@ export const LoginPage: React.FC = () => {
         onClose={dismissAccountLinking}
         email={pendingLinkEmail || ''}
         onLinkAccount={linkGoogleAccount}
+      />
+
+      <PhoneNumberPromptModal
+        isOpen={showPhonePrompt}
+        onComplete={() => {
+          setShowPhonePrompt(false)
+          // After successfully saving phone, send the user to the welcome page
+          navigate('/welcome', { replace: true })
+        }}
       />
     </>
   )

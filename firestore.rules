@@ -290,11 +290,14 @@ service cloud.firestore {
       allow read: if isAuthenticated();
       allow create: if isAuthenticated() && (
         isSuperAdmin() ||
-        (isOwner(userId) && (!('role' in request.resource.data) || request.resource.data.role == 'user'))
+        (isOwner(userId) && (!('role' in request.resource.data) || request.resource.data.role in ['user', 'free_user', 'paid_member']))
       );
       allow update: if isAuthenticated() && (
         isSuperAdmin() ||
-        (isOwner(userId) && (!request.resource.data.diff(resource.data).affectedKeys().hasAny(['role']))) ||
+        (isOwner(userId) && (
+          !request.resource.data.diff(resource.data).affectedKeys().hasAny(['role']) ||
+          (resource.data.role in ['user', 'free_user', 'paid_member', null] && request.resource.data.role in ['user', 'free_user', 'paid_member'])
+        )) ||
         (isPartnerOrAdmin() && isPointsMirrorUpdate())
       );
       allow delete: if isSuperAdmin();
@@ -305,11 +308,14 @@ service cloud.firestore {
       allow read: if isAuthenticated();
       allow create: if isAuthenticated() && (
         isSuperAdmin() ||
-        (isOwner(userId) && (!('role' in request.resource.data) || request.resource.data.role == 'user'))
+        (isOwner(userId) && (!('role' in request.resource.data) || request.resource.data.role in ['user', 'free_user', 'paid_member']))
       );
       allow update: if isAuthenticated() && (
         isSuperAdmin() ||
-        (isOwner(userId) && (!request.resource.data.diff(resource.data).affectedKeys().hasAny(['role']))) ||
+        (isOwner(userId) && (
+          !request.resource.data.diff(resource.data).affectedKeys().hasAny(['role']) ||
+          (resource.data.role in ['user', 'free_user', 'paid_member', null] && request.resource.data.role in ['user', 'free_user', 'paid_member'])
+        )) ||
         (isPartnerOrAdmin() && isPointsMirrorUpdate())
       );
       allow delete: if isSuperAdmin();
@@ -432,6 +438,11 @@ service cloud.firestore {
         isPartnerOrAdmin()
       );
       allow delete: if isSuperAdmin();
+    }
+
+    // User journeys (points dashboard: journey type, window target, total points)
+    match /user_journeys/{userId} {
+      allow read, write: if isAuthenticated() && request.auth.uid == userId;
     }
 
     // Points transactions collection (for leaderboards)
@@ -1474,6 +1485,23 @@ service cloud.firestore {
     match /faqs/{faqId} {
       allow read: if isAuthenticated();
       allow create, update, delete: if isSuperAdmin();
+    }
+
+    // Phone registry – enforces phone-number uniqueness across platforms.
+    // Doc ID = normalized phone number, body = { uid, email, phone, claimedAt }.
+    match /phone_registry/{phoneId} {
+      // Any authenticated user can check whether a phone is taken.
+      allow read: if isAuthenticated();
+
+      // A user may create or update a record for *their own* phone number.
+      // - On first claim: resource == null → create allowed.
+      // - On re-save: resource.data.uid must already equal request.auth.uid.
+      allow create, update: if isAuthenticated()
+        && request.resource.data.uid == request.auth.uid
+        && (!exists(resource) || resource.data.uid == request.auth.uid);
+
+      // Only super-admins may delete (e.g. to reassign a number).
+      allow delete: if isSuperAdmin();
     }
 
     // Default: deny all other access

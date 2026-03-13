@@ -310,6 +310,48 @@ export const partnerImpactBridgeApi = functions.region("us-central1").https.onRe
       const summary = await runCronSync(batchSize);
       res.status(200).json({ ok: true, action, summary }); return;
     }
+    if (action === "import_entries") {
+      const uid = getString(payload, ["uid", "userId", "firebase_uid"]);
+      if (!uid) { res.status(400).json({ ok: false, error: "import_entries requires uid/firebase_uid." }); return; }
+      const entries = Array.isArray(payload.entries) ? payload.entries : [];
+      if (entries.length === 0) { res.status(400).json({ ok: false, error: "import_entries requires a non-empty entries array." }); return; }
+      let imported = 0;
+      let skipped = 0;
+      const nowIso = new Date().toISOString();
+      for (const raw of entries) {
+        const r = toRecord(raw);
+        if (!r) { skipped += 1; continue; }
+        const sourceId = getString(r, ["source_entry_id", "sourceEntryId", "id"]);
+        if (!sourceId) { skipped += 1; continue; }
+        const docId = `amb_${uid}_${sourceId}`;
+        const ref = db.collection(IMPACT_LOG_COLLECTION).doc(docId);
+        const existing = await ref.get();
+        if (existing.exists && existing.data()?.sourcePlatform === "t4l_ambassadors") { skipped += 1; continue; }
+        await ref.set({
+          userId: uid,
+          title: getString(r, ["title"]) || "Ambassador Impact Activity",
+          description: getString(r, ["description"]) || "",
+          categoryGroup: getString(r, ["category_group", "categoryGroup"]) || "esg",
+          esgCategory: getString(r, ["esg_category", "esgCategory"]) || undefined,
+          date: getString(r, ["date", "activity_date"]) || nowIso.slice(0, 10),
+          hours: getNumber(r, ["hours", "volunteer_hours"], 0),
+          peopleImpacted: getNumber(r, ["people_impacted", "peopleImpacted"], 0),
+          usdValue: getNumber(r, ["usd_value", "usdValue"], 0),
+          points: getNumber(r, ["points"], 0),
+          impactValue: getNumber(r, ["impact_value", "impactValue"], 0),
+          scp: getNumber(r, ["scp"], 0),
+          verificationLevel: getString(r, ["verification_level", "verificationLevel"]) || "Tier 1: Self-Reported",
+          sourcePlatform: "t4l_ambassadors",
+          sourceEntryId: sourceId,
+          sourceSyncedAt: nowIso,
+          createdAt: getString(r, ["created_at", "createdAt"]) || nowIso,
+          entryType: getString(r, ["entry_type", "entryType"]) || "individual",
+          readOnly: true,
+        }, { merge: true });
+        imported += 1;
+      }
+      res.status(200).json({ ok: true, action, result: { uid, imported, skipped, total: entries.length } }); return;
+    }
     if (action === "health") { res.status(200).json({ ok: true, status: "ready", origins: Array.from(ALLOWED_ORIGINS) }); return; }
     res.status(400).json({ ok: false, error: "Unsupported action." });
   } catch (err) {

@@ -21,3 +21,4 @@ export * from "./referral-points";
 export * from "./admin-actions";
 export * from "./partner-impact-sync";
 export * from "./impact-api";
+export * from "./impact-sync-trigger";

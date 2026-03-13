@@ -39,6 +39,7 @@ import {
 } from '@/services/courseAssignmentService'
 import { canAccessOrganization } from '@/services/organizationAccessService'
 import { createReferral, generateReferralCode, validateReferralCode } from '@/services/referralService'
+import { checkPhoneAvailability, claimPhoneNumber } from '@/services/phoneRegistryService'
 import { JOURNEY_META, type JourneyType } from '@/config/pointsConfig'
 import { resolveEffectiveOrganization, resolveEffectiveRole } from '@/utils/authz'
 
@@ -1226,6 +1227,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     password: string,
     userData: Partial<UserProfile> & {
       gender?: string
+      phoneNumber?: string
       companyCode?: string
       companyId?: string
       companyName?: string
@@ -1267,6 +1269,26 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       const credential = await createUserWithEmailAndPassword(auth, normalizedEmail, password)
       const firebaseUser = credential.user
       const uid = firebaseUser.uid
+
+      if (userData.phoneNumber) {
+        try {
+          const { available, ownerUid } = await checkPhoneAvailability(userData.phoneNumber)
+          if (!available && ownerUid !== uid) {
+            await deleteUser(firebaseUser).catch((cleanupError) => {
+              console.error('[Auth] Failed to cleanup auth user after phone uniqueness check', cleanupError)
+            })
+            setLoading(false)
+            setProfileLoading(false)
+            return {
+              error: new Error('This phone number is already registered. Please use a different number or log in with your existing account.'),
+              userId: undefined,
+            }
+          }
+        } catch (phoneCheckError) {
+          console.warn('🟠 [Auth] Phone uniqueness check failed, proceeding with signup', phoneCheckError)
+        }
+      }
+
       let validatedOrganization:
         | Awaited<ReturnType<typeof validateCompanyCode>>['organization']
         | null = null
@@ -1404,6 +1426,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         ...(validatedOrganization?.code ? { companyCode: validatedOrganization.code } : {}),
         ...(validatedOrganization?.name ? { companyName: validatedOrganization.name } : {}),
         ...(userData.gender ? { gender: userData.gender } : {}),
+        ...(userData.phoneNumber ? { phoneNumber: userData.phoneNumber } : {}),
       }
 
       try {
@@ -1430,6 +1453,14 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
           console.error('🔴 [Auth] Failed to cleanup auth user after profile error', cleanupError)
         })
         throw profileError
+      }
+
+      if (userData.phoneNumber) {
+        try {
+          await claimPhoneNumber(userData.phoneNumber, uid, normalizedEmail)
+        } catch (phoneClaimError) {
+          console.warn('🟠 [Auth] Unable to claim phone number in registry', phoneClaimError)
+        }
       }
 
       if (validatedOrganization?.id) {

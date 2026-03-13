@@ -27,10 +27,10 @@ const brandActionScale = {
 }
 
 const brandColors = {
-  // Growth.design-approved anchors
-  primary: '#350e6f',
-  dark: '#27062e',
-  indigo: '#350e6f',
+  // Primary action color (updated to match T4 purple swatch)
+  primary: '#3B0F7A',
+  dark: '#2D0B5B',
+  indigo: '#3B0F7A',
   // Legacy/compatibility aliases mapped to new semantic neutrals
   primaryMuted: '#ede9fe',
   canvas: '#f8fafc',

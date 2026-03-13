@@ -465,7 +465,7 @@ export const MainLayout: React.FC = () => {
                           <item.icon size={20} />
                         </Box>
                         <Text color="inherit">{item.label}</Text>
-                        {isRestrictedForFreeUser ? (
+                        {isRestrictedForFreeUser && item.label !== 'Leadership Council' ? (
                           <Badge colorScheme="yellow" variant="subtle">
                             Upgrade
                           </Badge>
@@ -513,14 +513,11 @@ export const MainLayout: React.FC = () => {
           <HStack spacing={3} align="center">
             <Box boxSize="36px" borderRadius="full" bg="white" display="grid" placeItems="center" boxShadow="sm">
               <Text fontWeight="bold" color="brand.primary">
-                T4
+                T4L
               </Text>
             </Box>
             <Box>
               <Text fontSize="sm" fontWeight="bold" color="brand.text">
-                Tier Platform
-              </Text>
-              <Text fontSize="xs" color="brand.subtleText">
                 Transformation Journey
               </Text>
             </Box>
