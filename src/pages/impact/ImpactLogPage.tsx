@@ -1645,7 +1645,7 @@ export const ImpactLogPage: React.FC = () => {
   const [isFetchingEvent, setIsFetchingEvent] = useState(false)
   const [pendingEvent, setPendingEvent] = useState<any | null>(null)
 
-  const impactApiBase = `${import.meta.env.VITE_APP_BASE_URL}/api/impact`
+  const impactApiBase = `${import.meta.env.VITE_IMPACT_API_BASE_URL || import.meta.env.VITE_APP_BASE_URL}/api/impact`
 
   const extractEventId = (data: string): string | null => {
     // Pattern: /event/{id} (Transformation Tier internal links)
