@@ -483,23 +483,39 @@ export const PartnerUserManagement: React.FC<PartnerUserManagementProps> = ({
     }
   }
 
+  const columnWidths: Record<string, string> = {
+    expand: '30px',
+    risk: '70px',
+    name: '180px',
+    company: '80px',
+    progress: '90px',
+    week: '60px',
+    status: '70px',
+    lastActive: '80px',
+    action: '90px',
+  }
+
   const renderTableHeader = () => (
     <Thead>
       <Tr>
-        <Th width="40px"></Th>
-        {['Risk', 'Name/Email', 'Company', 'Progress %', 'Current Week', 'Status', 'Last Active', 'Primary Action'].map((header, idx) => {
+        <Th width={columnWidths.expand} px={1}></Th>
+        {['Risk', 'Name/Email', 'Company', 'Progress', 'Week', 'Status', 'Active', 'Action'].map((header, idx) => {
           const sortMapping = ['risk', 'name', 'company', 'progress', 'week', 'status', 'lastActive', 'action']
           const key = sortMapping[idx] || 'name'
+          const widthKey = ['risk', 'name', 'company', 'progress', 'week', 'status', 'lastActive', 'action'][idx]
           return (
             <Th
               key={header}
               cursor="pointer"
               onClick={() => toggleSort(key)}
               whiteSpace="nowrap"
+              width={columnWidths[widthKey]}
+              px={2}
+              fontSize="xs"
             >
-              <HStack spacing={2}>
+              <HStack spacing={1}>
                 <Text>{header}</Text>
-                {sortKey === key && <Badge colorScheme="purple">{sortDir === 'asc' ? '▲' : '▼'}</Badge>}
+                {sortKey === key && <Badge size="sm" colorScheme="purple">{sortDir === 'asc' ? '▲' : '▼'}</Badge>}
               </HStack>
             </Th>
           )
@@ -516,28 +532,28 @@ export const PartnerUserManagement: React.FC<PartnerUserManagementProps> = ({
     return (
       <React.Fragment key={user.id}>
         <Tr _hover={{ bg: 'brand.accent' }} cursor="pointer" onClick={() => openUser(user)}>
-          <Td onClick={(e) => toggleRowExpansion(user.id, e)}>
-            {isExpanded ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
+          <Td px={1} onClick={(e) => toggleRowExpansion(user.id, e)}>
+            {isExpanded ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
           </Td>
-          <Td>
-            <Badge colorScheme={riskColor[user.riskStatus]} textTransform="capitalize">
-              {user.riskStatus === 'at_risk' ? 'At Risk' : user.riskStatus}
+          <Td px={2}>
+            <Badge size="sm" colorScheme={riskColor[user.riskStatus]} textTransform="capitalize" fontSize="xs">
+              {user.riskStatus === 'at_risk' ? 'Risk' : user.riskStatus}
             </Badge>
           </Td>
-          <Td>
+          <Td px={2} maxW="180px">
             <VStack align="flex-start" spacing={0}>
-              <Text fontWeight="semibold" color="brand.text">
+              <Text fontWeight="semibold" color="brand.text" fontSize="sm" noOfLines={1}>
                 {displayName}
               </Text>
-              <Text fontSize="sm" color="brand.subtleText">
+              <Text fontSize="xs" color="brand.subtleText" noOfLines={1}>
                 {user.email}
               </Text>
             </VStack>
           </Td>
-          <Td textTransform="capitalize">{user.companyCode || 'Unassigned'}</Td>
-          <Td>
-            <HStack spacing={2}>
-              <Box bg="brand.accent" borderRadius="full" h="8px" w="80px" position="relative">
+          <Td px={2} fontSize="sm" textTransform="capitalize">{user.companyCode || '—'}</Td>
+          <Td px={2}>
+            <HStack spacing={1}>
+              <Box bg="brand.accent" borderRadius="full" h="6px" w="50px" position="relative">
                 <Box
                   position="absolute"
                   left={0}
@@ -548,24 +564,22 @@ export const PartnerUserManagement: React.FC<PartnerUserManagementProps> = ({
                   width={`${user.progressPercent}%`}
                 />
               </Box>
-              <Text fontSize="sm">{user.progressPercent}%</Text>
+              <Text fontSize="xs">{user.progressPercent}%</Text>
             </HStack>
           </Td>
-          <Td>{user.currentWeek}</Td>
-          <Td>
-            <Badge colorScheme={user.status === 'Active' ? 'green' : 'yellow'}>{user.status}</Badge>
+          <Td px={2} fontSize="sm">{user.currentWeek}</Td>
+          <Td px={2}>
+            <Badge size="sm" fontSize="xs" colorScheme={user.status === 'Active' ? 'green' : 'yellow'}>{user.status}</Badge>
           </Td>
-          <Td>
-            <Text fontSize="sm">{lastActiveLabel}</Text>
+          <Td px={2}>
+            <Text fontSize="xs" noOfLines={1}>{lastActiveLabel}</Text>
           </Td>
-          <Td onClick={(e) => e.stopPropagation()}>
-            <HStack spacing={2}>
-              {user.riskStatus !== 'engaged' ? (
-                <Button size="xs" colorScheme="purple" onClick={() => void handleStartIntervention(user)}>Start intervention</Button>
-              ) : (
-                <Button size="xs" variant="outline" onClick={() => openUser(user)}>Schedule check-in</Button>
-              )}
-            </HStack>
+          <Td px={2} onClick={(e) => e.stopPropagation()}>
+            {user.riskStatus !== 'engaged' ? (
+              <Button size="xs" fontSize="xs" colorScheme="purple" onClick={() => void handleStartIntervention(user)}>Intervene</Button>
+            ) : (
+              <Button size="xs" fontSize="xs" variant="outline" onClick={() => openUser(user)}>Check-in</Button>
+            )}
           </Td>
         </Tr>
         {isExpanded && (
@@ -708,7 +722,8 @@ export const PartnerUserManagement: React.FC<PartnerUserManagementProps> = ({
 
       {activeTab === 'users' && (
         <Stack spacing={4}>
-          <Table size="md" variant="simple">
+          <Box overflowX="auto">
+          <Table size="sm" variant="simple" w="100%">
             {renderTableHeader()}
             <Tbody>
               {paginated.map(renderUserRow)}
@@ -740,6 +755,7 @@ export const PartnerUserManagement: React.FC<PartnerUserManagementProps> = ({
               )}
             </Tbody>
           </Table>
+          </Box>
 
           <Flex justify="space-between" align="center" wrap="wrap" gap={3}>
             <Text fontSize="sm" color="brand.subtleText">
@@ -761,33 +777,32 @@ export const PartnerUserManagement: React.FC<PartnerUserManagementProps> = ({
         <Stack spacing={4}>
           <Text fontWeight="semibold" color="brand.text">Active Alerts</Text>
           {selection.length > 0 && renderBulkToolbar()}
-          <Table size="md" variant="simple">
+          <Box overflowX="auto">
+          <Table size="sm" variant="simple" w="100%">
             <Thead>
               <Tr>
-                <Th>
+                <Th px={1} width="30px">
                   <Checkbox
-                    size="lg"
+                    size="md"
                     borderRadius="md"
                     onChange={e =>
                       setSelection(e.target.checked ? atRiskUsers.map(u => u.id) : [])
                     }
                   />
                 </Th>
-                <Th>Name/Email</Th>
-                <Th>Company</Th>
-                <Th>Progress %</Th>
-                <Th>Current Week</Th>
-                <Th>Status</Th>
-                <Th>Risk Reason</Th>
-                <Th>Last Active</Th>
-                <Th>Nudge status</Th>
-                <Th>Actions</Th>
+                <Th px={2} fontSize="xs">Name/Email</Th>
+                <Th px={2} fontSize="xs">Company</Th>
+                <Th px={2} fontSize="xs">Progress</Th>
+                <Th px={2} fontSize="xs">Week</Th>
+                <Th px={2} fontSize="xs">Status</Th>
+                <Th px={2} fontSize="xs">Active</Th>
+                <Th px={2} fontSize="xs">Actions</Th>
               </Tr>
             </Thead>
             <Tbody>
               {usersLoading && (
                 <Tr>
-                  <Td colSpan={10}>
+                  <Td colSpan={8}>
                     <HStack spacing={3} py={6} justify="center">
                       <Spinner size="sm" />
                       <Text color="brand.subtleText">
@@ -799,24 +814,24 @@ export const PartnerUserManagement: React.FC<PartnerUserManagementProps> = ({
               )}
               {atRiskUsers.map(user => (
                 <Tr key={user.id}>
-                  <Td>
+                  <Td px={1}>
                     <Checkbox
-                      size="lg"
+                      size="md"
                       borderRadius="md"
                       isChecked={selection.includes(user.id)}
                       onChange={() => toggleSelection(user.id)}
                     />
                   </Td>
-                  <Td>
+                  <Td px={2} maxW="180px">
                     <VStack align="flex-start" spacing={0}>
-                      <Text fontWeight="semibold" color="brand.text">{getDisplayName(user, 'Member')}</Text>
-                      <Text fontSize="sm" color="brand.subtleText">{user.email}</Text>
+                      <Text fontWeight="semibold" color="brand.text" fontSize="sm" noOfLines={1}>{getDisplayName(user, 'Member')}</Text>
+                      <Text fontSize="xs" color="brand.subtleText" noOfLines={1}>{user.email}</Text>
                     </VStack>
                   </Td>
-                  <Td textTransform="capitalize">{user.companyCode}</Td>
-                  <Td>
-                    <HStack spacing={2}>
-                      <Box bg="red.50" borderRadius="full" h="8px" w="80px" position="relative">
+                  <Td px={2} fontSize="sm" textTransform="capitalize">{user.companyCode || '—'}</Td>
+                  <Td px={2}>
+                    <HStack spacing={1}>
+                      <Box bg="red.50" borderRadius="full" h="6px" w="50px" position="relative">
                         <Box
                           position="absolute"
                           left={0}
@@ -827,34 +842,26 @@ export const PartnerUserManagement: React.FC<PartnerUserManagementProps> = ({
                           width={`${user.progressPercent}%`}
                         />
                       </Box>
-                      <Text fontSize="sm">{user.progressPercent}%</Text>
+                      <Text fontSize="xs">{user.progressPercent}%</Text>
                     </HStack>
                   </Td>
-                  <Td>{user.currentWeek}</Td>
-                  <Td>
-                    <Badge colorScheme="red">At Risk</Badge>
+                  <Td px={2} fontSize="sm">{user.currentWeek}</Td>
+                  <Td px={2}>
+                    <Badge size="sm" fontSize="xs" colorScheme="red">At Risk</Badge>
                   </Td>
-                  <Td>
-                    <Text fontSize="sm" color="brand.subtleText">
-                      {user.riskReasons?.[0] || 'Points deficit'}
-                    </Text>
+                  <Td px={2}>
+                    <Text fontSize="xs" noOfLines={1}>{formatLastActiveLabel(user.lastActive)}</Text>
                   </Td>
-                  <Td>
-                    <Text fontSize="sm">{formatLastActiveLabel(user.lastActive)}</Text>
-                  </Td>
-                  <Td>
-                    <Badge colorScheme="green">Ready</Badge>
-                  </Td>
-                  <Td>
-                    <Button size="xs" colorScheme="purple" variant="outline" onClick={() => openUser(user)}>
-                      Quick nudge
+                  <Td px={2}>
+                    <Button size="xs" fontSize="xs" colorScheme="purple" variant="outline" onClick={() => openUser(user)}>
+                      Nudge
                     </Button>
                   </Td>
                 </Tr>
               ))}
               {!usersLoading && !atRiskUsers.length && (
                 <Tr>
-                  <Td colSpan={10}>
+                  <Td colSpan={8}>
                     <HStack spacing={3} py={6} justify="center">
                       <CheckCircle2 color="green" />
                       <Text color="brand.subtleText">
@@ -866,13 +873,15 @@ export const PartnerUserManagement: React.FC<PartnerUserManagementProps> = ({
               )}
             </Tbody>
           </Table>
+          </Box>
         </Stack>
       )}
 
       {activeTab === 'leaders' && (
         <Stack spacing={4}>
           <Text fontWeight="semibold" color="brand.text">Mentors & Team Leaders</Text>
-          <Table size="md" variant="simple">
+          <Box overflowX="auto">
+          <Table size="sm" variant="simple" w="100%">
             <Thead>
               <Tr>
                 <Th>Name/Email</Th>
@@ -930,6 +939,7 @@ export const PartnerUserManagement: React.FC<PartnerUserManagementProps> = ({
               )}
             </Tbody>
           </Table>
+          </Box>
         </Stack>
       )}
 

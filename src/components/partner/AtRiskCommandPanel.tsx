@@ -85,10 +85,10 @@ const cardStyle = {
 }
 
 const defaultFilters = {
-  region: 'All regions',
-  cohort: 'All cohorts',
+  organization: 'All organizations',
   status: 'All statuses',
   risk: 'All risk levels',
+  week: 'All weeks',
   belowWeeklyTarget: false,
   currentWeekOnly: false,
   compareHealthy: false,
@@ -219,17 +219,53 @@ export const AtRiskCommandPanel: React.FC<AtRiskCommandPanelProps> = ({
     await onAction(action, caseId, additionalData)
   }
 
+  // Get unique organizations from users for filter dropdown
+  const uniqueOrganizations = useMemo(() => {
+    const orgs = new Set(atRiskUsers.map(user => user.companyCode).filter(Boolean))
+    return Array.from(orgs).sort()
+  }, [atRiskUsers])
+
+  // Get unique weeks from users for filter dropdown
+  const uniqueWeeks = useMemo(() => {
+    const weeks = new Set(atRiskUsers.map(user => user.currentWeek).filter(w => w > 0))
+    return Array.from(weeks).sort((a, b) => a - b)
+  }, [atRiskUsers])
+
   const filteredLearners = useMemo(() => {
     let list = [...atRiskUsers]
+
+    // Organization filter
+    if (filters.organization !== 'All organizations') {
+      list = list.filter(user => user.companyCode === filters.organization)
+    }
+
+    // Status filter
     if (filters.status !== 'All statuses') {
       list = list.filter(user => user.status === filters.status)
     }
+
+    // Risk level filter
     if (filters.risk !== 'All risk levels') {
       list = list.filter(user => user.riskStatus === filters.risk)
     }
+
+    // Week filter
+    if (filters.week !== 'All weeks') {
+      const weekNum = parseInt(filters.week.replace('Week ', ''), 10)
+      list = list.filter(user => user.currentWeek === weekNum)
+    }
+
+    // Below weekly target filter
     if (filters.belowWeeklyTarget) {
       list = list.filter(user => user.weeklyEarned < user.weeklyRequired)
     }
+
+    // Current week only filter
+    if (filters.currentWeekOnly) {
+      const currentWeek = Math.max(...atRiskUsers.map(u => u.currentWeek || 0), 1)
+      list = list.filter(user => user.currentWeek === currentWeek)
+    }
+
     if (activeReason) {
       list = list.filter(user => user.riskReasons?.includes(activeReason))
     }
@@ -259,10 +295,10 @@ export const AtRiskCommandPanel: React.FC<AtRiskCommandPanelProps> = ({
 
   const activeFilterTags = useMemo(() => {
     const tags: { label: string; key: keyof typeof filters }[] = []
-    if (filters.region !== defaultFilters.region) tags.push({ label: `Region: ${filters.region}`, key: 'region' })
-    if (filters.cohort !== defaultFilters.cohort) tags.push({ label: `Cohort: ${filters.cohort}`, key: 'cohort' })
+    if (filters.organization !== defaultFilters.organization) tags.push({ label: `Org: ${filters.organization}`, key: 'organization' })
     if (filters.status !== defaultFilters.status) tags.push({ label: `Status: ${filters.status}`, key: 'status' })
     if (filters.risk !== defaultFilters.risk) tags.push({ label: `Risk: ${filters.risk}`, key: 'risk' })
+    if (filters.week !== defaultFilters.week) tags.push({ label: filters.week, key: 'week' })
     if (filters.belowWeeklyTarget) tags.push({ label: 'Below cycle points target', key: 'belowWeeklyTarget' })
     if (filters.currentWeekOnly) tags.push({ label: 'Current week only', key: 'currentWeekOnly' })
     if (filters.compareHealthy) tags.push({ label: 'Compare to healthy learners', key: 'compareHealthy' })
@@ -818,22 +854,22 @@ export const AtRiskCommandPanel: React.FC<AtRiskCommandPanelProps> = ({
             </HStack>
             <SimpleGrid columns={{ base: 1, md: 4 }} spacing={3}>
               <Select
-                value={draftFilters.region}
-                onChange={(event) => setDraftFilters(prev => ({ ...prev, region: event.target.value }))}
+                value={draftFilters.organization}
+                onChange={(event) => setDraftFilters(prev => ({ ...prev, organization: event.target.value }))}
               >
-                <option>All regions</option>
-                <option>East</option>
-                <option>Central</option>
-                <option>West</option>
+                <option>All organizations</option>
+                {uniqueOrganizations.map(org => (
+                  <option key={org} value={org}>{org}</option>
+                ))}
               </Select>
               <Select
-                value={draftFilters.cohort}
-                onChange={(event) => setDraftFilters(prev => ({ ...prev, cohort: event.target.value }))}
+                value={draftFilters.week}
+                onChange={(event) => setDraftFilters(prev => ({ ...prev, week: event.target.value }))}
               >
-                <option>All cohorts</option>
-                <option>Spring cohort</option>
-                <option>Summer cohort</option>
-                <option>Enterprise cohort</option>
+                <option>All weeks</option>
+                {uniqueWeeks.map(week => (
+                  <option key={week} value={`Week ${week}`}>Week {week}</option>
+                ))}
               </Select>
               <Select
                 value={draftFilters.status}
@@ -849,9 +885,9 @@ export const AtRiskCommandPanel: React.FC<AtRiskCommandPanelProps> = ({
                 onChange={(event) => setDraftFilters(prev => ({ ...prev, risk: event.target.value }))}
               >
                 <option>All risk levels</option>
-                <option value="critical">critical</option>
-                <option value="concern">concern</option>
-                <option value="watch">watch</option>
+                <option value="critical">Critical</option>
+                <option value="concern">Concern</option>
+                <option value="at_risk">At Risk</option>
               </Select>
             </SimpleGrid>
             <Collapse in={showMoreFilters}>

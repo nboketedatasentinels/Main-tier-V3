@@ -14,11 +14,6 @@ import {
   HStack,
   Icon,
   IconButton,
-  Menu as ChakraMenu,
-  MenuButton,
-  MenuDivider,
-  MenuItem,
-  MenuList,
   Select,
   Stack,
   Text,
@@ -31,11 +26,12 @@ import {
   useToast,
   useDisclosure,
 } from '@chakra-ui/react'
-import { LogOut, Menu, RefreshCw, Sparkles, User } from 'lucide-react'
+import { LogOut, Menu, RefreshCw, Sparkles } from 'lucide-react'
 import { NotificationDropdown } from '@/components/notifications/NotificationDropdown'
 import { useAuth } from '@/hooks/useAuth'
 import { usePartnerAdminSnapshot } from '@/hooks/partner/usePartnerAdminSnapshot'
 import { type NavigationSection, buildPartnerNavItems } from '@/utils/navigationItems'
+import { getDisplayName } from '@/utils/displayName'
 
 const APP_VIEWPORT_HEIGHT = { base: '100dvh', md: '100vh' } as const
 const MOBILE_NAV_HEIGHT = 68
@@ -69,6 +65,7 @@ export const PartnerLayout: React.FC<PartnerLayoutProps> = ({
   const toast = useToast()
   const [lastUpdatedLabel, setLastUpdatedLabel] = React.useState('Not yet loaded')
   const assignedCount = organizations.length || assignedOrganizationIds.length || 0
+  const displayName = React.useMemo(() => getDisplayName(profile, 'Partner'), [profile])
   const sections = navSections?.length ? navSections : buildPartnerNavItems()
   const primaryNavItems = React.useMemo(() => sections.flatMap(section => section.items).slice(0, 4), [sections])
   const mobileLabelByKey = React.useMemo<Record<string, string>>(
@@ -228,10 +225,10 @@ export const PartnerLayout: React.FC<PartnerLayoutProps> = ({
 
   const ProfileSection = () => (
     <HStack spacing={3} p={3} borderRadius="lg" bg="brand.accent" align="flex-start">
-      <Avatar name={profile?.fullName || 'Partner'} size="sm" />
+      <Avatar name={displayName} size="sm" />
       <VStack align="flex-start" spacing={0} flex={1}>
         <Text fontWeight="bold" color="brand.text" fontSize="sm">
-          {profile?.fullName || 'Partner'}
+          {displayName}
         </Text>
         <HStack spacing={2} align="center">
           <Text fontSize="xs" color="brand.subtleText">
@@ -267,11 +264,11 @@ export const PartnerLayout: React.FC<PartnerLayoutProps> = ({
   )
 
   const HeaderControls = () => (
-    <HStack spacing={3} align="center" wrap="wrap" justify={{ base: 'flex-start', md: 'flex-end' }} w={{ base: 'full', md: 'auto' }}>
+    <HStack spacing={3} align="center" wrap={{ base: 'wrap', md: 'nowrap' }} justify="flex-end" flexShrink={0}>
       <Select
-        flex={{ base: '1 1 220px', md: '0 1 auto' }}
-        minW={{ base: 'full', sm: '220px' }}
-        maxW={{ base: 'full', md: '280px' }}
+        w={{ base: 'full', md: '240px' }}
+        minW={{ base: 'full', md: '200px' }}
+        maxW="280px"
         value={selectedOrg}
         onChange={e => onSelectOrg(e.target.value)}
         bg="white"
@@ -285,29 +282,6 @@ export const PartnerLayout: React.FC<PartnerLayoutProps> = ({
         ))}
       </Select>
       <NotificationDropdown />
-      <ChakraMenu>
-        <MenuButton
-          as={Button}
-          variant="outline"
-          leftIcon={<Avatar size="sm" name={profile?.fullName || 'Partner'} />}
-          display={{ base: 'none', md: 'inline-flex' }}
-        >
-          <Text fontSize="sm" noOfLines={1} maxW="150px">
-            {profile?.fullName || 'Partner'}
-          </Text>
-        </MenuButton>
-        <MenuList>
-          <MenuItem icon={<User size={16} />} onClick={() => onNavigate?.('profile')}>Profile</MenuItem>
-          <MenuDivider />
-          <MenuItem
-            icon={<LogOut size={16} />}
-            onClick={handleLogout}
-            isDisabled={signingOut}
-          >
-            {signingOut ? 'Signing out...' : 'Sign out'}
-          </MenuItem>
-        </MenuList>
-      </ChakraMenu>
       <IconButton
         aria-label="Open navigation"
         icon={<Menu />}
@@ -389,14 +363,14 @@ export const PartnerLayout: React.FC<PartnerLayoutProps> = ({
         minW={0}
         minH={0}
       >
-        <Box flex={1} overflowY="auto">
-          <Flex justify="space-between" align={{ base: 'flex-start', md: 'center' }} mb={6} gap={4} wrap="wrap">
+        <Box flex={1} overflowY="auto" sx={{ '&::-webkit-scrollbar': { display: 'none' }, scrollbarWidth: 'none' }}>
+          <Flex justify="space-between" align={{ base: 'flex-start', md: 'center' }} mb={6} gap={4} wrap={{ base: 'wrap', md: 'nowrap' }}>
             <VStack align="flex-start" spacing={1}>
               <Text fontSize="sm" color="brand.subtleText">
                 Partner Dashboard
               </Text>
               <Text fontSize={{ base: '2xl', md: '3xl' }} lineHeight="shorter" fontWeight="bold" color="brand.text" wordBreak="break-word">
-                Welcome back, {profile?.fullName || 'Partner'}
+                Welcome back
               </Text>
               <Text color="brand.subtleText" maxW="760px">
                 Your partner workspace for learners, organizations, and interventions.

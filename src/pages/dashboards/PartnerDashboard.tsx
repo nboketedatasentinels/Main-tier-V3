@@ -487,18 +487,6 @@ export const PartnerDashboard: React.FC = () => {
 
     return (
       <Stack spacing={8}>
-        <VStack align="flex-start" spacing={1}>
-          <Text fontSize="sm" color="brand.subtleText">
-            Partner Dashboard
-          </Text>
-          <Text fontSize="3xl" fontWeight="bold" color="brand.text">
-            Partner Overview
-          </Text>
-          <Text color="brand.subtleText">
-            Your active learners, risks, and interventions today
-          </Text>
-        </VStack>
-
         <Card bg="white" border="1px solid" borderColor="brand.border">
           <CardBody py={3}>
             <Text fontSize="sm" color="brand.subtleText">
@@ -509,44 +497,57 @@ export const PartnerDashboard: React.FC = () => {
 
         <SimpleGrid columns={{ base: 1, md: 3 }} spacing={4}>
           {alertCards.map((card) => {
-            const isMuted = card.count === 0
-            const accentColor = isMuted ? 'gray' : card.color
+            const isLoading = usersLoading || adminDataLoading
+            const isMuted = !isLoading && card.count === 0
+            const accentColor = isLoading ? 'gray' : (isMuted ? 'gray' : card.color)
             const Icon = card.icon
             return (
               <Card
                 key={card.key}
-                bg={isMuted ? 'gray.50' : `${accentColor}.50`}
+                bg={isLoading ? 'gray.50' : (isMuted ? 'gray.50' : `${accentColor}.50`)}
                 border="1px solid"
-                borderColor={isMuted ? 'border.control' : `${accentColor}.200`}
-                cursor="pointer"
+                borderColor={isLoading ? 'gray.200' : (isMuted ? 'border.control' : `${accentColor}.200`)}
+                cursor={isLoading ? 'default' : 'pointer'}
                 transition="all 0.2s"
-                _hover={{ shadow: 'sm', borderColor: isMuted ? 'border.control' : `${accentColor}.300` }}
-                onClick={card.onClick}
+                _hover={isLoading ? {} : { shadow: 'sm', borderColor: isMuted ? 'border.control' : `${accentColor}.300` }}
+                onClick={isLoading ? undefined : card.onClick}
                 minH="150px"
                 h="100%"
               >
                 <CardBody p={5} h="100%">
                   <Stack spacing={3} h="100%" justify="space-between">
                     <HStack spacing={3} align="center">
-                      <Box color={`${accentColor}.500`}>
+                      <Box color={isLoading ? 'gray.400' : `${accentColor}.500`}>
                         <Icon size={20} />
                       </Box>
-                      <Text fontSize="3xl" fontWeight="bold" color={`${accentColor}.700`}>
-                        {card.count}
-                      </Text>
+                      {isLoading ? (
+                        <Skeleton height="36px" width="50px" borderRadius="md" />
+                      ) : (
+                        <Text fontSize="3xl" fontWeight="bold" color={`${accentColor}.700`}>
+                          {card.count}
+                        </Text>
+                      )}
                     </HStack>
-                    <Text fontWeight="semibold" color={`${accentColor}.700`}>
-                      {card.label}
-                    </Text>
-                    <Button
-                      size="sm"
-                      variant="link"
-                      colorScheme={accentColor === 'gray' ? 'gray' : accentColor}
-                      onClick={card.onClick}
-                      alignSelf="flex-start"
-                    >
-                      View all →
-                    </Button>
+                    {isLoading ? (
+                      <Skeleton height="20px" width="120px" borderRadius="md" />
+                    ) : (
+                      <Text fontWeight="semibold" color={`${accentColor}.700`}>
+                        {card.label}
+                      </Text>
+                    )}
+                    {isLoading ? (
+                      <Skeleton height="16px" width="70px" borderRadius="md" />
+                    ) : (
+                      <Button
+                        size="sm"
+                        variant="link"
+                        colorScheme={accentColor === 'gray' ? 'gray' : accentColor}
+                        onClick={card.onClick}
+                        alignSelf="flex-start"
+                      >
+                        View all →
+                      </Button>
+                    )}
                   </Stack>
                 </CardBody>
               </Card>
