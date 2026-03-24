@@ -37,7 +37,6 @@ import {
   Textarea,
   Th,
   Thead,
-  Tooltip,
   Tr,
   VStack,
   useDisclosure,
@@ -52,7 +51,7 @@ import type { PartnerUser } from '@/hooks/usePartnerDashboardData'
 import type { PartnerInterventionSummary } from '@/hooks/partner/usePartnerInterventions'
 import type { NudgeChannel, NudgeTemplateRecord } from '@/types/nudges'
 import type { DataWarning, RiskLevel, RiskReason } from '@/components/admin/RiskAnalysisCard'
-import { Check, Filter, HelpCircle, Info, Plus } from 'lucide-react'
+import { Check, Filter, HelpCircle, Plus } from 'lucide-react'
 import { getDisplayName } from '@/utils/displayName'
 
 export interface AtRiskNudgePayload {
@@ -147,7 +146,6 @@ const buildSparkline = (user: PartnerUser) => {
 
 export const AtRiskCommandPanel: React.FC<AtRiskCommandPanelProps> = ({
   engagementTrend,
-  riskReasons,
   dataQualityWarnings,
   interventions,
   atRiskUsers,
@@ -1018,53 +1016,7 @@ export const AtRiskCommandPanel: React.FC<AtRiskCommandPanelProps> = ({
         </CardBody>
       </Card>
 
-      <SimpleGrid columns={{ base: 1, lg: 2 }} spacing={4}>
-        <Card {...cardStyle}>
-          <CardBody>
-            <Stack spacing={3}>
-              <HStack justify="space-between" align="center">
-                <Text fontWeight="semibold" color="brand.text">Why these learners are at risk</Text>
-                <Tooltip label="Click a factor to filter the learner list">
-                  <Box color="brand.subtleText">
-                    <Info size={16} />
-                  </Box>
-                </Tooltip>
-              </HStack>
-              <Stack spacing={2}>
-                {riskReasons.map(reason => (
-                  <Button
-                    key={reason.label}
-                    variant={activeReason === reason.label ? 'solid' : 'outline'}
-                    colorScheme="purple"
-                    justifyContent="space-between"
-                    onClick={() => setActiveReason(prev => (prev === reason.label ? null : reason.label))}
-                  >
-                    <Text>{reason.label}</Text>
-                    <Badge colorScheme={reason.color}>{reason.count}</Badge>
-                  </Button>
-                ))}
-                {riskReasons.length === 0 && (
-                  <Text color="brand.subtleText">No risk factors detected yet.</Text>
-                )}
-              </Stack>
-              {dataQualityWarnings.map(warning => (
-                <HStack
-                  key={warning.message}
-                  p={3}
-                  borderRadius="md"
-                  bg="yellow.50"
-                  color="orange.700"
-                  border="1px solid"
-                  borderColor="yellow.200"
-                >
-                  <Text fontSize="sm">{warning.message}</Text>
-                  <Badge colorScheme="orange">Review</Badge>
-                </HStack>
-              ))}
-            </Stack>
-          </CardBody>
-        </Card>
-
+      <SimpleGrid columns={{ base: 1, lg: 1 }} spacing={4}>
         <Card {...cardStyle}>
           <CardBody>
             <Stack spacing={3}>

@@ -45,12 +45,53 @@ export const mapWeeklyPointsToProgress = (
   }
 }
 
+/**
+ * Journey context for risk calculation
+ * Used to apply 6-Week Power Journey specific at-risk logic
+ */
+export interface JourneyContext {
+  journeyType: string | null
+  totalPoints: number
+}
+
+// 6-Week journey constants
+const SIX_WEEK_PASS_MARK = 40000
+const SIX_WEEK_AT_RISK_THRESHOLD = 4 // At-risk starts at week 5 (> 4)
+
 export const calculateUserRiskStatus = (
   currentWeek: number,
   earnedPoints: Record<number, number>,
   requiredPoints: Record<number, number>,
   nudgeResponsivenessScore?: number,
+  journeyContext?: JourneyContext,
 ): { status: 'at_risk' | 'on_track'; reason?: string; points_deficit?: number } => {
+  // 6-Week Power Journey specific logic
+  if (journeyContext?.journeyType === '6W') {
+    // Weeks 1-4: NEVER flag as at_risk
+    if (currentWeek <= SIX_WEEK_AT_RISK_THRESHOLD) {
+      return {
+        status: 'on_track',
+        reason: `Week ${currentWeek}: At-risk evaluation starts at week 5`,
+      }
+    }
+
+    // Week 5+: Flag as at_risk ONLY if below 40,000 points
+    if (journeyContext.totalPoints < SIX_WEEK_PASS_MARK) {
+      return {
+        status: 'at_risk',
+        reason: `Week ${currentWeek}: ${journeyContext.totalPoints.toLocaleString()} < ${SIX_WEEK_PASS_MARK.toLocaleString()} pass mark`,
+        points_deficit: SIX_WEEK_PASS_MARK - journeyContext.totalPoints,
+      }
+    }
+
+    // Week 5+ with >= 40,000 points: on_track
+    return {
+      status: 'on_track',
+      reason: `Passed: ${journeyContext.totalPoints.toLocaleString()} >= ${SIX_WEEK_PASS_MARK.toLocaleString()}`,
+    }
+  }
+
+  // Default logic for other journey types
   const weekRequirement = requiredPoints[currentWeek] ?? 0
   const weekEarned = earnedPoints[currentWeek] ?? 0
 

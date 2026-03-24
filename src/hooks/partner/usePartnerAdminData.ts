@@ -42,6 +42,7 @@ export interface PartnerOrganization {
   lastActive?: string
   tags?: string[]
   warning?: string
+  journeyType?: string // Added for 6W at-risk logic
 }
 
 export interface PartnerUser {
@@ -95,6 +96,7 @@ type FirestorePartnerUser = Partial<PartnerUser> & {
   status?: string
   nudge_enabled?: boolean
   admin_notes?: string
+  journeyType?: string // Added for 6W at-risk logic
 }
 
 export interface PartnerAdminAnalytics {
@@ -398,6 +400,19 @@ export const usePartnerAdminData = (
     return mapping
   }, [organizations])
 
+  // Lookup org ID/code → journeyType (for 6W at-risk logic)
+  const journeyTypeLookup = useMemo(() => {
+    if (!organizations.length) return new Map<string, string>()
+    const mapping = new Map<string, string>()
+    organizations.forEach((org) => {
+      if (org.journeyType) {
+        if (org.id) mapping.set(org.id.toLowerCase(), org.journeyType)
+        if (org.code) mapping.set(org.code.toLowerCase(), org.journeyType)
+      }
+    })
+    return mapping
+  }, [organizations])
+
   const assignedOrgKeys = useMemo(() => {
     const keys: string[] = [...assignedOrganizationIds]
 
@@ -470,7 +485,7 @@ export const usePartnerAdminData = (
               count: snapshot.size,
             })
             const scoped = snapshot.docs.map((docSnap) => {
-              const data = docSnap.data() as Partial<PartnerOrganization>
+              const data = docSnap.data() as Partial<PartnerOrganization> & { journeyType?: string }
               return {
                 id: docSnap.id,
                 code: data.code || docSnap.id,
@@ -481,6 +496,7 @@ export const usePartnerAdminData = (
                 lastActive: data.lastActive,
                 tags: data.tags || [],
                 warning: !data.name || !data.code ? 'Organization details incomplete.' : undefined,
+                journeyType: data.journeyType, // Include for 6W at-risk logic
               }
             })
             handleSnapshot(scoped)
@@ -500,7 +516,7 @@ export const usePartnerAdminData = (
               count: assignedOrgs.length,
             })
             const scoped = assignedOrgs.map((org) => {
-              const data = org as OrganizationRecord & Partial<PartnerOrganization>
+              const data = org as OrganizationRecord & Partial<PartnerOrganization> & { journeyType?: string }
               return {
                 id: data.id,
                 code: data.code || data.id || '',
@@ -511,6 +527,7 @@ export const usePartnerAdminData = (
                 lastActive: data.lastActive,
                 tags: data.tags || [],
                 warning: !data.name || !data.code ? 'Organization details incomplete.' : undefined,
+                journeyType: data.journeyType, // Include for 6W at-risk logic
               }
             })
             handleSnapshot(scoped)
@@ -637,6 +654,7 @@ export const usePartnerAdminData = (
     assignedOrgKeys,
     selectedOrgKeys,
     organizationLookup,
+    journeyTypeLookup, // Added for 6W at-risk logic
     selectedOrg,
   })
 
@@ -646,9 +664,10 @@ export const usePartnerAdminData = (
       assignedOrgKeys,
       selectedOrgKeys,
       organizationLookup,
+      journeyTypeLookup, // Added for 6W at-risk logic
       selectedOrg,
     }
-  }, [assignedOrgKeys, selectedOrgKeys, organizationLookup, selectedOrg])
+  }, [assignedOrgKeys, selectedOrgKeys, organizationLookup, journeyTypeLookup, selectedOrg])
 
   // FIX: Track if users have been loaded to prevent infinite loop
   const usersInitializedRef = useRef(false)
@@ -899,11 +918,22 @@ export const usePartnerAdminData = (
                 pointsByUser[docWrapper.id] || [],
                 currentWeek
               )
+
+              // Get journey context for 6W at-risk logic
+              // Try user profile first, then fallback to organization
+              let userJourneyType: string | null = data.journeyType ?? null
+              if (!userJourneyType && rawOrganizationId) {
+                userJourneyType = latestFilters.journeyTypeLookup?.get(rawOrganizationId.toLowerCase()) ?? null
+              }
+              const userTotalPoints = data.totalPoints ?? 0
+
               const riskResult = calculateUserRiskStatus(
                 progress.current_week,
                 progress.earned_points,
                 progress.required_points,
-                data.nudgeResponseScore
+                data.nudgeResponseScore,
+                // Pass journey context for 6W-specific at-risk logic
+                { journeyType: userJourneyType, totalPoints: userTotalPoints }
               )
 
               const weeklyRequirement = progress.required_points[currentWeek] || 0
@@ -911,6 +941,9 @@ export const usePartnerAdminData = (
               const progressPercent = weeklyRequirement
                 ? Math.min(100, Math.round((weeklyEarned / weeklyRequirement) * 100))
                 : data.progressPercent || 0
+
+              // 6W journey special handling: Don't mark as 'critical' in weeks 1-4
+              const is6WInEarlyWeeks = userJourneyType === '6W' && currentWeek <= 4
 
               const riskStatus: PartnerRiskLevel | 'at_risk' =
                 riskResult.status === 'at_risk'
@@ -921,7 +954,10 @@ export const usePartnerAdminData = (
                       ? 'watch'
                       : progressPercent >= 60
                         ? 'concern'
-                        : 'critical'
+                        // 6W users in weeks 1-4: use 'watch' instead of 'critical'
+                        : is6WInEarlyWeeks
+                          ? 'watch'
+                          : 'critical'
 
               const riskReasons = [
                 ...(data.riskReasons || []),
