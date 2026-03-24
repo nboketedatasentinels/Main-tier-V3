@@ -301,7 +301,7 @@ const getEsgBreakdown = (values: Partial<ImpactLogEntry>): {
   return { impactUsd, hoursUsd, totalUsd: impactUsd + hoursUsd }
 }
 
-interface ExportFilters {
+export interface ExportFilters {
   dateRange: {
     start: Date
     end: Date
@@ -348,6 +348,7 @@ const BUSINESS_WASTE_HELPER_TEXT: Record<string, string> = {
     'Doing more work than required (over-processing), such as unnecessary approvals, features, or formatting.',
 }
 
+/* Temporarily unused helper kept for future CSV export wiring.
 const buildCsv = (entries: ImpactLogEntry[]) => {
   const headers = [
     'Source',
@@ -387,6 +388,7 @@ const buildCsv = (entries: ImpactLogEntry[]) => {
 
   return [headers, ...rows].map((row) => row.join(',')).join('\n')
 }
+*/
 
 const calculateImpactPreview = (values: Partial<ImpactLogEntry>) => {
   const verificationMultiplier = verificationMultipliers[(values.verificationLevel || 'Tier 1: Self-Reported') as VerificationTier] || 1
@@ -426,8 +428,7 @@ export const ImpactLogPage: React.FC = () => {
   const [companyEntries, setCompanyEntries] = useState<ImpactLogEntry[]>([])
   const [loading, setLoading] = useState(true)
   const [monthCursor, setMonthCursor] = useState<Date>(new Date())
-  const [isExporting, setIsExporting] = useState(false)
-  const [partnerSync, setPartnerSync] = useState<{
+  const [, setPartnerSync] = useState<{
     status: 'idle' | 'syncing' | 'success' | 'skipped' | 'error'
     message?: string
     importedCount?: number
@@ -447,7 +448,7 @@ export const ImpactLogPage: React.FC = () => {
   const [bulkErrorCount, setBulkErrorCount] = useState(0)
   const [isBulkProcessing, setIsBulkProcessing] = useState(false)
   const [isExportOpen, setIsExportOpen] = useState(false)
-  const [exportMode, setExportMode] = useState<'csv' | 'pdf'>('csv')
+  const [, setExportMode] = useState<'csv' | 'pdf'>('csv')
   const shareDisclosure = useDisclosure()
   const [exportFilters, setExportFilters] = useState<ExportFilters>(() => {
     const start = startOfMonth(new Date())
@@ -1604,8 +1605,6 @@ export const ImpactLogPage: React.FC = () => {
     }
   }
 
-  const handleExport = () => {}
-
   const statCards = [
     {
       label: 'Impact Activities',
@@ -1689,7 +1688,7 @@ export const ImpactLogPage: React.FC = () => {
   }
 
   const handleScanDecoded = async (decodedText: string | null) => {
-    if (!decodedText || !user) return
+    if (!decodedText) return
     setScannerError(null)
     setIsFetchingEvent(true)
     try {
@@ -1697,6 +1696,13 @@ export const ImpactLogPage: React.FC = () => {
       if (!eventId) {
         setScannerError('Invalid QR code. Please scan a valid Shared Impact Event code.')
         setIsFetchingEvent(false)
+        return
+      }
+
+      // If user is not logged in, redirect to Ambassador platform's guest participation page
+      if (!user) {
+        const ambassadorBase = import.meta.env.VITE_IMPACT_API_BASE_URL || 'https://ambassadors.t4leader.com'
+        window.location.href = `${ambassadorBase}/event-participate.html?event=${eventId}`
         return
       }
 

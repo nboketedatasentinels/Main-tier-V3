@@ -52,12 +52,26 @@ export const useWindowProgress = () => {
       docRef,
       (snapshot) => {
         if (snapshot.exists()) {
-          setData(snapshot.data() as WindowProgress)
+          const windowData = snapshot.data() as WindowProgress
+
+          // 6W journey fix: Don't show alert in weeks 1-4 (at-risk starts at week 5)
+          if (journeyType === '6W' && currentWeek <= 4) {
+            if (windowData.status === 'alert') {
+              setData({ ...windowData, status: 'warning' })
+            } else {
+              setData(windowData)
+            }
+          } else {
+            setData(windowData)
+          }
         } else {
           // Fallback if doc doesn't exist yet
           const journeyMeta = JOURNEY_META[journeyType as keyof typeof JOURNEY_META]
           const weeklyTarget = journeyMeta?.weeklyTarget || 0
           const windowTarget = getWindowTargetByJourney(journeyType, weeklyTarget)
+
+          // 6W journey: Use 'warning' not 'alert' for weeks 1-4 (at-risk starts at week 5)
+          const defaultStatus = (journeyType === '6W' && currentWeek <= 4) ? 'warning' : 'alert'
 
           setData({
             uid: profileId,
@@ -65,7 +79,7 @@ export const useWindowProgress = () => {
             windowNumber,
             pointsEarned: 0,
             windowTarget,
-            status: 'alert',
+            status: defaultStatus,
           })
         }
         setLoading(false)

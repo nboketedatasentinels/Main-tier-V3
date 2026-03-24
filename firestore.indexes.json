@@ -1,6 +1,48 @@
 {
   "indexes": [
     {
+      "collectionGroup": "organizations",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "status",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "journeyType",
+          "order": "ASCENDING"
+        }
+      ]
+    },
+    {
+      "collectionGroup": "learner_status",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "orgId",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "currentStatus",
+          "order": "ASCENDING"
+        }
+      ]
+    },
+    {
+      "collectionGroup": "learner_status",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "journeyType",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "pointsBasedAtRisk",
+          "order": "ASCENDING"
+        }
+      ]
+    },
+    {
       "collectionGroup": "points_transactions",
       "queryScope": "COLLECTION",
       "fields": [

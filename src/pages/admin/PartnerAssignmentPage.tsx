@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import {
+  Badge,
   Box,
   Button,
   Container,
@@ -140,6 +141,27 @@ export const PartnerAssignmentPage: React.FC = () => {
     );
   };
 
+  const toggleSelectAll = () => {
+    if (selectedLearners.length === filteredLearners.length) {
+      setSelectedLearners([]);
+    } else {
+      setSelectedLearners(filteredLearners.map(l => l.id));
+    }
+  };
+
+  const isAllSelected = filteredLearners.length > 0 && selectedLearners.length === filteredLearners.length;
+
+  // Learner at Risk Logic:
+  // - Only applies to 6-Week Power Journey (journeyType === '6W')
+  // - Only flags after Week 5 has passed (currentWeek >= 6)
+  // - Flags if learner has not reached 40,000 points (pass mark)
+  const SIX_WEEK_PASS_MARK = 40000;
+  const isLearnerAtRisk = (learner: UserProfile): boolean => {
+    if (learner.journeyType !== '6W') return false;
+    if ((learner.currentWeek ?? 1) < 6) return false;
+    return (learner.totalPoints ?? 0) < SIX_WEEK_PASS_MARK;
+  };
+
   const bgColor = useColorModeValue('white', 'gray.800');
   const borderColor = useColorModeValue('border.control', 'gray.700');
 
@@ -172,12 +194,17 @@ export const PartnerAssignmentPage: React.FC = () => {
               </FormControl>
 
               <FormControl maxW="200px">
-                <FormLabel>Target Week</FormLabel>
-                <Input
-                  type="number"
+                <FormLabel>Week</FormLabel>
+                <Select
                   value={weekNumber}
                   onChange={(e) => setWeekNumber(parseInt(e.target.value))}
-                />
+                >
+                  {Array.from({ length: 18 }, (_, i) => i + 1).map((week) => (
+                    <option key={week} value={week}>
+                      Week {week}
+                    </option>
+                  ))}
+                </Select>
               </FormControl>
             </HStack>
 
@@ -194,10 +221,21 @@ export const PartnerAssignmentPage: React.FC = () => {
               <Table variant="simple">
                 <Thead>
                   <Tr>
-                    <Th width="40px"></Th>
+                    <Th>
+                      <Checkbox
+                        isChecked={isAllSelected}
+                        isIndeterminate={selectedLearners.length > 0 && selectedLearners.length < filteredLearners.length}
+                        onChange={toggleSelectAll}
+                      >
+                        Select All
+                      </Checkbox>
+                    </Th>
                     <Th>Name</Th>
                     <Th>Email</Th>
                     <Th>Journey</Th>
+                    <Th>Week</Th>
+                    <Th>Points</Th>
+                    <Th>Status</Th>
                   </Tr>
                 </Thead>
                 <Tbody>
@@ -212,6 +250,25 @@ export const PartnerAssignmentPage: React.FC = () => {
                       <Td>{l.fullName}</Td>
                       <Td>{l.email}</Td>
                       <Td>{l.journeyType}</Td>
+                      <Td>Week {l.currentWeek ?? 1}</Td>
+                      <Td>{(l.totalPoints ?? 0).toLocaleString()}</Td>
+                      <Td>
+                        {l.journeyType === '6W' && (l.currentWeek ?? 1) >= 6 ? (
+                          isLearnerAtRisk(l) ? (
+                            <Badge colorScheme="red" variant="solid">
+                              At Risk
+                            </Badge>
+                          ) : (
+                            <Badge colorScheme="green" variant="solid">
+                              On Track
+                            </Badge>
+                          )
+                        ) : (
+                          <Badge colorScheme="gray" variant="subtle">
+                            —
+                          </Badge>
+                        )}
+                      </Td>
                     </Tr>
                   ))}
                 </Tbody>

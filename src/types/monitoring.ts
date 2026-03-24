@@ -58,6 +58,18 @@ export interface LearnerStatusRecord {
   engagementDropDetected?: boolean
   missedDeadlineCount: number
 
+  // ═══════════════════════════════════════════════════════════════════════════
+  // JOURNEY-SPECIFIC AT-RISK TRACKING
+  // For 6W journey: at-risk is only flagged after week 5 if < 40,000 points
+  // ═══════════════════════════════════════════════════════════════════════════
+  journeyType?: '4W' | '6W' | '3M' | '6M' | '9M'
+  currentWeek?: number // Week in journey (1-6 for 6W, 1-12 for 3M, etc.)
+  totalPoints?: number // User's total journey points
+  journeyPassMarkPoints?: number // Pass mark for their journey type
+  pointsBasedAtRisk?: boolean // true if at-risk due to points (vs engagement)
+  journeyAtRiskReason?: string // e.g., "6W: 35,000 < 40,000 pass mark"
+  pointsDeficit?: number // How many points below pass mark
+
   updatedAt: Timestamp
   calculatedAt: Timestamp
 }

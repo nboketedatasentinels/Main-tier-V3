@@ -13,6 +13,7 @@ import {
 import { db } from './firebase'
 import { getCurrentWeekNumber, getWeekDateRange } from '@/utils/weekCalculations'
 import { createStatusChangeNotification } from '@/services/notificationService'
+import { resolveJourneyType } from '@/utils/journeyType'
 
 export interface WeeklyPointsData {
   user_id: string
@@ -31,6 +32,10 @@ export interface WeeklyPointsData {
 const MINIMUM_WEEKLY_TARGET_POINTS = 4000
 const LOW_WEEKLY_POINTS_ALERT_THRESHOLD = MINIMUM_WEEKLY_TARGET_POINTS
 
+// 6-Week journey specific constants
+const SIX_WEEK_AT_RISK_THRESHOLD_WEEK = 4 // At-risk evaluation starts at week 5 (> 4)
+const SIX_WEEK_PASS_MARK = 40000
+
 // NOTE: The weekly_points collection is deprecated in favor of weeklyProgress.
 // Keep this module for legacy partner dashboards and future migration cleanup.
 
@@ -44,6 +49,44 @@ export const calculateWeeklyStatus = (
   if (percentage >= 70) return 'on_track'
   if (percentage >= 40) return 'warning'
   return 'at_risk'
+}
+
+/**
+ * Calculate weekly status with 6-week journey awareness
+ *
+ * CRITICAL: For 6W journey, learners should NOT be flagged as at_risk
+ * until after week 5 AND only if they're below 40,000 total points.
+ */
+export const calculateWeeklyStatusWithJourneyContext = (
+  earned: number,
+  target: number,
+  journeyContext?: {
+    journeyType: string | null
+    currentWeek: number
+    totalPoints: number
+  }
+): 'on_track' | 'warning' | 'at_risk' => {
+  // If 6-week journey and in weeks 1-5, never return at_risk
+  if (journeyContext?.journeyType === '6W' && journeyContext.currentWeek <= SIX_WEEK_AT_RISK_THRESHOLD_WEEK) {
+    if (target === 0) return 'on_track'
+    const percentage = (earned / target) * 100
+
+    if (percentage >= 70) return 'on_track'
+    // Return warning instead of at_risk for 6W users in weeks 1-5
+    return 'warning'
+  }
+
+  // If 6-week journey, week 6+, check total points
+  if (journeyContext?.journeyType === '6W' && journeyContext.currentWeek > SIX_WEEK_AT_RISK_THRESHOLD_WEEK) {
+    // Only at_risk if below 40,000 total points
+    if (journeyContext.totalPoints >= SIX_WEEK_PASS_MARK) {
+      return 'on_track'
+    }
+    return 'at_risk'
+  }
+
+  // Default behavior for other journey types
+  return calculateWeeklyStatus(earned, target)
 }
 
 export const getOrCreateWeeklyPoints = async (userId: string): Promise<void> => {
@@ -65,9 +108,32 @@ export const getOrCreateWeeklyPoints = async (userId: string): Promise<void> => 
     // Get user's target from their journey or profile
     const profileDoc = await getDoc(doc(db, 'profiles', userId))
     let targetPoints = MINIMUM_WEEKLY_TARGET_POINTS
+    let journeyType: string | null = null
+    let currentWeek = 1
+    let totalPoints = 0
 
     if (profileDoc.exists()) {
       const profileData = profileDoc.data()
+      totalPoints = profileData.totalPoints ?? 0
+      currentWeek = profileData.currentWeek ?? 1
+      journeyType = profileData.journeyType ?? null
+
+      // If no journey type on profile, check organization
+      if (!journeyType) {
+        const orgId = profileData.companyId ?? profileData.organizationId
+        if (orgId) {
+          const orgDoc = await getDoc(doc(db, 'organizations', orgId))
+          if (orgDoc.exists()) {
+            const orgData = orgDoc.data()
+            journeyType = resolveJourneyType({
+              journeyType: orgData.journeyType,
+              programDurationWeeks: orgData.programDurationWeeks,
+              programDuration: orgData.programDuration,
+            })
+          }
+        }
+      }
+
       // If user has a current journey, get its minimum weekly points requirement
       if (profileData.currentJourneyId) {
         const journeyDoc = await getDoc(doc(db, 'journeys', profileData.currentJourneyId))
@@ -76,6 +142,17 @@ export const getOrCreateWeeklyPoints = async (userId: string): Promise<void> => 
           targetPoints = journeyData.weeklyPointsTarget || MINIMUM_WEEKLY_TARGET_POINTS
         }
       }
+    }
+
+    // Determine initial status - use journey-aware calculation
+    // For 6W journey in weeks 1-5, use 'warning' instead of 'at_risk'
+    let initialStatus: 'on_track' | 'warning' | 'at_risk' = 'warning'
+    if (journeyType === '6W' && currentWeek <= SIX_WEEK_AT_RISK_THRESHOLD_WEEK) {
+      initialStatus = 'warning' // Never at_risk for 6W in weeks 1-5
+    } else if (journeyType === '6W' && currentWeek > SIX_WEEK_AT_RISK_THRESHOLD_WEEK && totalPoints < SIX_WEEK_PASS_MARK) {
+      initialStatus = 'at_risk' // Only at_risk for 6W after week 5 if below 40k
+    } else if (journeyType !== '6W') {
+      initialStatus = 'at_risk' // Other journeys use default behavior
     }
 
     // Create new weekly points record
@@ -87,7 +164,7 @@ export const getOrCreateWeeklyPoints = async (userId: string): Promise<void> => 
       points_earned: 0,
       target_points: targetPoints,
       engagement_count: 0,
-      status: 'at_risk',
+      status: initialStatus,
       week_start: Timestamp.fromDate(start),
       week_end: Timestamp.fromDate(end),
       created_at: Timestamp.now(),
@@ -184,6 +261,36 @@ export const updateWeeklyPoints = async (userId: string): Promise<void> => {
   // Ensure record exists
   await getOrCreateWeeklyPoints(userId)
 
+  // Get user profile for journey context
+  const profileDoc = await getDoc(doc(db, 'profiles', userId))
+  const profileData = profileDoc.exists() ? profileDoc.data() : null
+
+  // Resolve journey context for 6W journey awareness
+  let journeyContext: { journeyType: string | null; currentWeek: number; totalPoints: number } | undefined
+
+  if (profileData) {
+    const totalPoints = profileData.totalPoints ?? 0
+    const currentWeek = profileData.currentWeek ?? 1
+    const orgId = profileData.companyId ?? profileData.organizationId
+
+    // Get journey type from profile or organization
+    let journeyType = profileData.journeyType ?? null
+
+    if (!journeyType && orgId) {
+      const orgDoc = await getDoc(doc(db, 'organizations', orgId))
+      if (orgDoc.exists()) {
+        const orgData = orgDoc.data()
+        journeyType = resolveJourneyType({
+          journeyType: orgData.journeyType,
+          programDurationWeeks: orgData.programDurationWeeks,
+          programDuration: orgData.programDuration,
+        })
+      }
+    }
+
+    journeyContext = { journeyType, currentWeek, totalPoints }
+  }
+
   // Calculate points earned this week from user_points
   const pointsQuery = query(
     collection(db, 'user_points'),
@@ -221,7 +328,8 @@ export const updateWeeklyPoints = async (userId: string): Promise<void> => {
     const existingData = weeklyPointsDocs.docs[0].data()
     const targetPoints = existingData.target_points || MINIMUM_WEEKLY_TARGET_POINTS
 
-    const status = calculateWeeklyStatus(pointsEarned, targetPoints)
+    // Use journey-aware status calculation
+    const status = calculateWeeklyStatusWithJourneyContext(pointsEarned, targetPoints, journeyContext)
 
     await setDoc(
       docRef,

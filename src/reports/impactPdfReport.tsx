@@ -1,4 +1,3 @@
-import React from 'react'
 import { Document, Page, Text, View, StyleSheet, pdf, Image } from '@react-pdf/renderer'
 import { format } from 'date-fns'
 import type { ImpactLogEntry } from '@/pages/impact/ImpactLogPage'
