@@ -449,6 +449,7 @@ export const ImpactLogPage: React.FC = () => {
   const [isBulkProcessing, setIsBulkProcessing] = useState(false)
   const [isExportOpen, setIsExportOpen] = useState(false)
   const [, setExportMode] = useState<'csv' | 'pdf'>('csv')
+  const [isPdfExporting, setIsPdfExporting] = useState(false)
   const shareDisclosure = useDisclosure()
   const [exportFilters, setExportFilters] = useState<ExportFilters>(() => {
     const start = startOfMonth(new Date())
@@ -1810,7 +1811,10 @@ export const ImpactLogPage: React.FC = () => {
               <Button
                 variant="outline"
                 leftIcon={<Download size={18} />}
+                isLoading={isPdfExporting}
+                loadingText="Exporting..."
                 onClick={async () => {
+                  setIsPdfExporting(true)
                   try {
                     const allEntries = activeTab === 'personal' || !profile?.companyId ? entries : companyEntries
                     await generateImpactPdfReport(allEntries, exportFilters, user, profile, applyFilters)
@@ -1825,6 +1829,8 @@ export const ImpactLogPage: React.FC = () => {
                       description: error instanceof Error ? error.message : 'Unknown error.',
                       status: 'error',
                     })
+                  } finally {
+                    setIsPdfExporting(false)
                   }
                 }}
               >
