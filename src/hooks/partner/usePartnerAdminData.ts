@@ -43,6 +43,7 @@ export interface PartnerOrganization {
   tags?: string[]
   warning?: string
   journeyType?: string // Added for 6W at-risk logic
+  cohortStartDate?: string // Organization's cohort start date for accurate week calculation
 }
 
 export interface PartnerUser {
@@ -58,7 +59,7 @@ export interface PartnerUser {
   progressPercent: number
   currentWeek: number
   status: 'Active' | 'Paused' | 'Onboarding'
-  lastActive: string
+  lastActive?: string // Only set when recordUserActivity is called - undefined means no activity tracked yet
   riskStatus: PartnerRiskLevel | 'at_risk'
   weeklyEarned: number
   weeklyRequired: number
@@ -68,6 +69,8 @@ export interface PartnerUser {
   interventions?: number
   nudgeEnabled?: boolean
   adminNotes?: string
+  totalPoints?: number
+  journeyType?: string
 }
 
 type FirestorePartnerUser = Partial<PartnerUser> & {
@@ -88,10 +91,13 @@ type FirestorePartnerUser = Partial<PartnerUser> & {
   last_active_at?: unknown
   lastActive?: unknown
   last_active?: unknown
+  updatedAt?: unknown
+  updated_at?: unknown
   createdAt?: unknown
   created_at?: unknown
   role?: PartnerUser['role']
   totalPoints?: number
+  total_points?: number
   nudgeResponseScore?: number
   status?: string
   nudge_enabled?: boolean
@@ -413,6 +419,19 @@ export const usePartnerAdminData = (
     return mapping
   }, [organizations])
 
+  // Lookup org ID/code → cohortStartDate (for accurate week calculation)
+  const cohortStartLookup = useMemo(() => {
+    if (!organizations.length) return new Map<string, string>()
+    const mapping = new Map<string, string>()
+    organizations.forEach((org) => {
+      if (org.cohortStartDate) {
+        if (org.id) mapping.set(org.id.toLowerCase(), org.cohortStartDate)
+        if (org.code) mapping.set(org.code.toLowerCase(), org.cohortStartDate)
+      }
+    })
+    return mapping
+  }, [organizations])
+
   const assignedOrgKeys = useMemo(() => {
     const keys: string[] = [...assignedOrganizationIds]
 
@@ -485,7 +504,8 @@ export const usePartnerAdminData = (
               count: snapshot.size,
             })
             const scoped = snapshot.docs.map((docSnap) => {
-              const data = docSnap.data() as Partial<PartnerOrganization> & { journeyType?: string }
+              const data = docSnap.data() as Partial<PartnerOrganization> & OrganizationRecord
+              const cohortStart = normalizeTimestamp(data.cohortStartDate || data.programStart)
               return {
                 id: docSnap.id,
                 code: data.code || docSnap.id,
@@ -497,6 +517,7 @@ export const usePartnerAdminData = (
                 tags: data.tags || [],
                 warning: !data.name || !data.code ? 'Organization details incomplete.' : undefined,
                 journeyType: data.journeyType, // Include for 6W at-risk logic
+                cohortStartDate: cohortStart || undefined, // Include for accurate week calculation
               }
             })
             handleSnapshot(scoped)
@@ -516,7 +537,8 @@ export const usePartnerAdminData = (
               count: assignedOrgs.length,
             })
             const scoped = assignedOrgs.map((org) => {
-              const data = org as OrganizationRecord & Partial<PartnerOrganization> & { journeyType?: string }
+              const data = org as OrganizationRecord & Partial<PartnerOrganization>
+              const cohortStart = normalizeTimestamp(data.cohortStartDate || data.programStart)
               return {
                 id: data.id,
                 code: data.code || data.id || '',
@@ -528,6 +550,7 @@ export const usePartnerAdminData = (
                 tags: data.tags || [],
                 warning: !data.name || !data.code ? 'Organization details incomplete.' : undefined,
                 journeyType: data.journeyType, // Include for 6W at-risk logic
+                cohortStartDate: cohortStart || undefined, // Include for accurate week calculation
               }
             })
             handleSnapshot(scoped)
@@ -655,6 +678,7 @@ export const usePartnerAdminData = (
     selectedOrgKeys,
     organizationLookup,
     journeyTypeLookup, // Added for 6W at-risk logic
+    cohortStartLookup, // Added for accurate week calculation
     selectedOrg,
   })
 
@@ -665,9 +689,10 @@ export const usePartnerAdminData = (
       selectedOrgKeys,
       organizationLookup,
       journeyTypeLookup, // Added for 6W at-risk logic
+      cohortStartLookup, // Added for accurate week calculation
       selectedOrg,
     }
-  }, [assignedOrgKeys, selectedOrgKeys, organizationLookup, journeyTypeLookup, selectedOrg])
+  }, [assignedOrgKeys, selectedOrgKeys, organizationLookup, journeyTypeLookup, cohortStartLookup, selectedOrg])
 
   // FIX: Track if users have been loaded to prevent infinite loop
   const usersInitializedRef = useRef(false)
@@ -858,6 +883,7 @@ export const usePartnerAdminData = (
 
           if (signal.aborted || !isMounted) return
 
+          // Fetch weekly points data for progress tracking
           const { pointsByUser, hasPartialFailure, errors } = await fetchWeeklyPointsByUser(userIds)
 
           if (
@@ -904,16 +930,22 @@ export const usePartnerAdminData = (
                   data.program_start_date ||
                   normalizedRegistrationDate
                 ) || normalizedRegistrationDate
+
+              // For lastActive: only use actual activity tracking data (lastActiveAt)
+              // This is set by recordUserActivity when users perform actions
               const normalizedLastActive =
                 normalizeTimestamp(
                   data.lastActiveAt ||
-                  data.last_active_at ||
-                  data.lastActive ||
-                  data.last_active ||
-                  normalizedRegistrationDate
-                ) || new Date().toISOString()
+                  data.last_active_at
+                ) || undefined
 
-              const currentWeek = getProgramWeekNumber(normalizedProgramStart || undefined)
+              // FIX: Use organization's cohortStartDate for week calculation if available
+              // This ensures all users in the same cohort show the same week
+              const orgCohortStart = rawOrganizationId
+                ? latestFilters.cohortStartLookup?.get(rawOrganizationId.toLowerCase())
+                : undefined
+              const effectiveProgramStart = orgCohortStart || normalizedProgramStart
+              const currentWeek = getProgramWeekNumber(effectiveProgramStart || undefined)
               const progress = mapWeeklyPointsToProgress(
                 pointsByUser[docWrapper.id] || [],
                 currentWeek
@@ -925,7 +957,9 @@ export const usePartnerAdminData = (
               if (!userJourneyType && rawOrganizationId) {
                 userJourneyType = latestFilters.journeyTypeLookup?.get(rawOrganizationId.toLowerCase()) ?? null
               }
-              const userTotalPoints = data.totalPoints ?? 0
+              // Use the totalPoints field directly from the user's profile
+              // This is updated by pointsService.ts whenever points are awarded
+              const userTotalPoints = data.totalPoints ?? data.total_points ?? 0
 
               const riskResult = calculateUserRiskStatus(
                 progress.current_week,
@@ -1009,6 +1043,8 @@ export const usePartnerAdminData = (
                 interventions: data.interventions || 0,
                 nudgeEnabled: data.nudgeEnabled ?? data.nudge_enabled ?? true,
                 adminNotes: data.adminNotes ?? data.admin_notes ?? '',
+                totalPoints: userTotalPoints,
+                journeyType: userJourneyType || undefined,
               })
             } catch (err) {
               logger.error('[PartnerAdminData] Failed to transform user record', {

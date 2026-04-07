@@ -76,7 +76,7 @@ export const PersonalityTypeModal: React.FC<PersonalityTypeModalProps> = ({
   onComplete,
 }) => {
   // --- STATE MANAGEMENT ---
-  const { user } = useAuth();
+  const { user, refreshProfile } = useAuth();
   const toast = useToast();
 
   // Form data state
@@ -260,6 +260,9 @@ export const PersonalityTypeModal: React.FC<PersonalityTypeModalProps> = ({
         setDoc(userDocRef, dataToSave, { merge: true }),
         setDoc(profileDocRef, dataToSave, { merge: true }),
       ]);
+
+      // Refresh the profile to update AuthContext state with the new personality data
+      await refreshProfile({ reason: 'personality-profile-saved' });
 
       setSuccess(true);
       toast({

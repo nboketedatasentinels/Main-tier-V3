@@ -25,7 +25,7 @@ interface SelectedUser {
   name: string
   email: string
   riskLevel: string
-  lastActive: string
+  lastActive?: string // Optional - undefined means no activity tracked yet
   engagementScore: number
 }
 

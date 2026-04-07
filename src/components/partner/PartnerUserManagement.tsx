@@ -93,7 +93,7 @@ const normalizeDateValue = (value?: unknown) => {
 
 const formatLastActiveLabel = (value?: unknown) => {
   const parsed = normalizeDateValue(value)
-  if (!parsed) return 'Unknown'
+  if (!parsed) return 'No activity yet'
   return formatDistanceToNow(parsed, { addSuffix: true })
 }
 

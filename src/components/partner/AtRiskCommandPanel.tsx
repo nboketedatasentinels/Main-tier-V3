@@ -120,19 +120,77 @@ const daysSince = (value?: string) => {
   return Math.max(0, Math.round(diffMs / (1000 * 60 * 60 * 24)))
 }
 
+/**
+ * Build risk score based on ALL available user data signals:
+ * - Weekly points data (most accurate when available)
+ * - Progress percentage from profile
+ * - Total points earned vs journey expectations
+ * - Days since last activity
+ * - Risk status classification
+ *
+ * Score range: 25 (low risk) to 100 (critical risk)
+ */
 const buildRiskScore = (user: PartnerUser) => {
-  const baseMap: Record<string, number> = {
-    critical: 90,
-    concern: 76,
-    watch: 60,
-    at_risk: 70,
-    engaged: 45,
+  let score = 50 // Start at neutral
+  let dataSignals = 0
+
+  // Signal 1: Weekly progress (most accurate when available)
+  if (user.weeklyRequired > 0) {
+    const weeklyCompletion = Math.min(1, user.weeklyEarned / user.weeklyRequired)
+    // 100% weekly completion → -25, 0% → +25
+    score += (1 - weeklyCompletion) * 50 - 25
+    dataSignals++
   }
-  const base = baseMap[user.riskStatus] ?? 55
-  if (!user.weeklyRequired) return base
-  const gap = Math.max(0, user.weeklyRequired - user.weeklyEarned)
-  const ratio = gap / user.weeklyRequired
-  return Math.min(100, Math.round(base + ratio * 20))
+
+  // Signal 2: Overall progress percent
+  if (user.progressPercent > 0) {
+    // High progress → lower risk, low progress → higher risk
+    // 100% → -20, 0% → +20
+    score += (1 - user.progressPercent / 100) * 40 - 20
+    dataSignals++
+  }
+
+  // Signal 3: Total points relative to journey week
+  if (user.totalPoints && user.totalPoints > 0) {
+    // Expected: ~6,667 points per week for 6W journey (40,000 / 6 weeks)
+    const expectedPerWeek = 6667
+    const expected = expectedPerWeek * Math.max(1, user.currentWeek)
+    const pointsRatio = Math.min(1.5, user.totalPoints / expected) // Cap at 150%
+    // On track (1.0) → -15, ahead (1.5) → -22, behind (0.5) → -7
+    score += (1 - pointsRatio) * 30 - 15
+    dataSignals++
+  }
+
+  // Signal 4: Days inactive (if lastActive is available)
+  const lastActiveDate = user.lastActiveAt || user.lastActive
+  if (lastActiveDate) {
+    const daysInactive = daysSince(lastActiveDate) ?? 0
+    // Active today (0 days) → -10, 7 days → 0, 14+ days → +10
+    const inactivityPenalty = Math.min(10, Math.max(-10, (daysInactive - 7) * 1.5))
+    score += inactivityPenalty
+    dataSignals++
+  }
+
+  // Signal 5: Risk status baseline
+  const statusScore: Record<string, number> = {
+    engaged: -15,
+    watch: 0,
+    concern: 10,
+    at_risk: 15,
+    critical: 20,
+  }
+  score += statusScore[user.riskStatus] ?? 5
+  dataSignals++
+
+  // If we have no meaningful data signals (only status), indicate uncertainty
+  if (dataSignals <= 1) {
+    // Base score primarily on status with some variance from current week
+    const weekPenalty = Math.min(15, user.currentWeek * 3) // Later weeks = higher risk if no data
+    score = 55 + (statusScore[user.riskStatus] ?? 5) + weekPenalty
+  }
+
+  // Clamp to valid range
+  return Math.max(25, Math.min(100, Math.round(score)))
 }
 
 const buildSparkline = (user: PartnerUser) => {
@@ -980,6 +1038,7 @@ export const AtRiskCommandPanel: React.FC<AtRiskCommandPanelProps> = ({
                     </Th>
                     <Th onClick={() => toggleSort('name')} cursor="pointer">Learner Name</Th>
                     <Th onClick={() => toggleSort('risk')} cursor="pointer">Risk Score</Th>
+                    <Th>Points Earned</Th>
                     <Th onClick={() => toggleSort('inactive')} cursor="pointer">Days Inactive</Th>
                     <Th onClick={() => toggleSort('lastActivity')} cursor="pointer">Last Activity</Th>
                     <Th onClick={() => toggleSort('status')} cursor="pointer">Status</Th>
@@ -1016,6 +1075,11 @@ export const AtRiskCommandPanel: React.FC<AtRiskCommandPanelProps> = ({
                               ))}
                             </HStack>
                           </HStack>
+                        </Td>
+                        <Td>
+                          <Text fontWeight="medium">
+                            {(user.totalPoints ?? 0).toLocaleString()}
+                          </Text>
                         </Td>
                         <Td>{inactiveDays ?? '—'}</Td>
                         <Td>{formatDate(user.lastActiveAt || user.lastActive)}</Td>

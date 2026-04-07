@@ -20,6 +20,7 @@ import { awardBadge } from "./badgeService";
 import { updateWindowOnAward, updateWindowOnRevoke } from "./windowProgressService";
 import { checkAndHandleJourneyCompletion } from "./journeyCompletionService";
 import { detectStatusChangeAndNudge } from "./nudgeMonitorService";
+import { recordUserActivity } from "./userProfileService";
 
 const { JOURNEY_META, getMonthNumber } = pointsConfig;
 
@@ -375,6 +376,11 @@ export async function awardChecklistPoints(params: {
     });
 
     // Post-transaction logic
+    // Record user activity for accurate "last active" tracking
+    recordUserActivity(uid).catch(err =>
+      console.warn('[PointsService] Failed to record activity:', err)
+    );
+
     // Check for journey completion after points are awarded
     setTimeout(() => {
       checkAndHandleJourneyCompletion(uid, journeyType).catch(err =>

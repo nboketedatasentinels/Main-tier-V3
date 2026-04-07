@@ -36,7 +36,7 @@ export interface PartnerUser {
   progressPercent: number
   currentWeek: number
   status: 'Active' | 'Paused' | 'Onboarding'
-  lastActive: string
+  lastActive?: string // Only set when recordUserActivity is called - undefined means no activity tracked yet
   riskStatus: PartnerRiskLevel | 'at_risk'
   weeklyEarned: number
   weeklyRequired: number
@@ -46,6 +46,8 @@ export interface PartnerUser {
   interventions?: number
   nudgeEnabled?: boolean
   adminNotes?: string
+  totalPoints?: number
+  journeyType?: string
 }
 
 // FIX #12: Proper types instead of `any`
@@ -67,10 +69,13 @@ type FirestorePartnerUser = Partial<PartnerUser> & {
   last_active_at?: unknown
   lastActive?: unknown
   last_active?: unknown
+  updatedAt?: unknown
+  updated_at?: unknown
   createdAt?: unknown
   created_at?: unknown
   role?: PartnerUser['role']
   totalPoints?: number
+  total_points?: number
   nudgeResponseScore?: number
   status?: string
 }
@@ -445,14 +450,14 @@ export const usePartnerUsers = (options: UsePartnerUsersOptions) => {
                     data.program_start_date ||
                     normalizedRegistrationDate
                 ) || normalizedRegistrationDate
+
+              // For lastActive: only use actual activity tracking data (lastActiveAt)
+              // This is set by recordUserActivity when users perform actions
               const normalizedLastActive =
                 normalizeTimestamp(
                   data.lastActiveAt ||
-                    data.last_active_at ||
-                    data.lastActive ||
-                    data.last_active ||
-                    normalizedRegistrationDate
-                ) || new Date().toISOString()
+                    data.last_active_at
+                ) || undefined
 
               const currentWeek = getProgramWeekNumber(normalizedProgramStart || undefined)
               const progress = mapWeeklyPointsToProgress(
@@ -525,6 +530,8 @@ export const usePartnerUsers = (options: UsePartnerUsersOptions) => {
                 riskReasons,
                 registrationDate: normalizedRegistrationDate || undefined,
                 interventions: data.interventions || 0,
+                totalPoints: data.totalPoints ?? data.total_points ?? 0,
+                journeyType: data.journeyType || undefined,
               })
             } catch (err) {
               logger.error('[PartnerUsers] Failed to transform user record', {

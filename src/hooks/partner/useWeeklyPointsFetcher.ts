@@ -5,6 +5,60 @@ import { WeeklyPointsRecord } from '@/utils/partnerProgress'
 import { logger } from '@/utils/partnerDashboardUtils'
 
 // ============================================================================
+// FIX: Fetch actual total points from pointsLedger collection
+// ============================================================================
+
+interface TotalPointsResult {
+  pointsByUser: Record<string, number>
+  errors: Array<{ batch: string[]; error: unknown }>
+}
+
+export const fetchTotalPointsFromLedger = async (
+  userIds: string[]
+): Promise<TotalPointsResult> => {
+  if (!userIds.length) {
+    return { pointsByUser: {}, errors: [] }
+  }
+
+  const pointsByUser: Record<string, number> = {}
+  const errors: Array<{ batch: string[]; error: unknown }> = []
+  const batches: string[][] = []
+
+  // Initialize all users with 0 points
+  userIds.forEach((uid) => {
+    pointsByUser[uid] = 0
+  })
+
+  // Firestore 'in' queries support max 30 values
+  for (let i = 0; i < userIds.length; i += 30) {
+    batches.push(userIds.slice(i, i + 30))
+  }
+
+  for (const batch of batches) {
+    try {
+      const ledgerQuery = query(
+        collection(db, 'pointsLedger'),
+        where('uid', 'in', batch)
+      )
+      const snapshot = await getDocs(ledgerQuery)
+      snapshot.docs.forEach((docSnap) => {
+        const data = docSnap.data()
+        const uid = data.uid as string
+        const points = typeof data.points === 'number' ? data.points : 0
+        if (uid && points > 0) {
+          pointsByUser[uid] = (pointsByUser[uid] || 0) + points
+        }
+      })
+    } catch (error) {
+      logger.error(`Failed to fetch points ledger for batch`, error)
+      errors.push({ batch, error })
+    }
+  }
+
+  return { pointsByUser, errors }
+}
+
+// ============================================================================
 // FIX #7: Proper error handling for batch processing with partial failure tracking
 // ============================================================================
 

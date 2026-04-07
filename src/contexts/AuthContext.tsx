@@ -42,6 +42,7 @@ import { createReferral, generateReferralCode, validateReferralCode } from '@/se
 import { checkPhoneAvailability, claimPhoneNumber } from '@/services/phoneRegistryService'
 import { JOURNEY_META, type JourneyType } from '@/config/pointsConfig'
 import { resolveEffectiveOrganization, resolveEffectiveRole } from '@/utils/authz'
+import { recordUserActivity } from '@/services/userProfileService'
 
 interface AuthProviderProps {
   children: React.ReactNode
@@ -215,7 +216,11 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       previous.privacySettings?.shareImpactPublicly === next.privacySettings?.shareImpactPublicly &&
       previous.onboardingComplete === next.onboardingComplete &&
       previous.onboardingSkipped === next.onboardingSkipped &&
-      serializeAssignments(previous.assignedOrganizations) === serializeAssignments(next.assignedOrganizations)
+      serializeAssignments(previous.assignedOrganizations) === serializeAssignments(next.assignedOrganizations) &&
+      previous.hasCompletedPersonalityTest === next.hasCompletedPersonalityTest &&
+      previous.hasCompletedValuesTest === next.hasCompletedValuesTest &&
+      previous.personalityType === next.personalityType &&
+      JSON.stringify(previous.coreValues ?? []) === JSON.stringify(next.coreValues ?? [])
     )
   }, [serializeAssignments])
 
@@ -1125,8 +1130,14 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     }
 
     try {
-      await signInWithEmailAndPassword(auth, email, password)
+      const userCredential = await signInWithEmailAndPassword(auth, email, password)
       console.log('🟢 [Auth] signIn success')
+      // Record activity on login for accurate "last active" tracking
+      if (userCredential.user?.uid) {
+        recordUserActivity(userCredential.user.uid).catch(err =>
+          console.warn('[Auth] Failed to record login activity:', err)
+        )
+      }
       return { error: null }
     } catch (error) {
       console.error('🔴 [Auth] signIn failed', error)
@@ -1172,6 +1183,12 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         uid: credential.user.uid,
         isNewUser: additionalInfo?.isNewUser,
       })
+      // Record activity on login for accurate "last active" tracking
+      if (credential.user?.uid) {
+        recordUserActivity(credential.user.uid).catch(err =>
+          console.warn('[Auth] Failed to record login activity:', err)
+        )
+      }
       return { error: null, isNewUser: additionalInfo?.isNewUser }
     } catch (error) {
       console.error('🔴 [Auth] signInWithGoogle failed', error)

@@ -1,5 +1,6 @@
 import { db } from '@/services/firebase'
 import { doc, getDoc, serverTimestamp, setDoc } from 'firebase/firestore'
+import { recordUserActivity } from './userProfileService'
 
 type ChecklistActivityEntry = {
   id: string
@@ -56,5 +57,10 @@ export async function upsertChecklistActivity(params: {
       updatedAt: serverTimestamp(),
     },
     { merge: true },
+  )
+
+  // Record user activity for accurate "last active" tracking
+  recordUserActivity(params.userId).catch(err =>
+    console.warn('[ChecklistService] Failed to record activity:', err)
   )
 }

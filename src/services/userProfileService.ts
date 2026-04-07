@@ -356,3 +356,30 @@ export const upgradeUserToOrganization = async (params: {
 
   return { ...sourceData, ...updates, id: userId }
 }
+
+/**
+ * Records user activity by updating lastActiveAt timestamp.
+ * Call this when users perform significant actions like:
+ * - Completing activities/checklists
+ * - Earning points
+ * - Logging in
+ * - Viewing dashboard
+ */
+export const recordUserActivity = async (userId: string): Promise<void> => {
+  if (!userId?.trim()) return
+
+  const payload = {
+    lastActiveAt: serverTimestamp(),
+    updatedAt: serverTimestamp(),
+  }
+
+  try {
+    await Promise.all([
+      setDoc(doc(db, 'users', userId), payload, { merge: true }),
+      setDoc(doc(db, 'profiles', userId), payload, { merge: true }),
+    ])
+  } catch (error) {
+    // Silently fail - don't break user actions due to activity tracking
+    console.warn('[recordUserActivity] Failed to record activity:', error)
+  }
+}

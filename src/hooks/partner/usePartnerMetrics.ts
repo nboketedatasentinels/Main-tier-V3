@@ -18,7 +18,7 @@ export const usePartnerMetrics = (options: UsePartnerMetricsOptions) => {
     const newWindow = subDays(new Date(), 7)
 
     const activeMembers = users.filter(
-      (user) => new Date(user.lastActive) >= activeWindow
+      (user) => user.lastActive && new Date(user.lastActive) >= activeWindow
     ).length
 
     const engagementRate = Math.round(
