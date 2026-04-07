@@ -450,6 +450,7 @@ export const ImpactLogPage: React.FC = () => {
   const [isExportOpen, setIsExportOpen] = useState(false)
   const [, setExportMode] = useState<'csv' | 'pdf'>('csv')
   const [isPdfExporting, setIsPdfExporting] = useState(false)
+  const [isSubmittingImpact, setIsSubmittingImpact] = useState(false)
   const shareDisclosure = useDisclosure()
   const [exportFilters, setExportFilters] = useState<ExportFilters>(() => {
     const start = startOfMonth(new Date())
@@ -1308,6 +1309,7 @@ export const ImpactLogPage: React.FC = () => {
   const handleSubmit = async () => {
     if (!user?.uid) return
 
+    setIsSubmittingImpact(true)
     const errors: string[] = []
     const { verificationLevel, verifierEmail, evidenceLink, description, date, hours, peopleImpacted } = formValues
     const requirements = verificationRequirements[(verificationLevel || 'Tier 1: Self-Reported') as VerificationTier]
@@ -1382,6 +1384,7 @@ export const ImpactLogPage: React.FC = () => {
           isClosable: true,
         })
       })
+      setIsSubmittingImpact(false)
       return
     }
 
@@ -1393,17 +1396,7 @@ export const ImpactLogPage: React.FC = () => {
         duration: 5000,
         isClosable: true,
       })
-      return
-    }
-
-    if (!attestationChecked) {
-      toast({
-        title: 'Attestation required',
-        description: 'Please confirm that the information is accurate to the best of your knowledge.',
-        status: 'error',
-        duration: 5000,
-        isClosable: true,
-      })
+      setIsSubmittingImpact(false)
       return
     }
 
@@ -1500,8 +1493,8 @@ export const ImpactLogPage: React.FC = () => {
         const ledgerSnap = await getDoc(ledgerRef)
 
         if (ledgerSnap.exists()) {
-          toastStatus = 'warning'
-          toastDescription = "You've already logged an Impact entry for this journey window."
+          // Impact was saved successfully, just no additional journey points
+          toastDescription = "Your impact has been logged successfully."
         } else {
           const monthQuery = query(
             collection(db, 'pointsLedger'),
@@ -1512,8 +1505,8 @@ export const ImpactLogPage: React.FC = () => {
           const monthSnapshot = await getDocs(monthQuery)
 
           if (monthSnapshot.size >= activity.maxPerMonth) {
-            toastStatus = 'warning'
-            toastDescription = 'You have reached the Impact Log activity limit for this month.'
+            // Impact was saved successfully, just reached monthly limit for bonus points
+            toastDescription = 'Your impact has been logged successfully.'
           } else {
             try {
               await awardChecklistPoints({
@@ -1529,9 +1522,8 @@ export const ImpactLogPage: React.FC = () => {
               if (import.meta.env.DEV) {
                 console.error('Impact log points award failed', awardError)
               }
-              toastStatus = 'warning'
-              toastDescription =
-                'Impact logged, but journey progress could not be updated. Please try again later.'
+              // Impact was still saved successfully
+              toastDescription = 'Your impact has been logged successfully.'
             }
           }
         }
@@ -1542,6 +1534,7 @@ export const ImpactLogPage: React.FC = () => {
         description: toastDescription,
         status: toastStatus,
       })
+      setIsSubmittingImpact(false)
       onClose()
     } catch (error) {
       const errorMessage = error instanceof FirebaseError ? error.message : (error as Error)?.message || 'Unknown error'
@@ -1555,6 +1548,7 @@ export const ImpactLogPage: React.FC = () => {
         description: errorMessage,
         status: 'error',
       })
+      setIsSubmittingImpact(false)
     }
   }
 
@@ -3231,7 +3225,13 @@ export const ImpactLogPage: React.FC = () => {
             )}
 
             {wizardStep === 'confirm' && (
-            <Button colorScheme="purple" leftIcon={<Upload size={16} />} onClick={handleSubmit}>
+            <Button
+              colorScheme="purple"
+              leftIcon={<Upload size={16} />}
+              onClick={handleSubmit}
+              isLoading={isSubmittingImpact}
+              loadingText="Submitting..."
+            >
               Submit Impact
             </Button>
             )}
