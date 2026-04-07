@@ -5,7 +5,6 @@ import {
   Box,
   Button,
   Heading,
-  Progress,
   Stack,
   Text,
 } from '@chakra-ui/react'
@@ -40,18 +39,6 @@ export const GamificationPanel = ({
     () => activities.length > 0 && firstIncompleteActivity == null,
     [activities.length, firstIncompleteActivity],
   )
-
-  const progressPct = useMemo(() => {
-    if (activities.length === 0) return 0
-    const completed = activities.filter((a) => a.status === 'completed').length
-    return Math.round((completed / activities.length) * 100)
-  }, [activities])
-
-  const progressStatus = useMemo(() => {
-    if (progressPct >= 100) return { color: 'green', label: 'Completed' }
-    if (progressPct >= 75) return { color: 'blue', label: 'Strong momentum' }
-    return { color: 'teal', label: 'In progress' }
-  }, [progressPct])
 
   const scrollToActivity = () => {
     const target = firstActionableActivity ?? firstIncompleteActivity ?? firstCompletedActivity
@@ -101,11 +88,6 @@ export const GamificationPanel = ({
                 ? 'Celebrate this win'
                 : 'No activities yet'}
         </Button>
-        <Stack spacing={1} color="text.secondary">
-          <Text fontWeight="bold">Streak tracker</Text>
-          <Progress value={progressPct} colorScheme={progressStatus.color} borderRadius="full" />
-          <Text fontSize="sm" color="text.muted">Maintain daily check-ins to grow your streak.</Text>
-        </Stack>
       </Stack>
     </Box>
   )
