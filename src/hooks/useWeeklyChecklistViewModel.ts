@@ -342,6 +342,7 @@ export function useWeeklyChecklistViewModel() {
     totalCompletedAllTime: {},
     lastCompletedWeekByActivity: {},
   })
+  const [ledgerLoaded, setLedgerLoaded] = useState(false)
 
   useEffect(() => {
     if (!user) return
@@ -406,6 +407,9 @@ export function useWeeklyChecklistViewModel() {
       }
     }
 
+    // Reset ledgerLoaded when week changes
+    setLedgerLoaded(false)
+
     const unsubWeek = onSnapshot(weekQ, snap => {
       const weekCompleted = new Set<string>()
       const weekCounts: Record<string, number> = {}
@@ -421,6 +425,7 @@ export function useWeeklyChecklistViewModel() {
         weekCompleted,
         weekCounts,
       }))
+      setLedgerLoaded(true)
     }, (e) => console.error('[ledgerCache] week listener failed', e))
 
     loadStaticCounts()
@@ -490,8 +495,11 @@ export function useWeeklyChecklistViewModel() {
     })
 
     setActivities(next)
-    setLoading(false)
-  }, [isFreeTierMember, journey, ledgerCache, leadershipAvailability, selectedWeek, user])
+    // Only stop loading once ledger data has been loaded from Firestore
+    if (ledgerLoaded) {
+      setLoading(false)
+    }
+  }, [isFreeTierMember, journey, ledgerCache, ledgerLoaded, leadershipAvailability, selectedWeek, user])
 
   /* ------------------------------------------------------------------ */
   /* Weekly progress (realtime)                                           */
