@@ -1513,7 +1513,7 @@ export const ImpactLogPage: React.FC = () => {
                 uid: user.uid,
                 journeyType,
                 weekNumber,
-                activity: { ...activity, points: payload.points },
+                activity, // Use journey-configured points (e.g., 2000 for 6W)
                 source: 'impact_log_submission',
               })
               toastTitle = 'Impact logged and journey updated!'
