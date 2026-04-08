@@ -6,10 +6,11 @@ interface StatCardProps {
   label: string
   value: string
   icon: React.ReactNode
+  borderColor?: string
 }
 
-export const StatCard: React.FC<StatCardProps> = ({ label, value, icon }) => (
-  <SurfaceCard borderColor="gray.700" borderRadius="lg" bg="white">
+export const StatCard: React.FC<StatCardProps> = ({ label, value, icon, borderColor = 'gray.200' }) => (
+  <SurfaceCard borderWidth="1px" borderStyle="solid" borderColor={borderColor} borderRadius="lg" bg="white" boxShadow="sm">
     <HStack justify="space-between" mb={1}>
       <Text color="text.primary" fontSize="sm">
         {label}

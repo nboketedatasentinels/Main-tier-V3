@@ -3,18 +3,19 @@ import {
   Alert,
   AlertIcon,
   Badge,
+  Box,
   Flex,
   HStack,
   Heading,
   Icon,
   Progress,
+  SimpleGrid,
   Stack,
   Tag,
   Text,
 } from '@chakra-ui/react'
 import { CheckCircle, Lock } from 'lucide-react'
-import { format, addDays } from 'date-fns'
-import { SurfaceCard } from '@/components/primitives/SurfacePrimitives'
+import { format, addDays, differenceInDays } from 'date-fns'
 import { useAuth } from '@/hooks/useAuth'
 import {
   JOURNEY_LABELS,
@@ -80,14 +81,43 @@ export const JourneyHeader = ({
     return addDays(journeyStartDate, journey.programDurationWeeks * 7)
   }, [journeyStartDate, journey])
 
+  // Dynamically calculate current week and day from journeyStartDate
+  // 37 days = 5 weeks + 2 days (not Week 6, Day 3)
+  const { calculatedCurrentWeek, weekDayLabel } = useMemo(() => {
+    if (!journeyStartDate || !journey) {
+      const fallbackWeek = journey?.currentWeek ?? 1
+      return { calculatedCurrentWeek: fallbackWeek, weekDayLabel: `Week ${fallbackWeek}` }
+    }
+    const daysSinceStart = differenceInDays(new Date(), journeyStartDate)
+    const weeks = Math.floor(daysSinceStart / 7)
+    const days = daysSinceStart % 7
+
+    // For internal week tracking, use weeks + 1 (we're "in" the next week)
+    const currentWeekForTracking = Math.max(1, Math.min(journey.programDurationWeeks, weeks + 1))
+
+    // For display: "X weeks, Y days" format
+    let label: string
+    if (daysSinceStart >= journey.programDurationWeeks * 7) {
+      label = `${journey.programDurationWeeks} weeks`
+    } else if (weeks === 0) {
+      label = `${days} day${days === 1 ? '' : 's'}`
+    } else if (days === 0) {
+      label = `${weeks} week${weeks === 1 ? '' : 's'}`
+    } else {
+      label = `${weeks} week${weeks === 1 ? '' : 's'}, ${days} day${days === 1 ? '' : 's'}`
+    }
+
+    return { calculatedCurrentWeek: currentWeekForTracking, weekDayLabel: label }
+  }, [journeyStartDate, journey])
+
   const isMonthBasedJourney = useMemo(() => {
     return journey ? MONTH_BASED_JOURNEYS.includes(journey.journeyType) : false
   }, [journey])
 
   const currentMonthNumber = useMemo(() => {
     if (!journey) return 1
-    return getMonthNumber(journey.currentWeek)
-  }, [journey])
+    return getMonthNumber(calculatedCurrentWeek)
+  }, [journey, calculatedCurrentWeek])
 
   const totalMonths = useMemo(() => {
     if (!journey) return 1
@@ -134,18 +164,18 @@ export const JourneyHeader = ({
       }
       const startWeek = (month - 1) * 4 + 1
       const endWeek = Math.min(journey.programDurationWeeks, startWeek + 3)
-      const isCompleted = endWeek < (journey.currentWeek || 1)
+      const isCompleted = endWeek < calculatedCurrentWeek
       const isCurrent = month === currentMonthNumber
       const status = isCompleted ? 'completed' : isCurrent ? 'current' : 'locked'
       const completedWeeks = isCompleted
         ? 4
         : isCurrent
-        ? Math.max(0, Math.min(4, (journey.currentWeek || 1) - startWeek))
+        ? Math.max(0, Math.min(4, calculatedCurrentWeek - startWeek))
         : 0
       const completionPercent = Math.min(100, Math.round((completedWeeks / 4) * 100))
       return { month, startWeek, endWeek, status, completionPercent }
     },
-    [currentMonthNumber, journey],
+    [calculatedCurrentWeek, currentMonthNumber, journey],
   )
 
   if (!journey) return null
@@ -154,8 +184,8 @@ export const JourneyHeader = ({
   const startLabel = journeyStartDate ? format(journeyStartDate, 'MMM d, yyyy') : 'Not set'
   const endLabel = journeyEndDate ? format(journeyEndDate, 'MMM d, yyyy') : 'Not set'
   const overviewLabel = isMonthBasedJourney
-    ? `Month ${currentMonthNumber} of ${totalMonths} - Week ${journey.currentWeek} of ${journey.programDurationWeeks}`
-    : `Week ${journey.currentWeek} of ${journey.programDurationWeeks}`
+    ? `Month ${currentMonthNumber} of ${totalMonths} - ${weekDayLabel} of ${journey.programDurationWeeks}`
+    : `${weekDayLabel} of ${journey.programDurationWeeks}`
 
   const monthMilestones: MonthMilestone[] = isMonthBasedJourney
     ? Array.from({ length: totalMonths }, (_, idx) => monthMeta(idx + 1))
@@ -170,9 +200,9 @@ export const JourneyHeader = ({
         let status: WeekMilestone['status'] = 'locked'
         if (hasPoints) {
           status = 'completed'
-        } else if (weekNumber === journey.currentWeek) {
+        } else if (weekNumber === calculatedCurrentWeek) {
           status = 'current'
-        } else if (weekNumber < journey.currentWeek) {
+        } else if (weekNumber < calculatedCurrentWeek) {
           status = 'incomplete'
         } else {
           status = 'locked'
@@ -183,87 +213,120 @@ export const JourneyHeader = ({
     : []
 
   return (
-    <SurfaceCard borderColor="border.card">
-      <Stack spacing={4}>
-        <Flex align="flex-start" justify="space-between" wrap="wrap" gap={4}>
-          <Stack spacing={2}>
-            <HStack spacing={2}>
-              <Badge colorScheme="purple">{label}</Badge>
-              <Badge colorScheme={journey.isPaid ? 'green' : 'gray'}>{tierLabel}</Badge>
-            </HStack>
-            <Heading size="md" color="text.primary">
-              Journey Progress
-            </Heading>
-            <Text color="text.secondary">{overviewLabel}</Text>
-            <Text color="text.secondary" fontSize="sm">
-              {journey.programDurationWeeks} total weeks · {journeyProgress.activeWeeks} weeks with points
-            </Text>
-            <Text color="text.secondary" fontSize="sm">
-              {journeyProgress.totalEarned.toLocaleString()} points accumulated · Pass mark {journeyProgress.passMarkPoints.toLocaleString()}
-            </Text>
-            <Text color="text.secondary" fontSize="sm">
-              Max possible {journeyProgress.maxPossiblePoints.toLocaleString()} points
-            </Text>
-          </Stack>
-          <Stack spacing={1} align="flex-end">
-            <Text color="text.muted" fontSize="sm">
-              Started: {startLabel}
-            </Text>
-            <Text color="text.muted" fontSize="sm">
-              Expected completion: {endLabel}
-            </Text>
-            <Text color="text.muted" fontSize="sm">
-              Pass progress {journeyProgress.passPct}%
-            </Text>
-          </Stack>
+    <Box
+      borderWidth="1px"
+      borderStyle="solid"
+      borderColor="blue.200"
+      borderRadius="xl"
+      bg="white"
+      boxShadow="md"
+      overflow="hidden"
+    >
+      {/* Header Section */}
+      <Box px={4} py={2} bg="gray.50" borderBottomWidth="1px" borderColor="gray.100">
+        <Flex align="center" justify="space-between" wrap="wrap" gap={2}>
+          <HStack spacing={2}>
+            <Badge colorScheme="purple" fontSize="xs" px={2} borderRadius="full">{label}</Badge>
+            <Badge colorScheme={journey.isPaid ? 'green' : 'gray'} fontSize="xs" px={2} borderRadius="full">{tierLabel}</Badge>
+          </HStack>
+          <HStack spacing={3} color="text.muted" fontSize="xs">
+            <Text>Started: <Text as="span" fontWeight="semibold" color="text.primary">{startLabel}</Text></Text>
+            <Text>Ends: <Text as="span" fontWeight="semibold" color="text.primary">{endLabel}</Text></Text>
+          </HStack>
         </Flex>
-        <Progress value={journeyProgress.passPct} colorScheme="teal" borderRadius="full" />
-        {isOrgManagedJourney ? (
-          <Alert status="info" borderRadius="md">
-            <AlertIcon />
-            <Text fontSize="sm" color="text.secondary">
-              Journey duration is managed by your organization for this cohort. If the schedule changes, your completed activity history remains recorded.
-            </Text>
-          </Alert>
-        ) : null}
-        <HStack spacing={2} wrap="wrap">
-          {isMonthBasedJourney
-            ? monthMilestones.map((monthItem) => (
-                <Tag
-                  key={`month-${monthItem.month}`}
-                  colorScheme={
-                    monthItem.status === 'completed' ? 'green' : monthItem.status === 'current' ? 'teal' : 'gray'
-                  }
-                >
-                  <HStack spacing={1}>
-                    {monthItem.status === 'completed' && <Icon as={CheckCircle} />}
-                    {monthItem.status === 'locked' && <Icon as={Lock} />}
-                    <Text>Month {monthItem.month}</Text>
-                  </HStack>
-                </Tag>
-              ))
-            : weekMilestones.map((weekItem) => (
-                <Tag
-                  key={`week-${weekItem.week}`}
-                  colorScheme={
-                    weekItem.status === 'completed'
-                      ? 'green'
-                      : weekItem.status === 'current'
-                        ? 'teal'
-                        : weekItem.status === 'incomplete'
-                          ? 'yellow'
-                          : 'gray'
-                  }
-                >
-                  <HStack spacing={1}>
-                    {weekItem.status === 'completed' && <Icon as={CheckCircle} />}
-                    {weekItem.status === 'locked' && <Icon as={Lock} />}
-                    <Text>Week {weekItem.week}</Text>
-                  </HStack>
-                </Tag>
-              ))}
-        </HStack>
-      </Stack>
-    </SurfaceCard>
+      </Box>
+
+      {/* Main Content */}
+      <Box px={4} py={3}>
+        <Stack spacing={3}>
+          {/* Title and Progress */}
+          <Flex align="center" justify="space-between" wrap="wrap" gap={2}>
+            <HStack spacing={3}>
+              <Heading size="sm" color="text.primary">Journey Progress</Heading>
+              <Text color="text.secondary" fontSize="sm">{overviewLabel}</Text>
+            </HStack>
+            <HStack spacing={1}>
+              <Text fontSize="lg" fontWeight="bold" color="teal.600">{journeyProgress.passPct}%</Text>
+              <Text fontSize="xs" color="text.muted">pass</Text>
+            </HStack>
+          </Flex>
+
+          {/* Progress Bar */}
+          <Progress value={journeyProgress.passPct} colorScheme="teal" borderRadius="full" size="sm" />
+
+          {/* Stats Grid */}
+          <SimpleGrid columns={{ base: 2, md: 4 }} spacing={2}>
+            <Box py={2} px={3} bg="gray.50" borderRadius="md" borderLeftWidth="3px" borderLeftColor="blue.400">
+              <Text fontSize="xs" color="text.muted" textTransform="uppercase">Total Weeks</Text>
+              <Text fontSize="md" fontWeight="bold" color="text.primary">{journey.programDurationWeeks}</Text>
+            </Box>
+            <Box py={2} px={3} bg="gray.50" borderRadius="md" borderLeftWidth="3px" borderLeftColor="green.400">
+              <Text fontSize="xs" color="text.muted" textTransform="uppercase">Active Weeks</Text>
+              <Text fontSize="md" fontWeight="bold" color="text.primary">{journeyProgress.activeWeeks}</Text>
+            </Box>
+            <Box py={2} px={3} bg="gray.50" borderRadius="md" borderLeftWidth="3px" borderLeftColor="purple.400">
+              <Text fontSize="xs" color="text.muted" textTransform="uppercase">Points Earned</Text>
+              <Text fontSize="md" fontWeight="bold" color="text.primary">{journeyProgress.totalEarned.toLocaleString()}</Text>
+            </Box>
+            <Box py={2} px={3} bg="gray.50" borderRadius="md" borderLeftWidth="3px" borderLeftColor="orange.400">
+              <Text fontSize="xs" color="text.muted" textTransform="uppercase">Pass / Max</Text>
+              <Text fontSize="md" fontWeight="bold" color="text.primary">{journeyProgress.passMarkPoints.toLocaleString()} / {journeyProgress.maxPossiblePoints.toLocaleString()}</Text>
+            </Box>
+          </SimpleGrid>
+
+          {isOrgManagedJourney ? (
+            <Alert status="info" borderRadius="md" variant="subtle" py={2}>
+              <AlertIcon boxSize={4} />
+              <Text fontSize="xs" color="text.secondary">
+                Journey duration is managed by your organization. Your completed activity history remains recorded.
+              </Text>
+            </Alert>
+          ) : null}
+
+          {/* Week/Month Pills */}
+          <HStack spacing={2} wrap="wrap" justify="center">
+            {isMonthBasedJourney
+              ? monthMilestones.map((monthItem) => (
+                  <Tag
+                    key={`month-${monthItem.month}`}
+                    size="sm"
+                    borderRadius="full"
+                    colorScheme={
+                      monthItem.status === 'completed' ? 'green' : monthItem.status === 'current' ? 'teal' : 'gray'
+                    }
+                  >
+                    <HStack spacing={1}>
+                      {monthItem.status === 'completed' && <Icon as={CheckCircle} boxSize={3} />}
+                      {monthItem.status === 'locked' && <Icon as={Lock} boxSize={3} />}
+                      <Text fontSize="xs">Month {monthItem.month}</Text>
+                    </HStack>
+                  </Tag>
+                ))
+              : weekMilestones.map((weekItem) => (
+                  <Tag
+                    key={`week-${weekItem.week}`}
+                    size="sm"
+                    borderRadius="full"
+                    colorScheme={
+                      weekItem.status === 'completed'
+                        ? 'green'
+                        : weekItem.status === 'current'
+                          ? 'teal'
+                          : weekItem.status === 'incomplete'
+                            ? 'yellow'
+                            : 'gray'
+                    }
+                  >
+                    <HStack spacing={1}>
+                      {weekItem.status === 'completed' && <Icon as={CheckCircle} boxSize={3} />}
+                      {weekItem.status === 'locked' && <Icon as={Lock} boxSize={3} />}
+                      <Text fontSize="xs">Week {weekItem.week}</Text>
+                    </HStack>
+                  </Tag>
+                ))}
+          </HStack>
+        </Stack>
+      </Box>
+    </Box>
   )
 }

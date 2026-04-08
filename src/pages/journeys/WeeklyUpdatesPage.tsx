@@ -23,7 +23,6 @@ import {
   ModalHeader,
   ModalOverlay,
   Progress,
-  SimpleGrid,
   Skeleton,
   Stack,
   Tag,
@@ -33,9 +32,9 @@ import {
   useDisclosure,
   useToast,
 } from '@chakra-ui/react'
-import { AlertTriangle, CalendarRange, CheckCircle, Lock, Plus, ShieldCheck } from 'lucide-react'
+import { AlertTriangle, CheckCircle, Plus, ShieldCheck } from 'lucide-react'
 import { collection, doc, getDoc, getDocs, onSnapshot, query, serverTimestamp, setDoc, where } from 'firebase/firestore'
-import { addDays, format } from 'date-fns'
+import { addDays, format, differenceInDays } from 'date-fns'
 import { useLocation } from 'react-router-dom'
 import { removeUndefinedFields } from '@/utils/firestore'
 import { db } from '@/services/firebase'
@@ -46,7 +45,6 @@ import { WeeklyProgress } from '@/types'
 import { isFreeUser } from '@/utils/membership'
 import {
   JOURNEY_META,
-  getMonthNumber,
   getActivitiesForJourney,
   resolveCanonicalActivityId,
   type ActivityDef,
@@ -57,8 +55,6 @@ import { SurfaceCard } from '@/components/primitives/SurfacePrimitives'
 import { ORG_COLLECTION } from '@/constants/organizations'
 import {
   JOURNEY_LABELS,
-  JOURNEY_MONTH_COUNTS,
-  MONTH_BASED_JOURNEYS,
   resolveJourneyType,
 } from '@/utils/journeyType'
 import { getWindowNumber, getWindowRange, getWindowWeekNumber, PARALLEL_WINDOW_SIZE_WEEKS } from '@/utils/windowCalculations'
@@ -91,19 +87,6 @@ interface JourneyConfig {
 interface ProofModalState {
   isOpen: boolean;
   activity?: ActivityState;
-}
-
-interface MonthMilestone {
-  month: number;
-  startWeek: number;
-  endWeek: number;
-  status: 'completed' | 'current' | 'locked';
-  completionPercent: number;
-}
-
-interface WeekMilestone {
-  week: number;
-  status: 'completed' | 'current' | 'locked' | 'incomplete';
 }
 
 interface WindowProgressData {
@@ -157,15 +140,9 @@ const WeeklyChecklistPage: React.FC = () => {
   const [journey, setJourney] = useState<JourneyConfig | null>(null)
   const [activities, setActivities] = useState<ActivityState[]>([])
   const [selectedWeek, setSelectedWeek] = useState<number>(1)
-  const [progressLoading, setProgressLoading] = useState(true)
   const [activityLoading, setActivityLoading] = useState(true)
   const [error, setError] = useState<string>('')
   const [proofModal, setProofModal] = useState<ProofModalState>({ isOpen: false })
-  const [pendingCounts, setPendingCounts] = useState<{ completed: number; total: number; points: number }>({
-    completed: 0,
-    total: 0,
-    points: 0,
-  })
 
   const { isOpen, onOpen, onClose } = useDisclosure()
   const toast = useToast()
@@ -217,12 +194,6 @@ const WeeklyChecklistPage: React.FC = () => {
     return JOURNEY_META[journey.journeyType].weeklyTarget;
   }, [journey]);
 
-  const weekProgressByNumber = useMemo(() => {
-    const map = new Map<number, WeeklyProgress>();
-    allWeeksProgress.forEach(week => map.set(week.weekNumber, week));
-    return map;
-  }, [allWeeksProgress]);
-
   const windowMeta = useMemo(() => {
     if (!journey) {
       return {
@@ -271,26 +242,6 @@ const WeeklyChecklistPage: React.FC = () => {
     const offsetWeeks = journey.currentWeek - 1;
     return addDays(new Date(), -(offsetWeeks * 7));
   }, [journey, profile]);
-
-  const journeyEndDate = useMemo(() => {
-    if (!journeyStartDate || !journey) return null;
-    return addDays(journeyStartDate, journey.programDurationWeeks * 7);
-  }, [journeyStartDate, journey]);
-
-  const isMonthBasedJourney = useMemo(() => {
-    return journey ? MONTH_BASED_JOURNEYS.includes(journey.journeyType) : false;
-  }, [journey]);
-
-  const currentMonthNumber = useMemo(() => {
-    if (!journey) return 1;
-    return getMonthNumber(journey.currentWeek);
-  }, [journey]);
-
-  const totalMonths = useMemo(() => {
-    if (!journey) return 1;
-    if (!isMonthBasedJourney) return 1;
-    return JOURNEY_MONTH_COUNTS[journey.journeyType];
-  }, [journey, isMonthBasedJourney]);
 
   const getImpactLogDateRange = useCallback(
     (weekNumber: number) => {
@@ -347,9 +298,19 @@ const WeeklyChecklistPage: React.FC = () => {
         : (orgJourneyType ?? (profile.journeyType as JourneyType) ?? '6W');
       const meta = JOURNEY_META[journeyType];
 
+      // Dynamically calculate current week from journeyStartDate
+      let calculatedCurrentWeek = profile.currentWeek || 1;
+      if (profile.journeyStartDate) {
+        const startDate = new Date(profile.journeyStartDate);
+        if (!isNaN(startDate.getTime())) {
+          const daysSinceStart = differenceInDays(new Date(), startDate);
+          calculatedCurrentWeek = Math.max(1, Math.min(meta.weeks, Math.floor(daysSinceStart / 7) + 1));
+        }
+      }
+
       const journeyConfig: JourneyConfig = {
         journeyType,
-        currentWeek: profile.currentWeek || 1,
+        currentWeek: calculatedCurrentWeek,
         programDurationWeeks: meta.weeks,
         isPaid: !isFreeTierUser,
       };
@@ -553,14 +514,6 @@ const WeeklyChecklistPage: React.FC = () => {
     return () => unsubscribe()
   }, [getImpactLogDateRange, selectedWeek, toast, user])
 
-  const calculateProgress = useCallback(() => {
-    const completedActivities = activities.filter(a => a.status === 'completed')
-    const pendingActivities = activities.filter(a => a.status === 'pending')
-    const earnedPoints = completedActivities.reduce((sum, activity) => sum + activity.points, 0)
-    setPendingCounts({ completed: completedActivities.length, total: activities.length, points: earnedPoints })
-    return { completedActivities, pendingActivities, earnedPoints }
-  }, [activities])
-
   useEffect(() => {
     fetchJourney()
   }, [fetchJourney])
@@ -568,12 +521,6 @@ const WeeklyChecklistPage: React.FC = () => {
   useEffect(() => {
     fetchWeeklyData()
   }, [fetchWeeklyData])
-
-  useEffect(() => {
-    setProgressLoading(true)
-    calculateProgress()
-    setProgressLoading(false)
-  }, [activities, calculateProgress])
 
   const handleActivityUpdate = async (activity: ActivityState, nextStatus: ActivityStatus) => {
     if (!user || !journey) return;
@@ -695,7 +642,6 @@ const WeeklyChecklistPage: React.FC = () => {
             : activity,
         ),
       )
-      calculateProgress()
       toast({
         title: 'Proof submitted',
         description: 'Your proof has been sent for verification. Points will be awarded once approved.',
@@ -759,14 +705,6 @@ const WeeklyChecklistPage: React.FC = () => {
     }
   }, [isParallelWindowTrackingEnabled, weeklyProgress, windowProgressData]);
 
-  const weeklyPointsEarned = useMemo(() => {
-    if (isParallelWindowTrackingEnabled) {
-        return windowProgressData?.pointsEarned ?? pendingCounts.points;
-    }
-    if (weeklyProgress) return weeklyProgress.pointsEarned;
-    return pendingCounts.points;
-  }, [isParallelWindowTrackingEnabled, pendingCounts.points, weeklyProgress, windowProgressData]);
-
   const journeyProgress = useMemo(() => {
     if (!journey) {
       return { weeksAtTarget: 0, pct: 0, totalEarned: 0, totalTarget: 0 };
@@ -780,130 +718,86 @@ const WeeklyChecklistPage: React.FC = () => {
     return { weeksAtTarget, pct, totalEarned, totalTarget };
   }, [allWeeksProgress, journey, weeklyTarget]);
 
-  const monthMeta = useCallback(
-    (month: number): MonthMilestone => {
-      if (!journey) {
-        return {
-          month,
-          startWeek: 1,
-          endWeek: 4,
-          status: 'locked',
-          completionPercent: 0,
-        };
-      }
-      const startWeek = (month - 1) * 4 + 1;
-      const endWeek = Math.min(journey.programDurationWeeks, startWeek + 3);
-      const isCompleted = endWeek < journey.currentWeek;
-      const isCurrent = month === currentMonthNumber;
-      const status = isCompleted ? 'completed' : isCurrent ? 'current' : 'locked';
-      const completedWeeks = isCompleted
-        ? 4
-        : isCurrent
-          ? Math.max(0, Math.min(4, journey.currentWeek - startWeek))
-          : 0;
-      const completionPercent = Math.min(100, Math.round((completedWeeks / 4) * 100));
-      return { month, startWeek, endWeek, status, completionPercent };
-    },
-    [currentMonthNumber, journey],
-  );
+  const journeyEndDate = useMemo(() => {
+    if (!journeyStartDate || !journey) return null;
+    return addDays(journeyStartDate, journey.programDurationWeeks * 7);
+  }, [journeyStartDate, journey]);
+
+  const weeksRemaining = useMemo(() => {
+    if (!journey) return 0;
+    return Math.max(0, journey.programDurationWeeks - journey.currentWeek);
+  }, [journey]);
+
+  // 37 days = 5 weeks + 2 days (not Week 6, Day 3)
+  const weekDayLabel = useMemo(() => {
+    if (!journeyStartDate || !journey) return `Week ${journey?.currentWeek ?? 1}`;
+    const daysSinceStart = differenceInDays(new Date(), journeyStartDate);
+    const weeks = Math.floor(daysSinceStart / 7);
+    const days = daysSinceStart % 7;
+
+    if (daysSinceStart >= journey.programDurationWeeks * 7) {
+      return `${journey.programDurationWeeks} weeks`;
+    } else if (weeks === 0) {
+      return `${days} day${days === 1 ? '' : 's'}`;
+    } else if (days === 0) {
+      return `${weeks} week${weeks === 1 ? '' : 's'}`;
+    } else {
+      return `${weeks} week${weeks === 1 ? '' : 's'}, ${days} day${days === 1 ? '' : 's'}`;
+    }
+  }, [journeyStartDate, journey]);
 
   const renderJourneyHeader = () => {
     if (!journey) return null;
     const label = JOURNEY_LABELS[journey.journeyType];
-    const startLabel = journeyStartDate ? format(journeyStartDate, 'MMM d, yyyy') : 'Not set';
-    const endLabel = journeyEndDate ? format(journeyEndDate, 'MMM d, yyyy') : 'Not set';
-    const overviewLabel = isMonthBasedJourney
-      ? `Month ${currentMonthNumber} of ${totalMonths} - Week ${journey.currentWeek} of ${journey.programDurationWeeks}`
-      : `Week ${journey.currentWeek} of ${journey.programDurationWeeks}`;
-    const monthMilestones: MonthMilestone[] = isMonthBasedJourney
-      ? Array.from({ length: totalMonths }, (_, idx) => monthMeta(idx + 1))
-      : [];
-    const weekMilestones: WeekMilestone[] = !isMonthBasedJourney
-      ? Array.from({ length: journey.programDurationWeeks }, (_, idx) => ({
-        week: idx + 1,
-        status: (() => {
-          const weekNumber = idx + 1;
-          const progress = weekProgressByNumber.get(weekNumber);
-          const target = progress?.weeklyTarget ?? weeklyTarget;
-          const isAtTarget = progress ? progress.pointsEarned >= target : false;
-          if (isAtTarget) return 'completed';
-          if (weekNumber === selectedWeek) return 'current';
-          if (weekNumber > journey.currentWeek) return 'locked';
-          return 'incomplete';
-        })(),
-      }))
-      : [];
+    const startLabel = journeyStartDate ? format(journeyStartDate, 'MMM d, yyyy') : null;
+    const endLabel = journeyEndDate ? format(journeyEndDate, 'MMM d, yyyy') : null;
 
     return (
       <SurfaceCard borderColor="border.card">
-        <Stack spacing={4}>
-          <Flex align="flex-start" justify="space-between" wrap="wrap" gap={4}>
-            <Stack spacing={2}>
-              <HStack spacing={2}>
-                <Badge colorScheme="purple">{label}</Badge>
-                <Badge colorScheme={journey.isPaid ? 'green' : 'gray'}>{tierLabel}</Badge>
-              </HStack>
-              <Heading size="md" color="text.primary">
-                Journey Progress
-              </Heading>
-              <Text color="text.secondary">{overviewLabel}</Text>
-              <Text color="text.secondary" fontSize="sm">
-                {journey.programDurationWeeks} total weeks - {journeyProgress.weeksAtTarget} weeks at target
-              </Text>
-              <Text color="text.secondary" fontSize="sm">
-                {journeyProgress.totalEarned.toLocaleString()} of {journeyProgress.totalTarget.toLocaleString()} points earned
-              </Text>
-            </Stack>
-            <Stack spacing={1} align="flex-end">
-              <Text color="text.muted" fontSize="sm">
-                Started: {startLabel}
-              </Text>
-              <Text color="text.muted" fontSize="sm">
-                Expected completion: {endLabel}
-              </Text>
-              <Text color="text.muted" fontSize="sm">
-                Completion {journeyProgress.pct}%
-              </Text>
-            </Stack>
+        <Stack spacing={3}>
+          <Flex align="center" justify="space-between" wrap="wrap" gap={4}>
+            <HStack spacing={4}>
+              <Stack spacing={1}>
+                <HStack spacing={2}>
+                  <Badge colorScheme="purple" fontSize="sm">{label}</Badge>
+                  <Badge colorScheme={journey.isPaid ? 'green' : 'gray'} fontSize="sm">{tierLabel}</Badge>
+                </HStack>
+                <Text color="text.primary" fontWeight="bold" fontSize="xl">
+                  {weekDayLabel} of {journey.programDurationWeeks}
+                </Text>
+                <Text color="text.muted" fontSize="sm">
+                  {weeksRemaining > 0 ? `${weeksRemaining} week${weeksRemaining === 1 ? '' : 's'} remaining` : 'Final week'}
+                </Text>
+              </Stack>
+            </HStack>
+            <HStack spacing={6} align="center">
+              <Stack spacing={0} align="flex-end">
+                <Text color="text.primary" fontWeight="bold" fontSize="2xl">
+                  {journeyProgress.pct}%
+                </Text>
+                <Text color="text.muted" fontSize="sm">
+                  {journeyProgress.totalEarned.toLocaleString()} pts earned
+                </Text>
+              </Stack>
+              <Box w="100px">
+                <Progress value={journeyProgress.pct} colorScheme="teal" borderRadius="full" size="md" />
+              </Box>
+            </HStack>
           </Flex>
-          <Progress value={journeyProgress.pct} colorScheme="teal" borderRadius="full" />
-          <HStack spacing={2} wrap="wrap">
-            {isMonthBasedJourney
-              ? monthMilestones.map((monthItem) => (
-                <Tag
-                  key={`month-${monthItem.month}`}
-                  colorScheme={
-                    monthItem.status === 'completed' ? 'green' : monthItem.status === 'current' ? 'teal' : 'gray'
-                  }
-                >
-                  <HStack spacing={1}>
-                    {monthItem.status === 'completed' && <Icon as={CheckCircle} />}
-                    {monthItem.status === 'locked' && <Icon as={Lock} />}
-                    <Text>Month {monthItem.month}</Text>
-                  </HStack>
-                </Tag>
-              ))
-              : weekMilestones.map((weekItem) => (
-                <Tag
-                  key={`week-${weekItem.week}`}
-                  colorScheme={
-                    weekItem.status === 'completed'
-                      ? 'green'
-                      : weekItem.status === 'current'
-                        ? 'teal'
-                        : weekItem.status === 'incomplete'
-                          ? 'yellow'
-                          : 'gray'
-                  }
-                >
-                  <HStack spacing={1}>
-                    {weekItem.status === 'completed' && <Icon as={CheckCircle} />}
-                    {weekItem.status === 'locked' && <Icon as={Lock} />}
-                    <Text>Week {weekItem.week}</Text>
-                  </HStack>
-                </Tag>
-              ))}
-          </HStack>
+          {(startLabel || endLabel) && (
+            <Flex justify="space-between" wrap="wrap" gap={2}>
+              {startLabel && (
+                <Text color="text.muted" fontSize="sm">
+                  Started: {startLabel}
+                </Text>
+              )}
+              {endLabel && (
+                <Text color="text.muted" fontSize="sm">
+                  Ends: {endLabel}
+                </Text>
+              )}
+            </Flex>
+          )}
         </Stack>
       </SurfaceCard>
     );
@@ -964,6 +858,13 @@ const WeeklyChecklistPage: React.FC = () => {
     const showProofBadge = requiresPartnerApproval
     const showFreeBadge = activity.isFreeTier && !journey?.isPaid
     const availabilityMessage = getAvailabilityMessage(activity)
+
+    // Frequency info for clear display
+    const totalFrequency = activity.activityPolicy?.maxTotal ?? 1
+    const maxPoints = activity.points * totalFrequency
+    const frequencyLabel = totalFrequency === 1
+      ? '1x only'
+      : `${totalFrequency}x over journey`
 
     return (
       <Box
@@ -1031,15 +932,18 @@ const WeeklyChecklistPage: React.FC = () => {
               </Text>
             )}
           </Stack>
-          <Stack align="flex-end" spacing={2}>
-            <Tag
-              bg="tint.accentWarning"
-              color="text.primary"
-              border="1px solid"
-              borderColor="brand.primary"
-            >
-              +{activity.points} pts
-            </Tag>
+          <Stack align="flex-end" spacing={1}>
+            <Box bg="green.100" p={2} borderRadius="md" border="2px solid" borderColor="green.500">
+              <Text fontWeight="bold" color="green.800" fontSize="lg">
+                +{activity.points.toLocaleString()} pts each
+              </Text>
+              <Text fontWeight="bold" color="blue.600" fontSize="md">
+                {frequencyLabel}
+              </Text>
+              <Text fontWeight="bold" color="purple.600" fontSize="sm">
+                MAX: {maxPoints.toLocaleString()} pts total
+              </Text>
+            </Box>
             {activity.status === 'pending' && (
               <Tooltip label="Pending partner verification. Points will post after approval.">
                 <Icon as={AlertTriangle} color="danger.DEFAULT" />
@@ -1092,13 +996,14 @@ const WeeklyChecklistPage: React.FC = () => {
 
   const renderGuidanceCard = () => {
     if (normalizedJourneyType !== '6W') return null
-    const bullets = weeklyGuidance[selectedWeek]
+    const currentWeekNum = journey?.currentWeek ?? selectedWeek
+    const bullets = weeklyGuidance[currentWeekNum]
     if (!bullets?.length) return null
 
     return (
       <Box borderWidth="1px" borderColor="accent.purpleBorder" p={4} borderRadius="lg" bg="accent.purpleSubtle">
         <Heading size="sm" color="text.primary" mb={2}>
-          Week {selectedWeek} - Focus Guidance
+          Week {currentWeekNum} - Focus Guidance
         </Heading>
         <Stack spacing={2} color="text.secondary">
           {bullets.map(item => (
@@ -1112,32 +1017,6 @@ const WeeklyChecklistPage: React.FC = () => {
     )
   }
 
-  const renderGamificationPanel = () => (
-    <Box borderWidth="1px" borderColor="border.card" p={4} borderRadius="lg" bg="surface.default">
-      <Heading size="sm" color="text.primary" mb={3}>
-        Workflow Gamification
-      </Heading>
-      <Stack spacing={3}>
-        <Alert status="info" variant="subtle" borderRadius="md">
-          <AlertIcon />
-          <Stack spacing={1}>
-            <Text color="text.secondary">Focus on your next incomplete activity.</Text>
-            <Text color="text.secondary" fontSize="sm">
-              Keep your streak alive by acting in the next 24 hours.
-            </Text>
-          </Stack>
-        </Alert>
-        <Button colorScheme="primary" onClick={scrollToActivity} isDisabled={!firstIncompleteActivity}>
-          {firstIncompleteActivity ? `Complete ${firstIncompleteActivity.title}` : 'Week complete. Nice work'}
-        </Button>
-        <Stack spacing={1} color="text.secondary">
-          <Text fontWeight="bold">Streak tracker</Text>
-          <Progress value={Math.min(100, progressStatus.pct)} colorScheme={progressStatus.color} borderRadius="full" />
-          <Text fontSize="sm" color="text.muted">Maintain daily check-ins to grow your streak.</Text>
-        </Stack>
-      </Stack>
-    </Box>
-  )
 
   const renderProofModal = () => (
     <Modal isOpen={isOpen} onClose={onClose} isCentered>
@@ -1177,51 +1056,19 @@ const WeeklyChecklistPage: React.FC = () => {
   )
 
   const renderWeekSummary = () => (
-    <Stack spacing={4}>
-      <Stack spacing={1}>
+    <Flex align="center" justify="space-between" wrap="wrap" gap={3}>
+      <Stack spacing={0}>
         <Heading size="lg" color="text.primary">
-          Weekly Checklist
+          {weekDayLabel} of {journey?.programDurationWeeks ?? 6}
         </Heading>
-        <Text color="text.secondary">
-          Track your current activities and see how they roll up into your overall journey.
+        <Text color="text.muted" fontSize="sm">
+          Cycle {windowProgress.windowNumber}
         </Text>
       </Stack>
-      <Box p={4} borderWidth="1px" borderColor="gray.700" bg="white" borderRadius="lg">
-        <Stack spacing={3}>
-          <HStack justify="space-between">
-            <Heading size="sm" color="text.primary">
-              Week {selectedWeek} summary - Cycle {windowProgress.windowNumber}
-            </Heading>
-            <Tag colorScheme={progressStatus.color}>
-              {progressStatus.label} | {progressStatus.pct}%
-            </Tag>
-          </HStack>
-          <Progress value={progressStatus.pct} colorScheme={progressStatus.color} borderRadius="full" />
-          <SimpleGrid columns={{ base: 1, md: 4 }} spacing={4}>
-            <StatCard
-              label="Activities completed"
-              value={`${pendingCounts.completed} of ${pendingCounts.total}`}
-              icon={<Icon as={CheckCircle} color="success.400" />}
-            />
-            <StatCard
-              label="Points accumulated"
-              value={`${weeklyPointsEarned}`}
-              icon={<Icon as={Plus} color="brand.primary" />}
-            />
-            <StatCard
-              label={`Cycle ${windowProgress.windowNumber} points`}
-              value={`${windowProgress.earned} / ${windowProgress.target}`}
-              icon={<Icon as={CalendarRange} color="purple.400" />}
-            />
-            <StatCard
-              label="Status"
-              value={progressStatus.label}
-              icon={<InfoPill color={progressStatus.color} />}
-            />
-          </SimpleGrid>
-        </Stack>
-      </Box>
-    </Stack>
+      <Tag colorScheme={progressStatus.color} size="lg" px={4} py={2}>
+        {progressStatus.label}
+      </Tag>
+    </Flex>
   )
 
   if (!profile && !user) {
@@ -1293,31 +1140,45 @@ const WeeklyChecklistPage: React.FC = () => {
         </GridItem>
 
         <GridItem>
-          <Stack spacing={4}>
-            <SurfaceCard borderColor="border.card">
-              <Heading size="sm" color="text.primary" mb={3}>
-                Cycle progress
-              </Heading>
-              {progressLoading ? (
-                <Skeleton height="180px" />
-              ) : (
-                <Stack spacing={3}>
-                  <Progress value={progressStatus.pct} colorScheme={progressStatus.color} borderRadius="full" />
-                  <Text color="text.primary" fontWeight="bold">
-                    {windowProgress.earned} / {windowProgress.target} points in this cycle
-                  </Text>
-                  <Text color="text.secondary" fontSize="sm">
-                    {progressStatus.pct >= 100
-                      ? 'Amazing! You are ahead of your target.'
-                      : progressStatus.pct >= 75
-                        ? 'You are close. Aim to close remaining activities.'
-                        : 'Keep going. Your next activity will move you closer to target.'}
-                  </Text>
+          <SurfaceCard borderColor="border.card">
+            <Heading size="sm" color="text.primary" mb={3}>
+              Cycle {windowProgress.windowNumber} Progress
+            </Heading>
+            {activityLoading ? (
+              <Skeleton height="100px" />
+            ) : (
+              <Stack spacing={4}>
+                <Stack spacing={2}>
+                  <Flex justify="space-between" align="baseline">
+                    <Text color="text.primary" fontWeight="bold" fontSize="2xl">
+                      {windowProgress.earned.toLocaleString()}
+                    </Text>
+                    <Text color="text.muted" fontSize="sm">
+                      / {windowProgress.target.toLocaleString()} pts
+                    </Text>
+                  </Flex>
+                  <Progress value={progressStatus.pct} colorScheme={progressStatus.color} borderRadius="full" size="lg" />
                 </Stack>
-              )}
-            </SurfaceCard>
-            {renderGamificationPanel()}
-          </Stack>
+                <Text color="text.secondary" fontSize="sm">
+                  {progressStatus.pct >= 100
+                    ? 'Target reached! Keep building momentum.'
+                    : progressStatus.pct >= 75
+                      ? 'Almost there. Close remaining activities.'
+                      : 'Complete activities to reach your target.'}
+                </Text>
+                {firstIncompleteActivity && (
+                  <Button
+                    colorScheme="primary"
+                    size="sm"
+                    onClick={scrollToActivity}
+                    w="full"
+                  >
+                    Next: {firstIncompleteActivity.title}
+                  </Button>
+                )}
+              </Stack>
+            )}
+          </SurfaceCard>
         </GridItem>
       </Grid>
 
@@ -1325,24 +1186,6 @@ const WeeklyChecklistPage: React.FC = () => {
     </Stack>
   )
 }
-
-const StatCard: React.FC<{ label: string; value: string; icon: React.ReactNode }> = ({ label, value, icon }) => (
-  <SurfaceCard borderColor="gray.700" borderRadius="lg" bg="white">
-    <HStack justify="space-between" mb={1}>
-      <Text color="text.primary" fontSize="sm">
-        {label}
-      </Text>
-      {icon}
-    </HStack>
-    <Heading size="md" color="text.primary">
-      {value}
-    </Heading>
-  </SurfaceCard>
-)
-
-const InfoPill: React.FC<{ color: string }> = ({ color }) => (
-  <Box w={3} h={3} borderRadius="full" bg={`${color}.300`} />
-)
 
 export const WeeklyUpdatesPage = WeeklyChecklistPage
 export { WeeklyChecklistPage }

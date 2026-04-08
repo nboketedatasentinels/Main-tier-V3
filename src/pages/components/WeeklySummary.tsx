@@ -37,7 +37,7 @@ export const WeeklySummary = ({
   }, [cyclePoints, cycleTarget])
 
   return (
-    <Box p={4} borderWidth="1px" borderColor="gray.700" bg="white" borderRadius="lg">
+    <Box p={4} borderWidth="1px" borderStyle="solid" borderColor="blue.200" bg="white" borderRadius="lg" boxShadow="md">
       <Stack spacing={3}>
         <HStack justify="space-between">
           <Heading size="sm" color="text.primary">
@@ -53,21 +53,25 @@ export const WeeklySummary = ({
             label="Activities completed"
             value={`${completed}`}
             icon={<Icon as={CheckCircle} color="success.400" />}
+            borderColor="green.300"
           />
           <StatCard
             label="Points accumulated (total)"
             value={accumulatedPoints.toLocaleString()}
             icon={<Icon as={Plus} color="orange.400" />}
+            borderColor="purple.300"
           />
           <StatCard
             label={`Cycle ${windowNumber}`}
             value={`${cyclePoints.toLocaleString()} / ${cycleTarget.toLocaleString()}`}
             icon={<Icon as={CalendarRange} color="purple.400" />}
+            borderColor="blue.300"
           />
           <StatCard
             label="Status"
             value={progressStatus.label}
             icon={<InfoPill color={progressStatus.color} />}
+            borderColor="orange.300"
           />
         </SimpleGrid>
       </Stack>

@@ -1,7 +1,5 @@
 import {
   Box,
-  Grid,
-  GridItem,
   HStack,
   Skeleton,
   SkeletonCircle,
@@ -50,42 +48,24 @@ const ChecklistSkeletonLoader = () => (
       </HStack>
     </Box>
 
-    {/* Main Content Grid Skeleton */}
-    <Grid templateColumns={{ base: '1fr', xl: '2fr 1fr' }} gap={6} alignItems="start">
-      <GridItem>
-        <Box bg="white" p={6} borderRadius="lg" shadow="sm">
-          <Skeleton height="24px" width="180px" mb={4} />
-          <Stack spacing={4}>
-            {[1, 2, 3, 4, 5].map((i) => (
-              <Box key={i} p={4} borderWidth="1px" borderRadius="md">
-                <HStack spacing={4}>
-                  <SkeletonCircle size="40px" />
-                  <Stack flex={1} spacing={2}>
-                    <Skeleton height="18px" width="60%" />
-                    <SkeletonText noOfLines={2} spacing={2} skeletonHeight="12px" />
-                  </Stack>
-                  <Skeleton height="36px" width="100px" borderRadius="md" />
-                </HStack>
-              </Box>
-            ))}
-          </Stack>
-        </Box>
-      </GridItem>
-
-      <GridItem>
-        <Box bg="white" p={6} borderRadius="lg" shadow="sm">
-          <Skeleton height="24px" width="140px" mb={4} />
-          <Stack spacing={3}>
-            {[1, 2, 3].map((i) => (
-              <HStack key={i} justify="space-between">
-                <Skeleton height="16px" width="100px" />
-                <Skeleton height="16px" width="60px" />
-              </HStack>
-            ))}
-          </Stack>
-        </Box>
-      </GridItem>
-    </Grid>
+    {/* Activity List Skeleton */}
+    <Box bg="white" p={6} borderRadius="lg" shadow="sm">
+      <Skeleton height="24px" width="180px" mb={4} />
+      <Stack spacing={4}>
+        {[1, 2, 3, 4, 5].map((i) => (
+          <Box key={i} p={4} borderWidth="1px" borderRadius="md">
+            <HStack spacing={4}>
+              <SkeletonCircle size="40px" />
+              <Stack flex={1} spacing={2}>
+                <Skeleton height="18px" width="60%" />
+                <SkeletonText noOfLines={2} spacing={2} skeletonHeight="12px" />
+              </Stack>
+              <Skeleton height="36px" width="100px" borderRadius="md" />
+            </HStack>
+          </Box>
+        ))}
+      </Stack>
+    </Box>
   </Stack>
 )
 

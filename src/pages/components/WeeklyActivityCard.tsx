@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { Badge, Box, Button, Collapse, HStack, Heading, Icon, Stack, Tag, Text, Tooltip, useBreakpointValue } from '@chakra-ui/react'
-import { AlertTriangle, CalendarClock, CheckCircle, ChevronDown, ChevronUp, Circle, Infinity, Lock, RotateCcw, ShieldCheck, Zap } from 'lucide-react'
+import { AlertTriangle, CalendarClock, CheckCircle, ChevronDown, ChevronUp, Circle, Lock, RotateCcw, ShieldCheck } from 'lucide-react'
 import type { ActivityState } from '@/hooks/useWeeklyChecklistViewModel'
 import { getNextWindowAvailabilityMessage } from '@/utils/activityStateManager'
 import { getWindowNumber, PARALLEL_WINDOW_SIZE_WEEKS } from '@/utils/windowCalculations'
@@ -81,6 +81,11 @@ export const WeeklyActivityCard = ({
   const disabled = lockedByWeek || lockedByAvailability || lockedByInteraction || lockedByPartnerIssue
   const primaryActionDisabled = disabled || activity.status === 'completed' || isActionInFlight
   const visibilityState = getVisibilityState(activity)
+
+  // Check if activity is fully used (for done icon)
+  const totalFrequency = activity.activityPolicy?.maxTotal ?? 1
+  const completedCount = activity.completedCount ?? 0
+  const remainingUses = Math.max(0, totalFrequency - completedCount)
   const visibilityBadge = (() => {
     if (lockedByWeek) {
       return {
@@ -211,40 +216,51 @@ export const WeeklyActivityCard = ({
   const showCollapsedAssist = Boolean(!showDetails && primaryActionDisabled && (lockReason || exitAction))
 
   const policyBadge = () => {
-    const policy = activity.activityPolicy
-    if (policy?.type === 'one_time') {
-      return (
-        <Badge colorScheme="red" variant="subtle" display="flex" alignItems="center">
-          <Icon as={Zap} size={12} mr={1} /> One-time
-        </Badge>
-      )
-    }
-    if (policy?.type === 'window_limited') {
-      return (
-        <Badge colorScheme="blue" variant="subtle" display="flex" alignItems="center">
-          <Icon as={RotateCcw} size={12} mr={1} /> Resets each cycle
-        </Badge>
-      )
-    }
-    if (policy?.type === 'ongoing') {
-      return (
-        <Badge colorScheme="teal" variant="subtle" display="flex" alignItems="center">
-          <Icon as={Infinity} size={12} mr={1} /> Ongoing
-        </Badge>
-      )
-    }
-    return null
+    // Show dynamic frequency: "X of Y left"
+    const colorScheme = remainingUses === 0
+      ? 'gray'
+      : remainingUses === 1
+        ? 'red'
+        : totalFrequency === 1
+          ? 'red'
+          : 'blue'
+
+    const label = remainingUses === 0
+      ? 'Fully claimed'
+      : totalFrequency === 1
+        ? '1x only'
+        : `${remainingUses} of ${totalFrequency} left`
+
+    return (
+      <Badge colorScheme={colorScheme} variant="solid" display="flex" alignItems="center" fontWeight="bold">
+        {label}
+      </Badge>
+    )
   }
 
   const cardBg =
-    activity.status === 'completed' || activity.availability.state === 'permanently_exhausted'
-      ? 'green.50'
-      : activity.availability.state === 'next_window' || activity.availability.state === 'exhausted'
-        ? 'blue.50'
-        : 'white'
+    activity.availability.state === 'next_window' || activity.availability.state === 'exhausted'
+      ? 'blue.50'
+      : 'white'
+
+  const isFullyCompleted = activity.status === 'completed' || activity.availability.state === 'permanently_exhausted' || remainingUses === 0
 
   return (
-    <Box borderWidth="1px" borderRadius="lg" p={4} id={`activity-${activity.id}`} bg={cardBg}>
+    <Box borderWidth="1px" borderStyle="solid" borderColor="blue.200" borderRadius="lg" p={4} id={`activity-${activity.id}`} bg={cardBg} boxShadow="sm" position="relative">
+      {/* Big Done checkmark for fully completed activities */}
+      {isFullyCompleted && (
+        <Box
+          position="absolute"
+          top={2}
+          right={2}
+          bg="green.500"
+          borderRadius="full"
+          p={2}
+          boxShadow="md"
+        >
+          <Icon as={CheckCircle} color="white" boxSize={6} />
+        </Box>
+      )}
       <HStack justify="space-between" align="flex-start">
         <Stack spacing={1} flex={1}>
           <HStack spacing={2} wrap="wrap">

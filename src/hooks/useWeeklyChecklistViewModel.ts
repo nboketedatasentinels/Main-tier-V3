@@ -60,6 +60,8 @@ export interface ActivityState extends ActivityDef {
   rejectionReason?: string | null
   hasInteracted?: boolean
   quickActionLink?: ActivityQuickActionLink
+  /** Number of times this activity has been completed across all time */
+  completedCount?: number
 }
 
 export interface JourneyConfig {
@@ -364,52 +366,10 @@ export function useWeeklyChecklistViewModel() {
       where('uid', '==', user.uid),
     )
 
-    // Window and Global counts remain one-time for efficiency
-    const loadStaticCounts = async () => {
-      try {
-        const [windowSnap, globalSnap] = await Promise.all([
-          getDocs(windowQ),
-          getDocs(globalQ)
-        ])
-
-        const windowCounts: Record<string, number> = {}
-        const lastCompletedWeekByActivity: Record<string, number> = {}
-        windowSnap.docs.forEach(d => {
-          const row = d.data() as LedgerRow
-          if (!row.activityId) return
-          const activityId = resolveCanonicalActivityId(row.activityId) ?? row.activityId
-          windowCounts[activityId] = (windowCounts[activityId] ?? 0) + 1
-          const wk = Number(row.weekNumber ?? 0)
-          if (wk > 0) {
-            lastCompletedWeekByActivity[activityId] = Math.max(
-              lastCompletedWeekByActivity[activityId] ?? 0,
-              wk,
-            )
-          }
-        })
-
-        const totalCompletedAllTime: Record<string, number> = {}
-        globalSnap.docs.forEach(d => {
-          const row = d.data() as LedgerRow
-          if (!row.activityId) return
-          const activityId = resolveCanonicalActivityId(row.activityId) ?? row.activityId
-          totalCompletedAllTime[activityId] = (totalCompletedAllTime[activityId] ?? 0) + 1
-        })
-
-        setLedgerCache(prev => ({
-          ...prev,
-          windowCounts,
-          totalCompletedAllTime,
-          lastCompletedWeekByActivity,
-        }))
-      } catch (e) {
-        console.error('[ledgerCache] static load failed', e)
-      }
-    }
-
     // Reset ledgerLoaded when week changes
     setLedgerLoaded(false)
 
+    // Real-time listener for current week completions
     const unsubWeek = onSnapshot(weekQ, snap => {
       const weekCompleted = new Set<string>()
       const weekCounts: Record<string, number> = {}
@@ -428,10 +388,49 @@ export function useWeeklyChecklistViewModel() {
       setLedgerLoaded(true)
     }, (e) => console.error('[ledgerCache] week listener failed', e))
 
-    loadStaticCounts()
+    // Real-time listener for window counts (cycle-based)
+    const unsubWindow = onSnapshot(windowQ, snap => {
+      const windowCounts: Record<string, number> = {}
+      const lastCompletedWeekByActivity: Record<string, number> = {}
+      snap.docs.forEach(d => {
+        const row = d.data() as LedgerRow
+        if (!row.activityId) return
+        const activityId = resolveCanonicalActivityId(row.activityId) ?? row.activityId
+        windowCounts[activityId] = (windowCounts[activityId] ?? 0) + 1
+        const wk = Number(row.weekNumber ?? 0)
+        if (wk > 0) {
+          lastCompletedWeekByActivity[activityId] = Math.max(
+            lastCompletedWeekByActivity[activityId] ?? 0,
+            wk,
+          )
+        }
+      })
+      setLedgerCache(prev => ({
+        ...prev,
+        windowCounts,
+        lastCompletedWeekByActivity,
+      }))
+    }, (e) => console.error('[ledgerCache] window listener failed', e))
+
+    // Real-time listener for ALL-TIME completions (persisted data - critical for frequency display)
+    const unsubGlobal = onSnapshot(globalQ, snap => {
+      const totalCompletedAllTime: Record<string, number> = {}
+      snap.docs.forEach(d => {
+        const row = d.data() as LedgerRow
+        if (!row.activityId) return
+        const activityId = resolveCanonicalActivityId(row.activityId) ?? row.activityId
+        totalCompletedAllTime[activityId] = (totalCompletedAllTime[activityId] ?? 0) + 1
+      })
+      setLedgerCache(prev => ({
+        ...prev,
+        totalCompletedAllTime,
+      }))
+    }, (e) => console.error('[ledgerCache] global listener failed', e))
 
     return () => {
       unsubWeek()
+      unsubWindow()
+      unsubGlobal()
     }
   }, [selectedWeek, user])
 
@@ -491,6 +490,7 @@ export function useWeeklyChecklistViewModel() {
           : honorSystemForFreeUser
             ? FREE_TIER_HONOR_NOTICE
             : undefined,
+        completedCount: ledgerCache.totalCompletedAllTime[def.id] ?? 0,
       }
     })
 
