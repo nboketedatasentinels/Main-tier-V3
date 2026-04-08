@@ -119,7 +119,7 @@ const getRestrictedFeatureForPath = (path: string): RestrictedFeatureConfig | nu
   RESTRICTED_FREE_FEATURES.find((feature) => path.startsWith(feature.pathPrefix)) ?? null
 
 export const MainLayout: React.FC = () => {
-  const { profile, signOut, signingOut } = useAuth()
+  const { profile, profileStatus, signOut, signingOut } = useAuth()
   const location = useLocation()
   const navigate = useNavigate()
   const { isOpen, onOpen, onClose } = useDisclosure()
@@ -159,7 +159,10 @@ export const MainLayout: React.FC = () => {
   const shouldAutoOpenTour = Boolean(
     welcomeKey && isAppShellRoute && localStorage.getItem(welcomeKey) === 'pending',
   )
-  const shouldPromptPersonalityModal = Boolean(profile && isAppShellRoute && !hasCompletedPersonalityAndValues)
+  // Only prompt once profile is fully loaded from database (profileStatus === 'ready')
+  const shouldPromptPersonalityModal = Boolean(
+    profile && isAppShellRoute && profileStatus === 'ready' && !hasCompletedPersonalityAndValues
+  )
   const onboardingSessionSuppressionKey = useMemo(
     () => (profile?.id ? `t4l.onboardingSessionSuppressed.${profile.id}` : null),
     [profile?.id],
