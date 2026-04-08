@@ -91,7 +91,7 @@ export const WindowSummaryCard: React.FC<WindowSummaryCardProps> = ({ onNavigate
 
   if (loading) {
     return (
-      <Card h="100%" variant="outline" borderColor="border.subtle">
+      <Card h="100%" bg="white" borderWidth="1px" borderColor="green.400" borderRadius="xl">
         <CardBody>
           <Stack spacing={4}>
             <Skeleton h="20px" w="150px" />
@@ -107,7 +107,7 @@ export const WindowSummaryCard: React.FC<WindowSummaryCardProps> = ({ onNavigate
 
   if (error || !data) {
     return (
-      <Card h="100%" variant="outline" borderColor="border.subtle">
+      <Card h="100%" bg="white" borderWidth="1px" borderColor="green.400" borderRadius="xl">
         <CardBody>
           <Stack spacing={3}>
             <HStack spacing={2}>
@@ -149,7 +149,7 @@ export const WindowSummaryCard: React.FC<WindowSummaryCardProps> = ({ onNavigate
   );
 
   return (
-    <Card h="100%" variant="outline" borderColor="border.subtle" boxShadow="sm">
+    <Card h="100%" bg="white" borderWidth="1px" borderColor="green.400" borderRadius="xl" boxShadow="sm">
       <CardBody>
         <Stack spacing={4}>
           <HStack justify="space-between">

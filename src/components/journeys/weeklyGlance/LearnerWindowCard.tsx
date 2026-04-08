@@ -1,4 +1,4 @@
-import { Badge, Box, Card, CardBody, Divider, HStack, Icon, Progress, Stack, Text, VStack } from '@chakra-ui/react'
+import { Badge, Box, Card, CardBody, HStack, Icon, Progress, Stack, Text } from '@chakra-ui/react'
 import { CalendarClock, PartyPopper, Target } from 'lucide-react'
 
 interface LearnerWindowCardProps {
@@ -24,81 +24,75 @@ export const LearnerWindowCard = ({
   const remainingPoints = Math.max(targetPoints - earnedPoints, 0)
 
   return (
-    <Card h="100%" variant="outline" borderColor="border.subtle">
-      <CardBody p={6}>
-        <Stack spacing={4}>
-          <HStack justify="space-between">
+    <Card h="100%" bg="white" borderWidth="1px" borderColor="green.400" borderRadius="xl">
+      <CardBody p={5}>
+        <Stack spacing={5}>
+          {/* Header */}
+          <HStack justify="space-between" align="center">
             <HStack spacing={2}>
-              <Icon as={CalendarClock} color="brand.primary" />
-              <Text fontWeight="bold" fontSize="md">Learner Cycle</Text>
+              <Icon as={CalendarClock} color="green.500" boxSize={5} />
+              <Text fontWeight="semibold" fontSize="md" color="gray.800" fontFamily="heading">Learner Cycle</Text>
             </HStack>
-            <Badge colorScheme={daysRemaining <= 2 ? 'red' : 'green'}>
+            <Badge
+              colorScheme={daysRemaining <= 2 ? 'red' : 'green'}
+              fontSize="xs"
+              px={3}
+              py={1}
+              borderRadius="full"
+              fontFamily="body"
+            >
               {daysRemaining} day{daysRemaining === 1 ? '' : 's'} left
             </Badge>
           </HStack>
 
+          {/* Progress Section */}
+          <Box bg="gray.50" rounded="lg" p={4}>
+            <Text fontSize="sm" color="gray.500" mb={1}>{weekLabel}</Text>
+            <Progress
+              value={progressValue}
+              colorScheme={hasExceededGoal ? 'green' : 'purple'}
+              rounded="full"
+              size="sm"
+              mb={2}
+            />
+            <HStack justify="space-between" fontSize="sm">
+              <Text fontWeight="semibold" color="gray.700">{earnedPoints.toLocaleString()} pts earned</Text>
+              <Text color="gray.500">{remainingPoints > 0 ? `${remainingPoints.toLocaleString()} pts to goal` : 'Goal reached!'}</Text>
+            </HStack>
+          </Box>
+
+          {/* Milestone Section */}
           <Box
-            borderWidth="1px"
-            borderColor={hasExceededGoal ? 'green.200' : 'border.subtle'}
-            bg={hasExceededGoal ? 'green.50' : 'surface.subtle'}
-            rounded="md"
-            p={3}
+            borderLeftWidth="3px"
+            borderLeftColor={hasExceededGoal ? 'green.400' : 'purple.400'}
+            pl={3}
           >
-            <HStack justify="space-between" align="flex-start">
-              <Box>
-                <Text fontSize="sm" color="text.secondary">
-                  Next milestone
-                </Text>
-                <Text fontWeight="semibold">{nextMilestone}</Text>
-              </Box>
-              {hasExceededGoal && (
-                <HStack spacing={1} color="green.600">
-                  <Icon as={PartyPopper} />
-                  <Text fontSize="sm" fontWeight="semibold">
-                    Goal exceeded!
-                  </Text>
-                </HStack>
-              )}
-            </HStack>
+            <Text fontSize="xs" color="gray.500" textTransform="uppercase" letterSpacing="wide">Next Milestone</Text>
+            <Text fontWeight="semibold" color="gray.800">{nextMilestone}</Text>
+            {hasExceededGoal && (
+              <HStack spacing={1} color="green.500" mt={1}>
+                <Icon as={PartyPopper} boxSize={4} />
+                <Text fontSize="sm" fontWeight="medium">Goal exceeded!</Text>
+              </HStack>
+            )}
           </Box>
 
-          <Box>
-            <Text fontSize="sm" color="text.secondary">
-              {weekLabel}
-            </Text>
-            <Progress value={progressValue} colorScheme={hasExceededGoal ? 'green' : 'purple'} rounded="full" mt={2} />
-            <HStack justify="space-between" mt={2} fontSize="sm" color="text.secondary">
-              <Text>{earnedPoints} pts earned</Text>
-              <Text>{remainingPoints > 0 ? `${remainingPoints} pts to goal` : `${targetPoints} pts target`}</Text>
-            </HStack>
-          </Box>
-
-          <Divider />
-
-          <VStack align="stretch" spacing={2}>
-            <HStack spacing={2}>
-              <Icon as={Target} color="text.muted" />
-              <Text fontSize="sm" color="text.secondary">
-                Current cycle focus
-              </Text>
-            </HStack>
-            <Text fontSize="xs" color="text.muted">
-              Informational only
-            </Text>
-            {focusAreas.length > 0 ? (
+          {/* Focus Areas */}
+          {focusAreas.length > 0 && (
+            <Box>
+              <HStack spacing={2} mb={2}>
+                <Icon as={Target} color="gray.400" boxSize={4} />
+                <Text fontSize="sm" fontWeight="medium" color="gray.600">Focus Areas</Text>
+              </HStack>
               <HStack spacing={2} flexWrap="wrap">
                 {focusAreas.map((area) => (
-                  <Badge key={area} variant="subtle" colorScheme="purple">
+                  <Badge key={area} variant="subtle" colorScheme="purple" fontSize="xs">
                     {area}
                   </Badge>
                 ))}
               </HStack>
-            ) : (
-              <Text fontSize="sm" color="text.secondary">
-                No focus areas set for your organization.
-              </Text>
-            )}
-          </VStack>
+            </Box>
+          )}
         </Stack>
       </CardBody>
     </Card>

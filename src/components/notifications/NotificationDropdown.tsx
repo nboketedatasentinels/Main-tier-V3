@@ -55,17 +55,28 @@ export const NotificationDropdown = () => {
         <Box position="relative">
           <IconButton
             aria-label="Notifications"
-            icon={<Bell size={18} />}
+            icon={<Bell size={20} color="black" />}
             variant="ghost"
-            bg={hasUnread ? 'purple.50' : 'brand.accent'}
-            border="1px solid"
-            borderColor={hasUnread ? 'purple.300' : 'brand.border'}
-            _hover={{ bg: 'brand.primaryMuted' }}
+            _hover={{ bg: 'gray.100' }}
           />
           {hasUnread && (
-            <Badge position="absolute" top={0} right={0} colorScheme="purple" borderRadius="full">
+            <Box
+              position="absolute"
+              top={-1}
+              right={-1}
+              bg="red.500"
+              color="white"
+              borderRadius="full"
+              fontSize="10px"
+              fontWeight="bold"
+              w="18px"
+              h="18px"
+              display="flex"
+              alignItems="center"
+              justifyContent="center"
+            >
               {unreadCount}
-            </Badge>
+            </Box>
           )}
         </Box>
       </PopoverTrigger>

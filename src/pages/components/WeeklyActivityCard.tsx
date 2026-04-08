@@ -343,7 +343,7 @@ export const WeeklyActivityCard = ({
 
       {showCollapsedAssist ? (
         <Stack spacing={2} align="flex-start" mt={2}>
-          {lockReason ? (
+          {lockReason && !lockedByInteraction ? (
             <HStack spacing={2} color="blue.700">
               <Icon as={Lock} size={14} />
               <Text fontSize="xs" fontWeight="medium">
@@ -357,9 +357,6 @@ export const WeeklyActivityCard = ({
 
       <Collapse id={`activity-details-${activity.id}`} in={showDetails} animateOpacity>
         <Stack spacing={2} mt={3}>
-          <Text fontSize="sm" color="gray.600">
-            {activity.description}
-          </Text>
           {activity.freeTierNotice ? (
             <HStack spacing={2} color="green.700">
               <Icon as={CheckCircle} size={14} />
@@ -369,7 +366,7 @@ export const WeeklyActivityCard = ({
             </HStack>
           ) : null}
 
-          {lockReason ? (
+          {lockReason && !lockedByInteraction ? (
             <Stack spacing={2} align="flex-start">
               <HStack spacing={2} color="blue.700">
                 <Icon as={Lock} size={14} />
@@ -381,37 +378,13 @@ export const WeeklyActivityCard = ({
             </Stack>
           ) : null}
 
-          {activity.status === 'pending' ? (
-            <HStack spacing={2} color="blue.600">
-              <Icon as={AlertTriangle} size={14} />
-              <Text fontSize="sm">
-                Proof submitted and awaiting partner review. Points post after approval.
-              </Text>
-            </HStack>
-          ) : null}
-
-          {activity.status === 'completed' ? (
-            <HStack spacing={2} color="green.700">
-              <Icon as={CheckCircle} size={14} />
-              <Text fontSize="sm">
-                Great work. This activity is complete.
-              </Text>
-            </HStack>
-          ) : null}
-
           {activity.status === 'rejected' ? (
             <HStack spacing={2} color="red.600" align="start">
               <Icon as={AlertTriangle} size={14} mt={0.5} />
               <Text fontSize="sm">
-                Submission rejected{activity.rejectionReason ? `: ${activity.rejectionReason}` : '.'} You can resubmit proof.
+                Rejected{activity.rejectionReason ? `: ${activity.rejectionReason}` : ''}. Resubmit below.
               </Text>
             </HStack>
-          ) : null}
-
-          {!isAdmin && !activity.hasInteracted && activity.status !== 'completed' ? (
-            <Text fontSize="xs" color="gray.600">
-              Once submitted for review or marked complete, this selection is locked for the current week. If plans change, support can help.
-            </Text>
           ) : null}
         </Stack>
       </Collapse>

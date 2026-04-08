@@ -76,12 +76,6 @@ const APP_VIEWPORT_HEIGHT = { base: '100dvh', md: '100vh' } as const
 const MOBILE_NAV_HEIGHT = 68
 const MOBILE_NAV_HEIGHT_WITH_SAFE_AREA = `calc(${MOBILE_NAV_HEIGHT}px + env(safe-area-inset-bottom))`
 const MOBILE_NAV_BUTTON_HEIGHT = MOBILE_NAV_HEIGHT - 12
-const sectionLabelStyles = {
-  fontSize: 'xs',
-  fontWeight: 'semibold',
-  letterSpacing: '0.08em',
-  color: 'brand.subtleText',
-} as const
 
 type RestrictedFeatureConfig = {
   pathPrefix: string
@@ -401,39 +395,38 @@ export const MainLayout: React.FC = () => {
 
   const NavContent = ({ variant }: { variant: 'sidebar' | 'drawer' }) => {
     const isDark = variant === 'drawer'
-    const sectionTextColor = isDark ? 'whiteAlpha.700' : sectionLabelStyles.color
-    const activeBorder = isDark ? 'whiteAlpha.900' : 'brand.primary'
-    const activeText = isDark ? 'white' : 'brand.text'
-    const inactiveText = isDark ? 'whiteAlpha.900' : 'brand.subtleText'
-    const hoverBg = isDark ? 'whiteAlpha.100' : 'brand.primaryMuted'
-    const activeBg = isDark ? 'whiteAlpha.100' : 'brand.primaryMuted'
-    const dividerColor = isDark ? 'whiteAlpha.200' : 'brand.border'
-    const badgeStyles = isDark
-      ? { bg: 'whiteAlpha.200', color: 'whiteAlpha.900' }
-      : { bg: 'brand.primaryMuted', color: 'brand.text' }
+    const sectionTextColor = isDark ? 'whiteAlpha.600' : 'gray.500'
+    const activeBorder = isDark ? 'white' : 'purple.600'
+    const activeText = isDark ? 'white' : 'purple.700'
+    const activeIconColor = isDark ? 'white' : 'purple.600'
+    const inactiveText = isDark ? 'whiteAlpha.800' : 'gray.600'
+    const inactiveIconColor = isDark ? 'whiteAlpha.700' : 'gray.400'
+    const hoverBg = isDark ? 'whiteAlpha.100' : 'purple.50'
+    const activeBg = isDark ? 'whiteAlpha.150' : 'purple.50'
+    const dividerColor = isDark ? 'whiteAlpha.200' : 'gray.200'
 
     return (
-      <VStack align="stretch" spacing={6} pt={4}>
+      <VStack align="stretch" spacing={5} pt={2}>
         {filteredNavigation.map((section, sectionIndex) => (
           <Box key={section.label}>
             <Text
-              mb={3}
+              mb={2}
               fontSize="xs"
-              fontWeight="semibold"
-              letterSpacing="0.12em"
+              fontWeight="bold"
+              letterSpacing="0.1em"
               textTransform="uppercase"
               color={sectionTextColor}
+              fontFamily="heading"
+              px={3}
             >
               {section.label}
             </Text>
-            <VStack align="stretch" spacing={2}>
+            <VStack align="stretch" spacing={1}>
               {section.items.map(item => {
                 const isActive = location.pathname.startsWith(item.path)
-                const fontWeight = isActive || item.isPrimary ? 'semibold' : 'medium'
                 const restrictedFeature = isFreeUser ? getRestrictedFeatureForPath(item.path) : null
                 const isRestrictedForFreeUser = Boolean(restrictedFeature)
 
-                // Add data-tour attributes for tour targets
                 const getTourAttribute = (path: string) => {
                   if (path === '/app/weekly-glance') return 'dashboard'
                   if (path === '/app/weekly-checklist') return 'weekly-checklist'
@@ -450,32 +443,42 @@ export const MainLayout: React.FC = () => {
                     onClick={() => handleNavigation(item.path)}
                     bg={isActive ? activeBg : 'transparent'}
                     color={isActive ? activeText : inactiveText}
-                    _hover={{ bg: hoverBg, color: activeText }}
-                    minH="48px"
-                    px={4}
-                    borderLeftWidth="4px"
+                    _hover={{ bg: hoverBg, color: activeText, transform: 'translateX(2px)' }}
+                    minH="44px"
+                    px={3}
+                    borderLeftWidth="3px"
                     borderLeftColor={isActive ? activeBorder : 'transparent'}
-                    borderRadius="md"
-                    fontWeight={fontWeight}
+                    borderRadius="lg"
+                    fontWeight={isActive ? 'semibold' : 'medium'}
                     fontSize="sm"
+                    fontFamily="body"
+                    transition="all 0.2s ease"
                     aria-current={isActive ? 'page' : undefined}
                     data-tour={getTourAttribute(item.path)}
-                    sx={isRestrictedForFreeUser ? { opacity: 0.55, filter: 'grayscale(1)', cursor: 'not-allowed' } : undefined}
+                    sx={isRestrictedForFreeUser ? { opacity: 0.5, cursor: 'not-allowed' } : undefined}
                   >
                     <HStack spacing={3} w="full" justify="space-between">
                       <HStack spacing={3}>
-                        <Box color={isActive ? activeText : inactiveText}>
-                          <item.icon size={20} />
+                        <Box color={isActive ? activeIconColor : inactiveIconColor} transition="color 0.2s">
+                          <item.icon size={18} strokeWidth={isActive ? 2.5 : 2} />
                         </Box>
-                        <Text color="inherit">{item.label}</Text>
+                        <Text color="inherit" fontFamily="body">{item.label}</Text>
                         {isRestrictedForFreeUser && item.label !== 'Leadership Council' ? (
-                          <Badge colorScheme="yellow" variant="subtle">
-                            Upgrade
+                          <Badge colorScheme="orange" variant="subtle" fontSize="2xs">
+                            Pro
                           </Badge>
                         ) : null}
                       </HStack>
                       {item.badge && (
-                        <Badge px={2} borderRadius="full" fontSize="xs" {...badgeStyles}>
+                        <Badge
+                          bg={isDark ? 'whiteAlpha.200' : 'purple.100'}
+                          color={isDark ? 'white' : 'purple.700'}
+                          px={2}
+                          py={0.5}
+                          borderRadius="full"
+                          fontSize="2xs"
+                          fontWeight="bold"
+                        >
                           {item.badge.label}
                         </Badge>
                       )}
@@ -493,7 +496,7 @@ export const MainLayout: React.FC = () => {
               })}
             </VStack>
             {sectionIndex < filteredNavigation.length - 1 && (
-              <Divider mt={6} borderColor={dividerColor} />
+              <Divider mt={5} borderColor={dividerColor} />
             )}
           </Box>
         ))}
@@ -506,56 +509,86 @@ export const MainLayout: React.FC = () => {
       {/* Desktop Sidebar */}
       <Box
         w={{ base: '0', md: '260px' }}
-        bg="brand.sidebar"
+        bg="white"
         borderRight="1px solid"
-        borderColor="brand.border"
-        p={4}
+        borderColor="gray.200"
         display={{ base: 'none', md: 'block' }}
+        overflowY="auto"
       >
-        <VStack align="stretch" h="full" spacing={8}>
-          <HStack spacing={3} align="center">
-            <Box boxSize="36px" borderRadius="full" bg="white" display="grid" placeItems="center" boxShadow="sm">
-              <Text fontWeight="bold" color="brand.primary">
+        <VStack align="stretch" h="full" spacing={0}>
+          {/* Logo Header */}
+          <HStack
+            spacing={3}
+            align="center"
+            px={4}
+            py={5}
+            borderBottom="1px solid"
+            borderColor="gray.100"
+          >
+            <Box
+              boxSize="40px"
+              borderRadius="xl"
+              bgGradient="linear(to-br, purple.600, purple.800)"
+              display="grid"
+              placeItems="center"
+              boxShadow="md"
+            >
+              <Text fontWeight="bold" fontSize="sm" color="white" fontFamily="heading">
                 T4L
               </Text>
             </Box>
             <Box>
-              <Text fontSize="sm" fontWeight="bold" color="brand.text">
-                Transformation Journey
+              <Text fontSize="sm" fontWeight="semibold" color="gray.800" fontFamily="heading">
+                Transformation
+              </Text>
+              <Text fontSize="xs" color="gray.500" fontFamily="body">
+                Leadership Journey
               </Text>
             </Box>
           </HStack>
 
           {/* Navigation */}
-          <Box flex="1">
+          <Box flex="1" px={3} py={4} overflowY="auto">
             <NavContent variant="sidebar" />
           </Box>
 
           {/* User Info */}
-          <VStack align="stretch" spacing={3}>
-            <HStack align="center" spacing={3}>
-              <Avatar size="sm" name={profile?.fullName} src={profile?.avatarUrl} bg="brand.primary" color="white" />
+          <Box px={4} py={4} borderTop="1px solid" borderColor="gray.100" bg="gray.50">
+            <HStack align="center" spacing={3} mb={3}>
+              <Avatar
+                size="sm"
+                name={profile?.fullName}
+                src={profile?.avatarUrl}
+                bg="purple.600"
+                color="white"
+                border="2px solid"
+                borderColor="purple.200"
+              />
               <Box flex="1">
-                <Text fontSize="sm" fontWeight="semibold" color="brand.text">
+                <Text fontSize="sm" fontWeight="semibold" color="gray.800" fontFamily="body" noOfLines={1}>
                   {profile?.fullName || 'Your name'}
                 </Text>
-                <Text fontSize="xs" color="brand.subtleText">
-                  {profile?.totalPoints ? `${profile.totalPoints} points` : 'Logged in'}
+                <Text fontSize="xs" color="gray.500" fontFamily="body">
+                  {profile?.totalPoints ? `${profile.totalPoints.toLocaleString()} pts` : 'Member'}
                 </Text>
               </Box>
             </HStack>
             <Button
-              leftIcon={<LogOut size={16} />}
+              leftIcon={<LogOut size={14} />}
               variant="ghost"
               size="sm"
+              w="full"
               onClick={handleSignOut}
-              colorScheme="red"
+              color="gray.600"
+              _hover={{ bg: 'gray.100', color: 'red.500' }}
               isLoading={signingOut}
               isDisabled={signingOut}
+              fontFamily="body"
+              fontWeight="medium"
             >
               Sign Out
             </Button>
-          </VStack>
+          </Box>
         </VStack>
       </Box>
 
@@ -569,8 +602,6 @@ export const MainLayout: React.FC = () => {
           minH={HEADER_HEIGHT}
           flexShrink={0}
           bg="white"
-          borderBottom="1px solid"
-          borderColor="brand.border"
           gap={3}
           flexWrap={{ base: 'wrap', md: 'nowrap' }}
           rowGap={{ base: 3, md: 0 }}
@@ -690,11 +721,10 @@ export const MainLayout: React.FC = () => {
 
           <HStack
             spacing={3}
-            ml={{ base: 0, md: 4 }}
+            ml={{ base: 0, md: 'auto' }}
             align="center"
             order={{ base: 2, md: 0 }}
-            flex="1 1 auto"
-            justify={{ base: 'flex-end', md: 'flex-start' }}
+            justify="flex-end"
           >
             <NotificationDropdown />
             <Menu>

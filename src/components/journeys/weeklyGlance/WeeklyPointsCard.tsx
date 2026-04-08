@@ -54,70 +54,86 @@ export const WeeklyPointsCard = ({ data, loading, error, onNavigate }: WeeklyPoi
   return (
     <Card
       h="100%"
-      bg="surface.default"
-      borderColor="border.subtle"
-      variant="outline"
-      _hover={{ shadow: 'sm', cursor: onNavigate ? 'pointer' : 'default', transform: 'translateY(-2px)' }}
+      bg="white"
+      borderWidth="1px"
+      borderColor="teal.400"
+      borderRadius="xl"
+      _hover={{ shadow: 'md', cursor: onNavigate ? 'pointer' : 'default', transform: 'translateY(-2px)' }}
       transition="all 0.2s"
       onClick={onNavigate}
     >
-      <CardBody p={6}>
-        <Stack spacing={4}>
-          <HStack justify="space-between">
-            <HStack>
-              <Icon as={Target} color="brand.primary" />
-              <Text fontWeight="bold" fontSize="md" color="text.primary">Points Accumulated</Text>
+      <CardBody p={5}>
+        <Stack spacing={5}>
+          {/* Header */}
+          <HStack justify="space-between" align="center">
+            <HStack spacing={2}>
+              <Icon as={Target} color="teal.500" boxSize={5} />
+              <Text fontWeight="semibold" fontSize="md" color="gray.800" fontFamily="heading">Points Accumulated</Text>
             </HStack>
             {displayStatus && (
-              <Badge colorScheme={statusColor} variant="subtle">
+              <Badge
+                colorScheme={statusColor}
+                fontSize="xs"
+                px={3}
+                py={1}
+                borderRadius="full"
+                fontFamily="body"
+              >
                 {displayStatus.replace('_', ' ')}
               </Badge>
             )}
           </HStack>
 
           <Skeleton isLoaded={!loading} rounded="md">
-            <VStack align="stretch" spacing={2}>
-              <HStack justify="space-between">
-                <Text fontSize="xs" color="text.secondary">
-                  2-week cycle target
-                </Text>
-                <Text fontWeight="bold" color="text.primary">{`${cycleTargetPoints.toLocaleString()} pts`}</Text>
-              </HStack>
-              <HStack justify="space-between">
-                <Text fontSize="xs" color="text.secondary">
-                  Points accumulated this cycle
-                </Text>
-                <Text color="text.primary">{`${cyclePointsAccumulated.toLocaleString()} pts`}</Text>
-              </HStack>
-              <Progress colorScheme="brand" value={progress} height="8px" rounded="full" />
+            <Stack spacing={4}>
+              {/* Main Stats */}
+              <Box bg="gray.50" rounded="lg" p={4}>
+                <VStack align="stretch" spacing={3}>
+                  <HStack justify="space-between">
+                    <Text fontSize="sm" color="gray.500">Cycle Target</Text>
+                    <Text fontWeight="bold" fontSize="xl" color="gray.800">{cycleTargetPoints.toLocaleString()} pts</Text>
+                  </HStack>
+                  <Progress colorScheme="teal" value={progress} height="8px" rounded="full" />
+                  <HStack justify="space-between">
+                    <Text fontSize="sm" color="gray.500">Accumulated</Text>
+                    <Text fontWeight="semibold" color="teal.600">{cyclePointsAccumulated.toLocaleString()} pts</Text>
+                  </HStack>
+                </VStack>
+              </Box>
+
+              {/* Delta Status */}
               {(windowProgress || data) && (
-                <HStack spacing={2} color={pointDelta >= 0 ? 'green.600' : 'orange.500'}>
-                  <Icon as={TrendingUp} boxSize={4} />
-                  <Text fontSize="sm">{deltaLabel}</Text>
+                <HStack
+                  spacing={2}
+                  p={3}
+                  bg={pointDelta >= 0 ? 'green.50' : 'orange.50'}
+                  rounded="md"
+                  borderLeftWidth="3px"
+                  borderLeftColor={pointDelta >= 0 ? 'green.400' : 'orange.400'}
+                >
+                  <Icon as={TrendingUp} boxSize={4} color={pointDelta >= 0 ? 'green.500' : 'orange.500'} />
+                  <Text fontSize="sm" fontWeight="medium" color={pointDelta >= 0 ? 'green.700' : 'orange.700'}>
+                    {deltaLabel}
+                  </Text>
                 </HStack>
               )}
-              <HStack spacing={2}>
-                <Box flex={1} h="2px" bg="border.subtle" />
-              </HStack>
-              <HStack justify="space-between">
-                <HStack spacing={1}>
-                  <Icon as={Users} boxSize={4} color="text.secondary" />
-                  <Text fontSize="sm" color="text.secondary">
-                    {data?.engagement_count || 0} engagements logged this week
-                  </Text>
+
+              {/* Footer Stats */}
+              <HStack justify="space-between" pt={2}>
+                <HStack spacing={2}>
+                  <Icon as={Users} boxSize={4} color="gray.400" />
+                  <Text fontSize="sm" color="gray.600">{data?.engagement_count || 0} engagements</Text>
                 </HStack>
-                <HStack spacing={1}>
-                  <Icon as={Clock3} boxSize={4} color="text.secondary" />
-                  <Text fontSize="sm" color="text.secondary">
-                    {daysRemainingInCycle} days left in cycle
-                  </Text>
+                <HStack spacing={2}>
+                  <Icon as={Clock3} boxSize={4} color="gray.400" />
+                  <Text fontSize="sm" color="gray.600">{daysRemainingInCycle} days left</Text>
                 </HStack>
               </HStack>
-            </VStack>
+            </Stack>
           </Skeleton>
 
           {error && (
-            <HStack color="text.primary" fontSize="sm">
+            <HStack color="red.500" fontSize="sm" p={3} bg="red.50" rounded="md">
               <Icon as={AlertCircle} />
               <Text>Unable to load points summary.</Text>
             </HStack>

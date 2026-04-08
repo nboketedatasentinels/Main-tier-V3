@@ -35,54 +35,65 @@ export const ActivityFeedCard = ({ items, onSeeMore }: ActivityFeedCardProps) =>
   const visibleItems = onSeeMore ? items.slice(0, 5) : showAll ? items : items.slice(0, 5)
 
   return (
-    <Card h="100%" variant="outline" borderColor="border.subtle">
-      <CardBody p={6}>
+    <Card h="100%" bg="white" borderWidth="1px" borderColor="indigo.400" borderRadius="xl">
+      <CardBody p={5}>
         <Stack spacing={4}>
-          <HStack justify="space-between">
-            <Text fontWeight="bold" fontSize="md">Activity feed</Text>
-            <Text fontSize="xs" color="text.muted">
-              {openLoops} open loop{openLoops === 1 ? '' : 's'}
-            </Text>
+          {/* Header */}
+          <HStack justify="space-between" align="center">
+            <Text fontWeight="semibold" fontSize="md" color="gray.800" fontFamily="heading">Activity Feed</Text>
+            {openLoops > 0 && (
+              <Box bg="orange.100" px={3} py={1} borderRadius="full">
+                <Text fontSize="xs" fontWeight="medium" color="orange.700" fontFamily="body">
+                  {openLoops} pending
+                </Text>
+              </Box>
+            )}
           </HStack>
 
-          <VStack align="stretch" spacing={3}>
-            {items.length === 0 && (
-              <Text color="text.secondary" fontSize="sm">
-                No updates yet. Keep logging activity to see your feed.
-              </Text>
+          <VStack align="stretch" spacing={2}>
+            {items.length === 0 ? (
+              <Box bg="gray.50" p={4} rounded="lg" textAlign="center">
+                <Text color="gray.500" fontSize="sm">No recent activity</Text>
+              </Box>
+            ) : (
+              visibleItems.map((item) => (
+                <HStack
+                  key={item.id}
+                  align="flex-start"
+                  spacing={3}
+                  p={3}
+                  bg="gray.50"
+                  rounded="lg"
+                  _hover={{ bg: 'gray.100' }}
+                  transition="background 0.2s"
+                >
+                  <Box
+                    p={2}
+                    bg={item.status === 'complete' ? 'green.100' : item.status === 'pending' ? 'yellow.100' : 'red.100'}
+                    rounded="full"
+                  >
+                    <Icon
+                      as={statusIconMap[item.status]}
+                      color={statusColorMap[item.status]}
+                      boxSize={4}
+                    />
+                  </Box>
+                  <Box flex={1}>
+                    <Text fontWeight="semibold" fontSize="sm" color="gray.800">{item.title}</Text>
+                    <Text fontSize="sm" color="gray.600" noOfLines={1}>{item.description}</Text>
+                    <Text fontSize="xs" color="gray.400" mt={1}>{item.timestamp}</Text>
+                  </Box>
+                </HStack>
+              ))
             )}
-            {visibleItems.map((item) => (
-              <HStack
-                key={item.id}
-                align="flex-start"
-                spacing={3}
-                p={3}
-                borderWidth="1px"
-                borderColor="border.subtle"
-                rounded="md"
-              >
-                <Box pt={1}>
-                  <Icon as={statusIconMap[item.status]} color={statusColorMap[item.status]} />
-                </Box>
-                <Box flex={1}>
-                  <Text fontWeight="semibold">{item.title}</Text>
-                  <Text fontSize="sm" color="text.secondary" mt={1} noOfLines={1}>
-                    {item.description}
-                  </Text>
-                  <Text fontSize="xs" color="text.muted" mt={2}>
-                    {item.timestamp}
-                  </Text>
-                </Box>
-              </HStack>
-            ))}
           </VStack>
 
           {onSeeMore && items.length > 0 && (
             <Button
-              variant="link"
+              variant="ghost"
               size="sm"
+              colorScheme="indigo"
               alignSelf="flex-start"
-              color="brand.primary"
               onClick={onSeeMore}
             >
               See more
@@ -91,13 +102,13 @@ export const ActivityFeedCard = ({ items, onSeeMore }: ActivityFeedCardProps) =>
 
           {!onSeeMore && items.length > 5 && (
             <Button
-              variant="link"
+              variant="ghost"
               size="sm"
+              colorScheme="indigo"
               alignSelf="flex-start"
-              color="brand.primary"
               onClick={() => setShowAll(prev => !prev)}
             >
-              {showAll ? 'Show fewer updates' : `View all activity (${items.length})`}
+              {showAll ? 'Show less' : `View all (${items.length})`}
             </Button>
           )}
         </Stack>

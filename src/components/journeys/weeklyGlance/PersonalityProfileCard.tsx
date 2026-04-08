@@ -196,79 +196,72 @@ export const PersonalityProfileCard = ({ data, loading }: PersonalityProfileCard
   }
 
   return (
-    <Card h="100%" variant="outline" borderColor="border.subtle">
-      <CardBody p={6}>
-        <Stack spacing={3}>
-          <HStack justify="space-between">
-            <HStack>
-              <Icon as={Sparkles} color="brand.primary" />
-              <Text fontWeight="bold" fontSize="md" color="text.primary">Personality Profile</Text>
-            </HStack>
+    <Card h="100%" bg="white" borderWidth="1px" borderColor="blue.400" borderRadius="xl">
+      <CardBody p={5}>
+        <Stack spacing={5}>
+          {/* Header */}
+          <HStack spacing={2}>
+            <Icon as={Sparkles} color="blue.500" boxSize={5} />
+            <Text fontWeight="semibold" fontSize="md" color="gray.800" fontFamily="heading">Personality Profile</Text>
           </HStack>
 
           <Skeleton isLoaded={!loading} rounded="md">
-            <Stack spacing={2} color="brand.subtleText" fontSize="sm">
-              <Text>{data?.personalityDescription || 'Share your personality insights to receive tailored guidance.'}</Text>
-              <HStack spacing={2} align="center">
-                <Text fontWeight="semibold" color="brand.text">
+            <Stack spacing={4}>
+              {/* Personality Type */}
+              <Box bg="gray.50" rounded="lg" p={4}>
+                <Text fontSize="xs" color="gray.500" textTransform="uppercase" letterSpacing="wide" mb={2}>
                   Personality Type
                 </Text>
                 {selectedPersonalityType ? (
-                  <Tag colorScheme="purple" borderRadius="full" px={3} py={1}>
+                  <Tag colorScheme="purple" borderRadius="full" px={4} py={2} fontSize="md" fontWeight="semibold">
                     {selectedPersonalityType}
                   </Tag>
                 ) : (
-                  <Text color="brand.subtleText">Not set yet</Text>
+                  <Text color="gray.400" fontStyle="italic">Not set yet</Text>
                 )}
-              </HStack>
-              {strengths.length > 0 && (
-                <>
-                  <Text fontWeight="semibold" color="brand.text">
-                    Strengths
-                  </Text>
-                  <UnorderedList pl={5} spacing={1}>
-                    {strengths.slice(0, strengthPreviewCount).map(item => (
-                      <ListItem key={item}>{item}</ListItem>
-                    ))}
-                  </UnorderedList>
-                </>
-              )}
-              <Stack spacing={2} pt={strengths.length > 0 ? 1 : 0}>
-                  <HStack spacing={2} color="brand.text">
-                    <Icon as={Award} color="yellow.500" />
-                    <Text fontWeight="semibold">Core Values</Text>
-                  </HStack>
+              </Box>
+
+              {/* Core Values */}
+              <Box>
+                <HStack spacing={2} mb={3}>
+                  <Icon as={Award} color="yellow.500" boxSize={4} />
+                  <Text fontSize="sm" fontWeight="semibold" color="gray.700">Core Values</Text>
+                </HStack>
                 {selectedCoreValues.length > 0 ? (
                   <HStack spacing={2} flexWrap="wrap">
                     {selectedCoreValues.map(value => (
-                      <Tag key={value} colorScheme="yellow" borderRadius="full" px={3} py={1} whiteSpace="nowrap">
-                        <HStack spacing={1}>
-                          <Icon as={Award} size={14} />
-                          <Text>{value}</Text>
-                        </HStack>
+                      <Tag key={value} colorScheme="yellow" borderRadius="full" px={3} py={1} fontSize="sm">
+                        {value}
                       </Tag>
                     ))}
                   </HStack>
                 ) : (
-                  <Stack spacing={1}>
-                    <Text color="brand.subtleText">No core values selected yet.</Text>
-                    {localProfile?.personalityType && (
-                      <Text fontSize="xs" color="brand.subtleText">
-                        Complete the Personal Values test to add your core values.
-                      </Text>
-                    )}
-                  </Stack>
+                  <Text fontSize="sm" color="gray.400" fontStyle="italic">No core values selected yet</Text>
                 )}
-              </Stack>
-              <Text fontSize="sm" color="brand.subtleText">
-                Understanding your type helps us match you with the right habits, allies, and learning experiences.
-              </Text>
+              </Box>
+
+              {/* Strengths */}
+              {strengths.length > 0 && (
+                <Box>
+                  <Text fontSize="sm" fontWeight="semibold" color="gray.700" mb={2}>Strengths</Text>
+                  <UnorderedList pl={4} spacing={1} fontSize="sm" color="gray.600">
+                    {strengths.slice(0, strengthPreviewCount).map(item => (
+                      <ListItem key={item}>{item}</ListItem>
+                    ))}
+                  </UnorderedList>
+                </Box>
+              )}
+
+              {/* Action Button */}
               <Button
-                variant={localProfile?.personalityType ? 'link' : 'solid'}
-                colorScheme="purple"
+                variant="solid"
+                bg="purple.800"
+                color="white"
+                _hover={{ bg: 'purple.700' }}
                 size="sm"
                 onClick={() => setIsModalOpen(true)}
                 alignSelf="flex-start"
+                mt={2}
               >
                 View & Edit Profile
               </Button>
@@ -284,7 +277,7 @@ export const PersonalityProfileCard = ({ data, loading }: PersonalityProfileCard
           <ModalCloseButton />
           <ModalBody pb={6}>
             <Stack spacing={6}>
-              <Box bg="blue.50" p={5} borderRadius="lg" borderWidth="2px" borderColor="blue.200">
+              <Box bg="blue.50" p={5} borderRadius="lg" borderWidth="1px" borderColor="blue.200">
                 <VStack align="stretch" spacing={4}>
                   <HStack justify="space-between" align="center">
                     <Text fontWeight="semibold" color="blue.800">

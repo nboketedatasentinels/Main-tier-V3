@@ -10,22 +10,39 @@ interface NextMilestoneCardProps {
 
 export const NextMilestoneCard = ({ milestone, daysRemaining, onNavigate }: NextMilestoneCardProps) => {
   return (
-    <Card h="100%" variant="outline" borderColor="border.subtle">
-      <CardBody p={6}>
+    <Card h="100%" bg="white" borderWidth="1px" borderColor="purple.800" borderRadius="xl">
+      <CardBody p={5}>
         <Stack spacing={4}>
+          {/* Header */}
           <HStack spacing={2}>
-            <Icon as={Flag} color="brand.primary" />
-            <Text fontWeight="bold" fontSize="md" color="text.primary">
-              Next Milestone
-            </Text>
+            <Icon as={Flag} color="purple.600" boxSize={5} />
+            <Text fontWeight="semibold" fontSize="md" color="gray.800" fontFamily="heading">Next Milestone</Text>
           </HStack>
-          <Stack spacing={2}>
-            <Text fontWeight="semibold">{milestone}</Text>
-            <Text fontSize="sm" color="text.secondary">
-              Due in {daysRemaining} day{daysRemaining === 1 ? '' : 's'}.
+
+          {/* Milestone Info */}
+          <Stack
+            spacing={2}
+            p={4}
+            bg="purple.50"
+            rounded="lg"
+            borderLeftWidth="3px"
+            borderLeftColor="purple.600"
+          >
+            <Text fontWeight="semibold" fontSize="md" color="gray.800">{milestone}</Text>
+            <Text fontSize="sm" color="gray.600">
+              Due in {daysRemaining} day{daysRemaining === 1 ? '' : 's'}
             </Text>
           </Stack>
-          <Button size="sm" colorScheme="purple" alignSelf="flex-start" onClick={onNavigate}>
+
+          {/* Action Button */}
+          <Button
+            size="sm"
+            bg="purple.800"
+            color="white"
+            _hover={{ bg: 'purple.700' }}
+            alignSelf="flex-start"
+            onClick={onNavigate}
+          >
             Review checklist
           </Button>
         </Stack>

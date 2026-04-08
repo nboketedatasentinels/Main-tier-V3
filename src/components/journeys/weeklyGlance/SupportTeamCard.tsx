@@ -76,10 +76,13 @@ export const SupportTeamCard = ({ data, loading, peerMatches, peerMatchesLoading
   }, [onUpgradeOpen])
 
   return (
-    <Card h="100%" variant="outline" borderColor="border.subtle">
-      <CardBody p={6}>
+    <Card h="100%" bg="white" borderWidth="1px" borderColor="purple.400" borderRadius="xl">
+      <CardBody p={5}>
         <Stack spacing={4}>
-          <Text fontWeight="bold" fontSize="md" color="text.primary">Support Team</Text>
+          <HStack spacing={2}>
+            <Icon as={Users} color="purple.500" boxSize={5} />
+            <Text fontWeight="semibold" fontSize="md" color="gray.800" fontFamily="heading">Support Team</Text>
+          </HStack>
           <Skeleton isLoaded={!loading} rounded="md">
             <Stack spacing={3}>
               {hasMentor && mentorProfile && mentorProfile.id !== ambassadorProfile?.id && (

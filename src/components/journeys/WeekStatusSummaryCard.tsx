@@ -105,7 +105,7 @@ export const WeekStatusSummaryCard: React.FC<WeekStatusSummaryCardProps> = ({
 
   if (loading) {
     return (
-      <Card variant="outline" borderColor="border.subtle" h="100%">
+      <Card bg="white" borderWidth="1px" borderColor="cyan.400" borderRadius="xl" h="100%">
         <CardBody p={6}>
           <Stack spacing={4}>
             <Skeleton height="24px" width="60%" />
@@ -119,7 +119,7 @@ export const WeekStatusSummaryCard: React.FC<WeekStatusSummaryCardProps> = ({
 
   if (error) {
     return (
-      <Card variant="outline" borderColor="border.subtle" h="100%">
+      <Card bg="white" borderWidth="1px" borderColor="cyan.400" borderRadius="xl" h="100%">
         <CardBody p={6}>
           <Alert status="error" borderRadius="md">
             <AlertIcon />
@@ -141,8 +141,10 @@ export const WeekStatusSummaryCard: React.FC<WeekStatusSummaryCardProps> = ({
 
   return (
     <Card
-      variant="outline"
-      borderColor="border.subtle"
+      bg="white"
+      borderWidth="1px"
+      borderColor="cyan.400"
+      borderRadius="xl"
       h="100%"
       _hover={{ shadow: 'sm' }}
       transition="all 0.2s"

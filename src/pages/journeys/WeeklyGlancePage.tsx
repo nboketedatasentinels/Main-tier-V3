@@ -338,7 +338,7 @@ export const WeeklyGlancePage = () => {
   }, [navigate])
 
   return (
-    <Box p={{ base: 4, md: 6 }}>
+    <Box p={{ base: 4, md: 6 }} pt={{ base: 2, md: 2 }}>
       <Stack spacing={6}>
         {shouldShowBuildVillageCard && (
           <Card bg="brand.primaryMuted" border="1px" borderColor="brand.border">
@@ -368,16 +368,6 @@ export const WeeklyGlancePage = () => {
             </CardBody>
           </Card>
         )}
-
-        <Stack spacing={1}>
-          {/* Partial migration strategy: keep user copy general while weekly data contracts remain in place. */}
-          <Heading size="lg" color="text.primary">
-            Current Progress at a Glance
-          </Heading>
-          <Text color="text.primary">
-            Your personalized dashboard for points accumulated, habits, and support.
-          </Text>
-        </Stack>
 
         {hasError && (
           <Alert status="warning" rounded="md">
