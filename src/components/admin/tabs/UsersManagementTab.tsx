@@ -829,7 +829,7 @@ export const UsersManagementTab = ({ users: propUsers, loading: propLoading }: U
                 <Text fontWeight="medium" color="purple.700">
                   {selectedIds.length} selected
                 </Text>
-                <ButtonGroup size="sm" variant="solid" colorScheme="purple" isDisabled={bulkLoading || !isSuperAdmin}>
+                <ButtonGroup size="sm" colorScheme="purple" isDisabled={bulkLoading || !isSuperAdmin}>
                   <Button onClick={() => handleBulkRole('partner')} isLoading={bulkLoading}>
                     Make Admin
                   </Button>
@@ -963,7 +963,7 @@ export const UsersManagementTab = ({ users: propUsers, loading: propLoading }: U
                                 </Text>
                               </Stack>
                             ) : (
-                              <Badge colorScheme="purple" variant="subtle">
+                              <Badge colorScheme="purple">
                                 Independent
                               </Badge>
                             )}
@@ -1155,7 +1155,7 @@ export const UsersManagementTab = ({ users: propUsers, loading: propLoading }: U
                     </FormHelperText>
                   </FormControl>
 
-                  <Button size="sm" variant="outline" colorScheme="purple" mt={3} onClick={() => setIsCreatingOrganization(true)} isDisabled={promotionLoading}>
+                  <Button size="sm" colorScheme="purple" mt={3} onClick={() => setIsCreatingOrganization(true)} isDisabled={promotionLoading}>
                     Create new organization
                   </Button>
                 </Box>

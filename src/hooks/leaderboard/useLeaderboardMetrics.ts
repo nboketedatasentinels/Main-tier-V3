@@ -157,7 +157,8 @@ export const useLeaderboardMetrics = ({
 
     const rankedRows = [...rows]
       .sort((a, b) => {
-        const pointDelta = b.activePoints - a.activePoints
+        // Sort by totalPoints (real accumulated points) for ranking
+        const pointDelta = b.totalPoints - a.totalPoints
         if (pointDelta !== 0) return pointDelta
 
         const aName = getDisplayName(a.user, '')
@@ -174,8 +175,9 @@ export const useLeaderboardMetrics = ({
       })
     }
 
+    // Sort by totalPoints for the final display order
     return [...rankedRows].sort((a, b) =>
-      sortDirection === 'asc' ? a.activePoints - b.activePoints : b.activePoints - a.activePoints
+      sortDirection === 'asc' ? a.totalPoints - b.totalPoints : b.totalPoints - a.totalPoints
     )
   }, [aggregatedPoints, context, profile, segmentProfiles, sortDirection, sortField, timeframe])
 

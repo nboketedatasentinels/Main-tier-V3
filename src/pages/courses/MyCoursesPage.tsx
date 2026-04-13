@@ -292,7 +292,7 @@ const FreeTierCoursesPage: React.FC<{ userId?: string | null; profile: UserProfi
           <Heading size="md" color="gray.800">
             Complementary course
           </Heading>
-          <Badge colorScheme="purple" variant="subtle" borderRadius="full">
+          <Badge colorScheme="purple" borderRadius="full">
             1 course
           </Badge>
         </HStack>
@@ -1009,7 +1009,7 @@ const PaidLibraryCoursesPage: React.FC<{ userId?: string | null; profile: UserPr
               Browse all courses available with your membership.
             </Text>
             <HStack spacing={3} flexWrap="wrap">
-              <Badge colorScheme="purple" variant="subtle" borderRadius="full">
+              <Badge colorScheme="purple" borderRadius="full">
                 Premium access
               </Badge>
               <Text color="purple.700" fontSize="sm">

@@ -29,7 +29,7 @@ import {
   useToast,
   VStack,
 } from '@chakra-ui/react'
-import { Award, ExternalLink, Sparkles } from 'lucide-react'
+import { Award, ExternalLink, Fingerprint } from 'lucide-react'
 import { FormEvent, useEffect, useMemo, useState } from 'react'
 import { doc, updateDoc } from 'firebase/firestore'
 import { PersonalityProfile } from '@/hooks/useWeeklyGlanceData'
@@ -201,7 +201,7 @@ export const PersonalityProfileCard = ({ data, loading }: PersonalityProfileCard
         <Stack spacing={5}>
           {/* Header */}
           <HStack spacing={2}>
-            <Icon as={Sparkles} color="blue.500" boxSize={5} />
+            <Icon as={Fingerprint} color="blue.500" boxSize={5} />
             <Text fontWeight="semibold" fontSize="md" color="gray.800" fontFamily="heading">Personality Profile</Text>
           </HStack>
 

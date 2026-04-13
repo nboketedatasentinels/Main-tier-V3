@@ -13,9 +13,10 @@ import {
 } from '@chakra-ui/react'
 import { MouseEventHandler } from 'react'
 import { AlertCircle, Clock3, Target, TrendingUp, Users } from 'lucide-react'
-import { calculateWeekProgress, getDaysRemainingInWeek } from '@/utils/weekCalculations'
+import { calculateWeekProgress, getJourneyTiming } from '@/utils/weekCalculations'
 import { WeeklyPoints } from '@/hooks/useWeeklyGlanceData'
 import { useWindowProgress } from '@/hooks/useWindowProgress'
+import { useAuth } from '@/hooks/useAuth'
 
 interface WeeklyPointsCardProps {
   data: WeeklyPoints | null
@@ -33,7 +34,10 @@ const statusColorMap: Record<string, string> = {
 }
 
 export const WeeklyPointsCard = ({ data, loading, error, onNavigate }: WeeklyPointsCardProps) => {
-  const { data: windowProgress, windowWeek } = useWindowProgress()
+  const { profile } = useAuth()
+  const { data: windowProgress } = useWindowProgress()
+  const journeyTiming = getJourneyTiming(profile?.journeyStartDate, profile?.programDurationWeeks ?? 6)
+  const daysRemaining = journeyTiming?.daysRemaining ?? 0
   const fallbackWeeklyProgress = calculateWeekProgress(data?.points_earned || 0, data?.target_points || 0)
   const cycleTargetPoints = windowProgress?.windowTarget ?? (data?.target_points || 0) * 2
   const cyclePointsAccumulated = windowProgress?.pointsEarned ?? data?.points_earned ?? 0
@@ -41,8 +45,6 @@ export const WeeklyPointsCard = ({ data, loading, error, onNavigate }: WeeklyPoi
     cycleTargetPoints > 0
       ? Math.min(100, Math.round((cyclePointsAccumulated / cycleTargetPoints) * 100))
       : fallbackWeeklyProgress
-  const daysRemainingThisWeek = getDaysRemainingInWeek()
-  const daysRemainingInCycle = windowWeek === 1 ? daysRemainingThisWeek + 7 : daysRemainingThisWeek
   const displayStatus = windowProgress?.status ?? data?.status
   const statusColor = displayStatus ? statusColorMap[displayStatus] || 'gray' : 'gray'
   const pointDelta = cyclePointsAccumulated - cycleTargetPoints
@@ -126,7 +128,7 @@ export const WeeklyPointsCard = ({ data, loading, error, onNavigate }: WeeklyPoi
                 </HStack>
                 <HStack spacing={2}>
                   <Icon as={Clock3} boxSize={4} color="gray.400" />
-                  <Text fontSize="sm" color="gray.600">{daysRemainingInCycle} days left</Text>
+                  <Text fontSize="sm" color="gray.600">{daysRemaining} days left</Text>
                 </HStack>
               </HStack>
             </Stack>

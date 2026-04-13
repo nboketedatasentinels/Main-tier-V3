@@ -1537,16 +1537,17 @@ export const ImpactLogPage: React.FC = () => {
       setIsSubmittingImpact(false)
       onClose()
     } catch (error) {
-      const errorMessage = error instanceof FirebaseError ? error.message : (error as Error)?.message || 'Unknown error'
-
-      if (import.meta.env.DEV) {
-        console.error('Impact log submission failed', error)
-      }
+      console.error('[ImpactLog] Submission failed:', error)
+      const errorMessage = error instanceof FirebaseError
+        ? `Firebase error: ${error.code} - ${error.message}`
+        : (error as Error)?.message || 'Unknown error occurred'
 
       toast({
         title: 'Unable to log impact',
         description: errorMessage,
         status: 'error',
+        duration: 8000,
+        isClosable: true,
       })
       setIsSubmittingImpact(false)
     }

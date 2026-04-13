@@ -853,7 +853,7 @@ export const PartnerUserManagement: React.FC<PartnerUserManagementProps> = ({
                     <Text fontSize="xs" noOfLines={1}>{formatLastActiveLabel(user.lastActive)}</Text>
                   </Td>
                   <Td px={2}>
-                    <Button size="xs" fontSize="xs" colorScheme="purple" variant="outline" onClick={() => openUser(user)}>
+                    <Button size="xs" fontSize="xs" colorScheme="purple" onClick={() => openUser(user)}>
                       Nudge
                     </Button>
                   </Td>

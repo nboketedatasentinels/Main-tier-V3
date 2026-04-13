@@ -621,7 +621,7 @@ export const LeadershipCouncilPage: React.FC = () => {
                           </HStack>
                         )}
                         {mentorSourceLabel && (
-                          <Badge mt={3} width="fit-content" colorScheme="purple" variant="subtle">
+                          <Badge mt={3} width="fit-content" colorScheme="purple">
                             {mentorSourceLabel}
                           </Badge>
                         )}

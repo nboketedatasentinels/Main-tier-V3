@@ -451,7 +451,7 @@ export const CompanyDashboard: React.FC = () => {
         </Text>
 
         {(role === 'mentor' || role === 'both') && mentorSourceLabel && (
-          <Badge mt={2} colorScheme="purple" variant="subtle" alignSelf="flex-start">
+          <Badge mt={2} colorScheme="purple" variant="solid" alignSelf="flex-start">
             {mentorSourceLabel}
           </Badge>
         )}

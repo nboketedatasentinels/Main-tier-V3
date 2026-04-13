@@ -261,7 +261,7 @@ export const AtRiskInterventionFlow: React.FC<AtRiskInterventionFlowProps> = ({
               position="relative"
             >
               {decision === 'intervention' && (
-                <Badge colorScheme="purple" position="absolute" top={-3} left={4} variant="solid">SELECTED</Badge>
+                <Badge colorScheme="purple" position="absolute" top={-3} left={4}>SELECTED</Badge>
               )}
               <VStack align="flex-start" spacing={3}>
                 <VStack align="flex-start" spacing={0}>
@@ -459,7 +459,7 @@ export const AtRiskInterventionFlow: React.FC<AtRiskInterventionFlowProps> = ({
             <VStack align="flex-start" spacing={0}>
               <Text fontWeight="black" fontSize="xl" color="brand.text">ACTIVE INTERVENTION MODE</Text>
               <HStack wrap="wrap">
-                <Badge colorScheme="purple" variant="solid">In Progress</Badge>
+                <Badge colorScheme="purple">In Progress</Badge>
                 <Text fontSize="sm" color="brand.subtleText">SLA expires in {nextEscalation.label}</Text>
               </HStack>
             </VStack>
