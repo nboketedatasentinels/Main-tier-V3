@@ -451,7 +451,7 @@ const ReferralRewardsPage: React.FC = () => {
         <Stack spacing={3} align={{ base: 'center', md: 'flex-start' }} textAlign={{ base: 'center', md: 'left' }}>
           <HStack spacing={3} color="brand.primary">
             <Text fontSize="2xl">🚀🚀</Text>
-            <Badge colorScheme="purple" variant="subtle" px={3} py={1} borderRadius="full">
+            <Badge colorScheme="purple" px={3} py={1} borderRadius="full">
               Tier Ambassador Program
             </Badge>
           </HStack>
@@ -463,7 +463,7 @@ const ReferralRewardsPage: React.FC = () => {
           </Text>
         </Stack>
         <HStack spacing={3}>
-          <Button leftIcon={<Icon as={Share2} />} colorScheme="purple" variant="outline" onClick={shareModal.onOpen}>
+          <Button leftIcon={<Icon as={Share2} />} colorScheme="purple" onClick={shareModal.onOpen}>
             Share
           </Button>
           <Button leftIcon={<Icon as={UserPlus} />} colorScheme="purple" onClick={shareModal.onOpen}>
@@ -750,7 +750,7 @@ const ReferralRewardsPage: React.FC = () => {
                           <Text fontFamily="mono" fontWeight="bold" color="brand.text">
                             {AI_STACKING_COUPON_CODE}
                           </Text>
-                          <Button size="xs" variant="outline" colorScheme="purple" onClick={handleCouponCopy}>
+                          <Button size="xs" colorScheme="purple" onClick={handleCouponCopy}>
                             Copy code
                           </Button>
                         </HStack>

@@ -270,7 +270,7 @@ export const OrganizationDetailPage: React.FC = () => {
                       {organization?.name || 'Loading organization'}
                     </Text>
                     <HStack spacing={2}>
-                      <Badge colorScheme="purple" variant="subtle">
+                      <Badge colorScheme="purple">
                         Code: {organization?.code || 'N/A'}
                       </Badge>
                       {organization?.status && <StatusBadge status={organization.status} />}

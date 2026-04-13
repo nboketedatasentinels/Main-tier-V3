@@ -163,7 +163,7 @@ const AnnouncementCard: React.FC<{
             </Stack>
             <Stack direction={{ base: 'column', md: 'row' }} spacing={2} align="flex-end">
               {isUnread && (
-                <Badge colorScheme="purple" variant="solid" borderRadius="full">
+                <Badge colorScheme="purple" borderRadius="full">
                   New
                 </Badge>
               )}
