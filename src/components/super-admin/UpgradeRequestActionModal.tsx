@@ -171,7 +171,7 @@ export const UpgradeRequestActionModal: React.FC<UpgradeRequestActionModalProps>
                 {requesterEmail ? ` (${requesterEmail})` : ''} requested {request.requested_tier || 'an upgrade'}.
               </Text>
               {request.villageName && (
-                <Badge mt={2} colorScheme="purple" variant="solid">
+                <Badge mt={2} colorScheme="purple" variant="subtle">
                   Village: {request.villageName}
                 </Badge>
               )}

@@ -127,27 +127,23 @@ export const ChallengesTab: React.FC<ChallengesTabProps> = ({
     <VStack spacing={6} align="stretch">
       {/* Header Stats */}
       <Box
-        bg="white"
+        bg="linear-gradient(135deg, var(--chakra-colors-brand-primary), var(--chakra-colors-brand-dark))"
         borderRadius="xl"
         p={6}
-        border="1px solid"
-        borderColor="gray.100"
-        boxShadow="sm"
+        color="white"
       >
         <Flex justify="space-between" align="center" mb={4}>
           <Box>
-            <Text fontSize="xs" textTransform="uppercase" color="gray.500" fontWeight="semibold" letterSpacing="wide">
+            <Text fontSize="xs" textTransform="uppercase" color="whiteAlpha.800">
               Challenge Arena
             </Text>
-            <Text fontSize="xl" fontWeight="bold" color="gray.800">
+            <Text fontSize="xl" fontWeight="bold">
               Friendly competitions to spark growth
             </Text>
           </Box>
           <Button
             leftIcon={<Plus size={16} />}
-            bg="#350e6f"
-            color="white"
-            _hover={{ bg: '#4a1499' }}
+            colorScheme="orange"
             size="sm"
             onClick={onStartChallenge}
           >
@@ -157,26 +153,26 @@ export const ChallengesTab: React.FC<ChallengesTabProps> = ({
 
         <SimpleGrid columns={{ base: 2, md: 4 }} gap={4}>
           <Stat>
-            <StatLabel color="gray.500" fontSize="xs">Active & Pending</StatLabel>
-            <StatNumber fontSize="2xl" color="gray.800">{stats.activeCount}</StatNumber>
+            <StatLabel color="whiteAlpha.800" fontSize="xs">Active & Pending</StatLabel>
+            <StatNumber fontSize="2xl">{stats.activeCount}</StatNumber>
           </Stat>
           <Stat>
-            <StatLabel color="gray.500" fontSize="xs">Victories</StatLabel>
-            <StatNumber fontSize="2xl" color="gray.800">{stats.victories}</StatNumber>
+            <StatLabel color="whiteAlpha.800" fontSize="xs">Victories</StatLabel>
+            <StatNumber fontSize="2xl">{stats.victories}</StatNumber>
           </Stat>
           <Stat>
-            <StatLabel color="gray.500" fontSize="xs">Points Earned</StatLabel>
-            <StatNumber fontSize="2xl" color="gray.800">{stats.totalPoints.toLocaleString()}</StatNumber>
+            <StatLabel color="whiteAlpha.800" fontSize="xs">Points Earned</StatLabel>
+            <StatNumber fontSize="2xl">{stats.totalPoints.toLocaleString()}</StatNumber>
           </Stat>
           <Stat>
-            <StatLabel color="gray.500" fontSize="xs">Leaderboard Rank</StatLabel>
-            <StatNumber fontSize="2xl" color="gray.800">#{leaderboardRank ?? '-'}</StatNumber>
+            <StatLabel color="whiteAlpha.800" fontSize="xs">Leaderboard Rank</StatLabel>
+            <StatNumber fontSize="2xl">#{leaderboardRank ?? '-'}</StatNumber>
           </Stat>
         </SimpleGrid>
       </Box>
 
       {/* Challenge Lists */}
-      <Box bg="white" borderRadius="xl" border="1px solid" borderColor="gray.100" boxShadow="sm">
+      <Box bg="white" borderRadius="lg" border="1px solid" borderColor="border.control">
         <Flex justify="space-between" align="center" p={4} borderBottom="1px solid" borderColor="border.control">
           <Text fontWeight="semibold">Your Challenges</Text>
           <Select

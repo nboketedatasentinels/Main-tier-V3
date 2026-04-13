@@ -434,7 +434,7 @@ export const WeeklyActivityCard = ({
             isLoading={isActionInFlight}
             onClick={() => onMarkCompleted(activity)}
           >
-            {activity.approvalType === 'self' ? 'Confirm (Honor System)' : activity.id === 'impact_log' ? 'Do your impact' : 'Mark Complete'}
+            {activity.approvalType === 'self' ? 'Confirm (Honor System)' : 'Mark Complete'}
           </Button>
         )}
 

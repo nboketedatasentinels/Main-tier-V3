@@ -40,7 +40,8 @@ import { updateUserVillageId } from '@/services/userProfileService'
 import { checkVillageNameExists, createVillage } from '@/services/villageService'
 import {
   calculateWeekProgress,
-  getJourneyTiming,
+  getDaysRemainingInWeek,
+  getWeekDateRange,
 } from '@/utils/weekCalculations'
 
 // NOTE: This page is intentionally a partial migration: UI phrasing may be broader,
@@ -117,18 +118,9 @@ function useWeeklyGlanceViewModel() {
   const weeklyHabits = useMemo(() => data.weeklyHabits ?? [], [data.weeklyHabits])
   const peerMatches = useMemo(() => data.peerMatches ?? [], [data.peerMatches])
 
-  // Dynamic journey timing - consistent with JourneyHeader calculation
-  const journeyTiming = useMemo(
-    () => getJourneyTiming(profile?.journeyStartDate, profile?.programDurationWeeks ?? 6),
-    [profile?.journeyStartDate, profile?.programDurationWeeks]
-  )
-
-  const weekRange = useMemo(
-    () => journeyTiming ? { start: journeyTiming.weekStart, end: journeyTiming.weekEnd, label: journeyTiming.weekLabel } : { start: new Date(), end: new Date(), label: '' },
-    [journeyTiming]
-  )
-  const daysRemaining = journeyTiming?.daysRemaining ?? 0
-  const currentWeek = journeyTiming?.currentWeek ?? data.weekNumber
+  // Weekly variable names are deliberate until backend period support is generalized.
+  const weekRange = useMemo(() => getWeekDateRange(), [])
+  const daysRemaining = useMemo(() => getDaysRemainingInWeek(), [])
 
   const earnedPoints = data.weeklyPoints?.points_earned ?? 0
   const targetPoints = data.weeklyPoints?.target_points ?? 0
@@ -175,8 +167,6 @@ function useWeeklyGlanceViewModel() {
     weeklyHabits,
     peerMatches,
 
-    journeyTiming,
-    currentWeek,
     weekRange,
     daysRemaining,
     earnedPoints,
@@ -198,7 +188,6 @@ export const WeeklyGlancePage = () => {
     profile,
     refreshProfile,
     data,
-    currentWeek,
     weekRange,
     daysRemaining,
     earnedPoints,
@@ -402,7 +391,7 @@ export const WeeklyGlancePage = () => {
               <WindowSummaryCard onNavigate={handleNavigateChecklist} />
             ) : (
               <LearnerWindowCard
-                weekLabel={`Week ${currentWeek} • ${weekRange.label}`}
+                weekLabel={`Week ${data.weekNumber} • ${weekRange.label}`}
                 daysRemaining={daysRemaining}
                 progressValue={weekProgress}
                 targetPoints={targetPoints}

@@ -995,7 +995,7 @@ export const MentorDashboard: React.FC = () => {
                             {mentee.email}
                           </Text>
                           <Wrap mt={2} spacing={2}>
-                            <Tag size="sm" colorScheme="purple">
+                            <Tag size="sm" colorScheme="purple" variant="subtle">
                               <TagLabel>Program: {mentee.programDuration}</TagLabel>
                             </Tag>
                             <Tag size="sm" bg={palette.bg} color={palette.color}>
@@ -1019,7 +1019,7 @@ export const MentorDashboard: React.FC = () => {
                     </Flex>
 
                     <HStack spacing={3}>
-                      <Badge colorScheme="purple" display="flex" alignItems="center" gap={1}>
+                      <Badge colorScheme="purple" variant="subtle" display="flex" alignItems="center" gap={1}>
                         <Icon as={Building2} /> {mentee.company}
                       </Badge>
                       <Badge colorScheme="green" variant="subtle" display="flex" alignItems="center" gap={1}>

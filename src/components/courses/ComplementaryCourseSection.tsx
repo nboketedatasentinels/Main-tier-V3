@@ -172,7 +172,7 @@ export const ComplementaryCourseSection: React.FC<ComplementaryCourseSectionProp
             Available to all members
           </Badge>
         </HStack>
-        <Badge colorScheme="purple" borderRadius="full">
+        <Badge colorScheme="purple" variant="subtle" borderRadius="full">
           {complementaryIds.length} course{complementaryIds.length === 1 ? '' : 's'}
         </Badge>
       </HStack>

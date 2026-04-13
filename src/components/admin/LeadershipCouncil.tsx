@@ -243,7 +243,7 @@ export const LeadershipCouncil = ({ users: propUsers, organizations: propOrganiz
         <Grid templateColumns={{ base: '1fr', lg: '2fr 1fr' }} gap={6} alignItems="center">
           <GridItem>
             <HStack spacing={3} mb={3}>
-              <Badge colorScheme="purple" textTransform="uppercase" letterSpacing="widest">
+              <Badge colorScheme="purple" variant="subtle" textTransform="uppercase" letterSpacing="widest">
                 Leadership Council
               </Badge>
             </HStack>

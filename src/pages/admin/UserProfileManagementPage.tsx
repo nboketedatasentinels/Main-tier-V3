@@ -693,7 +693,7 @@ export const UserProfileManagementPage: React.FC<{ viewContext?: ViewContext }> 
                   {profileData.accountStatus || 'active'}
                 </Badge>
                 {profileData.personalityType && (
-                  <Tag colorScheme="purple">
+                  <Tag colorScheme="purple" variant="subtle">
                     <TagLabel>{profileData.personalityType}</TagLabel>
                   </Tag>
                 )}

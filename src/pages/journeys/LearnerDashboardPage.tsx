@@ -33,7 +33,7 @@ import { useAuth } from '@/hooks/useAuth'
 import { updateUserVillageId } from '@/services/userProfileService'
 import { checkVillageNameExists, createVillage } from '@/services/villageService'
 import { TransformationTier } from '@/types'
-import { calculateWeekProgress, getJourneyTiming } from '@/utils/weekCalculations'
+import { calculateWeekProgress, getDaysRemainingInWeek, getWeekDateRange } from '@/utils/weekCalculations'
 
 export const LearnerDashboardPage = () => {
   const { profile, refreshProfile } = useAuth()
@@ -173,11 +173,8 @@ export const LearnerDashboardPage = () => {
     }
   }
 
-  // Dynamic journey timing - consistent with JourneyHeader calculation
-  const journeyTiming = getJourneyTiming(profile?.journeyStartDate, profile?.programDurationWeeks ?? 6)
-  const weekRange = journeyTiming ? { start: journeyTiming.weekStart, end: journeyTiming.weekEnd, label: journeyTiming.weekLabel } : { start: new Date(), end: new Date(), label: '' }
-  const daysRemaining = journeyTiming?.daysRemaining ?? 0
-  const currentWeek = journeyTiming?.currentWeek ?? data.weekNumber
+  const weekRange = getWeekDateRange()
+  const daysRemaining = getDaysRemainingInWeek()
   const earnedPoints = data.weeklyPoints?.points_earned || 0
   const targetPoints = data.weeklyPoints?.target_points || 0
   const weekProgress = calculateWeekProgress(earnedPoints, targetPoints)
@@ -187,7 +184,7 @@ export const LearnerDashboardPage = () => {
       id: 'weekly-points',
       title: 'Points progress update',
       description: `${earnedPoints} points accumulated toward your ${targetPoints || 0} point weekly goal.`,
-      timestamp: `Week ${currentWeek} • ${daysRemaining} days left`,
+      timestamp: `Week ${data.weekNumber} • ${daysRemaining} days left`,
       status: earnedPoints >= targetPoints && targetPoints > 0 ? 'complete' : earnedPoints > 0 ? 'pending' : 'attention',
     },
     {
@@ -259,13 +256,13 @@ export const LearnerDashboardPage = () => {
               <WindowSummaryCard onNavigate={() => navigate('/app/weekly-checklist')} />
             ) : (
               <LearnerWindowCard
-                weekLabel={`Week ${currentWeek} • ${weekRange.label}`}
+                weekLabel={`Week ${data.weekNumber} • ${weekRange.label}`}
                 daysRemaining={daysRemaining}
                 progressValue={weekProgress}
                 targetPoints={targetPoints}
                 earnedPoints={earnedPoints}
                 focusAreas={data.focusAreas.map(fa => fa.title)}
-                nextMilestone={`Week ${currentWeek + 1} readiness review`}
+                nextMilestone={`Week ${data.weekNumber + 1} readiness review`}
               />
             )}
           </GridItem>
@@ -282,7 +279,7 @@ export const LearnerDashboardPage = () => {
           </GridItem>
           <GridItem colSpan={{ base: 1, md: 4 }} order={{ base: 5, md: 4 }}>
             <NextMilestoneCard
-              milestone={`Week ${currentWeek + 1} readiness review`}
+              milestone={`Week ${data.weekNumber + 1} readiness review`}
               daysRemaining={daysRemaining}
               onNavigate={() => navigate('/app/weekly-checklist')}
             />

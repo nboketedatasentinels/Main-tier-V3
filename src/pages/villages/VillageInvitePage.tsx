@@ -198,7 +198,7 @@ export const VillageInvitePage = () => {
             <HStack justify="space-between" align="center">
               <Text fontWeight="semibold">Send invitations</Text>
               {villageName && (
-                <Badge colorScheme="purple">
+                <Badge colorScheme="purple" variant="subtle">
                   {villageDisplayName}
                 </Badge>
               )}

@@ -28,6 +28,10 @@ import {
   Select,
   SimpleGrid,
   Stack,
+  Stat,
+  StatHelpText,
+  StatLabel,
+  StatNumber,
   Tab,
   TabList,
   TabPanel,
@@ -58,6 +62,7 @@ import {
   Crown,
   Lock,
   Medal,
+  RefreshCw,
   Sparkles,
   Star,
   Target,
@@ -179,6 +184,7 @@ export const LeadershipBoardPage: React.FC = () => {
   const [badgesLoading, setBadgesLoading] = useState(false)
   const [badgesError, setBadgesError] = useState<string | null>(null)
   const [pointsPulse, setPointsPulse] = useState(false)
+  const [isRefreshingProfile, setIsRefreshingProfile] = useState(false)
   const [villageDetails, setVillageDetails] = useState<VillageSummary | null>(null)
   const [isVillageLoading, setIsVillageLoading] = useState(false)
   const [villageError, setVillageError] = useState<string | null>(null)
@@ -219,6 +225,7 @@ export const LeadershipBoardPage: React.FC = () => {
 
   const context = useLeaderboardContext(profile)
   const contextLabels = useMemo(() => getLeaderboardContextLabels(context), [context])
+  const isAdminAll = context?.type === 'admin_all'
   const supportsSegmentTimeframes = !context
     || context.type === 'organization'
     || context.type === 'village'
@@ -231,7 +238,25 @@ export const LeadershipBoardPage: React.FC = () => {
     label: segmentLabel,
     memberLabel: segmentMemberLabel,
     scopeText: segmentScopeText,
+    badgeLabel: segmentBadgeLabel,
   } = contextLabels
+
+  const segmentIssue = useMemo(() => {
+    if (!profile || !context) return null
+    if (context.type === 'free') {
+      return 'Join a village to see your peers. Contact support.'
+    }
+    if (context.type === 'organization' && !context.organizationId && !context.organizationCode) {
+      return 'Organization assignment required to view this leaderboard.'
+    }
+    if (context.type === 'village' && !context.villageId) {
+      return 'Please contact support to join a village.'
+    }
+    if (context.type === 'cluster' && !context.clusterId) {
+      return 'Cluster assignment required to view this leaderboard.'
+    }
+    return null
+  }, [context, profile])
 
   const {
     profiles,
@@ -512,6 +537,31 @@ export const LeadershipBoardPage: React.FC = () => {
     return () => clearInterval(interval)
   }, [enableProfileRealtime, profile?.id, refreshProfile])
 
+  const handleManualRefresh = async () => {
+    setIsRefreshingProfile(true)
+    const result = await refreshProfile({ reason: 'leaderboard-manual', isManual: true })
+    setIsRefreshingProfile(false)
+
+    if (result.error) {
+      toast({
+        title: 'Refresh failed',
+        description: result.error.message,
+        status: 'error',
+        duration: 3000,
+        isClosable: true,
+      })
+      return
+    }
+
+    toast({
+      title: 'Profile refreshed',
+      description: 'Latest points have been synced.',
+      status: 'success',
+      duration: 2000,
+      isClosable: true,
+    })
+  }
+
   const dismissFilterTip = () => {
     setShowFilterTip(false)
     localStorage.setItem('leaderboard-filter-tip', 'dismissed')
@@ -770,203 +820,119 @@ export const LeadershipBoardPage: React.FC = () => {
   const shouldShowVillageCard = Boolean(villageDetails && villageId && !villageError)
 
   return (
-    <Stack spacing={8}>
-      {/* Hero Section */}
-      <Box
-        position="relative"
-        overflow="hidden"
-        borderRadius="2xl"
-        bgGradient="linear(to-r, #350e6f, #8b5a3c)"
-        p={{ base: 6, md: 10 }}
-        color="white"
-        boxShadow="0 10px 40px rgba(53, 14, 111, 0.3)"
-      >
-        {/* Decorative elements */}
-        <Box
-          position="absolute"
-          top="-50%"
-          right="-10%"
-          w="400px"
-          h="400px"
-          borderRadius="full"
-          bg="linear-gradient(135deg, rgba(255, 255, 255, 0.1) 0%, rgba(255, 255, 255, 0.02) 100%)"
-          filter="blur(60px)"
-          pointerEvents="none"
-        />
-        <Box
-          position="absolute"
-          bottom="-30%"
-          left="-5%"
-          w="300px"
-          h="300px"
-          borderRadius="full"
-          bg="linear-gradient(135deg, rgba(139, 90, 60, 0.3) 0%, rgba(53, 14, 111, 0.1) 100%)"
-          filter="blur(50px)"
-          pointerEvents="none"
-        />
-
-        <Flex justify="space-between" align="center" flexWrap="wrap" gap={6} position="relative">
-          <Box flex="1" minW="300px">
-            <HStack spacing={3} mb={4}>
-              <Flex
-                w={10}
-                h={10}
-                bg="whiteAlpha.200"
-                backdropFilter="blur(10px)"
-                borderRadius="lg"
-                align="center"
-                justify="center"
-                border="1px solid"
-                borderColor="whiteAlpha.300"
-              >
-                <Icon as={Trophy} boxSize={5} color="white" />
-              </Flex>
-              <Badge
-                bg="whiteAlpha.200"
-                color="white"
-                px={3}
-                py={1}
-                borderRadius="full"
-                fontSize="xs"
-                fontWeight="semibold"
-                textTransform="uppercase"
-                letterSpacing="wide"
-                backdropFilter="blur(10px)"
-              >
-                Leadership Board
-              </Badge>
-            </HStack>
-            <Text fontSize={{ base: '2xl', md: '3xl' }} fontWeight="bold" lineHeight="1.2" mb={2} color="white">
-              Compete. Rise. Lead.
+    <Stack spacing={6}>
+      <Flex align="center" justify="space-between">
+        <Box>
+          <HStack spacing={3}>
+            <Icon as={Sparkles} color="brand.primary" />
+            <Text fontSize="sm" color="text.secondary" textTransform="uppercase" letterSpacing="wide">
+              Leadership Board
             </Text>
-            <Text fontSize={{ base: 'sm', md: 'md' }} color="whiteAlpha.800" maxW="450px">
-              Track your progress, challenge your peers, and climb the ranks to become a transformation leader.
-            </Text>
-          </Box>
+          </HStack>
+          <Text fontSize="3xl" fontWeight="bold" color="text.primary" mt={1}>
+            Competitive, social, and personalized rankings
+          </Text>
+          <Text color="text.secondary">Switch between leaderboard and challenge views with real-time data.</Text>
+          <HStack spacing={2} mt={3} flexWrap="wrap">
+            <Badge colorScheme="primary">{segmentBadgeLabel}</Badge>
+            {segmentIssue ? (
+              <Badge colorScheme="orange">{segmentIssue}</Badge>
+            ) : (
+              <Badge colorScheme="green">Segmented privacy enabled</Badge>
+            )}
+            <Badge colorScheme="purple">Context: {context?.type ?? 'unknown'}</Badge>
+            {isAdminAll && (
+              <Badge colorScheme="purple">Admin view: All segments</Badge>
+            )}
+          </HStack>
+        </Box>
+        <HStack spacing={3}>
+          <Button
+            variant="outline"
+            colorScheme="brand"
+            leftIcon={<Icon as={RefreshCw} />}
+            isLoading={isRefreshingProfile}
+            onClick={handleManualRefresh}
+          >
+            Refresh
+          </Button>
+        </HStack>
+      </Flex>
 
-          {/* Action Buttons - Right Side */}
-          <VStack spacing={3} align="stretch">
-            <HStack spacing={3}>
-              <Button
-                size="md"
-                bg="whiteAlpha.200"
-                color="white"
-                leftIcon={<Icon as={Target} boxSize={4} />}
-                onClick={() => navigate('/app/impact')}
-                _hover={{ bg: 'whiteAlpha.300' }}
-                transition="all 0.2s"
-                fontWeight="medium"
-                px={6}
-                borderRadius="lg"
-                backdropFilter="blur(8px)"
-                border="1px solid"
-                borderColor="whiteAlpha.300"
-              >
-                Earn Points
+      <Card bg="surface.default" border="1px solid" borderColor="border.subtle">
+        <CardBody>
+          <Grid templateColumns={{ base: '1fr', lg: '1.2fr 1fr' }} gap={6} alignItems="center">
+            <Box>
+              <Text fontSize="lg" fontWeight="bold">Choose your next move</Text>
+              <Text color="text.secondary">
+                Earn points, climb the ranks, and unlock rewards with a focused action today.
+              </Text>
+            </Box>
+            <HStack spacing={3} flexWrap="wrap" justify={{ base: 'flex-start', lg: 'flex-end' }}>
+              <Button variant="primary" leftIcon={<Icon as={Target} />} onClick={() => navigate('/app/impact')}>
+                Earn points now
               </Button>
-              <Button
-                size="md"
-                bg="whiteAlpha.200"
-                color="white"
-                leftIcon={<Icon as={Trophy} boxSize={4} />}
-                onClick={onOpen}
-                _hover={{ bg: 'whiteAlpha.300' }}
-                transition="all 0.2s"
-                fontWeight="medium"
-                px={6}
-                borderRadius="lg"
-                backdropFilter="blur(8px)"
-                border="1px solid"
-                borderColor="whiteAlpha.300"
-              >
-                Start Challenge
+              <Button variant="secondary" leftIcon={<Icon as={Trophy} />} onClick={onOpen}>
+                Join a challenge
               </Button>
+              <Tooltip
+                label="Upgrade to unlock peer matching and collaboration sessions."
+                hasArrow
+                openDelay={200}
+                isDisabled={!isFreeTierUser}
+              >
+                <Box>
+                  <Button
+                    variant="outline"
+                    leftIcon={<Icon as={Users} />}
+                    onClick={isFreeTierUser ? promptPeerConnectUpgrade : () => navigate('/app/peer-connect')}
+                    opacity={isFreeTierUser ? 0.55 : 1}
+                    filter={isFreeTierUser ? 'grayscale(1)' : undefined}
+                  >
+                    Improve rank
+                  </Button>
+                </Box>
+              </Tooltip>
             </HStack>
-            <Tooltip
-              label="Upgrade to unlock peer matching and collaboration sessions."
-              hasArrow
-              openDelay={200}
-              isDisabled={!isFreeTierUser}
-            >
-              <Button
-                size="md"
-                bg="whiteAlpha.200"
-                color="white"
-                leftIcon={<Icon as={Users} boxSize={4} />}
-                onClick={isFreeTierUser ? promptPeerConnectUpgrade : () => navigate('/app/peer-connect')}
-                opacity={isFreeTierUser ? 0.7 : 1}
-                _hover={{ bg: 'whiteAlpha.300' }}
-                transition="all 0.2s"
-                fontWeight="medium"
-                px={6}
-                borderRadius="lg"
-                backdropFilter="blur(8px)"
-                border="1px solid"
-                borderColor="whiteAlpha.300"
-                justifyContent="flex-start"
-                w="full"
-              >
-                Peer Connect
-              </Button>
-            </Tooltip>
-          </VStack>
-        </Flex>
-      </Box>
+          </Grid>
+        </CardBody>
+      </Card>
 
       <Tabs variant="unstyled" colorScheme="primary">
         <TabList
-          bg="white"
+          bg="surface.default"
           border="1px solid"
-          borderColor="gray.200"
-          borderRadius="2xl"
-          p={1.5}
-          gap={2}
-          boxShadow="sm"
+          borderColor="border.subtle"
+          borderRadius="lg"
+          p={1}
+          gap={1}
         >
           <Tab
-            _selected={{
-              bg: '#350e6f',
-              color: 'white',
-              boxShadow: '0 4px 12px rgba(53, 14, 111, 0.3)',
-            }}
-            color="gray.600"
-            borderRadius="xl"
-            px={6}
-            py={3}
+            _selected={{ bg: 'tint.brandPrimary', color: 'text.primary' }}
+            color="text.secondary"
+            borderRadius="md"
+            px={4}
+            py={2}
             fontWeight="600"
-            transition="all 0.2s"
-            sx={{ '&[aria-selected=true] *': { color: 'white' } }}
           >
-            <HStack spacing={2}>
-              <Icon as={Medal} boxSize={4} />
-              <Text>Leaderboard</Text>
-            </HStack>
+            Leaderboard
           </Tab>
           <Tab
-            _selected={{
-              bg: '#350e6f',
-              color: 'white',
-              boxShadow: '0 4px 12px rgba(53, 14, 111, 0.3)',
-            }}
-            color="gray.600"
-            borderRadius="xl"
-            px={6}
-            py={3}
+            _selected={{ bg: 'tint.brandPrimary', color: 'text.primary' }}
+            color="text.secondary"
+            borderRadius="md"
+            px={4}
+            py={2}
             fontWeight="600"
-            transition="all 0.2s"
-            sx={{ '&[aria-selected=true] *': { color: 'white' } }}
           >
-            <HStack spacing={2}>
-              <Icon as={Trophy} boxSize={4} />
-              <Text>Challenges</Text>
-            </HStack>
+            Challenges
           </Tab>
         </TabList>
         <TabPanels>
           <TabPanel px={0}>
             <Stack spacing={6}>
               {shouldShowVillageSection && (
-                <Card bg="white" border="1px solid" borderColor="gray.100" boxShadow="sm" borderRadius="xl">
+                <Card bg="surface.default" border="1px solid" borderColor="border.subtle">
                   <CardBody>
                     {isVillageLoading && villageId ? (
                       <VStack spacing={3} py={6} textAlign="center">
@@ -993,9 +959,7 @@ export const LeadershipBoardPage: React.FC = () => {
                           justify="center"
                         >
                           <Button
-                            bg="#350e6f"
-                            color="white"
-                            _hover={{ bg: '#4a1499' }}
+                            variant="primary"
                             leftIcon={<Icon as={Users} />}
                             onClick={() => navigate(`/app/villages/${villageRouteId}/manage`)}
                             isDisabled={villageActionDisabled}
@@ -1004,9 +968,7 @@ export const LeadershipBoardPage: React.FC = () => {
                           </Button>
                           {isVillageCreator ? (
                             <Button
-                              bg="#350e6f"
-                              color="white"
-                              _hover={{ bg: '#4a1499' }}
+                              variant="secondary"
                               leftIcon={<Icon as={Sparkles} />}
                               onClick={() => navigate(`/app/villages/${villageRouteId}/invite`)}
                               isDisabled={villageActionDisabled}
@@ -1036,9 +998,7 @@ export const LeadershipBoardPage: React.FC = () => {
                           Join a village or organization to see peer rankings and community benchmarks.
                         </Text>
                         <Button
-                          bg="#350e6f"
-                          color="white"
-                          _hover={{ bg: '#4a1499' }}
+                          variant="primary"
                           as="a"
                           href={`mailto:${supportEmail}`}
                         >
@@ -1050,15 +1010,15 @@ export const LeadershipBoardPage: React.FC = () => {
                 </Card>
               )}
               <Grid templateColumns={{ base: '1fr', lg: '2fr 1fr' }} gap={4}>
-                <Card bg="white" border="1px solid" borderColor="gray.100" boxShadow="sm" borderRadius="xl">
-                  <CardHeader borderBottom="1px solid" borderColor="gray.100">
+                <Card bg="surface.default" border="1px solid" borderColor="border.subtle">
+                  <CardHeader>
                     <HStack justify="space-between" align="center">
                       <Box>
-                        <Text fontSize="lg" fontWeight="bold" color="gray.800">Progress Overview</Text>
-                        <Text color="gray.500" fontSize="sm">Live updates</Text>
+                        <Text fontSize="lg" fontWeight="bold">Progress Overview</Text>
+                        <Text color="text.secondary">Live updates</Text>
                       </Box>
-                      <Badge bg="purple.100" color="purple.700" display="flex" alignItems="center" gap={2} px={3} py={1} borderRadius="full">
-                        <Icon as={Trophy} boxSize={3} /> {percentile}
+                      <Badge colorScheme="primary" display="flex" alignItems="center" gap={2}>
+                        <Icon as={Trophy} /> {percentile}
                       </Badge>
                     </HStack>
                   </CardHeader>
@@ -1066,43 +1026,42 @@ export const LeadershipBoardPage: React.FC = () => {
                     <Stack spacing={6}>
                       <Grid templateColumns={{ base: '1fr', md: '1.4fr 1fr' }} gap={4}>
                         <Box
-                          p={5}
+                          p={4}
                           borderRadius="xl"
-                          bg="purple.50"
+                          bg="tint.brandPrimary"
                           border="1px solid"
-                          borderColor="purple.200"
-                          boxShadow="sm"
+                          borderColor="brand.primary"
                         >
-                          <Text fontSize="sm" color="purple.600" textTransform="uppercase" letterSpacing="wide" fontWeight="semibold">
+                          <Text fontSize="sm" color="brand.primary" textTransform="uppercase" letterSpacing="wide">
                             Primary Focus
                           </Text>
-                          <Text fontSize="lg" fontWeight="bold" color="gray.800" mt={1}>
+                          <Text fontSize="lg" fontWeight="bold" color="text.primary">
                             Your Rank Right Now
                           </Text>
-                          <HStack spacing={3} mt={3}>
+                          <HStack spacing={3} mt={2}>
                             <Box fontSize="2xl">{getRankIcon(userRow?.rank || leaderboardRows.length || 1)}</Box>
-                            <Text fontSize="4xl" fontWeight="bold" color="purple.700">
+                            <Text fontSize="4xl" fontWeight="bold" color="text.primary">
                               {userRow?.rank || '—'}
                             </Text>
                           </HStack>
-                          <Text color="gray.600" mt={2}>
-                            You're ahead of {aheadPercent}% of {(segmentLabel ?? 'segment').toLowerCase()} members.
+                          <Text color="text.secondary">
+                            You’re ahead of {aheadPercent}% of {(segmentLabel ?? 'segment').toLowerCase()} members.
                           </Text>
                           <HStack spacing={2} mt={3} flexWrap="wrap">
-                            <Badge bg="purple.100" color="purple.700" borderRadius="full">{percentile}</Badge>
-                            <Badge bg="green.100" color="green.700" borderRadius="full">{segmentScopeText}</Badge>
+                            <Badge colorScheme="primary">{percentile}</Badge>
+                            <Badge colorScheme="green">{segmentScopeText}</Badge>
                           </HStack>
                         </Box>
                         <Stack spacing={4}>
-                          <Box p={4} bg="gray.50" borderRadius="lg" border="1px solid" borderColor="gray.200">
+                          <Box>
                             <HStack justify="space-between">
-                              <Text fontWeight="semibold" color="gray.700">Weekly momentum</Text>
-                              <Text fontSize="sm" color="gray.500">
+                              <Text fontWeight="semibold">Weekly momentum</Text>
+                              <Text fontSize="sm" color="text.secondary">
                                 Goal {formatNumber(weeklyTarget)}
                               </Text>
                             </HStack>
-                            <Progress value={weeklyProgress} colorScheme="green" borderRadius="full" mt={2} size="sm" />
-                            <Text fontSize="xs" color="gray.500" mt={2}>
+                            <Progress value={weeklyProgress} colorScheme="green" borderRadius="full" mt={2} />
+                            <Text fontSize="xs" color="text.secondary" mt={1}>
                               {segmentStats.weeklyPoints > 0
                                 ? `${formatNumber(segmentStats.weeklyPoints)} points earned this week.`
                                 : 'Start an activity to earn your first points this week.'}
@@ -1110,116 +1069,46 @@ export const LeadershipBoardPage: React.FC = () => {
                           </Box>
                         </Stack>
                       </Grid>
-                      <SimpleGrid columns={{ base: 2, md: 3, lg: 5 }} spacing={4}>
-                        <Box
-                          p={5}
-                          bg="white"
-                          borderRadius="xl"
-                          border="1px solid"
-                          borderColor="gray.100"
-                          boxShadow="0 2px 8px rgba(0,0,0,0.04)"
-                          _hover={{ transform: 'translateY(-2px)', boxShadow: '0 8px 25px rgba(139, 92, 246, 0.15)', borderColor: 'purple.200' }}
-                          transition="all 0.3s ease"
-                          position="relative"
-                          overflow="hidden"
-                        >
-                          <Box position="absolute" top={0} right={0} w="60px" h="60px" bg="purple.50" borderRadius="0 0 0 100%" />
-                          <Flex w={10} h={10} bg="#350e6f" borderRadius="xl" align="center" justify="center" mb={3} boxShadow="0 4px 12px rgba(53, 14, 111, 0.3)">
-                            <Icon as={Star} boxSize={5} color="white" />
-                          </Flex>
-                          <Text fontSize="xs" color="gray.500" fontWeight="semibold" textTransform="uppercase" letterSpacing="wide" mb={1}>Total Points</Text>
-                          <Skeleton isLoaded={isPointsReady} height="32px">
-                            <Text fontWeight="bold" fontSize="2xl" color="gray.800" animation={pointsPulseStyle}>
+                      <SimpleGrid columns={{ base: 2, md: 3 }} spacing={3}>
+                        <Stat>
+                          <StatLabel color="text.muted">Total Points</StatLabel>
+                          <Skeleton isLoaded={isPointsReady} height="28px">
+                            <StatNumber color="text.primary" fontSize="lg" animation={pointsPulseStyle}>
                               {formatNumber(displayTotalPoints)}
-                            </Text>
+                            </StatNumber>
                           </Skeleton>
-                        </Box>
-                        <Box
-                          p={5}
-                          bg="white"
-                          borderRadius="xl"
-                          border="1px solid"
-                          borderColor="gray.100"
-                          boxShadow="0 2px 8px rgba(0,0,0,0.04)"
-                          _hover={{ transform: 'translateY(-2px)', boxShadow: '0 8px 25px rgba(16, 185, 129, 0.15)', borderColor: 'green.200' }}
-                          transition="all 0.3s ease"
-                          position="relative"
-                          overflow="hidden"
-                        >
-                          <Box position="absolute" top={0} right={0} w="60px" h="60px" bg="green.50" borderRadius="0 0 0 100%" />
-                          <Flex w={10} h={10} bg="linear-gradient(135deg, #047857 0%, #065f46 100%)" borderRadius="xl" align="center" justify="center" mb={3} boxShadow="0 4px 12px rgba(4, 120, 87, 0.3)">
-                            <Icon as={TrendingUp} boxSize={5} color="white" />
-                          </Flex>
-                          <Text fontSize="xs" color="gray.500" fontWeight="semibold" textTransform="uppercase" letterSpacing="wide" mb={1}>This Month</Text>
-                          <Skeleton isLoaded={isPointsReady} height="32px">
-                            <Text fontWeight="bold" fontSize="2xl" color="gray.800">
+                          <StatHelpText color="text.secondary">Lifetime XP earned</StatHelpText>
+                        </Stat>
+                        <Stat>
+                          <StatLabel color="text.muted">Monthly Points</StatLabel>
+                          <Skeleton isLoaded={isPointsReady} height="28px">
+                            <StatNumber color="text.primary" fontSize="lg">
                               {formatNumber(segmentStats.monthlyPoints)}
-                            </Text>
+                            </StatNumber>
                           </Skeleton>
-                        </Box>
-                        <Box
-                          p={5}
-                          bg="white"
-                          borderRadius="xl"
-                          border="1px solid"
-                          borderColor="gray.100"
-                          boxShadow="0 2px 8px rgba(0,0,0,0.04)"
-                          _hover={{ transform: 'translateY(-2px)', boxShadow: '0 8px 25px rgba(249, 115, 22, 0.15)', borderColor: 'orange.200' }}
-                          transition="all 0.3s ease"
-                          position="relative"
-                          overflow="hidden"
-                        >
-                          <Box position="absolute" top={0} right={0} w="60px" h="60px" bg="orange.50" borderRadius="0 0 0 100%" />
-                          <Flex w={10} h={10} bg="linear-gradient(135deg, #f97316 0%, #ea580c 100%)" borderRadius="xl" align="center" justify="center" mb={3} boxShadow="0 4px 12px rgba(249, 115, 22, 0.3)">
-                            <Icon as={Target} boxSize={5} color="white" />
-                          </Flex>
-                          <Text fontSize="xs" color="gray.500" fontWeight="semibold" textTransform="uppercase" letterSpacing="wide" mb={1}>Challenges</Text>
-                          <Text fontWeight="bold" fontSize="2xl" color="gray.800">{segmentStats.activeChallenges}</Text>
-                        </Box>
-                        <Box
-                          p={5}
-                          bg="white"
-                          borderRadius="xl"
-                          border="1px solid"
-                          borderColor="gray.100"
-                          boxShadow="0 2px 8px rgba(0,0,0,0.04)"
-                          _hover={{ transform: 'translateY(-2px)', boxShadow: '0 8px 25px rgba(234, 179, 8, 0.15)', borderColor: 'yellow.300' }}
-                          transition="all 0.3s ease"
-                          position="relative"
-                          overflow="hidden"
-                        >
-                          <Box position="absolute" top={0} right={0} w="60px" h="60px" bg="yellow.50" borderRadius="0 0 0 100%" />
-                          <Flex w={10} h={10} bg="linear-gradient(135deg, #eab308 0%, #ca8a04 100%)" borderRadius="xl" align="center" justify="center" mb={3} boxShadow="0 4px 12px rgba(234, 179, 8, 0.3)">
-                            <Icon as={Award} boxSize={5} color="white" />
-                          </Flex>
-                          <Text fontSize="xs" color="gray.500" fontWeight="semibold" textTransform="uppercase" letterSpacing="wide" mb={1}>Badges</Text>
-                          <Text fontWeight="bold" fontSize="2xl" color="gray.800">{segmentStats.badgesEarned}</Text>
-                        </Box>
-                        <Box
-                          p={5}
-                          bg="white"
-                          borderRadius="xl"
-                          border="1px solid"
-                          borderColor="gray.100"
-                          boxShadow="0 2px 8px rgba(0,0,0,0.04)"
-                          _hover={{ transform: 'translateY(-2px)', boxShadow: '0 8px 25px rgba(59, 130, 246, 0.15)', borderColor: 'blue.200' }}
-                          transition="all 0.3s ease"
-                          position="relative"
-                          overflow="hidden"
-                        >
-                          <Box position="absolute" top={0} right={0} w="60px" h="60px" bg="blue.50" borderRadius="0 0 0 100%" />
-                          <Flex w={10} h={10} bg="linear-gradient(135deg, #3b82f6 0%, #2563eb 100%)" borderRadius="xl" align="center" justify="center" mb={3} boxShadow="0 4px 12px rgba(59, 130, 246, 0.3)">
-                            <Icon as={Users} boxSize={5} color="white" />
-                          </Flex>
-                          <Text fontSize="xs" color="gray.500" fontWeight="semibold" textTransform="uppercase" letterSpacing="wide" mb={1}>{segmentMemberLabel}</Text>
-                          <Text fontWeight="bold" fontSize="2xl" color="gray.800">{segmentSize || 1}</Text>
-                        </Box>
+                          <StatHelpText color="text.secondary">Last 30 days</StatHelpText>
+                        </Stat>
+                        <Stat>
+                          <StatLabel color="text.muted">Active & Pending</StatLabel>
+                          <StatNumber color="text.primary" fontSize="lg">{segmentStats.activeChallenges}</StatNumber>
+                          <StatHelpText color="text.secondary">Live matchups</StatHelpText>
+                        </Stat>
+                        <Stat>
+                          <StatLabel color="text.muted">Badges Earned</StatLabel>
+                          <StatNumber color="text.primary" fontSize="lg">{segmentStats.badgesEarned}</StatNumber>
+                          <StatHelpText color="text.secondary">Celebrated wins</StatHelpText>
+                        </Stat>
+                        <Stat>
+                          <StatLabel color="text.muted">{segmentMemberLabel}</StatLabel>
+                          <StatNumber color="text.primary" fontSize="lg">{segmentSize || 1}</StatNumber>
+                          <StatHelpText color="text.secondary">{segmentLabel} size</StatHelpText>
+                        </Stat>
                       </SimpleGrid>
                     </Stack>
                   </CardBody>
                 </Card>
 
-                <Card bg="white" border="1px solid" borderColor="gray.100" boxShadow="sm" borderRadius="xl">
+                <Card bg="surface.default" border="1px solid" borderColor="border.subtle">
                   <CardHeader pb={2}>
                     <HStack justify="space-between">
                       <Text fontWeight="bold">Personal View</Text>
@@ -1238,13 +1127,13 @@ export const LeadershipBoardPage: React.FC = () => {
                         </Box>
                       </Stack>
                       <SimpleGrid columns={{ base: 1, sm: 2 }} spacing={3}>
-                        <Box p={3} border="1px solid" borderColor="gray.100" borderRadius="xl">
+                        <Box p={3} border="1px solid" borderColor="border.subtle" borderRadius="lg">
                           <Text fontSize="xs" color="text.secondary">Total Points</Text>
                           <Text fontWeight="bold" animation={pointsPulseStyle}>
                             {formatNumber(displayTotalPoints)}
                           </Text>
                         </Box>
-                        <Box p={3} border="1px solid" borderColor="gray.100" borderRadius="xl">
+                        <Box p={3} border="1px solid" borderColor="border.subtle" borderRadius="lg">
                           <Text fontSize="xs" color="text.secondary">Featured Badges</Text>
                           {badgesLoading ? (
                             <HStack spacing={2} mt={2}>
@@ -1276,7 +1165,7 @@ export const LeadershipBoardPage: React.FC = () => {
                                       color="white"
                                       icon={<Icon as={Award} />}
                                       border="1px solid"
-                                      borderColor="gray.100"
+                                      borderColor="border.subtle"
                                     />
                                   </Tooltip>
                                 )
@@ -1293,7 +1182,7 @@ export const LeadershipBoardPage: React.FC = () => {
                                     icon={<Icon as={Lock} />}
                                     color="text.muted"
                                     border="1px dashed"
-                                    borderColor="gray.100"
+                                    borderColor="border.subtle"
                                   />
                                 ))}
                               </HStack>
@@ -1302,10 +1191,10 @@ export const LeadershipBoardPage: React.FC = () => {
                         </Box>
                       </SimpleGrid>
                       <HStack spacing={3} flexWrap="wrap">
-                        <Button bg="#350e6f" color="white" _hover={{ bg: '#4a1499' }} leftIcon={<Icon as={Sparkles} />} onClick={() => navigate('/app/impact')}>
+                        <Button variant="primary" leftIcon={<Icon as={Sparkles} />} onClick={() => navigate('/app/impact')}>
                           Earn your next badge
                         </Button>
-                        <Button bg="#350e6f" color="white" _hover={{ bg: '#4a1499' }} leftIcon={<Icon as={Trophy} />} onClick={() => navigate('/app/badge-gallery')}>
+                        <Button variant="secondary" leftIcon={<Icon as={Trophy} />} onClick={() => navigate('/app/badge-gallery')}>
                           View badge roadmap
                         </Button>
                       </HStack>
@@ -1315,22 +1204,20 @@ export const LeadershipBoardPage: React.FC = () => {
               </Grid>
 
               {!isFreeContext && (
-                <Card bg="white" border="1px solid" borderColor="gray.100" boxShadow="sm" borderRadius="xl">
+                <Card bg="surface.default" border="1px solid" borderColor="border.subtle">
                   <CardHeader>
                     <Flex justify="space-between" align="center">
                       <Box>
-                        <Text fontWeight="bold" fontSize="lg" color="gray.800">Filters & Sorting</Text>
-                        <Text color="gray.500" fontSize="sm">Customize your view</Text>
+                        <Text fontWeight="bold">Filters & Sorting</Text>
+                        <Text color="text.secondary">Smart defaults for this week</Text>
                       </Box>
                       <HStack spacing={2}>
-                        <Button size="sm" variant="ghost" colorScheme="purple" onClick={handleResetFilters}>
-                          Reset
+                        <Button size="sm" variant="ghost" onClick={handleResetFilters}>
+                          Reset defaults
                         </Button>
                         <Button
                           size="sm"
-                          bg="#350e6f"
-                          color="white"
-                          _hover={{ bg: '#4a1499' }}
+                          variant="secondary"
                           rightIcon={<Icon as={isFiltersOpen ? ChevronUp : ChevronDown} />}
                           onClick={onToggleFilters}
                         >
@@ -1346,7 +1233,7 @@ export const LeadershipBoardPage: React.FC = () => {
                           <Flex p={3} borderRadius="md" bg="tint.brandPrimary" align="center" gap={3}>
                             <Icon as={AlertCircle} color="brand.primary" />
                             <Text fontSize="sm" flex="1">Tip: adjust timeframe and sorting to change your ranking view.</Text>
-                            <Button size="xs" bg="#350e6f" color="white" _hover={{ bg: '#4a1499' }} onClick={dismissFilterTip}>Got it</Button>
+                            <Button size="xs" onClick={dismissFilterTip}>Got it</Button>
                           </Flex>
                         )}
                         <SimpleGrid columns={{ base: 1, md: 3 }} spacing={4}>
@@ -1381,91 +1268,81 @@ export const LeadershipBoardPage: React.FC = () => {
               )}
 
               {!isFreeContext && (
-                <Card bg="white" border="1px solid" borderColor="gray.100" boxShadow="sm" borderRadius="xl" overflow="hidden">
-                  <CardHeader bg="linear-gradient(135deg, #fafafa 0%, #f5f5f5 100%)" borderBottom="1px solid" borderColor="gray.100">
+                <Card bg="surface.default" border="1px solid" borderColor="border.subtle">
+                  <CardHeader>
                     <Flex justify="space-between" align="center">
                       <Box>
-                        <HStack spacing={3}>
-                          <Flex w={10} h={10} bg="#350e6f" borderRadius="xl" align="center" justify="center" boxShadow="0 4px 12px rgba(53, 14, 111, 0.3)">
-                            <Icon as={Crown} boxSize={5} color="white" />
-                          </Flex>
-                          <Box>
-                            <Text fontWeight="bold" fontSize="lg" color="gray.800">{segmentLabel} Leaderboard</Text>
-                            <Text color="gray.500" fontSize="sm">Live rankings with real-time updates</Text>
-                          </Box>
-                        </HStack>
+                        <Text fontWeight="bold">{segmentLabel} Leaderboard</Text>
+                        <Text color="text.secondary">Sorted by points with live updates</Text>
                       </Box>
                       <HStack spacing={2}>
-                        <Badge bg="green.50" color="green.600" px={3} py={1} borderRadius="full" fontSize="xs" fontWeight="semibold">
-                          <HStack spacing={1}>
-                            <Box w={2} h={2} bg="green.500" borderRadius="full" />
-                            <Text>Live</Text>
-                          </HStack>
-                        </Badge>
+                        <Badge colorScheme="primary">Virtualized</Badge>
+                        <Badge colorScheme="primary">Real-time</Badge>
                       </HStack>
                     </Flex>
                   </CardHeader>
-                  <CardBody p={0}>
-                    <Box
-                      maxH="500px"
-                      overflowY="auto"
-                      onScroll={leaderboardRows.length > virtualizationThreshold ? onScrollVirtual : undefined}
-                    >
-                      <Table variant="simple" size="md">
-                        <Thead position="sticky" top={0} bg="gray.50" zIndex={1}>
-                          <Tr>
-                            <Th color="gray.500" fontSize="xs" fontWeight="semibold" textTransform="uppercase" letterSpacing="wider" py={4}>Rank</Th>
-                            <Th color="gray.500" fontSize="xs" fontWeight="semibold" textTransform="uppercase" letterSpacing="wider" py={4}>Member</Th>
-                            <Th color="gray.500" fontSize="xs" fontWeight="semibold" textTransform="uppercase" letterSpacing="wider" py={4}>Badges</Th>
-                            <Th color="gray.500" fontSize="xs" fontWeight="semibold" textTransform="uppercase" letterSpacing="wider" py={4}>Trend</Th>
-                            <Th color="gray.500" fontSize="xs" fontWeight="semibold" textTransform="uppercase" letterSpacing="wider" py={4} isNumeric>Points</Th>
-                          </Tr>
-                        </Thead>
-                        <Tbody>
-                          {virtualized.paddingTop > 0 && (
-                            <Tr height={`${virtualized.paddingTop}px`}>
-                              <Td colSpan={5} p={0} borderBottom="none" />
+                  <CardBody>
+                    <Box border="1px solid" borderColor="border.subtle" borderRadius="lg" overflow="hidden">
+                      <Box
+                        maxH="420px"
+                        overflowY="auto"
+                        onScroll={leaderboardRows.length > virtualizationThreshold ? onScrollVirtual : undefined}
+                      >
+                        <Table variant="simple" size="md" color="text.primary">
+                          <Thead position="sticky" top={0} bg="surface.default" zIndex={1}>
+                            <Tr>
+                              <Th color="text.muted">Rank</Th>
+                              <Th color="text.muted">Member</Th>
+                              <Th color="text.muted">Badges</Th>
+                              <Th color="text.muted">Trend</Th>
+                              <Th color="text.muted" isNumeric>Points</Th>
                             </Tr>
-                          )}
-                          {virtualized.rows.map((row) => {
-                            const rowRoute = profileRouteBase
-                              ? `${profileRouteBase}/${row.user.id}`
-                              : row.user.id === profile?.id
-                                ? '/app/profile'
-                                : null
-                            const organizationKey = row.user.companyId || row.user.organizationId || ''
-                            const organizationRecord = organizationsMap[organizationKey]
-                            const organizationLabel =
-                              organizationRecord?.name || row.user.companyName || row.user.companyId || 'Independent'
-                            const villageLabel =
-                              villageNames[row.user.villageId ?? ''] ||
-                              organizationRecord?.village ||
-                              row.user.villageId ||
-                              'Village not assigned'
-                            const clusterLabel =
-                              organizationRecord?.cluster || row.user.clusterId || 'Cluster not assigned'
-                            const isTopThree = row.rank <= 3
-                            const isCurrentUser = row.user.id === profile?.id
-                            return (
-                              <Tr
-                                key={row.user.id}
-                                bg={isCurrentUser ? 'purple.50' : 'white'}
-                                borderLeft={isTopThree ? '4px solid' : 'none'}
-                                borderLeftColor={
-                                  row.rank === 1 ? '#fbbf24'
-                                    : row.rank === 2 ? '#9ca3af'
-                                    : row.rank === 3 ? '#cd7c2e'
-                                    : 'transparent'
-                                }
-                                cursor={rowRoute ? 'pointer' : 'default'}
-                                transition="all 0.2s"
-                                _hover={{ bg: isCurrentUser ? 'purple.100' : 'gray.50' }}
-                                onClick={() => {
-                                  if (!rowRoute) return
-                                  navigate(rowRoute)
-                                }}
-                                height={`${rowHeight}px`}
-                              >
+                          </Thead>
+                          <Tbody>
+                            {virtualized.paddingTop > 0 && (
+                              <Tr height={`${virtualized.paddingTop}px`}>
+                                <Td colSpan={5} p={0} borderBottom="none" />
+                              </Tr>
+                            )}
+                            {virtualized.rows.map((row) => {
+                              const rowRoute = profileRouteBase
+                                ? `${profileRouteBase}/${row.user.id}`
+                                : row.user.id === profile?.id
+                                  ? '/app/profile'
+                                  : null
+                              const organizationKey = row.user.companyId || row.user.organizationId || ''
+                              const organizationRecord = organizationsMap[organizationKey]
+                              const organizationLabel =
+                                organizationRecord?.name || row.user.companyName || row.user.companyId || 'Independent'
+                              const villageLabel =
+                                villageNames[row.user.villageId ?? ''] ||
+                                organizationRecord?.village ||
+                                row.user.villageId ||
+                                'Village not assigned'
+                              const clusterLabel =
+                                organizationRecord?.cluster || row.user.clusterId || 'Cluster not assigned'
+                              return (
+                                <Tr
+                                  key={row.user.id}
+                                  bg={row.user.id === profile?.id ? 'tint.brandPrimary' : 'transparent'}
+                                  borderLeftWidth={row.rank <= 3 ? '4px' : '0px'}
+                                  borderLeftColor={
+                                    row.rank === 1
+                                      ? 'brand.primary'
+                                      : row.rank === 2
+                                        ? 'brand.dark'
+                                        : row.rank === 3
+                                          ? 'success.500'
+                                          : 'transparent'
+                                  }
+                                  cursor={rowRoute ? 'pointer' : 'default'}
+                                  onClick={() => {
+                                    if (!rowRoute) return
+                                    navigate(rowRoute)
+                                  }}
+                                  _hover={{ bg: row.user.id === profile?.id ? 'tint.brandPrimary' : 'surface.subtle' }}
+                                  height={`${rowHeight}px`}
+                                >
                                   <Td>{getRankIcon(row.rank)}</Td>
                                   <Td>
                                     <HStack spacing={3}>
@@ -1502,14 +1379,15 @@ export const LeadershipBoardPage: React.FC = () => {
                                     </HStack>
                                   </Td>
                                   <Td isNumeric>
-                                    <Text fontWeight="bold" color="text.primary">{formatNumber(row.totalPoints)}</Text>
+                                    <Text fontWeight="bold" color="text.primary">{formatNumber(row.activePoints)}</Text>
                                     <Progress
-                                      value={(row.totalPoints / Math.max(cohortStats.maxTotal, 1)) * 100}
+                                      value={(row.activePoints / Math.max(cohortStats.maxActive, 1)) * 100}
                                       size="xs"
                                       colorScheme="purple"
                                       borderRadius="full"
                                       mt={1}
                                     />
+                                    <Text fontSize="xs" color="text.secondary">Total {formatNumber(row.totalPoints)}</Text>
                                   </Td>
                                 </Tr>
                               )
@@ -1525,30 +1403,28 @@ export const LeadershipBoardPage: React.FC = () => {
                       {leaderboardRows.length > leaderboardPage * pageSize && (
                         <Button
                           w="full"
-                          bg="#350e6f"
-                          color="white"
-                          _hover={{ bg: '#4a1499' }}
+                          variant="secondary"
                           onClick={() => setLeaderboardPage((prev) => prev + 1)}
                           borderTopRadius={0}
-                          py={4}
                         >
                           Load more (25 per page)
                         </Button>
                       )}
+                    </Box>
                   </CardBody>
                 </Card>
               )}
 
               {!isFreeContext && (
                 <Grid templateColumns={{ base: '1fr', lg: '1fr 1fr' }} gap={4}>
-                  <Card bg="white" border="1px solid" borderColor="gray.100" boxShadow="sm" borderRadius="xl">
+                  <Card bg="surface.default" border="1px solid" borderColor="border.subtle">
                     <CardHeader>
                       <Text fontWeight="bold">Peer Progress</Text>
-                      <Text color="text.secondary">You're highlighted for quick comparison</Text>
+                      <Text color="text.secondary">You’re highlighted for quick comparison</Text>
                     </CardHeader>
                     <CardBody>
                       <Table size="sm" color="text.primary">
-                        <Thead bg="white">
+                        <Thead bg="surface.default">
                           <Tr>
                             <Th color="text.muted">Rank</Th>
                             <Th color="text.muted">Member</Th>
@@ -1584,10 +1460,10 @@ export const LeadershipBoardPage: React.FC = () => {
                     </CardBody>
                   </Card>
 
-                  <Card bg="white" border="1px solid" borderColor="gray.100" boxShadow="sm" borderRadius="xl">
+                  <Card bg="surface.default" border="1px solid" borderColor="border.subtle">
                     <CardHeader>
                       <Text fontWeight="bold">Cohort Comparison</Text>
-                      <Text color="text.secondary">You're ahead of {aheadPercent}% of your cohort</Text>
+                      <Text color="text.secondary">You’re ahead of {aheadPercent}% of your cohort</Text>
                     </CardHeader>
                     <CardBody>
                       <Stack spacing={4}>
@@ -1633,9 +1509,9 @@ export const LeadershipBoardPage: React.FC = () => {
 
               <Card
                 id="points-breakdown"
-                bg="white"
+                bg="surface.default"
                 border="1px solid"
-                borderColor="gray.100"
+                borderColor="border.subtle"
                 scrollMarginTop="120px"
               >
                   <CardHeader>

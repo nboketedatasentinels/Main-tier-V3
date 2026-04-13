@@ -86,7 +86,7 @@ export const LearnerWindowCard = ({
               </HStack>
               <HStack spacing={2} flexWrap="wrap">
                 {focusAreas.map((area) => (
-                  <Badge key={area} colorScheme="purple" fontSize="xs">
+                  <Badge key={area} variant="subtle" colorScheme="purple" fontSize="xs">
                     {area}
                   </Badge>
                 ))}

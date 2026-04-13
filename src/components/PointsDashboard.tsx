@@ -223,7 +223,7 @@ const PointsDashboard: React.FC<PointsDashboardProps> = ({ variant = 'full' }) =
             <HStack spacing={2} flexWrap="wrap">
               <Icon as={Award} boxSize={4} color="yellow.500" />
               {displayBadges.map((badge) => (
-                <Badge key={badge} colorScheme="purple">
+                <Badge key={badge} colorScheme="purple" variant="subtle">
                   {badge}
                 </Badge>
               ))}

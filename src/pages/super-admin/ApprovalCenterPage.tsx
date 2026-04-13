@@ -1030,7 +1030,7 @@ const ApprovalCenterPage: React.FC = () => {
                                   <Badge colorScheme={meta.badgeColor}>{meta.label}</Badge>
                                 )}
                                 {isFirstTime && (
-                                  <Badge colorScheme="purple">
+                                  <Badge colorScheme="purple" variant="subtle">
                                     New user
                                   </Badge>
                                 )}
@@ -1051,7 +1051,7 @@ const ApprovalCenterPage: React.FC = () => {
                                 </Text>
                               )}
                               {villageBadge && (
-                                <Badge colorScheme="purple" alignSelf="flex-start">
+                                <Badge colorScheme="purple" variant="subtle" alignSelf="flex-start">
                                   {villageBadge}
                                 </Badge>
                               )}

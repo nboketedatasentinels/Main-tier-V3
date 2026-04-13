@@ -990,7 +990,7 @@ export const AtRiskCommandPanel: React.FC<AtRiskCommandPanelProps> = ({
             {activeFilterTags.length > 0 && (
               <HStack spacing={2} flexWrap="wrap">
                 {activeFilterTags.map(tag => (
-                  <Tag key={tag.label} colorScheme="purple" borderRadius="full">
+                  <Tag key={tag.label} colorScheme="purple" variant="subtle" borderRadius="full">
                     <TagLabel>{tag.label}</TagLabel>
                     <TagCloseButton onClick={() => handleRemoveTag(tag.key)} />
                   </Tag>

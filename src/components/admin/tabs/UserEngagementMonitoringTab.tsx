@@ -267,7 +267,7 @@ export const UserEngagementMonitoringTab = ({ users: propUsers, organizations: p
           <Text fontWeight="medium" color="red.600">
             {loadError}
           </Text>
-          <Button size="sm" colorScheme="purple" onClick={loadEngagementData}>
+          <Button size="sm" variant="outline" colorScheme="purple" onClick={loadEngagementData}>
             Retry loading
           </Button>
         </Flex>
@@ -358,7 +358,7 @@ export const UserEngagementMonitoringTab = ({ users: propUsers, organizations: p
                 <Td>{formatDate(entry.lastInterventionAt)}</Td>
                 <Td>{formatDate(entry.nextCheckInAt)}</Td>
                 <Td textAlign="right">
-                  <Button size="sm" colorScheme="purple" onClick={() => handleOpenDetail(entry)}>
+                  <Button size="sm" variant="outline" colorScheme="purple" onClick={() => handleOpenDetail(entry)}>
                     View details
                   </Button>
                 </Td>

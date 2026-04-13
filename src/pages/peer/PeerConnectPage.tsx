@@ -1,5 +1,4 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { useSearchParams } from 'react-router-dom'
 import {
   Avatar,
   Badge,
@@ -369,14 +368,9 @@ const buildWeeklyMatchFromDoc = (matchId: string, data: WeeklyMatchDocument, pee
 export const PeerConnectPage: React.FC = () => {
   const { user, profile, loading, profileLoading } = useAuth()
   const toast = useToast()
-  const [searchParams] = useSearchParams()
   const challengeModal = useDisclosure()
   const sessionModal = useDisclosure()
   const viewedMatchRef = useRef<string | null>(null)
-
-  // Determine initial tab from URL param (0 = Peer Matching, 1 = Peer Sessions)
-  const initialTabIndex = searchParams.get('tab') === 'sessions' ? 1 : 0
-  const [tabIndex, setTabIndex] = useState(initialTabIndex)
 
   const [availablePeers, setAvailablePeers] = useState<PeerProfile[]>([])
   const [weeklyMatch, setWeeklyMatch] = useState<WeeklyMatch | null>(null)
@@ -1274,24 +1268,24 @@ export const PeerConnectPage: React.FC = () => {
 
   return (
     <Stack spacing={6} pb={12}>
-      <Box bg="white" p={6} borderRadius="2xl" border="1px solid" borderColor="gray.100" boxShadow="sm">
+      <Box bg="surface.default" p={6} borderRadius="2xl" border="1px solid" borderColor="border.subtle" boxShadow="sm">
         <Stack spacing={2}>
-          <Heading size="lg" color="gray.800">
+          <Heading size="lg" color="brand.text">
             Peer Connect
           </Heading>
-          <Text color="gray.500">
+          <Text color="brand.subtleText">
             Automated weekly matching pairs you one-on-one, while peer-to-peer sessions are partner-supervised group experiences, all anchored in Firebase so
             your connections stay in sync.
           </Text>
           <SimpleGrid columns={{ base: 1, md: 2 }} spacing={3} pt={1}>
             <Box p={3} borderRadius="lg" border="1px solid" borderColor="brand.border" bg="gray.50">
               <HStack spacing={2} mb={1}>
-                <Badge colorScheme="purple">
+                <Badge colorScheme="purple" variant="subtle">
                   Peer Matching
                 </Badge>
                 <Icon as={MessageSquare} w={4} h={4} color="purple.500" />
               </HStack>
-              <Text fontSize="sm" color="gray.500">
+              <Text fontSize="sm" color="brand.subtleText">
                 System-automated, one-on-one pairing so you can connect directly with a matched peer each week.
               </Text>
             </Box>
@@ -1302,7 +1296,7 @@ export const PeerConnectPage: React.FC = () => {
                 </Badge>
                 <Icon as={Users} w={4} h={4} color="blue.500" />
               </HStack>
-              <Text fontSize="sm" color="gray.500">
+              <Text fontSize="sm" color="brand.subtleText">
                 Group-oriented activities with partner oversight to keep sessions structured, monitored, and collaborative.
               </Text>
             </Box>
@@ -1310,8 +1304,8 @@ export const PeerConnectPage: React.FC = () => {
         </Stack>
       </Box>
 
-      <Tabs variant="soft-rounded" colorScheme="primary" index={tabIndex} onChange={setTabIndex} isFitted>
-        <TabList bg="white" p={2} borderRadius="full" border="1px solid" borderColor="gray.100">
+      <Tabs variant="soft-rounded" colorScheme="primary" defaultIndex={0} isFitted>
+        <TabList bg="surface.default" p={2} borderRadius="full" border="1px solid" borderColor="border.subtle">
           <Tab>
             <HStack spacing={2}>
               <Icon as={MessageSquare} w={4} h={4} />
@@ -1331,99 +1325,91 @@ export const PeerConnectPage: React.FC = () => {
             <SimpleGrid columns={{ base: 1, xl: 3 }} spacing={4} alignItems="start">
               <GridItem colSpan={{ base: 1, xl: 2 }}>
                 <Stack spacing={4}>
-                  <Box bg="white" p={6} borderRadius="xl" border="1px solid" borderColor="gray.100" boxShadow="sm">
+                  <Box bg="surface.default" p={6} borderRadius="2xl" border="1px solid" borderColor="border.subtle" boxShadow="sm">
                     <Flex justify="space-between" align={{ base: 'flex-start', md: 'center' }} gap={4} mb={4} direction={{ base: 'column', md: 'row' }}>
                       <Stack spacing={1}>
-                        <Text fontSize="xs" textTransform="uppercase" letterSpacing="wide" fontWeight="semibold" color="gray.500">
+                        <Text fontSize="sm" color="brand.subtleText">
                           {matchPreferences.refreshPreference === 'disabled'
                             ? 'Matching paused'
                             : `Match window ${matchWindow.label}`}
                         </Text>
-                        <Heading size="md" color="gray.800">
+                        <Heading size="md" color="brand.text">
                           {matchPreferences.refreshPreference === 'disabled' ? 'Peer Matching Paused' : 'Your Peer Match'}
                         </Heading>
-                        <Text fontSize="sm" color="gray.500">{matchDescription}</Text>
+                        <Text color="brand.subtleText">{matchDescription}</Text>
                       </Stack>
-                      <Badge colorScheme="purple" variant="subtle" alignSelf="flex-start">
+                      <Badge colorScheme="primary" variant="subtle" alignSelf="flex-start">
                         {refreshBadgeLabel}
                       </Badge>
                     </Flex>
 
                     {weeklyMatch ? (
-                      <Box>
-                        <Flex gap={4} align={{ base: 'flex-start', md: 'center' }} direction={{ base: 'column', md: 'row' }} mb={4}>
-                          <HStack spacing={3} flex={1} minW={0}>
-                            <Avatar name={peerDisplayName} src={weeklyMatch.peer.avatarUrl} size="md" flexShrink={0} />
-                            <Stack spacing={0} minW={0}>
-                              <Text fontWeight="semibold" color="gray.800" noOfLines={1}>
-                                {peerDisplayName}
-                              </Text>
-                              <Text fontSize="sm" color="gray.500" noOfLines={1}>
-                                {weeklyMatch.peer.email}
-                              </Text>
-                              <HStack spacing={2} pt={1} flexWrap="wrap">
-                                <Badge colorScheme="purple" variant="subtle" display="flex" alignItems="center" gap={1}>
-                                  <Icon as={Clock3} w={3} h={3} />
-                                  {weeklyMatch.peer.timezone || 'Timezone not set'}
-                                </Badge>
-                                <Badge colorScheme="purple" variant="solid">
-                                  {weeklyMatch.matchReason}
-                                </Badge>
-                                <Badge colorScheme={matchStatusColor} variant="outline">
-                                  {matchStatusLabel}
-                                </Badge>
-                              </HStack>
-                            </Stack>
-                          </HStack>
+                      <Flex gap={4} align={{ base: 'flex-start', md: 'center' }} direction={{ base: 'column', md: 'row' }}>
+                        <HStack spacing={3} flex={1}>
+                          <Avatar name={peerDisplayName} src={weeklyMatch.peer.avatarUrl} size="md" />
+                          <Stack spacing={0}>
+                            <Text fontWeight="semibold" color="brand.text">
+                              {peerDisplayName}
+                            </Text>
+                            <Text fontSize="sm" color="brand.subtleText">
+                              {weeklyMatch.peer.email}
+                            </Text>
+                            <HStack spacing={2} pt={1}>
+                              <Badge colorScheme="primary" variant="subtle" display="flex" alignItems="center" gap={1}>
+                                <Icon as={Clock3} w={3} h={3} />
+                                {weeklyMatch.peer.timezone || 'Timezone not set'}
+                              </Badge>
+                              <Badge colorScheme="primary" variant="solid">
+                                {weeklyMatch.matchReason}
+                              </Badge>
+                              <Badge colorScheme={matchStatusColor} variant="outline">
+                                {matchStatusLabel}
+                              </Badge>
+                            </HStack>
+                          </Stack>
+                        </HStack>
 
-                          <HStack spacing={2} flexShrink={0} flexWrap="wrap">
+                        <Stack spacing={2} align="flex-end">
+                          <Button
+                            as="a"
+                            href={`mailto:${weeklyMatch.peer.email}?subject=${encodeURIComponent(`Peer Match for ${matchWindow.label}`)}&body=${encodeURIComponent(
+                              `Hi ${peerDisplayName},%0D%0A%0D%0AWe were paired for this match window (${matchWindow.label}). I'd love to lock in a time to connect. Feel free to grab a slot on my calendar or reply with your availability.%0D%0A%0D%0A- ${senderDisplayName}`
+                            )}`}
+                            leftIcon={<Mail size={18} />}
+                            colorScheme="primary"
+                            variant="solid"
+                            target="_blank"
+                            onClick={() => updateMatchStatus('contacted')}
+                          >
+                            Email your peer
+                          </Button>
+                            <Button
+                            leftIcon={<Check size={16} />}
+                            variant="ghost"
+                            onClick={() => updateMatchStatus('completed')}
+                            isDisabled={weeklyMatch.matchStatus === 'completed'}
+                          >
+                            Mark as completed
+                          </Button>
+                          {weeklyMatch.peer.calendarLink && (
                             <Button
                               as="a"
-                              href={`mailto:${weeklyMatch.peer.email}?subject=${encodeURIComponent(`Peer Match for ${matchWindow.label}`)}&body=${encodeURIComponent(
-                                `Hi ${peerDisplayName},%0D%0A%0D%0AWe were paired for this match window (${matchWindow.label}). I'd love to lock in a time to connect. Feel free to grab a slot on my calendar or reply with your availability.%0D%0A%0D%0A- ${senderDisplayName}`
-                              )}`}
-                              leftIcon={<Mail size={16} />}
-                              bg="#350e6f"
-                              color="white"
-                              _hover={{ bg: '#4a1499' }}
-                              size="sm"
+                              href={weeklyMatch.peer.calendarLink}
                               target="_blank"
-                              onClick={() => updateMatchStatus('contacted')}
+                              rel="noreferrer"
+                              leftIcon={<Calendar size={16} />}
+                              variant="ghost"
                             >
-                              Email peer
+                              Calendar link
                             </Button>
-                            {weeklyMatch.peer.calendarLink && (
-                              <Button
-                                as="a"
-                                href={weeklyMatch.peer.calendarLink}
-                                target="_blank"
-                                rel="noreferrer"
-                                leftIcon={<Calendar size={16} />}
-                                size="sm"
-                                variant="outline"
-                                borderColor="gray.200"
-                              >
-                                Calendar
-                              </Button>
-                            )}
-                            <Button
-                              leftIcon={<Check size={14} />}
-                              size="sm"
-                              variant="outline"
-                              borderColor="gray.200"
-                              onClick={() => updateMatchStatus('completed')}
-                              isDisabled={weeklyMatch.matchStatus === 'completed'}
-                            >
-                              Mark complete
-                            </Button>
-                          </HStack>
-                        </Flex>
-                      </Box>
+                          )}
+                        </Stack>
+                      </Flex>
                     ) : (
-                      <Center py={10} flexDirection="column" gap={4} color="gray.500">
+                      <Center py={10} flexDirection="column" gap={4} color="brand.subtleText">
                         <Icon as={AlertCircle} w={5} h={5} color="orange.400" />
                         <Stack spacing={3} align="center" textAlign="center" maxW="md">
-                          <Text fontWeight="medium" color="gray.800" fontSize="lg">
+                          <Text fontWeight="medium" color="brand.text" fontSize="lg">
                             {matchPreferences.refreshPreference === 'disabled'
                               ? 'Peer Matching Disabled'
                               : 'No Match This Week'}
@@ -1461,14 +1447,14 @@ export const PeerConnectPage: React.FC = () => {
                                 <Icon as={Calendar} w={5} h={5} color="brand.primary" />
                                 <Stack spacing={1} align="flex-start">
                                   <HStack spacing={2}>
-                                    <Text fontSize="sm" fontWeight="semibold" color="gray.800">
+                                    <Text fontSize="sm" fontWeight="semibold" color="brand.text">
                                       Next Match:
                                     </Text>
                                     <Badge colorScheme="purple" fontSize="xs">
                                       {nextRefreshLabel}
                                     </Badge>
                                   </HStack>
-                                  <Text fontSize="xs" color="gray.500">
+                                  <Text fontSize="xs" color="brand.subtleText">
                                     {format(matchWindow.nextRefreshAt, 'EEEE, MMM d, yyyy')} - {matchPreferences.refreshPreference === 'biweekly' ? 'Biweekly' : 'Weekly'} schedule
                                   </Text>
                                 </Stack>
@@ -1476,7 +1462,7 @@ export const PeerConnectPage: React.FC = () => {
                             </Box>
                           )}
                           {matchPreferences.refreshPreference !== 'disabled' && matchPreferences.refreshPreference !== 'on-demand' && (
-                            <Text fontSize="xs" color="gray.500" fontStyle="italic">
+                            <Text fontSize="xs" color="brand.subtleText" fontStyle="italic">
                               Matches are created automatically by our matching system.
                               {availablePeers.length < 2 && ' Invite teammates to expand your peer pool.'}
                             </Text>
@@ -1486,33 +1472,33 @@ export const PeerConnectPage: React.FC = () => {
                     )}
 
                     <SimpleGrid columns={{ base: 1, md: 3 }} spacing={4} mt={6}>
-                      <Box border="1px solid" borderColor="gray.100" rounded="lg" p={3}>
-                        <Text fontSize="xs" textTransform="uppercase" color="gray.500" mb={1}>
+                      <Box border="1px solid" borderColor="border.subtle" rounded="lg" p={3}>
+                        <Text fontSize="xs" textTransform="uppercase" color="brand.subtleText" mb={1}>
                           Match age
                         </Text>
-                        <Text fontWeight="semibold" color="gray.800">
+                        <Text fontWeight="semibold" color="brand.text">
                           {matchAgeLabel}
                         </Text>
-                        <Text fontSize="xs" color="gray.500">
+                        <Text fontSize="xs" color="brand.subtleText">
                           {weeklyMatch?.createdAt ? `Created ${matchAgeLabel}` : 'New match is being prepared'}
                         </Text>
                       </Box>
-                      <Box border="1px solid" borderColor="gray.100" rounded="lg" p={3}>
-                        <Text fontSize="xs" textTransform="uppercase" color="gray.500" mb={1}>
+                      <Box border="1px solid" borderColor="border.subtle" rounded="lg" p={3}>
+                        <Text fontSize="xs" textTransform="uppercase" color="brand.subtleText" mb={1}>
                           Next refresh
                         </Text>
-                        <Text fontWeight="semibold" color="gray.800">
+                        <Text fontWeight="semibold" color="brand.text">
                           {nextRefreshLabel}
                         </Text>
                       </Box>
-                      <Box border="1px solid" borderColor="gray.100" rounded="lg" p={3}>
-                        <Text fontSize="xs" textTransform="uppercase" color="gray.500" mb={1}>
+                      <Box border="1px solid" borderColor="border.subtle" rounded="lg" p={3}>
+                        <Text fontSize="xs" textTransform="uppercase" color="brand.subtleText" mb={1}>
                           Status
                         </Text>
                         <Tag colorScheme={matchStatusColor} size="md">
                           {matchStatusLabel}
                         </Tag>
-                        <Text fontSize="xs" color="gray.500" mt={1}>
+                        <Text fontSize="xs" color="brand.subtleText" mt={1}>
                           Track your progress with this connection.
                         </Text>
                       </Box>
@@ -1521,10 +1507,10 @@ export const PeerConnectPage: React.FC = () => {
                     {matchTimelineProgress !== null && matchWindow.durationDays ? (
                       <Box mt={4}>
                         <HStack justify="space-between" mb={2}>
-                          <Text fontSize="xs" color="gray.500">
+                          <Text fontSize="xs" color="brand.subtleText">
                             Match timeline
                           </Text>
-                          <Text fontSize="xs" color="gray.500">
+                          <Text fontSize="xs" color="brand.subtleText">
                             {matchWindow.durationDays} days
                           </Text>
                         </HStack>
@@ -1533,16 +1519,13 @@ export const PeerConnectPage: React.FC = () => {
                     ) : null}
                   </Box>
 
-                  <Box bg="white" p={6} borderRadius="xl" border="1px solid" borderColor="gray.100" boxShadow="sm">
+                  <Box bg="surface.default" p={6} borderRadius="2xl" border="1px solid" borderColor="border.subtle" boxShadow="sm">
                     <Flex justify="space-between" align={{ base: 'flex-start', md: 'center' }} gap={3} mb={4} direction={{ base: 'column', md: 'row' }}>
                       <Stack spacing={1}>
-                        <Text fontSize="xs" textTransform="uppercase" letterSpacing="wide" fontWeight="semibold" color="gray.500">
-                          Sessions
-                        </Text>
-                        <Heading size="sm" color="gray.800">
+                        <Heading size="sm" color="brand.text">
                           Scheduled Peer Sessions
                         </Heading>
-                        <Text fontSize="sm" color="gray.500">
+                        <Text fontSize="sm" color="brand.subtleText">
                           Your confirmed and upcoming sessions. Confirm early to unlock points. Report no-shows after the confirmation deadline.
                         </Text>
                       </Stack>
@@ -1556,33 +1539,33 @@ export const PeerConnectPage: React.FC = () => {
                         <Center py={6}>
                           <HStack spacing={2}>
                             <Spinner size="sm" />
-                            <Text fontSize="sm" color="gray.500">
+                            <Text fontSize="sm" color="brand.subtleText">
                               Loading sessions...
                             </Text>
                           </HStack>
                         </Center>
                       ) : upcomingSessions.length ? (
                         upcomingSessions.map((session) => (
-                          <Box key={session.id} p={4} borderRadius="xl" border="1px solid" borderColor="gray.100" bg="white" boxShadow="xs">
+                          <Box key={session.id} p={4} borderRadius="xl" border="1px solid" borderColor="border.subtle" bg="surface.default" boxShadow="xs">
                             <HStack justify="space-between" align="flex-start" mb={2}>
                               <Stack spacing={0}>
-                                <Text fontWeight="semibold" color="gray.800">
+                                <Text fontWeight="semibold" color="brand.text">
                                   {session.title}
                                 </Text>
-                                <Text fontSize="sm" color="gray.500">
+                                <Text fontSize="sm" color="brand.subtleText">
                                   {format(session.scheduledAt, 'EEE, MMM d')} - {format(session.scheduledAt, 'p')} {session.timezone}
                                 </Text>
                               </Stack>
                               {renderStatusBadge(session.status)}
                             </HStack>
                             <Stack spacing={2} mb={3}>
-                              <HStack spacing={3} color="gray.500" fontSize="sm">
+                              <HStack spacing={3} color="brand.subtleText" fontSize="sm">
                                 <Icon as={Video} w={4} h={4} />
                                 <Text>{session.platform}</Text>
                               </HStack>
                               {session.link ? (
-                                <Box p={2} borderRadius="md" bg="gray.50" border="1px solid" borderColor="gray.100">
-                                  <Text fontSize="xs" fontWeight="semibold" color="gray.500" mb={1}>
+                                <Box p={2} borderRadius="md" bg="surface.subtle" border="1px solid" borderColor="border.subtle">
+                                  <Text fontSize="xs" fontWeight="semibold" color="brand.subtleText" mb={1}>
                                     Meeting link
                                   </Text>
                                   <Link href={session.link} isExternal color="brand.primary" fontSize="sm" wordBreak="break-all">
@@ -1590,7 +1573,7 @@ export const PeerConnectPage: React.FC = () => {
                                   </Link>
                                 </Box>
                               ) : (
-                                <Text fontSize="xs" color="gray.500">
+                                <Text fontSize="xs" color="brand.subtleText">
                                   Meeting link not added yet.
                                 </Text>
                               )}
@@ -1612,9 +1595,7 @@ export const PeerConnectPage: React.FC = () => {
                                   target="_blank"
                                   rel="noreferrer"
                                   size="sm"
-                                  bg="#350e6f"
-                                  color="white"
-                                  _hover={{ bg: '#4a1499' }}
+                                  colorScheme="primary"
                                 >
                                   Join Session
                                 </Button>
@@ -1622,11 +1603,8 @@ export const PeerConnectPage: React.FC = () => {
                               <Button
                                 leftIcon={<Check size={14} />}
                                 size="sm"
-                                bg={session.youConfirmed ? 'white' : '#350e6f'}
-                                color={session.youConfirmed ? 'gray.700' : 'white'}
-                                border={session.youConfirmed ? '1px solid' : 'none'}
-                                borderColor="gray.200"
-                                _hover={{ bg: session.youConfirmed ? 'gray.50' : '#4a1499' }}
+                                colorScheme="success"
+                                variant={session.youConfirmed ? 'outline' : 'solid'}
                                 onClick={() => confirmMeeting(session.id)}
                                 isDisabled={session.youConfirmed}
                               >
@@ -1636,21 +1614,20 @@ export const PeerConnectPage: React.FC = () => {
                                 leftIcon={<AlarmClockOff size={14} />}
                                 size="sm"
                                 variant="outline"
-                                borderColor="gray.200"
-                                color="orange.600"
+                                colorScheme="warning"
                                 onClick={() => reportNoShow(session.id)}
                                 isDisabled={disableNoShow(session)}
                               >
                                 Report No-Show
                               </Button>
                             </Flex>
-                            <Text fontSize="xs" color="gray.500" mt={3}>
+                            <Text fontSize="xs" color="brand.subtleText" mt={3}>
                               Confirmation deadline: {format(session.confirmationDeadline, 'MMM d, p')}
                             </Text>
                           </Box>
                         ))
                       ) : (
-                        <Center py={6} flexDirection="column" gap={2} color="gray.500" border="1px dashed" borderColor="gray.100" borderRadius="xl">
+                        <Center py={6} flexDirection="column" gap={2} color="brand.subtleText" border="1px dashed" borderColor="border.subtle" borderRadius="xl">
                           <Icon as={AlarmClockCheck} w={5} h={5} />
                           <Text fontSize="sm">No scheduled sessions yet.</Text>
                           <Text fontSize="xs">Accept an invitation from the sidebar or create a new peer session to get started.</Text>
@@ -1658,9 +1635,9 @@ export const PeerConnectPage: React.FC = () => {
                       )}
                     </SimpleGrid>
                   </Box>
-                  <Box bg="white" p={6} borderRadius="2xl" border="1px solid" borderColor="gray.100" boxShadow="sm" mt={4}>
+                  <Box bg="surface.default" p={6} borderRadius="2xl" border="1px solid" borderColor="border.subtle" boxShadow="sm" mt={4}>
                     <Flex justify="space-between" align="center" mb={3}>
-                      <Heading size="sm" color="gray.800">
+                      <Heading size="sm" color="brand.text">
                         Past peer sessions
                       </Heading>
                       <Badge colorScheme="primary" variant="outline">
@@ -1671,7 +1648,7 @@ export const PeerConnectPage: React.FC = () => {
                       <Center py={6}>
                         <HStack spacing={2}>
                           <Spinner size="sm" />
-                          <Text fontSize="sm" color="gray.500">
+                          <Text fontSize="sm" color="brand.subtleText">
                             Loading session history...
                           </Text>
                         </HStack>
@@ -1679,18 +1656,18 @@ export const PeerConnectPage: React.FC = () => {
                     ) : pastSessions.length ? (
                       <Stack spacing={3}>
                         {pastSessions.map((session) => (
-                          <Box key={session.id} p={3} borderRadius="lg" border="1px solid" borderColor="gray.100" bg="gray.50">
+                          <Box key={session.id} p={3} borderRadius="lg" border="1px solid" borderColor="border.subtle" bg="surface.subtle">
                             <Stack spacing={1}>
                               <HStack justify="space-between" align="center">
-                                <Text fontWeight="semibold" color="gray.800">
+                                <Text fontWeight="semibold" color="brand.text">
                                   {session.title}
                                 </Text>
                                 {renderStatusBadge(session.status)}
                               </HStack>
-                              <Text fontSize="sm" color="gray.500">
+                              <Text fontSize="sm" color="brand.subtleText">
                                 {format(session.scheduledAt, 'EEE, MMM d - p')} {session.timezone}
                               </Text>
-                              <Text fontSize="xs" color="gray.500">
+                              <Text fontSize="xs" color="brand.subtleText">
                                 Confirmation deadline: {format(session.confirmationDeadline, 'MMM d, p')}
                               </Text>
                               {session.status === 'no_show' && (
@@ -1715,7 +1692,7 @@ export const PeerConnectPage: React.FC = () => {
                         ))}
                       </Stack>
                     ) : (
-                      <Text fontSize="sm" color="gray.500">
+                      <Text fontSize="sm" color="brand.subtleText">
                         No past sessions yet. Start one to build your history.
                       </Text>
                     )}
@@ -1724,26 +1701,26 @@ export const PeerConnectPage: React.FC = () => {
               </GridItem>
 
               <GridItem>
-                    <Box bg="white" p={6} borderRadius="2xl" border="1px solid" borderColor="gray.100" boxShadow="sm" position="sticky" top={4}>
+                    <Box bg="surface.default" p={6} borderRadius="2xl" border="1px solid" borderColor="border.subtle" boxShadow="sm" position="sticky" top={4}>
                   <Flex justify="space-between" align="center" mb={2}>
-                    <Heading size="sm" color="gray.800">
+                    <Heading size="sm" color="brand.text">
                       Pending Invitations
                     </Heading>
                     <Badge colorScheme={pendingInvites.length > 0 ? 'orange' : 'gray'} variant="solid">
                       {pendingInvites.length}
                     </Badge>
                   </Flex>
-                  <Text fontSize="xs" color="gray.500" mb={4}>
+                  <Text fontSize="xs" color="brand.subtleText" mb={4}>
                     Respond to session invitations from peers. Real-time updates.
                   </Text>
                   <Stack spacing={3}>
                     {pendingInvites.length ? (
                       pendingInvites.map((invite) => (
                         <Box key={invite.id} p={4} borderRadius="lg" border="1px dashed" borderColor="orange.300" bg="orange.50">
-                          <Text fontWeight="semibold" color="gray.800">
+                          <Text fontWeight="semibold" color="brand.text">
                             {invite.fromName}
                           </Text>
-                          <Text fontSize="sm" color="gray.500">
+                          <Text fontSize="sm" color="brand.subtleText">
                             {invite.fromEmail}
                           </Text>
                           <HStack spacing={2} mt={3}>
@@ -1757,9 +1734,9 @@ export const PeerConnectPage: React.FC = () => {
                         </Box>
                       ))
                     ) : (
-                      <Box p={3} borderRadius="lg" border="1px solid" borderColor="gray.100" bg="gray.50">
+                      <Box p={3} borderRadius="lg" border="1px solid" borderColor="border.subtle" bg="surface.subtle">
                         <Icon as={AlarmClockCheck} w={4} h={4} color="green.500" mb={2} />
-                        <Text fontSize="sm" color="gray.500">
+                        <Text fontSize="sm" color="brand.subtleText">
                           All caught up! No pending invitations at the moment.
                         </Text>
                       </Box>
@@ -1774,10 +1751,10 @@ export const PeerConnectPage: React.FC = () => {
             <Stack spacing={4}>
               <Flex justify="space-between" align={{ base: 'flex-start', md: 'center' }} direction={{ base: 'column', md: 'row' }} gap={3}>
                 <Stack spacing={1}>
-                  <Heading size="md" color="gray.800">
+                  <Heading size="md" color="brand.text">
                     Peer sessions
                   </Heading>
-                  <Text color="gray.500">Create group sessions, challenge peers, and manage invitations in one place.</Text>
+                  <Text color="brand.subtleText">Create group sessions, challenge peers, and manage invitations in one place.</Text>
                 </Stack>
                 <HStack spacing={2}>
                   <Button variant="outline" leftIcon={<Sword size={16} />} onClick={challengeModal.onOpen}>
@@ -1791,9 +1768,9 @@ export const PeerConnectPage: React.FC = () => {
 
               <SimpleGrid columns={{ base: 1, lg: 3 }} spacing={4} alignItems="start">
                 <GridItem colSpan={{ base: 1, lg: 1 }}>
-                  <Box bg="white" p={6} borderRadius="2xl" border="1px solid" borderColor="gray.100" boxShadow="sm">
+                  <Box bg="surface.default" p={6} borderRadius="2xl" border="1px solid" borderColor="border.subtle" boxShadow="sm">
                     <Flex justify="space-between" align="center" mb={3}>
-                      <Heading size="sm" color="gray.800">
+                      <Heading size="sm" color="brand.text">
                         Your peer connections
                       </Heading>
                       <Badge colorScheme="primary" variant="subtle">
@@ -1805,7 +1782,7 @@ export const PeerConnectPage: React.FC = () => {
                         <Center py={4}>
                           <HStack spacing={2}>
                             <Spinner size="sm" />
-                            <Text fontSize="sm" color="gray.500">
+                            <Text fontSize="sm" color="brand.subtleText">
                               Loading peers...
                             </Text>
                           </HStack>
@@ -1813,25 +1790,22 @@ export const PeerConnectPage: React.FC = () => {
                       ) : (
                         <>
                           {availablePeers.slice(0, 4).map((peer) => (
-                            <Flex key={peer.id} align="center" justify="space-between" p={3} borderRadius="xl" border="1px solid" borderColor="gray.100" boxShadow="xs" gap={3}>
-                              <HStack spacing={3} minW={0} flex={1}>
-                                <Avatar name={peer.name} src={peer.avatarUrl} size="sm" flexShrink={0} />
-                                <Stack spacing={0} minW={0}>
-                                  <Text fontWeight="semibold" color="gray.800" noOfLines={1}>
+                            <Flex key={peer.id} align="center" justify="space-between" p={3} borderRadius="lg" border="1px solid" borderColor="border.subtle">
+                              <HStack spacing={3}>
+                                <Avatar name={peer.name} src={peer.avatarUrl} size="sm" />
+                                <Stack spacing={0}>
+                                  <Text fontWeight="semibold" color="brand.text">
                                     {peer.name}
                                   </Text>
-                                  <Text fontSize="sm" color="gray.500" noOfLines={1}>
+                                  <Text fontSize="sm" color="brand.subtleText">
                                     {peer.email}
                                   </Text>
                                 </Stack>
                               </HStack>
                               <Button
                                 size="sm"
-                                bg="#350e6f"
-                                color="white"
-                                _hover={{ bg: '#4a1499' }}
+                                variant="outline"
                                 leftIcon={<Trophy size={14} />}
-                                flexShrink={0}
                                 onClick={() => {
                                   setPreselectedUser(peer)
                                   challengeModal.onOpen()
@@ -1842,7 +1816,7 @@ export const PeerConnectPage: React.FC = () => {
                             </Flex>
                           ))}
                           {!availablePeers.length && (
-                            <Text fontSize="sm" color="gray.500">
+                            <Text fontSize="sm" color="brand.subtleText">
                               No peers found in your organisation yet. Invite teammates so you can start challenges and sessions.
                             </Text>
                           )}
@@ -1853,9 +1827,9 @@ export const PeerConnectPage: React.FC = () => {
                 </GridItem>
 
                 <GridItem colSpan={{ base: 1, lg: 2 }}>
-                    <Box bg="white" p={6} borderRadius="2xl" border="1px solid" borderColor="gray.100" boxShadow="sm">
+                    <Box bg="surface.default" p={6} borderRadius="2xl" border="1px solid" borderColor="border.subtle" boxShadow="sm">
                       <Flex justify="space-between" align="center" mb={3}>
-                        <Heading size="sm" color="gray.800">
+                        <Heading size="sm" color="brand.text">
                           Your sessions
                         </Heading>
                         <Badge colorScheme="primary" variant="outline">
@@ -1867,20 +1841,20 @@ export const PeerConnectPage: React.FC = () => {
                           <Center py={4}>
                             <HStack spacing={2}>
                               <Spinner size="sm" />
-                              <Text fontSize="sm" color="gray.500">
+                              <Text fontSize="sm" color="brand.subtleText">
                                 Loading sessions...
                               </Text>
                             </HStack>
                           </Center>
                         ) : sessions.length ? (
                           sessions.map((session) => (
-                            <Box key={session.id} p={3} borderRadius="lg" border="1px solid" borderColor="gray.100">
+                            <Box key={session.id} p={3} borderRadius="lg" border="1px solid" borderColor="border.subtle">
                               <HStack justify="space-between" align="flex-start" mb={1}>
                                 <Stack spacing={0}>
-                                  <Text fontWeight="semibold" color="gray.800">
+                                  <Text fontWeight="semibold" color="brand.text">
                                     {session.title}
                                   </Text>
-                                  <Text fontSize="sm" color="gray.500">
+                                  <Text fontSize="sm" color="brand.subtleText">
                                     {format(session.scheduledAt, 'MMM d, p')} ({session.timezone})
                                   </Text>
                                 </Stack>
@@ -1905,7 +1879,7 @@ export const PeerConnectPage: React.FC = () => {
                             </Box>
                           ))
                         ) : (
-                          <Stack spacing={1} color="gray.500">
+                          <Stack spacing={1} color="brand.subtleText">
                             <Text fontSize="sm">No sessions yet.</Text>
                             <Text fontSize="xs">Start a peer session to schedule your first group meetup.</Text>
                           </Stack>
@@ -1994,17 +1968,17 @@ export const PeerConnectPage: React.FC = () => {
                     </InputLeftElement>
                     <Input placeholder="Search peers" value={participantFilter} onChange={(e) => setParticipantFilter(e.target.value)} />
                   </InputGroup>
-                  <Text fontSize="xs" color="gray.500" mb={2}>
+                  <Text fontSize="xs" color="brand.subtleText" mb={2}>
                     {sessionForm.participants.length} selected
                   </Text>
-                  <Stack spacing={2} maxH="220px" overflowY="auto" border="1px solid" borderColor="gray.100" borderRadius="lg" p={2}>
+                  <Stack spacing={2} maxH="220px" overflowY="auto" border="1px solid" borderColor="border.subtle" borderRadius="lg" p={2}>
                     {filteredParticipants.map((peer) => (
                       <Flex key={peer.id} align="center" justify="space-between" p={2} borderRadius="md" _hover={{ bg: 'surface.subtle' }}>
                         <HStack spacing={3}>
                           <Avatar name={peer.name} src={peer.avatarUrl} size="sm" />
                           <Stack spacing={0}>
                             <Text fontWeight="semibold">{peer.name}</Text>
-                            <Text fontSize="xs" color="gray.500">
+                            <Text fontSize="xs" color="brand.subtleText">
                               {peer.identityTag || peer.timezone || 'Peer'}
                             </Text>
                           </Stack>
@@ -2040,10 +2014,10 @@ export const PeerConnectPage: React.FC = () => {
                   isRequired
                 />
 
-                <Box borderRadius="lg" border="1px dashed" borderColor="gray.100" p={3} bg="gray.50">
+                <Box borderRadius="lg" border="1px dashed" borderColor="border.subtle" p={3} bg="surface.subtle">
                   <HStack align="center" spacing={2}>
                     <Icon as={Target} w={4} h={4} color="brand.primary" />
-                    <Text fontSize="sm" color="gray.500">
+                    <Text fontSize="sm" color="brand.subtleText">
                       At least 2 participants are required so you can host a session with three or more people including yourself.
                     </Text>
                   </HStack>

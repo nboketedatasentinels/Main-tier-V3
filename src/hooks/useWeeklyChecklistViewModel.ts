@@ -108,14 +108,6 @@ const ACTIVITY_QUICK_LINKS: Partial<Record<ActivityId, ActivityQuickActionLink>>
     href: 'https://www.t4leader.com/tools',
     external: true,
   },
-  peer_matching: {
-    label: 'Find Peer Match',
-    href: '/app/peer-connect',
-  },
-  challenger: {
-    label: 'Challenge a Friend',
-    href: '/app/peer-connect?tab=sessions',
-  },
 }
 
 function shouldRequireSuperAdminReviewForFreeUser(activity: ActivityDef, isFreeTierMember: boolean): boolean {
