@@ -34,6 +34,7 @@ import { updateUserVillageId } from '@/services/userProfileService'
 import { checkVillageNameExists, createVillage } from '@/services/villageService'
 import { TransformationTier } from '@/types'
 import { calculateWeekProgress, getJourneyTiming } from '@/utils/weekCalculations'
+import { JOURNEY_META } from '@/config/pointsConfig'
 
 export const LearnerDashboardPage = () => {
   const { profile, refreshProfile } = useAuth()
@@ -180,7 +181,8 @@ export const LearnerDashboardPage = () => {
   const currentWeek = journeyTiming?.currentWeek ?? data.weekNumber
   const earnedPoints = data.weeklyPoints?.points_earned || 0
   const targetPoints = data.weeklyPoints?.target_points || 0
-  const weekProgress = calculateWeekProgress(earnedPoints, targetPoints)
+  const windowTarget = profile?.journeyType ? (JOURNEY_META[profile.journeyType]?.windowTarget ?? targetPoints) : targetPoints
+  const weekProgress = calculateWeekProgress(earnedPoints, windowTarget)
   const completedHabits = data.weeklyHabits.filter(habit => habit.completed).length
   const activityFeedItems = [
     {
@@ -262,7 +264,7 @@ export const LearnerDashboardPage = () => {
                 weekLabel={`Week ${currentWeek} • ${weekRange.label}`}
                 daysRemaining={daysRemaining}
                 progressValue={weekProgress}
-                targetPoints={targetPoints}
+                targetPoints={windowTarget}
                 earnedPoints={earnedPoints}
                 focusAreas={data.focusAreas.map(fa => fa.title)}
                 nextMilestone={`Week ${currentWeek + 1} readiness review`}

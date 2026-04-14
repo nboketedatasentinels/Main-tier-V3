@@ -131,6 +131,7 @@ function useWeeklyGlanceViewModel() {
 
   const earnedPoints = data.weeklyPoints?.points_earned ?? 0
   const targetPoints = data.weeklyPoints?.target_points ?? 0
+  const cycleTargetPoints = profile?.journeyType ? (JOURNEY_META[profile.journeyType]?.windowTarget ?? targetPoints * 2) : targetPoints * 2
 
   const weekProgress = useMemo(
     () => calculateWeekProgress(earnedPoints, targetPoints),
@@ -180,6 +181,7 @@ function useWeeklyGlanceViewModel() {
     daysRemaining,
     earnedPoints,
     targetPoints,
+    cycleTargetPoints,
     weekProgress,
     completedHabits,
 
@@ -202,6 +204,7 @@ export const WeeklyGlancePage = () => {
     daysRemaining,
     earnedPoints,
     targetPoints,
+    cycleTargetPoints,
     weekProgress,
     shouldShowBuildVillageCard,
     hasError,
@@ -403,8 +406,8 @@ export const WeeklyGlancePage = () => {
               <LearnerWindowCard
                 weekLabel={`Week ${currentWeek} • ${weekRange.label}`}
                 daysRemaining={daysRemaining}
-                progressValue={weekProgress}
-                targetPoints={targetPoints}
+                progressValue={cycleTargetPoints > 0 ? Math.min(100, Math.round(((profile?.totalPoints ?? earnedPoints) / cycleTargetPoints) * 100)) : weekProgress}
+                targetPoints={cycleTargetPoints}
                 earnedPoints={profile?.totalPoints ?? earnedPoints}
                 focusAreas={(data.focusAreas ?? []).map((focusArea) => focusArea.title)}
                 nextMilestone={(() => {
@@ -412,14 +415,14 @@ export const WeeklyGlancePage = () => {
                   const journeyType = profile?.journeyType
                   const passMarkPoints = journeyType ? JOURNEY_META[journeyType]?.passMarkPoints ?? 0 : 0
                   const userTotalPoints = profile?.totalPoints ?? 0
-                  const remaining = Math.max(targetPoints - earnedPoints, 0)
+                  const remaining = Math.max(cycleTargetPoints - userTotalPoints, 0)
                   if (totalWeeks > 0 && currentWeek >= totalWeeks) {
                     if (passMarkPoints > 0 && userTotalPoints >= passMarkPoints) return 'Journey complete — you passed!'
                     const shortfall = Math.max(passMarkPoints - userTotalPoints, 0)
                     return `Journey ended — ${shortfall.toLocaleString()} pts short of passing`
                   }
-                  if (earnedPoints >= targetPoints) return `Start Week ${currentWeek + 1} strong`
-                  return `Earn ${remaining.toLocaleString()} more pts this week`
+                  if (userTotalPoints >= cycleTargetPoints) return `Start Week ${currentWeek + 1} strong`
+                  return `Earn ${remaining.toLocaleString()} more pts this cycle`
                 })()}
                 nextMilestoneColor={(() => {
                   const totalWeeks = profile?.programDurationWeeks ?? 0
