@@ -40,7 +40,7 @@ export const WeeklyPointsCard = ({ data, loading, error, onNavigate }: WeeklyPoi
   const daysRemaining = journeyTiming?.daysRemaining ?? 0
   const fallbackWeeklyProgress = calculateWeekProgress(data?.points_earned || 0, data?.target_points || 0)
   const cycleTargetPoints = windowProgress?.windowTarget ?? (data?.target_points || 0) * 2
-  const cyclePointsAccumulated = windowProgress?.pointsEarned ?? data?.points_earned ?? 0
+  const cyclePointsAccumulated = profile?.totalPoints ?? windowProgress?.pointsEarned ?? data?.points_earned ?? 0
   const progress =
     cycleTargetPoints > 0
       ? Math.min(100, Math.round((cyclePointsAccumulated / cycleTargetPoints) * 100))

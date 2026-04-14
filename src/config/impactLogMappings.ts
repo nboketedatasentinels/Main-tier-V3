@@ -83,7 +83,7 @@ export const BUSINESS_CATEGORY_HELPER_TEXT: Record<BusinessPrimaryCategory, stri
 export const BUSINESS_CATEGORY_REQUIRES_WASTE: Record<BusinessPrimaryCategory, boolean> = {
   'Cost Savings': true,
   'Efficiency Gains': true,
-  'Revenue Growth': false,
+  'Revenue Growth': true,
 }
 
 export const DEFAULT_ACTIVITY_BY_ESG_CATEGORY: Record<ESGCategory, ActivityType> = {

@@ -8,7 +8,7 @@ import {
   PARALLEL_WINDOW_SIZE_WEEKS,
   getWindowTargetByJourney
 } from '@/utils/windowCalculations'
-import { getCurrentWeekNumber } from '@/utils/weekCalculations'
+import { getCurrentWeekNumber, getJourneyTiming } from '@/utils/weekCalculations'
 import { JOURNEY_META } from '@/config/pointsConfig'
 import type { WindowProgress } from '@/types'
 
@@ -21,10 +21,9 @@ export const useWindowProgress = () => {
   const [error, setError] = useState<Error | null>(null)
 
   const currentWeek = useMemo(() => {
-    return (profile?.currentWeek && profile.currentWeek > 0)
-      ? profile.currentWeek
-      : getCurrentWeekNumber()
-  }, [profile?.currentWeek])
+    const timing = getJourneyTiming(profile?.journeyStartDate, profile?.programDurationWeeks ?? 6)
+    return timing?.currentWeek ?? (profile?.currentWeek && profile.currentWeek > 0 ? profile.currentWeek : getCurrentWeekNumber())
+  }, [profile?.journeyStartDate, profile?.programDurationWeeks, profile?.currentWeek])
 
   const windowNumber = useMemo(() => {
     return getWindowNumber(currentWeek, PARALLEL_WINDOW_SIZE_WEEKS)

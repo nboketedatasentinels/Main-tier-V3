@@ -61,16 +61,19 @@ import {
 } from '@chakra-ui/react'
 import { Tooltip as RechartsTooltip, Bar, BarChart, CartesianGrid, Legend, Line, LineChart, ResponsiveContainer, XAxis, YAxis } from 'recharts'
 import {
+  BarChart2,
   Check,
   ChevronLeft,
   ChevronRight,
   Clock,
+  DollarSign,
   Download,
   Leaf,
   Plus,
   ShieldCheck,
   Target,
   Trash2,
+  TrendingUp,
   Upload,
   Users,
   Share2,
@@ -1607,7 +1610,8 @@ export const ImpactLogPage: React.FC = () => {
       value: stats.activities,
       help: 'Impact activities logged this month',
       icon: Target,
-      color: 'purple.500',
+      color: '#350e6f',
+      accentBg: 'purple.50',
     },
     {
       label: 'People Impacted',
@@ -1615,6 +1619,7 @@ export const ImpactLogPage: React.FC = () => {
       help: 'Total individuals reached',
       icon: Users,
       color: 'teal.500',
+      accentBg: 'teal.50',
     },
     {
       label: 'Hours',
@@ -1622,6 +1627,7 @@ export const ImpactLogPage: React.FC = () => {
       help: 'Hours contributed',
       icon: Clock,
       color: 'blue.500',
+      accentBg: 'blue.50',
     },
     {
       label: 'USD Saved/Created',
@@ -1629,11 +1635,13 @@ export const ImpactLogPage: React.FC = () => {
       help: 'Estimated financial value',
       icon: ShieldCheck,
       color: 'green.500',
+      accentBg: 'green.50',
     },
   ]
 
   const isMobile = useBreakpointValue({ base: true, md: false })
   const [wizardStep, setWizardStep] = useState<'category' | 'numbers' | 'describe' | 'confirm'>('category')
+  const [modalOpenedFrom, setModalOpenedFrom] = useState<'esg' | 'business' | null>(null)
   const [attestationChecked, setAttestationChecked] = useState(false)
   const [isScannerOpen, setIsScannerOpen] = useState(false)
   const [scannerError, setScannerError] = useState<string | null>(null)
@@ -1781,107 +1789,149 @@ export const ImpactLogPage: React.FC = () => {
 
   return (
     <Box bg="purple.25">
-      <Flex align="center" mb={6} gap={3} wrap="wrap">
-        <HStack spacing={3} align="center">
-          <Icon as={Target} color="purple.500" boxSize={7} />
-          <Box>
-            <Heading size="lg" color="text.primary">
-              Impact Log
-            </Heading>
-            <Text color="text.secondary">Track and measure your real-world impact</Text>
-          </Box>
-        </HStack>
+      <Flex align="center" justify="space-between" mb={6} gap={3} wrap="wrap">
+        <Box>
+          <Heading size="lg" color="text.primary">
+            Impact Log
+          </Heading>
+          <Text color="text.secondary">Track and measure your real-world impact</Text>
+        </Box>
         {!isMobile && (
-          <Wrap spacing={3} justify="flex-start">
-            <WrapItem>
-              <Button
-                variant="outline"
-                leftIcon={<Download size={18} />}
-                onClick={() => setIsBulkOpen(true)}
-              >
-                Bulk Upload (CSV)
-              </Button>
-            </WrapItem>
-            <WrapItem>
-              <Button
-                variant="outline"
-                leftIcon={<Download size={18} />}
-                isLoading={isPdfExporting}
-                loadingText="Exporting..."
-                onClick={async () => {
-                  setIsPdfExporting(true)
-                  try {
-                    const allEntries = activeTab === 'personal' || !profile?.companyId ? entries : companyEntries
-                    await generateImpactPdfReport(allEntries, exportFilters, user, profile, applyFilters)
-                    toast({
-                      title: 'PDF exported',
-                      description: 'Your impact report has been downloaded.',
-                      status: 'success',
-                    })
-                  } catch (error) {
-                    toast({
-                      title: 'PDF export failed',
-                      description: error instanceof Error ? error.message : 'Unknown error.',
-                      status: 'error',
-                    })
-                  } finally {
-                    setIsPdfExporting(false)
-                  }
-                }}
-              >
-                Export Impact Report
-              </Button>
-            </WrapItem>
-            <WrapItem>
-              <Button
-                variant="outline"
-                leftIcon={<Download size={18} />}
-                onClick={() => {
-                  setExportMode('csv')
-                  setIsExportOpen(true)
-                }}
-              >
-                Export CSV
-              </Button>
-            </WrapItem>
-            <WrapItem>
-              <Button
-                variant="outline"
-                leftIcon={<Share2 size={18} />}
-                onClick={shareDisclosure.onOpen}
-              >
-                Share Impact
-              </Button>
-            </WrapItem>
-            <WrapItem>
-              <Button
-                leftIcon={<Icon as={Target} />}
-                colorScheme="teal"
-                variant="solid"
-                onClick={() => {
-                  setScannerError(null)
-                  setIsScannerOpen(true)
-                }}
-              >
-                Scan Event QR
-              </Button>
-            </WrapItem>
-            <WrapItem>
-              <Button
-                colorScheme="purple"
-                leftIcon={<Plus size={18} />}
-                onClick={() => {
-                  setWizardStep('category')
-                  setAttestationChecked(false)
-                  onOpen()
-                }}
-              >
-                New Entry
-              </Button>
-            </WrapItem>
-          </Wrap>
+          <HStack spacing={3}>
+            <Button
+              variant="outline"
+              color="purple.700"
+              borderColor="purple.500"
+              borderRadius="lg"
+              fontWeight="semibold"
+              leftIcon={isEsgActive ? <Check size={18} /> : undefined}
+              _hover={{ bg: 'gray.100' }}
+              onClick={() => {
+                handleCategoryGroupChange('esg')
+                setWizardStep('category')
+                setAttestationChecked(false)
+                setModalOpenedFrom('esg')
+                onOpen()
+              }}
+            >
+              ESG Impact
+            </Button>
+            <Button
+              variant="outline"
+              color="purple.700"
+              borderColor="purple.500"
+              borderRadius="lg"
+              fontWeight="semibold"
+              leftIcon={isBusinessActive ? <Check size={18} /> : undefined}
+              _hover={{ bg: 'gray.100' }}
+              onClick={() => {
+                handleCategoryGroupChange('business')
+                setWizardStep('category')
+                setAttestationChecked(false)
+                setModalOpenedFrom('business')
+                onOpen()
+              }}
+            >
+              Business Impact
+            </Button>
+            <Button
+              bg="#350e6f"
+              color="white"
+              borderRadius="lg"
+              fontWeight="semibold"
+              leftIcon={<Icon as={Target} />}
+              _hover={{ bg: '#4a1499' }}
+              onClick={() => {
+                setScannerError(null)
+                setIsScannerOpen(true)
+              }}
+            >
+              Scan Event QR
+            </Button>
+          </HStack>
         )}
       </Flex>
+      {!isMobile && (
+        <Wrap spacing={3} justify="flex-start" mb={4}>
+          <WrapItem>
+            <Button
+              variant="outline"
+              color="purple.700"
+              borderColor="purple.500"
+              borderRadius="lg"
+              fontWeight="semibold"
+              leftIcon={<Download size={18} />}
+              _hover={{ bg: 'gray.100' }}
+              onClick={() => setIsBulkOpen(true)}
+            >
+              Bulk Upload (CSV)
+            </Button>
+          </WrapItem>
+          <WrapItem>
+            <Button
+              variant="outline"
+              color="purple.700"
+              borderColor="purple.500"
+              borderRadius="lg"
+              fontWeight="semibold"
+              leftIcon={<Download size={18} />}
+              isLoading={isPdfExporting}
+              loadingText="Exporting..."
+              _hover={{ bg: 'gray.100' }}
+              onClick={async () => {
+                setIsPdfExporting(true)
+                try {
+                  const allEntries = activeTab === 'personal' || !profile?.companyId ? entries : companyEntries
+                  await generateImpactPdfReport(allEntries, exportFilters, user, profile, applyFilters)
+                  toast({
+                    title: 'PDF exported',
+                    description: 'Your impact report has been downloaded.',
+                    status: 'success',
+                  })
+                } catch (error) {
+                  toast({
+                    title: 'PDF export failed',
+                    description: error instanceof Error ? error.message : 'Unknown error.',
+                    status: 'error',
+                  })
+                } finally {
+                  setIsPdfExporting(false)
+                }
+              }}
+            >
+              Export Impact Report
+            </Button>
+          </WrapItem>
+          <WrapItem>
+            <Button
+              variant="outline"
+              color="purple.700"
+              borderColor="purple.500"
+              borderRadius="lg"
+              fontWeight="semibold"
+              leftIcon={<Download size={18} />}
+              _hover={{ bg: 'gray.100' }}
+              onClick={() => exportImpactCsv(exportFilters)}
+            >
+              Export CSV
+            </Button>
+          </WrapItem>
+          <WrapItem>
+            <Button
+              variant="outline"
+              color="purple.700"
+              borderColor="purple.500"
+              borderRadius="lg"
+              fontWeight="semibold"
+              leftIcon={<Share2 size={18} />}
+              _hover={{ bg: 'gray.100' }}
+              onClick={shareDisclosure.onOpen}
+            >
+              Share Impact
+            </Button>
+          </WrapItem>
+        </Wrap>
+      )}
 
       {/* QR Scanner Modal */}
       <Modal isOpen={isScannerOpen} onClose={() => setIsScannerOpen(false)} size="lg">
@@ -2018,32 +2068,43 @@ export const ImpactLogPage: React.FC = () => {
         <GridItem>
           <SimpleGrid columns={{ base: 1, md: 2, xl: 5 }} spacing={4} mb={6}>
             {statCards.map((card) => (
-              <Stat
+              <Box
                 key={card.label}
-                p={4}
-                bg="surface.default"
-                boxShadow="md"
-                rounded="lg"
+                p={5}
+                bg="white"
+                borderRadius="xl"
                 border="1px solid"
-                borderColor={card.color}
-                textAlign="center"
+                borderColor="gray.100"
+                boxShadow="0 2px 8px rgba(0,0,0,0.04)"
+                _hover={{ transform: 'translateY(-2px)', boxShadow: '0 8px 25px rgba(0,0,0,0.08)', borderColor: 'gray.200' }}
+                transition="all 0.3s ease"
+                position="relative"
+                overflow="hidden"
               >
-                <HStack justify="space-between" mb={3}>
-                  <Box p={2} rounded="full" bg={`${card.color}10`} color={card.color}>
-                    <Icon as={card.icon} />
-                  </Box>
-                  <Tooltip label={card.help}>
-                    <Icon as={InfoIcon} color="text.muted" />
+                <Box position="absolute" top={0} right={0} w="60px" h="60px" bg={card.accentBg} borderRadius="0 0 0 100%" />
+                <HStack justify="space-between" mb={4}>
+                  <Flex
+                    w={10} h={10}
+                    borderRadius="xl"
+                    bg={card.color}
+                    align="center"
+                    justify="center"
+                    boxShadow={`0 4px 12px rgba(0,0,0,0.15)`}
+                  >
+                    <Icon as={card.icon} boxSize={5} color="white" />
+                  </Flex>
+                  <Tooltip label={card.help} hasArrow>
+                    <Icon as={InfoIcon} color="gray.400" boxSize={4} />
                   </Tooltip>
                 </HStack>
-                <Box textAlign="center">
-                <StatLabel color="text.secondary">{card.label}</StatLabel>
-                <StatNumber color="text.primary" fontSize="xl">
+                <Text fontSize="xs" color="gray.500" fontWeight="semibold" textTransform="uppercase" letterSpacing="wide" mb={1}>
+                  {card.label}
+                </Text>
+                <Text fontWeight="bold" fontSize="2xl" color="gray.800">
                   {card.label === 'USD Saved/Created' ? card.value : card.value.toLocaleString()}
-                </StatNumber>
-                <StatHelpText>{card.help}</StatHelpText>
-                </Box>
-              </Stat>
+                </Text>
+                <Text fontSize="xs" color="gray.500" mt={1}>{card.help}</Text>
+              </Box>
             ))}
             <PointsDashboard variant="compact" />
           </SimpleGrid>
@@ -2660,6 +2721,7 @@ export const ImpactLogPage: React.FC = () => {
               {wizardStep === 'category' && (
             <Stack spacing={4}>
               <HStack spacing={3}>
+                {modalOpenedFrom !== 'business' && (
                 <Button
                   colorScheme={isEsgActive ? 'green' : 'gray'}
                   variant={isEsgActive ? 'solid' : 'outline'}
@@ -2675,6 +2737,8 @@ export const ImpactLogPage: React.FC = () => {
                 >
                   ESG Impact
                 </Button>
+                )}
+                {modalOpenedFrom !== 'esg' && (
                 <Button
                   colorScheme={isBusinessActive ? 'blue' : 'gray'}
                   variant={isBusinessActive ? 'solid' : 'outline'}
@@ -2690,6 +2754,7 @@ export const ImpactLogPage: React.FC = () => {
                 >
                   Business Impact
                 </Button>
+                )}
               </HStack>
 
               {isEsgActive && (
@@ -2838,78 +2903,105 @@ export const ImpactLogPage: React.FC = () => {
 
               {isBusinessActive && (
                     <Stack spacing={4}>
-                <SimpleGrid columns={{ base: 1, md: 2 }} spacing={3}>
+                <Stack spacing={4}>
                   <FormControl>
                     <FormLabel>Primary Business Category</FormLabel>
-                    <Select
-                      mt={1}
-                      value={formValues.businessCategory}
-                      onChange={(e) => handleBusinessCategoryChange(e.target.value as BusinessPrimaryCategory)}
-                    >
-                      {BUSINESS_PRIMARY_CATEGORIES.map((category) => (
-                        <option key={category}>{category}</option>
-                      ))}
-                    </Select>
-                    <FormHelperText>
-                      {formValues.businessCategory ? BUSINESS_CATEGORY_HELPER_TEXT[formValues.businessCategory] : ''}
-                    </FormHelperText>
+                    <SimpleGrid columns={3} spacing={3} mt={1}>
+                      {BUSINESS_PRIMARY_CATEGORIES.map((category) => {
+                        const isSelected = formValues.businessCategory === category
+                        const icons: Record<string, React.ReactNode> = {
+                          'Cost Savings': <Icon as={DollarSign} boxSize={6} color={isSelected ? 'green.500' : 'gray.400'} />,
+                          'Efficiency Gains': <Icon as={BarChart2} boxSize={6} color={isSelected ? 'blue.500' : 'gray.400'} />,
+                          'Revenue Growth': <Icon as={TrendingUp} boxSize={6} color={isSelected ? 'orange.500' : 'gray.400'} />,
+                        }
+                        return (
+                          <Box
+                            key={category}
+                            as="button"
+                            type="button"
+                            textAlign="left"
+                            p={4}
+                            borderRadius="xl"
+                            border="2px solid"
+                            borderColor={isSelected ? 'green.400' : 'gray.200'}
+                            bg={isSelected ? 'green.50' : 'white'}
+                            boxShadow={isSelected ? 'md' : 'sm'}
+                            transition="all 0.2s"
+                            _hover={{ borderColor: 'green.300', boxShadow: 'md' }}
+                            onClick={() => handleBusinessCategoryChange(category)}
+                          >
+                            <Box mb={2}>{icons[category]}</Box>
+                            <Text fontWeight="bold" fontSize="sm" mb={1}>{category}</Text>
+                            <Text fontSize="xs" color="gray.500">{BUSINESS_CATEGORY_HELPER_TEXT[category]}</Text>
+                          </Box>
+                        )
+                      })}
+                    </SimpleGrid>
                   </FormControl>
 
-                  <FormControl isDisabled={activityTypeOptions.length === 0}>
-                    <FormLabel>Activity Type</FormLabel>
-                    <Select
-                      mt={1}
-                      value={formValues.activityType}
-                      onChange={(e) => handleActivityTypeChange(e.target.value)}
-                      isDisabled={activityTypeOptions.length === 0}
-                    >
-                      {activityTypeOptions.map((activity) => (
-                        <option key={activity}>{activity}</option>
-                      ))}
-                    </Select>
-                    <FormHelperText color={activityTypeOptions.length === 0 ? 'red.500' : 'text.muted'}>
-                      {activityTypeOptions.length === 0
-                        ? 'No activity types available for the selected category.'
-                        : `Available activities for ${formatCategoryLabel(activityTypeCategoryLabel)}.`}
-                    </FormHelperText>
-                  </FormControl>
-                      </SimpleGrid>
-
-                      {isBusinessWasteRequired && (
+                  {isBusinessWasteRequired && (
                     <FormControl>
                       <FormLabel>Specific Activity (8 wastes)</FormLabel>
-                          <HStack spacing={2} wrap="wrap">
-                            {BUSINESS_SECONDARY_WASTES.map((activity) => {
-                              const isSelected = formValues.businessActivity === activity
-                              return (
-                                <Tooltip
-                                  key={activity}
-                                  label={BUSINESS_WASTE_HELPER_TEXT[activity] || activity}
-                                  hasArrow
-                                  placement="top"
-                                  bg="blue.50"
-                                  color="blue.900"
-                                  border="1px solid"
-                                  borderColor="blue.100"
-                                  maxW="320px"
-                                >
-                                  <Button
-                                    size="sm"
-                                    variant={isSelected ? 'solid' : 'outline'}
-                                    colorScheme={isSelected ? 'blue' : 'gray'}
-                                    onClick={() =>
-                                      setFormValues((prev) => ({ ...prev, businessActivity: activity }))
-                                    }
-                                  >
-                                    {activity}
-                                  </Button>
-                                </Tooltip>
-                              )
-                            })}
-                          </HStack>
+                      <HStack spacing={2} wrap="wrap">
+                        {BUSINESS_SECONDARY_WASTES.map((activity) => {
+                          const isSelected = formValues.businessActivity === activity
+                          return (
+                            <Tooltip
+                              key={activity}
+                              label={BUSINESS_WASTE_HELPER_TEXT[activity] || activity}
+                              hasArrow
+                              placement="top"
+                              bg="blue.50"
+                              color="blue.900"
+                              border="1px solid"
+                              borderColor="blue.100"
+                              maxW="320px"
+                            >
+                              <Button
+                                size="sm"
+                                variant={isSelected ? 'solid' : 'outline'}
+                                colorScheme={isSelected ? 'blue' : 'gray'}
+                                onClick={() =>
+                                  setFormValues((prev) => ({ ...prev, businessActivity: activity }))
+                                }
+                              >
+                                {activity}
+                              </Button>
+                            </Tooltip>
+                          )
+                        })}
+                      </HStack>
                       <FormHelperText>Choose the waste category most impacted by the activity.</FormHelperText>
                     </FormControl>
-                      )}
+                  )}
+
+                  <FormControl>
+                    <FormLabel>Activity Type</FormLabel>
+                    {activityTypeOptions.length === 0 ? (
+                      <Text fontSize="sm" color="red.500" mt={1}>No activity types available for the selected category.</Text>
+                    ) : (
+                      <HStack spacing={2} wrap="wrap" mt={1}>
+                        {activityTypeOptions.map((activity) => {
+                          const isSelected = formValues.activityType === activity
+                          return (
+                            <Button
+                              key={activity}
+                              size="sm"
+                              variant={isSelected ? 'solid' : 'outline'}
+                              colorScheme={isSelected ? 'purple' : 'gray'}
+                              onClick={() => handleActivityTypeChange(activity)}
+                            >
+                              {activity}
+                            </Button>
+                          )
+                        })}
+                      </HStack>
+                    )}
+                    <FormHelperText color="text.muted">
+                      {`Available activities for ${formatCategoryLabel(activityTypeCategoryLabel)}.`}
+                    </FormHelperText>
+                  </FormControl>
+                </Stack>
                     </Stack>
                   )}
                 </Stack>

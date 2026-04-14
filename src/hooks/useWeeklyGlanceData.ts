@@ -18,7 +18,7 @@ import { db } from '@/services/firebase'
 import { useAuth } from '@/hooks/useAuth'
 import { useOrganizationLeadership } from '@/hooks/useOrganizationLeadership'
 import { ORG_COLLECTION } from '@/constants/organizations'
-import { getWeekKey, getCurrentWeekNumber } from '@/utils/weekCalculations'
+import { getWeekKey, getCurrentWeekNumber, getJourneyTiming } from '@/utils/weekCalculations'
 import { JOURNEY_META, getMonthNumber, getActivityDefinitionById } from '@/config/pointsConfig'
 import { InspirationQuote } from '@/types'
 import { leadershipQuotes } from '@/services/quotes'
@@ -181,11 +181,12 @@ export const useWeeklyGlanceData = () => {
     loading: leadershipLoading,
   } = useOrganizationLeadership(profile?.companyId, profile?.id, profile)
 
-  // Week-level keys remain the source of truth until non-weekly periods are supported.
-  const weekNumber = useMemo(
-    () => profile?.currentWeek || 1,
-    [profile?.currentWeek],
-  )
+  // Derive the true current week from journey start date so it stays in sync
+  // with journeyTiming used by the page — avoids stale profile.currentWeek mismatches.
+  const weekNumber = useMemo(() => {
+    const timing = getJourneyTiming(profile?.journeyStartDate, profile?.programDurationWeeks ?? 6)
+    return timing?.currentWeek ?? profile?.currentWeek ?? 1
+  }, [profile?.journeyStartDate, profile?.programDurationWeeks, profile?.currentWeek])
   const weekKey = useMemo(() => getWeekKey(), [])
   const calendarWeekNumber = useMemo(() => getCurrentWeekNumber(), [])
 

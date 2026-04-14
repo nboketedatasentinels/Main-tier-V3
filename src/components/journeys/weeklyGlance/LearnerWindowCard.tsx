@@ -9,6 +9,7 @@ interface LearnerWindowCardProps {
   earnedPoints: number
   focusAreas: string[]
   nextMilestone: string
+  nextMilestoneColor?: string
 }
 
 export const LearnerWindowCard = ({
@@ -19,6 +20,7 @@ export const LearnerWindowCard = ({
   earnedPoints,
   focusAreas,
   nextMilestone,
+  nextMilestoneColor,
 }: LearnerWindowCardProps) => {
   const hasExceededGoal = targetPoints > 0 && earnedPoints > targetPoints
   const remainingPoints = Math.max(targetPoints - earnedPoints, 0)
@@ -64,11 +66,11 @@ export const LearnerWindowCard = ({
           {/* Milestone Section */}
           <Box
             borderLeftWidth="3px"
-            borderLeftColor={hasExceededGoal ? 'green.400' : 'purple.400'}
+            borderLeftColor={hasExceededGoal ? 'green.400' : 'gray.800'}
             pl={3}
           >
             <Text fontSize="xs" color="gray.500" textTransform="uppercase" letterSpacing="wide">Next Milestone</Text>
-            <Text fontWeight="semibold" color="gray.800">{nextMilestone}</Text>
+            <Text fontWeight="semibold" color={nextMilestoneColor ?? 'gray.800'}>{nextMilestone}</Text>
             {hasExceededGoal && (
               <HStack spacing={1} color="green.500" mt={1}>
                 <Icon as={PartyPopper} boxSize={4} />

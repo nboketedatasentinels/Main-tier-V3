@@ -25,9 +25,7 @@ import { SupportTeamCard } from '@/components/journeys/weeklyGlance/SupportTeamC
 import { PersonalityProfileCard } from '@/components/journeys/weeklyGlance/PersonalityProfileCard'
 import { PeopleImpactedCard } from '@/components/journeys/weeklyGlance/PeopleImpactedCard'
 import { WeeklyInspirationCard } from '@/components/journeys/weeklyGlance/WeeklyInspirationCard'
-import { ActivityFeedCard } from '@/components/journeys/weeklyGlance/ActivityFeedCard'
 import { LearnerWindowCard } from '@/components/journeys/weeklyGlance/LearnerWindowCard'
-import { NextMilestoneCard } from '@/components/journeys/weeklyGlance/NextMilestoneCard'
 import { WindowSummaryCard } from '@/components/journeys/weeklyGlance/WindowSummaryCard'
 import { WeekStatusSummaryCard } from '@/components/journeys/WeekStatusSummaryCard'
 
@@ -42,6 +40,7 @@ import {
   calculateWeekProgress,
   getJourneyTiming,
 } from '@/utils/weekCalculations'
+import { JOURNEY_META } from '@/config/pointsConfig'
 
 // NOTE: This page is intentionally a partial migration: UI phrasing may be broader,
 // while data contracts remain weekly (`weeklyPoints`, `weekNumber`, week-based helpers).
@@ -406,9 +405,32 @@ export const WeeklyGlancePage = () => {
                 daysRemaining={daysRemaining}
                 progressValue={weekProgress}
                 targetPoints={targetPoints}
-                earnedPoints={earnedPoints}
+                earnedPoints={profile?.totalPoints ?? earnedPoints}
                 focusAreas={(data.focusAreas ?? []).map((focusArea) => focusArea.title)}
-                nextMilestone={`Week ${data.weekNumber + 1} readiness review`}
+                nextMilestone={(() => {
+                  const totalWeeks = profile?.programDurationWeeks ?? 0
+                  const journeyType = profile?.journeyType
+                  const passMarkPoints = journeyType ? JOURNEY_META[journeyType]?.passMarkPoints ?? 0 : 0
+                  const userTotalPoints = profile?.totalPoints ?? 0
+                  const remaining = Math.max(targetPoints - earnedPoints, 0)
+                  if (totalWeeks > 0 && currentWeek >= totalWeeks) {
+                    if (passMarkPoints > 0 && userTotalPoints >= passMarkPoints) return 'Journey complete — you passed!'
+                    const shortfall = Math.max(passMarkPoints - userTotalPoints, 0)
+                    return `Journey ended — ${shortfall.toLocaleString()} pts short of passing`
+                  }
+                  if (earnedPoints >= targetPoints) return `Start Week ${currentWeek + 1} strong`
+                  return `Earn ${remaining.toLocaleString()} more pts this week`
+                })()}
+                nextMilestoneColor={(() => {
+                  const totalWeeks = profile?.programDurationWeeks ?? 0
+                  const journeyType = profile?.journeyType
+                  const passMarkPoints = journeyType ? JOURNEY_META[journeyType]?.passMarkPoints ?? 0 : 0
+                  const userTotalPoints = profile?.totalPoints ?? 0
+                  if (totalWeeks > 0 && currentWeek >= totalWeeks) {
+                    return (passMarkPoints > 0 && userTotalPoints >= passMarkPoints) ? 'green.600' : 'red.500'
+                  }
+                  return undefined
+                })()}
               />
             )}
           </GridItem>
@@ -439,20 +461,6 @@ export const WeeklyGlancePage = () => {
             </GridItem>
           )}
 
-          <GridItem colSpan={{ base: 1, md: 8 }} order={{ base: 5, md: 5 }}>
-            <ActivityFeedCard
-              items={[...activityFeedItems]}
-              onSeeMore={handleSeeMoreActivity}
-            />
-          </GridItem>
-
-          <GridItem colSpan={{ base: 1, md: 4 }} order={{ base: 6, md: 6 }}>
-            <NextMilestoneCard
-              milestone={`Week ${data.weekNumber + 1} readiness review`}
-              daysRemaining={daysRemaining}
-              onNavigate={handleNavigateChecklist}
-            />
-          </GridItem>
 
           <GridItem colSpan={{ base: 1, md: 4 }} order={{ base: 7, md: 7 }}>
             <SupportTeamCard

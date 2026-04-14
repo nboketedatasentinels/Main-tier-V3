@@ -79,7 +79,7 @@ import {
   updateDoc,
   where,
 } from 'firebase/firestore'
-import { ResponsiveContainer, PieChart, Pie, Cell } from 'recharts'
+import { ResponsiveContainer, PieChart, Pie, Cell, Tooltip as RechartsTooltip } from 'recharts'
 import { Badge as BadgeDefinition, LeaderboardTimeframe, UserProfile, UserRole } from '@/types'
 import { OrganizationRecord } from '@/types/admin'
 import { db } from '@/services/firebase'
@@ -852,7 +852,7 @@ export const LeadershipBoardPage: React.FC = () => {
                 bg="whiteAlpha.200"
                 color="white"
                 leftIcon={<Icon as={Target} boxSize={4} />}
-                onClick={() => navigate('/app/impact')}
+                onClick={() => navigate('/app/weekly-checklist')}
                 _hover={{ bg: 'whiteAlpha.300' }}
                 transition="all 0.2s"
                 fontWeight="medium"
@@ -882,19 +882,40 @@ export const LeadershipBoardPage: React.FC = () => {
                 Start Challenge
               </Button>
             </HStack>
-            <Tooltip
-              label="Upgrade to unlock peer matching and collaboration sessions."
-              hasArrow
-              openDelay={200}
-              isDisabled={!isFreeTierUser}
-            >
+            <HStack spacing={3} w="full">
+              <Tooltip
+                label="Upgrade to unlock peer matching and collaboration sessions."
+                hasArrow
+                openDelay={200}
+                isDisabled={!isFreeTierUser}
+              >
+                <Button
+                  size="md"
+                  bg="whiteAlpha.200"
+                  color="white"
+                  leftIcon={<Icon as={Users} boxSize={4} />}
+                  onClick={isFreeTierUser ? promptPeerConnectUpgrade : () => navigate('/app/peer-connect')}
+                  opacity={isFreeTierUser ? 0.7 : 1}
+                  _hover={{ bg: 'whiteAlpha.300' }}
+                  transition="all 0.2s"
+                  fontWeight="medium"
+                  px={6}
+                  borderRadius="lg"
+                  backdropFilter="blur(8px)"
+                  border="1px solid"
+                  borderColor="whiteAlpha.300"
+                  justifyContent="flex-start"
+                  flex={1}
+                >
+                  Peer Connect
+                </Button>
+              </Tooltip>
               <Button
                 size="md"
                 bg="whiteAlpha.200"
                 color="white"
-                leftIcon={<Icon as={Users} boxSize={4} />}
-                onClick={isFreeTierUser ? promptPeerConnectUpgrade : () => navigate('/app/peer-connect')}
-                opacity={isFreeTierUser ? 0.7 : 1}
+                leftIcon={<Icon as={TrendingUp} boxSize={4} />}
+                onClick={() => navigate('/app/impact')}
                 _hover={{ bg: 'whiteAlpha.300' }}
                 transition="all 0.2s"
                 fontWeight="medium"
@@ -904,11 +925,11 @@ export const LeadershipBoardPage: React.FC = () => {
                 border="1px solid"
                 borderColor="whiteAlpha.300"
                 justifyContent="flex-start"
-                w="full"
+                flex={1}
               >
-                Peer Connect
+                Log Impact
               </Button>
-            </Tooltip>
+            </HStack>
           </VStack>
         </Flex>
       </Box>
@@ -1049,68 +1070,215 @@ export const LeadershipBoardPage: React.FC = () => {
                   </CardBody>
                 </Card>
               )}
-              <Grid templateColumns={{ base: '1fr', lg: '2fr 1fr' }} gap={4}>
+              <Grid templateColumns="1fr" gap={4}>
                 <Card bg="white" border="1px solid" borderColor="gray.100" boxShadow="sm" borderRadius="xl">
                   <CardHeader borderBottom="1px solid" borderColor="gray.100">
                     <HStack justify="space-between" align="center">
-                      <Box>
-                        <Text fontSize="lg" fontWeight="bold" color="gray.800">Progress Overview</Text>
-                        <Text color="gray.500" fontSize="sm">Live updates</Text>
-                      </Box>
-                      <Badge bg="purple.100" color="purple.700" display="flex" alignItems="center" gap={2} px={3} py={1} borderRadius="full">
-                        <Icon as={Trophy} boxSize={3} /> {percentile}
-                      </Badge>
+                      <Grid templateColumns={{ base: '1fr', md: '1fr 1fr' }} gap={4} flex={1}>
+                        <Box>
+                          <Text fontSize="lg" fontWeight="bold" color="gray.800">Progress Overview</Text>
+                          <Text color="gray.500" fontSize="sm">Live updates</Text>
+                        </Box>
+                        <Box pl={10}>
+                          <Text fontSize="lg" fontWeight="bold" color="gray.800">Your Points Breakdown</Text>
+                          <Text color="gray.500" fontSize="sm">Personal insights across categories</Text>
+                        </Box>
+                      </Grid>
+                      <HStack spacing={3} ml={4}>
+                        <IconButton
+                          aria-label="Previous page"
+                          icon={<ArrowUpAZ />}
+                          variant="secondary"
+                          size="sm"
+                          onClick={() => setBreakdownPage((prev) => Math.max(1, prev - 1))}
+                        />
+                        <IconButton
+                          aria-label="Next page"
+                          icon={<ArrowDownAZ />}
+                          variant="secondary"
+                          size="sm"
+                          onClick={() => setBreakdownPage((prev) => prev + 1)}
+                        />
+                      </HStack>
                     </HStack>
                   </CardHeader>
                   <CardBody>
                     <Stack spacing={6}>
-                      <Grid templateColumns={{ base: '1fr', md: '1.4fr 1fr' }} gap={4}>
+                      <Grid templateColumns={{ base: '1fr', md: '1fr 1fr' }} gap={4}>
                         <Box
                           p={5}
+                          bg="white"
                           borderRadius="xl"
-                          bg="purple.50"
                           border="1px solid"
                           borderColor="purple.200"
-                          boxShadow="sm"
+                          boxShadow="0 2px 8px rgba(0,0,0,0.04)"
+                          _hover={{ transform: 'translateY(-2px)', boxShadow: '0 8px 25px rgba(139, 92, 246, 0.15)', borderColor: 'purple.300' }}
+                          transition="all 0.3s ease"
+                          position="relative"
+                          overflow="hidden"
                         >
-                          <Text fontSize="sm" color="purple.600" textTransform="uppercase" letterSpacing="wide" fontWeight="semibold">
+                          <Box position="absolute" top={0} right={0} w="90px" h="90px" bg="purple.50" borderRadius="0 0 0 100%" />
+                          <Flex w={10} h={10} bg="#350e6f" borderRadius="xl" align="center" justify="center" mb={3} boxShadow="0 4px 12px rgba(53, 14, 111, 0.3)">
+                            <Icon as={Trophy} boxSize={5} color="white" />
+                          </Flex>
+                          <Text fontSize="xs" color="gray.500" fontWeight="semibold" textTransform="uppercase" letterSpacing="wide" mb={1}>
                             Primary Focus
                           </Text>
-                          <Text fontSize="lg" fontWeight="bold" color="gray.800" mt={1}>
+                          <Text fontSize="lg" fontWeight="bold" color="gray.800" mb={3}>
                             Your Rank Right Now
                           </Text>
-                          <HStack spacing={3} mt={3}>
+                          <HStack spacing={3}>
                             <Box fontSize="2xl">{getRankIcon(userRow?.rank || leaderboardRows.length || 1)}</Box>
-                            <Text fontSize="4xl" fontWeight="bold" color="purple.700">
+                            <Text fontSize="4xl" fontWeight="bold" color="gray.800">
                               {userRow?.rank || '—'}
                             </Text>
                           </HStack>
-                          <Text color="gray.600" mt={2}>
+                          <Text color="gray.600" mt={2} fontSize="sm">
                             You're ahead of {aheadPercent}% of {(segmentLabel ?? 'segment').toLowerCase()} members.
                           </Text>
                           <HStack spacing={2} mt={3} flexWrap="wrap">
                             <Badge bg="purple.100" color="purple.700" borderRadius="full">{percentile}</Badge>
-                            <Badge bg="green.100" color="green.700" borderRadius="full">{segmentScopeText}</Badge>
+                            <Badge bg="gray.100" color="gray.600" borderRadius="full">{segmentScopeText}</Badge>
                           </HStack>
                         </Box>
-                        <Stack spacing={4}>
-                          <Box p={4} bg="gray.50" borderRadius="lg" border="1px solid" borderColor="gray.200">
-                            <HStack justify="space-between">
-                              <Text fontWeight="semibold" color="gray.700">Weekly momentum</Text>
-                              <Text fontSize="sm" color="gray.500">
-                                Goal {formatNumber(weeklyTarget)}
-                              </Text>
-                            </HStack>
-                            <Progress value={weeklyProgress} colorScheme="green" borderRadius="full" mt={2} size="sm" />
-                            <Text fontSize="xs" color="gray.500" mt={2}>
-                              {segmentStats.weeklyPoints > 0
-                                ? `${formatNumber(segmentStats.weeklyPoints)} points earned this week.`
-                                : 'Start an activity to earn your first points this week.'}
-                            </Text>
-                          </Box>
-                        </Stack>
+                        <Box id="points-breakdown" scrollMarginTop="120px">
+                          <Grid templateColumns={{ base: '1fr', md: '1fr 1fr' }} gap={4} alignItems="center">
+                            <Box h="260px">
+                              <ResponsiveContainer width="100%" height="100%">
+                                <PieChart>
+                                  <Pie dataKey="value" data={userBreakdown} innerRadius={60} outerRadius={90} label>
+                                    {userBreakdown.map((entry, index) => (
+                                      <Cell key={`cell-${entry.name}`} fill={pointsColors[index % pointsColors.length]} />
+                                    ))}
+                                  </Pie>
+                                  <RechartsTooltip
+                                    content={({ active, payload }) => {
+                                      if (!active || !payload?.length) return null
+                                      const name = payload[0].name as string
+                                      const value = payload[0].value as number
+                                      const activities = activityHistoryByCategory[name] || []
+                                      return (
+                                        <Box bg="white" color="gray.800" p={3} borderRadius="md" fontSize="xs" maxW="260px" boxShadow="lg" border="1px solid" borderColor="gray.100">
+                                          <Text fontWeight="bold" mb={2} color="gray.800">{name} — {formatNumber(value)} pts</Text>
+                                          {activityHistoryLoading ? (
+                                            <Text color="gray.500">Loading...</Text>
+                                          ) : activities.length ? (
+                                            <Stack spacing={2}>
+                                              {activities.map((activity) => (
+                                                <Flex key={activity.id} justify="space-between" align="center" gap={4}>
+                                                  <HStack spacing={2}>
+                                                    <Icon as={CheckCircle} color="green.500" boxSize={3} />
+                                                    <Text color="gray.800">{activity.activityTitle}</Text>
+                                                  </HStack>
+                                                  <HStack spacing={3}>
+                                                    <Text color="gray.500">{format(activity.createdAt, 'MMM d')}</Text>
+                                                    <Text color="green.500" fontWeight="medium">+{formatNumber(activity.points)}</Text>
+                                                  </HStack>
+                                                </Flex>
+                                              ))}
+                                            </Stack>
+                                          ) : (
+                                            <Text color="gray.500">No activities yet</Text>
+                                          )}
+                                        </Box>
+                                      )
+                                    }}
+                                  />
+                                </PieChart>
+                              </ResponsiveContainer>
+                            </Box>
+                            <Stack spacing={3}>
+                              {userBreakdown.slice((breakdownPage - 1) * 4, (breakdownPage - 1) * 4 + 4).map((category, idx) => (
+                                <Box key={category.name}>
+                                  <Tooltip
+                                    hasArrow
+                                    placement="top"
+                                    borderRadius="md"
+                                    bg="white"
+                                    p={3}
+                                    label={
+                                      activityHistoryLoading ? (
+                                        <Text fontSize="xs">Loading...</Text>
+                                      ) : activityHistoryByCategory[category.name]?.length ? (
+                                        <Stack spacing={2}>
+                                          {activityHistoryByCategory[category.name].map((activity) => (
+                                            <Flex key={activity.id} justify="space-between" align="center" gap={4} fontSize="xs">
+                                              <HStack spacing={2}>
+                                                <Icon as={CheckCircle} color="green.500" boxSize={3} />
+                                                <Text color="gray.800">{activity.activityTitle}</Text>
+                                              </HStack>
+                                              <HStack spacing={3}>
+                                                <Text color="gray.500">{format(activity.createdAt, 'MMM d')}</Text>
+                                                <Text color="green.500" fontWeight="medium">+{formatNumber(activity.points)}</Text>
+                                              </HStack>
+                                            </Flex>
+                                          ))}
+                                        </Stack>
+                                      ) : (
+                                        <Text fontSize="xs">No activities yet</Text>
+                                      )
+                                    }
+                                  >
+                                  <Flex
+                                    align="center"
+                                    gap={3}
+                                    cursor="pointer"
+                                    onClick={() => toggleCategory(category.name)}
+                                    _hover={{ bg: 'surface.subtle' }}
+                                    borderRadius="md"
+                                    p={1}
+                                    mx={-1}
+                                  >
+                                    <Box w={2} h={12} borderRadius="full" bg={pointsColors[idx % pointsColors.length]} />
+                                    <Box flex="1">
+                                      <Flex justify="space-between" align="center">
+                                        <HStack>
+                                          <Text fontWeight="bold">{category.name}</Text>
+                                          <Icon
+                                            as={expandedCategories.has(category.name) ? ChevronDown : ChevronRight}
+                                            boxSize={4}
+                                            color="text.secondary"
+                                          />
+                                        </HStack>
+                                        <Text>{formatNumber(category.value)} pts</Text>
+                                      </Flex>
+                                      <Progress value={category.percent} colorScheme="primary" borderRadius="full" />
+                                      <Text fontSize="xs" color="text.secondary">{category.percent}% of active points</Text>
+                                    </Box>
+                                  </Flex>
+                                  </Tooltip>
+                                  <Collapse in={expandedCategories.has(category.name)} animateOpacity>
+                                    <Stack pl={6} spacing={2} mt={2} mb={2}>
+                                      {activityHistoryLoading ? (
+                                        <Skeleton height="20px" />
+                                      ) : activityHistoryByCategory[category.name]?.length ? (
+                                        activityHistoryByCategory[category.name].map((activity) => (
+                                          <Flex key={activity.id} justify="space-between" align="center" fontSize="sm">
+                                            <HStack spacing={2}>
+                                              <Icon as={CheckCircle} color="success.500" boxSize={3} />
+                                              <Text>{activity.activityTitle}</Text>
+                                            </HStack>
+                                            <HStack spacing={4}>
+                                              <Text color="text.secondary" fontSize="xs">
+                                                {format(activity.createdAt, 'MMM d')}
+                                              </Text>
+                                              <Text fontWeight="medium" color="success.600">+{formatNumber(activity.points)}</Text>
+                                            </HStack>
+                                          </Flex>
+                                        ))
+                                      ) : (
+                                        <Text fontSize="sm" color="text.secondary">No activities in this category yet</Text>
+                                      )}
+                                    </Stack>
+                                  </Collapse>
+                                </Box>
+                              ))}
+                              <Text fontSize="sm" color="text.secondary">Page {breakdownPage} of {Math.max(1, Math.ceil(userBreakdown.length / 4))}</Text>
+                            </Stack>
+                          </Grid>
+                        </Box>
                       </Grid>
-                      <SimpleGrid columns={{ base: 2, md: 3, lg: 5 }} spacing={4}>
+                      <SimpleGrid columns={{ base: 2, md: 2, lg: 4 }} spacing={4}>
                         <Box
                           p={5}
                           bg="white"
@@ -1183,25 +1351,6 @@ export const LeadershipBoardPage: React.FC = () => {
                           border="1px solid"
                           borderColor="gray.100"
                           boxShadow="0 2px 8px rgba(0,0,0,0.04)"
-                          _hover={{ transform: 'translateY(-2px)', boxShadow: '0 8px 25px rgba(234, 179, 8, 0.15)', borderColor: 'yellow.300' }}
-                          transition="all 0.3s ease"
-                          position="relative"
-                          overflow="hidden"
-                        >
-                          <Box position="absolute" top={0} right={0} w="60px" h="60px" bg="yellow.50" borderRadius="0 0 0 100%" />
-                          <Flex w={10} h={10} bg="linear-gradient(135deg, #eab308 0%, #ca8a04 100%)" borderRadius="xl" align="center" justify="center" mb={3} boxShadow="0 4px 12px rgba(234, 179, 8, 0.3)">
-                            <Icon as={Award} boxSize={5} color="white" />
-                          </Flex>
-                          <Text fontSize="xs" color="gray.500" fontWeight="semibold" textTransform="uppercase" letterSpacing="wide" mb={1}>Badges</Text>
-                          <Text fontWeight="bold" fontSize="2xl" color="gray.800">{segmentStats.badgesEarned}</Text>
-                        </Box>
-                        <Box
-                          p={5}
-                          bg="white"
-                          borderRadius="xl"
-                          border="1px solid"
-                          borderColor="gray.100"
-                          boxShadow="0 2px 8px rgba(0,0,0,0.04)"
                           _hover={{ transform: 'translateY(-2px)', boxShadow: '0 8px 25px rgba(59, 130, 246, 0.15)', borderColor: 'blue.200' }}
                           transition="all 0.3s ease"
                           position="relative"
@@ -1219,99 +1368,6 @@ export const LeadershipBoardPage: React.FC = () => {
                   </CardBody>
                 </Card>
 
-                <Card bg="white" border="1px solid" borderColor="gray.100" boxShadow="sm" borderRadius="xl">
-                  <CardHeader pb={2}>
-                    <HStack justify="space-between">
-                      <Text fontWeight="bold">Personal View</Text>
-                      <Badge colorScheme="success">Private Controls</Badge>
-                    </HStack>
-                  </CardHeader>
-                  <CardBody>
-                    <VStack align="stretch" spacing={4}>
-                      <Stack direction={{ base: 'column', sm: 'row' }} spacing={4} align={{ base: 'flex-start', sm: 'center' }}>
-                        <Avatar size="lg" name={profile?.fullName} src={profile?.avatarUrl} />
-                        <Box>
-                          <Text fontWeight="bold">{profile?.fullName || 'You'}</Text>
-                          <Text color="text.secondary">
-                            {formatNumber(displayTotalPoints)} pts
-                          </Text>
-                        </Box>
-                      </Stack>
-                      <SimpleGrid columns={{ base: 1, sm: 2 }} spacing={3}>
-                        <Box p={3} border="1px solid" borderColor="gray.100" borderRadius="xl">
-                          <Text fontSize="xs" color="text.secondary">Total Points</Text>
-                          <Text fontWeight="bold" animation={pointsPulseStyle}>
-                            {formatNumber(displayTotalPoints)}
-                          </Text>
-                        </Box>
-                        <Box p={3} border="1px solid" borderColor="gray.100" borderRadius="xl">
-                          <Text fontSize="xs" color="text.secondary">Featured Badges</Text>
-                          {badgesLoading ? (
-                            <HStack spacing={2} mt={2}>
-                              {Array.from({ length: 3 }).map((_, index) => (
-                                <SkeletonCircle key={index} size="8" />
-                              ))}
-                            </HStack>
-                          ) : badgesError ? (
-                            <Text fontSize="xs" color="text.secondary" mt={2}>
-                              {badgesError}
-                            </Text>
-                          ) : featuredBadges.length ? (
-                            <HStack spacing={2} mt={2}>
-                              {featuredBadges.map((badge) => {
-                                const earnedAtLabel = badge.earnedAt
-                                  ? new Date(badge.earnedAt).toLocaleDateString()
-                                  : 'Date unavailable'
-                                return (
-                                  <Tooltip
-                                    key={badge.id}
-                                    label={`${badge.name} • ${earnedAtLabel}`}
-                                    hasArrow
-                                  >
-                                    <Avatar
-                                      size="xs"
-                                      name={badge.name}
-                                      src={badge.iconUrl}
-                                      bg={badge.color ?? 'gray.500'}
-                                      color="white"
-                                      icon={<Icon as={Award} />}
-                                      border="1px solid"
-                                      borderColor="gray.100"
-                                    />
-                                  </Tooltip>
-                                )
-                              })}
-                            </HStack>
-                          ) : (
-                            <VStack align="start" spacing={2} mt={2}>
-                              <HStack spacing={2}>
-                                {Array.from({ length: 3 }).map((_, index) => (
-                                  <Avatar
-                                    key={index}
-                                    size="xs"
-                                    bg="surface.subtle"
-                                    icon={<Icon as={Lock} />}
-                                    color="text.muted"
-                                    border="1px dashed"
-                                    borderColor="gray.100"
-                                  />
-                                ))}
-                              </HStack>
-                            </VStack>
-                          )}
-                        </Box>
-                      </SimpleGrid>
-                      <HStack spacing={3} flexWrap="wrap">
-                        <Button bg="#350e6f" color="white" _hover={{ bg: '#4a1499' }} leftIcon={<Icon as={Sparkles} />} onClick={() => navigate('/app/impact')}>
-                          Earn your next badge
-                        </Button>
-                        <Button bg="#350e6f" color="white" _hover={{ bg: '#4a1499' }} leftIcon={<Icon as={Trophy} />} onClick={() => navigate('/app/badge-gallery')}>
-                          View badge roadmap
-                        </Button>
-                      </HStack>
-                    </VStack>
-                  </CardBody>
-                </Card>
               </Grid>
 
               {!isFreeContext && (
@@ -1416,8 +1472,8 @@ export const LeadershipBoardPage: React.FC = () => {
                           <Tr>
                             <Th color="gray.500" fontSize="xs" fontWeight="semibold" textTransform="uppercase" letterSpacing="wider" py={4}>Rank</Th>
                             <Th color="gray.500" fontSize="xs" fontWeight="semibold" textTransform="uppercase" letterSpacing="wider" py={4}>Member</Th>
-                            <Th color="gray.500" fontSize="xs" fontWeight="semibold" textTransform="uppercase" letterSpacing="wider" py={4}>Badges</Th>
-                            <Th color="gray.500" fontSize="xs" fontWeight="semibold" textTransform="uppercase" letterSpacing="wider" py={4}>Trend</Th>
+                            <Th color="gray.500" fontSize="xs" fontWeight="semibold" textTransform="uppercase" letterSpacing="wider" py={4}>Gap vs You</Th>
+                            <Th color="gray.500" fontSize="xs" fontWeight="semibold" textTransform="uppercase" letterSpacing="wider" py={4}>Vs Avg</Th>
                             <Th color="gray.500" fontSize="xs" fontWeight="semibold" textTransform="uppercase" letterSpacing="wider" py={4} isNumeric>Points</Th>
                           </Tr>
                         </Thead>
@@ -1483,21 +1539,29 @@ export const LeadershipBoardPage: React.FC = () => {
                                     </HStack>
                                   </Td>
                                   <Td>
-                                    <HStack spacing={1}>
-                                      {Array.from({ length: Math.min(row.badgeCount, 4) }).map((_, idx) => (
-                                        <Icon key={idx} as={Star} color="brand.primary" boxSize={4} />
-                                      ))}
-                                    </HStack>
+                                    {(() => {
+                                      const myPoints = userRow?.totalPoints ?? 0
+                                      const gap = row.totalPoints - myPoints
+                                      const isCurrentUserRow = isCurrentUser
+                                      return (
+                                        <Text
+                                          fontWeight="bold"
+                                          color={isCurrentUserRow ? 'green.500' : 'orange.500'}
+                                        >
+                                          {isCurrentUserRow ? '+0' : (gap >= 0 ? `+${formatNumber(gap)}` : `-${formatNumber(Math.abs(gap))}`)}
+                                        </Text>
+                                      )
+                                    })()}
                                   </Td>
                                   <Td>
                                     <HStack spacing={2}>
-                                      {row.activePoints >= cohortStats.avgActive ? (
+                                      {row.totalPoints >= cohortStats.avgTotal ? (
                                         <Icon as={TrendingUp} color="success.500" boxSize={4} />
                                       ) : (
                                         <Icon as={TrendingDown} color="danger.DEFAULT" boxSize={4} />
                                       )}
                                       <Text fontSize="xs" color="text.secondary">
-                                        {row.activePoints >= cohortStats.avgActive ? 'Above avg' : 'Below avg'}
+                                        {row.totalPoints >= cohortStats.avgTotal ? 'Above avg' : 'Below avg'}
                                       </Text>
                                     </HStack>
                                   </Td>
@@ -1539,203 +1603,7 @@ export const LeadershipBoardPage: React.FC = () => {
                 </Card>
               )}
 
-              {!isFreeContext && (
-                <Grid templateColumns={{ base: '1fr', lg: '1fr 1fr' }} gap={4}>
-                  <Card bg="white" border="1px solid" borderColor="gray.100" boxShadow="sm" borderRadius="xl">
-                    <CardHeader>
-                      <Text fontWeight="bold">Peer Progress</Text>
-                      <Text color="text.secondary">You're highlighted for quick comparison</Text>
-                    </CardHeader>
-                    <CardBody>
-                      <Table size="sm" color="text.primary">
-                        <Thead bg="white">
-                          <Tr>
-                            <Th color="text.muted">Rank</Th>
-                            <Th color="text.muted">Member</Th>
-                            <Th color="text.muted">Active Points</Th>
-                            <Th color="text.muted">Total</Th>
-                            <Th color="text.muted">Gap vs You</Th>
-                          </Tr>
-                        </Thead>
-                        <Tbody>
-                          {peerRows.map((row) => (
-                            <Tr
-                              key={row.user.id}
-                              bg={row.user.id === profile?.id ? 'tint.brandPrimary' : 'transparent'}
-                              _hover={{ bg: row.user.id === profile?.id ? 'tint.brandPrimary' : 'surface.subtle' }}
-                            >
-                              <Td>{row.rank}</Td>
-                              <Td>
-                                <HStack spacing={2}>
-                                  <Avatar size="xs" name={getDisplayName(row.user)} src={row.user.avatarUrl} />
-                                  <Text>{getDisplayName(row.user)}</Text>
-                                </HStack>
-                              </Td>
-                              <Td>{formatNumber(row.activePoints)}</Td>
-                              <Td>{formatNumber(row.totalPoints)}</Td>
-                              <Td color={row.delta >= 0 ? 'success.500' : 'danger.DEFAULT'}>
-                                {row.delta >= 0 ? '+' : ''}
-                                {formatNumber(row.delta)}
-                              </Td>
-                            </Tr>
-                          ))}
-                        </Tbody>
-                      </Table>
-                    </CardBody>
-                  </Card>
 
-                  <Card bg="white" border="1px solid" borderColor="gray.100" boxShadow="sm" borderRadius="xl">
-                    <CardHeader>
-                      <Text fontWeight="bold">Cohort Comparison</Text>
-                      <Text color="text.secondary">You're ahead of {aheadPercent}% of your cohort</Text>
-                    </CardHeader>
-                    <CardBody>
-                      <Stack spacing={4}>
-                        <Box>
-                          <HStack justify="space-between" mb={1}>
-                            <Text>Total Points</Text>
-                            <HStack spacing={2}>
-                              <Text fontWeight="semibold">{formatNumber(cohortStats.total)}</Text>
-                              <Text color="text.secondary" fontSize="sm">
-                                of {formatNumber(cohortStats.maxTotal)} top score
-                              </Text>
-                            </HStack>
-                          </HStack>
-                          <Progress
-                            value={(cohortStats.total / Math.max(cohortStats.maxTotal, 1)) * 100}
-                            colorScheme="primary"
-                            borderRadius="full"
-                          />
-                          <Text color="text.secondary" fontSize="xs" mt={1}>Cohort avg: {formatNumber(cohortStats.avgTotal)}</Text>
-                        </Box>
-                        <Box>
-                          <HStack justify="space-between" mb={1}>
-                            <Text>Active Points</Text>
-                            <HStack spacing={2}>
-                              <Text fontWeight="semibold">{formatNumber(cohortStats.active)}</Text>
-                              <Text color="text.secondary" fontSize="sm">
-                                of {formatNumber(cohortStats.maxActive)} top score
-                              </Text>
-                            </HStack>
-                          </HStack>
-                          <Progress
-                            value={(cohortStats.active / Math.max(cohortStats.maxActive, 1)) * 100}
-                            colorScheme="secondary"
-                            borderRadius="full"
-                          />
-                          <Text color="text.secondary" fontSize="xs" mt={1}>Cohort avg: {formatNumber(cohortStats.avgActive)}</Text>
-                        </Box>
-                      </Stack>
-                    </CardBody>
-                  </Card>
-                </Grid>
-              )}
-
-              <Card
-                id="points-breakdown"
-                bg="white"
-                border="1px solid"
-                borderColor="gray.100"
-                scrollMarginTop="120px"
-              >
-                  <CardHeader>
-                    <Flex justify="space-between" align="center">
-                      <Box>
-                        <Text fontWeight="bold">Your Points Breakdown</Text>
-                        <Text color="text.secondary">Personal insights across categories</Text>
-                      </Box>
-                      <HStack spacing={3}>
-                        <IconButton
-                          aria-label="Previous page"
-                          icon={<ArrowUpAZ />}
-                          variant="secondary"
-                          size="sm"
-                          onClick={() => setBreakdownPage((prev) => Math.max(1, prev - 1))}
-                        />
-                        <IconButton
-                          aria-label="Next page"
-                          icon={<ArrowDownAZ />}
-                          variant="secondary"
-                          size="sm"
-                          onClick={() => setBreakdownPage((prev) => prev + 1)}
-                        />
-                      </HStack>
-                    </Flex>
-                  </CardHeader>
-                  <CardBody>
-                    <Grid templateColumns={{ base: '1fr', md: '1fr 1fr' }} gap={4} alignItems="center">
-                      <Box h="260px">
-                        <ResponsiveContainer width="100%" height="100%">
-                          <PieChart>
-                            <Pie dataKey="value" data={userBreakdown} innerRadius={60} outerRadius={90} label>
-                              {userBreakdown.map((entry, index) => (
-                                <Cell key={`cell-${entry.name}`} fill={pointsColors[index % pointsColors.length]} />
-                              ))}
-                            </Pie>
-                          </PieChart>
-                        </ResponsiveContainer>
-                      </Box>
-                      <Stack spacing={3}>
-                        {userBreakdown.slice((breakdownPage - 1) * 4, (breakdownPage - 1) * 4 + 4).map((category, idx) => (
-                          <Box key={category.name}>
-                            <Flex
-                              align="center"
-                              gap={3}
-                              cursor="pointer"
-                              onClick={() => toggleCategory(category.name)}
-                              _hover={{ bg: 'surface.subtle' }}
-                              borderRadius="md"
-                              p={1}
-                              mx={-1}
-                            >
-                              <Box w={2} h={12} borderRadius="full" bg={pointsColors[idx % pointsColors.length]} />
-                              <Box flex="1">
-                                <Flex justify="space-between" align="center">
-                                  <HStack>
-                                    <Text fontWeight="bold">{category.name}</Text>
-                                    <Icon
-                                      as={expandedCategories.has(category.name) ? ChevronDown : ChevronRight}
-                                      boxSize={4}
-                                      color="text.secondary"
-                                    />
-                                  </HStack>
-                                  <Text>{formatNumber(category.value)} pts</Text>
-                                </Flex>
-                                <Progress value={category.percent} colorScheme="primary" borderRadius="full" />
-                                <Text fontSize="xs" color="text.secondary">{category.percent}% of active points</Text>
-                              </Box>
-                            </Flex>
-                            <Collapse in={expandedCategories.has(category.name)} animateOpacity>
-                              <Stack pl={6} spacing={2} mt={2} mb={2}>
-                                {activityHistoryLoading ? (
-                                  <Skeleton height="20px" />
-                                ) : activityHistoryByCategory[category.name]?.length ? (
-                                  activityHistoryByCategory[category.name].map((activity) => (
-                                    <Flex key={activity.id} justify="space-between" align="center" fontSize="sm">
-                                      <HStack spacing={2}>
-                                        <Icon as={CheckCircle} color="success.500" boxSize={3} />
-                                        <Text>{activity.activityTitle}</Text>
-                                      </HStack>
-                                      <HStack spacing={4}>
-                                        <Text color="text.secondary" fontSize="xs">
-                                          {format(activity.createdAt, 'MMM d')}
-                                        </Text>
-                                        <Text fontWeight="medium" color="success.600">+{formatNumber(activity.points)}</Text>
-                                      </HStack>
-                                    </Flex>
-                                  ))
-                                ) : (
-                                  <Text fontSize="sm" color="text.secondary">No activities in this category yet</Text>
-                                )}
-                              </Stack>
-                            </Collapse>
-                          </Box>
-                        ))}
-                        <Text fontSize="sm" color="text.secondary">Page {breakdownPage} of {Math.max(1, Math.ceil(userBreakdown.length / 4))}</Text>
-                      </Stack>
-                    </Grid>
-                  </CardBody>
-                </Card>
 
             </Stack>
           </TabPanel>

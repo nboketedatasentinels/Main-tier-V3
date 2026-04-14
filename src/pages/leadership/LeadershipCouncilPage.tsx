@@ -468,53 +468,62 @@ export const LeadershipCouncilPage: React.FC = () => {
 
   return (
     <Stack spacing={6}>
-      <Card bgGradient="linear(to-r, tint.brandPrimary, surface.default)" border="1px solid" borderColor="border.subtle">
-        <CardBody>
-          <Stack spacing={2}>
-            <Badge colorScheme="primary" width="fit-content" rounded="full" px={3} py={1} fontWeight="semibold">
-              Leadership Council
-            </Badge>
-            <Heading size="lg">Stay connected with the people supporting your transformation journey.</Heading>
-            {profile?.companyName && (
-              <HStack spacing={2} color="brand.primary" fontWeight="semibold">
-                <Icon as={Building2} size={20} />
-                <Text fontSize="lg">
-                  {profile.companyName}
-                  {profile.companyCode && ` (${profile.companyCode})`}
-                </Text>
+      <Card bgGradient="linear(to-r, #350e6f, #8b5a3c)" border="none" boxShadow="sm" borderRadius="xl" overflow="hidden">
+        <CardBody px={6} py={7}>
+          <Flex align="center" gap={6} direction={{ base: 'column', md: 'row' }}>
+            <Box flex={1} minW={0}>
+              <HStack spacing={2} mb={1}>
+                <Badge
+                  bg="whiteAlpha.300"
+                  color="white"
+                  borderRadius="full"
+                  px={2}
+                  py={0.5}
+                  fontSize="xs"
+                  fontWeight="semibold"
+                >
+                  Leadership Council
+                </Badge>
+                {profile?.companyName && (
+                  <HStack spacing={1}>
+                    <Icon as={Building2} boxSize={3} color="white" />
+                    <Text fontSize="xs" fontWeight="medium" color="white">
+                      {profile.companyName}
+                      {profile.companyCode && ` (${profile.companyCode})`}
+                    </Text>
+                  </HStack>
+                )}
               </HStack>
-            )}
-            <Text color="text.secondary">
-              Your dedicated mentor, ambassador, and transformation partner are highlighted below. Schedule sessions,
-              review upcoming meetings, and explore your leadership network.
-            </Text>
-            {showOrgDebug && (
-              <Stack spacing={1}>
-                <Text fontSize="xs" color="text.muted">
-                  Org ID: {organization.id ?? 'None'}
-                </Text>
-                <Text fontSize="xs" color="text.muted">
-                  Support assignments: {supportAssignmentStatus.loaded ? (supportAssignmentStatus.exists ? 'Loaded' : 'None') : 'Not checked'}
-                </Text>
-                <Text fontSize="xs" color="text.muted">
-                  Mentor source: {assignmentSources.mentor ?? 'None'}
-                </Text>
-                <Text fontSize="xs" color="text.muted">
-                  Ambassador source: {assignmentSources.ambassador ?? 'None'}
-                </Text>
-              </Stack>
-            )}
+              <Text fontWeight="bold" fontSize="lg" color="white">
+                Stay connected with the people supporting your transformation journey.
+              </Text>
+              <Text fontSize="sm" color="white">
+                Your mentor, ambassador, and transformation partner are highlighted below. Schedule sessions, review upcoming meetings, and explore your leadership network.
+              </Text>
+              {showOrgDebug && (
+                <HStack spacing={3} mt={1} flexWrap="wrap">
+                  <Text fontSize="xs" color="white">ID: {organization.id ?? '—'}</Text>
+                  <Text fontSize="xs" color="white">Assignments: {supportAssignmentStatus.loaded ? (supportAssignmentStatus.exists ? 'Loaded' : 'None') : '…'}</Text>
+                  <Text fontSize="xs" color="white">Mentor: {assignmentSources.mentor ?? '—'}</Text>
+                  <Text fontSize="xs" color="white">Ambassador: {assignmentSources.ambassador ?? '—'}</Text>
+                </HStack>
+              )}
+            </Box>
             <Button
               size="sm"
-              alignSelf="flex-start"
-              leftIcon={<RefreshCcw size={16} />}
-              variant="outline"
+              flexShrink={0}
+              leftIcon={<RefreshCcw size={14} />}
+              bg="whiteAlpha.200"
+              color="white"
+              border="1px solid"
+              borderColor="whiteAlpha.300"
+              _hover={{ bg: 'whiteAlpha.300' }}
               onClick={retryAssignments}
               isLoading={assignmentsLoading}
             >
-              Refresh assignments
+              Refresh
             </Button>
-          </Stack>
+          </Flex>
         </CardBody>
       </Card>
 
