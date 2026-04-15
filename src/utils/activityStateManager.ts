@@ -4,6 +4,7 @@ export type ActivityAvailabilityState = 'available' | 'locked' | 'exhausted' | '
 export type ActivityAvailabilityReason =
   | 'scheduled'
   | 'cooldown'
+  | 'weekly_cooldown'
   | 'max_per_week'
   | 'max_per_window'
   | 'missing_mentor'
@@ -31,6 +32,7 @@ export type ActivityAvailabilityContext = {
   windowCount: number
   totalCompletedAllTime: number
   lastCompletedWeek?: number
+  lastCompletedTimestamp?: number
   hasMentor?: boolean
   hasAmbassador?: boolean
 }
@@ -39,6 +41,7 @@ export type ActivityAvailabilityResult = {
   state: ActivityAvailabilityState
   reason?: ActivityAvailabilityReason
   cooldownRemainingWeeks?: number
+  cooldownUntil?: Date
   isScheduledForWeek: boolean
 }
 
@@ -103,6 +106,22 @@ export const calculateActivityAvailability = (
     const maxTotal = policy.maxTotal ?? 1
     if (totalCompletedAllTime >= maxTotal) {
       return { state: 'permanently_exhausted', reason: 'one_time_used', isScheduledForWeek: true }
+    }
+  }
+
+  // 2b. Weekly cooldown for multi-attempt activities (7 calendar days between submissions)
+  const isMultiAttempt = policy?.type !== 'one_time' && totalCompletedAllTime > 0
+  if (isMultiAttempt && context.lastCompletedTimestamp) {
+    const SEVEN_DAYS_MS = 7 * 24 * 60 * 60 * 1000
+    const msSinceLast = Date.now() - context.lastCompletedTimestamp
+    if (msSinceLast < SEVEN_DAYS_MS) {
+      const cooldownUntil = new Date(context.lastCompletedTimestamp + SEVEN_DAYS_MS)
+      return {
+        state: 'locked',
+        reason: 'weekly_cooldown',
+        cooldownUntil,
+        isScheduledForWeek: true,
+      }
     }
   }
 

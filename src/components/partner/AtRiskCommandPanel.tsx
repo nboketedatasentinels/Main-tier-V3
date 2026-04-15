@@ -45,6 +45,7 @@ import {
 import { EngagementChart } from '@/components/admin/EngagementChart'
 import { AtRiskInterventionFlow } from '@/components/partner/AtRiskInterventionFlow'
 import SendNudgeModal from '@/components/partner/nudges/SendNudgeModal'
+import SendQuickNudgeModal from '@/components/partner/nudges/SendQuickNudgeModal'
 import { createNudgeTemplateRecord, getActiveNudgeTemplates } from '@/services/nudgeService'
 import { useAuth } from '@/hooks/useAuth'
 import type { PartnerUser } from '@/hooks/usePartnerDashboardData'
@@ -210,12 +211,13 @@ export const AtRiskCommandPanel: React.FC<AtRiskCommandPanelProps> = ({
   onAction,
   onSendNudges,
 }) => {
-  const { isSuperAdmin } = useAuth()
+  const { isSuperAdmin, user, profile } = useAuth()
   const toast = useToast()
   const [activeTemplates, setActiveTemplates] = useState<NudgeTemplateRecord[]>([])
   const [templateLoadError, setTemplateLoadError] = useState<string | null>(null)
   const [templateLoading, setTemplateLoading] = useState(false)
   const [selectedCaseId, setSelectedCaseId] = useState<string | null>(null)
+  const [quickNudgeUser, setQuickNudgeUser] = useState<PartnerUser | null>(null)
   const [queueLoading, setQueueLoading] = useState(false)
   const [filters, setFilters] = useState(defaultFilters)
   const [draftFilters, setDraftFilters] = useState(defaultFilters)
@@ -1037,20 +1039,15 @@ export const AtRiskCommandPanel: React.FC<AtRiskCommandPanelProps> = ({
                       />
                     </Th>
                     <Th onClick={() => toggleSort('name')} cursor="pointer">Learner Name</Th>
-                    <Th onClick={() => toggleSort('risk')} cursor="pointer">Risk Score</Th>
                     <Th>Points Earned</Th>
                     <Th onClick={() => toggleSort('inactive')} cursor="pointer">Days Inactive</Th>
                     <Th onClick={() => toggleSort('lastActivity')} cursor="pointer">Last Activity</Th>
-                    <Th onClick={() => toggleSort('status')} cursor="pointer">Status</Th>
                     <Th>Actions</Th>
                   </Tr>
                 </Thead>
                 <Tbody>
                   {filteredLearners.map(user => {
-                    const score = buildRiskScore(user)
-                    const color = riskScoreColor(score)
                     const inactiveDays = daysSince(user.lastActiveAt || user.lastActive)
-                    const sparkline = buildSparkline(user)
 
                     return (
                       <Tr key={user.id} _hover={{ bg: 'brand.accent' }}>
@@ -1067,16 +1064,6 @@ export const AtRiskCommandPanel: React.FC<AtRiskCommandPanelProps> = ({
                           </VStack>
                         </Td>
                         <Td>
-                          <HStack spacing={2}>
-                            <Badge colorScheme={color}>{score}</Badge>
-                            <HStack spacing={1} align="flex-end">
-                              {sparkline.map((value, index) => (
-                                <Box key={`${user.id}-${index}`} w="6px" h={`${Math.round(value / 6)}px`} bg={`${color}.400`} borderRadius="full" />
-                              ))}
-                            </HStack>
-                          </HStack>
-                        </Td>
-                        <Td>
                           <Text fontWeight="medium">
                             {(user.totalPoints ?? 0).toLocaleString()}
                           </Text>
@@ -1084,15 +1071,12 @@ export const AtRiskCommandPanel: React.FC<AtRiskCommandPanelProps> = ({
                         <Td>{inactiveDays ?? '—'}</Td>
                         <Td>{formatDate(user.lastActiveAt || user.lastActive)}</Td>
                         <Td>
-                          <Badge colorScheme={user.status === 'Paused' ? 'orange' : 'green'}>{user.status}</Badge>
-                        </Td>
-                        <Td>
                           <HStack spacing={2}>
                             <Button size="xs" variant="outline">View Profile</Button>
                             <Button
                               size="xs"
                               colorScheme="purple"
-                              onClick={() => handleOpenNudgeComposer([user.id])}
+                              onClick={() => setQuickNudgeUser(user)}
                             >
                               Send Nudge
                             </Button>
@@ -1644,6 +1628,15 @@ export const AtRiskCommandPanel: React.FC<AtRiskCommandPanelProps> = ({
         templates={activeTemplates}
         onConfirm={handleSendNudges}
       />
+
+      {quickNudgeUser && (
+        <SendQuickNudgeModal
+          isOpen={Boolean(quickNudgeUser)}
+          onClose={() => setQuickNudgeUser(null)}
+          user={quickNudgeUser}
+          adminId={profile?.id ?? user?.uid ?? ''}
+        />
+      )}
 
     </Stack>
   )

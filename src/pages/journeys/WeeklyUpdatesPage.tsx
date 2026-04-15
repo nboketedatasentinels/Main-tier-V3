@@ -126,6 +126,7 @@ const statusLabelMap: Record<ActivityStatus, string> = {
 const availabilityReasonLabels: Record<ActivityAvailabilityReason, string> = {
   scheduled: 'Scheduled later this window',
   cooldown: 'Cooldown in effect',
+  weekly_cooldown: 'Opens again in a few days',
   max_per_week: 'Weekly limit reached',
   max_per_window: 'Cycle limit reached',
   missing_mentor: 'Mentor required',
@@ -387,13 +388,19 @@ const WeeklyChecklistPage: React.FC = () => {
         return acc;
       }, {});
 
-      const totalCompletedAllTime = globalLedgerSnapshot.docs.reduce<Record<string, number>>((acc, docItem) => {
-        const rawActivityId = docItem.data().activityId as string | undefined;
+      const totalCompletedAllTime: Record<string, number> = {};
+      const lastCompletedTimestamp: Record<string, number> = {};
+      globalLedgerSnapshot.docs.forEach(docItem => {
+        const data = docItem.data();
+        const rawActivityId = data.activityId as string | undefined;
         const activityId = rawActivityId ? (resolveCanonicalActivityId(rawActivityId) ?? rawActivityId) : undefined;
-        if (!activityId) return acc;
-        acc[activityId] = (acc[activityId] ?? 0) + 1;
-        return acc;
-      }, {});
+        if (!activityId) return;
+        totalCompletedAllTime[activityId] = (totalCompletedAllTime[activityId] ?? 0) + 1;
+        const ts = data.createdAt?.toMillis?.() ?? (data.createdAt?.seconds ? data.createdAt.seconds * 1000 : 0);
+        if (ts > 0) {
+          lastCompletedTimestamp[activityId] = Math.max(lastCompletedTimestamp[activityId] ?? 0, ts);
+        }
+      });
 
       const lastCompletionWeekByActivity = windowLedgerSnapshot.docs.reduce<Record<string, number>>((acc, docItem) => {
         const rawActivityId = docItem.data().activityId as string | undefined;
@@ -415,6 +422,7 @@ const WeeklyChecklistPage: React.FC = () => {
             windowCount: windowActivityCounts[def.id] ?? 0,
             totalCompletedAllTime: totalCompletedAllTime[def.id] ?? 0,
             lastCompletedWeek: lastCompletionWeekByActivity[def.id],
+            lastCompletedTimestamp: lastCompletedTimestamp[def.id],
             hasMentor,
             hasAmbassador,
           }),
@@ -674,37 +682,6 @@ const WeeklyChecklistPage: React.FC = () => {
     return selectedWeek > journey.currentWeek;
   }, [journey, selectedWeek]);
 
-  const progressStatus = useMemo(() => {
-    if (isParallelWindowTrackingEnabled) {
-      if (!windowProgressData) return { color: 'gray', label: 'Loading...', pct: 0 };
-      const { pointsEarned, windowTarget } = windowProgressData;
-      const pct = windowTarget > 0 ? Math.min(100, Math.round((pointsEarned / windowTarget) * 100)) : 0;
-
-      const statusConfig: Record<WindowProgressData['status'], { color: 'green' | 'yellow' | 'red' | 'blue' | 'teal'; label: string }> = {
-        on_track: { color: 'green', label: 'On Track' },
-        warning: { color: 'blue', label: 'Building momentum' },
-        alert: { color: 'teal', label: 'In motion' },
-        recovery: { color: 'blue', label: 'Recovery' },
-      };
-
-      const statusFromData = statusConfig[windowProgressData.status];
-      if (statusFromData) {
-        return { color: statusFromData.color, label: statusFromData.label, pct };
-      }
-
-      if (pct >= 100) return { color: 'green', label: 'On Track', pct };
-      if (pct >= 75) return { color: 'blue', label: 'Building momentum', pct };
-      return { color: 'teal', label: 'In motion', pct };
-    } else {
-      if (!weeklyProgress) return { color: 'gray', label: 'Loading...', pct: 0 };
-      const { pointsEarned, weeklyTarget } = weeklyProgress;
-      const pct = weeklyTarget > 0 ? Math.min(100, Math.round((pointsEarned / weeklyTarget) * 100)) : 0;
-      if (pct >= 100) return { color: 'green', label: 'On Track', pct };
-      if (pct >= 75) return { color: 'blue', label: 'Building momentum', pct };
-      return { color: 'teal', label: 'In motion', pct };
-    }
-  }, [isParallelWindowTrackingEnabled, weeklyProgress, windowProgressData]);
-
   const journeyProgress = useMemo(() => {
     if (!journey) {
       return { weeksAtTarget: 0, pct: 0, totalEarned: 0, totalTarget: 0 };
@@ -717,6 +694,74 @@ const WeeklyChecklistPage: React.FC = () => {
     ).length;
     return { weeksAtTarget, pct, totalEarned, totalTarget };
   }, [allWeeksProgress, journey, weeklyTarget]);
+
+  const passMarkPoints = useMemo(() => {
+    if (!journey) return 0;
+    return JOURNEY_META[journey.journeyType].passMarkPoints;
+  }, [journey]);
+
+  const journeyUrgency = useMemo(() => {
+    if (!journey) return null;
+    const totalWeeks = journey.programDurationWeeks;
+    const daysSinceStart = journeyStartDate ? differenceInDays(new Date(), journeyStartDate) : 0;
+    const elapsedWeeks = Math.min(totalWeeks, Math.max(0, daysSinceStart) / 7);
+    const timeProgress = totalWeeks > 0 ? elapsedWeeks / totalWeeks : 0;
+    const journeyEnded = timeProgress >= 1;
+    const expectedPointsNow = timeProgress * passMarkPoints;
+    const paceRatio = expectedPointsNow > 0 ? journeyProgress.totalEarned / expectedPointsNow : 1;
+    const deficit = Math.max(0, Math.round(expectedPointsNow - journeyProgress.totalEarned));
+    const weeksLeft = Math.max(0, Math.ceil(totalWeeks - elapsedWeeks));
+    const pointsNeeded = Math.max(0, passMarkPoints - journeyProgress.totalEarned);
+    const weeklyNeeded = weeksLeft > 0 ? Math.ceil(pointsNeeded / weeksLeft) : 0;
+
+    type UrgencyLevel = 'critical' | 'behind' | 'warning' | 'on_track';
+    let level: UrgencyLevel = 'on_track';
+    if (journeyEnded && journeyProgress.totalEarned < passMarkPoints) {
+      level = 'critical';
+    } else if (paceRatio < 0.4) {
+      level = 'critical';
+    } else if (paceRatio < 0.65) {
+      level = 'behind';
+    } else if (paceRatio < 0.85) {
+      level = 'warning';
+    }
+
+    return { level, deficit, journeyEnded, pointsNeeded, weeksLeft, weeklyNeeded };
+  }, [journey, journeyStartDate, journeyProgress.totalEarned, passMarkPoints]);
+
+  const progressStatus = useMemo(() => {
+    let pct = 0;
+
+    if (isParallelWindowTrackingEnabled) {
+      if (!windowProgressData) return { color: 'gray', label: 'Loading...', pct: 0 };
+      const { pointsEarned, windowTarget } = windowProgressData;
+      pct = windowTarget > 0 ? Math.min(100, Math.round((pointsEarned / windowTarget) * 100)) : 0;
+    } else {
+      if (!weeklyProgress) return { color: 'gray', label: 'Loading...', pct: 0 };
+      const { pointsEarned, weeklyTarget: wt } = weeklyProgress;
+      pct = wt > 0 ? Math.min(100, Math.round((pointsEarned / wt) * 100)) : 0;
+    }
+
+    // Journey-level urgency overrides cycle-level optimism
+    if (journeyUrgency?.journeyEnded) {
+      return { color: 'red', label: 'Journey ended', pct };
+    }
+    if (journeyUrgency?.level === 'critical') {
+      return { color: 'red', label: 'Behind pace', pct };
+    }
+    if (journeyUrgency?.level === 'behind') {
+      if (pct >= 100) return { color: 'orange', label: 'Catch-up needed', pct };
+      return { color: 'orange', label: 'Falling behind', pct };
+    }
+    if (journeyUrgency?.level === 'warning') {
+      if (pct >= 100) return { color: 'green', label: 'On Track', pct };
+      return { color: 'yellow', label: 'Needs attention', pct };
+    }
+
+    if (pct >= 100) return { color: 'green', label: 'On Track', pct };
+    if (pct >= 75) return { color: 'blue', label: 'Almost there', pct };
+    return { color: 'teal', label: 'In progress', pct };
+  }, [isParallelWindowTrackingEnabled, weeklyProgress, windowProgressData, journeyUrgency]);
 
   const journeyEndDate = useMemo(() => {
     if (!journeyStartDate || !journey) return null;
@@ -838,6 +883,12 @@ const WeeklyChecklistPage: React.FC = () => {
     if (activity.availability.state === 'available') return null
     if (activity.availability.reason === 'scheduled') {
       return `Available in week ${activity.week} of this window.`
+    }
+    if (activity.availability.reason === 'weekly_cooldown' && activity.availability.cooldownUntil) {
+      const unlockDate = activity.availability.cooldownUntil
+      const daysLeft = Math.max(1, Math.ceil((unlockDate.getTime() - Date.now()) / (1000 * 60 * 60 * 24)))
+      const dateLabel = unlockDate.toLocaleDateString(undefined, { month: 'short', day: 'numeric' })
+      return `Opens again on ${dateLabel} (${daysLeft} day${daysLeft === 1 ? '' : 's'}).`
     }
     if (activity.availability.reason === 'cooldown' && activity.availability.cooldownRemainingWeeks) {
       return `Available in ${activity.availability.cooldownRemainingWeeks} week(s).`
@@ -1056,19 +1107,48 @@ const WeeklyChecklistPage: React.FC = () => {
   )
 
   const renderWeekSummary = () => (
-    <Flex align="center" justify="space-between" wrap="wrap" gap={3}>
-      <Stack spacing={0}>
-        <Heading size="lg" color="text.primary">
-          {weekDayLabel} of {journey?.programDurationWeeks ?? 6}
-        </Heading>
-        <Text color="text.muted" fontSize="sm">
-          Cycle {windowProgress.windowNumber}
-        </Text>
-      </Stack>
-      <Tag colorScheme={progressStatus.color} size="lg" px={4} py={2}>
-        {progressStatus.label}
-      </Tag>
-    </Flex>
+    <Stack spacing={3}>
+      <Flex align="center" justify="space-between" wrap="wrap" gap={3}>
+        <Stack spacing={0}>
+          <Heading size="lg" color="text.primary">
+            {weekDayLabel} of {journey?.programDurationWeeks ?? 6}
+          </Heading>
+          <Text color="text.muted" fontSize="sm">
+            Cycle {windowProgress.windowNumber}
+          </Text>
+        </Stack>
+        <Tag colorScheme={progressStatus.color} size="lg" px={4} py={2}>
+          {progressStatus.label}
+        </Tag>
+      </Flex>
+
+      {/* Journey urgency banner */}
+      {journeyUrgency && journeyUrgency.level !== 'on_track' && (
+        <Alert
+          status={journeyUrgency.level === 'critical' ? 'error' : 'warning'}
+          borderRadius="md"
+          variant="left-accent"
+        >
+          <AlertIcon />
+          <Box flex="1">
+            <Text fontWeight="semibold" fontSize="sm">
+              {journeyUrgency.journeyEnded
+                ? 'Your journey has ended'
+                : journeyUrgency.level === 'critical'
+                  ? 'You are significantly behind'
+                  : journeyUrgency.level === 'behind'
+                    ? 'You are falling behind pace'
+                    : 'You are slightly off pace'}
+            </Text>
+            <Text fontSize="xs" color="text.secondary">
+              {journeyUrgency.journeyEnded
+                ? `You earned ${journeyProgress.totalEarned.toLocaleString()} of the ${passMarkPoints.toLocaleString()} points required to pass (${journeyUrgency.pointsNeeded.toLocaleString()} short).`
+                : `${journeyUrgency.deficit.toLocaleString()} points behind expected pace.${journeyUrgency.weeksLeft > 0 ? ` You need ~${journeyUrgency.weeklyNeeded.toLocaleString()} pts/week across ${journeyUrgency.weeksLeft} remaining week${journeyUrgency.weeksLeft === 1 ? '' : 's'} to pass.` : ''}`}
+            </Text>
+          </Box>
+        </Alert>
+      )}
+    </Stack>
   )
 
   if (!profile && !user) {
@@ -1150,7 +1230,7 @@ const WeeklyChecklistPage: React.FC = () => {
               <Stack spacing={4}>
                 <Stack spacing={2}>
                   <Flex justify="space-between" align="baseline">
-                    <Text color="text.primary" fontWeight="bold" fontSize="2xl">
+                    <Text color={journeyUrgency?.level === 'critical' ? 'red.600' : 'text.primary'} fontWeight="bold" fontSize="2xl">
                       {windowProgress.earned.toLocaleString()}
                     </Text>
                     <Text color="text.muted" fontSize="sm">
@@ -1160,15 +1240,41 @@ const WeeklyChecklistPage: React.FC = () => {
                   <Progress value={progressStatus.pct} colorScheme={progressStatus.color} borderRadius="full" size="lg" />
                 </Stack>
                 <Text color="text.secondary" fontSize="sm">
-                  {progressStatus.pct >= 100
-                    ? 'Target reached! Keep building momentum.'
-                    : progressStatus.pct >= 75
-                      ? 'Almost there. Close remaining activities.'
-                      : 'Complete activities to reach your target.'}
+                  {journeyUrgency?.journeyEnded
+                    ? 'Your journey has ended. Contact your partner for next steps.'
+                    : journeyUrgency?.level === 'critical'
+                      ? `You need ${journeyUrgency.pointsNeeded.toLocaleString()} more points to pass. Focus on high-value activities.`
+                      : journeyUrgency?.level === 'behind'
+                        ? `Aim for ~${journeyUrgency.weeklyNeeded.toLocaleString()} pts/week to get back on track.`
+                        : progressStatus.pct >= 100
+                          ? 'Target reached! Keep building momentum.'
+                          : progressStatus.pct >= 75
+                            ? 'Almost there. Close remaining activities.'
+                            : 'Complete activities to reach your target.'}
                 </Text>
+
+                {/* Journey-level pass progress */}
+                {passMarkPoints > 0 && (
+                  <Stack spacing={1}>
+                    <Flex justify="space-between" fontSize="xs" color="text.muted">
+                      <Text>Pass progress</Text>
+                      <Text>{Math.min(100, Math.round((journeyProgress.totalEarned / passMarkPoints) * 100))}%</Text>
+                    </Flex>
+                    <Progress
+                      value={Math.min(100, Math.round((journeyProgress.totalEarned / passMarkPoints) * 100))}
+                      colorScheme={journeyUrgency?.level === 'critical' ? 'red' : journeyUrgency?.level === 'behind' ? 'orange' : 'teal'}
+                      borderRadius="full"
+                      size="sm"
+                    />
+                    <Text fontSize="xs" color="text.muted">
+                      {journeyProgress.totalEarned.toLocaleString()} / {passMarkPoints.toLocaleString()} pts to pass
+                    </Text>
+                  </Stack>
+                )}
+
                 {firstIncompleteActivity && (
                   <Button
-                    colorScheme="primary"
+                    colorScheme={journeyUrgency?.level === 'critical' ? 'red' : journeyUrgency?.level === 'behind' ? 'orange' : 'primary'}
                     size="sm"
                     onClick={scrollToActivity}
                     w="full"

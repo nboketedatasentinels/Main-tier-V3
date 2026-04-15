@@ -966,7 +966,6 @@ export const usePartnerAdminData = (
                 progress.earned_points,
                 progress.required_points,
                 data.nudgeResponseScore,
-                // Pass journey context for 6W-specific at-risk logic
                 { journeyType: userJourneyType, totalPoints: userTotalPoints }
               )
 
@@ -976,22 +975,18 @@ export const usePartnerAdminData = (
                 ? Math.min(100, Math.round((weeklyEarned / weeklyRequirement) * 100))
                 : data.progressPercent || 0
 
-              // 6W journey special handling: Don't mark as 'critical' in weeks 1-4
-              const is6WInEarlyWeeks = userJourneyType === '6W' && currentWeek <= 4
-
+              // Map pace-ratio risk level to partner display categories
+              // Only critical/behind = at risk. Warning and above = positively evolving, not at risk.
               const riskStatus: PartnerRiskLevel | 'at_risk' =
-                riskResult.status === 'at_risk'
-                  ? 'at_risk'
-                  : progressPercent >= 95
-                    ? 'engaged'
-                    : progressPercent >= 80
+                riskResult.level === 'critical'
+                  ? 'critical'
+                  : riskResult.level === 'behind'
+                    ? 'at_risk'
+                    : riskResult.level === 'warning'
                       ? 'watch'
-                      : progressPercent >= 60
-                        ? 'concern'
-                        // 6W users in weeks 1-4: use 'watch' instead of 'critical'
-                        : is6WInEarlyWeeks
-                          ? 'watch'
-                          : 'critical'
+                      : progressPercent >= 95
+                        ? 'engaged'
+                        : 'watch'
 
               const riskReasons = [
                 ...(data.riskReasons || []),
@@ -1031,8 +1026,30 @@ export const usePartnerAdminData = (
                   : undefined,
                 progressPercent,
                 currentWeek,
-                status:
-                  ((data.accountStatus || data.status) as PartnerUser['status']) || 'Active',
+                status: (() => {
+                  // If explicitly paused in DB, respect that
+                  const dbStatus = (data.accountStatus || data.status) as string | undefined
+                  if (dbStatus === 'Paused' || dbStatus === 'paused') return 'Paused' as const
+
+                  // If onboarding is incomplete, mark as Onboarding
+                  const rawData = data as Record<string, unknown>
+                  if (rawData.onboardingComplete === false && !rawData.onboardingSkipped) return 'Onboarding' as const
+
+                  // Compute status from actual engagement data
+                  const hasAnyPoints = userTotalPoints > 0
+                  const hasLastActive = Boolean(normalizedLastActive)
+                  const daysSinceActive = normalizedLastActive
+                    ? Math.floor((Date.now() - new Date(normalizedLastActive).getTime()) / (1000 * 60 * 60 * 24))
+                    : null
+
+                  // No points AND no tracked activity → never engaged
+                  if (!hasAnyPoints && !hasLastActive) return 'Onboarding' as const
+
+                  // Inactive for 14+ days → Paused
+                  if (daysSinceActive !== null && daysSinceActive >= 14) return 'Paused' as const
+
+                  return 'Active' as const
+                })(),
                 lastActive: normalizedLastActive,
                 riskStatus,
                 weeklyEarned,

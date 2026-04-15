@@ -125,7 +125,7 @@ const getWeekAvailabilityStatus = (params: {
 
   const { startDate, endDate } = getWeekDateRange(cohortStartDate, weekIndex, weeksPerBlock)
   if (currentDate < startDate) return 'locked'
-  if (currentDate >= endDate) return 'completed'
+  if (currentDate >= endDate) return 'past'
   return 'current'
 }
 
@@ -755,7 +755,9 @@ const OrganizationCoursesPage: React.FC<{ userId?: string | null; profile: UserP
                     ? 'green'
                     : entry.availability === 'completed'
                       ? 'purple'
-                      : 'gray'
+                      : entry.availability === 'past'
+                        ? 'orange'
+                        : 'gray'
                 const statusLabel =
                   entry.availability === 'current'
                     ? isWeeklyTimeline
@@ -763,7 +765,9 @@ const OrganizationCoursesPage: React.FC<{ userId?: string | null; profile: UserP
                       : 'Current month'
                     : entry.availability === 'completed'
                       ? 'Completed'
-                      : 'Locked'
+                      : entry.availability === 'past'
+                        ? 'Ended'
+                        : 'Locked'
                 const hasCourse = Boolean(entry.course)
                 const isLoadingCourse = overallLoading && entry.courseId && !entry.course
                 const missingCourse = !overallLoading && entry.courseId && !entry.course
@@ -795,9 +799,11 @@ const OrganizationCoursesPage: React.FC<{ userId?: string | null; profile: UserP
                           as={
                             entry.availability === 'completed'
                               ? CheckCircle2
-                              : entry.availability === 'locked'
-                                ? Lock
-                                : Sparkles
+                              : entry.availability === 'past'
+                                ? Clock
+                                : entry.availability === 'locked'
+                                  ? Lock
+                                  : Sparkles
                           }
                         />
                         <Text fontSize="xs">{statusLabel}</Text>

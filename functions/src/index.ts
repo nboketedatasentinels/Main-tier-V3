@@ -24,3 +24,4 @@ export * from "./impact-api";
 export * from "./impact-sync-trigger";
 export * from "./at-risk-cron";
 export * from "./at-risk-api";
+export * from "./send-nudge-email";

@@ -49,11 +49,11 @@ export interface MonthlyCourseData {
   monthStatuses?: Array<{
     monthNumber: number
     courseId?: string
-    status: 'locked' | 'current' | 'completed'
+    status: 'locked' | 'current' | 'past' | 'completed'
   }>
 }
 
-export type MonthlyCourseStatusIndicator = 'locked' | 'current' | 'completed'
+export type MonthlyCourseStatusIndicator = 'locked' | 'current' | 'past' | 'completed'
 
 const normalizeDate = (value?: Timestamp | Date | null): Date | null => {
   if (!value) return null
@@ -124,7 +124,7 @@ const getMonthAvailabilityStatus = (params: {
   endDate.setMonth(endDate.getMonth() + monthIndex + 1)
 
   if (currentDate < startDate) return 'locked'
-  if (currentDate >= endDate) return 'completed'
+  if (currentDate >= endDate) return 'past'
   return 'current'
 }
 
@@ -194,16 +194,16 @@ export const buildMonthlyCourseState = async (
   if (monthIndex >= assignments.length) {
     const lastCourseDetails = await fetchCourseDetails(assignments[assignments.length - 1])
     return {
-      status: 'completed',
+      status: 'in_progress',
       course: lastCourseDetails || undefined,
       monthNumber: assignments.length,
       totalMonths,
       cohortStartDate: cohortStart,
-      message: 'You have completed all assigned courses for this program.',
+      message: 'All course windows have ended. Awaiting partner review.',
       monthStatuses: assignments.map((courseId, index) => ({
         monthNumber: index + 1,
         courseId: courseId || undefined,
-        status: 'completed',
+        status: 'past' as const,
       })),
     }
   }

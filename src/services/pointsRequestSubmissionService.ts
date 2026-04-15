@@ -21,8 +21,12 @@ export async function submitPointsVerificationRequestAtomic(params: {
   proofUrl: string
   notes?: string
   approvalType: ApprovalType
+  attemptNumber?: number
 }) {
-  const requestId = `${params.userId}__w${params.week}__${params.activityId}`
+  const baseId = `${params.userId}__w${params.week}__${params.activityId}`
+  const requestId = params.attemptNumber && params.attemptNumber > 1
+    ? `${baseId}__a${params.attemptNumber}`
+    : baseId
   const verificationRef = doc(db, 'points_verification_requests', requestId)
   const approvalRef = doc(db, 'approvals', requestId)
 

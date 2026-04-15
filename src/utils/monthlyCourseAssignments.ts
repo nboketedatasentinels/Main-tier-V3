@@ -160,7 +160,7 @@ export const getMonthDateRange = (cohortStartDate: Date, monthIndex: number) => 
   })
 }
 
-export type MonthlyCourseAvailability = 'locked' | 'current' | 'completed'
+export type MonthlyCourseAvailability = 'locked' | 'current' | 'past' | 'completed'
 
 export const getProgramSegmentAvailabilityStatus = (params: {
   cohortStartDate: Date | null
@@ -179,7 +179,7 @@ export const getProgramSegmentAvailabilityStatus = (params: {
     cadence,
   })
   if (currentDate < startDate) return 'locked'
-  if (currentDate >= endDate) return 'completed'
+  if (currentDate >= endDate) return 'past'
   return 'current'
 }
 

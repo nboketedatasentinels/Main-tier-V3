@@ -22,6 +22,8 @@ export const WeeklyChecklistLayout = ({ vm }: { vm: VM }) => {
         cyclePoints={vm.cyclePoints}
         cycleTarget={vm.cycleTarget}
         accumulatedPoints={vm.accumulatedPoints}
+        passMarkPoints={vm.passMarkPoints}
+        journeyUrgency={vm.journeyUrgency}
       />
 
       <ActivityList

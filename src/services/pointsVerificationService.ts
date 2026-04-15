@@ -13,7 +13,7 @@ import {
   where,
 } from 'firebase/firestore'
 import { db } from '@/services/firebase'
-import { awardChecklistPoints, reconcileUserPointsFromLedger } from './pointsService'
+import { awardChecklistPoints } from './pointsService'
 import { getActivityDefinitionById, resolveCanonicalActivityId } from '@/config/pointsConfig'
 import { createInAppNotification } from './notificationService'
 import { resolveJourneyType } from '@/utils/journeyType'
@@ -182,17 +182,10 @@ export const approvePointsVerificationRequest = async (params: {
     activityId: params.request.activity_id,
   })
   const canonicalActivityId = resolveCanonicalActivityId(params.request.activity_id) ?? params.request.activity_id
-  const ledgerRef = doc(
-    db,
-    'pointsLedger',
-    `${params.request.user_id}__w${params.request.week}__${activity?.id ?? params.request.activity_id}`,
-  )
 
   if (!activity) {
     throw new Error('Activity not found')
   }
-
-  const ledgerBeforeApproval = await getDoc(ledgerRef)
 
   const approverPayload = {
     status: 'approved',
@@ -211,18 +204,8 @@ export const approvePointsVerificationRequest = async (params: {
       weekNumber: params.request.week,
       activity,
       source: 'approval',
+      claimRef: params.request.id,
     })
-
-    const ledgerAfterApproval = await getDoc(ledgerRef)
-    if (!ledgerAfterApproval.exists()) {
-      throw new Error('Points ledger entry missing after approval')
-    }
-
-    // If ledger already existed, totals can drift over time due legacy/manual edits.
-    // Reconcile mirrors so approved requests always reflect in learner totals.
-    if (ledgerBeforeApproval.exists()) {
-      await reconcileUserPointsFromLedger(params.request.user_id)
-    }
   } catch (error) {
     console.error('[pointsVerificationService] Failed to award checklist points after approval:', error)
     try {

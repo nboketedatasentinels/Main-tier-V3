@@ -151,6 +151,48 @@ export const JourneyHeader = ({
     return { activeWeeks, passPct, totalEarned, passMarkPoints, maxPossiblePoints }
   }, [journeyMeta, passMarkResult?.adjustedThreshold, passMarkResult?.totalTarget, progress, journey])
 
+  // ── Urgency: compare actual points vs expected at this point in time ──
+  const urgency = useMemo(() => {
+    if (!journey || !journeyMeta) return null
+    const { totalEarned, passMarkPoints } = journeyProgress
+    const totalWeeks = journey.programDurationWeeks
+    const daysSinceStart = journeyStartDate ? differenceInDays(new Date(), journeyStartDate) : 0
+    const elapsedWeeks = Math.min(totalWeeks, daysSinceStart / 7)
+    const timeProgress = elapsedWeeks / totalWeeks // 0..1
+    const journeyEnded = timeProgress >= 1
+    const expectedPointsNow = timeProgress * passMarkPoints
+    const paceRatio = expectedPointsNow > 0 ? totalEarned / expectedPointsNow : 1
+    const deficit = Math.max(0, Math.round(expectedPointsNow - totalEarned))
+    const weeksLeft = Math.max(0, Math.ceil(totalWeeks - elapsedWeeks))
+    const pointsNeeded = Math.max(0, passMarkPoints - totalEarned)
+    const weeklyNeeded = weeksLeft > 0 ? Math.ceil(pointsNeeded / weeksLeft) : 0
+
+    type UrgencyLevel = 'critical' | 'behind' | 'warning' | 'on_track'
+    let level: UrgencyLevel = 'on_track'
+    let message = ''
+    let color = 'teal'
+
+    if (journeyEnded && totalEarned < passMarkPoints) {
+      level = 'critical'
+      message = `Your journey has ended. You earned ${totalEarned.toLocaleString()} of the ${passMarkPoints.toLocaleString()} points required to pass.`
+      color = 'red'
+    } else if (paceRatio < 0.4) {
+      level = 'critical'
+      message = `You're significantly behind — ${deficit.toLocaleString()} points below where you should be. You need ~${weeklyNeeded.toLocaleString()} pts/week to pass.`
+      color = 'red'
+    } else if (paceRatio < 0.65) {
+      level = 'behind'
+      message = `You're falling behind pace by ${deficit.toLocaleString()} points. Aim for ~${weeklyNeeded.toLocaleString()} pts/week to catch up.`
+      color = 'orange'
+    } else if (paceRatio < 0.85) {
+      level = 'warning'
+      message = `You're slightly behind — ${deficit.toLocaleString()} points off target. Stay consistent to close the gap.`
+      color = 'yellow'
+    }
+
+    return { level, message, color, deficit, paceRatio, journeyEnded, weeksLeft, weeklyNeeded, pointsNeeded }
+  }, [journey, journeyMeta, journeyProgress, journeyStartDate])
+
   const monthMeta = useCallback(
     (month: number): MonthMilestone => {
       if (!journey) {
@@ -246,13 +288,13 @@ export const JourneyHeader = ({
               <Text color="text.secondary" fontSize="sm">{overviewLabel}</Text>
             </HStack>
             <HStack spacing={1}>
-              <Text fontSize="lg" fontWeight="bold" color="teal.600">{journeyProgress.passPct}%</Text>
+              <Text fontSize="lg" fontWeight="bold" color={urgency?.level === 'critical' ? 'red.600' : urgency?.level === 'behind' ? 'orange.600' : urgency?.level === 'warning' ? 'yellow.700' : 'teal.600'}>{journeyProgress.passPct}%</Text>
               <Text fontSize="xs" color="text.muted">pass</Text>
             </HStack>
           </Flex>
 
           {/* Progress Bar */}
-          <Progress value={journeyProgress.passPct} colorScheme="teal" borderRadius="full" size="sm" />
+          <Progress value={journeyProgress.passPct} colorScheme={urgency?.level === 'critical' ? 'red' : urgency?.level === 'behind' ? 'orange' : urgency?.level === 'warning' ? 'yellow' : 'teal'} borderRadius="full" size="sm" />
 
           {/* Stats Grid */}
           <SimpleGrid columns={{ base: 2, md: 4 }} spacing={2}>
@@ -260,19 +302,45 @@ export const JourneyHeader = ({
               <Text fontSize="xs" color="text.muted" textTransform="uppercase">Total Weeks</Text>
               <Text fontSize="md" fontWeight="bold" color="text.primary">{journey.programDurationWeeks}</Text>
             </Box>
-            <Box py={2} px={3} bg="gray.50" borderRadius="md" borderLeftWidth="3px" borderLeftColor="green.400">
+            <Box py={2} px={3} bg={urgency && urgency.level !== 'on_track' && journeyProgress.activeWeeks < Math.floor(journey.programDurationWeeks * 0.5) ? 'red.50' : 'gray.50'} borderRadius="md" borderLeftWidth="3px" borderLeftColor={urgency && urgency.level !== 'on_track' && journeyProgress.activeWeeks < Math.floor(journey.programDurationWeeks * 0.5) ? 'red.400' : 'green.400'}>
               <Text fontSize="xs" color="text.muted" textTransform="uppercase">Active Weeks</Text>
-              <Text fontSize="md" fontWeight="bold" color="text.primary">{journeyProgress.activeWeeks}</Text>
+              <Text fontSize="md" fontWeight="bold" color={urgency && urgency.level !== 'on_track' && journeyProgress.activeWeeks < Math.floor(journey.programDurationWeeks * 0.5) ? 'red.600' : 'text.primary'}>{journeyProgress.activeWeeks}</Text>
             </Box>
-            <Box py={2} px={3} bg="gray.50" borderRadius="md" borderLeftWidth="3px" borderLeftColor="purple.400">
+            <Box py={2} px={3} bg={urgency?.level === 'critical' ? 'red.50' : urgency?.level === 'behind' ? 'orange.50' : 'gray.50'} borderRadius="md" borderLeftWidth="3px" borderLeftColor={urgency?.level === 'critical' ? 'red.400' : urgency?.level === 'behind' ? 'orange.400' : 'purple.400'}>
               <Text fontSize="xs" color="text.muted" textTransform="uppercase">Points Earned</Text>
-              <Text fontSize="md" fontWeight="bold" color="text.primary">{journeyProgress.totalEarned.toLocaleString()}</Text>
+              <Text fontSize="md" fontWeight="bold" color={urgency?.level === 'critical' ? 'red.600' : urgency?.level === 'behind' ? 'orange.600' : 'text.primary'}>{journeyProgress.totalEarned.toLocaleString()}</Text>
             </Box>
             <Box py={2} px={3} bg="gray.50" borderRadius="md" borderLeftWidth="3px" borderLeftColor="orange.400">
               <Text fontSize="xs" color="text.muted" textTransform="uppercase">Pass / Max</Text>
               <Text fontSize="md" fontWeight="bold" color="text.primary">{journeyProgress.passMarkPoints.toLocaleString()} / {journeyProgress.maxPossiblePoints.toLocaleString()}</Text>
             </Box>
           </SimpleGrid>
+
+          {/* Urgency Alert */}
+          {urgency && urgency.level !== 'on_track' && (
+            <Alert
+              status={urgency.level === 'critical' ? 'error' : 'warning'}
+              borderRadius="md"
+              variant="left-accent"
+              py={2}
+            >
+              <AlertIcon />
+              <Box flex="1">
+                <Text fontSize="sm" fontWeight="semibold" color={urgency.level === 'critical' ? 'red.800' : 'orange.800'}>
+                  {urgency.journeyEnded
+                    ? 'Journey ended — target not met'
+                    : urgency.level === 'critical'
+                      ? 'Significantly behind pace'
+                      : urgency.level === 'behind'
+                        ? 'Falling behind pace'
+                        : 'Slightly off pace'}
+                </Text>
+                <Text fontSize="xs" color={urgency.level === 'critical' ? 'red.700' : 'orange.700'}>
+                  {urgency.message}
+                </Text>
+              </Box>
+            </Alert>
+          )}
 
           {isOrgManagedJourney ? (
             <Alert status="info" borderRadius="md" variant="subtle" py={2}>

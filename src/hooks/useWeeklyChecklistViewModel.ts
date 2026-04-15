@@ -84,6 +84,7 @@ type LedgerRow = {
   activityId?: string
   weekNumber?: number
   monthNumber?: number
+  createdAt?: { toMillis?: () => number; seconds?: number } | null
 }
 
 function isAdminProfile(profile: { role?: string; userRole?: string } | null | undefined): boolean {
@@ -345,12 +346,14 @@ export function useWeeklyChecklistViewModel() {
     windowCounts: Record<string, number>
     totalCompletedAllTime: Record<string, number>
     lastCompletedWeekByActivity: Record<string, number>
+    lastCompletedTimestamp: Record<string, number>
   }>({
     weekCompleted: new Set(),
     weekCounts: {},
     windowCounts: {},
     totalCompletedAllTime: {},
     lastCompletedWeekByActivity: {},
+    lastCompletedTimestamp: {},
   })
   const [ledgerLoaded, setLedgerLoaded] = useState(false)
 
@@ -423,15 +426,22 @@ export function useWeeklyChecklistViewModel() {
     // Real-time listener for ALL-TIME completions (persisted data - critical for frequency display)
     const unsubGlobal = onSnapshot(globalQ, snap => {
       const totalCompletedAllTime: Record<string, number> = {}
+      const lastCompletedTimestamp: Record<string, number> = {}
       snap.docs.forEach(d => {
         const row = d.data() as LedgerRow
         if (!row.activityId) return
         const activityId = resolveCanonicalActivityId(row.activityId) ?? row.activityId
         totalCompletedAllTime[activityId] = (totalCompletedAllTime[activityId] ?? 0) + 1
+        // Track the most recent completion timestamp per activity
+        const ts = row.createdAt?.toMillis?.() ?? (row.createdAt?.seconds ? row.createdAt.seconds * 1000 : 0)
+        if (ts > 0) {
+          lastCompletedTimestamp[activityId] = Math.max(lastCompletedTimestamp[activityId] ?? 0, ts)
+        }
       })
       setLedgerCache(prev => ({
         ...prev,
         totalCompletedAllTime,
+        lastCompletedTimestamp,
       }))
     }, (e) => console.error('[ledgerCache] global listener failed', e))
 
@@ -473,6 +483,7 @@ export function useWeeklyChecklistViewModel() {
         windowCount: ledgerCache.windowCounts[def.id] ?? 0,
         totalCompletedAllTime: ledgerCache.totalCompletedAllTime[def.id] ?? 0,
         lastCompletedWeek: ledgerCache.lastCompletedWeekByActivity[def.id],
+        lastCompletedTimestamp: ledgerCache.lastCompletedTimestamp[def.id],
         hasMentor,
         hasAmbassador,
       })
@@ -758,6 +769,41 @@ export function useWeeklyChecklistViewModel() {
     () => allWeeksProgress.reduce((sum, week) => sum + (week.pointsEarned ?? 0), 0),
     [allWeeksProgress],
   )
+
+  const passMarkPoints = useMemo(() => {
+    if (!journey) return 0
+    return JOURNEY_META[journey.journeyType].passMarkPoints
+  }, [journey])
+
+  const journeyUrgency = useMemo(() => {
+    if (!journey) return null
+    const totalWeeks = journey.programDurationWeeks
+    const startDate = journey.journeyStartDate ? new Date(journey.journeyStartDate) : null
+    const daysSinceStart = startDate ? Math.max(0, (Date.now() - startDate.getTime()) / (1000 * 60 * 60 * 24)) : 0
+    const elapsedWeeks = Math.min(totalWeeks, daysSinceStart / 7)
+    const timeProgress = totalWeeks > 0 ? elapsedWeeks / totalWeeks : 0
+    const journeyEnded = timeProgress >= 1
+    const expectedPointsNow = timeProgress * passMarkPoints
+    const paceRatio = expectedPointsNow > 0 ? accumulatedPoints / expectedPointsNow : 1
+    const deficit = Math.max(0, Math.round(expectedPointsNow - accumulatedPoints))
+    const weeksLeft = Math.max(0, Math.ceil(totalWeeks - elapsedWeeks))
+    const pointsNeeded = Math.max(0, passMarkPoints - accumulatedPoints)
+    const weeklyNeeded = weeksLeft > 0 ? Math.ceil(pointsNeeded / weeksLeft) : 0
+
+    type UrgencyLevel = 'critical' | 'behind' | 'warning' | 'on_track'
+    let level: UrgencyLevel = 'on_track'
+    if (journeyEnded && accumulatedPoints < passMarkPoints) {
+      level = 'critical'
+    } else if (paceRatio < 0.4) {
+      level = 'critical'
+    } else if (paceRatio < 0.65) {
+      level = 'behind'
+    } else if (paceRatio < 0.85) {
+      level = 'warning'
+    }
+
+    return { level, deficit, journeyEnded, pointsNeeded, weeksLeft, weeklyNeeded }
+  }, [journey, accumulatedPoints, passMarkPoints])
 
   /* ------------------------------------------------------------------ */
   /* Admin-safe override policy                                           */
@@ -1105,6 +1151,7 @@ export function useWeeklyChecklistViewModel() {
         ? null
         : userOrganizationId
 
+      const attemptNumber = (activity.completedCount ?? 0) + 1
       await submitPointsVerificationRequestAtomic({
         userId: user.uid,
         organizationId: submissionOrganizationId,
@@ -1115,6 +1162,7 @@ export function useWeeklyChecklistViewModel() {
         proofUrl,
         notes: proofModal.notes?.trim(),
         approvalType: activity.approvalType,
+        attemptNumber,
       })
 
       await setActivityStatusLocal(activity.id, {
@@ -1197,6 +1245,8 @@ export function useWeeklyChecklistViewModel() {
     cycleTarget,
     cyclePoints,
     accumulatedPoints,
+    passMarkPoints,
+    journeyUrgency,
     loading,
     error,
     isAdmin,

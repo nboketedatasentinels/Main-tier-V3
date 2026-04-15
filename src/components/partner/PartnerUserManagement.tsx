@@ -569,7 +569,7 @@ export const PartnerUserManagement: React.FC<PartnerUserManagementProps> = ({
           </Td>
           <Td px={2} fontSize="sm">{user.currentWeek}</Td>
           <Td px={2}>
-            <Badge size="sm" fontSize="xs" colorScheme={user.status === 'Active' ? 'green' : 'yellow'}>{user.status}</Badge>
+            <Badge size="sm" fontSize="xs" colorScheme={user.status === 'Active' ? 'green' : user.status === 'Paused' ? 'orange' : user.status === 'Onboarding' ? 'blue' : 'yellow'}>{user.status}</Badge>
           </Td>
           <Td px={2}>
             <Text fontSize="xs" noOfLines={1}>{lastActiveLabel}</Text>

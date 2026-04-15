@@ -1,4 +1,5 @@
 import { differenceInCalendarDays } from 'date-fns'
+import { JOURNEY_META, type JourneyType } from '@/config/pointsConfig'
 
 export interface WeeklyPointsRecord {
   user_id?: string
@@ -46,84 +47,137 @@ export const mapWeeklyPointsToProgress = (
 }
 
 /**
- * Journey context for risk calculation
- * Used to apply 6-Week Power Journey specific at-risk logic
+ * Journey context for risk calculation.
+ * Uses pace-ratio: compare actual points earned vs expected points at this point in the journey.
  */
 export interface JourneyContext {
   journeyType: string | null
   totalPoints: number
+  programDurationWeeks?: number | null
 }
 
-// 6-Week journey constants
-const SIX_WEEK_PASS_MARK = 40000
-const SIX_WEEK_AT_RISK_THRESHOLD = 4 // At-risk starts at week 5 (> 4)
+export type RiskLevel = 'critical' | 'behind' | 'warning' | 'on_track'
 
+export interface RiskResult {
+  status: 'at_risk' | 'on_track'
+  level: RiskLevel
+  reason?: string
+  points_deficit?: number
+  paceRatio?: number
+}
+
+/**
+ * Calculates user risk status using pace-ratio:
+ *   paceRatio = totalEarned / expectedPointsAtThisTime
+ *
+ * Thresholds:
+ *   Journey ended + not passed → critical
+ *   paceRatio < 0.40           → critical (at_risk)
+ *   paceRatio < 0.65           → behind   (at_risk)
+ *   paceRatio < 0.85           → warning  (on_track — not at risk, just a heads up)
+ *   paceRatio >= 0.85          → on_track
+ *
+ * Grace period: first 20% of the journey (or first 2 weeks) → always on_track.
+ * This prevents false positives for users who just started.
+ */
 export const calculateUserRiskStatus = (
   currentWeek: number,
-  earnedPoints: Record<number, number>,
-  requiredPoints: Record<number, number>,
-  nudgeResponsivenessScore?: number,
+  _earnedPoints: Record<number, number>,
+  _requiredPoints: Record<number, number>,
+  _nudgeResponsivenessScore?: number,
   journeyContext?: JourneyContext,
-): { status: 'at_risk' | 'on_track'; reason?: string; points_deficit?: number } => {
-  // 6-Week Power Journey specific logic
-  if (journeyContext?.journeyType === '6W') {
-    // Weeks 1-4: NEVER flag as at_risk
-    if (currentWeek <= SIX_WEEK_AT_RISK_THRESHOLD) {
-      return {
-        status: 'on_track',
-        reason: `Week ${currentWeek}: At-risk evaluation starts at week 5`,
-      }
-    }
+): RiskResult => {
+  const journeyType = journeyContext?.journeyType as JourneyType | null
+  const totalEarned = journeyContext?.totalPoints ?? 0
 
-    // Week 5+: Flag as at_risk ONLY if below 40,000 points
-    if (journeyContext.totalPoints < SIX_WEEK_PASS_MARK) {
-      return {
-        status: 'at_risk',
-        reason: `Week ${currentWeek}: ${journeyContext.totalPoints.toLocaleString()} < ${SIX_WEEK_PASS_MARK.toLocaleString()} pass mark`,
-        points_deficit: SIX_WEEK_PASS_MARK - journeyContext.totalPoints,
-      }
-    }
+  // Resolve pass mark and total weeks from journey metadata
+  const meta = journeyType ? JOURNEY_META[journeyType] : null
+  const passMarkPoints = meta?.passMarkPoints ?? 0
+  const totalWeeks = journeyContext?.programDurationWeeks ?? meta?.weeks ?? 0
 
-    // Week 5+ with >= 40,000 points: on_track
+  // If we can't determine journey parameters, can't assess risk
+  if (!passMarkPoints || !totalWeeks) {
+    return { status: 'on_track', level: 'on_track' }
+  }
+
+  // Already passed — never at risk
+  if (totalEarned >= passMarkPoints) {
     return {
       status: 'on_track',
-      reason: `Passed: ${journeyContext.totalPoints.toLocaleString()} >= ${SIX_WEEK_PASS_MARK.toLocaleString()}`,
+      level: 'on_track',
+      reason: `Passed: ${totalEarned.toLocaleString()} >= ${passMarkPoints.toLocaleString()} pass mark`,
+      paceRatio: 1,
     }
   }
 
-  // Default logic for other journey types
-  const weekRequirement = requiredPoints[currentWeek] ?? 0
-  const weekEarned = earnedPoints[currentWeek] ?? 0
+  const elapsedWeeks = Math.min(totalWeeks, Math.max(0, currentWeek - 1))
+  const timeProgress = elapsedWeeks / totalWeeks
+  const journeyEnded = currentWeek > totalWeeks
 
-  const cumulativeRequirement = Object.keys(requiredPoints).reduce((total, weekKey) => {
-    const weekNumber = Number(weekKey)
-    if (weekNumber > currentWeek) return total
-    return total + (requiredPoints[weekNumber] ?? 0)
-  }, 0)
+  // Grace period: first 20% of the journey or first 2 weeks — don't flag anyone
+  const gracePeriodWeeks = Math.max(2, Math.ceil(totalWeeks * 0.2))
+  if (currentWeek <= gracePeriodWeeks && !journeyEnded) {
+    return {
+      status: 'on_track',
+      level: 'on_track',
+      reason: `Grace period (week ${currentWeek} of ${gracePeriodWeeks})`,
+      paceRatio: 1,
+    }
+  }
 
-  const cumulativeEarned = Object.keys(earnedPoints).reduce((total, weekKey) => {
-    const weekNumber = Number(weekKey)
-    if (weekNumber > currentWeek) return total
-    return total + (earnedPoints[weekNumber] ?? 0)
-  }, 0)
+  const expectedPointsNow = timeProgress * passMarkPoints
+  const paceRatio = expectedPointsNow > 0 ? totalEarned / expectedPointsNow : 1
+  const deficit = Math.max(0, Math.round(expectedPointsNow - totalEarned))
 
-  const weeklyRatio = weekRequirement > 0 ? weekEarned / weekRequirement : 1
-  const cumulativeRatio = cumulativeRequirement > 0 ? cumulativeEarned / cumulativeRequirement : 1
-  const baseRatio = Math.min(weeklyRatio, cumulativeRatio)
-  const responsivenessBoost = nudgeResponsivenessScore ? Math.min(0.1, nudgeResponsivenessScore * 0.05) : 0
-  const progressRatio = Math.min(1, baseRatio + responsivenessBoost)
-
-  if (progressRatio < 0.8) {
-    const deficit = Math.max(0, Math.round(weekRequirement * 0.8 - weekEarned))
+  // Journey ended without passing
+  if (journeyEnded) {
     return {
       status: 'at_risk',
-      reason: 'Behind on weekly points target',
-      points_deficit: deficit,
+      level: 'critical',
+      reason: `Journey ended: ${totalEarned.toLocaleString()} of ${passMarkPoints.toLocaleString()} required`,
+      points_deficit: passMarkPoints - totalEarned,
+      paceRatio,
     }
   }
 
+  // Significantly behind — critical
+  if (paceRatio < 0.4) {
+    return {
+      status: 'at_risk',
+      level: 'critical',
+      reason: `Significantly behind: ${deficit.toLocaleString()} pts below expected pace`,
+      points_deficit: deficit,
+      paceRatio,
+    }
+  }
+
+  // Falling behind — at risk
+  if (paceRatio < 0.65) {
+    return {
+      status: 'at_risk',
+      level: 'behind',
+      reason: `Falling behind: ${deficit.toLocaleString()} pts below expected pace`,
+      points_deficit: deficit,
+      paceRatio,
+    }
+  }
+
+  // Slightly off pace — warning, but NOT at_risk (positively evolving)
+  if (paceRatio < 0.85) {
+    return {
+      status: 'on_track',
+      level: 'warning',
+      reason: `Slightly off pace: ${deficit.toLocaleString()} pts below target`,
+      points_deficit: deficit,
+      paceRatio,
+    }
+  }
+
+  // On track
   return {
     status: 'on_track',
+    level: 'on_track',
+    paceRatio,
   }
 }
 

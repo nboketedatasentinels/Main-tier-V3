@@ -800,12 +800,14 @@ export const EditOrganizationModal: React.FC<EditOrganizationModalProps> = ({
                             ? (programCadence === 'biweekly' ? 'Current window' : 'Current month')
                             : availability === 'completed'
                               ? 'Completed'
-                              : 'Locked'
+                              : availability === 'past'
+                                ? 'Ended'
+                                : 'Locked'
                         return (
                           <Flex key={monthNumber} justify="space-between" align="center" p={2} bg="white" borderRadius="md">
                             <Text fontWeight="medium">{getProgramSegmentLabel(monthNumber, programCadence)}</Text>
                             <HStack spacing={2}>
-                              <Badge colorScheme={availability === 'current' ? 'green' : availability === 'completed' ? 'purple' : 'gray'}>
+                              <Badge colorScheme={availability === 'current' ? 'green' : availability === 'completed' ? 'purple' : availability === 'past' ? 'orange' : 'gray'}>
                                 {label}
                               </Badge>
                               <Text fontSize="sm" color="gray.600">

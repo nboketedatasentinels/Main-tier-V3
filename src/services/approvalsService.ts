@@ -118,6 +118,7 @@ export async function approveRequest(approvalId: string, reviewedBy: string): Pr
         weekNumber: request.week,
         activity: activity,
         source: 'approval',
+        claimRef: approvalId,
       });
     } catch (error) {
       console.error('[approvalsService] Failed to award checklist points after approval:', error);

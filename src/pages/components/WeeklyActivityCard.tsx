@@ -114,6 +114,12 @@ export const WeeklyActivityCard = ({
     if (lockedByWeek) return `Week ${selectedWeek} opens after Week ${currentWeek}.`
     if (lockedByInteraction) return 'Submission saved for this week. Need a change? Support can help.'
     if (lockedByPartnerIssue) return 'Your partner needs to issue this activity before you can complete it.'
+    if (activity.availability.reason === 'weekly_cooldown' && activity.availability.cooldownUntil) {
+      const unlockDate = activity.availability.cooldownUntil
+      const daysLeft = Math.max(1, Math.ceil((unlockDate.getTime() - Date.now()) / (1000 * 60 * 60 * 24)))
+      const dateLabel = unlockDate.toLocaleDateString(undefined, { month: 'short', day: 'numeric' })
+      return `Opens again on ${dateLabel} (${daysLeft} day${daysLeft === 1 ? '' : 's'}).`
+    }
     if (activity.availability.reason === 'scheduled' && selectedWeek < activity.week) {
       return `This activity unlocks in Week ${activity.week}.`
     }
