@@ -22,7 +22,6 @@ import {
   ModalHeader,
   ModalOverlay,
   Skeleton,
-  SkeletonCircle,
   Spinner,
   Progress,
   Select,
@@ -50,13 +49,11 @@ import {
   AlertCircle,
   ArrowDownAZ,
   ArrowUpAZ,
-  Award,
   CheckCircle,
   ChevronDown,
   ChevronUp,
   ChevronRight,
   Crown,
-  Lock,
   Medal,
   Sparkles,
   Star,
@@ -175,9 +172,9 @@ export const LeadershipBoardPage: React.FC = () => {
   const [virtualOffset, setVirtualOffset] = useState(0)
   const [leaderboardPage, setLeaderboardPage] = useState(1)
   const [breakdownPage, setBreakdownPage] = useState(1)
-  const [featuredBadges, setFeaturedBadges] = useState<FeaturedBadge[]>([])
-  const [badgesLoading, setBadgesLoading] = useState(false)
-  const [badgesError, setBadgesError] = useState<string | null>(null)
+  const [, setFeaturedBadges] = useState<FeaturedBadge[]>([])
+  const [, setBadgesLoading] = useState(false)
+  const [, setBadgesError] = useState<string | null>(null)
   const [pointsPulse, setPointsPulse] = useState(false)
   const [villageDetails, setVillageDetails] = useState<VillageSummary | null>(null)
   const [isVillageLoading, setIsVillageLoading] = useState(false)
@@ -548,7 +545,6 @@ export const LeadershipBoardPage: React.FC = () => {
     userRow,
     percentile,
     segmentSize,
-    peerRows,
     cohortStats,
     segmentStats,
   } = useLeaderboardMetrics({
@@ -565,8 +561,6 @@ export const LeadershipBoardPage: React.FC = () => {
 
   const isPointsReady = Boolean(profile) && profilesLoaded && transactionsLoaded
   const displayTotalPoints = userRow?.totalPoints ?? profile?.totalPoints ?? 0
-  const weeklyTarget = 200
-  const weeklyProgress = Math.min(100, (segmentStats.weeklyPoints / weeklyTarget) * 100)
   const percentileValue = leaderboardRows.length
     ? Math.round(((userRow?.rank ?? leaderboardRows.length) / leaderboardRows.length) * 100)
     : 100

@@ -194,14 +194,6 @@ const buildRiskScore = (user: PartnerUser) => {
   return Math.max(25, Math.min(100, Math.round(score)))
 }
 
-const buildSparkline = (user: PartnerUser) => {
-  const seed = user.weeklyRequired ? (user.weeklyEarned / user.weeklyRequired) * 100 : user.progressPercent
-  const normalized = Number.isFinite(seed) ? seed : 50
-  return Array.from({ length: 6 }).map((_, index) => {
-    const variance = (index - 2.5) * 6
-    return Math.max(8, Math.min(100, normalized + variance))
-  })
-}
 
 export const AtRiskCommandPanel: React.FC<AtRiskCommandPanelProps> = ({
   engagementTrend,

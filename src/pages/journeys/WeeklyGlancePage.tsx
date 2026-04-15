@@ -203,12 +203,10 @@ export const WeeklyGlancePage = () => {
     weekRange,
     daysRemaining,
     earnedPoints,
-    targetPoints,
     cycleTargetPoints,
     weekProgress,
     shouldShowBuildVillageCard,
     hasError,
-    activityFeedItems,
     isParallelTrackingEnabled,
   } = useWeeklyGlanceViewModel()
 
@@ -344,10 +342,6 @@ export const WeeklyGlancePage = () => {
 
   const handleViewPendingApprovals = useCallback(() => {
     navigate('/app/weekly-checklist?focus=pending-approvals')
-  }, [navigate])
-
-  const handleSeeMoreActivity = useCallback(() => {
-    navigate('/app/leadership-board#points-breakdown')
   }, [navigate])
 
   return (

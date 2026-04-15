@@ -34,7 +34,6 @@ import {
   Spinner,
   Stack,
   Stat,
-  StatHelpText,
   StatLabel,
   StatNumber,
   Table,
@@ -69,7 +68,6 @@ import {
   DollarSign,
   Download,
   Leaf,
-  Plus,
   ShieldCheck,
   Target,
   Trash2,
@@ -451,7 +449,6 @@ export const ImpactLogPage: React.FC = () => {
   const [bulkErrorCount, setBulkErrorCount] = useState(0)
   const [isBulkProcessing, setIsBulkProcessing] = useState(false)
   const [isExportOpen, setIsExportOpen] = useState(false)
-  const [, setExportMode] = useState<'csv' | 'pdf'>('csv')
   const [isPdfExporting, setIsPdfExporting] = useState(false)
   const [isSubmittingImpact, setIsSubmittingImpact] = useState(false)
   const shareDisclosure = useDisclosure()
