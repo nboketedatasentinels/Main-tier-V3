@@ -33,7 +33,7 @@ export const resolveProgramCadence = (programDuration?: number | string | null):
 export const getProgramDurationLabel = (programDuration?: number | string | null): string | null => {
   const parsed = normalizeProgramDuration(programDuration)
   if (parsed === null) return null
-  if (isBiweeklyProgramDuration(parsed)) return '6 weeks (3 x 2-week windows)'
+  if (isBiweeklyProgramDuration(parsed)) return '6 weeks (2 x 3-week windows)'
   const display = Number.isInteger(parsed) ? parsed.toString() : parsed.toFixed(1)
   return `${display} months`
 }
@@ -41,7 +41,7 @@ export const getProgramDurationLabel = (programDuration?: number | string | null
 export const resolveProgramMonthCount = (programDuration?: number | string | null): number => {
   const parsed = normalizeProgramDuration(programDuration)
   if (parsed === null) return 0
-  if (isBiweeklyProgramDuration(parsed)) return 3
+  if (isBiweeklyProgramDuration(parsed)) return 2
   return Math.ceil(parsed)
 }
 
@@ -143,8 +143,8 @@ export const getProgramSegmentDateRange = (params: {
 }) => {
   const { cohortStartDate, segmentIndex, cadence } = params
   if (cadence === 'biweekly') {
-    const startDate = addDays(cohortStartDate, segmentIndex * 14)
-    const endDate = addDays(cohortStartDate, (segmentIndex + 1) * 14)
+    const startDate = addDays(cohortStartDate, segmentIndex * 21)
+    const endDate = addDays(cohortStartDate, (segmentIndex + 1) * 21)
     return { startDate, endDate }
   }
   const startDate = addMonths(cohortStartDate, segmentIndex)

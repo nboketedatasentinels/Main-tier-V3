@@ -60,7 +60,7 @@ import { getCourseDetailsFromMapping } from '@/utils/courseMappings'
 
 const MotionBox = motion(Box)
 const MotionFlex = motion(Flex)
-const AI_STACKING_TITLE = 'AI Stacking 101: Boost Your Productivity (No Tech Skills Needed)'
+const AI_STACKING_TITLE = 'AI for Transformation Leaders: Judgment Over Features'
 const AI_STACKING_COUPON_CODE = 'Ai101'
 
 const ReferralRewardsPage: React.FC = () => {
@@ -764,7 +764,7 @@ const ReferralRewardsPage: React.FC = () => {
                           colorScheme="purple"
                           variant="ghost"
                         >
-                          Open AI Stacking 101 Course
+                          Open AI for Transformation Leaders
                         </Button>
                         <Text fontSize="xs" color="brand.subtleText">
                           One-time reward for your account. Use this coupon once, then mark it as used.

@@ -72,13 +72,13 @@ const resolveOrganizationId = (profile: UserProfile | null): string | null => {
 }
 
 const COURSE_IMAGE_FILENAMES: Record<string, string> = {
-  'AI Stacking 101: Boost Your Productivity (No Tech Skills Needed)': 'course-ai-stacking-101.avif',
-  'The Art of Connection: Sharpening Communication, Feedback, and Presentation Skills': 'course-art-of-connection.avif',
-  'Mindset Reset: Shift Your Thinking, Transform Your Life': 'course-mindset-reset.avif',
-  'Goal Setting Mastery: Turn Your Vision into Action': 'course-goal-setting-mastery.avif',
-  'The Heart of Leadership: Developing Emotional Intelligence for Impact': 'course-heart-of-leadership.avif',
+  'AI for Transformation Leaders: Judgment Over Features': 'course-ai-stacking-101.avif',
+  'Stakeholder Influence for Transformation Leaders': 'course-art-of-connection.avif',
+  "Leading Under Pressure: The Transformation Leader's Operating System": 'course-mindset-reset.avif',
+  'From Strategy to Execution in Transformation Programmes': 'course-goal-setting-mastery.avif',
+  'The Leader Your Transformation Team Actually Needs': 'course-heart-of-leadership.avif',
   'Digital Transformation with Data Sentinels': 'course-digital-transformation.avif',
-  'LinkedIn Warrior: Set Up Your Profile for Success': 'course-linkedin-warrior.avif',
+  'Your Digital Presence as a Transformation Leader': 'course-linkedin-warrior.avif',
   'Transformational Leadership': 'course-transformational-leadership.avif',
 }
 

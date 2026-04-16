@@ -83,7 +83,7 @@ interface EditOrganizationModalProps {
 }
 
 const programDurations: ProgramDurationOption[] = [
-  { value: 1.5, label: '6 weeks (3 x 2-week windows)', courseCount: 3 },
+  { value: 1.5, label: '6 weeks (2 x 3-week windows)', courseCount: 2 },
   { value: 3, label: '3 months', courseCount: 3 },
   { value: 6, label: '6 months', courseCount: 6 },
   { value: 9, label: '9 months', courseCount: 9 },
@@ -123,7 +123,7 @@ export const EditOrganizationModal: React.FC<EditOrganizationModalProps> = ({
   const programCadence = useMemo(() => resolveProgramCadence(form.programDuration), [form.programDuration])
   const assignmentUnit = programCadence === 'biweekly' ? 'window' : 'month'
   const assignmentUnitPlural = programCadence === 'biweekly' ? 'windows' : 'months'
-  const assignmentSectionLabel = programCadence === 'biweekly' ? '2-week window course assignments' : 'Monthly course assignments'
+  const assignmentSectionLabel = programCadence === 'biweekly' ? '3-week window course assignments' : 'Monthly course assignments'
   const assignmentBreakdownLabel = programCadence === 'biweekly' ? 'Cycle breakdown summary' : 'Monthly breakdown summary'
 
   const remainingCourses = courseLimit - getAssignedCourseIdsFromMonthlyAssignments(monthlyAssignments, courseLimit).length

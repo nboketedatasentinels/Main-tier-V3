@@ -44,10 +44,10 @@ export const REWARD_TIERS: RewardTier[] = [
   },
   {
     id: 3,
-    title: "25% Off 'AI Stacking 101' Course",
+    title: "25% Off 'AI for Transformation Leaders' Course",
     required: 15,
-    reward: "25% Off 'AI Stacking 101'",
-    description: 'Enjoy an exclusive 25% discount on the flagship AI Stacking 101 mastery course.',
+    reward: "25% Off 'AI for Transformation Leaders'",
+    description: 'Enjoy an exclusive 25% discount on the flagship AI for Transformation Leaders course.',
     label: 'Course',
     icon: Layers,
     gradient: 'linear-gradient(135deg, var(--chakra-colors-tint-brandPrimary), var(--chakra-colors-tint-accentWarning))',

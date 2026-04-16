@@ -609,7 +609,7 @@ async function creditReferralPointsInternal(
     const tierMilestones: Record<number, { title: string; reward: string }> = {
       1: { title: "Referral Bonus", reward: "100 Points" },
       5: { title: "Community Builder", reward: "Community Builder Badge" },
-      15: { title: "Network Champion", reward: "25% off AI Stacking 101 Course" },
+      15: { title: "Network Champion", reward: "25% off AI for Transformation Leaders Course" },
       20: { title: "Referrer of the Month", reward: "Featured in Newsletter" },
     };
 
