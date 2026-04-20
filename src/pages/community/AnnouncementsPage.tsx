@@ -61,10 +61,15 @@ import {
   User,
 } from 'lucide-react'
 import { format, formatDistanceToNow } from 'date-fns'
-import { useAnnouncements, type Announcement } from '@/hooks/useAnnouncements'
+import {
+  useAnnouncements,
+  type Announcement,
+  type AnnouncementTier,
+} from '@/hooks/useAnnouncements'
 import { useEventsFeed } from '@/hooks/useEventsFeed'
 import { WhatsAppCommunityCard } from '@/components/community/WhatsAppCommunityCard'
 import { useAuth } from '@/hooks/useAuth'
+import { usePartnerOrganizations } from '@/hooks/partner/usePartnerOrganizations'
 import { UserRole } from '@/types'
 import {
   type AdminAnnouncement,
@@ -428,6 +433,9 @@ interface ComposerState {
   actionLabel: string
   actionUrl: string
   targetRoles: string[]
+  tier: AnnouncementTier
+  orgCode: string
+  orgCodes: string[]
   status: 'draft' | 'published'
 }
 
@@ -438,8 +446,20 @@ const emptyComposer = (): ComposerState => ({
   actionLabel: '',
   actionUrl: '',
   targetRoles: [],
+  tier: 'global',
+  orgCode: '',
+  orgCodes: [],
   status: 'published',
 })
+
+const TIER_OPTIONS: Array<{ value: AnnouncementTier; label: string; description: string }> = [
+  { value: 'global', label: 'Global', description: 'Everyone on the platform' },
+  { value: 'org_wide', label: 'Org-wide', description: 'Learners across selected organisations' },
+  { value: 'org_specific', label: 'Org-specific', description: 'One organisation only' },
+]
+
+const tierLabel = (tier?: AnnouncementTier | null) =>
+  TIER_OPTIONS.find((option) => option.value === tier)?.label ?? 'Global'
 
 const AnnouncementComposer: React.FC<{
   initialValue?: AdminAnnouncement | null
@@ -451,8 +471,18 @@ const AnnouncementComposer: React.FC<{
   const [state, setState] = useState<ComposerState>(emptyComposer())
   const [saving, setSaving] = useState(false)
 
+  const { organizations } = usePartnerOrganizations()
+  const orgOptions = useMemo(
+    () =>
+      organizations
+        .filter((org) => Boolean(org.code))
+        .map((org) => ({ code: org.code, name: org.name || org.code })),
+    [organizations],
+  )
+
   useEffect(() => {
     if (initialValue) {
+      const existingTier: AnnouncementTier = initialValue.tier ?? 'global'
       setState({
         title: initialValue.title,
         message: initialValue.message,
@@ -460,6 +490,9 @@ const AnnouncementComposer: React.FC<{
         actionLabel: initialValue.actionLabel ?? '',
         actionUrl: initialValue.actionUrl ?? '',
         targetRoles: initialValue.targeting?.targetRoles ?? [],
+        tier: existingTier,
+        orgCode: initialValue.targeting?.companyCode ?? '',
+        orgCodes: initialValue.targeting?.companyCodes ?? [],
         status: initialValue.status === 'draft' ? 'draft' : 'published',
       })
     } else {
@@ -471,20 +504,32 @@ const AnnouncementComposer: React.FC<{
 
   const isValid = state.title.trim().length > 0 && state.message.trim().length > 0
   const mandatoryMissingLabel = state.isMandatory && !state.actionLabel.trim()
+  const tierMissingOrgs =
+    (state.tier === 'org_specific' && !state.orgCode) ||
+    (state.tier === 'org_wide' && state.orgCodes.length === 0)
 
   const handleSubmit = async (override?: Partial<ComposerState>) => {
-    if (!isValid || mandatoryMissingLabel) return
+    if (!isValid || mandatoryMissingLabel || tierMissingOrgs) return
     setSaving(true)
     const next = { ...state, ...override }
+    const targetingPayload: NonNullable<AnnouncementDraftInput['targeting']> = {}
+    if (next.targetRoles.length) targetingPayload.targetRoles = next.targetRoles
+    if (next.tier === 'org_specific' && next.orgCode) {
+      targetingPayload.companyCode = next.orgCode
+    }
+    if (next.tier === 'org_wide' && next.orgCodes.length) {
+      targetingPayload.companyCodes = next.orgCodes
+    }
+    const hasTargeting = Object.keys(targetingPayload).length > 0
     const payload: AnnouncementDraftInput = {
       title: next.title,
       message: next.message,
       isMandatory: next.isMandatory,
       actionLabel: next.actionLabel || null,
       actionUrl: next.actionUrl || null,
-      targeting: next.targetRoles.length ? { targetRoles: next.targetRoles } : null,
+      targeting: hasTargeting ? targetingPayload : null,
       status: next.status,
-      tier: 'global',
+      tier: next.tier,
       author: authorName,
       source: 'T4L Team',
     }
@@ -609,6 +654,81 @@ const AnnouncementComposer: React.FC<{
         )}
 
         <FormControl>
+          <FormLabel fontSize="sm">Announcement scope</FormLabel>
+          <Select
+            value={state.tier}
+            onChange={(e) => {
+              const nextTier = e.target.value as AnnouncementTier
+              setState((prev) => ({
+                ...prev,
+                tier: nextTier,
+                orgCode: nextTier === 'org_specific' ? prev.orgCode : '',
+                orgCodes: nextTier === 'org_wide' ? prev.orgCodes : [],
+              }))
+            }}
+          >
+            {TIER_OPTIONS.map((option) => (
+              <option key={option.value} value={option.value}>
+                {option.label} — {option.description}
+              </option>
+            ))}
+          </Select>
+        </FormControl>
+
+        {state.tier === 'org_specific' && (
+          <FormControl isRequired isInvalid={tierMissingOrgs}>
+            <FormLabel fontSize="sm">Target organisation</FormLabel>
+            <Select
+              placeholder="Select an organisation"
+              value={state.orgCode}
+              onChange={(e) => setState((prev) => ({ ...prev, orgCode: e.target.value }))}
+            >
+              {orgOptions.map((org) => (
+                <option key={org.code} value={org.code}>
+                  {org.name} ({org.code})
+                </option>
+              ))}
+            </Select>
+            {tierMissingOrgs && (
+              <FormHelperText color="red.500">
+                Pick one organisation for an org-specific announcement.
+              </FormHelperText>
+            )}
+          </FormControl>
+        )}
+
+        {state.tier === 'org_wide' && (
+          <FormControl isRequired isInvalid={tierMissingOrgs}>
+            <FormLabel fontSize="sm">Target organisations</FormLabel>
+            <CheckboxGroup
+              value={state.orgCodes}
+              onChange={(value) =>
+                setState((prev) => ({ ...prev, orgCodes: value as string[] }))
+              }
+            >
+              <Stack direction="column" spacing={2} maxH="200px" overflowY="auto" p={2} borderWidth={1} borderColor="border.subtle" borderRadius="md">
+                {orgOptions.length === 0 ? (
+                  <Text fontSize="sm" color="text.muted">
+                    No organisations available.
+                  </Text>
+                ) : (
+                  orgOptions.map((org) => (
+                    <Checkbox key={org.code} value={org.code}>
+                      {org.name} ({org.code})
+                    </Checkbox>
+                  ))
+                )}
+              </Stack>
+            </CheckboxGroup>
+            {tierMissingOrgs && (
+              <FormHelperText color="red.500">
+                Pick at least one organisation for an org-wide announcement.
+              </FormHelperText>
+            )}
+          </FormControl>
+        )}
+
+        <FormControl>
           <FormLabel fontSize="sm">Who should see this? (leave empty for everyone)</FormLabel>
           <CheckboxGroup
             value={state.targetRoles}
@@ -636,7 +756,7 @@ const AnnouncementComposer: React.FC<{
               colorScheme="purple"
               leftIcon={<Pencil size={16} />}
               isLoading={saving}
-              isDisabled={!isValid || mandatoryMissingLabel}
+              isDisabled={!isValid || mandatoryMissingLabel || tierMissingOrgs}
               onClick={() => handleSubmit()}
             >
               Save changes
@@ -645,7 +765,7 @@ const AnnouncementComposer: React.FC<{
             <>
               <Button
                 variant="outline"
-                isDisabled={!isValid || mandatoryMissingLabel || saving}
+                isDisabled={!isValid || mandatoryMissingLabel || tierMissingOrgs || saving}
                 onClick={() => handleSubmit({ status: 'draft' })}
               >
                 Save as draft
@@ -654,7 +774,7 @@ const AnnouncementComposer: React.FC<{
                 colorScheme="purple"
                 leftIcon={<Send size={16} />}
                 isLoading={saving}
-                isDisabled={!isValid || mandatoryMissingLabel}
+                isDisabled={!isValid || mandatoryMissingLabel || tierMissingOrgs}
                 onClick={() => handleSubmit({ status: 'published' })}
               >
                 Publish now
@@ -695,16 +815,26 @@ const AdminAnnouncementRow: React.FC<{
                   <Icon as={AlertTriangle} boxSize={3} /> Mandatory
                 </Badge>
               )}
+              <Badge colorScheme="blue" borderRadius="full">
+                {tierLabel(announcement.tier)}
+              </Badge>
+              {announcement.targeting?.companyCode && (
+                <Badge colorScheme="teal" borderRadius="full">
+                  {announcement.targeting.companyCode}
+                </Badge>
+              )}
+              {announcement.targeting?.companyCodes?.length ? (
+                <Badge colorScheme="teal" borderRadius="full">
+                  {announcement.targeting.companyCodes.length} org
+                  {announcement.targeting.companyCodes.length === 1 ? '' : 's'}
+                </Badge>
+              ) : null}
               {announcement.targeting?.targetRoles?.length ? (
                 <Badge colorScheme="purple" borderRadius="full">
                   {announcement.targeting.targetRoles.length} role
                   {announcement.targeting.targetRoles.length === 1 ? '' : 's'}
                 </Badge>
-              ) : (
-                <Badge colorScheme="blue" borderRadius="full">
-                  All users
-                </Badge>
-              )}
+              ) : null}
             </HStack>
             <Text fontWeight="semibold" color="text.primary">
               {announcement.title}

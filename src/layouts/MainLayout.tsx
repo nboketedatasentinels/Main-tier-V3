@@ -56,6 +56,7 @@ import { isFreeUser as isFreeTierUser } from '@/utils/membership'
 import { UpgradePromptModal } from '@/components/UpgradePromptModal'
 import PointsNotificationListener from '@/components/PointsNotificationListener'
 import { MandatoryAnnouncementGate } from '@/components/announcements/MandatoryAnnouncementGate'
+import { NewAnnouncementPopup } from '@/components/announcements/NewAnnouncementPopup'
 
 interface NavItem {
   label: string
@@ -928,6 +929,8 @@ export const MainLayout: React.FC = () => {
       <PointsNotificationListener />
 
       <MandatoryAnnouncementGate />
+
+      <NewAnnouncementPopup />
     </Flex>
   )
 }

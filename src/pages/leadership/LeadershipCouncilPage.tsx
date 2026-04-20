@@ -740,7 +740,12 @@ export const LeadershipCouncilPage: React.FC = () => {
 
       <Grid templateColumns="1fr" gap={6} alignItems="start">
         <GridItem>
-          <Tabs variant="unstyled" colorScheme="primary" isLazy>
+          <Tabs
+            variant="unstyled"
+            colorScheme="primary"
+            isLazy
+            defaultIndex={isLeadershipEligible ? 0 : 2}
+          >
             <TabList
               border="1px solid"
               borderColor="border.subtle"
@@ -750,22 +755,54 @@ export const LeadershipCouncilPage: React.FC = () => {
               gap={1}
               overflowX="auto"
             >
-              <Tab
-                whiteSpace="nowrap"
-                fontWeight="semibold"
-                rounded="md"
-                _selected={{ bg: 'brand.primary', color: 'text.inverse' }}
+              <Tooltip
+                label={journeyLockReason ?? ''}
+                placement="top"
+                isDisabled={isLeadershipEligible}
               >
-                Mentor
-              </Tab>
-              <Tab
-                whiteSpace="nowrap"
-                fontWeight="semibold"
-                rounded="md"
-                _selected={{ bg: 'brand.primary', color: 'text.inverse' }}
+                <Tab
+                  whiteSpace="nowrap"
+                  fontWeight="semibold"
+                  rounded="md"
+                  isDisabled={!isLeadershipEligible}
+                  _selected={{ bg: 'brand.primary', color: 'text.inverse' }}
+                  _disabled={{
+                    color: 'text.muted',
+                    bg: 'surface.subtle',
+                    cursor: 'not-allowed',
+                    opacity: 0.6,
+                  }}
+                >
+                  <HStack spacing={2}>
+                    {!isLeadershipEligible && <Icon as={Lock} boxSize={3} />}
+                    <Text as="span">Mentor</Text>
+                  </HStack>
+                </Tab>
+              </Tooltip>
+              <Tooltip
+                label={journeyLockReason ?? ''}
+                placement="top"
+                isDisabled={isLeadershipEligible}
               >
-                Ambassador
-              </Tab>
+                <Tab
+                  whiteSpace="nowrap"
+                  fontWeight="semibold"
+                  rounded="md"
+                  isDisabled={!isLeadershipEligible}
+                  _selected={{ bg: 'brand.primary', color: 'text.inverse' }}
+                  _disabled={{
+                    color: 'text.muted',
+                    bg: 'surface.subtle',
+                    cursor: 'not-allowed',
+                    opacity: 0.6,
+                  }}
+                >
+                  <HStack spacing={2}>
+                    {!isLeadershipEligible && <Icon as={Lock} boxSize={3} />}
+                    <Text as="span">Ambassador</Text>
+                  </HStack>
+                </Tab>
+              </Tooltip>
               <Tab
                 whiteSpace="nowrap"
                 fontWeight="semibold"

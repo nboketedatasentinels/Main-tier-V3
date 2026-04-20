@@ -22,7 +22,7 @@ export interface OrgMentorOption {
   companyCode: string | null
 }
 
-const extractName = (data: Record<string, unknown>): string => {
+const extractName = (data: Record<string, unknown>, fallback = 'Unknown member'): string => {
   const first = typeof data.firstName === 'string' ? data.firstName.trim() : ''
   const last = typeof data.lastName === 'string' ? data.lastName.trim() : ''
   const combined = `${first} ${last}`.trim()
@@ -30,7 +30,7 @@ const extractName = (data: Record<string, unknown>): string => {
   if (typeof data.fullName === 'string' && data.fullName.trim()) return data.fullName.trim()
   if (typeof data.name === 'string' && data.name.trim()) return data.name.trim()
   if (typeof data.email === 'string' && data.email.trim()) return data.email.trim()
-  return 'Unknown mentor'
+  return fallback
 }
 
 /**
@@ -52,7 +52,7 @@ export const fetchMentorsForOrg = async (params: {
     const data = docSnap.data() as Record<string, unknown>
     return {
       id: docSnap.id,
-      fullName: extractName(data),
+      fullName: extractName(data, 'Unknown mentor'),
       email: typeof data.email === 'string' ? data.email : null,
       companyId: typeof data.companyId === 'string' ? data.companyId : null,
       companyCode: typeof data.companyCode === 'string' ? data.companyCode : null,
@@ -67,6 +67,50 @@ export const fetchMentorsForOrg = async (params: {
     return false
   })
   const list = orgMatched.length > 0 ? orgMatched : allMentors
+  return list.sort((a, b) => a.fullName.localeCompare(b.fullName))
+}
+
+export interface OrgAmbassadorOption {
+  id: string
+  fullName: string
+  email: string | null
+  companyId: string | null
+  companyCode: string | null
+}
+
+/**
+ * Returns ambassadors whose profile companyId/companyCode matches the target organization.
+ * Falls back to returning all ambassadors when no org-specific ambassadors exist, mirroring
+ * the mentor lookup behaviour so partner admins can still see the global roster during
+ * org bootstrapping.
+ */
+export const fetchAmbassadorsForOrg = async (params: {
+  companyId: string
+  companyCode?: string | null
+}): Promise<OrgAmbassadorOption[]> => {
+  const { companyId, companyCode } = params
+  if (!companyId) return []
+
+  const ambassadorRoleQuery = query(collection(db, USERS), where('role', '==', 'ambassador'))
+  const snapshot = await getDocs(ambassadorRoleQuery)
+
+  const allAmbassadors: OrgAmbassadorOption[] = snapshot.docs.map((docSnap) => {
+    const data = docSnap.data() as Record<string, unknown>
+    return {
+      id: docSnap.id,
+      fullName: extractName(data, 'Unknown ambassador'),
+      email: typeof data.email === 'string' ? data.email : null,
+      companyId: typeof data.companyId === 'string' ? data.companyId : null,
+      companyCode: typeof data.companyCode === 'string' ? data.companyCode : null,
+    }
+  })
+
+  const orgMatched = allAmbassadors.filter((ambassador) => {
+    if (ambassador.companyId && ambassador.companyId === companyId) return true
+    if (companyCode && ambassador.companyCode && ambassador.companyCode === companyCode) return true
+    return false
+  })
+  const list = orgMatched.length > 0 ? orgMatched : allAmbassadors
   return list.sort((a, b) => a.fullName.localeCompare(b.fullName))
 }
 
