@@ -263,30 +263,17 @@ export const LeadershipBoardPage: React.FC = () => {
 
   const { activityHistoryByCategory, isLoading: activityHistoryLoading } = useUserActivityHistory(profile?.id)
 
-  const userBreakdown = useMemo(() => {
-    const categoryTotals: Record<string, number> = {}
-    let totalPoints = 0
-
-    Object.entries(activityHistoryByCategory).forEach(([category, entries]) => {
-      const filteredEntries = timeframeStart
-        ? entries.filter((e) => e.createdAt >= timeframeStart)
-        : entries
-
-      const catTotal = filteredEntries.reduce((sum, e) => sum + e.points, 0)
-      if (catTotal > 0) {
-        categoryTotals[category] = catTotal
-        totalPoints += catTotal
-      }
+  const activityHistoryByTitle = useMemo(() => {
+    const map: Record<string, typeof activityHistoryByCategory[string]> = {}
+    Object.values(activityHistoryByCategory).forEach((entries) => {
+      entries.forEach((entry) => {
+        const title = entry.activityTitle || 'Activity'
+        if (!map[title]) map[title] = []
+        map[title].push(entry)
+      })
     })
-
-    return Object.entries(categoryTotals)
-      .map(([name, value]) => ({
-        name,
-        value,
-        percent: totalPoints > 0 ? Math.round((value / totalPoints) * 100) : 0,
-      }))
-      .sort((a, b) => b.value - a.value)
-  }, [activityHistoryByCategory, timeframeStart])
+    return map
+  }, [activityHistoryByCategory])
 
   const toggleCategory = useCallback((categoryName: string) => {
     setExpandedCategories((prev) => {
@@ -561,6 +548,48 @@ export const LeadershipBoardPage: React.FC = () => {
 
   const isPointsReady = Boolean(profile) && profilesLoaded && transactionsLoaded
   const displayTotalPoints = userRow?.totalPoints ?? profile?.totalPoints ?? 0
+
+  const userBreakdown = useMemo(() => {
+    const activityTotals = new Map<string, { points: number; category: string }>()
+    let totalPoints = 0
+
+    Object.entries(activityHistoryByCategory).forEach(([category, entries]) => {
+      const filteredEntries = timeframeStart
+        ? entries.filter((e) => e.createdAt >= timeframeStart)
+        : entries
+
+      filteredEntries.forEach((entry) => {
+        if (entry.points <= 0) return
+        const title = entry.activityTitle || 'Activity'
+        const existing = activityTotals.get(title)
+        if (existing) {
+          existing.points += entry.points
+        } else {
+          activityTotals.set(title, { points: entry.points, category })
+        }
+        totalPoints += entry.points
+      })
+    })
+
+    if (!timeframeStart && displayTotalPoints > totalPoints) {
+      const unaccounted = displayTotalPoints - totalPoints
+      activityTotals.set('Other activities', {
+        points: unaccounted,
+        category: 'Uncategorized',
+      })
+      totalPoints = displayTotalPoints
+    }
+
+    return Array.from(activityTotals.entries())
+      .map(([name, data]) => ({
+        name,
+        value: data.points,
+        category: data.category,
+        percent: totalPoints > 0 ? Math.round((data.points / totalPoints) * 100) : 0,
+      }))
+      .sort((a, b) => b.value - a.value)
+  }, [activityHistoryByCategory, timeframeStart, displayTotalPoints])
+
   const percentileValue = leaderboardRows.length
     ? Math.round(((userRow?.rank ?? leaderboardRows.length) / leaderboardRows.length) * 100)
     : 100
@@ -1075,7 +1104,7 @@ export const LeadershipBoardPage: React.FC = () => {
                         </Box>
                         <Box pl={10}>
                           <Text fontSize="lg" fontWeight="bold" color="gray.800">Your Points Breakdown</Text>
-                          <Text color="gray.500" fontSize="sm">Personal insights across categories</Text>
+                          <Text color="gray.500" fontSize="sm">Points earned per activity</Text>
                         </Box>
                       </Grid>
                       <HStack spacing={3} ml={4}>
@@ -1138,52 +1167,92 @@ export const LeadershipBoardPage: React.FC = () => {
                         <Box id="points-breakdown" scrollMarginTop="120px">
                           <Grid templateColumns={{ base: '1fr', md: '1fr 1fr' }} gap={4} alignItems="center">
                             <Box h="260px">
-                              <ResponsiveContainer width="100%" height="100%">
-                                <PieChart>
-                                  <Pie dataKey="value" data={userBreakdown} innerRadius={60} outerRadius={90} label>
-                                    {userBreakdown.map((entry, index) => (
-                                      <Cell key={`cell-${entry.name}`} fill={pointsColors[index % pointsColors.length]} />
-                                    ))}
-                                  </Pie>
-                                  <RechartsTooltip
-                                    content={({ active, payload }) => {
-                                      if (!active || !payload?.length) return null
-                                      const name = payload[0].name as string
-                                      const value = payload[0].value as number
-                                      const activities = activityHistoryByCategory[name] || []
-                                      return (
-                                        <Box bg="white" color="gray.800" p={3} borderRadius="md" fontSize="xs" maxW="260px" boxShadow="lg" border="1px solid" borderColor="gray.100">
-                                          <Text fontWeight="bold" mb={2} color="gray.800">{name} — {formatNumber(value)} pts</Text>
-                                          {activityHistoryLoading ? (
-                                            <Text color="gray.500">Loading...</Text>
-                                          ) : activities.length ? (
-                                            <Stack spacing={2}>
-                                              {activities.map((activity) => (
-                                                <Flex key={activity.id} justify="space-between" align="center" gap={4}>
-                                                  <HStack spacing={2}>
-                                                    <Icon as={CheckCircle} color="green.500" boxSize={3} />
-                                                    <Text color="gray.800">{activity.activityTitle}</Text>
-                                                  </HStack>
-                                                  <HStack spacing={3}>
-                                                    <Text color="gray.500">{format(activity.createdAt, 'MMM d')}</Text>
+                              {activityHistoryLoading ? (
+                                <Flex h="full" align="center" justify="center">
+                                  <Spinner size="lg" color="#350e6f" thickness="3px" />
+                                </Flex>
+                              ) : userBreakdown.length === 0 ? (
+                                <Flex h="full" direction="column" align="center" justify="center" gap={3} px={4}>
+                                  <Flex
+                                    w={16}
+                                    h={16}
+                                    borderRadius="full"
+                                    bg="purple.50"
+                                    align="center"
+                                    justify="center"
+                                    border="2px dashed"
+                                    borderColor="purple.200"
+                                  >
+                                    <Icon as={Target} boxSize={7} color="#350e6f" />
+                                  </Flex>
+                                  <Text fontSize="sm" fontWeight="semibold" color="gray.700" textAlign="center">
+                                    No points yet
+                                  </Text>
+                                  <Text fontSize="xs" color="gray.500" textAlign="center" maxW="220px">
+                                    Complete activities or log impact to see your points breakdown here.
+                                  </Text>
+                                </Flex>
+                              ) : (
+                                <ResponsiveContainer width="100%" height="100%">
+                                  <PieChart>
+                                    <Pie dataKey="value" data={userBreakdown} innerRadius={60} outerRadius={90} label>
+                                      {userBreakdown.map((entry, index) => (
+                                        <Cell key={`cell-${entry.name}`} fill={pointsColors[index % pointsColors.length]} />
+                                      ))}
+                                    </Pie>
+                                    <RechartsTooltip
+                                      content={({ active, payload }) => {
+                                        if (!active || !payload?.length) return null
+                                        const name = payload[0].name as string
+                                        const value = payload[0].value as number
+                                        const entries = activityHistoryByTitle[name] || []
+                                        return (
+                                          <Box bg="white" color="gray.800" p={3} borderRadius="md" fontSize="xs" maxW="260px" boxShadow="lg" border="1px solid" borderColor="gray.100">
+                                            <Text fontWeight="bold" mb={2} color="gray.800">{name} — {formatNumber(value)} pts</Text>
+                                            {activityHistoryLoading ? (
+                                              <Text color="gray.500">Loading...</Text>
+                                            ) : entries.length ? (
+                                              <Stack spacing={2}>
+                                                {entries.map((activity) => (
+                                                  <Flex key={activity.id} justify="space-between" align="center" gap={4}>
+                                                    <HStack spacing={2}>
+                                                      <Icon as={CheckCircle} color="green.500" boxSize={3} />
+                                                      <Text color="gray.800">{format(activity.createdAt, 'MMM d')}</Text>
+                                                    </HStack>
                                                     <Text color="green.500" fontWeight="medium">+{formatNumber(activity.points)}</Text>
-                                                  </HStack>
-                                                </Flex>
-                                              ))}
-                                            </Stack>
-                                          ) : (
-                                            <Text color="gray.500">No activities yet</Text>
-                                          )}
-                                        </Box>
-                                      )
-                                    }}
-                                  />
-                                </PieChart>
-                              </ResponsiveContainer>
+                                                  </Flex>
+                                                ))}
+                                              </Stack>
+                                            ) : (
+                                              <Text color="gray.500">No activity details</Text>
+                                            )}
+                                          </Box>
+                                        )
+                                      }}
+                                    />
+                                  </PieChart>
+                                </ResponsiveContainer>
+                              )}
                             </Box>
                             <Stack spacing={3}>
-                              {userBreakdown.slice((breakdownPage - 1) * 4, (breakdownPage - 1) * 4 + 4).map((category, idx) => (
-                                <Box key={category.name}>
+                              {activityHistoryLoading ? (
+                                <Stack spacing={3}>
+                                  <Skeleton height="48px" borderRadius="md" />
+                                  <Skeleton height="48px" borderRadius="md" />
+                                  <Skeleton height="48px" borderRadius="md" />
+                                </Stack>
+                              ) : userBreakdown.length === 0 ? (
+                                <Box py={6} textAlign="center">
+                                  <Text fontSize="sm" color="gray.500">
+                                    Each activity you complete will appear here with its earned points.
+                                  </Text>
+                                </Box>
+                              ) : (
+                                <>
+                              {userBreakdown.slice((breakdownPage - 1) * 4, (breakdownPage - 1) * 4 + 4).map((activity, idx) => {
+                                const entries = activityHistoryByTitle[activity.name] || []
+                                return (
+                                <Box key={activity.name}>
                                   <Tooltip
                                     hasArrow
                                     placement="top"
@@ -1193,23 +1262,20 @@ export const LeadershipBoardPage: React.FC = () => {
                                     label={
                                       activityHistoryLoading ? (
                                         <Text fontSize="xs">Loading...</Text>
-                                      ) : activityHistoryByCategory[category.name]?.length ? (
+                                      ) : entries.length ? (
                                         <Stack spacing={2}>
-                                          {activityHistoryByCategory[category.name].map((activity) => (
-                                            <Flex key={activity.id} justify="space-between" align="center" gap={4} fontSize="xs">
+                                          {entries.map((entry) => (
+                                            <Flex key={entry.id} justify="space-between" align="center" gap={4} fontSize="xs">
                                               <HStack spacing={2}>
                                                 <Icon as={CheckCircle} color="green.500" boxSize={3} />
-                                                <Text color="gray.800">{activity.activityTitle}</Text>
+                                                <Text color="gray.800">{format(entry.createdAt, 'MMM d, yyyy')}</Text>
                                               </HStack>
-                                              <HStack spacing={3}>
-                                                <Text color="gray.500">{format(activity.createdAt, 'MMM d')}</Text>
-                                                <Text color="green.500" fontWeight="medium">+{formatNumber(activity.points)}</Text>
-                                              </HStack>
+                                              <Text color="green.500" fontWeight="medium">+{formatNumber(entry.points)}</Text>
                                             </Flex>
                                           ))}
                                         </Stack>
                                       ) : (
-                                        <Text fontSize="xs">No activities yet</Text>
+                                        <Text fontSize="xs">No detail available</Text>
                                       )
                                     }
                                   >
@@ -1217,7 +1283,7 @@ export const LeadershipBoardPage: React.FC = () => {
                                     align="center"
                                     gap={3}
                                     cursor="pointer"
-                                    onClick={() => toggleCategory(category.name)}
+                                    onClick={() => toggleCategory(activity.name)}
                                     _hover={{ bg: 'surface.subtle' }}
                                     borderRadius="md"
                                     p={1}
@@ -1227,47 +1293,47 @@ export const LeadershipBoardPage: React.FC = () => {
                                     <Box flex="1">
                                       <Flex justify="space-between" align="center">
                                         <HStack>
-                                          <Text fontWeight="bold">{category.name}</Text>
+                                          <Text fontWeight="bold" noOfLines={1}>{activity.name}</Text>
                                           <Icon
-                                            as={expandedCategories.has(category.name) ? ChevronDown : ChevronRight}
+                                            as={expandedCategories.has(activity.name) ? ChevronDown : ChevronRight}
                                             boxSize={4}
                                             color="text.secondary"
                                           />
                                         </HStack>
-                                        <Text>{formatNumber(category.value)} pts</Text>
+                                        <Text>{formatNumber(activity.value)} pts</Text>
                                       </Flex>
-                                      <Progress value={category.percent} colorScheme="primary" borderRadius="full" />
-                                      <Text fontSize="xs" color="text.secondary">{category.percent}% of active points</Text>
+                                      <Progress value={activity.percent} colorScheme="primary" borderRadius="full" />
+                                      <Text fontSize="xs" color="text.secondary">{activity.percent}% of active points · {activity.category}</Text>
                                     </Box>
                                   </Flex>
                                   </Tooltip>
-                                  <Collapse in={expandedCategories.has(category.name)} animateOpacity>
+                                  <Collapse in={expandedCategories.has(activity.name)} animateOpacity>
                                     <Stack pl={6} spacing={2} mt={2} mb={2}>
                                       {activityHistoryLoading ? (
                                         <Skeleton height="20px" />
-                                      ) : activityHistoryByCategory[category.name]?.length ? (
-                                        activityHistoryByCategory[category.name].map((activity) => (
-                                          <Flex key={activity.id} justify="space-between" align="center" fontSize="sm">
+                                      ) : entries.length ? (
+                                        entries.map((entry) => (
+                                          <Flex key={entry.id} justify="space-between" align="center" fontSize="sm">
                                             <HStack spacing={2}>
                                               <Icon as={CheckCircle} color="success.500" boxSize={3} />
-                                              <Text>{activity.activityTitle}</Text>
-                                            </HStack>
-                                            <HStack spacing={4}>
                                               <Text color="text.secondary" fontSize="xs">
-                                                {format(activity.createdAt, 'MMM d')}
+                                                {format(entry.createdAt, 'MMM d, yyyy')}
                                               </Text>
-                                              <Text fontWeight="medium" color="success.600">+{formatNumber(activity.points)}</Text>
                                             </HStack>
+                                            <Text fontWeight="medium" color="success.600">+{formatNumber(entry.points)}</Text>
                                           </Flex>
                                         ))
                                       ) : (
-                                        <Text fontSize="sm" color="text.secondary">No activities in this category yet</Text>
+                                        <Text fontSize="sm" color="text.secondary">No detail available</Text>
                                       )}
                                     </Stack>
                                   </Collapse>
                                 </Box>
-                              ))}
+                                )
+                              })}
                               <Text fontSize="sm" color="text.secondary">Page {breakdownPage} of {Math.max(1, Math.ceil(userBreakdown.length / 4))}</Text>
+                                </>
+                              )}
                             </Stack>
                           </Grid>
                         </Box>

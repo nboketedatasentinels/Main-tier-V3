@@ -13,6 +13,8 @@ import {
 import { db } from '@/services/firebase'
 import { useAuth } from './useAuth'
 
+export type AnnouncementTier = 'global' | 'org_wide' | 'org_specific'
+
 export interface AnnouncementTargeting {
   companyCode?: string | null
   companyCodes?: string[]
@@ -31,10 +33,16 @@ export interface Announcement {
   updatedAt: Date | null
   author?: string | null
   source?: string | null
+  tier?: AnnouncementTier | null
+  isMandatory: boolean
+  actionLabel: string | null
+  actionUrl: string | null
   isRead: boolean
   readAt: Date | null
   isArchived: boolean
   archivedAt: Date | null
+  actionCompleted: boolean
+  actionCompletedAt: Date | null
   targeting?: AnnouncementTargeting | null
 }
 
@@ -46,6 +54,10 @@ interface FirestoreAnnouncement {
   updatedAt?: Timestamp
   author?: string | null
   source?: string | null
+  tier?: AnnouncementTier | null
+  isMandatory?: boolean
+  actionLabel?: string | null
+  actionUrl?: string | null
   targeting?: AnnouncementTargeting | null
 }
 
@@ -54,14 +66,18 @@ interface AnnouncementState {
   readAt?: Timestamp | FieldValue | null
   isArchived?: boolean
   archivedAt?: Timestamp | FieldValue | null
+  actionCompleted?: boolean
+  actionCompletedAt?: Timestamp | FieldValue | null
 }
 
 interface UseAnnouncementsResult {
   announcements: Announcement[]
+  mandatoryPending: Announcement[]
   loading: boolean
   error: string | null
   markAnnouncementAsRead: (id: string) => Promise<void>
   markAnnouncementAsUnread: (id: string) => Promise<void>
+  markActionCompleted: (id: string) => Promise<void>
   archiveAnnouncement: (id: string) => Promise<void>
   restoreAnnouncement: (id: string) => Promise<void>
 }
@@ -129,10 +145,16 @@ export const useAnnouncements = (): UseAnnouncementsResult => {
             updatedAt: data.updatedAt?.toDate?.() || null,
             author: data.author ?? null,
             source: data.source ?? null,
+            tier: data.tier ?? null,
+            isMandatory: Boolean(data.isMandatory),
+            actionLabel: data.actionLabel ?? null,
+            actionUrl: data.actionUrl ?? null,
             isRead: false,
             readAt: null,
             isArchived: false,
             archivedAt: null,
+            actionCompleted: false,
+            actionCompletedAt: null,
             targeting: data.targeting ?? null,
           }
         })
@@ -184,15 +206,27 @@ export const useAnnouncements = (): UseAnnouncementsResult => {
             ? state.archivedAt
             : null
 
+        const actionCompletedAt = state?.actionCompletedAt instanceof Timestamp
+          ? state.actionCompletedAt.toDate()
+          : state?.actionCompletedAt instanceof Date
+            ? state.actionCompletedAt
+            : null
+
         return {
           ...announcement,
           isRead: state?.isRead ?? false,
           readAt,
           isArchived: state?.isArchived ?? false,
           archivedAt,
+          actionCompleted: state?.actionCompleted ?? false,
+          actionCompletedAt,
         }
       })
       .filter((announcement) => !announcement.isArchived)
+      .filter((announcement) => {
+        const status = announcement.status || 'published'
+        return status === 'published'
+      })
       .filter((announcement) => canSeeAnnouncement(announcement))
     setAnnouncements(merged)
   }, [rawAnnouncements, userStates, canSeeAnnouncement])
@@ -201,15 +235,7 @@ export const useAnnouncements = (): UseAnnouncementsResult => {
     async (id: string, updates: AnnouncementState) => {
       if (!user) return
       const stateRef = doc(db, 'announcementStates', user.uid, 'states', id)
-      await setDoc(
-        stateRef,
-        {
-          ...updates,
-          readAt: updates.readAt === undefined ? serverTimestamp() : updates.readAt,
-          archivedAt: updates.archivedAt === undefined ? null : updates.archivedAt,
-        },
-        { merge: true },
-      )
+      await setDoc(stateRef, updates, { merge: true })
     },
     [user],
   )
@@ -224,6 +250,18 @@ export const useAnnouncements = (): UseAnnouncementsResult => {
   const markAnnouncementAsUnread = useCallback(
     async (id: string) => {
       await updateState(id, { isRead: false, readAt: null })
+    },
+    [updateState],
+  )
+
+  const markActionCompleted = useCallback(
+    async (id: string) => {
+      await updateState(id, {
+        actionCompleted: true,
+        actionCompletedAt: serverTimestamp(),
+        isRead: true,
+        readAt: serverTimestamp(),
+      })
     },
     [updateState],
   )
@@ -244,18 +282,31 @@ export const useAnnouncements = (): UseAnnouncementsResult => {
 
   const sortedAnnouncements = useMemo(() => {
     return [...announcements].sort((a, b) => {
+      const aMandatoryPending = a.isMandatory && !a.actionCompleted
+      const bMandatoryPending = b.isMandatory && !b.actionCompleted
+      if (aMandatoryPending !== bMandatoryPending) return aMandatoryPending ? -1 : 1
+
+      if (a.isRead !== b.isRead) return a.isRead ? 1 : -1
+
       const dateA = a.createdAt?.getTime() || 0
       const dateB = b.createdAt?.getTime() || 0
       return dateB - dateA
     })
   }, [announcements])
 
+  const mandatoryPending = useMemo(
+    () => sortedAnnouncements.filter((a) => a.isMandatory && !a.actionCompleted),
+    [sortedAnnouncements],
+  )
+
   return {
     announcements: sortedAnnouncements,
+    mandatoryPending,
     loading,
     error,
     markAnnouncementAsRead,
     markAnnouncementAsUnread,
+    markActionCompleted,
     archiveAnnouncement,
     restoreAnnouncement,
   }

@@ -8,11 +8,18 @@ import {
   Button,
   ButtonGroup,
   chakra,
+  Checkbox,
+  CheckboxGroup,
+  Divider,
+  FormControl,
+  FormHelperText,
+  FormLabel,
   Grid,
   Heading,
   HStack,
   Icon,
   IconButton,
+  Input,
   Modal,
   ModalBody,
   ModalCloseButton,
@@ -20,14 +27,21 @@ import {
   ModalFooter,
   ModalHeader,
   ModalOverlay,
+  Select,
+  SimpleGrid,
   Spinner,
   Stack,
+  Switch,
   Text,
+  Textarea,
+  Tooltip,
   useDisclosure,
+  useToast,
   VStack,
 } from '@chakra-ui/react'
 import { useSearchParams } from 'react-router-dom'
 import {
+  AlertTriangle,
   ArrowUpRight,
   Archive,
   Briefcase,
@@ -36,22 +50,52 @@ import {
   Inbox,
   Mail,
   MailOpen,
+  Megaphone,
+  Pencil,
+  Plus,
   RefreshCcw,
   CalendarClock,
+  CheckCircle2,
+  Send,
+  Trash2,
   User,
 } from 'lucide-react'
 import { format, formatDistanceToNow } from 'date-fns'
-import type { Announcement } from '@/hooks/useAnnouncements'
+import { useAnnouncements, type Announcement } from '@/hooks/useAnnouncements'
 import { useEventsFeed } from '@/hooks/useEventsFeed'
 import { WhatsAppCommunityCard } from '@/components/community/WhatsAppCommunityCard'
 import { useAuth } from '@/hooks/useAuth'
 import { UserRole } from '@/types'
+import {
+  type AdminAnnouncement,
+  type AnnouncementDraftInput,
+  archiveAnnouncementAdmin,
+  createAnnouncement,
+  deleteAnnouncementAdmin,
+  publishAnnouncement,
+  subscribeToAllAnnouncements,
+  updateAnnouncement,
+} from '@/services/announcementService'
 
-const DEFAULT_TAB = 'events'
+const DEFAULT_TAB: TabKey = 'events'
 
-type TabKey = 'announcements' | 'events' | 'jobs' | 'grants'
+type TabKey = 'announcements' | 'events' | 'jobs' | 'grants' | 'admin'
 
-const tabs: Array<{ key: TabKey; label: string; description: string; icon: React.ElementType; hidden?: boolean }> = [
+interface TabDescriptor {
+  key: TabKey
+  label: string
+  description: string
+  icon: React.ElementType
+  hidden?: boolean
+}
+
+const baseTabs: TabDescriptor[] = [
+  {
+    key: 'announcements',
+    label: 'Announcements',
+    description: 'Platform-wide messages, updates, and required actions from the T4L team.',
+    icon: Megaphone,
+  },
   {
     key: 'events',
     label: 'Events',
@@ -72,6 +116,14 @@ const tabs: Array<{ key: TabKey; label: string; description: string; icon: React
   },
 ]
 
+const ROLE_TARGET_OPTIONS: Array<{ value: string; label: string }> = [
+  { value: 'free_user', label: 'Free members' },
+  { value: 'paid_member', label: 'Paid members' },
+  { value: 'mentor', label: 'Mentors' },
+  { value: 'ambassador', label: 'Ambassadors' },
+  { value: 'partner', label: 'Partners' },
+]
+
 const buildSearchParams = (tab: TabKey) => {
   const params = new URLSearchParams()
   params.set('tab', tab)
@@ -85,7 +137,7 @@ const AnnouncementsHeader = () => (
         Community Hub
       </Heading>
       <Text color="brand.subtleText" fontSize="md">
-        Explore events, job opportunities, and grants curated for the Village community.
+        Platform announcements, events, and community spaces — all in one place.
       </Text>
     </Stack>
   </Box>
@@ -94,7 +146,7 @@ const AnnouncementsHeader = () => (
 const TabNavigation: React.FC<{
   activeTab: TabKey
   onChange: (tab: TabKey) => void
-  tabs: Array<{ key: TabKey; label: string; description: string; icon: React.ElementType; hidden?: boolean }>
+  tabs: TabDescriptor[]
 }> = ({ activeTab, onChange, tabs }) => {
   const visibleTabs = tabs.filter((tab) => !tab.hidden)
   return (
@@ -129,8 +181,16 @@ const AnnouncementCard: React.FC<{
   onToggleArchive: () => void
 }> = ({ announcement, onOpen, onToggleRead, onToggleArchive }) => {
   const isUnread = !announcement.isRead
-  const indicatorColor = isUnread ? 'brand.primary' : 'border.subtle'
   const isArchived = announcement.isArchived
+  const mandatoryPending = announcement.isMandatory && !announcement.actionCompleted
+  const indicatorColor = mandatoryPending
+    ? 'red.400'
+    : isUnread
+      ? 'brand.primary'
+      : 'border.subtle'
+  const archiveBlockedReason = mandatoryPending
+    ? 'Complete the required action before archiving.'
+    : null
 
   return (
     <Box
@@ -138,13 +198,13 @@ const AnnouncementCard: React.FC<{
       textAlign="left"
       width="100%"
       onClick={onOpen}
-      borderWidth={1}
-      borderColor={isUnread ? 'accent.purpleBorder' : 'border.subtle'}
-      bg={isUnread ? 'accent.purpleSubtle' : 'surface.default'}
+      borderWidth={mandatoryPending ? 2 : 1}
+      borderColor={mandatoryPending ? 'red.300' : isUnread ? 'accent.purpleBorder' : 'border.subtle'}
+      bg={mandatoryPending ? 'red.50' : isUnread ? 'accent.purpleSubtle' : 'surface.default'}
       boxShadow={isUnread ? 'md' : 'sm'}
       borderRadius="2xl"
       p={4}
-      _hover={{ borderColor: 'purple.400', boxShadow: 'md' }}
+      _hover={{ borderColor: mandatoryPending ? 'red.400' : 'purple.400', boxShadow: 'md' }}
       transition="all 0.2s ease"
     >
       <HStack align="start" spacing={4}>
@@ -162,7 +222,19 @@ const AnnouncementCard: React.FC<{
               </Text>
             </Stack>
             <Stack direction={{ base: 'column', md: 'row' }} spacing={2} align="flex-end">
-              {isUnread && (
+              {mandatoryPending && (
+                <Badge colorScheme="red" borderRadius="full" display="inline-flex" gap={1} alignItems="center">
+                  <Icon as={AlertTriangle} boxSize={3} />
+                  Action required
+                </Badge>
+              )}
+              {announcement.isMandatory && announcement.actionCompleted && (
+                <Badge colorScheme="green" borderRadius="full" display="inline-flex" gap={1} alignItems="center">
+                  <Icon as={CheckCircle2} boxSize={3} />
+                  Completed
+                </Badge>
+              )}
+              {!announcement.isMandatory && isUnread && (
                 <Badge colorScheme="purple" borderRadius="full">
                   New
                 </Badge>
@@ -190,16 +262,23 @@ const AnnouncementCard: React.FC<{
                 onToggleRead()
               }}
             />
-            <IconButton
-              aria-label={announcement.isArchived ? 'Restore announcement' : 'Archive announcement'}
-              icon={<Icon as={announcement.isArchived ? RefreshCcw : Archive} boxSize={4} />}
-              size="sm"
-              variant="ghost"
-              onClick={(e) => {
-                e.stopPropagation()
-                onToggleArchive()
-              }}
-            />
+            <Tooltip label={archiveBlockedReason ?? ''} isDisabled={!archiveBlockedReason}>
+              <span>
+                <IconButton
+                  aria-label={
+                    announcement.isArchived ? 'Restore announcement' : 'Archive announcement'
+                  }
+                  icon={<Icon as={announcement.isArchived ? RefreshCcw : Archive} boxSize={4} />}
+                  size="sm"
+                  variant="ghost"
+                  isDisabled={Boolean(archiveBlockedReason) && !announcement.isArchived}
+                  onClick={(e) => {
+                    e.stopPropagation()
+                    onToggleArchive()
+                  }}
+                />
+              </span>
+            </Tooltip>
           </HStack>
         </Stack>
       </HStack>
@@ -213,16 +292,38 @@ const AnnouncementModal: React.FC<{
   onClose: () => void
   onArchive: () => void
   onRestore: () => void
-}> = ({ announcement, isOpen, onClose, onArchive, onRestore }) => {
+  onCompleteAction: () => Promise<void> | void
+}> = ({ announcement, isOpen, onClose, onArchive, onRestore, onCompleteAction }) => {
   const isArchived = announcement.isArchived
+  const mandatoryPending = announcement.isMandatory && !announcement.actionCompleted
+
+  const handleCompleteAction = async () => {
+    if (announcement.actionUrl) {
+      window.open(announcement.actionUrl, '_blank', 'noopener,noreferrer')
+    }
+    await onCompleteAction()
+  }
+
   return (
-    <Modal isOpen={isOpen} onClose={onClose} size="4xl" isCentered>
+    <Modal
+      isOpen={isOpen}
+      onClose={onClose}
+      size="4xl"
+      isCentered
+      closeOnOverlayClick={!mandatoryPending}
+      closeOnEsc={!mandatoryPending}
+    >
       <ModalOverlay backdropFilter="blur(6px)" />
       <ModalContent borderRadius="2xl" overflow="hidden">
         <ModalHeader>
           <Stack spacing={1}>
-            <Text fontSize="xs" fontWeight="bold" color="text.muted" letterSpacing="widest">
-              ANNOUNCEMENT
+            <Text
+              fontSize="xs"
+              fontWeight="bold"
+              color={mandatoryPending ? 'red.500' : 'text.muted'}
+              letterSpacing="widest"
+            >
+              {mandatoryPending ? 'ACTION REQUIRED' : 'ANNOUNCEMENT'}
             </Text>
             <Heading size="lg" color="text.primary">
               {announcement.title}
@@ -249,13 +350,23 @@ const AnnouncementModal: React.FC<{
             </HStack>
           </Stack>
         </ModalHeader>
-        <ModalCloseButton rounded="full" mt={2} />
+        {!mandatoryPending && <ModalCloseButton rounded="full" mt={2} />}
         <ModalBody>
-          <Box borderWidth={1} borderColor="border.subtle" bg="surface.subtle" borderRadius="2xl" p={4}>
-            <Text whiteSpace="pre-wrap" color="text.secondary" fontSize="md" lineHeight="tall">
-              {announcement.message}
-            </Text>
-          </Box>
+          <Stack spacing={4}>
+            {mandatoryPending && (
+              <Alert status="warning" borderRadius="xl">
+                <AlertIcon />
+                <AlertDescription fontSize="sm">
+                  This announcement requires an action before you can close it.
+                </AlertDescription>
+              </Alert>
+            )}
+            <Box borderWidth={1} borderColor="border.subtle" bg="surface.subtle" borderRadius="2xl" p={4}>
+              <Text whiteSpace="pre-wrap" color="text.secondary" fontSize="md" lineHeight="tall">
+                {announcement.message}
+              </Text>
+            </Box>
+          </Stack>
         </ModalBody>
         <ModalFooter justifyContent="space-between" alignItems="center">
           <HStack spacing={3} color="text.secondary" fontSize="sm" textTransform="uppercase" fontWeight="semibold">
@@ -277,22 +388,649 @@ const AnnouncementModal: React.FC<{
             )}
           </HStack>
           <HStack spacing={3}>
-            {isArchived ? (
-              <Button variant="outline" leftIcon={<RefreshCcw size={18} />} onClick={onRestore}>
-                Restore
-              </Button>
-            ) : (
-              <Button variant="outline" leftIcon={<Archive size={18} />} onClick={onArchive}>
-                Archive
+            {announcement.isMandatory && !announcement.actionCompleted && (
+              <Button
+                colorScheme="red"
+                leftIcon={<Icon as={CheckCircle2} boxSize={4} />}
+                rightIcon={announcement.actionUrl ? <Icon as={ArrowUpRight} boxSize={4} /> : undefined}
+                onClick={handleCompleteAction}
+              >
+                {announcement.actionLabel || 'Confirm I have taken action'}
               </Button>
             )}
-            <Button colorScheme="purple" onClick={onClose}>
-              Close
-            </Button>
+            {!mandatoryPending && (
+              <>
+                {isArchived ? (
+                  <Button variant="outline" leftIcon={<RefreshCcw size={18} />} onClick={onRestore}>
+                    Restore
+                  </Button>
+                ) : (
+                  <Button variant="outline" leftIcon={<Archive size={18} />} onClick={onArchive}>
+                    Archive
+                  </Button>
+                )}
+                <Button colorScheme="purple" onClick={onClose}>
+                  Close
+                </Button>
+              </>
+            )}
           </HStack>
         </ModalFooter>
       </ModalContent>
     </Modal>
+  )
+}
+
+interface ComposerState {
+  title: string
+  message: string
+  isMandatory: boolean
+  actionLabel: string
+  actionUrl: string
+  targetRoles: string[]
+  status: 'draft' | 'published'
+}
+
+const emptyComposer = (): ComposerState => ({
+  title: '',
+  message: '',
+  isMandatory: false,
+  actionLabel: '',
+  actionUrl: '',
+  targetRoles: [],
+  status: 'published',
+})
+
+const AnnouncementComposer: React.FC<{
+  initialValue?: AdminAnnouncement | null
+  onCancel: () => void
+  onSaved: () => void
+  authorName: string | null
+}> = ({ initialValue, onCancel, onSaved, authorName }) => {
+  const toast = useToast()
+  const [state, setState] = useState<ComposerState>(emptyComposer())
+  const [saving, setSaving] = useState(false)
+
+  useEffect(() => {
+    if (initialValue) {
+      setState({
+        title: initialValue.title,
+        message: initialValue.message,
+        isMandatory: initialValue.isMandatory,
+        actionLabel: initialValue.actionLabel ?? '',
+        actionUrl: initialValue.actionUrl ?? '',
+        targetRoles: initialValue.targeting?.targetRoles ?? [],
+        status: initialValue.status === 'draft' ? 'draft' : 'published',
+      })
+    } else {
+      setState(emptyComposer())
+    }
+    // Only resync when the target record id changes; snapshot re-emits keep edits in place.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [initialValue?.id])
+
+  const isValid = state.title.trim().length > 0 && state.message.trim().length > 0
+  const mandatoryMissingLabel = state.isMandatory && !state.actionLabel.trim()
+
+  const handleSubmit = async (override?: Partial<ComposerState>) => {
+    if (!isValid || mandatoryMissingLabel) return
+    setSaving(true)
+    const next = { ...state, ...override }
+    const payload: AnnouncementDraftInput = {
+      title: next.title,
+      message: next.message,
+      isMandatory: next.isMandatory,
+      actionLabel: next.actionLabel || null,
+      actionUrl: next.actionUrl || null,
+      targeting: next.targetRoles.length ? { targetRoles: next.targetRoles } : null,
+      status: next.status,
+      tier: 'global',
+      author: authorName,
+      source: 'T4L Team',
+    }
+    try {
+      if (initialValue) {
+        await updateAnnouncement(initialValue.id, payload)
+        toast({ title: 'Announcement updated', status: 'success', duration: 2500 })
+      } else {
+        await createAnnouncement(payload)
+        toast({ title: 'Announcement published', status: 'success', duration: 2500 })
+      }
+      onSaved()
+    } catch (error) {
+      console.error('Failed to save announcement', error)
+      toast({
+        title: 'Unable to save announcement',
+        description: error instanceof Error ? error.message : 'Please try again.',
+        status: 'error',
+        duration: 4000,
+      })
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  return (
+    <Box
+      borderWidth={1}
+      borderColor="border.subtle"
+      bg="surface.default"
+      borderRadius="3xl"
+      p={6}
+      boxShadow="sm"
+    >
+      <Stack spacing={5}>
+        <Stack spacing={1}>
+          <Text fontSize="xs" fontWeight="bold" color="text.muted" letterSpacing="widest">
+            {initialValue ? 'EDIT ANNOUNCEMENT' : 'NEW ANNOUNCEMENT'}
+          </Text>
+          <Heading size="md" color="text.primary">
+            {initialValue ? 'Update the announcement' : 'Send a platform-wide message'}
+          </Heading>
+          <Text color="text.secondary" fontSize="sm">
+            Mandatory announcements appear as a blocking pop-up until the learner confirms the required action.
+          </Text>
+        </Stack>
+
+        <SimpleGrid columns={{ base: 1, md: 2 }} spacing={4}>
+          <FormControl isRequired>
+            <FormLabel fontSize="sm">Title</FormLabel>
+            <Input
+              placeholder="e.g., Complete your Q2 profile update"
+              value={state.title}
+              onChange={(e) => setState((prev) => ({ ...prev, title: e.target.value }))}
+              maxLength={120}
+            />
+          </FormControl>
+          <FormControl>
+            <FormLabel fontSize="sm">Status</FormLabel>
+            <Select
+              value={state.status}
+              onChange={(e) =>
+                setState((prev) => ({ ...prev, status: e.target.value as ComposerState['status'] }))
+              }
+            >
+              <option value="published">Published</option>
+              <option value="draft">Draft</option>
+            </Select>
+            <FormHelperText>Drafts stay hidden from learners until published.</FormHelperText>
+          </FormControl>
+        </SimpleGrid>
+
+        <FormControl isRequired>
+          <FormLabel fontSize="sm">Message</FormLabel>
+          <Textarea
+            minH="140px"
+            placeholder="Share the details learners need. Plain text only."
+            value={state.message}
+            onChange={(e) => setState((prev) => ({ ...prev, message: e.target.value }))}
+          />
+        </FormControl>
+
+        <FormControl display="flex" alignItems="center" gap={3}>
+          <Switch
+            id="announcement-mandatory"
+            colorScheme="red"
+            isChecked={state.isMandatory}
+            onChange={(e) => setState((prev) => ({ ...prev, isMandatory: e.target.checked }))}
+          />
+          <Stack spacing={0}>
+            <FormLabel htmlFor="announcement-mandatory" mb={0} fontSize="sm">
+              Mandatory action required
+            </FormLabel>
+            <Text fontSize="xs" color="text.muted">
+              Learners will see a blocking modal on first login until they confirm the action.
+            </Text>
+          </Stack>
+        </FormControl>
+
+        {state.isMandatory && (
+          <SimpleGrid columns={{ base: 1, md: 2 }} spacing={4}>
+            <FormControl isRequired isInvalid={mandatoryMissingLabel}>
+              <FormLabel fontSize="sm">Action button label</FormLabel>
+              <Input
+                placeholder="e.g., Update my profile"
+                value={state.actionLabel}
+                onChange={(e) => setState((prev) => ({ ...prev, actionLabel: e.target.value }))}
+              />
+              {mandatoryMissingLabel && (
+                <FormHelperText color="red.500">Required for mandatory announcements.</FormHelperText>
+              )}
+            </FormControl>
+            <FormControl>
+              <FormLabel fontSize="sm">Action URL (optional)</FormLabel>
+              <Input
+                placeholder="https://… or leave blank for a confirm-only action"
+                value={state.actionUrl}
+                onChange={(e) => setState((prev) => ({ ...prev, actionUrl: e.target.value }))}
+              />
+            </FormControl>
+          </SimpleGrid>
+        )}
+
+        <FormControl>
+          <FormLabel fontSize="sm">Who should see this? (leave empty for everyone)</FormLabel>
+          <CheckboxGroup
+            value={state.targetRoles}
+            onChange={(value) =>
+              setState((prev) => ({ ...prev, targetRoles: value as string[] }))
+            }
+          >
+            <Stack direction={{ base: 'column', md: 'row' }} spacing={4} flexWrap="wrap">
+              {ROLE_TARGET_OPTIONS.map((option) => (
+                <Checkbox key={option.value} value={option.value}>
+                  {option.label}
+                </Checkbox>
+              ))}
+            </Stack>
+          </CheckboxGroup>
+          <FormHelperText>Admins always see all announcements regardless of targeting.</FormHelperText>
+        </FormControl>
+
+        <HStack justify="flex-end" spacing={3} pt={2}>
+          <Button variant="ghost" onClick={onCancel} isDisabled={saving}>
+            Cancel
+          </Button>
+          {initialValue ? (
+            <Button
+              colorScheme="purple"
+              leftIcon={<Pencil size={16} />}
+              isLoading={saving}
+              isDisabled={!isValid || mandatoryMissingLabel}
+              onClick={() => handleSubmit()}
+            >
+              Save changes
+            </Button>
+          ) : (
+            <>
+              <Button
+                variant="outline"
+                isDisabled={!isValid || mandatoryMissingLabel || saving}
+                onClick={() => handleSubmit({ status: 'draft' })}
+              >
+                Save as draft
+              </Button>
+              <Button
+                colorScheme="purple"
+                leftIcon={<Send size={16} />}
+                isLoading={saving}
+                isDisabled={!isValid || mandatoryMissingLabel}
+                onClick={() => handleSubmit({ status: 'published' })}
+              >
+                Publish now
+              </Button>
+            </>
+          )}
+        </HStack>
+      </Stack>
+    </Box>
+  )
+}
+
+const AdminAnnouncementRow: React.FC<{
+  announcement: AdminAnnouncement
+  onEdit: () => void
+  onTogglePublish: () => void
+  onArchive: () => void
+  onDelete: () => void
+  busy: boolean
+}> = ({ announcement, onEdit, onTogglePublish, onArchive, onDelete, busy }) => {
+  const statusColor =
+    announcement.status === 'published'
+      ? 'green'
+      : announcement.status === 'draft'
+        ? 'yellow'
+        : 'gray'
+  return (
+    <Box borderWidth={1} borderColor="border.subtle" borderRadius="2xl" bg="surface.default" p={4}>
+      <Stack spacing={2}>
+        <HStack justify="space-between" align="start" flexWrap="wrap" spacing={3}>
+          <Stack spacing={1} flex={1} minW="220px">
+            <HStack spacing={2} flexWrap="wrap">
+              <Badge colorScheme={statusColor} borderRadius="full" textTransform="capitalize">
+                {announcement.status}
+              </Badge>
+              {announcement.isMandatory && (
+                <Badge colorScheme="red" borderRadius="full" display="inline-flex" gap={1} alignItems="center">
+                  <Icon as={AlertTriangle} boxSize={3} /> Mandatory
+                </Badge>
+              )}
+              {announcement.targeting?.targetRoles?.length ? (
+                <Badge colorScheme="purple" borderRadius="full">
+                  {announcement.targeting.targetRoles.length} role
+                  {announcement.targeting.targetRoles.length === 1 ? '' : 's'}
+                </Badge>
+              ) : (
+                <Badge colorScheme="blue" borderRadius="full">
+                  All users
+                </Badge>
+              )}
+            </HStack>
+            <Text fontWeight="semibold" color="text.primary">
+              {announcement.title}
+            </Text>
+            <Text color="text.secondary" fontSize="sm" noOfLines={2}>
+              {announcement.message}
+            </Text>
+            <Text color="text.muted" fontSize="xs">
+              {announcement.createdAt
+                ? `Created ${format(announcement.createdAt, 'MMM d, yyyy')}`
+                : 'Draft'}
+            </Text>
+          </Stack>
+          <HStack spacing={2}>
+            <IconButton
+              aria-label="Edit announcement"
+              icon={<Pencil size={16} />}
+              size="sm"
+              variant="outline"
+              onClick={onEdit}
+              isDisabled={busy}
+            />
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={onTogglePublish}
+              isDisabled={busy}
+            >
+              {announcement.status === 'published' ? 'Unpublish' : 'Publish'}
+            </Button>
+            <IconButton
+              aria-label="Archive announcement"
+              icon={<Archive size={16} />}
+              size="sm"
+              variant="outline"
+              onClick={onArchive}
+              isDisabled={busy || announcement.status === 'archived'}
+            />
+            <IconButton
+              aria-label="Delete announcement"
+              icon={<Trash2 size={16} />}
+              size="sm"
+              variant="outline"
+              colorScheme="red"
+              onClick={onDelete}
+              isDisabled={busy}
+            />
+          </HStack>
+        </HStack>
+      </Stack>
+    </Box>
+  )
+}
+
+const AdminTab: React.FC<{ authorName: string | null }> = ({ authorName }) => {
+  const toast = useToast()
+  const [items, setItems] = useState<AdminAnnouncement[]>([])
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
+  const [editing, setEditing] = useState<AdminAnnouncement | null>(null)
+  const [composerOpen, setComposerOpen] = useState(false)
+  const [busyId, setBusyId] = useState<string | null>(null)
+
+  useEffect(() => {
+    const unsubscribe = subscribeToAllAnnouncements(
+      (next) => {
+        setItems(next)
+        setLoading(false)
+      },
+      (err) => {
+        console.error(err)
+        setError('Unable to load announcements right now.')
+        setLoading(false)
+      },
+    )
+    return unsubscribe
+  }, [])
+
+  const handleEdit = (announcement: AdminAnnouncement) => {
+    setEditing(announcement)
+    setComposerOpen(true)
+  }
+
+  const handleSaved = () => {
+    setComposerOpen(false)
+    setEditing(null)
+  }
+
+  const handleTogglePublish = async (announcement: AdminAnnouncement) => {
+    setBusyId(announcement.id)
+    try {
+      if (announcement.status === 'published') {
+        await updateAnnouncement(announcement.id, { status: 'draft' })
+      } else {
+        await publishAnnouncement(announcement.id)
+      }
+    } catch (err) {
+      toast({ title: 'Unable to update', status: 'error', duration: 3000 })
+      console.error(err)
+    } finally {
+      setBusyId(null)
+    }
+  }
+
+  const handleArchive = async (announcement: AdminAnnouncement) => {
+    setBusyId(announcement.id)
+    try {
+      await archiveAnnouncementAdmin(announcement.id)
+    } catch (err) {
+      toast({ title: 'Unable to archive', status: 'error', duration: 3000 })
+      console.error(err)
+    } finally {
+      setBusyId(null)
+    }
+  }
+
+  const handleDelete = async (announcement: AdminAnnouncement) => {
+    if (!window.confirm('Delete this announcement? This cannot be undone.')) return
+    setBusyId(announcement.id)
+    try {
+      await deleteAnnouncementAdmin(announcement.id)
+      toast({ title: 'Announcement deleted', status: 'success', duration: 2500 })
+    } catch (err) {
+      toast({ title: 'Unable to delete', status: 'error', duration: 3000 })
+      console.error(err)
+    } finally {
+      setBusyId(null)
+    }
+  }
+
+  return (
+    <Stack spacing={4}>
+      {error && (
+        <Alert status="error" borderRadius="xl">
+          <AlertIcon />
+          <AlertDescription fontSize="sm">{error}</AlertDescription>
+        </Alert>
+      )}
+
+      <HStack justify="space-between" align="center" flexWrap="wrap" spacing={3}>
+        <Stack spacing={0}>
+          <Heading size="md" color="text.primary">
+            Announcement management
+          </Heading>
+          <Text color="text.secondary" fontSize="sm">
+            Create, edit, and publish announcements visible to learners.
+          </Text>
+        </Stack>
+        {!composerOpen && (
+          <Button
+            leftIcon={<Plus size={16} />}
+            colorScheme="purple"
+            onClick={() => {
+              setEditing(null)
+              setComposerOpen(true)
+            }}
+          >
+            New announcement
+          </Button>
+        )}
+      </HStack>
+
+      {composerOpen && (
+        <AnnouncementComposer
+          initialValue={editing}
+          authorName={authorName}
+          onCancel={() => {
+            setComposerOpen(false)
+            setEditing(null)
+          }}
+          onSaved={handleSaved}
+        />
+      )}
+
+      <Divider />
+
+      {loading ? (
+        <VStack borderWidth={1} borderColor="border.subtle" borderRadius="2xl" bg="surface.default" p={8} spacing={3}>
+          <Spinner color="purple.500" size="md" />
+          <Text color="text.secondary">Loading announcements...</Text>
+        </VStack>
+      ) : items.length === 0 ? (
+        <VStack
+          borderWidth={1}
+          borderStyle="dashed"
+          borderColor="border.subtle"
+          borderRadius="2xl"
+          bg="surface.default"
+          p={8}
+          spacing={3}
+        >
+          <Icon as={Inbox} boxSize={10} color="text.muted" />
+          <Heading size="sm" color="text.primary">
+            No announcements yet
+          </Heading>
+          <Text color="text.secondary" fontSize="sm">
+            Publish one to share updates with learners.
+          </Text>
+        </VStack>
+      ) : (
+        <Stack spacing={3}>
+          {items.map((item) => (
+            <AdminAnnouncementRow
+              key={item.id}
+              announcement={item}
+              busy={busyId === item.id}
+              onEdit={() => handleEdit(item)}
+              onTogglePublish={() => handleTogglePublish(item)}
+              onArchive={() => handleArchive(item)}
+              onDelete={() => handleDelete(item)}
+            />
+          ))}
+        </Stack>
+      )}
+    </Stack>
+  )
+}
+
+const AnnouncementsTab: React.FC = () => {
+  const {
+    announcements,
+    loading,
+    error,
+    markAnnouncementAsRead,
+    markAnnouncementAsUnread,
+    markActionCompleted,
+    archiveAnnouncement,
+    restoreAnnouncement,
+  } = useAnnouncements()
+  const { isOpen, onOpen, onClose } = useDisclosure()
+  const [activeAnnouncementId, setActiveAnnouncementId] = useState<string | null>(null)
+
+  const activeAnnouncement = useMemo(
+    () => (activeAnnouncementId ? announcements.find((item) => item.id === activeAnnouncementId) ?? null : null),
+    [activeAnnouncementId, announcements],
+  )
+
+  const openAnnouncement = (announcement: Announcement) => {
+    setActiveAnnouncementId(announcement.id)
+    if (!announcement.isRead) {
+      void markAnnouncementAsRead(announcement.id)
+    }
+    onOpen()
+  }
+
+  const closeAnnouncementModal = () => {
+    setActiveAnnouncementId(null)
+    onClose()
+  }
+
+  return (
+    <Stack spacing={4}>
+      {error && (
+        <Alert status="error" borderRadius="xl" borderWidth={1} borderColor="red.200" bg="red.50">
+          <AlertIcon />
+          <AlertDescription fontSize="sm">{error}</AlertDescription>
+        </Alert>
+      )}
+
+      {loading ? (
+        <VStack
+          borderWidth={1}
+          borderColor="border.subtle"
+          borderRadius="2xl"
+          bg="surface.default"
+          p={10}
+          spacing={3}
+          boxShadow="sm"
+        >
+          <Spinner color="purple.500" size="lg" />
+          <Text color="text.secondary" fontWeight="medium">
+            Loading announcements...
+          </Text>
+        </VStack>
+      ) : announcements.length === 0 ? (
+        <VStack
+          borderWidth={1}
+          borderStyle="dashed"
+          borderColor="border.subtle"
+          borderRadius="2xl"
+          bg="surface.default"
+          p={10}
+          spacing={3}
+          boxShadow="sm"
+        >
+          <Icon as={Inbox} boxSize={12} color="text.muted" />
+          <Heading size="sm" color="text.primary">
+            No announcements available
+          </Heading>
+          <Text color="text.secondary" fontSize="sm">
+            Check back soon for new updates and community announcements.
+          </Text>
+        </VStack>
+      ) : (
+        <Grid templateColumns="repeat(auto-fit, minmax(320px, 1fr))" gap={4}>
+          {announcements.map((announcement) => (
+            <AnnouncementCard
+              key={announcement.id}
+              announcement={announcement}
+              onOpen={() => openAnnouncement(announcement)}
+              onToggleRead={() =>
+                announcement.isRead
+                  ? void markAnnouncementAsUnread(announcement.id)
+                  : void markAnnouncementAsRead(announcement.id)
+              }
+              onToggleArchive={() =>
+                announcement.isArchived
+                  ? void restoreAnnouncement(announcement.id)
+                  : void archiveAnnouncement(announcement.id)
+              }
+            />
+          ))}
+        </Grid>
+      )}
+
+      {activeAnnouncement && (
+        <AnnouncementModal
+          announcement={activeAnnouncement}
+          isOpen={isOpen}
+          onClose={closeAnnouncementModal}
+          onArchive={() => void archiveAnnouncement(activeAnnouncement.id)}
+          onRestore={() => void restoreAnnouncement(activeAnnouncement.id)}
+          onCompleteAction={() => markActionCompleted(activeAnnouncement.id)}
+        />
+      )}
+    </Stack>
   )
 }
 
@@ -463,24 +1201,33 @@ const GrantsTab = () => (
 
 export const AnnouncementsPage: React.FC = () => {
   const [searchParams, setSearchParams] = useSearchParams()
-  const [announcements, setAnnouncements] = useState<Announcement[]>([])
-  const [loading, setLoading] = useState(false)
-  const [error, setError] = useState<string | null>(null)
-  const { isOpen, onOpen, onClose } = useDisclosure()
-  const [activeAnnouncement, setActiveAnnouncement] = useState<Announcement | null>(null)
-  const { profile } = useAuth()
+  const { profile, isSuperAdmin } = useAuth()
   const hasOrganization = Boolean(profile?.companyId || profile?.organizationId || profile?.companyCode)
   const hasPaidAccess = profile?.membershipStatus === 'paid' && hasOrganization
-  const tabConfig = useMemo(
-    () =>
-      tabs.map((tab) =>
+
+  const tabConfig = useMemo<TabDescriptor[]>(
+    () => {
+      const withPaidHiding = baseTabs.map((tab) =>
         !hasPaidAccess && (tab.key === 'jobs' || tab.key === 'grants') ? { ...tab, hidden: true } : tab,
-      ),
-    [hasPaidAccess],
+      )
+      if (!isSuperAdmin) return withPaidHiding
+      return [
+        ...withPaidHiding,
+        {
+          key: 'admin',
+          label: 'Manage',
+          description: 'Create and manage platform-wide announcements.',
+          icon: Pencil,
+        },
+      ]
+    },
+    [hasPaidAccess, isSuperAdmin],
   )
 
   const tabFromUrl = (searchParams.get('tab') as TabKey) || DEFAULT_TAB
-  const activeTab: TabKey = tabConfig.some((tab) => tab.key === tabFromUrl && !tab.hidden) ? tabFromUrl : DEFAULT_TAB
+  const activeTab: TabKey = tabConfig.some((tab) => tab.key === tabFromUrl && !tab.hidden)
+    ? tabFromUrl
+    : DEFAULT_TAB
 
   useEffect(() => {
     if (tabFromUrl !== activeTab) {
@@ -488,53 +1235,13 @@ export const AnnouncementsPage: React.FC = () => {
     }
   }, [activeTab, tabFromUrl, setSearchParams])
 
-  useEffect(() => {
-    setLoading(false)
-    setError(null)
-  }, [])
-
-  const markAnnouncementAsRead = (id: string) => {
-    setAnnouncements((prev) => prev.map((announcement) => (announcement.id === id ? { ...announcement, isRead: true } : announcement)))
-  }
-
-  const markAnnouncementAsUnread = (id: string) => {
-    setAnnouncements((prev) => prev.map((announcement) => (announcement.id === id ? { ...announcement, isRead: false } : announcement)))
-  }
-
-  const archiveAnnouncement = (id: string) => {
-    setAnnouncements((prev) =>
-      prev.map((announcement) =>
-        announcement.id === id ? { ...announcement, isArchived: true, isRead: true } : announcement,
-      ),
-    )
-  }
-
-  const restoreAnnouncement = (id: string) => {
-    setAnnouncements((prev) =>
-      prev.map((announcement) =>
-        announcement.id === id ? { ...announcement, isArchived: false } : announcement,
-      ),
-    )
-  }
-
-  const openAnnouncement = (announcement: Announcement) => {
-    setActiveAnnouncement(announcement)
-    markAnnouncementAsRead(announcement.id)
-    onOpen()
-  }
-
-  const closeAnnouncementModal = () => {
-    setActiveAnnouncement(null)
-    onClose()
-  }
-
   const handleTabChange = (tab: TabKey) => {
     setSearchParams(buildSearchParams(tab))
   }
 
-  const announcementDescription = useMemo(() => {
-    const tabDetails = tabConfig.find((tab) => tab.key === activeTab)
-    return tabDetails?.description || ''
+  const tabDescription = useMemo(() => {
+    const details = tabConfig.find((tab) => tab.key === activeTab)
+    return details?.description || ''
   }, [activeTab, tabConfig])
 
   return (
@@ -544,89 +1251,16 @@ export const AnnouncementsPage: React.FC = () => {
       <Stack spacing={2}>
         <TabNavigation activeTab={activeTab} onChange={handleTabChange} tabs={tabConfig} />
         <Text color="text.secondary" fontSize="sm">
-          {announcementDescription}
+          {tabDescription}
         </Text>
       </Stack>
 
-      {activeTab === 'announcements' && (
-        <Stack spacing={4}>
-          {error && (
-            <Alert status="error" borderRadius="xl" borderWidth={1} borderColor="red.200" bg="red.50">
-              <AlertIcon />
-              <AlertDescription fontSize="sm">{error}</AlertDescription>
-            </Alert>
-          )}
-
-          {loading ? (
-            <VStack
-              borderWidth={1}
-              borderColor="border.subtle"
-              borderRadius="2xl"
-              bg="surface.default"
-              p={10}
-              spacing={3}
-              boxShadow="sm"
-            >
-              <Spinner color="purple.500" size="lg" />
-              <Text color="text.secondary" fontWeight="medium">
-                Loading content...
-              </Text>
-            </VStack>
-          ) : announcements.length === 0 ? (
-            <VStack
-              borderWidth={1}
-              borderStyle="dashed"
-              borderColor="border.subtle"
-              borderRadius="2xl"
-              bg="surface.default"
-              p={10}
-              spacing={3}
-              boxShadow="sm"
-            >
-              <Icon as={Inbox} boxSize={12} color="text.muted" />
-              <Heading size="sm" color="text.primary">
-                No announcements available
-              </Heading>
-              <Text color="text.secondary" fontSize="sm">
-                Check back soon for new updates and community announcements.
-              </Text>
-            </VStack>
-          ) : (
-            <Grid templateColumns="repeat(auto-fit, minmax(320px, 1fr))" gap={4}>
-              {announcements.map((announcement) => (
-                <AnnouncementCard
-                  key={announcement.id}
-                  announcement={announcement}
-                  onOpen={() => openAnnouncement(announcement)}
-                  onToggleRead={() =>
-                    announcement.isRead
-                      ? markAnnouncementAsUnread(announcement.id)
-                      : markAnnouncementAsRead(announcement.id)
-                  }
-                  onToggleArchive={() =>
-                    announcement.isArchived
-                      ? restoreAnnouncement(announcement.id)
-                      : archiveAnnouncement(announcement.id)
-                  }
-                />
-              ))}
-            </Grid>
-          )}
-        </Stack>
-      )}
-
+      {activeTab === 'announcements' && <AnnouncementsTab />}
       {activeTab === 'events' && <EventsTab />}
       {activeTab === 'jobs' && <JobsTab />}
       {activeTab === 'grants' && <GrantsTab />}
-
-      {activeAnnouncement && (
-        <AnnouncementModal
-          announcement={activeAnnouncement}
-          isOpen={isOpen}
-          onClose={closeAnnouncementModal}
-          onArchive={() => archiveAnnouncement(activeAnnouncement.id)}
-          onRestore={() => restoreAnnouncement(activeAnnouncement.id)}
-        />
+      {activeTab === 'admin' && isSuperAdmin && (
+        <AdminTab authorName={profile?.fullName || profile?.firstName || 'T4L Team'} />
       )}
     </Stack>
   )

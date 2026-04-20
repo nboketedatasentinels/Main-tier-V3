@@ -47,6 +47,7 @@ import { UserProfileManagementPage } from '@/pages/admin/UserProfileManagementPa
 import { OrganizationDetailPage } from '@/pages/admin/OrganizationDetailPage';
 import ApprovalQueuePage from '@/pages/admin/ApprovalQueuePage';
 import PartnerAssignmentPage from '@/pages/admin/PartnerAssignmentPage';
+import LearnerAssignmentsPage from '@/pages/partner/LearnerAssignmentsPage';
 import BadgeGalleryPage from '@/pages/badges/BadgeGalleryPage';
 import { VillageInvitePage } from '@/pages/villages/VillageInvitePage'
 import { AcceptVillageInvitePage } from '@/pages/villages/AcceptVillageInvitePage'
@@ -171,6 +172,7 @@ export const AppRoutes = () => {
           <Route path="organization/:organizationId" element={<OrganizationDetailPage />} />
           <Route path="user/:userId" element={<UserProfileManagementPage viewContext="partner" />} />
           <Route path="partner-assignment" element={<PartnerAssignmentPage />} />
+          <Route path="learner-assignments" element={<LearnerAssignmentsPage />} />
           <Route index element={<Navigate to="/partner/dashboard" replace />} />
         </Route>
 
@@ -188,6 +190,7 @@ export const AppRoutes = () => {
           <Route path="user/:userId" element={<UserProfileManagementPage viewContext="partner" />} />
           <Route path="approvals" element={<ApprovalQueuePage />} />
           <Route path="partner-assignment" element={<PartnerAssignmentPage />} />
+          <Route path="learner-assignments" element={<LearnerAssignmentsPage />} />
           <Route index element={<Navigate to="/admin/dashboard" replace />} />
         </Route>
 

@@ -29,7 +29,9 @@ import {
 } from '@chakra-ui/react'
 import { Flame, Gift, Megaphone, Share2, Target, TrendingUp, Users } from 'lucide-react'
 import { AmbassadorLayout } from '@/layouts/AmbassadorLayout'
+import { AmbassadorSessionsPanel } from '@/components/ambassador/AmbassadorSessionsPanel'
 import { useAuth } from '@/hooks/useAuth'
+import { getDisplayName } from '@/utils/displayName'
 
 type ReferralMetric = {
   label: string
@@ -128,6 +130,15 @@ export const AmbassadorDashboard: React.FC = () => {
             </Card>
           ))}
         </SimpleGrid>
+
+        {profile?.id && (
+          <AmbassadorSessionsPanel
+            ambassadorId={profile.id}
+            ambassadorName={getDisplayName(profile, ambassadorName)}
+            companyId={profile.companyId ?? null}
+            companyCode={profile.companyCode ?? null}
+          />
+        )}
 
         <Grid templateColumns={{ base: '1fr', xl: '2fr 1fr' }} gap={6}>
           <GridItem>

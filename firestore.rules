@@ -685,6 +685,77 @@ service cloud.firestore {
       allow delete: if isPartnerOrAdmin();
     }
 
+    // Ambassador coaching slots (ambassador-created, org-scoped, learners book into them)
+    match /ambassador_slots/{slotId} {
+      allow read: if isAuthenticated() && (
+        isPartnerOrAdmin() ||
+        request.auth.uid == resource.data.ambassador_id ||
+        isOrgScopedData(resource.data)
+      );
+      allow create: if isAuthenticated() && (
+        isPartnerOrAdmin() ||
+        (
+          request.auth.uid == request.resource.data.ambassador_id &&
+          request.resource.data.status == 'open' &&
+          request.resource.data.booking_count == 0
+        )
+      );
+      allow update: if isAuthenticated() && (
+        isPartnerOrAdmin() ||
+        request.auth.uid == resource.data.ambassador_id ||
+        // Allow any authenticated org member to adjust booking_count / status via transactional booking
+        (
+          isOrgScopedData(resource.data) &&
+          request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+            'booking_count', 'status', 'updated_at'
+          ])
+        )
+      );
+      allow delete: if isSuperAdmin();
+    }
+
+    // Ambassador slot bookings (one doc per learner+slot)
+    match /ambassador_slot_bookings/{bookingId} {
+      allow read: if isAuthenticated() && (
+        isPartnerOrAdmin() ||
+        request.auth.uid == resource.data.learner_id ||
+        request.auth.uid == resource.data.ambassador_id
+      );
+      allow create: if isAuthenticated() && (
+        isPartnerOrAdmin() ||
+        (
+          request.auth.uid == request.resource.data.learner_id &&
+          request.resource.data.status == 'booked'
+        )
+      );
+      allow update: if isAuthenticated() && (
+        isPartnerOrAdmin() ||
+        // Learner can cancel their own booking
+        (
+          request.auth.uid == resource.data.learner_id &&
+          request.resource.data.learner_id == resource.data.learner_id &&
+          request.resource.data.status == 'cancelled'
+        ) ||
+        // Ambassador (the slot owner) can mark attendance or cancel
+        request.auth.uid == resource.data.ambassador_id
+      );
+      allow delete: if isSuperAdmin();
+    }
+
+    // Mentorship goals (learner intent/goals for mentorship — one doc per learner)
+    match /mentorship_goals/{userId} {
+      allow read: if isAuthenticated() && (
+        request.auth.uid == userId ||
+        isPartnerOrAdmin() ||
+        (resource != null && request.auth.uid == resource.data.mentor_id)
+      );
+      allow create, update: if isAuthenticated() && (
+        request.auth.uid == userId ||
+        isPartnerOrAdmin()
+      );
+      allow delete: if isSuperAdmin();
+    }
+
     // Mentorship sessions
     match /mentorship_sessions/{sessionId} {
       allow read: if isAuthenticated() && (
@@ -1117,11 +1188,10 @@ service cloud.firestore {
       allow delete: if isSuperAdmin();
     }
 
-    // Announcements
+    // Announcements (V1: super_admin-only writes; HR/partner authoring ships in V2)
     match /announcements/{announcementId} {
       allow read: if isAuthenticated();
-      allow create, update: if isPartnerOrAdmin();
-      allow delete: if isSuperAdmin();
+      allow create, update, delete: if isSuperAdmin();
     }
 
     // Per-user announcement state

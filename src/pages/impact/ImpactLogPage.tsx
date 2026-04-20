@@ -58,7 +58,7 @@ import {
   Wrap,
   WrapItem,
 } from '@chakra-ui/react'
-import { Tooltip as RechartsTooltip, Bar, BarChart, CartesianGrid, Legend, Line, LineChart, ResponsiveContainer, XAxis, YAxis } from 'recharts'
+import { Tooltip as RechartsTooltip, Bar, BarChart, CartesianGrid, Legend, ResponsiveContainer, XAxis, YAxis } from 'recharts'
 import {
   BarChart2,
   Check,
@@ -753,51 +753,40 @@ export const ImpactLogPage: React.FC = () => {
   }, [activeTab, companyEntries, entries, monthCursor, profile?.companyId])
 
   const chartCategoryData = useMemo(() => {
-    const map = new Map<string, { hours: number; usd: number }>()
+    const ESG_ORDER = ['environmental', 'social', 'governance']
+    const ESG_LABELS: Record<string, string> = {
+      environmental: 'Environmental',
+      social: 'Social',
+      governance: 'Governance',
+    }
+    const map = new Map<string, { hours: number; usd: number; people: number; entries: number }>(
+      ESG_ORDER.map((k) => [k, { hours: 0, usd: 0, people: 0, entries: 0 }])
+    )
     filteredEntries.forEach((entry) => {
-      const key = entry.categoryGroup === 'esg' ? entry.esgCategory || 'ESG' : entry.businessCategory || 'Business'
-      const current = map.get(key) || { hours: 0, usd: 0 }
+      if (entry.categoryGroup !== 'esg' || !entry.esgCategory) return
+      const key = entry.esgCategory.toLowerCase()
+      if (!map.has(key)) return
+      const current = map.get(key)!
       map.set(key, {
         hours: current.hours + (entry.hours || 0),
         usd: current.usd + (entry.usdValue || 0),
+        people: current.people + (entry.peopleImpacted || 0),
+        entries: current.entries + 1,
       })
     })
 
-    return Array.from(map.entries()).map(([name, values]) => ({
-      name,
-      Hours: values.hours,
-      USD: values.usd,
-    }))
+    return ESG_ORDER.map((key) => {
+      const values = map.get(key)!
+      const count = values.entries || 1
+      return {
+        name: ESG_LABELS[key],
+        'Avg Hours / Activity': Math.round((values.hours / count) * 100) / 100,
+        'Avg USD / Activity': Math.round(values.usd / count),
+        _entries: values.entries,
+      }
+    })
   }, [filteredEntries])
 
-  const monthlyTrendData = useMemo(() => {
-    const months = Array.from({ length: 6 }).map((_, idx) => {
-      const month = startOfMonth(subMonths(monthCursor, 5 - idx))
-      const end = new Date(month)
-      end.setMonth(end.getMonth() + 1)
-      return {
-        label: format(month, 'MMM yyyy'),
-        start: month,
-        end,
-      }
-    })
-
-    return months.map(({ label, start, end }) => {
-      
-      const list = activeTab === 'personal' ? entries : companyEntries
-      const monthEntries = list.filter((entry) => {
-        const entryDate = new Date(entry.date)
-        return !isBefore(entryDate, start) && isBefore(entryDate, end)
-      })
-
-      return {
-        name: label,
-        Entries: monthEntries.length,
-        Hours: monthEntries.reduce((sum, e) => sum + (e.hours || 0), 0),
-        USD: monthEntries.reduce((sum, e) => sum + (e.usdValue || 0), 0),
-      }
-    })
-  }, [activeTab, companyEntries, entries, monthCursor])
 
   const stats = useMemo(
     () => ({
@@ -2106,67 +2095,61 @@ export const ImpactLogPage: React.FC = () => {
             <PointsDashboard variant="compact" />
           </SimpleGrid>
 
-          <Grid templateColumns={{ base: '1fr', xl: '1fr 1fr' }} gap={4} mb={6}>
-            <Box p={4} bg="surface.default" rounded="lg" border="1px solid" borderColor="border.subtle" shadow="xs">
-              <HStack mb={4} justify="space-between">
-                <Text fontWeight="bold">Impact Activities by Category</Text>
-                <Badge colorScheme="purple">Dual Axis</Badge>
-              </HStack>
-              <Box height="190px">
-                <ResponsiveContainer width="100%" height="100%">
-                  <BarChart data={chartCategoryData}>
-                    <CartesianGrid strokeDasharray="3 3" />
-                    <XAxis dataKey="name" />
-                    <YAxis
-                      yAxisId="left"
-                      width={60}
-                      tickFormatter={(value: number) =>
-                        value >= 1000 ? `${(value / 1000).toFixed(0)}k` : value.toString()
-                      }
-                    />
-                    <YAxis
-                      yAxisId="right"
-                      orientation="right"
-                      width={60}
-                      tickFormatter={(value: number) =>
-                        value >= 1000 ? `${(value / 1000).toFixed(0)}k` : value.toString()
-                      }
-                    />
-                    <RechartsTooltip />
-                    <Legend />
-                    <Bar yAxisId="left" dataKey="Hours" fill="var(--chakra-colors-brand-primary)" radius={4} />
-                    <Bar yAxisId="right" dataKey="USD" fill="var(--chakra-colors-success-500)" radius={4} />
-                  </BarChart>
-                </ResponsiveContainer>
+          <Box p={5} bg="surface.default" rounded="lg" border="1px solid" borderColor="border.subtle" shadow="xs" mb={6}>
+            <HStack mb={1} justify="space-between">
+              <Box>
+                <Text fontWeight="bold" fontSize="md">ESG Impact Efficiency</Text>
+                <Text fontSize="xs" color="text.muted" mt={0.5}>Average hours &amp; USD value per logged activity — shows which ESG pillar delivers the highest impact per effort</Text>
               </Box>
+              <Badge colorScheme="green" variant="subtle">Per Activity Average</Badge>
+            </HStack>
+            <Box height="300px" mt={4}>
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart data={chartCategoryData} margin={{ top: 4, right: 20, left: 0, bottom: 4 }} barCategoryGap="30%">
+                  <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="var(--chakra-colors-border-subtle)" />
+                  <XAxis
+                    dataKey="name"
+                    tick={{ fontSize: 13, fontWeight: 600 }}
+                    axisLine={false}
+                    tickLine={false}
+                  />
+                  <YAxis
+                    yAxisId="left"
+                    width={50}
+                    axisLine={false}
+                    tickLine={false}
+                    tick={{ fontSize: 11 }}
+                    tickFormatter={(value: number) =>
+                      value >= 1000 ? `${(value / 1000).toFixed(1)}k` : value.toString()
+                    }
+                    label={{ value: 'Avg Hours', angle: -90, position: 'insideLeft', offset: 10, style: { fontSize: 10, fill: '#888' } }}
+                  />
+                  <YAxis
+                    yAxisId="right"
+                    orientation="right"
+                    width={65}
+                    axisLine={false}
+                    tickLine={false}
+                    tick={{ fontSize: 11 }}
+                    tickFormatter={(value: number) =>
+                      value >= 1000 ? `$${(value / 1000).toFixed(1)}k` : `$${value}`
+                    }
+                    label={{ value: 'Avg USD ($)', angle: 90, position: 'insideRight', offset: 10, style: { fontSize: 10, fill: '#888' } }}
+                  />
+                  <RechartsTooltip
+                    contentStyle={{ borderRadius: '8px', fontSize: '12px', border: '1px solid #e2e8f0' }}
+                    formatter={(value: number, name: string) => {
+                      if (name === 'Avg USD / Activity') return [`$${value.toLocaleString()}`, name]
+                      return [value.toLocaleString(), name]
+                    }}
+                  />
+                  <Legend wrapperStyle={{ fontSize: '12px', paddingTop: '12px' }} />
+                  <Bar yAxisId="left" dataKey="Avg Hours / Activity" fill="#350e6f" radius={[4, 4, 0, 0]} />
+                  <Bar yAxisId="right" dataKey="Avg USD / Activity" fill="#22c55e" radius={[4, 4, 0, 0]} />
+                </BarChart>
+              </ResponsiveContainer>
             </Box>
-
-            <Box p={4} bg="surface.default" rounded="lg" border="1px solid" borderColor="border.subtle" shadow="xs">
-              <HStack mb={4} justify="space-between">
-                <Text fontWeight="bold">Monthly Trend</Text>
-                <Badge colorScheme="orange">Last 6 months</Badge>
-              </HStack>
-              <Box height="190px">
-                <ResponsiveContainer width="100%" height="100%">
-                  <LineChart data={monthlyTrendData}>
-                    <CartesianGrid strokeDasharray="3 3" />
-                    <XAxis dataKey="name" />
-                    <YAxis
-                      width={70}
-                      tickFormatter={(value: number) =>
-                        value >= 1000 ? `${(value / 1000).toFixed(0)}k` : value.toString()
-                      }
-                    />
-                    <RechartsTooltip />
-                    <Legend />
-                    <Line type="monotone" dataKey="Entries" stroke="var(--chakra-colors-brand-dark)" strokeWidth={3} dot={false} />
-                    <Line type="monotone" dataKey="Hours" stroke="var(--chakra-colors-brand-primary)" strokeWidth={3} dot={false} />
-                    <Line type="monotone" dataKey="USD" stroke="var(--chakra-colors-success-500)" strokeWidth={3} dot={false} />
-                  </LineChart>
-                </ResponsiveContainer>
-              </Box>
-            </Box>
-          </Grid>
+          </Box>
 
           <Flex align="center" mb={3}>
             <Heading size="md">Your Impact Activities ({filteredEntries.length})</Heading>

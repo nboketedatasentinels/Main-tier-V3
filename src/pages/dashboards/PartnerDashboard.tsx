@@ -1946,6 +1946,10 @@ export const PartnerDashboard: React.FC = () => {
       navigate('/partner/partner-assignment')
       return
     }
+    if (key === 'learner-assignments') {
+      navigate('/partner/learner-assignments')
+      return
+    }
 
     const normalized = key as PartnerPageKey
     if (['overview', 'users', 'organization-management', 'at-risk', 'reports', 'settings', 'profile'].includes(normalized)) {

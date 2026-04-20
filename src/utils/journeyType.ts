@@ -33,6 +33,11 @@ export const getJourneyLabel = (journeyType: JourneyType): string => JOURNEY_LAB
 
 export const isMonthBasedJourney = (journeyType: JourneyType): boolean => MONTH_BASED_JOURNEYS.includes(journeyType)
 
+// Leadership Council (mentor + ambassador pairing) is only unlocked on 3M/6M/9M
+// programs. 4W and 6W learners see the section but all gates stay blocked.
+export const isLeadershipCouncilJourney = (journeyType?: JourneyType | null): boolean =>
+  journeyType ? isMonthBasedJourney(journeyType) : false
+
 export const journeyTypeFromDurationWeeks = (weeks?: number | null): JourneyType | null => {
   if (!weeks) return null
   const normalized = Math.round(weeks)

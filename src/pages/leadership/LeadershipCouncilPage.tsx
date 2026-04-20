@@ -1,4 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react'
+import type { ReactNode } from 'react'
 import {
   Alert,
   AlertDescription,
@@ -54,19 +55,28 @@ import {
   Download,
   Eye,
   ExternalLink,
+  Lock,
   RefreshCcw,
   Shield,
+  Target,
   Timer,
   User,
   UserCircle2,
   Users,
 } from 'lucide-react'
-import { Timestamp, addDoc, collection, onSnapshot, orderBy, query, serverTimestamp, where } from 'firebase/firestore'
-import { format, formatDistanceToNow, isAfter, isValid, parseISO } from 'date-fns'
-import { db } from '@/services/firebase'
+import { format, formatDistanceToNow, isValid, parseISO } from 'date-fns'
 import { useAuth } from '@/hooks/useAuth'
 import { useOrganizationLeadership } from '@/hooks/useOrganizationLeadership'
+import { MENTORSHIP_GOALS_MAX_LENGTH, useMentorshipGoals } from '@/hooks/useMentorshipGoals'
+import { useLearnerMentorshipSessions } from '@/hooks/useMentorshipSessions'
+import {
+  cancelMentorshipSession,
+  createMentorshipSessionRequest,
+  type MentorshipSession,
+} from '@/services/mentorshipService'
+import { LearnerAmbassadorBookings } from '@/components/learner/LearnerAmbassadorBookings'
 import { getDisplayName } from '@/utils/displayName'
+import { getJourneyLabel, isLeadershipCouncilJourney } from '@/utils/journeyType'
 import type { UserProfileExtended } from '@/services/userProfileService'
 
 interface LeadershipProfile extends UserProfileExtended {
@@ -81,18 +91,6 @@ interface LeadershipProfile extends UserProfileExtended {
   lastActive?: string
   registrationDate?: string
   lastInteraction?: string
-}
-
-interface MentorshipSession {
-  id: string
-  mentorId: string
-  learnerId: string
-  scheduledAt: Date
-  topic: string
-  agenda?: string
-  status: 'scheduled' | 'completed' | 'cancelled'
-  meetingLink?: string
-  createdAt?: Date
 }
 
 interface PartnerProfile extends UserProfileExtended {
@@ -162,17 +160,22 @@ export const LeadershipCouncilPage: React.FC = () => {
 
   const isSamePerson = Boolean(mentorProfile?.id && ambassadorProfile?.id && mentorProfile.id === ambassadorProfile.id)
 
-  const [sessions, setSessions] = useState<MentorshipSession[]>([])
-  const [sessionsLoading, setSessionsLoading] = useState(false)
-  const [sessionsError, setSessionsError] = useState<string | null>(null)
+  const {
+    sessions,
+    byStatus: sessionsByStatus,
+    loading: sessionsLoading,
+    error: sessionsError,
+  } = useLearnerMentorshipSessions(profile?.id ?? null)
+  const [cancellingSessionId, setCancellingSessionId] = useState<string | null>(null)
 
   const [scheduleDate, setScheduleDate] = useState('')
   const [scheduleTime, setScheduleTime] = useState('')
   const [scheduleTopic, setScheduleTopic] = useState('')
-  const [scheduleAgenda, setScheduleAgenda] = useState('')
-  const [scheduleNotes, setScheduleNotes] = useState('')
-  const [scheduleLink, setScheduleLink] = useState('')
+  const [scheduleMessage, setScheduleMessage] = useState('')
   const [scheduleSubmitting, setScheduleSubmitting] = useState(false)
+
+  const [goalsDraft, setGoalsDraft] = useState('')
+  const [goalsInitialized, setGoalsInitialized] = useState(false)
 
   const sessionsModal = useDisclosure()
   const scheduleModal = useDisclosure()
@@ -181,6 +184,11 @@ export const LeadershipCouncilPage: React.FC = () => {
   const organizationReady = organization.loaded && organization.exists
   const supportAssignmentsReady = supportAssignmentStatus.loaded
   const showOrgDebug = import.meta.env.DEV && (organization.id || supportAssignmentStatus.id)
+  const isLeadershipEligible = isLeadershipCouncilJourney(profile?.journeyType)
+  const journeyLockReason = !isLeadershipEligible
+    ? 'Leadership Council unlocks on 3-month, 6-month, and 9-month journeys.'
+    : null
+  const currentJourneyLabel = profile?.journeyType ? getJourneyLabel(profile.journeyType) : null
   const mentorSourceLabel =
     assignmentSources.mentor === 'user'
       ? 'User-specific mentor'
@@ -189,48 +197,116 @@ export const LeadershipCouncilPage: React.FC = () => {
         : assignmentSources.mentor === 'profile'
           ? 'Profile mentor'
           : null
-  const canScheduleSession = Boolean(mentorProfile) && hasOrganization && organizationReady && supportAssignmentsReady && !assignmentsLoading
-  const scheduleDisabledReason = !hasOrganization
-    ? 'Link your account to an organization to unlock mentor scheduling.'
-    : !organizationReady
-      ? 'We are still confirming your organization details.'
-      : !supportAssignmentsReady
-        ? 'Support assignments are still loading.'
-        : !mentorProfile
-          ? 'A mentor must be assigned before scheduling.'
-          : null
-  const gatingSteps = [
-    {
-      id: 'organization',
-      title: 'Organization linked',
-      description: hasOrganization
-        ? 'Organization connection confirmed.'
-        : 'Add an organization to unlock assignments.',
-      status: hasOrganization ? (organizationReady ? 'complete' : 'pending') : 'blocked',
-    },
-    {
-      id: 'support',
-      title: 'Assignments checked',
-      description: supportAssignmentsReady
-        ? supportAssignmentStatus.exists
-          ? 'User assignments loaded.'
-          : 'No user-level assignments yet.'
-        : 'Checking support assignments.',
-      status: supportAssignmentsReady ? 'complete' : 'pending',
-    },
-    {
-      id: 'mentor',
-      title: 'Mentor ready',
-      description: mentorProfile ? 'Mentor profile loaded.' : 'Mentor assignment needed.',
-      status: mentorProfile ? 'complete' : assignmentsLoading ? 'pending' : 'blocked',
-    },
-    {
-      id: 'ambassador',
-      title: 'Ambassador ready',
-      description: ambassadorProfile ? 'Ambassador profile loaded.' : 'Ambassador assignment needed.',
-      status: ambassadorProfile ? 'complete' : assignmentsLoading ? 'pending' : 'blocked',
-    },
-  ] as const
+  const canScheduleSession =
+    isLeadershipEligible &&
+    Boolean(mentorProfile) &&
+    hasOrganization &&
+    organizationReady &&
+    supportAssignmentsReady &&
+    !assignmentsLoading
+  const scheduleDisabledReason = !isLeadershipEligible
+    ? journeyLockReason
+    : !hasOrganization
+      ? 'Link your account to an organization to unlock mentor scheduling.'
+      : !organizationReady
+        ? 'We are still confirming your organization details.'
+        : !supportAssignmentsReady
+          ? 'Support assignments are still loading.'
+          : !mentorProfile
+            ? 'A mentor must be assigned before scheduling.'
+            : null
+
+  const {
+    goals: savedGoals,
+    updatedAt: goalsUpdatedAt,
+    loading: goalsLoading,
+    saving: goalsSaving,
+    error: goalsError,
+    save: saveGoals,
+  } = useMentorshipGoals(
+    isLeadershipEligible ? profile?.id ?? null : null,
+    mentorProfile?.id ?? null,
+  )
+
+  const journeyBlockedDescription = currentJourneyLabel
+    ? `Available on 3-month, 6-month, and 9-month journeys — you're on the ${currentJourneyLabel}.`
+    : 'Available on 3-month, 6-month, and 9-month journeys.'
+  const gatingSteps: ReadonlyArray<{
+    id: 'organization' | 'support' | 'mentor' | 'ambassador'
+    title: string
+    description: string
+    status: 'complete' | 'pending' | 'blocked'
+  }> = !isLeadershipEligible
+    ? [
+        {
+          id: 'organization',
+          title: 'Organization linked',
+          description: journeyBlockedDescription,
+          status: 'blocked',
+        },
+        {
+          id: 'support',
+          title: 'Assignments checked',
+          description: journeyBlockedDescription,
+          status: 'blocked',
+        },
+        {
+          id: 'mentor',
+          title: 'Mentor ready',
+          description: journeyBlockedDescription,
+          status: 'blocked',
+        },
+        {
+          id: 'ambassador',
+          title: 'Ambassador ready',
+          description: journeyBlockedDescription,
+          status: 'blocked',
+        },
+      ]
+    : [
+        {
+          id: 'organization',
+          title: 'Organization linked',
+          description: hasOrganization
+            ? 'Organization connection confirmed.'
+            : 'Add an organization to unlock assignments.',
+          status: hasOrganization ? (organizationReady ? 'complete' : 'pending') : 'blocked',
+        },
+        {
+          id: 'support',
+          title: 'Assignments checked',
+          description: supportAssignmentsReady
+            ? supportAssignmentStatus.exists
+              ? 'Your mentor and ambassador assignments are in place.'
+              : 'Checked — your admin hasn’t recorded assignments yet.'
+            : 'Checking your support assignments.',
+          status: supportAssignmentsReady
+            ? supportAssignmentStatus.exists
+              ? 'complete'
+              : 'blocked'
+            : 'pending',
+        },
+        {
+          id: 'mentor',
+          title: 'Mentor ready',
+          description: mentorProfile
+            ? 'Mentor assigned — you can share goals and request a session.'
+            : assignmentsLoading
+              ? 'Loading your mentor assignment.'
+              : 'Your admin hasn’t assigned a mentor yet.',
+          status: mentorProfile ? 'complete' : assignmentsLoading ? 'pending' : 'blocked',
+        },
+        {
+          id: 'ambassador',
+          title: 'Ambassador ready',
+          description: ambassadorProfile
+            ? 'Ambassador ready — coaching sessions will appear here when scheduled.'
+            : assignmentsLoading
+              ? 'Loading your ambassador assignment.'
+              : 'Ambassador coaching hasn’t been set up for your organization yet.',
+          status: ambassadorProfile ? 'complete' : assignmentsLoading ? 'pending' : 'blocked',
+        },
+      ]
 
   const gateStatusColor = (status: 'complete' | 'pending' | 'blocked') => {
     if (status === 'complete') return 'green'
@@ -248,65 +324,38 @@ export const LeadershipCouncilPage: React.FC = () => {
     refresh()
   }, [refresh])
 
-  const loadSessions = useCallback(() => {
-    if (!profile?.id) return () => undefined
-    setSessionsLoading(true)
-    setSessionsError(null)
-
-    const sessionsQuery = query(
-      collection(db, 'mentorship_sessions'),
-      where('learner_id', '==', profile.id),
-      where('status', '==', 'scheduled'),
-      orderBy('scheduled_at', 'asc'),
-    )
-
-    const unsubscribe = onSnapshot(
-      sessionsQuery,
-      (snapshot) => {
-        const loadedSessions = snapshot.docs
-          .reduce<MentorshipSession[]>((acc, docSnapshot) => {
-            const data = docSnapshot.data()
-            const scheduledAt = data.scheduled_at?.toDate?.() || (data.scheduled_at ? new Date(data.scheduled_at) : null)
-            if (!scheduledAt || !isValid(scheduledAt)) return acc
-
-            const session: MentorshipSession = {
-              id: docSnapshot.id,
-              mentorId: data.mentor_id,
-              learnerId: data.learner_id,
-              scheduledAt,
-              topic: data.topic || 'Mentorship session',
-              agenda: data.agenda || undefined,
-              status: data.status || 'scheduled',
-              meetingLink: data.meeting_link || undefined,
-              createdAt: data.created_at?.toDate?.(),
-            }
-
-            if (isAfter(scheduledAt, new Date(Date.now() - 5 * 60 * 1000))) {
-              acc.push(session)
-            }
-            return acc
-          }, [])
-          .sort((a, b) => a.scheduledAt.getTime() - b.scheduledAt.getTime())
-
-        setSessions(loadedSessions)
-        setSessionsLoading(false)
-      },
-      (error) => {
-        setSessionsError(error.message)
-        setSessionsLoading(false)
-      },
-    )
-
-    return unsubscribe
-  }, [profile?.id])
-
   useEffect(() => {
-    const unsubscribe = loadSessions()
-    return () => unsubscribe && unsubscribe()
-  }, [loadSessions])
+    if (!isLeadershipEligible) {
+      setGoalsDraft('')
+      setGoalsInitialized(false)
+      return
+    }
+    if (!goalsLoading && !goalsInitialized) {
+      setGoalsDraft(savedGoals)
+      setGoalsInitialized(true)
+    }
+  }, [isLeadershipEligible, goalsLoading, goalsInitialized, savedGoals])
 
-  const handleScheduleSession = async () => {
-    if (!mentorProfile?.id) {
+  const goalsDirty = isLeadershipEligible && goalsInitialized && goalsDraft.trim() !== savedGoals.trim()
+  const goalsTooLong = goalsDraft.length > MENTORSHIP_GOALS_MAX_LENGTH
+
+  const handleSaveGoals = async () => {
+    if (!goalsDirty || goalsTooLong || goalsSaving) return
+    try {
+      await saveGoals(goalsDraft)
+      toast({
+        title: 'Goals saved',
+        description: 'Your mentor can now see what you want to achieve.',
+        status: 'success',
+      })
+    } catch (err) {
+      const description = err instanceof Error ? err.message : 'Try again in a moment.'
+      toast({ title: 'Could not save your goals', description, status: 'error' })
+    }
+  }
+
+  const handleRequestSession = async () => {
+    if (!mentorProfile?.id || !profile?.id) {
       toast({ title: 'Could not verify mentor assignment', status: 'error' })
       return
     }
@@ -316,51 +365,40 @@ export const LeadershipCouncilPage: React.FC = () => {
       return
     }
 
-    const scheduledAt = new Date(`${scheduleDate}T${scheduleTime}`)
-    if (!isValid(scheduledAt) || scheduledAt.getTime() < Date.now()) {
+    const proposedAt = new Date(`${scheduleDate}T${scheduleTime}`)
+    if (!isValid(proposedAt) || proposedAt.getTime() < Date.now()) {
       toast({ title: 'Please choose a future date and time', status: 'error' })
-      return
-    }
-
-    if (scheduleLink && !/^https?:\/\//i.test(scheduleLink)) {
-      toast({ title: 'Meeting link must be a valid URL', status: 'error' })
       return
     }
 
     setScheduleSubmitting(true)
     try {
-      await addDoc(collection(db, 'mentorship_sessions'), {
-        learner_id: profile?.id,
-        mentor_id: mentorProfile.id,
-        scheduled_at: Timestamp.fromDate(scheduledAt),
-        topic: scheduleTopic.trim(),
-        agenda: scheduleAgenda.trim() || null,
-        notes: scheduleNotes.trim() || null,
-        meeting_link: scheduleLink.trim() || null,
-        status: 'scheduled',
-        created_at: serverTimestamp(),
-        created_by: 'learner',
+      await createMentorshipSessionRequest({
+        learnerId: profile.id,
+        mentorId: mentorProfile.id,
+        topic: scheduleTopic,
+        requestMessage: scheduleMessage,
+        goals: savedGoals || undefined,
+        proposedAt,
+        learnerName: displayNameForProfile(profile),
+        mentorName: displayNameForProfile(mentorProfile),
       })
 
       toast({
-        title: 'Session scheduled',
-        description: `Your session with ${displayNameForProfile(mentorProfile)} is set for ${formatDisplayDate(
-          scheduledAt,
-        )} at ${format(scheduledAt, 'h:mm a')}.`,
+        title: 'Request sent',
+        description: `${displayNameForProfile(mentorProfile)} will see your request and respond.`,
         status: 'success',
       })
 
       setScheduleDate('')
       setScheduleTime('')
       setScheduleTopic('')
-      setScheduleAgenda('')
-      setScheduleNotes('')
-      setScheduleLink('')
+      setScheduleMessage('')
       scheduleModal.onClose()
     } catch (error) {
       const description = error instanceof Error ? error.message : 'Try again in a moment.'
       toast({
-        title: 'Failed to create session',
+        title: 'Failed to send request',
         description,
         status: 'error',
       })
@@ -369,8 +407,26 @@ export const LeadershipCouncilPage: React.FC = () => {
     }
   }
 
+  const handleCancelSession = async (session: MentorshipSession) => {
+    if (!profile?.id) return
+    setCancellingSessionId(session.id)
+    try {
+      await cancelMentorshipSession({ sessionId: session.id, actorId: profile.id })
+      toast({ title: 'Request withdrawn', status: 'info' })
+    } catch (err) {
+      const description = err instanceof Error ? err.message : 'Try again in a moment.'
+      toast({ title: 'Could not withdraw request', description, status: 'error' })
+    } finally {
+      setCancellingSessionId(null)
+    }
+  }
+
   const downloadIcs = (session: MentorshipSession) => {
-    const start = session.scheduledAt
+    const start = session.scheduledAt ?? session.proposedAt
+    if (!start) {
+      toast({ title: 'No session time set yet', status: 'warning' })
+      return
+    }
     const end = new Date(start.getTime() + 60 * 60 * 1000)
     const ics = [
       'BEGIN:VCALENDAR',
@@ -379,7 +435,7 @@ export const LeadershipCouncilPage: React.FC = () => {
       `SUMMARY:Mentorship session with ${mentorProfile ? displayNameForProfile(mentorProfile) : 'Mentor'}`,
       `DTSTART:${format(start, "yyyyMMdd'T'HHmmss")}`,
       `DTEND:${format(end, "yyyyMMdd'T'HHmmss")}`,
-      `DESCRIPTION:${session.topic}${session.agenda ? `\\n${session.agenda}` : ''}`,
+      `DESCRIPTION:${session.topic}${session.requestMessage ? `\\n${session.requestMessage}` : ''}`,
       session.meetingLink ? `LOCATION:${session.meetingLink}` : 'LOCATION:Virtual meeting',
       'END:VEVENT',
       'END:VCALENDAR',
@@ -394,59 +450,140 @@ export const LeadershipCouncilPage: React.FC = () => {
     URL.revokeObjectURL(url)
   }
 
-  const renderSessionCards = (limitCount?: number) => {
-    const items = limitCount ? sessions.slice(0, limitCount) : sessions
+  const sessionStatusBadge = (status: MentorshipSession['status']): { label: string; scheme: string } => {
+    switch (status) {
+      case 'requested':
+        return { label: 'Awaiting mentor', scheme: 'yellow' }
+      case 'scheduled':
+        return { label: 'Confirmed', scheme: 'green' }
+      case 'completed':
+        return { label: 'Completed', scheme: 'purple' }
+      case 'declined':
+        return { label: 'Declined', scheme: 'red' }
+      case 'cancelled':
+        return { label: 'Cancelled', scheme: 'gray' }
+      default:
+        return { label: status, scheme: 'gray' }
+    }
+  }
+
+  const renderSessionRow = (session: MentorshipSession, actions?: ReactNode) => {
+    const when = session.scheduledAt ?? session.proposedAt
+    const badge = sessionStatusBadge(session.status)
     return (
-      <Stack spacing={3}>
-        {items.map((session) => (
-          <Flex
-            key={session.id}
-            p={4}
-            border="1px dashed"
-            borderColor="border.subtle"
-            rounded="lg"
-            align="center"
-            gap={4}
-            bg="surface.default"
-          >
-            <Box p={3} bg="tint.brandPrimary" rounded="lg" display="inline-flex">
-              <Icon as={Calendar} color="brand.primary" />
-            </Box>
-            <Box flex="1">
-              <HStack justify="space-between" align="start" mb={1} spacing={3} flexWrap="wrap">
-                <HStack spacing={2}>
+      <Flex
+        key={session.id}
+        p={4}
+        border="1px dashed"
+        borderColor="border.subtle"
+        rounded="lg"
+        align={{ base: 'stretch', md: 'center' }}
+        direction={{ base: 'column', md: 'row' }}
+        gap={4}
+        bg="surface.default"
+      >
+        <Box p={3} bg="tint.brandPrimary" rounded="lg" display="inline-flex" flexShrink={0}>
+          <Icon as={Calendar} color="brand.primary" />
+        </Box>
+        <Box flex="1" minW={0}>
+          <HStack justify="space-between" align="start" mb={1} spacing={3} flexWrap="wrap">
+            <HStack spacing={2} flexWrap="wrap">
+              {when && (
+                <>
                   <Text fontWeight="bold" color="text.primary">
-                    {formatDisplayDate(session.scheduledAt)}
+                    {formatDisplayDate(when)}
                   </Text>
-                  <Text color="text.secondary">{format(session.scheduledAt, 'h:mm a')}</Text>
-                  <Badge colorScheme="success">{session.status}</Badge>
-                </HStack>
-                <Badge colorScheme="success" variant="subtle">
-                  {relativeTime(session.scheduledAt).replace('about ', '')}
-                </Badge>
-              </HStack>
-              <Text color="text.primary">{session.topic}</Text>
-              {session.agenda && (
-                <Text fontSize="sm" color="text.secondary" mt={1}>
-                  {session.agenda}
-                </Text>
+                  <Text color="text.secondary">{format(when, 'h:mm a')}</Text>
+                </>
               )}
-            </Box>
-            <Button size="sm" variant="ghost" leftIcon={<Download size={16} />} onClick={() => downloadIcs(session)}>
-              Download
-            </Button>
-          </Flex>
-        ))}
-      </Stack>
+              <Badge colorScheme={badge.scheme}>{badge.label}</Badge>
+            </HStack>
+            {when && (
+              <Badge colorScheme={badge.scheme} variant="subtle">
+                {relativeTime(when).replace('about ', '')}
+              </Badge>
+            )}
+          </HStack>
+          <Text color="text.primary">{session.topic}</Text>
+          {session.requestMessage && (
+            <Text fontSize="sm" color="text.secondary" mt={1}>
+              {session.requestMessage}
+            </Text>
+          )}
+          {session.declineReason && session.status === 'declined' && (
+            <Text fontSize="sm" color="red.500" mt={1}>
+              Reason: {session.declineReason}
+            </Text>
+          )}
+          {session.cancellationReason && session.status === 'cancelled' && (
+            <Text fontSize="sm" color="text.muted" mt={1}>
+              Reason: {session.cancellationReason}
+            </Text>
+          )}
+          {session.meetingLink && session.status === 'scheduled' && (
+            <Link
+              href={session.meetingLink}
+              color="brand.primary"
+              fontSize="sm"
+              mt={1}
+              isExternal
+              display="inline-flex"
+              alignItems="center"
+              gap={1}
+            >
+              <Icon as={ExternalLink} boxSize={3} /> Join meeting
+            </Link>
+          )}
+        </Box>
+        {actions && <HStack spacing={2}>{actions}</HStack>}
+      </Flex>
     )
   }
 
+  const renderJourneyLockedTab = (title: string) => (
+    <Card borderColor="border.subtle" borderWidth="1px" bg="surface.default">
+      <CardBody>
+        <Flex direction="column" align="center" textAlign="center" p={6} gap={3}>
+          <Icon as={Lock} boxSize={10} color="text.muted" />
+          <Heading size="sm">{title} unlocks on longer journeys</Heading>
+          <Text color="text.secondary">
+            Leadership Council pairings are part of the 3-month, 6-month, and 9-month programs.
+            {currentJourneyLabel ? ` You're currently on the ${currentJourneyLabel}.` : ''}
+          </Text>
+        </Flex>
+      </CardBody>
+    </Card>
+  )
+
+  const pendingRequests = sessionsByStatus.requested
+  const upcomingSessions = sessionsByStatus.scheduled
+  const recentFinished = useMemo(
+    () =>
+      [...sessionsByStatus.completed, ...sessionsByStatus.declined, ...sessionsByStatus.cancelled]
+        .sort((a, b) => {
+          const aTime = (a.completedAt ?? a.updatedAt ?? a.createdAt)?.getTime() ?? 0
+          const bTime = (b.completedAt ?? b.updatedAt ?? b.createdAt)?.getTime() ?? 0
+          return bTime - aTime
+        })
+        .slice(0, 5),
+    [sessionsByStatus.completed, sessionsByStatus.declined, sessionsByStatus.cancelled],
+  )
+  const hasAnySessions = sessions.length > 0
+
   const mentorSessionsSummary = useMemo(() => {
-    if (sessionsLoading) return 'Checking your schedule...'
-    if (sessions.length === 0) return 'No sessions scheduled yet. Use the schedule button to plan your next conversation.'
+    if (sessionsLoading) return 'Checking your session history...'
     const mentorName = mentorProfile ? displayNameForProfile(mentorProfile) : 'your mentor'
-    return `Your next ${sessions.length} session(s) with ${mentorName} at a glance`
-  }, [sessions.length, sessionsLoading, mentorProfile])
+    if (!hasAnySessions) {
+      return `Request your first session with ${mentorName} to get points flowing.`
+    }
+    if (pendingRequests.length > 0) {
+      return `${pendingRequests.length} request${pendingRequests.length === 1 ? '' : 's'} awaiting ${mentorName}`
+    }
+    if (upcomingSessions.length > 0) {
+      return `${upcomingSessions.length} session${upcomingSessions.length === 1 ? '' : 's'} confirmed with ${mentorName}`
+    }
+    return `Your history with ${mentorName}`
+  }, [hasAnySessions, mentorProfile, pendingRequests.length, sessionsLoading, upcomingSessions.length])
   const mentorLastInteraction = useMemo(
     () => formatOptionalIsoDate(mentorProfile?.lastInteraction),
     [mentorProfile?.lastInteraction],
@@ -527,6 +664,29 @@ export const LeadershipCouncilPage: React.FC = () => {
         </CardBody>
       </Card>
 
+      {!isLeadershipEligible && (
+        <Alert
+          status="info"
+          variant="left-accent"
+          borderRadius="lg"
+          bg="surface.default"
+          borderColor="border.subtle"
+          borderWidth="1px"
+          alignItems="flex-start"
+        >
+          <Icon as={Lock} color="brand.primary" boxSize={5} mr={3} mt={1} />
+          <Box>
+            <AlertTitle>Leadership Council unlocks on longer journeys</AlertTitle>
+            <AlertDescription display="block" color="text.secondary">
+              Mentor and Ambassador pairings are part of the 3-month, 6-month, and 9-month
+              programs. Keep building momentum in
+              {currentJourneyLabel ? ` the ${currentJourneyLabel}` : ' your current journey'} —
+              you&apos;ll unlock the full Council when you step into a longer program.
+            </AlertDescription>
+          </Box>
+        </Alert>
+      )}
+
       <Card borderColor="border.subtle" borderWidth="1px" bg="surface.default">
         <CardBody>
           <Stack spacing={4}>
@@ -536,11 +696,20 @@ export const LeadershipCouncilPage: React.FC = () => {
                   Assignment readiness
                 </Text>
                 <Text fontSize="sm" color="text.secondary">
-                  Complete each step to unlock mentor and ambassador connections.
+                  {isLeadershipEligible
+                    ? 'Complete each step to unlock mentor and ambassador connections.'
+                    : 'These steps become active on 3-month, 6-month, and 9-month journeys.'}
                 </Text>
               </Box>
-              <Badge colorScheme={assignmentsLoading ? 'yellow' : 'green'} variant="subtle">
-                {assignmentsLoading ? 'Checking assignments' : 'Status updated'}
+              <Badge
+                colorScheme={!isLeadershipEligible ? 'gray' : assignmentsLoading ? 'yellow' : 'green'}
+                variant="subtle"
+              >
+                {!isLeadershipEligible
+                  ? 'Locked for this journey'
+                  : assignmentsLoading
+                    ? 'Checking assignments'
+                    : 'Status updated'}
               </Badge>
             </HStack>
             <SimpleGrid columns={{ base: 1, md: 2 }} spacing={4}>
@@ -609,6 +778,9 @@ export const LeadershipCouncilPage: React.FC = () => {
 
             <TabPanels>
               <TabPanel px={0} pt={4}>
+                {!isLeadershipEligible ? (
+                  renderJourneyLockedTab('Mentor Assignment')
+                ) : (
                 <Card borderColor="border.subtle" borderWidth="1px" bg="surface.default">
                   <CardHeader pb={0}>
                     <HStack justify="space-between" align="start">
@@ -701,45 +873,125 @@ export const LeadershipCouncilPage: React.FC = () => {
 
                     {mentorProfile && (
                       <Stack spacing={4}>
+                        <Box
+                          p={4}
+                          border="1px solid"
+                          borderColor="border.subtle"
+                          rounded="lg"
+                          bg="surface.subtle"
+                        >
+                          <HStack justify="space-between" align="start" mb={2} flexWrap="wrap" spacing={3}>
+                            <HStack spacing={2}>
+                              <Icon as={Target} color="brand.primary" />
+                              <Text fontWeight="bold" color="text.primary">
+                                Your mentorship goals
+                              </Text>
+                            </HStack>
+                            {goalsUpdatedAt && (
+                              <Badge variant="subtle" colorScheme="purple">
+                                Updated {formatDistanceToNow(goalsUpdatedAt, { addSuffix: true })}
+                              </Badge>
+                            )}
+                          </HStack>
+                          <Text fontSize="sm" color="text.secondary" mb={3}>
+                            Share what you want to achieve from this mentorship so{' '}
+                            {displayNameForProfile(mentorProfile)} can tailor your sessions. You can
+                            update this any time.
+                          </Text>
+                          {goalsLoading ? (
+                            <Flex
+                              align="center"
+                              gap={3}
+                              p={4}
+                              border="1px dashed"
+                              borderColor="border.subtle"
+                              rounded="lg"
+                              bg="surface.default"
+                            >
+                              <Spinner size="sm" />
+                              <Text color="text.secondary">Loading your saved goals...</Text>
+                            </Flex>
+                          ) : (
+                            <>
+                              {goalsError && (
+                                <Alert status="warning" rounded="lg" mb={3}>
+                                  <AlertIcon />
+                                  <Box>
+                                    <AlertTitle>We couldn&apos;t sync your goals.</AlertTitle>
+                                    <AlertDescription>{goalsError}</AlertDescription>
+                                  </Box>
+                                </Alert>
+                              )}
+                              <FormControl isInvalid={goalsTooLong}>
+                                <Textarea
+                                  placeholder="What outcomes do you want from this mentorship? What skills, behaviours, or leadership moves are you growing into?"
+                                  value={goalsDraft}
+                                  onChange={(event) => setGoalsDraft(event.target.value)}
+                                  rows={5}
+                                  bg="surface.default"
+                                />
+                                <FormHelperText>
+                                  {goalsDraft.length}/{MENTORSHIP_GOALS_MAX_LENGTH} characters
+                                  {goalsTooLong ? ' — please shorten your goals to save.' : ''}
+                                </FormHelperText>
+                              </FormControl>
+                              <HStack justify="flex-end" mt={3} spacing={2}>
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={() => setGoalsDraft(savedGoals)}
+                                  isDisabled={!goalsDirty || goalsSaving}
+                                >
+                                  Reset
+                                </Button>
+                                <Button
+                                  colorScheme="primary"
+                                  size="sm"
+                                  onClick={handleSaveGoals}
+                                  isLoading={goalsSaving}
+                                  isDisabled={!goalsDirty || goalsTooLong}
+                                >
+                                  Save goals
+                                </Button>
+                              </HStack>
+                            </>
+                          )}
+                        </Box>
+
                         <HStack spacing={3} flexWrap="wrap">
                           <Tooltip
-                            label={scheduleDisabledReason || 'Schedule with your assigned mentor'}
+                            label={scheduleDisabledReason || 'Send a request to your mentor'}
                             placement="top"
                           >
                             <Button
                               leftIcon={<Calendar size={18} />}
-                              variant="outline"
+                              colorScheme="primary"
                               isDisabled={!canScheduleSession || scheduleSubmitting}
                               onClick={scheduleModal.onOpen}
                             >
-                              Schedule a session
+                              Request a session
                             </Button>
                           </Tooltip>
-                          <Button
-                            leftIcon={<Eye size={18} />}
-                            variant="outline"
-                            onClick={sessionsModal.onOpen}
-                            isDisabled={sessionsLoading}
-                          >
-                            {sessionsLoading ? 'Loading...' : 'View calendar'}
-                          </Button>
+                          {hasAnySessions && (
+                            <Button
+                              leftIcon={<Eye size={18} />}
+                              variant="outline"
+                              onClick={sessionsModal.onOpen}
+                            >
+                              View all ({sessions.length})
+                            </Button>
+                          )}
                         </HStack>
 
                         <Box p={4} border="1px solid" borderColor="border.subtle" rounded="lg" bg="surface.subtle">
-                          <HStack justify="space-between" align="start" mb={3}>
+                          <HStack justify="space-between" align="start" mb={3} flexWrap="wrap">
                             <Text fontWeight="bold" color="text.primary">
                               Your mentor sessions
                             </Text>
-                            {sessions.length > 3 && (
-                              <Link color="brand.primary" fontWeight="semibold" onClick={sessionsModal.onOpen}>
-                                View all upcoming sessions
-                              </Link>
-                            )}
+                            <Text fontSize="sm" color="text.secondary">
+                              {mentorSessionsSummary}
+                            </Text>
                           </HStack>
-
-                          <Text color="text.secondary" mb={3}>
-                            {mentorSessionsSummary}
-                          </Text>
 
                           {sessionsLoading && (
                             <Flex
@@ -752,21 +1004,21 @@ export const LeadershipCouncilPage: React.FC = () => {
                               bg="surface.default"
                             >
                               <Spinner />
-                              <Text>Checking for upcoming sessions...</Text>
+                              <Text>Checking for sessions...</Text>
                             </Flex>
                           )}
 
                           {sessionsError && (
-                            <Alert status="warning" colorScheme="warning" rounded="lg">
+                            <Alert status="warning" colorScheme="warning" rounded="lg" mb={3}>
                               <AlertIcon />
                               <Box>
-                                <AlertTitle>We couldn't load your upcoming sessions.</AlertTitle>
+                                <AlertTitle>We couldn&apos;t load your sessions.</AlertTitle>
                                 <AlertDescription>{sessionsError}</AlertDescription>
                               </Box>
                             </Alert>
                           )}
 
-                          {!sessionsLoading && !sessionsError && sessions.length === 0 && (
+                          {!sessionsLoading && !sessionsError && !hasAnySessions && (
                             <Flex
                               direction="column"
                               align="center"
@@ -779,14 +1031,104 @@ export const LeadershipCouncilPage: React.FC = () => {
                               bg="surface.default"
                             >
                               <Icon as={Calendar} color="text.muted" />
-                              <Text>No sessions scheduled yet.</Text>
+                              <Text>No sessions yet.</Text>
                               <Text fontSize="sm" color="text.secondary">
-                                Use the schedule button to plan your next conversation.
+                                Leadership initiative is yours — propose a time and topic and your mentor will
+                                confirm.
                               </Text>
                             </Flex>
                           )}
 
-                          {!sessionsLoading && !sessionsError && sessions.length > 0 && renderSessionCards(3)}
+                          {!sessionsLoading && !sessionsError && hasAnySessions && (
+                            <Stack spacing={5}>
+                              {pendingRequests.length > 0 && (
+                                <Box>
+                                  <Text
+                                    fontSize="xs"
+                                    textTransform="uppercase"
+                                    color="text.muted"
+                                    fontWeight="semibold"
+                                    mb={2}
+                                  >
+                                    Awaiting mentor ({pendingRequests.length})
+                                  </Text>
+                                  <Stack spacing={3}>
+                                    {pendingRequests.map((session) =>
+                                      renderSessionRow(
+                                        session,
+                                        <Button
+                                          size="sm"
+                                          variant="outline"
+                                          colorScheme="red"
+                                          onClick={() => handleCancelSession(session)}
+                                          isLoading={cancellingSessionId === session.id}
+                                        >
+                                          Withdraw
+                                        </Button>,
+                                      ),
+                                    )}
+                                  </Stack>
+                                </Box>
+                              )}
+
+                              {upcomingSessions.length > 0 && (
+                                <Box>
+                                  <Text
+                                    fontSize="xs"
+                                    textTransform="uppercase"
+                                    color="text.muted"
+                                    fontWeight="semibold"
+                                    mb={2}
+                                  >
+                                    Confirmed ({upcomingSessions.length})
+                                  </Text>
+                                  <Stack spacing={3}>
+                                    {upcomingSessions.map((session) =>
+                                      renderSessionRow(
+                                        session,
+                                        <>
+                                          <Button
+                                            size="sm"
+                                            variant="ghost"
+                                            leftIcon={<Download size={16} />}
+                                            onClick={() => downloadIcs(session)}
+                                          >
+                                            ICS
+                                          </Button>
+                                          <Button
+                                            size="sm"
+                                            variant="outline"
+                                            colorScheme="red"
+                                            onClick={() => handleCancelSession(session)}
+                                            isLoading={cancellingSessionId === session.id}
+                                          >
+                                            Cancel
+                                          </Button>
+                                        </>,
+                                      ),
+                                    )}
+                                  </Stack>
+                                </Box>
+                              )}
+
+                              {recentFinished.length > 0 && (
+                                <Box>
+                                  <Text
+                                    fontSize="xs"
+                                    textTransform="uppercase"
+                                    color="text.muted"
+                                    fontWeight="semibold"
+                                    mb={2}
+                                  >
+                                    Recent history
+                                  </Text>
+                                  <Stack spacing={3}>
+                                    {recentFinished.map((session) => renderSessionRow(session))}
+                                  </Stack>
+                                </Box>
+                              )}
+                            </Stack>
+                          )}
 
                           {mentorLastInteraction && (
                             <Text mt={3} fontSize="sm" color="text.muted">
@@ -798,9 +1140,13 @@ export const LeadershipCouncilPage: React.FC = () => {
                     )}
                   </CardBody>
                 </Card>
+                )}
               </TabPanel>
 
               <TabPanel px={0} pt={4}>
+                {!isLeadershipEligible ? (
+                  renderJourneyLockedTab('Ambassador Assignment')
+                ) : (
                 <Card borderColor="border.subtle" borderWidth="1px" bg="surface.default">
                   <CardHeader pb={0}>
                     <Text fontSize="xs" textTransform="uppercase" color="text.muted" fontWeight="semibold">
@@ -871,11 +1217,26 @@ export const LeadershipCouncilPage: React.FC = () => {
                         </VStack>
                       </Flex>
                     )}
+
+                    {profile?.id && (
+                      <>
+                        <Divider my={5} />
+                        <LearnerAmbassadorBookings
+                          learnerId={profile.id}
+                          learnerName={displayNameForProfile(profile)}
+                          companyId={profile.companyId ?? null}
+                        />
+                      </>
+                    )}
                   </CardBody>
                 </Card>
+                )}
               </TabPanel>
 
               <TabPanel px={0} pt={4}>
+                {!isLeadershipEligible ? (
+                  renderJourneyLockedTab('Transformation Partner')
+                ) : (
                 <Card borderColor="border.subtle" borderWidth="1px" bg="surface.default">
                   <CardHeader pb={2}>
                     <HStack spacing={3} align="center">
@@ -972,6 +1333,7 @@ export const LeadershipCouncilPage: React.FC = () => {
                     )}
                   </CardBody>
                 </Card>
+                )}
               </TabPanel>
             </TabPanels>
           </Tabs>
@@ -987,16 +1349,16 @@ export const LeadershipCouncilPage: React.FC = () => {
                 <Icon as={Calendar} color="brand.primary" />
               </Box>
               <Box>
-                <Heading size="md">Upcoming mentor sessions</Heading>
+                <Heading size="md">All mentor sessions</Heading>
                 <Text color="text.secondary">
-                  Your scheduled time with {mentorProfile ? displayNameForProfile(mentorProfile) : 'your mentor'}
+                  Your full history with {mentorProfile ? displayNameForProfile(mentorProfile) : 'your mentor'}
                 </Text>
               </Box>
             </HStack>
           </ModalHeader>
           <ModalCloseButton />
           <ModalBody>
-            {sessions.length === 0 ? (
+            {!hasAnySessions ? (
               <Flex
                 direction="column"
                 align="center"
@@ -1008,14 +1370,14 @@ export const LeadershipCouncilPage: React.FC = () => {
                 bg="surface.subtle"
               >
                 <Icon as={Calendar} color="text.muted" />
-                <Heading size="sm">No sessions scheduled yet</Heading>
+                <Heading size="sm">No sessions yet</Heading>
                 <Text color="text.secondary" textAlign="center">
-                  Use the schedule button to book your next conversation with your mentor.
+                  Request a session to get started.
                 </Text>
               </Flex>
             ) : (
-              <Stack spacing={4} maxH="60vh" overflowY="auto" pr={2}>
-                {renderSessionCards()}
+              <Stack spacing={3} maxH="60vh" overflowY="auto" pr={2}>
+                {sessions.map((session) => renderSessionRow(session))}
               </Stack>
             )}
           </ModalBody>
@@ -1034,9 +1396,9 @@ export const LeadershipCouncilPage: React.FC = () => {
             <HStack spacing={3}>
               <Icon as={Calendar} />
               <Box>
-                <Heading size="md">Schedule a mentorship session</Heading>
+                <Heading size="md">Request a mentorship session</Heading>
                 <Text color="text.inverse" fontSize="sm">
-                  Your time: {Intl.DateTimeFormat().resolvedOptions().timeZone}
+                  Your time zone: {Intl.DateTimeFormat().resolvedOptions().timeZone}
                 </Text>
               </Box>
             </HStack>
@@ -1044,65 +1406,63 @@ export const LeadershipCouncilPage: React.FC = () => {
           <ModalCloseButton color="text.inverse" />
           <ModalBody pt={4}>
             <Stack spacing={4}>
+              <Alert status="info" variant="subtle" rounded="lg">
+                <AlertIcon />
+                <Box>
+                  <AlertTitle>You propose, your mentor confirms</AlertTitle>
+                  <AlertDescription>
+                    Your mentor will see this request and either accept it or suggest another time.
+                    Points are awarded after the session, when your mentor marks it complete.
+                  </AlertDescription>
+                </Box>
+              </Alert>
+
               <SimpleGrid columns={{ base: 1, md: 2 }} spacing={3}>
                 <FormControl isRequired>
-                  <FormLabel>Date</FormLabel>
-                  <Input type="date" min={format(new Date(), 'yyyy-MM-dd')} value={scheduleDate} onChange={(e) => setScheduleDate(e.target.value)} />
+                  <FormLabel>Proposed date</FormLabel>
+                  <Input
+                    type="date"
+                    min={format(new Date(), 'yyyy-MM-dd')}
+                    value={scheduleDate}
+                    onChange={(e) => setScheduleDate(e.target.value)}
+                  />
                 </FormControl>
                 <FormControl isRequired>
-                  <FormLabel>Time</FormLabel>
-                  <Input type="time" value={scheduleTime} onChange={(e) => setScheduleTime(e.target.value)} />
+                  <FormLabel>Proposed time</FormLabel>
+                  <Input
+                    type="time"
+                    value={scheduleTime}
+                    onChange={(e) => setScheduleTime(e.target.value)}
+                  />
                 </FormControl>
               </SimpleGrid>
 
               <FormControl isRequired>
                 <FormLabel>Topic</FormLabel>
                 <Input
-                  placeholder="What would you like to discuss?"
+                  placeholder="What do you want to discuss in this session?"
                   value={scheduleTopic}
                   onChange={(e) => setScheduleTopic(e.target.value)}
                 />
               </FormControl>
 
               <FormControl>
-                <FormLabel>Agenda (optional)</FormLabel>
+                <FormLabel>Message to mentor (optional)</FormLabel>
                 <Textarea
-                  placeholder="Optional: Add details about what you'd like to cover"
-                  value={scheduleAgenda}
-                  onChange={(e) => setScheduleAgenda(e.target.value)}
+                  placeholder="Share any context — what you&apos;re working through, what you&apos;d like to get out of the session, anything they should review beforehand."
+                  value={scheduleMessage}
+                  onChange={(e) => setScheduleMessage(e.target.value)}
+                  rows={4}
                 />
-              </FormControl>
-
-              <FormControl>
-                <FormLabel>Notes (optional)</FormLabel>
-                <Textarea
-                  placeholder="Optional: Any additional context for your mentor"
-                  value={scheduleNotes}
-                  onChange={(e) => setScheduleNotes(e.target.value)}
-                />
-              </FormControl>
-
-              <FormControl>
-                <FormLabel>Meeting link (optional)</FormLabel>
-                <Input
-                  type="url"
-                  placeholder="Optional: Zoom, Teams, or other meeting link"
-                  value={scheduleLink}
-                  onChange={(e) => setScheduleLink(e.target.value)}
-                />
-                <FormHelperText>Include https:// to enable quick join.</FormHelperText>
+                <FormHelperText>
+                  Your saved mentorship goals will also be shared with this request.
+                </FormHelperText>
               </FormControl>
 
               {mentorProfile?.availabilityStatus && (
-                <Alert status="info" variant="subtle" rounded="lg">
-                  <AlertIcon />
-                  <Box>
-                    <AlertTitle>Availability</AlertTitle>
-                    <AlertDescription>
-                      Mentor is typically available {mentorProfile.availabilityStatus}. Availability is informational only and does not block scheduling.
-                    </AlertDescription>
-                  </Box>
-                </Alert>
+                <Text fontSize="sm" color="text.muted">
+                  Mentor typically available: {mentorProfile.availabilityStatus}
+                </Text>
               )}
             </Stack>
           </ModalBody>
@@ -1110,8 +1470,12 @@ export const LeadershipCouncilPage: React.FC = () => {
             <Button variant="ghost" onClick={scheduleModal.onClose}>
               Cancel
             </Button>
-            <Button colorScheme="primary" onClick={handleScheduleSession} isLoading={scheduleSubmitting}>
-              Schedule Session
+            <Button
+              colorScheme="primary"
+              onClick={handleRequestSession}
+              isLoading={scheduleSubmitting}
+            >
+              Send request
             </Button>
           </ModalFooter>
         </ModalContent>

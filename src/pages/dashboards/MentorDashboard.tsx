@@ -64,6 +64,7 @@ import {
 import { differenceInCalendarDays, format, isToday } from 'date-fns'
 import { useNavigate } from 'react-router-dom'
 import { MentorDashboardLayout } from '@/layouts/MentorDashboardLayout'
+import { MentorSessionsPanel } from '@/components/mentor/MentorSessionsPanel'
 import { useAuth } from '@/hooks/useAuth'
 import {
   deriveFallbackRisk,
@@ -573,6 +574,8 @@ export const MentorDashboard: React.FC = () => {
             ))}
           </SimpleGrid>
         </Box>
+
+        {profile?.id && <MentorSessionsPanel mentorId={profile.id} />}
 
         <Box ref={scheduleRef}>
           <Grid templateColumns={{ base: '1fr', xl: '2fr 1fr' }} gap={4}>
