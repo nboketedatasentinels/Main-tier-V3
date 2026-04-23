@@ -53,12 +53,12 @@ export const ConfirmationWelcomeModal: React.FC<ConfirmationWelcomeModalProps> =
       case 'mentor':
         return 'Share your expertise, review mentee updates, and celebrate their wins.'
       case 'ambassador':
-        return 'Rally the community by sharing opportunities and spotlighting great work.'
+        return 'Rally the ecosystem by sharing opportunities and spotlighting great work.'
       default:
         if (isPaidMember) {
           return 'Start earning points in your current cycle and track your progress clearly.'
         }
-        return 'Explore the platform, find your community, and start logging your impact.'
+        return 'Explore the platform, find your ecosystem, and start logging your impact.'
     }
   }, [membershipStatus, role])
 
@@ -70,7 +70,7 @@ export const ConfirmationWelcomeModal: React.FC<ConfirmationWelcomeModalProps> =
     },
     {
       icon: Users,
-      title: 'Community first',
+      title: 'Ecosystem first',
       description: 'Join villages, participate in peer spaces, and meet leaders on the same path.',
     },
     {
@@ -86,7 +86,7 @@ export const ConfirmationWelcomeModal: React.FC<ConfirmationWelcomeModalProps> =
     () => [
       { label: 'Open my dashboard', href: dashboardPath, icon: Sparkles },
       { label: 'Log my first impact', href: '/app/impact', icon: Target },
-      { label: 'Join the community', href: '/app/announcements', icon: Users },
+      { label: 'Join the ecosystem', href: '/app/announcements', icon: Users },
       { label: 'Browse courses', href: '/app/courses', icon: BookOpenCheck },
     ],
     [dashboardPath],

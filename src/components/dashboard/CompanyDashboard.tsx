@@ -556,7 +556,7 @@ export const CompanyDashboard: React.FC = () => {
         >
           <Box>
             <Heading size="md" color="white">Upgrade for the full experience</Heading>
-            <Text color="white">Unlock vlogs, premium courses, and community challenges</Text>
+            <Text color="white">Unlock vlogs, premium courses, and ecosystem challenges</Text>
           </Box>
           <HStack spacing={3}>
             <Button as={RouterLink} to="/upgrade" colorScheme="yellow" rightIcon={<ArrowUpRight size={16} />}>
@@ -581,7 +581,7 @@ export const CompanyDashboard: React.FC = () => {
           </HStack>
         </HStack>
         <Text color="gray.500" mb={6}>
-          Track your impact, progress, and community connections in one place
+          Track your impact, progress, and ecosystem connections in one place
         </Text>
 
         <Grid templateColumns={{ base: '1fr', md: 'repeat(2, 1fr)', xl: 'repeat(3, 1fr)' }} gap={4}>

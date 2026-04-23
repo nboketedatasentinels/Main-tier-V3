@@ -7,7 +7,7 @@ export const TeamBookClubPage: React.FC = () => {
       <header className="mb-8 space-y-2">
         <h1 className="text-2xl font-bold text-neutral-900">Global Book Club</h1>
         <p className="text-base text-neutral-700">
-          Join readers across the community and stay connected to every selection through our Firebase-backed hub log.
+          Join readers across the ecosystem and stay connected to every selection through our Firebase-backed hub log.
         </p>
       </header>
 

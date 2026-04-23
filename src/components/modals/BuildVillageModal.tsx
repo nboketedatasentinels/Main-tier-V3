@@ -64,7 +64,7 @@ export const BuildVillageModal: React.FC<BuildVillageModalProps> = ({
         <ModalBody>
           <VStack align="stretch" spacing={4}>
             <Text color="brand.subtleText">
-              Rally your peers into a community space where you can collaborate, keep each other accountable, and share wins.
+              Rally your peers into an ecosystem space where you can collaborate, keep each other accountable, and share wins.
             </Text>
 
             <HStack spacing={3} align="flex-start" bg="brand.primaryMuted" p={3} borderRadius="lg">

@@ -137,10 +137,10 @@ export const getLeaderboardContextLabels = (context: LeaderboardContext | null):
       }
     case 'community':
       return {
-        label: 'Community',
-        memberLabel: 'Community Members',
-        scopeText: 'Across your community',
-        badgeLabel: 'Community View',
+        label: 'Ecosystem',
+        memberLabel: 'Ecosystem Members',
+        scopeText: 'Across your ecosystem',
+        badgeLabel: 'Ecosystem View',
       }
     case 'admin_all':
       return {
@@ -154,7 +154,7 @@ export const getLeaderboardContextLabels = (context: LeaderboardContext | null):
       return {
         label: 'Leaderboard',
         memberLabel: 'Members',
-        scopeText: 'Across your community',
+        scopeText: 'Across your ecosystem',
         badgeLabel: 'Segment View',
       }
   }

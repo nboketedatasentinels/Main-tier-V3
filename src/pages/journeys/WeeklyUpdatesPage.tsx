@@ -109,7 +109,7 @@ const weeklyGuidance: Record<number, string[]> = {
   3: [
     'Schedule a mentor check-in',
     'Attend at least one live webinar',
-    'Publish a community post summarizing learnings',
+    'Publish an ecosystem post summarizing learnings',
   ],
   4: ['Finalize your Impact Log story', 'Close the loop on peer-to-peer actions', 'Submit proof for high-value missions'],
   5: ['Host or lead a meetup', 'Share a public celebration post', 'Review your streaks and keep them alive'],

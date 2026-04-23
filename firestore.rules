@@ -1218,6 +1218,17 @@ service cloud.firestore {
       allow update, delete: if isSuperAdmin();
     }
 
+    // User-submitted feedback (/app/feedback)
+    match /feedback/{feedbackId} {
+      allow read: if isPartnerOrAdmin();
+      allow create: if isAuthenticated() && (
+        !('userId' in request.resource.data) ||
+        request.resource.data.userId == null ||
+        request.resource.data.userId == request.auth.uid
+      );
+      allow update, delete: if isSuperAdmin();
+    }
+
     // Notification preferences
     match /notification_preferences/{userId} {
       allow read, create, update, delete: if isAuthenticated() && (

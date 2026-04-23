@@ -56,7 +56,7 @@ export const buildAmbassadorNavItems = (): NavigationSection[] => [
     items: [
       { key: 'overview', label: 'Dashboard Overview', icon: LayoutDashboard },
       { key: 'referrals', label: 'My Referrals', icon: Sparkles },
-      { key: 'engagement', label: 'Community Engagement', icon: Users },
+      { key: 'engagement', label: 'Ecosystem Engagement', icon: Users },
       { key: 'rewards', label: 'Rewards & Recognition', icon: Gift },
       { key: 'resources', label: 'Ambassador Resources', icon: BookOpen },
       { key: 'analytics', label: 'Performance Analytics', icon: BarChart3 },

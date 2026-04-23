@@ -2023,7 +2023,7 @@ export const ProfilePage: React.FC = () => {
                               {
                                 value: 'public',
                                 title: 'Public',
-                                description: 'Visible on company and village leaderboards across the community.',
+                                description: 'Visible on company and village leaderboards across the ecosystem.',
                               },
                               {
                                 value: 'company',

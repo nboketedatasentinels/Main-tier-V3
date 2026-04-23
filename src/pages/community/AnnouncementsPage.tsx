@@ -44,9 +44,7 @@ import {
   AlertTriangle,
   ArrowUpRight,
   Archive,
-  Briefcase,
   CalendarDays,
-  Coins,
   Inbox,
   Mail,
   MailOpen,
@@ -82,9 +80,9 @@ import {
   updateAnnouncement,
 } from '@/services/announcementService'
 
-const DEFAULT_TAB: TabKey = 'events'
+const DEFAULT_TAB: TabKey = 'announcements'
 
-type TabKey = 'announcements' | 'events' | 'jobs' | 'grants' | 'admin'
+type TabKey = 'announcements' | 'admin'
 
 interface TabDescriptor {
   key: TabKey
@@ -100,24 +98,6 @@ const baseTabs: TabDescriptor[] = [
     label: 'Announcements',
     description: 'Platform-wide messages, updates, and required actions from the T4L team.',
     icon: Megaphone,
-  },
-  {
-    key: 'events',
-    label: 'Events',
-    description: 'Discover upcoming workshops, gatherings, and live experiences.',
-    icon: CalendarDays,
-  },
-  {
-    key: 'jobs',
-    label: 'Job Board',
-    description: 'Join the WhatsApp job board to share roles and get real-time referrals.',
-    icon: Briefcase,
-  },
-  {
-    key: 'grants',
-    label: 'Grants & Funding',
-    description: 'Access grants via the WhatsApp community for collaborative discovery.',
-    icon: Coins,
   },
 ]
 
@@ -139,10 +119,10 @@ const AnnouncementsHeader = () => (
   <Box bg="white" p={6} borderRadius="3xl" borderWidth={1} borderColor="brand.border" boxShadow="sm">
     <Stack spacing={2}>
       <Heading size="lg" color="brand.text">
-        Community Hub
+        Ecosystem Hub
       </Heading>
       <Text color="brand.subtleText" fontSize="md">
-        Platform announcements, events, and community spaces — all in one place.
+        Platform announcements, events, and ecosystem spaces — all in one place.
       </Text>
     </Stack>
   </Box>
@@ -1125,7 +1105,7 @@ const AnnouncementsTab: React.FC = () => {
             No announcements available
           </Heading>
           <Text color="text.secondary" fontSize="sm">
-            Check back soon for new updates and community announcements.
+            Check back soon for new updates and ecosystem announcements.
           </Text>
         </VStack>
       ) : (
@@ -1164,7 +1144,7 @@ const AnnouncementsTab: React.FC = () => {
   )
 }
 
-const EventsTab: React.FC = () => {
+export const EventsTab: React.FC = () => {
   const { profile } = useAuth()
   const { events, loading: eventsLoading, error } = useEventsFeed()
   const isAdmin =
@@ -1265,7 +1245,7 @@ const EventsTab: React.FC = () => {
   )
 }
 
-const JobsTab = () => (
+export const JobsTab = () => (
   <Stack spacing={4}>
     <Alert status="success" borderRadius="xl" borderWidth={1} borderColor="green.100" bg="green.50">
       <AlertIcon />
@@ -1297,7 +1277,7 @@ const JobsTab = () => (
   </Stack>
 )
 
-const GrantsTab = () => (
+export const GrantsTab = () => (
   <Stack spacing={4}>
     <Alert status="success" borderRadius="xl" borderWidth={1} borderColor="green.100" bg="green.50">
       <AlertIcon />
@@ -1332,17 +1312,11 @@ const GrantsTab = () => (
 export const AnnouncementsPage: React.FC = () => {
   const [searchParams, setSearchParams] = useSearchParams()
   const { profile, isSuperAdmin } = useAuth()
-  const hasOrganization = Boolean(profile?.companyId || profile?.organizationId || profile?.companyCode)
-  const hasPaidAccess = profile?.membershipStatus === 'paid' && hasOrganization
-
   const tabConfig = useMemo<TabDescriptor[]>(
     () => {
-      const withPaidHiding = baseTabs.map((tab) =>
-        !hasPaidAccess && (tab.key === 'jobs' || tab.key === 'grants') ? { ...tab, hidden: true } : tab,
-      )
-      if (!isSuperAdmin) return withPaidHiding
+      if (!isSuperAdmin) return baseTabs
       return [
-        ...withPaidHiding,
+        ...baseTabs,
         {
           key: 'admin',
           label: 'Manage',
@@ -1351,7 +1325,7 @@ export const AnnouncementsPage: React.FC = () => {
         },
       ]
     },
-    [hasPaidAccess, isSuperAdmin],
+    [isSuperAdmin],
   )
 
   const tabFromUrl = (searchParams.get('tab') as TabKey) || DEFAULT_TAB
@@ -1386,9 +1360,6 @@ export const AnnouncementsPage: React.FC = () => {
       </Stack>
 
       {activeTab === 'announcements' && <AnnouncementsTab />}
-      {activeTab === 'events' && <EventsTab />}
-      {activeTab === 'jobs' && <JobsTab />}
-      {activeTab === 'grants' && <GrantsTab />}
       {activeTab === 'admin' && isSuperAdmin && (
         <AdminTab authorName={profile?.fullName || profile?.firstName || 'T4L Team'} />
       )}

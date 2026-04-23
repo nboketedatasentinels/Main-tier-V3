@@ -76,14 +76,14 @@ const achievements = [
     earnedOn: 'Mar 8',
   },
   {
-    name: 'Community Ally',
+    name: 'Ecosystem Ally',
     description: 'Hosted a village roundtable.',
     earnedOn: 'Mar 1',
   },
 ]
 
 const events = [
-  { title: 'Village Roundtable', date: 'Mar 18 • 5:00 PM', location: 'Zoom', type: 'Community' },
+  { title: 'Village Roundtable', date: 'Mar 18 • 5:00 PM', location: 'Zoom', type: 'Ecosystem' },
   { title: 'Impact Lab', date: 'Mar 20 • 12:00 PM', location: 'HQ Campus', type: 'Workshop' },
   { title: 'Mentor Office Hours', date: 'Mar 22 • 3:00 PM', location: 'Zoom', type: 'Mentorship' },
 ]

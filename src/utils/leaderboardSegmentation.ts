@@ -48,9 +48,9 @@ export const getSegmentContext = (profile?: UserProfile | null): SegmentContext 
     case 'paid_individual':
       return {
         type,
-        label: 'Community',
-        memberLabel: 'Community Members',
-        scopeText: 'Across your community',
+        label: 'Ecosystem',
+        memberLabel: 'Ecosystem Members',
+        scopeText: 'Across your ecosystem',
         filterField: 'transformationTier',
         filterValue: TransformationTier.INDIVIDUAL_PAID,
       }

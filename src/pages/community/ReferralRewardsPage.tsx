@@ -889,11 +889,11 @@ const ReferralRewardsPage: React.FC = () => {
             </Text>
           </HStack>
           <Heading size="md" color="white">
-            Share your link and start building your community.
+            Share your link and start building your ecosystem.
           </Heading>
           <Text opacity={0.9} maxW="3xl" color="white">
             Invite friends, peers, or teammates to Transformation Tier. Each successful signup counts toward your next reward
-            and helps expand our community of ambitious leaders.
+            and helps expand our ecosystem of ambitious leaders.
           </Text>
 
           <Box bg="white" color="brand.text" p={4} borderRadius="lg" boxShadow="md">

@@ -47,7 +47,7 @@ const referralMetrics: ReferralMetric[] = [
   { label: 'Active referrals', value: 42, change: '+8 this week', icon: Share2, color: 'purple' },
   { label: 'Successful enrollments', value: 19, change: '+4 this week', icon: Users, color: 'green' },
   { label: 'Rewards earned', value: '$860', change: 'Ready to redeem', icon: Gift, color: 'orange' },
-  { label: 'Community events', value: 7, change: 'Next event in 2 days', icon: Megaphone, color: 'blue' },
+  { label: 'Ecosystem events', value: 7, change: 'Next event in 2 days', icon: Megaphone, color: 'blue' },
 ]
 
 const referralPipeline: ReferralStage[] = [
@@ -65,7 +65,7 @@ const recentReferrals = [
 ]
 
 const engagementHighlights = [
-  { title: 'Community check-ins', metric: '12 touchpoints', detail: '4 follow-ups needed' },
+  { title: 'Ecosystem check-ins', metric: '12 touchpoints', detail: '4 follow-ups needed' },
   { title: 'Resource shares', metric: '23 shares', detail: 'Top: Leadership toolkit' },
   { title: 'Event sign-ups', metric: '18 RSVPs', detail: 'Mentor AMA on Friday' },
 ]
@@ -87,7 +87,7 @@ export const AmbassadorDashboard: React.FC = () => {
               Welcome back, {ambassadorName}
             </Text>
             <Text color="brand.subtleText">
-              Track referrals, celebrate wins, and grow the community with dedicated ambassador tools.
+              Track referrals, celebrate wins, and grow the ecosystem with dedicated ambassador tools.
             </Text>
             <HStack spacing={3}>
               <Badge colorScheme="purple">Referral program</Badge>

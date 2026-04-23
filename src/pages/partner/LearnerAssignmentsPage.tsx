@@ -41,13 +41,9 @@ import { usePartnerOrganizations } from '@/hooks/partner/usePartnerOrganizations
 import { useLearnerOverview, type LearnerOverviewRow } from '@/hooks/useLearnerOverview'
 import {
   assignMentorToLearner,
-  fetchAmbassadorsForOrg,
   fetchMentorsForOrg,
-  type OrgAmbassadorOption,
   type OrgMentorOption,
 } from '@/services/learnerAssignmentService'
-import { fetchOrganizationDetails } from '@/services/organizationService'
-import type { OrganizationRecord } from '@/types/admin'
 import { getDisplayName } from '@/utils/displayName'
 import { getJourneyLabel } from '@/utils/journeyType'
 
@@ -80,11 +76,6 @@ export const LearnerAssignmentsPage: React.FC = () => {
   const [mentors, setMentors] = useState<OrgMentorOption[]>([])
   const [mentorsLoading, setMentorsLoading] = useState(false)
   const [mentorsError, setMentorsError] = useState<string | null>(null)
-  const [ambassadors, setAmbassadors] = useState<OrgAmbassadorOption[]>([])
-  const [ambassadorsLoading, setAmbassadorsLoading] = useState(false)
-  const [ambassadorsError, setAmbassadorsError] = useState<string | null>(null)
-  const [orgDetails, setOrgDetails] = useState<OrganizationRecord | null>(null)
-  const [orgDetailsLoading, setOrgDetailsLoading] = useState(false)
   const [assigningLearnerId, setAssigningLearnerId] = useState<string | null>(null)
   const [search, setSearch] = useState('')
   const [filter, setFilter] = useState<FilterMode>('all')

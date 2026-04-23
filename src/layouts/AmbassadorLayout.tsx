@@ -113,7 +113,7 @@ export const AmbassadorLayout: React.FC<AmbassadorLayoutProps> = ({
   ambassadorName = 'Ambassador',
   avatarUrl,
   navSections,
-  subtitle = 'Grow the community and track your impact',
+  subtitle = 'Grow the ecosystem and track your impact',
 }) => {
   const { signOut, signingOut } = useAuth()
   const toast = useToast()

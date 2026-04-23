@@ -1027,8 +1027,8 @@ export const LeadershipBoardPage: React.FC = () => {
                         </Text>
                         <Text color="text.secondary">
                           {isVillageCreator
-                            ? 'Manage your village community and invite new members.'
-                            : 'View your village community or leave anytime.'}
+                            ? 'Manage your village ecosystem and invite new members.'
+                            : 'View your village ecosystem or leave anytime.'}
                         </Text>
                         <Stack
                           direction={{ base: 'column', sm: 'row' }}
@@ -1077,7 +1077,7 @@ export const LeadershipBoardPage: React.FC = () => {
                           Personal leaderboard view
                         </Text>
                         <Text color="text.secondary">
-                          Join a village or organization to see peer rankings and community benchmarks.
+                          Join a village or organization to see peer rankings and ecosystem benchmarks.
                         </Text>
                         <Button
                           bg="#350e6f"

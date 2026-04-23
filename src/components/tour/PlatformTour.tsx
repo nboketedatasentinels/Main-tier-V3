@@ -48,7 +48,7 @@ const tourSteps: TourStep[] = [
   },
   {
     target: '[data-tour="community"]',
-    title: 'Community',
+    title: 'Ecosystem',
     content: 'Connect with peers, join villages, and engage with mentors. Leadership is a team sport.',
     placement: 'bottom',
   },

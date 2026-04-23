@@ -480,6 +480,44 @@ export const updateOrganization = async (id: string, updates: Partial<Organizati
   await updateDoc(orgRef, { ...updates, updatedAt: serverTimestamp() })
 }
 
+export const cascadeCohortStartDateToProfiles = async (
+  orgId: string,
+  newCohortStartDate: string,
+): Promise<{ affectedCount: number }> => {
+  if (!orgId?.trim() || !newCohortStartDate) return { affectedCount: 0 }
+
+  const usersMirrorCollection = collection(db, 'users')
+  const [profileSnap, userSnap] = await Promise.all([
+    getDocs(query(usersCollection, where('organizationId', '==', orgId))),
+    getDocs(query(usersMirrorCollection, where('organizationId', '==', orgId))),
+  ])
+
+  const parsed = new Date(newCohortStartDate)
+  const cohortStartIso = isNaN(parsed.getTime()) ? newCohortStartDate : parsed.toISOString()
+  const updatePayload = {
+    journeyStartDate: cohortStartIso,
+    currentWeek: 1,
+    updatedAt: serverTimestamp(),
+  }
+
+  const allRefs = [
+    ...profileSnap.docs.map((d) => d.ref),
+    ...userSnap.docs.map((d) => d.ref),
+  ]
+  const BATCH_SIZE = 450
+  for (let i = 0; i < allRefs.length; i += BATCH_SIZE) {
+    const batch = writeBatch(db)
+    allRefs.slice(i, i + BATCH_SIZE).forEach((ref) => batch.update(ref, updatePayload))
+    await batch.commit()
+  }
+
+  const affectedUserIds = new Set<string>([
+    ...profileSnap.docs.map((d) => d.id),
+    ...userSnap.docs.map((d) => d.id),
+  ])
+  return { affectedCount: affectedUserIds.size }
+}
+
 export const deleteOrganization = async (id: string) => {
   if (!id?.trim()) return
   const orgId = id.trim()

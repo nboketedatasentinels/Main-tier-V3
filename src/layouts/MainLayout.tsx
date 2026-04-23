@@ -38,14 +38,15 @@ import {
   ClipboardList,
   Gavel,
   Megaphone,
-  Gift,
-  BookMarked,
   BookOpen,
-  Sparkles,
   Search,
   Trophy,
   LogOut,
   CalendarDays,
+  Headphones,
+  MessageCircle,
+  MessageSquare,
+  Wrench,
 } from 'lucide-react'
 import { useAuth } from '@/hooks/useAuth'
 import { BuildVillageModal } from '@/components/modals/BuildVillageModal'
@@ -284,12 +285,14 @@ export const MainLayout: React.FC = () => {
         ],
       },
       {
-        label: 'COMMUNITY',
+        label: 'ECOSYSTEM',
         items: [
-          { label: 'Events', path: '/app/announcements', icon: Megaphone, badge: { label: '2' } },
-          { label: 'Referral Rewards', path: '/app/referral-rewards', icon: Gift },
-          { label: 'Global Book Club', path: '/app/book-club', icon: BookMarked },
-          { label: 'Shameless Circle', path: '/app/shameless-circle', icon: Sparkles },
+          { label: 'Announcement', path: '/app/announcements', icon: Megaphone },
+          { label: 'Event', path: '/app/events', icon: CalendarDays },
+          { label: 'Shameless Tuesday Podcast', path: '/app/shameless-tuesday', icon: Headphones },
+          { label: 'WhatsApp Access', path: '/app/whatsapp-access', icon: MessageCircle },
+          { label: 'Tools', path: '/app/tools', icon: Wrench },
+          { label: 'Feedback', path: '/app/feedback', icon: MessageSquare },
         ],
       },
     ],
@@ -919,7 +922,7 @@ export const MainLayout: React.FC = () => {
           selectedRestrictedFeature?.benefits ?? [
             'Unlock paid-only collaboration features',
             'Access advanced leadership tools',
-            'Use the full journey and community toolkit',
+            'Use the full journey and ecosystem toolkit',
           ]
         }
         isOpen={isUpgradeModalOpen}

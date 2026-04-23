@@ -1220,7 +1220,7 @@ export const LeadershipCouncilPage: React.FC = () => {
                         <Heading size="sm">No ambassador assigned yet</Heading>
                         <Text color="text.secondary">
                           {hasOrganization
-                            ? "Your community hasn't been paired with an ambassador. Please contact your administrator for support."
+                            ? "Your ecosystem hasn't been paired with an ambassador. Please contact your administrator for support."
                             : 'Your account is not linked to an organization yet. Please contact your administrator.'}
                         </Text>
                       </Flex>

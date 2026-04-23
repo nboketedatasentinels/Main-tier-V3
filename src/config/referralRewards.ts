@@ -32,9 +32,9 @@ export const REWARD_TIERS: RewardTier[] = [
   },
   {
     id: 2,
-    title: 'Community Builder Badge',
+    title: 'Ecosystem Builder Badge',
     required: 5,
-    reward: 'Community Builder Badge',
+    reward: 'Ecosystem Builder Badge',
     description:
       'Visible on their profile + bragging rights in the leaderboard. Unlocks access to a bonus micro-learning.',
     label: 'Badge',
@@ -58,7 +58,7 @@ export const REWARD_TIERS: RewardTier[] = [
     title: 'Featured Recognition',
     required: 20,
     reward: "Featured in 'Referrer of the Month'",
-    description: "Featured in a community newsletter section ('Referrer of the Month').",
+    description: "Featured in an ecosystem newsletter section ('Referrer of the Month').",
     label: 'Featured',
     icon: Award,
     gradient: 'linear-gradient(135deg, var(--chakra-colors-surface-subtle), var(--chakra-colors-tint-brandPrimary))',

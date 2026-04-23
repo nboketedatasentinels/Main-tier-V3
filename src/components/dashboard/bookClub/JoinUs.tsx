@@ -39,12 +39,12 @@ export const JoinUs: React.FC = () => {
         </h2>
         <div className="space-y-3 text-base leading-relaxed text-text-secondary">
           <p>
-            Our reading community is coordinated through an external platform where you can see upcoming selections, join
+            Our reading ecosystem is coordinated through an external platform where you can see upcoming selections, join
             discussions, and manage your membership.
           </p>
           <p>
             Visit the Global Book Club hub to get plugged into the latest reads and conversation spaces. We log your visit with
-            Firebase so we can keep the community experience seamless across the app and our discussion space.
+            Firebase so we can keep the ecosystem experience seamless across the app and our discussion space.
           </p>
         </div>
       </div>

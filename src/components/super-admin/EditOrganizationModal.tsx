@@ -53,7 +53,7 @@ import {
   fetchOrganizationAssignments,
   fetchOrganizationDetails,
 } from '@/services/organizationService'
-import { updateOrganization } from '@/services/superAdminService'
+import { cascadeCohortStartDateToProfiles, updateOrganization } from '@/services/superAdminService'
 import {
   MonthlyCourseAssignments,
   buildMonthlyAssignmentsFromArray,
@@ -115,6 +115,7 @@ export const EditOrganizationModal: React.FC<EditOrganizationModalProps> = ({
   const [isLoading, setIsLoading] = useState(false)
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [monthlyAssignments, setMonthlyAssignments] = useState<MonthlyCourseAssignments>({})
+  const [originalCohortStartDate, setOriginalCohortStartDate] = useState<string | null>(null)
 
   const courseLimit = useMemo(() => {
     const option = programDurations.find((duration) => duration.value === form.programDuration)
@@ -230,11 +231,15 @@ export const EditOrganizationModal: React.FC<EditOrganizationModalProps> = ({
       setForm(emptyOrganization)
       setCourses([])
       setMonthlyAssignments({})
+      setOriginalCohortStartDate(null)
       return
     }
 
     if (organization) {
       setForm({ ...emptyOrganization, ...organization })
+      setOriginalCohortStartDate(
+        organization.cohortStartDate ? String(organization.cohortStartDate) : null,
+      )
     }
 
     const fetchData = async () => {
@@ -258,6 +263,9 @@ export const EditOrganizationModal: React.FC<EditOrganizationModalProps> = ({
               ? assignments
               : organizationDetails.courseAssignments || [],
           })
+          setOriginalCohortStartDate(
+            organizationDetails.cohortStartDate ? String(organizationDetails.cohortStartDate) : null,
+          )
           setMonthlyAssignments(() => {
             if (organizationDetails.monthlyCourseAssignments) {
               return organizationDetails.monthlyCourseAssignments
@@ -366,10 +374,32 @@ export const EditOrganizationModal: React.FC<EditOrganizationModalProps> = ({
         monthlyCourseAssignments: normalizedMonthlyAssignments,
         courseAssignmentStructure: 'monthly',
       })
+
+      const toDayKey = (value: string | null | undefined): string => {
+        if (!value) return ''
+        const d = new Date(value)
+        return isNaN(d.getTime()) ? value : d.toISOString().slice(0, 10)
+      }
+      const newCohortStartStr = form.cohortStartDate ? String(form.cohortStartDate) : ''
+      const cohortDateChanged =
+        !!newCohortStartStr && toDayKey(newCohortStartStr) !== toDayKey(originalCohortStartDate)
+
+      let cascadeMessage = `Cluster: ${clusterDisplayName}`
+      if (cohortDateChanged) {
+        const { affectedCount } = await cascadeCohortStartDateToProfiles(
+          organization.id,
+          newCohortStartStr,
+        )
+        cascadeMessage = `Program start date reset for ${affectedCount} member${
+          affectedCount === 1 ? '' : 's'
+        } — journey reset to Week 1. Existing points and history preserved.`
+      }
+
       toast({
         title: 'Organization updated successfully',
-        description: `Cluster: ${clusterDisplayName}`,
+        description: cascadeMessage,
         status: 'success',
+        duration: cohortDateChanged ? 8000 : 5000,
       })
       onUpdated?.({ ...form, id: organization.id })
       onClose()

@@ -115,7 +115,7 @@ export function generateSuggestedActions(
 
   if (newStatus === 'in_recovery') {
     actions.push('Keep up the momentum - one more week!')
-    actions.push('Celebrate this recovery step with your community')
+    actions.push('Celebrate this recovery step with your ecosystem')
     actions.push('Share your progress with your mentor')
   }
 

@@ -43,6 +43,11 @@ import { AnnouncementsPage } from '@/pages/community/AnnouncementsPage'
 import ReferralRewardsPage from '@/pages/community/ReferralRewardsPage'
 import { BookClubPage } from '@/pages/community/BookClubPage'
 import { ShamelessCirclePage } from '@/pages/community/ShamelessCirclePage';
+import EventsPage from '@/pages/community/EventsPage'
+import ShamelessTuesdayPodcastPage from '@/pages/community/ShamelessTuesdayPodcastPage'
+import WhatsAppAccessPage from '@/pages/community/WhatsAppAccessPage'
+import ToolsPage from '@/pages/community/ToolsPage'
+import FeedbackPage from '@/pages/community/FeedbackPage'
 import { UserProfileManagementPage } from '@/pages/admin/UserProfileManagementPage';
 import { OrganizationDetailPage } from '@/pages/admin/OrganizationDetailPage';
 import ApprovalQueuePage from '@/pages/admin/ApprovalQueuePage';
@@ -252,6 +257,11 @@ export const AppRoutes = () => {
             }
           />
           <Route path="announcements" element={<AnnouncementsPage />} />
+          <Route path="events" element={<EventsPage />} />
+          <Route path="shameless-tuesday" element={<ShamelessTuesdayPodcastPage />} />
+          <Route path="whatsapp-access" element={<WhatsAppAccessPage />} />
+          <Route path="tools" element={<ToolsPage />} />
+          <Route path="feedback" element={<FeedbackPage />} />
           <Route path="referral-rewards" element={<ReferralRewardsPage />} />
           <Route path="book-club" element={<BookClubPage />} />
           <Route path="shameless-circle" element={<ShamelessCirclePage />} />
