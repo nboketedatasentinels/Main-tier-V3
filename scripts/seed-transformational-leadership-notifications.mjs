@@ -1,0 +1,587 @@
+// Seeds the programme_notification_templates Firestore collection with the
+// 4-Week Transformational Leadership programme notification copy.
+// Source of truth for the copy is src/config/transformationalLeadershipNotifications.ts.
+// Keep both files in sync if copy changes.
+
+import admin from 'firebase-admin'
+
+if (!admin.apps.length) {
+  const serviceAccount = process.env.FIREBASE_SERVICE_ACCOUNT
+    ? JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT)
+    : null
+
+  admin.initializeApp({
+    credential: serviceAccount
+      ? admin.credential.cert(serviceAccount)
+      : admin.credential.applicationDefault(),
+    projectId: process.env.FIREBASE_PROJECT_ID || serviceAccount?.project_id,
+  })
+}
+
+const db = admin.firestore()
+const { serverTimestamp } = admin.firestore.FieldValue
+
+const PROGRAMME = 'transformational-leadership-4w'
+const TARGET_AUDIENCE = 'Transformational Leadership 4-Week learners'
+
+const WEEK_1_POLL = {
+  question:
+    'When things get hard in your current role, which of these sounds most like how you default to leading?',
+  options: [
+    'I paint the bigger picture and get the team inspired about where we are going (Transformational)',
+    'I make expectations clear, set the targets, and hold people to them (Transactional)',
+    'I trust my team to figure it out and I stay out of their way (Laissez-faire)',
+    'Honestly, it depends on the day and who is in the room (Mixed)',
+  ],
+}
+
+const WEEK_1_GAMMA_SLIDES = [
+  {
+    title: 'Slide 1 | Why this prompt exists',
+    body: `Most leadership style quizzes give you a label and leave you there. This prompt goes further. It asks you about specific moments from the last month, then works out which style you defaulted to, why, and whether it was the right fit for the moment. It takes five minutes.`,
+  },
+  {
+    title: 'Slide 2 | The prompt (copy and paste)',
+    body: `You are a transformation leadership coach. I am going to describe four recent leadership moments from my work. For each one, identify which leadership style I used (transformational, transactional, or laissez-faire), explain why you see it that way, and tell me whether that style was the right fit for the moment. Then give me one pattern across all four. Here are my four moments: [user pastes 4 moments, 2-3 sentences each].`,
+  },
+  {
+    title: 'Slide 3 | How to pick your four moments',
+    body: `Pick one moment of leading a project, one of giving feedback, one of making a hard decision, one of managing a conflict. They don't have to be successes. In fact, pick one that didn't land well. The prompt works better when there's something to learn from, not just moments to celebrate.`,
+  },
+  {
+    title: 'Slide 4 | What to do with the output',
+    body: `Compare what the AI tells you to what you said your default was in Monday's poll. If they match, you have strong self-awareness. If they don't, the gap is the most useful thing you will find this week. Bring both into your Peer-to-Peer session.`,
+  },
+]
+
+const WEEK_2_POLL = {
+  question:
+    'What is slowing down your transformation right now, more than anything else?',
+  options: [
+    'The top is not aligned -- exec sponsors say the right things but do not back them up',
+    'The middle is resistant -- managers are quietly protecting the old way of working',
+    'The team is tired -- they have seen too many changes that went nowhere',
+    'I am the bottleneck -- I know what I want but I cannot get people to move with me',
+  ],
+}
+
+const WEEK_2_GAMMA_SLIDES = [
+  {
+    title: 'Slide 1 | Why this works',
+    body: `Most of us write emails from our own perspective -- what we think is important, what we want them to do, why they should care. Resistant stakeholders do not respond to that. They respond to emails that start with their concerns, not yours. Claude is good at doing this flip because it has no ego in the conversation.`,
+  },
+  {
+    title: 'Slide 2 | The prompt (copy and paste)',
+    body: `You are a transformation communications coach. I need to write an email to a resistant stakeholder. Their name is [X], their role is [Y], and based on what I know, their biggest concern about this transformation is [Z]. The outcome I need from this email is [specific action]. Write the email from their perspective first: what they are worried about, why this transformation feels risky to them, what they need to hear to take the next step. Then write the email. Keep it under 150 words.`,
+  },
+  {
+    title: 'Slide 3 | How to pick the right stakeholder',
+    body: `Think of the one person in your current transformation whose pushback keeps coming up. Not the loudest critic -- the quiet one whose unsaid concerns are slowing things down. That is the email worth writing this week.`,
+  },
+  {
+    title: 'Slide 4 | Before you hit send',
+    body: `Never send the first version Claude gives you. Read it twice. Delete anything that sounds like it was written by a robot. Keep the structure -- their concerns first, then your ask. That structure is the part that works. The words need to sound like you.`,
+  },
+]
+
+const WEEK_3_POLL = {
+  question:
+    'Gut answer, no overthinking. How healthy is your current organisation for a transformation leader to succeed in?',
+  options: [
+    'Healthy -- the environment supports the work and I have what I need',
+    'Capable but strained -- most of the ingredients are there but something is missing',
+    'Broken system -- the environment is actively working against transformation',
+    'Honestly? I have never really thought about it this way',
+  ],
+}
+
+const WEEK_3_GAMMA_SLIDES = [
+  {
+    title: 'Slide 1 | Why bother',
+    body: `Reading leadership books and applying leadership books are two different skills. Most practitioners do the first and skip the second. This week, the book club gives you the content. The Digital Edge gives you the tool that turns reading into action. The action is the point.`,
+  },
+  {
+    title: 'Slide 2 | The prompt (copy and paste)',
+    body: `You are a transformation leadership consultant preparing a 10-minute briefing for a senior executive. The executive is [role] at a [industry] organisation. Their biggest concern right now is [specific concern from your stakeholder map]. Based on the core arguments of Road Map for Revolutionaries by [author], write me a one-page briefing that connects the book's three most relevant ideas directly to their concern. Use their language, not the book's language. Make it feel like something their direct report wrote, not a book summary.`,
+  },
+  {
+    title: 'Slide 3 | What to actually do with it',
+    body: `Do not send the briefing as is. Read it. Delete the parts that sound like a book review. Keep the parts that connect to their concern. Then -- and this is the part that matters -- book a 15-minute conversation with them and talk them through it. Do not email it. Have the conversation. That is where transformation relationships get built.`,
+  },
+  {
+    title: 'Slide 4 | If you skip this',
+    body: `If you finish the book and never use it, it becomes another thing you know. Knowledge without application is the most common trap in leadership development. The difference between the graduates who end up running transformations and the ones who keep reading about them is this single behaviour: they turn inputs into conversations. That is the whole difference.`,
+  },
+]
+
+const WEEK_4_POLL = {
+  question:
+    'Four weeks in. When things get hard in your current role, which of these sounds most like how you default to leading now?',
+  options: [
+    'I paint the bigger picture and get the team inspired about where we are going (Transformational)',
+    'I make expectations clear, set the targets, and hold people to them (Transactional)',
+    'I trust my team to figure it out and I stay out of their way (Laissez-faire)',
+    'It depends more now -- I pick the style the moment needs (Adaptive)',
+  ],
+}
+
+const WEEK_4_GAMMA_SLIDES = [
+  {
+    title: 'Slide 1 | Why this matters more than the templates',
+    body: `Templates are inputs. A plan is an output. Most practitioners finish a programme with a pile of templates and never convert them into something their organisation can actually use. This is the prompt that does the conversion. It is also the single most-requested tool from our Power Journey graduates.`,
+  },
+  {
+    title: 'Slide 2 | Before you run the prompt',
+    body: `You need four completed templates to feed into this: your Stakeholder Mapping, your Transformation Vision Canvas, your Leadership Development Action Plan, and your Change Communication Plan. If you have not finished those yet, do them first. The prompt is only as good as the thinking you feed into it.`,
+  },
+  {
+    title: 'Slide 3 | The prompt (copy and paste)',
+    body: `You are a transformation leadership coach. I am going to paste four documents below: a Stakeholder Map, a Vision Canvas, a Leadership Development Action Plan, and a Change Communication Plan. Synthesise them into a single 90-day transformation plan that fits on one page. Organise it as three 30-day blocks. For each block, name the two stakeholder moves, the one communication move, and the one personal leadership shift. Use my language, not template language. Keep it shorter than you want to. [paste all four documents].`,
+  },
+  {
+    title: 'Slide 4 | What to do on Monday morning',
+    body: `Book a 15-minute conversation with your exec sponsor. Walk them through the plan. Do not email it. Do not wait for them to read it. Walk them through it. Make one edit based on their feedback, right there in the meeting. That is how transformation plans become transformation programmes.`,
+  },
+]
+
+const templates = [
+  // ------------------------- Week 1 -------------------------
+  {
+    key: 'tl4w_w1_affirmation',
+    week: 1,
+    day: 1,
+    contentKind: 'affirmation',
+    channel: 'in_app',
+    title: 'Week 1 Words of Affirmation',
+    messageBody: `Welcome, {{firstName}}. You are not here to become a different leader. You are here to become a more honest one. This week, we hold up the mirror. Be gentle with what you see, and be honest about what needs to change. Let's go.`,
+  },
+  {
+    key: 'tl4w_w1_poll_push',
+    week: 1,
+    day: 1,
+    contentKind: 'poll',
+    channel: 'push',
+    title: 'Week 1 Leadership Style Poll',
+    messageBody: `Quick poll for you, {{firstName}}. 30 seconds. We want to know your default leadership style before you start the course.`,
+  },
+  {
+    key: 'tl4w_w1_poll_inapp',
+    week: 1,
+    day: 1,
+    contentKind: 'poll',
+    channel: 'in_app',
+    title: 'Week 1 Leadership Style Poll',
+    messageBody: `Before you get into the Self-Assessment this week, tell us what you think your default leadership style is. We will come back to this at the end of the course and see if anything changed. https://canva.link/thtr84xjyat1fwv`,
+    externalUrl: 'https://canva.link/thtr84xjyat1fwv',
+    referenceContent: { poll: WEEK_1_POLL },
+  },
+  {
+    key: 'tl4w_w1_digital_edge_push',
+    week: 1,
+    day: 3,
+    contentKind: 'digital_edge',
+    channel: 'push',
+    title: 'Week 1 Digital Edge',
+    messageBody: `Digital Edge is ready, {{firstName}}. A 5-min Claude prompt to spot your default style.`,
+  },
+  {
+    key: 'tl4w_w1_digital_edge_inapp',
+    week: 1,
+    day: 3,
+    contentKind: 'digital_edge',
+    channel: 'in_app',
+    title: 'Week 1 Digital Edge',
+    messageBody: `This week's Digital Edge is a prompt you can paste into Claude, ChatGPT, or Gemini. It asks you four questions, analyzes your answers, and tells you your likely default leadership style with receipts. 5 minutes. Try it before Day 5. https://gamma.app/docs/Digital-Edge-AI-Prompts-2l44v3pm19x9pay`,
+    externalUrl: 'https://gamma.app/docs/Digital-Edge-AI-Prompts-2l44v3pm19x9pay',
+    referenceContent: { gammaSlides: WEEK_1_GAMMA_SLIDES },
+  },
+  {
+    key: 'tl4w_w1_deep_dive',
+    week: 1,
+    day: 3,
+    contentKind: 'deep_dive',
+    channel: 'in_app',
+    title: 'Week 1 Deep Dive',
+    messageBody: `Your homework for Week 1, {{firstName}}. Pick one person at work who sees you lead regularly. Ask them this one question: 'In the last month, when I was under pressure, what did you see me default to?' Do not explain the course. Do not defend the answer. Just ask, listen, write down what they say. Bring it into next week.`,
+  },
+  {
+    key: 'tl4w_w1_progress_d2',
+    week: 1,
+    day: 2,
+    contentKind: 'progress_check',
+    channel: 'in_app',
+    progressVariant: 'day_2',
+    title: 'Week 1 Midweek Check',
+    messageBody: `Checking in, {{firstName}}. You are at {{currentPoints}} of 2,500 points for Week 1. Pass rate for the full programme is 9,000 points over 4 weeks, so roughly 2,250 per week keeps you on track. The LIFT Course Module is the biggest single win this week at 3,000 points. If you have not opened it yet, that is your next 20 minutes.`,
+  },
+  {
+    key: 'tl4w_w1_progress_d5_on_track',
+    week: 1,
+    day: 5,
+    contentKind: 'progress_check',
+    channel: 'in_app',
+    progressVariant: 'day_5_on_track',
+    title: 'End of Week 1',
+    messageBody: `End of Week 1, {{firstName}}. You are sitting at {{currentPoints}} of 2,500 target points. Strong week. 6,500 more to go for your pass. See you in Week 2.`,
+  },
+  {
+    key: 'tl4w_w1_progress_d5_behind',
+    week: 1,
+    day: 5,
+    contentKind: 'progress_check',
+    channel: 'in_app',
+    progressVariant: 'day_5_behind',
+    title: 'End of Week 1',
+    messageBody: `End of Week 1, {{firstName}}. You are sitting at {{currentPoints}} of 2,500 target points. Two days to catch up. Knock out the LIFT module this weekend and you are back on track for Week 2.`,
+  },
+  {
+    key: 'tl4w_w1_feedback',
+    week: 1,
+    day: 5,
+    contentKind: 'feedback_form',
+    channel: 'in_app',
+    title: 'Week 1 Feedback',
+    messageBody: `One week in, {{firstName}}. How is it going? 2-minute form. No wrong answers. We use every response. https://www.surveymonkey.com/r/SZV2QF5`,
+    externalUrl: 'https://www.surveymonkey.com/r/SZV2QF5',
+  },
+
+  // ------------------------- Week 2 -------------------------
+  {
+    key: 'tl4w_w2_affirmation',
+    week: 2,
+    day: 1,
+    contentKind: 'affirmation',
+    channel: 'in_app',
+    title: 'Week 2 Words of Affirmation',
+    messageBody: `Welcome to Week 2, {{firstName}}. Nobody tells you that leading change is lonely. This week we look at resistance, crisis, and the moments most leaders give up. You will not give up. You are here for a reason. Let's do the harder work.`,
+  },
+  {
+    key: 'tl4w_w2_poll_push',
+    week: 2,
+    day: 1,
+    contentKind: 'poll',
+    channel: 'push',
+    title: 'Week 2 Transformation Blockers Poll',
+    messageBody: `{{firstName}}, where is your transformation actually stuck right now? Quick poll.`,
+  },
+  {
+    key: 'tl4w_w2_poll_inapp',
+    week: 2,
+    day: 1,
+    contentKind: 'poll',
+    channel: 'in_app',
+    title: 'Week 2 Transformation Blockers Poll',
+    messageBody: `Before we get into resistance and crisis this week, tell us where the blockage in your real transformation actually sits. We will use the room's answers to shape the Peer-to-Peer session. https://canva.link/jcinjvf3uqfja2l`,
+    externalUrl: 'https://canva.link/jcinjvf3uqfja2l',
+    referenceContent: { poll: WEEK_2_POLL },
+  },
+  {
+    key: 'tl4w_w2_digital_edge_push',
+    week: 2,
+    day: 3,
+    contentKind: 'digital_edge',
+    channel: 'push',
+    title: 'Week 2 Digital Edge',
+    messageBody: `Digital Edge is live, {{firstName}}. Claude prompt for your toughest stakeholder email.`,
+  },
+  {
+    key: 'tl4w_w2_digital_edge_inapp',
+    week: 2,
+    day: 3,
+    contentKind: 'digital_edge',
+    channel: 'in_app',
+    title: 'Week 2 Digital Edge',
+    messageBody: `This week's tip: a Claude prompt that helps you write the email your most resistant stakeholder actually needs. Not the one you want to send. The one that might actually move them. 10 minutes. https://gamma.app/docs/Digital-Edge-AI-Prompts-x5wyajvf60vggei`,
+    externalUrl: 'https://gamma.app/docs/Digital-Edge-AI-Prompts-x5wyajvf60vggei',
+    referenceContent: { gammaSlides: WEEK_2_GAMMA_SLIDES },
+  },
+  {
+    key: 'tl4w_w2_deep_dive',
+    week: 2,
+    day: 3,
+    contentKind: 'deep_dive',
+    channel: 'in_app',
+    title: 'Week 2 Deep Dive',
+    messageBody: `Stakeholder Challenge Mapping, {{firstName}}. List the five people who most affect whether your transformation succeeds. For each one, write one sentence: what are they actually worried about? Not what they say in meetings. What they are worried about. Bring the list to your Peer-to-Peer session. This is the map you build everything else from.`,
+  },
+  {
+    key: 'tl4w_w2_progress_d2',
+    week: 2,
+    day: 2,
+    contentKind: 'progress_check',
+    channel: 'in_app',
+    progressVariant: 'day_2',
+    title: 'Week 2 Midweek Check',
+    messageBody: `Quick check, {{firstName}}. You are at {{currentPoints}} of 5,000 cumulative points. Halfway to the 9,000 pass rate. The webinar + workbook combo is worth 3,000 points in one session if you have not banked it yet. That is your single highest-value activity this week.`,
+  },
+  {
+    key: 'tl4w_w2_progress_d5_on_track',
+    week: 2,
+    day: 5,
+    contentKind: 'progress_check',
+    channel: 'in_app',
+    progressVariant: 'day_5_on_track',
+    title: 'End of Week 2',
+    messageBody: `End of Week 2, {{firstName}}. Cumulative: {{currentPoints}} of 5,000. You are halfway to passing. Week 3 shifts to the Book Club and Org Assessment -- lighter points load, heavier thinking.`,
+  },
+  {
+    key: 'tl4w_w2_progress_d5_behind',
+    week: 2,
+    day: 5,
+    contentKind: 'progress_check',
+    channel: 'in_app',
+    progressVariant: 'day_5_behind',
+    title: 'End of Week 2',
+    messageBody: `End of Week 2, {{firstName}}. Cumulative: {{currentPoints}} of 5,000. Pick one. The first podcast (1,000 pts) or an impact log entry (1,000 pts). Both are 30-minute jobs. Bank one this weekend.`,
+  },
+
+  // ------------------------- Week 3 -------------------------
+  {
+    key: 'tl4w_w3_affirmation',
+    week: 3,
+    day: 1,
+    contentKind: 'affirmation',
+    channel: 'in_app',
+    title: 'Week 3 Words of Affirmation',
+    messageBody: `Week 3, {{firstName}}. This week we turn the mirror outward. Is the problem you, or the room you are leading in? Most leaders never ask this question and spend years blaming themselves for resistance the environment caused. You are about to find out. That is a gift.`,
+  },
+  {
+    key: 'tl4w_w3_poll_push',
+    week: 3,
+    day: 1,
+    contentKind: 'poll',
+    channel: 'push',
+    title: 'Week 3 Organisation Health Poll',
+    messageBody: `Gut check, {{firstName}}. How healthy is your organisation for transformation? Quick poll.`,
+  },
+  {
+    key: 'tl4w_w3_poll_inapp',
+    week: 3,
+    day: 1,
+    contentKind: 'poll',
+    channel: 'in_app',
+    title: 'Week 3 Organisation Health Poll',
+    messageBody: `Before you do the Org Assessment this week, tell us your gut answer. We will compare your gut to your actual score at the end of the week. The gap is interesting every single time. https://canva.link/iazlcs24k89u3q1`,
+    externalUrl: 'https://canva.link/iazlcs24k89u3q1',
+    referenceContent: { poll: WEEK_3_POLL },
+  },
+  {
+    key: 'tl4w_w3_digital_edge_push',
+    week: 3,
+    day: 3,
+    contentKind: 'digital_edge',
+    channel: 'push',
+    title: 'Week 3 Digital Edge',
+    messageBody: `Digital Edge is up, {{firstName}}. Turn this week's book into ammunition for your boss.`,
+  },
+  {
+    key: 'tl4w_w3_digital_edge_inapp',
+    week: 3,
+    day: 3,
+    contentKind: 'digital_edge',
+    channel: 'in_app',
+    title: 'Week 3 Digital Edge',
+    messageBody: `This week's tip: use Claude to turn Road Map for Revolutionaries into a 10-minute briefing you can actually hand your exec sponsor. One prompt. One output. One real conversation with someone who has power in your organisation. https://gamma.app/docs/Digital-Edge-AI-Prompts-oaw9q1m3wfcct0c`,
+    externalUrl: 'https://gamma.app/docs/Digital-Edge-AI-Prompts-oaw9q1m3wfcct0c',
+    referenceContent: { gammaSlides: WEEK_3_GAMMA_SLIDES },
+  },
+  {
+    key: 'tl4w_w3_deep_dive',
+    week: 3,
+    day: 3,
+    contentKind: 'deep_dive',
+    channel: 'in_app',
+    title: 'Week 3 Deep Dive',
+    messageBody: `Your Week 3 deep dive, {{firstName}}. After you complete the Org Assessment, write one sentence answering this: 'If I were advising myself as an outsider, what would I tell me to do about my organisation's lowest-scoring dimension?' Write it. Re-read it the next morning. That is the answer.`,
+  },
+  {
+    key: 'tl4w_w3_progress_d2',
+    week: 3,
+    day: 2,
+    contentKind: 'progress_check',
+    channel: 'in_app',
+    progressVariant: 'day_2',
+    title: 'Week 3 Midweek Check',
+    messageBody: `Checking in, {{firstName}}. {{currentPoints}} of 7,500 cumulative points. Book Club session is 2,500 points in one go -- biggest win available this week. The Org Assessment does not carry points directly but it sets up Week 4's Capstone, so do not skip it.`,
+  },
+  {
+    key: 'tl4w_w3_progress_d5_on_track',
+    week: 3,
+    day: 5,
+    contentKind: 'progress_check',
+    channel: 'in_app',
+    progressVariant: 'day_5_on_track',
+    title: 'End of Week 3',
+    messageBody: `End of Week 3, {{firstName}}. Cumulative: {{currentPoints}} of 7,500. 1,500 points from passing. Week 4 will get you there if you show up.`,
+  },
+  {
+    key: 'tl4w_w3_progress_d5_behind',
+    week: 3,
+    day: 5,
+    contentKind: 'progress_check',
+    channel: 'in_app',
+    progressVariant: 'day_5_behind',
+    title: 'End of Week 3',
+    messageBody: `End of Week 3, {{firstName}}. Cumulative: {{currentPoints}} of 7,500. Book Club and second impact log this weekend. That is 3,500 points if you need to catch up hard.`,
+  },
+
+  // ------------------------- Week 4 -------------------------
+  {
+    key: 'tl4w_w4_affirmation',
+    week: 4,
+    day: 1,
+    contentKind: 'affirmation',
+    channel: 'in_app',
+    title: 'Week 4 Words of Affirmation',
+    messageBody: `Final week, {{firstName}}. You are not here to finish a course. You are here to walk out with a plan that works at your real job on Monday. The Capstone is where that happens. Do the templates. Do them badly if you have to. Done beats perfect.`,
+  },
+  {
+    key: 'tl4w_w4_poll_push',
+    week: 4,
+    day: 1,
+    contentKind: 'poll',
+    channel: 'push',
+    title: 'Week 4 Leadership Style Re-check Poll',
+    messageBody: `Last poll, {{firstName}}. Has your default leadership style changed since Week 1?`,
+  },
+  {
+    key: 'tl4w_w4_poll_inapp',
+    week: 4,
+    day: 1,
+    contentKind: 'poll',
+    channel: 'in_app',
+    title: 'Week 4 Leadership Style Re-check Poll',
+    messageBody: `Same poll we ran in Week 1, four weeks later. What is your default leadership style now? We will show you the before-and-after at the close of the course. https://canva.link/ipatcj5r9byfwgv`,
+    externalUrl: 'https://canva.link/ipatcj5r9byfwgv',
+    referenceContent: { poll: WEEK_4_POLL },
+  },
+  {
+    key: 'tl4w_w4_digital_edge_push',
+    week: 4,
+    day: 3,
+    contentKind: 'digital_edge',
+    channel: 'push',
+    title: 'Week 4 Digital Edge',
+    messageBody: `Final Digital Edge, {{firstName}}. Turn your Capstone into a 90-day plan with one prompt.`,
+  },
+  {
+    key: 'tl4w_w4_digital_edge_inapp',
+    week: 4,
+    day: 3,
+    contentKind: 'digital_edge',
+    channel: 'in_app',
+    title: 'Week 4 Digital Edge',
+    messageBody: `This week's tip: a prompt that takes the templates you complete in the Capstone and pulls them into a single 90-day plan. One page. Ready to share with your sponsor on Monday. https://gamma.app/docs/Digital-Edge-AI-Prompts-3yht2w480m0sm1m`,
+    externalUrl: 'https://gamma.app/docs/Digital-Edge-AI-Prompts-3yht2w480m0sm1m',
+    referenceContent: { gammaSlides: WEEK_4_GAMMA_SLIDES },
+  },
+  {
+    key: 'tl4w_w4_deep_dive',
+    week: 4,
+    day: 3,
+    contentKind: 'deep_dive',
+    channel: 'in_app',
+    title: 'Final Deep Dive',
+    messageBody: `Final deep dive, {{firstName}}. Write three names. Three people you will tell, this week, that you finished the Transformational Leadership programme and you have a plan. One of them should be someone who can open a door for you. One of them should be someone who will hold you accountable. One should be someone you want to pull into the next cohort. Do not just think it. Send the messages.`,
+  },
+  {
+    key: 'tl4w_w4_progress_d2',
+    week: 4,
+    day: 2,
+    contentKind: 'progress_check',
+    channel: 'in_app',
+    progressVariant: 'day_2',
+    title: 'Week 4 Midweek Check',
+    messageBody: `Last-week check, {{firstName}}. You are at {{currentPoints}} of the 9,000 pass rate. Shameless Circle session is 2,500 points. Third podcast is 1,000. AI tool review is 1,000. That is 4,500 points still on the table this week if you need them.`,
+  },
+  {
+    key: 'tl4w_w4_progress_d5_pass',
+    week: 4,
+    day: 5,
+    contentKind: 'progress_check',
+    channel: 'in_app',
+    progressVariant: 'day_5_pass',
+    title: 'Programme Complete',
+    messageBody: `Final points total, {{firstName}}: {{currentPoints}} of 9,000 to pass. 15,000 is the max. You passed. Certificate on the way. Post-Course Assessment still to do -- 10 minutes, closes tomorrow.`,
+  },
+  {
+    key: 'tl4w_w4_progress_d5_no_pass',
+    week: 4,
+    day: 5,
+    contentKind: 'progress_check',
+    channel: 'in_app',
+    progressVariant: 'day_5_no_pass',
+    title: 'Final Day',
+    messageBody: `Final points total, {{firstName}}: {{currentPoints}} of 9,000 to pass. 15,000 is the max. One more day. Shameless Circle session and the Post-Course Assessment are your final points-earners. Finish what you started.`,
+  },
+  {
+    key: 'tl4w_w4_feedback',
+    week: 4,
+    day: 5,
+    contentKind: 'feedback_form',
+    channel: 'in_app',
+    title: 'Final Feedback',
+    messageBody: `You made it, {{firstName}}. One last form. 3 minutes. Your honest feedback shapes the next cohort -- and we read every single response. https://www.surveymonkey.com/r/PTYZG7F`,
+    externalUrl: 'https://www.surveymonkey.com/r/PTYZG7F',
+  },
+]
+
+const buildDoc = (template) => {
+  const doc = {
+    key: template.key,
+    programme: PROGRAMME,
+    week: template.week,
+    day: template.day,
+    contentKind: template.contentKind,
+    channel: template.channel,
+    title: template.title,
+    messageBody: template.messageBody,
+    targetAudience: TARGET_AUDIENCE,
+    isActive: true,
+  }
+  if (template.progressVariant) doc.progressVariant = template.progressVariant
+  if (template.externalUrl) doc.externalUrl = template.externalUrl
+  if (template.referenceContent) doc.referenceContent = template.referenceContent
+  return doc
+}
+
+const seed = async () => {
+  console.log(
+    `Seeding programme_notification_templates for ${PROGRAMME} -- ${templates.length} templates.`,
+  )
+
+  let created = 0
+  let updated = 0
+  const collection = db.collection('programme_notification_templates')
+
+  for (const template of templates) {
+    const existing = await collection.where('key', '==', template.key).limit(1).get()
+
+    if (existing.empty) {
+      await collection.add({
+        ...buildDoc(template),
+        created_at: serverTimestamp(),
+        updated_at: serverTimestamp(),
+      })
+      created += 1
+      console.log(`Created: ${template.key}`)
+    } else {
+      await existing.docs[0].ref.set(
+        {
+          ...buildDoc(template),
+          updated_at: serverTimestamp(),
+        },
+        { merge: true },
+      )
+      updated += 1
+      console.log(`Updated: ${template.key}`)
+    }
+  }
+
+  console.log(`Seed complete. Created ${created}, updated ${updated}.`)
+}
+
+seed().catch((error) => {
+  console.error('Seed failed:', error)
+  process.exit(1)
+})

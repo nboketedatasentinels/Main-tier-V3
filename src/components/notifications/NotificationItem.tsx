@@ -1,3 +1,4 @@
+import { ReactNode, useState } from 'react'
 import {
   Box,
   Button,
@@ -10,6 +11,7 @@ import {
 import {
   BellRing,
   CheckCheck,
+  ExternalLink,
   MessageCircle,
   MessageSquare,
   ShieldAlert,
@@ -19,12 +21,42 @@ import {
   X,
 } from 'lucide-react'
 import { formatDistanceToNow } from 'date-fns'
+import { Link as RouterLink } from 'react-router-dom'
 import { NotificationRecord } from '@/types/notifications'
+import { NotificationDetailModal } from './NotificationDetailModal'
 
 interface NotificationItemProps {
   notification: NotificationRecord
   onMarkRead: () => void
   onAction?: (action: NotificationRecord['action_response']) => void
+  onClose?: () => void
+}
+
+interface NotificationDestination {
+  kind: 'external' | 'internal' | 'modal'
+  url?: string
+}
+
+const resolveNotificationDestination = (
+  notification: NotificationRecord,
+): NotificationDestination | null => {
+  const md = (notification.metadata ?? {}) as Record<string, unknown>
+
+  const externalUrl = typeof md.externalUrl === 'string' ? md.externalUrl : null
+  if (externalUrl) return { kind: 'external', url: externalUrl }
+
+  const actionUrl = typeof md.actionUrl === 'string' ? md.actionUrl : null
+  if (actionUrl) {
+    return /^https?:\/\//i.test(actionUrl)
+      ? { kind: 'external', url: actionUrl }
+      : { kind: 'internal', url: actionUrl }
+  }
+
+  if (notification.type === 'programme_day') {
+    return { kind: 'modal' }
+  }
+
+  return null
 }
 
 const notificationIcon = (type: NotificationRecord['type']) => {
@@ -71,26 +103,47 @@ const resolveTimestamp = (value?: unknown): string => {
   return formatDistanceToNow(date, { addSuffix: true })
 }
 
+const linkStyle: React.CSSProperties = {
+  display: 'block',
+  textDecoration: 'none',
+  color: 'inherit',
+}
+
+const stopClick = (e: React.MouseEvent) => {
+  e.preventDefault()
+  e.stopPropagation()
+}
+
 export const NotificationItem = ({
   notification,
   onMarkRead,
   onAction,
+  onClose,
 }: NotificationItemProps) => {
   const isRead = notification.is_read || notification.read
   const timestamp = resolveTimestamp(notification.created_at)
   const hasAction =
     notification.type === 'challenge_request' && !notification.action_response
 
-  const actionUrl =
-    typeof notification.metadata?.actionUrl === 'string'
-      ? notification.metadata.actionUrl
-      : null
-  const actionLabel =
-    typeof notification.metadata?.actionLabel === 'string'
-      ? notification.metadata.actionLabel
-      : 'View details'
+  const destination = resolveNotificationDestination(notification)
+  const [modalOpen, setModalOpen] = useState(false)
 
-  return (
+  const handleNavigate = () => {
+    if (!isRead) onMarkRead()
+    onClose?.()
+  }
+
+  const handleOpenModal = (e: React.MouseEvent) => {
+    e.preventDefault()
+    e.stopPropagation()
+    if (!isRead) onMarkRead()
+    onClose?.()
+    setModalOpen(true)
+  }
+
+  const clickable = destination !== null
+
+  const cardBody = (
     <Box
       borderWidth="1px"
       borderColor="border.control"
@@ -98,13 +151,13 @@ export const NotificationItem = ({
       bg="white"
       p={4}
       transition="all 0.15s ease"
+      cursor={clickable ? 'pointer' : 'default'}
       _hover={{
-        shadow: 'sm',
-        borderColor: 'border.control',
+        shadow: clickable ? 'md' : 'sm',
+        borderColor: clickable ? 'brand.primary' : 'border.control',
       }}
     >
       <HStack align="start" spacing={4}>
-        {/* Left: Contextual Icon */}
         <Box
           bg="gray.100"
           color="gray.500"
@@ -118,7 +171,6 @@ export const NotificationItem = ({
           <Icon as={notificationIcon(notification.type)} boxSize={5} />
         </Box>
 
-        {/* Center: Title + Description + Timestamp */}
         <Stack spacing={1} flex={1} minW={0}>
           <HStack spacing={2} align="center">
             {!isRead && (
@@ -138,11 +190,28 @@ export const NotificationItem = ({
             >
               {notification.title || 'Notification'}
             </Text>
+            {destination?.kind === 'external' && (
+              <Icon as={ExternalLink} boxSize={3} color="text.muted" />
+            )}
           </HStack>
 
           <Text color="gray.600" fontSize="sm" noOfLines={2}>
             {notification.message}
           </Text>
+
+          {destination?.kind === 'modal' && (
+            <Text
+              as="span"
+              color="brand.primary"
+              fontSize="xs"
+              fontWeight="semibold"
+              mt={1}
+              _hover={{ textDecoration: 'underline' }}
+              alignSelf="flex-start"
+            >
+              View more →
+            </Text>
+          )}
 
           {timestamp && (
             <Text color="text.muted" fontSize="xs" mt={1}>
@@ -150,58 +219,109 @@ export const NotificationItem = ({
             </Text>
           )}
 
-          {(actionUrl || (hasAction && onAction)) && (
+          {hasAction && onAction && (
             <HStack spacing={2} mt={3}>
-              {actionUrl && (
-                <Button
-                  size="xs"
-                  variant="outline"
-                  as="a"
-                  href={actionUrl}
-                  target="_blank"
-                  rel="noreferrer"
-                >
-                  {actionLabel}
-                </Button>
-              )}
-              {hasAction && onAction && (
-                <>
-                  <Button
-                    size="xs"
-                    colorScheme="brand"
-                    variant="solid"
-                    onClick={() => onAction('accepted')}
-                  >
-                    Accept
-                  </Button>
-                  <Button
-                    size="xs"
-                    variant="outline"
-                    onClick={() => onAction('declined')}
-                  >
-                    Decline
-                  </Button>
-                </>
-              )}
+              <Button
+                size="xs"
+                colorScheme="brand"
+                variant="solid"
+                onClick={(e) => {
+                  stopClick(e)
+                  onAction('accepted')
+                }}
+              >
+                Accept
+              </Button>
+              <Button
+                size="xs"
+                variant="outline"
+                onClick={(e) => {
+                  stopClick(e)
+                  onAction('declined')
+                }}
+              >
+                Decline
+              </Button>
             </HStack>
           )}
         </Stack>
 
-        {/* Right: Dismiss/Mark-as-read action */}
         <IconButton
           aria-label={isRead ? 'Dismiss' : 'Mark as read'}
           icon={isRead ? <X size={16} /> : <CheckCheck size={16} />}
           variant="ghost"
           size="sm"
           color="text.muted"
-          _hover={{
-            color: 'gray.600',
-            bg: 'gray.100',
+          _hover={{ color: 'gray.600', bg: 'gray.100' }}
+          onClick={(e) => {
+            stopClick(e)
+            onMarkRead()
           }}
-          onClick={onMarkRead}
           flexShrink={0}
         />
       </HStack>
+    </Box>
+  )
+
+  return (
+    <>
+      <NotificationLinkWrapper
+        destination={destination}
+        onNavigate={handleNavigate}
+        onOpenModal={handleOpenModal}
+      >
+        {cardBody}
+      </NotificationLinkWrapper>
+      <NotificationDetailModal
+        notification={notification}
+        isOpen={modalOpen}
+        onClose={() => setModalOpen(false)}
+      />
+    </>
+  )
+}
+
+interface NotificationLinkWrapperProps {
+  destination: NotificationDestination | null
+  onNavigate: () => void
+  onOpenModal: (e: React.MouseEvent) => void
+  children: ReactNode
+}
+
+const NotificationLinkWrapper = ({
+  destination,
+  onNavigate,
+  onOpenModal,
+  children,
+}: NotificationLinkWrapperProps) => {
+  if (!destination) return <>{children}</>
+
+  if (destination.kind === 'external' && destination.url) {
+    return (
+      <a
+        href={destination.url}
+        target="_blank"
+        rel="noopener noreferrer"
+        onClick={onNavigate}
+        style={linkStyle}
+      >
+        {children}
+      </a>
+    )
+  }
+
+  if (destination.kind === 'internal' && destination.url) {
+    return (
+      <RouterLink to={destination.url} onClick={onNavigate} style={linkStyle}>
+        {children}
+      </RouterLink>
+    )
+  }
+
+  // Modal case: plain clickable wrapper
+  return (
+    <Box as="div" onClick={onOpenModal} style={{ cursor: 'pointer' }}>
+      {children}
     </Box>
   )
 }

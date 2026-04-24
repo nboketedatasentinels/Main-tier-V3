@@ -34,6 +34,7 @@ const notificationCategoryMap: Record<NotificationType, NotificationCategory> = 
   badge_awarded: 'important_updates',
   referral_success: 'important_updates',
   referral_reward: 'important_updates',
+  programme_day: 'important_updates',
   unknown: 'other',
 }
 

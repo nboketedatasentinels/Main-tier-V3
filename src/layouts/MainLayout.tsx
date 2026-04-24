@@ -49,6 +49,7 @@ import {
   Wrench,
 } from 'lucide-react'
 import { useAuth } from '@/hooks/useAuth'
+import { useProgrammeNotificationSync } from '@/hooks/useProgrammeNotificationSync'
 import { BuildVillageModal } from '@/components/modals/BuildVillageModal'
 import { PersonalityTypeModal } from '@/components/modals/PersonalityTypeModal'
 import { PlatformTour } from '@/components/tour/PlatformTour'
@@ -117,6 +118,7 @@ const getRestrictedFeatureForPath = (path: string): RestrictedFeatureConfig | nu
 
 export const MainLayout: React.FC = () => {
   const { profile, profileStatus, signOut, signingOut } = useAuth()
+  useProgrammeNotificationSync()
   const location = useLocation()
   const navigate = useNavigate()
   const { isOpen, onOpen, onClose } = useDisclosure()

@@ -33,6 +33,7 @@ export type NotificationType =
   | 'badge_awarded'
   | 'referral_success'
   | 'referral_reward'
+  | 'programme_day'
   | 'unknown'
 
 export interface NotificationRecord {

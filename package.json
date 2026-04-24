@@ -16,6 +16,7 @@
     "a11y:contrast": "node scripts/contrast-audit.mjs",
     "ensure:collections": "node scripts/ensure-firestore-collections.mjs",
     "seed-courses": "node scripts/seed-courses.mjs",
+    "seed:tl4w-notifications": "node scripts/seed-transformational-leadership-notifications.mjs",
     "diagnose:partner-orgs": "node scripts/diagnose-partner-org-mismatch.mjs",
     "fix:partner-orgs": "node scripts/fix-user-organization-assignments.mjs",
     "fix:partner-orgs:dry-run": "node scripts/fix-user-organization-assignments.mjs --dry-run",

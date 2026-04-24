@@ -10,6 +10,7 @@ import {
   PopoverTrigger,
   Spinner,
   Text,
+  useDisclosure,
   VStack,
 } from '@chakra-ui/react'
 import { Bell, Sparkles } from 'lucide-react'
@@ -28,6 +29,7 @@ export const NotificationDropdown = () => {
   } = useNotifications({ limit: 50 })
 
   const hasUnread = unreadCount > 0
+  const { isOpen, onOpen, onClose } = useDisclosure()
 
   const sortedNotifications = useMemo(
     () =>
@@ -50,7 +52,13 @@ export const NotificationDropdown = () => {
   )
 
   return (
-    <Popover placement="bottom-end" closeOnBlur>
+    <Popover
+      placement="bottom-end"
+      closeOnBlur
+      isOpen={isOpen}
+      onOpen={onOpen}
+      onClose={onClose}
+    >
       <PopoverTrigger>
         <Box position="relative">
           <IconButton
@@ -141,6 +149,7 @@ export const NotificationDropdown = () => {
                       if (!action) return
                       updateNotificationAction(notification, action)
                     }}
+                    onClose={onClose}
                   />
                 ))}
               </VStack>
