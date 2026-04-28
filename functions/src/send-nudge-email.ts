@@ -120,7 +120,7 @@ function buildEmailHtml(data: SendNudgeEmailData): string {
             Log in today, check your weekly checklist, and keep building momentum. You've got this!
           </p>
           <table cellpadding="0" cellspacing="0"><tr><td style="background:#350e6f;border-radius:8px;padding:12px 28px;">
-            <a href="https://man-tier-v2.web.app" style="color:#FFFFFF;text-decoration:none;font-size:14px;font-weight:600;display:inline-block;">
+            <a href="https://app.t4leader.com/" style="color:#FFFFFF;text-decoration:none;font-size:14px;font-weight:600;display:inline-block;">
               Open My Dashboard
             </a>
           </td></tr></table>

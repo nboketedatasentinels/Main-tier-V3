@@ -52,7 +52,7 @@ const wrapEmailHtml = (data: SendProgrammeEmailData): string => {
         <tr><td class="px-content" style="padding:0 32px 24px;">
           <table cellpadding="0" cellspacing="0">
             <tr><td style="background:#350e6f;border-radius:8px;padding:12px 26px;">
-              <a href="https://man-tier-v2.web.app/app/dashboard" style="color:#FFFFFF;text-decoration:none;font-size:14px;font-weight:600;display:inline-block;">Open the app</a>
+              <a href="https://app.t4leader.com/" style="color:#FFFFFF;text-decoration:none;font-size:14px;font-weight:600;display:inline-block;">Open the app</a>
             </td></tr>
           </table>
         </td></tr>
@@ -152,7 +152,7 @@ export const sendProgrammeEmail = functions
     const fromAddress =
       process.env.SMTP_FROM || process.env.SMTP_USER || "info@t4leader.com";
     const html = wrapEmailHtml(data);
-    const text = `${data.bodyText}\n\n— Open the app: https://man-tier-v2.web.app/app/dashboard`;
+    const text = `${data.bodyText}\n\n— Open the app: https://app.t4leader.com/`;
 
     try {
       const transport = getTransporter();
