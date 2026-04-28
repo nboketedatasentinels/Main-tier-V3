@@ -26,3 +26,4 @@ export * from "./at-risk-cron";
 export * from "./at-risk-api";
 export * from "./send-nudge-email";
 export * from "./send-feedback-notification";
+export * from "./send-programme-email";

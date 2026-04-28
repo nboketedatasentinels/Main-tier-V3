@@ -92,6 +92,7 @@ import {
   getClusterShortName,
   getClusterTierByName,
 } from '@/utils/clusterTiers'
+import { PILLAR_METADATA, PILLAR_OPTIONS, type Pillar } from '@/types/pillar'
 
 interface CreateOrganizationModalProps {
   isOpen: boolean
@@ -545,6 +546,9 @@ export const CreateOrganizationModal: React.FC<CreateOrganizationModalProps> = (
       const isUnique = await validateOrganizationCodeUnique(form.code)
       if (!isUnique) throw new Error('Organization code is already in use')
       if (!form.programDuration) throw new Error('Program duration is required')
+      if (form.programDuration === 1.5 && !form.pillar) {
+        throw new Error('Pillar is required for the 6-week journey')
+      }
       if (!form.teamSize || form.teamSize <= 0) {
         throw new Error('Cohort size must be greater than 0 to assign a cluster')
       }
@@ -695,7 +699,11 @@ export const CreateOrganizationModal: React.FC<CreateOrganizationModalProps> = (
                     <Select
                       placeholder="Select duration"
                       value={form.programDuration?.toString() || ''}
-                      onChange={(e) => updateField('programDuration', Number(e.target.value))}
+                      onChange={(e) => {
+                        const next = Number(e.target.value)
+                        updateField('programDuration', next)
+                        if (next !== 1.5) updateField('pillar', undefined)
+                      }}
                     >
                       {programDurations.map((option) => (
                         <option key={option.value} value={option.value}>
@@ -710,6 +718,44 @@ export const CreateOrganizationModal: React.FC<CreateOrganizationModalProps> = (
                     </FormErrorMessage>
                   </FormControl>
                 </GridItem>
+                {form.programDuration === 1.5 ? (
+                  <GridItem colSpan={{ base: 1, md: 2 }}>
+                    <FormControl isRequired isInvalid={!form.pillar}>
+                      <FormLabel display="flex" alignItems="center" gap={2}>
+                        Power Journey pillar
+                        <Tooltip
+                          label="Each pillar splits the 6 weeks differently. The pillar determines course content and the notification schedule learners receive."
+                          placement="top"
+                        >
+                          <InfoIcon color="text.muted" />
+                        </Tooltip>
+                      </FormLabel>
+                      <Select
+                        placeholder="Select pillar"
+                        value={form.pillar || ''}
+                        onChange={(e) =>
+                          updateField('pillar', (e.target.value as Pillar) || undefined)
+                        }
+                      >
+                        {PILLAR_OPTIONS.map((value) => (
+                          <option key={value} value={value}>
+                            {PILLAR_METADATA[value].label}
+                          </option>
+                        ))}
+                      </Select>
+                      {form.pillar ? (
+                        <FormHelperText>
+                          Example courses: {PILLAR_METADATA[form.pillar].exampleCourses}
+                        </FormHelperText>
+                      ) : (
+                        <FormHelperText color="orange.600">
+                          Pillar is required for 6-week cohorts.
+                        </FormHelperText>
+                      )}
+                      <FormErrorMessage>Pillar is required for the 6-week journey.</FormErrorMessage>
+                    </FormControl>
+                  </GridItem>
+                ) : null}
                 <GridItem>
                   <FormControl isRequired>
                     <FormLabel>Cohort size</FormLabel>

@@ -50,10 +50,12 @@ import {
 } from 'lucide-react'
 import { useAuth } from '@/hooks/useAuth'
 import { useProgrammeNotificationSync } from '@/hooks/useProgrammeNotificationSync'
+import { useSixWeekProgrammeNotificationSync } from '@/hooks/useSixWeekProgrammeNotificationSync'
 import { BuildVillageModal } from '@/components/modals/BuildVillageModal'
 import { PersonalityTypeModal } from '@/components/modals/PersonalityTypeModal'
 import { PlatformTour } from '@/components/tour/PlatformTour'
 import { NotificationDropdown } from '@/components/notifications/NotificationDropdown'
+import { ProgrammePushPopup } from '@/components/notifications/ProgrammePushPopup'
 import { isFreeUser as isFreeTierUser } from '@/utils/membership'
 import { UpgradePromptModal } from '@/components/UpgradePromptModal'
 import PointsNotificationListener from '@/components/PointsNotificationListener'
@@ -119,6 +121,7 @@ const getRestrictedFeatureForPath = (path: string): RestrictedFeatureConfig | nu
 export const MainLayout: React.FC = () => {
   const { profile, profileStatus, signOut, signingOut } = useAuth()
   useProgrammeNotificationSync()
+  useSixWeekProgrammeNotificationSync()
   const location = useLocation()
   const navigate = useNavigate()
   const { isOpen, onOpen, onClose } = useDisclosure()
@@ -936,6 +939,8 @@ export const MainLayout: React.FC = () => {
       <MandatoryAnnouncementGate />
 
       <NewAnnouncementPopup />
+
+      <ProgrammePushPopup />
     </Flex>
   )
 }

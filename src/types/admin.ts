@@ -1,5 +1,6 @@
 import type { FieldValue, Timestamp } from 'firebase/firestore'
 import type { JourneyType } from '@/config/pointsConfig'
+import type { Pillar } from '@/types/pillar'
 
 export interface AdminActivityLogEntry {
   id: string
@@ -81,6 +82,11 @@ export interface OrganizationRecord {
   programDuration?: number
   programDurationWeeks?: number
   journeyType?: JourneyType
+  /**
+   * 6-Week Power Journey pillar (only meaningful when journeyType === '6W').
+   * Determines which course track + notification copy applies to the cohort.
+   */
+  pillar?: Pillar
   courseAssignments?: string[]
   monthlyCourseAssignments?: Record<string, string>
   courseAssignmentStructure?: 'monthly' | 'array'
@@ -329,6 +335,7 @@ export interface OrganizationDetailView {
   programDuration?: number
   programDurationWeeks?: number
   journeyType?: JourneyType
+  pillar?: Pillar
   description?: string
   transformationPartnerId?: string | null
   leadershipUpdatedAt?: string
