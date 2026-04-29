@@ -92,7 +92,13 @@ import {
   getClusterShortName,
   getClusterTierByName,
 } from '@/utils/clusterTiers'
-import { PILLAR_METADATA, PILLAR_OPTIONS, type Pillar } from '@/types/pillar'
+import {
+  PILLAR_COURSE_PLAN,
+  PILLAR_METADATA,
+  PILLAR_OPTIONS,
+  formatPillarWeekRange,
+  type Pillar,
+} from '@/types/pillar'
 
 interface CreateOrganizationModalProps {
   isOpen: boolean
@@ -733,9 +739,17 @@ export const CreateOrganizationModal: React.FC<CreateOrganizationModalProps> = (
                       <Select
                         placeholder="Select pillar"
                         value={form.pillar || ''}
-                        onChange={(e) =>
-                          updateField('pillar', (e.target.value as Pillar) || undefined)
-                        }
+                        onChange={(e) => {
+                          const nextPillar = (e.target.value as Pillar) || undefined
+                          updateField('pillar', nextPillar)
+                          if (nextPillar) {
+                            const plan = PILLAR_COURSE_PLAN[nextPillar]
+                            setMonthlyAssignments({
+                              '1': plan[0].courseId,
+                              '2': plan[1].courseId,
+                            })
+                          }
+                        }}
                       >
                         {PILLAR_OPTIONS.map((value) => (
                           <option key={value} value={value}>
@@ -745,7 +759,12 @@ export const CreateOrganizationModal: React.FC<CreateOrganizationModalProps> = (
                       </Select>
                       {form.pillar ? (
                         <FormHelperText>
-                          Example courses: {PILLAR_METADATA[form.pillar].exampleCourses}
+                          Auto-assigned courses:{' '}
+                          <strong>{PILLAR_COURSE_PLAN[form.pillar][0].title}</strong>{' '}
+                          ({formatPillarWeekRange(PILLAR_COURSE_PLAN[form.pillar][0].weekRange)})
+                          {' + '}
+                          <strong>{PILLAR_COURSE_PLAN[form.pillar][1].title}</strong>{' '}
+                          ({formatPillarWeekRange(PILLAR_COURSE_PLAN[form.pillar][1].weekRange)})
                         </FormHelperText>
                       ) : (
                         <FormHelperText color="orange.600">
@@ -960,12 +979,18 @@ export const CreateOrganizationModal: React.FC<CreateOrganizationModalProps> = (
                         })()
                       : undefined
                     const isEmpty = !assignedCourse
+                    const pillarPlanEntry =
+                      form.pillar && form.programDuration === 1.5
+                        ? PILLAR_COURSE_PLAN[form.pillar][index]
+                        : null
                     return (
                       <Box key={monthKey} borderWidth="1px" borderRadius="lg" p={3} bg="gray.50">
                         <Flex justify="space-between" align="center" mb={2}>
                           <HStack spacing={2}>
                             <Badge colorScheme={isEmpty ? 'red' : 'green'} borderRadius="full">
-                              {getProgramSegmentLabel(monthNumber, programCadence)}
+                              {pillarPlanEntry
+                                ? formatPillarWeekRange(pillarPlanEntry.weekRange)
+                                : getProgramSegmentLabel(monthNumber, programCadence)}
                             </Badge>
                             {dateRange && (
                               <Text fontSize="sm" color="gray.600">
