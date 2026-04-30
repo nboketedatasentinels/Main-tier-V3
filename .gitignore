@@ -50,3 +50,17 @@ nul
 # Firebase Admin credentials
 service-account-key.json
 *-service-account*.json
+
+# Firebase / GCP service account credentials
+serviceAccountKey.json
+*-firebase-adminsdk-*.json
+*-adminsdk-*.json
+service-account*.json
+*-service-account*.json
+gcp-key*.json
+google-credentials*.json
+
+# Other secrets
+*.pem
+*.p12
+*.key
