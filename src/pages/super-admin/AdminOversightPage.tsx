@@ -72,7 +72,6 @@ export const AdminOversightPage: React.FC<AdminOversightPageProps> = ({ adminNam
   const toast = useToast()
   const formModal = useDisclosure()
   const deleteDialog = useDisclosure()
-  const enableProfileRealtime = import.meta.env.VITE_ENABLE_PROFILE_REALTIME === 'true'
 
   const [admins, setAdmins] = useState<AdminUserRecord[]>([])
   const [organizations, setOrganizations] = useState<OrganizationRecord[]>([])
@@ -283,14 +282,6 @@ export const AdminOversightPage: React.FC<AdminOversightPageProps> = ({ adminNam
         status: 'success',
         duration: 5000,
       })
-      if (!enableProfileRealtime) {
-        toast({
-          title: 'Real-time updates are disabled',
-          description: 'Users will need to refresh their dashboard to see assignment changes.',
-          status: 'warning',
-          duration: 5000,
-        })
-      }
     } catch (error) {
       console.error(error)
       toast({ title: 'Failed to update admin access', status: 'error' })

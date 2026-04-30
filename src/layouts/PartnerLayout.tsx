@@ -19,10 +19,6 @@ import {
   Text,
   Tooltip,
   VStack,
-  Alert,
-  AlertDescription,
-  AlertIcon,
-  AlertTitle,
   useToast,
   useDisclosure,
 } from '@chakra-ui/react'
@@ -61,7 +57,6 @@ export const PartnerLayout: React.FC<PartnerLayoutProps> = ({
   const disclosure = useDisclosure()
   const { profile, signOut, signingOut, refreshProfile, profileLoading, lastProfileLoadAt, isAdmin } = useAuth()
   const { assignedOrganizationIds } = usePartnerAdminSnapshot({ enabled: isAdmin })
-  const enableProfileRealtime = import.meta.env.VITE_ENABLE_PROFILE_REALTIME === 'true'
   const toast = useToast()
   const [lastUpdatedLabel, setLastUpdatedLabel] = React.useState('Not yet loaded')
   const assignedCount = organizations.length || assignedOrganizationIds.length || 0
@@ -378,19 +373,6 @@ export const PartnerLayout: React.FC<PartnerLayoutProps> = ({
             </VStack>
             <HeaderControls />
           </Flex>
-
-          {isAdmin && !enableProfileRealtime && (
-            <Alert status="warning" mb={6} borderRadius="md">
-              <AlertIcon />
-              <Box>
-                <AlertTitle>Real-time profile updates are disabled.</AlertTitle>
-                <AlertDescription>
-                  Enable VITE_ENABLE_PROFILE_REALTIME to keep organization assignments in sync. Until then, use the
-                  refresh button to pull updates.
-                </AlertDescription>
-              </Box>
-            </Alert>
-          )}
 
           {children}
         </Box>
