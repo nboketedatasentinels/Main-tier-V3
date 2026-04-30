@@ -35,7 +35,9 @@ import {
   useToast,
 } from '@chakra-ui/react'
 import { AlertTriangle, RefreshCcw, Search, Users } from 'lucide-react'
+import { doc, getDoc } from 'firebase/firestore'
 import { PartnerLayout } from '@/layouts/PartnerLayout'
+import { db } from '@/services/firebase'
 import { useAuth } from '@/hooks/useAuth'
 import { usePartnerOrganizations } from '@/hooks/partner/usePartnerOrganizations'
 import { useLearnerOverview, type LearnerOverviewRow } from '@/hooks/useLearnerOverview'
@@ -73,6 +75,7 @@ export const LearnerAssignmentsPage: React.FC = () => {
   )
 
   const [selectedOrgId, setSelectedOrgId] = useState<string>('')
+  const [orgJourneyType, setOrgJourneyType] = useState<string | null>(null)
   const [mentors, setMentors] = useState<OrgMentorOption[]>([])
   const [mentorsLoading, setMentorsLoading] = useState(false)
   const [mentorsError, setMentorsError] = useState<string | null>(null)
@@ -107,6 +110,31 @@ export const LearnerAssignmentsPage: React.FC = () => {
 
   const { rows, loading, learnersError, statsError, refreshStats } =
     useLearnerOverview(selectedOrgId || null)
+
+  // Load the selected org's journeyType — this is the source of truth
+  // for whether to show mentor/ambassador columns. Reading it from
+  // learner rows is unreliable because stub profiles can have
+  // journeyType = undefined.
+  useEffect(() => {
+    if (!selectedOrgId) {
+      setOrgJourneyType(null)
+      return
+    }
+    let cancelled = false
+    getDoc(doc(db, 'organizations', selectedOrgId))
+      .then((snap) => {
+        if (cancelled) return
+        const data = snap.data()
+        setOrgJourneyType(typeof data?.journeyType === 'string' ? data.journeyType : null)
+      })
+      .catch(() => {
+        if (cancelled) return
+        setOrgJourneyType(null)
+      })
+    return () => {
+      cancelled = true
+    }
+  }, [selectedOrgId])
 
   // Load mentors when org changes
   useEffect(() => {
@@ -186,6 +214,13 @@ export const LearnerAssignmentsPage: React.FC = () => {
       zeroSession,
     }
   }, [rows])
+
+  // 6W (6-Week Power Journey) doesn't include mentor or ambassador sessions,
+  // so the Mentor / Mentor Sessions / Ambassador Sessions columns are hidden
+  // when the selected org is configured for 6W. Reading from the org doc
+  // (not from learner rows) avoids false positives when a learner profile
+  // has journeyType = undefined.
+  const showMentorColumns = orgJourneyType !== '6W'
 
   const hasOrgs = orgOptions.length > 0 || Boolean(profile?.companyId)
 
@@ -358,11 +393,11 @@ export const LearnerAssignmentsPage: React.FC = () => {
                       <Tr>
                         <Th>Learner</Th>
                         <Th>Journey</Th>
-                        <Th>Mentor</Th>
-                        <Th isNumeric>Mentor sessions</Th>
-                        <Th isNumeric>Ambassador sessions</Th>
+                        {showMentorColumns && <Th>Mentor</Th>}
+                        {showMentorColumns && <Th isNumeric>Mentor sessions</Th>}
+                        {showMentorColumns && <Th isNumeric>Ambassador sessions</Th>}
                         <Th isNumeric>Total points</Th>
-                        <Th>Flags</Th>
+                        {showMentorColumns && <Th>Flags</Th>}
                       </Tr>
                     </Thead>
                     <Tbody>
@@ -387,64 +422,72 @@ export const LearnerAssignmentsPage: React.FC = () => {
                               </Text>
                             )}
                           </Td>
-                          <Td>
-                            <Select
-                              size="sm"
-                              value={row.mentorId ?? ''}
-                              placeholder={mentorsLoading ? 'Loading…' : 'Unassigned'}
-                              onChange={(e) => handleAssignMentor(row, e.target.value)}
-                              isDisabled={assigningLearnerId === row.learnerId || mentorsLoading}
-                              minW="200px"
-                            >
-                              <option value="">Unassigned</option>
-                              {mentors.map((mentor) => (
-                                <option key={mentor.id} value={mentor.id}>
-                                  {mentor.fullName}
-                                </option>
-                              ))}
-                              {/* Ensure currently-assigned mentor is selectable even if not in filtered list */}
-                              {row.mentorId && !mentors.find((m) => m.id === row.mentorId) && (
-                                <option value={row.mentorId}>Unknown mentor ({row.mentorId.slice(0, 6)}…)</option>
-                              )}
-                            </Select>
-                          </Td>
-                          <Td isNumeric>
-                            <Stack spacing={0} align="flex-end">
-                              <Text fontWeight="semibold">{row.stats.mentorSessionsCompleted}</Text>
-                              {row.stats.mentorSessionsPending > 0 && (
-                                <Text fontSize="xs" color="text.muted">
-                                  +{row.stats.mentorSessionsPending} pending
-                                </Text>
-                              )}
-                            </Stack>
-                          </Td>
-                          <Td isNumeric>
-                            <Stack spacing={0} align="flex-end">
-                              <Text fontWeight="semibold">{row.stats.ambassadorSessionsAttended}</Text>
-                              {row.stats.ambassadorSessionsBooked > 0 && (
-                                <Text fontSize="xs" color="text.muted">
-                                  +{row.stats.ambassadorSessionsBooked} booked
-                                </Text>
-                              )}
-                            </Stack>
-                          </Td>
+                          {showMentorColumns && (
+                            <Td>
+                              <Select
+                                size="sm"
+                                value={row.mentorId ?? ''}
+                                placeholder={mentorsLoading ? 'Loading…' : 'Unassigned'}
+                                onChange={(e) => handleAssignMentor(row, e.target.value)}
+                                isDisabled={assigningLearnerId === row.learnerId || mentorsLoading}
+                                minW="200px"
+                              >
+                                <option value="">Unassigned</option>
+                                {mentors.map((mentor) => (
+                                  <option key={mentor.id} value={mentor.id}>
+                                    {mentor.fullName}
+                                  </option>
+                                ))}
+                                {/* Ensure currently-assigned mentor is selectable even if not in filtered list */}
+                                {row.mentorId && !mentors.find((m) => m.id === row.mentorId) && (
+                                  <option value={row.mentorId}>Unknown mentor ({row.mentorId.slice(0, 6)}…)</option>
+                                )}
+                              </Select>
+                            </Td>
+                          )}
+                          {showMentorColumns && (
+                            <Td isNumeric>
+                              <Stack spacing={0} align="flex-end">
+                                <Text fontWeight="semibold">{row.stats.mentorSessionsCompleted}</Text>
+                                {row.stats.mentorSessionsPending > 0 && (
+                                  <Text fontSize="xs" color="text.muted">
+                                    +{row.stats.mentorSessionsPending} pending
+                                  </Text>
+                                )}
+                              </Stack>
+                            </Td>
+                          )}
+                          {showMentorColumns && (
+                            <Td isNumeric>
+                              <Stack spacing={0} align="flex-end">
+                                <Text fontWeight="semibold">{row.stats.ambassadorSessionsAttended}</Text>
+                                {row.stats.ambassadorSessionsBooked > 0 && (
+                                  <Text fontSize="xs" color="text.muted">
+                                    +{row.stats.ambassadorSessionsBooked} booked
+                                  </Text>
+                                )}
+                              </Stack>
+                            </Td>
+                          )}
                           <Td isNumeric>{formatPoints(row.learner.totalPoints)}</Td>
-                          <Td>
-                            <HStack spacing={1} flexWrap="wrap">
-                              {row.flags.noMentor && (
-                                <Tag size="sm" colorScheme="orange" variant="subtle">
-                                  <Icon as={AlertTriangle} boxSize={3} mr={1} />
-                                  <TagLabel>No mentor</TagLabel>
-                                </Tag>
-                              )}
-                              {row.flags.zeroSessions && (
-                                <Tag size="sm" colorScheme="red" variant="subtle">
-                                  <Icon as={AlertTriangle} boxSize={3} mr={1} />
-                                  <TagLabel>Zero sessions</TagLabel>
-                                </Tag>
-                              )}
-                            </HStack>
-                          </Td>
+                          {showMentorColumns && (
+                            <Td>
+                              <HStack spacing={1} flexWrap="wrap">
+                                {row.flags.noMentor && (
+                                  <Tag size="sm" colorScheme="orange" variant="subtle">
+                                    <Icon as={AlertTriangle} boxSize={3} mr={1} />
+                                    <TagLabel>No mentor</TagLabel>
+                                  </Tag>
+                                )}
+                                {row.flags.zeroSessions && (
+                                  <Tag size="sm" colorScheme="red" variant="subtle">
+                                    <Icon as={AlertTriangle} boxSize={3} mr={1} />
+                                    <TagLabel>Zero sessions</TagLabel>
+                                  </Tag>
+                                )}
+                              </HStack>
+                            </Td>
+                          )}
                         </Tr>
                       ))}
                     </Tbody>
