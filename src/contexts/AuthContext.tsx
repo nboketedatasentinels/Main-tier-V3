@@ -43,6 +43,10 @@ import { checkPhoneAvailability, claimPhoneNumber } from '@/services/phoneRegist
 import { JOURNEY_META, type JourneyType } from '@/config/pointsConfig'
 import { resolveEffectiveOrganization, resolveEffectiveRole } from '@/utils/authz'
 import { recordUserActivity } from '@/services/userProfileService'
+import {
+  getMissingEngagementDefaults,
+  type OrgDefaultsContext,
+} from '@/utils/profileDefaults'
 
 interface AuthProviderProps {
   children: React.ReactNode
@@ -92,6 +96,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   })()
   const lastProfileLoadAtRef = useRef<string | null>(initialLastProfileLoadAt)
   const roleNormalizationRef = useRef({ userId: '', role: '' })
+  const engagementBackfillRef = useRef<{ userId: string; attempted: boolean }>({ userId: '', attempted: false })
   const enableProfileRealtime = import.meta.env.VITE_ENABLE_PROFILE_REALTIME === 'true'
   const complementaryCourseAssignmentRef = useRef({ inFlight: false, lastAttemptAt: 0, lastUserId: '' })
   const refreshStateRef = useRef({
@@ -181,6 +186,54 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       }
     },
     []
+  )
+
+  // Login self-heal: any profile that ended up with missing engagement markers
+  // (totalPoints / level / accountStatus / journeyType — the fields the leaderboard
+  // and notification scheduler require) gets repaired the next time the user
+  // signs in. Runs at most once per session per user. Never overwrites real
+  // progress — only fills fields that are currently undefined.
+  const maybeBackfillEngagementMarkers = useCallback(
+    async (loadedProfile: UserProfile, userId: string) => {
+      if (engagementBackfillRef.current.userId === userId && engagementBackfillRef.current.attempted) {
+        return
+      }
+      engagementBackfillRef.current = { userId, attempted: true }
+
+      const profileRecord = loadedProfile as unknown as Record<string, unknown>
+      const orgContext: OrgDefaultsContext = {
+        id: (profileRecord.companyId as string) || (profileRecord.organizationId as string) || null,
+        code: (profileRecord.companyCode as string) || (profileRecord.organizationCode as string) || null,
+        name: (profileRecord.companyName as string) || null,
+        journeyType: (profileRecord.journeyType as string) ?? null,
+        journeyStartDate: (profileRecord.journeyStartDate as string) ?? null,
+        programDurationWeeks: (profileRecord.programDurationWeeks as number) ?? null,
+      }
+
+      const updates = getMissingEngagementDefaults(profileRecord, orgContext)
+      if (Object.keys(updates).length === 0) return
+
+      try {
+        const payload = { ...updates, updatedAt: serverTimestamp() }
+        await Promise.all([
+          updateDoc(doc(db, 'profiles', userId), payload).catch(() =>
+            setDoc(doc(db, 'profiles', userId), payload, { merge: true }),
+          ),
+          updateDoc(doc(db, 'users', userId), payload).catch(() =>
+            setDoc(doc(db, 'users', userId), payload, { merge: true }),
+          ),
+        ])
+        console.log('🟣 [Auth] Backfilled engagement markers on login', { userId, fields: Object.keys(updates) })
+      } catch (error) {
+        engagementBackfillRef.current = { userId, attempted: false }
+        console.warn('🟠 [Auth] Engagement marker backfill failed', {
+          userId,
+          fields: Object.keys(updates),
+          message: (error as Error)?.message,
+        })
+      }
+    },
+    [],
   )
 
   const areProfilesEquivalent = useCallback((previous: UserProfile | null, next: UserProfile | null) => {
@@ -1005,6 +1058,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         recordProfileLoad(ensuredProfile)
         if (ensuredProfile) {
           void maybeNormalizeStoredRole(ensuredProfile, currentUser.uid)
+          void maybeBackfillEngagementMarkers(ensuredProfile, currentUser.uid)
           void attemptComplementaryCourseAssignment(currentUser.uid)
         }
         setProfileLoading(false)
@@ -1097,6 +1151,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     enableProfileRealtime,
     extractCustomClaims,
     fetchProfileWithRetry,
+    maybeBackfillEngagementMarkers,
     maybeNormalizeStoredRole,
     recordProfileLoad,
     updateProfileState,

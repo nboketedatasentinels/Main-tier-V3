@@ -25,6 +25,11 @@ import { normalizeEmail } from '@/utils/email'
 import { checkCapacityThresholds } from './capacityService'
 import { TransformationTier } from '@/types'
 import {
+  buildProfileEngagementDefaults,
+  getMissingEngagementDefaults,
+  type OrgDefaultsContext,
+} from '@/utils/profileDefaults'
+import {
   normalizeDurationWeeks,
   resolveDurationWeeksFromProgramDuration,
   resolveJourneyType,
@@ -260,11 +265,21 @@ const getOrganizationLicenseSnapshot = async (organizationId: string) => {
   if (!orgSnap.exists()) {
     throw new Error('Organization not found for invitation validation.')
   }
-  const data = orgSnap.data() as OrganizationRecord
+  const data = orgSnap.data() as OrganizationRecord & {
+    journeyType?: string | null
+    journeyStartDate?: string | null
+    cohortStartDate?: unknown
+    programDurationWeeks?: number | null
+  }
+  const cohortStartIso = timestampToIsoString(data.cohortStartDate)
   return {
+    id: organizationId,
     teamSize: data.teamSize ?? 0,
     name: data.name || null,
     code: data.code || null,
+    journeyType: data.journeyType || null,
+    journeyStartDate: data.journeyStartDate || cohortStartIso || null,
+    programDurationWeeks: typeof data.programDurationWeeks === 'number' ? data.programDurationWeeks : null,
   }
 }
 
@@ -396,10 +411,16 @@ const createOrUpdateUser = async (
     organizationId: string
     organizationName?: string | null
     organizationCode?: string | null
+    org?: OrgDefaultsContext | null
   },
 ) => {
   const normalizedEmail = payload.email ? normalizeEmail(payload.email) : undefined
   const existing = normalizedEmail ? await findExistingUserByEmail(normalizedEmail) : null
+  const orgContext: OrgDefaultsContext = payload.org ?? {
+    id: payload.organizationId,
+    code: payload.organizationCode ?? null,
+    name: payload.organizationName ?? null,
+  }
 
   if (existing?.id) {
     const userId = existing.id
@@ -407,9 +428,15 @@ const createOrUpdateUser = async (
     const profileRef = doc(db, 'profiles', userId)
     const [userSnap, profileSnap] = await Promise.all([getDoc(userRef), getDoc(profileRef)])
 
+    // Compute any engagement-marker fields that are missing on the existing profile,
+    // so partner-invited users never end up as invisible stubs on the leaderboard.
+    const profileData = profileSnap.exists() ? (profileSnap.data() as Record<string, unknown>) : null
+    const profileEngagementBackfill = getMissingEngagementDefaults(profileData, orgContext)
+
     // Keep the profile role in sync so Super Admin user management reflects assigned roles.
     if (existing.source === 'profiles') {
       await updateDoc(profileRef, {
+        ...profileEngagementBackfill,
         role: payload.role,
         membershipStatus: 'paid',
         companyId: payload.organizationId,
@@ -422,6 +449,7 @@ const createOrUpdateUser = async (
     } else {
       if (profileSnap.exists()) {
         await updateDoc(profileRef, {
+          ...profileEngagementBackfill,
           role: payload.role,
           membershipStatus: 'paid',
           companyId: payload.organizationId,
@@ -431,6 +459,27 @@ const createOrUpdateUser = async (
           updatedAt: serverTimestamp(),
           'dashboardPreferences.lockedToFreeExperience': false,
         })
+      } else {
+        // Profile was missing entirely (legacy users-only record). Create it with full
+        // engagement defaults so the user shows up on the leaderboard immediately.
+        await setDoc(
+          profileRef,
+          {
+            ...buildProfileEngagementDefaults(orgContext),
+            name: payload.name,
+            email: normalizedEmail,
+            role: payload.role,
+            membershipStatus: 'paid',
+            companyId: payload.organizationId,
+            companyCode: payload.organizationCode ?? null,
+            companyName: payload.organizationName ?? null,
+            transformationTier: TransformationTier.CORPORATE_MEMBER,
+            dashboardPreferences: { lockedToFreeExperience: false },
+            createdAt: serverTimestamp(),
+            updatedAt: serverTimestamp(),
+          },
+          { merge: true },
+        )
       }
     }
 
@@ -449,7 +498,10 @@ const createOrUpdateUser = async (
       : [payload.organizationId]
 
     if (userSnap.exists()) {
+      const userData = userSnap.data() as Record<string, unknown>
+      const userEngagementBackfill = getMissingEngagementDefaults(userData, orgContext)
       await updateDoc(userRef, {
+        ...userEngagementBackfill,
         role: payload.role,
         membershipStatus: 'paid',
         companyId: payload.organizationId,
@@ -464,6 +516,7 @@ const createOrUpdateUser = async (
       await setDoc(
         userRef,
         {
+          ...buildProfileEngagementDefaults(orgContext),
           name: payload.name,
           email: normalizedEmail,
           role: payload.role,
@@ -494,9 +547,18 @@ export const inviteUsersBulk = async (
   context: { organizationId: string; organizationName: string },
 ): Promise<BulkInvitationResult> => {
   const results: InvitationResultEntry[] = []
-  const { teamSize, code: organizationCode, name: organizationName } = await getOrganizationLicenseSnapshot(context.organizationId)
+  const orgSnapshot = await getOrganizationLicenseSnapshot(context.organizationId)
+  const { teamSize, code: organizationCode, name: organizationName } = orgSnapshot
   if (!teamSize || teamSize <= 0) {
     throw new Error('Cohort size must be set before inviting users.')
+  }
+  const orgContext: OrgDefaultsContext = {
+    id: orgSnapshot.id,
+    code: orgSnapshot.code,
+    name: orgSnapshot.name,
+    journeyType: orgSnapshot.journeyType,
+    journeyStartDate: orgSnapshot.journeyStartDate,
+    programDurationWeeks: orgSnapshot.programDurationWeeks,
   }
 
   const existingSeatEmails = await getExistingSeatMemberEmails(context.organizationId)
@@ -526,6 +588,7 @@ export const inviteUsersBulk = async (
           email: normalizedEmail,
           organizationName: organizationName ?? context.organizationName,
           organizationCode,
+          org: orgContext,
         })
         const invitationRef = await createInvitation({
           name: invitation.name,

@@ -99,6 +99,27 @@ export const buildScopeQueries = (peersRef: CollectionReference, scope: OrgScope
   return []
 }
 
+// Reconciles totalPoints/level between the canonical `profiles/{uid}` doc
+// (what the leaderboard reads) and the `users/{uid}` mirror (what AuthContext
+// reads when the user logs in). They are dual-written by pointsService, but
+// any drift (legacy data, partial backfills) would cause the leaderboard
+// number to disagree with the user's own profile. Taking max() guarantees
+// the leaderboard never shows a value lower than what the user sees.
+const reconcilePointsAndLevel = (
+  profileMember: Record<string, unknown>,
+  userMirror: Record<string, unknown> | undefined | null,
+): Record<string, unknown> => {
+  if (!userMirror) return profileMember
+  const profilePoints = typeof profileMember.totalPoints === 'number' ? profileMember.totalPoints : 0
+  const userPoints = typeof userMirror.totalPoints === 'number' ? userMirror.totalPoints : 0
+  const profileLevel = typeof profileMember.level === 'number' ? profileMember.level : 0
+  const userLevel = typeof userMirror.level === 'number' ? userMirror.level : 0
+  const totalPoints = Math.max(profilePoints, userPoints)
+  const level = Math.max(profileLevel, userLevel)
+  if (totalPoints === profilePoints && level === profileLevel) return profileMember
+  return { ...profileMember, totalPoints, level }
+}
+
 export const isProfileInOrg = (profile: OrgProfileLike | null | undefined, orgScope: OrgScope): boolean => {
   if (!orgScope.isValid || !profile) return false
   if (orgScope.type === 'company') {
@@ -128,25 +149,15 @@ export const fetchOrgMembers = async (
 
   const normalizeAccountStatus = (status: unknown) => (typeof status === 'string' ? status.trim().toLowerCase() : '')
 
-  const hasSignedInMarkers = (member: Record<string, unknown>) => {
-    if (typeof member.totalPoints === 'number') return true
-    if (typeof member.level === 'number') return true
-    if (typeof member.journeyType === 'string' && member.journeyType.trim().length > 0) return true
-    if (typeof member.onboardingComplete === 'boolean') return true
-    return false
-  }
-
   const isEligibleMember = (member: Record<string, unknown>) => {
     if (member.mergedInto) return false
 
+    // Only hide users explicitly suspended by a partner/admin. Empty/undefined status passes.
     const status = normalizeAccountStatus(member.accountStatus ?? member.status)
     if (status && status !== 'active') return false
 
     const email = typeof member.email === 'string' ? member.email : ''
     if (!normalizeEmail(email)) return false
-
-    // Exclude stub/pending invitation profiles that haven't completed a real sign-in bootstrap yet.
-    if (!hasSignedInMarkers(member)) return false
 
     return true
   }
@@ -202,7 +213,25 @@ export const fetchOrgMembers = async (
 
   console.log('[OrgMembers] Running queries with scope', orgScope, 'queryCount:', queries.length)
 
-  const snapshots = await Promise.all(queries.map((q) => getDocs(q)))
+  // Run profile + user-mirror queries in parallel. Same scope on both
+  // collections — the users/{uid} mirror is what AuthContext reads to display
+  // each user's profile points, so reconciling against it guarantees the
+  // leaderboard matches what every user sees on their own profile.
+  const usersRef = collection(db, 'users')
+  const userQueries = buildScopeQueries(usersRef, orgScope)
+  const [snapshots, userSnapshots] = await Promise.all([
+    Promise.all(queries.map((q) => getDocs(q))),
+    Promise.all(userQueries.map((q) => getDocs(q))),
+  ])
+
+  const userMirrorMap = new Map<string, Record<string, unknown>>()
+  userSnapshots.forEach((snapshot) => {
+    snapshot.docs.forEach((docSnap) => {
+      if (!userMirrorMap.has(docSnap.id)) {
+        userMirrorMap.set(docSnap.id, { id: docSnap.id, ...docSnap.data() })
+      }
+    })
+  })
 
   // Deduplicate by user ID
   const membersMap = new Map<string, Record<string, unknown>>()
@@ -211,9 +240,20 @@ export const fetchOrgMembers = async (
       .filter((docSnap) => !(excludeId && docSnap.id === excludeId))
       .forEach((docSnap) => {
         if (!membersMap.has(docSnap.id)) {
-          membersMap.set(docSnap.id, { id: docSnap.id, ...docSnap.data() })
+          const profileData = { id: docSnap.id, ...docSnap.data() }
+          membersMap.set(docSnap.id, reconcilePointsAndLevel(profileData, userMirrorMap.get(docSnap.id)))
         }
       })
+  })
+
+  // Surface user-mirror records that have no matching profiles/{uid} doc — this
+  // happens for legacy users created before the dual-write existed. Without
+  // this, those users would be invisible on the leaderboard despite having
+  // valid points in users/.
+  userMirrorMap.forEach((mirror, uid) => {
+    if (excludeId && uid === excludeId) return
+    if (membersMap.has(uid)) return
+    membersMap.set(uid, mirror)
   })
 
   const members = Array.from(membersMap.values()).sort((a, b) =>
@@ -251,8 +291,10 @@ export const listenToOrgMembers = (
   }
 
   const peersRef = collection(db, 'profiles')
+  const usersRef = collection(db, 'users')
 
   const queries = buildScopeQueries(peersRef, orgScope)
+  const userQueries = buildScopeQueries(usersRef, orgScope)
   if (!queries.length) {
     console.warn('[OrgMembers] No queries generated for scope', orgScope)
     onMembers([])
@@ -260,31 +302,27 @@ export const listenToOrgMembers = (
   }
 
   const membersMap = new Map<string, Record<string, unknown>>()
+  // Mirror map of `users/{uid}` data, kept live alongside profiles/. Used to
+  // reconcile totalPoints/level so the leaderboard matches what every user
+  // sees on their own profile when logged in.
+  const userMirrorMap = new Map<string, Record<string, unknown>>()
   const queryDocIds = new Map<number, Set<string>>()
+  const userQueryDocIds = new Map<number, Set<string>>()
   let pendingInitial = queries.length
   let hasReceivedInitialData = false
   const unsubscribers: (() => void)[] = []
 
   const normalizeAccountStatus = (status: unknown) => (typeof status === 'string' ? status.trim().toLowerCase() : '')
 
-  const hasSignedInMarkers = (member: Record<string, unknown>) => {
-    if (typeof member.totalPoints === 'number') return true
-    if (typeof member.level === 'number') return true
-    if (typeof member.journeyType === 'string' && member.journeyType.trim().length > 0) return true
-    if (typeof member.onboardingComplete === 'boolean') return true
-    return false
-  }
-
   const isEligibleMember = (member: Record<string, unknown>) => {
     if (member.mergedInto) return false
 
+    // Only hide users explicitly suspended by a partner/admin. Empty/undefined status passes.
     const status = normalizeAccountStatus(member.accountStatus ?? member.status)
     if (status && status !== 'active') return false
 
     const email = typeof member.email === 'string' ? member.email : ''
     if (!normalizeEmail(email)) return false
-
-    if (!hasSignedInMarkers(member)) return false
 
     return true
   }
@@ -329,7 +367,21 @@ export const listenToOrgMembers = (
   }
 
   const emitMembers = () => {
-    const members = Array.from(membersMap.values()).filter((m) => !(excludeId && m.id === excludeId))
+    // Merge profile members + user-mirror records, reconciling totalPoints/level
+    // so the value matches what each user sees on their own logged-in profile.
+    const merged = new Map<string, Record<string, unknown>>()
+    membersMap.forEach((member, uid) => {
+      if (excludeId && uid === excludeId) return
+      merged.set(uid, reconcilePointsAndLevel(member, userMirrorMap.get(uid)))
+    })
+    // Surface user-mirror-only records (legacy users with no profiles/{uid} doc)
+    // so they don't disappear from the leaderboard.
+    userMirrorMap.forEach((mirror, uid) => {
+      if (excludeId && uid === excludeId) return
+      if (merged.has(uid)) return
+      merged.set(uid, mirror)
+    })
+    const members = Array.from(merged.values())
     const eligible = members.filter(isEligibleMember)
     const deduped = dedupeByEmail(eligible).sort((a, b) =>
       String((a as Record<string, unknown>).fullName || '').localeCompare(
@@ -384,7 +436,53 @@ export const listenToOrgMembers = (
     unsubscribers.push(unsub)
   })
 
-  console.log('[OrgMembers] Real-time listeners started with scope', orgScope, 'queryCount:', queries.length)
+  // Parallel listeners on `users/` so totalPoints/level updates flow into the
+  // leaderboard the moment they're written, regardless of which collection the
+  // write hit. Profile listeners drive the `pendingInitial` gate; user-mirror
+  // listeners only re-emit if data has already been delivered, to avoid
+  // emitting half-loaded data.
+  userQueries.forEach((q, queryIndex) => {
+    const unsub = onSnapshot(
+      q,
+      (snapshot) => {
+        const ids = userQueryDocIds.get(queryIndex) || new Set<string>()
+        userQueryDocIds.set(queryIndex, ids)
+
+        let touched = false
+        snapshot.docChanges().forEach((change) => {
+          const docSnap = change.doc
+          touched = true
+          if (change.type === 'removed') {
+            ids.delete(docSnap.id)
+            let stillReferenced = false
+            for (const otherIds of userQueryDocIds.values()) {
+              if (otherIds.has(docSnap.id)) {
+                stillReferenced = true
+                break
+              }
+            }
+            if (!stillReferenced) {
+              userMirrorMap.delete(docSnap.id)
+            }
+          } else {
+            ids.add(docSnap.id)
+            userMirrorMap.set(docSnap.id, { id: docSnap.id, ...docSnap.data() })
+          }
+        })
+
+        if (touched && hasReceivedInitialData) {
+          emitMembers()
+        }
+      },
+      (error) => {
+        console.warn(`[OrgMembers] User-mirror query ${queryIndex} error`, error)
+        // Don't fail the whole listener — profiles/ data alone still works.
+      },
+    )
+    unsubscribers.push(unsub)
+  })
+
+  console.log('[OrgMembers] Real-time listeners started with scope', orgScope, 'queryCount:', queries.length, 'userQueryCount:', userQueries.length)
 
   return () => {
     unsubscribers.forEach((unsub) => unsub())

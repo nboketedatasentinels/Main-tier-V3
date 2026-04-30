@@ -41,6 +41,7 @@ import {
   VerificationRequest,
 } from '@/types/admin'
 import { normalizeRole } from '@/utils/role'
+import { buildProfileEngagementDefaults, getMissingEngagementDefaults } from '@/utils/profileDefaults'
 
 type TrendPoint = { label: string; value: number }
 
@@ -785,10 +786,14 @@ export const createAdminUser = async (
   const existingUserSnapshot = await getDocs(existingUserQuery)
 
   if (!existingUserSnapshot.empty) {
-    // User exists - update their existing profile instead of creating a duplicate
+    // User exists - update their existing profile instead of creating a duplicate.
+    // Only seed engagement defaults that are missing; never overwrite real progress.
     const existingDoc = existingUserSnapshot.docs[0]
     const existingId = existingDoc.id
+    const existingData = existingDoc.data() as Record<string, unknown>
+    const engagementBackfill = getMissingEngagementDefaults(existingData)
     const updatePayload = {
+      ...engagementBackfill,
       ...rest,
       fullName: adminData.fullName || `${adminData.firstName} ${adminData.lastName}`.trim(),
       accountStatus: adminData.accountStatus || 'active',
@@ -805,8 +810,11 @@ export const createAdminUser = async (
     return existingId
   }
 
-  // User doesn't exist - create new document (for inviting new admins)
+  // User doesn't exist - create new document (for inviting new admins).
+  // Seed full engagement defaults so the new admin is leaderboard/notification-ready
+  // even if they never run the user-side onboarding flow.
   const payload = {
+    ...buildProfileEngagementDefaults(),
     ...rest,
     fullName: adminData.fullName || `${adminData.firstName} ${adminData.lastName}`.trim(),
     accountStatus: adminData.accountStatus || 'active',
