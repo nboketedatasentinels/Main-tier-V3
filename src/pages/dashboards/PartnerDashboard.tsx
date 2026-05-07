@@ -13,6 +13,7 @@ import {
   Input,
   InputGroup,
   InputRightElement,
+  Progress,
   SimpleGrid,
   Stack,
   Text,
@@ -21,28 +22,36 @@ import {
   SkeletonText,
   useToast,
 } from '@chakra-ui/react'
-import { formatDistanceToNow, isValid } from 'date-fns'
-import { AlertTriangle, Bell, Building2, ClipboardCheck, Eye, EyeOff, Gauge, Key, Mail, Save, Sparkles, User, Users } from 'lucide-react'
-import { useNavigate } from 'react-router-dom'
+import { format, formatDistanceToNow, isValid } from 'date-fns'
+import { AlertTriangle, Bell, CalendarClock, ClipboardCheck, Eye, EyeOff, HeartHandshake, Key, Mail, MailQuestion, Save, Sparkles, UserCheck, User, Users } from 'lucide-react'
+import { useNavigate, useSearchParams } from 'react-router-dom'
 import { EmailAuthProvider, reauthenticateWithCredential, updatePassword } from 'firebase/auth'
 import { addDoc, collection, doc, updateDoc } from 'firebase/firestore'
 import { auth, db } from '@/services/firebase'
 import { OrganizationCard } from '@/components/admin/OrganizationCard'
 import PartnerLayout from '@/layouts/PartnerLayout'
 import { DashboardErrorBoundary } from '@/components/ui/DashboardErrorBoundary'
-import { AtRiskCommandPanel, type AtRiskNudgePayload } from '@/components/partner/AtRiskCommandPanel'
 import { PartnerUserManagement, type PartnerUserManagementTab } from '@/components/partner/PartnerUserManagement'
-import NudgeAutomationRules from '@/components/partner/nudges/NudgeAutomationRules'
 import { usePointsApprovalQueue } from '@/hooks/partner/usePointsApprovalQueue'
 import { usePartnerMetrics } from '@/hooks/partner/usePartnerMetrics'
 import { usePartnerDashboardData, type PartnerUser } from '@/hooks/usePartnerDashboardData'
+import { usePartnerSelectedOrg } from '@/hooks/partner/usePartnerSelectedOrg'
+import { usePartnerPendingInvitations } from '@/hooks/partner/usePartnerPendingInvitations'
+import { JOURNEY_META, type JourneyType } from '@/config/pointsConfig'
+import { getJourneyLabel } from '@/utils/journeyType'
 import { useAuth } from '@/hooks/useAuth'
 import { logOrganizationAccessAttempt } from '@/services/organizationService'
 import { recordEngagementAction } from '@/services/engagementService'
-import { sendBulkNudges } from '@/services/nudgeService'
 import { buildPartnerNavItems } from '@/utils/navigationItems'
 import { logger } from '@/utils/partnerDashboardUtils'
 import { getDisplayName } from '@/utils/displayName'
+
+const PARTNER_PAGE_KEY_SET = new Set<string>([
+  'overview',
+  'users',
+  'organization-management',
+  'profile',
+])
 
 export const PartnerDashboard: React.FC = () => {
   const navigate = useNavigate()
@@ -57,6 +66,10 @@ export const PartnerDashboard: React.FC = () => {
   } = useAuth()
   const toast = useToast()
   const [partnerOrgAccess, setPartnerOrgAccess] = useState<boolean | null>(null)
+  // URL-driven org selection shared across every /partner/* page so a chosen
+  // company persists when navigating between Dashboard, Learner Assignments,
+  // Course Approvals, etc.
+  const { selectedOrg: urlSelectedOrg, setSelectedOrg: setUrlSelectedOrg } = usePartnerSelectedOrg()
   const {
     assignedOrgCount,
     assignedOrganizations,
@@ -64,11 +77,9 @@ export const PartnerDashboard: React.FC = () => {
     organizationsLoading,
     organizationsReady,
     selectedOrg,
-    setSelectedOrg,
     updateUserPoints,
     usersError,
     usersLoading,
-    dataQualityWarnings,
     interventions,
     notificationCount,
     notifications,
@@ -77,11 +88,8 @@ export const PartnerDashboard: React.FC = () => {
     debugInfo,
     snapshot,
     adminDataLoading,
-  } = usePartnerDashboardData({ debugMode: false })
-  const { organizations, users, analytics } = snapshot
-  const engagementTrend = analytics?.engagementTrend ?? []
-  const riskLevels = analytics?.riskLevels ?? { engaged: 0, watch: 0, concern: 0, critical: 0 }
-  const atRiskUsers = useMemo(() => analytics?.atRiskUsers ?? [], [analytics?.atRiskUsers])
+  } = usePartnerDashboardData({ debugMode: false, selectedOrg: urlSelectedOrg || 'all' })
+  const { organizations, users } = snapshot
   const accountDisplayName = useMemo(
     () =>
       getDisplayName(
@@ -97,9 +105,24 @@ export const PartnerDashboard: React.FC = () => {
   )
   const snapshotUsers = useMemo(() => snapshot?.users ?? [], [snapshot?.users])
 
-  type PartnerPageKey = 'overview' | 'users' | 'organization-management' | 'at-risk' | 'reports' | 'settings' | 'profile'
-  const [activePage, setActivePage] = useState<PartnerPageKey>('overview')
+  type PartnerPageKey = 'overview' | 'users' | 'organization-management' | 'profile'
+  const [searchParams] = useSearchParams()
+  const initialPage = ((): PartnerPageKey => {
+    const fromUrl = searchParams.get('page') as PartnerPageKey | null
+    return fromUrl && PARTNER_PAGE_KEY_SET.has(fromUrl) ? fromUrl : 'overview'
+  })()
+  const [activePage, setActivePage] = useState<PartnerPageKey>(initialPage)
   const [userManagementTab, setUserManagementTab] = useState<PartnerUserManagementTab>('paid')
+
+  // Sync active page when URL ?page= changes (e.g., when navigating from
+  // sibling routes like /partner/course-approvals → /partner/dashboard?page=users).
+  useEffect(() => {
+    const fromUrl = searchParams.get('page') as PartnerPageKey | null
+    if (fromUrl && PARTNER_PAGE_KEY_SET.has(fromUrl) && fromUrl !== activePage) {
+      setActivePage(fromUrl)
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchParams])
   const [showAllNotifications, setShowAllNotifications] = useState(false)
 
   // Profile page state
@@ -115,6 +138,16 @@ export const PartnerDashboard: React.FC = () => {
     () => snapshot?.organizations ?? [],
     [snapshot?.organizations],
   )
+
+  // Auto-select the first available organization when none is chosen.
+  // ('all' was the historical default; the dropdown no longer offers it.)
+  useEffect(() => {
+    if (urlSelectedOrg) return
+    if (!snapshotOrganizations.length) return
+    const first = snapshotOrganizations[0]
+    const value = first.id || first.code
+    if (value) setUrlSelectedOrg(value)
+  }, [urlSelectedOrg, snapshotOrganizations, setUrlSelectedOrg])
 
   const organizationCodeLookup = useMemo(() => {
     const lookup = new Map<string, string>()
@@ -167,6 +200,84 @@ export const PartnerDashboard: React.FC = () => {
     })
   }, [snapshotUsers, scopedOrgKey, selectedOrg])
 
+  // Journey progress for the currently selected org. Computes day-level
+  // precision so a cohort that started today shows "1 day done · 5 weeks 6
+  // days left" on a 6W journey, etc. Returns a config-missing shape if the
+  // org has no journey type or no usable start date — so the UI can prompt
+  // the partner instead of silently hiding the bar.
+  const journeyProgress = useMemo(() => {
+    if (!scopedOrgKey || overviewOrganizations.length !== 1) return null
+    const org = overviewOrganizations[0] as { journeyType?: string; cohortStartDate?: string; name?: string }
+    const journeyType = org.journeyType as JourneyType | undefined
+    const hasValidJourneyType = Boolean(journeyType && JOURNEY_META[journeyType])
+    const startIso = org.cohortStartDate || null
+    const startDate = startIso ? new Date(startIso) : null
+    const hasStart = Boolean(startDate && !Number.isNaN(startDate.getTime()))
+
+    if (!hasValidJourneyType || !hasStart || !startDate) {
+      return {
+        unconfigured: true as const,
+        orgName: org.name ?? '',
+        missingJourneyType: !hasValidJourneyType,
+        missingStartDate: !hasStart,
+      }
+    }
+
+    const safeJourneyType = journeyType as JourneyType
+    const meta = JOURNEY_META[safeJourneyType]
+    const MS_PER_DAY = 24 * 60 * 60 * 1000
+    const totalDays = meta.weeks * 7
+    const journeyEndDate = new Date(startDate.getTime() + totalDays * MS_PER_DAY)
+
+    const rawDaysElapsed = Math.floor((Date.now() - startDate.getTime()) / MS_PER_DAY) + 1
+    // "Day 1" on the start date, capped at totalDays so the bar caps at 100%.
+    const daysElapsed = Math.min(totalDays, Math.max(1, rawDaysElapsed))
+    const daysRemaining = Math.max(0, totalDays - daysElapsed)
+    const isComplete = daysElapsed >= totalDays
+    const percent = Math.min(100, Math.max(0, (daysElapsed / totalDays) * 100))
+
+    // Format X days into the largest natural unit + remainder.
+    //   < 7 days → "N days"
+    //   7-59 days → "X weeks Y days" (drops " Y days" when Y=0)
+    //   >= 60 days → "X months Y weeks" (drops " Y weeks" when Y=0)
+    const formatDuration = (days: number): string => {
+      if (days <= 0) return '0 days'
+      if (days < 7) return `${days} day${days === 1 ? '' : 's'}`
+      if (days < 60) {
+        const weeks = Math.floor(days / 7)
+        const rem = days - weeks * 7
+        const wPart = `${weeks} week${weeks === 1 ? '' : 's'}`
+        if (rem === 0) return wPart
+        return `${wPart} ${rem} day${rem === 1 ? '' : 's'}`
+      }
+      const months = Math.floor(days / 30)
+      const remDays = days - months * 30
+      const remWeeks = Math.round(remDays / 7)
+      const mPart = `${months} month${months === 1 ? '' : 's'}`
+      if (remWeeks === 0) return mPart
+      return `${mPart} ${remWeeks} week${remWeeks === 1 ? '' : 's'}`
+    }
+
+    const doneLabel = `${formatDuration(daysElapsed)} done`
+    const remainingLabel = isComplete ? 'Journey complete' : `${formatDuration(daysRemaining)} left`
+
+    return {
+      unconfigured: false as const,
+      journeyType: safeJourneyType,
+      journeyLabel: getJourneyLabel(safeJourneyType),
+      daysElapsed,
+      daysRemaining,
+      totalDays,
+      percent,
+      isComplete,
+      doneLabel,
+      remainingLabel,
+      startDate,
+      endDate: journeyEndDate,
+      orgName: org.name ?? '',
+    }
+  }, [overviewOrganizations, scopedOrgKey])
+
   const { metrics: overviewMetrics, riskLevels: overviewRiskLevels } = usePartnerMetrics({
     users: overviewUsers,
     organizations: overviewOrganizations,
@@ -177,6 +288,27 @@ export const PartnerDashboard: React.FC = () => {
     () => snapshotOrganizations.map((org) => org.id).filter(Boolean) as string[],
     [snapshotOrganizations],
   )
+
+  // Pending invitations live-listened across the partner's assigned orgs.
+  // When the partner has filtered to a single org, narrow the listener to it.
+  const invitationOrgIds = useMemo(() => {
+    if (selectedOrg && selectedOrg !== 'all') {
+      const scopedOrg = snapshotOrganizations.find((org) => {
+        const lower = selectedOrg.toLowerCase()
+        return org.id?.toLowerCase() === lower || org.code?.toLowerCase() === lower
+      })
+      return scopedOrg?.id ? [scopedOrg.id] : []
+    }
+    return partnerOrganizationIds
+  }, [partnerOrganizationIds, selectedOrg, snapshotOrganizations])
+
+  const {
+    invitations: pendingInvitations,
+    loading: pendingInvitationsLoading,
+  } = usePartnerPendingInvitations({
+    organizationIds: invitationOrgIds,
+    enabled: profileStatus === 'ready',
+  })
 
   const { approvalQueue: pendingApprovals } = usePointsApprovalQueue(
     snapshotUsers,
@@ -352,30 +484,6 @@ export const PartnerDashboard: React.FC = () => {
 
     return Array.from(groups.values()).sort((a, b) => b.latestTimestamp - a.latestTimestamp)
   }, [notifications])
-  const riskReasons = useMemo(() => {
-    const counts: Record<string, number> = {}
-    atRiskUsers.forEach(user => {
-      const reasons = user.riskReasons?.length ? user.riskReasons : ['Below current 2-week cycle points target']
-      reasons.forEach(reason => {
-        counts[reason] = (counts[reason] || 0) + 1
-      })
-    })
-
-    const palette: Array<'orange' | 'red' | 'yellow' | 'purple' | 'green'> = ['orange', 'red', 'yellow', 'purple', 'green']
-    return Object.entries(counts).map(([label, count], idx) => ({
-      label,
-      count,
-      color: palette[idx % palette.length],
-    }))
-  }, [atRiskUsers])
-
-  const riskLevelList = [
-    { label: 'Engaged', color: 'green' as const, count: riskLevels.engaged },
-    { label: 'Watch', color: 'yellow' as const, count: riskLevels.watch },
-    { label: 'Concern', color: 'orange' as const, count: riskLevels.concern },
-    { label: 'Critical', color: 'red' as const, count: riskLevels.critical },
-  ]
-
   const overviewOrgCards = useMemo(
     () =>
       overviewOrganizations.map((org) => ({
@@ -439,13 +547,59 @@ export const PartnerDashboard: React.FC = () => {
         ? assignedOrgCount
         : Math.max(overviewOrganizations.length, selectedOrg ? 1 : 0)
     const overviewUserCount = overviewUsers.length
+
+    // Readiness aggregates across the in-scope users (single org or all).
+    const onboardingCompleteCount = overviewUsers.filter(
+      (u) => u.onboardingComplete === true,
+    ).length
+    const personalityCompleteCount = overviewUsers.filter(
+      (u) => u.hasCompletedPersonalityTest === true,
+    ).length
+    const valuesCompleteCount = overviewUsers.filter(
+      (u) => u.hasCompletedValuesTest === true,
+    ).length
+    const readinessTotal = overviewUserCount
+    const pct = (n: number) =>
+      readinessTotal === 0 ? 0 : Math.round((n / readinessTotal) * 100)
+
+    // Current week derived from journeyProgress.daysElapsed (only meaningful
+    // when one org is in scope — different orgs may have different cohorts).
+    const journeyWeekNumber =
+      journeyProgress && !journeyProgress.unconfigured
+        ? Math.min(
+            Math.ceil(journeyProgress.daysElapsed / 7),
+            Math.ceil(journeyProgress.totalDays / 7),
+          )
+        : null
+    const journeyTotalWeeks =
+      journeyProgress && !journeyProgress.unconfigured
+        ? Math.ceil(journeyProgress.totalDays / 7)
+        : null
+
+    // Aggregate-mode summary: distinct journey types across in-scope orgs.
+    const aggregateJourneySummary = (() => {
+      if (selectedOrg !== 'all') return null
+      if (overviewOrganizations.length === 0) return null
+      const counts = new Map<string, number>()
+      overviewOrganizations.forEach((org) => {
+        const key = (org as { journeyType?: string }).journeyType || 'unconfigured'
+        counts.set(key, (counts.get(key) ?? 0) + 1)
+      })
+      return Array.from(counts.entries())
+        .sort((a, b) => b[1] - a[1])
+        .map(([type, count]) => ({
+          type,
+          label: type === 'unconfigured' ? 'No journey set' : getJourneyLabel(type as JourneyType),
+          weeks: type === 'unconfigured' ? null : JOURNEY_META[type as JourneyType]?.weeks ?? null,
+          count,
+        }))
+    })()
     const scopeSummary = `${overviewOrgCount} organization${overviewOrgCount === 1 ? '' : 's'} · ${overviewUserCount} learner${overviewUserCount === 1 ? '' : 's'} in scope · Transformation Partner · Engagement tracking active`
     const isEmptyState =
       overviewMetrics.activeMembers === 0
       && overviewMetrics.engagementRate === 0
       && overviewMetrics.newRegistrations === 0
       && overviewMetrics.managedCompanies === 0
-    const managedCompanyLabel = overviewMetrics.managedCompanies === 1 ? 'company' : 'companies'
     const alertCards = [
       {
         key: 'risk',
@@ -453,7 +607,10 @@ export const PartnerDashboard: React.FC = () => {
         label: learnersAtRiskCount === 1 ? 'Learner at risk' : 'Learners at risk',
         color: 'red',
         icon: Users,
-        onClick: () => setActivePage('at-risk'),
+        onClick: () => {
+          setUserManagementTab('risk')
+          setActivePage('users')
+        },
       },
       {
         key: 'checkins',
@@ -461,7 +618,10 @@ export const PartnerDashboard: React.FC = () => {
         label: overdueCheckinsCount === 1 ? 'Overdue check-in' : 'Overdue check-ins',
         color: 'yellow',
         icon: Bell,
-        onClick: () => setActivePage('at-risk'),
+        onClick: () => {
+          setUserManagementTab('risk')
+          setActivePage('users')
+        },
       },
       {
         key: 'approvals',
@@ -476,13 +636,6 @@ export const PartnerDashboard: React.FC = () => {
       },
     ]
 
-    const activityMetrics = [
-      { label: 'Active members (30d)', value: overviewMetrics.activeMembers.toString(), icon: Users },
-      { label: 'Engagement rate', value: `${overviewMetrics.engagementRate}%`, icon: Gauge },
-      { label: 'New registrations (7d)', value: overviewMetrics.newRegistrations.toString(), icon: Sparkles },
-      { label: `Managed ${managedCompanyLabel}`, value: overviewMetrics.managedCompanies.toString(), icon: Building2 },
-    ]
-
     const visibleNotifications = showAllNotifications ? groupedNotifications : groupedNotifications.slice(0, 4)
 
     return (
@@ -494,6 +647,243 @@ export const PartnerDashboard: React.FC = () => {
             </Text>
           </CardBody>
         </Card>
+
+        {journeyProgress && journeyProgress.unconfigured && (
+          <Box
+            p={3}
+            borderRadius="md"
+            border="1px dashed"
+            borderColor="yellow.300"
+            bg="yellow.50"
+          >
+            <Text fontSize="sm" color="yellow.800" fontWeight="semibold">
+              Journey progress unavailable for {journeyProgress.orgName || 'this organization'}
+            </Text>
+            <Text fontSize="xs" color="yellow.700" mt={1}>
+              Missing{' '}
+              {journeyProgress.missingJourneyType && journeyProgress.missingStartDate
+                ? 'journey type and cohort start date'
+                : journeyProgress.missingJourneyType
+                  ? 'journey type'
+                  : 'cohort start date'}
+              . Ask a super admin to set{' '}
+              {journeyProgress.missingJourneyType && journeyProgress.missingStartDate
+                ? '`journeyType` and `cohortStartDate`'
+                : journeyProgress.missingJourneyType
+                  ? '`journeyType`'
+                  : '`cohortStartDate`'}{' '}
+              on the organization to enable the progress bar.
+            </Text>
+          </Box>
+        )}
+        {journeyProgress && !journeyProgress.unconfigured && (
+          <Stack spacing={2}>
+            <HStack justify="space-between" align="baseline" wrap="wrap" spacing={3}>
+              <Text fontSize="sm" fontWeight="semibold" color="brand.text">
+                {journeyProgress.journeyLabel} · {journeyProgress.doneLabel}
+              </Text>
+              <Text fontSize="xs" color="brand.subtleText">
+                {journeyProgress.remainingLabel}
+              </Text>
+            </HStack>
+            <Progress
+              value={journeyProgress.percent}
+              colorScheme="yellow"
+              size="sm"
+              borderRadius="full"
+              bg="yellow.50"
+            />
+            <HStack justify="space-between" fontSize="xs" color="brand.subtleText">
+              <Text>Started {format(journeyProgress.startDate, 'MMM d, yyyy')}</Text>
+              <Text>Ends {format(journeyProgress.endDate, 'MMM d, yyyy')}</Text>
+            </HStack>
+          </Stack>
+        )}
+
+        <SimpleGrid columns={{ base: 1, md: 3 }} spacing={4}>
+          <Card bg="white" border="1px solid" borderColor="brand.border" h="100%">
+            <CardBody>
+              <Stack spacing={3} h="100%">
+                <HStack spacing={3} align="center">
+                  <Box color="brand.primary"><CalendarClock size={20} /></Box>
+                  <Text fontWeight="bold" color="brand.text">Journey & week</Text>
+                </HStack>
+                {journeyProgress && !journeyProgress.unconfigured ? (
+                  <Stack spacing={1}>
+                    <Text fontSize="lg" fontWeight="bold" color="brand.text">
+                      Week {journeyWeekNumber} of {journeyTotalWeeks}
+                    </Text>
+                    <Text fontSize="sm" color="brand.subtleText">
+                      {journeyProgress.journeyLabel} · {journeyTotalWeeks}-week programme
+                    </Text>
+                    <Text fontSize="xs" color="brand.subtleText">
+                      Day {journeyProgress.daysElapsed} of {journeyProgress.totalDays}
+                    </Text>
+                  </Stack>
+                ) : journeyProgress && journeyProgress.unconfigured ? (
+                  <Stack spacing={1}>
+                    <Text fontSize="sm" color="brand.subtleText">
+                      Journey not configured for {journeyProgress.orgName || 'this organization'}.
+                    </Text>
+                  </Stack>
+                ) : aggregateJourneySummary && aggregateJourneySummary.length > 0 ? (
+                  <Stack spacing={2}>
+                    <Text fontSize="xs" color="brand.subtleText">
+                      Across {overviewOrganizations.length} organization{overviewOrganizations.length === 1 ? '' : 's'}
+                    </Text>
+                    <Stack spacing={1}>
+                      {aggregateJourneySummary.slice(0, 4).map((entry) => (
+                        <HStack key={entry.type} justify="space-between" fontSize="sm">
+                          <Text color="brand.text">
+                            {entry.label}
+                            {entry.weeks ? ` · ${entry.weeks}w` : ''}
+                          </Text>
+                          <Badge colorScheme="purple" variant="subtle">
+                            {entry.count} org{entry.count === 1 ? '' : 's'}
+                          </Badge>
+                        </HStack>
+                      ))}
+                    </Stack>
+                    <Text fontSize="xs" color="brand.subtleText">
+                      Pick an org above to see the current week.
+                    </Text>
+                  </Stack>
+                ) : (
+                  <Text fontSize="sm" color="brand.subtleText">
+                    No journey data available.
+                  </Text>
+                )}
+              </Stack>
+            </CardBody>
+          </Card>
+
+          <Card bg="white" border="1px solid" borderColor="brand.border" h="100%">
+            <CardBody>
+              <Stack spacing={3} h="100%">
+                <HStack spacing={3} align="center">
+                  <Box color="brand.primary"><UserCheck size={20} /></Box>
+                  <Text fontWeight="bold" color="brand.text">Learner readiness</Text>
+                </HStack>
+                {readinessTotal === 0 ? (
+                  <Text fontSize="sm" color="brand.subtleText">
+                    No learners in scope yet.
+                  </Text>
+                ) : (
+                  <Stack spacing={3}>
+                    <Stack spacing={1}>
+                      <HStack justify="space-between" fontSize="sm">
+                        <Text color="brand.text">Orientation</Text>
+                        <Text color="brand.subtleText">
+                          {onboardingCompleteCount}/{readinessTotal} · {pct(onboardingCompleteCount)}%
+                        </Text>
+                      </HStack>
+                      <Progress
+                        value={pct(onboardingCompleteCount)}
+                        size="xs"
+                        colorScheme="purple"
+                        borderRadius="full"
+                      />
+                    </Stack>
+                    <Stack spacing={1}>
+                      <HStack justify="space-between" fontSize="sm">
+                        <HStack spacing={2}>
+                          <Box color="brand.subtleText"><Sparkles size={14} /></Box>
+                          <Text color="brand.text">Personality assessment</Text>
+                        </HStack>
+                        <Text color="brand.subtleText">
+                          {personalityCompleteCount}/{readinessTotal} · {pct(personalityCompleteCount)}%
+                        </Text>
+                      </HStack>
+                      <Progress
+                        value={pct(personalityCompleteCount)}
+                        size="xs"
+                        colorScheme="orange"
+                        borderRadius="full"
+                      />
+                    </Stack>
+                    <Stack spacing={1}>
+                      <HStack justify="space-between" fontSize="sm">
+                        <HStack spacing={2}>
+                          <Box color="brand.subtleText"><HeartHandshake size={14} /></Box>
+                          <Text color="brand.text">Values assessment</Text>
+                        </HStack>
+                        <Text color="brand.subtleText">
+                          {valuesCompleteCount}/{readinessTotal} · {pct(valuesCompleteCount)}%
+                        </Text>
+                      </HStack>
+                      <Progress
+                        value={pct(valuesCompleteCount)}
+                        size="xs"
+                        colorScheme="yellow"
+                        borderRadius="full"
+                      />
+                    </Stack>
+                  </Stack>
+                )}
+              </Stack>
+            </CardBody>
+          </Card>
+
+          <Card bg="white" border="1px solid" borderColor="brand.border" h="100%">
+            <CardBody>
+              <Stack spacing={3} h="100%">
+                <HStack spacing={3} align="center" justify="space-between">
+                  <HStack spacing={3} align="center">
+                    <Box color="brand.primary"><MailQuestion size={20} /></Box>
+                    <Text fontWeight="bold" color="brand.text">Pending invitations</Text>
+                  </HStack>
+                  {pendingInvitationsLoading ? (
+                    <Skeleton height="22px" width="40px" borderRadius="md" />
+                  ) : (
+                    <Badge
+                      colorScheme={pendingInvitations.length > 0 ? 'orange' : 'gray'}
+                      variant={pendingInvitations.length > 0 ? 'solid' : 'subtle'}
+                    >
+                      {pendingInvitations.length}
+                    </Badge>
+                  )}
+                </HStack>
+                {pendingInvitationsLoading ? (
+                  <Stack spacing={2}>
+                    <SkeletonText noOfLines={3} spacing="2" />
+                  </Stack>
+                ) : pendingInvitations.length === 0 ? (
+                  <Text fontSize="sm" color="brand.subtleText">
+                    No outstanding invitations.
+                  </Text>
+                ) : (
+                  <Stack spacing={2}>
+                    {pendingInvitations.slice(0, 3).map((invite) => (
+                      <Box
+                        key={invite.id}
+                        p={2}
+                        borderRadius="md"
+                        border="1px solid"
+                        borderColor="brand.border"
+                        bg="brand.accent"
+                      >
+                        <Text fontSize="sm" fontWeight="semibold" color="brand.text" noOfLines={1}>
+                          {invite.email || invite.name || 'Invited learner'}
+                        </Text>
+                        <Text fontSize="xs" color="brand.subtleText">
+                          {invite.createdAt
+                            ? `Sent ${formatDistanceToNow(invite.createdAt, { addSuffix: true })}`
+                            : 'Sent recently'}
+                          {invite.role ? ` · ${invite.role}` : ''}
+                        </Text>
+                      </Box>
+                    ))}
+                    {pendingInvitations.length > 3 && (
+                      <Text fontSize="xs" color="brand.subtleText">
+                        +{pendingInvitations.length - 3} more pending
+                      </Text>
+                    )}
+                  </Stack>
+                )}
+              </Stack>
+            </CardBody>
+          </Card>
+        </SimpleGrid>
 
         <SimpleGrid columns={{ base: 1, md: 3 }} spacing={4}>
           {alertCards.map((card) => {
@@ -627,35 +1017,7 @@ export const PartnerDashboard: React.FC = () => {
             </Card>
           )}
 
-          <SimpleGrid columns={{ base: 1, lg: 2 }} spacing={4}>
-            <Card bg="white" border="1px solid" borderColor="brand.border">
-              <CardBody>
-                <Stack spacing={4}>
-                  <Text fontWeight="bold" color="brand.text">Activity Summary</Text>
-                  <SimpleGrid columns={{ base: 2, md: 2 }} spacing={4}>
-                    {activityMetrics.map((metric) => {
-                      const MetricIcon = metric.icon
-                      return (
-                        <HStack key={metric.label} spacing={3} align="center">
-                          <Box color="brand.primary">
-                            <MetricIcon size={18} />
-                          </Box>
-                          <VStack align="flex-start" spacing={0}>
-                            <Text fontSize="xs" color="brand.subtleText">
-                              {metric.label}
-                            </Text>
-                            <Text fontWeight="bold" fontSize="lg" color="brand.text">
-                              {metric.value}
-                            </Text>
-                          </VStack>
-                        </HStack>
-                      )
-                    })}
-                  </SimpleGrid>
-                </Stack>
-              </CardBody>
-            </Card>
-
+          <SimpleGrid columns={{ base: 1 }} spacing={4}>
             <Card bg="white" border="1px solid" borderColor="brand.border">
               <CardBody>
                 <Stack spacing={4}>
@@ -1074,54 +1436,6 @@ export const PartnerDashboard: React.FC = () => {
     }
   }, [interventions, profile?.fullName, profile?.id, toast, user?.uid])
 
-  const handleSendNudges = useCallback(async (payload: AtRiskNudgePayload) => {
-    const adminId = profile?.id ?? user?.uid
-    if (!adminId) {
-      throw new Error('Missing partner account context for nudge delivery.')
-    }
-
-    if (payload.users.length === 0) {
-      return { success: 0, failed: 0 }
-    }
-
-    const requiresEmail = payload.channel === 'email' || payload.channel === 'both'
-    const eligibleUsers = payload.users.filter((item) => !requiresEmail || Boolean(item.email))
-    const skippedCount = payload.users.length - eligibleUsers.length
-
-    if (eligibleUsers.length === 0) {
-      return { success: 0, failed: skippedCount }
-    }
-
-    const users = eligibleUsers
-      .map((item) => {
-        const lastActiveValue = item.lastActiveAt || item.lastActive
-        const parsedLastActive = lastActiveValue ? new Date(lastActiveValue) : null
-        const daysInactive =
-          parsedLastActive && !Number.isNaN(parsedLastActive.getTime())
-            ? Math.max(0, Math.round((Date.now() - parsedLastActive.getTime()) / (1000 * 60 * 60 * 24)))
-            : 0
-
-        return {
-          id: item.id,
-          email: item.email || undefined,
-          name: getDisplayName(item, 'Member'),
-          organizationName: item.companyCode || 'Your organization',
-          daysInactive,
-          engagementScore: item.progressPercent,
-        }
-      })
-
-    const result = await sendBulkNudges({
-      users,
-      adminId,
-      template: payload.template,
-      channel: payload.channel,
-      scheduleAt: payload.scheduleAt,
-    })
-
-    return { success: result.success.length, failed: result.failed.length + skippedCount }
-  }, [profile?.id, user?.uid])
-
   const handleStartInterventionFromUserManagement = useCallback(async (targetUser: PartnerUser) => {
     await handleAtRiskAction('add_to_intervention_queue', targetUser.id, {
       target: getDisplayName(targetUser, 'Member'),
@@ -1132,21 +1446,8 @@ export const PartnerDashboard: React.FC = () => {
       organizationCode: targetUser.companyCode || '',
       userId: targetUser.id,
     })
-    setActivePage('at-risk')
+    setUserManagementTab('risk')
   }, [handleAtRiskAction])
-
-  const renderAtRiskPage = () => (
-    <AtRiskCommandPanel
-      engagementTrend={engagementTrend}
-      riskLevelList={riskLevelList}
-      riskReasons={riskReasons}
-      dataQualityWarnings={dataQualityWarnings}
-      interventions={interventions}
-      atRiskUsers={atRiskUsers}
-      onAction={handleAtRiskAction}
-      onSendNudges={handleSendNudges}
-    />
-  )
 
   const renderUsersPage = () => (
     <Stack spacing={6}>
@@ -1189,7 +1490,9 @@ export const PartnerDashboard: React.FC = () => {
               <VStack align="flex-start" spacing={0}>
                 <Text fontWeight="bold" color="brand.text">User management</Text>
                 <Text fontSize="sm" color="brand.subtleText">
-                  Filtered to {selectedOrg === 'all' ? 'all organizations' : selectedOrg}
+                  Filtered to {selectedOrg === 'all'
+                    ? `all organizations (${snapshotOrganizations.length})`
+                    : overviewOrganizations[0]?.name || selectedOrg}
                 </Text>
               </VStack>
               <Badge colorScheme="purple">Scoped</Badge>
@@ -1202,7 +1505,7 @@ export const PartnerDashboard: React.FC = () => {
               organizationsLoading={snapshotLoading}
               organizationsReady={!snapshotLoading}
               selectedOrg={selectedOrg}
-              onSelectOrg={setSelectedOrg}
+              onSelectOrg={setUrlSelectedOrg}
               updateUserPoints={updateUserPoints}
               initialTab={userManagementTab}
               onStartIntervention={handleStartInterventionFromUserManagement}
@@ -1402,239 +1705,6 @@ export const PartnerDashboard: React.FC = () => {
       </Card>
     </Stack>
   )
-
-  const renderReports = () => {
-    const inScopeUsers = overviewUsers
-    const inScopeOrganizations = overviewOrganizations
-    const nowMs = Date.now()
-    const atRiskCount = inScopeUsers.filter(
-      (user) => user.riskStatus === 'critical' || user.riskStatus === 'concern' || user.riskStatus === 'at_risk',
-    ).length
-    const interventionCounts = interventions.reduce(
-      (acc, item) => {
-        if (item.status === 'critical') acc.critical += 1
-        if (item.status === 'active') acc.active += 1
-        if (item.status === 'watch') acc.watch += 1
-        if (item.status === 'escalated') acc.escalated += 1
-        return acc
-      },
-      { active: 0, watch: 0, critical: 0, escalated: 0 },
-    )
-    const recentNotifications = notifications.filter((notification) => {
-      if (!notification.created_at) return false
-      const createdMs = new Date(notification.created_at).getTime()
-      return Number.isFinite(createdMs) && createdMs >= nowMs - (24 * 60 * 60 * 1000)
-    }).length
-    const criticalWarningCount = dataQualityWarnings.filter((warning) => warning.severity === 'critical').length
-
-    const organizationNameLookup = new Map<string, string>()
-    inScopeOrganizations.forEach((org) => {
-      if (org.code) organizationNameLookup.set(org.code.toLowerCase(), org.name || org.code)
-      if (org.id) organizationNameLookup.set(org.id.toLowerCase(), org.name || org.code || org.id)
-    })
-
-    const organizationRows = Array.from(
-      inScopeUsers.reduce<Map<string, {
-        key: string
-        name: string
-        learners: number
-        atRisk: number
-        progressTotal: number
-        weeklyGapTotal: number
-      }>>((acc, user) => {
-        const rawKey = (user.companyCode || user.organizationId || 'unassigned').toLowerCase()
-        const existing = acc.get(rawKey) || {
-          key: rawKey,
-          name: organizationNameLookup.get(rawKey) || user.companyCode || user.organizationId || 'Unassigned',
-          learners: 0,
-          atRisk: 0,
-          progressTotal: 0,
-          weeklyGapTotal: 0,
-        }
-        const progressPercent = Number(user.progressPercent) || 0
-        const weeklyRequired = Number(user.weeklyRequired) || 0
-        const weeklyEarned = Number(user.weeklyEarned) || 0
-
-        existing.learners += 1
-        existing.progressTotal += progressPercent
-        existing.weeklyGapTotal += Math.max(0, weeklyRequired - weeklyEarned)
-        if (user.riskStatus === 'critical' || user.riskStatus === 'concern' || user.riskStatus === 'at_risk') {
-          existing.atRisk += 1
-        }
-
-        acc.set(rawKey, existing)
-        return acc
-      }, new Map()),
-    )
-      .map(([, row]) => ({
-        ...row,
-        avgProgress: row.learners > 0 ? Math.round(row.progressTotal / row.learners) : 0,
-        avgWeeklyGap: row.learners > 0 ? Math.round(row.weeklyGapTotal / row.learners) : 0,
-      }))
-      .sort((a, b) => b.atRisk - a.atRisk || b.learners - a.learners || a.name.localeCompare(b.name))
-
-    const latestEventCandidates = [
-      ...notifications.map((item) => item.created_at),
-      ...interventions.map((item) => item.statusChangedAt || item.openedAt || item.deadline),
-      ...inScopeUsers.map((item) => item.lastActiveAt || item.lastActive),
-    ].filter((value): value is string => Boolean(value))
-
-    const latestEventMs = latestEventCandidates.reduce((latest, value) => {
-      const ts = new Date(value).getTime()
-      if (!Number.isFinite(ts)) return latest
-      return ts > latest ? ts : latest
-    }, 0)
-
-    const freshnessLabel = latestEventMs
-      ? formatDistanceToNowSafe(new Date(latestEventMs), 'not available', { addSuffix: true })
-      : 'not available'
-
-    return (
-      <Stack spacing={6}>
-        <Card bg="white" border="1px solid" borderColor="brand.border">
-          <CardBody>
-            <Stack spacing={3}>
-              <HStack justify="space-between" align="center" wrap="wrap" spacing={3}>
-                <VStack align="flex-start" spacing={1}>
-                  <Text fontWeight="bold" color="brand.text">Reports</Text>
-                  <Text fontSize="sm" color="brand.subtleText">
-                    Live reporting from scoped Firestore snapshots for users, organizations, interventions, and notifications.
-                  </Text>
-                </VStack>
-                <Badge colorScheme={snapshotLoading || notificationsLoading ? 'yellow' : 'green'}>
-                  {snapshotLoading || notificationsLoading ? 'Refreshing live data' : `Live data (${freshnessLabel})`}
-                </Badge>
-              </HStack>
-              <SimpleGrid columns={{ base: 2, md: 5 }} spacing={3}>
-                <Box p={3} borderRadius="md" border="1px solid" borderColor="brand.border" bg="brand.accent">
-                  <Text fontSize="xs" color="brand.subtleText">Learners in scope</Text>
-                  <Text fontSize="2xl" fontWeight="bold" color="brand.text">{inScopeUsers.length}</Text>
-                </Box>
-                <Box p={3} borderRadius="md" border="1px solid" borderColor="brand.border" bg="brand.accent">
-                  <Text fontSize="xs" color="brand.subtleText">Organizations in scope</Text>
-                  <Text fontSize="2xl" fontWeight="bold" color="brand.text">{inScopeOrganizations.length}</Text>
-                </Box>
-                <Box p={3} borderRadius="md" border="1px solid" borderColor="brand.border" bg="brand.accent">
-                  <Text fontSize="xs" color="brand.subtleText">At-risk learners</Text>
-                  <Text fontSize="2xl" fontWeight="bold" color="red.500">{atRiskCount}</Text>
-                </Box>
-                <Box p={3} borderRadius="md" border="1px solid" borderColor="brand.border" bg="brand.accent">
-                  <Text fontSize="xs" color="brand.subtleText">Open interventions</Text>
-                  <Text fontSize="2xl" fontWeight="bold" color="brand.text">
-                    {interventionCounts.active + interventionCounts.watch + interventionCounts.critical}
-                  </Text>
-                </Box>
-                <Box p={3} borderRadius="md" border="1px solid" borderColor="brand.border" bg="brand.accent">
-                  <Text fontSize="xs" color="brand.subtleText">Notifications (24h)</Text>
-                  <Text fontSize="2xl" fontWeight="bold" color="brand.text">{recentNotifications}</Text>
-                </Box>
-              </SimpleGrid>
-            </Stack>
-          </CardBody>
-        </Card>
-
-        <Card bg="white" border="1px solid" borderColor="brand.border">
-          <CardBody>
-            <Stack spacing={3}>
-              <Text fontWeight="bold" color="brand.text">Engagement by organization</Text>
-              {organizationRows.length === 0 ? (
-                <Text fontSize="sm" color="brand.subtleText">No learner records are available for the selected scope yet.</Text>
-              ) : (
-                <Stack spacing={2}>
-                  {organizationRows.map((row) => (
-                    <Box key={row.key} p={3} borderRadius="md" border="1px solid" borderColor="brand.border" bg="brand.accent">
-                      <HStack justify="space-between" align="flex-start" wrap="wrap" spacing={2}>
-                        <VStack align="flex-start" spacing={0}>
-                          <Text fontWeight="semibold" color="brand.text">{row.name}</Text>
-                          <Text fontSize="sm" color="brand.subtleText">{row.learners} learner{row.learners === 1 ? '' : 's'}</Text>
-                        </VStack>
-                        <HStack spacing={2} wrap="wrap">
-                          <Badge colorScheme="purple">Avg progress: {row.avgProgress}%</Badge>
-                          <Badge colorScheme={row.atRisk > 0 ? 'red' : 'green'}>
-                            At-risk: {row.atRisk} / {row.learners}
-                          </Badge>
-                          <Badge colorScheme={row.avgWeeklyGap > 0 ? 'orange' : 'green'}>
-                            Avg weekly gap: {row.avgWeeklyGap}
-                          </Badge>
-                        </HStack>
-                      </HStack>
-                    </Box>
-                  ))}
-                </Stack>
-              )}
-            </Stack>
-          </CardBody>
-        </Card>
-
-        <SimpleGrid columns={{ base: 1, lg: 2 }} spacing={4}>
-          <Card bg="white" border="1px solid" borderColor="brand.border">
-            <CardBody>
-              <Stack spacing={3}>
-                <Text fontWeight="bold" color="brand.text">Risk distribution</Text>
-                <SimpleGrid columns={2} spacing={3}>
-                  <Box p={3} borderRadius="md" border="1px solid" borderColor="brand.border" bg="brand.accent">
-                    <Text fontSize="xs" color="brand.subtleText">Engaged</Text>
-                    <Text fontWeight="bold" color="green.600">{overviewRiskLevels.engaged}</Text>
-                  </Box>
-                  <Box p={3} borderRadius="md" border="1px solid" borderColor="brand.border" bg="brand.accent">
-                    <Text fontSize="xs" color="brand.subtleText">Watch</Text>
-                    <Text fontWeight="bold" color="yellow.600">{overviewRiskLevels.watch}</Text>
-                  </Box>
-                  <Box p={3} borderRadius="md" border="1px solid" borderColor="brand.border" bg="brand.accent">
-                    <Text fontSize="xs" color="brand.subtleText">Concern</Text>
-                    <Text fontWeight="bold" color="orange.600">{overviewRiskLevels.concern}</Text>
-                  </Box>
-                  <Box p={3} borderRadius="md" border="1px solid" borderColor="brand.border" bg="brand.accent">
-                    <Text fontSize="xs" color="brand.subtleText">Critical</Text>
-                    <Text fontWeight="bold" color="red.600">{overviewRiskLevels.critical}</Text>
-                  </Box>
-                </SimpleGrid>
-              </Stack>
-            </CardBody>
-          </Card>
-
-          <Card bg="white" border="1px solid" borderColor="brand.border">
-            <CardBody>
-              <Stack spacing={3}>
-                <Text fontWeight="bold" color="brand.text">Data quality & interventions</Text>
-                <HStack spacing={3} wrap="wrap">
-                  <Badge colorScheme={criticalWarningCount > 0 ? 'red' : 'green'}>
-                    Critical warnings: {criticalWarningCount}
-                  </Badge>
-                  <Badge colorScheme={dataQualityWarnings.length > criticalWarningCount ? 'orange' : 'gray'}>
-                    Warnings: {dataQualityWarnings.length - criticalWarningCount}
-                  </Badge>
-                  <Badge colorScheme={interventionCounts.escalated > 0 ? 'red' : 'gray'}>
-                    Escalated interventions: {interventionCounts.escalated}
-                  </Badge>
-                </HStack>
-                {dataQualityWarnings.length ? (
-                  <Stack spacing={2}>
-                    {dataQualityWarnings.slice(0, 5).map((warning) => (
-                      <Box
-                        key={warning.message}
-                        p={2}
-                        borderRadius="md"
-                        border="1px solid"
-                        borderColor={warning.severity === 'critical' ? 'red.200' : 'orange.200'}
-                        bg={warning.severity === 'critical' ? 'red.50' : 'orange.50'}
-                      >
-                        <Text fontSize="sm" color={warning.severity === 'critical' ? 'red.700' : 'orange.700'}>
-                          {warning.message}
-                        </Text>
-                      </Box>
-                    ))}
-                  </Stack>
-                ) : (
-                  <Text fontSize="sm" color="brand.subtleText">No data quality warnings in the current scope.</Text>
-                )}
-              </Stack>
-            </CardBody>
-          </Card>
-        </SimpleGrid>
-      </Stack>
-    )
-  }
 
   const handlePasswordChange = async () => {
     if (!auth.currentUser) {
@@ -1847,92 +1917,12 @@ export const PartnerDashboard: React.FC = () => {
     </Stack>
   )
 
-  const renderSettings = () => {
-    const scopedOrganizationCount = overviewOrganizations.length
-    const scopedUserCount = overviewUsers.length
-    const criticalWarnings = dataQualityWarnings.filter((warning) => warning.severity === 'critical').length
-    const activeInterventions = interventions.filter((item) => item.status === 'active' || item.status === 'critical').length
-    const syncStateLabel =
-      snapshotLoading || notificationsLoading
-        ? 'Refreshing from database...'
-        : `Live data updated ${formatDistanceToNowSafe(new Date(), 'just now', { addSuffix: true })}`
-
-    return (
-      <Stack spacing={6}>
-        <Card bg="white" border="1px solid" borderColor="brand.border">
-          <CardBody>
-            <Stack spacing={3}>
-              <HStack justify="space-between" align="center" wrap="wrap" spacing={3}>
-                <VStack align="flex-start" spacing={1}>
-                  <Text fontWeight="bold" color="brand.text">Settings</Text>
-                  <Text fontSize="sm" color="brand.subtleText">
-                    Live configuration context from current dashboard scope and Firestore snapshots.
-                  </Text>
-                </VStack>
-                <Badge colorScheme={snapshotLoading || notificationsLoading ? 'yellow' : 'green'}>
-                  {syncStateLabel}
-                </Badge>
-              </HStack>
-              <SimpleGrid columns={{ base: 1, md: 4 }} spacing={3}>
-                <Box p={3} borderRadius="md" border="1px solid" borderColor="brand.border" bg="brand.accent">
-                  <Text fontSize="xs" color="brand.subtleText">Scope</Text>
-                  <Text fontWeight="semibold" color="brand.text">
-                    {selectedOrg === 'all' ? 'All assigned organizations' : selectedOrg}
-                  </Text>
-                </Box>
-                <Box p={3} borderRadius="md" border="1px solid" borderColor="brand.border" bg="brand.accent">
-                  <Text fontSize="xs" color="brand.subtleText">Organizations in scope</Text>
-                  <Text fontWeight="bold" color="brand.text">{scopedOrganizationCount}</Text>
-                </Box>
-                <Box p={3} borderRadius="md" border="1px solid" borderColor="brand.border" bg="brand.accent">
-                  <Text fontSize="xs" color="brand.subtleText">Learners in scope</Text>
-                  <Text fontWeight="bold" color="brand.text">{scopedUserCount}</Text>
-                </Box>
-                <Box p={3} borderRadius="md" border="1px solid" borderColor="brand.border" bg="brand.accent">
-                  <Text fontSize="xs" color="brand.subtleText">Unread notifications</Text>
-                  <Text fontWeight="bold" color="brand.text">{notificationCount}</Text>
-                </Box>
-              </SimpleGrid>
-              <HStack spacing={3} wrap="wrap">
-                <Badge colorScheme={criticalWarnings > 0 ? 'red' : 'green'}>
-                  Critical data warnings: {criticalWarnings}
-                </Badge>
-                <Badge colorScheme={activeInterventions > 0 ? 'orange' : 'gray'}>
-                  Active interventions: {activeInterventions}
-                </Badge>
-                <Badge colorScheme="purple">At-risk learners: {atRiskUsers.length}</Badge>
-              </HStack>
-            </Stack>
-          </CardBody>
-        </Card>
-
-        <Card bg="white" border="1px solid" borderColor="brand.border">
-          <CardBody>
-            <Stack spacing={3}>
-              <Text fontWeight="bold" color="brand.text">Automated Nudge Rules</Text>
-              <Text fontSize="sm" color="brand.subtleText">
-                Live automation rules from Firestore. Toggling a rule updates `automation_rules` immediately.
-              </Text>
-              <NudgeAutomationRules />
-            </Stack>
-          </CardBody>
-        </Card>
-      </Stack>
-    )
-  }
-
   const renderPage = () => {
     switch (activePage) {
       case 'users':
         return renderUsersPage()
       case 'organization-management':
         return renderOrganizationManagementPage()
-      case 'at-risk':
-        return renderAtRiskPage()
-      case 'reports':
-        return renderReports()
-      case 'settings':
-        return renderSettings()
       case 'profile':
         return renderProfile()
       case 'overview':
@@ -1946,13 +1936,13 @@ export const PartnerDashboard: React.FC = () => {
       navigate('/partner/partner-assignment')
       return
     }
-    if (key === 'learner-assignments') {
-      navigate('/partner/learner-assignments')
+    if (key === 'course-approvals') {
+      navigate('/partner/course-approvals')
       return
     }
 
     const normalized = key as PartnerPageKey
-    if (['overview', 'users', 'organization-management', 'at-risk', 'reports', 'settings', 'profile'].includes(normalized)) {
+    if (['overview', 'users', 'organization-management', 'profile'].includes(normalized)) {
       if (normalized === 'users') {
         setUserManagementTab('paid')
       }
@@ -1967,7 +1957,7 @@ export const PartnerDashboard: React.FC = () => {
       <PartnerLayout
         organizations={organizations}
         selectedOrg={selectedOrg}
-        onSelectOrg={setSelectedOrg}
+        onSelectOrg={setUrlSelectedOrg}
         navSections={navSections}
         onNavigate={handleNavigate}
         activeItem={activePage}
@@ -1989,7 +1979,7 @@ export const PartnerDashboard: React.FC = () => {
       <PartnerLayout
         organizations={organizations}
         selectedOrg={selectedOrg}
-        onSelectOrg={setSelectedOrg}
+        onSelectOrg={setUrlSelectedOrg}
         navSections={navSections}
         onNavigate={handleNavigate}
         activeItem={activePage}
@@ -2014,7 +2004,7 @@ export const PartnerDashboard: React.FC = () => {
     <PartnerLayout
       organizations={organizations}
       selectedOrg={selectedOrg}
-      onSelectOrg={setSelectedOrg}
+      onSelectOrg={setUrlSelectedOrg}
       navSections={navSections}
       onNavigate={handleNavigate}
       activeItem={activePage}
