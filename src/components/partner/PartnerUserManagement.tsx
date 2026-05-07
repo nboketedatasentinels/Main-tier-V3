@@ -52,7 +52,12 @@ import UserNudgeHistoryPanel from '@/components/partner/nudges/UserNudgeHistoryP
 import { type PointsVerificationRequest } from '@/services/pointsVerificationService'
 import { getDisplayName } from '@/utils/displayName'
 
-export type PartnerUserManagementTab = 'users' | 'risk' | 'leaders' | 'approvals'
+export type PartnerUserManagementTab = 'paid' | 'free' | 'risk' | 'leaders' | 'approvals' | 'users'
+
+// Backwards-compat: routes / bookmarks may still pass the legacy 'users' tab key.
+// Treat it as the primary 'paid' tab so old links don't 404 in the UI.
+const normalizeTab = (tab: PartnerUserManagementTab): Exclude<PartnerUserManagementTab, 'users'> =>
+  tab === 'users' ? 'paid' : tab
 
 interface PartnerUserManagementProps {
   users: PartnerUser[]
@@ -135,10 +140,12 @@ export const PartnerUserManagement: React.FC<PartnerUserManagementProps> = ({
   selectedOrg,
   onSelectOrg,
   updateUserPoints,
-  initialTab = 'users',
+  initialTab = 'paid',
   onStartIntervention,
 }) => {
-  const [activeTab, setActiveTab] = useState<PartnerUserManagementTab>(initialTab)
+  const [activeTab, setActiveTab] = useState<Exclude<PartnerUserManagementTab, 'users'>>(
+    normalizeTab(initialTab),
+  )
   const [sortKey, setSortKey] = useState('lastActive')
   const [sortDir, setSortDir] = useState<'asc' | 'desc'>('desc')
   const [page, setPage] = useState(1)
@@ -208,15 +215,32 @@ export const PartnerUserManagement: React.FC<PartnerUserManagementProps> = ({
     return users.filter((user) => user.companyCode?.toLowerCase() === companyCode)
   }, [organizationCodeLookup, users, selectedOrg])
 
+  // Split filtered users into paid vs free tiers. The membershipTier field is
+  // derived in usePartnerAdminData from the raw profile role: 'free_user' →
+  // 'free', otherwise 'paid'. Default to 'paid' when missing so legacy docs
+  // without the field don't disappear from the UI entirely.
+  const paidUsers = useMemo(
+    () => filtered.filter((user) => (user.membershipTier ?? 'paid') === 'paid'),
+    [filtered],
+  )
+  const freeUsers = useMemo(
+    () => filtered.filter((user) => user.membershipTier === 'free'),
+    [filtered],
+  )
+
+  // Tab-specific source list: paid tab paginates paid users, free tab the free
+  // ones. The risk/leaders/approvals tabs draw from the full filtered list.
+  const tabSourceUsers = activeTab === 'free' ? freeUsers : paidUsers
+
   const sorted = useMemo(() => {
-    return [...filtered].sort((a, b) => {
+    return [...tabSourceUsers].sort((a, b) => {
       const aVal = getSortableValue(a, sortKey)
       const bVal = getSortableValue(b, sortKey)
       if (aVal < bVal) return sortDir === 'asc' ? -1 : 1
       if (aVal > bVal) return sortDir === 'asc' ? 1 : -1
       return 0
     })
-  }, [filtered, sortDir, sortKey])
+  }, [tabSourceUsers, sortDir, sortKey])
 
   const totalPages = Math.max(1, Math.ceil(sorted.length / PAGE_SIZE))
   const paginated = sorted.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE)
@@ -232,14 +256,14 @@ export const PartnerUserManagement: React.FC<PartnerUserManagementProps> = ({
 
   useEffect(() => {
     setPage(1)
-  }, [selectedOrg])
+  }, [selectedOrg, activeTab])
 
   useEffect(() => {
     setSelection([])
   }, [activeTab])
 
   useEffect(() => {
-    setActiveTab(initialTab)
+    setActiveTab(normalizeTab(initialTab))
   }, [initialTab])
 
   useEffect(() => {
@@ -675,12 +699,22 @@ export const PartnerUserManagement: React.FC<PartnerUserManagementProps> = ({
 
       <HStack spacing={3} wrap="wrap">
         <Button
-          variant={activeTab === 'users' ? 'solid' : 'ghost'}
+          variant={activeTab === 'paid' ? 'solid' : 'ghost'}
           colorScheme="purple"
           size="sm"
-          onClick={() => setActiveTab('users')}
+          onClick={() => setActiveTab('paid')}
+          rightIcon={<Badge colorScheme="purple">{paidUsers.length}</Badge>}
         >
-          Users
+          Paid Members
+        </Button>
+        <Button
+          variant={activeTab === 'free' ? 'solid' : 'ghost'}
+          colorScheme="purple"
+          size="sm"
+          onClick={() => setActiveTab('free')}
+          rightIcon={<Badge colorScheme="gray">{freeUsers.length}</Badge>}
+        >
+          Free Users
         </Button>
         <Button
           variant={activeTab === 'risk' ? 'solid' : 'ghost'}
@@ -710,8 +744,24 @@ export const PartnerUserManagement: React.FC<PartnerUserManagementProps> = ({
         </Button>
       </HStack>
 
-      {activeTab === 'users' && (
+      {(activeTab === 'paid' || activeTab === 'free') && (
         <Stack spacing={4}>
+          {activeTab === 'free' && (
+            <Box
+              p={3}
+              borderRadius="md"
+              border="1px solid"
+              borderColor="brand.border"
+              bg="brand.accent"
+            >
+              <Text fontSize="xs" color="brand.subtleText">
+                Free users haven't enrolled in a paid journey, so points, week,
+                and risk values reflect platform engagement rather than journey
+                progress. Use Last Active and onboarding completion to gauge
+                interest.
+              </Text>
+            </Box>
+          )}
           <Box overflowX="auto">
           <Table size="sm" variant="simple" w="100%">
             {renderTableHeader()}
@@ -735,9 +785,9 @@ export const PartnerUserManagement: React.FC<PartnerUserManagementProps> = ({
                     <HStack spacing={3} py={6} justify="center">
                       <CheckCircle2 color="green" />
                       <Text color="brand.subtleText">
-                        {usersLoading
-                          ? 'Loading learners...'
-                          : 'No learners found for the selected company'}
+                        {activeTab === 'free'
+                          ? 'No free users in the selected company'
+                          : 'No paid members in the selected company'}
                       </Text>
                     </HStack>
                   </Td>
