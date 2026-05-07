@@ -40,6 +40,7 @@ import { PartnerLayout } from '@/layouts/PartnerLayout'
 import { db } from '@/services/firebase'
 import { useAuth } from '@/hooks/useAuth'
 import { usePartnerOrganizations } from '@/hooks/partner/usePartnerOrganizations'
+import { usePartnerSelectedOrg } from '@/hooks/partner/usePartnerSelectedOrg'
 import { useLearnerOverview, type LearnerOverviewRow } from '@/hooks/useLearnerOverview'
 import {
   assignMentorToLearner,
@@ -69,12 +70,21 @@ export const LearnerAssignmentsPage: React.FC = () => {
         navigate('/partner/partner-assignment')
         return
       }
-      navigate('/partner/dashboard')
+      if (key === 'course-approvals') {
+        navigate('/partner/course-approvals')
+        return
+      }
+      if (key === 'overview') {
+        navigate('/partner/dashboard')
+        return
+      }
+      navigate(`/partner/dashboard?page=${encodeURIComponent(key)}`)
     },
     [navigate],
   )
 
-  const [selectedOrgId, setSelectedOrgId] = useState<string>('')
+  const { selectedOrg: selectedOrgId, setSelectedOrg: setSelectedOrgId } =
+    usePartnerSelectedOrg()
   const [orgJourneyType, setOrgJourneyType] = useState<string | null>(null)
   const [mentors, setMentors] = useState<OrgMentorOption[]>([])
   const [mentorsLoading, setMentorsLoading] = useState(false)

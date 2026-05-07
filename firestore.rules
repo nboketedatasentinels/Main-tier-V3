@@ -960,6 +960,22 @@ service cloud.firestore {
       allow delete: if isSuperAdmin();
     }
 
+    // Course completions — partner-verified course finishes that drive the
+    // "Completed" badge on the learner's MyCourses page and the LIFT module
+    // points award. Learners can read their own; only partners/super admins
+    // can create or update.
+    match /course_completions/{completionId} {
+      allow read: if isAuthenticated() && (
+        request.auth.uid == resource.data.userId ||
+        isPartnerOrAdmin()
+      );
+      allow create, update: if isPartnerOrAdmin()
+        && request.resource.data.userId is string
+        && request.resource.data.courseId is string
+        && request.resource.data.approvedBy == request.auth.uid;
+      allow delete: if isSuperAdmin();
+    }
+
     // System health alerts
     match /system_health_alerts/{alertId} {
       allow read: if isPartnerOrAdmin();

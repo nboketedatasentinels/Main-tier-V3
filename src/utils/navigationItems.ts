@@ -11,7 +11,6 @@ import {
   Settings,
   Sparkles,
   TrendingUp,
-  UserCheck,
   Users,
   UserSquare2,
   Workflow,
@@ -69,13 +68,10 @@ export const buildPartnerNavItems = (): NavigationSection[] => [
     title: 'Administration',
     items: [
       { key: 'overview', label: 'Overview', icon: LayoutDashboard },
-      { key: 'at-risk', label: 'At-Risk Command Panel', icon: TrendingUp },
       { key: 'users', label: 'User Management', icon: Users },
-      { key: 'learner-assignments', label: 'Learner Assignments', icon: UserCheck },
       { key: 'partner-assignment', label: 'Issue Activities', icon: ClipboardCheck },
+      { key: 'course-approvals', label: 'Course Approvals', icon: BookOpen },
       { key: 'organization-management', label: 'Organizations', icon: Building2 },
-      { key: 'reports', label: 'Reports', icon: BarChart3 },
-      { key: 'settings', label: 'Settings', icon: Settings },
     ],
   },
 ]

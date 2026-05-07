@@ -32,6 +32,10 @@
  *   # Process every learner in an org:
  *   node scripts/recover-impact-log-points.mjs --code ORGPJW
  *   node scripts/recover-impact-log-points.mjs --code ORGPJW --apply
+ *
+ *   # Process every learner platform-wide:
+ *   node scripts/recover-impact-log-points.mjs --all
+ *   node scripts/recover-impact-log-points.mjs --all --apply
  */
 
 import { initializeApp, cert } from 'firebase-admin/app'
@@ -51,9 +55,10 @@ const isApply = flag('--apply')
 const uidFilter = valueOf('--uid')
 const orgCode = valueOf('--code')
 const orgId = valueOf('--org')
+const isAll = flag('--all')
 
-if (!uidFilter && !orgCode && !orgId) {
-  console.error('Provide --uid <uid> or --code <orgCode> or --org <orgId>')
+if (!uidFilter && !orgCode && !orgId && !isAll) {
+  console.error('Provide --uid <uid> or --code <orgCode> or --org <orgId> or --all')
   process.exit(1)
 }
 
@@ -74,6 +79,10 @@ const fmt = (n) => num(n).toLocaleString('en-US')
 
 const collectTargetUids = async () => {
   if (uidFilter) return [uidFilter]
+  if (isAll) {
+    const snap = await db.collection('profiles').get()
+    return snap.docs.map((d) => d.id)
+  }
   let q = db.collection('profiles')
   q = orgId ? q.where('companyId', '==', orgId) : q.where('companyCode', '==', orgCode)
   const snap = await q.get()
@@ -145,15 +154,24 @@ const recoverOne = async (uid) => {
   const proposedTotal = existingLedgerSum + recoverPoints
   const proposedLevel = calculateLevel(proposedTotal)
 
-  console.log(
-    `\n${name}  (${uid})`,
-    `\n  current: profiles=${fmt(currentProfileTotal)} users=${fmt(currentUserTotal)}`,
-    `\n  ledger now: ${fmt(existingLedgerSum)} (${fullLedgerSnap.size} entries)`,
-    `\n  impact-log txs to recover: ${toCreate} entries worth ${fmt(recoverPoints)} pts`,
-    `\n  proposed final total: ${fmt(proposedTotal)} (level ${proposedLevel})`,
-  )
+  const hasDrift =
+    toCreate > 0 ||
+    currentProfileTotal !== proposedTotal ||
+    currentUserTotal !== proposedTotal
 
-  if (!isApply) return { uid, toCreate, recoverPoints, proposedTotal }
+  // In --all mode, only print users that need a change to keep the log readable.
+  // For single-user / single-org runs, print everyone for full visibility.
+  if (!isAll || hasDrift) {
+    console.log(
+      `\n${name}  (${uid})`,
+      `\n  current: profiles=${fmt(currentProfileTotal)} users=${fmt(currentUserTotal)}`,
+      `\n  ledger now: ${fmt(existingLedgerSum)} (${fullLedgerSnap.size} entries)`,
+      `\n  impact-log txs to recover: ${toCreate} entries worth ${fmt(recoverPoints)} pts`,
+      `\n  proposed final total: ${fmt(proposedTotal)} (level ${proposedLevel})`,
+    )
+  }
+
+  if (!isApply) return { uid, toCreate, recoverPoints, proposedTotal, hasDrift }
 
   if (toCreate === 0 && currentProfileTotal === proposedTotal && currentUserTotal === proposedTotal) {
     console.log('  [skip] already correct')
@@ -203,17 +221,21 @@ const main = async () => {
 
   let totalRecovered = 0
   let usersChanged = 0
+  let usersWithMirrorDrift = 0
   for (const uid of uids) {
     const r = await recoverOne(uid)
     if (r.toCreate > 0) {
       usersChanged += 1
       totalRecovered += r.recoverPoints
     }
+    if (r.hasDrift) usersWithMirrorDrift += 1
   }
 
   console.log('\n' + '='.repeat(60))
-  console.log(`Users with recoverable points: ${usersChanged} / ${uids.length}`)
-  console.log(`Total points to recover:       ${fmt(totalRecovered)}`)
+  console.log(`Users scanned:                  ${uids.length}`)
+  console.log(`Users with any drift:           ${usersWithMirrorDrift}`)
+  console.log(`Users with recoverable points:  ${usersChanged}`)
+  console.log(`Total points to recover:        ${fmt(totalRecovered)}`)
   if (!isApply) console.log('\nRe-run with --apply to commit.')
 }
 
