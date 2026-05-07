@@ -105,8 +105,8 @@ const getSortableValue = (user: PartnerUser, key: string) => {
       return getDisplayName(user, 'Member')
     case 'company':
       return user.companyCode
-    case 'progress':
-      return user.progressPercent
+    case 'points':
+      return user.totalPoints ?? 0
     case 'week':
       return user.currentWeek
     case 'status':
@@ -180,14 +180,15 @@ export const PartnerUserManagement: React.FC<PartnerUserManagementProps> = ({
   })
 
   const organizationOptions = useMemo(
-    () => [
-      { code: 'all', name: 'All Companies' },
-      ...organizations.map((org) => ({
+    () =>
+      organizations.map((org) => ({
         ...org,
+        // Match the header dropdown's value shape so both selectors round-trip
+        // through the URL ?org= param consistently.
+        value: org.id || org.code || 'unknown',
         code: org.code || org.id || 'unknown',
         name: org.name || org.code || org.id || 'Unknown organization',
       })),
-    ],
     [organizations],
   )
 
@@ -488,7 +489,7 @@ export const PartnerUserManagement: React.FC<PartnerUserManagementProps> = ({
     risk: '70px',
     name: '180px',
     company: '80px',
-    progress: '90px',
+    points: '90px',
     week: '60px',
     status: '70px',
     lastActive: '80px',
@@ -499,10 +500,10 @@ export const PartnerUserManagement: React.FC<PartnerUserManagementProps> = ({
     <Thead>
       <Tr>
         <Th width={columnWidths.expand} px={1}></Th>
-        {['Risk', 'Name/Email', 'Company', 'Progress', 'Week', 'Status', 'Active', 'Action'].map((header, idx) => {
-          const sortMapping = ['risk', 'name', 'company', 'progress', 'week', 'status', 'lastActive', 'action']
+        {['Risk', 'Name/Email', 'Company', 'Points', 'Week', 'Status', 'Active', 'Action'].map((header, idx) => {
+          const sortMapping = ['risk', 'name', 'company', 'points', 'week', 'status', 'lastActive', 'action']
           const key = sortMapping[idx] || 'name'
-          const widthKey = ['risk', 'name', 'company', 'progress', 'week', 'status', 'lastActive', 'action'][idx]
+          const widthKey = ['risk', 'name', 'company', 'points', 'week', 'status', 'lastActive', 'action'][idx]
           return (
             <Th
               key={header}
@@ -552,20 +553,9 @@ export const PartnerUserManagement: React.FC<PartnerUserManagementProps> = ({
           </Td>
           <Td px={2} fontSize="sm" textTransform="capitalize">{user.companyCode || '—'}</Td>
           <Td px={2}>
-            <HStack spacing={1}>
-              <Box bg="brand.accent" borderRadius="full" h="6px" w="50px" position="relative">
-                <Box
-                  position="absolute"
-                  left={0}
-                  top={0}
-                  bottom={0}
-                  borderRadius="full"
-                  bg="indigo.500"
-                  width={`${user.progressPercent}%`}
-                />
-              </Box>
-              <Text fontSize="xs">{user.progressPercent}%</Text>
-            </HStack>
+            <Text fontSize="sm" fontWeight="semibold" color="brand.text">
+              {(user.totalPoints ?? 0).toLocaleString()}
+            </Text>
           </Td>
           <Td px={2} fontSize="sm">{user.currentWeek}</Td>
           <Td px={2}>
@@ -676,7 +666,7 @@ export const PartnerUserManagement: React.FC<PartnerUserManagementProps> = ({
         </Stack>
         <Select maxW="240px" value={selectedOrg} onChange={e => onSelectOrg(e.target.value)}>
           {organizationOptions.map(org => (
-            <option key={org.code} value={org.code}>
+            <option key={org.value} value={org.value}>
               {org.name}
             </option>
           ))}
@@ -792,7 +782,7 @@ export const PartnerUserManagement: React.FC<PartnerUserManagementProps> = ({
                 </Th>
                 <Th px={2} fontSize="xs">Name/Email</Th>
                 <Th px={2} fontSize="xs">Company</Th>
-                <Th px={2} fontSize="xs">Progress</Th>
+                <Th px={2} fontSize="xs">Points</Th>
                 <Th px={2} fontSize="xs">Week</Th>
                 <Th px={2} fontSize="xs">Status</Th>
                 <Th px={2} fontSize="xs">Active</Th>
@@ -830,20 +820,9 @@ export const PartnerUserManagement: React.FC<PartnerUserManagementProps> = ({
                   </Td>
                   <Td px={2} fontSize="sm" textTransform="capitalize">{user.companyCode || '—'}</Td>
                   <Td px={2}>
-                    <HStack spacing={1}>
-                      <Box bg="red.50" borderRadius="full" h="6px" w="50px" position="relative">
-                        <Box
-                          position="absolute"
-                          left={0}
-                          top={0}
-                          bottom={0}
-                          borderRadius="full"
-                          bg="red.400"
-                          width={`${user.progressPercent}%`}
-                        />
-                      </Box>
-                      <Text fontSize="xs">{user.progressPercent}%</Text>
-                    </HStack>
+                    <Text fontSize="sm" fontWeight="semibold" color="brand.text">
+                      {(user.totalPoints ?? 0).toLocaleString()}
+                    </Text>
                   </Td>
                   <Td px={2} fontSize="sm">{user.currentWeek}</Td>
                   <Td px={2}>

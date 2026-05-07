@@ -71,6 +71,10 @@ export interface PartnerUser {
   adminNotes?: string
   totalPoints?: number
   journeyType?: string
+  onboardingComplete?: boolean
+  onboardingSkipped?: boolean
+  hasCompletedPersonalityTest?: boolean
+  hasCompletedValuesTest?: boolean
 }
 
 type FirestorePartnerUser = Partial<PartnerUser> & {
@@ -103,6 +107,10 @@ type FirestorePartnerUser = Partial<PartnerUser> & {
   nudge_enabled?: boolean
   admin_notes?: string
   journeyType?: string // Added for 6W at-risk logic
+  onboardingComplete?: boolean
+  onboardingSkipped?: boolean
+  hasCompletedPersonalityTest?: boolean
+  hasCompletedValuesTest?: boolean
 }
 
 export interface PartnerAdminAnalytics {
@@ -505,7 +513,13 @@ export const usePartnerAdminData = (
             })
             const scoped = snapshot.docs.map((docSnap) => {
               const data = docSnap.data() as Partial<PartnerOrganization> & OrganizationRecord
-              const cohortStart = normalizeTimestamp(data.cohortStartDate || data.programStart)
+              // Fallback chain so the partner dashboard's journey progress bar
+              // works for any org configured with a journey, even if an explicit
+              // cohort start hasn't been set: cohortStartDate → programStart →
+              // createdAt (the org's "added" date).
+              const cohortStart = normalizeTimestamp(
+                data.cohortStartDate || data.programStart || data.createdAt
+              )
               return {
                 id: docSnap.id,
                 code: data.code || docSnap.id,
@@ -538,7 +552,13 @@ export const usePartnerAdminData = (
             })
             const scoped = assignedOrgs.map((org) => {
               const data = org as OrganizationRecord & Partial<PartnerOrganization>
-              const cohortStart = normalizeTimestamp(data.cohortStartDate || data.programStart)
+              // Fallback chain so the partner dashboard's journey progress bar
+              // works for any org configured with a journey, even if an explicit
+              // cohort start hasn't been set: cohortStartDate → programStart →
+              // createdAt (the org's "added" date).
+              const cohortStart = normalizeTimestamp(
+                data.cohortStartDate || data.programStart || data.createdAt
+              )
               return {
                 id: data.id,
                 code: data.code || data.id || '',
@@ -1062,6 +1082,10 @@ export const usePartnerAdminData = (
                 adminNotes: data.adminNotes ?? data.admin_notes ?? '',
                 totalPoints: userTotalPoints,
                 journeyType: userJourneyType || undefined,
+                onboardingComplete: data.onboardingComplete === true,
+                onboardingSkipped: data.onboardingSkipped === true,
+                hasCompletedPersonalityTest: data.hasCompletedPersonalityTest === true,
+                hasCompletedValuesTest: data.hasCompletedValuesTest === true,
               })
             } catch (err) {
               logger.error('[PartnerAdminData] Failed to transform user record', {
