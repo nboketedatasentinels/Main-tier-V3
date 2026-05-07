@@ -346,10 +346,19 @@ const BASE_ACTIVITY_DEFINITIONS: BaseActivityEntry[] = [
     flexibleWeeks: true,
     frequencyNote: "Share your learning journey publicly.",
   },
-  // book_club removed per Partner App Review — book club sessions now count
-  // as peer_to_peer. The 'book_club' literal stays in the ActivityId union
-  // so existing pointsLedger entries written before this change remain
-  // type-valid; we just stop offering it as a claimable activity.
+  {
+    id: "book_club",
+    baseId: "book_club",
+    title: "Attend Book Club Session",
+    description: "Participate in a book club discussion session.",
+    points: 2500,
+    behaviorType: "window_limited",
+    approvalType: "partner_issued",
+    week: 4,
+    category: "Community",
+    flexibleWeeks: true,
+    frequencyNote: "Attend book club sessions as scheduled.",
+  },
   {
     id: "peer_matching",
     baseId: "peer_matching",
@@ -432,6 +441,7 @@ const JOURNEY_ACTIVITY_CONFIG: Partial<Record<JourneyType, JourneyActivityEntry[
     { activityId: "webinar_workbook", totalFrequency: 1, pointsOverride: 3000 },
     { activityId: "impact_log", totalFrequency: 2 },
     { activityId: "lift_module", totalFrequency: 1 },
+    { activityId: "book_club", totalFrequency: 1, pointsOverride: 1500 },
     { activityId: "shameless_circle", totalFrequency: 1, pointsOverride: 1500 },
     { activityId: "ai_tool_review", totalFrequency: 1 },
   ],
@@ -443,6 +453,7 @@ const JOURNEY_ACTIVITY_CONFIG: Partial<Record<JourneyType, JourneyActivityEntry[
     { activityId: "impact_log", totalFrequency: 4, pointsOverride: 2000 },
     { activityId: "lift_module", totalFrequency: 2, pointsOverride: 7000 },
     { activityId: "linkedin", totalFrequency: 3 },
+    { activityId: "book_club", totalFrequency: 1 },
     { activityId: "peer_matching", totalFrequency: 3 },
     { activityId: "challenger", totalFrequency: 3 },
   ],
@@ -454,6 +465,7 @@ const JOURNEY_ACTIVITY_CONFIG: Partial<Record<JourneyType, JourneyActivityEntry[
     { activityId: "impact_log", totalFrequency: 6 },
     { activityId: "lift_module", totalFrequency: 3 },
     { activityId: "linkedin", totalFrequency: 7 },
+    { activityId: "book_club", totalFrequency: 3 },
     { activityId: "peer_matching", totalFrequency: 12 },
     { activityId: "challenger", totalFrequency: 6 },
     { activityId: "mentor_meetup", totalFrequency: 3 },
@@ -467,6 +479,7 @@ const JOURNEY_ACTIVITY_CONFIG: Partial<Record<JourneyType, JourneyActivityEntry[
     { activityId: "impact_log", totalFrequency: 12 },
     { activityId: "lift_module", totalFrequency: 6 },
     { activityId: "linkedin", totalFrequency: 14 },
+    { activityId: "book_club", totalFrequency: 6 },
     { activityId: "peer_matching", totalFrequency: 24 },
     { activityId: "challenger", totalFrequency: 12 },
     { activityId: "mentor_meetup", totalFrequency: 6 },
@@ -480,6 +493,7 @@ const JOURNEY_ACTIVITY_CONFIG: Partial<Record<JourneyType, JourneyActivityEntry[
     { activityId: "impact_log", totalFrequency: 18 },
     { activityId: "lift_module", totalFrequency: 9 },
     { activityId: "linkedin", totalFrequency: 21 },
+    { activityId: "book_club", totalFrequency: 9 },
     { activityId: "peer_matching", totalFrequency: 36 },
     { activityId: "challenger", totalFrequency: 18 },
     { activityId: "mentor_meetup", totalFrequency: 9 },
