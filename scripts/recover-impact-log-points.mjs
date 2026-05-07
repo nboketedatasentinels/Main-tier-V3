@@ -187,7 +187,12 @@ const recoverOne = async (uid) => {
     const ledgerRef = db.collection('pointsLedger').doc(w.ledgerId)
     batch.set(ledgerRef, {
       uid,
-      activityId: 'impact_log_entry',
+      // Use the catalog activityId 'impact_log' so cap-aware reconcilers
+      // recognize these as legitimate impact_log activities (subject to the
+      // journey's totalFrequency cap). A previous version of this script
+      // wrote 'impact_log_entry' which didn't match the catalog and caused
+      // every recovered entry to be flagged as orphan / over-cap.
+      activityId: 'impact_log',
       points: w.points,
       source: 'impact_log_recovery',
       claimRef: w.sourceId ?? null,
