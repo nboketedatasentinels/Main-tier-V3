@@ -66,12 +66,10 @@ export const PartnerLayout: React.FC<PartnerLayoutProps> = ({
   const mobileLabelByKey = React.useMemo<Record<string, string>>(
     () => ({
       overview: 'Overview',
-      'at-risk': 'At-Risk',
       users: 'Users',
       'partner-assignment': 'Issue',
+      'course-approvals': 'Approvals',
       'organization-management': 'Orgs',
-      reports: 'Reports',
-      settings: 'Settings',
     }),
     [],
   )
@@ -264,12 +262,15 @@ export const PartnerLayout: React.FC<PartnerLayoutProps> = ({
         w={{ base: 'full', md: '240px' }}
         minW={{ base: 'full', md: '200px' }}
         maxW="280px"
-        value={selectedOrg}
+        value={selectedOrg || 'all'}
         onChange={e => onSelectOrg(e.target.value)}
         bg="white"
         borderColor="brand.border"
+        aria-label="Organization filter"
       >
-        <option value="all">All Companies</option>
+        {orgOptions.length > 1 && (
+          <option value="all">All organizations ({orgOptions.length})</option>
+        )}
         {orgOptions.map(org => (
           <option key={org.id || org.code} value={org.id || org.code}>
             {org.name}

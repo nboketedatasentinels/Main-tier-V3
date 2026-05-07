@@ -323,7 +323,7 @@ const BASE_ACTIVITY_DEFINITIONS: BaseActivityEntry[] = [
     baseId: "lift_module",
     title: "LIFT Course Module Completed",
     description: "Complete a LIFT course module. Points awarded by your partner.",
-    points: 3000,
+    points: 7000,
     behaviorType: "window_limited",
     approvalType: "partner_issued",
     week: 2,
