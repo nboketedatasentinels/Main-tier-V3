@@ -11,6 +11,7 @@ import { getActivityDefinitionById, JourneyType } from "@/config/pointsConfig";
 import { UserProfile } from "@/types";
 import { createApprovalRequest } from "./approvalsService";
 import { upsertChecklistActivity } from "./checklistService";
+import { awardChecklistPoints } from "./pointsService";
 
 const chunkList = <T,>(items: T[], size: number): T[][] => {
   const chunks: T[][] = []
@@ -77,28 +78,42 @@ export async function assignActivityToLearner(params: {
     }
 
     const profile = profileSnap.data() as UserProfile;
-    const journeyType = profile.journeyType || "6W";
+    const journeyType = (profile.journeyType || "6W") as JourneyType;
 
-    // 2. Find activity definition
-    const activity = getActivityDefinitionById({ activityId, journeyType: journeyType as JourneyType });
+    // 2. Find activity definition (applies journey-specific points overrides)
+    const activity = getActivityDefinitionById({ activityId, journeyType });
     if (!activity) {
       throw new Error("Activity definition not found");
     }
 
-    // 3. Mark activity as partner-issued in checklist.
-    // Learner still completes the activity to claim points.
+    // 3. Award points atomically. awardChecklistPoints is idempotent on
+    // (uid, weekNumber, activityId) — the same ledger doc id self-completion
+    // would write to — so partner re-issues and learner self-completes can't
+    // double-award. Throws on activity-limit violations.
+    await awardChecklistPoints({
+      uid: learnerId,
+      journeyType,
+      weekNumber,
+      activity,
+      source: 'partner_issued',
+    });
+
+    // 4. Mark the activity completed in the learner's checklist with
+    // partner-issued metadata, so the learner can't try to self-claim again
+    // and the UI shows it as already done.
     await upsertChecklistActivity({
       userId: learnerId,
       weekNumber,
       activityId,
       patch: {
+        status: 'completed',
         issuedByPartner: true,
         issuedBy: normalizedPartnerId,
         issuedAt: new Date().toISOString(),
       },
     });
 
-    // 4. Create an approval record for history (issued event).
+    // 5. Audit record for partner action history.
     await createApprovalRequest({
       userId: learnerId,
       type: 'partner_issued',
