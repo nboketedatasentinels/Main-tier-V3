@@ -323,7 +323,15 @@ const BASE_ACTIVITY_DEFINITIONS: BaseActivityEntry[] = [
     baseId: "lift_module",
     title: "LIFT Course Module Completed",
     description: "Complete a LIFT course module. Points awarded by your partner.",
-    points: 7000,
+    // Base value used by journeys without an explicit pointsOverride.
+    // 6W has its own override of 7,000 (matching the guideline's
+    // 'LIFT Course Module Completed: 2 × 7,000 = 14,000'). Earlier
+    // change set this base to 7,000, which made 4W (no override) compute
+    // 19,000 max instead of its configured 15,000 and crashed the app at
+    // module init via the maxPossiblePoints invariant. 3,000 keeps 4W,
+    // 3M, 6M, 9M at their original max while 6W still gets 7,000 via
+    // the override.
+    points: 3000,
     behaviorType: "window_limited",
     approvalType: "partner_issued",
     week: 2,
