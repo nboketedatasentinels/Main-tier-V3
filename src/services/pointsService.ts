@@ -238,31 +238,39 @@ export async function awardChecklistPoints(params: {
     const villageId = profileData?.villageId || null;
     const clusterId = profileData?.clusterId || null;
 
+    // Partner-issued awards bypass activity-frequency caps and cooldown:
+    // the partner's verification is the authoritative signal, and idempotency
+    // is still preserved by the deterministic ledger doc id below.
+    const bypassLimits = source === 'partner_issued';
+
     await runTransactionWithRetry(async (tx) => {
-      const [ledgerDoc, progressDoc, userDoc] = await Promise.all([
+      const [ledgerDoc, progressDoc, userDoc, profileDoc] = await Promise.all([
         tx.get(ledgerRef),
         tx.get(progressRef),
         tx.get(doc(db, "users", uid)),
+        tx.get(doc(db, "profiles", uid)),
       ]);
 
       if (ledgerDoc.exists()) return;
 
-      if (limits.maxPerWeek && weeklyActivitySnapshot.size >= limits.maxPerWeek) {
-        throw new Error("Weekly activity limit reached");
-      }
+      if (!bypassLimits) {
+        if (limits.maxPerWeek && weeklyActivitySnapshot.size >= limits.maxPerWeek) {
+          throw new Error("Weekly activity limit reached");
+        }
 
-      if (limits.maxPerWindow && windowActivitySnapshot.size >= limits.maxPerWindow) {
-        throw new Error("Window activity limit reached");
-      }
+        if (limits.maxPerWindow && windowActivitySnapshot.size >= limits.maxPerWindow) {
+          throw new Error("Window activity limit reached");
+        }
 
-      if (limits.maxTotal && totalActivitySnapshot.size >= limits.maxTotal) {
-        throw new Error("Total activity limit reached");
-      }
+        if (limits.maxTotal && totalActivitySnapshot.size >= limits.maxTotal) {
+          throw new Error("Total activity limit reached");
+        }
 
-      if (activity.cooldownWeeks && lastActivitySnapshot.size > 0) {
-        const lastWeekNumber = lastActivitySnapshot.docs[0]?.data()?.weekNumber as number | undefined;
-        if (lastWeekNumber && weekNumber - lastWeekNumber <= activity.cooldownWeeks) {
-          throw new Error("Activity cooldown in effect");
+        if (activity.cooldownWeeks && lastActivitySnapshot.size > 0) {
+          const lastWeekNumber = lastActivitySnapshot.docs[0]?.data()?.weekNumber as number | undefined;
+          if (lastWeekNumber && weekNumber - lastWeekNumber <= activity.cooldownWeeks) {
+            throw new Error("Activity cooldown in effect");
+          }
         }
       }
 
@@ -337,8 +345,16 @@ export async function awardChecklistPoints(params: {
         updatedAt: serverTimestamp(),
       };
 
-      tx.set(doc(db, "users", uid), profileUpdate, { merge: true });
-      tx.set(doc(db, "profiles", uid), profileUpdate, { merge: true });
+      // Mirror writes: only touch docs that already exist. For partner-issued
+      // awards the partner cannot create users/profiles docs (rules require
+      // owner/super_admin), so a missing mirror doc would otherwise fail the
+      // whole transaction. pointsLedger remains canonical; reconcile rehydrates.
+      if (userDoc.exists()) {
+        tx.set(doc(db, "users", uid), profileUpdate, { merge: true });
+      }
+      if (profileDoc.exists()) {
+        tx.set(doc(db, "profiles", uid), profileUpdate, { merge: true });
+      }
 
       // Record transaction for leaderboard and activity feeds
       tx.set(doc(collection(db, "points_transactions")), {

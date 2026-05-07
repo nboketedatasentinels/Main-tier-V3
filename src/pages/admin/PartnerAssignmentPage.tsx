@@ -115,10 +115,15 @@ export const PartnerAssignmentPage: React.FC = () => {
       setSelectedLearners([]);
     } catch (error) {
       console.error(error);
+      const message = error instanceof Error && error.message
+        ? error.message
+        : 'Something went wrong while issuing the activity.';
       toast({
         title: 'Issue failed',
-        description: 'Something went wrong while issuing the activity.',
-        status: 'error'
+        description: message,
+        status: 'error',
+        duration: 9000,
+        isClosable: true,
       });
     } finally {
       setLoading(false);
