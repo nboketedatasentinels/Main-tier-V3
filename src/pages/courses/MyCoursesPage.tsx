@@ -16,12 +16,14 @@ import {
   Divider,
   Tooltip,
 } from '@chakra-ui/react'
-import { BookOpen, Clock, ExternalLink, Sparkles, ArrowUpRight, CheckCircle2, CalendarDays, Lock } from 'lucide-react'
+import { BookOpen, Clock, ExternalLink, Sparkles, ArrowUpRight, CheckCircle2, CalendarDays, Lock, ShieldCheck } from 'lucide-react'
 import { Link as RouterLink } from 'react-router-dom'
 import { addDays } from 'date-fns'
 import { useAuth } from '@/hooks/useAuth'
 import { useOrganizationProgramCourses } from '@/hooks/useOrganizationProgramCourses'
 import { useUserCourseProgress } from '@/hooks/useUserCourseProgress'
+import { useUserCourseCompletions } from '@/hooks/useUserCourseCompletions'
+import type { CourseCompletionRecord } from '@/services/courseCompletionService'
 import { getCourseDocument, getCourseDocuments } from '@/services/courseService'
 import { canAccessCourse, isFreeUser } from '@/utils/membership'
 import {
@@ -129,6 +131,78 @@ const getWeekAvailabilityStatus = (params: {
   return 'current'
 }
 
+const resolveCourseCompletion = (
+  completionsByKey: Map<string, CourseCompletionRecord>,
+  course: { id?: string; title?: string },
+): CourseCompletionRecord | undefined => {
+  if (!course) return undefined
+  if (course.id) {
+    const direct = completionsByKey.get(course.id) ?? completionsByKey.get(course.id.trim().toLowerCase())
+    if (direct) return direct
+  }
+  if (course.title) {
+    const byTitle = completionsByKey.get(course.title.trim().toLowerCase())
+    if (byTitle) return byTitle
+  }
+  return undefined
+}
+
+const formatCompletionDate = (value?: Date | null) => {
+  if (!value) return null
+  try {
+    return value.toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })
+  } catch {
+    return null
+  }
+}
+
+interface CourseCompletionBadgeProps {
+  completion?: CourseCompletionRecord
+  /** Hide the awaiting hint when the course is locked or otherwise unavailable. */
+  showAwaitingHint?: boolean
+}
+
+const CourseCompletionStatus: React.FC<CourseCompletionBadgeProps> = ({ completion, showAwaitingHint = true }) => {
+  if (completion) {
+    const formattedDate = formatCompletionDate(completion.approvedAt)
+    return (
+      <HStack
+        spacing={2}
+        bg="green.50"
+        border="1px solid"
+        borderColor="green.200"
+        borderRadius="full"
+        px={3}
+        py={1}
+      >
+        <Icon as={CheckCircle2} color="green.600" boxSize={4} />
+        <Text fontSize="xs" color="green.800" fontWeight="semibold">
+          Completed
+          {completion.points ? ` · +${completion.points.toLocaleString()} pts` : ''}
+          {formattedDate ? ` · ${formattedDate}` : ''}
+        </Text>
+      </HStack>
+    )
+  }
+  if (!showAwaitingHint) return null
+  return (
+    <HStack
+      spacing={2}
+      bg="purple.50"
+      border="1px solid"
+      borderColor="purple.100"
+      borderRadius="full"
+      px={3}
+      py={1}
+    >
+      <Icon as={ShieldCheck} color="purple.600" boxSize={4} />
+      <Text fontSize="xs" color="purple.800">
+        Points awarded after partner verifies completion
+      </Text>
+    </HStack>
+  )
+}
+
 const badgeColor = (difficulty?: CourseDifficulty) => {
   switch (difficulty) {
     case 'Beginner':
@@ -182,6 +256,7 @@ const FreeTierCoursesPage: React.FC<{ userId?: string | null; profile: UserProfi
   profile,
 }) => {
   const { progressMap, loading: progressLoading } = useUserCourseProgress(userId)
+  const { completionsByKey } = useUserCourseCompletions(userId)
   const [course, setCourse] = useState<NormalizedCourse | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -399,6 +474,10 @@ const FreeTierCoursesPage: React.FC<{ userId?: string | null; profile: UserProfi
                         )}
                       </HStack>
 
+                      <CourseCompletionStatus
+                        completion={resolveCourseCompletion(completionsByKey, courseWithProgress)}
+                      />
+
                       {typeof courseWithProgress.progress === 'number' && (
                         <Box pt={1} width="full">
                           <Progress
@@ -455,6 +534,7 @@ const OrganizationCoursesPage: React.FC<{ userId?: string | null; profile: UserP
 
   const { program, loading: programLoading } = useOrganizationProgramCourses(organizationId)
   const { loading: progressLoading } = useUserCourseProgress(userId)
+  const { completionsByKey } = useUserCourseCompletions(userId)
 
   const [courseMap, setCourseMap] = useState<Record<string, NormalizedCourse>>({})
   const [loadingCourses, setLoadingCourses] = useState(true)
@@ -750,16 +830,22 @@ const OrganizationCoursesPage: React.FC<{ userId?: string | null; profile: UserP
 
             <SimpleGrid columns={{ base: 1, md: 2, xl: 3 }} spacing={4} mt={4}>
               {timelineEntries.map(entry => {
-                const statusColor =
-                  entry.availability === 'current'
+                const completion = entry.course
+                  ? resolveCourseCompletion(completionsByKey, entry.course)
+                  : undefined
+                const isApproved = Boolean(completion)
+                const statusColor = isApproved
+                  ? 'green'
+                  : entry.availability === 'current'
                     ? 'green'
                     : entry.availability === 'completed'
                       ? 'purple'
                       : entry.availability === 'past'
                         ? 'orange'
                         : 'gray'
-                const statusLabel =
-                  entry.availability === 'current'
+                const statusLabel = isApproved
+                  ? 'Completed'
+                  : entry.availability === 'current'
                     ? isWeeklyTimeline
                       ? 'Current week'
                       : 'Current month'
@@ -785,7 +871,7 @@ const OrganizationCoursesPage: React.FC<{ userId?: string | null; profile: UserP
                     borderWidth="1px"
                     borderRadius="2xl"
                     p={4}
-                    bg={entry.availability === 'current' ? 'purple.50' : 'gray.50'}
+                    bg={isApproved ? 'green.50' : entry.availability === 'current' ? 'purple.50' : 'gray.50'}
                   >
                     <HStack justify="space-between" mb={2}>
                       <Badge colorScheme={statusColor} borderRadius="full">
@@ -797,7 +883,7 @@ const OrganizationCoursesPage: React.FC<{ userId?: string | null; profile: UserP
                       <HStack spacing={1} color="gray.600">
                         <Icon
                           as={
-                            entry.availability === 'completed'
+                            isApproved || entry.availability === 'completed'
                               ? CheckCircle2
                               : entry.availability === 'past'
                                 ? Clock
@@ -816,6 +902,11 @@ const OrganizationCoursesPage: React.FC<{ userId?: string | null; profile: UserP
                       {entry.course?.description ||
                         `Your ${entry.periodLabel === 'week' ? 'weekly' : 'monthly'} course assignment.`}
                     </Text>
+                    {hasCourse && (
+                      <Box mb={2}>
+                        <CourseCompletionStatus completion={completion} showAwaitingHint={!isLocked} />
+                      </Box>
+                    )}
                     {entry.dateRange && (
                       <Badge variant="subtle" colorScheme="gray" borderRadius="full">
                         {entry.dateRange}
@@ -921,6 +1012,7 @@ const PaidLibraryCoursesPage: React.FC<{ userId?: string | null; profile: UserPr
   profile,
 }) => {
   const { progressMap, loading: progressLoading } = useUserCourseProgress(userId)
+  const { completionsByKey } = useUserCourseCompletions(userId)
   const [courses, setCourses] = useState<NormalizedCourse[]>([])
   const [loadingCourses, setLoadingCourses] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -1051,14 +1143,15 @@ const PaidLibraryCoursesPage: React.FC<{ userId?: string | null; profile: UserPr
               const hasLink = Boolean(course.link)
               const hasAccess = canAccessCourse(profile, course.title, course.id)
               const canOpen = hasAccess && hasLink
+              const completion = resolveCourseCompletion(completionsByKey, course)
               return (
                 <Box
                   key={course.id}
                   borderWidth="1px"
                   borderRadius="2xl"
                   p={5}
-                  bg="gray.50"
-                  borderColor="border.control"
+                  bg={completion ? 'green.50' : 'gray.50'}
+                  borderColor={completion ? 'green.200' : 'border.control'}
                   _hover={{ borderColor: 'purple.200', boxShadow: 'md' }}
                   transition="all 0.15s ease"
                 >
@@ -1078,6 +1171,8 @@ const PaidLibraryCoursesPage: React.FC<{ userId?: string | null; profile: UserPr
                         {course.description}
                       </Text>
                     </Stack>
+
+                    <CourseCompletionStatus completion={completion} />
 
                     <HStack spacing={4} flexWrap="wrap">
                       {course.estimatedMinutes ? (
