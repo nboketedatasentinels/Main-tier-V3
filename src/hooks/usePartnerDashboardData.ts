@@ -28,6 +28,16 @@ export const usePartnerDashboardData = (options?: UsePartnerDashboardDataOptions
   const { profile, isSuperAdmin, user, profileStatus } = useAuth()
 
   const [selectedOrg, setSelectedOrg] = useState<string>(options?.selectedOrg || 'all')
+
+  // Keep internal state in sync when the caller passes a controlled
+  // `options.selectedOrg` (e.g. URL-driven shared org selection across
+  // partner pages). Without this, only the initial value is honored.
+  useEffect(() => {
+    if (options?.selectedOrg === undefined) return
+    if (options.selectedOrg === selectedOrg) return
+    setSelectedOrg(options.selectedOrg || 'all')
+  }, [options?.selectedOrg, selectedOrg])
+
   const [notificationCount, setNotificationCount] = useState<number>(0)
   const [notifications, setNotifications] = useState<NotificationRecord[]>([])
   const [notificationsLoading, setNotificationsLoading] = useState<boolean>(true)
@@ -64,6 +74,8 @@ export const usePartnerDashboardData = (options?: UsePartnerDashboardDataOptions
       lastActive: (org as { lastActive?: string }).lastActive,
       tags: (org as { tags?: string[] }).tags || [],
       warning: !org.name || !org.code ? 'Organization details incomplete.' : undefined,
+      journeyType: org.journeyType,
+      cohortStartDate: org.cohortStartDate,
     }))
   }, [adminSnapshot?.organizations])
 
