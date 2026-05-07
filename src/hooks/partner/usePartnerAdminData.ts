@@ -75,6 +75,9 @@ export interface PartnerUser {
   onboardingSkipped?: boolean
   hasCompletedPersonalityTest?: boolean
   hasCompletedValuesTest?: boolean
+  // Inferred from the raw profile role: 'free_user' → 'free', everything else
+  // (paid_member, mentor, ambassador) → 'paid'. Used for paid/free tab split.
+  membershipTier?: 'free' | 'paid'
 }
 
 type FirestorePartnerUser = Partial<PartnerUser> & {
@@ -1086,6 +1089,9 @@ export const usePartnerAdminData = (
                 onboardingSkipped: data.onboardingSkipped === true,
                 hasCompletedPersonalityTest: data.hasCompletedPersonalityTest === true,
                 hasCompletedValuesTest: data.hasCompletedValuesTest === true,
+                // Raw profile role can be 'free_user' / 'paid_member' / etc. —
+                // wider than the narrow PartnerUser.role enum on the type.
+                membershipTier: (data.role as string | undefined) === 'free_user' ? 'free' : 'paid',
               })
             } catch (err) {
               logger.error('[PartnerAdminData] Failed to transform user record', {
@@ -1103,11 +1109,41 @@ export const usePartnerAdminData = (
             return
           }
 
-          logger.debug('[PartnerAdminData] Users loaded', { count: hydratedUsers.length })
-          console.log('[PartnerAdminData] Users query result count', hydratedUsers.length)
+          // Dedupe by email so the partner's user count matches the admin's
+          // (the admin path applies dedupeUserDocsByEmail on /profiles).
+          // Without this, learners with duplicate profile docs (same email,
+          // different docId) get counted twice in the partner view but once
+          // in the admin view, producing the "tables not talking" symptom.
+          // Keep the first occurrence; downstream consumers don't depend on
+          // which specific doc wins, only that counts agree across views.
+          const seenEmails = new Set<string>()
+          const dedupedUsers: PartnerUser[] = []
+          let duplicateCount = 0
+          for (const user of hydratedUsers) {
+            const emailKey = (user.email || '').trim().toLowerCase()
+            if (!emailKey) {
+              dedupedUsers.push(user)
+              continue
+            }
+            if (seenEmails.has(emailKey)) {
+              duplicateCount += 1
+              continue
+            }
+            seenEmails.add(emailKey)
+            dedupedUsers.push(user)
+          }
+          if (duplicateCount > 0) {
+            logger.warn('[PartnerAdminData] Dropped duplicate-email profile docs', {
+              dropped: duplicateCount,
+              kept: dedupedUsers.length,
+            })
+          }
+
+          logger.debug('[PartnerAdminData] Users loaded', { count: dedupedUsers.length })
+          console.log('[PartnerAdminData] Users query result count', dedupedUsers.length)
 
           usersInitializedRef.current = true
-          setUsers(hydratedUsers)
+          setUsers(dedupedUsers)
           setUsersLoading(false)
           setLastUsersSuccessAt(new Date())
         } catch (err) {

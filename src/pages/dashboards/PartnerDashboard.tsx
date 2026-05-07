@@ -99,7 +99,7 @@ export const PartnerDashboard: React.FC = () => {
 
   type PartnerPageKey = 'overview' | 'users' | 'organization-management' | 'at-risk' | 'reports' | 'settings' | 'profile'
   const [activePage, setActivePage] = useState<PartnerPageKey>('overview')
-  const [userManagementTab, setUserManagementTab] = useState<PartnerUserManagementTab>('users')
+  const [userManagementTab, setUserManagementTab] = useState<PartnerUserManagementTab>('paid')
   const [showAllNotifications, setShowAllNotifications] = useState(false)
 
   // Profile page state
@@ -1954,7 +1954,7 @@ export const PartnerDashboard: React.FC = () => {
     const normalized = key as PartnerPageKey
     if (['overview', 'users', 'organization-management', 'at-risk', 'reports', 'settings', 'profile'].includes(normalized)) {
       if (normalized === 'users') {
-        setUserManagementTab('users')
+        setUserManagementTab('paid')
       }
       setActivePage(normalized)
     } else {
