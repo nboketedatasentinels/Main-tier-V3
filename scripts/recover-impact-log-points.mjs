@@ -227,13 +227,19 @@ const main = async () => {
   let totalRecovered = 0
   let usersChanged = 0
   let usersWithMirrorDrift = 0
+  const failed = []
   for (const uid of uids) {
-    const r = await recoverOne(uid)
-    if (r.toCreate > 0) {
-      usersChanged += 1
-      totalRecovered += r.recoverPoints
+    try {
+      const r = await recoverOne(uid)
+      if (r.toCreate > 0) {
+        usersChanged += 1
+        totalRecovered += r.recoverPoints
+      }
+      if (r.hasDrift) usersWithMirrorDrift += 1
+    } catch (err) {
+      failed.push({ uid, error: err?.message || String(err) })
+      console.error(`  ✗ ${uid}: ${err?.message || err}`)
     }
-    if (r.hasDrift) usersWithMirrorDrift += 1
   }
 
   console.log('\n' + '='.repeat(60))
@@ -241,6 +247,11 @@ const main = async () => {
   console.log(`Users with any drift:           ${usersWithMirrorDrift}`)
   console.log(`Users with recoverable points:  ${usersChanged}`)
   console.log(`Total points to recover:        ${fmt(totalRecovered)}`)
+  if (failed.length) {
+    console.log(`Users that errored:             ${failed.length}`)
+    failed.slice(0, 10).forEach((f) => console.log(`  - ${f.uid}: ${f.error}`))
+    if (failed.length > 10) console.log(`  ... and ${failed.length - 10} more`)
+  }
   if (!isApply) console.log('\nRe-run with --apply to commit.')
 }
 

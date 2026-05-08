@@ -323,15 +323,12 @@ const BASE_ACTIVITY_DEFINITIONS: BaseActivityEntry[] = [
     baseId: "lift_module",
     title: "LIFT Course Module Completed",
     description: "Complete a LIFT course module. Points awarded by your partner.",
-    // Base value used by journeys without an explicit pointsOverride.
-    // 6W has its own override of 7,000 (matching the guideline's
-    // 'LIFT Course Module Completed: 2 × 7,000 = 14,000'). Earlier
-    // change set this base to 7,000, which made 4W (no override) compute
-    // 19,000 max instead of its configured 15,000 and crashed the app at
-    // module init via the maxPossiblePoints invariant. 3,000 keeps 4W,
-    // 3M, 6M, 9M at their original max while 6W still gets 7,000 via
-    // the override.
-    points: 3000,
+    // Canonical LIFT module value (matches 6W). Other journeys explicitly
+    // override down to 3,000 in JOURNEY_ACTIVITY_CONFIG below to preserve
+    // their existing maxPossiblePoints invariants — without those overrides
+    // the validateJourneyPointsConsistency() check throws at module load
+    // for 4W (15,000), 3M (113,000), 6M (226,000) and 9M (339,000).
+    points: 7000,
     behaviorType: "window_limited",
     approvalType: "partner_issued",
     week: 2,
@@ -448,7 +445,7 @@ const JOURNEY_ACTIVITY_CONFIG: Partial<Record<JourneyType, JourneyActivityEntry[
     { activityId: "watch_podcast", totalFrequency: 3 },
     { activityId: "webinar_workbook", totalFrequency: 1, pointsOverride: 3000 },
     { activityId: "impact_log", totalFrequency: 2 },
-    { activityId: "lift_module", totalFrequency: 1 },
+    { activityId: "lift_module", totalFrequency: 1, pointsOverride: 3000 },
     { activityId: "book_club", totalFrequency: 1, pointsOverride: 1500 },
     { activityId: "shameless_circle", totalFrequency: 1, pointsOverride: 1500 },
     { activityId: "ai_tool_review", totalFrequency: 1 },
@@ -471,7 +468,7 @@ const JOURNEY_ACTIVITY_CONFIG: Partial<Record<JourneyType, JourneyActivityEntry[
     { activityId: "webinar_workbook", totalFrequency: 3 },
     { activityId: "peer_to_peer", totalFrequency: 9 },
     { activityId: "impact_log", totalFrequency: 6 },
-    { activityId: "lift_module", totalFrequency: 3 },
+    { activityId: "lift_module", totalFrequency: 3, pointsOverride: 3000 },
     { activityId: "linkedin", totalFrequency: 7 },
     { activityId: "book_club", totalFrequency: 3 },
     { activityId: "peer_matching", totalFrequency: 12 },
@@ -485,7 +482,7 @@ const JOURNEY_ACTIVITY_CONFIG: Partial<Record<JourneyType, JourneyActivityEntry[
     { activityId: "webinar_workbook", totalFrequency: 6 },
     { activityId: "peer_to_peer", totalFrequency: 18 },
     { activityId: "impact_log", totalFrequency: 12 },
-    { activityId: "lift_module", totalFrequency: 6 },
+    { activityId: "lift_module", totalFrequency: 6, pointsOverride: 3000 },
     { activityId: "linkedin", totalFrequency: 14 },
     { activityId: "book_club", totalFrequency: 6 },
     { activityId: "peer_matching", totalFrequency: 24 },
@@ -499,7 +496,7 @@ const JOURNEY_ACTIVITY_CONFIG: Partial<Record<JourneyType, JourneyActivityEntry[
     { activityId: "webinar_workbook", totalFrequency: 9 },
     { activityId: "peer_to_peer", totalFrequency: 27 },
     { activityId: "impact_log", totalFrequency: 18 },
-    { activityId: "lift_module", totalFrequency: 9 },
+    { activityId: "lift_module", totalFrequency: 9, pointsOverride: 3000 },
     { activityId: "linkedin", totalFrequency: 21 },
     { activityId: "book_club", totalFrequency: 9 },
     { activityId: "peer_matching", totalFrequency: 36 },
