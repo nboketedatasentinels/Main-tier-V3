@@ -329,14 +329,6 @@ const CourseApprovalsPage: React.FC = () => {
     <PartnerLayout
       activeItem="course-approvals"
       organizations={layoutOrgs}
-      selectedOrg={selectedOrgId || 'all'}
-      onSelectOrg={(orgValue) => {
-        if (orgValue === 'all') {
-          setSelectedOrgId('')
-          return
-        }
-        setSelectedOrgId(orgValue)
-      }}
       onNavigate={handleNavigate}
     >
       <Stack spacing={6}>

@@ -243,14 +243,6 @@ export const LearnerAssignmentsPage: React.FC = () => {
     <PartnerLayout
       activeItem="learner-assignments"
       organizations={layoutOrgs}
-      selectedOrg={selectedOrgId || 'all'}
-      onSelectOrg={(orgValue) => {
-        if (orgValue === 'all') {
-          setSelectedOrgId('')
-          return
-        }
-        setSelectedOrgId(orgValue)
-      }}
       onNavigate={handleNavigate}
     >
       <Stack spacing={6}>
