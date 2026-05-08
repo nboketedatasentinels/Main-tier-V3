@@ -1082,12 +1082,21 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
           const updatedData = snap.data() as UserProfile
           const rawRole = updatedData.role ?? UserRole.USER
           const normalizedRole = normalizeRole(rawRole)
+          // Points fields (totalPoints / level) MUST come from profiles/{uid}
+          // so the user sees the same value partner & admin dashboards do —
+          // they read profiles directly. The users mirror can drift if a
+          // partner-issued award updates only one mirror, so we prefer the
+          // profiles snapshot below and only fall back to users on first
+          // bootstrap before profiles loads.
+          const base = profileRef.current
           const updatedProfile: UserProfile = {
             ...updatedData,
             id: snap.id,
             journeyType: updatedData.journeyType || '4W',
             role: normalizedRole as StandardRole,
             assignedOrganizations: updatedData.assignedOrganizations ?? [],
+            totalPoints: base?.totalPoints ?? updatedData.totalPoints ?? 0,
+            level: base?.level ?? updatedData.level ?? 1,
           }
           console.log('🔁 [Auth] Profile updated via snapshot', updatedProfile.role)
           updateProfileState(updatedProfile, 'realtime-snapshot')
