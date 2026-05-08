@@ -109,13 +109,18 @@ export const CourseApprovalsSection: React.FC = () => {
     Map<string, { title?: string; description?: string; externalUrl?: string; content_url?: string }>
   >(new Map())
 
+  // Auto-pick only when the partner has exactly one org. Multi-org partners
+  // who explicitly chose "All organizations" from the header dropdown should
+  // see the "Pick a single organization" prompt below — course approvals are
+  // scoped to a specific org's program (journey + pillar) so they can't be
+  // aggregated across orgs.
   useEffect(() => {
     if (selectedOrgId) return
-    if (orgOptions.length > 0) {
+    if (orgOptions.length === 1) {
       setSelectedOrgId(orgOptions[0].id)
       return
     }
-    if (profile?.companyId) {
+    if (orgOptions.length === 0 && profile?.companyId) {
       setSelectedOrgId(profile.companyId)
     }
   }, [orgOptions, profile?.companyId, selectedOrgId, setSelectedOrgId])
@@ -323,6 +328,21 @@ export const CourseApprovalsSection: React.FC = () => {
             <AlertTitle>No organizations yet</AlertTitle>
             <AlertDescription>
               Ask a super admin to assign you to an organization before approving courses.
+            </AlertDescription>
+          </Box>
+        </Alert>
+      )}
+
+      {!selectedOrgId && orgOptions.length > 1 && (
+        <Alert status="info" rounded="lg">
+          <AlertIcon />
+          <Box>
+            <AlertTitle>Pick a single organization to continue</AlertTitle>
+            <AlertDescription>
+              Course approvals are scoped to a specific organization&apos;s program
+              (each journey + pillar has its own course list), so they can&apos;t be
+              shown in aggregate across multiple organizations. Use the
+              organization picker in the header to choose one.
             </AlertDescription>
           </Box>
         </Alert>

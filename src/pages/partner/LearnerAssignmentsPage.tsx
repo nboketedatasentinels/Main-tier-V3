@@ -101,17 +101,20 @@ export const LearnerAssignmentsPage: React.FC = () => {
     [organizations],
   )
 
-  // Auto-pick first org when options load
+  // Auto-pick only when the partner has exactly one org. Multi-org partners
+  // who explicitly chose "All organizations" from the header dropdown should
+  // see the "Pick a single organization" prompt below — mentor assignment is
+  // scoped to a specific organization's mentor pool.
   useEffect(() => {
     if (selectedOrgId) return
-    if (orgOptions.length > 0) {
+    if (orgOptions.length === 1) {
       setSelectedOrgId(orgOptions[0].id)
       return
     }
-    if (profile?.companyId) {
+    if (orgOptions.length === 0 && profile?.companyId) {
       setSelectedOrgId(profile.companyId)
     }
-  }, [orgOptions, profile?.companyId, selectedOrgId])
+  }, [orgOptions, profile?.companyId, selectedOrgId, setSelectedOrgId])
 
   const selectedOrg = useMemo(
     () => orgOptions.find((o) => o.id === selectedOrgId),
@@ -282,9 +285,11 @@ export const LearnerAssignmentsPage: React.FC = () => {
           <Alert status="info" rounded="lg">
             <AlertIcon />
             <Box>
-              <AlertTitle>Pick an organization</AlertTitle>
+              <AlertTitle>Pick a single organization to continue</AlertTitle>
               <AlertDescription>
-                Use the organization selector in the top bar to load its learner roster.
+                {orgOptions.length > 1
+                  ? "Mentor assignment is scoped to a specific organization's mentor pool, so it can't be shown in aggregate across multiple organizations. Use the organization picker in the header to choose one."
+                  : 'Use the organization selector in the top bar to load its learner roster.'}
               </AlertDescription>
             </Box>
           </Alert>
