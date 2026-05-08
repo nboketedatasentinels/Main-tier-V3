@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
-import { Box, Tab, TabList, TabPanel, TabPanels, Tabs, Alert, AlertIcon, Badge } from '@chakra-ui/react'
+import { Tab, TabList, TabPanel, TabPanels, Tabs, Alert, AlertIcon, Badge } from '@chakra-ui/react'
 import { UsersManagementTab } from './tabs/UsersManagementTab'
 import { UserEngagementMonitoringTab } from './tabs/UserEngagementMonitoringTab'
 import { LeadershipCouncil } from './LeadershipCouncil'
@@ -162,7 +162,7 @@ export const UserManagementWithTabs = () => {
   }, [users, organizations])
 
   return (
-    <Box bg="gray.50" minH="calc(100vh - 120px)" p={{ base: 4, md: 6 }} borderRadius="3xl">
+    <>
       {error && (
         <Alert status="warning" borderRadius="xl" mb={4}>
           <AlertIcon />
@@ -207,6 +207,6 @@ export const UserManagementWithTabs = () => {
           </TabPanel>
         </TabPanels>
       </Tabs>
-    </Box>
+    </>
   )
 }

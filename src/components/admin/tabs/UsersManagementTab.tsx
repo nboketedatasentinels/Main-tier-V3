@@ -1,11 +1,10 @@
 import { useEffect, useMemo, useState } from 'react'
 import {
+  Avatar,
   Badge,
   Box,
   Button,
   ButtonGroup,
-  Card,
-  CardBody,
   Checkbox,
   Divider,
   Flex,
@@ -28,18 +27,12 @@ import {
   Select,
   Spinner,
   Stack,
-  Table,
-  Tbody,
-  Td,
   Text,
   Textarea,
-  Th,
-  Thead,
-  Tr,
   Tooltip,
   useToast,
 } from '@chakra-ui/react'
-import { ChevronLeft, ChevronRight, Eye, Filter, Search, Trash2 } from 'lucide-react'
+import { ChevronLeft, ChevronRight, Eye, Filter, Pencil, Search, Trash2 } from 'lucide-react'
 import { Link as RouterLink } from 'react-router-dom'
 import { useAuth } from '@/hooks/useAuth'
 import { usePartnerAdminSnapshot } from '@/hooks/partner/usePartnerAdminSnapshot'
@@ -107,22 +100,6 @@ type PromotionChange = {
   label: string
   before: string
   after: string
-}
-
-const formatDate = (date?: Date | null) => {
-  if (!date) return 'Unknown'
-  return new Intl.DateTimeFormat(undefined, { month: 'short', day: 'numeric', year: 'numeric' }).format(date)
-}
-
-const formatDateTime = (date?: Date | null) => {
-  if (!date) return 'Not recorded'
-  return new Intl.DateTimeFormat(undefined, {
-    month: 'short',
-    day: 'numeric',
-    year: 'numeric',
-    hour: 'numeric',
-    minute: '2-digit',
-  }).format(date)
 }
 
 const normalizeValue = (value?: string | null) => value?.toString().trim().toLowerCase() || ''
@@ -309,13 +286,6 @@ export const UsersManagementTab = ({ users: propUsers, loading: propLoading }: U
     team_leader: 'orange',
     mentor: 'blue',
     ambassador: 'green',
-  }
-
-  const accountBadgeColor: Record<string, string> = {
-    active: 'green',
-    pending: 'yellow',
-    inactive: 'gray',
-    suspended: 'red',
   }
 
   const tierBadgeColor: Record<string, string> = {
@@ -714,9 +684,7 @@ export const UsersManagementTab = ({ users: propUsers, loading: propLoading }: U
         <Text color="gray.600">Search, filter, and manage user access across the platform.</Text>
       </Stack>
 
-      <Card border="1px solid" borderColor="border.control" borderRadius="2xl" bg="white">
-        <CardBody>
-          <Stack spacing={4}>
+      <Stack spacing={4}>
             <Stack spacing={3}>
               <InputGroup maxW={{ base: '100%', lg: '360px' }}>
                 <InputLeftElement pointerEvents="none">
@@ -872,7 +840,7 @@ export const UsersManagementTab = ({ users: propUsers, loading: propLoading }: U
               </Flex>
             )}
 
-            <Box border="1px solid" borderColor="border.control" borderRadius="xl" overflowX="auto">
+            <Box bg="gray.50" borderRadius="xl" p={4}>
               {propLoading ? (
                 <Flex py={10} justify="center" align="center" gap={3}>
                   <Spinner color="purple.500" />
@@ -883,168 +851,202 @@ export const UsersManagementTab = ({ users: propUsers, loading: propLoading }: U
                   <Text color="red.500">{error}</Text>
                 </Flex>
               ) : (
-                <Table size="sm" minW="1380px">
-                  <Thead bg="gray.50">
-                    <Tr>
-                      <Th w="50px">
-                        <Checkbox
-                          isChecked={headerCheckboxChecked}
-                          isIndeterminate={headerCheckboxIndeterminate}
-                          onChange={(e) => setSelectedIds(e.target.checked ? filteredUsers.map((u) => u.id) : [])}
-                          aria-label="Select all"
-                        />
-                      </Th>
-                      <Th>User</Th>
-                      <Th>Role</Th>
-                      <Th>Membership</Th>
-                      <Th>Account</Th>
-                      <Th>Tier</Th>
-                      <Th>Organization</Th>
-                      <Th>Last Active</Th>
-                      <Th>Audit Trail</Th>
-                      <Th>Actions</Th>
-                    </Tr>
-                  </Thead>
-                  <Tbody>
+                <>
+                  {/* Column header row */}
+                  <Flex
+                    bg="white"
+                    color="gray.600"
+                    borderRadius="lg"
+                    boxShadow="0 1px 2px rgba(15, 23, 42, 0.04)"
+                    px={6}
+                    py={3}
+                    mb={2}
+                    align="center"
+                    gap={4}
+                    fontSize="xs"
+                    fontWeight="semibold"
+                    textTransform="uppercase"
+                    letterSpacing="wider"
+                    display={{ base: 'none', md: 'flex' }}
+                  >
+                    <Box w="32px">
+                      <Checkbox
+                        isChecked={headerCheckboxChecked}
+                        isIndeterminate={headerCheckboxIndeterminate}
+                        onChange={(e) => setSelectedIds(e.target.checked ? filteredUsers.map((u) => u.id) : [])}
+                        aria-label="Select all"
+                      />
+                    </Box>
+                    <Box flex="2 1 240px">User</Box>
+                    <Box flex="1 1 120px">Role</Box>
+                    <Box flex="1 1 100px">Membership</Box>
+                    <Box flex="1 1 100px">Tier</Box>
+                    <Box flex="1 1 140px">Organization</Box>
+                    <Box flex="0 0 auto" minW="140px" textAlign="right">Actions</Box>
+                  </Flex>
+
+                  {/* User cards */}
+                  <Stack spacing={2}>
                     {paginatedUsers.map((user) => {
-                      const normalizedAccountStatus = normalizeValue(user.accountStatus) || 'active'
                       const normalizedTier = normalizeValue(user.transformationTier)
                       return (
-                        <Tr key={user.id} _hover={{ bg: 'gray.50' }}>
-                          <Td>
+                        <Flex
+                          key={user.id}
+                          bg="white"
+                          borderRadius="xl"
+                          px={6}
+                          py={4}
+                          align="center"
+                          gap={4}
+                          boxShadow="0 1px 2px rgba(15, 23, 42, 0.04)"
+                          transition="all 0.15s ease"
+                          _hover={{ boxShadow: '0 6px 16px rgba(15, 23, 42, 0.08)', transform: 'translateY(-1px)' }}
+                          flexWrap={{ base: 'wrap', md: 'nowrap' }}
+                        >
+                          <Box w="32px" flexShrink={0}>
                             <Checkbox
                               isChecked={selectedIds.includes(user.id)}
                               onChange={() => toggleSelect(user.id)}
                               aria-label={`Select ${user.name}`}
                             />
-                          </Td>
-                          <Td>
-                            <Stack spacing={0}>
-                              <Text fontWeight="semibold" color="gray.800">
+                          </Box>
+
+                          <HStack flex="2 1 240px" spacing={3} minW={0}>
+                            <Avatar size="sm" name={user.name} bg="purple.100" color="purple.700" />
+                            <Stack spacing={0} minW={0}>
+                              <Text fontWeight="semibold" color="gray.800" noOfLines={1}>
                                 {user.name}
                               </Text>
-                              <Text fontSize="sm" color="gray.500">
+                              <Text fontSize="sm" color="gray.500" noOfLines={1}>
                                 {user.email || 'No email on file'}
                               </Text>
                             </Stack>
-                          </Td>
-                          <Td>
-                            <Badge colorScheme={roleBadgeColor[user.role]} textTransform="capitalize">
+                          </HStack>
+
+                          <Box flex="1 1 120px">
+                            <Badge
+                              colorScheme={roleBadgeColor[user.role]}
+                              textTransform="capitalize"
+                              borderRadius="full"
+                              px={3}
+                              py={1}
+                            >
                               {formatRoleLabel(user.role, user.membershipStatus)}
                             </Badge>
-                          </Td>
-                          <Td>
-                            <Badge colorScheme={membershipBadgeColor[user.membershipStatus]} textTransform="capitalize">
+                          </Box>
+
+                          <Box flex="1 1 100px">
+                            <Badge
+                              colorScheme={membershipBadgeColor[user.membershipStatus]}
+                              textTransform="capitalize"
+                              borderRadius="full"
+                              px={3}
+                              py={1}
+                            >
                               {formatMembershipLabel(user.membershipStatus)}
                             </Badge>
-                          </Td>
-                          <Td>
-                            <Badge colorScheme={accountBadgeColor[normalizedAccountStatus] || 'gray'}>
-                              {formatAccountStatusLabel(normalizedAccountStatus)}
-                            </Badge>
-                          </Td>
-                          <Td>
+                          </Box>
+
+                          <Box flex="1 1 100px">
                             {normalizedTier ? (
-                              <Badge colorScheme={tierBadgeColor[normalizedTier] || 'gray'}>{formatTierLabel(normalizedTier)}</Badge>
+                              <Badge
+                                colorScheme={tierBadgeColor[normalizedTier] || 'gray'}
+                                borderRadius="full"
+                                px={3}
+                                py={1}
+                              >
+                                {formatTierLabel(normalizedTier)}
+                              </Badge>
                             ) : (
-                              <Text fontSize="xs" color="gray.500">
+                              <Text fontSize="xs" color="gray.400">
                                 Not set
                               </Text>
                             )}
-                          </Td>
-                          <Td>
+                          </Box>
+
+                          <Box flex="1 1 140px" minW={0}>
                             {user.companyName ? (
-                              <Stack spacing={0}>
-                                <Text fontWeight="medium" color="gray.800">
+                              <Stack spacing={0} minW={0}>
+                                <Text fontWeight="medium" color="gray.800" noOfLines={1}>
                                   {user.companyName}
                                 </Text>
-                                <Text fontSize="xs" color="gray.500">
+                                <Text fontSize="xs" color="gray.500" noOfLines={1}>
                                   {user.companyCode || '-'}
                                 </Text>
                               </Stack>
                             ) : (
-                              <Badge colorScheme="purple">
+                              <Badge colorScheme="purple" borderRadius="full" px={3} py={1}>
                                 Independent
                               </Badge>
                             )}
-                          </Td>
-                          <Td>{formatDate(user.lastActive)}</Td>
-                          <Td>
-                            <Stack spacing={0}>
-                              <Text fontSize="xs" color="gray.700" fontWeight="medium">
-                                {formatDateTime(user.accessLastUpdatedAt)}
-                              </Text>
-                              <Text fontSize="xs" color="gray.500">
-                                {user.accessLastUpdatedByName || 'No actor recorded'}
-                              </Text>
-                              <Text fontSize="xs" color="gray.500" noOfLines={2}>
-                                {user.accessLastReason || 'No reason recorded'}
-                              </Text>
-                            </Stack>
-                          </Td>
-                          <Td>
-                            <HStack spacing={2} justify="flex-end">
-                              <Tooltip label="View and edit profile">
-                                <Button
-                                  as={RouterLink}
-                                  to={`${window.location.pathname.startsWith('/partner') ? '/partner' : '/admin'}/user/${user.id}`}
-                                  size="sm"
-                                  variant="outline"
-                                  colorScheme="purple"
-                                  leftIcon={<Eye size={16} />}
-                                >
-                                  View profile
-                                </Button>
-                              </Tooltip>
-                              {isSuperAdmin && (
-                                <>
-                                  <Button
+                          </Box>
+
+                          <HStack flex="0 0 auto" spacing={2} minW="140px" justify="flex-end">
+                            <Tooltip label="View profile">
+                              <IconButton
+                                as={RouterLink}
+                                to={`${window.location.pathname.startsWith('/partner') ? '/partner' : '/admin'}/user/${user.id}`}
+                                aria-label={`View profile for ${user.name}`}
+                                icon={<Eye size={16} />}
+                                size="sm"
+                                bg="purple.50"
+                                color="purple.600"
+                                borderRadius="lg"
+                                _hover={{ bg: 'purple.100' }}
+                              />
+                            </Tooltip>
+                            {isSuperAdmin && (
+                              <>
+                                <Tooltip label="Edit access">
+                                  <IconButton
+                                    aria-label={`Edit access for ${user.name}`}
+                                    icon={<Pencil size={16} />}
                                     size="sm"
-                                    variant="outline"
-                                    colorScheme="purple"
+                                    bg="purple.50"
+                                    color="purple.600"
+                                    borderRadius="lg"
+                                    _hover={{ bg: 'purple.100' }}
                                     onClick={() => openPromotionModal(user)}
                                     isLoading={promotionLoading && promotionTarget?.id === user.id}
-                                  >
-                                    Edit access
-                                  </Button>
+                                  />
+                                </Tooltip>
+                                <Tooltip label="Delete user">
                                   <IconButton
                                     aria-label={`Delete ${user.name}`}
                                     icon={<Trash2 size={16} />}
-                                    variant="outline"
-                                    colorScheme="red"
                                     size="sm"
+                                    bg="red.50"
+                                    color="red.600"
+                                    borderRadius="lg"
+                                    _hover={{ bg: 'red.100' }}
                                     onClick={() => handleDelete(user.id)}
                                     isLoading={statusChangingId === user.id}
                                   />
-                                </>
-                              )}
-                            </HStack>
-                          </Td>
-                        </Tr>
+                                </Tooltip>
+                              </>
+                            )}
+                          </HStack>
+                        </Flex>
                       )
                     })}
 
                     {!filteredUsers.length && (
-                      <Tr>
-                        <Td colSpan={10}>
-                          <Flex py={10} direction="column" align="center" gap={2}>
-                            <Text color="gray.700" fontWeight="medium">
-                              No users found for the current filters.
-                            </Text>
-                            <Text color="gray.500" fontSize="sm">
-                              Adjust your search and access filters to see more users.
-                            </Text>
-                          </Flex>
-                        </Td>
-                      </Tr>
+                      <Box bg="white" borderRadius="xl" px={6} py={10} boxShadow="0 1px 2px rgba(15, 23, 42, 0.04)">
+                        <Flex direction="column" align="center" gap={2}>
+                          <Text color="gray.700" fontWeight="medium">
+                            No users found for the current filters.
+                          </Text>
+                          <Text color="gray.500" fontSize="sm">
+                            Adjust your search and access filters to see more users.
+                          </Text>
+                        </Flex>
+                      </Box>
                     )}
-                  </Tbody>
-                </Table>
+                  </Stack>
+                </>
               )}
             </Box>
-          </Stack>
-        </CardBody>
-      </Card>
+      </Stack>
 
       <Modal isOpen={promotionModalOpen} onClose={handlePromotionModalClose} size="xl">
         <ModalOverlay />
