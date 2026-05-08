@@ -262,7 +262,12 @@ export const PartnerLayout: React.FC<PartnerLayoutProps> = ({
         w={{ base: 'full', md: '240px' }}
         minW={{ base: 'full', md: '200px' }}
         maxW="280px"
-        value={selectedOrg || 'all'}
+        value={
+          selectedOrg ||
+          (orgOptions.length > 1
+            ? 'all'
+            : orgOptions[0]?.id || orgOptions[0]?.code || '')
+        }
         onChange={e => onSelectOrg(e.target.value)}
         bg="white"
         borderColor="brand.border"
