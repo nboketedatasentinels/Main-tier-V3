@@ -29,6 +29,7 @@ import {
 import { useAuth } from '@/hooks/useAuth'
 import { usePartnerAdminSnapshot } from '@/hooks/partner/usePartnerAdminSnapshot'
 import { usePartnerOrganizations } from '@/hooks/partner/usePartnerOrganizations'
+import { usePartnerSelectedOrg } from '@/hooks/partner/usePartnerSelectedOrg'
 import {
   getEligibleLearnersForActivity,
   assignActivityToLearner,
@@ -52,6 +53,7 @@ export const PartnerAssignmentPage: React.FC = () => {
   const [searchParams, setSearchParams] = useSearchParams()
   const { assignedOrganizationIds } = usePartnerAdminSnapshot({ enabled: true })
   const { organizations: partnerOrganizations } = usePartnerOrganizations()
+  const { selectedOrg } = usePartnerSelectedOrg()
   const toast = useToast()
 
   const [learners, setLearners] = useState<UserProfile[]>([])
@@ -82,11 +84,16 @@ export const PartnerAssignmentPage: React.FC = () => {
     [],
   )
 
+  // Honor the header dropdown's selected org. When the partner picks a
+  // specific company, narrow the issuance pool to just that org. When the
+  // dropdown is set to "All organizations" (selectedOrg === ''), fall back
+  // to every org the partner is assigned to.
   const organizationIds = useMemo(() => {
+    if (selectedOrg) return [selectedOrg]
     if (assignedOrganizationIds.length) return assignedOrganizationIds
     if (profile?.organizationId) return [profile.organizationId]
     return []
-  }, [assignedOrganizationIds, profile?.organizationId])
+  }, [selectedOrg, assignedOrganizationIds, profile?.organizationId])
 
   const layoutOrgs = useMemo(
     () =>
