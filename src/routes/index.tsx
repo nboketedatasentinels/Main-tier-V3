@@ -1,4 +1,6 @@
+import { Suspense, lazy } from 'react'
 import { BrowserRouter, Routes, Route, Navigate, Outlet, useSearchParams } from 'react-router-dom'
+import { Center, Spinner } from '@chakra-ui/react'
 import { ProtectedRoute } from '@/components/ProtectedRoute'
 import { FreeTierGuard } from '@/components/FreeTierGuard'
 import RoleRedirect from '@/pages/auth/RoleRedirect'
@@ -22,11 +24,22 @@ import { UpgradePage } from '@/pages/upgrade/UpgradePage'
 // Onboarding imports
 import { WelcomePage } from '@/pages/onboarding/WelcomePage'
 
-// Dashboard imports
-import { SuperAdminDashboard } from '@/pages/dashboards/SuperAdminDashboard'
-import { MentorDashboard } from '@/pages/dashboards/MentorDashboard'
-import { AmbassadorDashboard } from '@/pages/dashboards/AmbassadorDashboard'
-import { PartnerDashboard } from '@/pages/dashboards/PartnerDashboard'
+// Dashboard imports — heavy role dashboards are code-split so navigating
+// between sidebar items doesn't synchronously unmount/mount one giant
+// component (which felt like a freeze). Suspense fallback shows a spinner
+// during the transition instead.
+const SuperAdminDashboard = lazy(() =>
+  import('@/pages/dashboards/SuperAdminDashboard').then(m => ({ default: m.SuperAdminDashboard }))
+)
+const MentorDashboard = lazy(() =>
+  import('@/pages/dashboards/MentorDashboard').then(m => ({ default: m.MentorDashboard }))
+)
+const AmbassadorDashboard = lazy(() =>
+  import('@/pages/dashboards/AmbassadorDashboard').then(m => ({ default: m.AmbassadorDashboard }))
+)
+const PartnerDashboard = lazy(() =>
+  import('@/pages/dashboards/PartnerDashboard').then(m => ({ default: m.PartnerDashboard }))
+)
 
 // Feature page imports
 import { JourneysPage } from '@/pages/journeys/JourneysPage'
@@ -50,9 +63,9 @@ import ToolsPage from '@/pages/community/ToolsPage'
 import FeedbackPage from '@/pages/community/FeedbackPage'
 import { UserProfileManagementPage } from '@/pages/admin/UserProfileManagementPage';
 import { OrganizationDetailPage } from '@/pages/admin/OrganizationDetailPage';
-import ApprovalQueuePage from '@/pages/admin/ApprovalQueuePage';
-import PartnerAssignmentPage from '@/pages/admin/PartnerAssignmentPage';
-import LearnerAssignmentsPage from '@/pages/partner/LearnerAssignmentsPage';
+const ApprovalQueuePage = lazy(() => import('@/pages/admin/ApprovalQueuePage'))
+const PartnerAssignmentPage = lazy(() => import('@/pages/admin/PartnerAssignmentPage'))
+const LearnerAssignmentsPage = lazy(() => import('@/pages/partner/LearnerAssignmentsPage'))
 import BadgeGalleryPage from '@/pages/badges/BadgeGalleryPage';
 import { VillageInvitePage } from '@/pages/villages/VillageInvitePage'
 import { AcceptVillageInvitePage } from '@/pages/villages/AcceptVillageInvitePage'
@@ -114,7 +127,14 @@ export const AppRoutes = () => {
         v7_relativeSplatPath: true,
       }}
     >
-      <Routes>
+      <Suspense
+        fallback={
+          <Center minH="100vh" w="100%" bg="gray.50">
+            <Spinner size="xl" thickness="4px" color="purple.500" emptyColor="gray.200" />
+          </Center>
+        }
+      >
+        <Routes>
         {/* Public routes */}
         <Route path="/" element={<HomePage />} />
         <Route path="/upgrade" element={<UpgradePage />} />
@@ -306,7 +326,8 @@ export const AppRoutes = () => {
         {/* Error routes */}
         <Route path="/unauthorized" element={<UnauthorizedPage />} />
         <Route path="*" element={<NotFoundPage />} />
-      </Routes>
+        </Routes>
+      </Suspense>
     </BrowserRouter>
   )
 }
