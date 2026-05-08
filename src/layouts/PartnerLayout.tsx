@@ -71,7 +71,6 @@ export const PartnerLayout: React.FC<PartnerLayoutProps> = ({
       overview: 'Overview',
       users: 'Users',
       'partner-assignment': 'Issue',
-      'course-approvals': 'Approvals',
       'organization-management': 'Orgs',
     }),
     [],

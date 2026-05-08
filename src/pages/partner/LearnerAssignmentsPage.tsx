@@ -71,7 +71,7 @@ export const LearnerAssignmentsPage: React.FC = () => {
         return
       }
       if (key === 'course-approvals') {
-        navigate('/partner/course-approvals')
+        navigate('/partner/partner-assignment?tab=course-approvals')
         return
       }
       if (key === 'overview') {
