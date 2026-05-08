@@ -1937,7 +1937,7 @@ export const PartnerDashboard: React.FC = () => {
       return
     }
     if (key === 'course-approvals') {
-      navigate('/partner/course-approvals')
+      navigate('/partner/partner-assignment?tab=course-approvals')
       return
     }
 
@@ -1956,8 +1956,6 @@ export const PartnerDashboard: React.FC = () => {
     return (
       <PartnerLayout
         organizations={organizations}
-        selectedOrg={selectedOrg}
-        onSelectOrg={setUrlSelectedOrg}
         navSections={navSections}
         onNavigate={handleNavigate}
         activeItem={activePage}
@@ -1978,8 +1976,6 @@ export const PartnerDashboard: React.FC = () => {
     return (
       <PartnerLayout
         organizations={organizations}
-        selectedOrg={selectedOrg}
-        onSelectOrg={setUrlSelectedOrg}
         navSections={navSections}
         onNavigate={handleNavigate}
         activeItem={activePage}
@@ -2003,8 +1999,6 @@ export const PartnerDashboard: React.FC = () => {
   return (
     <PartnerLayout
       organizations={organizations}
-      selectedOrg={selectedOrg}
-      onSelectOrg={setUrlSelectedOrg}
       navSections={navSections}
       onNavigate={handleNavigate}
       activeItem={activePage}

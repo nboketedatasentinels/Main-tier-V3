@@ -53,7 +53,6 @@ import { OrganizationDetailPage } from '@/pages/admin/OrganizationDetailPage';
 import ApprovalQueuePage from '@/pages/admin/ApprovalQueuePage';
 import PartnerAssignmentPage from '@/pages/admin/PartnerAssignmentPage';
 import LearnerAssignmentsPage from '@/pages/partner/LearnerAssignmentsPage';
-import CourseApprovalsPage from '@/pages/partner/CourseApprovalsPage';
 import BadgeGalleryPage from '@/pages/badges/BadgeGalleryPage';
 import { VillageInvitePage } from '@/pages/villages/VillageInvitePage'
 import { AcceptVillageInvitePage } from '@/pages/villages/AcceptVillageInvitePage'
@@ -179,7 +178,10 @@ export const AppRoutes = () => {
           <Route path="user/:userId" element={<UserProfileManagementPage viewContext="partner" />} />
           <Route path="partner-assignment" element={<PartnerAssignmentPage />} />
           <Route path="learner-assignments" element={<LearnerAssignmentsPage />} />
-          <Route path="course-approvals" element={<CourseApprovalsPage />} />
+          <Route
+            path="course-approvals"
+            element={<Navigate to="/partner/partner-assignment?tab=course-approvals" replace />}
+          />
           <Route index element={<Navigate to="/partner/dashboard" replace />} />
         </Route>
 
@@ -198,7 +200,10 @@ export const AppRoutes = () => {
           <Route path="approvals" element={<ApprovalQueuePage />} />
           <Route path="partner-assignment" element={<PartnerAssignmentPage />} />
           <Route path="learner-assignments" element={<LearnerAssignmentsPage />} />
-          <Route path="course-approvals" element={<CourseApprovalsPage />} />
+          <Route
+            path="course-approvals"
+            element={<Navigate to="/admin/partner-assignment?tab=course-approvals" replace />}
+          />
           <Route index element={<Navigate to="/admin/dashboard" replace />} />
         </Route>
 

@@ -70,7 +70,6 @@ export const buildPartnerNavItems = (): NavigationSection[] => [
       { key: 'overview', label: 'Overview', icon: LayoutDashboard },
       { key: 'users', label: 'User Management', icon: Users },
       { key: 'partner-assignment', label: 'Issue Activities', icon: ClipboardCheck },
-      { key: 'course-approvals', label: 'Course Approvals', icon: BookOpen },
       { key: 'organization-management', label: 'Organizations', icon: Building2 },
     ],
   },

@@ -71,7 +71,7 @@ export const LearnerAssignmentsPage: React.FC = () => {
         return
       }
       if (key === 'course-approvals') {
-        navigate('/partner/course-approvals')
+        navigate('/partner/partner-assignment?tab=course-approvals')
         return
       }
       if (key === 'overview') {
@@ -243,14 +243,6 @@ export const LearnerAssignmentsPage: React.FC = () => {
     <PartnerLayout
       activeItem="learner-assignments"
       organizations={layoutOrgs}
-      selectedOrg={selectedOrgId || 'all'}
-      onSelectOrg={(orgValue) => {
-        if (orgValue === 'all') {
-          setSelectedOrgId('')
-          return
-        }
-        setSelectedOrgId(orgValue)
-      }}
       onNavigate={handleNavigate}
     >
       <Stack spacing={6}>
