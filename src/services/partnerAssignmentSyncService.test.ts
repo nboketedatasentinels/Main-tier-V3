@@ -4,7 +4,7 @@ const firestoreMocks = vi.hoisted(() => ({
   doc: vi.fn((_: unknown, collectionName: string, docId: string) => ({
     path: `${collectionName}/${docId}`,
   })),
-  updateDoc: vi.fn(),
+  setDoc: vi.fn(),
   getDoc: vi.fn(),
   arrayRemove: vi.fn((value: string) => ({ __op: 'arrayRemove', value })),
   arrayUnion: vi.fn((value: string) => ({ __op: 'arrayUnion', value })),
@@ -21,7 +21,7 @@ vi.mock('firebase/firestore', () => ({
   doc: firestoreMocks.doc,
   getDoc: firestoreMocks.getDoc,
   serverTimestamp: firestoreMocks.serverTimestamp,
-  updateDoc: firestoreMocks.updateDoc,
+  setDoc: firestoreMocks.setDoc,
 }))
 
 import { bulkSyncPartnerOrganizations } from './partnerAssignmentSyncService'
@@ -29,7 +29,7 @@ import { bulkSyncPartnerOrganizations } from './partnerAssignmentSyncService'
 describe('partnerAssignmentSyncService', () => {
   beforeEach(() => {
     vi.clearAllMocks()
-    firestoreMocks.updateDoc.mockResolvedValue(undefined)
+    firestoreMocks.setDoc.mockResolvedValue(undefined)
   })
 
   it('removes org access from previous partner when org is reassigned', async () => {
@@ -40,23 +40,26 @@ describe('partnerAssignmentSyncService', () => {
 
     await bulkSyncPartnerOrganizations('partner_new', ['org_1'], [])
 
-    expect(firestoreMocks.updateDoc).toHaveBeenCalledWith(
+    expect(firestoreMocks.setDoc).toHaveBeenCalledWith(
       { path: 'profiles/partner_old' },
       expect.objectContaining({
         assignedOrganizations: { __op: 'arrayRemove', value: 'org_1' },
       }),
+      { merge: true },
     )
-    expect(firestoreMocks.updateDoc).toHaveBeenCalledWith(
+    expect(firestoreMocks.setDoc).toHaveBeenCalledWith(
       { path: 'users/partner_old' },
       expect.objectContaining({
         assignedOrganizations: { __op: 'arrayRemove', value: 'org_1' },
       }),
+      { merge: true },
     )
-    expect(firestoreMocks.updateDoc).toHaveBeenCalledWith(
+    expect(firestoreMocks.setDoc).toHaveBeenCalledWith(
       { path: 'organizations/org_1' },
       expect.objectContaining({
         transformationPartnerId: 'partner_new',
       }),
+      { merge: true },
     )
   })
 
@@ -68,12 +71,13 @@ describe('partnerAssignmentSyncService', () => {
 
     await bulkSyncPartnerOrganizations('partner_new', ['org_1'], [])
 
-    expect(firestoreMocks.updateDoc).toHaveBeenCalledTimes(1)
-    expect(firestoreMocks.updateDoc).toHaveBeenCalledWith(
+    expect(firestoreMocks.setDoc).toHaveBeenCalledTimes(1)
+    expect(firestoreMocks.setDoc).toHaveBeenCalledWith(
       { path: 'organizations/org_1' },
       expect.objectContaining({
         transformationPartnerId: 'partner_new',
       }),
+      { merge: true },
     )
   })
 })

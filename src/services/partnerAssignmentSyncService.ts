@@ -4,7 +4,7 @@ import {
   doc,
   getDoc,
   serverTimestamp,
-  updateDoc,
+  setDoc,
 } from 'firebase/firestore'
 import { db } from './firebase'
 import { ORG_COLLECTION } from '@/constants/organizations'
@@ -20,7 +20,10 @@ import { ORG_COLLECTION } from '@/constants/organizations'
  */
 
 /**
- * Safely update a document, ignoring errors if the document doesn't exist.
+ * Upsert a document with merge semantics so the write succeeds even when the
+ * target doc doesn't yet exist (otherwise updateDoc throws and the partner-side
+ * sync silently disappears — historic source of the dropdown showing only the
+ * URL-current org instead of every assigned org).
  */
 const safeUpdate = async (
   collectionName: string,
@@ -29,11 +32,9 @@ const safeUpdate = async (
 ): Promise<void> => {
   try {
     const docRef = doc(db, collectionName, docId)
-    await updateDoc(docRef, data)
+    await setDoc(docRef, data, { merge: true })
   } catch (error) {
-    // Silently ignore if document doesn't exist - this is expected for some users
-    // who may only have a profile or user document but not both
-    console.debug(`[PartnerSync] Could not update ${collectionName}/${docId}:`, error)
+    console.debug(`[PartnerSync] Could not upsert ${collectionName}/${docId}:`, error)
   }
 }
 
